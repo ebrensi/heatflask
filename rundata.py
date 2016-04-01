@@ -16,7 +16,7 @@ class Activity():
         # (lapnum, timestamp, seconds, xy_pos, alt, dist, heart, cad)
 
         self.name = activity
-        self.times_eries = [(point[1], point[3][0], point[3][1])
+        self.time_series = [(point[1], point[3][0], point[3][1])
                             for point in points]
 
     @classmethod
@@ -34,7 +34,7 @@ class Activity():
 
     def csv(self):
         return "\n".join("{}, {}".format(x, y)
-                         for t, x, y in self.times_series)
+                         for t, x, y in self.time_series) + "\n"
 
 
 def main():
@@ -43,13 +43,16 @@ def main():
 
     with open(outfname, "w") as outfile:
 
-        for in_fname in os.listdir(path)
+        for in_fname in os.listdir(path):
 
             if in_fname.endswith(".tcx"):
                 activity = Activity.from_file(path + "/" + in_fname)
-                if "run" in activity.name.lower():
-                    logging.debug("processing {}".format(in_fname))
-                    outfile.write(in_fname)
+
+                if ("run" in activity.name.lower() and
+                        (None not in activity.time_series[0])):
+                    logging.debug("Processing {}".format(in_fname))
+                    outfile.write(activity.csv())
+
                 else:
                     logging.debug("Ignoring {}".format(in_fname))
 
