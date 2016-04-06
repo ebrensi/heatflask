@@ -1,6 +1,4 @@
 # Running data analysis project
-The goal of this little project is to maintain my own database and analysis of my running, which I want to host on project's GitHub page at http://ebrensi.github.io/running_data.  I'd like for anyone to navigate to this project's page and see current summary information for my running activities, with some sort of interactive visualization.
-
 The goal of this project is to maintain my own database and analysis of my running, which I want to host on project's GitHub page at [http://ebrensi.github.io/running_data]  I'd like for anyone to navigate to this project's page and see current summary information for my running activities, with some sort of interactive visualization.
 
   * update 3/30/2016: I'm going to start by making a little web app to display a heatmap of all my running waypoints.
