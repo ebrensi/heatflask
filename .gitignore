@@ -109,5 +109,5 @@ $RECYCLE.BIN/
 *.old
 
 # This is the github pages repo for this project, which is basically a different repo
-project_page/
+gh-pages/
 
