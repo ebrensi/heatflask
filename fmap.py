@@ -5,14 +5,15 @@ import pandas as pd
 df = pd.read_csv('allpoints.csv')
 df = df[df.lat != "None"].astype(float)
 
-map = folium.Map(location=[37.831390, -122.185242], zoom_start=9)
+map = folium.Map(location=[37.831390, -122.185242], zoom_start=3)
 
 point_tuples = zip(df.lat, df.long)
 
 points = [[la, lo] for la, lo in point_tuples]
 
-cluster = plugins.HeatMap(points)
-# cluster = plugins.MarkerCluster(points[0:10000])
+cluster = plugins.HeatMap(data=points,
+                          name="heatmap",
+                          radius=5)
 
 
 # with open('allpoints.csv', 'rb') as f:
