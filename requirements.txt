@@ -1,0 +1,13 @@
+Flask==0.10.1
+folium==0.2.1
+gunicorn==19.1.0
+itsdangerous==0.24
+Jinja2==2.8
+MarkupSafe==0.23
+numpy==1.11.0
+pandas==0.18.0
+PasteDeploy==1.5.2
+python-dateutil==2.5.2
+pytz==2016.3
+six==1.10.0
+Werkzeug==0.11.8
