@@ -20,14 +20,6 @@ def makemap():
                               name="heatmap",
                               radius=5)
 
-    # with open('allpoints.csv', 'rb') as f:
-    #     reader = csv.reader(f)
-    #     for row in reader:
-    #         data = ([row[1]], [row[2]])
-    #         hm = plugins.HeatMap(data)
-    #         heatmap_map.add_children(hm)
-    # f.close()
-
     heatmap.add_children(cluster)
 
     return heatmap
