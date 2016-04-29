@@ -1,6 +1,7 @@
-#! /usr/bin/env python3
+#! /usr/bin/env python
 
-import tcx  # tcx.py is a script for parsing tcx files, that I found online
+# tcx.py is a script for parsing tcx files that I found online
+from fitnesshacks import tcx
 import os
 import pandas as pd
 import logging
