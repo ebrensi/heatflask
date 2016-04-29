@@ -1,0 +1,6 @@
+[submodule "garmin-connect-export"]
+	path = garmin-connect-export
+	url = git@github.com:ebrensi/garmin-connect-export.git
+[submodule "fitnesshacks"]
+	path = fitnesshacks
+	url = git@github.com:ebrensi/fitnesshacks.git
