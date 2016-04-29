@@ -29,7 +29,7 @@ def main(args):
     if args:
         filename = args[0]
     else:
-        filename = "templates/map.html"
+        filename = "map.html"
 
     M = makemap()
     M.save(filename)

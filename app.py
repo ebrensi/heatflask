@@ -1,7 +1,7 @@
 #! usr/bin/env python
 
 from flask import Flask, render_template
-
+import fmap
 
 app = Flask(__name__)
 
@@ -13,8 +13,15 @@ def index():
 
 @app.route('/heatmap')
 def heatmap():
-    print("hello")
-    return render_template('heatmap.html')
+    print("Constructing map...")
+    Map = fmap.makemap()
+
+    print("Rendering map into html")
+    html = Map.get_root().render()
+
+    print("Sending Map to browser")
+    return html
+    # return render_template('heatmap.html')
 
 
 if __name__ == '__main__':
