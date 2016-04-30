@@ -52,6 +52,11 @@ coverage.xml
 # Django stuff:
 *.log
 
+#Flask stuff
+instance/
+
+
+
 # Sphinx documentation
 docs/_build/
 
