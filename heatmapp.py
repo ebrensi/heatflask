@@ -21,7 +21,6 @@ def heatmap():
 
     print("Sending Map to browser")
     return html
-    # return render_template('heatmap.html')
 
 
 if __name__ == '__main__':
