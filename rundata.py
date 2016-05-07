@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 # tcx.py is a script for parsing tcx files that I found online
-from fitnesshacks import tcx
+import gpxpy
 import os
 import pandas as pd
 import logging
@@ -14,33 +14,32 @@ class Activity():
 
     """
     An object instance of Activity class represents one activity from a
-    Garmin TCX (v2) file.  For now, all we care about is the time series of
+    gpx file.  For now, all we care about is the time series of
     waypoints, which is a list of tuples (timestamp, latitude, longitude).
     """
 
-    def __init__(self, xml):
+    def __init__(self, filename):
         """
-        The default constructor creates an Activity from a tcx file in the
+        The default constructor creates an Activity from a gpx file in the
         form of a string.
         """
-        activity, points = tcx.parsetcx(xml)
-        # (lapnum, timestamp, seconds, xy_pos, alt, dist, heart, cad)
 
-        self.name = activity
-        self.time_series = [(point[1], point[3][0], point[3][1])
-                            for point in points]
+        with open(filename, "r") as file:
+            activity = gpxpy.parse(file)
 
-    @classmethod
-    def from_file(cls, fname):
-        """ Create Activity from file, given filename (full-path)"""
-        with open(fname, "r") as f:
-            xml = f.read()
-        return cls(xml)
+        self.time_series = []
+
+        for track in activity.tracks:
+            for segment in track.segments:
+                points = [(point.time, point.latitude, point.longitude)
+                          for point in segment.points]
+
+                self.time_series.extend(points)
 
     def dataframe(self):
         """Return a Pandas DataFrame of this Activity's time series"""
 
-        df = pd.DataFrame.from_records(self.locs,
+        df = pd.DataFrame.from_records(self.time_series,
                                        columns=["timestamp", "lat", "long"])
         df["timestamp"] = pd.to_datetime(df["timestamp"])
         df = df.set_index("timestamp")
@@ -50,7 +49,7 @@ class Activity():
         """
         Return a CSV (string) representation of this Activity's time series.
         """
-        return "\n".join("{}, {}".format(x, y)
+        return "\n".join("{}, {}, {}".format(t, x, y)
                          for t, x, y in self.time_series) + "\n"
 
 
@@ -60,24 +59,18 @@ def main():
     acvtivity files in my (local) Dropbox Tapiriik folder.
     """
 
-    path = "/home/efrem/Dropbox/Apps/tapiriik"
-    outfname = "allpoints.csv"
+    path = "./Activities"
+    outfname = "allpoints2.csv"
 
     with open(outfname, "w") as outfile:
 
         for in_fname in os.listdir(path):
 
-            if in_fname.endswith(".tcx"):
-                activity = Activity.from_file(path + "/" + in_fname)
+            if in_fname.endswith(".gpx"):
+                activity = Activity(path + "/" + in_fname)
 
-                if ("run" in activity.name.lower() and
-                        (None not in activity.time_series[0])):
-                    logging.debug("Processing {}".format(in_fname))
-                    outfile.write(activity.csv())
-
-                else:
-                    logging.debug("Ignoring {}".format(in_fname))
-
+                logging.debug("Processing {}".format(in_fname))
+                outfile.write(activity.csv())
 
 if __name__ == "__main__":
     main()
