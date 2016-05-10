@@ -13,8 +13,8 @@ def index():
 
 @app.route('/', methods=['POST'])
 def heatmap():
-    text = request.form['daterange']
-    start, end = text.replace(" ", "").split("-")
+    start = request.form['start']
+    end = request.form['end']
     print("Constructing map on dates ranging from...{} to {}"
           .format(start, end))
     Map = fmap.makemap(start, end)
