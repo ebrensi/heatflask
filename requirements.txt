@@ -1,5 +1,7 @@
 Flask==0.10.1
 folium==0.2.1
+futures==3.0.5
+gpxpy==1.1.1
 gunicorn==19.1.0
 itsdangerous==0.24
 Jinja2==2.8
@@ -9,5 +11,6 @@ pandas==0.18.0
 PasteDeploy==1.5.2
 python-dateutil==2.5.2
 pytz==2016.3
+requests==2.9.1
 six==1.10.0
 Werkzeug==0.11.8
