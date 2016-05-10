@@ -3,11 +3,10 @@
 <head>
 <title>Activities heatmap with selectable date range</title>
 <!-- Include Required Prerequisites -->
-<script type="text/javascript" src="//cdn.jsdelivr.net/jquery/1/jquery.min.js"></script>
-<script type="text/javascript" src="//cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
-<link rel="stylesheet" type="text/css" href="//cdn.jsdelivr.net/bootstrap/latest/css/bootstrap.css" />
+<script type="text/javascript" src="http://momentjs.com/downloads/moment.min.js"></script>
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
 
-<head>
 <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/themes/smoothness/jquery-ui.css">
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
 <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js"></script>
@@ -41,17 +40,22 @@
     <form action="." method="POST">
         <span style="display:inline-block">
         <label for="date1" style="display:block">Start Date:</label>
-        <input class="datepick" id="date1" type="text" name="start" value="01/01/2009" />
+        <input class="datepick" id="date1" type="text" name="start"/>
         </span>
 
         <span style="display:inline-block">
         <label for="date2" style="display:block">End Date:</label>
-        <input class="datepick" id="date2" type="text" name="end" value="06/06/2016" />
+        <input class="datepick" id="date2" type="text" name="end"/>
         </span>
 
         <input type="submit" name="my-form" value="Render Map!" style="background-color:red;color:white"/>
     </form>
     </h4>
+
+    <script>
+      document.getElementById('date1').value=moment("20090215", "YYYYMMDD").format("L");
+      document.getElementById('date2').value=moment().format("L");
+    </script>
 
     </div>
 
