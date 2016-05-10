@@ -6,9 +6,16 @@ import pandas as pd
 import sys
 
 
-def makemap():
-    df = pd.read_csv('allpoints.csv')
-    df = df[df.lat != "None"].astype(float)
+def makemap(start=None, end=None):
+    df = pd.read_csv('allpoints.csv',
+                     parse_dates=['timestamp'],
+                     index_col="timestamp").sort_index()
+    if not start:
+        start = df.index[0]
+    if not end:
+        end = df.index[-1]
+
+    df = df[start:end].dropna()
 
     heatmap = folium.Map(location=[37.831390, -122.185242], zoom_start=3)
 
@@ -26,14 +33,8 @@ def makemap():
 
 
 def main(args):
-    if args:
-        filename = args[0]
-    else:
-        filename = "map.html"
-
     M = makemap()
-    M.save(filename)
-
+    M.save("map.html")
 
 if __name__ == "__main__":
     main(sys.argv[1:])

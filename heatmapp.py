@@ -16,10 +16,10 @@ def heatmap():
     print("Constructing map...")
     Map = fmap.makemap()
 
-    print("Rendering map into html")
+    print("Rendering map into html...")
     html = Map.get_root().render()
 
-    print("Sending Map to browser")
+    print("Sending Map to browser...")
     return html
 
 

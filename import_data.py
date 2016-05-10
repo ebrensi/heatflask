@@ -18,23 +18,30 @@ class Activity():
     waypoints, which is a list of tuples (timestamp, latitude, longitude).
     """
 
-    def __init__(self, filename):
+    def __init__(self, gpx):
         """
         The default constructor creates an Activity from a gpx file in the
         form of a string.
         """
 
-        with open(filename, "r") as file:
-            activity = gpxpy.parse(file)
-
         self.time_series = []
 
-        for track in activity.tracks:
-            for segment in track.segments:
-                points = [(point.time, point.latitude, point.longitude)
-                          for point in segment.points]
+        try:
+            activity = gpxpy.parse(gpx)
+        except:
+            # ignore bad files for now
+            pass
+        else:
+            for track in activity.tracks:
+                for segment in track.segments:
+                    points = [(point.time, point.latitude, point.longitude)
+                              for point in segment.points]
+                    self.time_series.extend(points)
 
-                self.time_series.extend(points)
+    @classmethod
+    def from_file(cls, filename):
+        with open(filename, "r") as file:
+            return cls(file)
 
     def dataframe(self):
         """Return a Pandas DataFrame of this Activity's time series"""
@@ -60,16 +67,15 @@ def main():
     """
 
     path = "./Activities"
-    outfname = "allpoints2.csv"
+    outfname = "allpoints.csv"
 
     with open(outfname, "w") as outfile:
-
+        outfile.write("timestamp,lat,long\n")
         for in_fname in os.listdir(path):
 
             if in_fname.endswith(".gpx"):
-                activity = Activity(path + "/" + in_fname)
-
                 logging.debug("Processing {}".format(in_fname))
+                activity = Activity.from_file(path + "/" + in_fname)
                 outfile.write(activity.csv())
 
 if __name__ == "__main__":
