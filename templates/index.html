@@ -1,18 +1,45 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <title>Flask App</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<html lang="en">
+<head>
+<title>Activities heatmap with selectable date range</title>
+<!-- Include Required Prerequisites -->
+<script type="text/javascript" src="//cdn.jsdelivr.net/jquery/1/jquery.min.js"></script>
+<script type="text/javascript" src="//cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+<link rel="stylesheet" type="text/css" href="//cdn.jsdelivr.net/bootstrap/latest/css/bootstrap.css" />
 
-    <script src="/static/pace.js"></script>
-    <link href="/static/pace-theme-center-atom.css" rel="stylesheet" />
+<!-- Include Date Range Picker -->
+<script type="text/javascript" src="//cdn.jsdelivr.net/bootstrap.daterangepicker/2/daterangepicker.js"></script>
+<link rel="stylesheet" type="text/css" href="//cdn.jsdelivr.net/bootstrap.daterangepicker/2/daterangepicker.css" />
+</head>
 
-  </head>
-  <body>
-    <div class="container">
-      <h1>This is my little flask app!</h2>
+<body>
+
+<div class="container">
+<a href="http://www.animatedimages.org/cat-running-169.htm"><img src="http://www.animatedimages.org/data/media/169/animated-running-image-0037.gif" border="0" alt="animated-running-image-0037"/></a>
+    <h1>Welcome to my flask app!  muhahahaha.</h1>
+</div>
       <br>
-      <p>Click <a href="/heatmap">here</a> for heatmap.</p>
+
+    <div class="container">
+    <h2>Enter a date range over which to render activities map</h2>
+    <h3>and then wait for the magic to happen. (It could be a while.)</h3>
+    <br>
+    <h3>
+    <form action="." method="POST">
+        <input type="text" name="daterange" value="01/01/2009 - 06/06/2016" />
+        <input type="submit" name="my-form" value="Render Map!" />
+    </form>
+    </h3>
+
+    <script type="text/javascript">
+    $(function() {
+        $('input[name="daterange"]').daterangepicker();
+    });
+    </script>
+
     </div>
+
   </body>
 </html>
+
+

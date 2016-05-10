@@ -115,6 +115,9 @@ $RECYCLE.BIN/
 
 # This is the github pages repo for this project, which is basically a different repo
 gh-pages/
+
+# Activities directory is for activity files
 Activities/
 
-import_files
+# This file contains login info and I'm not sure how to deal with it without revealing my password, so I'll leave it off the server for now.
+download_files

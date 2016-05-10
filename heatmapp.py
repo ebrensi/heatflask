@@ -1,6 +1,6 @@
 #! usr/bin/env python
 
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 import fmap
 
 app = Flask(__name__)
@@ -11,10 +11,13 @@ def index():
     return render_template('index.html')
 
 
-@app.route('/heatmap')
+@app.route('/', methods=['POST'])
 def heatmap():
-    print("Constructing map...")
-    Map = fmap.makemap()
+    text = request.form['daterange']
+    start, end = text.replace(" ", "").split("-")
+    print("Constructing map on dates ranging from...{} to {}"
+          .format(start, end))
+    Map = fmap.makemap(start, end)
 
     print("Rendering map into html...")
     html = Map.get_root().render()
