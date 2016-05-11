@@ -3,9 +3,8 @@
 # tcx.py is a script for parsing tcx files that I found online
 import gpxpy
 import os
-import pandas as pd
 import logging
-
+import json
 
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 
@@ -23,14 +22,13 @@ class Activity():
         The default constructor creates an Activity from a gpx file in the
         form of a string.
         """
-
         self.time_series = []
+        self.empty = False
 
         try:
             activity = gpxpy.parse(gpx)
         except:
-            # ignore bad files for now
-            pass
+            self.empty = True
         else:
             for track in activity.tracks:
                 for segment in track.segments:
@@ -43,40 +41,48 @@ class Activity():
         with open(filename, "r") as file:
             return cls(file)
 
-    def dataframe(self):
-        """Return a Pandas DataFrame of this Activity's time series"""
-
-        df = pd.DataFrame.from_records(self.time_series,
-                                       columns=["timestamp", "lat", "long"])
-        df["timestamp"] = pd.to_datetime(df["timestamp"])
-        df = df.set_index("timestamp")
-        return df
-
     def csv(self):
         """
         Return a CSV (string) representation of this Activity's time series.
         """
-        return "\n".join("{}, {}, {}".format(t, x, y)
-                         for t, x, y in self.time_series) + "\n"
+        return ("\n".join("{}, {}, {}"
+                          .format(t, x, y)
+                          for t, x, y in self.time_series) + "\n")
 
 
 def main():
-    """
-    Running this script creates a csv file containing all waypoints of tcx
-    acvtivity files in my (local) Dropbox Tapiriik folder.
-    """
+    activity_path = "./Activities"
+    points_fname = "all_points.csv"
+    ids_fname = "all_ids.json"
 
-    path = "./Activities"
-    outfname = "allpoints.csv"
+    if os.path.isfile(ids_fname):
+        logging.debug("appending to %s", points_fname)
+        with open(ids_fname, "r") as idsfile:
+            ids = set(json.load(idsfile))
 
-    with open(outfname, "w") as outfile:
-        outfile.write("timestamp,lat,long\n")
-        for in_fname in os.listdir(path):
+    else:
+        ids = set()
+
+    with open(points_fname, "a") as pointsfile:
+        for in_fname in os.listdir(activity_path):
 
             if in_fname.endswith(".gpx"):
-                logging.debug("Processing {}".format(in_fname))
-                activity = Activity.from_file(path + "/" + in_fname)
-                outfile.write(activity.csv())
+                activity_id = in_fname.split("_")[1].split(".")[0]
+
+                if activity_id in ids:
+                    logging.debug("Skipping {}".format(in_fname))
+                else:
+                    logging.debug("Processing {}".format(in_fname))
+                    activity = (Activity
+                                .from_file(activity_path + "/" + in_fname))
+                    if not activity.empty:
+                        pointsfile.write(activity.csv())
+
+                ids.add(activity_id)
+
+    with open(ids_fname, "w") as ids_file:
+        json.dump(list(ids), ids_file)
+
 
 if __name__ == "__main__":
     main()

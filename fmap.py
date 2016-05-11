@@ -7,7 +7,7 @@ import sys
 
 
 def makemap(start=None, end=None):
-    df = pd.read_csv('allpoints.csv',
+    df = pd.read_csv('all_points.csv',
                      parse_dates=['timestamp'],
                      index_col="timestamp").sort_index()
     if not start:
