@@ -17,7 +17,11 @@ def makemap(start=None, end=None):
 
     df = df[start:end].dropna()
 
-    heatmap = folium.Map(location=[37.831390, -122.185242], zoom_start=3)
+    meanlat, meanlong = df.mean()
+
+    heatmap = folium.Map(location=[meanlat, meanlong],
+                         control_scale=True,
+                         zoom_start=12)
 
     point_tuples = zip(df.lat, df.long)
 

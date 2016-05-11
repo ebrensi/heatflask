@@ -29,35 +29,62 @@
 
 <div class="container">
     <h1>Fitness Activity Heat Map</h1>
+    <h2>See where Efrem's been runnin'!</h2>
 </div>
 
-    <br>
-
-    <div class="container">
-    <h2>Enter dates over which to render.</h2>
-    <br>
-    <h4>
-    <form action="." method="POST">
-        <span style="display:inline-block">
+  <div class="container">
+  <h3>Enter dates over which to render:</h3>
+  <h4>
+  <form action="." method="POST">
+      <span style="display:inline-block">
         <label for="date1" style="display:block">Start Date:</label>
         <input class="datepick" id="date1" type="text" name="start"/>
-        </span>
+      </span>
 
-        <span style="display:inline-block">
+
+      <span style="display:inline-block">
         <label for="date2" style="display:block">End Date:</label>
         <input class="datepick" id="date2" type="text" name="end"/>
-        </span>
+      </span>
 
-        <input type="submit" name="my-form" value="Render Map!" style="background-color:red;color:white"/>
-    </form>
-    </h4>
 
-    <script>
-      document.getElementById('date1').value=moment("20090215", "YYYYMMDD").format("L");
-      document.getElementById('date2').value=moment().format("L");
-    </script>
+      <span style="display:inline-block">
+      <label for="dd1" style="display:block">Presets:</label>
+      <select id ="ddl" name="ddl">
+        <option value=0>All</option>
+        <option value=2>Last 2 days</option>
+        <option value=7>Last 7 days</option>
+        <option value=30>Last 30 days</option>
+        <option value=60>Last 60 days</option>
+        <option value=180>Last 180 days</option>
+        <option value=365>Last year</option>
+      </select>
+      </span>
 
-    </div>
+      <input type="submit" name="my-form" value="Render Map!" style="background-color:red;color:white"/>
+  </form>
+  </h4>
+
+  <script>
+  document.getElementById('date1').value=moment("20090215", "YYYYMMDD").format("L");
+  document.getElementById('date2').value=moment().format("L");
+  // This is the function that selects what values
+  // to preload the date fields with.
+  $("#ddl").change(function () {
+            var choice = $(this).val();
+            var date1;
+            if (choice==0){
+              date1=moment("20090215", "YYYYMMDD");
+            } else {
+              date1=moment().subtract(choice, 'days');
+            };
+            document.getElementById('date1').value=date1.format("L");
+            document.getElementById('date2').value=moment().format("L");
+          });
+
+  </script>
+
+  </div>
 
   </body>
 </html>
