@@ -1,4 +1,0 @@
-
-[submodule "garmin-connect-export"]
-    path = garmin-connect-export
-    url = git@github.com:ebrensi/garmin-connect-export.git
