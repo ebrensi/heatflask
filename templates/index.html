@@ -11,11 +11,6 @@
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
 <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js"></script>
 
-  <script>
-  $(document).ready(function() {
-    $(".datepick").datepicker();
-  });
-  </script>
 </head>
 
 <!-- <a href="http://www.animatedimages.org/cat-running-169.htm"><img src="http://www.animatedimages.org/data/media/169/animated-running-image-0037.gif" border="0" alt="animated-running-image-0037"/></a>
@@ -35,7 +30,7 @@
   <div class="container">
   <h3>Enter dates over which to render:</h3>
   <h4>
-  <form action="." method="POST">
+  <form id="myform" action="." method="POST">
       <span style="display:inline-block">
         <label for="date1" style="display:block">Start Date:</label>
         <input class="datepick" id="date1" type="text" name="start"/>
@@ -49,44 +44,67 @@
 
 
       <span style="display:inline-block">
-      <label for="dd1" style="display:block">Presets:</label>
-      <select id ="ddl" name="ddl">
-        <option value=0>All</option>
+      <label for="presets-dropdown" style="display:block">Presets:</label>
+      <select id ="presets-dropdown" name="presets">
         <option value=2>Last 2 days</option>
         <option value=7>Last 7 days</option>
         <option value=30>Last 30 days</option>
         <option value=60>Last 60 days</option>
         <option value=180>Last 180 days</option>
         <option value=365>Last year</option>
+        <option value=0>All</option>
       </select>
       </span>
 
+      <br><br>
       <input type="submit" name="my-form" value="Render Map!" style="background-color:red;color:white"/>
   </form>
   </h4>
 
   <script>
-  document.getElementById('date1').value=moment("20090215", "YYYYMMDD").format("L");
+  // preload the date fields
+  document.getElementById('date1').value=moment().subtract(2, 'days').format("L");
   document.getElementById('date2').value=moment().format("L");
-  // This is the function that selects what values
-  // to preload the date fields with.
-  $("#ddl").change(function () {
-            var choice = $(this).val();
-            var date1;
-            if (choice==0){
-              date1=moment("20090215", "YYYYMMDD");
-            } else {
-              date1=moment().subtract(choice, 'days');
-            };
-            document.getElementById('date1').value=date1.format("L");
-            document.getElementById('date2').value=moment().format("L");
-          });
 
+
+  // Associate datepick css class with the datepicker function.
+  $(document).ready(function() {
+    $(".datepick").datepicker();
+  });
+
+
+  $(function(){
+      // Associate changes in the preset-dropdown menu with changing dates
+      //  in the date1 and date2 fields
+      $("#presets-dropdown").change(function () {
+                var choice = $(this).val();
+                var date1;
+                if (choice==0){
+                  date1=moment("20090215", "YYYYMMDD");
+                } else {
+                  date1=moment().subtract(choice, 'days');
+                };
+                document.getElementById('date1').value=date1.format("L");
+                document.getElementById('date2').value=moment().format("L");
+      });
+
+
+      // This function sets what happens when the user presses
+      //  "Render Map!" button
+      // $("#myform").submit(function(e){
+      //     e.preventDefault();
+      //     var data = $(this).getFormData(); // bs
+      //     var url = $.uri(data);
+      //     $('#myiframe').src = url;
+      // });
+
+    });
   </script>
 
+      <!-- start=05%2F04%2F2016&end=05%2F28%2F2016&ddl=2&my-form=Render+Map%21 -->
+
   </div>
+  <br>
+  <!-- <iframe id="myiframe" src="" height=100% width=95%  /> -->
 
-  </body>
 </html>
-
-
