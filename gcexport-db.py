@@ -1,10 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8
 
-# Note: This is the main file from the repo at
-#  https://github.com/ebrensi/garmin-connect-export/tree/json
-#  I've been trying to figure out how to nicely go about maintaining
-#  a sub-repo for it, but until then I will just use a copy of the file.
+# Import Garmin Connect data into a SQLite database
 
 
 from __future__ import unicode_literals
