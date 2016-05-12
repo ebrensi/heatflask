@@ -118,6 +118,3 @@ gh-pages/
 
 # Activities directory is for activity files
 Activities/
-
-# This file contains login info and I'm not sure how to deal with it without revealing my password, so I'll leave it off the server for now.
-download_files
