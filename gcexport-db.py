@@ -18,7 +18,7 @@ import sqlite3
 
 
 CURRENT_DATE = datetime.now().strftime('%Y-%m-%d')
-SQLITE_FILE = "activities_db.sqlite"
+DATABASE = "activities_db.sqlite"
 
 
 logging.basicConfig(  # filename="import_{}.log".format(CURRENT_DATE),
@@ -134,7 +134,7 @@ sesh = logged_in_session(username, password)
 
 
 # We should be logged in now.
-with sqlite3.connect(SQLITE_FILE) as db:
+with sqlite3.connect(DATABASE) as db:
     c = db.cursor()
     c.execute("CREATE TABLE IF NOT EXISTS activities("
               "id       INTEGER     PRIMARY KEY,"
@@ -147,6 +147,7 @@ with sqlite3.connect(SQLITE_FILE) as db:
               "longitude    REAL,"
               "id           INTEGER"
               ");")
+    db.commit()
 
     # Now we populate a set with the ids of activities that already exist
     #  in our database.

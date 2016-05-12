@@ -114,4 +114,4 @@ $RECYCLE.BIN/
 *.old
 
 # sqlite database
-*.sqlite
+#*.sqlite
