@@ -11,10 +11,10 @@ def index():
     return render_template('index.html')
 
 
-@app.route('/', methods=['POST'])
+@app.route('/map')
 def heatmap():
-    start = request.form['start']
-    end = request.form['end']
+    start = request.args.get('start')
+    end = request.args.get('end')
     print("Constructing map on dates ranging from...{} to {}"
           .format(start, end))
     Map = fmap.makemap(start, end)

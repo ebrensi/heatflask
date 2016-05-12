@@ -57,9 +57,21 @@
       </span>
 
       <br><br>
-      <input type="submit" name="my-form" value="Render Map!" style="background-color:red;color:white"/>
+
+      <input style="background-color:red;color:white" type="button" value="Render Map!" onclick="setIFrameSource(); return false;"/>
   </form>
   </h4>
+
+
+<script type="text/javascript">
+    function setIFrameSource(){
+        var iframe = document.getElementById("myiframe");
+        var d1 = document.getElementById("date1").value;
+        var d2 = document.getElementById("date2").value;
+        var mapurl = "/map?start="+d1+"&end="+d2
+        iframe.src = mapurl;
+    }
+</script>
 
   <script>
   // preload the date fields
@@ -88,23 +100,13 @@
                 document.getElementById('date2').value=moment().format("L");
       });
 
-
-      // This function sets what happens when the user presses
-      //  "Render Map!" button
-      // $("#myform").submit(function(e){
-      //     e.preventDefault();
-      //     var data = $(this).getFormData(); // bs
-      //     var url = $.uri(data);
-      //     $('#myiframe').src = url;
-      // });
-
     });
   </script>
+   <br>
+</div>
+  <iframe id="myiframe" src="/map?start=05%2F04%2F2016&end=05%2F28%2F2016" style="position: absolute; height: 100%; width: 100%; border: 10 margin-left: auto;
+margin-right: auto; left: 0; right: 0; display:block;" allowfullscreen/>
 
-      <!-- start=05%2F04%2F2016&end=05%2F28%2F2016&ddl=2&my-form=Render+Map%21 -->
 
-  </div>
-  <br>
-  <!-- <iframe id="myiframe" src="" height=100% width=95%  /> -->
 
 </html>
