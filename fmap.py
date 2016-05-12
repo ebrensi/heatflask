@@ -8,8 +8,11 @@ import sys
 
 def makemap(start=None, end=None):
     df = pd.read_csv('all_points.csv',
-                     parse_dates=['timestamp'],
+                     header=None,
+                     names=["timestamp", "lat", "long"],
+                     parse_dates=["timestamp"],
                      index_col="timestamp").sort_index()
+
     if not start:
         start = df.index[0]
     if not end:
