@@ -1,6 +1,7 @@
 #! usr/bin/env python
 
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, g
+import sqlite3
 import folium
 from folium import plugins
 import pandas as pd
@@ -12,6 +13,11 @@ app = Flask(__name__)
 @app.route('/')
 def index():
     return render_template('index.html')
+
+
+@app.route('/defaultmap')
+def blank_map():
+    return render_template("defaultmap.html")
 
 
 @app.route('/map')
