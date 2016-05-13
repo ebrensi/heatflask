@@ -137,15 +137,15 @@ sesh = logged_in_session(username, password)
 with sqlite3.connect(DATABASE) as db:
     c = db.cursor()
     c.execute("CREATE TABLE IF NOT EXISTS activities("
-              "id       INTEGER     PRIMARY KEY,"
-              "summary  TEXT"
+              "id       INTEGER     PRIMARY KEY"
+              # "summary  TEXT"
               ");")
 
     c.execute("CREATE TABLE IF NOT EXISTS points("
               "timestamp    TEXT,"
               "latitude     REAL,"
-              "longitude    REAL,"
-              "id           INTEGER"
+              "longitude    REAL"
+              # "id           INTEGER"
               ");")
     db.commit()
 
@@ -209,8 +209,8 @@ with sqlite3.connect(DATABASE) as db:
             if id in already_got:
                 logging.info("activity %s already in database.", id)
             else:
-                c.execute("INSERT INTO activities(id,summary) VALUES(?,?);",
-                          (id, json.dumps(A)))
+                c.execute("INSERT INTO activities(id) VALUES(?);",
+                          (id,))
 
                 # Display which entry we're working on.
                 info = {
@@ -259,12 +259,11 @@ with sqlite3.connect(DATABASE) as db:
                             for segment in track.segments:
                                 points = [(point.time,
                                            point.latitude,
-                                           point.longitude,
-                                           id)
+                                           point.longitude)
                                           for point in segment.points]
                         sql = ("INSERT INTO points "
-                               "(timestamp,latitude,longitude,id) "
-                               "VALUES (?,?,?,?);")
+                               "(timestamp,latitude,longitude) "
+                               "VALUES (?,?,?);")
                         c.executemany(sql, points)
 
                         logging.info('Done. GPX data saved.')
