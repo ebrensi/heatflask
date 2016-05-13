@@ -7,7 +7,7 @@ from folium import plugins
 import pandas as pd
 
 # configuration
-DATABASE = "activities_db.sqlite"
+DATABASE = "activities.db"
 DEBUG = True
 
 
@@ -51,19 +51,13 @@ def blank_map():
 def heatmap():
     start = request.args.get('start')
     end = request.args.get('end')
-    print("Constructing map on dates ranging from...{} to {}"
-          .format(start, end))
-    Map = makemap(start, end)
 
-    print("Rendering map into html...")
-    html = Map.get_root().render()
-
-    print("Sending Map to browser...")
-    return html
+    df = get_points_df(start, end)
+    return googlemap(df)
 
 
-def makemap(start=None, end=None):
-    # TODO: use proper method for parameter passing
+def get_points_df(start=None, end=None):
+   # TODO: use proper method for parameter passing
     query = ("SELECT timestamp, latitude, longitude FROM points"
              " WHERE timestamp >= '{}' and timestamp <= '{}';"
              .format(start, end))
@@ -80,6 +74,23 @@ def makemap(start=None, end=None):
         end = df.index[-1]
 
     df = df[start:end].dropna()
+    return df
+
+
+def googlemap(df):
+    def format_row(row):
+        return ("new google.maps.LatLng({}, {})"
+                .format(row["latitude"], row["longitude"]))
+
+    data = ",\n".join(df.apply(format_row, axis=1))
+    meanlat, meanlong = df.mean()
+    return render_template("googmap_template.html",
+                           data=data,
+                           zoom=15,
+                           center={"lat": meanlat, "lng": meanlong})
+
+
+def folium_map(df):
 
     meanlat, meanlong = df.mean()
 
@@ -97,7 +108,7 @@ def makemap(start=None, end=None):
 
     heatmap.add_children(cluster)
 
-    return heatmap
+    return heatmap.get_root().render()
 
 
 if __name__ == '__main__':

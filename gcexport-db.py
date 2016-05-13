@@ -18,7 +18,7 @@ import sqlite3
 
 
 CURRENT_DATE = datetime.now().strftime('%Y-%m-%d')
-DATABASE = "activities_db.sqlite"
+DATABASE = "activities.db"
 
 
 logging.basicConfig(  # filename="import_{}.log".format(CURRENT_DATE),
