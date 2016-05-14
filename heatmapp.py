@@ -57,7 +57,9 @@ def heatmap():
 
 
 def get_points_df(start=None, end=None):
-   # TODO: use proper method for parameter passing
+    # TODO: make sure datetimes are valid and start <= finish
+
+    # TODO: use proper method for parameter passing
     query = ("SELECT timestamp, latitude, longitude FROM points"
              " WHERE timestamp >= '{}' and timestamp <= '{}';"
              .format(start, end))
@@ -65,15 +67,7 @@ def get_points_df(start=None, end=None):
     df = pd.read_sql(query,
                      con=get_db(),
                      parse_dates=["timestamp"],
-                     index_col="timestamp").sort_index()
-
-    # TODO: make sure datetimes are valid and start <= finish
-    if not start:
-        start = df.index[0]
-    if not end:
-        end = df.index[-1]
-
-    df = df[start:end].dropna()
+                     index_col="timestamp")
     return df
 
 
@@ -91,7 +85,6 @@ def googlemap(df):
 
 
 def folium_map(df):
-
     meanlat, meanlong = df.mean()
 
     heatmap = folium.Map(location=[meanlat, meanlong],
