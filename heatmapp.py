@@ -7,6 +7,8 @@ from folium import plugins
 import pandas as pd
 
 # Configuration
+# This will work on any system that has a postgresql server with
+#  user, password, database all called heatmap.
 SQLALCHEMY_DATABASE_URI = "postgresql://heatmapp:heatmapp@localhost/heatmapp"
 DEBUG = True
 
