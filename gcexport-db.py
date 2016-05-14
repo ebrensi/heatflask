@@ -42,6 +42,8 @@ parser.add_argument('-c', '--count', nargs='?', default="1",
                     help=("number of recent activities to download, or 'all'"
                           " (default: 1)"))
 
+parser.add_argument('--clean', action='store_true', default=False)
+
 args = parser.parse_args()
 
 logging.info('Welcome to Garmin Connect Exporter!')
@@ -135,16 +137,19 @@ sesh = logged_in_session(username, password)
 # We should be logged in now.
 with psycopg2.connect(CONN_STRING) as db:
     c = db.cursor()
-    c.execute("CREATE TABLE IF NOT EXISTS activities("
-              "id       INTEGER     PRIMARY KEY"
-              # "summary  TEXT"
-              ");")
 
-    c.execute("CREATE TABLE IF NOT EXISTS points("
-              "timestamp    TEXT,"
-              "latitude     NUMERIC,"
-              "longitude    NUMERIC"
-              # "id           INTEGER"
+    if args.clean:
+        logging.info("Clean import")
+        c.execute("DROP TABLE activities;")
+        db.commit()
+
+    c.execute("CREATE TABLE IF NOT EXISTS activities("
+              "id               INTEGER       PRIMARY KEY,"
+              "beginTimestamp   TIMESTAMP,"
+              "summary          JSON,"
+              "timestamps       TIMESTAMP ARRAY,"
+              "latitudes        DOUBLE PRECISION ARRAY,"
+              "longitudes       DOUBLE PRECISION ARRAY"
               ");")
     db.commit()
 
@@ -153,7 +158,6 @@ with psycopg2.connect(CONN_STRING) as db:
     c.execute("SELECT id FROM activities;")
 
     already_got = set(tupp[0] for tupp in c.fetchall())
-    logging.info("already got: %s", already_got)
 
     download_all = False
 
@@ -208,25 +212,19 @@ with psycopg2.connect(CONN_STRING) as db:
             if id in already_got:
                 logging.info("activity %s already in database.", id)
             else:
-                c.execute("INSERT INTO activities(id) VALUES(%s);",
-                          (id,))
-
+                beginTimestamp = A['beginTimestamp']['display']
                 # Display which entry we're working on.
                 info = {
-                    "id": A['activityId'],
+                    "id": id,
                     "name": A['activityName']['value'],
-                    "timestamp": A['beginTimestamp']['display'],
-                    "duration": "??:??:??",
-                    "distance": "0.00 Miles"
+                    "starting": A['beginTimestamp']['display'],
+                    "dur": (A["sumElapsedDuration"]["display"]
+                            if "sumElapsedDuration" in A else "??:??:??"),
+                    "dist": (A["sumDistance"]["withUnit"]
+                             if "sumElapsedDuration" in A else "0.00 Miles")
                 }
 
-                if "sumElapsedDuration" in A:
-                    info["duration"] = A["sumElapsedDuration"]["display"]
-
-                if "sumDistance" in A:
-                    info["distance"] = A["sumDistance"]["withUnit"]
-
-                logging.info("[{id}] {name}: {timestamp}, {duration}, {distance}"
+                logging.info("[{id}] {name}: {starting}, {dur}, {dist}"
                              .format(**info))
 
                 # url of the gpx file that contains GIS points
@@ -238,7 +236,7 @@ with psycopg2.connect(CONN_STRING) as db:
                 try:
                     file_response = sesh.get(download_url)
                 except:
-                    logging.info("...failed. Skipping %s download", id)
+                    logging.info("...failed. Skipping download.")
 
                 else:
                     data = file_response.text
@@ -251,21 +249,30 @@ with psycopg2.connect(CONN_STRING) as db:
 
                     try:
                         activity = gpxpy.parse(data)
-                    except:
-                        logging.info('No track points found.')
-                    else:
-                        for track in activity.tracks:
-                            for segment in track.segments:
-                                points = [(point.time,
-                                           point.latitude,
-                                           point.longitude)
-                                          for point in segment.points]
-                        sql = ("INSERT INTO points "
-                               "(timestamp,latitude,longitude) "
-                               "VALUES (%s,%s,%s);")
-                        c.executemany(sql, points)
 
-                        logging.info('Done. GPX data saved.')
+                    except:
+                        pass
+
+                    else:
+                        points = [(point.time,
+                                   point.latitude,
+                                   point.longitude)
+                                  for track in activity.tracks
+                                  for segment in track.segments
+                                  for point in segment.points]
+
+                        tstamps, lats, lngs = (list(z)
+                                               for z in zip(*points))
+
+                        values = (id, beginTimestamp, json.dumps(A),
+                                  tstamps, lats, lngs)
+
+                        c.execute("INSERT INTO activities "
+                                  "(id, beginTimestamp, summary, "
+                                  "timestamps, latitudes, longitudes) "
+                                  "VALUES (%s,%s,%s,%s,%s,%s);", values)
+
+                        logging.info('Done. time series data saved.')
 
         logging.info("Chunk done!")
 logging.info('Done!')
