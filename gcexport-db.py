@@ -15,10 +15,20 @@ import argparse
 
 import gpxpy
 import psycopg2
+import urlparse
+import os
+# DATABASE_URL = "postgresql://heatmapp:heatmapp@localhost/heatmapp"
+#
+urlparse.uses_netloc.append("postgres")
+url = urlparse.urlparse(os.environ["DATABASE_URL"])
+DB_CONNECTION = {"database": url.path[1:],
+                 "user": url.username,
+                 "password": url.password,
+                 "host": url.hostname,
+                 "port": url.port}
+
 
 CURRENT_DATE = datetime.now().strftime('%Y-%m-%d')
-CONN_STRING = ("host='localhost' dbname='heatmapp' "
-               "user='heatmapp' password='heatmapp'")
 
 logging.basicConfig(  # filename="import_{}.log".format(CURRENT_DATE),
     format='%(levelname)s:%(message)s',
@@ -135,7 +145,7 @@ sesh = logged_in_session(username, password)
 
 
 # We should be logged in now.
-with psycopg2.connect(CONN_STRING) as db:
+with psycopg2.connect(**DB_CONNECTION) as db:
     c = db.cursor()
 
     if args.clean:
@@ -261,18 +271,21 @@ with psycopg2.connect(CONN_STRING) as db:
                                   for segment in track.segments
                                   for point in segment.points]
 
-                        tstamps, lats, lngs = (list(z)
-                                               for z in zip(*points))
+                        if points:
+                            tstamps, lats, lngs = (list(z)
+                                                   for z in zip(*points))
 
-                        values = (id, beginTimestamp, json.dumps(A),
-                                  tstamps, lats, lngs)
+                            values = (id, beginTimestamp, json.dumps(A),
+                                      tstamps, lats, lngs)
 
-                        c.execute("INSERT INTO activities "
-                                  "(id, beginTimestamp, summary, "
-                                  "timestamps, latitudes, longitudes) "
-                                  "VALUES (%s,%s,%s,%s,%s,%s);", values)
+                            c.execute("INSERT INTO activities "
+                                      "(id, beginTimestamp, summary, "
+                                      "timestamps, latitudes, longitudes) "
+                                      "VALUES (%s,%s,%s,%s,%s,%s);", values)
 
-                        logging.info('Done. time series data saved.')
+                            logging.info('Done. time series data saved.')
+                        else:
+                            logging.info('No GPS data.')
 
         logging.info("Chunk done!")
 logging.info('Done!')
