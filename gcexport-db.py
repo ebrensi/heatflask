@@ -14,12 +14,11 @@ import json
 import argparse
 
 import gpxpy
-import sqlite3
-
+import psycopg2
 
 CURRENT_DATE = datetime.now().strftime('%Y-%m-%d')
-DATABASE = "activities.db"
-
+CONN_STRING = ("host='localhost' dbname='heatmapp' "
+               "user='heatmapp' password='heatmapp'")
 
 logging.basicConfig(  # filename="import_{}.log".format(CURRENT_DATE),
     format='%(levelname)s:%(message)s',
@@ -134,7 +133,7 @@ sesh = logged_in_session(username, password)
 
 
 # We should be logged in now.
-with sqlite3.connect(DATABASE) as db:
+with psycopg2.connect(CONN_STRING) as db:
     c = db.cursor()
     c.execute("CREATE TABLE IF NOT EXISTS activities("
               "id       INTEGER     PRIMARY KEY"
@@ -143,8 +142,8 @@ with sqlite3.connect(DATABASE) as db:
 
     c.execute("CREATE TABLE IF NOT EXISTS points("
               "timestamp    TEXT,"
-              "latitude     REAL,"
-              "longitude    REAL"
+              "latitude     NUMERIC,"
+              "longitude    NUMERIC"
               # "id           INTEGER"
               ");")
     db.commit()
@@ -209,7 +208,7 @@ with sqlite3.connect(DATABASE) as db:
             if id in already_got:
                 logging.info("activity %s already in database.", id)
             else:
-                c.execute("INSERT INTO activities(id) VALUES(?);",
+                c.execute("INSERT INTO activities(id) VALUES(%s);",
                           (id,))
 
                 # Display which entry we're working on.
@@ -263,7 +262,7 @@ with sqlite3.connect(DATABASE) as db:
                                           for point in segment.points]
                         sql = ("INSERT INTO points "
                                "(timestamp,latitude,longitude) "
-                               "VALUES (?,?,?);")
+                               "VALUES (%s,%s,%s);")
                         c.executemany(sql, points)
 
                         logging.info('Done. GPX data saved.')
