@@ -85,7 +85,7 @@ def googlemap(df):
 
     data = ",\n".join(df.apply(format_row, axis=1))
     meanlat, meanlong = df.mean()
-    return render_template("googmap_template.html",
+    return render_template("googlemap_template.html",
                            data=data,
                            zoom=15,
                            center={"lat": meanlat, "lng": meanlong})
