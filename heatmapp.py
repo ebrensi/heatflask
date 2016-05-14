@@ -1,13 +1,13 @@
 #! usr/bin/env python
 
 from flask import Flask, render_template, request, g
-import sqlite3
+from sqlalchemy import create_engine
 import folium
 from folium import plugins
 import pandas as pd
 
-# configuration
-DATABASE = "activities.db"
+# Configuration
+SQLALCHEMY_DATABASE_URI = "postgresql://heatmapp:heatmapp@localhost/heatmapp"
 DEBUG = True
 
 
@@ -18,8 +18,8 @@ app.config.from_object(__name__)
 def get_db():
     db = getattr(g, "_database", None)
     if db is None:
-        db = g._database = sqlite3.connect(app.config['DATABASE'])
-        db.row_factory = sqlite3.Row
+        engine = create_engine(SQLALCHEMY_DATABASE_URI)
+        db = g._database = engine.connect()
     return db
 
 

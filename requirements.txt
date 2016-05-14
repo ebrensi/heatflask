@@ -1,4 +1,5 @@
 Flask==0.10.1
+Flask-SQLAlchemy==2.1
 folium==0.2.1
 futures==3.0.5
 gpxpy==1.1.1
@@ -9,8 +10,10 @@ MarkupSafe==0.23
 numpy==1.11.0
 pandas==0.18.0
 PasteDeploy==1.5.2
+psycopg2==2.6.1
 python-dateutil==2.5.2
 pytz==2016.3
 requests==2.9.1
 six==1.10.0
+SQLAlchemy==1.0.12
 Werkzeug==0.11.8
