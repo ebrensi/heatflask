@@ -5,11 +5,12 @@ from sqlalchemy import create_engine
 import folium
 from folium import plugins
 import pandas as pd
+import os
 
 # Configuration
 # This will work on any system that has a postgresql server with
 #  user, password, database all called heatmap.
-SQLALCHEMY_DATABASE_URI = "postgresql://heatmapp:heatmapp@localhost/heatmapp"
+SQLALCHEMY_DATABASE_URI = os.environ["DATABASE_URL"]
 DEBUG = True
 
 
