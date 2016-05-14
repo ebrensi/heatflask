@@ -61,10 +61,15 @@ def heatmap():
 def get_points_df(start=None, end=None):
     # TODO: make sure datetimes are valid and start <= finish
 
-    # TODO: use proper method for parameter passing
-    query = ("SELECT timestamp, latitude, longitude FROM points"
-             " WHERE timestamp >= '{}' and timestamp <= '{}';"
-             .format(start, end))
+    query = """
+            SELECT timestamp, latitude, longitude FROM(
+                SELECT unnest(timestamps) AS timestamp,
+                       unnest(latitudes) AS latitude,
+                       unnest(longitudes) AS longitude FROM activities
+                            where begintimestamp >= '%s'
+                            and begintimestamp <= '%s') as f;
+
+            """ % (start, end)
 
     df = pd.read_sql(query,
                      con=get_db(),
