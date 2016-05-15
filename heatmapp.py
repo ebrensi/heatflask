@@ -56,7 +56,8 @@ def heatmap():
     end = request.args.get('end')
 
     df = get_points_df(start, end)
-    return googlemap(df)
+    # return googlemap(df)
+    return folium_map(df)
 
 
 def get_points_df(start=None, end=None):

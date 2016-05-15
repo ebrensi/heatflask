@@ -17,8 +17,10 @@ import gpxpy
 import psycopg2
 import urlparse
 import os
+
+# Local database url
 # DATABASE_URL = "postgresql://heatmapp:heatmapp@localhost/heatmapp"
-#
+
 urlparse.uses_netloc.append("postgres")
 url = urlparse.urlparse(os.environ["DATABASE_URL"])
 DB_CONNECTION = {"database": url.path[1:],
@@ -30,9 +32,9 @@ DB_CONNECTION = {"database": url.path[1:],
 
 CURRENT_DATE = datetime.now().strftime('%Y-%m-%d')
 
-logging.basicConfig(  # filename="import_{}.log".format(CURRENT_DATE),
-    format='%(levelname)s:%(message)s',
-    level=logging.INFO)
+logging.basicConfig(filename="import_{}.log".format(CURRENT_DATE),
+                    format='%(levelname)s:%(message)s',
+                    level=logging.INFO)
 
 py2 = sys.version_info[0] < 3  # is this python 2?
 
@@ -102,7 +104,7 @@ url_gc_original_activity = 'http://connect.garmin.com/proxy/download-service/fil
 
 
 def logged_in_session(username, password):
-    # Create a session that will persist thorughout this script
+    # Create a session that will persist throughout this script
     sesh = requests.Session()
 
     sesh.headers['User-Agent'] = ("Mozilla/5.0 (X11; Linux x86_64) "
@@ -261,7 +263,7 @@ with psycopg2.connect(**DB_CONNECTION) as db:
                         activity = gpxpy.parse(data)
 
                     except:
-                        pass
+                        logging.info('porblem parsing GPS data.')
 
                     else:
                         points = [(point.time,
@@ -288,4 +290,5 @@ with psycopg2.connect(**DB_CONNECTION) as db:
                             logging.info('No GPS data.')
 
         logging.info("Chunk done!")
+        db.commit()
 logging.info('Done!')
