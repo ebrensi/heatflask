@@ -32,7 +32,7 @@ DB_CONNECTION = {"database": url.path[1:],
 
 CURRENT_DATE = datetime.now().strftime('%Y-%m-%d')
 
-logging.basicConfig(filename="import_{}.log".format(CURRENT_DATE),
+logging.basicConfig(#filename="import_{}.log".format(CURRENT_DATE),
                     format='%(levelname)s:%(message)s',
                     level=logging.INFO)
 
