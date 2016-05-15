@@ -1,6 +1,6 @@
 # Running data
 This is a Flask app that generates and displays a heatmap from my running data. This happens in two stages.
-  1. [gcexport-db.py]() downloads activity data, complete with GIS tracks, and populates the PostgresQL database located at the url specified by the `DATABASE_URL` environment variable. An initial import of activites is done via
+  1. [gcexport-db.py]() downloads activity data, complete with GIS tracks, and populates the PostgreSQL database located at the url specified by the `DATABASE_URL` environment variable. An initial import of activites is done via
   ```
   python gcexport-db.py --clean --username USERNAME --password PASSWORD
   ```
