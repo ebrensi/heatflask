@@ -112,6 +112,3 @@ $RECYCLE.BIN/
 
 # My Additions
 *.old
-
-# sqlite database
-#*.sqlite
