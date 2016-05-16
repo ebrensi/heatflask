@@ -8,8 +8,6 @@ import pandas as pd
 import os
 
 # Configuration
-# This will work on any system that has a postgresql server with
-#  user, password, database all called heatmap.
 SQLALCHEMY_DATABASE_URI = os.environ["DATABASE_URL"]
 DEBUG = True
 

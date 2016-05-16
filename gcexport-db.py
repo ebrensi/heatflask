@@ -12,29 +12,25 @@ import requests
 import logging
 import json
 import argparse
-
 import gpxpy
-import psycopg2
-import urlparse
+from sqlalchemy import create_engine
 import os
 
 # Local database url
 # DATABASE_URL = "postgresql://heatmapp:heatmapp@localhost/heatmapp"
 
-urlparse.uses_netloc.append("postgres")
-url = urlparse.urlparse(os.environ["DATABASE_URL"])
-DB_CONNECTION = {"database": url.path[1:],
-                 "user": url.username,
-                 "password": url.password,
-                 "host": url.hostname,
-                 "port": url.port}
+SQLALCHEMY_DATABASE_URI = os.environ["DATABASE_URL"]
 
 
 CURRENT_DATE = datetime.now().strftime('%Y-%m-%d')
 
-logging.basicConfig(#filename="import_{}.log".format(CURRENT_DATE),
-                    format='%(levelname)s:%(message)s',
-                    level=logging.INFO)
+logging.basicConfig(  # filename="import_{}.log".format(CURRENT_DATE),
+    format='%(levelname)s:%(message)s',
+    level=logging.INFO)
+
+# Turn on logging for SQLAlchemy too
+# logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+
 
 py2 = sys.version_info[0] < 3  # is this python 2?
 
@@ -82,7 +78,7 @@ url_gc_login = ("https://sso.garmin.com/sso/login?"
                 "&gauthHost=https://sso.garmin.com/sso"
                 "&locale=en_US"
                 "&id=gauth-widget"
-                "&cssUrl=https://static.garmincdn.com/com.garmin.connect/ui/css/gauth-custom-v1.1-min.css"
+                "&cssUrl=https://staticonn.garmincdn.com/com.garmin.connect/ui/css/gauth-custom-v1.1-min.css"
                 "&clientId=GarminConnect"
                 "&rememberMeShown=true"
                 "&rememberMeChecked=false"
@@ -147,29 +143,28 @@ sesh = logged_in_session(username, password)
 
 
 # We should be logged in now.
-with psycopg2.connect(**DB_CONNECTION) as db:
-    c = db.cursor()
+db = create_engine(SQLALCHEMY_DATABASE_URI)
+with db.connect() as conn:
 
     if args.clean:
         logging.info("Clean import")
-        c.execute("DROP TABLE activities;")
-        db.commit()
+        conn.execute("DROP TABLE IF EXISTS activities;")
+        args.count = "all"
 
-    c.execute("CREATE TABLE IF NOT EXISTS activities("
-              "id               INTEGER       PRIMARY KEY,"
-              "beginTimestamp   TIMESTAMP,"
-              "summary          JSON,"
-              "timestamps       TIMESTAMP ARRAY,"
-              "latitudes        DOUBLE PRECISION ARRAY,"
-              "longitudes       DOUBLE PRECISION ARRAY"
-              ");")
-    db.commit()
+    conn.execute("CREATE TABLE IF NOT EXISTS activities("
+                 "id               INTEGER       PRIMARY KEY,"
+                 "beginTimestamp   TIMESTAMP,"
+                 "summary          JSON,"
+                 "timestamps       TIMESTAMP ARRAY,"
+                 "latitudes        DOUBLE PRECISION ARRAY,"
+                 "longitudes       DOUBLE PRECISION ARRAY"
+                 ");")
 
     # Now we populate a set with the ids of activities that already exist
     #  in our database.
-    c.execute("SELECT id FROM activities;")
+    result = conn.execute("SELECT id FROM activities;")
 
-    already_got = set(tupp[0] for tupp in c.fetchall())
+    already_got = set(tupp[0] for tupp in result.fetchall())
 
     download_all = False
 
@@ -280,15 +275,14 @@ with psycopg2.connect(**DB_CONNECTION) as db:
                             values = (id, beginTimestamp, json.dumps(A),
                                       tstamps, lats, lngs)
 
-                            c.execute("INSERT INTO activities "
-                                      "(id, beginTimestamp, summary, "
-                                      "timestamps, latitudes, longitudes) "
-                                      "VALUES (%s,%s,%s,%s,%s,%s);", values)
+                            conn.execute("INSERT INTO activities "
+                                         "(id, beginTimestamp, summary, "
+                                         "timestamps, latitudes, longitudes) "
+                                         "VALUES (%s,%s,%s,%s,%s,%s);", values)
 
                             logging.info('Done. time series data saved.')
                         else:
                             logging.info('No GPS data.')
 
         logging.info("Chunk done!")
-        db.commit()
 logging.info('Done!')
