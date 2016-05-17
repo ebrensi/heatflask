@@ -37,7 +37,17 @@
     </style>
   </head>
 
+
+
   <body>
+  <img id="loadingimg" src="http://www.animatedimages.org/data/media/169/animated-running-image-0037.gif"/></div>
+  <script>
+  window.onload = function(){
+     document.getElementById('loadingimg').style.display = "none";
+  }
+  </script>
+
+
     <div id="floating-panel">
       <button onclick="toggleHeatmap()">Toggle Heatmap</button>
       <button onclick="changeGradient()">Change gradient</button>
@@ -45,6 +55,8 @@
       <button onclick="changeOpacity()">Change opacity</button>
     </div>
     <div id="map"></div>
+
+
     <script>
 
       // This example requires the Visualization library. Include the libraries=visualization

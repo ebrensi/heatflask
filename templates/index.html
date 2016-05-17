@@ -11,6 +11,43 @@
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
 <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js"></script>
 
+
+<!-- Scripts for controlling form button and selector actions -->
+<script> type="text/javascript"
+  var F = "YYYY-MM-DD"
+
+// Associate datepick css class with the datepicker function.
+  $(document).ready(function() {
+    $(".datepick").datepicker();
+  });
+
+  function setIFrameSource(){
+        var iframe = document.getElementById("myiframe");
+        var d1 = document.getElementById("date1").value;
+        var d2 = document.getElementById("date2").value;
+        var mapurl = "/map?start="+d1+"&end="+d2
+        iframe.src = mapurl;
+  }
+
+  $(function(){
+      // Associate changes in the preset-dropdown menu with changing dates
+      //  in the date1 and date2 fields
+      $("#presets-dropdown").change(function () {
+                var choice = $(this).val();
+                var date1;
+                if (choice==0){
+                  date1=moment("20090215", "YYYYMMDD");
+                } else {
+                  date1=moment().subtract(choice, 'days');
+                };
+                document.getElementById('date1').value=date1.format(F);
+                document.getElementById('date2').value=moment().add(1, 'days').format(F);
+      });
+
+    });
+  </script>
+
+
 </head>
 
 <!-- <a href="http://www.animatedimages.org/cat-running-169.htm"><img src="http://www.animatedimages.org/data/media/169/animated-running-image-0037.gif" border="0" alt="animated-running-image-0037"/></a>
@@ -64,49 +101,20 @@
 
 
 <script type="text/javascript">
-    function setIFrameSource(){
-        var iframe = document.getElementById("myiframe");
-        var d1 = document.getElementById("date1").value;
-        var d2 = document.getElementById("date2").value;
-        var mapurl = "/map?start="+d1+"&end="+d2
-        iframe.src = mapurl;
-    }
+    var F = "YYYY-MM-DD"
+
+    // preload the date fields
+    document.getElementById('date1').value=moment().subtract(2, 'days').format(F);
+    document.getElementById('date2').value=moment().add(1, 'days').format(F);
 </script>
 
-  <script>
-  var F = "YYYY-MM-DD"
-  // preload the date fields
-  document.getElementById('date1').value=moment().subtract(2, 'days').format(F);
-  document.getElementById('date2').value=moment().add(1, 'days').format(F);
 
-
-  // Associate datepick css class with the datepicker function.
-  $(document).ready(function() {
-    $(".datepick").datepicker();
-  });
-
-
-  $(function(){
-      // Associate changes in the preset-dropdown menu with changing dates
-      //  in the date1 and date2 fields
-      $("#presets-dropdown").change(function () {
-                var choice = $(this).val();
-                var date1;
-                if (choice==0){
-                  date1=moment("20090215", "YYYYMMDD");
-                } else {
-                  date1=moment().subtract(choice, 'days');
-                };
-                document.getElementById('date1').value=date1.format(F);
-                document.getElementById('date2').value=moment().add(1, 'days').format(F);
-      });
-
-    });
-  </script>
-   <br>
+  <br>
 </div>
-  <iframe id="myiframe" src="/defaultmap" style="position: absolute; height: 80%; width: 100%; border: 10 margin-left: auto;
-margin-right: auto; left: 0; right: 0; display:block;"/>
+
+  <iframe id="myiframe"
+          src="/defaultmap"
+          style="position: absolute; height: 80%; width: 100%; border: 10 margin-left: auto; margin-right: auto; left: 0; right: 0; display:block;"/>
 
 
 
