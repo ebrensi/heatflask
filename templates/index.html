@@ -77,7 +77,7 @@
   var F = "YYYY-MM-DD"
   // preload the date fields
   document.getElementById('date1').value=moment().subtract(2, 'days').format(F);
-  document.getElementById('date2').value=moment().format(F);
+  document.getElementById('date2').value=moment().add(1, 'days').format(F);
 
 
   // Associate datepick css class with the datepicker function.
@@ -98,7 +98,7 @@
                   date1=moment().subtract(choice, 'days');
                 };
                 document.getElementById('date1').value=date1.format(F);
-                document.getElementById('date2').value=moment().format(F);
+                document.getElementById('date2').value=moment().add(1, 'days').format(F);
       });
 
     });
