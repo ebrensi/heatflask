@@ -48,12 +48,69 @@
   </script>
 
 
+
+<div class="container">
+    <h1>Fitness Activity Heat Map</h1>
+    <h2>See where Efrem's been runnin'!</h2>
+</div>
+
+  <div class="container">
+  <h3>Enter dates over which to render:</h3>
+  <h4>
+  <form id="myform" action="." method="POST">
+      <span style="display:inline-block">
+        <label for="date1" style="display:block">Start Date:</label>
+        <input class="datepick" id="date1" type="text" name="start"/>
+      </span>
+
+
+      <span style="display:inline-block">
+        <label for="date2" style="display:block">End Date:</label>
+        <input class="datepick" id="date2" type="text" name="end"/>
+      </span>
+
+
+      <span style="display:inline-block">
+      <label for="presets-dropdown" style="display:block">Presets:</label>
+      <select id ="presets-dropdown" name="presets">
+        <option value=2>Last 2 days</option>
+        <option value=7>Last 7 days</option>
+        <option value=30>Last 30 days</option>
+        <option value=60>Last 60 days</option>
+        <option value=180>Last 180 days</option>
+        <option value=365>Last year</option>
+        <option value=0>All</option>
+      </select>
+      </span>
+
+      <br><br>
+
+      <input style="background-color:red;color:white" type="button" value="Render Map!" onclick="setIFrameSource(); return false;"/>
+  </form>
+  </h4>
+
+
+<script type="text/javascript">
+    var F = "YYYY-MM-DD"
+
+    // preload the date fields
+    document.getElementById('date1').value=moment().subtract(2, 'days').format(F);
+    document.getElementById('date2').value=moment().add(1, 'days').format(F);
+</script>
+
+
+  <br>
+</div>
+
     <div id="floating-panel">
       <button onclick="toggleHeatmap()">Toggle Heatmap</button>
       <button onclick="changeGradient()">Change gradient</button>
       <button onclick="changeRadius()">Change radius</button>
       <button onclick="changeOpacity()">Change opacity</button>
     </div>
+
+
+    <!-- This is where the map goes -->
     <div id="map"></div>
 
 
@@ -67,8 +124,8 @@
 
       function initMap() {
         map = new google.maps.Map(document.getElementById('map'), {
-          zoom: {{ zoom }},
-          center: {lat: {{ center.lat }}, lng: {{ center.lng }}},
+          zoom: 10,
+          center: {lat: 37, lng: -122},
           mapTypeId: google.maps.MapTypeId.ROADMAP
         });
 
@@ -76,17 +133,6 @@
           data: getPoints(),
           map: map
         });
-
-        // // Create a new LatLngBounds object
-        // var bounds  = new google.maps.LatLngBounds();
-        // // Add your points to the LatLngBounds object.
-        // for(point in getPoints()) {
-        //     bounds.extend(point);
-        // }
-        // // alert(bounds);
-        // alert(bounds);
-        // map.fitBounds(bounds);       // auto-zoom
-        // // map.panToBounds(bounds);     // auto-center
       }
 
       function toggleHeatmap() {
@@ -123,12 +169,12 @@
 
       function getPoints() {
         return [
-          {{ data }}
+          new google.maps.LatLng(37.782, -122.447)
         ];
       }
     </script>
     <script async defer
-        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAq7s1I5PZbMjxlq4l_JmN4ew1umqZjjaw&libraries=visualization&callback=initMap">
+        src="https://maps.googleapis.com/maps/api/js?libraries=visualization&callback=initMap">
     </script>
   </body>
   </html>
