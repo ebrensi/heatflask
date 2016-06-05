@@ -1,13 +1,13 @@
 #! usr/bin/env python
 
 from flask import Flask, render_template, request, g
-# from flask_compress import Compress
-
 from sqlalchemy import create_engine
 import folium
 from folium import plugins
 import pandas as pd
 import os
+from flask_compress import Compress
+
 
 # Configuration
 SQLALCHEMY_DATABASE_URI = os.environ["DATABASE_URL"]
@@ -16,7 +16,7 @@ DEBUG = True
 
 app = Flask(__name__)
 app.config.from_object(__name__)
-# Compress(app)
+Compress(app)
 
 
 def get_db():
