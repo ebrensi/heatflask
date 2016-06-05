@@ -3,13 +3,32 @@
 <head>
 <title>Activities heatmap with selectable date range</title>
 <!-- Include Required Prerequisites -->
-<script type="text/javascript" src="http://momentjs.com/downloads/moment.min.js"></script>
+
+<!-- *** JQuery stuff *** -->
+<!-- JQuery -->
+<script src="https://code.jquery.com/jquery-2.2.4.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+
+<!-- JQuery UI -->
+<script src="https://code.jquery.com/ui/1.11.4/jquery-ui.min.js" integrity="sha256-xNjb53/rY+WmG+4L6tTl9m6PpqknWZvRt0rO1SRnJzw=" crossorigin="anonymous"></script>
+
+<!-- JQuery UI Theme  -->
+<link rel="stylesheet" href="https://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
+
+
+<!-- Bootstrap stuff -->
 <!-- Latest compiled and minified CSS -->
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
 
-<link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/themes/smoothness/jquery-ui.css">
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
-<script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js"></script>
+<!-- Optional theme -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css" integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous">
+
+<!-- Latest compiled and minified JavaScript -->
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
+
+
+<!-- Moment.js for current date-->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.13.0/moment.min.js"></script>
+
 
 
 <!-- Scripts for controlling form button and selector actions -->
@@ -60,8 +79,8 @@
 
 
 <div class="container">
-    <h1>Fitness Activity Heat Map</h1>
-    <h2>See where Efrem's been runnin'!</h2>
+      <h1>Fitness Activity Heat Map</h1>
+      <h2>See where Efrem's been runnin'!</h2>
 </div>
 
   <div class="container">
@@ -95,7 +114,7 @@
 
       <br><br>
 
-      <input style="background-color:red;color:white" type="button" value="Render Map!" onclick="setIFrameSource(); return false;"/>
+      <input  type="button" class="btn btn-lg btn-danger" value="Render Map!" onclick="setIFrameSource(); return false;"/>
   </form>
   </h4>
 
