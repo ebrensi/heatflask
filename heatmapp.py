@@ -1,6 +1,8 @@
 #! usr/bin/env python
 
 from flask import Flask, render_template, request, g
+from flask_compress import Compress
+
 from sqlalchemy import create_engine
 import folium
 from folium import plugins
@@ -14,6 +16,7 @@ DEBUG = True
 
 app = Flask(__name__)
 app.config.from_object(__name__)
+Compress(app)
 
 
 def get_db():
