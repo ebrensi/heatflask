@@ -58,7 +58,8 @@ def heatmap():
 
     df = get_points_df(start, end)
     # return googlemap(df)
-    return folium_map(df)
+    # return folium_map(df)
+    return leaflet_heatmap(df)
 
 
 def get_points_df(start=None, end=None):
@@ -69,8 +70,8 @@ def get_points_df(start=None, end=None):
                 SELECT unnest(timestamps) AS timestamp,
                        unnest(latitudes) AS latitude,
                        unnest(longitudes) AS longitude FROM activities
-                            where begintimestamp >= '%s'
-                            and begintimestamp <= '%s') as f;
+                            WHERE begintimestamp >= '%s'
+                            AND begintimestamp <= '%s') AS f;
 
             """ % (start, end)
 
@@ -79,6 +80,18 @@ def get_points_df(start=None, end=None):
                      parse_dates=["timestamp"],
                      index_col="timestamp")
     return df
+
+
+def leaflet_heatmap(df):
+    meanlat, meanlong = df.mean()
+    t = render_template("leaflet_heatmap.html",
+                        data=df.values,
+                        zoom=15,
+                        center={"lat": meanlat, "lng": meanlong})
+    with open("test.html", "w") as f:
+        f.write(t)
+
+    return t
 
 
 def googlemap(df):
