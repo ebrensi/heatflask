@@ -51,7 +51,7 @@ def index():
     # with open("test.html", "w") as f:
     #     f.write(t)
 
-    return render_template('sidebarv2.html',
+    return render_template('index.html',
                            data=df.values,
                            zoom=13,
                            center={"lat": meanlat, "lng": meanlong})

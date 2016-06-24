@@ -112,3 +112,6 @@ $RECYCLE.BIN/
 
 # My Additions
 *.old
+
+.hidden
+.fuse*
