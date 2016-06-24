@@ -2,8 +2,6 @@
 
 from flask import Flask, render_template, request, g
 from sqlalchemy import create_engine
-import folium
-from folium import plugins
 import pandas as pd
 import os
 from flask_compress import Compress
@@ -43,23 +41,20 @@ def close_connection(exception):
 
 @app.route('/')
 def index():
-    return render_template('index.html')
-
-
-@app.route('/defaultmap')
-def blank_map():
-    return render_template("defaultmap.html")
-
-
-@app.route('/map')
-def heatmap():
-    start = request.args.get('start')
-    end = request.args.get('end')
+    start = request.args.get("start", "2016-06-01")
+    end = request.args.get("end", "2016-06-24")
 
     df = get_points_df(start, end)
-    # return googlemap(df)
-    # return folium_map(df)
-    return leaflet_heatmap(df)
+
+    meanlat, meanlong = df.mean()
+
+    # with open("test.html", "w") as f:
+    #     f.write(t)
+
+    return render_template('sidebarv2.html',
+                           data=df.values,
+                           zoom=13,
+                           center={"lat": meanlat, "lng": meanlong})
 
 
 def get_points_df(start=None, end=None):
@@ -82,50 +77,6 @@ def get_points_df(start=None, end=None):
     return df
 
 
-def leaflet_heatmap(df):
-    meanlat, meanlong = df.mean()
-    t = render_template("leaflet_heatmap.html",
-                        data=df.values,
-                        zoom=15,
-                        center={"lat": meanlat, "lng": meanlong})
-    with open("test.html", "w") as f:
-        f.write(t)
-
-    return t
-
-
-def googlemap(df):
-    def format_row(row):
-        return ("new google.maps.LatLng({}, {})"
-                .format(row["latitude"], row["longitude"]))
-
-    data = ",\n".join(df.apply(format_row, axis=1))
-    meanlat, meanlong = df.mean()
-    return render_template("googlemap_template.html",
-                           data=data,
-                           zoom=15,
-                           center={"lat": meanlat, "lng": meanlong})
-
-
-def folium_map(df):
-    meanlat, meanlong = df.mean()
-
-    heatmap = folium.Map(location=[meanlat, meanlong],
-                         control_scale=True,
-                         zoom_start=12)
-
-    point_tuples = zip(df.latitude, df.longitude)
-
-    points = [[la, lo] for la, lo in point_tuples]
-
-    cluster = plugins.HeatMap(data=points,
-                              name="heatmap",
-                              radius=5)
-
-    heatmap.add_children(cluster)
-
-    return heatmap.get_root().render()
-
-
+# This works but you really should use `flask run`
 if __name__ == '__main__':
     app.run()
