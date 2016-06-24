@@ -1,7 +1,7 @@
 # Activity Tracker Heatmap Demo
 
+#### A Flask app that generates and displays a heatmap from Garmin Connect activity data.
 #### http://heatflask.herokuapp.com
-A Flask app that generates and displays a heatmap from Garmin Connect activity data.
 
 This happens in two stages.
   1. [gcexport-db.py]() downloads activity data, complete with GIS tracks, and populates the PostgreSQL database located at the url specified by the `DATABASE_URL` environment variable. An initial import of activites is done via
@@ -48,7 +48,15 @@ Now you should have a fork of this repo on GitHub and a clone of that on your ow
   ```
   pip install requirements.txt
   ```
-Now start it up with `python heatmapp.py`, and it should work at http://127.0.0.1:5000 (http://localhost:5000) in your web browser.
+
+  3. Before running the app you'll need to populate the database with activity track data.
+  ```
+  python gcexport-db.py --clean
+  ```
+
+Now start up the app with
+    ```python heatmapp.py```
+it should work at http://127.0.0.1:5000 ( http://localhost:5000 ) in your web browser.
 
 
 
@@ -70,11 +78,18 @@ Before you make your first deploy however, you need to set up the database with 
   0. Go over to the resources tab in your app's settings (`https://dashboard.heroku.com/apps/my_app/resources`).
   1. Add the **Heroku Postgres** add-on.  The free version is fine as along as you have fewer than 10000 activities.  The Hobby-Dev (free) version of Heroku Postgres is limited to 10000 rows (and 20 simultaneous connections), and our app uses one row for each activity.  The GIS points are stored as arrays.
 
-If this is your first instance of Heroku Postgres, its URI will be in your app's `DATABASE_URL` environment variable.  Otherwise, you'll need to change the line
-```
-SQLALCHEMY_DATABASE_URI = os.environ["DATABASE_URL"]
-```
-in [heatmapp.py](heatmapp.py).
+  If this is your first instance of Heroku Postgres, its URI will be in your app's `DATABASE_URL` environment variable.  Otherwise, you'll need to change the line
+    ```
+    SQLALCHEMY_DATABASE_URI = os.environ["DATABASE_URL"]
+    ```
+  in [heatmapp.py](heatmapp.py).
+
+  2. Now populate the database with activity data. You'll need to run `gcexport-db.py --clean` in your Heroku environment.  If you have the Heroku command-line interface (CLI) installed you can do this with
+    ```
+    heroku run gcexport-db.py --clean
+    ```
+  in a local terminal.
+
 
 #### Deploy your app!
 Now head back over to the **Deploy** tab in your app's settings and deploy it.  It should be up and running at `https://my_app.herokuapp.com`.
@@ -84,3 +99,5 @@ If it went smoothly, **Congratulations!**
 Note:
 One thing that's different between deploying on the web versus locally is that when you run Flask locally for development, you use `flask run` or `python run` to use Flask's built in web-server.  When you deploy for real on the web, Flask's development server doesn't cut it, so we use gunicorn.  This happens behind the scenes, as Heroku automaticall installs everything in `requirements.txt` and `Procfile` specifies to use gunicorn.
 
+
+Note: Heroku has a free scheduler add-on in the add-ons section of your app's settings, that you can use to regularly run `gcexport-db.py` to automatically download the latest activities.
