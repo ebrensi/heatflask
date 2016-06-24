@@ -12,6 +12,10 @@
     <!-- JQuery UI -->
     <script src="https://code.jquery.com/ui/1.11.4/jquery-ui.min.js" integrity="sha256-xNjb53/rY+WmG+4L6tTl9m6PpqknWZvRt0rO1SRnJzw=" crossorigin="anonymous"></script>
 
+    <!-- JQuery UI Theme  -->
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
+
+
     <!-- Moment.js for current date-->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.13.0/moment.min.js"></script>
 
@@ -66,10 +70,13 @@
 
                 <h3>Enter dates over which to render:</h3>
 
-                  <form id="myform" action="." method="POST">
-                    <input  type="button" class="btn btn-lg btn-danger" value="Render Map!" style="display:inline-block" onclick="setIFrameSource(); return false;"/>
 
-                     <span style="display:inline-block">
+                  <form id="myform" action="/" method="GET">
+                    <button type="submit" style="display:block">Render Map!</button>
+
+
+
+                     <span style="display:block">
                       <label for="presets-dropdown" style="display:block">Presets:</label>
                       <select id ="presets-dropdown" name="presets">
                         <option value=2>Last 2 days</option>
@@ -84,13 +91,13 @@
 
                       <br>
 
-                      <span style="display:inline-block">
+                      <span style="display:block">
                         <label for="date1" style="display:block">Start Date:</label>
                         <input class="datepick" id="date1" type="text" name="start"/>
                       </span>
 
 
-                      <span style="display:inline-block">
+                      <span style="display:block">
                         <label for="date2" style="display:block">End Date:</label>
                         <input class="datepick" id="date2" type="text" name="end"/>
                       </span>
@@ -158,12 +165,11 @@
         $(".datepick").datepicker();
       });
 
-      function setIFrameSource(){
+      function setMapSource(){
             var iframe = document.getElementById("myiframe");
             var d1 = document.getElementById("date1").value;
             var d2 = document.getElementById("date2").value;
             var mapurl = "/map?start="+d1+"&end="+d2
-            iframe.src = mapurl;
       }
 
       $(function(){
