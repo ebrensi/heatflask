@@ -2,10 +2,9 @@
 
 from flask import Flask, render_template, request, g
 from sqlalchemy import create_engine
-import pandas as pd
 import os
 from flask_compress import Compress
-
+import json
 
 # Configuration
 SQLALCHEMY_DATABASE_URI = os.environ["DATABASE_URL"]
@@ -44,32 +43,36 @@ def index():
     start = request.args.get("start", "2016-06-01")
     end = request.args.get("end", "2016-06-24")
 
-    df = get_points_df(start, end)
+    points = get_points(start, end)
 
-    # with open("test.html", "w") as f:
-    #     f.write(t)
+    html = render_template('index.html', data=points)
 
-    return render_template('index.html', data=df.values)
+    with open("test.html", "w") as f:
+        f.write(html)
+
+    return html
 
 
-def get_points_df(start=None, end=None):
+def get_points(start=None, end=None):
     # TODO: make sure datetimes are valid and start <= finish
 
     query = """
-            SELECT timestamp, latitude, longitude FROM(
-                SELECT unnest(timestamps) AS timestamp,
-                       unnest(latitudes) AS latitude,
-                       unnest(longitudes) AS longitude FROM activities
-                            WHERE begintimestamp >= '%s'
-                            AND begintimestamp <= '%s') AS f;
-
+            SELECT  lat, lng
+            FROM (
+                SELECT timestamp, lat, lng
+                FROM(
+                    SELECT unnest(timestamps) AS timestamp,
+                           unnest(latitudes) AS lat,
+                           unnest(longitudes) AS lng FROM activities
+                                WHERE begintimestamp >= '%s'
+                                AND begintimestamp <= '%s'
+                    ) AS sub
+                ) AS sub2;
             """ % (start, end)
 
-    df = pd.read_sql(query,
-                     con=get_db(),
-                     parse_dates=["timestamp"],
-                     index_col="timestamp")
-    return df
+    result = query_db(query)
+    print(result)
+    return result
 
 
 # This works but you really should use `flask run`
