@@ -105,7 +105,6 @@ Note: Heroku has a free scheduler add-on in the add-ons section of your app's se
 
 #### Credits
 The responsive front-end UI is adapted from Tobias Bieniek's fantastic [sidebar-v2](https://github.com/Turbo87/sidebar-v2).
-
 The Garmin Connect activity importer is adapted from [garmin-connect-export](https://github.com/kjkjava/garmin-connect-export), by Kyle Krafka.
 
 #### License
