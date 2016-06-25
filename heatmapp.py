@@ -46,15 +46,10 @@ def index():
 
     df = get_points_df(start, end)
 
-    meanlat, meanlong = df.mean()
-
     # with open("test.html", "w") as f:
     #     f.write(t)
 
-    return render_template('index.html',
-                           data=df.values,
-                           zoom=13,
-                           center={"lat": meanlat, "lng": meanlong})
+    return render_template('index.html', data=df.values)
 
 
 def get_points_df(start=None, end=None):

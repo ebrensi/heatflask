@@ -78,7 +78,7 @@
 
                      <span style="display:block">
                       <label for="presets-dropdown" style="display:block">Presets:</label>
-                      <select id ="presets-dropdown" name="presets">
+                      <select id ="presets-dropdown" >
                         <option value=2>Last 2 days</option>
                         <option value=7>Last 7 days</option>
                         <option value=30>Last 30 days</option>
@@ -137,7 +137,13 @@
 
     <script>
         //  Define heatmap
-        var map = L.map('map').setView([{{ center.lat }}, {{ center.lng }}], {{ zoom }});
+        var points = [
+            {% for point in data %}
+            [{{ point[0] }}, {{ point[1] }}],
+            {% endfor %}
+        ];
+
+        var map = L.map('map')
 
         var tiles = L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
@@ -145,14 +151,9 @@
 
         var sidebar = L.control.sidebar('sidebar').addTo(map);
 
-        var points = [
-            {% for point in data %}
-            [{{ point[0] }}, {{ point[1] }}],
-            {% endfor %}
-        ];
+        var heat = L.heatLayer(points, {radius: 9}).addTo(map);
 
-
-        var heat = L.heatLayer(points, {radius: 10}).addTo(map);
+        map.fitBounds(points);
 
     </script>
 
