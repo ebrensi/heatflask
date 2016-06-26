@@ -21,13 +21,6 @@
 
     <link href="http://maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet">
 
-    <!-- Bootstrap stuff -->
-    <!-- Latest compiled and minified CSS -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
-
-    <!-- Optional theme -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css" integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous">
-
     <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7.2/leaflet.css" />
     <!--[if lte IE 8]><link rel="stylesheet" href="//cdn.leafletjs.com/leaflet-0.7.2/leaflet.ie.css" /><![endif]-->
 
@@ -100,13 +93,13 @@
 
                       <span style="display:block">
                         <label for="date1" style="display:block">Start Date:</label>
-                        <input class="datepick" id="date1" type="text" name="start"/>
+                        <input class="datepick" id="date1" type="text" name="start" value="{{ start }}" />
                       </span>
 
 
                       <span style="display:block">
                         <label for="date2" style="display:block">End Date:</label>
-                        <input class="datepick" id="date2" type="text" name="end"/>
+                        <input class="datepick" id="date2" type="text" name="end" value="{{ end }}"/>
                       </span>
 
                   </form>
