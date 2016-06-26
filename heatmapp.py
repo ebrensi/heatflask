@@ -4,12 +4,12 @@ from flask import Flask, render_template, request, g
 from sqlalchemy import create_engine
 import os
 from flask_compress import Compress
-import json
+from datetime import date, timedelta
+
 
 # Configuration
 SQLALCHEMY_DATABASE_URI = os.environ["DATABASE_URL"]
 DEBUG = True
-
 
 app = Flask(__name__)
 app.config.from_object(__name__)
@@ -40,12 +40,18 @@ def close_connection(exception):
 
 @app.route('/')
 def index():
-    start = request.args.get("start", "2016-06-01")
-    end = request.args.get("end", "2016-06-24")
+    tomorrow = (date.today() + timedelta(1)).strftime('%Y-%m-%d')
+    today = date.today().strftime('%Y-%m-%d')
+
+    start = request.args.get("start", today)
+    end = request.args.get("end", tomorrow)
 
     points = get_points(start, end)
 
-    html = render_template('index.html', data=points)
+    html = render_template('index.html',
+                           start=start,
+                           end=end,
+                           data=points)
 
     with open("test.html", "w") as f:
         f.write(html)
