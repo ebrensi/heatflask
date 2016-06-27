@@ -161,7 +161,10 @@
 
         // var points = {{ data }};
 
-        var map = L.map('map')
+        var map = L.map('map',
+                        {center:[45.5236,-122.675],
+                         zoom: 3}
+                );
 
         var tiles = L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
@@ -169,9 +172,10 @@
 
         var sidebar = L.control.sidebar('sidebar').addTo(map);
 
-        var heat = L.heatLayer(points, {radius: 9}).addTo(map);
-
-        map.fitBounds(points);
+        if (points.length != 0) {
+            var heat = L.heatLayer(points, {radius: 9}).addTo(map);
+            map.fitBounds(points);
+        }
 
     </script>
 
