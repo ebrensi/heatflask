@@ -4,7 +4,7 @@
 #### http://heatflask.herokuapp.com
 
 This happens in two stages.
-  1. [gcexport-db.py]() downloads activity data, complete with GIS tracks, and populates the PostgreSQL database located at the url specified by the `DATABASE_URL` environment variable. An initial import of activites is done via
+  1. [gcexport-db.py](gcexport-db.py) downloads activity data, complete with GIS tracks, and populates the PostgreSQL database located at the url specified by the `DATABASE_URL` environment variable. An initial import of activites is done via
   ```
   python gcexport-db.py --clean --username USERNAME --password PASSWORD
   ```
@@ -16,7 +16,7 @@ This happens in two stages.
   ```
   where [num] indicates to only attempt downloading the most recent [num] activities.
 
-  2. [heatmapp.py]() is the main Flask app.  It waits for an HTTP request for the map.  When such a request is received, it grabs the relevant data from the database and renders an html page.
+  2. [heatmapp.py](heatmapp.py) is the main Flask app.  It waits for an HTTP request for the map.  When such a request is received, it grabs the relevant data from the database and renders an html page.
 
 
 ## How to get your own version of this app running on Heroku

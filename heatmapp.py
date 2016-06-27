@@ -53,8 +53,8 @@ def index():
                            end=end,
                            data=points)
 
-    with open("test.html", "w") as f:
-        f.write(html)
+    # with open("test.html", "w") as f:
+    #     f.write(html)
 
     return html
 
@@ -77,7 +77,6 @@ def get_points(start=None, end=None):
             """ % (start, end)
 
     result = query_db(query)
-    print(result)
     return result
 
 
