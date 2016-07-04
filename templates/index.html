@@ -148,7 +148,7 @@
     <script src="http://cdn.leafletjs.com/leaflet-0.7.2/leaflet.js"></script>
     <script src="../static/leaflet-sidebar.js"></script>
     <script src="../static/leaflet-heat.js"></script>
-
+    <script src="../static/leaflet-tilelayer-mask.js"></script>
 
     <script>
 
@@ -159,23 +159,29 @@
             {% endfor %}
         ];
 
-        // var points = {{ data }};
+        var osmMap = L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
+        });
+
+
+        var EsriMap = L.tileLayer('http://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+        });
 
         var map = L.map('map',
                         {center:[45.5236,-122.675],
-                         zoom: 3}
-                );
-
-        // var tiles = L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
-        //     attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
-        // }).addTo(map);
-
-
-        var Esri_WorldImagery = L.tileLayer('http://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-        }).addTo(map);
+                         zoom: 3,
+                         layers : [ EsriMap ]
+                  });
 
         var sidebar = L.control.sidebar('sidebar').addTo(map);
+
+        var baseLayers = {
+            "Open Street Map": osmMap,
+            "Esri World Imagery": EsriMap
+        };
+
+        L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map);
 
         if (points.length != 0) {
             var heat = L.heatLayer(points, {radius: 9}).addTo(map);
