@@ -1,6 +1,6 @@
 #! usr/bin/env python
 
-from flask import Flask, render_template, request, g
+from flask import Flask, render_template, request, g, jsonify
 from sqlalchemy import create_engine
 import os
 from flask_compress import Compress
@@ -40,23 +40,22 @@ def close_connection(exception):
 
 @app.route('/')
 def index():
+    return render_template('index.html')
+
+
+@app.route('/points')
+def points():
     tomorrow = (date.today() + timedelta(1)).strftime('%Y-%m-%d')
     today = date.today().strftime('%Y-%m-%d')
 
     start = request.args.get("start", today)
     end = request.args.get("end", tomorrow)
 
-    points = get_points(start, end)
+    points = [[row[0], row[1]] for row in get_points(start, end)]
+    resp = jsonify(points)
+    resp.status_code = 200
 
-    html = render_template('index.html',
-                           start=start,
-                           end=end,
-                           data=points)
-
-    # with open("test.html", "w") as f:
-    #     f.write(html)
-
-    return html
+    return resp
 
 
 def get_points(start=None, end=None):
@@ -69,16 +68,16 @@ def get_points(start=None, end=None):
                 FROM(
                     SELECT unnest(timestamps) AS timestamp,
                            unnest(latitudes) AS lat,
-                           unnest(longitudes) AS lng FROM activities
-                                WHERE begintimestamp >= '%s'
-                                AND begintimestamp <= '%s'
+                           unnest(longitudes) AS lng
+                    FROM %s
+                    WHERE begintimestamp >= '%s'
+                      AND begintimestamp <= '%s'
                     ) AS sub
                 ) AS sub2;
-            """ % (start, end)
+            """ % ("activities", start, end)
 
     result = query_db(query)
     return result
-
 
 # This works but you really should use `flask run`
 if __name__ == '__main__':
