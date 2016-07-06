@@ -72,14 +72,14 @@
 
 
                   <form id="myform" action="">
-                    <button type="submit" id="renderButton" style="display:block">Render Map!</button>
+                    <button type="button" id="renderButton" style="display:block">Render Map!</button>
 
 
 
                      <span style="display:block">
                       <label for="presets-dropdown" style="display:block">Presets:</label>
                       <select id ="presets-dropdown" >
-                        <option value=2>Last 2 days</option>
+                        <option selected="selected" value=2>Last 2 days</option>
                         <option value=7>Last 7 days</option>
                         <option value=30>Last 30 days</option>
                         <option value=60>Last 60 days</option>
@@ -93,13 +93,13 @@
 
                       <span style="display:block">
                         <label for="date1" style="display:block">Start Date:</label>
-                        <input class="datepick" id="date1" type="text"/>
+                        <input class="datepick" id="date1" type="text"  value=""/>
                       </span>
 
 
                       <span style="display:block">
                         <label for="date2" style="display:block">End Date:</label>
-                        <input class="datepick" id="date2" type="text"/>
+                        <input class="datepick" id="date2" type="text" value=""/>
                       </span>
 
                   </form>
@@ -175,11 +175,11 @@
     <!-- Scripts for controlling form button and selector actions -->
     <script> type="text/javascript"
       var F = "YYYY-MM-DD"
+      var hmap_options = {radius: 9,
+                          blur: 15,
+                          gradient: {0.4: 'blue', 0.65: 'lime', 1: 'red'}
+                        };
 
-    // Associate datepick css class with the datepicker function.
-      $(document).ready(function() {
-        $(".datepick").datepicker();
-      });
 
       function renderHeatLayer(){
         var d1 = document.getElementById("date1").value;
@@ -188,34 +188,41 @@
         var points
 
         $.getJSON(points_url, function(points) {
-        //points is the JSON string
+            //points is the JSON string
+            if (points.length) {
+                var heat = L.heatLayer(points, hmap_options).addTo(map);
+                map.fitBounds(points);
+            };
         });
-
-        if (points.length != 0) {
-            var heat = L.heatLayer(points, {radius: 9}).addTo(map);
-            map.fitBounds(points);
-        };
       };
 
-      $(function(){
-          // Associate changes in the preset-dropdown menu with changing dates
-          //  in the date1 and date2 fields
-          $("#presets-dropdown").change(function () {
-                var choice = $(this).val();
-                var date1;
-                if (choice==0){
-                  date1=moment("20090215", "YYYYMMDD");
-                } else {
-                  date1=moment().subtract(choice, 'days');
-                };
-                document.getElementById('date1').value=date1.format(F);
-                document.getElementById('date2').value=moment().add(1, 'days').format(F);
-          });
+      function()
+
+        function preset_date_fill() {
+            var choice = $("#presets-dropdown").val();
+            var date1;
+            if (choice==0){
+              date1=moment("20090215", "YYYYMMDD");
+            } else {
+              date1=moment().subtract(choice, 'days');
+            };
+            document.getElementById('date1').value=date1.format(F);
+            document.getElementById('date2').value=moment().add(1, 'days').format(F);
+        };
 
 
-            $("#renderButton").bind('click', renderHeatLayer() );
 
+        $(document).ready(function() {
+            $(".datepick").datepicker();
+
+            // document.getElementById('presets-dropdown').selectedIndex=0;
+            $("#myform").on("ready", preset_date_fill);
+
+            $("#presets-dropdown").on("change", preset_date_fill);
+
+            $("#renderButton").on('click', renderHeatLayer );
         });
+
 
       </script>
 
