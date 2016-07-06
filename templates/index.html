@@ -71,15 +71,15 @@
                 <h3>Enter dates over which to render:</h3>
 
 
-                  <form id="myform" action="/" method="GET">
-                    <button type="submit" style="display:block">Render Map!</button>
+                  <form id="myform" action="">
+                    <button type="button" id="renderButton" style="display:block">Render Map!</button>
 
 
 
                      <span style="display:block">
                       <label for="presets-dropdown" style="display:block">Presets:</label>
                       <select id ="presets-dropdown" >
-                        <option value=2>Last 2 days</option>
+                        <option selected="selected" value=2>Last 2 days</option>
                         <option value=7>Last 7 days</option>
                         <option value=30>Last 30 days</option>
                         <option value=60>Last 60 days</option>
@@ -93,20 +93,17 @@
 
                       <span style="display:block">
                         <label for="date1" style="display:block">Start Date:</label>
-                        <input class="datepick" id="date1" type="text" name="start" value="{{ start }}" />
+                        <input class="datepick" id="date1" type="text"  value=""/>
                       </span>
 
 
                       <span style="display:block">
                         <label for="date2" style="display:block">End Date:</label>
-                        <input class="datepick" id="date2" type="text" name="end" value="{{ end }}"/>
+                        <input class="datepick" id="date2" type="text" value=""/>
                       </span>
 
                   </form>
-
-                  <!-- Running-guy animated gif -->
-                <a href="http://www.animatedimages.org/cat-running-169.htm"><img src="http://www.animatedimages.org/data/media/169/animated-running-image-0037.gif" border="0" alt="animated-running-image-0037" style="width: 10%; height: 10%"/></a>
-
+                  <br><br>
 
                 <form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_top">
 
@@ -148,21 +145,11 @@
     <script src="http://cdn.leafletjs.com/leaflet-0.7.2/leaflet.js"></script>
     <script src="../static/leaflet-sidebar.js"></script>
     <script src="../static/leaflet-heat.js"></script>
-    <script src="../static/leaflet-tilelayer-mask.js"></script>
 
     <script>
-
-        //  Define heatmap
-        var points = [
-            {% for point in data %}
-            [{{ point[0] }}, {{ point[1] }}],
-            {% endfor %}
-        ];
-
         var osmMap = L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
         });
-
 
         var EsriMap = L.tileLayer('http://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
             attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
@@ -183,45 +170,60 @@
 
         L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map);
 
-        if (points.length != 0) {
-            var heat = L.heatLayer(points, {radius: 9}).addTo(map);
-            map.fitBounds(points);
-        }
-
     </script>
 
     <!-- Scripts for controlling form button and selector actions -->
     <script> type="text/javascript"
       var F = "YYYY-MM-DD"
+      var hmap_options = {radius: 9,
+                          blur: 15,
+                          gradient: {0.4: 'blue', 0.65: 'lime', 1: 'red'}
+                        };
 
-    // Associate datepick css class with the datepicker function.
-      $(document).ready(function() {
-        $(".datepick").datepicker();
-      });
 
-      function setMapSource(){
-            var iframe = document.getElementById("myiframe");
-            var d1 = document.getElementById("date1").value;
-            var d2 = document.getElementById("date2").value;
-            var mapurl = "/map?start="+d1+"&end="+d2
-      }
+      function renderHeatLayer(){
+        var d1 = document.getElementById("date1").value;
+        var d2 = document.getElementById("date2").value;
+        var points_url = "/points?start="+d1+"&end="+d2
+        var points
 
-      $(function(){
-          // Associate changes in the preset-dropdown menu with changing dates
-          //  in the date1 and date2 fields
-          $("#presets-dropdown").change(function () {
-                    var choice = $(this).val();
-                    var date1;
-                    if (choice==0){
-                      date1=moment("20090215", "YYYYMMDD");
-                    } else {
-                      date1=moment().subtract(choice, 'days');
-                    };
-                    document.getElementById('date1').value=date1.format(F);
-                    document.getElementById('date2').value=moment().add(1, 'days').format(F);
-          });
-
+        $.getJSON(points_url, function(points) {
+            //points is the JSON string
+            if (points.length) {
+                var heat = L.heatLayer(points, hmap_options).addTo(map);
+                map.fitBounds(points);
+            };
         });
+      };
+
+      function()
+
+        function preset_date_fill() {
+            var choice = $("#presets-dropdown").val();
+            var date1;
+            if (choice==0){
+              date1=moment("20090215", "YYYYMMDD");
+            } else {
+              date1=moment().subtract(choice, 'days');
+            };
+            document.getElementById('date1').value=date1.format(F);
+            document.getElementById('date2').value=moment().add(1, 'days').format(F);
+        };
+
+
+
+        $(document).ready(function() {
+            $(".datepick").datepicker();
+
+            // document.getElementById('presets-dropdown').selectedIndex=0;
+            $("#myform").on("ready", preset_date_fill);
+
+            $("#presets-dropdown").on("change", preset_date_fill);
+
+            $("#renderButton").on('click', renderHeatLayer );
+        });
+
+
       </script>
 
 </body>
