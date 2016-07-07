@@ -196,10 +196,9 @@
         });
       };
 
-      function()
 
         function preset_date_fill() {
-            var choice = $("#presets-dropdown").val();
+            var choice = $(this).val();
             var date1;
             if (choice==0){
               date1=moment("20090215", "YYYYMMDD");
