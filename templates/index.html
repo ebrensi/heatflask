@@ -28,8 +28,15 @@
 
 
     <script src="http://cdn.leafletjs.com/leaflet-0.7.2/leaflet.js"></script>
+
     <script src="../static/leaflet-sidebar.js"></script>
+
     <script src="../static/leaflet-heat.js"></script>
+
+    <!-- Load Esri Leaflet from CDN -->
+     <!-- <script src="https://cdn.jsdelivr.net/leaflet.esri/2.0.0/esri-leaflet.js"></script> -->
+
+
     <script src="../static/leaflet.spin.js"></script>
     <script src="../static/spin.min.js"></script>
 
@@ -83,8 +90,6 @@
                   <form id="myform" action="">
                     <button type="button" id="renderButton" style="display:block">Render Map!</button>
 
-
-
                      <span style="display:block">
                       <label for="presets-dropdown" style="display:block">Presets:</label>
                       <select id ="presets-dropdown" >
@@ -110,6 +115,13 @@
                         <label for="date2" style="display:block">End Date:</label>
                         <input class="datepick" id="date2" type="text" value=""/>
                       </span>
+
+
+                      <span style="display:block">
+                        <label>Radius </label><input type="range" id="radius" value=9 min=10 max=50 /><br />
+                        <label>Blur </label><input type="range" id="blur" value=15 min=10 max=50 /><br />
+                        <button type="button" onClick="resetHmapOptions();">Reset</button>
+                     </span>
 
                   </form>
                   <br><br>
@@ -167,6 +179,10 @@
                          layers : [ EsriMap ]
                   });
 
+
+        // var EsriMap = L.esri.basemapLayer('Imagery');
+        // var labels = L.esri.basemapLayer('ImageryLabels');
+
         var sidebar = L.control.sidebar('sidebar').addTo(map);
 
         var baseLayers = {
@@ -178,11 +194,8 @@
 
 
       var F = "YYYY-MM-DD"
-      var hmap_options = {radius: 9,
-                          blur: 15,
-                          gradient: {0.4: 'blue', 0.65: 'lime', 1: 'red'}
-                        };
-
+      var points;
+      var heatlayer = false;
 
       function renderHeatLayer(){
         var d1 = document.getElementById("date1").value;
@@ -190,13 +203,15 @@
 
         var query_data = {start: d1, end: d2}
 
-        var points
-
         map.spin(true);   // start progress indicator
         $.getJSON('/points', query_data, function(points) {
             //points is the JSON string
             if (points.length) {
-                var heat = L.heatLayer(points, hmap_options).addTo(map);
+                if (heatlayer){
+                    map.removeLayer(heatlayer)
+                }
+                heatlayer = L.heatLayer(points, current_hmap_options());
+                map.addLayer(heatlayer);
                 map.fitBounds(points);
             };
         }).always(function() {
@@ -204,6 +219,26 @@
             });
       };
 
+
+
+      function current_hmap_options(){
+            return {radius: +document.getElementById("radius").value,
+                    blur: +document.getElementById("blur").value,
+                    gradient: {0.4: 'blue', 0.65: 'lime', 1: 'red'}
+                    }
+      }
+
+
+      function resetHmapOptions(){
+        document.getElementById("radius").value = 9;
+        document.getElementById("blur").value = 15;
+        heatmap_redraw();
+      }
+
+
+        function heatmap_redraw(){
+            heatlayer.setOptions(current_hmap_options());
+        }
 
         function preset_date_fill() {
             var choice = $("#presets-dropdown").val();
@@ -231,9 +266,13 @@
 
             $("#presets-dropdown").on("change", preset_date_fill);
 
+            $("#radius").on("change", heatmap_redraw)
+            $("#blur").on("change", heatmap_redraw)
+
             $("#renderButton").on('click', renderHeatLayer );
 
-            preset_date_fill()
+            preset_date_fill();
+            // renderHeatLayer();
         });
 
 
