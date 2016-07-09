@@ -118,8 +118,8 @@
 
 
                       <span style="display:block">
-                        <label>Radius </label><input type="range" id="radius" value=9 min=10 max=50 /><br />
-                        <label>Blur </label><input type="range" id="blur" value=15 min=10 max=50 /><br />
+                        <label>Radius </label><input type="range" id="radius" value=9 min=1 max=50 /><br />
+                        <label>Blur </label><input type="range" id="blur" value=15 min=1 max=50 /><br />
                         <button type="button" onClick="resetHmapOptions();">Reset</button>
                      </span>
 
@@ -266,8 +266,8 @@
 
             $("#presets-dropdown").on("change", preset_date_fill);
 
-            $("#radius").on("change", heatmap_redraw)
-            $("#blur").on("change", heatmap_redraw)
+            $("#radius").on("input", heatmap_redraw)
+            $("#blur").on("input", heatmap_redraw)
 
             $("#renderButton").on('click', renderHeatLayer );
 
