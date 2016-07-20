@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Activities heatmap with selectable date range</title>
+    <title>Activities Visualization</title>
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
@@ -19,8 +19,11 @@
     <!-- Moment.js for current date-->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.13.0/moment.min.js"></script>
 
+    <!-- Bootstrap fonts? -->
     <link href="http://maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet">
 
+
+    <!-- Leaflet stuff -->
     <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7.2/leaflet.css" />
     <!--[if lte IE 8]><link rel="stylesheet" href="//cdn.leafletjs.com/leaflet-0.7.2/leaflet.ie.css" /><![endif]-->
 
@@ -32,10 +35,6 @@
     <script src="../static/leaflet-sidebar.js"></script>
 
     <script src="../static/leaflet-heat.js"></script>
-
-    <!-- Load Esri Leaflet from CDN -->
-     <!-- <script src="https://cdn.jsdelivr.net/leaflet.esri/2.0.0/esri-leaflet.js"></script> -->
-
 
     <script src="../static/leaflet.spin.js"></script>
     <script src="../static/spin.min.js"></script>
@@ -179,9 +178,6 @@
                          layers : [ EsriMap ]
                   });
 
-
-        // var EsriMap = L.esri.basemapLayer('Imagery');
-        // var labels = L.esri.basemapLayer('ImageryLabels');
 
         var sidebar = L.control.sidebar('sidebar').addTo(map);
 
