@@ -125,11 +125,14 @@
                   </form>
                   <br><br>
 
-                <form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_top">
 
                 <div>
+                <br><br><br><br><br><br>
                 Support me in developing this app!
                 <br>
+
+                <form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_top">
+
                 <input type="hidden" name="cmd" value="_donations">
                 <input type="hidden" name="business" value="BarefootEfrem@gmail.com">
                 <input type="hidden" name="lc" value="US">
@@ -186,7 +189,7 @@
             "Esri World Imagery": EsriMap
         };
 
-        L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map);
+        control = L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map);
 
 
       var F = "YYYY-MM-DD"
@@ -205,9 +208,12 @@
             if (points.length) {
                 if (heatlayer){
                     map.removeLayer(heatlayer)
+                    control.removeLayer(heatlayer)
                 }
                 heatlayer = L.heatLayer(points, current_hmap_options());
                 map.addLayer(heatlayer);
+                var title = "Point Density: ("+d1+" - "+d2+")"
+                control.addOverlay(heatlayer, title)
                 map.fitBounds(points);
             };
         }).always(function() {

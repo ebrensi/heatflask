@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8
 
-# Import Garmin Connect data into a SQLite database
+# Import Garmin Connect data into a PostreSQL database
 
 
 from __future__ import unicode_literals
