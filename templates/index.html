@@ -125,6 +125,12 @@
                   </form>
                   <br><br>
 
+                <div>
+                <h3 id="numPoints"></h3>
+                </div>
+
+
+                <form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_top">
 
                 <div>
                 <br><br><br><br><br><br>
@@ -215,6 +221,9 @@
                 var title = "Point Density: ("+d1+" - "+d2+")"
                 control.addOverlay(heatlayer, title)
                 map.fitBounds(points);
+
+                document.getElementById('numPoints').innerHTML = d1 + " to " + d2 + "<br>" + points.length +" data points";
+
             };
         }).always(function() {
             map.spin(false); // stop progress indicator
