@@ -125,6 +125,11 @@
                   </form>
                   <br><br>
 
+                <div>
+                <h3 id="numPoints"></h3>
+                </div>
+
+
                 <form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_top">
 
                 <div>
@@ -209,6 +214,9 @@
                 heatlayer = L.heatLayer(points, current_hmap_options());
                 map.addLayer(heatlayer);
                 map.fitBounds(points);
+
+                document.getElementById('numPoints').innerHTML = d1 + " to " + d2 + "<br>" + points.length +" data points";
+
             };
         }).always(function() {
             map.spin(false); // stop progress indicator
