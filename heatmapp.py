@@ -1,6 +1,6 @@
 #! usr/bin/env python
 
-from flask import Flask, render_template, request, g, jsonify
+from flask import Flask, render_template, request, g, jsonify, url_for
 from sqlalchemy import create_engine
 import os
 from flask_compress import Compress
