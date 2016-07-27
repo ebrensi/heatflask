@@ -19,6 +19,9 @@ import os
 # Local database url
 # DATABASE_URL = "postgresql://heatmapp:heatmapp@localhost/heatmapp"
 
+# This is the path of the folder that we put bad gpx files in
+BAD_FILES_PATH = './bad_gpx_files'
+
 SQLALCHEMY_DATABASE_URI = os.environ["DATABASE_URL"]
 
 
@@ -258,7 +261,15 @@ with db.connect() as conn:
                         activity = gpxpy.parse(data)
 
                     except:
-                        logging.info('porblem parsing GPS data.')
+                        if not os.path.isdir(BAD_FILES_PATH):
+                            os.mkdir(BAD_FILES_PATH)
+
+                        fname = "{}_bad.gpx".format(id)
+                        file_path = os.path.join(BAD_FILES_PATH, fname)
+                        with open(file_path, "w") as save_file:
+                            save_file.write(data)
+
+                        logging.info('problem parsing GPS data. wrote %s', file_path)
 
                     else:
                         points = [(point.time,
