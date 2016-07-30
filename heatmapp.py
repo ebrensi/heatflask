@@ -80,6 +80,7 @@ def get_points(start=None, end=None):
     result = query_db(query)
     return result
 
+
 # This works but you really should use `flask run`
 if __name__ == '__main__':
     app.run()
