@@ -12,7 +12,6 @@ import requests
 import logging
 import json
 import argparse
-import gpxpy
 from sqlalchemy import create_engine
 import os
 
@@ -97,9 +96,7 @@ url_gc_login = ("https://sso.garmin.com/sso/login?"
 url_gc_post_auth = 'https://connect.garmin.com/post-auth/login?'
 
 url_gc_search = 'http://connect.garmin.com/proxy/activity-search-service-1.0/json/activities?'
-url_gc_gpx_activity = 'http://connect.garmin.com/proxy/activity-service-1.1/gpx/activity/'
-url_gc_tcx_activity = 'http://connect.garmin.com/proxy/activity-service-1.1/tcx/activity/'
-url_gc_original_activity = 'http://connect.garmin.com/proxy/download-service/files/activity/'
+url_gc_activity_details = "https://connect.garmin.com/modern/proxy/activity-service-1.3/json/activityDetails/"
 
 
 def logged_in_session(username, password):
@@ -158,7 +155,7 @@ with db.connect() as conn:
                  "id               INTEGER       PRIMARY KEY,"
                  "beginTimestamp   TIMESTAMP,"
                  "summary          JSON,"
-                 "timestamps       TIMESTAMP ARRAY,"
+                 "elapsed          INTEGER ARRAY,"
                  "latitudes        DOUBLE PRECISION ARRAY,"
                  "longitudes       DOUBLE PRECISION ARRAY"
                  ");")
@@ -238,62 +235,66 @@ with db.connect() as conn:
                              .format(**info))
 
                 # url of the gpx file that contains GIS points
-                download_url = ("{}{}?full=true"
-                                .format(url_gc_gpx_activity, info["id"]))
+                download_url = (url_gc_activity_details +
+                                str(info["id"]) +
+                                "?maxSize=999999999")
 
                 logging.info('Attempting download of activity track...')
 
                 try:
-                    file_response = sesh.get(download_url)
+                    response = sesh.get(download_url)
                 except:
                     logging.info("...failed. Skipping download.")
 
                 else:
-                    data = file_response.text
-                    if py2:
-                        # in python 2 we need to explicitly encode the unicode
-                        #  into something that can be written to a file.
-                        # If we don't do this then the write will fail for
-                        #  many non-english characters.
-                        data = data.encode(file_response.encoding)
-
                     try:
-                        activity = gpxpy.parse(data)
+                        dj = response.json()[
+                            "com.garmin.activity.details.json.ActivityDetails"]
+
+                        # with open("activity_{}.json".format(id), "w") as f:
+                        #     json.dump(dj, f, indent=2)
+
+                        activity = {}
+
+                        for m in dj["measurements"]:
+                            name = m["key"]
+                            idx = m["metricsIndex"]
+
+                            activity[name] = [metric["metrics"][idx]
+                                              for metric in dj["metrics"]]
+
+                        # logging.info(activity)
 
                     except:
                         if not os.path.isdir(BAD_FILES_PATH):
                             os.mkdir(BAD_FILES_PATH)
 
-                        fname = "{}_bad.gpx".format(id)
+                        fname = "{}_bad".format(id)
                         file_path = os.path.join(BAD_FILES_PATH, fname)
-                        with open(file_path, "w") as save_file:
-                            save_file.write(data)
+                        with open(file_path, "wb") as save_file:
+                            save_file.write(response.content)
 
-                        logging.info('problem parsing GPS data. wrote %s', file_path)
+                        logging.info(
+                            'problem parsing GPS data. wrote %s', file_path)
 
                     else:
-                        points = [(point.time,
-                                   point.latitude,
-                                   point.longitude)
-                                  for track in activity.tracks
-                                  for segment in track.segments
-                                  for point in segment.points]
 
-                        if points:
-                            tstamps, lats, lngs = (list(z)
-                                                   for z in zip(*points))
+                        lats = activity.setdefault("directLatitude", [])
+                        lngs = activity.setdefault("directLongitude", [])
+                        time = activity.setdefault("sumElapsedDuration", [])
 
+                        if lats:
                             values = (id, beginTimestamp, json.dumps(A),
-                                      tstamps, lats, lngs)
+                                      time, lats, lngs)
 
                             conn.execute("INSERT INTO activities "
                                          "(id, beginTimestamp, summary, "
-                                         "timestamps, latitudes, longitudes) "
+                                         "elapsed, latitudes, longitudes) "
                                          "VALUES (%s,%s,%s,%s,%s,%s);", values)
 
                             logging.info('Done. time series data saved.')
                         else:
-                            logging.info('No GPS data.')
+                            logging.info('Activity %s has no GIS points.')
 
         logging.info("Chunk done!")
 logging.info('Done!')

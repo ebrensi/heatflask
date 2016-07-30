@@ -64,9 +64,9 @@ def get_points(start=None, end=None):
     query = """
             SELECT  lat, lng
             FROM (
-                SELECT timestamp, lat, lng
+                SELECT elapsed, lat, lng
                 FROM(
-                    SELECT unnest(timestamps) AS timestamp,
+                    SELECT unnest(elapsed) AS elapsed,
                            unnest(latitudes) AS lat,
                            unnest(longitudes) AS lng
                     FROM %s
