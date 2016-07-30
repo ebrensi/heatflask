@@ -1,6 +1,6 @@
 #! usr/bin/env python
 
-from flask import Flask, render_template, request, g, jsonify, url_for
+from flask import Flask, render_template, request, g, jsonify
 from sqlalchemy import create_engine
 import os
 from flask_compress import Compress
@@ -73,7 +73,8 @@ def get_points(start=None, end=None):
                     WHERE begintimestamp >= '%s'
                       AND begintimestamp <= '%s'
                     ) AS sub
-                ) AS sub2;
+                ) AS sub2
+            WHERE lat <> 0 AND lng <> 0;
             """ % ("activities", start, end)
 
     result = query_db(query)

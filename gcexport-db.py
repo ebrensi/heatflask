@@ -251,19 +251,14 @@ with db.connect() as conn:
                         dj = response.json()[
                             "com.garmin.activity.details.json.ActivityDetails"]
 
-                        # with open("activity_{}.json".format(id), "w") as f:
-                        #     json.dump(dj, f, indent=2)
-
                         activity = {}
 
-                        for m in dj["measurements"]:
+                        for m in dj.setdefaut("measurements", {}):
                             name = m["key"]
                             idx = m["metricsIndex"]
 
                             activity[name] = [metric["metrics"][idx]
                                               for metric in dj["metrics"]]
-
-                        # logging.info(activity)
 
                     except:
                         if not os.path.isdir(BAD_FILES_PATH):
@@ -278,7 +273,6 @@ with db.connect() as conn:
                             'problem parsing GPS data. wrote %s', file_path)
 
                     else:
-
                         lats = activity.setdefault("directLatitude", [])
                         lngs = activity.setdefault("directLongitude", [])
                         time = activity.setdefault("sumElapsedDuration", [])
