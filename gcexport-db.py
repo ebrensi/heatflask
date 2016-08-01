@@ -252,14 +252,15 @@ with db.connect() as conn:
 
                         activity = {}
 
-                        for m in dj.setdefaut("measurements", {}):
+                        for m in dj.setdefault("measurements", {}):
                             name = m["key"]
                             idx = m["metricsIndex"]
 
                             activity[name] = [metric["metrics"][idx]
                                               for metric in dj["metrics"]]
 
-                    except:
+                    except Exception as e:
+                        logging.info("Problem with activity %s:%s", id, e)
                         if not os.path.isdir(BAD_FILES_PATH):
                             os.mkdir(BAD_FILES_PATH)
 
@@ -267,9 +268,6 @@ with db.connect() as conn:
                         file_path = os.path.join(BAD_FILES_PATH, fname)
                         with open(file_path, "wb") as save_file:
                             save_file.write(response.content)
-
-                        logging.info(
-                            'problem parsing GPS data. wrote %s', file_path)
 
                     else:
                         lats = activity.setdefault("directLatitude", [])
