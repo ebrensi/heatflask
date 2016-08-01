@@ -234,7 +234,6 @@ with db.connect() as conn:
                 logging.info("[{id}] {name}: {starting}, {dur}, {dist}"
                              .format(**info))
 
-                # url of the gpx file that contains GIS points
                 download_url = (url_gc_activity_details +
                                 str(info["id"]) +
                                 "?maxSize=999999999")
