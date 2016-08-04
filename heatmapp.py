@@ -123,7 +123,9 @@ def get_points(user, start=None, end=None):
                               db.func.unnest(Activity.longitudes))
     result = result.filter_by(user=user)
     result = result.filter(Activity.beginTimestamp.between(start, end))
-    # result = result.filter() # filter out (0,0) coordinates
+
+    # figure out a better way to do this
+    result = [(a, b) for a, b in result if (a, b) != (0, 0)]
     return result
 
 
