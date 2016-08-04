@@ -170,10 +170,8 @@ db.session.commit()
 # Now we populate a set with the ids of activities that already exist
 #  in our database.
 
-# result = conn.execute("SELECT id FROM activities;")
-# already_got = set(tupp[0] for tupp in result.fetchall())
-
-already_got = []
+already_got = [d[0] for d in db.session.query(
+    Activity.id).filter_by(user_name=username).all()]
 
 download_all = False
 
@@ -284,7 +282,7 @@ while total_downloaded < total_to_download:
                     time = activity.setdefault("sumElapsedDuration", [])
 
                     if lats:
-                        activity = Activity(username,
+                        activity = Activity(user,
                                             id,
                                             beginTimestamp,
                                             json.dumps(A),

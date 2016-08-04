@@ -38,11 +38,17 @@ db.session.commit()
 
 
 class User(db.Model):
+    __tablename__ = 'users'
     name = db.Column(db.String(),  primary_key=True)
     gc_username = db.Column(db.String())
     gc_password = db.Column(db.String())
 
-    activities = db.relationship("Activity", backref="user", lazy="dynamic")
+    # This is set up so that if a user gets deleted, all of the associated
+    #  activities are also deleted.
+    activities = db.relationship("Activity",
+                                 backref="user",
+                                 cascade="all, delete, delete-orphan",
+                                 lazy="dynamic")
 
     def __init__(self, name):
         self.name = name
@@ -52,7 +58,6 @@ class User(db.Model):
 
 
 class Activity(db.Model):
-    user_name = db.Column(db.String(), db.ForeignKey("user.name"))
     id = db.Column(INTEGER, primary_key=True)
     beginTimestamp = db.Column(TIMESTAMP)
     summary = db.Column(JSON)
@@ -60,8 +65,10 @@ class Activity(db.Model):
     latitudes = db.Column(ARRAY(DOUBLE_PRECISION))
     longitudes = db.Column(ARRAY(DOUBLE_PRECISION))
 
-    def __init__(self, user_name, id, beginTimestamp, summary, elapsed, latitudes, longitudes):
-        self.user_name = user_name
+    user_name = db.Column(db.String(), db.ForeignKey("users.name"))
+
+    def __init__(self, user, id, beginTimestamp, summary, elapsed, latitudes, longitudes):
+        self.user = user
         self.id = id
         self.beginTimestamp = beginTimestamp
         self.summary = summary
@@ -70,7 +77,7 @@ class Activity(db.Model):
         self.longitudes = longitudes
 
     def __repr__(self):
-        return "<Activity %s - %r>" % (self.user_name, self.id)
+        return "<Activity %s_%r>" % (self.user_name, self.id)
 
 
 # Web views
