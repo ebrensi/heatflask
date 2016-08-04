@@ -29,9 +29,14 @@ logging.basicConfig(  # filename="import_{}.log".format(CURRENT_DATE),
 # Turn on logging for SQLAlchemy too
 # logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
+# create tables from data models if they don't exist
+db.create_all()
+db.session.commit()
 
 py2 = sys.version_info[0] < 3  # is this python 2?
 
+
+#  Define command-line arguents
 parser = argparse.ArgumentParser()
 
 parser.add_argument("--username",
@@ -50,17 +55,6 @@ parser.add_argument('-c', '--count', nargs='?', default="1",
 
 parser.add_argument('--clean', action='store_true', default=False)
 
-args = parser.parse_args()
-
-logging.info('Welcome to Garmin Connect Exporter!')
-
-
-if args.username:
-    username = args.username
-else:
-    username = raw_input('Username: ') if py2 else input('Username: ')
-
-password = args.password if args.password else getpass()
 
 # Maximum number of activities you can request at once.  Set and enforced
 # by Garmin.
@@ -135,43 +129,64 @@ def logged_in_session(username, password):
     return sesh
 
 
-sesh = logged_in_session(username, password)
+# Retrive command-line arguments
+args = parser.parse_args()
 
+logging.info('Welcome to Garmin Connect Exporter!')
 
-# We should be logged in now.
+# Get username from command-line or console input
+if args.username:
+    username = args.username
+else:
+    username = raw_input('Username: ') if py2 else input('Username: ')
 
-# create tables from data models if they don't exist
-db.create_all()
-db.session.commit()
+password = None
 
 
 # retrieve this user's record if it exists
 user = User.query.get(username)
 
-if user and args.clean:
-    logging.info("clean import: deleting records for %s", user.gc_username)
+if user:
+    logging.info("user %s exists", user)
+    password = user.gc_password
 
+if args.clean:
     # delete user
     db.session.delete(user)
     db.session.commit()
+    user = None
+    logging.info("clean import: deleted records for %s", username)
 
-    args.count = "all"
-elif not user:
+    if not args.count:
+        # set to import all activities
+        args.count = "all"
+
+if not user:   # We'll create a new user
+    # Get GC user password from command-line arg or console input
+    if args.password:
+        password = args.password
+    elif not password:
+        password = getpass()
+
+    # Add this user
     user = User(username)
     user.gc_username = username
     user.gc_password = password
 
+    db.session.add(user)
+    db.session.commit()
+    logging.info("added user %s to database", user)
+    already_got = []
 
-# Add this user (or do nothing if user already exists)
-db.session.add(user)
-db.session.commit()
+else:
+    # get the ids of activities for this user
+    #  that already exist in our database
+    already_got = [d[0] for d in db.session.query(
+        Activity.id).filter_by(user_name=username).all()]
 
 
-# Now we populate a set with the ids of activities that already exist
-#  in our database.
-
-already_got = [d[0] for d in db.session.query(
-    Activity.id).filter_by(user_name=username).all()]
+# log in to Garmin Connect
+sesh = logged_in_session(username, password)
 
 download_all = False
 
@@ -245,7 +260,7 @@ while total_downloaded < total_to_download:
                             str(info["id"]) +
                             "?maxSize=999999999")
 
-            logging.info('Attempting download of activity track...')
+            logging.debug('Attempting download of activity track...')
 
             try:
                 response = sesh.get(download_url)
@@ -271,7 +286,7 @@ while total_downloaded < total_to_download:
                     if not os.path.isdir(BAD_FILES_PATH):
                         os.mkdir(BAD_FILES_PATH)
 
-                    fname = "{}_bad".format(id)
+                    fname = "{}_{}_bad".format(user.gc_username, id)
                     file_path = os.path.join(BAD_FILES_PATH, fname)
                     with open(file_path, "wb") as save_file:
                         save_file.write(response.content)
@@ -292,9 +307,9 @@ while total_downloaded < total_to_download:
 
                         db.session.add(activity)
                         db.session.commit()
-                        logging.info('Done. time series data saved.')
+                        logging.debug('Done. time series data saved.')
                     else:
                         logging.info('Activity %s has no GIS points.')
 
-    logging.info("Chunk done!")
+    logging.debug("Chunk done!")
 logging.info('Done!')
