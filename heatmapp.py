@@ -1,6 +1,6 @@
 #! usr/bin/env python
 
-from flask import Flask, render_template, request, g, jsonify
+from flask import Flask, render_template, request, redirect, jsonify, url_for
 from flask_compress import Compress
 from datetime import date, timedelta
 import os
@@ -79,20 +79,35 @@ class Activity(db.Model):
 
 
 # Web views
-@app.route('/')
-def index():
-    return render_template('index.html')
+
+# route for handling the login page logic
+@app.route('/', methods=['GET', 'POST'])
+def login():
+    error = None
+    if request.method == 'POST':
+        username = request.form['username']
+        user = User.query.get(username)
+        if user:
+            return redirect(url_for('user_map', username=username))
+        else:
+            error = 'Invalid Credentials. Please try again.'
+    return render_template('login.html', error=error)
 
 
-@app.route('/points')
-def points():
+@app.route('/<username>')
+def user_map(username):
+    return render_template('map.html', username=username)
+
+
+@app.route('/points/<username>')
+def points(username):
     tomorrow = (date.today() + timedelta(1)).strftime('%Y-%m-%d')
     today = date.today().strftime('%Y-%m-%d')
 
     start = request.args.get("start", today)
     end = request.args.get("end", tomorrow)
 
-    user = User.query.get("ebrensi")
+    user = User.query.get(username)
     points = [[row[0], row[1]] for row in get_points(user, start, end)]
     resp = jsonify(points)
     resp.status_code = 200
