@@ -102,22 +102,22 @@ def points():
 
 def get_points(user, start=None, end=None):
     # TODO: make sure datetimes are valid and start <= finish
-    query = """
-            SELECT  lat, lng
-            FROM (
-                SELECT elapsed, lat, lng
-                FROM(
-                    SELECT unnest(elapsed) AS elapsed,
-                           unnest(latitudes) AS lat,
-                           unnest(longitudes) AS lng
-                    FROM %s
-                    WHERE user_name == '%s'
-                      AND begintimestamp >= '%s'
-                      AND begintimestamp <= '%s'
-                    ) AS sub
-                ) AS sub2
-            WHERE lat <> 0 AND lng <> 0;
-            """ % (Activity.__tablename__, user.name, start, end)
+    # query = """
+    #         SELECT  lat, lng
+    #         FROM (
+    #             SELECT elapsed, lat, lng
+    #             FROM(
+    #                 SELECT unnest(elapsed) AS elapsed,
+    #                        unnest(latitudes) AS lat,
+    #                        unnest(longitudes) AS lng
+    #                 FROM %s
+    #                 WHERE user_name == '%s'
+    #                   AND begintimestamp >= '%s'
+    #                   AND begintimestamp <= '%s'
+    #                 ) AS sub
+    #             ) AS sub2
+    #         WHERE lat <> 0 AND lng <> 0;
+    #         """ % (Activity.__tablename__, user.name, start, end)
 
     result = db.session.query(db.func.unnest(Activity.latitudes),
                               db.func.unnest(Activity.longitudes))
