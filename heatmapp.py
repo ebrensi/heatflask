@@ -119,9 +119,8 @@ def get_points(user, start=None, end=None):
             WHERE lat <> 0 AND lng <> 0;
             """ % (Activity.__tablename__, user.name, start, end)
 
-    result = db.session.query(  # db.func.unnest(Activity.elapsed),
-        db.func.unnest(Activity.latitudes),
-        db.func.unnest(Activity.longitudes))
+    result = db.session.query(db.func.unnest(Activity.latitudes),
+                              db.func.unnest(Activity.longitudes))
     result = result.filter_by(user=user)
     result = result.filter(Activity.beginTimestamp.between(start, end))
     # result = result.filter() # filter out (0,0) coordinates
