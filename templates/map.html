@@ -80,7 +80,7 @@
         <div class="sidebar-content">
             <div class="sidebar-pane" id="home">
                 <h1 class="sidebar-header">
-                    See where Efrem's been runnin'!
+                    See where {{ username }}'s been runnin'!
                     <span class="sidebar-close"><i class="fa fa-caret-left"></i></span>
                 </h1>
 
@@ -217,7 +217,7 @@
         var query_data = {start: d1, end: d2}
 
         map.spin(true);   // start progress indicator
-        $.getJSON('/points', query_data, function(points) {
+        $.getJSON('/points/{{ username }}', query_data, function(points) {
             //points is the JSON string
             if (points.length) {
                 if (heatlayer){
