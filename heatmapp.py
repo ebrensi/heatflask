@@ -1,7 +1,6 @@
 #! usr/bin/env python
 
 from flask import Flask, render_template, request, g, jsonify
-from sqlalchemy import create_engine
 from flask_compress import Compress
 from datetime import date, timedelta
 import os
@@ -11,7 +10,6 @@ from flask_sqlalchemy import SQLAlchemy
 
 # For models
 from sqlalchemy.dialects.postgresql import ARRAY, DOUBLE_PRECISION, INTEGER, TIMESTAMP, JSON
-
 
 # This app is outgrowing this single-file setup. The next step is to modularize
 #  it but for now we'll stick with this while we get the SQLAlchemy data models
@@ -94,16 +92,16 @@ def points():
     start = request.args.get("start", today)
     end = request.args.get("end", tomorrow)
 
-    points = [[row[0], row[1]] for row in get_points(start, end)]
+    user = User.query.get("ebrensi")
+    points = [[row[0], row[1]] for row in get_points(user, start, end)]
     resp = jsonify(points)
     resp.status_code = 200
 
     return resp
 
 
-def get_points(start=None, end=None):
+def get_points(user, start=None, end=None):
     # TODO: make sure datetimes are valid and start <= finish
-
     query = """
             SELECT  lat, lng
             FROM (
@@ -113,14 +111,20 @@ def get_points(start=None, end=None):
                            unnest(latitudes) AS lat,
                            unnest(longitudes) AS lng
                     FROM %s
-                    WHERE begintimestamp >= '%s'
+                    WHERE user_name == '%s'
+                      AND begintimestamp >= '%s'
                       AND begintimestamp <= '%s'
                     ) AS sub
                 ) AS sub2
             WHERE lat <> 0 AND lng <> 0;
-            """ % ("activities", start, end)
+            """ % (Activity.__tablename__, user.name, start, end)
 
-    result = query_db(query)
+    result = db.session.query(  # db.func.unnest(Activity.elapsed),
+        db.func.unnest(Activity.latitudes),
+        db.func.unnest(Activity.longitudes))
+    result = result.filter_by(user=user)
+    result = result.filter(Activity.beginTimestamp.between(start, end))
+    # result = result.filter() # filter out (0,0) coordinates
     return result
 
 
