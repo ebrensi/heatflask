@@ -17,13 +17,14 @@
         <input class="btn btn-default" type="submit" value="Login">
       </form>
 
+      {% if error %}
+        <p class="error"><strong>Error:</strong> {{ error }}
+      {% endif %}
+
       <h1>Or Not</h1>
       <FORM METHOD="LINK" ACTION="/ebrensi">
       <INPUT class="btn btn-default" TYPE="submit" VALUE="See Demo">
       </FORM>
-      {% if error %}
-        <p class="error"><strong>Error:</strong> {{ error }}
-      {% endif %}
     </div>
   </body>
 </html>

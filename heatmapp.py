@@ -7,6 +7,10 @@ import os
 
 from flask_sqlalchemy import SQLAlchemy
 
+try:
+    from urllib.parse import urlencode
+except ImportError:
+    from urllib import urlencode
 
 # For models
 from sqlalchemy.dialects.postgresql import ARRAY, DOUBLE_PRECISION, INTEGER, TIMESTAMP, JSON
@@ -21,6 +25,15 @@ from sqlalchemy.dialects.postgresql import ARRAY, DOUBLE_PRECISION, INTEGER, TIM
 SQLALCHEMY_DATABASE_URI = os.environ["DATABASE_URL"]
 DEBUG = True
 SQLALCHEMY_TRACK_MODIFICATIONS = True
+
+STRAVA_AUTH_URL = "https://www.strava.com/oauth/authorize"
+STRAVA_AUTH_PARAMS = {"client_id": 12700,
+                      "response_type": "code",
+                      "redirect_uri": "http://heatflask.herokuapp.com/strava_token_exchange",
+                      # "scope": "view_prvate",
+                      # "state": "mystate",
+                      "approval_prompt": "force"
+                      }
 
 # Initialization. Later we'll put this in the __init__.py file
 app = Flask(__name__)
@@ -97,12 +110,17 @@ def login():
             return redirect(url_for('user_map', username=username))
         else:
             error = 'Invalid Credentials. Please try again.'
-    return render_template('login.html', error=error)
+
+    return render_template('login.html',
+                           error=error)
 
 
 @app.route('/<username>')
 def user_map(username):
-    return render_template('map.html', username=username)
+    strava_url = STRAVA_AUTH_URL + "?" + urlencode(STRAVA_AUTH_PARAMS)
+    return render_template('map.html',
+                           username=username,
+                           strava_auth_url=strava_url)
 
 
 @app.route('/<username>/points.json')
@@ -163,6 +181,13 @@ def gcimport(user_name):
             return "<h1>clear data for {} and import {} most recent activities</h1>".format(user_name, count)
         else:
             return "<h1>import {} most recent activities for user {}</h1>".format(count, user_name)
+
+
+@app.route('/strava_token_exchange')
+def strava_token_exchange():
+    resp = jsonify(request.args)
+    resp.status_code = 200
+    return resp
 
 
 # This works but you really should use `flask run`
