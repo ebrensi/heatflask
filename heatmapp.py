@@ -80,8 +80,14 @@ class Activity(db.Model):
 
 # Web views
 
+# for now we redirect the default view to my personal map
+@app.route('/')
+def nothing():
+    return redirect(url_for('user_map', username="ebrensi"))
+
+
 # route for handling the login page logic
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/login', methods=['GET', 'POST'])
 def login():
     error = None
     if request.method == 'POST':
@@ -99,8 +105,8 @@ def user_map(username):
     return render_template('map.html', username=username)
 
 
-@app.route('/points/<username>')
-def points(username):
+@app.route('/<username>/points.json')
+def pointsJSON(username):
     tomorrow = (date.today() + timedelta(1)).strftime('%Y-%m-%d')
     today = date.today().strftime('%Y-%m-%d')
 
@@ -142,6 +148,21 @@ def get_points(user, start=None, end=None):
     # figure out a better way to do this
     result = [(a, b) for a, b in result if (a, b) != (0, 0)]
     return result
+
+
+@app.route('/<user_name>/gcimport')
+# endpoint for scheduling a Garmin Connect activity import
+def gcimport(user_name):
+    user = User.query.get(user_name)
+
+    if user:
+        clean = request.args.get("clean", "false")
+        count = request.args.get("count", 3)
+
+        if clean.lower() == "true":
+            return "<h1>clear data for {} and import {} most recent activities</h1>".format(user_name, count)
+        else:
+            return "<h1>import {} most recent activities for user {}</h1>".format(count, user_name)
 
 
 # This works but you really should use `flask run`
