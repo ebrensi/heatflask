@@ -217,7 +217,7 @@
         var query_data = {start: d1, end: d2}
 
         map.spin(true);   // start progress indicator
-        $.getJSON('/points/{{ username }}', query_data, function(points) {
+        $.getJSON('/{{ username }}/points.json', query_data, function(points) {
             //points is the JSON string
             if (points.length) {
                 if (heatlayer){
