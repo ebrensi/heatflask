@@ -29,36 +29,9 @@ logging.basicConfig(  # filename="import_{}.log".format(CURRENT_DATE),
 # Turn on logging for SQLAlchemy too
 # logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
-# create tables from data models if they don't exist
-db.create_all()
-db.session.commit()
 
 py2 = sys.version_info[0] < 3  # is this python 2?
 
-
-#  Define command-line arguents
-parser = argparse.ArgumentParser()
-
-parser.add_argument("--username",
-                    help=("your Garmin Connect username "
-                          "(otherwise, you will be prompted)"),
-                    nargs='?')
-
-parser.add_argument("--password",
-                    help=("your Garmin Connect password "
-                          "(otherwise, you will be prompted)"),
-                    nargs='?')
-
-parser.add_argument('-c', '--count', nargs='?', default="1",
-                    help=("number of recent activities to download, or 'all'"
-                          " (default: 1)"))
-
-parser.add_argument('--clean', action='store_true', default=False)
-
-
-# Maximum number of activities you can request at once.  Set and enforced
-# by Garmin.
-limit_maximum = 100
 
 # URLs for various services.
 url_gc_login = ("https://sso.garmin.com/sso/login?"
@@ -129,26 +102,191 @@ def logged_in_session(username, password):
     return sesh
 
 
+def import_activities(db, user, count=1):
+
+    # get the ids of activities for this user
+    #  that already exist in our database
+    already_got = [d[0] for d in db.session.query(
+        Activity.id).filter_by(user_name=user.name).all()]
+
+    # log in to Garmin Connect
+    sesh = logged_in_session(user.gc_username, user.gc_password)
+
+    download_all = False
+
+    if count == 'all':
+        # If the user wants to download all activities, first download one,
+        # then the result of that request will tell us how many are available
+        # so we will modify the variables then.
+        total_to_download = 1
+        download_all = True
+    else:
+        total_to_download = int(args.count)
+
+    total_downloaded = 0
+
+    # This while loop will download data from the server in multiple chunks,
+    # if necessary.
+    while total_downloaded < total_to_download:
+        # Maximum of 100... 400 return status if over 100.  So download 100 or
+        # whatever remains if less than 100.
+        if total_to_download - total_downloaded > 100:
+            num_to_download = 100
+        else:
+            num_to_download = total_to_download - total_downloaded
+
+        search_params = {'start': total_downloaded, 'limit': num_to_download}
+
+        # Query Garmin Connect
+        # TODO: Catch possible exceptions here.
+        json_results = sesh.get(url_gc_search, params=search_params).json()
+
+        search = json_results['results']['search']
+
+        if download_all:
+            # Modify total_to_download based on how many activities the server
+            # reports.
+            total_to_download = int(search['totalFound'])
+            # Do it only once.
+            download_all = False
+
+        # Pull out just the list of activities.
+        activities = json_results['results']['activities']
+
+        # Process each activity.
+        for a in activities:
+            A = a['activity']
+
+            id = int(A['activityId'])
+
+            # Increase the count now, since we want to count skipped files.
+            total_downloaded += 1
+
+            if id in already_got:
+                logging.info("activity %s already in database.", id)
+            else:
+                beginTimestamp = A['beginTimestamp']['display']
+                # Display which entry we're working on.
+                info = {
+                    "id": id,
+                    "name": A['activityName']['value'],
+                    "starting": A['beginTimestamp']['display'],
+                    "dur": (A["sumElapsedDuration"]["display"]
+                            if "sumElapsedDuration" in A else "??:??:??"),
+                    "dist": (A["sumDistance"]["withUnit"]
+                             if "sumElapsedDuration" in A else "0.00 Miles")
+                }
+
+                logging.info("[{id}] {name}: {starting}, {dur}, {dist}"
+                             .format(**info))
+
+                download_url = (url_gc_activity_details +
+                                str(info["id"]) +
+                                "?maxSize=999999999")
+
+                logging.debug('Attempting download of activity track...')
+
+                try:
+                    response = sesh.get(download_url)
+                except:
+                    logging.info("...failed. Skipping download.")
+
+                else:
+                    try:
+                        dj = response.json()[
+                            "com.garmin.activity.details.json.ActivityDetails"]
+
+                        activity = {}
+
+                        for m in dj.setdefault("measurements", {}):
+                            name = m["key"]
+                            idx = m["metricsIndex"]
+
+                            activity[name] = [metric["metrics"][idx]
+                                              for metric in dj["metrics"]]
+
+                    except Exception as e:
+                        logging.info("Problem with activity %s:%s", id, e)
+                        if not os.path.isdir(BAD_FILES_PATH):
+                            os.mkdir(BAD_FILES_PATH)
+
+                        fname = "{}_{}_bad".format(user.gc_username, id)
+                        file_path = os.path.join(BAD_FILES_PATH, fname)
+                        with open(file_path, "wb") as save_file:
+                            save_file.write(response.content)
+
+                    else:
+                        lats = activity.setdefault("directLatitude", [])
+                        lngs = activity.setdefault("directLongitude", [])
+                        time = activity.setdefault("sumElapsedDuration", [])
+
+                        if lats:
+                            activity = Activity(user,
+                                                id,
+                                                beginTimestamp,
+                                                json.dumps(A),
+                                                time,
+                                                lats,
+                                                lngs)
+
+                            db.session.add(activity)
+                            db.session.commit()
+                            logging.debug('Done. time series data saved.')
+                        else:
+                            logging.info('Activity %s has no GIS points.')
+
+        logging.debug("Chunk done!")
+    logging.info('Done!')
+
+
+#  Define command-line arguents
+parser = argparse.ArgumentParser()
+
+parser.add_argument("--user",
+                    help="your app username",
+                    nargs='?')
+
+parser.add_argument("--gc_username",
+                    help=("your Garmin Connect username "
+                          "(otherwise, you will be prompted)"),
+                    nargs='?')
+
+parser.add_argument("--gc_password",
+                    help=("your Garmin Connect password "
+                          "(otherwise, you will be prompted)"),
+                    nargs='?')
+
+parser.add_argument('-c', '--count', nargs='?', default="1",
+                    help=("number of recent activities to download, or 'all'"
+                          " (default: 1)"))
+
+parser.add_argument('--clean', action='store_true', default=False)
+
+
+# create tables from data models if they don't exist
+db.create_all()
+db.session.commit()
+
 # Retrive command-line arguments
 args = parser.parse_args()
 
-logging.info('Welcome to Garmin Connect Exporter!')
 
-# Get username from command-line or console input
-if args.username:
+# retrieve this user's record if it exists
+user = User.query.get(args.user)
+
+if user:
+    logging.info("user %s exists", user)
+
+
+elif args.username:
+    # Get username from command-line or console input
     username = args.username
+
 else:
     username = raw_input('Username: ') if py2 else input('Username: ')
 
 password = None
 
-
-# retrieve this user's record if it exists
-user = User.query.get(username)
-
-if user:
-    logging.info("user %s exists", user)
-    password = user.gc_password
 
 if args.clean:
     # delete user
@@ -156,10 +294,6 @@ if args.clean:
     db.session.commit()
     user = None
     logging.info("clean import: deleted records for %s", username)
-
-    if not args.count:
-        # set to import all activities
-        args.count = "all"
 
 if not user:   # We'll create a new user
     # Get GC user password from command-line arg or console input
@@ -176,140 +310,7 @@ if not user:   # We'll create a new user
     db.session.add(user)
     db.session.commit()
     logging.info("added user %s to database", user)
-    already_got = []
-
-else:
-    # get the ids of activities for this user
-    #  that already exist in our database
-    already_got = [d[0] for d in db.session.query(
-        Activity.id).filter_by(user_name=username).all()]
 
 
-# log in to Garmin Connect
-sesh = logged_in_session(username, password)
-
-download_all = False
-
-if args.count == 'all':
-    # If the user wants to download all activities, first download one,
-    # then the result of that request will tell us how many are available
-    # so we will modify the variables then.
-    total_to_download = 1
-    download_all = True
-else:
-    total_to_download = int(args.count)
-
-total_downloaded = 0
-
-# This while loop will download data from the server in multiple chunks,
-# if necessary.
-while total_downloaded < total_to_download:
-    # Maximum of 100... 400 return status if over 100.  So download 100 or
-    # whatever remains if less than 100.
-    if total_to_download - total_downloaded > 100:
-        num_to_download = 100
-    else:
-        num_to_download = total_to_download - total_downloaded
-
-    search_params = {'start': total_downloaded, 'limit': num_to_download}
-
-    # Query Garmin Connect
-    # TODO: Catch possible exceptions here.
-    json_results = sesh.get(url_gc_search, params=search_params).json()
-
-    search = json_results['results']['search']
-
-    if download_all:
-        # Modify total_to_download based on how many activities the server
-        # reports.
-        total_to_download = int(search['totalFound'])
-        # Do it only once.
-        download_all = False
-
-    # Pull out just the list of activities.
-    activities = json_results['results']['activities']
-
-    # Process each activity.
-    for a in activities:
-        A = a['activity']
-
-        id = int(A['activityId'])
-
-        # Increase the count now, since we want to count skipped files.
-        total_downloaded += 1
-
-        if id in already_got:
-            logging.info("activity %s already in database.", id)
-        else:
-            beginTimestamp = A['beginTimestamp']['display']
-            # Display which entry we're working on.
-            info = {
-                "id": id,
-                "name": A['activityName']['value'],
-                "starting": A['beginTimestamp']['display'],
-                "dur": (A["sumElapsedDuration"]["display"]
-                        if "sumElapsedDuration" in A else "??:??:??"),
-                "dist": (A["sumDistance"]["withUnit"]
-                         if "sumElapsedDuration" in A else "0.00 Miles")
-            }
-
-            logging.info("[{id}] {name}: {starting}, {dur}, {dist}"
-                         .format(**info))
-
-            download_url = (url_gc_activity_details +
-                            str(info["id"]) +
-                            "?maxSize=999999999")
-
-            logging.debug('Attempting download of activity track...')
-
-            try:
-                response = sesh.get(download_url)
-            except:
-                logging.info("...failed. Skipping download.")
-
-            else:
-                try:
-                    dj = response.json()[
-                        "com.garmin.activity.details.json.ActivityDetails"]
-
-                    activity = {}
-
-                    for m in dj.setdefault("measurements", {}):
-                        name = m["key"]
-                        idx = m["metricsIndex"]
-
-                        activity[name] = [metric["metrics"][idx]
-                                          for metric in dj["metrics"]]
-
-                except Exception as e:
-                    logging.info("Problem with activity %s:%s", id, e)
-                    if not os.path.isdir(BAD_FILES_PATH):
-                        os.mkdir(BAD_FILES_PATH)
-
-                    fname = "{}_{}_bad".format(user.gc_username, id)
-                    file_path = os.path.join(BAD_FILES_PATH, fname)
-                    with open(file_path, "wb") as save_file:
-                        save_file.write(response.content)
-
-                else:
-                    lats = activity.setdefault("directLatitude", [])
-                    lngs = activity.setdefault("directLongitude", [])
-                    time = activity.setdefault("sumElapsedDuration", [])
-
-                    if lats:
-                        activity = Activity(user,
-                                            id,
-                                            beginTimestamp,
-                                            json.dumps(A),
-                                            time,
-                                            lats,
-                                            lngs)
-
-                        db.session.add(activity)
-                        db.session.commit()
-                        logging.debug('Done. time series data saved.')
-                    else:
-                        logging.info('Activity %s has no GIS points.')
-
-    logging.debug("Chunk done!")
-logging.info('Done!')
+# Now the user exists
+import_activities(db, user, count=args.count)
