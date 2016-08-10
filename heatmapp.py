@@ -100,7 +100,7 @@ class Activity(db.Model):
 # for now we redirect the default view to my personal map
 @app.route('/')
 def nothing():
-    return redirect(url_for('user_map', username="ebrensi"))
+    return redirect(url_for('user_map', username="Efrem"))
 
 
 # route for handling the login page logic

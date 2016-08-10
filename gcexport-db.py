@@ -107,11 +107,7 @@ def import_activities(db, user, count=1):
     # get the ids of activities for this user
     #  that already exist in our database
     already_got = [d[0] for d in db.session.query(
-        Activity.id).filter_by(user_name=user.name).all()]
-
-    if gc_username not in user:
-        logging.info("no GC info for %s", user)
-        return
+        Activity.id).filter_by(user_name=user.name, source="gc").all()]
 
     # log in to Garmin Connect
     sesh = logged_in_session(user.gc_username, user.gc_password)
@@ -282,7 +278,7 @@ if not args.user:
 user = User.query.get(args.user)
 
 if user:
-    logging.info("user %s exists", user)
+    logging.info("User %s exists", user)
 
 else:
     # user doesn't exist in database so we create it
@@ -291,11 +287,12 @@ else:
     if args.gc_username:
         gc_username = args.gc_username
     else:
-        gc_username = raw_input('Username: ') if py2 else input('Username: ')
+        prompt = "Garmin Connect Username: "
+        gc_username = raw_input(prompt) if py2 else input(prompt)
 
-    gc_password = args.password if args.password else getpass()
+    gc_password = args.gc_password if args.gc_password else getpass()
 
-    user = User(user=args.user,
+    user = User(name=args.user,
                 gc_username=gc_username,
                 gc_password=gc_password)
     db.session.add(user)
@@ -305,7 +302,7 @@ else:
 
 if args.clean:
     # delete all gc_activities for user from database
-    logging.info("clean import: deleted gc records for %s", user)
+    logging.info("clean import: deleted GC records for %s", user)
 
 
 # Now import GC activities for user
