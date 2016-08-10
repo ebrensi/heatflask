@@ -54,6 +54,8 @@ class User(db.Model):
     gc_username = db.Column(db.String())
     gc_password = db.Column(db.String())
 
+    strava_token = db.Column(db.String())
+
     # This is set up so that if a user gets deleted, all of the associated
     #  activities are also deleted.
     activities = db.relationship("Activity",
@@ -61,8 +63,8 @@ class User(db.Model):
                                  cascade="all, delete, delete-orphan",
                                  lazy="dynamic")
 
-    def __init__(self, name):
-        self.name = name
+    # def __init__(self, name):
+    #     self.name = name
 
     def __repr__(self):
         return "<User %r>" % (self.name)
@@ -76,16 +78,18 @@ class Activity(db.Model):
     latitudes = db.Column(ARRAY(DOUBLE_PRECISION))
     longitudes = db.Column(ARRAY(DOUBLE_PRECISION))
 
+    source = db.Column(db.String(2))
+
     user_name = db.Column(db.String(), db.ForeignKey("users.name"))
 
-    def __init__(self, user, id, beginTimestamp, summary, elapsed, latitudes, longitudes):
-        self.user = user
-        self.id = id
-        self.beginTimestamp = beginTimestamp
-        self.summary = summary
-        self.elapsed = elapsed
-        self.latitudes = latitudes
-        self.longitudes = longitudes
+    # def __init__(self, user, id, beginTimestamp, summary, elapsed, latitudes, longitudes):
+    #     self.user = user
+    #     self.id = id
+    #     self.beginTimestamp = beginTimestamp
+    #     self.summary = summary
+    #     self.elapsed = elapsed
+    #     self.latitudes = latitudes
+    #     self.longitudes = longitudes
 
     def __repr__(self):
         return "<Activity %s_%r>" % (self.user_name, self.id)

@@ -109,6 +109,10 @@ def import_activities(db, user, count=1):
     already_got = [d[0] for d in db.session.query(
         Activity.id).filter_by(user_name=user.name).all()]
 
+    if gc_username not in user:
+        logging.info("no GC info for %s", user)
+        return
+
     # log in to Garmin Connect
     sesh = logged_in_session(user.gc_username, user.gc_password)
 
@@ -221,21 +225,20 @@ def import_activities(db, user, count=1):
                         time = activity.setdefault("sumElapsedDuration", [])
 
                         if lats:
-                            activity = Activity(user,
-                                                id,
-                                                beginTimestamp,
-                                                json.dumps(A),
-                                                time,
-                                                lats,
-                                                lngs)
+                            activity = Activity(user=user,
+                                                id=id,
+                                                beginTimestamp=beginTimestamp,
+                                                summary=json.dumps(A),
+                                                elapsed=time,
+                                                latitudes=lats,
+                                                longitudes=lngs,
+                                                source="gc")
 
                             db.session.add(activity)
                             db.session.commit()
                             logging.debug('Done. time series data saved.')
                         else:
                             logging.info('Activity %s has no GIS points.')
-
-        logging.debug("Chunk done!")
     logging.info('Done!')
 
 
@@ -271,46 +274,39 @@ db.session.commit()
 args = parser.parse_args()
 
 
+if not args.user:
+    logging.info("no username given")
+    exit()
+
 # retrieve this user's record if it exists
 user = User.query.get(args.user)
 
 if user:
     logging.info("user %s exists", user)
 
-
-elif args.username:
-    # Get username from command-line or console input
-    username = args.username
-
 else:
-    username = raw_input('Username: ') if py2 else input('Username: ')
+    # user doesn't exist in database so we create it
 
-password = None
+    # Get gc_username and/or password from command-line or console input
+    if args.gc_username:
+        gc_username = args.gc_username
+    else:
+        gc_username = raw_input('Username: ') if py2 else input('Username: ')
+
+    gc_password = args.password if args.password else getpass()
+
+    user = User(user=args.user,
+                gc_username=gc_username,
+                gc_password=gc_password)
+    db.session.add(user)
+    db.session.commit()
+    logging.info("Added user %s to database", user)
 
 
 if args.clean:
-    # delete user
-    db.session.delete(user)
-    db.session.commit()
-    user = None
-    logging.info("clean import: deleted records for %s", username)
-
-if not user:   # We'll create a new user
-    # Get GC user password from command-line arg or console input
-    if args.password:
-        password = args.password
-    elif not password:
-        password = getpass()
-
-    # Add this user
-    user = User(username)
-    user.gc_username = username
-    user.gc_password = password
-
-    db.session.add(user)
-    db.session.commit()
-    logging.info("added user %s to database", user)
+    # delete all gc_activities for user from database
+    logging.info("clean import: deleted gc records for %s", user)
 
 
-# Now the user exists
+# Now import GC activities for user
 import_activities(db, user, count=args.count)
