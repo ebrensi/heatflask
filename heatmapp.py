@@ -172,25 +172,28 @@ def get_points(user, start=None, end=None):
     return result
 
 
-@app.route('/<user_name>/gcimport')
+@app.route('/<user_name>/activity_import')
 # endpoint for scheduling a Garmin Connect activity import
-def gcimport(user_name):
+def activity_import(user_name):
     user = User.query.get(user_name)
 
     if user:
-        clean = request.args.get("clean", "false")
+        clean = request.args.get("clean", "")
         count = request.args.get("count", 3)
+        service = request.args.get("service")
 
-        if clean.lower() == "true":
-            return "<h1>clear data for {} and import {} most recent activities</h1>".format(user_name, count)
+        if clean:
+            return "<h1>{}: clear data for {} and import {} most recent activities</h1>".format(service, user_name, count)
         else:
-            return "<h1>import {} most recent activities for user {}</h1>".format(count, user_name)
+            return "<h1>{}: import {} most recent activities for user {}</h1>".format(service, count, user_name)
 
 
 @app.route('/strava_token_exchange')
 def strava_token_exchange():
     resp = jsonify(request.args)
     resp.status_code = 200
+
+    strava_token = request.args["code"]
     return resp
 
 

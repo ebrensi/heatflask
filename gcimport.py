@@ -121,7 +121,7 @@ def import_activities(db, user, count=1):
         total_to_download = 1
         download_all = True
     else:
-        total_to_download = int(args.count)
+        total_to_download = int(count)
 
     total_downloaded = 0
 
