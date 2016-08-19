@@ -164,6 +164,7 @@ def import_activities(db, user, count=1):
 
             if id in already_got:
                 logging.info("activity %s already in database.", id)
+                yield "activity {} already in database.".format(id)
             else:
                 beginTimestamp = A['beginTimestamp']['display']
                 # Display which entry we're working on.

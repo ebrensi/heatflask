@@ -68,7 +68,7 @@
             <ul role="tablist">
                 <li><a href="#home" role="tab"><i class="fa fa-bars"></i></a></li>
                 <li><a href="#profile" role="tab"><i class="fa fa-user"></i></a></li>
-                <li class="disabled"><a href="#messages" role="tab"><i class="fa fa-envelope"></i></a></li>
+                <!-- <li class="disabled"><a href="#messages" role="tab"><i class="fa fa-envelope"></i></a></li> -->
             </ul>
 
             <ul role="tablist">
@@ -161,22 +161,11 @@
             </div>
 
             <div class="sidebar-pane" id="profile">
-                <h1 class="sidebar-header">Profile for {{ username }}<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
+                <h1 class="sidebar-header">Profile<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
 
-                <h2>Data import setup: </h2>
-                <a href="{{ strava_auth_url }}">
-                <img src="static/ConnectWithStrava.png">
-                </a>
 
-                <a href="{{ gc_import_setup }}">
-                <img src="static/gc-logo.png" width="90">
-                </a>
+                <h1> {{ username }}:</h1>
                 <br>
-                Once set-up, data will be imported periodically.
-
-
-
-                <br><br><br><br>
                 <h2>Import activities now:</h2>
                 <form method="get" action="{{ url_for('activity_import', user_name=username)}}">
                     <h3>
@@ -200,10 +189,24 @@
 
             <div class="sidebar-pane" id="messages">
                 <h1 class="sidebar-header">Messages<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
+                dddd
             </div>
 
             <div class="sidebar-pane" id="settings">
                 <h1 class="sidebar-header">Settings<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
+
+                <h1> {{ username }}:</h1>
+                <br>
+                <h2>Data import setup: </h2>
+                <a href="{{ strava_auth_url }}">
+                <img src="static/ConnectWithStrava.png">
+                </a>
+
+                <a href="{{ gc_import_setup }}">
+                <img src="static/gc-logo.png" width="90">
+                </a>
+                <br>
+                Once set-up, data will be imported periodically.
             </div>
         </div>
     </div>
