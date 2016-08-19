@@ -1,7 +1,9 @@
 #! usr/bin/env python
 
-from flask import Flask, render_template, request, redirect, jsonify, url_for
-from flask_compress import Compress
+from flask import Flask, Response, render_template, request, redirect, jsonify, url_for, session, abort
+from flask_login import LoginManager, UserMixin, login_required,  login_user, logout_user
+
+import flask_compress
 from datetime import date, timedelta
 import os
 
@@ -38,19 +40,30 @@ STRAVA_AUTH_PARAMS = {"client_id": 12700,
 # Initialization. Later we'll put this in the __init__.py file
 app = Flask(__name__)
 app.config.from_object(__name__)
-Compress(app)
 
+# initialize database
 db = SQLAlchemy(app)
+
+# Create tables if they don't exist
 db.create_all()
 db.session.commit()
 
+# initialize flask-login functionality
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
+
+# views will be sent as gzip encoded
+flask_compress.Compress(app)
+
 
 # Data models.  These will go in models.py later
-
-
-class User(db.Model):
+class User(db.Model, UserMixin):
     __tablename__ = 'users'
-    name = db.Column(db.String(),  primary_key=True)
+    name = db.Column(db.String(), primary_key=True)
+    # password = db.Column(db.String(), default="")
+
     gc_username = db.Column(db.String())
     gc_password = db.Column(db.String())
 
@@ -63,11 +76,16 @@ class User(db.Model):
                                  cascade="all, delete, delete-orphan",
                                  lazy="dynamic")
 
-    # def __init__(self, name):
-    #     self.name = name
-
     def __repr__(self):
         return "<User %r>" % (self.name)
+
+    def get_id(self):
+        return self.name
+
+    @classmethod
+    def get(cls, name):
+        user = cls.query.get(name)
+        return user if user else None
 
 
 class Activity(db.Model):
@@ -82,41 +100,61 @@ class Activity(db.Model):
 
     user_name = db.Column(db.String(), db.ForeignKey("users.name"))
 
-    # def __init__(self, user, id, beginTimestamp, summary, elapsed, latitudes, longitudes):
-    #     self.user = user
-    #     self.id = id
-    #     self.beginTimestamp = beginTimestamp
-    #     self.summary = summary
-    #     self.elapsed = elapsed
-    #     self.latitudes = latitudes
-    #     self.longitudes = longitudes
-
     def __repr__(self):
         return "<Activity %s_%r>" % (self.user_name, self.id)
 
 
 # Web views
 
+# ************* User handling views *************
+# somewhere to login
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        # password = request.form['password']
+
+        user = User.get(username)
+
+        if user:
+            login_user(user)
+            return redirect(request.args.get("next"))
+        else:
+            return abort(401)
+    else:
+        return Response('''
+        <form action="" method="post">
+            <p><input type=text name=username>
+            <p><input type=password name=password>
+            <p><input type=submit value=Login>
+        </form>
+        ''')
+
+
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    return Response('<p>Logged out</p>')
+
+
+# handle login failed
+@app.errorhandler(401)
+def page_not_found(e):
+    return Response('<p>Login failed</p>')
+
+
+# callback to reload the user object
+@login_manager.user_loader
+def load_user(username):
+    return User.get(username)
+
+
+# ************* other web views ****************
 # for now we redirect the default view to my personal map
 @app.route('/')
 def nothing():
     return redirect(url_for('user_map', username="Efrem"))
-
-
-# route for handling the login page logic
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    error = None
-    if request.method == 'POST':
-        username = request.form['username']
-        user = User.query.get(username)
-        if user:
-            return redirect(url_for('user_map', username=username))
-        else:
-            error = 'Invalid Credentials. Please try again.'
-
-    return render_template('login.html',
-                           error=error)
 
 
 @app.route('/<username>')
@@ -175,17 +213,20 @@ def get_points(user, start=None, end=None):
 @app.route('/<user_name>/activity_import')
 # endpoint for scheduling a Garmin Connect activity import
 def activity_import(user_name):
-    user = User.query.get(user_name)
+    user = User.get(user_name)
 
     if user:
         clean = request.args.get("clean", "")
         count = request.args.get("count", 3)
         service = request.args.get("service")
 
-        if clean:
-            return "<h1>{}: clear data for {} and import {} most recent activities</h1>".format(service, user_name, count)
-        else:
-            return "<h1>{}: import {} most recent activities for user {}</h1>".format(service, count, user_name)
+        if service == "gc":
+            import gcimport
+            if clean:
+                return "<h1>{}: clear data for {} and import {} most recent activities</h1>".format(service, user_name, count)
+            else:
+                gcimport.import_activities(db, user, count=count)
+                return "<h1>{}: import {} most recent activities for user {}</h1>".format(service, count, user_name)
 
 
 @app.route('/strava_token_exchange')
