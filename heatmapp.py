@@ -7,6 +7,8 @@ import flask_compress
 from datetime import date, timedelta
 import os
 
+import requests
+
 from flask_sqlalchemy import SQLAlchemy
 
 try:
@@ -244,15 +246,18 @@ def activity_import(user_name):
 
 @app.route('/strava_token_exchange')
 def strava_token_exchange():
-    resp = jsonify(request.args)
-    resp.status_code = 200
+    # resp = jsonify(request.args)
+    # resp.status_code = 200
 
     params = STRAVA_TOKEN_PARAMS.copy()
     params["code"] = request.args["code"]
 
-    token_url = STRAVA_TOKEN_URL + "?" + urlencode(params)
+    # token_url = STRAVA_TOKEN_URL + "?" + urlencode(params)
 
-    return redirect(token_url)
+    response = requests.post(STRAVA_TOKEN_URL, data=params)
+    resp = jsonify(response.json())
+    resp.status_code = 200
+    return resp
 
 
 # This works but you really should use `flask run`
