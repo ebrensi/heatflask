@@ -252,7 +252,7 @@ def strava_token_exchange():
 
     token_url = STRAVA_TOKEN_URL + urlencode(params)
 
-    return token_url
+    return redirect(token_url)
 
 
 # This works but you really should use `flask run`
