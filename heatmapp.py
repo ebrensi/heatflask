@@ -250,7 +250,7 @@ def strava_token_exchange():
     params = STRAVA_TOKEN_PARAMS.copy()
     params["code"] = request.args["code"]
 
-    token_url = STRAVA_TOKEN_URL + urlencode(params)
+    token_url = STRAVA_TOKEN_URL + "/" + urlencode(params)
 
     return redirect(token_url)
 
