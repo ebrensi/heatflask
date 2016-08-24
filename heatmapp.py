@@ -31,11 +31,16 @@ SQLALCHEMY_TRACK_MODIFICATIONS = True
 STRAVA_AUTH_URL = "https://www.strava.com/oauth/authorize"
 STRAVA_AUTH_PARAMS = {"client_id": 12700,
                       "response_type": "code",
-                      "redirect_uri": "http://heatflask.herokuapp.com/strava_token_exchange",
+                      # "redirect_uri": "http://heatflask.herokuapp.com/strava_token_exchange",
                       # "scope": "view_prvate",
                       # "state": "mystate",
                       "approval_prompt": "force"
                       }
+
+STRAVA_TOKEN_URL = "https://www.strava.com/oauth/token"
+STRAVA_TOKEN_PARAMS = {"client_id": os.environ["STRAVA_CLIENT_ID"],
+                       "client_secret":  os.environ["STRAVA_CLIENT_SECRET"],
+                       "code": "code"}
 
 # Initialization. Later we'll put this in the __init__.py file
 app = Flask(__name__)
@@ -59,7 +64,7 @@ flask_compress.Compress(app)
 
 
 # Data models.  These will go in models.py later
-class User(db.Model, UserMixin):
+class User(UserMixin, db.Model):
     __tablename__ = 'users'
     name = db.Column(db.String(), primary_key=True)
     # password = db.Column(db.String(), default="")
@@ -159,7 +164,12 @@ def nothing():
 
 @app.route('/<username>')
 def user_map(username):
-    strava_url = STRAVA_AUTH_URL + "?" + urlencode(STRAVA_AUTH_PARAMS)
+    params = STRAVA_AUTH_PARAMS.copy()
+    params.update({"state": username,
+                   "redirect_uri": request.url_root + "strava_token_exchange"
+                   })
+
+    strava_url = STRAVA_AUTH_URL + "?" + urlencode(params)
     return render_template('map.html',
                            username=username,
                            strava_auth_url=strava_url)
@@ -225,8 +235,11 @@ def activity_import(user_name):
             if clean:
                 return "<h1>{}: clear data for {} and import {} most recent activities</h1>".format(service, user_name, count)
             else:
-                gcimport.import_activities(db, user, count=count)
-                return "<h1>{}: import {} most recent activities for user {}</h1>".format(service, count, user_name)
+                do_import = gcimport.import_activities(db, user, count=count)
+                return Response(do_import, mimetype='text/event-stream')
+
+                # return "<h1>{}: import {} most recent activities for user
+                # {}</h1>".format(service, count, user_name)
 
 
 @app.route('/strava_token_exchange')
@@ -234,8 +247,12 @@ def strava_token_exchange():
     resp = jsonify(request.args)
     resp.status_code = 200
 
-    strava_token = request.args["code"]
-    return resp
+    params = STRAVA_TOKEN_PARAMS.copy()
+    params["code"] = request.args["code"]
+
+    token_url = STRAVA_TOKEN_URL + urlencode(params)
+
+    return token_url
 
 
 # This works but you really should use `flask run`

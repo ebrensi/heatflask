@@ -110,6 +110,7 @@ def import_activities(db, user, count=1):
         Activity.id).filter_by(user_name=user.name, source="gc").all()]
 
     # log in to Garmin Connect
+    yield "logging in Garmin Connect user {}...\n".format(user.gc_username)
     sesh = logged_in_session(user.gc_username, user.gc_password)
 
     download_all = False
@@ -163,8 +164,10 @@ def import_activities(db, user, count=1):
             total_downloaded += 1
 
             if id in already_got:
-                logging.info("activity %s already in database.", id)
-                yield "activity {} already in database.".format(id)
+                msg = "activity {} already in database.".format(id)
+                logging.info(msg)
+                yield msg + "\n"
+
             else:
                 beginTimestamp = A['beginTimestamp']['display']
                 # Display which entry we're working on.
@@ -178,8 +181,9 @@ def import_activities(db, user, count=1):
                              if "sumElapsedDuration" in A else "0.00 Miles")
                 }
 
-                logging.info("[{id}] {name}: {starting}, {dur}, {dist}"
-                             .format(**info))
+                msg = "[{id}] {name}: {starting}, {dur}, {dist}".format(**info)
+                logging.info(msg)
+                yield msg + "\n"
 
                 download_url = (url_gc_activity_details +
                                 str(info["id"]) +
@@ -190,7 +194,9 @@ def import_activities(db, user, count=1):
                 try:
                     response = sesh.get(download_url)
                 except:
-                    logging.info("...failed. Skipping download.")
+                    msg = "...failed. Skipping download."
+                    logging.info(msg)
+                    yield msg + "\n"
 
                 else:
                     try:
@@ -207,7 +213,10 @@ def import_activities(db, user, count=1):
                                               for metric in dj["metrics"]]
 
                     except Exception as e:
-                        logging.info("Problem with activity %s:%s", id, e)
+                        msg = "Problem with activity {}:{}".format(id, e)
+                        logging.info(msg)
+                        yield msg + "\n"
+
                         if not os.path.isdir(BAD_FILES_PATH):
                             os.mkdir(BAD_FILES_PATH)
 
@@ -235,8 +244,12 @@ def import_activities(db, user, count=1):
                             db.session.commit()
                             logging.debug('Done. time series data saved.')
                         else:
-                            logging.info('Activity %s has no GIS points.')
-    logging.info('Done!')
+                            msg = 'Activity {} has no GIS points.'.format(id)
+                            logging.info(msg)
+                            yield msg + "\n"
+    msg = 'Done!'
+    logging.info(msg)
+    yield msg + "\n"
 
 
 def main(user, count):
@@ -309,4 +322,5 @@ if __name__ == '__main__':
         logging.info("clean import: deleted GC records for %s", user)
 
     # import GC activities for user
-    import_activities(db, user, count=args.count)
+    for msg in import_activities(db, user, count=args.count):
+        pass
