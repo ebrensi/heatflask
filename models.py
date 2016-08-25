@@ -46,3 +46,8 @@ class Activity(db.Model):
 
     def __repr__(self):
         return "<Activity %s_%r>" % (self.user_name, self.id)
+
+
+# Create tables if they don't exist
+# db.create_all()
+# db.session.commit()
