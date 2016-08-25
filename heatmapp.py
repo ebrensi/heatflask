@@ -1,7 +1,10 @@
 #! usr/bin/env python
 
-from flask import Flask, Response, render_template, request, redirect, jsonify, url_for, session, abort
-from flask_login import LoginManager, UserMixin, login_required,  login_user, logout_user
+from urllib import urlencode
+
+from flask import Flask, Response, render_template, request, redirect, jsonify,\
+    url_for, session, abort
+from flask_login import LoginManager, login_required,  login_user, logout_user
 
 import flask_compress
 from datetime import date, timedelta
@@ -11,13 +14,10 @@ import requests
 
 from flask_sqlalchemy import SQLAlchemy
 
-try:
-    from urllib.parse import urlencode
-except ImportError:
-    from urllib import urlencode
+from flask_migrate import Migrate
 
-# For models
-from sqlalchemy.dialects.postgresql import ARRAY, DOUBLE_PRECISION, INTEGER, TIMESTAMP, JSON
+
+# from flask_migrate import Migrate
 
 # This app is outgrowing this single-file setup. The next step is to modularize
 #  it but for now we'll stick with this while we get the SQLAlchemy data models
@@ -28,7 +28,7 @@ from sqlalchemy.dialects.postgresql import ARRAY, DOUBLE_PRECISION, INTEGER, TIM
 # Later we'll put this in a config.py file
 SQLALCHEMY_DATABASE_URI = os.environ["DATABASE_URL"]
 DEBUG = True
-SQLALCHEMY_TRACK_MODIFICATIONS = True
+SQLALCHEMY_TRACK_MODIFICATIONS = False
 
 STRAVA_AUTH_URL = "https://www.strava.com/oauth/authorize"
 STRAVA_AUTH_PARAMS = {"client_id": 12700,
@@ -38,7 +38,6 @@ STRAVA_AUTH_PARAMS = {"client_id": 12700,
                       # "state": "mystate",
                       "approval_prompt": "force"
                       }
-
 STRAVA_TOKEN_URL = "https://www.strava.com/oauth/token"
 STRAVA_TOKEN_PARAMS = {"client_id": os.environ["STRAVA_CLIENT_ID"],
                        "client_secret":  os.environ["STRAVA_CLIENT_SECRET"],
@@ -50,6 +49,10 @@ app.config.from_object(__name__)
 
 # initialize database
 db = SQLAlchemy(app)
+
+# data models defined in models.py
+from models import User, Activity
+migrate = Migrate(app, db)
 
 # Create tables if they don't exist
 db.create_all()
@@ -64,57 +67,12 @@ login_manager.login_view = 'login'
 # views will be sent as gzip encoded
 flask_compress.Compress(app)
 
-
-# Data models.  These will go in models.py later
-class User(UserMixin, db.Model):
-    __tablename__ = 'users'
-    name = db.Column(db.String(), primary_key=True)
-    # password = db.Column(db.String(), default="")
-
-    gc_username = db.Column(db.String())
-    gc_password = db.Column(db.String())
-
-    strava_token = db.Column(db.String())
-
-    # This is set up so that if a user gets deleted, all of the associated
-    #  activities are also deleted.
-    activities = db.relationship("Activity",
-                                 backref="user",
-                                 cascade="all, delete, delete-orphan",
-                                 lazy="dynamic")
-
-    def __repr__(self):
-        return "<User %r>" % (self.name)
-
-    def get_id(self):
-        return self.name
-
-    @classmethod
-    def get(cls, name):
-        user = cls.query.get(name)
-        return user if user else None
-
-
-class Activity(db.Model):
-    id = db.Column(INTEGER, primary_key=True)
-    beginTimestamp = db.Column(TIMESTAMP)
-    summary = db.Column(JSON)
-    elapsed = db.Column(ARRAY(INTEGER))
-    latitudes = db.Column(ARRAY(DOUBLE_PRECISION))
-    longitudes = db.Column(ARRAY(DOUBLE_PRECISION))
-
-    source = db.Column(db.String(2))
-
-    user_name = db.Column(db.String(), db.ForeignKey("users.name"))
-
-    def __repr__(self):
-        return "<Activity %s_%r>" % (self.user_name, self.id)
-
-
 # Web views
 
 # ************* User handling views *************
 # somewhere to login
+
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == 'POST':
