@@ -1,39 +1,22 @@
 #! usr/bin/env python
 
 from urllib import urlencode
-
 from flask import Flask, Response, render_template, request, redirect, jsonify,\
-    url_for, session, abort
+    url_for, abort
 from flask_login import LoginManager, login_required,  login_user, logout_user
-
 import flask_compress
 from datetime import date, timedelta
 import os
-
 import requests
-
 from flask_sqlalchemy import SQLAlchemy
-
 from flask_migrate import Migrate
 
 
-# from flask_migrate import Migrate
-
-# This app is outgrowing this single-file setup. The next step is to modularize
-#  it but for now we'll stick with this while we get the SQLAlchemy data models
-#  working
-
-
 # Configuration
-# Later we'll put this in a config.py file
-SQLALCHEMY_DATABASE_URI = os.environ["DATABASE_URL"]
-DEBUG = True
-SQLALCHEMY_TRACK_MODIFICATIONS = False
-
 STRAVA_AUTH_URL = "https://www.strava.com/oauth/authorize"
 STRAVA_AUTH_PARAMS = {"client_id": 12700,
                       "response_type": "code",
-                      # "redirect_uri": "http://heatflask.herokuapp.com/strava_token_exchange",
+                      # "redirect_uri": "uri",
                       # "scope": "view_prvate",
                       # "state": "mystate",
                       "approval_prompt": "force"
@@ -45,7 +28,8 @@ STRAVA_TOKEN_PARAMS = {"client_id": os.environ["STRAVA_CLIENT_ID"],
 
 # Initialization. Later we'll put this in the __init__.py file
 app = Flask(__name__)
-app.config.from_object(__name__)
+# app.config.from_object(__name__)
+app.config.from_object(os.environ['APP_SETTINGS'])
 
 # initialize database
 db = SQLAlchemy(app)
@@ -218,6 +202,6 @@ def strava_token_exchange():
     return resp
 
 
-# This works but you really should use `flask run`
+# python heatmapp.py works but you really should use `flask run`
 if __name__ == '__main__':
     app.run()
