@@ -10,3 +10,4 @@ export FLASK_DEBUG=1
 export STRAVA_CLIENT_ID="12700"
 export STRAVA_CLIENT_SECRET="04d0fffe327fa71bffcbb4c9bc00c26a0d530e4b"
 
+export APP_SETTINGS="config.DevelopmentConfig"
