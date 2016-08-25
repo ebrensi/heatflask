@@ -38,9 +38,6 @@ db = SQLAlchemy(app)
 from models import User, Activity
 migrate = Migrate(app, db)
 
-# Create tables if they don't exist
-db.create_all()
-db.session.commit()
 
 # initialize flask-login functionality
 login_manager = LoginManager()
