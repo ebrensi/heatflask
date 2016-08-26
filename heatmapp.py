@@ -28,7 +28,6 @@ STRAVA_TOKEN_PARAMS = {"client_id": os.environ["STRAVA_CLIENT_ID"],
 
 # Initialization. Later we'll put this in the __init__.py file
 app = Flask(__name__)
-# app.config.from_object(__name__)
 app.config.from_object(os.environ['APP_SETTINGS'])
 
 # initialize database
