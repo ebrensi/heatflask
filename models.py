@@ -49,5 +49,15 @@ class Activity(db.Model):
 
 
 # Create tables if they don't exist
+#  These commands aren't necessary if we use flask-migrate
 # db.create_all()
 # db.session.commit()
+
+# If flask-migrate is being used, we build the tables from scratch using
+# flask db init
+
+# Then run
+# flask db migrate
+# flask db upgrade
+
+# and re-run the latter two every time we update the schema
