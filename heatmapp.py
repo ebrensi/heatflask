@@ -2,7 +2,7 @@
 
 from urllib import urlencode
 from flask import Flask, Response, render_template, request, redirect, jsonify,\
-    url_for, abort
+    url_for, abort, session
 from flask_login import LoginManager, login_required,  login_user, logout_user
 import flask_compress
 from datetime import date, timedelta
@@ -11,24 +11,42 @@ import requests
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 
+from flask_oauthlib.client import OAuth
 
 # Configuration
 STRAVA_AUTH_URL = "https://www.strava.com/oauth/authorize"
-STRAVA_AUTH_PARAMS = {"client_id": 12700,
+STRAVA_AUTH_PARAMS = {"client_id": os.environ["STRAVA_CLIENT_ID"],
                       "response_type": "code",
                       # "redirect_uri": "uri",
                       # "scope": "view_prvate",
                       # "state": "mystate",
-                      "approval_prompt": "force"
-                      }
+                      "approval_prompt": "force"}
+
 STRAVA_TOKEN_URL = "https://www.strava.com/oauth/token"
 STRAVA_TOKEN_PARAMS = {"client_id": os.environ["STRAVA_CLIENT_ID"],
                        "client_secret":  os.environ["STRAVA_CLIENT_SECRET"],
                        "code": "code"}
 
+
 # Initialization. Later we'll put this in the __init__.py file
 app = Flask(__name__)
 app.config.from_object(os.environ['APP_SETTINGS'])
+app.config.from_object(__name__)
+
+oauth = OAuth(app)
+
+strava = oauth.remote_app(
+    'strava',
+    consumer_key=app.config["STRAVA_CLIENT_ID"],
+    consumer_secret=app.config["STRAVA_CLIENT_SECRET"],
+    request_token_params=STRAVA_AUTH_PARAMS,
+    base_url='https://www.strava.com/api',
+    request_token_url=None,
+    access_token_method='POST',
+    access_token_url="https://www.strava.com/oauth/token",
+    authorize_url="https://www.strava.com/oauth/authorize"
+)
+
 
 # initialize database
 db = SQLAlchemy(app)
@@ -106,7 +124,8 @@ def nothing():
 def user_map(username):
     params = STRAVA_AUTH_PARAMS.copy()
     params.update({"state": username,
-                   "redirect_uri": request.url_root + "strava_token_exchange"
+                   "redirect_uri": url_for("strava_token_exchange",
+                                           _external=True)
                    })
 
     strava_url = STRAVA_AUTH_URL + "?" + urlencode(params)
@@ -189,8 +208,6 @@ def strava_token_exchange():
 
     params = STRAVA_TOKEN_PARAMS.copy()
     params["code"] = request.args["code"]
-
-    # token_url = STRAVA_TOKEN_URL + "?" + urlencode(params)
 
     response = requests.post(STRAVA_TOKEN_URL, data=params)
     resp = jsonify(response.json())
