@@ -1,8 +1,7 @@
-from flask import Flask, redirect, url_for, session, request, jsonify, flash
+#! /usr/bin/env python
+
+from flask import Flask, redirect, url_for, session, request, jsonify
 from flask_oauthlib.client import OAuth
-import os
-import json
-from urllib import urlencode, unquote
 
 STRAVA_CLIENT_ID = "12700"
 STRAVA_CLIENT_SECRET = "04d0fffe327fa71bffcbb4c9bc00c26a0d530e4b"
@@ -63,6 +62,22 @@ def authorized():
         session['strava_token'] = (resp['access_token'], '')
         me = strava.get('athlete')
         return jsonify(me.data)
+
+
+@app.route('/activities')
+def activities():
+    if 'strava_token' in session:
+        page = request.args["page"]
+        data = {"page": page,
+                "per_page": 50}
+        activities = strava.get('athlete/activities', data=data).data
+        a_list = {a["id"]: "{}: {}".format(a["name"], a["start_date"])
+                  for a in activities}
+        a_dict = {"activities": a_list,
+                  "count": len(a_list)}
+        return jsonify(a_dict)
+    else:
+        return redirect(url_for('login'))
 
 
 @strava.tokengetter
