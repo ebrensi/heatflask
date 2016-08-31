@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 from flask import Flask, redirect, url_for, session, request, jsonify, Response
-from stravalib import Client
+import stravalib
 
 STRAVA_CLIENT_ID = "12700"
 STRAVA_CLIENT_SECRET = "04d0fffe327fa71bffcbb4c9bc00c26a0d530e4b"
@@ -13,7 +13,7 @@ SECRET_KEY = "secret"
 app = Flask(__name__)
 app.config.from_object(__name__)
 
-client = Client()
+client = stravalib.Client()
 
 
 @app.route('/')
@@ -40,12 +40,6 @@ def login():
                                         approval_prompt="force",
                                         state=request.args.get("next", ""))
     return redirect(auth_url)
-
-
-# @app.route('/logout')
-# def logout():
-#     session.pop('strava_token', None)
-#     return redirect(url_for('index'))
 
 
 @app.route('/login/authorized')
