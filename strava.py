@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-from flask import Flask, redirect, url_for, session, request, jsonify
+from flask import Flask, redirect, url_for, session, request, jsonify, Response
 from stravalib import Client
 
 STRAVA_CLIENT_ID = "12700"
@@ -24,7 +24,8 @@ def index():
         ath = {"id": athlete.id,
                "firstname": athlete.firstname,
                "lastname": athlete.lastname,
-               "username": athlete.username
+               "username": athlete.username,
+               "pic_url": athlete.profile
                }
         return jsonify(ath)
     else:
@@ -36,7 +37,8 @@ def login():
     redirect_uri = url_for('authorized', _external=True)
     auth_url = client.authorization_url(client_id=app.config["STRAVA_CLIENT_ID"],
                                         redirect_uri=redirect_uri,
-                                        approval_prompt="force")
+                                        approval_prompt="force",
+                                        state=request.args.get("next", ""))
     return redirect(auth_url)
 
 
@@ -61,33 +63,52 @@ def authorized():
 
     else:
         client.access_token = access_token
-        return redirect(url_for("index"))
+        return redirect(request.args.get("state") or url_for("index"))
 
 
 @app.route('/activities')
 def activities():
     if client.access_token:
-        act = client.get_activities(after="2010-01-01T00:00:00Z")
-        ids = {a.id: a.name for a in act}
-        return jsonify(ids)
+        limit = request.args.get("limit")
 
-    # if 'strava_token' in session:
-    #     page = request.args["page"]
-    #     data = {"page": page,
-    #             "per_page": 50}
-    #     activities = strava.get('athlete/activities', data=data).data
-    #     a_list = {a["id"]: "{}: {}".format(a["name"], a["start_date"])
-    #               for a in activities}
-    #     a_dict = {"activities": a_list,
-    #               "count": len(a_list)}
-    #     return jsonify(a_dict)
+        def do_import():
+            count = 0
+            yield "importing activities from Strava...\n"
+            for a in client.get_activities(limit=limit):
+                # a2 = {"id": a.id,
+                #       "name": a.name,
+                #       "external_id": a.external_id,
+                #       "distance": a.distance,
+                #       "elapsed_time": a.elapsed_time,
+                #       "type": a.type,
+                #       "start_date_local": a.start_date_local
+                #       }
+                count += 1
+                yield "[{0.id}] {0.name}: {0.start_date_local}, {0.elapsed_time}, {0.distance}\n".format(a)
+            yield "Done! {} activities exported\n".format(count)
+
+        return Response(do_import(), mimetype='text/event-stream')
     else:
-        return redirect(url_for('login'))
+        return redirect(url_for('login', next=url_for("activities",
+                                                      _external=True)))
 
 
-# @strava.tokengetter
-# def get_strava_token():
-#     return session.get('strava_token')
+@app.route('/activities/<activity_id>')
+def data_points(activity_id):
+    if client.access_token:
+        streams = client.get_activity_streams(int(activity_id),
+                                              types=['time', 'latlng'])
+        print(streams)
+
+        time = streams["time"].data
+        latlng = streams["latlng"].data
+        points = ("{}: {}\n".format(t, ll) for t, ll in zip(time, latlng))
+        return Response(points, mimetype='text/event-stream')
+    else:
+        return redirect(url_for('login',
+                                next=url_for("data_points",
+                                             activity_id=activity_id,
+                                             _external=True)))
 
 
 if __name__ == '__main__':
