@@ -58,7 +58,7 @@ url_gc_login = ("https://sso.garmin.com/sso/login?"
 
 url_gc_post_auth = 'https://connect.garmin.com/post-auth/login?'
 
-url_gc_search = 'http://connect.garmin.com/proxy/activity-search-service-1.0/json/activities?'
+url_gc_search = 'http://connect.garmin.com/proxy/activity-search-service-1.2/json/activities?'
 url_gc_activity_details = "https://connect.garmin.com/modern/proxy/activity-service-1.3/json/activityDetails/"
 
 
@@ -99,6 +99,8 @@ def logged_in_session(username, password):
 
     r3 = sesh.post(url_gc_post_auth, params={"ticket": login_ticket})
 
+    sesh.get("http://connect.garmin.com/modern")
+    sesh.get("https://connect.garmin.com/legacy/session")
     return sesh
 
 
@@ -141,8 +143,7 @@ def import_activities(db, user, count=1):
         # Query Garmin Connect
         # TODO: Catch possible exceptions here.
         json_results = sesh.get(url_gc_search, params=search_params).json()
-
-        search = json_results['results']['search']
+        search = json_results['results']
 
         if download_all:
             # Modify total_to_download based on how many activities the server
@@ -169,16 +170,19 @@ def import_activities(db, user, count=1):
                 yield msg + "\n"
 
             else:
-                beginTimestamp = A['beginTimestamp']['display']
+                # with open("activity.json", "w") as file:
+                #     json.dump(A, file, indent=2)
+                AS = A['activitySummary']
+                beginTimestamp = AS['BeginTimestamp']['display']
                 # Display which entry we're working on.
                 info = {
                     "id": id,
-                    "name": A['activityName']['value'],
-                    "starting": A['beginTimestamp']['display'],
-                    "dur": (A["sumElapsedDuration"]["display"]
-                            if "sumElapsedDuration" in A else "??:??:??"),
-                    "dist": (A["sumDistance"]["withUnit"]
-                             if "sumElapsedDuration" in A else "0.00 Miles")
+                    "name": A['activityName'],
+                    "starting": beginTimestamp,
+                    "dur": (AS["SumElapsedDuration"]["display"]
+                            if "SumElapsedDuration" in AS else "??:??:??"),
+                    "dist": (AS["SumDistance"]["withUnit"]
+                             if "SumElapsedDuration" in AS else "0.00 Miles")
                 }
 
                 msg = "[{id}] {name}: {starting}, {dur}, {dist}".format(**info)

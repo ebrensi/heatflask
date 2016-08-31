@@ -11,8 +11,6 @@ import requests
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 
-from flask_oauthlib.client import OAuth
-
 # Configuration
 STRAVA_AUTH_URL = "https://www.strava.com/oauth/authorize"
 STRAVA_AUTH_PARAMS = {"client_id": os.environ["STRAVA_CLIENT_ID"],
@@ -32,21 +30,6 @@ STRAVA_TOKEN_PARAMS = {"client_id": os.environ["STRAVA_CLIENT_ID"],
 app = Flask(__name__)
 app.config.from_object(os.environ['APP_SETTINGS'])
 app.config.from_object(__name__)
-
-oauth = OAuth(app)
-
-strava = oauth.remote_app(
-    'strava',
-    consumer_key=app.config["STRAVA_CLIENT_ID"],
-    consumer_secret=app.config["STRAVA_CLIENT_SECRET"],
-    request_token_params=STRAVA_AUTH_PARAMS,
-    base_url='https://www.strava.com/api',
-    request_token_url=None,
-    access_token_method='POST',
-    access_token_url="https://www.strava.com/oauth/token",
-    authorize_url="https://www.strava.com/oauth/authorize"
-)
-
 
 # initialize database
 db = SQLAlchemy(app)
@@ -68,49 +51,6 @@ flask_compress.Compress(app)
 # Web views
 
 # ************* User handling views *************
-# somewhere to login
-
-
-@app.route("/login", methods=["GET", "POST"])
-def login():
-    if request.method == 'POST':
-        username = request.form['username']
-        # password = request.form['password']
-
-        user = User.get(username)
-
-        if user:
-            login_user(user)
-            return redirect(request.args.get("next"))
-        else:
-            return abort(401)
-    else:
-        return Response('''
-        <form action="" method="post">
-            <p><input type=text name=username>
-            <p><input type=password name=password>
-            <p><input type=submit value=Login>
-        </form>
-        ''')
-
-
-@app.route("/logout")
-@login_required
-def logout():
-    logout_user()
-    return Response('<p>Logged out</p>')
-
-
-# handle login failed
-@app.errorhandler(401)
-def page_not_found(e):
-    return Response('<p>Login failed</p>')
-
-
-# callback to reload the user object
-@login_manager.user_loader
-def load_user(username):
-    return User.get(username)
 
 
 # ************* other web views ****************
