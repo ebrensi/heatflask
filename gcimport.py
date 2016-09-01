@@ -173,12 +173,13 @@ def import_activities(db, user, count=1):
                 # with open("activity.json", "w") as file:
                 #     json.dump(A, file, indent=2)
                 AS = A['activitySummary']
-                beginTimestamp = AS['BeginTimestamp']['display']
+                beginTimestamp = AS['BeginTimestamp']['value']
+
                 # Display which entry we're working on.
                 info = {
                     "id": id,
                     "name": A['activityName'],
-                    "starting": beginTimestamp,
+                    "starting": AS['BeginTimestamp']['display'],
                     "dur": (AS["SumElapsedDuration"]["display"]
                             if "SumElapsedDuration" in AS else "??:??:??"),
                     "dist": (AS["SumDistance"]["withUnit"]
