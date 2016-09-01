@@ -1,10 +1,13 @@
 #! /usr/bin/env python
+# This is a sample app to test Strava API functionality
 
-from flask import Flask, redirect, url_for, session, request, jsonify, Response
+
+from flask import Flask, redirect, url_for, request, jsonify, Response
 import stravalib
+import os
 
-STRAVA_CLIENT_ID = "12700"
-STRAVA_CLIENT_SECRET = "04d0fffe327fa71bffcbb4c9bc00c26a0d530e4b"
+STRAVA_CLIENT_ID = os.environ["STRAVA_CLIENT_ID"]
+STRAVA_CLIENT_SECRET = os.environ["STRAVA_CLIENT_SECRET"]
 STRAVA_AUTH_URL = "https://www.strava.com/oauth/authorize"
 STRAVA_TOKEN_URL = "https://www.strava.com/oauth/token"
 SECRET_KEY = "secret"
