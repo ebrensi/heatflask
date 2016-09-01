@@ -1,16 +1,13 @@
 #! usr/bin/env python
 
 from flask import Flask, Response, render_template, request, redirect, jsonify,\
-    url_for, abort, session
-from flask_login import LoginManager, login_required,  login_user, logout_user
+    url_for, abort, session, flash
 import flask_compress
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from datetime import date, timedelta
 import os
 import stravalib
-
-import json
 
 
 app = Flask(__name__)
@@ -23,12 +20,6 @@ db = SQLAlchemy(app)
 from models import User, Activity
 migrate = Migrate(app, db)
 
-
-# initialize flask-login functionality
-login_manager = LoginManager()
-login_manager.init_app(app)
-login_manager.login_view = 'login'
-
 # Strava client
 client = stravalib.Client()
 
@@ -36,22 +27,22 @@ client = stravalib.Client()
 # views will be sent as gzip encoded
 flask_compress.Compress(app)
 
-# Web views
 
-# ************* User handling views *************
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    return render_template("login.html")
 
 
-# for now we redirect the default view to my personal map
 @app.route('/')
 def nothing():
-    return redirect(url_for('user_map', username="Efrem"))
+    return redirect(url_for('login'))
 
 
 @app.route('/<username>')
 def user_map(username):
     return render_template('map.html',
                            username=username,
-                           strava_auth_url=url_for("strava_userinfo"))
+                           strava_auth_url=url_for("strava_login"))
 
 
 @app.route('/<username>/points.json')
@@ -117,29 +108,13 @@ def activity_import(user_name):
                 do_import = gcimport.import_activities(db, user, count=count)
                 return Response(do_import, mimetype='text/event-stream')
 
+        elif service == "strava":
+            return redirect(url_for("strava_activities",
+                                    limit=count,
+                                    username=user_name,
+                                    really="yes"))
 
 # ------- Strava API stuff -----------
-@app.route('/strava')
-def strava():
-    return redirect(url_for("strava_userinfo"))
-
-
-@app.route('/strava/userinfo')
-def strava_userinfo():
-    if client.access_token:
-        A = client.get_athlete()
-        # ath = {key:value for key, value in A.__dict__.items()
-        #         if not key.startswith('__') and not callable(key)}
-
-        ath = {"id": A.id,
-               "firstname": A.firstname,
-               "lastname": A.lastname,
-               "username": A.username,
-               "pic_url": A.profile
-               }
-        return jsonify(ath)
-    else:
-        return redirect(url_for('strava_login'))
 
 
 @app.route('/strava/login')
@@ -154,34 +129,90 @@ def strava_login():
 
 @app.route('/strava/login/authorized')
 def authorized():
-    code = request.args['code']
-    access_token = client.exchange_code_for_token(client_id=app.config["STRAVA_CLIENT_ID"],
-                                                  client_secret=app.config[
-                                                      "STRAVA_CLIENT_SECRET"],
-                                                  code=code)
-    if access_token:
+    if "error" in request.args:
+        error = request.args["error"]
+        flash('Error: {}'.format(error))
+        return redirect(url_for('login'))
+    else:
+        code = request.args['code']
+        access_token = client.exchange_code_for_token(client_id=app.config["STRAVA_CLIENT_ID"],
+                                                      client_secret=app.config[
+                                                          "STRAVA_CLIENT_SECRET"],
+                                                      code=code)
         client.access_token = access_token
-        return redirect(request.args.get("state") or url_for("strava_userinfo"))
+        return redirect(request.args.get("state") or url_for("account_create"))
 
 
-@app.route('/strava/activities')
-def activities():
+@app.route('/strava/account_create')
+def account_create():
     if client.access_token:
-        limit = request.args.get("limit")
+        A = client.get_athlete()
+        user = User.get(A.username)
+        if not user:
+            athlete_info = {"id": A.id,
+                            "firstname": A.firstname,
+                            "lastname": A.lastname,
+                            "username": A.username,
+                            "pic_url": A.profile,
+                            }
+
+            user = User(name=A.username,
+                        strava_user_data=athlete_info)
+            db.session.add(user)
+            db.session.commit()
+        return redirect(url_for("user_map", username=A.username))
+
+
+@app.route('/<username>/strava/activities')
+def strava_activities(username):
+    user = User.get(username)
+    already_got = [d[0] for d in db.session.query(
+        Activity.id).filter_by(user_name=user.name, source="strava").all()]
+
+    limit = request.args.get("limit")
+    limit = int(limit) if limit else ""
+
+    really = (request.args.get("really") == "yes")
+
+    if client.access_token:
 
         def do_import():
             count = 0
             yield "importing activities from Strava...\n"
             for a in client.get_activities(limit=limit):
+                if really:
+
+                    if a.id in already_got:
+                        msg = "activity {} already in database.".format(a.id)
+                        yield msg + "\n"
+                    else:
+                        streams = client.get_activity_streams(int(a.id),
+                                                              types=['time', 'latlng'])
+                        time = streams["time"].data
+                        latlng = streams["latlng"].data
+
+                        A = Activity(user=user,
+                                     id=a.id,
+                                     beginTimestamp=a.start_date_local,
+                                     elapsed=time,
+                                     latitudes=[ll[0] for ll in latlng],
+                                     longitudes=[ll[1] for ll in latlng],
+                                     source="strava")
+                        db.session.add(A)
+                        db.session.commit()
+
                 count += 1
                 yield ("[{0.id}] {0.name}: {0.start_date_local},"
                        " {0.elapsed_time}, {0.distance}\n").format(a)
-            yield "Done! {} activities exported\n".format(count)
+            yield "Done! {} activities imported\n".format(count)
 
         return Response(do_import(), mimetype='text/event-stream')
+
     else:
-        return redirect(url_for('strava_login', next=url_for("activities",
-                                                             _external=True)))
+        return redirect(url_for('strava_login',
+                                next=url_for("strava_activities",
+                                             limit=limit,
+                                             _external=True)))
 
 
 @app.route('/strava/activities/<activity_id>')
@@ -189,7 +220,6 @@ def data_points(activity_id):
     if client.access_token:
         streams = client.get_activity_streams(int(activity_id),
                                               types=['time', 'latlng'])
-        print(streams)
 
         time = streams["time"].data
         latlng = streams["latlng"].data

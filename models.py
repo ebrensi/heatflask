@@ -7,7 +7,6 @@ from sqlalchemy.dialects.postgresql import ARRAY, DOUBLE_PRECISION, INTEGER,\
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
     name = db.Column(db.String(), primary_key=True)
-    # password = db.Column(db.String(), default="")
 
     gc_username = db.Column(db.String())
     gc_password = db.Column(db.String())
