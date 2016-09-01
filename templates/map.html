@@ -141,11 +141,8 @@
             </div>
 
             <div class="sidebar-pane" id="profile">
-                <h1 class="sidebar-header">Profile<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
+                <h1 class="sidebar-header">{{ username }}<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
 
-
-                <h1> {{ username }}:</h1>
-                <br>
                 <h2>Import activities now:</h2>
                 <form method="get" action="{{ url_for('activity_import', user_name=username)}}" target="output">
                     <h3>
@@ -166,6 +163,8 @@
                       <iframe class="embed-responsive-item" name="output" style="width:100%"></iframe>
                     </div>
                 </form>
+
+
             </div>
 
             <div class="sidebar-pane" id="messages">
