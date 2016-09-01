@@ -109,7 +109,7 @@ def activity_import(user_name):
         elif service == "strava":
             return redirect(url_for("strava_activities",
                                     limit=count,
-                                    username=user_name,
+                                    username=user.name,
                                     really="yes"))
 
 # ------- Strava API stuff -----------
@@ -182,9 +182,8 @@ def strava_activities(username):
     limit = request.args.get("limit")
     limit = int(limit) if limit else ""
 
-    really = (request.args.get("really") == "yes")
-
     if client.access_token:
+        really = (request.args.get("really") == "yes")
 
         def do_import():
             count = 0
@@ -225,6 +224,8 @@ def strava_activities(username):
         return redirect(url_for('strava_login',
                                 next=url_for("strava_activities",
                                              limit=limit,
+                                             really=really,
+                                             username=username,
                                              _external=True)))
 
 
