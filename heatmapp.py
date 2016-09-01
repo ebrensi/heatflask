@@ -41,8 +41,7 @@ def nothing():
 @app.route('/<username>')
 def user_map(username):
     return render_template('map.html',
-                           username=username,
-                           strava_auth_url=url_for("strava_login"))
+                           username=username)
 
 
 @app.route('/<username>/points.json')
@@ -91,13 +90,12 @@ def get_points(user, start=None, end=None):
 
 
 @app.route('/<user_name>/activity_import')
-# endpoint for scheduling a Garmin Connect activity import
 def activity_import(user_name):
     user = User.get(user_name)
 
     if user:
         clean = request.args.get("clean", "")
-        count = request.args.get("count", 3)
+        count = request.args.get("count", 0)
         service = request.args.get("service")
 
         if service == "gc":
@@ -163,11 +161,23 @@ def account_create():
         return redirect(url_for("user_map", username=A.username))
 
 
+@app.route('/strava/account_delete')
+def account_delete():
+    if client.access_token:
+        A = client.get_athlete()
+        user = User.get(A.username)
+        if user.name == A.username:
+            db.session.delete(user)
+            db.session.commit()
+            flash("user {} deleted".format(A.username))
+            return redirect(url_for("login"))
+
+
 @app.route('/<username>/strava/activities')
 def strava_activities(username):
     user = User.get(username)
     already_got = [d[0] for d in db.session.query(
-        Activity.id).filter_by(user_name=user.name, source="strava").all()]
+        Activity.id).filter_by(user_name=user.name, source="ST").all()]
 
     limit = request.args.get("limit")
     limit = int(limit) if limit else ""
@@ -188,18 +198,21 @@ def strava_activities(username):
                     else:
                         streams = client.get_activity_streams(int(a.id),
                                                               types=['time', 'latlng'])
-                        time = streams["time"].data
-                        latlng = streams["latlng"].data
+                        if "latlng" in streams:
+                            time = streams["time"].data
+                            lat, lng = zip(*streams["latlng"].data)
 
-                        A = Activity(user=user,
-                                     id=a.id,
-                                     beginTimestamp=a.start_date_local,
-                                     elapsed=time,
-                                     latitudes=[ll[0] for ll in latlng],
-                                     longitudes=[ll[1] for ll in latlng],
-                                     source="strava")
-                        db.session.add(A)
-                        db.session.commit()
+                            A = Activity(user=user,
+                                         id=a.id,
+                                         beginTimestamp=a.start_date_local,
+                                         elapsed=time,
+                                         latitudes=list(lat),
+                                         longitudes=list(lng),
+                                         source="ST")
+                            db.session.add(A)
+                            db.session.commit()
+                        else:
+                            yield "activity {} has no data points".format(a.id)
 
                 count += 1
                 yield ("[{0.id}] {0.name}: {0.start_date_local},"

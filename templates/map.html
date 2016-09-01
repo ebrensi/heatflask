@@ -130,10 +130,6 @@
                 <div>
                 <h3 id="numPoints"></h3>
                 <br><br>
-                Coming soon:<br>
-                Multi-user support, <br>
-                Strava import, <br>
-                CartoDB redering for better performance.
                 </div>
 
 
@@ -141,20 +137,7 @@
 
                 <div>
                 <br><br><br><br>
-                Support me in developing this app!
-                <br>
 
-                <form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_top">
-
-                <input type="hidden" name="cmd" value="_donations">
-                <input type="hidden" name="business" value="BarefootEfrem@gmail.com">
-                <input type="hidden" name="lc" value="US">
-                <input type="hidden" name="item_name" value="Efrem Rensi">
-                <input type="hidden" name="currency_code" value="USD">
-                <input type="hidden" name="bn" value="PP-DonationsBF:btn_donateCC_LG.gif:NonHosted">
-                <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" border="0" name="submit" alt="PayPal - The safer, easier way to pay online!">
-                <img alt="" border="0" src="https://www.paypalobjects.com/en_US/i/scr/pixel.gif" width="1" height="1">
-                </form>
                 </div>
 
             </div>
@@ -173,8 +156,8 @@
                     <input type="number" name="count" value=10 min=1 max=100>
                     most recent activities from
                     <select name='service'>
-                        <option value="strava"> Strava</option>
-                        <option selected="selected" value="gc"> Garmin Connect</option>
+                        <option selected="selected" value="strava"> Strava</option>
+                        <option value="gc"> Garmin Connect</option>
                     </select>
                     <br>
                     <input type="checkbox" name="clean">Clear existing activities<br>
@@ -196,17 +179,13 @@
                 <h1 class="sidebar-header">Settings<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
 
                 <h1> {{ username }}:</h1>
-                <br>
-                <h2>Data import setup: </h2>
-                <a href="{{ strava_auth_url|safe}}">
-                <img src="static/ConnectWithStrava.png">
-                </a>
+                <br><br>
 
-                <a href="{{ gc_import_setup }}">
-                <img src="static/gc-logo.png" width="90">
-                </a>
-                <br>
-                Once set-up, data will be imported periodically.
+                    <h3>Erase user "{{ username }}" and associated data from our database</h3>
+                    <FORM METHOD="LINK" ACTION="{{ url_for('account_delete', username=username) }}">
+                  <INPUT class="btn btn-primary" TYPE="submit"
+                         VALUE="Delete this account">
+                  </FORM>
             </div>
         </div>
     </div>
