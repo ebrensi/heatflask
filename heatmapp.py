@@ -1,36 +1,20 @@
 #! usr/bin/env python
 
-from urllib import urlencode
 from flask import Flask, Response, render_template, request, redirect, jsonify,\
     url_for, abort, session
 from flask_login import LoginManager, login_required,  login_user, logout_user
 import flask_compress
-from datetime import date, timedelta
-import os
-import requests
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+from datetime import date, timedelta
+import os
 import stravalib
 
+import json
 
-# Configuration
-STRAVA_AUTH_URL = "https://www.strava.com/oauth/authorize"
-STRAVA_AUTH_PARAMS = {"client_id": os.environ["STRAVA_CLIENT_ID"],
-                      "response_type": "code",
-                      # "redirect_uri": "uri",
-                      # "scope": "view_prvate",
-                      # "state": "mystate",
-                      "approval_prompt": "force"}
 
-STRAVA_TOKEN_URL = "https://www.strava.com/oauth/token"
-STRAVA_TOKEN_PARAMS = {"client_id": os.environ["STRAVA_CLIENT_ID"],
-                       "client_secret":  os.environ["STRAVA_CLIENT_SECRET"],
-                       "code": "code"}
-
-# Initialization. Later we'll put this in the __init__.py file
 app = Flask(__name__)
 app.config.from_object(os.environ['APP_SETTINGS'])
-app.config.from_object(__name__)
 
 # initialize database
 db = SQLAlchemy(app)
@@ -57,7 +41,6 @@ flask_compress.Compress(app)
 # ************* User handling views *************
 
 
-# ************* other web views ****************
 # for now we redirect the default view to my personal map
 @app.route('/')
 def nothing():
@@ -66,16 +49,9 @@ def nothing():
 
 @app.route('/<username>')
 def user_map(username):
-    params = STRAVA_AUTH_PARAMS.copy()
-    params.update({"state": username,
-                   "redirect_uri": url_for("strava_token_exchange",
-                                           _external=True)
-                   })
-
-    strava_url = STRAVA_AUTH_URL + "?" + urlencode(params)
     return render_template('map.html',
                            username=username,
-                           strava_auth_url=strava_url)
+                           strava_auth_url=url_for("strava_userinfo"))
 
 
 @app.route('/<username>/points.json')
@@ -142,20 +118,6 @@ def activity_import(user_name):
                 return Response(do_import, mimetype='text/event-stream')
 
 
-@app.route('/strava_token_exchange')
-def strava_token_exchange():
-    # resp = jsonify(request.args)
-    # resp.status_code = 200
-
-    params = STRAVA_TOKEN_PARAMS.copy()
-    params["code"] = request.args["code"]
-
-    response = requests.post(STRAVA_TOKEN_URL, data=params)
-    resp = jsonify(response.json())
-    resp.status_code = 200
-    return resp
-
-
 # ------- Strava API stuff -----------
 @app.route('/strava')
 def strava():
@@ -165,13 +127,15 @@ def strava():
 @app.route('/strava/userinfo')
 def strava_userinfo():
     if client.access_token:
-        athlete = client.get_athlete()
+        A = client.get_athlete()
+        # ath = {key:value for key, value in A.__dict__.items()
+        #         if not key.startswith('__') and not callable(key)}
 
-        ath = {"id": athlete.id,
-               "firstname": athlete.firstname,
-               "lastname": athlete.lastname,
-               "username": athlete.username,
-               "pic_url": athlete.profile
+        ath = {"id": A.id,
+               "firstname": A.firstname,
+               "lastname": A.lastname,
+               "username": A.username,
+               "pic_url": A.profile
                }
         return jsonify(ath)
     else:
