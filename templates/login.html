@@ -7,23 +7,39 @@
   </head>
   <body>
     <div class="container">
-      <h1>Please login</h1>
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+          <ul class=flashes>
+          {% for message in messages %}
+            <li>{{ message }}</li>
+          {% endfor %}
+          </ul>
+        {% endif %}
+      {% endwith %}
+
+      <h1>Welcome to HeatMappp</h1>
+
+
+      <h3>Create a new account or connect to an existing one</h3>
       <br>
-      <form action="" method="post">
+     <!--  <form action="" method="post">
         <input type="text" placeholder="Username" name="username" value="{{
           request.form.username }}">
          <input type="password" placeholder="Password" name="password" value="{{
           request.form.password }}">
         <input class="btn btn-default" type="submit" value="Login">
-      </form>
+      </form> -->
+      <a href="{{ url_for('strava_login') }}">
+                <img src="static/ConnectWithStrava.png">
+                </a>
 
       {% if error %}
         <p class="error"><strong>Error:</strong> {{ error }}
       {% endif %}
 
-      <h1>Or Not</h1>
-      <FORM METHOD="LINK" ACTION="/ebrensi">
-      <INPUT class="btn btn-default" TYPE="submit" VALUE="See Demo">
+      <h1>or</h1>
+      <FORM METHOD="LINK" ACTION="/Efrem">
+      <INPUT class="btn btn-primary" TYPE="submit" VALUE="See Demo">
       </FORM>
     </div>
   </body>
