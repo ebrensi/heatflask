@@ -9,9 +9,14 @@ from datetime import date, timedelta
 import os
 import stravalib
 
+import flask_login
+
 
 app = Flask(__name__)
 app.config.from_object(os.environ['APP_SETTINGS'])
+
+# views will be sent as gzip encoded
+flask_compress.Compress(app)
 
 # initialize database
 db = SQLAlchemy(app)
@@ -23,19 +28,78 @@ migrate = Migrate(app, db)
 # Strava client
 client = stravalib.Client()
 
+# Flask-login stuff
+login_manager = flask_login.LoginManager()
+login_manager.init_app(app)
 
-# views will be sent as gzip encoded
-flask_compress.Compress(app)
 
-
-@app.route("/login", methods=["GET", "POST"])
-def login():
-    return render_template("login.html")
+@login_manager.user_loader
+def load_user(name):
+    return User.get(name)
 
 
 @app.route('/')
 def nothing():
     return redirect(url_for('login'))
+
+
+# Display the login page
+@app.route("/login", methods=["GET"])
+def login():
+    return render_template("login.html")
+
+
+# Attempt to authorize a user via Oauth(2) or whatever
+@app.route('authorize/<service>')
+def authorize(service):
+    redirect_uri = url_for('auth_callback', service=service, _external=True)
+
+    if service == 'strava':
+        auth_url = client.authorization_url(client_id=app.config["STRAVA_CLIENT_ID"],
+                                            redirect_uri=redirect_uri,
+                                            approval_prompt="force",
+                                            state=request.args.get("next"))
+        return redirect(auth_url)
+
+
+# Authorization callback.  The service returns here to give us an access_token
+#  for the user who successfully logged in.
+@app.route('authorized/<service>')
+def auth_callback(service):
+    if "error" in request.args:
+        error = request.args["error"]
+        flash("Error: {}".format(error))
+        return redirect(url_for("login"))
+
+    elif service == "strava":
+        args = {"code": request.args.get("code"),
+                "client_id": app.config["STRAVA_CLIENT_ID"],
+                "client_secret": app.config["STRAVA_CLIENT_SECRET"]}
+        access_token = client.exchange_code_for_token(**args)
+        client.access_token = access_token
+
+        return redirect(request.args.get("state") or
+                        url_for("account_create"))
+
+
+@app.route('account_create')
+def account_create():
+    if client.access_token:
+        A = client.get_athlete()
+        user = User.get(A.username)
+        if not user:
+            athlete_info = {"id": A.id,
+                            "firstname": A.firstname,
+                            "lastname": A.lastname,
+                            "username": A.username,
+                            "pic_url": A.profile,
+                            }
+
+            user = User(name=A.username,
+                        strava_user_data=athlete_info)
+            db.session.add(user)
+            db.session.commit()
+        return redirect(url_for("user_map", username=A.username))
 
 
 @app.route('/<username>')
@@ -115,52 +179,6 @@ def activity_import(user_name):
 # ------- Strava API stuff -----------
 
 
-@app.route('/strava/login')
-def strava_login():
-    redirect_uri = url_for('authorized', _external=True)
-    auth_url = client.authorization_url(client_id=app.config["STRAVA_CLIENT_ID"],
-                                        redirect_uri=redirect_uri,
-                                        approval_prompt="force",
-                                        state=request.args.get("next", ""))
-    return redirect(auth_url)
-
-
-@app.route('/strava/login/authorized')
-def authorized():
-    if "error" in request.args:
-        error = request.args["error"]
-        flash('Error: {}'.format(error))
-        return redirect(url_for('login'))
-    else:
-        code = request.args['code']
-        access_token = client.exchange_code_for_token(client_id=app.config["STRAVA_CLIENT_ID"],
-                                                      client_secret=app.config[
-                                                          "STRAVA_CLIENT_SECRET"],
-                                                      code=code)
-        client.access_token = access_token
-        return redirect(request.args.get("state") or url_for("account_create"))
-
-
-@app.route('/strava/account_create')
-def account_create():
-    if client.access_token:
-        A = client.get_athlete()
-        user = User.get(A.username)
-        if not user:
-            athlete_info = {"id": A.id,
-                            "firstname": A.firstname,
-                            "lastname": A.lastname,
-                            "username": A.username,
-                            "pic_url": A.profile,
-                            }
-
-            user = User(name=A.username,
-                        strava_user_data=athlete_info)
-            db.session.add(user)
-            db.session.commit()
-        return redirect(url_for("user_map", username=A.username))
-
-
 @app.route('/strava/account_delete')
 def account_delete():
     if client.access_token:
@@ -214,8 +232,9 @@ def strava_activities(username):
                             yield "activity {} has no data points".format(a.id)
 
                 count += 1
+                mi = stravalib.unithelper.miles(a.distance)
                 yield ("[{0.id}] {0.name}: {0.start_date_local},"
-                       " {0.elapsed_time}, {0.distance}\n").format(a)
+                       " {0.elapsed_time}, {}\n").format(a, mi)
             yield "Done! {} activities imported\n".format(count)
 
         return Response(do_import(), mimetype='text/event-stream')
