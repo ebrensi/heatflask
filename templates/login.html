@@ -17,7 +17,7 @@
         {% endif %}
       {% endwith %}
 
-      <h1>Welcome to HeatMappp</h1>
+      <h1>Activities Heatmap login</h1>
 
 
       <h3>Create a new account or connect to an existing one</h3>
@@ -29,7 +29,7 @@
           request.form.password }}">
         <input class="btn btn-default" type="submit" value="Login">
       </form> -->
-      <a href="{{ url_for('strava_login') }}">
+      <a href="{{ url_for('authorize', service='strava') }}">
                 <img src="static/ConnectWithStrava.png">
                 </a>
 
