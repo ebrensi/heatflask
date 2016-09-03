@@ -66,13 +66,31 @@
         <!-- Nav tabs -->
         <div class="sidebar-tabs">
             <ul role="tablist">
-                <li><a href="#home" role="tab"><i class="fa fa-bars"></i></a></li>
-                <li><a href="#profile" role="tab"><i class="fa fa-user"></i></a></li>
+                <li>
+                <a href="#home" role="tab"><i class="fa fa-bars"></i></a>
+                </li>
+
+                {% if current_user.is_authenticated
+                    and (current_user.name == username) %}
+                <li>
+                {% else %}
+                <li class="disabled">
+                {% endif %}
+                <a href="#profile" role="tab"><i class="fa fa-user"></i></a>
+                </li>
+
                 <!-- <li class="disabled"><a href="#messages" role="tab"><i class="fa fa-envelope"></i></a></li> -->
             </ul>
 
             <ul role="tablist">
-                <li><a href="#settings" role="tab"><i class="fa fa-gear"></i></a></li>
+                {% if current_user.is_authenticated
+                    and (current_user.name == username) %}
+                <li>
+                {% else %}
+                <li class="disabled">
+                {% endif %}
+                <a href="#settings" role="tab"><i class="fa fa-gear"></i></a>
+                </li>
             </ul>
         </div>
 
@@ -84,6 +102,8 @@
                     <span class="sidebar-close"><i class="fa fa-caret-left"></i></span>
                 </h1>
 
+                <br>
+                <br>
 
                 <h3>Enter dates over which to render:</h3>
 
@@ -122,7 +142,6 @@
                         <label>Blur </label><input type="range" id="blur" value=15 min=1 max=50 /><br />
                         <button type="button" onClick="resetHmapOptions();">Reset</button>
                      </span>
-
                   </form>
                   <br><br>
 
@@ -132,6 +151,17 @@
                 <br><br>
                 </div>
 
+                <br>
+                {% if current_user.is_authenticated %}
+                <h3>Logged in as {{ current_user.name }}</h3>
+                <FORM METHOD="LINK" ACTION="/logout">
+                <INPUT class="btn btn-primary" TYPE="submit" VALUE="Log Out">
+                {% else %}
+                 <a href="{{ url_for('authorize', service='strava') }}">
+                <img src="static/LogInWithStrava.png">
+                </a>
+                {% endif %}
+
 
                 <div>
                 <br><br><br><br>
@@ -140,19 +170,21 @@
 
             </div>
 
+            {% if current_user.is_authenticated
+                    and (current_user.name == username) %}
             <div class="sidebar-pane" id="profile">
                 <h1 class="sidebar-header">{{ username }}<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
 
                 <h2>Import activities now:</h2>
-                <form method="get" action="{{ url_for('activity_import', user_name=username)}}" target="output">
+                <form method="get" action="{{ url_for('activity_import')}}" target="output">
                     <h3>
                     Import
 
                     <input type="number" name="count" value=10 min=1 max=100>
                     most recent activities from
                     <select name='service'>
-                        <option selected="selected" value="strava"> Strava</option>
-                        <option value="gc"> Garmin Connect</option>
+                        <option selected="selected" value="strava">Strava</option>
+                        <option value="gc">Garmin Connect</option>
                     </select>
                     <br>
                     <input type="checkbox" name="clean">Clear existing activities<br>
@@ -163,9 +195,8 @@
                       <iframe class="embed-responsive-item" name="output" style="width:100%"></iframe>
                     </div>
                 </form>
-
-
             </div>
+            {% endif %}
 
             <div class="sidebar-pane" id="messages">
                 <h1 class="sidebar-header">Messages<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
@@ -178,11 +209,7 @@
                 <h1> {{ username }}:</h1>
                 <br><br>
 
-                   <!--  <h3>Erase user "{{ username }}" and associated data from our database</h3>
-                    <FORM METHOD="LINK" ACTION="{{ url_for('account_delete', username=username) }}">
-                  <INPUT class="btn btn-primary" TYPE="submit"
-                         VALUE="Delete this account">
-                  </FORM> -->
+
             </div>
         </div>
     </div>
