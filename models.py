@@ -37,8 +37,7 @@ class Activity(db.Model):
     elapsed = db.Column(ARRAY(INTEGER))
     latitudes = db.Column(ARRAY(DOUBLE_PRECISION))
     longitudes = db.Column(ARRAY(DOUBLE_PRECISION))
-    polyline = db.column(db.String())
-
+    polyline = db.Column(db.String())
     source = db.Column(db.String())
 
     user_name = db.Column(db.String(), db.ForeignKey("users.name"))

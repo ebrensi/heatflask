@@ -151,9 +151,13 @@
                         <input type="submit" class="btn btn-default" value="Log Out" />
                     </form>
                 {% else %}
+                    Create an account and/or
+                    <br><br>
                     <a href="{{ url_for('authorize', service='strava') }}">
                     <img src="static/LogInWithStrava.png">
                     </a>
+                    <br><br>
+                    Note: Our copy of your GIS data is publicly viweable.  You can delete your account with us along with all of the data at any time.
                 {% endif %}
 
 

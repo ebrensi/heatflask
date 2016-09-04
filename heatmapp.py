@@ -184,9 +184,20 @@ def get_points(user, start=None, end=None):
     result = result.filter_by(user=user)
     result = result.filter(Activity.beginTimestamp.between(start, end))
 
-    # figure out a better way to do this
-    result = [(a, b) for a, b in result if (a, b) != (0, 0)]
     return result
+
+
+def get_points2(user, start=None, end=None):
+    result = db.session.query(Activity.polyline)
+    result = result.filter_by(user=user)
+    result = result.filter(Activity.beginTimestamp.between(start, end))
+
+    app.logger.info(result)
+    # return (point for point in (polyline.decode(pl) for pl in result))
+    for pl in result:
+        points = polyline.decode(pl)
+        for point in points:
+            yield point
 
 
 @app.route('/activity_import')
@@ -215,8 +226,11 @@ def activity_import():
 @app.route('/strava_activities')
 @login_required
 def strava_activities():
-    already_got = [d[0] for d in db.session.query(
-        Activity.id).filter_by(user=current_user, source="ST").all()]
+    user = User.get(current_user.name)
+
+    already_got = [int(d[0]) for d in db.session.query(
+        Activity.id).filter_by(user=user).all()]
+    app.logger.info("already_got: %s", already_got)
 
     limit = request.args.get("limit")
     limit = int(limit) if limit else ""
@@ -230,53 +244,45 @@ def strava_activities():
             count += 1
 
             if a.id in already_got:
-                msg = "activity {} already in database.".format(a.id)
+                msg = "{}. activity {} already in database.".format(count, a.id)
                 yield msg + "\n"
             else:
-                try:
-                    strava_map = a.map
-                except:
-                    yield "activity {} has no data points".format(a.id)
-                else:
-                    if really:
+                if really:
+                    try:
                         streams = client.get_activity_streams(a.id,
                                                               types=['time', 'latlng'])
+                    except:
+                        yield "activity {} has no data points".format(a.id)
+                    else:
                         time = streams["time"].data
-                        lat, lng = zip(*streams["latlng"].data)
 
-                        poly = polyline.encode(streams["latlng"].data)
+                        # eliminate (0,0) points
+                        latlng = [(x, y) for x, y in streams["latlng"].data
+                                  if (x, y) != (0, 0)]
+
+                        lat, lng = zip(*latlng)
+                        poly = polyline.encode(latlng)
                         other = {"name": a.name}
-                        params = {"user": current_user,
+                        params = {"user": user,
                                   "id": a.id,
                                   "other": other,
                                   "beginTimestamp": a.start_date_local,
-                                  # "elapsed": time,
-                                  # "latitudes": list(lat),
-                                  # "longitudes": list(lng),
+                                  "elapsed": time,
+                                  "latitudes": list(lat),
+                                  "longitudes": list(lng),
                                   "polyline": poly,
                                   "source": "ST"}
 
-                        app.logger.info("params: %s", params)
-                        # A = Activity(user=user,
-                        #              id=a.id,
-                        #              other=other,
-                        #              beginTimestamp=a.start_date_local,
-                        #              elapsed=time,
-                        #              latitudes=list(lat),
-                        #              longitudes=list(lng),
-                        #              polyline=poly,
-                        #              source="ST"
-                        #              )
-                        # db.session.add(A)
-                        # db.session.commit()
+                        # app.logger.info("params: %s", params)
+                        A = Activity(**params)
+                        db.session.add(A)
+                        db.session.commit()
 
-                    mi = stravalib.unithelper.miles(a.distance)
-                    msg = ("[{0.id}] {0.name}: {0.start_date_local}, "
-                           .format(a))
-                    msg += "{}\n".format(mi)
-                    # print("poly1: {}\npoly2: {}"
-                    #       .format(poly, summary["strava_polyline"]))
-                    yield msg
+                        mi = stravalib.unithelper.miles(a.distance)
+                        msg = ("[{0.id}] {0.name}: {0.start_date_local}"
+                               .format(a))
+                        msg = "{}. {}, {}\n".format(count, msg, mi)
+                        yield msg
 
         yield "Done! {} activities imported\n".format(count)
 
