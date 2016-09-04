@@ -95,7 +95,6 @@
                 </h1>
                 <h2>See where {{ username }}'s been runnin'!</h2>
                 <br>
-                <br>
 
                 <h3>Enter dates over which to render:</h3>
 
@@ -128,12 +127,6 @@
                         <input class="datepick" id="date2" type="text" value=""/>
                       </span>
 
-
-                      <span style="display:block">
-                        <label>Radius </label><input type="range" id="radius" value=9 min=1 max=50 /><br />
-                        <label>Blur </label><input type="range" id="blur" value=15 min=1 max=50 /><br />
-                        <button type="button" onClick="resetHmapOptions();">Reset</button>
-                     </span>
                   </form>
                   <br>
 
@@ -205,27 +198,27 @@
                 <form action={{ url_for('delete', username=username) }}>
                         <input type="submit" class="btn btn-default" value="Delete Account" />
                 </form>
-
-
-            </div>
-
-
             </div>
             {% endif %}
+
 
             <div class="sidebar-pane" id="messages">
                 <h1 class="sidebar-header">Messages<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
             </div>
 
-            {% if current_user.is_authenticated
-                    and (current_user.name == username) %}
             <div class="sidebar-pane" id="settings">
-                <h1 class="sidebar-header">Settings<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
+                <h1 class="sidebar-header">Map Settings<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
 
+                <form>
 
-            {% endif %}
-
-        </div>
+                    <span style="display:block">
+                        <label>Radius </label><input type="range" id="radius" value=9 min=1 max=50 /><br />
+                        <label>Blur </label><input type="range" id="blur" value=15 min=1 max=50 /><br />
+                        <button type="button" onClick="resetHmapOptions();">Reset</button>
+                     </span>
+                </form>
+            </div>
+         </div>
     </div>
 
     <div id="map" class="sidebar-map"></div>
