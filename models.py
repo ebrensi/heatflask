@@ -1,16 +1,14 @@
 from heatmapp import db
 from flask_login import UserMixin
-from sqlalchemy.dialects.postgresql import ARRAY, DOUBLE_PRECISION, INTEGER,\
+from sqlalchemy.dialects.postgresql import ARRAY, DOUBLE_PRECISION, \
     TIMESTAMP, JSON
+
+from sqlalchemy import INTEGER
 
 
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
     name = db.Column(db.String(), primary_key=True)
-
-    gc_username = db.Column(db.String())
-    gc_password = db.Column(db.String())
-
     strava_user_data = db.Column(JSON)
 
     # This is set up so that if a user gets deleted, all of the associated
@@ -33,14 +31,15 @@ class User(UserMixin, db.Model):
 
 
 class Activity(db.Model):
-    id = db.Column(INTEGER, primary_key=True)
+    id = db.Column(db.String(), primary_key=True)
     beginTimestamp = db.Column(TIMESTAMP)
-    summary = db.Column(JSON)
+    other = db.Column(JSON)
     elapsed = db.Column(ARRAY(INTEGER))
     latitudes = db.Column(ARRAY(DOUBLE_PRECISION))
     longitudes = db.Column(ARRAY(DOUBLE_PRECISION))
+    polyline = db.column(db.String())
 
-    source = db.Column(db.String(2))
+    source = db.Column(db.String())
 
     user_name = db.Column(db.String(), db.ForeignKey("users.name"))
 
@@ -50,6 +49,7 @@ class Activity(db.Model):
 
 # Create tables if they don't exist
 #  These commands aren't necessary if we use flask-migrate
+
 # db.create_all()
 # db.session.commit()
 

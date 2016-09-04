@@ -7,41 +7,17 @@
 
     <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
 
-    <!-- *** JQuery stuff *** -->
-    <!-- JQuery -->
-    <script src="https://code.jquery.com/jquery-2.2.4.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
-
-    <!-- JQuery UI -->
-    <script src="https://code.jquery.com/ui/1.11.4/jquery-ui.min.js" integrity="sha256-xNjb53/rY+WmG+4L6tTl9m6PpqknWZvRt0rO1SRnJzw=" crossorigin="anonymous"></script>
-
     <!-- JQuery UI Theme  -->
-    <link rel="stylesheet" href="https://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/jquery-ui.css') }}">
 
-
-    <!-- Moment.js for current date-->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.13.0/moment.min.js"></script>
-
-    <!-- Bootstrap fonts? -->
-    <link href="http://maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="{{ url_for('static', filename='css/font-awesome.min.css') }}" rel="stylesheet">
 
 
     <!-- Leaflet stuff -->
-    <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7.2/leaflet.css" />
-    <!--[if lte IE 8]><link rel="stylesheet" href="//cdn.leafletjs.com/leaflet-0.7.2/leaflet.ie.css" /><![endif]-->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/leaflet.css') }}" />
 
-    <link rel="stylesheet" href="../static/leaflet-sidebar.css" />
-
-
-    <script src="http://cdn.leafletjs.com/leaflet-0.7.2/leaflet.js"></script>
-
-    <script src="../static/leaflet-sidebar.js"></script>
-
-    <script src="../static/leaflet-heat.js"></script>
-
-    <script src="../static/leaflet.spin.js"></script>
-    <script src="../static/spin.min.js"></script>
-
-
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/leaflet-sidebar.css') }}"/>
 
     <style>
         body {
@@ -59,6 +35,27 @@
             color: #AAA;
         }
     </style>
+
+
+    <!-- JQuery -->
+    <script src="{{ url_for('static', filename='js/jquery-3.1.0.min.js') }}"></script>
+
+    <!-- JQuery UI -->
+    <script src="{{ url_for('static', filename='js/jquery-ui.min.js') }}"></script>
+
+    <script src="{{ url_for('static', filename='js/leaflet.js') }}"></script>
+
+    <script src="{{ url_for('static', filename='js/leaflet-sidebar.js') }}"></script>
+
+    <script src="{{ url_for('static', filename='js/leaflet-heat.js') }}"></script>
+
+    <script src="{{ url_for('static', filename='js/leaflet.spin.js') }}"></script>
+
+    <script src="{{ url_for('static', filename='js/spin.min.js') }}"></script>
+
+    <!-- Moment.js for current date-->
+    <script src="{{ url_for('static', filename='js/moment.js') }}"></script>
+
 
 </head>
 <body>
@@ -83,12 +80,7 @@
             </ul>
 
             <ul role="tablist">
-                {% if current_user.is_authenticated
-                    and (current_user.name == username) %}
                 <li>
-                {% else %}
-                <li class="disabled">
-                {% endif %}
                 <a href="#settings" role="tab"><i class="fa fa-gear"></i></a>
                 </li>
             </ul>
@@ -98,10 +90,10 @@
         <div class="sidebar-content">
             <div class="sidebar-pane" id="home">
                 <h1 class="sidebar-header">
-                    See where {{ username }}'s been runnin'!
+                    {{ username }}'s map
                     <span class="sidebar-close"><i class="fa fa-caret-left"></i></span>
                 </h1>
-
+                <h2>See where {{ username }}'s been runnin'!</h2>
                 <br>
                 <br>
 
@@ -152,19 +144,20 @@
                 </div>
 
                 <br>
+                <hr>
                 {% if current_user.is_authenticated %}
                 <h3>Logged in as {{ current_user.name }}</h3>
-                <FORM METHOD="LINK" ACTION="/logout">
-                <INPUT class="btn btn-primary" TYPE="submit" VALUE="Log Out">
+                    <form action={{ url_for('logout') }}>
+                        <input type="submit" class="btn btn-default" value="Log Out" />
+                    </form>
                 {% else %}
-                 <a href="{{ url_for('authorize', service='strava') }}">
-                <img src="static/LogInWithStrava.png">
-                </a>
+                    <a href="{{ url_for('authorize', service='strava') }}">
+                    <img src="static/LogInWithStrava.png">
+                    </a>
                 {% endif %}
 
 
                 <div>
-                <br><br><br><br>
 
                 </div>
 
@@ -175,19 +168,27 @@
             <div class="sidebar-pane" id="profile">
                 <h1 class="sidebar-header">{{ username }}<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
 
+
+                <h1> {{ current_user.strava_user_data['firstname'] }}
+                     {{ current_user.strava_user_data['lastname'] }}:</h1>
+                <a href="https://www.strava.com/settings/profile" target="_blank">
+                    <img src={{ current_user.strava_user_data['pic_url'] }} alt="user image" height="30%" width="30%">
+                </a>
+
+                <br>
+
                 <h2>Import activities now:</h2>
-                <form method="get" action="{{ url_for('activity_import')}}" target="output">
+                <form id="importform" method="get" action="{{ url_for('activity_import')}}" target="output">
                     <h3>
                     Import
 
-                    <input type="number" name="count" value=10 min=1 max=100>
+                    <input type="number" name="count" value=10 min=0 max=9999>
                     most recent activities from
                     <select name='service'>
                         <option selected="selected" value="strava">Strava</option>
-                        <option value="gc">Garmin Connect</option>
+                        <option disabled value="gc">Garmin Connect</option>
                     </select>
                     <br>
-                    <input type="checkbox" name="clean">Clear existing activities<br>
                     <input type="submit" value="Go!"/>
                     </h3>
                     <br>
@@ -195,22 +196,33 @@
                       <iframe class="embed-responsive-item" name="output" style="width:100%"></iframe>
                     </div>
                 </form>
+
+                <br>
+                <hr>
+                <br><br>
+                <form action={{ url_for('delete', username=username) }}>
+                        <input type="submit" class="btn btn-default" value="Delete Account" />
+                </form>
+
+
+            </div>
+
+
             </div>
             {% endif %}
 
             <div class="sidebar-pane" id="messages">
                 <h1 class="sidebar-header">Messages<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
-                dddd
             </div>
 
+            {% if current_user.is_authenticated
+                    and (current_user.name == username) %}
             <div class="sidebar-pane" id="settings">
                 <h1 class="sidebar-header">Settings<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
 
-                <h1> {{ username }}:</h1>
-                <br><br>
 
+            {% endif %}
 
-            </div>
         </div>
     </div>
 
