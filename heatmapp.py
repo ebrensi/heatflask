@@ -230,7 +230,7 @@ def strava_activities():
 
     already_got = [int(d[0]) for d in db.session.query(
         Activity.id).filter_by(user=user).all()]
-    app.logger.info("already_got: %s", already_got)
+    # app.logger.info("already_got: %s", already_got)
 
     limit = request.args.get("limit")
     limit = int(limit) if limit else ""
@@ -252,7 +252,8 @@ def strava_activities():
                         streams = client.get_activity_streams(a.id,
                                                               types=['time', 'latlng'])
                     except:
-                        yield "activity {} has no data points".format(a.id)
+                        yield ("{}. activity {} has no data points"
+                               .format(count, a.id))
                     else:
                         time = streams["time"].data
 
