@@ -161,30 +161,17 @@ def pointsJSON(username):
 
 
 def get_points(user, start=None, end=None):
-    # TODO: make sure datetimes are valid and start <= finish
-    # query = """
-    #         SELECT  lat, lng
-    #         FROM (
-    #             SELECT elapsed, lat, lng
-    #             FROM(
-    #                 SELECT unnest(elapsed) AS elapsed,
-    #                        unnest(latitudes) AS lat,
-    #                        unnest(longitudes) AS lng
-    #                 FROM %s
-    #                 WHERE user_name == '%s'
-    #                   AND begintimestamp >= '%s'
-    #                   AND begintimestamp <= '%s'
-    #                 ) AS sub
-    #             ) AS sub2
-    #         WHERE lat <> 0 AND lng <> 0;
-    #         """ % (Activity.__tablename__, user.name, start, end)
+    result = (db.session.query(Activity.polyline)
+              .filter(Activity.beginTimestamp.between(start, end))
+              .filter_by(user=user)
+              ).all()
 
-    result = db.session.query(db.func.unnest(Activity.latitudes),
-                              db.func.unnest(Activity.longitudes))
-    result = result.filter_by(user=user)
-    result = result.filter(Activity.beginTimestamp.between(start, end))
-
-    return result
+    def point_gen():
+        for pl in result:
+            points = polyline.decode(pl[0])
+            for point in points:
+                yield point
+    return point_gen()
 
 
 @app.route('/activity_import')
@@ -249,16 +236,17 @@ def strava_activities():
                         latlng = [(x, y) for x, y in streams["latlng"].data
                                   if (x, y) != (0, 0)]
 
-                        lat, lng = zip(*latlng)
+                        # lat, lng = zip(*latlng)
                         poly = polyline.encode(latlng)
-                        other = {"name": a.name}
+                        other = {"name": a.name,
+                                 "strava_polyline": a.map.summary_polyline}
                         params = {"user": user,
                                   "id": a.id,
                                   "other": other,
                                   "beginTimestamp": a.start_date_local,
                                   "elapsed": time,
-                                  "latitudes": list(lat),
-                                  "longitudes": list(lng),
+                                  # "latitudes": list(lat),
+                                  # "longitudes": list(lng),
                                   "polyline": poly,
                                   "source": "ST"}
 
