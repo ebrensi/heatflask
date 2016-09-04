@@ -187,19 +187,6 @@ def get_points(user, start=None, end=None):
     return result
 
 
-def get_points2(user, start=None, end=None):
-    result = db.session.query(Activity.polyline)
-    result = result.filter_by(user=user)
-    result = result.filter(Activity.beginTimestamp.between(start, end))
-
-    app.logger.info(result)
-    # return (point for point in (polyline.decode(pl) for pl in result))
-    for pl in result:
-        points = polyline.decode(pl)
-        for point in points:
-            yield point
-
-
 @app.route('/activity_import')
 @login_required
 def activity_import():
@@ -244,7 +231,8 @@ def strava_activities():
             count += 1
 
             if a.id in already_got:
-                msg = "{}. activity {} already in database.".format(count, a.id)
+                msg = ("{}. activity {} already in database.\n"
+                       .format(count, a.id))
                 yield msg + "\n"
             else:
                 if really:
@@ -252,7 +240,7 @@ def strava_activities():
                         streams = client.get_activity_streams(a.id,
                                                               types=['time', 'latlng'])
                     except:
-                        yield ("{}. activity {} has no data points"
+                        yield ("{}. activity {} has no data points\n"
                                .format(count, a.id))
                     else:
                         time = streams["time"].data
