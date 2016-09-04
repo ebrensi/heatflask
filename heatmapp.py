@@ -1,14 +1,14 @@
 #! usr/bin/env python
 
 from flask import Flask, Response, render_template, request, redirect, jsonify,\
-    url_for, abort, session, flash
+    url_for, abort, session, flash, g
 import flask_compress
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from datetime import date, timedelta
 import os
 import stravalib
-
+import polyline
 import flask_login
 from flask_login import current_user, login_user, logout_user, login_required
 
@@ -89,24 +89,22 @@ def auth_callback(service):
                                     "lastname": strava_user.lastname,
                                     "username": strava_user.username,
                                     "pic_url": strava_user.profile,
+                                    "access_token": access_token
                                     }
                 user = User(name=strava_user.username,
                             strava_user_data=strava_user_info)
                 db.session.add(user)
                 db.session.commit()
 
+            elif access_token != user.strava_user_data["access_token"]:
+                # if user exists but the access token has changed, update it
+                user.strava_user_data["access_token"] = access_token
+                db.session.commit()
+
             # I think this is remember=True, for persistent login. not sure
             login_user(user, True)
 
     return redirect(url_for("index", username=current_user.name))
-
-
-# This is a test route to see what happens if a non-authenticated user tries
-# to access a login_required view
-@app.route("/check")
-@login_required
-def check():
-    pass
 
 
 @app.route("/logout")
@@ -118,20 +116,31 @@ def logout():
         logout_user()
         flash("{} logged out".format(username))
     return redirect(url_for("login"))
-    # return redirect(url_for("index", username=user.name))
 
-"""
- <h3>Erase user "{{ username }}" and associated data from our database</h3>
-<FORM METHOD="LINK" ACTION="{{ url_for('account_delete', username=username) }}">
-  <INPUT class="btn btn-primary" TYPE="submit"
-         VALUE="Delete this account">
-</FORM>
-"""
+
+@app.route("/<username>/delete")
+@login_required
+def delete(username):
+    if username == current_user.name:
+        # log out current user
+        client.access_token = None
+        logout_user()
+
+        # that user is no longer the current user
+        user = User.get(username)
+        db.session.delete(user)
+        db.session.commit()
+        flash("user '{}' deleted".format(username))
+    else:
+        flash("you ({}) are not authorized to delete user {}"
+              .format(current_user.name, username))
+
+    return redirect(url_for("login"))
 
 
 @app.route('/<username>')
 def index(username):
-    return render_template('map.html',
+    return render_template('index.html',
                            username=username)
 
 
@@ -181,12 +190,12 @@ def get_points(user, start=None, end=None):
 
 
 @app.route('/activity_import')
-# @login_required
+@login_required
 def activity_import():
     user = current_user
 
-    clean = request.args.get("clean", "")
-    count = request.args.get("count", 0)
+    clean = request.args.get("clean")
+    count = request.args.get("count")
     service = request.args.get("service")
 
     if service == "gc":
@@ -200,16 +209,14 @@ def activity_import():
     elif service == "strava":
         return redirect(url_for("strava_activities",
                                 limit=count,
-                                username=user.name,
                                 really="yes"))
 
 
 @app.route('/strava_activities')
 @login_required
 def strava_activities():
-    user = current_user
     already_got = [d[0] for d in db.session.query(
-        Activity.id).filter_by(user_name=user.name, source="ST").all()]
+        Activity.id).filter_by(user=current_user, source="ST").all()]
 
     limit = request.args.get("limit")
     limit = int(limit) if limit else ""
@@ -220,61 +227,60 @@ def strava_activities():
         count = 0
         yield "importing activities from Strava...\n"
         for a in client.get_activities(limit=limit):
-            if really:
+            count += 1
 
-                if a.id in already_got:
-                    msg = "activity {} already in database.".format(a.id)
-                    yield msg + "\n"
+            if a.id in already_got:
+                msg = "activity {} already in database.".format(a.id)
+                yield msg + "\n"
+            else:
+                try:
+                    strava_map = a.map
+                except:
+                    yield "activity {} has no data points".format(a.id)
                 else:
-                    try:
-                        strava_map = a.map
-                    except:
-                        yield "activity {} has no data points".format(a.id)
-                    else:
-                        summary = {"map": strava_map,
-                                   "name": a.name}
-                        streams = client.get_activity_streams(int(a.id),
+                    if really:
+                        streams = client.get_activity_streams(a.id,
                                                               types=['time', 'latlng'])
                         time = streams["time"].data
                         lat, lng = zip(*streams["latlng"].data)
 
-                        A = Activity(user=user,
-                                     id=a.id,
-                                     summary=summary,
-                                     beginTimestamp=a.start_date_local,
-                                     elapsed=time,
-                                     latitudes=list(lat),
-                                     longitudes=list(lng),
-                                     source="ST")
-                        db.session.add(A)
-                        db.session.commit()
+                        poly = polyline.encode(streams["latlng"].data)
+                        other = {"name": a.name}
+                        params = {"user": current_user,
+                                  "id": a.id,
+                                  "other": other,
+                                  "beginTimestamp": a.start_date_local,
+                                  # "elapsed": time,
+                                  # "latitudes": list(lat),
+                                  # "longitudes": list(lng),
+                                  "polyline": poly,
+                                  "source": "ST"}
 
-            count += 1
-            mi = stravalib.unithelper.miles(a.distance)
-            msg = ("[{0.id}] {0.name}: {0.start_date_local},"
-                   " {0.elapsed_time}, ").format(a)
-            msg += "{}\n".format(mi)
-            yield msg
+                        app.logger.info("params: %s", params)
+                        # A = Activity(user=user,
+                        #              id=a.id,
+                        #              other=other,
+                        #              beginTimestamp=a.start_date_local,
+                        #              elapsed=time,
+                        #              latitudes=list(lat),
+                        #              longitudes=list(lng),
+                        #              polyline=poly,
+                        #              source="ST"
+                        #              )
+                        # db.session.add(A)
+                        # db.session.commit()
+
+                    mi = stravalib.unithelper.miles(a.distance)
+                    msg = ("[{0.id}] {0.name}: {0.start_date_local}, "
+                           .format(a))
+                    msg += "{}\n".format(mi)
+                    # print("poly1: {}\npoly2: {}"
+                    #       .format(poly, summary["strava_polyline"]))
+                    yield msg
+
         yield "Done! {} activities imported\n".format(count)
 
     return Response(do_import(), mimetype='text/event-stream')
-
-
-@app.route('/strava/activities/<activity_id>')
-def data_points(activity_id):
-    if client.access_token:
-        streams = client.get_activity_streams(int(activity_id),
-                                              types=['time', 'latlng'])
-
-        time = streams["time"].data
-        latlng = streams["latlng"].data
-        points = ("{}: {}\n".format(t, ll) for t, ll in zip(time, latlng))
-        return Response(points, mimetype='text/event-stream')
-    else:
-        return redirect(url_for('strava_login',
-                                next=url_for("data_points",
-                                             activity_id=activity_id,
-                                             _external=True)))
 
 
 # python heatmapp.py works but you really should use `flask run`
