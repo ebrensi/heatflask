@@ -177,24 +177,22 @@ def get_points(user, start=None, end=None):
 @app.route('/activity_import')
 @login_required
 def activity_import():
-    user = current_user
-
-    clean = request.args.get("clean")
-    count = request.args.get("count")
+    user = User.get(current_user.name)
+    count = int(request.args.get("count", 1))
     service = request.args.get("service")
+    detailed = request.args.get("detailed") == "yes"
 
     if service == "gc":
         import gcimport
-        if clean:
-            return "<h1>{}: clear data for {} and import {} most recent activities</h1>".format(service, user_name, count)
-        else:
-            do_import = gcimport.import_activities(db, user, count=count)
-            return Response(do_import, mimetype='text/event-stream')
+        do_import = gcimport.import_activities(db, user, count=count)
 
     elif service == "strava":
-        return redirect(url_for("strava_activities",
-                                limit=count,
-                                really="yes"))
+        import stravaimport
+        do_import = stravaimport.import_activities(db, user, client,
+                                                   limit=count,
+                                                   detailed=detailed)
+
+    return Response(do_import, mimetype='text/event-stream')
 
 
 @app.route('/strava_activities')
