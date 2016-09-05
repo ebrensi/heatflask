@@ -152,7 +152,7 @@ def index(username):
     render = request.args.get("render")
     render_method = render if (render in ["Heat", "Flow"]) else None
 
-    preset = request.args.get("preset")
+    preset = int(request.args.get("preset"))
     preset_set = preset if (preset in [2, 7, 30]) else None
 
     return render_template('index.html',
