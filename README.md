@@ -1,9 +1,14 @@
-# Activitis Visualization App
+# Activities Visualization App
 
-#### A Flask app that generates and displays a heatmap from Garmin Connect activity data.
+#### A Flask app that generates and displays leaflet visualizations from activity data.
 #### http://heatflask.herokuapp.com
 
 See a live demo with data at http://heatflask.herokuapp.com/demo.
+
+Currently it supports [Strava](https://www.strava.com) imports.  Strava allows syncing from other activity hosting services.
+
+##Contributing
+If you see something you'd like to improve, go ahead and create an issue and/or make a pull request. Contributions welcome!
 
 
 #### License
