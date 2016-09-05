@@ -31,12 +31,10 @@ class User(UserMixin, db.Model):
 
 
 class Activity(db.Model):
-    id = db.Column(db.String(), primary_key=True)
+    id = db.Column(INTEGER, primary_key=True)
     beginTimestamp = db.Column(TIMESTAMP)
     other = db.Column(JSON)
     elapsed = db.Column(ARRAY(INTEGER))
-    # latitudes = db.Column(ARRAY(DOUBLE_PRECISION))
-    # longitudes = db.Column(ARRAY(DOUBLE_PRECISION))
     polyline = db.Column(db.String())
     source = db.Column(db.String())
 
