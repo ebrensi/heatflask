@@ -1,6 +1,6 @@
 <html>
   <head>
-    <title>Activities Heatmap login</title>
+    <title>Activities Visualization login</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <link href="{{ url_for('static', filename='bootstrap.min.css') }}" rel="stylesheet">
@@ -17,18 +17,11 @@
         {% endif %}
       {% endwith %}
 
-      <h1>Activities Heatmap login</h1>
+      <h1>Activities Visualization login</h1>
 
 
       <h3>Create a new account or connect to an existing one</h3>
       <br>
-     <!--  <form action="" method="post">
-        <input type="text" placeholder="Username" name="username" value="{{
-          request.form.username }}">
-         <input type="password" placeholder="Password" name="password" value="{{
-          request.form.password }}">
-        <input class="btn btn-default" type="submit" value="Login">
-      </form> -->
       <a href="{{ url_for('authorize', service='strava') }}">
                 <img src="static/ConnectWithStrava.png">
                 </a>
