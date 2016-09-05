@@ -144,8 +144,8 @@ def index(username):
                            username=username)
 
 
-@app.route('/<username>/latlngs.json')
-def latlngsJSON(username):
+@app.route('/<username>/latlngs/<orientation>')
+def latlngsJSON(username, orientation):
     tomorrow = (date.today() + timedelta(1)).strftime('%Y-%m-%d')
     today = date.today().strftime('%Y-%m-%d')
 
@@ -153,25 +153,25 @@ def latlngsJSON(username):
     end = request.args.get("end", tomorrow)
 
     user = User.get(username)
-    points = [[row[0], row[1]] for row in get_points(user, start, end)]
-    resp = jsonify(points)
-    resp.status_code = 200
 
-    return resp
-
-
-def get_points(user, start=None, end=None):
+    # Query database for points
     result = (db.session.query(Activity.polyline)
               .filter(Activity.beginTimestamp.between(start, end))
               .filter_by(user=user)
               ).all()
 
-    def point_gen():
+    def pointsList_gen():
         for pl in result:
-            points = polyline.decode(pl[0])
-            for point in points:
-                yield point
-    return point_gen()
+            route = polyline.decode(pl[0])
+            yield [list(point) for point in route]
+
+    routes = list(pointsList_gen())
+
+    if orientation == "list":
+        return jsonify(routes)
+
+    flat = [item for sublist in routes for item in sublist]
+    return jsonify(flat)
 
 
 @app.route('/activity_import')

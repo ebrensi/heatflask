@@ -11,6 +11,8 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/jquery-ui.css') }}">
 
     <!-- Bootstrap Icons -->
+    <link href="{{ url_for('static', filename='bootstrap.min.css') }}" rel="stylesheet">
+
     <link href="{{ url_for('static', filename='css/font-awesome.min.css') }}" rel="stylesheet">
 
 
@@ -103,9 +105,10 @@
                 <h3>Enter dates over which to render:</h3>
 
                   <form id="myform" action="">
-                    <button type="button" id="renderHeat" style="display:block">Render HeatLayer!</button>
-                    <button type="button" id="renderAnt" style="display:block">Render AntLayer!</button>
+                    <button type="button" id="renderHeat" class="btn btn-primary">Render HeatLayer</button><br>
+                    <button type="button" id="renderAnt" class="btn btn-success">Render FlowLayer</button>
 
+                    <br><br>
                      <span style="display:block">
                       <label for="presets-dropdown" style="display:block">Presets:</label>
                       <select id ="presets-dropdown" >
@@ -189,7 +192,7 @@
                         <option disabled value="gc">Garmin Connect</option>
                     </select>
                     <br>
-                    <input type="checkbox" checked name="detailed" value="yes">Use all data latlngs<br>
+                    <input type="checkbox" checked name="detailed" value="yes">Use all data points<br>
                     <br>
                     <input type="submit" value="Go!"/>
                     </h3>
@@ -262,7 +265,7 @@
 
       var F = "YYYY-MM-DD"
       var latlngs;
-      var heatlayer = false;
+      var visLayer = false;
 
       function renderHeatLayer(){
         var d1 = document.getElementById("date1").value;
@@ -271,20 +274,20 @@
         var query_data = {start: d1, end: d2}
 
         map.spin(true);   // start progress indicator
-        $.getJSON('/{{ username }}/latlngs.json', query_data, function(latlngs) {
+        $.getJSON('/{{ username }}/latlngs/flat', query_data, function(latlngs) {
             //latlngs is the JSON object
             if (latlngs.length) {
-                if (heatlayer){
-                    map.removeLayer(heatlayer)
-                    control.removeLayer(heatlayer)
+                if (visLayer){
+                    map.removeLayer(visLayer)
+                    control.removeLayer(visLayer)
                 }
-                heatlayer = L.heatLayer(latlngs, current_hmap_options());
-                map.addLayer(heatlayer);
+                visLayer = L.heatLayer(latlngs, current_hmap_options());
+                map.addLayer(visLayer);
                 var title = "Point Density: ("+d1+" - "+d2+")"
-                control.addOverlay(heatlayer, title)
+                control.addOverlay(visLayer, title)
                 map.fitBounds(latlngs);
 
-                document.getElementById('numlatlngs').innerHTML = d1 + " to " + d2 + "<br>" + latlngs.length +" data latlngs";
+                document.getElementById('numlatlngs').innerHTML = d1 + " to " + d2 + "<br>" + latlngs.length +" data points";
 
             };
         }).always(function() {
@@ -293,6 +296,8 @@
       };
 
 
+      antoptions = {weight:3, color:'red', delay:10000}
+
       function renderAntLayer(){
         var d1 = document.getElementById("date1").value;
         var d2 = document.getElementById("date2").value;
@@ -300,20 +305,20 @@
         var query_data = {start: d1, end: d2}
 
         map.spin(true);   // start progress indicator
-        $.getJSON('/{{ username }}/latlngs.json', query_data, function(latlngs) {
+        $.getJSON('/{{ username }}/latlngs/list', query_data, function(latlngs) {
             //latlngs is the JSON object
             if (latlngs.length) {
-                if (heatlayer){
-                    map.removeLayer(heatlayer)
-                    control.removeLayer(heatlayer)
+                if (visLayer){
+                    map.removeLayer(visLayer)
+                    control.removeLayer(visLayer)
                 }
-                heatlayer = L.polyline.antPath(latlngs);
-                map.addLayer(heatlayer);
+                visLayer = new L.MultiPolyline.MultiAntPath(latlngs, antoptions);
+                map.addLayer(visLayer);
                 var title = "Ant Paths: ("+d1+" - "+d2+")"
-                control.addOverlay(heatlayer, title)
+                control.addOverlay(visLayer, title)
                 map.fitBounds(latlngs);
 
-                document.getElementById('numlatlngs').innerHTML = d1 + " to " + d2 + "<br>" + latlngs.length +" data latlngs";
+                document.getElementById('numlatlngs').innerHTML = d1 + " to " + d2 + "<br>" + latlngs.length +" activities";
 
             };
         }).always(function() {
@@ -340,7 +345,7 @@
 
 
         function heatmap_redraw(){
-            heatlayer.setOptions(current_hmap_options());
+            visLayer.setOptions(current_hmap_options());
         }
 
         function preset_date_fill() {
