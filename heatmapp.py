@@ -140,7 +140,14 @@ def delete(username):
 
 @app.route('/<username>')
 def index(username):
+    render = request.args.get("render")
+    render_method = render if (render in ["Heat", "Flow"]) else None
+
     return render_template('index.html',
+                           date1=request.args.get("date1"),
+                           date2=request.args.get("date2"),
+                           preset=request.args.get("preset"),
+                           render_on_load=render_method,
                            username=username)
 
 
@@ -202,7 +209,6 @@ def strava_activities():
 
     already_got = [int(d[0]) for d in db.session.query(
         Activity.id).filter_by(user=user).all()]
-    # app.logger.info("already_got: %s", already_got)
 
     limit = request.args.get("limit")
     limit = int(limit) if limit else ""
