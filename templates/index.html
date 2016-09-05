@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/jquery-ui.css') }}">
 
     <!-- Bootstrap Icons -->
-    <link href="{{ url_for('static', filename='bootstrap.min.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
 
     <link href="{{ url_for('static', filename='css/font-awesome.min.css') }}" rel="stylesheet">
 
@@ -105,20 +105,21 @@
                 <h3>Enter dates over which to render:</h3>
 
                   <form id="myform" action="">
-                    <button type="button" id="renderHeat" class="btn btn-primary">Render HeatLayer</button><br>
-                    <button type="button" id="renderAnt" class="btn btn-success">Render FlowLayer</button>
+                    <button type="button" id="renderHeat" class="btn btn-primary">Render HeatLayer</button>
+                    <button type="button" id="renderFlow" class="btn btn-success">Render FlowLayer</button>
 
                     <br><br>
                      <span style="display:block">
                       <label for="presets-dropdown" style="display:block">Presets:</label>
                       <select id ="presets-dropdown" >
-                        <option selected="selected" value=2>Last 2 days</option>
+                        <option value=2 selected="selected">Last 2 days</option>
                         <option value=7>Last 7 days</option>
                         <option value=30>Last 30 days</option>
                         <option value=60>Last 60 days</option>
                         <option value=180>Last 180 days</option>
                         <option value=365>Last year</option>
                         <option value=0>All</option>
+                        <option value=-1>None</option>
                       </select>
                       </span>
 
@@ -138,16 +139,13 @@
                   </form>
                   <br>
 
-                <div>
-                <h3 id="numlatlngs"></h3>
-                <br><br>
-                </div>
+                <div id="numlatlngs"></div>
 
                 <hr>
                 {% if current_user.is_authenticated %}
                 <h3>Logged in as {{ current_user.name }}</h3>
                     <form action={{ url_for('logout') }}>
-                        <input type="submit" class="btn btn-default" value="Log Out" />
+                        <input type="submit" class="btn btn-danger" value="Log Out" />
                     </form>
                 {% else %}
                     Create an account and/or
@@ -172,17 +170,17 @@
                 <h1 class="sidebar-header">{{ username }}<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
 
 
-                <h1> {{ current_user.strava_user_data['firstname'] }}
-                     {{ current_user.strava_user_data['lastname'] }}:</h1>
+                <h3> {{ current_user.strava_user_data['firstname'] }}
+                     {{ current_user.strava_user_data['lastname'] }}:</h3>
                 <a href="https://www.strava.com/settings/profile" target="_blank">
                     <img src={{ current_user.strava_user_data['pic_url'] }} alt="user image" height="30%" width="30%">
                 </a>
 
                 <br>
 
-                <h2>Import activities now:</h2>
+                <h3>Import activities now:</h3>
                 <form id="importform" method="get" action="{{ url_for('activity_import')}}" target="output">
-                    <h3>
+                    <h4>
                     Import
 
                     <input type="number" name="count" value=10 min=0 max=10>
@@ -195,7 +193,7 @@
                     <input type="checkbox" checked name="detailed" value="yes">Use all data points<br>
                     <br>
                     <input type="submit" value="Go!"/>
-                    </h3>
+                    </h4>
                     <br>
                     <div class="embed-responsive embed-responsive-4by3">
                       <iframe class="embed-responsive-item" name="output" style="width:100%"></iframe>
@@ -206,7 +204,7 @@
                 <hr>
                 <br><br>
                 <form action={{ url_for('delete', username=username) }}>
-                        <input type="submit" class="btn btn-default" value="Delete Account" />
+                    <input type="submit" class="btn btn-danger" value="Delete Account" />
                 </form>
             </div>
             {% endif %}
@@ -267,7 +265,7 @@
       var latlngs;
       var visLayer = false;
 
-      function renderHeatLayer(){
+      function renderHeatLayer(vis){
         var d1 = document.getElementById("date1").value;
         var d2 = document.getElementById("date2").value;
 
@@ -298,7 +296,7 @@
 
       antoptions = {weight:3, color:'red', delay:10000}
 
-      function renderAntLayer(){
+      function renderFlowLayer(){
         var d1 = document.getElementById("date1").value;
         var d2 = document.getElementById("date2").value;
 
@@ -371,18 +369,26 @@
         $(document).ready(function() {
 
             $(".datepick").datepicker();
-
             $("#presets-dropdown").on("change", preset_date_fill);
-
             $("#radius").on("input", heatmap_redraw)
             $("#blur").on("input", heatmap_redraw)
-
             $("#renderHeat").on('click', renderHeatLayer );
+            $("#renderFlow").on('click', renderFlowLayer );
 
-            $("#renderAnt").on('click', renderAntLayer );
+            {% if render_on_load %}
+                {% if preset %}
+            $("#presets-dropdown").val("{{ preset }}");
+            preset_date_fill();
+                {% else %}
+            $('#date1').val("{{ date1 }}");
+            $('#date2').val("{{ date2 }}");
+            $("#presets-dropdown").val("-1");
+                {% endif %}
+            render{{ render_on_load }}Layer();
+            {% else %}
 
             preset_date_fill();
-            // renderHeatLayer();
+            {% endif %}
         });
 
 
