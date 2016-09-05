@@ -144,8 +144,8 @@ def index(username):
                            username=username)
 
 
-@app.route('/<username>/points.json')
-def pointsJSON(username):
+@app.route('/<username>/latlngs.json')
+def latlngsJSON(username):
     tomorrow = (date.today() + timedelta(1)).strftime('%Y-%m-%d')
     today = date.today().strftime('%Y-%m-%d')
 

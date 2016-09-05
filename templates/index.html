@@ -47,14 +47,20 @@
 
     <script src="{{ url_for('static', filename='js/leaflet-sidebar.js') }}"></script>
 
-    <script src="{{ url_for('static', filename='js/leaflet-heat.js') }}"></script>
-
     <script src="{{ url_for('static', filename='js/leaflet.spin.js') }}"></script>
 
     <script src="{{ url_for('static', filename='js/spin.min.js') }}"></script>
 
     <!-- Moment.js for current date-->
     <script src="{{ url_for('static', filename='js/moment.js') }}"></script>
+
+    <!-- Heatmap -->
+    <script src="{{ url_for('static', filename='js/leaflet-heat.js') }}"></script>
+
+    <!-- ant path -->
+    <script src="{{ url_for('static', filename='js/leaflet-ant-path.js') }}"></script>
+
+
 
 
 </head>
@@ -93,13 +99,12 @@
                     {{ username }}'s map
                     <span class="sidebar-close"><i class="fa fa-caret-left"></i></span>
                 </h1>
-                <h2>See where {{ username }}'s been runnin'!</h2>
-                <br>
 
                 <h3>Enter dates over which to render:</h3>
 
                   <form id="myform" action="">
-                    <button type="button" id="renderButton" style="display:block">Render Map!</button>
+                    <button type="button" id="renderHeat" style="display:block">Render HeatLayer!</button>
+                    <button type="button" id="renderAnt" style="display:block">Render AntLayer!</button>
 
                      <span style="display:block">
                       <label for="presets-dropdown" style="display:block">Presets:</label>
@@ -131,7 +136,7 @@
                   <br>
 
                 <div>
-                <h3 id="numPoints"></h3>
+                <h3 id="numlatlngs"></h3>
                 <br><br>
                 </div>
 
@@ -177,14 +182,14 @@
                     <h3>
                     Import
 
-                    <input type="number" name="count" value=10 min=0 max=9999>
+                    <input type="number" name="count" value=10 min=0 max=10>
                     most recent activities from
                     <select name='service'>
                         <option selected="selected" value="strava">Strava</option>
                         <option disabled value="gc">Garmin Connect</option>
                     </select>
                     <br>
-                    <input type="checkbox" checked name="detailed" value="yes">Use all data points<br>
+                    <input type="checkbox" checked name="detailed" value="yes">Use all data latlngs<br>
                     <br>
                     <input type="submit" value="Go!"/>
                     </h3>
@@ -256,7 +261,7 @@
 
 
       var F = "YYYY-MM-DD"
-      var points;
+      var latlngs;
       var heatlayer = false;
 
       function renderHeatLayer(){
@@ -266,26 +271,56 @@
         var query_data = {start: d1, end: d2}
 
         map.spin(true);   // start progress indicator
-        $.getJSON('/{{ username }}/points.json', query_data, function(points) {
-            //points is the JSON string
-            if (points.length) {
+        $.getJSON('/{{ username }}/latlngs.json', query_data, function(latlngs) {
+            //latlngs is the JSON object
+            if (latlngs.length) {
                 if (heatlayer){
                     map.removeLayer(heatlayer)
                     control.removeLayer(heatlayer)
                 }
-                heatlayer = L.heatLayer(points, current_hmap_options());
+                heatlayer = L.heatLayer(latlngs, current_hmap_options());
                 map.addLayer(heatlayer);
                 var title = "Point Density: ("+d1+" - "+d2+")"
                 control.addOverlay(heatlayer, title)
-                map.fitBounds(points);
+                map.fitBounds(latlngs);
 
-                document.getElementById('numPoints').innerHTML = d1 + " to " + d2 + "<br>" + points.length +" data points";
+                document.getElementById('numlatlngs').innerHTML = d1 + " to " + d2 + "<br>" + latlngs.length +" data latlngs";
 
             };
         }).always(function() {
             map.spin(false); // stop progress indicator
             });
       };
+
+
+      function renderAntLayer(){
+        var d1 = document.getElementById("date1").value;
+        var d2 = document.getElementById("date2").value;
+
+        var query_data = {start: d1, end: d2}
+
+        map.spin(true);   // start progress indicator
+        $.getJSON('/{{ username }}/latlngs.json', query_data, function(latlngs) {
+            //latlngs is the JSON object
+            if (latlngs.length) {
+                if (heatlayer){
+                    map.removeLayer(heatlayer)
+                    control.removeLayer(heatlayer)
+                }
+                heatlayer = L.polyline.antPath(latlngs);
+                map.addLayer(heatlayer);
+                var title = "Ant Paths: ("+d1+" - "+d2+")"
+                control.addOverlay(heatlayer, title)
+                map.fitBounds(latlngs);
+
+                document.getElementById('numlatlngs').innerHTML = d1 + " to " + d2 + "<br>" + latlngs.length +" data latlngs";
+
+            };
+        }).always(function() {
+            map.spin(false); // stop progress indicator
+            });
+      };
+
 
 
 
@@ -337,7 +372,9 @@
             $("#radius").on("input", heatmap_redraw)
             $("#blur").on("input", heatmap_redraw)
 
-            $("#renderButton").on('click', renderHeatLayer );
+            $("#renderHeat").on('click', renderHeatLayer );
+
+            $("#renderAnt").on('click', renderAntLayer );
 
             preset_date_fill();
             // renderHeatLayer();
