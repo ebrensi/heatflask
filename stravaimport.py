@@ -99,23 +99,25 @@ if __name__ == '__main__':
         logging.info("no username given")
         exit()
 
-    # retrieve this user's record if it exists
-    user = User.get(args.user)
+    if args.user == "all":
+        users = User.query.all()
+    else:
+        users = User.query.filter_by(name=args.user).all()
 
-    if not user:
-        logging.info("User %s does not exist", args.user)
+    for user in users:
+        if args.clean:
+            # delete all gc_activities for user from database
+            Activity.query.filter_by(user=user).delete()
+            logging.info("clean import: deleted GC records for %s", user)
 
-    if args.clean:
-        # delete all gc_activities for user from database
-        Activity.query.filter_by(user=user).delete()
-        logging.info("clean import: deleted GC records for %s", user)
+        client = stravalib.Client(
+            access_token=user.strava_user_data["access_token"])
 
-    client = stravalib.Client(
-        access_token=user.strava_user_data["access_token"])
+        limit = None if args.count == "all" else int(args.count)
 
-    limit = None if args.count == "all" else int(args.count)
+        logging.info("importing {} records for {}".format(limit, user.name))
 
-    # import GC activities for user
-    for msg in import_activities(db, user, client, limit=limit,
-                                 detailed=args.detailed):
-        pass
+        # import GC activities for user
+        for msg in import_activities(db, user, client, limit=limit,
+                                     detailed=args.detailed):
+            pass
