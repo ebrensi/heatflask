@@ -234,7 +234,6 @@ def strava_activities():
                         latlng = [(x, y) for x, y in streams["latlng"].data
                                   if (x, y) != (0, 0)]
 
-                        # lat, lng = zip(*latlng)
                         poly = polyline.encode(latlng)
                         other = {"name": a.name,
                                  "strava_polyline": a.map.summary_polyline}
@@ -243,8 +242,6 @@ def strava_activities():
                                   "other": other,
                                   "beginTimestamp": a.start_date_local,
                                   "elapsed": time,
-                                  # "latitudes": list(lat),
-                                  # "longitudes": list(lng),
                                   "polyline": poly,
                                   "source": "ST"}
 
