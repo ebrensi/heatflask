@@ -50,7 +50,7 @@ def login():
     return render_template("login.html")
 
 
-# Attempt to authorize a user via Oauth(2) or whatever
+# Attempt to authorize a user via Oauth(2)
 @app.route('/authorize/<service>')
 def authorize(service):
     redirect_uri = url_for('auth_callback', service=service, _external=True)
@@ -152,13 +152,13 @@ def index(username):
     render = request.args.get("render")
     render_method = render if (render in ["Heat", "Flow"]) else None
 
-    preset = int(request.args.get("preset"))
-    preset_set = preset if (preset in [2, 7, 30]) else None
+    preset = request.args.get("preset")
+    preset = preset if (preset in ["2", "7", "30"]) else None
 
     return render_template('index.html',
                            date1=request.args.get("date1"),
                            date2=request.args.get("date2"),
-                           preset=preset_set,
+                           preset=preset,
                            render_on_load=render_method,
                            username=username)
 
@@ -278,6 +278,13 @@ def strava_activities():
 
     return Response(do_import(), mimetype='text/event-stream')
 
+
+@app.route('/admin')
+# @login_required
+def admin():
+    users = User.query.all()
+    info = {user.name: {"is_active": user.is_active} for user in users}
+    return jsonify(info)
 
 # python heatmapp.py works but you really should use `flask run`
 if __name__ == '__main__':

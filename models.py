@@ -1,8 +1,6 @@
 from heatmapp import db
 from flask_login import UserMixin
-from sqlalchemy.dialects.postgresql import ARRAY, DOUBLE_PRECISION, \
-    TIMESTAMP, JSON
-
+from sqlalchemy.dialects.postgresql import ARRAY, TIMESTAMP, JSON
 from sqlalchemy import INTEGER
 
 
