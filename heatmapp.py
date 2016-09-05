@@ -42,8 +42,9 @@ def load_user(name):
 def nothing():
     return redirect(url_for('login'))
 
-
 # Display the login page
+
+
 @app.route("/login", methods=["GET"])
 def login():
     return render_template("login.html")
@@ -138,15 +139,26 @@ def delete(username):
     return redirect(url_for("login"))
 
 
+@app.route('/demo')
+def demo():
+    return redirect(url_for("index",
+                            username="ebuggz",
+                            preset="7",
+                            render="Flow"))
+
+
 @app.route('/<username>')
 def index(username):
     render = request.args.get("render")
     render_method = render if (render in ["Heat", "Flow"]) else None
 
+    preset = request.args.get("preset")
+    preset_set = preset if (preset in [2, 7, 30]) else None
+
     return render_template('index.html',
                            date1=request.args.get("date1"),
                            date2=request.args.get("date2"),
-                           preset=request.args.get("preset"),
+                           preset=preset_set,
                            render_on_load=render_method,
                            username=username)
 
