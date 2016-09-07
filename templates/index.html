@@ -258,7 +258,8 @@
 
       var F = "YYYY-MM-DD"
       var latlngs;
-      var visLayer = false;
+      var HeatLayer = false;
+      var FlowLayer = false;
 
       var heatLayerOptions = {{ config["HEATMAP_DEFAULT_OPTIONS"]|tojson|safe}};
 
@@ -272,14 +273,14 @@
         $.getJSON('/{{ username }}/latlngs/flat', query_data, function(latlngs) {
             //latlngs is the JSON object
             if (latlngs.length) {
-                if (visLayer){
-                    map.removeLayer(visLayer)
-                    control.removeLayer(visLayer)
+                if (HeatLayer){
+                    map.removeLayer(HeatLayer)
+                    control.removeLayer(HeatLayer)
                 }
-                visLayer = L.heatLayer(latlngs, heatLayerOptions);
-                map.addLayer(visLayer);
+                HeatLayer = L.heatLayer(latlngs, heatLayerOptions);
+                map.addLayer(HeatLayer);
                 var title = "Point Density: ("+d1+" - "+d2+")"
-                control.addOverlay(visLayer, title)
+                control.addOverlay(HeatLayer, title)
                 map.fitBounds(latlngs);
 
                 document.getElementById('numlatlngs').innerHTML = d1 + " to " + d2 + "<br>" + latlngs.length +" data points";
@@ -304,14 +305,14 @@
         $.getJSON('/{{ username }}/latlngs/list', query_data, function(latlngs) {
             //latlngs is the JSON object
             if (latlngs.length) {
-                if (visLayer){
-                    map.removeLayer(visLayer)
-                    control.removeLayer(visLayer)
+                if (FlowLayer){
+                    map.removeLayer(FlowLayer)
+                    control.removeLayer(FlowLayer)
                 }
-                visLayer = new L.MultiPolyline.MultiAntPath(latlngs, flowLayerOptions);
-                map.addLayer(visLayer);
+                FlowLayer = new L.MultiPolyline.MultiAntPath(latlngs, flowLayerOptions);
+                map.addLayer(FlowLayer);
                 var title = "Ant Paths: ("+d1+" - "+d2+")"
-                control.addOverlay(visLayer, title)
+                control.addOverlay(FlowLayer, title)
                 map.fitBounds(latlngs);
 
                 document.getElementById('numlatlngs').innerHTML = d1 + " to " + d2 + "<br>" + latlngs.length +" activities";
