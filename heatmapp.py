@@ -163,6 +163,7 @@ def index(username):
                            date2=request.args.get("date2"),
                            preset=preset,
                            center=center,
+                           autozoom="selected",
                            zoom=zoom,
                            render_on_load=render_method,
                            username=username)
