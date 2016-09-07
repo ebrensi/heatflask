@@ -217,14 +217,7 @@
             <div class="sidebar-pane" id="settings">
                 <h1 class="sidebar-header">Map Settings<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
 
-                <form>
 
-                    <span style="display:block">
-                        <label>Radius </label><input type="range" id="radius" value=9 min=1 max=50 /><br />
-                        <label>Blur </label><input type="range" id="blur" value=15 min=1 max=50 /><br />
-                        <button type="button" onClick="resetHmapOptions();">Reset</button>
-                     </span>
-                </form>
             </div>
          </div>
     </div>
@@ -261,13 +254,17 @@
         control = L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map);
 
 
+
+
       var F = "YYYY-MM-DD"
       var latlngs;
       var visLayer = false;
 
+      var heatLayerOptions = {{ config["HEATMAP_DEFAULT_OPTIONS"]|tojson|safe}};
+
       function renderHeatLayer(vis){
-        var d1 = document.getElementById("date1").value;
-        var d2 = document.getElementById("date2").value;
+        var d1 = $("#date1").val();
+        var d2 = $("#date2").val();
 
         var query_data = {start: d1, end: d2}
 
@@ -279,7 +276,7 @@
                     map.removeLayer(visLayer)
                     control.removeLayer(visLayer)
                 }
-                visLayer = L.heatLayer(latlngs, current_hmap_options());
+                visLayer = L.heatLayer(latlngs, heatLayerOptions);
                 map.addLayer(visLayer);
                 var title = "Point Density: ("+d1+" - "+d2+")"
                 control.addOverlay(visLayer, title)
@@ -294,7 +291,8 @@
       };
 
 
-      antoptions = {weight:3, color:'red', delay:10000}
+
+      flowLayerOptions = {{ config["ANTPATH_DEFAULT_OPTIONS"]|tojson|safe }};
 
       function renderFlowLayer(){
         var d1 = document.getElementById("date1").value;
@@ -310,7 +308,7 @@
                     map.removeLayer(visLayer)
                     control.removeLayer(visLayer)
                 }
-                visLayer = new L.MultiPolyline.MultiAntPath(latlngs, antoptions);
+                visLayer = new L.MultiPolyline.MultiAntPath(latlngs, flowLayerOptions);
                 map.addLayer(visLayer);
                 var title = "Ant Paths: ("+d1+" - "+d2+")"
                 control.addOverlay(visLayer, title)
@@ -326,26 +324,6 @@
 
 
 
-
-      function current_hmap_options(){
-            return {radius: +document.getElementById("radius").value,
-                    blur: +document.getElementById("blur").value,
-                    gradient: {0.4: 'blue', 0.65: 'lime', 1: 'red'}
-                    }
-      }
-
-
-      function resetHmapOptions(){
-        document.getElementById("radius").value = 9;
-        document.getElementById("blur").value = 15;
-        heatmap_redraw();
-      }
-
-
-        function heatmap_redraw(){
-            visLayer.setOptions(current_hmap_options());
-        }
-
         function preset_date_fill() {
             var choice = $("#presets-dropdown").val();
 
@@ -355,13 +333,13 @@
                 date1=moment().subtract(choice, 'days');
             };
 
-            document.getElementById('date1').value=date1.format(F);
+            $('#date1').val(date1.format(F));
 
 
             // end date defaults to tomorrow, so that default query includes
             //  today's events.
             var date2 = moment().add(1, 'days');
-            document.getElementById('date2').value=date2.format(F);
+            $('#date2').val(date2.format(F));
         };
 
 
@@ -370,8 +348,6 @@
 
             $(".datepick").datepicker();
             $("#presets-dropdown").on("change", preset_date_fill);
-            $("#radius").on("input", heatmap_redraw)
-            $("#blur").on("input", heatmap_redraw)
             $("#renderHeat").on('click', renderHeatLayer );
             $("#renderFlow").on('click', renderFlowLayer );
 
