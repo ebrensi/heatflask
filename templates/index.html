@@ -21,6 +21,9 @@
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/leaflet-sidebar.css') }}"/>
 
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/L.Control.ZoomBox.css') }}" />
+
+
     <style>
         body {
             padding: 0;
@@ -62,6 +65,7 @@
     <!-- ant path -->
     <script src="{{ url_for('static', filename='js/leaflet-ant-path.js') }}"></script>
 
+    <script src="{{ url_for('static', filename='js/L.Control.ZoomBox.min.js') }}"></script>
 
 
 
@@ -105,10 +109,7 @@
                 <h3>Enter dates over which to render:</h3>
 
                   <form id="myform" action="">
-                    <button type="button" id="renderHeat" class="btn btn-primary">Render Heat Layer</button>
-                    <button type="button" id="renderFlow" class="btn btn-primary">Render Flow Layer</button>
 
-                    <br><br>
                      <span style="display:block">
                       <label for="presets-dropdown" style="display:block">Presets:</label>
                       <select id ="presets-dropdown" >
@@ -129,12 +130,31 @@
                         <label for="date1" style="display:block">Start Date:</label>
                         <input class="datepick" id="date1" type="text"  value=""/>
                       </span>
-
+                      <br>
 
                       <span style="display:block">
                         <label for="date2" style="display:block">End Date:</label>
                         <input class="datepick" id="date2" type="text" value=""/>
                       </span>
+
+                      <br>
+                      <div class="btn-group">
+                        <button type="button" id="renderHeat" class="btn btn-primary">Render Heat Layer</button><br>
+                        <label class="checkbox-inline"><input type="checkbox" checked id="heatres" value="low">Low-resolution</label>
+                    </div>
+
+                    <div class="btn-group">
+                        <button type="button" id="renderFlow" class="btn btn-primary">Render Flow Layer</button><br>
+                        <label class="checkbox-inline"><input type="checkbox" checked id="flowres" value="low">Low-resolution</label>
+                    </div>
+
+                    <hr>
+                        <div class="checkbox">
+                          <label><input type="checkbox" id="autozoom" value="true">Auto-Zoom on render</label>
+                        </div>
+
+                    <br>
+                    <button type="button" id="setURL" class="btn btn-primary">Set URL</button><br>
 
                   </form>
                   <br>
@@ -190,7 +210,7 @@
                         <option disabled value="gc">Garmin Connect</option>
                     </select>
                     <br>
-                    <input type="checkbox" checked name="detailed" value="yes">Use all data points<br>
+                    <input type="checkbox" checked name="detailed" value="yes">Import High-Resolution data<br>
                     <br>
                     <input type="submit" value="Go!"/>
                     </h4>
@@ -238,8 +258,8 @@
         });
 
         var map = L.map('map',
-                        {center:[45.5236,-122.675],
-                         zoom: 3,
+                        {center: {{ center }},
+                         zoom: {{ zoom }},
                          layers : [ EsriMap ]
                   });
 
@@ -251,9 +271,14 @@
             "Esri World Imagery": EsriMap
         };
 
-        control = L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map);
+        var control = L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map);
 
-
+        var zoom_control = L.control.zoomBox({
+            modal: true,  // If false (default), it deactivates after each use.
+                          // If true, zoomBox control stays active until you click on the control to deactivate.
+            // position: "topleft",
+        });
+        map.addControl(zoom_control);
 
 
       var F = "YYYY-MM-DD"
@@ -267,21 +292,23 @@
         var d1 = $("#date1").val();
         var d2 = $("#date2").val();
 
-        var query_data = {start: d1, end: d2}
+        var query_data = {start: d1, end: d2, resolution: $("#heatres:checked").val()}
 
         map.spin(true);   // start progress indicator
         $.getJSON('/{{ username }}/latlngs/flat', query_data, function(latlngs) {
             //latlngs is the JSON object
             if (latlngs.length) {
                 if (HeatLayer){
-                    map.removeLayer(HeatLayer)
-                    control.removeLayer(HeatLayer)
+                    map.removeLayer(HeatLayer);
+                    control.removeLayer(HeatLayer);
                 }
                 HeatLayer = L.heatLayer(latlngs, heatLayerOptions);
                 map.addLayer(HeatLayer);
-                var title = "Point Density: ("+d1+" - "+d2+")"
-                control.addOverlay(HeatLayer, title)
-                map.fitBounds(latlngs);
+                var title = "Point Density: ("+d1+" - "+d2+")";
+                control.addOverlay(HeatLayer, title);
+                if ($("#autozoom:checked").val()) {
+                    map.fitBounds(latlngs);
+                }
 
                 document.getElementById('numlatlngs').innerHTML = d1 + " to " + d2 + "<br>" + latlngs.length +" data points";
 
@@ -299,22 +326,24 @@
         var d1 = document.getElementById("date1").value;
         var d2 = document.getElementById("date2").value;
 
-        var query_data = {start: d1, end: d2}
+        var query_data = {start: d1, end: d2, resolution: $("#flowres:checked").val()}
 
         map.spin(true);   // start progress indicator
         $.getJSON('/{{ username }}/latlngs/list', query_data, function(latlngs) {
             //latlngs is the JSON object
             if (latlngs.length) {
                 if (FlowLayer){
-                    map.removeLayer(FlowLayer)
-                    control.removeLayer(FlowLayer)
+                    map.removeLayer(FlowLayer);
+                    control.removeLayer(FlowLayer);
                 }
                 FlowLayer = new L.MultiPolyline.MultiAntPath(latlngs, flowLayerOptions);
                 map.addLayer(FlowLayer);
                 var title = "Ant Paths: ("+d1+" - "+d2+")"
-                control.addOverlay(FlowLayer, title)
-                map.fitBounds(latlngs);
+                control.addOverlay(FlowLayer, title);
 
+                if ($("#autozoom:checked").val()) {
+                    map.fitBounds(latlngs);
+                }
                 document.getElementById('numlatlngs').innerHTML = d1 + " to " + d2 + "<br>" + latlngs.length +" activities";
 
             };
@@ -344,6 +373,21 @@
         };
 
 
+        function setURL(){
+            var params = { date1: $('#date1').val(),
+                           date2: $('#date2').val(),
+                           // center: map.getCenter(),
+                           zoom: map.getZoom(),
+                           render: "Flow"
+                       };
+            var str = jQuery.param(params);
+
+            var URL = "{{ username }}" + "?" + str;
+            window.history.pushState("", "", URL);
+        };
+
+
+
 
         $(document).ready(function() {
 
@@ -351,6 +395,7 @@
             $("#presets-dropdown").on("change", preset_date_fill);
             $("#renderHeat").on('click', renderHeatLayer );
             $("#renderFlow").on('click', renderFlowLayer );
+            $("#setURL").on('click', setURL);
 
             {% if render_on_load %}
                 {% if preset %}
