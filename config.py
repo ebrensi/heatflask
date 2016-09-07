@@ -13,8 +13,28 @@ class Config(object):
     # Strava stuff
     STRAVA_CLIENT_ID = os.environ["STRAVA_CLIENT_ID"]
     STRAVA_CLIENT_SECRET = os.environ["STRAVA_CLIENT_SECRET"]
-    STRAVA_AUTH_URL = "https://www.strava.com/oauth/authorize"
-    STRAVA_TOKEN_URL = "https://www.strava.com/oauth/token"
+
+    # Leaflet stuff
+    HEATMAP_DEFAULT_OPTIONS = {"radius": 9,
+                               "blur": 15,
+                               "gradient": {0.4: 'blue', 0.65: 'lime', 1: 'red'}
+                               }
+
+    ANTPATH_DEFAULT_OPTIONS = {"weight": 3,
+                               "color": 'red',
+                               "delay": 8000}
+
+    LEAFLET_BASE_LAYERS = [
+        {"title": "Open Street Map",
+         "url": 'http://{s}.tile.osm.org/{z}/{x}/{y}.png',
+         "attribution": '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+         },
+
+        {"title": "Esri World Imagery",
+         "url": 'http://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+         "attribution": 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+         }
+    ]
 
 
 class ProductionConfig(Config):
