@@ -155,10 +155,15 @@ def index(username):
     preset = request.args.get("preset")
     preset = preset if (preset in ["2", "7", "30"]) else None
 
+    center = request.args.get("center") or app.config["MAP_CENTER"]
+    zoom = request.args.get("zoom") or app.config["MAP_ZOOM"]
+
     return render_template('index.html',
                            date1=request.args.get("date1"),
                            date2=request.args.get("date2"),
                            preset=preset,
+                           center=center,
+                           zoom=zoom,
                            render_on_load=render_method,
                            username=username)
 
@@ -173,11 +178,17 @@ def latlngsJSON(username, orientation):
 
     user = User.get(username)
 
-    # Query database for points
-    result = (db.session.query(Activity.polyline)
-              .filter(Activity.beginTimestamp.between(start, end))
-              .filter_by(user=user)
-              ).all()
+    if request.args.get("resolution") == "low":
+        result = (db.session.query(Activity.other["strava_polyline"])
+                  .filter(Activity.beginTimestamp.between(start, end))
+                  .filter_by(user=user)
+                  ).all()
+    else:
+        # Query database for points
+        result = (db.session.query(Activity.polyline)
+                  .filter(Activity.beginTimestamp.between(start, end))
+                  .filter_by(user=user)
+                  ).all()
 
     def pointsList_gen():
         for pl in result:
@@ -187,6 +198,8 @@ def latlngsJSON(username, orientation):
     routes = list(pointsList_gen())
 
     if orientation == "list":
+        numpoints = sum(len(route) for route in routes)
+        app.logger.info("{} points.".format(numpoints))
         return jsonify(routes)
 
     flat = [item for sublist in routes for item in sublist]
@@ -271,6 +284,7 @@ def strava_activities():
                         mi = stravalib.unithelper.miles(a.distance)
                         msg = ("[{0.id}] {0.name}: {0.start_date_local}"
                                .format(a))
+
                         msg = "{}. {}, {}\n".format(count, msg, mi)
                         yield msg
 

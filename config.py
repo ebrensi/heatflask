@@ -24,6 +24,9 @@ class Config(object):
                                "color": 'red',
                                "delay": 8000}
 
+    MAP_CENTER = [45.5236, -122.675]
+    MAP_ZOOM = 3
+
     LEAFLET_BASE_LAYERS = [
         {"title": "Open Street Map",
          "url": 'http://{s}.tile.osm.org/{z}/{x}/{y}.png',
