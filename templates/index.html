@@ -112,11 +112,11 @@
 
                 <h3>Enter dates over which to render:</h3>
 
-                  <form id="myform" action="{{ url_for('index', username=username)}}">
+                  <form id="renderform" action="{{ url_for('index', username=username)}}">
 
                      <span style="display:block">
-                      <label for="presets-dropdown" style="display:block">Presets:</label>
-                      <select id ="presets-dropdown" >
+                      <label for="preset" style="display:block">Presets:</label>
+                      <select id ="preset" form="renderform" >
                         <option value=2 selected="selected">Last 2 days</option>
                         <option value=7>Last 7 days</option>
                         <option value=30>Last 30 days</option>
@@ -142,24 +142,34 @@
                       </span>
 
                       <br>
-                      <div class="btn-group">
-                        <button type="button" id="renderHeat" class="btn btn-primary">Render Heat Layer</button><br>
-                        <label class="checkbox-inline"><input type="checkbox" checked id="heatres" value="low">Low-resolution</label>
-                    </div>
 
-                    <div class="btn-group">
-                        <button type="button" id="renderFlow" class="btn btn-primary">Render Flow Layer</button><br>
-                        <label class="checkbox-inline"><input type="checkbox" checked id="flowres" value="low">Low-resolution</label>
-                    </div>
+                      <span style="display:block">
+                      <label for="renderHeat" style="display:block">Heat Layer:</label>
+                      <select id="renderHeat" name="renderHeat" form="renderform">
+                        <option selected="selected" value="">None</option>
+                        <option value="high">High resolution</option>
+                        <option value="low">Low resolution</option>
+                      </select>
+                      </span>
 
-                    <hr>
+
+                        <span style="display:block">
+                      <label for="renderFlow" style="display:block">Flow Layer:</label>
+                      <select id="renderFlow" name="renderFlow" form="renderform">
+                        <option selected="selected" value="">None</option>
+                        <option value="high">High resolution</option>
+                        <option value="low">Low resolution</option>
+                      </select>
+                      </span>
+
+
                         <div class="checkbox">
-                          <label><input type="checkbox" id="autozoom" {{ default_autozoom }} value="true">Auto-Zoom on render</label>
+                          <label><input type="checkbox" id="autozoom" {{ default_autozoom }} value="1">Auto-Zoom on render</label>
                         </div>
-                    <!--
+
                     <br>
-                    <button type="button" id="setURL" class="btn btn-primary">Set URL</button><br>
-                    -->
+                    <button type="button" id="renderButton" class="btn btn-primary">GO!</button><br>
+
 
                   </form>
                   <br>
@@ -240,13 +250,12 @@
 
                 <h3>Latest News:</h3>
                 <br>
-                <h4>2016-08-01-07</h4>
-                This app is in heavy development.  Bugs and features will come and go for a while so enjoy messing around with it.
-                Saving the state of the app (bookmarking) is not quite working the way I want yet, but it's getting there.
-                <br>
-                Feel free to <a href="mailto:Rensi.Efrem@gmail.com?Subject=About heatmapp" target="_top">contact me via email</a>
-                <br>
-                Better yet, if you think you're up to it then
+                <h4>2016-08-08</h4>
+                This app is in heavy development.  Bugs and features will come and go for a while so enjoy experimenting with it.
+                <br><br>
+                Feel free to <a href="mailto:Rensi.Efrem@gmail.com?Subject=About heatmapp" target="_top">contact me via email</a> with suggestions.
+                <br><br>
+                Better yet,
                 <a href="https://github.com/ebrensi/heatmappp/blob/master/CONTRIBUTING.md">join in the project!</a>
             </div>
 
@@ -372,9 +381,26 @@
       };
 
 
+        function renderLayers(){
+            if ($("#renderHeat").val()) {
+                renderHeatLayer();
+            } else if (HeatLayer){
+                map.removeLayer(HeatLayer);
+            }
+
+
+
+            if ($("#renderFlow").val()) {
+                renderFlowLayer();
+            } else if (FlowLayer) {
+                map.removeLayer(FlowLayer);
+            }
+        }
+
+
 
         function preset_date_fill() {
-            var choice = $("#presets-dropdown").val();
+            var choice = $("#preset").val();
 
             // date1 defaults to
             var date1 = moment("20090215", "YYYYMMDD");
@@ -390,6 +416,8 @@
             var date2 = moment().add(1, 'days');
             $('#date2').val(date2.format(F));
         };
+
+
 
 
         // function setURL(){
@@ -412,21 +440,19 @@
         $(document).ready(function() {
 
             $(".datepick").datepicker();
-            $("#presets-dropdown").on("change", preset_date_fill);
-            $("#renderHeat").on('click', renderHeatLayer );
-            $("#renderFlow").on('click', renderFlowLayer );
-            // $("#setURL").on('click', setURL);
+            $("#preset").on("change", preset_date_fill);
+            $("#renderButton").on('click', renderLayers);
 
             {% if render_on_load %}
                 {% if preset %}
-            $("#presets-dropdown").val("{{ preset }}");
+            $("#preset").val("{{ preset }}");
             preset_date_fill();
                 {% else %}
             $('#date1').val("{{ date1 }}");
             $('#date2').val("{{ date2 }}");
-            $("#presets-dropdown").val("-1");
+            $("#preset").val("-1");
                 {% endif %}
-            render{{ render_on_load }}Layer();
+            renderLayers();
             {% else %}
 
             preset_date_fill();
