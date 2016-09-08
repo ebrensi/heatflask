@@ -44,16 +44,16 @@
 
     <!-- JQuery -->
     <script src="{{ url_for('static', filename='js/jquery-3.1.0.min.js') }}"></script>
-
-    <!-- JQuery UI -->
     <script src="{{ url_for('static', filename='js/jquery-ui.min.js') }}"></script>
 
+    <!-- Leaflet.js -->
     <script src="{{ url_for('static', filename='js/leaflet.js') }}"></script>
 
+    <!-- sidebar v2 -->
     <script src="{{ url_for('static', filename='js/leaflet-sidebar.js') }}"></script>
 
+    <!-- Spinner to display during time-intensive operations -->
     <script src="{{ url_for('static', filename='js/leaflet.spin.js') }}"></script>
-
     <script src="{{ url_for('static', filename='js/spin.min.js') }}"></script>
 
     <!-- Moment.js for current date-->
@@ -62,10 +62,14 @@
     <!-- Heatmap -->
     <script src="{{ url_for('static', filename='js/leaflet-heat.js') }}"></script>
 
-    <!-- ant path -->
+    <!-- ant "Flow" path -->
     <script src="{{ url_for('static', filename='js/leaflet-ant-path.js') }}"></script>
 
+    <!-- Zoom control -->
     <script src="{{ url_for('static', filename='js/L.Control.ZoomBox.min.js') }}"></script>
+
+    <!-- A hasher for bookmarking map orientation -->
+    <script src="{{ url_for('static', filename='js/leaflet-fullHash.js') }}"></script>
 
 
 
@@ -88,7 +92,7 @@
                 <a href="#profile" role="tab"><i class="fa fa-user"></i></a>
                 </li>
 
-                <!-- <li class="disabled"><a href="#messages" role="tab"><i class="fa fa-envelope"></i></a></li> -->
+                <li><a href="#messages" role="tab"><i class="fa fa-envelope"></i></a></li>
             </ul>
 
             <ul role="tablist">
@@ -108,7 +112,7 @@
 
                 <h3>Enter dates over which to render:</h3>
 
-                  <form id="myform" action="">
+                  <form id="myform" action="{{ url_for('index', username=username)}}">
 
                      <span style="display:block">
                       <label for="presets-dropdown" style="display:block">Presets:</label>
@@ -150,11 +154,12 @@
 
                     <hr>
                         <div class="checkbox">
-                          <label><input type="checkbox" id="autozoom" {{ autozoom }} value="true">Auto-Zoom on render</label>
+                          <label><input type="checkbox" id="autozoom" {{ default_autozoom }} value="true">Auto-Zoom on render</label>
                         </div>
-
+                    <!--
                     <br>
                     <button type="button" id="setURL" class="btn btn-primary">Set URL</button><br>
+                    -->
 
                   </form>
                   <br>
@@ -232,6 +237,17 @@
 
             <div class="sidebar-pane" id="messages">
                 <h1 class="sidebar-header">Messages<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
+
+                <h3>Latest News:</h3>
+                <br>
+                <h4>2016-08-01-07</h4>
+                This app is in heavy development.  Bugs and features will come and go for a while so enjoy messing around with it.
+                Saving the state of the app (bookmarking) is not quite working the way I want yet, but it's getting there.
+                <br>
+                Feel free to <a href="mailto:Rensi.Efrem@gmail.com?Subject=About heatmapp" target="_top">contact me via email</a>
+                <br>
+                Better yet, if you think you're up to it then
+                <a href="https://github.com/ebrensi/heatmappp/blob/master/CONTRIBUTING.md">join in the project!</a>
             </div>
 
             <div class="sidebar-pane" id="settings">
@@ -258,8 +274,8 @@
         });
 
         var map = L.map('map',
-                        {center: {{ center }},
-                         zoom: {{ zoom }},
+                        {center: {{ default_center }},
+                         zoom: {{ default_zoom|safe }},
                          layers : [ EsriMap ]
                   });
 
@@ -274,31 +290,34 @@
         var control = L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map);
 
         var zoom_control = L.control.zoomBox({
-            modal: true,  // If false (default), it deactivates after each use.
-                          // If true, zoomBox control stays active until you click on the control to deactivate.
-            // position: "topleft",
+            modal: true,
         });
         map.addControl(zoom_control);
 
+        // Assuming your map instance is in a variable called map
+        var allMapLayers = {'osm': osmMap,
+                            'esri': EsriMap
+                        };
+        var hash = new L.Hash(map, allMapLayers);
 
-      var F = "YYYY-MM-DD"
-      var latlngs;
-      var HeatLayer = false;
-      var FlowLayer = false;
+        var F = "YYYY-MM-DD"
+        var latlngs;
+        var HeatLayer = false;
+        var FlowLayer = false;
 
-      var heatLayerOptions = {{ config["HEATMAP_DEFAULT_OPTIONS"]|tojson|safe}};
+        var heatLayerOptions = {{ config["HEATMAP_DEFAULT_OPTIONS"]|tojson|safe}};
 
-      function renderHeatLayer(vis){
-        var d1 = $("#date1").val();
-        var d2 = $("#date2").val();
+        function renderHeatLayer(vis){
+            var d1 = $("#date1").val();
+            var d2 = $("#date2").val();
 
-        var query_data = {start: d1, end: d2, resolution: $("#heatres:checked").val()}
+            var query_data = {start: d1, end: d2, resolution: $("#heatres:checked").val()}
 
-        map.spin(true);   // start progress indicator
-        $.getJSON('/{{ username }}/latlngs/flat', query_data, function(latlngs) {
-            //latlngs is the JSON object
-            if (latlngs.length) {
-                if (HeatLayer){
+            map.spin(true);   // start progress indicator
+            $.getJSON('/{{ username }}/latlngs/flat', query_data, function(latlngs) {
+                //latlngs is the JSON object
+                if (latlngs.length) {
+                    if (HeatLayer){
                     map.removeLayer(HeatLayer);
                     control.removeLayer(HeatLayer);
                 }
@@ -320,16 +339,16 @@
 
 
 
-      flowLayerOptions = {{ config["ANTPATH_DEFAULT_OPTIONS"]|tojson|safe }};
+        flowLayerOptions = {{ config["ANTPATH_DEFAULT_OPTIONS"]|tojson|safe }};
 
-      function renderFlowLayer(){
-        var d1 = document.getElementById("date1").value;
-        var d2 = document.getElementById("date2").value;
+        function renderFlowLayer(){
+            var d1 = document.getElementById("date1").value;
+            var d2 = document.getElementById("date2").value;
 
-        var query_data = {start: d1, end: d2, resolution: $("#flowres:checked").val()}
+            var query_data = {start: d1, end: d2, resolution: $("#flowres:checked").val()}
 
-        map.spin(true);   // start progress indicator
-        $.getJSON('/{{ username }}/latlngs/list', query_data, function(latlngs) {
+            map.spin(true);   // start progress indicator
+            $.getJSON('/{{ username }}/latlngs/list', query_data, function(latlngs) {
             //latlngs is the JSON object
             if (latlngs.length) {
                 if (FlowLayer){
@@ -373,18 +392,19 @@
         };
 
 
-        function setURL(){
-            var params = { date1: $('#date1').val(),
-                           date2: $('#date2').val(),
-                           // center: map.getCenter(),
-                           zoom: map.getZoom(),
-                           render: "Flow"
-                       };
-            var str = jQuery.param(params);
+        // function setURL(){
+        //     var params = { date1: $('#date1').val(),
+        //                    date2: $('#date2').val(),
+        //                    autozoom: $("#autozoom").val(),
+        //                    heatres: $("#heatres").val(),
+        //                    flowres: $("#flowres").val(),
+        //                    render: "Flow"
+        //                };
+        //     var str = jQuery.param(params);
 
-            var URL = "{{ username }}" + "?" + str;
-            window.history.pushState("", "", URL);
-        };
+        //     var URL = "{{ username }}" + "?" + str;
+        //     window.history.pushState("", "", URL);
+        // };
 
 
 
@@ -395,7 +415,7 @@
             $("#presets-dropdown").on("change", preset_date_fill);
             $("#renderHeat").on('click', renderHeatLayer );
             $("#renderFlow").on('click', renderFlowLayer );
-            $("#setURL").on('click', setURL);
+            // $("#setURL").on('click', setURL);
 
             {% if render_on_load %}
                 {% if preset %}

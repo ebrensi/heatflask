@@ -155,18 +155,21 @@ def index(username):
     preset = request.args.get("preset")
     preset = preset if (preset in ["2", "7", "30"]) else None
 
-    center = request.args.get("center") or app.config["MAP_CENTER"]
-    zoom = request.args.get("zoom") or app.config["MAP_ZOOM"]
+    # we'll default to autozoom if this is a preset (relative) view
+    #  If the dates are fixed then we assume the user wants a fixed view
+    default_autozoom = "checked" if preset else None
 
     return render_template('index.html',
+                           username=username,
+                           preset=preset,
                            date1=request.args.get("date1"),
                            date2=request.args.get("date2"),
-                           preset=preset,
-                           center=center,
-                           autozoom="checked",
-                           zoom=zoom,
+                           default_zoom=app.config["MAP_ZOOM"],
+                           default_center=app.config["MAP_CENTER"],
+                           default_autozoom=default_autozoom,
+                           default_layers=app.config["LEAFLET_BASE_LAYERS"],
                            render_on_load=render_method,
-                           username=username)
+                           )
 
 
 @app.route('/<username>/latlngs/<orientation>')
