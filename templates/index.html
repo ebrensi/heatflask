@@ -68,10 +68,6 @@
     <!-- Zoom control -->
     <script src="{{ url_for('static', filename='js/L.Control.ZoomBox.min.js') }}"></script>
 
-    <!-- A hasher for bookmarking map orientation -->
-    <script src="{{ url_for('static', filename='js/leaflet-fullHash.js') }}"></script>
-
-
 
 </head>
 <body>
@@ -286,12 +282,11 @@
         });
 
         var map = L.map('map',
-                        {center: {{ default_center }},
-                         zoom: {{ default_zoom|safe }},
+                        {center: [{{ lat }}, {{ lng }}],
+                         zoom: {{ zoom }},
                          layers : [ EsriMap ]
                   });
 
-        // var map = L.map('map', {layers : [ EsriMap ]})
 
         var sidebar = L.control.sidebar('sidebar').addTo(map);
 
@@ -306,12 +301,6 @@
             modal: true,
         });
         map.addControl(zoom_control);
-
-        // Assuming your map instance is in a variable called map
-        var allMapLayers = {'osm': osmMap,
-                            'esri': EsriMap
-                        };
-        var hash = new L.Hash(map, allMapLayers);
 
         var latlngs;
         var HeatLayer = false;
@@ -340,8 +329,6 @@
                 if ($("#autozoom:checked").val()) {
                     map.fitBounds(latlngs);
                 }
-
-                document.getElementById('numlatlngs').innerHTML = d1 + " to " + d2 + "<br>" + latlngs.length +" data points";
 
             };
         }).always(function() {
@@ -375,8 +362,6 @@
                 if ($("#autozoom:checked").val()) {
                     map.fitBounds(latlngs);
                 }
-                document.getElementById('numlatlngs').innerHTML = d1 + " to " + d2 + "<br>" + latlngs.length +" activities";
-
             };
         }).always(function() {
             map.spin(false); // stop progress indicator
@@ -410,15 +395,22 @@
                 params.date2 = $('#date2').val();
             }
 
-
-            if($("#autozoom").is(':checked'))
-                params.autozoom = "1"
+            if($("#autozoom").is(':checked')) {
+                params.autozoom = "1";
+            } else {
+                var zoom = map.getZoom();
+                    center = map.getCenter(),
+                    precision = Math.max(0, Math.ceil(Math.log(zoom) / Math.LN2));
+                params.lat = center.lat.toFixed(precision);
+                params.lng = center.lng.toFixed(precision);
+                params.zoom = zoom;
+            }
 
             if ($("#heatres").val())
-                params.heatres = $("#heatres").val()
+                params.heatres = $("#heatres").val();
 
             if ($("#flowres").val())
-                params.flowres = $("#flowres").val()
+                params.flowres = $("#flowres").val();
 
 
             var newURL = "{{ username }}" + "?" + jQuery.param(params);
@@ -427,7 +419,7 @@
 
 
         function preset_date_fill() {
-            var F = "YYYY-MM-DD"
+            var F = "YYYY-MM-DD";
             var choice = $("#preset").val();
 
             // date1 defaults to
@@ -453,8 +445,15 @@
                                         changeMonth: true,
                                         changeYear: true
                                     });
+            map.on('moveend', function(e) {
+                updateURL();
+            });
+
+            $("#autozoom").on("change",updateURL);
+
             $(".datepick").on("change", function(){$("#preset").val("");})
             $("#preset").on("change", preset_date_fill);
+
             $("#renderButton").on('click', renderLayers);
 
             $("#heatres").val("{{ heatres }}")
@@ -474,7 +473,7 @@
             {% endif %}
 
             renderLayers();
-        });
+        })
 
 
       </script>
