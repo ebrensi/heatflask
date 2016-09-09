@@ -299,6 +299,7 @@
         var latlngs;
         var HeatLayer = false;
         var FlowLayer = false;
+        var layerDate = {date1: "", date2: "", preset: ""};
 
         var heatLayerOptions = {{ config["HEATMAP_DEFAULT_OPTIONS"]|tojson|safe}};
 
@@ -376,6 +377,11 @@
                 map.removeLayer(FlowLayer);
             }
 
+            layerDate = {
+                date1: $("#date1").val(),
+                date2: $("#date2").val(),
+                preset: $("#preset").val()
+            }
             updateURL();
         }
 
@@ -383,10 +389,10 @@
             var params = {};
 
             if ($("#preset").val()) {
-                params.preset = $("#preset").val();
+                params.preset = layerDate.preset;
             } else {
-                params.date1 = $('#date1').val();
-                params.date2 = $('#date2').val();
+                params.date1 = layerDate.date1;
+                params.date2 = layerDate.date2;
             }
 
             if($("#autozoom").is(':checked')) {
