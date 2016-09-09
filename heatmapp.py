@@ -144,31 +144,27 @@ def demo():
     return redirect(url_for("index",
                             username="ebuggz",
                             preset="7",
-                            render="Flow"))
+                            heatres="high",
+                            flowres="low",
+                            autozoom=1))
 
 
 @app.route('/<username>')
 def index(username):
-    render = request.args.get("render")
-    render_method = render if (render in ["Heat", "Flow"]) else None
-
     preset = request.args.get("preset")
-    preset = preset if (preset in ["2", "7", "30"]) else None
-
-    # we'll default to autozoom if this is a preset (relative) view
-    #  If the dates are fixed then we assume the user wants a fixed view
-    default_autozoom = "checked" if preset else None
+    preset = preset if (preset in ["2", "7", "30"]) else ""
 
     return render_template('index.html',
                            username=username,
                            preset=preset,
                            date1=request.args.get("date1"),
                            date2=request.args.get("date2"),
+                           heatres=request.args.get("heatres", ""),
+                           flowres=request.args.get("flowres", ""),
+                           autozoom=request.args.get("autozoom", ""),
                            default_zoom=app.config["MAP_ZOOM"],
                            default_center=app.config["MAP_CENTER"],
-                           default_autozoom=default_autozoom,
                            default_layers=app.config["LEAFLET_BASE_LAYERS"],
-                           render_on_load=render_method,
                            )
 
 

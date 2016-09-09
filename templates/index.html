@@ -62,7 +62,7 @@
     <!-- Heatmap -->
     <script src="{{ url_for('static', filename='js/leaflet-heat.js') }}"></script>
 
-    <!-- ant "Flow" path -->
+    <!-- ant (Flow) path -->
     <script src="{{ url_for('static', filename='js/leaflet-ant-path.js') }}"></script>
 
     <!-- Zoom control -->
@@ -115,7 +115,7 @@
                   <form id="renderform" action="{{ url_for('index', username=username)}}">
 
                      <span style="display:block">
-                      <label for="preset" style="display:block">Presets:</label>
+                      <label for="preset" style="display:block">Relative-Date Preset:</label>
                       <select id ="preset" form="renderform" >
                         <option value=2 selected="selected">Last 2 days</option>
                         <option value=7>Last 7 days</option>
@@ -123,8 +123,11 @@
                         <option value=60>Last 60 days</option>
                         <option value=180>Last 180 days</option>
                         <option value=365>Last year</option>
-                        <option value=0>All</option>
-                        <option value=-1>None</option>
+                        <option value=-7 disabled>This week (M-F)</option>
+                        <option value=-30 disabled>This month</option>
+                        <option value=-365 disabled>This year</option>
+                        <option value=0 disabled>All</option>
+                        <option value="">----</option>
                       </select>
                       </span>
 
@@ -145,9 +148,9 @@
 
                       <span style="display:block">
                       <label for="renderHeat" style="display:block">Heat Layer:</label>
-                      <select id="renderHeat" name="renderHeat" form="renderform">
-                        <option selected="selected" value="">None</option>
-                        <option value="high">High resolution</option>
+                      <select id="heatres" name="renderHeat" form="renderform">
+                        <option value="">None</option>
+                        <option value="high" selected="selected">High resolution</option>
                         <option value="low">Low resolution</option>
                       </select>
                       </span>
@@ -155,20 +158,20 @@
 
                         <span style="display:block">
                       <label for="renderFlow" style="display:block">Flow Layer:</label>
-                      <select id="renderFlow" name="renderFlow" form="renderform">
-                        <option selected="selected" value="">None</option>
+                      <select id="flowres" name="renderFlow" form="renderform">
+                        <option value="">None</option>
                         <option value="high">High resolution</option>
-                        <option value="low">Low resolution</option>
+                        <option value="low" selected="selected">Low resolution</option>
                       </select>
                       </span>
 
 
                         <div class="checkbox">
-                          <label><input type="checkbox" id="autozoom" {{ default_autozoom }} value="1">Auto-Zoom on render</label>
+                          <label><input type="checkbox" id="autozoom" value="1">Auto-Zoom on render</label>
                         </div>
 
                     <br>
-                    <button type="button" id="renderButton" class="btn btn-primary">GO!</button><br>
+                    <button type="button" id="renderButton" class="btn btn-primary">Render Layers</button><br>
 
 
                   </form>
@@ -288,6 +291,7 @@
                          layers : [ EsriMap ]
                   });
 
+        // var map = L.map('map', {layers : [ EsriMap ]})
 
         var sidebar = L.control.sidebar('sidebar').addTo(map);
 
@@ -309,7 +313,6 @@
                         };
         var hash = new L.Hash(map, allMapLayers);
 
-        var F = "YYYY-MM-DD"
         var latlngs;
         var HeatLayer = false;
         var FlowLayer = false;
@@ -382,24 +385,49 @@
 
 
         function renderLayers(){
-            if ($("#renderHeat").val()) {
+            if ($("#heatres").val()) {
                 renderHeatLayer();
             } else if (HeatLayer){
                 map.removeLayer(HeatLayer);
             }
 
-
-
-            if ($("#renderFlow").val()) {
+            if ($("#flowres").val()) {
                 renderFlowLayer();
             } else if (FlowLayer) {
                 map.removeLayer(FlowLayer);
             }
+
+            updateURL();
+        }
+
+        function updateURL(){
+            var params = {};
+
+            if ($("#preset").val()) {
+                params.preset = $("#preset").val();
+            } else {
+                params.date1 = $('#date1').val();
+                params.date2 = $('#date2').val();
+            }
+
+
+            if($("#autozoom").is(':checked'))
+                params.autozoom = "1"
+
+            if ($("#heatres").val())
+                params.heatres = $("#heatres").val()
+
+            if ($("#flowres").val())
+                params.flowres = $("#flowres").val()
+
+
+            var newURL = "{{ username }}" + "?" + jQuery.param(params);
+            window.history.pushState("", "", newURL);
         }
 
 
-
         function preset_date_fill() {
+            var F = "YYYY-MM-DD"
             var choice = $("#preset").val();
 
             // date1 defaults to
@@ -419,44 +447,33 @@
 
 
 
-
-        // function setURL(){
-        //     var params = { date1: $('#date1').val(),
-        //                    date2: $('#date2').val(),
-        //                    autozoom: $("#autozoom").val(),
-        //                    heatres: $("#heatres").val(),
-        //                    flowres: $("#flowres").val(),
-        //                    render: "Flow"
-        //                };
-        //     var str = jQuery.param(params);
-
-        //     var URL = "{{ username }}" + "?" + str;
-        //     window.history.pushState("", "", URL);
-        // };
-
-
-
-
         $(document).ready(function() {
 
-            $(".datepick").datepicker();
+            $(".datepick").datepicker({ dateFormat: 'yy-mm-dd',
+                                        changeMonth: true,
+                                        changeYear: true
+                                    });
+            $(".datepick").on("change", function(){$("#preset").val("");})
             $("#preset").on("change", preset_date_fill);
             $("#renderButton").on('click', renderLayers);
 
-            {% if render_on_load %}
-                {% if preset %}
+            $("#heatres").val("{{ heatres }}")
+            $("#flowres").val("{{ flowres }}")
+
+            {% if autozoom  %}
+            $("#autozoom").prop('checked', true);
+            {% endif %}
+
+            {% if preset %}
             $("#preset").val("{{ preset }}");
             preset_date_fill();
-                {% else %}
+            {% else %}
             $('#date1').val("{{ date1 }}");
             $('#date2').val("{{ date2 }}");
-            $("#preset").val("-1");
-                {% endif %}
-            renderLayers();
-            {% else %}
-
-            preset_date_fill();
+            $("#preset").val("");
             {% endif %}
+
+            renderLayers();
         });
 
 
