@@ -154,16 +154,22 @@ def index(username):
     preset = request.args.get("preset")
     preset = preset if (preset in ["2", "7", "30"]) else ""
 
+    default_center = app.config["MAP_CENTER"]
+    lat = request.args.get("lat") or default_center[0]
+    lng = request.args.get("lng") or default_center[1]
+    zoom = request.args.get("zoom") or app.config["MAP_ZOOM"]
+
     return render_template('index.html',
                            username=username,
+                           lat=lat,
+                           lng=lng,
+                           zoom=zoom,
                            preset=preset,
                            date1=request.args.get("date1"),
                            date2=request.args.get("date2"),
                            heatres=request.args.get("heatres", ""),
                            flowres=request.args.get("flowres", ""),
                            autozoom=request.args.get("autozoom", ""),
-                           default_zoom=app.config["MAP_ZOOM"],
-                           default_center=app.config["MAP_CENTER"],
                            default_layers=app.config["LEAFLET_BASE_LAYERS"],
                            )
 
