@@ -178,7 +178,7 @@
                 <hr>
                 {% if current_user.is_authenticated %}
                 <h3>Logged in as {{ current_user.name }}</h3>
-                    <form id="logout_form" action="{{ url_for('logout') }}">
+                    <form action="{{ url_for('logout') }}">
                         <input type="submit" class="btn btn-danger" value="Log Out" />
 
                         <input class="current-url" type="hidden" id="afterLogout" name="next" value="" />
@@ -187,9 +187,9 @@
                     Create an account and/or
                     <br><br>
 
-                    <form id="login_form" action="{{ url_for('authorize', service='strava') }}">
-                    <input type="image" src="{{ url_for('static', filename='LogInWithStrava.png') }}" alt="Log-In with Strava" />
-
+                    <form action="{{ url_for('authorize', service='strava') }}">
+                        <input type="image" src="{{ url_for('static', filename='LogInWithStrava.png') }}" alt="Log-In with Strava" />
+                    </form>
                     <!-- If the user is logging in to his/her own data then we should redirect back to the current page. -->
                     <!-- <input class="current-url" type="hidden" id="afterLogin" name="next" value="" /> -->
 
