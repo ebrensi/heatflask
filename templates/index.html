@@ -193,15 +193,21 @@
                 <hr>
                 {% if current_user.is_authenticated %}
                 <h3>Logged in as {{ current_user.name }}</h3>
-                    <form action={{ url_for('logout') }}>
+                    <form action="{{ url_for('logout') }}">
                         <input type="submit" class="btn btn-danger" value="Log Out" />
+
+                        <input class="current-url" type="hidden" id="afterLogout" name="next" value="" />
                     </form>
                 {% else %}
                     Create an account and/or
                     <br><br>
-                    <a href="{{ url_for('authorize', service='strava') }}">
-                    <img src="static/LogInWithStrava.png">
-                    </a>
+
+                    <form action="{{ url_for('authorize', service='strava') }}">
+                        <input type="image" src="{{ url_for('static', filename='LogInWithStrava.png') }}" alt="Log-In with Strava" />
+                    </form>
+                    <!-- If the user is logging in to his/her own data then we should redirect back to the current page. -->
+                    <!-- <input class="current-url" type="hidden" id="afterLogin" name="next" value="" /> -->
+
                     <br><br>
                     Note: Our copy of your GIS data is publicly viewable.  You can delete your account with us along with all of the data at any time.
                 {% endif %}
@@ -503,6 +509,8 @@
 
             var newURL = "{{ username }}" + "?" + jQuery.param(params);
             window.history.pushState("", "", newURL);
+
+            $(".current-url").val(newURL);
         }
 
 
