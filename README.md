@@ -7,7 +7,10 @@ See a live demo with data at http://heatflask.herokuapp.com/demo.
 
 Currently it supports [Strava](https://www.strava.com) imports.  Strava allows syncing from other activity hosting services.
 
+The staging branch of this repo is for testing new features and is hosted at http://heatflask-staging.herokuapp.com.
+
 ##Contributing
+See [CONTRIBUTING](CONTRIBUTING.md) instructions.
 If you see something you'd like to improve, go ahead and create an issue and/or make a pull request. Contributions welcome!
 
 
