@@ -185,16 +185,17 @@ def latlngsJSON(username, orientation):
     user = User.get(username)
 
     if request.args.get("resolution") == "low":
-        result = (db.session.query(Activity.other["strava_polyline"])
-                  .filter(Activity.beginTimestamp.between(start, end))
-                  .filter_by(user=user)
-                  ).all()
+        result = db.session.query(Activity.other["strava_polyline"])
+
+    elif request.args.get("time"):
+        result = db.session.query(Activity.polyline, Activity.elapsed)
+
     else:
-        # Query database for points
-        result = (db.session.query(Activity.polyline)
-                  .filter(Activity.beginTimestamp.between(start, end))
-                  .filter_by(user=user)
-                  ).all()
+        result = db.session.query(Activity.polyline)
+
+    result = (result.filter(Activity.beginTimestamp.between(start, end))
+              .filter_by(user=user)
+              ).all()
 
     def pointsList_gen():
         for pl in result:

@@ -16,8 +16,12 @@
     <link href="{{ url_for('static', filename='css/font-awesome.min.css') }}" rel="stylesheet">
 
 
-    <!-- Leaflet stuff -->
+    <!-- Leaflet 0.77 css -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/leaflet.css') }}" />
+
+    <!-- leaflet@1.0.0-rc.3 -->
+    <!-- <link rel="stylesheet" href="https://unpkg.com/leaflet@1.0.0-rc.3/dist/leaflet.css" /> -->
+
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/leaflet-sidebar.css') }}"/>
 
@@ -46,8 +50,12 @@
     <script src="{{ url_for('static', filename='js/jquery-3.1.0.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/jquery-ui.min.js') }}"></script>
 
-    <!-- Leaflet.js -->
+    <!-- Leaflet.js 0.77-->
     <script src="{{ url_for('static', filename='js/leaflet.js') }}"></script>
+
+    <!-- Leaflet.js 1.0.0-rc.3-->
+    <!-- <script src="https://unpkg.com/leaflet@1.0.0-rc.3/dist/leaflet.js"></script>
+    -->
 
     <!-- sidebar v2 -->
     <script src="{{ url_for('static', filename='js/leaflet-sidebar.js') }}"></script>
@@ -67,6 +75,9 @@
 
     <!-- Zoom control -->
     <script src="{{ url_for('static', filename='js/L.Control.ZoomBox.min.js') }}"></script>
+
+    <script type="text/javascript" src="{{ url_for('static', filename='js/MovingMarker.js') }}"></script>
+
 
 
 </head>
@@ -160,6 +171,10 @@
                         <option value="low" selected="selected">Low resolution</option>
                       </select>
                       </span>
+
+                      <div class="checkbox">
+                          <label><input type="checkbox" id="FooLayer" value="1">Foo Paths</label>
+                     </div>
 
 
                         <div class="checkbox">
@@ -296,12 +311,38 @@
         });
         map.addControl(zoom_control);
 
-        var latlngs;
+        var data = {};
         var HeatLayer = false;
         var FlowLayer = false;
+        var FooLayer = false;
+
         var layerDate = {date1: "", date2: "", preset: ""};
 
         var heatLayerOptions = {{ config["HEATMAP_DEFAULT_OPTIONS"]|tojson|safe}};
+
+
+        function getlatlngs(res, is_flat){
+            var d1 = $("#date1").val();
+            var d2 = $("#date2").val();
+
+
+
+            var query_data = {
+                start: d1,
+                end: d2,
+                resolution: res
+            }
+
+            map.spin(true);   // start progress indicator
+            $.getJSON('/{{ username }}/latlngs/list', query_data, function(routesList) {
+                data.latlngslist = routesList;
+                flat = [];
+                routesList.forEach(function(latlng) { flat.push.apply(flat, latlng); });
+                data.latlngs = flat;
+            }).always(function() {
+                map.spin(false); // stop progress indicator
+                });
+        }
 
         function renderHeatLayer(vis){
             var d1 = $("#date1").val();
@@ -336,8 +377,8 @@
         flowLayerOptions = {{ config["ANTPATH_DEFAULT_OPTIONS"]|tojson|safe }};
 
         function renderFlowLayer(){
-            var d1 = document.getElementById("date1").value;
-            var d2 = document.getElementById("date2").value;
+            var d1 = $("#date1").val();
+            var d2 = $("#date2").val();
 
             var query_data = {start: d1, end: d2, resolution: $("#flowres:checked").val()}
 
@@ -364,6 +405,46 @@
       };
 
 
+        function renderFooLayer(){
+            var d1 = $("#date1").val();
+            var d2 = $("#date2").val();
+
+            var query_data = {
+                start: d1,
+                end: d2,
+                resolution: $("#flowres:checked").val(),
+                times: true
+            }
+
+            map.spin(true);   // start progress indicator
+            $.getJSON('/{{ username }}/latlngs/list', query_data, function(routes) {
+
+            var myIcon = L.divIcon({iconSize: new L.Point(4, 4)});
+
+            if (routes.length) {
+                if (FlowLayer){
+                    map.removeLayer(FooLayer);
+                    control.removeLayer(FooLayer);
+                }
+
+                FooLayer = new L.layerGroup();
+                FooOptions = {loop: true, autostart: true, icon: myIcon};
+
+                for (var i = 0; i < routes.length; i++) {
+                    console.log(routes[i]);
+                    var mm = L.Marker.movingMarker(routes[i], 5000, FooOptions).addTo(FooLayer);
+                }
+
+                map.addLayer(FooLayer);
+                var title = "Foo Paths: ("+d1+" - "+d2+")"
+                control.addOverlay(FooLayer, title);
+            };
+        }).always(function() {
+            map.spin(false); // stop progress indicator
+            });
+      };
+
+
         function renderLayers(){
             if ($("#heatres").val()) {
                 renderHeatLayer();
@@ -376,6 +457,13 @@
             } else if (FlowLayer) {
                 map.removeLayer(FlowLayer);
             }
+
+            if ($("#flowres").val() && $("#FooLayer:checked").val()) {
+                renderFooLayer();
+            } else if (FooLayer) {
+                map.removeLayer(FooLayer);
+            }
+
 
             layerDate = {
                 date1: $("#date1").val(),
