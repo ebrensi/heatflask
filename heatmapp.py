@@ -45,7 +45,7 @@ def nothing():
 # Display the login page
 
 
-@app.route("/login", methods=["GET"])
+@app.route("/login")
 def login():
     return render_template("login.html")
 
@@ -105,7 +105,8 @@ def auth_callback(service):
             # I think this is remember=True, for persistent login. not sure
             login_user(user, True)
 
-    return redirect(url_for("index", username=current_user.name))
+    return redirect(request.args.get("state") or
+                    url_for("index", username=current_user.name))
 
 
 @app.route("/logout")
@@ -116,7 +117,7 @@ def logout():
         client.access_token = None
         logout_user()
         flash("{} logged out".format(username))
-    return redirect(url_for("login"))
+    return redirect(request.args.get("next") or url_for("login"))
 
 
 @app.route("/<username>/delete")
