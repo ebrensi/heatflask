@@ -1,7 +1,7 @@
 #! usr/bin/env python
 
-from flask import Flask, Response, render_template, request, redirect, jsonify,\
-    url_for, abort, session, flash, g
+from flask import Flask, Response, render_template, request, redirect, \
+    jsonify, url_for, abort, session, flash, g
 import flask_compress
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -188,7 +188,8 @@ def latlngsJSON(username, orientation):
     if request.args.get("resolution") == "low":
         result = db.session.query(Activity.other["strava_polyline"])
 
-    elif request.args.get("times"):
+    elif (request.args.get("times") and
+            request.args.get("resolution") != "low"):
         result = db.session.query(Activity.polyline, Activity.elapsed)
 
     else:
@@ -199,18 +200,23 @@ def latlngsJSON(username, orientation):
               ).all()
 
     # app.logger.info(result)
+    TIME_SCALE = app.config["MOVING_MARKER_TIMESCALE"]
+    routes = [[list(point) for point in polyline.decode(pl[0])]
+              for pl in result]
 
-    def pointsList_gen():
-        for pl in result:
-            route = polyline.decode(pl[0])
-            yield [list(point) for point in route]
-
-    routes = list(pointsList_gen())
+    if request.args.get("times"):
+        if request.args.get("resolution") != "low":
+            dur = [[TIME_SCALE * (b - a) for a, b in zip(pl[1][:], pl[1][1:])] + [0]
+                   for pl in result]
+        else:
+            dur = [TIME_SCALE for pl in result]
+        # app.logger.info(dur)
 
     if orientation == "list":
-        numpoints = sum(len(route) for route in routes)
-        app.logger.info("{} points.".format(numpoints))
-        return jsonify(routes)
+        if request.args.get("times"):
+            return jsonify({"latlngs": routes, "durations": dur})
+        else:
+            return jsonify(routes)
 
     flat = [item for sublist in routes for item in sublist]
     return jsonify(flat)

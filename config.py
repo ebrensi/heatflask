@@ -22,7 +22,7 @@ class Config(object):
 
     ANTPATH_DEFAULT_OPTIONS = {"weight": 3,
                                "color": 'red',
-                               "delay": 8000}
+                               "delay": 2000}
 
     MAP_CENTER = [45.5236, -122.675]
     MAP_ZOOM = 3
@@ -38,6 +38,8 @@ class Config(object):
          "attribution": 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
          }
     ]
+
+    MOVING_MARKER_TIMESCALE = 1000
 
 
 class ProductionConfig(Config):
