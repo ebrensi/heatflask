@@ -301,10 +301,18 @@
             attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
         });
 
+        var blankMap = L.tileLayer('');
+
+        {% if config["OFFLINE"] %}
+        var defaultMap = blankMap;
+        {% else %}
+        var defaultMap = EsriMap;
+        {% endif %}
+
         var map = L.map('map',
                         {center: [{{ lat }}, {{ lng }}],
                          zoom: {{ zoom }},
-                         layers : [ EsriMap ]
+                         layers : [ defaultMap ]
                   });
 
 
@@ -312,7 +320,8 @@
 
         var baseLayers = {
             "Open Street Map": osmMap,
-            "Esri World Imagery": EsriMap
+            "Esri World Imagery": EsriMap,
+            "Blank Map": blankMap
         };
 
         var control = L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map);
