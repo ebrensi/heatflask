@@ -29,13 +29,21 @@ class Config(object):
 
     LEAFLET_BASE_LAYERS = [
         {"title": "Open Street Map",
+         "id": "osm",
          "url": 'http://{s}.tile.osm.org/{z}/{x}/{y}.png',
          "attribution": '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
          },
 
-        {"title": "Esri World Imagery",
+        {"id": "esri",
+         "title": "Esri World Imagery",
          "url": 'http://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
          "attribution": 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+         },
+
+        {"id": "sttoner",
+         "title": "Stamen Toner",
+         "url": "http://tile.stamen.com/toner/{z}/{x}/{y}.png}",
+         "attribution": 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, under <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a>. Data by <a href="http://openstreetmap.org">OpenStreetMap</a>, under <a href="http://www.openstreetmap.org/copyright">ODbL</a>.'
          }
     ]
 
@@ -52,5 +60,6 @@ class StagingConfig(Config):
 
 
 class DevelopmentConfig(Config):
+    OFFLINE = True
     DEVELOPMENT = True
     DEBUG = True

@@ -170,8 +170,7 @@ def index(username):
                            date2=request.args.get("date2"),
                            heatres=request.args.get("heatres", ""),
                            flowres=request.args.get("flowres", ""),
-                           autozoom=request.args.get("autozoom", ""),
-                           base_layers=app.config["LEAFLET_BASE_LAYERS"],
+                           autozoom=request.args.get("autozoom", "")
                            )
 
 
