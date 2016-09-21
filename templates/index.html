@@ -337,7 +337,7 @@
         var FooLayer = false;
 
         // This is where we store current state of the app
-        var layerDate = {date1: "", date2: "", preset: ""};
+        var appState = {date1: "", date2: "", preset: ""};
 
         var heatLayerOptions = {{ config["HEATMAP_DEFAULT_OPTIONS"]|tojson|safe}};
 
@@ -357,8 +357,56 @@
 
             map.spin(true);   // start progress indicator
             $.getJSON('/{{ username }}/getdata', query, function(data) {
-                // console.log(data);
-                app_data = data;
+
+                app_data = {};
+                console.log(data);
+                if (query.durations)
+                    app_data.durations = data.durations;
+
+                if (query.hires) {
+                    var hires_routes = [];
+                    var route;
+                    for (var i = 0; i < data.hires.length; i++) {
+                        route = L.PolylineUtil.decode(data.hires[i]);
+                        hires_routes.push(route);
+                    }
+
+                    if (flowres == "high")
+                        app_data.flow_data = hires_routes;
+
+                    if (heatres == "high"){
+                        var flat = [];
+                        for (var i = 0; i < hires_routes.length; i++) {
+                             flat.push.apply(flat, hires_routes[i]);
+                         }
+
+                         app_data.heat_data = flat;
+                    }
+                }
+
+                if (query.lores) {
+                    var lores_routes = [];
+                    var route;
+                    for (var i = 0; i < data.lores.length; i++) {
+                        route = L.PolylineUtil.decode(data.lores[i]);
+                        lores_routes.push(route);
+                    }
+
+
+                    if (flowres == "low")
+                        app_data.flow_data = lores_routes;
+
+                    if (heatres == "low"){
+                        var flat = [];
+                        for (var i = 0; i < lores_routes.length; i++) {
+                             flat.push.apply(flat, lores_routes[i]);
+                         }
+
+                         app_data.heat_data = flat;
+                    }
+                }
+
+                console.log(app_data);
 
             }).always(function() {
                 map.spin(false); // stop progress indicator
@@ -487,7 +535,7 @@
             }
 
 
-            layerDate = {
+            appState = {
                 date1: $("#date1").val(),
                 date2: $("#date2").val(),
                 preset: $("#preset").val()
@@ -499,10 +547,10 @@
             var params = {};
 
             if ($("#preset").val()) {
-                params.preset = layerDate.preset;
+                params.preset = appState.preset;
             } else {
-                params.date1 = layerDate.date1;
-                params.date2 = layerDate.date2;
+                params.date1 = appState.date1;
+                params.date2 = appState.date2;
             }
 
             if($("#autozoom").is(':checked')) {

@@ -186,14 +186,14 @@ def getdata(username):
 
     data = {}
 
-    if lores:
+    if hires:
         result = (db.session.query(Activity.polyline)
                   .filter(Activity.beginTimestamp.between(start, end))
                   .filter_by(user=user)
                   ).all()
         data["hires"] = [r[0] for r in result]
 
-    if hires:
+    if lores:
         result = (db.session.query(Activity.other["strava_polyline"])
                   .filter(Activity.beginTimestamp.between(start, end))
                   .filter_by(user=user)
