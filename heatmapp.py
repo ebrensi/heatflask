@@ -102,8 +102,8 @@ def auth_callback(service):
                 user.strava_user_data["access_token"] = access_token
                 db.session.commit()
 
-            # I think this is remember=True, for persistent login. not sure
-            login_user(user, True)
+            # I think this is remember=True, for persistent login.
+            login_user(user, remember=True)
 
     return redirect(request.args.get("state") or
                     url_for("index", username=current_user.name))
@@ -171,8 +171,47 @@ def index(username):
                            heatres=request.args.get("heatres", ""),
                            flowres=request.args.get("flowres", ""),
                            autozoom=request.args.get("autozoom", ""),
-                           default_layers=app.config["LEAFLET_BASE_LAYERS"],
+                           base_layers=app.config["LEAFLET_BASE_LAYERS"],
                            )
+
+
+@app.route('/<username>/getdata')
+def getdata(username):
+    user = User.get(username)
+    start = request.args.get("start")
+    end = request.args.get("end")
+
+    hires = request.args.get("hires") == "true"
+    lores = request.args.get("lores") == "true"
+    durations = request.args.get("durations")
+
+    data = {}
+
+    if lores:
+        result = (db.session.query(Activity.polyline)
+                  .filter(Activity.beginTimestamp.between(start, end))
+                  .filter_by(user=user)
+                  ).all()
+        data["hires"] = [r[0] for r in result]
+
+    if hires:
+        result = (db.session.query(Activity.other["strava_polyline"])
+                  .filter(Activity.beginTimestamp.between(start, end))
+                  .filter_by(user=user)
+                  ).all()
+        data["lores"] = [r[0] for r in result]
+
+    if durations:
+        result = (db.session.query(Activity.elapsed)
+                  .filter(Activity.beginTimestamp.between(start, end))
+                  .filter_by(user=user)
+                  ).all()
+
+        data["durations"] = [[(b - a) for a, b in zip(pl[0][:], pl[0][1:])] + [0]
+                             for pl in result]
+    # app.logger.info(data)
+
+    return jsonify(data)
 
 
 @app.route('/<username>/latlngs/<orientation>')
