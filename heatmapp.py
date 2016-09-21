@@ -153,7 +153,7 @@ def demo():
 @app.route('/<username>')
 def index(username):
     preset = request.args.get("preset")
-    preset = preset if (preset in ["2", "7", "30"]) else ""
+    # preset = preset if (preset in ["2", "7", "30", "60"]) else ""
 
     default_center = app.config["MAP_CENTER"]
     lat = request.args.get("lat") or default_center[0]
