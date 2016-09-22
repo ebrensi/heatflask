@@ -177,7 +177,7 @@
 
                       <!-- <div class="checkbox">
                           <label><input type="checkbox" id="FooLayer" value="1">Foo Paths</label>
-                     </div> -->
+                     </div -->>
 
 
                         <div class="checkbox">
@@ -407,44 +407,62 @@
 
 
                 // Add Heat Map Layer to map
-                if (HeatLayer){
+
+                if (HeatLayer && heat_data){
                     HeatLayer.setLatLngs(heat_data);
-                } else {
+                } else if (heat_data){
                     HeatLayer = L.heatLayer(heat_data, heatLayerOptions);
                     map.addLayer(HeatLayer);
                     control.addOverlay(HeatLayer, "Point Density");
                 }
+                else {
+                    map.removeLayer(HeatLayer);
+                    control.removeLayer(HeatLayer);
+                    HeatLayer = false;
+                }
 
 
-                // Add or modify Flow Layer
                 if (FlowLayer){
-                    // FlowLayer.setLatLngs(flow_data);
                     map.removeLayer(FlowLayer);
-                    // control.removeLayer(FlowLayer);
-                } else {
+                    control.removeLayer(FlowLayer);
+                    FlowLayer = false;
+                }
+                if (flow_data){
                     FlowLayer = new L.MultiPolyline.MultiAntPath(flow_data, flowLayerOptions);
                     map.addLayer(FlowLayer);
                     control.addOverlay(FlowLayer, "Flow Paths");
                 }
 
                 // Add or modify Foo Layer
-                if (FooLayer){
-                    map.removeLayer(FooLayer);
-                    // control.removeLayer(FooLayer);
-                } else {
-                    var myIcon = L.divIcon({iconSize: new L.Point(4, 4)});
+                // if (FooLayer){
+                //     map.removeLayer(FooLayer);
+                //     control.removeLayer(FlowLayer);
+                //     FlowLayer = false;
+                // }
+                // if (flow_data && )
+                //     var myIcon = L.divIcon({iconSize: new L.Point(10, 10)});
 
-                    FooLayer = new L.layerGroup();
-                    FooOptions = {loop: true, autostart: true, icon: myIcon};
+                //     FooLayer = new L.layerGroup();
+                //     FooOptions = {loop: true, autostart: true, icon: myIcon};
 
-                    for (var i = 0; i < flow_data.length; i++) {
-                        FooLayer.addLayer(L.Marker.movingMarker(flow_data[i], 5000, FooOptions))
-                    }
+                //     for (var i = 0; i < flow_data.length; i++) {
+                //         var dur = 10000;
+                //         if (durations && i+1 < flow_data.length) {
 
-                    map.addLayer(FooLayer);
-                    var title = "Foo Paths"
-                    control.addOverlay(FooLayer, title);
-                }
+                //             for (var j=0; j < durations[i].length; j++) {
+                //               durations[i][j] = durations[i][j] * 1000;
+                //             }
+                //             dur = durations[i];
+                //         }
+
+
+                //         FooLayer.addLayer(L.Marker.movingMarker(flow_data[i], dur, FooOptions))
+                //     }
+
+                //     map.addLayer(FooLayer);
+                //     var title = "Foo Paths"
+                //     control.addOverlay(FooLayer, title);
+                // }
 
 
 
