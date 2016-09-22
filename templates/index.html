@@ -427,14 +427,16 @@
 
                 if ($("#autozoom:checked").val())
                     if (heat_data) {
-                        var bounds = L.latLngBounds(heat_data);
-                        console.log(bounds);
+                        // var bounds = L.latLngBounds(heat_data);
+                        // console.log(bounds);
                         map.fitBounds(heat_data);
                     }
                     else if (flow_data) {
-                        var bounds = flow_data.getBounds();
-                        console.log(bounds);
-                        map.fitBounds(bounds);
+                        var flat = [];
+                        for (var i = 0; i < flow_data.length; i++) {
+                             flat.push.apply(flat, flow_data[i]);
+                         }
+                        map.fitBounds(flat);
                     }
 
             }).always(function() {
