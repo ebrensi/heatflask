@@ -175,9 +175,9 @@
                       </select>
                       </span>
 
-                     <!--  <div class="checkbox">
+                      <div class="checkbox">
                           <label><input type="checkbox" id="FooLayer" value="1">Foo Paths</label>
-                     </div> -->
+                     </div>
 
 
                         <div class="checkbox">
@@ -343,14 +343,15 @@
                 durations = false;
 
             var flowres = $("#flowres").val(),
-                heatres = $("#heatres").val();
+                heatres = $("#heatres").val(),
+                foo = $("#FooLayer:checked").val();
 
             var query = {
                 start: $("#date1").val(),
                 end: $("#date2").val(),
                 hires: flowres == "high" || heatres == "high",
                 lores: flowres == "low" || heatres == "low",
-                durations: flowres == "high" && $("#FooLayer:checked").val()
+                durations: flowres == "high" && foo
             };
 
             map.spin(true);   // start progress indicator
@@ -434,35 +435,33 @@
                 }
 
                 // Add or modify Foo Layer
-                // if (FooLayer){
-                //     map.removeLayer(FooLayer);
-                //     control.removeLayer(FlowLayer);
-                //     FlowLayer = false;
-                // }
-                // if (flow_data && )
-                //     var myIcon = L.divIcon({iconSize: new L.Point(10, 10)});
+                if (FooLayer){
+                    map.removeLayer(FooLayer);
+                    control.removeLayer(FooLayer);
+                    FooLayer = false;
+                }
+                if (flow_data && foo) {
+                    var myIcon = L.divIcon({iconSize: new L.Point(10, 10)});
 
-                //     FooLayer = new L.layerGroup();
-                //     FooOptions = {loop: true, autostart: true, icon: myIcon};
+                    FooLayer = new L.layerGroup();
+                    FooOptions = {loop: true, autostart: true, icon: myIcon};
 
-                //     for (var i = 0; i < flow_data.length; i++) {
-                //         var dur = 10000;
-                //         if (durations && i+1 < flow_data.length) {
+                    for (var i = 0; i < flow_data.length; i++) {
+                        var dur = 10000;
+                        if (durations) {
 
-                //             for (var j=0; j < durations[i].length; j++) {
-                //               durations[i][j] = durations[i][j] * 1000;
-                //             }
-                //             dur = durations[i];
-                //         }
+                            for (var j=0; j < durations[i].length; j++) {
+                              durations[i][j] = durations[i][j] * 5;
+                            }
+                            dur = durations[i];
+                        }
 
+                        FooLayer.addLayer(L.Marker.movingMarker(flow_data[i], dur, FooOptions))
+                    }
 
-                //         FooLayer.addLayer(L.Marker.movingMarker(flow_data[i], dur, FooOptions))
-                //     }
-
-                //     map.addLayer(FooLayer);
-                //     var title = "Foo Paths"
-                //     control.addOverlay(FooLayer, title);
-                // }
+                    map.addLayer(FooLayer);
+                    control.addOverlay(FooLayer, "Foo Paths");
+                }
 
 
 
