@@ -404,26 +404,51 @@
                 }
 
 
-                // now set layers
+
+
+                // Add Heat Map Layer to map
                 if (HeatLayer){
-                    map.removeLayer(HeatLayer);
-                    control.removeLayer(HeatLayer);
+                    HeatLayer.setLatLngs(heat_data);
+                } else {
+                    HeatLayer = L.heatLayer(heat_data, heatLayerOptions);
+                    map.addLayer(HeatLayer);
+                    control.addOverlay(HeatLayer, "Point Density");
                 }
 
-                HeatLayer = L.heatLayer(heat_data, heatLayerOptions);
-                map.addLayer(HeatLayer);
-                control.addOverlay(HeatLayer, "Point Density");
 
-
-
+                // Add or modify Flow Layer
                 if (FlowLayer){
+                    // FlowLayer.setLatLngs(flow_data);
                     map.removeLayer(FlowLayer);
-                    control.removeLayer(FlowLayer);
+                    // control.removeLayer(FlowLayer);
+                } else {
+                    FlowLayer = new L.MultiPolyline.MultiAntPath(flow_data, flowLayerOptions);
+                    map.addLayer(FlowLayer);
+                    control.addOverlay(FlowLayer, "Flow Paths");
                 }
 
-                FlowLayer = new L.MultiPolyline.MultiAntPath(flow_data, flowLayerOptions);
-                map.addLayer(FlowLayer);
-                control.addOverlay(FlowLayer, "Flow Paths");
+                // Add or modify Foo Layer
+                if (FooLayer){
+                    map.removeLayer(FooLayer);
+                    // control.removeLayer(FooLayer);
+                } else {
+                    var myIcon = L.divIcon({iconSize: new L.Point(4, 4)});
+
+                    FooLayer = new L.layerGroup();
+                    FooOptions = {loop: true, autostart: true, icon: myIcon};
+
+                    for (var i = 0; i < flow_data.length; i++) {
+                        FooLayer.addLayer(L.Marker.movingMarker(flow_data[i], 5000, FooOptions))
+                    }
+
+                    map.addLayer(FooLayer);
+                    var title = "Foo Paths"
+                    control.addOverlay(FooLayer, title);
+                }
+
+
+
+
 
                 if ($("#autozoom:checked").val())
                     if (heat_data) {
@@ -445,57 +470,8 @@
         }
 
 
-      //   function renderFooLayer(){
-      //       var d1 = $("#date1").val();
-      //       var d2 = $("#date2").val();
-
-      //       var query_data = {
-      //           start: d1,
-      //           end: d2,
-      //           resolution: $("#flowres").val(),
-      //           times: true
-      //       }
-
-      //       map.spin(true);   // start progress indicator
-      //       $.getJSON('/{{ username }}/latlngs/list', query_data, function(routes) {
-
-      //       var myIcon = L.divIcon({iconSize: new L.Point(4, 4)});
-
-      //       if (routes.length) {
-      //           if (FlowLayer){
-      //               map.removeLayer(FooLayer);
-      //               control.removeLayer(FooLayer);
-      //           }
-
-      //           FooLayer = new L.layerGroup();
-      //           FooOptions = {loop: true, autostart: true, icon: myIcon};
-
-      //           for (var i = 0; i < routes.length; i++) {
-      //               // console.log(routes[i]);
-      //               var mm = L.Marker.movingMarker(routes[i], 5000, FooOptions).addTo(FooLayer);
-      //           }
-
-      //           map.addLayer(FooLayer);
-      //           var title = "Foo Paths: ("+d1+" - "+d2+")"
-      //           control.addOverlay(FooLayer, title);
-      //       };
-      //   }).always(function() {
-      //       map.spin(false); // stop progress indicator
-      //       });
-      // };
-
-
         function renderLayers(){
             queryData();
-
-            // if ($("#flowres").val() && $("#FooLayer:checked").val()) {
-            //     renderFooLayer();
-            // } else if (FooLayer) {
-            //     map.removeLayer(FooLayer);
-            // }
-
-            // if ($("#autozoom:checked").val())
-            //         map.fitBounds(app_data.bounds);
 
             appState = {
                 date1: $("#date1").val(),

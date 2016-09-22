@@ -54,6 +54,6 @@ class StagingConfig(Config):
 
 
 class DevelopmentConfig(Config):
-    # OFFLINE = True
+    OFFLINE = True
     DEVELOPMENT = True
     DEBUG = True
