@@ -175,9 +175,9 @@
                       </select>
                       </span>
 
-                      <div class="checkbox">
+                      <!-- <div class="checkbox">
                           <label><input type="checkbox" id="FooLayer" value="1">Foo Paths</label>
-                     </div>
+                     </div> -->
 
 
                         <div class="checkbox">
@@ -187,13 +187,8 @@
                     <br>
                     <button type="button" id="renderButton" class="btn btn-primary">Render Layers</button><br>
 
-                    <button type="button" id="getdata" class="btn btn-primary">get json data</button><br>
-
-
                   </form>
                   <br>
-
-                <div id="numlatlngs"></div>
 
                 <hr>
                 {% if current_user.is_authenticated %}
@@ -240,7 +235,7 @@
 
                 <h3>Import activities now:</h3>
                 <form id="importform" method="get" action="{{ url_for('activity_import')}}" target="output">
-                    <h4>
+
                     Import
 
                     <input type="number" name="count" value=10 min=0 max=10>
@@ -253,7 +248,7 @@
                     <input type="checkbox" checked name="detailed" value="yes">Import High-Resolution data<br>
                     <br>
                     <input type="submit" value="Go!"/>
-                    </h4>
+
                     <br>
                     <div class="embed-responsive embed-responsive-4by3">
                       <iframe class="embed-responsive-item" name="output" style="width:100%"></iframe>
@@ -340,10 +335,13 @@
         var appState = {date1: "", date2: "", preset: ""};
 
         var heatLayerOptions = {{ config["HEATMAP_DEFAULT_OPTIONS"]|tojson|safe}};
+        var flowLayerOptions = {{ config["ANTPATH_DEFAULT_OPTIONS"]|tojson|safe }};
 
-
-        var app_data;
         function queryData(){
+            var heat_data = false,
+                flow_data = false,
+                durations = false;
+
             var flowres = $("#flowres").val(),
                 heatres = $("#heatres").val();
 
@@ -357,32 +355,10 @@
 
             map.spin(true);   // start progress indicator
             $.getJSON('/{{ username }}/getdata', query, function(data) {
-
-                app_data = {};
-                console.log(data);
+                // console.log(data);
                 if (query.durations)
-                    app_data.durations = data.durations;
+                    durations = data.durations;
 
-                if (query.hires) {
-                    var hires_routes = [];
-                    var route;
-                    for (var i = 0; i < data.hires.length; i++) {
-                        route = L.PolylineUtil.decode(data.hires[i]);
-                        hires_routes.push(route);
-                    }
-
-                    if (flowres == "high")
-                        app_data.flow_data = hires_routes;
-
-                    if (heatres == "high"){
-                        var flat = [];
-                        for (var i = 0; i < hires_routes.length; i++) {
-                             flat.push.apply(flat, hires_routes[i]);
-                         }
-
-                         app_data.heat_data = flat;
-                    }
-                }
 
                 if (query.lores) {
                     var lores_routes = [];
@@ -394,7 +370,7 @@
 
 
                     if (flowres == "low")
-                        app_data.flow_data = lores_routes;
+                        flow_data = lores_routes;
 
                     if (heatres == "low"){
                         var flat = [];
@@ -402,11 +378,64 @@
                              flat.push.apply(flat, lores_routes[i]);
                          }
 
-                         app_data.heat_data = flat;
+                         heat_data = flat;
                     }
                 }
 
-                console.log(app_data);
+                if (query.hires) {
+                    var hires_routes = [];
+                    var route;
+                    for (var i = 0; i < data.hires.length; i++) {
+                        route = L.PolylineUtil.decode(data.hires[i]);
+                        hires_routes.push(route);
+                    }
+
+                    if (flowres == "high")
+                        flow_data = hires_routes;
+
+                    if (heatres == "high"){
+                        var flat = [];
+                        for (var i = 0; i < hires_routes.length; i++) {
+                             flat.push.apply(flat, hires_routes[i]);
+                         }
+
+                         heat_data = flat;
+                    }
+                }
+
+
+                // now set layers
+                if (HeatLayer){
+                    map.removeLayer(HeatLayer);
+                    control.removeLayer(HeatLayer);
+                }
+
+                HeatLayer = L.heatLayer(heat_data, heatLayerOptions);
+                map.addLayer(HeatLayer);
+                control.addOverlay(HeatLayer, "Point Density");
+
+
+
+                if (FlowLayer){
+                    map.removeLayer(FlowLayer);
+                    control.removeLayer(FlowLayer);
+                }
+
+                FlowLayer = new L.MultiPolyline.MultiAntPath(flow_data, flowLayerOptions);
+                map.addLayer(FlowLayer);
+                control.addOverlay(FlowLayer, "Flow Paths");
+
+                if ($("#autozoom:checked").val())
+                    if (heat_data) {
+                        var bounds = L.latLngBounds(heat_data);
+                        console.log(bounds);
+                        map.fitBounds(heat_data);
+                    }
+                    else if (flow_data) {
+                        var bounds = flow_data.getBounds();
+                        console.log(bounds);
+                        map.fitBounds(bounds);
+                    }
 
             }).always(function() {
                 map.spin(false); // stop progress indicator
@@ -414,126 +443,57 @@
         }
 
 
-        function renderHeatLayer(vis){
-            var d1 = $("#date1").val();
-            var d2 = $("#date2").val();
+      //   function renderFooLayer(){
+      //       var d1 = $("#date1").val();
+      //       var d2 = $("#date2").val();
 
-            var query_data = {start: d1, end: d2, resolution: $("#heatres").val()}
+      //       var query_data = {
+      //           start: d1,
+      //           end: d2,
+      //           resolution: $("#flowres").val(),
+      //           times: true
+      //       }
 
-            map.spin(true);   // start progress indicator
-            $.getJSON('/{{ username }}/latlngs/flat', query_data, function(latlngs) {
-                //latlngs is the JSON object
-                if (latlngs.length) {
-                    if (HeatLayer){
-                    map.removeLayer(HeatLayer);
-                    control.removeLayer(HeatLayer);
-                }
-                HeatLayer = L.heatLayer(latlngs, heatLayerOptions);
-                map.addLayer(HeatLayer);
-                var title = "Point Density: ("+d1+" - "+d2+")";
-                control.addOverlay(HeatLayer, title);
-                if ($("#autozoom:checked").val()) {
-                    map.fitBounds(latlngs);
-                }
+      //       map.spin(true);   // start progress indicator
+      //       $.getJSON('/{{ username }}/latlngs/list', query_data, function(routes) {
 
-            };
-        }).always(function() {
-            map.spin(false); // stop progress indicator
-            });
-      };
+      //       var myIcon = L.divIcon({iconSize: new L.Point(4, 4)});
 
+      //       if (routes.length) {
+      //           if (FlowLayer){
+      //               map.removeLayer(FooLayer);
+      //               control.removeLayer(FooLayer);
+      //           }
 
+      //           FooLayer = new L.layerGroup();
+      //           FooOptions = {loop: true, autostart: true, icon: myIcon};
 
-        flowLayerOptions = {{ config["ANTPATH_DEFAULT_OPTIONS"]|tojson|safe }};
+      //           for (var i = 0; i < routes.length; i++) {
+      //               // console.log(routes[i]);
+      //               var mm = L.Marker.movingMarker(routes[i], 5000, FooOptions).addTo(FooLayer);
+      //           }
 
-        function renderFlowLayer(){
-            var d1 = $("#date1").val();
-            var d2 = $("#date2").val();
-
-            var query_data = {start: d1, end: d2, resolution: $("#flowres").val()}
-
-            map.spin(true);   // start progress indicator
-            $.getJSON('/{{ username }}/latlngs/list', query_data, function(latlngs) {
-            //latlngs is the JSON object
-            if (latlngs.length) {
-                if (FlowLayer){
-                    map.removeLayer(FlowLayer);
-                    control.removeLayer(FlowLayer);
-                }
-                FlowLayer = new L.MultiPolyline.MultiAntPath(latlngs, flowLayerOptions);
-                map.addLayer(FlowLayer);
-                var title = "Ant Paths: ("+d1+" - "+d2+")"
-                control.addOverlay(FlowLayer, title);
-
-                if ($("#autozoom:checked").val()) {
-                    map.fitBounds(latlngs);
-                }
-            };
-        }).always(function() {
-            map.spin(false); // stop progress indicator
-            });
-      };
-
-
-        function renderFooLayer(){
-            var d1 = $("#date1").val();
-            var d2 = $("#date2").val();
-
-            var query_data = {
-                start: d1,
-                end: d2,
-                resolution: $("#flowres").val(),
-                times: true
-            }
-
-            map.spin(true);   // start progress indicator
-            $.getJSON('/{{ username }}/latlngs/list', query_data, function(routes) {
-
-            var myIcon = L.divIcon({iconSize: new L.Point(4, 4)});
-
-            if (routes.length) {
-                if (FlowLayer){
-                    map.removeLayer(FooLayer);
-                    control.removeLayer(FooLayer);
-                }
-
-                FooLayer = new L.layerGroup();
-                FooOptions = {loop: true, autostart: true, icon: myIcon};
-
-                for (var i = 0; i < routes.length; i++) {
-                    // console.log(routes[i]);
-                    var mm = L.Marker.movingMarker(routes[i], 5000, FooOptions).addTo(FooLayer);
-                }
-
-                map.addLayer(FooLayer);
-                var title = "Foo Paths: ("+d1+" - "+d2+")"
-                control.addOverlay(FooLayer, title);
-            };
-        }).always(function() {
-            map.spin(false); // stop progress indicator
-            });
-      };
+      //           map.addLayer(FooLayer);
+      //           var title = "Foo Paths: ("+d1+" - "+d2+")"
+      //           control.addOverlay(FooLayer, title);
+      //       };
+      //   }).always(function() {
+      //       map.spin(false); // stop progress indicator
+      //       });
+      // };
 
 
         function renderLayers(){
-            if ($("#heatres").val()) {
-                renderHeatLayer();
-            } else if (HeatLayer){
-                map.removeLayer(HeatLayer);
-            }
+            queryData();
 
-            if ($("#flowres").val()) {
-                renderFlowLayer();
-            } else if (FlowLayer) {
-                map.removeLayer(FlowLayer);
-            }
+            // if ($("#flowres").val() && $("#FooLayer:checked").val()) {
+            //     renderFooLayer();
+            // } else if (FooLayer) {
+            //     map.removeLayer(FooLayer);
+            // }
 
-            if ($("#flowres").val() && $("#FooLayer:checked").val()) {
-                renderFooLayer();
-            } else if (FooLayer) {
-                map.removeLayer(FooLayer);
-            }
-
+            // if ($("#autozoom:checked").val())
+            //         map.fitBounds(app_data.bounds);
 
             appState = {
                 date1: $("#date1").val(),
@@ -615,7 +575,7 @@
             $("#preset").on("change", preset_date_fill);
 
             $("#renderButton").on('click', renderLayers);
-            $("#getdata").on('click', queryData);
+            // $("#getdata").on('click', queryData);
 
             $("#heatres").val("{{ heatres }}")
             $("#flowres").val("{{ flowres }}")
