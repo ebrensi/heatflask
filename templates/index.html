@@ -351,7 +351,7 @@
                 end: $("#date2").val(),
                 hires: flowres == "high" || heatres == "high",
                 lores: flowres == "low" || heatres == "low",
-                durations: flowres == "high" && foo
+                durations: flowres == "high"
             };
 
             map.spin(true);   // start progress indicator
@@ -429,7 +429,26 @@
                     FlowLayer = false;
                 }
                 if (flow_data){
-                    FlowLayer = new L.MultiPolyline.MultiAntPath(flow_data, flowLayerOptions);
+                    FlowLayer = new L.layerGroup();
+                    for (var i=0; i < flow_data.length; i++) {
+                        var route = flow_data[i];
+
+                        if (durations){
+                        //     var coord_dur = durations[i],
+                        //     var coords = [coord[0]];
+
+                        //     for (var j = 1; j < segs.length; j++) {
+                        //         if (coord_dur[j] != coord_dur[j-1]) {
+
+                        //         }
+                        //     }
+
+                        }
+
+                        else {
+                            FlowLayer.addLayer(new L.Polyline.AntPath(route, flowLayerOptions));
+                        }
+                    }
                     map.addLayer(FlowLayer);
                     control.addOverlay(FlowLayer, "Flow Paths");
                 }
