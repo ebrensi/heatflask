@@ -391,17 +391,13 @@
                         var flat = [];
                         for (var i = 0; i < hires_routes.length; i++) {
                              flat.push.apply(flat, hires_routes[i]);
-                         }
+                        }
 
-                         heat_data = flat;
+                        heat_data = flat;
                     }
                 }
 
-
-
-
                 // Add Heat Map Layer to map
-
                 if (HeatLayer && heat_data){
                     HeatLayer.setLatLngs(heat_data);
                 } else if (heat_data){
@@ -425,6 +421,7 @@
                 if (flow_data){
                     FlowLayer = new L.layerGroup();
                     var options = {{ config["ANTPATH_DEFAULT_OPTIONS"]|tojson|safe }};
+                    var DELAY = options.delay;
 
                     for (var i=0; i < flow_data.length; i++) {
                         var route = flow_data[i];
@@ -437,10 +434,10 @@
                                 subroute.push(route[j]);
 
                                 if (durs[j] != durs[j-1]) {
-                                    console.log({polyseg: subroute, dur:durs[j-1]});
+                                    // console.log({polyseg: subroute, dur:durs[j-1]});
 
-                                    options.delay = 1000 * durs[j-1]
-                                    polyseg = new L.Polyline.AntPath(subroute, flowLayerOptions);
+                                    options.delay = DELAY * durs[j-1]
+                                    polyseg = new L.Polyline.AntPath(subroute, options);
 
                                     FlowLayer.addLayer(polyseg);
 
@@ -594,7 +591,6 @@
             $("#preset").on("change", preset_date_fill);
 
             $("#renderButton").on('click', renderLayers);
-            // $("#getdata").on('click', queryData);
 
             $("#heatres").val("{{ heatres }}")
             $("#flowres").val("{{ flowres }}")
