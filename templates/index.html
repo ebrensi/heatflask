@@ -421,26 +421,38 @@
                     control.removeLayer(FlowLayer);
                     FlowLayer = false;
                 }
+
                 if (flow_data){
                     FlowLayer = new L.layerGroup();
+                    var options = {{ config["ANTPATH_DEFAULT_OPTIONS"]|tojson|safe }};
+
                     for (var i=0; i < flow_data.length; i++) {
                         var route = flow_data[i];
 
                         if (durations){
-                        //     var coord_dur = durations[i],
-                        //     var coords = [coord[0]];
+                            var durs = durations[i];
+                            var subroute = [route[0]];
 
-                        //     for (var j = 1; j < segs.length; j++) {
-                        //         if (coord_dur[j] != coord_dur[j-1]) {
+                            for (var j = 1; j < durs.length; j++) {
+                                subroute.push(route[j]);
 
-                        //         }
-                        //     }
+                                if (durs[j] != durs[j-1]) {
+                                    console.log({polyseg: subroute, dur:durs[j-1]});
 
+                                    options.delay = 1000 * durs[j-1]
+                                    polyseg = new L.Polyline.AntPath(subroute, flowLayerOptions);
+
+                                    FlowLayer.addLayer(polyseg);
+
+                                    subroute = [route[j]];
+                                }
+                            }
                         }
 
                         else {
-                            FlowLayer.addLayer(new L.Polyline.AntPath(route, flowLayerOptions));
+                            FlowLayer.addLayer(new L.Polyline.AntPath(route, options));
                         }
+
                     }
                     map.addLayer(FlowLayer);
                     control.addOverlay(FlowLayer, "Flow Paths");
