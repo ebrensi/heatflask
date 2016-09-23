@@ -20,9 +20,10 @@ class Config(object):
                                "gradient": {0.4: 'blue', 0.65: 'lime', 1: 'red'}
                                }
 
-    ANTPATH_DEFAULT_OPTIONS = {"weight": 3,
+    ANTPATH_DEFAULT_OPTIONS = {"weight": 2,
                                "color": 'red',
-                               "delay": 2000}
+                               "delay": 2000,
+                               "dashArray": [5, 5]}
 
     MAP_CENTER = [45.5236, -122.675]
     MAP_ZOOM = 3
