@@ -398,17 +398,15 @@
                 }
 
                 // Add Heat Map Layer to map
-                if (HeatLayer && heat_data){
-                    HeatLayer.setLatLngs(heat_data);
-                } else if (heat_data){
-                    HeatLayer = L.heatLayer(heat_data, heatLayerOptions);
-                    map.addLayer(HeatLayer);
-                    control.addOverlay(HeatLayer, "Point Density");
-                }
-                else {
+                if (HeatLayer){
                     map.removeLayer(HeatLayer);
                     control.removeLayer(HeatLayer);
                     HeatLayer = false;
+                }
+                if (heat_data){
+                    HeatLayer = L.heatLayer(heat_data, heatLayerOptions);
+                    map.addLayer(HeatLayer);
+                    control.addOverlay(HeatLayer, "Point Density");
                 }
 
 
@@ -514,7 +512,12 @@
             appState = {
                 date1: $("#date1").val(),
                 date2: $("#date2").val(),
-                preset: $("#preset").val()
+                preset: $("#preset").val(),
+
+                flowres: $("#flowres").val(),
+                heatres: $("#heatres").val(),
+                foo: $("#FooLayer:checked").val(),
+                autozoom: $("#autozoom:checked").val()
             }
             updateURL();
         }
