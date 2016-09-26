@@ -20,10 +20,12 @@ class Config(object):
                                "gradient": {0.4: 'blue', 0.65: 'lime', 1: 'red'}
                                }
 
-    ANTPATH_DEFAULT_OPTIONS = {"weight": 2,
+    ANTPATH_DEFAULT_OPTIONS = {"weight": 5,
+                               "opacity": 0.5,
                                "color": 'red',
+                               "pulseColor": 'white',
                                "delay": 2000,
-                               "dashArray": [5, 5]}
+                               "dashArray": [3, 10]}
 
     MAP_CENTER = [45.5236, -122.675]
     MAP_ZOOM = 3
