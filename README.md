@@ -5,7 +5,8 @@
 
 The currently running version of this app uses Leaflet 1.0 with the following plugins:
   * [sidebar-v2](https://github.com/turbo87/sidebar-v2)
-  * [Leaflet.AntPath](https://github.com/rubenspgcavalcante/leaflet-ant-path)
+  * [Leaflet.AntPath](https://github.com/rubenspgcavalcante/leaflet-ant-path) for Flow-map
+    * The high-resolution flow map uses a different ant path for every set of consecutive GIS points on an activity track with the same delay between points.
   * [Leaflet.Heat](https://github.com/Leaflet/Leaflet.heat)
   * [leaflet-providers](https://github.com/leaflet-extras/leaflet-providers)
   * [Leaflet.Spin](https://github.com/makinacorpus/Leaflet.Spin)
