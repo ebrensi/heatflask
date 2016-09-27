@@ -20,7 +20,7 @@ class Config(object):
                                "gradient": {0.4: 'blue', 0.65: 'lime', 1: 'red'}
                                }
 
-    ANTPATH_DEFAULT_OPTIONS = {"weight": 4,
+    ANTPATH_DEFAULT_OPTIONS = {"weight": 3,
                                "opacity": 0.5,
                                "color": 'red',
                                "pulseColor": 'white',

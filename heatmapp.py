@@ -146,7 +146,7 @@ def demo():
                             username="ebuggz",
                             preset="7",
                             heatres="high",
-                            flowres="low",
+                            flowres="high",
                             autozoom=1))
 
 
