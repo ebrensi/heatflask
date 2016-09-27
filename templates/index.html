@@ -75,6 +75,8 @@
     <script type="text/javascript" src="{{ url_for('static', filename='js/MovingMarker.js') }}"></script>
 
 
+    <script type="text/javascript" src="{{ url_for('static', filename='js/leaflet-providers.js') }}"></script>
+
 
 </head>
 <body>
@@ -167,10 +169,6 @@
                         <option value="low" selected="selected">Low resolution</option>
                       </select>
                       </span>
-
-                      <div class="checkbox">
-                          <label><input type="checkbox" id="FooLayer" value="1">Foo Paths</label>
-                     </div>
 
 
                         <div class="checkbox">
@@ -281,39 +279,48 @@
 
 
     <script>
-        var osmMap = L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
-        });
 
-        var EsriMap = L.tileLayer('http://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-        });
+        var baselayer_defs = {{ config["LEAFLET_BASE_LAYERS"]|safe }};
 
 
-        var blankMap = L.tileLayer('');
+        var baseLayers = {}
+
+        var blankLayer = L.tileLayer('');
+        baseLayers["Blank Map"] = blankLayer;
+
+        for (var i = 0; i < baselayer_defs.length; i++) {
+            var def = baselayer_defs[i];
+            if ("options" in def)
+                options = def.options;
+            else
+                options = {};
+
+            if ("provider" in def)
+                var tl = L.tileLayer.provider(def.provider, options);
+            else
+                var tl = L.tileLayer(def.url, options);
+
+            if (i == 0)
+                var default_baseLayer = tl;
+
+            baseLayers[def.title] = tl;
+        }
 
         {% if config["OFFLINE"] %}
-        var defaultMap = blankMap;
-        {% else %}
-        var defaultMap = EsriMap;
+        var default_baseLayer = blankLayer;
         {% endif %}
 
         var map = L.map('map',
                         {center: [{{ lat }}, {{ lng }}],
                          zoom: {{ zoom }},
-                         layers : [ defaultMap ]
+                         layers : [ default_baseLayer ]
                   });
 
 
-        var sidebar = L.control.sidebar('sidebar').addTo(map);
-
-        var baseLayers = {
-            "Open Street Map": osmMap,
-            "Esri World Imagery": EsriMap,
-            "Blank Map": blankMap
-        };
-
         var control = L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map);
+
+
+        var sidebar = L.control.sidebar('sidebar').addTo(map);
 
         var zoom_control = L.control.zoomBox({
             modal: true,
@@ -330,7 +337,7 @@
         var heatLayerOptions = {{ config["HEATMAP_DEFAULT_OPTIONS"]|tojson|safe}};
         var flowLayerOptions = {{ config["ANTPATH_DEFAULT_OPTIONS"]|tojson|safe }};
 
-        function queryData(){
+        function renderLayers(){
             var heat_data = false,
                 flow_data = false,
                 durations = false;
@@ -391,28 +398,22 @@
                         var flat = [];
                         for (var i = 0; i < hires_routes.length; i++) {
                              flat.push.apply(flat, hires_routes[i]);
-                         }
+                        }
 
-                         heat_data = flat;
+                        heat_data = flat;
                     }
                 }
 
-
-
-
                 // Add Heat Map Layer to map
-
-                if (HeatLayer && heat_data){
-                    HeatLayer.setLatLngs(heat_data);
-                } else if (heat_data){
-                    HeatLayer = L.heatLayer(heat_data, heatLayerOptions);
-                    map.addLayer(HeatLayer);
-                    control.addOverlay(HeatLayer, "Point Density");
-                }
-                else {
+                if (HeatLayer){
                     map.removeLayer(HeatLayer);
                     control.removeLayer(HeatLayer);
                     HeatLayer = false;
+                }
+                if (heat_data){
+                    HeatLayer = L.heatLayer(heat_data, heatLayerOptions);
+                    map.addLayer(HeatLayer);
+                    control.addOverlay(HeatLayer, "Point Density");
                 }
 
 
@@ -421,68 +422,47 @@
                     control.removeLayer(FlowLayer);
                     FlowLayer = false;
                 }
+
                 if (flow_data){
                     FlowLayer = new L.layerGroup();
+                    var options = {{ config["ANTPATH_DEFAULT_OPTIONS"]|tojson|safe }};
+                    var DELAY = options.delay;
+
                     for (var i=0; i < flow_data.length; i++) {
                         var route = flow_data[i];
 
-                        if (false){
-                        //     var coord_dur = durations[i],
-                        //     var coords = [coord[0]];
+                        if (durations){
+                            var durs = durations[i];
+                            var subroute = [route[0]];
 
-                        //     for (var j = 1; j < segs.length; j++) {
-                        //         if (coord_dur[j] != coord_dur[j-1]) {
+                            for (var j = 1; j < durs.length; j++) {
+                                subroute.push(route[j]);
 
-                        //         }
-                        //     }
+                                if (durs[j] != durs[j-1]) {
 
+                                    options.delay = DELAY * durs[j-1]
+                                    polyseg = new L.Polyline.AntPath(subroute, options);
+
+                                    FlowLayer.addLayer(polyseg);
+
+                                    subroute = [route[j]];
+                                }
+                            }
                         }
 
                         else {
-                            FlowLayer.addLayer(new L.Polyline.AntPath(route, flowLayerOptions));
+                            FlowLayer.addLayer(new L.Polyline.AntPath(route, options));
                         }
+
                     }
                     map.addLayer(FlowLayer);
                     control.addOverlay(FlowLayer, "Flow Paths");
                 }
 
-                // Add or modify Foo Layer
-                if (FooLayer){
-                    map.removeLayer(FooLayer);
-                    control.removeLayer(FooLayer);
-                    FooLayer = false;
-                }
-                if (flow_data && foo) {
-                    var myIcon = L.divIcon({iconSize: new L.Point(10, 10)});
-
-                    FooLayer = new L.layerGroup();
-                    FooOptions = {loop: true, autostart: true, icon: myIcon};
-
-                    for (var i = 0; i < flow_data.length; i++) {
-                        var dur = 10000;
-                        if (durations) {
-
-                            for (var j=0; j < durations[i].length; j++) {
-                              durations[i][j] = durations[i][j] * 5;
-                            }
-                            dur = durations[i];
-                        }
-
-                        FooLayer.addLayer(L.Marker.movingMarker(flow_data[i], dur, FooOptions))
-                    }
-
-                    map.addLayer(FooLayer);
-                    control.addOverlay(FooLayer, "Foo Paths");
-                }
-
-
-
 
 
                 if ($("#autozoom:checked").val())
                     if (heat_data) {
-                        // var bounds = L.latLngBounds(heat_data);
-                        // console.log(bounds);
                         map.fitBounds(heat_data);
                     }
                     else if (flow_data) {
@@ -495,20 +475,20 @@
 
             }).always(function() {
                 map.spin(false); // stop progress indicator
+                appState = {
+                    date1: $("#date1").val(),
+                    date2: $("#date2").val(),
+                    preset: $("#preset").val(),
+
+                    flowres: $("#flowres").val(),
+                    heatres: $("#heatres").val(),
+                    autozoom: $("#autozoom:checked").val()
+                };
+
+                updateURL();
                 });
         }
 
-
-        function renderLayers(){
-            queryData();
-
-            appState = {
-                date1: $("#date1").val(),
-                date2: $("#date2").val(),
-                preset: $("#preset").val()
-            }
-            updateURL();
-        }
 
         function updateURL(){
             var params = {};
@@ -582,7 +562,6 @@
             $("#preset").on("change", preset_date_fill);
 
             $("#renderButton").on('click', renderLayers);
-            // $("#getdata").on('click', queryData);
 
             $("#heatres").val("{{ heatres }}")
             $("#flowres").val("{{ flowres }}")
