@@ -281,74 +281,7 @@ def activity_import():
         do_import = stravaimport.import_activities(db, user, client,
                                                    limit=count,
                                                    detailed=detailed)
-
     return Response(do_import, mimetype='text/event-stream')
-
-
-@app.route('/strava_activities')
-@login_required
-def strava_activities():
-    user = User.get(current_user.name)
-
-    already_got = [int(d[0]) for d in db.session.query(
-        Activity.id).filter_by(user=user).all()]
-
-    limit = request.args.get("limit")
-    limit = int(limit) if limit else ""
-
-    really = (request.args.get("really") == "yes")
-
-    def do_import():
-        count = 0
-        yield "importing activities from Strava...\n"
-        for a in client.get_activities(limit=limit):
-            count += 1
-
-            if a.id in already_got:
-                msg = ("{}. activity {} already in database.\n"
-                       .format(count, a.id))
-                yield msg + "\n"
-            else:
-                if really:
-                    try:
-                        streams = client.get_activity_streams(a.id,
-                                                              types=['time', 'latlng'])
-                    except:
-                        yield ("{}. activity {} has no data points\n"
-                               .format(count, a.id))
-                    else:
-                        time = streams["time"].data
-
-                        # eliminate (0,0) points
-                        latlng = [(x, y) for x, y in streams["latlng"].data
-                                  if (x, y) != (0, 0)]
-
-                        poly = polyline.encode(latlng)
-                        other = {"name": a.name,
-                                 "strava_polyline": a.map.summary_polyline}
-                        params = {"user": user,
-                                  "id": a.id,
-                                  "other": other,
-                                  "beginTimestamp": a.start_date_local,
-                                  "elapsed": time,
-                                  "polyline": poly,
-                                  "source": "ST"}
-
-                        # app.logger.info("params: %s", params)
-                        A = Activity(**params)
-                        db.session.add(A)
-                        db.session.commit()
-
-                        mi = stravalib.unithelper.miles(a.distance)
-                        msg = ("[{0.id}] {0.name}: {0.start_date_local}"
-                               .format(a))
-
-                        msg = "{}. {}, {}\n".format(count, msg, mi)
-                        yield msg
-
-        yield "Done! {} activities imported\n".format(count)
-
-    return Response(do_import(), mimetype='text/event-stream')
 
 
 @app.route('/admin')
@@ -357,6 +290,7 @@ def admin():
     users = User.query.all()
     info = {user.name: {"is_active": user.is_active} for user in users}
     return jsonify(info)
+
 
 # python heatmapp.py works but you really should use `flask run`
 if __name__ == '__main__':

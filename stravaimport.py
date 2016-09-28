@@ -43,6 +43,7 @@ def import_activities(db, user, client, limit=1, detailed=True):
                       "id": a.id,
                       "other": other,
                       "beginTimestamp": a.start_date_local,
+                      "type": a.type,
                       "source": "ST"}
 
             if detailed:
