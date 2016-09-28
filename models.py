@@ -35,6 +35,7 @@ class Activity(db.Model):
     elapsed = db.Column(ARRAY(INTEGER))
     polyline = db.Column(db.String())
     source = db.Column(db.String())
+    type = db.Column(db.String())
 
     user_name = db.Column(db.String(), db.ForeignKey("users.name"))
 
