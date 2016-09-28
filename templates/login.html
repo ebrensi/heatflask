@@ -28,7 +28,7 @@
       <h3>Create a new account or connect to an existing one</h3>
       <br>
       <a href="{{ url_for('authorize', service='strava') }}">
-                <img src="static/ConnectWithStrava.png">
+                <img src="static/btn_strava_connectwith_orange.svg">
                 </a>
 
       {% if error %}
@@ -39,8 +39,6 @@
       <FORM METHOD="LINK" ACTION="{{ url_for('demo') }}">
       <INPUT class="btn btn-primary" TYPE="submit" VALUE="See Demo">
       </FORM>
-      <br>
-      Note: Our copy of your GIS data is publicly viewable.  You can delete your account with us along with all of the data at any time.
     </div>
   </body>
 </html>
