@@ -217,53 +217,6 @@ def getdata(username):
     return jsonify(data)
 
 
-@app.route('/<username>/latlngs/<orientation>')
-def latlngsJSON(username, orientation):
-    tomorrow = (date.today() + timedelta(1)).strftime('%Y-%m-%d')
-    today = date.today().strftime('%Y-%m-%d')
-
-    start = request.args.get("start", today)
-    end = request.args.get("end", tomorrow)
-
-    user = User.get(username)
-
-    if request.args.get("resolution") == "low":
-        result = db.session.query(Activity.other["strava_polyline"])
-
-    elif (request.args.get("times") and
-            request.args.get("resolution") != "low"):
-        result = db.session.query(Activity.polyline, Activity.elapsed)
-
-    else:
-        result = db.session.query(Activity.polyline)
-
-    result = (result.filter(Activity.beginTimestamp.between(start, end))
-              .filter_by(user=user)
-              ).all()
-
-    # app.logger.info(result)
-    TIME_SCALE = app.config["MOVING_MARKER_TIMESCALE"]
-    routes = [[list(point) for point in polyline.decode(pl[0])]
-              for pl in result]
-
-    if request.args.get("times"):
-        if request.args.get("resolution") != "low":
-            dur = [[TIME_SCALE * (b - a) for a, b in zip(pl[1][:], pl[1][1:])] + [0]
-                   for pl in result]
-        else:
-            dur = [TIME_SCALE for pl in result]
-        # app.logger.info(dur)
-
-    if orientation == "list":
-        if request.args.get("times"):
-            return jsonify({"latlngs": routes, "durations": dur})
-        else:
-            return jsonify(routes)
-
-    flat = [item for sublist in routes for item in sublist]
-    return jsonify(flat)
-
-
 @app.route('/activity_import')
 @login_required
 def activity_import():
