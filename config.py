@@ -30,44 +30,6 @@ class Config(object):
     MAP_CENTER = [45.5236, -122.675]
     MAP_ZOOM = 3
 
-    # BaseLayer definitions (supports leaflet-providers plugin)
-    #  the first deined layer is the default, unless OFFLINE is set to True,
-    #  in which case a blank layer is the default.
-    LEAFLET_BASE_LAYERS = [
-        {
-            "title": "Open Street Map",
-            "id": "osm",
-            "url": 'http://{s}.tile.osm.org/{z}/{x}/{y}.png',
-            "options":
-            {"attribution": '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'}
-        },
-        {
-            "id": "st_toner",
-            "title": "Stamen Toner",
-            "url": 'http://stamen-tiles-{s}.a.ssl.fastly.net/toner/{z}/{x}/{y}.{ext}',
-            "options": {
-                "attribution": 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; Map data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-                "subdomains": 'abcd',
-                "minZoom": 0,
-                "maxZoom": 20,
-                "ext": 'png'
-            }
-
-        },
-        {
-            "title": "Stamen Terrain",
-            "id": "st_terrain",
-            "provider": "Stamen.Terrain"
-        },
-        {
-            "id": "esri",
-            "title": "Esri World Imagery",
-            "url": 'http://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-            "options":
-            {"attribution": 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'}
-        }
-    ]
-
 
 class ProductionConfig(Config):
     DEBUG = False

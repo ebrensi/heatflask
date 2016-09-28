@@ -72,9 +72,6 @@
     <!-- Zoom control -->
     <script src="{{ url_for('static', filename='js/L.Control.ZoomBox.min.js') }}"></script>
 
-    <script type="text/javascript" src="{{ url_for('static', filename='js/MovingMarker.js') }}"></script>
-
-
     <script type="text/javascript" src="{{ url_for('static', filename='js/leaflet-providers.js') }}"></script>
 
 
@@ -194,13 +191,10 @@
                     <br><br>
 
                     <form action="{{ url_for('authorize', service='strava') }}">
-                        <input type="image" src="{{ url_for('static', filename='LogInWithStrava.png') }}" alt="Log-In with Strava" />
+                        <input type="image" src="{{ url_for('static', filename='btn_strava_connectwith_orange.svg') }}" alt="Log-In with Strava" />
                     </form>
                     <!-- If the user is logging in to his/her own data then we should redirect back to the current page. -->
                     <!-- <input class="current-url" type="hidden" id="afterLogin" name="next" value="" /> -->
-
-                    <br><br>
-                    Note: Our copy of your GIS data is publicly viewable.  You can delete your account with us along with all of the data at any time.
                 {% endif %}
 
 
@@ -279,36 +273,24 @@
 
 
     <script>
+        var map_providers = {{ baselayer|tojson|safe }};
 
-        var baselayer_defs = {{ config["LEAFLET_BASE_LAYERS"]|safe }};
+        var default_baseLayer;
+        var baseLayers = {"None": L.tileLayer("")};
 
+        var online = ("{{ config['OFFLINE'] }}" != "True");
 
-        var baseLayers = {}
+        if (map_providers.length && online) {
 
-        var blankLayer = L.tileLayer('');
-        baseLayers["Blank Map"] = blankLayer;
-
-        for (var i = 0; i < baselayer_defs.length; i++) {
-            var def = baselayer_defs[i];
-            if ("options" in def)
-                options = def.options;
-            else
-                options = {};
-
-            if ("provider" in def)
-                var tl = L.tileLayer.provider(def.provider, options);
-            else
-                var tl = L.tileLayer(def.url, options);
-
-            if (i == 0)
-                var default_baseLayer = tl;
-
-            baseLayers[def.title] = tl;
-        }
-
-        {% if config["OFFLINE"] %}
-        var default_baseLayer = blankLayer;
-        {% endif %}
+            for (var i = 0; i < map_providers.length; i++) {
+                provider = map_providers[i];
+                var tl = L.tileLayer.provider(provider);
+                baseLayers[provider] = tl;
+                if (i==0)
+                    default_baseLayer = tl;
+            }
+        } else
+            default_baseLayer = baseLayers["None"];
 
         var map = L.map('map',
                         {center: [{{ lat }}, {{ lng }}],
@@ -332,7 +314,9 @@
         var FooLayer = false;
 
         // This is where we store current state of the app
-        var appState = {date1: "", date2: "", preset: ""};
+        var appState = {
+            baseLayers: map_providers
+        };
 
         var heatLayerOptions = {{ config["HEATMAP_DEFAULT_OPTIONS"]|tojson|safe}};
         var flowLayerOptions = {{ config["ANTPATH_DEFAULT_OPTIONS"]|tojson|safe }};
@@ -344,7 +328,10 @@
 
             var flowres = $("#flowres").val(),
                 heatres = $("#heatres").val(),
-                foo = $("#FooLayer:checked").val();
+                date1 = $("#date1").val(),
+                date2 = $("#date2").val();
+
+            dates_changed = ((date1 != appState.date1) || (date2 != appState.date2));
 
             var query = {
                 start: $("#date1").val(),
@@ -474,18 +461,14 @@
                     }
 
             }).always(function() {
-                map.spin(false); // stop progress indicator
-                appState = {
-                    date1: $("#date1").val(),
-                    date2: $("#date2").val(),
-                    preset: $("#preset").val(),
+                    map.spin(false); // stop progress indicator
 
-                    flowres: $("#flowres").val(),
-                    heatres: $("#heatres").val(),
-                    autozoom: $("#autozoom:checked").val()
-                };
+                    appState['date1'] = date1;
+                    appState["date2"] = date2;
+                    appState["flowres"] = flowres;
+                    appState["heatres"] = heatres;
 
-                updateURL();
+                    updateURL();
                 });
         }
 
@@ -494,7 +477,7 @@
             var params = {};
 
             if ($("#preset").val()) {
-                params.preset = appState.preset;
+                params.preset = $("#preset").val();
             } else {
                 params.date1 = appState.date1;
                 params.date2 = appState.date2;
@@ -517,8 +500,9 @@
             if ($("#flowres").val())
                 params.flowres = $("#flowres").val();
 
+            params["baselayer"] = appState.baseLayers;
 
-            var newURL = "{{ username }}" + "?" + jQuery.param(params);
+            var newURL = "{{ username }}" + "?" + jQuery.param(params, true);
             window.history.pushState("", "", newURL);
 
             $(".current-url").val(newURL);

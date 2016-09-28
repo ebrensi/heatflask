@@ -146,8 +146,11 @@ def demo():
                             username="ebuggz",
                             preset="7",
                             heatres="high",
-                            flowres="high",
-                            autozoom=1))
+                            flowres="low",
+                            autozoom=1,
+                            baselayer=["OpenTopoMap"]
+                            )
+                    )
 
 
 @app.route('/<username>')
@@ -170,7 +173,8 @@ def index(username):
                            date2=request.args.get("date2"),
                            heatres=request.args.get("heatres", ""),
                            flowres=request.args.get("flowres", ""),
-                           autozoom=request.args.get("autozoom", "")
+                           autozoom=request.args.get("autozoom", ""),
+                           baselayer=request.args.getlist("baselayer")
                            )
 
 
