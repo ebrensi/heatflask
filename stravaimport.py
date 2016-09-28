@@ -73,6 +73,7 @@ def import_activities(db, user, client, limit=1, detailed=True):
     logging.info(msg)
     yield msg + "\n"
 
+
 if __name__ == '__main__':
     # create tables from data models if they don't exist
     db.create_all()
