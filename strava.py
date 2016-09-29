@@ -96,26 +96,30 @@ def activities():
 @app.route('/activities/<activity_id>')
 def data_points(activity_id):
     if client.access_token:
-        types = ['time', 'latlng', 'distance', 'altitude', 'velocity_smooth',
-                 'cadence', 'watts', 'grade_smooth']
+        stream_names = ['time', 'latlng', 'distance', 'altitude', 'velocity_smooth',
+                        'cadence', 'watts', 'grade_smooth']
 
-        streams = client.get_activity_streams(int(activity_id),
-                                              types=types)
+        streams = client.get_activity_streams(activity_id,
+                                              types=stream_names)
 
         # This is all done to eliminate any data-points from the streams where
         #  latlng is [0,0], which is invalid.  I am not sure if any [0,0] points
         #  actually exist in Strava data but some where there in the original
         #  Garmin data.
-        idx = types.index('latlng')
-        zipped = zip(*[streams[t].data for t in types if t in streams])
-        data = {
+        idx = stream_names.index('latlng')
+        zipped = zip(
+            *[streams[t].data for t in stream_names if t in streams])
+        stream_data = {
             t: tl for t, tl in
-            zip(types, zip(*[d for d in zipped if d[idx] != [0, 0]]))
+            zip(stream_names,
+                zip(*[d for d in zipped if d[idx] != [0, 0]])
+                )
         }
 
-        data["polyline"] = polyline.encode(data.pop('latlng'))
-
-        return jsonify(data)
+        stream_data["polyline"] = (
+            polyline.encode(stream_data.pop('latlng'))
+        )
+        return jsonify(stream_data)
     else:
         return redirect(url_for('login',
                                 next=url_for("data_points",

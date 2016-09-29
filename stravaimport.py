@@ -37,28 +37,44 @@ def import_activities(db, user, client, limit=1, detailed=True):
             logging.info(msg)
             yield msg + "\n"
         else:
-            other = {"name": a.name,
-                     "strava_polyline": a.map.summary_polyline}
-            params = {"user": user,
-                      "id": a.id,
-                      "other": other,
-                      "beginTimestamp": a.start_date_local,
-                      "type": a.type,
-                      "source": "ST"}
+            activity_data = {
+                "id": a.id,
+                "name": a.name,
+                "type": a.type,
+                "summary_polyline": a.map.summary_polyline,
+                "beginTimestamp": a.start_date_local,
+                "distance": a.distance,
+                "elapsed_time": a.elapsed_time,
+                "user": user
+            }
 
             if detailed:
+                stream_names = ['time', 'latlng', 'distance', 'altitude', 'velocity_smooth',
+                                'cadence', 'watts', 'grade_smooth']
+
                 streams = client.get_activity_streams(a.id,
-                                                      types=['time', 'latlng'])
+                                                      types=stream_names)
 
-                params["elapsed"] = streams["time"].data
+                # Here we eliminate any data-points from the streams where
+                #  latlng is [0,0], which is invalid.  I am not sure if any [0,0] points
+                #  actually exist in Strava data but some where there in the original
+                #  Garmin data.
+                idx = stream_names.index('latlng')
+                zipped = zip(
+                    *[streams[t].data for t in stream_names if t in streams])
+                stream_data = {
+                    t: tl for t, tl in
+                    zip(stream_names,
+                        zip(*[d for d in zipped if d[idx] != [0, 0]])
+                        )
+                }
 
-                # eliminate (0,0) points
-                latlng = [(x, y) for x, y in streams["latlng"].data
-                          if (x, y) != (0, 0)]
+                activity_data["polyline"] = (
+                    polyline.encode(stream_data.pop('latlng'))
+                )
+                activity_data.update(stream_data)
 
-                params["polyline"] = polyline.encode(latlng)
-
-            A = Activity(**params)
+            A = Activity(**activity_data)
             db.session.add(A)
             db.session.commit()
 
