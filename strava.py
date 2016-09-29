@@ -72,14 +72,15 @@ def activities():
             count = 0
             yield "importing activities from Strava...\n"
             for a in client.get_activities(limit=limit):
-                # a2 = {"id": a.id,
-                #       "name": a.name,
-                #       "external_id": a.external_id,
-                #       "distance": a.distance,
-                #       "elapsed_time": a.elapsed_time,
-                #       "type": a.type,
-                #       "start_date_local": a.start_date_local
-                #       }
+                # a2 = {
+                #     "id": a.id,
+                #     "name": a.name,
+                #     "external_id": a.external_id,
+                #     "distance": a.distance,
+                #     "elapsed_time": a.elapsed_time,
+                #     "type": a.type,
+                #     "start_date_local": a.start_date_local
+                # }
                 count += 1
                 yield "[{0.id}] {0.name}: {0.start_date_local}, {0.elapsed_time}, {0.distance}\n".format(a)
             yield "Done! {} activities exported\n".format(count)
