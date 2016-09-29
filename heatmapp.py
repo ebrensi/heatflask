@@ -8,7 +8,6 @@ from flask_migrate import Migrate
 from datetime import date, timedelta
 import os
 import stravalib
-import polyline
 import flask_login
 from flask_login import current_user, login_user, logout_user, login_required
 
@@ -58,7 +57,7 @@ def authorize(service):
     if service == 'strava':
         auth_url = client.authorization_url(client_id=app.config["STRAVA_CLIENT_ID"],
                                             redirect_uri=redirect_uri,
-                                            approval_prompt="force",
+                                            # approval_prompt="force",
                                             state=request.args.get("next"))
         return redirect(auth_url)
 
@@ -217,53 +216,6 @@ def getdata(username):
     return jsonify(data)
 
 
-@app.route('/<username>/latlngs/<orientation>')
-def latlngsJSON(username, orientation):
-    tomorrow = (date.today() + timedelta(1)).strftime('%Y-%m-%d')
-    today = date.today().strftime('%Y-%m-%d')
-
-    start = request.args.get("start", today)
-    end = request.args.get("end", tomorrow)
-
-    user = User.get(username)
-
-    if request.args.get("resolution") == "low":
-        result = db.session.query(Activity.other["strava_polyline"])
-
-    elif (request.args.get("times") and
-            request.args.get("resolution") != "low"):
-        result = db.session.query(Activity.polyline, Activity.elapsed)
-
-    else:
-        result = db.session.query(Activity.polyline)
-
-    result = (result.filter(Activity.beginTimestamp.between(start, end))
-              .filter_by(user=user)
-              ).all()
-
-    # app.logger.info(result)
-    TIME_SCALE = app.config["MOVING_MARKER_TIMESCALE"]
-    routes = [[list(point) for point in polyline.decode(pl[0])]
-              for pl in result]
-
-    if request.args.get("times"):
-        if request.args.get("resolution") != "low":
-            dur = [[TIME_SCALE * (b - a) for a, b in zip(pl[1][:], pl[1][1:])] + [0]
-                   for pl in result]
-        else:
-            dur = [TIME_SCALE for pl in result]
-        # app.logger.info(dur)
-
-    if orientation == "list":
-        if request.args.get("times"):
-            return jsonify({"latlngs": routes, "durations": dur})
-        else:
-            return jsonify(routes)
-
-    flat = [item for sublist in routes for item in sublist]
-    return jsonify(flat)
-
-
 @app.route('/activity_import')
 @login_required
 def activity_import():
@@ -281,74 +233,7 @@ def activity_import():
         do_import = stravaimport.import_activities(db, user, client,
                                                    limit=count,
                                                    detailed=detailed)
-
     return Response(do_import, mimetype='text/event-stream')
-
-
-@app.route('/strava_activities')
-@login_required
-def strava_activities():
-    user = User.get(current_user.name)
-
-    already_got = [int(d[0]) for d in db.session.query(
-        Activity.id).filter_by(user=user).all()]
-
-    limit = request.args.get("limit")
-    limit = int(limit) if limit else ""
-
-    really = (request.args.get("really") == "yes")
-
-    def do_import():
-        count = 0
-        yield "importing activities from Strava...\n"
-        for a in client.get_activities(limit=limit):
-            count += 1
-
-            if a.id in already_got:
-                msg = ("{}. activity {} already in database.\n"
-                       .format(count, a.id))
-                yield msg + "\n"
-            else:
-                if really:
-                    try:
-                        streams = client.get_activity_streams(a.id,
-                                                              types=['time', 'latlng'])
-                    except:
-                        yield ("{}. activity {} has no data points\n"
-                               .format(count, a.id))
-                    else:
-                        time = streams["time"].data
-
-                        # eliminate (0,0) points
-                        latlng = [(x, y) for x, y in streams["latlng"].data
-                                  if (x, y) != (0, 0)]
-
-                        poly = polyline.encode(latlng)
-                        other = {"name": a.name,
-                                 "strava_polyline": a.map.summary_polyline}
-                        params = {"user": user,
-                                  "id": a.id,
-                                  "other": other,
-                                  "beginTimestamp": a.start_date_local,
-                                  "elapsed": time,
-                                  "polyline": poly,
-                                  "source": "ST"}
-
-                        # app.logger.info("params: %s", params)
-                        A = Activity(**params)
-                        db.session.add(A)
-                        db.session.commit()
-
-                        mi = stravalib.unithelper.miles(a.distance)
-                        msg = ("[{0.id}] {0.name}: {0.start_date_local}"
-                               .format(a))
-
-                        msg = "{}. {}, {}\n".format(count, msg, mi)
-                        yield msg
-
-        yield "Done! {} activities imported\n".format(count)
-
-    return Response(do_import(), mimetype='text/event-stream')
 
 
 @app.route('/admin')
@@ -357,6 +242,7 @@ def admin():
     users = User.query.all()
     info = {user.name: {"is_active": user.is_active} for user in users}
     return jsonify(info)
+
 
 # python heatmapp.py works but you really should use `flask run`
 if __name__ == '__main__':
