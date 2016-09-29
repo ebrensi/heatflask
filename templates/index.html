@@ -187,8 +187,8 @@
                         <input class="current-url" type="hidden" id="afterLogout" name="next" value="" />
                     </form>
                 {% else %}
-                    Create an account and/or
-                    <br><br>
+                    Create an account and/or log in
+                    <br>
 
                     <form action="{{ url_for('authorize', service='strava') }}">
                         <input type="image" src="{{ url_for('static', filename='btn_strava_connectwith_orange.svg') }}" alt="Log-In with Strava" />
@@ -196,6 +196,11 @@
                     <!-- If the user is logging in to his/her own data then we should redirect back to the current page. -->
                     <!-- <input class="current-url" type="hidden" id="afterLogin" name="next" value="" /> -->
                 {% endif %}
+                <hr>
+                Questions or comments, or suggestions?<br>
+                <a href="mailto:Rensi.Efrem@gmail.com" target="_top">Contact me!</a>
+                <br>
+                Check out the <a href="https://github.com/ebrensi/heatmappp" target="_top">GitHub repo</a>.  Contributions welcome!
 
 
                 <div>
