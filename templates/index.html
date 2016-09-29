@@ -276,7 +276,10 @@
         var map_providers = {{ baselayer|tojson|safe }};
 
         var default_baseLayer;
-        var baseLayers = {"None": L.tileLayer("")};
+        var baseLayers = {
+            "None": L.tileLayer(""),
+            "Esri.WorldImagery": L.tileLayer.provider("Esri.WorldImagery")
+        };
 
         var online = ("{{ config['OFFLINE'] }}" != "True");
 

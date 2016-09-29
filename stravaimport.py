@@ -43,6 +43,7 @@ def import_activities(db, user, client, limit=1, detailed=True):
                       "id": a.id,
                       "other": other,
                       "beginTimestamp": a.start_date_local,
+                      "type": a.type,
                       "source": "ST"}
 
             if detailed:
@@ -71,6 +72,7 @@ def import_activities(db, user, client, limit=1, detailed=True):
     msg = "Done! {} activities imported".format(count)
     logging.info(msg)
     yield msg + "\n"
+
 
 if __name__ == '__main__':
     # create tables from data models if they don't exist

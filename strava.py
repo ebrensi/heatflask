@@ -5,13 +5,14 @@
 from flask import Flask, redirect, url_for, request, jsonify, Response
 import stravalib
 import os
+import polyline
 
 STRAVA_CLIENT_ID = os.environ["STRAVA_CLIENT_ID"]
 STRAVA_CLIENT_SECRET = os.environ["STRAVA_CLIENT_SECRET"]
 STRAVA_AUTH_URL = "https://www.strava.com/oauth/authorize"
 STRAVA_TOKEN_URL = "https://www.strava.com/oauth/token"
 SECRET_KEY = "secret"
-
+JSONIFY_PRETTYPRINT_REGULAR = False
 
 app = Flask(__name__)
 app.config.from_object(__name__)
@@ -40,7 +41,7 @@ def login():
     redirect_uri = url_for('authorized', _external=True)
     auth_url = client.authorization_url(client_id=app.config["STRAVA_CLIENT_ID"],
                                         redirect_uri=redirect_uri,
-                                        approval_prompt="force",
+                                        # approval_prompt="force",
                                         state=request.args.get("next", ""))
     return redirect(auth_url)
 
@@ -81,9 +82,10 @@ def activities():
                 #     "type": a.type,
                 #     "start_date_local": a.start_date_local
                 # }
+
                 count += 1
-                yield "[{0.id}] {0.name}: {0.start_date_local}, {0.elapsed_time}, {0.distance}\n".format(a)
-            yield "Done! {} activities exported\n".format(count)
+                yield "[{0.name}, {0.type}: {0.start_date_local}, {0.elapsed_time}, {0.distance}\n".format(a)
+            yield "Done listing {} activities\n".format(count)
 
         return Response(do_import(), mimetype='text/event-stream')
     else:
@@ -94,14 +96,26 @@ def activities():
 @app.route('/activities/<activity_id>')
 def data_points(activity_id):
     if client.access_token:
-        streams = client.get_activity_streams(int(activity_id),
-                                              types=['time', 'latlng'])
-        print(streams)
+        types = ['time', 'latlng', 'distance', 'altitude', 'velocity_smooth',
+                 'cadence', 'watts', 'grade_smooth']
 
-        time = streams["time"].data
-        latlng = streams["latlng"].data
-        points = ("{}: {}\n".format(t, ll) for t, ll in zip(time, latlng))
-        return Response(points, mimetype='text/event-stream')
+        streams = client.get_activity_streams(int(activity_id),
+                                              types=types)
+
+        # This is all done to eliminate any data-points from the streams where
+        #  latlng is [0,0], which is invalid.  I am not sure if any [0,0] points
+        #  actually exist in Strava data but some where there in the original
+        #  Garmin data.
+        idx = types.index('latlng')
+        zipped = zip(*[streams[t].data for t in types if t in streams])
+        data = {
+            t: tl for t, tl in
+            zip(types, zip(*[d for d in zipped if d[idx] != [0, 0]]))
+        }
+
+        data["polyline"] = polyline.encode(data.pop('latlng'))
+
+        return jsonify(data)
     else:
         return redirect(url_for('login',
                                 next=url_for("data_points",
