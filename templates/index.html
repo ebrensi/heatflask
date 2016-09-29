@@ -197,7 +197,7 @@
                     <!-- <input class="current-url" type="hidden" id="afterLogin" name="next" value="" /> -->
                 {% endif %}
                 <hr>
-                Questions or comments, or suggestions?<br>
+                Questions or comments, suggestions, job offers?<br>
                 <a href="mailto:Rensi.Efrem@gmail.com" target="_top">Contact me!</a>
                 <br>
                 Check out the <a href="https://github.com/ebrensi/heatmappp" target="_top">GitHub repo</a>.  Contributions welcome!
@@ -332,7 +332,7 @@
         function renderLayers(){
             var heat_data = false,
                 flow_data = false,
-                durations = false;
+                velocities = false;
 
             var flowres = $("#flowres").val(),
                 heatres = $("#heatres").val(),
@@ -346,14 +346,14 @@
                 end: $("#date2").val(),
                 hires: flowres == "high" || heatres == "high",
                 lores: flowres == "low" || heatres == "low",
-                durations: flowres == "high"
+                velocities: flowres == "high"
             };
 
             map.spin(true);   // start progress indicator
             $.getJSON('/{{ username }}/getdata', query, function(data) {
                 // console.log(data);
-                if (query.durations)
-                    durations = data.durations;
+                if (query.velocities)
+                    velocities = data.velocities;
 
 
                 if (query.lores) {
@@ -426,16 +426,16 @@
                     for (var i=0; i < flow_data.length; i++) {
                         var route = flow_data[i];
 
-                        if (durations){
-                            var durs = durations[i];
+                        if (velocities){
+                            var speeds = velocities[i];
                             var subroute = [route[0]];
 
-                            for (var j = 1; j < durs.length; j++) {
+                            for (var j = 1; j < speeds.length; j++) {
                                 subroute.push(route[j]);
 
-                                if (durs[j] != durs[j-1]) {
+                                if (speeds[j] != speeds[j-1]) {
 
-                                    options.delay = DELAY * durs[j-1]
+                                    options.delay = DELAY * speeds[j-1]
                                     polyseg = new L.Polyline.AntPath(subroute, options);
 
                                     FlowLayer.addLayer(polyseg);

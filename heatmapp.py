@@ -185,7 +185,7 @@ def getdata(username):
 
     hires = request.args.get("hires") == "true"
     lores = request.args.get("lores") == "true"
-    durations = request.args.get("durations")
+    velocities = request.args.get("velocities")
 
     data = {}
 
@@ -197,21 +197,19 @@ def getdata(username):
         data["hires"] = [r[0] for r in result]
 
     if lores:
-        result = (db.session.query(Activity.other["strava_polyline"])
+        result = (db.session.query(Activity.summary_polyline)
                   .filter(Activity.beginTimestamp.between(start, end))
                   .filter_by(user=user)
                   ).all()
         data["lores"] = [r[0] for r in result]
 
-    if durations:
-        result = (db.session.query(Activity.elapsed)
+    if velocities:
+        result = (db.session.query(Activity.velocity_smooth)
                   .filter(Activity.beginTimestamp.between(start, end))
                   .filter_by(user=user)
                   ).all()
 
-        data["durations"] = [[(b - a) for a, b in zip(pl[0][:], pl[0][1:])] + [0]
-                             for pl in result]
-    # app.logger.info(data)
+        data["velocities"] = [r[0] for r in result]
 
     return jsonify(data)
 
