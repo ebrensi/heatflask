@@ -28,13 +28,13 @@ class User(UserMixin, db.Model):
 
 
 class Activity(db.Model):
-    id = db.Column(db.Integer(), primary_key=True, autoincrement=False)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=False)
     name = db.Column(db.String())
     type = db.Column(db.String())
     summary_polyline = db.Column(db.String())
     beginTimestamp = db.Column(TIMESTAMP)
-    distance = db.Column(db.Float())
-    elapsed_time = db.column(db.Integer)
+    total_distance = db.Column(db.Float())
+    elapsed_time = db.Column(db.Integer)
 
     # streams
     time = db.Column(ARRAY(db.Integer))
