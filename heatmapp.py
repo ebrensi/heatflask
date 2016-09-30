@@ -200,11 +200,18 @@ def getdata(username):
         .filter_by(user=user)
     ).all()
 
+    def path_color(activity_type):
+        color_list = [color for color, activity_types
+                      in app.config["ANTPATH_ACTIVITY_COLORS"].items()
+                      if activity_type.lower() in activity_types]
+        return color_list[0]
+
     data["summary"] = [
         {
             "id": r[0],
             "name": r[1],
             "type": r[2],
+            "path_color": path_color(r[2]),
             "distance": r[3],
             "elapsed_time": r[4],
             "start_time": str(r[5])
