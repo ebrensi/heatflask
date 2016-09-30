@@ -233,7 +233,7 @@ def getdata(username):
                   .filter_by(user=user)
                   ).all()
 
-        data["distances"] = [[round(b - a, 3) for a, b in zip(pl[0], pl[0][1:])] + [0]
+        data["distances"] = [[round(b - a, 2) for a, b in zip(pl[0], pl[0][1:])] + [0]
                              for pl in result]
 
         data["durations"] = [[(b - a) for a, b in zip(pl[1], pl[1][1:])] + [0]
