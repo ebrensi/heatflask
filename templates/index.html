@@ -194,7 +194,7 @@
                         <input type="image" src="{{ url_for('static', filename='btn_strava_connectwith_orange.svg') }}" alt="Log-In with Strava" />
                     </form>
                     <!-- If the user is logging in to his/her own data then we should redirect back to the current page. -->
-                    <!-- <input class="current-url" type="hidden" id="afterLogin" name="next" value="" /> -->
+                    <input class="current-url" type="hidden" id="afterLogin" name="next" value="" />
                 {% endif %}
                 <hr>
                 Questions or comments, suggestions, job offers?<br>
@@ -228,12 +228,8 @@
 
                     Import
 
-                    <input type="number" name="count" value=10 min=0 max=10>
-                    most recent activities from
-                    <select name='service'>
-                        <option selected="selected" value="strava">Strava</option>
-                        <option disabled value="gc">Garmin Connect</option>
-                    </select>
+                    <input type="number" name="count" value=10 min=0 max=100>
+                    most recent activities from Strava.
                     <br>
                     <input type="checkbox" checked name="detailed" value="yes">Import High-Resolution data<br>
                     <br>

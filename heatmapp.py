@@ -240,8 +240,8 @@ def getdata(username):
                   .filter_by(user=user)
                   ).all()
 
-        data["distances"] = [[round(b - a, 2) for a, b in zip(pl[0], pl[0][1:])] + [0]
-                             for pl in result]
+        # data["distances"] = [[round(b - a, 2) for a, b in zip(pl[0], pl[0][1:])] + [0]
+        #                      for pl in result]
 
         data["durations"] = [[(b - a) for a, b in zip(pl[1], pl[1][1:])] + [0]
                              for pl in result]
@@ -255,18 +255,12 @@ def getdata(username):
 def activity_import():
     user = User.get(current_user.name)
     count = int(request.args.get("count", 1))
-    service = request.args.get("service")
     detailed = request.args.get("detailed") == "yes"
 
-    if service == "gc":
-        import gcimport
-        do_import = gcimport.import_activities(db, user, count=count)
-
-    elif service == "strava":
-        import stravaimport
-        do_import = stravaimport.import_activities(db, user, client,
-                                                   limit=count,
-                                                   detailed=detailed)
+    import stravaimport
+    do_import = stravaimport.import_activities(db, user, client,
+                                               limit=count,
+                                               detailed=detailed)
     return Response(do_import, mimetype='text/event-stream')
 
 
