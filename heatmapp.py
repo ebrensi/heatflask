@@ -185,9 +185,33 @@ def getdata(username):
 
     hires = request.args.get("hires") == "true"
     lores = request.args.get("lores") == "true"
-    velocities = request.args.get("velocities")
+    durations = request.args.get("durations")
 
     data = {}
+
+    result = (db.session.query(
+        Activity.id,
+        Activity.name,
+        Activity.type,
+        Activity.total_distance,
+        Activity.elapsed_time,
+        Activity.beginTimestamp
+    ).filter(Activity.beginTimestamp.between(start, end))
+        .filter_by(user=user)
+    ).all()
+
+    data["summary"] = [
+        {
+            "id": r[0],
+            "name": r[1],
+            "type": r[2],
+            "distance": r[3],
+            "elapsed_time": r[4],
+            "start_time": str(r[5])
+        }
+        for r in result]
+
+    # app.logger.info(data)
 
     if hires:
         result = (db.session.query(Activity.polyline)
@@ -203,14 +227,19 @@ def getdata(username):
                   ).all()
         data["lores"] = [r[0] for r in result]
 
-    if velocities:
-        result = (db.session.query(Activity.velocity_smooth)
+    if durations:
+        result = (db.session.query(Activity.distance, Activity.time)
                   .filter(Activity.beginTimestamp.between(start, end))
                   .filter_by(user=user)
                   ).all()
 
-        data["velocities"] = [r[0] for r in result]
+        data["distances"] = [[round(b - a, 3) for a, b in zip(pl[0], pl[0][1:])] + [0]
+                             for pl in result]
 
+        data["durations"] = [[(b - a) for a, b in zip(pl[1], pl[1][1:])] + [0]
+                             for pl in result]
+
+    app.logger.info(data)
     return jsonify(data)
 
 

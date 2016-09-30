@@ -43,22 +43,23 @@ def import_activities(db, user, client, limit=1, detailed=True):
                 "type": a.type,
                 "summary_polyline": a.map.summary_polyline,
                 "beginTimestamp": a.start_date_local,
-                "distance": a.distance,
-                "elapsed_time": a.elapsed_time,
+                "total_distance": float(a.distance),
+                "elapsed_time": int(a.elapsed_time.total_seconds()),
                 "user": user
             }
 
             if detailed:
-                stream_names = ['time', 'latlng', 'distance', 'altitude', 'velocity_smooth',
-                                'cadence', 'watts', 'grade_smooth']
+                stream_names = ['time', 'latlng', 'distance', 'altitude',
+                                'velocity_smooth', 'cadence', 'watts',
+                                'grade_smooth']
 
                 streams = client.get_activity_streams(a.id,
                                                       types=stream_names)
 
                 # Here we eliminate any data-points from the streams where
-                #  latlng is [0,0], which is invalid.  I am not sure if any [0,0] points
-                #  actually exist in Strava data but some where there in the original
-                #  Garmin data.
+                #  latlng is [0,0], which is invalid.  I am not sure if any
+                #  [0,0] points actually exist in Strava data but some where
+                #  there in the original Garmin data.
                 idx = stream_names.index('latlng')
                 zipped = zip(
                     *[streams[t].data for t in stream_names if t in streams])
@@ -79,9 +80,8 @@ def import_activities(db, user, client, limit=1, detailed=True):
             db.session.commit()
 
             mi = stravalib.unithelper.miles(a.distance)
-            msg = ("[{0.id}] {0.name}: {0.start_date_local}"
-                   .format(a))
-            msg = "{}. {}, {}".format(count, msg, mi)
+            msg = ("[{0.id}] {0.name}: {0.start_date_local}, {1}"
+                   .format(a, mi))
             logging.info(msg)
             yield msg + "\n"
 

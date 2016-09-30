@@ -332,7 +332,7 @@
         function renderLayers(){
             var heat_data = false,
                 flow_data = false,
-                velocities = false;
+                durations = false;
 
             var flowres = $("#flowres").val(),
                 heatres = $("#heatres").val(),
@@ -346,14 +346,14 @@
                 end: $("#date2").val(),
                 hires: flowres == "high" || heatres == "high",
                 lores: flowres == "low" || heatres == "low",
-                velocities: flowres == "high"
+                durations: flowres == "high"
             };
 
             map.spin(true);   // start progress indicator
             $.getJSON('/{{ username }}/getdata', query, function(data) {
                 // console.log(data);
-                if (query.velocities)
-                    velocities = data.velocities;
+                if (query.durations)
+                    durations = data.durations;
 
 
                 if (query.lores) {
@@ -426,16 +426,16 @@
                     for (var i=0; i < flow_data.length; i++) {
                         var route = flow_data[i];
 
-                        if (velocities){
-                            var speeds = velocities[i];
+                        if (durations){
+                            var durs = durations[i];
                             var subroute = [route[0]];
 
-                            for (var j = 1; j < speeds.length; j++) {
+                            for (var j = 1; j < durs.length; j++) {
                                 subroute.push(route[j]);
 
-                                if (speeds[j] != speeds[j-1]) {
+                                if (durs[j] != durs[j-1]) {
 
-                                    options.delay = DELAY * speeds[j-1]
+                                    options.delay = DELAY * durs[j-1]
                                     polyseg = new L.Polyline.AntPath(subroute, options);
 
                                     FlowLayer.addLayer(polyseg);
