@@ -425,6 +425,8 @@
 
                     for (var i=0; i < flow_data.length; i++) {
                         var route = flow_data[i];
+                        if ("path_color" in data.summary[i])
+                            options.color = data.summary[i].path_color;
 
                         if (durations){
                             var durs = durations[i];
