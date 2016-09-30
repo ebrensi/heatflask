@@ -15,17 +15,25 @@ class Config(object):
     STRAVA_CLIENT_SECRET = os.environ["STRAVA_CLIENT_SECRET"]
 
     # Leaflet stuff
-    HEATMAP_DEFAULT_OPTIONS = {"radius": 9,
-                               "blur": 15,
-                               "gradient": {0.4: 'blue', 0.65: 'lime', 1: 'red'}
-                               }
+    HEATMAP_DEFAULT_OPTIONS = {
+        "radius": 9,
+        "blur": 15,
+        "gradient": {0.4: 'blue', 0.65: 'lime', 1: 'red'}
+    }
 
-    ANTPATH_DEFAULT_OPTIONS = {"weight": 3,
-                               "opacity": 0.5,
-                               "color": 'red',
-                               "pulseColor": 'white',
-                               "delay": 2000,
-                               "dashArray": [3, 10]}
+    ANTPATH_DEFAULT_OPTIONS = {
+        "weight": 3,
+        "opacity": 0.5,
+        "color": 'red',
+        "pulseColor": 'white',
+        "delay": 2000,
+        "dashArray": [3, 10]
+    }
+
+    ANTPATH_ACTIVITY_COLORS = {
+        'red': ['run', 'walk', 'hike'],
+        'blue': ['ride']
+    }
 
     MAP_CENTER = [45.5236, -122.675]
     MAP_ZOOM = 3
