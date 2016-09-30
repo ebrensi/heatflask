@@ -2,7 +2,8 @@
 # This is a sample app to test Strava API functionality
 
 
-from flask import Flask, redirect, url_for, request, jsonify, Response
+from flask import Flask, redirect, url_for, request, jsonify, Response, \
+    render_template
 import stravalib
 import os
 import polyline
@@ -25,12 +26,13 @@ def index():
     if client.access_token:
         athlete = client.get_athlete()
 
-        ath = {"id": athlete.id,
-               "firstname": athlete.firstname,
-               "lastname": athlete.lastname,
-               "username": athlete.username,
-               "pic_url": athlete.profile
-               }
+        ath = {
+            "id": athlete.id,
+            "firstname": athlete.firstname,
+            "lastname": athlete.lastname,
+            "username": athlete.username,
+            "pic_url": athlete.profile
+        }
         return jsonify(ath)
     else:
         return redirect(url_for('login'))
@@ -66,31 +68,55 @@ def authorized():
 
 @app.route('/activities')
 def activities():
+    limit = request.args.get("limit", None, type=int)
     if client.access_token:
-        limit = request.args.get("limit")
 
         def do_import():
             count = 0
             yield "importing activities from Strava...\n"
             for a in client.get_activities(limit=limit):
-                # a2 = {
-                #     "id": a.id,
-                #     "name": a.name,
-                #     "external_id": a.external_id,
-                #     "distance": a.distance,
-                #     "elapsed_time": a.elapsed_time,
-                #     "type": a.type,
-                #     "start_date_local": a.start_date_local
-                # }
-
                 count += 1
                 yield "[{0.name}, {0.type}: {0.start_date_local}, {0.elapsed_time}, {0.distance}\n".format(a)
             yield "Done listing {} activities\n".format(count)
 
         return Response(do_import(), mimetype='text/event-stream')
     else:
-        return redirect(url_for('login', next=url_for("activities",
-                                                      _external=True)))
+        args = {"_external": True}
+        if limit:
+            args["limit"] = limit
+        return redirect(url_for('login', next=url_for("activities", **args)))
+
+
+@app.route('/activities.json')
+def activities_json():
+    limit = request.args.get("limit", None, type=int)
+    if client.access_token:
+        count = 0
+        data = []
+        for a in client.get_activities(limit=limit):
+            activity_data = {
+                "id": a.id,
+                "name": a.name,
+                "type": a.type,
+                "beginTimestamp": a.start_date_local,
+                "total_distance": float(a.distance),
+            }
+            data.append(activity_data)
+            count += 1
+            msg = ("[{0.name}, {0.type}: {0.start_date_local}, {0.elapsed_time}, {0.distance}\n"
+                   .format(a))
+
+        return jsonify(data)
+    else:
+        args = {"_external": True}
+        if limit:
+            args["limit"] = limit
+        return redirect(url_for('login', next=url_for("activities", **args)))
+
+
+@app.route('/activity_list')
+def alist():
+    return render_template("activities.html")
 
 
 @app.route('/activities/<activity_id>')
