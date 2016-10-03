@@ -7,6 +7,7 @@ from flask import Flask, redirect, url_for, request, jsonify, Response, \
 import stravalib
 import os
 import polyline
+import json
 
 STRAVA_CLIENT_ID = os.environ["STRAVA_CLIENT_ID"]
 STRAVA_CLIENT_SECRET = os.environ["STRAVA_CLIENT_SECRET"]
@@ -43,7 +44,6 @@ def login():
     redirect_uri = url_for('authorized', _external=True)
     auth_url = client.authorization_url(client_id=app.config["STRAVA_CLIENT_ID"],
                                         redirect_uri=redirect_uri,
-                                        # approval_prompt="force",
                                         state=request.args.get("next", ""))
     return redirect(auth_url)
 
@@ -66,20 +66,32 @@ def authorized():
         return redirect(request.args.get("state") or url_for("index"))
 
 
+def activity_iterator(client, **args):
+    for a in client.get_activities(**args):
+        activity = {
+            "id": a.id,
+            "name": a.name,
+            "type": a.type,
+            # "summary_polyline": a.map.summary_polyline,
+            "beginTimestamp": str(a.start_date_local),
+            "total_distance": float(a.distance),
+            "elapsed_time": int(a.elapsed_time.total_seconds()),
+            "msg": "[{0.id}] {0.type}: '{0.name}' {0.start_date_local}, {0.distance}".format(a)
+        }
+        yield activity
+
+
 @app.route('/activities')
 def activities():
     limit = request.args.get("limit", None, type=int)
     if client.access_token:
+        def actvity_msg_list():
+            yield "Activities list:\n"
+            for a in activity_iterator(client, limit=limit):
+                yield a["msg"] + "\n"
+            yield "Done.\n"
 
-        def do_import():
-            count = 0
-            yield "importing activities from Strava...\n"
-            for a in client.get_activities(limit=limit):
-                count += 1
-                yield "[{0.name}, {0.type}: {0.start_date_local}, {0.elapsed_time}, {0.distance}\n".format(a)
-            yield "Done listing {} activities\n".format(count)
-
-        return Response(do_import(), mimetype='text/event-stream')
+        return Response(actvity_msg_list(), mimetype='text/event-stream')
     else:
         args = {"_external": True}
         if limit:
@@ -87,36 +99,29 @@ def activities():
         return redirect(url_for('login', next=url_for("activities", **args)))
 
 
-@app.route('/activities.json')
-def activities_json():
+@app.route('/activity_stream')
+def activity_stream():
     limit = request.args.get("limit", None, type=int)
-    if client.access_token:
-        count = 0
-        data = []
-        for a in client.get_activities(limit=limit):
-            activity_data = {
-                "id": a.id,
-                "name": a.name,
-                "type": a.type,
-                "beginTimestamp": a.start_date_local,
-                "total_distance": float(a.distance),
-            }
-            data.append(activity_data)
-            count += 1
-            msg = ("[{0.name}, {0.type}: {0.start_date_local}, {0.elapsed_time}, {0.distance}\n"
-                   .format(a))
 
-        return jsonify(data)
-    else:
-        args = {"_external": True}
-        if limit:
-            args["limit"] = limit
-        return redirect(url_for('login', next=url_for("activities", **args)))
+    def stream():
+        for a in activity_iterator(client, limit=limit):
+            yield "data: {}\n\n".format(json.dumps(a))
+        yield "data: done\n\n"
+
+    return Response(stream(), mimetype='text/event-stream')
 
 
 @app.route('/activity_list')
-def alist():
-    return render_template("activities.html")
+def activity_list():
+    limit = request.args.get("limit", None, type=int)
+    if client.access_token:
+
+        return render_template("activities.html", limit=limit)
+    else:
+        args = {"_external": True}
+        if limit:
+            args["limit"] = limit
+        return redirect(url_for('login', next=url_for("activity_list", **args)))
 
 
 @app.route('/activities/<activity_id>')

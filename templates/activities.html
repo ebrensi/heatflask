@@ -7,26 +7,42 @@
         text-align: center;
       }
     </style>
-
     <!-- JQuery -->
     <script src="{{ url_for('static', filename='js/jquery-3.1.0.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/jquery-ui.min.js') }}"></script>
 
-      <script>
-        if (!!window.EventSource) {
-      var source = new EventSource("{{ url_for('activities', limit=10) }}");
-      source.onmessage = function(e) {
-        $("#data").text(e.data);
-      }
-    }
-    </script>
   </head>
   <body>
 
+<h1>Activities json</h1>
+<div id="result"></div>
 
-    <div id="data">nothing received yet</div>
+  <script>
+    var source = new EventSource("{{ url_for('activity_stream', limit=limit) }}");
+    var closed = false;
+
+    source.onmessage = function(event) {
+      if(closed) return
+      if (event.data != 'done')
+        row = "<a href={{ url_for('data_points',activity_id='') }}/"+ JSON.parse(event.data).id + ">";
+        document.getElementById("result").innerHTML += row + "<br>";
+      else {
+        closed = true;
+        this.close();
+      }
+    };
+
+     source.onerror = function(e) {
+      closed = true;
+    };
+
+    source.addEventListener('end', function(event) {
+      event.target.close();
+      closed = true;
+    }, true);
 
 
+  </script>
  </body>
 </html>
 
