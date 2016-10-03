@@ -204,7 +204,8 @@ def getdata(username):
         color_list = [color for color, activity_types
                       in app.config["ANTPATH_ACTIVITY_COLORS"].items()
                       if activity_type.lower() in activity_types]
-        return color_list[0]
+
+        return color_list[0] if color_list else ""
 
     data["summary"] = [
         {
@@ -246,7 +247,7 @@ def getdata(username):
         data["durations"] = [[(b - a) for a, b in zip(pl[1], pl[1][1:])] + [0]
                              for pl in result]
 
-    app.logger.info(data)
+    # app.logger.info(data)
     return jsonify(data)
 
 

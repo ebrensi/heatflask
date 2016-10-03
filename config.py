@@ -24,7 +24,7 @@ class Config(object):
     ANTPATH_DEFAULT_OPTIONS = {
         "weight": 3,
         "opacity": 0.5,
-        "color": 'red',
+        "color": 'yellow',
         "pulseColor": 'white',
         "delay": 2000,
         "dashArray": [3, 10]
