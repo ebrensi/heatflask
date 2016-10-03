@@ -8,8 +8,6 @@ import stravalib
 import os
 import polyline
 import json
-import time
-
 
 STRAVA_CLIENT_ID = os.environ["STRAVA_CLIENT_ID"]
 STRAVA_CLIENT_SECRET = os.environ["STRAVA_CLIENT_SECRET"]
