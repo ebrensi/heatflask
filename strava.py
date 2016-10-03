@@ -8,6 +8,8 @@ import stravalib
 import os
 import polyline
 import json
+import time
+
 
 STRAVA_CLIENT_ID = os.environ["STRAVA_CLIENT_ID"]
 STRAVA_CLIENT_SECRET = os.environ["STRAVA_CLIENT_SECRET"]
@@ -106,6 +108,7 @@ def activity_stream():
     def stream():
         for a in activity_iterator(client, limit=limit):
             yield "data: {}\n\n".format(json.dumps(a))
+
         yield "data: done\n\n"
 
     return Response(stream(), mimetype='text/event-stream')
