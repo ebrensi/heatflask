@@ -19,16 +19,19 @@
 
   <script>
     var source = new EventSource("{{ url_for('activity_stream', limit=limit) }}");
-    var closed = false;
+    var count = 0;
 
     source.onmessage = function(event) {
-      if(closed) return
-      if (event.data != 'done')
-        row = "<a href={{ url_for('data_points',activity_id='') }}/"+ JSON.parse(event.data).id + ">";
-        document.getElementById("result").innerHTML += row + "<br>";
-      else {
-        closed = true;
-        this.close();
+
+      // console.log(event.data);
+      if (event.data != 'done'){
+        var j = JSON.parse(event.data);
+        link = "<a href={{ url_for('data_points',activity_id='') }}"+ j.id + "> "+ j.msg + "</a>";
+        document.getElementById("result").innerHTML += link + "<br>";
+        count++;
+      } else {
+        source.close();
+        document.getElementById("result").innerHTML += "Done listing " + count +" activities.<br>";
       }
     };
 
