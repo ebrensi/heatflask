@@ -172,8 +172,11 @@
                           <label><input type="checkbox" id="autozoom" value="1">Auto-Zoom on render</label>
                         </div>
 
-                    <br>
-                    <button type="button" id="renderButton" class="btn btn-primary">Render Layers</button><br>
+                    <hr>
+                        <div id="data_message"></div>
+                    <hr>
+
+                    <button type="button" id="renderButton" class="btn btn-primary">Render Layers</button>
 
                   </form>
                   <br>
@@ -196,8 +199,6 @@
                     <!-- If the user is logging in to his/her own data then we should redirect back to the current page. -->
                     <input class="current-url" type="hidden" id="afterLogin" name="next" value="" />
                 {% endif %}
-                <hr>
-                <div id="data_message"></div>
                 <hr>
                 Questions or comments, suggestions, job offers?<br>
                 <a href="mailto:Rensi.Efrem@gmail.com" target="_top">Contact me!</a>
@@ -349,10 +350,13 @@
 
             map.spin(true);   // start progress indicator
             $.getJSON('/{{ username }}/getdata', query, function(data) {
-                $("#data_message").text(data.message);
+
                 if ("error" in data){
+                    $("#data_message").html("<font color='red'>" + data.error +"</font>");
                     return;
                 }
+
+                $("#data_message").text(data.message);
                 // console.log(data);
                 if (query.durations)
                     durations = data.durations;

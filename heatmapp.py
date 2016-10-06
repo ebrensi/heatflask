@@ -6,6 +6,7 @@ import flask_compress
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from datetime import date, timedelta
+import dateutil.parser
 import os
 import stravalib
 import flask_login
@@ -180,11 +181,23 @@ def index(username):
 @app.route('/<username>/getdata')
 def getdata(username):
     user = User.get(username)
-    start = request.args.get("start", False)
-    end = request.args.get("end", False)
+    start = request.args.get("start")
+    end = request.args.get("end")
 
-    if (not start) or (not end):
-        return {"error": "1", "message": "Invalid Date settings!"}
+    try:
+        dt_start = dateutil.parser.parse(start, fuzzy=True)
+        dt_end = dateutil.parser.parse(end, fuzzy=True)
+        assert(dt_end > dt_start)
+
+    except Exception as e:
+        app.logger.info(e)
+        return jsonify({
+            "error": "Enter Valid Dates."
+        })
+
+    start = dt_start.strftime("%Y-%m-%d")
+    end = dt_end.strftime("%Y-%m-%d")
+    # app.logger.info("dt_start = '{}', dt_end = '{}'".format(start, end))
 
     hires = request.args.get("hires") == "true"
     lores = request.args.get("lores") == "true"
@@ -229,14 +242,22 @@ def getdata(username):
                   .filter(Activity.beginTimestamp.between(start, end))
                   .filter_by(user=user)
                   ).all()
-        data["hires"] = [r[0] for r in result]
+        routes = [r[0] for r in result]
+        if any(routes):
+            data["hires"] = routes
+        else:
+            return jsonify({"error": "no high-res data in that date range"})
 
     if lores:
         result = (db.session.query(Activity.summary_polyline)
                   .filter(Activity.beginTimestamp.between(start, end))
                   .filter_by(user=user)
                   ).all()
-        data["lores"] = [r[0] for r in result]
+        routes = [r[0] for r in result]
+        if any(routes):
+            data["lores"] = routes
+        else:
+            return jsonify({"error": "no data in that date range"})
 
     if durations:
         result = (db.session.query(Activity.distance, Activity.time)
@@ -251,8 +272,9 @@ def getdata(username):
                              for pl in result]
 
     # app.logger.info(data)
-    data["message"] = "successfully retrieved data from {} to {}".format(
-        start, end)
+    data["message"] = (
+        "successfully retrieved data from {} to {}".format(start, end)
+    )
     return jsonify(data)
 
 
