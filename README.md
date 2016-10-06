@@ -3,6 +3,11 @@
 #### A Flask app that generates and displays [leaflet.js](http://leafletjs.com) visualizations from Strava activity data.
 #### http://heatflask.herokuapp.com
 
+## Documentation
+App usage instructions can be found [here](docs/docs.md).
+
+
+
 The currently running version of this app uses Leaflet 1.0 with the following plugins:
   * [sidebar-v2](https://github.com/turbo87/sidebar-v2)
   * [Leaflet.AntPath](https://github.com/rubenspgcavalcante/leaflet-ant-path) for Flow-map
