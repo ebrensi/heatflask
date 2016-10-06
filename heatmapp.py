@@ -180,8 +180,11 @@ def index(username):
 @app.route('/<username>/getdata')
 def getdata(username):
     user = User.get(username)
-    start = request.args.get("start")
-    end = request.args.get("end")
+    start = request.args.get("start", False)
+    end = request.args.get("end", False)
+
+    if (not start) or (not end):
+        return {"error": "1", "message": "Invalid Date settings!"}
 
     hires = request.args.get("hires") == "true"
     lores = request.args.get("lores") == "true"
@@ -248,6 +251,8 @@ def getdata(username):
                              for pl in result]
 
     # app.logger.info(data)
+    data["message"] = "successfully retrieved data from {} to {}".format(
+        start, end)
     return jsonify(data)
 
 
