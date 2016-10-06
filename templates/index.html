@@ -197,6 +197,8 @@
                     <input class="current-url" type="hidden" id="afterLogin" name="next" value="" />
                 {% endif %}
                 <hr>
+                <div id="data_message"></div>
+                <hr>
                 Questions or comments, suggestions, job offers?<br>
                 <a href="mailto:Rensi.Efrem@gmail.com" target="_top">Contact me!</a>
                 <br>
@@ -347,6 +349,10 @@
 
             map.spin(true);   // start progress indicator
             $.getJSON('/{{ username }}/getdata', query, function(data) {
+                $("#data_message").text(data.message);
+                if ("error" in data){
+                    return;
+                }
                 // console.log(data);
                 if (query.durations)
                     durations = data.durations;
