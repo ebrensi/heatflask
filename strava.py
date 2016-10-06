@@ -125,6 +125,16 @@ def activity_list():
         return redirect(url_for('login', next=url_for("activity_list", **args)))
 
 
+@app.route('/retrieve_list', methods=['POST'])
+def retrieve():
+    data = {
+        "to": request.form.getlist("to"),
+        "from": request.form.getlist("from")
+    }
+
+    return jsonify(data)
+
+
 @app.route('/activities/<activity_id>')
 def data_points(activity_id):
     if client.access_token:
