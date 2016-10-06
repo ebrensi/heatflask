@@ -475,10 +475,10 @@
                         map.fitBounds(flat);
                     }
 
+                $("#data_message").text(data.message);
             }).always(function() {
                     map.spin(false); // stop progress indicator
 
-                    $("#data_message").text(data.message);
                     appState['date1'] = date1;
                     appState["date2"] = date2;
                     appState["flowres"] = flowres;
