@@ -356,7 +356,6 @@
                     return;
                 }
 
-                $("#data_message").text(data.message);
                 // console.log(data);
                 if (query.durations)
                     durations = data.durations;
@@ -479,6 +478,7 @@
             }).always(function() {
                     map.spin(false); // stop progress indicator
 
+                    $("#data_message").text(data.message);
                     appState['date1'] = date1;
                     appState["date2"] = date2;
                     appState["flowres"] = flowres;

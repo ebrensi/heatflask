@@ -190,9 +190,9 @@ def getdata(username):
         assert(dt_end > dt_start)
 
     except Exception as e:
-        app.logger.info(e)
+        # app.logger.info(e)
         return jsonify({
-            "error": "Enter Valid Dates."
+            "error": "Enter Valid Dates"
         })
 
     start = dt_start.strftime("%Y-%m-%d")
@@ -273,7 +273,7 @@ def getdata(username):
 
     # app.logger.info(data)
     data["message"] = (
-        "successfully retrieved data from {} to {}".format(start, end)
+        "displaying {} - {} data".format(start, end)
     )
     return jsonify(data)
 
