@@ -7,43 +7,73 @@
         text-align: center;
       }
     </style>
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+
     <!-- JQuery -->
     <script src="{{ url_for('static', filename='js/jquery-3.1.0.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/jquery-ui.min.js') }}"></script>
 
+    <script src="{{ url_for('static', filename='js/multiselect.min.js') }}"></script>
   </head>
   <body>
 
-<h1>Activities json</h1>
-<div id="result"></div>
+
+  <div class="container">
+   <h2> Activity Select </h2>
+  </div>
+
+
+  <form action="{{ url_for('retrieve') }}" method='POST'>
+    <div class="row">
+      <div class="col-xs-5">
+          <select name="from" id="multiselect" class="form-control" size="100" multiple="multiple">
+
+          </select>
+      </div>
+
+      <div class="col-xs-2">
+          <button type="button" id="multiselect_rightAll" class="btn btn-block"><i class="glyphicon glyphicon-forward"></i></button>
+          <button type="button" id="multiselect_rightSelected" class="btn btn-block"><i class="glyphicon glyphicon-chevron-right"></i></button>
+          <button type="button" id="multiselect_leftSelected" class="btn btn-block"><i class="glyphicon glyphicon-chevron-left"></i></button>
+          <button type="button" id="multiselect_leftAll" class="btn btn-block"><i class="glyphicon glyphicon-backward"></i></button>
+      </div>
+
+      <div class="col-xs-5">
+          <select name="to" id="multiselect_to" class="form-control" size="100" multiple="multiple"></select>
+      </div>
+    </div>
+    <br>
+    <input type="submit" value="Queue activities for import">
+  </form>
+
+  <div id="status"></div>
 
   <script>
+    jQuery(document).ready(function($) {
+        $('#multiselect').multiselect();
+    });
+
     var source = new EventSource("{{ url_for('activity_stream', limit=limit) }}");
     var count = 0;
 
     source.onmessage = function(event) {
+      // $("#status").text("Getting Activity List");
 
       // console.log(event.data);
       if (event.data != 'done'){
         var j = JSON.parse(event.data);
-        link = "<a href={{ url_for('data_points',activity_id='') }}"+ j.id + "> "+ j.msg + "</a>";
-        document.getElementById("result").innerHTML += link + "<br>";
+
+        $('#multiselect').append($('<option>', {
+            value: j.id,
+            text: j.msg
+        }));
+
         count++;
       } else {
         source.close();
-        document.getElementById("result").innerHTML += "Done listing " + count +" activities.<br>";
+        // $("#status").text("Select from " + count + " activities");
       }
     };
-
-     source.onerror = function(e) {
-      closed = true;
-    };
-
-    source.addEventListener('end', function(event) {
-      event.target.close();
-      closed = true;
-    }, true);
-
 
   </script>
  </body>
