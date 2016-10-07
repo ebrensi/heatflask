@@ -97,6 +97,11 @@ def auth_callback(service):
                 db.session.add(user)
                 db.session.commit()
 
+                import stravaimport
+                stravaimport.import_activities(db, user, client,
+                                               limit=10,
+                                               detailed=True)
+
             elif access_token != user.strava_user_data["access_token"]:
                 # if user exists but the access token has changed, update it
                 user.strava_user_data["access_token"] = access_token
