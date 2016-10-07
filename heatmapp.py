@@ -102,7 +102,7 @@ def auth_callback(service):
                 user.strava_user_data["access_token"] = access_token
                 db.session.commit()
 
-            # I think this is remember=True, for persistent login.
+            # remember=True, for persistent login.
             login_user(user, remember=True)
 
     return redirect(request.args.get("state") or
@@ -155,8 +155,23 @@ def demo():
 
 @app.route('/<username>')
 def index(username):
+    date1 = request.args.get("date1")
+    date2 = request.args.get("date2")
     preset = request.args.get("preset")
-    # preset = preset if (preset in ["2", "7", "30", "60"]) else ""
+    autozoom = request.args.get("autozoom", "")
+    baselayer = request.args.getlist("baselayer")
+
+    if ((not date1) or (not date2)) and (not preset):
+        preset = "7"
+        autozoom = "1"
+        baselayer = ["OpenStreetMap.BlackAndWhite"]
+    else:
+        preset = preset if (preset in app.config["DATE_RANGE_PRESETS"]) else "7"
+
+    flowres = request.args.get("flowres", "")
+    heatres = request.args.get("heatres", "")
+    if (not flowres) and (not heatres):
+        flowres = "low"
 
     default_center = app.config["MAP_CENTER"]
     lat = request.args.get("lat") or default_center[0]
@@ -169,12 +184,12 @@ def index(username):
                            lng=lng,
                            zoom=zoom,
                            preset=preset,
-                           date1=request.args.get("date1"),
-                           date2=request.args.get("date2"),
-                           heatres=request.args.get("heatres", ""),
-                           flowres=request.args.get("flowres", ""),
-                           autozoom=request.args.get("autozoom", ""),
-                           baselayer=request.args.getlist("baselayer")
+                           date1=date1,
+                           date2=date2,
+                           heatres=heatres,
+                           flowres=flowres,
+                           autozoom=autozoom,
+                           baselayer=baselayer
                            )
 
 

@@ -10,6 +10,8 @@ class Config(object):
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SECRET_KEY = "pB\xeax\x9cJ\xd6\x81\xed\xd7\xf9\xd0\x99o\xad\rM\x92\xb1\x8b{7\x02r"
 
+    DATE_RANGE_PRESETS = ["2", "7", "30", "60", "180", "365"]
+
     # Strava stuff
     STRAVA_CLIENT_ID = os.environ["STRAVA_CLIENT_ID"]
     STRAVA_CLIENT_SECRET = os.environ["STRAVA_CLIENT_SECRET"]
