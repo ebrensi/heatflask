@@ -97,11 +97,6 @@ def auth_callback(service):
                 db.session.add(user)
                 db.session.commit()
 
-                import stravaimport
-                stravaimport.import_activities(db, user, client,
-                                               limit=10,
-                                               detailed=True)
-
             elif access_token != user.strava_user_data["access_token"]:
                 # if user exists but the access token has changed, update it
                 user.strava_user_data["access_token"] = access_token
@@ -156,6 +151,13 @@ def demo():
                             baselayer=["OpenTopoMap"]
                             )
                     )
+
+
+@app.route("/<username>/create_subscription")
+@login_required
+def create_subscription(username):
+    user = User.get(username)
+    client.create_subscription()
 
 
 @app.route('/<username>')
@@ -310,6 +312,11 @@ def activity_import():
                                                limit=count,
                                                detailed=detailed)
     return Response(do_import, mimetype='text/event-stream')
+
+
+@app.route('/subscription_callback')
+def subscription_callback():
+    pass
 
 
 @app.route('/admin')
