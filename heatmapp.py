@@ -45,13 +45,25 @@ def load_user(name):
 def nothing():
     return redirect(url_for('login'))
 
-# Display the login page
-
 
 @app.route("/login")
 # @cache.cached(timeout=120)
 def login():
     return render_template("login.html")
+
+
+@app.route('/demo')
+# @cache.cached(timeout=50)
+def demo():
+    return redirect(url_for("index",
+                            username="ebuggz",
+                            preset="7",
+                            heatres="high",
+                            flowres="low",
+                            autozoom=1,
+                            baselayer=["OpenTopoMap"]
+                            )
+                    )
 
 
 # Attempt to authorize a user via Oauth(2)
@@ -142,20 +154,6 @@ def delete(username):
               .format(current_user.name, username))
 
     return redirect(url_for("login"))
-
-
-@app.route('/demo')
-# @cache.cached(timeout=50)
-def demo():
-    return redirect(url_for("index",
-                            username="ebuggz",
-                            preset="7",
-                            heatres="high",
-                            flowres="low",
-                            autozoom=1,
-                            baselayer=["OpenTopoMap"]
-                            )
-                    )
 
 
 @app.route("/<username>/create_subscription")
@@ -287,14 +285,15 @@ def getdata(username):
             return jsonify({"error": "no data in that date range"})
 
     if durations:
-        result = (db.session.query(Activity.distance, Activity.time)
+        result = (db.session.query(Activity.distance,
+                                   Activity.time)
                   .filter(Activity.beginTimestamp.between(start, end))
                   .filter_by(user=user)
                   ).all()
 
         # data["distances"] = [[round(b - a, 2) for a, b in zip(pl[0], pl[0][1:])] + [0]
         #                      for pl in result]
-
+        app.logger.info(result)
         data["durations"] = [[(b - a) for a, b in zip(pl[1], pl[1][1:])] + [0]
                              for pl in result]
 
