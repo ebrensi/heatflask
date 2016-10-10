@@ -11,12 +11,10 @@ import os
 import stravalib
 import flask_login
 from flask_login import current_user, login_user, logout_user, login_required
-# from flask_caching import Cache
 
 
 app = Flask(__name__)
 app.config.from_object(os.environ['APP_SETTINGS'])
-# cache = Cache(app, config={'CACHE_TYPE': 'simple'})
 
 # views will be sent as gzip encoded
 flask_compress.Compress(app)
@@ -47,13 +45,11 @@ def nothing():
 
 
 @app.route("/login")
-# @cache.cached(timeout=120)
 def login():
     return render_template("login.html")
 
 
 @app.route('/demo')
-# @cache.cached(timeout=50)
 def demo():
     return redirect(url_for("index",
                             username="ebuggz",
@@ -74,7 +70,6 @@ def authorize(service):
     if service == 'strava':
         auth_url = client.authorization_url(client_id=app.config["STRAVA_CLIENT_ID"],
                                             redirect_uri=redirect_uri,
-                                            # approval_prompt="force",
                                             state=request.args.get("next"))
         return redirect(auth_url)
 
