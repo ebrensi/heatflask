@@ -26,7 +26,7 @@ bundles = {
                                      'css/leaflet.css',
                                      'css/leaflet-sidebar.css',
                                      'css/L.Control.ZoomBox.css',
-                                     output='index.css'),
+                                     output='gen/index.css'),
 
     "index_js": flask_assets.Bundle('js/jquery-3.1.0.min.js',
                                     'js/jquery-ui.min.js',
@@ -40,7 +40,7 @@ bundles = {
                                     'js/leaflet-ant-path.js',
                                     'js/L.Control.ZoomBox.min.js',
                                     'js/leaflet-providers.js',
-                                    output='index.js')
+                                    output='gen/index.js')
 
 }
 assets = flask_assets.Environment(app)
