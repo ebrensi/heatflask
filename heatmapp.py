@@ -152,13 +152,6 @@ def delete(username):
     return redirect(url_for("login"))
 
 
-@app.route("/<username>/create_subscription")
-@login_required
-def create_subscription(username):
-    user = User.get(username)
-    client.create_subscription()
-
-
 @app.route('/<username>')
 def index(username):
     date1 = request.args.get("date1")
@@ -304,7 +297,6 @@ def getdata(username):
 @login_required
 def activity_import():
     user = User.get(current_user.name)
-    app.logger.info(request.args)
     count = int(request.args.get("count", 1))
     detailed = True
 
@@ -313,11 +305,6 @@ def activity_import():
                                                limit=count,
                                                detailed=detailed)
     return Response(do_import, mimetype='text/event-stream')
-
-
-@app.route('/subscription_callback')
-def subscription_callback():
-    pass
 
 
 @app.route('/admin')
