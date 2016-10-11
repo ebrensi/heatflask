@@ -7,21 +7,9 @@
 
     <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
 
-    <!-- JQuery UI Theme  -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/jquery-ui.css') }}">
-
-    <!-- Bootstrap css-->
-    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
-
-    <link href="{{ url_for('static', filename='css/font-awesome.min.css') }}" rel="stylesheet">
-
-
-    <!-- leaflet@1.0.0-rc.3 -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/leaflet.css') }}" />
-
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/leaflet-sidebar.css') }}"/>
-
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/L.Control.ZoomBox.css') }}" />
+    {% assets "index_css" %}
+    <link rel="stylesheet" href="{{ ASSET_URL }}" />
+    {% endassets %}
 
 
     <style>
@@ -41,39 +29,9 @@
         }
     </style>
 
-
-    <!-- JQuery -->
-    <script src="{{ url_for('static', filename='js/jquery-3.1.0.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/jquery-ui.min.js') }}"></script>
-
-
-    <!--  Leaflet.js 1.0.0-rc.3 -->
-    <script src="{{ url_for('static', filename='js/leaflet.js') }}"></script>
-
-    <!-- sidebar v2 -->
-    <script src="{{ url_for('static', filename='js/leaflet-sidebar.js') }}"></script>
-
-    <!-- For polyline codec -->
-    <script type="text/javascript" src="{{ url_for('static', filename='js/Polyline.encoded.js') }}"></script>
-
-    <!-- Spinner to display during time-intensive operations -->
-    <script src="{{ url_for('static', filename='js/leaflet.spin.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/spin.min.js') }}"></script>
-
-    <!-- Moment.js for current date-->
-    <script src="{{ url_for('static', filename='js/moment.js') }}"></script>
-
-    <!-- Heatmap -->
-    <script src="{{ url_for('static', filename='js/leaflet-heat.js') }}"></script>
-
-    <!-- ant (Flow) path -->
-    <script src="{{ url_for('static', filename='js/leaflet-ant-path.js') }}"></script>
-
-    <!-- Zoom control -->
-    <script src="{{ url_for('static', filename='js/L.Control.ZoomBox.min.js') }}"></script>
-
-    <script type="text/javascript" src="{{ url_for('static', filename='js/leaflet-providers.js') }}"></script>
-
+    {% assets "index_js" %}
+    <script type="text/javascript" src="{{ ASSET_URL }}"></script>
+    {% endassets %}
 
 </head>
 <body>
