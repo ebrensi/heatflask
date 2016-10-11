@@ -18,7 +18,7 @@ import flask_assets
 app = Flask(__name__)
 app.config.from_object(os.environ['APP_SETTINGS'])
 
-# Client-side bundling of javascript and css files
+# we bundle javascript and css dependencies to reduce client-side overhead
 bundles = {
     "index_css": flask_assets.Bundle('css/jquery-ui.css',
                                      'css/bootstrap.min.css',
@@ -26,7 +26,7 @@ bundles = {
                                      'css/leaflet.css',
                                      'css/leaflet-sidebar.css',
                                      'css/L.Control.ZoomBox.css',
-                                     output='gen/index.css'),
+                                     output='index.css'),
 
     "index_js": flask_assets.Bundle('js/jquery-3.1.0.min.js',
                                     'js/jquery-ui.min.js',
@@ -40,7 +40,7 @@ bundles = {
                                     'js/leaflet-ant-path.js',
                                     'js/L.Control.ZoomBox.min.js',
                                     'js/leaflet-providers.js',
-                                    output='gen/index.js')
+                                    output='index.js')
 
 }
 assets = flask_assets.Environment(app)
