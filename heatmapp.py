@@ -27,9 +27,6 @@ db = SQLAlchemy(app)
 from models import User, Activity
 migrate = Migrate(app, db)
 
-# Strava client
-client = stravalib.Client()
-
 # Flask-login stuff
 login_manager = flask_login.LoginManager()
 login_manager.init_app(app)
@@ -69,6 +66,7 @@ def authorize(service):
     redirect_uri = url_for('auth_callback', service=service, _external=True)
 
     if service == 'strava':
+        client = stravalib.Client()
         auth_url = client.authorization_url(client_id=app.config["STRAVA_CLIENT_ID"],
                                             redirect_uri=redirect_uri,
                                             state=request.args.get("next"))
@@ -89,6 +87,7 @@ def auth_callback(service):
             args = {"code": request.args.get("code"),
                     "client_id": app.config["STRAVA_CLIENT_ID"],
                     "client_secret": app.config["STRAVA_CLIENT_SECRET"]}
+            client = stravalib.Client()
             access_token = client.exchange_code_for_token(**args)
             client.access_token = access_token
 
@@ -126,7 +125,6 @@ def auth_callback(service):
 def logout():
     if not current_user.is_anonymous:
         username = current_user.name
-        client.access_token = None
         logout_user()
         flash("{} logged out".format(username))
     return redirect(request.args.get("next") or url_for("login"))
@@ -136,15 +134,17 @@ def logout():
 @login_required
 def delete(username):
     if username == current_user.name:
-        # log out current user
-        client.access_token = None
         logout_user()
 
         # that user is no longer the current user
         user = User.get(username)
-        db.session.delete(user)
-        db.session.commit()
-        flash("user '{}' deleted".format(username))
+        try:
+            db.session.delete(user)
+            db.session.commit()
+        except Exception as e:
+            flash(str(e))
+        else:
+            flash("user '{}' deleted".format(username))
     else:
         flash("you ({}) are not authorized to delete user {}"
               .format(current_user.name, username))
@@ -204,7 +204,6 @@ def getdata(username):
         assert(dt_end > dt_start)
 
     except Exception as e:
-        # app.logger.info(e)
         return jsonify({
             "error": "Enter Valid Dates"
         })
@@ -249,8 +248,6 @@ def getdata(username):
         }
         for r in result]
 
-    # app.logger.info(data)
-
     if hires:
         result = (db.session.query(Activity.polyline)
                   .filter(Activity.beginTimestamp.between(start, end))
@@ -286,25 +283,27 @@ def getdata(username):
         data["durations"] = [[(b - a) for a, b in zip(pl[1], pl[1][1:])] + [0]
                              for pl in result]
 
-    # app.logger.info(data)
     data["message"] = (
         "displaying {} - {} data".format(start, end)
     )
     return jsonify(data)
 
 
-@app.route('/activity_import')
+@app.route('/<username>/activity_import')
 @login_required
-def activity_import():
-    user = User.get(current_user.name)
-    count = int(request.args.get("count", 1))
-    detailed = True
+def activity_import(username):
+    if username == current_user.name:
+        user = User.get(username)
+        count = int(request.args.get("count", 1))
+        detailed = True
 
-    import stravaimport
-    do_import = stravaimport.import_activities(db, user, client,
-                                               limit=count,
-                                               detailed=detailed)
-    return Response(do_import, mimetype='text/event-stream')
+        import stravaimport
+        do_import = stravaimport.import_activities(db, user,
+                                                   limit=count,
+                                                   detailed=detailed)
+        return Response(do_import, mimetype='text/event-stream')
+    else:
+        return iter(["There is a problem importing activities. Try logging out and logging back in."])
 
 
 @app.route('/admin')

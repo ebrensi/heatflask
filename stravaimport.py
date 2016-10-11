@@ -7,13 +7,12 @@ import polyline
 import argparse
 import logging
 
-
 logging.basicConfig(  # filename="strava_import_{}.log".format(CURRENT_DATE),
     format='%(levelname)s:%(message)s',
     level=logging.INFO)
 
 
-def import_activities(db, user, client, limit=1, detailed=True):
+def import_activities(db, user, limit=1, detailed=True):
     already_got = [int(d[0]) for d in db.session.query(
         Activity.id).filter_by(user=user).all()]
 
@@ -22,9 +21,19 @@ def import_activities(db, user, client, limit=1, detailed=True):
     logging.info(msg)
     yield msg + "\n"
 
+    token = user.strava_user_data.get("access_token")
+    client = stravalib.Client(access_token=token)
     activities = client.get_activities(limit=limit)
 
-    for a in activities:
+    while True:
+        try:
+            a = activities.next()
+        except StopIteration:
+            return
+        except Exception as e:
+            yield str(e)
+            return
+
         count += 1
 
         if not a.start_latlng:
@@ -129,14 +138,11 @@ if __name__ == '__main__':
             Activity.query.filter_by(user=user).delete()
             logging.info("clean import: deleted GC records for %s", user)
 
-        client = stravalib.Client(
-            access_token=user.strava_user_data["access_token"])
-
         limit = None if args.count == "all" else int(args.count)
 
         logging.info("importing {} records for {}".format(limit, user.name))
 
         # import GC activities for user
-        for msg in import_activities(db, user, client, limit=limit,
+        for msg in import_activities(db, user, limit=limit,
                                      detailed=args.detailed):
             pass
