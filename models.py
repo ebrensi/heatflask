@@ -1,6 +1,6 @@
-from heatmapp import db
 from flask_login import UserMixin
 from sqlalchemy.dialects.postgresql import ARRAY, TIMESTAMP, JSON, REAL
+from heatmapp import db
 
 
 class User(UserMixin, db.Model):
