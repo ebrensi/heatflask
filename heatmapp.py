@@ -1,4 +1,5 @@
 #! usr/bin/env python
+from __future__ import unicode_literals
 
 from flask import Flask, Response, render_template, request, redirect, \
     jsonify, url_for, abort, session, flash, g
@@ -288,7 +289,7 @@ def getdata(username):
 
         # data["distances"] = [[round(b - a, 2) for a, b in zip(pl[0], pl[0][1:])] + [0]
         #                      for pl in result]
-        app.logger.info(result)
+
         data["durations"] = [[(b - a) for a, b in zip(pl[1], pl[1][1:])] + [0]
                              for pl in result]
 
@@ -303,8 +304,9 @@ def getdata(username):
 @login_required
 def activity_import():
     user = User.get(current_user.name)
+    app.logger.info(request.args)
     count = int(request.args.get("count", 1))
-    detailed = request.args.get("detailed") == "yes"
+    detailed = True
 
     import stravaimport
     do_import = stravaimport.import_activities(db, user, client,

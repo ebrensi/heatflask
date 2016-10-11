@@ -1,10 +1,12 @@
 #! usr/bin/env python
 
+from __future__ import unicode_literals
 import stravalib
 from heatmapp import db, Activity, User
 import polyline
 import argparse
 import logging
+
 
 logging.basicConfig(  # filename="strava_import_{}.log".format(CURRENT_DATE),
     format='%(levelname)s:%(message)s',
@@ -50,8 +52,7 @@ def import_activities(db, user, client, limit=1, detailed=True):
 
             if detailed:
                 stream_names = ['time', 'latlng', 'distance', 'altitude',
-                                'velocity_smooth', 'cadence', 'watts',
-                                'grade_smooth']
+                                'velocity_smooth', 'cadence', 'grade_smooth']
 
                 streams = client.get_activity_streams(a.id,
                                                       types=stream_names)
