@@ -12,10 +12,40 @@ import os
 import stravalib
 import flask_login
 from flask_login import current_user, login_user, logout_user, login_required
+import flask_assets
 
 
 app = Flask(__name__)
 app.config.from_object(os.environ['APP_SETTINGS'])
+
+# Client-side bundling of javascript and css files
+bundles = {
+    "index_css": flask_assets.Bundle('css/jquery-ui.css',
+                                     'css/bootstrap.min.css',
+                                     'css/font-awesome.min.css',
+                                     'css/leaflet.css',
+                                     'css/leaflet-sidebar.css',
+                                     'css/L.Control.ZoomBox.css',
+                                     output='gen/index.css'),
+
+    "index_js": flask_assets.Bundle('js/jquery-3.1.0.min.js',
+                                    'js/jquery-ui.min.js',
+                                    'js/leaflet.js',
+                                    'js/leaflet-sidebar.js',
+                                    'js/Polyline.encoded.js',
+                                    'js/leaflet.spin.js',
+                                    'js/spin.min.js',
+                                    'js/moment.js',
+                                    'js/leaflet-heat.js',
+                                    'js/leaflet-ant-path.js',
+                                    'js/L.Control.ZoomBox.min.js',
+                                    'js/leaflet-providers.js',
+                                    output='gen/index.js')
+
+}
+assets = flask_assets.Environment(app)
+assets.register(bundles)
+
 
 # views will be sent as gzip encoded
 flask_compress.Compress(app)
