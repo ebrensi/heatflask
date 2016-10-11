@@ -108,6 +108,7 @@
         <div class="sidebar-content">
             <div class="sidebar-pane" id="home">
                 <h1 class="sidebar-header">
+                    <a href="https://www.strava.com/athletes/{{ username }}"><img src="{{ url_for('static',filename='strava_button.png')}}" width=20, height=20 class="img-fluid"> </a>
                     {{ username }}'s map
                     <span class="sidebar-close"><i class="fa fa-caret-left"></i></span>
                 </h1>
@@ -182,14 +183,7 @@
                   <br>
 
                 <hr>
-                {% if current_user.is_authenticated %}
-                <h3>Logged in as {{ current_user.name }}</h3>
-                    <form action="{{ url_for('logout') }}">
-                        <input type="submit" class="btn btn-danger" value="Log Out" />
-
-                        <input class="current-url" type="hidden" id="afterLogout" name="next" value="" />
-                    </form>
-                {% else %}
+                {% if not current_user.is_authenticated %}
                     Create an account and/or log in
                     <br>
 
@@ -230,10 +224,8 @@
 
                     Import
 
-                    <input type="number" name="count" value=10 min=0 max=10>
+                    <input type="number" name="count" value=10 min=0 max=50>
                     most recent activities from Strava.
-                    <br>
-                    <input type="checkbox" checked disabled="disabled" name="detailed" value="yes">Import High-Resolution data<br>
                     <br>
                     <input type="submit" value="Go!"/>
 
@@ -244,9 +236,16 @@
                 </form>
 
                 <br>
+                <form action="{{ url_for('logout') }}">
+                    <input type="submit" class="btn btn-danger" value="Log Out" />
+
+                    <input class="current-url" type="hidden" id="afterLogout" name="next" value="" />
+                </form>
+
+                <br>
                 <hr>
                 <br><br>
-                <form action="{{ url_for('delete', username=username) }}">
+                <form action="{{ url_for('delete', username=username) }}" onsubmit="return confirm('Delete your info from our database?');">
                     <input type="submit" class="btn btn-danger" value="Delete Account" />
                 </form>
             </div>
