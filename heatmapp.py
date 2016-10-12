@@ -375,7 +375,7 @@ def activities():
         options["after"] = dateutil.parser.parse(request.args.get("after"))
 
     if "limit" in request.args:
-        options["limit"] = request.args.get("limit")
+        options["limit"] = int(request.args.get("limit"))
 
     def boo():
         for a in activity_summary_iterator(user, **options):
