@@ -367,9 +367,18 @@ def activities():
     user = User.get(current_user.name)
     ids_query = db.session.query(Activity.id).filter_by(user=user).all()
     cached_activities = set(int(d[0]) for d in ids_query)
+    options = {}
+    if "before" in request.args:
+        options["before"] = dateutil.parser.parse(request.args.get("before"))
+
+    if "after" in request.args:
+        options["after"] = dateutil.parser.parse(request.args.get("after"))
+
+    if "limit" in request.args:
+        options["limit"] = request.args.get("limit")
 
     def boo():
-        for a in activity_summary_iterator(user, limit=100):
+        for a in activity_summary_iterator(user, **options):
             a["cached"] = "yes" if int(a['id']) in cached_activities else "no"
             yield "data: {}\n\n".format(json.dumps(a))
         yield "data: done\n\n"
@@ -381,8 +390,13 @@ def activities():
 @login_required
 def admin():
     users = User.query.all()
-    from sqlalchemy import func
-    info = {user.name: {"is_active": user.is_active} for user in users}
+
+    info = {
+        user.name: {
+            "is_active": user.is_active
+            "cached": len(db.session.query(Activity.id).filter_by(user=user).all())
+        }
+        for user in users}
     return jsonify(info)
 
 
