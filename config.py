@@ -3,6 +3,8 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 
 
 class Config(object):
+    APP_NAME = "HeatFlow (alpha)"
+    APP_VERSION = "alpha"
     DEBUG = False
     TESTING = False
     CSRF_ENABLED = True
