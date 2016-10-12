@@ -9,6 +9,7 @@ from flask_migrate import Migrate
 from datetime import date, timedelta
 import dateutil.parser
 import os
+import json
 import stravalib
 import flask_login
 from flask_login import current_user, login_user, logout_user, login_required
@@ -228,6 +229,11 @@ def getdata(username):
     start = request.args.get("start")
     end = request.args.get("end")
 
+    hires = request.args.get("hires") == "true"
+    lores = request.args.get("lores") == "true"
+
+    durations = request.args.get("durations")
+
     try:
         dt_start = dateutil.parser.parse(start, fuzzy=True)
         dt_end = dateutil.parser.parse(end, fuzzy=True)
@@ -241,10 +247,6 @@ def getdata(username):
     start = dt_start.strftime("%Y-%m-%d")
     end = dt_end.strftime("%Y-%m-%d")
     # app.logger.info("dt_start = '{}', dt_end = '{}'".format(start, end))
-
-    hires = request.args.get("hires") == "true"
-    lores = request.args.get("lores") == "true"
-    durations = request.args.get("durations")
 
     data = {}
 
@@ -334,10 +336,52 @@ def activity_import(username):
         return iter(["There is a problem importing activities. Try logging out and logging back in."])
 
 
+def activity_summary_iterator(user, **args):
+    token = user.strava_user_data.get("access_token")
+    client = stravalib.Client(access_token=token)
+    activities = client.get_activities(**args)
+
+    while True:
+        try:
+            a = activities.next()
+        except StopIteration:
+            return
+        except Exception as e:
+            yield {"error": str(e)}
+            return
+
+        yield {
+            "id": a.id,
+            "name": a.name,
+            "type": a.type,
+            "summary_polyline": a.map.summary_polyline,
+            "beginTimestamp": str(a.start_date_local),
+            "total_distance": float(a.distance),
+            "elapsed_time": int(a.elapsed_time.total_seconds())
+        }
+
+
+@app.route('/activity_summary_sse')
+@login_required
+def activities():
+    user = User.get(current_user.name)
+    ids_query = db.session.query(Activity.id).filter_by(user=user).all()
+    cached_activities = set(int(d[0]) for d in ids_query)
+
+    def boo():
+        for a in activity_summary_iterator(user, **request.args):
+            a["cached"] = "yes" if int(a['id']) in cached_activities else "no"
+            yield "data: {}\n\n".format(json.dumps(a))
+        yield "data: done\n\n"
+
+    return Response(boo(), mimetype='text/event-stream')
+
+
 @app.route('/admin')
-# @login_required
+@login_required
 def admin():
     users = User.query.all()
+    from sqlalchemy import func
     info = {user.name: {"is_active": user.is_active} for user in users}
     return jsonify(info)
 
