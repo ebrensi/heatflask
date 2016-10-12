@@ -22,11 +22,11 @@
    <h2> Activity Select </h2>
   </div>
 
-
+  <div class="container">
   <form action="{{ url_for('retrieve') }}" method='POST'>
     <div class="row">
       <div class="col-xs-5">
-          <select name="from" id="multiselect" class="form-control" size="100" multiple="multiple">
+          <select name="from" id="multiselect" class="form-control" size="50" multiple="multiple">
 
           </select>
       </div>
@@ -39,12 +39,13 @@
       </div>
 
       <div class="col-xs-5">
-          <select name="to" id="multiselect_to" class="form-control" size="100" multiple="multiple"></select>
+          <select name="to" id="multiselect_to" class="form-control" size="50" multiple="multiple"></select>
       </div>
     </div>
     <br>
     <input type="submit" value="Queue activities for import">
   </form>
+</div>
 
   <div id="status"></div>
 

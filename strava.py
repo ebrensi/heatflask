@@ -1,7 +1,7 @@
 #! /usr/bin/env python
-# This is a sample app to test Strava API functionality
+# This is a little app to test stravalib API functionality
 
-
+from __future__ import unicode_literals
 from flask import Flask, redirect, url_for, request, jsonify, Response, \
     render_template
 import stravalib
@@ -34,6 +34,7 @@ def index():
             "username": athlete.username,
             "pic_url": athlete.profile
         }
+
         return jsonify(ath)
     else:
         return redirect(url_for('login'))
