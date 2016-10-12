@@ -325,12 +325,10 @@ def activity_import(username):
     if username == current_user.name:
         user = User.get(username)
         count = int(request.args.get("count", 1))
-        detailed = True
 
         import stravaimport
         do_import = stravaimport.import_activities(db, user,
-                                                   limit=count,
-                                                   detailed=detailed)
+                                                   limit=count)
         return Response(do_import, mimetype='text/event-stream')
     else:
         return iter(["There is a problem importing activities. Try logging out and logging back in."])
