@@ -386,7 +386,21 @@ def activities():
     return Response(boo(), mimetype='text/event-stream')
 
 
-#  Subscription stuff (untested)
+# Admin stuff
+@app.route('/admin')
+@login_required
+def admin():
+    users = User.query.all()
+
+    info = {
+        user.name: {
+            "is_active": user.is_active,
+            "cached": len(db.session.query(Activity.id).filter_by(user=user).all())
+        }
+        for user in users}
+    return jsonify(info)
+
+"""
 @app.route('/subscribe')
 @login_required
 def subscribe():
@@ -408,22 +422,7 @@ def webhook_callback():
         response = client.handle_subscription_callback(request)
     else:
         response = client.handle_subscription_update(request)
-
-
-# Admin stuff
-@app.route('/admin')
-@login_required
-def admin():
-    users = User.query.all()
-
-    info = {
-        user.name: {
-            "is_active": user.is_active,
-            "cached": len(db.session.query(Activity.id).filter_by(user=user).all())
-        }
-        for user in users}
-    return jsonify(info)
-
+"""
 
 # python heatmapp.py works but you really should use `flask run`
 if __name__ == '__main__':
