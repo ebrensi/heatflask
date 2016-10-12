@@ -386,6 +386,31 @@ def activities():
     return Response(boo(), mimetype='text/event-stream')
 
 
+#  Subscription stuff (untested)
+@app.route('/subscribe')
+@login_required
+def subscribe():
+    user = User.get(current_user.name)
+    token = user.strava_user_data.get("access_token")
+    client = stravalib.Client(access_token=token)
+    sub = client.create_subscription(client_id=app.config["STRAVA_CLIENT_ID"],
+                                     client_secret=app.config[
+                                         "STRAVA_CLIENT_SECRET"],
+                                     callback_url=url_for("webhook_callback",
+                                                          _external=True))
+
+
+@app.route('/webhook_callback', methods=["GET", "POST"])
+def webhook_callback():
+    client = stravalib.Client()
+
+    if request.method == 'GET':
+        response = client.handle_subscription_callback(request)
+    else:
+        response = client.handle_subscription_update(request)
+
+
+# Admin stuff
 @app.route('/admin')
 @login_required
 def admin():
