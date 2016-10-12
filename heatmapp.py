@@ -369,7 +369,7 @@ def activities():
     cached_activities = set(int(d[0]) for d in ids_query)
 
     def boo():
-        for a in activity_summary_iterator(user, **request.args):
+        for a in activity_summary_iterator(user, limit=100):
             a["cached"] = "yes" if int(a['id']) in cached_activities else "no"
             yield "data: {}\n\n".format(json.dumps(a))
         yield "data: done\n\n"
