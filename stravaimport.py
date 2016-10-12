@@ -81,7 +81,7 @@ def import_activities(db, user, limit=1):
                     )
             }
 
-            if "polyline" in stream_data:
+            if "latlng" in stream_data:
                 activity_data["polyline"] = (
                     polyline.encode(stream_data.pop('latlng'))
                 )
