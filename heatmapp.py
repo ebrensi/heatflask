@@ -393,7 +393,7 @@ def admin():
 
     info = {
         user.name: {
-            "is_active": user.is_active
+            "is_active": user.is_active,
             "cached": len(db.session.query(Activity.id).filter_by(user=user).all())
         }
         for user in users}
