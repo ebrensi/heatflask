@@ -29,6 +29,9 @@ def import_activities(db, user, limit=1):
         try:
             a = activities.next()
         except StopIteration:
+            msg = "done importing {} activities.".format(count)
+            logging.info(msg)
+            yield msg + "\n"
             return
         except Exception as e:
             yield str(e)
