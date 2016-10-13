@@ -27,9 +27,9 @@
 
       <h3>Create a new account or connect to an existing one</h3>
       <br>
-      <a href="{{ url_for('authorize', service='strava') }}">
-                <img src="static/btn_strava_connectwith_orange.svg">
-                </a>
+      <form action="{{ url_for('authorize') }}">
+          <input type="image" src="{{ url_for('static', filename='btn_strava_connectwith_orange.svg') }}" alt="Log-In with Strava" />
+      </form>
 
       {% if error %}
         <p class="error"><strong>Error:</strong> {{ error }}
