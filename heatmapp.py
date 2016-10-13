@@ -234,6 +234,12 @@ def index(username):
 @app.route('/<username>/getdata')
 def getdata(username):
     user = User.get(username)
+
+    if not user:
+        return jsonify({
+            "error": "'{}' is not registered with this app".format(username)
+        })
+
     start = request.args.get("start")
     end = request.args.get("end")
 
