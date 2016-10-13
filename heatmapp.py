@@ -70,12 +70,10 @@ def load_user(name):
 
 @app.route('/')
 def nothing():
-    return redirect(url_for('splash'))
-
-
-@app.route("/splash")
-def splash():
-    return render_template("splash.html")
+    if current_user.is_anonymous:
+        return render_template("splash.html")
+    else:
+        return redirect(url_for('index', username=current_user.name))
 
 
 @app.route('/demo')
