@@ -73,82 +73,82 @@
 
                 <h3>Enter dates over which to render:</h3>
 
-                  <form id="renderform" action="{{ url_for('index', username=username)}}">
+                <form id="renderform" action="{{ url_for('index', username=username)}}">
 
-                     <span style="display:block">
-                      <label for="preset" style="display:block">Relative-Date Preset:</label>
-                      <select id ="preset" form="renderform" >
-                        <option value=2 selected="selected">Last 2 days</option>
-                        <option value=7>Last 7 days</option>
-                        <option value=30>Last 30 days</option>
-                        <option value=60>Last 60 days</option>
-                        <option value=180>Last 180 days</option>
-                        <option value=365>Last year</option>
-                        <option value=-7 disabled>This week (M-F)</option>
-                        <option value=-30 disabled>This month</option>
-                        <option value=-365 disabled>This year</option>
-                        <option value=0 disabled>All</option>
-                        <option value="">----</option>
-                      </select>
-                      </span>
+                 <span style="display:block">
+                  <label for="preset" style="display:block">Relative-Date Preset:</label>
+                  <select id ="preset" form="renderform" >
+                    <option value=2 selected="selected">Last 2 days</option>
+                    <option value=7>Last 7 days</option>
+                    <option value=30>Last 30 days</option>
+                    <option value=60>Last 60 days</option>
+                    <option value=180>Last 180 days</option>
+                    <option value=365>Last year</option>
+                    <option value=-7 disabled>This week (M-F)</option>
+                    <option value=-30 disabled>This month</option>
+                    <option value=-365 disabled>This year</option>
+                    <option value=0 disabled>All</option>
+                    <option value="">----</option>
+                  </select>
+                  </span>
 
-                      <br>
-
-                      <span style="display:block">
-                        <label for="date1" style="display:block">Start Date:</label>
-                        <input class="datepick" id="date1" type="text"  value=""/>
-                      </span>
-                      <br>
-
-                      <span style="display:block">
-                        <label for="date2" style="display:block">End Date:</label>
-                        <input class="datepick" id="date2" type="text" value=""/>
-                      </span>
-
-                      <br>
-
-                      <span style="display:block">
-                      <label for="renderHeat" style="display:block">Heat Layer:</label>
-                      <select id="heatres" name="renderHeat" form="renderform">
-                        <option value="">None</option>
-                        <option value="high" selected="selected">High resolution</option>
-                        <option value="low">Low resolution</option>
-                      </select>
-                      </span>
-
-
-                        <span style="display:block">
-                      <label for="renderFlow" style="display:block">Flow Layer:</label>
-                      <select id="flowres" name="renderFlow" form="renderform">
-                        <option value="">None</option>
-                        <option value="high">High resolution</option>
-                        <option value="low" selected="selected">Low resolution</option>
-                      </select>
-                      </span>
-
-
-                        <div class="checkbox">
-                          <label><input type="checkbox" id="autozoom" value="1">Auto-Zoom on render</label>
-                        </div>
-
-                    <hr>
-                        <div id="data_message">
-                            {% with messages = get_flashed_messages() %}
-                                {% if messages %}
-                                  <ul class=flashes>
-                                  {% for message in messages %}
-                                    <li>{{ message }}</li>
-                                  {% endfor %}
-                                  </ul>
-                                {% endif %}
-                            {% endwith %}
-                        </div>
-                    <hr>
-
-                    <button type="button" id="renderButton" class="btn btn-primary">Render Layers</button>
-
-                  </form>
                   <br>
+
+                  <span style="display:block">
+                    <label for="date1" style="display:block">Start Date:</label>
+                    <input class="datepick" id="date1" type="text"  value=""/>
+                  </span>
+                  <br>
+
+                  <span style="display:block">
+                    <label for="date2" style="display:block">End Date:</label>
+                    <input class="datepick" id="date2" type="text" value=""/>
+                  </span>
+
+                  <br>
+
+                  <span style="display:block">
+                  <label for="renderHeat" style="display:block">Heat Layer:</label>
+                  <select id="heatres" name="renderHeat" form="renderform">
+                    <option value="">None</option>
+                    <option value="high" selected="selected">High resolution</option>
+                    <option value="low">Low resolution</option>
+                  </select>
+                  </span>
+
+
+                    <span style="display:block">
+                  <label for="renderFlow" style="display:block">Flow Layer:</label>
+                  <select id="flowres" name="renderFlow" form="renderform">
+                    <option value="">None</option>
+                    <option value="high">High resolution</option>
+                    <option value="low" selected="selected">Low resolution</option>
+                  </select>
+                  </span>
+
+
+                    <div class="checkbox">
+                      <label><input type="checkbox" id="autozoom" value="1">Auto-Zoom on render</label>
+                    </div>
+
+                <hr>
+                    <div id="data_message">
+                        {% with messages = get_flashed_messages() %}
+                            {% if messages %}
+                              <ul class=flashes>
+                              {% for message in messages %}
+                                <li>{{ message }}</li>
+                              {% endfor %}
+                              </ul>
+                            {% endif %}
+                        {% endwith %}
+                    </div>
+                <hr>
+
+                <button type="button" id="renderButton" class="btn btn-primary">Render Layers</button>
+
+              </form>
+                <br>
 
                 <hr>
                 {% if current_user.is_authenticated %}
