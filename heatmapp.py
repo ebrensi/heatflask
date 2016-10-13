@@ -106,7 +106,7 @@ def authorize(service):
 
 # Authorization callback.  The service returns here to give us an access_token
 #  for the user who successfully logged in.
-@app.route('/authorized/<service>')
+@app.route('/authorized')
 def auth_callback(service):
     if "error" in request.args:
         error = request.args["error"]
@@ -114,38 +114,37 @@ def auth_callback(service):
         return redirect(url_for("login"))
 
     if current_user.is_anonymous:
-        if service == "strava":
-            args = {"code": request.args.get("code"),
-                    "client_id": app.config["STRAVA_CLIENT_ID"],
-                    "client_secret": app.config["STRAVA_CLIENT_SECRET"]}
-            client = stravalib.Client()
-            access_token = client.exchange_code_for_token(**args)
-            client.access_token = access_token
+        args = {"code": request.args.get("code"),
+                "client_id": app.config["STRAVA_CLIENT_ID"],
+                "client_secret": app.config["STRAVA_CLIENT_SECRET"]}
+        client = stravalib.Client()
+        access_token = client.exchange_code_for_token(**args)
+        client.access_token = access_token
 
-            strava_user = client.get_athlete()
-            user = User.get(strava_user.username)
+        strava_user = client.get_athlete()
+        user = User.get(strava_user.username)
 
-            if not user:
-                # If this user isn't in the database we create an account
-                strava_user_info = {"id": strava_user.id,
-                                    "firstname": strava_user.firstname,
-                                    "lastname": strava_user.lastname,
-                                    "username": strava_user.username,
-                                    "pic_url": strava_user.profile,
-                                    "access_token": access_token
-                                    }
-                user = User(name=strava_user.username,
-                            strava_user_data=strava_user_info)
-                db.session.add(user)
-                db.session.commit()
+        if not user:
+            # If this user isn't in the database we create an account
+            strava_user_info = {"id": strava_user.id,
+                                "firstname": strava_user.firstname,
+                                "lastname": strava_user.lastname,
+                                "username": strava_user.username,
+                                "pic_url": strava_user.profile,
+                                "access_token": access_token
+                                }
+            user = User(name=strava_user.username,
+                        strava_user_data=strava_user_info)
+            db.session.add(user)
+            db.session.commit()
 
-            elif access_token != user.strava_user_data["access_token"]:
-                # if user exists but the access token has changed, update it
-                user.strava_user_data["access_token"] = access_token
-                db.session.commit()
+        elif access_token != user.strava_user_data["access_token"]:
+            # if user exists but the access token has changed, update it
+            user.strava_user_data["access_token"] = access_token
+            db.session.commit()
 
-            # remember=True, for persistent login.
-            login_user(user, remember=True)
+        # remember=True, for persistent login.
+        login_user(user, remember=True)
 
     return redirect(request.args.get("state") or
                     url_for("index", username=current_user.name))
