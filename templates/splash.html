@@ -20,7 +20,7 @@
           {% endfor %}
           </ul>
         {% endif %}
-      {% endwith %}
+    {% endwith %}
 
       <h1>{{ config["APP_NAME"] }}</h1>
 
@@ -28,7 +28,9 @@
       <h3>Create a new account or connect to an existing one</h3>
       <br>
       <form action="{{ url_for('authorize') }}">
-          <input type="image" src="{{ url_for('static', filename='btn_strava_connectwith_orange.svg') }}" alt="Log-In with Strava" />
+          <input type="image" src="{{ url_for('static', filename='btn_strava_connectwith_orange.svg') }}"
+           alt="Log-In with Strava" >
+          <input type="hidden" name="state" value="{{ url_for('splash') }}">
       </form>
 
       {% if error %}

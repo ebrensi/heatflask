@@ -70,12 +70,12 @@ def load_user(name):
 
 @app.route('/')
 def nothing():
-    return redirect(url_for('login'))
+    return redirect(url_for('splash'))
 
 
-@app.route("/login")
-def login():
-    return render_template("login.html")
+@app.route("/splash")
+def splash():
+    return render_template("splash.html")
 
 
 @app.route('/demo')
@@ -94,13 +94,14 @@ def demo():
 # Attempt to authorize a user via Oauth(2)
 @app.route('/authorize')
 def authorize():
-    redirect_uri = url_for('auth_callback',  _external=True)
+    state = request.args.get("state")
+    redirect_uri = url_for('auth_callback', _external=True)
 
     client = stravalib.Client()
     auth_url = client.authorization_url(client_id=app.config["STRAVA_CLIENT_ID"],
                                         redirect_uri=redirect_uri,
                                         approval_prompt="force",
-                                        state=request.args.get("next"))
+                                        state=state)
     return redirect(auth_url)
 
 
@@ -108,10 +109,12 @@ def authorize():
 #  for the user who successfully logged in.
 @app.route('/authorized')
 def auth_callback():
+    state = request.args.get("state")
+
     if "error" in request.args:
         error = request.args["error"]
         flash("Error: {}".format(error))
-        return redirect(url_for("login"))
+        return redirect(state)
 
     if current_user.is_anonymous:
         args = {"code": request.args.get("code"),
@@ -120,8 +123,10 @@ def auth_callback():
         client = stravalib.Client()
         try:
             access_token = client.exchange_code_for_token(**args)
-        except:
-            raise
+        except Exception as e:
+            app.logger.info(str(e))
+            flash(str(e))
+            return redirect(state)
 
         client.access_token = access_token
 
@@ -161,7 +166,7 @@ def logout():
         username = current_user.name
         logout_user()
         flash("{} logged out".format(username))
-    return redirect(request.args.get("next") or url_for("login"))
+    return redirect(request.args.get("next") or url_for("splash"))
 
 
 @app.route("/<username>/delete")
@@ -183,7 +188,7 @@ def delete(username):
         flash("you ({}) are not authorized to delete user {}"
               .format(current_user.name, username))
 
-    return redirect(url_for("login"))
+    return redirect(url_for("splash"))
 
 
 @app.route('/<username>')

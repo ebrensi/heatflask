@@ -52,7 +52,7 @@
                 <a href="#profile" role="tab"><i class="fa fa-user"></i></a>
                 </li>
 
-                <li><a href="#messages" role="tab"><i class="fa fa-sticky-note"></i></a></li>
+                <li><a href="#messages" role="tab"><i class="fa fa-sticky-note-o"></i></a></li>
             </ul>
 
             <ul role="tablist">
@@ -132,7 +132,17 @@
                         </div>
 
                     <hr>
-                        <div id="data_message"></div>
+                        <div id="data_message">
+                            {% with messages = get_flashed_messages() %}
+                                {% if messages %}
+                                  <ul class=flashes>
+                                  {% for message in messages %}
+                                    <li>{{ message }}</li>
+                                  {% endfor %}
+                                  </ul>
+                                {% endif %}
+                            {% endwith %}
+                        </div>
                     <hr>
 
                     <button type="button" id="renderButton" class="btn btn-primary">Render Layers</button>
@@ -145,18 +155,14 @@
                     Create an account and/or log in
                     <br>
 
-                    <form action="{{ url_for('authorize') }}">
-                        <input type="image" src="{{ url_for('static', filename='btn_strava_connectwith_orange.svg') }}" alt="Log-In with Strava" />
-                        <!-- If the user is logging in to his/her own data then we should redirect back to the current page. -->
-                        <input class="current-url" type="hidden" id="afterLogin" name="next" value="" />
+                    <form action="{{ url_for('authorize') }}" >
+                        <input type="image" src="{{ url_for('static', filename='btn_strava_connectwith_orange.svg') }}" alt="Log-In with Strava" >
+                        <input class="current-url" type="hidden" name="state" value="" >
                     </form>
 
+
                 {% endif %}
-                <hr>
-                Questions or comments, suggestions, job offers?<br>
-                <a href="mailto:Rensi.Efrem@gmail.com" target="_top">Contact me!</a>
-                <br>
-                Check out the <a href="https://github.com/ebrensi/heatmappp" target="_top">GitHub repo</a>.  Contributions welcome!
+
 
                 <div>
 
@@ -212,18 +218,19 @@
 
 
             <div class="sidebar-pane" id="messages">
-                <h1 class="sidebar-header">Messages<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
-
-                Feel free to <a href="mailto:Rensi.Efrem@gmail.com?Subject=About heatmapp" target="_top">Contact me via email</a> with suggestions, or
-
-                <a href="https://github.com/ebrensi/heatmappp/blob/master/CONTRIBUTING.md">join in the project!</a>
+                <h1 class="sidebar-header">Info<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
+                <br>
+                {{ config['APP_NAME'] }} is a work in progress.<br>
+                <br>
+                Questions or comments, suggestions, job offers?<br>
+                <a href="mailto:Rensi.Efrem@gmail.com?Subject=About {{ config['APP_NAME'] }}">Contact Me.</a>
+                <br><br>
+                Check out the <a href="https://github.com/ebrensi/heatmappp" target="_blank">GitHub repo</a>.  Pull requests welcome!
 
                 <br><br>
                 Note: You can specify a custom map baselayer by setting "baselayer={map}" in the URL, where {map} is one of the provider names from
                  <a href="https://leaflet-extras.github.io/leaflet-providers/preview">leaflet-providers</a>
-
-                 <br><br>
-                2016-10-06: Hello!  Since this app was featured at the <a href="http://labs.strava.com/developers" target="_top">Strava developer challenge</a>, it's been getting a lot of activity and exposing bugs for me to fix. If you experience problems then check back in a day or two because I'm working on it. Thanks for checking it out!!!!
+                <hr>
 
             </div>
 
