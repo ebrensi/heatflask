@@ -92,22 +92,22 @@ def demo():
 
 
 # Attempt to authorize a user via Oauth(2)
-@app.route('/authorize/<service>')
-def authorize(service):
-    redirect_uri = url_for('auth_callback', service=service, _external=True)
+@app.route('/authorize')
+def authorize():
+    redirect_uri = url_for('auth_callback',  _external=True)
 
-    if service == 'strava':
-        client = stravalib.Client()
-        auth_url = client.authorization_url(client_id=app.config["STRAVA_CLIENT_ID"],
-                                            redirect_uri=redirect_uri,
-                                            state=request.args.get("next"))
-        return redirect(auth_url)
+    client = stravalib.Client()
+    auth_url = client.authorization_url(client_id=app.config["STRAVA_CLIENT_ID"],
+                                        redirect_uri=redirect_uri,
+                                        approval_prompt="force",
+                                        state=request.args.get("next"))
+    return redirect(auth_url)
 
 
 # Authorization callback.  The service returns here to give us an access_token
 #  for the user who successfully logged in.
 @app.route('/authorized')
-def auth_callback(service):
+def auth_callback():
     if "error" in request.args:
         error = request.args["error"]
         flash("Error: {}".format(error))
@@ -118,7 +118,11 @@ def auth_callback(service):
                 "client_id": app.config["STRAVA_CLIENT_ID"],
                 "client_secret": app.config["STRAVA_CLIENT_SECRET"]}
         client = stravalib.Client()
-        access_token = client.exchange_code_for_token(**args)
+        try:
+            access_token = client.exchange_code_for_token(**args)
+        except:
+            raise
+
         client.access_token = access_token
 
         strava_user = client.get_athlete()
