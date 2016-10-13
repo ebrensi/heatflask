@@ -151,14 +151,22 @@
                   <br>
 
                 <hr>
-                {% if not current_user.is_authenticated %}
-                    Create an account and/or log in
-                    <br>
+                {% if current_user.is_authenticated %}
+                You are logged in as {{ current_user.name }}:<br>
+                <form action="{{ url_for('logout') }}">
+                    <input type="submit" class="btn btn-danger" value="Log Out" />
 
-                    <form action="{{ url_for('authorize') }}" >
-                        <input type="image" src="{{ url_for('static', filename='btn_strava_connectwith_orange.svg') }}" alt="Log-In with Strava" >
-                        <input class="current-url" type="hidden" name="state" value="" >
-                    </form>
+                    <input class="current-url" type="hidden" id="afterLogout" name="next" value="" />
+                </form>
+                {% else %}
+
+                Create an account and/or log in
+                <br>
+
+                <form action="{{ url_for('authorize') }}" >
+                    <input type="image" src="{{ url_for('static', filename='btn_strava_connectwith_orange.svg') }}" alt="Log-In with Strava" >
+                    <input class="current-url" type="hidden" name="state" value="" >
+                </form>
 
 
                 {% endif %}
