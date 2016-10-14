@@ -5,6 +5,7 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 class Config(object):
     APP_NAME = "Heatflask (alpha)"
     APP_VERSION = "alpha"
+    ADMIN = ["ebuggz"]
     DEBUG = False
     TESTING = False
     CSRF_ENABLED = True
@@ -44,6 +45,11 @@ class Config(object):
 
 
 class ProductionConfig(Config):
+    ANALYTICS = {
+        'GOOGLE_UNIVERSAL_ANALYTICS': {
+            'ACCOUNT': "UA-85621398-1"
+        }
+    }
     DEBUG = False
 
 
