@@ -14,10 +14,13 @@ import stravalib
 import flask_login
 from flask_login import current_user, login_user, logout_user, login_required
 import flask_assets
+from flask_analytics import Analytics
 
 
 app = Flask(__name__)
 app.config.from_object(os.environ['APP_SETTINGS'])
+
+Analytics(app)
 
 # we bundle javascript and css dependencies to reduce client-side overhead
 bundles = {
@@ -61,7 +64,7 @@ migrate = Migrate(app, db)
 # Flask-login stuff
 login_manager = flask_login.LoginManager()
 login_manager.init_app(app)
-
+login_manager.login_view = 'nothing'
 
 @login_manager.user_loader
 def load_user(name):
@@ -379,7 +382,6 @@ def activity_summary_iterator(user, activity_ids=None, **args):
         }
 
 
-
 # creates a stream of current.user's activities, using the Strava API arguments
 @app.route('/activity_summary_sse')
 @login_required
@@ -393,7 +395,8 @@ def activities():
         options["activity_ids"] = request.args.getlist("id")
     else:
         if "before" in request.args:
-            options["before"] = dateutil.parser.parse(request.args.get("before"))
+            options["before"] = dateutil.parser.parse(
+                request.args.get("before"))
 
         if "after" in request.args:
             options["after"] = dateutil.parser.parse(request.args.get("after"))

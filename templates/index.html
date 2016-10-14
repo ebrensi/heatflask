@@ -33,6 +33,10 @@
     <script type="text/javascript" src="{{ ASSET_URL }}"></script>
     {% endassets %}
 
+    {% if not current_user.name in config["ADMIN"] %}
+    {{analytics}}
+    {% endif %}
+
 </head>
 <body>
     <div id="sidebar" class="sidebar collapsed">
@@ -104,7 +108,6 @@
                     <label for="date2" style="display:block">End Date:</label>
                     <input class="datepick" id="date2" type="text" value=""/>
                   </span>
-
                   <br>
 
                   <span style="display:block">
