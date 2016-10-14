@@ -167,7 +167,7 @@ def logout():
         username = current_user.name
         logout_user()
         flash("{} logged out".format(username))
-    return redirect(request.args.get("next") or url_for("splash"))
+    return redirect(request.args.get("next") or url_for("nothing"))
 
 
 @app.route("/<username>/delete")
@@ -189,7 +189,7 @@ def delete(username):
         flash("you ({}) are not authorized to delete user {}"
               .format(current_user.name, username))
 
-    return redirect(url_for("splash"))
+    return redirect(url_for("nothing"))
 
 
 @app.route('/<username>')
