@@ -66,6 +66,7 @@ login_manager = flask_login.LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'nothing'
 
+
 @login_manager.user_loader
 def load_user(name):
     return User.get(name)
@@ -101,7 +102,7 @@ def authorize():
     client = stravalib.Client()
     auth_url = client.authorization_url(client_id=app.config["STRAVA_CLIENT_ID"],
                                         redirect_uri=redirect_uri,
-                                        approval_prompt="force",
+                                        # approval_prompt="force",
                                         state=state)
     return redirect(auth_url)
 
@@ -124,6 +125,7 @@ def auth_callback():
         client = stravalib.Client()
         try:
             access_token = client.exchange_code_for_token(**args)
+
         except Exception as e:
             app.logger.info(str(e))
             flash(str(e))
@@ -254,7 +256,7 @@ def getdata(username):
         dt_end = dateutil.parser.parse(end, fuzzy=True)
         assert(dt_end > dt_start)
 
-    except Exception as e:
+    except:
         return jsonify({
             "error": "Enter Valid Dates"
         })
