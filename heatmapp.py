@@ -348,10 +348,14 @@ def activity_import(username):
         return iter(["There is a problem importing activities. Try logging out and logging back in."])
 
 
-def activity_summary_iterator(user, **args):
+def activity_summary_iterator(user, activity_ids=None, **args):
     token = user.strava_user_data.get("access_token")
     client = stravalib.Client(access_token=token)
-    activities = client.get_activities(**args)
+
+    if activity_ids:
+        activities = (client.get_activity(id) for id in activity_ids)
+    else:
+        activities = client.get_activities(**args)
 
     while True:
         try:
@@ -364,6 +368,8 @@ def activity_summary_iterator(user, **args):
 
         yield {
             "id": a.id,
+            "resource_state": a.resource_state,
+            "athlete_id": a.athlete.id,
             "name": a.name,
             "type": a.type,
             "summary_polyline": a.map.summary_polyline,
@@ -373,6 +379,8 @@ def activity_summary_iterator(user, **args):
         }
 
 
+
+# creates a stream of current.user's activities, using the Strava API arguments
 @app.route('/activity_summary_sse')
 @login_required
 def activities():
@@ -380,14 +388,18 @@ def activities():
     ids_query = db.session.query(Activity.id).filter_by(user=user).all()
     cached_activities = set(int(d[0]) for d in ids_query)
     options = {}
-    if "before" in request.args:
-        options["before"] = dateutil.parser.parse(request.args.get("before"))
 
-    if "after" in request.args:
-        options["after"] = dateutil.parser.parse(request.args.get("after"))
+    if "id" in request.args:
+        options["activity_ids"] = request.args.getlist("id")
+    else:
+        if "before" in request.args:
+            options["before"] = dateutil.parser.parse(request.args.get("before"))
 
-    if "limit" in request.args:
-        options["limit"] = int(request.args.get("limit"))
+        if "after" in request.args:
+            options["after"] = dateutil.parser.parse(request.args.get("after"))
+
+        if "limit" in request.args:
+            options["limit"] = int(request.args.get("limit"))
 
     def boo():
         for a in activity_summary_iterator(user, **options):
