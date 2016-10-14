@@ -237,46 +237,40 @@ def index(username):
 @app.route('/<username>/getdata')
 def getdata(username):
     user = User.get(username)
+    start = request.args.get("start")
+    end = request.args.get("end")
 
     if not user:
         return jsonify({
             "error": "'{}' is not registered with this app".format(username)
         })
 
-    start = request.args.get("start")
-    end = request.args.get("end")
+    options = {}
+    if "id" in request.args:
+        options["activity_ids"] = request.args.getlist("id")
+
+    else:
+        if "friends" in request.args:
+            options["friends"] = True
+
+        if "limit" in request.args:
+            options["limit"] = int(request.args.get("limit"))
+
+        try:
+            options["after"] = dateutil.parser.parse(start)
+            options["before"] = dateutil.parser.parse(end)
+            assert(options["before"] > options["after"])
+        except:
+            return jsonify({
+                "error": "Enter Valid Dates"
+            })
+
+    options = {"activity_ids": [730239033, 97090517]}
 
     hires = request.args.get("hires") == "true"
-    lores = request.args.get("lores") == "true"
-
     durations = request.args.get("durations")
 
-    try:
-        dt_start = dateutil.parser.parse(start, fuzzy=True)
-        dt_end = dateutil.parser.parse(end, fuzzy=True)
-        assert(dt_end > dt_start)
-
-    except:
-        return jsonify({
-            "error": "Enter Valid Dates"
-        })
-
-    start = dt_start.strftime("%Y-%m-%d")
-    end = dt_end.strftime("%Y-%m-%d")
-    # app.logger.info("dt_start = '{}', dt_end = '{}'".format(start, end))
-
-    data = {}
-
-    result = (db.session.query(
-        Activity.id,
-        Activity.name,
-        Activity.type,
-        Activity.total_distance,
-        Activity.elapsed_time,
-        Activity.beginTimestamp
-    ).filter(Activity.beginTimestamp.between(start, end))
-        .filter_by(user=user)
-    ).all()
+    data = {"summary": [], "lores": [], "hires": [], "durations": []}
 
     def path_color(activity_type):
         color_list = [color for color, activity_types
@@ -285,52 +279,26 @@ def getdata(username):
 
         return color_list[0] if color_list else ""
 
-    data["summary"] = [
-        {
-            "id": r[0],
-            "name": r[1],
-            "type": r[2],
-            "path_color": path_color(r[2]),
-            "distance": r[3],
-            "elapsed_time": r[4],
-            "start_time": str(r[5])
-        }
-        for r in result]
+    for activity in activity_summary_iterator(user, **options):
+        if "error" in activity:
+            return jsonify(activity)
 
-    if hires:
-        result = (db.session.query(Activity.polyline)
-                  .filter(Activity.beginTimestamp.between(start, end))
-                  .filter_by(user=user)
-                  ).all()
-        routes = [r[0] for r in result]
-        if any(routes):
-            data["hires"] = routes
-        else:
-            return jsonify({"error": "no high-res data in that date range"})
+        activity["path_color"] = path_color(activity["type"])
+        data["lores"].append(activity.pop("summary_polyline"))
+        data["summary"].append(activity)
 
-    if lores:
-        result = (db.session.query(Activity.summary_polyline)
-                  .filter(Activity.beginTimestamp.between(start, end))
-                  .filter_by(user=user)
-                  ).all()
-        routes = [r[0] for r in result]
-        if any(routes):
-            data["lores"] = routes
-        else:
-            return jsonify({"error": "no data in that date range"})
-
-    if durations:
-        result = (db.session.query(Activity.distance,
-                                   Activity.time)
-                  .filter(Activity.beginTimestamp.between(start, end))
-                  .filter_by(user=user)
-                  ).all()
-
-        # data["distances"] = [[round(b - a, 2) for a, b in zip(pl[0], pl[0][1:])] + [0]
-        #                      for pl in result]
-
-        data["durations"] = [[(b - a) for a, b in zip(pl[1], pl[1][1:])] + [0]
-                             for pl in result]
+        if hires:
+            act = Activity.query.get(activity["id"])
+            if act:
+                data["hires"].append(act.polyline)
+                if durations:
+                    t = act.time
+                    dur = [(b - a) for a, b in zip(t, t[1:])] + [0]
+                    data["durations"].append(dur)
+            else:
+                pass
+                # return jsonify({"error": "activity {} not cached"
+                #                 .format(activity["id"])})
 
     data["message"] = (
         "displaying {} - {} data".format(start, end)
@@ -353,14 +321,17 @@ def activity_import(username):
         return iter(["There is a problem importing activities. Try logging out and logging back in."])
 
 
-def activity_summary_iterator(user, activity_ids=None, **args):
+def activity_summary_iterator(user, activity_ids=None, friends=False, **args):
     token = user.strava_user_data.get("access_token")
     client = stravalib.Client(access_token=token)
 
     if activity_ids:
-        activities = (client.get_activity(id) for id in activity_ids)
+        activities = (client.get_activity(int(id)) for id in activity_ids)
     else:
-        activities = client.get_activities(**args)
+        if friends:
+            activities = client.get_friend_activities(**args)
+        else:
+            activities = client.get_activities(**args)
 
     while True:
         try:
@@ -373,7 +344,6 @@ def activity_summary_iterator(user, activity_ids=None, **args):
 
         yield {
             "id": a.id,
-            "resource_state": a.resource_state,
             "athlete_id": a.athlete.id,
             "name": a.name,
             "type": a.type,
@@ -396,6 +366,9 @@ def activities():
     if "id" in request.args:
         options["activity_ids"] = request.args.getlist("id")
     else:
+        if "friends" in request.args:
+            options["friends"] = True
+
         if "before" in request.args:
             options["before"] = dateutil.parser.parse(
                 request.args.get("before"))
