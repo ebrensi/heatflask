@@ -11,6 +11,7 @@ import dateutil.parser
 import os
 import json
 import stravalib
+import polyline
 import flask_login
 from flask_login import current_user, login_user, logout_user, login_required
 import flask_assets
@@ -265,7 +266,7 @@ def getdata(username):
                 "error": "Enter Valid Dates"
             })
 
-    options = {"activity_ids": [730239033, 97090517]}
+    # options = {"activity_ids": [730239033, 97090517]}
 
     hires = request.args.get("hires") == "true"
     durations = request.args.get("durations")
@@ -279,7 +280,10 @@ def getdata(username):
 
         return color_list[0] if color_list else ""
 
-    for activity in activity_summary_iterator(user, **options):
+    token = user.strava_user_data.get("access_token")
+    client = stravalib.Client(access_token=token)
+
+    for activity in activity_summary_iterator(client=client, **options):
         if "error" in activity:
             return jsonify(activity)
 
@@ -290,15 +294,30 @@ def getdata(username):
         if hires:
             act = Activity.query.get(activity["id"])
             if act:
-                data["hires"].append(act.polyline)
-                if durations:
-                    t = act.time
-                    dur = [(b - a) for a, b in zip(t, t[1:])] + [0]
-                    data["durations"].append(dur)
+                # If streams for this activity are in the database
+                #  then retrieve them
+                stream_dict = {"polyline": act.polyline, "time": act.time}
             else:
-                pass
-                # return jsonify({"error": "activity {} not cached"
-                #                 .format(activity["id"])})
+
+                # otherwise, request them from Strava
+                stream_names = ['time', 'latlng', 'distance', 'altitude',
+                                'velocity_smooth']
+
+                streams = client.get_activity_streams(activity["id"],
+                                                      types=stream_names)
+                stream_dict = {name: streams[name].data
+                               for name in stream_names}
+
+                if "latlng" in stream_dict:
+                    stream_dict["polyline"] = (
+                        polyline.encode(stream_dict.pop('latlng'))
+                    )
+
+            data["hires"].append(stream_dict["polyline"])
+            if durations:
+                t = stream_dict["time"]
+                dur = [(b - a) for a, b in zip(t, t[1:])] + [0]
+                data["durations"].append(dur)
 
     data["message"] = (
         "displaying {} - {} data".format(start, end)
@@ -321,17 +340,15 @@ def activity_import(username):
         return iter(["There is a problem importing activities. Try logging out and logging back in."])
 
 
-def activity_summary_iterator(user, activity_ids=None, friends=False, **args):
-    token = user.strava_user_data.get("access_token")
-    client = stravalib.Client(access_token=token)
+def activity_summary_iterator(user=None, client=None, activity_ids=None, **args):
+    if user and (not client):
+        token = user.strava_user_data.get("access_token")
+        client = stravalib.Client(access_token=token)
 
     if activity_ids:
         activities = (client.get_activity(int(id)) for id in activity_ids)
     else:
-        if friends:
-            activities = client.get_friend_activities(**args)
-        else:
-            activities = client.get_activities(**args)
+        activities = client.get_activities(**args)
 
     while True:
         try:
