@@ -1,5 +1,5 @@
 from flask_login import UserMixin
-from sqlalchemy.dialects.postgresql import ARRAY, TIMESTAMP, JSON, REAL
+from sqlalchemy.dialects import postgresql as pg
 from heatmapp import db
 
 
@@ -15,7 +15,7 @@ class User(UserMixin, db.Model):
     profile = db.Column(db.String())
     strava_access_token = db.Column(db.String())
 
-    dt_last_active = db.Column(TIMESTAMP)
+    dt_last_active = db.Column(pg.TIMESTAMP)
     app_activity_count = db.Column(db.Integer)
 
     # This is set up so that if a user gets deleted, all of the associated
@@ -52,22 +52,22 @@ class Activity(db.Model):
     name = db.Column(db.String())
     type = db.Column(db.String())
     summary_polyline = db.Column(db.String())
-    beginTimestamp = db.Column(TIMESTAMP)
+    beginTimestamp = db.Column(pg.TIMESTAMP)
     total_distance = db.Column(db.Float())
     elapsed_time = db.Column(db.Integer)
 
     # streams
-    time = db.Column(ARRAY(db.Integer))
+    time = db.Column(pg.ARRAY(db.Integer))
     polyline = db.Column(db.String())
-    distance = db.Column(ARRAY(db.Float()))
-    altitude = db.Column(ARRAY(db.Float()))
-    velocity_smooth = db.Column(ARRAY(REAL))
-    cadence = db.Column(ARRAY(db.Integer))
-    watts = db.Column(ARRAY(REAL))
-    grade_smooth = db.Column(ARRAY(REAL))
+    distance = db.Column(pg.ARRAY(db.Float()))
+    altitude = db.Column(pg.ARRAY(db.Float()))
+    velocity_smooth = db.Column(pg.ARRAY(pg.REAL))
+    cadence = db.Column(pg.ARRAY(db.Integer))
+    watts = db.Column(pg.ARRAY(pg.REAL))
+    grade_smooth = db.Column(pg.ARRAY(pg.REAL))
 
-    dt_cached = db.Column(TIMESTAMP)
-    dt_last_accessed = db.Column(TIMESTAMP)
+    dt_cached = db.Column(pg.TIMESTAMP)
+    dt_last_accessed = db.Column(pg.TIMESTAMP)
     access_count = db.Column(db.Integer)
 
     user_id = db.Column(db.Integer, db.ForeignKey("users.strava_id"))
@@ -95,6 +95,15 @@ class Activity(db.Model):
 
 # Then run
 # flask db migrate
+#    note: Flask-Migrate apparently has an issue with PostgreSQL ARRAY type.
+#     https://github.com/miguelgrinberg/Flask-Migrate/issues/72
+#       so after migrate we must go into the created migration file in
+#       migrations/versions and explicitly change
+#       postgresql.ARRAY(some_type) to postgresql.ARRAY(postgresql.some_type)
+#       or postgresql.ARRAY(sa.some_type)
+#
+# Then, run
 # flask db upgrade
-
-# and re-run the latter two every time we update the schema
+#
+#  to actually perform th upgrade.  This last step must be done both locally
+#  and on the server.
