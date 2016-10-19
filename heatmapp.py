@@ -438,6 +438,15 @@ def activity_select():
                            limit=request.args.get("limit"))
 
 
+@app.route('/retrieve_list', methods=['POST'])
+def retrieve_list():
+    data = {
+        "import": request.form.getlist("to")
+    }
+
+    return jsonify(data)
+
+
 # Admin stuff
 @app.route('/admin')
 @login_required
