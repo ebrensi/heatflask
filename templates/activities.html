@@ -23,9 +23,10 @@
   </div>
 
   <div class="container">
-  <form action="" method='POST'>
+  <form action="{{ url_for('retrieve_list') }}" method='POST'>
     <div class="row">
       <div class="col-xs-5">
+          Not cached
           <select name="from" id="multiselect" class="form-control" size="20" multiple="multiple">
 
           </select>
@@ -39,6 +40,7 @@
       </div>
 
       <div class="col-xs-5">
+          Cached
           <select name="to" id="multiselect_to" class="form-control" size="20" multiple="multiple"></select>
       </div>
     </div>
