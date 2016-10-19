@@ -33,7 +33,7 @@
     <script type="text/javascript" src="{{ ASSET_URL }}"></script>
     {% endassets %}
 
-    {% if not current_user.name in config["ADMIN"] %}
+    {% if not current_user.username in config["ADMIN"] %}
     {{analytics}}
     {% endif %}
 
@@ -48,7 +48,7 @@
                 </li>
 
                 {% if current_user.is_authenticated
-                    and (current_user.name == username) %}
+                    and (current_user.username == username) %}
                 <li>
                 {% else %}
                 <li class="disabled">
@@ -155,7 +155,7 @@
 
                 <hr>
                 {% if current_user.is_authenticated %}
-                You are logged in as <a href="{{ url_for('index', username=current_user.name) }}">{{ current_user.name }}</a> :<br>
+                You are logged in as <a href="{{ url_for('index', username=current_user.username) }}">{{ current_user.username }}</a> :<br>
                 <form action="{{ url_for('logout') }}">
                     <input type="submit" class="btn btn-danger" value="Log Out" />
 
@@ -182,15 +182,16 @@
             </div>
 
             {% if current_user.is_authenticated
-                    and (current_user.name == username) %}
+                    and (current_user.username == username) %}
             <div class="sidebar-pane" id="profile">
                 <h1 class="sidebar-header">{{ username }}<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
 
 
-                <h3> {{ current_user.strava_user_data['firstname'] }}
-                     {{ current_user.strava_user_data['lastname'] }}:</h3>
+                <h3> {{ current_user.firstname }}
+                     {{ current_user.lastname }}:</h3>
+                <br>(id: {{ current_user.strava_id }})<br>
                 <a href="https://www.strava.com/settings/profile" target="_blank">
-                    <img src={{ current_user.strava_user_data['pic_url'] }} alt="user image" height="30%" width="30%">
+                    <img src={{ current_user.profile }} alt="user image" height="30%" width="30%">
                 </a>
 
                 <br>
@@ -221,7 +222,7 @@
                 <br>
                 <hr>
                 <br><br>
-                <form action="{{ url_for('delete', username=username) }}" onsubmit="return confirm('Delete your info from our database?');">
+                <form action="{{ url_for('delete') }}" onsubmit="return confirm('Delete your info from our database?');">
                     <input type="submit" class="btn btn-danger" value="Delete Account" />
                 </form>
             </div>

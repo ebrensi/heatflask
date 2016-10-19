@@ -6,7 +6,7 @@ from flask import Flask, Response, render_template, request, redirect, \
 import flask_compress
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 import dateutil.parser
 import os
 import json
@@ -69,8 +69,8 @@ login_manager.login_view = 'nothing'
 
 
 @login_manager.user_loader
-def load_user(name):
-    return User.get(name)
+def load_user(user_id):
+    return User.get(user_id)
 
 
 @app.route('/')
@@ -78,7 +78,7 @@ def nothing():
     if current_user.is_anonymous:
         return render_template("splash.html")
     else:
-        return redirect(url_for('index', username=current_user.name))
+        return redirect(url_for('index', username=current_user.username))
 
 
 @app.route('/demo')
@@ -135,63 +135,61 @@ def auth_callback():
         client.access_token = access_token
 
         strava_user = client.get_athlete()
-        user = User.get(strava_user.username)
+        user = User.get(strava_user.id)
 
         if not user:
-            # If this user isn't in the database we create an account
-            strava_user_info = {"id": strava_user.id,
-                                "firstname": strava_user.firstname,
-                                "lastname": strava_user.lastname,
-                                "username": strava_user.username,
-                                "pic_url": strava_user.profile,
-                                "access_token": access_token
-                                }
-            user = User(name=strava_user.username,
-                        strava_user_data=strava_user_info)
+            # If this user isn't in the database we create a record
+            user = User(strava_id=strava_user.id,
+                        app_activity_count=0)
             db.session.add(user)
             db.session.commit()
 
-        elif access_token != user.strava_user_data["access_token"]:
-            # if user exists but the access token has changed, update it
-            user.strava_user_data["access_token"] = access_token
-            db.session.commit()
+        user.username = strava_user.username
+        user.strava_access_token = access_token
+        user.firstname = strava_user.firstname
+        user.lastname = strava_user.lastname
+        user.profile = strava_user.profile
+
+        user.dt_last_active = datetime.utcnow()
+        user.app_activity_count += 1
+        db.session.commit()
 
         # remember=True, for persistent login.
         login_user(user, remember=True)
 
     return redirect(request.args.get("state") or
-                    url_for("index", username=current_user.name))
+                    url_for("index", username=current_user.username))
 
 
 @app.route("/logout")
 @login_required
 def logout():
     if not current_user.is_anonymous:
-        username = current_user.name
+        user_id = current_user.strava_id
+        username = current_user.username
         logout_user()
-        flash("{} logged out".format(username))
+        flash("user {} ({}) logged out"
+              .format(user_id, username))
     return redirect(request.args.get("next") or url_for("nothing"))
 
 
-@app.route("/<username>/delete")
+@app.route("/delete")
 @login_required
-def delete(username):
-    if username == current_user.name:
+def delete():
+    if not current_user.is_anonymous:
+        username = current_user.username
+        user_id = current_user.strava_id
         logout_user()
 
-        # that user is no longer the current user
-        user = User.get(username)
+        # the current user is now logged out
+        user = User.get(user_id)
         try:
             db.session.delete(user)
             db.session.commit()
         except Exception as e:
             flash(str(e))
         else:
-            flash("user '{}' deleted".format(username))
-    else:
-        flash("you ({}) are not authorized to delete user {}"
-              .format(current_user.name, username))
-
+            flash("user {} ({}) deleted".format(user_id, username))
     return redirect(url_for("nothing"))
 
 
@@ -280,44 +278,63 @@ def getdata(username):
 
         return color_list[0] if color_list else ""
 
-    token = user.strava_user_data.get("access_token")
+    token = user.strava_access_token
     client = stravalib.Client(access_token=token)
 
     for activity in activity_summary_iterator(client=client, **options):
         if "error" in activity:
-            return jsonify(activity)
+            pass
+            # return jsonify(activity)
+        else:
+            data["lores"].append(activity.pop("summary_polyline"))
+            activity["path_color"] = path_color(activity["type"])
+            data["summary"].append(activity)
 
-        activity["path_color"] = path_color(activity["type"])
-        data["lores"].append(activity.pop("summary_polyline"))
-        data["summary"].append(activity)
+            if hires:
+                A = Activity.query.get(activity["id"])
+                if A:
+                    # If streams for this activity are in the database
+                    #  then retrieve them
+                    stream_dict = {"polyline": A.polyline, "time": A.time}
+                else:
 
-        if hires:
-            act = Activity.query.get(activity["id"])
-            if act:
-                # If streams for this activity are in the database
-                #  then retrieve them
-                stream_dict = {"polyline": act.polyline, "time": act.time}
-            else:
+                    # otherwise, request them from Strava
+                    stream_names = ['time', 'latlng', 'distance', 'altitude',
+                                    'velocity_smooth']
 
-                # otherwise, request them from Strava
-                stream_names = ['time', 'latlng', 'distance', 'altitude',
-                                'velocity_smooth']
+                    streams = client.get_activity_streams(activity["id"],
+                                                          types=stream_names)
+                    stream_dict = {name: streams[name].data
+                                   for name in stream_names}
 
-                streams = client.get_activity_streams(activity["id"],
-                                                      types=stream_names)
-                stream_dict = {name: streams[name].data
-                               for name in stream_names}
+                    if "latlng" in stream_dict:
+                        stream_dict["polyline"] = (
+                            polyline.encode(stream_dict.pop('latlng'))
+                        )
 
-                if "latlng" in stream_dict:
-                    stream_dict["polyline"] = (
-                        polyline.encode(stream_dict.pop('latlng'))
-                    )
+                        # add the imported activity to the database for quicker
+                        #  retrieval next time
+                        a2 = dict(activity).pop("path_color")
+                        a2.update(stream_dict)
+                        A = Activity(**a2)
+                        A.user = user
+                        A.dt_cached = datetime.utcnow()
+                        A.access_count = 0
 
-            data["hires"].append(stream_dict["polyline"])
-            if durations:
-                t = stream_dict["time"]
-                dur = [(b - a) for a, b in zip(t, t[1:])] + [0]
-                data["durations"].append(dur)
+                        db.session.add(A)
+                        db.session.commit()
+
+                if A:
+                    # update record of access
+                    A.dt_last_accessed = datetime.utcnow()
+                    A.access_count += 1
+                    db.session.commit()
+
+                    data["hires"].append(stream_dict["polyline"])
+                    if durations:
+                        t = stream_dict["time"]
+                        dur = [(b - a) for a, b in zip(t, t[1:])] + [0]
+                        data["durations"].append(dur)
 
     data["message"] = (
         "displaying {} - {} data".format(start, end)
@@ -328,8 +345,9 @@ def getdata(username):
 @app.route('/<username>/activity_import')
 @login_required
 def activity_import(username):
-    if username == current_user.name:
-        user = User.get(username)
+    user = User.get(username)
+
+    if user and (username == current_user.username):
         count = int(request.args.get("count", 1))
 
         import stravaimport
@@ -342,7 +360,7 @@ def activity_import(username):
 
 def activity_summary_iterator(user=None, client=None, activity_ids=None, **args):
     if user and (not client):
-        token = user.strava_user_data.get("access_token")
+        token = user.strava_access_token
         client = stravalib.Client(access_token=token)
 
     if activity_ids:
@@ -375,9 +393,7 @@ def activity_summary_iterator(user=None, client=None, activity_ids=None, **args)
 @app.route('/activity_summary_sse')
 @login_required
 def activities():
-    user = User.get(current_user.name)
-    ids_query = db.session.query(Activity.id).filter_by(user=user).all()
-    cached_activities = set(int(d[0]) for d in ids_query)
+    user = User.get(current_user.strava_id)
     options = {}
 
     if "id" in request.args:
@@ -398,7 +414,7 @@ def activities():
 
     def boo():
         for a in activity_summary_iterator(user, **options):
-            a["cached"] = "yes" if int(a['id']) in cached_activities else "no"
+            a["cached"] = "yes" if Activity.get(a['id']) else "no"
             yield "data: {}\n\n".format(json.dumps(a))
         yield "data: done\n\n"
 
@@ -423,8 +439,8 @@ def admin():
 @app.route('/subscribe')
 @login_required
 def subscribe():
-    user = User.get(current_user.name)
-    token = user.strava_user_data.get("access_token")
+    user = User.get(current_user.username)
+    token = user.strava_access_token
     client = stravalib.Client(access_token=token)
     sub = client.create_subscription(client_id=app.config["STRAVA_CLIENT_ID"],
                                      client_secret=app.config[
