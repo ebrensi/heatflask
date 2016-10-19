@@ -220,8 +220,15 @@ def index(username):
     lng = request.args.get("lng") or default_center[1]
     zoom = request.args.get("zoom") or app.config["MAP_ZOOM"]
 
+    # note 'user' is the user we are displaying data for.
+    # 'current_user' is the user that is currently logged in
+    user = User.get(username)
+    if not user:
+        flash("user '{}' is not registered with this app".format(username))
+        return redirect(url_for('nothing'))
+
     return render_template('index.html',
-                           username=username,
+                           username=user.username,
                            lat=lat,
                            lng=lng,
                            zoom=zoom,
