@@ -258,8 +258,6 @@ def getdata(username):
         options["activity_ids"] = request.args.getlist("id")
 
     else:
-        if "friends" in request.args:
-            options["friends"] = True
 
         if "limit" in request.args:
             options["limit"] = int(request.args.get("limit"))
@@ -401,9 +399,9 @@ def activity_summary_iterator(user=None, client=None,
 
 
 # creates a stream of current.user's activities, using the Strava API arguments
-@app.route('/activity_summary_sse')
+@app.route('/activities_sse')
 @login_required
-def activities():
+def activities_sse():
     user = User.get(current_user.strava_id)
     options = {}
 
@@ -426,10 +424,18 @@ def activities():
     def boo():
         for a in activity_summary_iterator(user, **options):
             a["cached"] = "yes" if Activity.get(a['id']) else "no"
+            a["msg"] = "[{id}] {beginTimestamp} '{name}'".format(**a)
             yield "data: {}\n\n".format(json.dumps(a))
         yield "data: done\n\n"
 
     return Response(boo(), mimetype='text/event-stream')
+
+
+@app.route('/activity_select')
+@login_required
+def activity_select():
+    return render_template("activities.html",
+                           limit=request.args.get("limit"))
 
 
 # Admin stuff
