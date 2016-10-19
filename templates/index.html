@@ -184,19 +184,31 @@
             {% if current_user.is_authenticated
                     and (current_user.username == username) %}
             <div class="sidebar-pane" id="profile">
-                <h1 class="sidebar-header">{{ username }}<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
+                <h1 class="sidebar-header">{{ username }} ({{ current_user.strava_id }}) <span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
 
 
                 <h3> {{ current_user.firstname }}
                      {{ current_user.lastname }}:</h3>
-                <br>(id: {{ current_user.strava_id }})<br>
+
                 <a href="https://www.strava.com/settings/profile" target="_blank">
                     <img src={{ current_user.profile }} alt="user image" height="30%" width="30%">
                 </a>
 
                 <br>
 
-                <h3>Import activities now:</h3>
+
+                <h3>Manage activity cache:</h3>
+                 <form action="{{ url_for('activity_select') }}" target="_blank">
+
+                    List
+                    <input type="number" name="limit" value=10 min=0 max=100>
+                    most recent Strava activities.
+                    <br>
+                    <input type="submit" value="Go!"/>
+                </form>
+
+
+                <h3>Cache activities now:</h3>
                 <form id="importform" method="get" action="{{ url_for('activity_import', username=username)}}" target="output">
 
                     Import
@@ -211,6 +223,10 @@
                       <iframe class="embed-responsive-item" name="output" style="width:100%"></iframe>
                     </div>
                 </form>
+
+
+
+
 
                 <br>
                 <form action="{{ url_for('logout') }}">

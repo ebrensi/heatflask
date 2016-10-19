@@ -21,7 +21,7 @@ def import_activities(db, user, limit=1):
     logging.info(msg)
     yield msg + "\n"
 
-    token = user.strava_user_data.get("access_token")
+    token = user.strava_access_token
     client = stravalib.Client(access_token=token)
     activities = client.get_activities(limit=limit)
 
@@ -54,6 +54,7 @@ def import_activities(db, user, limit=1):
             # Summary data
             activity_data = {
                 "id": a.id,
+                "athlete_id": a.athlete.id,
                 "name": a.name,
                 "type": a.type,
                 "summary_polyline": a.map.summary_polyline,
@@ -70,33 +71,21 @@ def import_activities(db, user, limit=1):
             streams = client.get_activity_streams(a.id,
                                                   types=stream_names)
 
-            # Here we eliminate any data-points from the streams where
-            #  latlng is [0,0], which is invalid.  I am not sure if any
-            #  [0,0] points actually exist in Strava data but some were
-            #  there in the original Garmin data.
-            idx = stream_names.index('latlng')
-            zipped = zip(
-                *[streams[t].data for t in stream_names if t in streams])
-            stream_data = {
-                t: tl for t, tl in
-                zip(stream_names,
-                    zip(*[d for d in zipped if d[idx] != [0, 0]])
-                    )
-            }
+            stream_data = {name: streams[name].data
+                           for name in stream_names}
 
             if "latlng" in stream_data:
                 activity_data["polyline"] = (
                     polyline.encode(stream_data.pop('latlng'))
                 )
+
                 activity_data.update(stream_data)
 
                 A = Activity(**activity_data)
                 db.session.add(A)
                 db.session.commit()
 
-                mi = stravalib.unithelper.miles(a.distance)
-                msg = ("[{0.id}] {0.name}: {0.start_date_local}, {1}"
-                       .format(a, mi))
+                msg = str(count) +". [{id}] {name}: {beginTimestamp}".format(**activity_data)
                 logging.info(msg)
                 yield msg + "\n"
             else:
@@ -148,7 +137,7 @@ if __name__ == '__main__':
 
         limit = None if args.count == "all" else int(args.count)
 
-        logging.info("importing {} records for {}".format(limit, user.name))
+        logging.info("importing {} records for {}".format(limit, user.username))
 
         # import GC activities for user
         for msg in import_activities(db, user, limit=limit):

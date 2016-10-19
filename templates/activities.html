@@ -23,10 +23,10 @@
   </div>
 
   <div class="container">
-  <form action="{{ url_for('retrieve') }}" method='POST'>
+  <form action="" method='POST'>
     <div class="row">
       <div class="col-xs-5">
-          <select name="from" id="multiselect" class="form-control" size="50" multiple="multiple">
+          <select name="from" id="multiselect" class="form-control" size="20" multiple="multiple">
 
           </select>
       </div>
@@ -39,7 +39,7 @@
       </div>
 
       <div class="col-xs-5">
-          <select name="to" id="multiselect_to" class="form-control" size="50" multiple="multiple"></select>
+          <select name="to" id="multiselect_to" class="form-control" size="20" multiple="multiple"></select>
       </div>
     </div>
     <br>
@@ -54,7 +54,7 @@
         $('#multiselect').multiselect();
     });
 
-    var source = new EventSource("{{ url_for('activity_stream', limit=limit) }}");
+    var source = new EventSource("{{ url_for('activities_sse', limit=limit) }}");
     var count = 0;
 
     source.onmessage = function(event) {
@@ -64,10 +64,17 @@
       if (event.data != 'done'){
         var j = JSON.parse(event.data);
 
-        $('#multiselect').append($('<option>', {
-            value: j.id,
-            text: j.msg
-        }));
+        if (j.cached == "no"){
+          $('#multiselect').append($('<option>', {
+              value: j.id,
+              text: j.msg
+          }));
+        } else {
+          $('#multiselect_to').append($('<option>', {
+              value: j.id,
+              text: j.msg
+          }));
+        }
 
         count++;
       } else {
