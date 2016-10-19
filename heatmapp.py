@@ -2,11 +2,11 @@
 from __future__ import unicode_literals
 
 from flask import Flask, Response, render_template, request, redirect, \
-    jsonify, url_for, abort, session, flash, g
+    jsonify, url_for, flash
 import flask_compress
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from datetime import date, timedelta, datetime
+from datetime import datetime
 import dateutil.parser
 import os
 import json
@@ -101,10 +101,12 @@ def authorize():
     redirect_uri = url_for('auth_callback', _external=True)
 
     client = stravalib.Client()
-    auth_url = client.authorization_url(client_id=app.config["STRAVA_CLIENT_ID"],
-                                        redirect_uri=redirect_uri,
-                                        # approval_prompt="force",
-                                        state=state)
+    auth_url = client.authorization_url(
+        client_id=app.config["STRAVA_CLIENT_ID"],
+        redirect_uri=redirect_uri,
+        # approval_prompt="force",
+        state=state
+    )
     return redirect(auth_url)
 
 
@@ -355,10 +357,12 @@ def activity_import(username):
                                                    limit=count)
         return Response(do_import, mimetype='text/event-stream')
     else:
-        return iter(["There is a problem importing activities. Try logging out and logging back in."])
+        return iter(["There is a problem importing activities."
+                     " Try logging out and logging back in."])
 
 
-def activity_summary_iterator(user=None, client=None, activity_ids=None, **args):
+def activity_summary_iterator(user=None, client=None,
+                              activity_ids=None, **args):
     if user and (not client):
         token = user.strava_access_token
         client = stravalib.Client(access_token=token)
@@ -430,10 +434,12 @@ def admin():
     info = {
         user.name: {
             "is_active": user.is_active,
-            "cached": len(db.session.query(Activity.id).filter_by(user=user).all())
+            "cached": len(db.session.query(Activity.id)
+                          .filter_by(user=user).all())
         }
         for user in users}
     return jsonify(info)
+
 
 """
 @app.route('/subscribe')
