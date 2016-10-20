@@ -272,11 +272,9 @@ def getdata(username):
             })
 
     # options = {"activity_ids": [730239033, 97090517]}
-
+    lores = request.args.get("lores") == "true"
     hires = request.args.get("hires") == "true"
     durations = request.args.get("durations")
-
-    data = {"summary": [], "lores": [], "hires": [], "durations": []}
 
     def path_color(activity_type):
         color_list = [color for color, activity_types
@@ -288,60 +286,55 @@ def getdata(username):
     token = user.strava_access_token
     client = stravalib.Client(access_token=token)
 
+    data = []
     for activity in activity_summary_iterator(client=client, **options):
-        if "error" in activity:
-            pass
-            # return jsonify(activity)
-        else:
-            data["lores"].append(activity.pop("summary_polyline"))
-            activity["path_color"] = path_color(activity["type"])
-            data["summary"].append(activity)
-
+        if "error" not in activity:
             if hires:
                 A = Activity.query.get(activity["id"])
-                if A:
+                if A and A.polyline:
                     # If streams for this activity are in the database
                     #  then retrieve them
-                    stream_dict = {"polyline": A.polyline, "time": A.time}
+                    activity["polyline"] = A.polyline
+                    if durations:
+                        activity["time"] = A.time
                 else:
 
                     # otherwise, request them from Strava
-                    stream_names = ['time', 'latlng', 'distance', 'altitude',
-                                    'velocity_smooth']
+                    stream_names = ['time', 'latlng']
 
                     streams = client.get_activity_streams(activity["id"],
                                                           types=stream_names)
-                    stream_dict = {name: streams[name].data
-                                   for name in stream_names}
 
-                    if "latlng" in stream_dict:
-                        stream_dict["polyline"] = (
-                            polyline.encode(stream_dict.pop('latlng'))
+                    activity.update({name: streams[name].data
+                                     for name in streams})
+
+                    if "latlng" in activity:
+                        activity["polyline"] = (
+                            polyline.encode(activity.pop('latlng'))
                         )
 
-                        # add the imported activity to the database for quicker
-                        #  retrieval next time
-                        a2 = dict(activity).pop("path_color")
-                        a2.update(stream_dict)
-                        A = Activity(**a2)
-                        A.user = user
-                        A.dt_cached = datetime.utcnow()
-                        A.access_count = 0
+                    # add the imported activity to the database for quicker
+                    #  retrieval next time
+                    A = Activity(**activity)
+                    A.user = user
+                    A.dt_cached = datetime.utcnow()
+                    A.access_count = 0
 
-                        db.session.add(A)
-                        db.session.commit()
-
-                if A:
-                    # update record of access
-                    A.dt_last_accessed = datetime.utcnow()
-                    A.access_count += 1
+                    db.session.add(A)
                     db.session.commit()
 
-                    data["hires"].append(stream_dict["polyline"])
-                    if durations:
-                        t = stream_dict["time"]
-                        dur = [(b - a) for a, b in zip(t, t[1:])] + [0]
-                        data["durations"].append(dur)
+                # update record of access
+                A.dt_last_accessed = datetime.utcnow()
+                A.access_count += 1
+                db.session.commit()
+
+                if durations and ("time" in activity):
+                    t = activity.pop("time")
+                    activity["durations"] = [(b - a)
+                                             for a, b in zip(t, t[1:])] + [0]
+
+            activity["path_color"] = path_color(activity["type"])
+            data.append(activity)
 
     data["message"] = (
         "displaying {} - {} data".format(start, end)
