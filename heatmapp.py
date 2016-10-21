@@ -304,10 +304,19 @@ def getdata(username):
                     # otherwise, request them from Strava
                     stream_names = ['time', 'latlng']
 
-                    streams = client.get_activity_streams(activity["id"],
-                                                          types=stream_names,
-                                                          resolution="all",
-                                                          series_type="time")
+                    try:
+                        streams = client.get_activity_streams(activity["id"],
+                                                              types=stream_names,
+                                                              # resolution="all",
+                                                              # series_type="time"
+                                                              )
+                    except Exception as e:
+                        app.logger.info("activity: {}\n{}".format(activity, e))
+                        break
+                    else:
+                        pass
+                        # app.logger.info(
+                        #     "loaded streams for: {}".format(activity))
 
                     activity_data = {name: streams[name].data
                                      for name in streams}

@@ -272,7 +272,7 @@
 
     <div id="map" class="sidebar-map"></div>
 
-    <a href="https://github.com/ebrensi/running_data" class="github-corner"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#151513; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a><style>.github-corner:hover .octo-arm{animation:octocat-wave 560ms ease-in-out}@keyframes octocat-wave{0%,100%{transform:rotate(0)}20%,60%{transform:rotate(-25deg)}40%,80%{transform:rotate(10deg)}}@media (max-width:500px){.github-corner:hover .octo-arm{animation:none}.github-corner .octo-arm{animation:octocat-wave 560ms ease-in-out}}</style>
+    <a href="https://github.com/ebrensi/running_data" class="github-corner" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#151513; color:#fff; position: absolute; top: 0; border: 0; right: 0;"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a><style>.github-corner:hover .octo-arm{animation:octocat-wave 560ms ease-in-out}@keyframes octocat-wave{0%,100%{transform:rotate(0)}20%,60%{transform:rotate(-25deg)}40%,80%{transform:rotate(10deg)}}@media (max-width:500px){.github-corner:hover .octo-arm{animation:none}.github-corner .octo-arm{animation:octocat-wave 560ms ease-in-out}}</style>
 
 
 
@@ -325,7 +325,7 @@
             baseLayers: map_providers
         };
 
-        var heatLayerOptions = {{ config["HEATMAP_DEFAULT_OPTIONS"]|tojson|safe}};
+        var heatLayerOptions = {{ config["HEATMAP_DEFAULT_OPTIONS"]|tojson|safe }};
         var flowLayerOptions = {{ config["ANTPATH_DEFAULT_OPTIONS"]|tojson|safe }};
 
         function renderLayers(){
@@ -351,131 +351,90 @@
             map.spin(true);   // start progress indicator
             $.getJSON('/{{ username }}/getdata', query, function(data) {
 
-                if ("error" in data){
-                    $("#data_message").html("<font color='red'>" + data.error +"</font>");
-                    return;
-                }
+                // if ("error" in data){
+                //     $("#data_message").html("<font color='red'>" + data.error +"</font>");
+                //     return;
+                // }
+
+                $("#data_message").html("");
 
                 // console.log(data);
-                if (query.durations)
-                    durations = data.durations;
+                var latlngs_flat = [],
+                    count = 0;
 
-
-                if (query.lores) {
-                    var lores_routes = [];
-                    var route;
-                    for (var i = 0; i < data.lores.length; i++) {
-                        route = L.PolylineUtil.decode(data.lores[i]);
-                        lores_routes.push(route);
-                    }
-
-
-                    if (flowres == "low")
-                        flow_data = lores_routes;
-
-                    if (heatres == "low"){
-                        var flat = [];
-                        for (var i = 0; i < lores_routes.length; i++) {
-                             flat.push.apply(flat, lores_routes[i]);
-                         }
-
-                         heat_data = flat;
-                    }
-                }
-
-                if (query.hires) {
-                    var hires_routes = [];
-                    var route;
-                    for (var i = 0; i < data.hires.length; i++) {
-                        route = L.PolylineUtil.decode(data.hires[i]);
-                        hires_routes.push(route);
-                    }
-
-                    if (flowres == "high")
-                        flow_data = hires_routes;
-
-                    if (heatres == "high"){
-                        var flat = [];
-                        for (var i = 0; i < hires_routes.length; i++) {
-                             flat.push.apply(flat, hires_routes[i]);
-                        }
-
-                        heat_data = flat;
-                    }
-                }
-
-                // Add Heat Map Layer to map
+                // Remove HeatLayer from map and control if it's there
                 if (HeatLayer){
                     map.removeLayer(HeatLayer);
                     control.removeLayer(HeatLayer);
                     HeatLayer = false;
                 }
-                if (heat_data){
-                    HeatLayer = L.heatLayer(heat_data, heatLayerOptions);
-                    map.addLayer(HeatLayer);
-                    control.addOverlay(HeatLayer, "Point Density");
-                }
 
-
+                // Remove FlowLayer from map and control if it's there
                 if (FlowLayer){
                     map.removeLayer(FlowLayer);
                     control.removeLayer(FlowLayer);
                     FlowLayer = false;
                 }
 
-                if (flow_data){
+                // Add new blank HeatLayer to map if specified
+                if (heatres){
+                    HeatLayer = L.heatLayer(latlngs_flat, heatLayerOptions);
+                    map.addLayer(HeatLayer);
+                    control.addOverlay(HeatLayer, "Point Density");
+                }
+
+                // Add new blank FlowLayer to map if specified
+                if (flowres){
                     FlowLayer = new L.layerGroup();
-                    var options = {{ config["ANTPATH_DEFAULT_OPTIONS"]|tojson|safe }};
-                    var DELAY = options.delay;
-
-                    for (var i=0; i < flow_data.length; i++) {
-                        var route = flow_data[i];
-                        if (("path_color" in data.summary[i]) && data.summary[i].path_color)
-                            options.color = data.summary[i].path_color;
-
-                        if (durations){
-                            var durs = durations[i];
-                            var subroute = [route[0]];
-
-                            for (var j = 1; j < durs.length; j++) {
-                                subroute.push(route[j]);
-
-                                if (durs[j] != durs[j-1]) {
-
-                                    options.delay = DELAY * durs[j-1]
-                                    polyseg = new L.Polyline.AntPath(subroute, options);
-
-                                    FlowLayer.addLayer(polyseg);
-
-                                    subroute = [route[j]];
-                                }
-                            }
-                        }
-
-                        else {
-                            FlowLayer.addLayer(new L.Polyline.AntPath(route, options));
-                        }
-
-                    }
                     map.addLayer(FlowLayer);
                     control.addOverlay(FlowLayer, "Flow Paths");
                 }
 
+                for (var i = 0; i < data.length; i++) {
+                    A = data[i];
 
-
-                if ($("#autozoom:checked").val())
-                    if (heat_data) {
-                        map.fitBounds(heat_data);
-                    }
-                    else if (flow_data) {
-                        var flat = [];
-                        for (var i = 0; i < flow_data.length; i++) {
-                             flat.push.apply(flat, flow_data[i]);
-                         }
-                        map.fitBounds(flat);
+                    if ("error" in A){
+                        $("#data_message").html("<font color='red'>" + A.error +"</font>");
+                    } else {
+                        msg = "rendering [" + A.id + "] " + A.name;
+                        $("#data_message").html(msg);
                     }
 
-                $("#data_message").text(data.message);
+                    if (query.lores && ("summary_polyline" in A))
+                            latlngs = L.PolylineUtil.decode(A.summary_polyline);
+
+                    else if (query.hires && ("polyline" in A))
+                        latlngs = L.PolylineUtil.decode(A.polyline);
+
+                    else
+                        latlngs = false
+
+
+                    if (flowres && latlngs){
+                        // add this activity's route to FlowLayer
+                        var options = {{ config["ANTPATH_DEFAULT_OPTIONS"]|tojson|safe }};
+                        if (("path_color" in A) && A.path_color)
+                            options.color = A.path_color;
+                        FlowLayer.addLayer(new L.Polyline.AntPath(latlngs, options));
+                    }
+
+
+                    latlngs_flat.push.apply(latlngs_flat, latlngs);
+
+                    // if (heatres && latlngs){
+                    //     // add this activity's route to HeatLayer
+                    //     latlngs_flat.push.apply(latlngs_flat, latlngs);
+                    // }
+                }
+
+
+                if ($("#autozoom:checked").val() && latlngs_flat)
+                    map.fitBounds(latlngs_flat);
+
+                msg = i + " activities rendered.  " + latlngs_flat.length + " points.";
+                $("#data_message").html(msg);
+
+
             }).always(function() {
                     map.spin(false); // stop progress indicator
 
