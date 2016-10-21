@@ -68,7 +68,7 @@ class Activity(db.Model):
 
     dt_cached = db.Column(pg.TIMESTAMP)
     dt_last_accessed = db.Column(pg.TIMESTAMP)
-    access_count = db.Column(db.Integer)
+    access_count = db.Column(db.Integer, default=0)
 
     user_id = db.Column(db.Integer, db.ForeignKey("users.strava_id"))
 

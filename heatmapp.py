@@ -245,8 +245,6 @@ def index(username):
 @app.route('/<username>/getdata')
 def getdata(username):
     user = User.get(username)
-    start = request.args.get("start")
-    end = request.args.get("end")
 
     if not user:
         return jsonify({
@@ -258,18 +256,23 @@ def getdata(username):
         options["activity_ids"] = request.args.getlist("id")
 
     else:
-
+        limit = request.args.get("limit")
         if "limit" in request.args:
-            options["limit"] = int(request.args.get("limit"))
+            options["limit"] = int(limit)
 
-        try:
-            options["after"] = dateutil.parser.parse(start)
-            options["before"] = dateutil.parser.parse(end)
-            assert(options["before"] > options["after"])
-        except:
-            return jsonify({
-                "error": "Enter Valid Dates"
-            })
+        start = request.args.get("start")
+        end = request.args.get("end")
+        if start or end:
+            try:
+                options["after"] = dateutil.parser.parse(start)
+                options["before"] = dateutil.parser.parse(end)
+                assert(options["before"] > options["after"])
+            except:
+                return jsonify({
+                    "error": "Enter Valid Dates"
+                })
+        elif not limit:
+            options["limit"] = 10
 
     # options = {"activity_ids": [730239033, 97090517]}
     lores = request.args.get("lores") == "true"
@@ -294,28 +297,30 @@ def getdata(username):
                 if A and A.polyline:
                     # If streams for this activity are in the database
                     #  then retrieve them
-                    activity["polyline"] = A.polyline
-                    if durations:
-                        activity["time"] = A.time
+                    activity.update({"polyline": A.polyline,
+                                     "time": A.time})
                 else:
 
                     # otherwise, request them from Strava
                     stream_names = ['time', 'latlng']
 
                     streams = client.get_activity_streams(activity["id"],
-                                                          types=stream_names)
+                                                          types=stream_names,
+                                                          resolution="all",
+                                                          series_type="time")
 
-                    activity.update({name: streams[name].data
-                                     for name in streams})
+                    activity_data = {name: streams[name].data
+                                     for name in streams}
 
-                    if "latlng" in activity:
+                    if "latlng" in activity_data:
                         activity["polyline"] = (
-                            polyline.encode(activity.pop('latlng'))
+                            polyline.encode(activity_data.pop('latlng'))
                         )
 
                     # add the imported activity to the database for quicker
                     #  retrieval next time
-                    A = Activity(**activity)
+                    activity_data.update(activity)
+                    A = Activity(**activity_data)
                     A.user = user
                     A.dt_cached = datetime.utcnow()
                     A.access_count = 0
@@ -328,17 +333,15 @@ def getdata(username):
                 A.access_count += 1
                 db.session.commit()
 
-                if durations and ("time" in activity):
+                if "time" in activity:
                     t = activity.pop("time")
-                    activity["durations"] = [(b - a)
-                                             for a, b in zip(t, t[1:])] + [0]
+                    if durations:
+                        activity["durations"] = [(b - a)
+                                                 for a, b in zip(t, t[1:])] + [0]
 
             activity["path_color"] = path_color(activity["type"])
             data.append(activity)
 
-    data["message"] = (
-        "displaying {} - {} data".format(start, end)
-    )
     return jsonify(data)
 
 
