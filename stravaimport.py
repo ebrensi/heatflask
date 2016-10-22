@@ -6,6 +6,7 @@ from heatmapp import db, Activity, User
 import polyline
 import argparse
 import logging
+from datetime import datetime
 
 logging.basicConfig(  # filename="strava_import_{}.log".format(CURRENT_DATE),
     format='%(levelname)s:%(message)s',
@@ -82,10 +83,14 @@ def import_activities(db, user, limit=1):
                 activity_data.update(stream_data)
 
                 A = Activity(**activity_data)
+                A.dt_cached = datetime.utcnow()
+                A.access_count = 0
+
                 db.session.add(A)
                 db.session.commit()
 
-                msg = str(count) +". [{id}] {name}: {beginTimestamp}".format(**activity_data)
+                msg = str(
+                    count) + ". [{id}] {name}: {beginTimestamp}".format(**activity_data)
                 logging.info(msg)
                 yield msg + "\n"
             else:

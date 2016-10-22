@@ -19,6 +19,7 @@ from flask_analytics import Analytics
 
 
 app = Flask(__name__)
+
 app.config.from_object(os.environ['APP_SETTINGS'])
 
 Analytics(app)
@@ -300,7 +301,8 @@ def getdata(username):
                     activity.update({"polyline": A.polyline,
                                      "time": A.time})
                 else:
-
+                    pass
+                    """
                     # otherwise, request them from Strava
                     stream_names = ['time', 'latlng']
 
@@ -336,7 +338,7 @@ def getdata(username):
 
                     db.session.add(A)
                     db.session.commit()
-
+                    """
                 # update record of access
                 A.dt_last_accessed = datetime.utcnow()
                 A.access_count += 1
