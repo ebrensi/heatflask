@@ -132,7 +132,7 @@ if __name__ == '__main__':
     if args.user == "all":
         users = User.query.all()
     else:
-        users = User.query.filter_by(name=args.user).all()
+        users = [User.get(args.user)]
 
     for user in users:
         if args.clean:
