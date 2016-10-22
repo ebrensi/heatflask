@@ -74,6 +74,10 @@ def load_user(user_id):
     return User.get(user_id)
 
 
+# app.add_url_rule('/favicon.ico',
+#                  redirect_to=url_for('static', filename='favicon.ico'))
+
+
 @app.route('/')
 def nothing():
     if current_user.is_anonymous:
@@ -301,8 +305,7 @@ def getdata(username):
                     activity.update({"polyline": A.polyline,
                                      "time": A.time})
                 else:
-                    pass
-                    """
+
                     # otherwise, request them from Strava
                     stream_names = ['time', 'latlng']
 
@@ -338,7 +341,7 @@ def getdata(username):
 
                     db.session.add(A)
                     db.session.commit()
-                    """
+
                 # update record of access
                 A.dt_last_accessed = datetime.utcnow()
                 A.access_count += 1
