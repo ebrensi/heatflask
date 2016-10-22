@@ -114,7 +114,7 @@
                   <label for="renderHeat" style="display:block">Heat Layer:</label>
                   <select id="heatres" name="renderHeat" form="renderform">
                     <option value="">None</option>
-                    <option value="high" selected="selected">High resolution</option>
+                    <option value="high">High resolution</option>
                     <option value="low">Low resolution</option>
                   </select>
                   </span>
@@ -125,7 +125,7 @@
                   <select id="flowres" name="renderFlow" form="renderform">
                     <option value="">None</option>
                     <option value="high">High resolution</option>
-                    <option value="low" selected="selected">Low resolution</option>
+                    <option value="low">Low resolution</option>
                   </select>
                   </span>
 
@@ -184,7 +184,7 @@
             {% if current_user.is_authenticated
                     and (current_user.username == username) %}
             <div class="sidebar-pane" id="profile">
-                <h1 class="sidebar-header">{{ username }} ({{ current_user.strava_id }}) <span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
+                <h1 class="sidebar-header"> <a href="https://www.strava.com/athletes/{{ username }}" target="_blank"><img src="{{ url_for('static',filename='strava_button.png')}}" width=20, height=20 class="img-fluid"> </a>  {{ username }} ({{ current_user.strava_id }}) <span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
 
 
                 <h3> {{ current_user.firstname }}
@@ -198,7 +198,8 @@
 
 
                 <h3>Manage activity cache:</h3>
-                 <form action="{{ url_for('activity_select') }}" target="_blank">
+                <img src="{{ url_for('static', filename='under-construction.gif') }}" height=50><br>
+                 <form action="{{ url_for('activities_sse') }}" target="_blank">
 
                     List
                     <input type="number" name="limit" value=10 min=0 max=100>
@@ -211,7 +212,7 @@
                 <h3>Cache activities now:</h3>
                 <form id="importform" method="get" action="{{ url_for('activity_import', username=username)}}" target="output">
 
-                    Import
+                    Import High-resolution data for
 
                     <input type="number" name="count" value=10 min=0 max=50>
                     most recent activities from Strava.
@@ -390,8 +391,11 @@
                     control.addOverlay(FlowLayer, "Flow Paths");
                 }
 
+                var bounds = L.latLngBounds();
+
                 for (var i = 0; i < data.length; i++) {
-                    A = data[i];
+                    var A = data[i];
+                    var extend_bounds = true;
 
                     if ("error" in A){
                         $("#data_message").html("<font color='red'>" + A.error +"</font>");
@@ -400,38 +404,44 @@
                         $("#data_message").html(msg);
                     }
 
-                    if (query.lores && ("summary_polyline" in A))
-                            latlngs = L.PolylineUtil.decode(A.summary_polyline);
-
-                    else if (query.hires && ("polyline" in A))
-                        latlngs = L.PolylineUtil.decode(A.polyline);
-
-                    else
-                        latlngs = false
-
-
-                    if (flowres && latlngs){
+                    if (flowres){
                         // add this activity's route to FlowLayer
                         var options = {{ config["ANTPATH_DEFAULT_OPTIONS"]|tojson|safe }};
                         if (("path_color" in A) && A.path_color)
                             options.color = A.path_color;
-                        FlowLayer.addLayer(new L.Polyline.AntPath(latlngs, options));
+                    }
+
+                    if (query.lores && ("summary_polyline" in A)) {
+                        var latlngs = L.PolylineUtil.decode(A.summary_polyline);
+                        if (extend_bounds){
+                            bounds.extend(latlngs);
+                            extend_bounds = false;
+                        }
+
+                        if (heatres == "low")
+                            latlngs_flat.push.apply(latlngs_flat, latlngs);
+                        if (flowres == "low")
+                            FlowLayer.addLayer(new L.Polyline.AntPath(latlngs, options));
                     }
 
 
-                    latlngs_flat.push.apply(latlngs_flat, latlngs);
+                    if (query.hires && ("polyline" in A)){
+                        var latlngs = L.PolylineUtil.decode(A.polyline);
+                        if (extend_bounds)
+                            bounds.extend(latlngs);
 
-                    // if (heatres && latlngs){
-                    //     // add this activity's route to HeatLayer
-                    //     latlngs_flat.push.apply(latlngs_flat, latlngs);
-                    // }
+                        if (heatres == "high")
+                            latlngs_flat.push.apply(latlngs_flat, latlngs);
+                        if (flowres == "high")
+                            FlowLayer.addLayer(new L.Polyline.AntPath(latlngs, options));
+                    }
                 }
 
 
-                if ($("#autozoom:checked").val() && latlngs_flat)
-                    map.fitBounds(latlngs_flat);
+                if ($("#autozoom:checked").val() && bounds.isValid())
+                    map.fitBounds(bounds);
 
-                msg = i + " activities rendered.  " + latlngs_flat.length + " points.";
+                msg = i + " activities rendered." ;
                 $("#data_message").html(msg);
 
 
