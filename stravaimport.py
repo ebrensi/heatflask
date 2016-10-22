@@ -14,12 +14,9 @@ logging.basicConfig(  # filename="strava_import_{}.log".format(CURRENT_DATE),
 
 
 def import_activities(db, user, limit=1):
-    already_got = [int(d[0]) for d in db.session.query(
-        Activity.id).filter_by(user=user).all()]
-
     count = 0
     msg = "importing activities from Strava..."
-    logging.info(msg)
+    # logging.info(msg)
     yield msg + "\n"
 
     token = user.strava_access_token
@@ -31,7 +28,7 @@ def import_activities(db, user, limit=1):
             a = activities.next()
         except StopIteration:
             msg = "done importing {} activities.".format(count)
-            logging.info(msg)
+            # logging.info(msg)
             yield msg + "\n"
             return
         except Exception as e:
@@ -43,13 +40,13 @@ def import_activities(db, user, limit=1):
         if not a.start_latlng:
             msg = ("{}. activity {} has no data points"
                    .format(count, a.id))
-            logging.info(msg)
+            # logging.info(msg)
             yield msg + "\n"
 
         elif Activity.get(a.id):
             msg = ("{}. activity {} already in database."
                    .format(count, a.id))
-            logging.info(msg)
+            # logging.info(msg)
             yield msg + "\n"
         else:
             # Summary data
@@ -96,7 +93,7 @@ def import_activities(db, user, limit=1):
             else:
                 msg = ("{}. activity {} has no GIS points."
                        .format(count, a.id))
-                logging.info(msg)
+                # logging.info(msg)
                 yield msg + "\n"
 
     msg = "Done! {} activities imported".format(count)
