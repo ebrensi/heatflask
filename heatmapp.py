@@ -461,10 +461,9 @@ def admin():
     users = User.query.all()
 
     info = {
-        user.name: {
+        user.username: {
             "is_active": user.is_active,
-            "cached": len(db.session.query(Activity.id)
-                          .filter_by(user=user).all())
+            "cached": len(user.activities.all())
         }
         for user in users}
     return jsonify(info)
