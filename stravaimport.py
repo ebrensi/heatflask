@@ -46,7 +46,7 @@ def import_activities(db, user, limit=1):
             logging.info(msg)
             yield msg + "\n"
 
-        elif a.id in already_got:
+        elif Activity.get(a.id):
             msg = ("{}. activity {} already in database."
                    .format(count, a.id))
             logging.info(msg)
