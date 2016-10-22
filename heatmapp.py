@@ -218,7 +218,8 @@ def index(username):
     flowres = request.args.get("flowres", "")
     heatres = request.args.get("heatres", "")
     if (not flowres) and (not heatres):
-        flowres = "low"
+        flowres = "high"
+        heatres = "high"
 
     default_center = app.config["MAP_CENTER"]
     lat = request.args.get("lat") or default_center[0]
