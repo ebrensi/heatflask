@@ -83,7 +83,13 @@ def nothing():
     if current_user.is_anonymous:
         return render_template("splash.html")
     else:
-        return redirect(url_for('index', username=current_user.username))
+        try:
+            username = current_user.username
+        except:
+            flash("oops! Session expired! You need to log back in.")
+            return render_template("splash.html")
+        else:
+            return redirect(url_for('index', username=username))
 
 
 @app.route('/demo')
