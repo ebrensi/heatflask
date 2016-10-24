@@ -86,7 +86,8 @@ def nothing():
         try:
             username = current_user.username
         except:
-            flash("oops! Session expired! You need to log back in.")
+            flash("oops! Please log back in.")
+            logout_user()
             return render_template("splash.html")
         else:
             return redirect(url_for('index', username=username))
