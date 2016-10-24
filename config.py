@@ -5,7 +5,7 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 class Config(object):
     APP_NAME = "Heatflask (alpha)"
     APP_VERSION = "alpha"
-    ADMIN = ["ebuggz"]
+    ADMIN = [15972102]
     DEBUG = False
     TESTING = False
     CSRF_ENABLED = True

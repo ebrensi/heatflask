@@ -467,35 +467,35 @@ def admin():
     info = {
         user.username: {
             "is_active": user.is_active,
-            "cached": len(user.activities.all())
+            "cached": user.activities.count()
         }
         for user in users}
     return jsonify(info)
 
 
-"""
-@app.route('/subscribe')
-@login_required
-def subscribe():
-    user = User.get(current_user.username)
-    token = user.strava_access_token
-    client = stravalib.Client(access_token=token)
-    sub = client.create_subscription(client_id=app.config["STRAVA_CLIENT_ID"],
-                                     client_secret=app.config[
-                                         "STRAVA_CLIENT_SECRET"],
-                                     callback_url=url_for("webhook_callback",
-                                                          _external=True))
+# @app.route('/subscribe')
+# @login_required
+# def subscribe():
+#     if current_user.strava_id in app.config["ADMIN"]:
+#         user = current_user
+#         token = user.strava_access_token
+#         client = stravalib.Client(access_token=token)
+#         sub = client.create_subscription(client_id=app.config["STRAVA_CLIENT_ID"],
+#                                          client_secret=app.config[
+#                                              "STRAVA_CLIENT_SECRET"],
+#                                          callback_url=url_for("webhook_callback",
+#                                                               _external=True))
 
 
-@app.route('/webhook_callback', methods=["GET", "POST"])
-def webhook_callback():
-    client = stravalib.Client()
+# @app.route('/webhook_callback', methods=["GET", "POST"])
+# def webhook_callback():
+#     client = stravalib.Client()
 
-    if request.method == 'GET':
-        response = client.handle_subscription_callback(request)
-    else:
-        response = client.handle_subscription_update(request)
-"""
+#     if request.method == 'GET':
+#         response = client.handle_subscription_callback(request)
+#     else:
+#         response = client.handle_subscription_update(request)
+
 
 # python heatmapp.py works but you really should use `flask run`
 if __name__ == '__main__':
