@@ -92,7 +92,7 @@ def demo():
                             username="ebuggz",
                             preset="7",
                             heatres="high",
-                            flowres="low",
+                            flowres="high",
                             autozoom=1,
                             baselayer=["OpenTopoMap"]
                             )
@@ -218,8 +218,8 @@ def index(username):
     flowres = request.args.get("flowres", "")
     heatres = request.args.get("heatres", "")
     if (not flowres) and (not heatres):
-        flowres = "high"
-        heatres = "high"
+        flowres = "low"
+        # heatres = "high"
 
     default_center = app.config["MAP_CENTER"]
     lat = request.args.get("lat") or default_center[0]
@@ -266,13 +266,14 @@ def getdata(username):
         if "limit" in request.args:
             options["limit"] = int(limit)
 
-        start = request.args.get("start")
-        end = request.args.get("end")
-        if start or end:
+        date1 = request.args.get("date1")
+        date2 = request.args.get("date2")
+        if date1 or date2:
             try:
-                options["after"] = dateutil.parser.parse(start)
-                options["before"] = dateutil.parser.parse(end)
-                assert(options["before"] > options["after"])
+                options["after"] = dateutil.parser.parse(date1)
+                if date2:
+                    options["before"] = dateutil.parser.parse(date2)
+                    assert(options["before"] > options["after"])
             except:
                 return jsonify({
                     "error": "Enter Valid Dates"

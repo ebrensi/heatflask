@@ -75,7 +75,7 @@
                     <span class="sidebar-close"><i class="fa fa-caret-left"></i></span>
                 </h1>
 
-                <h3>Enter dates over which to render:</h3>
+                <h3>Use data from activities:</h3>
 
                 <form id="renderform" action="{{ url_for('index', username=username)}}">
 
@@ -99,13 +99,13 @@
                   <br>
 
                   <span style="display:block">
-                    <label for="date1" style="display:block">Start Date:</label>
+                    <label for="date1" style="display:block">After:</label>
                     <input class="datepick" id="date1" type="text"  value=""/>
                   </span>
                   <br>
 
                   <span style="display:block">
-                    <label for="date2" style="display:block">End Date:</label>
+                    <label for="date2" style="display:block">Before:</label>
                     <input class="datepick" id="date2" type="text" value=""/>
                   </span>
                   <br>
@@ -343,8 +343,8 @@
             dates_changed = ((date1 != appState.date1) || (date2 != appState.date2));
 
             var query = {
-                start: $("#date1").val(),
-                end: $("#date2").val(),
+                date1: date1,
+                date2: date2,
                 hires: flowres == "high" || heatres == "high",
                 lores: flowres == "low" || heatres == "low",
                 durations: flowres == "high"
@@ -499,19 +499,12 @@
             var F = "YYYY-MM-DD";
             var choice = $("#preset").val();
 
-            // date1 defaults to
-            var date1 = moment("20090215", "YYYYMMDD");
             if (choice){
                 date1=moment().subtract(choice, 'days');
             };
 
             $('#date1').val(date1.format(F));
-
-
-            // end date defaults to tomorrow, so that default query includes
-            //  today's events.
-            var date2 = moment().add(1, 'days');
-            $('#date2').val(date2.format(F));
+            $('#date2').val("");
         };
 
 
