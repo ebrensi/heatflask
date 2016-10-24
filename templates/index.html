@@ -202,7 +202,7 @@
                  <form action="{{ url_for('activities_sse') }}" target="_blank">
 
                     List
-                    <input type="number" name="limit" value=10 min=0 max=100>
+                    <input type="number" name="limit" value=10 min=0 max=1000>
                     most recent Strava activities.
                     <br>
                     <input type="submit" value="Go!"/>
@@ -412,7 +412,7 @@
                             options.color = A.path_color;
                     }
 
-                    if (query.lores && ("summary_polyline" in A)) {
+                    if (query.lores && ("summary_polyline" in A) && (A.summary_polyline)) {
                         var latlngs = L.PolylineUtil.decode(A.summary_polyline);
                         if (extend_bounds){
                             bounds.extend(latlngs);
@@ -426,7 +426,7 @@
                     }
 
 
-                    if (query.hires && ("polyline" in A)){
+                    if (query.hires && ("polyline" in A) && (A.polyline)){
                         var latlngs = L.PolylineUtil.decode(A.polyline);
                         if (extend_bounds)
                             bounds.extend(latlngs);
