@@ -90,7 +90,14 @@ def nothing():
             logout_user()
             return render_template("splash.html")
         else:
-            return redirect(url_for('index', username=username))
+            if username:
+                return redirect(url_for('index', username=username))
+            else:
+                flash("null username?")
+                logout_user()
+                return render_template("splash.html")
+                
+                
 
 
 @app.route('/demo')
