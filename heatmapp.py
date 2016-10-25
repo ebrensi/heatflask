@@ -219,7 +219,6 @@ def index(username):
         except:
             logout_user()
         else:
-
             current_user.dt_last_active = datetime.utcnow()
             current_user.app_activity_count += 1
             db.session.commit()
@@ -234,14 +233,19 @@ def index(username):
     date1 = request.args.get("date1")
     date2 = request.args.get("date2")
     preset = request.args.get("preset")
+    limit = request.args.get("limit")
     autozoom = request.args.get("autozoom", "")
     baselayer = request.args.getlist("baselayer")
 
-    if ((not date1) or (not date2)) and (not preset):
-        preset = "7"
-        autozoom = "1"
-    else:
-        preset = preset if (preset in app.config["DATE_RANGE_PRESETS"]) else "7"
+    if (not date1) or (not date2):
+        if preset:
+            preset = (
+                preset
+                if (preset in app.config["DATE_RANGE_PRESETS"]) else "7"
+            )
+        elif not limit:
+            preset = "7"
+            autozoom = "1"
 
     flowres = request.args.get("flowres", "")
     heatres = request.args.get("heatres", "")
@@ -262,6 +266,7 @@ def index(username):
                            preset=preset,
                            date1=date1,
                            date2=date2,
+                           limit=limit,
                            heatres=heatres,
                            flowres=flowres,
                            autozoom=autozoom,
