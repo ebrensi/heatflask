@@ -219,16 +219,17 @@ def index(username):
         except:
             logout_user()
         else:
+
             current_user.dt_last_active = datetime.utcnow()
             current_user.app_activity_count += 1
             db.session.commit()
 
-        # note: 'current_user' is the user that is currently logged in.
-        #       'user' is the user we are displaying data for.
-        user = User.get(username)
-        if not user:
-            flash("user '{}' is not registered with this app".format(username))
-            return redirect(url_for('nothing'))
+    # note: 'current_user' is the user that is currently logged in.
+    #       'user' is the user we are displaying data for.
+    user = User.get(username)
+    if not user:
+        flash("user '{}' is not registered with this app".format(username))
+        return redirect(url_for('nothing'))
 
     date1 = request.args.get("date1")
     date2 = request.args.get("date2")
