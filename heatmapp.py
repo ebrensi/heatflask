@@ -407,7 +407,7 @@ def activity_import(username):
 
 def activity_summary_iterator(user=None, client=None,
                               activity_ids=None, **args):
-    if user and (not client):
+    if not client:
         token = user.strava_access_token
         client = stravalib.Client(access_token=token)
 
@@ -437,7 +437,7 @@ def activity_summary_iterator(user=None, client=None,
         }
 
 
-# creates a stream of current.user's activities, using the Strava API arguments
+# creates a SSE stream of current.user's activities, using the Strava API arguments
 @app.route('/activities_sse')
 @login_required
 def activities_sse():
