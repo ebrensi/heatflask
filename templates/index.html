@@ -49,7 +49,7 @@
                 </li>
 
                 {% if current_user.is_authenticated
-                    and (current_user.username == username) %}
+                    and (current_user.strava_id == user.strava_id) %}
                 <li>
                 {% else %}
                 <li class="disabled">
@@ -71,14 +71,14 @@
         <div class="sidebar-content">
             <div class="sidebar-pane" id="home">
                 <h1 class="sidebar-header">
-                    <a href="https://www.strava.com/athletes/{{ username }}" target="_blank"><img src="{{ url_for('static',filename='strava_button.png')}}" width=20, height=20 class="img-fluid"> </a>
-                    {{ username }}'s map
+                    <a href="https://www.strava.com/athletes/{{ user.strava_id }}" target="_blank"><img src="{{ url_for('static',filename='strava_button.png')}}" width=20, height=20 class="img-fluid"> </a>
+                    {{ user.username or user.strava_id }}'s map
                     <span class="sidebar-close"><i class="fa fa-caret-left"></i></span>
                 </h1>
 
                 <h3>Use data from activities:</h3>
 
-                <form id="renderform" action="{{ url_for('index', username=username)}}">
+                <form id="renderform" action="{{ url_for('index', username=user.strava_id)}}">
 
                  <span style="display:block">
                   <label for="preset" style="display:block">Relative-Date Preset:</label>
@@ -156,7 +156,7 @@
 
                 <hr>
                 {% if current_user.is_authenticated %}
-                You are logged in as <a href="{{ url_for('index', username=current_user.username) }}">{{ current_user.username }}</a> :<br>
+                You are logged in as <a href="{{ url_for('index', username=current_user.strava_id) }}" target="_blank">{{ current_user.username or current_user.strava_id}}</a> :<br>
                 <form action="{{ url_for('logout') }}">
                     <input type="submit" class="btn btn-danger" value="Log Out" />
 
@@ -183,9 +183,9 @@
             </div>
 
             {% if current_user.is_authenticated
-                    and (current_user.username == username) %}
+                    and (current_user.strava_id == user.strava_id) %}
             <div class="sidebar-pane" id="profile">
-                <h1 class="sidebar-header"> <a href="https://www.strava.com/athletes/{{ username }}" target="_blank"><img src="{{ url_for('static',filename='strava_button.png')}}" width=20, height=20 class="img-fluid"> </a>  {{ username }} ({{ current_user.strava_id }}) <span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
+                <h1 class="sidebar-header"> <a href="https://www.strava.com/athletes/{{ user.strava_id }}" target="_blank"><img src="{{ url_for('static',filename='strava_button.png')}}" width=20, height=20 class="img-fluid"> </a>  {{ current_user.username or current_user.strava_id }} <span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
 
 
                 <h3> {{ current_user.firstname }}
@@ -199,33 +199,31 @@
 
 
                 <h3>Manage activity cache:</h3>
-                <img src="{{ url_for('static', filename='under-construction.gif') }}" height=50><br>
                  <form action="{{ url_for('activities_sse') }}" target="_blank">
 
-                    List
+                    <input type="submit" value="List"/>
                     <input type="number" name="limit" value=10 min=0 max=1000>
                     most recent Strava activities.
-                    <br>
-                    <input type="submit" value="Go!"/>
+                     <img src="{{ url_for('static', filename='under-construction.gif') }}" height=40>
+                    <!-- <br> -->
+
                 </form>
 
 
                 <h3>Cache activities now:</h3>
-                <form id="importform" method="get" action="{{ url_for('activity_import', username=username)}}" target="output">
+                <form id="importform" method="get" action="{{ url_for('activity_import', username=user.strava_id)}}" target="output">
 
-                    Import High-resolution data for
+                     <input type="submit" value="Import"/> High-resolution data for
 
                     <input type="number" name="count" value=10 min=0 max=50>
                     most recent activities from Strava.
-                    <br>
-                    <input type="submit" value="Go!"/>
+                    <!-- <br> -->
 
-                    <br>
-                    <!-- <div class="embed-responsive embed-responsive-4by3">
-                      <iframe class="embed-responsive-item" name="output" style="width:100% height=20"></iframe>
-                    </div> -->
 
-                    <iframe name="output" style="width:100% height=5"></iframe>
+                    <!-- <br> -->
+                    <div class="embed-responsive embed-responsive-16by9">
+                      <iframe class="embed-responsive-item" name="output" style="width:90%"></iframe>
+                    </div>
                 </form>
 
 
@@ -252,13 +250,15 @@
             <div class="sidebar-pane" id="messages">
                 <h1 class="sidebar-header">Info<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
                 <br>
-                {{ config['APP_NAME'] }} is a work in progress.<br>
+                {{ config['APP_NAME'] }} is a work in progress.
+                <img src="{{ url_for('static', filename='under-construction.gif') }}" height=40>
                 <br><br>
                 How we access data:  Low-resolution data is retrieved directly from Strava and we don't cache it in this app's database.  Hi-Resolution data takes longer to import so the current version of this app automatically imports GIS points for activities the first time they are requested and caches them in a database.  On subsequent requests for an activity's (Hi-res) data, the app will check the database first and get it from there if it is available.  Right now there is no limit on the number of activities that get cached, but since we are using a cheap database that stores a maximum of 10000 activities, we will periodically clear it. At any time you can delete your accout with us, which will clear our cache for you and delete your Strava access token from our database.  The token we obtain is for public data, so this app won't import any activities you have set to private.  The URL for a heat/flow map and the current location dates or preset, zoom, and map, are embedded in the url so you can share that url and anyone who clicks on it will get the same view.
                 <br><br>
-                2016-10-21:  Back-end upgrade. The database was cleared.
+
+                2016-10-25: Apparently this app does not work on Apple iphone?  I am trying to fix that.
                 <br><br>
-                Questions or comments, suggestions, job offers?<br>
+                Questions, comments, suggestions?<br>
                 <a href="mailto:Rensi.Efrem@gmail.com?Subject=About {{ config['APP_NAME'] }}">Contact Me.</a>
                 <br><br>
                 Check out the <a href="https://github.com/ebrensi/heatmappp" target="_blank">GitHub repo</a>.  Pull requests welcome!
@@ -356,7 +356,7 @@
             };
 
             map.spin(true);   // start progress indicator
-            $.getJSON('/{{ username }}/getdata', query, function(data) {
+            $.getJSON('/{{ user.strava_id }}/getdata', query, function(data) {
 
                 // if ("error" in data){
                 //     $("#data_message").html("<font color='red'>" + data.error +"</font>");
@@ -493,7 +493,7 @@
 
             params["baselayer"] = appState.baseLayers;
 
-            var newURL = "{{ username }}" + "?" + jQuery.param(params, true);
+            var newURL = "{{ user.username or user.strava_id }}" + "?" + jQuery.param(params, true);
             window.history.pushState("", "", newURL);
 
             $(".current-url").val(newURL);
