@@ -32,6 +32,7 @@
     {% assets "index_js" %}
     <script type="text/javascript" src="{{ ASSET_URL }}"></script>
     {% endassets %}
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBLvYWwPmLsBRCGXeMHh-InA9rq35jdVeA" async defer></script>
 
     {% if not current_user.strava_id in config["ADMIN"] %}
     {{analytics}}
@@ -289,8 +290,13 @@
         var default_baseLayer;
         var baseLayers = {
             "None": L.tileLayer(""),
-            "Esri.WorldImagery": L.tileLayer.provider("Esri.WorldImagery")
+            "Esri.WorldImagery": L.tileLayer.provider("Esri.WorldImagery"),
+            "Google Roadmap":  L.gridLayer.googleMutant({type: 'roadmap'}),
+            "Google terrain":  L.gridLayer.googleMutant({
+                                type: 'terrain' // valid values are 'roadmap', 'satellite', 'terrain' and 'hybrid'
+                            })
         };
+
 
         var online = ("{{ config['OFFLINE'] }}" != "True");
 

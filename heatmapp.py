@@ -46,6 +46,7 @@ bundles = {
                                     'js/leaflet-ant-path.js',
                                     'js/L.Control.Window.js',
                                     'js/leaflet-providers.js',
+                                    'js/Leaflet.GoogleMutant.js',
                                     output='gen/index.js')
 
 }
