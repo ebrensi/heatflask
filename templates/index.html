@@ -291,17 +291,18 @@
         var baseLayers = {
             "None": L.tileLayer(""),
             "Esri.WorldImagery": L.tileLayer.provider("Esri.WorldImagery"),
-            "Google Roadmap":  L.gridLayer.googleMutant({type: 'roadmap'}),
-            "Google terrain":  L.gridLayer.googleMutant({
-                                type: 'terrain' // valid values are 'roadmap', 'satellite', 'terrain' and 'hybrid'
-                            })
+            // valid Google types are 'roadmap', 'satellite', 'terrain' and 'hybrid'
+            "Google.Roadmap":  L.gridLayer.googleMutant({type: 'roadmap'}),
+            "Google.Terrain":  L.gridLayer.googleMutant({type: 'terrain'}),
+            "Google.Hybrid": L.gridLayer.googleMutant({type: 'hybrid'})
         };
 
 
-        var online = ("{{ config['OFFLINE'] }}" != "True");
+        var offline = ("{{ config['OFFLINE'] }}" == "True");
 
-        if (map_providers.length && online) {
-
+        if (offline) {
+            default_baseLayer = baseLayers["None"];
+        } else if (map_providers.length) {
             for (var i = 0; i < map_providers.length; i++) {
                 provider = map_providers[i];
                 var tl = L.tileLayer.provider(provider);
@@ -309,8 +310,9 @@
                 if (i==0)
                     default_baseLayer = tl;
             }
-        } else
-            default_baseLayer = baseLayers["None"];
+        } else {
+            default_baseLayer = baseLayers["Google.Roadmap"];
+        }
 
         var map = L.map('map',
                         {center: [{{ lat }}, {{ lng }}],
