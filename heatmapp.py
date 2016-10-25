@@ -85,14 +85,15 @@ def favicon():
 def nothing():
     if current_user.is_authenticated:
         try:
-            assert current_user.username
+            assert current_user.strava_id
         except:
-            # If for some reason a user is logged in but has no user id or
-            #  the username is null
+            # If a user is logged in but has no record in our database.
+            #  i.e. was deleted.  We direct them to initialize a new account.
             logout_user()
             flash("oops! Please log back in.")
         else:
-            return redirect(url_for('index', username=current_user.username))
+            return redirect(url_for('index',
+                                    username=current_user.strava_id))
 
     return render_template("splash.html")
 
@@ -173,7 +174,7 @@ def auth_callback():
         login_user(user, remember=True)
 
     return redirect(request.args.get("state") or
-                    url_for("index", username=current_user.username))
+                    url_for("index", username=current_user.strava_id))
 
 
 @app.route("/logout")
@@ -183,8 +184,8 @@ def logout():
         user_id = current_user.strava_id
         username = current_user.username
         logout_user()
-        flash("user {} ({}) logged out"
-              .format(user_id, username))
+        flash("user '{}' ({}) logged out"
+              .format(username, user_id))
     return redirect(request.args.get("next") or url_for("nothing"))
 
 
@@ -204,18 +205,17 @@ def delete():
         except Exception as e:
             flash(str(e))
         else:
-            flash("user {} ({}) deleted".format(user_id, username))
+            flash("user '{}' ({}) deleted".format(username, user_id))
     return redirect(url_for("nothing"))
 
 
 @app.route('/<username>')
 def index(username):
     if current_user.is_authenticated:
-        # Make sure the logged in user is a valid user (i.e. has a username)
-        #  We need to do this because there are people whose accounts got
-        #  deleted but they are still technically logged in.
+         # If a user is logged in from a past session but has no record in our
+         #  database (was deleted), we log them out and consider them anonymous
         try:
-            assert current_user.username
+            assert current_user.strava_id
         except:
             logout_user()
         else:
@@ -227,7 +227,8 @@ def index(username):
     #       'user' is the user we are displaying data for.
     user = User.get(username)
     if not user:
-        flash("user '{}' is not registered with this app".format(username))
+        flash("user '{}' is not registered with this app"
+              .format(username))
         return redirect(url_for('nothing'))
 
     date1 = request.args.get("date1")
@@ -259,7 +260,7 @@ def index(username):
     zoom = request.args.get("zoom") or app.config["MAP_ZOOM"]
 
     return render_template('index.html',
-                           username=user.username,
+                           user=user,
                            lat=lat,
                            lng=lng,
                            zoom=zoom,
@@ -392,7 +393,7 @@ def getdata(username):
 def activity_import(username):
     user = User.get(username)
 
-    if user and (username == current_user.username):
+    if user and (user.strava_id == current_user.strava_id):
         count = int(request.args.get("count", 1))
 
         import stravaimport
@@ -495,7 +496,8 @@ def admin():
         user.strava_id: {
             "cached": user.activities.count(),
             "dt_last_active": user.dt_last_active,
-            "app_activity_count": user.app_activity_count
+            "app_activity_count": user.app_activity_count,
+            "username": user.username
         }
         for user in users}
     return jsonify(info)
