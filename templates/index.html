@@ -89,10 +89,6 @@
                     <option value=60>Last 60 days</option>
                     <option value=180>Last 180 days</option>
                     <option value=365>Last year</option>
-                    <option value=-7 disabled>This week (M-F)</option>
-                    <option value=-30 disabled>This month</option>
-                    <option value=-365 disabled>This year</option>
-                    <option value=0 disabled>All</option>
                     <option value="">----</option>
                   </select>
                   </span>
@@ -205,8 +201,6 @@
                     <input type="number" name="limit" value=10 min=0 max=1000>
                     most recent Strava activities.
                      <img src="{{ url_for('static', filename='under-construction.gif') }}" height=40>
-                    <!-- <br> -->
-
                 </form>
 
 
@@ -217,10 +211,7 @@
 
                     <input type="number" name="count" value=10 min=0 max=50>
                     most recent activities from Strava.
-                    <!-- <br> -->
 
-
-                    <!-- <br> -->
                     <div class="embed-responsive embed-responsive-16by9">
                       <iframe class="embed-responsive-item" name="output" style="width:90%"></iframe>
                     </div>
@@ -352,7 +343,7 @@
                 date2: date2,
                 hires: flowres == "high" || heatres == "high",
                 lores: flowres == "low" || heatres == "low",
-                durations: flowres == "high"
+                // durations: flowres == "high"
             };
 
             map.spin(true);   // start progress indicator
