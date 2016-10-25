@@ -16,7 +16,7 @@ class User(UserMixin, db.Model):
     strava_access_token = db.Column(db.String())
 
     dt_last_active = db.Column(pg.TIMESTAMP)
-    app_activity_count = db.Column(db.Integer)
+    app_activity_count = db.Column(db.Integer, default=0)
 
     # This is set up so that if a user gets deleted, all of the associated
     #  activities are also deleted.

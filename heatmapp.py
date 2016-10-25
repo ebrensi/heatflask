@@ -80,24 +80,18 @@ def load_user(user_id):
 
 @app.route('/')
 def nothing():
-    if current_user.is_anonymous:
-        return render_template("splash.html")
-    else:
+    if current_user.is_authenticated:
         try:
-            username = current_user.username
+            assert current_user.username
         except:
-            flash("oops! Please log back in.")
+            # If for some reason a user is logged in but has no user id or
+            #  the username is null
             logout_user()
-            return render_template("splash.html")
+            flash("oops! Please log back in.")
         else:
-            if username:
-                return redirect(url_for('index', username=username))
-            else:
-                flash("null username?")
-                logout_user()
-                return render_template("splash.html")
-                
-                
+            return redirect(url_for('index', username=current_user.username))
+
+    return render_template("splash.html")
 
 
 @app.route('/demo')
@@ -170,9 +164,6 @@ def auth_callback():
         user.firstname = strava_user.firstname
         user.lastname = strava_user.lastname
         user.profile = strava_user.profile
-
-        user.dt_last_active = datetime.utcnow()
-        user.app_activity_count += 1
         db.session.commit()
 
         # remember=True, for persistent login.
@@ -185,7 +176,7 @@ def auth_callback():
 @app.route("/logout")
 @login_required
 def logout():
-    if not current_user.is_anonymous:
+    if current_user.is_authenticated:
         user_id = current_user.strava_id
         username = current_user.username
         logout_user()
@@ -197,7 +188,7 @@ def logout():
 @app.route("/delete")
 @login_required
 def delete():
-    if not current_user.is_anonymous:
+    if current_user.is_authenticated:
         username = current_user.username
         user_id = current_user.strava_id
         logout_user()
@@ -216,6 +207,26 @@ def delete():
 
 @app.route('/<username>')
 def index(username):
+    if current_user.is_authenticated:
+        # Make sure the logged in user is a valid user (i.e. has a username)
+        #  We need to do this because there are people whose accounts got
+        #  deleted but they are still technically logged in.
+        try:
+            assert current_user.username
+        except:
+            logout_user()
+        else:
+            current_user.dt_last_active = datetime.utcnow()
+            current_user.app_activity_count += 1
+            db.session.commit()
+
+        # note: 'current_user' is the user that is currently logged in.
+        #       'user' is the user we are displaying data for.
+        user = User.get(username)
+        if not user:
+            flash("user '{}' is not registered with this app".format(username))
+            return redirect(url_for('nothing'))
+
     date1 = request.args.get("date1")
     date2 = request.args.get("date2")
     preset = request.args.get("preset")
@@ -239,13 +250,6 @@ def index(username):
     lat = request.args.get("lat") or default_center[0]
     lng = request.args.get("lng") or default_center[1]
     zoom = request.args.get("zoom") or app.config["MAP_ZOOM"]
-
-    # note 'user' is the user we are displaying data for.
-    # 'current_user' is the user that is currently logged in
-    user = User.get(username)
-    if not user:
-        flash("user '{}' is not registered with this app".format(username))
-        return redirect(url_for('nothing'))
 
     return render_template('index.html',
                            username=user.username,
@@ -480,9 +484,10 @@ def admin():
     users = User.query.all()
 
     info = {
-        user.username: {
-            "is_active": user.is_active,
-            "cached": user.activities.count()
+        user.strava_id: {
+            "cached": user.activities.count(),
+            "dt_last_active": user.dt_last_active,
+            "app_activity_count": user.app_activity_count
         }
         for user in users}
     return jsonify(info)
