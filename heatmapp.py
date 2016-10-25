@@ -2,7 +2,7 @@
 from __future__ import unicode_literals
 
 from flask import Flask, Response, render_template, request, redirect, \
-    jsonify, url_for, flash
+    jsonify, url_for, flash, send_from_directory
 import flask_compress
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -75,8 +75,10 @@ def load_user(user_id):
     return User.get(user_id)
 
 
-# app.add_url_rule('/favicon.ico',
-#                  redirect_to=url_for('static', filename='favicon.ico'))
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(os.path.join(app.root_path, 'static'),
+                               'favicon.ico')
 
 
 @app.route('/')
@@ -103,7 +105,7 @@ def demo():
                             heatres="high",
                             flowres="high",
                             autozoom=1,
-                            baselayer=["OpenTopoMap"]
+                            # baselayer=["OpenTopoMap"]
                             )
                     )
 
@@ -237,7 +239,6 @@ def index(username):
     if ((not date1) or (not date2)) and (not preset):
         preset = "7"
         autozoom = "1"
-        baselayer = ["OpenStreetMap.BlackAndWhite"]
     else:
         preset = preset if (preset in app.config["DATE_RANGE_PRESETS"]) else "7"
 
