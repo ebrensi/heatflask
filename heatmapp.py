@@ -520,21 +520,21 @@ def subscription(operation):
     user = current_user
     token = user.strava_access_token
     client = stravalib.Client(access_token=token)
-    app_credentials = {
-        "client_id": app.config["STRAVA_CLIENT_ID"],
-        "client_secret": app.config["STRAVA_CLIENT_SECRET"]
-    }
+    client_id = app.config["STRAVA_CLIENT_ID"],
+    client_secret = app.config["STRAVA_CLIENT_SECRET"]
 
     if operation == "create":
         sub = client.create_subscription(
             callback_url=url_for("webhook_callback", _external=True),
-            **app_credentials
+            client_id=client_id,
+            client_secret=client_secret
         )
         return jsonify({"created": sub})
 
     elif operation == "list":
-        subs = client.list_subscriptions(**app_credentials)
-        return jsonify(subs)
+        subs = client.list_subscriptions(client_id=client_id,
+                                         client_secret=client_secret)
+        return jsonify(list(subs))
 
     elif operation == "delete":
         try:
@@ -543,7 +543,8 @@ def subscription(operation):
             response = {"error": "bad or missing subscription id"}
         else:
             response = client.delete_subscription(subscription_id,
-                                                  **app_credentials)
+                                                  client_id=client_id,
+                                                  client_secret=client_secret)
         return jsonify(response)
 
 
@@ -552,9 +553,10 @@ def webhook_callback():
     client = stravalib.Client()
 
     if request.method == 'GET':
-        response = client.handle_subscription_callback(request)
-        app.logger.info("subsciption response: {}".format(response))
-    else:
+        app.logger.info("subscription response: {}".format(request.args))
+        # response = client.handle_subscription_callback(request)
+
+    elif request.method == 'POST':
         response = client.handle_subscription_update(request)
         app.logger.info("subsciption update: {}".format(response))
 
