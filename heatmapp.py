@@ -4,7 +4,7 @@ from __future__ import unicode_literals
 from flask import Flask, Response, render_template, request, redirect, \
     jsonify, url_for, flash, send_from_directory
 import flask_compress
-from flask_sqlalchemy import SQLAlchemy
+from models import User, Activity, db
 from flask_migrate import Migrate
 from datetime import datetime
 import dateutil.parser
@@ -16,11 +16,18 @@ import flask_login
 from flask_login import current_user, login_user, logout_user, login_required
 import flask_assets
 from flask_analytics import Analytics
+from flask_caching import Cache
 
 
 app = Flask(__name__)
-
 app.config.from_object(os.environ['APP_SETTINGS'])
+
+
+# data models defined in models.py
+db.init_app(app)
+migrate = Migrate(app, db)
+
+cache = Cache(app, config={'CACHE_TYPE': 'simple'})
 
 Analytics(app)
 
@@ -57,12 +64,6 @@ assets.register(bundles)
 # views will be sent as gzip encoded
 flask_compress.Compress(app)
 
-# initialize database
-db = SQLAlchemy(app)
-
-# data models defined in models.py
-from models import User, Activity
-migrate = Migrate(app, db)
 
 # Flask-login stuff
 login_manager = flask_login.LoginManager()
@@ -324,8 +325,8 @@ def getdata(username):
     client = stravalib.Client(access_token=token)
 
     data = []
-    for activity in activity_summary_iterator(client=client, **options):
-        if "error" not in activity:
+    for activity in activity_summaries(user, **options):
+        if ("error" not in activity) and activity.get("summary_polyline"):
             if hires:
                 A = Activity.query.get(activity["id"])
                 if A and A.polyline:
@@ -405,39 +406,39 @@ def activity_import(username):
                      " Try logging out and logging back in."])
 
 
-def activity_summary_iterator(user=None, client=None,
-                              activity_ids=None, **args):
-    if not client:
-        token = user.strava_access_token
-        client = stravalib.Client(access_token=token)
+@cache.memoize(50)
+def activity_summaries(user, activity_ids=None, **args):
+
+    token = user.strava_access_token
+    client = stravalib.Client(access_token=token)
 
     if activity_ids:
         activities = (client.get_activity(int(id)) for id in activity_ids)
     else:
         activities = client.get_activities(**args)
 
-    while True:
-        try:
-            a = activities.next()
-        except StopIteration:
-            return
-        except Exception as e:
-            yield {"error": str(e)}
-            return
+    try:
+        summaries = [
+            {
+                "id": a.id,
+                "athlete_id": a.athlete.id,
+                "name": a.name,
+                "type": a.type,
+                "summary_polyline": a.map.summary_polyline,
+                "beginTimestamp": str(a.start_date_local),
+                "total_distance": float(a.distance),
+                "elapsed_time": int(a.elapsed_time.total_seconds())
+            }
+            for a in activities
+        ]
+    except Exception as e:
+        summaries = [{"error": str(e)}]
 
-        yield {
-            "id": a.id,
-            "athlete_id": a.athlete.id,
-            "name": a.name,
-            "type": a.type,
-            "summary_polyline": a.map.summary_polyline,
-            "beginTimestamp": str(a.start_date_local),
-            "total_distance": float(a.distance),
-            "elapsed_time": int(a.elapsed_time.total_seconds())
-        }
+    return summaries
 
 
-# creates a SSE stream of current.user's activities, using the Strava API arguments
+# creates a SSE stream of current.user's activities, using the Strava API
+# arguments
 @app.route('/activities_sse')
 @login_required
 def activities_sse():
@@ -461,7 +462,7 @@ def activities_sse():
             options["limit"] = int(request.args.get("limit"))
 
     def boo():
-        for a in activity_summary_iterator(user, **options):
+        for a in activity_summaries(user, **options):
             a["cached"] = "yes" if Activity.get(a['id']) else "no"
             a["msg"] = "[{id}] {beginTimestamp} '{name}'".format(**a)
             yield "data: {}\n\n".format(json.dumps(a))

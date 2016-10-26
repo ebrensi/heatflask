@@ -1,6 +1,9 @@
 from flask_login import UserMixin
 from sqlalchemy.dialects import postgresql as pg
-from heatmapp import db
+from flask_sqlalchemy import SQLAlchemy
+
+
+db = SQLAlchemy()
 
 
 class User(UserMixin, db.Model):
@@ -26,7 +29,7 @@ class User(UserMixin, db.Model):
                                  lazy="dynamic")
 
     def __repr__(self):
-        return "<User %r (%s)>" % (self.strava_id, self.username)
+        return "<User %r>" % (self.strava_id)
 
     def get_id(self):
         return unicode(self.strava_id)
