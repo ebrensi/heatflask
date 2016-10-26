@@ -554,11 +554,12 @@ def webhook_callback():
 
     elif request.method == 'POST':
         raw = request.form
-        response = client.handle_subscription_update(request)
+        # response = client.handle_subscription_update(request)
+        response = raw
 
     app.logger.info("received from Strava: {}".format(raw))
     app.logger.info("sending response: {}".format(response))
-    return response
+    return jsonify(response)
 
 
 # python heatmapp.py works but you really should use `flask run`
