@@ -539,8 +539,12 @@ def subscription(operation):
         except:
             response = {"error": "bad or missing subscription id"}
         else:
-            response = client.delete_subscription(subscription_id,
-                                                  **credentials)
+            try:
+                response = client.delete_subscription(subscription_id,
+                                                      **credentials)
+            except Exception as e:
+                response = {"error": str(e)}
+
         return jsonify(response)
 
 
@@ -549,12 +553,12 @@ def webhook_callback():
     client = stravalib.Client()
 
     if request.method == 'GET':
-        raw = request.args
+        raw = dict(request.args)
         response = client.handle_subscription_callback(raw)
 
     elif request.method == 'POST':
-        raw = request.form
-        # response = client.handle_subscription_update(request)
+        raw = request.get_json(force=True)
+        # response = client.handle_subscription_update(raw)
         response = raw
 
     app.logger.info("received from Strava: {}".format(raw))
