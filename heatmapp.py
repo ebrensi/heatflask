@@ -517,23 +517,20 @@ def subscription(operation):
     if current_user.strava_id not in app.config["ADMIN"]:
         return jsonify({"error": "oops.  Can't do this."})
 
-    user = current_user
-    token = user.strava_access_token
-    client = stravalib.Client(access_token=token)
-    client_id = app.config["STRAVA_CLIENT_ID"],
-    client_secret = app.config["STRAVA_CLIENT_SECRET"]
-
+    client = stravalib.Client()
+    credentials = {
+        "client_id": app.config["STRAVA_CLIENT_ID"],
+        "client_secret": app.config["STRAVA_CLIENT_SECRET"]
+    }
     if operation == "create":
         sub = client.create_subscription(
             callback_url=url_for("webhook_callback", _external=True),
-            client_id=client_id,
-            client_secret=client_secret
+            **credentials
         )
         return jsonify({"created": sub})
 
     elif operation == "list":
-        subs = client.list_subscriptions(client_id=client_id,
-                                         client_secret=client_secret)
+        subs = client.list_subscriptions(**credentials)
         return jsonify(list(subs))
 
     elif operation == "delete":
@@ -543,8 +540,7 @@ def subscription(operation):
             response = {"error": "bad or missing subscription id"}
         else:
             response = client.delete_subscription(subscription_id,
-                                                  client_id=client_id,
-                                                  client_secret=client_secret)
+                                                  **credentials)
         return jsonify(response)
 
 
@@ -553,12 +549,16 @@ def webhook_callback():
     client = stravalib.Client()
 
     if request.method == 'GET':
-        app.logger.info("subscription response: {}".format(request.args))
-        # response = client.handle_subscription_callback(request)
+        raw = request.args
+        app.logger.info("subscription callback request: {}".format(raw))
+        response = client.handle_subscription_callback(raw)
+        app.logger.info("after handling: {}".format(response))
 
     elif request.method == 'POST':
+        raw = request.form
+        app.logger.info("subscription update: {}".format(raw))
         response = client.handle_subscription_update(request)
-        app.logger.info("subsciption update: {}".format(response))
+        app.logger.info("after handling: {}".format(response))
 
 
 # python heatmapp.py works but you really should use `flask run`
