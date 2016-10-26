@@ -550,15 +550,15 @@ def webhook_callback():
 
     if request.method == 'GET':
         raw = request.args
-        app.logger.info("subscription callback request: {}".format(raw))
         response = client.handle_subscription_callback(raw)
-        app.logger.info("after handling: {}".format(response))
 
     elif request.method == 'POST':
         raw = request.form
-        app.logger.info("subscription update: {}".format(raw))
         response = client.handle_subscription_update(request)
-        app.logger.info("after handling: {}".format(response))
+
+    app.logger.info("received from Strava: {}".format(raw))
+    app.logger.info("sending response: {}".format(response))
+    return response
 
 
 # python heatmapp.py works but you really should use `flask run`
