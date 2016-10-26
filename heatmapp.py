@@ -27,7 +27,7 @@ app.config.from_object(os.environ['APP_SETTINGS'])
 db.init_app(app)
 migrate = Migrate(app, db)
 
-cache = Cache(app, config={'CACHE_TYPE': 'simple'})
+cache = Cache(app, config={'CACHE_TYPE': 'null'})
 
 Analytics(app)
 
@@ -83,7 +83,7 @@ def favicon():
 
 
 @app.route('/apple-touch-icon')
-def favicon():
+def touch():
     return send_from_directory(os.path.join(app.root_path, 'static'),
                                'Heat.png')
 
