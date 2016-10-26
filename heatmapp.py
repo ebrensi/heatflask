@@ -82,6 +82,12 @@ def favicon():
                                'favicon.ico')
 
 
+@app.route('/apple-touch-icon')
+def favicon():
+    return send_from_directory(os.path.join(app.root_path, 'static'),
+                               'Heat.png')
+
+
 @app.route('/')
 def nothing():
     if current_user.is_authenticated:
