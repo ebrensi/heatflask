@@ -25,14 +25,25 @@ client = stravalib.Client()
 @app.route('/')
 def index():
     if client.access_token:
-        athlete = client.get_athlete()
+        id = request.args.get("id")
+        if id:
+            athlete = client.get_athlete(athlete_id=id)
+        else:
+            athlete = client.get_athlete()
 
         ath = {
             "id": athlete.id,
             "firstname": athlete.firstname,
             "lastname": athlete.lastname,
             "username": athlete.username,
-            "pic_url": athlete.profile
+            "pic_url": athlete.profile,
+            "sex": athlete.sex,
+            "city": athlete.city,
+            "state": athlete.state,
+            "country": athlete.country,
+            "date_preference": athlete.date_preference,
+            "measurement_preference": athlete.measurement_preference,
+            "email": athlete.email
         }
 
         return jsonify(ath)
@@ -73,7 +84,7 @@ def activity_iterator(client, **args):
             "id": a.id,
             "name": a.name,
             "type": a.type,
-            # "summary_polyline": a.map.summary_polyline,
+            "summary_polyline": a.map.summary_polyline,
             "beginTimestamp": str(a.start_date_local),
             "total_distance": float(a.distance),
             "elapsed_time": int(a.elapsed_time.total_seconds()),
@@ -142,26 +153,19 @@ def data_points(activity_id):
         stream_names = ['time', 'latlng', 'distance', 'altitude', 'velocity_smooth',
                         'cadence', 'watts', 'grade_smooth']
 
-        streams = client.get_activity_streams(activity_id,
-                                              types=stream_names)
-
-        # This is all done to eliminate any data-points from the streams where
-        #  latlng is [0,0], which is invalid.  I am not sure if any [0,0] points
-        #  actually exist in Strava data but some where there in the original
-        #  Garmin data.
-        idx = stream_names.index('latlng')
-        zipped = zip(
-            *[streams[t].data for t in stream_names if t in streams])
-        stream_data = {
-            t: tl for t, tl in
-            zip(stream_names,
-                zip(*[d for d in zipped if d[idx] != [0, 0]])
-                )
-        }
-
-        stream_data["polyline"] = (
-            polyline.encode(stream_data.pop('latlng'))
-        )
+        try:
+            streams = client.get_activity_streams(activity_id,
+                                                  types=stream_names)
+        except Exception as e:
+            stream_data = {"error": str(e)}
+        else:
+            stream_data = {stream: streams[stream].data for stream in streams}
+            if "latlng" in stream_data:
+                latlng = stream_data.pop('latlng')
+                if latlng:
+                    stream_data["polyline"] = (
+                        polyline.encode(latlng)
+                    )
         return jsonify(stream_data)
     else:
         return redirect(url_for('login',
