@@ -523,10 +523,14 @@ def subscription(operation):
         "client_secret": app.config["STRAVA_CLIENT_SECRET"]
     }
     if operation == "create":
-        sub = client.create_subscription(
-            callback_url=url_for("webhook_callback", _external=True),
-            **credentials
-        )
+        try:
+            sub = client.create_subscription(
+                callback_url=url_for("webhook_callback", _external=True),
+                **credentials
+            )
+        except Exception as e:
+            return jsonify({"error": str(e)})
+
         return jsonify({"created": str(sub)})
 
     elif operation == "list":
@@ -553,7 +557,7 @@ def webhook_callback():
     client = stravalib.Client()
 
     if request.method == 'GET':
-        raw = dict(request.args)
+        raw = request.args
         response = client.handle_subscription_callback(raw)
 
     elif request.method == 'POST':
