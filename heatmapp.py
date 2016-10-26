@@ -527,11 +527,11 @@ def subscription(operation):
             callback_url=url_for("webhook_callback", _external=True),
             **credentials
         )
-        return jsonify({"created": sub})
+        return jsonify({"created": str(sub)})
 
     elif operation == "list":
         subs = client.list_subscriptions(**credentials)
-        return jsonify(list(subs))
+        return jsonify([str(sub) for sub in subs])
 
     elif operation == "delete":
         try:
