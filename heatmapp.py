@@ -493,8 +493,8 @@ def retrieve_list():
     return jsonify(data)
 
 
-# Admin stuff
-@app.route('/admin')
+# List basic info about registered users
+@app.route('/users')
 @login_required
 def admin():
     users = User.query.all()
@@ -510,28 +510,53 @@ def admin():
     return jsonify(info)
 
 
-# @app.route('/subscribe')
-# @login_required
-# def subscribe():
-#     if current_user.strava_id in app.config["ADMIN"]:
-#         user = current_user
-#         token = user.strava_access_token
-#         client = stravalib.Client(access_token=token)
-#         sub = client.create_subscription(client_id=app.config["STRAVA_CLIENT_ID"],
-#                                          client_secret=app.config[
-#                                              "STRAVA_CLIENT_SECRET"],
-#                                          callback_url=url_for("webhook_callback",
-#                                                               _external=True))
+#  Webhook Subscription stuff.  Only admin users can access this
+@app.route('/subscription/<operation>')
+@login_required
+def subscription(operation):
+    if current_user.strava_id not in app.config["ADMIN"]:
+        return jsonify({"error": "oops.  Can't do this."})
+
+    user = current_user
+    token = user.strava_access_token
+    client = stravalib.Client(access_token=token)
+    app_credentials = {
+        "client_id": app.config["STRAVA_CLIENT_ID"],
+        "client_secret": app.config["STRAVA_CLIENT_SECRET"]
+    }
+
+    if operation == "create":
+        sub = client.create_subscription(
+            callback_url=url_for("webhook_callback", _external=True),
+            **app_credentials
+        )
+        return jsonify({"created": sub})
+
+    elif operation == "list":
+        subs = client.list_subscriptions(**app_credentials)
+        return jsonify(subs)
+
+    elif operation == "delete":
+        try:
+            subscription_id = int(request.args.get("id"))
+        except:
+            response = {"error": "bad or missing subscription id"}
+        else:
+            response = client.delete_subscription(subscription_id,
+                                                  **app_credentials)
+        return jsonify(response)
 
 
-# @app.route('/webhook_callback', methods=["GET", "POST"])
-# def webhook_callback():
-#     client = stravalib.Client()
+@app.route('/webhook_callback', methods=["GET", "POST"])
+def webhook_callback():
+    client = stravalib.Client()
 
-#     if request.method == 'GET':
-#         response = client.handle_subscription_callback(request)
-#     else:
-#         response = client.handle_subscription_update(request)
+    if request.method == 'GET':
+        response = client.handle_subscription_callback(request)
+        app.logger.info("subsciption response: {}".format(response))
+    else:
+        response = client.handle_subscription_update(request)
+        app.logger.info("subsciption update: {}".format(response))
 
 
 # python heatmapp.py works but you really should use `flask run`
