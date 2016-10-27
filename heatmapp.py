@@ -544,6 +544,7 @@ def subscription(operation):
             response = {"error": "bad or missing subscription id"}
         else:
             try:
+                # if successful this will be null
                 response = client.delete_subscription(subscription_id,
                                                       **credentials)
             except Exception as e:
@@ -557,17 +558,14 @@ def webhook_callback():
     client = stravalib.Client()
 
     if request.method == 'GET':
-        raw = request.args
-        response = client.handle_subscription_callback(raw)
+        return client.handle_subscription_callback(request.args)
 
     elif request.method == 'POST':
-        raw = request.get_json(force=True)
-        # response = client.handle_subscription_update(raw)
-        response = raw
-
-    app.logger.info("received from Strava: {}".format(raw))
-    app.logger.info("sending response: {}".format(response))
-    return jsonify(response)
+        update_raw = request.get_json(force=True)
+        app.logger.info(str(update_raw))
+        update = client.handle_subscription_update(update_raw)
+        # put update on a job queue
+        return "success"
 
 
 # python heatmapp.py works but you really should use `flask run`
