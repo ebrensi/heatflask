@@ -3,8 +3,8 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 
 
 class Config(object):
-    APP_NAME = "Heatflask (alpha)"
-    APP_VERSION = "alpha"
+    APP_VERSION = "(alpha)"
+    APP_NAME = "Heatflask {}".format(APP_VERSION)
     ADMIN = [15972102]
     DEBUG = False
     TESTING = False
@@ -12,6 +12,9 @@ class Config(object):
     SQLALCHEMY_DATABASE_URI = os.environ["DATABASE_URL"]
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SECRET_KEY = "pB\xeax\x9cJ\xd6\x81\xed\xd7\xf9\xd0\x99o\xad\rM\x92\xb1\x8b{7\x02r"
+
+    # Flask-Cache settings
+    CACHE_TYPE = "null"
 
     DATE_RANGE_PRESETS = ["2", "7", "30", "60", "180", "365"]
 
@@ -45,6 +48,10 @@ class Config(object):
 
 
 class ProductionConfig(Config):
+    """
+    These are settings specific to the production environment
+    (the main app running on Heroku)
+    """
     ANALYTICS = {
         'GOOGLE_UNIVERSAL_ANALYTICS': {
             'ACCOUNT': "UA-85621398-1"
@@ -52,13 +59,32 @@ class ProductionConfig(Config):
     }
     DEBUG = False
 
+    # For Flask-Cache
+    # CACHE_TYPE = 'redis'
+    # CACHE_REDIS_URL = os.environ.get('REDIS_URL')
+
+    # For Celery
+    # BROKER_URL = os.environ['REDIS_URL']
+    # CELERY_RESULT_BACKEND = os.environ.get(['REDIS_URL'])
+
 
 class StagingConfig(Config):
+    """
+    These are settings specific to the staging environment
+     (hosted test app)
+    """
     DEVELOPMENT = True
     DEBUG = True
 
 
 class DevelopmentConfig(Config):
+    """
+    These are settings specific to the development environment
+    (Developer's personal computer)
+    """
     # OFFLINE = True
     DEVELOPMENT = True
     DEBUG = True
+
+    # For Flask-Cache
+    CACHE_TYPE = "simple"

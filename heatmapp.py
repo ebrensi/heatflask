@@ -16,7 +16,7 @@ import flask_login
 from flask_login import current_user, login_user, logout_user, login_required
 import flask_assets
 from flask_analytics import Analytics
-# from flask_caching import Cache
+import flask_caching
 
 
 app = Flask(__name__)
@@ -27,7 +27,8 @@ app.config.from_object(os.environ['APP_SETTINGS'])
 from models import User, Activity, db
 migrate = Migrate(app, db)
 
-# cache = Cache(app, config={'CACHE_TYPE': 'simple'})
+# set up short-term fast caching support
+cache = flask_caching.Cache(app)
 
 Analytics(app)
 
@@ -412,32 +413,41 @@ def activity_import(username):
                      " Try logging out and logging back in."])
 
 
-# @cache.memoize(50)
+# @cache.memoize(timeout=50)
 def activity_summaries(user, activity_ids=None, **kwargs):
-    token = user.strava_access_token
-    client = stravalib.Client(access_token=token)
+    timeout = 120
+    unique = "{},{},{}".format(user.strava_id, activity_ids, kwargs)
+    key = hash(unique)
 
-    if activity_ids:
-        activities = (client.get_activity(int(id)) for id in activity_ids)
-    else:
-        activities = client.get_activities(**kwargs)
+    summaries = cache.get(key)
+    if not summaries:
+        token = user.strava_access_token
+        client = stravalib.Client(access_token=token)
 
-    try:
-        summaries = [
-            {
-                "id": a.id,
-                "athlete_id": a.athlete.id,
-                "name": a.name,
-                "type": a.type,
-                "summary_polyline": a.map.summary_polyline,
-                "beginTimestamp": str(a.start_date_local),
-                "total_distance": float(a.distance),
-                "elapsed_time": int(a.elapsed_time.total_seconds())
-            }
-            for a in activities
-        ]
-    except Exception as e:
-        summaries = [{"error": str(e)}]
+        if activity_ids:
+            activities = (client.get_activity(int(id)) for id in activity_ids)
+        else:
+            activities = client.get_activities(**kwargs)
+
+        try:
+            summaries = [
+                {
+                    "id": a.id,
+                    "athlete_id": a.athlete.id,
+                    "name": a.name,
+                    "type": a.type,
+                    "summary_polyline": a.map.summary_polyline,
+                    "beginTimestamp": str(a.start_date_local),
+                    "total_distance": float(a.distance),
+                    "elapsed_time": int(a.elapsed_time.total_seconds())
+                }
+                for a in activities
+            ]
+        except Exception as e:
+            summaries = [{"error": str(e)}]
+
+        cache.set(key, summaries, timeout)
+        app.logger.info("'{}' cached for {} seconds".format(unique, timeout))
 
     return summaries
 
