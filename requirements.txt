@@ -23,6 +23,7 @@ psycopg2==2.6.2
 python-dateutil==2.5.3
 python-editor==1.0.1
 pytz==2016.7
+redis==2.10.5
 requests==2.11.1
 six==1.10.0
 SQLAlchemy==1.1.0
