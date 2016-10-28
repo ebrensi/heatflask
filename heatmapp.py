@@ -16,7 +16,7 @@ import flask_login
 from flask_login import current_user, login_user, logout_user, login_required
 import flask_assets
 from flask_analytics import Analytics
-from flask_caching import Cache
+# from flask_caching import Cache
 
 
 app = Flask(__name__)
@@ -27,7 +27,7 @@ app.config.from_object(os.environ['APP_SETTINGS'])
 db.init_app(app)
 migrate = Migrate(app, db)
 
-cache = Cache(app, config={'CACHE_TYPE': 'null'})
+# cache = Cache(app, config={'CACHE_TYPE': 'null'})
 
 Analytics(app)
 
@@ -412,7 +412,7 @@ def activity_import(username):
                      " Try logging out and logging back in."])
 
 
-@cache.memoize(50)
+# @cache.memoize(50)
 def activity_summaries(user, activity_ids=None, **args):
 
     token = user.strava_access_token
