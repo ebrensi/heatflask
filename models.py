@@ -1,9 +1,9 @@
 from flask_login import UserMixin
 from sqlalchemy.dialects import postgresql as pg
 from flask_sqlalchemy import SQLAlchemy
+from heatmapp import app
 
-
-db = SQLAlchemy()
+db = SQLAlchemy(app)
 
 
 class User(UserMixin, db.Model):

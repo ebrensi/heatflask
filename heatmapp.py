@@ -4,7 +4,7 @@ from __future__ import unicode_literals
 from flask import Flask, Response, render_template, request, redirect, \
     jsonify, url_for, flash, send_from_directory
 import flask_compress
-from models import User, Activity, db
+
 from flask_migrate import Migrate
 from datetime import datetime
 import dateutil.parser
@@ -24,10 +24,10 @@ app.config.from_object(os.environ['APP_SETTINGS'])
 
 
 # data models defined in models.py
-db.init_app(app)
+from models import User, Activity, db
 migrate = Migrate(app, db)
 
-# cache = Cache(app, config={'CACHE_TYPE': 'null'})
+# cache = Cache(app, config={'CACHE_TYPE': 'simple'})
 
 Analytics(app)
 
@@ -219,8 +219,8 @@ def delete():
 @app.route('/<username>')
 def index(username):
     if current_user.is_authenticated:
-         # If a user is logged in from a past session but has no record in our
-         #  database (was deleted), we log them out and consider them anonymous
+        # If a user is logged in from a past session but has no record in our
+        #  database (was deleted), we log them out and consider them anonymous
         try:
             assert current_user.strava_id
         except:
@@ -413,15 +413,14 @@ def activity_import(username):
 
 
 # @cache.memoize(50)
-def activity_summaries(user, activity_ids=None, **args):
-
+def activity_summaries(user, activity_ids=None, **kwargs):
     token = user.strava_access_token
     client = stravalib.Client(access_token=token)
 
     if activity_ids:
         activities = (client.get_activity(int(id)) for id in activity_ids)
     else:
-        activities = client.get_activities(**args)
+        activities = client.get_activities(**kwargs)
 
     try:
         summaries = [
