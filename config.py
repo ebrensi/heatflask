@@ -60,8 +60,8 @@ class ProductionConfig(Config):
     DEBUG = False
 
     # For Flask-Cache
-    CACHE_TYPE = 'redis'
-    CACHE_REDIS_URL = os.environ.get('REDIS_URL')
+    # CACHE_TYPE = 'redis'
+    # CACHE_REDIS_URL = os.environ.get('REDIS_URL')
 
     # For Celery
     # BROKER_URL = os.environ['REDIS_URL']
