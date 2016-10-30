@@ -344,13 +344,13 @@ def getdata(username):
             if ("error" not in activity) and activity.get("summary_polyline"):
                 if hires:
                     A = Activity.query.get(activity["id"])
-                    if A and A.polyline:
-                        # If streams for this activity are in the database
-                        #  then retrieve them
-                        activity.update({"polyline": A.polyline,
-                                         "time": A.time})
+                    if A:
+                        if A.polyline:
+                            # If streams for this activity are in the database
+                            #  then retrieve them
+                            activity.update({"polyline": A.polyline,
+                                             "time": A.time})
                     else:
-
                         # otherwise, request them from Strava
                         stream_names = ['time', 'latlng']
 
@@ -423,25 +423,28 @@ def activity_import(username):
                      " Try logging out and logging back in."])
 
 
-# @cache.memoize(timeout=50)
 def activity_summaries(user, activity_ids=None, **kwargs):
-    timeout = 240   # cache activity summaries for 4 minutes
+    timeout = 120
     unique = "{},{},{}".format(user.strava_id, activity_ids, kwargs)
-    key = str(hash(unique))
+    key = hash(unique)
 
     summaries = cache.get(key)
-    if not summaries:
+    if summaries:
+        app.logger.info("got cache key '{}'".format(unique))
+        for summary in summaries:
+            yield summary
+    else:
         token = user.strava_access_token
         client = stravalib.Client(access_token=token)
-
+        summaries = []
         if activity_ids:
             activities = (client.get_activity(int(id)) for id in activity_ids)
         else:
             activities = client.get_activities(**kwargs)
 
-        try:
-            summaries = [
-                {
+        for a in activities:
+            try:
+                data = {
                     "id": a.id,
                     "athlete_id": a.athlete.id,
                     "name": a.name,
@@ -451,17 +454,13 @@ def activity_summaries(user, activity_ids=None, **kwargs):
                     "total_distance": float(a.distance),
                     "elapsed_time": int(a.elapsed_time.total_seconds())
                 }
-                for a in activities
-            ]
-        except Exception as e:
-            summaries = [{"error": str(e)}]
-
+            except Exception as e:
+                yield {"error": str(e)}
+            else:
+                summaries.append(data)
+                yield data
         cache.set(key, summaries, timeout)
-        app.logger.info("'{}' cached for {} seconds".format(unique, timeout))
-    else:
-        app.logger.info("retrieved from cache")
-
-    return summaries
+        app.logger.info("set cache key '{}'".format(unique))
 
 
 # creates a SSE stream of current.user's activities, using the Strava API

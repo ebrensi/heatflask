@@ -382,23 +382,19 @@
 
             var bounds = L.latLngBounds();
 
-            var base_url = "{{ url_for('getdata', username=user.strava_id, _external=True) }}";
+            var base_url = "{{ url_for('getdata', username=user.strava_id) }}";
             var url = base_url + "?" + jQuery.param(query, true);
-
-            console.log(url);
 
             map.spin(true);   // start progress indicator
 
             var source = new EventSource(url);
             var count = 0;
 
-            $("#status").text("Getting Activity Data...");
+            $("#data_message").html("Getting Activity Data...");
 
-            map.spin(false); // stop progress indicator
             source.onmessage = function(event) {
-              console.log(count);
 
-              if (event.data != 'done'){
+            if (event.data != 'done'){
                 var A = JSON.parse(event.data);
                 var extend_bounds = true;
 
@@ -441,20 +437,17 @@
                         FlowLayer.addLayer(new L.Polyline.AntPath(latlngs, options));
                 }
 
-                if ($("#autozoom:checked").val() && bounds.isValid())
-                    map.fitBounds(bounds);
-
                 count++;
 
               } else {
                 source.close();
-                // if ($("#autozoom:checked").val() && bounds.isValid())
-                //     map.fitBounds(bounds);
+                map.spin(false); // stop progress indicator
 
-                msg = count + " activities rendered." ;
+                if ($("#autozoom:checked").val() && bounds.isValid())
+                    map.fitBounds(bounds);
+
+                msg = count + " activities rendered.";
                 $("#data_message").html(msg);
-
-                // map.spin(false); // stop progress indicator
 
                 appState['date1'] = date1;
                 appState["date2"] = date2;
