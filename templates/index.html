@@ -327,16 +327,18 @@
         var flowLayerOptions = {{ config["ANTPATH_DEFAULT_OPTIONS"]|tojson|safe }};
 
         function renderLayers(){
-            var heat_data = false,
-                flow_data = false,
-                durations = false;
-
             var flowres = $("#flowres").val(),
                 heatres = $("#heatres").val(),
                 date1 = $("#date1").val(),
                 date2 = $("#date2").val();
 
-            dates_changed = ((date1 != appState.date1) || (date2 != appState.date2));
+            var dates_changed = ((date1 != appState.date1) || (date2 != appState.date2)),
+                res_changed = ((heatres != appState.heatres) || (flowres != appState.flowres));
+
+            var heat_data = false,
+                flow_data = false,
+                durations = false;
+
 
             var query = {
                 date1: date1,
@@ -409,6 +411,7 @@
                 if (flowres){
                     // add this activity's route to FlowLayer
                     var options = {{ config["ANTPATH_DEFAULT_OPTIONS"]|tojson|safe }};
+
                     if (("path_color" in A) && A.path_color)
                         options.color = A.path_color;
                 }
@@ -449,6 +452,7 @@
 
                 msg = count + " activities rendered.";
                 $("#data_message").html(msg);
+
 
                 appState['date1'] = date1;
                 appState["date2"] = date2;
