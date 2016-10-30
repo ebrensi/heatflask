@@ -415,7 +415,7 @@ def activity_import(username):
 
 # @cache.memoize(timeout=50)
 def activity_summaries(user, activity_ids=None, **kwargs):
-    timeout = 120
+    timeout = 240   # cache activity summaries for 4 minutes
     unique = "{},{},{}".format(user.strava_id, activity_ids, kwargs)
     key = str(hash(unique))
 
