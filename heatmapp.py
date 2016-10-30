@@ -17,11 +17,15 @@ from flask_login import current_user, login_user, logout_user, login_required
 import flask_assets
 from flask_analytics import Analytics
 import flask_caching
+from celery import Celery
 
 
 app = Flask(__name__)
 app.config.from_object(os.environ['APP_SETTINGS'])
 
+celery = Celery(app.name,
+                broker=app.config['CELERY_BROKER_URL'],
+                backend=app.config['CELERY_RESULT_BACKEND'])
 
 # data models defined in models.py
 from models import User, Activity, db
@@ -421,7 +425,7 @@ def activity_import(username):
 
 
 def activity_summaries(user, activity_ids=None, **kwargs):
-    timeout = 120
+    cache_timeout = 120
     unique = "{},{},{}".format(user.strava_id, activity_ids, kwargs)
     key = str(hash(unique))
 
@@ -456,7 +460,7 @@ def activity_summaries(user, activity_ids=None, **kwargs):
         except Exception as e:
             yield {"error": str(e)}
         else:
-            cache.set(key, summaries, timeout)
+            cache.set(key, summaries, cache_timeout)
             app.logger.info("set cache key '{}'".format(unique))
 
 
@@ -583,6 +587,16 @@ def webhook_callback():
         update = client.handle_subscription_update(update_raw)
         # put update on a job queue
         return "success"
+
+
+@celery.task()
+def add_together(a, b):
+    return a + b
+
+
+@app.route('/add/<a>/<b>')
+def add(a, b):
+    return str(add_together.delay(int(a), int(b)).wait())
 
 
 # python heatmapp.py works but you really should use `flask run`

@@ -11,6 +11,12 @@ class Config(object):
     CSRF_ENABLED = True
     SQLALCHEMY_DATABASE_URI = os.environ["DATABASE_URL"]
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+    CELERY_BROKER_URL = "sqla+" + SQLALCHEMY_DATABASE_URI
+    CELERY_RESULT_BACKEND = "db+" + SQLALCHEMY_DATABASE_URI
+
+    CACHE_REDIS_URL = os.environ.get('REDIS_URL')
+
     SECRET_KEY = "pB\xeax\x9cJ\xd6\x81\xed\xd7\xf9\xd0\x99o\xad\rM\x92\xb1\x8b{7\x02r"
 
     # Flask-Cache settings
@@ -61,10 +67,9 @@ class ProductionConfig(Config):
 
     # For Flask-Cache
     CACHE_TYPE = 'redis'
-    CACHE_REDIS_URL = os.environ.get('REDIS_URL')
 
     # For Celery
-    # BROKER_URL = os.environ['REDIS_URL']
+    # CELERY_BROKER_URL = os.environ['REDIS_URL']
     # CELERY_RESULT_BACKEND = os.environ.get(['REDIS_URL'])
 
 
@@ -74,7 +79,6 @@ class StagingConfig(Config):
      (hosted test app)
     """
     CACHE_TYPE = 'redis'
-    CACHE_REDIS_URL = os.environ.get('REDIS_URL')
 
     DEVELOPMENT = True
     DEBUG = True

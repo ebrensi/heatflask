@@ -1,5 +1,9 @@
 alembic==0.8.8
+amqp==1.4.9
+anyjson==0.3.3
 arrow==0.8.0
+billiard==3.3.0.23
+celery==3.1.24
 click==6.6
 Flask==0.11.1
 Flask-Analytics==0.6.0
@@ -15,6 +19,7 @@ gunicorn==19.1.0
 httplib2==0.9.2
 itsdangerous==0.24
 Jinja2==2.8
+kombu==3.0.37
 Mako==1.0.4
 MarkupSafe==0.23
 PasteDeploy==1.5.2
