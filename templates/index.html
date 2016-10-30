@@ -400,10 +400,8 @@
 
                 if ("error" in A){
                     msg = "<font color='red'>" + A.error +"</font>";
-                    $("#data_message").html(msg);
-                    var winMtds = L.control.window(map)
-                                    .content(msg)
-                                    .show();
+                    // $("#data_message").html(msg);
+                    var winMtds = L.control.window(map, {content:msg, visible:true});
                 } else {
                     msg = "rendering [" + A.id + "] " + A.name;
                     $("#data_message").html(msg);
