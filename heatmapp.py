@@ -417,7 +417,7 @@ def activity_import(username):
 def activity_summaries(user, activity_ids=None, **kwargs):
     timeout = 120
     unique = "{},{},{}".format(user.strava_id, activity_ids, kwargs)
-    key = hash(unique)
+    key = str(hash(unique))
 
     summaries = cache.get(key)
     if not summaries:
