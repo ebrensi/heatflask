@@ -444,6 +444,7 @@ def activity_summaries(user, activity_ids=None, **kwargs):
 
         app.logger.info("activities = {}".format(activities))
         for a in activities:
+            app.logger.info("a = {}".format(a))
             data = {
                 "id": a.id,
                 "athlete_id": a.athlete.id,
