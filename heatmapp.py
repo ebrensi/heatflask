@@ -287,10 +287,13 @@ def index(username):
 def getdata(username):
     user = User.get(username)
 
-    if not user:
-        return jsonify({
-            "error": "'{}' is not registered with this app".format(username)
-        })
+    # if not user:
+    #     data = {
+    #         "error": "'{}' is not registered with this app".format(username)
+    #     }
+    #     yield "data: {}\n\n".format(json.dumps(data))
+    #     yield "data: done\n\n"
+    #     return
 
     options = {}
     if "id" in request.args:
@@ -310,9 +313,14 @@ def getdata(username):
                     options["before"] = dateutil.parser.parse(date2)
                     assert(options["before"] > options["after"])
             except:
-                return jsonify({
-                    "error": "Enter Valid Dates"
-                })
+                pass
+                # data = {
+                #     "error": "Enter Valid Dates"
+                # }
+                # yield "data: {}\n\n".format(json.dumps(data))
+                # yield "data: done\n\n"
+                # return
+
         elif not limit:
             options["limit"] = 10
 
@@ -331,69 +339,71 @@ def getdata(username):
     token = user.strava_access_token
     client = stravalib.Client(access_token=token)
 
-    data = []
-    for activity in activity_summaries(user, **options):
-        if ("error" not in activity) and activity.get("summary_polyline"):
-            if hires:
-                A = Activity.query.get(activity["id"])
-                if A and A.polyline:
-                    # If streams for this activity are in the database
-                    #  then retrieve them
-                    activity.update({"polyline": A.polyline,
-                                     "time": A.time})
-                else:
-
-                    # otherwise, request them from Strava
-                    stream_names = ['time', 'latlng']
-
-                    try:
-                        streams = client.get_activity_streams(activity["id"],
-                                                              types=stream_names,
-                                                              # resolution="all",
-                                                              # series_type="time"
-                                                              )
-                    except Exception as e:
-                        app.logger.info("activity: {}\n{}".format(activity, e))
-                        break
+    def boo():
+        for activity in activity_summaries(user, **options):
+            if ("error" not in activity) and activity.get("summary_polyline"):
+                if hires:
+                    A = Activity.query.get(activity["id"])
+                    if A and A.polyline:
+                        # If streams for this activity are in the database
+                        #  then retrieve them
+                        activity.update({"polyline": A.polyline,
+                                         "time": A.time})
                     else:
-                        pass
-                        # app.logger.info(
-                        #     "loaded streams for: {}".format(activity))
 
-                    activity_data = {name: streams[name].data
-                                     for name in streams}
+                        # otherwise, request them from Strava
+                        stream_names = ['time', 'latlng']
 
-                    if "latlng" in activity_data:
-                        activity["polyline"] = (
-                            polyline.encode(activity_data.pop('latlng'))
-                        )
+                        try:
+                            streams = client.get_activity_streams(activity["id"],
+                                                                  types=stream_names,
+                                                                  # resolution="all",
+                                                                  # series_type="time"
+                                                                  )
+                        except Exception as e:
+                            app.logger.info(
+                                "activity: {}\n{}".format(activity, e))
+                            break
+                        else:
+                            pass
+                            # app.logger.info(
+                            #     "loaded streams for: {}".format(activity))
 
-                    # add the imported activity to the database for quicker
-                    #  retrieval next time
-                    activity_data.update(activity)
-                    A = Activity(**activity_data)
-                    A.user = user
-                    A.dt_cached = datetime.utcnow()
-                    A.access_count = 0
+                        activity_data = {name: streams[name].data
+                                         for name in streams}
 
-                    db.session.add(A)
+                        if "latlng" in activity_data:
+                            activity["polyline"] = (
+                                polyline.encode(activity_data.pop('latlng'))
+                            )
+
+                        # add the imported activity to the database for quicker
+                        #  retrieval next time
+                        activity_data.update(activity)
+                        A = Activity(**activity_data)
+                        A.user = user
+                        A.dt_cached = datetime.utcnow()
+                        A.access_count = 0
+
+                        db.session.add(A)
+                        db.session.commit()
+
+                    # update record of access
+                    A.dt_last_accessed = datetime.utcnow()
+                    A.access_count += 1
                     db.session.commit()
 
-                # update record of access
-                A.dt_last_accessed = datetime.utcnow()
-                A.access_count += 1
-                db.session.commit()
+                    if "time" in activity:
+                        t = activity.pop("time")
+                        if durations:
+                            activity["durations"] = [(b - a)
+                                                     for a, b in zip(t, t[1:])] + [0]
 
-                if "time" in activity:
-                    t = activity.pop("time")
-                    if durations:
-                        activity["durations"] = [(b - a)
-                                                 for a, b in zip(t, t[1:])] + [0]
+                activity["path_color"] = path_color(activity["type"])
+                yield "data: {}\n\n".format(json.dumps(activity))
+        yield "data: done\n\n"
 
-            activity["path_color"] = path_color(activity["type"])
-            data.append(activity)
-
-    return jsonify(data)
+    return Response(boo(), mimetype='text/event-stream')
 
 
 @app.route('/<username>/activity_import')
@@ -448,6 +458,8 @@ def activity_summaries(user, activity_ids=None, **kwargs):
 
         cache.set(key, summaries, timeout)
         app.logger.info("'{}' cached for {} seconds".format(unique, timeout))
+    else:
+        app.logger.info("retrieved from cache")
 
     return summaries
 

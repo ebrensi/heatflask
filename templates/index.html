@@ -346,112 +346,124 @@
                 // durations: flowres == "high"
             };
 
+            $("#data_message").html("");
+
+            // console.log(data);
+            var latlngs_flat = [],
+                count = 0;
+
+            // Remove HeatLayer from map and control if it's there
+            if (HeatLayer){
+                map.removeLayer(HeatLayer);
+                control.removeLayer(HeatLayer);
+                HeatLayer = false;
+            }
+
+            // Remove FlowLayer from map and control if it's there
+            if (FlowLayer){
+                map.removeLayer(FlowLayer);
+                control.removeLayer(FlowLayer);
+                FlowLayer = false;
+            }
+
+            // Add new blank HeatLayer to map if specified
+            if (heatres){
+                HeatLayer = L.heatLayer(latlngs_flat, heatLayerOptions);
+                map.addLayer(HeatLayer);
+                control.addOverlay(HeatLayer, "Point Density");
+            }
+
+            // Add new blank FlowLayer to map if specified
+            if (flowres){
+                FlowLayer = new L.layerGroup();
+                map.addLayer(FlowLayer);
+                control.addOverlay(FlowLayer, "Flow Paths");
+            }
+
+            var bounds = L.latLngBounds();
+
+            var base_url = "{{ url_for('getdata', username=user.strava_id, _external=True) }}";
+            var url = base_url + "?" + jQuery.param(query, true);
+
+            console.log(url);
+
             map.spin(true);   // start progress indicator
-            $.getJSON('/{{ user.strava_id }}/getdata', query, function(data) {
 
-                // if ("error" in data){
-                //     $("#data_message").html("<font color='red'>" + data.error +"</font>");
-                //     return;
-                // }
+            var source = new EventSource(url);
+            var count = 0;
 
-                $("#data_message").html("");
+            $("#status").text("Getting Activity Data...");
 
-                // console.log(data);
-                var latlngs_flat = [],
-                    count = 0;
+            map.spin(false); // stop progress indicator
+            source.onmessage = function(event) {
+              console.log(count);
 
-                // Remove HeatLayer from map and control if it's there
-                if (HeatLayer){
-                    map.removeLayer(HeatLayer);
-                    control.removeLayer(HeatLayer);
-                    HeatLayer = false;
+              if (event.data != 'done'){
+                var A = JSON.parse(event.data);
+                var extend_bounds = true;
+
+                if ("error" in A){
+                    $("#data_message").html("<font color='red'>" + A.error +"</font>");
+                } else {
+                    msg = "rendering [" + A.id + "] " + A.name;
+                    $("#data_message").html(msg);
                 }
 
-                // Remove FlowLayer from map and control if it's there
-                if (FlowLayer){
-                    map.removeLayer(FlowLayer);
-                    control.removeLayer(FlowLayer);
-                    FlowLayer = false;
-                }
-
-                // Add new blank HeatLayer to map if specified
-                if (heatres){
-                    HeatLayer = L.heatLayer(latlngs_flat, heatLayerOptions);
-                    map.addLayer(HeatLayer);
-                    control.addOverlay(HeatLayer, "Point Density");
-                }
-
-                // Add new blank FlowLayer to map if specified
                 if (flowres){
-                    FlowLayer = new L.layerGroup();
-                    map.addLayer(FlowLayer);
-                    control.addOverlay(FlowLayer, "Flow Paths");
+                    // add this activity's route to FlowLayer
+                    var options = {{ config["ANTPATH_DEFAULT_OPTIONS"]|tojson|safe }};
+                    if (("path_color" in A) && A.path_color)
+                        options.color = A.path_color;
                 }
 
-                var bounds = L.latLngBounds();
-
-                for (var i = 0; i < data.length; i++) {
-                    var A = data[i];
-                    var extend_bounds = true;
-
-                    if ("error" in A){
-                        $("#data_message").html("<font color='red'>" + A.error +"</font>");
-                    } else {
-                        msg = "rendering [" + A.id + "] " + A.name;
-                        $("#data_message").html(msg);
+                if (query.lores && ("summary_polyline" in A) && (A.summary_polyline)) {
+                    var latlngs = L.PolylineUtil.decode(A.summary_polyline);
+                    if (extend_bounds){
+                        bounds.extend(latlngs);
+                        extend_bounds = false;
                     }
 
-                    if (flowres){
-                        // add this activity's route to FlowLayer
-                        var options = {{ config["ANTPATH_DEFAULT_OPTIONS"]|tojson|safe }};
-                        if (("path_color" in A) && A.path_color)
-                            options.color = A.path_color;
-                    }
-
-                    if (query.lores && ("summary_polyline" in A) && (A.summary_polyline)) {
-                        var latlngs = L.PolylineUtil.decode(A.summary_polyline);
-                        if (extend_bounds){
-                            bounds.extend(latlngs);
-                            extend_bounds = false;
-                        }
-
-                        if (heatres == "low")
-                            latlngs_flat.push.apply(latlngs_flat, latlngs);
-                        if (flowres == "low")
-                            FlowLayer.addLayer(new L.Polyline.AntPath(latlngs, options));
-                    }
-
-
-                    if (query.hires && ("polyline" in A) && (A.polyline)){
-                        var latlngs = L.PolylineUtil.decode(A.polyline);
-                        if (extend_bounds)
-                            bounds.extend(latlngs);
-
-                        if (heatres == "high")
-                            latlngs_flat.push.apply(latlngs_flat, latlngs);
-                        if (flowres == "high")
-                            FlowLayer.addLayer(new L.Polyline.AntPath(latlngs, options));
-                    }
+                    if (heatres == "low")
+                        latlngs_flat.push.apply(latlngs_flat, latlngs);
+                    if (flowres == "low")
+                        FlowLayer.addLayer(new L.Polyline.AntPath(latlngs, options));
                 }
 
+
+                if (query.hires && ("polyline" in A) && (A.polyline)){
+                    var latlngs = L.PolylineUtil.decode(A.polyline);
+                    if (extend_bounds)
+                        bounds.extend(latlngs);
+
+                    if (heatres == "high")
+                        latlngs_flat.push.apply(latlngs_flat, latlngs);
+                    if (flowres == "high")
+                        FlowLayer.addLayer(new L.Polyline.AntPath(latlngs, options));
+                }
 
                 if ($("#autozoom:checked").val() && bounds.isValid())
                     map.fitBounds(bounds);
 
-                msg = i + " activities rendered." ;
+                count++;
+
+              } else {
+                source.close();
+                // if ($("#autozoom:checked").val() && bounds.isValid())
+                //     map.fitBounds(bounds);
+
+                msg = count + " activities rendered." ;
                 $("#data_message").html(msg);
 
+                // map.spin(false); // stop progress indicator
 
-            }).always(function() {
-                    map.spin(false); // stop progress indicator
+                appState['date1'] = date1;
+                appState["date2"] = date2;
+                appState["flowres"] = flowres;
+                appState["heatres"] = heatres;
 
-                    appState['date1'] = date1;
-                    appState["date2"] = date2;
-                    appState["flowres"] = flowres;
-                    appState["heatres"] = heatres;
-
-                    updateURL();
-                });
+                updateURL();
+              }
+            }
         }
 
 
