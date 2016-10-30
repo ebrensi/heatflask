@@ -287,13 +287,17 @@ def index(username):
 def getdata(username):
     user = User.get(username)
 
-    # if not user:
-    #     data = {
-    #         "error": "'{}' is not registered with this app".format(username)
-    #     }
-    #     yield "data: {}\n\n".format(json.dumps(data))
-    #     yield "data: done\n\n"
-    #     return
+    def errout(msg):
+        # outputs a terminating SSE stream consisting of one error message
+        data = {"error": "{}".format(msg)}
+
+        def boo():
+            yield "data: {}\n\n".format(json.dumps(data))
+            yield "data: done\n\n"
+        return Response(boo(), mimetype='text/event-stream')
+
+    if not user:
+        return errout("'{}' is not registered with this app".format(username))
 
     options = {}
     if "id" in request.args:
@@ -313,14 +317,7 @@ def getdata(username):
                     options["before"] = dateutil.parser.parse(date2)
                     assert(options["before"] > options["after"])
             except:
-                pass
-                # data = {
-                #     "error": "Enter Valid Dates"
-                # }
-                # yield "data: {}\n\n".format(json.dumps(data))
-                # yield "data: done\n\n"
-                # return
-
+                return errout("Invalid Dates")
         elif not limit:
             options["limit"] = 10
 
