@@ -399,7 +399,11 @@
                 var extend_bounds = true;
 
                 if ("error" in A){
-                    $("#data_message").html("<font color='red'>" + A.error +"</font>");
+                    msg = "<font color='red'>" + A.error +"</font>";
+                    $("#data_message").html(msg);
+                    var winMtds = L.control.window(map)
+                                    .content(msg)
+                                    .show();
                 } else {
                     msg = "rendering [" + A.id + "] " + A.name;
                     $("#data_message").html(msg);
