@@ -442,23 +442,21 @@ def activity_summaries(user, activity_ids=None, **kwargs):
         else:
             activities = client.get_activities(**kwargs)
 
+        app.logger.info("activities = {}".format(activities))
         for a in activities:
-            try:
-                data = {
-                    "id": a.id,
-                    "athlete_id": a.athlete.id,
-                    "name": a.name,
-                    "type": a.type,
-                    "summary_polyline": a.map.summary_polyline,
-                    "beginTimestamp": str(a.start_date_local),
-                    "total_distance": float(a.distance),
-                    "elapsed_time": int(a.elapsed_time.total_seconds())
-                }
-            except Exception as e:
-                yield {"error": str(e)}
-            else:
-                summaries.append(data)
-                yield data
+            data = {
+                "id": a.id,
+                "athlete_id": a.athlete.id,
+                "name": a.name,
+                "type": a.type,
+                "summary_polyline": a.map.summary_polyline,
+                "beginTimestamp": str(a.start_date_local),
+                "total_distance": float(a.distance),
+                "elapsed_time": int(a.elapsed_time.total_seconds())
+            }
+            summaries.append(data)
+            yield data
+
         cache.set(key, summaries, timeout)
         app.logger.info("set cache key '{}'".format(unique))
 
