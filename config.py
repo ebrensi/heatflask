@@ -43,7 +43,7 @@ class Config(object):
         'blue': ['ride']
     }
 
-    MAP_CENTER = [45.5236, -122.675]
+    MAP_CENTER = [27.53, 1.58]
     MAP_ZOOM = 3
 
 
@@ -60,8 +60,8 @@ class ProductionConfig(Config):
     DEBUG = False
 
     # For Flask-Cache
-    # CACHE_TYPE = 'redis'
-    # CACHE_REDIS_URL = os.environ.get('REDIS_URL')
+    CACHE_TYPE = 'redis'
+    CACHE_REDIS_URL = os.environ.get('REDIS_URL')
 
     # For Celery
     # BROKER_URL = os.environ['REDIS_URL']
