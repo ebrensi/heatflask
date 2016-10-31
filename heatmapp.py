@@ -347,15 +347,13 @@ def getdata(username):
     token = user.strava_access_token
     client = stravalib.Client(access_token=token)
 
-    def boo(db_write=db_write, cache_timeout=960):
+    def boo(db_write=db_write, cache_timeout=240):
         for activity in activity_summaries(user, **options):
             if ("error" not in activity) and activity.get("summary_polyline"):
-                if not lores:
-                    del activity["summary_polyline"]
 
                 a_id = activity["id"]
                 if hires:
-                    A = cache.get(str(a_id)) or Activity.query.get(a_id)
+                    A = Activity.query.get(a_id)
                     if A:
                         if A.polyline:
                             # If streams for this activity are in the database
@@ -367,7 +365,8 @@ def getdata(username):
                             db.session.commit()
 
                             # fast-cache the activity
-                            cache.set(str(a_id), A, cache_timeout)
+                            # if cache_timeout:
+                            #     cache.set(str(a_id), A, cache_timeout)
                     else:
                         # otherwise, request them from Strava
                         stream_names = ['time', 'latlng']
@@ -396,17 +395,17 @@ def getdata(username):
                             )
 
                         activity_data.update(activity)
-                        if "path_color" in activity_data:
-                            activity_data.pop("path_color")
+                        # if "path_color" in activity_data:
+                        #     activity_data.pop("path_color")
 
                         A = Activity(**activity_data)
                         A.user = user
                         A.dt_cached = datetime.utcnow()
                         A.access_count = 0
 
-                        # fast-cache the activity
-                        if cache_timeout:
-                            cache.set(str(a_id), A, cache_timeout)
+                        # # fast-cache the activity
+                        # if cache_timeout:
+                        #     cache.set(str(a_id), A, cache_timeout)
 
                         # add the imported activity to the database for quicker
                         #  retrieval next time
