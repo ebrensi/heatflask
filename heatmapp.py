@@ -303,6 +303,13 @@ def getdata(username):
     if not user:
         return errout("'{}' is not registered with this app".format(username))
 
+    # Only allow long (database) caching if this is the current user
+    #  accessing his/her own records
+    try:
+        db_write = current_user.strava_id == user.strava_id
+    except:
+        db_write = False
+
     options = {}
     if "id" in request.args:
         options["activity_ids"] = request.args.getlist("id")
@@ -340,17 +347,27 @@ def getdata(username):
     token = user.strava_access_token
     client = stravalib.Client(access_token=token)
 
-    def boo():
+    def boo(db_write=db_write, cache_timeout=960):
         for activity in activity_summaries(user, **options):
             if ("error" not in activity) and activity.get("summary_polyline"):
+                if not lores:
+                    del activity["summary_polyline"]
+
+                a_id = activity["id"]
                 if hires:
-                    A = Activity.query.get(activity["id"])
+                    A = cache.get(str(a_id)) or Activity.query.get(a_id)
                     if A:
                         if A.polyline:
                             # If streams for this activity are in the database
                             #  then retrieve them
                             activity.update({"polyline": A.polyline,
                                              "time": A.time})
+                            A.dt_last_accessed = datetime.utcnow()
+                            A.access_count += 1
+                            db.session.commit()
+
+                            # fast-cache the activity
+                            cache.set(str(a_id), A, cache_timeout)
                     else:
                         # otherwise, request them from Strava
                         stream_names = ['time', 'latlng']
@@ -386,13 +403,13 @@ def getdata(username):
                         A.dt_cached = datetime.utcnow()
                         A.access_count = 0
 
-                        db.session.add(A)
-                        db.session.commit()
+                        # fast-cache the activity
+                        if cache_timeout:
+                            cache.set(str(a_id), A, cache_timeout)
 
-                    # update record of access
-                    A.dt_last_accessed = datetime.utcnow()
-                    A.access_count += 1
-                    db.session.commit()
+                        if db_write:
+                            db.session.add(A)
+                            db.session.commit()
 
                     if "time" in activity:
                         t = activity.pop("time")
@@ -407,25 +424,8 @@ def getdata(username):
     return Response(boo(), mimetype='text/event-stream')
 
 
-@app.route('/<username>/activity_import')
-@login_required
-def activity_import(username):
-    user = User.get(username)
-
-    if user and (user.strava_id == current_user.strava_id):
-        count = int(request.args.get("count", 1))
-
-        import stravaimport
-        do_import = stravaimport.import_activities(db, user,
-                                                   limit=count)
-        return Response(do_import, mimetype='text/event-stream')
-    else:
-        return iter(["There is a problem importing activities."
-                     " Try logging out and logging back in."])
-
-
 def activity_summaries(user, activity_ids=None, **kwargs):
-    cache_timeout = 120
+    cache_timeout = 240
     unique = "{},{},{}".format(user.strava_id, activity_ids, kwargs)
     key = str(hash(unique))
 

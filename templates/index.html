@@ -205,16 +205,13 @@
 
 
                 <h3>Cache activities now:</h3>
-                <form id="importform" method="get" action="{{ url_for('activity_import', username=user.strava_id)}}" target="output">
+                <form id="importform" method="get" action="{{ url_for('getdata', username=user.strava_id)}}" target="_blank">
 
                      <input type="submit" value="Import"/> High-resolution data for
 
-                    <input type="number" name="count" value=10 min=0 max=50>
+                    <input type="number" name="limit" value=10 min=0 max=50>
+                    <input type="hidden" name="hires" value="true" >
                     most recent activities from Strava.
-
-                    <div class="embed-responsive embed-responsive-16by9">
-                      <iframe class="embed-responsive-item" name="output" style="width:90%"></iframe>
-                    </div>
                 </form>
 
 
@@ -244,10 +241,13 @@
                 {{ config['APP_NAME'] }} is a work in progress.
                 <img src="{{ url_for('static', filename='under-construction.gif') }}" height=40>
                 <br><br>
-                How we access data:  Low-resolution data is retrieved directly from Strava and we don't cache it in this app's database.  Hi-Resolution data takes longer to import so the current version of this app automatically imports GIS points for activities the first time they are requested and caches them in a database.  On subsequent requests for an activity's (Hi-res) data, the app will check the database first and get it from there if it is available.  Right now there is no limit on the number of activities that get cached, but since we are using a cheap database that stores a maximum of 10000 activities, we will periodically clear it. At any time you can delete your accout with us, which will clear our cache for you and delete your Strava access token from our database.  The token we obtain is for public data, so this app won't import any activities you have set to private.  The URL for a heat/flow map and the current location dates or preset, zoom, and map, are embedded in the url so you can share that url and anyone who clicks on it will get the same view.
+                How we access data:  Low-resolution data is retrieved directly from Strava and we don't cache it in this app's database.  Hi-Resolution data takes longer to import so the current version of this app automatically imports GIS points for activities the first time they are requested and caches them in a database.  On subsequent requests for an activity's (Hi-res) data, the app will check the database first and get it from there if it is available.  Right now there is no limit on the number of activities that get cached.  At any time you can delete your accout with us, which will clear our cache for you and delete your Strava access token from our database.  The token we obtain is for public data, so this app won't import any activities you have set to private.  The URL for a heat/flow map and the current location dates or preset, zoom, and map, are embedded in the url so you can share that url and anyone who clicks on it will get the same view.
                 <br><br>
 
-                2016-10-25: Apparently this app does not work on Apple iphone?  I am trying to fix that.
+                2016-10-30: Implemented short-term memory cache for faster performance.  Hi-res activities are kept available for fast access for 16 minutes.
+                <br><br>
+
+                2016-10-25: Apparently this app does not work on Safari browser on iOS?  I am trying to fix that.
                 <br><br>
                 Questions, comments, suggestions?<br>
                 <a href="mailto:Rensi.Efrem@gmail.com?Subject=About {{ config['APP_NAME'] }}">Contact Me.</a>
