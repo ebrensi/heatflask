@@ -113,7 +113,7 @@ def nothing():
 @app.route('/demo')
 def demo():
     return redirect(url_for("index",
-                            username="ebuggz",
+                            username="15972102",
                             preset="7",
                             heatres="high",
                             flowres="high",
@@ -347,10 +347,9 @@ def getdata(username):
     token = user.strava_access_token
     client = stravalib.Client(access_token=token)
 
-    def boo(db_write=db_write, cache_timeout=240):
+    def boo(db_write=db_write, cache_timeout=120):
         for activity in activity_summaries(user, **options):
             if ("error" not in activity) and activity.get("summary_polyline"):
-
                 a_id = activity["id"]
                 if hires:
                     A = Activity.query.get(a_id)
@@ -395,21 +394,18 @@ def getdata(username):
                             )
 
                         activity_data.update(activity)
-                        # if "path_color" in activity_data:
-                        #     activity_data.pop("path_color")
-
-                        A = Activity(**activity_data)
-                        A.user = user
-                        A.dt_cached = datetime.utcnow()
-                        A.access_count = 0
 
                         # # fast-cache the activity
                         # if cache_timeout:
                         #     cache.set(str(a_id), A, cache_timeout)
 
-                        # add the imported activity to the database for quicker
-                        #  retrieval next time
                         if db_write:
+                            if "path_color" in activity_data:
+                                del activity_data["path_color"]
+                            A = Activity(**activity_data)
+                            A.user = user
+                            A.dt_cached = datetime.utcnow()
+                            A.access_count = 0
                             db.session.add(A)
                             db.session.commit()
 
