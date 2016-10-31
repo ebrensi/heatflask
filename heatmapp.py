@@ -395,9 +395,10 @@ def getdata(username):
                                 polyline.encode(activity_data.pop('latlng'))
                             )
 
-                        # add the imported activity to the database for quicker
-                        #  retrieval next time
                         activity_data.update(activity)
+                        if "path_color" in activity_data:
+                            activity_data.pop("path_color")
+
                         A = Activity(**activity_data)
                         A.user = user
                         A.dt_cached = datetime.utcnow()
@@ -407,6 +408,8 @@ def getdata(username):
                         if cache_timeout:
                             cache.set(str(a_id), A, cache_timeout)
 
+                        # add the imported activity to the database for quicker
+                        #  retrieval next time
                         if db_write:
                             db.session.add(A)
                             db.session.commit()
