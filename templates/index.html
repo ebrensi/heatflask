@@ -308,6 +308,7 @@
 
         var control = L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map);
 
+        var zoomControl = map.zoomControl.setPosition('bottomright');
 
         var sidebar = L.control.sidebar('sidebar').addTo(map);
 
