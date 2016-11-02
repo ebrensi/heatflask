@@ -36,7 +36,7 @@ class User(UserMixin, db.Model):
     strava_client = None
 
     def describe(self):
-        attrs = ["username", "firstname", "lastname",
+        attrs = ["strava_id", "username", "firstname", "lastname",
                  "profile", "strava_access_token", "dt_last_active",
                  "app_activity_count"]
         return {attr: getattr(self, attr) for attr in attrs}
@@ -102,6 +102,13 @@ class User(UserMixin, db.Model):
             user = cls.query.get(user_id)
 
         return user if user else None
+
+    @classmethod
+    def backup(cls):
+        attrs = ["strava_id", "strava_access_token", "dt_last_active",
+                 "app_activity_count"]
+        return [{attr: getattr(user, attr) for attr in attrs}
+                for user in cls.query.all()]
 
     def activity_summaries(self, activity_ids=None, **kwargs):
         cache_timeout = 60
