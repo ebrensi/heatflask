@@ -110,6 +110,13 @@ class User(UserMixin, db.Model):
         return [{attr: getattr(user, attr) for attr in attrs}
                 for user in cls.query.all()]
 
+    @classmethod
+    def restore(cls, backup_json):
+        for record in backup_json:
+            if not User.get(record['strava_id']):
+                db.session.add(User(**record))
+                db.session.commit()
+
     def activity_summaries(self, activity_ids=None, **kwargs):
         cache_timeout = 60
         unique = "{},{},{}".format(self.strava_id, activity_ids, kwargs)
