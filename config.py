@@ -12,12 +12,17 @@ class Config(object):
     SQLALCHEMY_DATABASE_URI = os.environ["DATABASE_URL"]
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
+    # Defaults to using PostgreSQL for Celery
     CELERY_BROKER_URL = "sqla+" + SQLALCHEMY_DATABASE_URI
     CELERY_RESULT_BACKEND = "db+" + SQLALCHEMY_DATABASE_URI
 
+    # Settings for database (long) cache
+    DB_CACHE_TIMEOUT = 30 * 24 * 60 * 60  # 30 days
+
+    # Settings for fast-cache
     CACHE_REDIS_URL = os.environ.get('REDIS_URL')
-    CACHE_SUMMARIES_TIMEOUT = 120
-    CACHE_ACTIVITIES_TIMEOUT = 480
+    CACHE_SUMMARIES_TIMEOUT = 480   # 8 minutes
+    CACHE_ACTIVITIES_TIMEOUT = 960  # 16 minutes
 
     SECRET_KEY = "pB\xeax\x9cJ\xd6\x81\xed\xd7\xf9\xd0\x99o\xad\rM\x92\xb1\x8b{7\x02r"
 
@@ -71,8 +76,8 @@ class ProductionConfig(Config):
     CACHE_TYPE = 'redis'
 
     # For Celery
-    # CELERY_BROKER_URL = os.environ['REDIS_URL']
-    # CELERY_RESULT_BACKEND = os.environ.get(['REDIS_URL'])
+    CELERY_BROKER_URL = os.environ['REDIS_URL']
+    CELERY_RESULT_BACKEND = os.environ.get(['REDIS_URL'])
 
 
 class StagingConfig(Config):
