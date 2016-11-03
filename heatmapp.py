@@ -347,7 +347,8 @@ def getdata(username):
     token = user.strava_access_token
     client = stravalib.Client(access_token=token)
 
-    def boo(db_write=db_write, cache_timeout=120):
+    def boo(db_write=db_write):
+        cache_timeout = app.config["CACHE_ACTIVITIES_TIMEOUT"]
         for activity in activity_summaries(user, **options):
             if ("error" not in activity) and activity.get("summary_polyline"):
                 a_id = activity["id"]
@@ -386,7 +387,7 @@ def getdata(username):
                                 break
                             else:
                                 app.logger.info(
-                                     "imported streams for: {}".format(a_id))
+                                    "imported streams for: {}".format(a_id))
 
                                 activity_streams = {name: streams[name].data
                                                     for name in streams}
@@ -429,7 +430,8 @@ def getdata(username):
                         # fast-cache the hires_data
                         if cache_timeout:
                             cache.set(str(a_id), hires_data, cache_timeout)
-                            app.logger.info("cached hires data for {}".format(a_id))
+                            app.logger.info(
+                                "cached {} for {} seconds".format(a_id, cache_timeout))
 
                 # Now activity is a dictionary representing an activity
                 #  with hi-res streams
@@ -442,7 +444,7 @@ def getdata(username):
 
 
 def activity_summaries(user, activity_ids=None, **kwargs):
-    cache_timeout = 240
+    cache_timeout = app.config["CACHE_SUMMARIES_TIMEOUT"]
     unique = "{},{},{}".format(user.strava_id, activity_ids, kwargs)
     key = str(hash(unique))
 

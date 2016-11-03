@@ -16,6 +16,8 @@ class Config(object):
     CELERY_RESULT_BACKEND = "db+" + SQLALCHEMY_DATABASE_URI
 
     CACHE_REDIS_URL = os.environ.get('REDIS_URL')
+    CACHE_SUMMARIES_TIMEOUT = 120
+    CACHE_ACTIVITIES_TIMEOUT = 480
 
     SECRET_KEY = "pB\xeax\x9cJ\xd6\x81\xed\xd7\xf9\xd0\x99o\xad\rM\x92\xb1\x8b{7\x02r"
 
