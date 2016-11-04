@@ -192,29 +192,12 @@
                     <img src={{ current_user.profile }} alt="user image" height="30%" width="30%">
                 </a>
 
-                <br>
+                <br><br>
+                Activity import is no longer necessary. Activities are cached when you render them.
+                <br><br>
+                Check again later for new user features!
 
-
-                <h3>Manage activity cache:</h3>
-                 <form action="{{ url_for('activities_sse') }}" target="_blank">
-
-                    <input type="submit" value="List"/>
-                    <input type="number" name="limit" value=10 min=0 max=1000>
-                    most recent Strava activities.
-                     <img src="{{ url_for('static', filename='under-construction.gif') }}" height=40>
-                </form>
-
-
-                <h3>Cache activities now:</h3>
-                <form id="importform" method="get" action="{{ url_for('getdata', username=user.strava_id)}}" target="_blank">
-
-                     <input type="submit" value="Import"/> High-resolution data for
-
-                    <input type="number" name="limit" value=10 min=0 max=50>
-                    <input type="hidden" name="hires" value="true" >
-                    most recent activities from Strava.
-                </form>
-
+                <hr>
 
 
 
@@ -242,15 +225,22 @@
                 {{ config['APP_NAME'] }} is a work in progress.
                 <img src="{{ url_for('static', filename='under-construction.gif') }}" height=40>
                 <br><br>
-                How we access data:  Low-resolution data is retrieved directly from Strava and we don't cache it in this app's database.  Hi-Resolution data takes longer to import so the current version of this app automatically imports GIS points for activities the first time they are requested and caches them in a database.  On subsequent requests for an activity's (Hi-res) data, the app will check the database first and get it from there if it is available.  Right now there is no limit on the number of activities that get cached.  At any time you can delete your accout with us, which will clear our cache for you and delete your Strava access token from our database.  The token we obtain is for public data, so this app won't import any activities you have set to private.  The URL for a heat/flow map and the current location dates or preset, zoom, and map, are embedded in the url so you can share that url and anyone who clicks on it will get the same view.
+                How we access data:  Upon redering activities, Low-resolution data is retrieved directly from Strava and is cached for fast access for 8 minutes.  High-Resolution data is fast-cached for 16 minutes, and cached in our database for 7 days.   If high-resolution data for an activity is not accessed for over 7 days then it gets deleted from our database.
+                <br>
+                On subsequent requests for an activity's (Hi-res) data, Heatflask will check the fast-cache first, then the database, and finally import from Strava.  We hold your data for at most 7 days.
+                <br><br>
+                Deleting your accout with us clears our database cache for you and deletes your Strava access token from our database.  The token we obtain is for public data, so this app won't import any activities you have set to private.
+
+                <br><br>
+                The URL for a heat/flow map and the current location dates or preset, zoom, and map, are embedded in the url so you can share that url and anyone who clicks on it will get the same view.
                 <br><br>
 
-                2016-10-25: Apparently this app does not work on Safari browser on iOS?
+                Flow-maps currently don't work on Safari browser on iOS due to a
+                <a href="https://github.com/rubenspgcavalcante/leaflet-ant-path/issues/21"> known bug </a>
+                in a dependency.
                 <br><br>
                 Questions, comments, suggestions?<br>
                 <a href="mailto:Rensi.Efrem@gmail.com?Subject=About {{ config['APP_NAME'] }}">Contact Me.</a>
-                <br><br>
-                Check out the <a href="https://github.com/ebrensi/heatmappp" target="_blank">GitHub repo</a>.  Pull requests welcome!
 
                 <br><br>
                 Note: You can specify a custom map baselayer by setting "baselayer={map}" in the URL, where {map} is one of the provider names from
