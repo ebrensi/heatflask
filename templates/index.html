@@ -146,6 +146,7 @@
                 <hr>
 
                 <button type="button" id="renderButton" class="btn btn-primary">Render Layers</button>
+                <button type="button" id="abortButton" class="btn btn-danger">Abort</button>
 
               </form>
                 <br>
@@ -388,7 +389,17 @@
             map.spin(true);   // start progress indicator
 
             var source = new EventSource(url);
-            var count = 0;
+            $("#abortButton").show();
+
+            var count = 0,
+                abort = false;
+
+            $('#abortButton').click(function(){
+                $("#abortButton").hide();
+                source.close();
+                map.spin(false);
+                $("#data_message").html("Aborted: " + count + " activities rendered");
+            });
 
             $("#data_message").html("Connecting to Strava...");
 
@@ -450,6 +461,7 @@
               } else {
                 source.close();
                 map.spin(false); // stop progress indicator
+                $("#abortButton").hide();
 
                 if ($("#autozoom:checked").val() && bounds.isValid())
                     map.fitBounds(bounds);
@@ -520,6 +532,7 @@
 
 
         $(document).ready(function() {
+            $("#abortButton").hide()
 
             $(".datepick").datepicker({ dateFormat: 'yy-mm-dd',
                                         changeMonth: true,
