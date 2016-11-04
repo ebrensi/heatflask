@@ -27,12 +27,13 @@ celery = Celery(app.name,
                 broker=app.config['CELERY_BROKER_URL'],
                 backend=app.config['CELERY_RESULT_BACKEND'])
 
+# set up short-term fast caching support
+cache = flask_caching.Cache(app)
+
 # data models defined in models.py
 from models import User, Activity, db
 migrate = Migrate(app, db)
 
-# set up short-term fast caching support
-cache = flask_caching.Cache(app)
 
 Analytics(app)
 
@@ -44,6 +45,7 @@ bundles = {
                                      'css/leaflet.css',
                                      'css/leaflet-sidebar.css',
                                      'css/L.Control.Window.css',
+                                     'css/Control.Loading.css',
                                      output='gen/index.css'),
 
     "index_js": flask_assets.Bundle('js/jquery-3.1.0.min.js',
@@ -59,6 +61,8 @@ bundles = {
                                     'js/L.Control.Window.js',
                                     'js/leaflet-providers.js',
                                     'js/Leaflet.GoogleMutant.js',
+                                    'js/Control.Loading.js',
+                                    filters='rjsmin',
                                     output='gen/index.js')
 
 }
@@ -488,7 +492,7 @@ def activity_summaries(user, activity_ids=None, **kwargs):
 @app.route('/activities_sse')
 @login_required
 def activities_sse():
-    user = User.get(current_user.strava_id)
+    # user = User.get(current_user.strava_id)
     options = {}
 
     if "id" in request.args:
@@ -508,7 +512,7 @@ def activities_sse():
             options["limit"] = int(request.args.get("limit"))
 
     def boo():
-        for a in activity_summaries(user, **options):
+        for a in activity_summaries(current_user, **options):
             a["cached"] = "yes" if Activity.get(a['id']) else "no"
             a["msg"] = "[{id}] {beginTimestamp} '{name}'".format(**a)
             yield "data: {}\n\n".format(json.dumps(a))
