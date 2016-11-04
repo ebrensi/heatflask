@@ -9,7 +9,7 @@ class Config(object):
     DEBUG = False
     TESTING = False
     CSRF_ENABLED = True
-    SQLALCHEMY_DATABASE_URI = os.environ["DATABASE_URL"]
+    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # Defaults to using PostgreSQL for Celery
@@ -17,7 +17,7 @@ class Config(object):
     CELERY_RESULT_BACKEND = "db+" + SQLALCHEMY_DATABASE_URI
 
     # Settings for database (long) cache
-    DB_CACHE_TIMEOUT = 30 * 24 * 60 * 60  # 30 days
+    DB_CACHE_TIMEOUT = 7 * 24 * 60 * 60  # 7 days
 
     # Settings for fast-cache
     CACHE_REDIS_URL = os.environ.get('REDIS_URL')
@@ -32,8 +32,8 @@ class Config(object):
     DATE_RANGE_PRESETS = ["2", "7", "30", "60", "180", "365"]
 
     # Strava stuff
-    STRAVA_CLIENT_ID = os.environ["STRAVA_CLIENT_ID"]
-    STRAVA_CLIENT_SECRET = os.environ["STRAVA_CLIENT_SECRET"]
+    STRAVA_CLIENT_ID = os.environ.get("STRAVA_CLIENT_ID")
+    STRAVA_CLIENT_SECRET = os.environ.get("STRAVA_CLIENT_SECRET")
 
     # Leaflet stuff
     HEATMAP_DEFAULT_OPTIONS = {
@@ -76,8 +76,8 @@ class ProductionConfig(Config):
     CACHE_TYPE = 'redis'
 
     # For Celery
-    CELERY_BROKER_URL = os.environ['REDIS_URL']
-    CELERY_RESULT_BACKEND = os.environ['REDIS_URL']
+    CELERY_BROKER_URL = os.environ.get('REDIS_URL')
+    CELERY_RESULT_BACKEND = os.environ.get('REDIS_URL')
 
 
 class StagingConfig(Config):
