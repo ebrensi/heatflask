@@ -169,24 +169,7 @@ def auth_callback():
             flash(str(e))
             return redirect(state)
 
-        client.access_token = access_token
-
-        strava_user = client.get_athlete()
-        user = User.get(strava_user.id)
-
-        if not user:
-            # If this user isn't in the database we create a record
-            user = User(strava_id=strava_user.id,
-                        app_activity_count=0)
-            db.session.add(user)
-            db.session.commit()
-
-        user.username = strava_user.username
-        user.strava_access_token = access_token
-        user.firstname = strava_user.firstname
-        user.lastname = strava_user.lastname
-        user.profile = strava_user.profile
-        db.session.commit()
+        user = User.from_access_token(access_token)
 
         # remember=True, for persistent login.
         login_user(user, remember=True)
@@ -218,8 +201,7 @@ def delete():
         # the current user is now logged out
         user = User.get(user_id)
         try:
-            db.session.delete(user)
-            db.session.commit()
+            user.delete()
         except Exception as e:
             flash(str(e))
         else:
@@ -270,7 +252,7 @@ def index(username):
     heatres = request.args.get("heatres", "")
     if (not flowres) and (not heatres):
         flowres = "low"
-        # heatres = "high"
+        heatres = "low"
 
     default_center = app.config["MAP_CENTER"]
     lat = request.args.get("lat") or default_center[0]
