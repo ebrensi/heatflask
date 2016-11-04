@@ -67,6 +67,7 @@ class User(UserMixin, db.Model):
         if not user:
             user = cls(strava_id=strava_user.id,
                        app_activity_count=0)
+            db.session.add(user)
 
         user.update(
             username=strava_user.username,
@@ -77,29 +78,40 @@ class User(UserMixin, db.Model):
             dt_last_active=datetime.utcnow(),
             client=client
         )
+
+        db.session.commit()
         return user
 
-    def update_db(self):
-        if not User.get(self.strava_id):
-            db.session.add(self)
-        return db.session.commit()
-
     def delete(self):
-        if User.get(self.strava_id):
-            db.session.delete(self)
-            return db.session.commit()
+        db.session.delete(self)
+        db.session.commit()
+
+        # delete from cache too.  It may be under two different keys
+        cache.delete("user:{}".format(self.strava_id))
+        cache.delete("user:{}".format(self.username))
 
     @classmethod
     def get(cls, user_identifier):
-        # Get user by id or username
-        try:
-            # try casting identifier to int
-            user_id = int(user_identifier)
-        except ValueError:
-            # if that doesn't work then assume it's a string username
-            user = cls.query.filter_by(username=user_identifier).first()
+        key = "user:{}".format(user_identifier)
+        user = cache.get(key)
+        if user:
+            app.logger.info("retrieved user {} with key '{}'".format(user, key))
+            return user
         else:
-            user = cls.query.get(user_id)
+            # Get user from db by id or username
+            try:
+                # try casting identifier to int
+                user_id = int(user_identifier)
+            except ValueError:
+                # if that doesn't work then assume it's a string username
+                user = cls.query.filter_by(username=user_identifier).first()
+            else:
+                user = cls.query.get(user_id)
+
+            if user:
+                app.logger.info("cached user {} under key '{}'".format(
+                    user, key))
+                cache.set(key, user, app.config.get("CACHE_USERS_TIMEOUT"))
 
         return user if user else None
 
