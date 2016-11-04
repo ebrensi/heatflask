@@ -390,7 +390,7 @@
             var source = new EventSource(url);
             var count = 0;
 
-            $("#data_message").html("Getting Activity Data...");
+            $("#data_message").html("Connecting to Strava...");
 
             source.onmessage = function(event) {
 
@@ -401,6 +401,12 @@
                 if ("error" in A){
                     msg = "<font color='red'>" + A.error +"</font>";
                     var winMtds = L.control.window(map, {title: "Oops.", content:msg, visible:true});
+                    source.close();
+                    map.spin(false);
+
+                } else if ("msg" in A) {
+                    $("#data_message").html(A.msg);
+                    return;
                 } else {
                     msg = "rendering [" + A.id + "] " + A.name;
                     $("#data_message").html(msg);

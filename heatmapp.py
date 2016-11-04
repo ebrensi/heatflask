@@ -45,7 +45,6 @@ bundles = {
                                      'css/leaflet.css',
                                      'css/leaflet-sidebar.css',
                                      'css/L.Control.Window.css',
-                                     'css/Control.Loading.css',
                                      output='gen/index.css'),
 
     "index_js": flask_assets.Bundle('js/jquery-3.1.0.min.js',
@@ -61,7 +60,6 @@ bundles = {
                                     'js/L.Control.Window.js',
                                     'js/leaflet-providers.js',
                                     'js/Leaflet.GoogleMutant.js',
-                                    'js/Control.Loading.js',
                                     filters='rjsmin',
                                     output='gen/index.js')
 
@@ -375,6 +373,11 @@ def getdata(username):
                             A.access_count += 1
                             db.session.commit()
                         else:
+                            data = {
+                                "msg": "importing {} from Strava".format(a_id)
+                            }
+                            yield "data: {}\n\n".format(json.dumps(data))
+
                             # activity data isn't cached or in the database so
                             #  request it from Strava
                             stream_names = ['time', 'latlng']
@@ -405,6 +408,11 @@ def getdata(username):
                                     )
 
                                 activity_streams.update(activity)
+
+                                # we need to get rid of path_color in case
+                                #  activity object came from the cache
+                                activity_streams.pop("path_color", None)
+
                                 A = Activity(**activity_streams)
 
                                 if db_write:
