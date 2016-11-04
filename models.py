@@ -66,8 +66,7 @@ class User(UserMixin, db.Model):
         user = cls.get(strava_user.id)
         if not user:
             user = cls(strava_id=strava_user.id,
-                       app_activity_count=0)
-            db.session.add(user)
+                       app_activity_count=0).add()
 
         user.update(
             username=strava_user.username,
@@ -81,6 +80,12 @@ class User(UserMixin, db.Model):
 
         db.session.commit()
         return user
+
+    def add(self):
+        db.session.add(self)
+        key = "user:{}".format(self.strava_id)
+        cache.set(key, self, app.config.get("CACHE_USERS_TIMEOUT"))
+        return self
 
     def delete(self):
         db.session.delete(self)
