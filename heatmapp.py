@@ -83,7 +83,6 @@ login_manager.login_view = 'nothing'
 
 
 @login_manager.user_loader
-@cache.memoize(240)
 def load_user(user_id):
     return User.get(user_id)
 
