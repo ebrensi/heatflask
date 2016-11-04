@@ -18,7 +18,11 @@ import flask_assets
 from flask_analytics import Analytics
 import flask_caching
 from celery import Celery
+from signal import signal, SIGPIPE, SIG_DFL
 
+# makes python ignore sigpipe? prevents broken pipe exception when client
+#  aborts an SSE stream
+signal(SIGPIPE, SIG_DFL)
 
 app = Flask(__name__)
 app.config.from_object(os.environ['APP_SETTINGS'])
