@@ -83,6 +83,7 @@ login_manager.login_view = 'nothing'
 
 
 @login_manager.user_loader
+@cache.memoize(240)
 def load_user(user_id):
     return User.get(user_id)
 
@@ -368,15 +369,9 @@ def getdata(username):
 
                     else:
                         # Attempt to retreive activity from database
-                        A = Activity.query.get(a_id)
+                        A = Activity.get(a_id)
 
-                        if A:
-                            # If this activity is in the database
-                            #  then note that it was accessed
-                            A.dt_last_accessed = datetime.utcnow()
-                            A.access_count += 1
-                            db.session.commit()
-                        else:
+                        if not A:
                             data = {
                                 "msg": "importing {} from Strava".format(a_id)
                             }
