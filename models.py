@@ -1,7 +1,12 @@
 from flask_login import UserMixin
 from sqlalchemy.dialects import postgresql as pg
 from flask_sqlalchemy import SQLAlchemy
-from heatmapp import app
+from datetime import datetime
+import polyline
+import stravalib
+
+
+from heatmapp import app, cache
 
 db = SQLAlchemy(app)
 
@@ -28,11 +33,61 @@ class User(UserMixin, db.Model):
                                  cascade="all, delete, delete-orphan",
                                  lazy="dynamic")
 
+    strava_client = None
+
+    def describe(self):
+        attrs = ["strava_id", "username", "firstname", "lastname",
+                 "profile", "strava_access_token", "dt_last_active",
+                 "app_activity_count"]
+        return {attr: getattr(self, attr) for attr in attrs}
+
+    def client(self):
+        if not self.strava_client:
+            self.strava_client = stravalib.Client(
+                access_token=self.strava_access_token)
+        return self.strava_client
+
     def __repr__(self):
         return "<User %r>" % (self.strava_id)
 
     def get_id(self):
         return unicode(self.strava_id)
+
+    def update(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+        return self
+
+    @classmethod
+    def from_access_token(cls, token):
+        client = stravalib.Client(access_token=token)
+        strava_user = client.get_athlete()
+
+        user = cls.get(strava_user.id)
+        if not user:
+            user = cls(strava_id=strava_user.id,
+                       app_activity_count=0)
+
+        user.update(
+            username=strava_user.username,
+            strava_access_token=token,
+            firstname=strava_user.firstname,
+            lastname=strava_user.lastname,
+            profile=strava_user.profile,
+            dt_last_active=datetime.utcnow(),
+            client=client
+        )
+        return user
+
+    def update_db(self):
+        if not User.get(self.strava_id):
+            db.session.add(self)
+        return db.session.commit()
+
+    def delete(self):
+        if User.get(self.strava_id):
+            db.session.delete(self)
+            return db.session.commit()
 
     @classmethod
     def get(cls, user_identifier):
@@ -48,10 +103,64 @@ class User(UserMixin, db.Model):
 
         return user if user else None
 
+    @classmethod
+    def backup(cls):
+        attrs = ["strava_id", "strava_access_token", "dt_last_active",
+                 "app_activity_count"]
+        return [{attr: getattr(user, attr) for attr in attrs}
+                for user in cls.query.all()]
+
+    @classmethod
+    def restore(cls, backup_json):
+        for record in backup_json:
+            if not User.get(record['strava_id']):
+                db.session.add(User(**record))
+                db.session.commit()
+
+    def activity_summaries(self, activity_ids=None, **kwargs):
+        cache_timeout = 60
+        unique = "{},{},{}".format(self.strava_id, activity_ids, kwargs)
+        key = str(hash(unique))
+
+        summaries = cache.get(key)
+        if summaries:
+            app.logger.info("got cache key '{}'".format(unique))
+            for summary in summaries:
+                yield summary
+        else:
+            summaries = []
+            if activity_ids:
+                activities = (self.client().get_activity(int(id))
+                              for id in activity_ids)
+            else:
+                activities = self.client().get_activities(**kwargs)
+
+            try:
+                for a in activities:
+                    data = {
+                        "id": a.id,
+                        "athlete_id": a.athlete.id,
+                        "name": a.name,
+                        "type": a.type,
+                        "summary_polyline": a.map.summary_polyline,
+                        "beginTimestamp": str(a.start_date_local),
+                        "total_distance": float(a.distance),
+                        "elapsed_time": int(a.elapsed_time.total_seconds()),
+                        "user_id": self.strava_id
+                    }
+                    A = Activity(**data)
+                    summaries.append(A)
+                    yield A
+            except Exception as e:
+                yield {"error": str(e)}
+            else:
+                cache.set(key, summaries, cache_timeout)
+                app.logger.info("set cache key '{}'".format(unique))
+
 
 class Activity(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=False)
-    athlete_id = db.Column(db.Integer)
+    athlete_id = db.Column(db.Integer)  # owner of this activity
     name = db.Column(db.String())
     type = db.Column(db.String())
     summary_polyline = db.Column(db.String())
@@ -73,10 +182,56 @@ class Activity(db.Model):
     dt_last_accessed = db.Column(pg.TIMESTAMP)
     access_count = db.Column(db.Integer, default=0)
 
+    # self.user is the user that requested this activity, and may or may not
+    #  be the owner of the activity (athlete_id)
     user_id = db.Column(db.Integer, db.ForeignKey("users.strava_id"))
+
+    def owned(self):
+        return self.user_id == self.athlete_id
 
     def __repr__(self):
         return "<Activity %r>" % (self.id)
+
+    def serialize(self):
+        attrs = ["id", "athlete_id", "name", "type", "summary_polyline",
+                 "beginTimestamp", "total_distance", "elapsed_time",
+                 "time", "polyline", "distance", "altitude", "velocity_smooth",
+                 "cadence", "watts", "grade_smooth", "dt_cached",
+                 "dt_last_accessed", "access_count"]
+        return {attr: getattr(self, attr) for attr in attrs}
+
+    def import_streams(self, streams=[]):
+        stream_names = set(['time', 'latlng'])
+        stream_names.update(streams)
+
+        client = User.get(self.user_id).client()
+        try:
+            streams = client.get_activity_streams(self.id, types=stream_names)
+        except Exception as e:
+            return {"error": str(e)}
+
+        dict = {}
+        if "latlng" in streams:
+            self.polyline = polyline.encode(streams['latlng'].data)
+            dict["polyline"] = self.polyline
+            del streams['latlng']
+
+        for s in streams:
+            dict[s] = streams[s].data
+            setattr(self, s, streams[s].data)
+        return self
+
+    def update_db(self):
+        if not Activity.get(self.id):
+            self.user = User.get(self.user_id)
+            self.dt_cached = datetime.utcnow()
+            self.access_count = 0
+            db.session.add(self)
+        return db.session.commit()
+
+    def delete(self):
+        db.session.delete(self)
+        return db.session.commit()
 
     @classmethod
     def get(cls, activity_id):
@@ -85,7 +240,13 @@ class Activity(db.Model):
         except ValueError:
             return None
         else:
-            return cls.query.get(id)
+            A = cls.query.get(id)
+            if A:
+                A.dt_last_accessed = datetime.utcnow()
+                A.access_count += 1
+                db.session.commit()
+            return A
+
 
 # Create tables if they don't exist
 #  These commands aren't necessary if we use flask-migrate
