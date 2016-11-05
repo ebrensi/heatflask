@@ -562,8 +562,6 @@ def purge(days):
 @app.route('/users')
 @login_required
 def admin():
-    users = User.query.all()
-
     info = {
         user.strava_id: {
             "cached": user.activities.count(),
@@ -571,7 +569,7 @@ def admin():
             "app_activity_count": user.app_activity_count,
             "username": user.username
         }
-        for user in users}
+        for user in User.query}
     return jsonify(info)
 
 
