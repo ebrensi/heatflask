@@ -5,7 +5,7 @@ from flask import Flask, Response, render_template, request, redirect, \
     jsonify, url_for, flash, send_from_directory
 import flask_compress
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import dateutil.parser
 import os
 import json
@@ -18,7 +18,7 @@ from flask_analytics import Analytics
 import flask_caching
 from celery import Celery
 from signal import signal, SIGPIPE, SIG_DFL
-
+from sqlalchemy import or_, and_
 # makes python ignore sigpipe? prevents broken pipe exception when client
 #  aborts an SSE stream
 signal(SIGPIPE, SIG_DFL)
@@ -523,7 +523,38 @@ def retrieve_list():
     return jsonify(data)
 
 
-# List basic info about registered users
+@app.route('/old')
+@login_required
+def old():
+    d = int(request.args.get("days", 7))
+    old_activities = purge.delay(d).wait()
+    return jsonify(old_activities)
+
+
+@celery.task()
+def purge(days):
+    now = datetime.utcnow()
+    past_time = now - timedelta(days=days)
+    # app.logger.info("now: {}, {} days ago: {}".format(now, days, past_time))
+
+    new_activities = (
+        Activity.query.filter(
+            or_(
+                Activity.dt_last_accessed < past_time,
+                and_(
+                    Activity.dt_cached < past_time,
+                    Activity.dt_last_accessed == None
+                )
+
+            )
+        )
+    ).all()
+
+    dates = {a.id: {"accessed": str(a.dt_last_accessed), "cached": a.dt_cached}
+             for a in new_activities}
+    return dates
+
+
 @app.route('/users')
 @login_required
 def admin():
@@ -592,10 +623,15 @@ def webhook_callback():
 
     elif request.method == 'POST':
         update_raw = request.get_json(force=True)
-        app.logger.info(str(update_raw))
+        app.logger.info("subscription: ".format(update_raw))
         update = client.handle_subscription_update(update_raw)
-        # put update on a job queue
+        handle_update.delay(update)
         return "success"
+
+
+@celery.task()
+def handle_update(update):
+    pass
 
 
 @celery.task()
