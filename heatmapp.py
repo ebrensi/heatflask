@@ -531,7 +531,7 @@ def old():
 
     app.logger.info("{} of {} activities to purge".format(old_activities.count(),
                                                           Activity.query.count()))
-    dates = {a.id: {"accessed": str(a.dt_last_accessed), "cached": a.dt_cached}
+    dates = {a.id: {"accessed": str(a.dt_last_accessed), "cached": str(a.dt_cached)}
              for a in old_activities}
     msg = ("purged {} of {} activities over {} days old\n {}"
            .format(old_activities.count(),
