@@ -526,19 +526,17 @@ def retrieve_list():
 @app.route('/old')
 @login_required
 def old():
+    if current_user.strava_id not in app.config["ADMIN"]:
+        return jsonify({"error": "oops.  Can't do this."})
+
     d = int(request.args.get("days", 7))
     old_activities = purge(d)
 
-    app.logger.info("{} of {} activities to purge".format(old_activities.count(),
-                                                          Activity.query.count()))
-    dates = {a.id: {"accessed": str(a.dt_last_accessed), "cached": str(a.dt_cached)}
-             for a in old_activities}
-    msg = ("purged {} of {} activities over {} days old\n {}"
+    msg = ("purged {} of {} activities over {} days old"
            .format(old_activities.count(),
-                   Activity.query.count(),
-                   d,
-                   json.dumps(dates, indent=2))
+                   Activity.query.count())
            )
+    old_activities.delete()
     return msg
 
 
