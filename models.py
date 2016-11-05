@@ -102,21 +102,21 @@ class User(UserMixin, db.Model):
         if user:
             app.logger.info("retrieved user {} with key '{}'".format(user, key))
             return user
-        else:
-            # Get user from db by id or username
-            try:
-                # try casting identifier to int
-                user_id = int(user_identifier)
-            except ValueError:
-                # if that doesn't work then assume it's a string username
-                user = cls.query.filter_by(username=user_identifier).first()
-            else:
-                user = cls.query.get(user_id)
 
-            if user:
-                app.logger.info("cached user {} under key '{}'".format(
-                    user, key))
-                cache.set(key, user, app.config.get("CACHE_USERS_TIMEOUT"))
+        # Get user from db by id or username
+        try:
+            # try casting identifier to int
+            user_id = int(user_identifier)
+        except ValueError:
+            # if that doesn't work then assume it's a string username
+            user = cls.query.filter_by(username=user_identifier).first()
+        else:
+            user = cls.query.get(user_id)
+
+        if user:
+            app.logger.info("cached user {} under key '{}'".format(
+                user, key))
+            cache.set(key, user, app.config.get("CACHE_USERS_TIMEOUT"))
 
         return user if user else None
 
@@ -130,12 +130,11 @@ class User(UserMixin, db.Model):
     @classmethod
     def restore(cls, backup_json):
         for record in backup_json:
-            if not User.get(record['strava_id']):
-                db.session.add(User(**record))
-                db.session.commit()
+            if not cls.get(record['strava_id']):
+                cls(**record).add()
 
     def activity_summaries(self, activity_ids=None, **kwargs):
-        cache_timeout = 60
+        cache_timeout = app.config.get("CACHE_SUMMARIES_TIMEOUT")
         unique = "{},{},{}".format(self.strava_id, activity_ids, kwargs)
         key = str(hash(unique))
 
@@ -154,18 +153,19 @@ class User(UserMixin, db.Model):
 
             try:
                 for a in activities:
-                    data = {
-                        "id": a.id,
-                        "athlete_id": a.athlete.id,
-                        "name": a.name,
-                        "type": a.type,
-                        "summary_polyline": a.map.summary_polyline,
-                        "beginTimestamp": str(a.start_date_local),
-                        "total_distance": float(a.distance),
-                        "elapsed_time": int(a.elapsed_time.total_seconds()),
-                        "user_id": self.strava_id
-                    }
-                    A = Activity(**data)
+                    A = Activity.get(a.id)
+                    if not A:
+                        data = {
+                            "id": a.id,
+                            "athlete_id": a.athlete.id,
+                            "name": a.name,
+                            "type": a.type,
+                            "summary_polyline": a.map.summary_polyline,
+                            "beginTimestamp": str(a.start_date_local),
+                            "total_distance": float(a.distance),
+                            "elapsed_time": int(a.elapsed_time.total_seconds())
+                        }
+                        A = Activity(**data)
                     summaries.append(A)
                     yield A
             except Exception as e:
@@ -227,14 +227,11 @@ class Activity(db.Model):
         except Exception as e:
             return {"error": str(e)}
 
-        dict = {}
         if "latlng" in streams:
             self.polyline = polyline.encode(streams['latlng'].data)
-            dict["polyline"] = self.polyline
             del streams['latlng']
 
         for s in streams:
-            dict[s] = streams[s].data
             setattr(self, s, streams[s].data)
         return self
 
@@ -246,23 +243,48 @@ class Activity(db.Model):
             db.session.add(self)
         return db.session.commit()
 
+    def add(self):
+        db.session.add(self)
+        Activity.cache(self)
+
     def delete(self):
         db.session.delete(self)
-        return db.session.commit()
+        db.session.commit()
+        key = Activity.key(self.id)
+        cache.delete(key)
+
+    @staticmethod
+    def key(activity_id):
+        return "A:{}".format(activity_id)
+
+    @classmethod
+    def cache(cls, A):
+        key = cls.key(A.id)
+        cache.set(key, A, app.config.get("CACHE_ACTIVITIES_TIMEOUT"))
+        app.logger.info("cached {} under key '{}'".format(A, key))
 
     @classmethod
     def get(cls, activity_id):
+        key = cls.key(activity_id)
+        A = cache.get(key)
+
+        if A:
+            app.logger.info("retrieved {} with key '{}'".format(A, key))
+            return A
+
         try:
             id = int(activity_id)
         except ValueError:
             return None
-        else:
-            A = cls.query.get(id)
-            if A:
-                A.dt_last_accessed = datetime.utcnow()
-                A.access_count += 1
-                db.session.commit()
-            return A
+
+        A = cls.query.get(id)
+        if A:
+            A.dt_last_accessed = datetime.utcnow()
+            A.access_count += 1
+            db.session.commit()
+            app.logger.info("retrieved {} from db".format(A))
+            cls.cache(A)
+        return A
 
 
 # Create tables if they don't exist
