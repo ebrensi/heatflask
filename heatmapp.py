@@ -528,6 +528,9 @@ def retrieve_list():
 def old():
     d = int(request.args.get("days", 7))
     old_activities = purge(d)
+
+    app.logger.info("{} of {} activities to purge".format(old_activities.count(),
+                                                          Activity.query.count()))
     dates = {a.id: {"accessed": str(a.dt_last_accessed), "cached": a.dt_cached}
              for a in old_activities}
     return jsonify(dates)
