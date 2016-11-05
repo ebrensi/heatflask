@@ -533,7 +533,13 @@ def old():
                                                           Activity.query.count()))
     dates = {a.id: {"accessed": str(a.dt_last_accessed), "cached": a.dt_cached}
              for a in old_activities}
-    return jsonify(dates)
+    msg = ("purged {} of {} activities over {} days old\n {}"
+           .format(old_activities.count(),
+                   Activity.query.count(),
+                   d,
+                   json.dumps(dates, indent=2))
+           )
+    return msg
 
 
 # @celery.task()
