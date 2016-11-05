@@ -350,7 +350,7 @@ def getdata(username):
 
                     else:
                         # Attempt to retreive activity from database
-                        A = Activity.get(a_id)
+                        A = Activity.query.get(a_id)
 
                         if not A:
                             data = {
