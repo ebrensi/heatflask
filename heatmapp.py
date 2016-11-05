@@ -534,7 +534,9 @@ def old():
 
     msg = ("purged {} of {} activities over {} days old"
            .format(old_activities.count(),
-                   Activity.query.count())
+                   Activity.query.count(),
+                   d
+                   )
            )
     old_activities.delete()
     return msg
