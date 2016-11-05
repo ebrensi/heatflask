@@ -538,6 +538,7 @@ def old():
                    d
                    )
            )
+    old_activities = purge(d)
     old_activities.delete()
     return msg
 
@@ -550,9 +551,6 @@ def purge(days):
 
     old_activities = (
         Activity.query
-        .with_entities(Activity.id,
-                       Activity.dt_last_accessed,
-                       Activity.dt_cached)
         .filter(
             or_(
                 Activity.dt_last_accessed < past_time,
