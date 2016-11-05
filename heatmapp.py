@@ -5,7 +5,6 @@ from flask import Flask, Response, render_template, request, redirect, \
     jsonify, url_for, flash, send_from_directory
 import flask_compress
 
-from flask_migrate import Migrate
 from datetime import datetime
 import dateutil.parser
 import os
@@ -34,9 +33,8 @@ celery = Celery(app.name,
 # set up short-term fast caching support
 cache = flask_caching.Cache(app)
 
-# data models defined in models.py
+# models depend on cache and app so we import them afterwards
 from models import User, Activity, db
-migrate = Migrate(app, db)
 
 
 Analytics(app)
