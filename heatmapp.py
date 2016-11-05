@@ -528,18 +528,22 @@ def retrieve_list():
 def old():
     d = int(request.args.get("days", 7))
     old_activities = purge(d)
-    return jsonify(old_activities)
+    dates = {a.id: {"accessed": str(a.dt_last_accessed), "cached": a.dt_cached}
+             for a in old_activities}
+    return jsonify(dates)
 
 
+# @celery.task()
 def purge(days):
     now = datetime.utcnow()
     past_time = now - timedelta(days=days)
     # app.logger.info("now: {}, {} days ago: {}".format(now, days, past_time))
 
-    new_activities = (
-        Activity.query.with_entities(Activity.id,
-                                     Activity.dt_last_accessed,
-                                     Activity.dt_cached)
+    old_activities = (
+        Activity.query
+        .with_entities(Activity.id,
+                       Activity.dt_last_accessed,
+                       Activity.dt_cached)
         .filter(
             or_(
                 Activity.dt_last_accessed < past_time,
@@ -550,11 +554,9 @@ def purge(days):
 
             )
         )
-    ).all()
+    )
 
-    dates = {a.id: {"accessed": str(a.dt_last_accessed), "cached": a.dt_cached}
-             for a in new_activities}
-    return dates
+    return old_activities
 
 
 @app.route('/users')
