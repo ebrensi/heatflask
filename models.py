@@ -83,8 +83,7 @@ class User(UserMixin, db.Model):
 
     def add(self):
         db.session.add(self)
-        key = "user:{}".format(self.strava_id)
-        cache.set(key, self, app.config.get("CACHE_USERS_TIMEOUT"))
+        self.cache()
         return self
 
     def delete(self):
@@ -95,12 +94,23 @@ class User(UserMixin, db.Model):
         cache.delete("user:{}".format(self.strava_id))
         cache.delete("user:{}".format(self.username))
 
+    @staticmethod
+    def key(identifier):
+        return "U:{}".format(identifier)
+
+    def cache(self, identifier=None):
+        key = User.key(identifier or self.strava_id)
+        cache.set(key, self, app.config.get("CACHE_USERS_TIMEOUT"))
+        app.logger.debug("cached {} under key '{}'".format(self, key))
+        return self
+
     @classmethod
     def get(cls, user_identifier):
-        key = "user:{}".format(user_identifier)
+        key = User.key(user_identifier)
         user = cache.get(key)
         if user:
-            app.logger.info("retrieved user {} with key '{}'".format(user, key))
+            app.logger.debug(
+                "retrieved {} from cache with key {}".format(user, key))
             return user
 
         # Get user from db by id or username
@@ -114,9 +124,7 @@ class User(UserMixin, db.Model):
             user = cls.query.get(user_id)
 
         if user:
-            app.logger.info("cached user {} under key '{}'".format(
-                user, key))
-            cache.set(key, user, app.config.get("CACHE_USERS_TIMEOUT"))
+            user.cache(user_identifier)
 
         return user if user else None
 
@@ -140,7 +148,7 @@ class User(UserMixin, db.Model):
 
         summaries = cache.get(key)
         if summaries:
-            app.logger.info("got cache key '{}'".format(unique))
+            app.logger.debug("got cache key '{}'".format(unique))
             for summary in summaries:
                 yield summary
         else:
@@ -153,26 +161,24 @@ class User(UserMixin, db.Model):
 
             try:
                 for a in activities:
-                    A = Activity.get(a.id)
-                    if not A:
-                        data = {
-                            "id": a.id,
-                            "athlete_id": a.athlete.id,
-                            "name": a.name,
-                            "type": a.type,
-                            "summary_polyline": a.map.summary_polyline,
-                            "beginTimestamp": str(a.start_date_local),
-                            "total_distance": float(a.distance),
-                            "elapsed_time": int(a.elapsed_time.total_seconds())
-                        }
-                        A = Activity(**data)
-                    summaries.append(A)
-                    yield A
+                    data = {
+                        "id": a.id,
+                        "athlete_id": a.athlete.id,
+                        "name": a.name,
+                        "type": a.type,
+                        "summary_polyline": a.map.summary_polyline,
+                        "beginTimestamp": str(a.start_date_local),
+                        "total_distance": float(a.distance),
+                        "elapsed_time": int(a.elapsed_time.total_seconds()),
+                        "user_id": self.strava_id
+                    }
+                    summaries.append(data)
+                    yield data
             except Exception as e:
                 yield {"error": str(e)}
             else:
                 cache.set(key, summaries, cache_timeout)
-                app.logger.info("set cache key '{}'".format(unique))
+                app.logger.debug("set cache key '{}'".format(unique))
 
 
 class Activity(db.Model):
@@ -203,7 +209,7 @@ class Activity(db.Model):
     #  be the owner of the activity (athlete_id)
     user_id = db.Column(db.Integer, db.ForeignKey("users.strava_id"))
 
-    def owned(self):
+    def authorized(self):
         return self.user_id == self.athlete_id
 
     def __repr__(self):
@@ -218,6 +224,12 @@ class Activity(db.Model):
         return {attr: getattr(self, attr) for attr in attrs}
 
     def import_streams(self, streams=[]):
+        if not self.authorized():
+            return None
+
+        if not getattr(self, "summary_polyline", None):
+            return self
+
         stream_names = set(['time', 'latlng'])
         stream_names.update(streams)
 
@@ -245,7 +257,7 @@ class Activity(db.Model):
 
     def add(self):
         db.session.add(self)
-        Activity.cache(self)
+        self.cache()
 
     def delete(self):
         db.session.delete(self)
@@ -254,14 +266,13 @@ class Activity(db.Model):
         cache.delete(key)
 
     @staticmethod
-    def key(activity_id):
-        return "A:{}".format(activity_id)
+    def key(identifier):
+        return "A:{}".format(identifier)
 
-    @classmethod
-    def cache(cls, A):
-        key = cls.key(A.id)
-        cache.set(key, A, app.config.get("CACHE_ACTIVITIES_TIMEOUT"))
-        app.logger.info("cached {} under key '{}'".format(A, key))
+    def cache(self, identifier=None):
+        key = Activity.key(identifier or self.id)
+        cache.set(key, self, app.config.get("CACHE_ACTIVITIES_TIMEOUT"))
+        app.logger.debug("cached {} under key '{}'".format(self, key))
 
     @classmethod
     def get(cls, activity_id):
@@ -269,7 +280,7 @@ class Activity(db.Model):
         A = cache.get(key)
 
         if A:
-            app.logger.info("retrieved {} with key '{}'".format(A, key))
+            app.logger.debug("retrieved {} with key '{}'".format(A, key))
             return A
 
         try:
@@ -282,8 +293,8 @@ class Activity(db.Model):
             A.dt_last_accessed = datetime.utcnow()
             A.access_count += 1
             db.session.commit()
-            app.logger.info("retrieved {} from db".format(A))
-            cls.cache(A)
+            app.logger.debug("retrieved {} from db".format(A))
+            A.cache()
         return A
 
 

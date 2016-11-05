@@ -225,7 +225,7 @@
                 {{ config['APP_NAME'] }} is a work in progress.
                 <img src="{{ url_for('static', filename='under-construction.gif') }}" height=40>
                 <br><br>
-                How we access data:  Upon redering activities, Low-resolution data is retrieved directly from Strava and is cached for fast access for 8 minutes.  High-Resolution data is fast-cached for 16 minutes, and cached in our database for 7 days.   If high-resolution data for an activity is not accessed for over 7 days then it gets deleted from our database.
+                How we access data:  Upon redering activities, Low-resolution data is retrieved directly from Strava and is cached for fast access for 5 minutes.  High-Resolution data is fast-cached for 24 hours, and cached in our database for 7 days.   If high-resolution data for an activity is not accessed for over 7 days then it gets deleted from our database.
                 <br>
                 On subsequent requests for an activity's (Hi-res) data, Heatflask will check the fast-cache first, then the database, and finally import from Strava.  We hold your data for at most 7 days.
                 <br><br>
