@@ -133,7 +133,7 @@ class User(UserMixin, db.Model):
         attrs = ["strava_id", "strava_access_token", "dt_last_active",
                  "app_activity_count"]
         return [{attr: getattr(user, attr) for attr in attrs}
-                for user in cls.query.all()]
+                for user in cls.query]
 
     @classmethod
     def restore(cls, backup_json):
