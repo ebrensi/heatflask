@@ -537,7 +537,10 @@ def purge(days):
     # app.logger.info("now: {}, {} days ago: {}".format(now, days, past_time))
 
     new_activities = (
-        Activity.query.filter(
+        Activity.query.with_entities(Activity.id,
+                                     Activity.dt_last_accessed,
+                                     Activity.dt_last_accessed)
+        .filter(
             or_(
                 Activity.dt_last_accessed < past_time,
                 and_(
