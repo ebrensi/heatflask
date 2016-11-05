@@ -499,7 +499,7 @@ def activities_sse():
 
     def boo():
         for a in activity_summaries(current_user, **options):
-            a["cached"] = "yes" if Activity.get(a['id']) else "no"
+            a["cached"] = "yes" if Activity.query.get(a['id']) else "no"
             a["msg"] = "[{id}] {beginTimestamp} '{name}'".format(**a)
             yield "data: {}\n\n".format(json.dumps(a))
         yield "data: done\n\n"
@@ -539,7 +539,7 @@ def purge(days):
     new_activities = (
         Activity.query.with_entities(Activity.id,
                                      Activity.dt_last_accessed,
-                                     Activity.dt_last_accessed)
+                                     Activity.dt_cached)
         .filter(
             or_(
                 Activity.dt_last_accessed < past_time,
