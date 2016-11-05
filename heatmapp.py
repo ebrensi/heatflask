@@ -540,6 +540,7 @@ def old():
            )
     old_activities = purge(d)
     old_activities.delete()
+    db.session.commit()
     return msg
 
 
