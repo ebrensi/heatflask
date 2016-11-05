@@ -527,11 +527,10 @@ def retrieve_list():
 @login_required
 def old():
     d = int(request.args.get("days", 7))
-    old_activities = purge.delay(d).wait()
+    old_activities = purge(d)
     return jsonify(old_activities)
 
 
-@celery.task()
 def purge(days):
     now = datetime.utcnow()
     past_time = now - timedelta(days=days)
