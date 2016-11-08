@@ -106,6 +106,5 @@ class DevelopmentConfig(Config):
     # OFFLINE = True
     DEVELOPMENT = True
     DEBUG = True
-
     # For Flask-Cache
     CACHE_TYPE = "simple"
