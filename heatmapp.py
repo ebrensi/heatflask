@@ -20,6 +20,7 @@ import flask_caching
 from celery import Celery
 from signal import signal, SIGPIPE, SIG_DFL
 from sqlalchemy import or_, and_
+
 # makes python ignore sigpipe? prevents broken pipe exception when client
 #  aborts an SSE stream
 signal(SIGPIPE, SIG_DFL)
@@ -48,6 +49,7 @@ bundles = {
                                      'css/leaflet.css',
                                      'css/leaflet-sidebar.css',
                                      'css/L.Control.Window.css',
+                                     filters='cssmin',
                                      output='gen/index.css'),
 
     "index_js": flask_assets.Bundle('js/jquery-3.1.0.min.js',
