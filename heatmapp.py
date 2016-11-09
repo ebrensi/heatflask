@@ -483,7 +483,7 @@ def activities_sse():
             options["limit"] = int(request.args.get("limit"))
 
     def boo():
-        for a in activity_summaries(current_user, **options):
+        for a in current_user.activity_summaries(**options):
             a["cached"] = "yes" if Activity.query.get(a['id']) else "no"
             a["msg"] = "[{id}] {beginTimestamp} '{name}'".format(**a)
             yield "data: {}\n\n".format(json.dumps(a))
