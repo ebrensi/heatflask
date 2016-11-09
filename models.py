@@ -1,6 +1,7 @@
 from flask_login import UserMixin
 from sqlalchemy.dialects import postgresql as pg
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import inspect
 from datetime import datetime
 import polyline
 import stravalib
@@ -9,6 +10,17 @@ import stravalib
 from heatmapp import app, cache
 
 db = SQLAlchemy(app)
+
+
+def inspector(obj):
+    state = inspect(obj)
+    return {
+        "transient": state.transient,
+        "pending": state.pending,
+        "persistent": state.persistent,
+        "deleted": state.deleted,
+        "detached": state.detached
+    }
 
 
 class User(UserMixin, db.Model):
@@ -66,7 +78,7 @@ class User(UserMixin, db.Model):
         user = cls.get(strava_user.id)
         if not user:
             user = cls(strava_id=strava_user.id,
-                       app_activity_count=0).add()
+                       app_activity_count=0)
 
         user.update(
             username=strava_user.username,
@@ -77,22 +89,7 @@ class User(UserMixin, db.Model):
             dt_last_active=datetime.utcnow(),
             client=client
         )
-
-        db.session.commit()
         return user
-
-    def add(self):
-        db.session.add(self)
-        self.cache()
-        return self
-
-    def delete(self):
-        db.session.delete(self)
-        db.session.commit()
-
-        # delete from cache too.  It may be under two different keys
-        cache.delete("user:{}".format(self.strava_id))
-        cache.delete("user:{}".format(self.username))
 
     @staticmethod
     def key(identifier):
@@ -103,6 +100,13 @@ class User(UserMixin, db.Model):
         cache.set(key, self, app.config.get("CACHE_USERS_TIMEOUT"))
         app.logger.debug("cached {} under key '{}'".format(self, key))
         return self
+
+    def uncache(self):
+        app.logger.debug("deleting {}".format(self))
+
+        # delete from cache too.  It may be under two different keys
+        cache.delete(User.key(self.strava_id))
+        cache.delete(User.key(self.username))
 
     @classmethod
     def get(cls, user_identifier):
@@ -134,12 +138,6 @@ class User(UserMixin, db.Model):
                  "app_activity_count"]
         return [{attr: getattr(user, attr) for attr in attrs}
                 for user in cls.query]
-
-    @classmethod
-    def restore(cls, backup_json):
-        for record in backup_json:
-            if not cls.get(record['strava_id']):
-                cls(**record).add()
 
     def activity_summaries(self, activity_ids=None, **kwargs):
         cache_timeout = app.config.get("CACHE_SUMMARIES_TIMEOUT")
@@ -247,24 +245,6 @@ class Activity(db.Model):
             setattr(self, s, streams[s].data)
         return self
 
-    def update_db(self):
-        if not Activity.get(self.id):
-            self.user = User.get(self.user_id)
-            self.dt_cached = datetime.utcnow()
-            self.access_count = 0
-            db.session.add(self)
-        return db.session.commit()
-
-    def add(self):
-        db.session.add(self)
-        self.cache()
-
-    def delete(self):
-        db.session.delete(self)
-        db.session.commit()
-        key = Activity.key(self.id)
-        cache.delete(key)
-
     @staticmethod
     def key(identifier):
         return "A:{}".format(identifier)
@@ -273,6 +253,10 @@ class Activity(db.Model):
         key = Activity.key(identifier or self.id)
         cache.set(key, self, app.config.get("CACHE_ACTIVITIES_TIMEOUT"))
         app.logger.debug("cached {} under key '{}'".format(self, key))
+
+    def uncache(self):
+        key = Activity.key(self.id)
+        cache.delete(key)
 
     @classmethod
     def get(cls, activity_id):
@@ -292,7 +276,6 @@ class Activity(db.Model):
         if A:
             A.dt_last_accessed = datetime.utcnow()
             A.access_count += 1
-            db.session.commit()
             app.logger.debug("retrieved {} from db".format(A))
             A.cache()
         return A
