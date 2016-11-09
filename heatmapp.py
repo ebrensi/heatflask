@@ -458,46 +458,6 @@ def getdata(username):
     return Response(boo(), mimetype='text/event-stream')
 
 
-def activity_summaries(user, activity_ids=None, **kwargs):
-    cache_timeout = app.config["CACHE_SUMMARIES_TIMEOUT"]
-    unique = "{},{},{}".format(user.strava_id, activity_ids, kwargs)
-    key = str(hash(unique))
-
-    summaries = cache.get(key)
-    if summaries:
-        app.logger.info("got cache key '{}'".format(unique))
-        for summary in summaries:
-            yield summary
-    else:
-        token = user.strava_access_token
-        client = stravalib.Client(access_token=token)
-        summaries = []
-        if activity_ids:
-            activities = (client.get_activity(int(id)) for id in activity_ids)
-        else:
-            activities = client.get_activities(**kwargs)
-
-        try:
-            for a in activities:
-                data = {
-                    "id": a.id,
-                    "athlete_id": a.athlete.id,
-                    "name": a.name,
-                    "type": a.type,
-                    "summary_polyline": a.map.summary_polyline,
-                    "beginTimestamp": str(a.start_date_local),
-                    "total_distance": float(a.distance),
-                    "elapsed_time": int(a.elapsed_time.total_seconds())
-                }
-                summaries.append(data)
-                yield data
-        except Exception as e:
-            yield {"error": str(e)}
-        else:
-            cache.set(key, summaries, cache_timeout)
-            app.logger.info("set cache key '{}'".format(unique))
-
-
 # creates a SSE stream of current.user's activities, using the Strava API
 # arguments
 @app.route('/activities_sse')
