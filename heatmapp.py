@@ -247,10 +247,11 @@ def index(username):
         try:
             db.session.delete(user)
         except InvalidRequestError:
+            # This user is cached from an old session
             pass
         else:
             db.session.commit()
-            flash("user '{}' has an invalid access token, and needs to re-register"
+            flash("user '{}'  is not registered with this app"
                   .format(username))
             app.logger.debug(e)
         return redirect(url_for('nothing'))
@@ -462,6 +463,77 @@ def getdata(username):
         yield "data: done\n\n"
 
     return Response(boo(), mimetype='text/event-stream')
+
+
+def getstreams(user, activity):
+    # activity data isn't cached or in the database so
+    #  request it from Strava
+    stream_names = ['time', 'latlng']
+
+    try:
+        streams = (
+            user.client()
+            .get_activity_streams(activity["id"],
+                                  types=stream_names)
+        )
+    except Exception as e:
+        app.logger.info(
+            "activity: {}\n{}".format(activity, e))
+        return
+    else:
+        app.logger.info(
+            "imported streams for: {}".format(activity["id"])
+        )
+
+        activity_streams = {name: streams[name].data
+                            for name in streams}
+
+        # replace latlng array with polyline
+        # representation in activity_streams
+        if "latlng" in activity_streams:
+            activity_streams["polyline"] = (
+                polyline.encode(
+                    activity_streams.pop('latlng'))
+            )
+
+        activity_streams.update(activity)
+
+        # we need to get rid of path_color in case
+        #  activity object came from the cache
+        activity_streams.pop("path_color", None)
+
+        A = Activity(**activity_streams)
+
+        # write this activity to the database
+        A.user = user
+        A.dt_cached = datetime.utcnow()
+        A.access_count = 0
+        db.session.add(A)
+        db.session.commit()
+
+        # Now A is an Activity object, either from the database
+        #  or directly from Strava,
+        #   and activity is a summary dictionary
+
+        hires_data = {
+            "polyline": A.polyline
+        }
+
+        if durations and A.time:
+            t = A.time
+            hires_data["durations"] = [
+                (b - a) for a, b in zip(t, t[1:])
+            ] + [0]
+
+        activity.update(hires_data)
+
+        # fast-cache the hires_data
+        if cache_timeout:
+            cache.set(str(a_id), hires_data, cache_timeout)
+            app.logger.info(
+                "cached {} for {} seconds"
+                .format(a_id, cache_timeout)
+            )
 
 
 # creates a SSE stream of current.user's activities, using the Strava API
