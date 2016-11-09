@@ -21,7 +21,7 @@ from celery import Celery
 from signal import signal, SIGPIPE, SIG_DFL
 from sqlalchemy import or_, and_
 from requests.exceptions import HTTPError
-
+from sqlalchemy.exc import InvalidRequestError
 
 # makes python ignore sigpipe? prevents broken pipe exception when client
 #  aborts an SSE stream
@@ -244,11 +244,15 @@ def index(username):
         client.get_athlete()
     except HTTPError as e:
         user.uncache()
-        db.session.delete(user)
-        db.session.commit()
-        flash("user '{}' has an invalid access token, and needs to re-register"
-              .format(username))
-        app.logger.debug(e)
+        try:
+            db.session.delete(user)
+        except InvalidRequestError:
+            pass
+        else:
+            db.session.commit()
+            flash("user '{}' has an invalid access token, and needs to re-register"
+                  .format(username))
+            app.logger.debug(e)
         return redirect(url_for('nothing'))
 
     date1 = request.args.get("date1")
@@ -446,7 +450,9 @@ def getdata(username):
                         if cache_timeout:
                             cache.set(str(a_id), hires_data, cache_timeout)
                             app.logger.info(
-                                "cached {} for {} seconds".format(a_id, cache_timeout))
+                                "cached {} for {} seconds"
+                                .format(a_id, cache_timeout)
+                            )
 
                 # Now activity is a dictionary representing an activity
                 #  with hi-res streams
