@@ -20,6 +20,8 @@ import flask_caching
 from celery import Celery
 from signal import signal, SIGPIPE, SIG_DFL
 from sqlalchemy import or_, and_
+from requests.exceptions import HTTPError
+
 
 # makes python ignore sigpipe? prevents broken pipe exception when client
 #  aborts an SSE stream
@@ -37,7 +39,7 @@ cache = flask_caching.Cache(app)
 
 # models depend on cache and app so we import them afterwards
 from models import User, Activity, db
-
+db.create_all()
 
 Analytics(app)
 
@@ -171,6 +173,9 @@ def auth_callback():
             return redirect(state)
 
         user = User.from_access_token(access_token)
+        db.session.add(user)
+        db.session.commit()
+        app.logger.debug(user.describe())
 
         # remember=True, for persistent login.
         login_user(user, remember=True)
@@ -202,7 +207,9 @@ def delete():
         # the current user is now logged out
         user = User.get(user_id)
         try:
-            user.delete()
+            user.uncache()
+            db.session.delete(user)
+            db.session.commit()
         except Exception as e:
             flash(str(e))
         else:
@@ -230,6 +237,18 @@ def index(username):
     if not user:
         flash("user '{}' is not registered with this app"
               .format(username))
+        return redirect(url_for('nothing'))
+
+    client = user.client()
+    try:
+        client.get_athlete()
+    except HTTPError as e:
+        user.uncache()
+        db.session.delete(user)
+        db.session.commit()
+        flash("user '{}' has an invalid access token, and needs to re-register"
+              .format(username))
+        app.logger.debug(e)
         return redirect(url_for('nothing'))
 
     date1 = request.args.get("date1")
@@ -333,12 +352,11 @@ def getdata(username):
 
         return color_list[0] if color_list else ""
 
-    token = user.strava_access_token
-    client = stravalib.Client(access_token=token)
+    client = user.client()
 
     def boo(db_write=db_write):
         cache_timeout = app.config["CACHE_ACTIVITIES_TIMEOUT"]
-        for activity in activity_summaries(user, **options):
+        for activity in user.activity_summaries(**options):
             if ("error" not in activity) and activity.get("summary_polyline"):
                 a_id = activity["id"]
 
@@ -352,8 +370,12 @@ def getdata(username):
                     else:
                         # Attempt to retreive activity from database
                         A = Activity.query.get(a_id)
+                        if A:
+                            A.access_count += 1
+                            A.dt_last_accessed = datetime.utcnow()
+                            db.session.commit()
 
-                        if not A:
+                        else:
                             data = {
                                 "msg": "importing {} from Strava".format(a_id)
                             }

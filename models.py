@@ -143,6 +143,7 @@ class User(UserMixin, db.Model):
         cache_timeout = app.config.get("CACHE_SUMMARIES_TIMEOUT")
         unique = "{},{},{}".format(self.strava_id, activity_ids, kwargs)
         key = str(hash(unique))
+        client = self.client()
 
         summaries = cache.get(key)
         if summaries:
@@ -152,10 +153,10 @@ class User(UserMixin, db.Model):
         else:
             summaries = []
             if activity_ids:
-                activities = (self.client().get_activity(int(id))
+                activities = (client.get_activity(int(id))
                               for id in activity_ids)
             else:
-                activities = self.client().get_activities(**kwargs)
+                activities = client.get_activities(**kwargs)
 
             try:
                 for a in activities:

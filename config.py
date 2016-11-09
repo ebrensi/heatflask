@@ -29,7 +29,7 @@ class Config(object):
     CACHE_ACTIVITIES_TIMEOUT = 24 * 60 * 60  # 24 hours
 
     # How long we hold a User object in memory
-    CACHE_USERS_TIMEOUT = 24 * 60 * 60  # 24 hours
+    CACHE_USERS_TIMEOUT = 10  # 10 seconds
 
     SECRET_KEY = "pB\xeax\x9cJ\xd6\x81\xed\xd7\xf9\xd0\x99o\xad\rM\x92\xb1\x8b{7\x02r"
 
