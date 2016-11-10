@@ -2,6 +2,7 @@
 from __future__ import unicode_literals
 
 import gevent
+from gevent.pool import Pool
 from flask import Flask, Response, render_template, request, redirect, \
     jsonify, url_for, flash, send_from_directory
 import flask_compress
@@ -359,181 +360,116 @@ def getdata(username):
 
     client = user.client()
 
-    def boo(db_write=db_write):
+    def process(activity):
         cache_timeout = app.config["CACHE_ACTIVITIES_TIMEOUT"]
-        for activity in user.activity_summaries(**options):
-            if ("error" not in activity) and activity.get("summary_polyline"):
-                a_id = activity["id"]
+        if ("error" not in activity) and activity.get("summary_polyline"):
+            a_id = activity["id"]
 
-                if hires:
-                    # attempt to get activity hires data from the fast-cache
-                    cached_hires_data = cache.get(str(a_id))
-                    if cached_hires_data:
-                        activity.update(cached_hires_data)
-                        app.logger.info("got cached data for {}".format(a_id))
+            if hires:
+                # attempt to get activity hires data from the fast-cache
+                cached_hires_data = cache.get(str(a_id))
+                if cached_hires_data:
+                    activity.update(cached_hires_data)
+                    app.logger.info("got cached data for {}".format(a_id))
+
+                else:
+                    # Attempt to retreive activity from database
+                    A = Activity.query.get(a_id)
+                    if A:
+                        A.access_count += 1
+                        A.dt_last_accessed = datetime.utcnow()
+                        db.session.commit()
 
                     else:
-                        # Attempt to retreive activity from database
-                        A = Activity.query.get(a_id)
-                        if A:
-                            A.access_count += 1
-                            A.dt_last_accessed = datetime.utcnow()
-                            db.session.commit()
-
-                        else:
-                            data = {
-                                "msg": "importing {} from Strava".format(a_id)
-                            }
-                            yield "data: {}\n\n".format(json.dumps(data))
-
-                            # activity data isn't cached or in the database so
-                            #  request it from Strava
-                            stream_names = ['time', 'latlng']
-
-                            try:
-                                streams = (
-                                    client
-                                    .get_activity_streams(activity["id"],
-                                                          types=stream_names)
-                                )
-                            except Exception as e:
-                                app.logger.info(
-                                    "activity: {}\n{}".format(activity, e))
-                                break
-                            else:
-                                app.logger.info(
-                                    "imported streams for: {}".format(a_id))
-
-                                activity_streams = {name: streams[name].data
-                                                    for name in streams}
-
-                                # replace latlng array with polyline
-                                # representation in activity_streams
-                                if "latlng" in activity_streams:
-                                    activity_streams["polyline"] = (
-                                        polyline.encode(
-                                            activity_streams.pop('latlng'))
-                                    )
-
-                                activity_streams.update(activity)
-
-                                # we need to get rid of path_color in case
-                                #  activity object came from the cache
-                                activity_streams.pop("path_color", None)
-
-                                A = Activity(**activity_streams)
-
-                                if db_write:
-                                    # write this activity to the database
-                                    A.user = user
-                                    A.dt_cached = datetime.utcnow()
-                                    A.access_count = 0
-                                    db.session.add(A)
-                                    db.session.commit()
-
-                        # Now A is an Activity object, either from the database
-                        #  or directly from Strava,
-                        #   and activity is a summary dictionary
-
-                        hires_data = {
-                            "polyline": A.polyline
+                        data = {
+                            "msg": "importing {} from Strava".format(a_id)
                         }
+                        yield "data: {}\n\n".format(json.dumps(data))
 
-                        if durations and A.time:
-                            t = A.time
-                            hires_data["durations"] = [
-                                (b - a) for a, b in zip(t, t[1:])
-                            ] + [0]
+                        # activity data isn't cached or in the database so
+                        #  request it from Strava
+                        stream_names = ['time', 'latlng']
 
-                        activity.update(hires_data)
-
-                        # fast-cache the hires_data
-                        if cache_timeout:
-                            cache.set(str(a_id), hires_data, cache_timeout)
-                            app.logger.info(
-                                "cached {} for {} seconds"
-                                .format(a_id, cache_timeout)
+                        try:
+                            streams = (
+                                client
+                                .get_activity_streams(activity["id"],
+                                                      types=stream_names)
                             )
+                        except Exception as e:
+                            app.logger.info(
+                                "activity: {}\n{}".format(activity, e))
+                            break
+                        else:
+                            app.logger.info(
+                                "imported streams for: {}".format(a_id))
 
-                # Now activity is a dictionary representing an activity
-                #  with hi-res streams
-                activity["path_color"] = path_color(activity["type"])
+                            activity_streams = {name: streams[name].data
+                                                for name in streams}
 
+                            # replace latlng array with polyline
+                            # representation in activity_streams
+                            if "latlng" in activity_streams:
+                                activity_streams["polyline"] = (
+                                    polyline.encode(
+                                        activity_streams.pop('latlng'))
+                                )
+
+                            activity_streams.update(activity)
+
+                            # we need to get rid of path_color in case
+                            #  activity object came from the cache
+                            activity_streams.pop("path_color", None)
+
+                            A = Activity(**activity_streams)
+
+                            if db_write:
+                                # write this activity to the database
+                                A.user = user
+                                A.dt_cached = datetime.utcnow()
+                                A.access_count = 0
+                                db.session.add(A)
+                                db.session.commit()
+
+                    # Now A is an Activity object, either from the database
+                    #  or directly from Strava,
+                    #   and activity is a summary dictionary
+
+                    hires_data = {
+                        "polyline": A.polyline
+                    }
+
+                    if durations and A.time:
+                        t = A.time
+                        hires_data["durations"] = [
+                            (b - a) for a, b in zip(t, t[1:])
+                        ] + [0]
+
+                    activity.update(hires_data)
+
+                    # fast-cache the hires_data
+                    if cache_timeout:
+                        cache.set(str(a_id), hires_data, cache_timeout)
+                        app.logger.info(
+                            "cached {} for {} seconds"
+                            .format(a_id, cache_timeout)
+                        )
+
+            # Now activity is a dictionary representing an activity
+            #  with hi-res streams
+            activity["path_color"] = path_color(activity["type"])
+
+        return activity
+
+    pool = Pool()
+
+    def sse_iterator(db_write=db_write):
+        activities = user.activity_summaries(**options)
+        for activity in pool.imap_unordered(process, activities):
             yield "data: {}\n\n".format(json.dumps(activity))
         yield "data: done\n\n"
 
-    return Response(boo(), mimetype='text/event-stream')
-
-
-def getstreams(user, activity):
-    # activity data isn't cached or in the database so
-    #  request it from Strava
-    stream_names = ['time', 'latlng']
-
-    try:
-        streams = (
-            user.client()
-            .get_activity_streams(activity["id"],
-                                  types=stream_names)
-        )
-    except Exception as e:
-        app.logger.info(
-            "activity: {}\n{}".format(activity, e))
-        return
-    else:
-        app.logger.info(
-            "imported streams for: {}".format(activity["id"])
-        )
-
-        activity_streams = {name: streams[name].data
-                            for name in streams}
-
-        # replace latlng array with polyline
-        # representation in activity_streams
-        if "latlng" in activity_streams:
-            activity_streams["polyline"] = (
-                polyline.encode(
-                    activity_streams.pop('latlng'))
-            )
-
-        activity_streams.update(activity)
-
-        # we need to get rid of path_color in case
-        #  activity object came from the cache
-        activity_streams.pop("path_color", None)
-
-        A = Activity(**activity_streams)
-
-        # write this activity to the database
-        A.user = user
-        A.dt_cached = datetime.utcnow()
-        A.access_count = 0
-        db.session.add(A)
-        db.session.commit()
-
-        # Now A is an Activity object, either from the database
-        #  or directly from Strava,
-        #   and activity is a summary dictionary
-
-        hires_data = {
-            "polyline": A.polyline
-        }
-
-        if durations and A.time:
-            t = A.time
-            hires_data["durations"] = [
-                (b - a) for a, b in zip(t, t[1:])
-            ] + [0]
-
-        activity.update(hires_data)
-
-        # fast-cache the hires_data
-        if cache_timeout:
-            cache.set(str(a_id), hires_data, cache_timeout)
-            app.logger.info(
-                "cached {} for {} seconds"
-                .format(a_id, cache_timeout)
-            )
+    return Response(sse_iterator(), mimetype='text/event-stream')
 
 
 # creates a SSE stream of current.user's activities, using the Strava API
