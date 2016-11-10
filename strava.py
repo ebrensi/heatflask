@@ -8,6 +8,9 @@ import stravalib
 import os
 import polyline
 import json
+import random
+import gevent
+from gevent.pool import Pool
 
 STRAVA_CLIENT_ID = os.environ["STRAVA_CLIENT_ID"]
 STRAVA_CLIENT_SECRET = os.environ["STRAVA_CLIENT_SECRET"]
@@ -67,28 +70,15 @@ def authorized():
         return redirect(request.args.get("state") or url_for("index"))
 
 
-def activity_iterator(client, **args):
-    for a in client.get_activities(**args):
-        activity = {
-            "id": a.id,
-            "name": a.name,
-            "type": a.type,
-            # "summary_polyline": a.map.summary_polyline,
-            "beginTimestamp": str(a.start_date_local),
-            "total_distance": float(a.distance),
-            "elapsed_time": int(a.elapsed_time.total_seconds()),
-            "msg": "[{0.id}] {0.type}: '{0.name}' {0.start_date_local}, {0.distance}".format(a)
-        }
-        yield activity
-
-
 @app.route('/activities')
 def activities():
     limit = request.args.get("limit", None, type=int)
+    streams = request.args.get("streams")
+
     if client.access_token:
         def actvity_msg_list():
             yield "Activities list:\n"
-            for a in activity_iterator(client, limit=limit):
+            for a in activity_iterator(client, streams=streams, limit=limit):
                 yield a["msg"] + "\n"
             yield "Done.\n"
 
@@ -100,7 +90,7 @@ def activities():
         return redirect(url_for('login', next=url_for("activities", **args)))
 
 
-@app.route('/activity_stream')
+@app.route('/activities_sse')
 def activity_stream():
     limit = request.args.get("limit", None, type=int)
 
@@ -139,35 +129,63 @@ def retrieve():
 @app.route('/activities/<activity_id>')
 def data_points(activity_id):
     if client.access_token:
-        stream_names = ['time', 'latlng', 'distance', 'altitude', 'velocity_smooth',
-                        'cadence', 'watts', 'grade_smooth']
-
-        streams = client.get_activity_streams(activity_id,
-                                              types=stream_names)
-
-        # This is all done to eliminate any data-points from the streams where
-        #  latlng is [0,0], which is invalid.  I am not sure if any [0,0] points
-        #  actually exist in Strava data but some where there in the original
-        #  Garmin data.
-        idx = stream_names.index('latlng')
-        zipped = zip(
-            *[streams[t].data for t in stream_names if t in streams])
-        stream_data = {
-            t: tl for t, tl in
-            zip(stream_names,
-                zip(*[d for d in zipped if d[idx] != [0, 0]])
-                )
-        }
-
-        stream_data["polyline"] = (
-            polyline.encode(stream_data.pop('latlng'))
-        )
+        stream_data = get_stream_data(activity_id)
         return jsonify(stream_data)
     else:
         return redirect(url_for('login',
                                 next=url_for("data_points",
                                              activity_id=activity_id,
                                              _external=True)))
+
+
+def activity_iterator(client, streams=False, **args):
+    for a in client.get_activities(**args):
+        activity = {
+            "id": a.id,
+            "name": a.name,
+            "type": a.type,
+            "summary_polyline": a.map.summary_polyline,
+            "beginTimestamp": str(a.start_date_local),
+            "total_distance": float(a.distance),
+            "elapsed_time": int(a.elapsed_time.total_seconds()),
+            "msg": "[{0.id}] {0.type}: '{0.name}' {0.start_date_local}, {0.distance}".format(a)
+        }
+
+        yield activity
+
+
+def get_stream_data(activity_id):
+    stream_names = ['time', 'latlng', 'distance', 'altitude']
+
+    streams = client.get_activity_streams(activity_id,
+                                          types=stream_names)
+
+    stream_data = {name: streams[name].data for name in streams}
+
+    if 'latlng' in stream_data:
+        stream_data["polyline"] = (
+            polyline.encode(stream_data.pop('latlng'))
+        )
+
+    return stream_data
+
+
+@app.route('/test')
+def data_stream():
+    pool = Pool()
+
+    def test_job(i):
+        r = random.randint(1, 10)
+        gevent.sleep(r)
+        return "test {} completed in {} secs".format(i, r)
+
+    def yield_from_queue():
+        for a in pool.imap_unordered(test_job, xrange(1, 10)):
+            yield "data: {}\n\n".format(json.dumps(a))
+
+        yield "data: done\n\n"
+
+    return Response(yield_from_queue(), mimetype='text/event-stream')
 
 
 if __name__ == '__main__':
