@@ -17,7 +17,6 @@ from flask_login import current_user, login_user, logout_user, login_required
 import flask_assets
 from flask_analytics import Analytics
 import flask_caching
-from celery import Celery
 from signal import signal, SIGPIPE, SIG_DFL
 from sqlalchemy import or_, and_
 from requests.exceptions import HTTPError
@@ -30,12 +29,9 @@ signal(SIGPIPE, SIG_DFL)
 app = Flask(__name__)
 app.config.from_object(os.environ['APP_SETTINGS'])
 
-celery = Celery(app.name,
-                broker=app.config['CELERY_BROKER_URL'],
-                backend=app.config['CELERY_RESULT_BACKEND'])
-
 # set up short-term fast caching support
 cache = flask_caching.Cache(app)
+cache.clear()
 
 # models depend on cache and app so we import them afterwards
 from models import User, Activity, db
@@ -514,29 +510,26 @@ def retrieve_list():
     return jsonify(data)
 
 
-@app.route('/old')
+@app.route('/purge_old_activities')
 @login_required
 def old():
     if current_user.strava_id not in app.config["ADMIN"]:
         return jsonify({"error": "oops.  Can't do this."})
 
-    d = int(request.args.get("days", 7))
-    old_activities = purge(d)
+    old_activities = old_activities_query(7)
 
-    msg = ("purged {} of {} activities over {} days old"
+    msg = ("purged {} of {} activities over 7 days old"
            .format(old_activities.count(),
-                   Activity.query.count(),
-                   d
+                   Activity.query.count()
                    )
            )
-    old_activities = purge(d)
+    old_activities = old_activities_query(7)
     old_activities.delete()
     db.session.commit()
     return msg
 
 
-# @celery.task()
-def purge(days):
+def old_activities_query(days):
     now = datetime.utcnow()
     past_time = now - timedelta(days=days)
     # app.logger.info("now: {}, {} days ago: {}".format(now, days, past_time))
@@ -626,23 +619,8 @@ def webhook_callback():
         update_raw = request.get_json(force=True)
         app.logger.info("subscription: ".format(update_raw))
         update = client.handle_subscription_update(update_raw)
-        handle_update.delay(update)
+        # handle_update.delay(update)
         return "success"
-
-
-@celery.task()
-def handle_update(update):
-    pass
-
-
-@celery.task()
-def add_together(a, b):
-    return a + b
-
-
-@app.route('/add/<a>/<b>')
-def add(a, b):
-    return str(add_together.delay(int(a), int(b)).wait())
 
 
 # python heatmapp.py works but you really should use `flask run`
