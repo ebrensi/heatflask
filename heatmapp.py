@@ -345,7 +345,6 @@ def getdata(username):
     # options = {"activity_ids": [730239033, 97090517]}
     lores = request.args.get("lores") == "true"
     hires = request.args.get("hires") == "true"
-    durations = request.args.get("durations")
 
     def path_color(activity_type):
         color_list = [color for color, activity_types
@@ -354,94 +353,37 @@ def getdata(username):
 
         return color_list[0] if color_list else ""
 
-    client = user.client()
+    # pool = Pool()
 
-    def process(activity):
-        cache_timeout = app.config["CACHE_ACTIVITIES_TIMEOUT"]
-        if ("error" not in activity) and activity.get("summary_polyline"):
-            a_id = activity["id"]
+    def sse_iterator():
+        for activity in user.activity_summaries(**options):
 
-            if hires:
-                # attempt to get activity hires data from the fast-cache
-                cached_hires_data = cache.get(str(a_id))
-                if cached_hires_data:
-                    activity.update(cached_hires_data)
-                    app.logger.info("got cached data for {}".format(a_id))
-
-                else:
-                    # Attempt to retreive activity from database
-                    A = Activity.query.get(a_id)
+            if ("error" not in activity) and activity.get("summary_polyline"):
+                if hires and ("polyline" not in activity):
+                    A = Activity.get(activity["id"])
                     if A:
-                        A.access_count += 1
-                        A.dt_last_accessed = datetime.utcnow()
+                        A = db.session.merge(A)
+                    else:
+                        A = Activity(**activity)
+                        # write this activity to the database
+                        A.user = user
+                        A.dt_cached = datetime.utcnow()
+                        A.access_count = 0
+                        db.session.add(A)
                         db.session.commit()
 
-                    else:
-                        stream_names = ['time', 'latlng', 'altitude']
+                        A.import_streams()
+                        db.session.commit()
+                        A.cache()
 
-                        try:
-                            streams = (
-                                client
-                                .get_activity_streams(activity["id"],
-                                                      types=stream_names)
-                            )
-                        except:
-                            pass
-                        else:
-                            app.logger.info(
-                                "imported streams for: {}".format(a_id))
+                    activity.update({
+                        "polyline": A.polyline,
+                        "time": A.time
+                    })
 
-                            activity.update({name: streams[name].data
-                                             for name in streams})
-
-                            # replace latlng array with polyline
-                            # representation in activity_streams
-                            if "latlng" in activity:
-                                activity["polyline"] = (
-                                    polyline.encode(
-                                        activity.pop('latlng'))
-                                )
-
-                            A = Activity(**activity)
-
-                            if db_write:
-                                # write this activity to the database
-                                A.user = user
-                                A.dt_cached = datetime.utcnow()
-                                A.access_count = 0
-                                db.session.add(A)
-                                db.session.commit()
-
-                    # Now A is an Activity object, either from the database
-                    #  or directly from Strava,
-                    #   and activity is a summary dictionary
-
-                    hires_data = {
-                        "polyline": A.polyline
-                    }
-
-                    activity.update(hires_data)
-
-                    # fast-cache the hires_data
-                    if cache_timeout:
-                        cache.set(str(a_id), hires_data, cache_timeout)
-                        app.logger.info(
-                            "cached {} for {} seconds"
-                            .format(a_id, cache_timeout)
-                        )
-
-            # Now activity is a dictionary representing an activity
-            #  with hi-res streams
             activity["path_color"] = path_color(activity["type"])
-
-        return activity
-
-    pool = Pool()
-
-    def sse_iterator(db_write=db_write):
-        activities = user.activity_summaries(**options)
-        for activity in pool.imap_unordered(process, activities):
             yield "data: {}\n\n".format(json.dumps(activity))
+
         yield "data: done\n\n"
 
     return Response(sse_iterator(), mimetype='text/event-stream')
