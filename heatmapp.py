@@ -236,22 +236,22 @@ def index(username):
               .format(username))
         return redirect(url_for('nothing'))
 
-    client = user.client()
-    try:
-        client.get_athlete()
-    except HTTPError as e:
-        user.uncache()
-        try:
-            db.session.delete(user)
-        except InvalidRequestError:
-            # This user is cached from an old session
-            pass
-        else:
-            db.session.commit()
-            flash("user '{}'  is not registered with this app"
-                  .format(username))
-            app.logger.debug(e)
-        return redirect(url_for('nothing'))
+    # client = user.client()
+    # try:
+    #     client.get_athlete()
+    # except HTTPError as e:
+    #     user.uncache()
+    #     try:
+    #         db.session.delete(user)
+    #     except InvalidRequestError:
+    #         # This user is cached from an old session
+    #         pass
+    #     else:
+    #         db.session.commit()
+    #         flash("user '{}'  is not registered with this app"
+    #               .format(username))
+    #         app.logger.debug(e)
+    #     return redirect(url_for('nothing'))
 
     date1 = request.args.get("date1")
     date2 = request.args.get("date2")
@@ -346,7 +346,7 @@ def getdata(username):
 
         return color_list[0] if color_list else ""
 
-    pool = Pool()
+    pool = Pool(5)
     client = user.client()
     jobs = []
 
@@ -399,6 +399,9 @@ def getdata(username):
             db.session.commit()
             A.cache()
             yield "data: {}\n\n".format(json.dumps(activity))
+            yield "data: {}\n\n".format(json.dumps({
+                "msg": "Waiting for data from Strava..."
+            }))
 
         yield "data: done\n\n"
 
