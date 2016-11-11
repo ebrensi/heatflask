@@ -112,6 +112,10 @@ class User(UserMixin, db.Model):
     def get(cls, user_identifier):
         key = User.key(user_identifier)
         user = cache.get(key)
+
+        # if user not in db.session:
+        #     db.session.add(user)
+
         if user:
             app.logger.debug(
                 "retrieved {} from cache with key {}".format(user, key))
