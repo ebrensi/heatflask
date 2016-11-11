@@ -1,7 +1,8 @@
 #! usr/bin/env python
 from __future__ import unicode_literals
 
-# import gevent
+import gevent
+import polyline
 from gevent.pool import Pool
 from flask import Flask, Response, render_template, request, redirect, \
     jsonify, url_for, flash, send_from_directory
@@ -312,13 +313,6 @@ def getdata(username):
     if not user:
         return errout("'{}' is not registered with this app".format(username))
 
-    # Only allow long (database) caching if this is the current user
-    #  accessing his/her own records
-    try:
-        db_write = current_user.strava_id == user.strava_id
-    except:
-        db_write = False
-
     options = {}
     if "id" in request.args:
         options["activity_ids"] = request.args.getlist("id")
@@ -352,35 +346,58 @@ def getdata(username):
 
         return color_list[0] if color_list else ""
 
-    # pool = Pool()
+    pool = Pool()
+    client = user.client()
+    jobs = []
+
+    def get_streams(activity):
+        stream_names = ['time', 'latlng', 'altitude']
+
+        try:
+            streams = client.get_activity_streams(activity["id"],
+                                                  types=stream_names)
+        except Exception as e:
+            return {"error": str(e)}
+
+        activity.update({name: streams[name].data for name in streams})
+
+        if "latlng" in activity:
+            activity["polyline"] = polyline.encode(activity['latlng'])
+            del activity['latlng']
+
+        return activity
 
     def sse_iterator():
         for activity in user.activity_summaries(**options):
 
             if ("error" not in activity) and activity.get("summary_polyline"):
+                activity["path_color"] = path_color(activity["type"])
+
                 if hires and ("polyline" not in activity):
+
                     A = Activity.get(activity["id"])
                     if A:
                         A = db.session.merge(A)
+                        activity.update({
+                            "polyline": A.polyline,
+                            "time": A.time
+                        })
+                        yield "data: {}\n\n".format(json.dumps(activity))
                     else:
-                        A = Activity(**activity)
-                        # write this activity to the database
-                        A.user = user
-                        A.dt_cached = datetime.utcnow()
-                        A.access_count = 0
-                        db.session.add(A)
-                        db.session.commit()
+                        jobs.append(pool.apply_async(get_streams, [activity]))
+                else:
+                    yield "data: {}\n\n".format(json.dumps(activity))
 
-                        A.import_streams()
-                        db.session.commit()
-                        A.cache()
-
-                    activity.update({
-                        "polyline": A.polyline,
-                        "time": A.time
-                    })
-
-            activity["path_color"] = path_color(activity["type"])
+        for job in gevent.iwait(jobs):
+            activity = job.get()
+            A = Activity(**activity)
+            # write this activity to the database
+            A.user = user
+            A.dt_cached = datetime.utcnow()
+            A.access_count = 0
+            db.session.add(A)
+            db.session.commit()
+            A.cache()
             yield "data: {}\n\n".format(json.dumps(activity))
 
         yield "data: done\n\n"
