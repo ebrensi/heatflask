@@ -16,6 +16,9 @@ class Config(object):
     CELERY_BROKER_URL = "sqla+" + SQLALCHEMY_DATABASE_URI
     CELERY_RESULT_BACKEND = "db+" + SQLALCHEMY_DATABASE_URI
 
+    # Number of concurrent activity import requests
+    CONCURRENCY = 3
+
     # Settings for database (long) cache
     DB_CACHE_TIMEOUT = 7 * 24 * 60 * 60  # 7 days
 
