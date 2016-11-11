@@ -208,6 +208,9 @@ class Activity(db.Model):
     #  be the owner of the activity (athlete_id)
     user_id = db.Column(db.Integer, db.ForeignKey("users.strava_id"))
 
+    # path color is not stored in the database
+    path_color = None
+
     def authorized(self):
         return self.user_id == self.athlete_id
 
