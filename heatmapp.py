@@ -346,7 +346,7 @@ def getdata(username):
 
         return color_list[0] if color_list else ""
 
-    pool = Pool(5)
+    pool = Pool(app.config["CONCURRENCY"])
     client = user.client()
     jobs = []
 
