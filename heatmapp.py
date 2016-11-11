@@ -1,7 +1,7 @@
 #! usr/bin/env python
 from __future__ import unicode_literals
 
-import gevent
+# import gevent
 from gevent.pool import Pool
 from flask import Flask, Response, render_template, request, redirect, \
     jsonify, url_for, flash, send_from_directory
@@ -12,7 +12,6 @@ import dateutil.parser
 import os
 import json
 import stravalib
-import polyline
 import flask_login
 from flask_login import current_user, login_user, logout_user, login_required
 import flask_assets
@@ -32,7 +31,7 @@ app.config.from_object(os.environ['APP_SETTINGS'])
 
 # set up short-term fast caching support
 cache = flask_caching.Cache(app)
-cache.clear()
+# cache.clear()
 
 # models depend on cache and app so we import them afterwards
 from models import User, Activity, db
