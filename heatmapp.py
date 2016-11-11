@@ -381,14 +381,7 @@ def getdata(username):
                         db.session.commit()
 
                     else:
-                        data = {
-                            "msg": "importing {} from Strava".format(a_id)
-                        }
-                        yield "data: {}\n\n".format(json.dumps(data))
-
-                        # activity data isn't cached or in the database so
-                        #  request it from Strava
-                        stream_names = ['time', 'latlng']
+                        stream_names = ['time', 'latlng', 'altitude']
 
                         try:
                             streams = (
@@ -396,32 +389,24 @@ def getdata(username):
                                 .get_activity_streams(activity["id"],
                                                       types=stream_names)
                             )
-                        except Exception as e:
-                            app.logger.info(
-                                "activity: {}\n{}".format(activity, e))
-                            break
+                        except:
+                            pass
                         else:
                             app.logger.info(
                                 "imported streams for: {}".format(a_id))
 
-                            activity_streams = {name: streams[name].data
-                                                for name in streams}
+                            activity.update({name: streams[name].data
+                                             for name in streams})
 
                             # replace latlng array with polyline
                             # representation in activity_streams
-                            if "latlng" in activity_streams:
-                                activity_streams["polyline"] = (
+                            if "latlng" in activity:
+                                activity["polyline"] = (
                                     polyline.encode(
-                                        activity_streams.pop('latlng'))
+                                        activity.pop('latlng'))
                                 )
 
-                            activity_streams.update(activity)
-
-                            # we need to get rid of path_color in case
-                            #  activity object came from the cache
-                            activity_streams.pop("path_color", None)
-
-                            A = Activity(**activity_streams)
+                            A = Activity(**activity)
 
                             if db_write:
                                 # write this activity to the database
@@ -438,12 +423,6 @@ def getdata(username):
                     hires_data = {
                         "polyline": A.polyline
                     }
-
-                    if durations and A.time:
-                        t = A.time
-                        hires_data["durations"] = [
-                            (b - a) for a, b in zip(t, t[1:])
-                        ] + [0]
 
                     activity.update(hires_data)
 
