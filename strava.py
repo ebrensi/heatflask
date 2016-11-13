@@ -11,6 +11,8 @@ import json
 import random
 import gevent
 from gevent.pool import Pool
+import flask_caching
+
 
 STRAVA_CLIENT_ID = os.environ["STRAVA_CLIENT_ID"]
 STRAVA_CLIENT_SECRET = os.environ["STRAVA_CLIENT_SECRET"]
@@ -21,6 +23,11 @@ JSONIFY_PRETTYPRINT_REGULAR = False
 
 app = Flask(__name__)
 app.config.from_object(__name__)
+
+cache = flask_caching.Cache(app, config={'CACHE_TYPE': 'simple'})
+cache.clear()
+cache_timeout = 5 * 60
+
 
 client = stravalib.Client()
 
@@ -70,26 +77,6 @@ def authorized():
         return redirect(request.args.get("state") or url_for("index"))
 
 
-@app.route('/activities')
-def activities():
-    limit = request.args.get("limit", None, type=int)
-    streams = request.args.get("streams")
-
-    if client.access_token:
-        def actvity_msg_list():
-            yield "Activities list:\n"
-            for a in activity_iterator(client, streams=streams, limit=limit):
-                yield a["msg"] + "\n"
-            yield "Done.\n"
-
-        return Response(actvity_msg_list(), mimetype='text/event-stream')
-    else:
-        args = {"_external": True}
-        if limit:
-            args["limit"] = limit
-        return redirect(url_for('login', next=url_for("activities", **args)))
-
-
 @app.route('/activities_sse')
 def activity_stream():
     limit = request.args.get("limit", None, type=int)
@@ -99,11 +86,10 @@ def activity_stream():
             yield "data: {}\n\n".format(json.dumps(a))
 
         yield "data: done\n\n"
-
     return Response(stream(), mimetype='text/event-stream')
 
 
-@app.route('/activity_list')
+@app.route('/activities')
 def activity_list():
     limit = request.args.get("limit", None, type=int)
     if client.access_token:
@@ -130,7 +116,7 @@ def retrieve():
 def data_points(activity_id):
     if client.access_token:
         stream_data = get_stream_data(activity_id)
-        return jsonify(stream_data)
+        return json.dumps(stream_data, indent=2)
     else:
         return redirect(url_for('login',
                                 next=url_for("data_points",
@@ -138,34 +124,45 @@ def data_points(activity_id):
                                              _external=True)))
 
 
-def activity_iterator(client, streams=False, **args):
-    for a in client.get_activities(**args):
-        activity = {
-            "id": a.id,
-            "name": a.name,
-            "type": a.type,
-            "summary_polyline": a.map.summary_polyline,
-            "beginTimestamp": str(a.start_date_local),
-            "total_distance": float(a.distance),
-            "elapsed_time": int(a.elapsed_time.total_seconds()),
-            "msg": "[{0.id}] {0.type}: '{0.name}' {0.start_date_local}, {0.distance}".format(a)
-        }
-
-        yield activity
+def activity_iterator(client, **args):
+    key = str(hash(json.dumps(args)))
+    activities = cache.get(key)
+    if activities:
+        for a in activities:
+            yield a
+    else:
+        activities = []
+        for a in client.get_activities(**args):
+            activity = {
+                "id": a.id,
+                "name": a.name,
+                "type": a.type,
+                "summary_polyline": a.map.summary_polyline,
+                "beginTimestamp": str(a.start_date_local),
+                "total_distance": float(a.distance),
+                "elapsed_time": int(a.elapsed_time.total_seconds()),
+            }
+            activities.append(activity)
+            yield activity
+        cache.set(key, activities, cache_timeout)
 
 
 def get_stream_data(activity_id):
-    stream_names = ['time', 'latlng', 'distance', 'altitude']
+    key = "J:{}".format(activity_id)
+    stream_data = cache.get(key)
+    if not stream_data:
+        stream_names = ['time', 'latlng', 'distance', 'altitude']
 
-    streams = client.get_activity_streams(activity_id,
-                                          types=stream_names)
+        streams = client.get_activity_streams(activity_id,
+                                              types=stream_names)
 
-    stream_data = {name: streams[name].data for name in streams}
+        stream_data = {name: streams[name].data for name in streams}
 
-    if 'latlng' in stream_data:
-        stream_data["polyline"] = (
-            polyline.encode(stream_data.pop('latlng'))
-        )
+        if 'latlng' in stream_data:
+            stream_data["polyline"] = (
+                polyline.encode(stream_data.get('latlng'))
+            )
+        cache.set(key, stream_data, cache_timeout)
 
     return stream_data
 
