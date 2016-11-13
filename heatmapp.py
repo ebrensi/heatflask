@@ -32,7 +32,6 @@ app.config.from_object(os.environ['APP_SETTINGS'])
 
 # set up short-term fast caching support
 cache = flask_caching.Cache(app)
-# cache.clear()
 
 # models depend on cache and app so we import them afterwards
 from models import User, Activity, db
@@ -235,23 +234,6 @@ def index(username):
         flash("user '{}' is not registered with this app"
               .format(username))
         return redirect(url_for('nothing'))
-
-    # client = user.client()
-    # try:
-    #     client.get_athlete()
-    # except HTTPError as e:
-    #     user.uncache()
-    #     try:
-    #         db.session.delete(user)
-    #     except InvalidRequestError:
-    #         # This user is cached from an old session
-    #         pass
-    #     else:
-    #         db.session.commit()
-    #         flash("user '{}'  is not registered with this app"
-    #               .format(username))
-    #         app.logger.debug(e)
-    #     return redirect(url_for('nothing'))
 
     date1 = request.args.get("date1")
     date2 = request.args.get("date2")
@@ -511,6 +493,16 @@ def admin():
         }
         for user in User.query}
     return jsonify(info)
+
+
+@app.route('/clear_cache')
+@login_required
+def clear_cache():
+    if current_user.strava_id in app.config["ADMIN"]:
+        cache.clear()
+        return "cache cleared"
+    else:
+        return "nothing!"
 
 
 #  Webhook Subscription stuff.  Only admin users can access this
