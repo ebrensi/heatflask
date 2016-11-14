@@ -1,7 +1,7 @@
 #! usr/bin/env python
 from __future__ import unicode_literals
 
-import gevent
+# import gevent
 import polyline
 from gevent.pool import Pool
 from flask import Flask, Response, render_template, request, redirect, \
@@ -328,11 +328,11 @@ def getdata(username):
 
         return color_list[0] if color_list else ""
 
-    pool = Pool(app.config["CONCURRENCY"])
+    # pool = Pool(app.config["CONCURRENCY"])
     client = user.client()
-    jobs = []
+    # jobs = []
 
-    def get_streams(activity):
+    def import_streams(activity):
         stream_names = ['time', 'latlng', 'altitude']
 
         try:
@@ -345,8 +345,14 @@ def getdata(username):
 
         if "latlng" in activity:
             activity["polyline"] = polyline.encode(activity['latlng'])
-            del activity['latlng']
+        return activity
 
+    def add_db_entry(activity):
+        A = Activity.new(**activity)
+        A.user = user
+        db.session.add(A)
+        db.session.commit()
+        A.cache()
         return activity
 
     def sse_iterator():
@@ -366,25 +372,14 @@ def getdata(username):
                         })
                         yield "data: {}\n\n".format(json.dumps(activity))
                     else:
-                        jobs.append(pool.apply_async(get_streams, [activity]))
+
+                        yield "data: {}\n\n".format(json.dumps({
+                            "msg": "importing [{id}] {name}...".format(**activity)
+                        }))
+                        add_db_entry(import_streams(activity))
+                        yield "data: {}\n\n".format(json.dumps(activity))
                 else:
                     yield "data: {}\n\n".format(json.dumps(activity))
-
-        for job in gevent.iwait(jobs):
-            activity = job.get()
-            A = Activity(**activity)
-            # write this activity to the database
-            A.user = user
-            A.dt_cached = datetime.utcnow()
-            A.access_count = 0
-            db.session.add(A)
-            db.session.commit()
-            A.cache()
-            yield "data: {}\n\n".format(json.dumps(activity))
-            yield "data: {}\n\n".format(json.dumps({
-                "msg": "Waiting for data from Strava..."
-            }))
-
         yield "data: done\n\n"
 
     return Response(sse_iterator(), mimetype='text/event-stream')
@@ -483,7 +478,7 @@ def old_activities_query(days):
 
 @app.route('/users')
 @login_required
-def admin():
+def users():
     info = {
         user.strava_id: {
             "cached": user.activities.count(),
@@ -502,7 +497,7 @@ def clear_cache():
         cache.clear()
         return "cache cleared"
     else:
-        return "nothing!"
+        return "sorry."
 
 
 #  Webhook Subscription stuff.  Only admin users can access this

@@ -202,7 +202,7 @@ class Activity(db.Model):
 
     dt_cached = db.Column(pg.TIMESTAMP)
     dt_last_accessed = db.Column(pg.TIMESTAMP)
-    access_count = db.Column(db.Integer, default=0)
+    access_count = db.Column(db.Integer)
 
     # self.user is the user that requested this activity, and may or may not
     #  be the owner of the activity (athlete_id)
@@ -210,6 +210,14 @@ class Activity(db.Model):
 
     # path color is not stored in the database
     path_color = None
+    latlng = []
+
+    @classmethod
+    def new(cls, **kwargs):
+        A = cls(**kwargs)
+        A.dt_cached = datetime.utcnow()
+        A.access_count = 0
+        return A
 
     def authorized(self):
         return self.user_id == self.athlete_id
