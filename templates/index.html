@@ -299,7 +299,7 @@
                 msg += "<li>{{ message }}</li>"
               {% endfor %}
               msg += "</ul>"
-              var winMtds = L.control.window(map, {title: "Oops.", content:msg, visible:true});
+              var winMtds = L.control.window(map, {content:msg, visible:true});
             {% endif %}
         {% endwith %}
 
