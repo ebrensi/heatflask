@@ -389,8 +389,8 @@ def getdata(username):
 # arguments
 @app.route('/activities_sse')
 @login_required
-def activities_sse():
-    # user = User.get(current_user.strava_id)
+def activity_stream():
+    user = User.get(current_user.strava_id)
     options = {}
 
     if "id" in request.args:
@@ -410,20 +410,25 @@ def activities_sse():
             options["limit"] = int(request.args.get("limit"))
 
     def boo():
-        for a in current_user.activity_summaries(**options):
+        for a in user.activity_summaries(**options):
             a["cached"] = "yes" if Activity.query.get(a['id']) else "no"
-            a["msg"] = "[{id}] {beginTimestamp} '{name}'".format(**a)
             yield "data: {}\n\n".format(json.dumps(a))
         yield "data: done\n\n"
 
     return Response(boo(), mimetype='text/event-stream')
 
 
-@app.route('/activity_select')
+@app.route('/activities')
 @login_required
-def activity_select():
+def activities():
     return render_template("activities.html",
                            limit=request.args.get("limit"))
+
+
+@app.route('/activities/<activity_id>')
+@login_required
+def data_points(activity_id):
+    return redirect("https://www.strava.com/activities/{}".format(activity_id))
 
 
 @app.route('/retrieve_list', methods=['POST'])
