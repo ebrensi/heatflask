@@ -29,11 +29,10 @@ class Config(object):
     CACHE_SUMMARIES_TIMEOUT = 6 * 60   # 5 minutes
 
     # How long we hold onto hires activities
-    CACHE_ACTIVITIES_TIMEOUT = 24 * 60 * 60  # 24 hours
+    CACHE_ACTIVITIES_TIMEOUT = 1 * 60 * 60  # 1 hour
 
     # How long we hold a User object in memory
-    CACHE_USERS_TIMEOUT = 60  # 10 seconds
-
+    CACHE_USERS_TIMEOUT = 60 * 60  # 1 hour
     SECRET_KEY = "pB\xeax\x9cJ\xd6\x81\xed\xd7\xf9\xd0\x99o\xad\rM\x92\xb1\x8b{7\x02r"
 
     # Flask-Cache settings
