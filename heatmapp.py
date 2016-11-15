@@ -1,7 +1,7 @@
 #! usr/bin/env python
 from __future__ import unicode_literals
 
-# import gevent
+import gevent
 import polyline
 from gevent.pool import Pool
 from flask import Flask, Response, render_template, request, redirect, \
@@ -32,6 +32,7 @@ app.config.from_object(os.environ['APP_SETTINGS'])
 
 # set up short-term fast caching support
 cache = flask_caching.Cache(app)
+cache.clear()
 
 # models depend on cache and app so we import them afterwards
 from models import User, Activity, db
@@ -355,6 +356,8 @@ def getdata(username):
         A.cache()
         return activity
 
+    jobs = []
+    pool = Pool(app.config["CONCURRENCY"])
     def sse_iterator():
         for activity in user.activity_summaries(**options):
 
@@ -373,13 +376,20 @@ def getdata(username):
                         yield "data: {}\n\n".format(json.dumps(activity))
                     else:
 
-                        yield "data: {}\n\n".format(json.dumps({
-                            "msg": "importing [{id}] {name}...".format(**activity)
-                        }))
-                        add_db_entry(import_streams(activity))
-                        yield "data: {}\n\n".format(json.dumps(activity))
+                        yield "data: {}\n\n".format(
+                            json.dumps({
+                                "msg": "importing [{id}] {name}..."
+                                .format(**activity)
+                            }))
+                        jobs.append(activity)
+
+                        # add_db_entry(import_streams(activity))
+                        # yield "data: {}\n\n".format(json.dumps(activity))
                 else:
                     yield "data: {}\n\n".format(json.dumps(activity))
+        for activity in pool.imap_unordered(import_streams, jobs):
+            # add_db_entry(activity)
+            yield "data: {}\n\n".format(json.dumps(activity))
         yield "data: done\n\n"
 
     return Response(sse_iterator(), mimetype='text/event-stream')
