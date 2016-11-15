@@ -26,10 +26,10 @@ class Config(object):
     CACHE_REDIS_URL = os.environ.get('REDIS_URL')
 
     # How long (seconds) we hold summary query results in fast-cache
-    CACHE_SUMMARIES_TIMEOUT = 6 * 60   # 5 minutes
+    CACHE_SUMMARIES_TIMEOUT = 5 * 60   # 5 minutes
 
     # How long we hold onto hires activities
-    CACHE_ACTIVITIES_TIMEOUT = 1 * 60 * 60  # 1 hour
+    CACHE_ACTIVITIES_TIMEOUT = 20 * 60  # 20 minutes
 
     # How long we hold a User object in memory
     CACHE_USERS_TIMEOUT = 60 * 60  # 1 hour

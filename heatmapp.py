@@ -318,7 +318,6 @@ def getdata(username):
             options["limit"] = 10
 
     # options = {"activity_ids": [730239033, 97090517]}
-    lores = request.args.get("lores") == "true"
     hires = request.args.get("hires") == "true"
 
     def path_color(activity_type):
@@ -332,55 +331,54 @@ def getdata(username):
     client = user.client()
     # jobs = []
 
-    def import_streams(activity):
+    def import_streams(activity_id):
         stream_names = ['time', 'latlng', 'altitude']
 
         try:
-            streams = client.get_activity_streams(activity["id"],
+            streams = client.get_activity_streams(activity_id,
                                                   types=stream_names)
         except Exception as e:
             return {"error": str(e)}
 
-        activity.update({name: streams[name].data for name in streams})
+        activity_streams = {name: streams[name].data for name in streams}
 
-        if "latlng" in activity:
-            activity["polyline"] = polyline.encode(activity['latlng'])
-        return activity
-
-    def add_db_entry(activity):
-        A = Activity.new(**activity)
-        A.user = user
-        db.session.add(A)
-        db.session.commit()
-        A.cache()
-        return activity
+        if "latlng" in activity_streams:
+            activity_streams["polyline"] = polyline.encode(
+                activity_streams['latlng'])
+        return activity_streams
 
     def sse_iterator():
+        relevant_streams = ["polyline"]
+
         for activity in user.activity_summaries(**options):
 
             if ("error" not in activity) and activity.get("summary_polyline"):
                 activity["path_color"] = path_color(activity["type"])
 
                 if hires and ("polyline" not in activity):
+                    data = Activity.get_data(activity["id"], relevant_streams)
 
-                    A = Activity.get(activity["id"])
-                    if A:
-                        A = db.session.merge(A)
-                        activity.update({
-                            "polyline": A.polyline,
-                            "time": A.time
-                        })
-                        yield "data: {}\n\n".format(json.dumps(activity))
+                    if data:
+                        data.update(activity)
+                        yield "data: {}\n\n".format(json.dumps(data))
+
                     else:
-
                         yield "data: {}\n\n".format(
                             json.dumps({
                                 "msg": "importing [{id}] {name}..."
                                 .format(**activity)
                             }))
 
-                        add_db_entry(import_streams(activity))
-                        yield "data: {}\n\n".format(json.dumps(activity))
+                        activity_data = import_streams(activity["id"])
+                        activity_data.update(activity)
+                        A = Activity.new(**activity_data)
+                        A.user = user
+                        db.session.add(A)
+                        db.session.commit()
+
+                        data = A.data(relevant_streams)
+                        data.update(activity)
+                        yield "data: {}\n\n".format(json.dumps(data))
                 else:
                     yield "data: {}\n\n".format(json.dumps(activity))
         yield "data: done\n\n"
