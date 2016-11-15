@@ -7,11 +7,6 @@
      <!-- Custom style for this template -->
     <link href="{{ url_for('static', filename='css/cover.css') }}" rel="stylesheet">
 
-
-    {% if not current_user.name in config["ADMIN"] %}
-    {{analytics}}
-    {% endif %}
-
   </head>
   <body>
 
