@@ -1,7 +1,6 @@
 #! usr/bin/env python
 from __future__ import unicode_literals
 
-import gevent
 import polyline
 from gevent.pool import Pool
 from flask import Flask, Response, render_template, request, redirect, \
@@ -356,8 +355,6 @@ def getdata(username):
         A.cache()
         return activity
 
-    jobs = []
-    pool = Pool(app.config["CONCURRENCY"])
     def sse_iterator():
         for activity in user.activity_summaries(**options):
 
@@ -381,15 +378,11 @@ def getdata(username):
                                 "msg": "importing [{id}] {name}..."
                                 .format(**activity)
                             }))
-                        jobs.append(activity)
 
-                        # add_db_entry(import_streams(activity))
-                        # yield "data: {}\n\n".format(json.dumps(activity))
+                        add_db_entry(import_streams(activity))
+                        yield "data: {}\n\n".format(json.dumps(activity))
                 else:
                     yield "data: {}\n\n".format(json.dumps(activity))
-        for activity in pool.imap_unordered(import_streams, jobs):
-            # add_db_entry(activity)
-            yield "data: {}\n\n".format(json.dumps(activity))
         yield "data: done\n\n"
 
     return Response(sse_iterator(), mimetype='text/event-stream')
