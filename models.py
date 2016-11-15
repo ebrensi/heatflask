@@ -159,7 +159,7 @@ class User(UserMixin, db.Model):
             summaries = []
             if activity_ids:
                 activities = map(client.get_activity,
-                                 (id for id in activity_ids))
+                                 (int(id) for id in activity_ids))
             else:
                 activities = client.get_activities(**kwargs)
 
