@@ -11,6 +11,11 @@ from heatmapp import app, cache
 
 db = SQLAlchemy(app)
 
+CACHE_USERS_TIMEOUT = app.config["CACHE_USERS_TIMEOUT"]
+CACHE_SUMMARIES_TIMEOUT = app.config["CACHE_SUMMARIES_TIMEOUT"]
+CACHE_ACTIVITIES_TIMEOUT = app.config["CACHE_ACTIVITIES_TIMEOUT"]
+CACHE_DATA_TIMEOUT = app.config["CACHE_ACTIVITIES_TIMEOUT"]
+
 
 def inspector(obj):
     state = inspect(obj)
@@ -95,10 +100,11 @@ class User(UserMixin, db.Model):
     def key(identifier):
         return "U:{}".format(identifier)
 
-    def cache(self, identifier=None):
+    def cache(self, identifier=None, timeout=CACHE_USERS_TIMEOUT):
         key = User.key(identifier or self.strava_id)
-        cache.set(key, self, app.config.get("CACHE_USERS_TIMEOUT"))
-        app.logger.debug("cached {} under key '{}'".format(self, key))
+        cache.set(key, self, timeout)
+        app.logger.debug(
+            "cached {} with key '{}' for {} sec".format(self, key, timeout))
         return self
 
     def uncache(self):
@@ -109,7 +115,7 @@ class User(UserMixin, db.Model):
         cache.delete(User.key(self.username))
 
     @classmethod
-    def get(cls, user_identifier):
+    def get(cls, user_identifier, timeout=CACHE_USERS_TIMEOUT):
         key = User.key(user_identifier)
         user = cache.get(key)
         if user:
@@ -128,7 +134,7 @@ class User(UserMixin, db.Model):
             user = cls.query.get(user_id)
 
         if user:
-            user.cache(user_identifier)
+            user.cache(user_identifier, timeout)
 
         return user if user else None
 
@@ -139,8 +145,7 @@ class User(UserMixin, db.Model):
         return [{attr: getattr(user, attr) for attr in attrs}
                 for user in cls.query]
 
-    def activity_summaries(self, activity_ids=None, **kwargs):
-        cache_timeout = app.config.get("CACHE_SUMMARIES_TIMEOUT")
+    def activity_summaries(self, activity_ids=None, timeout=CACHE_SUMMARIES_TIMEOUT, **kwargs):
         unique = "{},{},{}".format(self.strava_id, activity_ids, kwargs)
         key = str(hash(unique))
         client = self.client()
@@ -153,8 +158,8 @@ class User(UserMixin, db.Model):
         else:
             summaries = []
             if activity_ids:
-                activities = (client.get_activity(int(id))
-                              for id in activity_ids)
+                activities = map(client.get_activity,
+                                 (id for id in activity_ids))
             else:
                 activities = client.get_activities(**kwargs)
 
@@ -176,8 +181,9 @@ class User(UserMixin, db.Model):
             except Exception as e:
                 yield {"error": str(e)}
             else:
-                cache.set(key, summaries, cache_timeout)
-                app.logger.debug("set cache key '{}'".format(unique))
+                cache.set(key, summaries, timeout)
+                app.logger.debug(
+                    "set cache key '{}' for {} sec".format(unique, timeout))
 
 
 class Activity(db.Model):
@@ -263,21 +269,44 @@ class Activity(db.Model):
 
         return self
 
+    def data(self, attrs, timeout=CACHE_DATA_TIMEOUT):
+        """
+        Activity.data(attrs) retrieves and caches only specific
+        attributes for this Activity, saving memory compared to caching the
+        entire object.
+        Activity.get() returns an activity object, but Activity.data(attrs)
+        returns a dictionary object.
+        """
+        key = "A:{}:{}".format(self.id, attrs)
+        data = cache.get(key)
+        if data:
+            app.logger.debug("retrieved '{}'".format(key))
+            return data
+
+        if "latlng" in attrs:
+            self.make_latlng()
+        data = {attr: getattr(self, attr, None) for attr in attrs}
+        cache.set(key, data, timeout)
+        app.logger.debug("cached {} for {} for {} sec"
+                         .format(attrs, self, timeout))
+        return data
+
     @staticmethod
     def key(identifier):
         return "A:{}".format(identifier)
 
-    def cache(self, identifier=None):
+    def cache(self, identifier=None, timeout=CACHE_ACTIVITIES_TIMEOUT):
         key = Activity.key(identifier or self.id)
-        cache.set(key, self, app.config.get("CACHE_ACTIVITIES_TIMEOUT"))
-        app.logger.debug("cached {} under key '{}'".format(self, key))
+        cache.set(key, self, timeout)
+        app.logger.debug(
+            "cached {} under key '{}' for {} sec".format(self, key, timeout))
 
     def uncache(self):
         key = Activity.key(self.id)
         cache.delete(key)
 
     @classmethod
-    def get(cls, activity_id):
+    def get(cls, activity_id, timeout=CACHE_ACTIVITIES_TIMEOUT):
         key = cls.key(activity_id)
         A = cache.get(key)
 
@@ -295,8 +324,14 @@ class Activity(db.Model):
             A.dt_last_accessed = datetime.utcnow()
             A.access_count += 1
             app.logger.debug("retrieved {} from db".format(A))
-            A.cache()
+            A.cache(timeout=timeout)
         return A
+
+    @classmethod
+    def get_data(cls, activity_id, attrs, timeout=CACHE_DATA_TIMEOUT):
+        A = cls.query.get(activity_id)
+        if A:
+            return A.data(attrs, timeout=CACHE_DATA_TIMEOUT)
 
 
 # Create tables if they don't exist
