@@ -339,21 +339,3 @@ class Activity(db.Model):
 
 # db.create_all()
 # db.session.commit()
-
-# If flask-migrate is being used, we build the tables from scratch using
-# flask db init
-
-# Then run
-# flask db migrate
-#    note: Flask-Migrate apparently has an issue with PostgreSQL ARRAY type.
-#     https://github.com/miguelgrinberg/Flask-Migrate/issues/72
-#       so after migrate we must go into the created migration file in
-#       migrations/versions and explicitly change
-#       postgresql.ARRAY(some_type) to postgresql.ARRAY(postgresql.some_type)
-#       or postgresql.ARRAY(sa.some_type)
-#
-# Then, run
-# flask db upgrade
-#
-#  to actually perform th upgrade.  This last step must be done both locally
-#  and on the server.
