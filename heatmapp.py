@@ -414,7 +414,7 @@ def activity_stream():
 
     def boo():
         for a in user.activity_summaries(**options):
-            a["cached"] = "yes" if Activity.query.get(a['id']) else "no"
+            # a["cached"] = "yes" if Activity.query.get(a['id']) else "no"
             yield "data: {}\n\n".format(json.dumps(a))
         yield "data: done\n\n"
 
