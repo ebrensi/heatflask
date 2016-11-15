@@ -210,7 +210,7 @@ class Activity(db.Model):
 
     # path color is not stored in the database
     path_color = None
-    latlng = []
+    latlng = None
 
     @classmethod
     def new(cls, **kwargs):
@@ -224,6 +224,12 @@ class Activity(db.Model):
 
     def __repr__(self):
         return "<Activity %r>" % (self.id)
+
+    def make_latlng(self):
+        mypolyline = self.polyline or self.summary_polyline
+        if mypolyline:
+            self.latlng = polyline.decode(mypolyline)
+        return self.latlng
 
     def serialize(self):
         attrs = ["id", "athlete_id", "name", "type", "summary_polyline",
@@ -249,12 +255,12 @@ class Activity(db.Model):
         except Exception as e:
             return {"error": str(e)}
 
-        if "latlng" in streams:
-            self.polyline = polyline.encode(streams['latlng'].data)
-            del streams['latlng']
-
         for s in streams:
             setattr(self, s, streams[s].data)
+
+        if self.latlng:
+            self.polyline = polyline.encode(self.latlng)
+
         return self
 
     @staticmethod
