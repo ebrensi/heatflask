@@ -235,12 +235,11 @@ def index(username):
               .format(username))
         return redirect(url_for('nothing'))
 
-    date1 = request.args.get("date1")
-    date2 = request.args.get("date2")
-    preset = request.args.get("preset")
-    limit = request.args.get("limit")
-    autozoom = request.args.get("autozoom", "")
-    baselayer = request.args.getlist("baselayer")
+    date1 = request.args.get("date1", "")
+    date2 = request.args.get("date2", "")
+    preset = request.args.get("preset", "")
+    limit = request.args.get("limit", "")
+    baselayer = request.args.getlist("baselayer", "")
 
     if (not date1) or (not date2):
         if preset:
@@ -250,7 +249,6 @@ def index(username):
             )
         elif not limit:
             preset = "7"
-            autozoom = "1"
 
     flowres = request.args.get("flowres", "")
     heatres = request.args.get("heatres", "")
@@ -258,10 +256,15 @@ def index(username):
         flowres = "low"
         heatres = "low"
 
-    default_center = app.config["MAP_CENTER"]
-    lat = request.args.get("lat") or default_center[0]
-    lng = request.args.get("lng") or default_center[1]
-    zoom = request.args.get("zoom") or app.config["MAP_ZOOM"]
+    lat = request.args.get("lat")
+    lng = request.args.get("lng")
+    zoom = request.args.get("zoom")
+    autozoom = request.args.get("autozoom")
+
+    if (not lat) or (not lng):
+        lat, lng = app.config["MAP_CENTER"]
+        zoom = app.config["MAP_ZOOM"]
+        autozoom = "1"
 
     return render_template('index.html',
                            user=user,
@@ -296,29 +299,27 @@ def getdata(username):
         return errout("'{}' is not registered with this app".format(username))
 
     options = {}
-    if "id" in request.args:
-        options["activity_ids"] = request.args.getlist("id")
+    limit = request.args.get("limit")
+    if limit:
+        options["limit"] = int(limit)
 
-    else:
-        limit = request.args.get("limit")
-        if "limit" in request.args:
-            options["limit"] = int(limit)
-
-        date1 = request.args.get("date1")
-        date2 = request.args.get("date2")
-        if date1 or date2:
-            try:
-                options["after"] = dateutil.parser.parse(date1)
-                if date2:
-                    options["before"] = dateutil.parser.parse(date2)
-                    assert(options["before"] > options["after"])
-            except:
-                return errout("Invalid Dates")
-        elif not limit:
-            options["limit"] = 10
+    date1 = request.args.get("date1")
+    date2 = request.args.get("date2")
+    if date1 or date2:
+        try:
+            options["after"] = dateutil.parser.parse(date1)
+            if date2:
+                options["before"] = dateutil.parser.parse(date2)
+                assert(options["before"] > options["after"])
+        except:
+            return errout("Invalid Dates")
+    elif not limit:
+        options["limit"] = 10
 
     # options = {"activity_ids": [730239033, 97090517]}
     hires = request.args.get("hires") == "true"
+
+    app.logger.debug("get_data: {}".format(options))
 
     def path_color(activity_type):
         color_list = [color for color, activity_types
