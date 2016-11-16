@@ -324,6 +324,8 @@
         var flowLayerOptions = {{ config["ANTPATH_DEFAULT_OPTIONS"]|tojson|safe }};
 
         function renderLayers(){
+            // if $("#preset").val() preset_date_fill();
+
             var flowres = $("#flowres").val(),
                 heatres = $("#heatres").val(),
                 date1 = $("#date1").val(),
@@ -519,7 +521,7 @@
             var preset = $("#preset").val();
 
             if (preset){
-                date1=moment().subtract(choice, 'days');
+                date1=moment().subtract(preset, 'days');
             };
 
             $('#date1').val(date1.format(F));
