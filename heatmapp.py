@@ -446,40 +446,26 @@ def retrieve_list():
 def old():
     if current_user.strava_id not in app.config["ADMIN"]:
         return jsonify({"error": "oops.  Can't do this."})
-
-    old_activities = old_activities_query(7)
-
-    msg = ("purged {} of {} activities over 7 days old"
-           .format(old_activities.count(),
-                   Activity.query.count()
-                   )
-           )
-    old_activities = old_activities_query(7)
-    old_activities.delete()
-    db.session.commit()
+    days = app.config["DB_CACHE_TIMEOUT"]
+    deleted_count = purge_old_activities(days)
+    msg = ("purged {} activities over {} days old.  {} remaining."
+           .format(deleted_count, days, Activity.query.count()))
     return msg
 
 
-def old_activities_query(days):
+def purge_old_activities(days=app.config["DB_CACHE_TIMEOUT"]):
     now = datetime.utcnow()
     past_time = now - timedelta(days=days)
-    # app.logger.info("now: {}, {} days ago: {}".format(now, days, past_time))
-
     old_activities = (
-        Activity.query
-        .filter(
-            or_(
-                Activity.dt_last_accessed < past_time,
-                and_(
-                    Activity.dt_cached < past_time,
-                    Activity.dt_last_accessed == None
-                )
-
-            )
-        )
+        Activity.query.filter(or_(Activity.dt_last_accessed < past_time,
+                                  and_(Activity.dt_cached < past_time,
+                                       Activity.dt_last_accessed == None)))
     )
-
-    return old_activities
+    count = old_activities.delete()
+    db.session.commit()
+    msg = "purged {} activities over {} days old.".format(count, days)
+    app.logger.info(msg)
+    return count
 
 
 @app.route('/users')

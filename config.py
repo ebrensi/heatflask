@@ -20,7 +20,7 @@ class Config(object):
     CONCURRENCY = 3
 
     # Settings for database (long) cache
-    DB_CACHE_TIMEOUT = 7 * 24 * 60 * 60  # 7 days
+    DB_CACHE_TIMEOUT = 7   # 7 days
 
     # Settings for fast-cache
     CACHE_REDIS_URL = os.environ.get('REDIS_URL')
