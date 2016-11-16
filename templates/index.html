@@ -107,6 +107,9 @@
                   </span>
                   <br>
 
+                  <input type="hidden" id="limit" value="" />
+
+
                   <span style="display:block">
                   <label for="renderHeat" style="display:block">Heat Layer:</label>
                   <select id="heatres" name="renderHeat" form="renderform">
@@ -324,10 +327,8 @@
             var flowres = $("#flowres").val(),
                 heatres = $("#heatres").val(),
                 date1 = $("#date1").val(),
-                date2 = $("#date2").val();
-
-            var dates_changed = ((date1 != appState.date1) || (date2 != appState.date2)),
-                res_changed = ((heatres != appState.heatres) || (flowres != appState.flowres));
+                date2 = $("#date2").val(),
+                limit = $("#limit").val();
 
             var heat_data = false,
                 flow_data = false,
@@ -336,15 +337,16 @@
 
 
             var lores = (flowres == "low" || heatres == "low"),
-                query = {
-                date1: date1,
-                date2: date2,
-                hires: flowres == "high" || heatres == "high"
-            };
+                hires = (flowres == "high" || heatres == "high"),
+                query = {};
+
+            if (date1) query.date1 = date1;
+            if (date2) query.date2 = date2;
+            if (hires) query.hires = hires;
+            if (limit) query.limit = limit;
 
             $("#data_message").html("");
 
-            // console.log(data);
             var latlngs_flat = [],
                 count = 0;
 
@@ -467,6 +469,7 @@
 
                 appState['date1'] = date1;
                 appState["date2"] = date2;
+                appState["limit"] = limit;
                 appState["flowres"] = flowres;
                 appState["heatres"] = heatres;
 
@@ -478,10 +481,9 @@
 
         function updateURL(){
             var params = {};
-
-            if ($("#preset").val()) {
-                params.preset = $("#preset").val();
-            } else {
+            if ($("#limit").val()) params.limit = $("#limit").val();
+            else if ($("#preset").val()) params.preset = $("#preset").val();
+            else {
                 params.date1 = appState.date1;
                 params.date2 = appState.date2;
             }
@@ -514,9 +516,9 @@
 
         function preset_date_fill() {
             var F = "YYYY-MM-DD";
-            var choice = $("#preset").val();
+            var preset = $("#preset").val();
 
-            if (choice){
+            if (preset){
                 date1=moment().subtract(choice, 'days');
             };
 
@@ -551,7 +553,9 @@
             $("#autozoom").prop('checked', true);
             {% endif %}
 
-            {% if preset %}
+            {% if limit %}
+            $("#limit").val("{{ limit }}");
+            {% elif preset %}
             $("#preset").val("{{ preset }}");
             preset_date_fill();
             {% else %}
