@@ -82,7 +82,7 @@
 
                  <span style="display:block">
                   <label for="preset" style="display:block">Relative-Date Preset:</label>
-                  <select id ="preset" form="renderform" >
+                  <select id="preset" form="renderform" >
                     <option value=2 selected="selected">Last 2 days</option>
                     <option value=7>Last 7 days</option>
                     <option value=30>Last 30 days</option>
@@ -106,6 +106,7 @@
                     <input class="datepick" id="date2" type="text" value=""/>
                   </span>
                   <br>
+
 
                   <input type="hidden" id="limit" value="" />
 
@@ -324,8 +325,6 @@
         var flowLayerOptions = {{ config["ANTPATH_DEFAULT_OPTIONS"]|tojson|safe }};
 
         function renderLayers(){
-            // if $("#preset").val() preset_date_fill();
-
             var flowres = $("#flowres").val(),
                 heatres = $("#heatres").val(),
                 date1 = $("#date1").val(),
@@ -348,9 +347,9 @@
             if (limit) query.limit = limit;
 
             $("#data_message").html("");
+            appState.items = [];
 
-            var latlngs_flat = [],
-                count = 0;
+            var latlngs_flat = [];
 
             // Remove HeatLayer from map and control if it's there
             if (HeatLayer){
@@ -397,7 +396,7 @@
                 $("#abortButton").hide();
                 source.close();
                 map.spin(false);
-                $("#data_message").html("Aborted: " + count + " activities rendered");
+                $("#data_message").html("Aborted: " + appState.items.lenth + " activities rendered");
             });
 
             $("#data_message").html("Connecting to Strava...");
@@ -446,16 +445,22 @@
 
                 if (query.hires && ("polyline" in A) && (A.polyline)){
                     var latlngs = L.PolylineUtil.decode(A.polyline);
-                    if (extend_bounds)
+                    if (extend_bounds) {
                         bounds.extend(latlngs);
-
+                        extend_bounds = false;
+                    }
                     if (heatres == "high")
                         latlngs_flat.push.apply(latlngs_flat, latlngs);
                     if (flowres == "high")
                         FlowLayer.addLayer(new L.Polyline.AntPath(latlngs, options));
                 }
 
-                count++;
+                if (!extend_bounds) {
+                    delete A.summary_polyline;
+                    delete A.polyline;
+                    delete A.time;
+                    appState.items.push(A);
+                }
 
               } else {
                 source.close();
@@ -465,7 +470,7 @@
                 if ($("#autozoom:checked").val() && bounds.isValid())
                     map.fitBounds(bounds);
 
-                msg = count + " activities rendered.";
+                msg = appState.items.length + " activities rendered.";
                 $("#data_message").html(msg);
 
 
@@ -474,7 +479,6 @@
                 appState["limit"] = limit;
                 appState["flowres"] = flowres;
                 appState["heatres"] = heatres;
-
                 updateURL();
               }
             }
