@@ -76,40 +76,37 @@
                     <span class="sidebar-close"><i class="fa fa-caret-left"></i></span>
                 </h1>
 
-                <h3>Use data from activities:</h3>
+                <h3>Activities query:</h3>
 
+                <br>
                 <form id="renderform" action="{{ url_for('index', username=user.strava_id)}}">
 
-                 <span style="display:block">
-                  <label for="preset" style="display:block">Date Preset or Limit:</label>
-                  <select id="preset" form="renderform" >
-                    <option value=2>Last 2 days</option>
-                    <option value=7>Last 7 days</option>
-                    <option value=30>Last 30 days</option>
-                    <option value=60>Last 60 days</option>
-                    <option value=180>Last 180 days</option>
-                    <option value=365>Last year</option>
-                    <option value="" selected="selected">----</option>
+                 <span id="num_select">
+                  <input class="preset" id="select_num" type="number" value=0 min=0 max=500>
+                  most</span>
+
+                 <span>
+                  <select class="preset" id="select_type" form="renderform">
+                    <option value="days">recent days</option>
+                    <option value="activities">recent activities</option>
+                    <option value="" selected="selected">Date-Range</option>
                   </select>
                   </span>
-
+                  <br>
                   <br>
 
-                  <span style="display:block">
-                    <label for="date1" style="display:block">After:</label>
+
+                  <span class="select_date" style="display:block">
+                    After
                     <input class="datepick" id="date1" type="text"  value=""/>
                   </span>
                   <br>
 
-                  <span style="display:block">
-                    <label for="date2" style="display:block">Before:</label>
+                  <span class="select_date" style="display:block">
+                    Before
                     <input class="datepick" id="date2" type="text" value=""/>
                   </span>
-                  <br>
-
-
-                  <input type="hidden" id="limit" value="" />
-
+                  <hr>
 
                   <span style="display:block">
                   <label for="renderHeat" style="display:block">Heat Layer:</label>
@@ -329,22 +326,22 @@
                 heatres = $("#heatres").val(),
                 date1 = $("#date1").val(),
                 date2 = $("#date2").val(),
-                limit = $("#limit").val();
+                type = $("#select_type").val(),
+                num = $("#select_num").val();
 
             var heat_data = false,
                 flow_data = false,
                 durations = false;
 
-
-
             var lores = (flowres == "low" || heatres == "low"),
                 hires = (flowres == "high" || heatres == "high"),
                 query = {};
 
+            if (type=="activities") query.limit = num;
             if (date1) query.date1 = date1;
-            if (date2) query.date2 = date2;
+            if (date2 && (date2 != "now")) query.date2 = date2;
             if (hires) query.hires = hires;
-            if (limit) query.limit = limit;
+
 
             $("#data_message").html("");
             appState.items = [];
@@ -485,12 +482,15 @@
 
 
         function updateURL(){
-            var params = {};
-            if ($("#limit").val()) params.limit = $("#limit").val();
-            else if ($("#preset").val()) params.preset = $("#preset").val();
+            var params = {},
+                type = $("#select_type").val(),
+                num = $("#select_num").val();
+
+            if (type == "activities") params.limit = num;
+            else if (type == "days") params.preset = num;
             else {
                 if (appState.date1) params.date1 = appState.date1;
-                if (appState.date2) params.date2 = appState.date2;
+                if (appState.date2 && (appState.date2 != "now")) params.date2 = appState.date2;
             }
 
             if($("#autozoom").is(':checked')) {
@@ -520,16 +520,28 @@
 
 
         function preset_sync() {
-            var F = "YYYY-MM-DD";
-            var preset = $("#preset").val();
+            var F = "YYYY-MM-DD",
+                num = $("#select_num").val(),
+                type = $("#select_type").val();
 
-            if (preset){
-                date1=moment().subtract(preset, 'days');
-            };
+            $('#query_type').text(type);
+            if (type=="days"){
+                $(".select_date").hide()
+                $("#num_select").show()
+                $('#date1').val(moment().subtract(num, 'days').format(F));
+                $('#date2').val("now");
+            } else if (type=="activities"){
+                $(".select_date").hide()
+                $("#num_select").show()
+                $('#date1').val("");
+                $('#date2').val("now")
+            }
+            else {
+                $(".select_date").show()
+                $("#select_num").val("")
+                $("#num_select").hide()
+            }
 
-            $('#date1').val(date1.format(F));
-            $('#date2').val("");
-            $('#limit').val("");
         };
 
 
@@ -548,10 +560,9 @@
             $("#autozoom").on("change",updateURL);
 
             $(".datepick").on("change", function(){
-                $("#preset").val("");
-                $("#limit").val("");
+                $(".preset").val("");
             });
-            $("#preset").on("change", preset_sync);
+            $(".preset").on("change", preset_sync);
 
             $("#renderButton").on('click', renderLayers);
 
@@ -563,9 +574,11 @@
             {% endif %}
 
             {% if limit %}
-            $("#limit").val("{{ limit }}");
+            $("#select_num").val("{{ limit }}");
+            $("#select_type").val("activities");
             {% elif preset %}
-            $("#preset").val("{{ preset }}");
+            $("#select_num").val("{{ preset }}");
+            $("#select_type").val("days");
             preset_sync();
             {% else %}
             $('#date1').val("{{ date1 }}");
@@ -574,6 +587,8 @@
             {% endif %}
 
             renderLayers();
+            preset_sync();
+
         })
 
 
