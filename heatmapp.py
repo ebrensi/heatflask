@@ -243,18 +243,25 @@ def index(username):
 
     if (not date1) and (not date2):
         if preset:
-            preset = (
-                preset
-                if (preset in app.config["DATE_RANGE_PRESETS"]) else "7"
-            )
-        elif not limit:
-            preset = "7"
+            try:
+                preset = int(preset)
+            except:
+                flash("'{}' is not a valid preset".format(preset))
+                preset = 7
+        elif limit:
+            try:
+                limit = int(limit)
+            except:
+                flash("'{}' is not a valid limit".format(limit))
+                limit = 1
+        else:
+            limit = 1
 
     flowres = request.args.get("flowres", "")
     heatres = request.args.get("heatres", "")
     if (not flowres) and (not heatres):
-        flowres = "low"
-        heatres = "low"
+        flowres = "high"
+        heatres = "high"
 
     lat = request.args.get("lat")
     lng = request.args.get("lng")
