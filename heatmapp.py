@@ -241,7 +241,7 @@ def index(username):
     limit = request.args.get("limit", "")
     baselayer = request.args.getlist("baselayer", "")
 
-    if (not date1) or (not date2):
+    if (not date1) and (not date2):
         if preset:
             preset = (
                 preset
