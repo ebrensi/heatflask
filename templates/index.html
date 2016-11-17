@@ -490,8 +490,8 @@
             if ($("#limit").val()) params.limit = $("#limit").val();
             else if ($("#preset").val()) params.preset = $("#preset").val();
             else {
-                params.date1 = appState.date1;
-                params.date2 = appState.date2;
+                if (appState.date1) params.date1 = appState.date1;
+                if (appState.date2) params.date2 = appState.date2;
             }
 
             if($("#autozoom").is(':checked')) {
