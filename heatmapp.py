@@ -309,6 +309,8 @@ def getdata(username):
     limit = request.args.get("limit")
     if limit:
         options["limit"] = int(limit)
+        if limit == 0:
+            limit == 1
 
     date1 = request.args.get("date1")
     date2 = request.args.get("date2")
