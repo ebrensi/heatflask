@@ -5,8 +5,11 @@ from sqlalchemy import inspect
 from datetime import datetime
 import polyline
 import stravalib
-
-
+import pandas as pd
+from gevent.queue import Queue
+from gevent.pool import Pool
+import gevent
+from exceptions import StopIteration
 from heatmapp import app, cache
 
 db = SQLAlchemy(app)
@@ -15,6 +18,7 @@ CACHE_USERS_TIMEOUT = app.config["CACHE_USERS_TIMEOUT"]
 CACHE_SUMMARIES_TIMEOUT = app.config["CACHE_SUMMARIES_TIMEOUT"]
 CACHE_ACTIVITIES_TIMEOUT = app.config["CACHE_ACTIVITIES_TIMEOUT"]
 CACHE_DATA_TIMEOUT = app.config["CACHE_ACTIVITIES_TIMEOUT"]
+CACHE_INDEX_TIMEOUT = CACHE_SUMMARIES_TIMEOUT
 
 
 def inspector(obj):
@@ -51,6 +55,8 @@ class User(UserMixin, db.Model):
                                  lazy="dynamic")
 
     strava_client = None
+    activity_index = None
+    dt_last_indexed = None
 
     def describe(self):
         attrs = ["strava_id", "username", "firstname", "lastname",
@@ -144,6 +150,66 @@ class User(UserMixin, db.Model):
                  "app_activity_count"]
         return [{attr: getattr(user, attr) for attr in attrs}
                 for user in cls.query]
+
+    def index(self, limit=None,  after=None, before=None):
+        def strava2dict(a):
+            return {
+                "id": a.id,
+                "athlete_id": a.athlete.id,
+                "name": a.name,
+                "type": a.type,
+                "summary_polyline": a.map.summary_polyline,
+                "beginTimestamp": a.start_date_local,
+                "total_distance": float(a.distance),
+                "elapsed_time": int(a.elapsed_time.total_seconds()),
+            }
+
+        if self.activity_index:
+            needs_update = ((datetime.utcnow() - self.dt_last_indexed)
+                            .total_seconds > CACHE_INDEX_TIMEOUT)
+            if not needs_update:
+                if limit:
+                    return self.activity_index.head(limit).iterrows()
+                df = self.activity_index
+                if after:
+                    df = df[:after]
+                if before:
+                    df = df[before:]
+                return df.iterrows()
+            else:
+                latest = self.activity_index.index[0]
+                activities_list = [strava2dict(a)
+                                   for a in self.client().get_activities(after=latest)]
+                if activities_list:
+                    df = pd.DataFrame(activities_list)
+                    self.activity_index = df.append(
+                        self.activity_index).sort_index()
+                    self.dt_last_indexed = datetime.utcnow()
+                    return self.index(limit=limit, after=after, before=before)
+
+        # If we got here then the index hasn't been created yet
+        Q = Queue()
+        P = Pool()
+
+        def async_job(limit, after, before):
+            activities_list = []
+            for a in self.client().get_activities():
+                d = strava2dict(a)
+                activities_list.append(d)
+                if limit:
+                    Q.put(d)
+                    print("put {} on queue".format(d["id"]))
+                    limit -= 1
+                    if not limit:
+                        Q.put(StopIteration)
+                # deal with before and after
+
+            self.activity_index = (pd.DataFrame(activities_list)
+                                   .set_index("beginTimestamp")
+                                   .sort_index(ascending=False))
+            self.dt_last_indexed = datetime.utcnow()
+        P.apply_async(async_job, [limit, after, before])
+        return Q
 
     def activity_summaries(self, activity_ids=None, timeout=CACHE_SUMMARIES_TIMEOUT, **kwargs):
         unique = "{},{},{}".format(self.strava_id, activity_ids, kwargs)
