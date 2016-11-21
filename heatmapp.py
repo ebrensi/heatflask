@@ -21,6 +21,8 @@ from signal import signal, SIGPIPE, SIG_DFL
 from sqlalchemy import or_, and_
 from requests.exceptions import HTTPError
 from sqlalchemy.exc import InvalidRequestError
+from psycopg2 import OperationalError,  # "too many connections"
+    IntegrityError  # duplicate key value violates unique constraint
 
 # makes python ignore sigpipe? prevents broken pipe exception when client
 #  aborts an SSE stream
@@ -382,9 +384,10 @@ def getdata(username):
                         activity_data = import_streams(activity["id"])
                         activity_data.update(activity)
                         A = Activity.new(**activity_data)
+                        A = db.session.merge(A)
                         A.user = user
                         db.session.add(A)
-                        db.session.commit()
+                        db.session.commit()  # getting IntegrityError here sometimes
 
                         data = A.data(relevant_streams)
                         data.update(activity)
