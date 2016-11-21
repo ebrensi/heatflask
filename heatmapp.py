@@ -21,8 +21,8 @@ from signal import signal, SIGPIPE, SIG_DFL
 from sqlalchemy import or_, and_
 from requests.exceptions import HTTPError
 from sqlalchemy.exc import InvalidRequestError
-from psycopg2 import OperationalError,  # "too many connections"
-    IntegrityError  # duplicate key value violates unique constraint
+# "too many connections" and  "duplicate key value violates unique constraint"
+from psycopg2 import OperationalError, IntegrityError
 
 # makes python ignore sigpipe? prevents broken pipe exception when client
 #  aborts an SSE stream
