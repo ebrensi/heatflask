@@ -337,7 +337,14 @@
                 hires = (flowres == "high" || heatres == "high"),
                 query = {};
 
-            if (type=="activities") query.limit = num;
+            if (type=="activities") {
+                if (num == 0) {
+                    query.limit = 1;
+                }
+                else
+                    query.limit = num;
+            }
+
             if (date1) query.date1 = date1;
             if (date2 && (date2 != "now")) query.date2 = date2;
             if (hires) query.hires = hires;
