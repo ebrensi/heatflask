@@ -260,6 +260,7 @@
         var baseLayers = {
             "None": L.tileLayer(""),
             "Esri.WorldImagery": L.tileLayer.provider("Esri.WorldImagery"),
+            "OpenStreetMap.Mapnik": L.tileLayer.provider("OpenStreetMap.Mapnik"),
             // valid Google types are 'roadmap', 'satellite', 'terrain' and 'hybrid'
             "Google.Roadmap":  L.gridLayer.googleMutant({type: 'roadmap'}),
             "Google.Terrain":  L.gridLayer.googleMutant({type: 'terrain'}),
@@ -290,7 +291,10 @@
                   });
 
 
-        var control = L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map);
+        var sidebar = L.control.sidebar('sidebar').addTo(map),
+            zoomControl = map.zoomControl.setPosition('bottomright'),
+            layerControl = L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map),
+            locateControl = L.control.locate({position: "bottomright", icon: "fa fa-anchor"}).addTo(map);
 
          {% with messages = get_flashed_messages() %}
             {% if messages %}
@@ -304,10 +308,6 @@
             {% endif %}
         {% endwith %}
 
-
-        var zoomControl = map.zoomControl.setPosition('bottomright');
-
-        var sidebar = L.control.sidebar('sidebar').addTo(map);
 
         var HeatLayer = false;
         var FlowLayer = false;
@@ -337,7 +337,14 @@
                 hires = (flowres == "high" || heatres == "high"),
                 query = {};
 
-            if (type=="activities") query.limit = num;
+            if (type=="activities") {
+                if (num == 0) {
+                    query.limit = 1;
+                }
+                else
+                    query.limit = num;
+            }
+
             if (date1) query.date1 = date1;
             if (date2 && (date2 != "now")) query.date2 = date2;
             if (hires) query.hires = hires;
@@ -351,14 +358,14 @@
             // Remove HeatLayer from map and control if it's there
             if (HeatLayer){
                 map.removeLayer(HeatLayer);
-                control.removeLayer(HeatLayer);
+                layerControl.removeLayer(HeatLayer);
                 HeatLayer = false;
             }
 
             // Remove FlowLayer from map and control if it's there
             if (FlowLayer){
                 map.removeLayer(FlowLayer);
-                control.removeLayer(FlowLayer);
+                layerControl.removeLayer(FlowLayer);
                 FlowLayer = false;
             }
 
@@ -366,14 +373,14 @@
             if (heatres){
                 HeatLayer = L.heatLayer(latlngs_flat, heatLayerOptions);
                 map.addLayer(HeatLayer);
-                control.addOverlay(HeatLayer, "Point Density");
+                layerControl.addOverlay(HeatLayer, "Point Density");
             }
 
             // Add new blank FlowLayer to map if specified
             if (flowres){
                 FlowLayer = new L.layerGroup();
                 map.addLayer(FlowLayer);
-                control.addOverlay(FlowLayer, "Flow Paths");
+                layerControl.addOverlay(FlowLayer, "Flow Paths");
             }
 
             var bounds = L.latLngBounds();
@@ -382,6 +389,7 @@
             var url = base_url + "?" + jQuery.param(query, true);
 
             map.spin(true);   // start progress indicator
+            locateControl.stop();
 
             var source = new EventSource(url);
             $("#abortButton").show();
