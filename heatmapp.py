@@ -49,6 +49,7 @@ bundles = {
                                      'css/leaflet.css',
                                      'css/leaflet-sidebar.css',
                                      'css/L.Control.Window.css',
+                                     'css/L.Control.Locate.min.css',
                                      filters='cssmin',
                                      output='gen/index.css'),
 
@@ -65,6 +66,7 @@ bundles = {
                                     'js/L.Control.Window.js',
                                     'js/leaflet-providers.js',
                                     'js/Leaflet.GoogleMutant.js',
+                                    'js/L.Control.Locate.min.js',
                                     filters='rjsmin',
                                     output='gen/index.js')
 
@@ -257,7 +259,7 @@ def index(username):
                 flash("'{}' is not a valid limit".format(limit))
                 limit = 1
         else:
-            limit = 10
+            limit = 5
 
     flowres = request.args.get("flowres", "")
     heatres = request.args.get("heatres", "")
