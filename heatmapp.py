@@ -243,7 +243,8 @@ def index(username):
     date2 = request.args.get("date2", "")
     preset = request.args.get("preset", "")
     limit = request.args.get("limit", "")
-    baselayer = request.args.getlist("baselayer", "")
+    baselayer = request.args.getlist("baselayer")
+    ids = request.args.getlist("id")
 
     if (not date1) and (not date2):
         if preset:
@@ -282,6 +283,7 @@ def index(username):
                            lat=lat,
                            lng=lng,
                            zoom=zoom,
+                           ids=ids,
                            preset=preset,
                            date1=date1,
                            date2=date2,
@@ -310,26 +312,29 @@ def getdata(username):
         return errout("'{}' is not registered with this app".format(username))
 
     options = {}
-    limit = request.args.get("limit")
-    if limit:
-        options["limit"] = int(limit)
-        if limit == 0:
-            limit == 1
+    ids = request.args.getlist("id")
+    if ids:
+        options["activity_ids"] = ids
+    else:
+        limit = request.args.get("limit")
+        if limit:
+            options["limit"] = int(limit)
+            if limit == 0:
+                limit == 1
 
-    date1 = request.args.get("date1")
-    date2 = request.args.get("date2")
-    if date1 or date2:
-        try:
-            options["after"] = dateutil.parser.parse(date1)
-            if date2:
-                options["before"] = dateutil.parser.parse(date2)
-                assert(options["before"] > options["after"])
-        except:
-            return errout("Invalid Dates")
-    elif not limit:
-        options["limit"] = 10
+        date1 = request.args.get("date1")
+        date2 = request.args.get("date2")
+        if date1 or date2:
+            try:
+                options["after"] = dateutil.parser.parse(date1)
+                if date2:
+                    options["before"] = dateutil.parser.parse(date2)
+                    assert(options["before"] > options["after"])
+            except:
+                return errout("Invalid Dates")
+        elif not limit:
+            options["limit"] = 10
 
-    # options = {"activity_ids": [730239033, 97090517]}
     hires = request.args.get("hires") == "true"
 
     app.logger.debug("get_data: {}".format(options))
