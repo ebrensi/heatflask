@@ -54,15 +54,17 @@ class Config(object):
     ANTPATH_DEFAULT_OPTIONS = {
         "weight": 3,
         "opacity": 0.5,
-        "color": 'yellow',
+        "color": 'black',
         "pulseColor": 'white',
         "delay": 2000,
-        "dashArray": [3, 10]
+        "dashArray": [3, 10],
+        # "noClip": False
     }
 
     ANTPATH_ACTIVITY_COLORS = {
         'red': ['run', 'walk', 'hike'],
-        'blue': ['ride']
+        'blue': ['ride'],
+        'yellow': ['swim']
     }
 
     MAP_CENTER = [27.53, 1.58]
