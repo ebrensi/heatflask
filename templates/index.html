@@ -281,8 +281,7 @@
                 provider = map_providers[i];
                 var tl = L.tileLayer.provider(provider);
                 baseLayers[provider] = tl;
-                if (i==0)
-                    default_baseLayer = tl;
+                if (i==0) default_baseLayer = tl;
             }
         } else {
             default_baseLayer = baseLayers["Google.Roadmap"];
@@ -485,7 +484,7 @@
                 done("Finished. ");
                 appState['date1'] = date1;
                 appState["date2"] = date2;
-                appState["limit"] = limit;
+                if ("limit" in query) appState["limit"] = query.limit;
                 appState["flowres"] = flowres;
                 appState["heatres"] = heatres;
                 updateURL();

@@ -36,7 +36,7 @@ cache = flask_caching.Cache(app)
 cache.clear()
 
 # models depend on cache and app so we import them afterwards
-from models import User, Activity, db
+from models import User, Activity, db, inspector
 db.create_all()
 
 Analytics(app)
@@ -87,7 +87,9 @@ login_manager.login_view = 'nothing'
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.get(user_id)
+    user = db.session.merge(User.get(user_id), load=False)
+    # app.logger.debug(inspector(user))
+    return user
 
 
 @app.route('/favicon.ico')
@@ -173,9 +175,11 @@ def auth_callback():
             return redirect(state)
 
         user = User.from_access_token(access_token)
+        app.logger.debug("created {}. inspect: {}".format(user.describe(),
+                                                          inspector(user)))
         db.session.add(user)
         db.session.commit()
-        app.logger.debug(user.describe())
+        app.logger.debug(inspector(user))
 
         # remember=True, for persistent login.
         login_user(user, remember=True)
@@ -190,6 +194,7 @@ def logout():
     if current_user.is_authenticated:
         user_id = current_user.strava_id
         username = current_user.username
+        current_user.uncache()
         logout_user()
         flash("user '{}' ({}) logged out"
               .format(username, user_id))
@@ -337,7 +342,7 @@ def getdata(username):
 
     hires = request.args.get("hires") == "true"
 
-    app.logger.debug("get_data: {}".format(options))
+    app.logger.debug("getdata: {}".format(options))
 
     def path_color(activity_type):
         color_list = [color for color, activity_types
