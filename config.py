@@ -57,7 +57,8 @@ class Config(object):
         "color": 'black',
         "pulseColor": 'white',
         "delay": 2000,
-        "dashArray": [3, 10]
+        "dashArray": [3, 10],
+        "noClip": False
     }
 
     ANTPATH_ACTIVITY_COLORS = {
