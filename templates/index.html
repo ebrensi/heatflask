@@ -89,20 +89,24 @@
                   <select class="preset" id="select_type" form="renderform">
                     <option value="days">recent days</option>
                     <option value="activities">recent activities</option>
+                    <option value="activity_ids">Activity IDs</option>
                     <option value="" selected="selected">Date-Range</option>
                   </select>
                   </span>
                   <br>
                   <br>
 
+                  <span id="id_select">
+                    <input type="text" id="select_ids" name="id" value="">
+                  </span>
 
-                  <span class="select_date" style="display:block">
+                  <span class="date_select" style="display:block">
                     After
                     <input class="datepick" id="date1" type="text"  value=""/>
                   </span>
                   <br>
 
-                  <span class="select_date" style="display:block">
+                  <span class="date_select" style="display:block">
                     Before
                     <input class="datepick" id="date2" type="text" value=""/>
                   </span>
@@ -260,6 +264,7 @@
         var baseLayers = {
             "None": L.tileLayer(""),
             "Esri.WorldImagery": L.tileLayer.provider("Esri.WorldImagery"),
+            "OpenStreetMap.Mapnik": L.tileLayer.provider("OpenStreetMap.Mapnik"),
             // valid Google types are 'roadmap', 'satellite', 'terrain' and 'hybrid'
             "Google.Roadmap":  L.gridLayer.googleMutant({type: 'roadmap'}),
             "Google.Terrain":  L.gridLayer.googleMutant({type: 'terrain'}),
@@ -276,8 +281,7 @@
                 provider = map_providers[i];
                 var tl = L.tileLayer.provider(provider);
                 baseLayers[provider] = tl;
-                if (i==0)
-                    default_baseLayer = tl;
+                if (i==0) default_baseLayer = tl;
             }
         } else {
             default_baseLayer = baseLayers["Google.Roadmap"];
@@ -290,7 +294,10 @@
                   });
 
 
-        var control = L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map);
+        var sidebar = L.control.sidebar('sidebar').addTo(map),
+            zoomControl = map.zoomControl.setPosition('bottomright'),
+            layerControl = L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map),
+            locateControl = L.control.locate({position: "bottomright", icon: "fa fa-anchor"}).addTo(map);
 
          {% with messages = get_flashed_messages() %}
             {% if messages %}
@@ -304,10 +311,6 @@
             {% endif %}
         {% endwith %}
 
-
-        var zoomControl = map.zoomControl.setPosition('bottomright');
-
-        var sidebar = L.control.sidebar('sidebar').addTo(map);
 
         var HeatLayer = false;
         var FlowLayer = false;
@@ -337,11 +340,19 @@
                 hires = (flowres == "high" || heatres == "high"),
                 query = {};
 
-            if (type=="activities") query.limit = num;
-            if (date1) query.date1 = date1;
-            if (date2 && (date2 != "now")) query.date2 = date2;
-            if (hires) query.hires = hires;
-
+            if (type == "activity_ids") {
+                query.id = $("#activity_ids").val()
+            } else if (type=="activities") {
+                if (num == 0) {
+                    query.limit = 1;
+                }
+                else
+                    query.limit = num;
+            } else {
+                if (date1) query.date1 = date1;
+                if (date2 && (date2 != "now")) query.date2 = date2;
+                if (hires) query.hires = hires;
+            }
 
             $("#data_message").html("");
             appState.items = [];
@@ -351,14 +362,14 @@
             // Remove HeatLayer from map and control if it's there
             if (HeatLayer){
                 map.removeLayer(HeatLayer);
-                control.removeLayer(HeatLayer);
+                layerControl.removeLayer(HeatLayer);
                 HeatLayer = false;
             }
 
             // Remove FlowLayer from map and control if it's there
             if (FlowLayer){
                 map.removeLayer(FlowLayer);
-                control.removeLayer(FlowLayer);
+                layerControl.removeLayer(FlowLayer);
                 FlowLayer = false;
             }
 
@@ -366,14 +377,14 @@
             if (heatres){
                 HeatLayer = L.heatLayer(latlngs_flat, heatLayerOptions);
                 map.addLayer(HeatLayer);
-                control.addOverlay(HeatLayer, "Point Density");
+                layerControl.addOverlay(HeatLayer, "Point Density");
             }
 
             // Add new blank FlowLayer to map if specified
             if (flowres){
                 FlowLayer = new L.layerGroup();
                 map.addLayer(FlowLayer);
-                control.addOverlay(FlowLayer, "Flow Paths");
+                layerControl.addOverlay(FlowLayer, "Flow Paths");
             }
 
             var bounds = L.latLngBounds();
@@ -382,6 +393,7 @@
             var url = base_url + "?" + jQuery.param(query, true);
 
             map.spin(true);   // start progress indicator
+            locateControl.stop();
 
             var source = new EventSource(url);
             $("#abortButton").show();
@@ -472,7 +484,7 @@
                 done("Finished. ");
                 appState['date1'] = date1;
                 appState["date2"] = date2;
-                appState["limit"] = limit;
+                if ("limit" in query) appState["limit"] = query.limit;
                 appState["flowres"] = flowres;
                 appState["heatres"] = heatres;
                 updateURL();
@@ -487,6 +499,7 @@
                 num = $("#select_num").val();
 
             if (type == "activities") params.limit = num;
+            else if (type == "activity_ids") params.id = $("#activity_ids").val();
             else if (type == "days") params.preset = num;
             else {
                 if (appState.date1) params.date1 = appState.date1;
@@ -526,20 +539,27 @@
 
             $('#query_type').text(type);
             if (type=="days"){
-                $(".select_date").hide()
-                $("#num_select").show()
+                $(".date_select").hide();
+                $("#id_select").hide();
+                $("#num_select").show();
                 $('#date1').val(moment().subtract(num, 'days').format(F));
                 $('#date2').val("now");
-            } else if (type=="activities"){
-                $(".select_date").hide()
-                $("#num_select").show()
+            } else if (type=="activities") {
+                $(".date_select").hide();
+                $("#id_select").hide();
+                $("#num_select").show();
                 $('#date1').val("");
-                $('#date2').val("now")
+                $('#date2').val("now");
             }
-            else {
-                $(".select_date").show()
-                $("#select_num").val("")
-                $("#num_select").hide()
+            else if (type=="activity_ids") {
+                $(".date_select").hide();
+                $("#num_select").hide();
+                $("#id_select").show();
+            } else {
+                $(".date_select").show();
+                $("#select_num").val("");
+                $("#num_select").hide();
+                $("#id_select").hide();
             }
 
         };
@@ -547,7 +567,7 @@
 
 
         $(document).ready(function() {
-            $("#abortButton").hide()
+            $("#abortButton").hide();
 
             $(".datepick").datepicker({ dateFormat: 'yy-mm-dd',
                                         changeMonth: true,
@@ -573,7 +593,9 @@
             $("#autozoom").prop('checked', true);
             {% endif %}
 
-            {% if limit %}
+            {% if ids %}
+            $("#select_ids").val("{{ ids }}");
+            {% elif limit %}
             $("#select_num").val("{{ limit }}");
             $("#select_type").val("activities");
             {% elif preset %}

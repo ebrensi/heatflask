@@ -21,6 +21,8 @@ from signal import signal, SIGPIPE, SIG_DFL
 from sqlalchemy import or_, and_
 from requests.exceptions import HTTPError
 from sqlalchemy.exc import InvalidRequestError
+# "too many connections" and  "duplicate key value violates unique constraint"
+from psycopg2 import OperationalError, IntegrityError
 
 # makes python ignore sigpipe? prevents broken pipe exception when client
 #  aborts an SSE stream
@@ -34,7 +36,7 @@ cache = flask_caching.Cache(app)
 cache.clear()
 
 # models depend on cache and app so we import them afterwards
-from models import User, Activity, db
+from models import User, Activity, db, inspector
 db.create_all()
 
 Analytics(app)
@@ -47,6 +49,7 @@ bundles = {
                                      'css/leaflet.css',
                                      'css/leaflet-sidebar.css',
                                      'css/L.Control.Window.css',
+                                     'css/L.Control.Locate.min.css',
                                      filters='cssmin',
                                      output='gen/index.css'),
 
@@ -63,6 +66,7 @@ bundles = {
                                     'js/L.Control.Window.js',
                                     'js/leaflet-providers.js',
                                     'js/Leaflet.GoogleMutant.js',
+                                    'js/L.Control.Locate.min.js',
                                     filters='rjsmin',
                                     output='gen/index.js')
 
@@ -83,7 +87,9 @@ login_manager.login_view = 'nothing'
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.get(user_id)
+    user = db.session.merge(User.get(user_id), load=False)
+    # app.logger.debug(inspector(user))
+    return user
 
 
 @app.route('/favicon.ico')
@@ -169,9 +175,11 @@ def auth_callback():
             return redirect(state)
 
         user = User.from_access_token(access_token)
+        app.logger.debug("created {}. inspect: {}".format(user.describe(),
+                                                          inspector(user)))
         db.session.add(user)
         db.session.commit()
-        app.logger.debug(user.describe())
+        app.logger.debug(inspector(user))
 
         # remember=True, for persistent login.
         login_user(user, remember=True)
@@ -186,6 +194,7 @@ def logout():
     if current_user.is_authenticated:
         user_id = current_user.strava_id
         username = current_user.username
+        current_user.uncache()
         logout_user()
         flash("user '{}' ({}) logged out"
               .format(username, user_id))
@@ -239,7 +248,8 @@ def index(username):
     date2 = request.args.get("date2", "")
     preset = request.args.get("preset", "")
     limit = request.args.get("limit", "")
-    baselayer = request.args.getlist("baselayer", "")
+    baselayer = request.args.getlist("baselayer")
+    ids = request.args.getlist("id")
 
     if (not date1) and (not date2):
         if preset:
@@ -255,7 +265,7 @@ def index(username):
                 flash("'{}' is not a valid limit".format(limit))
                 limit = 1
         else:
-            limit = 10
+            limit = 5
 
     flowres = request.args.get("flowres", "")
     heatres = request.args.get("heatres", "")
@@ -278,6 +288,7 @@ def index(username):
                            lat=lat,
                            lng=lng,
                            zoom=zoom,
+                           ids=ids,
                            preset=preset,
                            date1=date1,
                            date2=date2,
@@ -306,27 +317,32 @@ def getdata(username):
         return errout("'{}' is not registered with this app".format(username))
 
     options = {}
-    limit = request.args.get("limit")
-    if limit:
-        options["limit"] = int(limit)
+    ids = request.args.getlist("id")
+    if ids:
+        options["activity_ids"] = ids
+    else:
+        limit = request.args.get("limit")
+        if limit:
+            options["limit"] = int(limit)
+            if limit == 0:
+                limit == 1
 
-    date1 = request.args.get("date1")
-    date2 = request.args.get("date2")
-    if date1 or date2:
-        try:
-            options["after"] = dateutil.parser.parse(date1)
-            if date2:
-                options["before"] = dateutil.parser.parse(date2)
-                assert(options["before"] > options["after"])
-        except:
-            return errout("Invalid Dates")
-    elif not limit:
-        options["limit"] = 10
+        date1 = request.args.get("date1")
+        date2 = request.args.get("date2")
+        if date1 or date2:
+            try:
+                options["after"] = dateutil.parser.parse(date1)
+                if date2:
+                    options["before"] = dateutil.parser.parse(date2)
+                    assert(options["before"] > options["after"])
+            except:
+                return errout("Invalid Dates")
+        elif not limit:
+            options["limit"] = 10
 
-    # options = {"activity_ids": [730239033, 97090517]}
     hires = request.args.get("hires") == "true"
 
-    app.logger.debug("get_data: {}".format(options))
+    app.logger.debug("getdata: {}".format(options))
 
     def path_color(activity_type):
         color_list = [color for color, activity_types
@@ -380,9 +396,10 @@ def getdata(username):
                         activity_data = import_streams(activity["id"])
                         activity_data.update(activity)
                         A = Activity.new(**activity_data)
+                        A = db.session.merge(A)
                         A.user = user
                         db.session.add(A)
-                        db.session.commit()
+                        db.session.commit()  # getting IntegrityError here sometimes
 
                         data = A.data(relevant_streams)
                         data.update(activity)
