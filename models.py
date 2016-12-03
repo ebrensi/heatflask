@@ -5,11 +5,12 @@ from sqlalchemy import inspect
 from datetime import datetime
 import polyline
 import stravalib
+
 import pandas as pd
 from gevent.queue import Queue
 from gevent.pool import Pool
-import gevent
 from exceptions import StopIteration
+
 from heatmapp import app, cache
 
 db = SQLAlchemy(app)
@@ -23,13 +24,8 @@ CACHE_INDEX_TIMEOUT = CACHE_SUMMARIES_TIMEOUT
 
 def inspector(obj):
     state = inspect(obj)
-    return {
-        "transient": state.transient,
-        "pending": state.pending,
-        "persistent": state.persistent,
-        "deleted": state.deleted,
-        "detached": state.detached
-    }
+    attrs = ["transient", "pending", "persistent", "deleted", "detached"]
+    return [attr for attr in attrs if getattr(state, attr)]
 
 
 class User(UserMixin, db.Model):
@@ -211,7 +207,21 @@ class User(UserMixin, db.Model):
         P.apply_async(async_job, [limit, after, before])
         return Q
 
-    def activity_summaries(self, activity_ids=None, timeout=CACHE_SUMMARIES_TIMEOUT, **kwargs):
+    def get_activity(self, a_id):
+        client = self.client()
+        try:
+            # client.protocol.get('/activities/{id}', id=a_id)
+            activity = client.get_activity(int(a_id))
+            app.logger.debug("imported Strava activity {}".format(a_id))
+        except Exception as e:
+            activity = None
+            app.logger.debug(
+                "error retrieving activity '{}': {}".format(a_id, e))
+        return activity
+
+    def activity_summaries(self, activity_ids=None,
+                           timeout=CACHE_SUMMARIES_TIMEOUT,
+                           **kwargs):
         unique = "{},{},{}".format(self.strava_id, activity_ids, kwargs)
         key = str(hash(unique))
         client = self.client()
@@ -224,32 +234,34 @@ class User(UserMixin, db.Model):
         else:
             summaries = []
             if activity_ids:
-                activities = map(client.get_activity,
-                                 (int(id) for id in activity_ids))
+                activities = (self.get_activity(id) for id in activity_ids)
             else:
                 activities = client.get_activities(**kwargs)
 
             try:
                 for a in activities:
-                    data = {
-                        "id": a.id,
-                        "athlete_id": a.athlete.id,
-                        "name": a.name,
-                        "type": a.type,
-                        "summary_polyline": a.map.summary_polyline,
-                        "beginTimestamp": str(a.start_date_local),
-                        "total_distance": float(a.distance),
-                        "elapsed_time": int(a.elapsed_time.total_seconds()),
-                        "user_id": self.strava_id
-                    }
-                    summaries.append(data)
-                    yield data
+                    if a:
+                        data = {
+                            "id": a.id,
+                            "athlete_id": a.athlete.id,
+                            "name": a.name,
+                            "type": a.type,
+                            "summary_polyline": a.map.summary_polyline,
+                            "beginTimestamp": str(a.start_date_local),
+                            "total_distance": float(a.distance),
+                            "elapsed_time": int(a.elapsed_time.total_seconds()),
+                            "user_id": self.strava_id
+                        }
+                        summaries.append(data)
+                        yield data
             except Exception as e:
                 yield {"error": str(e)}
             else:
-                cache.set(key, summaries, timeout)
-                app.logger.debug(
-                    "set cache key '{}' for {} sec".format(unique, timeout))
+                if summaries:
+                    cache.set(key, summaries, timeout)
+                    app.logger.debug(
+                        "set cache key '{}' for {} sec".format(unique, timeout)
+                    )
 
 
 class Activity(db.Model):
