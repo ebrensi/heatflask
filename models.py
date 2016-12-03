@@ -5,6 +5,7 @@ from sqlalchemy import inspect
 from datetime import datetime
 import polyline
 import stravalib
+import requests
 
 
 from heatmapp import app, cache
@@ -143,6 +144,7 @@ class User(UserMixin, db.Model):
     def get_activity(self, a_id):
         client = self.client()
         try:
+            # client.protocol.get('/activities/{id}', id=a_id)
             activity = client.get_activity(int(a_id))
             app.logger.debug("imported Strava activity {}".format(a_id))
         except Exception as e:

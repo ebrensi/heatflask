@@ -10,6 +10,7 @@ import flask_compress
 from datetime import datetime, timedelta
 import dateutil.parser
 import os
+import re
 import json
 import itertools
 import stravalib
@@ -250,23 +251,24 @@ def index(username):
     preset = request.args.get("preset", "")
     limit = request.args.get("limit", "")
     baselayer = request.args.getlist("baselayer")
-    ids = request.args.getlist("id")
+    ids = request.args.get("id", "")
 
-    if (not date1) and (not date2):
-        if preset:
-            try:
-                preset = int(preset)
-            except:
-                flash("'{}' is not a valid preset".format(preset))
-                preset = 7
-        elif limit:
-            try:
-                limit = int(limit)
-            except:
-                flash("'{}' is not a valid limit".format(limit))
-                limit = 1
-        else:
-            limit = 5
+    if not ids:
+        if (not date1) and (not date2):
+            if preset:
+                try:
+                    preset = int(preset)
+                except:
+                    flash("'{}' is not a valid preset".format(preset))
+                    preset = 7
+            elif limit:
+                try:
+                    limit = int(limit)
+                except:
+                    flash("'{}' is not a valid limit".format(limit))
+                    limit = 1
+            else:
+                limit = 5
 
     flowres = request.args.get("flowres", "")
     heatres = request.args.get("heatres", "")
@@ -319,8 +321,12 @@ def getdata(username):
         return errout("'{}' is not registered with this app".format(username))
 
     options = {}
-    ids = request.args.getlist("id")
-    if ids:
+    ids_raw = request.args.get("id")
+    if ids_raw:
+        non_digit = re.compile("\D")
+
+        ids = non_digit.split(ids_raw)
+        app.logger.debug("'{}' => {}".format(ids_raw, ids))
         options["activity_ids"] = ids
     else:
         limit = request.args.get("limit")
@@ -344,7 +350,7 @@ def getdata(username):
 
     hires = request.args.get("hires") == "true"
 
-    # app.logger.debug("getdata: {}, hires={}".format(options, hires))
+    app.logger.debug("getdata: {}, hires={}".format(options, hires))
 
     def path_color(activity_type):
         color_list = [color for color, activity_types
