@@ -351,8 +351,9 @@
             } else {
                 if (date1) query.date1 = date1;
                 if (date2 && (date2 != "now")) query.date2 = date2;
-                if (hires) query.hires = hires;
             }
+
+            if (hires) query.hires = hires;
 
             $("#data_message").html("");
             appState.items = [];
