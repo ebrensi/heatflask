@@ -10,7 +10,9 @@ import flask_compress
 from datetime import datetime, timedelta
 import dateutil.parser
 import os
+import re
 import json
+import itertools
 import stravalib
 import flask_login
 from flask_login import current_user, login_user, logout_user, login_required
@@ -36,7 +38,7 @@ cache = flask_caching.Cache(app)
 cache.clear()
 
 # models depend on cache and app so we import them afterwards
-from models import User, Activity, db
+from models import User, Activity, db, inspector
 db.create_all()
 
 Analytics(app)
@@ -87,7 +89,9 @@ login_manager.login_view = 'nothing'
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.get(user_id)
+    user = db.session.merge(User.get(user_id), load=False)
+    # app.logger.debug(inspector(user))
+    return user
 
 
 @app.route('/favicon.ico')
@@ -173,9 +177,11 @@ def auth_callback():
             return redirect(state)
 
         user = User.from_access_token(access_token)
+        app.logger.debug("created {}. inspect: {}".format(user.describe(),
+                                                          inspector(user)))
         db.session.add(user)
         db.session.commit()
-        app.logger.debug(user.describe())
+        app.logger.debug(inspector(user))
 
         # remember=True, for persistent login.
         login_user(user, remember=True)
@@ -190,6 +196,7 @@ def logout():
     if current_user.is_authenticated:
         user_id = current_user.strava_id
         username = current_user.username
+        current_user.uncache()
         logout_user()
         flash("user '{}' ({}) logged out"
               .format(username, user_id))
@@ -243,23 +250,25 @@ def index(username):
     date2 = request.args.get("date2", "")
     preset = request.args.get("preset", "")
     limit = request.args.get("limit", "")
-    baselayer = request.args.getlist("baselayer", "")
+    baselayer = request.args.getlist("baselayer")
+    ids = request.args.get("id", "")
 
-    if (not date1) and (not date2):
-        if preset:
-            try:
-                preset = int(preset)
-            except:
-                flash("'{}' is not a valid preset".format(preset))
-                preset = 7
-        elif limit:
-            try:
-                limit = int(limit)
-            except:
-                flash("'{}' is not a valid limit".format(limit))
-                limit = 1
-        else:
-            limit = 5
+    if not ids:
+        if (not date1) and (not date2):
+            if preset:
+                try:
+                    preset = int(preset)
+                except:
+                    flash("'{}' is not a valid preset".format(preset))
+                    preset = 7
+            elif limit:
+                try:
+                    limit = int(limit)
+                except:
+                    flash("'{}' is not a valid limit".format(limit))
+                    limit = 1
+            else:
+                limit = 5
 
     flowres = request.args.get("flowres", "")
     heatres = request.args.get("heatres", "")
@@ -282,6 +291,7 @@ def index(username):
                            lat=lat,
                            lng=lng,
                            zoom=zoom,
+                           ids=ids,
                            preset=preset,
                            date1=date1,
                            date2=date2,
@@ -297,42 +307,50 @@ def index(username):
 def getdata(username):
     user = User.get(username)
 
+    def sse_out(obj=None):
+        data = json.dumps(obj) if obj else "done"
+        return "data: {}\n\n".format(data)
+
     def errout(msg):
         # outputs a terminating SSE stream consisting of one error message
         data = {"error": "{}".format(msg)}
-
-        def boo():
-            yield "data: {}\n\n".format(json.dumps(data))
-            yield "data: done\n\n"
-        return Response(boo(), mimetype='text/event-stream')
+        return Response(itertools.imap(sse_out, data, None),
+                        mimetype='text/event-stream')
 
     if not user:
         return errout("'{}' is not registered with this app".format(username))
 
     options = {}
-    limit = request.args.get("limit")
-    if limit:
-        options["limit"] = int(limit)
-        if limit == 0:
-            limit == 1
+    ids_raw = request.args.get("id")
+    if ids_raw:
+        non_digit = re.compile("\D")
 
-    date1 = request.args.get("date1")
-    date2 = request.args.get("date2")
-    if date1 or date2:
-        try:
-            options["after"] = dateutil.parser.parse(date1)
-            if date2:
-                options["before"] = dateutil.parser.parse(date2)
-                assert(options["before"] > options["after"])
-        except:
-            return errout("Invalid Dates")
-    elif not limit:
-        options["limit"] = 10
+        ids = non_digit.split(ids_raw)
+        app.logger.debug("'{}' => {}".format(ids_raw, ids))
+        options["activity_ids"] = ids
+    else:
+        limit = request.args.get("limit")
+        if limit:
+            options["limit"] = int(limit)
+            if limit == 0:
+                limit == 1
 
-    # options = {"activity_ids": [730239033, 97090517]}
+        date1 = request.args.get("date1")
+        date2 = request.args.get("date2")
+        if date1 or date2:
+            try:
+                options["after"] = dateutil.parser.parse(date1)
+                if date2:
+                    options["before"] = dateutil.parser.parse(date2)
+                    assert(options["before"] > options["after"])
+            except:
+                return errout("Invalid Dates")
+        elif not limit:
+            options["limit"] = 10
+
     hires = request.args.get("hires") == "true"
 
-    app.logger.debug("get_data: {}".format(options))
+    app.logger.debug("getdata: {}, hires={}".format(options, hires))
 
     def path_color(activity_type):
         color_list = [color for color, activity_types
@@ -352,6 +370,7 @@ def getdata(username):
             streams = client.get_activity_streams(activity_id,
                                                   types=stream_names)
         except Exception as e:
+            app.logger.debug(e)
             return {"error": str(e)}
 
         activity_streams = {name: streams[name].data for name in streams}
@@ -365,7 +384,7 @@ def getdata(username):
         relevant_streams = ["polyline"]
 
         for activity in user.activity_summaries(**options):
-
+            app.logger.debug("activity {}".format(activity))
             if ("error" not in activity) and activity.get("summary_polyline"):
                 activity["path_color"] = path_color(activity["type"])
 
@@ -374,14 +393,14 @@ def getdata(username):
 
                     if data:
                         data.update(activity)
-                        yield "data: {}\n\n".format(json.dumps(data))
+                        # app.logger.debug("sending {}".format(data))
+                        yield sse_out(data)
 
                     else:
-                        yield "data: {}\n\n".format(
-                            json.dumps({
-                                "msg": "importing [{id}] {name}..."
-                                .format(**activity)
-                            }))
+                        yield sse_out({
+                            "msg": "importing [{id}] {name}..."
+                            .format(**activity)
+                        })
 
                         activity_data = import_streams(activity["id"])
                         activity_data.update(activity)
@@ -393,10 +412,10 @@ def getdata(username):
 
                         data = A.data(relevant_streams)
                         data.update(activity)
-                        yield "data: {}\n\n".format(json.dumps(data))
+                        yield sse_out(data)
                 else:
-                    yield "data: {}\n\n".format(json.dumps(activity))
-        yield "data: done\n\n"
+                    yield sse_out(activity)
+        yield sse_out()
 
     return Response(sse_iterator(), mimetype='text/event-stream')
 
