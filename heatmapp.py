@@ -362,6 +362,7 @@ def getdata(username):
             streams = client.get_activity_streams(activity_id,
                                                   types=stream_names)
         except Exception as e:
+            app.logger.debug(e)
             return {"error": str(e)}
 
         activity_streams = {name: streams[name].data for name in streams}
