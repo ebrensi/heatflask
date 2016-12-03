@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 import dateutil.parser
 import os
 import json
+import itertools
 import stravalib
 import flask_login
 from flask_login import current_user, login_user, logout_user, login_required
@@ -304,14 +305,15 @@ def index(username):
 def getdata(username):
     user = User.get(username)
 
+    def sse_out(obj=None):
+        data = json.dumps(obj) if obj else "done"
+        return "data: {}\n\n".format(data)
+
     def errout(msg):
         # outputs a terminating SSE stream consisting of one error message
         data = {"error": "{}".format(msg)}
-
-        def boo():
-            yield "data: {}\n\n".format(json.dumps(data))
-            yield "data: done\n\n"
-        return Response(boo(), mimetype='text/event-stream')
+        return Response(itertools.imap(sse_out, data, None),
+                        mimetype='text/event-stream')
 
     if not user:
         return errout("'{}' is not registered with this app".format(username))
@@ -342,7 +344,7 @@ def getdata(username):
 
     hires = request.args.get("hires") == "true"
 
-    app.logger.debug("getdata: {}".format(options))
+    # app.logger.debug("getdata: {}, hires={}".format(options, hires))
 
     def path_color(activity_type):
         color_list = [color for color, activity_types
@@ -376,7 +378,7 @@ def getdata(username):
         relevant_streams = ["polyline"]
 
         for activity in user.activity_summaries(**options):
-
+            app.logger.debug("activity {}".format(activity))
             if ("error" not in activity) and activity.get("summary_polyline"):
                 activity["path_color"] = path_color(activity["type"])
 
@@ -385,14 +387,14 @@ def getdata(username):
 
                     if data:
                         data.update(activity)
-                        yield "data: {}\n\n".format(json.dumps(data))
+                        # app.logger.debug("sending {}".format(data))
+                        yield sse_out(data)
 
                     else:
-                        yield "data: {}\n\n".format(
-                            json.dumps({
-                                "msg": "importing [{id}] {name}..."
-                                .format(**activity)
-                            }))
+                        yield sse_out({
+                            "msg": "importing [{id}] {name}..."
+                            .format(**activity)
+                        })
 
                         activity_data = import_streams(activity["id"])
                         activity_data.update(activity)
@@ -404,10 +406,10 @@ def getdata(username):
 
                         data = A.data(relevant_streams)
                         data.update(activity)
-                        yield "data: {}\n\n".format(json.dumps(data))
+                        yield sse_out(data)
                 else:
-                    yield "data: {}\n\n".format(json.dumps(activity))
-        yield "data: done\n\n"
+                    yield sse_out(activity)
+        yield sse_out()
 
     return Response(sse_iterator(), mimetype='text/event-stream')
 
