@@ -317,6 +317,12 @@ def getdata(username):
         return Response(itertools.imap(sse_out, data, None),
                         mimetype='text/event-stream')
 
+    def cast_int(s):
+        try:
+            return int(s)
+        except:
+            return
+
     if not user:
         return errout("'{}' is not registered with this app".format(username))
 
@@ -325,7 +331,9 @@ def getdata(username):
     if ids_raw:
         non_digit = re.compile("\D")
 
-        ids = non_digit.split(ids_raw)
+        ids = [s for s in [cast_int(s) for s in non_digit.split(ids_raw)]
+               if s]
+
         app.logger.debug("'{}' => {}".format(ids_raw, ids))
         options["activity_ids"] = ids
     else:
