@@ -16,10 +16,10 @@ from heatmapp import app, cache
 db = SQLAlchemy(app)
 
 CACHE_USERS_TIMEOUT = app.config["CACHE_USERS_TIMEOUT"]
-CACHE_SUMMARIES_TIMEOUT = app.config["CACHE_SUMMARIES_TIMEOUT"]
+CACHE_INDEX_TIMEOUT = app.config["CACHE_INDEX_TIMEOUT"]
+CACHE_INDEX_UPDATE_TIMEOUT = app.config["CACHE_INDEX_UPDATE_TIMEOUT"]
 CACHE_ACTIVITIES_TIMEOUT = app.config["CACHE_ACTIVITIES_TIMEOUT"]
 CACHE_DATA_TIMEOUT = app.config["CACHE_ACTIVITIES_TIMEOUT"]
-CACHE_INDEX_TIMEOUT = CACHE_SUMMARIES_TIMEOUT
 
 
 def inspector(obj):
@@ -57,7 +57,7 @@ class User(UserMixin, db.Model):
     def describe(self):
         attrs = ["strava_id", "username", "firstname", "lastname",
                  "profile", "strava_access_token", "dt_last_active",
-                 "app_activity_count"]
+                 "app_activity_count", "dt_last_indexed"]
         return {attr: getattr(self, attr) for attr in attrs}
 
     def client(self):
@@ -148,6 +148,7 @@ class User(UserMixin, db.Model):
                 for user in cls.query]
 
     def index(self, limit=None,  after=None, before=None):
+
         def strava2dict(a):
             return {
                 "id": a.id,
@@ -160,25 +161,33 @@ class User(UserMixin, db.Model):
                 "elapsed_time": int(a.elapsed_time.total_seconds()),
             }
 
+        index_key = "I:{}".format(self.strava_id)
+
+        if not self.dt_last_indexed:
+            ind = cache.get(index_key)
+            if ind:
+                self.dt_last_indexed, self.activity_index = ind
+
         if self.dt_last_indexed:
             elapsed = (datetime.utcnow() - self.dt_last_indexed).total_seconds()
-            needs_update = elapsed > CACHE_INDEX_TIMEOUT
-            app.logger.info("elapsed: {}, timeout: {}"
-                            .format(elapsed, CACHE_INDEX_TIMEOUT))
+            needs_update = elapsed > CACHE_INDEX_UPDATE_TIMEOUT
 
             if not needs_update:
                 if limit:
-                    return self.activity_index.head(limit).iterrows()
-                df = self.activity_index
-                if after:
-                    df = df[:after]
-                if before:
-                    df = df[before:]
-                return df.iterrows()
+                    df = self.activity_index.head(limit)
+                else:
+                    df = self.activity_index
+                    if after:
+                        df = df[:after]
+                    if before:
+                        df = df[before:]
+                df = df.reset_index()
+                df.beginTimestamp = df.beginTimestamp.astype(str)
+                return df.to_dict("records")
             else:
                 latest = self.activity_index.index[0]
-                app.logger.info("updating activity index from {}"
-                                .format(latest))
+                app.logger.info("updating activity index for {}"
+                                .format(self.strava_id))
 
                 already_got = set(self.activity_index.id)
                 activities_list = [strava2dict(
@@ -194,6 +203,10 @@ class User(UserMixin, db.Model):
                     )
 
                 self.dt_last_indexed = datetime.utcnow()
+                cache.set(index_key,
+                          (self.dt_last_indexed, self.activity_index),
+                          CACHE_INDEX_TIMEOUT)
+
                 return self.index(limit=limit, after=after, before=before)
 
         # If we got here then the index hasn't been created yet
@@ -205,24 +218,29 @@ class User(UserMixin, db.Model):
             for a in self.client().get_activities():
                 d = strava2dict(a)
                 activities_list.append(d)
+                if (limit or
+                    (after and (d["beginTimestamp"] >= after)) or
+                        (before and (d["beginTimestamp"] <= before))):
+                    d2 = dict(d)
+                    d2["beginTimestamp"] = str(d2["beginTimestamp"])
+                    Q.put(d2)
+                    app.logger.info("put {} on queue".format(d2["id"]))
+
                 if limit:
-                    Q.put(d)
-                    app.logger.info("put {} on queue".format(d["id"]))
                     limit -= 1
                     if not limit:
-                        Q.put_nowait(StopIteration)
-                if ((after and (d.beginTimestamp >= after)) or
-                        (before and (d.beginTimestamp <= before))):
-                    Q.put(d)
-                    app.logger.info("put {} on queue".format(d["id"]))
-
+                        Q.put(StopIteration)
             Q.put(StopIteration)
 
             self.activity_index = (pd.DataFrame(activities_list)
                                    .set_index("beginTimestamp")
                                    .sort_index(ascending=False))
-
+            app.logger.debug("done with indexing for {}".format(self))
             self.dt_last_indexed = datetime.utcnow()
+            cache.set(index_key,
+                      (self.dt_last_indexed, self.activity_index),
+                      CACHE_INDEX_TIMEOUT)
+
         P.apply_async(async_job, [limit, after, before])
         return Q
 
@@ -237,49 +255,11 @@ class User(UserMixin, db.Model):
                 "error retrieving activity '{}': {}".format(a_id, e))
         return activity
 
-    def activity_summaries(self, activity_ids=None,
-                           timeout=CACHE_SUMMARIES_TIMEOUT,
-                           **kwargs):
-        unique = "{},{},{}".format(self.strava_id, activity_ids, kwargs)
-        key = str(hash(unique))
-        client = self.client()
-
-        summaries = cache.get(key)
-        if summaries:
-            app.logger.debug("got cache key '{}'".format(unique))
-            for summary in summaries:
-                yield summary
+    def activity_summaries(self, activity_ids=None, **kwargs):
+        if activity_ids:
+            pass
         else:
-            summaries = []
-            if activity_ids:
-                activities = (self.get_activity(id) for id in activity_ids)
-            else:
-                activities = client.get_activities(**kwargs)
-
-            try:
-                for a in activities:
-                    if a:
-                        data = {
-                            "id": a.id,
-                            "athlete_id": a.athlete.id,
-                            "name": a.name,
-                            "type": a.type,
-                            "summary_polyline": a.map.summary_polyline,
-                            "beginTimestamp": str(a.start_date_local),
-                            "total_distance": float(a.distance),
-                            "elapsed_time": int(a.elapsed_time.total_seconds()),
-                            "user_id": self.strava_id
-                        }
-                        summaries.append(data)
-                        yield data
-            except Exception as e:
-                yield {"error": str(e)}
-            else:
-                if summaries:
-                    cache.set(key, summaries, timeout)
-                    app.logger.debug(
-                        "set cache key '{}' for {} sec".format(unique, timeout)
-                    )
+            return self.index(**kwargs)
 
 
 class Activity(db.Model):

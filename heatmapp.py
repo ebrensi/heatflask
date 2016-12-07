@@ -91,6 +91,7 @@ login_manager.login_view = 'nothing'
 def load_user(user_id):
     user = db.session.merge(User.get(user_id), load=False)
     # app.logger.debug(inspector(user))
+    app.logger.debug(user.describe())
     return user
 
 
@@ -392,7 +393,7 @@ def getdata(username):
         relevant_streams = ["polyline"]
 
         for activity in user.activity_summaries(**options):
-            app.logger.debug("activity {}".format(activity))
+            # app.logger.debug("activity {}".format(activity))
             if ("error" not in activity) and activity.get("summary_polyline"):
                 activity["path_color"] = path_color(activity["type"])
 
