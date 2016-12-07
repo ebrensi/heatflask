@@ -89,7 +89,7 @@
                   <select class="preset" id="select_type" form="renderform">
                     <option value="days">recent days</option>
                     <option value="activities">recent activities</option>
-                    <!-- <option value="activity_ids">Activity IDs</option> -->
+                    <option value="activity_ids">Activity IDs</option>
                     <option value="" selected="selected">Date-Range</option>
                   </select>
                   </span>
@@ -97,7 +97,7 @@
                   <br>
 
                   <span id="id_select">
-                    <input type="text" id="select_ids" name="id" value="">
+                    <textarea name="id" id="activity_ids" form="renderform"></textarea>
                   </span>
 
                   <span class="date_select" style="display:block">
@@ -351,8 +351,9 @@
             } else {
                 if (date1) query.date1 = date1;
                 if (date2 && (date2 != "now")) query.date2 = date2;
-                if (hires) query.hires = hires;
             }
+
+            if (hires) query.hires = hires;
 
             $("#data_message").html("");
             appState.items = [];
@@ -594,7 +595,8 @@
             {% endif %}
 
             {% if ids %}
-            $("#select_ids").val("{{ ids }}");
+            $("#activity_ids").val("{{ ids }}");
+            $("#select_type").val("activity_ids");
             {% elif limit %}
             $("#select_num").val("{{ limit }}");
             $("#select_type").val("activities");

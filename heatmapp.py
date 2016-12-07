@@ -10,7 +10,9 @@ import flask_compress
 from datetime import datetime, timedelta
 import dateutil.parser
 import os
+import re
 import json
+import itertools
 import stravalib
 import flask_login
 from flask_login import current_user, login_user, logout_user, login_required
@@ -89,6 +91,7 @@ login_manager.login_view = 'nothing'
 def load_user(user_id):
     user = db.session.merge(User.get(user_id), load=False)
     # app.logger.debug(inspector(user))
+    app.logger.debug(user.describe())
     return user
 
 
@@ -249,23 +252,24 @@ def index(username):
     preset = request.args.get("preset", "")
     limit = request.args.get("limit", "")
     baselayer = request.args.getlist("baselayer")
-    ids = request.args.getlist("id")
+    ids = request.args.get("id", "")
 
-    if (not date1) and (not date2):
-        if preset:
-            try:
-                preset = int(preset)
-            except:
-                flash("'{}' is not a valid preset".format(preset))
-                preset = 7
-        elif limit:
-            try:
-                limit = int(limit)
-            except:
-                flash("'{}' is not a valid limit".format(limit))
-                limit = 1
-        else:
-            limit = 5
+    if not ids:
+        if (not date1) and (not date2):
+            if preset:
+                try:
+                    preset = int(preset)
+                except:
+                    flash("'{}' is not a valid preset".format(preset))
+                    preset = 7
+            elif limit:
+                try:
+                    limit = int(limit)
+                except:
+                    flash("'{}' is not a valid limit".format(limit))
+                    limit = 1
+            else:
+                limit = 5
 
     flowres = request.args.get("flowres", "")
     heatres = request.args.get("heatres", "")
@@ -304,21 +308,34 @@ def index(username):
 def getdata(username):
     user = User.get(username)
 
+    def sse_out(obj=None):
+        data = json.dumps(obj) if obj else "done"
+        return "data: {}\n\n".format(data)
+
     def errout(msg):
         # outputs a terminating SSE stream consisting of one error message
         data = {"error": "{}".format(msg)}
+        return Response(itertools.imap(sse_out, data, None),
+                        mimetype='text/event-stream')
 
-        def boo():
-            yield "data: {}\n\n".format(json.dumps(data))
-            yield "data: done\n\n"
-        return Response(boo(), mimetype='text/event-stream')
+    def cast_int(s):
+        try:
+            return int(s)
+        except:
+            return
 
     if not user:
         return errout("'{}' is not registered with this app".format(username))
 
     options = {}
-    ids = request.args.getlist("id")
-    if ids:
+    ids_raw = request.args.get("id")
+    if ids_raw:
+        non_digit = re.compile("\D")
+
+        ids = [s for s in [cast_int(s) for s in non_digit.split(ids_raw)]
+               if s]
+
+        app.logger.debug("'{}' => {}".format(ids_raw, ids))
         options["activity_ids"] = ids
     else:
         limit = request.args.get("limit")
@@ -342,7 +359,7 @@ def getdata(username):
 
     hires = request.args.get("hires") == "true"
 
-    app.logger.debug("getdata: {}".format(options))
+    app.logger.debug("getdata: {}, hires={}".format(options, hires))
 
     def path_color(activity_type):
         color_list = [color for color, activity_types
@@ -376,7 +393,7 @@ def getdata(username):
         relevant_streams = ["polyline"]
 
         for activity in user.activity_summaries(**options):
-
+            # app.logger.debug("activity {}".format(activity))
             if ("error" not in activity) and activity.get("summary_polyline"):
                 activity["path_color"] = path_color(activity["type"])
 
@@ -385,14 +402,14 @@ def getdata(username):
 
                     if data:
                         data.update(activity)
-                        yield "data: {}\n\n".format(json.dumps(data))
+                        # app.logger.debug("sending {}".format(data))
+                        yield sse_out(data)
 
                     else:
-                        yield "data: {}\n\n".format(
-                            json.dumps({
-                                "msg": "importing [{id}] {name}..."
-                                .format(**activity)
-                            }))
+                        yield sse_out({
+                            "msg": "importing [{id}] {name}..."
+                            .format(**activity)
+                        })
 
                         activity_data = import_streams(activity["id"])
                         activity_data.update(activity)
@@ -404,10 +421,10 @@ def getdata(username):
 
                         data = A.data(relevant_streams)
                         data.update(activity)
-                        yield "data: {}\n\n".format(json.dumps(data))
+                        yield sse_out(data)
                 else:
-                    yield "data: {}\n\n".format(json.dumps(activity))
-        yield "data: done\n\n"
+                    yield sse_out(activity)
+        yield sse_out()
 
     return Response(sse_iterator(), mimetype='text/event-stream')
 
