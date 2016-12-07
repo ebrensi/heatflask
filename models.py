@@ -160,9 +160,12 @@ class User(UserMixin, db.Model):
                 "elapsed_time": int(a.elapsed_time.total_seconds()),
             }
 
-        if self.activity_index:
-            needs_update = ((datetime.utcnow() - self.dt_last_indexed)
-                            .total_seconds > CACHE_INDEX_TIMEOUT)
+        if self.dt_last_indexed:
+            elapsed = (datetime.utcnow() - self.dt_last_indexed).total_seconds()
+            needs_update = elapsed > CACHE_INDEX_TIMEOUT
+            app.logger.info("elapsed: {}, timeout: {}"
+                            .format(elapsed, CACHE_INDEX_TIMEOUT))
+
             if not needs_update:
                 if limit:
                     return self.activity_index.head(limit).iterrows()
@@ -174,35 +177,51 @@ class User(UserMixin, db.Model):
                 return df.iterrows()
             else:
                 latest = self.activity_index.index[0]
-                activities_list = [strava2dict(a)
-                                   for a in self.client().get_activities(after=latest)]
+                app.logger.info("updating activity index from {}"
+                                .format(latest))
+
+                already_got = set(self.activity_index.id)
+                activities_list = [strava2dict(
+                    a) for a in self.client().get_activities(after=latest)
+                    if a.id not in already_got]
+
                 if activities_list:
-                    df = pd.DataFrame(activities_list)
-                    self.activity_index = df.append(
-                        self.activity_index).sort_index()
-                    self.dt_last_indexed = datetime.utcnow()
-                    return self.index(limit=limit, after=after, before=before)
+                    df = pd.DataFrame(activities_list).set_index(
+                        "beginTimestamp")
+
+                    self.activity_index = (
+                        df.append(self.activity_index).sort_index()
+                    )
+
+                self.dt_last_indexed = datetime.utcnow()
+                return self.index(limit=limit, after=after, before=before)
 
         # If we got here then the index hasn't been created yet
         Q = Queue()
         P = Pool()
 
-        def async_job(limit, after, before):
+        def async_job(limit=None, after=None, before=None):
             activities_list = []
             for a in self.client().get_activities():
                 d = strava2dict(a)
                 activities_list.append(d)
                 if limit:
                     Q.put(d)
-                    print("put {} on queue".format(d["id"]))
+                    app.logger.info("put {} on queue".format(d["id"]))
                     limit -= 1
                     if not limit:
-                        Q.put(StopIteration)
-                # deal with before and after
+                        Q.put_nowait(StopIteration)
+                if ((after and (d.beginTimestamp >= after)) or
+                        (before and (d.beginTimestamp <= before))):
+                    Q.put(d)
+                    app.logger.info("put {} on queue".format(d["id"]))
+
+            Q.put(StopIteration)
 
             self.activity_index = (pd.DataFrame(activities_list)
                                    .set_index("beginTimestamp")
                                    .sort_index(ascending=False))
+
             self.dt_last_indexed = datetime.utcnow()
         P.apply_async(async_job, [limit, after, before])
         return Q
@@ -416,3 +435,6 @@ class Activity(db.Model):
 
 # db.create_all()
 # db.session.commit()
+
+
+e = User.get("e_rensi")
