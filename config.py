@@ -25,17 +25,17 @@ class Config(object):
     # Settings for fast-cache
     CACHE_REDIS_URL = os.environ.get('REDIS_URL')
 
-    # How long (seconds) we hold activity summary data in fast-cache
-    CACHE_INDEX_TIMEOUT = 60 * 60   # 1 hour
+    # How long (seconds) we hold activity summary data
+    CACHE_INDEX_TIMEOUT = 7 * 24 * 60 * 60   # 7 days
 
-    # How long before our index is outated and needs an update
+    # How long before a user's index is outated and needs an update
     CACHE_INDEX_UPDATE_TIMEOUT = 10 * 60  # 10 minutes
 
     # How long we hold onto hires activities
-    CACHE_ACTIVITIES_TIMEOUT = 12 * 60 * 60  # 12 hours
+    CACHE_ACTIVITIES_TIMEOUT = 7 * 24 * 60 * 60  # 7 days
 
     # How long we hold a User object in memory
-    CACHE_USERS_TIMEOUT = 60 * 60  # 1 hour
+    CACHE_USERS_TIMEOUT = 7 * 24 * 60 * 60  # 7 days
     SECRET_KEY = "pB\xeax\x9cJ\xd6\x81\xed\xd7\xf9\xd0\x99o\xad\rM\x92\xb1\x8b{7\x02r"
 
     # Flask-Cache settings
