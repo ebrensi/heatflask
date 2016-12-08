@@ -11,6 +11,7 @@ class Config(object):
     CSRF_ENABLED = True
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_POOL_RECYCLE = 10 * 60  # 10 minutes
 
     # Defaults to using PostgreSQL for Celery
     CELERY_BROKER_URL = "sqla+" + SQLALCHEMY_DATABASE_URI
