@@ -394,7 +394,10 @@ def getdata(username):
 
         for activity in user.activity_summaries(**options):
             # app.logger.debug("activity {}".format(activity))
-            if ("error" not in activity) and activity.get("summary_polyline"):
+            if ("msg" in activity) or ("error" in activity) or ("stop_rendering" in activity):
+                yield sse_out(activity)
+
+            if activity.get("summary_polyline"):
                 activity["path_color"] = path_color(activity["type"])
 
                 if hires and ("polyline" not in activity):
@@ -424,6 +427,7 @@ def getdata(username):
                         yield sse_out(data)
                 else:
                     yield sse_out(activity)
+
         yield sse_out()
 
     return Response(sse_iterator(), mimetype='text/event-stream')
