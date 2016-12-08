@@ -354,7 +354,7 @@
             if ($( "#sidebar" ).hasClass( "collapsed" )) {
                 var msgBox = L.control.window(map,
                     {title: "status",
-                    position: 'top',
+                    position: 'topright',
                     content:"<div class='data_message'></div>",
                     visible:true
                 });
@@ -429,7 +429,6 @@
                 doneRendering("<font color='red'>Aborted:</font>");
             });
 
-            $(".data_message").html("Connecting to Strava...");
 
             source.onmessage = function(event) {
 
