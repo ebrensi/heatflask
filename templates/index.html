@@ -437,6 +437,8 @@
                     doneRendering(msg);
                     stopListening();
 
+                } else if ("stop_rendering" in A){
+                    doneRendering("Done rendering.");
                 } else if ("msg" in A) {
                     $(".data_message").html(A.msg);
                     return;

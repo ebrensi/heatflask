@@ -394,7 +394,7 @@ def getdata(username):
 
         for activity in user.activity_summaries(**options):
             # app.logger.debug("activity {}".format(activity))
-            if ("msg" in activity) or ("error" in activity):
+            if ("msg" in activity) or ("error" in activity) or ("stop_rendering" in activity):
                 yield sse_out(activity)
 
             if activity.get("summary_polyline"):
