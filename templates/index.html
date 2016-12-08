@@ -351,10 +351,10 @@
             if (hires) query.hires = hires;
 
             $(".data_message").html("");
-            $( "#sidebar" ).hasClass( "collapsed" ){
+            if ($( "#sidebar" ).hasClass( "collapsed" )) {
                 var msgBox = L.control.window(map,
                     {title: "status",
-                    position: 'topRight',
+                    position: 'top',
                     content:"<div class='data_message'></div>",
                     visible:true
                 });
