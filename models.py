@@ -166,7 +166,13 @@ class User(UserMixin, db.Model):
         if not self.dt_last_indexed:
             ind = cache.get(index_key)
             if ind:
-                self.dt_last_indexed, self.activity_index = ind
+                if ind == "indexing":
+                    return [{
+                        "error": "Indexing activities for user {}...please try again in a few seconds."
+                        .format(self.strava_id)
+                    }]
+                else:
+                    self.dt_last_indexed, self.activity_index = ind
 
         if self.dt_last_indexed:
             elapsed = (datetime.utcnow() - self.dt_last_indexed).total_seconds()
@@ -214,6 +220,10 @@ class User(UserMixin, db.Model):
         P = Pool()
 
         def async_job(limit=None, after=None, before=None):
+            # Indicate to another process that we are currently indexing
+            #  This should not take any longer than 60 seconds
+            cache.set(index_key, "indexing", 60)
+
             activities_list = []
             for a in self.client().get_activities():
                 d = strava2dict(a)
@@ -226,10 +236,13 @@ class User(UserMixin, db.Model):
                     Q.put(d2)
                     app.logger.info("put {} on queue".format(d2["id"]))
 
-                if limit:
-                    limit -= 1
-                    if not limit:
-                        Q.put(StopIteration)
+                    if limit:
+                        limit -= 1
+                        if not limit:
+                            Q.put(StopIteration)
+                else:
+                    Q.put({"msg": "indexing activities..."})
+
             Q.put(StopIteration)
 
             self.activity_index = (pd.DataFrame(activities_list)
