@@ -137,8 +137,7 @@
                     </div>
 
                 <hr>
-                    <div id="data_message">
-                    </div>
+                    <div class="data_message"></div>
                 <hr>
 
                 <button type="button" id="renderButton" class="btn btn-primary">Render Layers</button>
@@ -224,18 +223,14 @@
                 <br>
                 {{ config['APP_NAME'] }} is a work in progress.
                 <img src="{{ url_for('static', filename='under-construction.gif') }}" height=40>
+
                 <br><br>
-                How we access data: When redering activities, low-resolution data is retrieved directly from Strava and is cached in-memory for 5 minutes.  High-Resolution data is fast-cached for 1 hour, and kept in our database for 7 days.   If high-resolution data for an activity is not accessed for over 7 days then it gets deleted from our database.
-                <br>
-                On subsequent requests for an activity's (Hi-res) data, Heatflask will check the memory-cache first, then the database, and finally import from Strava.
+                The URL for a heat/flow map and the current location dates or preset, and zoom are embedded in the url so you can share that url and anyone who clicks on it will get the same view.
                 <br><br>
+
                 The token we obtain is for public data, so Heatflask will not import or render any activities you have set to private.
                 Deleting your accout with us clears our database cache for you and deletes your Strava access token from our database.
-
                 <br><br>
-                The URL for a heat/flow map and the current location dates or preset, zoom, and map, are embedded in the url so you can share that url and anyone who clicks on it will get the same view.
-                <br><br>
-
                 Questions, comments, suggestions?<br>
                 <a href="mailto:Rensi.Efrem@gmail.com?Subject=About {{ config['APP_NAME'] }}">Contact Me.</a>
 
@@ -355,7 +350,9 @@
 
             if (hires) query.hires = hires;
 
-            $("#data_message").html("");
+            $(".data_message").html("");
+            var msgBox = L.control.window(map, {title: "status", content:"<div class='data_message'></div>", visible:true});
+            //
             appState.items = [];
 
             var latlngs_flat = [];
@@ -399,25 +396,34 @@
             var source = new EventSource(url);
             $("#abortButton").show();
 
-            var abort = false;
+            var abort = false,
+                rendering = true;
 
-            function done(msg){
+            function doneRendering(msg){
+                if (rendering) {
+                    map.spin(false); // stop progress indicator
+                    $("#abortButton").hide();
+
+                    if ($("#autozoom:checked").val() && bounds.isValid())
+                        map.fitBounds(bounds);
+
+                    msg2 = msg + " " + appState.items.length + " activities rendered.";
+                    $(".data_message").html(msg2);
+                    rendering = false;
+                }
+            }
+
+
+            function stopListening(){
                 source.close();
-                map.spin(false); // stop progress indicator
-                $("#abortButton").hide();
-
-                if ($("#autozoom:checked").val() && bounds.isValid())
-                    map.fitBounds(bounds);
-
-                msg2 = msg + " " + appState.items.length + " activities rendered.";
-                $("#data_message").html(msg2);
+                msgBox.close();
             }
 
             $('#abortButton').click(function(){
-                done("<font color='red'>Aborted:</font>");
+                doneRendering("<font color='red'>Aborted:</font>");
             });
 
-            $("#data_message").html("Connecting to Strava...");
+            $(".data_message").html("Connecting to Strava...");
 
             source.onmessage = function(event) {
 
@@ -428,16 +434,17 @@
                 if ("error" in A){
                     msg = "<font color='red'>" + A.error +"</font>";
                     var winMtds = L.control.window(map, {title: "Oops.", content:msg, visible:true});
-                    source.close();
-                    map.spin(false);
-                    $("#abortButton").hide();
+                    doneRendering(msg);
+                    stopListening();
 
+                } else if ("stop_rendering" in A){
+                    doneRendering("Done rendering.");
                 } else if ("msg" in A) {
-                    $("#data_message").html(A.msg);
+                    $(".data_message").html(A.msg);
                     return;
                 } else {
                     msg = "rendering [" + A.id + "] " + A.name;
-                    $("#data_message").html(msg);
+                    $(".data_message").html(msg);
                 }
 
                 if (flowres){
@@ -482,7 +489,8 @@
                 }
 
               } else {
-                done("Finished. ");
+                doneRendering("Finished. ");
+                stopListening();
                 appState['date1'] = date1;
                 appState["date2"] = date2;
                 if ("limit" in query) appState["limit"] = query.limit;

@@ -166,7 +166,13 @@ class User(UserMixin, db.Model):
         if not self.dt_last_indexed:
             ind = cache.get(index_key)
             if ind:
-                self.dt_last_indexed, self.activity_index = ind
+                if ind == "indexing":
+                    return [{
+                        "error": "Indexing activities for user {}...please try again in a few seconds."
+                        .format(self.strava_id)
+                    }]
+                else:
+                    self.dt_last_indexed, self.activity_index = ind
 
         if self.dt_last_indexed:
             elapsed = (datetime.utcnow() - self.dt_last_indexed).total_seconds()
@@ -214,7 +220,12 @@ class User(UserMixin, db.Model):
         P = Pool()
 
         def async_job(limit=None, after=None, before=None):
+            # Indicate to another process that we are currently indexing
+            #  This should not take any longer than 60 seconds
+            cache.set(index_key, "indexing", 60)
+
             activities_list = []
+            count = 1
             for a in self.client().get_activities():
                 d = strava2dict(a)
                 activities_list.append(d)
@@ -226,10 +237,15 @@ class User(UserMixin, db.Model):
                     Q.put(d2)
                     app.logger.info("put {} on queue".format(d2["id"]))
 
-                if limit:
-                    limit -= 1
-                    if not limit:
-                        Q.put(StopIteration)
+                    if limit:
+                        limit -= 1
+                        if not limit:
+                            Q.put({"stop_rendering": "1"})
+                else:
+                    Q.put({"msg": "indexing...{} activities".format(count)})
+                count += 1
+
+            Q.put({"msg": "done indexing {} activities.".format(count)})
             Q.put(StopIteration)
 
             self.activity_index = (pd.DataFrame(activities_list)
@@ -350,7 +366,7 @@ class Activity(db.Model):
         Activity.data(attrs) retrieves and caches only specific
         attributes for this Activity, saving memory compared to caching the
         entire object.
-        Activity.get() returns an activity object, but Activity.data(attrs)
+        Activity.get() returns an Activity object, but Activity.data(attrs)
         returns a dictionary object.
         """
         key = "A:{}:{}".format(self.id, attrs)
@@ -415,6 +431,3 @@ class Activity(db.Model):
 
 # db.create_all()
 # db.session.commit()
-
-
-e = User.get("e_rensi")
