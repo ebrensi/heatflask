@@ -396,23 +396,31 @@
             var source = new EventSource(url);
             $("#abortButton").show();
 
-            var abort = false;
+            var abort = false,
+                rendering = true;
 
-            function done(msg){
+            function doneRendering(msg){
+                if (rendering) {
+                    map.spin(false); // stop progress indicator
+                    $("#abortButton").hide();
+
+                    if ($("#autozoom:checked").val() && bounds.isValid())
+                        map.fitBounds(bounds);
+
+                    msg2 = msg + " " + appState.items.length + " activities rendered.";
+                    $(".data_message").html(msg2);
+                    rendering = false;
+                }
+            }
+
+
+            function stopListening(){
                 source.close();
                 msgBox.close();
-                map.spin(false); // stop progress indicator
-                $("#abortButton").hide();
-
-                if ($("#autozoom:checked").val() && bounds.isValid())
-                    map.fitBounds(bounds);
-
-                msg2 = msg + " " + appState.items.length + " activities rendered.";
-                $(".data_message").html(msg2);
             }
 
             $('#abortButton').click(function(){
-                done("<font color='red'>Aborted:</font>");
+                doneRendering("<font color='red'>Aborted:</font>");
             });
 
             $(".data_message").html("Connecting to Strava...");
@@ -426,9 +434,8 @@
                 if ("error" in A){
                     msg = "<font color='red'>" + A.error +"</font>";
                     var winMtds = L.control.window(map, {title: "Oops.", content:msg, visible:true});
-                    source.close();
-                    map.spin(false);
-                    $("#abortButton").hide();
+                    doneRendering(msg);
+                    stopListening();
 
                 } else if ("msg" in A) {
                     $(".data_message").html(A.msg);
@@ -480,7 +487,8 @@
                 }
 
               } else {
-                done("Finished. ");
+                doneRendering("Finished. ");
+                stopListening();
                 appState['date1'] = date1;
                 appState["date2"] = date2;
                 if ("limit" in query) appState["limit"] = query.limit;

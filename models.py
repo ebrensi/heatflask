@@ -244,6 +244,8 @@ class User(UserMixin, db.Model):
                 else:
                     Q.put({"msg": "indexing...{} activities".format(count)})
                 count += 1
+
+            Q.put({"msg": "done indexing {} activities.".format(count)})
             Q.put(StopIteration)
 
             self.activity_index = (pd.DataFrame(activities_list)
