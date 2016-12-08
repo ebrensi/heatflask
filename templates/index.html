@@ -350,14 +350,16 @@
 
             if (hires) query.hires = hires;
 
+            // if ($( "#sidebar" ).hasClass( "collapsed" )) {
+            //     var msgBox = L.control.window(map,
+            //         {position: 'topRight',
+            //         content:"<div class='data_message'></div>",
+            //         visible:true
+            //     });
+            // }
+
             $(".data_message").html("");
-            if ($( "#sidebar" ).hasClass( "collapsed" )) {
-                var msgBox = L.control.window(map,
-                    {position: 'topRight',
-                    content:"<div class='data_message'></div>",
-                    visible:true
-                });
-            }
+
             appState.items = [];
 
             var latlngs_flat = [];
@@ -421,7 +423,7 @@
 
             function stopListening(){
                 source.close();
-                msgBox.close();
+                // msgBox.close();
             }
 
             $('#abortButton').click(function(){
