@@ -225,6 +225,7 @@ class User(UserMixin, db.Model):
             cache.set(index_key, "indexing", 60)
 
             activities_list = []
+            count = 1
             for a in self.client().get_activities():
                 d = strava2dict(a)
                 activities_list.append(d)
@@ -238,11 +239,11 @@ class User(UserMixin, db.Model):
 
                     if limit:
                         limit -= 1
-                        if not limit:
-                            Q.put(StopIteration)
+                        # if not limit:
+                        #     Q.put(StopIteration)
                 else:
-                    Q.put({"msg": "indexing activities..."})
-
+                    Q.put({"msg": "indexing...{} activities".format(count)})
+                count += 1
             Q.put(StopIteration)
 
             self.activity_index = (pd.DataFrame(activities_list)
@@ -363,7 +364,7 @@ class Activity(db.Model):
         Activity.data(attrs) retrieves and caches only specific
         attributes for this Activity, saving memory compared to caching the
         entire object.
-        Activity.get() returns an activity object, but Activity.data(attrs)
+        Activity.get() returns an Activity object, but Activity.data(attrs)
         returns a dictionary object.
         """
         key = "A:{}:{}".format(self.id, attrs)
@@ -428,6 +429,3 @@ class Activity(db.Model):
 
 # db.create_all()
 # db.session.commit()
-
-
-e = User.get("e_rensi")
