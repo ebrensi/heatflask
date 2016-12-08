@@ -351,8 +351,14 @@
             if (hires) query.hires = hires;
 
             $(".data_message").html("");
-            var msgBox = L.control.window(map, {title: "status", content:"<div class='data_message'></div>", visible:true});
-            //
+            if ($( "#sidebar" ).hasClass( "collapsed" )) {
+                var msgBox = L.control.window(map,
+                    {title: "status",
+                    position: 'top',
+                    content:"<div class='data_message'></div>",
+                    visible:true
+                });
+            }
             appState.items = [];
 
             var latlngs_flat = [];
