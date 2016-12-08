@@ -91,7 +91,7 @@ login_manager.login_view = 'nothing'
 def load_user(user_id):
     user = db.session.merge(User.get(user_id), load=False)
     # app.logger.debug(inspector(user))
-    app.logger.debug(user.describe())
+    # app.logger.debug(user.describe())
     return user
 
 
