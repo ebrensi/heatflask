@@ -137,8 +137,7 @@
                     </div>
 
                 <hr>
-                    <div id="data_message">
-                    </div>
+                    <div class="data_message"></div>
                 <hr>
 
                 <button type="button" id="renderButton" class="btn btn-primary">Render Layers</button>
@@ -351,7 +350,9 @@
 
             if (hires) query.hires = hires;
 
-            $("#data_message").html("");
+            $(".data_message").html("");
+            var msgBox = L.control.window(map, {title: "status", content:"<div class='data_message'></div>", visible:true});
+            //
             appState.items = [];
 
             var latlngs_flat = [];
@@ -399,6 +400,7 @@
 
             function done(msg){
                 source.close();
+                msgBox.close();
                 map.spin(false); // stop progress indicator
                 $("#abortButton").hide();
 
@@ -406,14 +408,14 @@
                     map.fitBounds(bounds);
 
                 msg2 = msg + " " + appState.items.length + " activities rendered.";
-                $("#data_message").html(msg2);
+                $(".data_message").html(msg2);
             }
 
             $('#abortButton').click(function(){
                 done("<font color='red'>Aborted:</font>");
             });
 
-            $("#data_message").html("Connecting to Strava...");
+            $(".data_message").html("Connecting to Strava...");
 
             source.onmessage = function(event) {
 
@@ -429,11 +431,11 @@
                     $("#abortButton").hide();
 
                 } else if ("msg" in A) {
-                    $("#data_message").html(A.msg);
+                    $(".data_message").html(A.msg);
                     return;
                 } else {
                     msg = "rendering [" + A.id + "] " + A.name;
-                    $("#data_message").html(msg);
+                    $(".data_message").html(msg);
                 }
 
                 if (flowres){
