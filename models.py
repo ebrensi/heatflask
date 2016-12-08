@@ -257,7 +257,7 @@ class User(UserMixin, db.Model):
 
     def activity_summaries(self, activity_ids=None, **kwargs):
         if activity_ids:
-            pass
+            return []
         else:
             return self.index(**kwargs)
 
