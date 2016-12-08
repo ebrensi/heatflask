@@ -239,8 +239,8 @@ class User(UserMixin, db.Model):
 
                     if limit:
                         limit -= 1
-                        # if not limit:
-                        #     Q.put(StopIteration)
+                        if not limit:
+                            Q.put({"stop_rendering": "1"})
                 else:
                     Q.put({"msg": "indexing...{} activities".format(count)})
                 count += 1
