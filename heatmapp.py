@@ -35,7 +35,7 @@ app.config.from_object(os.environ['APP_SETTINGS'])
 
 # set up short-term fast caching support
 cache = flask_caching.Cache(app)
-cache.clear()
+# cache.clear()
 
 # models depend on cache and app so we import them afterwards
 from models import User, Activity, db, inspector
