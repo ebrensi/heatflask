@@ -402,6 +402,7 @@
 
             var source = new EventSource(url);
             $("#abortButton").show();
+            $('#renderButton').prop('disabled', true);
 
             var abort = false,
                 rendering = true;
@@ -423,11 +424,12 @@
 
             function stopListening(){
                 source.close();
-                // msgBox.close();
+                $('#renderButton').prop('disabled', false);
             }
 
             $('#abortButton').click(function(){
                 doneRendering("<font color='red'>Aborted:</font>");
+                stopListening();
             });
 
 
