@@ -3,7 +3,6 @@ from sqlalchemy.dialects import postgresql as pg
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import inspect
 from datetime import datetime
-import polyline
 import stravalib
 
 import pandas as pd
@@ -42,13 +41,6 @@ class User(UserMixin, db.Model):
 
     dt_last_active = db.Column(pg.TIMESTAMP)
     app_activity_count = db.Column(db.Integer, default=0)
-
-    # This is set up so that if a user gets deleted, all of the associated
-    #  activities are also deleted.
-    activities = db.relationship("Activity",
-                                 backref="user",
-                                 cascade="all, delete, delete-orphan",
-                                 lazy="dynamic")
 
     strava_client = None
     activity_index = None
@@ -276,154 +268,6 @@ class User(UserMixin, db.Model):
             return []
         else:
             return self.index(**kwargs)
-
-
-class Activity(db.Model):
-    id = db.Column(db.Integer, primary_key=True, autoincrement=False)
-    athlete_id = db.Column(db.Integer)  # owner of this activity
-    name = db.Column(db.String())
-    type = db.Column(db.String())
-    summary_polyline = db.Column(db.String())
-    beginTimestamp = db.Column(pg.TIMESTAMP)
-    total_distance = db.Column(db.Float())
-    elapsed_time = db.Column(db.Integer)
-
-    # streams
-    time = db.Column(pg.ARRAY(db.Integer))
-    polyline = db.Column(db.String())
-    distance = db.Column(pg.ARRAY(db.Float()))
-    altitude = db.Column(pg.ARRAY(db.Float()))
-    velocity_smooth = db.Column(pg.ARRAY(pg.REAL))
-    cadence = db.Column(pg.ARRAY(db.Integer))
-    watts = db.Column(pg.ARRAY(pg.REAL))
-    grade_smooth = db.Column(pg.ARRAY(pg.REAL))
-
-    dt_cached = db.Column(pg.TIMESTAMP)
-    dt_last_accessed = db.Column(pg.TIMESTAMP)
-    access_count = db.Column(db.Integer)
-
-    # self.user is the user that requested this activity, and may or may not
-    #  be the owner of the activity (athlete_id)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.strava_id"))
-
-    # path color is not stored in the database
-    path_color = None
-    latlng = None
-
-    @classmethod
-    def new(cls, **kwargs):
-        A = cls(**kwargs)
-        A.dt_cached = datetime.utcnow()
-        A.access_count = 0
-        return A
-
-    def authorized(self):
-        return self.user_id == self.athlete_id
-
-    def __repr__(self):
-        return "<Activity %r>" % (self.id)
-
-    def make_latlng(self):
-        mypolyline = self.polyline or self.summary_polyline
-        if mypolyline:
-            self.latlng = polyline.decode(mypolyline)
-        return self.latlng
-
-    def serialize(self):
-        attrs = ["id", "athlete_id", "name", "type", "summary_polyline",
-                 "beginTimestamp", "total_distance", "elapsed_time",
-                 "time", "polyline", "distance", "altitude", "velocity_smooth",
-                 "cadence", "watts", "grade_smooth", "dt_cached",
-                 "dt_last_accessed", "access_count"]
-        return {attr: getattr(self, attr) for attr in attrs}
-
-    def import_streams(self, streams=[]):
-        if not self.authorized():
-            return None
-
-        if not getattr(self, "summary_polyline", None):
-            return self
-
-        stream_names = set(['time', 'latlng', 'altitude'])
-        stream_names.update(streams)
-
-        client = User.get(self.user_id).client()
-        try:
-            streams = client.get_activity_streams(self.id, types=stream_names)
-        except Exception as e:
-            return {"error": str(e)}
-
-        for s in streams:
-            setattr(self, s, streams[s].data)
-
-        if self.latlng:
-            self.polyline = polyline.encode(self.latlng)
-
-        return self
-
-    def data(self, attrs, timeout=CACHE_DATA_TIMEOUT):
-        """
-        Activity.data(attrs) retrieves and caches only specific
-        attributes for this Activity, saving memory compared to caching the
-        entire object.
-        Activity.get() returns an Activity object, but Activity.data(attrs)
-        returns a dictionary object.
-        """
-        key = "A:{}:{}".format(self.id, attrs)
-        data = cache.get(key)
-        if data:
-            app.logger.debug("retrieved '{}'".format(key))
-            return data
-
-        if "latlng" in attrs:
-            self.make_latlng()
-        data = {attr: getattr(self, attr, None) for attr in attrs}
-        cache.set(key, data, timeout)
-        app.logger.debug("cached {} for {} for {} sec"
-                         .format(attrs, self, timeout))
-        return data
-
-    @staticmethod
-    def key(identifier):
-        return "A:{}".format(identifier)
-
-    def cache(self, identifier=None, timeout=CACHE_ACTIVITIES_TIMEOUT):
-        key = Activity.key(identifier or self.id)
-        cache.set(key, self, timeout)
-        app.logger.debug(
-            "cached {} under key '{}' for {} sec".format(self, key, timeout))
-
-    def uncache(self):
-        key = Activity.key(self.id)
-        cache.delete(key)
-
-    @classmethod
-    def get(cls, activity_id, timeout=CACHE_ACTIVITIES_TIMEOUT):
-        key = cls.key(activity_id)
-        A = cache.get(key)
-
-        if A:
-            app.logger.debug("retrieved {} with key '{}'".format(A, key))
-            return A
-
-        try:
-            id = int(activity_id)
-        except ValueError:
-            return None
-
-        A = cls.query.get(id)
-        if A:
-            A.dt_last_accessed = datetime.utcnow()
-            A.access_count += 1
-            app.logger.debug("retrieved {} from db".format(A))
-            A.cache(timeout=timeout)
-        return A
-
-    @classmethod
-    def get_data(cls, activity_id, attrs, timeout=CACHE_DATA_TIMEOUT):
-        A = cls.query.get(activity_id)
-        if A:
-            return A.data(attrs, timeout=CACHE_DATA_TIMEOUT)
 
 
 # Create tables if they don't exist
