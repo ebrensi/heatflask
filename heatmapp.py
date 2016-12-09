@@ -38,7 +38,7 @@ cache = flask_caching.Cache(app)
 # cache.clear()
 
 # models depend on cache and app so we import them afterwards
-from models import User, Activity, db, inspector
+from models import User, db, inspector
 db.create_all()
 
 Analytics(app)
@@ -490,31 +490,31 @@ def retrieve_list():
     return jsonify(data)
 
 
-@app.route('/purge_old_activities')
-@login_required
-def old():
-    if current_user.strava_id not in app.config["ADMIN"]:
-        return jsonify({"error": "oops.  Can't do this."})
-    days = app.config["DB_CACHE_TIMEOUT"]
-    deleted_count = purge_old_activities(days)
-    msg = ("purged {} activities over {} days old.  {} remaining."
-           .format(deleted_count, days, Activity.query.count()))
-    return msg
+# @app.route('/purge_old_activities')
+# @login_required
+# def old():
+#     if current_user.strava_id not in app.config["ADMIN"]:
+#         return jsonify({"error": "oops.  Can't do this."})
+#     days = app.config["DB_CACHE_TIMEOUT"]
+#     deleted_count = purge_old_activities(days)
+#     msg = ("purged {} activities over {} days old.  {} remaining."
+#            .format(deleted_count, days, Activity.query.count()))
+#     return msg
 
 
-def purge_old_activities(days=app.config["DB_CACHE_TIMEOUT"]):
-    now = datetime.utcnow()
-    past_time = now - timedelta(days=days)
-    old_activities = (
-        Activity.query.filter(or_(Activity.dt_last_accessed < past_time,
-                                  and_(Activity.dt_cached < past_time,
-                                       Activity.dt_last_accessed == None)))
-    )
-    count = old_activities.delete()
-    db.session.commit()
-    msg = "purged {} activities over {} days old.".format(count, days)
-    app.logger.info(msg)
-    return count
+# def purge_old_activities(days=app.config["DB_CACHE_TIMEOUT"]):
+#     now = datetime.utcnow()
+#     past_time = now - timedelta(days=days)
+#     old_activities = (
+#         Activity.query.filter(or_(Activity.dt_last_accessed < past_time,
+#                                   and_(Activity.dt_cached < past_time,
+#                                        Activity.dt_last_accessed == None)))
+#     )
+#     count = old_activities.delete()
+#     db.session.commit()
+#     msg = "purged {} activities over {} days old.".format(count, days)
+#     app.logger.info(msg)
+#     return count
 
 
 @app.route('/users')
