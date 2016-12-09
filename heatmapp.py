@@ -6,9 +6,8 @@ import polyline
 from flask import Flask, Response, render_template, request, redirect, \
     jsonify, url_for, flash, send_from_directory
 import flask_compress
-
-from datetime import datetime, timedelta
 import dateutil.parser
+from datetime import datetime
 import os
 import re
 import json
@@ -20,13 +19,8 @@ import flask_assets
 from flask_analytics import Analytics
 import flask_caching
 from signal import signal, SIGPIPE, SIG_DFL
-from sqlalchemy import or_, and_
-from requests.exceptions import HTTPError
-from sqlalchemy.exc import InvalidRequestError
-# "too many connections" and  "duplicate key value violates unique constraint"
-from psycopg2 import OperationalError, IntegrityError
 
-# makes python ignore sigpipe? prevents broken pipe exception when client
+# makes python ignore sigpipe and prevents broken pipe exception when client
 #  aborts an SSE stream
 signal(SIGPIPE, SIG_DFL)
 
@@ -488,33 +482,6 @@ def retrieve_list():
     }
 
     return jsonify(data)
-
-
-# @app.route('/purge_old_activities')
-# @login_required
-# def old():
-#     if current_user.strava_id not in app.config["ADMIN"]:
-#         return jsonify({"error": "oops.  Can't do this."})
-#     days = app.config["DB_CACHE_TIMEOUT"]
-#     deleted_count = purge_old_activities(days)
-#     msg = ("purged {} activities over {} days old.  {} remaining."
-#            .format(deleted_count, days, Activity.query.count()))
-#     return msg
-
-
-# def purge_old_activities(days=app.config["DB_CACHE_TIMEOUT"]):
-#     now = datetime.utcnow()
-#     past_time = now - timedelta(days=days)
-#     old_activities = (
-#         Activity.query.filter(or_(Activity.dt_last_accessed < past_time,
-#                                   and_(Activity.dt_cached < past_time,
-#                                        Activity.dt_last_accessed == None)))
-#     )
-#     count = old_activities.delete()
-#     db.session.commit()
-#     msg = "purged {} activities over {} days old.".format(count, days)
-#     app.logger.info(msg)
-#     return count
 
 
 @app.route('/users')
