@@ -372,59 +372,62 @@ def getdata(username):
     client = user.client()
     # jobs = []
 
-    def import_streams(activity_id):
-        stream_names = ['time', 'latlng', 'altitude']
-
+    def import_streams(activity_id, stream_names):
+        streams_to_import = list(stream_names)
+        if ("polyline" in stream_names):
+            streams_to_import.append("latlng")
+            streams_to_import.remove("polyline")
         try:
             streams = client.get_activity_streams(activity_id,
-                                                  types=stream_names)
+                                                  types=streams_to_import)
         except Exception as e:
             app.logger.debug(e)
             return {"error": str(e)}
 
         activity_streams = {name: streams[name].data for name in streams}
 
-        if "latlng" in activity_streams:
+        if ("polyline" in stream_names) and ("latlng" in activity_streams):
             activity_streams["polyline"] = polyline.encode(
                 activity_streams['latlng'])
+            if ("latlng" not in stream_names):
+                del activity_streams["latlng"]
+
         return activity_streams
 
     def sse_iterator():
-        relevant_streams = ["polyline"]
+        streams_out = ["polyline"]
+        streams_to_cache = ["time", "polyline"]
 
         for activity in user.activity_summaries(**options):
             # app.logger.debug("activity {}".format(activity))
-            if ("msg" in activity) or ("error" in activity) or ("stop_rendering" in activity):
+            if (("msg" in activity) or
+                ("error" in activity) or
+                    ("stop_rendering" in activity)):
                 yield sse_out(activity)
 
             if activity.get("summary_polyline"):
                 activity["path_color"] = path_color(activity["type"])
 
-                if hires and ("polyline" not in activity):
-                    data = Activity.get_data(activity["id"], relevant_streams)
+                if hires:
+                    key = "A:{}".format(activity["id"])
+                    stream_data = cache.get(key)
 
-                    if data:
-                        data.update(activity)
-                        # app.logger.debug("sending {}".format(data))
-                        yield sse_out(data)
-
-                    else:
+                    if not stream_data:
                         yield sse_out({
                             "msg": "importing [{id}] {name}..."
                             .format(**activity)
                         })
 
-                        activity_data = import_streams(activity["id"])
-                        activity_data.update(activity)
-                        A = Activity.new(**activity_data)
-                        A = db.session.merge(A)
-                        A.user = user
-                        db.session.add(A)
-                        db.session.commit()  # getting IntegrityError here sometimes
+                        stream_data = import_streams(activity["id"],
+                                                     streams_to_cache)
+                        if "error" not in stream_data:
+                            cache.set(key, stream_data,
+                                      app.config["CACHE_ACTIVITIES_TIMEOUT"])
 
-                        data = A.data(relevant_streams)
-                        data.update(activity)
-                        yield sse_out(data)
+                    data = {s: stream_data[s] for s in streams_out}
+                    data.update(activity)
+                    # app.logger.debug("sending {}".format(data))
+                    yield sse_out(data)
                 else:
                     yield sse_out(activity)
 
