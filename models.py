@@ -265,7 +265,7 @@ class User(UserMixin, db.Model):
 
     def activity_summaries(self, activity_ids=None, **kwargs):
         if activity_ids:
-            return []
+            return [{"error": "still working on this feature!!! :p"}]
         else:
             return self.index(**kwargs)
 
