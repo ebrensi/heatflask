@@ -392,38 +392,41 @@ def getdata(username):
         streams_out = ["polyline"]
         streams_to_cache = ["time", "polyline"]
 
-        for activity in user.activity_summaries(**options):
-            # app.logger.debug("activity {}".format(activity))
-            if (("msg" in activity) or
-                ("error" in activity) or
-                    ("stop_rendering" in activity)):
-                yield sse_out(activity)
-
-            if activity.get("summary_polyline"):
-                activity["path_color"] = path_color(activity["type"])
-
-                if hires:
-                    key = "A:{}".format(activity["id"])
-                    stream_data = cache.get(key)
-
-                    if not stream_data:
-                        yield sse_out({
-                            "msg": "importing [{id}] {name}..."
-                            .format(**activity)
-                        })
-
-                        stream_data = import_streams(activity["id"],
-                                                     streams_to_cache)
-                        if "error" not in stream_data:
-                            cache.set(key, stream_data,
-                                      app.config["CACHE_ACTIVITIES_TIMEOUT"])
-
-                    data = {s: stream_data[s] for s in streams_out}
-                    data.update(activity)
-                    # app.logger.debug("sending {}".format(data))
-                    yield sse_out(data)
-                else:
+        try:
+            for activity in user.activity_summaries(**options):
+                # app.logger.debug("activity {}".format(activity))
+                if (("msg" in activity) or
+                    ("error" in activity) or
+                        ("stop_rendering" in activity)):
                     yield sse_out(activity)
+
+                if activity.get("summary_polyline"):
+                    activity["path_color"] = path_color(activity["type"])
+
+                    if hires:
+                        key = "A:{}".format(activity["id"])
+                        stream_data = cache.get(key)
+
+                        if not stream_data:
+                            yield sse_out({
+                                "msg": "importing [{id}] {name}..."
+                                .format(**activity)
+                            })
+
+                            stream_data = import_streams(activity["id"],
+                                                         streams_to_cache)
+                            if "error" not in stream_data:
+                                cache.set(key, stream_data,
+                                          app.config["CACHE_ACTIVITIES_TIMEOUT"])
+
+                        data = {s: stream_data[s] for s in streams_out}
+                        data.update(activity)
+                        # app.logger.debug("sending {}".format(data))
+                        yield sse_out(data)
+                    else:
+                        yield sse_out(activity)
+        except Exception as e:
+            yield sse_out({"error": str(e)})
 
         yield sse_out()
 
