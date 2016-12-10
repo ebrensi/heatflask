@@ -492,7 +492,6 @@ def retrieve_list():
 def users():
     info = {
         user.strava_id: {
-            "cached": user.activities.count(),
             "dt_last_active": user.dt_last_active,
             "app_activity_count": user.app_activity_count,
             "username": user.username
