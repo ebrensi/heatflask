@@ -42,8 +42,8 @@ class User(UserMixin, db.Model):
     dt_last_active = db.Column(pg.TIMESTAMP)
     app_activity_count = db.Column(db.Integer, default=0)
 
-    strava_client = None
-    activity_index = None
+    Sstrava_client = None
+    # activity_index = None
     dt_last_indexed = None
 
     def describe(self):
@@ -164,7 +164,7 @@ class User(UserMixin, db.Model):
                         .format(self.strava_id)
                     }]
                 else:
-                    self.dt_last_indexed, self.activity_index = ind
+                    self.dt_last_indexed, activity_index = ind
 
         if self.dt_last_indexed:
             elapsed = (datetime.utcnow() - self.dt_last_indexed).total_seconds()
@@ -172,9 +172,9 @@ class User(UserMixin, db.Model):
 
             if not needs_update:
                 if limit:
-                    df = self.activity_index.head(limit)
+                    df = activity_index.head(limit)
                 else:
-                    df = self.activity_index
+                    df = activity_index
                     if after:
                         df = df[:after]
                     if before:
@@ -183,11 +183,11 @@ class User(UserMixin, db.Model):
                 df.beginTimestamp = df.beginTimestamp.astype(str)
                 return df.to_dict("records")
             else:
-                latest = self.activity_index.index[0]
+                latest = activity_index.index[0]
                 app.logger.info("updating activity index for {}"
                                 .format(self.strava_id))
 
-                already_got = set(self.activity_index.id)
+                already_got = set(activity_index.id)
                 activities_list = [strava2dict(
                     a) for a in self.client().get_activities(after=latest)
                     if a.id not in already_got]
@@ -196,13 +196,13 @@ class User(UserMixin, db.Model):
                     df = pd.DataFrame(activities_list).set_index(
                         "beginTimestamp")
 
-                    self.activity_index = (
-                        df.append(self.activity_index).sort_index()
+                    activity_index = (
+                        df.append(activity_index).sort_index()
                     )
 
                 self.dt_last_indexed = datetime.utcnow()
                 cache.set(index_key,
-                          (self.dt_last_indexed, self.activity_index),
+                          (self.dt_last_indexed, activity_index),
                           CACHE_INDEX_TIMEOUT)
 
                 return self.index(limit=limit, after=after, before=before)
@@ -240,13 +240,13 @@ class User(UserMixin, db.Model):
             Q.put({"msg": "done indexing {} activities.".format(count)})
             Q.put(StopIteration)
 
-            self.activity_index = (pd.DataFrame(activities_list)
-                                   .set_index("beginTimestamp")
-                                   .sort_index(ascending=False))
+            activity_index = (pd.DataFrame(activities_list)
+                              .set_index("beginTimestamp")
+                              .sort_index(ascending=False))
             app.logger.debug("done with indexing for {}".format(self))
             self.dt_last_indexed = datetime.utcnow()
             cache.set(index_key,
-                      (self.dt_last_indexed, self.activity_index),
+                      (self.dt_last_indexed, activity_index),
                       CACHE_INDEX_TIMEOUT)
 
         P.apply_async(async_job, [limit, after, before])

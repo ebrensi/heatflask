@@ -20,9 +20,6 @@ class Config(object):
     # Number of concurrent activity import requests
     CONCURRENCY = 3
 
-    # Settings for database (long) cache
-    DB_CACHE_TIMEOUT = 7   # 7 days
-
     # Settings for fast-cache
     CACHE_REDIS_URL = os.environ.get('REDIS_URL')
 
@@ -39,7 +36,7 @@ class Config(object):
     CACHE_USERS_TIMEOUT = 7 * 24 * 60 * 60  # 7 days
     SECRET_KEY = "pB\xeax\x9cJ\xd6\x81\xed\xd7\xf9\xd0\x99o\xad\rM\x92\xb1\x8b{7\x02r"
 
-    # Flask-Cache settings
+    # Flask-Cache (defaul) settings
     CACHE_TYPE = "null"
 
     DATE_RANGE_PRESETS = ["2", "7", "30", "60", "180", "365"]
