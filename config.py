@@ -23,7 +23,7 @@ class Config(object):
     # Settings for fast-cache
     CACHE_REDIS_URL = os.environ.get('REDIS_URL')
 
-    # How long (seconds) we hold activity summary data
+    # How long (seconds) we hold activity index before rebuilding it
     CACHE_INDEX_TIMEOUT = 7 * 24 * 60 * 60   # 7 days
 
     # How long before a user's index is outated and needs an update
@@ -39,8 +39,6 @@ class Config(object):
 
     # Flask-Cache (defaul) settings
     CACHE_TYPE = "null"
-
-    DATE_RANGE_PRESETS = ["2", "7", "30", "60", "180", "365"]
 
     # Strava stuff
     STRAVA_CLIENT_ID = os.environ.get("STRAVA_CLIENT_ID")
