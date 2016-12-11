@@ -42,7 +42,7 @@ class User(UserMixin, db.Model):
     dt_last_active = db.Column(pg.TIMESTAMP)
     app_activity_count = db.Column(db.Integer, default=0)
 
-    Sstrava_client = None
+    strava_client = None
     # activity_index = None
     dt_last_indexed = None
 
