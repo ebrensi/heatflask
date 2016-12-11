@@ -155,19 +155,18 @@ class User(UserMixin, db.Model):
 
         index_key = "I:{}".format(self.strava_id)
 
-        if not self.dt_last_indexed:
-            ind = cache.get(index_key)
-            if ind:
-                if ind == "indexing":
-                    return [{
-                        "error": "Indexing activities for user {}...please try again in a few seconds."
-                        .format(self.strava_id)
-                    }]
-                else:
-                    self.dt_last_indexed, activity_index = ind
+        ind = cache.get(index_key)
+        if ind:
+            if ind == "indexing":
+                return [{
+                    "error": "Indexing activities for user {}...please try again in a few seconds."
+                    .format(self.strava_id)
+                }]
 
-        if self.dt_last_indexed:
-            elapsed = (datetime.utcnow() - self.dt_last_indexed).total_seconds()
+            dt_last_indexed, activity_index = ind
+
+            elapsed = (datetime.utcnow() -
+                       dt_last_indexed).total_seconds()
             needs_update = elapsed > CACHE_INDEX_UPDATE_TIMEOUT
 
             if not needs_update:
@@ -200,9 +199,9 @@ class User(UserMixin, db.Model):
                         df.append(activity_index).sort_index()
                     )
 
-                self.dt_last_indexed = datetime.utcnow()
+                dt_last_indexed = datetime.utcnow()
                 cache.set(index_key,
-                          (self.dt_last_indexed, activity_index),
+                          (dt_last_indexed, activity_index),
                           CACHE_INDEX_TIMEOUT)
 
                 return self.index(limit=limit, after=after, before=before)
@@ -244,9 +243,9 @@ class User(UserMixin, db.Model):
                               .set_index("beginTimestamp")
                               .sort_index(ascending=False))
             app.logger.debug("done with indexing for {}".format(self))
-            self.dt_last_indexed = datetime.utcnow()
+            dt_last_indexed = datetime.utcnow()
             cache.set(index_key,
-                      (self.dt_last_indexed, activity_index),
+                      (dt_last_indexed, activity_index),
                       CACHE_INDEX_TIMEOUT)
 
         P.apply_async(async_job, [limit, after, before])
