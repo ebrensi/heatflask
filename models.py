@@ -167,21 +167,9 @@ class User(UserMixin, db.Model):
 
             elapsed = (datetime.utcnow() -
                        dt_last_indexed).total_seconds()
-            needs_update = elapsed > CACHE_INDEX_UPDATE_TIMEOUT
 
-            if not needs_update:
-                if limit:
-                    df = activity_index.head(limit)
-                else:
-                    df = activity_index
-                    if after:
-                        df = df[:after]
-                    if before:
-                        df = df[before:]
-                df = df.reset_index()
-                df.beginTimestamp = df.beginTimestamp.astype(str)
-                return df.to_dict("records")
-            else:
+            # update the index if we need to
+            if elapsed > CACHE_INDEX_UPDATE_TIMEOUT:
                 latest = activity_index.index[0]
                 app.logger.info("updating activity index for {}"
                                 .format(self.strava_id))
@@ -196,7 +184,9 @@ class User(UserMixin, db.Model):
                         "beginTimestamp")
 
                     activity_index = (
-                        df.append(activity_index).sort_index()
+                        df.append(activity_index)
+                        .drop_duplicates()
+                        .sort_index()
                     )
 
                 dt_last_indexed = datetime.utcnow()
@@ -204,7 +194,17 @@ class User(UserMixin, db.Model):
                           (dt_last_indexed, activity_index),
                           CACHE_INDEX_TIMEOUT)
 
-                return self.index(limit=limit, after=after, before=before)
+            if limit:
+                df = activity_index.head(limit)
+            else:
+                df = activity_index
+                if after:
+                    df = df[:after]
+                if before:
+                    df = df[before:]
+            df = df.reset_index()
+            df.beginTimestamp = df.beginTimestamp.astype(str)
+            return df.to_dict("records")
 
         # If we got here then the index hasn't been created yet
         Q = Queue()
