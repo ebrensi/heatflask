@@ -30,10 +30,11 @@ class Config(object):
     CACHE_INDEX_UPDATE_TIMEOUT = 10 * 60  # 10 minutes
 
     # How long we hold onto hires activities
-    CACHE_ACTIVITIES_TIMEOUT = 7 * 24 * 60 * 60  # 7 days
+    CACHE_ACTIVITIES_TIMEOUT = 1 * 24 * 60 * 60  # 1 days
 
     # How long we hold a User object in memory
-    CACHE_USERS_TIMEOUT = 7 * 24 * 60 * 60  # 7 days
+    CACHE_USERS_TIMEOUT = 1 * 24 * 60 * 60  # 1 days
+
     SECRET_KEY = "pB\xeax\x9cJ\xd6\x81\xed\xd7\xf9\xd0\x99o\xad\rM\x92\xb1\x8b{7\x02r"
 
     # Flask-Cache (defaul) settings
