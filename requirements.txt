@@ -21,6 +21,7 @@ Jinja2==2.8
 kombu==3.0.37
 Mako==1.0.4
 MarkupSafe==0.23
+msgpack-python==0.4.8
 numpy==1.11.2
 pandas==0.19.1
 PasteDeploy==1.5.2
