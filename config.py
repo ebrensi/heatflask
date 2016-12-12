@@ -30,7 +30,7 @@ class Config(object):
     CACHE_INDEX_UPDATE_TIMEOUT = 10 * 60  # 10 minutes
 
     # How long we hold onto hires activities
-    CACHE_ACTIVITIES_TIMEOUT = 1 * 24 * 60 * 60  # 1 days
+    CACHE_ACTIVITIES_TIMEOUT = 2 * 60 * 60  # 2 hours
 
     # How long we hold a User object in memory
     CACHE_USERS_TIMEOUT = 1 * 24 * 60 * 60  # 1 days
