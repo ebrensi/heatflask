@@ -211,7 +211,7 @@ class User(UserMixin, db.Model):
         P = Pool()
 
         def async_job(limit=None, after=None, before=None):
-            # Indicate to another process that we are currently indexing
+            # Indicate to other processes that we are currently indexing
             #  This should not take any longer than 60 seconds
             cache.set(index_key, "indexing", 60)
 
