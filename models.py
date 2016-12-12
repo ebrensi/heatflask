@@ -163,8 +163,7 @@ class User(UserMixin, db.Model):
                     .format(self.strava_id)
                 }]
 
-            dt_last_indexed, pack = ind
-            activity_index = pd.read_msgpack(pack)
+            dt_last_indexed, activity_index = ind
 
             elapsed = (datetime.utcnow() -
                        dt_last_indexed).total_seconds()
@@ -192,7 +191,7 @@ class User(UserMixin, db.Model):
 
                 dt_last_indexed = datetime.utcnow()
                 cache.set(index_key,
-                          (dt_last_indexed, activity_index.to_msgpack()),
+                          (dt_last_indexed, activity_index),
                           CACHE_INDEX_TIMEOUT)
 
             if limit:
@@ -246,7 +245,7 @@ class User(UserMixin, db.Model):
             app.logger.debug("done with indexing for {}".format(self))
             dt_last_indexed = datetime.utcnow()
             cache.set(index_key,
-                      (dt_last_indexed, activity_index.to_msgpack()),
+                      (dt_last_indexed, activity_index),
                       CACHE_INDEX_TIMEOUT)
 
         P.apply_async(async_job, [limit, after, before])
