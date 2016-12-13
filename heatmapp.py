@@ -423,6 +423,8 @@ def getdata(username):
                                 cache.set(key,
                                           packed_data,
                                           app.config["CACHE_ACTIVITIES_TIMEOUT"])
+                                app.logger.debug(
+                                    "cached {}, size = {}".format(key, len(packed_data)))
 
                         data = {s: stream_data[s] for s in streams_out}
                         data.update(activity)
