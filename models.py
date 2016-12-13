@@ -245,7 +245,7 @@ class User(UserMixin, db.Model):
             app.logger.debug("done with indexing for {}".format(self))
             dt_last_indexed = datetime.utcnow()
             cache.set(index_key,
-                      (dt_last_indexed, activity_index),
+                      (dt_last_indexed, activity_index.to_msgpack()),
                       CACHE_INDEX_TIMEOUT)
 
         P.apply_async(async_job, [limit, after, before])
