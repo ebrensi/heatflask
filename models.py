@@ -144,7 +144,6 @@ class User(UserMixin, db.Model):
         def strava2dict(a):
             return {
                 "id": a.id,
-                "athlete_id": a.athlete.id,
                 "name": a.name,
                 "type": a.type,
                 "summary_polyline": a.map.summary_polyline,
@@ -219,22 +218,23 @@ class User(UserMixin, db.Model):
             count = 1
             for a in self.client().get_activities():
                 d = strava2dict(a)
-                activities_list.append(d)
-                if (limit or
-                    (after and (d["beginTimestamp"] >= after)) or
-                        (before and (d["beginTimestamp"] <= before))):
-                    d2 = dict(d)
-                    d2["beginTimestamp"] = str(d2["beginTimestamp"])
-                    Q.put(d2)
-                    app.logger.info("put {} on queue".format(d2["id"]))
+                if d.get("summary_polyline"):
+                    activities_list.append(d)
+                    if (limit or
+                        (after and (d["beginTimestamp"] >= after)) or
+                            (before and (d["beginTimestamp"] <= before))):
+                        d2 = dict(d)
+                        d2["beginTimestamp"] = str(d2["beginTimestamp"])
+                        Q.put(d2)
+                        app.logger.info("put {} on queue".format(d2["id"]))
 
-                    if limit:
-                        limit -= 1
-                        if not limit:
-                            Q.put({"stop_rendering": "1"})
-                else:
-                    Q.put({"msg": "indexing...{} activities".format(count)})
-                count += 1
+                        if limit:
+                            limit -= 1
+                            if not limit:
+                                Q.put({"stop_rendering": "1"})
+                    else:
+                        Q.put({"msg": "indexing...{} activities".format(count)})
+                    count += 1
 
             Q.put({"msg": "done indexing {} activities.".format(count)})
             Q.put(StopIteration)
@@ -244,9 +244,15 @@ class User(UserMixin, db.Model):
                               .sort_index(ascending=False))
             app.logger.debug("done with indexing for {}".format(self))
             dt_last_indexed = datetime.utcnow()
+            packed = activity_index.to_msgpack()
             cache.set(index_key,
-                      (dt_last_indexed, activity_index.to_msgpack()),
+                      (dt_last_indexed, packed),
                       CACHE_INDEX_TIMEOUT)
+            # app.logger.info("cached {}, size={}".format(index_key,
+            #                                             len(packed)))
+            # with open("index.txt", "w") as file:
+            #     file.write(packed)
+            # activity_index.to_csv("index.csv", encoding="utf-8")
 
         P.apply_async(async_job, [limit, after, before])
         return Q
