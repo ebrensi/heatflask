@@ -163,8 +163,8 @@ class User(UserMixin, db.Model):
                     .format(self.strava_id)
                 }]
 
-            dt_last_indexed, activity_index = ind
-
+            dt_last_indexed, packed = ind
+            activity_index = pd.read_msgpack(packed)
             elapsed = (datetime.utcnow() -
                        dt_last_indexed).total_seconds()
 
@@ -186,12 +186,12 @@ class User(UserMixin, db.Model):
                     activity_index = (
                         df.append(activity_index)
                         .drop_duplicates()
-                        .sort_index()
+                        .sort_index(ascending=False)
                     )
 
                 dt_last_indexed = datetime.utcnow()
                 cache.set(index_key,
-                          (dt_last_indexed, activity_index),
+                          (dt_last_indexed, activity_index.to_msgpack()),
                           CACHE_INDEX_TIMEOUT)
 
             if limit:
