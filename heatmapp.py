@@ -419,7 +419,9 @@ def getdata(username):
                             stream_data = import_streams(activity["id"],
                                                          streams_to_cache)
                             if "error" not in stream_data:
-                                cache.set(key, msgpack.packb(stream_data),
+                                packed_data = msgpack.packb(stream_data)
+                                cache.set(key,
+                                          packed_data,
                                           app.config["CACHE_ACTIVITIES_TIMEOUT"])
 
                         data = {s: stream_data[s] for s in streams_out}
