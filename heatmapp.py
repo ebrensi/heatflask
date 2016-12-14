@@ -2,6 +2,7 @@
 from __future__ import unicode_literals
 
 import polyline
+import gevent
 # from gevent.pool import Pool
 from flask import Flask, Response, render_template, request, redirect, \
     jsonify, url_for, flash, send_from_directory
@@ -20,6 +21,8 @@ import flask_assets
 from flask_analytics import Analytics
 import flask_caching
 from signal import signal, SIGPIPE, SIG_DFL
+from gevent import monkey
+monkey.patch_all(httplib=True)  # may not be necessary
 
 # makes python ignore sigpipe and prevents broken pipe exception when client
 #  aborts an SSE stream
@@ -391,7 +394,8 @@ def getdata(username):
 
     def sse_iterator():
         streams_out = ["polyline"]
-        streams_to_cache = ["time", "polyline"]
+        # streams_to_cache = ["time", "polyline"]
+        streams_to_cache = ["polyline"]
 
         try:
             for activity in user.activity_summaries(**options):
@@ -430,15 +434,16 @@ def getdata(username):
                         data.update(activity)
                         # app.logger.debug("sending {}".format(data))
                         yield sse_out(data)
+                        gevent.sleep(0)
                     else:
                         yield sse_out(activity)
+                        gevent.sleep(0)
         except Exception as e:
             yield sse_out({"error": str(e)})
 
         yield sse_out()
 
     return Response(sse_iterator(), mimetype='text/event-stream')
-
 
 # creates a SSE stream of current.user's activities, using the Strava API
 # arguments
@@ -515,64 +520,6 @@ def clear_cache():
         return "cache cleared"
     else:
         return "sorry."
-
-
-#  Webhook Subscription stuff.  Only admin users can access this
-@app.route('/subscription/<operation>')
-@login_required
-def subscription(operation):
-    if current_user.strava_id not in app.config["ADMIN"]:
-        return jsonify({"error": "oops.  Can't do this."})
-
-    client = stravalib.Client()
-    credentials = {
-        "client_id": app.config["STRAVA_CLIENT_ID"],
-        "client_secret": app.config["STRAVA_CLIENT_SECRET"]
-    }
-    if operation == "create":
-        try:
-            sub = client.create_subscription(
-                callback_url=url_for("webhook_callback", _external=True),
-                **credentials
-            )
-        except Exception as e:
-            return jsonify({"error": str(e)})
-
-        return jsonify({"created": str(sub)})
-
-    elif operation == "list":
-        subs = client.list_subscriptions(**credentials)
-        return jsonify([str(sub) for sub in subs])
-
-    elif operation == "delete":
-        try:
-            subscription_id = int(request.args.get("id"))
-        except:
-            response = {"error": "bad or missing subscription id"}
-        else:
-            try:
-                # if successful this will be null
-                response = client.delete_subscription(subscription_id,
-                                                      **credentials)
-            except Exception as e:
-                response = {"error": str(e)}
-
-        return jsonify(response)
-
-
-@app.route('/webhook_callback', methods=["GET", "POST"])
-def webhook_callback():
-    client = stravalib.Client()
-
-    if request.method == 'GET':
-        return client.handle_subscription_callback(request.args)
-
-    elif request.method == 'POST':
-        update_raw = request.get_json(force=True)
-        app.logger.info("subscription: ".format(update_raw))
-        update = client.handle_subscription_update(update_raw)
-        # handle_update.delay(update)
-        return "success"
 
 
 # python heatmapp.py works but you really should use `flask run`

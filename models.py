@@ -6,6 +6,7 @@ from datetime import datetime
 import stravalib
 
 import pandas as pd
+import gevent
 from gevent.queue import Queue
 from gevent.pool import Pool
 from exceptions import StopIteration
@@ -234,7 +235,9 @@ class User(UserMixin, db.Model):
                                 Q.put({"stop_rendering": "1"})
                     else:
                         Q.put({"msg": "indexing...{} activities".format(count)})
+
                     count += 1
+                    gevent.sleep(0)
 
             Q.put({"msg": "done indexing {} activities.".format(count)})
             Q.put(StopIteration)
@@ -248,8 +251,8 @@ class User(UserMixin, db.Model):
             cache.set(index_key,
                       (dt_last_indexed, packed),
                       CACHE_INDEX_TIMEOUT)
-            # app.logger.info("cached {}, size={}".format(index_key,
-            #                                             len(packed)))
+            app.logger.info("cached {}, size={}".format(index_key,
+                                                        len(packed)))
             # with open("index.txt", "w") as file:
             #     file.write(packed)
             # activity_index.to_csv("index.csv", encoding="utf-8")
