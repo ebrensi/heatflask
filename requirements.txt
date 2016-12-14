@@ -2,6 +2,7 @@ amqp==2.1.1
 anyjson==0.3.3
 arrow==0.10.0
 billiard==3.5.0.2
+blosc==1.4.4
 click==6.6
 cssmin==0.2.0
 Flask==0.11.1
@@ -21,6 +22,7 @@ Jinja2==2.8
 kombu==3.0.37
 Mako==1.0.4
 MarkupSafe==0.23
+msgpack-numpy==0.3.7
 msgpack-python==0.4.8
 numpy==1.11.2
 pandas==0.19.1

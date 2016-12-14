@@ -191,7 +191,8 @@ class User(UserMixin, db.Model):
 
                 dt_last_indexed = datetime.utcnow()
                 cache.set(index_key,
-                          (dt_last_indexed, activity_index.to_msgpack()),
+                          (dt_last_indexed,
+                           activity_index.to_msgpack(compress='blosc')),
                           CACHE_INDEX_TIMEOUT)
 
             if limit:
@@ -245,17 +246,22 @@ class User(UserMixin, db.Model):
             activity_index = (pd.DataFrame(activities_list)
                               .set_index("beginTimestamp")
                               .sort_index(ascending=False))
+            activity_index['id'] = activity_index['id'].astype("uint32")
+            activity_index['elapsed_time'] = activity_index[
+                'elapsed_time'].astype("uint32")
+            activity_index['total_distance'] = activity_index[
+                'total_distance'].astype("float32")
+
             app.logger.debug("done with indexing for {}".format(self))
             dt_last_indexed = datetime.utcnow()
-            packed = activity_index.to_msgpack()
+            packed = activity_index.to_msgpack(compress='blosc')
             cache.set(index_key,
                       (dt_last_indexed, packed),
                       CACHE_INDEX_TIMEOUT)
             app.logger.info("cached {}, size={}".format(index_key,
                                                         len(packed)))
-            # with open("index.txt", "w") as file:
-            #     file.write(packed)
-            # activity_index.to_csv("index.csv", encoding="utf-8")
+
+            # activity_index.to_msgpack("index.msg", compress='blosc')
 
         P.apply_async(async_job, [limit, after, before])
         return Q

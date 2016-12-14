@@ -374,6 +374,7 @@ def getdata(username):
             streams_to_import.remove("polyline")
         try:
             streams = client.get_activity_streams(activity_id,
+                                                  series_type='time',
                                                   types=streams_to_import)
         except Exception as e:
             app.logger.debug(e)
@@ -384,10 +385,8 @@ def getdata(username):
         if ("polyline" in stream_names) and ("latlng" in activity_streams):
             activity_streams["polyline"] = polyline.encode(
                 activity_streams['latlng'])
-            if ("latlng" not in stream_names):
-                del activity_streams["latlng"]
 
-        return activity_streams
+        return {s: activity_streams[s] for s in stream_names}
 
     def sse_iterator():
         streams_out = ["polyline"]
