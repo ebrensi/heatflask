@@ -22,7 +22,7 @@ from flask_analytics import Analytics
 import flask_caching
 from signal import signal, SIGPIPE, SIG_DFL
 from gevent import monkey
-monkey.patch_all(httplib=True)  # may not be necessary
+monkey.patch_all()  # may not be necessary
 
 # makes python ignore sigpipe and prevents broken pipe exception when client
 #  aborts an SSE stream
@@ -447,6 +447,8 @@ def getdata(username):
 
 # creates a SSE stream of current.user's activities, using the Strava API
 # arguments
+
+
 @app.route('/activities_sse')
 @login_required
 def activity_stream():
