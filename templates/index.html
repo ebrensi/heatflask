@@ -547,6 +547,9 @@
                 if (appState.date2 && (appState.date2 != "now")) params.date2 = appState.date2;
             }
 
+            if ($("#hoverinfo").is(':checked'))
+                params.hover = "1";
+
             if($("#autozoom").is(':checked')) {
                 params.autozoom = "1";
             } else {
@@ -632,6 +635,10 @@
 
             {% if autozoom  %}
             $("#autozoom").prop('checked', true);
+            {% endif %}
+
+            {% if hover  %}
+            $("#hoverinfo").prop('checked', true);
             {% endif %}
 
             {% if ids %}

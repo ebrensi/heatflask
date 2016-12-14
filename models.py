@@ -144,7 +144,7 @@ class User(UserMixin, db.Model):
         return [{attr: getattr(user, attr) for attr in attrs}
                 for user in cls.query]
 
-    def index(self, limit=None,  after=None, before=None):
+    def index(self, activity_ids=None, limit=None,  after=None, before=None):
 
         def strava2dict(a):
             return {
@@ -206,14 +206,17 @@ class User(UserMixin, db.Model):
                            activity_index.to_msgpack(compress='blosc')),
                           CACHE_INDEX_TIMEOUT)
 
-            if limit:
-                df = activity_index.head(limit)
+            if activity_ids:
+                df = activity_index[activity_index["id"].isin(activity_ids)]
             else:
-                df = activity_index
-                if after:
-                    df = df[:after]
-                if before:
-                    df = df[before:]
+                if limit:
+                    df = activity_index.head(limit)
+                else:
+                    df = activity_index
+                    if after:
+                        df = df[:after]
+                    if before:
+                        df = df[before:]
             df = df.reset_index()
             df.beginTimestamp = df.beginTimestamp.astype(str)
             return df.to_dict("records")
@@ -293,11 +296,8 @@ class User(UserMixin, db.Model):
                 "error retrieving activity '{}': {}".format(a_id, e))
         return activity
 
-    def activity_summaries(self, activity_ids=None, **kwargs):
-        if activity_ids:
-            return [{"error": "still working on this feature!!! :p"}]
-        else:
-            return self.index(**kwargs)
+    def activity_summaries(self, **kwargs):
+        return self.index(**kwargs)
 
 
 # Create tables if they don't exist
