@@ -13,7 +13,7 @@ from exceptions import StopIteration
 
 from heatmapp import app, cache
 
-import os.path
+import os
 
 
 db = SQLAlchemy(app)
@@ -23,7 +23,7 @@ CACHE_INDEX_TIMEOUT = app.config["CACHE_INDEX_TIMEOUT"]
 CACHE_INDEX_UPDATE_TIMEOUT = app.config["CACHE_INDEX_UPDATE_TIMEOUT"]
 CACHE_ACTIVITIES_TIMEOUT = app.config["CACHE_ACTIVITIES_TIMEOUT"]
 CACHE_DATA_TIMEOUT = app.config["CACHE_ACTIVITIES_TIMEOUT"]
-LOCAL = True
+LOCAL = os.environ.get("APP_SETTINGS") == "config.DevelopmentConfig"
 
 
 def inspector(obj):
