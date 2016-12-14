@@ -395,8 +395,16 @@ def getdata(username):
         # streams_to_cache = ["time", "polyline"]
         streams_to_cache = ["polyline"]
 
+        activity_data = user.activity_summaries(**options)
+        if isinstance(activity_data, list):
+            total = len(activity_data)
+        else:
+            total = "?"
+
+        count = 0
         try:
-            for activity in user.activity_summaries(**options):
+            for activity in activity_data:
+                count += 1
                 # app.logger.debug("activity {}".format(activity))
                 if (("msg" in activity) or
                     ("error" in activity) or
@@ -413,10 +421,16 @@ def getdata(username):
                         if stream_data:
                             stream_data = msgpack.unpackb(stream_data)
                         else:
-                            yield sse_out({
-                                "msg": "importing [{id}] {name}..."
-                                .format(**activity)
-                            })
+                            msg = (
+                                "importing {0}/{1}..."
+                                .format(
+                                    count,
+                                    total,
+                                    # activity["beginTimestamp"],
+                                    # activity["name"]
+                                )
+                            )
+                            yield sse_out({"msg": msg})
 
                             stream_data = import_streams(activity["id"],
                                                          streams_to_cache)
