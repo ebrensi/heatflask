@@ -13,6 +13,9 @@ from exceptions import StopIteration
 
 from heatmapp import app, cache
 
+import os.path
+
+
 db = SQLAlchemy(app)
 
 CACHE_USERS_TIMEOUT = app.config["CACHE_USERS_TIMEOUT"]
@@ -20,6 +23,7 @@ CACHE_INDEX_TIMEOUT = app.config["CACHE_INDEX_TIMEOUT"]
 CACHE_INDEX_UPDATE_TIMEOUT = app.config["CACHE_INDEX_UPDATE_TIMEOUT"]
 CACHE_ACTIVITIES_TIMEOUT = app.config["CACHE_ACTIVITIES_TIMEOUT"]
 CACHE_DATA_TIMEOUT = app.config["CACHE_ACTIVITIES_TIMEOUT"]
+LOCAL = True
 
 
 def inspector(obj):
@@ -213,6 +217,15 @@ class User(UserMixin, db.Model):
             df = df.reset_index()
             df.beginTimestamp = df.beginTimestamp.astype(str)
             return df.to_dict("records")
+
+        if LOCAL and os.path.isfile("index.msg"):
+            df = pd.read_msgpack("index.msg")
+            dt_last_indexed = datetime.utcnow()
+            packed = df.to_msgpack(compress='blosc')
+            cache.set(index_key,
+                      (dt_last_indexed, packed),
+                      CACHE_INDEX_TIMEOUT)
+            return []
 
         # If we got here then the index hasn't been created yet
         Q = Queue()
