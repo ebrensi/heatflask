@@ -164,7 +164,7 @@ class User(UserMixin, db.Model):
                 }]
 
             dt_last_indexed, packed = ind
-            activity_index = pd.read_msgpack(packed)
+            activity_index = pd.read_msgpack(packed).astype({"type": str})
             elapsed = (datetime.utcnow() -
                        dt_last_indexed).total_seconds()
 
@@ -187,6 +187,7 @@ class User(UserMixin, db.Model):
                         df.append(activity_index)
                         .drop_duplicates()
                         .sort_index(ascending=False)
+                        .astype({"type": "category"})
                     )
 
                 dt_last_indexed = datetime.utcnow()
@@ -245,12 +246,8 @@ class User(UserMixin, db.Model):
 
             activity_index = (pd.DataFrame(activities_list)
                               .set_index("beginTimestamp")
-                              .sort_index(ascending=False))
-            activity_index['id'] = activity_index['id'].astype("uint32")
-            activity_index['elapsed_time'] = activity_index[
-                'elapsed_time'].astype("uint32")
-            activity_index['total_distance'] = activity_index[
-                'total_distance'].astype("float32")
+                              .sort_index(ascending=False)
+                              .astype({"type": "category"}))
 
             app.logger.debug("done with indexing for {}".format(self))
             dt_last_indexed = datetime.utcnow()
