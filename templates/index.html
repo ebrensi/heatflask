@@ -135,6 +135,9 @@
                     <div class="checkbox">
                       <label><input type="checkbox" id="autozoom" value="1">Auto-Zoom on render</label>
                     </div>
+                    <div class="checkbox">
+                      <label><input type="checkbox" id="hoverinfo" value="1">Path details</label>
+                    </div>
 
                 <hr>
                     <div class="data_message"></div>
@@ -481,28 +484,30 @@
                 if (heatpoints) latlngs_flat.push.apply(latlngs_flat, heatpoints);
                 if (flowpoints) {
                     flow = new L.Polyline.AntPath(flowpoints, options);
-                    flow.on('mouseover', function(e) {
-                      //open popup;
-                      let popup = L.popup()
-                        .setLatLng(e.latlng)
-                        .setContent(
-                            `<a href='https://www.strava.com/activities/${A.id}' target='_blank'>${A.id}</a>`+
-                            ` - ${A.type}: ${A.beginTimestamp}<br>${A.name}`
-                            )
-                        .openOn(map);
 
-                       layer = e.target;
-                       layer.setStyle({
-                          color: 'green',
-                          opacity: 1
-                      });
-                    });
+                    if ($("#hoverinfo").is(":checked")) {
+                        flow.on('mouseover', function(e) {
+                          //open popup;
+                          let popup = L.popup()
+                            .setLatLng(e.latlng)
+                            .setContent(
+                                `<a href='https://www.strava.com/activities/${A.id}' target='_blank'>${A.id}</a>`+
+                                ` - ${A.type}: ${A.beginTimestamp}<br>${A.name}`
+                                )
+                            .openOn(map);
 
-                    flow.on("mouseout", function(e) {
-                        layer = e.target;
-                        layer.setStyle(options);
-                    });
+                           layer = e.target;
+                           layer.setStyle({
+                              color: 'green',
+                              opacity: 1
+                          });
+                        });
 
+                        flow.on("mouseout", function(e) {
+                            layer = e.target;
+                            layer.setStyle(options);
+                        });
+                    }
                     FlowLayer.addLayer(flow);
                 }
 
