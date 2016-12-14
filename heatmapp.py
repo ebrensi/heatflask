@@ -5,7 +5,7 @@ import polyline
 import gevent
 # from gevent.pool import Pool
 from flask import Flask, Response, render_template, request, redirect, \
-    jsonify, url_for, flash, send_from_directory
+    jsonify, url_for, flash, send_from_directory, render_template_string
 import flask_compress
 import dateutil.parser
 from datetime import datetime
@@ -24,12 +24,9 @@ from signal import signal, SIGPIPE, SIG_DFL
 from gevent import monkey
 monkey.patch_all()  # may not be necessary
 
-# makes python ignore sigpipe and prevents broken pipe exception when client
-#  aborts an SSE stream
-signal(SIGPIPE, SIG_DFL)
-
 app = Flask(__name__)
 app.config.from_object(os.environ['APP_SETTINGS'])
+
 
 # set up short-term fast caching support
 cache = flask_caching.Cache(app)
@@ -504,14 +501,35 @@ def retrieve_list():
 @app.route('/users')
 @login_required
 def users():
-    info = {
-        user.strava_id: {
-            "dt_last_active": user.dt_last_active,
-            "app_activity_count": user.app_activity_count,
-            "username": user.username
-        }
-        for user in User.query}
-    return jsonify(info)
+    if current_user.strava_id in app.config["ADMIN"]:
+        info = [
+            {
+                "id": user.strava_id,
+                "dt_last_active": user.dt_last_active,
+                "app_activity_count": user.app_activity_count,
+                "username": user.username
+            }
+            for user in User.query
+        ]
+
+        info = sorted(info, key=lambda(x): x["app_activity_count"] or 0)
+
+        html = """
+        <h1> Registered Users </h1>
+        <table>
+            {%- for d in data %}
+              <tr>
+                <td><a href="{{ url_for('index',username=d['id']) }}" target='_blank'>{{ d['id'] }}</a></td>
+                <td>{{ d["app_activity_count"] }}</td>
+                <td>{{ d["dt_last_active"] }}</td>
+              </tr>
+            {%- endfor %}
+        </table>
+
+        """
+        return render_template_string(html, data=info)
+    else:
+        return "sorry."
 
 
 @app.route('/clear_cache')
@@ -523,6 +541,10 @@ def clear_cache():
     else:
         return "sorry."
 
+
+# makes python ignore sigpipe and prevents broken pipe exception when client
+#  aborts an SSE stream
+signal(SIGPIPE, SIG_DFL)
 
 # python heatmapp.py works but you really should use `flask run`
 if __name__ == '__main__':
