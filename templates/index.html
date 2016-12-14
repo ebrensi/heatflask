@@ -440,7 +440,7 @@
                 var extend_bounds = true;
 
                 if ("error" in A){
-                    msg = "<font color='red'>" + A.error +"</font>";
+                    msg = "<font color='red'>" + A.error +"</font><br>";
                     var winMtds = L.control.window(map, {title: "Oops.", content:msg, visible:true});
                     doneRendering(msg);
                     stopListening();
