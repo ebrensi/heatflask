@@ -276,6 +276,7 @@ def index(username):
     lng = request.args.get("lng")
     zoom = request.args.get("zoom")
     autozoom = request.args.get("autozoom")
+    hover = request.args.get("hover")
 
     if (not lat) or (not lng):
         lat, lng = app.config["MAP_CENTER"]
@@ -295,6 +296,7 @@ def index(username):
                            heatres=heatres,
                            flowres=flowres,
                            autozoom=autozoom,
+                           hover=hover,
                            baselayer=baselayer
                            )
 
