@@ -149,9 +149,15 @@ class User(UserMixin, db.Model):
                 "type": a.type,
                 "summary_polyline": a.map.summary_polyline,
                 "beginTimestamp": a.start_date_local,
-                "total_distance": float(a.distance),
-                "elapsed_time": int(a.elapsed_time.total_seconds()),
+                # "total_distance": float(a.distance),
+                # "elapsed_time": int(a.elapsed_time.total_seconds()),
             }
+        dtypes = {
+            "id": "uint32",
+            "type": "category",
+            # "total_distance": "float32",
+            # "elapsed_time": "uint32"
+        }
 
         index_key = "I:{}".format(self.strava_id)
 
@@ -187,7 +193,7 @@ class User(UserMixin, db.Model):
                         df.append(activity_index)
                         .drop_duplicates()
                         .sort_index(ascending=False)
-                        .astype({"type": "category"})
+                        .astype(dtypes)
                     )
 
                 dt_last_indexed = datetime.utcnow()
@@ -247,7 +253,7 @@ class User(UserMixin, db.Model):
             activity_index = (pd.DataFrame(activities_list)
                               .set_index("beginTimestamp")
                               .sort_index(ascending=False)
-                              .astype({"type": "category"}))
+                              .astype(dtypes))
 
             app.logger.debug("done with indexing for {}".format(self))
             dt_last_indexed = datetime.utcnow()
