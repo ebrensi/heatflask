@@ -437,7 +437,9 @@
 
             if (event.data != 'done'){
                 var A = JSON.parse(event.data);
-                var extend_bounds = true;
+                var extend_bounds = true,
+                    heatpoints = false,
+                    flowpoints = false;
 
                 if ("error" in A){
                     msg = "<font color='red'>" + A.error +"</font><br>";
@@ -464,32 +466,49 @@
                 }
 
                 if (lores && ("summary_polyline" in A) && (A.summary_polyline)) {
-                    var latlngs = L.PolylineUtil.decode(A.summary_polyline);
-                    if (extend_bounds){
-                        bounds.extend(latlngs);
-                        extend_bounds = false;
-                    }
-
-                    if (heatres == "low")
-                        latlngs_flat.push.apply(latlngs_flat, latlngs);
-                    if (flowres == "low")
-                        FlowLayer.addLayer(new L.Polyline.AntPath(latlngs, options));
+                    let latlngs = L.PolylineUtil.decode(A.summary_polyline);
+                    if (heatres == "low") heatpoints = latlngs;
+                    if (flowres == "low") flowpoints = latlngs;
                 }
 
 
                 if (query.hires && ("polyline" in A) && (A.polyline)){
-                    var latlngs = L.PolylineUtil.decode(A.polyline);
-                    if (extend_bounds) {
-                        bounds.extend(latlngs);
-                        extend_bounds = false;
-                    }
-                    if (heatres == "high")
-                        latlngs_flat.push.apply(latlngs_flat, latlngs);
-                    if (flowres == "high")
-                        FlowLayer.addLayer(new L.Polyline.AntPath(latlngs, options));
+                    let latlngs = L.PolylineUtil.decode(A.polyline);
+                    if (heatres == "high") heatpoints = latlngs;
+                    if (flowres == "high") flowpoints = latlngs;
                 }
 
-                if (!extend_bounds) {
+                if (heatpoints) latlngs_flat.push.apply(latlngs_flat, heatpoints);
+                if (flowpoints) {
+                    flow = new L.Polyline.AntPath(flowpoints, options);
+                    flow.on('mouseover', function(e) {
+                      //open popup;
+                      let popup = L.popup()
+                        .setLatLng(e.latlng)
+                        .setContent(
+                            `<a href='https://www.strava.com/activities/${A.id}' target='_blank'>${A.id}</a>`+
+                            ` - ${A.type}: ${A.beginTimestamp}<br>${A.name}`
+                            )
+                        .openOn(map);
+
+                       layer = e.target;
+                       layer.setStyle({
+                          color: 'green',
+                          opacity: 1
+                      });
+                    });
+
+                    flow.on("mouseout", function(e) {
+                        layer = e.target;
+                        layer.setStyle(options);
+                    });
+
+                    FlowLayer.addLayer(flow);
+                }
+
+                points = heatpoints || flowpoints;
+                if (points) {
+                    bounds.extend(points);
                     delete A.summary_polyline;
                     delete A.polyline;
                     delete A.time;
