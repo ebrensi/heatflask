@@ -76,7 +76,8 @@ class User(UserMixin, db.Model):
 
     @classmethod
     def from_access_token(cls, token):
-        client = stravalib.Client(access_token=token)
+        client = stravalib.Client(access_token=token,
+                                  rate_limit_requests=False)
         strava_user = client.get_athlete()
 
         user = cls.get(strava_user.id)
