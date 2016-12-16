@@ -126,6 +126,7 @@ def demo():
                             preset="7",
                             heatres="high",
                             flowres="high",
+                            info=1,
                             autozoom=1,
                             # baselayer=["OpenTopoMap"]
                             )
@@ -264,7 +265,7 @@ def index(username):
                     flash("'{}' is not a valid limit".format(limit))
                     limit = 1
             else:
-                limit = 5
+                limit = 1
 
     flowres = request.args.get("flowres", "")
     heatres = request.args.get("heatres", "")
@@ -276,7 +277,9 @@ def index(username):
     lng = request.args.get("lng")
     zoom = request.args.get("zoom")
     autozoom = request.args.get("autozoom")
-    hover = request.args.get("hover")
+    info = request.args.get("hover") or request.args.get("info")
+    if not info:
+        info = 1
 
     if (not lat) or (not lng):
         lat, lng = app.config["MAP_CENTER"]
@@ -296,7 +299,7 @@ def index(username):
                            heatres=heatres,
                            flowres=flowres,
                            autozoom=autozoom,
-                           hover=hover,
+                           info=info,
                            baselayer=baselayer
                            )
 
