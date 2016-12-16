@@ -147,6 +147,18 @@ class User(UserMixin, db.Model):
         return [{attr: getattr(user, attr) for attr in attrs}
                 for user in cls.query]
 
+    def index_key(self):
+        return "I:{}".format(self.strava_id)
+
+    def indexing(self, status=None):
+        # Indicate to other processes that we are currently indexing
+        #  This should not take any longer than 60 seconds
+        key = "indexing {}".format(self.strava_id)
+        if status is None:
+            return cache.get(key)
+        else:
+            return cache.set(key, status, 60)
+
     def index(self, activity_ids=None, limit=None,  after=None, before=None):
 
         def strava2dict(a):
@@ -166,16 +178,14 @@ class User(UserMixin, db.Model):
             "elapsed_time": "uint32"
         }
 
-        index_key = "I:{}".format(self.strava_id)
-
-        ind = cache.get(index_key)
-        if ind:
-            if ind == "indexing":
-                return [{
-                    "error": "Indexing activities for user {}...please try again in a few seconds."
+        if self.indexing():
+            return [{
+                    "error": "Indexing activities for user {}...<br>Please try again in a few seconds.<br>"
                     .format(self.strava_id)
-                }]
+                    }]
 
+        ind = cache.get(self.index_key())
+        if ind:
             dt_last_indexed, packed = ind
             activity_index = pd.read_msgpack(packed).astype({"type": str})
             elapsed = (datetime.utcnow() -
@@ -204,7 +214,7 @@ class User(UserMixin, db.Model):
                     )
 
                 dt_last_indexed = datetime.utcnow()
-                cache.set(index_key,
+                cache.set(self.index_key(),
                           (dt_last_indexed,
                            activity_index.to_msgpack(compress='blosc')),
                           CACHE_INDEX_TIMEOUT)
@@ -228,7 +238,7 @@ class User(UserMixin, db.Model):
             df = pd.read_msgpack("index.msg")
             dt_last_indexed = datetime.utcnow()
             packed = df.to_msgpack(compress='blosc')
-            cache.set(index_key,
+            cache.set(self.index_key(),
                       (dt_last_indexed, packed),
                       CACHE_INDEX_TIMEOUT)
             return []
@@ -237,10 +247,9 @@ class User(UserMixin, db.Model):
         Q = Queue()
         P = Pool()
 
-        def async_job(limit=None, after=None, before=None):
-            # Indicate to other processes that we are currently indexing
-            #  This should not take any longer than 60 seconds
-            cache.set(index_key, "indexing", 60)
+        def async_job(user, limit=None, after=None, before=None):
+
+            user.indexing(True)
 
             activities_list = []
             count = 1
@@ -277,15 +286,18 @@ class User(UserMixin, db.Model):
             app.logger.debug("done with indexing for {}".format(self))
             dt_last_indexed = datetime.utcnow()
             packed = activity_index.to_msgpack(compress='blosc')
-            cache.set(index_key,
+            cache.set(self.index_key(),
                       (dt_last_indexed, packed),
                       CACHE_INDEX_TIMEOUT)
-            app.logger.info("cached {}, size={}".format(index_key,
+
+            user.indexing(False)
+
+            app.logger.info("cached {}, size={}".format(self.index_key(),
                                                         len(packed)))
 
             # activity_index.to_msgpack("index.msg", compress='blosc')
 
-        P.apply_async(async_job, [limit, after, before])
+        P.apply_async(async_job, [self, limit, after, before])
         return Q
 
     def get_activity(self, a_id):

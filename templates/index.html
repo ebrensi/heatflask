@@ -490,7 +490,7 @@
                            this.bringToFront();
                            this.setStyle({
                                 weight: default_options.weight + 3,
-                                opacity: 0.7
+                                opacity: 1
                            });
                           });
 
@@ -503,7 +503,7 @@
                         });
 
                         flow.on("click", function(e) {
-                          let url = "{{ url_for('index',username=user.username) }}"
+                          let url = "{{ url_for('index',username=user.strava_id) }}"
                           let popup = L.popup()
                             .setLatLng(e.latlng)
                             .setContent(
@@ -575,7 +575,7 @@
 
             params["baselayer"] = appState.baseLayers;
 
-            var newURL = "{{ user.username or user.strava_id }}" + "?" + jQuery.param(params, true);
+            var newURL = "{{ user.strava_id }}" + "?" + jQuery.param(params, true);
             window.history.pushState("", "", newURL);
 
             $(".current-url").val(newURL);
