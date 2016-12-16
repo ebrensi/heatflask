@@ -60,7 +60,9 @@ class User(UserMixin, db.Model):
     def client(self):
         if not self.strava_client:
             self.strava_client = stravalib.Client(
-                access_token=self.strava_access_token)
+                access_token=self.strava_access_token,
+                rate_limit_requests=False
+            )
         return self.strava_client
 
     def __repr__(self):
