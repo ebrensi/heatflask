@@ -198,9 +198,13 @@ class User(UserMixin, db.Model):
                                 .format(self.strava_id))
 
                 already_got = set(activity_index.id)
-                activities_list = [strava2dict(
-                    a) for a in self.client().get_activities(after=latest)
-                    if a.id not in already_got]
+
+                try:
+                    activities_list = [strava2dict(
+                        a) for a in self.client().get_activities(after=latest)
+                        if a.id not in already_got]
+                except Exception as e:
+                    return [{"error": str(e)}]
 
                 if activities_list:
                     df = pd.DataFrame(activities_list).set_index(
@@ -253,49 +257,54 @@ class User(UserMixin, db.Model):
 
             activities_list = []
             count = 1
-            for a in self.client().get_activities():
-                d = strava2dict(a)
-                if d.get("summary_polyline"):
-                    activities_list.append(d)
-                    if (limit or
-                        (after and (d["beginTimestamp"] >= after)) or
-                            (before and (d["beginTimestamp"] <= before))):
-                        d2 = dict(d)
-                        d2["beginTimestamp"] = str(d2["beginTimestamp"])
-                        Q.put(d2)
-                        app.logger.info("put {} on queue".format(d2["id"]))
+            try:
+                for a in self.client().get_activities():
+                    d = strava2dict(a)
+                    if d.get("summary_polyline"):
+                        activities_list.append(d)
+                        if (limit or
+                            (after and (d["beginTimestamp"] >= after)) or
+                                (before and (d["beginTimestamp"] <= before))):
+                            d2 = dict(d)
+                            d2["beginTimestamp"] = str(d2["beginTimestamp"])
+                            Q.put(d2)
+                            app.logger.info("put {} on queue".format(d2["id"]))
 
-                        if limit:
-                            limit -= 1
-                            if not limit:
-                                Q.put({"stop_rendering": "1"})
-                    else:
-                        Q.put({"msg": "indexing...{} activities".format(count)})
+                            if limit:
+                                limit -= 1
+                                if not limit:
+                                    Q.put({"stop_rendering": "1"})
+                        else:
+                            Q.put({"msg": "indexing...{} activities".format(count)})
 
-                    count += 1
-                    gevent.sleep(0)
+                        count += 1
+                        gevent.sleep(0)
+            except Exception as e:
+                Q.put({"error": str(e)})
+                Q.put(StopIteration)
 
-            Q.put({"msg": "done indexing {} activities.".format(count)})
-            Q.put(StopIteration)
+            else:
+                Q.put({"msg": "done indexing {} activities.".format(count)})
+                Q.put(StopIteration)
 
-            activity_index = (pd.DataFrame(activities_list)
-                              .set_index("beginTimestamp")
-                              .sort_index(ascending=False)
-                              .astype(dtypes))
+                activity_index = (pd.DataFrame(activities_list)
+                                  .set_index("beginTimestamp")
+                                  .sort_index(ascending=False)
+                                  .astype(dtypes))
 
-            app.logger.debug("done with indexing for {}".format(self))
-            dt_last_indexed = datetime.utcnow()
-            packed = activity_index.to_msgpack(compress='blosc')
-            cache.set(self.index_key(),
-                      (dt_last_indexed, packed),
-                      CACHE_INDEX_TIMEOUT)
+                app.logger.debug("done with indexing for {}".format(self))
+                dt_last_indexed = datetime.utcnow()
+                packed = activity_index.to_msgpack(compress='blosc')
+                cache.set(self.index_key(),
+                          (dt_last_indexed, packed),
+                          CACHE_INDEX_TIMEOUT)
 
-            user.indexing(False)
+                user.indexing(False)
 
-            app.logger.info("cached {}, size={}".format(self.index_key(),
-                                                        len(packed)))
+                app.logger.info("cached {}, size={}".format(self.index_key(),
+                                                            len(packed)))
 
-            # activity_index.to_msgpack("index.msg", compress='blosc')
+                # activity_index.to_msgpack("index.msg", compress='blosc')
 
         P.apply_async(async_job, [self, limit, after, before])
         return Q
@@ -310,10 +319,6 @@ class User(UserMixin, db.Model):
             app.logger.debug(
                 "error retrieving activity '{}': {}".format(a_id, e))
         return activity
-
-    def activity_summaries(self, **kwargs):
-        return self.index(**kwargs)
-
 
 # Create tables if they don't exist
 #  These commands aren't necessary if we use flask-migrate

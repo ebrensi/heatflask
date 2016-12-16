@@ -398,7 +398,7 @@ def getdata(username):
         # streams_to_cache = ["time", "polyline"]
         streams_to_cache = ["polyline"]
 
-        activity_data = user.activity_summaries(**options)
+        activity_data = user.index(**options)
         if isinstance(activity_data, list):
             total = len(activity_data)
         else:
@@ -487,7 +487,7 @@ def activity_stream():
             options["limit"] = int(request.args.get("limit"))
 
     def boo():
-        for a in user.activity_summaries(**options):
+        for a in user.index(**options):
             yield "data: {}\n\n".format(json.dumps(a))
         yield "data: done\n\n"
 
