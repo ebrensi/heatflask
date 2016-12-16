@@ -136,7 +136,7 @@
                       <label><input type="checkbox" id="autozoom" value="1">Auto-Zoom when finished</label>
                     </div>
                     <div class="checkbox">
-                      <label><input type="checkbox" id="hoverinfo" value="1">path details on hover</label>
+                      <label><input type="checkbox" id="info" value="1">Flow Path details</label>
                     </div>
 
                 <hr>
@@ -462,10 +462,10 @@
 
                 if (flowres){
                     // add this activity's route to FlowLayer
-                    var options = {{ config["ANTPATH_DEFAULT_OPTIONS"]|tojson|safe }};
+                    var default_options = {{ config["ANTPATH_DEFAULT_OPTIONS"]|tojson|safe }};
 
                     if (("path_color" in A) && A.path_color)
-                        options.color = A.path_color;
+                        default_options.color = A.path_color;
                 }
 
                 if (lores && ("summary_polyline" in A) && (A.summary_polyline)) {
@@ -483,29 +483,35 @@
 
                 if (heatpoints) latlngs_flat.push.apply(latlngs_flat, heatpoints);
                 if (flowpoints) {
-                    flow = new L.Polyline.AntPath(flowpoints, options);
+                    flow = new L.Polyline.AntPath(flowpoints, default_options);
 
-                    if ($("#hoverinfo").is(":checked")) {
-                        flow.on('mouseover', function(e) {
-                          //open popup;
+                    if ($("#info").is(":checked")) {
+                        flow.on('mouseover', function() {
+                           this.bringToFront();
+                           this.setStyle({
+                                weight: default_options.weight + 3,
+                                opacity: 0.7
+                           });
+                          });
+
+
+                        flow.on("mouseout", function() {
+                            this.setStyle({
+                                weight: default_options.weight,
+                                opacity: default_options.opacity
+                            });
+                        });
+
+                        flow.on("click", function(e) {
+                          let url = "{{ url_for('index',username=user.username) }}"
                           let popup = L.popup()
                             .setLatLng(e.latlng)
                             .setContent(
-                                `<a href='https://www.strava.com/activities/${A.id}' target='_blank'>${A.id}</a>`+
-                                ` - ${A.type}: ${A.beginTimestamp}<br>${A.name}`
+                                `[${A.id}] ${A.name}<br>${A.type}: ${A.beginTimestamp}<br>`+
+                                `View in <a href='https://www.strava.com/activities/${A.id}' target='_blank'>Strava</a>`+
+                                `, <a href='${url}?id=${A.id}&flowres=high' target='_blank'>Heatflask</a>`
                                 )
                             .openOn(map);
-
-                           layer = e.target;
-                           layer.setStyle({
-                              color: 'green',
-                              opacity: 1
-                          });
-                        });
-
-                        flow.on("mouseout", function(e) {
-                            layer = e.target;
-                            layer.setStyle(options);
                         });
                     }
                     FlowLayer.addLayer(flow);
@@ -547,8 +553,8 @@
                 if (appState.date2 && (appState.date2 != "now")) params.date2 = appState.date2;
             }
 
-            if ($("#hoverinfo").is(':checked'))
-                params.hover = "1";
+            if ($("#info").is(':checked'))
+                params.info = "1";
 
             if($("#autozoom").is(':checked')) {
                 params.autozoom = "1";
@@ -637,8 +643,8 @@
             $("#autozoom").prop('checked', true);
             {% endif %}
 
-            {% if hover  %}
-            $("#hoverinfo").prop('checked', true);
+            {% if info  %}
+            $("#info").prop('checked', true);
             {% endif %}
 
             {% if ids %}
