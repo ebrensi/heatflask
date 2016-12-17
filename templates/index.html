@@ -487,11 +487,13 @@
 
                     if ($("#info").is(":checked")) {
                         flow.on('mouseover', function() {
-                           this.bringToFront();
-                           this.setStyle({
-                                weight: default_options.weight + 3,
-                                opacity: 1
-                           });
+                           if (this.options.weight == default_options.weight){
+                               this.bringToFront();
+                               this.setStyle({
+                                    weight: default_options.weight + 3,
+                                    opacity: 1
+                               });
+                            }
                           });
 
 
