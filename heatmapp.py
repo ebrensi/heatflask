@@ -64,6 +64,7 @@ bundles = {
                                     'js/leaflet-providers.js',
                                     'js/Leaflet.GoogleMutant.js',
                                     'js/L.Control.Locate.min.js',
+                                    'js/EventSource.js',
                                     filters='rjsmin',
                                     output='gen/index.js')
 
@@ -394,9 +395,10 @@ def getdata(username):
         return {s: activity_streams[s] for s in stream_names}
 
     def sse_iterator():
-        streams_out = ["polyline", "velocity_smooth", "latlng"]
-        streams_to_cache = ["velocity_smooth", "polyline", "latlng"]
-        # streams_to_cache = ["polyline"]
+        # streams_out = ["polyline", "velocity_smooth"]
+        # streams_to_cache = ["polyline", "velocity_smooth"]
+        streams_out = ["polyline"]
+        streams_to_cache = ["polyline"]
 
         activity_data = user.index(**options)
         if isinstance(activity_data, list):
@@ -471,7 +473,7 @@ def activity_stream():
     options = {}
 
     if "id" in request.args:
-        options["activity_ids"] = request.args.getlist("id")
+        options["activity_ids"] = request.args.get("id")
     else:
         if "friends" in request.args:
             options["friends"] = True

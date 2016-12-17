@@ -152,12 +152,12 @@ class User(UserMixin, db.Model):
 
     def indexing(self, status=None):
         # Indicate to other processes that we are currently indexing
-        #  This should not take any longer than 60 seconds
+        #  This should not take any longer than 30 seconds
         key = "indexing {}".format(self.strava_id)
         if status is None:
             return cache.get(key)
         else:
-            return cache.set(key, status, 60)
+            return cache.set(key, status, 30)
 
     def index(self, activity_ids=None, limit=None,  after=None, before=None):
 
@@ -240,12 +240,15 @@ class User(UserMixin, db.Model):
 
         if LOCAL and os.path.isfile("index.msg"):
             df = pd.read_msgpack("index.msg")
-            dt_last_indexed = datetime.utcnow()
+            dt_last_indexed = datetime.min
             packed = df.to_msgpack(compress='blosc')
             cache.set(self.index_key(),
                       (dt_last_indexed, packed),
                       CACHE_INDEX_TIMEOUT)
-            return []
+            return self.index(activity_ids=activity_ids,
+                              limit=limit,
+                              after=after,
+                              before=before)
 
         # If we got here then the index hasn't been created yet
         Q = Queue()
@@ -304,7 +307,8 @@ class User(UserMixin, db.Model):
                 app.logger.info("cached {}, size={}".format(self.index_key(),
                                                             len(packed)))
 
-                # activity_index.to_msgpack("index.msg", compress='blosc')
+                if LOCAL and (not os.path.isfile("index.msg")):
+                    activity_index.to_msgpack("index.msg", compress='blosc')
 
         P.apply_async(async_job, [self, limit, after, before])
         return Q
