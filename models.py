@@ -150,6 +150,9 @@ class User(UserMixin, db.Model):
     def index_key(self):
         return "I:{}".format(self.strava_id)
 
+    def delete_index(self):
+        return cache.delete(self.index_key())
+
     def indexing(self, status=None):
         # Indicate to other processes that we are currently indexing
         #  This should not take any longer than 30 seconds

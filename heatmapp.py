@@ -3,7 +3,6 @@ from __future__ import unicode_literals
 
 import polyline
 import gevent
-# from gevent.pool import Pool
 from flask import Flask, Response, render_template, request, redirect, \
     jsonify, url_for, flash, send_from_directory, render_template_string
 import flask_compress
@@ -212,6 +211,7 @@ def delete():
         # the current user is now logged out
         user = User.get(user_id)
         try:
+            user.delete_index()
             user.uncache()
             db.session.delete(user)
             db.session.commit()
@@ -369,9 +369,7 @@ def getdata(username):
 
         return color_list[0] if color_list else ""
 
-    # pool = Pool(app.config["CONCURRENCY"])
     client = user.client()
-    # jobs = []
 
     def import_streams(activity_id, stream_names):
         streams_to_import = list(stream_names)
