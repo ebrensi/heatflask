@@ -64,6 +64,7 @@ class Config(object):
     ANTPATH_ACTIVITY_COLORS = {
         'red': ['run', 'walk', 'hike'],
         'blue': ['ride'],
+        'aqua': ['virtualride'],
         'yellow': ['swim']
     }
 
