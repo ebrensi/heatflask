@@ -394,9 +394,9 @@ def getdata(username):
         return {s: activity_streams[s] for s in stream_names}
 
     def sse_iterator():
-        streams_out = ["polyline"]
-        # streams_to_cache = ["time", "polyline"]
-        streams_to_cache = ["polyline"]
+        streams_out = ["polyline", "velocity_smooth", "latlng"]
+        streams_to_cache = ["velocity_smooth", "polyline", "latlng"]
+        # streams_to_cache = ["polyline"]
 
         activity_data = user.index(**options)
         if isinstance(activity_data, list):
@@ -505,15 +505,6 @@ def activities():
 @login_required
 def data_points(activity_id):
     return redirect("https://www.strava.com/activities/{}".format(activity_id))
-
-
-@app.route('/retrieve_list', methods=['POST'])
-def retrieve_list():
-    data = {
-        "import": request.form.getlist("to")
-    }
-
-    return jsonify(data)
 
 
 @app.route('/users')
