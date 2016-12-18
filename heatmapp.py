@@ -197,7 +197,7 @@ def logout(username):
         logout_user()
         flash("user '{}' ({}) logged out"
               .format(username, user_id))
-    return redirect(request.args.get("next") or url_for("nothing"))
+    return redirect(url_for("nothing"))
 
 
 @app.route("/<username>/delete_index")
