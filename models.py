@@ -51,6 +51,14 @@ class User(UserMixin, db.Model):
     # activity_index = None
     dt_last_indexed = None
 
+    def __eq__(self, other):
+        try:
+            value = self.strava_id == other.strava_id
+        except:
+            return False
+        else:
+            return value
+
     def describe(self):
         attrs = ["strava_id", "username", "firstname", "lastname",
                  "profile", "strava_access_token", "dt_last_active",

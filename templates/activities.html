@@ -25,6 +25,8 @@
       <th>date</th>
       <th>type</th>
       <th>name</th>
+      <th>Strava link</th>
+      <th>Heatflask link</th>
     </tr>
   </thead>
   <tbody>
@@ -37,7 +39,7 @@
 
   <script>
     jQuery(document).ready(function($) {
-        var source = new EventSource("{{ url_for('activity_stream', limit=limit) }}");
+        var source = new EventSource("{{ url_for('activity_stream', username=user.strava_id, limit=limit) }}");
         var count = 0;
         $("#status").text("Getting Activity List");
 
@@ -55,13 +57,15 @@
               highlight = "";
             }
 
-            link = "<a href={{ url_for('data_points',activity_id='') }}" +a.id + " target='_blank'>" + a.id +"</a>"
-
+            strava_link = "<a href='https://www.strava.com/activities/" +a.id + "' target='_blank'>Strava " + a.id +"</a>"
+            heatflask_link = "<a href={{ url_for('index',username=user.strava_id) }}?id=" +a.id + " target='_blank'> Heatflask " + a.id +"</a>"
             row = "<tr " + highlight +  ">" +
-                   "<th scope='row'>" + link + "</th>" +
+                   "<th scope='row'>" + a.id + "</th>" +
                    "<td>" + a.beginTimestamp +"</td>" +
                    "<td>" + a.type + "</td>" +
                    "<td>" + a.name + "</td>" +
+                   "<td>" + strava_link + "</td>" +
+                   "<td>" + heatflask_link + "</td>" +
                    "</tr>";
             $('#activities_list tbody').append(row);
 

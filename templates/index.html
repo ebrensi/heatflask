@@ -136,7 +136,7 @@
                       <label><input type="checkbox" id="autozoom" value="1">Auto-Zoom when finished</label>
                     </div>
                     <div class="checkbox">
-                      <label><input type="checkbox" id="info" value="1">Flow Path details</label>
+                      <label><input type="checkbox" id="info" value="1">Flow Path details on hover/click</label>
                     </div>
 
                 <hr>
@@ -153,7 +153,7 @@
                 {% if current_user.is_authenticated %}
                 You are logged in as <a href="{{ url_for('index', username=current_user.strava_id) }}" target="_blank">{{ current_user.username or current_user.strava_id}}</a> :<br>
 
-                <form action="{{ url_for('logout') }}">
+                <form action="{{ url_for('logout', username=user.strava_id) }}">
                     <input type="submit" class="btn btn-danger" value="Log Out" />
 
                     <input class="current-url" type="hidden" id="afterLogout" name="next" value="" />
@@ -192,20 +192,23 @@
                 </a>
 
                 <br><br>
-                <form action="{{ url_for('activities') }}" target="_blank">
+                <form action="{{ url_for('activities', username=current_user.strava_id) }}" target="_blank">
                     <input type="submit" class="btn" value="List" />
                     <input type="number" name="limit" min="1" max="10000" value="100" />
                     most recent activities
                 </form>
-                <br>
-
+                <br><br>
+                Heatflask builds an index of all your activity sumaries for fast access.  You can delete the index here, and it will get rebuilt the next time activities are rendered.
+                <form action="{{ url_for('delete_index', username=user.strava_id) }}" target="_blank">
+                    <input type="submit" class="btn" value="Delete activity index" />
+                </form>
                 <hr>
 
 
 
 
                 <br>
-                <form action="{{ url_for('logout') }}">
+                <form action="{{ url_for('logout', username=user.strava_id) }}">
                     <input type="submit" class="btn btn-danger" value="Log Out" />
 
                     <input class="current-url" type="hidden" id="afterLogout" name="next" value="" />
@@ -214,7 +217,7 @@
                 <br>
                 <hr>
                 <br><br>
-                <form action="{{ url_for('delete') }}" onsubmit="return confirm('Delete your info from our database?');">
+                <form action="{{ url_for('delete', username=user.strava_id) }}" onsubmit="return confirm('Delete your info from our database?');">
                     <input type="submit" class="btn btn-danger" value="Delete Account" />
                 </form>
             </div>
@@ -486,14 +489,40 @@
                     flow = new L.Polyline.AntPath(flowpoints, default_options);
 
                     if ($("#info").is(":checked")) {
-                        flow.on('mouseover', function() {
+
+                        function pad(num) {
+                            return ("0"+num).slice(-2);
+                        }
+                        function hhmmss(secs) {
+                          var minutes = Math.floor(secs / 60);
+                          secs = secs%60;
+                          var hours = Math.floor(minutes/60)
+                          minutes = minutes%60;
+                          return pad(hours)+":"+pad(minutes)+":"+pad(secs);
+                        }
+
+                        flow.on('mouseover', function(e) {
                            if (this.options.weight == default_options.weight){
                                this.bringToFront();
                                this.setStyle({
                                     weight: default_options.weight + 3,
                                     opacity: 1
                                });
-                            }
+                               // let url = "{{ url_for('index',username=user.strava_id) }}"
+                               //  d = parseFloat(A.total_distance);
+                               //  dkm = +(d / 1000).toFixed(2);
+                               //  dmi = +(d / 1609.34).toFixed(2);
+                               //  elapsed = hhmmss(parseFloat(A.elapsed_time));
+                               //  let popup = L.popup()
+                               //    .setLatLng(e.latlng)
+                               //    .setContent(
+                               //      `[${A.id}] ${A.name}<br>${A.type}: ${A.beginTimestamp}<br>`+
+                               //      `${dkm} km (${dmi} mi), ${elapsed}<br>` +
+                               //      `View in <a href='https://www.strava.com/activities/${A.id}' target='_blank'>Strava</a>`+
+                               //      `, <a href='${url}?id=${A.id}&flowres=high' target='_blank'>Heatflask</a>`
+                               //    )
+                               //    .openOn(map);
+                             }
                           });
 
 
@@ -506,10 +535,15 @@
 
                         flow.on("click", function(e) {
                           let url = "{{ url_for('index',username=user.strava_id) }}"
+                          d = parseFloat(A.total_distance);
+                          dkm = +(d / 1000).toFixed(2);
+                          dmi = +(d / 1609.34).toFixed(2);
+                          elapsed = hhmmss(parseFloat(A.elapsed_time));
                           let popup = L.popup()
                             .setLatLng(e.latlng)
                             .setContent(
                                 `[${A.id}] ${A.name}<br>${A.type}: ${A.beginTimestamp}<br>`+
+                                `${dkm} km (${dmi} mi), ${elapsed}<br>` +
                                 `View in <a href='https://www.strava.com/activities/${A.id}' target='_blank'>Strava</a>`+
                                 `, <a href='${url}?id=${A.id}&flowres=high' target='_blank'>Heatflask</a>`
                                 )
