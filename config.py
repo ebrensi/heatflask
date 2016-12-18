@@ -11,14 +11,6 @@ class Config(object):
     CSRF_ENABLED = True
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_POOL_RECYCLE = 10 * 60  # 10 minutes
-
-    # Defaults to using PostgreSQL for Celery
-    CELERY_BROKER_URL = "sqla+" + SQLALCHEMY_DATABASE_URI
-    CELERY_RESULT_BACKEND = "db+" + SQLALCHEMY_DATABASE_URI
-
-    # Number of concurrent activity import requests
-    CONCURRENCY = 3
 
     # Settings for fast-cache
     CACHE_REDIS_URL = os.environ.get('REDIS_URL')
@@ -29,11 +21,11 @@ class Config(object):
     # How long before a user's index is outated and needs an update
     CACHE_INDEX_UPDATE_TIMEOUT = 10 * 60  # 10 minutes
 
-    # How long we hold onto hires activities
-    CACHE_ACTIVITIES_TIMEOUT = 1 * 24 * 60 * 60  # 1 days
+    # How long we memory-cache hires activities
+    CACHE_ACTIVITIES_TIMEOUT = 12 * 60 * 60  # 12 hours
 
     # How long we hold a User object in memory
-    CACHE_USERS_TIMEOUT = 1 * 24 * 60 * 60  # 1 days
+    CACHE_USERS_TIMEOUT = 2 * 60 * 60  # 2 hours
 
     SECRET_KEY = "pB\xeax\x9cJ\xd6\x81\xed\xd7\xf9\xd0\x99o\xad\rM\x92\xb1\x8b{7\x02r"
 
@@ -86,10 +78,6 @@ class ProductionConfig(Config):
 
     # For Flask-Cache
     CACHE_TYPE = 'redis'
-
-    # For Celery
-    CELERY_BROKER_URL = os.environ.get('REDIS_URL')
-    CELERY_RESULT_BACKEND = os.environ.get('REDIS_URL')
 
 
 class StagingConfig(Config):
