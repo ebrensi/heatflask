@@ -187,10 +187,10 @@ def auth_callback():
                     url_for("index", username=current_user.strava_id))
 
 
-@app.route("/logout")
+@app.route("/<username>/logout")
 @login_required
-def logout():
-    if current_user.is_authenticated:
+def logout(username):
+    if User.get(username) == current_user:
         user_id = current_user.strava_id
         username = current_user.username
         current_user.uncache()
@@ -200,16 +200,27 @@ def logout():
     return redirect(request.args.get("next") or url_for("nothing"))
 
 
-@app.route("/delete")
+@app.route("/<username>/delete_index")
 @login_required
-def delete():
-    if current_user.is_authenticated:
-        username = current_user.username
-        user_id = current_user.strava_id
+def delete_index(username):
+    if User.get(username) == current_user:
+        if current_user.is_authenticated:
+            current_user.delete_index()
+        return "index for {} deleted".format(username)
+    else:
+        return "sorry you can't delete index for {}".format(username)
+
+
+@app.route("/<username>/delete")
+@login_required
+def delete(username):
+    user = User.get(username)
+    if user == current_user:
+        username = user.username
+        user_id = user.strava_id
         logout_user()
 
         # the current user is now logged out
-        user = User.get(user_id)
         try:
             user.delete_index()
             user.uncache()
@@ -219,7 +230,9 @@ def delete():
             flash(str(e))
         else:
             flash("user '{}' ({}) deleted".format(username, user_id))
-    return redirect(url_for("nothing"))
+        return redirect(url_for("nothing"))
+    else:
+        return "sorry, you cannot do that"
 
 
 @app.route('/<username>')
@@ -445,7 +458,8 @@ def getdata(username):
                                 app.logger.debug(
                                     "cached {}, size = {}".format(key, len(packed_data)))
 
-                        data = {s: stream_data[s] for s in streams_out}
+                        # data = {s: stream_data[s] for s in streams_out}
+                        data = stream_data
                         data.update(activity)
                         # app.logger.debug("sending {}".format(data))
                         yield sse_out(data)
@@ -464,47 +478,49 @@ def getdata(username):
 # arguments
 
 
-@app.route('/activities_sse')
+@app.route('/<username>/activities_sse')
 @login_required
-def activity_stream():
-    user = User.get(current_user.strava_id)
-    options = {}
+def activity_stream(username):
+    user = User.get(username)
+    if (user == current_user):
+        options = {}
 
-    if "id" in request.args:
-        options["activity_ids"] = request.args.get("id")
+        if "id" in request.args:
+            options["activity_ids"] = request.args.get("id")
+        else:
+            if "friends" in request.args:
+                options["friends"] = True
+
+            if "before" in request.args:
+                options["before"] = dateutil.parser.parse(
+                    request.args.get("before"))
+
+            if "after" in request.args:
+                options["after"] = dateutil.parser.parse(
+                    request.args.get("after"))
+
+            if "limit" in request.args:
+                options["limit"] = int(request.args.get("limit"))
+
+        def boo():
+            for a in user.index(**options):
+                yield "data: {}\n\n".format(json.dumps(a))
+            yield "data: done\n\n"
+
+        return Response(boo(), mimetype='text/event-stream')
     else:
-        if "friends" in request.args:
-            options["friends"] = True
-
-        if "before" in request.args:
-            options["before"] = dateutil.parser.parse(
-                request.args.get("before"))
-
-        if "after" in request.args:
-            options["after"] = dateutil.parser.parse(request.args.get("after"))
-
-        if "limit" in request.args:
-            options["limit"] = int(request.args.get("limit"))
-
-    def boo():
-        for a in user.index(**options):
-            yield "data: {}\n\n".format(json.dumps(a))
-        yield "data: done\n\n"
-
-    return Response(boo(), mimetype='text/event-stream')
+        return "sorry, wrong user."
 
 
-@app.route('/activities')
+@app.route('/<username>/activities')
 @login_required
-def activities():
-    return render_template("activities.html",
-                           limit=request.args.get("limit"))
-
-
-@app.route('/activities/<activity_id>')
-@login_required
-def data_points(activity_id):
-    return redirect("https://www.strava.com/activities/{}".format(activity_id))
+def activities(username):
+    if (User.get(username) == current_user):
+        return render_template("activities.html",
+                               limit=request.args.get("limit"),
+                               user=current_user)
+    else:
+        return "sorry"
 
 
 @app.route('/users')
