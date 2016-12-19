@@ -322,10 +322,12 @@
             baseLayers: map_providers
         };
 
-        var heatLayerOptions = {{ config["HEATMAP_DEFAULT_OPTIONS"]|tojson|safe }};
-        var flowLayerOptions = {{ config["ANTPATH_DEFAULT_OPTIONS"]|tojson|safe }};
 
         function renderLayers(){
+            const heatLayerOptions = {{ config["HEATMAP_DEFAULT_OPTIONS"]|tojson|safe }},
+                  flowLayerOptions = {{ config["ANTPATH_DEFAULT_OPTIONS"]|tojson|safe }},
+                  flowLayerConsts = {{ config["FLOWPATH_VARIATION_CONSTANTS"]|tojson|safe }};
+
             var flowres = $("#flowres").val(),
                 heatres = $("#heatres").val(),
                 date1 = $("#date1").val(),
@@ -427,6 +429,18 @@
                 }
             }
 
+            // *** Used for flowpath event listeners
+            function pad(num) {
+                return ("0"+num).slice(-2);
+            }
+            function hhmmss(secs) {
+              var minutes = Math.floor(secs / 60);
+              secs = secs%60;
+              var hours = Math.floor(minutes/60)
+              minutes = minutes%60;
+              return pad(hours)+":"+pad(minutes)+":"+pad(secs);
+            }
+            // ****
 
             function stopListening(){
                 source.close();
@@ -465,10 +479,10 @@
 
                 if (flowres){
                     // add this activity's route to FlowLayer
-                    var default_options = {{ config["ANTPATH_DEFAULT_OPTIONS"]|tojson|safe }};
+                    var fopts = Object.assign({}, flowLayerOptions);;
 
                     if (("path_color" in A) && A.path_color)
-                        default_options.color = A.path_color;
+                        fopts.color = A.path_color;
                 }
 
                 if (lores && ("summary_polyline" in A) && (A.summary_polyline)) {
@@ -486,50 +500,28 @@
 
                 if (heatpoints) latlngs_flat.push.apply(latlngs_flat, heatpoints);
                 if (flowpoints) {
-                    flow = new L.Polyline.AntPath(flowpoints, default_options);
+                    v = parseFloat(A.average_speed);
+
+                    fopts.delay = parseInt(flowLayerConsts.K / v);
+                    fopts.dashArray = [2, parseInt(flowLayerConsts.T * v)];
+                    flow = new L.Polyline.AntPath(flowpoints, fopts);
 
                     if ($("#info").is(":checked")) {
-
-                        function pad(num) {
-                            return ("0"+num).slice(-2);
-                        }
-                        function hhmmss(secs) {
-                          var minutes = Math.floor(secs / 60);
-                          secs = secs%60;
-                          var hours = Math.floor(minutes/60)
-                          minutes = minutes%60;
-                          return pad(hours)+":"+pad(minutes)+":"+pad(secs);
-                        }
-
                         flow.on('mouseover', function(e) {
-                           if (this.options.weight == default_options.weight){
+                           if (this.options.weight == fopts.weight){
                                this.bringToFront();
                                this.setStyle({
-                                    weight: default_options.weight + 3,
+                                    weight: fopts.weight + 3,
                                     opacity: 1
                                });
-                               // let url = "{{ url_for('index',username=user.strava_id) }}"
-                               //  d = parseFloat(A.total_distance);
-                               //  dkm = +(d / 1000).toFixed(2);
-                               //  dmi = +(d / 1609.34).toFixed(2);
-                               //  elapsed = hhmmss(parseFloat(A.elapsed_time));
-                               //  let popup = L.popup()
-                               //    .setLatLng(e.latlng)
-                               //    .setContent(
-                               //      `[${A.id}] ${A.name}<br>${A.type}: ${A.beginTimestamp}<br>`+
-                               //      `${dkm} km (${dmi} mi), ${elapsed}<br>` +
-                               //      `View in <a href='https://www.strava.com/activities/${A.id}' target='_blank'>Strava</a>`+
-                               //      `, <a href='${url}?id=${A.id}&flowres=high' target='_blank'>Heatflask</a>`
-                               //    )
-                               //    .openOn(map);
                              }
                           });
 
 
                         flow.on("mouseout", function() {
                             this.setStyle({
-                                weight: default_options.weight,
-                                opacity: default_options.opacity
+                                weight: fopts.weight,
+                                opacity: fopts.opacity
                             });
                         });
 
