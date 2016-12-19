@@ -181,12 +181,16 @@ class User(UserMixin, db.Model):
                 "beginTimestamp": a.start_date_local,
                 "total_distance": float(a.distance),
                 "elapsed_time": int(a.elapsed_time.total_seconds()),
+                # "moving_time": int(a.moving_time),
+                "average_speed": float(a.average_speed)
             }
         dtypes = {
             "id": "uint32",
             "type": "category",
             "total_distance": "float32",
-            "elapsed_time": "uint32"
+            "elapsed_time": "uint32",
+            # "moving_time": "uint32",
+            "average_speed": "float16"
         }
 
         if self.indexing():
