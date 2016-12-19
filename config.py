@@ -52,6 +52,10 @@ class Config(object):
         "dashArray": [3, 10],
         # "noClip": False
     }
+    FLOWPATH_VARIATION_CONSTANTS = {
+        "K": 10000,
+        "T": 5
+    }
 
     ANTPATH_ACTIVITY_COLORS = {
         'red': ['run', 'walk', 'hike'],
