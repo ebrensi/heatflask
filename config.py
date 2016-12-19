@@ -53,7 +53,7 @@ class Config(object):
         # "noClip": False
     }
     FLOWPATH_VARIATION_CONSTANTS = {
-        "K": 10000,
+        "K": 12000,
         "T": 5
     }
 
