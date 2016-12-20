@@ -279,13 +279,13 @@ def index(username):
                     flash("'{}' is not a valid limit".format(limit))
                     limit = 1
             else:
-                limit = 1
+                limit = 5
 
     flowres = request.args.get("flowres", "")
     heatres = request.args.get("heatres", "")
     if (not flowres) and (not heatres):
-        flowres = "low"
-        heatres = "low"
+        flowres = "high"
+        heatres = "high"
 
     lat = request.args.get("lat")
     lng = request.args.get("lng")
