@@ -3,6 +3,9 @@
 source activate runapp
 
 export DATABASE_URL=postgresql://heatmapp:heatmapp@localhost/heatmapp
+export REDIS_URL=redis://localhost
+export MONGODB_URI=mongodb://localhost
+
 export SERVER_NAME=localhost
 export FLASK_APP=heatmapp.py
 export FLASK_DEBUG=1

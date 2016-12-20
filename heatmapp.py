@@ -12,6 +12,7 @@ import os
 import re
 import json
 import msgpack
+import pymongo
 import itertools
 import stravalib
 import flask_login
@@ -30,6 +31,8 @@ app.config.from_object(os.environ['APP_SETTINGS'])
 # set up short-term fast caching support
 cache = flask_caching.Cache(app)
 # cache.clear()
+
+mongo_client = pymongo.MongoClient(app.config.get("MONGODB_URI"))
 
 # models depend on cache and app so we import them afterwards
 from models import User, db, inspector

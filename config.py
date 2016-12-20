@@ -12,6 +12,8 @@ class Config(object):
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
+    MONGODB_URI = os.environ.get("MONGODB_URI")
+
     # Settings for fast-cache
     CACHE_REDIS_URL = os.environ.get('REDIS_URL')
 
@@ -104,4 +106,4 @@ class DevelopmentConfig(Config):
     DEVELOPMENT = True
     DEBUG = True
     # For Flask-Cache
-    CACHE_TYPE = "simple"
+    CACHE_TYPE = "redis" if os.environ.get("REDIS_URL") else "simple"
