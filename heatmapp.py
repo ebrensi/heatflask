@@ -33,7 +33,7 @@ sslify = SSLify(app)
 cache = flask_caching.Cache(app)
 # cache.clear()
 
-mongo_client = pymongo.MongoClient(app.config.get("MONGODB_URI"))
+mongodb = pymongo.MongoClient(app.config.get("MONGODB_URI")).heatflask
 
 # models depend on cache and app so we import them afterwards
 from models import User, db, inspector
