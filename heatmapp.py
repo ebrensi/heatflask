@@ -20,13 +20,14 @@ from flask_login import current_user, login_user, logout_user, login_required
 import flask_assets
 from flask_analytics import Analytics
 import flask_caching
+from flask_sslify import SSLify
 from signal import signal, SIGPIPE, SIG_DFL
 from gevent import monkey
 monkey.patch_all()  # may not be necessary
 
 app = Flask(__name__)
 app.config.from_object(os.environ['APP_SETTINGS'])
-
+sslify = SSLify(app)
 
 # set up short-term fast caching support
 cache = flask_caching.Cache(app)
