@@ -181,7 +181,6 @@ class User(UserMixin, db.Model):
                 "beginTimestamp": a.start_date_local,
                 "total_distance": float(a.distance),
                 "elapsed_time": int(a.elapsed_time.total_seconds()),
-                # "moving_time": int(a.moving_time),
                 "average_speed": float(a.average_speed)
             }
         dtypes = {
@@ -189,7 +188,6 @@ class User(UserMixin, db.Model):
             "type": "category",
             "total_distance": "float32",
             "elapsed_time": "uint32",
-            # "moving_time": "uint32",
             "average_speed": "float16"
         }
 
@@ -299,11 +297,8 @@ class User(UserMixin, db.Model):
                         gevent.sleep(0)
             except Exception as e:
                 Q.put({"error": str(e)})
-                Q.put(StopIteration)
-
             else:
                 Q.put({"msg": "done indexing {} activities.".format(count)})
-                Q.put(StopIteration)
 
                 activity_index = (pd.DataFrame(activities_list)
                                   .set_index("beginTimestamp")
@@ -317,13 +312,14 @@ class User(UserMixin, db.Model):
                           (dt_last_indexed, packed),
                           CACHE_INDEX_TIMEOUT)
 
-                user.indexing(False)
-
                 app.logger.info("cached {}, size={}".format(self.index_key(),
                                                             len(packed)))
 
                 if LOCAL and (not os.path.isfile("index.msg")):
                     activity_index.to_msgpack("index.msg", compress='blosc')
+            finally:
+                user.indexing(False)
+                Q.put(StopIteration)
 
         P.apply_async(async_job, [self, limit, after, before])
         return Q
