@@ -405,7 +405,7 @@
             var base_url = "{{ url_for('getdata', username=user.strava_id) }}";
             var url = base_url + "?" + jQuery.param(query, true);
 
-            map.spin(true);   // start progress indicator
+            map.spin(true, {top:'50%', left:'50%'});   // start progress indicator
             locateControl.stop();
 
             var source = new EventSource(url);
