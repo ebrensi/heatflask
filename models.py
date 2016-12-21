@@ -22,8 +22,8 @@ CACHE_USERS_TIMEOUT = app.config["CACHE_USERS_TIMEOUT"]
 CACHE_INDEX_TIMEOUT = app.config["CACHE_INDEX_TIMEOUT"]
 CACHE_INDEX_UPDATE_TIMEOUT = app.config["CACHE_INDEX_UPDATE_TIMEOUT"]
 CACHE_ACTIVITIES_TIMEOUT = app.config["CACHE_ACTIVITIES_TIMEOUT"]
-CACHE_DATA_TIMEOUT = app.config["CACHE_ACTIVITIES_TIMEOUT"]
 LOCAL = os.environ.get("APP_SETTINGS") == "config.DevelopmentConfig"
+OFFLINE = app.config["OFFLINE"]
 
 
 def inspector(obj):
@@ -205,7 +205,7 @@ class User(UserMixin, db.Model):
                        dt_last_indexed).total_seconds()
 
             # update the index if we need to
-            if elapsed > CACHE_INDEX_UPDATE_TIMEOUT:
+            if (elapsed > CACHE_INDEX_UPDATE_TIMEOUT) and (not OFFLINE):
                 latest = activity_index.index[0]
                 app.logger.info("updating activity index for {}"
                                 .format(self.strava_id))

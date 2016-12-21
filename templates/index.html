@@ -195,7 +195,7 @@
                 The activity index is built when you register, and updated with new activities.  If you made changes to or deleted old activities on Strava, rebuild the index here.
                 <form action="{{ url_for('activities', username=current_user.strava_id) }}" target="_blank">
                     <input type="submit" class="btn" value="View activity index" />
-                    <label><input type="checkbox" name="rebuild" value="1">Rebuild Index</label>
+                    <label><input type="checkbox" name="rebuild" value="1">Re-build</label>
                 </form>
                 <br><br>
 

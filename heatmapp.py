@@ -504,7 +504,7 @@ def activity_stream(username):
                     request.args.get("after"))
 
             if "limit" in request.args:
-                options["limit"] = int(request.args.get("limit"))
+                options["limit"] = request.args.get("limit")
 
         def boo():
             for a in user.index(**options):
@@ -520,7 +520,7 @@ def activity_stream(username):
 @login_required
 def activities(username):
     if (User.get(username) == current_user):
-        if (request.args.get("rebuild") == "1"):
+        if request.args.get("rebuild"):
             current_user.delete_index()
         return render_template("activities.html",
                                user=current_user)
