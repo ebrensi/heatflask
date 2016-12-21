@@ -192,19 +192,12 @@
                 </a>
 
                 <br><br>
+                The activity index is built when you register, and updated with new activities.  If you made changes to or deleted old activities on Strava, rebuild the index here.
                 <form action="{{ url_for('activities', username=current_user.strava_id) }}" target="_blank">
-                    <input type="submit" class="btn" value="List" />
-                    <input type="number" name="limit" min="1" max="10000" value="100" />
-                    most recent activities
+                    <input type="submit" class="btn" value="View activity index" />
+                    <label><input type="checkbox" name="rebuild" value="1">Rebuild Index</label>
                 </form>
                 <br><br>
-                Heatflask builds an index of all your activity sumaries for fast access.  You can delete the index here, and it will get rebuilt the next time activities are rendered.
-                <form action="{{ url_for('delete_index', username=user.strava_id) }}" target="_blank">
-                    <input type="submit" class="btn" value="Delete activity index" />
-                </form>
-                <hr>
-
-
 
 
                 <br>

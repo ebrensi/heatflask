@@ -89,7 +89,6 @@ login_manager.login_view = 'nothing'
 @login_manager.user_loader
 def load_user(user_id):
     user = User.get(user_id)
-
     # app.logger.debug(inspector(user))
     # app.logger.debug(user.describe())
     return user
@@ -521,8 +520,9 @@ def activity_stream(username):
 @login_required
 def activities(username):
     if (User.get(username) == current_user):
+        if (request.args.get("rebuild") == "1"):
+            current_user.delete_index()
         return render_template("activities.html",
-                               limit=request.args.get("limit"),
                                user=current_user)
     else:
         return "sorry"
