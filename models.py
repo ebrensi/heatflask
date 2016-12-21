@@ -131,7 +131,7 @@ class User(UserMixin, db.Model):
         if user:
             app.logger.debug(
                 "retrieved {} from cache with key {}".format(user, key))
-            return user
+            return db.session.merge(user, load=False)
 
         # Get user from db by id or username
         try:
