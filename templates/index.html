@@ -345,7 +345,7 @@
                 if (date2 && (date2 != "now")) query.date2 = date2;
             }
 
-            let msgBox = L.control.window(map,
+            var msgBox = L.control.window(map,
                 {position: 'top',
                 content:"<div class='data_message'></div>",
                 visible:true
