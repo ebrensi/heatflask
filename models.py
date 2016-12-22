@@ -159,7 +159,8 @@ class User(UserMixin, db.Model):
         return "I:{}".format(self.strava_id)
 
     def delete_index(self):
-        return cache.delete(self.index_key())
+        cache.delete(self.index_key())
+        return cache.get(self.index_key())
 
     def indexing(self, status=None):
         # Indicate to other processes that we are currently indexing
@@ -251,18 +252,6 @@ class User(UserMixin, db.Model):
             df.beginTimestamp = df.beginTimestamp.astype(str)
             return df.to_dict("records")
 
-        if LOCAL and os.path.isfile("index.msg"):
-            df = pd.read_msgpack("index.msg")
-            dt_last_indexed = datetime.min
-            packed = df.to_msgpack(compress='blosc')
-            cache.set(self.index_key(),
-                      (dt_last_indexed, packed),
-                      CACHE_INDEX_TIMEOUT)
-            return self.index(activity_ids=activity_ids,
-                              limit=limit,
-                              after=after,
-                              before=before)
-
         # If we got here then the index hasn't been created yet
         Q = Queue()
         P = Pool()
@@ -314,9 +303,6 @@ class User(UserMixin, db.Model):
 
                 app.logger.info("cached {}, size={}".format(self.index_key(),
                                                             len(packed)))
-
-                if LOCAL and (not os.path.isfile("index.msg")):
-                    activity_index.to_msgpack("index.msg", compress='blosc')
             finally:
                 user.indexing(False)
                 Q.put(StopIteration)
