@@ -278,7 +278,7 @@
                 if (i==0) default_baseLayer = tl;
             }
         } else {
-            default_baseLayer = baseLayers["Google.Roadmap"];
+            default_baseLayer = baseLayers["Google.Terrain"];
         }
 
         var map = L.map('map',
@@ -321,20 +321,21 @@
                   flowLayerOptions = {{ config["ANTPATH_DEFAULT_OPTIONS"]|tojson|safe }},
                   flowLayerConsts = {{ config["FLOWPATH_VARIATION_CONSTANTS"]|tojson|safe }};
 
-            var flowres = $("#flowres").val(),
-                heatres = $("#heatres").val(),
-                date1 = $("#date1").val(),
-                date2 = $("#date2").val(),
-                type = $("#select_type").val(),
-                num = $("#select_num").val();
+            const flowres = $("#flowres").val(),
+                  heatres = $("#heatres").val(),
+                  date1 = $("#date1").val(),
+                  date2 = $("#date2").val(),
+                  type = $("#select_type").val(),
+                  num = $("#select_num").val();
 
-            var heat_data = false,
+            const lores = (flowres == "low" || heatres == "low"),
+                  hires = (flowres == "high" || heatres == "high");
+
+            let heat_data = false,
                 flow_data = false,
-                durations = false;
-
-            var lores = (flowres == "low" || heatres == "low"),
-                hires = (flowres == "high" || heatres == "high"),
                 query = {};
+
+
 
             if (type == "activity_ids") {
                 query.id = $("#activity_ids").val()
@@ -398,7 +399,7 @@
             var base_url = "{{ url_for('getdata', username=user.strava_id) }}";
             var url = base_url + "?" + jQuery.param(query, true);
 
-            map.spin(true, {top:'50%', left:'50%'});   // start progress indicator
+            // map.spin(true, {top:'50%', left:'50%'});   // start progress indicator
             locateControl.stop();
 
             var source = new EventSource(url);
