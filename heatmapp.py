@@ -460,7 +460,8 @@ def getdata(username):
                                 app.logger.debug(
                                     "cached {}, size = {}".format(key, len(packed_data)))
 
-                        data = {s: stream_data[s] for s in streams_out}
+                        data = {s: stream_data[s] for s in streams_out
+                                if s in stream_data}
                         data.update(activity)
                         # app.logger.debug("sending {}".format(data))
                         yield sse_out(data)
