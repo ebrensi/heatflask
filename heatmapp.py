@@ -412,7 +412,7 @@ def getdata(username):
     def sse_iterator():
         # streams_out = ["polyline", "velocity_smooth"]
         # streams_to_cache = ["polyline", "velocity_smooth"]
-        streams_out = ["polyline"]
+        streams_out = ["polyline", "error"]
         streams_to_cache = ["polyline"]
 
         activity_data = user.index(**options)
@@ -445,9 +445,7 @@ def getdata(username):
                                 "importing {0}/{1}..."
                                 .format(
                                     count,
-                                    total,
-                                    # activity["beginTimestamp"],
-                                    # activity["name"]
+                                    total
                                 )
                             )
                             yield sse_out({"msg": msg})
@@ -462,8 +460,7 @@ def getdata(username):
                                 app.logger.debug(
                                     "cached {}, size = {}".format(key, len(packed_data)))
 
-                        # data = {s: stream_data[s] for s in streams_out}
-                        data = stream_data
+                        data = {s: stream_data[s] for s in streams_out}
                         data.update(activity)
                         # app.logger.debug("sending {}".format(data))
                         yield sse_out(data)
