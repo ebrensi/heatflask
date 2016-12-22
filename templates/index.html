@@ -252,10 +252,9 @@
 
 
     <script>
-        var map_providers = {{ baselayer|tojson|safe }};
-
-        var default_baseLayer;
-        var baseLayers = {
+        let map_providers = {{ baselayer|tojson|safe }},
+            default_baseLayer,
+            baseLayers = {
             "None": L.tileLayer(""),
             "Esri.WorldImagery": L.tileLayer.provider("Esri.WorldImagery"),
             "OpenStreetMap.Mapnik": L.tileLayer.provider("OpenStreetMap.Mapnik"),
@@ -266,7 +265,7 @@
         };
 
 
-        var offline = ("{{ config['OFFLINE'] }}" == "True");
+        const offline = ("{{ config['OFFLINE'] }}" == "True");
 
         if (offline) {
             default_baseLayer = baseLayers["None"];
@@ -281,14 +280,14 @@
             default_baseLayer = baseLayers["Google.Terrain"];
         }
 
-        var map = L.map('map',
+        let map = L.map('map',
                         {center: [{{ lat }}, {{ lng }}],
                          zoom: {{ zoom }},
                          layers : [ default_baseLayer ]
                   });
 
 
-        var sidebar = L.control.sidebar('sidebar').addTo(map),
+        let sidebar = L.control.sidebar('sidebar').addTo(map),
             zoomControl = map.zoomControl.setPosition('bottomright'),
             layerControl = L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map),
             locateControl = L.control.locate({position: "bottomright", icon: "fa fa-anchor"}).addTo(map);
@@ -306,12 +305,11 @@
         {% endwith %}
 
 
-        var HeatLayer = false;
-        var FlowLayer = false;
-        var FooLayer = false;
+        let HeatLayer = false,
+            FlowLayer = false;
 
         // This is where we store current state of the app
-        var appState = {
+        let appState = {
             baseLayers: map_providers
         };
 
@@ -347,7 +345,7 @@
                 if (date2 && (date2 != "now")) query.date2 = date2;
             }
 
-            var msgBox = L.control.window(map,
+            let msgBox = L.control.window(map,
                 {position: 'top',
                 content:"<div class='data_message'></div>",
                 visible:true
@@ -355,13 +353,20 @@
 
             if (hires) query.hires = hires;
 
-            // if ($( "#sidebar" ).hasClass( "collapsed" )) {
-            //     var msgBox = L.control.window(map,
-            //         {position: 'topRight',
-            //         content:"<div class='data_message'></div>",
-            //         visible:true
-            //     });
-            // }
+
+            // *** Used for flowpath event listeners
+            function pad(num) {
+                return ("0"+num).slice(-2);
+            }
+            function hhmmss(secs) {
+              let minutes = Math.floor(secs / 60) % 60;
+              secs = secs%60;
+              let hours = Math.floor(minutes/60)
+              minutes = minutes%60;
+              return pad(hours)+":"+pad(minutes)+":"+pad(secs);
+            }
+            // ****
+
 
             $(".data_message").html("");
             appState.items = [];
@@ -423,21 +428,11 @@
                 }
             }
 
-            // *** Used for flowpath event listeners
-            function pad(num) {
-                return ("0"+num).slice(-2);
-            }
-            function hhmmss(secs) {
-              let minutes = Math.floor(secs / 60) % 60;
-              secs = secs%60;
-              let hours = Math.floor(minutes/60)
-              minutes = minutes%60;
-              return pad(hours)+":"+pad(minutes)+":"+pad(secs);
-            }
-            // ****
+
 
             function stopListening(){
                 source.close();
+                msgBox.close();
                 $('#renderButton').prop('disabled', false);
             }
 
@@ -473,7 +468,7 @@
 
                 if (flowres){
                     // add this activity's route to FlowLayer
-                    var fopts = {...flowLayerOptions};  // copy of default options
+                    var fopts = Object.assign({}, flowLayerOptions);  // copy of default options
 
                     if (("path_color" in A) && A.path_color)
                         fopts.color = A.path_color;
