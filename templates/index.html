@@ -335,20 +335,23 @@
                 flow_data = false,
                 query = {};
 
+            let latlngs_flat = [],
+                bounds = L.latLngBounds();
 
-
-            if (type == "activity_ids") {
-                query.id = $("#activity_ids").val()
-            } else if (type=="activities") {
-                if (num == 0) {
-                    query.limit = 1;
-                }
-                else
-                    query.limit = num;
+            if (type == "activity_ids") query.id = $("#activity_ids").val();
+            else if (type=="activities") {
+                if (num == 0) query.limit = 1;
+                else query.limit = num;
             } else {
                 if (date1) query.date1 = date1;
                 if (date2 && (date2 != "now")) query.date2 = date2;
             }
+
+            var msgBox = L.control.window(map,
+                {position: 'top',
+                content:"<div class='data_message'></div>",
+                visible:true
+             });
 
             if (hires) query.hires = hires;
 
@@ -361,10 +364,7 @@
             // }
 
             $(".data_message").html("");
-
             appState.items = [];
-
-            var latlngs_flat = [];
 
             // Remove HeatLayer from map and control if it's there
             if (HeatLayer){
@@ -394,30 +394,30 @@
                 layerControl.addOverlay(FlowLayer, "Flow Paths");
             }
 
-            var bounds = L.latLngBounds();
 
-            var base_url = "{{ url_for('getdata', username=user.strava_id) }}";
-            var url = base_url + "?" + jQuery.param(query, true);
+
+            let url = "{{ url_for('getdata', username=user.strava_id) }}"
+                       + "?" + jQuery.param(query, true);
 
             // map.spin(true, {top:'50%', left:'50%'});   // start progress indicator
             locateControl.stop();
 
-            var source = new EventSource(url);
+            let source = new EventSource(url),
+                         abort = false,
+                         rendering = true;;
+
             $("#abortButton").show();
             $('#renderButton').prop('disabled', true);
 
-            var abort = false,
-                rendering = true;
-
             function doneRendering(msg){
                 if (rendering) {
-                    map.spin(false); // stop progress indicator
+                    // map.spin(false); // stop progress indicator
                     $("#abortButton").hide();
 
                     if ($("#autozoom:checked").val() && bounds.isValid())
                         map.fitBounds(bounds);
 
-                    msg2 = msg + " " + appState.items.length + " activities rendered.";
+                    let msg2 = msg + " " + appState.items.length + " activities rendered.";
                     $(".data_message").html(msg2);
                     rendering = false;
                 }
@@ -428,9 +428,9 @@
                 return ("0"+num).slice(-2);
             }
             function hhmmss(secs) {
-              var minutes = Math.floor(secs / 60);
+              let minutes = Math.floor(secs / 60) % 60;
               secs = secs%60;
-              var hours = Math.floor(minutes/60)
+              let hours = Math.floor(minutes/60)
               minutes = minutes%60;
               return pad(hours)+":"+pad(minutes)+":"+pad(secs);
             }
@@ -450,14 +450,14 @@
             source.onmessage = function(event) {
 
             if (event.data != 'done'){
-                var A = JSON.parse(event.data);
-                var extend_bounds = true,
-                    heatpoints = false,
-                    flowpoints = false;
+                let A = JSON.parse(event.data),
+                        extend_bounds = true,
+                        heatpoints = false,
+                        flowpoints = false;
 
                 if ("error" in A){
-                    msg = "<font color='red'>" + A.error +"</font><br>";
-                    var winMtds = L.control.window(map, {title: "Oops.", content:msg, visible:true});
+                    let msg = "<font color='red'>" + A.error +"</font><br>";
+                    let winMtds = L.control.window(map, {title: "Oops.", content:msg, visible:true});
                     doneRendering(msg);
                     stopListening();
 
@@ -467,13 +467,13 @@
                     $(".data_message").html(A.msg);
                     return;
                 } else {
-                    msg = "rendering [" + A.id + "] " + A.name;
+                    let msg = "rendering [" + A.id + "] " + A.name;
                     $(".data_message").html(msg);
                 }
 
                 if (flowres){
                     // add this activity's route to FlowLayer
-                    var fopts = Object.assign({}, flowLayerOptions);;
+                    var fopts = {...flowLayerOptions};  // copy of default options
 
                     if (("path_color" in A) && A.path_color)
                         fopts.color = A.path_color;
@@ -563,7 +563,7 @@
 
 
         function updateURL(){
-            var params = {},
+            let params = {},
                 type = $("#select_type").val(),
                 num = $("#select_num").val();
 
@@ -581,7 +581,7 @@
             if($("#autozoom").is(':checked')) {
                 params.autozoom = "1";
             } else {
-                var zoom = map.getZoom();
+                let zoom = map.getZoom();
                     center = map.getCenter(),
                     precision = Math.max(0, Math.ceil(Math.log(zoom) / Math.LN2));
                 params.lat = center.lat.toFixed(precision);
@@ -597,7 +597,7 @@
 
             params["baselayer"] = appState.baseLayers;
 
-            var newURL = "{{ user.strava_id }}" + "?" + jQuery.param(params, true);
+            let newURL = "{{ user.strava_id }}" + "?" + jQuery.param(params, true);
             window.history.pushState("", "", newURL);
 
             $(".current-url").val(newURL);
@@ -605,7 +605,7 @@
 
 
         function preset_sync() {
-            var F = "YYYY-MM-DD",
+            let F = "YYYY-MM-DD",
                 num = $("#select_num").val(),
                 type = $("#select_type").val();
 
@@ -644,7 +644,7 @@
             $(".datepick").datepicker({ dateFormat: 'yy-mm-dd',
                                         changeMonth: true,
                                         changeYear: true
-                                    });
+                           });
             map.on('moveend', function(e) {
                 updateURL();
             });
