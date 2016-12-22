@@ -23,7 +23,7 @@ CACHE_INDEX_TIMEOUT = app.config["CACHE_INDEX_TIMEOUT"]
 CACHE_INDEX_UPDATE_TIMEOUT = app.config["CACHE_INDEX_UPDATE_TIMEOUT"]
 CACHE_ACTIVITIES_TIMEOUT = app.config["CACHE_ACTIVITIES_TIMEOUT"]
 LOCAL = os.environ.get("APP_SETTINGS") == "config.DevelopmentConfig"
-OFFLINE = app.config["OFFLINE"]
+OFFLINE = app.config.get("OFFLINE")
 
 
 def inspector(obj):
