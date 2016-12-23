@@ -39,7 +39,7 @@
 
   <script>
     jQuery(document).ready(function($) {
-        var source = new EventSource("{{ url_for('activity_stream', username=user.strava_id, limit=limit) }}");
+        var source = new EventSource("{{ url_for('activity_stream', username=user.strava_id) }}");
         var count = 0;
         $("#status").text("Getting Activity List");
 
