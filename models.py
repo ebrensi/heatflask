@@ -4,7 +4,8 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import inspect
 from datetime import datetime
 import stravalib
-
+import pymongo
+from bson.objectid import ObjectId
 import pandas as pd
 import gevent
 from gevent.queue import Queue
@@ -17,6 +18,7 @@ import os
 
 
 db = SQLAlchemy(app)
+mongodb = pymongo.MongoClient(app.config.get("MONGODB_URI")).heatflask
 
 CACHE_USERS_TIMEOUT = app.config["CACHE_USERS_TIMEOUT"]
 CACHE_INDEX_TIMEOUT = app.config["CACHE_INDEX_TIMEOUT"]
@@ -320,6 +322,34 @@ class User(UserMixin, db.Model):
             app.logger.debug(
                 "error retrieving activity '{}': {}".format(a_id, e))
         return activity
+
+
+#  Activity class is only a proxy to underlying data structures.
+#  There are no Activity objects
+class Activity(object):
+
+    @staticmethod
+    def cache_key(id):
+        return "A:{}".format(id)
+
+    @classmethod
+    def add(cls, id):
+        pass
+
+    @classmethod
+    def get(cls, id):
+        key = cls.cache_key(id)
+        cached = cache.get(key)
+
+        if cached:
+            return cached
+
+        data = mongodb.find_one({"_id": ObjectId(id)})
+        cache.set(key,
+                  data,
+                  app.config["CACHE_ACTIVITIES_TIMEOUT"])
+        return data
+
 
 # Create tables if they don't exist
 #  These commands aren't necessary if we use flask-migrate
