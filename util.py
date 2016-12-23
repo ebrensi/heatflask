@@ -1,7 +1,7 @@
 #! usr/bin/env python
-import heatmapp
 import argparse
 
+from heatmapp import Activities, app, cache
 
 #  Define command-line arguents
 parser = argparse.ArgumentParser()
@@ -16,8 +16,12 @@ parser.add_argument("-p", "--purge", action='store_true',
 args = parser.parse_args()
 
 if args.clear_cache:
-    heatmapp.cache.clear()
-    heatmapp.app.logger.info("cleared cache")
+    cache.clear()
+    app.logger.info("cleared cache")
 
 if args.purge:
-    heatmapp.purge_old_activities()
+    days = app.config["STORE_ACTIVITIES_TIMEOUT"]
+    result = Activities.purge(days)
+    app.logger.info("purged {} activities older than {} days"
+                    .format(result.deleted_count,
+                            days))

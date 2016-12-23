@@ -348,7 +348,7 @@ class Activities(object):
         cached = rcache.get(key)
 
         if cached:
-            app.logger.debug("got Activity {} from cache".format(id))
+            # app.logger.debug("got Activity {} from cache".format(id))
             # rcache.expire(key, timeout)  # reset expiration timeout
             return msgpack.unpackb(cached)
 
@@ -357,7 +357,7 @@ class Activities(object):
             data = result.get("data")
             if data:
                 rcache.setex(key, msgpack.packb(data), timeout)
-                app.logger.debug("got Activity {} from MongoDB".format(id))
+                # app.logger.debug("got Activity {} from MongoDB".format(id))
                 return data
 
     @classmethod
