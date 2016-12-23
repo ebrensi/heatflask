@@ -12,7 +12,6 @@ import os
 import re
 import json
 import msgpack
-import pymongo
 import itertools
 import stravalib
 import flask_login
@@ -33,10 +32,9 @@ sslify = SSLify(app)
 cache = flask_caching.Cache(app)
 # cache.clear()
 
-mongodb = pymongo.MongoClient(app.config.get("MONGODB_URI")).heatflask
 
 # models depend on cache and app so we import them afterwards
-from models import User, db, inspector
+from models import User, Activities, db, inspector
 db.create_all()
 
 Analytics(app)
@@ -58,8 +56,8 @@ bundles = {
                                     'js/leaflet.js',
                                     'js/leaflet-sidebar.js',
                                     'js/Polyline.encoded.js',
-                                    'js/leaflet.spin.js',
-                                    'js/spin.min.js',
+                                    # 'js/leaflet.spin.js',
+                                    # 'js/spin.min.js',
                                     'js/moment.js',
                                     'js/leaflet-heat.js',
                                     'js/leaflet-ant-path.js',
@@ -178,8 +176,8 @@ def auth_callback():
             return redirect(state)
 
         user = User.from_access_token(access_token)
-        app.logger.debug("created {}. inspect: {}".format(user.describe(),
-                                                          inspector(user)))
+        app.logger.debug("logged in {}. inspect: {}".format(user.describe(),
+                                                            inspector(user)))
         db.session.add(user)
         db.session.commit()
         app.logger.debug(inspector(user))
@@ -435,8 +433,7 @@ def getdata(username):
                     activity["path_color"] = path_color(activity["type"])
 
                     if hires:
-                        key = "A:{}".format(activity["id"])
-                        stream_data = cache.get(key)
+                        stream_data = Activities.get(activity["id"])
 
                         if stream_data:
                             stream_data = msgpack.unpackb(stream_data)
@@ -454,6 +451,7 @@ def getdata(username):
                                                          streams_to_cache)
                             if "error" not in stream_data:
                                 packed_data = msgpack.packb(stream_data)
+                                Activities.add(activity["id"], stream_data)
                                 cache.set(key,
                                           packed_data,
                                           app.config["CACHE_ACTIVITIES_TIMEOUT"])
