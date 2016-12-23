@@ -17,10 +17,17 @@ from heatmapp import app, cache
 
 import os
 
+# PostgreSQL access via SQLAlchemy
+db_sql = SQLAlchemy(app)
+Column = db_sql.Column
+String, Integer = db_sql.String, db_sql.Integer
 
-db = SQLAlchemy(app)
-mongodb = pymongo.MongoClient(app.config.get("MONGODB_URI")).heatflask
-rcache = Redis.from_url(app.config["REDIS_URL"])
+# MongoDB access via PyMongo
+mongo_client = pymongo.MongoClient(app.config.get("MONGODB_URI"))
+db_mongo = mongo_client.get_default_database()
+
+# Redis data-store
+redis = Redis.from_url(app.config["REDIS_URL"])
 
 CACHE_USERS_TIMEOUT = app.config["CACHE_USERS_TIMEOUT"]
 CACHE_INDEX_TIMEOUT = app.config["CACHE_INDEX_TIMEOUT"]
@@ -36,20 +43,20 @@ def inspector(obj):
     return [attr for attr in attrs if getattr(state, attr)]
 
 
-class User(UserMixin, db.Model):
+class User(UserMixin, db_sql.Model):
     __tablename__ = 'users'
-    strava_id = db.Column(db.Integer, primary_key=True, autoincrement=False)
+    strava_id = Column(Integer, primary_key=True, autoincrement=False)
 
     # These fields get refreshed every time the user logs in.
     #  They are only stored in the database to enable persistent login
-    username = db.Column(db.String())
-    firstname = db.Column(db.String())
-    lastname = db.Column(db.String())
-    profile = db.Column(db.String())
-    strava_access_token = db.Column(db.String())
+    username = Column(String())
+    firstname = Column(String())
+    lastname = Column(String())
+    profile = Column(String())
+    strava_access_token = Column(String())
 
-    dt_last_active = db.Column(pg.TIMESTAMP)
-    app_activity_count = db.Column(db.Integer, default=0)
+    dt_last_active = Column(pg.TIMESTAMP)
+    app_activity_count = Column(Integer, default=0)
 
     strava_client = None
     # activity_index = None
@@ -135,7 +142,7 @@ class User(UserMixin, db.Model):
         if user:
             app.logger.debug(
                 "retrieved {} from cache with key {}".format(user, key))
-            return db.session.merge(user, load=False)
+            return db_sql.session.merge(user, load=False)
 
         # Get user from db by id or username
         try:
@@ -336,8 +343,8 @@ class Activities(object):
 
     @classmethod
     def set(cls, id, data, timeout=CACHE_ACTIVITIES_TIMEOUT):
-        rcache.setex(cls.cache_key(id), msgpack.packb(data), timeout)
-        mongodb.activities.update_one(
+        redis.setex(cls.cache_key(id), msgpack.packb(data), timeout)
+        db_mongo.activities.update_one(
             {"_id": int(id)},
             {"$set": {"ts": datetime.utcnow(), "data": data}},
             upsert=True)
@@ -345,30 +352,30 @@ class Activities(object):
     @classmethod
     def get(cls, id, timeout=CACHE_ACTIVITIES_TIMEOUT):
         key = cls.cache_key(id)
-        cached = rcache.get(key)
+        cached = redis.get(key)
 
         if cached:
             # app.logger.debug("got Activity {} from cache".format(id))
-            # rcache.expire(key, timeout)  # reset expiration timeout
+            # redis.expire(key, timeout)  # reset expiration timeout
             return msgpack.unpackb(cached)
 
-        result = mongodb.activities.find_one({"_id": int(id)})
+        result = db_mongo.activities.find_one({"_id": int(id)})
         if result:
             data = result.get("data")
             if data:
-                rcache.setex(key, msgpack.packb(data), timeout)
-                # app.logger.debug("got Activity {} from MongoDB".format(id))
+                redis.setex(key, msgpack.packb(data), timeout)
+                # app.logger.debug("got Activity {} from db_mongo".format(id))
                 return data
 
     @classmethod
     def clear(cls):
-        mongodb.activities.drop()
-        rcache.delete(*rcache.keys(cls.cache_key("*")))
+        db_mongo.activities.drop()
+        redis.delete(*redis.keys(cls.cache_key("*")))
 
     @classmethod
     def purge(cls, age_in_days):
         earlier_date = datetime.utcnow() - timedelta(days=age_in_days)
-        result = mongodb.activities.delete_many({'ts': {"$lt": earlier_date}})
+        result = db_mongo.activities.delete_many({'ts': {"$lt": earlier_date}})
         return result
 
 # Create tables if they don't exist
