@@ -33,8 +33,8 @@ cache = flask_caching.Cache(app)
 
 
 # models depend on cache and app so we import them afterwards
-from models import User, Activities, db, inspector
-db.create_all()
+from models import User, Activities, db_sql, inspector
+db_sql.create_all()
 
 Analytics(app)
 
@@ -55,8 +55,6 @@ bundles = {
                                     'js/leaflet.js',
                                     'js/leaflet-sidebar.js',
                                     'js/Polyline.encoded.js',
-                                    # 'js/leaflet.spin.js',
-                                    # 'js/spin.min.js',
                                     'js/moment.js',
                                     'js/leaflet-heat.js',
                                     'js/leaflet-ant-path.js',
@@ -177,8 +175,8 @@ def auth_callback():
         user = User.from_access_token(access_token)
         app.logger.debug("logged in {}. inspect: {}".format(user.describe(),
                                                             inspector(user)))
-        db.session.add(user)
-        db.session.commit()
+        db_sql.session.add(user)
+        db_sql.session.commit()
         app.logger.debug(inspector(user))
 
         # remember=True, for persistent login.
@@ -225,8 +223,8 @@ def delete(username):
         try:
             user.delete_index()
             user.uncache()
-            db.session.delete(user)
-            db.session.commit()
+            db_sql.session.delete(user)
+            db_sql.session.commit()
         except Exception as e:
             flash(str(e))
         else:
@@ -248,7 +246,7 @@ def index(username):
         else:
             current_user.dt_last_active = datetime.utcnow()
             current_user.app_activity_count += 1
-            db.session.commit()
+            db_sql.session.commit()
 
     # note: 'current_user' is the user that is currently logged in.
     #       'user' is the user we are displaying data for.
