@@ -2,10 +2,11 @@ from flask_login import UserMixin
 from sqlalchemy.dialects import postgresql as pg
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import inspect
-from datetime import datetime
+from datetime import datetime, timedelta
 import stravalib
 import pymongo
-from bson.objectid import ObjectId
+import msgpack
+from redis import Redis
 import pandas as pd
 import gevent
 from gevent.queue import Queue
@@ -19,6 +20,7 @@ import os
 
 db = SQLAlchemy(app)
 mongodb = pymongo.MongoClient(app.config.get("MONGODB_URI")).heatflask
+rcache = Redis.from_url(app.config["REDIS_URL"])
 
 CACHE_USERS_TIMEOUT = app.config["CACHE_USERS_TIMEOUT"]
 CACHE_INDEX_TIMEOUT = app.config["CACHE_INDEX_TIMEOUT"]
@@ -324,32 +326,50 @@ class User(UserMixin, db.Model):
         return activity
 
 
-#  Activity class is only a proxy to underlying data structures.
+#  Activities class is only a proxy to underlying data structures.
 #  There are no Activity objects
-class Activity(object):
+class Activities(object):
 
     @staticmethod
     def cache_key(id):
         return "A:{}".format(id)
 
     @classmethod
-    def add(cls, id):
-        pass
+    def set(cls, id, data, timeout=CACHE_ACTIVITIES_TIMEOUT):
+        rcache.setex(cls.cache_key(id), msgpack.packb(data), timeout)
+        mongodb.activities.update_one(
+            {"_id": int(id)},
+            {"$set": {"ts": datetime.utcnow(), "data": data}},
+            upsert=True)
 
     @classmethod
-    def get(cls, id):
+    def get(cls, id, timeout=CACHE_ACTIVITIES_TIMEOUT):
         key = cls.cache_key(id)
-        cached = cache.get(key)
+        cached = rcache.get(key)
 
         if cached:
-            return cached
+            app.logger.debug("got Activity {} from cache".format(id))
+            # rcache.expire(key, timeout)  # reset expiration timeout
+            return msgpack.unpackb(cached)
 
-        data = mongodb.find_one({"_id": ObjectId(id)})
-        cache.set(key,
-                  data,
-                  app.config["CACHE_ACTIVITIES_TIMEOUT"])
-        return data
+        result = mongodb.activities.find_one({"_id": int(id)})
+        if result:
+            data = result.get("data")
+            if data:
+                rcache.setex(key, msgpack.packb(data), timeout)
+                app.logger.debug("got Activity {} from MongoDB".format(id))
+                return data
 
+    @classmethod
+    def clear(cls):
+        mongodb.activities.drop()
+        rcache.delete(*rcache.keys(cls.cache_key("*")))
+
+    @classmethod
+    def purge(cls, age_in_days):
+        earlier_date = datetime.utcnow() - timedelta(days=age_in_days)
+        result = mongodb.activities.delete_many({'ts': {"$lt": earlier_date}})
+        return result
 
 # Create tables if they don't exist
 #  These commands aren't necessary if we use flask-migrate
