@@ -11,7 +11,6 @@ from datetime import datetime
 import os
 import re
 import json
-import msgpack
 import itertools
 import stravalib
 import flask_login
@@ -435,9 +434,7 @@ def getdata(username):
                     if hires:
                         stream_data = Activities.get(activity["id"])
 
-                        if stream_data:
-                            stream_data = msgpack.unpackb(stream_data)
-                        else:
+                        if not stream_data:
                             msg = (
                                 "importing {0}/{1}..."
                                 .format(
@@ -450,13 +447,7 @@ def getdata(username):
                             stream_data = import_streams(activity["id"],
                                                          streams_to_cache)
                             if "error" not in stream_data:
-                                packed_data = msgpack.packb(stream_data)
-                                Activities.add(activity["id"], stream_data)
-                                cache.set(key,
-                                          packed_data,
-                                          app.config["CACHE_ACTIVITIES_TIMEOUT"])
-                                app.logger.debug(
-                                    "cached {}, size = {}".format(key, len(packed_data)))
+                                Activities.set(activity["id"], stream_data)
 
                         data = {s: stream_data[s] for s in streams_out
                                 if s in stream_data}
@@ -468,7 +459,8 @@ def getdata(username):
                         yield sse_out(activity)
                         gevent.sleep(0)
         except Exception as e:
-            yield sse_out({"error": str(e)})
+            raise
+            # yield sse_out({"error": str(e)})
 
         yield sse_out()
 

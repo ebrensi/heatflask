@@ -13,10 +13,9 @@ class Config(object):
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     MONGODB_URI = os.environ.get("MONGODB_URI")
+    REDIS_URL = os.environ.get('REDIS_URL')
 
     # Settings for fast-cache
-    CACHE_REDIS_URL = os.environ.get('REDIS_URL')
-
     # How long (seconds) we hold activity index before rebuilding it
     CACHE_INDEX_TIMEOUT = 7 * 24 * 60 * 60   # 7 days
 
