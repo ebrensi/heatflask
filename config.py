@@ -14,7 +14,7 @@ class Config(object):
 
     MONGODB_URI = os.environ.get("MONGODB_URI")
     REDIS_URL = os.environ.get('REDIS_URL')
-    REDIS_CACHE_URL = REDIS_URL
+    CACHE_REDIS_URL = REDIS_URL
 
     # Settings for fast-cache
     # How long (seconds) we hold activity index before rebuilding it
