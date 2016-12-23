@@ -155,8 +155,6 @@
 
                 <form action="{{ url_for('logout', username=user.strava_id) }}">
                     <input type="submit" class="btn btn-danger" value="Log Out" />
-
-                    <!-- <input class="current-url" type="hidden" id="afterLogout" name="next" value="" /> -->
                 </form>
                 {% else %}
 
@@ -165,16 +163,9 @@
 
                 <form action="{{ url_for('authorize') }}" >
                     <input type="image" src="{{ url_for('static', filename='btn_strava_connectwith_orange.svg') }}" alt="Log-In with Strava" >
-                    <!-- <input type="hidden" name="state" value="{{ url_for('nothing') }}" > -->
                 </form>
 
-
                 {% endif %}
-
-
-                <div>
-
-                </div>
 
             </div>
 
@@ -462,10 +453,10 @@
                 } else if ("msg" in A) {
                     $(".data_message").html(A.msg);
                     return;
-                } else {
-                    let msg = "rendering [" + A.id + "] " + A.name;
-                    $(".data_message").html(msg);
-                }
+                } // else {
+                //     let msg = "rendering [" + A.id + "] " + A.name;
+                //     $(".data_message").html(msg);
+                // }
 
                 if (flowres){
                     // add this activity's route to FlowLayer

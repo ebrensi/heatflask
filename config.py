@@ -22,8 +22,11 @@ class Config(object):
     # How long before a user's index is outated and needs an update
     CACHE_INDEX_UPDATE_TIMEOUT = 10 * 60  # 10 minutes
 
+    # We daily purge activities older than this from MongoDB
+    STORE_ACTIVITIES_TIMEOUT = 7  # days
+
     # How long we memory-cache hires activities
-    CACHE_ACTIVITIES_TIMEOUT = 3 * 60 * 60  # 3 hours
+    CACHE_ACTIVITIES_TIMEOUT = 1 * 60 * 60  # 1 hour
 
     # How long we hold a User object in memory
     CACHE_USERS_TIMEOUT = 2 * 60 * 60  # 2 hours
@@ -106,3 +109,4 @@ class DevelopmentConfig(Config):
     DEBUG = True
     # For Flask-Cache
     CACHE_TYPE = "redis" if os.environ.get("REDIS_URL") else "simple"
+    CACHE_ACTIVITIES_TIMEOUT = 10

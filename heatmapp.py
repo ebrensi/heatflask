@@ -459,8 +459,8 @@ def getdata(username):
                         yield sse_out(activity)
                         gevent.sleep(0)
         except Exception as e:
-            raise
-            # yield sse_out({"error": str(e)})
+            # raise
+            yield sse_out({"error": str(e)})
 
         yield sse_out()
 
