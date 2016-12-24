@@ -43,6 +43,14 @@ def inspector(obj):
     return [attr for attr in attrs if getattr(state, attr)]
 
 
+def serialize_datetime(dt):
+    return (dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second, dt.microsecond)
+
+
+def deserialize_datetime(s):
+    return datetime(*s)
+
+
 class User(UserMixin, db_sql.Model):
     __tablename__ = 'users'
     strava_id = Column(Integer, primary_key=True, autoincrement=False)
@@ -59,8 +67,6 @@ class User(UserMixin, db_sql.Model):
     app_activity_count = Column(Integer, default=0)
 
     strava_client = None
-    # activity_index = None
-    dt_last_indexed = None
 
     def __eq__(self, other):
         try:
@@ -70,11 +76,19 @@ class User(UserMixin, db_sql.Model):
         else:
             return value
 
-    def describe(self):
+    def serialize(self):
         attrs = ["strava_id", "username", "firstname", "lastname",
                  "profile", "strava_access_token", "dt_last_active",
                  "app_activity_count", "dt_last_indexed"]
-        return {attr: getattr(self, attr) for attr in attrs}
+        d = {attr: getattr(self, attr) for attr in attrs}
+        if d.dt_last_active:
+            d.dt_last_active = serialize_datetime(d.dt_last_active)
+        return msgpack.packb(d)
+
+    @classmethod
+    def from_serialized(cls, p):
+        d = msgpack.unpackb(p)
+        return cls(d)
 
     def client(self):
         if not self.strava_client:
@@ -377,6 +391,7 @@ class Activities(object):
         earlier_date = datetime.utcnow() - timedelta(days=age_in_days)
         result = db_mongo.activities.delete_many({'ts': {"$lt": earlier_date}})
         return result
+
 
 # Create tables if they don't exist
 #  These commands aren't necessary if we use flask-migrate

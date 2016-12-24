@@ -33,7 +33,7 @@ cache = flask_caching.Cache(app)
 
 
 # models depend on cache and app so we import them afterwards
-from models import User, Activities, db_sql, inspector
+from models import User, Activities, db_sql, db_mongo, redis, inspector
 db_sql.create_all()
 
 Analytics(app)
