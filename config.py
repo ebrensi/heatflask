@@ -17,7 +17,7 @@ class Config(object):
     CACHE_REDIS_URL = REDIS_URL
 
     # Settings for fast-cache
-    # How long (seconds) we hold activity index before rebuilding it
+    # How long (seconds) we hold a user's index (in redis) before rebuilding it
     CACHE_INDEX_TIMEOUT = 7 * 24 * 60 * 60   # 7 days
 
     # How long before a user's index is outated and needs an update
@@ -30,7 +30,7 @@ class Config(object):
     CACHE_ACTIVITIES_TIMEOUT = 1 * 60 * 60  # 1 hour
 
     # How long we hold a User object in memory
-    CACHE_USERS_TIMEOUT = 2 * 60 * 60  # 2 hours
+    CACHE_USERS_TIMEOUT = 1 * 60 * 60  # 1 hour
 
     SECRET_KEY = "pB\xeax\x9cJ\xd6\x81\xed\xd7\xf9\xd0\x99o\xad\rM\x92\xb1\x8b{7\x02r"
 
@@ -105,7 +105,7 @@ class DevelopmentConfig(Config):
     These are settings specific to the development environment
     (Developer's personal computer)
     """
-    OFFLINE = True
+    # OFFLINE = True
     DEVELOPMENT = True
     DEBUG = True
     # For Flask-Cache
