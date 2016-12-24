@@ -43,11 +43,11 @@ def inspector(obj):
     return [attr for attr in attrs if getattr(state, attr)]
 
 
-def serialize_datetime(dt):
+def tuplize_datetime(dt):
     return (dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second, dt.microsecond)
 
 
-def deserialize_datetime(s):
+def detuplize_datetime(s):
     return datetime(*s)
 
 
@@ -77,18 +77,23 @@ class User(UserMixin, db_sql.Model):
             return value
 
     def serialize(self):
-        attrs = ["strava_id", "username", "firstname", "lastname",
-                 "profile", "strava_access_token", "dt_last_active",
-                 "app_activity_count", "dt_last_indexed"]
-        d = {attr: getattr(self, attr) for attr in attrs}
-        if d.dt_last_active:
-            d.dt_last_active = serialize_datetime(d.dt_last_active)
+        d = {}
+        d.update(vars(self))
+        del d["_sa_instance_state"]
+        dt = d.get("dt_last_active")
+        if dt:
+            d["dt_last_active"] = tuplize_datetime(dt)
+        else:
+            del d["dt_last_active"]
         return msgpack.packb(d)
 
     @classmethod
     def from_serialized(cls, p):
         d = msgpack.unpackb(p)
-        return cls(d)
+        dt = d.get("dt_last_active")
+        if dt:
+            d["dt_last_active"] = detuplize_datetime(dt)
+        return cls(**d)
 
     def client(self):
         if not self.strava_client:
@@ -137,10 +142,9 @@ class User(UserMixin, db_sql.Model):
 
     def cache(self, identifier=None, timeout=CACHE_USERS_TIMEOUT):
         key = User.key(identifier or self.strava_id)
-        cache.set(key, self, timeout)
         app.logger.debug(
-            "cached {} with key '{}' for {} sec".format(self, key, timeout))
-        return self
+            "caching {} with key '{}' for {} sec".format(self, key, timeout))
+        return redis.setex(key, self.serialize(), timeout)
 
     def uncache(self):
         app.logger.debug("deleting {}".format(self))
@@ -152,11 +156,12 @@ class User(UserMixin, db_sql.Model):
     @classmethod
     def get(cls, user_identifier, timeout=CACHE_USERS_TIMEOUT):
         key = User.key(user_identifier)
-        user = cache.get(key)
-        if user:
+        cached = redis.get(key)
+        if cached:
+            user = User.from_serialized(cached)
             app.logger.debug(
                 "retrieved {} from cache with key {}".format(user, key))
-            return db_sql.session.merge(user, load=False)
+            return db_sql.session.merge(user)
 
         # Get user from db by id or username
         try:
