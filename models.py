@@ -12,7 +12,7 @@ import gevent
 from gevent.queue import Queue
 from gevent.pool import Pool
 from exceptions import StopIteration
-
+import cPickle
 from heatmapp import app, cache
 
 import os
@@ -35,12 +35,6 @@ CACHE_INDEX_UPDATE_TIMEOUT = app.config["CACHE_INDEX_UPDATE_TIMEOUT"]
 CACHE_ACTIVITIES_TIMEOUT = app.config["CACHE_ACTIVITIES_TIMEOUT"]
 LOCAL = os.environ.get("APP_SETTINGS") == "config.DevelopmentConfig"
 OFFLINE = app.config.get("OFFLINE")
-
-
-def inspector(obj):
-    state = inspect(obj)
-    attrs = ["transient", "pending", "persistent", "deleted", "detached"]
-    return [attr for attr in attrs if getattr(state, attr)]
 
 
 def tuplize_datetime(dt):
@@ -68,32 +62,33 @@ class User(UserMixin, db_sql.Model):
 
     strava_client = None
 
-    def __eq__(self, other):
-        try:
-            value = self.strava_id == other.strava_id
-        except:
-            return False
-        else:
-            return value
+    def db_state(self):
+        state = inspect(self)
+        attrs = ["transient", "pending", "persistent", "deleted", "detached"]
+        return [attr for attr in attrs if getattr(state, attr)]
+
+    # def serialize(self):
+    #     d = {}
+    #     d.update(vars(self))
+    #     del d["_sa_instance_state"]
+    #     dt = d.get("dt_last_active")
+    #     if dt:
+    #         d["dt_last_active"] = tuplize_datetime(dt)
+    #     else:
+    #         del d["dt_last_active"]
+    #     return msgpack.packb(d)
 
     def serialize(self):
-        d = {}
-        d.update(vars(self))
-        del d["_sa_instance_state"]
-        dt = d.get("dt_last_active")
-        if dt:
-            d["dt_last_active"] = tuplize_datetime(dt)
-        else:
-            del d["dt_last_active"]
-        return msgpack.packb(d)
+        return cPickle.dumps(self)
 
     @classmethod
     def from_serialized(cls, p):
-        d = msgpack.unpackb(p)
-        dt = d.get("dt_last_active")
-        if dt:
-            d["dt_last_active"] = detuplize_datetime(dt)
-        return cls(**d)
+        # d = msgpack.unpackb(p)
+        # dt = d.get("dt_last_active")
+        # if dt:
+        #     d["dt_last_active"] = detuplize_datetime(dt)
+        # return cls(**d)
+        return cPickle.loads(p)
 
     def client(self):
         if not self.strava_client:
@@ -147,11 +142,11 @@ class User(UserMixin, db_sql.Model):
         return redis.setex(key, self.serialize(), timeout)
 
     def uncache(self):
-        app.logger.debug("deleting {}".format(self))
+        app.logger.debug("uncaching {}".format(self))
 
         # delete from cache too.  It may be under two different keys
-        cache.delete(User.key(self.strava_id))
-        cache.delete(User.key(self.username))
+        redis.delete(User.key(self.strava_id))
+        redis.delete(User.key(self.username))
 
     @classmethod
     def get(cls, user_identifier, timeout=CACHE_USERS_TIMEOUT):
@@ -161,7 +156,7 @@ class User(UserMixin, db_sql.Model):
             user = User.from_serialized(cached)
             app.logger.debug(
                 "retrieved {} from cache with key {}".format(user, key))
-            return db_sql.session.merge(user)
+            return db_sql.session.merge(user, load=False)
 
         # Get user from db by id or username
         try:
@@ -374,8 +369,8 @@ class Activities(object):
         cached = redis.get(key)
 
         if cached:
+            redis.expire(key, timeout)  # reset expiration timeout
             # app.logger.debug("got Activity {} from cache".format(id))
-            # redis.expire(key, timeout)  # reset expiration timeout
             return msgpack.unpackb(cached)
 
         result = db_mongo.activities.find_one({"_id": int(id)})
@@ -383,7 +378,7 @@ class Activities(object):
             data = result.get("data")
             if data:
                 redis.setex(key, msgpack.packb(data), timeout)
-                # app.logger.debug("got Activity {} from db_mongo".format(id))
+                # app.logger.debug("got Activity {} from MongoDB".format(id))
                 return data
 
     @classmethod
