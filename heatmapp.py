@@ -33,7 +33,7 @@ cache = flask_caching.Cache(app)
 
 
 # models depend on cache and app so we import them afterwards
-from models import User, Activities, db_sql, db_mongo, redis, inspector
+from models import User, Activities, db_sql, db_mongo, redis
 db_sql.create_all()
 
 Analytics(app)
@@ -84,8 +84,7 @@ login_manager.login_view = 'nothing'
 @login_manager.user_loader
 def load_user(user_id):
     user = User.get(user_id)
-    app.logger.debug(inspector(user))
-    # app.logger.debug(user.describe())
+    app.logger.debug(user.db_state())
     return user
 
 
@@ -173,11 +172,9 @@ def auth_callback():
             return redirect(state)
 
         user = User.from_access_token(access_token)
-        app.logger.debug("logged in {}. inspect: {}".format(user.describe(),
-                                                            inspector(user)))
-        db_sql.session.add(user)
+        app.logger.debug("logged in {}")
+        db_sql.session.add(user)  #error here
         db_sql.session.commit()
-        app.logger.debug(inspector(user))
 
         # remember=True, for persistent login.
         login_user(user, remember=True)
