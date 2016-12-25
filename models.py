@@ -153,10 +153,14 @@ class User(UserMixin, db_sql.Model):
         key = User.key(user_identifier)
         cached = redis.get(key)
         if cached:
-            user = User.from_serialized(cached)
-            app.logger.debug(
-                "retrieved {} from cache with key {}".format(user, key))
-            return db_sql.session.merge(user, load=False)
+            try:
+                user = User.from_serialized(cached)
+                app.logger.debug(
+                    "retrieved {} from cache with key {}".format(user, key))
+                return db_sql.session.merge(user, load=False)
+            except:
+                # apparently this key doesn't work so let's delete it
+                redis.delete(key)
 
         # Get user from db by id or username
         try:
