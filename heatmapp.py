@@ -173,7 +173,7 @@ def auth_callback():
 
         user = User.from_access_token(access_token)
         app.logger.debug("logged in {}")
-        db_sql.session.add(user)  #error here
+        db_sql.session.add(user)  # error here
         db_sql.session.commit()
 
         # remember=True, for persistent login.
@@ -407,6 +407,8 @@ def getdata(username):
         streams_out = ["polyline", "error"]
         streams_to_cache = ["polyline"]
 
+        yield sse_out({"msg": "Retrieving Index..."})
+
         activity_data = user.index(**options)
         if isinstance(activity_data, list):
             total = len(activity_data)
@@ -425,20 +427,13 @@ def getdata(username):
 
                 if activity.get("summary_polyline"):
                     activity["path_color"] = path_color(activity["type"])
+                    msg = "rendering {0}/{1}...".format(count, total)
+                    yield sse_out({"msg": msg})
 
                     if hires:
                         stream_data = Activities.get(activity["id"])
 
                         if not stream_data:
-                            msg = (
-                                "importing {0}/{1}..."
-                                .format(
-                                    count,
-                                    total
-                                )
-                            )
-                            yield sse_out({"msg": msg})
-
                             stream_data = import_streams(activity["id"],
                                                          streams_to_cache)
                             if "error" not in stream_data:
