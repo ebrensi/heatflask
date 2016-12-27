@@ -211,23 +211,21 @@
 
             <div class="sidebar-pane" id="messages">
                 <h1 class="sidebar-header">Info<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
-                <br>
-                {{ config['APP_NAME'] }} is a work in progress.
-                <img src="{{ url_for('static', filename='under-construction.gif') }}" height=40>
-
+                <br><br>
+                {{ config['APP_NAME'] }} imports and renders your public (not private) activities.<br>
+                Due to limited storage, we cache an index of your activity IDs and GPS data for rendered activites that expires after 7 days.<br><br>
+                Deleting your accout with us clears our database cache for you and deletes your Strava access token from our database.
                 <br><br>
                 The URL for a heat/flow map and the current location dates or preset, and zoom are embedded in the url so you can share that url and anyone who clicks on it will get the same view.
                 <br><br>
-
-                The token we obtain is for public data, so Heatflask will not import or render any activities you have set to private.
-                Deleting your accout with us clears our database cache for you and deletes your Strava access token from our database.
-                <br><br>
-                Questions, comments, suggestions?<br>
-                <a href="mailto:Rensi.Efrem@gmail.com?Subject=About {{ config['APP_NAME'] }}">Contact Me.</a>
-
-                <br><br>
                 Note: You can specify a custom map baselayer by setting "baselayer={map}" in the URL, where {map} is one of the provider names from
                  <a href="https://leaflet-extras.github.io/leaflet-providers/preview" target="_blank">leaflet-providers</a>
+                <hr>
+
+                {{ config['APP_NAME'] }} is a work in progress.
+                <img src="{{ url_for('static', filename='under-construction.gif') }}" height=40>
+                Questions, comments, suggestions?  Want to help?!!<br>
+                <a href="mailto:Rensi.Efrem@gmail.com?subject=About {{ config['APP_NAME'] }}">Contact Me!</a>
                 <hr>
 
             </div>
