@@ -111,3 +111,22 @@ class DevelopmentConfig(Config):
     # For Flask-Cache
     CACHE_TYPE = "redis" if os.environ.get("REDIS_URL") else "simple"
     CACHE_ACTIVITIES_TIMEOUT = 10
+
+
+"""
+Ride                       Kitesurf
+Run                        NordicSki
+Swim                       RockClimbing
+Hike                       RollerSki
+Walk                       Rowing
+AlpineSki                  Snowboard
+BackcountrySki             Snowshoe
+Canoeing                   StairStepper
+Crossfit                   StandUpPaddling
+EBikeRide                  Surfing
+Elliptical                 VirtualRide
+IceSkate                   WeightTraining
+InlineSkate                Windsurf
+Kayaking                   Workout
+                           Yoga
+"""

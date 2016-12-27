@@ -60,6 +60,10 @@ class User(UserMixin, db_sql.Model):
     dt_last_active = Column(pg.TIMESTAMP)
     app_activity_count = Column(Integer, default=0)
 
+    # measurement_preference 'feet' or 'meters'
+    # city:   string
+    # state:  string
+    # country:    string
     strava_client = None
 
     def db_state(self):
@@ -67,27 +71,11 @@ class User(UserMixin, db_sql.Model):
         attrs = ["transient", "pending", "persistent", "deleted", "detached"]
         return [attr for attr in attrs if getattr(state, attr)]
 
-    # def serialize(self):
-    #     d = {}
-    #     d.update(vars(self))
-    #     del d["_sa_instance_state"]
-    #     dt = d.get("dt_last_active")
-    #     if dt:
-    #         d["dt_last_active"] = tuplize_datetime(dt)
-    #     else:
-    #         del d["dt_last_active"]
-    #     return msgpack.packb(d)
-
     def serialize(self):
         return cPickle.dumps(self)
 
     @classmethod
     def from_serialized(cls, p):
-        # d = msgpack.unpackb(p)
-        # dt = d.get("dt_last_active")
-        # if dt:
-        #     d["dt_last_active"] = detuplize_datetime(dt)
-        # return cls(**d)
         return cPickle.loads(p)
 
     def client(self):
