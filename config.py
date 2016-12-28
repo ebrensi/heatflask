@@ -17,7 +17,7 @@ class Config(object):
     CACHE_REDIS_URL = REDIS_URL
 
     # Settings for fast-cache
-    # How long (seconds) we hold a user's index (in redis) before rebuilding it
+    # How long (seconds) we hold a user's index before rebuilding it
     CACHE_INDEX_TIMEOUT = 7 * 24 * 60 * 60   # 7 days
 
     # How long before a user's index is outated and needs an update
