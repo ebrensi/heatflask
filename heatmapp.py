@@ -122,14 +122,25 @@ def nothing():
 
 @app.route('/demo')
 def demo():
+    # Last 7 days of activity
+    # return redirect(url_for("index",
+    #                         username="15972102",
+    #                         preset="7",
+    #                         heatres="high",
+    #                         flowres="high",
+    #                         info=1,
+    #                         autozoom=1
+    #                         )
+    #                 )
+
+    # My Christmas week in Houston
     return redirect(url_for("index",
                             username="15972102",
-                            preset="7",
+                            date1="2016-12-21",
+                            autozoom=1,
                             heatres="high",
                             flowres="high",
-                            info=1,
-                            autozoom=1,
-                            # baselayer=["OpenTopoMap"]
+                            info=1
                             )
                     )
 
