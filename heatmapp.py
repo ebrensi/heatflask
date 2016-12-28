@@ -12,6 +12,7 @@ import os
 import re
 import json
 import itertools
+import msgpack
 import stravalib
 import flask_login
 from flask_login import current_user, login_user, logout_user, login_required
@@ -33,7 +34,7 @@ cache = flask_caching.Cache(app)
 
 
 # models depend on cache and app so we import them afterwards
-from models import User, Activities, db_sql, db_mongo, redis
+from models import User, Activities, db_sql, db_mongo, redis, tuplize_datetime
 db_sql.create_all()
 
 Analytics(app)
@@ -172,7 +173,7 @@ def auth_callback():
             return redirect(state)
 
         user = User.from_access_token(access_token)
-        app.logger.debug("logged in {}")
+        app.logger.debug("logged in {}".format(user))
         db_sql.session.add(user)  # error here
         db_sql.session.commit()
 
@@ -252,6 +253,12 @@ def index(username):
         flash("user '{}' is not registered with this app"
               .format(username))
         return redirect(url_for('nothing'))
+
+    ip_address = request.environ.get('HTTP_X_REAL_IP', request.remote_addr)
+    redis.lpush("history",
+                msgpack.packb((tuplize_datetime(datetime.now()),
+                               ip_address, request.url))
+                )
 
     date1 = request.args.get("date1", "")
     date2 = request.args.get("date2", "")
@@ -539,6 +546,43 @@ def users():
         return render_template_string(html, data=info)
     else:
         return "sorry."
+
+
+@app.route('/history')
+@login_required
+def history():
+    MAX = app.config["MAX_HISTORY"]
+    if current_user.strava_id in app.config["ADMIN"]:
+        if redis.llen("history"):
+            data = [
+                (datetime(*tpl[:5]), ip, url) for tpl, ip, url in
+                [msgpack.unpackb(record)
+                 for record in redis.lrange("history", 0, -1)]
+            ]
+
+            if data:
+                html = """
+                <h1>Events</h1>
+                <table>
+                    <tr>
+                    <td>time</td>
+                    <td>ip address</td>
+                    <td>url</td>
+                    </tr>
+                    {%- for time,ip,url in data %}
+                      <tr>
+                        <td>{{ time }}</td>
+                        <td>{{ ip }}</td>
+                        <td><a href="{{ url }}" target='_blank'>{{ url }}</a></td>
+                      </tr>
+                    {%- endfor %}
+                </table>
+
+                """
+                if redis.llen("history") > MAX:
+                    redis.ltrim("history", 0, MAX)
+                return render_template_string(html, data=data)
+    return "oops"
 
 
 @app.route('/clear_cache')

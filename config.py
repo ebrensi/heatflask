@@ -72,6 +72,9 @@ class Config(object):
     MAP_CENTER = [27.53, 1.58]
     MAP_ZOOM = 3
 
+    # Maximum number of event-log entries
+    MAX_HISTORY = 1000
+
 
 class ProductionConfig(Config):
     """
