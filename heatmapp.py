@@ -269,7 +269,7 @@ def index(username):
 
     ip_address = request.environ.get('HTTP_X_REAL_IP', request.remote_addr)
     redis.lpush("history",
-                msgpack.packb((tuplize_datetime(datetime.now()),
+                msgpack.packb((tuplize_datetime(datetime.utcnow()),
                                ip_address, request.url))
                 )
 
