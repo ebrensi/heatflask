@@ -57,13 +57,16 @@ class User(UserMixin, db_sql.Model):
     profile = Column(String())
     strava_access_token = Column(String())
 
+    city = Column(String())
+    state = Column(String())
+    country = Column(String())
+    activity_index = Column(pg.HSTORE)
+
     dt_last_active = Column(pg.TIMESTAMP)
     app_activity_count = Column(Integer, default=0)
 
     # measurement_preference 'feet' or 'meters'
-    # city:   string
-    # state:  string
-    # country:    string
+
     strava_client = None
 
     def db_state(self):
