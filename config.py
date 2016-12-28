@@ -14,7 +14,6 @@ class Config(object):
 
     MONGODB_URI = os.environ.get("MONGODB_URI")
     REDIS_URL = os.environ.get('REDIS_URL')
-    CACHE_REDIS_URL = REDIS_URL
 
     # Settings for fast-cache
     # How long (seconds) we hold a user's index before rebuilding it
@@ -33,9 +32,6 @@ class Config(object):
     CACHE_USERS_TIMEOUT = 1 * 60 * 60  # 1 hour
 
     SECRET_KEY = "pB\xeax\x9cJ\xd6\x81\xed\xd7\xf9\xd0\x99o\xad\rM\x92\xb1\x8b{7\x02r"
-
-    # Flask-Cache (defaul) settings
-    CACHE_TYPE = "null"
 
     # Strava stuff
     STRAVA_CLIENT_ID = os.environ.get("STRAVA_CLIENT_ID")
@@ -88,17 +84,12 @@ class ProductionConfig(Config):
     }
     DEBUG = False
 
-    # For Flask-Cache
-    CACHE_TYPE = 'redis'
-
 
 class StagingConfig(Config):
     """
     These are settings specific to the staging environment
      (hosted test app)
     """
-    CACHE_TYPE = 'redis'
-
     DEVELOPMENT = True
     DEBUG = True
 
@@ -111,6 +102,6 @@ class DevelopmentConfig(Config):
     # OFFLINE = True
     DEVELOPMENT = True
     DEBUG = True
+
     # For Flask-Cache
-    CACHE_TYPE = "redis" if os.environ.get("REDIS_URL") else "simple"
     CACHE_ACTIVITIES_TIMEOUT = 10
