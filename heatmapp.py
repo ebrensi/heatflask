@@ -1,12 +1,11 @@
 #! usr/bin/env python
+from __future__ import unicode_literals
 
+import gevent
 from gevent import monkey
 monkey.patch_all()  # may not be necessary
 
-from __future__ import unicode_literals
-
 import polyline
-import gevent
 from flask import Flask, Response, render_template, request, redirect, \
     jsonify, url_for, flash, send_from_directory, render_template_string
 import flask_compress
@@ -37,7 +36,7 @@ cache = flask_caching.Cache(app)
 
 
 # models depend on cache and app so we import them afterwards
-from models import User, Activities, db_sql, db_mongo, redis, tuplize_datetime
+from models import Users, Activities, db_sql, db_mongo, redis, tuplize_datetime
 db_sql.create_all()
 
 Analytics(app)
@@ -87,7 +86,7 @@ login_manager.login_view = 'nothing'
 
 @login_manager.user_loader
 def load_user(user_id):
-    user = User.get(user_id)
+    user = Users.get(user_id)
     app.logger.debug(user.db_state())
     return user
 
@@ -175,7 +174,7 @@ def auth_callback():
             flash(str(e))
             return redirect(state)
 
-        user = User.from_access_token(access_token)
+        user = Users.from_access_token(access_token)
         app.logger.debug("logged in {}".format(user))
         db_sql.session.add(user)  # error here
         db_sql.session.commit()
@@ -190,7 +189,7 @@ def auth_callback():
 @app.route("/<username>/logout")
 @login_required
 def logout(username):
-    if User.get(username) == current_user:
+    if Users.get(username) == current_user:
         user_id = current_user.strava_id
         username = current_user.username
         current_user.uncache()
@@ -203,7 +202,7 @@ def logout(username):
 @app.route("/<username>/delete_index")
 @login_required
 def delete_index(username):
-    if User.get(username) == current_user:
+    if Users.get(username) == current_user:
         if current_user.is_authenticated:
             current_user.delete_index()
         return "index for {} deleted".format(username)
@@ -214,7 +213,7 @@ def delete_index(username):
 @app.route("/<username>/delete")
 @login_required
 def delete(username):
-    user = User.get(username)
+    user = Users.get(username)
     if user == current_user:
         username = user.username
         user_id = user.strava_id
@@ -251,7 +250,7 @@ def index(username):
 
     # note: 'current_user' is the user that is currently logged in.
     #       'user' is the user we are displaying data for.
-    user = User.get(username)
+    user = Users.get(username)
     if not user:
         flash("user '{}' is not registered with this app"
               .format(username))
@@ -326,7 +325,7 @@ def index(username):
 
 @app.route('/<username>/getdata')
 def getdata(username):
-    user = User.get(username)
+    user = Users.get(username)
 
     def sse_out(obj=None):
         data = json.dumps(obj) if obj else "done"
@@ -473,7 +472,7 @@ def getdata(username):
 @app.route('/<username>/activities_sse')
 @login_required
 def activity_stream(username):
-    user = User.get(username)
+    user = Users.get(username)
     if (user == current_user):
         options = {}
 
@@ -507,7 +506,7 @@ def activity_stream(username):
 @app.route('/<username>/activities')
 @login_required
 def activities(username):
-    if (User.get(username) == current_user):
+    if (Users.get(username) == current_user):
         if request.args.get("rebuild"):
             current_user.delete_index()
         return render_template("activities.html",
@@ -528,7 +527,7 @@ def users():
                 "app_activity_count": user.app_activity_count,
                 "username": user.username
             }
-            for user in User.query
+            for user in Users.query
         ]
 
         info = sorted(info, key=lambda(x): x["app_activity_count"] or 0)
@@ -547,6 +546,15 @@ def users():
 
         """
         return render_template_string(html, data=info)
+    else:
+        return "sorry."
+
+
+@app.route('/users/backup')
+@login_required
+def users_backup():
+    if current_user.strava_id in app.config["ADMIN"]:
+        return jsonify(Users.backup())
     else:
         return "sorry."
 
