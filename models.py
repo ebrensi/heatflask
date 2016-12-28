@@ -45,7 +45,7 @@ def detuplize_datetime(s):
     return datetime(*s)
 
 
-class User(UserMixin, db_sql.Model):
+class Users(UserMixin, db_sql.Model):
     __tablename__ = 'users'
     strava_id = Column(Integer, primary_key=True, autoincrement=False)
 
@@ -57,11 +57,11 @@ class User(UserMixin, db_sql.Model):
     profile = Column(String())
     strava_access_token = Column(String())
 
-    measurement_preference = Column(String())
-    city = Column(String())
-    state = Column(String())
-    country = Column(String())
-    activity_index = Column(pg.HSTORE)
+    # measurement_preference = Column(String())
+    # city = Column(String())
+    # state = Column(String())
+    # country = Column(String())
+    # activity_index = Column(pg.HSTORE)
 
     dt_last_active = Column(pg.TIMESTAMP)
     app_activity_count = Column(Integer, default=0)
@@ -133,7 +133,7 @@ class User(UserMixin, db_sql.Model):
         return "U:{}".format(identifier)
 
     def cache(self, identifier=None, timeout=CACHE_USERS_TIMEOUT):
-        key = User.key(identifier or self.strava_id)
+        key = self.__class__.key(identifier or self.strava_id)
         app.logger.debug(
             "caching {} with key '{}' for {} sec".format(self, key, timeout))
         return redis.setex(key, self.serialize(), timeout)
@@ -142,16 +142,16 @@ class User(UserMixin, db_sql.Model):
         app.logger.debug("uncaching {}".format(self))
 
         # delete from cache too.  It may be under two different keys
-        redis.delete(User.key(self.strava_id))
-        redis.delete(User.key(self.username))
+        redis.delete(self.__class__.key(self.strava_id))
+        redis.delete(self.__class__.key(self.username))
 
     @classmethod
     def get(cls, user_identifier, timeout=CACHE_USERS_TIMEOUT):
-        key = User.key(user_identifier)
+        key = cls.key(user_identifier)
         cached = redis.get(key)
         if cached:
             try:
-                user = User.from_serialized(cached)
+                user = cls.from_serialized(cached)
                 app.logger.debug(
                     "retrieved {} from cache with key {}".format(user, key))
                 return db_sql.session.merge(user, load=False)
@@ -394,7 +394,7 @@ class Activities(object):
         return result
 
     render_specs = [
-        ("type", "units", "color")
+        ("type", "units", "color"),
         ("Ride", "speed", "red"),
         ("Run", "pace", "red"),
         ("Swim", None, "yellow"),
