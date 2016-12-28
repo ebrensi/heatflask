@@ -57,6 +57,7 @@ class User(UserMixin, db_sql.Model):
     profile = Column(String())
     strava_access_token = Column(String())
 
+    measurement_preference = Column(String())
     city = Column(String())
     state = Column(String())
     country = Column(String())
@@ -386,6 +387,39 @@ class Activities(object):
         earlier_date = datetime.utcnow() - timedelta(days=age_in_days)
         result = db_mongo.activities.delete_many({'ts': {"$lt": earlier_date}})
         return result
+
+    render_specs = [
+        ("type", "units", "color")
+        ("Ride", "speed", "red"),
+        ("Run", "pace", "red"),
+        ("Swim", None, "yellow"),
+        ("Hike", "pace", "red"),
+        ("Walk", "pace", "red"),
+        ("AlpineSki", None, None),
+        ("BackcountrySki", None, None),
+        ("Canoeing", None, None),
+        ("Crossfit", None, None),
+        ("EBikeRide", "speed", "blue"),
+        ("Elliptical", None, None),
+        ("IceSkate", "speed", None),
+        ("InlineSkate", None, None),
+        ("Kayaking", None, None),
+        ("Kitesurf", "speed", None),
+        ("NordicSki", None, None),
+        ("RockClimbing", None, None),
+        ("RollerSki", "speed", None),
+        ("Rowing", "speed", None),
+        ("Snowboard", None, None),
+        ("Snowshoe", None, None),
+        ("StairStepper", None, None),
+        ("StandUpPaddling", None, None),
+        ("Surfing", None, None),
+        ("VirtualRide", "speed", "cyan"),
+        ("WeightTraining", None, None),
+        ("Windsurf", "speed", None),
+        ("Workout", None, None),
+        ("Yoga", None, None)
+    ]
 
 
 # Create tables if they don't exist
