@@ -1,4 +1,8 @@
 #! usr/bin/env python
+
+from gevent import monkey
+monkey.patch_all()  # may not be necessary
+
 from __future__ import unicode_literals
 
 import polyline
@@ -21,8 +25,7 @@ from flask_analytics import Analytics
 import flask_caching
 from flask_sslify import SSLify
 from signal import signal, SIGPIPE, SIG_DFL
-from gevent import monkey
-monkey.patch_all()  # may not be necessary
+
 
 app = Flask(__name__)
 app.config.from_object(os.environ['APP_SETTINGS'])
