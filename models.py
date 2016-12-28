@@ -67,6 +67,7 @@ class Users(UserMixin, db_sql.Model):
     app_activity_count = Column(Integer, default=0)
 
     strava_client = None
+    packed_activity_index = None
 
     def db_state(self):
         state = inspect(self)
@@ -134,9 +135,12 @@ class Users(UserMixin, db_sql.Model):
 
     def cache(self, identifier=None, timeout=CACHE_USERS_TIMEOUT):
         key = self.__class__.key(identifier or self.strava_id)
+        packed = self.serialize()
         app.logger.debug(
-            "caching {} with key '{}' for {} sec".format(self, key, timeout))
-        return redis.setex(key, self.serialize(), timeout)
+            "caching {} with key '{}' for {} sec. size={}"
+            .format(self, key, timeout, len(packed))
+        )
+        return redis.setex(key, packed, timeout)
 
     def uncache(self):
         app.logger.debug("uncaching {}".format(self))
@@ -224,20 +228,24 @@ class Users(UserMixin, db_sql.Model):
                     .format(self.strava_id)
                     }]
 
-        ind = cache.get(self.index_key())
-        if ind:
-            dt_last_indexed, packed = ind
-            activity_index = pd.read_msgpack(packed).astype({"type": str})
+        if not self.activity_index:
+            self.activity_index = (db_mongo.indexes
+                                   .find_one({"_id": self.strava_id}))
+        if self.activity_index:
+            dt_last_indexed = self.activity_index["dt_last_indexed"]
+            packed_index = self.activity_index["packed_index"]
+
+            index_df = pd.read_msgpack(packed_index).astype({"type": str})
             elapsed = (datetime.utcnow() -
                        dt_last_indexed).total_seconds()
 
             # update the index if we need to
             if (elapsed > CACHE_INDEX_UPDATE_TIMEOUT) and (not OFFLINE):
-                latest = activity_index.index[0]
+                latest = index_df.index[0]
                 app.logger.info("updating activity index for {}"
                                 .format(self.strava_id))
 
-                already_got = set(activity_index.id)
+                already_got = set(index_df.id)
 
                 try:
                     activities_list = [strava2dict(
@@ -246,30 +254,44 @@ class Users(UserMixin, db_sql.Model):
                 except Exception as e:
                     return [{"error": str(e)}]
 
+                # whether or not there are any new activities,
+                # we will update the timestamp
+                to_update = {"dt_last_indexed": datetime.utcnow()}
+
                 if activities_list:
-                    df = pd.DataFrame(activities_list).set_index(
+                    new_df = pd.DataFrame(activities_list).set_index(
                         "beginTimestamp")
 
-                    activity_index = (
-                        df.append(activity_index)
+                    index_df = (
+                        new_df.append(index_df)
                         .drop_duplicates()
                         .sort_index(ascending=False)
                         .astype(dtypes)
                     )
 
-                dt_last_indexed = datetime.utcnow()
-                cache.set(self.index_key(),
-                          (dt_last_indexed,
-                           activity_index.to_msgpack(compress='blosc')),
-                          CACHE_INDEX_TIMEOUT)
+                    to_update["packed_index"] = (
+                        index_df.to_msgpack(compress='blosc')
+                    )
+
+                # update activity_index in this user
+                self.activity_index.update(to_update)
+
+                # update the cache entry for this user (necessary?)
+                self.cache()
+
+                # update activity_index in MongoDB
+                db_mongo.indexes.update_one(
+                    {"_id": self.strava_id},
+                    {"$set": to_update}
+                )
 
             if activity_ids:
-                df = activity_index[activity_index["id"].isin(activity_ids)]
+                df = index_df[index_df["id"].isin(activity_ids)]
             else:
                 if limit:
-                    df = activity_index.head(limit)
+                    df = index_df.head(limit)
                 else:
-                    df = activity_index
+                    df = index_df
                     if after:
                         df = df[:after]
                     if before:
@@ -289,7 +311,7 @@ class Users(UserMixin, db_sql.Model):
             activities_list = []
             count = 1
             try:
-                for a in self.client().get_activities():
+                for a in user.client().get_activities():
                     d = strava2dict(a)
                     if d.get("summary_polyline"):
                         activities_list.append(d)
@@ -306,7 +328,8 @@ class Users(UserMixin, db_sql.Model):
                                 if not limit:
                                     Q.put({"stop_rendering": "1"})
                         else:
-                            Q.put({"msg": "indexing...{} activities".format(count)})
+                            Q.put({"msg": "indexing...{} activities"
+                                   .format(count)})
 
                         count += 1
                         gevent.sleep(0)
@@ -315,20 +338,29 @@ class Users(UserMixin, db_sql.Model):
             else:
                 Q.put({"msg": "done indexing {} activities.".format(count)})
 
-                activity_index = (pd.DataFrame(activities_list)
-                                  .set_index("beginTimestamp")
-                                  .sort_index(ascending=False)
-                                  .astype(dtypes))
+                index_df = (pd.DataFrame(activities_list)
+                            .set_index("beginTimestamp")
+                            .sort_index(ascending=False)
+                            .astype(dtypes))
 
-                app.logger.debug("done with indexing for {}".format(self))
-                dt_last_indexed = datetime.utcnow()
-                packed = activity_index.to_msgpack(compress='blosc')
-                cache.set(self.index_key(),
-                          (dt_last_indexed, packed),
-                          CACHE_INDEX_TIMEOUT)
+                app.logger.debug("done with indexing for {}".format(user))
 
-                app.logger.info("cached {}, size={}".format(self.index_key(),
-                                                            len(packed)))
+                user.activity_index = {
+                    "dt_last_indexed": datetime.utcnow(),
+                    "packed_index": index_df.to_msgpack(compress='blosc')
+                }
+
+                # store activity index in MongoDB
+                db_mongo.indexes.update_one(
+                    {"_id": user.strava_id},
+                    {"$set": user.activity_index},
+                    upsert=True)
+
+                app.logger.info("put index for {} in MongoDB".format(user))
+
+                # update the cache for this user
+                user.cache()
+
             finally:
                 user.indexing(False)
                 Q.put(StopIteration)
@@ -359,9 +391,12 @@ class Activities(object):
     @classmethod
     def set(cls, id, data, timeout=CACHE_ACTIVITIES_TIMEOUT):
         redis.setex(cls.cache_key(id), msgpack.packb(data), timeout)
+        document = {"ts": datetime.utcnow()}
+        document.update(data)
+
         db_mongo.activities.update_one(
             {"_id": int(id)},
-            {"$set": {"ts": datetime.utcnow(), "data": data}},
+            {"$set": document},
             upsert=True)
 
     @classmethod
