@@ -447,7 +447,7 @@ def getdata(username):
 
                 if activity.get("summary_polyline"):
                     activity["path_color"] = path_color(activity["type"])
-                    msg = "rendering {0}/{1}...".format(count, total)
+                    msg = "activity {0}/{1}...".format(count, total)
                     yield sse_out({"msg": msg})
 
                     if hires:

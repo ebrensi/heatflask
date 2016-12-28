@@ -335,15 +335,7 @@
                 if (date2 && (date2 != "now")) query.date2 = date2;
             }
 
-            var msgBox = L.control.window(map,
-                {position: 'top',
-                content:"<div class='data_message'></div>",
-                visible:true
-             });
-
             if (hires) query.hires = hires;
-
-
             // *** Used for flowpath event listeners
             function pad(num) {
                 return ("0"+num).slice(-2);
@@ -357,8 +349,13 @@
             }
             // ****
 
+            var msgBox = L.control.window(map,
+                {position: 'top',
+                content:"<div class='data_message'></div>",
+                visible:true
+             });
 
-            $(".data_message").html("");
+            $(".data_message").html("Rendering activities...");
             appState.items = [];
 
             // Remove HeatLayer from map and control if it's there
