@@ -197,9 +197,9 @@ class Users(UserMixin, db_sql.Model):
         #  This should not take any longer than 30 seconds
         key = "indexing {}".format(self.strava_id)
         if status is None:
-            return cache.get(key)
+            return redis.get(key)
         else:
-            return cache.set(key, status, 30)
+            return redis.setex(key, status, 30)
 
     def index(self, activity_ids=None, limit=None,  after=None, before=None):
 
