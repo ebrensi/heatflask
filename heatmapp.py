@@ -565,7 +565,7 @@ def users():
 @login_required
 def users_backup():
     if current_user.strava_id in app.config["ADMIN"]:
-        return jsonify(Users.backup())
+        return jsonify(Users.dump())
     else:
         return "sorry."
 

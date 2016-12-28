@@ -175,7 +175,7 @@ class Users(UserMixin, db_sql.Model):
         return user if user else None
 
     @classmethod
-    def backup(cls):
+    def dump(cls):
         attrs = ["strava_id", "strava_access_token", "dt_last_active",
                  "app_activity_count"]
         return [{attr: getattr(user, attr) for attr in attrs}
