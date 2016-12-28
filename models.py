@@ -66,8 +66,6 @@ class User(UserMixin, db_sql.Model):
     dt_last_active = Column(pg.TIMESTAMP)
     app_activity_count = Column(Integer, default=0)
 
-    # measurement_preference 'feet' or 'meters'
-
     strava_client = None
 
     def db_state(self):
@@ -105,6 +103,7 @@ class User(UserMixin, db_sql.Model):
     def from_access_token(cls, token):
         client = stravalib.Client(access_token=token,
                                   rate_limit_requests=False)
+
         strava_user = client.get_athlete()
 
         user = cls.get(strava_user.id)
@@ -119,6 +118,12 @@ class User(UserMixin, db_sql.Model):
             lastname=strava_user.lastname,
             profile=strava_user.profile,
             dt_last_active=datetime.utcnow(),
+
+            measurement_preference=strava_user.measurement_preference,
+            city=strava_user.city,
+            state=strava_user.state,
+            country=strava_user.country,
+
             client=client
         )
         return user
