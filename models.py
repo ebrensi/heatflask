@@ -13,7 +13,7 @@ from gevent.queue import Queue
 from gevent.pool import Pool
 from exceptions import StopIteration
 import cPickle
-from heatmapp import app, cache
+from heatmapp import app
 
 import os
 
@@ -189,8 +189,10 @@ class Users(UserMixin, db_sql.Model):
         return "I:{}".format(self.strava_id)
 
     def delete_index(self):
-        cache.delete(self.index_key())
-        return cache.get(self.index_key())
+        result = db_mongo.activities.delete_one({'_id': self.strava_id})
+        self.activity_index = None
+        self.cache()
+        return result
 
     def indexing(self, status=None):
         # Indicate to other processes that we are currently indexing

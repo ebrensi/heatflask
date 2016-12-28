@@ -21,7 +21,6 @@ import flask_login
 from flask_login import current_user, login_user, logout_user, login_required
 import flask_assets
 from flask_analytics import Analytics
-import flask_caching
 from flask_sslify import SSLify
 from signal import signal, SIGPIPE, SIG_DFL
 
@@ -30,12 +29,8 @@ app = Flask(__name__)
 app.config.from_object(os.environ['APP_SETTINGS'])
 sslify = SSLify(app)
 
-# set up short-term fast caching support
-cache = flask_caching.Cache(app)
-# cache.clear()
 
-
-# models depend on cache and app so we import them afterwards
+# models depend app so we import them afterwards
 from models import Users, Activities, db_sql, db_mongo, redis, tuplize_datetime
 db_sql.create_all()
 
@@ -605,16 +600,6 @@ def history():
                     redis.ltrim("history", 0, MAX)
                 return render_template_string(html, data=data)
     return "oops"
-
-
-@app.route('/clear_cache')
-@login_required
-def clear_cache():
-    if current_user.strava_id in app.config["ADMIN"]:
-        cache.clear()
-        return "cache cleared"
-    else:
-        return "sorry."
 
 
 # makes python ignore sigpipe and prevents broken pipe exception when client
