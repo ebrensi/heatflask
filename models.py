@@ -83,7 +83,7 @@ class Users(UserMixin, db_sql.Model):
         return cPickle.loads(p)
 
     def client(self):
-        return stravalib.Client(
+        stravalib.Client(
             access_token=self.strava_access_token,
             rate_limit_requests=False
         )
@@ -429,7 +429,8 @@ class Activities(object):
         result = db_mongo.activities.delete_many({'ts': {"$lt": earlier_date}})
         return result
 
-    def import_streams(client, activity_id, stream_names):
+    @classmethod
+    def import_streams(cls, client, activity_id, stream_names):
         streams_to_import = list(stream_names)
         if ("polyline" in stream_names):
             streams_to_import.append("latlng")
@@ -448,7 +449,17 @@ class Activities(object):
             activity_streams["polyline"] = polyline.encode(
                 activity_streams['latlng'])
 
+        cls.set(activity_id, activity_streams)
+
         return {s: activity_streams[s] for s in stream_names}
+
+    @staticmethod
+    def path_color(activity_type):
+        color_list = [color for color, activity_types
+                      in app.config["ANTPATH_ACTIVITY_COLORS"].items()
+                      if activity_type.lower() in activity_types]
+
+        return color_list[0] if color_list else ""
 
     render_specs = [
         ("type", "units", "color"),
