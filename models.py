@@ -5,7 +5,7 @@ from sqlalchemy import inspect
 from datetime import datetime, timedelta
 import stravalib
 import pymongo
-import msgpack
+
 from redis import Redis
 import pandas as pd
 import gevent
@@ -13,6 +13,8 @@ from gevent.queue import Queue
 from gevent.pool import Pool
 from exceptions import StopIteration
 import cPickle
+import msgpack
+from bson.binary import Binary
 from heatmapp import app
 
 import os
@@ -67,7 +69,7 @@ class Users(UserMixin, db_sql.Model):
     app_activity_count = Column(Integer, default=0)
 
     strava_client = None
-    packed_activity_index = None
+    activity_index = None
 
     def db_state(self):
         state = inspect(self)
@@ -125,7 +127,7 @@ class Users(UserMixin, db_sql.Model):
             state=strava_user.state,
             country=strava_user.country,
 
-            client=client
+            strava_client=client
         )
         return user
 
@@ -272,7 +274,7 @@ class Users(UserMixin, db_sql.Model):
                     )
 
                     to_update["packed_index"] = (
-                        index_df.to_msgpack(compress='blosc')
+                        Binary(index_df.to_msgpack(compress='blosc'))
                     )
 
                 # update activity_index in this user
@@ -313,7 +315,7 @@ class Users(UserMixin, db_sql.Model):
             activities_list = []
             count = 1
             try:
-                for a in user.client().get_activities():
+                for a in user.client().get_activities(limit=10):
                     d = strava2dict(a)
                     if d.get("summary_polyline"):
                         activities_list.append(d)
@@ -349,16 +351,18 @@ class Users(UserMixin, db_sql.Model):
 
                 user.activity_index = {
                     "dt_last_indexed": datetime.utcnow(),
-                    "packed_index": index_df.to_msgpack(compress='blosc')
+                    "packed_index": Binary(index_df.to_msgpack(compress='blosc'))
                 }
 
                 # store activity index in MongoDB
-                db_mongo.indexes.update_one(
+                result = db_mongo.indexes.update_one(
                     {"_id": user.strava_id},
                     {"$set": user.activity_index},
                     upsert=True)
 
-                app.logger.info("put index for {} in MongoDB".format(user))
+                app.logger.info(
+                    "put index for {} in MongoDB: {}".format(user, vars(result))
+                )
 
                 # update the cache for this user
                 user.cache()
