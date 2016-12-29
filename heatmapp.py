@@ -5,7 +5,6 @@ import gevent
 from gevent import monkey
 monkey.patch_all()  # may not be necessary
 
-import polyline
 from flask import Flask, Response, render_template, request, redirect, \
     jsonify, url_for, flash, send_from_directory, render_template_string
 import flask_compress
@@ -386,13 +385,6 @@ def getdata(username):
 
     app.logger.debug("getdata: {}, hires={}".format(options, hires))
 
-    def path_color(activity_type):
-        color_list = [color for color, activity_types
-                      in app.config["ANTPATH_ACTIVITY_COLORS"].items()
-                      if activity_type.lower() in activity_types]
-
-        return color_list[0] if color_list else ""
-
     client = user.client()
 
     def sse_iterator():
@@ -420,7 +412,10 @@ def getdata(username):
                     yield sse_out(activity)
 
                 if activity.get("summary_polyline"):
-                    activity["path_color"] = path_color(activity["type"])
+                    activity.update(
+                        Activities.ATYPE_MAP.get(activity["type"].lower())
+                    )
+
                     msg = "activity {0}/{1}...".format(count, total)
                     yield sse_out({"msg": msg})
 

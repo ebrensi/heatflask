@@ -83,7 +83,7 @@ class Users(UserMixin, db_sql.Model):
         return cPickle.loads(p)
 
     def client(self):
-        stravalib.Client(
+        return stravalib.Client(
             access_token=self.strava_access_token,
             rate_limit_requests=False
         )
@@ -385,6 +385,43 @@ class Users(UserMixin, db_sql.Model):
 #  There are no Activity objects
 class Activities(object):
 
+    # This is a list of tuples specifying properties of the rendered objects,
+    #  such as path color, speed/pace in description.  others can be added
+    ATYPE_SPECS = [
+        ("Ride", "speed", "red"),
+        ("Run", "pace", "red"),
+        ("Swim", None, "yellow"),
+        ("Hike", "pace", "red"),
+        ("Walk", "pace", "red"),
+        ("AlpineSki", None, None),
+        ("BackcountrySki", None, None),
+        ("Canoeing", None, None),
+        ("Crossfit", None, None),
+        ("EBikeRide", "speed", "blue"),
+        ("Elliptical", None, None),
+        ("IceSkate", "speed", None),
+        ("InlineSkate", None, None),
+        ("Kayaking", None, None),
+        ("Kitesurf", "speed", None),
+        ("NordicSki", None, None),
+        ("RockClimbing", None, None),
+        ("RollerSki", "speed", None),
+        ("Rowing", "speed", None),
+        ("Snowboard", None, None),
+        ("Snowshoe", None, None),
+        ("StairStepper", None, None),
+        ("StandUpPaddling", None, None),
+        ("Surfing", None, None),
+        ("VirtualRide", "speed", "cyan"),
+        ("WeightTraining", None, None),
+        ("Windsurf", "speed", None),
+        ("Workout", None, None),
+        ("Yoga", None, None)
+    ]
+
+    ATYPE_MAP = {atype.lower(): {"path_color": color, "vtype": vtype}
+                 for atype, vtype, color in ATYPE_SPECS}
+
     @staticmethod
     def cache_key(id):
         return "A:{}".format(id)
@@ -460,39 +497,6 @@ class Activities(object):
                       if activity_type.lower() in activity_types]
 
         return color_list[0] if color_list else ""
-
-    render_specs = [
-        ("type", "units", "color"),
-        ("Ride", "speed", "red"),
-        ("Run", "pace", "red"),
-        ("Swim", None, "yellow"),
-        ("Hike", "pace", "red"),
-        ("Walk", "pace", "red"),
-        ("AlpineSki", None, None),
-        ("BackcountrySki", None, None),
-        ("Canoeing", None, None),
-        ("Crossfit", None, None),
-        ("EBikeRide", "speed", "blue"),
-        ("Elliptical", None, None),
-        ("IceSkate", "speed", None),
-        ("InlineSkate", None, None),
-        ("Kayaking", None, None),
-        ("Kitesurf", "speed", None),
-        ("NordicSki", None, None),
-        ("RockClimbing", None, None),
-        ("RollerSki", "speed", None),
-        ("Rowing", "speed", None),
-        ("Snowboard", None, None),
-        ("Snowshoe", None, None),
-        ("StairStepper", None, None),
-        ("StandUpPaddling", None, None),
-        ("Surfing", None, None),
-        ("VirtualRide", "speed", "cyan"),
-        ("WeightTraining", None, None),
-        ("Windsurf", "speed", None),
-        ("Workout", None, None),
-        ("Yoga", None, None)
-    ]
 
 
 # Create tables if they don't exist
