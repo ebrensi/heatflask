@@ -4,6 +4,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import inspect
 from datetime import datetime, timedelta
 import stravalib
+import polyline
 import pymongo
 
 from redis import Redis
@@ -427,6 +428,27 @@ class Activities(object):
         earlier_date = datetime.utcnow() - timedelta(days=age_in_days)
         result = db_mongo.activities.delete_many({'ts': {"$lt": earlier_date}})
         return result
+
+    def import_streams(client, activity_id, stream_names):
+        streams_to_import = list(stream_names)
+        if ("polyline" in stream_names):
+            streams_to_import.append("latlng")
+            streams_to_import.remove("polyline")
+        try:
+            streams = client.get_activity_streams(activity_id,
+                                                  series_type='time',
+                                                  types=streams_to_import)
+        except Exception as e:
+            app.logger.debug(e)
+            return {"error": str(e)}
+
+        activity_streams = {name: streams[name].data for name in streams}
+
+        if ("polyline" in stream_names) and ("latlng" in activity_streams):
+            activity_streams["polyline"] = polyline.encode(
+                activity_streams['latlng'])
+
+        return {s: activity_streams[s] for s in stream_names}
 
     render_specs = [
         ("type", "units", "color"),
