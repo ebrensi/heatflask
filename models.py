@@ -67,8 +67,6 @@ class Users(UserMixin, db_sql.Model):
 
     dt_last_active = Column(pg.TIMESTAMP)
     app_activity_count = Column(Integer, default=0)
-
-    strava_client = None
     activity_index = None
 
     def db_state(self):
@@ -84,12 +82,10 @@ class Users(UserMixin, db_sql.Model):
         return cPickle.loads(p)
 
     def client(self):
-        if not self.strava_client:
-            self.strava_client = stravalib.Client(
-                access_token=self.strava_access_token,
-                rate_limit_requests=False
-            )
-        return self.strava_client
+        return stravalib.Client(
+            access_token=self.strava_access_token,
+            rate_limit_requests=False
+        )
 
     def __repr__(self):
         return "<User %r>" % (self.strava_id)
@@ -125,9 +121,7 @@ class Users(UserMixin, db_sql.Model):
             measurement_preference=strava_user.measurement_preference,
             city=strava_user.city,
             state=strava_user.state,
-            country=strava_user.country,
-
-            strava_client=client
+            country=strava_user.country
         )
         return user
 
@@ -315,7 +309,7 @@ class Users(UserMixin, db_sql.Model):
             activities_list = []
             count = 1
             try:
-                for a in user.client().get_activities(limit=10):
+                for a in user.client().get_activities():
                     d = strava2dict(a)
                     if d.get("summary_polyline"):
                         activities_list.append(d)
