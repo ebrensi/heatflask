@@ -433,8 +433,6 @@ def getdata(username):
                                                           activity["id"],
                                                           streams_to_cache)
                             )
-                            if "error" not in stream_data:
-                                Activities.set(activity["id"], stream_data)
 
                         data = {s: stream_data[s] for s in streams_out
                                 if s in stream_data}
