@@ -395,27 +395,6 @@ def getdata(username):
 
     client = user.client()
 
-    def import_streams(activity_id, stream_names):
-        streams_to_import = list(stream_names)
-        if ("polyline" in stream_names):
-            streams_to_import.append("latlng")
-            streams_to_import.remove("polyline")
-        try:
-            streams = client.get_activity_streams(activity_id,
-                                                  series_type='time',
-                                                  types=streams_to_import)
-        except Exception as e:
-            app.logger.debug(e)
-            return {"error": str(e)}
-
-        activity_streams = {name: streams[name].data for name in streams}
-
-        if ("polyline" in stream_names) and ("latlng" in activity_streams):
-            activity_streams["polyline"] = polyline.encode(
-                activity_streams['latlng'])
-
-        return {s: activity_streams[s] for s in stream_names}
-
     def sse_iterator():
         # streams_out = ["polyline", "velocity_smooth"]
         # streams_to_cache = ["polyline", "velocity_smooth"]
@@ -449,8 +428,11 @@ def getdata(username):
                         stream_data = Activities.get(activity["id"])
 
                         if not stream_data:
-                            stream_data = import_streams(activity["id"],
-                                                         streams_to_cache)
+                            stream_data = (
+                                Activities.import_streams(client,
+                                                          activity["id"],
+                                                          streams_to_cache)
+                            )
                             if "error" not in stream_data:
                                 Activities.set(activity["id"], stream_data)
 
