@@ -486,9 +486,9 @@ class Activities(object):
             activity_streams["polyline"] = polyline.encode(
                 activity_streams['latlng'])
 
-        cls.set(activity_id, activity_streams)
-
-        return {s: activity_streams[s] for s in stream_names}
+        output = {s: activity_streams[s] for s in stream_names}
+        cls.set(activity_id, output)
+        return output
 
     @staticmethod
     def path_color(activity_type):
