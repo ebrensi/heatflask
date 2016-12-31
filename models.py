@@ -27,7 +27,7 @@ String, Integer = db_sql.String, db_sql.Integer
 
 # MongoDB access via PyMongo
 mongo_client = pymongo.MongoClient(app.config.get("MONGODB_URI"))
-db_mongo = mongo_client.get_default_database()
+mongodb = mongo_client.get_default_database()
 
 # Redis data-store
 redis = Redis.from_url(app.config["REDIS_URL"])
@@ -186,7 +186,7 @@ class Users(UserMixin, db_sql.Model):
         return "I:{}".format(self.strava_id)
 
     def delete_index(self):
-        result = db_mongo.activities.delete_one({'_id': self.strava_id})
+        result = mongodb.activities.delete_one({'_id': self.strava_id})
         self.activity_index = None
         self.cache()
         return result
@@ -228,7 +228,7 @@ class Users(UserMixin, db_sql.Model):
                     }]
 
         if not self.activity_index:
-            self.activity_index = (db_mongo.indexes
+            self.activity_index = (mongodb.indexes
                                    .find_one({"_id": self.strava_id}))
         if self.activity_index:
             dt_last_indexed = self.activity_index["dt_last_indexed"]
@@ -279,7 +279,7 @@ class Users(UserMixin, db_sql.Model):
                 self.cache()
 
                 # update activity_index in MongoDB
-                db_mongo.indexes.update_one(
+                mongodb.indexes.update_one(
                     {"_id": self.strava_id},
                     {"$set": to_update}
                 )
@@ -350,7 +350,7 @@ class Users(UserMixin, db_sql.Model):
                 }
 
                 # store activity index in MongoDB
-                result = db_mongo.indexes.update_one(
+                result = mongodb.indexes.update_one(
                     {"_id": user.strava_id},
                     {"$set": user.activity_index},
                     upsert=True)
@@ -432,7 +432,7 @@ class Activities(object):
         document = {"ts": datetime.utcnow()}
         document.update(data)
 
-        db_mongo.activities.update_one(
+        mongodb.activities.update_one(
             {"_id": int(id)},
             {"$set": document},
             upsert=True)
@@ -447,7 +447,7 @@ class Activities(object):
             # app.logger.debug("got Activity {} from cache".format(id))
             return msgpack.unpackb(cached)
 
-        result = db_mongo.activities.find_one({"_id": int(id)})
+        result = mongodb.activities.find_one({"_id": int(id)})
         if result:
             data = result.get("data")
             if data:
@@ -457,13 +457,13 @@ class Activities(object):
 
     @classmethod
     def clear(cls):
-        db_mongo.activities.drop()
+        mongodb.activities.drop()
         redis.delete(*redis.keys(cls.cache_key("*")))
 
     @classmethod
     def purge(cls, age_in_days):
         earlier_date = datetime.utcnow() - timedelta(days=age_in_days)
-        result = db_mongo.activities.delete_many({'ts': {"$lt": earlier_date}})
+        result = mongodb.activities.delete_many({'ts': {"$lt": earlier_date}})
         return result
 
     @classmethod
