@@ -242,7 +242,7 @@
 
 
     <script>
-        let map_providers = {{ baselayer|tojson|safe }},
+        var map_providers = {{ baselayer|tojson|safe }},
             default_baseLayer,
             baseLayers = {
             "None": L.tileLayer(""),
@@ -260,9 +260,9 @@
         if (offline) {
             default_baseLayer = baseLayers["None"];
         } else if (map_providers.length) {
-            for (var i = 0; i < map_providers.length; i++) {
+            for (let i = 0; i < map_providers.length; i++) {
                 provider = map_providers[i];
-                var tl = L.tileLayer.provider(provider);
+                let tl = L.tileLayer.provider(provider);
                 baseLayers[provider] = tl;
                 if (i==0) default_baseLayer = tl;
             }
@@ -270,36 +270,36 @@
             default_baseLayer = baseLayers["Google.Terrain"];
         }
 
-        let map = L.map('map',
+        var map = L.map('map',
                         {center: [{{ lat }}, {{ lng }}],
                          zoom: {{ zoom }},
                          layers : [ default_baseLayer ]
                   });
 
 
-        let sidebar = L.control.sidebar('sidebar').addTo(map),
+        var sidebar = L.control.sidebar('sidebar').addTo(map),
             zoomControl = map.zoomControl.setPosition('bottomright'),
             layerControl = L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map),
             locateControl = L.control.locate({position: "bottomright", icon: "fa fa-anchor"}).addTo(map);
 
          {% with messages = get_flashed_messages() %}
             {% if messages %}
-              var msg = "<ul class=flashes>"
+              let msg = "<ul class=flashes>"
 
               {% for message in messages %}
                 msg += "<li>{{ message }}</li>"
               {% endfor %}
               msg += "</ul>"
-              var winMtds = L.control.window(map, {content:msg, visible:true});
+              L.control.window(map, {content:msg, visible:true});
             {% endif %}
         {% endwith %}
 
 
-        let HeatLayer = false,
+        var HeatLayer = false,
             FlowLayer = false;
 
         // This is where we store current state of the app
-        let appState = {
+        var appState = {
             baseLayers: map_providers
         };
 
@@ -336,6 +336,7 @@
             }
 
             if (hires) query.hires = hires;
+
             // *** Used for flowpath event listeners
             function pad(num) {
                 return ("0"+num).slice(-2);
@@ -349,14 +350,6 @@
             }
             // ****
 
-            var msgBox = L.control.window(map,
-                {position: 'top',
-                content:"<div class='data_message'></div>",
-                visible:true
-             });
-
-            $(".data_message").html("Rendering activities...");
-            appState.items = [];
 
             // Remove HeatLayer from map and control if it's there
             if (HeatLayer){
@@ -386,26 +379,31 @@
                 layerControl.addOverlay(FlowLayer, "Flow Paths");
             }
 
+            let msgBox = L.control.window(map,
+                {position: 'top',
+                content:"<div class='data_message'></div>",
+                visible:true
+             });
+
+            $(".data_message").html("Rendering activities...");
+            appState.items = [];
 
 
             let url = "{{ url_for('getdata', username=user.strava_id) }}"
                        + "?" + jQuery.param(query, true);
 
-            // map.spin(true, {top:'50%', left:'50%'});   // start progress indicator
             locateControl.stop();
 
-            let source = new EventSource(url),
-                         abort = false,
-                         rendering = true;;
+            let source = new EventSource(url);
+            let rendering = true,
+                listening = true;
 
             $("#abortButton").show();
             $('#renderButton').prop('disabled', true);
 
             function doneRendering(msg){
                 if (rendering) {
-                    // map.spin(false); // stop progress indicator
                     $("#abortButton").hide();
-
                     if ($("#autozoom:checked").val() && bounds.isValid())
                         map.fitBounds(bounds);
 
@@ -418,130 +416,139 @@
 
 
             function stopListening(){
-                source.close();
-                msgBox.close();
-                $('#renderButton').prop('disabled', false);
+                if (listening){
+                    listening = false;
+                    source.close();
+
+                    try {
+                        msgBox.close();
+                    }
+                    catch(err) {
+                        console.log(err.message);
+                    }
+
+                    $('#renderButton').prop('disabled', false);
+                }
             }
 
             $('#abortButton').click(function(){
-                doneRendering("<font color='red'>Aborted:</font>");
                 stopListening();
+                doneRendering("<font color='red'>Aborted:</font>");
             });
 
 
             source.onmessage = function(event) {
+                if (event.data != 'done'){
+                    let A = JSON.parse(event.data),
+                            extend_bounds = true,
+                            heatpoints = false,
+                            flowpoints = false;
 
-            if (event.data != 'done'){
-                let A = JSON.parse(event.data),
-                        extend_bounds = true,
-                        heatpoints = false,
-                        flowpoints = false;
+                    if ("error" in A){
+                        let msg = "<font color='red'>" + A.error +"</font><br>";
+                        L.control.window(map, {title: "Oops.", content:msg, visible:true});
+                        doneRendering(msg);
+                        stopListening();
 
-                if ("error" in A){
-                    let msg = "<font color='red'>" + A.error +"</font><br>";
-                    let winMtds = L.control.window(map, {title: "Oops.", content:msg, visible:true});
-                    doneRendering(msg);
-                    stopListening();
+                    } else if ("stop_rendering" in A){
+                        doneRendering("Done rendering.");
+                    } else if ("msg" in A) {
+                        $(".data_message").html(A.msg);
+                        return;
+                    } // else {
+                    //     let msg = "rendering [" + A.id + "] " + A.name;
+                    //     $(".data_message").html(msg);
+                    // }
 
-                } else if ("stop_rendering" in A){
-                    doneRendering("Done rendering.");
-                } else if ("msg" in A) {
-                    $(".data_message").html(A.msg);
-                    return;
-                } // else {
-                //     let msg = "rendering [" + A.id + "] " + A.name;
-                //     $(".data_message").html(msg);
-                // }
+                    if (flowres){
+                        // add this activity's route to FlowLayer
+                        var fopts = Object.assign({}, flowLayerOptions);  // copy of default options
 
-                if (flowres){
-                    // add this activity's route to FlowLayer
-                    var fopts = Object.assign({}, flowLayerOptions);  // copy of default options
-
-                    if (("path_color" in A) && A.path_color)
-                        fopts.color = A.path_color;
-                }
-
-                if (lores && ("summary_polyline" in A) && (A.summary_polyline)) {
-                    let latlngs = L.PolylineUtil.decode(A.summary_polyline);
-                    if (heatres == "low") heatpoints = latlngs;
-                    if (flowres == "low") flowpoints = latlngs;
-                }
-
-
-                if (query.hires && ("polyline" in A) && (A.polyline)){
-                    let latlngs = L.PolylineUtil.decode(A.polyline);
-                    if (heatres == "high") heatpoints = latlngs;
-                    if (flowres == "high") flowpoints = latlngs;
-                }
-
-                if (heatpoints) latlngs_flat.push.apply(latlngs_flat, heatpoints);
-                if (flowpoints) {
-                    v = parseFloat(A.average_speed);
-
-                    fopts.delay = parseInt(flowLayerConsts.K / v);
-                    fopts.dashArray = [2, parseInt(flowLayerConsts.T * v)];
-                    flow = new L.Polyline.AntPath(flowpoints, fopts);
-
-                    if ($("#info").is(":checked")) {
-                        flow.on('mouseover', function(e) {
-                           if (this.options.weight == fopts.weight){
-                               this.bringToFront();
-                               this.setStyle({
-                                    weight: fopts.weight + 3,
-                                    opacity: 1
-                               });
-                             }
-                          });
-
-
-                        flow.on("mouseout", function() {
-                            this.setStyle({
-                                weight: fopts.weight,
-                                opacity: fopts.opacity
-                            });
-                        });
-
-                        flow.on("click", function(e) {
-                          let url = "{{ url_for('index',username=user.strava_id) }}"
-                          d = parseFloat(A.total_distance);
-                          dkm = +(d / 1000).toFixed(2);
-                          dmi = +(d / 1609.34).toFixed(2);
-                          elapsed = hhmmss(parseFloat(A.elapsed_time));
-                          let popup = L.popup()
-                            .setLatLng(e.latlng)
-                            .setContent(
-                                `[${A.id}] ${A.name}<br>${A.type}: ${A.beginTimestamp}<br>`+
-                                `${dkm} km (${dmi} mi), ${elapsed}<br>` +
-                                `View in <a href='https://www.strava.com/activities/${A.id}' target='_blank'>Strava</a>`+
-                                `, <a href='${url}?id=${A.id}&flowres=high' target='_blank'>Heatflask</a>`
-                                )
-                            .openOn(map);
-                        });
+                        if (("path_color" in A) && A.path_color)
+                            fopts.color = A.path_color;
                     }
-                    FlowLayer.addLayer(flow);
-                }
 
-                points = heatpoints || flowpoints;
-                if (points) {
-                    bounds.extend(points);
-                    delete A.summary_polyline;
-                    delete A.polyline;
-                    delete A.time;
-                    appState.items.push(A);
-                }
+                    if (lores && ("summary_polyline" in A) && (A.summary_polyline)) {
+                        let latlngs = L.PolylineUtil.decode(A.summary_polyline);
+                        if (heatres == "low") heatpoints = latlngs;
+                        if (flowres == "low") flowpoints = latlngs;
+                    }
 
-              } else {
-                doneRendering("Finished. ");
-                stopListening();
-                appState['date1'] = date1;
-                appState["date2"] = date2;
-                if ("limit" in query) appState["limit"] = query.limit;
-                appState["flowres"] = flowres;
-                appState["heatres"] = heatres;
-                updateURL();
-              }
+
+                    if (query.hires && ("polyline" in A) && (A.polyline)){
+                        let latlngs = L.PolylineUtil.decode(A.polyline);
+                        if (heatres == "high") heatpoints = latlngs;
+                        if (flowres == "high") flowpoints = latlngs;
+                    }
+
+                    if (heatpoints) latlngs_flat.push.apply(latlngs_flat, heatpoints);
+                    if (flowpoints) {
+                        v = parseFloat(A.average_speed);
+
+                        fopts.delay = parseInt(flowLayerConsts.K / v);
+                        fopts.dashArray = [2, parseInt(flowLayerConsts.T * v)];
+                        flow = new L.Polyline.AntPath(flowpoints, fopts);
+
+                        if ($("#info").is(":checked")) {
+                            flow.on('mouseover', function(e) {
+                               if (this.options.weight == fopts.weight){
+                                   this.bringToFront();
+                                   this.setStyle({
+                                        weight: fopts.weight + 3,
+                                        opacity: 1
+                                   });
+                                 }
+                              });
+
+
+                            flow.on("mouseout", function() {
+                                this.setStyle({
+                                    weight: fopts.weight,
+                                    opacity: fopts.opacity
+                                });
+                            });
+
+                            flow.on("click", function(e) {
+                              let url = "{{ url_for('index',username=user.strava_id) }}"
+                              d = parseFloat(A.total_distance);
+                              dkm = +(d / 1000).toFixed(2);
+                              dmi = +(d / 1609.34).toFixed(2);
+                              elapsed = hhmmss(parseFloat(A.elapsed_time));
+                              let popup = L.popup()
+                                .setLatLng(e.latlng)
+                                .setContent(
+                                    `[${A.id}] ${A.name}<br>${A.type}: ${A.beginTimestamp}<br>`+
+                                    `${dkm} km (${dmi} mi), ${elapsed}<br>` +
+                                    `View in <a href='https://www.strava.com/activities/${A.id}' target='_blank'>Strava</a>`+
+                                    `, <a href='${url}?id=${A.id}&flowres=high' target='_blank'>Heatflask</a>`
+                                    )
+                                .openOn(map);
+                            });
+                        }
+                        FlowLayer.addLayer(flow);
+                    }
+
+                    points = heatpoints || flowpoints;
+                    if (points) {
+                        bounds.extend(points);
+                        delete A.summary_polyline;
+                        delete A.polyline;
+                        delete A.time;
+                        appState.items.push(A);
+                    }
+
+                  } else {
+                    doneRendering("Finished. ");
+                    stopListening();
+                    appState['date1'] = date1;
+                    appState["date2"] = date2;
+                    if ("limit" in query) appState["limit"] = query.limit;
+                    appState["flowres"] = flowres;
+                    appState["heatres"] = heatres;
+                    updateURL();
+                  }
+                }
             }
-        }
 
 
         function updateURL(){

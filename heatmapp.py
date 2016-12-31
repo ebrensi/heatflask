@@ -57,7 +57,7 @@ bundles = {
                                     'js/leaflet-providers.js',
                                     'js/Leaflet.GoogleMutant.js',
                                     'js/L.Control.Locate.min.js',
-                                    'js/EventSource.js',
+                                    'js/eventsource.js',
                                     filters='rjsmin',
                                     output='gen/index.js')
 
@@ -403,7 +403,6 @@ def getdata(username):
         count = 0
         try:
             for activity in activity_data:
-                count += 1
                 # app.logger.debug("activity {}".format(activity))
                 if (("msg" in activity) or
                     ("error" in activity) or
@@ -411,6 +410,7 @@ def getdata(username):
                     yield sse_out(activity)
 
                 if activity.get("summary_polyline"):
+                    count += 1
                     activity.update(
                         Activities.ATYPE_MAP.get(activity["type"].lower())
                     )
@@ -443,7 +443,9 @@ def getdata(username):
 
         yield sse_out()
 
-    return Response(sse_iterator(), mimetype='text/event-stream')
+    resp = Response(sse_iterator(), mimetype='text/event-stream')
+    app.logger.debug("sse stream response:\n{}".format(resp))
+    return resp
 
 # creates a SSE stream of current.user's activities, using the Strava API
 # arguments
