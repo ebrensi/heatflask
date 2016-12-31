@@ -412,7 +412,7 @@ class Activities(object):
     # This is a list of tuples specifying properties of the rendered objects,
     #  such as path color, speed/pace in description.  others can be added
     ATYPE_SPECS = [
-        ("Ride", "speed", "red"),
+        ("Ride", "speed", "blue"),
         ("Run", "pace", "red"),
         ("Swim", None, "yellow"),
         ("Hike", "pace", "red"),
@@ -542,9 +542,9 @@ class Activities(object):
             activity_streams["polyline"] = polyline.encode(
                 activity_streams['latlng'])
 
-        cls.set(activity_id, activity_streams)
-
-        return {s: activity_streams[s] for s in stream_names}
+        output = {s: activity_streams[s] for s in stream_names}
+        cls.set(activity_id, output)
+        return output
 
     @staticmethod
     def path_color(activity_type):
