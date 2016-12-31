@@ -621,6 +621,13 @@
 
 
         $(document).ready(function() {
+            $("#select_num").keypress(function(event) {
+                if (event.which == 13) {
+                    event.preventDefault();
+                    renderLayers();
+                }
+            });
+
             $("#abortButton").hide();
 
             $(".datepick").datepicker({ dateFormat: 'yy-mm-dd',
