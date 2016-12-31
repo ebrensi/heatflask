@@ -338,15 +338,8 @@
             if (hires) query.hires = hires;
 
             // *** Used for flowpath event listeners
-            function pad(num) {
-                return ("0"+num).slice(-2);
-            }
             function hhmmss(secs) {
-              let minutes = Math.floor(secs / 60);
-              secs = secs%60;
-              let hours = Math.floor(minutes/60);
-              minutes = minutes%60;
-              return pad(hours)+":"+pad(minutes)+":"+pad(secs);
+               return new Date(secs * 1000).toISOString().substr(11, 8);
             }
             // ****
 
@@ -462,8 +455,8 @@
 
                     if (flowres){
                         // add this activity's route to FlowLayer
-                        var fopts = Object.assign({}, flowLayerOptions);  // copy of default options
-
+                        var fopts = Object.assign({}, flowLayerOptions),  // copy of default options
+                            v = parseFloat(A.average_speed);
                         if (("path_color" in A) && A.path_color)
                             fopts.color = A.path_color;
                     }
@@ -483,8 +476,6 @@
 
                     if (heatpoints) latlngs_flat.push.apply(latlngs_flat, heatpoints);
                     if (flowpoints) {
-                        v = parseFloat(A.average_speed);
-
                         fopts.delay = parseInt(flowLayerConsts.K / v);
                         fopts.dashArray = [2, parseInt(flowLayerConsts.T * v)];
                         flow = new L.Polyline.AntPath(flowpoints, fopts);
@@ -509,16 +500,30 @@
                             });
 
                             flow.on("click", function(e) {
-                              let url = "{{ url_for('index',username=user.strava_id) }}"
-                              d = parseFloat(A.total_distance);
-                              dkm = +(d / 1000).toFixed(2);
-                              dmi = +(d / 1609.34).toFixed(2);
-                              elapsed = hhmmss(parseFloat(A.elapsed_time));
+                              let url = "{{ url_for('index',username=user.strava_id) }}",
+                                  d = parseFloat(A.total_distance),
+                                  elapsed = hhmmss(parseFloat(A.elapsed_time));
+
+                              let dkm = +(d / 1000).toFixed(2),
+                                  dmi = +(d / 1609.34).toFixed(2),
+                                  vkm,
+                                  vmi;
+
+                              if (A.vtype == "pace"){
+                                vkm = hhmmss(1000 / v).slice(3) + "/km";
+                                vmi = hhmmss(1609.34 / v).slice(3) + "/mi";
+                              } else {
+                                vkm = (v * 3600 / 1000).toFixed(2) + "km/hr";
+                                vmi = (v * 3600 / 1609.34).toFixed(2) + "mi/hr";
+
+                              }
+
+
                               let popup = L.popup()
                                 .setLatLng(e.latlng)
                                 .setContent(
-                                    `[${A.id}] ${A.name}<br>${A.type}: ${A.beginTimestamp}<br>`+
-                                    `${dkm} km (${dmi} mi), ${elapsed}<br>` +
+                                    `${A.name}<br>${A.type}: ${A.beginTimestamp}<br>`+
+                                    `${dkm} km (${dmi} mi) in ${elapsed}<br>${vkm} (${vmi})<br>` +
                                     `View in <a href='https://www.strava.com/activities/${A.id}' target='_blank'>Strava</a>`+
                                     `, <a href='${url}?id=${A.id}&flowres=high' target='_blank'>Heatflask</a>`
                                     )
