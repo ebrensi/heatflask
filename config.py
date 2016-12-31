@@ -16,14 +16,14 @@ class Config(object):
     REDIS_URL = os.environ.get('REDIS_URL')
 
     # Settings for fast-cache
-    # How long (seconds) we hold a user's index before rebuilding it
-    CACHE_INDEX_TIMEOUT = 7 * 24 * 60 * 60   # 7 days
-
-    # How long before a user's index is outated and needs an update
-    CACHE_INDEX_UPDATE_TIMEOUT = 10 * 60  # 10 minutes
+    # How long (seconds) we hold a user's index (in Mongo) before rebuilding it
+    STORE_INDEX_TIMEOUT = 7 * 24 * 60 * 60   # 7 days
 
     # We daily purge activities older than this from MongoDB
     STORE_ACTIVITIES_TIMEOUT = 7  # days
+
+    # How long before a user's index is outated and needs an update
+    INDEX_UPDATE_TIMEOUT = 10 * 60  # 10 minutes
 
     # How long we memory-cache hires activities
     CACHE_ACTIVITIES_TIMEOUT = 1 * 60 * 60  # 1 hour
@@ -104,4 +104,4 @@ class DevelopmentConfig(Config):
     DEBUG = True
 
     # For Flask-Cache
-    CACHE_ACTIVITIES_TIMEOUT = 10
+    CACHE_ACTIVITIES_TIMEOUT = 60

@@ -33,9 +33,8 @@ mongodb = mongo_client.get_default_database()
 redis = Redis.from_url(app.config["REDIS_URL"])
 
 CACHE_USERS_TIMEOUT = app.config["CACHE_USERS_TIMEOUT"]
-CACHE_INDEX_TIMEOUT = app.config["CACHE_INDEX_TIMEOUT"]
-CACHE_INDEX_UPDATE_TIMEOUT = app.config["CACHE_INDEX_UPDATE_TIMEOUT"]
 CACHE_ACTIVITIES_TIMEOUT = app.config["CACHE_ACTIVITIES_TIMEOUT"]
+INDEX_UPDATE_TIMEOUT = app.config["INDEX_UPDATE_TIMEOUT"]
 LOCAL = os.environ.get("APP_SETTINGS") == "config.DevelopmentConfig"
 OFFLINE = app.config.get("OFFLINE")
 
@@ -186,10 +185,17 @@ class Users(UserMixin, db_sql.Model):
         return "I:{}".format(self.strava_id)
 
     def delete_index(self):
-        result = mongodb.activities.delete_one({'_id': self.strava_id})
+        try:
+            result1 = mongodb.indexes.delete_one({'_id': self.strava_id})
+        except Exception as e:
+            app.logger.debug("error deleting index {} from MongoDB:\n{}"
+                             .format(self, e))
+            result1 = e
+
         self.activity_index = None
-        self.cache()
-        return result
+        result2 = self.cache()
+
+        return result1, result2
 
     def indexing(self, status=None):
         # Indicate to other processes that we are currently indexing
@@ -228,18 +234,23 @@ class Users(UserMixin, db_sql.Model):
                     }]
 
         if not self.activity_index:
-            self.activity_index = (mongodb.indexes
-                                   .find_one({"_id": self.strava_id}))
-        if self.activity_index:
-            dt_last_indexed = self.activity_index["dt_last_indexed"]
-            packed_index = self.activity_index["packed_index"]
+            try:
+                self.activity_index = (mongodb.indexes
+                                       .find_one({"_id": self.strava_id}))
+            except Exception as e:
+                app.logger.debug("error accessing mongodb indexes collection:\n{}"
+                                 .format(e))
 
-            index_df = pd.read_msgpack(packed_index).astype({"type": str})
+        if self.activity_index:
+            index_df = pd.read_msgpack(
+                self.activity_index["packed_index"]
+            ).astype({"type": str})
+
             elapsed = (datetime.utcnow() -
-                       dt_last_indexed).total_seconds()
+                       self.activity_index["dt_last_indexed"]).total_seconds()
 
             # update the index if we need to
-            if (elapsed > CACHE_INDEX_UPDATE_TIMEOUT) and (not OFFLINE):
+            if (elapsed > INDEX_UPDATE_TIMEOUT) and (not OFFLINE):
                 latest = index_df.index[0]
                 app.logger.info("updating activity index for {}"
                                 .format(self.strava_id))
@@ -279,10 +290,16 @@ class Users(UserMixin, db_sql.Model):
                 self.cache()
 
                 # update activity_index in MongoDB
-                mongodb.indexes.update_one(
-                    {"_id": self.strava_id},
-                    {"$set": to_update}
-                )
+                try:
+                    mongodb.indexes.update_one(
+                        {"_id": self.strava_id},
+                        {"$set": to_update}
+                    )
+                except Exception as e:
+                    app.logger.debug(
+                        "error updating activity index for {} in MongoDB:\n{}"
+                        .format(self, e)
+                    )
 
             if activity_ids:
                 df = index_df[index_df["id"].isin(activity_ids)]
@@ -349,18 +366,25 @@ class Users(UserMixin, db_sql.Model):
                     "packed_index": Binary(index_df.to_msgpack(compress='blosc'))
                 }
 
-                # store activity index in MongoDB
-                result = mongodb.indexes.update_one(
-                    {"_id": user.strava_id},
-                    {"$set": user.activity_index},
-                    upsert=True)
-
-                app.logger.info(
-                    "put index for {} in MongoDB: {}".format(user, vars(result))
-                )
-
                 # update the cache for this user
                 user.cache()
+
+                # if MongoDB access fails then at least the activity index
+                # is cached with the user for a while.  Since we're using
+                # a cheap sandbox version of Mongo, it might be down sometimes.
+                try:
+                    result = mongodb.indexes.update_one(
+                        {"_id": user.strava_id},
+                        {"$set": user.activity_index},
+                        upsert=True)
+
+                    app.logger.info("inserted activity index for {} in MongoDB: {}"
+                                    .format(user, vars(result)))
+                except Exception as e:
+                    app.logger.debug(
+                        "error wrtiting activity index for {} to MongoDB:\n{}"
+                        .format(user, e)
+                    )
 
             finally:
                 user.indexing(False)
@@ -428,14 +452,21 @@ class Activities(object):
 
     @classmethod
     def set(cls, id, data, timeout=CACHE_ACTIVITIES_TIMEOUT):
-        redis.setex(cls.cache_key(id), msgpack.packb(data), timeout)
+        # cache it first, in case mongo is down
+        result1 = redis.setex(cls.cache_key(id), msgpack.packb(data), timeout)
+
         document = {"ts": datetime.utcnow()}
         document.update(data)
-
-        mongodb.activities.update_one(
-            {"_id": int(id)},
-            {"$set": document},
-            upsert=True)
+        try:
+            result2 = mongodb.activities.update_one(
+                {"_id": int(id)},
+                {"$set": document},
+                upsert=True)
+        except Exception as e:
+            result2 = None
+            app.logger.debug("error writing activity {} to MongoDB:\n{}"
+                             .format(id, e))
+        return result1, result2
 
     @classmethod
     def get(cls, id, timeout=CACHE_ACTIVITIES_TIMEOUT):
@@ -444,26 +475,51 @@ class Activities(object):
 
         if cached:
             redis.expire(key, timeout)  # reset expiration timeout
-            # app.logger.debug("got Activity {} from cache".format(id))
+            app.logger.debug("got Activity {} from cache".format(id))
             return msgpack.unpackb(cached)
 
-        result = mongodb.activities.find_one({"_id": int(id)})
-        if result:
-            data = result.get("data")
-            if data:
-                redis.setex(key, msgpack.packb(data), timeout)
-                # app.logger.debug("got Activity {} from MongoDB".format(id))
-                return data
+        try:
+            document = mongodb.activities.find_one_and_update(
+                {"_id": int(id)},
+                {"$set": {"ts": datetime.utcnow()}}
+            )
+
+        except Exception as e:
+            app.logger.debug("error accessing activity {} from MongoDB:\n{}"
+                             .format(id, e))
+            return
+
+        if document:
+            del document["_id"]
+            del document["ts"]
+            redis.setex(key, msgpack.packb(document), timeout)
+            app.logger.debug("got activity {} data from MongoDB".format(id))
+            return document
 
     @classmethod
     def clear(cls):
-        mongodb.activities.drop()
-        redis.delete(*redis.keys(cls.cache_key("*")))
+        try:
+            result1 = mongodb.activities.drop()
+        except Exception as e:
+            app.logger.debug("error deleting activities collection from MongoDB.\n{}"
+                             .format(e))
+            result1 = e
+
+        result2 = redis.delete(*redis.keys(cls.cache_key("*")))
+        # todo: re-create activities collection
+
+        return result1, result2
 
     @classmethod
     def purge(cls, age_in_days):
         earlier_date = datetime.utcnow() - timedelta(days=age_in_days)
-        result = mongodb.activities.delete_many({'ts': {"$lt": earlier_date}})
+        try:
+            result = mongodb.activities.delete_many(
+                {'ts': {"$lt": earlier_date}}
+            )
+        except Exception as e:
+            app.logger.debug("error deleting old activities from MongoDB.\n{}"
+                             .format(e))
         return result
 
     @classmethod
