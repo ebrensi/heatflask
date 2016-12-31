@@ -58,13 +58,6 @@ class Config(object):
         "T": 5
     }
 
-    ANTPATH_ACTIVITY_COLORS = {
-        'red': ['run', 'walk', 'hike'],
-        'blue': ['ride'],
-        'aqua': ['virtualride'],
-        'yellow': ['swim']
-    }
-
     MAP_CENTER = [27.53, 1.58]
     MAP_ZOOM = 3
 
