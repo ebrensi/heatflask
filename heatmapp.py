@@ -23,14 +23,12 @@ from flask_analytics import Analytics
 from flask_sslify import SSLify
 from signal import signal, SIGPIPE, SIG_DFL
 
-
 app = Flask(__name__)
 app.config.from_object(os.environ['APP_SETTINGS'])
 sslify = SSLify(app)
 
-
 # models depend app so we import them afterwards
-from models import Users, Activities, db_sql, db_mongo, redis, tuplize_datetime
+from models import Users, Activities, db_sql, mongodb, redis, tuplize_datetime
 db_sql.create_all()
 
 Analytics(app)
@@ -131,6 +129,7 @@ def demo():
     return redirect(url_for("index",
                             username="15972102",
                             date1="2016-12-21",
+                            date2="2016-12-28",
                             autozoom=1,
                             heatres="high",
                             flowres="high",
