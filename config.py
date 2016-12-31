@@ -37,7 +37,7 @@ class Config(object):
     STRAVA_CLIENT_ID = os.environ.get("STRAVA_CLIENT_ID")
     STRAVA_CLIENT_SECRET = os.environ.get("STRAVA_CLIENT_SECRET")
 
-    # Leaflet stuff
+    # Leaflet.js stuff
     HEATMAP_DEFAULT_OPTIONS = {
         "radius": 9,
         "blur": 15,
@@ -97,4 +97,4 @@ class DevelopmentConfig(Config):
     DEBUG = True
 
     # For Flask-Cache
-    CACHE_ACTIVITIES_TIMEOUT = 60
+    CACHE_ACTIVITIES_TIMEOUT = 120
