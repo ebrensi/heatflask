@@ -13,7 +13,6 @@ from datetime import datetime
 import os
 import re
 import json
-import itertools
 import msgpack
 import stravalib
 import flask_login
@@ -29,7 +28,6 @@ sslify = SSLify(app)
 
 # models depend app so we import them afterwards
 from models import Users, Activities, db_sql, mongodb, redis, tuplize_datetime
-db_sql.create_all()
 
 Analytics(app)
 
@@ -179,12 +177,10 @@ def auth_callback():
             return redirect(state)
 
         user = Users.from_access_token(access_token)
-        app.logger.debug("logged in {}".format(user))
-        db_sql.session.add(user)  # error here
-        db_sql.session.commit()
 
         # remember=True, for persistent login.
         login_user(user, remember=True)
+        app.logger.debug("logged in {}".format(user))
 
     return redirect(request.args.get("state") or
                     url_for("index", username=current_user.strava_id))
@@ -225,10 +221,7 @@ def delete(username):
 
         # the current user is now logged out
         try:
-            user.delete_index()
-            user.uncache()
-            db_sql.session.delete(user)
-            db_sql.session.commit()
+            user.delete()
         except Exception as e:
             flash(str(e))
         else:
@@ -248,9 +241,10 @@ def index(username):
         except:
             logout_user()
         else:
-            current_user.dt_last_active = datetime.utcnow()
-            current_user.app_activity_count += 1
-            db_sql.session.commit()
+            current_user.update(
+                dt_last_active=datetime.utcnow(),
+                app_activity_count=current_user.app_activity_count + 1
+            )
 
     # note: 'current_user' is the user that is currently logged in.
     #       'user' is the user we are displaying data for.
