@@ -63,7 +63,6 @@ class Users(UserMixin, db_sql.Model):
     # city = Column(String())
     # state = Column(String())
     # country = Column(String())
-    # activity_index = Column(pg.HSTORE)
 
     dt_last_active = Column(pg.TIMESTAMP)
     app_activity_count = Column(Integer, default=0)

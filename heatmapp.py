@@ -338,7 +338,7 @@ def getdata(username):
     def errout(msg):
         # outputs a terminating SSE stream consisting of one error message
         data = {"error": "{}".format(msg)}
-        return Response(itertools.imap(sse_out, data, None),
+        return Response(map(sse_out, [data, None]),
                         mimetype='text/event-stream')
 
     def cast_int(s):
