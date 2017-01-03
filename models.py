@@ -229,8 +229,8 @@ class Users(UserMixin, db_sql.Model):
 
         if self.indexing():
             return [{
-                    "error": "Indexing activities for user {}...<br>Please try again in a few seconds.<br>"
-                    .format(self.strava_id)
+                    "error": "Building activity index for {}".format(self.strava_id)
+                    + "...<br>Please try again in a few seconds.<br>"
                     }]
 
         if not self.activity_index:
@@ -238,8 +238,9 @@ class Users(UserMixin, db_sql.Model):
                 self.activity_index = (mongodb.indexes
                                        .find_one({"_id": self.strava_id}))
             except Exception as e:
-                app.logger.debug("error accessing mongodb indexes collection:\n{}"
-                                 .format(e))
+                app.logger.debug(
+                    "error accessing mongodb indexes collection:\n{}"
+                    .format(e))
 
         if self.activity_index:
             index_df = pd.read_msgpack(
@@ -320,7 +321,7 @@ class Users(UserMixin, db_sql.Model):
         Q = Queue()
         P = Pool()
 
-        def async_job(user, limit=None, after=None, before=None):
+        def build_index(user, limit=None, after=None, before=None):
 
             user.indexing(True)
 
@@ -378,8 +379,10 @@ class Users(UserMixin, db_sql.Model):
                         {"$set": user.activity_index},
                         upsert=True)
 
-                    app.logger.info("inserted activity index for {} in MongoDB: {}"
-                                    .format(user, vars(result)))
+                    app.logger.info(
+                        "inserted activity index for {} in MongoDB: {}"
+                        .format(user, vars(result))
+                    )
                 except Exception as e:
                     app.logger.debug(
                         "error wrtiting activity index for {} to MongoDB:\n{}"
@@ -390,7 +393,7 @@ class Users(UserMixin, db_sql.Model):
                 user.indexing(False)
                 Q.put(StopIteration)
 
-        P.apply_async(async_job, [self, limit, after, before])
+        P.apply_async(build_index, [self, limit, after, before])
         return Q
 
     def get_activity(self, a_id):
@@ -485,8 +488,9 @@ class Activities(object):
             )
 
         except Exception as e:
-            app.logger.debug("error accessing activity {} from MongoDB:\n{}"
-                             .format(id, e))
+            app.logger.debug(
+                "error accessing activity {} from MongoDB:\n{}"
+                .format(id, e))
             return
 
         if document:
@@ -501,25 +505,38 @@ class Activities(object):
         try:
             result1 = mongodb.activities.drop()
         except Exception as e:
-            app.logger.debug("error deleting activities collection from MongoDB.\n{}"
-                             .format(e))
+            app.logger.debug(
+                "error deleting activities collection from MongoDB.\n{}"
+                .format(e))
             result1 = e
 
         result2 = redis.delete(*redis.keys(cls.cache_key("*")))
-        # todo: re-create activities collection
+
+        mongodb.create_collection("activities")
+
+        timeout = app.config["STORE_ACTIVITIES_TIMEOUT"]
+        mongodb["activities"].create_index(
+            "ts",
+            expireAfterSeconds=timeout
+        )
 
         return result1, result2
 
     @classmethod
-    def purge(cls, age_in_days):
-        earlier_date = datetime.utcnow() - timedelta(days=age_in_days)
+    def purge_old(cls, age_in_seconds=None):
+        if not age_in_seconds:
+            age_in_seconds = app.config["STORE_ACTIVITIES_TIMEOUT"]
+
+        earlier_date = datetime.utcnow() - timedelta(seconds=age_in_seconds)
         try:
             result = mongodb.activities.delete_many(
                 {'ts': {"$lt": earlier_date}}
             )
         except Exception as e:
-            app.logger.debug("error deleting old activities from MongoDB.\n{}"
-                             .format(e))
+            app.logger.debug(
+                "error deleting old activities from MongoDB.\n{}"
+                .format(e)
+            )
         return result
 
     @classmethod
@@ -554,9 +571,5 @@ class Activities(object):
 
         return color_list[0] if color_list else ""
 
-
-# Create tables if they don't exist
-#  These commands aren't necessary if we use flask-migrate
-
-# db.create_all()
-# db.session.commit()
+# mongodb.command("dbstats")
+# mongodb.command("collstats", "activities")

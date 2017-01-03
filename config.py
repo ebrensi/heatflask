@@ -20,7 +20,7 @@ class Config(object):
     STORE_INDEX_TIMEOUT = 7 * 24 * 60 * 60   # 7 days
 
     # We daily purge activities older than this from MongoDB
-    STORE_ACTIVITIES_TIMEOUT = 7  # days
+    STORE_ACTIVITIES_TIMEOUT = 7 * 24 * 60 * 60  # 7 days
 
     # How long before a user's index is outated and needs an update
     INDEX_UPDATE_TIMEOUT = 10 * 60  # 10 minutes
