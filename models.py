@@ -95,6 +95,7 @@ class Users(UserMixin, db_sql.Model):
     def update(self, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
+        db_sql.session.commit()
         return self
 
     @classmethod
@@ -108,6 +109,8 @@ class Users(UserMixin, db_sql.Model):
         if not user:
             user = cls(strava_id=strava_user.id,
                        app_activity_count=0)
+            db_sql.session.add(user)
+            db_sql.session.commit()
 
         user.update(
             username=strava_user.username,
@@ -122,6 +125,7 @@ class Users(UserMixin, db_sql.Model):
             state=strava_user.state,
             country=strava_user.country
         )
+
         return user
 
     @staticmethod
@@ -172,6 +176,12 @@ class Users(UserMixin, db_sql.Model):
             user.cache(user_identifier, timeout)
 
         return user if user else None
+
+    def delete(self):
+        self.delete_index()
+        self.uncache()
+        db_sql.session.delete(self)
+        db_sql.session.commit()
 
     @classmethod
     def dump(cls):
