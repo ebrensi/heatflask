@@ -4,6 +4,9 @@ from __future__ import unicode_literals
 import gevent
 from gevent import monkey
 monkey.patch_all()  # may not be necessary
+# from gevent.queue import Queue
+# from gevent.pool import Pool
+
 
 from flask import Flask, Response, render_template, request, redirect, \
     jsonify, url_for, flash, send_from_directory, render_template_string
@@ -378,15 +381,25 @@ def getdata(username):
 
     app.logger.debug("getdata: {}, hires={}".format(options, hires))
 
-    client = user.client()
-
-    def sse_iterator():
+    def sse_iterator(client, Q):
         # streams_out = ["polyline", "velocity_smooth"]
         # streams_to_cache = ["polyline", "velocity_smooth"]
         streams_out = ["polyline", "error"]
         streams_to_cache = ["polyline"]
 
-        yield sse_out({"msg": "Retrieving Index..."})
+        def import_and_queue(Q, activity):
+            stream_data = Activities.import_streams(
+                client, activity["id"], streams_to_cache)
+
+            data = {s: stream_data[s] for s in streams_out
+                    if s in stream_data}
+            data.update(activity)
+            app.logger.debug("imported streams for {}".format(activity["id"]))
+            Q.put(sse_out(data))
+            gevent.sleep(0)
+
+        pool = gevent.pool.Pool(app.config.get("CONCURRENCY"))
+        Q.put(sse_out({"msg": "Retrieving Index..."}))
 
         activity_data = user.index(**options)
         if isinstance(activity_data, list):
@@ -401,7 +414,7 @@ def getdata(username):
                 if (("msg" in activity) or
                     ("error" in activity) or
                         ("stop_rendering" in activity)):
-                    yield sse_out(activity)
+                    Q.put(sse_out(activity))
 
                 if activity.get("summary_polyline"):
                     count += 1
@@ -410,36 +423,34 @@ def getdata(username):
                     )
 
                     msg = "activity {0}/{1}...".format(count, total)
-                    yield sse_out({"msg": msg})
+                    Q.put(sse_out({"msg": msg}))
 
                     if hires:
                         stream_data = Activities.get(activity["id"])
 
                         if not stream_data:
-                            stream_data = (
-                                Activities.import_streams(client,
-                                                          activity["id"],
-                                                          streams_to_cache)
-                            )
-
-                        data = {s: stream_data[s] for s in streams_out
-                                if s in stream_data}
-                        data.update(activity)
-                        # app.logger.debug("sending {}".format(data))
-                        yield sse_out(data)
-                        gevent.sleep(0)
+                            pool.spawn(import_and_queue, Q, activity)
+                        else:
+                            data = {s: stream_data[s] for s in streams_out
+                                    if s in stream_data}
+                            data.update(activity)
+                            # app.logger.debug("sending {}".format(data))
+                            Q.put(sse_out(data))
+                            gevent.sleep(0)
                     else:
-                        yield sse_out(activity)
+                        Q.put(sse_out(activity))
                         gevent.sleep(0)
         except Exception as e:
             # raise
-            yield sse_out({"error": str(e)})
+            Q.put(sse_out({"error": str(e)}))
 
-        yield sse_out()
+        pool.join()
+        Q.put(sse_out())
 
-    resp = Response(sse_iterator(), mimetype='text/event-stream')
-    app.logger.debug("sse stream response:\n{}".format(resp))
-    return resp
+    client = user.client()
+    Q = gevent.queue.Queue()
+    gevent.spawn(sse_iterator, client, Q)
+    return Response(Q, mimetype='text/event-stream')
 
 # creates a SSE stream of current.user's activities, using the Strava API
 # arguments
