@@ -189,7 +189,7 @@ class Users(UserMixin, db_sql.Model):
                 for user in cls.query]
 
         mongodb.drop_collection("users")
-        mongodb.users.insert_many(dump)
+        # mongodb.users.insert_many(dump)
         return dump
 
     @classmethod
