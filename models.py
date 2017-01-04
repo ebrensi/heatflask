@@ -208,7 +208,7 @@ class Users(UserMixin, db_sql.Model):
 
         def get_strava_user(user_dict):
             client = stravalib.Client(
-                access_token=user_dict["strava_access_token"])
+                access_token=user_dict["access_token"])
             try:
                 strava_user = client.get_athlete()
             except Exception as e:
@@ -225,7 +225,7 @@ class Users(UserMixin, db_sql.Model):
                     "city": strava_user.city,
                     "state": strava_user.state,
                     "country": strava_user.country,
-                    "access_token": user_dict["strava_access_token"],
+                    "access_token": user_dict["access_token"],
                     "dt_last_active": user_dict.get("dt_last_active"),
                     "app_activity_count": user_dict.get("app_activity_count")
                 }
