@@ -4,9 +4,7 @@ from __future__ import unicode_literals
 import gevent
 from gevent import monkey
 monkey.patch_all()  # may not be necessary
-# from gevent.queue import Queue
-# from gevent.pool import Pool
-
+from exceptions import StopIteration
 
 from flask import Flask, Response, render_template, request, redirect, \
     jsonify, url_for, flash, send_from_directory, render_template_string
@@ -381,7 +379,7 @@ def getdata(username):
 
     app.logger.debug("getdata: {}, hires={}".format(options, hires))
 
-    def sse_iterator(client, Q):
+    def sse_iterator(client, pool, Q):
         # streams_out = ["polyline", "velocity_smooth"]
         # streams_to_cache = ["polyline", "velocity_smooth"]
         streams_out = ["polyline", "error"]
@@ -398,7 +396,6 @@ def getdata(username):
             Q.put(sse_out(data))
             gevent.sleep(0)
 
-        pool = gevent.pool.Pool(app.config.get("CONCURRENCY"))
         Q.put(sse_out({"msg": "Retrieving Index..."}))
 
         activity_data = user.index(**options)
@@ -449,12 +446,13 @@ def getdata(username):
             # raise
             Q.put(sse_out({"error": str(e)}))
 
-        pool.join()
         Q.put(sse_out())
+        Q.put(StopIteration)
 
     client = user.client()
+    pool = gevent.pool.Pool(app.config.get("CONCURRENCY"))
     Q = gevent.queue.Queue()
-    gevent.spawn(sse_iterator, client, Q)
+    pool.apply_async(sse_iterator, [client, pool, Q])
     return Response(Q, mimetype='text/event-stream')
 
 # creates a SSE stream of current.user's activities, using the Strava API
