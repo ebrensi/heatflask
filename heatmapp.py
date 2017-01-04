@@ -404,8 +404,10 @@ def getdata(username):
         activity_data = user.index(**options)
         if isinstance(activity_data, list):
             total = len(activity_data)
+            ftotal = float(total)
         else:
             total = "?"
+            ftotal = None
 
         count = 0
         try:
@@ -422,8 +424,11 @@ def getdata(username):
                         Activities.ATYPE_MAP.get(activity["type"].lower())
                     )
 
-                    msg = "activity {0}/{1}...".format(count, total)
-                    Q.put(sse_out({"msg": msg}))
+                    data = {"msg": "activity {0}/{1}...".format(count, total)}
+                    if ftotal:
+                        data["value"] = count / ftotal
+
+                    Q.put(sse_out(data))
 
                     if hires:
                         stream_data = Activities.get(activity["id"])
