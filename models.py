@@ -188,8 +188,9 @@ class Users(UserMixin, db_sql.Model):
         dump = [{attr: getattr(user, attr) for attr in attrs}
                 for user in cls.query]
 
-        mongodb.drop_collection("users")
-        # mongodb.users.insert_many(dump)
+        # df = pd.DataFrame(dump).set_index("id")
+        # document = df.to_json(orient="split")
+        # mongodb.users.insert_one(document)
         return dump
 
     @classmethod
