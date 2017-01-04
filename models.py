@@ -571,8 +571,11 @@ class Activities(object):
                 .format(e))
             result1 = e
 
-        result2 = redis.delete(*redis.keys(cls.cache_key("*")))
-
+        to_delete = redis.keys(cls.cache_key("*"))
+        if to_delete:
+            result2 = redis.delete(*to_delete)
+        else:
+            result2 = None
         mongodb.create_collection("activities")
 
         timeout = app.config["STORE_ACTIVITIES_TIMEOUT"]

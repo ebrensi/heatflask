@@ -141,6 +141,7 @@
 
                 <hr>
                     <div class="data_message"></div>
+                    <div><progress class='progbar'></progress></div>
                 <hr>
 
                 <button type="button" id="renderButton" class="btn btn-primary">Render Layers</button>
@@ -374,7 +375,7 @@
 
             let msgBox = L.control.window(map,
                 {position: 'top',
-                content:"<div class='data_message'></div>",
+                 content:"<div class='data_message'></div><div><progress class='progbar'></progress></div>",
                 visible:true
              });
 
@@ -392,11 +393,14 @@
                 listening = true;
 
             $("#abortButton").show();
+            $(".progbar").show();
+            var progs = document.getElementsByClassName('progbar');
             $('#renderButton').prop('disabled', true);
 
             function doneRendering(msg){
                 if (rendering) {
                     $("#abortButton").hide();
+                    $(".progbar").hide();
                     if ($("#autozoom:checked").val() && bounds.isValid())
                         map.fitBounds(bounds);
 
@@ -442,11 +446,16 @@
                         L.control.window(map, {title: "Oops.", content:msg, visible:true});
                         doneRendering(msg);
                         stopListening();
-
+                        return;
                     } else if ("stop_rendering" in A){
                         doneRendering("Done rendering.");
                     } else if ("msg" in A) {
                         $(".data_message").html(A.msg);
+                        if ("value" in A) {
+                            for (let i = 0; i < progs.length; i++) {
+                                 progs[i].value = parseFloat(A.value)
+                             }
+                        }
                         return;
                     } // else {
                     //     let msg = "rendering [" + A.id + "] " + A.name;
@@ -641,7 +650,7 @@
             });
 
             $("#abortButton").hide();
-
+            $(".progbar").hide();
             $(".datepick").datepicker({ dateFormat: 'yy-mm-dd',
                                         changeMonth: true,
                                         changeYear: true
