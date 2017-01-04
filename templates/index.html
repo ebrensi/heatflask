@@ -34,7 +34,7 @@
     {% endassets %}
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBLvYWwPmLsBRCGXeMHh-InA9rq35jdVeA" async defer></script>
 
-    {% if not current_user.strava_id in config["ADMIN"] %}
+    {% if not current_user.id in config["ADMIN"] %}
     {{analytics}}
     {% endif %}
 
@@ -49,7 +49,7 @@
                 </li>
 
                 {% if current_user.is_authenticated
-                    and (current_user.strava_id == user.strava_id) %}
+                    and (current_user.id == user.id) %}
                 <li>
                 {% else %}
                 <li class="disabled">
@@ -71,15 +71,15 @@
         <div class="sidebar-content">
             <div class="sidebar-pane" id="home">
                 <h1 class="sidebar-header">
-                    <a href="https://www.strava.com/athletes/{{ user.strava_id }}" target="_blank"><img src="{{ url_for('static',filename='strava_button.png')}}" width=20, height=20 class="img-fluid"> </a>
-                    {{ user.username or user.strava_id }}'s map
+                    <a href="https://www.strava.com/athletes/{{ user.id }}" target="_blank"><img src="{{ url_for('static',filename='strava_button.png')}}" width=20, height=20 class="img-fluid"> </a>
+                    {{ user.username or user.id }}'s map
                     <span class="sidebar-close"><i class="fa fa-caret-left"></i></span>
                 </h1>
 
                 <h3>Activities query:</h3>
 
                 <br>
-                <form id="renderform" action="{{ url_for('index', username=user.strava_id)}}">
+                <form id="renderform" action="{{ url_for('index', username=user.id)}}">
 
                  <span id="num_select">
                   <input class="preset" id="select_num" type="number" value=0 min=0 max=500>
@@ -151,9 +151,9 @@
 
                 <hr>
                 {% if current_user.is_authenticated %}
-                You are logged in as <a href="{{ url_for('index', username=current_user.strava_id) }}" target="_blank">{{ current_user.username or current_user.strava_id}}</a> :<br>
+                You are logged in as <a href="{{ url_for('index', username=current_user.id) }}" target="_blank">{{ current_user.username or current_user.id}}</a> :<br>
 
-                <form action="{{ url_for('logout', username=user.strava_id) }}">
+                <form action="{{ url_for('logout', username=user.id) }}">
                     <input type="submit" class="btn btn-danger" value="Log Out" />
                 </form>
                 {% else %}
@@ -170,9 +170,9 @@
             </div>
 
             {% if current_user.is_authenticated
-                    and (current_user.strava_id == user.strava_id) %}
+                    and (current_user.id == user.id) %}
             <div class="sidebar-pane" id="profile">
-                <h1 class="sidebar-header"> <a href="https://www.strava.com/athletes/{{ user.strava_id }}" target="_blank"><img src="{{ url_for('static',filename='strava_button.png')}}" width=20, height=20 class="img-fluid"> </a>  {{ current_user.username or current_user.strava_id }} <span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
+                <h1 class="sidebar-header"> <a href="https://www.strava.com/athletes/{{ user.id }}" target="_blank"><img src="{{ url_for('static',filename='strava_button.png')}}" width=20, height=20 class="img-fluid"> </a>  {{ current_user.username or current_user.id }} <span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
 
 
                 <h3> {{ current_user.firstname }}
@@ -184,7 +184,7 @@
 
                 <br><br>
                 The activity index is built when you register, and updated with new activities.  If you made changes to or deleted old activities on Strava, rebuild the index here.
-                <form action="{{ url_for('activities', username=current_user.strava_id) }}" target="_blank">
+                <form action="{{ url_for('activities', username=current_user.id) }}" target="_blank">
                     <input type="submit" class="btn" value="View activity index" />
                     <label><input type="checkbox" name="rebuild" value="1">Re-build</label>
                     <input type="hidden" name="limit" value="100000">
@@ -193,7 +193,7 @@
 
 
                 <br>
-                <form action="{{ url_for('logout', username=user.strava_id) }}">
+                <form action="{{ url_for('logout', username=user.id) }}">
                     <input type="submit" class="btn btn-danger" value="Log Out" />
 
                     <!-- <input class="current-url" type="hidden" id="afterLogout" name="next" value="" /> -->
@@ -202,7 +202,7 @@
                 <br>
                 <hr>
                 <br><br>
-                <form action="{{ url_for('delete', username=user.strava_id) }}" onsubmit="return confirm('Delete your info from our database?');">
+                <form action="{{ url_for('delete', username=user.id) }}" onsubmit="return confirm('Delete your info from our database?');">
                     <input type="submit" class="btn btn-danger" value="Delete Account" />
                 </form>
             </div>
@@ -382,7 +382,7 @@
             appState.items = [];
 
 
-            let url = "{{ url_for('getdata', username=user.strava_id) }}"
+            let url = "{{ url_for('getdata', username=user.id) }}"
                        + "?" + jQuery.param(query, true);
 
             locateControl.stop();
@@ -500,7 +500,7 @@
                             });
 
                             flow.on("click", function(e) {
-                              let url = "{{ url_for('index',username=user.strava_id) }}",
+                              let url = "{{ url_for('index',username=user.id) }}",
                                   d = parseFloat(A.total_distance),
                                   elapsed = hhmmss(parseFloat(A.elapsed_time));
 
@@ -591,7 +591,7 @@
 
             params["baselayer"] = appState.baseLayers;
 
-            let newURL = "{{ user.strava_id }}" + "?" + jQuery.param(params, true);
+            let newURL = "{{ user.id }}" + "?" + jQuery.param(params, true);
             window.history.pushState("", "", newURL);
 
             $(".current-url").val(newURL);

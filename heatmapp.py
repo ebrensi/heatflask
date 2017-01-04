@@ -97,7 +97,7 @@ def touch():
 def nothing():
     if current_user.is_authenticated:
         try:
-            assert current_user.strava_id
+            assert current_user.id
         except:
             # If a user is logged in but has no record in our database.
             #  i.e. was deleted.  We direct them to initialize a new account.
@@ -105,7 +105,7 @@ def nothing():
             flash("oops! Please log back in.")
         else:
             return redirect(url_for('index',
-                                    username=current_user.strava_id))
+                                    username=current_user.id))
 
     return render_template("splash.html")
 
@@ -183,14 +183,14 @@ def auth_callback():
         app.logger.debug("logged in {}".format(user))
 
     return redirect(request.args.get("state") or
-                    url_for("index", username=current_user.strava_id))
+                    url_for("index", username=current_user.id))
 
 
 @app.route("/<username>/logout")
 @login_required
 def logout(username):
     if Users.get(username) == current_user:
-        user_id = current_user.strava_id
+        user_id = current_user.id
         username = current_user.username
         current_user.uncache()
         logout_user()
@@ -216,7 +216,7 @@ def delete(username):
     user = Users.get(username)
     if user == current_user:
         username = user.username
-        user_id = user.strava_id
+        user_id = user.id
         logout_user()
 
         # the current user is now logged out
@@ -237,7 +237,7 @@ def index(username):
         # If a user is logged in from a past session but has no record in our
         #  database (was deleted), we log them out and consider them anonymous
         try:
-            assert current_user.strava_id
+            assert current_user.id
         except:
             logout_user()
         else:
@@ -495,10 +495,10 @@ def activities(username):
 @app.route('/users')
 @login_required
 def users():
-    if current_user.strava_id in app.config["ADMIN"]:
+    if current_user.id in app.config["ADMIN"]:
         info = [
             {
-                "id": user.strava_id,
+                "id": user.id,
                 "dt_last_active": user.dt_last_active,
                 "app_activity_count": user.app_activity_count,
                 "username": user.username
@@ -529,8 +529,8 @@ def users():
 @app.route('/users/backup')
 @login_required
 def users_backup():
-    if current_user.strava_id in app.config["ADMIN"]:
-        return jsonify(Users.dump())
+    if current_user.id in app.config["ADMIN"]:
+        return jsonify(Users.backup())
     else:
         return "sorry."
 
@@ -539,7 +539,7 @@ def users_backup():
 @login_required
 def history():
     MAX = app.config["MAX_HISTORY"]
-    if current_user.strava_id in app.config["ADMIN"]:
+    if current_user.id in app.config["ADMIN"]:
         if redis.llen("history"):
             data = [
                 (datetime(*tpl[:5]), ip, url) for tpl, ip, url in

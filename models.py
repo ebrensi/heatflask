@@ -48,8 +48,7 @@ def detuplize_datetime(s):
 
 
 class Users(UserMixin, db_sql.Model):
-    __tablename__ = 'users'
-    strava_id = Column(Integer, primary_key=True, autoincrement=False)
+    id = Column(Integer, primary_key=True, autoincrement=False)
 
     # These fields get refreshed every time the user logs in.
     #  They are only stored in the database to enable persistent login
@@ -57,12 +56,12 @@ class Users(UserMixin, db_sql.Model):
     firstname = Column(String())
     lastname = Column(String())
     profile = Column(String())
-    strava_access_token = Column(String())
+    access_token = Column(String())
 
-    # measurement_preference = Column(String())
-    # city = Column(String())
-    # state = Column(String())
-    # country = Column(String())
+    measurement_preference = Column(String())
+    city = Column(String())
+    state = Column(String())
+    country = Column(String())
 
     dt_last_active = Column(pg.TIMESTAMP)
     app_activity_count = Column(Integer, default=0)
@@ -82,15 +81,15 @@ class Users(UserMixin, db_sql.Model):
 
     def client(self):
         return stravalib.Client(
-            access_token=self.strava_access_token,
+            access_token=self.access_token,
             rate_limit_requests=False
         )
 
     def __repr__(self):
-        return "<User %r>" % (self.strava_id)
+        return "<User %r>" % (self.id)
 
     def get_id(self):
-        return unicode(self.strava_id)
+        return unicode(self.id)
 
     def update(self, **kwargs):
         for key, value in kwargs.items():
@@ -102,19 +101,18 @@ class Users(UserMixin, db_sql.Model):
     def from_access_token(cls, token):
         client = stravalib.Client(access_token=token,
                                   rate_limit_requests=False)
-
         strava_user = client.get_athlete()
 
         user = cls.get(strava_user.id)
         if not user:
-            user = cls(strava_id=strava_user.id,
+            user = cls(id=strava_user.id,
                        app_activity_count=0)
             db_sql.session.add(user)
             db_sql.session.commit()
 
         user.update(
             username=strava_user.username,
-            strava_access_token=token,
+            access_token=token,
             firstname=strava_user.firstname,
             lastname=strava_user.lastname,
             profile=strava_user.profile,
@@ -133,7 +131,7 @@ class Users(UserMixin, db_sql.Model):
         return "U:{}".format(identifier)
 
     def cache(self, identifier=None, timeout=CACHE_USERS_TIMEOUT):
-        key = self.__class__.key(identifier or self.strava_id)
+        key = self.__class__.key(identifier or self.id)
         packed = self.serialize()
         app.logger.debug(
             "caching {} with key '{}' for {} sec. size={}"
@@ -145,7 +143,7 @@ class Users(UserMixin, db_sql.Model):
         app.logger.debug("uncaching {}".format(self))
 
         # delete from cache too.  It may be under two different keys
-        redis.delete(self.__class__.key(self.strava_id))
+        redis.delete(self.__class__.key(self.id))
         redis.delete(self.__class__.key(self.username))
 
     @classmethod
@@ -184,18 +182,71 @@ class Users(UserMixin, db_sql.Model):
         db_sql.session.commit()
 
     @classmethod
-    def dump(cls):
-        attrs = ["strava_id", "strava_access_token", "dt_last_active",
+    def backup(cls):
+        attrs = ["id", "access_token", "dt_last_active",
                  "app_activity_count"]
-        return [{attr: getattr(user, attr) for attr in attrs}
+        dump = [{attr: getattr(user, attr) for attr in attrs}
                 for user in cls.query]
 
+        mongodb.drop_collection("users")
+        mongodb.users.insert_many(dump)
+        return dump
+
+    @classmethod
+    def restore(cls, users_list=None):
+        import json
+        try:
+            users_list = json.load(open("users.json", "r"))
+        except:
+            pass
+
+        if not users_list:
+            users_list = mongodb.users.find()
+
+        db_sql.drop_all()
+        db_sql.create_all()
+
+        def get_strava_user(user_dict):
+            client = stravalib.Client(
+                access_token=user_dict["strava_access_token"])
+            try:
+                strava_user = client.get_athlete()
+            except Exception as e:
+                app.logger.debug("error getting user {}:\n{}"
+                                 .format(user_dict["strava_id"], e))
+            else:
+                return {
+                    "id": strava_user.id,
+                    "username": strava_user.username,
+                    "firstname": strava_user.firstname,
+                    "lastname": strava_user.lastname,
+                    "profile": strava_user.profile,
+                    "measurement_preference": strava_user.measurement_preference,
+                    "city": strava_user.city,
+                    "state": strava_user.state,
+                    "country": strava_user.country,
+                    "access_token": user_dict["strava_access_token"],
+                    "dt_last_active": user_dict.get("dt_last_active"),
+                    "app_activity_count": user_dict.get("app_activity_count")
+                }
+
+        P = Pool()
+        for user_dict in P.imap_unordered(get_strava_user, users_list):
+            if user_dict:
+                user = Users(**user_dict)
+                try:
+                    db_sql.session.add(user)
+                except:
+                    user = db_sql.session.merge(user)
+                db_sql.session.commit()
+                app.logger.debug("successfully restored {}".format(user))
+
     def index_key(self):
-        return "I:{}".format(self.strava_id)
+        return "I:{}".format(self.id)
 
     def delete_index(self):
         try:
-            result1 = mongodb.indexes.delete_one({'_id': self.strava_id})
+            result1 = mongodb.indexes.delete_one({'_id': self.id})
         except Exception as e:
             app.logger.debug("error deleting index {} from MongoDB:\n{}"
                              .format(self, e))
@@ -209,7 +260,7 @@ class Users(UserMixin, db_sql.Model):
     def indexing(self, status=None):
         # Indicate to other processes that we are currently indexing
         #  This should not take any longer than 30 seconds
-        key = "indexing {}".format(self.strava_id)
+        key = "indexing {}".format(self.id)
         if status is None:
             return redis.get(key)
         else:
@@ -238,14 +289,14 @@ class Users(UserMixin, db_sql.Model):
 
         if self.indexing():
             return [{
-                    "error": "Building activity index for {}".format(self.strava_id)
+                    "error": "Building activity index for {}".format(self.id)
                     + "...<br>Please try again in a few seconds.<br>"
                     }]
 
         if not self.activity_index:
             try:
                 self.activity_index = (mongodb.indexes
-                                       .find_one({"_id": self.strava_id}))
+                                       .find_one({"_id": self.id}))
             except Exception as e:
                 app.logger.debug(
                     "error accessing mongodb indexes collection:\n{}"
@@ -263,7 +314,7 @@ class Users(UserMixin, db_sql.Model):
             if (elapsed > INDEX_UPDATE_TIMEOUT) and (not OFFLINE):
                 latest = index_df.index[0]
                 app.logger.info("updating activity index for {}"
-                                .format(self.strava_id))
+                                .format(self.id))
 
                 already_got = set(index_df.id)
 
@@ -302,7 +353,7 @@ class Users(UserMixin, db_sql.Model):
                 # update activity_index in MongoDB
                 try:
                     mongodb.indexes.update_one(
-                        {"_id": self.strava_id},
+                        {"_id": self.id},
                         {"$set": to_update}
                     )
                 except Exception as e:
@@ -384,7 +435,7 @@ class Users(UserMixin, db_sql.Model):
                 # a cheap sandbox version of Mongo, it might be down sometimes.
                 try:
                     result = mongodb.indexes.update_one(
-                        {"_id": user.strava_id},
+                        {"_id": user.id},
                         {"$set": user.activity_index},
                         upsert=True)
 
