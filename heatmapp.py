@@ -379,7 +379,7 @@ def getdata(username):
 
     app.logger.debug("getdata: {}, hires={}".format(options, hires))
 
-    def sse_iterator(client, pool, Q):
+    def sse_iterator(client, Q):
         # streams_out = ["polyline", "velocity_smooth"]
         # streams_to_cache = ["polyline", "velocity_smooth"]
         streams_out = ["polyline", "error"]
@@ -396,6 +396,7 @@ def getdata(username):
             Q.put(sse_out(data))
             gevent.sleep(0)
 
+        pool = gevent.pool.Pool(app.config.get("CONCURRENCY"))
         Q.put(sse_out({"msg": "Retrieving Index..."}))
 
         activity_data = user.index(**options)
@@ -446,13 +447,16 @@ def getdata(username):
             # raise
             Q.put(sse_out({"error": str(e)}))
 
+        pool.join(timeout=10)  # make sure all spwned threads are done
         Q.put(sse_out())
+
+        # We must put a StopIteration here to close the (http?) connection,
+        # otherise we'll get an idle connection error from Heroku
         Q.put(StopIteration)
 
-    client = user.client()
-    pool = gevent.pool.Pool(app.config.get("CONCURRENCY"))
     Q = gevent.queue.Queue()
-    pool.apply_async(sse_iterator, [client, pool, Q])
+    gevent.spawn(sse_iterator, user.client(), Q)
+
     return Response(Q, mimetype='text/event-stream')
 
 # creates a SSE stream of current.user's activities, using the Strava API
