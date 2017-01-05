@@ -2,9 +2,10 @@
 from __future__ import unicode_literals
 
 import gevent
-from gevent import monkey
-monkey.patch_all()  # may not be necessary
+# from gevent import monkey
+# monkey.patch_all()  # may not be necessary
 from exceptions import StopIteration
+from functools import wraps
 
 from flask import Flask, Response, render_template, request, redirect, \
     jsonify, url_for, flash, send_from_directory, render_template_string
@@ -29,6 +30,7 @@ sslify = SSLify(app)
 
 # models depend app so we import them afterwards
 from models import Users, Activities, db_sql, mongodb, redis, tuplize_datetime
+
 
 Analytics(app)
 
@@ -82,6 +84,17 @@ def load_user(user_id):
     return user
 
 
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if ((current_user.is_authenticated) and
+                (current_user.id in app.config["ADMIN"])):
+            return f(*args, **kwargs)
+        else:
+            return login_manager.unauthorized()
+    return decorated_function
+
+
 @app.route('/favicon.ico')
 def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static'),
@@ -108,7 +121,10 @@ def nothing():
             return redirect(url_for('index',
                                     username=current_user.id))
 
-    return render_template("splash.html")
+    return render_template("splash.html",
+                           redirect=request.args.get(
+                               "next") or url_for("nothing")
+                           )
 
 
 @app.route('/demo')
@@ -511,83 +527,76 @@ def activities(username):
 
 
 @app.route('/users')
-@login_required
+@admin_required
 def users():
-    if current_user.id in app.config["ADMIN"]:
-        info = [
-            {
-                "id": user.id,
-                "dt_last_active": user.dt_last_active,
-                "app_activity_count": user.app_activity_count,
-                "username": user.username
-            }
-            for user in Users.query
-        ]
+    info = [
+        {
+            "id": user.id,
+            "dt_last_active": user.dt_last_active,
+            "app_activity_count": user.app_activity_count,
+            "username": user.username
+        }
+        for user in Users.query
+    ]
 
-        info = sorted(info, key=lambda(x): x["app_activity_count"] or 0)
+    info = sorted(info, key=lambda(x): x["app_activity_count"] or 0)
 
-        html = """
-        <h1> Registered Users </h1>
-        <table>
-            {%- for d in data %}
-              <tr>
-                <td><a href="{{ url_for('index',username=d['id']) }}" target='_blank'>{{ d['id'] }}</a></td>
-                <td>{{ d["app_activity_count"] }}</td>
-                <td>{{ d["dt_last_active"] }}</td>
-              </tr>
-            {%- endfor %}
-        </table>
+    html = """
+    <h1> Registered Users </h1>
+    <table>
+        {%- for d in data %}
+          <tr>
+            <td><a href="{{ url_for('index',username=d['id']) }}" target='_blank'>{{ d['id'] }}</a></td>
+            <td>{{ d["app_activity_count"] }}</td>
+            <td>{{ d["dt_last_active"] }}</td>
+          </tr>
+        {%- endfor %}
+    </table>
 
-        """
-        return render_template_string(html, data=info)
-    else:
-        return "sorry."
+    """
+    return render_template_string(html, data=info)
 
 
 @app.route('/users/backup')
-@login_required
+@admin_required
 def users_backup():
-    if current_user.id in app.config["ADMIN"]:
-        return jsonify(Users.backup())
-    else:
-        return "sorry."
+    return jsonify(Users.backup())
 
 
 @app.route('/history')
-@login_required
+@admin_required
 def history():
     MAX = app.config["MAX_HISTORY"]
-    if current_user.id in app.config["ADMIN"]:
-        if redis.llen("history"):
-            data = [
-                (datetime(*tpl[:5]), ip, url) for tpl, ip, url in
-                [msgpack.unpackb(record)
-                 for record in redis.lrange("history", 0, -1)]
-            ]
+    if redis.llen("history"):
+        data = [
+            (datetime(*tpl[:5]), ip, url) for tpl, ip, url in
+            [msgpack.unpackb(record)
+             for record in redis.lrange("history", 0, -1)]
+        ]
 
-            if data:
-                html = """
-                <h1>Events</h1>
-                <table>
-                    <tr>
-                    <td>time</td>
-                    <td>ip address</td>
-                    <td>url</td>
-                    </tr>
-                    {%- for time,ip,url in data %}
-                      <tr>
-                        <td>{{ time }}</td>
-                        <td>{{ ip }}</td>
-                        <td><a href="{{ url }}" target='_blank'>{{ url }}</a></td>
-                      </tr>
-                    {%- endfor %}
-                </table>
+        if data:
+            html = """
+            <h1>Events</h1>
+            <table>
+                <tr>
+                <td>time</td>
+                <td>ip address</td>
+                <td>url</td>
+                </tr>
+                {%- for time,ip,url in data %}
+                  <tr>
+                    <td>{{ time }}</td>
+                    <td>{{ ip }}</td>
+                    <td><a href="{{ url }}" target='_blank'>{{ url }}</a></td>
+                  </tr>
+                {%- endfor %}
+            </table>
 
-                """
-                if redis.llen("history") > MAX:
-                    redis.ltrim("history", 0, MAX)
-                return render_template_string(html, data=data)
-    return "oops"
+            """
+            if redis.llen("history") > MAX:
+                redis.ltrim("history", 0, MAX)
+            return render_template_string(html, data=data)
+    return "No history"
 
 
 # makes python ignore sigpipe and prevents broken pipe exception when client
