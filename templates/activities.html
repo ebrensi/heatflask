@@ -39,7 +39,7 @@
 
   <script>
     jQuery(document).ready(function($) {
-        var source = new EventSource("{{ url_for('activity_stream', username=user.strava_id, limit=limit) }}");
+        var source = new EventSource("{{ url_for('activity_stream', username=user.id, limit=limit) }}");
         var count = 0;
         $("#status").text("Getting Activity List");
 
@@ -58,7 +58,7 @@
             }
 
             strava_link = "<a href='https://www.strava.com/activities/" +a.id + "' target='_blank'>Strava " + a.id +"</a>"
-            heatflask_link = "<a href={{ url_for('index',username=user.strava_id) }}?id=" +a.id + " target='_blank'> Heatflask " + a.id +"</a>"
+            heatflask_link = "<a href={{ url_for('index',username=user.id) }}?id=" +a.id + " target='_blank'> Heatflask " + a.id +"</a>"
             row = "<tr " + highlight +  ">" +
                    "<th scope='row'>" + a.id + "</th>" +
                    "<td>" + a.beginTimestamp +"</td>" +
