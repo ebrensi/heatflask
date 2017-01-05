@@ -97,6 +97,9 @@ class Users(UserMixin, db_sql.Model):
         db_sql.session.commit()
         return self
 
+    def is_admin(self):
+        return self.id in app.config["ADMIN"]
+
     @classmethod
     def from_access_token(cls, token):
         client = stravalib.Client(access_token=token,

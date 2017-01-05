@@ -74,7 +74,7 @@ flask_compress.Compress(app)
 # Flask-login stuff
 login_manager = flask_login.LoginManager()
 login_manager.init_app(app)
-login_manager.login_view = 'nothing'
+login_manager.login_view = 'splash'
 
 
 @login_manager.user_loader
@@ -87,8 +87,8 @@ def load_user(user_id):
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if ((current_user.is_authenticated) and
-                (current_user.id in app.config["ADMIN"])):
+        if (current_user.is_authenticated and
+                current_user.is_admin()):
             return f(*args, **kwargs)
         else:
             return login_manager.unauthorized()
@@ -108,7 +108,7 @@ def touch():
 
 
 @app.route('/')
-def nothing():
+def splash():
     if current_user.is_authenticated:
         try:
             assert current_user.id
@@ -122,9 +122,8 @@ def nothing():
                                     username=current_user.id))
 
     return render_template("splash.html",
-                           redirect=request.args.get(
-                               "next") or url_for("nothing")
-                           )
+                           next=(request.args.get("next") or
+                                 url_for("splash")))
 
 
 @app.route('/demo')
@@ -213,7 +212,7 @@ def logout(username):
         logout_user()
         flash("user '{}' ({}) logged out"
               .format(username, user_id))
-    return redirect(url_for("nothing"))
+    return redirect(url_for("splash"))
 
 
 @app.route("/<username>/delete_index")
@@ -243,7 +242,7 @@ def delete(username):
             flash(str(e))
         else:
             flash("user '{}' ({}) deleted".format(username, user_id))
-        return redirect(url_for("nothing"))
+        return redirect(url_for("splash"))
     else:
         return "sorry, you cannot do that"
 
@@ -269,7 +268,7 @@ def index(username):
     if not user:
         flash("user '{}' is not registered with this app"
               .format(username))
-        return redirect(url_for('nothing'))
+        return redirect(url_for('splash'))
 
     ip_address = request.environ.get('HTTP_X_REAL_IP', request.remote_addr)
     redis.lpush("history",
