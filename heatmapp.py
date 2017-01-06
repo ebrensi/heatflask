@@ -108,12 +108,12 @@ def log_request(f):
                 "msg": href(request.url, request.full_path)
             })
 
-            ips = {"remote_addr": request.remote_addr,
-                   "access_route": request.access_route,
-                   'HTTP_X_REAL_IP': request.environ.get('HTTP_X_REAL_IP'),
-                   }
-            app.logger.info("ips={}\nuser_agent={}"
-                            .format(ips, request.user_agent))
+            # ips = {"remote_addr": request.remote_addr,
+            #        "access_route": request.access_route,
+            #        'HTTP_X_REAL_IP': request.environ.get('HTTP_X_REAL_IP'),
+            #        }
+            # app.logger.info("ips={}\nuser_agent={}"
+            #                 .format(ips, request.user_agent))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -422,9 +422,9 @@ def getdata(username):
 
     hires = request.args.get("hires") == "true"
 
-    # app.logger.debug("getdata: {}, hires={}".format(options, hires))
+    def sse_iterator(client, request_name, Q):
+        start_time = datetime.utcnow()
 
-    def sse_iterator(client, Q):
         # streams_out = ["polyline", "time"]
         # streams_to_cache = ["polyline", "time"]
         streams_out = ["polyline"]
@@ -453,6 +453,7 @@ def getdata(username):
             ftotal = None
 
         count = 0
+        imported = 0
         try:
             for activity in activity_data:
                 # app.logger.debug("activity {}".format(activity))
@@ -478,6 +479,7 @@ def getdata(username):
 
                         if not stream_data:
                             pool.spawn(import_and_queue, Q, activity)
+                            imported += 1
                         else:
                             data = {s: stream_data[s] for s in streams_out
                                     if s in stream_data}
@@ -499,8 +501,15 @@ def getdata(username):
         # otherise we'll get an idle connection error from Heroku
         Q.put(StopIteration)
 
+        elapsed = datetime.utcnow() - start_time
+        EventLogger.new_event(msg="{}: elapsed={} sec, count={}, imported {}"
+                              .format(request_name,
+                                      round(elapsed.total_seconds(), 3),
+                                      count,
+                                      imported))
+
     Q = gevent.queue.Queue()
-    gevent.spawn(sse_iterator, user.client(), Q)
+    gevent.spawn(sse_iterator, user.client(), request.full_path, Q)
     return Response(Q, mimetype='text/event-stream')
 
 
