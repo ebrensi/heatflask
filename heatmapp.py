@@ -15,7 +15,6 @@ from datetime import datetime
 import os
 import re
 import json
-import msgpack
 import stravalib
 import flask_login
 from flask_login import current_user, login_user, logout_user, login_required
@@ -29,7 +28,7 @@ app.config.from_object(os.environ['APP_SETTINGS'])
 sslify = SSLify(app)
 
 # models depend app so we import them afterwards
-from models import Users, Activities, db_sql, mongodb, redis, tuplize_datetime
+from models import Users, Activities, EventLogger, db_sql, mongodb, redis
 
 
 Analytics(app)
@@ -66,7 +65,6 @@ bundles = {
 assets = flask_assets.Environment(app)
 assets.register(bundles)
 
-
 # views will be sent as gzip encoded
 flask_compress.Compress(app)
 
@@ -80,7 +78,6 @@ login_manager.login_view = 'splash'
 @login_manager.user_loader
 def load_user(user_id):
     user = Users.get(user_id)
-    app.logger.debug(user.db_state())
     return user
 
 
@@ -92,6 +89,28 @@ def admin_required(f):
             return f(*args, **kwargs)
         else:
             return login_manager.unauthorized()
+    return decorated_function
+
+
+def log_request(f):
+    def href(url, text):
+        return "<a href='{}' target='_blank'>{}</a>".format(url, text)
+
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if current_user.is_anonymous or (not current_user.is_admin()):
+            EventLogger.new_event(**{
+                "ip": request.environ.get('HTTP_X_REAL_IP', request.remote_addr),
+                "cuid": "" if current_user.is_anonymous else current_user.id,
+                "msg": href(request.url, request.full_path)
+            })
+
+            ips = {"remote_addr": request.remote_addr,
+                   "access_route": request.access_route,
+                   'HTTP_X_REAL_IP': request.environ.get('HTTP_X_REAL_IP'),
+                   }
+            app.logger.info(ips)
+        return f(*args, **kwargs)
     return decorated_function
 
 
@@ -188,7 +207,7 @@ def auth_callback():
             access_token = client.exchange_code_for_token(**args)
 
         except Exception as e:
-            app.logger.info(str(e))
+            app.logger.info("authorization error:\n{}".format(e))
             flash(str(e))
             return redirect(state)
 
@@ -196,7 +215,8 @@ def auth_callback():
 
         # remember=True, for persistent login.
         login_user(user, remember=True)
-        app.logger.debug("logged in {}".format(user))
+        app.logger.debug("authenticated {}".format(user))
+        EventLogger.new_event(msg="authenticated {}".format(user.id))
 
     return redirect(request.args.get("state") or
                     url_for("index", username=current_user.id))
@@ -205,13 +225,15 @@ def auth_callback():
 @app.route("/<username>/logout")
 @login_required
 def logout(username):
-    if Users.get(username) == current_user:
-        user_id = current_user.id
-        username = current_user.username
+    user = Users.get(username)
+    if user == current_user:
+        user_id = user.id
+        username = user.username
         current_user.uncache()
         logout_user()
         flash("user '{}' ({}) logged out"
               .format(username, user_id))
+        EventLogger.new_event(msg="{} logged out".format(user_id))
     return redirect(url_for("splash"))
 
 
@@ -242,12 +264,14 @@ def delete(username):
             flash(str(e))
         else:
             flash("user '{}' ({}) deleted".format(username, user_id))
+            EventLogger.new_event(msg="{} deleted".format(user_id))
         return redirect(url_for("splash"))
     else:
         return "sorry, you cannot do that"
 
 
 @app.route('/<username>')
+@log_request
 def index(username):
     if current_user.is_authenticated:
         # If a user is logged in from a past session but has no record in our
@@ -269,12 +293,6 @@ def index(username):
         flash("user '{}' is not registered with this app"
               .format(username))
         return redirect(url_for('splash'))
-
-    ip_address = request.environ.get('HTTP_X_REAL_IP', request.remote_addr)
-    redis.lpush("history",
-                msgpack.packb((tuplize_datetime(datetime.utcnow()),
-                               ip_address, request.url))
-                )
 
     date1 = request.args.get("date1", "")
     date2 = request.args.get("date2", "")
@@ -318,7 +336,6 @@ def index(username):
         lat, lng = app.config["MAP_CENTER"]
         zoom = app.config["MAP_ZOOM"]
         autozoom = "1"
-
     return render_template('index.html',
                            user=user,
                            lat=lat,
@@ -338,6 +355,7 @@ def index(username):
 
 
 @app.route('/<username>/getdata')
+@log_request
 def getdata(username):
     user = Users.get(username)
 
@@ -368,7 +386,7 @@ def getdata(username):
         ids = [s for s in [cast_int(s) for s in non_digit.split(ids_raw)]
                if s]
 
-        app.logger.debug("'{}' => {}".format(ids_raw, ids))
+        # app.logger.debug("'{}' => {}".format(ids_raw, ids))
         options["activity_ids"] = ids
     else:
         limit = request.args.get("limit")
@@ -392,22 +410,22 @@ def getdata(username):
 
     hires = request.args.get("hires") == "true"
 
-    app.logger.debug("getdata: {}, hires={}".format(options, hires))
+    # app.logger.debug("getdata: {}, hires={}".format(options, hires))
 
     def sse_iterator(client, Q):
-        # streams_out = ["polyline", "velocity_smooth"]
-        # streams_to_cache = ["polyline", "velocity_smooth"]
-        streams_out = ["polyline", "error"]
+        # streams_out = ["polyline", "time"]
+        # streams_to_cache = ["polyline", "time"]
+        streams_out = ["polyline"]
         streams_to_cache = ["polyline"]
 
         def import_and_queue(Q, activity):
             stream_data = Activities.import_streams(
                 client, activity["id"], streams_to_cache)
 
-            data = {s: stream_data[s] for s in streams_out
+            data = {s: stream_data[s] for s in streams_out + ["error"]
                     if s in stream_data}
             data.update(activity)
-            app.logger.debug("imported streams for {}".format(activity["id"]))
+            # app.logger.debug("imported streams for {}".format(activity["id"]))
             Q.put(sse_out(data))
             gevent.sleep(0)
 
@@ -462,7 +480,7 @@ def getdata(username):
             # raise
             Q.put(sse_out({"error": str(e)}))
 
-        pool.join(timeout=10)  # make sure all spwned threads are done
+        pool.join(timeout=10)  # make sure all spawned jobs are done
         Q.put(sse_out())
 
         # We must put a StopIteration here to close the (http?) connection,
@@ -471,16 +489,15 @@ def getdata(username):
 
     Q = gevent.queue.Queue()
     gevent.spawn(sse_iterator, user.client(), Q)
-
     return Response(Q, mimetype='text/event-stream')
+
 
 # creates a SSE stream of current.user's activities, using the Strava API
 # arguments
-
-
 @app.route('/<username>/activities_sse')
 @login_required
 def activity_stream(username):
+
     user = Users.get(username)
     if (user == current_user):
         options = {}
@@ -514,6 +531,7 @@ def activity_stream(username):
 
 @app.route('/<username>/activities')
 @login_required
+@log_request
 def activities(username):
     if (Users.get(username) == current_user):
         if request.args.get("rebuild"):
@@ -564,38 +582,38 @@ def users_backup():
 
 @app.route('/history')
 @admin_required
-def history():
-    MAX = app.config["MAX_HISTORY"]
-    if redis.llen("history"):
-        data = [
-            (datetime(*tpl[:5]), ip, url) for tpl, ip, url in
-            [msgpack.unpackb(record)
-             for record in redis.lrange("history", 0, -1)]
-        ]
+def event_history():
+    events = EventLogger.get_log()
+    if events:
+        html = """
+        <h1>Events</h1>
+        <table>
+            <tr>
+            <td>time</td>
+            <td>ip</td>
+            <td>from</td>
+            <td>event</td>
+            </tr>
+            {%- for e in events %}
+              <tr>
+                <td>{{ e.get('ts', '') }}</td>
+                <td>{{ e.get('ip', '') }}</td>
+                <td>{{ e.get('cuid', '') }}</td>
+                <td>{{ e.get('msg', '')|safe }}</td>
+              </tr>
+            {%- endfor %}
+        </table>
 
-        if data:
-            html = """
-            <h1>Events</h1>
-            <table>
-                <tr>
-                <td>time</td>
-                <td>ip address</td>
-                <td>url</td>
-                </tr>
-                {%- for time,ip,url in data %}
-                  <tr>
-                    <td>{{ time }}</td>
-                    <td>{{ ip }}</td>
-                    <td><a href="{{ url }}" target='_blank'>{{ url }}</a></td>
-                  </tr>
-                {%- endfor %}
-            </table>
-
-            """
-            if redis.llen("history") > MAX:
-                redis.ltrim("history", 0, MAX)
-            return render_template_string(html, data=data)
+        """
+        return render_template_string(html, events=events)
     return "No history"
+
+
+@app.route('/history/init')
+@admin_required
+def event_history_init():
+    EventLogger.init()
+    return redirect(url_for("event_history"))
 
 
 # makes python ignore sigpipe and prevents broken pipe exception when client

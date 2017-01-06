@@ -29,6 +29,7 @@ String, Integer = db_sql.String, db_sql.Integer
 mongo_client = pymongo.MongoClient(app.config.get("MONGODB_URI"))
 mongodb = mongo_client.get_default_database()
 
+
 # Redis data-store
 redis = Redis.from_url(app.config["REDIS_URL"])
 
@@ -136,14 +137,14 @@ class Users(UserMixin, db_sql.Model):
     def cache(self, identifier=None, timeout=CACHE_USERS_TIMEOUT):
         key = self.__class__.key(identifier or self.id)
         packed = self.serialize()
-        app.logger.debug(
-            "caching {} with key '{}' for {} sec. size={}"
-            .format(self, key, timeout, len(packed))
-        )
+        # app.logger.debug(
+        #     "caching {} with key '{}' for {} sec. size={}"
+        #     .format(self, key, timeout, len(packed))
+        # )
         return redis.setex(key, packed, timeout)
 
     def uncache(self):
-        app.logger.debug("uncaching {}".format(self))
+        # app.logger.debug("uncaching {}".format(self))
 
         # delete from cache too.  It may be under two different keys
         redis.delete(self.__class__.key(self.id))
@@ -156,8 +157,8 @@ class Users(UserMixin, db_sql.Model):
         if cached:
             try:
                 user = cls.from_serialized(cached)
-                app.logger.debug(
-                    "retrieved {} from cache with key {}".format(user, key))
+                # app.logger.debug(
+                #     "retrieved {} from cache with key {}".format(user, key))
                 return db_sql.session.merge(user, load=False)
             except:
                 # apparently this key doesn't work so let's delete it
@@ -267,8 +268,10 @@ class Users(UserMixin, db_sql.Model):
         key = "indexing {}".format(self.id)
         if status is None:
             return redis.get(key)
-        else:
+        elif status:
             return redis.setex(key, status, 30)
+        else:
+            redis.delete(key)
 
     def index(self, activity_ids=None, limit=None,  after=None, before=None):
 
@@ -317,8 +320,8 @@ class Users(UserMixin, db_sql.Model):
             # update the index if we need to
             if (elapsed > INDEX_UPDATE_TIMEOUT) and (not OFFLINE):
                 latest = index_df.index[0]
-                app.logger.info("updating activity index for {}"
-                                .format(self.id))
+                # app.logger.info("updating activity index for {}"
+                #                 .format(self.id))
 
                 already_got = set(index_df.id)
 
@@ -390,19 +393,21 @@ class Users(UserMixin, db_sql.Model):
             user.indexing(True)
 
             activities_list = []
-            count = 1
+            count = 0
             try:
                 for a in user.client().get_activities():
                     d = strava2dict(a)
                     if d.get("summary_polyline"):
                         activities_list.append(d)
+                        count += 1
                         if (limit or
                             (after and (d["beginTimestamp"] >= after)) or
                                 (before and (d["beginTimestamp"] <= before))):
                             d2 = dict(d)
                             d2["beginTimestamp"] = str(d2["beginTimestamp"])
                             Q.put(d2)
-                            app.logger.info("put {} on queue".format(d2["id"]))
+                            # app.logger.info("put {} on
+                            # queue".format(d2["id"]))
 
                             if limit:
                                 limit -= 1
@@ -411,8 +416,6 @@ class Users(UserMixin, db_sql.Model):
                         else:
                             Q.put({"msg": "indexing...{} activities"
                                    .format(count)})
-
-                        count += 1
                         gevent.sleep(0)
             except Exception as e:
                 Q.put({"error": str(e)})
@@ -424,12 +427,16 @@ class Users(UserMixin, db_sql.Model):
                             .sort_index(ascending=False)
                             .astype(dtypes))
 
-                app.logger.debug("done with indexing for {}".format(user))
-
+                packed = Binary(index_df.to_msgpack(compress='blosc'))
                 user.activity_index = {
                     "dt_last_indexed": datetime.utcnow(),
-                    "packed_index": Binary(index_df.to_msgpack(compress='blosc'))
+                    "packed_index": packed
                 }
+
+                # app.logger.debug("done with indexing for {}".format(user))
+                EventLogger.new_event(
+                    msg="built activity index for {}. count={}, size={}"
+                    .format(user, count, len(packed)))
 
                 # update the cache for this user
                 user.cache()
@@ -443,10 +450,10 @@ class Users(UserMixin, db_sql.Model):
                         {"$set": user.activity_index},
                         upsert=True)
 
-                    app.logger.info(
-                        "inserted activity index for {} in MongoDB: {}"
-                        .format(user, vars(result))
-                    )
+                    # app.logger.info(
+                    #     "inserted activity index for {} in MongoDB: {}"
+                    #     .format(user, vars(result))
+                    # )
                 except Exception as e:
                     app.logger.debug(
                         "error wrtiting activity index for {} to MongoDB:\n{}"
@@ -464,7 +471,7 @@ class Users(UserMixin, db_sql.Model):
         client = self.client()
         try:
             activity = client.get_activity(int(a_id))
-            app.logger.debug("imported Strava activity {}".format(a_id))
+            # app.logger.debug("imported Strava activity {}".format(a_id))
         except Exception as e:
             activity = None
             app.logger.debug(
@@ -542,7 +549,7 @@ class Activities(object):
 
         if cached:
             redis.expire(key, timeout)  # reset expiration timeout
-            app.logger.debug("got Activity {} from cache".format(id))
+            # app.logger.debug("got Activity {} from cache".format(id))
             return msgpack.unpackb(cached)
 
         try:
@@ -561,11 +568,11 @@ class Activities(object):
             del document["_id"]
             del document["ts"]
             redis.setex(key, msgpack.packb(document), timeout)
-            app.logger.debug("got activity {} data from MongoDB".format(id))
+            # app.logger.debug("got activity {} data from MongoDB".format(id))
             return document
 
     @classmethod
-    def clear(cls):
+    def init(cls):
         try:
             result1 = mongodb.activities.drop()
         except Exception as e:
@@ -617,8 +624,10 @@ class Activities(object):
                                                   series_type='time',
                                                   types=streams_to_import)
         except Exception as e:
-            app.logger.debug(e)
-            return {"error": str(e)}
+            app.logger.debug("error importing sreams for {}:\n{}"
+                             .formtat(activity_id, e))
+            return {"error": "error importing sreams for {}:\n{}"
+                             .formtat(activity_id, e)}
 
         activity_streams = {name: streams[name].data for name in streams}
 
@@ -638,5 +647,32 @@ class Activities(object):
 
         return color_list[0] if color_list else ""
 
-# mongodb.command("dbstats")
-# mongodb.command("collstats", "activities")
+
+class EventLogger(object):
+
+    @staticmethod
+    def init():
+        redis.delete("history")
+        mongodb.drop_collection("history")
+        mongodb.create_collection("history",
+                                  capped=True,
+                                  autoIndexId=False,
+                                  max=app.config["MAX_HISTORY"],
+                                  size=200000)
+        # mongodb.create_index("ts")
+
+    @staticmethod
+    def get_log():
+        return mongodb.history.find(sort=[("$natural", pymongo.DESCENDING)])
+
+    @staticmethod
+    def new_event(**event):
+        event["ts"] = datetime.utcnow()
+        mongodb.history.insert_one(event)
+
+    # mongodb.command("dbstats")
+    # mongodb.command("collstats", "activities")
+
+
+if "history" not in mongodb.collection_names():
+    EventLogger.init()
