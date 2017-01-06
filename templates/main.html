@@ -7,7 +7,7 @@
 
     <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
 
-    {% assets "index_css" %}
+    {% assets "main_css" %}
     <link rel="stylesheet" href="{{ ASSET_URL }}" />
     {% endassets %}
 
@@ -29,7 +29,7 @@
         }
     </style>
 
-    {% assets "index_js" %}
+    {% assets "main_js" %}
     <script type="text/javascript" src="{{ ASSET_URL }}"></script>
     {% endassets %}
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBLvYWwPmLsBRCGXeMHh-InA9rq35jdVeA" async defer></script>
@@ -79,7 +79,7 @@
                 <h3>Activities query:</h3>
 
                 <br>
-                <form id="renderform" action="{{ url_for('index', username=user.id)}}">
+                <form id="renderform" action="{{ url_for('main', username=user.id)}}">
 
                  <span id="num_select">
                   <input class="preset" id="select_num" type="number" value=0 min=0 max=500>
@@ -152,7 +152,7 @@
 
                 <hr>
                 {% if current_user.is_authenticated %}
-                You are logged in as <a href="{{ url_for('index', username=current_user.id) }}" target="_blank">{{ current_user.username or current_user.id}}</a> :<br>
+                You are logged in as <a href="{{ url_for('main', username=current_user.id) }}" target="_blank">{{ current_user.username or current_user.id}}</a> :<br>
 
                 <form action="{{ url_for('logout', username=user.id) }}">
                     <input type="submit" class="btn btn-danger" value="Log Out" />
@@ -509,7 +509,7 @@
                             });
 
                             flow.on("click", function(e) {
-                              let url = "{{ url_for('index',username=user.id) }}",
+                              let url = "{{ url_for('main',username=user.id) }}",
                                   d = parseFloat(A.total_distance),
                                   elapsed = hhmmss(parseFloat(A.elapsed_time));
 

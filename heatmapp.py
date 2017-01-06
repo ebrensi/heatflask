@@ -39,7 +39,7 @@ Analytics(app)
 
 # we bundle javascript and css dependencies to reduce client-side overhead
 bundles = {
-    "index_css": flask_assets.Bundle('css/jquery-ui.css',
+    "main_css": flask_assets.Bundle('css/jquery-ui.css',
                                      'css/bootstrap.min.css',
                                      'css/font-awesome.min.css',
                                      'css/leaflet.css',
@@ -47,9 +47,9 @@ bundles = {
                                      'css/L.Control.Window.css',
                                      'css/L.Control.Locate.min.css',
                                      filters='cssmin',
-                                     output='gen/index.css'),
+                                     output='gen/main.css'),
 
-    "index_js": flask_assets.Bundle('js/jquery-3.1.0.min.js',
+    "main_js": flask_assets.Bundle('js/jquery-3.1.0.min.js',
                                     'js/jquery-ui.min.js',
                                     'js/leaflet.js',
                                     'js/leaflet-sidebar.js',
@@ -63,7 +63,7 @@ bundles = {
                                     'js/L.Control.Locate.min.js',
                                     'js/eventsource.js',
                                     filters='rjsmin',
-                                    output='gen/index.js')
+                                    output='gen/main.js')
 
 }
 assets = flask_assets.Environment(app)
@@ -149,7 +149,7 @@ def splash():
             logout_user()
             flash("oops! Please log back in.")
         else:
-            return redirect(url_for('index',
+            return redirect(url_for('main',
                                     username=current_user.id))
 
     return render_template("splash.html",
@@ -160,7 +160,7 @@ def splash():
 @app.route('/demo')
 def demo():
     # Last 7 days of activity
-    # return redirect(url_for("index",
+    # return redirect(url_for("main",
     #                         username="15972102",
     #                         preset="7",
     #                         heatres="high",
@@ -171,7 +171,7 @@ def demo():
     #                 )
 
     # My Christmas week in Houston
-    return redirect(url_for("index",
+    return redirect(url_for("main",
                             username="15972102",
                             date1="2016-12-21",
                             date2="2016-12-28",
@@ -231,7 +231,7 @@ def auth_callback():
         EventLogger.new_event(msg="authenticated {}".format(user.id))
 
     return redirect(request.args.get("state") or
-                    url_for("index", username=current_user.id))
+                    url_for("main", username=current_user.id))
 
 
 @app.route("/<username>/logout")
@@ -284,7 +284,7 @@ def delete(username):
 
 @app.route('/<username>')
 @log_request
-def index(username):
+def main(username):
     if current_user.is_authenticated:
         # If a user is logged in from a past session but has no record in our
         #  database (was deleted), we log them out and consider them anonymous
@@ -348,7 +348,7 @@ def index(username):
         lat, lng = app.config["MAP_CENTER"]
         zoom = app.config["MAP_ZOOM"]
         autozoom = "1"
-    return render_template('index.html',
+    return render_template('main.html',
                            user=user,
                            lat=lat,
                            lng=lng,
@@ -584,7 +584,7 @@ def users():
     <table>
         {%- for d in data %}
           <tr>
-            <td><a href="{{ url_for('index',username=d['id']) }}" target='_blank'>{{ d['id'] }}</a></td>
+            <td><a href="{{ url_for('main',username=d['id']) }}" target='_blank'>{{ d['id'] }}</a></td>
             <td>{{ d["app_activity_count"] }}</td>
             <td>{{ d["dt_last_active"] }}</td>
           </tr>
@@ -604,6 +604,25 @@ def users_backup():
 @app.route('/history')
 @admin_required
 def event_history():
+    def href(url, text):
+        return "<a href='{}' target='_blank'>{}</a>".format(url, text)
+
+    def id_tag(e):
+        dt = e.get('ts')
+        return href(url_for('logged_event', id=e['_id']),
+                    dt.strftime("%m-%d %H:%M:%S"))
+
+    def ip_lookup_url(ip):
+        return "http://freegeoip.net/json/{}".format(ip) if ip else "#"
+
+    def ip_tag(e):
+        ip = e.get("ip")
+        return href(ip_lookup_url(ip), ip) if ip else ""
+
+    def cuid_tag(e):
+        cuid = e.get('cuid')
+        return href(url_for("main", username=cuid), cuid) if cuid else ""
+
     events = EventLogger.get_log()
     if events:
         html = """
@@ -617,16 +636,20 @@ def event_history():
             </tr>
             {%- for e in events %}
               <tr>
-                <td> <a href='{{ url_for('logged_event', id=e['_id']) }}' target='_blank'>{{e.get('ts').strftime("%m-%d %H:%M:%S")}}</a></td>
-                <td>{{ e.get('ip', '') }}</td>
-                <td>{{ e.get('cuid', '') }}</td>
+                <td>{{ id(e)|safe }}</td>
+                <td>{{ ip(e)|safe }}</td>
+                <td>{{ cuid(e)|safe }}</td>
                 <td>{{ e.get('msg', '')|safe }}</td>
               </tr>
             {%- endfor %}
         </table>
 
         """
-        return render_template_string(html, events=events)
+        return render_template_string(html,
+                                      events=events,
+                                      ip=ip_tag,
+                                      id=id_tag,
+                                      cuid=cuid_tag)
     return "No history"
 
 
