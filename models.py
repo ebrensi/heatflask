@@ -15,6 +15,7 @@ from gevent.pool import Pool
 from exceptions import StopIteration
 import cPickle
 import msgpack
+from bson import ObjectId
 from bson.binary import Binary
 from heatmapp import app
 
@@ -656,14 +657,25 @@ class EventLogger(object):
         mongodb.drop_collection("history")
         mongodb.create_collection("history",
                                   capped=True,
-                                  autoIndexId=False,
+                                  # autoIndexId=False,
                                   max=app.config["MAX_HISTORY"],
                                   size=200000)
-        # mongodb.create_index("ts")
+        # mongodb.history.create_index("ts")
+
+    @staticmethod
+    def get_event(event_id):
+        event = mongodb.history.find_one({"_id": ObjectId(event_id)})
+        event["_id"] = str(event["_id"])
+        return event
 
     @staticmethod
     def get_log():
-        return mongodb.history.find(sort=[("$natural", pymongo.DESCENDING)])
+        events = list(
+            mongodb.history.find(sort=[("$natural", pymongo.DESCENDING)])
+        )
+        for e in events:
+            e["_id"] = str(e["_id"])
+        return events
 
     @staticmethod
     def new_event(**event):
