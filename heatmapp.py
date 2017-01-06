@@ -102,7 +102,7 @@ def log_request(f):
     def decorated_function(*args, **kwargs):
         if current_user.is_anonymous or (not current_user.is_admin()):
             EventLogger.new_event(**{
-                "ip": request.environ.get('HTTP_X_REAL_IP', request.remote_addr),
+                "ip": request.access_route[-1],
                 "cuid": "" if current_user.is_anonymous else current_user.id,
                 "agent": vars(request.user_agent),
                 "msg": href(request.url, request.full_path)
