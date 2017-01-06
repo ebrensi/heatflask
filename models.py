@@ -435,8 +435,8 @@ class Users(UserMixin, db_sql.Model):
 
                 # app.logger.debug("done with indexing for {}".format(user))
                 EventLogger.new_event(
-                    msg="built activity index for {}. count={}, size={}"
-                    .format(user, count, len(packed)))
+                    msg="Built activity index for {}. count={}, size={}"
+                    .format(user.id, count, len(packed)))
 
                 # update the cache for this user
                 user.cache()
