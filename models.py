@@ -30,6 +30,9 @@ String, Integer = db_sql.String, db_sql.Integer
 mongo_client = pymongo.MongoClient(app.config.get("MONGODB_URI"))
 mongodb = mongo_client.get_default_database()
 
+# mongodb.command("dbstats")
+# mongodb.command("collstats", "activities")
+
 
 # Redis data-store
 redis = Redis.from_url(app.config["REDIS_URL"])
@@ -659,7 +662,7 @@ class EventLogger(object):
                                   capped=True,
                                   # autoIndexId=False,
                                   max=app.config["MAX_HISTORY"],
-                                  size=200000)
+                                  size=2 * 1024 * 1024)
         # mongodb.history.create_index("ts")
 
     @staticmethod
@@ -681,10 +684,6 @@ class EventLogger(object):
     def new_event(**event):
         event["ts"] = datetime.utcnow()
         mongodb.history.insert_one(event)
-
-    # mongodb.command("dbstats")
-    # mongodb.command("collstats", "activities")
-
 
 if "history" not in mongodb.collection_names():
     EventLogger.init()
