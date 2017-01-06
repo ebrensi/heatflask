@@ -31,6 +31,10 @@ sslify = SSLify(app)
 from models import Users, Activities, EventLogger, db_sql, mongodb, redis
 
 
+def href(url, text):
+    return "<a href='{}' target='_blank'>{}</a>".format(url, text)
+
+
 Analytics(app)
 
 # we bundle javascript and css dependencies to reduce client-side overhead
@@ -93,8 +97,6 @@ def admin_required(f):
 
 
 def log_request(f):
-    def href(url, text):
-        return "<a href='{}' target='_blank'>{}</a>".format(url, text)
 
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -102,6 +104,7 @@ def log_request(f):
             EventLogger.new_event(**{
                 "ip": request.environ.get('HTTP_X_REAL_IP', request.remote_addr),
                 "cuid": "" if current_user.is_anonymous else current_user.id,
+                "agent": vars(request.user_agent),
                 "msg": href(request.url, request.full_path)
             })
 
@@ -109,7 +112,8 @@ def log_request(f):
                    "access_route": request.access_route,
                    'HTTP_X_REAL_IP': request.environ.get('HTTP_X_REAL_IP'),
                    }
-            app.logger.info(ips)
+            app.logger.info("ips={}\nuser_agent={}"
+                            .format(ips, request.user_agent))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -124,6 +128,14 @@ def favicon():
 def touch():
     return send_from_directory(os.path.join(app.root_path, 'static'),
                                'Heat.png')
+
+
+@app.route("/robots.txt")
+def robots_txt():
+    EventLogger.new_event(msg="robots.txt request",
+                          agent=request.user_agent)
+    return send_from_directory(os.path.join(app.root_path, 'static'),
+                               'robots.txt')
 
 
 @app.route('/')
@@ -596,7 +608,7 @@ def event_history():
             </tr>
             {%- for e in events %}
               <tr>
-                <td>{{ e.get('ts', '') }}</td>
+                <td> <a href='{{ url_for('logged_event', id=e['_id']) }}' target='_blank'>{{e.get('ts').strftime("%m-%d %H:%M:%S")}}</a></td>
                 <td>{{ e.get('ip', '') }}</td>
                 <td>{{ e.get('cuid', '') }}</td>
                 <td>{{ e.get('msg', '')|safe }}</td>
@@ -607,6 +619,18 @@ def event_history():
         """
         return render_template_string(html, events=events)
     return "No history"
+
+
+@app.route('/history/raw')
+@admin_required
+def event_history_raw():
+    return jsonify(EventLogger.get_log())
+
+
+@app.route('/history/<id>')
+@admin_required
+def logged_event(id):
+    return jsonify(EventLogger.get_event(id))
 
 
 @app.route('/history/init')
