@@ -395,6 +395,7 @@ class Users(UserMixin, db_sql.Model):
         def build_index(user, limit=None, after=None, before=None):
 
             user.indexing(True)
+            start_time = datetime.utcnow()
 
             activities_list = []
             count = 0
@@ -438,9 +439,13 @@ class Users(UserMixin, db_sql.Model):
                 }
 
                 # app.logger.debug("done with indexing for {}".format(user))
+                elapsed = datetime.utcnow() - start_time
                 EventLogger.new_event(
-                    msg="Built activity index for {}. count={}, size={}"
-                    .format(user.id, count, len(packed)))
+                    msg="{}'s activities indexed in {} sec. count={}, size={}"
+                    .format(user.id,
+                            round(elapsed.total_seconds(), 3),
+                            count,
+                            len(packed)))
 
                 # update the cache for this user
                 user.cache()
