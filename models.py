@@ -690,5 +690,6 @@ class EventLogger(object):
         event["ts"] = datetime.utcnow()
         mongodb.history.insert_one(event)
 
+
 if "history" not in mongodb.collection_names():
     EventLogger.init()

@@ -107,13 +107,6 @@ def log_request(f):
                 "agent": vars(request.user_agent),
                 "msg": href(request.url, request.full_path)
             })
-
-            # ips = {"remote_addr": request.remote_addr,
-            #        "access_route": request.access_route,
-            #        'HTTP_X_REAL_IP': request.environ.get('HTTP_X_REAL_IP'),
-            #        }
-            # app.logger.info("ips={}\nuser_agent={}"
-            #                 .format(ips, request.user_agent))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -132,8 +125,6 @@ def touch():
 
 @app.route("/robots.txt")
 def robots_txt():
-    EventLogger.new_event(msg="robots.txt request",
-                          agent=request.user_agent)
     return send_from_directory(os.path.join(app.root_path, 'static'),
                                'robots.txt')
 
@@ -283,7 +274,6 @@ def delete(username):
 
 
 @app.route('/<username>')
-@log_request
 def main(username):
     if current_user.is_authenticated:
         # If a user is logged in from a past session but has no record in our
@@ -348,6 +338,15 @@ def main(username):
         lat, lng = app.config["MAP_CENTER"]
         zoom = app.config["MAP_ZOOM"]
         autozoom = "1"
+
+    if current_user.is_anonymous or (not current_user.is_admin()):
+        EventLogger.new_event(**{
+            "ip": request.access_route[-1],
+            "cuid": "" if current_user.is_anonymous else current_user.id,
+            "agent": vars(request.user_agent),
+            "msg": href(request.url, request.full_path)
+        })
+
     return render_template('main.html',
                            user=user,
                            lat=lat,
@@ -367,7 +366,6 @@ def main(username):
 
 
 @app.route('/<username>/getdata')
-@log_request
 def getdata(username):
     user = Users.get(username)
 
@@ -422,7 +420,17 @@ def getdata(username):
 
     hires = request.args.get("hires") == "true"
 
-    def sse_iterator(client, request_name, Q):
+    if current_user.is_anonymous or (not current_user.is_admin()):
+        event_data = {
+            "ip": request.access_route[-1],
+            "cuid": "" if current_user.is_anonymous else current_user.id,
+            "agent": vars(request.user_agent),
+            "msg": href(request.url, request.full_path)
+        }
+    else:
+        event_data = None
+
+    def sse_iterator(client, Q):
         start_time = datetime.utcnow()
 
         # streams_out = ["polyline", "time"]
@@ -502,14 +510,15 @@ def getdata(username):
         Q.put(StopIteration)
 
         elapsed = datetime.utcnow() - start_time
-        EventLogger.new_event(msg="{}: elapsed={} sec, count={}, imported {}"
-                              .format(request_name,
-                                      round(elapsed.total_seconds(), 3),
-                                      count,
-                                      imported))
+        if event_data:
+            event_data["msg"] += (": elapsed={} sec, count={}, imported {}"
+                                  .format(round(elapsed.total_seconds(), 3),
+                                          count,
+                                          imported))
+            EventLogger.new_event(**event_data)
 
     Q = gevent.queue.Queue()
-    gevent.spawn(sse_iterator, user.client(), request.full_path, Q)
+    gevent.spawn(sse_iterator, user.client(), Q)
     return Response(Q, mimetype='text/event-stream')
 
 
