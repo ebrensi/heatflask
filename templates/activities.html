@@ -58,7 +58,7 @@
             }
 
             strava_link = "<a href='https://www.strava.com/activities/" +a.id + "' target='_blank'>Strava " + a.id +"</a>"
-            heatflask_link = "<a href={{ url_for('index',username=user.id) }}?id=" +a.id + " target='_blank'> Heatflask " + a.id +"</a>"
+            heatflask_link = "<a href={{ url_for('main',username=user.id) }}?id=" +a.id + " target='_blank'> Heatflask " + a.id +"</a>"
             row = "<tr " + highlight +  ">" +
                    "<th scope='row'>" + a.id + "</th>" +
                    "<td>" + a.beginTimestamp +"</td>" +
