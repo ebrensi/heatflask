@@ -425,6 +425,15 @@ class Users(UserMixin, db_sql.Model):
             except Exception as e:
                 Q.put({"error": str(e)})
             else:
+                if not activities_list:
+                    Q.put({"error": "No activities!"})
+                    Q.put(StopIteration)
+                    user.indexing(False)
+                    EventLogger.new_event(
+                        msg="no activities for {}".format(user.id)
+                    )
+                    return
+
                 Q.put({"msg": "done indexing {} activities.".format(count)})
 
                 index_df = (pd.DataFrame(activities_list)
