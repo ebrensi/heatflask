@@ -12,6 +12,7 @@ from flask import Flask, Response, render_template, request, redirect, \
 import flask_compress
 import dateutil.parser
 from datetime import datetime
+from dateutil import tz
 import os
 import re
 import json
@@ -77,7 +78,6 @@ flask_compress.Compress(app)
 login_manager = flask_login.LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'splash'
-
 
 # @app.before_request
 # def log_request():
@@ -626,8 +626,6 @@ def users_backup():
     return jsonify(Users.backup())
 
 
-
-
 # ---- Event log stuff ----
 @app.route('/history')
 @admin_required
@@ -635,8 +633,14 @@ def event_history():
     def href(url, text):
         return "<a href='{}' target='_blank'>{}</a>".format(url, text)
 
+    def naive_utc_datetime_to_pst(dt):
+        from_zone = tz.gettz('UTC')
+        to_zone = tz.gettz('America/Los_Angeles')
+        utc = dt.replace(tzinfo=from_zone)
+        return utc.astimezone(to_zone)
+
     def id_tag(e):
-        dt = e.get('ts')
+        dt = naive_utc_datetime_to_pst(e.get('ts'))
         return href(url_for('logged_event', event_id=e['_id']),
                     dt.strftime("%m-%d %H:%M:%S"))
 
@@ -690,7 +694,7 @@ def event_history_raw():
 @app.route('/history/<event_id>')
 @admin_required
 def logged_event(event_id):
-    return jsonify(EventLogger.get_event(id))
+    return jsonify(EventLogger.get_event(event_id))
 
 
 @app.route('/history/init')
