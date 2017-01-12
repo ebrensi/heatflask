@@ -83,7 +83,10 @@ class Users(UserMixin, db_sql.Model):
     def profile(self):
         profile = {}
         profile.update(vars(self))
-        del profile["activity_index"]
+        del profile["_sa_instance_state"]
+        if "activity_index" in profile:
+            del profile["activity_index"]
+        # app.logger.debug("{}: {}".format(self, profile))
         return profile
 
     @classmethod

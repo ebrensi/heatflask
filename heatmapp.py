@@ -100,7 +100,7 @@ def admin_required(f):
     return decorated_function
 
 
-def self_required(f):
+def admin_or_self_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         user_name = request.view_args.get("username")
@@ -112,7 +112,6 @@ def self_required(f):
         else:
             return login_manager.unauthorized()
     return decorated_function
-
 
 
 def log_request_event(f):
@@ -593,17 +592,10 @@ def activities(username):
 @app.route('/users')
 @admin_required
 def users():
-    info = [
-        {
-            "id": user.id,
-            "dt_last_active": user.dt_last_active,
-            "app_activity_count": user.app_activity_count,
-            "username": user.username
-        }
-        for user in Users.query
-    ]
-
-    info = sorted(info, key=lambda(x): x["app_activity_count"] or 0)
+    info = sorted(
+        [user.profile() for user in Users.query],
+        key=lambda(x): x["app_activity_count"] or 0
+        )
 
     html = """
     <h1> Registered Users </h1>
@@ -622,7 +614,7 @@ def users():
 
 
 @app.route('/users/<username>')
-@admin_required
+@admin_or_self_required
 def user_profile(username):
     user = Users.get(username)
     return jsonify(user.profile())
@@ -645,7 +637,7 @@ def event_history():
 
     def id_tag(e):
         dt = e.get('ts')
-        return href(url_for('logged_event', id=e['_id']),
+        return href(url_for('logged_event', event_id=e['_id']),
                     dt.strftime("%m-%d %H:%M:%S"))
 
     def ip_lookup_url(ip):
