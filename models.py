@@ -80,6 +80,12 @@ class Users(UserMixin, db_sql.Model):
     def serialize(self):
         return cPickle.dumps(self)
 
+    def profile(self):
+        profile = {}
+        profile.update(vars(self))
+        del profile["activity_index"]
+        return profile
+
     @classmethod
     def from_serialized(cls, p):
         return cPickle.loads(p)
@@ -675,8 +681,7 @@ class EventLogger(object):
         mongodb.create_collection("history",
                                   capped=True,
                                   # autoIndexId=False,
-                                  max=app.config["MAX_HISTORY"],
-                                  size=2 * 1024 * 1024)
+                                  size=app.config["MAX_HISTORY_BYTES"])
         # mongodb.history.create_index("ts")
 
     @staticmethod
@@ -698,6 +703,15 @@ class EventLogger(object):
     def new_event(**event):
         event["ts"] = datetime.utcnow()
         mongodb.history.insert_one(event)
+
+    @classmethod
+    def log_request(cls, flask_request_object, **args):
+        req = flask_request_object
+        args.update({
+            "ip": req.access_route[-1],
+            "agent": vars(req.user_agent),
+        })
+        cls.new_event(**args)
 
 
 if "history" not in mongodb.collection_names():

@@ -79,6 +79,10 @@ login_manager.init_app(app)
 login_manager.login_view = 'splash'
 
 
+# @app.before_request
+# def log_request():
+#     app.logger.debug(vars(request))
+
 @login_manager.user_loader
 def load_user(user_id):
     user = Users.get(user_id)
@@ -96,17 +100,29 @@ def admin_required(f):
     return decorated_function
 
 
-def log_request(f):
-
+def self_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if current_user.is_anonymous or (not current_user.is_admin()):
-            EventLogger.new_event(**{
-                "ip": request.access_route[-1],
-                "cuid": "" if current_user.is_anonymous else current_user.id,
-                "agent": vars(request.user_agent),
-                "msg": href(request.url, request.full_path)
-            })
+        user_name = request.view_args.get("username")
+        if (current_user.is_authenticated and
+                (current_user.is_admin() or
+                    (current_user.id == user_name) or
+                    (current_user.username == user_name))):
+            return f(*args, **kwargs)
+        else:
+            return login_manager.unauthorized()
+    return decorated_function
+
+
+
+def log_request_event(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        anon = current_user.is_anonymous
+        if anon or (not current_user.is_admin()):
+            EventLogger.log_request(request,
+                                    cuid="" if anon else current_user.id,
+                                    msg=href(request.url, request.full_path))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -561,7 +577,7 @@ def activity_stream(username):
 
 @app.route('/<username>/activities')
 @login_required
-@log_request
+@log_request_event
 def activities(username):
     if (Users.get(username) == current_user):
         if request.args.get("rebuild"):
@@ -573,6 +589,7 @@ def activities(username):
         return "sorry"
 
 
+# ---- User admin stuff ----
 @app.route('/users')
 @admin_required
 def users():
@@ -604,12 +621,22 @@ def users():
     return render_template_string(html, data=info)
 
 
+@app.route('/users/<username>')
+@admin_required
+def user_profile(username):
+    user = Users.get(username)
+    return jsonify(user.profile())
+
+
 @app.route('/users/backup')
 @admin_required
 def users_backup():
     return jsonify(Users.backup())
 
 
+
+
+# ---- Event log stuff ----
 @app.route('/history')
 @admin_required
 def event_history():
@@ -630,7 +657,7 @@ def event_history():
 
     def cuid_tag(e):
         cuid = e.get('cuid')
-        return href(url_for("main", username=cuid), cuid) if cuid else ""
+        return href(url_for("user_profile", username=cuid), cuid) if cuid else ""
 
     events = EventLogger.get_log()
     if events:
@@ -668,9 +695,9 @@ def event_history_raw():
     return jsonify(EventLogger.get_log())
 
 
-@app.route('/history/<id>')
+@app.route('/history/<event_id>')
 @admin_required
-def logged_event(id):
+def logged_event(event_id):
     return jsonify(EventLogger.get_event(id))
 
 

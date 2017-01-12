@@ -64,8 +64,8 @@ class Config(object):
     MAP_CENTER = [27.53, 1.58]
     MAP_ZOOM = 3
 
-    # Maximum number of event-log entries
-    MAX_HISTORY = 1000
+    # Maximum size of event history (for capped MongoDB collection)
+    MAX_HISTORY_BYTES = 2 * 1024 * 1024  # 2MB
 
 
 class ProductionConfig(Config):
