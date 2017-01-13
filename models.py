@@ -522,31 +522,31 @@ class Activities(object):
     # This is a list of tuples specifying properties of the rendered objects,
     #  such as path color, speed/pace in description.  others can be added
     ATYPE_SPECS = [
-        ("Ride", "speed", "blue"),
-        ("Run", "pace", "red"),
-        ("Swim", None, "yellow"),
-        ("Hike", "pace", "red"),
-        ("Walk", "pace", "red"),
-        ("AlpineSki", None, None),
-        ("BackcountrySki", None, None),
-        ("Canoeing", None, None),
+        ("Ride", "speed", "#0000FF"),  # Blue
+        ("Run", "pace", "#FF0000"),  # Red
+        ("Swim", "speed", "#00FF7F"),  # SpringGreen
+        ("Hike", "pace", "#FF1493"),  # DeepPink
+        ("Walk", "pace", "#FF00FF"),  # Fuchsia
+        ("AlpineSki", None, "#00FF00"),  # Lime
+        ("BackcountrySki", None, "#32CD32"),  # LimeGreen
+        ("Canoeing", None, "#FFA500"),  # Orange
         ("Crossfit", None, None),
-        ("EBikeRide", "speed", "blue"),
+        ("EBikeRide", "speed", "#0000CD"),  # MediumBlue
         ("Elliptical", None, None),
-        ("IceSkate", "speed", None),
-        ("InlineSkate", None, None),
-        ("Kayaking", None, None),
+        ("IceSkate", "speed", "#663399"),  # RebeccaPurple
+        ("InlineSkate", None, "#8A2BE2"),  # BlueViolet
+        ("Kayaking", None, "#FFA500"),  # Orange
         ("Kitesurf", "speed", None),
-        ("NordicSki", None, None),
-        ("RockClimbing", None, None),
-        ("RollerSki", "speed", None),
-        ("Rowing", "speed", None),
-        ("Snowboard", None, None),
-        ("Snowshoe", None, None),
+        ("NordicSki", None, "#00FF00"),  # Lime
+        ("RockClimbing", None, "#4B0082"),  # Indigo
+        ("RollerSki", "speed", "#800080"),  # Purple
+        ("Rowing", "speed", "#FA8072"),  # Salmon
+        ("Snowboard", None, "#00FF00"),  # Lime
+        ("Snowshoe", "pace", "#00FA9A"),  # MediumSpringGreen
         ("StairStepper", None, None),
         ("StandUpPaddling", None, None),
-        ("Surfing", None, None),
-        ("VirtualRide", "speed", "cyan"),
+        ("Surfing", None, "#006400"),  # DarkGreen
+        ("VirtualRide", "speed", "#1E90FF"),  # DodgerBlue
         ("WeightTraining", None, None),
         ("Windsurf", "speed", None),
         ("Workout", None, None),

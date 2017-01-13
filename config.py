@@ -52,10 +52,8 @@ class Config(object):
         "opacity": 0.5,
         "color": 'black',
         "pulseColor": 'white',
-        "delay": 2000,
-        "dashArray": [3, 10],
-        # "noClip": False
     }
+
     FLOWPATH_VARIATION_CONSTANTS = {
         "K": 12000,
         "T": 5
