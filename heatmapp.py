@@ -83,6 +83,7 @@ login_manager.login_view = 'splash'
 # def log_request():
 #     app.logger.debug(vars(request))
 
+
 @login_manager.user_loader
 def load_user(user_id):
     user = Users.get(user_id)
@@ -104,9 +105,13 @@ def admin_or_self_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         user_name = request.view_args.get("username")
+        try:
+            user_id = int(user_name)
+        except:
+            user_id == None
         if (current_user.is_authenticated and
                 (current_user.is_admin() or
-                    (current_user.id == user_name) or
+                    (current_user.id == user_id) or
                     (current_user.username == user_name))):
             return f(*args, **kwargs)
         else:
@@ -121,7 +126,7 @@ def log_request_event(f):
         if anon or (not current_user.is_admin()):
             EventLogger.log_request(request,
                                     cuid="" if anon else current_user.id,
-                                    msg=href(request.url, request.full_path))
+                                    msg=request.url)
         return f(*args, **kwargs)
     return decorated_function
 
@@ -193,6 +198,7 @@ def demo():
 
 # Attempt to authorize a user via Oauth(2)
 @app.route('/authorize')
+@log_request_event
 def authorize():
     state = request.args.get("state")
     redirect_uri = url_for('auth_callback', _external=True)
@@ -243,6 +249,7 @@ def auth_callback():
 
 
 @app.route("/<username>/logout")
+@log_request_event
 @login_required
 def logout(username):
     user = Users.get(username)
@@ -253,7 +260,6 @@ def logout(username):
         logout_user()
         flash("user '{}' ({}) logged out"
               .format(username, user_id))
-        EventLogger.new_event(msg="{} logged out".format(user_id))
     return redirect(url_for("splash"))
 
 
@@ -577,21 +583,19 @@ def activity_stream(username):
 
 
 @app.route('/<username>/activities')
-@login_required
 @log_request_event
+@admin_or_self_required
 def activities(username):
-    if (Users.get(username) == current_user):
-        if request.args.get("rebuild"):
-            current_user.delete_index()
-        return render_template("activities.html",
-                               user=current_user,
-                               limit=request.args.get("limit"))
-    else:
-        return "sorry"
+    if request.args.get("rebuild"):
+        current_user.delete_index()
+    return render_template("activities.html",
+                           user=current_user,
+                           limit=request.args.get("limit"))
 
 
 # ---- User admin stuff ----
 @app.route('/users')
+@log_request_event
 @admin_required
 def users():
     info = sorted(
@@ -616,6 +620,7 @@ def users():
 
 
 @app.route('/users/<username>')
+@log_request_event
 @admin_or_self_required
 def user_profile(username):
     user = Users.get(username)
@@ -623,6 +628,7 @@ def user_profile(username):
 
 
 @app.route('/users/backup')
+@log_request_event
 @admin_required
 def users_backup():
     return jsonify(Users.backup())
@@ -630,6 +636,7 @@ def users_backup():
 
 # ---- Event log stuff ----
 @app.route('/history')
+@log_request_event
 @admin_required
 def event_history():
     def href(url, text):
@@ -688,18 +695,21 @@ def event_history():
 
 
 @app.route('/history/raw')
+@log_request_event
 @admin_required
 def event_history_raw():
     return jsonify(EventLogger.get_log())
 
 
 @app.route('/history/<event_id>')
+@log_request_event
 @admin_required
 def logged_event(event_id):
     return jsonify(EventLogger.get_event(event_id))
 
 
 @app.route('/history/init')
+@log_request_event
 @admin_required
 def event_history_init():
     EventLogger.init()
