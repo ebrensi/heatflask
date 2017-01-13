@@ -13,6 +13,7 @@ import gevent
 from gevent.queue import Queue
 from gevent.pool import Pool
 from exceptions import StopIteration
+from requests.exceptions import HTTPError
 import cPickle
 import msgpack
 from bson import ObjectId
@@ -116,9 +117,14 @@ class Users(UserMixin, db_sql.Model):
 
     @classmethod
     def from_access_token(cls, token):
-        client = stravalib.Client(access_token=token,
-                                  rate_limit_requests=False)
-        strava_user = client.get_athlete()
+        client = stravalib.Client(access_token=token)
+        try:
+            strava_user = client.get_athlete()
+        except HTTPError as e:
+            if "Unauthorized" in e.message:
+                return
+            else:
+                raise
 
         user = cls.get(strava_user.id)
         if not user:
@@ -142,6 +148,9 @@ class Users(UserMixin, db_sql.Model):
         )
 
         return user
+
+    def validate(self):
+        return self.__class__.from_access_token(self.access_token)
 
     @staticmethod
     def key(identifier):

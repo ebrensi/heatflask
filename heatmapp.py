@@ -165,6 +165,8 @@ def splash():
 
 @app.route('/demo')
 def demo():
+    #https://heatflask.herokuapp.com/15972102?limit=100&info=1&lat=37.8022&lng=-122.2493&zoom=12&heatres=high&flowres=high
+
     # Last 7 days of activity
     # return redirect(url_for("main",
     #                         username="15972102",
