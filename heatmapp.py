@@ -104,18 +104,14 @@ def admin_required(f):
 def admin_or_self_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        user_name = request.view_args.get("username")
-        try:
-            user_id = int(user_name)
-        except:
-            user_id == None
-        if (current_user.is_authenticated and
-                (current_user.is_admin() or
-                    (current_user.id == user_id) or
-                    (current_user.username == user_name))):
-            return f(*args, **kwargs)
-        else:
-            return login_manager.unauthorized()
+        if current_user.is_authenticated:
+            user_identifier = request.view_args.get("username")
+            if (current_user.is_admin() or
+                (user_identifier == current_user.username) or
+                 (user_identifier == str(current_user.id))):
+                return f(*args, **kwargs)
+            else:
+                return login_manager.unauthorized()
     return decorated_function
 
 
@@ -599,7 +595,7 @@ def activities(username):
 @admin_required
 def users():
     info = sorted(
-        [user.profile() for user in Users.query],
+        [user.info() for user in Users.query],
         key=lambda(x): x["app_activity_count"] or 0
         )
 
@@ -624,7 +620,7 @@ def users():
 @admin_or_self_required
 def user_profile(username):
     user = Users.get(username)
-    return jsonify(user.profile())
+    return jsonify(user.info())
 
 
 @app.route('/users/backup')

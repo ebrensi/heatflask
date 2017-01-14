@@ -81,7 +81,7 @@ class Users(UserMixin, db_sql.Model):
     def serialize(self):
         return cPickle.dumps(self)
 
-    def profile(self):
+    def info(self):
         profile = {}
         profile.update(vars(self))
         del profile["_sa_instance_state"]
