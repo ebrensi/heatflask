@@ -140,6 +140,7 @@ def touch():
 
 
 @app.route("/robots.txt")
+@log_request_event
 def robots_txt():
     return send_from_directory(os.path.join(app.root_path, 'static'),
                                'robots.txt')
