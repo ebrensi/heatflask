@@ -40,31 +40,32 @@ Analytics(app)
 
 # we bundle javascript and css dependencies to reduce client-side overhead
 bundles = {
-    "main_css": flask_assets.Bundle('css/jquery-ui.css',
-                                     'css/bootstrap.min.css',
-                                     'css/font-awesome.min.css',
-                                     'css/leaflet.css',
-                                     'css/leaflet-sidebar.css',
-                                     'css/L.Control.Window.css',
-                                     'css/L.Control.Locate.min.css',
-                                     filters='cssmin',
-                                     output='gen/main.css'),
+    "main_css": flask_assets.Bundle('css/main.css',
+                                    'css/jquery-ui.css',
+                                    'css/bootstrap.min.css',
+                                    'css/font-awesome.min.css',
+                                    'css/leaflet.css',
+                                    'css/leaflet-sidebar.css',
+                                    'css/L.Control.Window.css',
+                                    'css/L.Control.Locate.min.css',
+                                    filters='cssmin',
+                                    output='gen/main.css'),
 
     "main_js": flask_assets.Bundle('js/jquery-3.1.0.min.js',
-                                    'js/jquery-ui.min.js',
-                                    'js/leaflet.js',
-                                    'js/leaflet-sidebar.js',
-                                    'js/Polyline.encoded.js',
-                                    'js/moment.js',
-                                    'js/leaflet-heat.js',
-                                    'js/leaflet-ant-path.js',
-                                    'js/L.Control.Window.js',
-                                    'js/leaflet-providers.js',
-                                    'js/Leaflet.GoogleMutant.js',
-                                    'js/L.Control.Locate.min.js',
-                                    'js/eventsource.js',
-                                    filters='rjsmin',
-                                    output='gen/main.js')
+                                   'js/jquery-ui.min.js',
+                                   'js/leaflet.js',
+                                   'js/leaflet-sidebar.js',
+                                   'js/Polyline.encoded.js',
+                                   'js/moment.js',
+                                   'js/leaflet-heat.js',
+                                   'js/leaflet-ant-path.js',
+                                   'js/L.Control.Window.js',
+                                   'js/leaflet-providers.js',
+                                   'js/Leaflet.GoogleMutant.js',
+                                   'js/L.Control.Locate.min.js',
+                                   'js/eventsource.js',
+                                   filters='rjsmin',
+                                   output='gen/main.js')
 
 }
 assets = flask_assets.Environment(app)
@@ -108,7 +109,7 @@ def admin_or_self_required(f):
             user_identifier = request.view_args.get("username")
             if (current_user.is_admin() or
                 (user_identifier == current_user.username) or
-                 (user_identifier == str(current_user.id))):
+                    (user_identifier == str(current_user.id))):
                 return f(*args, **kwargs)
             else:
                 return login_manager.unauthorized()
@@ -167,7 +168,7 @@ def splash():
 
 @app.route('/demo')
 def demo():
-    #https://heatflask.herokuapp.com/15972102?limit=100&info=1&lat=37.8022&lng=-122.2493&zoom=12&heatres=high&flowres=high
+    # https://heatflask.herokuapp.com/15972102?limit=100&info=1&lat=37.8022&lng=-122.2493&zoom=12&heatres=high&flowres=high
 
     # Last 7 days of activity
     # return redirect(url_for("main",
@@ -598,7 +599,7 @@ def users():
     info = sorted(
         [user.info() for user in Users.query],
         key=lambda(x): x["app_activity_count"] or 0
-        )
+    )
 
     html = """
     <h1> Registered Users </h1>
