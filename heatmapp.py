@@ -45,7 +45,7 @@ bundles = {
                                     'css/bootstrap.min.css',
                                     'css/font-awesome.min.css',
                                     'css/leaflet.css',
-                                    'css/leaflet-sidebar.css',
+                                    'css/leaflet-sidebar.min.css',
                                     'css/L.Control.Window.css',
                                     'css/L.Control.Locate.min.css',
                                     filters='cssmin',
@@ -54,7 +54,7 @@ bundles = {
     "main_js": flask_assets.Bundle('js/jquery-3.1.0.min.js',
                                    'js/jquery-ui.min.js',
                                    'js/leaflet.js',
-                                   'js/leaflet-sidebar.js',
+                                   'js/leaflet-sidebar.min.js',
                                    'js/Polyline.encoded.js',
                                    'js/moment.js',
                                    'js/leaflet-heat.js',
@@ -65,7 +65,12 @@ bundles = {
                                    'js/L.Control.Locate.min.js',
                                    'js/eventsource.js',
                                    filters='rjsmin',
-                                   output='gen/main.js')
+                                   output='gen/main.js'),
+
+    "splash_css": flask_assets.Bundle('css/bootstrap.min.css',
+                                      'css/cover.css',
+                                      filters='cssmin',
+                                      output='gen/splash.css')
 
 }
 assets = flask_assets.Environment(app)

@@ -3,9 +3,9 @@
     <title>{{ config["APP_NAME"] }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
-     <!-- Custom style for this template -->
-    <link href="{{ url_for('static', filename='css/cover.css') }}" rel="stylesheet">
+    {% assets "splash_css" %}
+    <link rel="stylesheet" href="{{ ASSET_URL }}" />
+    {% endassets %}
 
   </head>
   <body>
