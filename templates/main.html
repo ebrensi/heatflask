@@ -31,6 +31,11 @@
                 <a href="#home" role="tab"><i class="fa fa-bars"></i></a>
                 </li>
 
+                <!-- <li class="disabled"> -->
+                <li>
+                <a href="#activities" role="tab"><i class="fa fa-list"></i></a></li>
+
+
                 {% if current_user.is_authenticated
                     and (current_user.id == user.id) %}
                 <li>
@@ -41,12 +46,6 @@
                 </li>
 
                 <li><a href="#messages" role="tab"><i class="fa fa-sticky-note-o"></i></a></li>
-
-
-                <!-- <li class="disabled"> -->
-                <li>
-                <a href="#activities" role="tab"><i class="fa fa-list"></i></a></li>
-
             </ul>
 
             <!-- <ul role="tablist">
@@ -373,7 +372,7 @@
              });
 
             $(".data_message").html("Rendering activities...");
-            appState.items = [];
+            appState.items = {};
 
 
             let url = "{{ url_for('getdata', username=user.id) }}"
@@ -390,12 +389,19 @@
                 paging: false,
                 scrollY: "70vh",
                 scrollX: true,
-                scrollCollapse: true
+                scrollCollapse: true,
+                scroller: true,
+                order: [[ 0, "desc" ]],
+                select: {style: "os"},
+                "columns": [
+                    { "data": "Date" },
+                    { "data": "Type" },
+                    { "data": "Dist" },
+                    { "data": "Name" }
+                ]
             });
-            // $('#atab').on( 'click', 'tr', function () {
-            //     let id = atable.row( this ).id();
-            //     alert( 'Clicked row id '+id );
-            // } );
+
+
             $("#abortButton").show();
 
             $('#abortButton').click(function(){
@@ -414,7 +420,7 @@
                     $(".progbar").hide();
                     if ($("#autozoom:checked").val() && bounds.isValid())
                         map.fitBounds(bounds);
-                    let msg2 = msg + " " + appState.items.length + " activities rendered.";
+                    let msg2 = msg + " " + Object.keys(appState.items).length + " activities rendered.";
                     $(".data_message").html(msg2);
                     rendering = false;
                 }
@@ -440,22 +446,64 @@
             }
 
 
-            function highlightFlow(){
-               if (this.options.weight == flowLayerOptions.weight){
-                   this.bringToFront();
-                   this.setStyle({
+            function highlightFlow(id){
+               if (flow.options.weight == flowLayerOptions.weight){
+                    $("#"+id).toggleClass('selected');
+                    let flow = appState.items[id].flowLayer;
+                    // $(".dataTables_scrollBody").scrollTo(id);
+                    flow.bringToFront();
+                    flow.setStyle({
                         weight: flowLayerOptions.weight + 3,
                         opacity: 1
                    });
                  }
             }
 
-            function restoreFlow(){
-                this.setStyle({
+            function restoreFlow(id){
+                $("#"+id).toggleClass('selected');
+                let flow = appState.items[id].flowLayer;
+                // console.log(id);
+                flow.setStyle({
                     weight: flowLayerOptions.weight,
                     opacity: flowLayerOptions.opacity
                 });
             }
+
+            function activityDataPopup(e, A){
+              let url = "{{ url_for('main',username=user.id) }}",
+                  d = parseFloat(A.total_distance),
+                  elapsed = hhmmss(parseFloat(A.elapsed_time)),
+                  v = parseFloat(A.average_speed);
+              let dkm = +(d / 1000).toFixed(2),
+                  dmi = +(d / 1609.34).toFixed(2),
+                  vkm,
+                  vmi;
+
+              if (A.vtype == "pace"){
+                vkm = hhmmss(1000 / v).slice(3) + "/km";
+                vmi = hhmmss(1609.34 / v).slice(3) + "/mi";
+              } else {
+                vkm = (v * 3600 / 1000).toFixed(2) + "km/hr";
+                vmi = (v * 3600 / 1609.34).toFixed(2) + "mi/hr";
+              }
+
+
+              let popup = L.popup()
+                .setLatLng(e.latlng)
+                .setContent(
+                    `${A.name}<br>${A.type}: ${A.beginTimestamp}<br>`+
+                    `${dkm} km (${dmi} mi) in ${elapsed}<br>${vkm} (${vmi})<br>` +
+                    `View in <a href='https://www.strava.com/activities/${A.id}' target='_blank'>Strava</a>`+
+                    `, <a href='${url}?id=${A.id}&flowres=high' target='_blank'>Heatflask</a>`
+                    )
+                .openOn(map);
+            }
+
+            // Action for click on activity table row
+            $('#atab tbody').on('click', 'tr', function () {
+                let id = this.id;
+                $(this).toggleClass('selected');
+            } );
 
 
 
@@ -485,9 +533,14 @@
                     } else {
                         let d = parseFloat(A.total_distance),
                             dkm = +(d / 1000).toFixed(2),
-                            ts = A.beginTimestamp.slice(0,10)
-                        let n = atable.row.add([ts, A.type, dkm, A.name]).draw( false );
-                        // $(n).attr( 'id', A.id );
+                            ts = A.beginTimestamp.slice(0,10),
+                             n = atable.row.add({
+                                DT_RowId: A.id,
+                                Date: ts,
+                                Type: A.type,
+                                Dist: dkm,
+                                Name: A.name
+                            }).draw(false).node();
                     }
 
                     if (flowres){
@@ -516,42 +569,21 @@
                         fopts.delay = parseInt(flowLayerConsts.K / v);
                         fopts.dashArray = [2, parseInt(flowLayerConsts.T * v)];
                         flow = new L.Polyline.AntPath(flowpoints, fopts);
+                        A.flowLayer = flow;
+                        FlowLayer.addLayer(flow);
 
                         if ($("#info").is(":checked")) {
-                            flow.on('mouseover', highlightFlow);
-                            flow.on("mouseout", restoreFlow);
+                            flow.on("mouseover", function(event) {
+                                highlightFlow(A.id);
+                            });
+                            flow.on("mouseout",function(event) {
+                                restoreFlow(A.id);
+                            });
 
-                            flow.on("click", function(e) {
-                              let url = "{{ url_for('main',username=user.id) }}",
-                                  d = parseFloat(A.total_distance),
-                                  elapsed = hhmmss(parseFloat(A.elapsed_time));
-
-                              let dkm = +(d / 1000).toFixed(2),
-                                  dmi = +(d / 1609.34).toFixed(2),
-                                  vkm,
-                                  vmi;
-
-                              if (A.vtype == "pace"){
-                                vkm = hhmmss(1000 / v).slice(3) + "/km";
-                                vmi = hhmmss(1609.34 / v).slice(3) + "/mi";
-                              } else {
-                                vkm = (v * 3600 / 1000).toFixed(2) + "km/hr";
-                                vmi = (v * 3600 / 1609.34).toFixed(2) + "mi/hr";
-                              }
-
-
-                              let popup = L.popup()
-                                .setLatLng(e.latlng)
-                                .setContent(
-                                    `${A.name}<br>${A.type}: ${A.beginTimestamp}<br>`+
-                                    `${dkm} km (${dmi} mi) in ${elapsed}<br>${vkm} (${vmi})<br>` +
-                                    `View in <a href='https://www.strava.com/activities/${A.id}' target='_blank'>Strava</a>`+
-                                    `, <a href='${url}?id=${A.id}&flowres=high' target='_blank'>Heatflask</a>`
-                                    )
-                                .openOn(map);
+                            flow.on("click", function(event) {
+                                activityDataPopup(event, A);
                             });
                         }
-                        FlowLayer.addLayer(flow);
                     }
 
                     points = heatpoints || flowpoints;
@@ -560,7 +592,7 @@
                         delete A.summary_polyline;
                         delete A.polyline;
                         delete A.time;
-                        appState.items.push(A);
+                        appState.items[A.id] = A;
                     }
 
                   } else {
