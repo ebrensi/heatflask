@@ -392,7 +392,7 @@
                 scrollCollapse: true,
                 scroller: true,
                 order: [[ 0, "desc" ]],
-                select: {style: "os"},
+                select: false,
                 "columns": [
                     { "data": "Date" },
                     { "data": "Type" },
@@ -447,10 +447,15 @@
 
 
             function highlightFlow(id){
-               if (flow.options.weight == flowLayerOptions.weight){
-                    $("#"+id).toggleClass('selected');
-                    let flow = appState.items[id].flowLayer;
-                    // $(".dataTables_scrollBody").scrollTo(id);
+                let A = appState.items[id];
+                if (!A.selected){
+                    let row = $("#"+id),
+                        scroller = $('.dataTables_scrollBody'),
+                        flow = A.flowLayer;
+
+                    row.toggleClass('selected');
+                    A.selected = true;
+                    scroller.scrollTop(row.prop('offsetTop') - scroller.height()/2);
                     flow.bringToFront();
                     flow.setStyle({
                         weight: flowLayerOptions.weight + 3,
@@ -461,8 +466,10 @@
 
             function restoreFlow(id){
                 $("#"+id).toggleClass('selected');
-                let flow = appState.items[id].flowLayer;
+                let A = appState.items[id],
+                    flow = A.flowLayer;
                 // console.log(id);
+                A.selected = false;
                 flow.setStyle({
                     weight: flowLayerOptions.weight,
                     opacity: flowLayerOptions.opacity
@@ -501,8 +508,13 @@
 
             // Action for click on activity table row
             $('#atab tbody').on('click', 'tr', function () {
-                let id = this.id;
-                $(this).toggleClass('selected');
+                let id = this.id,
+                    A = appState.items[id];
+                if (A.selected) restoreFlow(id);
+                else {
+                    highlightFlow(id);
+                    map.panInsideBounds(A.flowLayer.getBounds());
+                }
             } );
 
 
@@ -513,6 +525,7 @@
                             extend_bounds = true,
                             heatpoints = false,
                             flowpoints = false;
+                    A.selected = false;
 
                     if ("error" in A){
                         let msg = "<font color='red'>" + A.error +"</font><br>";
