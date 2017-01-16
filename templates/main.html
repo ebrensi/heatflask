@@ -141,7 +141,10 @@
 
                 <hr>
                 {% if current_user.is_authenticated %}
-                You are logged in as <a href="{{ url_for('main', username=current_user.id) }}" target="_blank">{{ current_user.username or current_user.id}}</a> :<br>
+                You are logged in as
+                <a href="{{ url_for('main', username=current_user.id) }}"
+                            target="_blank">{{ current_user.username or current_user.id}}</a> :
+                <br>
 
                 <form action="{{ url_for('logout', username=user.id) }}">
                     <input type="submit" class="btn btn-danger" value="Log Out" />
@@ -216,6 +219,11 @@
                 Questions, comments, suggestions?  Want to help?!!<br>
                 <a href="mailto:Rensi.Efrem@gmail.com?subject=About {{ config['APP_NAME'] }}">Contact Me!</a>
                 <hr>
+            </div>
+
+            <div class="sidebar-pane" id="activities">
+                <h1 class="sidebar-header">Rendered Activities<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
+                <div id="activities_list"></div>
             </div>
 
             <div class="sidebar-pane" id="settings">
@@ -377,6 +385,13 @@
                 listening = true;
 
             $("#abortButton").show();
+
+            $('#abortButton').click(function(){
+                stopListening();
+                doneRendering("<font color='red'>Aborted:</font>");
+            });
+
+
             $(".progbar").show();
             var progs = document.getElementsByClassName('progbar');
             $('#renderButton').prop('disabled', true);
@@ -412,11 +427,25 @@
                 }
             }
 
-            $('#abortButton').click(function(){
-                stopListening();
-                doneRendering("<font color='red'>Aborted:</font>");
-            });
 
+            function highlightFlow(){
+               if (this.options.weight == flowLayerOptions.weight){
+                   this.bringToFront();
+                   this.setStyle({
+                        weight: flowLayerOptions.weight + 3,
+                        opacity: 1
+                   });
+                 }
+            }
+
+            function restoreFlow(){
+                this.setStyle({
+                    weight: flowLayerOptions.weight,
+                    opacity: flowLayerOptions.opacity
+                });
+            }
+
+            $("#activities_list").html("<table id='atab'><tr><td>date</td><td>type</td><td>dist</td><td>name</td></tr></table>");
 
             source.onmessage = function(event) {
                 if (event.data != 'done'){
@@ -441,10 +470,12 @@
                              }
                         }
                         return;
-                    } // else {
-                    //     let msg = "rendering [" + A.id + "] " + A.name;
-                    //     $(".data_message").html(msg);
-                    // }
+                    } else {
+                        let d = parseFloat(A.total_distance),
+                            dkm = +(d / 1000).toFixed(2);
+                        let ln = `<tr><td>${A.beginTimestamp}</td><td>${A.type}</td><td>${dkm}</td><td>${A.name}</td></tr>`;
+                        $("#atab").append(ln);
+                    }
 
                     if (flowres){
                         // add this activity's route to FlowLayer
@@ -474,23 +505,8 @@
                         flow = new L.Polyline.AntPath(flowpoints, fopts);
 
                         if ($("#info").is(":checked")) {
-                            flow.on('mouseover', function(e) {
-                               if (this.options.weight == fopts.weight){
-                                   this.bringToFront();
-                                   this.setStyle({
-                                        weight: fopts.weight + 3,
-                                        opacity: 1
-                                   });
-                                 }
-                              });
-
-
-                            flow.on("mouseout", function() {
-                                this.setStyle({
-                                    weight: fopts.weight,
-                                    opacity: fopts.opacity
-                                });
-                            });
+                            flow.on('mouseover', highlightFlow);
+                            flow.on("mouseout", restoreFlow);
 
                             flow.on("click", function(e) {
                               let url = "{{ url_for('main',username=user.id) }}",
@@ -508,7 +524,6 @@
                               } else {
                                 vkm = (v * 3600 / 1000).toFixed(2) + "km/hr";
                                 vmi = (v * 3600 / 1609.34).toFixed(2) + "mi/hr";
-
                               }
 
 
