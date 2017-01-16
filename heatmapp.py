@@ -48,11 +48,13 @@ bundles = {
                                     'css/leaflet-sidebar.min.css',
                                     'css/L.Control.Window.css',
                                     'css/L.Control.Locate.min.css',
+                                    'css/jquery.dataTables.min.css',
                                     filters='cssmin',
                                     output='gen/main.css'),
 
     "main_js": flask_assets.Bundle('js/jquery-3.1.0.min.js',
                                    'js/jquery-ui.min.js',
+                                   'js/jquery.dataTables.min.js',
                                    'js/leaflet.js',
                                    'js/leaflet-sidebar.min.js',
                                    'js/Polyline.encoded.js',
