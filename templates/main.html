@@ -223,7 +223,8 @@
 
             <div class="sidebar-pane" id="activities">
                 <h1 class="sidebar-header">Rendered Activities<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
-                <div id="activities_list"></div>
+                <div id="activities_list">
+                </div>
             </div>
 
             <div class="sidebar-pane" id="settings">
@@ -384,6 +385,17 @@
             let rendering = true,
                 listening = true;
 
+            $("#activities_list").html("<table id='atab' class='display compact order-column' cellspacing='0' width='100%'><thead><tr><th>Date</th><th>Type</th><th>Dist</th><th>Name</th></tr><hr></thead><tbody</tbody></table>");
+            let atable = $('#atab').DataTable({
+                paging: false,
+                scrollY: "70vh",
+                scrollX: true,
+                scrollCollapse: true
+            });
+            // $('#atab').on( 'click', 'tr', function () {
+            //     let id = atable.row( this ).id();
+            //     alert( 'Clicked row id '+id );
+            // } );
             $("#abortButton").show();
 
             $('#abortButton').click(function(){
@@ -402,7 +414,6 @@
                     $(".progbar").hide();
                     if ($("#autozoom:checked").val() && bounds.isValid())
                         map.fitBounds(bounds);
-
                     let msg2 = msg + " " + appState.items.length + " activities rendered.";
                     $(".data_message").html(msg2);
                     rendering = false;
@@ -424,6 +435,7 @@
                     }
 
                     $('#renderButton').prop('disabled', false);
+
                 }
             }
 
@@ -445,7 +457,7 @@
                 });
             }
 
-            $("#activities_list").html("<table id='atab'><tr><td>date</td><td>type</td><td>dist</td><td>name</td></tr></table>");
+
 
             source.onmessage = function(event) {
                 if (event.data != 'done'){
@@ -466,15 +478,16 @@
                         $(".data_message").html(A.msg);
                         if ("value" in A) {
                             for (let i = 0; i < progs.length; i++) {
-                                 progs[i].value = parseFloat(A.value)
+                                 progs[i].value = parseFloat(A.value);
                              }
                         }
                         return;
                     } else {
                         let d = parseFloat(A.total_distance),
-                            dkm = +(d / 1000).toFixed(2);
-                        let ln = `<tr><td>${A.beginTimestamp}</td><td>${A.type}</td><td>${dkm}</td><td>${A.name}</td></tr>`;
-                        $("#atab").append(ln);
+                            dkm = +(d / 1000).toFixed(2),
+                            ts = A.beginTimestamp.slice(0,10)
+                        let n = atable.row.add([ts, A.type, dkm, A.name]).draw( false );
+                        // $(n).attr( 'id', A.id );
                     }
 
                     if (flowres){
@@ -669,6 +682,8 @@
 
             $("#heatres").val("{{ heatres }}")
             $("#flowres").val("{{ flowres }}")
+
+            $('#atab').DataTable();
 
             {% if autozoom  %}
             $("#autozoom").prop('checked', true);
