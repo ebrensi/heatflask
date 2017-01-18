@@ -245,7 +245,7 @@
     <div id="map" class="sidebar-map"></div>
 
     <script>
-        const OFFLINE = {{ config['OFFLINE']|tojson }},
+        const OFFLINE = {{ config.get('OFFLINE')|tojson }},
             HEATLAYER_DEFAULT_OPTIONS = {{ config["HEATMAP_DEFAULT_OPTIONS"]|tojson|safe }},
             FLOWLAYER_DEFAULT_OPTIONS = {{ config["ANTPATH_DEFAULT_OPTIONS"]|tojson|safe }},
             FLOWPATH_VARIATION_CONSTANTS = {{ config["FLOWPATH_VARIATION_CONSTANTS"]|tojson|safe }},

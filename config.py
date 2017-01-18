@@ -9,6 +9,7 @@ class Config(object):
     DEBUG = False
     TESTING = False
     CSRF_ENABLED = True
+    OFFLINE = False
 
     CONCURRENCY = 4
 
@@ -93,7 +94,7 @@ class DevelopmentConfig(Config):
     These are settings specific to the development environment
     (Developer's personal computer)
     """
-    OFFLINE = True
+    # OFFLINE = True
     DEVELOPMENT = True
     DEBUG = True
 
