@@ -10,7 +10,7 @@ class Config(object):
     TESTING = False
     CSRF_ENABLED = True
 
-    CONCURRENCY = 3
+    CONCURRENCY = 4
 
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
@@ -42,7 +42,7 @@ class Config(object):
 
     # Leaflet.js stuff
     HEATMAP_DEFAULT_OPTIONS = {
-        "radius": 9,
+        "radius": 8,
         "blur": 15,
         "gradient": {0.4: 'blue', 0.65: 'lime', 1: 'red'}
     }
@@ -56,7 +56,7 @@ class Config(object):
 
     FLOWPATH_VARIATION_CONSTANTS = {
         "K": 12000,
-        "T": 5
+        "T": 6
     }
 
     MAP_CENTER = [27.53, 1.58]

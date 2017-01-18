@@ -376,7 +376,10 @@
             scroller.scrollTop(row.prop('offsetTop') - scroller.height()/2);
 
             // highlight animated path
-            flow.bringToFront();
+            try {
+                flow.bringToFront();
+            } catch(e) {}
+
             flow.setStyle({
                 weight: FLOWLAYER_DEFAULT_OPTIONS.weight + 3,
                 opacity: 1
@@ -384,6 +387,7 @@
 
             return A;
         }
+
 
         function unhighlightPath(id){
             let A = appState.items[id];
@@ -610,8 +614,7 @@
 
                     if (flowres){
                         // add this activity's route to FlowLayer
-                        var fopts = Object.assign({}, FLOWLAYER_DEFAULT_OPTIONS),  // copy of default options
-                            v = parseFloat(A.average_speed);
+                        var fopts = Object.assign({}, FLOWLAYER_DEFAULT_OPTIONS);
                         if (("path_color" in A) && A.path_color)
                             fopts.color = A.path_color;
                     }
@@ -633,6 +636,7 @@
                         latlngs_flat.push.apply(latlngs_flat, heatpoints);
                     }
                     if (flowpoints) {
+                        let v = parseFloat(A.average_speed);
                         fopts.delay = parseInt(FLOWPATH_VARIATION_CONSTANTS.K / v);
                         fopts.dashArray = [2, parseInt(FLOWPATH_VARIATION_CONSTANTS.T * v)];
                         A.flowLayer = new L.Polyline.AntPath(flowpoints, fopts);
