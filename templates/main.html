@@ -108,13 +108,13 @@
                   </span>
 
 
-                    <span style="display:block">
-                  <label for="renderFlow" style="display:block">Flow Layer:</label>
-                  <select id="flowres" name="renderFlow" form="renderform">
-                    <option value="">None</option>
-                    <option value="high">High resolution</option>
-                    <option value="low">Low resolution</option>
-                  </select>
+                  <span style="display:block">
+                      <label for="renderFlow" style="display:block">Flow Layer:</label>
+                      <select id="flowres" name="renderFlow" form="renderform">
+                        <option value="">None</option>
+                        <option value="high">High resolution</option>
+                        <option value="low">Low resolution</option>
+                      </select>
                   </span>
 
 
@@ -362,6 +362,11 @@
             }
         }
 
+        function selectedIDs(){
+            return appState.items.filter(
+                        (id, a) => {return a.selected;}
+                   ).map(function(a) { return a.id; });
+        }
 
         function highlightPath(id) {
             let A = appState.items[id];
