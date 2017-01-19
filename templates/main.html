@@ -697,9 +697,10 @@
                         latlngs_flat.push.apply(latlngs_flat, heatpoints);
                     }
                     if (flowpoints) {
-                        let v = parseFloat(A.average_speed);
+                        let v = parseFloat(A.average_speed),
+                            v_adj = 1 + Math.log(10*v);
                         fopts.delay = parseInt(FLOWPATH_VARIATION_CONSTANTS.K / v);
-                        fopts.dashArray = [2, parseInt(FLOWPATH_VARIATION_CONSTANTS.T * v)];
+                        fopts.dashArray = [2, parseInt(FLOWPATH_VARIATION_CONSTANTS.T * v_adj)];
                         fopts.paused = appState.paused;
                         A.flowLayer = new L.Polyline.AntPath(flowpoints, fopts);
                         FlowLayer.addLayer(A.flowLayer);
