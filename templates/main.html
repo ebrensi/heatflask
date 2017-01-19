@@ -83,6 +83,7 @@
                   </span>
 
                   <span id="id_select">
+                    <br>
                     <textarea name="id" id="activity_ids" form="renderform"></textarea>
                   </span>
 
@@ -230,9 +231,8 @@
 
                 <div>
                 <br>
-                <form>
-                      <input type="checkbox" name="szoom" id="zoom-table-selection" value="1">Auto-Zoom to selection<br>
-                </form>
+                <input type="checkbox" name="szoom" id="zoom-table-selection" value="1">Auto-Zoom to selection
+                <button type="button" id="render-selection-button" class="btn btn-default btn-sm">Render selected</button>
                 </div>
             </div>
 
@@ -256,7 +256,7 @@
         // Activity Table Setup
         let atable = $('#atab').DataTable({
             paging: false,
-            scrollY: "70vh",
+            scrollY: "60vh",
             scrollX: true,
             scrollCollapse: true,
             scroller: true,
@@ -352,7 +352,7 @@
         function zoomToSelected(){
             // Pan-Zoom to fit all selected activities
             let selection_bounds = L.latLngBounds();
-            $.each(appState.items, function(id, a) {
+            $.each(appState.items, (id, a) => {
                 if (a.selected) {
                     selection_bounds.extend(a.bounds);
                 }
@@ -363,9 +363,15 @@
         }
 
         function selectedIDs(){
-            return appState.items.filter(
-                        (id, a) => {return a.selected;}
+            return Object.values(appState.items).filter(
+                        (a) => { return a.selected; }
                    ).map(function(a) { return a.id; });
+        }
+
+        function openSelected(){
+            ids = selectedIDs();
+            let url = BASE_USER_URL + "?id=" + ids.join("+");
+            window.open(url,'_blank');
         }
 
         function highlightPath(id) {
@@ -788,7 +794,8 @@
             });
             $(".preset").on("change", preset_sync);
 
-            $("#renderButton").on('click', renderLayers);
+            $("#renderButton").click(renderLayers);
+            $("#render-selection-button").click(openSelected);
 
             $("#heatres").val("{{ heatres }}")
             $("#flowres").val("{{ flowres }}")
