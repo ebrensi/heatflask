@@ -401,6 +401,9 @@
             ids = selectedIDs();
             if (ids.length > 0) {
                 let url = BASE_USER_URL + "?id=" + ids.join("+");
+                if (appState.paused == true){
+                    url += "&paused=1"
+                }
                 window.open(url,'_blank');
             }
         }
@@ -697,6 +700,7 @@
                         let v = parseFloat(A.average_speed);
                         fopts.delay = parseInt(FLOWPATH_VARIATION_CONSTANTS.K / v);
                         fopts.dashArray = [2, parseInt(FLOWPATH_VARIATION_CONSTANTS.T * v)];
+                        fopts.paused = appState.paused;
                         A.flowLayer = new L.Polyline.AntPath(flowpoints, fopts);
                         FlowLayer.addLayer(A.flowLayer);
 
@@ -848,6 +852,8 @@
                     updateState();
                 }
             });
+
+            $("#render-selection-button").prop("checked", true);
 
             $("#autozoom").on("change", updateState);
             $("#info").on("change", updateState);
