@@ -218,14 +218,7 @@
             <div class="sidebar-pane" id="activities">
                 <h1 class="sidebar-header">Rendered Activities<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
                 <div id="activities_list">
-                    <table id='atab' class='display compact order-column' cellspacing='0' width='100%'>
-                        <thead>
-                            <tr><th>Date</th><th>Type</th><th>Dist</th><th>Time</th><th>Name</th></tr>
-                        </thead>
-
-                        <tbody>
-                        </tbody>
-                    </table>
+                    <table id='atab' class='display compact order-column' cellspacing='0' width='100%'></table>
                 </div>
 
                 <div>
@@ -349,16 +342,12 @@
             order: [[ 0, "desc" ]],
             select: true,
             columns: [
-                { data: "Date" },
-                { data: "Type" },
-                { data: "Dist" },
-                { data: "Time" },
-                { data: "Name" }
-            ],
-            // fixedColumns:   {
-            //     leftColumns: 1,
-            //     rightColumns: 1
-            // }
+                { data: "Date", title: "Date" },
+                { data: "Type", title: "Type"},
+                { data: "Dist", title: "Dist"},
+                { data: "Time", title: "Time"},
+                { data: "Name", title: "Name"}
+            ]
         });
 
         // Action for click on activity table row
