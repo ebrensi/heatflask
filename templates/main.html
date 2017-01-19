@@ -777,7 +777,8 @@
             $(".datepick").datepicker({ dateFormat: 'yy-mm-dd',
                                         changeMonth: true,
                                         changeYear: true
-                           });
+            });
+
             map.on('moveend', function(e) {
                 updateURL();
             });
