@@ -66,7 +66,6 @@
 
                 <h3>Activities query:</h3>
 
-                <br>
                 <form id="renderform" action="{{ url_for('main', username=user.id)}}">
 
                  <span id="num_select">
@@ -167,7 +166,7 @@
                      {{ current_user.lastname }}:</h3>
 
                 <a href="https://www.strava.com/settings/profile" target="_blank">
-                    <img src={{ current_user.profile }} alt="user image" height="30%" width="30%">
+                    <img src={{ current_user.profile }} alt="user image" height="20%" width="20%">
                 </a>
 
                 <br><br>
@@ -177,6 +176,7 @@
                     <label><input type="checkbox" name="rebuild" value="1">Re-build</label>
                     <input type="hidden" name="limit" value="100000">
                 </form>
+
                 <br><br>
 
 
@@ -220,7 +220,7 @@
                 <div id="activities_list">
                     <table id='atab' class='display compact order-column' cellspacing='0' width='100%'>
                         <thead>
-                            <tr><th>Date</th><th>Type</th><th>Dist</th><th>Name</th></tr>
+                            <tr><th>Date</th><th>Type</th><th>Dist</th><th>Time</th><th>Name</th></tr>
                         </thead>
 
                         <tbody>
@@ -345,20 +345,20 @@
             scrollY: "60vh",
             scrollX: true,
             scrollCollapse: true,
-            scroller: true,
+            // scroller: true,
             order: [[ 0, "desc" ]],
             select: true,
             columns: [
-                { "data": "Date" },
-                { "data": "Type" },
-                { "data": "Dist" },
-                // { "data": "Time" },
-                { "data": "Name" }
+                { data: "Date" },
+                { data: "Type" },
+                { data: "Dist" },
+                { data: "Time" },
+                { data: "Name" }
             ],
-            fixedColumns:   {
-                leftColumns: 1,
-                rightColumns: 1
-            }
+            // fixedColumns:   {
+            //     leftColumns: 1,
+            //     rightColumns: 1
+            // }
         });
 
         // Action for click on activity table row
@@ -681,7 +681,7 @@
                                 Date: ts,
                                 Type: A.type,
                                 Dist: dkm,
-                                // Time: hhmmss(parseFloat(A.elapsed_time)),
+                                Time: hhmmss(A.elapsed_time),
                                 Name: A.name
                             }).draw(false).node();
                     }
