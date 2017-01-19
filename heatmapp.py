@@ -49,6 +49,7 @@ bundles = {
                                     'css/L.Control.Window.css',
                                     'css/L.Control.Locate.min.css',
                                     'css/jquery.dataTables.min.css',
+                                    'css/easy-button.css',
                                     filters='cssmin',
                                     output='gen/main.css'),
 
@@ -65,6 +66,7 @@ bundles = {
                                    'js/leaflet-providers.js',
                                    'js/Leaflet.GoogleMutant.js',
                                    'js/L.Control.Locate.min.js',
+                                   'js/easy-button.js',
                                    'js/eventsource.js',
                                    filters='rjsmin',
                                    output='gen/main.js'),
