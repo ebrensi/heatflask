@@ -355,8 +355,8 @@ def main(username):
     flowres = request.args.get("flowres", "")
     heatres = request.args.get("heatres", "")
     if (not flowres) and (not heatres):
-        flowres = "low"
-        heatres = "low"
+        flowres = "high"
+        heatres = "high"
 
     lat = request.args.get("lat")
     lng = request.args.get("lng")
