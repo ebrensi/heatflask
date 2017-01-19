@@ -527,8 +527,8 @@ class Activities(object):
         ("Swim", "speed", "#00FF7F"),  # SpringGreen
         ("Hike", "pace", "#FF1493"),  # DeepPink
         ("Walk", "pace", "#FF00FF"),  # Fuchsia
-        ("AlpineSki", None, "#00FF00"),  # Lime
-        ("BackcountrySki", None, "#32CD32"),  # LimeGreen
+        ("AlpineSki", None, "#800080"),  # Purple
+        ("BackcountrySki", None, "#800080"),  # Purple
         ("Canoeing", None, "#FFA500"),  # Orange
         ("Crossfit", None, None),
         ("EBikeRide", "speed", "#0000CD"),  # MediumBlue
@@ -537,12 +537,12 @@ class Activities(object):
         ("InlineSkate", None, "#8A2BE2"),  # BlueViolet
         ("Kayaking", None, "#FFA500"),  # Orange
         ("Kitesurf", "speed", None),
-        ("NordicSki", None, "#00FF00"),  # Lime
+        ("NordicSki", None, "#800080"),  # purple
         ("RockClimbing", None, "#4B0082"),  # Indigo
         ("RollerSki", "speed", "#800080"),  # Purple
         ("Rowing", "speed", "#FA8072"),  # Salmon
         ("Snowboard", None, "#00FF00"),  # Lime
-        ("Snowshoe", "pace", "#00FA9A"),  # MediumSpringGreen
+        ("Snowshoe", "pace", "#800080"),  # Purple
         ("StairStepper", None, None),
         ("StandUpPaddling", None, None),
         ("Surfing", None, "#006400"),  # DarkGreen
