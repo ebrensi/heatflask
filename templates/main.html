@@ -253,7 +253,74 @@
             BASE_USER_URL = "{{ url_for('main', username=user.id) }}",
             USER_ID = "{{ user.id }}";
 
-        // Activity Table Setup
+        // Set up Map and base layers
+        let map_providers = {{ baselayer|tojson|safe }},
+            default_baseLayer,
+            baseLayers = {
+            "None": L.tileLayer(""),
+            "Esri.WorldImagery": L.tileLayer.provider("Esri.WorldImagery"),
+            "OpenStreetMap.Mapnik": L.tileLayer.provider("OpenStreetMap.Mapnik"),
+            "Google.Roadmap":  L.gridLayer.googleMutant({type: 'roadmap'}),
+            "Google.Terrain":  L.gridLayer.googleMutant({type: 'terrain'}),
+            "Google.Hybrid": L.gridLayer.googleMutant({type: 'hybrid'})
+            },
+            HeatLayer = false,
+            FlowLayer = false,
+            appState = {
+                baseLayers: map_providers,
+                paused: false
+            };
+
+
+        if (OFFLINE) {
+            default_baseLayer = baseLayers["None"];
+        } else if (map_providers.length) {
+            for (let i = 0; i < map_providers.length; i++) {
+                provider = map_providers[i];
+                let tl = L.tileLayer.provider(provider);
+                baseLayers[provider] = tl;
+                if (i==0) default_baseLayer = tl;
+            }
+        } else {
+            default_baseLayer = baseLayers["Google.Terrain"];
+        }
+
+        let map = L.map('map',
+                        {center: [{{ lat }}, {{ lng }}],
+                         zoom: {{ zoom }},
+                         layers : [ default_baseLayer ]
+                  });
+
+
+        let sidebar = L.control.sidebar('sidebar').addTo(map),
+            zoomControl = map.zoomControl.setPosition('bottomright'),
+            layerControl = L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map),
+            locateControl = L.control.locate({position: "bottomright", icon: "fa fa-anchor"}).addTo(map);
+            pauseButton = L.easyButton('fa fa-pause', function(btn, map){
+                                pauseFlow();
+                                paused = True;
+                          }).addTo(map),
+            playButton = L.easyButton('fa fa-play', function(btn, map){
+                                resumeFlow();
+                                pasued = False;
+                          }).addTo(map);
+
+
+        // Flash any messages
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+              let msg = "<ul class=flashes>"
+
+              {% for message in messages %}
+                msg += "<li>{{ message }}</li>"
+              {% endfor %}
+              msg += "</ul>"
+              L.control.window(map, {content:msg, visible:true});
+            {% endif %}
+        {% endwith %}
+
+
+        // Set-up activity table
         let atable = $('#atab').DataTable({
             paging: false,
             scrollY: "60vh",
@@ -286,63 +353,6 @@
 
 
 
-        // Set up Map and base layers
-        let map_providers = {{ baselayer|tojson|safe }},
-            default_baseLayer,
-            baseLayers = {
-            "None": L.tileLayer(""),
-            "Esri.WorldImagery": L.tileLayer.provider("Esri.WorldImagery"),
-            "OpenStreetMap.Mapnik": L.tileLayer.provider("OpenStreetMap.Mapnik"),
-            "Google.Roadmap":  L.gridLayer.googleMutant({type: 'roadmap'}),
-            "Google.Terrain":  L.gridLayer.googleMutant({type: 'terrain'}),
-            "Google.Hybrid": L.gridLayer.googleMutant({type: 'hybrid'})
-        }
-
-
-        if (OFFLINE) {
-            default_baseLayer = baseLayers["None"];
-        } else if (map_providers.length) {
-            for (let i = 0; i < map_providers.length; i++) {
-                provider = map_providers[i];
-                let tl = L.tileLayer.provider(provider);
-                baseLayers[provider] = tl;
-                if (i==0) default_baseLayer = tl;
-            }
-        } else {
-            default_baseLayer = baseLayers["Google.Terrain"];
-        }
-
-        let map = L.map('map',
-                        {center: [{{ lat }}, {{ lng }}],
-                         zoom: {{ zoom }},
-                         layers : [ default_baseLayer ]
-                  });
-
-
-        let sidebar = L.control.sidebar('sidebar').addTo(map),
-            zoomControl = map.zoomControl.setPosition('bottomright'),
-            layerControl = L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map),
-            locateControl = L.control.locate({position: "bottomright", icon: "fa fa-anchor"}).addTo(map);
-
-         {% with messages = get_flashed_messages() %}
-            {% if messages %}
-              let msg = "<ul class=flashes>"
-
-              {% for message in messages %}
-                msg += "<li>{{ message }}</li>"
-              {% endfor %}
-              msg += "</ul>"
-              L.control.window(map, {content:msg, visible:true});
-            {% endif %}
-        {% endwith %}
-
-
-        let HeatLayer = false,
-            FlowLayer = false,
-            appState = {
-                baseLayers: map_providers
-            };
-
 
         // Convert seconds to HH:MM:SS format
         function hhmmss(secs) {
@@ -372,6 +382,22 @@
             ids = selectedIDs();
             let url = BASE_USER_URL + "?id=" + ids.join("+");
             window.open(url,'_blank');
+        }
+
+        function pauseFlow(ids=Object.keys(appState.items)){
+            for (i = 0; i < ids.length; i++) {
+                appState.items[ids[i]].flowLayer.pause();
+            }
+        }
+
+        function resumeFlow(ids=Object.keys(appState.items)){
+            for (i = 0; i < ids.length; i++) {
+                flow = appState.items[ids[i]].flowLayer;
+                // This is necessary until I get a new version of Ant-path
+                // that has the bug fix.
+                flow.options.paused = false;
+                flow.resume();
+            }
         }
 
         function highlightPath(id) {
