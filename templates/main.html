@@ -400,7 +400,7 @@
 
         function openSelected(){
             ids = selectedIDs();
-            if (ids) {
+            if (ids.length > 0) {
                 let url = BASE_USER_URL + "?id=" + ids.join("+");
                 window.open(url,'_blank');
             }

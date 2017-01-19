@@ -512,7 +512,7 @@ def getdata(username):
 
                     data = {"msg": "activity {0}/{1}...".format(count, total)}
                     if ftotal:
-                        data["value"] = count / ftotal
+                        data["value"] = round(count / ftotal, 3)
 
                     Q.put(sse_out(data))
 
