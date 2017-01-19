@@ -361,8 +361,8 @@ def main(username):
     lat = request.args.get("lat")
     lng = request.args.get("lng")
     zoom = request.args.get("zoom")
-    autozoom = request.args.get("autozoom")
-    info = request.args.get("hover") or request.args.get("info")
+    autozoom = request.args.get("autozoom") in ["1", "true"]
+    info = request.args.get("info") in ["1", "true"]
     if not info:
         info = 1
 
@@ -379,6 +379,7 @@ def main(username):
             "msg": href(request.url, request.full_path)
         })
 
+    paused = request.args.get("paused") in ["1", "true"]
     return render_template('main.html',
                            user=user,
                            lat=lat,
@@ -393,6 +394,7 @@ def main(username):
                            flowres=flowres,
                            autozoom=autozoom,
                            info=info,
+                           paused=paused,
                            baselayer=baselayer
                            )
 

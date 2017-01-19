@@ -257,18 +257,18 @@
         let map_providers = {{ baselayer|tojson|safe }},
             default_baseLayer,
             baseLayers = {
-            "None": L.tileLayer(""),
-            "Esri.WorldImagery": L.tileLayer.provider("Esri.WorldImagery"),
-            "OpenStreetMap.Mapnik": L.tileLayer.provider("OpenStreetMap.Mapnik"),
-            "Google.Roadmap":  L.gridLayer.googleMutant({type: 'roadmap'}),
-            "Google.Terrain":  L.gridLayer.googleMutant({type: 'terrain'}),
-            "Google.Hybrid": L.gridLayer.googleMutant({type: 'hybrid'})
+                "None": L.tileLayer(""),
+                "Esri.WorldImagery": L.tileLayer.provider("Esri.WorldImagery"),
+                "OpenStreetMap.Mapnik": L.tileLayer.provider("OpenStreetMap.Mapnik"),
+                "Google.Roadmap": L.gridLayer.googleMutant({type: 'roadmap'}),
+                "Google.Terrain": L.gridLayer.googleMutant({type: 'terrain'}),
+                "Google.Hybrid": L.gridLayer.googleMutant({type: 'hybrid'})
             },
             HeatLayer = false,
             FlowLayer = false,
             appState = {
                 baseLayers: map_providers,
-                paused: false
+                paused: {{ paused|tojson }}
             };
 
 
@@ -296,25 +296,45 @@
             zoomControl = map.zoomControl.setPosition('bottomright'),
             layerControl = L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map),
             locateControl = L.control.locate({position: "bottomright", icon: "fa fa-anchor"}).addTo(map);
-            pauseButton = L.easyButton('fa fa-pause', function(btn, map){
-                                pauseFlow();
-                                paused = True;
-                          }).addTo(map),
-            playButton = L.easyButton('fa fa-play', function(btn, map){
-                                resumeFlow();
-                                pasued = False;
-                          }).addTo(map);
+
+
+        //
+        let button_states = [{
+                        stateName: 'animation-running',
+                        icon:      'fa-pause',
+                        title:     'Pause Animation',
+                        onClick: function(btn, map) {
+                            pauseFlow();
+                            appState.paused = true;
+                            updateState();
+                            btn.state('animation-paused');
+                        }
+                    }, {
+                        stateName: 'animation-paused',
+                        icon:      'fa-play',
+                        title:     'Resume Animation',
+                        onClick: function(btn, map) {
+                            resumeFlow();
+                            appState.paused = false;
+                            updateState();
+                            btn.state('animation-running');
+                        }
+                }],
+
+            animationControl = L.easyButton({
+                states: appState.paused? button_states.reverse() : button_states
+            }).addTo(map);
 
 
         // Flash any messages
         {% with messages = get_flashed_messages() %}
             {% if messages %}
-              let msg = "<ul class=flashes>"
+              let msg = "<ul class=flashes>";
 
               {% for message in messages %}
-                msg += "<li>{{ message }}</li>"
+                msg += "<li>{{ message }}</li>";
               {% endfor %}
-              msg += "</ul>"
+              msg += "</ul>";
               L.control.window(map, {content:msg, visible:true});
             {% endif %}
         {% endwith %}
@@ -380,8 +400,10 @@
 
         function openSelected(){
             ids = selectedIDs();
-            let url = BASE_USER_URL + "?id=" + ids.join("+");
-            window.open(url,'_blank');
+            if (ids) {
+                let url = BASE_USER_URL + "?id=" + ids.join("+");
+                window.open(url,'_blank');
+            }
         }
 
         function pauseFlow(ids=Object.keys(appState.items)){
@@ -613,7 +635,7 @@
 
                     if ("limit" in query) appState["limit"] = query.limit;
 
-                    updateURL();
+                    updateState();
                   } else {
                     let A = JSON.parse(event.data),
                             heatpoints = false,
@@ -709,26 +731,41 @@
             }
 
 
-        function updateURL(){
+        function updateState(){
             let params = {},
                 type = $("#select_type").val(),
                 num = $("#select_num").val();
 
-            if (type == "activities") params.limit = num;
-            else if (type == "activity_ids") params.id = $("#activity_ids").val();
-            else if (type == "days") params.preset = num;
-            else {
-                if (appState.date1) params.date1 = appState.date1;
-                if (appState.date2 && (appState.date2 != "now")) params.date2 = appState.date2;
+            if (type == "activities") {
+                params.limit = num;
+            } else if (type == "activity_ids") {
+                params.id = $("#activity_ids").val();
+            } else if (type == "days") {
+                params.preset = num;
+            } else {
+                if (appState.date1) {
+                    params.date1 = appState.date1;
+                }
+                if (appState.date2 && (appState.date2 != "now")) {
+                    params.date2 = appState.date2;
+                }
             }
 
-            if ($("#info").is(':checked'))
-                params.info = "1";
+            if (appState.paused){
+                params.paused = "1";
+            }
 
-            if($("#autozoom").is(':checked')) {
+            if ($("#info").is(':checked')) {
+                appState.info = true;
+                params.info = "1";
+            }
+
+            if ($("#autozoom").is(':checked')) {
+                appState.autozoom = true;
                 params.autozoom = "1";
             } else {
-                let zoom = map.getZoom();
+                appState.autozoom = false;
+                let zoom = map.getZoom(),
                     center = map.getCenter(),
                     precision = Math.max(0, Math.ceil(Math.log(zoom) / Math.LN2));
                 params.lat = center.lat.toFixed(precision);
@@ -736,11 +773,13 @@
                 params.zoom = zoom;
             }
 
-            if ($("#heatres").val())
+            if ($("#heatres").val()) {
                 params.heatres = $("#heatres").val();
+            }
 
-            if ($("#flowres").val())
+            if ($("#flowres").val()) {
                 params.flowres = $("#flowres").val();
+            }
 
             params["baselayer"] = appState.baseLayers;
 
@@ -806,10 +845,14 @@
             });
 
             map.on('moveend', function(e) {
-                updateURL();
+                if (!appState.autozoom) {
+                    updateState();
+                }
             });
 
-            $("#autozoom").on("change",updateURL);
+            $("#autozoom").on("change", updateState);
+            $("#info").on("change", updateState);
+
             $("#zoom-table-selection").on("change", function(){
                 if ( $("#zoom-table-selection").is(':checked')) {
                     zoomToSelected();
