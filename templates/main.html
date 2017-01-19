@@ -853,11 +853,11 @@
                 }
             });
 
-            $("#render-selection-button").prop("checked", true);
 
             $("#autozoom").on("change", updateState);
             $("#info").on("change", updateState);
 
+            $("#zoom-table-selection").prop("checked", true);
             $("#zoom-table-selection").on("change", function(){
                 if ( $("#zoom-table-selection").is(':checked')) {
                     zoomToSelected();
