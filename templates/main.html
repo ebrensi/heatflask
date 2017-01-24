@@ -48,11 +48,12 @@
                 <li><a href="#messages" role="tab"><i class="fa fa-sticky-note-o"></i></a></li>
             </ul>
 
-            <!-- <ul role="tablist">
-                <li class="disabled">
+            <ul role="tablist">
+                <li>
                 <a href="#settings" role="tab"><i class="fa fa-gear"></i></a>
                 </li>
-            </ul> -->
+            </ul>
+
         </div>
 
         <!-- Tab panes -->
@@ -230,6 +231,75 @@
 
             <div class="sidebar-pane" id="settings">
                 <h1 class="sidebar-header">Map Settings<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
+                    <img src="{{ url_for('static', filename='under-construction.gif') }}" height=40>
+                    <form id="layer-settings-form">
+                    <div>
+                        <h4>Heatmap Options</h4>
+                        <label>Radius:
+                        <input class="heatmap-opt" id="radius" type="number" value={{ config["HEATMAP_DEFAULT_OPTIONS"]["radius"] }} min=0 max=20>
+                        </label>
+
+                        <label>
+                        Blur:
+                        <input class="heatmap-opt" id="blur" type="number" value={{ config["HEATMAP_DEFAULT_OPTIONS"]["blur"] }} min=0 max=20>
+                        </label>
+                        <br><br>
+                        <label>
+                        Gradient:
+                        </label>
+                        <table cellspacing="1">
+                            <thead>
+                            <th>Value</th><th>Color</th>
+                            </thead>
+
+                            <tbody>
+                            <tr>
+                            <td>
+                             <input class="heatmap-grad-val" id="1" type="number" value='0.4' step='0.01' min=0 max=1>
+                            </td>
+                            <td>
+                              <input class="heatmap-grad-color" id="1" type="color" value='#0000FF'>
+                            </td>
+                            </tr>
+
+                            <tr>
+                            <td>
+                             <input class="heatmap-grad-val" id="2" type="number" value='0.65' step='0.01' min=0 max=1>
+                            </td>
+                            <td>
+                              <input id="heatmap-grad-color" id="2" type="color" value='#00FF00'>
+                            </td>
+                            </tr>
+
+                            <tr>
+                            <td>
+                             <input class="heatmap-grad-val" id="3" type="number" value='1' step='0.01' min=0 max=1>
+                            </td>
+                            <td>
+                              <input id="heatmap-grad-color" id="3" type="color" value='#FF0000'>
+                            </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <hr>
+                    <div>
+                        <h4>Flowmap Options</h4>
+                        <label>Weight:</label>
+                        <input class="flowmap-opt" id="weight" type="number" value={{ config["ANTPATH_DEFAULT_OPTIONS"]["weight"] }} min=0 max=20>
+
+                        <label>Opacity:</label>
+                        <input class="flowmap-opt" id="opacity" type="number" value={{ config["ANTPATH_DEFAULT_OPTIONS"]["opacity"] }} min=0 max=20>
+
+                        <br>
+                        <h4>Flowmap Variation Constants</h4>
+                        <label>K:</label>
+                        <input class="flowmap-opt" id="K" type="number" value={{ config["FLOWPATH_VARIATION_CONSTANTS"]["K"] }} min=0 max=1000000>
+
+                        <label>T:</label>
+                        <input class="flowmap-opt" id="T" type="number" value={{ config["FLOWPATH_VARIATION_CONSTANTS"]["T"] }} min=0 max=1000000>
+                    </div>
+                    </form>
             </div>
         </div>
     </div>
