@@ -127,7 +127,7 @@
 
                 <hr>
                     <div class="data_message"></div>
-                    <div><progress class='progbar'></progress></div>
+                    <div><progress id='tab' class='progbar'></progress></div>
                 <hr>
 
                 <button type="button" id="renderButton" class="btn btn-primary">Render Layers</button>
@@ -573,7 +573,13 @@
             appState.items = {};
             atable.clear();
 
-            let progress_bars = $('.progbar'),
+
+            let msgBox = L.control.window(map,
+                {position: 'top',
+                 content:"<div class='data_message'></div><div><progress class='progbar' id='box'></progress></div>",
+                visible:true
+             }),
+                progress_bars = $('.progbar'),
                 rendering = true,
                 listening = true,
                 bounds = L.latLngBounds(),
@@ -581,12 +587,7 @@
                     BASE_DATAURL + "?" + jQuery.param(query, true)
                 );
 
-
-            let msgBox = L.control.window(map,
-                {position: 'top',
-                 content:"<div class='data_message'></div><div><progress class='progbar'></progress></div>",
-                visible:true
-             });
+            // debugger;
 
             $(".data_message").html("Rendering activities...");
             $("#abortButton").show();
@@ -656,16 +657,17 @@
                     } else if ("msg" in A) {
                         $(".data_message").html(A.msg);
                         if ("value" in A) {
-                            for (let i = 0; i < progress_bars.length; i++) {
-                                 progress_bars[i].value = parseFloat(A.value);
-                             }
+                            progress_bars.val(A.value);
+                            // for (let i = 0; i < progress_bars.length; i++) {
+                            //      progress_bars[i].value = A.value;
+                            //  }
                         }
                         return;
                     } else {
                         let d = parseFloat(A.total_distance),
                             dkm = +(d / 1000).toFixed(2),
                             ts = href( stravaActivityURL(A.id), A.beginTimestamp.slice(0,10) ),
-                             n = atable.row.add({
+                            n = atable.row.add({
                                 DT_RowId: A.id,
                                 Date: ts,
                                 Type: A.type,
