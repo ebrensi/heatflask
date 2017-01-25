@@ -18,13 +18,12 @@
   <table id='activities_list' class='display order-column' cellspacing='1' width='100%'>
     <thead>
       <th>ID</th>
+      <th>Link</th>
       <th>Date</th>
       <th>Type</th>
       <th>Dist</th>
       <th>Time</th>
       <th>Name</th>
-      <th>Strava</th>
-      <th>Heatflask</th>
     </thead>
     <tbody>
     </tbody>
@@ -43,6 +42,9 @@
         return `<a href='${url}' target='_blank'>${text}</a>`
     }
 
+    function img(url, w=20, h=20){
+      return `<img src=${url} width=${w} height=${h} class="img-fluid">`;
+    }
     function stravaActivityURL(id) {
         return `https://www.strava.com/activities/${id}`;
     }
@@ -51,10 +53,12 @@
       return "<td>" + text +"</td>";
     }
 
+
     jQuery(document).ready(function($) {
-        let source = new EventSource("{{ url_for('activity_stream', username=user.id, limit=limit) }}"),
-            count = 0,
-            USER_BASE_URL = "{{url_for('main',username=user.id)}}";
+        let heatflask_button = img("{{ url_for('static',filename='Heat.png') }}"),
+            USER_BASE_URL = "{{url_for('main',username=user.id)}}",
+            source = new EventSource("{{ url_for('activity_stream', username=user.id, limit=limit) }}");
+
         $("#status").text("Getting Activity List");
 
         source.onmessage = function(event) {
@@ -71,22 +75,19 @@
             });
           } else {
             let A = JSON.parse(event.data),
-                strava_link = href(stravaActivityURL(A.id), A.id),
-                heatflask_link = href(`?id=${A.id}`, A.id),
+                heatflask_link = href(`${USER_BASE_URL}?id=${A.id}`, heatflask_button),
                 ts = A.beginTimestamp.slice(0,10),
                 dkm = +(A.total_distance / 1000).toFixed(2),
                 row = "<tr>" +
-                   "<th scope='row'>" + A.id + "</th>" +
+                   td(href(stravaActivityURL(A.id), A.id)) +
+                   td(heatflask_link) +
                    td(ts) +
                    td(A.type) +
                    td(dkm) +
                    td(hhmmss(A.elapsed_time)) +
                    td(A.name) +
-                   td(strava_link) +
-                   td(heatflask_link) +
                    "</tr>";
             $('#activities_list tbody').append(row);
-            count++;
           }
         }
     });
