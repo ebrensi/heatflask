@@ -365,7 +365,7 @@ def main(username):
                     flash("'{}' is not a valid limit".format(limit))
                     limit = 1
             else:
-                limit = 30
+                limit = 10
 
     flowres = request.args.get("flowres", "")
     heatres = request.args.get("heatres", "")
