@@ -89,9 +89,13 @@ login_manager = flask_login.LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'splash'
 
-# @app.before_request
-# def log_request():
-#     app.logger.debug(vars(request))
+
+@app.before_request
+def log_request():
+    if "66.102.6" in request.access_route[-1]:
+        EventLogger.log_request(request,
+                                msg="(Google) {}".format(request.url))
+    # app.logger.debug(vars(request))
 
 
 @login_manager.user_loader
@@ -625,6 +629,9 @@ def user_profile(username):
 @log_request_event
 @admin_required
 def users_backup():
+    if "66.102.6" in request.access_route[-1]:
+        return "*** What's up Google? ***"
+
     return jsonify(Users.backup())
 
 
