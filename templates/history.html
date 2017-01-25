@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="{{ url_for('static', filename='js/jquery-3.1.0.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/datatables.min.js') }}"></script>
+</head>
+
+<body>
+    <h1>Events</h1>
+    <table id="events_table" class='display order-column compact' cellspacing='0' width='100%'>
+        <thead>
+            <th>time</th>
+            <th>ip</th>
+            <th>from</th>
+            <th>event</th>
+        </thead>
+        {%- for e in events %}
+          <tr>
+            <td>{{ id(e)|safe }}</td>
+            <td>{{ ip(e)|safe }}</td>
+            <td>{{ cuid(e)|safe }}</td>
+            <td>{{ e.get('msg', '')|safe }}</td>
+          </tr>
+        {%- endfor %}
+    </table>
+
+
+    <script>
+    $(document).ready(function() {
+        $('#events_table').DataTable({
+            paging: false,
+            scrollY: "80vh",
+            scrollX: true,
+            scrollCollapse: true,
+            select: true
+        });
+    });
+
+
+    </script>
+</body>
+</html>

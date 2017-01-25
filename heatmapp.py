@@ -614,20 +614,7 @@ def users():
         key=lambda(x): x["app_activity_count"] or 0
     )
 
-    html = """
-    <h1> Registered Users </h1>
-    <table>
-        {%- for d in data %}
-          <tr>
-            <td><a href="{{ url_for('main',username=d['id']) }}" target='_blank'>{{ d['id'] }}</a></td>
-            <td>{{ d["app_activity_count"] }}</td>
-            <td>{{ d["dt_last_active"] }}</td>
-          </tr>
-        {%- endfor %}
-    </table>
-
-    """
-    return render_template_string(html, data=info)
+    return render_template("admin.html", data=info)
 
 
 @app.route('/users/<username>')
@@ -677,31 +664,11 @@ def event_history():
 
     events = EventLogger.get_log()
     if events:
-        html = """
-        <h1>Events</h1>
-        <table>
-            <tr>
-            <td>time</td>
-            <td>ip</td>
-            <td>from</td>
-            <td>event</td>
-            </tr>
-            {%- for e in events %}
-              <tr>
-                <td>{{ id(e)|safe }}</td>
-                <td>{{ ip(e)|safe }}</td>
-                <td>{{ cuid(e)|safe }}</td>
-                <td>{{ e.get('msg', '')|safe }}</td>
-              </tr>
-            {%- endfor %}
-        </table>
-
-        """
-        return render_template_string(html,
-                                      events=events,
-                                      ip=ip_tag,
-                                      id=id_tag,
-                                      cuid=cuid_tag)
+        return render_template("history.html",
+                               events=events,
+                               ip=ip_tag,
+                               id=id_tag,
+                               cuid=cuid_tag)
     return "No history"
 
 
