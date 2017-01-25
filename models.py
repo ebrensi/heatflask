@@ -702,7 +702,7 @@ class EventLogger(object):
 
         mongodb.history_new.rename("history")
         stats = mongodb.command("collstats", "history")
-        cls.new_event(msg="rebuilt event log: ".format(stats))
+        cls.new_event(msg="rebuilt event log: {}".format(stats))
 
     @staticmethod
     def get_event(event_id):
