@@ -686,15 +686,23 @@ class Activities(object):
 
 class EventLogger(object):
 
-    @staticmethod
-    def init():
+    @classmethod
+    def init(cls, rebuild=True, size=app.config["MAX_HISTORY_BYTES"]):
         redis.delete("history")
-        mongodb.drop_collection("history")
-        mongodb.create_collection("history",
+        mongodb.create_collection("history_new",
                                   capped=True,
                                   # autoIndexId=False,
-                                  size=app.config["MAX_HISTORY_BYTES"])
-        # mongodb.history.create_index("ts")
+                                  size=size)
+
+        collections = mongodb.collection_names(include_system_collections=False)
+        if ("history" in collections) and rebuild:
+            all_docs = mongodb.history.find()
+            mongodb.history_new.insert_many(all_docs)
+            mongodb.history.drop()
+
+        mongodb.history_new.rename("history")
+        stats = mongodb.command("collstats", "history")
+        cls.new_event(msg="rebuilt event log: ".format(stats))
 
     @staticmethod
     def get_event(event_id):
