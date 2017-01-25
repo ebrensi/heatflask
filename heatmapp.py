@@ -98,8 +98,8 @@ def log_request():
         EventLogger.log_request(request,
                                 msg="(Google) {}".format(request.url))
 
-        app.logger.debug(request.access_route[-1])
-        return "Hey what's up Google visitor.  How are you doing? If you get this message then go to /googler"
+        # app.logger.debug(request.access_route[-1])
+        return "Hey what's up Google visitor!  How are you doing? If you get this message then go to /googler"
 
 
 @login_manager.user_loader
@@ -184,6 +184,9 @@ def splash():
             #  i.e. was deleted.  We direct them to initialize a new account.
             logout_user()
             flash("oops! Please log back in.")
+        else:
+            return redirect(url_for('main',
+                                    username=current_user.id))
     return render_template("splash.html",
                            next=(request.args.get("next") or
                                  url_for("splash")))
@@ -266,7 +269,7 @@ def auth_callback():
         EventLogger.new_event(msg="authenticated {}".format(user.id))
 
     return redirect(request.args.get("state") or
-                    url_for("main", username=current_user.id))
+                    url_for("main", username=user.id))
 
 
 @app.route("/<username>/logout")
