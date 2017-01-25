@@ -4,7 +4,6 @@
     <title>{{ config["APP_NAME"] }}</title>
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-
     <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
 
     {% assets "main_css" %}
@@ -20,8 +19,8 @@
     {% if not current_user.id in config["ADMIN"] %}
     {{analytics}}
     {% endif %}
-
 </head>
+
 <body>
     <div id="sidebar" class="sidebar collapsed">
         <!-- Nav tabs -->
@@ -49,7 +48,12 @@
             </ul>
 
             <ul role="tablist">
+                {% if current_user.is_authenticated
+                    and (current_user.id == user.id) %}
                 <li>
+                {% else %}
+                <li class="disabled">
+                {% endif %}
                 <a href="#settings" role="tab"><i class="fa fa-gear"></i></a>
                 </li>
             </ul>
