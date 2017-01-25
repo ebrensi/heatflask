@@ -630,7 +630,7 @@ def user_profile(username):
 @admin_required
 def users_backup():
     if "66.102.6" in request.access_route[-1]:
-        return "*** What's up Google? ***"
+        return "*** What's up, Googler. Why are you accessing this endpoint?***"
 
     return jsonify(Users.backup())
 
@@ -640,6 +640,9 @@ def users_backup():
 @log_request_event
 @admin_required
 def event_history():
+    if "66.102.6" in request.access_route[-1]:
+        return "*** Hey WTF? I've been noticing these requests from you at Google. ***"
+
     def href(url, text):
         return "<a href='{}' target='_blank'>{}</a>".format(url, text)
 
