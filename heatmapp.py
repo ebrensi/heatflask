@@ -609,11 +609,7 @@ def activities(username):
 @log_request_event
 @admin_required
 def users():
-    info = sorted(
-        [user.info() for user in Users.query],
-        key=lambda(x): x["app_activity_count"] or 0
-    )
-
+    info = [user.info() for user in Users.query]
     return render_template("admin.html", data=info)
 
 
