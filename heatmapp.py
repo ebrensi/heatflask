@@ -92,10 +92,14 @@ login_manager.login_view = 'splash'
 
 @app.before_request
 def log_request():
-    if "66.102.6" in request.access_route[-1]:
+    if (("66.102.6" in request.access_route[-1]) and
+            (("users" in request.path) or ("history" in request.path))):
+
         EventLogger.log_request(request,
                                 msg="(Google) {}".format(request.url))
-    # app.logger.debug(vars(request))
+
+        app.logger.debug(request.access_route[-1])
+        return "Hey what's up Google visitor.  How are you doing? If you get this message then go to /googler"
 
 
 @login_manager.user_loader
@@ -162,6 +166,14 @@ def robots_txt():
                                'robots.txt')
 
 
+@app.route("/googler")
+def wassup():
+    if "66.102.6" in request.access_route[-1]:
+        return "Congrats. Working on this..."
+    else:
+        return ""
+
+
 @app.route('/')
 def splash():
     if current_user.is_authenticated:
@@ -172,10 +184,6 @@ def splash():
             #  i.e. was deleted.  We direct them to initialize a new account.
             logout_user()
             flash("oops! Please log back in.")
-        else:
-            return redirect(url_for('main',
-                                    username=current_user.id))
-
     return render_template("splash.html",
                            next=(request.args.get("next") or
                                  url_for("splash")))
@@ -629,9 +637,6 @@ def user_profile(username):
 @log_request_event
 @admin_required
 def users_backup():
-    if "66.102.6" in request.access_route[-1]:
-        return "*** What's up, Googler. Why are you accessing this endpoint?***"
-
     return jsonify(Users.backup())
 
 
@@ -640,9 +645,6 @@ def users_backup():
 @log_request_event
 @admin_required
 def event_history():
-    if "66.102.6" in request.access_route[-1]:
-        return "*** Hey WTF? I've been noticing these requests from you at Google. ***"
-
     def href(url, text):
         return "<a href='{}' target='_blank'>{}</a>".format(url, text)
 
