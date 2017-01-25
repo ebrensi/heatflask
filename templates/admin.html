@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <script src="{{ url_for('static', filename='js/jquery-3.1.0.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/jquery-ui.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/datatables.min.js') }}"></script>
+</head>
+
+<body>
+    <h1> Registered Users </h1>
+    <table id="users_table" class='display order-column' cellspacing='0' width='100%'>
+        <thead>
+        <th>ID</th>
+        <th>count</th>
+        <th>last active</th>
+        </thead>
+        {%- for d in data %}
+          <tr>
+            <td><a href="{{ url_for('main',username=d['id']) }}" target='_blank'>{{ d['id'] }}</a></td>
+            <td>{{ d["app_activity_count"] }}</td>
+            <td>{{ d["dt_last_active"] }}</td>
+          </tr>
+        {%- endfor %}
+    </table>
+
+
+    <script>
+    let atable = $('#users_table').DataTable({
+            paging: false,
+            scrollY: "70vh",
+            scrollX: true,
+            scrollCollapse: true,
+            order: [[ 1, "desc" ]]
+        });
+    </script>
+</body>
+</html>

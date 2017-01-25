@@ -8,72 +8,84 @@
       }
     </style>
     <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
-
-    <!-- JQuery -->
     <script src="{{ url_for('static', filename='js/jquery-3.1.0.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/jquery-ui.min.js') }}"></script>
-    <!-- <script src="{{ url_for('static', filename='js/jquery.dataTables.min.js') }}"></script> -->
+    <script src="{{ url_for('static', filename='js/datatables.min.js') }}"></script>
   </head>
-  <body>
 
+  <body>
   <h2>Activities list</h2>
-  <br>
   <div class="table-responsive">
-   <table class="table table-hover table-sm table-bordered" id="activities_list">
-  <thead>
-    <tr>
-      <th>id</th>
-      <th>date</th>
-      <th>type</th>
-      <th>name</th>
-      <th>Strava link</th>
-      <th>Heatflask link</th>
-    </tr>
-  </thead>
-  <tbody>
-  </tbody>
-</table>
+  <table id='activities_list' class='display order-column' cellspacing='0' width='100%'></table>
   </div>
 
 
   <div id="status"></div>
 
   <script>
+    let atable = $('#activities_list').DataTable({
+            paging: false,
+            scrollY: "70vh",
+            scrollX: true,
+            scrollCollapse: true,
+            order: [[ 1, "desc" ]],
+            select: true,
+            columns: [
+                { data: "ID", title: "ID" },
+                { data: "date", title: "Date"},
+                { data: "type", title: "Type"},
+                { data: "dist", title: "Dist"},
+                { data: "time", title: "Time"},
+                { data: "name", title: "Name"},
+                { data: "strava_link", title: "Strava"},
+                { data: "heatflask_link", title: "Heatflask"}
+
+            ]
+        });
+
+    function hhmmss(secs) {
+        return new Date(secs * 1000).toISOString().substr(11, 8);
+    }
+
+    function href(url, text){
+        return `<a href='${url}' target='_blank'>${text}</a>`
+    }
+
+    function stravaActivityURL(id) {
+        return `https://www.strava.com/activities/${id}`;
+    }
+
+
     jQuery(document).ready(function($) {
-        var source = new EventSource("{{ url_for('activity_stream', username=user.id, limit=limit) }}");
-        var count = 0;
+        let source = new EventSource("{{ url_for('activity_stream', username=user.id, limit=limit) }}"),
+            count = 0,
+            USER_BASE_URL = "{{url_for('main',username=user.id)}}";
         $("#status").text("Getting Activity List");
 
         source.onmessage = function(event) {
-          // console.log(event.data);
-          if (event.data != 'done'){
-            var a = JSON.parse(event.data),
-                row,
-                link,
-                highlight;
-
-            if (a.cached == "yes"){
-                highlight = "class='table-active'";
-            } else {
-              highlight = "";
-            }
-
-            strava_link = "<a href='https://www.strava.com/activities/" +a.id + "' target='_blank'>Strava " + a.id +"</a>"
-            heatflask_link = "<a href={{ url_for('main',username=user.id) }}?id=" +a.id + " target='_blank'> Heatflask " + a.id +"</a>"
-            row = "<tr " + highlight +  ">" +
-                   "<th scope='row'>" + a.id + "</th>" +
-                   "<td>" + a.beginTimestamp +"</td>" +
-                   "<td>" + a.type + "</td>" +
-                   "<td>" + a.name + "</td>" +
-                   "<td>" + strava_link + "</td>" +
-                   "<td>" + heatflask_link + "</td>" +
-                   "</tr>";
-            $('#activities_list tbody').append(row);
-
-            count++;
-          } else {
+          if (event.data == 'done') {
             source.close();
             $("#status").text("Listing " + count + " activities");
+          } else {
+            let A = JSON.parse(event.data),
+                strava_link = href(stravaActivityURL(A.id), A.id),
+                heatflask_link = href(`?id=${A.id}`, A.id),
+                ts = A.beginTimestamp.slice(0,10),
+                dkm = +(A.total_distance / 1000).toFixed(2);
+
+            atable.row.add({
+                  DT_RowId: A.id,
+                  ID: A.id,
+                  date: ts,
+                  type: A.type,
+                  dist: dkm,
+                  time: hhmmss(A.elapsed_time),
+                  name: A.name,
+                  strava_link: strava_link,
+                  heatflask_link: heatflask_link
+            }).draw(false).node();
+
+            count++;
           }
         }
     });
