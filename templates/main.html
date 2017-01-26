@@ -10,10 +10,10 @@
     <link rel="stylesheet" href="{{ ASSET_URL }}" />
     {% endassets %}
 
-
     {% assets "main_js" %}
     <script type="text/javascript" src="{{ ASSET_URL }}"></script>
     {% endassets %}
+
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBLvYWwPmLsBRCGXeMHh-InA9rq35jdVeA" async defer></script>
 
     {% if not current_user.id in config["ADMIN"] %}

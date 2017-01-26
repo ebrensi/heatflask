@@ -40,41 +40,61 @@ Analytics(app)
 
 # we bundle javascript and css dependencies to reduce client-side overhead
 bundles = {
-    "main_css": flask_assets.Bundle('css/main.css',
-                                    'css/jquery-ui.css',
-                                    'css/bootstrap.min.css',
-                                    'css/font-awesome.min.css',
-                                    'css/leaflet.css',
-                                    'css/leaflet-sidebar.min.css',
-                                    'css/L.Control.Window.css',
-                                    'css/L.Control.Locate.min.css',
-                                    'css/datatables.min.css',
-                                    'css/easy-button.css',
-                                    filters='cssmin',
-                                    output='gen/main.css'),
+    "main_css": flask_assets.Bundle(
+        'css/main.css',
+        'css/jquery-ui.css',
+        'css/bootstrap.min.css',
+        'css/font-awesome.min.css',
+        'css/leaflet.css',
+        'css/leaflet-sidebar.min.css',
+        'css/L.Control.Window.css',
+        'css/L.Control.Locate.min.css',
+        'css/datatables.min.css',
+        'css/easy-button.css',
+        filters='cssmin',
+        output='gen/main.css'
+    ),
 
-    "main_js": flask_assets.Bundle('js/jquery-3.1.0.min.js',
-                                   'js/jquery-ui.min.js',
-                                   'js/datatables.min.js',
-                                   'js/leaflet.js',
-                                   'js/leaflet-sidebar.min.js',
-                                   'js/Polyline.encoded.js',
-                                   'js/moment.js',
-                                   'js/leaflet-heat.js',
-                                   'js/leaflet-ant-path.js',
-                                   'js/L.Control.Window.js',
-                                   'js/leaflet-providers.js',
-                                   'js/Leaflet.GoogleMutant.js',
-                                   'js/L.Control.Locate.min.js',
-                                   'js/easy-button.js',
-                                   'js/eventsource.js',
-                                   filters='rjsmin',
-                                   output='gen/main.js'),
+    "main_js": flask_assets.Bundle(
+        'js/jquery-3.1.0.min.js',
+        'js/jquery-ui.min.js',
+        'js/datatables.min.js',
+        'js/leaflet.js',
+        'js/leaflet-sidebar.min.js',
+        'js/Polyline.encoded.js',
+        'js/moment.js',
+        'js/leaflet-heat.js',
+        'js/leaflet-ant-path.js',
+        'js/L.Control.Window.js',
+        'js/leaflet-providers.js',
+        'js/Leaflet.GoogleMutant.js',
+        'js/L.Control.Locate.min.js',
+        'js/easy-button.js',
+        'js/eventsource.js',
+        filters='rjsmin',
+        output='gen/main.js'
+    ),
 
-    "splash_css": flask_assets.Bundle('css/bootstrap.min.css',
-                                      'css/cover.css',
-                                      filters='cssmin',
-                                      output='gen/splash.css')
+    "splash_css": flask_assets.Bundle(
+        'css/bootstrap.min.css',
+        'css/cover.css',
+        filters='cssmin',
+        output='gen/splash.css'
+    ),
+
+    "basic_table_css": flask_assets.Bundle(
+        'css/bootstrap.min.css',
+        'css/datatables.min.css',
+        filters='cssmin',
+        output='gen/basic_table.css'
+    ),
+
+    "basic_table_js": flask_assets.Bundle(
+        'js/jquery-3.1.0.min.js',
+        'js/datatables.min.js',
+        filters='rjsmin',
+        output='gen/basic_table.js'
+    )
 
 }
 assets = flask_assets.Environment(app)
