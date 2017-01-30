@@ -330,7 +330,6 @@
                 "Google.Terrain": L.gridLayer.googleMutant({type: 'terrain'}),
                 "Google.Hybrid": L.gridLayer.googleMutant({type: 'hybrid'})
             },
-            boundsRect,
             HeatLayer = false,
             FlowLayer = false,
             appState = {
@@ -520,16 +519,11 @@
                 opacity: 1
             });
 
-
-            boundsRect = L.rectangle(A.bounds, {color: "red", weight: 1}).addTo(map);
-
-
             return A;
         }
 
 
         function unhighlightPath(id){
-            map.removeLayer(boundsRect)
 
             let A = appState.items[id];
             if (A.selected) return false;
