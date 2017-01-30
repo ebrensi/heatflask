@@ -330,6 +330,7 @@
                 "Google.Terrain": L.gridLayer.googleMutant({type: 'terrain'}),
                 "Google.Hybrid": L.gridLayer.googleMutant({type: 'hybrid'})
             },
+            boundsRect,
             HeatLayer = false,
             FlowLayer = false,
             appState = {
@@ -354,7 +355,8 @@
         let map = L.map('map',
                         {center: [{{ lat }}, {{ lng }}],
                          zoom: {{ zoom }},
-                         layers : [ default_baseLayer ]
+                         layers : [ default_baseLayer ],
+                         renderer: L.svg({ padding: 1 })
                   });
 
 
@@ -518,11 +520,17 @@
                 opacity: 1
             });
 
+
+            boundsRect = L.rectangle(A.bounds, {color: "red", weight: 1}).addTo(map);
+
+
             return A;
         }
 
 
         function unhighlightPath(id){
+            map.removeLayer(boundsRect)
+
             let A = appState.items[id];
             if (A.selected) return false;
 
@@ -798,7 +806,9 @@
 
                     let points = heatpoints || flowpoints;
                     if (points) {
-                        A.bounds = L.latLngBounds(points);
+                        if (!A.bounds) {
+                            A.bounds = L.latLngBounds(points);
+                        }
                         bounds.extend(A.bounds);
                         delete A.summary_polyline;
                         delete A.polyline;

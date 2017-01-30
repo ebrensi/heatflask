@@ -296,6 +296,21 @@ class Users(UserMixin, db_sql.Model):
             redis.delete(key)
 
     def index(self, activity_ids=None, limit=None,  after=None, before=None):
+        def bounds(poly):
+            if poly:
+                latlngs = polyline.decode(poly)
+                # app.logger.info("latlngs: {}".format(latlngs))
+
+                lats = [ll[0] for ll in latlngs]
+                lngs = [ll[1] for ll in latlngs]
+
+                SW = (min(lats), min(lngs))
+                NE = (max(lats), max(lngs))
+
+                # app.logger.info("SW = {}, NE = {}".format(SW, NE))
+                return SW, NE
+            else:
+                return []
 
         def strava2dict(a):
             return {
@@ -306,8 +321,10 @@ class Users(UserMixin, db_sql.Model):
                 "beginTimestamp": a.start_date_local,
                 "total_distance": float(a.distance),
                 "elapsed_time": int(a.elapsed_time.total_seconds()),
-                "average_speed": float(a.average_speed)
+                "average_speed": float(a.average_speed),
+                "bounds": bounds(a.map.summary_polyline)
             }
+
         dtypes = {
             "id": "uint32",
             "type": "category",
