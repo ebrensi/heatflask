@@ -322,7 +322,7 @@ class Users(UserMixin, db_sql.Model):
                 "total_distance": float(a.distance),
                 "elapsed_time": int(a.elapsed_time.total_seconds()),
                 "average_speed": float(a.average_speed),
-                "bounds": bounds(a.map.summary_polyline)
+                # "bounds": bounds(a.map.summary_polyline)
             }
 
         dtypes = {
