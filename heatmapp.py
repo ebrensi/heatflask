@@ -502,10 +502,10 @@ def getdata(username):
     def sse_iterator(client, Q):
         start_time = datetime.utcnow()
 
-        streams_out = ["polyline", "time"]
-        streams_to_cache = ["polyline", "time"]
-        # streams_out = ["polyline"]
-        # streams_to_cache = ["polyline"]
+        # streams_out = ["polyline", "time"]
+        # streams_to_cache = ["polyline", "time"]
+        streams_out = ["polyline"]
+        streams_to_cache = ["polyline"]
 
         def import_and_queue(Q, activity):
             stream_data = Activities.import_streams(
@@ -568,7 +568,6 @@ def getdata(username):
                         Q.put(sse_out(activity))
                         gevent.sleep(0)
         except Exception as e:
-            # raise
             Q.put(sse_out({"error": str(e)}))
 
         pool.join(timeout=10)  # make sure all spawned jobs are done
