@@ -72,6 +72,13 @@ class Users(UserMixin, db_sql.Model):
     dt_last_active = Column(pg.TIMESTAMP)
     app_activity_count = Column(Integer, default=0)
     activity_index = None
+    index_df_dtypes = {
+        "id": "uint32",
+        "type": "category",
+        "total_distance": "float32",
+        "elapsed_time": "uint32",
+        "average_speed": "float16"
+    }
 
     def db_state(self):
         state = inspect(self)
@@ -295,7 +302,80 @@ class Users(UserMixin, db_sql.Model):
         else:
             redis.delete(key)
 
+    def get_activity_index(self):
+        if not self.activity_index:
+            try:
+                self.activity_index = (mongodb.indexes
+                                       .find_one({"_id": self.id}))
+            except Exception as e:
+                app.logger.debug(
+                    "error accessing mongodb indexes collection:\n{}"
+                    .format(e))
+
+        return self.activity_index
+
+    def update_activity_index(self, index_df=None):
+        if (index_df is None) and self.get_activity_index():
+            index_df = pd.read_msgpack(
+                self.activity_index["packed_index"]
+            ).astype({"type": str})
+
+        latest = index_df.index[0]
+        # app.logger.info("updating activity index for {}"
+        #                 .format(self.id))
+
+        already_got = set(index_df.id)
+
+        try:
+            activities_list = [Activities.strava2dict(
+                a) for a in self.client().get_activities(after=latest)
+                if a.id not in already_got]
+        except Exception as e:
+            return [{"error": str(e)}]
+
+        # whether or not there are any new activities,
+        # we will update the timestamp
+        to_update = {"dt_last_indexed": datetime.utcnow()}
+
+        if activities_list:
+            new_df = pd.DataFrame(activities_list).set_index(
+                "beginTimestamp")
+
+            index_df = (
+                new_df.append(index_df)
+                .drop_duplicates()
+                .sort_index(ascending=False)
+                .astype(Users.index_df_dtypes)
+            )
+
+            to_update["packed_index"] = (
+                Binary(index_df.to_msgpack(compress='blosc'))
+            )
+
+        # update activity_index in this user
+        self.activity_index.update(to_update)
+
+        # update the cache entry for this user (necessary?)
+        self.cache()
+
+        # update activity_index in MongoDB
+        try:
+            mongodb.indexes.update_one(
+                {"_id": self.id},
+                {"$set": to_update}
+            )
+        except Exception as e:
+            app.logger.debug(
+                "error updating activity index for {} in MongoDB:\n{}"
+                .format(self, e)
+            )
+
+        return index_df
+
     def index(self, activity_ids=None, limit=None,  after=None, before=None):
+        Q = Queue()
+        P = Pool()
+
         def bounds(poly):
             if poly:
                 latlngs = polyline.decode(poly)
@@ -312,43 +392,13 @@ class Users(UserMixin, db_sql.Model):
             else:
                 return []
 
-        def strava2dict(a):
-            return {
-                "id": a.id,
-                "name": a.name,
-                "type": a.type,
-                "summary_polyline": a.map.summary_polyline,
-                "beginTimestamp": a.start_date_local,
-                "total_distance": float(a.distance),
-                "elapsed_time": int(a.elapsed_time.total_seconds()),
-                "average_speed": float(a.average_speed),
-                # "bounds": bounds(a.map.summary_polyline)
-            }
-
-        dtypes = {
-            "id": "uint32",
-            "type": "category",
-            "total_distance": "float32",
-            "elapsed_time": "uint32",
-            "average_speed": "float16"
-        }
-
         if self.indexing():
             return [{
                     "error": "Building activity index for {}".format(self.id)
                     + "...<br>Please try again in a few seconds.<br>"
                     }]
 
-        if not self.activity_index:
-            try:
-                self.activity_index = (mongodb.indexes
-                                       .find_one({"_id": self.id}))
-            except Exception as e:
-                app.logger.debug(
-                    "error accessing mongodb indexes collection:\n{}"
-                    .format(e))
-
-        if self.activity_index:
+        if self.get_activity_index():
             index_df = pd.read_msgpack(
                 self.activity_index["packed_index"]
             ).astype({"type": str})
@@ -358,55 +408,7 @@ class Users(UserMixin, db_sql.Model):
 
             # update the index if we need to
             if (elapsed > INDEX_UPDATE_TIMEOUT) and (not OFFLINE):
-                latest = index_df.index[0]
-                # app.logger.info("updating activity index for {}"
-                #                 .format(self.id))
-
-                already_got = set(index_df.id)
-
-                try:
-                    activities_list = [strava2dict(
-                        a) for a in self.client().get_activities(after=latest)
-                        if a.id not in already_got]
-                except Exception as e:
-                    return [{"error": str(e)}]
-
-                # whether or not there are any new activities,
-                # we will update the timestamp
-                to_update = {"dt_last_indexed": datetime.utcnow()}
-
-                if activities_list:
-                    new_df = pd.DataFrame(activities_list).set_index(
-                        "beginTimestamp")
-
-                    index_df = (
-                        new_df.append(index_df)
-                        .drop_duplicates()
-                        .sort_index(ascending=False)
-                        .astype(dtypes)
-                    )
-
-                    to_update["packed_index"] = (
-                        Binary(index_df.to_msgpack(compress='blosc'))
-                    )
-
-                # update activity_index in this user
-                self.activity_index.update(to_update)
-
-                # update the cache entry for this user (necessary?)
-                self.cache()
-
-                # update activity_index in MongoDB
-                try:
-                    mongodb.indexes.update_one(
-                        {"_id": self.id},
-                        {"$set": to_update}
-                    )
-                except Exception as e:
-                    app.logger.debug(
-                        "error updating activity index for {} in MongoDB:\n{}"
-                        .format(self, e)
-                    )
+                index_df = self.update_activity_index(index_df)
 
             if activity_ids:
                 df = index_df[index_df["id"].isin(activity_ids)]
@@ -424,9 +426,6 @@ class Users(UserMixin, db_sql.Model):
             return df.to_dict("records")
 
         # If we got here then the index hasn't been created yet
-        Q = Queue()
-        P = Pool()
-
         def build_index(user, limit=None, after=None, before=None):
 
             user.indexing(True)
@@ -436,7 +435,7 @@ class Users(UserMixin, db_sql.Model):
             count = 0
             try:
                 for a in user.client().get_activities():
-                    d = strava2dict(a)
+                    d = Activities.strava2dict(a)
                     if d.get("summary_polyline"):
                         activities_list.append(d)
                         count += 1
@@ -474,7 +473,7 @@ class Users(UserMixin, db_sql.Model):
                 index_df = (pd.DataFrame(activities_list)
                             .set_index("beginTimestamp")
                             .sort_index(ascending=False)
-                            .astype(dtypes))
+                            .astype(Users.index_df_dtypes))
 
                 packed = Binary(index_df.to_msgpack(compress='blosc'))
                 user.activity_index = {
@@ -572,6 +571,20 @@ class Activities(object):
 
     ATYPE_MAP = {atype.lower(): {"path_color": color, "vtype": vtype}
                  for atype, vtype, color in ATYPE_SPECS}
+
+    @staticmethod
+    def strava2dict(a):
+        return {
+            "id": a.id,
+            "name": a.name,
+            "type": a.type,
+            "summary_polyline": a.map.summary_polyline,
+            "beginTimestamp": a.start_date_local,
+            "total_distance": float(a.distance),
+            "elapsed_time": int(a.elapsed_time.total_seconds()),
+            "average_speed": float(a.average_speed),
+            # "bounds": bounds(a.map.summary_polyline)
+        }
 
     @staticmethod
     def cache_key(id):
