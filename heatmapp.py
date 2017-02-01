@@ -521,7 +521,7 @@ def getdata(username):
         pool = gevent.pool.Pool(app.config.get("CONCURRENCY"))
         Q.put(sse_out({"msg": "Retrieving Index..."}))
 
-        activity_data = user.index(**options)
+        activity_data = user.query_index(**options)
         if isinstance(activity_data, list):
             total = len(activity_data)
             ftotal = float(total)
@@ -618,7 +618,7 @@ def activity_stream(username):
                 options["limit"] = int(request.args.get("limit"))
 
         def boo():
-            for a in user.index(**options):
+            for a in user.query_index(**options):
                 yield "data: {}\n\n".format(json.dumps(a))
             yield "data: done\n\n"
 
