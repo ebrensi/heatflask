@@ -296,13 +296,13 @@ class Users(UserMixin, db_sql.Model):
         #  This should not take any longer than 30 seconds
         key = "indexing {}".format(self.id)
         if status is None:
-            return redis.get(key)
+            return redis.get(key) == "True"
         elif status:
-            return redis.setex(key, status, 30)
+            return redis.setex(key, status, 60)
         else:
             redis.delete(key)
 
-    def get_activity_index(self):
+    def get_raw_index(self):
         if not self.activity_index:
             try:
                 self.activity_index = (mongodb.indexes
@@ -314,8 +314,105 @@ class Users(UserMixin, db_sql.Model):
 
         return self.activity_index
 
-    def update_activity_index(self, index_df=None):
-        if (index_df is None) and self.get_activity_index():
+    def build_index(self, out_queue=None, limit=None, after=None, before=None):
+        def enqueue(msg):
+            if out_queue is None:
+                pass
+            else:
+                out_queue.put(msg)
+
+        self.indexing(True)
+        start_time = datetime.utcnow()
+
+        activities_list = []
+        count = 0
+        try:
+            for a in self.client().get_activities():
+                d = Activities.strava2dict(a)
+                if d.get("summary_polyline"):
+                    activities_list.append(d)
+                    count += 1
+                    if (limit or
+                        (after and (d["beginTimestamp"] >= after)) or
+                            (before and (d["beginTimestamp"] <= before))):
+                        d2 = dict(d)
+                        d2["beginTimestamp"] = str(d2["beginTimestamp"])
+                        enqueue(d2)
+                        # app.logger.info("put {} on queue".format(d2["id"]))
+
+                        if limit:
+                            limit -= 1
+                            if not limit:
+                                enqueue({"stop_rendering": "1"})
+                    else:
+                        enqueue({"msg": "indexing...{} activities"
+                                 .format(count)})
+                    gevent.sleep(0)
+        except Exception as e:
+            enqueue({"error": str(e)})
+        else:
+            if not activities_list:
+                enqueue({"error": "No activities!"})
+                enqueue(StopIteration)
+                self.indexing(False)
+                EventLogger.new_event(
+                    msg="no activities for {}".format(self.id)
+                )
+                return
+
+            enqueue({"msg": "done indexing {} activities.".format(count)})
+
+            index_df = (pd.DataFrame(activities_list)
+                        .set_index("beginTimestamp")
+                        .sort_index(ascending=False)
+                        .astype(Users.index_df_dtypes))
+
+            packed = Binary(index_df.to_msgpack(compress='blosc'))
+            self.activity_index = {
+                "dt_last_indexed": datetime.utcnow(),
+                "packed_index": packed
+            }
+
+            # app.logger.debug("done with indexing for {}".format(self))
+            elapsed = datetime.utcnow() - start_time
+            EventLogger.new_event(
+                msg="{}'s activities indexed in {} sec. count={}, size={}"
+                .format(self.id,
+                        round(elapsed.total_seconds(), 3),
+                        count,
+                        len(packed)))
+
+            # update the cache for this user
+            self.cache()
+
+            # if MongoDB access fails then at least the activity index
+            # is cached with the user for a while.  Since we're using
+            # a cheap sandbox version of Mongo, it might be down sometimes.
+            try:
+                result = mongodb.indexes.update_one(
+                    {"_id": self.id},
+                    {"$set": self.activity_index},
+                    upsert=True)
+
+                # app.logger.info(
+                #     "inserted activity index for {} in MongoDB: {}"
+                #     .format(self, vars(result))
+                # )
+            except Exception as e:
+                app.logger.debug(
+                    "error wrtiting activity index for {} to MongoDB:\n{}"
+                    .format(self, e)
+                )
+
+        finally:
+            self.indexing(False)
+            enqueue(StopIteration)
+
+        if activities_list:
+            return index_df
+
+    def update_index(self, index_df=None):
+        if (index_df is None) and self.get_raw_index():
             index_df = pd.read_msgpack(
                 self.activity_index["packed_index"]
             ).astype({"type": str})
@@ -372,9 +469,7 @@ class Users(UserMixin, db_sql.Model):
 
         return index_df
 
-    def index(self, activity_ids=None, limit=None,  after=None, before=None):
-        Q = Queue()
-        P = Pool()
+    def query_index(self, activity_ids=None, limit=None,  after=None, before=None):
 
         def bounds(poly):
             if poly:
@@ -398,7 +493,7 @@ class Users(UserMixin, db_sql.Model):
                     + "...<br>Please try again in a few seconds.<br>"
                     }]
 
-        if self.get_activity_index():
+        if self.get_raw_index():
             index_df = pd.read_msgpack(
                 self.activity_index["packed_index"]
             ).astype({"type": str})
@@ -408,7 +503,7 @@ class Users(UserMixin, db_sql.Model):
 
             # update the index if we need to
             if (elapsed > INDEX_UPDATE_TIMEOUT) and (not OFFLINE):
-                index_df = self.update_activity_index(index_df)
+                index_df = self.update_index(index_df)
 
             if activity_ids:
                 df = index_df[index_df["id"].isin(activity_ids)]
@@ -425,98 +520,9 @@ class Users(UserMixin, db_sql.Model):
             df.beginTimestamp = df.beginTimestamp.astype(str)
             return df.to_dict("records")
 
-        # If we got here then the index hasn't been created yet
-        def build_index(user, limit=None, after=None, before=None):
-
-            user.indexing(True)
-            start_time = datetime.utcnow()
-
-            activities_list = []
-            count = 0
-            try:
-                for a in user.client().get_activities():
-                    d = Activities.strava2dict(a)
-                    if d.get("summary_polyline"):
-                        activities_list.append(d)
-                        count += 1
-                        if (limit or
-                            (after and (d["beginTimestamp"] >= after)) or
-                                (before and (d["beginTimestamp"] <= before))):
-                            d2 = dict(d)
-                            d2["beginTimestamp"] = str(d2["beginTimestamp"])
-                            Q.put(d2)
-                            # app.logger.info("put {} on
-                            # queue".format(d2["id"]))
-
-                            if limit:
-                                limit -= 1
-                                if not limit:
-                                    Q.put({"stop_rendering": "1"})
-                        else:
-                            Q.put({"msg": "indexing...{} activities"
-                                   .format(count)})
-                        gevent.sleep(0)
-            except Exception as e:
-                Q.put({"error": str(e)})
-            else:
-                if not activities_list:
-                    Q.put({"error": "No activities!"})
-                    Q.put(StopIteration)
-                    user.indexing(False)
-                    EventLogger.new_event(
-                        msg="no activities for {}".format(user.id)
-                    )
-                    return
-
-                Q.put({"msg": "done indexing {} activities.".format(count)})
-
-                index_df = (pd.DataFrame(activities_list)
-                            .set_index("beginTimestamp")
-                            .sort_index(ascending=False)
-                            .astype(Users.index_df_dtypes))
-
-                packed = Binary(index_df.to_msgpack(compress='blosc'))
-                user.activity_index = {
-                    "dt_last_indexed": datetime.utcnow(),
-                    "packed_index": packed
-                }
-
-                # app.logger.debug("done with indexing for {}".format(user))
-                elapsed = datetime.utcnow() - start_time
-                EventLogger.new_event(
-                    msg="{}'s activities indexed in {} sec. count={}, size={}"
-                    .format(user.id,
-                            round(elapsed.total_seconds(), 3),
-                            count,
-                            len(packed)))
-
-                # update the cache for this user
-                user.cache()
-
-                # if MongoDB access fails then at least the activity index
-                # is cached with the user for a while.  Since we're using
-                # a cheap sandbox version of Mongo, it might be down sometimes.
-                try:
-                    result = mongodb.indexes.update_one(
-                        {"_id": user.id},
-                        {"$set": user.activity_index},
-                        upsert=True)
-
-                    # app.logger.info(
-                    #     "inserted activity index for {} in MongoDB: {}"
-                    #     .format(user, vars(result))
-                    # )
-                except Exception as e:
-                    app.logger.debug(
-                        "error wrtiting activity index for {} to MongoDB:\n{}"
-                        .format(user, e)
-                    )
-
-            finally:
-                user.indexing(False)
-                Q.put(StopIteration)
-
-        P.apply_async(build_index, [self, limit, after, before])
+        Q = Queue()
+        P = Pool()
+        P.apply_async(self.build_index, [limit, Q, after, before])
         return Q
 
     def get_activity(self, a_id):
