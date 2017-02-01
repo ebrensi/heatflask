@@ -791,7 +791,7 @@ class Subscription(object):
                                       capped=True,
                                       size=1 * 1024 * 1024)
 
-        EventLogger.new_event({"msg": "Created subscription ".format(sub)})
+        EventLogger.new_event(msg="Created subscription ".format(sub))
         return {"created": str(sub)}
 
     @classmethod
@@ -802,26 +802,25 @@ class Subscription(object):
 
     @classmethod
     def delete(cls, subscription_id, delete_db=False):
-        if subscription_id not in cls.list():
-            try:
-                # if successful this will be null
-                result = cls.client.delete_subscription(subscription_id,
-                                                        **cls.credentials)
-            except Exception as e:
-                return {"error": str(e)}
+        try:
+            # if successful this will be null
+            result = cls.client.delete_subscription(subscription_id,
+                                                    **cls.credentials)
+        except Exception as e:
+            return {"error": str(e)}
 
-            if delete_db:
-                mongodb.subscription.drop()
+        if delete_db:
+            mongodb.subscription.drop()
 
-            EventLogger.new_event(
-                msg="deleted subscription {}".format(subscription_id)
-            )
-            return result
+        EventLogger.new_event(
+            msg="deleted subscription {}".format(subscription_id)
+        )
+        return result
 
     @classmethod
     def list(cls):
         subs = cls.client.list_subscriptions(**cls.credentials)
-        return [sub for sub in subs]
+        return [str(sub) for sub in subs]
 
     @staticmethod
     def update(update_raw):
