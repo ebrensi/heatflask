@@ -724,7 +724,6 @@ class EventLogger(object):
 
     @classmethod
     def init(cls, rebuild=True, size=app.config["MAX_HISTORY_BYTES"]):
-        redis.delete("history")
         mongodb.create_collection("history_new",
                                   capped=True,
                                   # autoIndexId=False,
@@ -768,6 +767,80 @@ class EventLogger(object):
             "agent": vars(req.user_agent),
         })
         cls.new_event(**args)
+
+
+class Subscription(object):
+    client = stravalib.Client()
+    credentials = {
+        "client_id": app.config["STRAVA_CLIENT_ID"],
+        "client_secret": app.config["STRAVA_CLIENT_SECRET"]
+    }
+
+    @classmethod
+    def create(cls, callback_url):
+        try:
+            sub = cls.client.create_subscription(
+                callback_url=callback_url,
+                **cls.credentials
+            )
+        except Exception as e:
+            return {"error": str(e)}
+
+        if "subscription" not in mongodb.collection_names():
+            mongodb.create_collection("subscription",
+                                      capped=True,
+                                      size=1 * 1024 * 1024)
+
+        EventLogger.new_event({"msg": "Created subscription ".format(sub)})
+        return {"created": str(sub)}
+
+    @classmethod
+    def handle_callback(cls, args):
+        cb = cls.client.handle_subscription_callback(args)
+        EventLogger.new_event(msg="subscription callback: {}".format(cb))
+        return cb
+
+    @classmethod
+    def delete(cls, subscription_id, delete_db=False):
+        if subscription_id not in cls.list():
+            try:
+                # if successful this will be null
+                result = cls.client.delete_subscription(subscription_id,
+                                                        **cls.credentials)
+            except Exception as e:
+                return {"error": str(e)}
+
+            if delete_db:
+                mongodb.subscription.drop()
+
+            EventLogger.new_event(
+                msg="deleted subscription {}".format(subscription_id)
+            )
+            return result
+
+    @classmethod
+    def list(cls):
+        subs = cls.client.list_subscriptions(**cls.credentials)
+        return [sub for sub in subs]
+
+    @staticmethod
+    def update(update_raw):
+        doc = {
+            "dt": datetime.utcnow(),
+            "ud": update_raw
+        }
+        result = mongodb.subscription.insert_one(doc)
+        return result
+
+    @staticmethod
+    def iter_updates():
+        updates = mongodb.subscription.find(
+            sort=[("$natural", pymongo.DESCENDING)]
+        )
+
+        for u in updates:
+            u["_id"] = str(u["_id"])
+            yield u
 
 
 if "history" not in mongodb.collection_names():
