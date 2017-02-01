@@ -522,7 +522,7 @@ class Users(UserMixin, db_sql.Model):
 
         Q = Queue()
         P = Pool()
-        P.apply_async(self.build_index, [limit, Q, after, before])
+        P.apply_async(self.build_index, [Q, limit, after, before])
         return Q
 
     def get_activity(self, a_id):
