@@ -2,8 +2,6 @@
 from __future__ import unicode_literals
 
 import gevent
-# from gevent import monkey
-# monkey.patch_all()  # may not be necessary
 from exceptions import StopIteration
 from functools import wraps
 
@@ -29,7 +27,8 @@ app.config.from_object(os.environ['APP_SETTINGS'])
 sslify = SSLify(app)
 
 # models depend app so we import them afterwards
-from models import Users, Activities, EventLogger, db_sql, mongodb, redis
+from models import Users, Activities, EventLogger, Subscription,\
+    db_sql, mongodb, redis
 
 
 def href(url, text):
@@ -216,26 +215,14 @@ def splash():
 def demo():
     # https://heatflask.herokuapp.com/15972102?limit=100&info=1&lat=37.8022&lng=-122.2493&zoom=12&heatres=high&flowres=high
 
-    # Last 7 days of activity
-    # return redirect(url_for("main",
-    #                         username="15972102",
-    #                         preset="7",
-    #                         heatres="high",
-    #                         flowres="high",
-    #                         info=1,
-    #                         autozoom=1
-    #                         )
-    #                 )
-
-    # My Christmas week in Houston
+    # Last 10 activities
     return redirect(url_for("main",
                             username="15972102",
-                            date1="2016-12-21",
-                            date2="2016-12-28",
-                            autozoom=1,
+                            limit="10",
                             heatres="high",
                             flowres="high",
-                            info=1
+                            info=1,
+                            autozoom=1
                             )
                     )
 
@@ -499,8 +486,9 @@ def getdata(username):
     else:
         event_data = None
 
-    def sse_iterator(client, Q):
+    def sse_iterator(user, options, Q):
         start_time = datetime.utcnow()
+        client = user.client()
 
         # streams_out = ["polyline", "time"]
         # streams_to_cache = ["polyline", "time"]
@@ -586,7 +574,7 @@ def getdata(username):
             EventLogger.new_event(**event_data)
 
     Q = gevent.queue.Queue()
-    gevent.spawn(sse_iterator, user.client(), Q)
+    gevent.spawn(sse_iterator, user, options, Q)
     return Response(Q, mimetype='text/event-stream')
 
 
@@ -722,6 +710,47 @@ def logged_event(event_id):
 def event_history_init():
     EventLogger.init()
     return redirect(url_for("event_history"))
+
+
+# Stuff for subscription to Strava webhooks
+@app.route('/subscription/<operation>')
+@admin_required
+def subscription_endpoint(operation):
+    if operation == "create":
+        result = Subscription.create(
+            url_for("webhook_callback", _external=True)
+        )
+        return jsonify(result)
+
+    elif operation == "list":
+        return jsonify(Subscription.list())
+
+    elif operation == "delete":
+        try:
+            subscription_id = int(request.args.get("id"))
+        except:
+            result = {"error": "bad or missing subscription id"}
+        else:
+            result = Subscription.delete(subscription_id)
+        return jsonify(result)
+
+    elif operation == "updates":
+        return jsonify(list(Subscription.iter_updates()))
+
+
+@app.route('/webhook_callback', methods=["GET", "POST"])
+def webhook_callback():
+    if request.method == 'GET':
+        cb = Subscription.handle_callback(request.args)
+        return jsonify(cb)
+
+    elif request.method == 'POST':
+        update_raw = request.get_json(force=True)
+        app.logger.info("subscription update: ".format(update_raw))
+        # update = client.handle_subscription_update(update_raw)
+        # gevent.spawn(Subscription.update, update_raw)
+        Subscription.update(update_raw)
+        return "success"
 
 
 # makes python ignore sigpipe and prevents broken pipe exception when client
