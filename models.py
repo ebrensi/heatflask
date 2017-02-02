@@ -184,6 +184,7 @@ class Users(UserMixin, db_sql.Model):
         key = cls.key(user_identifier)
         cached = redis.get(key)
         if cached:
+            redis.expire(key, CACHE_USERS_TIMEOUT)
             try:
                 user = cls.from_serialized(cached)
                 # app.logger.debug(
@@ -412,10 +413,13 @@ class Users(UserMixin, db_sql.Model):
             return index_df
 
     def update_index(self, index_df=None):
-        if (index_df is None) and self.get_raw_index():
-            index_df = pd.read_msgpack(
-                self.activity_index["packed_index"]
-            ).astype({"type": str})
+        if (index_df is None):
+            if self.get_raw_index():
+                index_df = pd.read_msgpack(
+                    self.activity_index["packed_index"]
+                ).astype({"type": str})
+            else:
+                return
 
         latest = index_df.index[0]
         # app.logger.info("updating activity index for {}"
@@ -830,7 +834,7 @@ class Webhooks(object):
             "object_type": obj.object_type,
             "aspect_type": obj.aspect_type,
             "event_time": str(obj.event_time),
-            "ud": update_raw
+            # "ud": update_raw
         }
         result = mongodb.subscription.insert_one(doc)
         app.logger.info("subscription update:\n{}".format(doc))
