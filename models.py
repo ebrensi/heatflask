@@ -696,10 +696,10 @@ class Activities(object):
                                                   series_type='time',
                                                   types=streams_to_import)
         except Exception as e:
-            app.logger.debug("error importing sreams for {}:\n{}"
-                             .formtat(activity_id, e))
-            return {"error": "error importing sreams for {}:\n{}"
-                             .formtat(activity_id, e)}
+            app.logger.debug("error importing streams for {}:\n{}"
+                             .format(activity_id, e))
+            return {"error": "error importing streams for {}:\n{}"
+                             .format(activity_id, e)}
 
         activity_streams = {name: streams[name].data for name in streams}
 

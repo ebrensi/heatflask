@@ -490,17 +490,22 @@ def getdata(username):
         start_time = datetime.utcnow()
         client = user.client()
 
+        err_count_key = "status:{}:{}".format(user.id, start_time)
+
         # streams_out = ["polyline", "time"]
         # streams_to_cache = ["polyline", "time"]
         streams_out = ["polyline"]
         streams_to_cache = ["polyline"]
 
-        def import_and_queue(Q, activity):
+        def import_and_queue(client, Q, err_count_key, activity):
             stream_data = Activities.import_streams(
                 client, activity["id"], streams_to_cache)
 
             data = {s: stream_data[s] for s in streams_out + ["error"]
                     if s in stream_data}
+            if "error" in data:
+                redis.incr(err_count_key)
+
             data.update(activity)
             # app.logger.debug("imported streams for {}".format(activity["id"]))
             Q.put(sse_out(data))
@@ -543,7 +548,8 @@ def getdata(username):
                         stream_data = Activities.get(activity["id"])
 
                         if not stream_data:
-                            pool.spawn(import_and_queue, Q, activity)
+                            pool.spawn(import_and_queue,
+                                       client, Q, err_count_key, activity)
                             imported += 1
                         else:
                             data = {s: stream_data[s] for s in streams_out
@@ -571,6 +577,10 @@ def getdata(username):
                                   .format(round(elapsed.total_seconds(), 3),
                                           count,
                                           imported))
+            err_count = redis.get(err_count_key)
+            if err_count:
+                event_data["msg"] += ", errors={}".format(err_count)
+                redis.delete(err_count_key)
             EventLogger.new_event(**event_data)
 
     Q = gevent.queue.Queue()
@@ -740,9 +750,9 @@ def subscription_endpoint(operation):
 
 @app.route('/webhook_callback', methods=["GET", "POST"])
 def webhook_callback():
+
     if request.method == 'GET':
-        cb = Subscription.handle_callback(request.args)
-        return jsonify(cb)
+        return Subscription.handle_callback(request.args)
 
     elif request.method == 'POST':
         update_raw = request.get_json(force=True)
