@@ -753,13 +753,14 @@ def webhook_callback():
 
     if request.method == 'GET':
         app.logger.debug("received webhook callback GET with args {}\nfull request: {}"
-                         .format(request.args, request))
+                         .format(request.args, vars(request)))
         cb = Webhook.handle_callback(request.args)
-        return jsonify(cb), 200
+        app.logger.debug("handle_callback returns {}".format(cb))
+        return cb, 200
 
     elif request.method == 'POST':
         # update_raw = request.get_json(force=True)
-        app.logger.info("subscription update (POST): ".format(request))
+        app.logger.info("subscription update (POST): ".format(vars(request)))
         # update = client.handle_subscription_update(update_raw)
         # gevent.spawn(Webhook.update, update_raw)
         # Webhook.update(update_raw)
