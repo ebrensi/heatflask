@@ -752,7 +752,7 @@ def subscription_endpoint(operation):
 def webhook_callback():
 
     if request.method == 'GET':
-        return Subscription.handle_callback(request.args)
+        return jsonify(Subscription.handle_callback(request.args)), 200
 
     elif request.method == 'POST':
         update_raw = request.get_json(force=True)
