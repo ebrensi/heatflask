@@ -730,18 +730,15 @@ def subscription_endpoint(operation):
         result = Webhook.create(
             url_for("webhook_callback", _external=True)
         )
-        return jsonify(result)
+        return "create subscription: {}".format(result)
 
     elif operation == "list":
-        return jsonify(Webhook.list())
+        return jsonify({"subscriptions": Webhook.list()})
 
     elif operation == "delete":
-        try:
-            subscription_id = int(request.args.get("id"))
-        except:
-            result = {"error": "bad or missing subscription id"}
-        else:
-            result = Webhook.delete(subscription_id)
+        result = Webhook.delete(
+            subscription_id=request.args.get("id")
+        )
         return jsonify(result)
 
     elif operation == "updates":
@@ -759,8 +756,9 @@ def webhook_callback():
         return jsonify(cb)
 
     elif request.method == 'POST':
-        # update_raw = request.get_json(force=True)
-        app.logger.info("subscription update (POST): ".format(vars(request)))
+        update_raw = request.get_json(force=True)
+        app.logger.info("subscription update (POST): {}\njson: {}"
+                        .format(vars(request), update_raw))
         # update = client.handle_subscription_update(update_raw)
         # gevent.spawn(Webhook.update, update_raw)
         # Webhook.update(update_raw)

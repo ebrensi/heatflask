@@ -779,7 +779,7 @@ class Webhook(object):
     @classmethod
     def create(cls, callback_url):
         try:
-            response = cls.client.create_subscription(
+            subs = cls.client.create_subscription(
                 callback_url=callback_url,
                 **cls.credentials
             )
@@ -792,9 +792,9 @@ class Webhook(object):
                                       size=1 * 1024 * 1024)
 
         # EventLogger.new_event(msg="Created subscription ".format(sub))
-        app.logger.debug("create_subscription returns {}: {}"
-                         .format(response, vars(response)))
-        return response
+        app.logger.debug("create_subscription returns {}"
+                         .format(subs))
+        return subs
 
     @classmethod
     def handle_callback(cls, args):
@@ -803,17 +803,21 @@ class Webhook(object):
         return cb
 
     @classmethod
-    def delete(cls, subscription_id, delete_db=False):
+    def delete(cls, subscription_id=None, delete_collection=False):
+        if not subscription_id:
+            subscription_id = cls.list.pop()
         try:
             # if successful this will be null
-            result = cls.client.delete_subscription(subscription_id,
-                                                    **cls.credentials)
+            cls.client.delete_subscription(subscription_id,
+                                           **cls.credentials)
         except Exception as e:
             return {"error": str(e)}
 
-        if delete_db:
+        if delete_collection:
             mongodb.subscription.drop()
 
+        result = {"success": "deleted subscription {}".format(subscription_id)}
+        app.logger.debug(result)
         # EventLogger.new_event(
         #     msg="deleted subscription {}".format(subscription_id)
         # )
@@ -822,7 +826,7 @@ class Webhook(object):
     @classmethod
     def list(cls):
         subs = cls.client.list_subscriptions(**cls.credentials)
-        return [str(sub) for sub in subs]
+        return [sub.id for sub in subs]
 
     @staticmethod
     def update(update_raw):
