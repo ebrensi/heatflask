@@ -769,7 +769,7 @@ class EventLogger(object):
         cls.new_event(**args)
 
 
-class Subscription(object):
+class Webhook(object):
     client = stravalib.Client()
     credentials = {
         "client_id": app.config["STRAVA_CLIENT_ID"],
