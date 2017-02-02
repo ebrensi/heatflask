@@ -791,13 +791,14 @@ class Webhook(object):
                                       capped=True,
                                       size=1 * 1024 * 1024)
 
-        EventLogger.new_event(msg="Created subscription ".format(sub))
-        return {"created": str(sub)}
+        # EventLogger.new_event(msg="Created subscription ".format(sub))
+        app.logger.debug("called created_subscription: {}".format(vars(sub)))
+        return vars(sub)
 
     @classmethod
     def handle_callback(cls, args):
         cb = cls.client.handle_subscription_callback(args)
-        EventLogger.new_event(msg="subscription callback: {}".format(cb))
+        # EventLogger.new_event(msg="subscription callback: {}".format(cb))
         return cb
 
     @classmethod
@@ -812,9 +813,9 @@ class Webhook(object):
         if delete_db:
             mongodb.subscription.drop()
 
-        EventLogger.new_event(
-            msg="deleted subscription {}".format(subscription_id)
-        )
+        # EventLogger.new_event(
+        #     msg="deleted subscription {}".format(subscription_id)
+        # )
         return result
 
     @classmethod
