@@ -829,7 +829,7 @@ class Webhooks(object):
             "object_id": obj.object_id,
             "object_type": obj.object_type,
             "aspect_type": obj.aspect_type,
-            "event_time": obj.event_time,
+            "event_time": str(obj.event_time),
             "ud": update_raw
         }
         result = mongodb.subscription.insert_one(doc)
