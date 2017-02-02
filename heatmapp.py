@@ -27,7 +27,7 @@ app.config.from_object(os.environ['APP_SETTINGS'])
 sslify = SSLify(app)
 
 # models depend app so we import them afterwards
-from models import Users, Activities, EventLogger, Subscription,\
+from models import Users, Activities, EventLogger, Webhook,\
     db_sql, mongodb, redis
 
 
@@ -727,13 +727,13 @@ def event_history_init():
 @admin_required
 def subscription_endpoint(operation):
     if operation == "create":
-        result = Subscription.create(
+        result = Webhook.create(
             url_for("webhook_callback", _external=True)
         )
         return jsonify(result)
 
     elif operation == "list":
-        return jsonify(Subscription.list())
+        return jsonify(Webhook.list())
 
     elif operation == "delete":
         try:
@@ -741,25 +741,25 @@ def subscription_endpoint(operation):
         except:
             result = {"error": "bad or missing subscription id"}
         else:
-            result = Subscription.delete(subscription_id)
+            result = Webhook.delete(subscription_id)
         return jsonify(result)
 
     elif operation == "updates":
-        return jsonify(list(Subscription.iter_updates()))
+        return jsonify(list(Webhook.iter_updates()))
 
 
 @app.route('/webhook_callback', methods=["GET", "POST"])
 def webhook_callback():
 
     if request.method == 'GET':
-        return jsonify(Subscription.handle_callback(request.args)), 200
+        return jsonify(Webhook.handle_callback(request.args)), 200
 
     elif request.method == 'POST':
         update_raw = request.get_json(force=True)
         app.logger.info("subscription update: ".format(update_raw))
         # update = client.handle_subscription_update(update_raw)
-        # gevent.spawn(Subscription.update, update_raw)
-        Subscription.update(update_raw)
+        # gevent.spawn(Webhook.update, update_raw)
+        Webhook.update(update_raw)
         return "success"
 
 
