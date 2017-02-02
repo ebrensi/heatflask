@@ -779,7 +779,7 @@ class Webhook(object):
     @classmethod
     def create(cls, callback_url):
         try:
-            sub = cls.client.create_subscription(
+            response = cls.client.create_subscription(
                 callback_url=callback_url,
                 **cls.credentials
             )
@@ -792,8 +792,9 @@ class Webhook(object):
                                       size=1 * 1024 * 1024)
 
         # EventLogger.new_event(msg="Created subscription ".format(sub))
-        app.logger.debug("called created_subscription: {}".format(vars(sub)))
-        return vars(sub)
+        app.logger.debug("create_subscription returns {}: {}"
+                         .format(response, vars(response)))
+        return response
 
     @classmethod
     def handle_callback(cls, args):
