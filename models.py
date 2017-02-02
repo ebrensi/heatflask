@@ -769,7 +769,7 @@ class EventLogger(object):
         cls.new_event(**args)
 
 
-class Webhook(object):
+class Webhooks(object):
     client = stravalib.Client()
     credentials = {
         "client_id": app.config["STRAVA_CLIENT_ID"],
@@ -794,7 +794,7 @@ class Webhook(object):
         return {"created": str(subs)}
 
     @classmethod
-    def handle_callback(cls, args):
+    def handle_subscription_callback(cls, args):
         return cls.client.handle_subscription_callback(args)
 
     @classmethod
@@ -819,14 +819,20 @@ class Webhook(object):
         subs = cls.client.list_subscriptions(**cls.credentials)
         return [sub.id for sub in subs]
 
-    @staticmethod
-    def update(update_raw):
+    @classmethod
+    def handle_update_callback(cls, update_raw):
+        obj = cls.client.handle_subscription_update(update_raw)
         doc = {
             "dt": datetime.utcnow(),
+            # "subscription_id": obj.subscription_id,
+            "owner_id": obj.owner_id,
+            "object_id": obj.object_id,
+            "object_type": obj.object_type,
+            "aspect_type": obj.aspect_type,
+            "event_time": obj.event_time,
             "ud": update_raw
         }
         result = mongodb.subscription.insert_one(doc)
-        # update_obj = client.handle_subscription_update(update_raw)
         app.logger.info("subscription update:\n{}".format(doc))
         return result
 
