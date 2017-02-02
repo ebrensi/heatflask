@@ -756,7 +756,7 @@ def webhook_callback():
                          .format(request.args, vars(request)))
         cb = Webhook.handle_callback(request.args)
         app.logger.debug("handle_callback returns {}".format(cb))
-        return cb, 200
+        return jsonify(cb)
 
     elif request.method == 'POST':
         # update_raw = request.get_json(force=True)
