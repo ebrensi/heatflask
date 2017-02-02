@@ -27,7 +27,7 @@ app.config.from_object(os.environ['APP_SETTINGS'])
 sslify = SSLify(app)
 
 # models depend app so we import them afterwards
-from models import Users, Activities, EventLogger, Webhook,\
+from models import Users, Activities, EventLogger, Webhooks,\
     db_sql, mongodb, redis
 
 
@@ -728,33 +728,34 @@ def event_history_init():
 def subscription_endpoint(operation):
     if operation == "create":
         return jsonify(
-            Webhook.create(url_for("webhook_callback", _external=True))
+            Webhooks.create(url_for("webhook_callback", _external=True))
         )
 
     elif operation == "list":
-        return jsonify({"subscriptions": Webhook.list()})
+        return jsonify({"subscriptions": Webhooks.list()})
 
     elif operation == "delete":
-        result = Webhook.delete(
-            subscription_id=request.args.get("id")
+        result = Webhooks.delete(
+            subscription_id=request.args.get("id"),
+            delete_collection=request.args.get("reset")
         )
         return jsonify(result)
 
     elif operation == "updates":
-        return jsonify(list(Webhook.iter_updates()))
+        return jsonify(list(Webhooks.iter_updates()))
 
 
 @app.route('/webhook_callback', methods=["GET", "POST"])
 def webhook_callback():
 
     if request.method == 'GET':
-        cb = Webhook.handle_callback(request.args)
-        app.logger.debug("handle_callback returns {}".format(cb))
+        cb = Webhooks.handle_subscription_callback(request.args)
+        app.logger.debug("handle_subscription_callback returns {}".format(cb))
         return jsonify(cb)
 
     elif request.method == 'POST':
         update_raw = request.get_json(force=True)
-        gevent.spawn(Webhook.update, update_raw)
+        gevent.spawn(Webhooks.handle_update_callback, update_raw)
         return "success"
 
 
