@@ -790,24 +790,18 @@ class Webhook(object):
             mongodb.create_collection("subscription",
                                       capped=True,
                                       size=1 * 1024 * 1024)
-
-        # EventLogger.new_event(msg="Created subscription ".format(sub))
-        app.logger.debug("create_subscription returns {}"
-                         .format(subs))
-        return subs
+        app.logger.debug("create_subscription returns {}".format(subs))
+        return {"created": str(subs)}
 
     @classmethod
     def handle_callback(cls, args):
-        cb = cls.client.handle_subscription_callback(args)
-        # EventLogger.new_event(msg="subscription callback: {}".format(cb))
-        return cb
+        return cls.client.handle_subscription_callback(args)
 
     @classmethod
     def delete(cls, subscription_id=None, delete_collection=False):
         if not subscription_id:
             subscription_id = cls.list.pop()
         try:
-            # if successful this will be null
             cls.client.delete_subscription(subscription_id,
                                            **cls.credentials)
         except Exception as e:
@@ -818,9 +812,6 @@ class Webhook(object):
 
         result = {"success": "deleted subscription {}".format(subscription_id)}
         app.logger.debug(result)
-        # EventLogger.new_event(
-        #     msg="deleted subscription {}".format(subscription_id)
-        # )
         return result
 
     @classmethod
@@ -835,6 +826,8 @@ class Webhook(object):
             "ud": update_raw
         }
         result = mongodb.subscription.insert_one(doc)
+        # update_obj = client.handle_subscription_update(update_raw)
+        app.logger.info("subscription update:\n{}".format(doc))
         return result
 
     @staticmethod

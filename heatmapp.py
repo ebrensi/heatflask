@@ -727,10 +727,9 @@ def event_history_init():
 @admin_required
 def subscription_endpoint(operation):
     if operation == "create":
-        result = Webhook.create(
-            url_for("webhook_callback", _external=True)
+        return jsonify(
+            Webhook.create(url_for("webhook_callback", _external=True))
         )
-        return "create subscription: {}".format(result)
 
     elif operation == "list":
         return jsonify({"subscriptions": Webhook.list()})
@@ -749,19 +748,13 @@ def subscription_endpoint(operation):
 def webhook_callback():
 
     if request.method == 'GET':
-        app.logger.debug("received webhook callback GET with args {}\nfull request: {}"
-                         .format(request.args, vars(request)))
         cb = Webhook.handle_callback(request.args)
         app.logger.debug("handle_callback returns {}".format(cb))
         return jsonify(cb)
 
     elif request.method == 'POST':
         update_raw = request.get_json(force=True)
-        app.logger.info("subscription update (POST): {}\njson: {}"
-                        .format(vars(request), update_raw))
-        # update = client.handle_subscription_update(update_raw)
-        # gevent.spawn(Webhook.update, update_raw)
-        # Webhook.update(update_raw)
+        gevent.spawn(Webhook.update, update_raw)
         return "success"
 
 
