@@ -723,9 +723,12 @@
 
                     if ("error" in A){
                         let msg = "<font color='red'>" + A.error +"</font><br>";
-                        L.control.window(map, {title: "Oops.", content:msg, visible:true});
-                        doneRendering(msg);
-                        stopListening();
+                        $(".data_message").html(A.msg);
+                        // console.log("Error activity:")
+                        console.log(A)
+                        // L.control.window(map, {title: "Oops.", content:msg, visible:true});
+                        // doneRendering(msg);
+                        // stopListening();
                         return;
                     } else if ("stop_rendering" in A){
                         doneRendering("Done rendering.");
