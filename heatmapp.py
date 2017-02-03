@@ -742,7 +742,8 @@ def subscription_endpoint(operation):
         return jsonify(result)
 
     elif operation == "updates":
-        return jsonify(list(Webhooks.iter_updates()))
+        return render_template("webhooks.html",
+                               events=Webhooks.iter_updates())
 
 
 @app.route('/webhook_callback', methods=["GET", "POST"])

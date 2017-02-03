@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width">
+    {% assets "basic_table_css" %}
+    <link rel="stylesheet" href="{{ ASSET_URL }}" />
+    {% endassets %}
+
+    {% assets "basic_table_js" %}
+    <script type="text/javascript" src="{{ ASSET_URL }}"></script>
+    {% endassets %}
+</head>
+
+
+<body>
+    <h4>Subscription Updates</h1>
+    <table id="updates_table" class='display order-column compact' cellspacing='1' width='100%'>
+        <thead>
+            <th>dt</th>
+            <th>time</th>
+            <th>owner</th>
+            <th>object</th>
+            <th>type</th>
+            <th>aspect</th>
+            <th>updated</th>
+        </thead>
+        {%- for e in events %}
+          <tr>
+            <td>{{ e.get("dt") }}</td>
+            <td>{{ e.get("event_time") }}</td>
+            <td>{{ e.get("owner_id") }}</td>
+            <td>{{ e.get("object_id") }}</td>
+            <td>{{ e.get("owner_type") }}</td>
+            <td>{{ e.get("aspect_type") }}</td>
+            <td>{{ e.get("owner_id") }}</td>
+            <td>{{ e.get("updated") }}</td>
+          </tr>
+        {%- endfor %}
+    </table>
+
+
+    <script>
+    $(document).ready(function() {
+        $('#updates_table').DataTable({
+            paging: false,
+            scrollY: "80vh",
+            scrollX: true,
+            scrollCollapse: true,
+            select: true,
+            order: [[ 0, "desc" ]]
+        });
+    });
+
+
+    </script>
+</body>
+</html>
