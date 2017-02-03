@@ -15,6 +15,7 @@ class Config(object):
 
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_POOL_SIZE = 16
 
     MONGODB_URI = os.environ.get("MONGODB_URI")
     REDIS_URL = os.environ.get('REDIS_URL')
