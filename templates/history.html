@@ -20,6 +20,7 @@
             <th>from</th>
             <th>event</th>
         </thead>
+        <tbody>
         {%- for e in events %}
           <tr>
             <td>{{ id(e)|safe }}</td>
@@ -28,6 +29,7 @@
             <td>{{ e.get('msg', '')|safe }}</td>
           </tr>
         {%- endfor %}
+        </tbody>
     </table>
 
 

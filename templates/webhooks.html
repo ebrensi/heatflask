@@ -24,6 +24,7 @@
             <th>aspect</th>
             <th>updated</th>
         </thead>
+        <tbody>
         {%- for e in events %}
           <tr>
             <td>{{ e.get("dt") }}</td>
@@ -36,6 +37,7 @@
             <td>{{ e.get("updated") }}</td>
           </tr>
         {%- endfor %}
+        </tbody>
     </table>
 
 
