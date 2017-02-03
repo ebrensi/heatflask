@@ -81,7 +81,7 @@ class ProductionConfig(Config):
             'ACCOUNT': "UA-85621398-1"
         }
     }
-    # DEBUG = True
+    DEBUG = True
 
 
 class StagingConfig(Config):
