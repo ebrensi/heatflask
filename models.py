@@ -277,9 +277,6 @@ class Users(UserMixin, db_sql.Model):
                 db_sql.session.commit()
                 app.logger.debug("successfully restored {}".format(user))
 
-    def index_key(self):
-        return "I:{}".format(self.id)
-
     def delete_index(self):
         try:
             result1 = mongodb.indexes.delete_one({'_id': self.id})
@@ -290,6 +287,8 @@ class Users(UserMixin, db_sql.Model):
 
         self.activity_index = None
         result2 = self.cache()
+        app.logger.debug("delete index for {}. mongo:{}, redis:{}"
+                         .format(self.id, result1, result2))
 
         return result1, result2
 
@@ -325,6 +324,7 @@ class Users(UserMixin, db_sql.Model):
 
         self.indexing(True)
         start_time = datetime.utcnow()
+        app.logger.debug("building activity index for {}".format(self.id))
 
         activities_list = []
         count = 0
@@ -362,8 +362,6 @@ class Users(UserMixin, db_sql.Model):
                 )
                 return
 
-            enqueue({"msg": "done indexing {} activities.".format(count)})
-
             index_df = (pd.DataFrame(activities_list)
                         .set_index("beginTimestamp")
                         .sort_index(ascending=False)
@@ -374,15 +372,6 @@ class Users(UserMixin, db_sql.Model):
                 "dt_last_indexed": datetime.utcnow(),
                 "packed_index": packed
             }
-
-            # app.logger.debug("done with indexing for {}".format(self))
-            elapsed = datetime.utcnow() - start_time
-            EventLogger.new_event(
-                msg="{}'s activities indexed in {} sec. count={}, size={}"
-                .format(self.id,
-                        round(elapsed.total_seconds(), 3),
-                        count,
-                        len(packed)))
 
             # update the cache for this user
             self.cache()
@@ -408,6 +397,20 @@ class Users(UserMixin, db_sql.Model):
 
         finally:
             self.indexing(False)
+            elapsed = datetime.utcnow() - start_time
+
+            msg = (
+                "{}'s index built in {} sec. count={}, size={}"
+                .format(self.id,
+                        round(elapsed.total_seconds(), 3),
+                        count,
+                        len(packed))
+            )
+
+            app.logger.debug(msg)
+            EventLogger.new_event(msg=msg)
+
+            enqueue({"msg": "done indexing {} activities.".format(count)})
             enqueue(StopIteration)
 
         if activities_list:
