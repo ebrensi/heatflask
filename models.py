@@ -846,11 +846,12 @@ class Webhooks(object):
             "event_time": str(obj.event_time),
             # "ud": update_raw
         }
-        result = mongodb.subscription.insert_one(doc)
 
         user = Users.get(obj.owner_id, timeout=60)
         doc["updated"] = (user and
                           (user.update_index(reset_ttl=False) is not None))
+        result = mongodb.subscription.insert_one(doc)
+
         app.logger.info("subscription update:\n{}".format(doc))
         return result
 
