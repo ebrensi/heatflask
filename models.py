@@ -479,7 +479,7 @@ class Users(UserMixin, db_sql.Model):
         app.logger.info("updated {} index activities for user {} in {} sec."
                         .format(len(activities_list),
                                 self.id,
-                                round(elapsed.total_Seconds, 3)))
+                                round(elapsed.total_seconds(), 3)))
         if to_update:
             return index_df
 
