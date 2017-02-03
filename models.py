@@ -815,7 +815,7 @@ class Webhooks(object):
     @classmethod
     def delete(cls, subscription_id=None, delete_collection=False):
         if not subscription_id:
-            subscription_id = cls.list.pop()
+            subscription_id = cls.list().pop()
         try:
             cls.client.delete_subscription(subscription_id,
                                            **cls.credentials)
