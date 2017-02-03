@@ -412,7 +412,9 @@ class Users(UserMixin, db_sql.Model):
         if activities_list:
             return index_df
 
-    def update_index(self, index_df=None):
+    def update_index(self, index_df=None, reset_ttl=True):
+        start_time = datetime.utcnow()
+
         if (index_df is None):
             if self.get_raw_index():
                 index_df = pd.read_msgpack(
@@ -434,9 +436,10 @@ class Users(UserMixin, db_sql.Model):
         except Exception as e:
             return [{"error": str(e)}]
 
-        # whether or not there are any new activities,
-        # we will update the timestamp
-        to_update = {"dt_last_indexed": datetime.utcnow()}
+        to_update = {}
+        if reset_ttl:
+            # update the timestamp
+            to_update["dt_last_indexed"] = datetime.utcnow()
 
         if activities_list:
             new_df = pd.DataFrame(activities_list).set_index(
@@ -453,25 +456,32 @@ class Users(UserMixin, db_sql.Model):
                 Binary(index_df.to_msgpack(compress='blosc'))
             )
 
-        # update activity_index in this user
-        self.activity_index.update(to_update)
+        if to_update:
+            # update activity_index in this user
+            self.activity_index.update(to_update)
 
-        # update the cache entry for this user (necessary?)
-        self.cache()
+            # update the cache entry for this user (necessary?)
+            self.cache()
 
-        # update activity_index in MongoDB
-        try:
-            mongodb.indexes.update_one(
-                {"_id": self.id},
-                {"$set": to_update}
-            )
-        except Exception as e:
-            app.logger.debug(
-                "error updating activity index for {} in MongoDB:\n{}"
-                .format(self, e)
-            )
+            # update activity_index in MongoDB
+            try:
+                mongodb.indexes.update_one(
+                    {"_id": self.id},
+                    {"$set": to_update}
+                )
+            except Exception as e:
+                app.logger.debug(
+                    "error updating activity index for {} in MongoDB:\n{}"
+                    .format(self, e)
+                )
 
-        return index_df
+        elapsed = datetime.utcnow() - start_time
+        app.logger.info("updated {} index activities for user {} in {} sec."
+                        .format(len(activities_list),
+                                self.id,
+                                round(elapsed.total_Seconds, 3)))
+        if to_update:
+            return index_df
 
     def query_index(self, activity_ids=None, limit=None,  after=None, before=None):
 
@@ -837,6 +847,10 @@ class Webhooks(object):
             # "ud": update_raw
         }
         result = mongodb.subscription.insert_one(doc)
+
+        user = Users.get(obj.owner_id, timeout=60)
+        doc["updated"] = (user and
+                          (user.update_index(reset_ttl=False) is not None))
         app.logger.info("subscription update:\n{}".format(doc))
         return result
 
