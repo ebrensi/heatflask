@@ -591,38 +591,28 @@ def getdata(username):
 # creates a SSE stream of current.user's activities, using the Strava API
 # arguments
 @app.route('/<username>/activities_sse')
-@login_required
+@admin_or_self_required
 def activity_stream(username):
-
     user = Users.get(username)
-    if (user == current_user):
-        options = {}
-
-        if "id" in request.args:
-            options["activity_ids"] = request.args.get("id")
-        else:
-            if "friends" in request.args:
-                options["friends"] = True
-
-            if "before" in request.args:
-                options["before"] = dateutil.parser.parse(
-                    request.args.get("before"))
-
-            if "after" in request.args:
-                options["after"] = dateutil.parser.parse(
-                    request.args.get("after"))
-
-            if "limit" in request.args:
-                options["limit"] = int(request.args.get("limit"))
-
-        def boo():
-            for a in user.query_index(**options):
-                yield "data: {}\n\n".format(json.dumps(a))
-            yield "data: done\n\n"
-
-        return Response(boo(), mimetype='text/event-stream')
+    options = {}
+    if "id" in request.args:
+        options["activity_ids"] = request.args.get("id")
     else:
-        return "sorry, wrong user."
+        if "before" in request.args:
+            options["before"] = dateutil.parser.parse(
+                request.args.get("before"))
+        if "after" in request.args:
+            options["after"] = dateutil.parser.parse(
+                request.args.get("after"))
+        if "limit" in request.args:
+            options["limit"] = int(request.args.get("limit"))
+
+    def boo():
+        for a in user.query_index(**options):
+            yield "data: {}\n\n".format(json.dumps(a))
+        yield "data: done\n\n"
+
+    return Response(boo(), mimetype='text/event-stream')
 
 
 @app.route('/<username>/activities')
