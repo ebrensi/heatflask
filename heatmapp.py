@@ -24,7 +24,7 @@ from signal import signal, SIGPIPE, SIG_DFL
 
 app = Flask(__name__)
 app.config.from_object(os.environ['APP_SETTINGS'])
-sslify = SSLify(app)
+sslify = SSLify(app, permanent=True, skips=["webhook_callback"])
 
 # models depend app so we import them afterwards
 from models import Users, Activities, EventLogger, Webhooks,\
@@ -750,9 +750,13 @@ def subscription_endpoint(operation):
 def webhook_callback():
 
     if request.method == 'GET':
-        cb = Webhooks.handle_subscription_callback(request.args)
-        app.logger.debug("handle_subscription_callback returns {}".format(cb))
-        return jsonify(cb)
+        if request.args.get("hub.challenge"):
+            app.logger.debug(
+                "subscription callback with {}".format(request.args))
+            cb = Webhooks.handle_subscription_callback(request.args)
+            app.logger.debug(
+                "handle_subscription_callback returns {}".format(cb))
+            return jsonify(cb)
 
     elif request.method == 'POST':
         update_raw = request.get_json(force=True)
