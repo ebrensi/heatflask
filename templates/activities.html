@@ -18,8 +18,7 @@
   </head>
 
   <body>
-  <h2>Activities list</h2>
-  <div class="table-responsive">
+  <h3>Activities list</h3>
   <table id='activities_list' class='display order-column' cellspacing='1' width='100%'>
     <thead>
       <th>ID</th>
@@ -33,7 +32,6 @@
     <tbody>
     </tbody>
   </table>
-  </div>
 
 
   <div id="status"></div>
@@ -62,7 +60,7 @@
     jQuery(document).ready(function($) {
         let heatflask_button = img("{{ url_for('static',filename='Heat.png') }}"),
             USER_BASE_URL = "{{url_for('main',username=user.id)}}",
-            source = new EventSource("{{ url_for('activity_stream', username=user.id, limit=limit) }}");
+            source = new EventSource("{{ url_for('activity_stream', username=user.id) }}");
 
         $("#status").text("Getting Activity List");
 
