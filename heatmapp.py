@@ -594,7 +594,7 @@ def getdata(username):
 @admin_or_self_required
 def activity_stream(username):
     user = Users.get(username)
-    options = {}
+    options = {"limit": 10000}
     if "id" in request.args:
         options["activity_ids"] = request.args.get("id")
     else:
@@ -609,7 +609,8 @@ def activity_stream(username):
 
     def boo():
         for a in user.query_index(**options):
-            yield "data: {}\n\n".format(json.dumps(a))
+            if "id" in a:
+                yield "data: {}\n\n".format(json.dumps(a))
         yield "data: done\n\n"
 
     return Response(boo(), mimetype='text/event-stream')
@@ -622,8 +623,7 @@ def activities(username):
     if request.args.get("rebuild"):
         current_user.delete_index()
     return render_template("activities.html",
-                           user=current_user,
-                           limit=request.args.get("limit"))
+                           user=current_user)
 
 
 # ---- User admin stuff ----

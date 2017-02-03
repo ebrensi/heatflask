@@ -19,6 +19,11 @@
 
   <body>
   <h3>Activities list</h3>
+  <div id="status">
+    <span id="status_msg"></span>
+    <span id="count"></span>
+  </div>
+
   <table id='activities_list' class='display order-column' cellspacing='1' width='100%'>
     <thead>
       <th>ID</th>
@@ -34,7 +39,6 @@
   </table>
 
 
-  <div id="status"></div>
 
   <script>
     function hhmmss(secs) {
@@ -60,37 +64,42 @@
     jQuery(document).ready(function($) {
         let heatflask_button = img("{{ url_for('static',filename='Heat.png') }}"),
             USER_BASE_URL = "{{url_for('main',username=user.id)}}",
+            count = 0,
             source = new EventSource("{{ url_for('activity_stream', username=user.id) }}");
 
-        $("#status").text("Getting Activity List");
+        $("#status_msg").text("Retrieving Activity Index...");
 
         source.onmessage = function(event) {
           if (event.data == 'done') {
             source.close();
-
             $('#activities_list').DataTable({
                 paging: false,
                 scrollY: "80vh",
                 scrollX: true,
                 scrollCollapse: true,
-                order: [[ 1, "desc" ]],
+                order: [[ 2, "desc" ]],
                 select: true
             });
+            $("#status").hide()
+
           } else {
-            let A = JSON.parse(event.data),
-                heatflask_link = href(`${USER_BASE_URL}?id=${A.id}`, heatflask_button),
-                ts = A.beginTimestamp.slice(0,10),
-                dkm = +(A.total_distance / 1000).toFixed(2),
-                row = "<tr>" +
-                   td(href(stravaActivityURL(A.id), A.id)) +
-                   td(heatflask_link) +
-                   td(ts) +
-                   td(A.type) +
-                   td(dkm) +
-                   td(hhmmss(A.elapsed_time)) +
-                   td(A.name) +
-                   "</tr>";
-            $('#activities_list tbody').append(row);
+            let A = JSON.parse(event.data);
+            if ("id" in A) {
+              $("#count").text(count++);
+              let heatflask_link = href(`${USER_BASE_URL}?id=${A.id}`, heatflask_button),
+                  ts = A.beginTimestamp.slice(0,10),
+                  dkm = +(A.total_distance / 1000).toFixed(2),
+                  row = "<tr>" +
+                     td(href(stravaActivityURL(A.id), A.id)) +
+                     td(heatflask_link) +
+                     td(ts) +
+                     td(A.type) +
+                     td(dkm) +
+                     td(hhmmss(A.elapsed_time)) +
+                     td(A.name) +
+                     "</tr>";
+              $('#activities_list tbody').append(row);
+            }
           }
         }
     });
