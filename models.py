@@ -685,23 +685,6 @@ class Activities(object):
         return result1, result2
 
     @classmethod
-    def purge_old(cls, age_in_seconds=None):
-        if not age_in_seconds:
-            age_in_seconds = app.config["STORE_ACTIVITIES_TIMEOUT"]
-
-        earlier_date = datetime.utcnow() - timedelta(seconds=age_in_seconds)
-        try:
-            result = mongodb.activities.delete_many(
-                {'ts': {"$lt": earlier_date}}
-            )
-        except Exception as e:
-            app.logger.debug(
-                "error deleting old activities from MongoDB.\n{}"
-                .format(e)
-            )
-        return result
-
-    @classmethod
     def import_streams(cls, client, activity_id, stream_names):
         streams_to_import = list(stream_names)
         if ("polyline" in stream_names):
