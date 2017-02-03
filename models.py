@@ -212,6 +212,7 @@ class Users(UserMixin, db_sql.Model):
     def delete(self):
         self.delete_index()
         self.uncache()
+        self.client().deauthorize()
         db_sql.session.delete(self)
         db_sql.session.commit()
 
@@ -849,11 +850,12 @@ class Webhooks(object):
         }
 
         user = Users.get(obj.owner_id, timeout=60)
-        doc["updated"] = (user and
-                          (user.update_index(reset_ttl=False) is not None))
+        doc["updated"] = (
+            user and (user.update_index(reset_ttl=False) is not None)
+        )
         result = mongodb.subscription.insert_one(doc)
 
-        app.logger.info("subscription update:\n{}".format(doc))
+        # app.logger.info("subscription update:\n{}".format(doc))
         return result
 
     @staticmethod
