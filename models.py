@@ -434,7 +434,8 @@ class Users(UserMixin, db_sql.Model):
                 a) for a in self.client().get_activities(after=latest)
                 if a.id not in already_got]
         except Exception as e:
-            return [{"error": str(e)}]
+            app.logger.info({"error": str(e)})
+            return
 
         to_update = {}
         if reset_ttl:
