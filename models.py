@@ -840,13 +840,12 @@ class Webhooks(object):
         obj = cls.client.handle_subscription_update(update_raw)
         doc = {
             "dt": datetime.utcnow(),
-            # "subscription_id": obj.subscription_id,
+            "subscription_id": obj.subscription_id,
             "owner_id": obj.owner_id,
             "object_id": obj.object_id,
             "object_type": obj.object_type,
             "aspect_type": obj.aspect_type,
-            "event_time": str(obj.event_time),
-            # "ud": update_raw
+            "event_time": str(obj.event_time)
         }
 
         user = Users.get(obj.owner_id, timeout=60)

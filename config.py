@@ -18,7 +18,7 @@ class Config(object):
     SQLALCHEMY_POOL_SIZE = 16
     SQLALCHEMY_MAX_OVERFLOW = 2
     SQLALCHEMY_POOL_TIMEOUT = 10
-    # SQLALCHEMY_POOL_RECYCLE = 1 * 60 * 60
+    SQLALCHEMY_POOL_RECYCLE = 1 * 60 * 60
 
     MONGODB_URI = os.environ.get("MONGODB_URI")
     REDIS_URL = os.environ.get('REDIS_URL')
