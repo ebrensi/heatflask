@@ -755,8 +755,8 @@ def webhook_callback():
         return jsonify(cb)
 
     elif request.method == 'POST':
-        # update_raw = request.get_json(force=True)
-        # gevent.spawn(Webhooks.handle_update_callback, update_raw)
+        update_raw = request.get_json(force=True)
+        gevent.spawn(Webhooks.handle_update_callback, update_raw)
         return "success"
 
 
