@@ -303,7 +303,7 @@ class Users(UserMixin, db_sql.Model):
         else:
             redis.delete(key)
 
-    def get_raw_index(self):
+    def get_index(self):
         if not self.activity_index:
             try:
                 self.activity_index = (mongodb.indexes
@@ -313,7 +313,10 @@ class Users(UserMixin, db_sql.Model):
                     "error accessing mongodb indexes collection:\n{}"
                     .format(e))
 
-        return self.activity_index
+        if self.activity_index:
+            return pd.read_msgpack(
+                self.activity_index["packed_index"]
+            ).astype({"type": str})
 
     def build_index(self, out_queue=None, limit=None, after=None, before=None):
         def enqueue(msg):
@@ -815,7 +818,8 @@ class Webhooks(object):
             if delete_collection:
                 mongodb.subscription.drop()
 
-            result = {"success": "deleted subscription {}".format(subscription_id)}
+            result = {"success": "deleted subscription {}".format(
+                subscription_id)}
         else:
             result = {"error": "non-existent/incorrect subscription id"}
         app.logger.debug(result)
@@ -839,7 +843,9 @@ class Webhooks(object):
             "event_time": str(obj.event_time)
         }
 
-        user = Users.get(obj.owner_id, timeout=60)
+        raw_index = mongodb.indexes.find_one({"_id": obj.owner_id})
+        if raw_index:
+            user = Users.get(obj.owner_id, timeout=60)
         doc["updated"] = (
             user and (user.update_index(reset_ttl=False) is not None)
         )
