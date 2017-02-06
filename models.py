@@ -802,17 +802,22 @@ class Webhooks(object):
     @classmethod
     def delete(cls, subscription_id=None, delete_collection=False):
         if not subscription_id:
-            subscription_id = cls.list().pop()
-        try:
-            cls.client.delete_subscription(subscription_id,
-                                           **cls.credentials)
-        except Exception as e:
-            return {"error": str(e)}
+            subs_list = cls.list()
+            if subs_list:
+                subscription_id = subs_list.pop()
+        if subscription_id:
+            try:
+                cls.client.delete_subscription(subscription_id,
+                                               **cls.credentials)
+            except Exception as e:
+                return {"error": str(e)}
 
-        if delete_collection:
-            mongodb.subscription.drop()
+            if delete_collection:
+                mongodb.subscription.drop()
 
-        result = {"success": "deleted subscription {}".format(subscription_id)}
+            result = {"success": "deleted subscription {}".format(subscription_id)}
+        else:
+            result = {"error": "non-existent/incorrect subscription id"}
         app.logger.debug(result)
         return result
 
