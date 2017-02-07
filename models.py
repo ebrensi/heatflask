@@ -314,9 +314,12 @@ class Users(UserMixin, db_sql.Model):
                     .format(e))
 
         if self.activity_index:
-            return pd.read_msgpack(
-                self.activity_index["packed_index"]
-            ).astype({"type": str})
+            return {
+                "index_df": pd.read_msgpack(
+                    self.activity_index["packed_index"]
+                ).astype({"type": str}),
+                "dt_last_indexed": self.activity_index["dt_last_indexed"]
+            }
 
     def build_index(self, out_queue=None, limit=None, after=None, before=None):
         def enqueue(msg):
@@ -422,11 +425,10 @@ class Users(UserMixin, db_sql.Model):
     def update_index(self, index_df=None, reset_ttl=True):
         start_time = datetime.utcnow()
 
-        if (index_df is None):
-            if self.get_raw_index():
-                index_df = pd.read_msgpack(
-                    self.activity_index["packed_index"]
-                ).astype({"type": str})
+        if index_df is None:
+            activity_index = self.get_index()
+            if activity_index:
+                index_df = activity_index["index_df"]
             else:
                 return
 
@@ -515,13 +517,11 @@ class Users(UserMixin, db_sql.Model):
                     + "...<br>Please try again in a few seconds.<br>"
                     }]
 
-        if self.get_raw_index():
-            index_df = pd.read_msgpack(
-                self.activity_index["packed_index"]
-            ).astype({"type": str})
-
+        activity_index = self.get_index()
+        if activity_index:
+            index_df = activity_index["index_df"]
             elapsed = (datetime.utcnow() -
-                       self.activity_index["dt_last_indexed"]).total_seconds()
+                       activity_index["dt_last_indexed"]).total_seconds()
 
             # update the index if we need to
             if (elapsed > INDEX_UPDATE_TIMEOUT) and (not OFFLINE):
@@ -543,8 +543,7 @@ class Users(UserMixin, db_sql.Model):
             return df.to_dict("records")
 
         Q = Queue()
-        P = Pool()
-        P.apply_async(self.build_index, [Q, limit, after, before])
+        gevent.spawn(self.build_index, Q, limit, after, before)
         return Q
 
     def get_activity(self, a_id):
@@ -832,6 +831,25 @@ class Webhooks(object):
 
     @classmethod
     def handle_update_callback(cls, update_raw):
+        # if an archived index exists for the user whose data is being updated,
+        #  we will update his/her index.
+        user_id = int(update_raw.get("owner_id", 0))
+        archived_activity_index = mongodb.indexes.find_one(
+            {"_id": user_id}
+        )
+        updated = None
+        if archived_activity_index:
+            # an activity index assoiciated with this update was found in
+            # mongoDB, so most likely we have the associated user.
+            updated = False
+            user = Users.get(user_id, timeout=60)
+            if user:
+                user.activity_index = archived_activity_index
+                gevent.spawn(user.update_index, reset_ttl=False)
+                gevent.sleep(0)
+                # user.update_index(reset_ttl=False)
+                updated = True
+
         obj = cls.client.handle_subscription_update(update_raw)
         doc = {
             "dt": datetime.utcnow(),
@@ -840,15 +858,9 @@ class Webhooks(object):
             "object_id": obj.object_id,
             "object_type": obj.object_type,
             "aspect_type": obj.aspect_type,
-            "event_time": str(obj.event_time)
+            "event_time": str(obj.event_time),
+            "updated": updated
         }
-
-        raw_index = mongodb.indexes.find_one({"_id": obj.owner_id})
-        if raw_index:
-            user = Users.get(obj.owner_id, timeout=60)
-        doc["updated"] = (
-            user and (user.update_index(reset_ttl=False) is not None)
-        )
         result = mongodb.subscription.insert_one(doc)
 
         # app.logger.info("subscription update:\n{}".format(doc))
