@@ -334,27 +334,32 @@ class Users(UserMixin, db_sql.Model):
 
         activities_list = []
         count = 0
+        rendering = True
         try:
             for a in self.client().get_activities():
                 d = Activities.strava2dict(a)
                 if d.get("summary_polyline"):
                     activities_list.append(d)
                     count += 1
-                    if (limit or
-                        (after and (d["beginTimestamp"] >= after)) or
-                            (before and (d["beginTimestamp"] <= before))):
+
+                    if (rendering and
+                        ((limit and (count <= limit)) or
+                         (after and (d["beginTimestamp"] >= after)) or
+                            (before and (d["beginTimestamp"] <= before)))):
                         d2 = dict(d)
                         d2["beginTimestamp"] = str(d2["beginTimestamp"])
                         enqueue(d2)
                         # app.logger.info("put {} on queue".format(d2["id"]))
-
-                        if limit:
-                            limit -= 1
-                            if not limit:
-                                enqueue({"stop_rendering": "1"})
                     else:
                         enqueue({"msg": "indexing...{} activities"
                                  .format(count)})
+
+                    if (rendering and
+                        ((limit and count >= limit) or
+                            (after and (d["beginTimestamp"] < after)))):
+                        rendering = False
+                        enqueue({"stop_rendering": "1"})
+
                     gevent.sleep(0)
         except Exception as e:
             enqueue({"error": str(e)})
@@ -847,7 +852,6 @@ class Webhooks(object):
                 user.activity_index = archived_activity_index
                 gevent.spawn(user.update_index, reset_ttl=False)
                 gevent.sleep(0)
-                # user.update_index(reset_ttl=False)
                 updated = True
 
         obj = cls.client.handle_subscription_update(update_raw)
