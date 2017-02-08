@@ -430,9 +430,10 @@ class Users(UserMixin, db_sql.Model):
         if activities_list:
             return index_df
 
-    def update_index(self, index_df=None, reset_ttl=True):
+    def update_index(self, index_df=None, activity_ids=[], reset_ttl=True):
         start_time = datetime.utcnow()
 
+        #  retrieve the current index if we have it, otherwise quit
         if index_df is None:
             activity_index = self.get_index()
             if activity_index:
@@ -440,19 +441,40 @@ class Users(UserMixin, db_sql.Model):
             else:
                 return
 
-        latest = index_df.index[0]
-        # app.logger.info("updating activity index for {}"
-        #                 .format(self.id))
-
         already_got = set(index_df.id)
 
-        try:
-            activities_list = [Activities.strava2dict(
-                a) for a in self.client().get_activities(after=latest)
-                if a.id not in already_got]
-        except Exception as e:
-            app.logger.info({"error": str(e)})
-            return
+        # if particular activity_ids are supplied, we will go fetch those
+        # activities and add/replace them. otherwise, we get new activities
+        # since the latest one in our current index
+        if activity_ids:
+            activities_list = []
+            for aid in activity_ids:
+                try:
+                    act = Activities.strava2dict(
+                        self.client().get_activity(aid)
+                    )
+                except Exception as e:
+                    app.logger.error("error getting activity {}: {}"
+                                     .format(aid, e))
+                else:
+                    activities_list.append(act)
+
+                # remove these activities from index_df they are there
+                index_df = index_df.ix[~index_df["id"].isin(activity_ids)]
+
+                app.logger.info("updating activity {} in index {}"
+                                .format(aid, self.id))
+        else:
+            latest = index_df.index[0]
+            app.logger.info("getting new activites (since {}) for index {}"
+                            .format(latest, self.id))
+            try:
+                activities_list = [Activities.strava2dict(
+                    a) for a in self.client().get_activities(after=latest)
+                    if a.id not in already_got]
+            except Exception as e:
+                app.logger.error({"error": str(e)})
+                return
 
         to_update = {}
         if reset_ttl:
@@ -553,17 +575,6 @@ class Users(UserMixin, db_sql.Model):
         Q = Queue()
         gevent.spawn(self.build_index, Q, limit, after, before)
         return Q
-
-    def get_activity(self, a_id):
-        client = self.client()
-        try:
-            activity = client.get_activity(int(a_id))
-            # app.logger.debug("imported Strava activity {}".format(a_id))
-        except Exception as e:
-            activity = None
-            app.logger.debug(
-                "error retrieving activity '{}': {}".format(a_id, e))
-        return activity
 
 
 #  Activities class is only a proxy to underlying data structures.
