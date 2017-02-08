@@ -145,7 +145,7 @@
                             target="_blank">{{ current_user.username or current_user.id}}</a> :
                 <br>
 
-                <form action="{{ url_for('logout', username=user.id) }}">
+                <form action="{{ url_for('logout', username=current_user.id) }}">
                     <input type="submit" class="btn btn-danger" value="Log Out" />
                 </form>
                 {% else %}
@@ -162,8 +162,11 @@
             {% if current_user.is_authenticated
                     and ((current_user.id == user.id) or current_user.is_admin()) %}
             <div class="sidebar-pane" id="profile">
-                <h1 class="sidebar-header"> <a href="https://www.strava.com/athletes/{{ user.id }}" target="_blank"><img src="{{ url_for('static',filename='strava_button.png')}}" width=20, height=20 class="img-fluid"> </a>  {{ current_user.username or current_user.id }} <span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
+                <h1 class="sidebar-header"> <a href="https://www.strava.com/athletes/{{ user.id }}" target="_blank"><img src="{{ url_for('static',filename='strava_button.png')}}" width=20, height=20 class="img-fluid"> </a>  {{ user.username or user.id }} <span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
 
+                {% if current_user.is_authenticated and current_user.is_admin() %}
+                Admin on behalf of:<br>
+                {% endif }
 
                 <h3> {{ user.firstname }}
                      {{ user.lastname }}:</h3>
