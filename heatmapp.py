@@ -721,7 +721,7 @@ def subscription_endpoint(operation):
         timezone = Utility.ip_timezone(Utility.ip_address(request))
 
         def tzcorrect(e):
-            dt = Utility.utc_to_timezone(e.get('ts'), timezone)
+            dt = Utility.utc_to_timezone(e.get('dt'), timezone)
             return dt.strftime("%m-%d %H:%M:%S")
 
         return render_template("webhooks.html",
