@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>Activities List</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- <meta name="viewport" content="width=device-width, initial-scale=1.0"> -->
     <style>
       #data {
         text-align: center;
@@ -18,7 +18,7 @@
   </head>
 
   <body>
-  <h3>Activities list</h3>
+  <h4>Activities list</h4>
   <div id="status">
     <span id="status_msg"></span>
     <span id="count"></span>
@@ -65,6 +65,8 @@
         let heatflask_button = img("{{ url_for('static',filename='Heat.png') }}"),
             USER_BASE_URL = "{{url_for('main',username=user.id)}}",
             count = 0,
+            count_DOM_element = $("#count"),
+            table_body = $('#activities_list tbody'),
             source = new EventSource("{{ url_for('activity_stream', username=user.id) }}");
 
         $("#status_msg").text("Retrieving Activity Index...");
@@ -85,7 +87,7 @@
           } else {
             let A = JSON.parse(event.data);
             if ("id" in A) {
-              $("#count").text(count++);
+              count_DOM_element.text(count++);
               let heatflask_link = href(`${USER_BASE_URL}?id=${A.id}`, heatflask_button),
                   ts = A.beginTimestamp.slice(0,10),
                   dkm = +(A.total_distance / 1000).toFixed(2),
@@ -98,7 +100,7 @@
                      td(hhmmss(A.elapsed_time)) +
                      td(A.name) +
                      "</tr>";
-              $('#activities_list tbody').append(row);
+              table_body.append(row);
             }
           }
         }
