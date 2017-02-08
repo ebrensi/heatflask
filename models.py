@@ -350,17 +350,18 @@ class Users(UserMixin, db_sql.Model):
                         d2["beginTimestamp"] = str(d2["beginTimestamp"])
                         enqueue(d2)
                         # app.logger.info("put {} on queue".format(d2["id"]))
-                    else:
-                        enqueue({"msg": "indexing...{} activities"
-                                 .format(count)})
-
                     if (rendering and
                         ((limit and count >= limit) or
                             (after and (d["beginTimestamp"] < after)))):
                         rendering = False
                         enqueue({"stop_rendering": "1"})
 
-                    gevent.sleep(0)
+                    if not (count % 10):
+                        enqueue({"msg": "indexing...{} activities"
+                                 .format(count)})
+                        gevent.sleep(0)
+
+            gevent.sleep(0)
         except Exception as e:
             enqueue({"error": str(e)})
         else:
