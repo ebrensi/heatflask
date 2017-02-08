@@ -15,7 +15,7 @@
 
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBLvYWwPmLsBRCGXeMHh-InA9rq35jdVeA" async defer></script>
 
-    {% if not current_user.id in config["ADMIN"] %}
+    {% if not current_user.is_admin() %}
     {{analytics}}
     {% endif %}
 </head>
@@ -35,7 +35,7 @@
 
 
                 {% if current_user.is_authenticated
-                    and (current_user.id == user.id) %}
+                    and ((current_user.id == user.id) or current_user.is_admin())%}
                 <li>
                 {% else %}
                 <li class="disabled">
@@ -48,7 +48,7 @@
 
             <ul role="tablist">
                 {% if current_user.is_authenticated
-                    and (current_user.id == user.id) %}
+                    and ((current_user.id == user.id) or current_user.is_admin()) %}
                 <li>
                 {% else %}
                 <li class="disabled">
@@ -161,7 +161,7 @@
             </div>
 
             {% if current_user.is_authenticated
-                    and (current_user.id == user.id) %}
+                    and ((current_user.id == user.id) or current_user.is_admin()) %}
             <div class="sidebar-pane" id="profile">
                 <h1 class="sidebar-header"> <a href="https://www.strava.com/athletes/{{ user.id }}" target="_blank"><img src="{{ url_for('static',filename='strava_button.png')}}" width=20, height=20 class="img-fluid"> </a>  {{ current_user.username or current_user.id }} <span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
 
