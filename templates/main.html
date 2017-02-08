@@ -29,7 +29,6 @@
                 <a href="#home" role="tab"><i class="fa fa-bars"></i></a>
                 </li>
 
-                <!-- <li class="disabled"> -->
                 <li>
                 <a href="#activities" role="tab"><i class="fa fa-list"></i></a></li>
 
@@ -48,7 +47,7 @@
 
             <ul role="tablist">
                 {% if current_user.is_authenticated
-                    and ((current_user.id == user.id) or current_user.is_admin()) %}
+                    and current_user.is_admin() %}
                 <li>
                 {% else %}
                 <li class="disabled">
@@ -166,19 +165,18 @@
                 <h1 class="sidebar-header"> <a href="https://www.strava.com/athletes/{{ user.id }}" target="_blank"><img src="{{ url_for('static',filename='strava_button.png')}}" width=20, height=20 class="img-fluid"> </a>  {{ current_user.username or current_user.id }} <span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
 
 
-                <h3> {{ current_user.firstname }}
-                     {{ current_user.lastname }}:</h3>
+                <h3> {{ user.firstname }}
+                     {{ user.lastname }}:</h3>
 
                 <a href="https://www.strava.com/settings/profile" target="_blank">
-                    <img src={{ current_user.profile }} alt="user image" height="20%" width="20%">
+                    <img src={{ user.profile }} alt="user image" height="20%" width="20%">
                 </a>
 
                 <br><br>
                 The activity index is built when you register, and updated with new activities.  If you made changes to or deleted old activities on Strava, rebuild the index here.
-                <form action="{{ url_for('activities', username=current_user.id) }}" target="_blank">
+                <form action="{{ url_for('activities', username=user.id) }}" target="_blank">
                     <input type="submit" class="btn" value="View activity index" />
                     <label><input type="checkbox" name="rebuild" value="1">Re-build</label>
-                    <!-- <input type="hidden" name="limit" value="100000"> -->
                 </form>
 
                 <br><br>
