@@ -27,13 +27,8 @@ app.config.from_object(os.environ['APP_SETTINGS'])
 sslify = SSLify(app, permanent=True, skips=["webhook_callback"])
 
 # models depend app so we import them afterwards
-from models import Users, Activities, EventLogger, Webhooks,\
+from models import Users, Activities, EventLogger, Utility, Webhooks,\
     db_sql, mongodb, redis
-
-
-def href(url, text):
-    return "<a href='{}' target='_blank'>{}</a>".format(url, text)
-
 
 Analytics(app)
 
@@ -398,7 +393,7 @@ def main(username):
             "ip": request.access_route[-1],
             "cuid": "" if current_user.is_anonymous else current_user.id,
             "agent": vars(request.user_agent),
-            "msg": href(request.url, request.full_path)
+            "msg": Utility.href(request.url, request.full_path)
         })
 
     paused = request.args.get("paused") in ["1", "true"]
@@ -481,7 +476,7 @@ def getdata(username):
             "ip": request.access_route[-1],
             "cuid": "" if current_user.is_anonymous else current_user.id,
             "agent": vars(request.user_agent),
-            "msg": href(request.url, request.full_path)
+            "msg": Utility.href(request.url, request.full_path)
         }
     else:
         event_data = None
@@ -655,30 +650,21 @@ def users_backup():
 @log_request_event
 @admin_required
 def event_history():
-    def href(url, text):
-        return "<a href='{}' target='_blank'>{}</a>".format(url, text)
 
-    def naive_utc_datetime_to_pst(dt):
-        from_zone = tz.gettz('UTC')
-        to_zone = tz.gettz('America/Los_Angeles')
-        utc = dt.replace(tzinfo=from_zone)
-        return utc.astimezone(to_zone)
+    timezone = Utility.ip_timezone(Utility.ip_address(request))
 
     def id_tag(e):
-        dt = naive_utc_datetime_to_pst(e.get('ts'))
-        return href(url_for('logged_event', event_id=e['_id']),
-                    dt.strftime("%m-%d %H:%M:%S"))
-
-    def ip_lookup_url(ip):
-        return "http://freegeoip.net/json/{}".format(ip) if ip else "#"
+        dt = Utility.utc_to_timezone(e.get('ts'), timezone)
+        return Utility.href(url_for('logged_event', event_id=e['_id']),
+                            dt.strftime("%m-%d %H:%M:%S"))
 
     def ip_tag(e):
         ip = e.get("ip")
-        return href(ip_lookup_url(ip), ip) if ip else ""
+        return Utility.href(Utility.ip_lookup_url(ip), ip) if ip else ""
 
     def cuid_tag(e):
         cuid = e.get('cuid')
-        return href(url_for("user_profile", username=cuid), cuid) if cuid else ""
+        return Utility.href(url_for("user_profile", username=cuid), cuid) if cuid else ""
 
     events = EventLogger.get_log()
     if events:
@@ -732,7 +718,14 @@ def subscription_endpoint(operation):
         return jsonify(result)
 
     elif operation == "updates":
+        timezone = Utility.ip_timezone(Utility.ip_address(request))
+
+        def tzcorrect(e):
+            dt = Utility.utc_to_timezone(e.get('ts'), timezone)
+            return dt.strftime("%m-%d %H:%M:%S")
+
         return render_template("webhooks.html",
+                               dt=tzcorrect,
                                events=Webhooks.iter_updates())
 
 

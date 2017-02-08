@@ -3,6 +3,7 @@ from sqlalchemy.dialects import postgresql as pg
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import inspect
 from datetime import datetime, timedelta
+import dateutil
 import stravalib
 import polyline
 import pymongo
@@ -13,6 +14,7 @@ import gevent
 from gevent.queue import Queue
 from gevent.pool import Pool
 from exceptions import StopIteration
+import requests
 from requests.exceptions import HTTPError
 import cPickle
 import msgpack
@@ -880,6 +882,38 @@ class Webhooks(object):
         for u in updates:
             u["_id"] = str(u["_id"])
             yield u
+
+
+class Utility():
+
+    @staticmethod
+    def href(url, text):
+        return "<a href='{}' target='_blank'>{}</a>".format(url, text)
+
+    @staticmethod
+    def ip_lookup_url(ip):
+        return "http://freegeoip.net/json/{}".format(ip) if ip else "#"
+
+    @staticmethod
+    def ip_address(flask_request_object):
+        return flask_request_object.access_route[-1]
+
+    @classmethod
+    def ip_lookup(cls, ip_address):
+        r = requests.get(cls.ip_lookup_url(ip_address))
+        return r.json()
+
+    @classmethod
+    def ip_timezone(cls, ip_address):
+        tz = cls.ip_lookup(ip_address)["time_zone"]
+        return tz if tz else 'America/Los_Angeles'
+
+    @staticmethod
+    def utc_to_timezone(dt, timezone='America/Los_Angeles'):
+        from_zone = dateutil.tz.gettz('UTC')
+        to_zone = dateutil.tz.gettz(timezone)
+        utc = dt.replace(tzinfo=from_zone)
+        return utc.astimezone(to_zone)
 
 
 if "history" not in mongodb.collection_names():

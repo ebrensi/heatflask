@@ -17,22 +17,16 @@
     <table id="updates_table" class='display order-column compact' cellspacing='1' width='100%'>
         <thead>
             <th>dt</th>
-            <th>time</th>
             <th>owner</th>
-            <th>object</th>
-            <th>type</th>
-            <th>aspect</th>
+            <th>activity</th>
             <th>updated</th>
         </thead>
         <tbody>
         {%- for e in events %}
           <tr>
-            <td>{{ e.get("dt") }}</td>
-            <td>{{ e.get("event_time") }}</td>
+            <td>{{ dt(e) }}</td>
             <td>{{ e.get("owner_id") }}</td>
             <td>{{ e.get("object_id") }}</td>
-            <td>{{ e.get("object_type") }}</td>
-            <td>{{ e.get("aspect_type") }}</td>
             <td>{{ e.get("updated") }}</td>
           </tr>
         {%- endfor %}
