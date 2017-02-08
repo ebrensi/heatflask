@@ -620,10 +620,11 @@ def activity_stream(username):
 @log_request_event
 @admin_or_self_required
 def activities(username):
+    user = Users.get(username)
     if request.args.get("rebuild"):
-        current_user.delete_index()
+        user.delete_index()
     return render_template("activities.html",
-                           user=current_user)
+                           user=user)
 
 
 # ---- User admin stuff ----
