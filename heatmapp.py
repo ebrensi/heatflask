@@ -519,6 +519,7 @@ def getdata(username):
 
         count = 0
         imported = 0
+        elapsed = 0
         try:
             for activity in activity_data:
                 # app.logger.debug("activity {}".format(activity))
@@ -526,6 +527,9 @@ def getdata(username):
                     ("error" in activity) or
                         ("stop_rendering" in activity)):
                     Q.put(sse_out(activity))
+
+                    if "stop_rendering" in activity:
+                        elapsed = datetime.utcnow() - start_time
 
                 if activity.get("summary_polyline"):
                     count += 1
@@ -566,7 +570,8 @@ def getdata(username):
         # otherise we'll get an idle connection error from Heroku
         Q.put(StopIteration)
 
-        elapsed = datetime.utcnow() - start_time
+        if not elapsed:
+            elapsed = datetime.utcnow() - start_time
         if event_data:
             event_data["msg"] += (": elapsed={} sec, count={}, imported {}"
                                   .format(round(elapsed.total_seconds(), 3),
