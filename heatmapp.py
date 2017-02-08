@@ -106,8 +106,8 @@ login_manager.login_view = 'splash'
 
 @app.before_request
 def log_request():
-    if (("66.102.6" in request.access_route[-1]) and
-            (("users" in request.path) or ("history" in request.path))):
+    if (("66.102" in request.access_route[-1]) and
+            any(w in request.path for w in ["users", "history", "subscription"])):
 
         EventLogger.log_request(request,
                                 msg="(Google) {}".format(request.url))
@@ -182,8 +182,8 @@ def robots_txt():
 
 @app.route("/googler")
 def wassup():
-    if "66.102.6" in request.access_route[-1]:
-        return "Congrats. Working on this..."
+    if "66.102" in request.access_route[-1]:
+        return "Congrats. What do you want?"
     else:
         return ""
 
