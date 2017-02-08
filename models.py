@@ -852,23 +852,25 @@ class Webhooks(object):
     def handle_update_callback(cls, update_raw):
         # if an archived index exists for the user whose data is being updated,
         #  we will update his/her index.
-        user_id = int(update_raw.get("owner_id", 0))
+        obj = cls.client.handle_subscription_update(update_raw)
         archived_activity_index = mongodb.indexes.find_one(
-            {"_id": user_id}
+            {"_id": obj.owner_id}
         )
         updated = None
         if archived_activity_index:
             # an activity index assoiciated with this update was found in
             # mongoDB, so most likely we have the associated user.
             updated = False
-            user = Users.get(user_id, timeout=60)
+            user = Users.get(obj.owner_id, timeout=60)
             if user:
+                ids = [obj.object_id]
                 user.activity_index = archived_activity_index
-                gevent.spawn(user.update_index, reset_ttl=False)
+                gevent.spawn(user.update_index,
+                             activity_ids=ids,
+                             reset_ttl=False)
                 gevent.sleep(0)
                 updated = True
 
-        obj = cls.client.handle_subscription_update(update_raw)
         doc = {
             "dt": datetime.utcnow(),
             "subscription_id": obj.subscription_id,
