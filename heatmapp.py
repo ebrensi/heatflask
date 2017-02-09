@@ -24,7 +24,7 @@ from signal import signal, SIGPIPE, SIG_DFL
 
 app = Flask(__name__)
 app.config.from_object(os.environ['APP_SETTINGS'])
-sslify = SSLify(app, permanent=True, skips=["webhook_callback"])
+sslify = SSLify(app, skips=["webhook_callback"])
 
 # models depend app so we import them afterwards
 from models import Users, Activities, EventLogger, Utility, Webhooks,\
