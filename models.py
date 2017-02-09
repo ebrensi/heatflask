@@ -290,7 +290,7 @@ class Users(UserMixin, db_sql.Model):
         self.activity_index = None
         result2 = self.cache()
         app.logger.debug("delete index for {}. mongo:{}, redis:{}"
-                         .format(self.id, result1, result2))
+                         .format(self.id, vars(result1), result2))
 
         return result1, result2
 
