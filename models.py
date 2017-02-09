@@ -577,6 +577,27 @@ class Users(UserMixin, db_sql.Model):
         return Q
 
 
+class Indexes(object):
+
+    @staticmethod
+    def init():
+        # drop the "indexes" collection
+        mongodb.indexes.drop()
+
+        # delete all users from the Redis cache, since they have indexes
+        keys_to_delete = redis.keys(Users.key("*"))
+        redis.delete(*keys_to_delete)
+
+        # create new indexes collection
+        mongodb.create_collection("indexes")
+
+        timeout = app.config["STORE_INDEX_TIMEOUT"]
+        mongodb.indexes.create_index(
+            "dt_last_indexed",
+            expireAfterSeconds=timeout
+        )
+
+
 #  Activities class is only a proxy to underlying data structures.
 #  There are no Activity objects
 class Activities(object):
