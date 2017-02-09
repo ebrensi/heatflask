@@ -853,9 +853,14 @@ class Webhooks(object):
         # if an archived index exists for the user whose data is being updated,
         #  we will update his/her index.
         obj = cls.client.handle_subscription_update(update_raw)
+
         archived_activity_index = mongodb.indexes.find_one(
             {"_id": obj.owner_id}
         )
+
+        app.logger.info("update reqest for user {}, activity {}"
+                        .format(obj.owner_id, obj.object_id))
+
         updated = None
         if archived_activity_index:
             # an activity index assoiciated with this update was found in
@@ -882,8 +887,6 @@ class Webhooks(object):
             "updated": updated
         }
         result = mongodb.subscription.insert_one(doc)
-
-        # app.logger.info("subscription update:\n{}".format(doc))
         return result
 
     @staticmethod
