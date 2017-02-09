@@ -164,7 +164,7 @@
             <div class="sidebar-pane" id="profile">
                 <h1 class="sidebar-header"> <a href="https://www.strava.com/athletes/{{ user.id }}" target="_blank"><img src="{{ url_for('static',filename='strava_button.png')}}" width=20, height=20 class="img-fluid"> </a>  {{ user.username or user.id }} <span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
 
-                {% if current_user.is_authenticated and current_user.is_admin() %}
+                {% if current_user.is_authenticated and current_user.is_admin() and (not user.is_admin()) %}
                 Admin ({{ current_user.id }}) on behalf of:<br>
                 {% endif %}
 
@@ -176,7 +176,7 @@
                 </a>
 
                 <br><br>
-                The activity index is built when you register, and updated with new activities.  If you made changes to or deleted old activities on Strava, rebuild the index here.
+                The activity index is built the first time you use Heatflask and expires after 7 days of inactivity.  While your index is active (within 7 days of the last access), it is automatically updated with new activities and most changes you make on Strava.  You can manually force Heatflask to re-build the index from current Strava data.
                 <form action="{{ url_for('activities', username=user.id) }}" target="_blank">
                     <input type="submit" class="btn" value="View activity index" />
                     <label><input type="checkbox" name="rebuild" value="1">Re-build</label>
