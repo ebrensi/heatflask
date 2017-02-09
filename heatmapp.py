@@ -10,7 +10,8 @@ from flask import Flask, Response, render_template, request, redirect, \
 import flask_compress
 import dateutil.parser
 from datetime import datetime
-from dateutil import tz
+import sys
+import logging
 import os
 import re
 import json
@@ -24,6 +25,10 @@ from signal import signal, SIGPIPE, SIG_DFL
 
 app = Flask(__name__)
 app.config.from_object(os.environ['APP_SETTINGS'])
+
+app.logger.addHandler(logging.StreamHandler(sys.stdout))
+app.logger.setLevel(logging.DEBUG)
+
 sslify = SSLify(app, skips=["webhook_callback"])
 
 # models depend app so we import them afterwards
