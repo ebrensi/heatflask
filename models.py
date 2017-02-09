@@ -250,7 +250,7 @@ class Users(UserMixin, db_sql.Model):
             try:
                 strava_user = client.get_athlete()
             except Exception as e:
-                app.logger.debug("error getting user {}:\n{}"
+                app.logger.error("error getting user {}:\n{}"
                                  .format(user_dict["strava_id"], e))
             else:
                 return {
@@ -283,7 +283,7 @@ class Users(UserMixin, db_sql.Model):
         try:
             result1 = mongodb.indexes.delete_one({'_id': self.id})
         except Exception as e:
-            app.logger.debug("error deleting index {} from MongoDB:\n{}"
+            app.logger.error("error deleting index {} from MongoDB:\n{}"
                              .format(self, e))
             result1 = e
 
@@ -311,7 +311,7 @@ class Users(UserMixin, db_sql.Model):
                 self.activity_index = (mongodb.indexes
                                        .find_one({"_id": self.id}))
             except Exception as e:
-                app.logger.debug(
+                app.logger.error(
                     "error accessing mongodb indexes collection:\n{}"
                     .format(e))
 
@@ -404,7 +404,7 @@ class Users(UserMixin, db_sql.Model):
                 #     .format(self, vars(result))
                 # )
             except Exception as e:
-                app.logger.debug(
+                app.logger.error(
                     "error wrtiting activity index for {} to MongoDB:\n{}"
                     .format(self, e)
                 )
@@ -719,10 +719,10 @@ class Activities(object):
                                                   series_type='time',
                                                   types=streams_to_import)
         except Exception as e:
-            app.logger.debug("error importing streams for {}:\n{}"
-                             .format(activity_id, e))
-            return {"error": "error importing streams for {}:\n{}"
-                             .format(activity_id, e)}
+            msg = ("Can't import streams for activity {}:\n{}"
+                   .format(activity_id, e))
+            app.logger.error(msg)
+            return {"error": msg}
 
         activity_streams = {name: streams[name].data for name in streams}
 
@@ -840,7 +840,7 @@ class Webhooks(object):
                 subscription_id)}
         else:
             result = {"error": "non-existent/incorrect subscription id"}
-        app.logger.debug(result)
+        app.logger.error(result)
         return result
 
     @classmethod
