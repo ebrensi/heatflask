@@ -186,6 +186,7 @@ def robots_txt():
 
 
 @app.route("/googler")
+@log_request_event
 def wassup():
     if "66.102" in request.access_route[-1]:
         return "Congrats. What do you want?"

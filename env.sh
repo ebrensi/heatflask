@@ -1,6 +1,6 @@
 #! usr/bin/env bash
 
-source activate runapp
+source activate heatflask
 
 export DATABASE_URL=postgresql://heatmapp:heatmapp@localhost/heatmapp
 export REDIS_URL=redis://localhost
