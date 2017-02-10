@@ -176,7 +176,7 @@
                 </a>
 
                 <br><br>
-                The activity index is built the first time you use Heatflask and expires after 7 days of inactivity.  While your index is active (within 7 days of the last access), it is automatically updated with new activities and most changes you make on Strava.  You can manually force Heatflask to re-build the index from current Strava data.
+                The activity index is built the first time you use Heatflask and expires after 7 days of inactivity.  While your index is active (within 7 days of the last access), it is automatically updated with new activities and most changes you make on Strava.  If our index does not corrrectly reflect the current state of your Strava activities you can manually force Heatflask to re-build the index from Strava data.
                 <form action="{{ url_for('activities', username=user.id) }}" target="_blank">
                     <input type="submit" class="btn" value="View activity index" />
                     <label><input type="checkbox" name="rebuild" value="1">Re-build</label>
