@@ -885,6 +885,8 @@ class Webhooks(object):
             updated = False
             user = Users.get(user_id, timeout=60)
             if user:
+                app.logger.info("update reqest for user {}, activity {}"
+                                .format(user_id, update_raw["object_id"]))
                 ids = [int(update_raw["object_id"])]
                 user.activity_index = archived_activity_index
                 gevent.spawn(user.update_index,
@@ -894,8 +896,7 @@ class Webhooks(object):
                 updated = True
 
         obj = cls.client.handle_subscription_update(update_raw)
-        app.logger.info("update reqest for user {}, activity {}"
-                        .format(obj.owner_id, obj.object_id))
+
         doc = {
             "dt": datetime.utcnow(),
             "subscription_id": obj.subscription_id,
