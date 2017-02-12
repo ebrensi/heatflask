@@ -366,6 +366,7 @@ class Users(UserMixin, db_sql.Model):
             gevent.sleep(0)
         except Exception as e:
             enqueue({"error": str(e)})
+            app.logger.error(e)
         else:
             if not activities_list:
                 enqueue({"error": "No activities!"})
@@ -409,10 +410,7 @@ class Users(UserMixin, db_sql.Model):
                     .format(self, e)
                 )
 
-        finally:
-            self.indexing(False)
             elapsed = datetime.utcnow() - start_time
-
             msg = (
                 "{}'s index built in {} sec. count={}, size={}"
                 .format(self.id,
@@ -423,8 +421,10 @@ class Users(UserMixin, db_sql.Model):
 
             app.logger.debug(msg)
             EventLogger.new_event(msg=msg)
-
             enqueue({"msg": "done indexing {} activities.".format(count)})
+
+        finally:
+            self.indexing(False)
             enqueue(StopIteration)
 
         if activities_list:
