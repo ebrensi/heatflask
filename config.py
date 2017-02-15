@@ -31,7 +31,7 @@ class Config(object):
     STORE_ACTIVITIES_TIMEOUT = 7 * 24 * 60 * 60  # 7 days
 
     # How long before a user's index is outated and needs an update
-    INDEX_UPDATE_TIMEOUT = 10 * 60  # 10 minutes
+    INDEX_UPDATE_TIMEOUT = 24 * 60 * 60  # 1 day
 
     # How long we memory-cache hires activities
     CACHE_ACTIVITIES_TIMEOUT = 1 * 60 * 60  # 1 hour
