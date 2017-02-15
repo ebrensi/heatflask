@@ -165,7 +165,7 @@
                 <h1 class="sidebar-header"> <a href="https://www.strava.com/athletes/{{ user.id }}" target="_blank"><img src="{{ url_for('static',filename='strava_button.png')}}" width=20, height=20 class="img-fluid"> </a>  {{ user.username or user.id }} <span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
 
                 {% if current_user.is_authenticated and current_user.is_admin() and (not user.is_admin()) %}
-                Admin ({{ current_user.id }}) on behalf of:<br>
+                Admin ({{ current_user.id }}) on behalf of:
                 {% endif %}
 
                 <h3> {{ user.firstname }}
@@ -176,7 +176,7 @@
                 </a>
 
                 <br><br>
-                The activity index is built the first time you use Heatflask and expires after 7 days of inactivity.  While your index is active (within 7 days of the last access), it is automatically updated with new activities and most changes you make on Strava.  If our index does not corrrectly reflect the current state of your Strava activities you can manually force Heatflask to re-build the index from Strava data.
+                The activity index is built the first time you use Heatflask and expires after 7 days of inactivity.  While your index is active (within 7 days of the last access), it is automatically updated with new activities and most changes you make on Strava.  If our index does not corrrectly reflect the current state of your Strava activities, try re-building the index from Strava data.
                 <form action="{{ url_for('activities', username=user.id) }}" target="_blank">
                     <input type="submit" class="btn" value="View activity index" />
                     <label><input type="checkbox" name="rebuild" value="1">Re-build</label>
@@ -674,6 +674,12 @@
                 if (rendering) {
                     $("#abortButton").hide();
                     $(".progbar").hide();
+                    try {
+                        msgBox.close();
+                    }
+                    catch(err) {
+                        console.log(err.message);
+                    }
                     if ($("#autozoom:checked").val() && bounds.isValid())
                         map.fitBounds(bounds);
                     let msg2 = msg + " " + Object.keys(appState.items).length + " activities rendered.";
@@ -690,14 +696,6 @@
                 if (listening){
                     listening = false;
                     source.close();
-
-                    try {
-                        msgBox.close();
-                    }
-                    catch(err) {
-                        console.log(err.message);
-                    }
-
                     $('#renderButton').prop('disabled', false);
 
                 }

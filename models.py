@@ -554,7 +554,7 @@ class Users(UserMixin, db_sql.Model):
                        activity_index["dt_last_indexed"]).total_seconds()
 
             # update the index if we need to
-            if (elapsed > INDEX_UPDATE_TIMEOUT) and (not OFFLINE):
+            if (not OFFLINE) and (elapsed > INDEX_UPDATE_TIMEOUT):
                 index_df = self.update_index(index_df)
 
             if activity_ids:
