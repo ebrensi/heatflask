@@ -339,10 +339,9 @@ def main(username):
         except:
             logout_user()
         else:
-            current_user.update(
-                dt_last_active=datetime.utcnow(),
-                app_activity_count=current_user.app_activity_count + 1
-            )
+            current_user.dt_last_active = datetime.utcnow()
+            current_user.app_activity_count += 1
+            db_sql.session.commit()
 
     # note: 'current_user' is the user that is currently logged in.
     #       'user' is the user we are displaying data for.
