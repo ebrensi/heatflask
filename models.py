@@ -211,30 +211,36 @@ class Users(UserMixin, db_sql.Model):
     def delete(self):
         self.delete_index()
         self.uncache()
-        self.client().deauthorize()
+        try:
+            self.client().deauthorize()
+        except:
+            pass
         db_sql.session.delete(self)
         db_sql.session.commit()
 
     @classmethod
     def update_all(cls, delete=True):
-        for user in Users.query:
+        def user_data(user):
             data = cls.strava_data_from_token(user.access_token)
-            if data:
-                cls.add_or_update(cache_timeout=60, **data)
-                app.logger.info("successfully updated {}".format(user))
-            else:
-                app.logger.info("invalid access token for {}".format(user))
+            return data if data else user
+
+        P = Pool()
+        for obj in P.imap_unordered(user_data, cls.query):
+            if type(obj) == cls:
+                app.logger.info("invalid access token for {}".format(obj))
                 if delete:
-                    user.delete()
+                    obj.delete()
+            else:
+                user = cls.add_or_update(cache_timeout=60, **obj)
+                app.logger.info("successfully updated {}".format(user))
 
     @classmethod
     def backup(cls):
-        attrs = ["id", "access_token", "dt_last_active",
-                 "app_activity_count"]
+        attrs = ["id", "access_token", "dt_last_active", "app_activity_count"]
         dump = [{attr: getattr(user, attr) for attr in attrs}
                 for user in cls.query]
 
-        mongodb.users.insert_one({"backup": dump})
+        mongodb.users.insert_one({"backup": dump, "ts": datetime.utcnow()})
         return dump
 
     @classmethod
@@ -259,7 +265,7 @@ class Users(UserMixin, db_sql.Model):
         db_sql.create_all()
         count_before = len(users_list)
         count = 0
-        P = Pool(app.config["CONCURRENCY"])
+        P = Pool()
         for user_dict in P.imap_unordered(update_user_data, users_list):
             if user_dict:
                 user = cls.add_or_update(cache_timeout=60, **user_dict)
