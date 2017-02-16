@@ -138,7 +138,8 @@ class Users(UserMixin, db_sql.Model):
                 "city": strava_user.city,
                 "state": strava_user.state,
                 "country": strava_user.country,
-                "email": strava_user.email
+                "email": strava_user.email,
+                "access_token": token
             }
 
     @staticmethod
