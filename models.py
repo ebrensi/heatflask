@@ -162,7 +162,7 @@ class Users(UserMixin, db_sql.Model):
         redis.delete(self.__class__.key(self.username))
 
     @classmethod
-    def add_or_update(cls, **kwargs):
+    def add_or_update(cls, cache_timeout=CACHE_USERS_TIMEOUT, **kwargs):
         # Creates a new user or updates an existing user (with the same id)
         # from named-argument data.
         detached_user = cls(**kwargs)
@@ -174,7 +174,7 @@ class Users(UserMixin, db_sql.Model):
             app.logger.error("error adding/updating user {}: {}"
                              .format(kwargs, e))
         else:
-            persistent_user.cache()
+            persistent_user.cache(cache_timeout)
             return persistent_user
 
     @classmethod
@@ -215,6 +215,18 @@ class Users(UserMixin, db_sql.Model):
         db_sql.session.commit()
 
     @classmethod
+    def update_all(cls, delete=True):
+        for user in Users.query:
+            data = cls.strava_data_from_token(user.access_token)
+            if data:
+                cls.add_or_update(cache_timeout=60, **data)
+                app.logger.info("successfully update {}".format(user))
+            else:
+                app.logger.info("invalid access token for {}".format(user))
+                if delete:
+                    user.delete()
+
+    @classmethod
     def backup(cls):
         attrs = ["id", "access_token", "dt_last_active",
                  "app_activity_count"]
@@ -249,7 +261,7 @@ class Users(UserMixin, db_sql.Model):
         P = Pool(app.config["CONCURRENCY"])
         for user_dict in P.imap_unordered(update_user_data, users_list):
             if user_dict:
-                user = cls.add_or_update(**user_dict)
+                user = cls.add_or_update(cache_timeout=60, **user_dict)
                 if user:
                     count += 1
                     app.logger.debug("successfully restored/updated {}"
