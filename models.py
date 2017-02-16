@@ -246,7 +246,7 @@ class Users(UserMixin, db_sql.Model):
             )
             if strava_data:
                 user_data.update(strava_data)
-                return strava_data
+                return user_data
 
         if not users_list:
             doc = mongodb.users.find_one()
