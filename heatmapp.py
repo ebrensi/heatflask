@@ -269,7 +269,8 @@ def auth_callback():
             flash(str(e))
             return redirect(state)
 
-        user = Users.from_access_token(access_token)
+        user_data = Users.strava_data_from_token(access_token)
+        user = Users.add_or_update(user_data)
 
         # remember=True, for persistent login.
         login_user(user, remember=True)
@@ -655,6 +656,13 @@ def user_profile(username):
 @admin_required
 def users_backup():
     return jsonify(Users.backup())
+
+
+@app.route('/users/restore')
+@log_request_event
+@admin_required
+def users_restore():
+    return jsonify(Users.restore())
 
 
 # ---- Event log stuff ----

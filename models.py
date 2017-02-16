@@ -70,6 +70,7 @@ class Users(UserMixin, db_sql.Model):
     city = Column(String())
     state = Column(String())
     country = Column(String())
+    email = Column(String())
 
     dt_last_active = Column(pg.TIMESTAMP)
     app_activity_count = Column(Integer, default=0)
@@ -115,51 +116,30 @@ class Users(UserMixin, db_sql.Model):
     def get_id(self):
         return unicode(self.id)
 
-    def update(self, **kwargs):
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-        db_sql.session.commit()
-        return self
-
     def is_admin(self):
         return self.id in app.config["ADMIN"]
 
-    @classmethod
-    def from_access_token(cls, token):
+    @staticmethod
+    def strava_data_from_token(token):
         client = stravalib.Client(access_token=token)
         try:
             strava_user = client.get_athlete()
-        except HTTPError as e:
-            if "Unauthorized" in e.message:
-                return
-            else:
-                raise
-
-        user = cls.get(strava_user.id)
-        if not user:
-            user = cls(id=strava_user.id,
-                       app_activity_count=0)
-            db_sql.session.add(user)
-            db_sql.session.commit()
-
-        user.update(
-            username=strava_user.username,
-            access_token=token,
-            firstname=strava_user.firstname,
-            lastname=strava_user.lastname,
-            profile=strava_user.profile,
-            dt_last_active=datetime.utcnow(),
-
-            measurement_preference=strava_user.measurement_preference,
-            city=strava_user.city,
-            state=strava_user.state,
-            country=strava_user.country
-        )
-
-        return user
-
-    def validate(self):
-        return self.__class__.from_access_token(self.access_token)
+        except Exception as e:
+            app.logger.error("error getting user: {}"
+                             .format(e))
+        else:
+            return {
+                "id": strava_user.id,
+                "username": strava_user.username,
+                "firstname": strava_user.firstname,
+                "lastname": strava_user.lastname,
+                "profile": strava_user.profile,
+                "measurement_preference": strava_user.measurement_preference,
+                "city": strava_user.city,
+                "state": strava_user.state,
+                "country": strava_user.country,
+                "email": strava_user.email
+            }
 
     @staticmethod
     def key(identifier):
@@ -180,6 +160,22 @@ class Users(UserMixin, db_sql.Model):
         # delete from cache too.  It may be under two different keys
         redis.delete(self.__class__.key(self.id))
         redis.delete(self.__class__.key(self.username))
+
+    @classmethod
+    def add_or_update(cls, **kwargs):
+        # Creates a new user or updates an existing user (with the same id)
+        # from named-argument data.
+        detached_user = cls(**kwargs)
+        try:
+            persistent_user = db_sql.session.merge(detached_user)
+            db_sql.session.commit()
+        except Exception as e:
+            db_sql.session.rollback()
+            app.logger.error("error adding/updating user {}: {}"
+                             .format(kwargs, e))
+        else:
+            persistent_user.cache()
+            return persistent_user
 
     @classmethod
     def get(cls, user_identifier, timeout=CACHE_USERS_TIMEOUT):
@@ -225,59 +221,44 @@ class Users(UserMixin, db_sql.Model):
         dump = [{attr: getattr(user, attr) for attr in attrs}
                 for user in cls.query]
 
-        # df = pd.DataFrame(dump).set_index("id")
-        # document = df.to_json(orient="split")
-        # mongodb.users.insert_one(document)
+        mongodb.users.insert_one({"backup": dump})
         return dump
 
     @classmethod
     def restore(cls, users_list=None):
-        import json
-        try:
-            users_list = json.load(open("users.json", "r"))
-        except:
-            pass
+
+        def update_user_data(user_data):
+            strava_data = cls.strava_data_from_token(
+                user_data.get("access_token")
+            )
+            if strava_data:
+                user_data.update(strava_data)
+                return strava_data
 
         if not users_list:
-            users_list = mongodb.users.find()
+            doc = mongodb.users.find_one()
+            if doc:
+                users_list = doc.get("backup")
+            else:
+                return
 
         db_sql.drop_all()
         db_sql.create_all()
-
-        def get_strava_user(user_dict):
-            client = stravalib.Client(
-                access_token=user_dict["access_token"])
-            try:
-                strava_user = client.get_athlete()
-            except Exception as e:
-                app.logger.error("error getting user {}:\n{}"
-                                 .format(user_dict["strava_id"], e))
-            else:
-                return {
-                    "id": strava_user.id,
-                    "username": strava_user.username,
-                    "firstname": strava_user.firstname,
-                    "lastname": strava_user.lastname,
-                    "profile": strava_user.profile,
-                    "measurement_preference": strava_user.measurement_preference,
-                    "city": strava_user.city,
-                    "state": strava_user.state,
-                    "country": strava_user.country,
-                    "access_token": user_dict["access_token"],
-                    "dt_last_active": user_dict.get("dt_last_active"),
-                    "app_activity_count": user_dict.get("app_activity_count")
-                }
-
-        P = Pool()
-        for user_dict in P.imap_unordered(get_strava_user, users_list):
+        count_before = len(users_list)
+        count = 0
+        P = Pool(app.config["CONCURRENCY"])
+        for user_dict in P.imap_unordered(update_user_data, users_list):
             if user_dict:
-                user = Users(**user_dict)
-                try:
-                    db_sql.session.add(user)
-                except:
-                    user = db_sql.session.merge(user)
-                db_sql.session.commit()
-                app.logger.debug("successfully restored {}".format(user))
+                user = cls.add_or_update(**user_dict)
+                if user:
+                    count += 1
+                    app.logger.debug("successfully restored/updated {}"
+                                     .format(user))
+        return {
+            "operation": "users restore",
+            "before": count_before,
+            "after": count
+        }
 
     def delete_index(self):
         try:
