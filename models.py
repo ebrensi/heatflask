@@ -220,7 +220,7 @@ class Users(UserMixin, db_sql.Model):
             data = cls.strava_data_from_token(user.access_token)
             if data:
                 cls.add_or_update(cache_timeout=60, **data)
-                app.logger.info("successfully update {}".format(user))
+                app.logger.info("successfully updated {}".format(user))
             else:
                 app.logger.info("invalid access token for {}".format(user))
                 if delete:
