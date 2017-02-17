@@ -118,7 +118,8 @@ def log_request():
                                 msg="(Google) {}".format(request.url))
 
         # app.logger.debug(request.access_route[-1])
-        return "Hey what's up Google visitor!  How are you doing? If you get this message then go to /googler"
+        return ("Hey what's up Google visitor! " +
+                "How are you doing? If you get this message then go to /googler")
 
 
 @login_manager.user_loader

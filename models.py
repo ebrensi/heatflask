@@ -462,8 +462,8 @@ class Users(UserMixin, db_sql.Model):
                 # remove these activities from index_df they are there
                 index_df = index_df.ix[~index_df["id"].isin(activity_ids)]
 
-                app.logger.info("updating activity {} in index {}"
-                                .format(aid, self.id))
+                # app.logger.info("updating activity {} in index {}"
+                #                 .format(aid, self.id))
         else:
             latest = index_df.index[0]
             app.logger.info("getting new activites (since {}) for index {}"
@@ -885,8 +885,6 @@ class Webhooks(object):
             updated = False
             user = Users.get(user_id, timeout=60)
             if user:
-                app.logger.info("update reqest for user {}, activity {}"
-                                .format(user_id, update_raw["object_id"]))
                 ids = [int(update_raw["object_id"])]
                 user.activity_index = archived_activity_index
                 gevent.spawn(user.update_index,
