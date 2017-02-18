@@ -425,21 +425,35 @@
             ]
         });
 
-        // Action for click on activity table row
-        $('#atab tbody').on('click', 'tr', function () {
-            let id = this.id;
-            togglePathSelect(id);
-            if ( $("#zoom-table-selection").is(':checked')) {
-                    zoomToSelected();
-                } else {
-                    let A = appState.items[id];
-                    if (A.selected) {
-                        map.panInsideBounds(A.flowLayer.getBounds());
+
+        function handle_table_selections( e, dt, type, indexes ) {
+            if ( type === 'row' ) {
+                // let data = atable.rows( indexes ).data();
+                let selected_rows = atable.rows( {selected: true} ).data(),
+                    unselected_rows = atable.rows( {selected: false} ).data();
+
+                for (let i = 0; i < selected_rows.length; i++) {
+                    id = selected_rows[i].DT_RowId;
+                    if (!appState.items[id].selected){
+                        togglePathSelect(id);
                     }
                 }
-        });
 
+                for (let i = 0; i < unselected_rows.length; i++) {
+                    id = unselected_rows[i].DT_RowId;
+                    if (appState.items[id].selected){
+                        togglePathSelect(id);
+                    }
+                }
 
+                if ( $("#zoom-table-selection").is(':checked') ) {
+                    zoomToSelected();
+                }
+            }
+        }
+
+        atable.on( 'select', handle_table_selections)
+              .on( 'deselect', handle_table_selections);
 
 
         // Convert seconds to HH:MM:SS format
