@@ -271,7 +271,8 @@ def auth_callback():
             return redirect(state)
 
         user_data = Users.strava_data_from_token(access_token)
-        user = Users.add_or_update(user_data)
+        # app.logger.debug("user data: {}".format(user_data))
+        user = Users.add_or_update(**user_data)
 
         # remember=True, for persistent login.
         login_user(user, remember=True)
