@@ -372,7 +372,6 @@
                         title:     'Pause Animation',
                         onClick: function(btn, map) {
                             pauseFlow();
-                            appState.paused = true;
                             updateState();
                             btn.state('animation-paused');
                         }
@@ -382,7 +381,6 @@
                         title:     'Resume Animation',
                         onClick: function(btn, map) {
                             resumeFlow();
-                            appState.paused = false;
                             updateState();
                             btn.state('animation-running');
                         }
@@ -499,6 +497,7 @@
             for (i = 0; i < ids.length; i++) {
                 appState.items[ids[i]].flowLayer.pause();
             }
+            appState.paused = true;
         }
 
         function resumeFlow(ids=Object.keys(appState.items)){
@@ -509,6 +508,7 @@
                 flow.options.paused = false;
                 flow.resume();
             }
+            appState.paused = false;
         }
 
         function highlightPath(id) {
