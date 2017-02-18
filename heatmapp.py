@@ -495,9 +495,9 @@ def getdata(username):
         err_count_key = "status:{}:{}".format(user.id, start_time)
 
         # streams_out = ["polyline", "time"]
-        # streams_to_cache = ["polyline", "time"]
+        streams_to_cache = ["polyline", "time"]
         streams_out = ["polyline"]
-        streams_to_cache = ["polyline"]
+        # streams_to_cache = ["polyline"]
 
         def import_and_queue(client, Q, err_count_key, activity):
             stream_data = Activities.import_streams(
