@@ -350,8 +350,13 @@
             let s = time % max_time,
                 key_time = s - DELAY * Math.floor(s/DELAY);
 
-            let i=0, t, d, dt, p1, p2, p;
+            let i=0, t, d, dt, p1, p2, p, size;
             ctx.fillStyle = "#FFFFFF";
+            if (A.selected) {
+                size = 5;
+            } else {
+                size = 2;
+            }
 
             for (let j = 0; j < num_pts; j++) {
                 t = (key_time + j*DELAY);
@@ -371,9 +376,9 @@
 
                 if (info.bounds.contains(p)) {
                     dot = info.layer._map.latLngToContainerPoint(p);
-                    ctx.fillRect(dot.x-1, dot.y-1, 3, 3);
+                    ctx.fillRect(dot.x-1, dot.y-1, size, size);
                     // ctx.beginPath();
-                    // ctx.arc(dot.x, dot.y, 2, 0, Math.PI * 2);
+                    // ctx.arc(dot.x, dot.y, size, 0, Math.PI * 2);
                     // ctx.fill();
                     // ctx.closePath();
                 }
