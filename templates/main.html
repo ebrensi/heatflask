@@ -312,8 +312,6 @@
 
 
     <script type="text/javascript">
-
-    <script>
         const OFFLINE = {{ config.get('OFFLINE')|tojson }},
             HEATLAYER_DEFAULT_OPTIONS = {{ config["HEATMAP_DEFAULT_OPTIONS"]|tojson|safe }},
             FLOWLAYER_DEFAULT_OPTIONS = {{ config["ANTPATH_DEFAULT_OPTIONS"]|tojson|safe }},
@@ -511,6 +509,7 @@
             //     flow.pause();
             //     flow.options.paused();
             // }
+            DotLayer.pause();
             appState.paused = true;
         }
 
@@ -609,47 +608,6 @@
                 `, <a href='${BASE_USER_URL}?id=${A.id}&flowres=high' target='_blank'>Heatflask</a>`
                 )
             .openOn(map);
-        }
-
-
-        /* for dot paths */
-        start_time = Date.now();
-
-        function onDrawLayer(info) {
-            let now = Date.now();
-
-            fps_display.update();
-
-            let ctx = info.canvas.getContext('2d'),
-                time = (now - start_time) >>> 6;
-
-            ctx.clearRect(0, 0, info.canvas.width, info.canvas.height);
-
-            let ids = Object.keys(appState.items);
-            for (i = 0; i < ids.length; i++) {
-                let A = appState.items[ids[i]];
-                if (("time" in A) && ("latlng" in A)) {
-                    drawDots(info, A, time)
-                } else {
-                    console.log(A);
-                }
-            }
-        };
-
-        function animate() {
-          appState.paused = false;
-          L.Util.requestAnimFrame(this._animate, this);
-        }
-
-        function pause() {
-          appState.Paused = true;
-        }
-
-        function _animate() {
-            if (!appState.paused) {
-              this.drawLayer();
-              L.Util.requestAnimFrame(this._animate, this);
-            }
         }
 
         /* Rendering */
