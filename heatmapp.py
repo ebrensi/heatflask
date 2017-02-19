@@ -65,6 +65,7 @@ bundles = {
         'js/leaflet-heat.js',
         'js/L.Control.Window.js',
         'js/L.CanvasLayer.js',
+        'js/L.Control.fps.js',
         'js/leaflet-providers.js',
         'js/Leaflet.GoogleMutant.js',
         'js/L.Control.Locate.min.js',

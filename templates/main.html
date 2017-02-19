@@ -312,31 +312,6 @@
 
 
     <script type="text/javascript">
-        /* define fps control */
-        L.Control.fps = L.Control.extend({
-          options: {
-            position: "topright"
-          },
-
-          onAdd: function (map) {
-            // Control container
-            this._container = L.DomUtil.create('div', 'leaflet-control-fps');
-            L.DomEvent.disableClickPropagation(this._container);
-            this.update(0);
-            return this._container;
-          },
-
-          update: function(num) {
-              this._container.innerHTML = "FPS: " + Math.floor(num);
-          }
-        });
-
-        //constructor registration
-        L.control.fps = function(options) {
-          return new L.Control.fps();
-        };
-
-
         /* Canvas Layer */
         DELAY_CONST = 100;
 
@@ -708,16 +683,12 @@
 
 
         /* for dot paths */
-        lastCalledTime = Date.now();
         start_time = Date.now();
 
         function onDrawLayer(info) {
-            let now = Date.now(),
-                delta = (now - lastCalledTime)/1000;
-            lastCalledTime = now;
-            fps = 1/delta;
+            let now = Date.now();
 
-            fps_display.update(fps);
+            fps_display.update();
 
             let ctx = info.canvas.getContext('2d'),
                 time = (now - start_time) >>> 6;
