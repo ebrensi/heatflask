@@ -63,7 +63,6 @@ bundles = {
         'js/Polyline.encoded.js',
         'js/moment.js',
         'js/leaflet-heat.js',
-        'js/leaflet-ant-path.js',
         'js/L.Control.Window.js',
         'js/L.CanvasLayer.js',
         'js/leaflet-providers.js',
