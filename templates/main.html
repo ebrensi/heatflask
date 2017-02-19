@@ -310,6 +310,87 @@
 
     <div id="map" class="sidebar-map"></div>
 
+
+    <script type="text/javascript">
+        /* define fps control */
+        L.Control.fps = L.Control.extend({
+          options: {
+            position: "topright"
+          },
+
+          onAdd: function (map) {
+            // Control container
+            this._container = L.DomUtil.create('div', 'leaflet-control-fps');
+            L.DomEvent.disableClickPropagation(this._container);
+            this.update(0);
+            return this._container;
+          },
+
+          update: function(num) {
+              this._container.innerHTML = "FPS: " + Math.floor(num);
+          }
+        });
+
+        //constructor registration
+        L.control.fps = function(options) {
+          return new L.Control.fps();
+        };
+
+
+        /* Canvas Layer */
+        DELAY = 20;
+
+        function drawDots(info, A, time) {
+            const times = A.time,
+                  latlngs = A.latlng,
+                  max_time = times[times.length-1],
+                  num_pts = Math.floor(max_time / DELAY),
+                  ctx = info.canvas.getContext('2d');
+
+            let s = time % max_time,
+                key_time = s - DELAY * Math.floor(s/DELAY);
+
+            let i=0, t, d, dt, p1, p2, p;
+            ctx.fillStyle = "#FFFFFF";
+
+            for (let j = 0; j < num_pts; j++) {
+                t = (key_time + j*DELAY);
+                if (t >= times[i]) {
+                  while (t >= times[i]) {
+                    i++;
+                  }
+
+                  p1 = latlngs[i-1],
+                  p2 = latlngs[i];
+                  dt = times[i] - times[i-1];
+                  M = [(p2[0]-p1[0])/dt,  (p2[1]-p1[1])/dt];
+                }
+
+                dt = t - times[i-1];
+                p = [p1[0] + M[0]*dt, p1[1] + M[1]*dt];
+
+                if (info.bounds.contains(p)) {
+                    dot = info.layer._map.latLngToContainerPoint(p);
+                    ctx.fillRect(dot.x-1, dot.y-1, 3, 3);
+                    // ctx.beginPath();
+                    // ctx.arc(dot.x, dot.y, 2, 0, Math.PI * 2);
+                    // ctx.fill();
+                    // ctx.closePath();
+                }
+            }
+
+        }
+
+
+    </script>
+
+
+
+
+
+
+
+
     <script>
         const OFFLINE = {{ config.get('OFFLINE')|tojson }},
             HEATLAYER_DEFAULT_OPTIONS = {{ config["HEATMAP_DEFAULT_OPTIONS"]|tojson|safe }},
@@ -332,6 +413,7 @@
             },
             HeatLayer = false,
             FlowLayer = false,
+            DotLayer = false,
             appState = {
                 baseLayers: map_providers,
                 paused: {{ paused|tojson }}
@@ -362,7 +444,8 @@
         let sidebar = L.control.sidebar('sidebar').addTo(map),
             zoomControl = map.zoomControl.setPosition('bottomright'),
             layerControl = L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map),
-            locateControl = L.control.locate({position: "bottomright", icon: "fa fa-anchor"}).addTo(map);
+            locateControl = L.control.locate({position: "bottomright", icon: "fa fa-anchor"}).addTo(map),
+            fps_display = L.control.fps().addTo(map);
 
 
         //
@@ -381,6 +464,9 @@
                         title:     'Resume Animation',
                         onClick: function(btn, map) {
                             resumeFlow();
+                            if (DotLayer) {
+                                DotLayer.animate();
+                            }
                             updateState();
                             btn.state('animation-running');
                         }
@@ -594,6 +680,52 @@
             .openOn(map);
         }
 
+
+        /* for dot paths */
+        lastCalledTime = Date.now();
+        start_time = Date.now();
+
+        function onDrawLayer(info) {
+            let now = Date.now(),
+                delta = (now - lastCalledTime)/1000;
+            lastCalledTime = now;
+            fps = 1/delta;
+
+            fps_display.update(fps);
+
+            let ctx = info.canvas.getContext('2d'),
+                time = (now - start_time) >>> 6;
+
+            ctx.clearRect(0, 0, info.canvas.width, info.canvas.height);
+
+            let ids = Object.keys(appState.items);
+            for (i = 0; i < ids.length; i++) {
+                let A = appState.items[ids[i]];
+                if (("time" in A) && ("latlng" in A)) {
+                    drawDots(info, A, time)
+                } else {
+                    console.log(A);
+                }
+            }
+        };
+
+        function animate() {
+          appState.paused = false;
+          L.Util.requestAnimFrame(this._animate, this);
+        }
+
+        function pause() {
+          appState.Paused = true;
+        }
+
+        function _animate() {
+            if (!appState.paused) {
+              this.drawLayer();
+              L.Util.requestAnimFrame(this._animate, this);
+            }
+        }
+
+        /* Rendering */
         function renderLayers() {
             const flowres = $("#flowres").val(),
                   heatres = $("#heatres").val(),
@@ -603,6 +735,7 @@
                   num = $("#select_num").val(),
                   lores = (flowres == "low" || heatres == "low"),
                   hires = (flowres == "high" || heatres == "high");
+                  dotFlow = true;
 
             let query = {};
 
@@ -644,6 +777,13 @@
             }
 
 
+            if (DotLayer){
+                map.removeLayer(DotLayer);
+                layerControl.removeLayer(DotLayer);
+                DotLayer = false;
+            }
+
+
             // Add new blank HeatLayer to map if specified
             let latlngs_flat = [];
             if (heatres){
@@ -657,6 +797,17 @@
                 FlowLayer = new L.layerGroup();
                 map.addLayer(FlowLayer);
                 layerControl.addOverlay(FlowLayer, "Flow Paths");
+
+                if (dotFlow) {
+                    DotLayer = L.canvasLayer();
+                    DotLayer.onDrawLayer = onDrawLayer;
+                    DotLayer.animate = animate;
+                    DotLayer._animate = _animate;
+                    DotLayer.pause = pause;
+
+                    map.addLayer(DotLayer);
+                    layerControl.addOverlay(DotLayer, "Dot Paths");
+                }
             }
 
             locateControl.stop();
@@ -782,7 +933,12 @@
                     if (query.hires && ("polyline" in A) && (A.polyline)){
                         let latlngs = L.PolylineUtil.decode(A.polyline);
                         if (heatres == "high") heatpoints = latlngs;
-                        if (flowres == "high") flowpoints = latlngs;
+                        if (flowres == "high") {
+                            flowpoints = latlngs;
+                            if (dotFlow && ("time" in A)) {
+                                A.latlng = latlngs;
+                            }
+                        }
                     }
 
                     if (heatpoints) {
@@ -821,7 +977,9 @@
                         bounds.extend(A.bounds);
                         delete A.summary_polyline;
                         delete A.polyline;
-                        delete A.time;
+                        if (!dotFlow){
+                            delete A.time;
+                        }
                         appState.items[A.id] = A;
                     }
                   }

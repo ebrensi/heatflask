@@ -102,4 +102,4 @@ class DevelopmentConfig(Config):
     DEVELOPMENT = True
     DEBUG = True
 
-    CACHE_ACTIVITIES_TIMEOUT = 120
+    CACHE_ACTIVITIES_TIMEOUT = 2 * 60 * 60
