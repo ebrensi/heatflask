@@ -722,9 +722,14 @@
                     let msg2 = msg + " " + Object.keys(appState.items).length + " activities rendered.";
                     $(".data_message").html(msg2);
                     rendering = false;
-                    if (!appState.paused && DotLayer) {
-                        DotLayer.animate();
+                    if (DotLayer) {
+                        map.removeLayer(DotLayer); //this is a hack
+                        map.addLayer(DotLayer);
+                        if (!appState.paused) {
+                            DotLayer.animate();
+                        }
                     }
+
                 }
             }
 
