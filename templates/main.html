@@ -372,7 +372,6 @@
             fps_display = L.control.fps().addTo(map);
 
 
-        //
         let button_states = [{
                         stateName: 'animation-running',
                         icon:      'fa-pause',
@@ -503,24 +502,12 @@
             }
         }
 
-        function pauseFlow(ids=Object.keys(appState.items)){
-            // for (i = 0; i < ids.length; i++) {
-            //     flow = appState.items[ids[i]].flowLayer;
-            //     flow.pause();
-            //     flow.options.paused();
-            // }
+        function pauseFlow(){
             DotLayer.pause();
             appState.paused = true;
         }
 
-        function resumeFlow(ids=Object.keys(appState.items)){
-            // for (i = 0; i < ids.length; i++) {
-            //     flow = appState.items[ids[i]].flowLayer;
-            //     // This is necessary until I get a new version of Ant-path
-            //     // that has the bug fix.
-            //     flow.options.paused = false;
-            //     flow.resume();
-            // }
+        function resumeFlow(){
             appState.paused = false;
             if (DotLayer) {
                 DotLayer.animate();
