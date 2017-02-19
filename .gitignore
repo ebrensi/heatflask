@@ -113,7 +113,7 @@ $RECYCLE.BIN/
 
 # My Additions
 *.old
-.webassets-cache
+static/.webassets-cache
 .hidden
 .fuse*
 test.html
