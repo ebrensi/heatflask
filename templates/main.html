@@ -341,6 +341,10 @@
         DELAY_CONST = 100;
 
         function drawDots(info, A, time) {
+            if (!info.bounds.intersects(A.bounds)) {
+                return;
+            }
+
             const times = A.time,
                   latlngs = A.latlng,
                   max_time = times[times.length-1],
@@ -352,12 +356,14 @@
             let s = time % max_time,
                 key_time = s - delay * Math.floor(s/delay);
 
-            let i=0, t, d, dt, p1, p2, p, size;
+            let i=0, t, d, dt, p1, p2, p, size, interval_good;
             // ctx.fillStyle = "#FFFFFF";
             if (A.selected) {
-                size = 8;
-            } else {
                 size = 4;
+                ctx.fillStyle = "#FFFFFF";
+            } else {
+                size = 2;
+                ctx.fillStyle = "#000000";
             }
 
             for (let j = 0; j < num_pts; j++) {
@@ -367,27 +373,35 @@
                     i++;
                   }
 
-                  p1 = latlngs[i-1],
+                  p1 = latlngs[i-1];
                   p2 = latlngs[i];
-                  dt = times[i] - times[i-1];
-                  M = [(p2[0]-p1[0])/dt,  (p2[1]-p1[1])/dt];
+                  interval_good = info.bounds.contains(p1) || info.bounds.contains(p2);
+
+                  if (interval_good) {
+                      dt = times[i] - times[i-1];
+                      M = [(p2[0]-p1[0])/dt,  (p2[1]-p1[1])/dt];
+                  }
                 }
 
-                dt = t - times[i-1];
-                p = [p1[0] + M[0]*dt, p1[1] + M[1]*dt];
+                if (interval_good) {
 
-                if (info.bounds.contains(p)) {
-                    dot = info.layer._map.latLngToContainerPoint(p);
-                    ctx.fillRect(dot.x-1, dot.y-1, size, size);
-                    // ctx.beginPath();
-                    // ctx.arc(dot.x, dot.y, size, 0, Math.PI * 2);
-                    // ctx.fill();
-                    // ctx.closePath();
+                    dt = t - times[i-1];
+                    p = [p1[0] + M[0]*dt, p1[1] + M[1]*dt];
+
+                    if (info.bounds.contains(p)) {
+                        dot = info.layer._map.latLngToContainerPoint(p);
+                        // ctx.fillRect(dot.x-1, dot.y-1, size, size);
+                        ctx.beginPath();
+                        ctx.arc(dot.x, dot.y, size, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.closePath();
+
+                    }
                 }
+
             }
 
         }
-
 
     </script>
 
