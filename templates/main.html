@@ -338,28 +338,30 @@
 
 
         /* Canvas Layer */
-        DELAY = 20;
+        DELAY_CONST = 100;
 
         function drawDots(info, A, time) {
             const times = A.time,
                   latlngs = A.latlng,
                   max_time = times[times.length-1],
-                  num_pts = Math.floor(max_time / DELAY),
+                  zoom = info.zoom,
+                  delay = DELAY_CONST/Math.sqrt(zoom),
+                  num_pts = Math.floor(max_time / delay),
                   ctx = info.canvas.getContext('2d');
 
             let s = time % max_time,
-                key_time = s - DELAY * Math.floor(s/DELAY);
+                key_time = s - delay * Math.floor(s/delay);
 
             let i=0, t, d, dt, p1, p2, p, size;
-            ctx.fillStyle = "#FFFFFF";
+            // ctx.fillStyle = "#FFFFFF";
             if (A.selected) {
-                size = 5;
+                size = 8;
             } else {
-                size = 2;
+                size = 4;
             }
 
             for (let j = 0; j < num_pts; j++) {
-                t = (key_time + j*DELAY);
+                t = (key_time + j*delay);
                 if (t >= times[i]) {
                   while (t >= times[i]) {
                     i++;
@@ -442,7 +444,7 @@
                         {center: [{{ lat }}, {{ lng }}],
                          zoom: {{ zoom }},
                          layers : [ default_baseLayer ],
-                         renderer: L.svg({ padding: 0 })
+                         renderer: L.canvas({ padding: 0 })
                   });
 
 
@@ -585,21 +587,26 @@
         }
 
         function pauseFlow(ids=Object.keys(appState.items)){
-            for (i = 0; i < ids.length; i++) {
-                appState.items[ids[i]].flowLayer.pause();
-            }
+            // for (i = 0; i < ids.length; i++) {
+            //     flow = appState.items[ids[i]].flowLayer;
+            //     flow.pause();
+            //     flow.options.paused();
+            // }
             appState.paused = true;
         }
 
         function resumeFlow(ids=Object.keys(appState.items)){
-            for (i = 0; i < ids.length; i++) {
-                flow = appState.items[ids[i]].flowLayer;
-                // This is necessary until I get a new version of Ant-path
-                // that has the bug fix.
-                flow.options.paused = false;
-                flow.resume();
-            }
+            // for (i = 0; i < ids.length; i++) {
+            //     flow = appState.items[ids[i]].flowLayer;
+            //     // This is necessary until I get a new version of Ant-path
+            //     // that has the bug fix.
+            //     flow.options.paused = false;
+            //     flow.resume();
+            // }
             appState.paused = false;
+            if (DotLayer) {
+                DotLayer.animate();
+            }
         }
 
         function highlightPath(id) {
@@ -621,7 +628,7 @@
 
             flow.setStyle({
                 weight: FLOWLAYER_DEFAULT_OPTIONS.weight + 3,
-                opacity: 1
+                // opacity: 1
             });
 
             return A;
@@ -639,7 +646,7 @@
             // restore animated path to defaults
             A.flowLayer.setStyle({
                 weight: FLOWLAYER_DEFAULT_OPTIONS.weight,
-                opacity: FLOWLAYER_DEFAULT_OPTIONS.opacity
+                // opacity: FLOWLAYER_DEFAULT_OPTIONS.opacity
             });
 
             return A;
@@ -855,6 +862,9 @@
                     let msg2 = msg + " " + Object.keys(appState.items).length + " activities rendered.";
                     $(".data_message").html(msg2);
                     rendering = false;
+                    if (!appState.paused && DotLayer) {
+                        DotLayer.animate();
+                    }
                 }
             }
 
@@ -882,7 +892,6 @@
                     appState["heatres"] = heatres;
 
                     if ("limit" in query) appState["limit"] = query.limit;
-
                     updateState();
                   } else {
                     let A = JSON.parse(event.data),
@@ -952,10 +961,10 @@
                     if (flowpoints) {
                         let v = parseFloat(A.average_speed),
                             v_adj = 1 + Math.log(10*v);
-                        fopts.delay = parseInt(FLOWPATH_VARIATION_CONSTANTS.K / v);
-                        fopts.dashArray = [2, parseInt(FLOWPATH_VARIATION_CONSTANTS.T * v_adj)];
-                        fopts.paused = appState.paused;
-                        A.flowLayer = new L.Polyline.AntPath(flowpoints, fopts);
+                        // fopts.delay = parseInt(FLOWPATH_VARIATION_CONSTANTS.K / v);
+                        // fopts.dashArray = [2, parseInt(FLOWPATH_VARIATION_CONSTANTS.T * v_adj)];
+                        // fopts.paused = appState.paused;
+                        A.flowLayer = new L.Polyline(flowpoints, fopts);
                         FlowLayer.addLayer(A.flowLayer);
 
                         if ($("#info").is(":checked")) {
