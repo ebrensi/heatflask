@@ -16,9 +16,9 @@ L.Control.fps = L.Control.extend({
         return this._container;
     },
 
-    update: function(now=Date.now()) {
+    update: function(now=Date.now(), msg="") {
         let fps = 500 / (now - this.lastCalledTime);
-        this._container.innerHTML = "FPS: " + 2 * Math.floor(fps);
+        this._container.innerHTML = "FPS: " + 2 * Math.floor(fps) + msg;
         this.lastCalledTime = now;
         return fps
   }
