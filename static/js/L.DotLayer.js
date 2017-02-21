@@ -1,24 +1,47 @@
 /* Canvas Layer */
-DELAY_CONST = 100;
+let DOT_CONSTS = {
+  1: [10000, 1],
+  2: [5000, 1],
+  3: [3000, 1],
+  4: [2000, 1],
+  5: [1000, 1],
+  6: [900, 1],
+  7: [800, 2],
+  8: [700, 2],
+  9: [600, 2],
+  10: [500, 3],
+  11: [400, 3],
+  12: [300, 4],
+  13: [200, 4],
+  14: [100, 5],
+  15: [50, 5],
+  16: [50, 5],
+  17: [30, 6],
+  18: [15, 6],
+  19: [15, 6],
+  20: [10, 6]
+},
+    SPEED_CONST = 6;
 
 function drawDots(info, A, time) {
     if (!info.bounds.intersects(A.bounds)) {
-        return;
+        return 0;
     }
 
     const times = A.time,
           latlngs = A.latlng,
           max_time = times[times.length-1],
           zoom = info.zoom,
-          delay = DELAY_CONST/Math.sqrt(zoom),
+          delay = DOT_CONSTS[zoom][0],
           num_pts = Math.floor(max_time / delay),
           ctx = info.canvas.getContext('2d');
 
     let s = time % max_time,
-        key_time = s - delay * Math.floor(s/delay);
+        key_time = s - delay * Math.floor(s/delay),
+        count = 0,
+        i = 0,
+        t, d, dt, p1, p2, p, size, interval_good;
 
-    let i=0, t, d, dt, p1, p2, p, size, interval_good;
-    // ctx.fillStyle = "#FFFFFF";
     if (A.selected) {
         size = 4;
         ctx.fillStyle = "#FFFFFF";
@@ -56,10 +79,13 @@ function drawDots(info, A, time) {
                 ctx.arc(dot.x, dot.y, size, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.closePath();
+                count++;
             }
         }
 
     }
+
+    return delay;
 
 }
 
@@ -67,23 +93,25 @@ function drawDots(info, A, time) {
 function onDrawLayer(info) {
     let now = Date.now();
 
-    fps_display.update();
-
     let ctx = info.canvas.getContext('2d'),
-        time = (now - this.start_time) >>> 6;
+        zoom = info.zoom,
+        time = (now - this.start_time) >>> DOT_CONSTS[zoom][1],
+        delay = 0;
 
     ctx.clearRect(0, 0, info.canvas.width, info.canvas.height);
-
     let ids = Object.keys(appState.items);
     for (i = 0; i < ids.length; i++) {
         let A = appState.items[ids[i]];
         if (("time" in A) && ("latlng" in A)) {
-            drawDots(info, A, time)
+            delay = drawDots(info, A, time);
         } else {
             console.log(A);
         }
     }
-};
+
+    fps_display.update(now, " delay=" + delay + " zoom="+info.zoom);
+
+}
 
 function animate() {
   this.paused = false;
