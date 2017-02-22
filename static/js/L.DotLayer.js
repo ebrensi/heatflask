@@ -21,7 +21,7 @@
 
 
 L.DotLayer = function() {
-    DOT_CONSTS = {
+    this.DOT_CONSTS = {
       1: [10000, 1],
       2: [5000, 1],
       3: [3000, 1],
@@ -53,7 +53,7 @@ L.DotLayer = function() {
               latlngs = A.latlng,
               max_time = times[times.length-1],
               zoom = info.zoom,
-              delay = DOT_CONSTS[zoom][0],
+              delay = this.DOT_CONSTS[zoom][0],
               num_pts = Math.floor(max_time / delay),
               ctx = info.canvas.getContext('2d');
 
@@ -114,7 +114,7 @@ L.DotLayer = function() {
 
         let ctx = info.canvas.getContext('2d'),
             zoom = info.zoom,
-            time = (now - this.start_time) >>> DOT_CONSTS[zoom][1],
+            time = (now - this.start_time) >>> this.DOT_CONSTS[zoom][1],
             count = 0;
 
         ctx.clearRect(0, 0, info.canvas.width, info.canvas.height);
@@ -148,6 +148,40 @@ L.DotLayer = function() {
           L.Util.requestAnimFrame(this._animate, this);
         }
     };
+
+    this.getEvents = function () {
+        var events = {
+            movestart: this.onMap_pan_zoom_start,
+            moveend: this._onLayerDidMove,
+
+            resize: this._onLayerDidResize,
+        };
+        if (this._map.options.zoomAnimation && L.Browser.any3d) {
+            events.zoomanim =  this._animateZoom;
+        }
+
+        return events;
+    };
+
+
+      this._onLayerDidMove = function () {
+        let topLeft = this._map.containerPointToLayerPoint([0, 0]);
+        L.DomUtil.setPosition(this._canvas, topLeft);
+        this.drawLayer();
+        this.onMap_pan_zoom_stop();
+    };
+
+    this.onMap_pan_zoom_start = function() {
+        this.pauseState = this.paused;
+        this.pause();
+    }
+
+    this.onMap_pan_zoom_stop = function() {
+        this.paused = this.pauseState;
+        if (!this.paused) {
+            this.animate();
+        }
+    }
 
 };
 
