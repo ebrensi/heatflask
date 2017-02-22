@@ -527,9 +527,9 @@ const times=A.time,latlngs=A.latlng,max_time=times[times.length-1],zoom=info.zoo
 for(let j=0;j<num_pts;j++){t=(key_time+j*delay);if(t>=times[i]){while(t>=times[i]){i++;}
 p1=latlngs[i-1];p2=latlngs[i];interval_good=info.bounds.contains(p1)||info.bounds.contains(p2);if(interval_good){dt=times[i]-times[i-1];M=[(p2[0]-p1[0])/dt,(p2[1]-p1[1])/dt];}}
 if(interval_good){dt=t-times[i-1];p=[p1[0]+M[0]*dt,p1[1]+M[1]*dt];if(info.bounds.contains(p)){dot=info.layer._map.latLngToContainerPoint(p);ctx.beginPath();ctx.arc(dot.x,dot.y,size,0,Math.PI*2);ctx.fill();ctx.closePath();count++;}}}
-return delay;}
-function onDrawLayer(info){let now=Date.now();let ctx=info.canvas.getContext('2d'),zoom=info.zoom,time=(now-this.start_time)>>>DOT_CONSTS[zoom][1],delay=0;ctx.clearRect(0,0,info.canvas.width,info.canvas.height);let ids=Object.keys(appState.items);for(i=0;i<ids.length;i++){let A=appState.items[ids[i]];if(("time"in A)&&("latlng"in A)){delay=drawDots(info,A,time);}else{console.log(A);}}
-fps_display.update(now," delay="+delay+" zoom="+info.zoom);}
+return count;}
+function onDrawLayer(info){let now=Date.now();let ctx=info.canvas.getContext('2d'),zoom=info.zoom,time=(now-this.start_time)>>>DOT_CONSTS[zoom][1],count=0;ctx.clearRect(0,0,info.canvas.width,info.canvas.height);let ids=Object.keys(appState.items);for(i=0;i<ids.length;i++){let A=appState.items[ids[i]];if(("time"in A)&&("latlng"in A)){count+=drawDots(info,A,time);}else{console.log(A);}}
+fps_display.update(now," n="+count+" z="+info.zoom);}
 function animate(){this.paused=false;this.start_time=Date.now();L.Util.requestAnimFrame(this._animate,this);}
 function pause(){this.paused=true;}
 function _animate(){if(!this.paused){this.drawLayer();L.Util.requestAnimFrame(this._animate,this);}}
