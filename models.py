@@ -454,8 +454,8 @@ class Users(UserMixin, db_sql.Model):
                         self.client().get_activity(aid)
                     )
                 except Exception as e:
-                    app.logger.error("error getting activity {}: {}"
-                                     .format(aid, e))
+                    app.logger.error("error getting {}'s activity {}: {}"
+                                     .format(self, aid, e))
                 else:
                     activities_list.append(act)
 
@@ -516,10 +516,17 @@ class Users(UserMixin, db_sql.Model):
                 )
 
         elapsed = datetime.utcnow() - start_time
-        app.logger.info("updated {} index activities for user {} in {} sec."
-                        .format(len(activities_list),
-                                self.id,
-                                round(elapsed.total_seconds(), 3)))
+        num = len(activities_list)
+        msg = (
+            "updated {} index activit{} {} for user {} in {} sec."
+            .format(num,
+                    "y" if num == 1 else "ies",
+                    activities_list if num else "",
+                    self.id,
+                    round(elapsed.total_seconds(), 3))
+        )
+
+        app.logger.info(msg)
         if to_update:
             return index_df
 
