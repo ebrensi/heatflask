@@ -1,25 +1,3 @@
-/* Canvas Layer */
-
-// DotLayer = function(){
-//     this.onLayerDidMount = function (){
-//        // -- prepare custom drawing
-//     };
-//     this.onLayerWillUnmount  = function(){
-//        // -- custom cleanup
-//     };
-//     this.setData = function (data){
-//       // -- custom data set
-//       this.needRedraw(); // -- call to drawLayer
-//     };
-//     this.onDrawLayer = function (viewInfo){
-//     // -- custom  draw
-//     }
-
-// }
-
-// DotLayer.prototype = new L.CanvasLayer(); // -- setup prototype
-
-
 L.DotLayer = function() {
     this.DOT_CONSTS = {
       1: [10000, 1],
