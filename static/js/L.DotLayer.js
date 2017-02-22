@@ -84,7 +84,7 @@ function drawDots(info, A, time) {
 
     }
 
-    return delay;
+    return count;
 
 }
 
@@ -95,20 +95,20 @@ function onDrawLayer(info) {
     let ctx = info.canvas.getContext('2d'),
         zoom = info.zoom,
         time = (now - this.start_time) >>> DOT_CONSTS[zoom][1],
-        delay = 0;
+        count = 0;
 
     ctx.clearRect(0, 0, info.canvas.width, info.canvas.height);
     let ids = Object.keys(appState.items);
     for (i = 0; i < ids.length; i++) {
         let A = appState.items[ids[i]];
         if (("time" in A) && ("latlng" in A)) {
-            delay = drawDots(info, A, time);
+            count += drawDots(info, A, time);
         } else {
             console.log(A);
         }
     }
 
-    fps_display.update(now, " delay=" + delay + " zoom="+info.zoom);
+    fps_display.update(now, " n=" + count + " z="+info.zoom);
 
 }
 
@@ -128,3 +128,10 @@ function _animate() {
       L.Util.requestAnimFrame(this._animate, this);
     }
 }
+
+
+
+// zoomstart
+// movestart
+// zoomend
+// moveend
