@@ -518,6 +518,8 @@
             let A = appState.items[id];
             if (A.selected) return false;
 
+            A.highlighted = true;
+
             let row = $("#"+id),
                 scroller = $('.dataTables_scrollBody'),
                 flow = A.flowLayer;
@@ -544,6 +546,8 @@
 
             let A = appState.items[id];
             if (A.selected) return false;
+
+            A.highlighted = false;
 
             // un-highlight table row
             $("#"+id).removeClass('selected');
