@@ -18,10 +18,9 @@ let DOT_CONSTS = {
   16: [50, 5],
   17: [30, 6],
   18: [15, 6],
-  19: [15, 6],
-  20: [10, 6]
-},
-    SPEED_CONST = 6;
+  19: [15, 7],
+  20: [10, 7]
+};
 
 function drawDots(info, A, time) {
     if (!info.bounds.intersects(A.bounds)) {
@@ -42,7 +41,7 @@ function drawDots(info, A, time) {
         i = 0,
         t, d, dt, p1, p2, p, size, interval_good;
 
-    if (A.selected) {
+    if (A.highlighted) {
         size = 4;
         ctx.fillStyle = "#FFFFFF";
     } else {

@@ -99,6 +99,7 @@ class DevelopmentConfig(Config):
     (Developer's personal computer)
     """
     OFFLINE = True
+    ASSETS_DEBUG = True
     DEVELOPMENT = True
     DEBUG = True
 

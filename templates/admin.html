@@ -13,7 +13,7 @@
 
 <body>
     <h3> Registered Users </h3>
-    <table id="users_table" class='display order-column' cellspacing='1'>
+    <table id="users_table" class='display order-column' cellspacing='1' width='100%'>
         <thead>
         <th>ID</th>
         <th>count</th>
@@ -21,6 +21,7 @@
         <th>Name</th>
         <th>city</th>
         <th>Country</th>
+        <th>email</th>
         </thead>
         <tbody>
         {%- for d in data %}
@@ -28,9 +29,10 @@
             <td><a href="{{ url_for('main',username=d['id']) }}" target='_blank'>{{ d['id'] }}</a></td>
             <td>{{ d["app_activity_count"] }}</td>
             <td>{{ d["dt_last_active"] }}</td>
-            <td>{{ d["firstname"] }} {{ d["lastname"] }}</td>
+            <td>{{ d["lastname"] }}, {{ d["firstname"] }}</td>
             <td>{{ d["city"] }}</td>
             <td>{{ d["country"] }}</td>
+            <td><a href="mailto:{{ d['email'] }}" target='_blank'>{{ d['email'] }}</a></td>
           </tr>
         {%- endfor %}
         </tbody>
