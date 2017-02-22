@@ -191,7 +191,3 @@ L.dotLayer = function () {
     return new L.DotLayer();
 };
 
-// zoomstart
-// movestart
-// zoomend
-// moveend
