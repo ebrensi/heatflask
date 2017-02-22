@@ -672,17 +672,12 @@
             if (flowres){
                 FlowLayer = new L.layerGroup();
                 map.addLayer(FlowLayer);
-                layerControl.addOverlay(FlowLayer, "Flow Paths");
+                layerControl.addOverlay(FlowLayer, "Polylines");
 
                 if (dotFlow) {
-                    DotLayer = L.canvasLayer();
-                    DotLayer.onDrawLayer = onDrawLayer;
-                    DotLayer.animate = animate;
-                    DotLayer._animate = _animate;
-                    DotLayer.pause = pause;
-
+                    DotLayer = new L.DotLayer();
                     map.addLayer(DotLayer);
-                    layerControl.addOverlay(DotLayer, "Dot Paths");
+                    layerControl.addOverlay(DotLayer, "Dots");
                 }
             }
 
