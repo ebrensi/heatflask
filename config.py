@@ -99,8 +99,6 @@ class DevelopmentConfig(Config):
     (Developer's personal computer)
     """
     OFFLINE = True
-    # ASSETS_DEBUG = True
     DEVELOPMENT = True
     DEBUG = True
-
     CACHE_ACTIVITIES_TIMEOUT = 2 * 60 * 60

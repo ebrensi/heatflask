@@ -99,6 +99,9 @@ bundles = {
 
 }
 assets = flask_assets.Environment(app)
+assets.auto_build = False
+assets.debug = False
+assets.cache = False
 assets.register(bundles)
 
 # views will be sent as gzip encoded
