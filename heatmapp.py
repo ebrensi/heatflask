@@ -99,11 +99,10 @@ bundles = {
 
 }
 assets = flask_assets.Environment(app)
-
-assets.auto_build = False
-assets.debug = False
-assets.cache = False
-assets.manifest = None
+# assets.auto_build = False
+# assets.debug = False
+# assets.cache = False
+# assets.manifest = None
 assets.register(bundles)
 
 
@@ -674,6 +673,18 @@ def users_backup():
 @admin_required
 def users_restore():
     return jsonify(Users.restore())
+
+
+@app.route('/app/info')
+@admin_required
+def app_info():
+    info = {
+        "config": str(app.config),
+        "mongodb": mongodb.command("dbstats"),
+        "activities": mongodb.command("collstats", "activities"),
+        "indexes": mongodb.command("collstats", "indexes")
+    }
+    return jsonify(info)
 
 
 # ---- Event log stuff ----

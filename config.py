@@ -3,14 +3,49 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 
 
 class Config(object):
-    APP_VERSION = "(alpha)"
-    APP_NAME = "Heatflask {}".format(APP_VERSION)
-    ADMIN = [15972102]
+    # Flask settings
     DEBUG = False
     TESTING = False
     CSRF_ENABLED = True
-    OFFLINE = False
 
+    # Heatflask settings
+    OFFLINE = False
+    APP_VERSION = "(alpha)"
+    APP_NAME = "Heatflask {}".format(APP_VERSION)
+    ADMIN = [15972102]
+
+    # Leaflet.js stuff
+    HEATMAP_DEFAULT_OPTIONS = {
+        "radius": 8,
+        "blur": 15,
+        "gradient": {0.4: 'blue', 0.65: 'lime', 1: 'red'}
+    }
+
+    ANTPATH_DEFAULT_OPTIONS = {
+        "weight": 3,
+        "opacity": 0.5,
+        "color": 'black',
+        "pulseColor": 'white',
+    }
+
+    FLOWPATH_VARIATION_CONSTANTS = {
+        "K": 12000,
+        "T": 6
+    }
+
+    MAP_CENTER = [27.53, 1.58]
+    MAP_ZOOM = 3
+
+    # SSLIFY Settings
+    SSLIFY_PERMANENT = True
+
+    # We make Flask-Assets Default to manual build without caching
+    ASSETS_AUTO_BUILD = False
+    ASSETS_DEBUG = False
+    ASSETS_CACHE = False
+    ASSETS_MANIFEST = None
+
+    # Concurrency for Web-API fetching
     CONCURRENCY = 4
 
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
@@ -44,28 +79,6 @@ class Config(object):
     # Strava stuff
     STRAVA_CLIENT_ID = os.environ.get("STRAVA_CLIENT_ID")
     STRAVA_CLIENT_SECRET = os.environ.get("STRAVA_CLIENT_SECRET")
-
-    # Leaflet.js stuff
-    HEATMAP_DEFAULT_OPTIONS = {
-        "radius": 8,
-        "blur": 15,
-        "gradient": {0.4: 'blue', 0.65: 'lime', 1: 'red'}
-    }
-
-    ANTPATH_DEFAULT_OPTIONS = {
-        "weight": 3,
-        "opacity": 0.5,
-        "color": 'black',
-        "pulseColor": 'white',
-    }
-
-    FLOWPATH_VARIATION_CONSTANTS = {
-        "K": 12000,
-        "T": 6
-    }
-
-    MAP_CENTER = [27.53, 1.58]
-    MAP_ZOOM = 3
 
     # Maximum size of event history (for capped MongoDB collection)
     MAX_HISTORY_BYTES = 2 * 1024 * 1024  # 2MB
@@ -102,3 +115,13 @@ class DevelopmentConfig(Config):
     DEVELOPMENT = True
     DEBUG = True
     CACHE_ACTIVITIES_TIMEOUT = 2 * 60 * 60
+
+    # SSLIFY Settings
+    SSLIFY_PERMANENT = False
+
+    # Flask-Assets settings
+    ASSETS_DEBUG = True
+    # ASSETS_AUTO_BUILD = True
+    # ASSETS_CACHE = True
+    # ASSETS_MANIFEST = 'cache'
+    # ASSETS_UPDATER = 'timestamp'

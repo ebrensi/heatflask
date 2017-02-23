@@ -33,10 +33,6 @@ String, Integer = db_sql.String, db_sql.Integer
 mongo_client = pymongo.MongoClient(app.config.get("MONGODB_URI"))
 mongodb = mongo_client.get_default_database()
 
-# mongodb.command("dbstats")
-# mongodb.command("collstats", "activities")
-
-
 # Redis data-store
 redis = Redis.from_url(app.config["REDIS_URL"])
 
@@ -678,7 +674,7 @@ class Activities(object):
                 upsert=True)
         except Exception as e:
             result2 = None
-            app.logger.debug("error writing activity {} to MongoDB:\n{}"
+            app.logger.debug("error writing activity {} to MongoDB: {}"
                              .format(id, e))
         return result1, result2
 
