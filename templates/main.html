@@ -150,13 +150,14 @@
                 </form>
                 {% else %}
 
-                Create an account and/or log in
-
+                Create an account and/or log in.
                 <form action="{{ url_for('authorize') }}" >
                     <input type="image" src="{{ url_for('static', filename='btn_strava_connectwith_orange.svg') }}" alt="Log-In with Strava" >
                 </form>
 
                 {% endif %}
+                <br>
+                <a href="mailto:Rensi.Efrem@gmail.com?subject=About {{ config['APP_NAME'] }}"> Having problems?</a>
             </div>
 
             {% if current_user.is_authenticated
@@ -176,7 +177,7 @@
                 </a>
 
                 <br><br>
-                The activity index is built the first time you use Heatflask and expires after 7 days of inactivity.  While your index is active (within 7 days of the last access), it is automatically updated with new activities and most changes you make on Strava.  If our index does not corrrectly reflect the current state of your Strava activities, try re-building the index from Strava data.
+                The activity index is built the first time you use this app.  While your index is active (within 7 days of the last access), it is automatically updated with new activities and most changes you make on Strava.  If our index does not corrrectly reflect the current state of your Strava activities, try re-building the index.
                 <form action="{{ url_for('activities', username=user.id) }}" target="_blank">
                     <input type="submit" class="btn" value="View activity index" />
                     <label><input type="checkbox" name="rebuild" value="1">Re-build</label>
@@ -215,8 +216,8 @@
 
                 {{ config['APP_NAME'] }} is a work in progress.
                 <img src="{{ url_for('static', filename='under-construction.gif') }}" height=40>
-                Questions, comments, suggestions?  Want to contribute?<br>
-                <a href="mailto:Rensi.Efrem@gmail.com?subject=About {{ config['APP_NAME'] }}">Contact Me!</a>
+                <br>
+                <a href="mailto:Rensi.Efrem@gmail.com?subject=About {{ config['APP_NAME'] }}">Questions, comments, suggestions?  Want to contribute?</a>
                 <hr>
             </div>
 
