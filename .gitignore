@@ -115,6 +115,7 @@ $RECYCLE.BIN/
 *.old
 .hidden
 .fuse*
+static/.webassets-cache
 test.html
 bad_gpx_files
 index.msg
