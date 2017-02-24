@@ -24,11 +24,10 @@ L.DotLayer = function() {
     this.paused = false;
 
     this.onAdd = function(map) {
+        console.log("dotLayer added");
         super.on_add(map);
-        if (!appState.paused){
-            this.animate();
-        }
-
+        this.onMap_pan_zoom_stop;
+        return this;
     }
 
     this.drawDots = function(info, A, time) {
@@ -52,9 +51,11 @@ L.DotLayer = function() {
 
         if (A.highlighted) {
             size = 4;
+            ctx.globalAlpha = 1;
             ctx.fillStyle = "#FFFFFF";
         } else {
             size = 2;
+            ctx.globalAlpha = 0.2;
             ctx.fillStyle = "#000000";
         }
 
@@ -111,7 +112,8 @@ L.DotLayer = function() {
             if (("time" in A) && ("latlng" in A)) {
                 count += this.drawDots(info, A, time);
             } else {
-                console.log(A);
+                // console.log(A);
+                count = 0;
             }
         }
 
