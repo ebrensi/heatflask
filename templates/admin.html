@@ -17,6 +17,18 @@
     </table>
 
     <script>
+    function href(url, text){
+        return `<a href='${url}' target='_blank'>${text}</a>`
+    }
+
+    function formatID (data, type, row) {
+        if (type == "display") {
+            return href("/" + data, data);
+        } else {
+            return data;
+        }
+    }
+
     function formatDate(data, type, row, meta) {
         date = new Date(data);
         return type === "display" || type === "filter" ?
@@ -32,7 +44,7 @@
             paging: false,
             data: data,
             columns: [
-                {title: "ID",    data: "id"},
+                {title: "ID",    data: "id", render: formatID},
                 {title: "count", data: "app_activity_count"},
                 {
                     title: "last active",
