@@ -14,33 +14,36 @@
 <body>
     <h3> Registered Users </h3>
     <table id="users_table" class='display order-column' cellspacing='1' width='100%'>
-        <thead>
-        <th>ID</th>
-        <th>count</th>
-        <th>last active</th>
-        <th>Name</th>
-        <th>city</th>
-        <th>Country</th>
-        <th>email</th>
-        </thead>
-        <tbody>
-        {%- for d in data %}
-          <tr>
-            <td><a href="{{ url_for('main',username=d['id']) }}" target='_blank'>{{ d['id'] }}</a></td>
-            <td>{{ d["app_activity_count"] }}</td>
-            <td>{{ d["dt_last_active"] }}</td>
-            <td>{{ d["lastname"] }}, {{ d["firstname"] }}</td>
-            <td>{{ d["city"] }}</td>
-            <td>{{ d["country"] }}</td>
-            <td><a href="mailto:{{ d['email'] }}" target='_blank'>{{ d['email'] }}</a></td>
-          </tr>
-        {%- endfor %}
-        </tbody>
     </table>
 
     <script>
+    function formatDate(data, type, row, meta) {
+        date = new Date(data);
+        return type === "display" || type === "filter" ?
+            date.toLocaleString('en-US', { hour12: false }) : date;
+    }
+
+    function combineNames(data, type, row, meta) {
+        return row.lastname + ", " + row.firstname;
+    }
+
+    let data = {{ data|tojson}};
     let atable = $('#users_table').DataTable({
             paging: false,
+            data: data,
+            columns: [
+                {title: "ID",    data: "id"},
+                {title: "count", data: "app_activity_count"},
+                {
+                    title: "last active",
+                    data: "dt_last_active",
+                    render: formatDate,
+                },
+                {title: "Name", render: combineNames},
+                {title: "City",    data: "city"},
+                {title: "Country", data: "country"},
+                {title: "email",   data: "email" }
+            ],
             scrollY: "80vh",
             scrollX: true,
             scrollCollapse: true,
