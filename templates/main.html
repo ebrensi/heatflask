@@ -362,7 +362,8 @@
                         {center: DEFAULT_MAP_CENTER,
                          zoom: DEFAULT_MAP_ZOOM,
                          layers : [ default_baseLayer ],
-                         renderer: L.canvas({ padding: 0 })
+                         // renderer: L.canvas({ padding: 0 })
+                         renderer: L.svg({ padding: 0 })
                   });
 
 
@@ -536,7 +537,7 @@
 
             flow.setStyle({
                 weight: FLOWLAYER_DEFAULT_OPTIONS.weight + 3,
-                // opacity: 1
+                // opacity: 0.1
             });
 
             return A;
@@ -767,8 +768,8 @@
                     if ("error" in A){
                         let msg = "<font color='red'>" + A.error +"</font><br>";
                         $(".data_message").html(A.msg);
-                        // console.log("Error activity:")
-                        console.log(A)
+                        console.log(`Error activity ${A.id}: ${A.error}`);
+                        // console.log(A)
                         // L.control.window(map, {title: "Oops.", content:msg, visible:true});
                         // doneRendering(msg);
                         // stopListening();

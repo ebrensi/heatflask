@@ -23,7 +23,7 @@ class Config(object):
 
     ANTPATH_DEFAULT_OPTIONS = {
         "weight": 3,
-        "opacity": 0.5,
+        "opacity": 0.1,
         "color": 'black',
         "pulseColor": 'white',
     }
@@ -121,7 +121,7 @@ class DevelopmentConfig(Config):
 
     # Flask-Assets settings
     ASSETS_DEBUG = True
-    # ASSETS_AUTO_BUILD = True
-    # ASSETS_CACHE = True
-    # ASSETS_MANIFEST = 'cache'
-    # ASSETS_UPDATER = 'timestamp'
+    ASSETS_AUTO_BUILD = True
+    ASSETS_CACHE = True
+    ASSETS_MANIFEST = 'cache'
+    ASSETS_UPDATER = 'timestamp'
