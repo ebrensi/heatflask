@@ -21,6 +21,15 @@ L.DotLayer = function() {
       19: [15, 7],
       20: [10, 7]
     };
+    this.paused = false;
+
+    this.onAdd = function(map) {
+        super.on_add(map);
+        if (!appState.paused){
+            this.animate();
+        }
+
+    }
 
     this.drawDots = function(info, A, time) {
         if (!info.bounds.intersects(A.bounds)) {
