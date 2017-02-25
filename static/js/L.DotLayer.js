@@ -65,7 +65,7 @@ L.DotLayer = L.CanvasLayer.extend({
             ctx.fillStyle = "#FFFFFF";
         } else {
             size = 2;
-            ctx.globalAlpha = 1;
+            ctx.globalAlpha = 0.7;
             ctx.fillStyle = "#000000";
         }
 
