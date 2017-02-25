@@ -7349,28 +7349,55 @@ L.DotLayer = L.CanvasLayer.extend({
     },
 
     paused: false,
+    _pane: "shadow-pane",
+
+    onAdd: function (map) {
+        this._map = map;
+        this._canvas = L.DomUtil.create('canvas', 'leaflet-layer');
+        this.tiles = {};
+
+        var size = this._map.getSize();
+        this._canvas.width = size.x;
+        this._canvas.height = size.y;
+
+        var animated = this._map.options.zoomAnimation && L.Browser.any3d;
+        console.log("animated="+animated)
+        L.DomUtil.addClass(this._canvas, 'leaflet-zoom-' + (animated ? 'animated' : 'hide'));
 
 
-    onAdd: function(map) {
-        L.CanvasLayer.prototype.onAdd.call(this, map);
-        console.log("DotLayer added");
+        // map._panes.overlayPane.appendChild(this._canvas);
+        map._panes.shadowPane.style.pointerEvents = "none";
+        map._panes.shadowPane.appendChild(this._canvas);
+
+        map.on(this.getEvents(),this);
+
+        var del = this._delegate || this;
+        del.onLayerDidMount && del.onLayerDidMount(); // -- callback
         if (appState.items) {
             this._onLayerDidMove();
         }
-        return this;
+        else {
+            this.needRedraw();
+        }
     },
 
-    // onRemove: function(map) {
-    //     L.CanvasLayer.prototype.onAdd.call(this, map);
-    //     console.log("DotLayer removed");
-    //     // this.pause();
-    // },
+    //-------------------------------------------------------------
+    onRemove: function (map) {
+        var del = this._delegate || this;
+        del.onLayerWillUnmount && del.onLayerWillUnmount(); // -- callback
 
+
+        // map.getPanes().overlayPane.removeChild(this._canvas);
+        map.getPanes().shadowPane.removeChild(this._canvas);
+
+        map.off(this.getEvents(),this);
+
+        this._canvas = null;
+    }
 
     drawDots: function(info, A, time) {
         const times = A.time,
               latlngs = A.latlng,
-              distance = A.total_distance,
               max_time = times[times.length-1],
               zoom = info.zoom,
               delay = this.DOT_CONSTS[zoom][0],
