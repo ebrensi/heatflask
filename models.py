@@ -517,7 +517,7 @@ class Users(UserMixin, db_sql.Model):
             "updated {} index activit{} {} for user {} in {} sec."
             .format(num,
                     "y" if num == 1 else "ies",
-                    activities_list if num else "",
+                    [a.id for a in activities_list] if num else "",
                     self.id,
                     round(elapsed.total_seconds(), 3))
         )
