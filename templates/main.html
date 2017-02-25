@@ -106,7 +106,7 @@
                   <select id="heatres" name="renderHeat" form="renderform">
                     <option value="">None</option>
                     <option value="high">High resolution</option>
-                    <option value="low">Low resolution</option>
+                    <option value="low" disabled="">Low resolution</option>
                   </select>
                   </span>
 
@@ -116,7 +116,7 @@
                       <select id="flowres" name="renderFlow" form="renderform">
                         <option value="">None</option>
                         <option value="high">High resolution</option>
-                        <option value="low">Low resolution</option>
+                        <option value="low" disabled="">Low resolution</option>
                       </select>
                   </span>
 
@@ -362,8 +362,8 @@
                         {center: DEFAULT_MAP_CENTER,
                          zoom: DEFAULT_MAP_ZOOM,
                          layers : [ default_baseLayer ],
-                         renderer: L.canvas({ padding: 0 })
-                         // renderer: L.svg({ padding: 0 })
+                         //renderer: L.canvas({ padding: 0 })
+                         renderer: L.svg({ padding: 0 })
                   });
 
 
@@ -675,12 +675,6 @@
                 FlowLayer = new L.layerGroup();
                 map.addLayer(FlowLayer);
                 layerControl.addOverlay(FlowLayer, "Polylines");
-
-                if (dotFlow) {
-                    DotLayer = new L.DotLayer();
-                    map.addLayer(DotLayer);
-                    layerControl.addOverlay(DotLayer, "Dots");
-                }
             }
 
             locateControl.stop();
@@ -723,14 +717,11 @@
                     let msg2 = msg + " " + Object.keys(appState.items).length + " activities rendered.";
                     $(".data_message").html(msg2);
                     rendering = false;
-                    if (DotLayer) {
-                        map.removeLayer(DotLayer); //this is a hack
+                    if (dotFlow) {
+                        DotLayer = new L.DotLayer();
                         map.addLayer(DotLayer);
-                        if (!appState.paused) {
-                            DotLayer.animate();
-                        }
+                        layerControl.addOverlay(DotLayer, "Dots");
                     }
-
                 }
             }
 

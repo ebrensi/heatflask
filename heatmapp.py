@@ -391,6 +391,11 @@ def main(username):
 
     flowres = request.args.get("flowres", "")
     heatres = request.args.get("heatres", "")
+
+    # ******  Temporarily force hires for flow *****
+    if flowres:
+        flowres = "high";
+
     if (not flowres) and (not heatres):
         flowres = "high"
         heatres = "high"

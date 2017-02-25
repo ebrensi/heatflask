@@ -7359,11 +7359,11 @@ L.DotLayer = L.CanvasLayer.extend({
         return this;
     },
 
-    onRemove: function(map) {
-        L.CanvasLayer.prototype.onAdd.call(this, map);
-        console.log("DotLayer removed");
-        this.pause();
-    },
+    // onRemove: function(map) {
+    //     L.CanvasLayer.prototype.onAdd.call(this, map);
+    //     console.log("DotLayer removed");
+    //     // this.pause();
+    // },
 
 
     drawDots: function(info, A, time) {
@@ -7391,7 +7391,7 @@ L.DotLayer = L.CanvasLayer.extend({
             ctx.fillStyle = "#FFFFFF";
         } else {
             size = 2;
-            ctx.globalAlpha = 0.5;
+            ctx.globalAlpha = 1;
             ctx.fillStyle = "#000000";
         }
 
@@ -7448,8 +7448,7 @@ L.DotLayer = L.CanvasLayer.extend({
             if (("time" in A) && ("latlng" in A)) {
                 count += this.drawDots(info, A, time);
             } else {
-                // console.log(A);
-                count = 0;
+                let a;  // do nothing
             }
         }
 
@@ -7478,9 +7477,9 @@ L.DotLayer = L.CanvasLayer.extend({
         var events = {
             movestart: this.onMap_pan_zoom_start,
             moveend: this._onLayerDidMove,
-
             resize: this._onLayerDidResize,
         };
+
         if (this._map.options.zoomAnimation && L.Browser.any3d) {
             events.zoomanim =  this._animateZoom;
         }
