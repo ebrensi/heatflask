@@ -23,7 +23,7 @@ class Config(object):
 
     ANTPATH_DEFAULT_OPTIONS = {
         "weight": 3,
-        "opacity": 0.4,
+        "opacity": 0.3,
         "color": 'black',
         "pulseColor": 'white',
     }
