@@ -153,6 +153,8 @@ L.DotLayer = L.CanvasLayer.extend({
             movestart: this.onMap_pan_zoom_start,
             moveend: this._onLayerDidMove,
 
+            panstart: this.onMap_pan_zoom_start,
+
             resize: this._onLayerDidResize,
         };
         if (this._map.options.zoomAnimation && L.Browser.any3d) {
