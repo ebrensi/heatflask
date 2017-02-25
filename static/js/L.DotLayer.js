@@ -24,6 +24,7 @@ L.DotLayer = L.CanvasLayer.extend({
 
     paused: false,
 
+
     onAdd: function(map) {
         L.CanvasLayer.prototype.onAdd.call(this, map);
         console.log("DotLayer added");
@@ -41,12 +42,9 @@ L.DotLayer = L.CanvasLayer.extend({
 
 
     drawDots: function(info, A, time) {
-        if (!info.bounds.intersects(A.bounds)) {
-            return 0;
-        }
-
         const times = A.time,
               latlngs = A.latlng,
+              distance = A.total_distance,
               max_time = times[times.length-1],
               zoom = info.zoom,
               delay = this.DOT_CONSTS[zoom][0],
@@ -113,16 +111,14 @@ L.DotLayer = L.CanvasLayer.extend({
         let ctx = info.canvas.getContext('2d'),
             zoom = info.zoom,
             time = (now - this.start_time) >>> this.DOT_CONSTS[zoom][1],
-            count = 0;
+            count = 0,
+            items = appState.items;
 
         ctx.clearRect(0, 0, info.canvas.width, info.canvas.height);
-        let ids = Object.keys(appState.items);
-        for (i = 0; i < ids.length; i++) {
-            let A = appState.items[ids[i]];
-            if (("time" in A) && ("latlng" in A)) {
+        for (let id in items) {
+            let A = items[id];
+            if (("latlng" in A) && info.bounds.intersects(A.bounds) && ("time" in A)) {
                 count += this.drawDots(info, A, time);
-            } else {
-                let a;  // do nothing
             }
         }
 
