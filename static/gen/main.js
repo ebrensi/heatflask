@@ -7393,7 +7393,7 @@ L.DotLayer = L.CanvasLayer.extend({
         map.off(this.getEvents(),this);
 
         this._canvas = null;
-    }
+    },
 
     drawDots: function(info, A, time) {
         const times = A.time,
