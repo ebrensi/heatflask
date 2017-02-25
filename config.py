@@ -23,7 +23,7 @@ class Config(object):
 
     ANTPATH_DEFAULT_OPTIONS = {
         "weight": 3,
-        "opacity": 0.1,
+        "opacity": 0.2,
         "color": 'black',
         "pulseColor": 'white',
     }
@@ -40,10 +40,10 @@ class Config(object):
     SSLIFY_PERMANENT = True
 
     # We make Flask-Assets Default to manual build without caching
-    ASSETS_AUTO_BUILD = False
+    # ASSETS_AUTO_BUILD = False
     ASSETS_DEBUG = False
-    ASSETS_CACHE = False
-    ASSETS_MANIFEST = None
+    # ASSETS_CACHE = False
+    # ASSETS_MANIFEST = None
 
     # Concurrency for Web-API fetching
     CONCURRENCY = 4
@@ -120,8 +120,8 @@ class DevelopmentConfig(Config):
     SSLIFY_PERMANENT = False
 
     # Flask-Assets settings
-    ASSETS_DEBUG = True
-    ASSETS_AUTO_BUILD = True
-    ASSETS_CACHE = True
-    ASSETS_MANIFEST = 'cache'
-    ASSETS_UPDATER = 'timestamp'
+    ASSETS_DEBUG = "merge"
+    # ASSETS_AUTO_BUILD = True
+    # ASSETS_CACHE = True
+    # ASSETS_MANIFEST = 'cache'
+    # ASSETS_UPDATER = 'timestamp'

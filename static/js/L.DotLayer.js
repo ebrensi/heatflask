@@ -1,5 +1,5 @@
-L.DotLayer = function() {
-    this.DOT_CONSTS = {
+L.DotLayer = L.CanvasLayer.extend({
+    DOT_CONSTS: {
       1: [10000, 1],
       2: [5000, 1],
       3: [3000, 1],
@@ -20,17 +20,27 @@ L.DotLayer = function() {
       18: [15, 6],
       19: [15, 7],
       20: [10, 7]
-    };
-    this.paused = false;
+    },
 
-    this.onAdd = function(map) {
-        console.log("dotLayer added");
-        super.on_add(map);
-        this.onMap_pan_zoom_stop;
+    paused: false,
+
+    onAdd: function(map) {
+        L.CanvasLayer.prototype.onAdd.call(this, map);
+        console.log("DotLayer added");
+        if (appState.items) {
+            this._onLayerDidMove();
+        }
         return this;
-    }
+    },
 
-    this.drawDots = function(info, A, time) {
+    onRemove: function(map) {
+        L.CanvasLayer.prototype.onAdd.call(this, map);
+        console.log("DotLayer removed");
+        this.pause();
+    },
+
+
+    drawDots: function(info, A, time) {
         if (!info.bounds.intersects(A.bounds)) {
             return 0;
         }
@@ -55,7 +65,7 @@ L.DotLayer = function() {
             ctx.fillStyle = "#FFFFFF";
         } else {
             size = 2;
-            ctx.globalAlpha = 0.2;
+            ctx.globalAlpha = 0.5;
             ctx.fillStyle = "#000000";
         }
 
@@ -94,10 +104,10 @@ L.DotLayer = function() {
 
         }
         return count;
-    };
+    },
 
     /* for dot paths */
-    this.onDrawLayer = function(info) {
+    onDrawLayer: function(info) {
         let now = Date.now();
 
         let ctx = info.canvas.getContext('2d'),
@@ -119,26 +129,26 @@ L.DotLayer = function() {
 
         fps_display.update(now, " n=" + count + " z="+info.zoom);
 
-    };
+    },
 
-    this.animate = function() {
+    animate: function() {
       this.paused = false;
       this.start_time = Date.now();
       L.Util.requestAnimFrame(this._animate, this);
-    };
+    },
 
-    this.pause = function() {
+    pause: function() {
       this.paused = true;
-    };
+    },
 
-    this._animate = function() {
+    _animate: function() {
         if (!this.paused) {
           this.drawLayer();
           L.Util.requestAnimFrame(this._animate, this);
         }
-    };
+    },
 
-    this.getEvents = function () {
+    getEvents: function () {
         var events = {
             movestart: this.onMap_pan_zoom_start,
             moveend: this._onLayerDidMove,
@@ -150,31 +160,29 @@ L.DotLayer = function() {
         }
 
         return events;
-    };
+    },
 
 
-      this._onLayerDidMove = function () {
+    _onLayerDidMove: function () {
         let topLeft = this._map.containerPointToLayerPoint([0, 0]);
         L.DomUtil.setPosition(this._canvas, topLeft);
         this.drawLayer();
         this.onMap_pan_zoom_stop();
-    };
+    },
 
-    this.onMap_pan_zoom_start = function() {
-        this.pauseState = this.paused;
+    onMap_pan_zoom_start: function() {
         this.pause();
-    }
+    },
 
-    this.onMap_pan_zoom_stop = function() {
-        this.paused = this.pauseState;
-        if (!this.paused) {
+    onMap_pan_zoom_stop: function() {
+        if (!appState.paused) {
             this.animate();
         }
     }
 
-};
+});
 
-L.DotLayer.prototype = new L.CanvasLayer(); // -- setup prototype
+// L.DotLayer.prototype = new L.CanvasLayer(); // -- setup prototype
 
 L.dotLayer = function () {
     return new L.DotLayer();
