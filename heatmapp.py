@@ -693,6 +693,15 @@ def app_info():
     return jsonify(info)
 
 
+@app.route('/app/init')
+@admin_required
+def app_init():
+    info = {
+        Activities.init()
+        Indexes.init()
+    }
+    return jsonify(info)
+    
 # ---- Event log stuff ----
 @app.route('/history')
 @log_request_event

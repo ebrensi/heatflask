@@ -589,7 +589,7 @@ class Indexes(object):
 
         # delete all users from the Redis cache, since they have indexes
         keys_to_delete = redis.keys(Users.key("*"))
-        redis.delete(*keys_to_delete)
+        #redis.delete(*keys_to_delete)
 
         # create new indexes collection
         mongodb.create_collection("indexes")
@@ -719,7 +719,8 @@ class Activities(object):
 
         to_delete = redis.keys(cls.cache_key("*"))
         if to_delete:
-            result2 = redis.delete(*to_delete)
+            pass
+            #result2 = redis.delete(*to_delete)
         else:
             result2 = None
         mongodb.create_collection("activities")
