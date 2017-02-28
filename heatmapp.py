@@ -33,7 +33,7 @@ sslify = SSLify(app, skips=["webhook_callback"])
 
 # models depend app so we import them afterwards
 from models import Users, Activities, EventLogger, Utility, Webhooks,\
-    db_sql, mongodb, redis
+    Indexes, db_sql, mongodb, redis
 
 Analytics(app)
 
@@ -394,7 +394,7 @@ def main(username):
 
     # ******  Temporarily force hires for flow *****
     if flowres:
-        flowres = "high";
+        flowres = "high"
 
     if (not flowres) and (not heatres):
         flowres = "high"
@@ -689,6 +689,16 @@ def app_info():
         "mongodb": mongodb.command("dbstats"),
         "activities": mongodb.command("collstats", "activities"),
         "indexes": mongodb.command("collstats", "indexes")
+    }
+    return jsonify(info)
+
+
+@app.route('/app/dbinit')
+@admin_required
+def app_init():
+    info = {
+        Activities.init(),
+        Indexes.init()
     }
     return jsonify(info)
 

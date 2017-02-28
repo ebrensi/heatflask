@@ -63,16 +63,16 @@ class Config(object):
     STORE_INDEX_TIMEOUT = 7 * 24 * 60 * 60   # 7 days
 
     # We daily purge activities older than this from MongoDB
-    STORE_ACTIVITIES_TIMEOUT = 7 * 24 * 60 * 60  # 7 days
+    STORE_ACTIVITIES_TIMEOUT = 3 * 24 * 60 * 60  # 3 days
 
     # How long before a user's index is outated and needs an update
     INDEX_UPDATE_TIMEOUT = 24 * 60 * 60  # 1 day
 
     # How long we memory-cache hires activities
-    CACHE_ACTIVITIES_TIMEOUT = 1 * 60 * 60  # 1 hour
+    CACHE_ACTIVITIES_TIMEOUT = 30 * 60  # 30 mintues
 
     # How long we hold a User object in memory
-    CACHE_USERS_TIMEOUT = 1 * 60 * 60  # 1 hour
+    CACHE_USERS_TIMEOUT = 30 * 60  # 30 minutes
 
     SECRET_KEY = "pB\xeax\x9cJ\xd6\x81\xed\xd7\xf9\xd0\x99o\xad\rM\x92\xb1\x8b{7\x02r"
 
