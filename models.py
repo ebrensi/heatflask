@@ -583,22 +583,25 @@ class Users(UserMixin, db_sql.Model):
 class Indexes(object):
 
     @staticmethod
-    def init():
+    def init(clear_cache=False):
         # drop the "indexes" collection
         mongodb.indexes.drop()
 
-        # delete all users from the Redis cache, since they have indexes
-        keys_to_delete = redis.keys(Users.key("*"))
-        redis.delete(*keys_to_delete)
+        if clear_cache:
+            # delete all users from the Redis cache, since they have indexes
+            keys_to_delete = redis.keys(Users.key("*"))
+            if keys_to_delete:
+                redis.delete(*keys_to_delete)
 
         # create new indexes collection
         mongodb.create_collection("indexes")
 
         timeout = app.config["STORE_INDEX_TIMEOUT"]
-        mongodb.indexes.create_index(
+        result = mongodb.indexes.create_index(
             "dt_last_indexed",
             expireAfterSeconds=timeout
         )
+        return vars(result)
 
 
 #  Activities class is only a proxy to underlying data structures.
@@ -708,7 +711,7 @@ class Activities(object):
             return document
 
     @classmethod
-    def init(cls):
+    def init(cls, clear_cache=False):
         try:
             result1 = mongodb.activities.drop()
         except Exception as e:
@@ -717,11 +720,13 @@ class Activities(object):
                 .format(e))
             result1 = e
 
-        to_delete = redis.keys(cls.cache_key("*"))
-        if to_delete:
-            result2 = redis.delete(*to_delete)
-        else:
-            result2 = None
+        if clear_cache:
+            to_delete = redis.keys(cls.cache_key("*"))
+            if to_delete:
+                result2 = redis.delete(*to_delete)
+            else:
+                result2 = None
+
         mongodb.create_collection("activities")
 
         timeout = app.config["STORE_ACTIVITIES_TIMEOUT"]
