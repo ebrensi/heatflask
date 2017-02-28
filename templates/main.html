@@ -472,8 +472,22 @@
                return new Date(secs * 1000).toISOString().substr(11, 8);
         }
 
+        // return an HTML href tag from a url and text
         function href(url, text){
             return `<a href='${url}' target='_blank'>${text}</a>`
+        }
+
+        // decode an array of successive differences into an array of the
+        // original values
+        function streamDecode(dlist, first_value=0) {
+            let running_sum = first_value,
+                outArray = [first_value],
+                len=dlist.length;
+            for (let i=0; i<len; i++) {
+                running_sum += dlist[i];
+                outArray.push(running_sum);
+            }
+            return outArray;
         }
 
         function zoomToSelected(){
@@ -809,6 +823,7 @@
                             flowpoints = latlngs;
                             if (dotFlow && ("time" in A)) {
                                 A.latlng = latlngs;
+                                A.time = streamDecode(A.time);
                             }
                         }
                     }

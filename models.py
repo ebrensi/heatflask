@@ -528,22 +528,6 @@ class Users(UserMixin, db_sql.Model):
 
     def query_index(self, activity_ids=None, limit=None,  after=None, before=None):
 
-        def bounds(poly):
-            if poly:
-                latlngs = polyline.decode(poly)
-                # app.logger.info("latlngs: {}".format(latlngs))
-
-                lats = [ll[0] for ll in latlngs]
-                lngs = [ll[1] for ll in latlngs]
-
-                SW = (min(lats), min(lngs))
-                NE = (max(lats), max(lngs))
-
-                # app.logger.info("SW = {}, NE = {}".format(SW, NE))
-                return SW, NE
-            else:
-                return []
-
         if self.indexing():
             return [{
                     "error": "Building activity index for {}".format(self.id)
@@ -601,7 +585,7 @@ class Indexes(object):
             "dt_last_indexed",
             expireAfterSeconds=timeout
         )
-        return vars(result)
+        app.logger.info("initialized Indexes collection")
 
 
 #  Activities class is only a proxy to underlying data structures.
@@ -646,7 +630,28 @@ class Activities(object):
                  for atype, vtype, color in ATYPE_SPECS}
 
     @staticmethod
-    def strava2dict(a):
+    def bounds(poly):
+        if poly:
+            latlngs = polyline.decode(poly)
+            # app.logger.info("latlngs: {}".format(latlngs))
+
+            lats = [ll[0] for ll in latlngs]
+            lngs = [ll[1] for ll in latlngs]
+
+            SW = (min(lats), min(lngs))
+            NE = (max(lats), max(lngs))
+
+            # app.logger.info("SW = {}, NE = {}".format(SW, NE))
+            return SW, NE
+        else:
+            return []
+
+    @staticmethod
+    def stream_encode(vals):
+        return [b - a for a, b in zip(vals, vals[1:])]
+
+    @classmethod
+    def strava2dict(cls, a):
         return {
             "id": a.id,
             "name": a.name,
@@ -656,7 +661,7 @@ class Activities(object):
             "total_distance": float(a.distance),
             "elapsed_time": int(a.elapsed_time.total_seconds()),
             "average_speed": float(a.average_speed),
-            # "bounds": bounds(a.map.summary_polyline)
+            # "bounds": cls.bounds(a.map.summary_polyline)
         }
 
     @staticmethod
@@ -734,7 +739,7 @@ class Activities(object):
             "ts",
             expireAfterSeconds=timeout
         )
-
+        app.logger.info("initialized Activity collection")
         return result1, result2
 
     @classmethod
@@ -755,9 +760,15 @@ class Activities(object):
 
         activity_streams = {name: streams[name].data for name in streams}
 
+        # Encode/compress latlng data into polyline format
         if ("polyline" in stream_names) and ("latlng" in activity_streams):
             activity_streams["polyline"] = polyline.encode(
                 activity_streams['latlng'])
+
+        # Encode/compress time data into successive differences
+        if ("time" in stream_names) and ("time" in activity_streams):
+            activity_streams["time"] = cls.stream_encode(
+                activity_streams["time"])
 
         output = {s: activity_streams[s] for s in stream_names}
         cls.set(activity_id, output)
