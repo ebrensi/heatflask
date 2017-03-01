@@ -78,7 +78,9 @@ L.DotLayer = L.CanvasLayer.extend({
               n1 = this.DCONST * A.total_distance * info.zoom * info.zoom * info.zoom,
               delay = Math.floor(max_time / n1),
               num_pts = Math.floor(max_time / delay),
-              ctx = info.canvas.getContext('2d');
+              ctx = info.canvas.getContext('2d'),
+              xmax = info.size.x,
+              ymax = info.size.y;
 
         let s = time % max_time,
             key_time = s - delay * Math.floor(s/delay),
@@ -88,11 +90,11 @@ L.DotLayer = L.CanvasLayer.extend({
 
         if (A.highlighted) {
             size = 4;
-            ctx.globalAlpha = 1;
+            // ctx.globalAlpha = 1;
             ctx.fillStyle = "#FFFFFF";
         } else {
             size = 2;
-            ctx.globalAlpha = 0.7;
+            // ctx.globalAlpha = 0.7;
             ctx.fillStyle = "#000000";
         }
 
@@ -103,23 +105,26 @@ L.DotLayer = L.CanvasLayer.extend({
                 i++;
               }
 
-              p1 = latlngs[i-1];
-              p2 = latlngs[i];
-              interval_good = info.bounds.contains(p1) || info.bounds.contains(p2);
+              p1 = info.layer._map.latLngToContainerPoint(latlngs[i-1]);
+              p2 = info.layer._map.latLngToContainerPoint(latlngs[i]);
+              interval_good = (p1.x >= 0 && p1.x <= xmax) && (p1.y >= 0 && p1.y <= ymax) ||
+                              (p2.x >= 0 && p2.x <= xmax) && (p2.y >= 0 && p2.y <= ymax);
 
               if (interval_good) {
                   dt = times[i] - times[i-1];
-                  M = [(p2[0]-p1[0])/dt,  (p2[1]-p1[1])/dt];
+                  M = [(p2.x-p1.x)/dt,  (p2.y-p1.y)/dt];
               }
             }
 
             if (interval_good) {
 
                 dt = t - times[i-1];
-                p = [p1[0] + M[0]*dt, p1[1] + M[1]*dt];
+                dot = {
+                  x: p1.x + M[0]*dt,
+                  y: p1.y + M[1]*dt
+                };
 
-                if (info.bounds.contains(p)) {
-                    dot = info.layer._map.latLngToContainerPoint(p);
+                if ((dot.x >= 0 && dot.x <= xmax) && (dot.y >= 0 && dot.y <= ymax)) {
                     // ctx.fillRect(dot.x-1, dot.y-1, size, size);
                     ctx.beginPath();
                     ctx.arc(dot.x, dot.y, size, 0, Math.PI * 2);
