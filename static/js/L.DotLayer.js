@@ -25,6 +25,7 @@ L.DotLayer = L.CanvasLayer.extend({
     paused: false,
     _pane: "shadow-pane",
     DCONST: 0.000001,
+    two_pi: 2 * Math.PI,
 
     onAdd: function (map) {
         this._map = map;
@@ -76,19 +77,21 @@ L.DotLayer = L.CanvasLayer.extend({
               dist = A.total_distance,
               zoom = info.zoom,
               n1 = this.DCONST * A.total_distance * info.zoom * info.zoom * info.zoom,
-              delay = Math.floor(max_time / n1),
-              num_pts = Math.floor(max_time / delay),
+              // n1 = (A.total_distance << (info.zoom-1)) >> 21,
+              delay = ~~(max_time / n1),
+              num_pts = ~~(max_time / delay),
               ctx = info.canvas.getContext('2d'),
               xmax = info.size.x,
               ymax = info.size.y;
 
         let s = time % max_time,
-            key_time = s - delay * Math.floor(s/delay),
+            key_time = s - delay * (~~(s/delay)),
             count = 0,
             i = 0,
             t, d, dt, p1, p2, p, size, interval_good;
 
         if (A.highlighted) {
+            // size = 4;
             size = 4;
             // ctx.globalAlpha = 1;
             ctx.fillStyle = "#FFFFFF";
@@ -120,14 +123,14 @@ L.DotLayer = L.CanvasLayer.extend({
 
                 dt = t - times[i-1];
                 dot = {
-                  x: p1.x + M[0]*dt,
-                  y: p1.y + M[1]*dt
+                  x: ~~(p1.x + M[0]*dt + 0.5),
+                  y: ~~(p1.y + M[1]*dt + 0.5)
                 };
 
                 if ((dot.x >= 0 && dot.x <= xmax) && (dot.y >= 0 && dot.y <= ymax)) {
                     // ctx.fillRect(dot.x-1, dot.y-1, size, size);
                     ctx.beginPath();
-                    ctx.arc(dot.x, dot.y, size, 0, Math.PI * 2);
+                    ctx.arc(dot.x, dot.y, size, 0, this.two_pi);
                     ctx.fill();
                     ctx.closePath();
                     count++;
