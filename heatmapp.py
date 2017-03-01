@@ -35,6 +35,12 @@ sslify = SSLify(app, skips=["webhook_callback"])
 from models import Users, Activities, EventLogger, Utility, Webhooks,\
     Indexes, db_sql, mongodb, redis
 
+# just do once
+if not redis.get("db-reset"):
+    Activities.init(clear_cache=True)
+    # Indexes.init(clear_cache=True)
+    redis.set("db-reset", 1)
+
 Analytics(app)
 
 # we bundle javascript and css dependencies to reduce client-side overhead

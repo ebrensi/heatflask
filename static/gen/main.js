@@ -7350,6 +7350,7 @@ L.DotLayer = L.CanvasLayer.extend({
 
     paused: false,
     _pane: "shadow-pane",
+    DCONST: 0.000001,
 
     onAdd: function (map) {
         this._map = map;
@@ -7399,8 +7400,10 @@ L.DotLayer = L.CanvasLayer.extend({
         const times = A.time,
               latlngs = A.latlng,
               max_time = times[times.length-1],
+              dist = A.total_distance,
               zoom = info.zoom,
-              delay = this.DOT_CONSTS[zoom][0],
+              n1 = this.DCONST * A.total_distance * info.zoom * info.zoom * info.zoom,
+              delay = Math.floor(max_time / n1),
               num_pts = Math.floor(max_time / delay),
               ctx = info.canvas.getContext('2d');
 
