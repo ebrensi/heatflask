@@ -671,10 +671,13 @@ class Activities(object):
     @classmethod
     def set(cls, id, data, timeout=CACHE_ACTIVITIES_TIMEOUT):
         # cache it first, in case mongo is down
-        result1 = redis.setex(cls.cache_key(id), msgpack.packb(data), timeout)
+        packed = msgpack.packb(data)
+        result1 = redis.setex(cls.cache_key(id), packed, timeout)
 
-        document = {"ts": datetime.utcnow()}
-        document.update(data)
+        document = {
+            "ts": datetime.utcnow(),
+            "mpk": Binary(packed)
+        }
         try:
             result2 = mongodb.activities.update_one(
                 {"_id": int(id)},
@@ -688,32 +691,35 @@ class Activities(object):
 
     @classmethod
     def get(cls, id, timeout=CACHE_ACTIVITIES_TIMEOUT):
+        packed = None
         key = cls.cache_key(id)
         cached = redis.get(key)
 
         if cached:
             redis.expire(key, timeout)  # reset expiration timeout
             # app.logger.debug("got Activity {} from cache".format(id))
-            return msgpack.unpackb(cached)
+            packed = cached
+        else:
+            try:
+                document = mongodb.activities.find_one_and_update(
+                    {"_id": int(id)},
+                    {"$set": {"ts": datetime.utcnow()}}
+                )
 
-        try:
-            document = mongodb.activities.find_one_and_update(
-                {"_id": int(id)},
-                {"$set": {"ts": datetime.utcnow()}}
-            )
+            except Exception as e:
+                app.logger.debug(
+                    "error accessing activity {} from MongoDB:\n{}"
+                    .format(id, e))
+                return
 
-        except Exception as e:
-            app.logger.debug(
-                "error accessing activity {} from MongoDB:\n{}"
-                .format(id, e))
-            return
-
-        if document:
-            del document["_id"]
-            del document["ts"]
-            redis.setex(key, msgpack.packb(document), timeout)
-            # app.logger.debug("got activity {} data from MongoDB".format(id))
-            return document
+            if document:
+                packed = document["mpk"]
+                # del document["_id"]
+                # del document["ts"]
+                redis.setex(key, packed, timeout)
+                # app.logger.debug("got activity {} data from MongoDB".format(id))
+        if packed:
+            return msgpack.unpackb(packed)
 
     @classmethod
     def init(cls, clear_cache=False):
@@ -765,10 +771,10 @@ class Activities(object):
             activity_streams["polyline"] = polyline.encode(
                 activity_streams['latlng'])
 
-        # Encode/compress time data into successive differences
-        if ("time" in stream_names) and ("time" in activity_streams):
-            activity_streams["time"] = cls.stream_encode(
-                activity_streams["time"])
+        for s in ["time", "altitude", "distance"]:
+            # Encode/compress time data into successive differences
+            if (s in stream_names) and (s in activity_streams):
+                activity_streams[s] = cls.stream_encode(activity_streams[s])
 
         output = {s: activity_streams[s] for s in stream_names}
         cls.set(activity_id, output)

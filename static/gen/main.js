@@ -5010,7 +5010,7 @@ L.Control.fps = L.Control.extend({
         let fps = 500 / (now - this.lastCalledTime);
         this._container.innerHTML = "FPS: " + 2 * Math.floor(fps) + msg;
         this.lastCalledTime = now;
-        return fps
+        return fps;
   }
 });
 
@@ -7336,14 +7336,14 @@ L.DotLayer = L.CanvasLayer.extend({
       8: [700, 2],
       9: [600, 2],
       10: [500, 3],
-      11: [400, 3],
-      12: [300, 4],
-      13: [200, 4],
+      11: [400, 4],
+      12: [300, 5],
+      13: [200, 5],
       14: [100, 5],
-      15: [50, 5],
-      16: [50, 5],
+      15: [50, 6],
+      16: [50, 6],
       17: [30, 6],
-      18: [15, 6],
+      18: [15, 7],
       19: [15, 7],
       20: [10, 7]
     },
@@ -7362,7 +7362,6 @@ L.DotLayer = L.CanvasLayer.extend({
         this._canvas.height = size.y;
 
         var animated = this._map.options.zoomAnimation && L.Browser.any3d;
-        console.log("animated="+animated)
         L.DomUtil.addClass(this._canvas, 'leaflet-zoom-' + (animated ? 'animated' : 'hide'));
 
 
