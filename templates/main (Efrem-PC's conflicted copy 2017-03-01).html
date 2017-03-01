@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ config["APP_NAME"] }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+
+    {% assets "main_css" %}
+    <link rel="stylesheet" href="{{ ASSET_URL }}" />
+    {% endassets %}
+
+    {% assets "main_js" %}
+    <script type="text/javascript" src="{{ ASSET_URL }}"></script>
+    {% endassets %}
+
+    {% if not config.get('OFFLINE') %}
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBLvYWwPmLsBRCGXeMHh-InA9rq35jdVeA" async defer></script>
+    {% endif %}
+
+    {% if current_user.is_anonymous or (not current_user.is_admin()) %}
+    {{analytics}}
+    {% endif %}
+</head>
+
+<body>
+    <div id="sidebar" class="sidebar collapsed">
+        <!-- Nav tabs -->
+        <div class="sidebar-tabs">
+            <ul role="tablist">
+                <li>
+                <a href="#home" role="tab"><i class="fa fa-bars"></i></a>
+                </li>
+
+                <li>
+                <a href="#activities" role="tab"><i class="fa fa-list"></i></a></li>
+
+
+                {% if current_user.is_authenticated
+                    and ((current_user.id == user.id) or current_user.is_admin())%}
+                <li>
+                {% else %}
+                <li class="disabled">
+                {% endif %}
+                <a href="#profile" role="tab"><i class="fa fa-user"></i></a>
+                </li>
+
+                <li><a href="#messages" role="tab"><i class="fa fa-sticky-note-o"></i></a></li>
+            </ul>
+
+            <ul role="tablist">
+                {% if current_user.is_authenticated
+                    and current_user.is_admin() %}
+                <li>
+                {% else %}
+                <li class="disabled">
+                {% endif %}
+                <a href="#settings" role="tab"><i class="fa fa-gear"></i></a>
+                </li>
+            </ul>
+
+        </div>
+
+        <!-- Tab panes -->
+        <div class="sidebar-content">
+            <div class="sidebar-pane" id="home">
+                <h1 class="sidebar-header">
+                    <a href="https://www.strava.com/athletes/{{ user.id }}" target="_blank"><img src="{{ url_for('static',filename='strava_button.png')}}" width=20, height=20 class="img-fluid"> </a>
+                    {{ user.username or user.id }}'s map
+                    <span class="sidebar-close"><i class="fa fa-caret-left"></i></span>
+                </h1>
+
+                <h3>Activities query:</h3>
+
+                <form id="renderform" action="{{ url_for('main', username=user.id)}}">
+
+                 <span id="num_select">
+                  <input class="preset" id="select_num" type="number" value=0 min=0 max=500>
+                  most</span>
+
+                 <span>
+                  <select class="preset" id="select_type" form="renderform">
+                    <option value="days">recent days</option>
+                    <option value="activities">recent activities</option>
+                    <option value="activity_ids">Activity IDs</option>
+                    <option value="" selected="selected">Date-Range</option>
+                  </select>
+                  </span>
+
+                  <span id="id_select">
+                    <br>
+                    <textarea name="id" id="activity_ids" form="renderform"></textarea>
+                  </span>
+
+                  <span class="date_select" style="display:block">
+                    After
+                    <input class="datepick" id="date1" type="text"  value=""/>
+                  </span>
+                  <br>
+
+                  <span class="date_select" style="display:block">
+                    Before
+                    <input class="datepick" id="date2" type="text" value=""/>
+                  </span>
+                  <hr>
+
+                  <span style="display:block">
+                  <label for="renderHeat" style="display:block">Heat Layer:</label>
+                  <select id="heatres" name="renderHeat" form="renderform">
+                    <option value="">None</option>
+                    <option value="high">High resolution</option>
+                    <option value="low" disabled="">Low resolution</option>
+                  </select>
+                  </span>
+
+
+                  <span style="display:block">
+                      <label for="renderFlow" style="display:block">Flow Layer:</label>
+                      <select id="flowres" name="renderFlow" form="renderform">
+                        <option value="">None</option>
+                        <option value="high">High resolution</option>
+                        <option value="low" disabled="">Low resolution</option>
+                      </select>
+                  </span>
+
+
+                    <div class="checkbox">
+                      <label><input type="checkbox" id="autozoom" value="1">Auto-Zoom when finished</label>
+                    </div>
+                    <div class="checkbox">
+                      <label><input type="checkbox" id="info" value="1">Flow Path details on hover/click</label>
+                    </div>
+
+                <hr>
+                    <div class="data_message"></div>
+                    <div><progress id='tab' class='progbar'></progress></div>
+                <hr>
+
+                <button type="button" id="renderButton" class="btn btn-primary">Render Layers</button>
+                <button type="button" id="abortButton" class="btn btn-danger">Abort</button>
+
+              </form>
+
+                <hr>
+                {% if current_user.is_authenticated %}
+                You are logged in as
+                <a href="{{ url_for('main', username=current_user.id) }}"
+                            target="_blank">{{ current_user.username or current_user.id}}</a> :
+                <br>
+
+                <form action="{{ url_for('logout', username=current_user.id) }}">
+                    <input type="submit" class="btn btn-danger" value="Log Out" />
+                </form>
+                {% else %}
+
+                Create an account and/or log in.
+                <form action="{{ url_for('authorize') }}" >
+                    <input type="image" src="{{ url_for('static', filename='btn_strava_connectwith_orange.svg') }}" alt="Log-In with Strava" >
+                </form>
+
+                {% endif %}
+                <br>
+                <a href="mailto:Rensi.Efrem@gmail.com?subject=About {{ config['APP_NAME'] }}"> Having problems?</a>
+            </div>
+
+            {% if current_user.is_authenticated
+                    and ((current_user.id == user.id) or current_user.is_admin()) %}
+            <div class="sidebar-pane" id="profile">
+                <h1 class="sidebar-header"> <a href="https://www.strava.com/athletes/{{ user.id }}" target="_blank"><img src="{{ url_for('static',filename='strava_button.png')}}" width=20, height=20 class="img-fluid"> </a>  {{ user.username or user.id }} <span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
+
+                {% if current_user.is_authenticated and current_user.is_admin() and (not user.is_admin()) %}
+                Admin ({{ current_user.id }}) on behalf of:
+                {% endif %}
+
+                <h3> {{ user.firstname }}
+                     {{ user.lastname }}:</h3>
+
+                <a href="https://www.strava.com/settings/profile" target="_blank">
+                    <img src={{ user.profile }} alt="user image" height="20%" width="20%">
+                </a>
+
+                <br><br>
+                The activity index is built the first time you use this app.  While your index is active (within 7 days of the last access), it is automatically updated with new activities and most changes you make on Strava.  If our index does not corrrectly reflect the current state of your Strava activities, try re-building the index.
+                <form action="{{ url_for('activities', username=user.id) }}" target="_blank">
+                    <input type="submit" class="btn" value="View activity index" />
+                    <label><input type="checkbox" name="rebuild" value="1">Re-build</label>
+                </form>
+
+                <br><br>
+
+
+                <br>
+                <form action="{{ url_for('logout', username=user.id) }}">
+                    <input type="submit" class="btn btn-danger" value="Log Out" />
+                </form>
+
+                <br>
+                <hr>
+                <br><br>
+                <form action="{{ url_for('delete', username=user.id) }}" onsubmit="return confirm('Delete your info from our database?');">
+                    <input type="submit" class="btn btn-danger" value="Delete Account" />
+                </form>
+            </div>
+            {% endif %}
+
+
+            <div class="sidebar-pane" id="messages">
+                <h1 class="sidebar-header">Info<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
+                <br>
+                {{ config['APP_NAME'] }} imports and renders your public activities from Strava.<br>
+                Our cache of your activity data is deleted if not accessed for 7 days.<br><br>
+                Deleting your accout with us clears our database cache for you and deletes your Strava access token from our database.
+                <br><br>
+                The URL for a heat/flow map and the current location dates or preset, and zoom are embedded in the url so you can share that url and anyone who clicks on it will get the same view.
+                <br><br>
+                Note: You can specify a custom map baselayer by setting "baselayer={map}" in the URL, where {map} is one of the provider names from
+                 <a href="https://leaflet-extras.github.io/leaflet-providers/preview" target="_blank">leaflet-providers</a>
+                <hr>
+
+                {{ config['APP_NAME'] }} is a work in progress.
+                <img src="{{ url_for('static', filename='under-construction.gif') }}" height=40>
+                <br>
+                <a href="mailto:Rensi.Efrem@gmail.com?subject=About {{ config['APP_NAME'] }}">Questions, comments, suggestions?  Want to contribute?</a>
+                <hr>
+            </div>
+
+            <div class="sidebar-pane" id="activities">
+                <h1 class="sidebar-header">Rendered Activities<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
+                <div id="activities_list">
+                    <table id='atab' class='display compact order-column' cellspacing='0' width='100%'></table>
+                </div>
+
+                <div>
+                <br>
+                <input type="checkbox" name="szoom" id="zoom-table-selection" value="1">Auto-Zoom to selection
+                <button type="button" id="render-selection-button" class="btn btn-default btn-sm">Render selected</button>
+                </div>
+            </div>
+
+            <div class="sidebar-pane" id="settings">
+                <h1 class="sidebar-header">Map Settings<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
+                    <img src="{{ url_for('static', filename='under-construction.gif') }}" height=40>
+                    <form id="layer-settings-form">
+                    <div>
+                        <h4>Heatmap Options</h4>
+                        <label>Radius:
+                        <input class="heatmap-opt" id="radius" type="number" value={{ config["HEATMAP_DEFAULT_OPTIONS"]["radius"] }} min=0 max=20>
+                        </label>
+
+                        <label>
+                        Blur:
+                        <input class="heatmap-opt" id="blur" type="number" value={{ config["HEATMAP_DEFAULT_OPTIONS"]["blur"] }} min=0 max=20>
+                        </label>
+                        <br><br>
+                        <label>
+                        Gradient:
+                        </label>
+                        <table cellspacing="1">
+                            <thead>
+                            <th>Value</th><th>Color</th>
+                            </thead>
+
+                            <tbody>
+                            <tr>
+                            <td>
+                             <input class="heatmap-grad-val" id="1" type="number" value='0.4' step='0.01' min=0 max=1>
+                            </td>
+                            <td>
+                              <input class="heatmap-grad-color" id="1" type="color" value='#0000FF'>
+                            </td>
+                            </tr>
+
+                            <tr>
+                            <td>
+                             <input class="heatmap-grad-val" id="2" type="number" value='0.65' step='0.01' min=0 max=1>
+                            </td>
+                            <td>
+                              <input id="heatmap-grad-color" id="2" type="color" value='#00FF00'>
+                            </td>
+                            </tr>
+
+                            <tr>
+                            <td>
+                             <input class="heatmap-grad-val" id="3" type="number" value='1' step='0.01' min=0 max=1>
+                            </td>
+                            <td>
+                              <input id="heatmap-grad-color" id="3" type="color" value='#FF0000'>
+                            </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <hr>
+                    <div>
+                        <h4>Flowmap Options</h4>
+                        <label>Weight:</label>
+                        <input class="flowmap-opt" id="weight" type="number" value={{ config["ANTPATH_DEFAULT_OPTIONS"]["weight"] }} min=0 max=20>
+
+                        <label>Opacity:</label>
+                        <input class="flowmap-opt" id="opacity" type="number" value={{ config["ANTPATH_DEFAULT_OPTIONS"]["opacity"] }} min=0 max=20>
+
+                        <br>
+                        <h4>Flowmap Variation Constants</h4>
+                        <label>K:</label>
+                        <input class="flowmap-opt" id="K" type="number" value={{ config["FLOWPATH_VARIATION_CONSTANTS"]["K"] }} min=0 max=1000000>
+
+                        <label>T:</label>
+                        <input class="flowmap-opt" id="T" type="number" value={{ config["FLOWPATH_VARIATION_CONSTANTS"]["T"] }} min=0 max=1000000>
+                    </div>
+                    </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="map" class="sidebar-map"></div>
+
+
+    <script type="text/javascript">
+        const OFFLINE = {{ config.get('OFFLINE')|tojson }},
+            HEATLAYER_DEFAULT_OPTIONS = {{ config["HEATMAP_DEFAULT_OPTIONS"]|tojson|safe }},
+            FLOWLAYER_DEFAULT_OPTIONS = {{ config["ANTPATH_DEFAULT_OPTIONS"]|tojson|safe }},
+            FLOWPATH_VARIATION_CONSTANTS = {{ config["FLOWPATH_VARIATION_CONSTANTS"]|tojson|safe }},
+            BASE_DATAURL = "{{ url_for('getdata', username=user.id) }}",
+            BASE_USER_URL = "{{ url_for('main', username=user.id) }}",
+            USER_ID = "{{ user.id }}",
+            START_PAUSED = {{ paused|tojson }},
+            MAP_PROVIDERS = {{ baselayer|tojson|safe }},
+            DEFAULT_MAP_CENTER = [{{ lat }}, {{ lng }}],
+            DEFAULT_MAP_ZOOM = {{ zoom }};
+
+        // Set up Map and base layers
+        let map_providers = MAP_PROVIDERS,
+            default_baseLayer,
+            baseLayers = {
+                "None": L.tileLayer(""),
+                "Esri.WorldImagery": L.tileLayer.provider("Esri.WorldImagery"),
+                "OpenStreetMap.Mapnik": L.tileLayer.provider("OpenStreetMap.Mapnik"),
+                "Google.Roadmap": L.gridLayer.googleMutant({type: 'roadmap'}),
+                "Google.Terrain": L.gridLayer.googleMutant({type: 'terrain'}),
+                "Google.Hybrid": L.gridLayer.googleMutant({type: 'hybrid'})
+            },
+            HeatLayer = false,
+            FlowLayer = false,
+            DotLayer = false,
+            appState = {
+                baseLayers: map_providers,
+                paused: START_PAUSED
+            };
+
+
+        if (OFFLINE) {
+            default_baseLayer = baseLayers["None"];
+        } else if (map_providers.length) {
+            for (let i = 0; i < map_providers.length; i++) {
+                provider = map_providers[i];
+                let tl = L.tileLayer.provider(provider);
+                baseLayers[provider] = tl;
+                if (i==0) default_baseLayer = tl;
+            }
+        } else {
+            default_baseLayer = baseLayers["Google.Terrain"];
+        }
+
+        let map = L.map('map',
+                        {center: DEFAULT_MAP_CENTER,
+                         zoom: DEFAULT_MAP_ZOOM,
+                         layers : [ default_baseLayer ],
+                         //renderer: L.canvas({ padding: 0 })
+                         renderer: L.svg({ padding: 0 })
+                  });
+
+
+        let sidebar = L.control.sidebar('sidebar').addTo(map),
+            zoomControl = map.zoomControl.setPosition('bottomright'),
+            layerControl = L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map),
+            locateControl = L.control.locate({position: "bottomright", icon: "fa fa-anchor"}).addTo(map),
+            fps_display = L.control.fps().addTo(map);
+
+
+        let button_states = [{
+                        stateName: 'animation-running',
+                        icon:      'fa-pause',
+                        title:     'Pause Animation',
+                        onClick: function(btn, map) {
+                            pauseFlow();
+                            updateState();
+                            btn.state('animation-paused');
+                        }
+                    }, {
+                        stateName: 'animation-paused',
+                        icon:      'fa-play',
+                        title:     'Resume Animation',
+                        onClick: function(btn, map) {
+                            resumeFlow();
+                            if (DotLayer) {
+                                DotLayer.animate();
+                            }
+                            updateState();
+                            btn.state('animation-running');
+                        }
+                }],
+
+            animationControl = L.easyButton({
+                states: appState.paused? button_states.reverse() : button_states
+            }).addTo(map);
+
+
+        // Flash any messages
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+              let msg = "<ul class=flashes>";
+
+              {% for message in messages %}
+                msg += "<li>{{ message }}</li>";
+              {% endfor %}
+              msg += "</ul>";
+              L.control.window(map, {content:msg, visible:true});
+            {% endif %}
+        {% endwith %}
+
+
+        // Set-up activity table
+        let atable = $('#atab').DataTable({
+            paging: false,
+            scrollY: "60vh",
+            scrollX: true,
+            scrollCollapse: true,
+            // scroller: true,
+            order: [[ 0, "desc" ]],
+            select: true,
+            columns: [
+                { data: "Date", title: "Date" },
+                { data: "Type", title: "Type"},
+                { data: "Dist", title: "km"},
+                { data: "Time", title: "Time"},
+                { data: "Name", title: "Name"}
+            ]
+        });
+
+
+        function handle_table_selections( e, dt, type, indexes ) {
+            if ( type === 'row' ) {
+                // let data = atable.rows( indexes ).data();
+                let selected_rows = atable.rows( {selected: true} ).data(),
+                    unselected_rows = atable.rows( {selected: false} ).data();
+
+                for (let i = 0; i < selected_rows.length; i++) {
+                    id = selected_rows[i].DT_RowId;
+                    if (!appState.items[id].selected){
+                        togglePathSelect(id);
+                    }
+                }
+
+                for (let i = 0; i < unselected_rows.length; i++) {
+                    id = unselected_rows[i].DT_RowId;
+                    if (appState.items[id].selected){
+                        togglePathSelect(id);
+                    }
+                }
+
+                if ( $("#zoom-table-selection").is(':checked') ) {
+                    zoomToSelected();
+                }
+            }
+        }
+
+        atable.on( 'select', handle_table_selections)
+              .on( 'deselect', handle_table_selections);
+
+
+        // Convert seconds to HH:MM:SS format
+        function hhmmss(secs) {
+               return new Date(secs * 1000).toISOString().substr(11, 8);
+        }
+
+        function href(url, text){
+            return `<a href='${url}' target='_blank'>${text}</a>`
+        }
+
+        function zoomToSelected(){
+            // Pan-Zoom to fit all selected activities
+            let selection_bounds = L.latLngBounds();
+            $.each(appState.items, (id, a) => {
+                if (a.selected) {
+                    selection_bounds.extend(a.bounds);
+                }
+            });
+            if (selection_bounds.isValid()) {
+                map.fitBounds(selection_bounds);
+            }
+        }
+
+        function selectedIDs(){
+            return Object.values(appState.items).filter(
+                        (a) => { return a.selected; }
+                   ).map(function(a) { return a.id; });
+        }
+
+        function openSelected(){
+            ids = selectedIDs();
+            if (ids.length > 0) {
+                let url = BASE_USER_URL + "?id=" + ids.join("+");
+                if (appState.paused == true){
+                    url += "&paused=1"
+                }
+                window.open(url,'_blank');
+            }
+        }
+
+        function pauseFlow(){
+            DotLayer.pause();
+            appState.paused = true;
+        }
+
+        function resumeFlow(){
+            appState.paused = false;
+            if (DotLayer) {
+                DotLayer.animate();
+            }
+        }
+
+        function highlightPath(id) {
+            let A = appState.items[id];
+            if (A.selected) return false;
+
+            A.highlighted = true;
+
+            let row = $("#"+id),
+                scroller = $('.dataTables_scrollBody'),
+                flow = A.flowLayer;
+
+            // highlight table row and scroll to it if necessary
+            row.addClass('selected');
+            scroller.scrollTop(row.prop('offsetTop') - scroller.height()/2);
+
+            // highlight animated path
+            try {
+                flow.bringToFront();
+            } catch(e) {}
+
+            flow.setStyle({
+                weight: FLOWLAYER_DEFAULT_OPTIONS.weight + 3,
+                opacity: FLOWLAYER_DEFAULT_OPTIONS.opacity + 0.1
+            });
+            return A;
+        }
+
+
+        function unhighlightPath(id){
+
+            let A = appState.items[id];
+            if (A.selected) return false;
+
+            A.highlighted = false;
+
+            // un-highlight table row
+            $("#"+id).removeClass('selected');
+
+            // restore animated path to defaults
+            A.flowLayer.setStyle({
+                weight: FLOWLAYER_DEFAULT_OPTIONS.weight,
+                opacity: FLOWLAYER_DEFAULT_OPTIONS.opacity
+            });
+
+            return A;
+        }
+
+        function togglePathSelect(id){
+            let A = appState.items[id];
+            if (A.selected) {
+                A.selected = false;
+                unhighlightPath(id);
+            } else {
+                highlightPath(id);
+                A.selected = true;
+            }
+        }
+
+        function activityDataPopup(id, latlng){
+          let A = appState.items[id],
+              d = parseFloat(A.total_distance),
+              elapsed = hhmmss(parseFloat(A.elapsed_time)),
+              v = parseFloat(A.average_speed);
+          let dkm = +(d / 1000).toFixed(2),
+              dmi = +(d / 1609.34).toFixed(2),
+              vkm,
+              vmi;
+
+          if (A.vtype == "pace"){
+            vkm = hhmmss(1000 / v).slice(3) + "/km";
+            vmi = hhmmss(1609.34 / v).slice(3) + "/mi";
+          } else {
+            vkm = (v * 3600 / 1000).toFixed(2) + "km/hr";
+            vmi = (v * 3600 / 1609.34).toFixed(2) + "mi/hr";
+          }
+
+          let popup = L.popup()
+            .setLatLng(latlng)
+            .setContent(
+                `${A.name}<br>${A.type}: ${A.beginTimestamp}<br>`+
+                `${dkm} km (${dmi} mi) in ${elapsed}<br>${vkm} (${vmi})<br>` +
+                `View in <a href='https://www.strava.com/activities/${A.id}' target='_blank'>Strava</a>`+
+                `, <a href='${BASE_USER_URL}?id=${A.id}&flowres=high' target='_blank'>Heatflask</a>`
+                )
+            .openOn(map);
+        }
+
+        /* Rendering */
+        function renderLayers() {
+            const flowres = $("#flowres").val(),
+                  heatres = $("#heatres").val(),
+                  date1 = $("#date1").val(),
+                  date2 = $("#date2").val(),
+                  type = $("#select_type").val(),
+                  num = $("#select_num").val(),
+                  lores = (flowres == "low" || heatres == "low"),
+                  hires = (flowres == "high" || heatres == "high");
+                  dotFlow = true;
+
+            let query = {};
+
+            if (type == "activity_ids") {
+                query.id = $("#activity_ids").val();
+            } else if (type=="activities") {
+                if (num == 0) {
+                    query.limit = 1;
+                }
+                else {
+                    query.limit = num;
+                }
+            } else {
+                if (date1) {
+                    query.date1 = date1;
+                }
+                if (date2 && (date2 != "now")) {
+                    query.date2 = date2;
+                }
+            }
+
+            if (hires) {
+                query.hires = hires;
+            }
+
+
+            // Remove HeatLayer from map and control if it's there
+            if (HeatLayer){
+                map.removeLayer(HeatLayer);
+                layerControl.removeLayer(HeatLayer);
+                HeatLayer = false;
+            }
+
+            // Remove FlowLayer from map and control if it's there
+            if (FlowLayer){
+                map.removeLayer(FlowLayer);
+                layerControl.removeLayer(FlowLayer);
+                FlowLayer = false;
+            }
+
+
+            if (DotLayer){
+                map.removeLayer(DotLayer);
+                layerControl.removeLayer(DotLayer);
+                DotLayer = false;
+            }
+
+
+            // Add new blank HeatLayer to map if specified
+            let latlngs_flat = [];
+            if (heatres){
+                HeatLayer = L.heatLayer(latlngs_flat, HEATLAYER_DEFAULT_OPTIONS);
+                map.addLayer(HeatLayer);
+                layerControl.addOverlay(HeatLayer, "Point Density");
+            }
+
+            // Add new blank FlowLayer to map if specified
+            if (flowres){
+                FlowLayer = new L.layerGroup();
+                map.addLayer(FlowLayer);
+                layerControl.addOverlay(FlowLayer, "Polylines");
+            }
+
+            locateControl.stop();
+            appState.items = {};
+            atable.clear();
+
+
+            let msgBox = L.control.window(map,
+                {position: 'top',
+                 content:"<div class='data_message'></div><div><progress class='progbar' id='box'></progress></div>",
+                visible:true
+             }),
+                progress_bars = $('.progbar'),
+                rendering = true,
+                listening = true,
+                bounds = L.latLngBounds(),
+                source = new EventSource(
+                    BASE_DATAURL + "?" + jQuery.param(query, true)
+                );
+
+            // debugger;
+
+            $(".data_message").html("Rendering activities...");
+            $("#abortButton").show();
+            $(".progbar").show();
+            $('#renderButton').prop('disabled', true);
+
+            function doneRendering(msg){
+                if (rendering) {
+                    $("#abortButton").hide();
+                    $(".progbar").hide();
+                    try {
+                        msgBox.close();
+                    }
+                    catch(err) {
+                        console.log(err.message);
+                    }
+                    if ($("#autozoom:checked").val() && bounds.isValid())
+                        map.fitBounds(bounds);
+                    let msg2 = msg + " " + Object.keys(appState.items).length + " activities rendered.";
+                    $(".data_message").html(msg2);
+                    rendering = false;
+                    if (dotFlow) {
+                        DotLayer = new L.DotLayer();
+                        map.addLayer(DotLayer);
+                        layerControl.addOverlay(DotLayer, "Dots");
+                    }
+                }
+            }
+
+            function stravaActivityURL(id) {
+                return `https://www.strava.com/activities/${id}`;
+            }
+
+            function stopListening() {
+                if (listening){
+                    listening = false;
+                    source.close();
+                    $('#renderButton').prop('disabled', false);
+
+                }
+            }
+
+
+            source.onmessage = function(event) {
+                if (event.data == 'done') {
+                    doneRendering("Finished. ");
+                    stopListening();
+                    appState['date1'] = date1;
+                    appState["date2"] = date2;
+                    appState["flowres"] = flowres;
+                    appState["heatres"] = heatres;
+
+                    if ("limit" in query) appState["limit"] = query.limit;
+                    updateState();
+                  } else {
+                    let A = JSON.parse(event.data),
+                            heatpoints = false,
+                            flowpoints = false;
+                    A.selected = false;
+
+                    if ("error" in A){
+                        let msg = "<font color='red'>" + A.error +"</font><br>";
+                        $(".data_message").html(A.msg);
+                        console.log(`Error activity ${A.id}: ${A.error}`);
+                        // console.log(A)
+                        // L.control.window(map, {title: "Oops.", content:msg, visible:true});
+                        // doneRendering(msg);
+                        // stopListening();
+                        return;
+                    } else if ("stop_rendering" in A){
+                        doneRendering("Done rendering.");
+                    } else if ("msg" in A) {
+                        $(".data_message").html(A.msg);
+                        if ("value" in A) {
+                            progress_bars.val(A.value);
+                        }
+                        return;
+                    } else {
+                        let d = parseFloat(A.total_distance),
+                            dkm = +(d / 1000).toFixed(2),
+                            ts = href( stravaActivityURL(A.id), A.beginTimestamp.slice(0,10) ),
+                            n = atable.row.add({
+                                DT_RowId: A.id,
+                                Date: ts,
+                                Type: A.type,
+                                Dist: dkm,
+                                Time: hhmmss(A.elapsed_time),
+                                Name: A.name
+                            }).draw(false).node();
+                    }
+
+                    if (flowres){
+                        // add this activity's route to FlowLayer
+                        var fopts = Object.assign({}, FLOWLAYER_DEFAULT_OPTIONS);
+                        if (("path_color" in A) && A.path_color)
+                            fopts.color = A.path_color;
+                    }
+
+                    if (lores && ("summary_polyline" in A) && (A.summary_polyline)) {
+                        let latlngs = L.PolylineUtil.decode(A.summary_polyline);
+                        if (heatres == "low") heatpoints = latlngs;
+                        if (flowres == "low") flowpoints = latlngs;
+                    }
+
+
+                    if (query.hires && ("polyline" in A) && (A.polyline)){
+                        let latlngs = L.PolylineUtil.decode(A.polyline);
+                        if (heatres == "high") heatpoints = latlngs;
+                        if (flowres == "high") {
+                            flowpoints = latlngs;
+                            if (dotFlow && ("time" in A)) {
+                                A.latlng = latlngs;
+                            }
+                        }
+                    }
+
+                    if (heatpoints) {
+                        latlngs_flat.push.apply(latlngs_flat, heatpoints);
+                    }
+                    if (flowpoints) {
+                        let v = parseFloat(A.average_speed),
+                            v_adj = 1 + Math.log(10*v);
+                        // fopts.delay = parseInt(FLOWPATH_VARIATION_CONSTANTS.K / v);
+                        // fopts.dashArray = [2, parseInt(FLOWPATH_VARIATION_CONSTANTS.T * v_adj)];
+                        // fopts.paused = appState.paused;
+                        A.flowLayer = new L.Polyline(flowpoints, fopts);
+                        FlowLayer.addLayer(A.flowLayer);
+
+                        if ($("#info").is(":checked")) {
+                            A.flowLayer.on("mouseover", function(event) {
+                                highlightPath(A.id);
+                            });
+                            A.flowLayer.on("mouseout",function(event) {
+                                unhighlightPath(A.id);
+                            });
+                            A.flowLayer.on("click", function(event) {
+                                togglePathSelect(A.id);
+                                if (A.selected){
+                                    activityDataPopup(A.id, event.latlng);
+                                }
+                            });
+                        }
+                    }
+
+                    let points = heatpoints || flowpoints;
+                    if (points) {
+                        if (!A.bounds) {
+                            A.bounds = L.latLngBounds(points);
+                        }
+                        bounds.extend(A.bounds);
+                        delete A.summary_polyline;
+                        delete A.polyline;
+                        if (!dotFlow){
+                            delete A.time;
+                        }
+                        appState.items[A.id] = A;
+                    }
+                  }
+                }
+            }
+
+
+        function updateState(){
+            let params = {},
+                type = $("#select_type").val(),
+                num = $("#select_num").val();
+
+            if (type == "activities") {
+                params.limit = num;
+            } else if (type == "activity_ids") {
+                params.id = $("#activity_ids").val();
+            } else if (type == "days") {
+                params.preset = num;
+            } else {
+                if (appState.date1) {
+                    params.date1 = appState.date1;
+                }
+                if (appState.date2 && (appState.date2 != "now")) {
+                    params.date2 = appState.date2;
+                }
+            }
+
+            if (appState.paused){
+                params.paused = "1";
+            }
+
+            if ($("#info").is(':checked')) {
+                appState.info = true;
+                params.info = "1";
+            }
+
+            if ($("#autozoom").is(':checked')) {
+                appState.autozoom = true;
+                params.autozoom = "1";
+            } else {
+                appState.autozoom = false;
+                let zoom = map.getZoom(),
+                    center = map.getCenter(),
+                    precision = Math.max(0, Math.ceil(Math.log(zoom) / Math.LN2));
+                params.lat = center.lat.toFixed(precision);
+                params.lng = center.lng.toFixed(precision);
+                params.zoom = zoom;
+            }
+
+            if ($("#heatres").val()) {
+                params.heatres = $("#heatres").val();
+            }
+
+            if ($("#flowres").val()) {
+                params.flowres = $("#flowres").val();
+            }
+
+            params["baselayer"] = appState.baseLayers;
+
+            let newURL = USER_ID + "?" + jQuery.param(params, true);
+            window.history.pushState("", "", newURL);
+
+            $(".current-url").val(newURL);
+        }
+
+
+        function preset_sync() {
+            let F = "YYYY-MM-DD",
+                num = $("#select_num").val(),
+                type = $("#select_type").val();
+
+            $('#query_type').text(type);
+            if (type=="days"){
+                $(".date_select").hide();
+                $("#id_select").hide();
+                $("#num_select").show();
+                $('#date1').val(moment().subtract(num, 'days').format(F));
+                $('#date2').val("now");
+            } else if (type=="activities") {
+                $(".date_select").hide();
+                $("#id_select").hide();
+                $("#num_select").show();
+                $('#date1').val("");
+                $('#date2').val("now");
+            }
+            else if (type=="activity_ids") {
+                $(".date_select").hide();
+                $("#num_select").hide();
+                $("#id_select").show();
+            } else {
+                $(".date_select").show();
+                $("#select_num").val("");
+                $("#num_select").hide();
+                $("#id_select").hide();
+            }
+
+        };
+
+
+
+        $(document).ready(function() {
+            $("#select_num").keypress(function(event) {
+                if (event.which == 13) {
+                    event.preventDefault();
+                    renderLayers();
+                }
+            });
+
+            $("#abortButton").hide();
+            $('#abortButton').click(function(){
+                stopListening();
+                doneRendering("<font color='red'>Aborted:</font>");
+            });
+
+            $(".progbar").hide();
+            $(".datepick").datepicker({ dateFormat: 'yy-mm-dd',
+                                        changeMonth: true,
+                                        changeYear: true
+            });
+
+            map.on('moveend', function(e) {
+                if (!appState.autozoom) {
+                    updateState();
+                }
+            });
+
+
+            $("#autozoom").on("change", updateState);
+            $("#info").on("change", updateState);
+
+            $("#zoom-table-selection").prop("checked", true);
+            $("#zoom-table-selection").on("change", function(){
+                if ( $("#zoom-table-selection").is(':checked')) {
+                    zoomToSelected();
+                }
+            });
+
+            $(".datepick").on("change", function(){
+                $(".preset").val("");
+            });
+            $(".preset").on("change", preset_sync);
+
+            $("#renderButton").click(renderLayers);
+            $("#render-selection-button").click(openSelected);
+
+            $("#heatres").val("{{ heatres }}")
+            $("#flowres").val("{{ flowres }}")
+
+            {% if autozoom  %}
+            $("#autozoom").prop('checked', true);
+            {% endif %}
+
+            {% if info  %}
+            $("#info").prop('checked', true);
+            {% endif %}
+
+            {% if ids %}
+            $("#activity_ids").val("{{ ids }}");
+            $("#select_type").val("activity_ids");
+            {% elif limit %}
+            $("#select_num").val("{{ limit }}");
+            $("#select_type").val("activities");
+            {% elif preset %}
+            $("#select_num").val("{{ preset }}");
+            $("#select_type").val("days");
+            preset_sync();
+            {% else %}
+            $('#date1').val("{{ date1 }}");
+            $('#date2').val("{{ date2 }}");
+            $("#preset").val("");
+            {% endif %}
+
+            renderLayers();
+            preset_sync();
+
+        })
+    </script>
+
+</body>
+</html>
