@@ -62,14 +62,14 @@ class Config(object):
     # How long (seconds) we hold a user's index (in Mongo) before rebuilding it
     STORE_INDEX_TIMEOUT = 7 * 24 * 60 * 60   # 7 days
 
-    # We daily purge activities older than this from MongoDB
-    STORE_ACTIVITIES_TIMEOUT = 3 * 24 * 60 * 60  # 3 days
+    # We purge activities older than this from MongoDB
+    STORE_ACTIVITIES_TIMEOUT = 5 * 24 * 60 * 60  # 5 days
 
     # How long before a user's index is outated and needs an update
     INDEX_UPDATE_TIMEOUT = 24 * 60 * 60  # 1 day
 
     # How long we memory-cache hires activities
-    CACHE_ACTIVITIES_TIMEOUT = 30 * 60  # 30 mintues
+    CACHE_ACTIVITIES_TIMEOUT = 30 * 60  # 30 minutes
 
     # How long we hold a User object in memory
     CACHE_USERS_TIMEOUT = 30 * 60  # 30 minutes
