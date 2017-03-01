@@ -7451,11 +7451,11 @@ L.DotLayer = L.CanvasLayer.extend({
                 };
 
                 if ((dot.x >= 0 && dot.x <= xmax) && (dot.y >= 0 && dot.y <= ymax)) {
-                    ctx.fillRect(dot.x-1, dot.y-1, size, size);
-                    // ctx.beginPath();
-                    // ctx.arc(dot.x, dot.y, size, 0, Math.PI * 2);
-                    // ctx.fill();
-                    // ctx.closePath();
+                    // ctx.fillRect(dot.x-1, dot.y-1, size, size);
+                    ctx.beginPath();
+                    ctx.arc(dot.x, dot.y, size, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.closePath();
                     count++;
                 }
             }
