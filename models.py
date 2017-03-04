@@ -648,7 +648,26 @@ class Activities(object):
 
     @staticmethod
     def stream_encode(vals):
-        return [b - a for a, b in zip(vals, vals[1:])]
+        diffs = [b - a for a, b in zip(vals, vals[1:])]
+        encoded = []
+        pair = None
+        for a, b in zip(diffs, diffs[1:]):
+            if a == b:
+                if pair:
+                    pair[1] += 1
+                else:
+                    pair = [a, 2]
+            else:
+                if pair:
+                    encoded.append(pair)
+                    pair = None
+                else:
+                    encoded.append(a)
+        if pair:
+            encoded.append(pair)
+        else:
+            encoded.append(b)
+        return encoded
 
     @classmethod
     def strava2dict(cls, a):

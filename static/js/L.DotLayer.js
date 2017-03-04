@@ -219,4 +219,3 @@ L.DotLayer = L.CanvasLayer.extend({
 L.dotLayer = function () {
     return new L.DotLayer();
 };
-
