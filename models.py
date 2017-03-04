@@ -659,7 +659,10 @@ class Activities(object):
                     pair = [a, 2]
             else:
                 if pair:
-                    encoded.append(pair)
+                    if pair[1] > 2:
+                        encoded.append(pair)
+                    else:
+                        encoded.extend(2 * [pair[0]])
                     pair = None
                 else:
                     encoded.append(a)
@@ -765,7 +768,6 @@ class Activities(object):
             expireAfterSeconds=timeout
         )
         app.logger.info("initialized Activity collection")
-        return result1, result2
 
     @classmethod
     def import_streams(cls, client, activity_id, stream_names):
@@ -791,7 +793,7 @@ class Activities(object):
                 activity_streams['latlng'])
 
         for s in ["time", "altitude", "distance"]:
-            # Encode/compress time data into successive differences
+            # Encode/compress these streams
             if (s in stream_names) and (s in activity_streams):
                 activity_streams[s] = cls.stream_encode(activity_streams[s])
 
