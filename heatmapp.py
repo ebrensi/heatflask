@@ -356,13 +356,13 @@ def main(username):
             current_user.dt_last_active = datetime.utcnow()
             current_user.app_activity_count += 1
             db_sql.session.commit()
-            if current_user.app_activity_count == 1:
-                flash(
-                    "Hello new user {}! If you experience problems,"
-                    .format(current_user.username or current_user.id) +
-                    " please contact me at rensi.efrem@gmail.com"
+            # if current_user.app_activity_count == 1:
+            #     flash(
+            #         "Hello new user {}! If you experience problems,"
+            #         .format(current_user.username or current_user.id) +
+            #         " please contact me at rensi.efrem@gmail.com"
 
-                )
+            #     )
 
     # note: 'current_user' is the user that is currently logged in.
     #       'user' is the user we are displaying data for.
