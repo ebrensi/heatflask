@@ -46,7 +46,7 @@ class Config(object):
     # ASSETS_MANIFEST = None
 
     # Concurrency for Web-API fetching
-    CONCURRENCY = 4
+    CONCURRENCY = 5
 
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
