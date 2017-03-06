@@ -152,11 +152,20 @@ L.DotLayer = L.CanvasLayer.extend({
             items = appState.items;
 
         ctx.clearRect(0, 0, info.canvas.width, info.canvas.height);
+        highlighted_items = [];
         for (let id in items) {
             let A = items[id];
             if (("latlng" in A) && info.bounds.intersects(A.bounds) && ("time" in A)) {
-                count += this.drawDots(info, A, time);
+                if (A.highlighted) {
+                    highlighted_items.push(A);
+                } else {
+                    count += this.drawDots(info, A, time);
+                }
             }
+        }
+
+        for (let i=0; i < highlighted_items.length; i++) {
+            count += this.drawDots(info, highlighted_items[i], time);
         }
 
         fps_display.update(now, " n=" + count + " z="+info.zoom);
