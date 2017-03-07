@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <!-- <meta name="viewport" content="width=device-width"> -->
     {% assets "basic_table_css" %}
     <link rel="stylesheet" href="{{ ASSET_URL }}" />
     {% endassets %}
@@ -15,29 +14,41 @@
 <body>
     <h3>Subscription Updates</h3>
     <table id="updates_table" class='display order-column compact' cellspacing='1' width='100%'>
-        <thead>
-            <th>dt</th>
-            <th>owner</th>
-            <th>activity</th>
-            <th>updated</th>
-        </thead>
-        <tbody>
-        {%- for e in events %}
-          <tr>
-            <td>{{ dt(e) }}</td>
-            <td>{{ e.get("owner_id") }}</td>
-            <td>{{ e.get("object_id") }}</td>
-            <td>{{ e.get("updated") }}</td>
-          </tr>
-        {%- endfor %}
-        </tbody>
     </table>
 
 
     <script>
+    const user_profile_url = "{{ url_for('user_profile', username='') }}",
+          data = {{ events|tojson }};
+
+    function formatID (data, type, row) {
+        if (data) {
+            if (type == "display") {
+                return href(user_profile_url+data, data);
+            } else {
+                return data;
+            }
+        } else {
+            return "";
+        }
+    }
+
+    function formatActivityID (data, type, row) {
+        return data;
+    }
+
+
     $(document).ready(function() {
-        $('#updates_table').DataTable({
+        let updates_table = $('#updates_table').DataTable({
             paging: false,
+            deferRender: true,
+            data: data,
+            columns: [
+                {title: "dt",    data: "dt", render: formatDate},
+                {title: "owner", data: "owner_id", render: formatID},
+                {title: "activity", data: "object_id", render: formatActivityID},
+                {title: "updated",    data: "updated"}
+            ],
             scrollY: "80vh",
             scrollX: true,
             scrollCollapse: true,
@@ -45,8 +56,6 @@
             order: [[ 0, "desc" ]]
         });
     });
-
-
     </script>
 </body>
 </html>
