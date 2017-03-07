@@ -44,6 +44,7 @@
             dataTable = $('#events_table').DataTable({
                 paging: false,
                 data: data,
+                deferRender: true,
                 columns: [
                     {title: "time",    data: "ts", render: formatDate},
                     {title: "ip",    data: "ip", defaultContent: "", render: formatIP},

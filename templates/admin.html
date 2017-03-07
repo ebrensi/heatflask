@@ -36,6 +36,7 @@
     let data = {{ data|tojson }};
     let atable = $('#users_table').DataTable({
             paging: false,
+            deferRender: true,
             data: data,
             columns: [
                 {title: "ID",    data: "id", render: formatID},
