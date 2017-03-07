@@ -4462,12 +4462,10 @@ L.Control.Sidebar=L.Control.extend({includes:L.Mixin.Events,options:{position:"l
 */
 L.HeatLayer=(L.Layer?L.Layer:L.Class).extend({initialize:function(t,i){this._latlngs=t,L.setOptions(this,i)},setLatLngs:function(t){return this._latlngs=t,this.redraw()},addLatLng:function(t){return this._latlngs.push(t),this.redraw()},setOptions:function(t){return L.setOptions(this,t),this._heat&&this._updateOptions(),this.redraw()},redraw:function(){return!this._heat||this._frame||this._map._animating||(this._frame=L.Util.requestAnimFrame(this._redraw,this)),this},onAdd:function(t){this._map=t,this._canvas||this._initCanvas(),t._panes.overlayPane.appendChild(this._canvas),t.on("moveend",this._reset,this),t.options.zoomAnimation&&L.Browser.any3d&&t.on("zoomanim",this._animateZoom,this),this._reset()},onRemove:function(t){t.getPanes().overlayPane.removeChild(this._canvas),t.off("moveend",this._reset,this),t.options.zoomAnimation&&t.off("zoomanim",this._animateZoom,this)},addTo:function(t){return t.addLayer(this),this},_initCanvas:function(){var t=this._canvas=L.DomUtil.create("canvas","leaflet-heatmap-layer leaflet-layer"),i=L.DomUtil.testProp(["transformOrigin","WebkitTransformOrigin","msTransformOrigin"]);t.style[i]="50% 50%";var a=this._map.getSize();t.width=a.x,t.height=a.y;var s=this._map.options.zoomAnimation&&L.Browser.any3d;L.DomUtil.addClass(t,"leaflet-zoom-"+(s?"animated":"hide")),this._heat=simpleheat(t),this._updateOptions()},_updateOptions:function(){this._heat.radius(this.options.radius||this._heat.defaultRadius,this.options.blur),this.options.gradient&&this._heat.gradient(this.options.gradient),this.options.max&&this._heat.max(this.options.max)},_reset:function(){var t=this._map.containerPointToLayerPoint([0,0]);L.DomUtil.setPosition(this._canvas,t);var i=this._map.getSize();this._heat._width!==i.x&&(this._canvas.width=this._heat._width=i.x),this._heat._height!==i.y&&(this._canvas.height=this._heat._height=i.y),this._redraw()},_redraw:function(){var t,i,a,s,e,n,h,o,r,d=[],_=this._heat._r,l=this._map.getSize(),m=new L.Bounds(L.point([-_,-_]),l.add([_,_])),c=void 0===this.options.max?1:this.options.max,u=void 0===this.options.maxZoom?this._map.getMaxZoom():this.options.maxZoom,f=1/Math.pow(2,Math.max(0,Math.min(u-this._map.getZoom(),12))),g=_/2,p=[],v=this._map._getMapPanePos(),w=v.x%g,y=v.y%g;for(t=0,i=this._latlngs.length;i>t;t++)if(a=this._map.latLngToContainerPoint(this._latlngs[t]),m.contains(a)){e=Math.floor((a.x-w)/g)+2,n=Math.floor((a.y-y)/g)+2;var x=void 0!==this._latlngs[t].alt?this._latlngs[t].alt:void 0!==this._latlngs[t][2]?+this._latlngs[t][2]:1;r=x*f,p[n]=p[n]||[],s=p[n][e],s?(s[0]=(s[0]*s[2]+a.x*r)/(s[2]+r),s[1]=(s[1]*s[2]+a.y*r)/(s[2]+r),s[2]+=r):p[n][e]=[a.x,a.y,r]}for(t=0,i=p.length;i>t;t++)if(p[t])for(h=0,o=p[t].length;o>h;h++)s=p[t][h],s&&d.push([Math.round(s[0]),Math.round(s[1]),Math.min(s[2],c)]);this._heat.data(d).draw(this.options.minOpacity),this._frame=null},_animateZoom:function(t){var i=this._map.getZoomScale(t.zoom),a=this._map._getCenterOffset(t.center)._multiplyBy(-i).subtract(this._map._getMapPanePos());L.DomUtil.setTransform?L.DomUtil.setTransform(this._canvas,a,i):this._canvas.style[L.DomUtil.TRANSFORM]=L.DomUtil.getTranslateString(a)+" scale("+i+")"}}),L.heatLayer=function(t,i){return new L.HeatLayer(t,i)};
 
-
 /*
-  Generic  Canvas Layer for leaflet 0.7 and 1.0-rc,
-  copyright Stanislav Sumbera,  2016 , sumbera.com , license MIT
-  originally created and motivated by L.CanvasOverlay  available here: https://gist.github.com/Sumbera/11114288
-
+  DotLayer Efrem Rensi, 2017,
+  based on L.CanvasLayer by Stanislav Sumbera,  2016 , sumbera.com
+  license MIT
 */
 
 // -- L.DomUtil.setTransform from leaflet 1.0.0 to work on 0.0.7
@@ -4483,19 +4481,47 @@ L.DomUtil.setTransform = L.DomUtil.setTransform || function (el, offset, scale) 
 };
 
 // -- support for both  0.0.7 and 1.0.0 rc2 leaflet
-L.CanvasLayer = (L.Layer ? L.Layer : L.Class).extend({
+L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
+    SCONSTS: {
+        1: 1,
+        2: 1,
+        3: 1,
+        4: 1,
+        5: 1,
+        6: 1,
+        7: 2,
+        8: 2,
+        9: 2,
+        10: 3,
+        11: 4,
+        12: 5,
+        13: 5,
+        14: 5,
+        15: 6,
+        16: 6,
+        17: 6,
+        18: 7,
+        19: 7,
+        20: 7
+    },
+
+    _pane: "shadowPane",
+    DCONST: 0.000001,
+    two_pi: 2 * Math.PI,
+
+    options: {
+        paused: false
+    },
+
+
     // -- initialized is called on prototype
-    initialize: function (options) {
+    initialize: function (items, options) {
         this._map    = null;
         this._canvas = null;
         this._frame  = null;
-        this._delegate = null;
+        this._items = items;
         L.setOptions(this, options);
-    },
-
-    delegate :function(del){
-        this._delegate = del;
-        return this;
+        this._paused = this.options.paused;
     },
 
     needRedraw: function () {
@@ -4505,163 +4531,38 @@ L.CanvasLayer = (L.Layer ? L.Layer : L.Class).extend({
         return this;
     },
 
+
     //-------------------------------------------------------------
     _onLayerDidResize: function (resizeEvent) {
         this._canvas.width = resizeEvent.newSize.x;
         this._canvas.height = resizeEvent.newSize.y;
     },
+
     //-------------------------------------------------------------
     _onLayerDidMove: function () {
-        var topLeft = this._map.containerPointToLayerPoint([0, 0]);
+        let topLeft = this._map.containerPointToLayerPoint([0, 0]);
         L.DomUtil.setPosition(this._canvas, topLeft);
         this.drawLayer();
+        this.onMap_pan_zoom_stop();
     },
+
     //-------------------------------------------------------------
     getEvents: function () {
         var events = {
+            movestart: this.onMap_pan_zoom_start,
+            moveend: this._onLayerDidMove,
             resize: this._onLayerDidResize,
-            moveend: this._onLayerDidMove
         };
+
         if (this._map.options.zoomAnimation && L.Browser.any3d) {
             events.zoomanim =  this._animateZoom;
         }
 
         return events;
     },
-    //-------------------------------------------------------------
-    onAdd: function (map) {
-        this._map = map;
-        this._canvas = L.DomUtil.create('canvas', 'leaflet-layer');
-        this.tiles = {};
 
-        var size = this._map.getSize();
-        this._canvas.width = size.x;
-        this._canvas.height = size.y;
-
-        var animated = this._map.options.zoomAnimation && L.Browser.any3d;
-        L.DomUtil.addClass(this._canvas, 'leaflet-zoom-' + (animated ? 'animated' : 'hide'));
-
-
-        map._panes.overlayPane.appendChild(this._canvas);
-
-        map.on(this.getEvents(),this);
-
-        var del = this._delegate || this;
-        del.onLayerDidMount && del.onLayerDidMount(); // -- callback
-        this.needRedraw();
-    },
 
     //-------------------------------------------------------------
-    onRemove: function (map) {
-        var del = this._delegate || this;
-        del.onLayerWillUnmount && del.onLayerWillUnmount(); // -- callback
-
-
-        map.getPanes().overlayPane.removeChild(this._canvas);
-
-        map.off(this.getEvents(),this);
-
-        this._canvas = null;
-
-    },
-
-    //------------------------------------------------------------
-    addTo: function (map) {
-        map.addLayer(this);
-        return this;
-    },
-    // --------------------------------------------------------------------------------
-    LatLonToMercator: function (latlon) {
-        return {
-            x: latlon.lng * 6378137 * Math.PI / 180,
-            y: Math.log(Math.tan((90 + latlon.lat) * Math.PI / 360)) * 6378137
-        };
-    },
-
-    //------------------------------------------------------------------------------
-    drawLayer: function () {
-        // -- todo make the viewInfo properties  flat objects.
-        if (!this._map){
-            return;
-        }
-
-        var size   = this._map.getSize();
-        var bounds = this._map.getBounds();
-        var zoom   = this._map.getZoom();
-
-        var center = this.LatLonToMercator(this._map.getCenter());
-        var corner = this.LatLonToMercator(this._map.containerPointToLatLng(this._map.getSize()));
-
-        var del = this._delegate || this;
-        del.onDrawLayer && del.onDrawLayer( {
-                                                layer : this,
-                                                canvas: this._canvas,
-                                                bounds: bounds,
-                                                size: size,
-                                                zoom: zoom,
-                                                center : center,
-                                                corner : corner
-                                            });
-        this._frame = null;
-    },
-    // -- L.DomUtil.setTransform from leaflet 1.0.0 to work on 0.0.7
-    //------------------------------------------------------------------------------
-    _setTransform: function (el, offset, scale) {
-        var pos = offset || new L.Point(0, 0);
-
-        el.style[L.DomUtil.TRANSFORM] =
-			(L.Browser.ie3d ?
-				'translate(' + pos.x + 'px,' + pos.y + 'px)' :
-				'translate3d(' + pos.x + 'px,' + pos.y + 'px,0)') +
-			(scale ? ' scale(' + scale + ')' : '');
-    },
-
-    //------------------------------------------------------------------------------
-    _animateZoom: function (e) {
-        var scale = this._map.getZoomScale(e.zoom);
-        // -- different calc of offset in leaflet 1.0.0 and 0.0.7 thanks for 1.0.0-rc2 calc @jduggan1
-        var offset = L.Layer ? this._map._latLngToNewLayerPoint(this._map.getBounds().getNorthWest(), e.zoom, e.center) :
-                               this._map._getCenterOffset(e.center)._multiplyBy(-scale).subtract(this._map._getMapPanePos());
-
-        L.DomUtil.setTransform(this._canvas, offset, scale);
-
-
-    }
-});
-
-L.canvasLayer = function () {
-    return new L.CanvasLayer();
-};
-
-L.DotLayer = L.CanvasLayer.extend({
-    DOT_CONSTS: {
-      1: [10000, 1],
-      2: [5000, 1],
-      3: [3000, 1],
-      4: [2000, 1],
-      5: [1000, 1],
-      6: [900, 1],
-      7: [800, 2],
-      8: [700, 2],
-      9: [600, 2],
-      10: [500, 3],
-      11: [400, 4],
-      12: [300, 5],
-      13: [200, 5],
-      14: [100, 5],
-      15: [50, 6],
-      16: [50, 6],
-      17: [30, 6],
-      18: [15, 7],
-      19: [15, 7],
-      20: [10, 7]
-    },
-
-    paused: false,
-    _pane: "shadow-pane",
-    DCONST: 0.000001,
-    two_pi: 2 * Math.PI,
-
     onAdd: function (map) {
         this._map = map;
         this._canvas = L.DomUtil.create('canvas', 'leaflet-layer');
@@ -4681,9 +4582,8 @@ L.DotLayer = L.CanvasLayer.extend({
 
         map.on(this.getEvents(),this);
 
-        var del = this._delegate || this;
-        del.onLayerDidMount && del.onLayerDidMount(); // -- callback
-        if (appState.items) {
+        this.onLayerDidMount && this.onLayerDidMount(); // -- callback
+        if (this._items) {
             this._onLayerDidMove();
         }
         else {
@@ -4693,8 +4593,7 @@ L.DotLayer = L.CanvasLayer.extend({
 
     //-------------------------------------------------------------
     onRemove: function (map) {
-        var del = this._delegate || this;
-        del.onLayerWillUnmount && del.onLayerWillUnmount(); // -- callback
+        this.onLayerWillUnmount && this.onLayerWillUnmount(); // -- callback
 
 
         // map.getPanes().overlayPane.removeChild(this._canvas);
@@ -4705,7 +4604,50 @@ L.DotLayer = L.CanvasLayer.extend({
         this._canvas = null;
     },
 
-    drawDots: function(info, A, time) {
+
+    // --------------------------------------------------------------------
+    addTo: function (map) {
+        map.addLayer(this);
+        return this;
+    },
+
+    // --------------------------------------------------------------------
+    LatLonToMercator: function (latlon) {
+        return {
+            x: latlon.lng * 6378137 * Math.PI / 180,
+            y: Math.log(Math.tan((90 + latlon.lat) * Math.PI / 360)) * 6378137
+        };
+    },
+
+    // --------------------------------------------------------------------
+    drawLayer: function () {
+        // -- todo make the viewInfo properties  flat objects.
+        if (!this._map){
+            return;
+        }
+
+        var size   = this._map.getSize();
+        var bounds = this._map.getBounds();
+        var zoom   = this._map.getZoom();
+
+        var center = this.LatLonToMercator(this._map.getCenter());
+        var corner = this.LatLonToMercator(this._map.containerPointToLatLng(this._map.getSize()));
+
+        this.onDrawLayer && this.onDrawLayer( {
+                                                layer : this,
+                                                canvas: this._canvas,
+                                                bounds: bounds,
+                                                size: size,
+                                                zoom: zoom,
+                                                center : center,
+                                                corner : corner
+                                            });
+        this._frame = null;
+    },
+
+
+    // --------------------------------------------------------------------
+    drawDots: function(info, A, time, size) {
         const times = A.time,
               latlngs = A.latlng,
               max_time = times[times.length-1],
@@ -4723,18 +4665,8 @@ L.DotLayer = L.CanvasLayer.extend({
             key_time = s - delay * (~~(s/delay)),
             count = 0,
             i = 0,
-            t, d, dt, p1, p2, p, size, interval_good;
+            t, d, dt, p1, p2, p, interval_good;
 
-        if (A.highlighted) {
-            // size = 4;
-            size = 4;
-            // ctx.globalAlpha = 1;
-            ctx.fillStyle = "#FFFFFF";
-        } else {
-            size = 2;
-            // ctx.globalAlpha = 0.7;
-            ctx.fillStyle = "#000000";
-        }
 
         for (let j = 0; j < num_pts; j++) {
             t = (key_time + j*delay);
@@ -4782,11 +4714,13 @@ L.DotLayer = L.CanvasLayer.extend({
 
         let ctx = info.canvas.getContext('2d'),
             zoom = info.zoom,
-            time = (now - this.start_time) >>> this.DOT_CONSTS[zoom][1],
+            time = (now - this.start_time) >>> this.SCONSTS[zoom],
             count = 0,
             items = appState.items;
 
         ctx.clearRect(0, 0, info.canvas.width, info.canvas.height);
+        ctx.fillStyle = "#000000";
+
         highlighted_items = [];
         for (let id in items) {
             let A = items[id];
@@ -4794,74 +4728,89 @@ L.DotLayer = L.CanvasLayer.extend({
                 if (A.highlighted) {
                     highlighted_items.push(A);
                 } else {
-                    count += this.drawDots(info, A, time);
+                    count += this.drawDots(info, A, time, 2);
                 }
             }
         }
 
-        for (let i=0; i < highlighted_items.length; i++) {
-            count += this.drawDots(info, highlighted_items[i], time);
+        // now plot highlighted paths
+        let hlen = highlighted_items.length;
+        if (hlen) {
+            ctx.fillStyle = "#FFFFFF";
+            for (let i=0; i < hlen; i++) {
+                count += this.drawDots(info, highlighted_items[i], time, 4);
+            }
         }
 
-        fps_display.update(now, " n=" + count + " z="+info.zoom);
+        fps_display && fps_display.update(now, " n=" + count + " z="+info.zoom);
 
     },
 
+    // --------------------------------------------------------------------
     animate: function() {
-      this.paused = false;
-      this.start_time = Date.now();
-      L.Util.requestAnimFrame(this._animate, this);
+        this._paused = false;
+        this.start_time = Date.now();
+        L.Util.requestAnimFrame(this._animate, this);
     },
 
+    // --------------------------------------------------------------------
     pause: function() {
-      this.paused = true;
+        this._paused = true;
     },
 
+
+    // --------------------------------------------------------------------
     _animate: function() {
-        if (!this.paused) {
+        if (!this._paused && !this._moving) {
           this.drawLayer();
           L.Util.requestAnimFrame(this._animate, this);
         }
     },
 
-    getEvents: function () {
-        var events = {
-            movestart: this.onMap_pan_zoom_start,
-            moveend: this._onLayerDidMove,
-            resize: this._onLayerDidResize,
-        };
-
-        if (this._map.options.zoomAnimation && L.Browser.any3d) {
-            events.zoomanim =  this._animateZoom;
-        }
-
-        return events;
-    },
-
-
-    _onLayerDidMove: function () {
-        let topLeft = this._map.containerPointToLayerPoint([0, 0]);
-        L.DomUtil.setPosition(this._canvas, topLeft);
-        this.drawLayer();
-        this.onMap_pan_zoom_stop();
-    },
-
+    // --------------------------------------------------------------------
     onMap_pan_zoom_start: function() {
-        this.pause();
+        this._moving = true;
     },
 
+    // --------------------------------------------------------------------
     onMap_pan_zoom_stop: function() {
-        if (!appState.paused) {
+        this._moving = false;
+        if (!this._paused) {
             this.animate();
         }
+    },
+
+    // -- L.DomUtil.setTransform from leaflet 1.0.0 to work on 0.0.7
+    //------------------------------------------------------------------------------
+    _setTransform: function (el, offset, scale) {
+        var pos = offset || new L.Point(0, 0);
+
+        el.style[L.DomUtil.TRANSFORM] =
+            (L.Browser.ie3d ?
+              'translate(' + pos.x + 'px,' + pos.y + 'px)' :
+              'translate3d(' + pos.x + 'px,' + pos.y + 'px,0)') +
+            (scale ? ' scale(' + scale + ')' : '');
+    },
+
+    //------------------------------------------------------------------------------
+    _animateZoom: function (e) {
+        var scale = this._map.getZoomScale(e.zoom);
+
+        // -- different calc of offset in leaflet 1.0.0 and 0.0.7 thanks for 1.0.0-rc2 calc @jduggan1
+        var offset = L.Layer ? this._map._latLngToNewLayerPoint(this._map.getBounds().getNorthWest(), e.zoom, e.center) :
+                               this._map._getCenterOffset(e.center)._multiplyBy(-scale).subtract(this._map._getMapPanePos());
+
+        L.DomUtil.setTransform(this._canvas, offset, scale);
+
+
     }
+
+
 
 });
 
-// L.DotLayer.prototype = new L.CanvasLayer(); // -- setup prototype
-
-L.dotLayer = function () {
-    return new L.DotLayer();
+L.dotLayer = function (items, options) {
+    return new L.DotLayer(items, options);
 };
 
 /*
