@@ -4508,6 +4508,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
     _pane: "shadowPane",
     DCONST: 0.000001,
     two_pi: 2 * Math.PI,
+    target_fps: 15,
 
     options: {
         paused: false
@@ -4522,14 +4523,6 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         this._items = items;
         L.setOptions(this, options);
         this._paused = this.options.paused;
-    },
-
-    needRedraw: function () {
-        this.setView();
-        // if (!this._frame) {
-            this._frame = L.Util.requestAnimFrame(this.drawLayer, this);
-        // }
-        return this;
     },
 
 
@@ -4761,6 +4754,8 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
     animate: function() {
         this._paused = false;
         this.start_time = Date.now();
+        this.lastCalledTime = Date.now();
+        this.minDelay = ~~(1000/this.target_fps);
         this.setView();
         this._frame = L.Util.requestAnimFrame(this._animate, this);
     },
@@ -4773,10 +4768,19 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
 
     // --------------------------------------------------------------------
     _animate: function() {
-        if (!this._paused && !this._mapMoving) {
-          this.drawLayer();
-          this._frame = this._frame || L.Util.requestAnimFrame(this._animate, this);
+        if (this._paused || this._mapMoving) {
+            return;
         }
+
+        let now = Date.now();
+        if (now - this.lastCalledTime > this.minDelay) {
+            this.lastCalledTime = now;
+            this.drawLayer();
+        } else {
+            this._frame = null;
+        }
+
+        this._frame = this._frame || L.Util.requestAnimFrame(this._animate, this);
     },
 
 
