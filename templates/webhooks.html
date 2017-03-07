@@ -34,7 +34,11 @@
     }
 
     function formatActivityID (data, type, row) {
-        return data;
+        if (row.updated == true && type == "display") {
+            return href(stravaActivityURL(data), data)
+        } else {
+            return data
+        }
     }
 
 
