@@ -17,23 +17,6 @@
     </table>
 
     <script>
-    function href(url, text){
-        return `<a href='${url}' target='_blank'>${text}</a>`
-    }
-
-    function formatID (data, type, row) {
-        if (type == "display") {
-            return href("/" + data, data);
-        } else {
-            return data;
-        }
-    }
-
-    function formatDate(data, type, row, meta) {
-        date = new Date(data);
-        return type === "display" || type === "filter" ?
-            date.toLocaleString('en-US', { hour12: false }) : date;
-    }
 
     function combineNames(data, type, row, meta) {
         return row.lastname + ", " + row.firstname;

@@ -100,6 +100,7 @@ bundles = {
     "basic_table_js": flask_assets.Bundle(
         'js/jquery-3.1.0.min.js',
         'js/datatables.min.js',
+        'js/appUtil.js',
         filters='rjsmin',
         output='gen/basic_table.js'
     )
@@ -708,29 +709,9 @@ def app_init():
 @log_request_event
 @admin_required
 def event_history():
-
-    timezone = Utility.ip_timezone(Utility.ip_address(request))
-
-    def id_tag(e):
-        dt = Utility.utc_to_timezone(e.get('ts'), timezone)
-        return Utility.href(url_for('logged_event', event_id=e['_id']),
-                            dt.strftime("%m-%d %H:%M:%S"))
-
-    def ip_tag(e):
-        ip = e.get("ip")
-        return Utility.href(Utility.ip_lookup_url(ip), ip) if ip else ""
-
-    def cuid_tag(e):
-        cuid = e.get('cuid')
-        return Utility.href(url_for("user_profile", username=cuid), cuid) if cuid else ""
-
     events = EventLogger.get_log()
     if events:
-        return render_template("history.html",
-                               events=events,
-                               ip=ip_tag,
-                               id=id_tag,
-                               cuid=cuid_tag)
+        return render_template("history.html", events=events)
     return "No history"
 
 

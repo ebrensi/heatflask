@@ -14,29 +14,21 @@
 <body>
     <h3>Events</h3>
     <table id="events_table" class='display order-column compact' cellspacing='1' width='100%'>
-        <thead>
-            <th>time</th>
-            <th>ip</th>
-            <th>from</th>
-            <th>event</th>
-        </thead>
-        <tbody>
-        {%- for e in events %}
-          <tr>
-            <td>{{ id(e)|safe }}</td>
-            <td>{{ ip(e)|safe }}</td>
-            <td>{{ cuid(e)|safe }}</td>
-            <td>{{ e.get('msg', '')|safe }}</td>
-          </tr>
-        {%- endfor %}
-        </tbody>
     </table>
 
 
     <script>
     $(document).ready(function() {
-        $('#events_table').DataTable({
+        let data = {{ events|tojson}};
+        let dataTable = $('#events_table').DataTable({
             paging: false,
+            data: data,
+            columns: [
+                {title: "time",    data: "ts", render: formatDate},
+                {title: "ip",    data: "ip", defaultContent: "", render: formatIP},
+                {title: "user",    data: "cuid", defaultContent: "", render: formatID},
+                {title: "event",    data: "msg"}
+            ],
             scrollY: "80vh",
             scrollX: true,
             scrollCollapse: true,
