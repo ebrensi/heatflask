@@ -241,17 +241,7 @@ function ip_lookup_url(ip) {
     return ip ? `http://freegeoip.net/json/${ip}`: "#"
 }
 
-function formatID (data, type, row) {
-    if (data) {
-        if (type == "display") {
-            return href("/" + data, data);
-        } else {
-            return data;
-        }
-    } else {
-        return "";
-    }
-}
+
 
 function formatDate(data, type, row, meta) {
     date = new Date(data);

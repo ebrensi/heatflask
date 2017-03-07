@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <!-- <meta name="viewport" content="width=device-width, initial-scale=1.0"> -->
     {% assets "basic_table_css" %}
     <link rel="stylesheet" href="{{ ASSET_URL }}" />
     {% endassets %}
@@ -22,7 +21,19 @@
         return row.lastname + ", " + row.firstname;
     }
 
-    let data = {{ data|tojson}};
+    function formatID (data, type, row) {
+        if (data) {
+            if (type == "display") {
+                return href("/" + data, data);
+            } else {
+                return data;
+            }
+        } else {
+            return "";
+        }
+    }
+
+    let data = {{ data|tojson }};
     let atable = $('#users_table').DataTable({
             paging: false,
             data: data,

@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <!-- <meta name="viewport" content="width=device-width"> -->
     {% assets "basic_table_css" %}
     <link rel="stylesheet" href="{{ ASSET_URL }}" />
     {% endassets %}
@@ -16,24 +15,46 @@
     <table id="events_table" class='display order-column compact' cellspacing='1' width='100%'>
     </table>
 
-
     <script>
+    const user_profile_url = "{{ url_for('user_profile', username='') }}",
+          event_url = "{{ url_for('logged_event', event_id='') }}";
+
+    function formatID (data, type, row) {
+        if (data) {
+            if (type == "display") {
+                return href(user_profile_url+data, data);
+            } else {
+                return data;
+            }
+        } else {
+            return "";
+        }
+    }
+
+
+    function formatDate(data, type, row, meta) {
+        date = new Date(data);
+        return (type === "display" || type === "filter") ?
+            href(event_url + row["_id"], date.toLocaleString('en-US', { hour12: false })) : date;
+    }
+
+
     $(document).ready(function() {
-        let data = {{ events|tojson}};
-        let dataTable = $('#events_table').DataTable({
-            paging: false,
-            data: data,
-            columns: [
-                {title: "time",    data: "ts", render: formatDate},
-                {title: "ip",    data: "ip", defaultContent: "", render: formatIP},
-                {title: "user",    data: "cuid", defaultContent: "", render: formatID},
-                {title: "event",    data: "msg"}
-            ],
-            scrollY: "80vh",
-            scrollX: true,
-            scrollCollapse: true,
-            select: true,
-            order: [[ 0, "desc" ]]
+        let data = {{ events|tojson}},
+            dataTable = $('#events_table').DataTable({
+                paging: false,
+                data: data,
+                columns: [
+                    {title: "time",    data: "ts", render: formatDate},
+                    {title: "ip",    data: "ip", defaultContent: "", render: formatIP},
+                    {title: "user",    data: "cuid", defaultContent: "", render: formatID},
+                    {title: "event",    data: "msg"}
+                ],
+                scrollY: "80vh",
+                scrollX: true,
+                scrollCollapse: true,
+                select: true,
+                order: [[ 0, "desc" ]]
         });
     });
 
