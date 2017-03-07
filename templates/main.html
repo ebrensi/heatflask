@@ -743,7 +743,7 @@
                     $(".data_message").html(msg2);
                     rendering = false;
                     if (dotFlow) {
-                        DotLayer = new L.DotLayer();
+                        DotLayer = new L.DotLayer({paused: appState.paused});
                         map.addLayer(DotLayer);
                         layerControl.addOverlay(DotLayer, "Dots");
                     }

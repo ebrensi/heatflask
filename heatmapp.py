@@ -69,7 +69,6 @@ bundles = {
         'js/leaflet.js',
         'js/leaflet-sidebar.min.js',
         'js/leaflet-heat.js',
-        'js/L.CanvasLayer.js',
         'js/L.DotLayer.js',
         'js/Polyline.encoded.js',
         'js/L.Control.Window.js',
