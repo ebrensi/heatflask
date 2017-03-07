@@ -60,32 +60,35 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         this._paused = this.options.paused;
     },
 
-    needRedraw: function () {
-        if (!this._frame) {
-            this._frame = L.Util.requestAnimFrame(this.drawLayer, this);
-        }
-        return this;
-    },
-
 
     //-------------------------------------------------------------
     _onLayerDidResize: function (resizeEvent) {
         this._canvas.width = resizeEvent.newSize.x;
         this._canvas.height = resizeEvent.newSize.y;
+        this.setView();
     },
 
     //-------------------------------------------------------------
     _onLayerDidMove: function () {
+        this._mapMoving = false;
+
         let topLeft = this._map.containerPointToLayerPoint([0, 0]);
         L.DomUtil.setPosition(this._canvas, topLeft);
-        this.drawLayer();
-        this.onMap_pan_zoom_stop();
+        if (!this._paused) {
+            this.animate();
+        } else {
+            this.setView();
+            this._frame = L.Util.requestAnimFrame(this.drawLayer, this);
+        }
+
     },
 
     //-------------------------------------------------------------
     getEvents: function () {
         var events = {
-            movestart: this.onMap_pan_zoom_start,
+            movestart: function() {
+              this._mapMoving = true;
+            },
             moveend: this._onLayerDidMove,
             resize: this._onLayerDidResize,
         };
@@ -122,9 +125,6 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         if (this._items) {
             this._onLayerDidMove();
         }
-        else {
-            this.needRedraw();
-        }
     },
 
     //-------------------------------------------------------------
@@ -155,6 +155,16 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         };
     },
 
+
+    // -------------------------------------------------------------------
+    setView: function () {
+        this._size = this._map.getSize();
+        this._bounds = this._map.getBounds();
+        this._zoom = this._map.getZoom();
+        this._center = this.LatLonToMercator(this._map.getCenter());
+        this._corner = this.LatLonToMercator(this._map.containerPointToLatLng(this._map.getSize()));
+    },
+
     // --------------------------------------------------------------------
     drawLayer: function () {
         // -- todo make the viewInfo properties  flat objects.
@@ -162,21 +172,14 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
             return;
         }
 
-        var size   = this._map.getSize();
-        var bounds = this._map.getBounds();
-        var zoom   = this._map.getZoom();
-
-        var center = this.LatLonToMercator(this._map.getCenter());
-        var corner = this.LatLonToMercator(this._map.containerPointToLatLng(this._map.getSize()));
-
         this.onDrawLayer && this.onDrawLayer( {
                                                 layer : this,
                                                 canvas: this._canvas,
-                                                bounds: bounds,
-                                                size: size,
-                                                zoom: zoom,
-                                                center : center,
-                                                corner : corner
+                                                bounds: this._bounds,
+                                                size: this._size,
+                                                zoom: this._zoom,
+                                                center: this._center,
+                                                corner: this._corner
                                             });
         this._frame = null;
     },
@@ -286,7 +289,8 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
     animate: function() {
         this._paused = false;
         this.start_time = Date.now();
-        L.Util.requestAnimFrame(this._animate, this);
+        this.setView();
+        this._frame = L.Util.requestAnimFrame(this._animate, this);
     },
 
     // --------------------------------------------------------------------
@@ -297,24 +301,12 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
 
     // --------------------------------------------------------------------
     _animate: function() {
-        if (!this._paused && !this._moving) {
+        if (!this._paused && !this._mapMoving) {
           this.drawLayer();
-          L.Util.requestAnimFrame(this._animate, this);
+          this._frame = this._frame || L.Util.requestAnimFrame(this._animate, this);
         }
     },
 
-    // --------------------------------------------------------------------
-    onMap_pan_zoom_start: function() {
-        this._moving = true;
-    },
-
-    // --------------------------------------------------------------------
-    onMap_pan_zoom_stop: function() {
-        this._moving = false;
-        if (!this._paused) {
-            this.animate();
-        }
-    },
 
     // -- L.DomUtil.setTransform from leaflet 1.0.0 to work on 0.0.7
     //------------------------------------------------------------------------------
