@@ -40,7 +40,7 @@ from models import Users, Activities, EventLogger, Utility, Webhooks,\
 #     Activities.init(clear_cache=True)
 #     # Indexes.init(clear_cache=True)
 #     redis.set("db-reset", 1)
-redis.delete("db-reset")
+# redis.delete("db-reset")
 
 Analytics(app)
 
