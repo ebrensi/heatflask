@@ -66,7 +66,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
     _onLayerDidResize: function (resizeEvent) {
         this._canvas.width = resizeEvent.newSize.x;
         this._canvas.height = resizeEvent.newSize.y;
-        this.setView();
+        this._setupWindow();
     },
 
     //-------------------------------------------------------------
@@ -78,7 +78,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         if (!this._paused) {
             this.animate();
         } else {
-            this.setView();
+            this._setupWindow();
             this._frame = L.Util.requestAnimFrame(this.drawLayer, this);
         }
 
@@ -158,10 +158,11 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
 
 
     // -------------------------------------------------------------------
-    setView: function () {
+    _setupWindow: function () {
         this._size = this._map.getSize();
         this._bounds = this._map.getBounds();
         this._zoom = this._map.getZoom();
+
         this._center = this.LatLonToMercator(this._map.getCenter());
         this._corner = this.LatLonToMercator(this._map.containerPointToLatLng(this._map.getSize()));
     },
@@ -292,7 +293,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         this.start_time = Date.now();
         this.lastCalledTime = Date.now();
         this.minDelay = ~~(1000/this.target_fps);
-        this.setView();
+        this._setupWindow();
         this._frame = L.Util.requestAnimFrame(this._animate, this);
     },
 
