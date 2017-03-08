@@ -161,13 +161,51 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
 
     // -------------------------------------------------------------------
     _setupWindow: function () {
-        console.log("setupWindow")
+        if (!this._map || !this._items) {
+            return;
+        }
+
         this._size = this._map.getSize();
         this._bounds = this._map.getBounds();
         this._zoom = this._map.getZoom();
 
         this._center = this.LatLonToMercator(this._map.getCenter());
         this._corner = this.LatLonToMercator(this._map.containerPointToLatLng(this._map.getSize()));
+
+        const xmax = this._size.x,
+              ymax = this._size.y;
+
+        // compute relevant container points and slopes
+        this._processedItems = {};
+        for (let id in this._items) {
+            let A = this._items[id];
+            if (("latlng" in A) && this._bounds.intersects(A.bounds) && ("time" in A)) {
+                let len = A.latlng.length,
+                    cp_all = A.latlng.map(p => this._map.latLngToContainerPoint(p)),
+                    t = [],
+                    cp = [],
+                    M = [];
+
+                for (let i=1; i<len; i++) {
+                    let p1 = cp_all[i-1],
+                        p1_in = ((p1.x >= 0 && p1.x <= xmax) && (p1.y >= 0 && p1.y <= ymax)),
+                        p2 = cp_all[i],
+                        p2_in = ((p2.x >= 0 && p2.x <= xmax) && (p2.y >= 0 && p2.y <= ymax));
+
+                    if (p1_in || p2_in) {
+                        t.push(A.time[i-1]);
+                        cp.push(p1);
+                        let dt = A.time[i] - A.time[i-1];
+
+                        M.push({ x: (p2.x-p1.x)/dt, y: (p2.y-p1.y)/dt });
+                    }
+                }
+                if (t.length) {
+                    this._processedItems[id] = {t: t, cp: cp, M: M}
+                }
+            }
+        }
+        console.log("setupWindow");
     },
 
     // --------------------------------------------------------------------
@@ -260,7 +298,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
             zoom = info.zoom,
             time = (now - this.start_time) >>> this.SCONSTS[zoom],
             count = 0,
-            items = appState.items;
+            items = this._items;
 
         ctx.clearRect(0, 0, info.canvas.width, info.canvas.height);
         ctx.fillStyle = "#000000";
