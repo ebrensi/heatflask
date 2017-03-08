@@ -344,12 +344,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
                                this._map._getCenterOffset(e.center)._multiplyBy(-scale).subtract(this._map._getMapPanePos());
 
         L.DomUtil.setTransform(this._canvas, offset, scale);
-
-
     }
-
-
-
 });
 
 L.dotLayer = function (items, options) {
