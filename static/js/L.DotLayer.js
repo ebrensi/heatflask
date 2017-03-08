@@ -74,6 +74,8 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         this._mapMoving = false;
 
         let topLeft = this._map.containerPointToLayerPoint([0, 0]);
+        ctx = this._canvas.getContext('2d');
+        ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
         L.DomUtil.setPosition(this._canvas, topLeft);
         if (!this._paused) {
             this.animate();
