@@ -161,6 +161,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
 
     // -------------------------------------------------------------------
     _setupWindow: function () {
+        console.log("setupWindow")
         this._size = this._map.getSize();
         this._bounds = this._map.getBounds();
         this._zoom = this._map.getZoom();
