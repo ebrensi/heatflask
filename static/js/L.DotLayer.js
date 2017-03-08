@@ -205,7 +205,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
                 }
             }
         }
-        console.log("setupWindow");
+        // console.log("setupWindow");
     },
 
     // --------------------------------------------------------------------
@@ -229,63 +229,55 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
 
 
     // --------------------------------------------------------------------
-    drawDots: function(info, A, time, size) {
-        const times = A.time,
-              latlngs = A.latlng,
-              max_time = times[times.length-1],
-              dist = A.total_distance,
-              zoom = info.zoom,
-              n1 = this.DCONST * A.total_distance * info.zoom * info.zoom * info.zoom,
-              // n1 = (A.total_distance << (info.zoom-1)) >> 20,
+    drawDots: function(id, time, size) {
+        const A = this._items[id],
+              B = this._processedItems[id],
+              max_time = A.time.slice(-1),
+              zoom = this._zoom,
+              n1 = this.DCONST * A.total_distance * zoom * zoom * zoom,
+              // n1 = (A.total_distance << (this._zoom-1)) >> 20,
               delay = ~~(max_time / n1),
               num_pts = ~~(max_time / delay),
-              ctx = info.canvas.getContext('2d'),
-              xmax = info.size.x,
-              ymax = info.size.y;
+              ctx = this._canvas.getContext('2d'),
+              xmax = this._size.x,
+              ymax = this._size.y;
 
         let s = time % max_time,
             key_time = s - delay * (~~(s/delay)),
             count = 0,
             i = 0,
-            t, d, dt, p1, p2, p, interval_good;
+            t, dt,
+            p1 = B.cp[0],
+            t1 = B.t[0],
+            M = B.M[0];
 
 
         for (let j = 0; j < num_pts; j++) {
             t = (key_time + j*delay);
-            if (t >= times[i]) {
-              while (t >= times[i]) {
+            if (t >= B.t[i+1]) {
+              while (t >= B.t[i+1]) {
                 i++;
               }
 
-              p1 = info.layer._map.latLngToContainerPoint(latlngs[i-1]);
-              p2 = info.layer._map.latLngToContainerPoint(latlngs[i]);
-              interval_good = (p1.x >= 0 && p1.x <= xmax) && (p1.y >= 0 && p1.y <= ymax) ||
-                              (p2.x >= 0 && p2.x <= xmax) && (p2.y >= 0 && p2.y <= ymax);
-
-              if (interval_good) {
-                  dt = times[i] - times[i-1];
-                  M = [(p2.x-p1.x)/dt,  (p2.y-p1.y)/dt];
-              }
+              p1 = B.cp[i];
+              t1 = B.t[i];
+              M = B.M[i];
             }
 
-            if (interval_good) {
+            dt = t - t1;
+            dot = {
+              x: ~~(p1.x + M.x*dt + 0.5),
+              y: ~~(p1.y + M.y*dt + 0.5)
+            };
 
-                dt = t - times[i-1];
-                dot = {
-                  x: ~~(p1.x + M[0]*dt + 0.5),
-                  y: ~~(p1.y + M[1]*dt + 0.5)
-                };
-
-                if ((dot.x >= 0 && dot.x <= xmax) && (dot.y >= 0 && dot.y <= ymax)) {
-                    // ctx.fillRect(dot.x-1, dot.y-1, size, size);
-                    ctx.beginPath();
-                    ctx.arc(dot.x, dot.y, size, 0, this.two_pi);
-                    ctx.fill();
-                    ctx.closePath();
-                    count++;
-                }
+            if ((dot.x >= 0 && dot.x <= xmax) && (dot.y >= 0 && dot.y <= ymax)) {
+                // ctx.fillRect(dot.x-1, dot.y-1, size, size);
+                ctx.beginPath();
+                ctx.arc(dot.x, dot.y, size, 0, this.two_pi);
+                ctx.fill();
+                ctx.closePath();
+                count++;
             }
-
         }
         return count;
     },
@@ -297,21 +289,17 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         let ctx = info.canvas.getContext('2d'),
             zoom = info.zoom,
             time = (now - this.start_time) >>> this.SCONSTS[zoom],
-            count = 0,
-            items = this._items;
+            count = 0;
 
         ctx.clearRect(0, 0, info.canvas.width, info.canvas.height);
         ctx.fillStyle = "#000000";
 
         highlighted_items = [];
-        for (let id in items) {
-            let A = items[id];
-            if (("latlng" in A) && info.bounds.intersects(A.bounds) && ("time" in A)) {
-                if (A.highlighted) {
-                    highlighted_items.push(A);
-                } else {
-                    count += this.drawDots(info, A, time, 2);
-                }
+        for (let id in this._processedItems) {
+            if (this._items[id].highlighted) {
+                highlighted_items.push(id);
+            } else {
+                count += this.drawDots(id, time, 2);
             }
         }
 
@@ -320,7 +308,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         if (hlen) {
             ctx.fillStyle = "#FFFFFF";
             for (let i=0; i < hlen; i++) {
-                count += this.drawDots(info, highlighted_items[i], time, 4);
+                count += this.drawDots(highlighted_items[i], time, 4);
             }
         }
 
