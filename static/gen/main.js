@@ -4538,6 +4538,8 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         this._mapMoving = false;
 
         let topLeft = this._map.containerPointToLayerPoint([0, 0]);
+        ctx = this._canvas.getContext('2d');
+        ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
         L.DomUtil.setPosition(this._canvas, topLeft);
         if (!this._paused) {
             this.animate();
@@ -4553,8 +4555,6 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         var events = {
             movestart: function() {
               this._mapMoving = true;
-              // ctx = this._canvas.getContext('2d');
-              // ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
             },
             moveend: this._onLayerDidMove,
             resize: this._onLayerDidResize,
