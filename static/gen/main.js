@@ -4645,14 +4645,15 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         for (let id in this._items) {
             let A = this._items[id];
             if (("latlng" in A) && this._bounds.intersects(A.bounds) && ("time" in A)) {
-                let len = A.latlng.length,
-                    cp_all = A.latlng.map(
+                let cp_all = A.latlng.map(
                         (latLng, i) =>
                         Object.assign(this._map.latLngToContainerPoint(latLng), {t: A.time[i]})
-                        ),
-                    cp = [];
+                        );
 
-                for (let i=1; i<len; i++) {
+                cp_all = L.LineUtil.simplify(cp_all, this.options.smoothFactor);
+
+                let cp = [];
+                for (let i=1, len=cp_all.length; i<len; i++) {
                     let p1 = cp_all[i-1],
                         p1_in = ((p1.x >= 0 && p1.x <= xmax) && (p1.y >= 0 && p1.y <= ymax)),
                         p2 = cp_all[i],
