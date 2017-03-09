@@ -44,10 +44,11 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
     _pane: "shadowPane",
     DCONST: 0.000001,
     two_pi: 2 * Math.PI,
-    target_fps: 15,
+    target_fps: 16,
 
     options: {
-        paused: false
+        startPaused: false,
+        smoothFactor: 1.0
     },
 
 
@@ -58,7 +59,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         this._frame  = null;
         this._items = items;
         L.setOptions(this, options);
-        this._paused = this.options.paused;
+        this._paused = this.options.startPaused;
     },
 
 
@@ -181,10 +182,11 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
             let A = this._items[id];
             if (("latlng" in A) && this._bounds.intersects(A.bounds) && ("time" in A)) {
                 let len = A.latlng.length,
-                    cp_all = A.latlng.map(p => this._map.latLngToContainerPoint(p)),
-                    t = [],
-                    cp = [],
-                    M = [];
+                    cp_all = A.latlng.map(
+                        (latLng, i) =>
+                        Object.assign(this._map.latLngToContainerPoint(latLng), {t: A.time[i]})
+                        ),
+                    cp = [];
 
                 for (let i=1; i<len; i++) {
                     let p1 = cp_all[i-1],
@@ -193,19 +195,16 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
                         p2_in = ((p2.x >= 0 && p2.x <= xmax) && (p2.y >= 0 && p2.y <= ymax));
 
                     if (p1_in || p2_in) {
-                        t.push(A.time[i-1]);
+                        dt = p2.t - p1.t;
+                        Object.assign(p1, { dx: (p2.x-p1.x)/dt, dy: (p2.y-p1.y)/dt });
                         cp.push(p1);
-                        let dt = A.time[i] - A.time[i-1];
-
-                        M.push({ x: (p2.x-p1.x)/dt, y: (p2.y-p1.y)/dt });
                     }
                 }
-                if (t.length) {
-                    this._processedItems[id] = {t: t, cp: cp, M: M}
+                if (cp.length) {
+                    this._processedItems[id] = cp;
                 }
             }
         }
-        // console.log("setupWindow");
     },
 
     // --------------------------------------------------------------------
@@ -231,7 +230,8 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
     // --------------------------------------------------------------------
     drawDots: function(id, time, size) {
         const A = this._items[id],
-              B = this._processedItems[id],
+              P = this._processedItems[id],
+              last_P_idx = P.length - 1,
               max_time = A.time.slice(-1),
               zoom = this._zoom,
               n1 = this.DCONST * A.total_distance * zoom * zoom * zoom,
@@ -247,27 +247,22 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
             count = 0,
             i = 0,
             t, dt,
-            p1 = B.cp[0],
-            t1 = B.t[0],
-            M = B.M[0];
+            p = P[0];
 
 
         for (let j = 0; j < num_pts; j++) {
             t = (key_time + j*delay);
-            if (t >= B.t[i+1]) {
-              while (t >= B.t[i+1]) {
+            if (i < last_P_idx && t >= P[i+1].t) {
+              while (i < last_P_idx && t >= P[i+1].t) {
                 i++;
               }
-
-              p1 = B.cp[i];
-              t1 = B.t[i];
-              M = B.M[i];
+              p = P[i];
             }
 
-            dt = t - t1;
+            dt = t - p.t;
             dot = {
-              x: ~~(p1.x + M.x*dt + 0.5),
-              y: ~~(p1.y + M.y*dt + 0.5)
+              x: ~~(p.x + p.dx*dt + 0.5),
+              y: ~~(p.y + p.dy*dt + 0.5)
             };
 
             if ((dot.x >= 0 && dot.x <= xmax) && (dot.y >= 0 && dot.y <= ymax)) {
