@@ -433,14 +433,9 @@ class Users(UserMixin, db_sql.Model):
         if index_df is None:
             activity_index = self.get_index()
             if activity_index:
-                # We will replace the 10 most recent activities, since these
-                #  are the ones most likely to have been manually modified
-                #  since last access.
-                index_df = activity_index["index_df"][10:]
+                index_df = activity_index["index_df"]
             else:
                 return
-
-        already_got = set(index_df.id)
 
         # if particular activity_ids are supplied, we will go fetch those
         # activities and add/replace them. otherwise, we get new activities
@@ -464,6 +459,12 @@ class Users(UserMixin, db_sql.Model):
                 # app.logger.info("updating activity {} in index {}"
                 #                 .format(aid, self.id))
         else:
+            # We will replace the 10 most recent activities, since these
+            #  are the ones most likely to have been manually modified
+            #  since last access.
+            index_df = index_df[10:]
+
+            already_got = set(index_df.id)
             latest = index_df.index[0]
             app.logger.info("getting new activites (since {}) for index {}"
                             .format(latest, self.id))
@@ -476,7 +477,7 @@ class Users(UserMixin, db_sql.Model):
                     "was not able to retrieve {}'s latest activity data"
                     .format(self, e)
                 )
-                return
+                return self.get_index()["index_df"]
 
         to_update = {}
         if reset_ttl:

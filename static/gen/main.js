@@ -4721,7 +4721,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
     },
 
     drawSquare: function(obj, dot) {
-        obj._ctx.fillRect(dot.x-1, dot.y-1, 4, 4);
+        obj._ctx.fillRect(dot.x-2, dot.y-2, 4, 4);
     },
 
     drawDot: function (obj, dot) {
