@@ -35,7 +35,7 @@
 
     let data = {{ data|tojson }};
     let atable = $('#users_table').DataTable({
-            pageLength: 100,
+            pageLength: 50,
             deferRender: true,
             data: data,
             columns: [
@@ -54,7 +54,7 @@
             scrollY: "80vh",
             scrollX: true,
             scrollCollapse: true,
-            select: true,
+            select: false,
             order: [[ 1, "desc" ]]
         });
     </script>

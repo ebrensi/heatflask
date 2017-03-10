@@ -44,7 +44,7 @@
 
     $(document).ready(function() {
         let updates_table = $('#updates_table').DataTable({
-            paging: false,
+            pageLength: 50,
             deferRender: true,
             data: data,
             columns: [

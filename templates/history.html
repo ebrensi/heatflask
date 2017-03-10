@@ -40,9 +40,9 @@
 
 
     $(document).ready(function() {
-        let data = {{ events|tojson}},
+        let data = {{ events|tojson }},
             dataTable = $('#events_table').DataTable({
-                pageLength: 100,
+                pageLength: 50,
                 data: data,
                 deferRender: true,
                 columns: [
@@ -54,7 +54,7 @@
                 scrollY: "80vh",
                 scrollX: true,
                 scrollCollapse: true,
-                select: true,
+                select: false,
                 order: [[ 0, "desc" ]]
         });
     });
