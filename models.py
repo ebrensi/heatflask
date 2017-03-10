@@ -433,7 +433,10 @@ class Users(UserMixin, db_sql.Model):
         if index_df is None:
             activity_index = self.get_index()
             if activity_index:
-                index_df = activity_index["index_df"]
+                # We will replace the 10 most recent activities, since these
+                #  are the ones most likely to have been manually modified
+                #  since last access.
+                index_df = activity_index["index_df"][10:]
             else:
                 return
 
@@ -469,7 +472,10 @@ class Users(UserMixin, db_sql.Model):
                     a) for a in self.client().get_activities(after=latest)
                     if a.id not in already_got]
             except Exception as e:
-                app.logger.error({"error": str(e)})
+                app.logger.error(
+                    "was not able to retrieve {}'s latest activity data"
+                    .format(self, e)
+                )
                 return
 
         to_update = {}

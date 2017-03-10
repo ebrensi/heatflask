@@ -179,7 +179,7 @@
                 </a>
 
                 <br><br>
-                The activity index is built the first time you use this app.  While your index is active (within 7 days of the last access), it is automatically updated with new activities and most changes you make on Strava.  If our index does not corrrectly reflect the current state of your Strava activities, try re-building the index.
+                If our index does not corrrectly reflect the current state of your Strava activities, try re-building the index here.
                 <form action="{{ url_for('activities', username=user.id) }}" target="_blank">
                     <input type="submit" class="btn" value="View activity index" />
                     <label><input type="checkbox" name="rebuild" value="1">Re-build</label>
