@@ -4520,8 +4520,9 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
     initialize: function (items, options) {
         this._map    = null;
         this._canvas = null;
+        this._ctx = null;
         this._frame  = null;
-        this._items = items;
+        this._items = items || null;
         L.setOptions(this, options);
         this._paused = this.options.startPaused;
     },
@@ -4538,9 +4539,8 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
     _onLayerDidMove: function () {
         this._mapMoving = false;
 
+        this._ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
         let topLeft = this._map.containerPointToLayerPoint([0, 0]);
-        ctx = this._canvas.getContext('2d');
-        ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
         L.DomUtil.setPosition(this._canvas, topLeft);
         if (!this._paused) {
             this.animate();
@@ -4575,12 +4575,13 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         this._canvas = L.DomUtil.create('canvas', 'leaflet-layer');
         this.tiles = {};
 
-        var size = this._map.getSize();
+        let size = this._map.getSize();
         this._canvas.width = size.x;
         this._canvas.height = size.y;
+        this._ctx = this._canvas.getContext('2d');
 
-        var animated = this._map.options.zoomAnimation && L.Browser.any3d;
-        L.DomUtil.addClass(this._canvas, 'leaflet-zoom-' + (animated ? 'animated' : 'hide'));
+        let zoomAnimated = this._map.options.zoomAnimation && L.Browser.any3d;
+        L.DomUtil.addClass(this._canvas, 'leaflet-zoom-' + (zoomAnimated ? 'animated' : 'hide'));
 
 
         // map._panes.overlayPane.appendChild(this._canvas);
@@ -4589,7 +4590,6 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
 
         map.on(this.getEvents(),this);
 
-        this.onLayerDidMount && this.onLayerDidMount(); // -- callback
         if (this._items) {
             this._onLayerDidMove();
         }
@@ -4629,6 +4629,9 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         if (!this._map || !this._items) {
             return;
         }
+
+        this._ctx = this._canvas.getContext('2d');
+        this._ctx.fillStyle = "#000000";
 
         this._size = this._map.getSize();
         this._bounds = this._map.getBounds();
@@ -4673,27 +4676,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
     },
 
     // --------------------------------------------------------------------
-    drawLayer: function () {
-        // -- todo make the viewInfo properties  flat objects.
-        if (!this._map){
-            return;
-        }
-
-        this.onDrawLayer && this.onDrawLayer( {
-                                                layer : this,
-                                                canvas: this._canvas,
-                                                bounds: this._bounds,
-                                                size: this._size,
-                                                zoom: this._zoom,
-                                                center: this._center,
-                                                corner: this._corner
-                                            });
-        this._frame = null;
-    },
-
-
-    // --------------------------------------------------------------------
-    drawDots: function(id, time, size) {
+    drawDots: function(id, time, drawDotFunc) {
         const A = this._items[id],
               P = this._processedItems[id],
               last_P_idx = P.length - 1,
@@ -4703,7 +4686,6 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
               // n1 = (A.total_distance << (this._zoom-1)) >> 20,
               delay = ~~(max_time / n1),
               num_pts = ~~(max_time / delay),
-              ctx = this._canvas.getContext('2d'),
               xmax = this._size.x,
               ymax = this._size.y;
 
@@ -4731,49 +4713,60 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
             };
 
             if ((dot.x >= 0 && dot.x <= xmax) && (dot.y >= 0 && dot.y <= ymax)) {
-                // ctx.fillRect(dot.x-1, dot.y-1, size, size);
-                ctx.beginPath();
-                ctx.arc(dot.x, dot.y, size, 0, this.two_pi);
-                ctx.fill();
-                ctx.closePath();
+                drawDotFunc(this, dot);
                 count++;
             }
         }
         return count;
     },
 
-    /* for dot paths */
-    onDrawLayer: function(info) {
-        let now = Date.now();
+    drawSquare: function(obj, dot) {
+        obj._ctx.fillRect(dot.x-1, dot.y-1, 4, 4);
+    },
 
-        let ctx = info.canvas.getContext('2d'),
-            zoom = info.zoom,
+    drawDot: function (obj, dot) {
+        let ctx = obj._ctx;
+        ctx.beginPath();
+        ctx.arc(dot.x, dot.y, 3, 0, obj.two_pi);
+        ctx.fill();
+        ctx.closePath();
+    },
+
+    drawLayer: function(now) {
+        if (!this._map){
+            return;
+        }
+
+        let ctx = this._ctx,
+            zoom = this._zoom,
             time = (now - this.start_time) >>> this.SCONSTS[zoom],
             count = 0;
 
-        ctx.clearRect(0, 0, info.canvas.width, info.canvas.height);
-        ctx.fillStyle = "#000000";
+        this._ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
 
         highlighted_items = [];
         for (let id in this._processedItems) {
             if (this._items[id].highlighted) {
                 highlighted_items.push(id);
             } else {
-                count += this.drawDots(id, time, 2);
+                count += this.drawDots(id, time, this.drawSquare);
             }
         }
 
         // now plot highlighted paths
         let hlen = highlighted_items.length;
         if (hlen) {
-            ctx.fillStyle = "#FFFFFF";
+            this._ctx.save();
+            this._ctx.fillStyle = "#FFFFFF";
             for (let i=0; i < hlen; i++) {
-                count += this.drawDots(highlighted_items[i], time, 4);
+                count += this.drawDots(highlighted_items[i], time, this.drawDot);
             }
+            this._ctx.restore();
         }
 
-        fps_display && fps_display.update(now, " n=" + count + " z="+info.zoom);
+        fps_display && fps_display.update(now, " n=" + count + " z="+ this._zoom);
 
+        this._frame = null;
     },
 
     // --------------------------------------------------------------------
@@ -4781,7 +4774,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         this._paused = false;
         this.start_time = Date.now();
         this.lastCalledTime = Date.now();
-        this.minDelay = ~~(1000/this.target_fps);
+        this.minDelay = ~~(1000/this.target_fps + 0.5);
         this._setupWindow();
         this._frame = L.Util.requestAnimFrame(this._animate, this);
     },
@@ -4801,7 +4794,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         let now = Date.now();
         if (now - this.lastCalledTime > this.minDelay) {
             this.lastCalledTime = now;
-            this.drawLayer();
+            this.drawLayer(now);
         } else {
             this._frame = null;
         }
