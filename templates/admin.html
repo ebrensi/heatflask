@@ -33,9 +33,10 @@
         }
     }
 
-    let data = {{ data|tojson }};
+    const data = {{ data|tojson }};
     let atable = $('#users_table').DataTable({
             pageLength: 50,
+            // ajax: "{{ url_for('ajax_server', data='users') }}",
             deferRender: true,
             data: data,
             columns: [
