@@ -521,10 +521,9 @@ class Users(UserMixin, db_sql.Model):
         elapsed = datetime.utcnow() - start_time
         num = len(activities_list)
         msg = (
-            "updated {} index activit{} {} for user {} in {} sec."
+            "updated {} index activit{} for user {} in {} sec."
             .format(num,
                     "y" if num == 1 else "ies",
-                    [a['id'] for a in activities_list] if num else "",
                     self.id,
                     round(elapsed.total_seconds(), 3))
         )
