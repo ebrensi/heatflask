@@ -685,6 +685,7 @@ class Activities(object):
             "name": a.name,
             "type": a.type,
             "summary_polyline": a.map.summary_polyline,
+            "ts_UTC": a.start_date,
             "beginTimestamp": a.start_date_local,
             "total_distance": float(a.distance),
             "elapsed_time": int(a.elapsed_time.total_seconds()),

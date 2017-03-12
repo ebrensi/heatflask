@@ -192,6 +192,8 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
                 cp_all = L.LineUtil.simplify(cp_all, this.options.smoothFactor);
 
                 let cp = [];
+                A.startTime = new Date(A.ts_UTC || A.beginTimestamp).getTime();
+
                 for (let i=1, len=cp_all.length; i<len; i++) {
                     let p1 = cp_all[i-1],
                         p1_in = ((p1.x >= 0 && p1.x <= xmax) && (p1.y >= 0 && p1.y <= ymax)),
@@ -212,12 +214,13 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
     },
 
     // --------------------------------------------------------------------
-    drawDots: function(id, time, drawDotFunc) {
+    drawDots: function(id, now, drawDotFunc) {
         const A = this._items[id],
+              zoom = this._zoom,
+              time = (now - A.startTime) >>> this.SCONSTS[zoom],
               P = this._processedItems[id],
               last_P_idx = P.length - 1,
               max_time = A.time.slice(-1),
-              zoom = this._zoom,
               n1 = this.DCONST * A.total_distance * zoom * zoom * zoom,
               // n1 = (A.total_distance << (this._zoom-1)) >> 20,
               delay = ~~(max_time / n1),
@@ -275,7 +278,6 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
 
         let ctx = this._ctx,
             zoom = this._zoom,
-            time = (now - this.start_time) >>> this.SCONSTS[zoom],
             count = 0;
 
         this._ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
@@ -285,7 +287,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
             if (this._items[id].highlighted) {
                 highlighted_items.push(id);
             } else {
-                count += this.drawDots(id, time, this.drawSquare);
+                count += this.drawDots(id, now, this.drawSquare);
             }
         }
 
@@ -295,7 +297,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
             this._ctx.save();
             this._ctx.fillStyle = "#FFFFFF";
             for (let i=0; i < hlen; i++) {
-                count += this.drawDots(highlighted_items[i], time, this.drawDot);
+                count += this.drawDots(highlighted_items[i], now, this.drawDot);
             }
             this._ctx.restore();
         }
