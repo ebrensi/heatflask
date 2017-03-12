@@ -708,7 +708,7 @@ def app_init():
 @log_request_event
 @admin_required
 def event_history():
-    events = EventLogger.get_log()
+    events = EventLogger.get_log(int(request.args.get("n", 100)))
     if events:
         return render_template("history.html", events=events)
     return "No history"
@@ -757,7 +757,10 @@ def subscription_endpoint(operation):
 
     elif operation == "updates":
         return render_template("webhooks.html",
-                               events=list(Webhooks.iter_updates()))
+                               events=list(
+                                   Webhooks.iter_updates(
+                                       int(request.args.get("n", 100)))
+                               ))
 
 
 @app.route('/webhook_callback', methods=["GET", "POST"])

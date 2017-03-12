@@ -843,9 +843,10 @@ class EventLogger(object):
         return event
 
     @staticmethod
-    def get_log():
+    def get_log(limit=0):
         events = list(
-            mongodb.history.find(sort=[("$natural", pymongo.DESCENDING)])
+            mongodb.history.find(
+                sort=[("$natural", pymongo.DESCENDING)]).limit(limit)
         )
         for e in events:
             e["_id"] = str(e["_id"])
@@ -962,10 +963,10 @@ class Webhooks(object):
         return result
 
     @staticmethod
-    def iter_updates():
+    def iter_updates(limit=0):
         updates = mongodb.subscription.find(
             sort=[("$natural", pymongo.DESCENDING)]
-        )
+        ).limit(limit)
 
         for u in updates:
             u["_id"] = str(u["_id"])
@@ -1006,3 +1007,6 @@ class Utility():
 
 if "history" not in mongodb.collection_names():
     EventLogger.init()
+
+if "activities" not in mongodb.collection_names():
+    Activities.init()
