@@ -1,0 +1,5391 @@
+[33mcommit 028abce783073c218e858bdb70b354e091011d19[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Mar 12 21:11:11 2017 -0700
+
+    gets rid of googler stuff
+
+[33mcommit dc98aafb5d5cd3e35f57160c5c6df31f99815761[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Mar 12 20:56:00 2017 -0700
+
+    attempts to make auto-pause/restart look better
+
+[33mcommit 65afb44c6a2dd4df243369141b8112abeae44a2d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Mar 12 12:33:03 2017 -0700
+
+    importing start_date sseems to cause problems
+
+[33mcommit c0e850e652c86016a5cb22e561a9ab6fc8476e94[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Mar 12 12:21:13 2017 -0700
+
+    startTime for animation is now the timestamp from an activity
+
+[33mcommit f60ceecb4b5351ddf8f8b050fb14fb8491d1d5ba[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Mar 12 11:47:49 2017 -0700
+
+    makes log less verbose
+
+[33mcommit b946f8e3795492613abc1dc8a7a607e4fd5762a5[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Mar 12 11:45:32 2017 -0700
+
+    adds limiter for history and webhook list queries
+
+[33mcommit 9f68b28958e41341fbcab5cf0b3848c3168ecc4e[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Mar 10 09:10:31 2017 -0800
+
+    replaces last 10 activities on index update
+
+[33mcommit 0e8abb5b361580b47033db97c49da7115400ec1a[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Mar 10 08:24:14 2017 -0800
+
+    updates last 10 activities whether or not they were changed
+
+[33mcommit 6c35331feb2d05e538a222bd1ef415d885d5f2b7[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Mar 9 20:03:40 2017 -0800
+
+    minor fix
+
+[33mcommit d39b9fe9be388b09ff7e54c31821a176b9540771[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Mar 9 19:47:40 2017 -0800
+
+    enables basic two types of dots
+
+[33mcommit de92573bed8d8a310da8a4ccd6b7696ae7ae5223[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Mar 8 19:25:50 2017 -0800
+
+    new build of assets
+
+[33mcommit 60830b58cccb67286f189841f2ef77cd828544cd[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Mar 8 16:49:57 2017 -0800
+
+    updates assets
+
+[33mcommit 9fb0c17ed5af4eda6ea14064c300d1b86db39767[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Mar 8 16:37:35 2017 -0800
+
+    uses simplify now
+
+[33mcommit 0494c7715d37beac14408d4c436aa4a0a1a4920e[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Mar 8 16:22:26 2017 -0800
+
+    processedItems is acollection of objects now
+
+[33mcommit 2e520230639d8b445f8094e1b43355600613728e[m
+Merge: 967f4ac 7a603cf
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Mar 8 11:05:03 2017 -0800
+
+    merged staging branch
+
+[33mcommit 967f4acab4657c727df397f43f545cac687e459c[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Mar 8 10:58:03 2017 -0800
+
+    delete a comment
+
+[33mcommit 835793be2c7d5f29f0ab35ba504915f3aed308f9[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Mar 8 01:58:22 2017 -0800
+
+    cosmetic fix
+
+[33mcommit 7a603cf97c5d0c4f6136bb766ee639d8ee11b345[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Mar 8 01:41:07 2017 -0800
+
+    processedItems implemented
+
+[33mcommit 5d69a338f2dff920315b3fdcfc6467dd07fbb220[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Mar 8 00:24:00 2017 -0800
+
+    adds processedItems
+
+[33mcommit 87c09e1ecdf2c70950fe8b203c2d1734b2821e95[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Mar 7 22:36:04 2017 -0800
+
+    turn off zoom-animation for better performance
+
+[33mcommit 7492035e80116fc65de77055ffa44bf6e999954a[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Mar 7 21:43:52 2017 -0800
+
+    fixes up table views a bit
+
+[33mcommit 9c221523cc1e1c4bb4ef2e8ed60de5031894da91[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Mar 7 16:50:42 2017 -0800
+
+    updates
+
+[33mcommit 010951ce68869327dee8088b6cfc213f677a46a7[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Mar 7 16:49:32 2017 -0800
+
+    gets rid of ghosting on move
+
+[33mcommit cd1a3376d3c1475fdf204be97e8ad474a59f5346[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Mar 7 16:40:52 2017 -0800
+
+    changed a function name that might be conflicting
+
+[33mcommit 4ee980f53a6427ac6a6fffbd118747739988fa23[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Mar 7 15:48:01 2017 -0800
+
+    throttles animation to target fps
+
+[33mcommit f00c90cd7b2b28204675e4da14713bb3935a40c4[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Mar 7 14:49:53 2017 -0800
+
+    more optimizations
+
+[33mcommit c108e99be8cf511d768e392eb3e1eea076d5972a[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Mar 7 13:29:48 2017 -0800
+
+    removes 'updated' from webhooks view
+
+[33mcommit de344e2192529d2989d5f0abb560966b3c70ab25[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Mar 7 13:27:33 2017 -0800
+
+    updates webhooks
+
+[33mcommit 6eb7437dee182f63f3828215db0c217f71e5139b[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Mar 7 13:13:41 2017 -0800
+
+    hopefully fixes subscription updates view
+
+[33mcommit 5e66ca0cf713c4d82ec86987a499670ba9d151e2[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Mar 7 12:56:29 2017 -0800
+
+    updates webhooks view
+
+[33mcommit 54891e10c413e7595329d68e7264d252fa3cdb81[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Mar 7 12:40:57 2017 -0800
+
+    adds deferRenderer setting to some tables
+
+[33mcommit 97df9cd23a401d925ffc150c262eced5b761e845[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Mar 7 12:32:09 2017 -0800
+
+    combines canvaslayer and dotlayer
+
+[33mcommit 0156caa4f3110ca3e7fb2f4f583f1d2981325bd0[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Mar 6 22:37:16 2017 -0800
+
+    history works again
+
+[33mcommit c9ffadb1594206535bb30c26aecb60cffd8382cc[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Mar 6 21:56:00 2017 -0800
+
+    hopefully speeds up history datatable render
+
+[33mcommit 3cbe6c9d96256be22418dc0c0d74fa92156a13f5[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Mar 6 09:04:06 2017 -0800
+
+    plots highlighted items separately
+
+[33mcommit bac60d49e7f334bace35d26b22e42b586d9ee3a7[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Mar 4 15:48:33 2017 -0800
+
+    back to svg renderer for now
+
+[33mcommit f11c8a36234b561bd3f760c51cfbb92d62643cdf[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Mar 3 23:39:16 2017 -0800
+
+    deleted some crap
+
+[33mcommit d2379b6c5cddb46e176e0c6ed324f691ed2ee40d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Mar 3 23:36:01 2017 -0800
+
+    eliminates hello message
+
+[33mcommit 9d1e15d8ef092adbffa44a548d57e4a464ae2e7f[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Mar 3 23:15:13 2017 -0800
+
+    moves dependencies around
+
+[33mcommit 7030264f82c588cb45729e76741cdaea7c48ac5f[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Mar 3 22:51:36 2017 -0800
+
+    increases web concurrency
+
+[33mcommit 351c34fbc9bcfd20c842210acd686df0f4421f0b[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Mar 3 22:32:42 2017 -0800
+
+    steam_encode RLE ignores less than 3 repeating values
+
+[33mcommit 4b0276fc2636c4de3df17b810d6abc989427a21a[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Mar 3 22:10:52 2017 -0800
+
+    streamDecode allows for possible RLE encoding of difference-sequence
+
+[33mcommit f5f3bd26d8f26a9470694007b0e6dd3dd7583902[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Mar 3 21:50:09 2017 -0800
+
+    stream_encode does RLE too now
+
+[33mcommit 251e79a4cea9a133ae016b98e6a5da5eebfadf42[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Mar 1 11:55:34 2017 -0800
+
+    more optimization
+
+[33mcommit b84b76ca60c7774576eb89ef60bdd800916c1e72[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Mar 1 01:34:39 2017 -0800
+
+    slight optimization
+
+[33mcommit 816597a21f15a1ac57a67cb7e9c4a6ab2b8c98ae[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Mar 1 01:28:17 2017 -0800
+
+    optimizes a bit by precomputing some container points
+
+[33mcommit d4293b6afeccc3b6f86e83f5370fcacd80b77ae4[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Mar 1 00:53:30 2017 -0800
+
+    cosmetic fix
+
+[33mcommit e91541fda3fcbca141963091166507c9b04207e7[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Mar 1 00:32:05 2017 -0800
+
+    more efficient storage
+
+[33mcommit d233a126e98367aceba5e81e1f20b3a552b28dc6[m
+Merge: 4144177 dd1a986
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Feb 28 18:02:49 2017 -0800
+
+    Merge branch 'dist'
+
+[33mcommit dd1a986453eb09f5b2dda32588432535d40cc872[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Feb 28 18:01:31 2017 -0800
+
+    deleted some crap
+
+[33mcommit 414417756e78c084e29b4698548458467befbf9c[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Feb 28 17:33:02 2017 -0800
+
+    adds missing semicolon
+
+[33mcommit 2917a7ee0899fc45bf0c0f1531184ebbe6479b3e[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Feb 28 17:27:44 2017 -0800
+
+    adds semicolon!
+
+[33mcommit 0c10df3ec6f94021c4e88ddd4102a6c9566fd6bd[m
+Merge: 98f4ade 5cc5474
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Feb 28 10:59:07 2017 -0800
+
+    Merge branch 'encode' into dist
+
+[33mcommit 5cc5474d7ca1d0960cb07e0f8656734bd8532f28[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Feb 28 10:30:59 2017 -0800
+
+    encodes datastreams for more compact storage and server-to-client transfer
+
+[33mcommit 98f4adeaf2f2166690ad42657198977f3f7e2edb[m
+Merge: 3cfdeaf 58673ca
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Feb 28 08:54:42 2017 -0800
+
+    Merge branch 'master' into dist
+
+[33mcommit 58673ca71fd6a8bb61ab6af97ea0086f294b0a2e[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Feb 28 08:53:20 2017 -0800
+
+    updates timeout settings
+
+[33mcommit d9bd29ad0fd79e3cef4395698a6604f38cf79d4e[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Feb 28 08:50:27 2017 -0800
+
+    adds endpoint for resetting mongo databases
+
+[33mcommit 3cfdeaf2a64e2e281e53551550ee60c2bce68327[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Feb 28 07:29:51 2017 -0800
+
+    disttance-based point selection works
+
+[33mcommit 2c22f42b3a819f23c253c8b2ae0c73cf1fe5d516[m
+Author: Efrem's phone <BarefootEfrem@gmail.com>
+Date:   Mon Feb 27 08:45:36 2017 -0800
+
+    changes timeouts and creates endpoint for database reset
+
+[33mcommit e8163d94d60c02b7f81cec5df728b4973aba8d93[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Feb 25 15:37:18 2017 -0800
+
+    updates settings
+
+[33mcommit d0c9e0da2ca11ffbd1f3f67ff7f363c4f8205fb0[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Feb 25 15:35:44 2017 -0800
+
+    changes some settings
+
+[33mcommit 802395bed38aafab35c128f606d91b87fd972c24[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Feb 25 13:23:22 2017 -0800
+
+    updates styling a bit
+
+[33mcommit 9b928b1207f6414bcc702d7f8e9ead9b9e5ca3cb[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Feb 25 13:16:59 2017 -0800
+
+    doesn't load googleapis if OFFLINE
+
+[33mcommit e39326824fa71273a412bd4a15697449ab732e32[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Feb 25 13:05:13 2017 -0800
+
+    fixes z-index issue with DotLayer
+
+[33mcommit 78187f0f80882925f14200020e52797241a2e846[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Feb 25 10:42:56 2017 -0800
+
+    optimizes onDrawLayer a little bit
+
+[33mcommit 3b9b4e5de5eda58b3ddc1ba515a43bbc66fcad56[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Feb 24 22:03:05 2017 -0800
+
+    oops.  fixed typo
+
+[33mcommit 541e11ec744ac0e3b542d6a9e9a4156efe158469[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Feb 24 18:46:38 2017 -0800
+
+    less verbose
+
+[33mcommit b5b75ac6820b19f3798a69a082de5d6e3959d971[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Feb 24 18:41:41 2017 -0800
+
+    fixes some bug for now
+
+[33mcommit 64094758382789367e4cfea291ea2b1e6c9c21b5[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Feb 24 18:38:58 2017 -0800
+
+    fixes freezing dots
+
+[33mcommit b9bedc140c951fd5783e782f19fc3796246b847c[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Feb 24 17:54:24 2017 -0800
+
+    fixs
+
+[33mcommit e67e0361162ad407b91ead9338b5e8b7111d5f87[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Feb 24 17:39:27 2017 -0800
+
+    changes some settings
+
+[33mcommit 93fc0df10e8ebd7ac45a0d1fff584bd2aab7ac13[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Feb 24 17:00:26 2017 -0800
+
+    some fixes. more to come.
+
+[33mcommit a39a427692f5deef65253e64924c0309ba0decbd[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Feb 24 13:53:55 2017 -0800
+
+    updates main.js
+
+[33mcommit 48bf8a52e644b930b5bef52349c9d2eee65e44d6[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Feb 24 13:48:47 2017 -0800
+
+    adds some fixes
+
+[33mcommit a5a44535196d40b3dab4149bb32e59eae34c4538[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Feb 24 11:40:26 2017 -0800
+
+    fixes drawlayer in canvaslayer.js for if there is no map
+
+[33mcommit 8d7cf0dd8f9e1bccc0ed263304c98b94cd040005[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Feb 24 11:26:27 2017 -0800
+
+    updates admin.html
+
+[33mcommit 512cfd93a079f730cb119cce1f702571b5e6a2ed[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Feb 24 11:09:21 2017 -0800
+
+    fixes admin (users) view with better datatable use
+
+[33mcommit 7fdbc47f677bc2c26b309a393504ec7c53a09a86[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Feb 23 16:20:53 2017 -0800
+
+    a few cosmetic fixes
+
+[33mcommit 176f09193aea4ca39ddecb6b6ba0264d70c2e028[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Feb 23 15:36:59 2017 -0800
+
+    makes Flask-Assets settings depend on running environment
+
+[33mcommit 0cc70d94167ab158a6e3d8c3b0a5be235f24a1db[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Feb 23 14:13:28 2017 -0800
+
+    fixes flumbuxory
+
+[33mcommit 0979e527c27f1176d8b31411267e3d9964659830[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Feb 22 17:30:09 2017 -0800
+
+    cosmetic fix
+
+[33mcommit 2e581e4031aaa10beb9d9579420db4cf33bac050[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Feb 22 17:20:50 2017 -0800
+
+    web-assets auto-build disabled
+
+[33mcommit 23e50fdc2415f14dd311427b11fda66483409046[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Feb 22 16:52:30 2017 -0800
+
+    gets rid of flask-assets caching and auto-build
+
+[33mcommit d9fd28a56e524df36e328f060e02940673a9f4ef[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Feb 22 12:03:12 2017 -0800
+
+    a few fixes
+
+[33mcommit cc59371ce5e52ec6f27956a84730f7ad151c3282[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Feb 22 02:33:53 2017 -0800
+
+    fixes
+
+[33mcommit 573db830bf15aa7e5705b6c2d27d1d79b73cec3a[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Feb 22 02:26:39 2017 -0800
+
+    fixes
+
+[33mcommit b9938fcb155567d2ab274a430614790311c48ca1[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Feb 22 02:19:54 2017 -0800
+
+    oops
+
+[33mcommit aa0b6e38ecdb467f26c5d8ed2a83c70afbe07401[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Feb 22 01:44:31 2017 -0800
+
+    adds event handler to pause animation while map moves
+
+[33mcommit 22b42ca0df8490b7bfe88ebfb14c8d5bf96f0011[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Feb 22 01:00:04 2017 -0800
+
+    implements otlayer as class
+
+[33mcommit d77a86e5e0ec9d0dafea48722ece946e2b4f728d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Feb 21 22:40:08 2017 -0800
+
+    minor fixes
+
+[33mcommit 517e8970dce67414ad5e2a9a8ef2317b31f46567[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Feb 21 21:32:29 2017 -0800
+
+    minor fixes
+
+[33mcommit 08e09ac6ec57206628922a10704292a462f93c94[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Feb 21 19:20:11 2017 -0800
+
+    added a bit of detail to logging
+
+[33mcommit 23fd9d3ae3ac6f945e82b544e9b7ba84cd360ff0[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Feb 20 16:42:03 2017 -0800
+
+    varies dot constants (speed/delay) with zoom better.
+
+[33mcommit cbae2cb9c8931ed187848386b90e92590d0be31c[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Feb 19 22:51:58 2017 -0800
+
+    changes file name
+
+[33mcommit e89c02f80e014d9f7ee9042b79e90a3a93168039[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Feb 19 13:24:45 2017 -0800
+
+    adds .webassets-cache to .gitignore
+
+[33mcommit ef87098fb374913dac13ed2434dbf4fc19e3e0c2[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Feb 19 13:20:42 2017 -0800
+
+    brings dots to front when done rendering
+
+[33mcommit 6d93b5c389a40b0b80ed12de3e0bde92a43ba922[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Feb 19 13:14:49 2017 -0800
+
+    fixes datatables.css
+
+[33mcommit fb5fce4ea846548f28d49e5dd38836bd9ac090e7[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Feb 19 12:53:51 2017 -0800
+
+    adds message
+
+[33mcommit af6648e1ad28f707adda253d777e8298bfdd2920[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Feb 19 12:42:52 2017 -0800
+
+    upgrade to leaflet 1.0.3
+
+[33mcommit 09a31fb3c0acc20769237c9748bc66636b5ded27[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Feb 19 12:07:11 2017 -0800
+
+    separates out dotlayer defs
+
+[33mcommit 75ce0e9a91e98dd8a8c09fb544b1a35ac3b1473c[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Feb 19 11:46:53 2017 -0800
+
+    separates out dotLayer.js
+
+[33mcommit dc48d4e0e2d4684403f3b924e6aa77e2c1bae75e[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Feb 19 10:51:51 2017 -0800
+
+    slightly better fps readout
+
+[33mcommit f3b1d9ba8637448daa51c00860c1a55e66e4d0b4[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Feb 19 10:45:14 2017 -0800
+
+    separates out L.Control.fps
+
+[33mcommit 2d2a9f64303b6131f2adafb394d74b0f10a4e944[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Feb 19 10:05:18 2017 -0800
+
+    fix activity table layout
+
+[33mcommit 776968144d36f55f71db055e141c24f83aa3867a[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Feb 19 10:03:41 2017 -0800
+
+    gets rid of leaflet-ant-path
+
+[33mcommit e363a632dec90584425fadcd39b0e3657f3b3f5f[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Feb 18 20:38:59 2017 -0800
+
+    makes canvas plotting a little more efficient by eliminating segments where neither point is contained in view
+
+[33mcommit 0b794dbbb210e53a75ed9d514850987ad8672236[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Feb 18 19:05:52 2017 -0800
+
+    basic dots implementation
+
+[33mcommit c20ec2b7930a7921c3d6400ed7c6d2c481c6b431[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Feb 18 17:56:12 2017 -0800
+
+    different size for selected dots
+
+[33mcommit 6861149108b084746d7d1dc1cf296e707130ceae[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Feb 18 17:38:16 2017 -0800
+
+    very basic canvas dot-path implementation
+
+[33mcommit 92c1b52b71e3d20ba5b9a0383e1dab47bcc229a6[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Feb 18 15:24:45 2017 -0800
+
+    puts time data in stream
+
+[33mcommit b97233337267959b70573aabea5fab70167dde09[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Feb 18 15:09:48 2017 -0800
+
+    oops! fixes a big bug that prevents people from logging in
+
+[33mcommit 8900598ecd774d9385ae306b06936915718e6a14[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Feb 18 14:54:11 2017 -0800
+
+    fixes pause and resume a little bit
+
+[33mcommit fe5ea5adc335727aea1931d012bb58e139b9da5e[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Feb 18 14:49:46 2017 -0800
+
+    imports time but doesn't send that to client
+
+[33mcommit 454932fa6874b848b1a22abc0e7b36a62de53334[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Feb 17 18:28:53 2017 -0800
+
+    adds .webassets-cache to .gitignore
+
+[33mcommit 25523855e1721f1d6e5fb12586b14d52c9d1668f[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Feb 17 16:49:28 2017 -0800
+
+    better activity_table selection handling
+
+[33mcommit c802d1e556d4503c9451fe64ad464ea5f1c8f5f9[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Feb 17 13:16:23 2017 -0800
+
+    simplifies log output
+
+[33mcommit 27d7a9b6a80b604e48adb62bc7cbff552eba92e9[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Feb 15 20:43:55 2017 -0800
+
+    adds update_all method to Users
+
+[33mcommit a76e8f8e7516a3d7419a6b260f28267d8613f1b7[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Feb 15 19:21:37 2017 -0800
+
+    fixes a bug in Users.restore()
+
+[33mcommit bab6e042527908b2564be6c6f56f33d45074d3b1[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Feb 15 19:19:37 2017 -0800
+
+    adds access token back into profile. oops
+
+[33mcommit 0b51d72b079c676000bebb9cdb6d45d74d73ffa8[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Feb 15 16:57:59 2017 -0800
+
+    minor fix
+
+[33mcommit 43c749e2738330a0a821d724e093f86878b607ae[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Feb 15 16:57:02 2017 -0800
+
+    quick fix
+
+[33mcommit 6428fa11990d8ae2518ad9ee0282f4e72f3c04e1[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Feb 15 16:20:44 2017 -0800
+
+    fixes a few typos
+
+[33mcommit 96448fbf2e20c8c1aa36fe6e8160333899e526f1[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Feb 15 16:17:18 2017 -0800
+
+    temporarily disable email field
+
+[33mcommit f0eae099271b453898d1e689e219a621264227ae[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Feb 15 16:11:45 2017 -0800
+
+    adds email and better backup/restore for Users
+
+[33mcommit 1e219595938f56e3f6a62bc0abaa73722cfd6e6b[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Feb 15 11:14:59 2017 -0800
+
+    a few minor tweaks
+
+[33mcommit 969177ef6e74b69f681205238b1a4fec86cf1418[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Feb 11 21:58:19 2017 -0800
+
+    better error handling for build_index
+
+[33mcommit 5ca2b08417e5964bca21975390b320cb0d51086b[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Feb 10 00:05:39 2017 -0800
+
+    updated index explanation
+
+[33mcommit 52d1d539b7b6cf471ec3fba5b172539a6bb8e9d2[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Feb 9 23:48:21 2017 -0800
+
+    make logging updates less verbose
+
+[33mcommit 025489971b0c6f81887021ab49bda218a29e37dd[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Feb 9 21:33:21 2017 -0800
+
+    upgraded dependencies
+
+[33mcommit f18da75801cdccd5d7fba5aad4072f66ed23fcdc[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Feb 9 17:17:37 2017 -0800
+
+    maybe fixes update bug
+
+[33mcommit 8aa73b93c9f7033814fe801966ad890e6318e97d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Feb 9 15:39:01 2017 -0800
+
+    adds Indexes class and init method
+
+[33mcommit 830a913183bc815a428afc2ce1c22276be18c15c[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Feb 9 13:18:44 2017 -0800
+
+    adds more descriptive logging for delete index
+
+[33mcommit 9b5b7557b1ffb5b1b88a26f2c8403b1a298c0e22[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Feb 9 13:15:01 2017 -0800
+
+    adds logger info for updates
+
+[33mcommit 8d9a4b98aee37733ae86b91616321946da697128[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Feb 9 12:13:43 2017 -0800
+
+    improves error logging
+
+[33mcommit 893e44d0f9d2618e188c59f9179669a45dcb8db1[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Feb 9 12:07:40 2017 -0800
+
+    some UX changes
+
+[33mcommit 48a77b6b916636b5e12a9a7e1f82bdeec492eb6c[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Feb 8 20:53:29 2017 -0800
+
+    enables logging without debug mode
+
+[33mcommit 831a2a933bb5e81cc08206f593e956cd41c37234[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Feb 8 16:52:04 2017 -0800
+
+    fixes problem with localhost not working (removed sslify 'permanent')
+
+[33mcommit 26cd86b46772263f50485a78ee67201a4e61903f[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Feb 8 15:22:10 2017 -0800
+
+    fixed googler code
+
+[33mcommit 9ef75b072a5a18b086afb4d5f3996cc766fa3bde[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Feb 8 15:05:12 2017 -0800
+
+    deleted bad file
+
+[33mcommit 868ed3d041646bacf1733008a2372813c872fc6e[m
+Merge: ddc9154 9d4d477
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Feb 8 14:48:38 2017 -0800
+
+    Merge branch 'master' of github.com:ebrensi/heatflask
+
+[33mcommit ddc915437498c29dc53831bb451d49ebf78caf3d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Feb 8 14:33:02 2017 -0800
+
+    ???
+
+[33mcommit 9d4d477044e47bba8f3943edd0de2f6e42adb9f2[m
+Author: Efrem Rensi <ebrensi@users.noreply.github.com>
+Date:   Wed Feb 8 14:20:31 2017 -0800
+
+    fixes a typo
+
+[33mcommit aaa4f82cdab6ae47752e943551dc0cbebf5045be[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Feb 8 12:53:55 2017 -0800
+
+    allows for update of existing activities in index
+
+[33mcommit 447bd991ce39cea0b30161bf68fdd590dcdf4165[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Feb 8 11:24:42 2017 -0800
+
+    fixes typo
+
+[33mcommit 432b2fbfcaaeec07db16bc56922abb8a097681dd[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Feb 8 11:22:02 2017 -0800
+
+    more admin stuff
+
+[33mcommit bc6bffd002c3d45fac6b8dad25b2cf20f39dbddf[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Feb 8 11:18:30 2017 -0800
+
+    more admin stuff
+
+[33mcommit 262b03b7260dabe3d9019fc4547974a9f2ab1185[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Feb 8 11:10:20 2017 -0800
+
+    makes elapsed message accurately reflect actual rendering time
+
+[33mcommit 5fc5231194d12dc2d22ddb91ce700f4bcd472f50[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Feb 8 11:02:32 2017 -0800
+
+    moe admin fixes
+
+[33mcommit e09b3029a53919667a634d9c3249ff6412274b23[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Feb 8 10:54:30 2017 -0800
+
+    adds admin access to some views
+
+[33mcommit 6d699e3da29431a6f46785a607a31d9771e82fe9[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Feb 8 10:42:00 2017 -0800
+
+    fixes typo
+
+[33mcommit ca2e74d74623982bdb4a6cae3039d0300cdaca3c[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Feb 8 10:35:58 2017 -0800
+
+    fixes timezone stuff
+
+[33mcommit 10bbe8e51bc05963d21864fdd14d7ea89c499e69[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Feb 7 16:16:38 2017 -0800
+
+    hopefully fixes activities_list problem on mobile
+
+[33mcommit f8e35521e0117e268a1b64869f202aaa86d5a314[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Feb 7 16:03:02 2017 -0800
+
+    tries having build_index only context switch every 10 items
+
+[33mcommit 4a04a30f0b5e050c19ef26e877a3164aa5f1c328[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Feb 7 15:45:36 2017 -0800
+
+    improves build_index
+
+[33mcommit 63e5af608d459dc3a75782eaa712a8566cf24697[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Feb 7 14:28:32 2017 -0800
+
+    better subscription update handling.
+
+[33mcommit e21b24907ba6d3375946b124625ee0fcb91643df[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Feb 6 11:51:29 2017 -0800
+
+    get_index now returns a DataFrame
+
+[33mcommit 260ddea788010e76926c57f2a54d23e3642c68f3[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Feb 6 11:28:04 2017 -0800
+
+    better delete subscription handler
+
+[33mcommit 8eef97b3347b153aa32adecf871d836e7c9d4a56[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Feb 3 14:19:02 2017 -0800
+
+    fixes rebuild index
+
+[33mcommit 89a7a208b9fdbef43b2c72db8e50f901a94a4a05[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Feb 3 13:00:14 2017 -0800
+
+    eliminates limit from activities request
+
+[33mcommit 14c3aca989343318e2cdd51a00358587ad7c5858[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Feb 3 12:48:20 2017 -0800
+
+    slight fix for activities_sse
+
+[33mcommit 3c7a0153ce0197601b90696f7a54740af40e459d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Feb 3 11:46:16 2017 -0800
+
+    handles blank GET requests to webhook_callback
+
+[33mcommit f8107ccb18019faa55ddf40b2894a2d9385de73e[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Feb 3 11:24:19 2017 -0800
+
+    fixes webhooks ?
+
+[33mcommit 34a7b119d6039744d03c8de5930108028ee4e42c[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Feb 3 11:16:10 2017 -0800
+
+    adds some fucntionality to limit PostgreSQL connections
+
+[33mcommit a13a126510cd94b6aeb79744b5d34c3ace3960b4[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Feb 3 11:04:23 2017 -0800
+
+    updates flask-sqlalchemy settings
+
+[33mcommit da25c850f93939baa5ad45ba68c50f64ca2d9387[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Feb 3 11:03:19 2017 -0800
+
+    adds other sqlalchemy settings
+
+[33mcommit a58209af29b6d8425810bee1960532a083f2dc17[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Feb 3 10:59:09 2017 -0800
+
+    sets SQLALCHEMY_POOL_SIZE to limit open connections
+
+[33mcommit 91b012f5f92b481f55fc59429a76a34b74974454[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Feb 3 10:51:47 2017 -0800
+
+    fixes typo
+
+[33mcommit e963b97bcad88faa4c73dd96a87aa80188472849[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Feb 3 10:48:46 2017 -0800
+
+    fixes typo
+
+[33mcommit bca2a71ba7394a417123f1d9ac0cf48a0aeff12d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Feb 3 10:43:35 2017 -0800
+
+    adds tbody section to table views
+
+[33mcommit 6bd08f4beef4096e4b5b1aff18b296bdd6b1759b[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Feb 3 10:37:54 2017 -0800
+
+    adds webhooks view as a table
+
+[33mcommit 5a85063b4cba6f6cd216e66799a350a99be0733d[m
+Author: Efrem's phone <BarefootEfrem@gmail.com>
+Date:   Thu Feb 2 18:45:14 2017 -0800
+
+    fixes bug
+
+[33mcommit 83de3caa4a1c6a846c45275f17fd7e15ac0743b7[m
+Author: Efrem's phone <BarefootEfrem@gmail.com>
+Date:   Thu Feb 2 18:38:02 2017 -0800
+
+    disables webhook update
+
+[33mcommit 2c9bf03975ac3261ef8d847d4360dc5a06e453a8[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Feb 2 16:49:58 2017 -0800
+
+    return None from index update if user.get_activities raises an exception
+
+[33mcommit 5a98ec476822ec4cf99a8867ee825cfac2fa3561[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Feb 2 16:43:19 2017 -0800
+
+    fixes bug
+
+[33mcommit 46d7b87f52d38252c5291b859490a956f92e3eb2[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Feb 2 16:35:11 2017 -0800
+
+    fixes typo
+
+[33mcommit d493a4b4ce044cbf5cdf87135b029ee2743ad003[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Feb 2 16:30:11 2017 -0800
+
+    implements webhooks to update existing indexes
+
+[33mcommit bb6224bee0daacf49fd501e9cf871d5fe4afea96[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Feb 2 15:26:25 2017 -0800
+
+    fixes index update to not do anything if no index exists
+
+[33mcommit 61b80d1e44cf33207a10cf70eda42ca9e008b0e8[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Feb 2 14:38:42 2017 -0800
+
+    fixes bug
+
+[33mcommit e156732a6c4d8f14e4b362b703f6f2cc5ada30f9[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Feb 2 14:32:43 2017 -0800
+
+    uses stravalib update handler
+
+[33mcommit 386748c81618c025dfdbb5f2063e6a289fd087a0[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Feb 2 14:05:16 2017 -0800
+
+    makes webhooks logging less verbose
+
+[33mcommit 480907257601e07c0e1cf30f1665fb95bc8f38b1[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Feb 2 13:24:25 2017 -0800
+
+    more webhook fixes
+
+[33mcommit fbf1376fa6eadc6bbecd0947029b9ce3c22083de[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Feb 2 12:31:45 2017 -0800
+
+    more fixes
+
+[33mcommit a246dd0369966da91dc03f53f3dbc5d69fc67c2d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Feb 2 12:23:09 2017 -0800
+
+    more fixes to subscription callback code
+
+[33mcommit 710adb1e46212b5d5c393a66d07b8ff4c7b1e3e9[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Feb 2 12:13:13 2017 -0800
+
+    better logging for subscription test
+
+[33mcommit e4a7c248e3e263304bc486077139458477a38cd7[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Feb 2 11:43:14 2017 -0800
+
+    temporarily sqitching to debug mode for subscription testing
+
+[33mcommit b16edd854ebf0403121027d3bbc236174b4aa23e[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Feb 1 23:44:49 2017 -0800
+
+    maybe fixes subscription method
+
+[33mcommit 855cbce10929a4d62923887b06bf5d6d0e56438f[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Feb 1 23:21:58 2017 -0800
+
+    maybe fixes subscription method
+
+[33mcommit a15e3a007fafc56f77fd63c78bc461dabcc0dcbd[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Feb 1 18:19:47 2017 -0800
+
+    hopefully fixes webhook callback bug and introduces better error logging for activity stream import
+
+[33mcommit c3df3dd4b6451f88f39b2ac43438a60c421db225[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Feb 1 14:44:28 2017 -0800
+
+    fixes webhook bugs
+
+[33mcommit 8ae7a3a6ca19a8d5dc41c87d6a8da2e5df1e9305[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Feb 1 14:30:43 2017 -0800
+
+    adds basic Strava webhooks functionality
+
+[33mcommit 93282e8a83846cef147d3503ca2d3c169c588627[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Jan 31 18:03:12 2017 -0800
+
+    fixes index build bug
+
+[33mcommit 1d0bcc0d2f629615caf397f9c692057c8134d420[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Jan 31 17:38:31 2017 -0800
+
+    some changes to indexing implementation
+
+[33mcommit b9c8bdbdce176ce7a53313c1504ef871e91dae90[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Jan 30 12:04:04 2017 -0800
+
+    moves update activity index into its own method
+
+[33mcommit 22ba96612bff3df62647fc9e5acf5b9cb7c8bd19[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Jan 30 09:59:11 2017 -0800
+
+    makes table views more responsive
+
+[33mcommit cfde90218de7106094ec4f54cc70c4c749dc4ccb[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Jan 30 09:46:21 2017 -0800
+
+    sets renderer clip padding to 0
+
+[33mcommit 080cf97283d3e8f084277ee23f34f81ffa187994[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Jan 29 19:00:55 2017 -0800
+
+    temporarily disables server-side bounds construction
+
+[33mcommit 0ea399c132d58523c03fdb109f56c20cc25b0811[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Jan 29 18:55:18 2017 -0800
+
+    never mind
+
+[33mcommit 0925f2c3c346cec52df6b4dfe5048cd31c618965[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Jan 29 18:54:07 2017 -0800
+
+    adds time to activity stream
+
+[33mcommit 6dd15b225e240200fd31b57eed82016b9b903543[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Jan 29 18:50:24 2017 -0800
+
+    no bound recctangle on select
+
+[33mcommit 9798f495a8a90af5f8621ef2307c7d8903d747c7[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Jan 29 18:44:37 2017 -0800
+
+    adds bounds field to server-side activity storage
+
+[33mcommit 8fcf1cce10886af198f620f58027248fac9dfe4a[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Jan 25 23:37:30 2017 -0800
+
+    adds basic_table assets for table views
+
+[33mcommit 6b75398ef0fe9b3dc122bb8ffd34e7ee22b9b547[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Jan 25 15:53:46 2017 -0800
+
+    oops.  fixed typo.
+
+[33mcommit 795892f91534ba809b736da701e0078a68dd46d3[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Jan 25 15:50:41 2017 -0800
+
+    makes EventLogger.init() copy all events from old history as default
+
+[33mcommit 57c0e33509654aaf648c760477982d5f5aedf509[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Jan 25 13:50:09 2017 -0800
+
+    chages 'dist' column name to 'km'
+
+[33mcommit 4338d202a3a317a08d4ac7cdda5cc33983569ad8[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Jan 25 05:05:45 2017 -0800
+
+    changes default number of activities to 10
+
+[33mcommit 56991dc77375aae2aa6312b71dc604c5feb9555f[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Jan 25 05:02:58 2017 -0800
+
+    fixes bug introduced by accidentally deleting some code in splash()
+
+[33mcommit a809a006de88c143bba705116fa0c0a26a6f0292[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Jan 24 22:48:22 2017 -0800
+
+    adds googler handler
+
+[33mcommit ae0b11fdea9923f0d49725c78d41088813249e2d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Jan 24 20:08:38 2017 -0800
+
+    cosmetic fixes
+
+[33mcommit c37b8cd2f6960771ab2c1901830d5ed4e430a3a0[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Jan 24 19:56:32 2017 -0800
+
+    cosmetic changes
+
+[33mcommit 94eca550031358df5e3418ebfa2fc4e94c475ae3[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Jan 24 17:57:27 2017 -0800
+
+    improves history view
+
+[33mcommit f09e71f91a5ad7da5628e82e695097b9bcc7ff68[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Jan 24 17:38:17 2017 -0800
+
+    improves activities list
+
+[33mcommit 5c39406c64a84c4a75b96a5f57bec8eee995e4fc[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Jan 24 17:00:07 2017 -0800
+
+    disables settings for non admin
+
+[33mcommit e845a81d352f37a90de971e15edbe23ff9436caa[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Jan 24 16:57:54 2017 -0800
+
+    all tables converted to dataTables
+
+[33mcommit db783ea913079cea65bcd71b6a702e790720c1d2[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Jan 24 16:09:42 2017 -0800
+
+    starts conversion of admin, user, activities views to datatables
+
+[33mcommit de4b8becf368ecb528f19804d36a9b4916b83d81[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Jan 24 00:00:40 2017 -0800
+
+    adds options settings but they don't work yet
+
+[33mcommit d34289438a5e65bb459d5f019f204037ec85ca83[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Jan 23 22:57:38 2017 -0800
+
+    fixes progress bar in msgbox
+
+[33mcommit 9263ea832d582592a45cd1b34e12f00234d1cccc[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Jan 19 11:47:30 2017 -0800
+
+    table header names defined in script rather than dom
+
+[33mcommit 243b0d588ca2e30d91425c43b774145edbe605b3[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Jan 19 11:28:16 2017 -0800
+
+    new version of datatables
+
+[33mcommit f022eaa3ddb7d6cf5f4f34190acdf8eec70ffcdb[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Jan 19 02:33:03 2017 -0800
+
+    adds Strava links to activity table
+
+[33mcommit 1538503a6d5230f2c9e6e34cfd6ddce489d3206b[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Jan 19 01:14:34 2017 -0800
+
+    updates default colors
+
+[33mcommit 8312c33bc17d792ada727c0b7cb7fa0e6f299c7d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Jan 19 01:03:05 2017 -0800
+
+    scales velocity logarithmically
+
+[33mcommit 52ae8146bb80450a78e16597887e0df1e12d20ec[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Jan 19 00:14:49 2017 -0800
+
+    trying new defaults
+
+[33mcommit 6e9b1ce532eeab26e76fcec4f3eb9e34fddae68d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Jan 19 00:04:01 2017 -0800
+
+    replicates paused quality in child views
+
+[33mcommit 18b36ea43121c6fe98a2a20abf3f3acc9c1cfc51[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Jan 18 23:30:42 2017 -0800
+
+    updates default user view
+
+[33mcommit 2f373a3dd549a23766646dde224b1a3afd18843e[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Jan 18 21:42:20 2017 -0800
+
+    fixes empty selection bug
+
+[33mcommit e9e15a7faf3af638d76f8eb10cee7bc5d0b17289[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Jan 18 21:18:00 2017 -0800
+
+    adds pause and fixes id selecion link
+
+[33mcommit 3a5fc0ebeae7a73645fd7123370195fcb2774a91[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Jan 18 18:22:53 2017 -0800
+
+    adds play and resume buttons
+
+[33mcommit 1514103fd785c0b01f43c464948dd2ef424c0828[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Jan 18 16:29:19 2017 -0800
+
+    better robots.txt event logger
+
+[33mcommit 3d2c18c6daba66f43e2020dc326091a063285cab[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Jan 18 16:05:15 2017 -0800
+
+    adds button to render selected activities in new tab/window
+
+[33mcommit 7cd4cc9929065a748add56c71eaf50f96f90a0d4[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Jan 18 12:02:12 2017 -0800
+
+    adds selectedIDs method
+
+[33mcommit 27b9b2ccd8baae2ecf91995825112de28a925a05[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Jan 18 01:09:11 2017 -0800
+
+    fixes bug with setting OFFLINE variable in template
+
+[33mcommit b835f94fed4554aee749fc55fcb8e071c8d2c4c2[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Jan 18 00:47:06 2017 -0800
+
+    fixes bug with detached paths
+
+[33mcommit 38c9853be625bf5ddbfa61535e68b226e6d61b13[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Jan 18 00:01:45 2017 -0800
+
+    fixes a bunch of stuff
+
+[33mcommit 29733afa5ff26a2c282f31ee5ee4c7ee850b4500[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Jan 16 13:20:58 2017 -0800
+
+    select from table and map both work
+
+[33mcommit 917761f9697607fcd342e5765a331e4c6fa9d156[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Jan 16 12:31:48 2017 -0800
+
+    cross selection mostly works
+
+[33mcommit 98c750569574be1fb2e21c59921529d79263aded[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Jan 16 01:07:26 2017 -0800
+
+    basic activity table running
+
+[33mcommit 82f32a86f778eebd8b4b7efc1b34404bcdb7fc06[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Jan 15 17:02:42 2017 -0800
+
+    adds basic activity table to sidebar tab
+
+[33mcommit 45d4784d2181a5a3ef251eda008d458947aea2ed[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Jan 15 14:06:37 2017 -0800
+
+    upgrades leaflet-sidebar and makes web-asset for splash page
+
+[33mcommit 659905516bcdc1b30ed8cd0329d0ec0329a77102[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Jan 15 13:40:44 2017 -0800
+
+    improves html and css formatting
+
+[33mcommit 29a9cba2992b09f27377df40b105d71c80e50305[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Jan 15 10:06:56 2017 -0800
+
+    log requests for robots.txt
+
+[33mcommit 911514f82c5f97945423a9e0c077adcf541b77fe[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Jan 15 10:03:37 2017 -0800
+
+    remove contact me message on splash
+
+[33mcommit dc9e77953777759807b75d11582ccbf65140c5df[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Jan 13 19:41:26 2017 -0800
+
+    rename user.profile() method to user.info() to avoid name conflict
+
+[33mcommit 89c0b4513c3ef80fe1b33e44e6e222f537f8305c[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Jan 13 13:16:29 2017 -0800
+
+    changes permissions a bit.
+
+[33mcommit ad8ae39f8b240f365bcf0c089970018e44723990[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Jan 13 09:46:57 2017 -0800
+
+    defines more activity colors
+
+[33mcommit 12819857de728bd6903b1f4ac1456c2edd2dad80[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Jan 12 22:47:13 2017 -0800
+
+    adds validate method to Users
+
+[33mcommit 1a4257c5c6eab27f2c04a956edb28a9b07d26d69[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Jan 12 14:21:37 2017 -0800
+
+    outputs event datetimes in PST. will make this work for any locality later
+
+[33mcommit 1c58b10f75f7b37329db418083c9028a7d283ea1[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Jan 12 13:43:39 2017 -0800
+
+    better user profile
+
+[33mcommit 5d7500989e2b9f4bde35626c57c8fbaed2bce2a1[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Jan 12 13:22:10 2017 -0800
+
+    adds some admin functionality
+
+[33mcommit 559f9a9094208b3006158ea6b63593ee3c7e2933[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Jan 11 10:55:36 2017 -0800
+
+    adds handler for empty activities_list
+
+[33mcommit 3357717411db0b9f23b0652e9045adaa00e89651[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Jan 8 22:28:58 2017 -0800
+
+    fixes some bugs
+
+[33mcommit 051031d521aed38ea635e1f5918f186c97aa7d7f[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Jan 8 21:13:22 2017 -0800
+
+    fixes bug introduced by variable name change
+
+[33mcommit d5cfde934aca5a0b6beeefa4a428e1f436aa0958[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Jan 6 14:13:45 2017 -0800
+
+    better event logging
+
+[33mcommit 79e3f7dc1045846efe6a178adffe521e8580eee5[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Jan 6 12:36:00 2017 -0800
+
+    better event logging
+
+[33mcommit 2aebec00081ea3c1cba6e14fbc77bf71ab44e451[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Jan 6 11:40:43 2017 -0800
+
+    better ip address
+
+[33mcommit 70854f5576d5d7c0fe8000922d5ec1c2130a8699[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Jan 6 11:24:16 2017 -0800
+
+    event log code is dismal but works
+
+[33mcommit a70716815ca45fd338bb09d2cbbb0e4252788321[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Jan 6 11:08:15 2017 -0800
+
+    beefs up event log a bit
+
+[33mcommit 03dfa2ffb43412145c9e1af775461bf33f4dd18d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Jan 6 08:55:14 2017 -0800
+
+    fixes typo
+
+[33mcommit 96eff37b8151e0301fcea962e28979750f7271e6[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Jan 6 01:31:01 2017 -0800
+
+    re-works history/event-logger.  now it has its own class and is stored in mongo
+
+[33mcommit 719438852947a8dbcb3a34ca9a42a14b3c1d3f4f[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Jan 5 14:58:23 2017 -0800
+
+    adds is_admin() method to User
+
+[33mcommit 4d5ab38558d1707cfc9983036cf3fab0db12175b[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Jan 5 13:02:28 2017 -0800
+
+    adds decorator for admin-only views
+
+[33mcommit 9e3c03bacb1862d93ec46b964764ceb6e5773d9c[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Jan 4 17:15:17 2017 -0800
+
+    fixes activities list view
+
+[33mcommit 1d46f68d5743a3945619592aa2be9b8cb1b3fe20[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Jan 4 08:28:59 2017 -0800
+
+    adds join to make sure threads finish and puts pool definition in generator
+
+[33mcommit e7cff5af31d24d48d02b880e73fabfa448169028[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Jan 4 07:38:13 2017 -0800
+
+    adds stopIteration at end of getdata to hopefully fix idle connection
+
+[33mcommit 603369b1ce3f256cd4858a3dcd5868caf1437158[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Jan 4 00:26:50 2017 -0800
+
+    adds progress bar
+
+[33mcommit e741cb6f8bccf0059876af5148adbf9f19fc6166[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Jan 3 21:07:04 2017 -0800
+
+    async imports of activity streams
+
+[33mcommit 6a42f703f302497575933bb175fc5bb01c6dce2c[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Jan 3 18:42:25 2017 -0800
+
+    cosmetic fix
+
+[33mcommit 07dfddea03e3b5feb288d3c44bb481be689bcb92[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Jan 3 16:28:46 2017 -0800
+
+    fixes typo
+
+[33mcommit 9862446fcfb28784049ef5a82a4a70a11e94a377[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Jan 3 16:23:48 2017 -0800
+
+    no comment
+
+[33mcommit b39ef6ba7294a8ff95226fe204d6182526d967c8[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Jan 3 16:09:05 2017 -0800
+
+    adds new user methods
+
+[33mcommit 36e6d86d7b84ac1f0d83a0ec1722cba3790becdd[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Jan 3 16:08:20 2017 -0800
+
+    chages user schema and adds a few new user methods
+
+[33mcommit d6a78a172622b10f3059de203f1499774e7d2e0c[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Jan 3 12:24:28 2017 -0800
+
+    moves explicit db_sql references to models.py (abstracts app from Postgres)
+
+[33mcommit d77ae298cb14e49fa0546f41e575f2c0f9464de5[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Jan 3 11:54:39 2017 -0800
+
+    fixes bug errout function
+
+[33mcommit f8d46eb0754174bb25736b470607aa176479545d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Jan 3 10:46:03 2017 -0800
+
+    cosmetic fixes
+
+[33mcommit c0aa8ad1437c612b36b5d3adab5bab51e1cca3b1[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Dec 31 13:49:28 2016 -0800
+
+    shows speed/pace in activity pop-up
+
+[33mcommit 8681bcfaeea48d247b35398beb8477d45100c8e3[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Dec 31 13:46:42 2016 -0800
+
+    shows speed/pace in activity pop-up
+
+[33mcommit fad8f84573ecc2594c1e34804d113da02bd090e0[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Dec 31 12:46:54 2016 -0800
+
+    fixes abort button
+
+[33mcommit cdbb2bff5151442d2c33a400ab307ce1b115968b[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Dec 30 18:24:54 2016 -0800
+
+    cleans up config.py a bit
+
+[33mcommit 99fc0d5e97c171eae2786d070a621483f2922dc5[m
+Merge: fcdbd6e 74945c9
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Dec 30 18:22:06 2016 -0800
+
+    Merge branch 'master' of github.com:ebrensi/heatflask
+
+[33mcommit fcdbd6e27e54617270cda3a109f040fcea5e0639[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Dec 30 18:20:17 2016 -0800
+
+    client-side: makes return (enter) key call the render function
+
+[33mcommit b252f1071535f0dcabe0ed1ab9be713dcb0bda8a[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Dec 30 18:09:25 2016 -0800
+
+    puts mongodb access in try-exception clauses and fixes mongo activity access
+
+[33mcommit 132df31cde34204da7dcc1e4b72ad2c3b48d67c3[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Dec 30 16:54:33 2016 -0800
+
+    change db_mongo name to mongodb
+
+[33mcommit 74945c9b2a98effb43282ab6b91c45215ba42f4f[m
+Author: Efrem's phone <BarefootEfrem@gmail.com>
+Date:   Thu Dec 29 17:46:24 2016 -0800
+
+    only store selected activity streams
+
+[33mcommit 18ff30440f5def418e060c3d7442e6fbb4c85714[m
+Author: Efrem's phone <BarefootEfrem@gmail.com>
+Date:   Thu Dec 29 16:24:38 2016 -0800
+
+    make bike rides blue again!
+
+[33mcommit e5d2830250e944eaf1e231814f2be39cc9235fa9[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Dec 29 12:27:12 2016 -0800
+
+    eliminates flask_caching altogether
+
+[33mcommit 82eca3e0cdbe77bb5048cd8d020292d7d49afc09[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Dec 29 12:25:48 2016 -0800
+
+    moves more activity functionality to Activity class
+
+[33mcommit 5b0209510282d9738b4e8effc36f026132cceafa[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Dec 29 11:25:56 2016 -0800
+
+    moves more activity import fuctionality to Activity class
+
+[33mcommit 4c16d3a6c62f92445646a8c0f6eabf3c5eeb3706[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Dec 29 10:55:38 2016 -0800
+
+    moves import streams to Activity class
+
+[33mcommit 6ef13d5c06a05760d6f59a516782a16826c3d1ce[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Dec 28 17:42:12 2016 -0800
+
+    index in detached User instance and mongoDB
+
+[33mcommit 16ed2408684fc6733208279a9d738c51103051e3[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Dec 28 17:19:26 2016 -0800
+
+    adds Binary wrapper to msgpacked index
+
+[33mcommit bd8347a333f18d03d7f0a42a01528ac1fe1e9082[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Dec 28 14:56:34 2016 -0800
+
+    no longer using flask_caching. Direct Redis caching instead
+
+[33mcommit 935413948cac417d32ba7e4bb9e3077ddc57cdaf[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Dec 28 14:47:24 2016 -0800
+
+    no longer uses flask_cache for indexing flag
+
+[33mcommit 73a7011ba0519813f502eec52fe9b86d220b968b[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Dec 28 14:44:03 2016 -0800
+
+    moves index storage to MongoDB and user instance
+
+[33mcommit 626e84227757499c25f8a53fdce712efa1541628[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Dec 28 12:27:43 2016 -0800
+
+    chages timestamp to utc
+
+[33mcommit e700cef59e182f4d11d45da2b05ed33bd2e0af82[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Dec 28 12:00:27 2016 -0800
+
+    change some names
+
+[33mcommit 855ad9072d99414a91fa458be81ec2a6186f5bb4[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Dec 28 11:42:49 2016 -0800
+
+    changes some output messages
+
+[33mcommit 068ec294e0bfe2b0251d1301846aba950f832501[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Dec 28 11:26:50 2016 -0800
+
+    changes demo view
+
+[33mcommit 1bc31631c6285b772937daf49b6fff08c02498cc[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Dec 28 11:18:41 2016 -0800
+
+    changes User class name, adds backup Users view
+
+[33mcommit d3369f85cd952220d089b4459537da9147285638[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Dec 27 22:47:54 2016 -0800
+
+    adds new fields to from_access_token method
+
+[33mcommit e36bf73b4c1db1d08d073239cf7d36ef7c7ac851[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Dec 27 22:16:17 2016 -0800
+
+    puts monkey patching at top of heatmapp
+
+[33mcommit b65bc25ebe845fcaec809817536893fa131e56d5[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Dec 27 22:08:08 2016 -0800
+
+    adds render specs array
+
+[33mcommit 6c73162b5285a069ce294b453de2dfc4ae39e2fa[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Dec 27 21:35:24 2016 -0800
+
+    adds new User fields
+
+[33mcommit bbcc9eff433b1e07a117aa6e55d038765db8b468[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Dec 27 16:16:06 2016 -0800
+
+    adds rudimentary event log
+
+[33mcommit 5bf5d65901cb38a8c6b6123e932f1409b9827f8f[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Dec 27 08:47:54 2016 -0800
+
+    cleans up code a bit
+
+[33mcommit af4540ff88a10e1529a354720fc7d036c04233c5[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Dec 27 08:25:16 2016 -0800
+
+    revises developer notes
+
+[33mcommit 71d965abd614b7ad6d32bb64e1f7e5f6b1f63159[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Dec 27 07:43:22 2016 -0800
+
+    better progress indication
+
+[33mcommit 3ae9dd0a8453b6d4ae48920b051fb276cdb5b7b5[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Dec 25 12:22:28 2016 -0800
+
+    fixes error in time display
+
+[33mcommit 8b239d871771ffeabc351eb75249ac67c5ef6b3b[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Dec 25 12:16:38 2016 -0800
+
+    hopefuly fixes user caching issue
+
+[33mcommit 0d01fc48bb1e3946f6be1e48b43f1480ac0b7606[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Dec 25 11:50:34 2016 -0800
+
+    using cPickle for user caching instead of custom serialize
+
+[33mcommit 070f0dc7ad9b0dfbe9251248e83312d5ddaefde6[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Dec 24 15:04:33 2016 -0800
+
+    alternative user caching hopefully works
+
+[33mcommit c1810f11c9842c020101d2b8c85c12a83c3c0353[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Dec 24 06:24:13 2016 -0800
+
+    adds custom serialization for User object
+
+[33mcommit a38c6f48778adefbb4cae6ac66d3113bb03fcdc1[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Dec 23 14:01:28 2016 -0800
+
+    uses mongodb and redis for activity storage, with new activity class
+
+[33mcommit b8ae7127647ebfc45ff060710a2f9d1f227e3521[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Dec 23 00:41:12 2016 -0800
+
+    hopefully fixes cache bug
+
+[33mcommit 6710f7dd38b4563f7cda6fa8cd9a4b7ba5a3834e[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Dec 23 00:24:03 2016 -0800
+
+    adds REDIS_CACHE_URL back while I figure this bug out
+
+[33mcommit 02311ce13448cac199410d235900a9270c8d4373[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Dec 23 00:02:11 2016 -0800
+
+    monogDB storage and direct redis cache implemented
+
+[33mcommit 2542aa9f657e53e0620f02bee4bbde3abd432f6f[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Dec 22 23:21:52 2016 -0800
+
+    moves activity storage to models and uses mongodb and redis directly
+
+[33mcommit b195835ad34d8d13ab667f3c427d5bba7b685ede[m
+Merge: 566f033 fe2e59b
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Dec 22 18:50:44 2016 -0800
+
+    Merge branch 'master' into mongo
+
+[33mcommit fe2e59b346dbb8db5dd0a54db4d34c1bc8ea125c[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Dec 22 18:50:07 2016 -0800
+
+    fixes index rebuild bug
+
+[33mcommit 2f5398ba41e2c842f7e0c8376096aad8fa8885e7[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Dec 22 18:14:55 2016 -0800
+
+    fixes index rebuild function
+
+[33mcommit 566f0336522ff88cc1dc82a97ba3aae9aed54d54[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Dec 22 18:09:21 2016 -0800
+
+    adds get method to Activity
+
+[33mcommit 90b328222d793ede5b749849216a1840f23f1b6b[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Dec 22 14:08:51 2016 -0800
+
+    login from demo redirects to logged-in user's account
+
+[33mcommit 61a6b19cc785899792a4b71f7b66c76ecddc49ac[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Dec 21 19:31:44 2016 -0800
+
+    msgBox not showing for some reason. fix?
+
+[33mcommit d9bfe1e1b269ad7798341f783dd8d1cd769ae5b6[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Dec 21 19:21:18 2016 -0800
+
+    gets delete index working correctly
+
+[33mcommit e02b75463390f7051915908190c272823f6671a7[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Dec 21 18:21:55 2016 -0800
+
+    converts js var to let and const
+
+[33mcommit 73f37e3385770da9954e7fc3d9321dd94ab57aca[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Dec 21 17:46:52 2016 -0800
+
+    better error passing
+
+[33mcommit b2132bf4473d61259d55f86ff1be5d4a4ff819bb[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Dec 21 17:30:37 2016 -0800
+
+    cosmetic fixes
+
+[33mcommit 6cb8b818ca83bd9d263eb75fe0633893d8090aa6[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Dec 21 16:00:26 2016 -0800
+
+    fixes typo bug
+
+[33mcommit ebc96fea83fb542f6931f377b1caa81a0871ab13[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Dec 21 15:39:45 2016 -0800
+
+    combines index rebuild with activity list
+
+[33mcommit 59b42833bd9c84b7bd090431c3c95f89d5c33ad9[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Dec 21 14:42:53 2016 -0800
+
+    integrates index rebuild with activity list view.
+
+[33mcommit 7036268ea9d66fe7ac9c79e38545ed918aa90873[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Dec 21 14:08:24 2016 -0800
+
+    addresses null user in login manager
+
+[33mcommit 5bddd6626a5b704876fa329e3884793e62249687[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Dec 20 10:25:17 2016 -0800
+
+    redirects user to splash after logout
+
+[33mcommit afb6ff0eba4475ee85844a087cea67ad1b1175d3[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Dec 20 10:20:49 2016 -0800
+
+    cosmetic fixes
+
+[33mcommit 70a78163c6245e2cc1d5993aeed3664a997fc755[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Dec 20 08:33:33 2016 -0800
+
+    adds auto HTTPS (SSL) redirect via flask-ssl
+
+[33mcommit 13bd48b72c6036d7366e08da11dc4ed276fd128e[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Dec 20 08:30:12 2016 -0800
+
+    adds mongodb support
+
+[33mcommit 0878902113eb80cf73fad118183e7055688ce510[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Dec 19 22:24:21 2016 -0800
+
+    changes default view
+
+[33mcommit dd8059ebb4c3d783ca92c8b908262c6ef7123931[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Dec 19 22:17:19 2016 -0800
+
+    maybe fixes indexing message bug
+
+[33mcommit 67e197d0a4471432e9225ec171df7a21fe82c616[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Dec 19 10:36:49 2016 -0800
+
+    adjust flow consts
+
+[33mcommit ef858fc04ca852e182c42d6b4b9e0a5fc5aa2e79[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Dec 19 10:27:28 2016 -0800
+
+    implements speed-varying flow paths (average speed)
+
+[33mcommit 390e4cd1409a840ac6684dca0314d67034d4298d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Dec 19 09:27:45 2016 -0800
+
+    adds average_speed to index
+
+[33mcommit 0ca1430229988aedc4d5769e49c3b86b3f89421b[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Dec 18 15:20:16 2016 -0800
+
+    redirects to splash page after logout
+
+[33mcommit 2d5bd30dd88a4fc2262cc55c1dfe290f5e2b7204[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Dec 18 15:11:13 2016 -0800
+
+    updates config settings
+
+[33mcommit 3319b3d61cd46d706e6f5821115f40067187c7b6[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Dec 18 14:55:33 2016 -0800
+
+    cosmetic fix
+
+[33mcommit c38c9ba1888ee4e5c4e46b4afc5cd5b7eb39b291[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Dec 18 14:41:11 2016 -0800
+
+    makes some changes to ui
+
+[33mcommit d613d63305662adbced297e69b1d6838af2ee2e9[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Dec 17 12:13:31 2016 -0800
+
+    adds delete_index method to User
+
+[33mcommit a2f296fdc3fb6a53e610a19596cccfa324c9c285[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Dec 17 10:38:57 2016 -0800
+
+    hopefully fixes mouseout malfunction in microsoft IE and Edge
+
+[33mcommit ef629cb29370645ede7f8cdaa54b936612f10266[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Dec 17 10:05:58 2016 -0800
+
+    adds EventSource polyfill for edge and IE
+
+[33mcommit a58d26d50ccb5cf42d653f9474408f0b626d8b15[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Dec 17 10:03:09 2016 -0800
+
+    some quick fixes
+
+[33mcommit 5824fa3d4e5a1c0fb2ec736732c56d0672917488[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Dec 16 21:31:39 2016 -0800
+
+    adds latlng and velocity_smooth to output streams
+
+[33mcommit 788b2f741db94ae6a49b949ce1cccb87ce3c2987[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Dec 16 20:04:54 2016 -0800
+
+    adds color for 'virtualride' activity type
+
+[33mcommit 2c573d3b6ccef016be57e4d8493b5409597cb389[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Dec 16 09:49:44 2016 -0800
+
+    fixes case where user unregisters but doe
+
+[33mcommit dcd85f291f011b084381237ee4eb076afc9f7bb0[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Dec 15 22:01:24 2016 -0800
+
+    async indexing function no longer assumes user context
+
+[33mcommit bef2b217d50a591e0edb7c50baca9a0eb470d757[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Dec 15 18:21:44 2016 -0800
+
+    adds total_distance and elapsed_time back into index. fuck it.
+
+[33mcommit ccbe658b4591eaf4ca734cba67408281eb845786[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Dec 15 17:39:33 2016 -0800
+
+    adds some fixes to path hover/click functionality
+
+[33mcommit 66a03f3e4ead5ae621d8e2b1947d936f5fdaa033[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Dec 15 17:35:58 2016 -0800
+
+    disables client-side rate limiting for Strava API
+
+[33mcommit b67d3a7554e1f519b63d8d9e94499961ea4553cf[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Dec 15 15:50:39 2016 -0800
+
+    disables Strava client's rate-limiter
+
+[33mcommit bbb961661f82064691b15abfa32aa050c9f0902f[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Dec 14 15:43:40 2016 -0800
+
+    add text progress indicator
+
+[33mcommit baa5aafe37c486978edef4c24a6ae745c556d48d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Dec 14 13:40:36 2016 -0800
+
+    adds id selector functionality to index
+
+[33mcommit 4fbad72ce5049e3d5914dfbadd2de10838047370[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Dec 14 11:48:14 2016 -0800
+
+    adds checkbox option for path details
+
+[33mcommit d108aec6b60fecfb529187e480cd7bdd1a8079f3[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Dec 14 11:26:46 2016 -0800
+
+    adds popup identifiers to flow paths
+
+[33mcommit f7a5d651b08fa85a8f92029a7ff08c7576a5398b[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Dec 14 10:01:31 2016 -0800
+
+    further reduce index size by cutting out unused fields
+
+[33mcommit 48d9b548459371d839e0a684449e1be29cac984a[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Dec 14 09:40:41 2016 -0800
+
+    lengthens cache timeouts
+
+[33mcommit 33836a198233bc6cbe7d1135fd953247c7facb11[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Dec 14 09:35:05 2016 -0800
+
+    makes index a little smaller by making activity type a category
+
+[33mcommit 0f6fb99b23f6a62d9d7452fc6daa504f2d9bbf3f[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Dec 14 08:48:50 2016 -0800
+
+    fix typo
+
+[33mcommit cfaab7fe8ef08aa455e0ff210f8206ef7e513273[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Dec 13 20:49:25 2016 -0800
+
+    cleans up index a little
+
+[33mcommit ad726841ac680208e312b1f686a20a5a86b4189a[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Dec 13 19:10:29 2016 -0800
+
+    adds better admin view
+
+[33mcommit 48ad0151d7b1e9731dec6058cb8c7729f9020be7[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Dec 13 17:19:04 2016 -0800
+
+    adds explicit gevent context switches
+
+[33mcommit bbdb68a216e31933a2e445eaa2583214591e673d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Dec 13 17:18:01 2016 -0800
+
+    adds explicit gevent context switches
+
+[33mcommit a6a9fe6c8abf35f1f84a615e7574457fd03832fa[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Dec 13 09:08:00 2016 -0800
+
+    makes index data a little more compact
+
+[33mcommit 685717e2466532e97ca31a3cdd217a3bfd25ceeb[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Dec 12 20:21:30 2016 -0800
+
+    don't clear cache
+
+[33mcommit bd927d7cb2435c917901d198b3f45f0efbdf6877[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Dec 12 20:02:21 2016 -0800
+
+    fixes backwards index sorting
+
+[33mcommit 017ac76624e29859ce77d118d984961791f726b0[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Dec 12 20:01:25 2016 -0800
+
+    fixes backwards sorting of index
+
+[33mcommit b06848e3c7653453bc9350b38018ed4bc413c7ea[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Dec 12 20:00:03 2016 -0800
+
+    fixes backwards sorting of index
+
+[33mcommit 1a4a8c4c598162c47f79b784df2d3df039c7294f[m
+Merge: e1a0756 9fa2471
+Author: Efrem Rensi <ebrensi@users.noreply.github.com>
+Date:   Mon Dec 12 11:59:02 2016 -0800
+
+    Merge pull request #18 from ebrensi/fix
+    
+    takes msgpack encoding off of summaries
+
+[33mcommit 9fa24711a7bff9567cbdb90a34b5dd1a211c9482[m
+Author: Efrem's phone <BarefootEfrem@gmail.com>
+Date:   Mon Dec 12 11:55:59 2016 -0800
+
+    takes msgpack encoding off of summaries
+
+[33mcommit e1a07565fb2af1cdfb348dad2830361f3238fa5c[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Dec 12 09:50:04 2016 -0800
+
+    use msgpack for serializing redis-stored data
+
+[33mcommit 76908703eac74337b2a99388a5444dbd8c0e1c85[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Dec 12 08:39:16 2016 -0800
+
+    shortens TTL for caching until I figure out what is taking up so much memory
+
+[33mcommit 9c3592ad78f19b07ea70b2ae93561a4ed21a8998[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Dec 10 23:15:49 2016 -0800
+
+    cosmetic fixe
+
+[33mcommit b2aa30f91e67ce5adb2711fdc86c87720daebb89[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Dec 10 22:37:21 2016 -0800
+
+    cleans up activity index update code
+
+[33mcommit d228734ec103fdb504e00ee99d81164891bcfc09[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Dec 10 21:52:38 2016 -0800
+
+    fixes activity_index bug
+
+[33mcommit 3daddfead9c5920742ff6ccd4becc8e745d3e048[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Dec 10 18:23:20 2016 -0800
+
+    fixes typo
+
+[33mcommit ac48d4400c1283b62ff7f88a5248aab8f3b3cf09[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Dec 10 18:19:38 2016 -0800
+
+    takes activity index out of User instance
+
+[33mcommit 2e379d4868b83b501ab2d0e6f613012f0b7aeed4[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Dec 10 10:39:14 2016 -0800
+
+    fixes users enpoint
+
+[33mcommit 4de19f27b97db95623ddc7f9429b76b210877164[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Dec 10 10:06:41 2016 -0800
+
+    add exception handler for bad access token
+
+[33mcommit 751329bf114f04eeec14fe6fd1f43447ff4ecdf3[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Dec 9 14:37:06 2016 -0800
+
+    deletes some no longer used code
+
+[33mcommit ff32504940d673f704959ea288568a6fd7edefd7[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Dec 9 13:33:07 2016 -0800
+
+    fixes typo
+
+[33mcommit 477a9579d138965df1fb9022ce97a1595d458407[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Dec 9 13:23:49 2016 -0800
+
+    activities all stored NoSQL now
+
+[33mcommit e30da0a53d8c4ae02d7fd103c12b93b9a4aff65a[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Dec 9 13:15:19 2016 -0800
+
+    eliminates Activity model from db
+
+[33mcommit 6c522610558f8889bab4c58457dd14d7744f43be[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Dec 9 01:18:46 2016 -0800
+
+    disable clearing cache on build
+
+[33mcommit 28438569d79f6f30a8d11bf3218b6599ea77b587[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Dec 9 00:58:33 2016 -0800
+
+    disables render button while rendering and makes abort work correctly
+
+[33mcommit c14fe85d2e4b6e252b9918e8e301190036aea86f[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Dec 8 15:33:45 2016 -0800
+
+    gets rid of status box
+
+[33mcommit b56fc89ab8fffde439e6fd7fbfb482be376fc835[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Dec 8 15:29:29 2016 -0800
+
+    minimizes status window
+
+[33mcommit c7f894c9d75fcdd457137d2419f82d18934d9433[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Dec 8 15:24:07 2016 -0800
+
+    fix up status window
+
+[33mcommit 4154ec1996ba6cf7ce8bfaadf95c23c47161f83e[m
+Merge: 0a29c93 978fd8f
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Dec 8 15:07:02 2016 -0800
+
+    Merge branch 'staging'
+
+[33mcommit 978fd8f9eba1fdbbed3ae204bbc505a4c259c21d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Dec 8 15:01:42 2016 -0800
+
+    makes status window less obtrusive
+
+[33mcommit a1d956c619dcf6bcc9825b9ad4b13074e00a0b36[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Dec 8 14:57:13 2016 -0800
+
+    modifies status windo
+
+[33mcommit 0a29c93c65c61d8828ac83568cd93c886990e7fc[m
+Merge: 8a0a753 1dbf65b
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Dec 8 14:39:45 2016 -0800
+
+    Merge branch 'staging'
+
+[33mcommit 1dbf65b7e4360fe23b308580780fc2c8632507ce[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Dec 8 14:34:07 2016 -0800
+
+    adds better status indication
+
+[33mcommit f98e9b1eb413d38a024adec25fdc4db170b32eee[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Dec 8 14:23:38 2016 -0800
+
+    separates sse stop from render stop
+
+[33mcommit 7c43d8cb87a804e246c401fcd57a912f0d5c016d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Dec 8 13:47:59 2016 -0800
+
+    adds status message box
+
+[33mcommit a5a38ecf41a8a473f1cdcc8172b063083d637550[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Dec 8 12:34:48 2016 -0800
+
+    prevents user from rendering while activites are geetting indexed
+
+[33mcommit 8a0a753b61987f30ec07441032622c36dc2c32c2[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Dec 8 08:45:35 2016 -0800
+
+    disables activity_id selection for now
+
+[33mcommit 1a0ab19452ee2e8a58cebd9f8b692aab00d2f7f5[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Dec 7 17:47:58 2016 -0800
+
+    sets sqlalchemy to kill idle db connecctions after 10 minutes
+
+[33mcommit 1aecffc75f98f233cd046147b485e8db1ac742fd[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Dec 7 16:21:23 2016 -0800
+
+    trying full indexing on main branch (fingers crossed)
+
+[33mcommit 176c823e6f2270836c925dd25b675226aaec42dd[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Dec 7 15:53:46 2016 -0800
+
+    lengthens redis cache timeouts
+
+[33mcommit e784ba1c9e6a3e64439d90b8c612ef67fedd3dcc[m
+Merge: 2dc0543 164ae5d
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Dec 7 15:15:34 2016 -0800
+
+    Merge branch 'index' into staging
+
+[33mcommit 164ae5d4770ec7ade21ad442288aa85b03ff6031[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Dec 7 15:15:02 2016 -0800
+
+    implements background indexing and caching, but can be done better
+
+[33mcommit 953d9b1282ba0c07105264ba210a9bb8b59fd603[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Dec 7 12:19:37 2016 -0800
+
+    adds indexing to User model
+
+[33mcommit 82fb4cb422b5c3f13a97f6c60d838dca6ec8775d[m
+Merge: 6990004 13a012d
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Dec 6 17:34:44 2016 -0800
+
+    Merge branch 'master' into index
+
+[33mcommit 13a012d3ff0fd9f18f262e0f78f55b1ec9840335[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Dec 6 14:20:27 2016 -0800
+
+    removes default activity_id settings
+
+[33mcommit 3bdad60e4f105667b4f3cca873b2e2c41d23ae4a[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Dec 6 14:12:44 2016 -0800
+
+    adds id select functionality in url and UI
+
+[33mcommit 6990004abcb2aa854498b3f94393b18af89778cc[m
+Merge: 26f2f1b fa9c739
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Dec 3 11:22:02 2016 -0800
+
+    merges changes to master
+
+[33mcommit fa9c7392c410830e38eab2f7f7ec99b30bfd224f[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Dec 3 10:36:20 2016 -0800
+
+    updates readme
+
+[33mcommit a5d3253ad5fc619c4d5c2d06c9d2975fc291d5ca[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Dec 3 10:20:57 2016 -0800
+
+    id functionality in place but not enabled yet
+
+[33mcommit 369548f3b09101b4a187a2c47acf79858c992ab8[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Dec 2 21:54:58 2016 -0800
+
+    fixes hires bug introduced a few commits ago
+
+[33mcommit 2dc05433a8c7c7e4d31c102eecc691645469f1ea[m
+Merge: 6b0480f 97c42b7
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Dec 2 16:43:43 2016 -0800
+
+    Merge branch 'id' into staging
+
+[33mcommit 97c42b79c15dba04eef1fdb6bb83c5c3d06cd3ca[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Dec 2 16:43:24 2016 -0800
+
+    staged for rendering individual activities by id
+
+[33mcommit 6b0480f883109f1e408428484be5716928829a6a[m
+Merge: 15c03e6 3ee832f
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Dec 2 15:09:42 2016 -0800
+
+    Merge branch 'id' into staging
+
+[33mcommit 3ee832fd36d5a1d3b8daa01ad8d7fa01c46db11a[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Dec 2 15:09:29 2016 -0800
+
+    updates requirements.txt
+
+[33mcommit 55a78c561ebff1c36d8866ee3468b9228694fef7[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Dec 2 14:54:46 2016 -0800
+
+    id select almost works
+
+[33mcommit 16caaac3084c9fb505df5148fa13b3b0e2f79979[m
+Merge: fffb199 f5cd9a6
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Dec 1 18:38:05 2016 -0800
+
+    Merge branch 'master' into id
+
+[33mcommit f5cd9a65e5c5712e4a15f9d326a9a245ffa6e817[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Dec 1 18:37:49 2016 -0800
+
+    adds noClip=False to polyline options
+
+[33mcommit fffb1994c8569a4015d4b782b914b2c938ecd484[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Dec 1 13:10:06 2016 -0800
+
+    activity id select almost works
+
+[33mcommit 26f2f1bb5a59c05ed0aedfcfdef72faef24dc0ac[m
+Merge: 0d3866c 858d12b
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Nov 26 20:08:01 2016 -0800
+
+    Merge branch 'master' into morecache
+
+[33mcommit 858d12b660180fb1ea1ccddc96454b27d4cd6306[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Nov 26 18:16:12 2016 -0800
+
+    adds swim activity color
+
+[33mcommit 850cb6f5710aa9f515ddfb7862d5f89a8705cbc5[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Nov 26 17:50:52 2016 -0800
+
+    adds locate control and
+
+[33mcommit d6645b2803e57893ea152d679cc4da218604a57e[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Nov 26 16:58:15 2016 -0800
+
+    upgrades leaflet to 1.0.2
+
+[33mcommit 4d61f69eec6120cbbe9d5d753afb55e82ecde2d8[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Nov 26 16:52:16 2016 -0800
+
+    adds code to prevent limit=0 in getdata query
+
+[33mcommit 0d3866c919540b7babf5faca399cca1d20f86e7e[m
+Merge: 0665735 d05c5a6
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Nov 21 09:54:56 2016 -0800
+
+    Merge branch 'master' into morecache
+
+[33mcommit d05c5a6aa71329c316918a0b4a1f19edeca2eb95[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Nov 21 09:45:34 2016 -0800
+
+    fixes typo
+
+[33mcommit 37b5f506fa237d51d84bfc4f132676d3875c782d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Nov 21 09:41:50 2016 -0800
+
+    hopefully fixes duplicate key errr
+
+[33mcommit 83304f5d1550ed0f45748f2fda78424997eb8b21[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Nov 20 21:18:09 2016 -0800
+
+    makes sure limit >= 1
+
+[33mcommit 06657352ee06764775b2607b62fe91b9a60db039[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Nov 20 21:15:39 2016 -0800
+
+    first commit of all activities cached
+
+[33mcommit 15c03e6930acaa53513bcee8f32f9a8707391862[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Nov 17 00:54:18 2016 -0800
+
+    gets rid of pgbouncer ref in procfile
+
+[33mcommit b7f33665a02c5aa80d2af9d1d0d348c59f974180[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Nov 17 00:46:44 2016 -0800
+
+    adds pgBouncer buildpack
+
+[33mcommit 88ad197d381d7418cf753de0724972819660edac[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Nov 17 00:32:27 2016 -0800
+
+    set default resolution to low
+
+[33mcommit 66277d231631a56c27e3688d4e14efb166561785[m
+Merge: ab12b6a 78a7193
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Nov 17 00:18:36 2016 -0800
+
+    Merge branch 'staging'
+
+[33mcommit ab12b6a3a5e41f6cd9223e860fed6b884c6ca17d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Nov 17 00:16:51 2016 -0800
+
+    increases cache timeout
+
+[33mcommit 78a7193bda83f1ecfcd9d03dcbe383cc6fcf94a0[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Nov 16 23:08:05 2016 -0800
+
+    changes query selector and introduces recent activities
+
+[33mcommit 1111cf7c3bfc67bf327d8790a53eaef47a52e11f[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Nov 16 19:39:56 2016 -0800
+
+    adds functioning limit selection by url (but not by ui yet)
+
+[33mcommit e25664ba43b3fc95e4a84c928a2b4698bda07994[m
+Merge: bb116ec 0fae076
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Nov 16 17:13:57 2016 -0800
+
+    Merge branch 'master' into limit
+
+[33mcommit 0fae076577783280e066e3db9c510948b72b309e[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Nov 16 16:14:44 2016 -0800
+
+    cleans up blank dates out of url
+
+[33mcommit 563554dd41edff415dcb3526b4e1eea7bc59c07c[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Nov 16 16:06:30 2016 -0800
+
+    fixes date issue
+
+[33mcommit bb116ecaa47c85f5d0eb9e75dd1b9bfb3ad8dacf[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Nov 16 13:48:41 2016 -0800
+
+    adds client-side retention of activity info
+
+[33mcommit 7cacb2d0bacfd57f1cd4eb759c21b67b7b1bcfe7[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Nov 16 12:28:50 2016 -0800
+
+    fixes date-fill bug introduced from typo
+
+[33mcommit 70c76ecf360b0ba1a51f3cafefb6a66c6734d509[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Nov 16 12:06:51 2016 -0800
+
+    adds basic limit query functionality
+
+[33mcommit f170194645fdc86a7c316b8b9c6be233c31784ca[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Nov 16 10:20:37 2016 -0800
+
+    adds util.py script
+
+[33mcommit 9f20cce324abcb838ddfd23d2799ceeb108360e5[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Nov 15 14:35:12 2016 -0800
+
+    fixes typo
+
+[33mcommit c031164c00b2d750fc52add542f1fd072ecaec41[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Nov 15 13:44:47 2016 -0800
+
+    gets rid of unused 'lores' option from data query
+
+[33mcommit 4fd7582c70fbe58a3e7a43331bc815978f8eac47[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Nov 15 13:35:37 2016 -0800
+
+    makes hires activity data caching more memory efficient
+
+[33mcommit 3ebea314fd63c91583da4024242672eecb10d96b[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Nov 15 09:42:25 2016 -0800
+
+    adds latlng field and make_latlng() method to Activity
+
+[33mcommit 9c5d92921c04f5a8aacbdf56a9aca598f3292a6e[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Nov 15 08:38:12 2016 -0800
+
+    shortens cache timeouts for activity data
+
+[33mcommit f6e205f34e617b89d77d240d57f985d8068e4bf9[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Nov 15 08:27:42 2016 -0800
+
+    changes default resolution to low
+
+[33mcommit 4d3176dd788caec0fa7c0ae4292cb72006334a27[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Nov 15 08:16:27 2016 -0800
+
+    removes async imports
+
+[33mcommit 0653d241960b9709aff4887511c58b920fd76900[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Nov 15 08:13:36 2016 -0800
+
+    clears cache on start
+
+[33mcommit ab5f9e8a7d1f9aebfac94bf23d3827a27df6187f[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Nov 14 20:05:26 2016 -0800
+
+    changes default view
+
+[33mcommit 86581e16032b127bdc050632e10ce866d52fd6fe[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Nov 14 18:54:29 2016 -0800
+
+    removes analytics script from splash page.
+
+[33mcommit 5c45f13caebd627cb950f3b36c55d05f4204d3f6[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Nov 14 18:52:51 2016 -0800
+
+    removes analytics from splash page
+
+[33mcommit 7be7e0f39df29d38f8f1fac242125db9c4f254a8[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Nov 14 10:16:13 2016 -0800
+
+    cosmetic change
+
+[33mcommit 1e2b2de724fbd1d39cab769cf230ee2c082bf775[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Nov 14 10:00:47 2016 -0800
+
+    a few changes
+
+[33mcommit 7f662d38af1f80185b4671332f749461ebbfe27f[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Nov 14 09:55:14 2016 -0800
+
+    adds activity list option
+
+[33mcommit 9d1d17a219f90c5c27a12274a4919543515e826d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Nov 14 09:40:11 2016 -0800
+
+    adds flash messages as a control window popup
+
+[33mcommit a1c52989c12f03cf8fc8813e76a57c631a82d192[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Nov 14 09:30:41 2016 -0800
+
+    updated messages
+
+[33mcommit eecce6334d9f84adba6ac78a5d4fd83ca39a75be[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Nov 14 08:56:41 2016 -0800
+
+    temporarily disables async import untill we get it right
+
+[33mcommit 863af7c12b4fd26a960c007323da7c57a8af0402[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Nov 13 00:25:55 2016 -0800
+
+    adds prototype stuff to strava.py
+
+[33mcommit 50f8370ece192548052d0aa6afccc6a53c7db5d5[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Nov 11 09:14:25 2016 -0800
+
+    moves concurrency setting to config.py
+
+[33mcommit 31da9d2b7b37caddc5c8ec871185616ac0c4ebf0[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Nov 11 08:50:16 2016 -0800
+
+    removes user token verification on render
+
+[33mcommit efbcbfed5c593518af1a5384c95c8e433e02286e[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Nov 11 08:18:54 2016 -0800
+
+    implements async stream import
+
+[33mcommit fd0786e445a55677f53a7695fa0f8bb4becb9d5f[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Nov 11 07:42:32 2016 -0800
+
+    activity cache version
+
+[33mcommit a6edca339c0d7a5e98af57dc1765d4cf865eb10b[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Nov 11 00:38:26 2016 -0800
+
+    makes activity import more succinct and uses model methods, caches Activity objects
+
+[33mcommit d79371ec7163fe5041e104104e04d99a2519c55e[m
+Merge: 6e25b59 05776fe
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Nov 10 22:08:41 2016 -0800
+
+    Merge branch 'master' into cc
+
+[33mcommit 05776fe8f9693bc778ef5154b4d1b2113b59ce2f[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Nov 10 22:08:22 2016 -0800
+
+    gets rid of flask-migrate and some other stuff
+
+[33mcommit 6e25b59f78ee7567bb8ac068bbbae3153eae2210[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Nov 10 21:11:03 2016 -0800
+
+    first try at async activity import
+
+[33mcommit fe05438886bf2b7390d16f5f5ea7282af54d76e0[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Nov 10 20:58:59 2016 -0800
+
+    adds path_color to Activity object
+
+[33mcommit 29a76c3933c85df6ce7ff4b34339536c076b5189[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Nov 10 15:55:23 2016 -0800
+
+    implements async activity import
+
+[33mcommit 586044ea7a4297928b6da4e79fcae9caf6b4c9e2[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Nov 10 15:12:13 2016 -0800
+
+    adds test view for streaming async results
+
+[33mcommit d2ac85a3837b71beeca1d27ec39c3a7e2379acbf[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Nov 9 01:34:31 2016 -0800
+
+    experimenting with concurrent stream imports
+
+[33mcommit cd330a254145ab45800f6b68e228ce5b26294c4e[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Nov 9 00:31:33 2016 -0800
+
+    most likely fixes internal server error on login bug
+
+[33mcommit 80b4a824e2ce4d4947ed41edd0d36663d811e9f8[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Nov 8 23:10:18 2016 -0800
+
+    fixes typo
+
+[33mcommit c385deade710c0929fffa2c2091591d616d47651[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Nov 8 22:41:56 2016 -0800
+
+    delete some redundant code
+
+[33mcommit 967a6da15ea859a9ce6700fde0cd64c0f6e4dd80[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Nov 8 22:21:38 2016 -0800
+
+    moves all db.session methods to app, where it seems to work better
+
+[33mcommit 9fcf7d2a0b427772d92ccbd3c6ac6cffe303ffb9[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Nov 8 21:53:38 2016 -0800
+
+    removes db.session methods from model methods, where they seem to cause problems.
+
+[33mcommit 074538a683f88da34d893d6d78d852da68b2167a[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Nov 7 20:22:53 2016 -0800
+
+    upgraded leaflet.js
+
+[33mcommit 6ccde49b2ea429df4f77d0e4e07812ed466846df[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Nov 7 19:06:09 2016 -0800
+
+    iOS fix maybe...
+
+[33mcommit 890c12b7a6c9ae56f399836173eb0fa2faff5c7d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Nov 7 08:30:59 2016 -0800
+
+    updates leaflet-ant-path with new version that fixes iOS bug (hopefully)
+
+[33mcommit 3e1c1ba9a882722ac99913e3c5967285941b383e[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Nov 7 08:14:35 2016 -0800
+
+    adds gevent
+
+[33mcommit 03b325c5f7bab72afec57256d3a51431ab5c7442[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Nov 5 02:45:52 2016 -0700
+
+    adds a missing commit()
+
+[33mcommit cd224ebdbfc5253c489e3a201c6f722f6e138f98[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Nov 5 02:42:41 2016 -0700
+
+    fix typo
+
+[33mcommit 330e732e8b475ab51b6edf10d19208582530ebab[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Nov 5 02:35:53 2016 -0700
+
+    fix typo
+
+[33mcommit fa8d47b3dd7952900b4aed3c59d6c15d57cd5171[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Nov 5 02:30:59 2016 -0700
+
+    imlpements old activity purge
+
+[33mcommit 27659054b87b067c8978a18121b4b8c4e7ad624b[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Nov 5 02:20:55 2016 -0700
+
+    still fixing stuff
+
+[33mcommit 2069244fe44e3665edfc052ee3f79e826b7c9b30[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Nov 5 02:14:45 2016 -0700
+
+    makin shit work
+
+[33mcommit 7540efd00dfc1faa4065f3f4bafce55e6a55c50e[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Nov 5 02:02:34 2016 -0700
+
+    playing around with sqlalchemy
+
+[33mcommit 935137f1437b5ff6666d247acdac725087b2d702[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Nov 5 01:52:40 2016 -0700
+
+    gets rid of unnecessary .all() in queries
+
+[33mcommit 6d1eb59684b6f2796391fee2b28dc1c1c6f92628[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Nov 5 01:45:00 2016 -0700
+
+    trying something with sqlalchemy
+
+[33mcommit 57426fe459ed7406256306c4cac38448a5a070ad[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Nov 5 01:34:35 2016 -0700
+
+    fixes typo
+
+[33mcommit db516b694e77c73f56091d218adb9b6b85a28dae[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Nov 5 01:29:06 2016 -0700
+
+    fixes purge query to not hog up so much memory
+
+[33mcommit e38d3b2bc5302e6e0dc1f25a04393ea2249ee222[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Nov 5 01:15:03 2016 -0700
+
+    removes celery worker
+
+[33mcommit a7ff665106ff42026e08fd78e4d339256cedbaa6[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Nov 5 00:57:42 2016 -0700
+
+    trying gevent for celery worker
+
+[33mcommit 2d6db723704af7c0a32fab0fd6d96aaff420a724[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Nov 5 00:33:03 2016 -0700
+
+    almost implements activity purge as celery task
+
+[33mcommit 228449d04a684159769fedac6e2cfa958dcd899b[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Nov 4 21:44:51 2016 -0700
+
+    gets rid of flask-migrate
+
+[33mcommit 24ec82f01194e4cfe781b1d9f9fb66500102d6d3[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Nov 4 21:20:08 2016 -0700
+
+    adds caching capabilities directly to User and Activity
+
+[33mcommit 8c8e32b619848c11834dff70a0e7a049e92bfa0d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Nov 4 18:08:03 2016 -0700
+
+    implements caching for Activity objects and integrates with user objects
+
+[33mcommit 0c2192d3703ef1a9bf650f625960c621a4022066[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Nov 4 16:50:06 2016 -0700
+
+    adds caching add method to User
+
+[33mcommit 5bcb8d2c600df04c6451c5fd1362f75dcdb5c2d8[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Nov 4 16:18:48 2016 -0700
+
+    adds caching to user queries to cut down on database hits
+
+[33mcommit 18cc66b01ac14a96456b51f6bb0b679c300f4a26[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Nov 4 15:01:28 2016 -0700
+
+    fix typo
+
+[33mcommit 01ce95596efa92bd78e40966f427c36946eaab9a[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Nov 4 15:00:57 2016 -0700
+
+    typo?
+
+[33mcommit 13caa33cbdbc6e0c61c9b6fd0421cc7cbdc05195[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Nov 4 11:27:03 2016 -0700
+
+    client-side cleanup
+
+[33mcommit 6b779e5ddc6b97d3449742782fad21c211bad429[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Nov 4 10:42:05 2016 -0700
+
+    updated leaflet-providers
+
+[33mcommit 12d85d933255285a929ce3b7f86c3b52e61ad537[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Nov 4 02:52:29 2016 -0700
+
+    adds option for client to abort render process
+
+[33mcommit 6182dcd1568c75d277c2f57321b39a79f83b52e9[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Nov 4 02:13:12 2016 -0700
+
+    adds abort option to client
+
+[33mcommit a6b2e2dd4bf123da52940ab7737dc02369b61447[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Nov 4 01:16:46 2016 -0700
+
+    gets rid of Control.Loading
+
+[33mcommit edbb9c5952f6c164f3937d80411b3fa56f2aebe7[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Nov 4 01:15:37 2016 -0700
+
+    fixes path_color bug and introduces more vebose sse
+
+[33mcommit f4432e1e0a996a3649565e3e0e276a2e61ce7bd2[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Nov 3 23:28:59 2016 -0700
+
+    include Control.Loading.js
+
+[33mcommit c8b8d647ccedbd5999588ecde278bbf2cce37294[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Nov 3 22:21:29 2016 -0700
+
+    fix environment variable imports
+
+[33mcommit e0b861da83275abd7e445a163f0908d5aa3d3a77[m
+Merge: 6fb1bab c1dd910
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Nov 3 21:05:41 2016 -0700
+
+    Merge branch 'fixes' into db
+
+[33mcommit 6fb1bab5cc8b8670e8eb03f222c2fe967bdb4ec5[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Nov 3 16:08:19 2016 -0700
+
+    fixes typo
+
+[33mcommit 189171b55eef67feaf393ce75297e81a34bb1d60[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Nov 3 16:02:46 2016 -0700
+
+    increases short-cache timeouts and enables Redis broker for Celery workers
+
+[33mcommit 897c5a2e86295e777d5ecee5ad3aab8adee02b39[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Nov 3 13:36:45 2016 -0700
+
+    oves fast-cache timeout settings to settings.py
+
+[33mcommit 3e7ae8cb771c231e63539bac9da23904b0eeca88[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Nov 3 13:16:13 2016 -0700
+
+    adds fast-caching back in, hopefully better this time
+
+[33mcommit 8c4b428c06377d735504b4f8c7e8ebe65d763d9a[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Nov 3 11:20:03 2016 -0700
+
+    changes gunicorn worker-class to gevent and increases request timeout
+
+[33mcommit c1dd910acd31b1851eefd2ec7195dd11ff6bc73b[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Nov 2 16:23:14 2016 -0700
+
+    adds restore method to User model
+
+[33mcommit f11119d38acdac327470dea13a0af689cebe2442[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Nov 2 16:16:27 2016 -0700
+
+    adds backup method to User
+
+[33mcommit a324bc5b00786554d63a84e86c50e11eff7f6193[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Nov 2 15:50:53 2016 -0700
+
+    moves strava models API access to models.py
+
+[33mcommit 838b7e063c498b4a33a2a4f98fc2ba340167cd7d[m
+Merge: 878f2f3 a4cf9f9
+Author: Efrem Rensi <ebrensi@users.noreply.github.com>
+Date:   Tue Nov 1 00:00:54 2016 -0700
+
+    Merge pull request #17 from eliotwinchell/patch-1
+    
+    Change Zoom Control location
+
+[33mcommit a4cf9f9ac178d87760f835e877d1b9be80cbc6f4[m
+Author: Eliot Winchell <eliot.winchell@gmail.com>
+Date:   Mon Oct 31 22:53:30 2016 -0700
+
+    Update index.html
+
+[33mcommit 878f2f3882e7a5fba529b197f11d848f599ab723[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Oct 31 08:44:40 2016 -0700
+
+    hack fix for path_color db_write bug.  need to fix it better.
+
+[33mcommit 59754bd21f5e0c9afc39cdef923d93946b6b3ff8[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Oct 30 21:40:01 2016 -0700
+
+    disable activity cache for now
+
+[33mcommit 91c09fe99310fdf36253bd3067023299cbb0a4fe[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Oct 30 18:46:31 2016 -0700
+
+    quick bug fix
+
+[33mcommit 8d9babac7c0b1a814906b6f4df9011381ba3c4e6[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Oct 30 18:36:09 2016 -0700
+
+    adds activity cache
+
+[33mcommit 7864b49677e628224befbd0f61bd4a413bc1d545[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Oct 30 16:10:34 2016 -0700
+
+    super basic celery implementation
+
+[33mcommit ffde30f2c086eb9d0b755021a4e6d0025d4ec0a5[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Oct 30 14:15:04 2016 -0700
+
+    more dynamic
+
+[33mcommit 1f9630ee3192689449934e2f1f2c9ed048ddd758[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Oct 30 13:41:12 2016 -0700
+
+    adds better error handling, restores redis caching, sse activity import progress
+
+[33mcommit 294a863f5308d9ee93632d29e2dec74f306aba8b[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Oct 30 12:58:05 2016 -0700
+
+    handles error in activity listing
+
+[33mcommit 06ea5262099514dfd15447f316106b4143d5cd59[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Oct 30 12:51:58 2016 -0700
+
+    fixes bad access token bug
+
+[33mcommit 849c5c766997b88cdf3c1faf61962a127a25b835[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Oct 30 12:45:57 2016 -0700
+
+    fixes bad access token bug
+
+[33mcommit af8e0e98251d59ce5e4ebdca6de18c4bd7d53a2b[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Oct 30 12:30:54 2016 -0700
+
+    adds logging to catch a bug
+
+[33mcommit ab71634eac845d45512af4b1bc9ea7f4074f96fd[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Oct 30 12:26:09 2016 -0700
+
+    catch exception for when user account has invalid access token
+
+[33mcommit 1fc17d7c048aa14382b565a9547528e1dce8a1e3[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Oct 30 12:09:18 2016 -0700
+
+    fixes hash key issue
+
+[33mcommit 57d66f88edd6b7128eeb2e0e2a736df079c6f805[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Oct 30 12:05:07 2016 -0700
+
+    use sse stream for rendering
+
+[33mcommit ebdfada4939656989bf47ebfedf66630a2564e67[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Oct 29 23:04:49 2016 -0700
+
+    sends activities to client as sse
+
+[33mcommit 5682cf3c1cf91b20136932db7b6f033faea97e2a[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Oct 29 20:47:14 2016 -0700
+
+    enables Redis caching on master branch
+
+[33mcommit ee99cbefda02a04592b321d9814f39723d2f2ed2[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Oct 29 20:32:40 2016 -0700
+
+    oops caching only enabled on staging branch
+
+[33mcommit 30f1d61f63ba195924279e21627c2a43fe7e7a7b[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Oct 29 20:28:13 2016 -0700
+
+    enables cache with string keys this time
+
+[33mcommit 3298fac20d444709988aa163bd1dd231f8377417[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Oct 29 13:32:02 2016 -0700
+
+    disbles caching
+
+[33mcommit f3513f76560c953e10a50df2d4f5580835c73b6d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Oct 28 16:32:13 2016 -0700
+
+    hopefully enables redis caching on heroku
+
+[33mcommit 0f78afd5ca4e08dbac728bf683718a238282298b[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Oct 28 16:20:28 2016 -0700
+
+    basic caching works locally with simplecache but not with redis yet
+
+[33mcommit 5c4c6416ea37fd64946d31d5e333260312147cf8[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Oct 28 14:36:33 2016 -0700
+
+    fixes app context issue and disables caching for now
+
+[33mcommit 002ba02865cb11faf2cec99391e14876bb36f078[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Oct 28 10:28:12 2016 -0700
+
+    disables memoizing
+
+[33mcommit bf1d95eab32c79e3697bde5707973cfd0d87b72a[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Oct 26 22:31:20 2016 -0700
+
+    webhooks set up for later use
+
+[33mcommit ca0f433f499ac6786c5b05eeba0eb5b5fae25cee[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Oct 26 16:42:30 2016 -0700
+
+    more fix
+
+[33mcommit de060f126dfaa59560a51138a4e0c6382bc2247d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Oct 26 16:22:36 2016 -0700
+
+    gets callbacks right?
+
+[33mcommit 0b3f174a2773700ea6f114726ae2c243a0f0d44b[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Oct 26 16:01:03 2016 -0700
+
+    debug on
+
+[33mcommit 1a53c0d352f7a92a007ad644df2b2f4bf432d92d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Oct 26 15:43:17 2016 -0700
+
+    boo
+
+[33mcommit de9df87099426977c8833ae43673fd2d770b0c7d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Oct 26 15:25:44 2016 -0700
+
+    another tweak to webhook callback
+
+[33mcommit d28f5ecf496e69f0fee9457e48ddad1dded314ef[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Oct 26 15:14:47 2016 -0700
+
+    tweaks subscription callback
+
+[33mcommit f9d9635c154e822499f8acd98b9c177c9483e041[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Oct 26 14:58:54 2016 -0700
+
+    attempts to fix subscription stuff
+
+[33mcommit f260713c9d8fbe22c66cc3c9d8461de51ffa78e9[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Oct 26 14:27:40 2016 -0700
+
+    tweaks subscription code
+
+[33mcommit d8c1ee7f3be476fe273b24b0787aed07d878c291[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Oct 26 13:52:41 2016 -0700
+
+    adds basic webhook subscription functionality
+
+[33mcommit 82040304c25d89f42f1f7d5adeb63731fc7ffa5c[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Oct 26 13:04:18 2016 -0700
+
+    fixes favicon issue
+
+[33mcommit ed88f3dfbc771c76773ffbb4bc3689c5fb63b337[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Oct 26 12:59:21 2016 -0700
+
+    Revert "beefs up strava.py test-app a bit"
+    
+    This reverts commit bfb36f2897c14242caad06e073573099a00021aa.
+
+[33mcommit bfb36f2897c14242caad06e073573099a00021aa[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Oct 26 12:44:29 2016 -0700
+
+    beefs up strava.py test-app a bit
+
+[33mcommit a3907bcd1d3a4e6500326d7b3f189937205fd5a2[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Oct 25 23:32:54 2016 -0700
+
+    adds apple touch icon
+
+[33mcommit 659f1a4270e6ad6b2b30c4d95d9eed048a4c1598[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Oct 25 17:57:36 2016 -0700
+
+    minimal caching
+
+[33mcommit bcd0d45bc4188981d051efa7b949b780b6019aa2[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Oct 25 14:51:31 2016 -0700
+
+    makes cosmetic fix
+
+[33mcommit 4e2e897c82fedce9f369cb3de4251d5c2ab1b594[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Oct 25 13:54:49 2016 -0700
+
+    cosmetic fixes
+
+[33mcommit 0d014e52e7a22c5738e5315df1974cc549f3e0b5[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Oct 25 13:17:13 2016 -0700
+
+    uses strava_id as unique identifier instead of username, which apparently can be null
+
+[33mcommit 5ced40ae6279dc6de93b385b14f28558e2b97609[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Oct 25 11:12:15 2016 -0700
+
+    adds strava_button back
+
+[33mcommit 791cb0461239071c8c1b7e808a8cf3f96cd2a9de[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Oct 25 11:01:06 2016 -0700
+
+    adds limit option and eliminates github corner banner
+
+[33mcommit f2fbcb991a8e2a82a13913fe45abe77bf4bf718c[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Oct 25 10:18:31 2016 -0700
+
+    fixes username bug for real this time
+
+[33mcommit 7f8083e9d830d94eb37ee11063176d1398e1770d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Oct 25 09:45:53 2016 -0700
+
+    adds Google map options and defaults to roadmap, but google map cannot be specified in url for now
+
+[33mcommit febd6ca14e42d1ecfe22e9c8810403acced77555[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Oct 25 08:58:34 2016 -0700
+
+    adds google maps options
+
+[33mcommit 16bced861fede63b2b463c81a3d271116e2aa6b6[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Oct 24 21:33:32 2016 -0700
+
+    maketivity count more robust
+
+[33mcommit b7ac9e5403f5178bbc0838ea75aa49846c45d339[m
+Author: Efrem's phone <BarefootEfrem@gmail.com>
+Date:   Mon Oct 24 13:07:08 2016 -0700
+
+    quick fix for null username bug
+
+[33mcommit 613d72cea99f92fcabb0f6b431cdd261183fa88b[m
+Author: Efrem Rensi <ebrensi@users.noreply.github.com>
+Date:   Mon Oct 24 11:09:56 2016 -0700
+
+    Fix old user login bug
+    
+    Some people are still logged in after their account is deleted. This fix logs out any user that doesn't have a `username` attribute and asks them to log back in.
+
+[33mcommit 182261bfee4d3718821cfa78813fff6458c163dc[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Oct 24 10:41:12 2016 -0700
+
+    fix username bug
+
+[33mcommit 16346f1e4ae841abd915e2e8c90475e3e80f923a[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Oct 24 00:28:25 2016 -0700
+
+    fixes null polyline bug
+
+[33mcommit 7aabcb5e953a36338da3285b3c726032cb7e2de0[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Oct 24 00:08:49 2016 -0700
+
+    date selection scheme is more like Strava query
+
+[33mcommit de1bebfc16c8cf052269a4b02c3d865c9df1c639[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Oct 23 23:34:14 2016 -0700
+
+    updated message
+
+[33mcommit 4c75a0b8fb67b384fe9b341f0e40e1e9922eb59c[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Oct 23 21:05:30 2016 -0700
+
+    adds control window plugin for messages
+
+[33mcommit 5e26c7303022f7151ef92bea334877a6c55b4a40[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Oct 23 21:03:04 2016 -0700
+
+    gets rid of zoombox control
+
+[33mcommit d03deccfd086207938f6a6e10321c696d59ab50a[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Oct 22 10:46:46 2016 -0700
+
+    change default behavior
+
+[33mcommit 3592d1aac98ae6e370b9d4668f03e1d828a61a8d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Oct 22 10:41:46 2016 -0700
+
+    adds back auto-caching. hope this doesn't break anything
+
+[33mcommit c4b9a77df26e8a45a8a9b4987e947095be08c1a4[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Oct 22 10:18:46 2016 -0700
+
+    fixes username bug
+
+[33mcommit 8b4f78391ca58ee81f5d0d7909aac8717a751478[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Oct 22 00:01:57 2016 -0700
+
+    fixes typo in stravaimport
+
+[33mcommit 08d854a84a1aede2b80a128441e117c15f56d715[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Oct 21 23:45:38 2016 -0700
+
+    fixes bug in stravaimport.py
+
+[33mcommit 8d95df798a94610eb9dd8dfa5c36026c397d4c6e[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Oct 21 19:34:15 2016 -0700
+
+    adds message
+
+[33mcommit 3d298b36f4162fedb3091f66d0d85abdbc66802b[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Oct 21 19:28:33 2016 -0700
+
+    iterative and but caching commented out
+
+[33mcommit e5007ef1f20a12f2c355ed6526b147127edfb81a[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Oct 21 17:00:23 2016 -0700
+
+    fix typo
+
+[33mcommit 9f2b98b8bb127fe36643c073762bdf9632198a55[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Oct 21 16:16:42 2016 -0700
+
+    implements basic unlimited auto-caching
+
+[33mcommit 0fcfee3e6d1c2df435529d6535bff699d18bfffc[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Oct 20 17:03:37 2016 -0700
+
+    makes getdata work again
+
+[33mcommit 6b998c55272b088fe6110332d50c628f4b7fd7b2[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Oct 20 15:55:07 2016 -0700
+
+    makes activity query group data by activity rather than separated into summaries, lores, hires, and durations
+
+[33mcommit 7fed77c09c0b24b9f417374502ba1a9f481b5a86[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Oct 19 16:05:44 2016 -0700
+
+    adds callback for selector
+
+[33mcommit 75926776f1bece51001cb592ba90fdfc10b5a28d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Oct 19 15:51:57 2016 -0700
+
+    updates strava_import.py to new schema and adds basic acivity selector
+
+[33mcommit 1cd117f86e12a66ec8bc6570d89be8bbb9651f5e[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Oct 19 15:27:29 2016 -0700
+
+    adds basic activity list functionality
+
+[33mcommit e456d19a1292dd6e866fc561b1d7d3323947a836[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Oct 19 14:28:37 2016 -0700
+
+    query User on index render
+
+[33mcommit 8dd28d02fc881de0d9a77edcd2486163284b7d4b[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Oct 19 11:54:17 2016 -0700
+
+    pep8 consmetic fixes
+
+[33mcommit 91419fec2a6d60290b45d5f065ffa513f06a930d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Oct 19 11:48:00 2016 -0700
+
+    makes flask-migrate work
+
+[33mcommit 427b9301a5be7dcf6aad617d9db41ad98cc44698[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Oct 19 00:11:35 2016 -0700
+
+    changed user schema
+
+[33mcommit 742a245b40aa63f67f9dd17dc5e361d697b92fc6[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Oct 17 11:09:02 2016 -0700
+
+    get streams from Strava if not it database
+
+[33mcommit 6099a1c1172362e1c7cacc7cf2c1541571197f7c[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Oct 14 15:33:36 2016 -0700
+
+    implements direct strava queries and by activity id
+
+[33mcommit 01747f99eec22db18813bf4d83c81f6a95319de9[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Oct 14 11:16:07 2016 -0700
+
+    adds google analytics to splash page
+
+[33mcommit 7b4d7630813b1c63ec3397f9330d634cdd39aee4[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Oct 14 11:08:44 2016 -0700
+
+    disable forced re-authentication
+
+[33mcommit 38dfd32ef8f838192f3777796c16790dade192c1[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Oct 14 10:21:08 2016 -0700
+
+    fixes logout bug
+
+[33mcommit 46a3942484206bb07b791ffbf98ceb7ccf198c62[m
+Merge: c998797 2f77ede
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Oct 13 23:02:48 2016 -0700
+
+    Merge branch 'by_id'
+
+[33mcommit 2f77ededb9b560d8b0088466d9692c133ad0e9cf[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Oct 13 23:01:25 2016 -0700
+
+    adds Google Analytics functionality
+
+[33mcommit 5a87df70f08ca26b4af435445d9c5fe2cd496cb1[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Oct 13 18:15:15 2016 -0700
+
+    adds option to explicitly specify activity_ids to activity_summary_iterator
+
+[33mcommit c9987971778c02df998627a5b515c090de2e238d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Oct 13 16:46:27 2016 -0700
+
+    make sure external links open to blank tab or window
+
+[33mcommit fb30a0a72aa0bda9276b61a93202b7db2d011afc[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Oct 13 16:37:32 2016 -0700
+
+    minor reformat
+
+[33mcommit 52dfc0ed393c3c205b8663a975b17ac34718989d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Oct 13 16:33:09 2016 -0700
+
+    fixes login redirect bug
+
+[33mcommit 781d3ee4aa57245ba38240ec7057720d59ba97be[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Oct 13 15:52:02 2016 -0700
+
+    handle data query for invalid user
+
+[33mcommit 8e14f7ccfcaf93b4bad195af090b54e47f8fcdfc[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Oct 13 15:38:08 2016 -0700
+
+    add logout option on main sidebar
+
+[33mcommit 4160e173ba3ae1f73d3691205808387c5c9cb2ef[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Oct 13 15:11:16 2016 -0700
+
+    handle failed logins
+
+[33mcommit af27b03c8d5e70c002ba23622ce2512b8919298a[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Oct 12 20:18:56 2016 -0700
+
+    eliminate 'service' argument from more stuff
+
+[33mcommit 71c2fdcf1b19ef63e379d870395f953197943f91[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Oct 12 20:03:45 2016 -0700
+
+    eliminate service parameter, since it's always Strava.
+
+[33mcommit 097cc0e9672c7375e947382e0642c88d6027073b[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Oct 12 15:12:21 2016 -0700
+
+    bug fix
+
+[33mcommit 8a9e7b8750bffdc1a3d74a62472353c96c21a44e[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Oct 12 00:50:35 2016 -0700
+
+    last minute fixes
+
+[33mcommit 5520239b5194f70a32250070211b55e0d0982934[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Oct 12 00:37:07 2016 -0700
+
+    add finished import message
+
+[33mcommit efe3aaec204789a799db2b4539030dadd84f824e[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Oct 12 00:20:37 2016 -0700
+
+    add preliminary webhook support
+
+[33mcommit e29c7696ecea5d87b2b568b194c4de25c9753ff2[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Oct 11 23:23:07 2016 -0700
+
+    define app name in config file
+
+[33mcommit 05553cb0844469133b9437ca8793519ad93d4c6b[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Oct 11 22:55:55 2016 -0700
+
+    cast limit to int
+
+[33mcommit a453e0af38994ec490851b1a6281907896ceac31[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Oct 11 22:17:24 2016 -0700
+
+    fix typo
+
+[33mcommit 1859d080e48e759b06f359b00cb3245444de040a[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Oct 11 22:15:22 2016 -0700
+
+    update activity stream and admin view
+
+[33mcommit 79de4bffe8f8106b38de982f512897ccb5423ff0[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Oct 11 21:44:31 2016 -0700
+
+    fix bug
+
+[33mcommit 2b3a29066cab98220fac4289bafc248a7a20cdb8[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Oct 11 21:32:56 2016 -0700
+
+    add activity summary stream
+
+[33mcommit 40f43f7af69c9b6b3e5436ed89d101448db7d14d[m
+Merge: 0a0445e 94a761c
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Oct 11 18:57:46 2016 -0700
+
+    Merge branch 'master' into staging
+
+[33mcommit 94a761cf6c939ead64876e40079f572c03b52b54[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Oct 11 18:57:10 2016 -0700
+
+    fix typo
+
+[33mcommit 0a0445e7799c56feaa8db6caaadd7a59924dfb1c[m
+Merge: c2fdaed af272cf
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Oct 11 18:55:47 2016 -0700
+
+    Merge branch 'master' into staging
+
+[33mcommit af272cf8903c0fd976e22855c8a8a75fe0129312[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Oct 11 18:53:58 2016 -0700
+
+    got rid of 'detailed' option and fixed error for activities with no latlng stream
+
+[33mcommit c2fdaed7b14b0c1def46b5f3a0aefc4c381f6c52[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Oct 11 15:10:20 2016 -0700
+
+    move flask-assets virtual path back to static/gen/
+
+[33mcommit 2b20e60c09f6ccaee522467cdaee3caf80608e14[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Oct 11 14:38:00 2016 -0700
+
+    a few changes (should have made separate commits but meh)
+
+[33mcommit 1aa1ebc3de183af96a0bcd0d20fc87db2b261616[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Oct 11 09:45:09 2016 -0700
+
+    add flask-assets
+
+[33mcommit eaee6c83a767d592dc224d328236e4805407c536[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Oct 11 03:14:10 2016 -0700
+
+    update message
+
+[33mcommit 1ae5b7dc0c35443d830cee0c8f144a1e5ec74a22[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Oct 11 02:32:39 2016 -0700
+
+    Revert "update message"
+    
+    This reverts commit f7c5944827e474ad632f06d87e239ff74982c5cf.
+
+[33mcommit f7c5944827e474ad632f06d87e239ff74982c5cf[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Oct 10 19:24:25 2016 -0700
+
+    update message
+
+[33mcommit 8f94d0c6c309d6188dae862ac8e135055b317dd6[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Oct 10 19:03:39 2016 -0700
+
+    move stravalib client into request contexts
+
+[33mcommit a6cb55c73b2ffd6ac72d11e02f910859419d6829[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Oct 10 17:53:57 2016 -0700
+
+    add button
+
+[33mcommit 4e363c21d6d0aa5ccd50f1e79725b1f203a3d64e[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Oct 10 17:39:50 2016 -0700
+
+    unicode bug fix and hardwire import to detailed
+
+[33mcommit dc31ba9008fe3eee4785d2b54ec574e404d6a349[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Oct 10 14:50:30 2016 -0700
+
+    remove flask-cache code
+
+[33mcommit 333e37117626e21b528c26046074b816a8b0a37a[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Oct 10 14:37:58 2016 -0700
+
+    staged to add webhook suport
+
+[33mcommit d1d61a47f600266bf0cd7c6f0a678376c50f7928[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Oct 10 10:47:07 2016 -0700
+
+    disabled caching for now
+
+[33mcommit 2dabe183c4d13a056be8cc7f0443cba2fc81cc71[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Oct 8 15:27:00 2016 -0700
+
+    add caching for demo view
+
+[33mcommit d1023cf1cb88b376f6e4795e8e0f4bde3dfd5d18[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Oct 8 15:19:53 2016 -0700
+
+    set max imported activities back to 10
+
+[33mcommit 64936c247e93d94deb0500ec8717d659bdd8e1ed[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Oct 7 14:04:44 2016 -0700
+
+    upon creation of new account, import user's 10 most recent activities
+
+[33mcommit e0acc0406b144f449f383840e528dca6c3fa4a22[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Oct 7 13:53:09 2016 -0700
+
+    add default parameters for new users and after login
+
+[33mcommit c7bd3723ebbd026b39aa84bfa6ee5a8c1466fee4[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Oct 6 16:03:14 2016 -0700
+
+    fix typo
+
+[33mcommit 9c7916a75fcd6b03d0a94e196ab33892d592d4e1[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Oct 6 15:56:15 2016 -0700
+
+    update python dependencies
+
+[33mcommit 10e6fd98dbae1480bfc28d87aeefab0e59367bc3[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Oct 6 15:22:16 2016 -0700
+
+    fix empty result and invalid date query
+
+[33mcommit 3062e55ec99af3b43f27e0ce4f8e23b361ff2c68[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Oct 6 12:58:17 2016 -0700
+
+    update license
+
+[33mcommit 78b8aba6ffc7598c428f693191a213d84479ab5e[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Oct 6 11:04:12 2016 -0700
+
+    add wwelcome message for new users
+
+[33mcommit 3593fde25b0d7d21ba09281b9d684748b0973c66[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Oct 6 10:02:45 2016 -0700
+
+    update readme
+
+[33mcommit 086c0d5d3640be8f07f8ddfb2ca92b4e809450bd[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Oct 6 09:50:01 2016 -0700
+
+    add documentation link and file
+
+[33mcommit abe8ac5d41fc4f258307b8481e1b0416bb651cee[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Oct 5 18:02:30 2016 -0700
+
+    basic activity selection in strava.py
+
+[33mcommit 605223b41c4e6d0c8cb36905dc9acfb56182cf2a[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Oct 3 10:55:53 2016 -0700
+
+    color selector bug fix
+
+[33mcommit 37e196de0a2774ee0a969b8c2f505723fbb8eb25[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Oct 3 09:44:35 2016 -0700
+
+    activity stream works for strava.py
+
+[33mcommit a5a58fea0a1c428c5474d787e5a897f59d1a84e2[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Oct 3 09:07:08 2016 -0700
+
+    got sse activity feed working
+
+[33mcommit a99bd9e25ed6a46863ae9fe7e10cea2a5095bf54[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Oct 3 06:43:51 2016 -0700
+
+    test activity selctor
+
+[33mcommit ecb523fc2922fe2d77066bac221ddb6270fd0d04[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Sep 30 16:41:06 2016 -0700
+
+    developing activities selector
+
+[33mcommit 64bf95a85d42a5a0c9b6f080f5845a3f73aa0a01[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Sep 30 13:20:43 2016 -0700
+
+    take out garmin connect references
+
+[33mcommit b9013fe88eec0d1d69e1c7801dad586a58b07135[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Sep 30 12:55:45 2016 -0700
+
+    implement path color by activity type
+
+[33mcommit 3a26de7e349125da7eb384fe40791e5b4f466a43[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Sep 30 11:49:27 2016 -0700
+
+    add colors to config
+
+[33mcommit 61f3352bdfca4754d2c46d24d03d662fdb389182[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Sep 29 22:32:51 2016 -0700
+
+    implement new schema
+
+[33mcommit 9a06a3852a9e47ef38aa3732e0bdc23e438f19c2[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Sep 29 15:29:57 2016 -0700
+
+    revised activity schema, updated queries and import to reflect that
+
+[33mcommit f674bbfb6c5dc235fc7780bfe93e8b2202090da1[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Sep 29 10:05:44 2016 -0700
+
+    add links for contact info
+
+[33mcommit f8764b01d7f939ccb799652aa293ebcb281075fb[m
+Merge: 3664a4f d25dc4d
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Sep 29 09:42:53 2016 -0700
+
+    fixed merge conflict
+
+[33mcommit 3664a4fc917afbe156996464e0766e63fdd53bc5[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Sep 29 09:40:07 2016 -0700
+
+    cosmetic fix
+
+[33mcommit d25dc4de466d9885240558db9f2029ea944355bb[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Sep 29 09:37:39 2016 -0700
+
+    make sure app has one legit default baselayer. don't force Strava re-auth
+
+[33mcommit b3cf99b86bbb57b5e9113d4b6f750f792471e73e[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Sep 29 09:36:13 2016 -0700
+
+    modify test app
+
+[33mcommit b02f2e31671bea1ca81a8f612df2a4efc287c2db[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Sep 28 15:10:22 2016 -0700
+
+    get rid of latlngsJSON view, which is no longer being used
+
+[33mcommit 40814081013ed739b64fbd7308b7416e7aac0529[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Sep 28 15:04:12 2016 -0700
+
+    took activities list view out of main app
+
+[33mcommit 529d48f4e5e0328a623d0ae2d8b6f39428d17137[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Sep 27 18:25:19 2016 -0700
+
+    baselayer selectable in query string
+
+[33mcommit fff2f9975d0f31b1f4956f3ff93f6f08d36d4408[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Sep 27 13:16:32 2016 -0700
+
+    update readme
+
+[33mcommit 61ea06bbbba77657787e8250426d5c67874edaab[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Sep 27 13:10:05 2016 -0700
+
+    update leaflet to 1.0, update readme
+
+[33mcommit 8f280b86402731df9904ac8a047637fab7a8e295[m
+Merge: 8100ac0 7be2452
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Sep 27 12:22:00 2016 -0700
+
+    fixed merge conflict
+
+[33mcommit 7be245273d244e5ab5a60e3714d10c5797acf377[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Sep 27 12:17:10 2016 -0700
+
+    move map definitions to config.py and support leaflet-providers.js
+
+[33mcommit d85b510a20c2d597b55b58482bdfa154d2999d44[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Sep 26 09:00:19 2016 -0700
+
+    fix typos
+
+[33mcommit aaee84ae468c52046ef01ca64fc68827b65d0b3d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Sep 22 19:16:19 2016 -0700
+
+    foo flow mostly works
+
+[33mcommit 0de35afbff26b3142422a69f3975220c833c7e10[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Sep 22 18:46:07 2016 -0700
+
+    first itertion of multiflow
+
+[33mcommit 8100ac070d44bef8c5ffdf237c08a16a9adeaa89[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Sep 22 17:30:19 2016 -0700
+
+    fixed typo
+
+[33mcommit 31dd858029ba6e858c51f3194de529c2dbeb76a1[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Sep 22 17:25:41 2016 -0700
+
+    upgraded leaflet to version 1
+
+[33mcommit 72d1d41ecde780c95e488d4e90deb3f5a0c4d8ff[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Sep 22 17:16:51 2016 -0700
+
+    updated antpath to new version, no longer using multiantpath
+
+[33mcommit c25eb155eafe8b21377b44f911d0d87d473544df[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Sep 22 15:49:13 2016 -0700
+
+    minimal foo path implementation
+
+[33mcommit 090e2e3383e6215dd133651e90662c26c7b9996c[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Sep 22 15:06:12 2016 -0700
+
+    fix typo
+
+[33mcommit 7e13fef0d4138115153d788266cd12bc749114eb[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Sep 22 15:05:00 2016 -0700
+
+    fix re-render process
+
+[33mcommit c99b8f36ef6bc906bc431bb988f6c3c625ae8547[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Sep 22 10:24:26 2016 -0700
+
+    added minimal foo path implementation
+
+[33mcommit 9d50682f1bb0ad40b26c42adaf039fe09946190e[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Sep 21 20:37:08 2016 -0700
+
+    fixed auto-zoom
+
+[33mcommit ec87f48ec01d91e3ccf0a67f9d0b86ea722717aa[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Sep 21 20:28:35 2016 -0700
+
+    data query via polyline works
+
+[33mcommit 488910d4d98883653d22452fd48b8fb000c93b1d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Sep 21 11:59:11 2016 -0700
+
+    queryData imports polylines and converts to arrays of coordinates correctly
+
+[33mcommit 2965965216038ca6da6424e04023e47922e8d796[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Sep 21 09:49:50 2016 -0700
+
+    fix typos
+
+[33mcommit 43f0519e89a09468b4025a20178c12d3c17024df[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Sep 21 09:25:44 2016 -0700
+
+    add blank-map baselayer and OFFLINE option in config.py
+
+[33mcommit 07d160b9bcdf429e45022f48f6aa24b38d8dcf5b[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Sep 20 18:56:25 2016 -0700
+
+    add minimal polyline query for client-side decode
+
+[33mcommit f0ba5465262cc5196ea148cad584332bbc5b4920[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Sep 14 21:19:10 2016 -0700
+
+    added time scale
+
+[33mcommit 41aa50823903a4fa90cf55456c1eb35c093cb192[m
+Merge: 1245f40 664cd19
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Sep 14 15:59:36 2016 -0700
+
+    Merge branch 'master' into staging
+
+[33mcommit 664cd191585bf39fc7e0847672428821fe571655[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Sep 14 15:58:25 2016 -0700
+
+    fix html typo
+
+[33mcommit 7450e98f260d95f88a25622087f6f04245f592fa[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Sep 14 15:56:29 2016 -0700
+
+    redirect to current url after logout
+
+[33mcommit 1245f408b994f53666781f6be20e788f256d4819[m
+Merge: da151b5 de7ca18
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Sep 14 14:11:41 2016 -0700
+
+    Merge branch 'master' into staging
+    updated readme
+
+[33mcommit de7ca18d2dafdaaa17a8ba5884a42984c4177d24[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Sep 14 14:11:10 2016 -0700
+
+    update readme.md
+
+[33mcommit da151b56cb5477d436458cea14aa18672ff8898c[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Sep 14 14:07:11 2016 -0700
+
+    fix typo
+
+[33mcommit f9993ec24d8107346f077f9a1e4cc57cfb56ea1c[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Sep 14 13:53:07 2016 -0700
+
+    implement minimal foo paths
+
+[33mcommit 1aca27c4c47c23fb426339e7014d73e8d5b0750f[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Sep 14 13:51:23 2016 -0700
+
+    implement minimal foo paths
+
+[33mcommit 646be39869816bfd6ba1c651775dbbfa515ecbe8[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Sep 9 09:46:17 2016 -0700
+
+    url represents currently rendered state of app
+
+[33mcommit 3a31c0b462fad489f4013240d88e9d45ef7d33f0[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Sep 9 09:32:25 2016 -0700
+
+    disabled messages tab
+
+[33mcommit 74767f563325bc33383cebb9ec6e7bef306adc4d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Sep 9 01:43:37 2016 -0700
+
+    url parse build and update works well without hash
+
+[33mcommit b85a01eaaf83c97a400b59f8fea717dce9d58b3e[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Sep 8 23:19:03 2016 -0700
+
+    url/hash kinda works
+
+[33mcommit 46285bdc35e4d6bbb4525ce6ba8cee695866378e[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Sep 8 16:19:13 2016 -0700
+
+    changed UI to have one render button
+
+[33mcommit 152dee10169d611dbf75326c712fdc10bb4336b3[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Sep 7 17:13:06 2016 -0700
+
+    urls/hashing work for map state, but not for app state yet
+
+[33mcommit c474990c3f249fdc9217675211015e44abf47943[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Sep 7 10:16:29 2016 -0700
+
+    fix typo
+
+[33mcommit bf6a65ead6a88b6ee2bf7dff6c7e286603823ed9[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Sep 7 10:10:40 2016 -0700
+
+    fix default autozoom
+
+[33mcommit dc18913e9dff72fe81f2fe0ffe9e8b6d54aaf963[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Sep 7 01:26:25 2016 -0700
+
+    some ui changes
+
+[33mcommit 67e6f560a6c3823ab0ee214b9069d28c0743df62[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Sep 7 01:25:43 2016 -0700
+
+    some ui changes
+
+[33mcommit 42bfe91524fec31d907c9e567fbda0bc9cce1b36[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Sep 6 19:12:59 2016 -0700
+
+    combine heat and flow
+
+[33mcommit eafb628c238400faaba71f28572dafa9865d7e32[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Sep 6 18:37:10 2016 -0700
+
+    got rid of realtime options settings
+
+[33mcommit 9df4f3538085029bb358dd5b04aa0f2ca3482d4f[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Sep 5 09:40:49 2016 -0700
+
+    minor fix
+
+[33mcommit 3d60316f02ccba3450491d27d38878811d4c6052[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Sep 5 09:23:47 2016 -0700
+
+    updated readme
+
+[33mcommit a0b2db917ac2b2cd8395dae143eece4b5a3cb1fe[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Sep 5 09:17:40 2016 -0700
+
+    added migrations rudimentary admin view
+
+[33mcommit 5c40f2a4bf37e764665e24db66bc8e26aaf17493[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Sep 5 08:36:41 2016 -0700
+
+    added multi-user import to stravaimport.py
+
+[33mcommit ffb4754b3ce32227c0442076263b3cf04c084d31[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Sep 5 00:51:21 2016 -0700
+
+    fix typo
+
+[33mcommit 5bf9ce00d2f693f3d5cc84716d29ca1e58226bee[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Sep 5 00:43:10 2016 -0700
+
+    add minimal direct-url (bookmarking) capability
+
+[33mcommit 99a8b88a17aa57e213b3c840c503de11fd05ad66[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Sep 5 00:24:04 2016 -0700
+
+    add minimal direct-url (bookmarking) capability
+
+[33mcommit 0e1a2370f2ef616b88548f91596f954892d51a41[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Sep 4 21:53:39 2016 -0700
+
+    minimal flow-layer functionality
+
+[33mcommit 1c5e9d12b72cd78a5bef84b66b88ce36be78516a[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Sep 4 19:00:43 2016 -0700
+
+    first iteration of ant path
+
+[33mcommit 792789775470c2ac2c50785cf9d9122868836854[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Sep 4 17:57:00 2016 -0700
+
+    minor database schema fix
+
+[33mcommit ef4003dad20fa6a94b68573e582c73022f18ca9d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Sep 4 17:49:30 2016 -0700
+
+    move strava import to separate module
+
+[33mcommit 4a8f3c0e54f892ad1281a5303a71fece5d70c240[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Sep 4 15:42:37 2016 -0700
+
+    use polylines instead of float arrays
+
+[33mcommit 1690b81fe9fd2d4f5e516b4a3775adba6d5de886[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Sep 4 14:33:39 2016 -0700
+
+    bug fix
+
+[33mcommit ead0e8bd1fc14c50b33fcb574545698e65f79c30[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Sep 4 13:44:23 2016 -0700
+
+    fix typos
+
+[33mcommit 2f99d3bcf5a01ccf125d56c94e0096911ab0d44b[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Sep 4 13:19:08 2016 -0700
+
+    fix typos
+
+[33mcommit 14c6707b21f26d5a4f6177f3a84e136cdbb85e9e[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Sep 4 13:17:31 2016 -0700
+
+    fix typos
+
+[33mcommit 161cc3e60fa77b6ffc2293ab05105f87c01f3868[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Sep 4 13:06:23 2016 -0700
+
+    strava login works
+
+[33mcommit 0cf50f477fd83584085520d05fbed3210df9b4d1[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Sep 4 10:56:03 2016 -0700
+
+    several changes
+
+[33mcommit 1a3bd16c8714d1d0a605c4959637824fafe6ef73[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Sep 2 17:33:39 2016 -0700
+
+    almost works
+
+[33mcommit f67fb3d438944705fa27250edacd427a9ff4ada9[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Sep 1 19:17:34 2016 -0700
+
+    start integrating flask-login
+
+[33mcommit a95774efd61aa33943637b3389011e633a7f0f97[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Sep 1 16:34:19 2016 -0700
+
+    maybe fixed a bug
+
+[33mcommit c110d0e3897e5cd9e69f7610d2dd09d1fa7f19d9[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Sep 1 15:25:21 2016 -0700
+
+    fix typos
+
+[33mcommit 0da3bb5fdc49f9c35937c51151e7f4109a04a924[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Sep 1 14:36:44 2016 -0700
+
+    removed delete account option for now
+
+[33mcommit 3aaa21513d733c55af8c460c4e7613c48f8bf66e[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Sep 1 14:31:09 2016 -0700
+
+    fix typo
+
+[33mcommit 3a32ae397d09714a25d11ff0db559616ef345f9c[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Sep 1 14:23:08 2016 -0700
+
+    rudimentary multi-user functionality with strava login
+
+[33mcommit aaf4992ede606a779462de83bb212ceca58f1cf4[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Sep 1 00:29:33 2016 -0700
+
+    almost works
+
+[33mcommit b171b8f2145dc0ba7194a8a327cfce3ecbb5ef78[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Aug 31 20:54:42 2016 -0700
+
+    cleaned stuff up
+
+[33mcommit 530c84f469d8dba1572cf80ff112187c263ba29d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Aug 31 18:39:06 2016 -0700
+
+    integrated strava.py into heatmapp.py
+
+[33mcommit 70eb1e9f43b416338d9892fbe8d60f34f2529952[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Aug 31 17:05:32 2016 -0700
+
+    fixed typos
+
+[33mcommit 0f113dcdb24e09e9c71c36511f9f99ccd113f986[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Aug 31 16:28:47 2016 -0700
+
+    re-initialized database with flask db init
+
+[33mcommit 02953d793473c706ace12b9b47759c63474d38d2[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Aug 31 16:09:43 2016 -0700
+
+    strava API test works. Now to integrate it into app.
+
+[33mcommit 2ed308ddffe031665ad777ea2754620cf8a6d9cd[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Aug 30 17:21:52 2016 -0700
+
+    strava gis points text app works
+
+[33mcommit 47ffcf2d6f2945fa2687adb8faba0ecf1fe665a4[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Aug 30 13:04:54 2016 -0700
+
+    switched to using stravalib instead of flask-oauthlib
+
+[33mcommit 8fc4203fe0ff96aa1f707ac0154ec6b67947f74d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Aug 27 13:47:38 2016 -0700
+
+    access strava api with oauthlib kinda works
+
+[33mcommit 08b68f3ba318a7eed7575c24699152403537d6d8[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Aug 26 18:28:22 2016 -0700
+
+    preliminary strava functionality
+
+[33mcommit e485fa8c1c44d13ad0a8ea0e85cddd6171168f8c[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Aug 25 17:15:42 2016 -0700
+
+    update
+
+[33mcommit e03bb04767676ef8269ec3330b88aec6a010535b[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Aug 25 16:53:02 2016 -0700
+
+    update migration stuff
+
+[33mcommit 5c26317528c6581f67dec603ce16261966653dc1[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Aug 25 16:41:53 2016 -0700
+
+    cosmetic update
+
+[33mcommit bd2f128a6c8e66a950f71319cd53559b5f2a1ef4[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Aug 25 16:36:12 2016 -0700
+
+    moved configuration to config.py
+
+[33mcommit 926cf63e79c3c81051670dd913b9f9a14690002c[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Aug 25 15:40:46 2016 -0700
+
+    add database migration functionality
+
+[33mcommit 9b3243e796baeaa8f3d69bf40d461df833c470c3[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Aug 24 15:51:16 2016 -0700
+
+    update requirements.txt
+
+[33mcommit a2e6b13b6289f76bb08b7d4979cc343c6b618b95[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Aug 23 19:38:40 2016 -0700
+
+    strava token exchange works
+
+[33mcommit efcdd8c879c295efca835b95546a01316e21a852[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Aug 23 19:26:45 2016 -0700
+
+    fix typo
+
+[33mcommit 72fa4fe8e6d7f62475bcc7636050aed42296da1d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Aug 23 19:24:27 2016 -0700
+
+    typo fix
+
+[33mcommit 3542608a9ff3c12ec86e657366d1c8491dfc4a2e[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Aug 23 19:20:06 2016 -0700
+
+    correct token exchange
+
+[33mcommit 51961877412180c41c4b4a73d2c853885772fe10[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Aug 23 19:16:01 2016 -0700
+
+    updated requirements.txt
+
+[33mcommit 4a9713e1f0bd2054abb5851f0003bde7ec90e4e1[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Aug 23 19:08:05 2016 -0700
+
+    a bunch of changes.  bad git habits I know
+
+[33mcommit 4073cffb06f24329d7e1cd83a7136ccac35c43f4[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Aug 19 13:16:37 2016 -0700
+
+    starting conversion to settings
+
+[33mcommit dfa8027188a4306b02c84dc7f9c8a79ab9138e6d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Aug 10 23:33:01 2016 -0700
+
+    adding import setup options to map sidebar
+
+[33mcommit 5f1106ec9e361ae00958d3fde7ae1345b0c42f70[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Aug 9 19:36:47 2016 -0700
+
+    multi-user mostly works
+
+[33mcommit 3230497240a80fc09cbfc8d35aaf77189364a1d6[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Aug 9 17:36:16 2016 -0700
+
+    modularized gcexport.py
+
+[33mcommit ae8accab5622c0b99fa8a12d8847089176f361f2[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Aug 9 13:04:11 2016 -0700
+
+    export fix
+
+[33mcommit dbe7d89ad8e9f9c9216f925a6630b9bd36e85275[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Aug 4 22:34:24 2016 -0700
+
+    started Strava functionality
+
+[33mcommit 590b78cecbf918696e348ba56a67d4417020ab6d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Aug 4 17:34:44 2016 -0700
+
+    added some API stuff
+
+[33mcommit 7d1c63298b1022c03590aa24313e739fc598b307[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Aug 4 16:43:35 2016 -0700
+
+    implement rudimentary login
+
+[33mcommit 552ca7e388f882061ff1ed25c2d55157f11f6d17[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Aug 4 14:38:29 2016 -0700
+
+    cosmetic fix
+
+[33mcommit f7fb86b0b2e43ed865471ee085781575bbf8565a[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Aug 4 14:34:23 2016 -0700
+
+    filter out (0,0) GIS points
+
+[33mcommit e527a7c7a9b112e966e440e87ab7a39e00dac73b[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Aug 4 14:01:30 2016 -0700
+
+    fixed bugs and use existing password if user already in database
+
+[33mcommit 5539de900f9d375d1cb0e8f677df509ef92e3b1c[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Aug 4 00:46:37 2016 -0700
+
+    multi-user query mostly works
+
+[33mcommit 1bd6a54d791274fdc614a3af40cc1db3b03cc9d3[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Aug 3 17:47:14 2016 -0700
+
+    activity and user relationships appear to work now
+
+[33mcommit a8c675dadfa09e3d00590c16b6b86d8a6c8486a4[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Aug 3 15:27:19 2016 -0700
+
+    SQLAlchemy GC import works
+
+[33mcommit 45a6e8c8063db08b04c8ba7149243a969e37d159[m
+Merge: 37e0030 c2f628c
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Jul 31 17:41:05 2016 -0700
+
+    Merge branch 'master' into models
+
+[33mcommit c2f628c3f8b4bff0c5f10081b881183a13a69573[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Jul 31 17:40:11 2016 -0700
+
+    gcexport-db.py bug fix
+
+[33mcommit 37e003072b4ff9b0f13017375714a381257ba31b[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Jul 31 17:21:57 2016 -0700
+
+    starting restructure for multi-user
+
+[33mcommit 9cce04870d027754922beeb4575f2536424fec97[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Jul 30 12:26:16 2016 -0700
+
+    cosmetic changes
+
+[33mcommit 22a514c2e7517dc441125f7d6e0b3d5a9d5c43f3[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Jul 29 19:27:20 2016 -0700
+
+    fix 0 position bug
+
+[33mcommit e8a82e5e33ee2fc88cd757cce8493023f2052d9e[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Jul 29 17:36:49 2016 -0700
+
+    use Garmin json activity details api
+
+[33mcommit 969d2d50df425185494d5156da6df68267d6abd6[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Jul 27 15:25:58 2016 -0700
+
+    added favicon
+
+[33mcommit 209114d1d56ad8cbb3a1c4b191958be8182e3805[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Jul 27 14:16:58 2016 -0700
+
+    added disclaimer
+
+[33mcommit e679387df647a7190073a723a27799fbfb4b68a4[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Jul 27 13:39:55 2016 -0700
+
+    save bad gpx files to inspet if they raise an error when parsing
+
+[33mcommit 3a4152da76679d59b2d29aeaccf23f50ba73861b[m
+Merge: 9072c36 89edfc3
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Jul 27 13:05:36 2016 -0700
+
+    add num points indicator and clean up requirements.txt
+
+[33mcommit 89edfc31aa98b7462c8c207e21ca5da9769d0e34[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Jul 27 13:02:43 2016 -0700
+
+    added numpoints and cleaned up requirements.txt
+
+[33mcommit 9072c368e0d3555a6115d9ef8d077c8420766dad[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Jul 21 17:10:52 2016 -0700
+
+    cosmetic fixes
+
+[33mcommit 4783b4b953685bdffd0e9cff7a56f3a857616d11[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Jul 20 14:43:06 2016 -0700
+
+    cosmetic fixes
+
+[33mcommit 8613c23abd4c44d8d4cadce077803389c8167f53[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Jul 8 18:40:42 2016 -0700
+
+    heatmap settings sliders work instantaneously
+
+[33mcommit 8b04f3a2922430b6522271f4543285dfa4a02fc4[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Jul 8 18:12:21 2016 -0700
+
+    add heatmap controls
+
+[33mcommit 68e0f97815efe07f169945c5f56dac036d5fdacb[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Jul 7 14:09:27 2016 -0700
+
+    date pre-fill works
+
+[33mcommit f937300f9c75fb54bc13e792aec3a15411cb1aa0[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Jul 7 13:25:57 2016 -0700
+
+    added progress indicator
+
+[33mcommit 403595de6caabbf579c932c6b46892d6bef2f20a[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Jul 7 11:50:07 2016 -0700
+
+    fix date selection
+
+[33mcommit 42926cd0e3dfb87712e2a1cabafd3c6b12cdd11f[m
+Merge: fa3f36e 6eb7f40
+Author: Efrem Rensi <ebrensi@users.noreply.github.com>
+Date:   Wed Jul 6 16:53:21 2016 -0700
+
+    Merge pull request #7 from ebrensi/rest
+    
+    use rest api rather than jinja2 template for data
+
+[33mcommit 6eb7f4013119bbd412f26a9d41486dd160c1b310[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Jul 6 16:51:12 2016 -0700
+
+    REST api good
+
+[33mcommit 257d307200f94bcb1882a03e8085d9e7d00fb8f4[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Jul 4 23:42:43 2016 -0700
+
+    first stab at serving data as json stream
+
+[33mcommit fa3f36e77bf8a434e7b5a3c73d4a617d811c7b4c[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Jul 4 14:47:04 2016 -0700
+
+    add baselayer control
+
+[33mcommit 9f0dbd09847eef94cc7044c014150b132eb8f44d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Jul 2 12:19:28 2016 -0700
+
+    use Esri_WorldImagery map tile
+
+[33mcommit 14bdcf91227f9a0561e926ec4bea81a5e0f1755e[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Jun 27 11:52:01 2016 -0700
+
+    minor update
+
+[33mcommit 5bf88e2b9cd8346fb12ec43d6dc6f4df227ea055[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Jun 27 11:49:24 2016 -0700
+
+    render blank map when no data
+
+[33mcommit c1563ed062295d95b75811c1fb9d3f228e146a96[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Jun 25 23:26:22 2016 -0700
+
+    initialize date better
+
+[33mcommit fa2fbc929cde20e9e9edd5da34bd522edae2cb7e[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Jun 25 08:31:54 2016 -0700
+
+    updates
+
+[33mcommit a2f2c6abdd0ebcdaa76dd9d91734e16132b83173[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Jun 24 21:57:49 2016 -0700
+
+    added auto zoom and center
+
+[33mcommit 7a0cadbfe9f81e157f7070f012818dbee1640dfa[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Jun 24 17:28:45 2016 -0700
+
+    added license
+
+[33mcommit 17919aae50231c552709e76224c4938bea98b50b[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Jun 24 17:20:58 2016 -0700
+
+    cosmetic fixes
+
+[33mcommit 801ec86fe9eb4c6bad92157ff95ffd5b830d3740[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Jun 24 17:20:32 2016 -0700
+
+    cosmetics
+
+[33mcommit e39c2203bd97221d4058f7b0e664384abed53e5d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Jun 24 17:15:05 2016 -0700
+
+    updated readme
+
+[33mcommit 7cd2d71ea7b40148e1dca5a070de177a7281560d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Jun 24 16:59:25 2016 -0700
+
+    updated readme
+
+[33mcommit 5f60e075444899feaf0f7ed66261645eefafdf45[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Jun 24 16:56:08 2016 -0700
+
+    updated readme
+
+[33mcommit e8ae61c336447d5bea634a8a8a2f78be086c7772[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Jun 24 16:36:15 2016 -0700
+
+    updated doc, made some cosmetic changes
+
+[33mcommit 0dbc9b54c5399532e5bf43fc16c5d4fa0bf84b89[m
+Merge: f6ed64f 6144148
+Author: Efrem Rensi <ebrensi@users.noreply.github.com>
+Date:   Fri Jun 24 13:12:13 2016 -0700
+
+    Merge pull request #5 from ebrensi/sidebar
+    
+    Sidebar
+
+[33mcommit 6144148a379b893ef6035824cff1e855460e33be[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Jun 24 13:05:37 2016 -0700
+
+    sidebar version ready for publish
+
+[33mcommit 8575ddeac3963a2220eb6db373b8731a27975e8d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Jun 24 12:38:51 2016 -0700
+
+    first sidebar version
+
+[33mcommit f6ed64f40e6ce9ca6d36ed6392db5ddd3cf99e55[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Jun 5 21:03:01 2016 -0700
+
+    implement leaflet.heat
+
+[33mcommit c3504dd002bfee1d8aad64eb52f21b7bdcef7aed[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Jun 5 16:15:50 2016 -0700
+
+    flask (gzip) compress works on localhost
+
+[33mcommit 43b7682ab942d73d0fff4a8bb1fabfd102395b76[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Jun 5 09:51:08 2016 -0700
+
+    somethig's up with flask-compress
+
+[33mcommit faf8397a80bde405281dc38ba9fb6189f24b59dc[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun Jun 5 09:21:18 2016 -0700
+
+    added flask-compress functionality
+
+[33mcommit d8e5433c5b4aeecd5b17ec2df670a556ee4155c1[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat May 21 19:40:09 2016 -0700
+
+    added google maps api key but something still wrong with google map setup
+
+[33mcommit 7f4bb8fd28568cb1b4c5b6bb2a5ed1e7cb4b5ea5[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue May 17 15:33:58 2016 -0700
+
+    moved some stuff around in the templates
+
+[33mcommit 5585848fda5ec9a60d05f16263121ac0cc4a8ad5[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue May 17 09:22:02 2016 -0700
+
+    staged for major front-end change
+
+[33mcommit a53d5704c2db32af0b13b5835d17bb37a1f3aca6[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon May 16 19:37:35 2016 -0700
+
+    make sure end date includes the whole day (add day to end date)
+
+[33mcommit f41e939accb08ea903eb67a3d6eeabf8bee7b7d2[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon May 16 09:02:57 2016 -0700
+
+    updated .gitignore
+
+[33mcommit 93839413e324dc167c4e2f5b6a0cc92a018bc024[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun May 15 23:01:31 2016 -0700
+
+    SQLAlchemy compliant
+
+[33mcommit c7591f177731af5a3097a7ec0c721e5149027999[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun May 15 16:40:51 2016 -0700
+
+    cosmetic fixes
+
+[33mcommit b6e4fbe2c25112ae3c26e0a236560e1e063e0bbc[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun May 15 16:26:42 2016 -0700
+
+    updated readme
+
+[33mcommit b04604da18dfc9f88f50cb9719b24e0c2871dcbe[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sun May 15 16:23:37 2016 -0700
+
+    cosmetic fixes
+
+[33mcommit 319ea90f5cc7bcc9216a9d8169c90e5049071bd5[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat May 14 03:56:24 2016 -0700
+
+    moved database url to environment vaariable DATABASE_URL
+
+[33mcommit d219e5bf3d8e6d59b5d1ee01dc4a2eed5c7d717f[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat May 14 03:04:28 2016 -0700
+
+    yay!
+
+[33mcommit 9f5c62108faa1b54dc1e12fb66a3877c3488045d[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat May 14 02:53:29 2016 -0700
+
+    SQL query for map rendering works with new compact schema
+
+[33mcommit 0b9a90b08935001e9054eab993664963ad0d63ae[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat May 14 02:00:04 2016 -0700
+
+    import into new schema
+
+[33mcommit c33723d85cbc96183783f1ab84bc1b02f769e513[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri May 13 19:24:50 2016 -0700
+
+    clean up redundant code
+
+[33mcommit 9e4557f5b0dc1831e82611cb19cdc4ace55ab919[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri May 13 19:21:32 2016 -0700
+
+    clean up redundant code
+
+[33mcommit 69f214e7fe386c0855431ca178eb5f24f955d3d3[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri May 13 18:33:08 2016 -0700
+
+    local postgresql implementation works
+
+[33mcommit 3ca7acc1259c16d95026c642f968a46b9942268a[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri May 13 00:56:23 2016 -0700
+
+    new db file
+
+[33mcommit 7931eaffe2162edf78e3ef67863241a94daa1ffc[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri May 13 00:05:20 2016 -0700
+
+    use google map api
+
+[33mcommit 4911c176355d39c291295104dc5c8d18d5940dc9[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu May 12 16:41:11 2016 -0700
+
+    updated readme
+
+[33mcommit 61ac3b7ac7580d63239bcd58171b4bd50546ad04[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu May 12 16:29:58 2016 -0700
+
+    sqlite implementation works!
+
+[33mcommit a407d5b237cd143cf1da5377783d84305d0381df[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu May 12 13:56:49 2016 -0700
+
+    added default map
+
+[33mcommit 6a3bbd431a9f2eb916ad8cd176754cda7f413df5[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu May 12 13:30:35 2016 -0700
+
+    moved fmap (map rendering code) into main app
+
+[33mcommit da371894582390da763069b458f44f2ae9ff0074[m
+Merge: 9a1dbb7 fe2d563
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu May 12 12:56:57 2016 -0700
+
+    ready to make fmap use databse instead of csv files
+
+[33mcommit fe2d5633034930942b22a66ad43b945d8310d173[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu May 12 12:50:11 2016 -0700
+
+    probably Last commit of this branch
+
+[33mcommit 5853db8ed3da002c7c28f91c5ab64530302229d1[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu May 12 12:12:21 2016 -0700
+
+    map displayed as iframe
+
+[33mcommit 67981871952d543ec9f53f24c3f71cbfba3b6193[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu May 12 11:05:26 2016 -0700
+
+    stage to make iframe work
+
+[33mcommit 9fc12fed5b0709c03955a02ca55cca8c930c85fb[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu May 12 10:16:09 2016 -0700
+
+    csv verision with smart updating works
+
+[33mcommit 9a1dbb76b6a84a04ae508adbf916e70ceeab95d8[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu May 12 09:36:56 2016 -0700
+
+    staged for making app use database
+
+[33mcommit bdd281bdf8e96e8b3f760673f6469a413a5e7696[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed May 11 21:11:57 2016 -0700
+
+    database pop works
+
+[33mcommit c3d669628c56568efba79ae7dd689e4684dd6be9[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed May 11 21:10:32 2016 -0700
+
+    database pop works
+
+[33mcommit 7e516cae0542559b45a5049568905e2e53a549c3[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed May 11 11:46:12 2016 -0700
+
+    updating code done
+
+[33mcommit dc550040d191d58083d4bcbff838511941de8d64[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed May 11 08:48:05 2016 -0700
+
+    fix sbumodule snafu
+
+[33mcommit 7968631bdfe6e378751cc56a710472bc493529a5[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue May 10 21:54:12 2016 -0700
+
+    made some front-end changes
+
+[33mcommit 318fe02156c5e3f7385509801ef740fbba828141[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue May 10 17:41:38 2016 -0700
+
+    update html
+
+[33mcommit e96434dade8ad68ea8a5539c3aca56f9e09ec985[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue May 10 17:38:27 2016 -0700
+
+    cosmetic html edits
+
+[33mcommit 6c57b80eb425a21b0577186d1cf037b60e4e3efc[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue May 10 14:43:47 2016 -0700
+
+    updated template
+
+[33mcommit 431753dbd34bd310035ce856bcce8358e71c47ea[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue May 10 13:34:18 2016 -0700
+
+    double date picker looks nice and works
+
+[33mcommit 30fabdeb0b170ab33b0057c78b0d4fe766bc657f[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue May 10 12:10:49 2016 -0700
+
+    updated requirements.txt
+
+[33mcommit b518704a4a6bd292222d684a25d8601a0a09fe98[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue May 10 12:07:34 2016 -0700
+
+    implemented date-range selector
+
+[33mcommit d5baa6431218406ba20773a1fd4e0ef6cb350cfa[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue May 10 10:07:57 2016 -0700
+
+    updated readme
+
+[33mcommit dd65b30cb1d46daac02a4497b804461247d43a55[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue May 10 10:05:04 2016 -0700
+
+    fully functional with gpx
+
+[33mcommit a8503636886026a3a366b578ec4a728679c6cc9e[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri May 6 17:59:42 2016 -0700
+
+    uses gpx files now
+
+[33mcommit 53c525fb759c1972622fe12b87949f85fb414ec0[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri May 6 16:31:44 2016 -0700
+
+    staged for gpx instead of tcx
+
+[33mcommit f3a706a7097cbd139eaf45a1dec54f114eb2a24b[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed May 4 15:49:17 2016 -0700
+
+    hopefully fixed a snafu
+
+[33mcommit a79b353127cb26dfba9e522f6ce82a8e5e387028[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed May 4 13:36:24 2016 -0700
+
+    updated readme
+
+[33mcommit cc52070ce3b46acd5f5aac4d935611f02629654f[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed May 4 13:21:43 2016 -0700
+
+    updated readme
+
+[33mcommit 4f3b84ec3065b0c17d3bafe2ab8feb1479fda505[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Sat Apr 30 15:13:23 2016 -0700
+
+    staged for addition of progress indicator on map rendering
+
+[33mcommit 9ca2a162dec8226dd8de6b65e7208a08b5702d5a[m
+Author: Efrem Rensi <ebrensi@users.noreply.github.com>
+Date:   Fri Apr 29 22:59:07 2016 -0700
+
+    Delete Procfile (Case Conflict)
+
+[33mcommit a82d5d6a8737ab61990b5908a537804cb0fdc8ef[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Apr 29 19:37:07 2016 -0700
+
+    changed app name
+
+[33mcommit 8e8d5dfa0251a40eea043a372fc63c9bca1d1a13[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Apr 29 18:57:16 2016 -0700
+
+    deleted huge static heatmap file
+
+[33mcommit 9bee348d74aadee1f7247c29fd73c431da6a5421[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Apr 29 18:49:09 2016 -0700
+
+    got rid of training load.csv
+
+[33mcommit 123bd0af7ab2aef5577b3b453065afcd61acfb3a[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Apr 29 18:47:49 2016 -0700
+
+    added Procfile for Heroku deployment
+
+[33mcommit 48f3ecd3f9925b466878ee76a37b27247ea571bf[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Apr 29 17:48:12 2016 -0700
+
+    updated .gitignore
+
+[33mcommit 4b889ce61e84f69b659119f2c987a1481ccfe19f[m
+Merge: d4a28a6 4164e58
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Apr 29 16:56:04 2016 -0700
+
+    Merge branch 'master' of github.com:ebrensi/running_data
+
+[33mcommit d4a28a6bee92a431ad841ba999e6d6fc7361cd10[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Apr 29 16:55:06 2016 -0700
+
+    updated readme
+
+[33mcommit 4164e5855568c611c2c1510f47cbe0458a5ecb17[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Apr 29 16:45:11 2016 -0700
+
+    added requirements.txt
+
+[33mcommit c1a730ae70b03e5e8ad30978207a51db8195c095[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Apr 29 15:04:18 2016 -0700
+
+    implemented realtime map rendering from points
+
+[33mcommit 138ef25a9efaebc3cbb9df59030ff9fe8c77930c[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Apr 29 13:48:05 2016 -0700
+
+    updated readme
+
+[33mcommit f8e0c9d40e338546aa425c95d7d23c0cd222f010[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Apr 29 13:25:31 2016 -0700
+
+    cleaned up fmap.py
+
+[33mcommit 41bca5ee1e49e319cc1282812c7558546e325d86[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Fri Apr 29 13:09:21 2016 -0700
+
+    started implementation as flask app
+
+[33mcommit bf4eaa1a2d0625792a6779c1784ed988d7b4ca12[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Apr 26 15:19:04 2016 -0700
+
+    deleted garmin-connect in order to reset it back to original state
+
+[33mcommit fbd4b8bf150d4df1c57594578ca57d49a296e621[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Apr 7 19:44:48 2016 -0700
+
+    got first version working
+
+[33mcommit 03eb7c41dc2b7d589b137b6db030cbce86487379[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Apr 7 14:33:21 2016 -0700
+
+    updated readme
+
+[33mcommit 993cd69555792a9e4220f20fd69e188dd226db78[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Apr 7 14:30:11 2016 -0700
+
+    updated readme
+
+[33mcommit 54f542061269b379dfe541c914423ba455e6a645[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Apr 7 14:02:02 2016 -0700
+
+    got simple static heatmap working
+
+[33mcommit 40fa1fa0461efe10aff2da005434f9fead432174[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Apr 6 14:20:05 2016 -0700
+
+    modified gitignore
+
+[33mcommit 955f8648f32240bea8da0aa461c836f86535341b[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Apr 6 10:07:17 2016 -0700
+
+    changed stuff
+
+[33mcommit 9b0127651c5914386e0ff2f709e4329efd0d0fb6[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Apr 5 18:31:33 2016 -0700
+
+    updated readme
+
+[33mcommit 9836f2fae9d8ce31c34ed3d087e4b6790c2a57c8[m
+Merge: 352dd68 699f7a6
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Apr 5 16:54:06 2016 -0700
+
+    updated readme
+
+[33mcommit 352dd688db2b9c0d5f89d43889aaee1b42b78e90[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Apr 5 16:50:36 2016 -0700
+
+    updated readme
+
+[33mcommit 699f7a6bbe7f671577a7feae0b9de3b8bbf2dd95[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Tue Apr 5 16:50:36 2016 -0700
+
+    updated readme
+
+[33mcommit b9cceb51b8f555c995929805f8426b2b166ecb2f[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Mar 31 19:59:01 2016 -0700
+
+    added waypoint csv file
+
+[33mcommit 80c930d9c3e491679b3a19c6e5d99d44c2945a62[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Mar 31 19:25:54 2016 -0700
+
+    added docstrings
+
+[33mcommit dc5e360fc5659a3cd2bb4f46fa6cdc41630609b3[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Thu Mar 31 17:32:21 2016 -0700
+
+    creating csv file works
+
+[33mcommit 357f12c87b8f51d205a47c7a46c155422343589e[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Mar 30 19:55:32 2016 -0700
+
+    updated readme
+
+[33mcommit d0e0de9f6217ab650498cc650cd0720d62389913[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Wed Mar 30 19:48:35 2016 -0700
+
+    started heatmap project
+
+[33mcommit 9d55fa2c9b99b6ca4284adf9b2c4762e9ac7667b[m
+Author: Efrem <BarefootEfrem@gmail.com>
+Date:   Mon Feb 1 13:49:50 2016 -0800
+
+    data update
