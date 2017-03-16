@@ -4508,7 +4508,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
     _pane: "shadowPane",
     DCONST: 0.000001,
     two_pi: 2 * Math.PI,
-    target_fps: 20,
+    target_fps: 16,
 
     options: {
         startPaused: false,
@@ -4685,11 +4685,11 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
               time = (now - A.startTime) >>> this.SCONSTS[zoom],
               P = this._processedItems[id],
               last_P_idx = P.length - 1,
-              max_time = A.elapsed_time,
+              max_time = A.time.slice(-1),
               n1 = this.DCONST * A.total_distance * zoom * zoom * zoom,
               // n1 = (A.total_distance << (this._zoom-1)) >> 20,
               delay = ~~(max_time / n1),
-              num_pts = ~~(max_time / delay + 0.5),
+              num_pts = ~~(max_time / delay),
               xmax = this._size.x,
               ymax = this._size.y;
 
