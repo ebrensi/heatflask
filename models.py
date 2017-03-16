@@ -129,7 +129,7 @@ class Users(UserMixin, db_sql.Model):
                 "username": strava_user.username,
                 "firstname": strava_user.firstname,
                 "lastname": strava_user.lastname,
-                "profile": strava_user.profile,
+                "profile": strava_user.profile_medium or strava_user.profile,
                 "measurement_preference": strava_user.measurement_preference,
                 "city": strava_user.city,
                 "state": strava_user.state,
