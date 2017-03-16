@@ -225,7 +225,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
               n1 = this.DCONST * A.total_distance * zoom * zoom * zoom,
               // n1 = (A.total_distance << (this._zoom-1)) >> 20,
               delay = ~~(max_time / n1),
-              num_pts = ~~(max_time / delay + 0.5),
+              num_pts = ~~(max_time / delay),
               xmax = this._size.x,
               ymax = this._size.y;
 
