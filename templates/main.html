@@ -845,19 +845,25 @@
                     if (flowpoints) {
                         let v = parseFloat(A.average_speed),
                             v_adj = 1 + Math.log(10*v);
-                        // fopts.delay = parseInt(FLOWPATH_VARIATION_CONSTANTS.K / v);
-                        // fopts.dashArray = [2, parseInt(FLOWPATH_VARIATION_CONSTANTS.T * v_adj)];
-                        // fopts.paused = appState.paused;
                         A.flowLayer = new L.Polyline(flowpoints, fopts);
                         FlowLayer.addLayer(A.flowLayer);
 
                         if ($("#info").is(":checked")) {
                             A.flowLayer.on("mouseover", function(event) {
+                                if (A.highlighted || A.selected) {
+                                    return;
+                                }
                                 highlightPath(A.id);
+
                             });
+
                             A.flowLayer.on("mouseout",function(event) {
+                                if (A.selected || !A.highlighted) {
+                                    return;
+                                }
                                 unhighlightPath(A.id);
                             });
+
                             A.flowLayer.on("click", function(event) {
                                 togglePathSelect(A.id);
                                 if (A.selected){
