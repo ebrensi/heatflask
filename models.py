@@ -249,6 +249,9 @@ class Users(UserMixin, db_sql.Model):
             if strava_data:
                 user_data.update(strava_data)
                 return user_data
+            else:
+                app.logger.info("problem updating user {}"
+                                .format(user_data["id"]))
 
         if not users_list:
             doc = mongodb.users.find_one()
@@ -261,7 +264,7 @@ class Users(UserMixin, db_sql.Model):
         db_sql.create_all()
         count_before = len(users_list)
         count = 0
-        P = Pool()
+        P = Pool(app.config["CONCURRENCY"])
         for user_dict in P.imap_unordered(update_user_data, users_list):
             if user_dict:
                 user = cls.add_or_update(cache_timeout=60, **user_dict)
