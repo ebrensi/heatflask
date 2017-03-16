@@ -221,11 +221,11 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
               time = (now - A.startTime) >>> this.SCONSTS[zoom],
               P = this._processedItems[id],
               last_P_idx = P.length - 1,
-              max_time = A.time.slice(-1),
+              max_time = A.elapsed_time,
               n1 = this.DCONST * A.total_distance * zoom * zoom * zoom,
               // n1 = (A.total_distance << (this._zoom-1)) >> 20,
               delay = ~~(max_time / n1),
-              num_pts = ~~(max_time / delay),
+              num_pts = ~~(max_time / delay + 0.5),
               xmax = this._size.x,
               ymax = this._size.y;
 
@@ -233,12 +233,11 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
             key_time = s - delay * (~~(s/delay)),
             count = 0,
             i = 0,
-            t, dt,
+            dt,
             p = P[0];
 
 
-        for (let j = 0; j < num_pts; j++) {
-            t = (key_time + j*delay);
+        for (let t = key_time; t < max_time; t += delay) {
             if (i < last_P_idx && t >= P[i+1].t) {
               while (i < last_P_idx && t >= P[i+1].t) {
                 i++;
