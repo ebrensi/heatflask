@@ -28,11 +28,6 @@ class Config(object):
         "pulseColor": 'white',
     }
 
-    FLOWPATH_VARIATION_CONSTANTS = {
-        "K": 12000,
-        "T": 6
-    }
-
     MAP_CENTER = [27.53, 1.58]
     MAP_ZOOM = 3
 
@@ -46,7 +41,7 @@ class Config(object):
     # ASSETS_MANIFEST = None
 
     # Concurrency for Web-API fetching
-    CONCURRENCY = 5
+    CONCURRENCY = 4
 
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
@@ -58,21 +53,24 @@ class Config(object):
     MONGODB_URI = os.environ.get("MONGODB_URI")
     REDIS_URL = os.environ.get('REDIS_URL')
 
-    # Settings for fast-cache
     # How long (seconds) we hold a user's index (in Mongo) before rebuilding it
-    STORE_INDEX_TIMEOUT = 7 * 24 * 60 * 60   # 7 days
+    # We purge a user's activity index from Mongo if it has not been accessed
+    #  for longer than this.  Note this also means that subscription updates
+    #  for this user will be ignored after this timeout.
+    STORE_INDEX_TIMEOUT = 3 * 24 * 60 * 60   # 3 days
 
-    # We purge activities older than this from MongoDB
-    STORE_ACTIVITIES_TIMEOUT = 5 * 24 * 60 * 60  # 5 days
+    # We purge activities from Mongo that haven't been accessed for longer
+    # than this
+    STORE_ACTIVITIES_TIMEOUT = 3 * 24 * 60 * 60  # 3 days
 
     # How long before a user's index is outated and needs an update
-    INDEX_UPDATE_TIMEOUT = 30 * 60  # 30 min
+    INDEX_UPDATE_TIMEOUT = 10 * 60  # 10 minutes
 
-    # How long we memory-cache hires activities
-    CACHE_ACTIVITIES_TIMEOUT = 30 * 60  # 30 minutes
+    # How long we Redis-cache hires activities
+    CACHE_ACTIVITIES_TIMEOUT = 20 * 60  # 20 minutes
 
     # How long we hold a User object in memory
-    CACHE_USERS_TIMEOUT = 30 * 60  # 30 minutes
+    CACHE_USERS_TIMEOUT = 20 * 60  # 20 minutes
 
     SECRET_KEY = "pB\xeax\x9cJ\xd6\x81\xed\xd7\xf9\xd0\x99o\xad\rM\x92\xb1\x8b{7\x02r"
 
