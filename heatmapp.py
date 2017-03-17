@@ -554,7 +554,7 @@ def getdata(username):
                     if "stop_rendering" in activity:
                         elapsed = datetime.utcnow() - start_time
 
-                if activity.get("summary_polyline"):
+                if activity.get("summary_polyline") and activity.get("total_distance", 0) > 1:
                     count += 1
                     activity.update(
                         Activities.ATYPE_MAP.get(activity["type"].lower())

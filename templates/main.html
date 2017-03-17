@@ -301,10 +301,10 @@
                         <br>
                         <h4>Flowmap Variation Constants</h4>
                         <label>K:</label>
-                        <input class="flowmap-opt" id="K" type="number" value={{ config["FLOWPATH_VARIATION_CONSTANTS"]["K"] }} min=0 max=1000000>
+                        <input class="flowmap-opt" id="K" type="number" value="" min=0 max=1000000>
 
                         <label>T:</label>
-                        <input class="flowmap-opt" id="T" type="number" value={{ config["FLOWPATH_VARIATION_CONSTANTS"]["T"] }} min=0 max=1000000>
+                        <input class="flowmap-opt" id="T" type="number" value="" min=0 max=1000000>
                     </div>
                     </form>
             </div>
@@ -318,7 +318,6 @@
         const OFFLINE = {{ config.get('OFFLINE')|tojson }},
             HEATLAYER_DEFAULT_OPTIONS = {{ config["HEATMAP_DEFAULT_OPTIONS"]|tojson|safe }},
             FLOWLAYER_DEFAULT_OPTIONS = {{ config["ANTPATH_DEFAULT_OPTIONS"]|tojson|safe }},
-            FLOWPATH_VARIATION_CONSTANTS = {{ config["FLOWPATH_VARIATION_CONSTANTS"]|tojson|safe }},
             BASE_DATAURL = "{{ url_for('getdata', username=user.id) }}",
             BASE_USER_URL = "{{ url_for('main', username=user.id) }}",
             USER_ID = "{{ user.id }}",
