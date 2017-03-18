@@ -4742,7 +4742,8 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
 
         let ctx = this._ctx,
             zoom = this._zoom,
-            count = 0;
+            count = 0,
+            t0 = performance.now();
 
         this._ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
 
@@ -4766,7 +4767,8 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
             this._ctx.restore();
         }
 
-        fps_display && fps_display.update(now, " n=" + count + " z="+ this._zoom);
+        let elapsed = (performance.now() - t0).toFixed(1);
+        fps_display && fps_display.update(now, `${elapsed} ms/f, n=${count}, z=${this._zoom}`);
     },
 
     // --------------------------------------------------------------------
@@ -5382,8 +5384,8 @@ L.Control.fps = L.Control.extend({
     },
 
     update: function(now=Date.now(), msg="") {
-        let fps = 500 / (now - this.lastCalledTime);
-        this._container.innerHTML = "FPS: " + 2 * Math.floor(fps) + msg;
+        let fps = ~~(1000 / (now - this.lastCalledTime) + 0.5);
+        this._container.innerHTML = `${fps} f/s, ${msg}`;
         this.lastCalledTime = now;
         return fps;
   }
