@@ -278,7 +278,8 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
 
         let ctx = this._ctx,
             zoom = this._zoom,
-            count = 0;
+            count = 0,
+            t0 = performance.now();
 
         this._ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
 
@@ -302,7 +303,8 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
             this._ctx.restore();
         }
 
-        fps_display && fps_display.update(now, " n=" + count + " z="+ this._zoom);
+        let elapsed = (performance.now() - t0).toFixed(1);
+        fps_display && fps_display.update(now, `${elapsed} ms/f, n=${count}, z=${this._zoom}`);
     },
 
     // --------------------------------------------------------------------
