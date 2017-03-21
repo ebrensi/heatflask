@@ -291,7 +291,7 @@
                     </div>
                     <hr>
                     <div>
-                        <h4>Flowmap Options</h4>
+                        <h4>FlowPath Options</h4>
                         <label>Weight:</label>
                         <input class="flowmap-opt" id="weight" type="number" value={{ config["ANTPATH_DEFAULT_OPTIONS"]["weight"] }} min=0 max=20>
 
@@ -299,12 +299,17 @@
                         <input class="flowmap-opt" id="opacity" type="number" value={{ config["ANTPATH_DEFAULT_OPTIONS"]["opacity"] }} min=0 max=20>
 
                         <br>
-                        <h4>Flowmap Variation Constants</h4>
-                        <label>K:</label>
-                        <input class="flowmap-opt" id="K" type="number" value="" min=0 max=1000000>
+                        <h4>Dot Path options</h4>
 
-                        <label>T:</label>
-                        <input class="flowmap-opt" id="T" type="number" value="" min=0 max=1000000>
+                        <label>Size:</label>
+                        <input class="dot-opt" id="nSize" type="number" value="" min=1 max=10>
+                        <label>Color:</label>
+                        <input class="dot-opt" id="nColor" type="text" value="#000000">
+
+                        <label>Size:</label>
+                        <input class="dot-opt" id="sSize" type="number" value="" min=0 max=10>
+                        <label>Color:</label>
+                        <input class="dot-opt" id="sColor" type="text" value="#FFFFFF">
                     </div>
                     </form>
             </div>
@@ -571,8 +576,9 @@
             } catch(e) {}
 
             flow.setStyle({
-                weight: FLOWLAYER_DEFAULT_OPTIONS.weight + 3,
-                opacity: FLOWLAYER_DEFAULT_OPTIONS.opacity + 0.1
+                weight: FLOWLAYER_DEFAULT_OPTIONS.weight + 2,
+                // opacity: FLOWLAYER_DEFAULT_OPTIONS.opacity + 0.1
+                opacity: 0.8;
             });
             return A;
         }
