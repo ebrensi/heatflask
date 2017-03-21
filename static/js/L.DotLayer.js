@@ -45,10 +45,18 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
     DCONST: 0.000001,
     two_pi: 2 * Math.PI,
     target_fps: 16,
+    smoothFactor: 1.0,
 
     options: {
         startPaused: false,
-        smoothFactor: 1.0
+        normal: {
+            dotColor: "#000000",
+            dotSize: 3
+        },
+        selected: {
+            dotColor: "#FFFFFF",
+            dotSize: 2
+        }
     },
 
 
@@ -168,7 +176,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         }
 
         this._ctx = this._canvas.getContext('2d');
-        this._ctx.fillStyle = "#000000";
+        this._ctx.fillStyle = this.options.normal.dotColor;
 
         this._size = this._map.getSize();
         this._bounds = this._map.getBounds();
@@ -190,7 +198,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
                         Object.assign(this._map.latLngToContainerPoint(latLng), {t: A.time[i]})
                         );
 
-                cp_all = L.LineUtil.simplify(cp_all, this.options.smoothFactor);
+                cp_all = L.LineUtil.simplify(cp_all, this.smoothFactor);
 
                 let cp = [];
                 A.startTime = new Date(A.ts_UTC || A.beginTimestamp).getTime();
@@ -222,7 +230,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
               P = this._processedItems[id],
               last_P_idx = P.length - 1,
               max_time = A.time.slice(-1),
-              n1 = this.DCONST * A.total_distance * zoom * zoom * zoom,
+              n1 = this.DCONST * A.total_distance * (1 << (zoom-2)),
               // n1 = (A.total_distance << (this._zoom-1)) >> 20,
               delay = ~~(max_time / n1),
               num_pts = ~~(max_time / delay),
@@ -260,13 +268,14 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
     },
 
     drawSquare: function(obj, dot) {
-        obj._ctx.fillRect(dot.x-2, dot.y-2, 4, 4);
+        let size = obj.options.normal.dotSize;
+        obj._ctx.fillRect(dot.x-2, dot.y-2, size, size);
     },
 
     drawDot: function (obj, dot) {
         let ctx = obj._ctx;
         ctx.beginPath();
-        ctx.arc(dot.x, dot.y, 3, 0, obj.two_pi);
+        ctx.arc(dot.x, dot.y, obj.options.selected.dotSize, 0, obj.two_pi);
         ctx.fill();
         ctx.closePath();
     },
@@ -296,7 +305,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         let hlen = highlighted_items.length;
         if (hlen) {
             this._ctx.save();
-            this._ctx.fillStyle = "#FFFFFF";
+            this._ctx.fillStyle = this.options.selected.dotColor;
             for (let i=0; i < hlen; i++) {
                 count += this.drawDots(highlighted_items[i], now, this.drawDot);
             }

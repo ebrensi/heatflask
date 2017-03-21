@@ -324,7 +324,12 @@
             START_PAUSED = {{ paused|tojson }},
             MAP_PROVIDERS = {{ baselayer|tojson|safe }},
             DEFAULT_MAP_CENTER = [{{ lat }}, {{ lng }}],
-            DEFAULT_MAP_ZOOM = {{ zoom }};
+            DEFAULT_MAP_ZOOM = {{ zoom }},
+            {% if current_user.is_authenticated and current_user.is_admin() %}
+            ADMIN = true;
+            {% else %}
+            ADMIN = false;
+            {% endif %}
 
         // Set up Map and base layers
         let map_providers = MAP_PROVIDERS,
@@ -373,7 +378,11 @@
             zoomControl = map.zoomControl.setPosition('bottomright'),
             layerControl = L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map),
             locateControl = L.control.locate({position: "bottomright", icon: "fa fa-anchor"}).addTo(map),
+            fps_display = null;
+
+        if (ADMIN) {
             fps_display = L.control.fps().addTo(map);
+        }
 
 
         let button_states = [{
