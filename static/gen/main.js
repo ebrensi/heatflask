@@ -4494,15 +4494,15 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         9: 2,
         10: 3,
         11: 4,
-        12: 5,
+        12: 4,
         13: 5,
         14: 5,
         15: 6,
-        16: 6,
-        17: 6,
+        16: 7,
+        17: 7,
         18: 7,
-        19: 7,
-        20: 7
+        19: 8,
+        20: 8
     },
 
     _pane: "shadowPane",
@@ -4523,7 +4523,6 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         }
     },
 
-
     // -- initialized is called on prototype
     initialize: function (items, options) {
         this._map    = null;
@@ -4532,6 +4531,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         this._frame  = null;
         this._items = items || null;
         this._timeOffset = 0;
+        this._colorPalette = [];
         L.setOptions(this, options);
         this._paused = this.options.startPaused;
     },
@@ -4600,6 +4600,14 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         map.on(this.getEvents(),this);
 
         if (this._items) {
+            let itemsList = Object.values(this._items),
+                numItems = itemsList.length;
+
+            this._colorPalette = createPalette(numItems);
+            for (let i=0; i<numItems; i++) {
+                itemsList[i]["dotColor"] = this._colorPalette[i];
+            }
+
             this._onLayerDidMove();
         }
     },
@@ -4708,7 +4716,6 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
             dt,
             p = P[0];
 
-
         for (let t = key_time; t < max_time; t += delay) {
             if (i < last_P_idx && t >= P[i+1].t) {
               while (i < last_P_idx && t >= P[i+1].t) {
@@ -4755,6 +4762,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
             t0 = performance.now();
 
         this._ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
+        this._ctx.fillStyle = this.options.normal.dotColor;
 
         highlighted_items = [];
         for (let id in this._processedItems) {
@@ -4768,12 +4776,13 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         // now plot highlighted paths
         let hlen = highlighted_items.length;
         if (hlen) {
-            this._ctx.save();
-            this._ctx.fillStyle = this.options.selected.dotColor;
+            // ctx.save();
             for (let i=0; i < hlen; i++) {
-                count += this.drawDots(highlighted_items[i], now, this.drawDot);
+                id = highlighted_items[i];
+                ctx.fillStyle = this._items[id].dotColor;
+                count += this.drawDots(id, now, this.drawDot);
             }
-            this._ctx.restore();
+            // this._ctx.restore();
         }
 
         let elapsed = (performance.now() - t0).toFixed(1);
@@ -4847,6 +4856,35 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
 L.dotLayer = function (items, options) {
     return new L.DotLayer(items, options);
 };
+
+
+
+
+/* From http://stackoverflow.com/a/20591891/4718949 */
+function hslToRgbString(h,s,l) {
+    return 'hsl(' + h +',' + s + '%,' + l +'% )';
+}
+
+function createPalette (colorCount) {
+    let newPalette = [],
+        hueStep = Math.floor ( 330 / colorCount ),
+        hue = 0,
+        saturation = 95,
+        luminosity =  55,
+        greenJump  = false;
+
+  for ( let colorIndex=0; colorIndex < colorCount; colorIndex++ ) {
+    saturation = (colorIndex & 1) ? 90 : 65;
+    luminosity = (colorIndex & 1) ? 80 : 55;
+    newPalette.push( hslToRgbString (hue ,saturation, luminosity ));
+    hue += hueStep ;
+    if (!greenJump && hue >100) {
+      hue+=30;
+      greenJump = true;
+    }
+  }
+  return newPalette ;
+}
 
 /*
  * Utility functions to decode/encode numbers and array's of numbers
