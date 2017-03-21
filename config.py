@@ -22,10 +22,9 @@ class Config(object):
     }
 
     ANTPATH_DEFAULT_OPTIONS = {
-        "weight": 3,
-        "opacity": 0.3,
-        "color": 'black',
-        "pulseColor": 'white',
+        "weight": 2,
+        "opacity": 0.2,
+        "color": 'black'
     }
 
     MAP_CENTER = [27.53, 1.58]

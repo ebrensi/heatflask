@@ -5388,6 +5388,7 @@ L.Control.fps = L.Control.extend({
         // Control container
         this._container = L.DomUtil.create('div', 'leaflet-control-fps');
         L.DomEvent.disableClickPropagation(this._container);
+        this._container.style.backgroundColor = 'white';
         this.update(0);
         return this._container;
     },
