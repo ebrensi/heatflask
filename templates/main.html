@@ -318,7 +318,7 @@
         </div>
     </div>
 
-    <div id="map_element" class="sidebar-map"></div>
+    <div id="map" class="sidebar-map"></div>
 
 
     <script type="text/javascript">
@@ -371,7 +371,7 @@
             default_baseLayer = baseLayers["Google.Terrain"];
         }
 
-        let map = L.map('map_element',
+        var map = L.map('map',
                         {center: DEFAULT_MAP_CENTER,
                          zoom: DEFAULT_MAP_ZOOM,
                          layers : [ default_baseLayer ],
