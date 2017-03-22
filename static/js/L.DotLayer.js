@@ -135,14 +135,17 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
 
         map.on(this.getEvents(),this);
 
-        if (this._items) {
-            let itemsList = Object.values(this._items),
-                numItems = itemsList.length;
 
-            this._colorPalette = createPalette(numItems);
-            for (let i=0; i<numItems; i++) {
-                itemsList[i]["dotColor"] = this._colorPalette[i];
-            }
+        if (this._items) {
+
+            // set dotColors for these items
+        //     let itemsList = Object.values(this._items),
+        //         numItems = itemsList.length;
+
+        //     this._colorPalette = createPalette(numItems);
+        //     for (let i=0; i<numItems; i++) {
+        //         itemsList[i]["dotColor"] = this._colorPalette[i];
+        //     }
 
             this._onLayerDidMove();
         }
@@ -315,7 +318,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
             // ctx.save();
             for (let i=0; i < hlen; i++) {
                 id = highlighted_items[i];
-                ctx.fillStyle = this._items[id].dotColor;
+                ctx.fillStyle = this._items[id].dotColor || this.options.selected.dotColor;
                 count += this.drawDots(id, now, this.drawDot);
             }
             // this._ctx.restore();
