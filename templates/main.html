@@ -381,7 +381,7 @@
                   });
 
 
-        let sidebar = L.control.sidebar('sidebar').addTo(map),
+        let sidebarControl = L.control.sidebar('sidebar').addTo(map),
             zoomControl = map.zoomControl.setPosition('bottomright'),
             layerControl = L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map),
             locateControl = L.control.locate({position: "bottomright", icon: "fa fa-anchor"}).addTo(map),
