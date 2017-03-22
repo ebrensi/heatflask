@@ -4494,15 +4494,15 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         9: 2,
         10: 3,
         11: 4,
-        12: 4,
+        12: 5,
         13: 5,
         14: 5,
         15: 6,
-        16: 7,
-        17: 7,
+        16: 6,
+        17: 6,
         18: 7,
-        19: 8,
-        20: 8
+        19: 7,
+        20: 7
     },
 
     _pane: "shadowPane",
@@ -4519,7 +4519,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         },
         selected: {
             dotColor: "#FFFFFF",
-            dotSize: 2
+            dotSize: 3
         }
     },
 
@@ -4599,14 +4599,17 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
 
         map.on(this.getEvents(),this);
 
-        if (this._items) {
-            let itemsList = Object.values(this._items),
-                numItems = itemsList.length;
 
-            this._colorPalette = createPalette(numItems);
-            for (let i=0; i<numItems; i++) {
-                itemsList[i]["dotColor"] = this._colorPalette[i];
-            }
+        if (this._items) {
+
+            // set dotColors for these items
+        //     let itemsList = Object.values(this._items),
+        //         numItems = itemsList.length;
+
+        //     this._colorPalette = createPalette(numItems);
+        //     for (let i=0; i<numItems; i++) {
+        //         itemsList[i]["dotColor"] = this._colorPalette[i];
+        //     }
 
             this._onLayerDidMove();
         }
@@ -4779,7 +4782,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
             // ctx.save();
             for (let i=0; i < hlen; i++) {
                 id = highlighted_items[i];
-                ctx.fillStyle = this._items[id].dotColor;
+                ctx.fillStyle = this._items[id].dotColor || this.options.selected.dotColor;
                 count += this.drawDots(id, now, this.drawDot);
             }
             // this._ctx.restore();
