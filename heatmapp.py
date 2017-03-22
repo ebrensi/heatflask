@@ -54,7 +54,7 @@ bundles = {
         'css/leaflet.css',
         'css/leaflet-sidebar.min.css',
         'css/L.Control.Window.css',
-        'css/L.Control.Locate.min.css',
+        # 'css/L.Control.Locate.min.css',
         'css/datatables.min.css',
         'css/easy-button.css',
         filters='cssmin',
