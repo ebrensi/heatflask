@@ -64,7 +64,7 @@
         <div class="sidebar-content">
             <div class="sidebar-pane" id="home">
                 <h1 class="sidebar-header">
-                    <a href="https://www.strava.com/athletes/{{ user.id }}" target="_blank"><img src="{{ url_for('static',filename='strava_button.png')}}" width=20, height=20, class="img-fluid"> </a>
+                    <a href="https://www.strava.com/athletes/{{ user.id }}" target="_blank"><img src="{{ url_for('static',filename='strava_button.png')}}" style="width:20px; height:20px;" class="img-fluid"> </a>
                     {{ user.username or user.id }}'s map
                     <span class="sidebar-close"><i class="fa fa-caret-left"></i></span>
                 </h1>
@@ -165,7 +165,7 @@
             {% if current_user.is_authenticated
                     and ((current_user.id == user.id) or current_user.is_admin()) %}
             <div class="sidebar-pane" id="profile">
-                <h1 class="sidebar-header"> <a href="https://www.strava.com/athletes/{{ user.id }}" target="_blank"><img src="{{ url_for('static',filename='strava_button.png')}}" width=20, height=20 class="img-fluid"> </a>  {{ user.username or user.id }} <span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
+                <h1 class="sidebar-header"> <a href="https://www.strava.com/athletes/{{ user.id }}" target="_blank"><img src="{{ url_for('static',filename='strava_button.png')}}" style="width:20px; height:20px" class="img-fluid"> </a>  {{ user.username or user.id }} <span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
 
                 {% if current_user.is_authenticated and current_user.is_admin() and (not user.is_admin()) %}
                 Admin ({{ current_user.id }}) on behalf of:
