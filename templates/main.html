@@ -64,7 +64,7 @@
         <div class="sidebar-content">
             <div class="sidebar-pane" id="home">
                 <h1 class="sidebar-header">
-                    <a href="https://www.strava.com/athletes/{{ user.id }}" target="_blank"><img src="{{ url_for('static',filename='strava_button.png')}}" style="width:20px; height:20px;" class="img-fluid"> </a>
+                    <a href="https://www.strava.com/athletes/{{ user.id }}" target="_blank"><img src="{{ url_for('static',filename='strava_button.png')}}" style="width:20px; height:20px;" class="img-fluid" alt="StravaLogo"> </a>
                     {{ user.username or user.id }}'s map
                     <span class="sidebar-close"><i class="fa fa-caret-left"></i></span>
                 </h1>
@@ -165,7 +165,7 @@
             {% if current_user.is_authenticated
                     and ((current_user.id == user.id) or current_user.is_admin()) %}
             <div class="sidebar-pane" id="profile">
-                <h1 class="sidebar-header"> <a href="https://www.strava.com/athletes/{{ user.id }}" target="_blank"><img src="{{ url_for('static',filename='strava_button.png')}}" style="width:20px; height:20px" class="img-fluid"> </a>  {{ user.username or user.id }} <span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
+                <h1 class="sidebar-header"> <a href="https://www.strava.com/athletes/{{ user.id }}" target="_blank"><img src="{{ url_for('static',filename='strava_button.png')}}" style="width:20px; height:20px" class="img-fluid" alt="StravaLogo"> </a>  {{ user.username or user.id }} <span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
 
                 {% if current_user.is_authenticated and current_user.is_admin() and (not user.is_admin()) %}
                 Admin ({{ current_user.id }}) on behalf of:
@@ -217,7 +217,7 @@
                 <hr>
 
                 {{ config['APP_NAME'] }} is a work in progress.
-                <img src="{{ url_for('static', filename='under-construction.gif') }}" height=40>
+                <img src="{{ url_for('static', filename='under-construction.gif') }}" height=40 alt="under-construction">
                 <br>
                 <a href="mailto:Rensi.Efrem@gmail.com?subject=About {{ config['APP_NAME'] }}">Questions, comments, suggestions?  Want to contribute?</a>
                 <hr>
@@ -238,7 +238,7 @@
 
             <div class="sidebar-pane" id="settings">
                 <h1 class="sidebar-header">Map Settings<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
-                    <img src="{{ url_for('static', filename='under-construction.gif') }}" height=40>
+                    <img src="{{ url_for('static', filename='under-construction.gif') }}" height=40 alt="under-construction">
                     <form id="layer-settings-form">
                     <div>
                         <h4>Heatmap Options</h4>
@@ -264,28 +264,28 @@
                             <tbody>
                             <tr>
                             <td>
-                             <input class="heatmap" id="gval1" type="number" value='0.4' step='0.01' min=0 max=1>
+                             <input class="heatmap-opt" id="gval1" type="number" value='0.4' step='0.01' min=0 max=1>
                             </td>
                             <td>
-                              <input class="heatmap" id="gcolor1" type="color" value='#0000FF'>
-                            </td>
-                            </tr>
-
-                            <tr>
-                            <td>
-                             <input class="heatmap" id="gval2" type="number" value='0.65' step='0.01' min=0 max=1>
-                            </td>
-                            <td>
-                              <input id="heatmap" id="gcolor2" type="color" value='#00FF00'>
+                              <input class="heatmap-opt" id="gcolor1" type="color" value='#0000FF'>
                             </td>
                             </tr>
 
                             <tr>
                             <td>
-                             <input class="heatmap" id="gval3" type="number" value='1' step='0.01' min=0 max=1>
+                             <input class="heatmap-opt" id="gval2" type="number" value='0.65' step='0.01' min=0 max=1>
                             </td>
                             <td>
-                              <input id="heatmap" id="gcolor3" type="color" value='#FF0000'>
+                              <input class="heatmap-opt" id="gcolor2" type="color" value='#00FF00'>
+                            </td>
+                            </tr>
+
+                            <tr>
+                            <td>
+                             <input class="heatmap-opt" id="gval3" type="number" value='1' step='0.01' min=0 max=1>
+                            </td>
+                            <td>
+                              <input class="heatmap-opt" id="gcolor3" type="color" value='#FF0000'>
                             </td>
                             </tr>
                             </tbody>
