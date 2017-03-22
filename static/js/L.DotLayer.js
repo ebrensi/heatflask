@@ -241,10 +241,8 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
               P = this._processedItems[id],
               last_P_idx = P.length - 1,
               max_time = A.time.slice(-1),
-              n1 = this.DCONST * A.total_distance * (1 << (zoom-2)),
-              // n1 = (A.total_distance << (this._zoom-1)) >> 20,
-              delay = ~~(max_time / n1),
-              num_pts = ~~(max_time / delay),
+              n = this.DCONST * A.total_distance * (1 << (zoom-2)),
+              delay = max_time / n,
               xmax = this._size.x,
               ymax = this._size.y;
 
