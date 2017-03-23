@@ -2093,9 +2093,6 @@ a.ui-button:active,
 	pointer-events:none;
 }
 
-.leaflet-control-locate a{font-size:1.4em;color:#444}.leaflet-control-locate.active a{color:#2074B6}.leaflet-control-locate.active.following a{color:#FC8428}
-/*# sourceMappingURL=L.Control.Locate.min.css.map */
-
 /*
  * This combined file was created by the DataTables downloader builder:
  *   https://datatables.net/download
