@@ -243,7 +243,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
               total_seconds = A.time.slice(-1),
               z = this._zoom,
               T = this.K * total_seconds / (A.total_distance * (1 << (z-2))),
-              s = 2 * (now - A.startTime) / (1 << (z/2)),
+              s = Math.log(z) * (now - A.startTime) / (1 << (z/2)),
               xmax = this._size.x,
               ymax = this._size.y;
 
