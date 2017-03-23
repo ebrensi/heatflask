@@ -46,6 +46,8 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
     two_pi: 2 * Math.PI,
     target_fps: 16,
     smoothFactor: 1.0,
+    K: 1500000,
+    S: 1000,
 
     options: {
         startPaused: false,
@@ -236,24 +238,22 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
     // --------------------------------------------------------------------
     drawDots: function(id, now, drawDotFunc) {
         const A = this._items[id],
-              zoom = this._zoom,
-              time = (now - A.startTime) >>> this.SCONSTS[zoom],
               P = this._processedItems[id],
               last_P_idx = P.length - 1,
-              max_time = A.time.slice(-1),
-              n = this.DCONST * A.total_distance * (1 << (zoom-2)),
-              delay = max_time / n,
+              total_seconds = A.time.slice(-1),
+              z = this._zoom,
+              T = this.K * total_seconds / (A.total_distance * (1 << (z-2))),
+              s = 2 * (now - A.startTime) / (1 << (z/2)),
               xmax = this._size.x,
               ymax = this._size.y;
 
-        let s = time % max_time,
-            key_time = s - delay * (~~(s/delay)),
+        let key_time = s - T * (~~(s/T)),
             count = 0,
             i = 0,
             dt,
             p = P[0];
 
-        for (let t = key_time; t < max_time; t += delay) {
+        for (let t = key_time; t < total_seconds; t += T) {
             if (i < last_P_idx && t >= P[i+1].t) {
               while (i < last_P_idx && t >= P[i+1].t) {
                 i++;
