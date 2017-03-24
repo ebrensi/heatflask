@@ -166,7 +166,8 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
             return;
         }
 
-        this._ctx = this._canvas.getContext('2d');
+        t0 = performance.now();
+        // this._ctx = this._canvas.getContext('2d');
         this._ctx.fillStyle = this.options.normal.dotColor;
 
         this._size = this._map.getSize();
@@ -183,26 +184,30 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
 
         // compute relevant container points and slopes
         this._processedItems = {};
+        let cp, cp_all, contained;
+
         for (let id in this._items) {
             let A = this._items[id];
             if (("latlng" in A) && this._bounds.intersects(A.bounds) && ("time" in A)) {
-                let cp_all = A.latlng.map(
-                        (latLng, i) =>
-                        Object.assign(this._map.latLngToContainerPoint(latLng), {t: A.time[i]})
-                        );
+                cp_all = A.latlng.map(function(latLng, i) {
+                        p = this._map.latLngToContainerPoint(latLng);
+                        p.t = A.time[i];
+                        return p;
+                    }.bind(this));
 
                 cp_all = L.LineUtil.simplify(cp_all, this.smoothFactor);
 
-                let cp = [];
+                contained = cp_all.map( function (p) {
+                    return ((p.x >= 0 && p.x <= xmax) && (p.y >= 0 && p.y <= ymax));
+                });
+
+                cp = [];
                 A.startTime = new Date(A.ts_UTC || A.beginTimestamp).getTime();
 
-                for (let i=1, len=cp_all.length; i<len; i++) {
-                    let p1 = cp_all[i-1],
-                        p1_in = ((p1.x >= 0 && p1.x <= xmax) && (p1.y >= 0 && p1.y <= ymax)),
-                        p2 = cp_all[i],
-                        p2_in = ((p2.x >= 0 && p2.x <= xmax) && (p2.y >= 0 && p2.y <= ymax));
-
-                    if (p1_in || p2_in) {
+                for (let p1, p2, i=1, len=cp_all.length; i<len; i++) {
+                    if (contained[i-1] || contained[i]) {
+                        p1 = cp_all[i-1];
+                        p2 = cp_all[i];
                         dt = p2.t - p1.t;
                         Object.assign(p1, { dx: (p2.x-p1.x)/dt, dy: (p2.y-p1.y)/dt });
                         cp.push(p1);
@@ -221,6 +226,9 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
                 }
             }
         }
+
+        elapsed = (performance.now() - t0).toFixed(4);
+        console.log(`dot context update took ${elapsed} ms`)
     },
 
     // --------------------------------------------------------------------
