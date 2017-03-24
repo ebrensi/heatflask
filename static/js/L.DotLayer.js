@@ -172,7 +172,10 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
 
         this._size = this._map.getSize();
         this._bounds = this._map.getBounds();
+
+        let oldZoom = this._zoom;
         this._zoom = this._map.getZoom();
+        zoomChanged = oldZoom != this._zoom;
 
         this._center = this.LatLonToMercator(this._map.getCenter());
         this._corner = this.LatLonToMercator(this._map.containerPointToLatLng(this._map.getSize()));
