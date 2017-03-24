@@ -4482,28 +4482,6 @@ L.DomUtil.setTransform = L.DomUtil.setTransform || function (el, offset, scale) 
 
 // -- support for both  0.0.7 and 1.0.0 rc2 leaflet
 L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
-    SCONSTS: {
-        1: 1,
-        2: 1,
-        3: 1,
-        4: 1,
-        5: 1,
-        6: 1,
-        7: 2,
-        8: 2,
-        9: 2,
-        10: 3,
-        11: 4,
-        12: 5,
-        13: 5,
-        14: 5,
-        15: 6,
-        16: 6,
-        17: 6,
-        18: 7,
-        19: 7,
-        20: 7
-    },
 
     _pane: "shadowPane",
     DCONST: 0.000001,
@@ -4511,7 +4489,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
     target_fps: 16,
     smoothFactor: 1.0,
     K: 1500000,
-    S: 1000,
+    S: 0.8,
 
     options: {
         startPaused: false,
@@ -4665,6 +4643,8 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         const xmax = this._size.x,
               ymax = this._size.y;
 
+        this._dotSize = Math.log(this._zoom) + 1;
+
         // compute relevant container points and slopes
         this._processedItems = {};
         for (let id in this._items) {
@@ -4693,7 +4673,15 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
                     }
                 }
                 if (cp.length) {
-                    this._processedItems[id] = cp;
+                    this._processedItems[id] = {
+                        cp: cp,
+
+                        // interval T between dots is a function of total distance, total time, and zoom
+                        T: this.K * A.time.slice(-1) / (A.total_distance * (1 << (this._zoom-2))),
+
+                        // time scaling factor
+                        S: this.S * Math.log(this._zoom) / (1 << (this._zoom/2))
+                    };
                 }
             }
         }
@@ -4702,12 +4690,12 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
     // --------------------------------------------------------------------
     drawDots: function(id, now, drawDotFunc) {
         const A = this._items[id],
-              P = this._processedItems[id],
+              P = this._processedItems[id].cp,
               last_P_idx = P.length - 1,
               total_seconds = A.time.slice(-1),
               z = this._zoom,
-              T = this.K * total_seconds / (A.total_distance * (1 << (z-2))),
-              s = Math.log(z) * (now - A.startTime) / (1 << (z/2)),
+              T = this._processedItems[id].T,
+              s = (now - A.startTime) * this._processedItems[id].S,
               xmax = this._size.x,
               ymax = this._size.y;
 
@@ -4715,7 +4703,8 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
             count = 0,
             i = 0,
             dt,
-            p = P[0];
+            p = P[0],
+            loc;
 
         for (let t = key_time; t < total_seconds; t += T) {
             if (i < last_P_idx && t >= P[i+1].t) {
@@ -4726,28 +4715,27 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
             }
 
             dt = t - p.t;
-            dot = {
+            loc = {
               x: ~~(p.x + p.dx*dt + 0.5),
               y: ~~(p.y + p.dy*dt + 0.5)
             };
 
-            if ((dot.x >= 0 && dot.x <= xmax) && (dot.y >= 0 && dot.y <= ymax)) {
-                drawDotFunc(this, dot);
+            if ((loc.x >= 0 && loc.x <= xmax) && (loc.y >= 0 && loc.y <= ymax)) {
+                drawDotFunc(this, loc);
                 count++;
             }
         }
         return count;
     },
 
-    drawSquare: function(obj, dot) {
-        let size = obj.options.normal.dotSize;
-        obj._ctx.fillRect(dot.x-2, dot.y-2, size, size);
+    drawSquare: function(obj, loc) {
+        obj._ctx.fillRect(loc.x-2, loc.y-2, obj._dotSize, obj._dotSize);
     },
 
-    drawDot: function (obj, dot) {
+    drawDot: function (obj, loc) {
         let ctx = obj._ctx;
         ctx.beginPath();
-        ctx.arc(dot.x, dot.y, obj.options.selected.dotSize, 0, obj.two_pi);
+        ctx.arc(loc.x, loc.y, obj._dotSize, 0, obj.two_pi);
         ctx.fill();
         ctx.closePath();
     },
