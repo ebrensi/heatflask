@@ -4654,9 +4654,13 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
 
         for (let id in this._items) {
             let A = this._items[id];
+            if (zoomChanged) {
+                A.projected = null;
+            }
+
             if (("latlng" in A) && this._bounds.intersects(A.bounds) && ("time" in A)) {
 
-                if (zoomChanged || !A.projected) {
+                if (!A.projected) {
                     A.projected = A.latlng.map(function(latLng, i){
                         p = this._map.latLngToLayerPoint(latLng);
                         p.t = A.time[i];
