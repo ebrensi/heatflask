@@ -4631,7 +4631,6 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         }
 
         t0 = performance.now();
-        // this._ctx = this._canvas.getContext('2d');
         this._ctx.fillStyle = this.options.normal.dotColor;
 
         this._size = this._map.getSize();
@@ -4651,18 +4650,27 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
 
         // compute relevant container points and slopes
         this._processedItems = {};
-        let cp, cp_all, contained;
+        let cp, cpp, cp_all, contained;
 
         for (let id in this._items) {
             let A = this._items[id];
             if (("latlng" in A) && this._bounds.intersects(A.bounds) && ("time" in A)) {
-                cp_all = A.latlng.map(function(latLng, i) {
-                        p = this._map.latLngToContainerPoint(latLng);
+
+                if (zoomChanged || !A.projected) {
+                    A.projected = A.latlng.map(function(latLng, i){
+                        p = this._map.latLngToLayerPoint(latLng);
                         p.t = A.time[i];
                         return p;
                     }.bind(this));
 
-                cp_all = L.LineUtil.simplify(cp_all, this.smoothFactor);
+                    A.projected = L.LineUtil.simplify(A.projected, this.smoothFactor);
+                }
+
+                cp_all = A.projected.map(function(p) {
+                        cpp = this._map.layerPointToContainerPoint(p);
+                        cpp.t = p.t;
+                        return cpp;
+                    }.bind(this));
 
                 contained = cp_all.map( function (p) {
                     return ((p.x >= 0 && p.x <= xmax) && (p.y >= 0 && p.y <= ymax));
