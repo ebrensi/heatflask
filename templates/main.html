@@ -339,7 +339,7 @@
             {% endif %}
 
         // Set up Map and base layers
-        let map_providers = MAP_PROVIDERS,
+        var map_providers = MAP_PROVIDERS,
             default_baseLayer,
             baseLayers = {
                 "None": L.tileLayer(""),
@@ -381,7 +381,7 @@
                   });
 
 
-        let sidebarControl = L.control.sidebar('sidebar').addTo(map),
+        var sidebarControl = L.control.sidebar('sidebar').addTo(map),
             zoomControl = map.zoomControl.setPosition('bottomright'),
             layerControl = L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map),
             // locateControl = L.control.locate({position: "bottomright", icon: "fa fa-anchor"}).addTo(map),
@@ -435,7 +435,7 @@
 
 
         // Set-up activity table
-        let atable = $('#atab').DataTable({
+        var atable = $('#atab').DataTable({
             paging: false,
             scrollY: "60vh",
             scrollX: true,

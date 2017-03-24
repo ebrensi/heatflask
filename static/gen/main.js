@@ -4636,7 +4636,10 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
 
         this._size = this._map.getSize();
         this._bounds = this._map.getBounds();
+
+        let oldZoom = this._zoom;
         this._zoom = this._map.getZoom();
+        zoomChanged = oldZoom != this._zoom;
 
         this._center = this.LatLonToMercator(this._map.getCenter());
         this._corner = this.LatLonToMercator(this._map.containerPointToLatLng(this._map.getSize()));
@@ -4648,7 +4651,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
 
         // compute relevant container points and slopes
         this._processedItems = {};
-        let cp_all, contained;
+        let cp, cp_all, contained;
 
         for (let id in this._items) {
             let A = this._items[id];
@@ -4665,7 +4668,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
                     return ((p.x >= 0 && p.x <= xmax) && (p.y >= 0 && p.y <= ymax));
                 });
 
-                let cp = [];
+                cp = [];
                 A.startTime = new Date(A.ts_UTC || A.beginTimestamp).getTime();
 
                 for (let p1, p2, i=1, len=cp_all.length; i<len; i++) {
