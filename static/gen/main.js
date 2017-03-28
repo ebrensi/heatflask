@@ -4640,6 +4640,8 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         this._pxBounds = this._map.getPixelBounds();
         this._layerBounds = this._map._latLngBoundsToNewLayerBounds(this._latLngBounds, this._zoom, this._map.getCenter());
 
+        this._pxOffset = this._mapPanePos.subtract(this._pxOrigin);
+
         const z = this._zoom,
               ppos = this._mapPanePos,
               pxOrigin = this._pxOrigin,
@@ -4661,12 +4663,12 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
                 A.projected = {};
             }
 
-            if (("latlng" in A) && this._latLngBounds.intersects(A.bounds) && ("time" in A)) {
+            if (("latlng" in A) && this._latLngBounds.overlaps(A.bounds) && ("time" in A)) {
                 let projected = A.projected[z];
 
                 if (!projected) {
                     projected = A.latlng.map(function(latLng, i){
-                        p = this._map.latLngToLayerPoint(latLng);
+                        p = this._map.project(latLng);
                         p.t = A.time[i];
                         return p;
                     }.bind(this));
@@ -4677,8 +4679,8 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
 
                 contained = projected.map( function (p) {
                     // return ((p.x >= xmin && p.x <= xmax) && (p.y >= ymin && p.y <= ymax));
-                    return this._layerBounds.contains(p);
-                });
+                    return this._pxBounds.contains(p);
+                }.bind(this));
 
 
                 cp = [];
@@ -4695,7 +4697,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
                         cp.push(p1);
                     }
                 }
-                if (cp.length) {
+                if (cp.length > 1) {
                     this._processedItems[id] = {
                         cp: cp,
 
@@ -4722,11 +4724,10 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
               z = this._zoom,
               T = this._processedItems[id].T,
               s = (now - A.startTime) * this._processedItems[id].S,
+              pxBounds = this._pxBounds,
               xmax = this._size.x,
-              ymax = this._size.y,
-              ppos = this._mapPanePos,
-              ppox = ppos.x + 0.5,
-              ppoy = ppos.y + 0.5;
+              ymax = this._size.y;
+
 
         let key_time = s - T * (~~(s/T)),
             count = 0,
@@ -4745,8 +4746,8 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
 
             dt = t - p.t;
             loc = {
-              x: ~~(p.x + p.dx*dt + ppox),
-              y: ~~(p.y + p.dy*dt + ppoy)
+              x: ~~(p.x + p.dx*dt + this._pxOffset.x + 0.5),
+              y: ~~(p.y + p.dy*dt + this._pxOffset.y + 0.5)
             };
 
             if ((loc.x >= 0 && loc.x <= xmax) && (loc.y >= 0 && loc.y <= ymax)) {
