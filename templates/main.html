@@ -295,10 +295,10 @@
                     <div>
                         <h4>FlowPath Options</h4>
                         <label>Weight:</label>
-                        <input class="flowmap-opt" id="weight" type="number" value={{ config["ANTPATH_DEFAULT_OPTIONS"]["weight"] }} min=0 max=20>
+                        <input class="flowmap-opt" id="weight" type="number" value={{ config["POLYLINE_DEFAULT_OPTIONS"]["weight"] }} min=0 max=20>
 
                         <label>Opacity:</label>
-                        <input class="flowmap-opt" id="opacity" type="number" value={{ config["ANTPATH_DEFAULT_OPTIONS"]["opacity"] }} min=0 max=20>
+                        <input class="flowmap-opt" id="opacity" type="number" value={{ config["POLYLINE_DEFAULT_OPTIONS"]["opacity"] }} min=0 max=20>
 
                         <br>
                         <h4>Dot Path options</h4>
@@ -324,7 +324,7 @@
     <script type="text/javascript">
         const OFFLINE = {{ config.get('OFFLINE')|tojson }},
             HEATLAYER_DEFAULT_OPTIONS = {{ config["HEATMAP_DEFAULT_OPTIONS"]|tojson|safe }},
-            FLOWLAYER_DEFAULT_OPTIONS = {{ config["ANTPATH_DEFAULT_OPTIONS"]|tojson|safe }},
+            POLYLINE_DEFAULT_OPTIONS = {{ config["POLYLINE_DEFAULT_OPTIONS"]|tojson|safe }},
             BASE_DATAURL = "{{ url_for('getdata', username=user.id) }}",
             BASE_USER_URL = "{{ url_for('main', username=user.id) }}",
             USER_ID = "{{ user.id }}",
@@ -377,7 +377,7 @@
                         {center: DEFAULT_MAP_CENTER,
                          zoom: DEFAULT_MAP_ZOOM,
                          layers : [ default_baseLayer ],
-                         // renderer: L.canvas({ padding: 0 })
+                         // renderer: L.canvas({ padding: 0 }),
                          renderer: L.svg({ padding: 0 }),
                          zoomAnimation: false
                   });
@@ -580,8 +580,8 @@
             } catch(e) {}
 
             flow.setStyle({
-                weight: FLOWLAYER_DEFAULT_OPTIONS.weight + 2,
-                // opacity: FLOWLAYER_DEFAULT_OPTIONS.opacity + 0.1
+                weight: POLYLINE_DEFAULT_OPTIONS.weight + 2,
+                // opacity: POLYLINE_DEFAULT_OPTIONS.opacity + 0.1
                 opacity: 0.8
             });
             return A;
@@ -600,8 +600,8 @@
 
             // restore animated path to defaults
             A.flowLayer.setStyle({
-                weight: FLOWLAYER_DEFAULT_OPTIONS.weight,
-                opacity: FLOWLAYER_DEFAULT_OPTIONS.opacity
+                weight: POLYLINE_DEFAULT_OPTIONS.weight,
+                opacity: POLYLINE_DEFAULT_OPTIONS.opacity
             });
 
             return A;
@@ -833,7 +833,7 @@
 
                     if (flowres){
                         // add this activity's route to FlowLayer
-                        var fopts = Object.assign({}, FLOWLAYER_DEFAULT_OPTIONS);
+                        var fopts = Object.assign({}, POLYLINE_DEFAULT_OPTIONS);
                         if (("path_color" in A) && A.path_color)
                             fopts.color = A.path_color;
                     }

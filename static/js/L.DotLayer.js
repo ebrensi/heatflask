@@ -237,7 +237,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
                         cp: cp,
 
                         // interval T between dots is a function of total distance, total time, and zoom
-                        T: this.K * A.time.slice(-1) / (A.total_distance * (1 << (this._zoom-2))),
+                        T: ~~(this.K * A.time.slice(-1) / (A.total_distance * (1 << (this._zoom-2)))),
 
                         // time scaling factor
                         S: this.S * Math.log(this._zoom) / (1 << (this._zoom/2))
@@ -264,7 +264,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
               ymax = this._size.y;
 
 
-        let key_time = s - T * (~~(s/T)),
+        let key_time = s % T,
             count = 0,
             i = 0,
             dt,

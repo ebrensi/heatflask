@@ -21,10 +21,11 @@ class Config(object):
         "gradient": {0.4: 'blue', 0.65: 'lime', 1: 'red'}
     }
 
-    ANTPATH_DEFAULT_OPTIONS = {
+    POLYLINE_DEFAULT_OPTIONS = {
         "weight": 2,
         "opacity": 0.2,
-        "color": 'black'
+        "color": 'black',
+        "smoothFactor": 1.0
     }
 
     MAP_CENTER = [27.53, 1.58]
