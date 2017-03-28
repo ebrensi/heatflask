@@ -4678,7 +4678,6 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
                 }
 
                 contained = projected.map( function (p) {
-                    // return ((p.x >= xmin && p.x <= xmax) && (p.y >= ymin && p.y <= ymax));
                     return this._pxBounds.contains(p);
                 }.bind(this));
 
