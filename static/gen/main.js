@@ -4630,65 +4630,68 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
             return;
         }
 
-        t0 = performance.now();
-        this._ctx.fillStyle = this.options.normal.dotColor;
+        const t0 = performance.now();
 
         this._size = this._map.getSize();
-        this._bounds = this._map.getBounds();
-
-        let oldZoom = this._zoom;
+        this._latLngBounds = this._map.getBounds();
         this._zoom = this._map.getZoom();
-        zoomChanged = oldZoom != this._zoom;
+        this._mapPanePos = this._map._getMapPanePos();
+        this._pxOrigin = this._map.getPixelOrigin();
+        this._pxBounds = this._map.getPixelBounds();
+        this._layerBounds = this._map._latLngBoundsToNewLayerBounds(this._latLngBounds, this._zoom, this._map.getCenter());
 
-        this._center = this.LatLonToMercator(this._map.getCenter());
-        this._corner = this.LatLonToMercator(this._map.containerPointToLatLng(this._map.getSize()));
+        const z = this._zoom,
+              ppos = this._mapPanePos,
+              pxOrigin = this._pxOrigin,
+              pxBounds = this._pxBounds,
+              layerBounds = this._layerBounds;
 
-        const xmax = this._size.x,
-              ymax = this._size.y;
-
-        this._dotSize = Math.log(this._zoom) + 1;
+        console.log(`zoom=${z}\nmapPanePos=${ppos}\nsize=${this._size}\n` +
+                    `pxOrigin=${pxOrigin}\npxBounds=[${pxBounds.min}, ${pxBounds.max}]\n` +
+                    `layerBounds=[${layerBounds.min}, ${layerBounds.max}]`);
+        this._dotSize = Math.log(z) + 1;
 
         // compute relevant container points and slopes
         this._processedItems = {};
-        let cp, cpp, cp_all, contained;
+        let cp, cpp, contained;
 
         for (let id in this._items) {
             let A = this._items[id];
-            if (zoomChanged) {
-                A.projected = null;
+            if (!A.projected) {
+                A.projected = {};
             }
 
-            if (("latlng" in A) && this._bounds.intersects(A.bounds) && ("time" in A)) {
+            if (("latlng" in A) && this._latLngBounds.intersects(A.bounds) && ("time" in A)) {
+                let projected = A.projected[z];
 
-                if (!A.projected) {
-                    A.projected = A.latlng.map(function(latLng, i){
+                if (!projected) {
+                    projected = A.latlng.map(function(latLng, i){
                         p = this._map.latLngToLayerPoint(latLng);
                         p.t = A.time[i];
                         return p;
                     }.bind(this));
 
-                    A.projected = L.LineUtil.simplify(A.projected, this.smoothFactor);
+                    projected = L.LineUtil.simplify(projected, this.smoothFactor);
+                    A.projected[z] = projected;
                 }
 
-                cp_all = A.projected.map(function(p) {
-                        cpp = this._map.layerPointToContainerPoint(p);
-                        cpp.t = p.t;
-                        return cpp;
-                    }.bind(this));
-
-                contained = cp_all.map( function (p) {
-                    return ((p.x >= 0 && p.x <= xmax) && (p.y >= 0 && p.y <= ymax));
+                contained = projected.map( function (p) {
+                    // return ((p.x >= xmin && p.x <= xmax) && (p.y >= ymin && p.y <= ymax));
+                    return this._layerBounds.contains(p);
                 });
+
 
                 cp = [];
                 A.startTime = new Date(A.ts_UTC || A.beginTimestamp).getTime();
 
-                for (let p1, p2, i=1, len=cp_all.length; i<len; i++) {
+                for (let p1, p2, i=1, len=projected.length; i<len; i++) {
                     if (contained[i-1] || contained[i]) {
-                        p1 = cp_all[i-1];
-                        p2 = cp_all[i];
-                        dt = p2.t - p1.t;
-                        Object.assign(p1, { dx: (p2.x-p1.x)/dt, dy: (p2.y-p1.y)/dt });
+                        p1 = projected[i-1];
+                        if (!p1.dx) {
+                            p2 = projected[i];
+                            dt = p2.t - p1.t;
+                            Object.assign(p1, { dx: (p2.x-p1.x)/dt, dy: (p2.y-p1.y)/dt });
+                        }
                         cp.push(p1);
                     }
                 }
@@ -4706,8 +4709,8 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
             }
         }
 
-        elapsed = (performance.now() - t0).toFixed(4);
-        console.log(`dot context update took ${elapsed} ms`)
+        elapsed = (performance.now() - t0).toFixed(2);
+        console.log(`dot context update took ${elapsed} ms`);
     },
 
     // --------------------------------------------------------------------
@@ -4720,7 +4723,10 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
               T = this._processedItems[id].T,
               s = (now - A.startTime) * this._processedItems[id].S,
               xmax = this._size.x,
-              ymax = this._size.y;
+              ymax = this._size.y,
+              ppos = this._mapPanePos,
+              ppox = ppos.x + 0.5,
+              ppoy = ppos.y + 0.5;
 
         let key_time = s - T * (~~(s/T)),
             count = 0,
@@ -4739,8 +4745,8 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
 
             dt = t - p.t;
             loc = {
-              x: ~~(p.x + p.dx*dt + 0.5),
-              y: ~~(p.y + p.dy*dt + 0.5)
+              x: ~~(p.x + p.dx*dt + ppox),
+              y: ~~(p.y + p.dy*dt + ppoy)
             };
 
             if ((loc.x >= 0 && loc.x <= xmax) && (loc.y >= 0 && loc.y <= ymax)) {
