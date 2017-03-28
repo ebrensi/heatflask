@@ -340,15 +340,8 @@
 
         // Set up Map and base layers
         var map_providers = MAP_PROVIDERS,
-            default_baseLayer,
-            baseLayers = {
-                "None": L.tileLayer(""),
-                "Esri.WorldImagery": L.tileLayer.provider("Esri.WorldImagery"),
-                "OpenStreetMap.Mapnik": L.tileLayer.provider("OpenStreetMap.Mapnik"),
-                "Google.Roadmap": L.gridLayer.googleMutant({type: 'roadmap'}),
-                "Google.Terrain": L.gridLayer.googleMutant({type: 'terrain'}),
-                "Google.Hybrid": L.gridLayer.googleMutant({type: 'hybrid'})
-            },
+            baseLayers = {"None": L.tileLayer("")},
+            default_baseLayer = baseLayers["None"],
             HeatLayer = false,
             FlowLayer = false,
             DotLayer = false,
@@ -358,17 +351,26 @@
             };
 
 
-        if (OFFLINE) {
-            default_baseLayer = baseLayers["None"];
-        } else if (map_providers.length) {
-            for (let i = 0; i < map_providers.length; i++) {
-                provider = map_providers[i];
-                let tl = L.tileLayer.provider(provider);
-                baseLayers[provider] = tl;
-                if (i==0) default_baseLayer = tl;
+        if (!OFFLINE) {
+            let online_baseLayers = {
+                "Esri.WorldImagery": L.tileLayer.provider("Esri.WorldImagery"),
+                "OpenStreetMap.Mapnik": L.tileLayer.provider("OpenStreetMap.Mapnik"),
+                "Google.Roadmap": L.gridLayer.googleMutant({type: 'roadmap'}),
+                "Google.Terrain": L.gridLayer.googleMutant({type: 'terrain'}),
+                "Google.Hybrid": L.gridLayer.googleMutant({type: 'hybrid'})
+            };
+
+            Object.assign(baseLayers, online_baseLayers);
+            if (map_providers.length) {
+                for (let i = 0; i < map_providers.length; i++) {
+                    provider = map_providers[i];
+                    let tl = L.tileLayer.provider(provider);
+                    baseLayers[provider] = tl;
+                    if (i==0) default_baseLayer = tl;
+                }
+            } else {
+                default_baseLayer = baseLayers["Google.Terrain"];
             }
-        } else {
-            default_baseLayer = baseLayers["Google.Terrain"];
         }
 
         var map = L.map('map',
