@@ -4683,7 +4683,6 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
 
 
                 cp = [];
-                A.startTime = new Date(A.ts_UTC || A.beginTimestamp).getTime();
 
                 for (let p1, p2, i=1, len=projected.length; i<len; i++) {
                     if (contained[i-1] || contained[i]) {
@@ -4704,7 +4703,10 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
                         T: ~~(this.K * A.time.slice(-1) / (A.total_distance * (1 << (this._zoom-2)))),
 
                         // time scaling factor
-                        S: this.S * Math.log(this._zoom) / (1 << (this._zoom/2))
+                        S: this.S * Math.log(this._zoom) / (1 << (this._zoom/2)),
+
+                        startTime: new Date(A.ts_UTC || A.beginTimestamp).getTime(),
+                        totSec: A.time.slice(-1)
                     };
                 }
             }
@@ -4715,27 +4717,27 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
     },
 
     // --------------------------------------------------------------------
-    drawDots: function(id, now, drawDotFunc) {
-        const A = this._items[id],
-              P = this._processedItems[id].cp,
+    drawDots: function(obj, now, highlighted) {
+        const P = obj.cp,
               last_P_idx = P.length - 1,
-              total_seconds = A.time.slice(-1),
-              z = this._zoom,
-              T = this._processedItems[id].T,
-              s = (now - A.startTime) * this._processedItems[id].S,
-              pxBounds = this._pxBounds,
+              totSec = obj.totSec,
+              T = obj.T,
+              s = (now - obj.startTime) * obj.S,
               xmax = this._size.x,
-              ymax = this._size.y;
+              ymax = this._size.y,
+              ctx = this._ctx,
+              dotSize = this._dotSize,
+              two_pi = this.two_pi;
 
 
-        let key_time = s % T,//s - T * (~~(s/T)),
+        let key_time = s % T,
             count = 0,
             i = 0,
-            dt,
+            t, dt,
             p = P[0],
-            loc;
+            lx, ly;
 
-        for (let t = key_time; t < total_seconds; t += T) {
+        for (t = key_time; t < totSec; t += T) {
             if (i < last_P_idx && t >= P[i+1].t) {
               while (i < last_P_idx && t >= P[i+1].t) {
                 i++;
@@ -4744,13 +4746,19 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
             }
 
             dt = t - p.t;
-            loc = {
-              x: ~~(p.x + p.dx*dt + this._pxOffset.x + 0.5),
-              y: ~~(p.y + p.dy*dt + this._pxOffset.y + 0.5)
-            };
+            lx = ~~(p.x + p.dx*dt + this._pxOffset.x + 0.5);
+            ly = ~~(p.y + p.dy*dt + this._pxOffset.y + 0.5);
 
-            if ((loc.x >= 0 && loc.x <= xmax) && (loc.y >= 0 && loc.y <= ymax)) {
-                drawDotFunc(this, loc);
+            if ((lx >= 0 && lx <= xmax) && (ly >= 0 && ly <= ymax)) {
+                if (highlighted) {
+                    ctx.beginPath();
+                    ctx.arc(lx, ly, dotSize, 0, two_pi);
+                    ctx.fill();
+                    ctx.closePath();
+                } else {
+                    ctx.fillRect(lx-2, ly-2, dotSize, dotSize);
+
+                }
                 count++;
             }
         }
@@ -4782,25 +4790,31 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         this._ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
         this._ctx.fillStyle = this.options.normal.dotColor;
 
-        highlighted_items = [];
-        for (let id in this._processedItems) {
-            if (this._items[id].highlighted) {
-                highlighted_items.push(id);
+        let id,
+            item,
+            items = this._items,
+            pItem,
+            pItems = this._processedItems,
+            highlighted_items = [];
+
+        for (id in pItems) {
+            item = pItems[id];
+            if (items[id].highlighted) {
+                highlighted_items.push(item);
             } else {
-                count += this.drawDots(id, now, this.drawSquare);
+                count += this.drawDots(item, now, false);
             }
         }
 
         // now plot highlighted paths
-        let hlen = highlighted_items.length;
+        let i,
+            hlen = highlighted_items.length;
         if (hlen) {
-            // ctx.save();
-            for (let i=0; i < hlen; i++) {
-                id = highlighted_items[i];
-                ctx.fillStyle = this._items[id].dotColor || this.options.selected.dotColor;
-                count += this.drawDots(id, now, this.drawDot);
+            for (i=0; i < hlen; i++) {
+                item = highlighted_items[i];
+                ctx.fillStyle = item.dotColor || this.options.selected.dotColor;
+                count += this.drawDots(item, now, true);
             }
-            // this._ctx.restore();
         }
 
         let elapsed = (performance.now() - t0).toFixed(1);
