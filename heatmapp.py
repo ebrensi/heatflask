@@ -626,11 +626,25 @@ def activities(username):
                            user=user)
 
 
+@app.route('/<username>/update_info')
+@log_request_event
+@admin_or_self_required
+def update_share_status(username):
+    status = request.args.get("status")
+    app.logger.info("share status for {} set to {}"
+                    .format(current_user, status))
+    # Change user's share status here
+    current_user.share_profile = status == "public"
+    db_sql.session.commit()
+
+    return status
+
+
 # ---- Shared views ----
 @app.route('/public/directory')
 @log_request_event
 def public_directory():
-    # user = Users.get(username)
+    ulist = Users.query.filter_by(share_profile=True)
     return "users"
 
 

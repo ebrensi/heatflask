@@ -27,7 +27,7 @@ import os
 # PostgreSQL access via SQLAlchemy
 db_sql = SQLAlchemy(app)
 Column = db_sql.Column
-String, Integer = db_sql.String, db_sql.Integer
+String, Integer, Boolean = db_sql.String, db_sql.Integer, db_sql.Boolean
 
 # MongoDB access via PyMongo
 mongo_client = pymongo.MongoClient(app.config.get("MONGODB_URI"))
@@ -70,6 +70,8 @@ class Users(UserMixin, db_sql.Model):
 
     dt_last_active = Column(pg.TIMESTAMP)
     app_activity_count = Column(Integer, default=0)
+    # share_profile = Column(Boolean, default=False)
+
     activity_index = None
     index_df_dtypes = {
         "id": "uint32",
@@ -232,7 +234,8 @@ class Users(UserMixin, db_sql.Model):
 
     @classmethod
     def backup(cls):
-        attrs = ["id", "access_token", "dt_last_active", "app_activity_count"]
+        attrs = ["id", "access_token", "dt_last_active", "app_activity_count",
+            "share_profile"]
         dump = [{attr: getattr(user, attr) for attr in attrs}
                 for user in cls.query]
 
