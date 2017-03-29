@@ -44,7 +44,8 @@ OFFLINE = app.config.get("OFFLINE")
 
 
 def tuplize_datetime(dt):
-    return (dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second, dt.microsecond)
+    return (dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second,
+            dt.microsecond)
 
 
 def detuplize_datetime(s):
