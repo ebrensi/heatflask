@@ -168,13 +168,14 @@ class Users(UserMixin, db_sql.Model):
         app.logger.info("new user: {}".format(detached_user.info()))
         try:
             persistent_user = db_sql.session.merge(detached_user)
+            # db_sql.session.add(persistent_user)
             db_sql.session.commit()
         except Exception as e:
             db_sql.session.rollback()
             app.logger.error("error adding/updating user {}: {}"
                              .format(kwargs, e))
         else:
-            persistent_user.cache(cache_timeout)
+            # persistent_user.cache(cache_timeout)
             app.logger.info("updated user: {}".format(persistent_user.info()))
             return persistent_user
 
@@ -189,8 +190,9 @@ class Users(UserMixin, db_sql.Model):
                 # app.logger.debug(
                 #     "retrieved {} from cache with key {}".format(user, key))
                 return db_sql.session.merge(user, load=False)
-            except:
-                # apparently this key doesn't work so let's delete it
+            except Exception:
+                # apparently this cached user object is no good so let's
+                #  delete it
                 redis.delete(key)
 
         # Get user from db by id or username
@@ -213,7 +215,7 @@ class Users(UserMixin, db_sql.Model):
         self.uncache()
         try:
             self.client().deauthorize()
-        except:
+        except Exception:
             pass
         db_sql.session.delete(self)
         db_sql.session.commit()

@@ -360,13 +360,13 @@ def main(username):
             if preset:
                 try:
                     preset = int(preset)
-                except:
+                except ValueError:
                     flash("'{}' is not a valid preset".format(preset))
                     preset = 7
             elif limit:
                 try:
                     limit = int(limit)
-                except:
+                except ValueError:
                     flash("'{}' is not a valid limit".format(limit))
                     limit = 1
             else:
@@ -441,7 +441,7 @@ def getdata(username):
     def cast_int(s):
         try:
             return int(s)
-        except:
+        except ValueError:
             return
 
     if not user:
@@ -472,7 +472,7 @@ def getdata(username):
                 if date2:
                     options["before"] = dateutil.parser.parse(date2)
                     assert(options["before"] > options["after"])
-            except:
+            except AssertionError:
                 return errout("Invalid Dates")
         elif not limit:
             options["limit"] = 10
@@ -537,7 +537,8 @@ def getdata(username):
                     if "stop_rendering" in activity:
                         elapsed = datetime.utcnow() - start_time
 
-                if activity.get("summary_polyline") and activity.get("total_distance", 0) > 1:
+                if (activity.get("summary_polyline") and
+                        activity.get("total_distance", 0) > 1):
                     count += 1
                     activity.update(
                         Activities.ATYPE_MAP.get(activity["type"].lower())
