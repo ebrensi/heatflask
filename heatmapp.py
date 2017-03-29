@@ -40,7 +40,7 @@ from models import Users, Activities, EventLogger, Utility, Webhooks,\
 #     Activities.init(clear_cache=True)
 #     # Indexes.init(clear_cache=True)
 #     redis.set("db-reset", 1)
-redis.delete("db-reset")
+# redis.delete("db-reset")
 
 Analytics(app)
 
@@ -119,21 +119,6 @@ login_manager.init_app(app)
 login_manager.login_view = 'splash'
 
 
-@app.before_request
-def log_request():
-    if (("66.102" in request.access_route[-1]) and
-            any(w in request.path for w in ["users", "history", "subscription"])):
-
-        EventLogger.log_request(request,
-                                msg="(Google) {}".format(request.url))
-
-        # app.logger.debug(request.access_route[-1])
-        return (
-            "Hey what's up Google visitor! How are you doing? "
-            "If you get this message then go to /googler"
-        )
-
-
 @login_manager.user_loader
 def load_user(user_id):
     user = Users.get(user_id)
@@ -196,15 +181,6 @@ def robots_txt():
                             msg=request.user_agent.string)
     return send_from_directory(os.path.join(app.root_path, 'static'),
                                'robots.txt')
-
-
-@app.route("/googler")
-@log_request_event
-def wassup():
-    if "66.102" in request.access_route[-1]:
-        return "Congrats. What do you want?"
-    else:
-        return ""
 
 
 @app.route('/')
@@ -648,6 +624,14 @@ def activities(username):
         user.delete_index()
     return render_template("activities.html",
                            user=user)
+
+
+# ---- Shared views ----
+@app.route('/public/directory')
+@log_request_event
+def public_directory():
+    # user = Users.get(username)
+    return "users"
 
 
 # ---- User admin stuff ----
