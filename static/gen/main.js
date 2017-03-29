@@ -4651,7 +4651,8 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         // console.log(`zoom=${z}\nmapPanePos=${ppos}\nsize=${this._size}\n` +
         //             `pxOrigin=${pxOrigin}\npxBounds=[${pxBounds.min}, ${pxBounds.max}]\n` +
         //             `layerBounds=[${layerBounds.min}, ${layerBounds.max}]`);
-        this._dotSize = Math.log(z) + 1;
+        this._dotSize = Math.log(z);
+        this._dotOffset = ~~(this._dotSize / 2 + 0.5);
 
         // compute relevant container points and slopes
         this._processedItems = {};
@@ -4727,6 +4728,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
               ymax = this._size.y,
               ctx = this._ctx,
               dotSize = this._dotSize,
+              dotOffset = this._dotOffset,
               two_pi = this.two_pi;
 
 
@@ -4768,7 +4770,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
                         ctx.fill();
                         ctx.closePath();
                     } else {
-                        ctx.fillRect(lx-2, ly-2, dotSize, dotSize);
+                        ctx.fillRect(lx-dotOffset, ly-dotOffset, dotSize, dotSize);
 
                     }
                     count++;
