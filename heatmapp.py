@@ -329,9 +329,16 @@ def main(username):
         except:
             logout_user()
         else:
-            current_user.dt_last_active = datetime.utcnow()
-            current_user.app_activity_count += 1
-            db_sql.session.commit()
+            updates = {
+                "id": current_user.id,
+                "dt_last_active": datetime.utcnow(),
+                "app_activity_count": current_user.app_activity_count + 1
+            }
+            Users.add_or_update(**updates)
+            # cu = Users.get(current_user.id)
+            # cu.dt_last_active = datetime.utcnow()
+            # cu.app_activity_count += 1
+            # db_sql.session.commit()
 
     # note: 'current_user' is the user that is currently logged in.
     #       'user' is the user we are displaying data for.
@@ -633,19 +640,23 @@ def update_share_status(username):
     status = request.args.get("status")
     app.logger.info("share status for {} set to {}"
                     .format(current_user, status))
-    # Change user's share status here
-    current_user.share_profile = status == "public"
-    db_sql.session.commit()
-
-    return status
+    # set user's share status
+    # current_user.setOptions("share", status == "public")
+    # user = Users.get(username)
+    # user = db_sql.session.merge(user)
+    user = Users.add_or_update(**{
+        "id": current_user.id,
+        "share_profile": status == "public"
+    })
+    return json.dumps(user.info())
 
 
 # ---- Shared views ----
 @app.route('/public/directory')
 @log_request_event
 def public_directory():
-    ulist = Users.query.filter_by(share_profile=True)
-    return "users"
+    ulist = [user.info() for user in Users.query.filter_by(share_profile=True)]
+    return render_template("directory.html", data=ulist)
 
 
 # ---- User admin stuff ----

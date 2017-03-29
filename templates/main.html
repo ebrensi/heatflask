@@ -1060,6 +1060,11 @@
             $("#autozoom").on("change", updateState);
             $("#info").on("change", updateState);
 
+
+            {% if user.share_profile %}
+            $("#share").prop("checked", true);
+            {% endif %}
+
             $("#share").on("change", function() {
                 let status = $("#share").is(":checked")? "public":"private";
                 updateShareStatus(status);

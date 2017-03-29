@@ -70,7 +70,7 @@ class Users(UserMixin, db_sql.Model):
 
     dt_last_active = Column(pg.TIMESTAMP)
     app_activity_count = Column(Integer, default=0)
-    # share_profile = Column(Boolean, default=False)
+    share_profile = Column(Boolean, default=False)
 
     activity_index = None
     index_df_dtypes = {
@@ -165,6 +165,7 @@ class Users(UserMixin, db_sql.Model):
         # Creates a new user or updates an existing user (with the same id)
         # from named-argument data.
         detached_user = cls(**kwargs)
+        app.logger.info("new user: {}".format(detached_user.info()))
         try:
             persistent_user = db_sql.session.merge(detached_user)
             db_sql.session.commit()
@@ -174,6 +175,7 @@ class Users(UserMixin, db_sql.Model):
                              .format(kwargs, e))
         else:
             persistent_user.cache(cache_timeout)
+            app.logger.info("updated user: {}".format(persistent_user.info()))
             return persistent_user
 
     @classmethod
@@ -234,8 +236,10 @@ class Users(UserMixin, db_sql.Model):
 
     @classmethod
     def backup(cls):
-        attrs = ["id", "access_token", "dt_last_active", "app_activity_count",
-            "share_profile"]
+        attrs = [
+            "id", "access_token", "dt_last_active", "app_activity_count",
+            # "share_profile"
+        ]
         dump = [{attr: getattr(user, attr) for attr in attrs}
                 for user in cls.query]
 
@@ -263,8 +267,18 @@ class Users(UserMixin, db_sql.Model):
             else:
                 return
 
+        # erase user table
         db_sql.drop_all()
+
+        # delete all users from the Redis cache
+        keys_to_delete = redis.keys(Users.key("*"))
+        if keys_to_delete:
+            redis.delete(*keys_to_delete)
+
+        # create new user table
         db_sql.create_all()
+
+        # rebuild table with user backup updated with current info from Strava
         count_before = len(users_list)
         count = 0
         P = Pool(app.config["CONCURRENCY"])
