@@ -23,7 +23,7 @@ class Config(object):
 
     POLYLINE_DEFAULT_OPTIONS = {
         "weight": 2,
-        "opacity": 0.2,
+        "opacity": 0.3,
         "color": 'black',
         "smoothFactor": 1.0
     }

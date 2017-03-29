@@ -233,7 +233,7 @@ def demo():
     return redirect(url_for("main",
                             username="15972102",
                             limit="10",
-                            heatres="high",
+                            # heatres="high",
                             flowres="high",
                             info=1,
                             autozoom=1
@@ -398,7 +398,7 @@ def main(username):
 
     if (not flowres) and (not heatres):
         flowres = "high"
-        heatres = "high"
+        # heatres = "high"
 
     lat = request.args.get("lat")
     lng = request.args.get("lng")

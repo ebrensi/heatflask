@@ -4648,9 +4648,9 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
               pxBounds = this._pxBounds,
               layerBounds = this._layerBounds;
 
-        console.log(`zoom=${z}\nmapPanePos=${ppos}\nsize=${this._size}\n` +
-                    `pxOrigin=${pxOrigin}\npxBounds=[${pxBounds.min}, ${pxBounds.max}]\n` +
-                    `layerBounds=[${layerBounds.min}, ${layerBounds.max}]`);
+        // console.log(`zoom=${z}\nmapPanePos=${ppos}\nsize=${this._size}\n` +
+        //             `pxOrigin=${pxOrigin}\npxBounds=[${pxBounds.min}, ${pxBounds.max}]\n` +
+        //             `layerBounds=[${layerBounds.min}, ${layerBounds.max}]`);
         this._dotSize = Math.log(z) + 1;
 
         // compute relevant container points and slopes
