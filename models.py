@@ -161,23 +161,30 @@ class Users(UserMixin, db_sql.Model):
         redis.delete(self.__class__.key(self.id))
         redis.delete(self.__class__.key(self.username))
 
+    def update_usage(self):
+        self.dt_last_active = datetime.utcnow()
+        self.app_activity_count = self.app_activity_count + 1
+        db_sql.session.commit()
+        self.cache()
+        return self
+
     @classmethod
     def add_or_update(cls, cache_timeout=CACHE_USERS_TIMEOUT, **kwargs):
         # Creates a new user or updates an existing user (with the same id)
-        # from named-argument data.
         detached_user = cls(**kwargs)
-        app.logger.info("new user: {}".format(detached_user.info()))
         try:
             persistent_user = db_sql.session.merge(detached_user)
-            # db_sql.session.add(persistent_user)
             db_sql.session.commit()
+
         except Exception as e:
             db_sql.session.rollback()
             app.logger.error("error adding/updating user {}: {}"
                              .format(kwargs, e))
         else:
-            # persistent_user.cache(cache_timeout)
-            app.logger.info("updated user: {}".format(persistent_user.info()))
+            if persistent_user:
+                persistent_user.cache(cache_timeout)
+                # app.logger.info("updated {} with {}"
+                #                 .format(persistent_user, kwargs))
             return persistent_user
 
     @classmethod
