@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ config["APP_NAME"] }}Public User Directory</title>
+    {% assets "basic_table_css" %}
+    <link rel="stylesheet" href="{{ ASSET_URL }}" />
+    {% endassets %}
+
+    {% assets "basic_table_js" %}
+    <script type="text/javascript" src="{{ ASSET_URL }}"></script>
+    {% endassets %}
+</head>
+
+<body>
+    <h3>Public User Directory</h3>
+    <table id="users_table" class='display order-column' cellspacing='1' width='100%'>
+    </table>
+
+    <script>
+
+    function combineNames(data, type, row, meta) {
+        return row.lastname + ", " + row.firstname;
+    }
+
+    function formatID (data, type, row) {
+        if (data) {
+            if (type == "display") {
+                return href("/" + data, data);
+            } else {
+                return data;
+            }
+        } else {
+            return "";
+        }
+    }
+
+    const data = {{ data|tojson }};
+    let atable = $('#users_table').DataTable({
+            pageLength: 50,
+            deferRender: true,
+            data: data,
+            columns: [
+                {title: "ID",    data: "id", render: formatID},
+                {
+                    title: "last active",
+                    data: "dt_last_active",
+                    render: formatDate,
+                },
+                {title: "Name", render: combineNames},
+                {title: "City",    data: "city"},
+                {title: "Country", data: "country"}
+            ],
+            scrollY: "80vh",
+            scrollX: true,
+            scrollCollapse: true,
+            select: false,
+            order: [[ 1, "desc" ]]
+        });
+    </script>
+</body>
+</html>
