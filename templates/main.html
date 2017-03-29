@@ -336,6 +336,7 @@
             BASE_DATAURL = "{{ url_for('getdata', username=user.id) }}",
             BASE_USER_URL = "{{ url_for('main', username=user.id) }}",
             USER_ID = "{{ user.id }}",
+            SHARE_STATUS_UPDATE_URL = "{{ url_for('update_share_status', username=user.id) }}",
             START_PAUSED = {{ paused|tojson }},
             MAP_PROVIDERS = {{ baselayer|tojson|safe }},
             DEFAULT_MAP_CENTER = [{{ lat }}, {{ lng }}],
@@ -461,6 +462,25 @@
                 { data: "Name", title: "Name"}
             ]
         });
+
+         function httpGetAsync(theUrl, callback) {
+            let xmlHttp = new XMLHttpRequest();
+            xmlHttp.onreadystatechange = function() {
+                if (xmlHttp.readyState == 4 && xmlHttp.status == 200)
+                    callback(xmlHttp.responseText);
+            }
+            xmlHttp.open("GET", theUrl, true); // true for asynchronous
+            xmlHttp.send(null);
+        }
+
+
+        function updateShareStatus(status) {
+            console.log("updating share status.");
+            url = `${SHARE_STATUS_UPDATE_URL}?status=${status}`;
+            httpGetAsync(url, function(responseText) {
+                console.log(`response: ${responseText}`);
+            });
+        }
 
 
         function handle_table_selections( e, dt, type, indexes ) {
@@ -1039,6 +1059,12 @@
 
             $("#autozoom").on("change", updateState);
             $("#info").on("change", updateState);
+
+            $("#share").on("change", function() {
+                let status = $("#share").is(":checked")? "public":"private";
+                updateShareStatus(status);
+            });
+
 
             $("#zoom-table-selection").prop("checked", true);
             $("#zoom-table-selection").on("change", function(){
