@@ -326,19 +326,10 @@ def main(username):
         #  database (was deleted), we log them out and consider them anonymous
         try:
             assert current_user.id
-        except:
+        except AssertionError:
             logout_user()
         else:
-            updates = {
-                "id": current_user.id,
-                "dt_last_active": datetime.utcnow(),
-                "app_activity_count": current_user.app_activity_count + 1
-            }
-            Users.add_or_update(**updates)
-            # cu = Users.get(current_user.id)
-            # cu.dt_last_active = datetime.utcnow()
-            # cu.app_activity_count += 1
-            # db_sql.session.commit()
+            current_user.update_usage()
 
     # note: 'current_user' is the user that is currently logged in.
     #       'user' is the user we are displaying data for.
@@ -642,14 +633,10 @@ def update_share_status(username):
     app.logger.info("share status for {} set to {}"
                     .format(current_user, status))
     # set user's share status
-    # current_user.setOptions("share", status == "public")
-    # user = Users.get(username)
-    # user = db_sql.session.merge(user)
-    user = Users.add_or_update(**{
-        "id": current_user.id,
-        "share_profile": status == "public"
-    })
-    return json.dumps(user.info())
+    current_user.share_profile = (status == "public")
+    db_sql.session.commit()
+    current_user.cache()
+    return jsonify(share=current_user.share_profile)
 
 
 # ---- Shared views ----
