@@ -4583,13 +4583,13 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         if (this._items) {
 
             // set dotColors for these items
-        //     let itemsList = Object.values(this._items),
-        //         numItems = itemsList.length;
+            // let itemsList = Object.values(this._items),
+            //     numItems = itemsList.length;
 
-        //     this._colorPalette = createPalette(numItems);
-        //     for (let i=0; i<numItems; i++) {
-        //         itemsList[i]["dotColor"] = this._colorPalette[i];
-        //     }
+            // this._colorPalette = createPalette(numItems);
+            // for (let i=0; i<numItems; i++) {
+            //     itemsList[i].dotColor = this._colorPalette[i];
+            // }
 
             this._onLayerDidMove();
         }
@@ -4638,7 +4638,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         this._mapPanePos = this._map._getMapPanePos();
         this._pxOrigin = this._map.getPixelOrigin();
         this._pxBounds = this._map.getPixelBounds();
-        this._layerBounds = this._map._latLngBoundsToNewLayerBounds(this._latLngBounds, this._zoom, this._map.getCenter());
+        // this._layerBounds = this._map._latLngBoundsToNewLayerBounds(this._latLngBounds, this._zoom, this._map.getCenter());
 
         this._pxOffset = this._mapPanePos.subtract(this._pxOrigin);
 
