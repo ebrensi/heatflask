@@ -604,7 +604,7 @@ class Activities(object):
     # This is a list of tuples specifying properties of the rendered objects,
     #  such as path color, speed/pace in description.  others can be added
     ATYPE_SPECS = [
-        ("Ride", "speed", "#0000FF"),  # Blue
+        ("Ride", "speed", "#2B60DE"),  # Ocean Blue
         ("Run", "pace", "#FF0000"),  # Red
         ("Swim", "speed", "#00FF7F"),  # SpringGreen
         ("Hike", "pace", "#FF1493"),  # DeepPink
