@@ -4690,7 +4690,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
                         if (!p1.dx) {
                             p2 = projected[i];
                             dt = p2.t - p1.t;
-                            Object.assign(p1, { dx: (p2.x-p1.x)/dt, dy: (p2.y-p1.y)/dt });
+                            Object.assign(p1, { dx: (p2.x-p1.x)/dt, dy: (p2.y-p1.y)/dt, t2: p2.t });
                         }
                         cp.push(p1);
                     }
@@ -4719,7 +4719,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
     // --------------------------------------------------------------------
     drawDots: function(obj, now, highlighted) {
         const P = obj.cp,
-              last_P_idx = P.length - 1,
+              lenP = P.length,
               totSec = obj.totSec,
               T = obj.T,
               s = (now - obj.startTime) * obj.S,
@@ -4737,44 +4737,46 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
             p = P[0],
             lx, ly;
 
+        if (key_time < 0) {
+            key_time += T;
+        }
+
+        // console.log("\nnew obj");
+        // let out;
+
         for (t = key_time; t < totSec; t += T) {
-            if (i < last_P_idx && t >= P[i+1].t) {
-              while (i < last_P_idx && t >= P[i+1].t) {
+            out = 0;
+            while (t >= P[i].t2) {
                 i++;
-              }
-              p = P[i];
+                if (i == lenP) {
+                    return count;
+                }
             }
 
+            p = P[i];
+
             dt = t - p.t;
-            lx = ~~(p.x + p.dx*dt + this._pxOffset.x + 0.5);
-            ly = ~~(p.y + p.dy*dt + this._pxOffset.y + 0.5);
+            if (dt > 0) {
+                lx = ~~(p.x + p.dx*dt + this._pxOffset.x + 0.5);
+                ly = ~~(p.y + p.dy*dt + this._pxOffset.y + 0.5);
 
-            if ((lx >= 0 && lx <= xmax) && (ly >= 0 && ly <= ymax)) {
-                if (highlighted) {
-                    ctx.beginPath();
-                    ctx.arc(lx, ly, dotSize, 0, two_pi);
-                    ctx.fill();
-                    ctx.closePath();
-                } else {
-                    ctx.fillRect(lx-2, ly-2, dotSize, dotSize);
+                if ((lx >= 0 && lx <= xmax) && (ly >= 0 && ly <= ymax)) {
+                    out = 1;
+                    if (highlighted) {
+                        ctx.beginPath();
+                        ctx.arc(lx, ly, dotSize, 0, two_pi);
+                        ctx.fill();
+                        ctx.closePath();
+                    } else {
+                        ctx.fillRect(lx-2, ly-2, dotSize, dotSize);
 
+                    }
+                    count++;
                 }
-                count++;
+            // console.log(`t: ${t}, i: ${i}, out: ${out}`);
             }
         }
         return count;
-    },
-
-    drawSquare: function(obj, loc) {
-        obj._ctx.fillRect(loc.x-2, loc.y-2, obj._dotSize, obj._dotSize);
-    },
-
-    drawDot: function (obj, loc) {
-        let ctx = obj._ctx;
-        ctx.beginPath();
-        ctx.arc(loc.x, loc.y, obj._dotSize, 0, obj.two_pi);
-        ctx.fill();
-        ctx.closePath();
     },
 
     drawLayer: function(now) {
