@@ -245,16 +245,27 @@ class Users(UserMixin, db_sql.Model):
                 app.logger.info("successfully updated {}".format(user))
 
     @classmethod
+    def dump(cls, attrs, **filter_by):
+        dump = [{attr: getattr(user, attr) for attr in attrs}
+                for user in cls.query.filter_by(**filter_by)]
+        return dump
+
+    @classmethod
     def backup(cls):
-        attrs = [
+        fields = [
             "id", "access_token", "dt_last_active", "app_activity_count",
             # "share_profile"
         ]
-        dump = [{attr: getattr(user, attr) for attr in attrs}
-                for user in cls.query]
+        dump = cls.dump(fields)
 
         mongodb.users.insert_one({"backup": dump, "ts": datetime.utcnow()})
         return dump
+
+    @classmethod
+    def directory(cls):
+        fields = ["id", "dt_last_active", "firstname", "lastname",
+                  "city", "state", "country"]
+        return cls.dump(fields, share_profile=True)
 
     @classmethod
     def restore(cls, users_list=None):

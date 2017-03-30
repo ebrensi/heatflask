@@ -5592,7 +5592,7 @@ L.control.fps = function(options) {
 					}
 				},
 				DE: {
-					url: 'http://{s}.tile.openstreetmap.de/tiles/osmde/{z}/{x}/{y}.png',
+					url: '//{s}.tile.openstreetmap.de/tiles/osmde/{z}/{x}/{y}.png',
 					options: {
 						maxZoom: 18
 					}
@@ -5630,26 +5630,24 @@ L.control.fps = function(options) {
 			options: {
 				attribution:
 					'&copy; <a href="http://www.thunderforest.com/">Thunderforest</a>, {attribution.OpenStreetMap}',
-				variant: 'cycle'
+				variant: 'cycle',
+				maxZoom: 22
 			},
 			variants: {
 				OpenCycleMap: 'cycle',
 				Transport: {
 					options: {
-						variant: 'transport',
-						maxZoom: 19
+						variant: 'transport'
 					}
 				},
 				TransportDark: {
 					options: {
-						variant: 'transport-dark',
-						maxZoom: 19
+						variant: 'transport-dark'
 					}
 				},
 				SpinalMap: {
 					options: {
-						variant: 'spinal-map',
-						maxZoom: 11
+						variant: 'spinal-map'
 					}
 				},
 				Landscape: 'landscape',
@@ -5683,6 +5681,7 @@ L.control.fps = function(options) {
 		Hydda: {
 			url: '//{s}.tile.openstreetmap.se/hydda/{variant}/{z}/{x}/{y}.png',
 			options: {
+				maxZoom: 18,
 				variant: 'full',
 				attribution: 'Tiles courtesy of <a href="http://openstreetmap.se/" target="_blank">OpenStreetMap Sweden</a> &mdash; Map data {attribution.OpenStreetMap}'
 			},
@@ -5698,7 +5697,9 @@ L.control.fps = function(options) {
 				attribution:
 					'Imagery from <a href="http://mapbox.com/about/maps/">MapBox</a> &mdash; ' +
 					'Map data {attribution.OpenStreetMap}',
-				subdomains: 'abcd'
+				subdomains: 'abcd',
+				id: 'streets',
+				accessToken: '<insert your access token here>',
 			}
 		},
 		Stamen: {
