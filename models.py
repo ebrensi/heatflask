@@ -254,7 +254,7 @@ class Users(UserMixin, db_sql.Model):
     def backup(cls):
         fields = [
             "id", "access_token", "dt_last_active", "app_activity_count",
-            # "share_profile"
+            "share_profile"
         ]
         dump = cls.dump(fields)
 
