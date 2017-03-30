@@ -630,13 +630,17 @@ def activities(username):
 @admin_or_self_required
 def update_share_status(username):
     status = request.args.get("status")
-    app.logger.info("share status for {} set to {}"
-                    .format(current_user, status))
+    user = Users.get(username)
+
     # set user's share status
-    current_user.share_profile = (status == "public")
+    user.share_profile = (status == "public")
     db_sql.session.commit()
-    current_user.cache()
-    return jsonify(share=current_user.share_profile)
+    user.cache()
+
+    app.logger.info("share status for {} set to {}"
+                    .format(user, status))
+
+    return jsonify(user=user.id, share=user.share_profile)
 
 
 # ---- Shared views ----
