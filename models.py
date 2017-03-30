@@ -305,7 +305,7 @@ class Users(UserMixin, db_sql.Model):
         P = Pool(app.config["CONCURRENCY"])
         for user_dict in P.imap_unordered(update_user_data, users_list):
             if user_dict:
-                user = cls.add_or_update(cache_timeout=60, **user_dict)
+                user = cls.add_or_update(cache_timeout=10, **user_dict)
                 if user:
                     count += 1
                     app.logger.debug("successfully restored/updated {}"
