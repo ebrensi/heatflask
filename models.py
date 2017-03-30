@@ -289,15 +289,18 @@ class Users(UserMixin, db_sql.Model):
                 return
 
         # erase user table
-        db_sql.drop_all()
+        result = db_sql.drop_all()
+        app.logger.info("dropping Users table: {}".format(result))
 
         # delete all users from the Redis cache
         keys_to_delete = redis.keys(Users.key("*"))
         if keys_to_delete:
-            redis.delete(*keys_to_delete)
+            result = redis.delete(*keys_to_delete)
+            app.logger.info("dropping cached User objects: {}".format(result))
 
         # create new user table
-        db_sql.create_all()
+        result = db_sql.create_all()
+        app.logger.info("creating Users table: {}".format(result))
 
         # rebuild table with user backup updated with current info from Strava
         count_before = len(users_list)
