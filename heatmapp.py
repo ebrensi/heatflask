@@ -643,8 +643,7 @@ def update_share_status(username):
 @app.route('/public/directory')
 @log_request_event
 def public_directory():
-    ulist = [user.info() for user in Users.query.filter_by(share_profile=True)]
-    return render_template("directory.html", data=ulist)
+    return render_template("directory.html", data=Users.directory())
 
 
 # ---- User admin stuff ----
