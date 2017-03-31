@@ -176,7 +176,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         this._pxBounds = this._map.getPixelBounds();
         // this._layerBounds = this._map._latLngBoundsToNewLayerBounds(this._latLngBounds, this._zoom, this._map.getCenter());
 
-        this._pxOffset = this._mapPanePos.subtract(this._pxOrigin);
+        this._pxOffset = this._mapPanePos.subtract(this._pxOrigin)._add(new L.Point(0.5, 0.5));
 
         const z = this._zoom,
               ppos = this._mapPanePos,
@@ -255,20 +255,22 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
 
     // --------------------------------------------------------------------
     drawDots: function(obj, now, highlighted) {
-        const P = obj.cp,
-              lenP = P.length,
-              totSec = obj.totSec,
-              T = obj.T,
-              s = (now - obj.startTime) * obj.S,
-              xmax = this._size.x,
-              ymax = this._size.y,
-              ctx = this._ctx,
-              dotSize = this._dotSize,
-              dotOffset = this._dotOffset,
-              two_pi = this.two_pi;
+        var P = obj.cp,
+            lenP = P.length,
+            totSec = obj.totSec,
+            T = obj.T,
+            s = (now - obj.startTime) * obj.S,
+            xmax = this._size.x,
+            ymax = this._size.y,
+            ctx = this._ctx,
+            dotSize = this._dotSize,
+            dotOffset = this._dotOffset,
+            two_pi = this.two_pi,
+            xOffset = this._pxOffset.x,
+            yOffset = this._pxOffset.y;
 
 
-        let key_time = s % T,
+        var key_time = s % T,
             count = 0,
             i = 0,
             t, dt,
@@ -283,23 +285,20 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         // let out;
 
         for (t = key_time; t < totSec; t += T) {
-            out = 0;
-            while (t >= P[i].t2) {
+            // out = 0;
+            while (t >= p.t2) {
                 i++;
-                if (i == lenP) {
-                    return count;
-                }
+                p = P[i];
+                if (i >= lenP) return count;
             }
-
-            p = P[i];
 
             dt = t - p.t;
             if (dt > 0) {
-                lx = ~~(p.x + p.dx*dt + this._pxOffset.x + 0.5);
-                ly = ~~(p.y + p.dy*dt + this._pxOffset.y + 0.5);
+                lx = ~~(p.x + p.dx*dt + xOffset);
+                ly = ~~(p.y + p.dy*dt + yOffset);
 
                 if ((lx >= 0 && lx <= xmax) && (ly >= 0 && ly <= ymax)) {
-                    out = 1;
+                    // out = 1;
                     if (highlighted) {
                         ctx.beginPath();
                         ctx.arc(lx, ly, dotSize, 0, two_pi);
