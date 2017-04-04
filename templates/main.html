@@ -146,14 +146,6 @@
                 <a href="{{ url_for('main', username=current_user.id) }}"
                             target="_blank">{{ current_user.username or current_user.id}}</a>
                 <br>
-                <div style="background-color: lightblue;">
-                 <b>New! (2017-03-29):</b><br>
-                 Check out the
-                    <a href="{{ url_for('public_directory')}}" target="_blank">
-                    public user directory.
-                    </a>
-                    <i class="fa fa-user"></i>
-                </div>
 
                 <form action="{{ url_for('logout', username=current_user.id) }}">
                     <input type="submit" class="btn btn-danger" value="Log Out" />
