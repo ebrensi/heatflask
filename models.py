@@ -679,6 +679,10 @@ class Activities(object):
     ATYPE_MAP = {atype.lower(): {"path_color": color, "vtype": vtype}
                  for atype, vtype, color in ATYPE_SPECS}
 
+    @classmethod
+    def atype_properties(cls, atype):
+        return cls.ATYPE_MAP.get(atype.lower()) or cls.ATYPE_MAP.get("workout")
+
     @staticmethod
     def bounds(poly):
         if poly:

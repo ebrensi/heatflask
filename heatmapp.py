@@ -532,7 +532,7 @@ def getdata(username):
                         activity.get("total_distance", 0) > 1):
                     count += 1
                     activity.update(
-                        Activities.ATYPE_MAP.get(activity["type"].lower())
+                        Activities.atype_properties(activity["type"])
                     )
 
                     data = {"msg": "activity {0}/{1}...".format(count, total)}
