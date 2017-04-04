@@ -4785,15 +4785,14 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
             return;
         }
 
-        let ctx = this._ctx,
-            zoom = this._zoom,
-            count = 0,
-            t0 = performance.now();
-
         this._ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
         this._ctx.fillStyle = this.options.normal.dotColor;
 
-        let id,
+        var ctx = this._ctx,
+            zoom = this._zoom,
+            count = 0,
+            t0 = performance.now(),
+            id,
             item,
             items = this._items,
             pItem,
@@ -4810,7 +4809,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         }
 
         // now plot highlighted paths
-        let i,
+        var i,
             hlen = highlighted_items.length;
         if (hlen) {
             for (i=0; i < hlen; i++) {
@@ -4820,7 +4819,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
             }
         }
 
-        let elapsed = (performance.now() - t0).toFixed(1);
+        var elapsed = (performance.now() - t0).toFixed(1);
         fps_display && fps_display.update(now, `${elapsed} ms/f, n=${count}, z=${this._zoom}`);
     },
 
