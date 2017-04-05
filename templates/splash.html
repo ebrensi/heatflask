@@ -24,9 +24,6 @@
 
       <h1>{{ config["APP_NAME"] }}</h1>
 
-
-      <h3>Create a new account or connect to an existing one</h3>
-      <br>
       <form action="{{ url_for('authorize') }}">
           <input type="image" src="{{ url_for('static', filename='btn_strava_connectwith_orange.svg') }}"
            alt="Authenticate with Strava" >
@@ -48,7 +45,7 @@
 
       <br>
       <a href="mailto:Rensi.Efrem@gmail.com?subject=About {{ config['APP_NAME'] }}">Having problems?</a>
-      <p>This apparently does not work on Safari for older versions of macOS and iOS.  We are working on it! Want to help?</p>
+      <p>This apparently does not work on Safari for older versions of macOS and iOS.  We are working on it!</p>
     </div>
 
   </body>
