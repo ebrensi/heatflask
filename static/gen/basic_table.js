@@ -269,6 +269,6 @@ function hhmmss(secs) {
 }
 
 
-function img(url, w=20, h=20){
-  return `<img src=${url} width=${w} height=${h} class="img-fluid">`;
+function img(url, w=20, h=20, alt=""){
+  return `<img src=${url} width=${w} height=${h} class="img-fluid" alt="${alt}">`;
 }

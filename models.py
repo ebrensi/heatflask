@@ -263,7 +263,7 @@ class Users(UserMixin, db_sql.Model):
 
     @classmethod
     def directory(cls):
-        fields = ["id", "dt_last_active", "firstname", "lastname",
+        fields = ["id", "dt_last_active", "firstname", "lastname", "profile",
                   "city", "state", "country"]
         return cls.dump(fields, share_profile=True)
 
