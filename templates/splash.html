@@ -41,6 +41,11 @@
       <FORM METHOD="LINK" ACTION="{{ url_for('demo') }}">
       <INPUT class="btn btn-primary" TYPE="submit" VALUE="See Demo">
       </FORM>
+
+      <FORM METHOD="LINK" ACTION="{{ url_for('public_directory')}}">
+      <INPUT class="btn btn-primary" TYPE="submit" VALUE="Another Demo">
+      </FORM>
+
       <br>
       <a href="mailto:Rensi.Efrem@gmail.com?subject=About {{ config['APP_NAME'] }}">Having problems?</a>
       <p>This apparently does not work on Safari for older versions of macOS and iOS.  We are working on it! Want to help?</p>

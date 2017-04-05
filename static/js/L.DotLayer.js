@@ -242,7 +242,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
                         // time scaling factor
                         S: this.S * Math.log(this._zoom) / (1 << (this._zoom/2)),
 
-                        dotColor: A.dotColor,
+                        // dotColor: A.dotColor,
 
                         startTime: new Date(A.ts_UTC || A.beginTimestamp).getTime(),
                         totSec: A.time.slice(-1)
@@ -272,21 +272,21 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
             yOffset = this._pxOffset.y;
 
 
-        var key_time = s % T,
+        var timeOffset = s % T,
             count = 0,
             i = 0,
             t, dt,
             p = P[0],
             lx, ly;
 
-        if (key_time < 0) {
-            key_time += T;
+        if (timeOffset < 0) {
+            timeOffset += T;
         }
 
         // console.log("\nnew obj");
         // let out;
 
-        for (t = key_time; t < totSec; t += T) {
+        for (t = s % T; t < totSec; t += T) {
             // out = 0;
             while (t >= p.t2) {
                 i++;
