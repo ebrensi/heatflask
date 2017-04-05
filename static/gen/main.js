@@ -4583,13 +4583,13 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         if (this._items) {
 
             // set dotColors for these items
-            // let itemsList = Object.values(this._items),
-            //     numItems = itemsList.length;
+            let itemsList = Object.values(this._items),
+                numItems = itemsList.length;
 
-            // this._colorPalette = createPalette(numItems);
-            // for (let i=0; i<numItems; i++) {
-            //     itemsList[i].dotColor = this._colorPalette[i];
-            // }
+            this._colorPalette = createPalette(numItems);
+            for (let i=0; i<numItems; i++) {
+                itemsList[i].dotColor = this._colorPalette[i];
+            }
 
             this._onLayerDidMove();
         }
@@ -4706,6 +4706,8 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
                         // time scaling factor
                         S: this.S * Math.log(this._zoom) / (1 << (this._zoom/2)),
 
+                        dotColor: A.dotColor,
+
                         startTime: new Date(A.ts_UTC || A.beginTimestamp).getTime(),
                         totSec: A.time.slice(-1)
                     };
@@ -4764,6 +4766,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
                 if ((lx >= 0 && lx <= xmax) && (ly >= 0 && ly <= ymax)) {
                     // out = 1;
                     if (highlighted) {
+                        // console.log(ctx.fillStyle);
                         ctx.beginPath();
                         ctx.arc(lx, ly, dotSize, 0, two_pi);
                         ctx.fill();
@@ -4809,12 +4812,13 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         }
 
         // now plot highlighted paths
-        var i,
+        var i, dotColor,
             hlen = highlighted_items.length;
         if (hlen) {
             for (i=0; i < hlen; i++) {
                 item = highlighted_items[i];
                 ctx.fillStyle = item.dotColor || this.options.selected.dotColor;
+                // console.log(item.dotColor || this.options.selected.dotColor);
                 count += this.drawDots(item, now, true);
             }
         }

@@ -22,10 +22,10 @@
         return row.lastname + ", " + row.firstname;
     }
 
-    function formatID (data, type, row) {
+    function formatHFID (data, type, row) {
         if (data) {
             if (type == "display") {
-                return href("/" + data, data);
+                return href("/" + data, img(row.profile, w=50, h=50, alt=data));
             } else {
                 return data;
             }
@@ -40,15 +40,15 @@
             deferRender: true,
             data: data,
             columns: [
-                {title: "ID",    data: "id", render: formatID},
+                {title: "",    data: "id", render: formatHFID},
+                {title: "Name", render: combineNames},
+                {title: "City",    data: "city"},
+                {title: "Country", data: "country"},
                 {
                     title: "last active",
                     data: "dt_last_active",
                     render: formatDate,
-                },
-                {title: "Name", render: combineNames},
-                {title: "City",    data: "city"},
-                {title: "Country", data: "country"}
+                }
             ],
             scrollY: "80vh",
             scrollX: true,
