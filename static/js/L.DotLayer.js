@@ -286,7 +286,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         // console.log("\nnew obj");
         // let out;
 
-        for (t = s % T; t < totSec; t += T) {
+        for (t = timeOffset; t < totSec; t += T) {
             // out = 0;
             while (t >= p.t2) {
                 i++;
