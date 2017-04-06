@@ -4484,7 +4484,6 @@ L.DomUtil.setTransform = L.DomUtil.setTransform || function (el, offset, scale) 
 L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
 
     _pane: "shadowPane",
-    DCONST: 0.000001,
     two_pi: 2 * Math.PI,
     target_fps: 16,
     smoothFactor: 1.0,
