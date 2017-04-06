@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>{{ config["APP_NAME"] }}</title>
+    <title>{{ config["APP_NAME"] }} - {{ user.username or user.id }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
 
