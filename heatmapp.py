@@ -208,7 +208,7 @@ def demo():
     # Last 10 activities
     return redirect(url_for("main",
                             username="15972102",
-                            limit="10",
+                            limit="100",
                             # heatres="high",
                             flowres="high",
                             info=1,
