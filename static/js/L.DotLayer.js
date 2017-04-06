@@ -20,14 +20,11 @@ L.DomUtil.setTransform = L.DomUtil.setTransform || function (el, offset, scale) 
 L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
 
     _pane: "shadowPane",
-    DCONST: 0.000001,
     two_pi: 2 * Math.PI,
     target_fps: 16,
     smoothFactor: 1.0,
-    K: 1500000.0,
-    S: 0.8,
-    // C1: 400000.0,
-    // C2: 2.0,
+    C1: 1000000.0,
+    C2: 400.0,
 
     options: {
         startPaused: false,
@@ -191,6 +188,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         //             `layerBounds=[${layerBounds.min}, ${layerBounds.max}]`);
         this._dotSize = Math.log(z);
         this._dotOffset = ~~(this._dotSize / 2 + 0.5);
+        this._zoomFactor = 1 / Math.pow(2, this._zoom);
 
         // compute relevant container points and slopes
         this._processedItems = {};
@@ -263,10 +261,9 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         var P = obj.cp,
             lenP = P.length,
             totSec = obj.totSec,
-            // T = this.C1 / Math.pow(2, this._zoom-4),
-            // s = this.C2 * (now - obj.startTime) / Math.pow(2, this._zoom/2),
-            s = (now - obj.startTime) * obj.S,
-            T = obj.T,
+            p = this._zoomFactor,
+            dT = this.C1 * p,
+            s = this.C2 * p * (now - obj.startTime),
             xmax = this._size.x,
             ymax = this._size.y,
             ctx = this._ctx,
@@ -277,7 +274,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
             yOffset = this._pxOffset.y;
 
 
-        var timeOffset = s % T,
+        var timeOffset = s % dT,
             count = 0,
             i = 0,
             t, dt,
@@ -285,13 +282,13 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
             lx, ly;
 
         if (timeOffset < 0) {
-            timeOffset += T;
+            timeOffset += dT;
         }
 
         // console.log("\nnew obj");
         // let out;
 
-        for (t = timeOffset; t < totSec; t += T) {
+        for (t = timeOffset; t < totSec; t += dT) {
             // out = 0;
             while (t >= p.t2) {
                 i++;
