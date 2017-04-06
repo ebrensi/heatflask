@@ -24,8 +24,10 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
     two_pi: 2 * Math.PI,
     target_fps: 16,
     smoothFactor: 1.0,
-    K: 1500000,
+    K: 1500000.0,
     S: 0.8,
+    // C1: 400000.0,
+    // C2: 2.0,
 
     options: {
         startPaused: false,
@@ -252,7 +254,8 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         }
 
         elapsed = (performance.now() - t0).toFixed(2);
-        console.log(`dot context update took ${elapsed} ms`);
+        // console.log(`dot context update took ${elapsed} ms`);
+        // console.log(this._processedItems);
     },
 
     // --------------------------------------------------------------------
@@ -260,8 +263,10 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         var P = obj.cp,
             lenP = P.length,
             totSec = obj.totSec,
-            T = obj.T,
+            // T = this.C1 / Math.pow(2, this._zoom-4),
+            // s = this.C2 * (now - obj.startTime) / Math.pow(2, this._zoom/2),
             s = (now - obj.startTime) * obj.S,
+            T = obj.T,
             xmax = this._size.x,
             ymax = this._size.y,
             ctx = this._ctx,
