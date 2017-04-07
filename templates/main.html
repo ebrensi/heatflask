@@ -44,11 +44,21 @@
                 <a href="#profile" role="tab"><i class="fa fa-user"></i></a>
                 </li>
 
-                <li><a href="#messages" role="tab"><i class="fa fa-sticky-note-o"></i></a></li>
+                <li><a href="#controls" role="tab"><i class="fa fa-sliders"></i></a></li>
+
             </ul>
 
             <ul role="tablist">
+
+                <li><a href="#messages" role="tab"><i class="fa fa-info"></i></a></li>
+
+
+                {% if current_user.is_authenticated
+                    and ((current_user.id == user.id) or current_user.is_admin())%}
                 <li>
+                {% else %}
+                <li class="disabled">
+                {% endif %}
                 <a href="#settings" role="tab"><i class="fa fa-gear"></i></a>
                 </li>
             </ul>
@@ -211,7 +221,7 @@
                 <br>
                 {{ config['APP_NAME'] }} imports and renders your public activities from Strava.<br>
                 Our cache of your activity data is deleted if not accessed for 7 days.<br><br>
-                Deleting your accout with us clears our database cache for you and deletes your Strava access token from our database.
+                Deleting your account with us clears our database cache for you and deletes your Strava access token from our database.
                 <br><br>
                 The URL for a heat/flow map and the current location dates or preset, and zoom are embedded in the url so you can share that url and anyone who clicks on it will get the same view.
                 <br><br>
@@ -241,8 +251,8 @@
                 </div>
             </div>
 
-            <div class="sidebar-pane" id="settings">
-                <h1 class="sidebar-header">Map Settings<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
+            <div class="sidebar-pane" id="controls">
+                <h1 class="sidebar-header">Layer Settings<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
                     <form id="layer-settings-form">
                     <div>
                         <h4>Animation Constants</h4>
