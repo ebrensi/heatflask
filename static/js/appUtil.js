@@ -1,4 +1,12 @@
 
+function stravaActivityURL(id) {
+    return `https://www.strava.com/activities/${id}`;
+}
+
+function stravaAthleteURL(id) {
+    return `https://www.strava.com/athletes/${id}`
+}
+
 function href(url, text){
     return `<a href='${url}' target='_blank'>${text}</a>`
 }
@@ -34,11 +42,6 @@ function formatUserId (data, type, row) {
     } else {
         return "";
     }
-}
-
-
-function stravaActivityURL(id) {
-    return `https://www.strava.com/activities/${id}`;
 }
 
 
