@@ -248,12 +248,12 @@
                         <h4>Animation Constants</h4>
                         <div>
                             <label>Speed:</label>
-                            <input class="dot-opt" id="speedConst" type="number" min=0 max=1000>
+                            <input type="text" class="dial" id="speedConst" data-min="0" data-max="100">
                         </div>
 
                         <div>
                             <label>Sparcity:</label>
-                            <input class="dot-opt" id="sepConst" type="number" min=0 max=1000>
+                            <input type="text" class="dial" id="sepConst" data-min="0" data-max="100">
                         </div>
                         <!-- <label>Size:</label>
                         <input class="dot-opt" id="nSize" type="number" value="" min=1 max=10>
@@ -737,15 +737,9 @@
                         DotLayer = new L.DotLayer(appState.items, {startPaused: appState.paused});
                         map.addLayer(DotLayer);
                         layerControl.addOverlay(DotLayer, "Dots");
-                        $("#sepConst").val(DotLayer.C1 / 50000);
-                        $("#sepConst").change( function() {
-                            DotLayer.C1 = $(this).val() * 50000;
-                        });
 
-                        $("#speedConst").val(DotLayer.C2 / 40);
-                        $("#speedConst").change( function() {
-                            DotLayer.C2 = $(this).val() * 40;
-                        });
+                        $("#sepConst").val(DotLayer.C1 / 50000).trigger("change");
+                        $("#speedConst").val(DotLayer.C2 / 40).trigger("change");
                     }
                 }
             }
@@ -1001,6 +995,24 @@
             $(".datepick").datepicker({ dateFormat: 'yy-mm-dd',
                                         changeMonth: true,
                                         changeYear: true
+            });
+
+            $(".dial").knob({
+                width: "100",
+                height: "100",
+                cursor: 20,
+                inline: true,
+                displayInput: false,
+                change: function (val) {
+                    if (DotLayer) {
+                        if (this.$[0].id == "sepConst") {
+                            DotLayer.C1 = val * 50000;
+                        } else {
+                            DotLayer.C2 = val * 40;
+                        }
+
+                    }
+                }
             });
 
             map.on('moveend', function(e) {

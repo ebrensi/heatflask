@@ -64,6 +64,7 @@ bundles = {
     "main_js": flask_assets.Bundle(
         'js/jquery-3.1.0.min.js',
         'js/jquery-ui.min.js',
+        'js/jquery.knob.min.js',
         'js/datatables.min.js',
         'js/moment.js',
         'js/leaflet.js',
@@ -75,7 +76,7 @@ bundles = {
         'js/L.Control.fps.js',
         'js/leaflet-providers.js',
         'js/Leaflet.GoogleMutant.js',
-        'js/L.Control.Locate.min.js',
+        # 'js/L.Control.Locate.min.js',
         'js/easy-button.js',
         'js/eventsource.js',
         filters='rjsmin',
