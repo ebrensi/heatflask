@@ -4493,12 +4493,10 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
     options: {
         startPaused: false,
         normal: {
-            dotColor: "#000000",
-            dotSize: 3
+            dotColor: "#000000"
         },
         selected: {
-            dotColor: "#FFFFFF",
-            dotSize: 3
+            dotColor: "#FFFFFF"
         }
     },
 

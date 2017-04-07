@@ -248,72 +248,19 @@
 
             <div class="sidebar-pane" id="settings">
                 <h1 class="sidebar-header">Map Settings<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
-                    <img src="{{ url_for('static', filename='under-construction.gif') }}" height=40 alt="under-construction">
                     <form id="layer-settings-form">
                     <div>
-                        <h4>Heatmap Options</h4>
-                        <label>Radius:
-                        <input class="heatmap-opt" id="radius" type="number" value={{ config["HEATMAP_DEFAULT_OPTIONS"]["radius"] }} min=0 max=20>
-                        </label>
+                        <h4>Animation Constants</h4>
+                        <div>
+                            <label>Speed:</label>
+                            <input class="dot-opt" id="speedConst" type="number" min=0 max=1000>
+                        </div>
 
-                        <label>
-                        Blur:
-                        <input class="heatmap-opt" id="blur" type="number" value={{ config["HEATMAP_DEFAULT_OPTIONS"]["blur"] }} min=0 max=20>
-                        </label>
-                        <br><br>
-                        <label>
-                        Gradient:
-                        </label>
-                        <table cellspacing="1">
-                            <thead>
-                            <tr>
-                                <th>Value</th><th>Color</th>
-                            </tr>
-                            </thead>
-
-                            <tbody>
-                            <tr>
-                            <td>
-                             <input class="heatmap-opt" id="gval1" type="number" value='0.4' step='0.01' min=0 max=1>
-                            </td>
-                            <td>
-                              <input class="heatmap-opt" id="gcolor1" type="color" value='#0000FF'>
-                            </td>
-                            </tr>
-
-                            <tr>
-                            <td>
-                             <input class="heatmap-opt" id="gval2" type="number" value='0.65' step='0.01' min=0 max=1>
-                            </td>
-                            <td>
-                              <input class="heatmap-opt" id="gcolor2" type="color" value='#00FF00'>
-                            </td>
-                            </tr>
-
-                            <tr>
-                            <td>
-                             <input class="heatmap-opt" id="gval3" type="number" value='1' step='0.01' min=0 max=1>
-                            </td>
-                            <td>
-                              <input class="heatmap-opt" id="gcolor3" type="color" value='#FF0000'>
-                            </td>
-                            </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <hr>
-                    <div>
-                        <h4>FlowPath Options</h4>
-                        <label>Weight:</label>
-                        <input class="flowmap-opt" id="weight" type="number" value={{ config["POLYLINE_DEFAULT_OPTIONS"]["weight"] }} min=0 max=20>
-
-                        <label>Opacity:</label>
-                        <input class="flowmap-opt" id="opacity" type="number" value={{ config["POLYLINE_DEFAULT_OPTIONS"]["opacity"] }} min=0 max=20>
-
-                        <br>
-                        <h4>Dot Path options</h4>
-
-                        <label>Size:</label>
+                        <div>
+                            <label>Sparcity:</label>
+                            <input class="dot-opt" id="sepConst" type="number" min=0 max=1000>
+                        </div>
+                        <!-- <label>Size:</label>
                         <input class="dot-opt" id="nSize" type="number" value="" min=1 max=10>
                         <label>Color:</label>
                         <input class="dot-opt" id="nColor" type="text" value="#000000">
@@ -321,7 +268,7 @@
                         <label>Size:</label>
                         <input class="dot-opt" id="sSize" type="number" value="" min=0 max=10>
                         <label>Color:</label>
-                        <input class="dot-opt" id="sColor" type="text" value="#FFFFFF">
+                        <input class="dot-opt" id="sColor" type="text" value="#FFFFFF"> -->
                     </div>
                     </form>
             </div>
@@ -795,6 +742,15 @@
                         DotLayer = new L.DotLayer(appState.items, {startPaused: appState.paused});
                         map.addLayer(DotLayer);
                         layerControl.addOverlay(DotLayer, "Dots");
+                        $("#sepConst").val(DotLayer.C1 / 50000);
+                        $("#sepConst").change( function() {
+                            DotLayer.C1 = $(this).val() * 50000;
+                        });
+
+                        $("#speedConst").val(DotLayer.C2 / 40);
+                        $("#speedConst").change( function() {
+                            DotLayer.C2 = $(this).val() * 40;
+                        });
                     }
                 }
             }
