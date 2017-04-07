@@ -4738,6 +4738,8 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
             yOffset = this._pxOffset.y;
 
 
+        console.log("dt="+dT);
+
         var timeOffset = s % dT,
             count = 0,
             i = 0,

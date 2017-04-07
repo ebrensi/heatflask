@@ -186,16 +186,15 @@ def robots_txt():
 @app.route('/')
 def splash():
     if current_user.is_authenticated:
-        try:
-            assert current_user.id
-        except:
+        if hasattr(current_user, "id"):
+            return redirect(url_for('main',
+                                    username=current_user.id))
+        else:
             # If a user is logged in but has no record in our database.
             #  i.e. was deleted.  We direct them to initialize a new account.
             logout_user()
             flash("oops! Please log back in.")
-        else:
-            return redirect(url_for('main',
-                                    username=current_user.id))
+
     return render_template("splash.html",
                            next=(request.args.get("next") or
                                  url_for("splash")))

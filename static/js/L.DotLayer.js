@@ -24,7 +24,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
     target_fps: 16,
     smoothFactor: 1.0,
     C1: 1000000.0,
-    C2: 400.0,
+    C2: 200.0,
 
     options: {
         startPaused: false,
@@ -236,12 +236,6 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
                     this._processedItems[id] = {
                         cp: cp,
 
-                        // interval T between dots is a function of total distance, total time, and zoom
-                        T: ~~(this.K * A.time.slice(-1) / (A.total_distance * (1 << (this._zoom-2)))),
-
-                        // time scaling factor
-                        S: this.S * Math.log(this._zoom) / (1 << (this._zoom/2)),
-
                         // dotColor: A.dotColor,
 
                         startTime: new Date(A.ts_UTC || A.beginTimestamp).getTime(),
@@ -261,9 +255,9 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         var P = obj.cp,
             lenP = P.length,
             totSec = obj.totSec,
-            p = this._zoomFactor,
-            dT = this.C1 * p,
-            s = this.C2 * p * (now - obj.startTime),
+            zf = this._zoomFactor,
+            dT = this.C1 * zf,
+            s = this.C2 * zf * (now - obj.startTime),
             xmax = this._size.x,
             ymax = this._size.y,
             ctx = this._ctx,
@@ -272,7 +266,6 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
             two_pi = this.two_pi,
             xOffset = this._pxOffset.x,
             yOffset = this._pxOffset.y;
-
 
         var timeOffset = s % dT,
             count = 0,
