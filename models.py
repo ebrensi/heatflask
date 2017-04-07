@@ -598,7 +598,10 @@ class Users(UserMixin, db_sql.Model):
                 df = index_df[index_df["id"].isin(activity_ids)]
             else:
                 if limit:
-                    df = index_df.head(limit)
+                    # only consider activities with a summary polyline
+                    df = index_df[
+                        index_df.summary_polyline.notnull()
+                    ].head(limit)
                 else:
                     df = index_df
                     if after:
