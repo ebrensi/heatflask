@@ -48,12 +48,7 @@
             </ul>
 
             <ul role="tablist">
-                {% if current_user.is_authenticated
-                    and current_user.is_admin() %}
                 <li>
-                {% else %}
-                <li class="disabled">
-                {% endif %}
                 <a href="#settings" role="tab"><i class="fa fa-gear"></i></a>
                 </li>
             </ul>
