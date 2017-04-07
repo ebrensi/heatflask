@@ -23,7 +23,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
     two_pi: 2 * Math.PI,
     target_fps: 16,
     smoothFactor: 1.0,
-    _dThresh: 0.01,
+    _tThresh: 3600,
     C1: 1000000.0,
     C2: 200.0,
 
@@ -181,18 +181,20 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
             pxOrigin = this._pxOrigin,
             pxBounds = this._pxBounds,
             layerBounds = this._layerBounds,
-            dThresh = this._dThresh;
+            tThresh = this._tThresh;
+
+        this._dotSize = Math.log(z);
+        this._dotOffset = ~~(this._dotSize / 2 + 0.5);
+        this._zoomFactor = 1 / Math.pow(2, z);
 
         // console.log(`zoom=${z}\nmapPanePos=${ppos}\nsize=${this._size}\n` +
         //             `pxOrigin=${pxOrigin}\npxBounds=[${pxBounds.min}, ${pxBounds.max}]\n` +
         //             `layerBounds=[${layerBounds.min}, ${layerBounds.max}]`);
-        this._dotSize = Math.log(z);
-        this._dotOffset = ~~(this._dotSize / 2 + 0.5);
-        this._zoomFactor = 1 / Math.pow(2, this._zoom);
+
 
         // compute relevant container points and slopes
         this._processedItems = {};
-        let cp, cpp, contained;
+        let cp, cpp, contained, dMag;
 
         for (let id in this._items) {
             let A = this._items[id];
@@ -204,19 +206,15 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
                 let projected = A.projected[z];
 
                 if (!projected) {
-                    projected = A.latlng.map(function(latLng, i){
-                        p = this._map.project(latLng);
-                        p.t = A.time[i];
-                        return p;
-                    }.bind(this));
+                    projected = A.latlng.map((latLng, i) =>
+                        Object.assign( this._map.project(latLng), {t: A.time[i]} )
+                    );
 
                     projected = L.LineUtil.simplify(projected, this.smoothFactor);
                     A.projected[z] = projected;
                 }
 
-                contained = projected.map( function (p) {
-                    return this._pxBounds.contains(p);
-                }.bind(this));
+                contained = projected.map( (p) => this._pxBounds.contains(p));
 
 
                 cp = [];
@@ -229,13 +227,15 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
                             dt = p2.t - p1.t;
                             Object.assign(p1, { dx: (p2.x-p1.x)/dt, dy: (p2.y-p1.y)/dt, t2: p2.t });
 
-                            // We don't bother with a segment with almost no movement
-                            if (p1.dx*p1.dx + p1.dy*p1.dy < dThresh) {
+
+                            if (dt > tThresh) {
                                 p1.isBad = true;
+                                // console.log(p1);
                             }
                         }
 
                         p1.isBad || cp.push(p1);
+                        // cp.push(p1);
                     }
                 }
                 if (cp.length > 1) {
