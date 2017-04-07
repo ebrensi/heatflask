@@ -21,25 +21,13 @@
         return row.lastname + ", " + row.firstname;
     }
 
-    function formatID (data, type, row) {
-        if (data) {
-            if (type == "display") {
-                return href("/" + data, data);
-            } else {
-                return data;
-            }
-        } else {
-            return "";
-        }
-    }
-
     const data = {{ data|tojson }};
     let atable = $('#users_table').DataTable({
             pageLength: 50,
             deferRender: true,
             data: data,
             columns: [
-                {title: "ID",    data: "id", render: formatID},
+                {title: "ID",    data: "id", render: formatUserId},
                 {title: "count", data: "app_activity_count"},
                 {
                     title: "last active",
