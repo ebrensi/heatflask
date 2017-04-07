@@ -24,17 +24,15 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
     target_fps: 16,
     smoothFactor: 1.0,
     C1: 1000000.0,
-    C2: 300.0,
+    C2: 200.0,
 
     options: {
         startPaused: false,
         normal: {
-            dotColor: "#000000",
-            dotSize: 3
+            dotColor: "#000000"
         },
         selected: {
-            dotColor: "#FFFFFF",
-            dotSize: 3
+            dotColor: "#FFFFFF"
         }
     },
 
