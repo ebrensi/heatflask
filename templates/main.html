@@ -50,7 +50,7 @@
 
             <ul role="tablist">
 
-                <li><a href="#messages" role="tab"><i class="fa fa-info"></i></a></li>
+                <li><a href="#info-pane" role="tab"><i class="fa fa-info"></i></a></li>
 
 
                 {% if current_user.is_authenticated
@@ -216,7 +216,7 @@
             {% endif %}
 
 
-            <div class="sidebar-pane" id="messages">
+            <div class="sidebar-pane" id="info-pane">
                 <h1 class="sidebar-header">Info<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
                 <br>
                 {{ config['APP_NAME'] }} imports and renders your public activities from Strava.<br>
@@ -253,8 +253,8 @@
 
             <div class="sidebar-pane" id="controls">
                 <h1 class="sidebar-header">Layer Settings<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
+                     <div  style="background-color: rgba(255, 255, 255, 0.95);">
                     <form id="layer-settings-form">
-                    <div>
                         <h4>Animation Constants</h4>
                         <div>
                             <label>Speed:</label>
@@ -262,7 +262,7 @@
                         </div>
 
                         <div>
-                            <label>Sparcity:</label>
+                            <label>Sparsity:</label>
                             <input type="text" class="dial" id="sepConst" data-min="0" data-max="100">
                         </div>
                         <!-- <label>Size:</label>
@@ -274,8 +274,8 @@
                         <input class="dot-opt" id="sSize" type="number" value="" min=0 max=10>
                         <label>Color:</label>
                         <input class="dot-opt" id="sColor" type="text" value="#FFFFFF"> -->
-                    </div>
                     </form>
+                    </div>
             </div>
         </div>
     </div>
@@ -1008,8 +1008,8 @@
             });
 
             $(".dial").knob({
-                width: "100",
-                height: "100",
+                width: "150",
+                height: "150",
                 cursor: 20,
                 inline: true,
                 displayInput: false,
