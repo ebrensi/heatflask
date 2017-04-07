@@ -64,7 +64,7 @@ bundles = {
     "main_js": flask_assets.Bundle(
         'js/jquery-3.1.0.min.js',
         'js/jquery-ui.min.js',
-        'js/jquery.knob.min.js',
+        'js/jquery.knob.min.js',  # Anthony Terrien
         'js/datatables.min.js',
         'js/moment.js',
         'js/leaflet.js',

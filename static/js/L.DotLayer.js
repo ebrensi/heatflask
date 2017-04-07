@@ -23,6 +23,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
     two_pi: 2 * Math.PI,
     target_fps: 16,
     smoothFactor: 1.0,
+    _dThresh: 0.01,
     C1: 1000000.0,
     C2: 200.0,
 
@@ -175,11 +176,12 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
 
         this._pxOffset = this._mapPanePos.subtract(this._pxOrigin)._add(new L.Point(0.5, 0.5));
 
-        const z = this._zoom,
-              ppos = this._mapPanePos,
-              pxOrigin = this._pxOrigin,
-              pxBounds = this._pxBounds,
-              layerBounds = this._layerBounds;
+        var z = this._zoom,
+            ppos = this._mapPanePos,
+            pxOrigin = this._pxOrigin,
+            pxBounds = this._pxBounds,
+            layerBounds = this._layerBounds,
+            dThresh = this._dThresh;
 
         // console.log(`zoom=${z}\nmapPanePos=${ppos}\nsize=${this._size}\n` +
         //             `pxOrigin=${pxOrigin}\npxBounds=[${pxBounds.min}, ${pxBounds.max}]\n` +
@@ -222,12 +224,18 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
                 for (let p1, p2, i=1, len=projected.length; i<len; i++) {
                     if (contained[i-1] || contained[i]) {
                         p1 = projected[i-1];
-                        if (!p1.dx) {
+                        if (!p1.dx && !p1.dy && !p1.isBad) {
                             p2 = projected[i];
                             dt = p2.t - p1.t;
                             Object.assign(p1, { dx: (p2.x-p1.x)/dt, dy: (p2.y-p1.y)/dt, t2: p2.t });
+
+                            // We don't bother with a segment with almost no movement
+                            if (p1.dx*p1.dx + p1.dy*p1.dy < dThresh) {
+                                p1.isBad = true;
+                            }
                         }
-                        cp.push(p1);
+
+                        p1.isBad || cp.push(p1);
                     }
                 }
                 if (cp.length > 1) {
