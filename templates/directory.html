@@ -22,17 +22,7 @@
         return row.lastname + ", " + row.firstname;
     }
 
-    function formatHFID (data, type, row) {
-        if (data) {
-            if (type == "display") {
-                return href("/" + data, img(row.profile, w=50, h=50, alt=data));
-            } else {
-                return data;
-            }
-        } else {
-            return "";
-        }
-    }
+
 
     const data = {{ data|tojson }};
     let atable = $('#users_table').DataTable({
@@ -40,7 +30,7 @@
             deferRender: true,
             data: data,
             columns: [
-                {title: "",    data: "id", render: formatHFID},
+                {title: "",    data: "id", render: formatUserId},
                 {title: "Name", render: combineNames},
                 {title: "City",    data: "city"},
                 {title: "Country", data: "country"},

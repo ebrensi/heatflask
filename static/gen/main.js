@@ -4489,7 +4489,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
     two_pi: 2 * Math.PI,
     target_fps: 16,
     smoothFactor: 1.0,
-    _tThresh: 3600,
+    _tThresh: 1800,
     C1: 1000000.0,
     C2: 200.0,
 
@@ -4696,7 +4696,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
 
                             if (dt > tThresh) {
                                 p1.isBad = true;
-                                console.log(p1);
+                                // console.log(p1);
                             }
                         }
 

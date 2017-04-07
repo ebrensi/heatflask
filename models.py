@@ -262,12 +262,6 @@ class Users(UserMixin, db_sql.Model):
         return dump
 
     @classmethod
-    def directory(cls):
-        fields = ["id", "dt_last_active", "firstname", "lastname", "profile",
-                  "city", "state", "country"]
-        return cls.dump(fields, share_profile=True)
-
-    @classmethod
     def restore(cls, users_list=None):
 
         def update_user_data(user_data):

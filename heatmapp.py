@@ -647,7 +647,10 @@ def update_share_status(username):
 @app.route('/public/directory')
 @log_request_event
 def public_directory():
-    return render_template("directory.html", data=Users.directory())
+    fields = ["id", "dt_last_active", "firstname", "lastname", "profile",
+              "city", "state", "country"]
+    info = Users.dump(fields, share_profile=True)
+    return render_template("directory.html", data=info)
 
 
 # ---- User admin stuff ----
@@ -655,7 +658,9 @@ def public_directory():
 @log_request_event
 @admin_required
 def users():
-    info = [user.info() for user in Users.query]
+    fields = ["id", "dt_last_active", "firstname", "lastname", "profile",
+              "app_activity_count", "city", "state", "country", "email"]
+    info = Users.dump(fields)
     return render_template("admin.html", data=info)
 
 
