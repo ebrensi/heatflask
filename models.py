@@ -850,7 +850,13 @@ class Activities(object):
         for s in ["time", "altitude", "distance"]:
             # Encode/compress these streams
             if (s in stream_names) and (s in activity_streams):
-                activity_streams[s] = cls.stream_encode(activity_streams[s])
+                try:
+                    activity_streams[s] = cls.stream_encode(activity_streams[s])
+                except Exception as e:
+                    msg = ("Can't encode stream '{}' for activity {}:\n{}"
+                           .format(activity_id, e))
+                    app.logger.error(msg)
+                    return {"error": msg}
 
         output = {s: activity_streams[s] for s in stream_names}
         cls.set(activity_id, output)
