@@ -853,8 +853,8 @@ class Activities(object):
                 try:
                     activity_streams[s] = cls.stream_encode(activity_streams[s])
                 except Exception as e:
-                    msg = ("Can't encode stream '{}' for activity {}:\n{}"
-                           .format(s, activity_id, e))
+                    msg = ("Can't encode stream '{}' for activity {} due to '{}':\n{}"
+                           .format(s, activity_id, e, activity_streams[s]))
                     app.logger.error(msg)
                     return {"error": msg}
 
