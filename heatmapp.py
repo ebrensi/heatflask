@@ -241,9 +241,7 @@ def auth_callback():
     state = request.args.get("state")
 
     if "error" in request.args:
-        error = request.args["error"]
-        flash("Error: {}".format(error))
-        return redirect(state)
+        flash("Error: {}".format(request.args.get("error")))
 
     if current_user.is_anonymous:
         args = {"code": request.args.get("code"),
@@ -254,18 +252,22 @@ def auth_callback():
             access_token = client.exchange_code_for_token(**args)
 
         except Exception as e:
-            app.logger.info("authorization error:\n{}".format(e))
+            app.logger.error("authorization error:\n{}".format(e))
             flash(str(e))
             return redirect(state)
 
         user_data = Users.strava_data_from_token(access_token)
         # app.logger.debug("user data: {}".format(user_data))
-        user = Users.add_or_update(**user_data)
 
-        # remember=True, for persistent login.
-        login_user(user, remember=True)
-        app.logger.debug("authenticated {}".format(user))
-        EventLogger.new_event(msg="authenticated {}".format(user.id))
+        user = Users.add_or_update(**user_data)
+        if user:
+            # remember=True, for persistent login.
+            login_user(user, remember=True)
+            app.logger.debug("authenticated {}".format(user))
+            EventLogger.new_event(msg="authenticated {}".format(user.id))
+        else:
+            app.loogger.error("user authenication error")
+            flash("There was a problem authorizing user")
 
     return redirect(request.args.get("state") or
                     url_for("main", username=user.id))
