@@ -22,7 +22,7 @@ L.Control.fps = L.Control.extend({
         this._container.innerHTML = `${fps} f/s, ${msg}`;
         this.lastCalledTime = now;
         return fps;
-  }
+    }
 });
 
 //constructor registration
