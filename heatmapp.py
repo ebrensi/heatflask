@@ -649,8 +649,8 @@ def update_share_status(username):
 @app.route('/public/directory')
 @log_request_event
 def public_directory():
-    fields = ["id", "dt_last_active", "firstname", "lastname", "profile",
-              "city", "state", "country"]
+    fields = ["id", "dt_last_active", "username", "profile",
+            "city", "state", "country"]
     info = Users.dump(fields, share_profile=True)
     return render_template("directory.html", data=info)
 
