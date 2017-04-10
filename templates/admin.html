@@ -17,12 +17,12 @@
 
     <script>
 
-    function combineNames(data, type, row, meta) {
-        return row.lastname + ", " + row.firstname;
-    }
+        function combineNames(data, type, row, meta) {
+            return row.lastname + ", " + row.firstname;
+        }
 
-    const data = {{ data|tojson }};
-    let atable = $('#users_table').DataTable({
+        const data = {{ data|tojson }};
+        let atable = $('#users_table').DataTable({
             pageLength: 50,
             deferRender: true,
             data: data,
@@ -43,7 +43,7 @@
             scrollX: true,
             scrollCollapse: true,
             select: false,
-            order: [[ 1, "desc" ]]
+            order: [[ 2, "desc" ]]
         });
     </script>
 </body>

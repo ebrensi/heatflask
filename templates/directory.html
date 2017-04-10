@@ -18,21 +18,22 @@
 
     <script>
 
-    function combineNames(data, type, row, meta) {
-        return row.lastname + ", " + row.firstname;
-    }
+        function combineNames(data, type, row, meta) {
+            return row.lastname + ", " + row.firstname;
+        }
 
 
 
-    const data = {{ data|tojson }};
-    let atable = $('#users_table').DataTable({
+        const data = {{ data|tojson }};
+        let atable = $('#users_table').DataTable({
             pageLength: 100,
             deferRender: true,
             data: data,
             columns: [
                 {title: "",    data: "id", render: formatUserId},
-                {title: "Name", render: combineNames},
+                {title: "username"},
                 {title: "City",    data: "city"},
+                {title: "Region",    data: "state"},
                 {title: "Country", data: "country"},
                 {
                     title: "last active",
@@ -44,7 +45,7 @@
             scrollX: true,
             scrollCollapse: true,
             select: false,
-            order: [[ 1, "desc" ]]
+            order: [[ 5, "desc" ]]
         });
     </script>
 </body>
