@@ -124,7 +124,7 @@ class Users(UserMixin, db_sql.Model):
         try:
             strava_user = client.get_athlete()
         except Exception as e:
-            app.logger.error("error getting user: {}"
+            app.logger.error("error getting user data from token: {}"
                              .format(e))
         else:
             return {
@@ -170,6 +170,10 @@ class Users(UserMixin, db_sql.Model):
 
     @classmethod
     def add_or_update(cls, cache_timeout=CACHE_USERS_TIMEOUT, **kwargs):
+        if not kwargs:
+            app.logger.debug("attempted to add_or_update user with no data")
+            return
+
         # Creates a new user or updates an existing user (with the same id)
         detached_user = cls(**kwargs)
         try:
@@ -178,8 +182,8 @@ class Users(UserMixin, db_sql.Model):
 
         except Exception as e:
             db_sql.session.rollback()
-            app.logger.error("error adding/updating user {}: {}"
-                             .format(kwargs, e))
+            app.logger.error(
+                "error adding/updating user {}: {}".format(kwargs, e))
         else:
             if persistent_user:
                 persistent_user.cache(cache_timeout)
