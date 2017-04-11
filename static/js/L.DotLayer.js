@@ -186,6 +186,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         this._zoomFactor = 1 / Math.pow( 2, z );
 
         var tThresh = this._tThresh * DotLayer._zoomFactor;
+
         console.log(`tThresh=${tThresh}`);
 
         // Console.log(`zoom=${z}\nmapPanePos=${ppos}\nsize=${this._size}\n` +
