@@ -187,8 +187,6 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
         var tThresh = this._tThresh * DotLayer._zoomFactor;
 
-        console.log(`tThresh=${tThresh}`);
-
         // Console.log(`zoom=${z}\nmapPanePos=${ppos}\nsize=${this._size}\n` +
         //             `pxOrigin=${pxOrigin}\npxBounds=[${pxBounds.min}, ${pxBounds.max}]\n` +
         //             `layerBounds=[${layerBounds.min}, ${layerBounds.max}]`);
