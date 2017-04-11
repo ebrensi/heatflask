@@ -259,12 +259,12 @@
 											<h4>Animation Constants</h4>
 											<div>
 												<label>Speed:</label>
-												<input type="text" class="dial" id="speedConst" data-min="0" data-max="100">
+												<input type="text" class="dial" id="speedConst">
 											</div>
 
 											<div>
 												<label>Sparsity:</label>
-												<input type="text" class="dial" id="sepConst" data-min="0" data-max="100">
+												<input type="text" class="dial" id="sepConst">
 											</div>
                         <!-- <label>Size:</label>
                         <input class="dot-opt" id="nSize" type="number" value="" min=1 max=10>
@@ -286,33 +286,39 @@
 
     <script type="text/javascript">
     	const OFFLINE = {{ config.get('OFFLINE')|tojson }},
-    	HEATLAYER_DEFAULT_OPTIONS = {{ config["HEATMAP_DEFAULT_OPTIONS"]|tojson|safe }},
-    	POLYLINE_DEFAULT_OPTIONS = {{ config["POLYLINE_DEFAULT_OPTIONS"]|tojson|safe }},
-    	BASE_DATAURL = "{{ url_for('getdata', username=user.id) }}",
-    	BASE_USER_URL = "{{ url_for('main', username=user.id) }}",
-    	USER_ID = "{{ user.id }}",
-    	SHARE_STATUS_UPDATE_URL = "{{ url_for('update_share_status', username=user.id) }}",
-    	START_PAUSED = {{ paused|tojson }},
-    	MAP_PROVIDERS = {{ baselayer|tojson|safe }},
-    	DEFAULT_MAP_CENTER = [{{ lat }}, {{ lng }}],
-    	DEFAULT_MAP_ZOOM = {{ zoom }},
-    	{% if current_user.is_authenticated and current_user.is_admin() %}
-    	ADMIN = true;
-    	{% else %}
-    	ADMIN = false;
-    	{% endif %}
+            SEP_SCALE = 500000.0,
+            SPEED_SCALE = 500.0,
+        	HEATLAYER_DEFAULT_OPTIONS = {{ config["HEATMAP_DEFAULT_OPTIONS"]|tojson|safe }},
+        	POLYLINE_DEFAULT_OPTIONS = {{ config["POLYLINE_DEFAULT_OPTIONS"]|tojson|safe }},
+        	BASE_DATAURL = "{{ url_for('getdata', username=user.id) }}",
+        	BASE_USER_URL = "{{ url_for('main', username=user.id) }}",
+        	USER_ID = "{{ user.id }}",
+        	SHARE_STATUS_UPDATE_URL = "{{ url_for('update_share_status', username=user.id) }}",
+        	START_PAUSED = {{ paused|tojson }},
+        	MAP_PROVIDERS = {{ baselayer|tojson|safe }},
+        	DEFAULT_MAP_CENTER = [{{ lat }}, {{ lng }}],
+        	DEFAULT_MAP_ZOOM = {{ zoom }},
+        	{% if current_user.is_authenticated and current_user.is_admin() %}
+        	ADMIN = true;
+        	{% else %}
+        	ADMIN = false;
+        	{% endif %}
+
+
+
+
 
         // Set up Map and base layers
         var map_providers = MAP_PROVIDERS,
-        baseLayers = {"None": L.tileLayer("")},
-        default_baseLayer = baseLayers["None"],
-        HeatLayer = false,
-        FlowLayer = false,
-        DotLayer = false,
-        appState = {
-        	baseLayers: map_providers,
-        	paused: START_PAUSED
-        };
+            baseLayers = {"None": L.tileLayer("")},
+            default_baseLayer = baseLayers["None"],
+            HeatLayer = false,
+            FlowLayer = false,
+            DotLayer = false,
+            appState = {
+            	baseLayers: map_providers,
+            	paused: START_PAUSED
+            };
 
 
         if (!OFFLINE) {
@@ -348,42 +354,65 @@
 
 
         var sidebarControl = L.control.sidebar('sidebar').addTo(map),
-        zoomControl = map.zoomControl.setPosition('bottomright'),
-        layerControl = L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map),
-            // locateControl = L.control.locate({position: "bottomright", icon: "fa fa-anchor"}).addTo(map),
-            fps_display = null;
+            zoomControl = map.zoomControl.setPosition('bottomright'),
+            layerControl = L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map),
+                // locateControl = L.control.locate({position: "bottomright", icon: "fa fa-anchor"}).addTo(map),
+                fps_display = null;
 
-            if (ADMIN) {
-            	fps_display = L.control.fps().addTo(map);
-            }
+                if (ADMIN) {
+                	fps_display = L.control.fps().addTo(map);
+                }
 
 
-            let button_states = [{
-            	stateName: 'animation-running',
-            	icon:      'fa-pause',
-            	title:     'Pause Animation',
-            	onClick: function(btn, map) {
-            		pauseFlow();
-            		updateState();
-            		btn.state('animation-paused');
-            	}
-            }, {
-            	stateName: 'animation-paused',
-            	icon:      'fa-play',
-            	title:     'Resume Animation',
-            	onClick: function(btn, map) {
-            		resumeFlow();
-            		if (DotLayer) {
-            			DotLayer.animate();
-            		}
-            		updateState();
-            		btn.state('animation-running');
-            	}
-            }],
+                let button_states = [{
+                	stateName: 'animation-running',
+                	icon:      'fa-pause',
+                	title:     'Pause Animation',
+                	onClick: function(btn, map) {
+                		pauseFlow();
+                		updateState();
+                		btn.state('animation-paused');
+                	}
+                }, {
+                	stateName: 'animation-paused',
+                	icon:      'fa-play',
+                	title:     'Resume Animation',
+                	onClick: function(btn, map) {
+                		resumeFlow();
+                		if (DotLayer) {
+                			DotLayer.animate();
+                		}
+                		updateState();
+                		btn.state('animation-running');
+                	}
+                }],
 
-            animationControl = L.easyButton({
-            	states: appState.paused? button_states.reverse() : button_states
-            }).addTo(map);
+                animationControl = L.easyButton({
+                	states: appState.paused? button_states.reverse() : button_states
+                }).addTo(map);
+
+
+        // set up dial-controls
+        $(".dial").knob({
+                min: 0,
+                max: 100,
+                step: 1,
+                width: "150",
+                height: "150",
+                cursor: 20,
+                inline: true,
+                // displayInput: false,
+                change: function (val) {
+                    if (DotLayer) {
+                        if (this.$[0].id == "sepConst") {
+                            DotLayer.C1 = val * SEP_SCALE;
+                        } else {
+                            DotLayer.C2 = val * SPEED_SCALE;
+                        }
+
+                    }
+                }
+            });
 
 
         // Flash any messages
@@ -749,8 +778,8 @@
             			map.addLayer(DotLayer);
             			layerControl.addOverlay(DotLayer, "Dots");
 
-            			$("#sepConst").val(DotLayer.C1 / 50000).trigger("change");
-            			$("#speedConst").val(DotLayer.C2 / 40).trigger("change");
+            			$("#sepConst").val(DotLayer.C1 / SEP_SCALE).trigger("change");
+            			$("#speedConst").val(DotLayer.C2 / SPEED_SCALE).trigger("change");
             		}
             	}
             }
@@ -1008,23 +1037,6 @@
         		changeYear: true
         	});
 
-        	$(".dial").knob({
-        		width: "150",
-        		height: "150",
-        		cursor: 20,
-        		inline: true,
-        		displayInput: false,
-        		change: function (val) {
-        			if (DotLayer) {
-        				if (this.$[0].id == "sepConst") {
-        					DotLayer.C1 = val * 50000;
-        				} else {
-        					DotLayer.C2 = val * 40;
-        				}
-
-        			}
-        		}
-        	});
 
         	map.on('moveend', function(e) {
         		if (!appState.autozoom) {
