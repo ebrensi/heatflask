@@ -23,7 +23,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
     two_pi: 2 * Math.PI,
     target_fps: 16,
     smoothFactor: 1.0,
-    _tThresh: 1800,
+    _tThresh: 10000000,
     C1: 1000000.0,
     C2: 200.0,
 
@@ -179,12 +179,14 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             ppos = this._mapPanePos,
             pxOrigin = this._pxOrigin,
             pxBounds = this._pxBounds,
-            layerBounds = this._layerBounds,
-            tThresh = this._tThresh;
+            layerBounds = this._layerBounds;
 
         this._dotSize = Math.log( z );
         this._dotOffset = ~~( this._dotSize / 2 + 0.5 );
         this._zoomFactor = 1 / Math.pow( 2, z );
+
+        var tThresh = this._tThresh * DotLayer._zoomFactor;
+        console.log(`tThresh=${tThresh}`);
 
         // Console.log(`zoom=${z}\nmapPanePos=${ppos}\nsize=${this._size}\n` +
         //             `pxOrigin=${pxOrigin}\npxBounds=[${pxBounds.min}, ${pxBounds.max}]\n` +
@@ -242,7 +244,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                         // DotColor: A.dotColor,
 
                         startTime: new Date( A.ts_UTC || A.beginTimestamp ).getTime(),
-                        totSec: A.time.slice( -1 )
+                        totSec: A.time.slice( -1 )[0]
                     };
                 }
             }
