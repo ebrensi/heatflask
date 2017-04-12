@@ -4489,7 +4489,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
     two_pi: 2 * Math.PI,
     target_fps: 16,
     smoothFactor: 1.0,
-    _tThresh: 10000000,
+    _tThresh: 100000000.0,
     C1: 1000000.0,
     C2: 200.0,
 
@@ -4652,7 +4652,6 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         this._zoomFactor = 1 / Math.pow( 2, z );
 
         var tThresh = this._tThresh * DotLayer._zoomFactor;
-        console.log(`tThresh=${tThresh}`);
 
         // Console.log(`zoom=${z}\nmapPanePos=${ppos}\nsize=${this._size}\n` +
         //             `pxOrigin=${pxOrigin}\npxBounds=[${pxBounds.min}, ${pxBounds.max}]\n` +
