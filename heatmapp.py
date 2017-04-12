@@ -79,6 +79,7 @@ bundles = {
         # 'js/L.Control.Locate.min.js',
         'js/easy-button.js',
         'js/eventsource.js',
+        'js/appUtil.js',
         filters='rjsmin',
         output='gen/main.js'
     ),
@@ -650,7 +651,7 @@ def update_share_status(username):
 @log_request_event
 def public_directory():
     fields = ["id", "dt_last_active", "username", "profile",
-            "city", "state", "country"]
+              "city", "state", "country"]
     info = Users.dump(fields, share_profile=True)
     return render_template("directory.html", data=info)
 
