@@ -266,15 +266,6 @@
 												<label>Sparsity:</label>
 												<input type="text" class="dial" id="sepConst">
 											</div>
-                        <!-- <label>Size:</label>
-                        <input class="dot-opt" id="nSize" type="number" value="" min=1 max=10>
-                        <label>Color:</label>
-                        <input class="dot-opt" id="nColor" type="text" value="#000000">
-
-                        <label>Size:</label>
-                        <input class="dot-opt" id="sSize" type="number" value="" min=0 max=10>
-                        <label>Color:</label>
-                        <input class="dot-opt" id="sColor" type="text" value="#FFFFFF"> -->
                     </form>
                 </div>
             </div>
@@ -451,17 +442,6 @@
             ]
         });
 
-        function httpGetAsync(theUrl, callback) {
-        	let xmlHttp = new XMLHttpRequest();
-        	xmlHttp.onreadystatechange = function() {
-        		if (xmlHttp.readyState == 4 && xmlHttp.status == 200)
-        			callback(xmlHttp.responseText);
-        	}
-            xmlHttp.open("GET", theUrl, true); // true for asynchronous
-            xmlHttp.send(null);
-        }
-
-
         function updateShareStatus(status) {
         	console.log("updating share status.");
         	url = `${SHARE_STATUS_UPDATE_URL}?status=${status}`;
@@ -498,41 +478,8 @@
         }
 
         atable.on( 'select', handle_table_selections)
-        .on( 'deselect', handle_table_selections);
+            .on( 'deselect', handle_table_selections);
 
-
-        // Convert seconds to HH:MM:SS format
-        function hhmmss(secs) {
-        	return new Date(secs * 1000).toISOString().substr(11, 8);
-        }
-
-        // return an HTML href tag from a url and text
-        function href(url, text){
-        	return `<a href='${url}' target='_blank'>${text}</a>`
-        }
-
-        // decode a (possibly RLE-encoded) array of successive differences into
-        //  an array of the original values
-        //  This will decode both [1, 2,2,2,2,2,2, 5] and [1, [2,6], 5] into
-        //    [0, 1, 3, 5, 7, 9, 11, 13, 18]
-        function streamDecode(rle_list, first_value=0) {
-        	let running_sum = first_value,
-        	outArray = [first_value],
-        	len = rle_list.length;
-        	for (let i=0; i<len; i++) {
-        		el = rle_list[i];
-        		if (el instanceof Array) {
-        			for (let j=0; j<el[1]; j++) {
-        				running_sum += el[0];
-        				outArray.push(running_sum);
-        			}
-        		} else {
-        			running_sum += el;
-        			outArray.push(running_sum);
-        		}
-        	}
-        	return outArray;
-        }
 
         function zoomToSelected(){
             // Pan-Zoom to fit all selected activities
@@ -786,10 +733,6 @@
             			$("#speedConst").val(Math.sqrt(DotLayer.C2) / SPEED_SCALE).trigger("change");
             		}
             	}
-            }
-
-            function stravaActivityURL(id) {
-            	return `https://www.strava.com/activities/${id}`;
             }
 
             function stopListening() {
