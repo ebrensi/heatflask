@@ -286,8 +286,8 @@
 
     <script type="text/javascript">
     	const OFFLINE = {{ config.get('OFFLINE')|tojson }},
-            SEP_SCALE = 500000.0,
-            SPEED_SCALE = 200.0,
+            SPEED_SCALE = 10.0,
+            SEP_SCALE = {m: 0.14, b: 15.0},
         	HEATLAYER_DEFAULT_OPTIONS = {{ config["HEATMAP_DEFAULT_OPTIONS"]|tojson|safe }},
         	POLYLINE_DEFAULT_OPTIONS = {{ config["POLYLINE_DEFAULT_OPTIONS"]|tojson|safe }},
         	BASE_DATAURL = "{{ url_for('getdata', username=user.id) }}",
@@ -404,12 +404,16 @@
                 // displayInput: false,
                 change: function (val) {
                     if (DotLayer) {
+                        let newVal;
                         if (this.$[0].id == "sepConst") {
-                            DotLayer.C1 = val * SEP_SCALE;
+                            newVal = Math.pow(2, val * SEP_SCALE.m + SEP_SCALE.b);
+                            DotLayer.C1 = newVal;
+                            // console.log(`C1=${newVal}`)
                         } else {
-                            DotLayer.C2 = val * SPEED_SCALE;
+                            newVal = val * val * SPEED_SCALE;
+                            DotLayer.C2 = newVal;
+                            console.log(`C2=${newVal}`)
                         }
-
                     }
                 }
             });
@@ -778,8 +782,8 @@
             			map.addLayer(DotLayer);
             			layerControl.addOverlay(DotLayer, "Dots");
 
-            			$("#sepConst").val(DotLayer.C1 / SEP_SCALE).trigger("change");
-            			$("#speedConst").val(DotLayer.C2 / SPEED_SCALE).trigger("change");
+            			$("#sepConst").val((Math.log2(DotLayer.C1) - SEP_SCALE.b) / SEP_SCALE.m ).trigger("change");
+            			$("#speedConst").val(Math.sqrt(DotLayer.C2) / SPEED_SCALE).trigger("change");
             		}
             	}
             }
