@@ -286,7 +286,7 @@
 
     <script type="text/javascript">
     	const OFFLINE = {{ config.get('OFFLINE')|tojson }},
-            SPEED_SCALE = 10.0,
+            SPEED_SCALE = 5.0,
             SEP_SCALE = {m: 0.14, b: 15.0},
         	HEATLAYER_DEFAULT_OPTIONS = {{ config["HEATMAP_DEFAULT_OPTIONS"]|tojson|safe }},
         	POLYLINE_DEFAULT_OPTIONS = {{ config["POLYLINE_DEFAULT_OPTIONS"]|tojson|safe }},
