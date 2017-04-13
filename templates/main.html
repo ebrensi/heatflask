@@ -315,7 +315,7 @@
         if (!OFFLINE) {
         	let online_baseLayers = {
         		"Esri.WorldImagery": L.tileLayer.provider("Esri.WorldImagery"),
-        		"OpenStreetMap.Mapnik": L.tileLayer.provider("OpenStreetMap.Mapnik"),
+        		"OpenStreetMap.Mapnik": L.tileLayer.provider("OpenStreetMap.Mapnik")
         		// "Google.Roadmap": L.gridLayer.googleMutant({type: 'roadmap'}),
         		// "Google.Terrain": L.gridLayer.googleMutant({type: 'terrain'}),
         		// "Google.Hybrid": L.gridLayer.googleMutant({type: 'hybrid'})
@@ -330,7 +330,8 @@
         			if (i==0) default_baseLayer = tl;
         		}
         	} else {
-        		default_baseLayer = baseLayers["Google.Terrain"];
+        		// default_baseLayer = baseLayers["Google.Terrain"];
+                default_baseLayer = baseLayers["Esri.WorldImagery"];
         	}
         }
 
