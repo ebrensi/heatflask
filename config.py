@@ -103,6 +103,7 @@ class StagingConfig(Config):
     """
     DEVELOPMENT = True
     DEBUG = True
+    ASSETS_DEBUG = True
 
 
 class DevelopmentConfig(Config):
