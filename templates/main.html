@@ -14,7 +14,7 @@
 	{% endassets %}
 
 	{% if not config.get('OFFLINE') %}
-	<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBLvYWwPmLsBRCGXeMHh-InA9rq35jdVeA" async defer></script>
+	<!-- <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBLvYWwPmLsBRCGXeMHh-InA9rq35jdVeA" async defer></script> -->
 	{% endif %}
 
 	{% if current_user.is_anonymous or (not current_user.is_admin()) %}
@@ -316,9 +316,9 @@
         	let online_baseLayers = {
         		"Esri.WorldImagery": L.tileLayer.provider("Esri.WorldImagery"),
         		"OpenStreetMap.Mapnik": L.tileLayer.provider("OpenStreetMap.Mapnik"),
-        		"Google.Roadmap": L.gridLayer.googleMutant({type: 'roadmap'}),
-        		"Google.Terrain": L.gridLayer.googleMutant({type: 'terrain'}),
-        		"Google.Hybrid": L.gridLayer.googleMutant({type: 'hybrid'})
+        		// "Google.Roadmap": L.gridLayer.googleMutant({type: 'roadmap'}),
+        		// "Google.Terrain": L.gridLayer.googleMutant({type: 'terrain'}),
+        		// "Google.Hybrid": L.gridLayer.googleMutant({type: 'hybrid'})
         	};
 
         	Object.assign(baseLayers, online_baseLayers);
