@@ -14,7 +14,7 @@
 	{% endassets %}
 
 	{% if not config.get('OFFLINE') %}
-	<!-- <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBLvYWwPmLsBRCGXeMHh-InA9rq35jdVeA" async defer></script> -->
+	<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBLvYWwPmLsBRCGXeMHh-InA9rq35jdVeA" async defer></script>
 	{% endif %}
 
 	{% if current_user.is_anonymous or (not current_user.is_admin()) %}
@@ -242,7 +242,7 @@
 								<div class="sidebar-pane" id="activities">
 									<h1 class="sidebar-header">Rendered Activities<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
 									<div id="activities_list">
-										<table id='atab' class='display compact order-column' cellspacing='0' width='100%'></table>
+										<table id='atab' class='display compact order-column' width='100%'></table>
 									</div>
 
 									<div>
@@ -313,33 +313,31 @@
 
 
         if (!OFFLINE) {
-        	let online_baseLayers = {
+        	var online_baseLayers = {
         		"Esri.WorldImagery": L.tileLayer.provider("Esri.WorldImagery"),
-        		"OpenStreetMap.Mapnik": L.tileLayer.provider("OpenStreetMap.Mapnik")
-        		// "Google.Roadmap": L.gridLayer.googleMutant({type: 'roadmap'}),
-        		// "Google.Terrain": L.gridLayer.googleMutant({type: 'terrain'}),
-        		// "Google.Hybrid": L.gridLayer.googleMutant({type: 'hybrid'})
+        		"OpenStreetMap.Mapnik": L.tileLayer.provider("OpenStreetMap.Mapnik"),
+        		"Google.Roadmap": L.gridLayer.googleMutant({type: 'roadmap'}),
+        		"Google.Terrain": L.gridLayer.googleMutant({type: 'terrain'}),
+        		"Google.Hybrid": L.gridLayer.googleMutant({type: 'hybrid'})
         	};
 
         	Object.assign(baseLayers, online_baseLayers);
         	if (map_providers.length) {
-        		for (let i = 0; i < map_providers.length; i++) {
+        		for (var i = 0; i < map_providers.length; i++) {
         			provider = map_providers[i];
-        			let tl = L.tileLayer.provider(provider);
+        			var tl = L.tileLayer.provider(provider);
         			baseLayers[provider] = tl;
         			if (i==0) default_baseLayer = tl;
         		}
         	} else {
-        		// default_baseLayer = baseLayers["Google.Terrain"];
-                default_baseLayer = baseLayers["Esri.WorldImagery"];
-        	}
+        		default_baseLayer = baseLayers["Google.Terrain"];
+         	}
         }
 
         var map = L.map('map',
         	{center: DEFAULT_MAP_CENTER,
         		zoom: DEFAULT_MAP_ZOOM,
         		layers : [ default_baseLayer ],
-                         // renderer: L.canvas({ padding: 0 }),
                          renderer: L.svg({ padding: 0 }),
                          zoomAnimation: false
                      });
@@ -351,12 +349,12 @@
                 // locateControl = L.control.locate({position: "bottomright", icon: "fa fa-anchor"}).addTo(map),
                 fps_display = null;
 
-                // if (ADMIN) {
+                if (ADMIN) {
                 	fps_display = L.control.fps().addTo(map);
-                // }
+                }
 
 
-                let button_states = [{
+                var button_states = [{
                 	stateName: 'animation-running',
                 	icon:      'fa-pause',
                 	title:     'Pause Animation',
@@ -396,7 +394,7 @@
                 // displayInput: false,
                 change: function (val) {
                     if (DotLayer) {
-                        let newVal;
+                        var newVal;
                         if (this.$[0].id == "sepConst") {
                             newVal = Math.pow(2, val * SEP_SCALE.m + SEP_SCALE.b);
                             DotLayer.C1 = newVal;
@@ -414,7 +412,7 @@
         // Flash any messages
         {% with messages = get_flashed_messages() %}
         {% if messages %}
-        let msg = "<ul class=flashes>";
+        var msg = "<ul class=flashes>";
 
         {% for message in messages %}
         msg += "<li>{{ message }}</li>";
@@ -431,7 +429,6 @@
         	scrollY: "60vh",
         	scrollX: true,
         	scrollCollapse: true,
-            // scroller: true,
             order: [[ 0, "desc" ]],
             select: true,
             columns: [
@@ -454,18 +451,17 @@
 
         function handle_table_selections( e, dt, type, indexes ) {
         	if ( type === 'row' ) {
-                // let data = atable.rows( indexes ).data();
-                let selected_rows = atable.rows( {selected: true} ).data(),
+                var selected_rows = atable.rows( {selected: true} ).data(),
                 unselected_rows = atable.rows( {selected: false} ).data();
 
-                for (let i = 0; i < selected_rows.length; i++) {
+                for (var i = 0; i < selected_rows.length; i++) {
                 	id = selected_rows[i].DT_RowId;
                 	if (!appState.items[id].selected){
                 		togglePathSelect(id);
                 	}
                 }
 
-                for (let i = 0; i < unselected_rows.length; i++) {
+                for (var i = 0; i < unselected_rows.length; i++) {
                 	id = unselected_rows[i].DT_RowId;
                 	if (appState.items[id].selected){
                 		togglePathSelect(id);
@@ -484,7 +480,7 @@
 
         function zoomToSelected(){
             // Pan-Zoom to fit all selected activities
-            let selection_bounds = L.latLngBounds();
+            var selection_bounds = L.latLngBounds();
             $.each(appState.items, (id, a) => {
             	if (a.selected) {
             		selection_bounds.extend(a.bounds);
@@ -504,7 +500,7 @@
         function openSelected(){
         	ids = selectedIDs();
         	if (ids.length > 0) {
-        		let url = BASE_USER_URL + "?id=" + ids.join("+");
+        		var url = BASE_USER_URL + "?id=" + ids.join("+");
         		if (appState.paused == true){
         			url += "&paused=1"
         		}
@@ -525,12 +521,12 @@
         }
 
         function highlightPath(id) {
-        	let A = appState.items[id];
+        	var A = appState.items[id];
         	if (A.selected) return false;
 
         	A.highlighted = true;
 
-        	let row = $("#"+id),
+        	var row = $("#"+id),
         	scroller = $('.dataTables_scrollBody'),
         	flow = A.flowLayer;
 
@@ -554,7 +550,7 @@
 
         function unhighlightPath(id){
 
-        	let A = appState.items[id];
+        	var A = appState.items[id];
         	if (A.selected) return false;
 
         	A.highlighted = false;
@@ -572,7 +568,7 @@
         }
 
         function togglePathSelect(id){
-        	let A = appState.items[id];
+        	var A = appState.items[id];
         	if (A.selected) {
         		A.selected = false;
         		unhighlightPath(id);
@@ -583,11 +579,11 @@
         }
 
         function activityDataPopup(id, latlng){
-        	let A = appState.items[id],
+        	var A = appState.items[id],
         	d = parseFloat(A.total_distance),
         	elapsed = hhmmss(parseFloat(A.elapsed_time)),
         	v = parseFloat(A.average_speed);
-        	let dkm = +(d / 1000).toFixed(2),
+        	var dkm = +(d / 1000).toFixed(2),
         	dmi = +(d / 1609.34).toFixed(2),
         	vkm,
         	vmi;
@@ -600,7 +596,7 @@
         		vmi = (v * 3600 / 1609.34).toFixed(2) + "mi/hr";
         	}
 
-        	let popup = L.popup()
+        	var popup = L.popup()
         	.setLatLng(latlng)
         	.setContent(
         		`${A.name}<br>${A.type}: ${A.beginTimestamp}<br>`+
@@ -623,7 +619,7 @@
         	hires = (flowres == "high" || heatres == "high");
         	dotFlow = true;
 
-        	let query = {};
+        	var query = {};
 
         	if (type == "activity_ids") {
         		query.id = $("#activity_ids").val();
@@ -671,7 +667,7 @@
 
 
             // Add new blank HeatLayer to map if specified
-            let latlngs_flat = [];
+            var latlngs_flat = [];
             if (heatres){
             	HeatLayer = L.heatLayer(latlngs_flat, HEATLAYER_DEFAULT_OPTIONS);
             	map.addLayer(HeatLayer);
@@ -690,7 +686,7 @@
             atable.clear();
 
 
-            let msgBox = L.control.window(map,
+            var msgBox = L.control.window(map,
             	{position: 'top',
             	content:"<div class='data_message'></div><div><progress class='progbar' id='box'></progress></div>",
             	visible:true
@@ -702,8 +698,6 @@
             source = new EventSource(
             	BASE_DATAURL + "?" + jQuery.param(query, true)
             	);
-
-            // debugger;
 
             $(".data_message").html("Rendering activities...");
             $("#abortButton").show();
@@ -722,18 +716,16 @@
             		}
             		if ($("#autozoom:checked").val() && bounds.isValid())
             			map.fitBounds(bounds);
-            		let msg2 = msg + " " + Object.keys(appState.items).length + " activities rendered.";
+            		var msg2 = msg + " " + Object.keys(appState.items).length + " activities rendered.";
             		$(".data_message").html(msg2);
             		rendering = false;
             		if (dotFlow) {
-                        console.log("adding DotLayer...");
             			DotLayer = new L.DotLayer(appState.items, {startPaused: appState.paused});
             			map.addLayer(DotLayer);
             			layerControl.addOverlay(DotLayer, "Dots");
 
             			$("#sepConst").val((Math.log2(DotLayer.C1) - SEP_SCALE.b) / SEP_SCALE.m ).trigger("change");
             			$("#speedConst").val(Math.sqrt(DotLayer.C2) / SPEED_SCALE).trigger("change");
-                        console.log("DotLayer added");
             		}
             	}
             }
@@ -760,19 +752,15 @@
             		if ("limit" in query) appState["limit"] = query.limit;
             		updateState();
             	} else {
-            		let A = JSON.parse(event.data),
+            		var A = JSON.parse(event.data),
             		heatpoints = false,
             		flowpoints = false;
             		A.selected = false;
 
             		if ("error" in A){
-            			let msg = "<font color='red'>" + A.error +"</font><br>";
+            			var msg = "<font color='red'>" + A.error +"</font><br>";
             			$(".data_message").html(A.msg);
             			console.log(`Error activity ${A.id}: ${A.error}`);
-                        // console.log(A)
-                        // L.control.window(map, {title: "Oops.", content:msg, visible:true});
-                        // doneRendering(msg);
-                        // stopListening();
                         return;
                     } else if ("stop_rendering" in A){
                     	doneRendering("Done rendering.");
@@ -783,7 +771,7 @@
                     	}
                     	return;
                     } else {
-                    	let d = parseFloat(A.total_distance),
+                    	var d = parseFloat(A.total_distance),
                     	dkm = +(d / 1000).toFixed(2),
                     	ts = href( stravaActivityURL(A.id), A.beginTimestamp.slice(0,10) ),
                     	n = atable.row.add({
@@ -804,14 +792,14 @@
                     }
 
                     if (lores && ("summary_polyline" in A) && (A.summary_polyline)) {
-                    	let latlngs = L.PolylineUtil.decode(A.summary_polyline);
+                    	var latlngs = L.PolylineUtil.decode(A.summary_polyline);
                     	if (heatres == "low") heatpoints = latlngs;
                     	if (flowres == "low") flowpoints = latlngs;
                     }
 
 
                     if (query.hires && ("polyline" in A) && (A.polyline)){
-                    	let latlngs = L.PolylineUtil.decode(A.polyline);
+                    	var latlngs = L.PolylineUtil.decode(A.polyline);
                     	if (heatres == "high") heatpoints = latlngs;
                     	if (flowres == "high") {
                     		flowpoints = latlngs;
@@ -826,7 +814,7 @@
                     	latlngs_flat.push.apply(latlngs_flat, heatpoints);
                     }
                     if (flowpoints) {
-                    	let v = parseFloat(A.average_speed),
+                    	var v = parseFloat(A.average_speed),
                     	v_adj = 1 + Math.log(10*v);
                     	A.flowLayer = new L.Polyline(flowpoints, fopts);
                     	FlowLayer.addLayer(A.flowLayer);
@@ -856,7 +844,7 @@
                     	}
                     }
 
-                    let points = heatpoints || flowpoints;
+                    var points = heatpoints || flowpoints;
                     if (points) {
                     	if (!A.bounds) {
                     		A.bounds = L.latLngBounds(points);
@@ -875,7 +863,7 @@
 
 
         function updateState(){
-        	let params = {},
+        	var params = {},
         	type = $("#select_type").val(),
         	num = $("#select_num").val();
 
@@ -908,7 +896,7 @@
         		params.autozoom = "1";
         	} else {
         		appState.autozoom = false;
-        		let zoom = map.getZoom(),
+        		var zoom = map.getZoom(),
         		center = map.getCenter(),
         		precision = Math.max(0, Math.ceil(Math.log(zoom) / Math.LN2));
         		params.lat = center.lat.toFixed(precision);
@@ -926,7 +914,7 @@
 
         	params["baselayer"] = appState.baseLayers;
 
-        	let newURL = USER_ID + "?" + jQuery.param(params, true);
+        	var newURL = USER_ID + "?" + jQuery.param(params, true);
         	window.history.pushState("", "", newURL);
 
         	$(".current-url").val(newURL);
@@ -934,7 +922,7 @@
 
 
         function preset_sync() {
-        	let F = "YYYY-MM-DD",
+        	var F = "YYYY-MM-DD",
         	num = $("#select_num").val(),
         	type = $("#select_type").val();
 
@@ -1004,7 +992,7 @@
         	{% endif %}
 
         	$("#share").on("change", function() {
-        		let status = $("#share").is(":checked")? "public":"private";
+        		var status = $("#share").is(":checked")? "public":"private";
         		updateShareStatus(status);
         	});
 
