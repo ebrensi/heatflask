@@ -171,7 +171,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         this._mapPanePos = this._map._getMapPanePos();
         this._pxOrigin = this._map.getPixelOrigin();
         this._pxBounds = this._map.getPixelBounds();
-        // This._layerBounds = this._map._latLngBoundsToNewLayerBounds(this._latLngBounds, this._zoom, this._map.getCenter());
+        this._layerBounds = this._map._latLngBoundsToNewLayerBounds( this._latLngBounds, this._zoom, this._map.getCenter() );
 
         this._pxOffset = this._mapPanePos.subtract( this._pxOrigin )._add( new L.Point( 0.5, 0.5 ) );
 
@@ -187,12 +187,11 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
         var tThresh = this._tThresh * DotLayer._zoomFactor;
 
-        // Console.log(`zoom=${z}\nmapPanePos=${ppos}\nsize=${this._size}\n` +
-        //             `pxOrigin=${pxOrigin}\npxBounds=[${pxBounds.min}, ${pxBounds.max}]\n` +
-        //             `layerBounds=[${layerBounds.min}, ${layerBounds.max}]`);
+        console.log( `zoom=${z}\nmapPanePos=${ppos}\nsize=${this._size}\n` +
+                    `pxOrigin=${pxOrigin}\npxBounds=[${pxBounds.min}, ${pxBounds.max}]\n` +
+                    `layerBounds=[${layerBounds.min}, ${layerBounds.max}]` );
 
-
-        // compute relevant container points and slopes
+        // Compute relevant container points and slopes
         this._processedItems = {};
         let cp, cpp, contained, dMag;
 
@@ -243,7 +242,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                         // DotColor: A.dotColor,
 
                         startTime: new Date( A.ts_UTC || A.beginTimestamp ).getTime(),
-                        totSec: A.time.slice( -1 )[0]
+                        totSec: A.time.slice( -1 )[ 0 ]
                     };
                 }
             }
