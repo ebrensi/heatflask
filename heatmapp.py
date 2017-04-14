@@ -99,7 +99,7 @@ bundles = {
     ),
 
     "basic_table_js": flask_assets.Bundle(
-        'js/jquery-3.1.0.min.js',
+        'js/jquery-3.2.1.min.js',
         'js/datatables.min.js',
         'js/appUtil.js',
         filters='rjsmin',
