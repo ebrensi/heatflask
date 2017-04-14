@@ -93,7 +93,7 @@ class ProductionConfig(Config):
         }
     }
     DEBUG = False
-    ASSETS_DEBUG = False
+    ASSETS_DEBUG = "merge"
 
 
 class StagingConfig(Config):
