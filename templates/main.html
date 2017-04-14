@@ -726,12 +726,14 @@
             		$(".data_message").html(msg2);
             		rendering = false;
             		if (dotFlow) {
+                        console.log("adding DotLayer...");
             			DotLayer = new L.DotLayer(appState.items, {startPaused: appState.paused});
             			map.addLayer(DotLayer);
             			layerControl.addOverlay(DotLayer, "Dots");
 
             			$("#sepConst").val((Math.log2(DotLayer.C1) - SEP_SCALE.b) / SEP_SCALE.m ).trigger("change");
             			$("#speedConst").val(Math.sqrt(DotLayer.C2) / SPEED_SCALE).trigger("change");
+                        console.log("DotLayer added");
             		}
             	}
             }
