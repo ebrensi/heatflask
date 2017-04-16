@@ -96,6 +96,7 @@ bundles = {
     "basic_table_css": flask_assets.Bundle(
         'css/bootstrap.min.css',
         'css/datatables.min.css',
+        'css/table-styling.css',
         filters='cssmin',
         output='gen/basic_table.css'
     ),
