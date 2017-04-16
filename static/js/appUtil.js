@@ -13,17 +13,17 @@ function href( url, text ) {
 }
 
 function ip_lookup_url( ip ) {
-    return ip ? `http://freegeoip.net/json/${ip}` : "#";
+    return ( ip? "http://freegeoip.net/json/"+ip : "#" );
 }
 
 
 // Strava specific stuff
 function stravaActivityURL( id ) {
-    return `https://www.strava.com/activities/${id}`;
+    return "https://www.strava.com/activities/"+id;
 }
 
 function stravaAthleteURL( id ) {
-    return `https://www.strava.com/athletes/${id}`;
+    return "https://www.strava.com/athletes/"+id;
 }
 // ----------------------
 
