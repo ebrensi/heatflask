@@ -93,7 +93,7 @@ class ProductionConfig(Config):
         }
     }
     DEBUG = False
-    ASSETS_DEBUG = "merge"
+    # ASSETS_DEBUG = False
 
 
 class StagingConfig(Config):
@@ -111,7 +111,7 @@ class DevelopmentConfig(Config):
     These are settings specific to the development environment
     (Developer's personal computer)
     """
-    OFFLINE = False
+    OFFLINE = True
     DEVELOPMENT = True
     DEBUG = True
     CACHE_ACTIVITIES_TIMEOUT = 2 * 60 * 60
@@ -120,7 +120,7 @@ class DevelopmentConfig(Config):
     SSLIFY_PERMANENT = False
 
     # Flask-Assets settings
-    ASSETS_DEBUG = "merge"
+    # ASSETS_DEBUG = "merge"
     # ASSETS_AUTO_BUILD = True
     # ASSETS_CACHE = True
     # ASSETS_MANIFEST = 'cache'
