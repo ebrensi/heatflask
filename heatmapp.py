@@ -18,6 +18,7 @@ import json
 import stravalib
 import flask_login
 from flask_login import current_user, login_user, logout_user, login_required
+import webassets
 import flask_assets
 from flask_analytics import Analytics
 from flask_sslify import SSLify
@@ -45,6 +46,7 @@ from models import Users, Activities, EventLogger, Utility, Webhooks,\
 Analytics(app)
 
 # we bundle javascript and css dependencies to reduce client-side overhead
+# es2015 = webassets.filter.get_filter("babel", presets="es2015")
 bundles = {
     "main_css": flask_assets.Bundle(
         'css/main.css',
@@ -80,7 +82,7 @@ bundles = {
         'js/easy-button.js',
         'js/eventsource.js',
         'js/appUtil.js',
-        filters='rjsmin',
+        filters=["babel", 'rjsmin'],
         output='gen/main.js'
     ),
 
