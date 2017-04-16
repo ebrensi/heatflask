@@ -18,7 +18,6 @@ import json
 import stravalib
 import flask_login
 from flask_login import current_user, login_user, logout_user, login_required
-import webassets
 import flask_assets
 from flask_analytics import Analytics
 from flask_sslify import SSLify
@@ -105,7 +104,7 @@ bundles = {
         'js/jquery-3.2.1.min.js',
         'js/datatables.min.js',
         'js/appUtil.js',
-        filters='rjsmin',
+        # filters='rjsmin',
         output='gen/basic_table.js'
     )
 
@@ -692,6 +691,7 @@ def users_restore():
     return jsonify(Users.restore())
 
 
+# ---- App maintenance stuff -----
 @app.route('/app/info')
 @admin_required
 def app_info():
