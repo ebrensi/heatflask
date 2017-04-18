@@ -1,1 +1,1 @@
-web: gunicorn heatmapp:app --worker-class gevent --timeout 60 --log-file=-
+web: gunicorn heatflask:app --worker-class gevent --timeout 60 --log-file=-

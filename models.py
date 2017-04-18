@@ -20,7 +20,7 @@ import cPickle
 import msgpack
 from bson import ObjectId
 from bson.binary import Binary
-from heatmapp import app
+from heatflask import app
 
 import os
 
