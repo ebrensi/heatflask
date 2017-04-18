@@ -45,6 +45,7 @@ from models import Users, Activities, EventLogger, Utility, Webhooks,\
 Analytics(app)
 
 # we bundle javascript and css dependencies to reduce client-side overhead
+# app.config["CLOSURE_COMPRESSOR_OPTIMIZATION"] = "WHITESPACE_ONLY"
 bundles = {
     "main_css": flask_assets.Bundle(
         'css/main.css',
@@ -70,7 +71,6 @@ bundles = {
         'js/leaflet.js',
         'js/leaflet-sidebar.min.js',
         'js/leaflet-heat.js',
-        '../DotLayer.js',
         'js/Polyline.encoded.js',
         'js/L.Control.Window.js',
         'js/L.Control.fps.js',
@@ -80,6 +80,7 @@ bundles = {
         'js/easy-button.js',
         'js/eventsource.js',
         'js/appUtil.js',
+        '../DotLayer.js',
         '../heatflask.js',
         filters=["babel", 'rjsmin'],
         output='gen/main.js'
