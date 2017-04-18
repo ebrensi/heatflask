@@ -276,28 +276,31 @@
 
 
     <script type="text/javascript">
-    	const OFFLINE = {{ config.get('OFFLINE')|tojson }},
-            SPEED_SCALE = 5.0,
-            SEP_SCALE = {m: 0.14, b: 15.0},
-        	HEATLAYER_DEFAULT_OPTIONS = {{ config["HEATMAP_DEFAULT_OPTIONS"]|tojson|safe }},
-        	POLYLINE_DEFAULT_OPTIONS = {{ config["POLYLINE_DEFAULT_OPTIONS"]|tojson|safe }},
-        	BASE_DATAURL = "{{ url_for('getdata', username=user.id) }}",
-        	BASE_USER_URL = "{{ url_for('main', username=user.id) }}",
-        	USER_ID = "{{ user.id }}",
-        	SHARE_STATUS_UPDATE_URL = "{{ url_for('update_share_status', username=user.id) }}",
-        	START_PAUSED = {{ paused|tojson }},
-        	MAP_PROVIDERS = {{ baselayer|tojson|safe }},
-        	DEFAULT_MAP_CENTER = [{{ lat }}, {{ lng }}],
-        	DEFAULT_MAP_ZOOM = {{ zoom }},
-        	{% if current_user.is_authenticated and current_user.is_admin() %}
-        	ADMIN = true;
-        	{% else %}
-        	ADMIN = false;
-        	{% endif %}
+        // Constants defined via template
+        const HEATRES = "{{ heatres }}",
+              FLOWRES = "{{ flowres }}",
+              ACTIVITY_IDS = "{{ ids }}",
+              NUM_RECENT_ACTIVITIES = "{{ limit }}",
+              NUM_RECENT_DAYS = "{{ preset }}",
+              DATE1 = "{{ date1 }}",
+              DATE2 = "{{ date2 }}",
+              START_PAUSED = {{ paused|tojson }},
+              MAP_PROVIDERS = {{ baselayer|tojson|safe }},
+              DEFAULT_MAP_CENTER = [{{ lat }}, {{ lng }}],
+              DEFAULT_MAP_ZOOM = {{ zoom }},
+              OFFLINE = {{ config.get('OFFLINE')|tojson }},
+              HEATLAYER_DEFAULT_OPTIONS = {{ config["HEATMAP_DEFAULT_OPTIONS"]|tojson|safe }},
+              POLYLINE_DEFAULT_OPTIONS = {{ config["POLYLINE_DEFAULT_OPTIONS"]|tojson|safe }},
+              BASE_DATAURL = "{{ url_for('getdata', username=user.id) }}",
+              BASE_USER_URL = "{{ url_for('main', username=user.id) }}",
+              USER_ID = "{{ user.id }}",
+              SHARE_STATUS_UPDATE_URL = "{{ url_for('update_share_status', username=user.id) }}",
+              ADMIN = {{ (current_user.is_authenticated and current_user.is_admin())|tojson|safe }},
+              FLASH_MESSAGES = {{ get_flashed_messages() }};
 
 
-
-
+        const SPEED_SCALE = 5.0,
+              SEP_SCALE = {m: 0.14, b: 15.0};
 
         // Set up Map and base layers
         var map_providers = MAP_PROVIDERS,
@@ -409,18 +412,14 @@
             });
 
 
-        // Flash any messages
-        {% with messages = get_flashed_messages() %}
-        {% if messages %}
-        var msg = "<ul class=flashes>";
-
-        {% for message in messages %}
-        msg += "<li>{{ message }}</li>";
-        {% endfor %}
-        msg += "</ul>";
-        L.control.window(map, {content:msg, visible:true});
-        {% endif %}
-        {% endwith %}
+        if (FLASH_MESSAGES.length > 0) {
+            var msg = "<ul class=flashes>";
+            for (let i=0, len=FLASH_MESSAGES.length; i<len; i++) {
+                msg += "<li>" + FLASH_MESSAGES[i] + "</li>";
+            }
+            msg += "</ul>";
+            L.control.window(map, {content:msg, visible:true});
+        }
 
 
         // Set-up activity table
@@ -1012,8 +1011,8 @@
         	$("#renderButton").click(renderLayers);
         	$("#render-selection-button").click(openSelected);
 
-        	$("#heatres").val("{{ heatres }}")
-        	$("#flowres").val("{{ flowres }}")
+        	$("#heatres").val(HEATRES)
+        	$("#flowres").val(FLOWRES)
 
         	{% if autozoom  %}
         	$("#autozoom").prop('checked', true);
@@ -1024,18 +1023,18 @@
         	{% endif %}
 
         	{% if ids %}
-        	$("#activity_ids").val("{{ ids }}");
+        	$("#activity_ids").val(ACTIVITY_IDS);
         	$("#select_type").val("activity_ids");
         	{% elif limit %}
-        	$("#select_num").val("{{ limit }}");
+        	$("#select_num").val(NUM_RECENT_ACTIVITIES);
         	$("#select_type").val("activities");
         	{% elif preset %}
-        	$("#select_num").val("{{ preset }}");
+        	$("#select_num").val(NUM_RECENT_DAYS);
         	$("#select_type").val("days");
         	preset_sync();
         	{% else %}
-        	$('#date1').val("{{ date1 }}");
-        	$('#date2').val("{{ date2 }}");
+        	$('#date1').val(DATE1);
+        	$('#date2').val(DATE2);
         	$("#preset").val("");
         	{% endif %}
 
