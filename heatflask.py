@@ -71,7 +71,7 @@ bundles = {
         'js/leaflet.js',
         'js/leaflet-sidebar.min.js',
         'js/leaflet-heat.js',
-        'js/L.DotLayer.js',
+        '../DotLayer.js',
         'js/Polyline.encoded.js',
         'js/L.Control.Window.js',
         'js/L.Control.fps.js',
@@ -81,6 +81,7 @@ bundles = {
         'js/easy-button.js',
         'js/eventsource.js',
         'js/appUtil.js',
+        '../heatflask.js',
         filters=["babel", 'rjsmin'],
         output='gen/main.js'
     ),
