@@ -20,6 +20,31 @@
 	{% if current_user.is_anonymous or (not current_user.is_admin()) %}
 	{{analytics}}
 	{% endif %}
+
+    <script type="text/javascript">
+        // Constants defined via template
+        const HEATRES = "{{ heatres }}",
+              FLOWRES = "{{ flowres }}",
+              ACTIVITY_IDS = "{{ ids }}",
+              NUM_RECENT_ACTIVITIES = "{{ limit }}",
+              NUM_RECENT_DAYS = "{{ preset }}",
+              DATE1 = "{{ date1 }}",
+              DATE2 = "{{ date2 }}",
+              START_PAUSED = {{ paused|tojson }},
+              MAP_PROVIDERS = {{ baselayer|tojson|safe }},
+              DEFAULT_MAP_CENTER = [{{ lat }}, {{ lng }}],
+              DEFAULT_MAP_ZOOM = {{ zoom }},
+              OFFLINE = {{ config.get('OFFLINE')|tojson }},
+              HEATLAYER_DEFAULT_OPTIONS = {{ config["HEATMAP_DEFAULT_OPTIONS"]|tojson|safe }},
+              POLYLINE_DEFAULT_OPTIONS = {{ config["POLYLINE_DEFAULT_OPTIONS"]|tojson|safe }},
+              BASE_DATAURL = "{{ url_for('getdata', username=user.id) }}",
+              BASE_USER_URL = "{{ url_for('main', username=user.id) }}",
+              USER_ID = "{{ user.id }}",
+              SHARE_STATUS_UPDATE_URL = "{{ url_for('update_share_status', username=user.id) }}",
+              ADMIN = {{ (current_user.is_authenticated and current_user.is_admin())|tojson|safe }},
+              FLASH_MESSAGES = {{ get_flashed_messages() }};
+    </script>
+
 </head>
 
 <body>
@@ -274,31 +299,7 @@
 
     <div id="map" class="sidebar-map"></div>
 
-
     <script type="text/javascript">
-        // Constants defined via template
-        const HEATRES = "{{ heatres }}",
-              FLOWRES = "{{ flowres }}",
-              ACTIVITY_IDS = "{{ ids }}",
-              NUM_RECENT_ACTIVITIES = "{{ limit }}",
-              NUM_RECENT_DAYS = "{{ preset }}",
-              DATE1 = "{{ date1 }}",
-              DATE2 = "{{ date2 }}",
-              START_PAUSED = {{ paused|tojson }},
-              MAP_PROVIDERS = {{ baselayer|tojson|safe }},
-              DEFAULT_MAP_CENTER = [{{ lat }}, {{ lng }}],
-              DEFAULT_MAP_ZOOM = {{ zoom }},
-              OFFLINE = {{ config.get('OFFLINE')|tojson }},
-              HEATLAYER_DEFAULT_OPTIONS = {{ config["HEATMAP_DEFAULT_OPTIONS"]|tojson|safe }},
-              POLYLINE_DEFAULT_OPTIONS = {{ config["POLYLINE_DEFAULT_OPTIONS"]|tojson|safe }},
-              BASE_DATAURL = "{{ url_for('getdata', username=user.id) }}",
-              BASE_USER_URL = "{{ url_for('main', username=user.id) }}",
-              USER_ID = "{{ user.id }}",
-              SHARE_STATUS_UPDATE_URL = "{{ url_for('update_share_status', username=user.id) }}",
-              ADMIN = {{ (current_user.is_authenticated and current_user.is_admin())|tojson|safe }},
-              FLASH_MESSAGES = {{ get_flashed_messages() }};
-
-
         const SPEED_SCALE = 5.0,
               SEP_SCALE = {m: 0.14, b: 15.0};
 
