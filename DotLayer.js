@@ -173,7 +173,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         this._pxBounds = this._map.getPixelBounds();
         this._layerBounds = this._map._latLngBoundsToNewLayerBounds( this._latLngBounds, this._zoom, this._map.getCenter() );
 
-        this._pxOffset = this._mapPanePos.subtract( this._pxOrigin )._add( new L.Point( 0.5, 0.5 ) );
+        this._pxOffset = this._mapPanePos._add( new L.Point( 0.5, 0.5 ) );
 
         var z = this._zoom,
             ppos = this._mapPanePos,
@@ -193,35 +193,35 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
         // Compute relevant container points and slopes
         this._processedItems = {};
-        let cp, cpp, contained, dMag;
+        let A, cp, cpp, contained, dMag, layerPoints;
 
         for ( let id in this._items ) {
-            let A = this._items[ id ];
-            if ( !A.projected ) {
-                A.projected = {};
+            A = this._items[ id ];
+            if ( !A.layerPoints ) {
+                A.layerPoints = {};
             }
 
             if ( ( "latlng" in A ) && this._latLngBounds.overlaps( A.bounds ) && ( "time" in A ) ) {
-                let projected = A.projected[ z ];
+                layerPoints = A.layerPoints[ z ];
 
-                if ( !projected ) {
-                    projected = A.latlng.map( ( latLng, i ) =>
-                        Object.assign( this._map.project( latLng ), { t: A.time[ i ] } )
+                if ( !layerPoints ) {
+                    layerPoints = A.latlng.map( ( latLng, i ) =>
+                        Object.assign( this._map.project( latLng )._subtract(pxOrigin), { t: A.time[ i ] } )
                     );
 
-                    projected = L.LineUtil.simplify( projected, this.smoothFactor );
-                    A.projected[ z ] = projected;
+                    layerPoints = L.LineUtil.simplify( layerPoints, this.smoothFactor );
+                    A.layerPoints[ z ] = layerPoints;
                 }
 
-                contained = projected.map( ( p ) => this._pxBounds.contains( p ) );
+                contained = layerPoints.map( ( p ) => this._layerBounds.contains( p ) );
 
                 cp = [];
 
-                for ( let p1, p2, i = 1, len = projected.length; i < len; i++ ) {
+                for ( let p1, p2, i = 1, len = layerPoints.length; i < len; i++ ) {
                     if ( contained[ i - 1 ] || contained[ i ] ) {
-                        p1 = projected[ i - 1 ];
+                        p1 = layerPoints[ i - 1 ];
                         if ( !p1.dx && !p1.dy && !p1.isBad ) {
-                            p2 = projected[ i ];
+                            p2 = layerPoints[ i ];
                             dt = p2.t - p1.t;
                             Object.assign( p1, { dx: ( p2.x - p1.x ) / dt, dy: ( p2.y - p1.y ) / dt, t2: p2.t } );
 
