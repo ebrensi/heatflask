@@ -7,7 +7,7 @@ export REDIS_URL=redis://localhost
 export MONGODB_URI=mongodb://localhost/heatflask
 
 export SERVER_NAME=localhost
-export FLASK_APP=heatmapp.py
+export FLASK_APP=heatflask.py
 export FLASK_DEBUG=1
 
 export STRAVA_CLIENT_ID="12700"

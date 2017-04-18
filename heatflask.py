@@ -45,7 +45,6 @@ from models import Users, Activities, EventLogger, Utility, Webhooks,\
 Analytics(app)
 
 # we bundle javascript and css dependencies to reduce client-side overhead
-# es2015 = webassets.filter.get_filter("babel", presets="es2015")
 bundles = {
     "main_css": flask_assets.Bundle(
         'css/main.css',
