@@ -241,16 +241,6 @@ function highlightPath(id) {
     row.addClass('selected');
     scroller.scrollTop(row.prop('offsetTop') - scroller.height()/2);
 
-    // highlight animated path
-    // try {
-    //     flow.bringToFront();
-    // } catch(e) {}
-
-    // flow.setStyle({
-    //     weight: POLYLINE_DEFAULT_OPTIONS.weight + 1,
-    //     // opacity: POLYLINE_DEFAULT_OPTIONS.opacity + 0.1
-    //     opacity: 0.8
-    // });
     return A;
 }
 
@@ -264,12 +254,6 @@ function unhighlightPath(id){
 
     // un-highlight table row
     $("#"+id).removeClass('selected');
-
-    // restore animated path to defaults
-    // A.flowLayer.setStyle({
-    //     weight: POLYLINE_DEFAULT_OPTIONS.weight,
-    //     opacity: POLYLINE_DEFAULT_OPTIONS.opacity
-    // });
 
     return A;
 }
@@ -358,14 +342,6 @@ function renderLayers() {
         HeatLayer = false;
     }
 
-    // Remove FlowLayer from map and control if it's there
-    if (FlowLayer){
-        map.removeLayer(FlowLayer);
-        layerControl.removeLayer(FlowLayer);
-        FlowLayer = false;
-    }
-
-
     if (DotLayer){
         map.removeLayer(DotLayer);
         layerControl.removeLayer(DotLayer);
@@ -379,13 +355,6 @@ function renderLayers() {
         HeatLayer = L.heatLayer(latlngs_flat, HEATLAYER_DEFAULT_OPTIONS);
         map.addLayer(HeatLayer);
         layerControl.addOverlay(HeatLayer, "Point Density");
-    }
-
-    // Add new blank FlowLayer to map if specified
-    if (flowres){
-        FlowLayer = new L.layerGroup();
-        map.addLayer(FlowLayer);
-        layerControl.addOverlay(FlowLayer, "Polylines");
     }
 
     // locateControl.stop();
@@ -491,13 +460,6 @@ function renderLayers() {
                 }).draw(false).node();
             }
 
-            if (flowres){
-                // add this activity's route to FlowLayer
-                var fopts = Object.assign({}, POLYLINE_DEFAULT_OPTIONS);
-                if (("path_color" in A) && A.path_color)
-                    fopts.color = A.path_color;
-            }
-
             if (lores && ("summary_polyline" in A) && (A.summary_polyline)) {
                 var latlngs = L.PolylineUtil.decode(A.summary_polyline);
                 if (heatres == "low") heatpoints = latlngs;
@@ -519,36 +481,6 @@ function renderLayers() {
 
             if (heatpoints) {
                 latlngs_flat.push.apply(latlngs_flat, heatpoints);
-            }
-            if (flowpoints) {
-                var v = parseFloat(A.average_speed),
-                v_adj = 1 + Math.log(10*v);
-                // A.flowLayer = new L.Polyline(flowpoints, fopts);
-                // FlowLayer.addLayer(A.flowLayer);
-
-                // if ($("#info").is(":checked")) {
-                //     A.flowLayer.on("mouseover", function(event) {
-                //         if (A.highlighted || A.selected) {
-                //             return;
-                //         }
-                //         highlightPath(A.id);
-
-                //     });
-
-                //     A.flowLayer.on("mouseout",function(event) {
-                //         if (A.selected || !A.highlighted) {
-                //             return;
-                //         }
-                //         unhighlightPath(A.id);
-                //     });
-
-                //     A.flowLayer.on("click", function(event) {
-                //         togglePathSelect(A.id);
-                //         if (A.selected){
-                //             activityDataPopup(A.id, event.latlng);
-                //         }
-                //     });
-                // }
             }
 
             var points = heatpoints || flowpoints;
@@ -719,8 +651,6 @@ $(document).ready(function() {
     $("#heatres").val(ONLOAD_PARAMS.heatres);
     $("#flowres").val(ONLOAD_PARAMS.flowres)
     $("#autozoom").prop('checked', ONLOAD_PARAMS.autozoom);
-    // $("#info").prop('checked', ONLOAD_PARAMS.info);
-
 
     if (ONLOAD_PARAMS.activity_ids) {
         $("#activity_ids").val(ONLOAD_PARAMS.activity_ids);

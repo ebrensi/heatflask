@@ -21,7 +21,6 @@
         // Constants defined via template
         const OFFLINE = {{ config.get('OFFLINE')|tojson }},
               HEATLAYER_DEFAULT_OPTIONS = {{ config["HEATMAP_DEFAULT_OPTIONS"]|tojson|safe }},
-              POLYLINE_DEFAULT_OPTIONS = {{ config["POLYLINE_DEFAULT_OPTIONS"]|tojson|safe }},
               BASE_DATAURL = "{{ url_for('getdata', username=user.id) }}",
               BASE_USER_URL = "{{ url_for('main', username=user.id) }}",
               USER_ID = "{{ user.id }}",
@@ -140,7 +139,7 @@
 										<select id="heatres" name="renderHeat" form="renderform">
 											<option value="">None</option>
 											<option value="high">High resolution</option>
-											<option value="low" disabled="">Low resolution</option>
+											<option value="low">Low resolution</option>
 										</select>
 									</span>
 
@@ -150,7 +149,7 @@
 										<select id="flowres" name="renderFlow" form="renderform">
 											<option value="">None</option>
 											<option value="high">High resolution</option>
-											<option value="low" disabled="">Low resolution</option>
+											<!-- <option value="low" disabled="">Low resolution</option> -->
 										</select>
 									</span>
 
@@ -158,9 +157,6 @@
 									<div class="checkbox">
 										<label><input type="checkbox" id="autozoom" value="1">Auto-Zoom when finished</label>
 									</div>
-									<!-- <div class="checkbox">
-										<label><input type="checkbox" id="info" value="1" disabled>Flow Path details on hover/click</label>
-									</div> -->
 
 									<hr>
 									<div class="data_message"></div>
