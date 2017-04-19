@@ -62,10 +62,16 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
     _onLayerDidMove: function() {
         this._mapMoving = false;
 
-        this._setupWindow();
-        this._ctx.clearRect( 0, 0, this._canvas.width, this._canvas.height );
         let topLeft = this._map.containerPointToLayerPoint( [ 0, 0 ] );
+
+        this._ctx.clearRect( 0, 0, this._canvas.width, this._canvas.height );
         L.DomUtil.setPosition( this._canvas, topLeft );
+
+        this._ctx2.clearRect( 0, 0, this._canvas2.width, this._canvas2.height );
+        L.DomUtil.setPosition( this._canvas2, topLeft );
+
+        this._setupWindow();
+
         if ( !this._paused ) {
             this.animate();
         } else {
@@ -95,21 +101,27 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
     //-------------------------------------------------------------
     onAdd: function( map ) {
         this._map = map;
-        this._canvas = L.DomUtil.create( "canvas", "leaflet-layer" );
-        this.tiles = {};
 
-        let size = this._map.getSize();
+        let size = this._map.getSize(),
+            zoomAnimated = this._map.options.zoomAnimation && L.Browser.any3d;
+
+        // dotlayer canvas
+        this._canvas = L.DomUtil.create( "canvas", "leaflet-layer" );
         this._canvas.width = size.x;
         this._canvas.height = size.y;
         this._ctx = this._canvas.getContext( "2d" );
-
-        let zoomAnimated = this._map.options.zoomAnimation && L.Browser.any3d;
         L.DomUtil.addClass( this._canvas, "leaflet-zoom-" + ( zoomAnimated ? "animated" : "hide" ) );
-
-
-        // Map._panes.overlayPane.appendChild(this._canvas);
         map._panes.shadowPane.style.pointerEvents = "none";
         map._panes.shadowPane.appendChild( this._canvas );
+
+        // create Canvas for polyline-ish things
+        this._canvas2 = L.DomUtil.create( "canvas", "leaflet-layer" );
+        this._canvas2.width = size.x;
+        this._canvas2.height = size.y;
+        this._ctx2 = this._canvas2.getContext( "2d" );
+        L.DomUtil.addClass( this._canvas2, "leaflet-zoom-" + ( zoomAnimated ? "animated" : "hide" ) );
+        map._panes.overlayPane.appendChild( this._canvas2 );
+
 
         map.on( this.getEvents(), this );
 
@@ -134,11 +146,13 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
 
         // map.getPanes().overlayPane.removeChild(this._canvas);
-        map.getPanes().shadowPane.removeChild( this._canvas );
+        map._panes.shadowPane.removeChild( this._canvas );
+        this._canvas = null;
+
+        map._panes.overlayPane.removeChild( this._canvas2 );
+        this._canvas2 = null;
 
         map.off( this.getEvents(), this );
-
-        this._canvas = null;
     },
 
 
@@ -187,13 +201,15 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
         var tThresh = this._tThresh * DotLayer._zoomFactor;
 
+        var line_ctx = this._ctx2;
+
         console.log( `zoom=${z}\nmapPanePos=${ppos}\nsize=${this._size}\n` +
                     `pxOrigin=${pxOrigin}\npxBounds=[${pxBounds.min}, ${pxBounds.max}]\n` +
                     `layerBounds=[${layerBounds.min}, ${layerBounds.max}]` );
 
         // Compute relevant container points and slopes
         this._processedItems = {};
-        let A, cp, cpp, contained, dMag, layerPoints;
+        let A, cp, cpp, contained, dMag, layerPoints, c1, c2;
 
         for ( let id in this._items ) {
             A = this._items[ id ];
@@ -217,11 +233,23 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
                 cp = [];
 
+                line_ctx.beginPath();
+
                 for ( let p1, p2, i = 1, len = layerPoints.length; i < len; i++ ) {
                     if ( contained[ i - 1 ] || contained[ i ] ) {
                         p1 = layerPoints[ i - 1 ];
+                        p2 = layerPoints[ i ];
+
+                        // draw polyline segment from p1 to p2
+                        c1 = p1.add(this._mapPanePos)._round();
+                        c2 = p2.add(this._mapPanePos)._round();
+                        line_ctx.moveTo(c1.x, c1.y);
+                        line_ctx.lineTo(c2.x, c2.y);
+                        // console.log(`drawSeg(${c1}, ${c2})`);
+
+
+                        // Compute derivative at this point if we haven't yet
                         if ( !p1.dx && !p1.dy && !p1.isBad ) {
-                            p2 = layerPoints[ i ];
                             dt = p2.t - p1.t;
                             Object.assign( p1, { dx: ( p2.x - p1.x ) / dt, dy: ( p2.y - p1.y ) / dt, t2: p2.t } );
 
@@ -235,6 +263,9 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                         // Cp.push(p1);
                     }
                 }
+
+                line_ctx.stroke();
+
                 if ( cp.length > 1 ) {
                     this._processedItems[ id ] = {
                         cp: cp,
@@ -252,6 +283,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         // Console.log(`dot context update took ${elapsed} ms`);
         // console.log(this._processedItems);
     },
+
 
     // --------------------------------------------------------------------
     drawDots: function( obj, now, highlighted ) {
