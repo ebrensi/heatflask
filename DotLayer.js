@@ -37,7 +37,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             pathWidth: 1
         },
         selected: {
-            dotColor: "#FFFFFF",
+            dotColor: "#ffffff",
             pathColor: "#000000",
             pathOpacity: 0.7,
             pathWidth: 2
@@ -290,7 +290,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                     this._processedItems[ id ] = {
                         cp: cp,
 
-                        // DotColor: A.dotColor,
+                        // dotColor: A.dotColor,
 
                         startTime: new Date( A.ts_UTC || A.beginTimestamp ).getTime(),
                         totSec: A.time.slice( -1 )[ 0 ]
@@ -357,8 +357,10 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                         ctx.arc( lx, ly, dotSize, 0, two_pi );
                         ctx.fill();
                         ctx.closePath();
+                        // ctx.stroke();
                     } else {
                         ctx.fillRect( lx - dotOffset, ly - dotOffset, dotSize, dotSize );
+                        // ctx.stroke();
 
                     }
                     count++;

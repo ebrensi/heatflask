@@ -21,13 +21,6 @@ class Config(object):
         "gradient": {0.4: 'blue', 0.65: 'lime', 1: 'red'}
     }
 
-    POLYLINE_DEFAULT_OPTIONS = {
-        "weight": 2,
-        "opacity": 0.3,
-        "color": 'black',
-        "smoothFactor": 1.0
-    }
-
     MAP_CENTER = [27.53, 1.58]
     MAP_ZOOM = 3
 
