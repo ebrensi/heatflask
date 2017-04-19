@@ -189,18 +189,24 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
         const t0 = performance.now();
 
-        this._size = this._map.getSize();
-        this._latLngBounds = this._map.getBounds();
+        // Get new map orientation
         this._zoom = this._map.getZoom();
+        this._center = this._map.getCenter;
+        this._size = this._map.getSize();
+
+
+        this._latLngBounds = this._map.getBounds();
         this._mapPanePos = this._map._getMapPanePos();
         this._pxOrigin = this._map.getPixelOrigin();
         this._pxBounds = this._map.getPixelBounds();
         this._pxOffset = this._mapPanePos.subtract( this._pxOrigin )._add( new L.Point( 0.5, 0.5 ) );
 
-        var z = this._zoom,
+        var line_ctx = this._ctx2,
+            z = this._zoom,
             ppos = this._mapPanePos,
             pxOrigin = this._pxOrigin,
-            pxBounds = this._pxBounds;
+            pxBounds = this._pxBounds,
+            items = this._items;
 
         this._dotSize = Math.log( z );
         this._dotOffset = ~~( this._dotSize / 2 + 0.5 );
@@ -208,17 +214,21 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
         var tThresh = this._tThresh * DotLayer._zoomFactor;
 
-        var line_ctx = this._ctx2;
-
         // console.log( `zoom=${z}\nmapPanePos=${ppos}\nsize=${this._size}\n` +
         //             `pxOrigin=${pxOrigin}\npxBounds=[${pxBounds.min}, ${pxBounds.max}]`
         //              );
 
         // Compute relevant container points and slopes
         this._processedItems = {};
-        let A, cp, cpp, contained, dMag, projected, c1, c2;
 
-        for ( let id in this._items ) {
+        let A, cp, contained, projected, c1, c2;
+
+        for ( let id in items ) {
+            if (!items.hasOwnProperty(id)) {
+                //The current property is not a direct property of p
+                continue;
+            }
+
             A = this._items[ id ];
             drawingLine = false;
 
@@ -258,18 +268,20 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                             }
                         }
 
-                        p1.isBad || cp.push( p1 );
+                        if (!p1.isBad) {
+                            cp.push( p1 );
 
-                        if (this.options.showPaths) {
-                            if (!drawingLine) {
-                                line_ctx.beginPath();
-                                drawingLine = true;
+                            if (this.options.showPaths) {
+                                if (!drawingLine) {
+                                    line_ctx.beginPath();
+                                    drawingLine = true;
+                                }
+                                // draw polyline segment from p1 to p2
+                                c1 = p1.add(this._pxOffset);
+                                c2 = p2.add(this._pxOffset);
+                                line_ctx.moveTo(c1.x, c1.y);
+                                line_ctx.lineTo(c2.x, c2.y);
                             }
-                            // draw polyline segment from p1 to p2
-                            c1 = p1.add(this._pxOffset);
-                            c2 = p2.add(this._pxOffset);
-                            line_ctx.moveTo(c1.x, c1.y);
-                            line_ctx.lineTo(c2.x, c2.y);
                         }
                     }
                 }
