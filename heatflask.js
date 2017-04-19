@@ -233,15 +233,15 @@ function highlightPath(id) {
     scroller.scrollTop(row.prop('offsetTop') - scroller.height()/2);
 
     // highlight animated path
-    try {
-        flow.bringToFront();
-    } catch(e) {}
+    // try {
+    //     flow.bringToFront();
+    // } catch(e) {}
 
-    flow.setStyle({
-        weight: POLYLINE_DEFAULT_OPTIONS.weight + 1,
-        // opacity: POLYLINE_DEFAULT_OPTIONS.opacity + 0.1
-        opacity: 0.8
-    });
+    // flow.setStyle({
+    //     weight: POLYLINE_DEFAULT_OPTIONS.weight + 1,
+    //     // opacity: POLYLINE_DEFAULT_OPTIONS.opacity + 0.1
+    //     opacity: 0.8
+    // });
     return A;
 }
 
@@ -257,10 +257,10 @@ function unhighlightPath(id){
     $("#"+id).removeClass('selected');
 
     // restore animated path to defaults
-    A.flowLayer.setStyle({
-        weight: POLYLINE_DEFAULT_OPTIONS.weight,
-        opacity: POLYLINE_DEFAULT_OPTIONS.opacity
-    });
+    // A.flowLayer.setStyle({
+    //     weight: POLYLINE_DEFAULT_OPTIONS.weight,
+    //     opacity: POLYLINE_DEFAULT_OPTIONS.opacity
+    // });
 
     return A;
 }
@@ -514,32 +514,32 @@ function renderLayers() {
             if (flowpoints) {
                 var v = parseFloat(A.average_speed),
                 v_adj = 1 + Math.log(10*v);
-                A.flowLayer = new L.Polyline(flowpoints, fopts);
-                FlowLayer.addLayer(A.flowLayer);
+                // A.flowLayer = new L.Polyline(flowpoints, fopts);
+                // FlowLayer.addLayer(A.flowLayer);
 
-                if ($("#info").is(":checked")) {
-                    A.flowLayer.on("mouseover", function(event) {
-                        if (A.highlighted || A.selected) {
-                            return;
-                        }
-                        highlightPath(A.id);
+                // if ($("#info").is(":checked")) {
+                //     A.flowLayer.on("mouseover", function(event) {
+                //         if (A.highlighted || A.selected) {
+                //             return;
+                //         }
+                //         highlightPath(A.id);
 
-                    });
+                //     });
 
-                    A.flowLayer.on("mouseout",function(event) {
-                        if (A.selected || !A.highlighted) {
-                            return;
-                        }
-                        unhighlightPath(A.id);
-                    });
+                //     A.flowLayer.on("mouseout",function(event) {
+                //         if (A.selected || !A.highlighted) {
+                //             return;
+                //         }
+                //         unhighlightPath(A.id);
+                //     });
 
-                    A.flowLayer.on("click", function(event) {
-                        togglePathSelect(A.id);
-                        if (A.selected){
-                            activityDataPopup(A.id, event.latlng);
-                        }
-                    });
-                }
+                //     A.flowLayer.on("click", function(event) {
+                //         togglePathSelect(A.id);
+                //         if (A.selected){
+                //             activityDataPopup(A.id, event.latlng);
+                //         }
+                //     });
+                // }
             }
 
             var points = heatpoints || flowpoints;
@@ -710,7 +710,7 @@ $(document).ready(function() {
     $("#heatres").val(ONLOAD_PARAMS.heatres);
     $("#flowres").val(ONLOAD_PARAMS.flowres)
     $("#autozoom").prop('checked', ONLOAD_PARAMS.autozoom);
-    $("#info").prop('checked', ONLOAD_PARAMS.info);
+    // $("#info").prop('checked', ONLOAD_PARAMS.info);
 
 
     if (ONLOAD_PARAMS.activity_ids) {
