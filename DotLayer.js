@@ -29,11 +29,18 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
     options: {
         startPaused: false,
+        showPaths: true,
         normal: {
-            dotColor: "#000000"
+            dotColor: "#000000",
+            pathColor: "#000000",
+            pathOpacity: 0.5,
+            pathWidth: 1
         },
         selected: {
-            dotColor: "#FFFFFF"
+            dotColor: "#FFFFFF",
+            pathColor: "#000000",
+            pathOpacity: 0.7,
+            pathWidth: 2
         }
     },
 
@@ -120,6 +127,8 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         this._canvas2.width = size.x;
         this._canvas2.height = size.y;
         this._ctx2 = this._canvas2.getContext( "2d" );
+        this._ctx2.lineCap = "round";
+        this._ctx2.lineJoin = "round";
         L.DomUtil.addClass( this._canvas2, "leaflet-zoom-" + ( zoomAnimated ? "animated" : "hide" ) );
         map._panes.overlayPane.appendChild( this._canvas2 );
 
@@ -186,15 +195,12 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         this._mapPanePos = this._map._getMapPanePos();
         this._pxOrigin = this._map.getPixelOrigin();
         this._pxBounds = this._map.getPixelBounds();
-        this._layerBounds = this._map._latLngBoundsToNewLayerBounds( this._latLngBounds, this._zoom, this._map.getCenter() );
-
         this._pxOffset = this._mapPanePos.subtract( this._pxOrigin )._add( new L.Point( 0.5, 0.5 ) );
 
         var z = this._zoom,
             ppos = this._mapPanePos,
             pxOrigin = this._pxOrigin,
-            pxBounds = this._pxBounds,
-            layerBounds = this._layerBounds;
+            pxBounds = this._pxBounds;
 
         this._dotSize = Math.log( z );
         this._dotOffset = ~~( this._dotSize / 2 + 0.5 );
@@ -204,9 +210,9 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
         var line_ctx = this._ctx2;
 
-        console.log( `zoom=${z}\nmapPanePos=${ppos}\nsize=${this._size}\n` +
-                    `pxOrigin=${pxOrigin}\npxBounds=[${pxBounds.min}, ${pxBounds.max}]\n` +
-                    `layerBounds=[${layerBounds.min}, ${layerBounds.max}]` );
+        // console.log( `zoom=${z}\nmapPanePos=${ppos}\nsize=${this._size}\n` +
+        //             `pxOrigin=${pxOrigin}\npxBounds=[${pxBounds.min}, ${pxBounds.max}]`
+        //              );
 
         // Compute relevant container points and slopes
         this._processedItems = {};
@@ -214,6 +220,8 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
         for ( let id in this._items ) {
             A = this._items[ id ];
+            drawingLine = false;
+
             if ( !A.projected ) {
                 A.projected = {};
             }
@@ -234,26 +242,10 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
                 cp = [];
 
-                // line_ctx.globalAlpha = options.opacity;
-                // line_ctx.lineWidth = options.weight;
-                // line_ctx.lineCap = options.lineCap;
-                // line_ctx.lineJoin = options.lineJoin;
-                line_ctx.strokeStyle = A.path_color || "#000000";
-
-                line_ctx.beginPath();
-
                 for ( let p1, p2, i = 1, len = projected.length; i < len; i++ ) {
                     if ( contained[ i - 1 ] || contained[ i ] ) {
                         p1 = projected[ i - 1 ];
                         p2 = projected[ i ];
-
-                        // draw polyline segment from p1 to p2
-                        c1 = p1.add(this._pxOffset);
-                        c2 = p2.add(this._pxOffset);
-                        line_ctx.moveTo(c1.x, c1.y);
-                        line_ctx.lineTo(c2.x, c2.y);
-                        // console.log(`drawSeg(${c1}, ${c2})`);
-
 
                         // Compute derivative at this point if we haven't yet
                         if ( !p1.dx && !p1.dy && !p1.isBad ) {
@@ -267,11 +259,32 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                         }
 
                         p1.isBad || cp.push( p1 );
-                        // Cp.push(p1);
+
+                        if (this.options.showPaths) {
+                            if (!drawingLine) {
+                                line_ctx.beginPath();
+                                drawingLine = true;
+                            }
+                            // draw polyline segment from p1 to p2
+                            c1 = p1.add(this._pxOffset);
+                            c2 = p2.add(this._pxOffset);
+                            line_ctx.moveTo(c1.x, c1.y);
+                            line_ctx.lineTo(c2.x, c2.y);
+                        }
                     }
                 }
 
-                line_ctx.stroke();
+                if (this.options.showPaths) {
+                    if (drawingLine) {
+                        lineType = A.highlighted? "selected":"normal";
+                        line_ctx.globalAlpha = this.options[lineType].pathOpacity;
+                        line_ctx.lineWidth = this.options[lineType].pathWidth;
+                        line_ctx.strokeStyle = A.path_color || this.options[lineType].pathColor;
+                        line_ctx.stroke();
+                    } else {
+                        line_ctx.stroke();
+                    }
+                }
 
                 if ( cp.length > 1 ) {
                     this._processedItems[ id ] = {
