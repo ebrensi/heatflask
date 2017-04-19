@@ -87,6 +87,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
               this._mapMoving = true;
             },
             moveend: this._onLayerDidMove,
+            zoomend: this._onLayerDidMove,
             resize: this._onLayerDidResize
         };
 
@@ -187,7 +188,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         this._pxBounds = this._map.getPixelBounds();
         this._layerBounds = this._map._latLngBoundsToNewLayerBounds( this._latLngBounds, this._zoom, this._map.getCenter() );
 
-        this._pxOffset = this._mapPanePos._add( new L.Point( 0.5, 0.5 ) );
+        this._pxOffset = this._mapPanePos._subtract(this._pxOrigin)._add( new L.Point( 0.5, 0.5 ) );
 
         var z = this._zoom,
             ppos = this._mapPanePos,
@@ -222,16 +223,22 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
                 if ( !layerPoints ) {
                     layerPoints = A.latlng.map( ( latLng, i ) =>
-                        Object.assign( this._map.project( latLng )._subtract(pxOrigin), { t: A.time[ i ] } )
+                        Object.assign( this._map.project( latLng ), { t: A.time[ i ] } )
                     );
 
                     layerPoints = L.LineUtil.simplify( layerPoints, this.smoothFactor );
                     A.layerPoints[ z ] = layerPoints;
                 }
 
-                contained = layerPoints.map( ( p ) => this._layerBounds.contains( p ) );
+                contained = layerPoints.map( ( p ) => this._pxBounds.contains( p ) );
 
                 cp = [];
+
+                // line_ctx.globalAlpha = options.opacity;
+                // line_ctx.lineWidth = options.weight;
+                // line_ctx.lineCap = options.lineCap;
+                // line_ctx.lineJoin = options.lineJoin;
+                line_ctx.strokeStyle = A.path_color || "#000000";
 
                 line_ctx.beginPath();
 
@@ -241,8 +248,8 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                         p2 = layerPoints[ i ];
 
                         // draw polyline segment from p1 to p2
-                        c1 = p1.add(this._mapPanePos)._round();
-                        c2 = p2.add(this._mapPanePos)._round();
+                        c1 = p1.add(this._pxOffset);
+                        c2 = p2.add(this._pxOffset);
                         line_ctx.moveTo(c1.x, c1.y);
                         line_ctx.lineTo(c2.x, c2.y);
                         // console.log(`drawSeg(${c1}, ${c2})`);
