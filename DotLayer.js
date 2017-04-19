@@ -188,7 +188,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         this._pxBounds = this._map.getPixelBounds();
         this._layerBounds = this._map._latLngBoundsToNewLayerBounds( this._latLngBounds, this._zoom, this._map.getCenter() );
 
-        this._pxOffset = this._mapPanePos._subtract(this._pxOrigin)._add( new L.Point( 0.5, 0.5 ) );
+        this._pxOffset = this._mapPanePos.subtract( this._pxOrigin )._add( new L.Point( 0.5, 0.5 ) );
 
         var z = this._zoom,
             ppos = this._mapPanePos,
@@ -210,27 +210,27 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
         // Compute relevant container points and slopes
         this._processedItems = {};
-        let A, cp, cpp, contained, dMag, layerPoints, c1, c2;
+        let A, cp, cpp, contained, dMag, projected, c1, c2;
 
         for ( let id in this._items ) {
             A = this._items[ id ];
-            if ( !A.layerPoints ) {
-                A.layerPoints = {};
+            if ( !A.projected ) {
+                A.projected = {};
             }
 
             if ( ( "latlng" in A ) && this._latLngBounds.overlaps( A.bounds ) && ( "time" in A ) ) {
-                layerPoints = A.layerPoints[ z ];
+                projected = A.projected[ z ];
 
-                if ( !layerPoints ) {
-                    layerPoints = A.latlng.map( ( latLng, i ) =>
+                if ( !projected ) {
+                    projected = A.latlng.map( ( latLng, i ) =>
                         Object.assign( this._map.project( latLng ), { t: A.time[ i ] } )
                     );
 
-                    layerPoints = L.LineUtil.simplify( layerPoints, this.smoothFactor );
-                    A.layerPoints[ z ] = layerPoints;
+                    projected = L.LineUtil.simplify( projected, this.smoothFactor );
+                    A.projected[ z ] = projected;
                 }
 
-                contained = layerPoints.map( ( p ) => this._pxBounds.contains( p ) );
+                contained = projected.map( ( p ) => this._pxBounds.contains( p ) );
 
                 cp = [];
 
@@ -242,10 +242,10 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
                 line_ctx.beginPath();
 
-                for ( let p1, p2, i = 1, len = layerPoints.length; i < len; i++ ) {
+                for ( let p1, p2, i = 1, len = projected.length; i < len; i++ ) {
                     if ( contained[ i - 1 ] || contained[ i ] ) {
-                        p1 = layerPoints[ i - 1 ];
-                        p2 = layerPoints[ i ];
+                        p1 = projected[ i - 1 ];
+                        p2 = projected[ i ];
 
                         // draw polyline segment from p1 to p2
                         c1 = p1.add(this._pxOffset);
