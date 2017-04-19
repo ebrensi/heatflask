@@ -37,10 +37,11 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             pathWidth: 1
         },
         selected: {
-            dotColor: "#ffffff",
+            dotColor: "#FFFFFF",
+            dotStrokeColor: "#FFFFFF",
             pathColor: "#000000",
             pathOpacity: 0.7,
-            pathWidth: 2
+            pathWidth: 3
         }
     },
 
@@ -208,6 +209,8 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             pxBounds = this._pxBounds,
             items = this._items;
 
+        this._ctx.strokeStyle = this.options.selected.dotStrokeColor;
+
         this._dotSize = Math.log( z );
         this._dotOffset = ~~( this._dotSize / 2 + 0.5 );
         this._zoomFactor = 1 / Math.pow( 2, z );
@@ -218,7 +221,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         //             `pxOrigin=${pxOrigin}\npxBounds=[${pxBounds.min}, ${pxBounds.max}]`
         //              );
 
-        // Compute relevant container points and slopes
+
         this._processedItems = {};
 
         let A, cp, contained, projected, c1, c2;
@@ -264,7 +267,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
                             if ( dt > tThresh ) {
                                 p1.isBad = true;
-                                // Console.log(p1);
+                                // Console.log(`bad segment ${p1}, ${p2}`);
                             }
                         }
 
@@ -302,7 +305,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                     this._processedItems[ id ] = {
                         cp: cp,
 
-                        // dotColor: A.dotColor,
+                        dotColor: A.dotColor,
 
                         startTime: new Date( A.ts_UTC || A.beginTimestamp ).getTime(),
                         totSec: A.time.slice( -1 )[ 0 ]
@@ -341,6 +344,10 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             p = P[ 0 ],
             lx, ly;
 
+        if (highlighted) {
+            ctx.fillStyle = obj.dotColor || this.options.selected.dotColor;
+        }
+
         if ( timeOffset < 0 ) {
             timeOffset += dT;
         }
@@ -349,7 +356,6 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         // let out;
 
         for ( t = timeOffset; t < totSec; t += dT ) {
-            // Out = 0;
             while ( t >= p.t2 ) {
                 i++;
                 p = P[ i ];
@@ -362,22 +368,17 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                 ly = ~~( p.y + p.dy * dt + yOffset );
 
                 if ( ( lx >= 0 && lx <= xmax ) && ( ly >= 0 && ly <= ymax ) ) {
-                    // Out = 1;
                     if ( highlighted ) {
-                        // Console.log(ctx.fillStyle);
                         ctx.beginPath();
                         ctx.arc( lx, ly, dotSize, 0, two_pi );
                         ctx.fill();
                         ctx.closePath();
-                        // ctx.stroke();
+                        ctx.stroke();
                     } else {
                         ctx.fillRect( lx - dotOffset, ly - dotOffset, dotSize, dotSize );
-                        // ctx.stroke();
-
                     }
                     count++;
                 }
-            // Console.log(`t: ${t}, i: ${i}, out: ${out}`);
             }
         }
         return count;
@@ -417,8 +418,6 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         if ( hlen ) {
             for ( i = 0; i < hlen; i++ ) {
                 item = highlighted_items[ i ];
-                ctx.fillStyle = item.dotColor || this.options.selected.dotColor;
-                // Console.log(item.dotColor || this.options.selected.dotColor);
                 count += this.drawDots( item, now, true );
             }
         }
