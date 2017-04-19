@@ -402,6 +402,11 @@ function renderLayers() {
 
                 $("#sepConst").val((Math.log2(DotLayer.C1) - SEP_SCALE.b) / SEP_SCALE.m ).trigger("change");
                 $("#speedConst").val(Math.sqrt(DotLayer.C2) / SPEED_SCALE).trigger("change");
+                $("#showPaths").prop("checked", DotLayer.options.showPaths)
+                                .on("change", function(){
+                                     DotLayer.options.showPaths = $(this).prop("checked");
+                                     DotLayer._onLayerDidMove();
+                                });
             }
         }
     }

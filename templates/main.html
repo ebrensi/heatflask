@@ -276,22 +276,30 @@
 
 								<div class="sidebar-pane" id="controls">
 									<h1 class="sidebar-header">Layer Settings<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
-									<div  style="background-color: rgba(255, 255, 255, 0.95);">
+									<div>
 										<form id="layer-settings-form">
 											<h4>Animation Constants</h4>
 											<div>
-												<label>Speed:</label>
+												<span style="text-align: center;">
+												<label for="speedConst">
+												Speed:
 												<input type="text" class="dial" id="speedConst">
+												</label>
+												</span>
+
+												<span style="text-align: center;">
+												<label for="sepConst">Sparsity:
+												<input type="text" class="dial" id="sepConst">
+												</label>
+												</span>
 											</div>
 
-											<div>
-												<label>Sparsity:</label>
-												<input type="text" class="dial" id="sepConst">
-											</div>
-                    </form>
-                </div>
-            </div>
-        </div>
+											<input type="checkbox" id="showPaths" checked>
+											<label for="showPaths">Show Paths</label>
+                    					</form>
+                				  </div>
+            					</div>
+        	</div>
     </div>
 
     <div id="map" class="sidebar-map"></div>
