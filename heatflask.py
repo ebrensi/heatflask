@@ -63,26 +63,33 @@ bundles = {
     ),
 
     "main_js": flask_assets.Bundle(
-        'js/jquery-3.2.1.min.js',
-        'js/jquery-ui.min.js',
-        'js/jquery.knob.min.js',  # Anthony Terrien
-        'js/datatables.min.js',
-        'js/moment.js',
-        'js/leaflet.js',
-        'js/leaflet-sidebar.min.js',
-        'js/leaflet-heat.js',
-        'js/Polyline.encoded.js',
-        'js/L.Control.Window.js',
-        'js/L.Control.fps.js',
-        'js/leaflet-providers.js',
-        'js/Leaflet.GoogleMutant.js',
-        # 'js/L.Control.Locate.min.js',
-        'js/easy-button.js',
-        'js/eventsource.js',
-        'js/appUtil.js',
-        '../DotLayer.js',
-        '../heatflask.js',
-        filters=["babel", 'rjsmin'],
+        # Dependencies
+        flask_assets.Bundle(
+            'js/jquery-3.2.1.min.js',
+            'js/jquery-ui.min.js',
+            'js/jquery.knob.min.js',  # Anthony Terrien
+            'js/datatables.min.js',
+            'js/moment.js',
+            'js/leaflet.js',
+            'js/leaflet-sidebar.min.js',
+            'js/leaflet-heat.js',
+            'js/Polyline.encoded.js',
+            'js/L.Control.Window.js',
+            'js/L.Control.fps.js',
+            'js/leaflet-providers.js',
+            'js/Leaflet.GoogleMutant.js',
+            # 'js/L.Control.Locate.min.js',
+            'js/easy-button.js',
+            'js/eventsource.js',
+            filters=["babel", "rjsmin"],
+        ),
+        # Heatflask-specific code
+        flask_assets.Bundle(
+            'js/appUtil.js',
+            '../heatflask.js',
+            '../DotLayer.js',
+            filters=["babel", 'rjsmin'],
+        ),
         output='gen/main.js'
     ),
 

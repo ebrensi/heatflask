@@ -166,8 +166,17 @@ function handle_table_selections( e, dt, type, indexes ) {
             }
         }
 
+        let c = map.getCenter(),
+            z = map.getZoom();
+
         if ( $("#zoom-table-selection").is(':checked') ) {
             zoomToSelected();
+        }
+
+        // If map didn't move then force a redraw
+        let c2 = map.getCenter();
+        if (DotLayer && c.x == c2.x &&  c.y == c2.y && z == map.getZoom()) {
+            DotLayer._onLayerDidMove();
         }
     }
 }
