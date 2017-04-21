@@ -21,7 +21,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
     _pane: "shadowPane",
     two_pi: 2 * Math.PI,
-    target_fps: 16,
+    target_fps: 32,
     smoothFactor: 1.0,
     _tThresh: 100000000.0,
     C1: 1000000.0,
