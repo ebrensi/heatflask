@@ -43,6 +43,10 @@
                     map_zoom: {{ zoom }},
                     info: {{ info|tojson }}
               };
+
+             MEASURMENT_PREFERENCE = "{{ current_user.measurement_preference if current_user.is_authenticated else user.measurement_preference }}";
+             DIST_UNIT = (MEASURMENT_PREFERENCE=="feet")? 1609.34 : 1000.0;
+             DIST_LABEL = (MEASURMENT_PREFERENCE=="feet")?  "mi" : "Km";
     </script>
 
 </head>
@@ -263,8 +267,8 @@
 
 								<div class="sidebar-pane" id="activities">
 									<h1 class="sidebar-header">Rendered Activities<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
-									<div id="activities_list">
-										<table id='atab' class='display compact order-column'></table>
+									<div>
+										<table id='activitiesList' class='display compact order-column'></table>
 									</div>
 
 									<div>

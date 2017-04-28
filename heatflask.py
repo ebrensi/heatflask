@@ -70,27 +70,34 @@ bundles = {
             'js/jquery-ui.min.js',
             'js/jquery.knob.min.js',  # Anthony Terrien
             'js/datatables.min.js',
-            'js/moment.js',
             'js/leaflet.js',
             'js/leaflet-sidebar.min.js',
             'js/leaflet-heat.js',
+            output="gen/pre-compiled-dependencies.js"
+        ),
+
+        flask_assets.Bundle(
+            'js/eventsource.js',
+            'js/moment.js',
             'js/Polyline.encoded.js',
             'js/L.Control.Window.js',
-            'js/L.Control.fps.js',
             'js/leaflet-providers.js',
             'js/Leaflet.GoogleMutant.js',
             'js/leaflet-areaselect.js',
             # 'js/L.Control.Locate.min.js',
             'js/easy-button.js',
-            'js/eventsource.js',
             filters=["babel", "rjsmin"],
+            output="gen/non-compiled-dependencies.js"
         ),
+
         # Heatflask-specific code
         flask_assets.Bundle(
+            'js/L.Control.fps.js',
             'js/appUtil.js',
             '../heatflask.js',
             '../DotLayer.js',
             filters=["babel", 'rjsmin'],
+            output="app-specific.js"
         ),
         output='gen/main.js'
     ),
