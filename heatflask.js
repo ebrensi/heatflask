@@ -10,7 +10,8 @@ var map_providers = ONLOAD_PARAMS.map_providers,
     DotLayer = false,
     appState = {
         baseLayers: map_providers,
-        paused: ONLOAD_PARAMS.start_paused
+        paused: ONLOAD_PARAMS.start_paused,
+        items: {}
     };
 
 
@@ -120,23 +121,24 @@ if (FLASH_MESSAGES.length > 0) {
     L.control.window(map, {content:msg, visible:true});
 }
 
-
-// Set-up activity table
-var atable = $('#atab').DataTable({
-    paging: false,
-    scrollY: "60vh",
-    scrollX: true,
-    scrollCollapse: true,
-    order: [[ 0, "desc" ]],
-    select: true,
-    columns: [
-    { data: "Date", title: "Date" },
-    { data: "Type", title: "Type"},
-    { data: "Dist", title: "km"},
-    { data: "Time", title: "Time"},
-    { data: "Name", title: "Name"}
-    ]
-});
+var atable = $('#activitiesList').DataTable({
+                paging: false,
+                scrollY: "60vh",
+                scrollX: true,
+                scrollCollapse: true,
+                order: [[ 0, "desc" ]],
+                select: true,
+                data: Object.values(appState.items),
+                idSrc: "id",
+                columns: [
+                { title: "Date",  data: null, render: (A) => href( stravaActivityURL(A.id), A.beginTimestamp.slice(0,10) ) },
+                { title: "Type", data: "type"},
+                { title: `Dist (${DIST_LABEL})`, data: "total_distance", render: (data) => +(data / DIST_UNIT).toFixed(2)},
+                { title: "Time", data: "elapsed_time", render: hhmmss},
+                { title: "Name", data: "name"}
+                ]
+            }).on( 'select', handle_table_selections)
+              .on( 'deselect', handle_table_selections);
 
 function updateShareStatus(status) {
     console.log("updating share status.");
@@ -149,20 +151,18 @@ function updateShareStatus(status) {
 
 function handle_table_selections( e, dt, type, indexes ) {
     if ( type === 'row' ) {
-        var selected_rows = atable.rows( {selected: true} ).data(),
-        unselected_rows = atable.rows( {selected: false} ).data();
+        var selectedItems = atable.rows( {selected: true} ).data(),
+            unselectedItems = atable.rows( {selected: false} ).data();
 
-        for (var i = 0; i < selected_rows.length; i++) {
-            id = selected_rows[i].DT_RowId;
-            if (!appState.items[id].selected){
-                togglePathSelect(id);
+        for (var i = 0; i < selectedItems.length; i++) {
+            if (!selectedItems[i].selected){
+                togglePathSelect(selectedItems[i].id);
             }
         }
 
-        for (var i = 0; i < unselected_rows.length; i++) {
-            id = unselected_rows[i].DT_RowId;
-            if (appState.items[id].selected){
-                togglePathSelect(id);
+        for (var i = 0; i < unselectedItems.length; i++) {
+            if (unselectedItems[i].selected){
+                togglePathSelect(unselectedItems[i].id);
             }
         }
 
@@ -180,10 +180,6 @@ function handle_table_selections( e, dt, type, indexes ) {
         }
     }
 }
-
-atable.on( 'select', handle_table_selections)
-    .on( 'deselect', handle_table_selections);
-
 
 function zoomToSelected(){
     // Pan-Zoom to fit all selected activities
@@ -407,6 +403,9 @@ function renderLayers() {
                                      DotLayer.options.showPaths = $(this).prop("checked");
                                      DotLayer._onLayerDidMove();
                                 });
+
+                // render the activities table
+                atable.draw(false);
             }
         }
     }
@@ -451,19 +450,12 @@ function renderLayers() {
                     progress_bars.val(A.value);
                 }
                 return;
-            } else {
-                var d = parseFloat(A.total_distance),
-                dkm = +(d / 1000).toFixed(2),
-                ts = href( stravaActivityURL(A.id), A.beginTimestamp.slice(0,10) ),
-                n = atable.row.add({
-                    DT_RowId: A.id,
-                    Date: ts,
-                    Type: A.type,
-                    Dist: dkm,
-                    Time: hhmmss(A.elapsed_time),
-                    Name: A.name
-                }).draw(false).node();
             }
+            else {
+                atable.row.add(A);
+            }
+
+
 
             if (lores && ("summary_polyline" in A) && (A.summary_polyline)) {
                 var latlngs = L.PolylineUtil.decode(A.summary_polyline);
