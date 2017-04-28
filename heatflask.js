@@ -284,14 +284,14 @@ function activityDataPopup(id, latlng){
     }
 
     var popup = L.popup()
-    .setLatLng(latlng)
-    .setContent(
-        `${A.name}<br>${A.type}: ${A.beginTimestamp}<br>`+
-        `${dkm} km (${dmi} mi) in ${elapsed}<br>${vkm} (${vmi})<br>` +
-        `View in <a href='https://www.strava.com/activities/${A.id}' target='_blank'>Strava</a>`+
-        `, <a href='${BASE_USER_URL}?id=${A.id}&flowres=high' target='_blank'>Heatflask</a>`
-        )
-    .openOn(map);
+                .setLatLng(latlng)
+                .setContent(
+                    `${A.name}<br>${A.type}: ${A.beginTimestamp}<br>`+
+                    `${dkm} km (${dmi} mi) in ${elapsed}<br>${vkm} (${vmi})<br>` +
+                    `View in <a href='https://www.strava.com/activities/${A.id}' target='_blank'>Strava</a>`+
+                    `, <a href='${BASE_USER_URL}?id=${A.id}&flowres=high' target='_blank'>Heatflask</a>`
+                    )
+                .openOn(map);
 }
 
 /* Rendering */
@@ -405,7 +405,7 @@ function renderLayers() {
                                 });
 
                 // render the activities table
-                atable.draw(false);
+                atable.rows.add(Object.values(appState.items)).draw(false);
             }
         }
     }
@@ -452,7 +452,7 @@ function renderLayers() {
                 return;
             }
             else {
-                atable.row.add(A);
+                // atable.row.add(A);
             }
 
 
