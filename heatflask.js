@@ -354,7 +354,12 @@ function renderLayers() {
     }
 
     // locateControl.stop();
-    appState.items = {};
+    // appState.items = {};
+
+    // We will load in new items that aren't already in appState.items,
+    //  and delete whatever is left.
+    var toDelete = new Set(Object.keys(appState.items));
+
     atable.clear();
 
 
@@ -404,6 +409,12 @@ function renderLayers() {
                                      DotLayer._onLayerDidMove();
                                 });
 
+                // delete all members of toDelete from appState.items
+                for (let item of toDelete) {
+                    delete appState.items[item];
+                }
+
+
                 // render the activities table
                 atable.rows.add(Object.values(appState.items)).draw(false);
             }
@@ -452,7 +463,12 @@ function renderLayers() {
                 return;
             }
             else {
-                // atable.row.add(A);
+                let alreadyIn = toDelete.delete(A.id.toString())
+
+                // if A is already in appState.items then we can stop now
+                if (!heatres && alreadyIn) {
+                    return;
+                }
             }
 
 
@@ -491,7 +507,11 @@ function renderLayers() {
                 if (!dotFlow){
                     delete A.time;
                 }
-                appState.items[A.id] = A;
+
+                // only add A to appState.items if it isn't already there
+                if (!(A.id in appState.items)) {
+                    appState.items[A.id] = A;
+                }
             }
         }
     }
