@@ -474,20 +474,30 @@ function renderLayers() {
 
 
             if (lores && ("summary_polyline" in A) && (A.summary_polyline)) {
-                var latlngs = L.PolylineUtil.decode(A.summary_polyline);
+                let latlngs = L.PolylineUtil.decode(A.summary_polyline);
                 if (heatres == "low") heatpoints = latlngs;
-                if (flowres == "low") flowpoints = latlngs;
+                // if (flowres == "low") flowpoints = latlngs;
             }
 
 
             if (query.hires && ("polyline" in A) && (A.polyline)){
-                var latlngs = L.PolylineUtil.decode(A.polyline);
-                if (heatres == "high") heatpoints = latlngs;
+                let llNumbers = L.PolylineUtil.decode(A.polyline);
+
+                if (heatres == "high") heatpoints = llNumbers;
+
                 if (flowres == "high") {
+                    let len = llNumbers.length,
+                        latlngs = new Float32Array(2*len);
+
+                    for (let i=0; i<len; i++) {
+                        idx = i*2;
+                        latlngs[idx] = llNumbers[i][0];
+                        latlngs[idx+1] = llNumbers[i][1];
+                    }
                     flowpoints = latlngs;
                     if (dotFlow && ("time" in A)) {
                         A.latlng = latlngs;
-                        A.time = streamDecode(A.time);
+                        A.time = new Float32Array(streamDecode(A.time));
                     }
                 }
             }
