@@ -249,9 +249,13 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                 projected = A.projected[ z ];
 
                 if ( !projected ) {
-                    projected = A.latlng.map( ( latLng, i ) =>
-                        Object.assign( this._map.project( latLng ), { t: A.time[ i ] } )
-                    );
+                    let len = A.latlng.length,
+                        projected = new Float32Array(len);
+
+                    for (let i=0, p, ll; i<len; i+=2) {
+                        p = this._map.project( [A.latlng[i], A.latlng[i+1]] );
+                        p.t = A.time[ i >> 1];
+                    }
 
                     projected = L.LineUtil.simplify( projected, this.smoothFactor );
                     A.projected[ z ] = projected;
