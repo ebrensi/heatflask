@@ -61,8 +61,15 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
     //-------------------------------------------------------------
     _onLayerDidResize: function( resizeEvent ) {
-        this._canvas.width = resizeEvent.newSize.x;
-        this._canvas.height = resizeEvent.newSize.y;
+        let newWidth = resizeEvent.newSize.x,
+            newHeight = resizeEvent.newSize.y;
+
+        this._canvas.width = newWidth;
+        this._canvas.height = newHeight;
+
+        this._canvas2.width = newWidth;
+        this._canvas2.height = newHeight;
+
         this._setupWindow();
     },
 
@@ -95,7 +102,6 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
               this._mapMoving = true;
             },
             moveend: this._onLayerDidMove,
-            zoomend: this._onLayerDidMove,
             resize: this._onLayerDidResize
         };
 
