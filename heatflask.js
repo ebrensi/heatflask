@@ -447,6 +447,7 @@ function renderLayers() {
             heatpoints = false,
             flowpoints = false;
             A.selected = false;
+            A.bounds = L.latLngBounds();
 
             if ("error" in A){
                 var msg = "<font color='red'>" + A.error +"</font><br>";
@@ -489,10 +490,12 @@ function renderLayers() {
                     let len = llNumbers.length,
                         latlngs = new Float32Array(2*len);
 
-                    for (let i=0; i<len; i++) {
+                    for (let i=0, ll; i<len; i++) {
+                        ll = llNumbers[i];
+                        A.bounds.extend(ll);
                         idx = i*2;
-                        latlngs[idx] = llNumbers[i][0];
-                        latlngs[idx+1] = llNumbers[i][1];
+                        latlngs[idx] = ll[0];
+                        latlngs[idx+1] = ll[1];
                     }
                     flowpoints = latlngs;
                     if (dotFlow && ("time" in A)) {
@@ -508,9 +511,6 @@ function renderLayers() {
 
             var points = heatpoints || flowpoints;
             if (points) {
-                if (!A.bounds) {
-                    A.bounds = L.latLngBounds(points);
-                }
                 bounds.extend(A.bounds);
                 delete A.summary_polyline;
                 delete A.polyline;
