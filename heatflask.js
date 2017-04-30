@@ -482,26 +482,27 @@ function renderLayers() {
 
 
             if (query.hires && ("polyline" in A) && (A.polyline)){
-                let llNumbers = L.PolylineUtil.decode(A.polyline);
+                let latLngArray = L.PolylineUtil.decode(A.polyline);
 
-                if (heatres == "high") heatpoints = llNumbers;
+                if (heatres == "high") heatpoints = latLngArray;
 
-                if (flowres == "high") {
-                    let len = llNumbers.length,
-                        latlngs = new Float32Array(2*len);
+                if (flowres == "high" && ("time" in A)) {
+                    let len = latLngArray.length,
+                        time = streamDecode(A.time),
+                        latlngTime = new Float32Array(3*len);
 
                     for (let i=0, ll; i<len; i++) {
-                        ll = llNumbers[i];
+                        ll = latLngArray[i];
+
                         A.bounds.extend(ll);
-                        idx = i*2;
-                        latlngs[idx] = ll[0];
-                        latlngs[idx+1] = ll[1];
+                        idx = i*3;
+                        latlngTime[idx] = ll[0];
+                        latlngTime[idx+1] = ll[1];
+                        latlngTime[idx+2] = time[i];
                     }
-                    flowpoints = latlngs;
-                    if (dotFlow && ("time" in A)) {
-                        A.latlng = latlngs;
-                        A.time = new Float32Array(streamDecode(A.time));
-                    }
+
+                    A.latlngTime = latlngTime;
+                    flowpoints = latlngTime;
                 }
             }
 
@@ -509,14 +510,11 @@ function renderLayers() {
                 latlngs_flat.push.apply(latlngs_flat, heatpoints);
             }
 
-            var points = heatpoints || flowpoints;
-            if (points) {
+            if (heatpoints || flowpoints) {
                 bounds.extend(A.bounds);
                 delete A.summary_polyline;
                 delete A.polyline;
-                if (!dotFlow){
-                    delete A.time;
-                }
+                delete A.time;
 
                 // only add A to appState.items if it isn't already there
                 if (!(A.id in appState.items)) {
