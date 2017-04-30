@@ -489,20 +489,20 @@ function renderLayers() {
                 if (flowres == "high" && ("time" in A)) {
                     let len = latLngArray.length,
                         time = streamDecode(A.time),
-                        latlngTime = new Float32Array(3*len);
+                        latLngTime = new Float32Array(3*len);
 
                     for (let i=0, ll; i<len; i++) {
                         ll = latLngArray[i];
 
                         A.bounds.extend(ll);
                         idx = i*3;
-                        latlngTime[idx] = ll[0];
-                        latlngTime[idx+1] = ll[1];
-                        latlngTime[idx+2] = time[i];
+                        latLngTime[idx] = ll[0];
+                        latLngTime[idx+1] = ll[1];
+                        latLngTime[idx+2] = time[i];
                     }
 
-                    A.latlngTime = latlngTime;
-                    flowpoints = latlngTime;
+                    A.latLngTime = latLngTime;
+                    flowpoints = latLngTime;
                 }
             }
 
