@@ -230,7 +230,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
         this._processedItems = {};
 
-        let A, cp, contained, projected, c1, c2;
+        let A, cp, contained, c1, c2, projected;
 
         for ( let id in items ) {
             if (!items.hasOwnProperty(id)) {
@@ -245,19 +245,35 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                 A.projected = {};
             }
 
-            if ( ( "latlng" in A ) && this._latLngBounds.overlaps( A.bounds ) && ( "time" in A ) ) {
+            if ( A.latLngTime && this._latLngBounds.overlaps( A.bounds )) {
                 projected = A.projected[ z ];
 
                 if ( !projected ) {
-                    let len = A.latlng.length,
-                        projected = new Float32Array(len);
+                    let numPoints = A.latLngTime.length / 3,
+                        projectedObjs = new Array(numPoints);
 
-                    for (let i=0, p, ll; i<len; i+=2) {
-                        p = this._map.project( [A.latlng[i], A.latlng[i+1]] );
-                        p.t = A.time[ i >> 1];
+                    for (let i=0, p, idx; i<numPoints; i++) {
+                        idx = 3*i;
+                        p = this._map.project( [A.latLngTime[idx], A.latLngTime[idx+1]] );
+                        p.t = latLngTime[idx+2];
+                        projectedObjs[i] = p;
                     }
 
-                    projected = L.LineUtil.simplify( projected, this.smoothFactor );
+                    projectedObjs = L.LineUtil.simplify( projectedObjs, this.smoothFactor );
+
+                    // now projectedObjs is an Array of objects, so we convert it
+                    // to a Float32Array
+                    let numObjs = projectedObjs.length,
+
+                    projected = new Float32Array(numObjs * 3);
+                    for (let i=0, obj, idx; i<numObjs; i++) {
+                        obj = projectedObjs[i];
+                        idx = 3 * i;
+                        projected[idx] = obj.x;
+                        projected[idx+1] = obj.y;
+                        projected[idx+2] = obj.t;
+
+                    }
                     A.projected[ z ] = projected;
                 }
 
