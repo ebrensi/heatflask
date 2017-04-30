@@ -230,7 +230,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
         this._processedItems = {};
 
-        let A, cp, contained, c1, c2, projected;
+        let c1, c2;
 
         for ( let id in items ) {
             if (!items.hasOwnProperty(id)) {
@@ -238,7 +238,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                 continue;
             }
 
-            A = this._items[ id ];
+            let A = this._items[ id ];
             drawingLine = false;
 
             if ( !A.projected ) {
@@ -246,8 +246,9 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             }
 
             if ( A.latLngTime && this._latLngBounds.overlaps( A.bounds )) {
-                projected = A.projected[ z ];
+                let projected = A.projected[ z ];
 
+                // Compute projected points if necessary
                 if ( !projected ) {
                     let numPoints = A.latLngTime.length / 3,
                         projectedObjs = new Array(numPoints);
@@ -277,12 +278,34 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                     A.projected[ z ] = projected;
                 }
 
-                contained = projected.map( ( p ) => this._pxBounds.contains( p ) );
+                // determine whether or not each projected point is in the
+                // currently visible area
+                let numProjected = projected.length / 3;
+                    segGood = new Int8Array(numProjected-1),
+                    goodSegCount = 0,
+                    in0 = this._pxBounds.contains(
+                        [ projected[0], projected[1] ]
+                    );
 
-                cp = [];
+                for (let i=1, idx, in1, isGood; i<numProjected; i++) {
+                    idx = 3 * i;
+                    in1 = this._pxBounds.contains(
+                        [ projected[idx], projected[idx+1] ]
+                    );
+                    isGood = (in0 && in1)? 1:0;
+                    segGood[i-1] = isGood;
+                    goodSegCount += isGood;
+                    in0 = in1;
+                }
 
-                for ( let p1, p2, i = 1, len = projected.length; i < len; i++ ) {
-                    if ( contained[ i - 1 ] || contained[ i ] ) {
+                /* continue here */
+
+                let cp = new Float32Array(goodSegCount*6);
+
+                for ( let p1, p2, idx, i=1, j=0; i < numProjected; i++ ) {
+                    // Is the current segment in the visible area?
+                    if ( segGood[i] ) {
+                        idx = 3 * i;
                         p1 = projected[ i - 1 ];
                         p2 = projected[ i ];
 
