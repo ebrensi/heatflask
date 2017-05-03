@@ -598,6 +598,8 @@ function renderLayers() {
             }
 
             if (heatpoints || flowpoints) {
+                A.startTime = moment(A.ts_UTC || A.beginTimestamp).valueOf();
+
                 bounds.extend(A.bounds);
                 delete A.summary_polyline;
                 delete A.polyline;
@@ -989,7 +991,10 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
 
         var tThresh = this._tThresh * DotLayer._zoomFactor;
 
-        console.log(`zoom=${z}\nmapPanePos=${ppos}\nsize=${this._size}\n` + `pxOrigin=${pxOrigin}\npxBounds=[${pxBounds.min}, ${pxBounds.max}]`);
+        // console.log( `zoom=${z}\nmapPanePos=${ppos}\nsize=${this._size}\n` +
+        //             `pxOrigin=${pxOrigin}\npxBounds=[${pxBounds.min}, ${pxBounds.max}]`
+        //              );
+
 
         this._processedItems = {};
 
@@ -1129,7 +1134,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
 
         elapsed = (performance.now() - perf_t0).toFixed(2);
         console.log(`dot context update took ${elapsed} ms`);
-        console.log(this._processedItems);
+        // console.log(this._processedItems);
     },
 
     // --------------------------------------------------------------------
