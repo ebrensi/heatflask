@@ -361,18 +361,13 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                     }
                 }
 
-
                 this._processedItems[ id ] = {
                     dP: dP,
-
                     P: projected,
-
                     dotColor: A.dotColor,
-
-                    startTime: new Date( A.ts_UTC || A.beginTimestamp ).getTime(),
+                    startTime: A.startTime,
                     totSec: projected.slice( -1 )[ 0 ]
                 };
-
             }
         }
 
