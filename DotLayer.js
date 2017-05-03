@@ -70,7 +70,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         this._canvas2.width = newWidth;
         this._canvas2.height = newHeight;
 
-        this._setupWindow();
+        this._onLayerDidMove();
     },
 
     //-------------------------------------------------------------
@@ -194,7 +194,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             return;
         }
 
-        const t0 = performance.now();
+        const perf_t0 = performance.now();
 
         // Get new map orientation
         this._zoom = this._map.getZoom();
@@ -223,14 +223,15 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
         var tThresh = this._tThresh * DotLayer._zoomFactor;
 
-        // console.log( `zoom=${z}\nmapPanePos=${ppos}\nsize=${this._size}\n` +
-        //             `pxOrigin=${pxOrigin}\npxBounds=[${pxBounds.min}, ${pxBounds.max}]`
-        //              );
+        console.log( `zoom=${z}\nmapPanePos=${ppos}\nsize=${this._size}\n` +
+                    `pxOrigin=${pxOrigin}\npxBounds=[${pxBounds.min}, ${pxBounds.max}]`
+                     );
 
 
         this._processedItems = {};
 
-        let c1, c2;
+        let pxOffx = this._pxOffset.x,
+            pxOffy = this._pxOffset.y;
 
         for ( let id in items ) {
             if (!items.hasOwnProperty(id)) {
@@ -241,22 +242,25 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             let A = this._items[ id ];
             drawingLine = false;
 
+            // console.log("processing "+A.id);
+
             if ( !A.projected ) {
                 A.projected = {};
             }
 
             if ( A.latLngTime && this._latLngBounds.overlaps( A.bounds )) {
-                let projected = A.projected[ z ];
+                let projected = A.projected[ z ],
+                    llt = A.latLngTime;
 
                 // Compute projected points if necessary
                 if ( !projected ) {
-                    let numPoints = A.latLngTime.length / 3,
+                    let numPoints = llt.length / 3,
                         projectedObjs = new Array(numPoints);
 
                     for (let i=0, p, idx; i<numPoints; i++) {
                         idx = 3*i;
-                        p = this._map.project( [A.latLngTime[idx], A.latLngTime[idx+1]] );
-                        p.t = latLngTime[idx+2];
+                        p = this._map.project( [llt[idx], llt[idx+1]] );
+                        p.t = llt[idx+2];
                         projectedObjs[i] = p;
                     }
 
@@ -273,67 +277,74 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                         projected[idx] = obj.x;
                         projected[idx+1] = obj.y;
                         projected[idx+2] = obj.t;
-
                     }
                     A.projected[ z ] = projected;
                 }
 
+
+                projected = A.projected[z];
                 // determine whether or not each projected point is in the
                 // currently visible area
-                let numProjected = projected.length / 3;
-                    segGood = new Int8Array(numProjected-1),
+                let numProjected = projected.length / 3,
+                    numSegs = numProjected -1,
+                    segGood = new Int8Array(numProjected-2),
                     goodSegCount = 0,
+                    t0 = projected[2],
                     in0 = this._pxBounds.contains(
                         [ projected[0], projected[1] ]
                     );
 
-                for (let i=1, idx, in1, isGood; i<numProjected; i++) {
-                    idx = 3 * i;
-                    in1 = this._pxBounds.contains(
-                        [ projected[idx], projected[idx+1] ]
-                    );
-                    isGood = (in0 && in1)? 1:0;
+
+                for (let i=1, idx; i<numSegs; i++) {
+                    let idx = 3 * i,
+                        p = projected.slice(idx, idx+3),
+                        in1 = this._pxBounds.contains(
+                            [ p[0], p[1] ]
+                        ),
+                        t1 = p[2],
+                        isGood = (in0 && in1 && (t1-t0 < tThresh) )? 1:0;
                     segGood[i-1] = isGood;
                     goodSegCount += isGood;
                     in0 = in1;
+                    t0 = t1;
                 }
 
-                /* continue here */
+                // console.log(segGood);
+                if (goodSegCount == 0) {
+                    continue;
+                }
 
-                let cp = new Float32Array(goodSegCount*6);
+                let dP = new Float32Array(goodSegCount*3);
 
-                for ( let p1, p2, idx, i=1, j=0; i < numProjected; i++ ) {
+                for ( let i=0, j=0; i < numSegs; i++ ) {
                     // Is the current segment in the visible area?
                     if ( segGood[i] ) {
-                        idx = 3 * i;
-                        p1 = projected[ i - 1 ];
-                        p2 = projected[ i ];
+                        let pidx = 3 * i,
+                            didx = 3 * j,
+                            p = projected.slice(pidx, pidx+6);
+                        j++;
 
-                        // Compute derivative at this point if we haven't yet
-                        if ( !p1.dx && !p1.dy && !p1.isBad ) {
-                            dt = p2.t - p1.t;
-                            Object.assign( p1, { dx: ( p2.x - p1.x ) / dt, dy: ( p2.y - p1.y ) / dt, t2: p2.t } );
+                        // p[0:2] are p1.x, p1.y, and p1.t
+                        // p[3:5] are p2.x, p2.y, and p2.t
 
-                            if ( dt > tThresh ) {
-                                p1.isBad = true;
-                                // Console.log(`bad segment ${p1}, ${p2}`);
+                        // Compute derivative for this segment
+                        dP[didx] = pidx;
+                        dt = p[5] - p[2];
+                        dP[didx+1] = (p[3] - p[0]) / dt;
+                        dP[didx+2] = (p[4] - p[1]) / dt;
+
+                        if (this.options.showPaths) {
+                            if (!drawingLine) {
+                                line_ctx.beginPath();
+                                drawingLine = true;
                             }
-                        }
-
-                        if (!p1.isBad) {
-                            cp.push( p1 );
-
-                            if (this.options.showPaths) {
-                                if (!drawingLine) {
-                                    line_ctx.beginPath();
-                                    drawingLine = true;
-                                }
-                                // draw polyline segment from p1 to p2
-                                c1 = p1.add(this._pxOffset);
-                                c2 = p2.add(this._pxOffset);
-                                line_ctx.moveTo(c1.x, c1.y);
-                                line_ctx.lineTo(c2.x, c2.y);
-                            }
+                            // draw polyline segment from p1 to p2
+                            let c1x = ~~(p[0] + pxOffx),
+                                c1y = ~~(p[1] + pxOffy),
+                                c2x = ~~(p[3] + pxOffx),
+                                c2y = ~~(p[4] + pxOffy);
+                            line_ctx.moveTo(c1x, c1y);
+                            line_ctx.lineTo(c2x, c2y);
                         }
                     }
                 }
@@ -350,29 +361,32 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                     }
                 }
 
-                if ( cp.length > 1 ) {
-                    this._processedItems[ id ] = {
-                        cp: cp,
 
-                        dotColor: A.dotColor,
+                this._processedItems[ id ] = {
+                    dP: dP,
 
-                        startTime: new Date( A.ts_UTC || A.beginTimestamp ).getTime(),
-                        totSec: A.time.slice( -1 )[ 0 ]
-                    };
-                }
+                    P: projected,
+
+                    dotColor: A.dotColor,
+
+                    startTime: new Date( A.ts_UTC || A.beginTimestamp ).getTime(),
+                    totSec: projected.slice( -1 )[ 0 ]
+                };
+
             }
         }
 
-        elapsed = ( performance.now() - t0 ).toFixed( 2 );
-        // Console.log(`dot context update took ${elapsed} ms`);
-        // console.log(this._processedItems);
+        elapsed = ( performance.now() - perf_t0 ).toFixed( 2 );
+        console.log(`dot context update took ${elapsed} ms`);
+        console.log(this._processedItems);
     },
 
 
     // --------------------------------------------------------------------
     drawDots: function( obj, now, highlighted ) {
-        var P = obj.cp,
-            lenP = P.length,
+        var P = obj.P,
+            dP = obj.dP,
+            len_dP = dP.length / 3,
             totSec = obj.totSec,
             zf = this._zoomFactor,
             dT = this.C1 * zf,
@@ -388,10 +402,10 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
         var timeOffset = s % dT,
             count = 0,
-            i = 0,
-            t, dt,
-            p = P[ 0 ],
-            lx, ly;
+            idx = dP[0],
+            dx = dP[1],
+            dy = dP[2],
+            p = P.slice(idx, idx+3 );
 
         if (highlighted) {
             ctx.fillStyle = obj.dotColor || this.options.selected.dotColor;
@@ -403,18 +417,25 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
         // Console.log("\nnew obj");
         // let out;
+        debugger;
 
-        for ( t = timeOffset; t < totSec; t += dT ) {
-            while ( t >= p.t2 ) {
-                i++;
-                p = P[ i ];
-                if ( i >= lenP ) return count;
+        for (let t=timeOffset, i=0; t < totSec; t += dT ) {
+            while ( t >= P[idx+5] ) {
+                i += 3;
+                idx = dP[i];
+                dx = dP[i+1];
+                dy = dP[i+2];
+
+                p = P.slice(idx, idx+3);
+                if ( i >= len_dP ) {
+                    return count;
+                }
             }
 
-            dt = t - p.t;
+            let dt = t - p[2];
             if ( dt > 0 ) {
-                lx = ~~( p.x + p.dx * dt + xOffset );
-                ly = ~~( p.y + p.dy * dt + yOffset );
+                let lx = ~~( p[0] + dx * dt + xOffset ),
+                    ly = ~~( p[1] + dy * dt + yOffset );
 
                 if ( ( lx >= 0 && lx <= xmax ) && ( ly >= 0 && ly <= ymax ) ) {
                     if ( highlighted ) {
