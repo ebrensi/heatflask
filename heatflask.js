@@ -511,6 +511,11 @@ function renderLayers() {
             }
 
             if (heatpoints || flowpoints) {
+                A.startTime = moment(A.ts_UTC || A.beginTimestamp ).valueOf()
+                if (!A.bounds) {
+                    A.bounds = L.latLngBounds(points);
+                }
+
                 bounds.extend(A.bounds);
                 delete A.summary_polyline;
                 delete A.polyline;
