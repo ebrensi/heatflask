@@ -498,6 +498,8 @@ function renderLayers() {
 
             var points = heatpoints || flowpoints;
             if (points) {
+                A.startTime = moment(A.ts_UTC || A.beginTimestamp ).valueOf()
+
                 if (!A.bounds) {
                     A.bounds = L.latLngBounds(points);
                 }

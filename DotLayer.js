@@ -310,10 +310,8 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                 if ( cp.length > 1 ) {
                     this._processedItems[ id ] = {
                         cp: cp,
-
                         dotColor: A.dotColor,
-
-                        startTime: new Date( A.ts_UTC || A.beginTimestamp ).getTime(),
+                        startTime: A.startTime,
                         totSec: A.time.slice( -1 )[ 0 ]
                     };
                 }
