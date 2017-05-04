@@ -104,7 +104,7 @@ class DevelopmentConfig(Config):
     These are settings specific to the development environment
     (Developer's personal computer)
     """
-    OFFLINE = False
+    OFFLINE = True
     DEVELOPMENT = True
     DEBUG = True
     CACHE_ACTIVITIES_TIMEOUT = 2 * 60 * 60
