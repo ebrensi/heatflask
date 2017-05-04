@@ -447,6 +447,7 @@ function renderLayers() {
             heatpoints = false,
             flowpoints = false;
             A.selected = false;
+            A.bounds = L.latLngBounds();
 
             if ("error" in A){
                 var msg = "<font color='red'>" + A.error +"</font><br>";
@@ -474,21 +475,34 @@ function renderLayers() {
 
 
             if (lores && ("summary_polyline" in A) && (A.summary_polyline)) {
-                var latlngs = L.PolylineUtil.decode(A.summary_polyline);
+                let latlngs = L.PolylineUtil.decode(A.summary_polyline);
                 if (heatres == "low") heatpoints = latlngs;
-                if (flowres == "low") flowpoints = latlngs;
+                // if (flowres == "low") flowpoints = latlngs;
             }
 
 
             if (query.hires && ("polyline" in A) && (A.polyline)){
-                var latlngs = L.PolylineUtil.decode(A.polyline);
-                if (heatres == "high") heatpoints = latlngs;
-                if (flowres == "high") {
-                    flowpoints = latlngs;
-                    if (dotFlow && ("time" in A)) {
-                        A.latlng = latlngs;
-                        A.time = streamDecode(A.time);
+                let latLngArray = L.PolylineUtil.decode(A.polyline);
+
+                if (heatres == "high") heatpoints = latLngArray;
+
+                if (flowres == "high" && ("time" in A)) {
+                    let len = latLngArray.length,
+                        time = streamDecode(A.time),
+                        latLngTime = new Float32Array(3*len);
+
+                    for (let i=0, ll; i<len; i++) {
+                        ll = latLngArray[i];
+
+                        A.bounds.extend(ll);
+                        idx = i*3;
+                        latLngTime[idx] = ll[0];
+                        latLngTime[idx+1] = ll[1];
+                        latLngTime[idx+2] = time[i];
                     }
+
+                    A.latLngTime = latLngTime;
+                    flowpoints = latLngTime;
                 }
             }
 
@@ -496,19 +510,13 @@ function renderLayers() {
                 latlngs_flat.push.apply(latlngs_flat, heatpoints);
             }
 
-            var points = heatpoints || flowpoints;
-            if (points) {
+            if (heatpoints || flowpoints) {
                 A.startTime = moment(A.ts_UTC || A.beginTimestamp ).valueOf()
 
-                if (!A.bounds) {
-                    A.bounds = L.latLngBounds(points);
-                }
                 bounds.extend(A.bounds);
                 delete A.summary_polyline;
                 delete A.polyline;
-                if (!dotFlow){
-                    delete A.time;
-                }
+                delete A.time;
 
                 // only add A to appState.items if it isn't already there
                 if (!(A.id in appState.items)) {
