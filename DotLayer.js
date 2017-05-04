@@ -90,7 +90,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         if ( !this._paused ) {
             this.animate();
         } else {
-            this._frame = L.Util.requestAnimFrame( this.drawLayer, this );
+            this._frame = this._frame || L.Util.requestAnimFrame( this.drawLayer, this );
         }
 
     },
@@ -99,7 +99,8 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
     getEvents: function() {
         var events = {
             movestart: function() {
-              this._mapMoving = true;
+                console.log("movestart");
+                this._mapMoving = true;
             },
             moveend: this._onLayerDidMove,
             resize: this._onLayerDidResize
@@ -495,7 +496,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         this._paused = false;
         this.lastCalledTime = 0;
         this.minDelay = ~~( 1000 / this.target_fps + 0.5 );
-        this._frame = L.Util.requestAnimFrame( this._animate, this );
+        this._frame = this._frame || L.Util.requestAnimFrame( this._animate, this );
     },
 
     // --------------------------------------------------------------------
@@ -506,26 +507,31 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
     // --------------------------------------------------------------------
     _animate: function() {
+        if (!this._frame) {
+            return;
+        }
+        this._frame = null;
+
+        let ts = Date.now(),
+            now = ts - this._timeOffset;
+
         if ( this._paused || this._mapMoving ) {
             // Ths is so we can start where we left off when we resume
-            this._timePaused = Date.now();
+            this._timePaused = ts;
             return;
         }
 
          if ( this._timePaused ) {
-            this._timeOffset = Date.now() - this._timePaused;
+            this._timeOffset = ts - this._timePaused;
             this._timePaused = null;
         }
 
-        let now = Date.now() - this._timeOffset;
         if ( now - this.lastCalledTime > this.minDelay ) {
             this.lastCalledTime = now;
             this.drawLayer( now );
         }
 
-        this._frame = null;
-
-        this._frame = this._frame || L.Util.requestAnimFrame( this._animate, this );
+        this._frame = L.Util.requestAnimFrame( this._animate, this );
     },
 
 
