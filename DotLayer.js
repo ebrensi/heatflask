@@ -302,7 +302,8 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                             [ p[0], p[1] ]
                         ),
                         t1 = p[2],
-                        isGood = (in0 && in1 && (t1-t0 < tThresh) )? 1:0;
+                        // isGood = (in0 && in1 && (t1-t0 < tThresh) )? 1:0;
+                        isGood = (in0 && in1 && (t1-t0 < tThresh))? 1:0;
                     segGood[i-1] = isGood;
                     goodSegCount += isGood;
                     in0 = in1;
@@ -381,7 +382,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
     drawDots: function( obj, now, highlighted ) {
         var P = obj.P,
             dP = obj.dP,
-            len_dP = dP.length / 3,
+            len_dP = dP.length,
             totSec = obj.totSec,
             zf = this._zoomFactor,
             dT = this.C1 * zf,
@@ -410,24 +411,22 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             timeOffset += dT;
         }
 
-        // Console.log("\nnew obj");
-        // let out;
-        debugger;
-
-        for (let t=timeOffset, i=0; t < totSec; t += dT ) {
-            while ( t >= P[idx+5] ) {
-                i += 3;
-                idx = dP[i];
+        for (let t=timeOffset, i=0, dt; t < totSec; t += dT ) {
+            if (t >= P[idx+5]) {
+                while ( t >= P[idx+5] ) {
+                    i += 3;
+                    idx = dP[i];
+                    if ( i >= len_dP ) {
+                        return count;
+                    }
+                }
+                p = P.slice(idx, idx+3);
                 dx = dP[i+1];
                 dy = dP[i+2];
-
-                p = P.slice(idx, idx+3);
-                if ( i >= len_dP ) {
-                    return count;
-                }
             }
 
-            let dt = t - p[2];
+            dt = t - p[2];
+
             if ( dt > 0 ) {
                 let lx = ~~( p[0] + dx * dt + xOffset ),
                     ly = ~~( p[1] + dy * dt + yOffset );
