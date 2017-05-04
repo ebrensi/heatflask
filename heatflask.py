@@ -73,6 +73,7 @@ bundles = {
             'js/leaflet.js',
             'js/leaflet-sidebar.min.js',
             'js/leaflet-heat.js',
+            'js/CCapture.all.min.js',
             output="gen/pre-compiled-dependencies.js"
         ),
 
