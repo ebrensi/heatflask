@@ -824,7 +824,10 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
     initialize: function (items, options) {
         this._map = null;
         this._canvas = null;
+        this._canvas2 = null;
+        this._capturing = null;
         this._ctx = null;
+        this._ctx2 = null;
         this._frame = null;
         this._items = items || null;
         this._timeOffset = 0;
@@ -1271,9 +1274,11 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
             return;
         }
         this._frame = null;
+        // debugger;
 
         let ts = Date.now(),
-            now = ts - this._timeOffset;
+            now = ts - this._timeOffset,
+            capturing = this._capturing;
 
         if (this._paused || this._mapMoving) {
             // Ths is so we can start where we left off when we resume
@@ -1286,9 +1291,11 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
             this._timePaused = null;
         }
 
-        if (now - this.lastCalledTime > this.minDelay) {
+        if (capturing || now - this.lastCalledTime > this.minDelay) {
             this.lastCalledTime = now;
             this.drawLayer(now);
+
+            capturing && this._capturer.capture(this._canvas);
         }
 
         this._frame = L.Util.requestAnimFrame(this._animate, this);
@@ -1310,6 +1317,32 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         var offset = L.Layer ? this._map._latLngToNewLayerPoint(this._map.getBounds().getNorthWest(), e.zoom, e.center) : this._map._getCenterOffset(e.center)._multiplyBy(-scale).subtract(this._map._getMapPanePos());
 
         L.DomUtil.setTransform(this._canvas, offset, scale);
+    },
+
+    // ------------------------------------------------------
+    startCapture: function () {
+        // set up frame capture functionality
+        this._capturer = new CCapture({
+            format: "webm",
+            framerate: 15,
+            timeLimit: 5,
+            display: true,
+            verbose: false
+        });
+        this._capturer.start();
+        this._capturing = true;
+    },
+
+    stopCapture: function () {
+        this._capturer.stop();
+        this._capturing = false;
+
+        // default save, will download automatically a file called {name}.extension (webm/gif/tar)
+        this._capturer.save();
+        // delete currentTime;
+
+        // // custom save, will get a blob in the callback
+        // capturer.save( function( blob ) { /* ... */ } );
     }
 });
 
