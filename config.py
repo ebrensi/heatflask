@@ -96,7 +96,7 @@ class StagingConfig(Config):
     """
     DEVELOPMENT = True
     DEBUG = True
-    ASSETS_DEBUG = True
+    ASSETS_DEBUG = "merge"
 
 
 class DevelopmentConfig(Config):
