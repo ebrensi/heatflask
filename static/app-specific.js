@@ -1065,7 +1065,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
                         t1 = p[2],
 
                     // isGood = (in0 && in1 && (t1-t0 < tThresh) )? 1:0;
-                    isGood = in0 && in1 && t1 - t0 < tThresh ? 1 : 0;
+                    isGood = (in0 || in1) && t1 - t0 < tThresh ? 1 : 0;
                     segGood[i - 1] = isGood;
                     goodSegCount += isGood;
                     in0 = in1;
