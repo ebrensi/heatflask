@@ -113,7 +113,7 @@ class DevelopmentConfig(Config):
     SSLIFY_PERMANENT = False
 
     # Flask-Assets settings
-    ASSETS_DEBUG = True
+    ASSETS_DEBUG = "merge"
     # ASSETS_AUTO_BUILD = True
     # ASSETS_CACHE = True
     # ASSETS_MANIFEST = 'cache'
