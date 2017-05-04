@@ -7387,7 +7387,8 @@ if (ADMIN) {
     fps_display = L.control.fps().addTo(map);
 }
 
-var button_states = [{
+// Animation button
+var animation_button_states = [{
     stateName: 'animation-running',
     icon: 'fa-pause',
     title: 'Pause Animation',
@@ -7408,9 +7409,37 @@ var button_states = [{
         updateState();
         btn.state('animation-running');
     }
-}],
-    animationControl = L.easyButton({
-    states: appState.paused ? button_states.reverse() : button_states
+}];
+
+var animationControl = L.easyButton({
+    states: appState.paused ? animation_button_states.reverse() : animation_button_states
+}).addTo(map);
+
+// Capture button
+var capture_button_states = [{
+    stateName: 'not-capturing',
+    icon: 'fa-video-camera',
+    title: 'Capture',
+    onClick: function (btn, map) {
+        if (DotLayer) {
+            DotLayer.startCapture();
+        }
+        btn.state('capturing');
+    }
+}, {
+    stateName: 'capturing',
+    icon: 'fa-stop',
+    title: 'Stop capturing',
+    onClick: function (btn, map) {
+        if (DotLayer) {
+            DotLayer.stopCapture();
+        }
+        btn.state('not-capturing');
+    }
+}];
+
+var captureControl = L.easyButton({
+    states: capture_button_states
 }).addTo(map);
 
 // set up dial-controls
@@ -8534,7 +8563,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         this._capturer = new CCapture({
             format: "gif",
             workersPath: 'static/js/',
-            framerate: 15,
+            framerate: 30,
             timeLimit: 5,
             display: true,
             verbose: false

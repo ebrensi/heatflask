@@ -49,40 +49,76 @@ var map = L.map('map', {
 var sidebarControl = L.control.sidebar('sidebar').addTo(map),
     zoomControl = map.zoomControl.setPosition('bottomright'),
     layerControl = L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map),
-        // locateControl = L.control.locate({position: "bottomright", icon: "fa fa-anchor"}).addTo(map),
-        fps_display = null;
+    // locateControl = L.control.locate({position: "bottomright", icon: "fa fa-anchor"}).addTo(map),
+    fps_display = null;
 
-        if (ADMIN) {
-            fps_display = L.control.fps().addTo(map);
+if (ADMIN) {
+    fps_display = L.control.fps().addTo(map);
+}
+
+
+// Animation button
+var animation_button_states = [
+    {
+        stateName: 'animation-running',
+        icon:      'fa-pause',
+        title:     'Pause Animation',
+        onClick: function(btn, map) {
+            pauseFlow();
+            updateState();
+            btn.state('animation-paused');
+            }
+    },
+
+    {
+        stateName: 'animation-paused',
+        icon:      'fa-play',
+        title:     'Resume Animation',
+        onClick: function(btn, map) {
+            resumeFlow();
+            if (DotLayer) {
+                DotLayer.animate();
+            }
+            updateState();
+            btn.state('animation-running');
         }
+    }
+];
+
+var animationControl = L.easyButton({
+    states: appState.paused? animation_button_states.reverse() : animation_button_states
+}).addTo(map);
 
 
-        var button_states = [{
-            stateName: 'animation-running',
-            icon:      'fa-pause',
-            title:     'Pause Animation',
-            onClick: function(btn, map) {
-                pauseFlow();
-                updateState();
-                btn.state('animation-paused');
+// Capture button
+var capture_button_states = [
+    {
+        stateName: 'not-capturing',
+        icon: 'fa-video-camera',
+        title: 'Capture',
+        onClick: function (btn, map) {
+            if (DotLayer) {
+                DotLayer.startCapture();
             }
-        }, {
-            stateName: 'animation-paused',
-            icon:      'fa-play',
-            title:     'Resume Animation',
-            onClick: function(btn, map) {
-                resumeFlow();
-                if (DotLayer) {
-                    DotLayer.animate();
-                }
-                updateState();
-                btn.state('animation-running');
+            btn.state('capturing');
+        }
+    },
+    {
+        stateName: 'capturing',
+        icon: 'fa-stop',
+        title: 'Stop capturing',
+        onClick: function (btn, map) {
+            if (DotLayer) {
+                DotLayer.stopCapture();
             }
-        }],
+            btn.state('not-capturing');
+        }
+    }
+];
 
-        animationControl = L.easyButton({
-            states: appState.paused? button_states.reverse() : button_states
-        }).addTo(map);
+var captureControl = L.easyButton({
+    states: capture_button_states
+}).addTo(map);
 
 
 // set up dial-controls
