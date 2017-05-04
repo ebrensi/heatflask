@@ -37,7 +37,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             pathWidth: 1
         },
         selected: {
-            dotColor: "#FFFFFF",
+            dotColor: "#FFFFF   F",
             dotStrokeColor: "#FFFFFF",
             pathColor: "#000000",
             pathOpacity: 0.7,
