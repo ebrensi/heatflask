@@ -59,6 +59,9 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         this._colorPalette = [];
         L.setOptions( this, options );
         this._paused = this.options.startPaused;
+        if (this._paused){
+            this._timePaused = Date.now();
+        }
     },
 
 
@@ -93,7 +96,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         if ( !this._paused ) {
             this.animate();
         } else {
-            this.drawLayer();
+            this.drawLayer(this._timePaused);
         }
 
     },
@@ -584,7 +587,8 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
     getMapImage: function() {
         leafletImage(this._map, function(err, canvas) {
             download(canvas.toDataURL("image/png"), "mapView.png", "image/png");
-        }).bind(this);
+            console.log("leaflet-image: " + err);
+        });
     },
 
 

@@ -8636,8 +8636,9 @@ var map = L.map('map', {
     center: ONLOAD_PARAMS.map_center,
     zoom: ONLOAD_PARAMS.map_zoom,
     layers: [default_baseLayer],
-    renderer: L.svg({ padding: 0 }),
-    zoomAnimation: false
+    preferCanvas: true,
+    // renderer: L.svg({ padding: 0 }),
+    zoomAnimation: true
 });
 
 var sidebarControl = L.control.sidebar('sidebar').addTo(map),
@@ -9344,6 +9345,9 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         this._colorPalette = [];
         L.setOptions(this, options);
         this._paused = this.options.startPaused;
+        if (this._paused) {
+            this._timePaused = Date.now();
+        }
     },
 
     //-------------------------------------------------------------
@@ -9377,7 +9381,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         if (!this._paused) {
             this.animate();
         } else {
-            this._frame = this._frame || L.Util.requestAnimFrame(this.drawLayer, this);
+            this.drawLayer(this._timePaused);
         }
     },
 
@@ -9842,7 +9846,8 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
     getMapImage: function () {
         leafletImage(this._map, function (err, canvas) {
             download(canvas.toDataURL("image/png"), "mapView.png", "image/png");
-        }).bind(this);
+            console.log("leaflet-image: " + err);
+        });
     },
 
     // ------------------------------------------------------
