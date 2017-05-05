@@ -93,7 +93,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         if ( !this._paused ) {
             this.animate();
         } else {
-            this._frame = this._frame || L.Util.requestAnimFrame( this.drawLayer, this );
+            this.drawLayer();
         }
 
     },
