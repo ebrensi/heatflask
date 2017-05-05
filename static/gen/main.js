@@ -7421,20 +7421,24 @@ var capture_button_states = [{
     icon: 'fa-video-camera',
     title: 'Capture',
     onClick: function (btn, map) {
-        if (DotLayer) {
-            DotLayer.startCapture();
+        if (!DotLayer) {
+            return;
         }
         btn.state('capturing');
+        timeout = DotLayer.startCapture();
+        setTimeout(function () {
+            btn.state('not-capturing');
+        }, timeout + 500);
     }
 }, {
     stateName: 'capturing',
     icon: 'fa-stop',
     title: 'Stop capturing',
     onClick: function (btn, map) {
-        if (DotLayer) {
+        if (DotLayer && DotLayer._capturing) {
             DotLayer.stopCapture();
+            btn.state('not-capturing');
         }
-        btn.state('not-capturing');
     }
 }];
 
@@ -7443,7 +7447,7 @@ var captureControl = L.easyButton({
 }).addTo(map);
 
 // set up dial-controls
-$(".dial").knob({
+$(".dotconst-dial").knob({
     min: 0,
     max: 100,
     step: 0.1,
@@ -7453,18 +7457,19 @@ $(".dial").knob({
     inline: true,
     // displayInput: false,
     change: function (val) {
-        if (DotLayer) {
-            var newVal;
-            if (this.$[0].id == "sepConst") {
-                newVal = Math.pow(2, val * SEP_SCALE.m + SEP_SCALE.b);
-                DotLayer.C1 = newVal;
-                // console.log(`C1=${newVal}`)
-            } else {
-                newVal = val * val * SPEED_SCALE;
-                DotLayer.C2 = newVal;
-                // console.log(`C2=${newVal}`)
-            }
+        if (!DotLayer) {
+            return;
         }
+
+        let newVal;
+        if (this.$[0].id == "sepConst") {
+            newVal = Math.pow(2, val * SEP_SCALE.m + SEP_SCALE.b);
+            DotLayer.C1 = newVal;
+        } else {
+            newVal = val * val * SPEED_SCALE;
+            DotLayer.C2 = newVal;
+        }
+        $(".periodDisplay").html(DotLayer.periodInSecs().toFixed(2));
     }
 });
 
@@ -7735,6 +7740,10 @@ function renderLayers() {
 
                 $("#sepConst").val((Math.log2(DotLayer.C1) - SEP_SCALE.b) / SEP_SCALE.m).trigger("change");
                 $("#speedConst").val(Math.sqrt(DotLayer.C2) / SPEED_SCALE).trigger("change");
+                setTimeout(function () {
+                    $(".periodDisplay").html(DotLayer.periodInSecs().toFixed(2));
+                }, 1000);
+
                 $("#showPaths").prop("checked", DotLayer.options.showPaths).on("change", function () {
                     DotLayer.options.showPaths = $(this).prop("checked");
                     DotLayer._onLayerDidMove();
@@ -8159,7 +8168,8 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
             let itemsList = Object.values(this._items),
                 numItems = itemsList.length;
 
-            this._colorPalette = createPalette(numItems);
+            this._colorPalette = colorPalette(numItems);
+            // this._colorPalette = createPalette( numItems );
             for (let i = 0; i < numItems; i++) {
                 itemsList[i].dotColor = this._colorPalette[i];
             }
@@ -8225,7 +8235,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
 
         this._ctx.strokeStyle = this.options.selected.dotStrokeColor;
 
-        this._dotSize = Math.log(z);
+        this._dotSize = Math.max(1, ~~(Math.log(z) + 0.5));
         this._dotOffset = ~~(this._dotSize / 2 + 0.5);
         this._zoomFactor = 1 / Math.pow(2, z);
 
@@ -8385,9 +8395,8 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
             dP = obj.dP,
             len_dP = dP.length,
             totSec = obj.totSec,
-            zf = this._zoomFactor,
-            dT = this.C1 * zf,
-            s = this.C2 * zf * (now - obj.startTime),
+            period = this._period,
+            s = this._timeScale * (now - obj.startTime),
             xmax = this._size.x,
             ymax = this._size.y,
             ctx = this._ctx,
@@ -8397,7 +8406,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
             xOffset = this._pxOffset.x,
             yOffset = this._pxOffset.y;
 
-        var timeOffset = s % dT,
+        var timeOffset = s % period,
             count = 0,
             idx = dP[0],
             dx = dP[1],
@@ -8409,10 +8418,10 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         }
 
         if (timeOffset < 0) {
-            timeOffset += dT;
+            timeOffset += period;
         }
 
-        for (let t = timeOffset, i = 0, dt; t < totSec; t += dT) {
+        for (let t = timeOffset, i = 0, dt; t < totSec; t += period) {
             if (t >= P[idx + 5]) {
                 while (t >= P[idx + 5]) {
                     i += 3;
@@ -8454,21 +8463,24 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
             return;
         }
 
-        this._ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
-        this._ctx.fillStyle = this.options.normal.dotColor;
-
-        var ctx = this._ctx,
+        let ctx = this._ctx,
             zoom = this._zoom,
             count = 0,
             t0 = performance.now(),
-            id,
             item,
             items = this._items,
             pItem,
             pItems = this._processedItems,
-            highlighted_items = [];
+            highlighted_items = [],
+            zf = this._zoomFactor;
 
-        for (id in pItems) {
+        this._ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
+        this._ctx.fillStyle = this.options.normal.dotColor;
+
+        this._timeScale = this.C2 * zf;
+        this._period = this.C1 * zf + 0.5;
+
+        for (let id in pItems) {
             item = pItems[id];
             if (items[id].highlighted) {
                 highlighted_items.push(item);
@@ -8478,18 +8490,21 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         }
 
         // Now plot highlighted paths
-        var i,
-            dotColor,
-            hlen = highlighted_items.length;
+        let hlen = highlighted_items.length;
         if (hlen) {
-            for (i = 0; i < hlen; i++) {
+            for (let i = 0; i < hlen; i++) {
                 item = highlighted_items[i];
                 count += this.drawDots(item, now, true);
             }
         }
 
-        var elapsed = (performance.now() - t0).toFixed(1);
-        fps_display && fps_display.update(now, `${elapsed} ms/f, n=${count}, z=${this._zoom}`);
+        if (fps_display) {
+            let periodInSecs = this.periodInSecs(),
+                progress = (now / 1000 % periodInSecs).toFixed(1),
+                elapsed = (performance.now() - t0).toFixed(1);
+
+            fps_display.update(now, `${elapsed} ms/f, n=${count}, z=${this._zoom},\nP=${progress}/${periodInSecs.toFixed(2)}`);
+        }
     },
 
     // --------------------------------------------------------------------
@@ -8556,20 +8571,30 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         L.DomUtil.setTransform(this._canvas, offset, scale);
     },
 
+    periodInSecs: function () {
+        return this._period / (this._timeScale * 1000);
+    },
+
     // ------------------------------------------------------
     startCapture: function () {
-        // set up frame capture functionality
+        periodInSecs = this.periodInSecs();
+        if (periodInSecs > 5) {
+            return 0;
+        }
 
         this._capturer = new CCapture({
+            name: "movingPath",
             format: "gif",
             workersPath: 'static/js/',
             framerate: 30,
-            timeLimit: 5,
+            timeLimit: periodInSecs,
             display: true,
             verbose: false
         });
-        this._capturer.start();
+
         this._capturing = true;
+        this._capturer.start();
+        return periodInSecs;
     },
 
     stopCapture: function () {
@@ -8589,29 +8614,33 @@ L.dotLayer = function (items, options) {
     return new L.DotLayer(items, options);
 };
 
-/* From http://stackoverflow.com/a/20591891/4718949 */
-function hslToRgbString(h, s, l) {
-    return "hsl(" + h + "," + s + "%," + l + "% )";
+// ---------------------------------------------------------------------------
+/*
+    From "Making annoying rainbows in javascript"
+    A tutorial by jim bumgardner
+*/
+function makeColorGradient(frequency1, frequency2, frequency3, phase1, phase2, phase3, center, width, len) {
+    let palette = new Array(len);
+
+    if (center == undefined) center = 128;
+    if (width == undefined) width = 127;
+    if (len == undefined) len = 50;
+
+    for (let i = 0; i < len; ++i) {
+        let r = Math.round(Math.sin(frequency1 * i + phase1) * width + center),
+            g = Math.round(Math.sin(frequency2 * i + phase2) * width + center),
+            b = Math.round(Math.sin(frequency3 * i + phase3) * width + center);
+        palette[i] = `rgb(${r}, ${g}, ${b})`;
+        // document.write( '<font color="' + RGB2Color(red,grn,blu) + '">&#9608;</font>');
+    }
+    return palette;
 }
 
-function createPalette(colorCount) {
-    let newPalette = [],
-        hueStep = Math.floor(330 / colorCount),
-        hue = 0,
-        saturation = 95,
-        luminosity = 55,
-        greenJump = false;
-
-    for (let colorIndex = 0; colorIndex < colorCount; colorIndex++) {
-        saturation = colorIndex & 1 ? 90 : 65;
-        luminosity = colorIndex & 1 ? 80 : 55;
-        newPalette.push(hslToRgbString(hue, saturation, luminosity));
-        hue += hueStep;
-        if (!greenJump && hue > 100) {
-            hue += 30;
-            greenJump = true;
-        }
-    }
-    return newPalette;
+function colorPalette(n) {
+    center = 128;
+    width = 127;
+    steps = 10;
+    frequency = 2 * Math.PI / steps;
+    return makeColorGradient(frequency, frequency, frequency, 0, 2, 4, center, width, n);
 }
 
