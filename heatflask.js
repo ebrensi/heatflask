@@ -18,7 +18,7 @@ var map_providers = ONLOAD_PARAMS.map_providers,
 if (!OFFLINE) {
     var online_baseLayers = {
         "Esri.WorldImagery": L.tileLayer.provider("Esri.WorldImagery"),
-        "OpenStreetMap.Mapnik": L.tileLayer.provider("OpenStreetMap.Mapnik"),
+        "Stamen.Terrain": L.tileLayer.provider("Stamen.Terrain"),
         "Google.Roadmap": L.gridLayer.googleMutant({type: 'roadmap'}),
         "Google.Terrain": L.gridLayer.googleMutant({type: 'terrain'}),
         "Google.Hybrid": L.gridLayer.googleMutant({type: 'hybrid'})
@@ -33,7 +33,7 @@ if (!OFFLINE) {
             if (i==0) default_baseLayer = tl;
         }
     } else {
-        default_baseLayer = baseLayers["Google.Terrain"];
+        default_baseLayer = baseLayers["Stamen.Terrain"];
     }
 }
 
