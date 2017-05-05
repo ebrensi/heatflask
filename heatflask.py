@@ -55,8 +55,6 @@ bundles = {
         'css/leaflet.css',
         'css/leaflet-sidebar.min.css',
         'css/leaflet-areaselect.css',
-        'css/L.Control.Window.css',
-        # 'css/L.Control.Locate.min.css',
         'css/datatables.min.css',
         'css/easy-button.css',
         filters='cssmin',
@@ -73,7 +71,9 @@ bundles = {
             'js/leaflet.js',
             'js/leaflet-sidebar.min.js',
             'js/leaflet-heat.js',
-            'js/CCapture.all.min.js',
+            'js/download.min.js',
+            'js/gif.js',  # Johan Nordberg: http://jnordberg.github.io/gif.js/
+
             output="gen/pre-compiled-dependencies.js"
         ),
 
@@ -85,7 +85,8 @@ bundles = {
             'js/leaflet-providers.js',
             'js/Leaflet.GoogleMutant.js',
             'js/leaflet-areaselect.js',
-            # 'js/L.Control.Locate.min.js',
+            'js/CCapture.js',  # Jaume Sanchez: https://github.com/spite/ccapture.js
+            'js/leaflet-image.js',  # Tom MacWright: https://github.com/mapbox/leaflet-image
             'js/easy-button.js',
             filters=["babel", "rjsmin"],
             output="gen/non-compiled-dependencies.js"

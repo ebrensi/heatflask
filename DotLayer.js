@@ -508,7 +508,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         this._paused = false;
         this.lastCalledTime = 0;
         this.minDelay = ~~( 1000 / this.target_fps + 0.5 );
-        this._frame = this._frame || L.Util.requestAnimFrame( this._animate, this );
+        this._frame = L.Util.requestAnimFrame( this._animate, this );
     },
 
     // --------------------------------------------------------------------
@@ -578,6 +578,17 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
     periodInSecs: function() {
         return this._period / (this._timeScale * 1000);
     },
+
+
+
+    getMapImage: function() {
+        leafletImage(this._map, function(err, canvas) {
+            download(canvas.toDataURL("image/png"), "mapView.png", "image/png");
+        }).bind(this);
+    },
+
+
+
 
     // ------------------------------------------------------
     startCapture: function() {

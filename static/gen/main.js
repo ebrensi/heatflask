@@ -269,7 +269,13 @@ L.Control.Sidebar=L.Control.extend({includes:L.Mixin.Events,options:{position:"l
 */
 L.HeatLayer=(L.Layer?L.Layer:L.Class).extend({initialize:function(t,i){this._latlngs=t,L.setOptions(this,i)},setLatLngs:function(t){return this._latlngs=t,this.redraw()},addLatLng:function(t){return this._latlngs.push(t),this.redraw()},setOptions:function(t){return L.setOptions(this,t),this._heat&&this._updateOptions(),this.redraw()},redraw:function(){return!this._heat||this._frame||this._map._animating||(this._frame=L.Util.requestAnimFrame(this._redraw,this)),this},onAdd:function(t){this._map=t,this._canvas||this._initCanvas(),t._panes.overlayPane.appendChild(this._canvas),t.on("moveend",this._reset,this),t.options.zoomAnimation&&L.Browser.any3d&&t.on("zoomanim",this._animateZoom,this),this._reset()},onRemove:function(t){t.getPanes().overlayPane.removeChild(this._canvas),t.off("moveend",this._reset,this),t.options.zoomAnimation&&t.off("zoomanim",this._animateZoom,this)},addTo:function(t){return t.addLayer(this),this},_initCanvas:function(){var t=this._canvas=L.DomUtil.create("canvas","leaflet-heatmap-layer leaflet-layer"),i=L.DomUtil.testProp(["transformOrigin","WebkitTransformOrigin","msTransformOrigin"]);t.style[i]="50% 50%";var a=this._map.getSize();t.width=a.x,t.height=a.y;var s=this._map.options.zoomAnimation&&L.Browser.any3d;L.DomUtil.addClass(t,"leaflet-zoom-"+(s?"animated":"hide")),this._heat=simpleheat(t),this._updateOptions()},_updateOptions:function(){this._heat.radius(this.options.radius||this._heat.defaultRadius,this.options.blur),this.options.gradient&&this._heat.gradient(this.options.gradient),this.options.max&&this._heat.max(this.options.max)},_reset:function(){var t=this._map.containerPointToLayerPoint([0,0]);L.DomUtil.setPosition(this._canvas,t);var i=this._map.getSize();this._heat._width!==i.x&&(this._canvas.width=this._heat._width=i.x),this._heat._height!==i.y&&(this._canvas.height=this._heat._height=i.y),this._redraw()},_redraw:function(){var t,i,a,s,e,n,h,o,r,d=[],_=this._heat._r,l=this._map.getSize(),m=new L.Bounds(L.point([-_,-_]),l.add([_,_])),c=void 0===this.options.max?1:this.options.max,u=void 0===this.options.maxZoom?this._map.getMaxZoom():this.options.maxZoom,f=1/Math.pow(2,Math.max(0,Math.min(u-this._map.getZoom(),12))),g=_/2,p=[],v=this._map._getMapPanePos(),w=v.x%g,y=v.y%g;for(t=0,i=this._latlngs.length;i>t;t++)if(a=this._map.latLngToContainerPoint(this._latlngs[t]),m.contains(a)){e=Math.floor((a.x-w)/g)+2,n=Math.floor((a.y-y)/g)+2;var x=void 0!==this._latlngs[t].alt?this._latlngs[t].alt:void 0!==this._latlngs[t][2]?+this._latlngs[t][2]:1;r=x*f,p[n]=p[n]||[],s=p[n][e],s?(s[0]=(s[0]*s[2]+a.x*r)/(s[2]+r),s[1]=(s[1]*s[2]+a.y*r)/(s[2]+r),s[2]+=r):p[n][e]=[a.x,a.y,r]}for(t=0,i=p.length;i>t;t++)if(p[t])for(h=0,o=p[t].length;o>h;h++)s=p[t][h],s&&d.push([Math.round(s[0]),Math.round(s[1]),Math.min(s[2],c)]);this._heat.data(d).draw(this.options.minOpacity),this._frame=null},_animateZoom:function(t){var i=this._map.getZoomScale(t.zoom),a=this._map._getCenterOffset(t.center)._multiplyBy(-i).subtract(this._map._getMapPanePos());L.DomUtil.setTransform?L.DomUtil.setTransform(this._canvas,a,i):this._canvas.style[L.DomUtil.TRANSFORM]=L.DomUtil.getTranslateString(a)+" scale("+i+")"}}),L.heatLayer=function(t,i){return new L.HeatLayer(t,i)};
 
-function download(t,e,n){function i(t){var e=t.split(/[:;,]/),n=e[1],i="base64"==e[2]?atob:decodeURIComponent,r=i(e.pop()),o=r.length,a=0,s=new Uint8Array(o);for(a;a<o;++a)s[a]=r.charCodeAt(a);return new m([s],{type:n})}function r(t,e){if("download"in l)return l.href=t,l.setAttribute("download",w),l.innerHTML="downloading...",l.style.display="none",f.body.appendChild(l),setTimeout(function(){l.click(),f.body.removeChild(l),e===!0&&setTimeout(function(){h.URL.revokeObjectURL(l.href)},250)},66),!0;var n=f.createElement("iframe");f.body.appendChild(n),e||(t="data:"+t.replace(/^data:([\w\/\-\+]+)/,d)),n.src=t,setTimeout(function(){f.body.removeChild(n)},333)}var o,a,s,h=window,d="application/octet-stream",u=n||d,c=t,f=document,l=f.createElement("a"),p=function(t){return String(t)},m=h.Blob||h.MozBlob||h.WebKitBlob||p,g=h.MSBlobBuilder||h.WebKitBlobBuilder||h.BlobBuilder,w=e||"download";if("true"===String(this)&&(c=[c,u],u=c[0],c=c[1]),String(c).match(/^data\:[\w+\-]+\/[\w+\-]+[,;]/))return navigator.msSaveBlob?navigator.msSaveBlob(i(c),w):r(c);try{o=c instanceof m?c:new m([c],{type:u})}catch(t){g&&(a=new g,a.append([c]),o=a.getBlob(u))}if(navigator.msSaveBlob)return navigator.msSaveBlob(o,w);if(h.URL)r(h.URL.createObjectURL(o),!0);else{if("string"==typeof o||o.constructor===p)try{return r("data:"+u+";base64,"+h.btoa(o))}catch(t){return r("data:"+u+","+encodeURIComponent(o))}s=new FileReader,s.onload=function(t){r(this.result)},s.readAsDataURL(o)}return!0}window.Whammy=function(){function t(t,n){for(var i=e(t),r=3e4,o=[{id:440786851,data:[{data:1,id:17030},{data:1,id:17143},{data:4,id:17138},{data:8,id:17139},{data:"webm",id:17026},{data:2,id:17031},{data:2,id:17029}]},{id:408125543,data:[{id:357149030,data:[{data:1e6,id:2807729},{data:"whammy",id:19840},{data:"whammy",id:22337},{data:c(i.duration),id:17545}]},{id:374648427,data:[{id:174,data:[{data:1,id:215},{data:1,id:29637},{data:0,id:156},{data:"und",id:2274716},{data:"V_VP8",id:134},{data:"VP8",id:2459272},{data:1,id:131},{id:224,data:[{data:i.width,id:176},{data:i.height,id:186}]}]}]},{id:475249515,data:[]}]}],s=o[1],d=s.data[2],u=0,f=0;u<t.length;){var l={id:187,data:[{data:Math.round(f),id:179},{id:183,data:[{data:1,id:247},{data:0,size:8,id:241}]}]};d.data.push(l);var p=[],m=0;do p.push(t[u]),m+=t[u].duration,u++;while(u<t.length&&m<r);var g=0,w={id:524531317,data:[{data:Math.round(f),id:231}].concat(p.map(function(t){var e=h({discardable:0,frame:t.data.slice(4),invisible:0,keyframe:1,lacing:0,trackNum:1,timecode:Math.round(g)});return g+=t.duration,{data:e,id:163}}))};s.data.push(w),f+=m}for(var v=0,y=0;y<s.data.length;y++){y>=3&&(d.data[y-3].data[1].data[1].data=v);var b=a([s.data[y]],n);v+=b.size||b.byteLength||b.length,2!=y&&(s.data[y]=b)}return a(o,n)}function e(t){for(var e=t[0].width,n=t[0].height,i=t[0].duration,r=1;r<t.length;r++){if(t[r].width!=e)throw"Frame "+(r+1)+" has a different width";if(t[r].height!=n)throw"Frame "+(r+1)+" has a different height";if(t[r].duration<0||t[r].duration>32767)throw"Frame "+(r+1)+" has a weird duration (must be between 0 and 32767)";i+=t[r].duration}return{duration:i,width:e,height:n}}function n(t){for(var e=[];t>0;)e.push(255&t),t>>=8;return new Uint8Array(e.reverse())}function i(t,e){for(var n=new Uint8Array(e),i=e-1;i>=0;i--)n[i]=255&t,t>>=8;return n}function r(t){for(var e=new Uint8Array(t.length),n=0;n<t.length;n++)e[n]=t.charCodeAt(n);return e}function o(t){var e=[],n=t.length%8?new Array(9-t.length%8).join("0"):"";t=n+t;for(var i=0;i<t.length;i+=8)e.push(parseInt(t.substr(i,8),2));return new Uint8Array(e)}function a(t,e){for(var h=[],d=0;d<t.length;d++)if("id"in t[d]){var u=t[d].data;if("object"==typeof u&&(u=a(u,e)),"number"==typeof u&&(u="size"in t[d]?i(u,t[d].size):o(u.toString(2))),"string"==typeof u&&(u=r(u)),u.length);for(var c=u.size||u.byteLength||u.length,f=0,l=56;l>0;l-=7)if(c>Math.pow(2,l)-2){f=l/7;break}var p=c.toString(2),m=new Array(8*(f+1)+1).join("0"),g=new Array(f+1).join("0")+1,w=m.substr(0,m.length-p.length-g.length)+p,v=g+w;h.push(n(t[d].id)),h.push(o(v)),h.push(u)}else h.push(t[d]);if(e){var y=s(h);return new Uint8Array(y)}return new Blob(h,{type:"video/webm"})}function s(t,e){null==e&&(e=[]);for(var n=0;n<t.length;n++)"object"==typeof t[n]?s(t[n],e):e.push(t[n]);return e}function h(t){var e=0;if(t.keyframe&&(e|=128),t.invisible&&(e|=8),t.lacing&&(e|=t.lacing<<1),t.discardable&&(e|=1),t.trackNum>127)throw"TrackNumber > 127 not supported";var n=[128|t.trackNum,t.timecode>>8,255&t.timecode,e].map(function(t){return String.fromCharCode(t)}).join("")+t.frame;return n}function d(t){for(var e=t.RIFF[0].WEBP[0],n=e.indexOf("*"),i=0,r=[];i<4;i++)r[i]=e.charCodeAt(n+3+i);var o,a,s,h,d;return d=r[1]<<8|r[0],o=16383&d,a=d>>14,d=r[3]<<8|r[2],s=16383&d,h=d>>14,{width:o,height:s,data:e,riff:t}}function u(t){for(var e=0,n={};e<t.length;){var i=t.substr(e,4);if(n[i]=n[i]||[],"RIFF"==i||"LIST"==i){var r=parseInt(t.substr(e+4,4).split("").map(function(t){var e=t.charCodeAt(0).toString(2);return new Array(8-e.length+1).join("0")+e}).join(""),2),o=t.substr(e+4+4,r);e+=8+r,n[i].push(u(o))}else"WEBP"==i?(n[i].push(t.substr(e+8)),e=t.length):(n[i].push(t.substr(e+4)),e=t.length)}return n}function c(t){return[].slice.call(new Uint8Array(new Float64Array([t]).buffer),0).map(function(t){return String.fromCharCode(t)}).reverse().join("")}function f(t,e){this.frames=[],this.duration=1e3/t,this.quality=e||.8}return f.prototype.add=function(t,e){if("undefined"!=typeof e&&this.duration)throw"you can't pass a duration if the fps is set";if("undefined"==typeof e&&!this.duration)throw"if you don't have the fps set, you need to have durations here.";if(t.canvas&&(t=t.canvas),t.toDataURL)t=t.getContext("2d").getImageData(0,0,t.width,t.height);else if("string"!=typeof t)throw"frame must be a a HTMLCanvasElement, a CanvasRenderingContext2D or a DataURI formatted string";if("string"==typeof t&&!/^data:image\/webp;base64,/gi.test(t))throw"Input must be formatted properly as a base64 encoded DataURI of type image/webp";this.frames.push({image:t,duration:e||this.duration})},f.prototype.encodeFrames=function(t){if(this.frames[0].image instanceof ImageData){var e=this.frames,n=document.createElement("canvas"),i=n.getContext("2d");n.width=this.frames[0].image.width,n.height=this.frames[0].image.height;var r=function(o){var a=e[o];i.putImageData(a.image,0,0),a.image=n.toDataURL("image/webp",this.quality),o<e.length-1?setTimeout(function(){r(o+1)},1):t()}.bind(this);r(0)}else t()},f.prototype.compile=function(e,n){this.encodeFrames(function(){var i=new t(this.frames.map(function(t){var e=d(u(atob(t.image.slice(23))));return e.duration=t.duration,e}),e);n(i)}.bind(this))},{Video:f,fromImageArray:function(e,n,i){return t(e.map(function(t){var e=d(u(atob(t.slice(23))));return e.duration=1e3/n,e}),i)},toWebM:t}}(),function(){"use strict";function t(t){var e,n=new Uint8Array(t);for(e=0;e<t;e+=1)n[e]=0;return n}function e(e,n,i,r){var o=n+i,a=t((parseInt(o/r)+1)*r);return a.set(e),a}function n(t,e,n){return t=t.toString(n||8),"000000000000".substr(t.length+12-e)+t}function i(e,n,i){var r,o;for(n=n||t(e.length),i=i||0,r=0,o=e.length;r<o;r+=1)n[i]=e.charCodeAt(r),i+=1;return n}function r(t){function e(t){return o[t>>18&63]+o[t>>12&63]+o[t>>6&63]+o[63&t]}var n,i,r,a=t.length%3,s="";for(n=0,r=t.length-a;n<r;n+=3)i=(t[n]<<16)+(t[n+1]<<8)+t[n+2],s+=e(i);switch(s.length%4){case 1:s+="=";break;case 2:s+="=="}return s}var o=["A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z","a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z","0","1","2","3","4","5","6","7","8","9","+","/"];window.utils={},window.utils.clean=t,window.utils.pad=n,window.utils.extend=e,window.utils.stringToUint8=i,window.utils.uint8ToBase64=r}(),function(){"use strict";function t(t,i){var r=n.clean(512),o=0;return e.forEach(function(e){var n,i,a=t[e.field]||"";for(n=0,i=a.length;n<i;n+=1)r[o]=a.charCodeAt(n),o+=1;o+=e.length-n}),"function"==typeof i?i(r,o):r}var e,n=window.utils;e=[{field:"fileName",length:100},{field:"fileMode",length:8},{field:"uid",length:8},{field:"gid",length:8},{field:"fileSize",length:12},{field:"mtime",length:12},{field:"checksum",length:8},{field:"type",length:1},{field:"linkName",length:100},{field:"ustar",length:8},{field:"owner",length:32},{field:"group",length:32},{field:"majorNumber",length:8},{field:"minorNumber",length:8},{field:"filenamePrefix",length:155},{field:"padding",length:12}],window.header={},window.header.structure=e,window.header.format=t}(),function(){"use strict";function t(t){this.written=0,e=(t||20)*r,this.out=i.clean(e),this.blocks=[],this.length=0}var e,n=window.header,i=window.utils,r=512;t.prototype.append=function(t,e,o,a){var s,h,d,u,c,f,l;if("string"==typeof e)e=i.stringToUint8(e);else if(e.constructor!==Uint8Array.prototype.constructor)throw"Invalid input type. You gave me: "+e.constructor.toString().match(/function\s*([$A-Za-z_][0-9A-Za-z_]*)\s*\(/)[1];"function"==typeof o&&(a=o,o={}),o=o||{},d=o.mode||4095&parseInt("777",8),u=o.mtime||Math.floor(+new Date/1e3),c=o.uid||0,f=o.gid||0,s={fileName:t,fileMode:i.pad(d,7),uid:i.pad(c,7),gid:i.pad(f,7),fileSize:i.pad(e.length,11),mtime:i.pad(u,11),checksum:"        ",type:"0",ustar:"ustar  ",owner:o.owner||"",group:o.group||""},h=0,Object.keys(s).forEach(function(t){var e,n,i=s[t];for(e=0,n=i.length;e<n;e+=1)h+=i.charCodeAt(e)}),s.checksum=i.pad(h,6)+"\0 ",l=n.format(s);var p=Math.ceil(l.length/r)*r,m=Math.ceil(e.length/r)*r;this.blocks.push({header:l,input:e,headerLength:p,inputLength:m})},t.prototype.save=function(){var t=[],e=[],n=0,i=Math.pow(2,20),o=[];return this.blocks.forEach(function(t){n+t.headerLength+t.inputLength>i&&(e.push({blocks:o,length:n}),o=[],n=0),o.push(t),n+=t.headerLength+t.inputLength}),e.push({blocks:o,length:n}),e.forEach(function(e){var n=new Uint8Array(e.length),i=0;e.blocks.forEach(function(t){n.set(t.header,i),i+=t.headerLength,n.set(t.input,i),i+=t.inputLength}),t.push(n)}),t.push(new Uint8Array(2*r)),new Blob(t,{type:"octet/stream"})},t.prototype.clear=function(){this.written=0,this.out=i.clean(e)},window.Tar=t}(),function(t){function e(t,n){if({}.hasOwnProperty.call(e.cache,t))return e.cache[t];var i=e.resolve(t);if(!i)throw new Error("Failed to resolve module "+t);var r={id:t,require:e,filename:t,exports:{},loaded:!1,parent:n,children:[]};n&&n.children.push(r);var o=t.slice(0,t.lastIndexOf("/")+1);return e.cache[t]=r.exports,i.call(r.exports,r,r.exports,o,t),r.loaded=!0,e.cache[t]=r.exports}e.modules={},e.cache={},e.resolve=function(t){return{}.hasOwnProperty.call(e.modules,t)?e.modules[t]:void 0},e.define=function(t,n){e.modules[t]=n};var n=function(e){return e="/",{title:"browser",version:"v0.10.26",browser:!0,env:{},argv:[],nextTick:t.setImmediate||function(t){setTimeout(t,0)},cwd:function(){return e},chdir:function(t){e=t}}}();e.define("/gif.coffee",function(t,n,i,r){function o(t,e){return{}.hasOwnProperty.call(t,e)}function a(t,e){for(var n=0,i=e.length;n<i;++n)if(n in e&&e[n]===t)return!0;return!1}function s(t,e){function n(){this.constructor=t}for(var i in e)o(e,i)&&(t[i]=e[i]);return n.prototype=e.prototype,t.prototype=new n,t.__super__=e.prototype,t}var h,d,u,c,f;u=e("events",t).EventEmitter,h=e("/browser.coffee",t),f=function(t){function e(t){var e,n;this.running=!1,this.options={},this.frames=[],this.freeWorkers=[],this.activeWorkers=[],this.setOptions(t);for(e in d)n=d[e],null!=this.options[e]?this.options[e]:this.options[e]=n}return s(e,t),d={workerScript:"gif.worker.js",workers:2,repeat:0,background:"#fff",quality:10,width:null,height:null,transparent:null},c={delay:500,copy:!1},e.prototype.setOption=function(t,e){return this.options[t]=e,null==this._canvas||"width"!==t&&"height"!==t?void 0:this._canvas[t]=e},e.prototype.setOptions=function(t){var e,n;return function(i){for(e in t)o(t,e)&&(n=t[e],i.push(this.setOption(e,n)));return i}.call(this,[])},e.prototype.addFrame=function(t,e){var n,i;null==e&&(e={}),n={},n.transparent=this.options.transparent;for(i in c)n[i]=e[i]||c[i];if(null!=this.options.width||this.setOption("width",t.width),null!=this.options.height||this.setOption("height",t.height),"undefined"!=typeof ImageData&&null!=ImageData&&t instanceof ImageData)n.data=t.data;else if("undefined"!=typeof CanvasRenderingContext2D&&null!=CanvasRenderingContext2D&&t instanceof CanvasRenderingContext2D||"undefined"!=typeof WebGLRenderingContext&&null!=WebGLRenderingContext&&t instanceof WebGLRenderingContext)e.copy?n.data=this.getContextData(t):n.context=t;else{if(null==t.childNodes)throw new Error("Invalid image");e.copy?n.data=this.getImageData(t):n.image=t}return this.frames.push(n)},e.prototype.render=function(){var t,e;if(this.running)throw new Error("Already running");if(null==this.options.width||null==this.options.height)throw new Error("Width and height must be set prior to rendering");this.running=!0,this.nextFrame=0,this.finishedFrames=0,this.imageParts=function(e){for(var n=function(){var t;t=[];for(var e=0;0<=this.frames.length?e<this.frames.length:e>this.frames.length;0<=this.frames.length?++e:--e)t.push(e);return t}.apply(this,arguments),i=0,r=n.length;i<r;++i)t=n[i],e.push(null);return e}.call(this,[]),e=this.spawnWorkers();for(var n=function(){var t;t=[];for(var n=0;0<=e?n<e:n>e;0<=e?++n:--n)t.push(n);return t}.apply(this,arguments),i=0,r=n.length;i<r;++i)t=n[i],this.renderNextFrame();return this.emit("start"),this.emit("progress",0)},e.prototype.abort=function(){for(var t;;){if(t=this.activeWorkers.shift(),!(null!=t))break;console.log("killing active worker"),t.terminate()}return this.running=!1,this.emit("abort")},e.prototype.spawnWorkers=function(){var t;return t=Math.min(this.options.workers,this.frames.length),function(){var e;e=[];for(var n=this.freeWorkers.length;this.freeWorkers.length<=t?n<t:n>t;this.freeWorkers.length<=t?++n:--n)e.push(n);return e}.apply(this,arguments).forEach(function(t){return function(e){var n;return console.log("spawning worker "+e),n=new Worker(t.options.workerScript),n.onmessage=function(t){return function(e){return t.activeWorkers.splice(t.activeWorkers.indexOf(n),1),t.freeWorkers.push(n),t.frameFinished(e.data)}}(t),t.freeWorkers.push(n)}}(this)),t},e.prototype.frameFinished=function(t){return console.log("frame "+t.index+" finished - "+this.activeWorkers.length+" active"),this.finishedFrames++,this.emit("progress",this.finishedFrames/this.frames.length),this.imageParts[t.index]=t,a(null,this.imageParts)?this.renderNextFrame():this.finishRendering()},e.prototype.finishRendering=function(){var t,e,n,i,r,o,a;r=0;for(var s=0,h=this.imageParts.length;s<h;++s)e=this.imageParts[s],r+=(e.data.length-1)*e.pageSize+e.cursor;r+=e.pageSize-e.cursor,console.log("rendering finished - filesize "+Math.round(r/1e3)+"kb"),t=new Uint8Array(r),o=0;for(var d=0,u=this.imageParts.length;d<u;++d){e=this.imageParts[d];for(var c=0,f=e.data.length;c<f;++c)a=e.data[c],n=c,t.set(a,o),o+=n===e.data.length-1?e.cursor:e.pageSize}return i=new Blob([t],{type:"image/gif"}),this.emit("finished",i,t)},e.prototype.renderNextFrame=function(){var t,e,n;if(0===this.freeWorkers.length)throw new Error("No free workers");return this.nextFrame>=this.frames.length?void 0:(t=this.frames[this.nextFrame++],n=this.freeWorkers.shift(),e=this.getTask(t),console.log("starting frame "+(e.index+1)+" of "+this.frames.length),this.activeWorkers.push(n),n.postMessage(e))},e.prototype.getContextData=function(t){return t.getImageData(0,0,this.options.width,this.options.height).data},e.prototype.getImageData=function(t){var e;return null!=this._canvas||(this._canvas=document.createElement("canvas"),this._canvas.width=this.options.width,this._canvas.height=this.options.height),e=this._canvas.getContext("2d"),e.setFill=this.options.background,e.fillRect(0,0,this.options.width,this.options.height),e.drawImage(t,0,0),this.getContextData(e)},e.prototype.getTask=function(t){var e,n;if(e=this.frames.indexOf(t),n={index:e,last:e===this.frames.length-1,delay:t.delay,transparent:t.transparent,width:this.options.width,height:this.options.height,quality:this.options.quality,repeat:this.options.repeat,canTransfer:"chrome"===h.name},null!=t.data)n.data=t.data;else if(null!=t.context)n.data=this.getContextData(t.context);else{if(null==t.image)throw new Error("Invalid frame");n.data=this.getImageData(t.image)}return n},e}(u),t.exports=f}),e.define("/browser.coffee",function(t,e,n,i){var r,o,a,s,h;s=navigator.userAgent.toLowerCase(),a=navigator.platform.toLowerCase(),h=s.match(/(opera|ie|firefox|chrome|version)[\s\/:]([\w\d\.]+)?.*?(safari|version[\s\/:]([\w\d\.]+)|$)/)||[null,"unknown",0],o="ie"===h[1]&&document.documentMode,r={name:"version"===h[1]?h[3]:h[1],version:o||parseFloat("opera"===h[1]&&h[4]?h[4]:h[2]),platform:{name:s.match(/ip(?:ad|od|hone)/)?"ios":(s.match(/(?:webos|android)/)||a.match(/mac|win|linux/)||["other"])[0]}},r[r.name]=!0,r[r.name+parseInt(r.version,10)]=!0,r.platform[r.platform.name]=!0,t.exports=r}),e.define("events",function(t,e,i,r){n.EventEmitter||(n.EventEmitter=function(){});var o=e.EventEmitter=n.EventEmitter,a="function"==typeof Array.isArray?Array.isArray:function(t){return"[object Array]"===Object.prototype.toString.call(t)},s=10;o.prototype.setMaxListeners=function(t){this._events||(this._events={}),this._events.maxListeners=t},o.prototype.emit=function(t){if("error"===t&&(!this._events||!this._events.error||a(this._events.error)&&!this._events.error.length))throw arguments[1]instanceof Error?arguments[1]:new Error("Uncaught, unspecified 'error' event.");if(!this._events)return!1;var e=this._events[t];if(!e)return!1;if("function"!=typeof e){if(a(e)){for(var n=Array.prototype.slice.call(arguments,1),i=e.slice(),r=0,o=i.length;r<o;r++)i[r].apply(this,n);return!0}return!1}switch(arguments.length){case 1:e.call(this);break;case 2:e.call(this,arguments[1]);break;case 3:e.call(this,arguments[1],arguments[2]);break;default:var n=Array.prototype.slice.call(arguments,1);e.apply(this,n)}return!0},o.prototype.addListener=function(t,e){if("function"!=typeof e)throw new Error("addListener only takes instances of Function");if(this._events||(this._events={}),this.emit("newListener",t,e),this._events[t])if(a(this._events[t])){if(!this._events[t].warned){var n;n=void 0!==this._events.maxListeners?this._events.maxListeners:s,n&&n>0&&this._events[t].length>n&&(this._events[t].warned=!0,console.error("(node) warning: possible EventEmitter memory leak detected. %d listeners added. Use emitter.setMaxListeners() to increase limit.",this._events[t].length),console.trace())}this._events[t].push(e)}else this._events[t]=[this._events[t],e];else this._events[t]=e;return this},o.prototype.on=o.prototype.addListener,o.prototype.once=function(t,e){var n=this;return n.on(t,function i(){n.removeListener(t,i),e.apply(this,arguments)}),this},o.prototype.removeListener=function(t,e){if("function"!=typeof e)throw new Error("removeListener only takes instances of Function");if(!this._events||!this._events[t])return this;var n=this._events[t];if(a(n)){var i=n.indexOf(e);if(i<0)return this;n.splice(i,1),0==n.length&&delete this._events[t]}else this._events[t]===e&&delete this._events[t];return this},o.prototype.removeAllListeners=function(t){return t&&this._events&&this._events[t]&&(this._events[t]=null),this},o.prototype.listeners=function(t){return this._events||(this._events={}),this._events[t]||(this._events[t]=[]),a(this._events[t])||(this._events[t]=[this._events[t]]),this._events[t]}}),t.GIF=e("/gif.coffee")}.call(this,this),function(){"use strict";function t(t){return t&&t.Object===Object?t:null}function e(t){return String("0000000"+t).slice(-7)}function n(){function t(){return Math.floor(65536*(1+Math.random())).toString(16).substring(1)}return t()+t()+"-"+t()+"-"+t()+"-"+t()+"-"+t()+t()+t()}function i(t){var e={};this.settings=t,this.on=function(t,n){e[t]=n},this.emit=function(t){var n=e[t];n&&n.apply(null,Array.prototype.slice.call(arguments,1))},this.filename=t.name||n(),this.extension="",this.mimeType=""}function r(t){i.call(this,t),this.extension=".tar",this.mimeType="application/x-tar",this.fileExtension="",this.tape=null,this.count=0}function o(t){r.call(this,t),this.type="image/png",this.fileExtension=".png"}function a(t){r.call(this,t),this.type="image/jpeg",this.fileExtension=".jpg",this.quality=t.quality/100||.8}function s(t){var e=document.createElement("canvas");"image/webp"!==e.toDataURL("image/webp").substr(5,10)&&console.log("WebP not supported - try another export format"),i.call(this,t),t.quality=t.quality/100||.8,this.extension=".webm",this.mimeType="video/webm",this.baseFilename=this.filename,this.frames=[],this.part=1}function h(t){i.call(this,t),t.quality=t.quality/100||.8,this.encoder=new FFMpegServer.Video(t),this.encoder.on("process",function(){this.emit("process")}.bind(this)),this.encoder.on("finished",function(t,e){var n=this.callback;n&&(this.callback=void 0,n(t,e))}.bind(this)),this.encoder.on("progress",function(t){this.settings.onProgress&&this.settings.onProgress(t)}.bind(this)),this.encoder.on("error",function(t){alert(JSON.stringify(t,null,2))}.bind(this))}function d(t){i.call(this,t),this.framerate=this.settings.framerate,this.type="video/webm",this.extension=".webm",this.stream=null,this.mediaRecorder=null,this.chunks=[]}function u(t){i.call(this,t),t.quality=31-(30*t.quality/100||10),t.workers=t.workers||4,this.extension=".gif",this.mimeType="image/gif",this.canvas=document.createElement("canvas"),this.ctx=this.canvas.getContext("2d"),this.sizeSet=!1,this.encoder=new GIF({workers:t.workers,quality:t.quality,workerScript:t.workersPath+"gif.worker.js"}),this.encoder.on("progress",function(t){this.settings.onProgress&&this.settings.onProgress(t)}.bind(this)),this.encoder.on("finished",function(t){var e=this.callback;e&&(this.callback=void 0,e(t))}.bind(this))}function c(t){function e(){function t(){return this._hooked||(this._hooked=!0,this._hookedTime=this.currentTime||0,this.pause(),et.push(this)),this._hookedTime+S.startTime}b("Capturer start"),A=window.Date.now(),L=A+S.startTime,D=window.performance.now(),E=D+S.startTime,window.Date.prototype.getTime=function(){return L},window.Date.now=function(){return L},window.setTimeout=function(t,e){var n={callback:t,time:e,triggerTime:L+e};return B.push(n),b("Timeout set to "+n.time),n},window.clearTimeout=function(t){for(var e=0;e<B.length;e++)B[e]!=t||(B.splice(e,1),b("Timeout cleared"))},window.setInterval=function(t,e){var n={callback:t,time:e,triggerTime:L+e};return j.push(n),b("Interval set to "+n.time),n},window.clearInterval=function(t){return b("clear Interval"),null},window.requestAnimationFrame=function(t){U.push(t)},window.performance.now=function(){return E};try{Object.defineProperty(HTMLVideoElement.prototype,"currentTime",{get:t}),Object.defineProperty(HTMLAudioElement.prototype,"currentTime",{get:t})}catch(t){b(t)}}function n(){e(),I.start(),M=!0}function i(){M=!1,I.stop(),f()}function r(t,e){Z(t,0,e)}function c(){r(v)}function f(){b("Capturer stop"),window.setTimeout=Z,window.setInterval=J,window.clearTimeout=Y,window.requestAnimationFrame=$,window.Date.prototype.getTime=tt,window.Date.now=Q,window.performance.now=X}function l(){var t=R/S.framerate;(S.frameLimit&&R>=S.frameLimit||S.timeLimit&&t>=S.timeLimit)&&(i(),y());var e=new Date(null);e.setSeconds(t),S.motionBlurFrames>2?P.textContent="CCapture "+S.format+" | "+R+" frames ("+O+" inter) | "+e.toISOString().substr(11,8):P.textContent="CCapture "+S.format+" | "+R+" frames | "+e.toISOString().substr(11,8)}function p(t){N.width===t.width&&N.height===t.height||(N.width=t.width,N.height=t.height,q=new Uint16Array(N.height*N.width*4),V.fillStyle="#0",V.fillRect(0,0,N.width,N.height))}function m(t){V.drawImage(t,0,0),z=V.getImageData(0,0,N.width,N.height);for(var e=0;e<q.length;e+=4)q[e]+=z.data[e],q[e+1]+=z.data[e+1],q[e+2]+=z.data[e+2];O++}function g(){for(var t=z.data,e=0;e<q.length;e+=4)t[e]=2*q[e]/S.motionBlurFrames,t[e+1]=2*q[e+1]/S.motionBlurFrames,t[e+2]=2*q[e+2]/S.motionBlurFrames;V.putImageData(z,0,0),I.add(N),R++,O=0,b("Full MB Frame! "+R+" "+L);for(var e=0;e<q.length;e+=4)q[e]=0,q[e+1]=0,q[e+2]=0;gc()}function w(t){M&&(S.motionBlurFrames>2?(p(t),m(t),O>=.5*S.motionBlurFrames?g():c()):(I.add(t),R++,b("Full Frame! "+R)))}function v(){var t=1e3/S.framerate,e=(R+O/S.motionBlurFrames)*t;L=A+e,E=D+e,et.forEach(function(t){t._hookedTime=e/1e3}),l(),b("Frame: "+R+" "+O);for(var n=0;n<B.length;n++)L>=B[n].triggerTime&&(r(B[n].callback),B.splice(n,1));for(var n=0;n<j.length;n++)L>=j[n].triggerTime&&(r(j[n].callback),j[n].triggerTime+=j[n].time);U.forEach(function(t){r(t,L-k)}),U=[]}function y(t){t||(t=function(t){return download(t,I.filename+I.extension,I.mimeType),!1}),I.save(t)}function b(t){_&&console.log(t)}function x(t,e){W[t]=e}function T(t){var e=W[t];e&&e.apply(null,Array.prototype.slice.call(arguments,1))}function C(t){T("progress",t)}var _,F,L,A,E,D,c,I,S=t||{},B=(new Date,[]),j=[],R=0,O=0,U=[],M=!1,W={};S.framerate=S.framerate||60,S.motionBlurFrames=2*(S.motionBlurFrames||1),_=S.verbose||!1,F=S.display||!1,S.step=1e3/S.framerate,S.timeLimit=S.timeLimit||0,S.frameLimit=S.frameLimit||0,S.startTime=S.startTime||0;var P=document.createElement("div");P.style.position="absolute",P.style.left=P.style.top=0,P.style.backgroundColor="black",P.style.fontFamily="monospace",P.style.fontSize="11px",P.style.padding="5px",P.style.color="red",P.style.zIndex=1e5,S.display&&document.body.appendChild(P);var q,z,N=document.createElement("canvas"),V=N.getContext("2d");b("Step is set to "+S.step+"ms");var H={gif:u,webm:s,ffmpegserver:h,png:o,jpg:a,"webm-mediarecorder":d},G=H[S.format];if(!G)throw"Error: Incorrect or missing format: Valid formats are "+Object.keys(H).join(", ");if(I=new G(S),I.step=c,I.on("process",v),I.on("progress",C),"performance"in window==0&&(window.performance={}),Date.now=Date.now||function(){return(new Date).getTime()},"now"in window.performance==0){var K=Date.now();performance.timing&&performance.timing.navigationStart&&(K=performance.timing.navigationStart),window.performance.now=function(){return Date.now()-K}}var Z=window.setTimeout,J=window.setInterval,Y=window.clearTimeout,$=window.requestAnimationFrame,Q=window.Date.now,X=window.performance.now,tt=window.Date.prototype.getTime,et=[];return{start:n,capture:w,stop:i,save:y,on:x}}var f={function:!0,object:!0},l=(parseFloat,parseInt,f[typeof exports]&&exports&&!exports.nodeType?exports:void 0),p=f[typeof module]&&module&&!module.nodeType?module:void 0,m=p&&p.exports===l?l:void 0,g=t(l&&p&&"object"==typeof global&&global),w=t(f[typeof self]&&self),v=t(f[typeof window]&&window),y=t(f[typeof this]&&this),b=g||v!==(y&&y.window)&&v||w||y||Function("return this")();"gc"in window||(window.gc=function(){}),HTMLCanvasElement.prototype.toBlob||Object.defineProperty(HTMLCanvasElement.prototype,"toBlob",{value:function(t,e,n){for(var i=atob(this.toDataURL(e,n).split(",")[1]),r=i.length,o=new Uint8Array(r),a=0;a<r;a++)o[a]=i.charCodeAt(a);t(new Blob([o],{type:e||"image/png"}))}}),function(){if("performance"in window==0&&(window.performance={}),Date.now=Date.now||function(){return(new Date).getTime()},"now"in window.performance==0){var t=Date.now();performance.timing&&performance.timing.navigationStart&&(t=performance.timing.navigationStart),window.performance.now=function(){return Date.now()-t}}}();var k=window.Date.now();i.prototype.start=function(){},i.prototype.stop=function(){},i.prototype.add=function(){},i.prototype.save=function(){},i.prototype.dispose=function(){},i.prototype.safeToProceed=function(){return!0},i.prototype.step=function(){console.log("Step not set!")},r.prototype=Object.create(i.prototype),r.prototype.start=function(){this.dispose()},r.prototype.add=function(t){var n=new FileReader;n.onload=function(){this.tape.append(e(this.count)+this.fileExtension,new Uint8Array(n.result)),this.count++,this.step()}.bind(this),n.readAsArrayBuffer(t)},r.prototype.save=function(t){t(this.tape.save())},r.prototype.dispose=function(){this.tape=new Tar,this.count=0},o.prototype=Object.create(r.prototype),o.prototype.add=function(t){t.toBlob(function(t){r.prototype.add.call(this,t)}.bind(this),this.type)},a.prototype=Object.create(r.prototype),a.prototype.add=function(t){t.toBlob(function(t){r.prototype.add.call(this,t)}.bind(this),this.type,this.quality)},s.prototype=Object.create(i.prototype),s.prototype.start=function(t){this.dispose()},s.prototype.add=function(t){this.frames.push(t.toDataURL("image/webp",this.quality)),this.settings.autoSaveTime>0&&this.frames.length/this.settings.framerate>=this.settings.autoSaveTime?this.save(function(t){this.filename=this.baseFilename+"-part-"+e(this.part),download(t,this.filename+this.extension,this.mimeType),this.dispose(),this.part++,this.filename=this.baseFilename+"-part-"+e(this.part),this.step()}.bind(this)):this.step()},s.prototype.save=function(t){if(this.frames.length){var e=Whammy.fromImageArray(this.frames,this.settings.framerate),n=new Blob([e],{type:"octet/stream"});t(n)}},s.prototype.dispose=function(t){this.frames=[]},h.prototype=Object.create(i.prototype),h.prototype.start=function(){this.encoder.start(this.settings)},h.prototype.add=function(t){this.encoder.add(t)},h.prototype.save=function(t){this.callback=t,this.encoder.end()},h.prototype.safeToProceed=function(){return this.encoder.safeToProceed()},d.prototype=Object.create(i.prototype),d.prototype.add=function(t){this.stream||(this.stream=t.captureStream(this.framerate),this.mediaRecorder=new MediaRecorder(this.stream),this.mediaRecorder.start(),this.mediaRecorder.ondataavailable=function(t){this.chunks.push(t.data)}.bind(this)),this.step()},d.prototype.save=function(t){this.mediaRecorder.onstop=function(e){var n=new Blob(this.chunks,{type:"video/webm"});this.chunks=[],t(n)}.bind(this),this.mediaRecorder.stop()},u.prototype=Object.create(i.prototype),u.prototype.add=function(t){this.sizeSet||(this.encoder.setOption("width",t.width),this.encoder.setOption("height",t.height),this.sizeSet=!0),this.canvas.width=t.width,this.canvas.height=t.height,this.ctx.drawImage(t,0,0),this.encoder.addFrame(this.ctx,{copy:!0,delay:this.settings.step}),this.step()},u.prototype.save=function(t){this.callback=t,this.encoder.render()},(v||w||{}).CCapture=c,"function"==typeof define&&"object"==typeof define.amd&&define.amd?define(function(){return c}):l&&p?(m&&((p.exports=c).CCapture=c),l.CCapture=c):b.CCapture=c}();
+//download.js v4.2, by dandavis; 2008-2017. [MIT] see http://danml.com/download.html for tests/usage
+;(function(r,l){"function"==typeof define&&define.amd?define([],l):"object"==typeof exports?module.exports=l():r.download=l()})(this,function(){return function l(a,e,k){function q(a){var h=a.split(/[:;,]/);a=h[1];var h=("base64"==h[2]?atob:decodeURIComponent)(h.pop()),d=h.length,b=0,c=new Uint8Array(d);for(b;b<d;++b)c[b]=h.charCodeAt(b);return new f([c],{type:a})}function m(a,b){if("download"in d)return d.href=a,d.setAttribute("download",n),d.className="download-js-link",d.innerHTML="downloading...",d.style.display="none",document.body.appendChild(d),setTimeout(function(){d.click(),document.body.removeChild(d),!0===b&&setTimeout(function(){g.URL.revokeObjectURL(d.href)},250)},66),!0;if(/(Version)\/(\d+)\.(\d+)(?:\.(\d+))?.*Safari\//.test(navigator.userAgent))return/^data:/.test(a)&&(a="data:"+a.replace(/^data:([\w\/\-\+]+)/,"application/octet-stream")),!window.open(a)&&confirm("Displaying New Document\n\nUse Save As... to download, then click back to return to this page.")&&(location.href=a),!0;var c=document.createElement("iframe");document.body.appendChild(c),!b&&/^data:/.test(a)&&(a="data:"+a.replace(/^data:([\w\/\-\+]+)/,"application/octet-stream")),c.src=a,setTimeout(function(){document.body.removeChild(c)},333)}var g=window,b=k||"application/octet-stream",c=!e&&!k&&a,d=document.createElement("a");k=function(a){return String(a)};var f=g.Blob||g.MozBlob||g.WebKitBlob||k,n=e||"download",f=f.call?f.bind(g):Blob;"true"===String(this)&&(a=[a,b],b=a[0],a=a[1]);if(c&&2048>c.length&&(n=c.split("/").pop().split("?")[0],d.href=c,-1!==d.href.indexOf(c))){var p=new XMLHttpRequest;return p.open("GET",c,!0),p.responseType="blob",p.onload=function(a){l(a.target.response,n,"application/octet-stream")},setTimeout(function(){p.send()},0),p}if(/^data:([\w+-]+\/[\w+.-]+)?[,;]/.test(a)){if(!(2096103.424<a.length&&f!==k))return navigator.msSaveBlob?navigator.msSaveBlob(q(a),n):m(a);a=q(a),b=a.type||"application/octet-stream"}else if(/([\x80-\xff])/.test(a)){e=0;var c=new Uint8Array(a.length),t=c.length;for(e;e<t;++e)c[e]=a.charCodeAt(e);a=new f([c],{type:b})}a=a instanceof f?a:new f([a],{type:b});if(navigator.msSaveBlob)return navigator.msSaveBlob(a,n);if(g.URL)m(g.URL.createObjectURL(a),!0);else{if("string"==typeof a||a.constructor===k)try{return m("data:"+b+";base64,"+g.btoa(a))}catch(h){return m("data:"+b+","+encodeURIComponent(a))}b=new FileReader,b.onload=function(a){m(this.result)},b.readAsDataURL(a)}return!0}});
+
+// gif.js 0.2.0 - https://github.com/jnordberg/gif.js
+(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.GIF=f()}})(function(){var define,module,exports;return function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s}({1:[function(require,module,exports){function EventEmitter(){this._events=this._events||{};this._maxListeners=this._maxListeners||undefined}module.exports=EventEmitter;EventEmitter.EventEmitter=EventEmitter;EventEmitter.prototype._events=undefined;EventEmitter.prototype._maxListeners=undefined;EventEmitter.defaultMaxListeners=10;EventEmitter.prototype.setMaxListeners=function(n){if(!isNumber(n)||n<0||isNaN(n))throw TypeError("n must be a positive number");this._maxListeners=n;return this};EventEmitter.prototype.emit=function(type){var er,handler,len,args,i,listeners;if(!this._events)this._events={};if(type==="error"){if(!this._events.error||isObject(this._events.error)&&!this._events.error.length){er=arguments[1];if(er instanceof Error){throw er}else{var err=new Error('Uncaught, unspecified "error" event. ('+er+")");err.context=er;throw err}}}handler=this._events[type];if(isUndefined(handler))return false;if(isFunction(handler)){switch(arguments.length){case 1:handler.call(this);break;case 2:handler.call(this,arguments[1]);break;case 3:handler.call(this,arguments[1],arguments[2]);break;default:args=Array.prototype.slice.call(arguments,1);handler.apply(this,args)}}else if(isObject(handler)){args=Array.prototype.slice.call(arguments,1);listeners=handler.slice();len=listeners.length;for(i=0;i<len;i++)listeners[i].apply(this,args)}return true};EventEmitter.prototype.addListener=function(type,listener){var m;if(!isFunction(listener))throw TypeError("listener must be a function");if(!this._events)this._events={};if(this._events.newListener)this.emit("newListener",type,isFunction(listener.listener)?listener.listener:listener);if(!this._events[type])this._events[type]=listener;else if(isObject(this._events[type]))this._events[type].push(listener);else this._events[type]=[this._events[type],listener];if(isObject(this._events[type])&&!this._events[type].warned){if(!isUndefined(this._maxListeners)){m=this._maxListeners}else{m=EventEmitter.defaultMaxListeners}if(m&&m>0&&this._events[type].length>m){this._events[type].warned=true;console.error("(node) warning: possible EventEmitter memory "+"leak detected. %d listeners added. "+"Use emitter.setMaxListeners() to increase limit.",this._events[type].length);if(typeof console.trace==="function"){console.trace()}}}return this};EventEmitter.prototype.on=EventEmitter.prototype.addListener;EventEmitter.prototype.once=function(type,listener){if(!isFunction(listener))throw TypeError("listener must be a function");var fired=false;function g(){this.removeListener(type,g);if(!fired){fired=true;listener.apply(this,arguments)}}g.listener=listener;this.on(type,g);return this};EventEmitter.prototype.removeListener=function(type,listener){var list,position,length,i;if(!isFunction(listener))throw TypeError("listener must be a function");if(!this._events||!this._events[type])return this;list=this._events[type];length=list.length;position=-1;if(list===listener||isFunction(list.listener)&&list.listener===listener){delete this._events[type];if(this._events.removeListener)this.emit("removeListener",type,listener)}else if(isObject(list)){for(i=length;i-- >0;){if(list[i]===listener||list[i].listener&&list[i].listener===listener){position=i;break}}if(position<0)return this;if(list.length===1){list.length=0;delete this._events[type]}else{list.splice(position,1)}if(this._events.removeListener)this.emit("removeListener",type,listener)}return this};EventEmitter.prototype.removeAllListeners=function(type){var key,listeners;if(!this._events)return this;if(!this._events.removeListener){if(arguments.length===0)this._events={};else if(this._events[type])delete this._events[type];return this}if(arguments.length===0){for(key in this._events){if(key==="removeListener")continue;this.removeAllListeners(key)}this.removeAllListeners("removeListener");this._events={};return this}listeners=this._events[type];if(isFunction(listeners)){this.removeListener(type,listeners)}else if(listeners){while(listeners.length)this.removeListener(type,listeners[listeners.length-1])}delete this._events[type];return this};EventEmitter.prototype.listeners=function(type){var ret;if(!this._events||!this._events[type])ret=[];else if(isFunction(this._events[type]))ret=[this._events[type]];else ret=this._events[type].slice();return ret};EventEmitter.prototype.listenerCount=function(type){if(this._events){var evlistener=this._events[type];if(isFunction(evlistener))return 1;else if(evlistener)return evlistener.length}return 0};EventEmitter.listenerCount=function(emitter,type){return emitter.listenerCount(type)};function isFunction(arg){return typeof arg==="function"}function isNumber(arg){return typeof arg==="number"}function isObject(arg){return typeof arg==="object"&&arg!==null}function isUndefined(arg){return arg===void 0}},{}],2:[function(require,module,exports){var UA,browser,mode,platform,ua;ua=navigator.userAgent.toLowerCase();platform=navigator.platform.toLowerCase();UA=ua.match(/(opera|ie|firefox|chrome|version)[\s\/:]([\w\d\.]+)?.*?(safari|version[\s\/:]([\w\d\.]+)|$)/)||[null,"unknown",0];mode=UA[1]==="ie"&&document.documentMode;browser={name:UA[1]==="version"?UA[3]:UA[1],version:mode||parseFloat(UA[1]==="opera"&&UA[4]?UA[4]:UA[2]),platform:{name:ua.match(/ip(?:ad|od|hone)/)?"ios":(ua.match(/(?:webos|android)/)||platform.match(/mac|win|linux/)||["other"])[0]}};browser[browser.name]=true;browser[browser.name+parseInt(browser.version,10)]=true;browser.platform[browser.platform.name]=true;module.exports=browser},{}],3:[function(require,module,exports){var EventEmitter,GIF,browser,extend=function(child,parent){for(var key in parent){if(hasProp.call(parent,key))child[key]=parent[key]}function ctor(){this.constructor=child}ctor.prototype=parent.prototype;child.prototype=new ctor;child.__super__=parent.prototype;return child},hasProp={}.hasOwnProperty,indexOf=[].indexOf||function(item){for(var i=0,l=this.length;i<l;i++){if(i in this&&this[i]===item)return i}return-1},slice=[].slice;EventEmitter=require("events").EventEmitter;browser=require("./browser.coffee");GIF=function(superClass){var defaults,frameDefaults;extend(GIF,superClass);defaults={workerScript:"gif.worker.js",workers:2,repeat:0,background:"#fff",quality:10,width:null,height:null,transparent:null,debug:false,dither:false};frameDefaults={delay:500,copy:false};function GIF(options){var base,key,value;this.running=false;this.options={};this.frames=[];this.freeWorkers=[];this.activeWorkers=[];this.setOptions(options);for(key in defaults){value=defaults[key];if((base=this.options)[key]==null){base[key]=value}}}GIF.prototype.setOption=function(key,value){this.options[key]=value;if(this._canvas!=null&&(key==="width"||key==="height")){return this._canvas[key]=value}};GIF.prototype.setOptions=function(options){var key,results,value;results=[];for(key in options){if(!hasProp.call(options,key))continue;value=options[key];results.push(this.setOption(key,value))}return results};GIF.prototype.addFrame=function(image,options){var frame,key;if(options==null){options={}}frame={};frame.transparent=this.options.transparent;for(key in frameDefaults){frame[key]=options[key]||frameDefaults[key]}if(this.options.width==null){this.setOption("width",image.width)}if(this.options.height==null){this.setOption("height",image.height)}if(typeof ImageData!=="undefined"&&ImageData!==null&&image instanceof ImageData){frame.data=image.data}else if(typeof CanvasRenderingContext2D!=="undefined"&&CanvasRenderingContext2D!==null&&image instanceof CanvasRenderingContext2D||typeof WebGLRenderingContext!=="undefined"&&WebGLRenderingContext!==null&&image instanceof WebGLRenderingContext){if(options.copy){frame.data=this.getContextData(image)}else{frame.context=image}}else if(image.childNodes!=null){if(options.copy){frame.data=this.getImageData(image)}else{frame.image=image}}else{throw new Error("Invalid image")}return this.frames.push(frame)};GIF.prototype.render=function(){var i,j,numWorkers,ref;if(this.running){throw new Error("Already running")}if(this.options.width==null||this.options.height==null){throw new Error("Width and height must be set prior to rendering")}this.running=true;this.nextFrame=0;this.finishedFrames=0;this.imageParts=function(){var j,ref,results;results=[];for(i=j=0,ref=this.frames.length;0<=ref?j<ref:j>ref;i=0<=ref?++j:--j){results.push(null)}return results}.call(this);numWorkers=this.spawnWorkers();if(this.options.globalPalette===true){this.renderNextFrame()}else{for(i=j=0,ref=numWorkers;0<=ref?j<ref:j>ref;i=0<=ref?++j:--j){this.renderNextFrame()}}this.emit("start");return this.emit("progress",0)};GIF.prototype.abort=function(){var worker;while(true){worker=this.activeWorkers.shift();if(worker==null){break}this.log("killing active worker");worker.terminate()}this.running=false;return this.emit("abort")};GIF.prototype.spawnWorkers=function(){var j,numWorkers,ref,results;numWorkers=Math.min(this.options.workers,this.frames.length);(function(){results=[];for(var j=ref=this.freeWorkers.length;ref<=numWorkers?j<numWorkers:j>numWorkers;ref<=numWorkers?j++:j--){results.push(j)}return results}).apply(this).forEach(function(_this){return function(i){var worker;_this.log("spawning worker "+i);worker=new Worker(_this.options.workerScript);worker.onmessage=function(event){_this.activeWorkers.splice(_this.activeWorkers.indexOf(worker),1);_this.freeWorkers.push(worker);return _this.frameFinished(event.data)};return _this.freeWorkers.push(worker)}}(this));return numWorkers};GIF.prototype.frameFinished=function(frame){var i,j,ref;this.log("frame "+frame.index+" finished - "+this.activeWorkers.length+" active");this.finishedFrames++;this.emit("progress",this.finishedFrames/this.frames.length);this.imageParts[frame.index]=frame;if(this.options.globalPalette===true){this.options.globalPalette=frame.globalPalette;this.log("global palette analyzed");if(this.frames.length>2){for(i=j=1,ref=this.freeWorkers.length;1<=ref?j<ref:j>ref;i=1<=ref?++j:--j){this.renderNextFrame()}}}if(indexOf.call(this.imageParts,null)>=0){return this.renderNextFrame()}else{return this.finishRendering()}};GIF.prototype.finishRendering=function(){var data,frame,i,image,j,k,l,len,len1,len2,len3,offset,page,ref,ref1,ref2;len=0;ref=this.imageParts;for(j=0,len1=ref.length;j<len1;j++){frame=ref[j];len+=(frame.data.length-1)*frame.pageSize+frame.cursor}len+=frame.pageSize-frame.cursor;this.log("rendering finished - filesize "+Math.round(len/1e3)+"kb");data=new Uint8Array(len);offset=0;ref1=this.imageParts;for(k=0,len2=ref1.length;k<len2;k++){frame=ref1[k];ref2=frame.data;for(i=l=0,len3=ref2.length;l<len3;i=++l){page=ref2[i];data.set(page,offset);if(i===frame.data.length-1){offset+=frame.cursor}else{offset+=frame.pageSize}}}image=new Blob([data],{type:"image/gif"});return this.emit("finished",image,data)};GIF.prototype.renderNextFrame=function(){var frame,task,worker;if(this.freeWorkers.length===0){throw new Error("No free workers")}if(this.nextFrame>=this.frames.length){return}frame=this.frames[this.nextFrame++];worker=this.freeWorkers.shift();task=this.getTask(frame);this.log("starting frame "+(task.index+1)+" of "+this.frames.length);this.activeWorkers.push(worker);return worker.postMessage(task)};GIF.prototype.getContextData=function(ctx){return ctx.getImageData(0,0,this.options.width,this.options.height).data};GIF.prototype.getImageData=function(image){var ctx;if(this._canvas==null){this._canvas=document.createElement("canvas");this._canvas.width=this.options.width;this._canvas.height=this.options.height}ctx=this._canvas.getContext("2d");ctx.setFill=this.options.background;ctx.fillRect(0,0,this.options.width,this.options.height);ctx.drawImage(image,0,0);return this.getContextData(ctx)};GIF.prototype.getTask=function(frame){var index,task;index=this.frames.indexOf(frame);task={index:index,last:index===this.frames.length-1,delay:frame.delay,transparent:frame.transparent,width:this.options.width,height:this.options.height,quality:this.options.quality,dither:this.options.dither,globalPalette:this.options.globalPalette,repeat:this.options.repeat,canTransfer:browser.name==="chrome"};if(frame.data!=null){task.data=frame.data}else if(frame.context!=null){task.data=this.getContextData(frame.context)}else if(frame.image!=null){task.data=this.getImageData(frame.image)}else{throw new Error("Invalid frame")}return task};GIF.prototype.log=function(){var args;args=1<=arguments.length?slice.call(arguments,0):[];if(!this.options.debug){return}return console.log.apply(console,args)};return GIF}(EventEmitter);module.exports=GIF},{"./browser.coffee":2,events:1}]},{},[3])(3)});
+//# sourceMappingURL=gif.js.map
+
 /** @license
  * eventsource.js
  * Available under MIT License (MIT)
@@ -6848,6 +6854,1264 @@ L.areaSelect = function (options) {
 };
 
 
+;(function () {
+
+	"use strict";
+
+	var objectTypes = {
+		'function': true,
+		'object': true
+	};
+
+	function checkGlobal(value) {
+		return value && value.Object === Object ? value : null;
+	}
+
+	/** Built-in method references without a dependency on `root`. */
+	var freeParseFloat = parseFloat,
+	    freeParseInt = parseInt;
+
+	/** Detect free variable `exports`. */
+	var freeExports = objectTypes[typeof exports] && exports && !exports.nodeType ? exports : undefined;
+
+	/** Detect free variable `module`. */
+	var freeModule = objectTypes[typeof module] && module && !module.nodeType ? module : undefined;
+
+	/** Detect the popular CommonJS extension `module.exports`. */
+	var moduleExports = freeModule && freeModule.exports === freeExports ? freeExports : undefined;
+
+	/** Detect free variable `global` from Node.js. */
+	var freeGlobal = checkGlobal(freeExports && freeModule && typeof global == 'object' && global);
+
+	/** Detect free variable `self`. */
+	var freeSelf = checkGlobal(objectTypes[typeof self] && self);
+
+	/** Detect free variable `window`. */
+	var freeWindow = checkGlobal(objectTypes[typeof window] && window);
+
+	/** Detect `this` as the global object. */
+	var thisGlobal = checkGlobal(objectTypes[typeof this] && this);
+
+	/**
+ * Used as a reference to the global object.
+ *
+ * The `this` value is used if it's the global object to avoid Greasemonkey's
+ * restricted `window` object, otherwise the `window` object is used.
+ */
+	var root = freeGlobal || freeWindow !== (thisGlobal && thisGlobal.window) && freeWindow || freeSelf || thisGlobal || Function('return this')();
+
+	if (!('gc' in window)) {
+		window.gc = function () {};
+	}
+
+	if (!HTMLCanvasElement.prototype.toBlob) {
+		Object.defineProperty(HTMLCanvasElement.prototype, 'toBlob', {
+			value: function (callback, type, quality) {
+
+				var binStr = atob(this.toDataURL(type, quality).split(',')[1]),
+				    len = binStr.length,
+				    arr = new Uint8Array(len);
+
+				for (var i = 0; i < len; i++) {
+					arr[i] = binStr.charCodeAt(i);
+				}
+
+				callback(new Blob([arr], { type: type || 'image/png' }));
+			}
+		});
+	}
+
+	// @license http://opensource.org/licenses/MIT
+	// copyright Paul Irish 2015
+
+
+	// Date.now() is supported everywhere except IE8. For IE8 we use the Date.now polyfill
+	//   github.com/Financial-Times/polyfill-service/blob/master/polyfills/Date.now/polyfill.js
+	// as Safari 6 doesn't have support for NavigationTiming, we use a Date.now() timestamp for relative values
+
+	// if you want values similar to what you'd get with real perf.now, place this towards the head of the page
+	// but in reality, you're just getting the delta between now() calls, so it's not terribly important where it's placed
+
+
+	(function () {
+
+		if ("performance" in window == false) {
+			window.performance = {};
+		}
+
+		Date.now = Date.now || function () {
+			// thanks IE8
+			return new Date().getTime();
+		};
+
+		if ("now" in window.performance == false) {
+
+			var nowOffset = Date.now();
+
+			if (performance.timing && performance.timing.navigationStart) {
+				nowOffset = performance.timing.navigationStart;
+			}
+
+			window.performance.now = function now() {
+				return Date.now() - nowOffset;
+			};
+		}
+	})();
+
+	function pad(n) {
+		return String("0000000" + n).slice(-7);
+	}
+	// https://developer.mozilla.org/en-US/Add-ons/Code_snippets/Timers
+
+	var g_startTime = window.Date.now();
+
+	function guid() {
+		function s4() {
+			return Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1);
+		}
+		return s4() + s4() + '-' + s4() + '-' + s4() + '-' + s4() + '-' + s4() + s4() + s4();
+	}
+
+	function CCFrameEncoder(settings) {
+
+		var _handlers = {};
+
+		this.settings = settings;
+
+		this.on = function (event, handler) {
+
+			_handlers[event] = handler;
+		};
+
+		this.emit = function (event) {
+
+			var handler = _handlers[event];
+			if (handler) {
+
+				handler.apply(null, Array.prototype.slice.call(arguments, 1));
+			}
+		};
+
+		this.filename = settings.name || guid();
+		this.extension = '';
+		this.mimeType = '';
+	}
+
+	CCFrameEncoder.prototype.start = function () {};
+	CCFrameEncoder.prototype.stop = function () {};
+	CCFrameEncoder.prototype.add = function () {};
+	CCFrameEncoder.prototype.save = function () {};
+	CCFrameEncoder.prototype.dispose = function () {};
+	CCFrameEncoder.prototype.safeToProceed = function () {
+		return true;
+	};
+	CCFrameEncoder.prototype.step = function () {
+		console.log('Step not set!');
+	};
+
+	function CCTarEncoder(settings) {
+
+		CCFrameEncoder.call(this, settings);
+
+		this.extension = '.tar';
+		this.mimeType = 'application/x-tar';
+		this.fileExtension = '';
+
+		this.tape = null;
+		this.count = 0;
+	}
+
+	CCTarEncoder.prototype = Object.create(CCFrameEncoder.prototype);
+
+	CCTarEncoder.prototype.start = function () {
+
+		this.dispose();
+	};
+
+	CCTarEncoder.prototype.add = function (blob) {
+
+		var fileReader = new FileReader();
+		fileReader.onload = function () {
+			this.tape.append(pad(this.count) + this.fileExtension, new Uint8Array(fileReader.result));
+
+			//if( this.settings.autoSaveTime > 0 && ( this.frames.length / this.settings.framerate ) >= this.settings.autoSaveTime ) {
+
+			this.count++;
+			this.step();
+		}.bind(this);
+		fileReader.readAsArrayBuffer(blob);
+	};
+
+	CCTarEncoder.prototype.save = function (callback) {
+
+		callback(this.tape.save());
+	};
+
+	CCTarEncoder.prototype.dispose = function () {
+
+		this.tape = new Tar();
+		this.count = 0;
+	};
+
+	function CCPNGEncoder(settings) {
+
+		CCTarEncoder.call(this, settings);
+
+		this.type = 'image/png';
+		this.fileExtension = '.png';
+	}
+
+	CCPNGEncoder.prototype = Object.create(CCTarEncoder.prototype);
+
+	CCPNGEncoder.prototype.add = function (canvas) {
+
+		canvas.toBlob(function (blob) {
+			CCTarEncoder.prototype.add.call(this, blob);
+		}.bind(this), this.type);
+	};
+
+	function CCJPEGEncoder(settings) {
+
+		CCTarEncoder.call(this, settings);
+
+		this.type = 'image/jpeg';
+		this.fileExtension = '.jpg';
+		this.quality = settings.quality / 100 || .8;
+	}
+
+	CCJPEGEncoder.prototype = Object.create(CCTarEncoder.prototype);
+
+	CCJPEGEncoder.prototype.add = function (canvas) {
+
+		canvas.toBlob(function (blob) {
+			CCTarEncoder.prototype.add.call(this, blob);
+		}.bind(this), this.type, this.quality);
+	};
+
+	/*
+ 
+ 	WebM Encoder
+ 
+ */
+
+	function CCWebMEncoder(settings) {
+
+		var canvas = document.createElement('canvas');
+		if (canvas.toDataURL('image/webp').substr(5, 10) !== 'image/webp') {
+			console.log("WebP not supported - try another export format");
+		}
+
+		CCFrameEncoder.call(this, settings);
+
+		settings.quality = settings.quality / 100 || .8;
+
+		this.extension = '.webm';
+		this.mimeType = 'video/webm';
+		this.baseFilename = this.filename;
+
+		this.frames = [];
+		this.part = 1;
+	}
+
+	CCWebMEncoder.prototype = Object.create(CCFrameEncoder.prototype);
+
+	CCWebMEncoder.prototype.start = function (canvas) {
+
+		this.dispose();
+	};
+
+	CCWebMEncoder.prototype.add = function (canvas) {
+
+		this.frames.push(canvas.toDataURL('image/webp', this.quality));
+
+		if (this.settings.autoSaveTime > 0 && this.frames.length / this.settings.framerate >= this.settings.autoSaveTime) {
+			this.save(function (blob) {
+				this.filename = this.baseFilename + '-part-' + pad(this.part);
+				download(blob, this.filename + this.extension, this.mimeType);
+				this.dispose();
+				this.part++;
+				this.filename = this.baseFilename + '-part-' + pad(this.part);
+				this.step();
+			}.bind(this));
+		} else {
+			this.step();
+		}
+	};
+
+	CCWebMEncoder.prototype.save = function (callback) {
+
+		if (!this.frames.length) return;
+
+		var webm = Whammy.fromImageArray(this.frames, this.settings.framerate);
+		var blob = new Blob([webm], { type: "octet/stream" });
+		callback(blob);
+	};
+
+	CCWebMEncoder.prototype.dispose = function (canvas) {
+
+		this.frames = [];
+	};
+
+	function CCFFMpegServerEncoder(settings) {
+
+		CCFrameEncoder.call(this, settings);
+
+		settings.quality = settings.quality / 100 || .8;
+
+		this.encoder = new FFMpegServer.Video(settings);
+		this.encoder.on('process', function () {
+			this.emit('process');
+		}.bind(this));
+		this.encoder.on('finished', function (url, size) {
+			var cb = this.callback;
+			if (cb) {
+				this.callback = undefined;
+				cb(url, size);
+			}
+		}.bind(this));
+		this.encoder.on('progress', function (progress) {
+			if (this.settings.onProgress) {
+				this.settings.onProgress(progress);
+			}
+		}.bind(this));
+		this.encoder.on('error', function (data) {
+			alert(JSON.stringify(data, null, 2));
+		}.bind(this));
+	}
+
+	CCFFMpegServerEncoder.prototype = Object.create(CCFrameEncoder.prototype);
+
+	CCFFMpegServerEncoder.prototype.start = function () {
+
+		this.encoder.start(this.settings);
+	};
+
+	CCFFMpegServerEncoder.prototype.add = function (canvas) {
+
+		this.encoder.add(canvas);
+	};
+
+	CCFFMpegServerEncoder.prototype.save = function (callback) {
+
+		this.callback = callback;
+		this.encoder.end();
+	};
+
+	CCFFMpegServerEncoder.prototype.safeToProceed = function () {
+		return this.encoder.safeToProceed();
+	};
+
+	/*
+ 	HTMLCanvasElement.captureStream()
+ */
+
+	function CCStreamEncoder(settings) {
+
+		CCFrameEncoder.call(this, settings);
+
+		this.framerate = this.settings.framerate;
+		this.type = 'video/webm';
+		this.extension = '.webm';
+		this.stream = null;
+		this.mediaRecorder = null;
+		this.chunks = [];
+	}
+
+	CCStreamEncoder.prototype = Object.create(CCFrameEncoder.prototype);
+
+	CCStreamEncoder.prototype.add = function (canvas) {
+
+		if (!this.stream) {
+			this.stream = canvas.captureStream(this.framerate);
+			this.mediaRecorder = new MediaRecorder(this.stream);
+			this.mediaRecorder.start();
+
+			this.mediaRecorder.ondataavailable = function (e) {
+				this.chunks.push(e.data);
+			}.bind(this);
+		}
+		this.step();
+	};
+
+	CCStreamEncoder.prototype.save = function (callback) {
+
+		this.mediaRecorder.onstop = function (e) {
+			var blob = new Blob(this.chunks, { 'type': 'video/webm' });
+			this.chunks = [];
+			callback(blob);
+		}.bind(this);
+
+		this.mediaRecorder.stop();
+	};
+
+	function CCGIFEncoder(settings) {
+
+		CCFrameEncoder.call(this, settings);
+
+		settings.quality = 31 - (settings.quality * 30 / 100 || 10);
+		settings.workers = settings.workers || 4;
+
+		this.extension = '.gif';
+		this.mimeType = 'image/gif';
+
+		this.canvas = document.createElement('canvas');
+		this.ctx = this.canvas.getContext('2d');
+		this.sizeSet = false;
+
+		this.encoder = new GIF({
+			workers: settings.workers,
+			quality: settings.quality,
+			background: "#FFFF",
+			workerScript: settings.workersPath + 'gif.worker.js'
+		});
+
+		this.encoder.on('progress', function (progress) {
+			if (this.settings.onProgress) {
+				this.settings.onProgress(progress);
+			}
+		}.bind(this));
+
+		this.encoder.on('finished', function (blob) {
+			var cb = this.callback;
+			if (cb) {
+				this.callback = undefined;
+				cb(blob);
+			}
+		}.bind(this));
+	}
+
+	CCGIFEncoder.prototype = Object.create(CCFrameEncoder.prototype);
+
+	CCGIFEncoder.prototype.add = function (canvas) {
+
+		if (!this.sizeSet) {
+			this.encoder.setOption('width', canvas.width);
+			this.encoder.setOption('height', canvas.height);
+			this.sizeSet = true;
+		}
+
+		this.canvas.width = canvas.width;
+		this.canvas.height = canvas.height;
+		this.ctx.drawImage(canvas, 0, 0);
+
+		this.encoder.addFrame(this.ctx, { copy: true, delay: this.settings.step });
+		this.step();
+	};
+
+	CCGIFEncoder.prototype.save = function (callback) {
+
+		this.callback = callback;
+
+		this.encoder.render();
+	};
+
+	function CCapture(settings) {
+
+		var _settings = settings || {},
+		    _date = new Date(),
+		    _verbose,
+		    _display,
+		    _time,
+		    _startTime,
+		    _performanceTime,
+		    _performanceStartTime,
+		    _step,
+		    _encoder,
+		    _timeouts = [],
+		    _intervals = [],
+		    _frameCount = 0,
+		    _intermediateFrameCount = 0,
+		    _lastFrame = null,
+		    _requestAnimationFrameCallbacks = [],
+		    _capturing = false,
+		    _handlers = {};
+
+		_settings.framerate = _settings.framerate || 60;
+		_settings.motionBlurFrames = 2 * (_settings.motionBlurFrames || 1);
+		_verbose = _settings.verbose || false;
+		_display = _settings.display || false;
+		_settings.step = 1000.0 / _settings.framerate;
+		_settings.timeLimit = _settings.timeLimit || 0;
+		_settings.frameLimit = _settings.frameLimit || 0;
+		_settings.startTime = _settings.startTime || 0;
+
+		var _timeDisplay = document.createElement('div');
+		_timeDisplay.style.position = 'absolute';
+		_timeDisplay.style.left = _timeDisplay.style.top = 0;
+		_timeDisplay.style.backgroundColor = 'black';
+		_timeDisplay.style.fontFamily = 'monospace';
+		_timeDisplay.style.fontSize = '11px';
+		_timeDisplay.style.padding = '5px';
+		_timeDisplay.style.color = 'red';
+		_timeDisplay.style.zIndex = 100000;
+		if (_settings.display) document.body.appendChild(_timeDisplay);
+
+		var canvasMotionBlur = document.createElement('canvas');
+		var ctxMotionBlur = canvasMotionBlur.getContext('2d');
+		var bufferMotionBlur;
+		var imageData;
+
+		_log('Step is set to ' + _settings.step + 'ms');
+
+		var _encoders = {
+			gif: CCGIFEncoder,
+			webm: CCWebMEncoder,
+			ffmpegserver: CCFFMpegServerEncoder,
+			png: CCPNGEncoder,
+			jpg: CCJPEGEncoder,
+			'webm-mediarecorder': CCStreamEncoder
+		};
+
+		var ctor = _encoders[_settings.format];
+		if (!ctor) {
+			throw "Error: Incorrect or missing format: Valid formats are " + Object.keys(_encoders).join(", ");
+		}
+		_encoder = new ctor(_settings);
+		_encoder.step = _step;
+
+		_encoder.on('process', _process);
+		_encoder.on('progress', _progress);
+
+		if ("performance" in window == false) {
+			window.performance = {};
+		}
+
+		Date.now = Date.now || function () {
+			// thanks IE8
+			return new Date().getTime();
+		};
+
+		if ("now" in window.performance == false) {
+
+			var nowOffset = Date.now();
+
+			if (performance.timing && performance.timing.navigationStart) {
+				nowOffset = performance.timing.navigationStart;
+			}
+
+			window.performance.now = function now() {
+				return Date.now() - nowOffset;
+			};
+		}
+
+		var _oldSetTimeout = window.setTimeout,
+		    _oldSetInterval = window.setInterval,
+		    _oldClearTimeout = window.clearTimeout,
+		    _oldRequestAnimationFrame = window.requestAnimationFrame,
+		    _oldNow = window.Date.now,
+		    _oldPerformanceNow = window.performance.now,
+		    _oldGetTime = window.Date.prototype.getTime;
+		// Date.prototype._oldGetTime = Date.prototype.getTime;
+
+		var media = [];
+
+		function _init() {
+
+			_log('Capturer start');
+
+			_startTime = window.Date.now();
+			_time = _startTime + _settings.startTime;
+			_performanceStartTime = window.performance.now();
+			_performanceTime = _performanceStartTime + _settings.startTime;
+
+			window.Date.prototype.getTime = function () {
+				return _time;
+			};
+			window.Date.now = function () {
+				return _time;
+			};
+
+			window.setTimeout = function (callback, time) {
+				var t = {
+					callback: callback,
+					time: time,
+					triggerTime: _time + time
+				};
+				_timeouts.push(t);
+				_log('Timeout set to ' + t.time);
+				return t;
+			};
+			window.clearTimeout = function (id) {
+				for (var j = 0; j < _timeouts.length; j++) {
+					if (_timeouts[j] == id) {
+						_timeouts.splice(j, 1);
+						_log('Timeout cleared');
+						continue;
+					}
+				}
+			};
+			window.setInterval = function (callback, time) {
+				var t = {
+					callback: callback,
+					time: time,
+					triggerTime: _time + time
+				};
+				_intervals.push(t);
+				_log('Interval set to ' + t.time);
+				return t;
+			};
+			window.clearInterval = function (id) {
+				_log('clear Interval');
+				return null;
+			};
+			window.requestAnimationFrame = function (callback) {
+				_requestAnimationFrameCallbacks.push(callback);
+			};
+			window.performance.now = function () {
+				return _performanceTime;
+			};
+
+			function hookCurrentTime() {
+				if (!this._hooked) {
+					this._hooked = true;
+					this._hookedTime = this.currentTime || 0;
+					this.pause();
+					media.push(this);
+				}
+				return this._hookedTime + _settings.startTime;
+			};
+
+			try {
+				Object.defineProperty(HTMLVideoElement.prototype, 'currentTime', { get: hookCurrentTime });
+				Object.defineProperty(HTMLAudioElement.prototype, 'currentTime', { get: hookCurrentTime });
+			} catch (err) {
+				_log(err);
+			}
+		}
+
+		function _start() {
+			_init();
+			_encoder.start();
+			_capturing = true;
+		}
+
+		function _stop() {
+			_capturing = false;
+			_encoder.stop();
+			_destroy();
+		}
+
+		function _call(fn, p) {
+			_oldSetTimeout(fn, 0, p);
+		}
+
+		function _step() {
+			//_oldRequestAnimationFrame( _process );
+			_call(_process);
+		}
+
+		function _destroy() {
+			_log('Capturer stop');
+			window.setTimeout = _oldSetTimeout;
+			window.setInterval = _oldSetInterval;
+			window.clearTimeout = _oldClearTimeout;
+			window.requestAnimationFrame = _oldRequestAnimationFrame;
+			window.Date.prototype.getTime = _oldGetTime;
+			window.Date.now = _oldNow;
+			window.performance.now = _oldPerformanceNow;
+		}
+
+		function _updateTime() {
+			var seconds = _frameCount / _settings.framerate;
+			if (_settings.frameLimit && _frameCount >= _settings.frameLimit || _settings.timeLimit && seconds >= _settings.timeLimit) {
+				_stop();
+				_save();
+			}
+			var d = new Date(null);
+			d.setSeconds(seconds);
+			if (_settings.motionBlurFrames > 2) {
+				_timeDisplay.textContent = 'CCapture ' + _settings.format + ' | ' + _frameCount + ' frames (' + _intermediateFrameCount + ' inter) | ' + d.toISOString().substr(11, 8);
+			} else {
+				_timeDisplay.textContent = 'CCapture ' + _settings.format + ' | ' + _frameCount + ' frames | ' + d.toISOString().substr(11, 8);
+			}
+		}
+
+		function _checkFrame(canvas) {
+
+			if (canvasMotionBlur.width !== canvas.width || canvasMotionBlur.height !== canvas.height) {
+				canvasMotionBlur.width = canvas.width;
+				canvasMotionBlur.height = canvas.height;
+				bufferMotionBlur = new Uint16Array(canvasMotionBlur.height * canvasMotionBlur.width * 4);
+				ctxMotionBlur.fillStyle = '#0';
+				ctxMotionBlur.fillRect(0, 0, canvasMotionBlur.width, canvasMotionBlur.height);
+			}
+		}
+
+		function _blendFrame(canvas) {
+
+			//_log( 'Intermediate Frame: ' + _intermediateFrameCount );
+
+			ctxMotionBlur.drawImage(canvas, 0, 0);
+			imageData = ctxMotionBlur.getImageData(0, 0, canvasMotionBlur.width, canvasMotionBlur.height);
+			for (var j = 0; j < bufferMotionBlur.length; j += 4) {
+				bufferMotionBlur[j] += imageData.data[j];
+				bufferMotionBlur[j + 1] += imageData.data[j + 1];
+				bufferMotionBlur[j + 2] += imageData.data[j + 2];
+			}
+			_intermediateFrameCount++;
+		}
+
+		function _saveFrame() {
+
+			var data = imageData.data;
+			for (var j = 0; j < bufferMotionBlur.length; j += 4) {
+				data[j] = bufferMotionBlur[j] * 2 / _settings.motionBlurFrames;
+				data[j + 1] = bufferMotionBlur[j + 1] * 2 / _settings.motionBlurFrames;
+				data[j + 2] = bufferMotionBlur[j + 2] * 2 / _settings.motionBlurFrames;
+			}
+			ctxMotionBlur.putImageData(imageData, 0, 0);
+			_encoder.add(canvasMotionBlur);
+			_frameCount++;
+			_intermediateFrameCount = 0;
+			_log('Full MB Frame! ' + _frameCount + ' ' + _time);
+			for (var j = 0; j < bufferMotionBlur.length; j += 4) {
+				bufferMotionBlur[j] = 0;
+				bufferMotionBlur[j + 1] = 0;
+				bufferMotionBlur[j + 2] = 0;
+			}
+			gc();
+		}
+
+		function _capture(canvas) {
+
+			if (_capturing) {
+
+				if (_settings.motionBlurFrames > 2) {
+
+					_checkFrame(canvas);
+					_blendFrame(canvas);
+
+					if (_intermediateFrameCount >= .5 * _settings.motionBlurFrames) {
+						_saveFrame();
+					} else {
+						_step();
+					}
+				} else {
+					_encoder.add(canvas);
+					_frameCount++;
+					_log('Full Frame! ' + _frameCount);
+				}
+			}
+		}
+
+		function _process() {
+
+			var step = 1000 / _settings.framerate;
+			var dt = (_frameCount + _intermediateFrameCount / _settings.motionBlurFrames) * step;
+
+			_time = _startTime + dt;
+			_performanceTime = _performanceStartTime + dt;
+
+			media.forEach(function (v) {
+				v._hookedTime = dt / 1000;
+			});
+
+			_updateTime();
+			_log('Frame: ' + _frameCount + ' ' + _intermediateFrameCount);
+
+			for (var j = 0; j < _timeouts.length; j++) {
+				if (_time >= _timeouts[j].triggerTime) {
+					_call(_timeouts[j].callback);
+					//console.log( 'timeout!' );
+					_timeouts.splice(j, 1);
+					continue;
+				}
+			}
+
+			for (var j = 0; j < _intervals.length; j++) {
+				if (_time >= _intervals[j].triggerTime) {
+					_call(_intervals[j].callback);
+					_intervals[j].triggerTime += _intervals[j].time;
+					//console.log( 'interval!' );
+					continue;
+				}
+			}
+
+			_requestAnimationFrameCallbacks.forEach(function (cb) {
+				_call(cb, _time - g_startTime);
+			});
+			_requestAnimationFrameCallbacks = [];
+		}
+
+		function _save(callback) {
+
+			if (!callback) {
+				callback = function (blob) {
+					download(blob, _encoder.filename + _encoder.extension, _encoder.mimeType);
+					return false;
+				};
+			}
+			_encoder.save(callback);
+		}
+
+		function _log(message) {
+			if (_verbose) console.log(message);
+		}
+
+		function _on(event, handler) {
+
+			_handlers[event] = handler;
+		}
+
+		function _emit(event) {
+
+			var handler = _handlers[event];
+			if (handler) {
+
+				handler.apply(null, Array.prototype.slice.call(arguments, 1));
+			}
+		}
+
+		function _progress(progress) {
+
+			_emit('progress', progress);
+		}
+
+		return {
+			start: _start,
+			capture: _capture,
+			stop: _stop,
+			save: _save,
+			on: _on
+		};
+	}
+
+	(freeWindow || freeSelf || {}).CCapture = CCapture;
+
+	// Some AMD build optimizers like r.js check for condition patterns like the following:
+	if (typeof define == 'function' && typeof define.amd == 'object' && define.amd) {
+		// Define as an anonymous module so, through path mapping, it can be
+		// referenced as the "underscore" module.
+		define(function () {
+			return CCapture;
+		});
+	}
+	// Check for `exports` after `define` in case a build optimizer adds an `exports` object.
+	else if (freeExports && freeModule) {
+			// Export for Node.js.
+			if (moduleExports) {
+				(freeModule.exports = CCapture).CCapture = CCapture;
+			}
+			// Export for CommonJS support.
+			freeExports.CCapture = CCapture;
+		} else {
+			// Export to the global object.
+			root.CCapture = CCapture;
+		}
+})();
+
+
+(function (f) {
+    if (typeof exports === "object" && typeof module !== "undefined") {
+        module.exports = f();
+    } else if (typeof define === "function" && define.amd) {
+        define([], f);
+    } else {
+        var g;if (typeof window !== "undefined") {
+            g = window;
+        } else if (typeof global !== "undefined") {
+            g = global;
+        } else if (typeof self !== "undefined") {
+            g = self;
+        } else {
+            g = this;
+        }g.leafletImage = f();
+    }
+})(function () {
+    var define, module, exports;return function e(t, n, r) {
+        function s(o, u) {
+            if (!n[o]) {
+                if (!t[o]) {
+                    var a = typeof require == "function" && require;if (!u && a) return a(o, !0);if (i) return i(o, !0);var f = new Error("Cannot find module '" + o + "'");throw f.code = "MODULE_NOT_FOUND", f;
+                }var l = n[o] = { exports: {} };t[o][0].call(l.exports, function (e) {
+                    var n = t[o][1][e];return s(n ? n : e);
+                }, l, l.exports, e, t, n, r);
+            }return n[o].exports;
+        }var i = typeof require == "function" && require;for (var o = 0; o < r.length; o++) s(r[o]);return s;
+    }({ 1: [function (require, module, exports) {
+            /* global L */
+
+            var queue = require('d3-queue').queue;
+
+            var cacheBusterDate = +new Date();
+
+            // leaflet-image
+            module.exports = function leafletImage(map, callback) {
+
+                var hasMapbox = !!L.mapbox;
+
+                var dimensions = map.getSize(),
+                    layerQueue = new queue(1);
+
+                var canvas = document.createElement('canvas');
+                canvas.width = dimensions.x;
+                canvas.height = dimensions.y;
+                var ctx = canvas.getContext('2d');
+
+                // dummy canvas image when loadTile get 404 error
+                // and layer don't have errorTileUrl
+                var dummycanvas = document.createElement('canvas');
+                dummycanvas.width = 1;
+                dummycanvas.height = 1;
+                var dummyctx = dummycanvas.getContext('2d');
+                dummyctx.fillStyle = 'rgba(0,0,0,0)';
+                dummyctx.fillRect(0, 0, 1, 1);
+
+                // layers are drawn in the same order as they are composed in the DOM:
+                // tiles, paths, and then markers
+                map.eachLayer(drawTileLayer);
+                map.eachLayer(drawEsriDynamicLayer);
+
+                if (map._pathRoot) {
+                    layerQueue.defer(handlePathRoot, map._pathRoot);
+                } else if (map._panes) {
+                    var firstCanvas = map._panes.overlayPane.getElementsByTagName('canvas').item(0);
+                    if (firstCanvas) {
+                        layerQueue.defer(handlePathRoot, firstCanvas);
+                    }
+                }
+                map.eachLayer(drawMarkerLayer);
+                layerQueue.awaitAll(layersDone);
+
+                function drawTileLayer(l) {
+                    if (l instanceof L.TileLayer) layerQueue.defer(handleTileLayer, l);else if (l._heat) layerQueue.defer(handlePathRoot, l._canvas);
+                }
+
+                function drawMarkerLayer(l) {
+                    if (l instanceof L.Marker && l.options.icon instanceof L.Icon) {
+                        layerQueue.defer(handleMarkerLayer, l);
+                    }
+                }
+
+                function drawEsriDynamicLayer(l) {
+                    if (!L.esri) return;
+
+                    if (l instanceof L.esri.DynamicMapLayer) {
+                        layerQueue.defer(handleEsriDymamicLayer, l);
+                    }
+                }
+
+                function done() {
+                    callback(null, canvas);
+                }
+
+                function layersDone(err, layers) {
+                    if (err) throw err;
+                    layers.forEach(function (layer) {
+                        if (layer && layer.canvas) {
+                            ctx.drawImage(layer.canvas, 0, 0);
+                        }
+                    });
+                    done();
+                }
+
+                function handleTileLayer(layer, callback) {
+                    // `L.TileLayer.Canvas` was removed in leaflet 1.0
+                    var isCanvasLayer = L.TileLayer.Canvas && layer instanceof L.TileLayer.Canvas,
+                        canvas = document.createElement('canvas');
+
+                    canvas.width = dimensions.x;
+                    canvas.height = dimensions.y;
+
+                    var ctx = canvas.getContext('2d'),
+                        bounds = map.getPixelBounds(),
+                        zoom = map.getZoom(),
+                        tileSize = layer.options.tileSize;
+
+                    if (zoom > layer.options.maxZoom || zoom < layer.options.minZoom ||
+                    // mapbox.tileLayer
+                    hasMapbox && layer instanceof L.mapbox.tileLayer && !layer.options.tiles) {
+                        return callback();
+                    }
+
+                    var tileBounds = L.bounds(bounds.min.divideBy(tileSize)._floor(), bounds.max.divideBy(tileSize)._floor()),
+                        tiles = [],
+                        j,
+                        i,
+                        tileQueue = new queue(1);
+
+                    for (j = tileBounds.min.y; j <= tileBounds.max.y; j++) {
+                        for (i = tileBounds.min.x; i <= tileBounds.max.x; i++) {
+                            tiles.push(new L.Point(i, j));
+                        }
+                    }
+
+                    tiles.forEach(function (tilePoint) {
+                        var originalTilePoint = tilePoint.clone();
+
+                        if (layer._adjustTilePoint) {
+                            layer._adjustTilePoint(tilePoint);
+                        }
+
+                        var tilePos = originalTilePoint.scaleBy(new L.Point(tileSize, tileSize)).subtract(bounds.min);
+
+                        if (tilePoint.y >= 0) {
+                            if (isCanvasLayer) {
+                                var tile = layer._tiles[tilePoint.x + ':' + tilePoint.y];
+                                tileQueue.defer(canvasTile, tile, tilePos, tileSize);
+                            } else {
+                                var url = addCacheString(layer.getTileUrl(tilePoint));
+                                tileQueue.defer(loadTile, url, tilePos, tileSize);
+                            }
+                        }
+                    });
+
+                    tileQueue.awaitAll(tileQueueFinish);
+
+                    function canvasTile(tile, tilePos, tileSize, callback) {
+                        callback(null, {
+                            img: tile,
+                            pos: tilePos,
+                            size: tileSize
+                        });
+                    }
+
+                    function loadTile(url, tilePos, tileSize, callback) {
+                        var im = new Image();
+                        im.crossOrigin = '';
+                        im.onload = function () {
+                            callback(null, {
+                                img: this,
+                                pos: tilePos,
+                                size: tileSize
+                            });
+                        };
+                        im.onerror = function (e) {
+                            // use canvas instead of errorTileUrl if errorTileUrl get 404
+                            if (layer.options.errorTileUrl != '' && e.target.errorCheck === undefined) {
+                                e.target.errorCheck = true;
+                                e.target.src = layer.options.errorTileUrl;
+                            } else {
+                                callback(null, {
+                                    img: dummycanvas,
+                                    pos: tilePos,
+                                    size: tileSize
+                                });
+                            }
+                        };
+                        im.src = url;
+                    }
+
+                    function tileQueueFinish(err, data) {
+                        data.forEach(drawTile);
+                        callback(null, { canvas: canvas });
+                    }
+
+                    function drawTile(d) {
+                        ctx.drawImage(d.img, Math.floor(d.pos.x), Math.floor(d.pos.y), d.size, d.size);
+                    }
+                }
+
+                function handlePathRoot(root, callback) {
+                    var bounds = map.getPixelBounds(),
+                        origin = map.getPixelOrigin(),
+                        canvas = document.createElement('canvas');
+                    canvas.width = dimensions.x;
+                    canvas.height = dimensions.y;
+                    var ctx = canvas.getContext('2d');
+                    var pos = L.DomUtil.getPosition(root).subtract(bounds.min).add(origin);
+                    try {
+                        ctx.drawImage(root, pos.x, pos.y, canvas.width - pos.x * 2, canvas.height - pos.y * 2);
+                        callback(null, {
+                            canvas: canvas
+                        });
+                    } catch (e) {
+                        console.error('Element could not be drawn on canvas', root); // eslint-disable-line no-console
+                    }
+                }
+
+                function handleMarkerLayer(marker, callback) {
+                    var canvas = document.createElement('canvas'),
+                        ctx = canvas.getContext('2d'),
+                        pixelBounds = map.getPixelBounds(),
+                        minPoint = new L.Point(pixelBounds.min.x, pixelBounds.min.y),
+                        pixelPoint = map.project(marker.getLatLng()),
+                        isBase64 = /^data\:/.test(marker._icon.src),
+                        url = isBase64 ? marker._icon.src : addCacheString(marker._icon.src),
+                        im = new Image(),
+                        options = marker.options.icon.options,
+                        size = options.iconSize,
+                        pos = pixelPoint.subtract(minPoint),
+                        anchor = L.point(options.iconAnchor || size && size.divideBy(2, true));
+
+                    if (size instanceof L.Point) size = [size.x, size.y];
+
+                    var x = Math.round(pos.x - size[0] + anchor.x),
+                        y = Math.round(pos.y - anchor.y);
+
+                    canvas.width = dimensions.x;
+                    canvas.height = dimensions.y;
+                    im.crossOrigin = '';
+
+                    im.onload = function () {
+                        ctx.drawImage(this, x, y, size[0], size[1]);
+                        callback(null, {
+                            canvas: canvas
+                        });
+                    };
+
+                    im.src = url;
+
+                    if (isBase64) im.onload();
+                }
+
+                function handleEsriDymamicLayer(dynamicLayer, callback) {
+                    var canvas = document.createElement('canvas');
+                    canvas.width = dimensions.x;
+                    canvas.height = dimensions.y;
+
+                    var ctx = canvas.getContext('2d');
+
+                    var im = new Image();
+                    im.crossOrigin = '';
+                    im.src = addCacheString(dynamicLayer._currentImage._image.src);
+
+                    im.onload = function () {
+                        ctx.drawImage(im, 0, 0);
+                        callback(null, {
+                            canvas: canvas
+                        });
+                    };
+                }
+
+                function addCacheString(url) {
+                    // If it's a data URL we don't want to touch this.
+                    if (isDataURL(url) || url.indexOf('mapbox.com/styles/v1') !== -1) {
+                        return url;
+                    }
+                    return url + (url.match(/\?/) ? '&' : '?') + 'cache=' + cacheBusterDate;
+                }
+
+                function isDataURL(url) {
+                    var dataURLRegex = /^\s*data:([a-z]+\/[a-z]+(;[a-z\-]+\=[a-z\-]+)?)?(;base64)?,[a-z0-9\!\$\&\'\,\(\)\*\+\,\;\=\-\.\_\~\:\@\/\?\%\s]*\s*$/i;
+                    return !!url.match(dataURLRegex);
+                }
+            };
+        }, { "d3-queue": 2 }], 2: [function (require, module, exports) {
+            (function (global, factory) {
+                typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) : typeof define === 'function' && define.amd ? define(['exports'], factory) : factory(global.d3_queue = global.d3_queue || {});
+            })(this, function (exports) {
+                'use strict';
+
+                var version = "2.0.3";
+
+                var slice = [].slice;
+
+                var noabort = {};
+
+                function Queue(size) {
+                    if (!(size >= 1)) throw new Error();
+                    this._size = size;
+                    this._call = this._error = null;
+                    this._tasks = [];
+                    this._data = [];
+                    this._waiting = this._active = this._ended = this._start = 0; // inside a synchronous task callback?
+                }
+
+                Queue.prototype = queue.prototype = {
+                    constructor: Queue,
+                    defer: function (callback) {
+                        if (typeof callback !== "function" || this._call) throw new Error();
+                        if (this._error != null) return this;
+                        var t = slice.call(arguments, 1);
+                        t.push(callback);
+                        ++this._waiting, this._tasks.push(t);
+                        poke(this);
+                        return this;
+                    },
+                    abort: function () {
+                        if (this._error == null) abort(this, new Error("abort"));
+                        return this;
+                    },
+                    await: function (callback) {
+                        if (typeof callback !== "function" || this._call) throw new Error();
+                        this._call = function (error, results) {
+                            callback.apply(null, [error].concat(results));
+                        };
+                        maybeNotify(this);
+                        return this;
+                    },
+                    awaitAll: function (callback) {
+                        if (typeof callback !== "function" || this._call) throw new Error();
+                        this._call = callback;
+                        maybeNotify(this);
+                        return this;
+                    }
+                };
+
+                function poke(q) {
+                    if (!q._start) try {
+                        start(q);
+                    } // let the current task complete
+                    catch (e) {
+                        if (q._tasks[q._ended + q._active - 1]) abort(q, e);
+                    } // task errored synchronously
+                }
+
+                function start(q) {
+                    while (q._start = q._waiting && q._active < q._size) {
+                        var i = q._ended + q._active,
+                            t = q._tasks[i],
+                            j = t.length - 1,
+                            c = t[j];
+                        t[j] = end(q, i);
+                        --q._waiting, ++q._active;
+                        t = c.apply(null, t);
+                        if (!q._tasks[i]) continue; // task finished synchronously
+                        q._tasks[i] = t || noabort;
+                    }
+                }
+
+                function end(q, i) {
+                    return function (e, r) {
+                        if (!q._tasks[i]) return; // ignore multiple callbacks
+                        --q._active, ++q._ended;
+                        q._tasks[i] = null;
+                        if (q._error != null) return; // ignore secondary errors
+                        if (e != null) {
+                            abort(q, e);
+                        } else {
+                            q._data[i] = r;
+                            if (q._waiting) poke(q);else maybeNotify(q);
+                        }
+                    };
+                }
+
+                function abort(q, e) {
+                    var i = q._tasks.length,
+                        t;
+                    q._error = e; // ignore active callbacks
+                    q._data = undefined; // allow gc
+                    q._waiting = NaN; // prevent starting
+
+                    while (--i >= 0) {
+                        if (t = q._tasks[i]) {
+                            q._tasks[i] = null;
+                            if (t.abort) try {
+                                t.abort();
+                            } catch (e) {/* ignore */}
+                        }
+                    }
+
+                    q._active = NaN; // allow notification
+                    maybeNotify(q);
+                }
+
+                function maybeNotify(q) {
+                    if (!q._active && q._call) q._call(q._error, q._data);
+                }
+
+                function queue(concurrency) {
+                    return new Queue(arguments.length ? +concurrency : Infinity);
+                }
+
+                exports.version = version;
+                exports.queue = queue;
+            });
+        }, {}] }, {}, [1])(1);
+});
+
+
 (function () {
 
   // This is for grouping buttons into a bar
@@ -8512,7 +9776,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         this._paused = false;
         this.lastCalledTime = 0;
         this.minDelay = ~~(1000 / this.target_fps + 0.5);
-        this._frame = this._frame || L.Util.requestAnimFrame(this._animate, this);
+        this._frame = L.Util.requestAnimFrame(this._animate, this);
     },
 
     // --------------------------------------------------------------------
@@ -8573,6 +9837,12 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
 
     periodInSecs: function () {
         return this._period / (this._timeScale * 1000);
+    },
+
+    getMapImage: function () {
+        leafletImage(this._map, function (err, canvas) {
+            download(canvas.toDataURL("image/png"), "mapView.png", "image/png");
+        }).bind(this);
     },
 
     // ------------------------------------------------------
