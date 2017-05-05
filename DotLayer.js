@@ -471,7 +471,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         this._ctx.fillStyle = this.options.normal.dotColor;
 
         this._timeScale = this.C2 * zf;
-        this._period = this.C1 * zf + 0.5;
+        this._period = this.C1 * zf;
 
 
 
@@ -631,8 +631,8 @@ L.dotLayer = function( items, options ) {
 };
 
 
-
 // ---------------------------------------------------------------------------
+
 /*
     From "Making annoying rainbows in javascript"
     A tutorial by jim bumgardner
@@ -651,7 +651,6 @@ function makeColorGradient(frequency1, frequency2, frequency3,
             g = Math.round(Math.sin(frequency2*i + phase2) * width + center),
             b = Math.round(Math.sin(frequency3*i + phase3) * width + center);
         palette[i] = `rgb(${r}, ${g}, ${b})`;
-       // document.write( '<font color="' + RGB2Color(red,grn,blu) + '">&#9608;</font>');
     }
     return palette;
 }
