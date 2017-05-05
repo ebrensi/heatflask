@@ -457,7 +457,6 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             zoom = this._zoom,
             count = 0,
             t0 = performance.now(),
-            id,
             item,
             items = this._items,
             pItem,
@@ -473,7 +472,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
 
 
-        for (id in pItems ) {
+        for (let id in pItems ) {
             item = pItems[ id ];
             if ( items[ id ].highlighted ) {
                 highlighted_items.push( item );
@@ -483,17 +482,25 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         }
 
         // Now plot highlighted paths
-        var i, dotColor,
-            hlen = highlighted_items.length;
+        let hlen = highlighted_items.length;
         if ( hlen ) {
-            for ( i = 0; i < hlen; i++ ) {
+            for (let i = 0; i < hlen; i++ ) {
                 item = highlighted_items[ i ];
                 count += this.drawDots( item, now, true );
             }
         }
 
-        var elapsed = ( performance.now() - t0 ).toFixed( 1 );
-        fps_display && fps_display.update( now, `${elapsed} ms/f, n=${count}, z=${this._zoom}` );
+
+        if (fps_display) {
+            let toSec = 1 / (this._timeScale * 1000),
+                periodInSecs = this._period * toSec,
+                progress = ((now/1000) % periodInSecs).toFixed(1),
+                elapsed = ( performance.now() - t0 ).toFixed( 1 );
+
+            // Period in seconds is this._period / (this._timeScale * 1000)
+
+            fps_display.update( now, `${elapsed} ms/f, n=${count}, z=${this._zoom},\nP=${progress}/${periodInSecs.toFixed(2)}` );
+        }
     },
 
     // --------------------------------------------------------------------
