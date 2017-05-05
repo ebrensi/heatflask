@@ -46,6 +46,8 @@ var map = L.map('map', {
         zoomAnimation: false
     });
 
+// var areaSelect = L.areaSelect({width:200, height:300});
+// areaSelect.addTo(map);
 
 var sidebarControl = L.control.sidebar('sidebar').addTo(map),
     zoomControl = map.zoomControl.setPosition('bottomright'),
