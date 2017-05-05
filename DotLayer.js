@@ -585,10 +585,15 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
 
     getMapImage: function() {
+        let mapImageCanvas;
+
         leafletImage(this._map, function(err, canvas) {
             download(canvas.toDataURL("image/png"), "mapView.png", "image/png");
             console.log("leaflet-image: " + err);
+            mapImageCanvas = canvas;
+
         });
+        return mapImageCanvas;
     },
 
 
@@ -596,11 +601,12 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
     // ------------------------------------------------------
     startCapture: function() {
-        periodInSecs = this.periodInSecs();
+        let periodInSecs = this.periodInSecs();
         if (periodInSecs > 5) {
             return 0;
         }
 
+        let mapImageCanvas = getMapImage();
         this._capturer = new CCapture( {
                 name: "movingPath",
                 format: "gif",

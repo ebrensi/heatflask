@@ -8613,7 +8613,7 @@ var map_providers = ONLOAD_PARAMS.map_providers,
 if (!OFFLINE) {
     var online_baseLayers = {
         "Esri.WorldImagery": L.tileLayer.provider("Esri.WorldImagery"),
-        "OpenStreetMap.Mapnik": L.tileLayer.provider("OpenStreetMap.Mapnik"),
+        "Stamen.Terrain": L.tileLayer.provider("Stamen.Terrain"),
         "Google.Roadmap": L.gridLayer.googleMutant({ type: 'roadmap' }),
         "Google.Terrain": L.gridLayer.googleMutant({ type: 'terrain' }),
         "Google.Hybrid": L.gridLayer.googleMutant({ type: 'hybrid' })
@@ -8628,7 +8628,7 @@ if (!OFFLINE) {
             if (i == 0) default_baseLayer = tl;
         }
     } else {
-        default_baseLayer = baseLayers["Google.Terrain"];
+        default_baseLayer = baseLayers["Stamen.Terrain"];
     }
 }
 
@@ -8638,7 +8638,7 @@ var map = L.map('map', {
     layers: [default_baseLayer],
     preferCanvas: true,
     // renderer: L.svg({ padding: 0 }),
-    zoomAnimation: true
+    zoomAnimation: false
 });
 
 var sidebarControl = L.control.sidebar('sidebar').addTo(map),
@@ -9844,19 +9844,24 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
     },
 
     getMapImage: function () {
+        let mapImageCanvas;
+
         leafletImage(this._map, function (err, canvas) {
             download(canvas.toDataURL("image/png"), "mapView.png", "image/png");
             console.log("leaflet-image: " + err);
+            mapImageCanvas = canvas;
         });
+        return mapImageCanvas;
     },
 
     // ------------------------------------------------------
     startCapture: function () {
-        periodInSecs = this.periodInSecs();
+        let periodInSecs = this.periodInSecs();
         if (periodInSecs > 5) {
             return 0;
         }
 
+        let mapImageCanvas = getMapImage();
         this._capturer = new CCapture({
             name: "movingPath",
             format: "gif",
