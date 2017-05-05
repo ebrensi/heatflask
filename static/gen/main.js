@@ -9842,15 +9842,78 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         return this._period / (this._timeScale * 1000);
     },
 
-    getMapImage: function () {
-        let mapImageCanvas;
-
+    captureCycle: function () {
+        let periodInSecs = this.periodInSecs();
+        if (periodInSecs > 5) {
+            return 0;
+        }
+        this._mapMoving = true;
         leafletImage(this._map, function (err, canvas) {
-            download(canvas.toDataURL("image/png"), "mapView.png", "image/png");
+            //download(canvas.toDataURL("image/png"), "mapView.png", "image/png");
             console.log("leaflet-image: " + err);
-            mapImageCanvas = canvas;
+            if (canvas) {
+                this.capture(canvas, periodInSecs);
+            }
+        }.bind(this));
+    },
+
+    capture: function (baseCanvas, durationSecs = 2) {
+        this._mapMoving = true;
+        debugger;
+
+        let height = baseCanvas.height,
+            width = baseCanvas.width,
+            frameCanvas = document.createElement('canvas');
+
+        frameCanvas.width = width;
+        frameCanvas.height = height;
+
+        let frameCtx = frameCanvas.getContext('2d'),
+
+        // info = document.getElementById("info"),
+        frameTime = Date.now(),
+            frameRate = 30,
+            numFrames = durationSecs * frameRate,
+            delay = ~~(1000 / frameRate),
+            encoder = new GIF({
+            workers: 4,
+            quality: 10,
+            // background: "#FFFF",
+            // transparent: "#FFFF",
+            workerScript: 'static/js/gif.worker.js'
         });
-        return mapImageCanvas;
+
+        // encoder.on( 'start', function(){
+        //     startTime = Date.now();
+        //     frameTime = Date.now();
+        // }.bind( this ) );
+
+        encoder.on('progress', function (progress) {
+            // info.innerHTML(p*100+"%");
+            console.log(p * 100 + "% done.");
+        }.bind(this));
+
+        encoder.on('finished', function (blob) {
+            window.open(URL.createObjectURL(blob));
+            // download(blob, "output.gif", 'image/gif' );
+
+            this._mapMoving = false;
+            if (!this._paused) {
+                this.animate();
+            }
+        }.bind(this));
+
+        for (let i = 0; i < numFrames; i++, frameTime += delay) {
+            this.drawLayer(frameTime);
+
+            frameCtx.clearRect(0, 0, width, height);
+            frameCtx.drawImage(baseCanvas, 0, 0);
+            frameCtx.drawImage(this._dotCanvas, 0, 0);
+
+            encoder.addFrame(frameCtx, { copy: true, delay: delay });
+        }
+
+        encoder.render();
     },
 
     // ------------------------------------------------------
@@ -9860,7 +9923,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
             return 0;
         }
 
-        let mapImageCanvas = getMapImage();
+        let mapImageCanvas = getMapImageCanvas();
         this._capturer = new CCapture({
             name: "movingPath",
             format: "gif",
