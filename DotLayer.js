@@ -217,7 +217,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
         this._ctx.strokeStyle = this.options.selected.dotStrokeColor;
 
-        this._dotSize = Math.log( z );
+        this._dotSize = Math.max(1, ~~(Math.log( z ) + 0.5));
         this._dotOffset = ~~( this._dotSize / 2 + 0.5 );
         this._zoomFactor = 1 / Math.pow( 2, z );
 
@@ -384,9 +384,8 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             dP = obj.dP,
             len_dP = dP.length,
             totSec = obj.totSec,
-            zf = this._zoomFactor,
-            dT = this.C1 * zf,
-            s = this.C2 * zf * ( now - obj.startTime ),
+            period = this._period,
+            s = this._timeScale * ( now - obj.startTime ),
             xmax = this._size.x,
             ymax = this._size.y,
             ctx = this._ctx,
@@ -396,7 +395,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             xOffset = this._pxOffset.x,
             yOffset = this._pxOffset.y;
 
-        var timeOffset = s % dT,
+        var timeOffset = s % period,
             count = 0,
             idx = dP[0],
             dx = dP[1],
@@ -408,10 +407,10 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         }
 
         if ( timeOffset < 0 ) {
-            timeOffset += dT;
+            timeOffset += period;
         }
 
-        for (let t=timeOffset, i=0, dt; t < totSec; t += dT ) {
+        for (let t=timeOffset, i=0, dt; t < totSec; t += period) {
             if (t >= P[idx+5]) {
                 while ( t >= P[idx+5] ) {
                     i += 3;
@@ -453,10 +452,8 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             return;
         }
 
-        this._ctx.clearRect( 0, 0, this._canvas.width, this._canvas.height );
-        this._ctx.fillStyle = this.options.normal.dotColor;
 
-        var ctx = this._ctx,
+        let ctx = this._ctx,
             zoom = this._zoom,
             count = 0,
             t0 = performance.now(),
@@ -465,9 +462,18 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             items = this._items,
             pItem,
             pItems = this._processedItems,
-            highlighted_items = [];
+            highlighted_items = [],
+            zf = this._zoomFactor;
 
-        for ( id in pItems ) {
+        this._ctx.clearRect( 0, 0, this._canvas.width, this._canvas.height );
+        this._ctx.fillStyle = this.options.normal.dotColor;
+
+        this._timeScale = this.C2 * zf;
+        this._period = ~~(this.C1 * zf + 0.5);
+
+
+
+        for (id in pItems ) {
             item = pItems[ id ];
             if ( items[ id ].highlighted ) {
                 highlighted_items.push( item );
@@ -561,8 +567,6 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 L.dotLayer = function( items, options ) {
     return new L.DotLayer( items, options );
 };
-
-
 
 
 /* From http://stackoverflow.com/a/20591891/4718949 */

@@ -29,7 +29,7 @@ class Config(object):
 
     # We make Flask-Assets Default to manual build without caching
     # ASSETS_AUTO_BUILD = False
-    ASSETS_DEBUG = False
+    # ASSETS_DEBUG = False
     # ASSETS_CACHE = False
     # ASSETS_MANIFEST = None
 
