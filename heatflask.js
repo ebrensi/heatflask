@@ -43,7 +43,7 @@ var map = L.map('map', {
         layers : [ default_baseLayer ],
         preferCanvas: true,
         // renderer: L.svg({ padding: 0 }),
-        zoomAnimation: true
+        zoomAnimation: false
     });
 
 
