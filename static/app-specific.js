@@ -168,6 +168,9 @@ var map = L.map('map', {
     zoomAnimation: false
 });
 
+var areaSelect = L.areaSelect({ width: 200, height: 300 });
+areaSelect.addTo(map);
+
 var sidebarControl = L.control.sidebar('sidebar').addTo(map),
     zoomControl = map.zoomControl.setPosition('bottomright'),
     layerControl = L.control.layers(baseLayers, null, { position: 'topleft' }).addTo(map),
@@ -834,6 +837,9 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         this._colorPalette = [];
         L.setOptions(this, options);
         this._paused = this.options.startPaused;
+        if (this._paused) {
+            this._timePaused = Date.now();
+        }
     },
 
     //-------------------------------------------------------------
@@ -867,7 +873,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         if (!this._paused) {
             this.animate();
         } else {
-            this._frame = this._frame || L.Util.requestAnimFrame(this.drawLayer, this);
+            this.drawLayer(this._timePaused);
         }
     },
 
@@ -1269,7 +1275,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         this._paused = false;
         this.lastCalledTime = 0;
         this.minDelay = ~~(1000 / this.target_fps + 0.5);
-        this._frame = this._frame || L.Util.requestAnimFrame(this._animate, this);
+        this._frame = L.Util.requestAnimFrame(this._animate, this);
     },
 
     // --------------------------------------------------------------------
@@ -1358,32 +1364,6 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
 L.dotLayer = function (items, options) {
     return new L.DotLayer(items, options);
 };
-
-/* From http://stackoverflow.com/a/20591891/4718949 */
-function hslToRgbString(h, s, l) {
-    return "hsl(" + h + "," + s + "%," + l + "% )";
-}
-
-function createPalette(colorCount) {
-    let newPalette = [],
-        hueStep = Math.floor(330 / colorCount),
-        hue = 0,
-        saturation = 95,
-        luminosity = 55,
-        greenJump = false;
-
-    for (let colorIndex = 0; colorIndex < colorCount; colorIndex++) {
-        saturation = colorIndex & 1 ? 90 : 65;
-        luminosity = colorIndex & 1 ? 80 : 55;
-        newPalette.push(hslToRgbString(hue, saturation, luminosity));
-        hue += hueStep;
-        if (!greenJump && hue > 100) {
-            hue += 30;
-            greenJump = true;
-        }
-    }
-    return newPalette;
-}
 
 /*
     From "Making annoying rainbows in javascript"
