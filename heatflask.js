@@ -97,10 +97,14 @@ var capture_button_states = [
         icon: 'fa-video-camera',
         title: 'Capture',
         onClick: function (btn, map) {
-            if (DotLayer) {
-                DotLayer.startCapture();
+            if (!DotLayer) {
+                return;
             }
             btn.state('capturing');
+            timeout = DotLayer.startCapture();
+            setTimeout(function(){
+                btn.state('not-capturing');
+            }, timeout+500);
         }
     },
     {
@@ -108,10 +112,10 @@ var capture_button_states = [
         icon: 'fa-stop',
         title: 'Stop capturing',
         onClick: function (btn, map) {
-            if (DotLayer) {
+            if (DotLayer && DotLayer._capturing) {
                 DotLayer.stopCapture();
+                btn.state('not-capturing');
             }
-            btn.state('not-capturing');
         }
     }
 ];
@@ -122,7 +126,7 @@ var captureControl = L.easyButton({
 
 
 // set up dial-controls
-$(".dial").knob({
+$(".dotconst-dial").knob({
         min: 0,
         max: 100,
         step: 0.1,
@@ -132,18 +136,20 @@ $(".dial").knob({
         inline: true,
         // displayInput: false,
         change: function (val) {
-            if (DotLayer) {
-                var newVal;
-                if (this.$[0].id == "sepConst") {
-                    newVal = Math.pow(2, val * SEP_SCALE.m + SEP_SCALE.b);
-                    DotLayer.C1 = newVal;
-                    // console.log(`C1=${newVal}`)
-                } else {
-                    newVal = val * val * SPEED_SCALE;
-                    DotLayer.C2 = newVal;
-                    // console.log(`C2=${newVal}`)
-                }
+            if (!DotLayer) {
+                return;
             }
+
+            let newVal;
+            if (this.$[0].id == "sepConst") {
+                newVal = Math.pow(2, val * SEP_SCALE.m + SEP_SCALE.b);
+                DotLayer.C1 = newVal;
+            } else {
+                newVal = val * val * SPEED_SCALE;
+                DotLayer.C2 = newVal;
+            }
+            $(".periodDisplay").html(DotLayer.periodInSecs().toFixed(2));
+
         }
     });
 
@@ -439,6 +445,10 @@ function renderLayers() {
 
                 $("#sepConst").val((Math.log2(DotLayer.C1) - SEP_SCALE.b) / SEP_SCALE.m ).trigger("change");
                 $("#speedConst").val(Math.sqrt(DotLayer.C2) / SPEED_SCALE).trigger("change");
+                setTimeout(function(){
+                    $(".periodDisplay").html(DotLayer.periodInSecs().toFixed(2));
+                }, 1000);
+
                 $("#showPaths").prop("checked", DotLayer.options.showPaths)
                                 .on("change", function(){
                                      DotLayer.options.showPaths = $(this).prop("checked");
