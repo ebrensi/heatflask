@@ -59,13 +59,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         this._colorPalette = [];
         L.setOptions( this, options );
         this._paused = this.options.startPaused;
-<<<<<<< HEAD
-        if (this._paused){
-            this._timePaused = Date.now();
-        }
-=======
         this._timePaused = Date.now();
->>>>>>> master
     },
 
 
