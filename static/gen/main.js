@@ -8585,6 +8585,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         this._capturer = new CCapture({
             name: "movingPath",
             format: "gif",
+            quality: 5,
             workersPath: 'static/js/',
             framerate: 30,
             timeLimit: periodInSecs,
