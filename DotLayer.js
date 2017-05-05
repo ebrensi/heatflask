@@ -509,7 +509,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         this._paused = false;
         this.lastCalledTime = 0;
         this.minDelay = ~~( 1000 / this.target_fps + 0.5 );
-        this._frame = this._frame || L.Util.requestAnimFrame( this._animate, this );
+        this._frame = L.Util.requestAnimFrame( this._animate, this );
     },
 
     // --------------------------------------------------------------------
@@ -575,34 +575,6 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 L.dotLayer = function( items, options ) {
     return new L.DotLayer( items, options );
 };
-
-
-/* From http://stackoverflow.com/a/20591891/4718949 */
-function hslToRgbString( h, s, l ) {
-    return "hsl(" + h + "," + s + "%," + l + "% )";
-}
-
-function createPalette ( colorCount ) {
-    let newPalette = [],
-        hueStep = Math.floor( 330 / colorCount ),
-        hue = 0,
-        saturation = 95,
-        luminosity =  55,
-        greenJump  = false;
-
-  for ( let colorIndex = 0; colorIndex < colorCount; colorIndex++ ) {
-    saturation = ( colorIndex & 1 ) ? 90 : 65;
-    luminosity = ( colorIndex & 1 ) ? 80 : 55;
-    newPalette.push( hslToRgbString( hue, saturation, luminosity ) );
-    hue += hueStep ;
-    if ( !greenJump && hue > 100 ) {
-      hue += 30;
-      greenJump = true;
-    }
-  }
-  return newPalette ;
-}
-
 
 
 /*
