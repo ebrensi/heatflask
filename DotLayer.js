@@ -56,9 +56,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         this._colorPalette = [];
         L.setOptions( this, options );
         this._paused = this.options.startPaused;
-        if (this._paused){
-            this._timePaused = Date.now();
-        }
+        this._timePaused = Date.now();
     },
 
 
@@ -90,10 +88,10 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
         this._setupWindow();
 
-        if ( !this._paused ) {
-            this.animate();
-        } else {
+        if (this._paused) {
             this.drawLayer(this._timePaused);
+        } else {
+            this.animate();
         }
 
     },
@@ -510,6 +508,10 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
     // --------------------------------------------------------------------
     animate: function() {
         this._paused = false;
+        if ( this._timePaused ) {
+            this._timeOffset = Date.now() - this._timePaused;
+            this._timePaused = null;
+        }
         this.lastCalledTime = 0;
         this.minDelay = ~~( 1000 / this.target_fps + 0.5 );
         this._frame = L.Util.requestAnimFrame( this._animate, this );
@@ -535,11 +537,6 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             // Ths is so we can start where we left off when we resume
             this._timePaused = ts;
             return;
-        }
-
-         if ( this._timePaused ) {
-            this._timeOffset = ts - this._timePaused;
-            this._timePaused = null;
         }
 
         if ( now - this.lastCalledTime > this.minDelay ) {
