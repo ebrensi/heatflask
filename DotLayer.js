@@ -48,11 +48,11 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
     // -- initialized is called on prototype
     initialize: function( items, options ) {
         this._map    = null;
-        this._canvas = null;
-        this._canvas2 = null;
+        this._dotCanvas = null;
+        this._lineCanvas = null;
         this._capturing = null;
-        this._ctx = null;
-        this._ctx2 = null;
+        this._dotCtx = null;
+        this._lineCtx = null;
         this._frame  = null;
         this._items = items || null;
         this._timeOffset = 0;
@@ -68,11 +68,11 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         let newWidth = resizeEvent.newSize.x,
             newHeight = resizeEvent.newSize.y;
 
-        this._canvas.width = newWidth;
-        this._canvas.height = newHeight;
+        this._dotCanvas.width = newWidth;
+        this._dotCanvas.height = newHeight;
 
-        this._canvas2.width = newWidth;
-        this._canvas2.height = newHeight;
+        this._lineCanvas.width = newWidth;
+        this._lineCanvas.height = newHeight;
 
         this._onLayerDidMove();
     },
@@ -83,22 +83,18 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
         let topLeft = this._map.containerPointToLayerPoint( [ 0, 0 ] );
 
-        this._ctx.clearRect( 0, 0, this._canvas.width, this._canvas.height );
-        L.DomUtil.setPosition( this._canvas, topLeft );
+        this._dotCtx.clearRect( 0, 0, this._dotCanvas.width, this._dotCanvas.height );
+        L.DomUtil.setPosition( this._dotCanvas, topLeft );
 
-        this._ctx2.clearRect( 0, 0, this._canvas2.width, this._canvas2.height );
-        L.DomUtil.setPosition( this._canvas2, topLeft );
+        this._lineCtx.clearRect( 0, 0, this._lineCanvas.width, this._lineCanvas.height );
+        L.DomUtil.setPosition( this._lineCanvas, topLeft );
 
         this._setupWindow();
 
         if (this._paused) {
             this.drawLayer(this._timePaused);
         } else {
-<<<<<<< HEAD
-            this.drawLayer(this._timePaused);
-=======
             this.animate();
->>>>>>> master
         }
 
     },
@@ -129,23 +125,23 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             zoomAnimated = this._map.options.zoomAnimation && L.Browser.any3d;
 
         // dotlayer canvas
-        this._canvas = L.DomUtil.create( "canvas", "leaflet-layer" );
-        this._canvas.width = size.x;
-        this._canvas.height = size.y;
-        this._ctx = this._canvas.getContext( "2d" );
-        L.DomUtil.addClass( this._canvas, "leaflet-zoom-" + ( zoomAnimated ? "animated" : "hide" ) );
+        this._dotCanvas = L.DomUtil.create( "canvas", "leaflet-layer" );
+        this._dotCanvas.width = size.x;
+        this._dotCanvas.height = size.y;
+        this._dotCtx = this._dotCanvas.getContext( "2d" );
+        L.DomUtil.addClass( this._dotCanvas, "leaflet-zoom-" + ( zoomAnimated ? "animated" : "hide" ) );
         map._panes.shadowPane.style.pointerEvents = "none";
-        map._panes.shadowPane.appendChild( this._canvas );
+        map._panes.shadowPane.appendChild( this._dotCanvas );
 
         // create Canvas for polyline-ish things
-        this._canvas2 = L.DomUtil.create( "canvas", "leaflet-layer" );
-        this._canvas2.width = size.x;
-        this._canvas2.height = size.y;
-        this._ctx2 = this._canvas2.getContext( "2d" );
-        this._ctx2.lineCap = "round";
-        this._ctx2.lineJoin = "round";
-        L.DomUtil.addClass( this._canvas2, "leaflet-zoom-" + ( zoomAnimated ? "animated" : "hide" ) );
-        map._panes.overlayPane.appendChild( this._canvas2 );
+        this._lineCanvas = L.DomUtil.create( "canvas", "leaflet-layer" );
+        this._lineCanvas.width = size.x;
+        this._lineCanvas.height = size.y;
+        this._lineCtx = this._lineCanvas.getContext( "2d" );
+        this._lineCtx.lineCap = "round";
+        this._lineCtx.lineJoin = "round";
+        L.DomUtil.addClass( this._lineCanvas, "leaflet-zoom-" + ( zoomAnimated ? "animated" : "hide" ) );
+        map._panes.overlayPane.appendChild( this._lineCanvas );
 
         map.on( this.getEvents(), this );
 
@@ -169,13 +165,11 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
     onRemove: function( map ) {
         this.onLayerWillUnmount && this.onLayerWillUnmount(); // -- callback
 
+        map._panes.shadowPane.removeChild( this._dotCanvas );
+        this._dotCanvas = null;
 
-        // map.getPanes().overlayPane.removeChild(this._canvas);
-        map._panes.shadowPane.removeChild( this._canvas );
-        this._canvas = null;
-
-        map._panes.overlayPane.removeChild( this._canvas2 );
-        this._canvas2 = null;
+        map._panes.overlayPane.removeChild( this._lineCanvas );
+        this._lineCanvas = null;
 
         map.off( this.getEvents(), this );
     },
@@ -216,14 +210,14 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         this._pxBounds = this._map.getPixelBounds();
         this._pxOffset = this._mapPanePos.subtract( this._pxOrigin )._add( new L.Point( 0.5, 0.5 ) );
 
-        var line_ctx = this._ctx2,
+        var lineCtx = this._lineCtx,
             z = this._zoom,
             ppos = this._mapPanePos,
             pxOrigin = this._pxOrigin,
             pxBounds = this._pxBounds,
             items = this._items;
 
-        this._ctx.strokeStyle = this.options.selected.dotStrokeColor;
+        this._dotCtx.strokeStyle = this.options.selected.dotStrokeColor;
 
         this._dotSize = Math.max(1, ~~(Math.log( z ) + 0.5));
         this._dotOffset = ~~( this._dotSize / 2 + 0.5 );
@@ -344,7 +338,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
                         if (this.options.showPaths) {
                             if (!drawingLine) {
-                                line_ctx.beginPath();
+                                lineCtx.beginPath();
                                 drawingLine = true;
                             }
                             // draw polyline segment from p1 to p2
@@ -352,8 +346,8 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                                 c1y = ~~(p[1] + pxOffy),
                                 c2x = ~~(p[3] + pxOffx),
                                 c2y = ~~(p[4] + pxOffy);
-                            line_ctx.moveTo(c1x, c1y);
-                            line_ctx.lineTo(c2x, c2y);
+                            lineCtx.moveTo(c1x, c1y);
+                            lineCtx.lineTo(c2x, c2y);
                         }
                     }
                 }
@@ -361,12 +355,12 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                 if (this.options.showPaths) {
                     if (drawingLine) {
                         lineType = A.highlighted? "selected":"normal";
-                        line_ctx.globalAlpha = this.options[lineType].pathOpacity;
-                        line_ctx.lineWidth = this.options[lineType].pathWidth;
-                        line_ctx.strokeStyle = A.path_color || this.options[lineType].pathColor;
-                        line_ctx.stroke();
+                        lineCtx.globalAlpha = this.options[lineType].pathOpacity;
+                        lineCtx.lineWidth = this.options[lineType].pathWidth;
+                        lineCtx.strokeStyle = A.path_color || this.options[lineType].pathColor;
+                        lineCtx.stroke();
                     } else {
-                        line_ctx.stroke();
+                        lineCtx.stroke();
                     }
                 }
 
@@ -396,7 +390,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             s = this._timeScale * ( now - obj.startTime ),
             xmax = this._size.x,
             ymax = this._size.y,
-            ctx = this._ctx,
+            ctx = this._dotCtx,
             dotSize = this._dotSize,
             dotOffset = this._dotOffset,
             two_pi = this.two_pi,
@@ -461,7 +455,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         }
 
 
-        let ctx = this._ctx,
+        let ctx = this._dotCtx,
             zoom = this._zoom,
             count = 0,
             t0 = performance.now(),
@@ -472,8 +466,8 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             highlighted_items = [],
             zf = this._zoomFactor;
 
-        this._ctx.clearRect( 0, 0, this._canvas.width, this._canvas.height );
-        this._ctx.fillStyle = this.options.normal.dotColor;
+        ctx.clearRect( 0, 0, this._dotCanvas.width, this._dotCanvas.height );
+        ctx.fillStyle = this.options.normal.dotColor;
 
         this._timeScale = this.C2 * zf;
         this._period = this.C1 * zf;
@@ -549,7 +543,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             this.lastCalledTime = now;
             this.drawLayer( now );
 
-            capturing && this._capturer.capture( this._canvas );
+            capturing && this._capturer.capture( this._dotCanvas );
         }
 
         this._frame = L.Util.requestAnimFrame( this._animate, this );
@@ -576,7 +570,8 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         var offset = L.Layer ? this._map._latLngToNewLayerPoint( this._map.getBounds().getNorthWest(), e.zoom, e.center ) :
                                this._map._getCenterOffset( e.center )._multiplyBy( -scale ).subtract( this._map._getMapPanePos() );
 
-        L.DomUtil.setTransform( this._canvas, offset, scale );
+        L.DomUtil.setTransform( this._dotCanvas, offset, scale );
+        L.DomUtil.setTransform( this._lineCanvas, offset, scale );
     },
 
 
