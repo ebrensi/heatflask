@@ -59,9 +59,13 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         this._colorPalette = [];
         L.setOptions( this, options );
         this._paused = this.options.startPaused;
+<<<<<<< HEAD
         if (this._paused){
             this._timePaused = Date.now();
         }
+=======
+        this._timePaused = Date.now();
+>>>>>>> master
     },
 
 
@@ -93,10 +97,14 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
         this._setupWindow();
 
-        if ( !this._paused ) {
-            this.animate();
-        } else {
+        if (this._paused) {
             this.drawLayer(this._timePaused);
+        } else {
+<<<<<<< HEAD
+            this.drawLayer(this._timePaused);
+=======
+            this.animate();
+>>>>>>> master
         }
 
     },
@@ -509,6 +517,10 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
     // --------------------------------------------------------------------
     animate: function() {
         this._paused = false;
+        if ( this._timePaused ) {
+            this._timeOffset = Date.now() - this._timePaused;
+            this._timePaused = null;
+        }
         this.lastCalledTime = 0;
         this.minDelay = ~~( 1000 / this.target_fps + 0.5 );
         this._frame = L.Util.requestAnimFrame( this._animate, this );
@@ -538,10 +550,6 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             return;
         }
 
-         if ( this._timePaused ) {
-            this._timeOffset = ts - this._timePaused;
-            this._timePaused = null;
-        }
 
         if (capturing || (now - this.lastCalledTime > this.minDelay)) {
             this.lastCalledTime = now;
