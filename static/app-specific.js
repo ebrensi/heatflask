@@ -919,7 +919,8 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
             let itemsList = Object.values(this._items),
                 numItems = itemsList.length;
 
-            this._colorPalette = createPalette(numItems);
+            this._colorPalette = colorPalette(numItems);
+            // this._colorPalette = createPalette( numItems );
             for (let i = 0; i < numItems; i++) {
                 itemsList[i].dotColor = this._colorPalette[i];
             }
@@ -1349,5 +1350,34 @@ function createPalette(colorCount) {
         }
     }
     return newPalette;
+}
+
+/*
+    From "Making annoying rainbows in javascript"
+    A tutorial by jim bumgardner
+*/
+function makeColorGradient(frequency1, frequency2, frequency3, phase1, phase2, phase3, center, width, len) {
+    let palette = new Array(len);
+
+    if (center == undefined) center = 128;
+    if (width == undefined) width = 127;
+    if (len == undefined) len = 50;
+
+    for (let i = 0; i < len; ++i) {
+        let r = Math.round(Math.sin(frequency1 * i + phase1) * width + center),
+            g = Math.round(Math.sin(frequency2 * i + phase2) * width + center),
+            b = Math.round(Math.sin(frequency3 * i + phase3) * width + center);
+        palette[i] = `rgb(${r}, ${g}, ${b})`;
+        // document.write( '<font color="' + RGB2Color(red,grn,blu) + '">&#9608;</font>');
+    }
+    return palette;
+}
+
+function colorPalette(n) {
+    center = 128;
+    width = 127;
+    steps = 10;
+    frequency = 2 * Math.PI / steps;
+    return makeColorGradient(frequency, frequency, frequency, 0, 2, 4, center, width, n);
 }
 
