@@ -41,8 +41,9 @@ var map = L.map('map', {
         center: ONLOAD_PARAMS.map_center,
         zoom: ONLOAD_PARAMS.map_zoom,
         layers : [ default_baseLayer ],
-        renderer: L.svg({ padding: 0 }),
-        zoomAnimation: false
+        preferCanvas: true,
+        // renderer: L.svg({ padding: 0 }),
+        zoomAnimation: true
     });
 
 
