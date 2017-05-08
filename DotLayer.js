@@ -587,6 +587,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         }
         this._mapMoving = true;
         leafletImage(this._map, function(err, canvas) {
+            console.log("capturing static map frame...");
             //download(canvas.toDataURL("image/png"), "mapView.png", "image/png");
             console.log("leaflet-image: " + err);
             if (canvas) {
@@ -598,7 +599,6 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
     capture: function(baseCanvas, durationSecs=2) {
         this._mapMoving = true;
-        debugger;
 
         let height = baseCanvas.height,
             width = baseCanvas.width,
@@ -627,14 +627,14 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         //     frameTime = Date.now();
         // }.bind( this ) );
 
-        encoder.on( 'progress', function( progress ) {
+        encoder.on( 'progress', function( p ) {
             // info.innerHTML(p*100+"%");
-            console.log(p*100+"% done.");
+            // console.log(p*100+"% done.");
         }.bind( this ) );
 
         encoder.on('finished', function( blob ) {
-            window.open(URL.createObjectURL(blob));
-            // download(blob, "output.gif", 'image/gif' );
+            // window.open(URL.createObjectURL(blob));
+            download(blob, "output.gif", 'image/gif' );
 
             this._mapMoving = false;
             if (!this._paused) {
@@ -642,23 +642,27 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             }
         }.bind( this ) );
 
-
+        console.log("generating frames...");
         for (let i=0; i<numFrames; i++, frameTime+=delay){
+            // console.log(`processing frame ${i+1}/${numFrames}`);
             this.drawLayer(frameTime);
 
             frameCtx.clearRect( 0, 0, width, height );
             frameCtx.drawImage(baseCanvas, 0, 0);
             frameCtx.drawImage(this._dotCanvas, 0, 0);
-
-            encoder.addFrame(frameCtx, {copy: true, delay: delay});
+            encoder.addFrame(frameCanvas, {copy: true, delay: delay});
         }
 
+        cosole.log("rendering output...");
         encoder.render();
     },
 
 
     // ------------------------------------------------------
     startCapture: function() {
+        this.captureCycle();
+        return;
+        /*
         let periodInSecs = this.periodInSecs();
         if (periodInSecs > 5) {
             return 0;
@@ -679,9 +683,12 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         this._capturing = true;
         this._capturer.start();
         return periodInSecs;
+        */
     },
 
     stopCapture: function() {
+        return;
+
         this._capturer.stop();
         this._capturing = false;
 
