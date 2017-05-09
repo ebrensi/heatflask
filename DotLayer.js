@@ -591,17 +591,17 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             //download(canvas.toDataURL("image/png"), "mapView.png", "image/png");
             console.log("leaflet-image: " + err);
             if (canvas) {
-                this.capture(canvas, periodInSecs);
+                this.captureGIF(canvas, periodInSecs);
             }
         }.bind(this));
     },
 
 
-    capture: function(baseCanvas, durationSecs=2) {
+    captureGIF: function(baseCanvas=null, durationSecs=2) {
         this._mapMoving = true;
 
-        let height = baseCanvas.height,
-            width = baseCanvas.width,
+        let height = baseCanvas? baseCanvas.height : this._size.y,
+            width = baseCanvas? baseCanvas.width : this._size.x,
             frameCanvas = document.createElement('canvas');
 
         frameCanvas.width = width;
@@ -612,7 +612,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             frameTime = Date.now(),
             frameRate = 30,
             numFrames = durationSecs * frameRate,
-            delay = ~~(1000 / frameRate),
+            delay = 1000 / frameRate,
 
             encoder = new GIF({
                 workers: 4,
@@ -644,16 +644,17 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
         console.log("generating frames...");
         for (let i=0; i<numFrames; i++, frameTime+=delay){
-            // console.log(`processing frame ${i+1}/${numFrames}`);
+            console.log(`processing frame ${i+1}/${numFrames}`);
             this.drawLayer(frameTime);
 
             frameCtx.clearRect( 0, 0, width, height );
             frameCtx.drawImage(baseCanvas, 0, 0);
             frameCtx.drawImage(this._dotCanvas, 0, 0);
-            encoder.addFrame(frameCanvas, {copy: true, delay: delay});
+            encoder.addFrame(frameCanvas, { copy: true, delay: delay});
+            // window.open(frameCanvas.toDataURL("image/png"), '_blank');
         }
 
-        cosole.log("rendering output...");
+        console.log("rendering output...");
         encoder.render();
     },
 
