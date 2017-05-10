@@ -6854,853 +6854,6 @@ L.areaSelect = function (options) {
 };
 
 
-;(function () {
-
-	"use strict";
-
-	var objectTypes = {
-		'function': true,
-		'object': true
-	};
-
-	function checkGlobal(value) {
-		return value && value.Object === Object ? value : null;
-	}
-
-	/** Built-in method references without a dependency on `root`. */
-	var freeParseFloat = parseFloat,
-	    freeParseInt = parseInt;
-
-	/** Detect free variable `exports`. */
-	var freeExports = objectTypes[typeof exports] && exports && !exports.nodeType ? exports : undefined;
-
-	/** Detect free variable `module`. */
-	var freeModule = objectTypes[typeof module] && module && !module.nodeType ? module : undefined;
-
-	/** Detect the popular CommonJS extension `module.exports`. */
-	var moduleExports = freeModule && freeModule.exports === freeExports ? freeExports : undefined;
-
-	/** Detect free variable `global` from Node.js. */
-	var freeGlobal = checkGlobal(freeExports && freeModule && typeof global == 'object' && global);
-
-	/** Detect free variable `self`. */
-	var freeSelf = checkGlobal(objectTypes[typeof self] && self);
-
-	/** Detect free variable `window`. */
-	var freeWindow = checkGlobal(objectTypes[typeof window] && window);
-
-	/** Detect `this` as the global object. */
-	var thisGlobal = checkGlobal(objectTypes[typeof this] && this);
-
-	/**
- * Used as a reference to the global object.
- *
- * The `this` value is used if it's the global object to avoid Greasemonkey's
- * restricted `window` object, otherwise the `window` object is used.
- */
-	var root = freeGlobal || freeWindow !== (thisGlobal && thisGlobal.window) && freeWindow || freeSelf || thisGlobal || Function('return this')();
-
-	if (!('gc' in window)) {
-		window.gc = function () {};
-	}
-
-	if (!HTMLCanvasElement.prototype.toBlob) {
-		Object.defineProperty(HTMLCanvasElement.prototype, 'toBlob', {
-			value: function (callback, type, quality) {
-
-				var binStr = atob(this.toDataURL(type, quality).split(',')[1]),
-				    len = binStr.length,
-				    arr = new Uint8Array(len);
-
-				for (var i = 0; i < len; i++) {
-					arr[i] = binStr.charCodeAt(i);
-				}
-
-				callback(new Blob([arr], { type: type || 'image/png' }));
-			}
-		});
-	}
-
-	// @license http://opensource.org/licenses/MIT
-	// copyright Paul Irish 2015
-
-
-	// Date.now() is supported everywhere except IE8. For IE8 we use the Date.now polyfill
-	//   github.com/Financial-Times/polyfill-service/blob/master/polyfills/Date.now/polyfill.js
-	// as Safari 6 doesn't have support for NavigationTiming, we use a Date.now() timestamp for relative values
-
-	// if you want values similar to what you'd get with real perf.now, place this towards the head of the page
-	// but in reality, you're just getting the delta between now() calls, so it's not terribly important where it's placed
-
-
-	(function () {
-
-		if ("performance" in window == false) {
-			window.performance = {};
-		}
-
-		Date.now = Date.now || function () {
-			// thanks IE8
-			return new Date().getTime();
-		};
-
-		if ("now" in window.performance == false) {
-
-			var nowOffset = Date.now();
-
-			if (performance.timing && performance.timing.navigationStart) {
-				nowOffset = performance.timing.navigationStart;
-			}
-
-			window.performance.now = function now() {
-				return Date.now() - nowOffset;
-			};
-		}
-	})();
-
-	function pad(n) {
-		return String("0000000" + n).slice(-7);
-	}
-	// https://developer.mozilla.org/en-US/Add-ons/Code_snippets/Timers
-
-	var g_startTime = window.Date.now();
-
-	function guid() {
-		function s4() {
-			return Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1);
-		}
-		return s4() + s4() + '-' + s4() + '-' + s4() + '-' + s4() + '-' + s4() + s4() + s4();
-	}
-
-	function CCFrameEncoder(settings) {
-
-		var _handlers = {};
-
-		this.settings = settings;
-
-		this.on = function (event, handler) {
-
-			_handlers[event] = handler;
-		};
-
-		this.emit = function (event) {
-
-			var handler = _handlers[event];
-			if (handler) {
-
-				handler.apply(null, Array.prototype.slice.call(arguments, 1));
-			}
-		};
-
-		this.filename = settings.name || guid();
-		this.extension = '';
-		this.mimeType = '';
-	}
-
-	CCFrameEncoder.prototype.start = function () {};
-	CCFrameEncoder.prototype.stop = function () {};
-	CCFrameEncoder.prototype.add = function () {};
-	CCFrameEncoder.prototype.save = function () {};
-	CCFrameEncoder.prototype.dispose = function () {};
-	CCFrameEncoder.prototype.safeToProceed = function () {
-		return true;
-	};
-	CCFrameEncoder.prototype.step = function () {
-		console.log('Step not set!');
-	};
-
-	function CCTarEncoder(settings) {
-
-		CCFrameEncoder.call(this, settings);
-
-		this.extension = '.tar';
-		this.mimeType = 'application/x-tar';
-		this.fileExtension = '';
-
-		this.tape = null;
-		this.count = 0;
-	}
-
-	CCTarEncoder.prototype = Object.create(CCFrameEncoder.prototype);
-
-	CCTarEncoder.prototype.start = function () {
-
-		this.dispose();
-	};
-
-	CCTarEncoder.prototype.add = function (blob) {
-
-		var fileReader = new FileReader();
-		fileReader.onload = function () {
-			this.tape.append(pad(this.count) + this.fileExtension, new Uint8Array(fileReader.result));
-
-			//if( this.settings.autoSaveTime > 0 && ( this.frames.length / this.settings.framerate ) >= this.settings.autoSaveTime ) {
-
-			this.count++;
-			this.step();
-		}.bind(this);
-		fileReader.readAsArrayBuffer(blob);
-	};
-
-	CCTarEncoder.prototype.save = function (callback) {
-
-		callback(this.tape.save());
-	};
-
-	CCTarEncoder.prototype.dispose = function () {
-
-		this.tape = new Tar();
-		this.count = 0;
-	};
-
-	function CCPNGEncoder(settings) {
-
-		CCTarEncoder.call(this, settings);
-
-		this.type = 'image/png';
-		this.fileExtension = '.png';
-	}
-
-	CCPNGEncoder.prototype = Object.create(CCTarEncoder.prototype);
-
-	CCPNGEncoder.prototype.add = function (canvas) {
-
-		canvas.toBlob(function (blob) {
-			CCTarEncoder.prototype.add.call(this, blob);
-		}.bind(this), this.type);
-	};
-
-	function CCJPEGEncoder(settings) {
-
-		CCTarEncoder.call(this, settings);
-
-		this.type = 'image/jpeg';
-		this.fileExtension = '.jpg';
-		this.quality = settings.quality / 100 || .8;
-	}
-
-	CCJPEGEncoder.prototype = Object.create(CCTarEncoder.prototype);
-
-	CCJPEGEncoder.prototype.add = function (canvas) {
-
-		canvas.toBlob(function (blob) {
-			CCTarEncoder.prototype.add.call(this, blob);
-		}.bind(this), this.type, this.quality);
-	};
-
-	/*
- 
- 	WebM Encoder
- 
- */
-
-	function CCWebMEncoder(settings) {
-
-		var canvas = document.createElement('canvas');
-		if (canvas.toDataURL('image/webp').substr(5, 10) !== 'image/webp') {
-			console.log("WebP not supported - try another export format");
-		}
-
-		CCFrameEncoder.call(this, settings);
-
-		settings.quality = settings.quality / 100 || .8;
-
-		this.extension = '.webm';
-		this.mimeType = 'video/webm';
-		this.baseFilename = this.filename;
-
-		this.frames = [];
-		this.part = 1;
-	}
-
-	CCWebMEncoder.prototype = Object.create(CCFrameEncoder.prototype);
-
-	CCWebMEncoder.prototype.start = function (canvas) {
-
-		this.dispose();
-	};
-
-	CCWebMEncoder.prototype.add = function (canvas) {
-
-		this.frames.push(canvas.toDataURL('image/webp', this.quality));
-
-		if (this.settings.autoSaveTime > 0 && this.frames.length / this.settings.framerate >= this.settings.autoSaveTime) {
-			this.save(function (blob) {
-				this.filename = this.baseFilename + '-part-' + pad(this.part);
-				download(blob, this.filename + this.extension, this.mimeType);
-				this.dispose();
-				this.part++;
-				this.filename = this.baseFilename + '-part-' + pad(this.part);
-				this.step();
-			}.bind(this));
-		} else {
-			this.step();
-		}
-	};
-
-	CCWebMEncoder.prototype.save = function (callback) {
-
-		if (!this.frames.length) return;
-
-		var webm = Whammy.fromImageArray(this.frames, this.settings.framerate);
-		var blob = new Blob([webm], { type: "octet/stream" });
-		callback(blob);
-	};
-
-	CCWebMEncoder.prototype.dispose = function (canvas) {
-
-		this.frames = [];
-	};
-
-	function CCFFMpegServerEncoder(settings) {
-
-		CCFrameEncoder.call(this, settings);
-
-		settings.quality = settings.quality / 100 || .8;
-
-		this.encoder = new FFMpegServer.Video(settings);
-		this.encoder.on('process', function () {
-			this.emit('process');
-		}.bind(this));
-		this.encoder.on('finished', function (url, size) {
-			var cb = this.callback;
-			if (cb) {
-				this.callback = undefined;
-				cb(url, size);
-			}
-		}.bind(this));
-		this.encoder.on('progress', function (progress) {
-			if (this.settings.onProgress) {
-				this.settings.onProgress(progress);
-			}
-		}.bind(this));
-		this.encoder.on('error', function (data) {
-			alert(JSON.stringify(data, null, 2));
-		}.bind(this));
-	}
-
-	CCFFMpegServerEncoder.prototype = Object.create(CCFrameEncoder.prototype);
-
-	CCFFMpegServerEncoder.prototype.start = function () {
-
-		this.encoder.start(this.settings);
-	};
-
-	CCFFMpegServerEncoder.prototype.add = function (canvas) {
-
-		this.encoder.add(canvas);
-	};
-
-	CCFFMpegServerEncoder.prototype.save = function (callback) {
-
-		this.callback = callback;
-		this.encoder.end();
-	};
-
-	CCFFMpegServerEncoder.prototype.safeToProceed = function () {
-		return this.encoder.safeToProceed();
-	};
-
-	/*
- 	HTMLCanvasElement.captureStream()
- */
-
-	function CCStreamEncoder(settings) {
-
-		CCFrameEncoder.call(this, settings);
-
-		this.framerate = this.settings.framerate;
-		this.type = 'video/webm';
-		this.extension = '.webm';
-		this.stream = null;
-		this.mediaRecorder = null;
-		this.chunks = [];
-	}
-
-	CCStreamEncoder.prototype = Object.create(CCFrameEncoder.prototype);
-
-	CCStreamEncoder.prototype.add = function (canvas) {
-
-		if (!this.stream) {
-			this.stream = canvas.captureStream(this.framerate);
-			this.mediaRecorder = new MediaRecorder(this.stream);
-			this.mediaRecorder.start();
-
-			this.mediaRecorder.ondataavailable = function (e) {
-				this.chunks.push(e.data);
-			}.bind(this);
-		}
-		this.step();
-	};
-
-	CCStreamEncoder.prototype.save = function (callback) {
-
-		this.mediaRecorder.onstop = function (e) {
-			var blob = new Blob(this.chunks, { 'type': 'video/webm' });
-			this.chunks = [];
-			callback(blob);
-		}.bind(this);
-
-		this.mediaRecorder.stop();
-	};
-
-	function CCGIFEncoder(settings) {
-
-		CCFrameEncoder.call(this, settings);
-
-		settings.quality = 31 - (settings.quality * 30 / 100 || 10);
-		settings.workers = settings.workers || 4;
-
-		this.extension = '.gif';
-		this.mimeType = 'image/gif';
-
-		this.canvas = document.createElement('canvas');
-		this.ctx = this.canvas.getContext('2d');
-		this.sizeSet = false;
-
-		this.encoder = new GIF({
-			workers: settings.workers,
-			quality: settings.quality,
-			background: "#FFFF",
-			workerScript: settings.workersPath + 'gif.worker.js'
-		});
-
-		this.encoder.on('progress', function (progress) {
-			if (this.settings.onProgress) {
-				this.settings.onProgress(progress);
-			}
-		}.bind(this));
-
-		this.encoder.on('finished', function (blob) {
-			var cb = this.callback;
-			if (cb) {
-				this.callback = undefined;
-				cb(blob);
-			}
-		}.bind(this));
-	}
-
-	CCGIFEncoder.prototype = Object.create(CCFrameEncoder.prototype);
-
-	CCGIFEncoder.prototype.add = function (canvas) {
-
-		if (!this.sizeSet) {
-			this.encoder.setOption('width', canvas.width);
-			this.encoder.setOption('height', canvas.height);
-			this.sizeSet = true;
-		}
-
-		this.canvas.width = canvas.width;
-		this.canvas.height = canvas.height;
-		this.ctx.drawImage(canvas, 0, 0);
-
-		this.encoder.addFrame(this.ctx, { copy: true, delay: this.settings.step });
-		this.step();
-	};
-
-	CCGIFEncoder.prototype.save = function (callback) {
-
-		this.callback = callback;
-
-		this.encoder.render();
-	};
-
-	function CCapture(settings) {
-
-		var _settings = settings || {},
-		    _date = new Date(),
-		    _verbose,
-		    _display,
-		    _time,
-		    _startTime,
-		    _performanceTime,
-		    _performanceStartTime,
-		    _step,
-		    _encoder,
-		    _timeouts = [],
-		    _intervals = [],
-		    _frameCount = 0,
-		    _intermediateFrameCount = 0,
-		    _lastFrame = null,
-		    _requestAnimationFrameCallbacks = [],
-		    _capturing = false,
-		    _handlers = {};
-
-		_settings.framerate = _settings.framerate || 60;
-		_settings.motionBlurFrames = 2 * (_settings.motionBlurFrames || 1);
-		_verbose = _settings.verbose || false;
-		_display = _settings.display || false;
-		_settings.step = 1000.0 / _settings.framerate;
-		_settings.timeLimit = _settings.timeLimit || 0;
-		_settings.frameLimit = _settings.frameLimit || 0;
-		_settings.startTime = _settings.startTime || 0;
-
-		var _timeDisplay = document.createElement('div');
-		_timeDisplay.style.position = 'absolute';
-		_timeDisplay.style.left = _timeDisplay.style.top = 0;
-		_timeDisplay.style.backgroundColor = 'black';
-		_timeDisplay.style.fontFamily = 'monospace';
-		_timeDisplay.style.fontSize = '11px';
-		_timeDisplay.style.padding = '5px';
-		_timeDisplay.style.color = 'red';
-		_timeDisplay.style.zIndex = 100000;
-		if (_settings.display) document.body.appendChild(_timeDisplay);
-
-		var canvasMotionBlur = document.createElement('canvas');
-		var ctxMotionBlur = canvasMotionBlur.getContext('2d');
-		var bufferMotionBlur;
-		var imageData;
-
-		_log('Step is set to ' + _settings.step + 'ms');
-
-		var _encoders = {
-			gif: CCGIFEncoder,
-			webm: CCWebMEncoder,
-			ffmpegserver: CCFFMpegServerEncoder,
-			png: CCPNGEncoder,
-			jpg: CCJPEGEncoder,
-			'webm-mediarecorder': CCStreamEncoder
-		};
-
-		var ctor = _encoders[_settings.format];
-		if (!ctor) {
-			throw "Error: Incorrect or missing format: Valid formats are " + Object.keys(_encoders).join(", ");
-		}
-		_encoder = new ctor(_settings);
-		_encoder.step = _step;
-
-		_encoder.on('process', _process);
-		_encoder.on('progress', _progress);
-
-		if ("performance" in window == false) {
-			window.performance = {};
-		}
-
-		Date.now = Date.now || function () {
-			// thanks IE8
-			return new Date().getTime();
-		};
-
-		if ("now" in window.performance == false) {
-
-			var nowOffset = Date.now();
-
-			if (performance.timing && performance.timing.navigationStart) {
-				nowOffset = performance.timing.navigationStart;
-			}
-
-			window.performance.now = function now() {
-				return Date.now() - nowOffset;
-			};
-		}
-
-		var _oldSetTimeout = window.setTimeout,
-		    _oldSetInterval = window.setInterval,
-		    _oldClearTimeout = window.clearTimeout,
-		    _oldRequestAnimationFrame = window.requestAnimationFrame,
-		    _oldNow = window.Date.now,
-		    _oldPerformanceNow = window.performance.now,
-		    _oldGetTime = window.Date.prototype.getTime;
-		// Date.prototype._oldGetTime = Date.prototype.getTime;
-
-		var media = [];
-
-		function _init() {
-
-			_log('Capturer start');
-
-			_startTime = window.Date.now();
-			_time = _startTime + _settings.startTime;
-			_performanceStartTime = window.performance.now();
-			_performanceTime = _performanceStartTime + _settings.startTime;
-
-			window.Date.prototype.getTime = function () {
-				return _time;
-			};
-			window.Date.now = function () {
-				return _time;
-			};
-
-			window.setTimeout = function (callback, time) {
-				var t = {
-					callback: callback,
-					time: time,
-					triggerTime: _time + time
-				};
-				_timeouts.push(t);
-				_log('Timeout set to ' + t.time);
-				return t;
-			};
-			window.clearTimeout = function (id) {
-				for (var j = 0; j < _timeouts.length; j++) {
-					if (_timeouts[j] == id) {
-						_timeouts.splice(j, 1);
-						_log('Timeout cleared');
-						continue;
-					}
-				}
-			};
-			window.setInterval = function (callback, time) {
-				var t = {
-					callback: callback,
-					time: time,
-					triggerTime: _time + time
-				};
-				_intervals.push(t);
-				_log('Interval set to ' + t.time);
-				return t;
-			};
-			window.clearInterval = function (id) {
-				_log('clear Interval');
-				return null;
-			};
-			window.requestAnimationFrame = function (callback) {
-				_requestAnimationFrameCallbacks.push(callback);
-			};
-			window.performance.now = function () {
-				return _performanceTime;
-			};
-
-			function hookCurrentTime() {
-				if (!this._hooked) {
-					this._hooked = true;
-					this._hookedTime = this.currentTime || 0;
-					this.pause();
-					media.push(this);
-				}
-				return this._hookedTime + _settings.startTime;
-			};
-
-			try {
-				Object.defineProperty(HTMLVideoElement.prototype, 'currentTime', { get: hookCurrentTime });
-				Object.defineProperty(HTMLAudioElement.prototype, 'currentTime', { get: hookCurrentTime });
-			} catch (err) {
-				_log(err);
-			}
-		}
-
-		function _start() {
-			_init();
-			_encoder.start();
-			_capturing = true;
-		}
-
-		function _stop() {
-			_capturing = false;
-			_encoder.stop();
-			_destroy();
-		}
-
-		function _call(fn, p) {
-			_oldSetTimeout(fn, 0, p);
-		}
-
-		function _step() {
-			//_oldRequestAnimationFrame( _process );
-			_call(_process);
-		}
-
-		function _destroy() {
-			_log('Capturer stop');
-			window.setTimeout = _oldSetTimeout;
-			window.setInterval = _oldSetInterval;
-			window.clearTimeout = _oldClearTimeout;
-			window.requestAnimationFrame = _oldRequestAnimationFrame;
-			window.Date.prototype.getTime = _oldGetTime;
-			window.Date.now = _oldNow;
-			window.performance.now = _oldPerformanceNow;
-		}
-
-		function _updateTime() {
-			var seconds = _frameCount / _settings.framerate;
-			if (_settings.frameLimit && _frameCount >= _settings.frameLimit || _settings.timeLimit && seconds >= _settings.timeLimit) {
-				_stop();
-				_save();
-			}
-			var d = new Date(null);
-			d.setSeconds(seconds);
-			if (_settings.motionBlurFrames > 2) {
-				_timeDisplay.textContent = 'CCapture ' + _settings.format + ' | ' + _frameCount + ' frames (' + _intermediateFrameCount + ' inter) | ' + d.toISOString().substr(11, 8);
-			} else {
-				_timeDisplay.textContent = 'CCapture ' + _settings.format + ' | ' + _frameCount + ' frames | ' + d.toISOString().substr(11, 8);
-			}
-		}
-
-		function _checkFrame(canvas) {
-
-			if (canvasMotionBlur.width !== canvas.width || canvasMotionBlur.height !== canvas.height) {
-				canvasMotionBlur.width = canvas.width;
-				canvasMotionBlur.height = canvas.height;
-				bufferMotionBlur = new Uint16Array(canvasMotionBlur.height * canvasMotionBlur.width * 4);
-				ctxMotionBlur.fillStyle = '#0';
-				ctxMotionBlur.fillRect(0, 0, canvasMotionBlur.width, canvasMotionBlur.height);
-			}
-		}
-
-		function _blendFrame(canvas) {
-
-			//_log( 'Intermediate Frame: ' + _intermediateFrameCount );
-
-			ctxMotionBlur.drawImage(canvas, 0, 0);
-			imageData = ctxMotionBlur.getImageData(0, 0, canvasMotionBlur.width, canvasMotionBlur.height);
-			for (var j = 0; j < bufferMotionBlur.length; j += 4) {
-				bufferMotionBlur[j] += imageData.data[j];
-				bufferMotionBlur[j + 1] += imageData.data[j + 1];
-				bufferMotionBlur[j + 2] += imageData.data[j + 2];
-			}
-			_intermediateFrameCount++;
-		}
-
-		function _saveFrame() {
-
-			var data = imageData.data;
-			for (var j = 0; j < bufferMotionBlur.length; j += 4) {
-				data[j] = bufferMotionBlur[j] * 2 / _settings.motionBlurFrames;
-				data[j + 1] = bufferMotionBlur[j + 1] * 2 / _settings.motionBlurFrames;
-				data[j + 2] = bufferMotionBlur[j + 2] * 2 / _settings.motionBlurFrames;
-			}
-			ctxMotionBlur.putImageData(imageData, 0, 0);
-			_encoder.add(canvasMotionBlur);
-			_frameCount++;
-			_intermediateFrameCount = 0;
-			_log('Full MB Frame! ' + _frameCount + ' ' + _time);
-			for (var j = 0; j < bufferMotionBlur.length; j += 4) {
-				bufferMotionBlur[j] = 0;
-				bufferMotionBlur[j + 1] = 0;
-				bufferMotionBlur[j + 2] = 0;
-			}
-			gc();
-		}
-
-		function _capture(canvas) {
-
-			if (_capturing) {
-
-				if (_settings.motionBlurFrames > 2) {
-
-					_checkFrame(canvas);
-					_blendFrame(canvas);
-
-					if (_intermediateFrameCount >= .5 * _settings.motionBlurFrames) {
-						_saveFrame();
-					} else {
-						_step();
-					}
-				} else {
-					_encoder.add(canvas);
-					_frameCount++;
-					_log('Full Frame! ' + _frameCount);
-				}
-			}
-		}
-
-		function _process() {
-
-			var step = 1000 / _settings.framerate;
-			var dt = (_frameCount + _intermediateFrameCount / _settings.motionBlurFrames) * step;
-
-			_time = _startTime + dt;
-			_performanceTime = _performanceStartTime + dt;
-
-			media.forEach(function (v) {
-				v._hookedTime = dt / 1000;
-			});
-
-			_updateTime();
-			_log('Frame: ' + _frameCount + ' ' + _intermediateFrameCount);
-
-			for (var j = 0; j < _timeouts.length; j++) {
-				if (_time >= _timeouts[j].triggerTime) {
-					_call(_timeouts[j].callback);
-					//console.log( 'timeout!' );
-					_timeouts.splice(j, 1);
-					continue;
-				}
-			}
-
-			for (var j = 0; j < _intervals.length; j++) {
-				if (_time >= _intervals[j].triggerTime) {
-					_call(_intervals[j].callback);
-					_intervals[j].triggerTime += _intervals[j].time;
-					//console.log( 'interval!' );
-					continue;
-				}
-			}
-
-			_requestAnimationFrameCallbacks.forEach(function (cb) {
-				_call(cb, _time - g_startTime);
-			});
-			_requestAnimationFrameCallbacks = [];
-		}
-
-		function _save(callback) {
-
-			if (!callback) {
-				callback = function (blob) {
-					download(blob, _encoder.filename + _encoder.extension, _encoder.mimeType);
-					return false;
-				};
-			}
-			_encoder.save(callback);
-		}
-
-		function _log(message) {
-			if (_verbose) console.log(message);
-		}
-
-		function _on(event, handler) {
-
-			_handlers[event] = handler;
-		}
-
-		function _emit(event) {
-
-			var handler = _handlers[event];
-			if (handler) {
-
-				handler.apply(null, Array.prototype.slice.call(arguments, 1));
-			}
-		}
-
-		function _progress(progress) {
-
-			_emit('progress', progress);
-		}
-
-		return {
-			start: _start,
-			capture: _capture,
-			stop: _stop,
-			save: _save,
-			on: _on
-		};
-	}
-
-	(freeWindow || freeSelf || {}).CCapture = CCapture;
-
-	// Some AMD build optimizers like r.js check for condition patterns like the following:
-	if (typeof define == 'function' && typeof define.amd == 'object' && define.amd) {
-		// Define as an anonymous module so, through path mapping, it can be
-		// referenced as the "underscore" module.
-		define(function () {
-			return CCapture;
-		});
-	}
-	// Check for `exports` after `define` in case a build optimizer adds an `exports` object.
-	else if (freeExports && freeModule) {
-			// Export for Node.js.
-			if (moduleExports) {
-				(freeModule.exports = CCapture).CCapture = CCapture;
-			}
-			// Export for CommonJS support.
-			freeExports.CCapture = CCapture;
-		} else {
-			// Export to the global object.
-			root.CCapture = CCapture;
-		}
-})();
-
-
 (function (f) {
     if (typeof exports === "object" && typeof module !== "undefined") {
         module.exports = f();
@@ -8468,6 +7621,535 @@ L.areaSelect = function (options) {
     return tmpIcon;
   }
 })();
+
+
+/*
+	var vid = new Whammy.Video();
+	vid.add(canvas or data url)
+	vid.compile()
+*/
+
+window.Whammy = function () {
+	// in this case, frames has a very specific meaning, which will be
+	// detailed once i finish writing the code
+
+	function toWebM(frames, outputAsArray) {
+		var info = checkFrames(frames);
+
+		//max duration by cluster in milliseconds
+		var CLUSTER_MAX_DURATION = 30000;
+
+		var EBML = [{
+			"id": 0x1a45dfa3, // EBML
+			"data": [{
+				"data": 1,
+				"id": 0x4286 // EBMLVersion
+			}, {
+				"data": 1,
+				"id": 0x42f7 // EBMLReadVersion
+			}, {
+				"data": 4,
+				"id": 0x42f2 // EBMLMaxIDLength
+			}, {
+				"data": 8,
+				"id": 0x42f3 // EBMLMaxSizeLength
+			}, {
+				"data": "webm",
+				"id": 0x4282 // DocType
+			}, {
+				"data": 2,
+				"id": 0x4287 // DocTypeVersion
+			}, {
+				"data": 2,
+				"id": 0x4285 // DocTypeReadVersion
+			}]
+		}, {
+			"id": 0x18538067, // Segment
+			"data": [{
+				"id": 0x1549a966, // Info
+				"data": [{
+					"data": 1e6, //do things in millisecs (num of nanosecs for duration scale)
+					"id": 0x2ad7b1 // TimecodeScale
+				}, {
+					"data": "whammy",
+					"id": 0x4d80 // MuxingApp
+				}, {
+					"data": "whammy",
+					"id": 0x5741 // WritingApp
+				}, {
+					"data": doubleToString(info.duration),
+					"id": 0x4489 // Duration
+				}]
+			}, {
+				"id": 0x1654ae6b, // Tracks
+				"data": [{
+					"id": 0xae, // TrackEntry
+					"data": [{
+						"data": 1,
+						"id": 0xd7 // TrackNumber
+					}, {
+						"data": 1,
+						"id": 0x73c5 // TrackUID
+					}, {
+						"data": 0,
+						"id": 0x9c // FlagLacing
+					}, {
+						"data": "und",
+						"id": 0x22b59c // Language
+					}, {
+						"data": "V_VP8",
+						"id": 0x86 // CodecID
+					}, {
+						"data": "VP8",
+						"id": 0x258688 // CodecName
+					}, {
+						"data": 1,
+						"id": 0x83 // TrackType
+					}, {
+						"id": 0xe0, // Video
+						"data": [{
+							"data": info.width,
+							"id": 0xb0 // PixelWidth
+						}, {
+							"data": info.height,
+							"id": 0xba // PixelHeight
+						}]
+					}]
+				}]
+			}, {
+				"id": 0x1c53bb6b, // Cues
+				"data": [
+					//cue insertion point
+				]
+			}
+
+			//cluster insertion point
+			]
+		}];
+
+		var segment = EBML[1];
+		var cues = segment.data[2];
+
+		//Generate clusters (max duration)
+		var frameNumber = 0;
+		var clusterTimecode = 0;
+		while (frameNumber < frames.length) {
+
+			var cuePoint = {
+				"id": 0xbb, // CuePoint
+				"data": [{
+					"data": Math.round(clusterTimecode),
+					"id": 0xb3 // CueTime
+				}, {
+					"id": 0xb7, // CueTrackPositions
+					"data": [{
+						"data": 1,
+						"id": 0xf7 // CueTrack
+					}, {
+						"data": 0, // to be filled in when we know it
+						"size": 8,
+						"id": 0xf1 // CueClusterPosition
+					}]
+				}]
+			};
+
+			cues.data.push(cuePoint);
+
+			var clusterFrames = [];
+			var clusterDuration = 0;
+			do {
+				clusterFrames.push(frames[frameNumber]);
+				clusterDuration += frames[frameNumber].duration;
+				frameNumber++;
+			} while (frameNumber < frames.length && clusterDuration < CLUSTER_MAX_DURATION);
+
+			var clusterCounter = 0;
+			var cluster = {
+				"id": 0x1f43b675, // Cluster
+				"data": [{
+					"data": Math.round(clusterTimecode),
+					"id": 0xe7 // Timecode
+				}].concat(clusterFrames.map(function (webp) {
+					var block = makeSimpleBlock({
+						discardable: 0,
+						frame: webp.data.slice(4),
+						invisible: 0,
+						keyframe: 1,
+						lacing: 0,
+						trackNum: 1,
+						timecode: Math.round(clusterCounter)
+					});
+					clusterCounter += webp.duration;
+					return {
+						data: block,
+						id: 0xa3
+					};
+				}))
+			};
+
+			//Add cluster to segment
+			segment.data.push(cluster);
+			clusterTimecode += clusterDuration;
+		}
+
+		//First pass to compute cluster positions
+		var position = 0;
+		for (var i = 0; i < segment.data.length; i++) {
+			if (i >= 3) {
+				cues.data[i - 3].data[1].data[1].data = position;
+			}
+			var data = generateEBML([segment.data[i]], outputAsArray);
+			position += data.size || data.byteLength || data.length;
+			if (i != 2) {
+				// not cues
+				//Save results to avoid having to encode everything twice
+				segment.data[i] = data;
+			}
+		}
+
+		return generateEBML(EBML, outputAsArray);
+	}
+
+	// sums the lengths of all the frames and gets the duration, woo
+
+	function checkFrames(frames) {
+		var width = frames[0].width,
+		    height = frames[0].height,
+		    duration = frames[0].duration;
+		for (var i = 1; i < frames.length; i++) {
+			if (frames[i].width != width) throw "Frame " + (i + 1) + " has a different width";
+			if (frames[i].height != height) throw "Frame " + (i + 1) + " has a different height";
+			if (frames[i].duration < 0 || frames[i].duration > 0x7fff) throw "Frame " + (i + 1) + " has a weird duration (must be between 0 and 32767)";
+			duration += frames[i].duration;
+		}
+		return {
+			duration: duration,
+			width: width,
+			height: height
+		};
+	}
+
+	function numToBuffer(num) {
+		var parts = [];
+		while (num > 0) {
+			parts.push(num & 0xff);
+			num = num >> 8;
+		}
+		return new Uint8Array(parts.reverse());
+	}
+
+	function numToFixedBuffer(num, size) {
+		var parts = new Uint8Array(size);
+		for (var i = size - 1; i >= 0; i--) {
+			parts[i] = num & 0xff;
+			num = num >> 8;
+		}
+		return parts;
+	}
+
+	function strToBuffer(str) {
+		// return new Blob([str]);
+
+		var arr = new Uint8Array(str.length);
+		for (var i = 0; i < str.length; i++) {
+			arr[i] = str.charCodeAt(i);
+		}
+		return arr;
+		// this is slower
+		// return new Uint8Array(str.split('').map(function(e){
+		// 	return e.charCodeAt(0)
+		// }))
+	}
+
+	//sorry this is ugly, and sort of hard to understand exactly why this was done
+	// at all really, but the reason is that there's some code below that i dont really
+	// feel like understanding, and this is easier than using my brain.
+
+	function bitsToBuffer(bits) {
+		var data = [];
+		var pad = bits.length % 8 ? new Array(1 + 8 - bits.length % 8).join('0') : '';
+		bits = pad + bits;
+		for (var i = 0; i < bits.length; i += 8) {
+			data.push(parseInt(bits.substr(i, 8), 2));
+		}
+		return new Uint8Array(data);
+	}
+
+	function generateEBML(json, outputAsArray) {
+		var ebml = [];
+		for (var i = 0; i < json.length; i++) {
+			if (!('id' in json[i])) {
+				//already encoded blob or byteArray
+				ebml.push(json[i]);
+				continue;
+			}
+
+			var data = json[i].data;
+			if (typeof data == 'object') data = generateEBML(data, outputAsArray);
+			if (typeof data == 'number') data = 'size' in json[i] ? numToFixedBuffer(data, json[i].size) : bitsToBuffer(data.toString(2));
+			if (typeof data == 'string') data = strToBuffer(data);
+
+			if (data.length) {
+				var z = z;
+			}
+
+			var len = data.size || data.byteLength || data.length;
+			var zeroes = Math.ceil(Math.ceil(Math.log(len) / Math.log(2)) / 8);
+			var size_str = len.toString(2);
+			var padded = new Array(zeroes * 7 + 7 + 1 - size_str.length).join('0') + size_str;
+			var size = new Array(zeroes).join('0') + '1' + padded;
+
+			//i actually dont quite understand what went on up there, so I'm not really
+			//going to fix this, i'm probably just going to write some hacky thing which
+			//converts that string into a buffer-esque thing
+
+			ebml.push(numToBuffer(json[i].id));
+			ebml.push(bitsToBuffer(size));
+			ebml.push(data);
+		}
+
+		//output as blob or byteArray
+		if (outputAsArray) {
+			//convert ebml to an array
+			var buffer = toFlatArray(ebml);
+			return new Uint8Array(buffer);
+		} else {
+			return new Blob(ebml, { type: "video/webm" });
+		}
+	}
+
+	function toFlatArray(arr, outBuffer) {
+		if (outBuffer == null) {
+			outBuffer = [];
+		}
+		for (var i = 0; i < arr.length; i++) {
+			if (typeof arr[i] == 'object') {
+				//an array
+				toFlatArray(arr[i], outBuffer);
+			} else {
+				//a simple element
+				outBuffer.push(arr[i]);
+			}
+		}
+		return outBuffer;
+	}
+
+	//OKAY, so the following two functions are the string-based old stuff, the reason they're
+	//still sort of in here, is that they're actually faster than the new blob stuff because
+	//getAsFile isn't widely implemented, or at least, it doesn't work in chrome, which is the
+	// only browser which supports get as webp
+
+	//Converting between a string of 0010101001's and binary back and forth is probably inefficient
+	//TODO: get rid of this function
+	function toBinStr_old(bits) {
+		var data = '';
+		var pad = bits.length % 8 ? new Array(1 + 8 - bits.length % 8).join('0') : '';
+		bits = pad + bits;
+		for (var i = 0; i < bits.length; i += 8) {
+			data += String.fromCharCode(parseInt(bits.substr(i, 8), 2));
+		}
+		return data;
+	}
+
+	function generateEBML_old(json) {
+		var ebml = '';
+		for (var i = 0; i < json.length; i++) {
+			var data = json[i].data;
+			if (typeof data == 'object') data = generateEBML_old(data);
+			if (typeof data == 'number') data = toBinStr_old(data.toString(2));
+
+			var len = data.length;
+			var zeroes = Math.ceil(Math.ceil(Math.log(len) / Math.log(2)) / 8);
+			var size_str = len.toString(2);
+			var padded = new Array(zeroes * 7 + 7 + 1 - size_str.length).join('0') + size_str;
+			var size = new Array(zeroes).join('0') + '1' + padded;
+
+			ebml += toBinStr_old(json[i].id.toString(2)) + toBinStr_old(size) + data;
+		}
+		return ebml;
+	}
+
+	//woot, a function that's actually written for this project!
+	//this parses some json markup and makes it into that binary magic
+	//which can then get shoved into the matroska comtainer (peaceably)
+
+	function makeSimpleBlock(data) {
+		var flags = 0;
+		if (data.keyframe) flags |= 128;
+		if (data.invisible) flags |= 8;
+		if (data.lacing) flags |= data.lacing << 1;
+		if (data.discardable) flags |= 1;
+		if (data.trackNum > 127) {
+			throw "TrackNumber > 127 not supported";
+		}
+		var out = [data.trackNum | 0x80, data.timecode >> 8, data.timecode & 0xff, flags].map(function (e) {
+			return String.fromCharCode(e);
+		}).join('') + data.frame;
+
+		return out;
+	}
+
+	// here's something else taken verbatim from weppy, awesome rite?
+
+	function parseWebP(riff) {
+		var VP8 = riff.RIFF[0].WEBP[0];
+
+		var frame_start = VP8.indexOf('\x9d\x01\x2a'); //A VP8 keyframe starts with the 0x9d012a header
+		for (var i = 0, c = []; i < 4; i++) c[i] = VP8.charCodeAt(frame_start + 3 + i);
+
+		var width, horizontal_scale, height, vertical_scale, tmp;
+
+		//the code below is literally copied verbatim from the bitstream spec
+		tmp = c[1] << 8 | c[0];
+		width = tmp & 0x3FFF;
+		horizontal_scale = tmp >> 14;
+		tmp = c[3] << 8 | c[2];
+		height = tmp & 0x3FFF;
+		vertical_scale = tmp >> 14;
+		return {
+			width: width,
+			height: height,
+			data: VP8,
+			riff: riff
+		};
+	}
+
+	// i think i'm going off on a riff by pretending this is some known
+	// idiom which i'm making a casual and brilliant pun about, but since
+	// i can't find anything on google which conforms to this idiomatic
+	// usage, I'm assuming this is just a consequence of some psychotic
+	// break which makes me make up puns. well, enough riff-raff (aha a
+	// rescue of sorts), this function was ripped wholesale from weppy
+
+	function parseRIFF(string) {
+		var offset = 0;
+		var chunks = {};
+
+		while (offset < string.length) {
+			var id = string.substr(offset, 4);
+			chunks[id] = chunks[id] || [];
+			if (id == 'RIFF' || id == 'LIST') {
+				var len = parseInt(string.substr(offset + 4, 4).split('').map(function (i) {
+					var unpadded = i.charCodeAt(0).toString(2);
+					return new Array(8 - unpadded.length + 1).join('0') + unpadded;
+				}).join(''), 2);
+				var data = string.substr(offset + 4 + 4, len);
+				offset += 4 + 4 + len;
+				chunks[id].push(parseRIFF(data));
+			} else if (id == 'WEBP') {
+				// Use (offset + 8) to skip past "VP8 "/"VP8L"/"VP8X" field after "WEBP"
+				chunks[id].push(string.substr(offset + 8));
+				offset = string.length;
+			} else {
+				// Unknown chunk type; push entire payload
+				chunks[id].push(string.substr(offset + 4));
+				offset = string.length;
+			}
+		}
+		return chunks;
+	}
+
+	// here's a little utility function that acts as a utility for other functions
+	// basically, the only purpose is for encoding "Duration", which is encoded as
+	// a double (considerably more difficult to encode than an integer)
+	function doubleToString(num) {
+		return [].slice.call(new Uint8Array(new Float64Array([num]) //create a float64 array
+		.buffer) //extract the array buffer
+		, 0) // convert the Uint8Array into a regular array
+		.map(function (e) {
+			//since it's a regular array, we can now use map
+			return String.fromCharCode(e); // encode all the bytes individually
+		}).reverse() //correct the byte endianness (assume it's little endian for now)
+		.join(''); // join the bytes in holy matrimony as a string
+	}
+
+	function WhammyVideo(speed, quality) {
+		// a more abstract-ish API
+		this.frames = [];
+		this.duration = 1000 / speed;
+		this.quality = quality || 0.8;
+	}
+
+	WhammyVideo.prototype.add = function (frame, duration) {
+		if (typeof duration != 'undefined' && this.duration) throw "you can't pass a duration if the fps is set";
+		if (typeof duration == 'undefined' && !this.duration) throw "if you don't have the fps set, you need to have durations here.";
+		if (frame.canvas) {
+			//CanvasRenderingContext2D
+			frame = frame.canvas;
+		}
+		if (frame.toDataURL) {
+			// frame = frame.toDataURL('image/webp', this.quality);
+			// quickly store image data so we don't block cpu. encode in compile method.
+			frame = frame.getContext('2d').getImageData(0, 0, frame.width, frame.height);
+		} else if (typeof frame != "string") {
+			throw "frame must be a a HTMLCanvasElement, a CanvasRenderingContext2D or a DataURI formatted string";
+		}
+		if (typeof frame === "string" && !/^data:image\/webp;base64,/ig.test(frame)) {
+			throw "Input must be formatted properly as a base64 encoded DataURI of type image/webp";
+		}
+		this.frames.push({
+			image: frame,
+			duration: duration || this.duration
+		});
+	};
+
+	// deferred webp encoding. Draws image data to canvas, then encodes as dataUrl
+	WhammyVideo.prototype.encodeFrames = function (callback) {
+
+		if (this.frames[0].image instanceof ImageData) {
+
+			var frames = this.frames;
+			var tmpCanvas = document.createElement('canvas');
+			var tmpContext = tmpCanvas.getContext('2d');
+			tmpCanvas.width = this.frames[0].image.width;
+			tmpCanvas.height = this.frames[0].image.height;
+
+			var encodeFrame = function (index) {
+				console.log('encodeFrame', index);
+				var frame = frames[index];
+				tmpContext.putImageData(frame.image, 0, 0);
+				frame.image = tmpCanvas.toDataURL('image/webp', this.quality);
+				if (index < frames.length - 1) {
+					setTimeout(function () {
+						encodeFrame(index + 1);
+					}, 1);
+				} else {
+					callback();
+				}
+			}.bind(this);
+
+			encodeFrame(0);
+		} else {
+			callback();
+		}
+	};
+
+	WhammyVideo.prototype.compile = function (outputAsArray, callback) {
+
+		this.encodeFrames(function () {
+
+			var webm = new toWebM(this.frames.map(function (frame) {
+				var webp = parseWebP(parseRIFF(atob(frame.image.slice(23))));
+				webp.duration = frame.duration;
+				return webp;
+			}), outputAsArray);
+			callback(webm);
+		}.bind(this));
+	};
+
+	return {
+		Video: WhammyVideo,
+		fromImageArray: function (images, fps, outputAsArray) {
+			return toWebM(images.map(function (image) {
+				var webp = parseWebP(parseRIFF(atob(image.slice(23))));
+				webp.duration = 1000 / fps;
+				return webp;
+			}), outputAsArray);
+		},
+		toWebM: toWebM
+		// expose methods of madness
+	};
+}();
 
 
 /* fps display control for leaflet*/
