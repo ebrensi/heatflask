@@ -12,6 +12,7 @@ class Config(object):
     OFFLINE = False
     APP_VERSION = "(alpha)"
     APP_NAME = "Heatflask {}".format(APP_VERSION)
+    APP_SETTINGS = os.environ.get("APP_SETTINGS")
     ADMIN = [15972102]
 
     # Leaflet.js stuff
@@ -86,7 +87,13 @@ class ProductionConfig(Config):
         }
     }
     DEBUG = False
-    # ASSETS_DEBUG = False
+
+    # Turn off webassets building for production, but we need to make sure
+    #  assets files are built in development
+    ASSETS_DEBUG = False
+    ASSETS_AUTO_BUILD = False
+    ASSETS_CACHE = False
+    ASSETS_MANIFEST = False
 
 
 class StagingConfig(Config):
@@ -96,7 +103,12 @@ class StagingConfig(Config):
     """
     DEVELOPMENT = True
     DEBUG = True
+
+    # webassets should not minify assets
     ASSETS_DEBUG = "merge"
+    # ASSETS_AUTO_BUILD = False
+    # ASSETS_CACHE = False
+    # ASSETS_MANIFEST = False
 
 
 class DevelopmentConfig(Config):
@@ -113,8 +125,4 @@ class DevelopmentConfig(Config):
     SSLIFY_PERMANENT = False
 
     # Flask-Assets settings
-    ASSETS_DEBUG = "merge"
-    # ASSETS_AUTO_BUILD = True
-    # ASSETS_CACHE = True
-    # ASSETS_MANIFEST = 'cache'
-    # ASSETS_UPDATER = 'timestamp'
+    ASSETS_DEBUG = True

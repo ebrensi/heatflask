@@ -85,7 +85,6 @@ bundles = {
             'js/leaflet-providers.js',
             'js/Leaflet.GoogleMutant.js',
             'js/leaflet-areaselect.js',
-            # 'js/CCapture.js',  # Jaume Sanchez: https://github.com/spite/ccapture.js
             'js/leaflet-image.js',  # Tom MacWright: https://github.com/mapbox/leaflet-image
             'js/easy-button.js',
             filters=["babel", "rjsmin"],
@@ -123,7 +122,6 @@ bundles = {
         'js/jquery-3.2.1.min.js',
         'js/datatables.min.js',
         'js/appUtil.js',
-        # filters='rjsmin',
         output='gen/basic_table.js'
     )
 
@@ -189,6 +187,12 @@ def log_request_event(f):
 def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static'),
                                'favicon.ico')
+
+
+@app.route('/avatar/athlete/medium.png')
+def anon_photo():
+    return send_from_directory(os.path.join(app.root_path, 'static'),
+                               'anon-photo.jpg')
 
 
 @app.route('/apple-touch-icon')
