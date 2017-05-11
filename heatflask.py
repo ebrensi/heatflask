@@ -189,6 +189,12 @@ def favicon():
                                'favicon.ico')
 
 
+@app.route('/avatar/athlete/medium.png')
+def favicon():
+    return send_from_directory(os.path.join(app.root_path, 'static'),
+                               'anon-photo.jpg')
+
+
 @app.route('/apple-touch-icon')
 def touch():
     return send_from_directory(os.path.join(app.root_path, 'static'),
