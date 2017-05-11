@@ -84,7 +84,6 @@ bundles = {
             'js/leaflet-providers.js',
             'js/Leaflet.GoogleMutant.js',
             'js/leaflet-areaselect.js',
-            # 'js/L.Control.Locate.min.js',
             'js/easy-button.js',
             filters=["babel", "rjsmin"],
             output="gen/non-compiled-dependencies.js"
@@ -121,7 +120,6 @@ bundles = {
         'js/jquery-3.2.1.min.js',
         'js/datatables.min.js',
         'js/appUtil.js',
-        # filters='rjsmin',
         output='gen/basic_table.js'
     )
 
@@ -190,7 +188,7 @@ def favicon():
 
 
 @app.route('/avatar/athlete/medium.png')
-def favicon():
+def anon_photo():
     return send_from_directory(os.path.join(app.root_path, 'static'),
                                'anon-photo.jpg')
 
