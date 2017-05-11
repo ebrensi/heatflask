@@ -55,6 +55,7 @@ bundles = {
         'css/leaflet.css',
         'css/leaflet-sidebar.min.css',
         'css/leaflet-areaselect.css',
+        'css/L.Control.Window.css',
         'css/datatables.min.css',
         'css/easy-button.css',
         filters='cssmin',
@@ -73,7 +74,6 @@ bundles = {
             'js/leaflet-heat.js',
             'js/download.min.js',
             'js/gif.js',  # Johan Nordberg: http://jnordberg.github.io/gif.js/
-
             output="gen/pre-compiled-dependencies.js"
         ),
 
