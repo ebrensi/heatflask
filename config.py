@@ -105,10 +105,10 @@ class StagingConfig(Config):
     DEBUG = True
 
     # webassets should not minify assets
-    ASSETS_DEBUG = "merge"
-    # ASSETS_AUTO_BUILD = False
-    # ASSETS_CACHE = False
-    # ASSETS_MANIFEST = False
+    ASSETS_DEBUG = True
+    ASSETS_AUTO_BUILD = False
+    ASSETS_CACHE = False
+    ASSETS_MANIFEST = False
 
 
 class DevelopmentConfig(Config):
