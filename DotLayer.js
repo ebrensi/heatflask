@@ -580,14 +580,34 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
 
 
+
+    // -----------------------------------------------------------------------
+
     captureCycle: function() {
         let periodInSecs = this.periodInSecs();
         if (periodInSecs > 5) {
             return 0;
         }
         this._mapMoving = true;
+
+        // set up display
+        pd = document.createElement( 'div' );
+        pd.style.position = 'absolute';
+        pd.style.left = pd.style.top = 0
+        pd.style.backgroundColor = 'black';
+        pd.style.fontFamily = 'monospace'
+        pd.style.fontSize = '11px'
+        pd.style.padding = '5px'
+        pd.style.color = 'red';
+        pd.style.zIndex = 100000
+        document.body.appendChild( pd );
+        this._progressDisplay = pd;
+
+        let msg = "capturing static map frame...";
+        console.log(msg);
+        pd.textContent = msg;
+
         leafletImage(this._map, function(err, canvas) {
-            console.log("capturing static map frame...");
             //download(canvas.toDataURL("image/png"), "mapView.png", "image/png");
             console.log("leaflet-image: " + err);
             if (canvas) {
@@ -597,18 +617,33 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
     },
 
 
+    /*  For gif.js configuration
+    Disposal Method - Indicates the way in which the graphic is to
+            be treated after being displayed.
+            Values :    0 -   No disposal specified. The decoder is
+                              not required to take any action.
+                        1 -   Do not dispose. The graphic is to be left
+                              in place.
+                        2 -   Restore to background color. The area used by the
+                              graphic must be restored to the background color.
+                        3 -   Restore to previous. The decoder is required to
+                              restore the area overwritten by the graphic with
+                              what was there prior to rendering the graphic.
+                      4-7 -   To be defined.
+    */
+
     captureGIF: function(baseCanvas=null, durationSecs=2) {
         this._mapMoving = true;
 
         let height = baseCanvas? baseCanvas.height : this._size.y,
             width = baseCanvas? baseCanvas.width : this._size.x,
-            frameCanvas = document.createElement('canvas');
+            frameCanvas = document.createElement('canvas'),
+            pd = this._progressDisplay;
 
         frameCanvas.width = width;
         frameCanvas.height = height;
 
         let frameCtx = frameCanvas.getContext('2d'),
-            // info = document.getElementById("info"),
             frameTime = Date.now(),
             frameRate = 30,
             numFrames = durationSecs * frameRate,
@@ -622,19 +657,23 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                 workerScript: 'static/js/gif.worker.js'
             });
 
-        // encoder.on( 'start', function(){
-        //     startTime = Date.now();
-        //     frameTime = Date.now();
-        // }.bind( this ) );
+        encoder.on( 'start', function(){
+            msg = "Encoding frames...";
+            console.log(msg);
+            this._progressDisplay.textContent = msg;
+        }.bind( this ) );
 
         encoder.on( 'progress', function( p ) {
-            // info.innerHTML(p*100+"%");
-            // console.log(p*100+"% done.");
+            msg = `Encoding ${p*100} % done`;
+            console.log(msg);
+            this._progressDisplay.textContent = msg;
         }.bind( this ) );
 
         encoder.on('finished', function( blob ) {
             // window.open(URL.createObjectURL(blob));
             download(blob, "output.gif", 'image/gif' );
+
+            document.body.removeChild( this._progressDisplay );
 
             this._mapMoving = false;
             if (!this._paused) {
@@ -642,9 +681,14 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             }
         }.bind( this ) );
 
-        console.log("generating frames...");
+        // console.log("generating frames...");
+        num = Math.round(numFrames);
         for (let i=0; i<numFrames; i++, frameTime+=delay){
-            console.log(`processing frame ${i+1}/${numFrames}`);
+            msg = `processing frame ${i+1}/${num}`;
+            console.log(msg);
+            // debugger;
+            pd.textContent = msg;
+
             this.drawLayer(frameTime);
 
             frameCtx.clearRect( 0, 0, width, height );
@@ -658,49 +702,11 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         encoder.render();
     },
 
-
-    // ------------------------------------------------------
-    startCapture: function() {
-        this.captureCycle();
-        return;
-        /*
-        let periodInSecs = this.periodInSecs();
-        if (periodInSecs > 5) {
-            return 0;
-        }
-
-        let mapImageCanvas = getMapImageCanvas();
-        this._capturer = new CCapture( {
-                name: "movingPath",
-                format: "gif",
-                quality: 5,
-                workersPath: 'static/js/',
-                framerate: 30,
-                timeLimit: periodInSecs,
-                display: true,
-                verbose: false
-            });
-
-        this._capturing = true;
-        this._capturer.start();
-        return periodInSecs;
-        */
-    },
-
-    stopCapture: function() {
-        return;
-
-        this._capturer.stop();
-        this._capturing = false;
-
-        // default save, will download automatically a file called {name}.extension (webm/gif/tar)
-        this._capturer.save();
-        // delete currentTime;
-
-        // // custom save, will get a blob in the callback
-        // capturer.save( function( blob ) { /* ... */ } );
+    abortCapture: function() {
+        console.log("abort request");
     }
-} );
+
+} );  // end of L.DotLayer definition
 
 L.dotLayer = function( items, options ) {
     return new L.DotLayer( items, options );
@@ -738,3 +744,6 @@ function colorPalette(n) {
     frequency = 2*Math.PI/steps;
     return makeColorGradient(frequency,frequency,frequency,0,2,4,center,width,n);
 }
+
+
+

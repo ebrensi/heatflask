@@ -104,7 +104,7 @@ var capture_button_states = [
                 return;
             }
             btn.state('capturing');
-            timeout = DotLayer.startCapture();
+            timeout = DotLayer.captureCycle();
             setTimeout(function(){
                 btn.state('not-capturing');
             }, timeout+500);
@@ -116,8 +116,8 @@ var capture_button_states = [
         title: 'Stop capturing',
         onClick: function (btn, map) {
             if (DotLayer && DotLayer._capturing) {
-                DotLayer.stopCapture();
-                btn.state('not-capturing');
+                DotLayer.abortCapture();
+                // btn.state('not-capturing');
             }
         }
     }
