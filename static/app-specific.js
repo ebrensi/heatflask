@@ -238,9 +238,11 @@ var capture_button_states = [{
     }
 }];
 
+// Capture control button
 var captureControl = L.easyButton({
     states: capture_button_states
-}).addTo(map);
+});
+captureControl.enabled = false;
 
 // set up dial-controls
 $(".dotconst-dial").knob({
@@ -265,7 +267,27 @@ $(".dotconst-dial").knob({
             newVal = val * val * SPEED_SCALE;
             DotLayer.C2 = newVal;
         }
-        $(".periodDisplay").html(DotLayer.periodInSecs().toFixed(2));
+
+        if (DotLayer._paused) {
+            DotLayer.drawLayer(DotLayer._timePaused);
+        }
+
+        // Enable capture if period is less than CAPTURE_PERIOD_MAX
+        let periodValue = DotLayer.periodInSecs().toFixed(2),
+            captureEnabled = captureControl.enabled;
+
+        $("#period-value").html(periodValue);
+        if (periodValue <= CAPTURE_PERIOD_MAX) {
+            if (!captureEnabled) {
+                console.log("capture enabled");
+                captureControl.addTo(map);
+                captureControl.enabled = true;
+            }
+        } else if (captureEnabled) {
+            console.log("capture disabled");
+            captureControl.removeFrom(map);
+            captureControl.enabled = false;
+        }
     }
 });
 
@@ -1393,7 +1415,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         this._progressDisplay = pd;
 
         let msg = "capturing static map frame...";
-        console.log(msg);
+        // console.log(msg);
         pd.textContent = msg;
 
         leafletImage(this._map, function (err, canvas) {
@@ -1461,6 +1483,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
             download(blob, "output.gif", 'image/gif');
 
             document.body.removeChild(this._progressDisplay);
+            delete this._progressDisplay;
 
             this._mapMoving = false;
             if (!this._paused) {

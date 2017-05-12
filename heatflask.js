@@ -123,9 +123,12 @@ var capture_button_states = [
     }
 ];
 
+
+// Capture control button
 var captureControl = L.easyButton({
     states: capture_button_states
-}).addTo(map);
+});
+captureControl.enabled = false;
 
 
 // set up dial-controls
@@ -151,8 +154,25 @@ $(".dotconst-dial").knob({
                 newVal = val * val * SPEED_SCALE;
                 DotLayer.C2 = newVal;
             }
-            $(".periodDisplay").html(DotLayer.periodInSecs().toFixed(2));
 
+            if (DotLayer._paused) {
+                DotLayer.drawLayer(DotLayer._timePaused);
+            }
+
+            // Enable capture if period is less than CAPTURE_PERIOD_MAX
+            let periodValue = DotLayer.periodInSecs().toFixed(2),
+                captureEnabled = captureControl.enabled;
+
+            $("#period-value").html(periodValue);
+            if (periodValue <= CAPTURE_PERIOD_MAX) {
+                if (!captureEnabled) {
+                    captureControl.addTo(map);
+                    captureControl.enabled = true;
+                }
+            } else if (captureEnabled) {
+                captureControl.removeFrom(map);
+                captureControl.enabled = false;
+            }
         }
     });
 

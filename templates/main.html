@@ -42,11 +42,11 @@
                     map_center: [{{ lat }}, {{ lng }}],
                     map_zoom: {{ zoom }},
                     info: {{ info|tojson }}
-              };
-
-             MEASURMENT_PREFERENCE = "{{ current_user.measurement_preference if current_user.is_authenticated else user.measurement_preference }}";
-             DIST_UNIT = (MEASURMENT_PREFERENCE=="feet")? 1609.34 : 1000.0;
-             DIST_LABEL = (MEASURMENT_PREFERENCE=="feet")?  "mi" : "Km";
+              },
+             MEASURMENT_PREFERENCE = "{{ current_user.measurement_preference if current_user.is_authenticated else user.measurement_preference }}",
+             DIST_UNIT = (MEASURMENT_PREFERENCE=="feet")? 1609.34 : 1000.0,
+             DIST_LABEL = (MEASURMENT_PREFERENCE=="feet")?  "mi" : "Km",
+             CAPTURE_PERIOD_MAX = 5;
     </script>
 
 </head>
@@ -297,10 +297,10 @@
 												</label>
 												</span>
 
-												<span> Period T =
-												<span class="periodDisplay"></span>
+												<div id="period-display"> Period T =
+												<span id="period-value"></span>
 												sec
-												</span>
+												</div>
 											</div>
 
 											<input type="checkbox" id="showPaths" checked>
