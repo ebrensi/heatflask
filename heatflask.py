@@ -98,7 +98,7 @@ bundles = {
             '../heatflask.js',
             '../DotLayer.js',
             filters=["babel", 'rjsmin'],
-            output="app-specific.js"
+            output="gen/app-specific.js"
         ),
         output='gen/main.js'
     ),

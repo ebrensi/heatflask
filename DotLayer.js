@@ -653,6 +653,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                 // transparent: "#FFFF",
                 workerScript: 'static/js/gif.worker.js'
             });
+            this._encoder = encoder;
 
         // encoder.on( 'start', function(){
         //     msg = "Encoding frames...";
@@ -700,6 +701,10 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
     abortCapture: function() {
         console.log("abort request");
+        this._progressDisplay.textContent("aborting...");
+        if (this._encoder) {
+            this._encoder.abort();
+        }
     }
 
 } );  // end of L.DotLayer definition
