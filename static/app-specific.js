@@ -141,7 +141,7 @@ var map_providers = ONLOAD_PARAMS.map_providers,
 if (!OFFLINE) {
     var online_baseLayers = {
         "Esri.WorldImagery": L.tileLayer.provider("Esri.WorldImagery"),
-        "OpenStreetMap.Mapnik": L.tileLayer.provider("OpenStreetMap.Mapnik"),
+        "Stamen.Terrain": L.tileLayer.provider("Stamen.Terrain"),
         "Google.Roadmap": L.gridLayer.googleMutant({ type: 'roadmap' }),
         "Google.Terrain": L.gridLayer.googleMutant({ type: 'terrain' }),
         "Google.Hybrid": L.gridLayer.googleMutant({ type: 'hybrid' })
@@ -156,7 +156,7 @@ if (!OFFLINE) {
             if (i == 0) default_baseLayer = tl;
         }
     } else {
-        default_baseLayer = baseLayers["Google.Terrain"];
+        default_baseLayer = baseLayers["Stamen.Terrain"];
     }
 }
 
@@ -164,12 +164,13 @@ var map = L.map('map', {
     center: ONLOAD_PARAMS.map_center,
     zoom: ONLOAD_PARAMS.map_zoom,
     layers: [default_baseLayer],
-    renderer: L.svg({ padding: 0 }),
+    preferCanvas: true,
+    // renderer: L.svg({ padding: 0 }),
     zoomAnimation: false
 });
 
-var areaSelect = L.areaSelect({ width: 200, height: 300 });
-areaSelect.addTo(map);
+// var areaSelect = L.areaSelect({width:200, height:300});
+// areaSelect.addTo(map);
 
 var sidebarControl = L.control.sidebar('sidebar').addTo(map),
     zoomControl = map.zoomControl.setPosition('bottomright'),
@@ -182,7 +183,8 @@ if (ADMIN) {
     fps_display = L.control.fps().addTo(map);
 }
 
-var button_states = [{
+// Animation button
+var animation_button_states = [{
     stateName: 'animation-running',
     icon: 'fa-pause',
     title: 'Pause Animation',
@@ -203,13 +205,45 @@ var button_states = [{
         updateState();
         btn.state('animation-running');
     }
-}],
-    animationControl = L.easyButton({
-    states: appState.paused ? button_states.reverse() : button_states
+}];
+
+var animationControl = L.easyButton({
+    states: appState.paused ? animation_button_states.reverse() : animation_button_states
+}).addTo(map);
+
+// Capture button
+var capture_button_states = [{
+    stateName: 'not-capturing',
+    icon: 'fa-video-camera',
+    title: 'Capture',
+    onClick: function (btn, map) {
+        if (!DotLayer) {
+            return;
+        }
+        btn.state('capturing');
+        timeout = DotLayer.captureCycle();
+        setTimeout(function () {
+            btn.state('not-capturing');
+        }, timeout + 500);
+    }
+}, {
+    stateName: 'capturing',
+    icon: 'fa-stop',
+    title: 'Stop capturing',
+    onClick: function (btn, map) {
+        if (DotLayer && DotLayer._capturing) {
+            DotLayer.abortCapture();
+            // btn.state('not-capturing');
+        }
+    }
+}];
+
+var captureControl = L.easyButton({
+    states: capture_button_states
 }).addTo(map);
 
 // set up dial-controls
-$(".dial").knob({
+$(".dotconst-dial").knob({
     min: 0,
     max: 100,
     step: 0.1,
@@ -219,18 +253,19 @@ $(".dial").knob({
     inline: true,
     // displayInput: false,
     change: function (val) {
-        if (DotLayer) {
-            var newVal;
-            if (this.$[0].id == "sepConst") {
-                newVal = Math.pow(2, val * SEP_SCALE.m + SEP_SCALE.b);
-                DotLayer.C1 = newVal;
-                // console.log(`C1=${newVal}`)
-            } else {
-                newVal = val * val * SPEED_SCALE;
-                DotLayer.C2 = newVal;
-                // console.log(`C2=${newVal}`)
-            }
+        if (!DotLayer) {
+            return;
         }
+
+        let newVal;
+        if (this.$[0].id == "sepConst") {
+            newVal = Math.pow(2, val * SEP_SCALE.m + SEP_SCALE.b);
+            DotLayer.C1 = newVal;
+        } else {
+            newVal = val * val * SPEED_SCALE;
+            DotLayer.C2 = newVal;
+        }
+        $(".periodDisplay").html(DotLayer.periodInSecs().toFixed(2));
     }
 });
 
@@ -501,6 +536,10 @@ function renderLayers() {
 
                 $("#sepConst").val((Math.log2(DotLayer.C1) - SEP_SCALE.b) / SEP_SCALE.m).trigger("change");
                 $("#speedConst").val(Math.sqrt(DotLayer.C2) / SPEED_SCALE).trigger("change");
+                setTimeout(function () {
+                    $(".periodDisplay").html(DotLayer.periodInSecs().toFixed(2));
+                }, 1000);
+
                 $("#showPaths").prop("checked", DotLayer.options.showPaths).on("change", function () {
                     DotLayer.options.showPaths = $(this).prop("checked");
                     DotLayer._onLayerDidMove();
@@ -826,24 +865,18 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
     // -- initialized is called on prototype
     initialize: function (items, options) {
         this._map = null;
-        this._canvas = null;
-        this._canvas2 = null;
+        this._dotCanvas = null;
+        this._lineCanvas = null;
         this._capturing = null;
-        this._ctx = null;
-        this._ctx2 = null;
+        this._dotCtx = null;
+        this._lineCtx = null;
         this._frame = null;
         this._items = items || null;
         this._timeOffset = 0;
         this._colorPalette = [];
         L.setOptions(this, options);
         this._paused = this.options.startPaused;
-<<<<<<< HEAD
-        if (this._paused) {
-            this._timePaused = Date.now();
-        }
-=======
         this._timePaused = Date.now();
->>>>>>> master
     },
 
     //-------------------------------------------------------------
@@ -851,11 +884,11 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         let newWidth = resizeEvent.newSize.x,
             newHeight = resizeEvent.newSize.y;
 
-        this._canvas.width = newWidth;
-        this._canvas.height = newHeight;
+        this._dotCanvas.width = newWidth;
+        this._dotCanvas.height = newHeight;
 
-        this._canvas2.width = newWidth;
-        this._canvas2.height = newHeight;
+        this._lineCanvas.width = newWidth;
+        this._lineCanvas.height = newHeight;
 
         this._onLayerDidMove();
     },
@@ -866,22 +899,18 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
 
         let topLeft = this._map.containerPointToLayerPoint([0, 0]);
 
-        this._ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
-        L.DomUtil.setPosition(this._canvas, topLeft);
+        this._dotCtx.clearRect(0, 0, this._dotCanvas.width, this._dotCanvas.height);
+        L.DomUtil.setPosition(this._dotCanvas, topLeft);
 
-        this._ctx2.clearRect(0, 0, this._canvas2.width, this._canvas2.height);
-        L.DomUtil.setPosition(this._canvas2, topLeft);
+        this._lineCtx.clearRect(0, 0, this._lineCanvas.width, this._lineCanvas.height);
+        L.DomUtil.setPosition(this._lineCanvas, topLeft);
 
         this._setupWindow();
 
         if (this._paused) {
             this.drawLayer(this._timePaused);
         } else {
-<<<<<<< HEAD
-            this.drawLayer(this._timePaused);
-=======
             this.animate();
->>>>>>> master
         }
     },
 
@@ -910,23 +939,23 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
             zoomAnimated = this._map.options.zoomAnimation && L.Browser.any3d;
 
         // dotlayer canvas
-        this._canvas = L.DomUtil.create("canvas", "leaflet-layer");
-        this._canvas.width = size.x;
-        this._canvas.height = size.y;
-        this._ctx = this._canvas.getContext("2d");
-        L.DomUtil.addClass(this._canvas, "leaflet-zoom-" + (zoomAnimated ? "animated" : "hide"));
+        this._dotCanvas = L.DomUtil.create("canvas", "leaflet-layer");
+        this._dotCanvas.width = size.x;
+        this._dotCanvas.height = size.y;
+        this._dotCtx = this._dotCanvas.getContext("2d");
+        L.DomUtil.addClass(this._dotCanvas, "leaflet-zoom-" + (zoomAnimated ? "animated" : "hide"));
         map._panes.shadowPane.style.pointerEvents = "none";
-        map._panes.shadowPane.appendChild(this._canvas);
+        map._panes.shadowPane.appendChild(this._dotCanvas);
 
         // create Canvas for polyline-ish things
-        this._canvas2 = L.DomUtil.create("canvas", "leaflet-layer");
-        this._canvas2.width = size.x;
-        this._canvas2.height = size.y;
-        this._ctx2 = this._canvas2.getContext("2d");
-        this._ctx2.lineCap = "round";
-        this._ctx2.lineJoin = "round";
-        L.DomUtil.addClass(this._canvas2, "leaflet-zoom-" + (zoomAnimated ? "animated" : "hide"));
-        map._panes.overlayPane.appendChild(this._canvas2);
+        this._lineCanvas = L.DomUtil.create("canvas", "leaflet-layer");
+        this._lineCanvas.width = size.x;
+        this._lineCanvas.height = size.y;
+        this._lineCtx = this._lineCanvas.getContext("2d");
+        this._lineCtx.lineCap = "round";
+        this._lineCtx.lineJoin = "round";
+        L.DomUtil.addClass(this._lineCanvas, "leaflet-zoom-" + (zoomAnimated ? "animated" : "hide"));
+        map._panes.overlayPane.appendChild(this._lineCanvas);
 
         map.on(this.getEvents(), this);
 
@@ -950,13 +979,11 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
     onRemove: function (map) {
         this.onLayerWillUnmount && this.onLayerWillUnmount(); // -- callback
 
+        map._panes.shadowPane.removeChild(this._dotCanvas);
+        this._dotCanvas = null;
 
-        // map.getPanes().overlayPane.removeChild(this._canvas);
-        map._panes.shadowPane.removeChild(this._canvas);
-        this._canvas = null;
-
-        map._panes.overlayPane.removeChild(this._canvas2);
-        this._canvas2 = null;
+        map._panes.overlayPane.removeChild(this._lineCanvas);
+        this._lineCanvas = null;
 
         map.off(this.getEvents(), this);
     },
@@ -994,14 +1021,14 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         this._pxBounds = this._map.getPixelBounds();
         this._pxOffset = this._mapPanePos.subtract(this._pxOrigin)._add(new L.Point(0.5, 0.5));
 
-        var line_ctx = this._ctx2,
+        var lineCtx = this._lineCtx,
             z = this._zoom,
             ppos = this._mapPanePos,
             pxOrigin = this._pxOrigin,
             pxBounds = this._pxBounds,
             items = this._items;
 
-        this._ctx.strokeStyle = this.options.selected.dotStrokeColor;
+        this._dotCtx.strokeStyle = this.options.selected.dotStrokeColor;
 
         this._dotSize = Math.max(1, ~~(Math.log(z) + 0.5));
         this._dotOffset = ~~(this._dotSize / 2 + 0.5);
@@ -1116,7 +1143,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
 
                         if (this.options.showPaths) {
                             if (!drawingLine) {
-                                line_ctx.beginPath();
+                                lineCtx.beginPath();
                                 drawingLine = true;
                             }
                             // draw polyline segment from p1 to p2
@@ -1124,8 +1151,8 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
                                 c1y = ~~(p[1] + pxOffy),
                                 c2x = ~~(p[3] + pxOffx),
                                 c2y = ~~(p[4] + pxOffy);
-                            line_ctx.moveTo(c1x, c1y);
-                            line_ctx.lineTo(c2x, c2y);
+                            lineCtx.moveTo(c1x, c1y);
+                            lineCtx.lineTo(c2x, c2y);
                         }
                     }
                 }
@@ -1133,12 +1160,12 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
                 if (this.options.showPaths) {
                     if (drawingLine) {
                         lineType = A.highlighted ? "selected" : "normal";
-                        line_ctx.globalAlpha = this.options[lineType].pathOpacity;
-                        line_ctx.lineWidth = this.options[lineType].pathWidth;
-                        line_ctx.strokeStyle = A.path_color || this.options[lineType].pathColor;
-                        line_ctx.stroke();
+                        lineCtx.globalAlpha = this.options[lineType].pathOpacity;
+                        lineCtx.lineWidth = this.options[lineType].pathWidth;
+                        lineCtx.strokeStyle = A.path_color || this.options[lineType].pathColor;
+                        lineCtx.stroke();
                     } else {
-                        line_ctx.stroke();
+                        lineCtx.stroke();
                     }
                 }
 
@@ -1167,7 +1194,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
             s = this._timeScale * (now - obj.startTime),
             xmax = this._size.x,
             ymax = this._size.y,
-            ctx = this._ctx,
+            ctx = this._dotCtx,
             dotSize = this._dotSize,
             dotOffset = this._dotOffset,
             two_pi = this.two_pi,
@@ -1231,7 +1258,7 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
             return;
         }
 
-        let ctx = this._ctx,
+        let ctx = this._dotCtx,
             zoom = this._zoom,
             count = 0,
             t0 = performance.now(),
@@ -1242,11 +1269,11 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
             highlighted_items = [],
             zf = this._zoomFactor;
 
-        this._ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
-        this._ctx.fillStyle = this.options.normal.dotColor;
+        ctx.clearRect(0, 0, this._dotCanvas.width, this._dotCanvas.height);
+        ctx.fillStyle = this.options.normal.dotColor;
 
         this._timeScale = this.C2 * zf;
-        this._period = ~~(this.C1 * zf + 0.5);
+        this._period = this.C1 * zf;
 
         for (let id in pItems) {
             item = pItems[id];
@@ -1267,12 +1294,9 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         }
 
         if (fps_display) {
-            let toSec = 1 / (this._timeScale * 1000),
-                periodInSecs = this._period * toSec,
+            let periodInSecs = this.periodInSecs(),
                 progress = (now / 1000 % periodInSecs).toFixed(1),
                 elapsed = (performance.now() - t0).toFixed(1);
-
-            // Period in seconds is this._period / (this._timeScale * 1000)
 
             fps_display.update(now, `${elapsed} ms/f, n=${count}, z=${this._zoom},\nP=${progress}/${periodInSecs.toFixed(2)}`);
         }
@@ -1313,20 +1337,11 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
             return;
         }
 
-<<<<<<< HEAD
-        if (this._timePaused) {
-            this._timeOffset = ts - this._timePaused;
-            this._timePaused = null;
-        }
-
         if (capturing || now - this.lastCalledTime > this.minDelay) {
-=======
-        if (now - this.lastCalledTime > this.minDelay) {
->>>>>>> master
             this.lastCalledTime = now;
             this.drawLayer(now);
 
-            capturing && this._capturer.capture(this._canvas);
+            capturing && this._capturer.capture(this._dotCanvas);
         }
 
         this._frame = L.Util.requestAnimFrame(this._animate, this);
@@ -1347,39 +1362,144 @@ L.DotLayer = (L.Layer ? L.Layer : L.Class).extend({
         // -- different calc of offset in leaflet 1.0.0 and 0.0.7 thanks for 1.0.0-rc2 calc @jduggan1
         var offset = L.Layer ? this._map._latLngToNewLayerPoint(this._map.getBounds().getNorthWest(), e.zoom, e.center) : this._map._getCenterOffset(e.center)._multiplyBy(-scale).subtract(this._map._getMapPanePos());
 
-        L.DomUtil.setTransform(this._canvas, offset, scale);
+        L.DomUtil.setTransform(this._dotCanvas, offset, scale);
+        L.DomUtil.setTransform(this._lineCanvas, offset, scale);
     },
 
-    // ------------------------------------------------------
-    startCapture: function () {
-        // set up frame capture functionality
-        this._capturer = new CCapture({
-            format: "webm",
-            framerate: 15,
-            timeLimit: 5,
-            display: true,
-            verbose: false
+    periodInSecs: function () {
+        return this._period / (this._timeScale * 1000);
+    },
+
+    // -----------------------------------------------------------------------
+
+    captureCycle: function () {
+        let periodInSecs = this.periodInSecs();
+        if (periodInSecs > 5) {
+            return 0;
+        }
+        this._mapMoving = true;
+
+        // set up display
+        pd = document.createElement('div');
+        pd.style.position = 'absolute';
+        pd.style.left = pd.style.top = 0;
+        pd.style.backgroundColor = 'black';
+        pd.style.fontFamily = 'monospace';
+        pd.style.fontSize = '11px';
+        pd.style.padding = '5px';
+        pd.style.color = 'red';
+        pd.style.zIndex = 100000;
+        document.body.appendChild(pd);
+        this._progressDisplay = pd;
+
+        let msg = "capturing static map frame...";
+        console.log(msg);
+        pd.textContent = msg;
+
+        leafletImage(this._map, function (err, canvas) {
+            //download(canvas.toDataURL("image/png"), "mapView.png", "image/png");
+            console.log("leaflet-image: " + err);
+            if (canvas) {
+                this.captureGIF(canvas, periodInSecs);
+            }
+        }.bind(this));
+    },
+
+    /*  For gif.js configuration
+    Disposal Method - Indicates the way in which the graphic is to
+            be treated after being displayed.
+            Values :    0 -   No disposal specified. The decoder is
+                              not required to take any action.
+                        1 -   Do not dispose. The graphic is to be left
+                              in place.
+                        2 -   Restore to background color. The area used by the
+                              graphic must be restored to the background color.
+                        3 -   Restore to previous. The decoder is required to
+                              restore the area overwritten by the graphic with
+                              what was there prior to rendering the graphic.
+                      4-7 -   To be defined.
+    */
+
+    captureGIF: function (baseCanvas = null, durationSecs = 2) {
+        this._mapMoving = true;
+
+        let height = baseCanvas ? baseCanvas.height : this._size.y,
+            width = baseCanvas ? baseCanvas.width : this._size.x,
+            frameCanvas = document.createElement('canvas'),
+            pd = this._progressDisplay;
+
+        frameCanvas.width = width;
+        frameCanvas.height = height;
+
+        let frameCtx = frameCanvas.getContext('2d'),
+            frameTime = Date.now(),
+            frameRate = 30,
+            numFrames = durationSecs * frameRate,
+            delay = 1000 / frameRate,
+            encoder = new GIF({
+            workers: 4,
+            quality: 10,
+            // background: "#FFFF",
+            // transparent: "#FFFF",
+            workerScript: 'static/js/gif.worker.js'
         });
-        this._capturer.start();
-        this._capturing = true;
+
+        encoder.on('start', function () {
+            msg = "Encoding frames...";
+            console.log(msg);
+            this._progressDisplay.textContent = msg;
+        }.bind(this));
+
+        encoder.on('progress', function (p) {
+            msg = `Encoding ${p * 100} % done`;
+            console.log(msg);
+            this._progressDisplay.textContent = msg;
+        }.bind(this));
+
+        encoder.on('finished', function (blob) {
+            // window.open(URL.createObjectURL(blob));
+            download(blob, "output.gif", 'image/gif');
+
+            document.body.removeChild(this._progressDisplay);
+
+            this._mapMoving = false;
+            if (!this._paused) {
+                this.animate();
+            }
+        }.bind(this));
+
+        // console.log("generating frames...");
+        num = Math.round(numFrames);
+        for (let i = 0; i < numFrames; i++, frameTime += delay) {
+            msg = `processing frame ${i + 1}/${num}`;
+            console.log(msg);
+            // debugger;
+            pd.textContent = msg;
+
+            this.drawLayer(frameTime);
+
+            frameCtx.clearRect(0, 0, width, height);
+            frameCtx.drawImage(baseCanvas, 0, 0);
+            frameCtx.drawImage(this._dotCanvas, 0, 0);
+            encoder.addFrame(frameCanvas, { copy: true, delay: delay });
+            // window.open(frameCanvas.toDataURL("image/png"), '_blank');
+        }
+
+        console.log("rendering output...");
+        encoder.render();
     },
 
-    stopCapture: function () {
-        this._capturer.stop();
-        this._capturing = false;
-
-        // default save, will download automatically a file called {name}.extension (webm/gif/tar)
-        this._capturer.save();
-        // delete currentTime;
-
-        // // custom save, will get a blob in the callback
-        // capturer.save( function( blob ) { /* ... */ } );
+    abortCapture: function () {
+        console.log("abort request");
     }
-});
+
+}); // end of L.DotLayer definition
 
 L.dotLayer = function (items, options) {
     return new L.DotLayer(items, options);
 };
+
+// ---------------------------------------------------------------------------
 
 /*
     From "Making annoying rainbows in javascript"
@@ -1397,7 +1517,6 @@ function makeColorGradient(frequency1, frequency2, frequency3, phase1, phase2, p
             g = Math.round(Math.sin(frequency2 * i + phase2) * width + center),
             b = Math.round(Math.sin(frequency3 * i + phase3) * width + center);
         palette[i] = `rgb(${r}, ${g}, ${b})`;
-        // document.write( '<font color="' + RGB2Color(red,grn,blu) + '">&#9608;</font>');
     }
     return palette;
 }
