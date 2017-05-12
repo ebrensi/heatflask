@@ -15,6 +15,9 @@ class Config(object):
     APP_SETTINGS = os.environ.get("APP_SETTINGS")
     ADMIN = [15972102]
 
+    # We limit the capture duration to 5 seconds to keep gif file size down
+    CAPTURE_DURATION_MAX = 5
+
     # Leaflet.js stuff
     HEATMAP_DEFAULT_OPTIONS = {
         "radius": 8,
@@ -116,7 +119,7 @@ class DevelopmentConfig(Config):
     These are settings specific to the development environment
     (Developer's personal computer)
     """
-    OFFLINE = True
+    OFFLINE = False
     DEVELOPMENT = True
     DEBUG = True
     CACHE_ACTIVITIES_TIMEOUT = 2 * 60 * 60
