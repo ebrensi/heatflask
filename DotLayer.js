@@ -596,15 +596,15 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         pd.style.left = pd.style.top = 0
         pd.style.backgroundColor = 'black';
         pd.style.fontFamily = 'monospace'
-        pd.style.fontSize = '11px'
+        pd.style.fontSize = '20px'
         pd.style.padding = '5px'
-        pd.style.color = 'red';
+        pd.style.color = 'white';
         pd.style.zIndex = 100000
         document.body.appendChild( pd );
         this._progressDisplay = pd;
 
         let msg = "capturing static map frame...";
-        console.log(msg);
+        // console.log(msg);
         pd.textContent = msg;
 
         leafletImage(this._map, function(err, canvas) {
@@ -657,14 +657,14 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                 workerScript: 'static/js/gif.worker.js'
             });
 
-        encoder.on( 'start', function(){
-            msg = "Encoding frames...";
-            console.log(msg);
-            this._progressDisplay.textContent = msg;
-        }.bind( this ) );
+        // encoder.on( 'start', function(){
+        //     msg = "Encoding frames...";
+        //     console.log(msg);
+        //     this._progressDisplay.textContent = msg;
+        // }.bind( this ) );
 
         encoder.on( 'progress', function( p ) {
-            msg = `Encoding ${p*100} % done`;
+            msg = `Encoding frames...${~~(p*100)}%`;
             console.log(msg);
             this._progressDisplay.textContent = msg;
         }.bind( this ) );
@@ -674,6 +674,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             download(blob, "output.gif", 'image/gif' );
 
             document.body.removeChild( this._progressDisplay );
+            delete this._progressDisplay
 
             this._mapMoving = false;
             if (!this._paused) {
@@ -681,12 +682,10 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             }
         }.bind( this ) );
 
-        // console.log("generating frames...");
-        num = Math.round(numFrames);
-        for (let i=0; i<numFrames; i++, frameTime+=delay){
-            msg = `processing frame ${i+1}/${num}`;
-            console.log(msg);
-            // debugger;
+        // Add frames to the encoder
+        for (let i=0, num=Math.round(numFrames); i<num; i++, frameTime+=delay){
+            msg = `Rendering frames...${~~(i/num * 100)}%`;
+            // console.log(msg);
             pd.textContent = msg;
 
             this.drawLayer(frameTime);
@@ -698,7 +697,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             // window.open(frameCanvas.toDataURL("image/png"), '_blank');
         }
 
-        console.log("rendering output...");
+        // encode the Frame array
         encoder.render();
     },
 

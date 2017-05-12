@@ -104,7 +104,7 @@ class StagingConfig(Config):
     DEVELOPMENT = True
     DEBUG = True
 
-    # webassets should not minify assets
+    # webassets should not build bundles
     ASSETS_DEBUG = True
     ASSETS_AUTO_BUILD = False
     ASSETS_CACHE = False
@@ -116,7 +116,7 @@ class DevelopmentConfig(Config):
     These are settings specific to the development environment
     (Developer's personal computer)
     """
-    OFFLINE = False
+    OFFLINE = True
     DEVELOPMENT = True
     DEBUG = True
     CACHE_ACTIVITIES_TIMEOUT = 2 * 60 * 60
