@@ -424,23 +424,24 @@ def main(username):
         })
 
     paused = request.args.get("paused") in ["1", "true"]
-    return render_template('main.html',
-                           user=user,
-                           lat=lat,
-                           lng=lng,
-                           zoom=zoom,
-                           ids=ids,
-                           preset=preset,
-                           date1=date1,
-                           date2=date2,
-                           limit=limit,
-                           heatres=heatres,
-                           flowres=flowres,
-                           autozoom=autozoom,
-                           info=info,
-                           paused=paused,
-                           baselayer=baselayer
-                           )
+    return render_template(
+        'main.html',
+        user=user,
+        lat=lat,
+        lng=lng,
+        zoom=zoom,
+        ids=ids,
+        preset=preset,
+        date1=date1,
+        date2=date2,
+        limit=limit,
+        heatres=heatres,
+        flowres=flowres,
+        autozoom=autozoom,
+        info=info,
+        paused=paused,
+        baselayer=baselayer
+    )
 
 
 @app.route('/<username>/getdata')

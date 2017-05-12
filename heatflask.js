@@ -33,7 +33,7 @@ if (!OFFLINE) {
             if (i==0) default_baseLayer = tl;
         }
     } else {
-        default_baseLayer = baseLayers["Stamen.Terrain"];
+        default_baseLayer = baseLayers["Google.Terrain"];
     }
 }
 
@@ -42,7 +42,6 @@ var map = L.map('map', {
         zoom: ONLOAD_PARAMS.map_zoom,
         layers : [ default_baseLayer ],
         preferCanvas: true,
-        // renderer: L.svg({ padding: 0 }),
         zoomAnimation: false
     });
 
@@ -52,12 +51,7 @@ var map = L.map('map', {
 var sidebarControl = L.control.sidebar('sidebar').addTo(map),
     zoomControl = map.zoomControl.setPosition('bottomright'),
     layerControl = L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map),
-    // locateControl = L.control.locate({position: "bottomright", icon: "fa fa-anchor"}).addTo(map),
-    fps_display = null;
-
-if (ADMIN) {
-    fps_display = L.control.fps().addTo(map);
-}
+    fps_display = ADMIN? L.control.fps().addTo(map) : null;
 
 
 // Animation button
@@ -117,7 +111,6 @@ var capture_button_states = [
         onClick: function (btn, map) {
             if (DotLayer && DotLayer._capturing) {
                 DotLayer.abortCapture();
-                // btn.state('not-capturing');
             }
         }
     }
@@ -140,7 +133,7 @@ $(".dotconst-dial").knob({
         height: "150",
         cursor: 20,
         inline: true,
-        // displayInput: false,
+        displayInput: false,
         change: function (val) {
             if (!DotLayer) {
                 return;
@@ -159,12 +152,12 @@ $(".dotconst-dial").knob({
                 DotLayer.drawLayer(DotLayer._timePaused);
             }
 
-            // Enable capture if period is less than CAPTURE_PERIOD_MAX
-            let periodValue = DotLayer.periodInSecs().toFixed(2),
+            // Enable capture if period is less than CAPTURE_DURATION_MAX
+            let cycleDuration = DotLayer.periodInSecs().toFixed(2),
                 captureEnabled = captureControl.enabled;
 
-            $("#period-value").html(periodValue);
-            if (periodValue <= CAPTURE_PERIOD_MAX) {
+            $("#period-value").html(cycleDuration);
+            if (cycleDuration <= CAPTURE_DURATION_MAX) {
                 if (!captureEnabled) {
                     captureControl.addTo(map);
                     captureControl.enabled = true;
@@ -465,12 +458,12 @@ function renderLayers() {
                 DotLayer = new L.DotLayer(appState.items, {startPaused: appState.paused});
                 map.addLayer(DotLayer);
                 layerControl.addOverlay(DotLayer, "Dots");
-
                 $("#sepConst").val((Math.log2(DotLayer.C1) - SEP_SCALE.b) / SEP_SCALE.m ).trigger("change");
                 $("#speedConst").val(Math.sqrt(DotLayer.C2) / SPEED_SCALE).trigger("change");
+
                 setTimeout(function(){
-                    $(".periodDisplay").html(DotLayer.periodInSecs().toFixed(2));
-                }, 1000);
+                    $("#period-value").html(DotLayer.periodInSecs().toFixed(2));
+                }, 500);
 
                 $("#showPaths").prop("checked", DotLayer.options.showPaths)
                                 .on("change", function(){

@@ -585,9 +585,6 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
     captureCycle: function() {
         let periodInSecs = this.periodInSecs();
-        if (periodInSecs > 5) {
-            return 0;
-        }
         this._mapMoving = true;
 
         // set up display
@@ -617,7 +614,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
     },
 
 
-    /*  For gif.js configuration
+    /*  TODO: take advantage of static background using
     Disposal Method - Indicates the way in which the graphic is to
             be treated after being displayed.
             Values :    0 -   No disposal specified. The decoder is
@@ -665,7 +662,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
         encoder.on( 'progress', function( p ) {
             msg = `Encoding frames...${~~(p*100)}%`;
-            console.log(msg);
+            // console.log(msg);
             this._progressDisplay.textContent = msg;
         }.bind( this ) );
 

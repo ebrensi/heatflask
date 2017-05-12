@@ -42,11 +42,11 @@
                     map_center: [{{ lat }}, {{ lng }}],
                     map_zoom: {{ zoom }},
                     info: {{ info|tojson }}
-              },
+             },
              MEASURMENT_PREFERENCE = "{{ current_user.measurement_preference if current_user.is_authenticated else user.measurement_preference }}",
              DIST_UNIT = (MEASURMENT_PREFERENCE=="feet")? 1609.34 : 1000.0,
              DIST_LABEL = (MEASURMENT_PREFERENCE=="feet")?  "mi" : "Km",
-             CAPTURE_PERIOD_MAX = 5;
+             CAPTURE_DURATION_MAX = {{ config.get('CAPTURE_DURATION_MAX')|tojson }};
     </script>
 
 </head>
@@ -246,22 +246,16 @@
 								<div class="sidebar-pane" id="info-pane">
 									<h1 class="sidebar-header">Info<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
 									<br>
-									{{ config['APP_NAME'] }} imports and renders your public activities from Strava.<br>
-									Our cache of your activity data is deleted if not accessed for 7 days.<br><br>
-									Deleting your account with us clears our database cache for you and deletes your Strava access token from our database.
-									<br><br>
 									The URL for a heat/flow map and the current location dates or preset, and zoom are embedded in the url so you can share that url and anyone who clicks on it will get the same view.
 									<br><br>
 									Note: You can specify a custom map baselayer by setting "baselayer={map}" in the URL, where {map} is one of the provider names from
 									<a href="https://leaflet-extras.github.io/leaflet-providers/preview" target="_blank">leaflet-providers</a>
 									<hr>
+									<h4>GIF Export</h4>
+									 if you adjust the cycle duration to less than 5 seconds then you have the option to capture and export the current view of your system as an animated gif.  The process is currently pretty slow and produces large (1-20 Mb) files.  Also it currently doesn't work with Google Maps baselayers.
 
-									{{ config['APP_NAME'] }} is a work in progress.
-									<img src="{{ url_for('static', filename='under-construction.gif') }}" height=40 alt="under-construction">
-									<br>
-									<a href="mailto:Rensi.Efrem@gmail.com">Questions, comments, suggestions?</a>
-									<br>
-									<a href="https://github.com/ebrensi/heatflask"><i class="fa fa-github fa-2x"></i> Want to contribute? <i class="fa fa-github fa-2x"></i></a>
+
+									<a href="https://github.com/ebrensi/heatflask"><i class="fa fa-github fa-2x"></i> Want to contribute?<i class="fa fa-github fa-2x"></i></a>
 									<hr>
 								</div>
 
