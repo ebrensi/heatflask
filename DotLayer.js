@@ -634,13 +634,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
         let height = baseCanvas? baseCanvas.height : this._size.y,
             width = baseCanvas? baseCanvas.width : this._size.x,
-            frameCanvas = document.createElement('canvas'),
-            pd = this._progressDisplay;
-
-        frameCanvas.width = width;
-        frameCanvas.height = height;
-
-        let frameCtx = frameCanvas.getContext('2d'),
+            pd = this._progressDisplay,
             frameTime = Date.now(),
             frameRate = 30,
             numFrames = durationSecs * frameRate,
@@ -680,6 +674,13 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             }
         }.bind( this ) );
 
+        // add initial background frame
+        encoder.addFrame(baseCanvas, {
+            // copy: true,
+            delay: 0,
+            dispose: 0 // no disposal for this frame
+        });
+
         // Add frames to the encoder
         for (let i=0, num=Math.round(numFrames); i<num; i++, frameTime+=delay){
             msg = `Rendering frames...${~~(i/num * 100)}%`;
@@ -687,12 +688,11 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             pd.textContent = msg;
 
             this.drawLayer(frameTime);
-
-            frameCtx.clearRect( 0, 0, width, height );
-            frameCtx.drawImage(baseCanvas, 0, 0);
-            frameCtx.drawImage(this._dotCanvas, 0, 0);
-            encoder.addFrame(frameCanvas, { copy: true, delay: delay});
-            // window.open(frameCanvas.toDataURL("image/png"), '_blank');
+            encoder.addFrame(this._dotCanvas, {
+                copy: true,
+                delay: delay,
+                dispose: 2  // revert to previous (baseCanvas) after rendering this frame
+            });
         }
 
         // encode the Frame array
