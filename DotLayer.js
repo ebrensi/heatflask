@@ -645,7 +645,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                 quality: 10,
                 // background: "#FFFF",
                 // transparent: "#FFFF",
-                workerScript: 'static/js/gif.worker.js'
+                workerScript: 'static/js/gif.worker2.js'
             });
             this._encoder = encoder;
 
@@ -674,12 +674,12 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             }
         }.bind( this ) );
 
-        // add initial background frame
-        encoder.addFrame(baseCanvas, {
-            // copy: true,
-            delay: 0,
-            dispose: 0 // no disposal for this frame
-        });
+        // // add initial background frame
+        // encoder.addFrame(baseCanvas, {
+        //     copy: true,
+        //     delay: 0,
+        //     dispose: 0 // no disposal for this frame
+        // });
 
         // Add frames to the encoder
         for (let i=0, num=Math.round(numFrames); i<num; i++, frameTime+=delay){
@@ -691,7 +691,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             encoder.addFrame(this._dotCanvas, {
                 copy: true,
                 delay: delay,
-                dispose: 2  // revert to previous (baseCanvas) after rendering this frame
+                dispose: 1  // revert to previous (baseCanvas) after rendering this frame
             });
         }
 
