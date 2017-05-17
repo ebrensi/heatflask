@@ -43,13 +43,13 @@ LOCAL = os.environ.get("APP_SETTINGS") == "config.DevelopmentConfig"
 OFFLINE = app.config.get("OFFLINE")
 
 
-def tuplize_datetime(dt):
-    return (dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second,
-            dt.microsecond)
+# def tuplize_datetime(dt):
+#     return (dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second,
+#             dt.microsecond)
 
 
-def detuplize_datetime(s):
-    return datetime(*s)
+# def detuplize_datetime(s):
+#     return datetime(*s)
 
 
 class Users(UserMixin, db_sql.Model):
@@ -608,6 +608,8 @@ class Users(UserMixin, db_sql.Model):
                         df = df[before:]
             df = df.reset_index()
             df.beginTimestamp = df.beginTimestamp.astype(str)
+            # df.ts_UTC = df.ts_UTC.astype(str)
+
             return df.to_dict("records")
 
         Q = Queue()
@@ -729,18 +731,20 @@ class Activities(object):
 
     @classmethod
     def strava2dict(cls, a):
-        return {
+        d = {
             "id": a.id,
             "name": a.name,
             "type": a.type,
             "summary_polyline": a.map.summary_polyline,
-            # "ts_UTC": a.start_date,
+            "ts_UTC": str(a.start_date),
+            "group": a.athlete_count,
             "beginTimestamp": a.start_date_local,
             "total_distance": float(a.distance),
             "elapsed_time": int(a.elapsed_time.total_seconds()),
             "average_speed": float(a.average_speed),
-            # "bounds": cls.bounds(a.map.summary_polyline)
         }
+
+        return d
 
     @staticmethod
     def cache_key(id):
