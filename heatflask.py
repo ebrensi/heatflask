@@ -29,6 +29,10 @@ app.config.from_object(os.environ['APP_SETTINGS'])
 app.logger.addHandler(logging.StreamHandler(sys.stdout))
 app.logger.setLevel(logging.DEBUG)
 
+STREAMS_OUT = ["polyline", "time"]
+STREAMS_TO_CACHE = ["polyline", "time"]
+
+
 sslify = SSLify(app, skips=["webhook_callback"])
 
 # models depend app so we import them afterwards
@@ -515,14 +519,11 @@ def getdata(username):
 
         err_count_key = "status:{}:{}".format(user.id, start_time)
 
-        streams_out = ["polyline", "time"]
-        streams_to_cache = ["polyline", "time"]
-
         def import_and_queue(client, Q, err_count_key, activity):
             stream_data = Activities.import_streams(
-                client, activity["id"], streams_to_cache)
+                client, activity["id"], STREAMS_TO_CACHE)
 
-            data = {s: stream_data[s] for s in streams_out + ["error"]
+            data = {s: stream_data[s] for s in STREAMS_OUT + ["error"]
                     if s in stream_data}
             if "error" in data:
                 redis.incr(err_count_key)
@@ -578,7 +579,7 @@ def getdata(username):
                                        client, Q, err_count_key, activity)
                             imported += 1
                         else:
-                            data = {s: stream_data[s] for s in streams_out
+                            data = {s: stream_data[s] for s in STREAMS_OUT
                                     if s in stream_data}
                             data.update(activity)
                             # app.logger.debug("sending {}".format(data))
@@ -670,6 +671,25 @@ def update_share_status(username):
                     .format(user, status))
 
     return jsonify(user=user.id, share=user.share_profile)
+
+
+# ---- for single-stream ajax call ----
+@app.route('/<username>/stream/<activity_id>')
+@log_request_event
+def stream_ajax(username, activity_id):
+    stream_data = Activities.get(activity_id)
+    if not stream_data:
+        user = Users.get(username)
+        if not user:
+            return
+
+        data = Activities.import_streams(
+            user.client(), activity_id, STREAMS_TO_CACHE
+        )
+
+        stream_data = {s: data[s] for s in STREAMS_OUT + ["error"]
+                       if s in data}
+    return jsonify(stream_data)
 
 
 # ---- Shared views ----
