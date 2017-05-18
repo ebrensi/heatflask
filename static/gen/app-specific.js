@@ -299,7 +299,7 @@ var atable = $('#activitiesList').DataTable({
     select: true,
     data: Object.values(appState.items),
     idSrc: "id",
-    columns: [{ title: "Date", data: null, render: A => href(stravaActivityURL(A.id), A.beginTimestamp.slice(0, 10)) }, { title: "Type", data: "type" }, { title: `Dist (${DIST_LABEL})`, data: "total_distance", render: data => +(data / DIST_UNIT).toFixed(2) }, { title: "Time", data: "elapsed_time", render: hhmmss }, { title: "Name", data: "name" }]
+    columns: [{ title: "Date", data: null, render: A => href(stravaActivityURL(A.id), A.ts_local.slice(0, 10)) }, { title: "Type", data: "type" }, { title: `Dist (${DIST_LABEL})`, data: "total_distance", render: data => +(data / DIST_UNIT).toFixed(2) }, { title: "Time", data: "elapsed_time", render: hhmmss }, { title: "Name", data: "name" }]
 }).on('select', handle_table_selections).on('deselect', handle_table_selections);
 
 function updateShareStatus(status) {
@@ -445,7 +445,7 @@ function activityDataPopup(id, latlng) {
         vmi = (v * 3600 / 1609.34).toFixed(2) + "mi/hr";
     }
 
-    var popup = L.popup().setLatLng(latlng).setContent(`${A.name}<br>${A.type}: ${A.beginTimestamp}<br>` + `${dkm} km (${dmi} mi) in ${elapsed}<br>${vkm} (${vmi})<br>` + `View in <a href='https://www.strava.com/activities/${A.id}' target='_blank'>Strava</a>` + `, <a href='${BASE_USER_URL}?id=${A.id}&flowres=high' target='_blank'>Heatflask</a>`).openOn(map);
+    var popup = L.popup().setLatLng(latlng).setContent(`${A.name}<br>${A.type}: ${A.ts_local}<br>` + `${dkm} km (${dmi} mi) in ${elapsed}<br>${vkm} (${vmi})<br>` + `View in <a href='https://www.strava.com/activities/${A.id}' target='_blank'>Strava</a>` + `, <a href='${BASE_USER_URL}?id=${A.id}&flowres=high' target='_blank'>Heatflask</a>`).openOn(map);
 }
 
 /* Rendering */
@@ -652,7 +652,7 @@ function renderLayers() {
             }
 
             if (heatpoints || flowpoints) {
-                A.startTime = moment(A.ts_UTC || A.beginTimestamp).valueOf();
+                A.startTime = moment(A.ts_UTC || A.ts_local).valueOf();
 
                 bounds.extend(A.bounds);
                 delete A.summary_polyline;

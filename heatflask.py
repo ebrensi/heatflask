@@ -616,8 +616,8 @@ def getdata(username):
     return Response(Q, mimetype='text/event-stream')
 
 
-@app.route('/<username>/group_activity/<activity_id>')
-def group_activity(username, activity_id):
+@app.route('/<username>/related_activities/<activity_id>')
+def related_activities(username, activity_id):
     user = Users.get(username)
     client = user.client()
     try:

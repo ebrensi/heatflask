@@ -39,7 +39,7 @@
   <script>
     const HEATFLASK_BUTTON = img("{{ url_for('static',filename='Heat.png') }}"),
           USER_BASE_URL = "{{url_for('main',username=user.id)}}",
-          GROUP_ACTIVITY_URL = "{{ url_for('group_activity', username=user.id, activity_id='') }}";
+          GROUP_ACTIVITY_URL = "{{ url_for('related_activities', username=user.id, activity_id='') }}";
 
     function td(text) {
       return "<td>" + text +"</td>";
