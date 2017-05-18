@@ -384,15 +384,15 @@ class Users(UserMixin, db_sql.Model):
 
                     if (rendering and
                         ((limit and (count <= limit)) or
-                         (after and (d["beginTimestamp"] >= after)) or
-                            (before and (d["beginTimestamp"] <= before)))):
+                         (after and (d["ts_local"] >= after)) or
+                            (before and (d["ts_local"] <= before)))):
                         d2 = dict(d)
-                        d2["beginTimestamp"] = str(d2["beginTimestamp"])
+                        d2["ts_local"] = str(d2["ts_local"])
                         enqueue(d2)
                         # app.logger.info("put {} on queue".format(d2["id"]))
                     if (rendering and
                         ((limit and count >= limit) or
-                            (after and (d["beginTimestamp"] < after)))):
+                            (after and (d["ts_local"] < after)))):
                         rendering = False
                         enqueue({"stop_rendering": "1"})
 
@@ -416,7 +416,7 @@ class Users(UserMixin, db_sql.Model):
                 return
 
             index_df = (pd.DataFrame(activities_list)
-                        .set_index("beginTimestamp")
+                        .set_index("ts_local")
                         .sort_index(ascending=False)
                         .astype(Users.index_df_dtypes))
 
@@ -528,7 +528,7 @@ class Users(UserMixin, db_sql.Model):
 
         if activities_list:
             new_df = pd.DataFrame(activities_list).set_index(
-                "beginTimestamp")
+                "ts_local")
 
             index_df = (
                 new_df.append(index_df)
@@ -607,7 +607,7 @@ class Users(UserMixin, db_sql.Model):
                     if before:
                         df = df[before:]
             df = df.reset_index()
-            df.beginTimestamp = df.beginTimestamp.astype(str)
+            df.ts_local = df.ts_local.astype(str)
             # df.ts_UTC = df.ts_UTC.astype(str)
 
             return df.to_dict("records")
@@ -738,7 +738,7 @@ class Activities(object):
             "summary_polyline": a.map.summary_polyline,
             "ts_UTC": str(a.start_date),
             "group": a.athlete_count,
-            "beginTimestamp": a.start_date_local,
+            "ts_local": a.start_date_local,
             "total_distance": float(a.distance),
             "elapsed_time": int(a.elapsed_time.total_seconds()),
             "average_speed": float(a.average_speed),

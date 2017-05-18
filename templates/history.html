@@ -42,7 +42,7 @@
     $(document).ready(function() {
         let data = {{ events|tojson }},
             dataTable = $('#events_table').DataTable({
-                pageLength: 50,
+                pageLength: 100,
                 data: data,
                 deferRender: true,
                 columns: [
