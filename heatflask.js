@@ -189,7 +189,7 @@ var atable = $('#activitiesList').DataTable({
                 data: Object.values(appState.items),
                 idSrc: "id",
                 columns: [
-                { title: "Date",  data: null, render: (A) => href( stravaActivityURL(A.id), A.beginTimestamp.slice(0,10) ) },
+                { title: "Date",  data: null, render: (A) => href( stravaActivityURL(A.id), A.ts_local.slice(0,10) ) },
                 { title: "Type", data: "type"},
                 { title: `Dist (${DIST_LABEL})`, data: "total_distance", render: (data) => +(data / DIST_UNIT).toFixed(2)},
                 { title: "Time", data: "elapsed_time", render: hhmmss},
@@ -344,7 +344,7 @@ function activityDataPopup(id, latlng){
     var popup = L.popup()
                 .setLatLng(latlng)
                 .setContent(
-                    `${A.name}<br>${A.type}: ${A.beginTimestamp}<br>`+
+                    `${A.name}<br>${A.type}: ${A.ts_local}<br>`+
                     `${dkm} km (${dmi} mi) in ${elapsed}<br>${vkm} (${vmi})<br>` +
                     `View in <a href='https://www.strava.com/activities/${A.id}' target='_blank'>Strava</a>`+
                     `, <a href='${BASE_USER_URL}?id=${A.id}&flowres=high' target='_blank'>Heatflask</a>`
@@ -573,7 +573,7 @@ function renderLayers() {
             }
 
             if (heatpoints || flowpoints) {
-                A.startTime = moment(A.ts_UTC || A.beginTimestamp ).valueOf()
+                A.startTime = moment(A.ts_UTC || A.ts_local ).valueOf()
 
                 bounds.extend(A.bounds);
                 delete A.summary_polyline;
