@@ -616,6 +616,26 @@ def getdata(username):
     return Response(Q, mimetype='text/event-stream')
 
 
+@app.route('/<username>/group_activity/<activity_id>')
+def group_activity(username, activity_id):
+    user = Users.get(username)
+    client = user.client()
+    try:
+        racts = client.get_related_activities(int(activity_id))
+    except Exception as e:
+        app.logger.info("Error getting related activities for ", activity_id)
+        return
+
+    activities = []
+
+    for a in racts:
+        A = Activities.strava2dict(a)
+        A["user"] = a.athlete.id
+        activities.append(A)
+
+    return jsonify(activities)
+
+
 # creates a SSE stream of current.user's activities, using the Strava API
 # arguments
 @app.route('/<username>/activities_sse')
