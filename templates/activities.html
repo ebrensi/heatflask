@@ -37,16 +37,24 @@
 
 
   <script>
+    const HEATFLASK_BUTTON = img("{{ url_for('static',filename='Heat.png') }}"),
+          USER_BASE_URL = "{{url_for('main',username=user.id)}}",
+          GROUP_ACTIVITY_URL = "{{ url_for('group_activity', username=user.id, activity_id='') }}";
 
     function td(text) {
       return "<td>" + text +"</td>";
     }
 
+    function groupLink(A) {
+      if (A.group == 1) {
+        return ""
+      }
+      let url = GROUP_ACTIVITY_URL + A.id;
+      return href(url, A.group)
+    }
 
     jQuery(document).ready(function($) {
-        let heatflask_button = img("{{ url_for('static',filename='Heat.png') }}"),
-            USER_BASE_URL = "{{url_for('main',username=user.id)}}",
-            count = 0,
+        let count = 0,
             count_DOM_element = $("#count"),
             table_body = $('#activities_list tbody'),
             source = new EventSource("{{ url_for('activity_stream', username=user.id) }}");
@@ -70,8 +78,8 @@
             let A = JSON.parse(event.data);
             if ("id" in A) {
               count_DOM_element.text(count++);
-              let heatflask_link = href(`${USER_BASE_URL}?id=${A.id}`, heatflask_button),
-                  ts = A.beginTimestamp.slice(0,10),
+              let heatflask_link = href(`${USER_BASE_URL}?id=${A.id}`, HEATFLASK_BUTTON),
+                  ts = A.ts_local.slice(0,10),
                   dkm = +(A.total_distance / 1000).toFixed(2),
                   row = "<tr>" +
                      td(href(stravaActivityURL(A.id), A.id)) +
@@ -81,7 +89,7 @@
                      td(dkm) +
                      td(hhmmss(A.elapsed_time)) +
                      td(A.name) +
-                     td(A.group) +
+                     td(groupLink(A)) +
                      "</tr>";
               table_body.append(row);
             }
