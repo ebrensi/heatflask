@@ -115,5 +115,7 @@ $RECYCLE.BIN/
 *.old
 .hidden
 .fuse*
+
 static/.webassets-cache/
-test.html
+static/gen/build/
+
