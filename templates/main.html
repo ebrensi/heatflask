@@ -308,9 +308,14 @@
 
     <div id="map" class="sidebar-map"></div>
 
-    {% assets "main_js" %}
+    {% assets "dependencies_js" %}
         <script type="text/javascript" src="{{ ASSET_URL }}"></script>
     {% endassets %}
+
+    {% assets "app_specific_js" %}
+        <script type="text/javascript" src="{{ ASSET_URL }}"></script>
+    {% endassets %}
+
 
 </body>
 </html>

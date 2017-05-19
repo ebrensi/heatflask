@@ -66,8 +66,8 @@ bundles = {
         output='gen/main.css'
     ),
 
-    "main_js": flask_assets.Bundle(
-        # Dependencies
+    "dependencies_js": flask_assets.Bundle(
+        # minified dependencies
         flask_assets.Bundle(
             'js/jquery-3.2.1.min.js',
             'js/jquery-ui.min.js',
@@ -78,9 +78,9 @@ bundles = {
             'js/leaflet-heat.js',
             'js/download.min.js',
             'js/gif.js',  # Johan Nordberg: http://jnordberg.github.io/gif.js/
-            output="gen/pre-compiled-dependencies.js"
+            output="gen/build/pre-compiled-dependencies.js"
         ),
-
+        # un-minified dependencies
         flask_assets.Bundle(
             'js/eventsource.js',
             'js/moment.js',
@@ -92,19 +92,18 @@ bundles = {
             'js/leaflet-image.js',  # Tom MacWright: https://github.com/mapbox/leaflet-image
             'js/easy-button.js',
             filters=["babel", "rjsmin"],
-            output="gen/non-compiled-dependencies.js"
+            output="gen/build/non-compiled-dependencies.js"
         ),
+        output='gen/dependencies.js'
+    ),
 
-        # Heatflask-specific code
-        flask_assets.Bundle(
-            'js/L.Control.fps.js',
-            'js/appUtil.js',
-            '../heatflask.js',
-            '../DotLayer.js',
-            filters=["babel", 'rjsmin'],
-            output="gen/app-specific.js"
-        ),
-        output='gen/main.js'
+    "app_specific_js": flask_assets.Bundle(  # Heatflask-specific code
+        'js/L.Control.fps.js',
+        'js/appUtil.js',
+        '../heatflask.js',
+        '../DotLayer.js',
+        filters=["babel", 'rjsmin'],
+        output="gen/app-specific.js"
     ),
 
     "splash_css": flask_assets.Bundle(
