@@ -8,7 +8,6 @@ from functools import wraps
 from flask import Flask, Response, render_template, request, redirect, \
     jsonify, url_for, flash, send_from_directory, render_template_string
 import flask_compress
-import dateutil.parser
 from datetime import datetime
 import sys
 import logging
@@ -487,20 +486,14 @@ def getdata(username):
             if limit == 0:
                 limit == 1
 
-        date1 = request.args.get("date1")
-        date2 = request.args.get("date2")
-        if date1 or date2:
-            try:
-                options["after"] = dateutil.parser.parse(date1)
-                if date2:
-                    options["before"] = dateutil.parser.parse(date2)
-                    assert(options["before"] > options["after"])
-            except AssertionError:
-                return errout("Invalid Dates")
-        elif not limit:
-            options["limit"] = 10
+        options["after"] = request.args.get("date1")
+        options["before"] = request.args.get("date2")
+        options["limit"] = 10 if not (options["after"] or
+                                      options["before"] or
+                                      limit) else limit
 
-    hires = request.args.get("hires") == "true"
+    options["ids_out"] = request.args.get("ids_out")
+    hires = bool(request.args.get("hires"))
 
     if current_user.is_anonymous or (not current_user.is_admin()):
         event_data = {
@@ -536,6 +529,7 @@ def getdata(username):
         Q.put(sse_out({"msg": "Retrieving Index..."}))
 
         activity_data = user.query_index(**options)
+
         if isinstance(activity_data, list):
             total = len(activity_data)
             ftotal = float(total)
@@ -642,20 +636,14 @@ def related_activities(username, activity_id):
 def activity_stream(username):
     user = Users.get(username)
     options = {"limit": 10000}
-    if "id" in request.args:
-        options["activity_ids"] = request.args.get("id")
-    else:
-        if "before" in request.args:
-            options["before"] = dateutil.parser.parse(
-                request.args.get("before"))
-        if "after" in request.args:
-            options["after"] = dateutil.parser.parse(
-                request.args.get("after"))
-        if "limit" in request.args:
-            options["limit"] = int(request.args.get("limit"))
+    options.update({k: request.args.get(k) for k in request.args})
+    app.logger.info("query_inedx called with {}".format(options))
+    result = user.query_index(**options)
+    if "ids" in result:
+        return jsonify(result["ids"])
 
     def boo():
-        for a in user.query_index(**options):
+        for a in result:
             if "id" in a:
                 yield "data: {}\n\n".format(json.dumps(a))
         yield "data: done\n\n"
