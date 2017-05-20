@@ -10,6 +10,7 @@ from flask import Flask, Response, render_template, request, redirect, \
 import flask_compress
 from datetime import datetime
 import sys
+import uuid
 import logging
 import os
 import re
@@ -39,13 +40,21 @@ from models import Users, Activities, EventLogger, Utility, Webhooks,\
     Indexes, db_sql, mongodb, redis
 
 # just do once
-if not redis.get("db-reset"):
-    # Activities.init(clear_cache=True)
-    Indexes.init(clear_cache=True)
-    redis.set("db-reset", 1)
-# redis.delete("db-reset")
+# if not redis.get("db-reset"):
+#     # Activities.init(clear_cache=True)
+#     Indexes.init(clear_cache=True)
+#     redis.set("db-reset", 1)
+redis.delete("db-reset")
 
 Analytics(app)
+
+
+def parseInt(s):
+    try:
+        return int(s)
+    except ValueError:
+        return
+
 
 # we bundle javascript and css dependencies to reduce client-side overhead
 # app.config["CLOSURE_COMPRESSOR_OPTIMIZATION"] = "WHITESPACE_ONLY"
@@ -460,12 +469,6 @@ def getdata(username):
         return Response(map(sse_out, [data, None]),
                         mimetype='text/event-stream')
 
-    def cast_int(s):
-        try:
-            return int(s)
-        except ValueError:
-            return
-
     if not user:
         return errout("'{}' is not registered with this app".format(username))
 
@@ -475,7 +478,7 @@ def getdata(username):
     if ids_raw:
         non_digit = re.compile("\D")
 
-        ids = [s for s in [cast_int(s) for s in non_digit.split(ids_raw)]
+        ids = [s for s in [parseInt(s) for s in non_digit.split(ids_raw)]
                if s]
 
         # app.logger.debug("'{}' => {}".format(ids_raw, ids))
@@ -690,23 +693,45 @@ def update_share_status(username):
     return jsonify(user=user.id, share=user.share_profile)
 
 
-# ---- for single-stream ajax call ----
-@app.route('/<username>/stream/<activity_id>')
-@log_request_event
-def stream_ajax(username, activity_id):
-    stream_data = Activities.get(activity_id)
-    if not stream_data:
+# ---- handle ajax call for streams ----
+# query is in the form { userId1: [...activity_ids...],
+#                        userId2: [...activity_ids...] }
+# the response to this call is a key that is used as a parameter for getdata
+@app.route('/ajax/streams', methods=["POST"])
+# @log_request_event
+def stream_ajax():
+    query = request.get_json(force=True)
+    app.logger.info(query)
+    key = uuid.uuid1()
+    redis.setex(key, query, 30)  # key is good for 30 secs
+    return jsonify(key)
+
+
+@app.route('/getdata/<query_key>')
+def getdata(query_key):
+
+    query_obj = redis.get(query_key)
+    if not query_obj:
+        return errout("invalid query_key")
+
+    workers = gevent.pool.Pool(app.config.get("CONCURRENCY"))
+    out_queue = gevent.queue.Queue()
+
+    for username, query in query_obj:
         user = Users.get(username)
         if not user:
-            return
+            continue
 
-        data = Activities.import_streams(
-            user.client(), activity_id, STREAMS_TO_CACHE
-        )
+        gevent.spawn(sse_iterator, user, query, out_queue)
 
-        stream_data = {s: data[s] for s in STREAMS_OUT + ["error"]
-                       if s in data}
-    return jsonify(stream_data)
+    workers.join(timeout=60)  # make sure all spawned jobs are done
+    out_queue.put(sse_out())
+
+    # We must put a StopIteration here to close the (http?) connection,
+    # otherise we'll get an idle connection error from Heroku
+    out_queue.put(StopIteration)
+
+    return Response(out_queue, mimetype='text/event-stream')
 
 
 # ---- Shared views ----
@@ -851,6 +876,111 @@ def webhook_callback():
         update_raw = request.get_json(force=True)
         Webhooks.handle_update_callback(update_raw)
         return "success"
+
+
+def sse_out(obj=None):
+    data = json.dumps(obj) if obj else "done"
+    return "data: {}\n\n".format(data)
+
+
+def errout(msg):
+    # outputs a terminating SSE stream consisting of one error message
+    data = {"error": "{}".format(msg)}
+    return Response(map(sse_out, [data, None]),
+                    mimetype='text/event-stream')
+
+
+def sse_iterator(user, query, pool, Q, event_data=None):
+    start_time = datetime.utcnow()
+    client = user.client()
+
+    err_count_key = "status:{}:{}".format(user.id, start_time)
+
+    def import_and_queue(client, Q, err_count_key, activity):
+        stream_data = Activities.import_streams(
+            client, activity["id"], STREAMS_TO_CACHE)
+
+        data = {s: stream_data[s] for s in STREAMS_OUT + ["error"]
+                if s in stream_data}
+        if "error" in data:
+            redis.incr(err_count_key)
+
+        data.update(activity)
+        # app.logger.debug("imported streams for {}".format(activity["id"]))
+        Q.put(sse_out(data))
+        gevent.sleep(0)
+
+    Q.put(sse_out({"msg": "Retrieving Index..."}))
+
+    activity_data = user.query_index(**query)
+
+    if isinstance(activity_data, list):
+        Q.put(sse_out({"msg": "Retrieving Index..."}))
+        total = len(activity_data)
+        ftotal = float(total)
+    else:
+        total = "?"
+        ftotal = None
+
+    count = 0
+    imported = 0
+    elapsed = 0
+    try:
+        for activity in activity_data:
+            # app.logger.debug("activity {}".format(activity))
+            if (("msg" in activity) or
+                ("error" in activity) or
+                    ("stop_rendering" in activity)):
+                Q.put(sse_out(activity))
+
+                if "stop_rendering" in activity:
+                    elapsed = datetime.utcnow() - start_time
+
+            if (activity.get("summary_polyline") and
+                    activity.get("total_distance", 0) > 1):
+                count += 1
+                activity.update(
+                    Activities.atype_properties(activity["type"])
+                )
+
+                data = {"msg": "activity {0}/{1}...".format(count, total)}
+                if ftotal:
+                    data["value"] = round(count / ftotal, 3)
+
+                Q.put(sse_out(data))
+
+                if query["hires"]:
+                    stream_data = Activities.get(activity["id"])
+
+                    if not stream_data:
+                        pool.spawn(import_and_queue,
+                                   client, Q, err_count_key, activity)
+                        imported += 1
+                    else:
+                        data = {s: stream_data[s] for s in STREAMS_OUT
+                                if s in stream_data}
+                        data.update(activity)
+                        # app.logger.debug("sending {}".format(data))
+                        Q.put(sse_out(data))
+                        gevent.sleep(0)
+                else:
+                    Q.put(sse_out(activity))
+                    gevent.sleep(0)
+    except Exception as e:
+        Q.put(sse_out({"error": str(e)}))
+
+    if not elapsed:
+        elapsed = datetime.utcnow() - start_time
+    if event_data:
+        event_data["msg"] += (": elapsed={} sec, count={}, imported {}"
+                              .format(round(elapsed.total_seconds(), 3),
+                                      count,
+                                      imported))
+        err_count = redis.get(err_count_key)
+        if err_count:
+            event_data["msg"] += ", errors={}".format(err_count)
+            redis.delete(err_count_key)
+        EventLogger.new_event(**event_data)
 
 
 # makes python ignore sigpipe and prevents broken pipe exception when client
