@@ -39,10 +39,10 @@ from models import Users, Activities, EventLogger, Utility, Webhooks,\
     Indexes, db_sql, mongodb, redis
 
 # just do once
-# if not redis.get("db-reset"):
-#     Activities.init(clear_cache=True)
-#     # Indexes.init(clear_cache=True)
-#     redis.set("db-reset", 1)
+if not redis.get("db-reset"):
+    # Activities.init(clear_cache=True)
+    Indexes.init(clear_cache=True)
+    redis.set("db-reset", 1)
 # redis.delete("db-reset")
 
 Analytics(app)
@@ -469,6 +469,7 @@ def getdata(username):
     if not user:
         return errout("'{}' is not registered with this app".format(username))
 
+    # Parse arguments for query parameters
     options = {}
     ids_raw = request.args.get("id")
     if ids_raw:
@@ -492,9 +493,9 @@ def getdata(username):
                                       options["before"] or
                                       limit) else limit
 
-    options["ids_out"] = request.args.get("ids_out")
     hires = bool(request.args.get("hires"))
 
+    #  Log event
     if current_user.is_anonymous or (not current_user.is_admin()):
         event_data = {
             "ip": request.access_route[-1],
@@ -631,24 +632,33 @@ def related_activities(username, activity_id):
 
 # creates a SSE stream of current.user's activities, using the Strava API
 # arguments
+
 @app.route('/<username>/activities_sse')
 @admin_or_self_required
 def activity_stream(username):
     user = Users.get(username)
     options = {"limit": 10000}
     options.update({k: request.args.get(k) for k in request.args})
-    app.logger.info("query_inedx called with {}".format(options))
+    # app.logger.info("query_index called with {}".format(options))
     result = user.query_index(**options)
-    if "ids" in result:
-        return jsonify(result["ids"])
 
-    def boo():
+    def boo(result):
         for a in result:
             if "id" in a:
                 yield "data: {}\n\n".format(json.dumps(a))
         yield "data: done\n\n"
 
-    return Response(boo(), mimetype='text/event-stream')
+    return Response(boo(result), mimetype='text/event-stream')
+
+
+#  Output json object of activities query
+@app.route('/<username>/activities_json')
+def activities_json(username):
+    user = Users.get(username)
+    options = {"limit": 10}
+    options.update({k: request.args.get(k) for k in request.args})
+    result = user.query_index(**options)
+    return jsonify(result)
 
 
 @app.route('/<username>/activities')
