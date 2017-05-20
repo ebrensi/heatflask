@@ -529,8 +529,6 @@ def getdata(username):
         Q.put(sse_out({"msg": "Retrieving Index..."}))
 
         activity_data = user.query_index(**options)
-        if options["ids_out"] and ("ids" in activity_data):
-            return jsonify(activity_data)
 
         if isinstance(activity_data, list):
             total = len(activity_data)
