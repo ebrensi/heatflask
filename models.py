@@ -599,6 +599,7 @@ class Users(UserMixin, db_sql.Model):
             except ValueError:
                 return [{"error": "Invalid limit value"}]
 
+        # Retrieve the index from storage
         activity_index = self.get_index()
         if activity_index:
             index_df = activity_index["index_df"]
@@ -631,6 +632,7 @@ class Users(UserMixin, db_sql.Model):
                 df.ts_local = df.ts_local.astype(str)
                 return df.to_dict("records")
 
+        # If the index doesn't exist then we build it
         Q = Queue()
         gevent.spawn(self.build_index, Q, limit, after, before)
         return Q

@@ -418,7 +418,10 @@ function renderLayers() {
 
     // We will load in new items that aren't already in appState.items,
     //  and delete whatever is left.
-    var toDelete = new Set(Object.keys(appState.items));
+    var inClient = new Set(Object.keys(appState.items));
+    if (inClient.length > 0) {
+        httpGetAsync(theUrl, callback);
+    }
 
     atable.clear();
 
@@ -473,8 +476,8 @@ function renderLayers() {
                                      DotLayer._onLayerDidMove();
                                 });
 
-                // delete all members of toDelete from appState.items
-                for (let item of toDelete) {
+                // delete all members of inClient from appState.items
+                for (let item of inClient) {
                     delete appState.items[item];
                 }
 
@@ -528,7 +531,7 @@ function renderLayers() {
                 return;
             }
             else {
-                let alreadyIn = toDelete.delete(A.id.toString())
+                let alreadyIn = inClient.delete(A.id.toString())
 
                 // if A is already in appState.items then we can stop now
                 if (!heatres && alreadyIn) {
