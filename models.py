@@ -574,13 +574,30 @@ class Users(UserMixin, db_sql.Model):
         if to_update:
             return index_df
 
-    def query_index(self, activity_ids=None, limit=None,  after=None, before=None):
+    def query_index(self, activity_ids=None, limit=None,
+                    after=None, before=None, ids_out=False):
 
         if self.indexing():
             return [{
                     "error": "Building activity index for {}".format(self.id)
                     + "...<br>Please try again in a few seconds.<br>"
                     }]
+
+        # Parse dates parameters and make sure the range is valid
+        if before or after:
+            try:
+                after = dateutil.parser.parse(after)
+                if before:
+                    before = dateutil.parser.parse(before)
+                    assert(before > after)
+            except AssertionError:
+                return [{"error": "Invalid Dates"}]
+
+        if limit:
+            try:
+                limit = int(limit)
+            except ValueError:
+                return [{"error": "Invalid limit value"}]
 
         activity_index = self.get_index()
         if activity_index:
@@ -607,8 +624,12 @@ class Users(UserMixin, db_sql.Model):
                     if before:
                         df = df[before:]
             df = df.reset_index()
-            df.beginTimestamp = df.beginTimestamp.astype(str)
-            return df.to_dict("records")
+
+            if ids_out:
+                return df["id"].tolist()
+            else:
+                df.beginTimestamp = df.beginTimestamp.astype(str)
+                return df.to_dict("records")
 
         Q = Queue()
         gevent.spawn(self.build_index, Q, limit, after, before)

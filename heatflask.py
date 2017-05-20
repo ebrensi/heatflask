@@ -483,20 +483,14 @@ def getdata(username):
             if limit == 0:
                 limit == 1
 
-        date1 = request.args.get("date1")
-        date2 = request.args.get("date2")
-        if date1 or date2:
-            try:
-                options["after"] = dateutil.parser.parse(date1)
-                if date2:
-                    options["before"] = dateutil.parser.parse(date2)
-                    assert(options["before"] > options["after"])
-            except AssertionError:
-                return errout("Invalid Dates")
-        elif not limit:
-            options["limit"] = 10
+        options["after"] = request.args.get("date1")
+        options["before"] = request.args.get("date2")
+        options["limit"] = 10 if not (options["after"] or
+                                      options["before"] or
+                                      limit) else limit
 
-    hires = request.args.get("hires") == "true"
+    options["ids_out"] = request.args.get("ids_out")
+    hires = bool(request.args.get("hires"))
 
     if current_user.is_anonymous or (not current_user.is_admin()):
         event_data = {
@@ -621,17 +615,7 @@ def getdata(username):
 def activity_stream(username):
     user = Users.get(username)
     options = {"limit": 10000}
-    if "id" in request.args:
-        options["activity_ids"] = request.args.get("id")
-    else:
-        if "before" in request.args:
-            options["before"] = dateutil.parser.parse(
-                request.args.get("before"))
-        if "after" in request.args:
-            options["after"] = dateutil.parser.parse(
-                request.args.get("after"))
-        if "limit" in request.args:
-            options["limit"] = int(request.args.get("limit"))
+    options.update(request.args)
 
     def boo():
         for a in user.query_index(**options):
