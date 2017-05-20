@@ -414,7 +414,6 @@ function renderLayers() {
         layerControl.addOverlay(HeatLayer, "Point Density");
     }
 
-    // locateControl.stop();
     // appState.items = {};
 
     // We will load in new items that aren't already in appState.items,

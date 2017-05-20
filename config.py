@@ -128,4 +128,4 @@ class DevelopmentConfig(Config):
     SSLIFY_PERMANENT = False
 
     # Flask-Assets settings
-    ASSETS_DEBUG = True
+    # ASSETS_DEBUG = True

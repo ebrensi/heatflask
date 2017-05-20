@@ -626,7 +626,7 @@ class Users(UserMixin, db_sql.Model):
             df = df.reset_index()
 
             if ids_out:
-                return {"ids": df["id"].tolist()}
+                return df["id"].tolist()
             else:
                 df.beginTimestamp = df.beginTimestamp.astype(str)
                 return df.to_dict("records")
