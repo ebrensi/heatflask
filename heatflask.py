@@ -529,6 +529,9 @@ def getdata(username):
         Q.put(sse_out({"msg": "Retrieving Index..."}))
 
         activity_data = user.query_index(**options)
+        if options["ids_out"] and ("ids" in activity_data):
+            return jsonify(activity_data)
+
         if isinstance(activity_data, list):
             total = len(activity_data)
             ftotal = float(total)
@@ -615,10 +618,14 @@ def getdata(username):
 def activity_stream(username):
     user = Users.get(username)
     options = {"limit": 10000}
-    options.update(request.args)
+    options.update({k: request.args.get(k) for k in request.args})
+    app.logger.info("query_inedx called with {}".format(options))
+    result = user.query_index(**options)
+    if "ids" in result:
+        return jsonify(result["ids"])
 
     def boo():
-        for a in user.query_index(**options):
+        for a in result:
             if "id" in a:
                 yield "data: {}\n\n".format(json.dumps(a))
         yield "data: done\n\n"
