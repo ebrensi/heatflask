@@ -19,6 +19,9 @@ if (!OFFLINE) {
     var online_baseLayers = {
         "Esri.WorldImagery": L.tileLayer.provider("Esri.WorldImagery"),
         "Stamen.Terrain": L.tileLayer.provider("Stamen.Terrain"),
+        // "OpenStreetMap.BlackAndWhite": L.tileLayer.provider("OpenStreetMap.BlackAndWhite"),
+        "CartoDB.Positron": L.tileLayer.provider("CartoDB.Positron"),
+        "CartoDB.DarkMatter": L.tileLayer.provider("CartoDB.DarkMatter"),
         "Google.Roadmap": L.gridLayer.googleMutant({type: 'roadmap'}),
         "Google.Terrain": L.gridLayer.googleMutant({type: 'terrain'}),
         "Google.Hybrid": L.gridLayer.googleMutant({type: 'hybrid'})
