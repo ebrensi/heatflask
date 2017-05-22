@@ -46,7 +46,8 @@
              MEASURMENT_PREFERENCE = "{{ current_user.measurement_preference if current_user.is_authenticated else user.measurement_preference }}",
              DIST_UNIT = (MEASURMENT_PREFERENCE=="feet")? 1609.34 : 1000.0,
              DIST_LABEL = (MEASURMENT_PREFERENCE=="feet")?  "mi" : "Km",
-             CAPTURE_DURATION_MAX = {{ config.get('CAPTURE_DURATION_MAX')|tojson }};
+             CAPTURE_DURATION_MAX = {{ config.get('CAPTURE_DURATION_MAX')|tojson }},
+             DEFAULT_DOTCOLOR = {{ config.get('DEFAULT_DOTCOLOR')|tojson }};
     </script>
 
 </head>
@@ -304,8 +305,14 @@
 												</div>
 											</div>
 
-											<input type="checkbox" id="showPaths" checked>
-											<label for="showPaths">Show Paths</label>
+											<div>
+												<input type="checkbox" id="showPaths" checked>
+												<label for="showPaths">Show Paths</label>
+											</div>
+											<div>
+												<label for="normal-dotColor">Default Dot Color:</label>
+												<input type="color" name="normal-dotcolor" id="normal-dotColor" value="#ffffff">
+											</div>
                     					</form>
                 				  </div>
             					</div>
