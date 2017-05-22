@@ -721,7 +721,6 @@ def getdata(query_key):
         user = Users.get(username)
         if not user:
             continue
-
         gevent.spawn(sse_iterator, user, query, out_queue)
 
     workers.join(timeout=60)  # make sure all spawned jobs are done
@@ -878,6 +877,7 @@ def webhook_callback():
         return "success"
 
 
+# SSE (Server-Side Events) stuff
 def sse_out(obj=None):
     data = json.dumps(obj) if obj else "done"
     return "data: {}\n\n".format(data)
@@ -890,37 +890,39 @@ def errout(msg):
                     mimetype='text/event-stream')
 
 
+def import_and_queue(client, Q, err_count_key, activity):
+    stream_data = Activities.import_streams(
+        client, activity["id"], STREAMS_TO_CACHE)
+
+    data = {s: stream_data[s] for s in STREAMS_OUT + ["error"]
+            if s in stream_data}
+    if "error" in data:
+        redis.incr(err_count_key)
+
+    data.update(activity)
+    # app.logger.debug("imported streams for {}".format(activity["id"]))
+    Q.put(sse_out(data))
+    gevent.sleep(0)
+
+
 def sse_iterator(user, query, pool, Q, event_data=None):
+    # employs a pool of gevent asynchronous workers to put activity data
+    #  for one user, with streams, on a queue
+
     start_time = datetime.utcnow()
     client = user.client()
 
     err_count_key = "status:{}:{}".format(user.id, start_time)
 
-    def import_and_queue(client, Q, err_count_key, activity):
-        stream_data = Activities.import_streams(
-            client, activity["id"], STREAMS_TO_CACHE)
-
-        data = {s: stream_data[s] for s in STREAMS_OUT + ["error"]
-                if s in stream_data}
-        if "error" in data:
-            redis.incr(err_count_key)
-
-        data.update(activity)
-        # app.logger.debug("imported streams for {}".format(activity["id"]))
-        Q.put(sse_out(data))
-        gevent.sleep(0)
-
-    Q.put(sse_out({"msg": "Retrieving Index..."}))
-
     activity_data = user.query_index(**query)
 
+    obj = {
+        "summary_info": {"user": user.username or user.id},
+    }
     if isinstance(activity_data, list):
-        Q.put(sse_out({"msg": "Retrieving Index..."}))
-        total = len(activity_data)
-        ftotal = float(total)
-    else:
-        total = "?"
-        ftotal = None
+        obj["summary_info"]["count"] = len(activity_data)
+
+    Q.put(sse_out(obj))
 
     count = 0
     imported = 0
@@ -942,12 +944,6 @@ def sse_iterator(user, query, pool, Q, event_data=None):
                 activity.update(
                     Activities.atype_properties(activity["type"])
                 )
-
-                data = {"msg": "activity {0}/{1}...".format(count, total)}
-                if ftotal:
-                    data["value"] = round(count / ftotal, 3)
-
-                Q.put(sse_out(data))
 
                 if query["hires"]:
                     stream_data = Activities.get(activity["id"])
