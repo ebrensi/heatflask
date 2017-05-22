@@ -23,6 +23,7 @@
               HEATLAYER_DEFAULT_OPTIONS = {{ config["HEATMAP_DEFAULT_OPTIONS"]|tojson|safe }},
               BASE_DATAURL = "{{ url_for('getdata', username=user.id) }}",
               BASE_USER_URL = "{{ url_for('main', username=user.id) }}",
+              GROUP_ACTIVITY_URL = "{{ url_for('related_activities', username=user.id, activity_id='') }}",
               USER_ID = "{{ user.id }}",
               SHARE_PROFILE = {{ user.share_profile|tojson|safe }},
               SHARE_STATUS_UPDATE_URL = "{{ url_for('update_share_status', username=user.id) }}",
