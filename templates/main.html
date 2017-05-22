@@ -5,7 +5,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 	<link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
 
-	{% assets "main_css" %}
+	{% assets "dependencies_css" %}
 	<link rel="stylesheet" href="{{ ASSET_URL }}" />
 	{% endassets %}
 
@@ -45,7 +45,7 @@
              },
              MEASURMENT_PREFERENCE = "{{ current_user.measurement_preference if current_user.is_authenticated else user.measurement_preference }}",
              DIST_UNIT = (MEASURMENT_PREFERENCE=="feet")? 1609.34 : 1000.0,
-             DIST_LABEL = (MEASURMENT_PREFERENCE=="feet")?  "mi" : "Km",
+             DIST_LABEL = (MEASURMENT_PREFERENCE=="feet")?  "mi" : "km",
              CAPTURE_DURATION_MAX = {{ config.get('CAPTURE_DURATION_MAX')|tojson }},
              DEFAULT_DOTCOLOR = {{ config.get('DEFAULT_DOTCOLOR')|tojson }};
     </script>

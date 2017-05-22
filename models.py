@@ -43,15 +43,6 @@ LOCAL = os.environ.get("APP_SETTINGS") == "config.DevelopmentConfig"
 OFFLINE = app.config.get("OFFLINE")
 
 
-# def tuplize_datetime(dt):
-#     return (dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second,
-#             dt.microsecond)
-
-
-# def detuplize_datetime(s):
-#     return datetime(*s)
-
-
 class Users(UserMixin, db_sql.Model):
     id = Column(Integer, primary_key=True, autoincrement=False)
 

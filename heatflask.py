@@ -39,18 +39,18 @@ from models import Users, Activities, EventLogger, Utility, Webhooks,\
     Indexes, db_sql, mongodb, redis
 
 # just do once
-if not redis.get("db-reset"):
-    # Activities.init(clear_cache=True)
-    Indexes.init(clear_cache=True)
-    redis.set("db-reset", 1)
-# redis.delete("db-reset")
+# if not redis.get("db-reset"):
+#     # Activities.init(clear_cache=True)
+#     Indexes.init(clear_cache=True)
+#     redis.set("db-reset", 1)
+redis.delete("db-reset")
 
 Analytics(app)
 
 # we bundle javascript and css dependencies to reduce client-side overhead
 # app.config["CLOSURE_COMPRESSOR_OPTIMIZATION"] = "WHITESPACE_ONLY"
 bundles = {
-    "main_css": flask_assets.Bundle(
+    "dependencies_css": flask_assets.Bundle(
         'css/main.css',
         'css/jquery-ui.css',
         'css/bootstrap.min.css',
@@ -114,6 +114,7 @@ bundles = {
 
     "basic_table_css": flask_assets.Bundle(
         'css/bootstrap.min.css',
+        'css/font-awesome.min.css',
         'css/datatables.min.css',
         'css/table-styling.css',
         filters='cssmin',
