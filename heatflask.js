@@ -173,6 +173,9 @@ $(".dotconst-dial").knob({
     });
 
 
+
+
+
 if (FLASH_MESSAGES.length > 0) {
     var msg = "<ul class=flashes>";
     for (let i=0, len=FLASH_MESSAGES.length; i<len; i++) {
@@ -457,7 +460,15 @@ function renderLayers() {
             $(".data_message").html(msg2);
             rendering = false;
             if (dotFlow) {
-                DotLayer = new L.DotLayer(appState.items, {startPaused: appState.paused});
+                DotLayer = new L.DotLayer(appState.items, {
+                    startPaused: appState.paused
+                });
+
+                DotLayer.options.normal.dotColor = $("#normal-dotColor").val();
+                $("#normal-dotColor").on("input", function (){
+                    DotLayer.options.normal.dotColor = $(this).val();
+                });
+
                 map.addLayer(DotLayer);
                 layerControl.addOverlay(DotLayer, "Dots");
                 $("#sepConst").val((Math.log2(DotLayer.C1) - SEP_SCALE.b) / SEP_SCALE.m ).trigger("change");
@@ -685,6 +696,8 @@ function preset_sync() {
 
 
 $(document).ready(function() {
+    $("#normal-dotColor").val(DEFAULT_DOTCOLOR);
+
     $("#select_num").keypress(function(event) {
         if (event.which == 13) {
             event.preventDefault();
