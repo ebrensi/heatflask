@@ -5,7 +5,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 	<link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
 
-	{% assets "main_css" %}
+	{% assets "dependencies_css" %}
 	<link rel="stylesheet" href="{{ ASSET_URL }}" />
 	{% endassets %}
 
@@ -23,6 +23,7 @@
               HEATLAYER_DEFAULT_OPTIONS = {{ config["HEATMAP_DEFAULT_OPTIONS"]|tojson|safe }},
               BASE_DATAURL = "{{ url_for('getdata', username=user.id) }}",
               BASE_USER_URL = "{{ url_for('main', username=user.id) }}",
+              GROUP_ACTIVITY_URL = "{{ url_for('related_activities', username=user.id, activity_id='') }}",
               USER_ID = "{{ user.id }}",
               SHARE_PROFILE = {{ user.share_profile|tojson|safe }},
               SHARE_STATUS_UPDATE_URL = "{{ url_for('update_share_status', username=user.id) }}",
@@ -45,7 +46,7 @@
              },
              MEASURMENT_PREFERENCE = "{{ current_user.measurement_preference if current_user.is_authenticated else user.measurement_preference }}",
              DIST_UNIT = (MEASURMENT_PREFERENCE=="feet")? 1609.34 : 1000.0,
-             DIST_LABEL = (MEASURMENT_PREFERENCE=="feet")?  "mi" : "Km",
+             DIST_LABEL = (MEASURMENT_PREFERENCE=="feet")?  "mi" : "km",
              CAPTURE_DURATION_MAX = {{ config.get('CAPTURE_DURATION_MAX')|tojson }},
              DEFAULT_DOTCOLOR = {{ config.get('DEFAULT_DOTCOLOR')|tojson }};
     </script>

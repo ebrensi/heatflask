@@ -59,7 +59,7 @@ def parseInt(s):
 # we bundle javascript and css dependencies to reduce client-side overhead
 # app.config["CLOSURE_COMPRESSOR_OPTIMIZATION"] = "WHITESPACE_ONLY"
 bundles = {
-    "main_css": flask_assets.Bundle(
+    "dependencies_css": flask_assets.Bundle(
         'css/main.css',
         'css/jquery-ui.css',
         'css/bootstrap.min.css',
@@ -123,6 +123,7 @@ bundles = {
 
     "basic_table_css": flask_assets.Bundle(
         'css/bootstrap.min.css',
+        'css/font-awesome.min.css',
         'css/datatables.min.css',
         'css/table-styling.css',
         filters='cssmin',

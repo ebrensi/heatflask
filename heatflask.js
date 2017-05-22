@@ -194,12 +194,27 @@ var atable = $('#activitiesList').DataTable({
                 select: true,
                 data: Object.values(appState.items),
                 idSrc: "id",
-                columns: [
-                { title: "Date",  data: null, render: (A) => href( stravaActivityURL(A.id), A.ts_local.slice(0,10) ) },
+                columns: [{
+                    title: '<i class="fa fa-calendar" aria-hidden="true"></i>',
+                    data: null,
+                    render: (A) => href( stravaActivityURL(A.id), A.ts_local.slice(0,10) )
+                },
                 { title: "Type", data: "type"},
-                { title: `Dist (${DIST_LABEL})`, data: "total_distance", render: (data) => +(data / DIST_UNIT).toFixed(2)},
-                { title: "Time", data: "elapsed_time", render: hhmmss},
-                { title: "Name", data: "name"}
+                {
+                    title: `<i class="fa fa-arrows-h" aria-hidden="true"></i> (${DIST_LABEL})`,
+                    data: "total_distance",
+                    render: (data) => +(data / DIST_UNIT).toFixed(2)},
+                {
+                    title: '<i class="fa fa-clock-o" aria-hidden="true"></i>',
+                    data: "elapsed_time",
+                    render: hhmmss},
+
+                { title: "Name", data: "name"},
+
+                {
+                    title: '<i class="fa fa-users" aria-hidden="true"></i>',
+                    data: "group",
+                    render:  formatGroup}
                 ]
             }).on( 'select', handle_table_selections)
               .on( 'deselect', handle_table_selections);
