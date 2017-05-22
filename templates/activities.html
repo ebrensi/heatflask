@@ -21,14 +21,14 @@
 
   <table id='activities_list' class='display order-column compact' style="width:100%">
     <thead>
-      <th>ID</th>
-      <th>Link</th>
-      <th>Date</th>
+      <th><i class="fa fa-link" aria-hidden="true"></i></th>
+      <th><i class="fa fa-external-link" aria-hidden="true"></i></th>
+      <th><i class="fa fa-users" aria-hidden="true"></i></th>
+      <th><i class="fa fa-calendar" aria-hidden="true"></i></th>
       <th>Type</th>
-      <th>Dist</th>
-      <th>Time</th>
+      <th id="dist"></th>
+      <th><i class="fa fa-clock-o" aria-hidden="true"></i></th>
       <th>Name</th>
-      <!-- <th>Group</th> -->
     </thead>
     <tbody>
     </tbody>
@@ -37,7 +37,11 @@
 
 
   <script>
-    const HEATFLASK_BUTTON = img("{{ url_for('static',filename='Heat.png') }}"),
+    const MEASURMENT_PREFERENCE = "{{ current_user.measurement_preference if current_user.is_authenticated else user.measurement_preference }}",
+          DIST_UNIT = (MEASURMENT_PREFERENCE=="feet")? 1609.34 : 1000.0,
+          DIST_LABEL = (MEASURMENT_PREFERENCE=="feet")?  "mi" : "km",
+          //HEATFLASK_BUTTON = img("{{ url_for('static',filename='Heat.png') }}"),
+          STRAVA_BUTTON = img("{{ url_for('static',filename='strava_button.png') }}"),
           USER_BASE_URL = "{{url_for('main',username=user.id)}}",
           GROUP_ACTIVITY_URL = "{{ url_for('related_activities', username=user.id, activity_id='') }}";
 
@@ -50,7 +54,9 @@
         return ""
       }
       let url = GROUP_ACTIVITY_URL + A.id;
-      return href(url, A.group)
+      return href(url, "<i class='fa fa-users'></i>");
+      // return href(url, A.group);
+
     }
 
     jQuery(document).ready(function($) {
@@ -60,6 +66,7 @@
             source = new EventSource("{{ url_for('activity_stream', username=user.id) }}");
 
         $("#status_msg").text("Retrieving Activity Index...");
+        $("#dist").html(`<i class="fa fa-arrows-h" aria-hidden="true"></i> (${DIST_LABEL})`);
 
         source.onmessage = function(event) {
           if (event.data == 'done') {
@@ -69,27 +76,29 @@
                 scrollY: "80vh",
                 scrollX: true,
                 scrollCollapse: true,
-                order: [[ 2, "desc" ]],
+                order: [[ 3, "desc" ]],
                 select: false
             });
-            $("#status").hide()
+
+            $("#status").hide();
 
           } else {
             let A = JSON.parse(event.data);
             if ("id" in A) {
               count_DOM_element.text(count++);
-              let heatflask_link = href(`${USER_BASE_URL}?id=${A.id}`, HEATFLASK_BUTTON),
+              let heatflask_link = `${USER_BASE_URL}?id=${A.id}`,
+                  strava_link = href(`${stravaActivityURL( A.id ) }`, STRAVA_BUTTON),
                   ts = A.ts_local.slice(0,10),
-                  dkm = +(A.total_distance / 1000).toFixed(2),
+                  dkm = +(A.total_distance / DIST_UNIT).toFixed(2),
                   row = "<tr>" +
-                     td(href(stravaActivityURL(A.id), A.id)) +
-                     td(heatflask_link) +
+                     td(href(heatflask_link, A.id)) +
+                     td(strava_link) +
+                     td(groupLink(A)) +
                      td(ts) +
                      td(A.type) +
                      td(dkm) +
                      td(hhmmss(A.elapsed_time)) +
                      td(A.name) +
-                     // td(groupLink(A)) +
                      "</tr>";
               table_body.append(row);
             }
