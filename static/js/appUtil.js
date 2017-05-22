@@ -56,6 +56,18 @@ function formatUserId ( data, type, row ) {
         return "";
     }
 }
+
+function formatGroup(data, type, row) {
+      if (!data || data == 1) {
+        return ""
+      }
+      if (type == "display") {
+        let url = GROUP_ACTIVITY_URL + row.id;
+        return href(url, "<i class='fa fa-users'></i>");
+      } else {
+        return data;
+      }
+    }
 // ------------------------
 
 
