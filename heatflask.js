@@ -19,9 +19,12 @@ if (!OFFLINE) {
     var online_baseLayers = {
         "Esri.WorldImagery": L.tileLayer.provider("Esri.WorldImagery"),
         "Stamen.Terrain": L.tileLayer.provider("Stamen.Terrain"),
+        "OpenStreetMap.BlackAndWhite": L.tileLayer.provider("OpenStreetMap.BlackAndWhite"),
+        "CartoDB.Positron": L.tileLayer.provider("CartoDB.Positron"),
+        "CartoDB.DarkMatter": L.tileLayer.provider("CartoDB.DarkMatter"),
         "Google.Roadmap": L.gridLayer.googleMutant({type: 'roadmap'}),
         "Google.Terrain": L.gridLayer.googleMutant({type: 'terrain'}),
-        "Google.Hybrid": L.gridLayer.googleMutant({type: 'hybrid'})
+        // "Google.Hybrid": L.gridLayer.googleMutant({type: 'hybrid'})
     };
 
     Object.assign(baseLayers, online_baseLayers);
@@ -170,6 +173,9 @@ $(".dotconst-dial").knob({
     });
 
 
+
+
+
 if (FLASH_MESSAGES.length > 0) {
     var msg = "<ul class=flashes>";
     for (let i=0, len=FLASH_MESSAGES.length; i<len; i++) {
@@ -185,15 +191,30 @@ var atable = $('#activitiesList').DataTable({
                 scrollX: true,
                 scrollCollapse: true,
                 order: [[ 0, "desc" ]],
-                select: true,
+                select: isMobileDevice()? "multi" : "os",
                 data: Object.values(appState.items),
                 idSrc: "id",
-                columns: [
-                { title: "Date",  data: null, render: (A) => href( stravaActivityURL(A.id), A.beginTimestamp.slice(0,10) ) },
+                columns: [{
+                    title: '<i class="fa fa-calendar" aria-hidden="true"></i>',
+                    data: null,
+                    render: (A) => href( stravaActivityURL(A.id), A.ts_local.slice(0,10) )
+                },
                 { title: "Type", data: "type"},
-                { title: `Dist (${DIST_LABEL})`, data: "total_distance", render: (data) => +(data / DIST_UNIT).toFixed(2)},
-                { title: "Time", data: "elapsed_time", render: hhmmss},
-                { title: "Name", data: "name"}
+                {
+                    title: `<i class="fa fa-arrows-h" aria-hidden="true"></i> (${DIST_LABEL})`,
+                    data: "total_distance",
+                    render: (data) => +(data / DIST_UNIT).toFixed(2)},
+                {
+                    title: '<i class="fa fa-clock-o" aria-hidden="true"></i>',
+                    data: "elapsed_time",
+                    render: hhmmss},
+
+                { title: "Name", data: "name"},
+
+                {
+                    title: '<i class="fa fa-users" aria-hidden="true"></i>',
+                    data: "group",
+                    render:  formatGroup}
                 ]
             }).on( 'select', handle_table_selections)
               .on( 'deselect', handle_table_selections);
@@ -344,7 +365,7 @@ function activityDataPopup(id, latlng){
     var popup = L.popup()
                 .setLatLng(latlng)
                 .setContent(
-                    `${A.name}<br>${A.type}: ${A.beginTimestamp}<br>`+
+                    `${A.name}<br>${A.type}: ${A.ts_local}<br>`+
                     `${dkm} km (${dmi} mi) in ${elapsed}<br>${vkm} (${vmi})<br>` +
                     `View in <a href='https://www.strava.com/activities/${A.id}' target='_blank'>Strava</a>`+
                     `, <a href='${BASE_USER_URL}?id=${A.id}&flowres=high' target='_blank'>Heatflask</a>`
@@ -411,7 +432,6 @@ function renderLayers() {
         layerControl.addOverlay(HeatLayer, "Point Density");
     }
 
-    // locateControl.stop();
     // appState.items = {};
 
     // We will load in new items that aren't already in appState.items,
@@ -455,7 +475,15 @@ function renderLayers() {
             $(".data_message").html(msg2);
             rendering = false;
             if (dotFlow) {
-                DotLayer = new L.DotLayer(appState.items, {startPaused: appState.paused});
+                DotLayer = new L.DotLayer(appState.items, {
+                    startPaused: appState.paused
+                });
+
+                // DotLayer.options.normal.dotColor = $("#normal-dotColor").val();
+                // $("#normal-dotColor").on("input", function (){
+                //     DotLayer.options.normal.dotColor = $(this).val();
+                // });
+
                 map.addLayer(DotLayer);
                 layerControl.addOverlay(DotLayer, "Dots");
                 $("#sepConst").val((Math.log2(DotLayer.C1) - SEP_SCALE.b) / SEP_SCALE.m ).trigger("change");
@@ -573,7 +601,7 @@ function renderLayers() {
             }
 
             if (heatpoints || flowpoints) {
-                A.startTime = moment(A.ts_UTC || A.beginTimestamp ).valueOf()
+                A.startTime = moment(A.ts_UTC || A.ts_local ).valueOf()
 
                 bounds.extend(A.bounds);
                 delete A.summary_polyline;
@@ -683,6 +711,8 @@ function preset_sync() {
 
 
 $(document).ready(function() {
+    // $("#normal-dotColor").val(DEFAULT_DOTCOLOR);
+
     $("#select_num").keypress(function(event) {
         if (event.which == 13) {
             event.preventDefault();

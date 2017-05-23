@@ -8,7 +8,6 @@ from functools import wraps
 from flask import Flask, Response, render_template, request, redirect, \
     jsonify, url_for, flash, send_from_directory, render_template_string
 import flask_compress
-import dateutil.parser
 from datetime import datetime
 import sys
 import logging
@@ -29,6 +28,10 @@ app.config.from_object(os.environ['APP_SETTINGS'])
 app.logger.addHandler(logging.StreamHandler(sys.stdout))
 app.logger.setLevel(logging.DEBUG)
 
+STREAMS_OUT = ["polyline", "time"]
+STREAMS_TO_CACHE = ["polyline", "time"]
+
+
 sslify = SSLify(app, skips=["webhook_callback"])
 
 # models depend app so we import them afterwards
@@ -37,24 +40,23 @@ from models import Users, Activities, EventLogger, Utility, Webhooks,\
 
 # just do once
 # if not redis.get("db-reset"):
-#     Activities.init(clear_cache=True)
-#     # Indexes.init(clear_cache=True)
+#     # Activities.init(clear_cache=True)
+#     Indexes.init(clear_cache=True)
 #     redis.set("db-reset", 1)
-# redis.delete("db-reset")
+redis.delete("db-reset")
 
 Analytics(app)
 
 # we bundle javascript and css dependencies to reduce client-side overhead
 # app.config["CLOSURE_COMPRESSOR_OPTIMIZATION"] = "WHITESPACE_ONLY"
 bundles = {
-    "main_css": flask_assets.Bundle(
+    "dependencies_css": flask_assets.Bundle(
         'css/main.css',
         'css/jquery-ui.css',
         'css/bootstrap.min.css',
         'css/font-awesome.min.css',
         'css/leaflet.css',
         'css/leaflet-sidebar.min.css',
-        'css/leaflet-areaselect.css',
         'css/L.Control.Window.css',
         'css/datatables.min.css',
         'css/easy-button.css',
@@ -62,8 +64,8 @@ bundles = {
         output='gen/main.css'
     ),
 
-    "main_js": flask_assets.Bundle(
-        # Dependencies
+    "dependencies_js": flask_assets.Bundle(
+        # minified dependencies
         flask_assets.Bundle(
             'js/jquery-3.2.1.min.js',
             'js/jquery-ui.min.js',
@@ -76,7 +78,7 @@ bundles = {
             'js/gif2.js',  # Johan Nordberg: http://jnordberg.github.io/gif.js/
             output="gen/pre-compiled-dependencies.js"
         ),
-
+        # un-minified dependencies
         flask_assets.Bundle(
             'js/eventsource.js',
             'js/moment.js',
@@ -84,23 +86,21 @@ bundles = {
             'js/L.Control.Window.js',
             'js/leaflet-providers.js',
             'js/Leaflet.GoogleMutant.js',
-            'js/leaflet-areaselect.js',
             'js/leaflet-image.js',  # Tom MacWright: https://github.com/mapbox/leaflet-image
             'js/easy-button.js',
             filters=["babel", "rjsmin"],
-            output="gen/non-compiled-dependencies.js"
+            output="gen/build/non-compiled-dependencies.js"
         ),
+        output='gen/dependencies.js'
+    ),
 
-        # Heatflask-specific code
-        flask_assets.Bundle(
-            'js/L.Control.fps.js',
-            'js/appUtil.js',
-            '../heatflask.js',
-            '../DotLayer.js',
-            filters=["babel", 'rjsmin'],
-            output="gen/app-specific.js"
-        ),
-        output='gen/main.js'
+    "app_specific_js": flask_assets.Bundle(  # Heatflask-specific code
+        'js/L.Control.fps.js',
+        'js/appUtil.js',
+        '../heatflask.js',
+        '../DotLayer.js',
+        filters=["babel", 'rjsmin'],
+        output="gen/app-specific.js"
     ),
 
     "splash_css": flask_assets.Bundle(
@@ -112,6 +112,7 @@ bundles = {
 
     "basic_table_css": flask_assets.Bundle(
         'css/bootstrap.min.css',
+        'css/font-awesome.min.css',
         'css/datatables.min.css',
         'css/table-styling.css',
         filters='cssmin',
@@ -467,6 +468,7 @@ def getdata(username):
     if not user:
         return errout("'{}' is not registered with this app".format(username))
 
+    # Parse arguments for query parameters
     options = {}
     ids_raw = request.args.get("id")
     if ids_raw:
@@ -484,21 +486,15 @@ def getdata(username):
             if limit == 0:
                 limit == 1
 
-        date1 = request.args.get("date1")
-        date2 = request.args.get("date2")
-        if date1 or date2:
-            try:
-                options["after"] = dateutil.parser.parse(date1)
-                if date2:
-                    options["before"] = dateutil.parser.parse(date2)
-                    assert(options["before"] > options["after"])
-            except AssertionError:
-                return errout("Invalid Dates")
-        elif not limit:
-            options["limit"] = 10
+        options["after"] = request.args.get("date1")
+        options["before"] = request.args.get("date2")
+        options["limit"] = 10 if not (options["after"] or
+                                      options["before"] or
+                                      limit) else limit
 
-    hires = request.args.get("hires") == "true"
+    hires = bool(request.args.get("hires"))
 
+    #  Log event
     if current_user.is_anonymous or (not current_user.is_admin()):
         event_data = {
             "ip": request.access_route[-1],
@@ -515,14 +511,11 @@ def getdata(username):
 
         err_count_key = "status:{}:{}".format(user.id, start_time)
 
-        streams_out = ["polyline", "time"]
-        streams_to_cache = ["polyline", "time"]
-
         def import_and_queue(client, Q, err_count_key, activity):
             stream_data = Activities.import_streams(
-                client, activity["id"], streams_to_cache)
+                client, activity["id"], STREAMS_TO_CACHE)
 
-            data = {s: stream_data[s] for s in streams_out + ["error"]
+            data = {s: stream_data[s] for s in STREAMS_OUT + ["error"]
                     if s in stream_data}
             if "error" in data:
                 redis.incr(err_count_key)
@@ -536,6 +529,7 @@ def getdata(username):
         Q.put(sse_out({"msg": "Retrieving Index..."}))
 
         activity_data = user.query_index(**options)
+
         if isinstance(activity_data, list):
             total = len(activity_data)
             ftotal = float(total)
@@ -578,7 +572,7 @@ def getdata(username):
                                        client, Q, err_count_key, activity)
                             imported += 1
                         else:
-                            data = {s: stream_data[s] for s in streams_out
+                            data = {s: stream_data[s] for s in STREAMS_OUT
                                     if s in stream_data}
                             data.update(activity)
                             # app.logger.debug("sending {}".format(data))
@@ -615,32 +609,55 @@ def getdata(username):
     return Response(Q, mimetype='text/event-stream')
 
 
+@app.route('/<username>/related_activities/<activity_id>')
+def related_activities(username, activity_id):
+    user = Users.get(username)
+    client = user.client()
+    try:
+        racts = client.get_related_activities(int(activity_id))
+    except Exception as e:
+        app.logger.info("Error getting related activities for ", activity_id)
+        return
+
+    activities = []
+
+    for a in racts:
+        A = Activities.strava2dict(a)
+        A["user"] = a.athlete.id
+        activities.append(A)
+
+    return jsonify(activities)
+
+
 # creates a SSE stream of current.user's activities, using the Strava API
 # arguments
+
 @app.route('/<username>/activities_sse')
 @admin_or_self_required
 def activity_stream(username):
     user = Users.get(username)
     options = {"limit": 10000}
-    if "id" in request.args:
-        options["activity_ids"] = request.args.get("id")
-    else:
-        if "before" in request.args:
-            options["before"] = dateutil.parser.parse(
-                request.args.get("before"))
-        if "after" in request.args:
-            options["after"] = dateutil.parser.parse(
-                request.args.get("after"))
-        if "limit" in request.args:
-            options["limit"] = int(request.args.get("limit"))
+    options.update({k: request.args.get(k) for k in request.args})
+    # app.logger.info("query_index called with {}".format(options))
+    result = user.query_index(**options)
 
-    def boo():
-        for a in user.query_index(**options):
+    def boo(result):
+        for a in result:
             if "id" in a:
                 yield "data: {}\n\n".format(json.dumps(a))
         yield "data: done\n\n"
 
-    return Response(boo(), mimetype='text/event-stream')
+    return Response(boo(result), mimetype='text/event-stream')
+
+
+#  Output json object of activities query
+@app.route('/<username>/activities_json')
+def activities_json(username):
+    user = Users.get(username)
+    options = {"limit": 10}
+    options.update({k: request.args.get(k) for k in request.args})
+    result = user.query_index(**options)
+    return jsonify(result)
 
 
 @app.route('/<username>/activities')
@@ -670,6 +687,25 @@ def update_share_status(username):
                     .format(user, status))
 
     return jsonify(user=user.id, share=user.share_profile)
+
+
+# ---- for single-stream ajax call ----
+@app.route('/<username>/stream/<activity_id>')
+@log_request_event
+def stream_ajax(username, activity_id):
+    stream_data = Activities.get(activity_id)
+    if not stream_data:
+        user = Users.get(username)
+        if not user:
+            return
+
+        data = Activities.import_streams(
+            user.client(), activity_id, STREAMS_TO_CACHE
+        )
+
+        stream_data = {s: data[s] for s in STREAMS_OUT + ["error"]
+                       if s in data}
+    return jsonify(stream_data)
 
 
 # ---- Shared views ----

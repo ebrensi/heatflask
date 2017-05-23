@@ -18,6 +18,9 @@ class Config(object):
     # We limit the capture duration to 5 seconds to keep gif file size down
     CAPTURE_DURATION_MAX = 5
 
+    # DotLayer options
+    DEFAULT_DOTCOLOR = "#FFFFFF"
+
     # Leaflet.js stuff
     HEATMAP_DEFAULT_OPTIONS = {
         "radius": 8,
@@ -128,4 +131,4 @@ class DevelopmentConfig(Config):
     SSLIFY_PERMANENT = False
 
     # Flask-Assets settings
-    ASSETS_DEBUG = True
+    # ASSETS_DEBUG = True
