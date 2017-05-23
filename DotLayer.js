@@ -30,6 +30,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
     options: {
         startPaused: false,
         showPaths: true,
+        colorAll: true,
         normal: {
             dotColor: "#000000",
             pathColor: "#000000",
@@ -41,7 +42,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             dotStrokeColor: "#FFFFFF",
             pathColor: "#000000",
             pathOpacity: 0.7,
-            pathWidth: 3
+            pathWidth: 1
         }
     },
 
@@ -404,7 +405,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             dy = dP[2],
             p = P.slice(idx, idx+3 );
 
-        if (highlighted) {
+        if (this.options.colorAll || highlighted) {
             ctx.fillStyle = obj.dotColor || this.options.selected.dotColor;
         }
 
