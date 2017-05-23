@@ -259,28 +259,27 @@ L.GridLayer.GoogleMutant = L.GridLayer.extend({
 		if (coords) {
 			var tileKey = this._tileCoordsToKey(coords);
 			imgNode.style.position = 'absolute';
-			var cloneImgNode = imgNode.cloneNode(true);
-			cloneImgNode.style.visibility = 'visible';
 			imgNode.style.visibility = 'hidden';
 
 			var key = tileKey + '/' + sublayer;
+			// console.log('mutation for tile', key)
+			//store img so it can also be used in subsequent tile requests
+			this._freshTiles[key] = imgNode;
+
 			if (key in this._tileCallbacks && this._tileCallbacks[key]) {
 // console.log('Fullfilling callback ', key);
-				this._tileCallbacks[key].shift()(cloneImgNode);
+				//fullfill most recent tileCallback because there maybe callbacks that will never get a 
+				//corresponding mutation (because map moved to quickly...)
+				this._tileCallbacks[key].pop()(imgNode); 
 				if (!this._tileCallbacks[key].length) { delete this._tileCallbacks[key]; }
 			} else {
-// console.log('Caching for later', key);
-
 				if (this._tiles[tileKey]) {
 					//we already have a tile in this position (mutation is probably a google layer being added)
 					//replace it
 					var c = this._tiles[tileKey].el;
 					var oldImg = (sublayer === 0) ? c.firstChild : c.firstChild.nextSibling;
+					var cloneImgNode = this._clone(imgNode);
 					c.replaceChild(cloneImgNode, oldImg);
-				} else if (key in this._freshTiles) {
-					this._freshTiles[key].push(cloneImgNode);
-				} else {
-					this._freshTiles[key] = [cloneImgNode];
 				}
 			}
 		} else if (imgNode.src.match(this._staticRegExp)) {
@@ -299,15 +298,15 @@ L.GridLayer.GoogleMutant = L.GridLayer.extend({
 		for (var i = 0; i < this._imagesPerTile; i++) {
 			var key2 = key + '/' + i;
 			if (key2 in this._freshTiles) {
-				tileContainer.appendChild(this._freshTiles[key2].pop());
-				if (!this._freshTiles[key2].length) { delete this._freshTiles[key2]; }
+				var imgNode = this._freshTiles[key2];
+				tileContainer.appendChild(this._clone(imgNode));
 				tileContainer.dataset.pending--;
 // 				console.log('Got ', key2, ' from _freshTiles');
 			} else {
 				this._tileCallbacks[key2] = this._tileCallbacks[key2] || [];
 				this._tileCallbacks[key2].push( (function (c/*, k2*/) {
-					return function (cloneImgNode) {
-						c.appendChild(cloneImgNode);
+					return function (imgNode) {
+						c.appendChild(this._clone(imgNode));
 						c.dataset.pending--;
 						if (!parseInt(c.dataset.pending)) { done(); }
 // 						console.log('Sent ', k2, ' to _tileCallbacks, still ', c.dataset.pending, ' images to go');
@@ -320,6 +319,12 @@ L.GridLayer.GoogleMutant = L.GridLayer.extend({
 			L.Util.requestAnimFrame(done);
 		}
 		return tileContainer;
+	},
+
+	_clone: function (imgNode) {
+		var clonedImgNode = imgNode.cloneNode(true);
+		clonedImgNode.style.visibility = 'visible';
+		return clonedImgNode;
 	},
 
 	_checkZoomLevels: function () {
@@ -398,36 +403,31 @@ L.GridLayer.GoogleMutant = L.GridLayer.extend({
 	_removeTile: function (key) {
 		if (!this._mutant) return;
 
-		for (var i=0; i<this._imagesPerTile; i++) {
-			var key2 = key + '/' + i;
-			if (key2 in this._freshTiles) { delete this._freshTiles[key2]; }
-// 				console.log('Pruned spurious hybrid _freshTiles');
-		}
-
-		//if the tile is still visible in the google map, keep it.
-		//In this situation, if the tile is later required, there won't be a mutation event (since tile is already in gMap) 
-		//and there will be no other way to refetch the tile.
-		//this situation where GMaps keeps a tile longer than Leaflet can happen when the map goes past 
-		//self's maxNativeZoom
-		var gZoom = this._mutant.getZoom();
-		var zoom = key.split(':')[2];
-		if (zoom == gZoom && gZoom == this.options.maxNativeZoom) {
-			var imgs = this._tiles[key].el.querySelectorAll('img');
-			if (imgs.length) {
-				for (var j=0; j<this._imagesPerTile;j++) {
-					var keyJ = key + '/' + j;
-					var imgNode = imgs[j];
-					if (keyJ in this._freshTiles) {
-						this._freshTiles[keyJ].push(imgNode);
-					} else {
-						this._freshTiles[keyJ] = [imgNode];
-					}				
-				}
-			}
-		}
+		//give time for animations to finish before checking it tile should be pruned
+		setTimeout(this._pruneTile.bind(this, key), 1000);
 
 
 		return L.GridLayer.prototype._removeTile.call(this, key);
+	},
+
+	_pruneTile: function (key) {
+		var gZoom = this._mutant.getZoom();
+		var tileZoom = key.split(':')[2];
+		var googleBounds = this._mutant.getBounds();
+		var sw = googleBounds.getSouthWest();
+		var ne = googleBounds.getNorthEast();
+		var gMapBounds = L.latLngBounds([[sw.lat(), sw.lng()], [ne.lat(), ne.lng()]]);
+
+		for (var i=0; i<this._imagesPerTile; i++) {
+			var key2 = key + '/' + i;
+			if (key2 in this._freshTiles) { 
+				var tileBounds = this._map && this._keyToBounds(key);
+				var stillVisible = this._map && tileBounds.overlaps(gMapBounds) && (tileZoom == gZoom);
+
+				if (!stillVisible) delete this._freshTiles[key2]; 
+//				console.log('Prunning of ', key, (!stillVisible))
+			}
+		}
 	}
 });
 
