@@ -57,7 +57,6 @@ bundles = {
         'css/font-awesome.min.css',
         'css/leaflet.css',
         'css/leaflet-sidebar.min.css',
-        'css/leaflet-areaselect.css',
         'css/L.Control.Window.css',
         'css/datatables.min.css',
         'css/easy-button.css',
@@ -87,7 +86,6 @@ bundles = {
             'js/L.Control.Window.js',
             'js/leaflet-providers.js',
             'js/Leaflet.GoogleMutant.js',
-            'js/leaflet-areaselect.js',
             'js/leaflet-image.js',  # Tom MacWright: https://github.com/mapbox/leaflet-image
             'js/easy-button.js',
             filters=["babel", "rjsmin"],
