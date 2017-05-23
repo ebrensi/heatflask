@@ -479,10 +479,10 @@ function renderLayers() {
                     startPaused: appState.paused
                 });
 
-                DotLayer.options.normal.dotColor = $("#normal-dotColor").val();
-                $("#normal-dotColor").on("input", function (){
-                    DotLayer.options.normal.dotColor = $(this).val();
-                });
+                // DotLayer.options.normal.dotColor = $("#normal-dotColor").val();
+                // $("#normal-dotColor").on("input", function (){
+                //     DotLayer.options.normal.dotColor = $(this).val();
+                // });
 
                 map.addLayer(DotLayer);
                 layerControl.addOverlay(DotLayer, "Dots");
@@ -711,7 +711,7 @@ function preset_sync() {
 
 
 $(document).ready(function() {
-    $("#normal-dotColor").val(DEFAULT_DOTCOLOR);
+    // $("#normal-dotColor").val(DEFAULT_DOTCOLOR);
 
     $("#select_num").keypress(function(event) {
         if (event.which == 13) {
