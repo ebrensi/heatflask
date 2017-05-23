@@ -191,7 +191,7 @@ var atable = $('#activitiesList').DataTable({
                 scrollX: true,
                 scrollCollapse: true,
                 order: [[ 0, "desc" ]],
-                select: true,
+                select: isMobileDevice()? "multi" : "os",
                 data: Object.values(appState.items),
                 idSrc: "id",
                 columns: [{
