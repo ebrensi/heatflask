@@ -614,10 +614,10 @@ def related_activities(username, activity_id):
     user = Users.get(username)
     client = user.client()
     try:
-        racts = client.get_related_activities(int(activity_id))
+        racts = list(client.get_related_activities(int(activity_id)))
     except Exception as e:
-        app.logger.info("Error getting related activities for ", activity_id)
-        return
+        app.logger.info("Error getting related activities: {}".format(e))
+        return jsonify(e)
 
     activities = []
 
