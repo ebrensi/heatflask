@@ -232,6 +232,13 @@ e){b.active(e===c)})}}});e(l).on("preInit.dt.dtSelect",function(b,a){"dt"===b.na
 
 
 
+// Courtesy of TwoFuckingDevelopers (@2fdevs, @elecash and @qmarcos)
+function isMobileDevice() {
+    return (typeof window.orientation !== "undefined") || (navigator.userAgent.indexOf('IEMobile') !== -1);
+};
+
+
+// ------------------------------
 function hhmmss( secs ) {
     return new Date( secs * 1000 ).toISOString().substr( 11, 8 );
 }
@@ -250,7 +257,6 @@ function ip_lookup_url( ip ) {
     return ( ip? "http://freegeoip.net/json/"+ip : "#" );
 }
 
-
 // Strava specific stuff
 function stravaActivityURL( id ) {
     return "https://www.strava.com/activities/"+id;
@@ -259,8 +265,6 @@ function stravaActivityURL( id ) {
 function stravaAthleteURL( id ) {
     return "https://www.strava.com/athletes/"+id;
 }
-// ----------------------
-
 
 
 // For DataTables
