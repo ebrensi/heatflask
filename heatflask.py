@@ -617,7 +617,7 @@ def related_activities(username, activity_id):
         racts = list(client.get_related_activities(int(activity_id)))
     except Exception as e:
         app.logger.info("Error getting related activities: {}".format(e))
-        return jsonify(e)
+        return str(e)
 
     activities = []
 
