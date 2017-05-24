@@ -25,7 +25,7 @@ from heatflask import app
 import os
 
 # PostgreSQL access via SQLAlchemy
-db_sql = SQLAlchemy(app)
+db_sql = SQLAlchemy(app)  # , session_options={'expire_on_commit': False})
 Column = db_sql.Column
 String, Integer, Boolean = db_sql.String, db_sql.Integer, db_sql.Boolean
 
@@ -224,20 +224,33 @@ class Users(UserMixin, db_sql.Model):
         db_sql.session.commit()
 
     @classmethod
-    def update_all(cls, delete=True):
-        def user_data(user):
-            data = cls.strava_data_from_token(user.access_token)
-            return data if data else user
+    def update_all(cls, delete=False):
+        with app.app_context():
+            def user_data(user):
+                data = cls.strava_data_from_token(user.access_token)
+                # check = "valid" if user else "INVALID"
+                # app.logger.info(
+                #     "token for {} is {}".format(user, check)
+                # )
+                return data if data else user
 
-        P = Pool()
-        for obj in P.imap_unordered(user_data, cls.query):
-            if type(obj) == cls:
-                app.logger.info("invalid access token for {}".format(obj))
-                if delete:
-                    obj.delete()
-            else:
-                user = cls.add_or_update(cache_timeout=60, **obj)
-                app.logger.info("successfully updated {}".format(user))
+            P = Pool()
+            try:
+                for obj in P.imap_unordered(user_data, cls.query):
+                    if type(obj) == cls:
+                        msg = "invalid access token for {}".format(obj)
+                        if delete:
+                            obj.delete()
+                            msg += "...deleted"
+                    else:
+                        user = cls.add_or_update(cache_timeout=60, **obj)
+                        msg = "successfully updated {}".format(user)
+                    # app.logger.info(msg)
+                    yield msg + "\n"
+                yield "done!"
+            except Exception as e:
+                app.logger.info("error: {}".format(e))
+                P.kill()
 
     @classmethod
     def dump(cls, attrs, **filter_by):
