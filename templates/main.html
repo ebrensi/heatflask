@@ -28,7 +28,7 @@
               SHARE_PROFILE = {{ user.share_profile|tojson|safe }},
               SHARE_STATUS_UPDATE_URL = "{{ url_for('update_share_status', username=user.id) }}",
               ADMIN = {{ (current_user.is_authenticated and current_user.is_admin())|tojson|safe }},
-              FLASH_MESSAGES = {{ get_flashed_messages() }},
+              FLASH_MESSAGES = {{ get_flashed_messages()|tojson|safe }},
               ONLOAD_PARAMS = {
                     flowres: "{{ flowres }}",
                     heatres: "{{ heatres }}",

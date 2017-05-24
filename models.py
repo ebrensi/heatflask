@@ -234,7 +234,6 @@ class Users(UserMixin, db_sql.Model):
                 # )
                 return data if data else user
 
-            # P = Pool(app.config["CONCURRENCY"])
             P = Pool()
             try:
                 for obj in P.imap_unordered(user_data, cls.query):
