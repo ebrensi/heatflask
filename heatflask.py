@@ -617,10 +617,10 @@ def related_activities(username, activity_id):
     user = Users.get(username)
     client = user.client()
     try:
-        racts = client.get_related_activities(int(activity_id))
+        racts = list(client.get_related_activities(int(activity_id)))
     except Exception as e:
-        app.logger.info("Error getting related activities for ", activity_id)
-        return
+        app.logger.info("Error getting related activities: {}".format(e))
+        return str(e)
 
     activities = []
 
@@ -753,14 +753,6 @@ def users():
     return render_template("admin.html", data=info)
 
 
-@app.route('/users/<username>')
-@log_request_event
-@admin_or_self_required
-def user_profile(username):
-    user = Users.get(username)
-    return jsonify(user.info())
-
-
 @app.route('/users/backup')
 @log_request_event
 @admin_required
@@ -773,6 +765,22 @@ def users_backup():
 @admin_required
 def users_restore():
     return jsonify(Users.restore())
+
+
+@app.route('/users/update')
+@log_request_event
+@admin_required
+def users_update():
+    iterator = Users.update_all(delete=request.args.get("delete"))
+    return Response(iterator, mimetype='text/event-stream')
+
+
+@app.route('/users/<username>')
+@log_request_event
+@admin_or_self_required
+def user_profile(username):
+    user = Users.get(username)
+    return jsonify(user.info())
 
 
 # ---- App maintenance stuff -----
