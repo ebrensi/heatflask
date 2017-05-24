@@ -247,6 +247,7 @@ class Users(UserMixin, db_sql.Model):
                         msg = "successfully updated {}".format(user)
                     # app.logger.info(msg)
                     yield msg + "\n"
+                yield "done!"
             except Exception as e:
                 app.logger.info("error: {}".format(e))
                 P.kill()
