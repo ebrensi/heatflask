@@ -26,6 +26,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
     _tThresh: 100000000.0,
     C1: 1000000.0,
     C2: 200.0,
+    dotScale: 2,
 
     options: {
         startPaused: false,
@@ -220,7 +221,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
         this._dotCtx.strokeStyle = this.options.selected.dotStrokeColor;
 
-        this._dotSize = Math.max(1, ~~(Math.log( z ) + 0.5));
+        this._dotSize = Math.max(1, ~~(Math.log( z ) + 0.5)) * this.dotScale;
         this._dotOffset = ~~( this._dotSize / 2 + 0.5 );
         this._zoomFactor = 1 / Math.pow( 2, z );
 
@@ -636,6 +637,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         let height = baseCanvas? baseCanvas.height : this._size.y,
             width = baseCanvas? baseCanvas.width : this._size.x,
             pd = this._progressDisplay,
+            frameCanvas = document.createElement('canvas'),
             frameTime = Date.now(),
             frameRate = 30,
             numFrames = durationSecs * frameRate,
@@ -644,11 +646,17 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             encoder = new GIF({
                 workers: 4,
                 quality: 10,
-                // background: "#FFFF",
-                // transparent: "#FFFF",
+                transparent: 'rgba(0,0,0,0)',
+                dither: "FloydSteinberg",
+                // background: "#FFFFFF",
                 workerScript: 'static/js/gif.worker2.js'
             });
-            this._encoder = encoder;
+
+        frameCanvas.width = width;
+        frameCanvas.height = height;
+        let frameCtx = frameCanvas.getContext('2d');
+
+        this._encoder = encoder;
 
         // encoder.on( 'start', function(){
         //     msg = "Encoding frames...";
@@ -688,11 +696,16 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             // console.log(msg);
             pd.textContent = msg;
 
+            frameCtx.clearRect( 0, 0, width, height );
+            frameCtx.drawImage(baseCanvas, 0, 0);
             this.drawLayer(frameTime);
-            encoder.addFrame(this._dotCanvas, {
+            frameCtx.drawImage(this._dotCanvas, 0, 0);
+            // debugger;
+
+            encoder.addFrame(frameCanvas, {
                 copy: true,
                 delay: delay,
-                dispose: 1  // revert to previous (baseCanvas) after rendering this frame
+                dispose: 3
             });
         }
 
