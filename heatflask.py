@@ -84,8 +84,8 @@ bundles = {
             'js/leaflet-sidebar.min.js',
             'js/leaflet-heat.js',
             'js/download.min.js',
-            'js/gif.js',  # Johan Nordberg: http://jnordberg.github.io/gif.js/
-            output="gen/build/pre-compiled-dependencies.js"
+            'js/gif2.js',  # Johan Nordberg: http://jnordberg.github.io/gif.js/
+            output="gen/pre-compiled-dependencies.js"
         ),
         # un-minified dependencies
         flask_assets.Bundle(
