@@ -36,7 +36,7 @@ if (!OFFLINE) {
             if (i==0) default_baseLayer = tl;
         }
     } else {
-        default_baseLayer = baseLayers["Google.Terrain"];
+        default_baseLayer = baseLayers["CartoDB.DarkMatter"];
     }
 }
 
@@ -170,7 +170,29 @@ $(".dotconst-dial").knob({
                 captureControl.enabled = false;
             }
         }
-    });
+});
+
+$(".dotscale-dial").knob({
+        min: 0.01,
+        max: 4,
+        step: 0.01,
+        width: "100",
+        height: "100",
+        cursor: 20,
+        inline: true,
+        displayInput: false,
+        change: function (val) {
+            if (!DotLayer) {
+                return;
+            }
+            DotLayer.dotScale = val;
+            if (DotLayer._paused) {
+                DotLayer.drawLayer(DotLayer._timePaused);
+            }
+        }
+});
+
+
 
 
 
@@ -488,7 +510,7 @@ function renderLayers() {
                 layerControl.addOverlay(DotLayer, "Dots");
                 $("#sepConst").val((Math.log2(DotLayer.C1) - SEP_SCALE.b) / SEP_SCALE.m ).trigger("change");
                 $("#speedConst").val(Math.sqrt(DotLayer.C2) / SPEED_SCALE).trigger("change");
-
+                $("#dotScale").val(DotLayer.dotScale).trigger("change");
                 setTimeout(function(){
                     $("#period-value").html(DotLayer.periodInSecs().toFixed(2));
                 }, 500);
