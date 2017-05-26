@@ -63,7 +63,6 @@ bundles = {
         filters='cssmin',
         output='gen/main.css'
     ),
-
     "dependencies_js": flask_assets.Bundle(
         # minified dependencies
         flask_assets.Bundle(
@@ -92,6 +91,11 @@ bundles = {
             output="gen/build/non-compiled-dependencies.js"
         ),
         output='gen/dependencies.js'
+    ),
+
+    "gifjs_webworker_js": flask_assets.Bundle(
+        'js/gif.worker2.js',
+        output="gen/gif.worker.js"
     ),
 
     "app_specific_js": flask_assets.Bundle(  # Heatflask-specific code
