@@ -26,6 +26,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
     _tThresh: 100000000.0,
     C1: 1000000.0,
     C2: 200.0,
+    dotScale: 1,
 
     options: {
         startPaused: false,
@@ -219,9 +220,6 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             items = this._items;
 
         this._dotCtx.strokeStyle = this.options.selected.dotStrokeColor;
-
-        this._dotSize = Math.max(1, ~~(Math.log( z ) + 0.5));
-        this._dotOffset = ~~( this._dotSize / 2 + 0.5 );
         this._zoomFactor = 1 / Math.pow( 2, z );
 
         var tThresh = this._tThresh * DotLayer._zoomFactor;
@@ -392,8 +390,8 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             xmax = this._size.x,
             ymax = this._size.y,
             ctx = this._dotCtx,
-            dotSize = this._dotSize,
-            dotOffset = this._dotOffset,
+            dotSize = Math.max(1, ~~(this.dotScale * Math.log( this._zoom ) + 0.5)),
+            dotOffset = ~~( this._dotSize / 2 + 0.5 ),
             two_pi = this.two_pi,
             xOffset = this._pxOffset.x,
             yOffset = this._pxOffset.y;
@@ -615,52 +613,33 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
     },
 
 
-    /*  TODO: take advantage of static background using
-    Disposal Method - Indicates the way in which the graphic is to
-            be treated after being displayed.
-            Values :    0 -   No disposal specified. The decoder is
-                              not required to take any action.
-                        1 -   Do not dispose. The graphic is to be left
-                              in place.
-                        2 -   Restore to background color. The area used by the
-                              graphic must be restored to the background color.
-                        3 -   Restore to previous. The decoder is required to
-                              restore the area overwritten by the graphic with
-                              what was there prior to rendering the graphic.
-                      4-7 -   To be defined.
-    */
+
 
     captureGIF: function(baseCanvas=null, durationSecs=2) {
         this._mapMoving = true;
 
         let height = baseCanvas? baseCanvas.height : this._size.y,
             width = baseCanvas? baseCanvas.width : this._size.x,
+            pd = this._progressDisplay,
             frameCanvas = document.createElement('canvas'),
-            pd = this._progressDisplay;
-
-        frameCanvas.width = width;
-        frameCanvas.height = height;
-
-        let frameCtx = frameCanvas.getContext('2d'),
             frameTime = Date.now(),
             frameRate = 30,
             numFrames = durationSecs * frameRate,
             delay = 1000 / frameRate,
 
             encoder = new GIF({
-                workers: 4,
-                quality: 10,
-                // background: "#FFFF",
-                // transparent: "#FFFF",
-                workerScript: 'static/js/gif.worker.js'
+                workers: 8,
+                quality: 8,
+                transparent: 'rgba(0,0,0,0)',
+                workerScript: 'static/js/gif.worker2.js'
             });
-            this._encoder = encoder;
 
-        // encoder.on( 'start', function(){
-        //     msg = "Encoding frames...";
-        //     console.log(msg);
-        //     this._progressDisplay.textContent = msg;
-        // }.bind( this ) );
+        frameCanvas.width = width;
+        frameCanvas.height = height;
+        let frameCtx = frameCanvas.getContext('2d'),
+            baseCtx = baseCanvas.getContext('2d');
+
+        this._encoder = encoder;
 
         encoder.on( 'progress', function( p ) {
             msg = `Encoding frames...${~~(p*100)}%`;
@@ -681,24 +660,72 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             }
         }.bind( this ) );
 
+
+
+        // create initial frame
+        frameCtx.drawImage(baseCanvas, 0, 0);
+        this.drawLayer(frameTime);
+        frameCtx.drawImage(this._dotCanvas, 0, 0);
+
+        // add initial frame_0 to clip.  We set the disposal to 1 (no disposal),
+        //   so after this frame is displayed, it remains there.
+        //  Also, this frame is opaque (no transparency)
+        encoder.addFrame(frameCanvas, {
+            copy: true,
+            delay: delay,
+            dispose: 1, // no disposal for this frame
+            transparent: null
+        });
+
+        // Now we set all of baseCanvas to transparent except for where the dots
+        //  were in frame_0
+        this._dotCtx.save()
+        this._dotCtx.globalCompositeOperation = 'source-in';
+        this._dotCtx.drawImage(baseCanvas, 0, 0);
+        this._dotCtx.restore()
+        baseCtx.clearRect( 0, 0, width, height );
+        baseCtx.drawImage(this._dotCanvas, 0, 0);
+
+        // window.open(baseCanvas.toDataURL("image/png"), '_blank');
+
         // Add frames to the encoder
-        for (let i=0, num=Math.round(numFrames); i<num; i++, frameTime+=delay){
+        for (let i=1, num=Math.round(numFrames); i<num; i++, frameTime+=delay){
             msg = `Rendering frames...${~~(i/num * 100)}%`;
             // console.log(msg);
             pd.textContent = msg;
 
-            this.drawLayer(frameTime);
-
             frameCtx.clearRect( 0, 0, width, height );
             frameCtx.drawImage(baseCanvas, 0, 0);
+
+            this.drawLayer(frameTime);
             frameCtx.drawImage(this._dotCanvas, 0, 0);
-            encoder.addFrame(frameCanvas, { copy: true, delay: delay});
-            // window.open(frameCanvas.toDataURL("image/png"), '_blank');
+
+            encoder.addFrame(frameCanvas, {
+                copy: true,
+                delay: delay,
+                transparent: 'rgba(0,0,1,0)',
+                dispose: 3 // restore to previous (frame_0)
+            });
         }
 
         // encode the Frame array
         encoder.render();
     },
+
+    /*
+    Disposal Method - Indicates the way in which the graphic is to
+            be treated after being displayed.
+            Values :    0 -   No disposal specified. The decoder is
+                              not required to take any action.
+                        1 -   Do not dispose. The graphic is to be left
+                              in place.
+                        2 -   Restore to background color. The area used by the
+                              graphic must be restored to the background color.
+                        3 -   Restore to previous. The decoder is required to
+                              restore the area overwritten by the graphic with
+                              what was there prior to rendering the graphic.
+                      4-7 -   To be defined.
+    */
 
     abortCapture: function() {
         console.log("abort request");
