@@ -15,8 +15,8 @@ class Config(object):
     APP_SETTINGS = os.environ.get("APP_SETTINGS")
     ADMIN = [15972102]
 
-    # We limit the capture duration to 5 seconds to keep gif file size down
-    CAPTURE_DURATION_MAX = 5
+    # We limit the capture duration to keep gif file size down
+    CAPTURE_DURATION_MAX = 10
 
     # DotLayer options
     DEFAULT_DOTCOLOR = "#FFFFFF"

@@ -631,7 +631,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                 workers: 8,
                 quality: 8,
                 transparent: 'rgba(0,0,0,0)',
-                workerScript: 'static/js/gif.worker2.js'
+                workerScript: GIFJS_WORKER_URL
             });
 
         frameCanvas.width = width;
