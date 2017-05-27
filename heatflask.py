@@ -657,16 +657,6 @@ def activity_stream(username):
     return Response(boo(result), mimetype='text/event-stream')
 
 
-#  Output json object of activities query
-@app.route('/<username>/activities_json')
-def activities_json(username):
-    user = Users.get(username)
-    options = {"limit": 10}
-    options.update({k: request.args.get(k) for k in request.args})
-    result = user.query_index(**options)
-    return jsonify(result)
-
-
 @app.route('/<username>/activities')
 @log_request_event
 @admin_or_self_required
@@ -696,22 +686,35 @@ def update_share_status(username):
     return jsonify(user=user.id, share=user.share_profile)
 
 
+#  Output json object of activities query
+@app.route('/<username>/query_index')
+def query_index(username):
+    user = Users.get(username)
+    if user:
+        options = {"limit": 10}
+        options.update({k: request.args.get(k) for k in request.args})
+        result = user.query_index(**options)
+    else:
+        result = {"error": "invalid user"}
+    return jsonify(result)
+
+
 # ---- handle ajax call for streams ----
-# query is in the form { userId1: [...activity_ids...],
-#                        userId2: [...activity_ids...] }
+# query is in the form { userId1: {...query1...},
+#                        userId2: {...query2...} }
 # the response to this call is a key that is used as a parameter for getdata
-@app.route('/ajax/streams', methods=["POST"])
+@app.route('/stream_query', methods=["POST"])
 # @log_request_event
-def stream_ajax():
+def get_query_key():
     query = request.get_json(force=True)
     app.logger.info(query)
-    key = uuid.uuid1()
+    key = str(uuid.uuid1())
     redis.setex(key, query, 30)  # key is good for 30 secs
-    return jsonify(key)
+    return key
 
 
 @app.route('/getdata/<query_key>')
-def getdata(query_key):
+def getdata_with_key(query_key):
 
     query_obj = redis.get(query_key)
     if not query_obj:
@@ -927,8 +930,15 @@ def sse_iterator(user, query, pool, Q, event_data=None):
 
     activity_data = user.query_index(**query)
 
+    if not activity_data:
+        # If the index doesn't exist then we build it
+        activity_data = Queue()
+        gevent.spawn(user.build_index, activity_data, **query)
+
     obj = {
-        "summary_info": {"user": user.username or user.id},
+        "summary_info": {
+            "user": user.username or user.id,
+        },
     }
     if isinstance(activity_data, list):
         obj["summary_info"]["count"] = len(activity_data)

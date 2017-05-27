@@ -24,6 +24,9 @@ from heatflask import app
 
 import os
 
+CONCURRENCY = app.config["CONCURRENCY"]
+
+
 # PostgreSQL access via SQLAlchemy
 db_sql = SQLAlchemy(app)  # , session_options={'expire_on_commit': False})
 Column = db_sql.Column
@@ -307,7 +310,7 @@ class Users(UserMixin, db_sql.Model):
         # rebuild table with user backup updated with current info from Strava
         count_before = len(users_list)
         count = 0
-        P = Pool(app.config["CONCURRENCY"])
+        P = Pool(CONCURRENCY)
         for user_dict in P.imap_unordered(update_user_data, users_list):
             if user_dict:
                 user = cls.add_or_update(cache_timeout=10, **user_dict)
@@ -595,13 +598,13 @@ class Users(UserMixin, db_sql.Model):
                     before = dateutil.parser.parse(before)
                     assert(before > after)
             except AssertionError:
-                return [{"error": "Invalid Dates"}]
+                return [{"DateError": "Invalid Dates"}]
 
         if limit:
             try:
                 limit = int(limit)
             except ValueError:
-                return [{"error": "Invalid limit value"}]
+                return [{"LimitError": "Invalid limit value"}]
 
         # Retrieve the index from storage
         activity_index = self.get_index()
@@ -636,10 +639,22 @@ class Users(UserMixin, db_sql.Model):
                 df.ts_local = df.ts_local.astype(str)
                 return df.to_dict("records")
 
-        # If the index doesn't exist then we build it
-        Q = Queue()
-        gevent.spawn(self.build_index, Q, limit, after, before)
-        return Q
+    def enqueue_activities(self, queue, activity_ids, streams_only=False, import_streams=True, pool=None):
+        pool = pool or Pool(CONCURRENCY)
+        out_queue = Queue()
+
+        if not streams_only:
+            summaries = self.query_index(activity_ids)
+
+        for aid in activity_ids:
+            stream_data = Activities.get(aid)
+            if data:
+                stream_data["id"] = aid
+                out_queue.put(data)
+            elif import_streams and (not OFFLINE):
+                worker_pool.apply_async(cls.import_streams, args=(client, aid))
+
+        return out_queue
 
 
 class Indexes(object):
@@ -669,6 +684,33 @@ class Indexes(object):
 #  Activities class is only a proxy to underlying data structures.
 #  There are no Activity objects
 class Activities(object):
+
+    @classmethod
+    def init(cls, clear_cache=False):
+        # Create/Initialize Activity database
+        try:
+            result1 = mongodb.activities.drop()
+        except Exception as e:
+            app.logger.debug(
+                "error deleting activities collection from MongoDB.\n{}"
+                .format(e))
+            result1 = e
+
+        if clear_cache:
+            to_delete = redis.keys(cls.cache_key("*"))
+            if to_delete:
+                result2 = redis.delete(*to_delete)
+            else:
+                result2 = None
+
+        mongodb.create_collection("activities")
+
+        timeout = app.config["STORE_ACTIVITIES_TIMEOUT"]
+        mongodb["activities"].create_index(
+            "ts",
+            expireAfterSeconds=timeout
+        )
+        app.logger.info("initialized Activity collection")
 
     # This is a list of tuples specifying properties of the rendered objects,
     #  such as path color, speed/pace in description.  others can be added
@@ -766,7 +808,7 @@ class Activities(object):
             "ts_local": a.start_date_local,
             "total_distance": float(a.distance),
             "elapsed_time": int(a.elapsed_time.total_seconds()),
-            "average_speed": float(a.average_speed),
+            "average_speed": float(a.average_speed)
         }
 
         return d
@@ -821,38 +863,10 @@ class Activities(object):
 
             if document:
                 packed = document["mpk"]
-                # del document["_id"]
-                # del document["ts"]
                 redis.setex(key, packed, timeout)
                 # app.logger.debug("got activity {} data from MongoDB".format(id))
         if packed:
             return msgpack.unpackb(packed)
-
-    @classmethod
-    def init(cls, clear_cache=False):
-        try:
-            result1 = mongodb.activities.drop()
-        except Exception as e:
-            app.logger.debug(
-                "error deleting activities collection from MongoDB.\n{}"
-                .format(e))
-            result1 = e
-
-        if clear_cache:
-            to_delete = redis.keys(cls.cache_key("*"))
-            if to_delete:
-                result2 = redis.delete(*to_delete)
-            else:
-                result2 = None
-
-        mongodb.create_collection("activities")
-
-        timeout = app.config["STORE_ACTIVITIES_TIMEOUT"]
-        mongodb["activities"].create_index(
-            "ts",
-            expireAfterSeconds=timeout
-        )
-        app.logger.info("initialized Activity collection")
 
     @classmethod
     def import_streams(cls, client, activity_id, stream_names):
