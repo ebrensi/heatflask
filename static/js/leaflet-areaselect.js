@@ -12,12 +12,6 @@ L.AreaSelect = L.Class.extend({
 
         this._width = this.options.width;
         this._height = this.options.height;
-
-        // make touch events simulate mouse events via _touchHandler
-        document.addEventListener("touchstart", this._touchHandler, true);
-        document.addEventListener("touchmove", this._touchHandler, true);
-        document.addEventListener("touchend", this._touchHandler, true);
-        document.addEventListener("touchcancel", this._touchHandler, true);
     },
 
     addTo: function(map) {
@@ -182,34 +176,7 @@ L.AreaSelect = L.Class.extend({
         setDimensions(this._neHandle, {right:leftRightWidth-handleOffset, top:topBottomHeight-7});
         setDimensions(this._swHandle, {left:leftRightWidth-handleOffset, bottom:topBottomHeight-7});
         setDimensions(this._seHandle, {right:leftRightWidth-handleOffset, bottom:topBottomHeight-7});
-    },
-
-    _touchHandler : function(event) {
-        // Add touch support by converting touch events to mouse events
-        // Source: http://stackoverflow.com/a/6362527/725573
-
-        var touches = event.changedTouches,
-            first = touches[0],
-            type = "";
-
-        switch(event.type) {
-            case "touchstart": type = "mousedown"; break;
-            case "touchmove":  type = "mousemove"; break;
-            case "touchend":   type = "mouseup";   break;
-            default: return;
-        }
-
-        //Convert the touch event into it's corresponding mouse event
-        var simulatedEvent = document.createEvent("MouseEvent");
-        simulatedEvent.initMouseEvent(type, true, true, window, 1,
-                                  first.screenX, first.screenY,
-                                  first.clientX, first.clientY, false,
-                                  false, false, false, 0/*left*/, null);
-
-        first.target.dispatchEvent(simulatedEvent);
-        event.preventDefault();
     }
-});
 
 L.areaSelect = function(options) {
     return new L.AreaSelect(options);

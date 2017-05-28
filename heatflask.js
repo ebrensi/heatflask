@@ -48,13 +48,13 @@ var map = L.map('map', {
         zoomAnimation: false
     });
 
-// var areaSelect = L.areaSelect({width:200, height:300});
-// areaSelect.addTo(map);
+
 
 var sidebarControl = L.control.sidebar('sidebar').addTo(map),
     zoomControl = map.zoomControl.setPosition('bottomright'),
     layerControl = L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map),
-    fps_display = ADMIN? L.control.fps().addTo(map) : null;
+    fps_display = ADMIN? L.control.fps().addTo(map) : null,
+    areaSelect = L.areaSelect({width:200, height:200});
 
 
 // Animation button
@@ -90,6 +90,7 @@ var animationControl = L.easyButton({
 }).addTo(map);
 
 
+
 // Capture button
 var capture_button_states = [
     {
@@ -100,11 +101,12 @@ var capture_button_states = [
             if (!DotLayer) {
                 return;
             }
+            areaSelect.addTo(map);
             btn.state('capturing');
-            timeout = DotLayer.captureCycle();
-            setTimeout(function(){
+            timeout = DotLayer.captureCycle(callback=function(){
                 btn.state('not-capturing');
-            }, timeout+500);
+                areaSelect.removeFrom(map);
+            });
         }
     },
     {
