@@ -54,7 +54,7 @@ var sidebarControl = L.control.sidebar('sidebar').addTo(map),
     zoomControl = map.zoomControl.setPosition('bottomright'),
     layerControl = L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map),
     fps_display = ADMIN? L.control.fps().addTo(map) : null,
-    areaSelect = L.areaSelect({width:200, height:200});
+    areaSelect = null;
 
 
 // Animation button
@@ -94,19 +94,45 @@ var animationControl = L.easyButton({
 // Capture button
 var capture_button_states = [
     {
-        stateName: 'not-capturing',
+        stateName: 'idle',
         icon: 'fa-video-camera',
-        title: 'Capture',
+        title: 'Capture GIF',
         onClick: function (btn, map) {
             if (!DotLayer) {
                 return;
             }
+            let size = map.getSize();
+            areaSelect = L.areaSelect({width:200, height:200});
+            areaSelect._width = ~~(0.8 * size.x);
+            areaSelect._height = ~~(0.8 * size.y);
             areaSelect.addTo(map);
-            btn.state('capturing');
-            timeout = DotLayer.captureCycle(callback=function(){
-                btn.state('not-capturing');
-                areaSelect.removeFrom(map);
+            btn.state('selecting');
+        }
+    },
+    {
+        stateName: 'selecting',
+        icon: 'fa-object-group',
+        title: 'select capture region',
+        onClick: function (btn, map) {
+            let size = map.getSize(),
+                w = areaSelect._width,
+                h = areaSelect._height,
+                topLeft = {
+                    x: Math.round((size.x - w) / 2),
+                    y: Math.round((size.y - h) / 2)
+                },
+
+                selection = {
+                    topLeft: topLeft,
+                    width: w,
+                    height: h
+                };
+
+            DotLayer.captureCycle(selection=selection, callback=function(){
+                btn.state('idle');
+                areaSelect.remove();
             });
+            btn.state('capturing');
         }
     },
     {
@@ -116,6 +142,8 @@ var capture_button_states = [
         onClick: function (btn, map) {
             if (DotLayer && DotLayer._capturing) {
                 DotLayer.abortCapture();
+                areaSelect.remove();
+                btn.state('idle');
             }
         }
     }

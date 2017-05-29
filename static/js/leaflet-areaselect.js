@@ -177,6 +177,7 @@ L.AreaSelect = L.Class.extend({
         setDimensions(this._swHandle, {left:leftRightWidth-handleOffset, bottom:topBottomHeight-7});
         setDimensions(this._seHandle, {right:leftRightWidth-handleOffset, bottom:topBottomHeight-7});
     }
+});
 
 L.areaSelect = function(options) {
     return new L.AreaSelect(options);
