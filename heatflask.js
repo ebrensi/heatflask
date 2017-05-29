@@ -83,16 +83,37 @@ var animation_button_states = [
             btn.state('animation-running');
         }
     }
-];
+],
 
-var animationControl = L.easyButton({
-    states: appState.paused? animation_button_states.reverse() : animation_button_states
-}).addTo(map);
+    animationControl = L.easyButton({
+        states: appState.paused? animation_button_states.reverse() : animation_button_states
+    }).addTo(map);
 
 
 
-// Select activities button
+// Select-activities-in-region button
+var selectButton_states = [
+    {
+        stateName: 'not-selecting',
+        icon: 'fa-object-group',
+        title: 'select mode',
+        onClick: function(btn, map) {
+            btn.state('selecting');
+        }
+    },
+    {
+    stateName: 'selecting',
+    icon: '<span>&cross;</span>',
+    title: 'select mode',
+    onClick: function(btn, map) {
+        btn.state('not-selecting');
+    }
+},
 
+],
+    selectControl = L.easyButton({
+        states: selectButton_states
+    }).addTo(map);
 
 
 // Capture button
@@ -115,7 +136,7 @@ var capture_button_states = [
     },
     {
         stateName: 'selecting',
-        icon: 'fa-object-group',
+        icon: 'fa-expand',
         title: 'select capture region',
         onClick: function (btn, map) {
             let size = map.getSize(),
@@ -142,7 +163,7 @@ var capture_button_states = [
     },
     {
         stateName: 'capturing',
-        icon: 'fa-stop',
+        icon: 'fa-stop-circle',
         title: 'Stop capturing',
         onClick: function (btn, map) {
             if (DotLayer && DotLayer._capturing) {
