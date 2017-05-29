@@ -131,6 +131,14 @@ L.AreaSelect = L.Class.extend({
             L.DomEvent.addListener(self.map, "mouseup", onMouseUp);
         }
         L.DomEvent.addListener(handle, "mousedown", onMouseDown);
+
+        if (touchHandler) {
+            // make touch events simulate mouse events via touchHandler
+            handle.addEventListener("touchstart", touchHandler, true);
+            handle.addEventListener("touchmove", touchHandler, true);
+            handle.addEventListener("touchend", touchHandler, true);
+            handle.addEventListener("touchcancel", touchHandler, true);
+        }
     },
 
     _onMapResize: function() {

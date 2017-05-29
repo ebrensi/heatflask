@@ -132,6 +132,7 @@ var capture_button_states = [
                 btn.state('idle');
                 areaSelect.remove();
             });
+
             btn.state('capturing');
         }
     },
