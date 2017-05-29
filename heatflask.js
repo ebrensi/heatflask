@@ -91,6 +91,10 @@ var animationControl = L.easyButton({
 
 
 
+// Select activities button
+
+
+
 // Capture button
 var capture_button_states = [
     {
@@ -238,6 +242,8 @@ if (FLASH_MESSAGES.length > 0) {
     L.control.window(map, {content:msg, visible:true});
 }
 
+
+// Activity Table in sidebar
 var atable = $('#activitiesList').DataTable({
                 paging: false,
                 scrollY: "60vh",
@@ -271,6 +277,11 @@ var atable = $('#activitiesList').DataTable({
                 ]
             }).on( 'select', handle_table_selections)
               .on( 'deselect', handle_table_selections);
+
+
+var tableScroller = $('.dataTables_scrollBody');
+
+
 
 function updateShareStatus(status) {
     console.log("updating share status.");
@@ -362,12 +373,11 @@ function highlightPath(id) {
     A.highlighted = true;
 
     var row = $("#"+id),
-    scroller = $('.dataTables_scrollBody'),
-    flow = A.flowLayer;
+        flow = A.flowLayer;
 
     // highlight table row and scroll to it if necessary
     row.addClass('selected');
-    scroller.scrollTop(row.prop('offsetTop') - scroller.height()/2);
+    // tableScroller.scrollTop(row.prop('offsetTop') - tableScroller.height()/2);
 
     return A;
 }
