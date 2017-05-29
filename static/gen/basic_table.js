@@ -376,8 +376,8 @@ function touchHandler(event) {
     event.preventDefault();
 }
 
-// make touch events simulate mouse events via _touchHandler
-document.addEventListener("touchstart", touchHandler, true);
-document.addEventListener("touchmove", touchHandler, true);
-document.addEventListener("touchend", touchHandler, true);
-document.addEventListener("touchcancel", touchHandler, true);
+// // make touch events simulate mouse events via _touchHandler
+// document.addEventListener("touchstart", touchHandler, true);
+// document.addEventListener("touchmove", touchHandler, true);
+// document.addEventListener("touchend", touchHandler, true);
+// document.addEventListener("touchcancel", touchHandler, true);
