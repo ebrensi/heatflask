@@ -748,7 +748,7 @@ def qtest(num_users):
     all_users = list(Users.query)
     users = all_users[0:num_users]
     query_obj = json.dumps({user.id: {"limit": 2} for user in users})
-    app.logger.info(query_obj)
+    # app.logger.info(query_obj)
     key = "test"
     redis.setex(key, query_obj, 10 * 60)
     return jsonify({
