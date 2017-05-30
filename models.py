@@ -25,6 +25,13 @@ from heatflask import app
 import os
 
 CONCURRENCY = app.config["CONCURRENCY"]
+STREAMS_OUT = ["polyline", "time"]
+STREAMS_TO_CACHE = ["polyline", "time"]
+CACHE_USERS_TIMEOUT = app.config["CACHE_USERS_TIMEOUT"]
+CACHE_ACTIVITIES_TIMEOUT = app.config["CACHE_ACTIVITIES_TIMEOUT"]
+INDEX_UPDATE_TIMEOUT = app.config["INDEX_UPDATE_TIMEOUT"]
+LOCAL = os.environ.get("APP_SETTINGS") == "config.DevelopmentConfig"
+OFFLINE = app.config.get("OFFLINE")
 
 
 # PostgreSQL access via SQLAlchemy
@@ -38,12 +45,6 @@ mongodb = mongo_client.get_default_database()
 
 # Redis data-store
 redis = Redis.from_url(app.config["REDIS_URL"])
-
-CACHE_USERS_TIMEOUT = app.config["CACHE_USERS_TIMEOUT"]
-CACHE_ACTIVITIES_TIMEOUT = app.config["CACHE_ACTIVITIES_TIMEOUT"]
-INDEX_UPDATE_TIMEOUT = app.config["INDEX_UPDATE_TIMEOUT"]
-LOCAL = os.environ.get("APP_SETTINGS") == "config.DevelopmentConfig"
-OFFLINE = app.config.get("OFFLINE")
 
 
 class Users(UserMixin, db_sql.Model):
@@ -74,6 +75,15 @@ class Users(UserMixin, db_sql.Model):
         "total_distance": "float32",
         "elapsed_time": "uint32",
         "average_speed": "float16"
+    }
+
+    index_df_out_dtypes = {
+        "type": str,
+        "total_distance": float,
+        "elapsed_time": int,
+        "average_speed": float,
+        "ts_local": str,
+        "ts_UTC": str
     }
 
     def db_state(self):
@@ -368,7 +378,7 @@ class Users(UserMixin, db_sql.Model):
                 "dt_last_indexed": self.activity_index["dt_last_indexed"]
             }
 
-    def build_index(self, out_queue=None, limit=None, after=None, before=None):
+    def build_index(self, out_queue=None, limit=None, after=None, before=None, activity_ids=None):
         def enqueue(msg):
             if out_queue is None:
                 pass
@@ -390,12 +400,20 @@ class Users(UserMixin, db_sql.Model):
                     count += 1
 
                     if (rendering and
+                        (activity_ids and (d["id"] in activity_ids)) or
                         ((limit and (count <= limit)) or
                          (after and (d["ts_local"] >= after)) or
                             (before and (d["ts_local"] <= before)))):
                         d2 = dict(d)
                         d2["ts_local"] = str(d2["ts_local"])
                         enqueue(d2)
+
+                        if activity_ids:
+                            activity_ids.remove(d["id"])
+                            if not activity_ids:
+                                rendering = False
+                                enqueue({"stop_rendering": "1"})
+
                         # app.logger.info("put {} on queue".format(d2["id"]))
                     if (rendering and
                         ((limit and count >= limit) or
@@ -598,13 +616,13 @@ class Users(UserMixin, db_sql.Model):
                     before = dateutil.parser.parse(before)
                     assert(before > after)
             except AssertionError:
-                return [{"DateError": "Invalid Dates"}]
+                return [{"error": "Invalid Dates"}]
 
         if limit:
             try:
                 limit = int(limit)
             except ValueError:
-                return [{"LimitError": "Invalid limit value"}]
+                return [{"error": "Invalid limit value"}]
 
         # Retrieve the index from storage
         activity_index = self.get_index()
@@ -639,20 +657,124 @@ class Users(UserMixin, db_sql.Model):
                 df.ts_local = df.ts_local.astype(str)
                 return df.to_dict("records")
 
-    def enqueue_activities(self, queue, activity_ids, streams_only=False, import_streams=True, pool=None):
-        pool = pool or Pool(CONCURRENCY)
-        out_queue = Queue()
+        # If there is no index then we need to build it
+        Q = Queue()
+        gevent.spawn(self.build_index, Q, limit, after, before)
+        return Q
 
-        if not streams_only:
-            summaries = self.query_index(activity_ids)
+    def query_activities(self, activity_ids=None,
+                         limit=None,
+                         after=None, before=None,
+                         only_ids=False,
+                         summaries=False,
+                         streams=False,
+                         owner_id=False,
+                         pool=None,
+                         out_queue=None):
+        app.logger.info({
+            "limit": limit,
+            "after": after,
+            "before": before,
+            "only_ids": only_ids,
+            "summaries": summaries,
+            "streams": streams,
+            "pool": pool,
+            "out_queue": out_queue
+        })
+
+        def import_streams(client, queue, activity):
+            # app.logger.debug("importing {}".format(activity["id"]))
+
+            stream_data = Activities.import_streams(
+                client, activity["id"], STREAMS_TO_CACHE)
+
+            data = {s: stream_data[s] for s in STREAMS_OUT + ["error"]
+                    if s in stream_data}
+            data.update(activity)
+            queue.put(data)
+            # app.logger.debug("importing {}...queued!".format(activity["id"]))
+            gevent.sleep(0)
+
+        pool = pool or Pool(CONCURRENCY)
+        client = self.client()
+
+        put_stopIteration = False
+        if not out_queue:
+            out_queue = Queue()
+            put_stopIteration = True
+
+        index_df = None
+        if summaries or limit or only_ids or after or before:
+            activity_index = self.get_index()
+            if activity_index:
+                index_df = activity_index["index_df"]
+            else:
+                app.logger.info("building index for {}".format(self))
+                index_df = self.build_index(activity_ids, limit, after, before)
+                app.logger.info("building index for {}...done".format(self))
+
+            ids_df = index_df[index_df.summary_polyline.notnull()].id
+
+            if limit:
+                 # only consider activities with a summary polyline
+                ids_df = ids_df.head(int(limit))
+
+            elif before or after:
+                #  get ids of activities in date-range
+                try:
+                    after = dateutil.parser.parse(after)
+                    if before:
+                        before = dateutil.parser.parse(before)
+                        assert(before > after)
+                except AssertionError:
+                    return [{"error": "Invalid Dates"}]
+
+                if after:
+                    ids_df = ids_df[:after]
+                if before:
+                    ids_df = ids_df[before:]
+
+            activity_ids = ids_df.tolist()
+            index_df = index_df.reset_index().set_index(
+                "id").astype(Users.index_df_out_dtypes)
+            index_df.ts_local = index_df.ts_local.astype(str)
+            index_df.ts_UTC = index_df.ts_UTC.astype(str)
+
+        if only_ids:
+            out_queue.put(activity_ids)
+            out_queue.put(StopIteration)
+            return out_queue
 
         for aid in activity_ids:
-            stream_data = Activities.get(aid)
-            if data:
-                stream_data["id"] = aid
-                out_queue.put(data)
-            elif import_streams and (not OFFLINE):
-                worker_pool.apply_async(cls.import_streams, args=(client, aid))
+            result = {"id": int(aid)}
+            if owner_id:
+                result.update({"owner_id": self.id})
+
+            if summaries:
+                result.update(index_df.loc[int(aid)].to_dict())
+
+            if not streams:
+                out_queue.put(result)
+
+            else:
+                stream_data = Activities.get(aid)
+
+                if stream_data:
+                    result.update(stream_data)
+                    out_queue.put(result)
+
+                elif not OFFLINE:
+                    pool.spawn(import_streams,
+                               client, out_queue, result)
+                gevent.sleep(0)
+
+        # If we are using our own queue, we make sure to put a stopIteration
+        #  at the end of it so we have to wait for all import jobs to finish.
+        #  If the caller supplies a queue, can return immediately and let them
+        #   handle responsibility of adding the stopIteration.
+        if put_stopIteration:
+            pool.join()
+            out_queue.put(StopIteration)
 
         return out_queue
 
