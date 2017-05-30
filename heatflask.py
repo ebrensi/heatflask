@@ -691,12 +691,42 @@ def update_share_status(username):
 def query_index(username):
     user = Users.get(username)
     if user:
-        options = {"limit": 10}
-        options.update({k: request.args.get(k) for k in request.args})
+        options = {k: request.args.get(k) for k in request.args}
+        if not options:
+            options = {"limit": 10}
         result = user.query_index(**options)
     else:
         result = {"error": "invalid user"}
     return jsonify(result)
+
+
+@app.route('/<username>/query_activities/<out_type>')
+def query_activities(username, out_type):
+    user = Users.get(username)
+    if user:
+        options = {k: request.args.get(k) for k in request.args}
+        if not options:
+            options = {"limit": 10}
+    else:
+        return
+
+    if out_type == "json":
+        return jsonify(list(user.query_activities(**options)))
+    else:
+        def go(user, pool, out_queue):
+            options["pool"] = pool
+            options["out_queue"] = out_queue
+            user.query_activities(**options)
+            pool.join()
+            out_queue.put(None)
+            out_queue.put(StopIteration)
+
+        pool = gevent.pool.Pool(app.config.get("CONCURRENCY"))
+        out_queue = gevent.queue.Queue()
+        gevent.spawn(go, user, pool, out_queue)
+        gevent.sleep(0)
+        return Response((sse_out(json.dumps(a)) if a else sse_out() for a in out_queue),
+                        mimetype='text/event-stream')
 
 
 # ---- handle ajax call for streams ----
@@ -713,30 +743,59 @@ def get_query_key():
     return key
 
 
+@app.route('/app/test/<int:num_users>')
+def qtest(num_users):
+    all_users = list(Users.query)
+    users = all_users[0:num_users]
+    query_obj = json.dumps({user.id: {"limit": 2} for user in users})
+    app.logger.info(query_obj)
+    key = "test"
+    redis.setex(key, query_obj, 10 * 60)
+    return jsonify({
+        "key": key,
+        "query_obj": query_obj,
+        "url": url_for("getdata_with_key", query_key=key, _external=True)
+    })
+
+
 @app.route('/getdata/<query_key>')
 def getdata_with_key(query_key):
-
     query_obj = redis.get(query_key)
+
     if not query_obj:
         return errout("invalid query_key")
 
-    workers = gevent.pool.Pool(app.config.get("CONCURRENCY"))
+    query_obj = json.loads(query_obj)
+    app.logger.debug(query_obj)
+
+    def go(query_obj, pool, out_queue):
+        for username, options in query_obj.items():
+            user = Users.get(username)
+            if not user:
+                continue
+
+            app.logger.debug("querying {}: {}".format(user, options))
+            options.update({
+                "pool": pool,
+                "out_queue": out_queue,
+                "streams": True,
+                "summaries": True,
+                "owner_id": True
+            })
+            user.query_activities(**options)
+            gevent.sleep(0)
+
+        pool.join()
+        out_queue.put(None)
+        out_queue.put(StopIteration)
+        app.logger.debug("done")
+
+    pool = gevent.pool.Pool(app.config.get("CONCURRENCY"))
     out_queue = gevent.queue.Queue()
-
-    for username, query in query_obj:
-        user = Users.get(username)
-        if not user:
-            continue
-        gevent.spawn(sse_iterator, user, query, out_queue)
-
-    workers.join(timeout=60)  # make sure all spawned jobs are done
-    out_queue.put(sse_out())
-
-    # We must put a StopIteration here to close the (http?) connection,
-    # otherise we'll get an idle connection error from Heroku
-    out_queue.put(StopIteration)
-
-    return Response(out_queue, mimetype='text/event-stream')
+    gevent.spawn(go, query_obj, pool, out_queue)
+    gevent.sleep(0)
+    return Response((sse_out(json.dumps(a)) if a else sse_out() for a in out_queue),
+                    mimetype='text/event-stream')
 
 
 # ---- Shared views ----
@@ -902,102 +961,6 @@ def errout(msg):
     data = {"error": "{}".format(msg)}
     return Response(map(sse_out, [data, None]),
                     mimetype='text/event-stream')
-
-
-def import_and_queue(client, Q, err_count_key, activity):
-    stream_data = Activities.import_streams(
-        client, activity["id"], STREAMS_TO_CACHE)
-
-    data = {s: stream_data[s] for s in STREAMS_OUT + ["error"]
-            if s in stream_data}
-    if "error" in data:
-        redis.incr(err_count_key)
-
-    data.update(activity)
-    # app.logger.debug("imported streams for {}".format(activity["id"]))
-    Q.put(sse_out(data))
-    gevent.sleep(0)
-
-
-def sse_iterator(user, query, pool, Q, event_data=None):
-    # employs a pool of gevent asynchronous workers to put activity data
-    #  for one user, with streams, on a queue
-
-    start_time = datetime.utcnow()
-    client = user.client()
-
-    err_count_key = "status:{}:{}".format(user.id, start_time)
-
-    activity_data = user.query_index(**query)
-
-    if not activity_data:
-        # If the index doesn't exist then we build it
-        activity_data = Queue()
-        gevent.spawn(user.build_index, activity_data, **query)
-
-    obj = {
-        "summary_info": {
-            "user": user.username or user.id,
-        },
-    }
-    if isinstance(activity_data, list):
-        obj["summary_info"]["count"] = len(activity_data)
-
-    Q.put(sse_out(obj))
-
-    count = 0
-    imported = 0
-    elapsed = 0
-    try:
-        for activity in activity_data:
-            # app.logger.debug("activity {}".format(activity))
-            if (("msg" in activity) or
-                ("error" in activity) or
-                    ("stop_rendering" in activity)):
-                Q.put(sse_out(activity))
-
-                if "stop_rendering" in activity:
-                    elapsed = datetime.utcnow() - start_time
-
-            if (activity.get("summary_polyline") and
-                    activity.get("total_distance", 0) > 1):
-                count += 1
-                activity.update(
-                    Activities.atype_properties(activity["type"])
-                )
-
-                if query["hires"]:
-                    stream_data = Activities.get(activity["id"])
-
-                    if not stream_data:
-                        pool.spawn(import_and_queue,
-                                   client, Q, err_count_key, activity)
-                        imported += 1
-                    else:
-                        data = {s: stream_data[s] for s in STREAMS_OUT
-                                if s in stream_data}
-                        data.update(activity)
-                        # app.logger.debug("sending {}".format(data))
-                        Q.put(sse_out(data))
-                        gevent.sleep(0)
-                else:
-                    Q.put(sse_out(activity))
-                    gevent.sleep(0)
-    except Exception as e:
-        Q.put(sse_out({"error": str(e)}))
-
-    if not elapsed:
-        elapsed = datetime.utcnow() - start_time
-    if event_data:
-        event_data["msg"] += (": elapsed={} sec, count={}, imported {}"
-                              .format(round(elapsed.total_seconds(), 3),
-                                      count,
-                                      imported))
-        err_count = redis.get(err_count_key)
-        if err_count:
-            event_data["msg"] += ", errors={}".format(err_count)
-            redis.delete(err_count_key)
-        EventLogger.new_event(**event_data)
 
 
 # makes python ignore sigpipe and prevents broken pipe exception when client
