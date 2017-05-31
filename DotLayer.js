@@ -527,8 +527,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         // debugger;
 
         let ts = Date.now(),
-            now = ts - this._timeOffset,
-            capturing = this._capturing;
+            now = ts - this._timeOffset;
 
         if ( this._paused || this._mapMoving ) {
             // Ths is so we can start where we left off when we resume
@@ -537,11 +536,9 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         }
 
 
-        if (capturing || (now - this.lastCalledTime > this.minDelay)) {
+        if (now - this.lastCalledTime > this.minDelay) {
             this.lastCalledTime = now;
             this.drawLayer( now );
-
-            capturing && this._capturer.capture( this._dotCanvas );
         }
 
         this._frame = L.Util.requestAnimFrame( this._animate, this );
@@ -582,9 +579,10 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
     // -----------------------------------------------------------------------
 
-    captureCycle: function() {
+    captureCycle: function(selection=null, callback=null) {
         let periodInSecs = this.periodInSecs();
         this._mapMoving = true;
+        this._capturing = true;
 
         // set up display
         pd = document.createElement( 'div' );
@@ -607,7 +605,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             //download(canvas.toDataURL("image/png"), "mapView.png", "image/png");
             console.log("leaflet-image: " + err);
             if (canvas) {
-                this.captureGIF(canvas, periodInSecs);
+                this.captureGIF(selection, canvas, periodInSecs, callback=callback);
             }
         }.bind(this));
     },
@@ -615,13 +613,40 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
 
 
-    captureGIF: function(baseCanvas=null, durationSecs=2) {
+    captureGIF: function(selection=null, baseCanvas=null, durationSecs=2, callback=null) {
         this._mapMoving = true;
 
-        let height = baseCanvas? baseCanvas.height : this._size.y,
-            width = baseCanvas? baseCanvas.width : this._size.x,
-            pd = this._progressDisplay,
+        // crop baseFrame if necessary
+        let sx, sy, sw, sh;
+        if (selection) {
+            sx = selection.topLeft.x;
+            sy = selection.topLeft.y;
+            sw = selection.width;
+            sh = selection.height;
+            if (baseCanvas) {
+                // window.open(baseCanvas.toDataURL("image/png"), '_blank');
+                let croppedBaseCanvas = document.createElement('canvas');
+                croppedBaseCanvas.width = sw;
+                croppedBaseCanvas.height = sh;
+                croppedBaseCtx = croppedBaseCanvas.getContext('2d');
+                croppedBaseCtx.drawImage(baseCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
+                baseCanvas = croppedBaseCanvas;
+            }
+        } else {
+            sx = sy = 0;
+            sw = this._size.x;
+            sh = this._size.y;
+        }
+
+        let baseCtx = baseCanvas.getContext('2d'),
             frameCanvas = document.createElement('canvas'),
+            frameCtx = frameCanvas.getContext('2d');
+
+        frameCanvas.width = sw;
+        frameCanvas.height = sh;
+
+        // set up GIF encoder
+        let pd = this._progressDisplay,
             frameTime = Date.now(),
             frameRate = 30,
             numFrames = durationSecs * frameRate,
@@ -634,11 +659,6 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                 workerScript: GIFJS_WORKER_URL
             });
 
-        frameCanvas.width = width;
-        frameCanvas.height = height;
-        let frameCtx = frameCanvas.getContext('2d'),
-            baseCtx = baseCanvas.getContext('2d');
-
         this._encoder = encoder;
 
         encoder.on( 'progress', function( p ) {
@@ -649,23 +669,31 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
         encoder.on('finished', function( blob ) {
             // window.open(URL.createObjectURL(blob));
-            download(blob, "output.gif", 'image/gif' );
+
+            if (blob) {
+                download(blob, "output.gif", 'image/gif' );
+            }
 
             document.body.removeChild( this._progressDisplay );
             delete this._progressDisplay
 
             this._mapMoving = false;
+            this._capturing = false;
             if (!this._paused) {
                 this.animate();
+            }
+            if (callback) {
+                callback();
             }
         }.bind( this ) );
 
 
 
-        // create initial frame
+
+
         frameCtx.drawImage(baseCanvas, 0, 0);
         this.drawLayer(frameTime);
-        frameCtx.drawImage(this._dotCanvas, 0, 0);
+        frameCtx.drawImage(this._dotCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
 
         // add initial frame_0 to clip.  We set the disposal to 1 (no disposal),
         //   so after this frame is displayed, it remains there.
@@ -681,12 +709,11 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         //  were in frame_0
         this._dotCtx.save()
         this._dotCtx.globalCompositeOperation = 'source-in';
-        this._dotCtx.drawImage(baseCanvas, 0, 0);
+        this._dotCtx.drawImage(baseCanvas, 0, 0, sw, sh, sx, sy, sw, sh);
         this._dotCtx.restore()
-        baseCtx.clearRect( 0, 0, width, height );
-        baseCtx.drawImage(this._dotCanvas, 0, 0);
 
-        // window.open(baseCanvas.toDataURL("image/png"), '_blank');
+        baseCtx.clearRect( 0, 0, sw, sh );
+        baseCtx.drawImage(this._dotCanvas,  sx, sy, sw, sh, 0, 0, sw, sh);
 
         // Add frames to the encoder
         for (let i=1, num=Math.round(numFrames); i<num; i++, frameTime+=delay){
@@ -694,11 +721,11 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             // console.log(msg);
             pd.textContent = msg;
 
-            frameCtx.clearRect( 0, 0, width, height );
+            frameCtx.clearRect( 0, 0, sw, sh);
             frameCtx.drawImage(baseCanvas, 0, 0);
 
             this.drawLayer(frameTime);
-            frameCtx.drawImage(this._dotCanvas, 0, 0);
+            frameCtx.drawImage(this._dotCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
 
             encoder.addFrame(frameCanvas, {
                 copy: true,
@@ -728,10 +755,18 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
     */
 
     abortCapture: function() {
-        console.log("abort request");
-        this._progressDisplay.textContent("aborting...");
+        // console.log("capture aborted");
+        this._progressDisplay.textContent = "aborting...";
         if (this._encoder) {
             this._encoder.abort();
+            document.body.removeChild( this._progressDisplay );
+            delete this._progressDisplay
+
+            this._mapMoving = false;
+            this._capturing = false;
+            if (!this._paused) {
+                this.animate();
+            }
         }
     }
 
