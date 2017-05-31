@@ -67,6 +67,7 @@ bundles = {
         'css/leaflet.css',
         'css/leaflet-sidebar.min.css',
         'css/L.Control.Window.css',
+        'css/leaflet-areaselect.css',
         'css/datatables.min.css',
         'css/easy-button.css',
         filters='cssmin',
@@ -95,6 +96,7 @@ bundles = {
             'js/leaflet-providers.js',
             'js/Leaflet.GoogleMutant.js',
             'js/leaflet-image.js',  # Tom MacWright: https://github.com/mapbox/leaflet-image
+            'js/leaflet-areaselect.js',
             'js/easy-button.js',
             filters=["babel", "rjsmin"],
             output="gen/build/non-compiled-dependencies.js"

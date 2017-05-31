@@ -48,13 +48,13 @@ var map = L.map('map', {
         zoomAnimation: false
     });
 
-// var areaSelect = L.areaSelect({width:200, height:300});
-// areaSelect.addTo(map);
+
 
 var sidebarControl = L.control.sidebar('sidebar').addTo(map),
     zoomControl = map.zoomControl.setPosition('bottomright'),
     layerControl = L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map),
-    fps_display = ADMIN? L.control.fps().addTo(map) : null;
+    fps_display = ADMIN? L.control.fps().addTo(map) : null,
+    areaSelect = null;
 
 
 // Animation button
@@ -90,21 +90,54 @@ var animationControl = L.easyButton({
 }).addTo(map);
 
 
+
+// Select activities button
+
+
+
 // Capture button
 var capture_button_states = [
     {
-        stateName: 'not-capturing',
+        stateName: 'idle',
         icon: 'fa-video-camera',
-        title: 'Capture',
+        title: 'Capture GIF',
         onClick: function (btn, map) {
             if (!DotLayer) {
                 return;
             }
+            let size = map.getSize();
+            areaSelect = L.areaSelect({width:200, height:200});
+            areaSelect._width = ~~(0.8 * size.x);
+            areaSelect._height = ~~(0.8 * size.y);
+            areaSelect.addTo(map);
+            btn.state('selecting');
+        }
+    },
+    {
+        stateName: 'selecting',
+        icon: 'fa-object-group',
+        title: 'select capture region',
+        onClick: function (btn, map) {
+            let size = map.getSize(),
+                w = areaSelect._width,
+                h = areaSelect._height,
+                topLeft = {
+                    x: Math.round((size.x - w) / 2),
+                    y: Math.round((size.y - h) / 2)
+                },
+
+                selection = {
+                    topLeft: topLeft,
+                    width: w,
+                    height: h
+                };
+
+            DotLayer.captureCycle(selection=selection, callback=function(){
+                btn.state('idle');
+                areaSelect.remove();
+            });
+
             btn.state('capturing');
-            timeout = DotLayer.captureCycle();
-            setTimeout(function(){
-                btn.state('not-capturing');
-            }, timeout+500);
         }
     },
     {
@@ -114,6 +147,8 @@ var capture_button_states = [
         onClick: function (btn, map) {
             if (DotLayer && DotLayer._capturing) {
                 DotLayer.abortCapture();
+                areaSelect.remove();
+                btn.state('idle');
             }
         }
     }
@@ -207,6 +242,8 @@ if (FLASH_MESSAGES.length > 0) {
     L.control.window(map, {content:msg, visible:true});
 }
 
+
+// Activity Table in sidebar
 var atable = $('#activitiesList').DataTable({
                 paging: false,
                 scrollY: "60vh",
@@ -240,6 +277,11 @@ var atable = $('#activitiesList').DataTable({
                 ]
             }).on( 'select', handle_table_selections)
               .on( 'deselect', handle_table_selections);
+
+
+var tableScroller = $('.dataTables_scrollBody');
+
+
 
 function updateShareStatus(status) {
     console.log("updating share status.");
@@ -331,12 +373,11 @@ function highlightPath(id) {
     A.highlighted = true;
 
     var row = $("#"+id),
-    scroller = $('.dataTables_scrollBody'),
-    flow = A.flowLayer;
+        flow = A.flowLayer;
 
     // highlight table row and scroll to it if necessary
     row.addClass('selected');
-    scroller.scrollTop(row.prop('offsetTop') - scroller.height()/2);
+    // tableScroller.scrollTop(row.prop('offsetTop') - tableScroller.height()/2);
 
     return A;
 }
