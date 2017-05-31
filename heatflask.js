@@ -18,8 +18,9 @@ var map_providers = ONLOAD_PARAMS.map_providers,
 if (!OFFLINE) {
     var online_baseLayers = {
         "Esri.WorldImagery": L.tileLayer.provider("Esri.WorldImagery"),
+        "Esri.NatGeoWorldMap": L.tileLayer.provider("Esri.NatGeoWorldMap"),
         "Stamen.Terrain": L.tileLayer.provider("Stamen.Terrain"),
-        "OpenStreetMap.BlackAndWhite": L.tileLayer.provider("OpenStreetMap.BlackAndWhite"),
+        "Stamen.TonerLite": L.tileLayer.provider("Stamen.TonerLite"),
         "CartoDB.Positron": L.tileLayer.provider("CartoDB.Positron"),
         "CartoDB.DarkMatter": L.tileLayer.provider("CartoDB.DarkMatter"),
         "Google.Roadmap": L.gridLayer.googleMutant({type: 'roadmap'}),
