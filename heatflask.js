@@ -471,6 +471,9 @@ function renderLayers() {
     }
 
 
+
+
+
     // Remove HeatLayer from map and control if it's there
     if (HeatLayer){
         map.removeLayer(HeatLayer);
@@ -493,13 +496,12 @@ function renderLayers() {
         layerControl.addOverlay(HeatLayer, "Point Density");
     }
 
-    // appState.items = {};
-
     // We will load in new items that aren't already in appState.items,
     //  and delete whatever is left.
     var inClient = new Set(Object.keys(appState.items));
     if (inClient.length > 0) {
-        httpGetAsync(theUrl, callback);
+        url = QUERY_URL_JSON + "?" + jQuery.param(query, true)
+        httpGetAsync(url, callback);
     }
 
     atable.clear();
