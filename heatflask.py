@@ -383,8 +383,8 @@ def main(username):
               .format(username))
         return redirect(url_for('splash'))
 
-    date1 = request.args.get("date1", "")
-    date2 = request.args.get("date2", "")
+    date1 = request.args.get("date1", "") or request.args.get("after", "")
+    date2 = request.args.get("date2", "") or request.args.get("before", "")
     preset = request.args.get("preset", "")
     limit = request.args.get("limit", "")
     baselayer = request.args.getlist("baselayer")
@@ -495,8 +495,8 @@ def getdata(username):
             if limit == 0:
                 limit == 1
 
-        options["after"] = request.args.get("date1")
-        options["before"] = request.args.get("date2")
+        options["after"] = request.args.get("date1") or request.args.get("after")
+        options["before"] = request.args.get("date2") or request.args.get("before")
         options["limit"] = 10 if not (options["after"] or
                                       options["before"] or
                                       limit) else limit

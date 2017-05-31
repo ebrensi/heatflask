@@ -671,6 +671,13 @@ class Users(UserMixin, db_sql.Model):
                          owner_id=False,
                          pool=None,
                          out_queue=None):
+
+        if self.indexing():
+            return [{
+                    "error": "Building activity index for {}".format(self.id)
+                    + "...<br>Please try again in a few seconds.<br>"
+                    }]
+
         app.logger.info({
             "limit": limit,
             "after": after,

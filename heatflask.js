@@ -230,9 +230,6 @@ $(".dotscale-dial").knob({
 
 
 
-
-
-
 if (FLASH_MESSAGES.length > 0) {
     var msg = "<ul class=flashes>";
     for (let i=0, len=FLASH_MESSAGES.length; i<len; i++) {
@@ -436,17 +433,18 @@ function activityDataPopup(id, latlng){
                 .openOn(map);
 }
 
+
 /* Rendering */
 function renderLayers() {
     const flowres = $("#flowres").val(),
-    heatres = $("#heatres").val(),
-    date1 = $("#date1").val(),
-    date2 = $("#date2").val(),
-    type = $("#select_type").val(),
-    num = $("#select_num").val(),
-    lores = (flowres == "low" || heatres == "low"),
-    hires = (flowres == "high" || heatres == "high");
-    dotFlow = true;
+          heatres = $("#heatres").val(),
+          date1 = $("#date1").val(),
+          date2 = $("#date2").val(),
+          type = $("#select_type").val(),
+          num = $("#select_num").val(),
+          lores = (flowres == "low" || heatres == "low"),
+          hires = (flowres == "high" || heatres == "high");
+          dotFlow = true;
 
     var query = {};
 
