@@ -729,7 +729,7 @@ def query_activities(username, out_type):
         out_queue = gevent.queue.Queue()
         gevent.spawn(go, user, pool, out_queue)
         gevent.sleep(0)
-        return Response((sse_out(json.dumps(a)) if a else sse_out() for a in out_queue),
+        return Response((sse_out(a) if a else sse_out() for a in out_queue),
                         mimetype='text/event-stream')
 
 
@@ -796,7 +796,7 @@ def getdata_with_key(query_key):
     out_queue = gevent.queue.Queue()
     gevent.spawn(go, query_obj, pool, out_queue)
     gevent.sleep(0)
-    return Response((sse_out(json.dumps(a)) if a else sse_out() for a in out_queue),
+    return Response((sse_out(a) if a else sse_out() for a in out_queue),
                     mimetype='text/event-stream')
 
 

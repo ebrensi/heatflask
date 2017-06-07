@@ -755,30 +755,34 @@ class Users(UserMixin, db_sql.Model):
             return out_queue
 
         for aid in activity_ids:
-            result = {"id": int(aid)}
+            A = {"id": int(aid)}
 
             if owner_id:
-                result.update({"owner_id": self.id})
+                A.update({"owner_id": self.id})
 
             if summaries:
-                result.update(index_df.loc[int(aid)].to_dict())
+                A.update(index_df.loc[int(aid)].to_dict())
+                if ("bounds" not in A):
+                    A["bounds"] = Activities.bounds(A["summary_polyline"])
 
                 # TODO: do this on the client
-                result.update(Activities.atype_properties(result["type"]))
+                A.update(Activities.atype_properties(A["type"]))
 
             if not streams:
-                out_queue.put(result)
+                out_queue.put(A)
 
             else:
                 stream_data = Activities.get(aid)
 
                 if stream_data:
-                    result.update(stream_data)
-                    out_queue.put(result)
+                    A.update(stream_data)
+                    if ("bounds" not in A):
+                        A["bounds"] = Activities.bounds(A["polyline"])
+                    out_queue.put(A)
 
                 elif not OFFLINE:
                     pool.spawn(import_streams,
-                               client, out_queue, result)
+                               client, out_queue, A)
                 gevent.sleep(0)
 
         # If we are using our own queue, we make sure to put a stopIteration
@@ -892,18 +896,16 @@ class Activities(object):
     def bounds(poly):
         if poly:
             latlngs = polyline.decode(poly)
-            # app.logger.info("latlngs: {}".format(latlngs))
 
             lats = [ll[0] for ll in latlngs]
             lngs = [ll[1] for ll in latlngs]
 
-            SW = (min(lats), min(lngs))
-            NE = (max(lats), max(lngs))
-
-            #app.logger.info("SW = {}, NE = {}".format(SW, NE))
-            return SW, NE
+            return {
+                "SW": (min(lats), min(lngs)),
+                "NE": (max(lats), max(lngs))
+            }
         else:
-            return []
+            return {}
 
     @staticmethod
     def stream_encode(vals):
