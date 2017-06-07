@@ -428,6 +428,33 @@ function activityDataPopup(id, latlng){
                 .openOn(map);
 }
 
+function initializeDotLayer() {
+    DotLayer = new L.DotLayer(appState.items, {
+        startPaused: appState.paused
+    });
+
+    // DotLayer.options.normal.dotColor = $("#normal-dotColor").val();
+    // $("#normal-dotColor").on("input", function (){
+    //     DotLayer.options.normal.dotColor = $(this).val();
+    // });
+
+    map.addLayer(DotLayer);
+    layerControl.addOverlay(DotLayer, "Dots");
+    $("#sepConst").val((Math.log2(DotLayer.C1) - SEP_SCALE.b) / SEP_SCALE.m ).trigger("change");
+    $("#speedConst").val(Math.sqrt(DotLayer.C2) / SPEED_SCALE).trigger("change");
+    $("#dotScale").val(DotLayer.dotScale).trigger("change");
+
+    setTimeout(function(){
+        $("#period-value").html(DotLayer.periodInSecs().toFixed(2));
+    }, 500);
+
+    $("#showPaths").prop("checked", DotLayer.options.showPaths)
+                    .on("change", function(){
+                         DotLayer.options.showPaths = $(this).prop("checked");
+                         DotLayer._onLayerDidMove();
+                    });
+}
+
 
 /* Rendering */
 function renderLayers() {
@@ -439,83 +466,55 @@ function renderLayers() {
           num = $("#select_num").val(),
           lores = (flowres == "low" || heatres == "low"),
           hires = (flowres == "high" || heatres == "high");
-          dotFlow = true;
 
-    var query = {};
+    let latlngs_flat = [];
 
-    if (type == "activity_ids") {
-        query.id = $("#activity_ids").val();
-    } else if (type=="activities") {
-        if (num == 0) {
-            query.limit = 1;
-        }
-        else {
-            query.limit = num;
-        }
-    } else {
-        if (date1) {
-            query.date1 = date1;
-        }
-        if (date2 && (date2 != "now")) {
-            query.date2 = date2;
-        }
-    }
-
-    if (hires) {
-        query.hires = hires;
-    }
-
-
-
-
-
-    // Remove HeatLayer from map and control if it's there
-    if (HeatLayer){
-        map.removeLayer(HeatLayer);
-        layerControl.removeLayer(HeatLayer);
-        HeatLayer = false;
-    }
-
-    if (DotLayer){
-        map.removeLayer(DotLayer);
-        layerControl.removeLayer(DotLayer);
-        DotLayer = false;
-    }
-
-
-    // Add new blank HeatLayer to map if specified
-    var latlngs_flat = [];
-    if (heatres){
-        HeatLayer = L.heatLayer(latlngs_flat, HEATLAYER_DEFAULT_OPTIONS);
-        map.addLayer(HeatLayer);
-        layerControl.addOverlay(HeatLayer, "Point Density");
-    }
 
     // We will load in new items that aren't already in appState.items,
     //  and delete whatever is left.
     let inClient = new Set(Object.keys(appState.items).map(Number));
-    if (inClient.size > 0 && (type != "activity_ids")) {
+
+    if (type == "activity_ids") {
+         activityQuery = {
+            // hhhh
+         }
+    } else {
         activityQuery = {
             limit: (type == "activities")? Math.max(1, +num) : undefined,
             after: date1? date1 : undefined,
             before: (date2 && date2 != "now")? date2 : undefined,
             only_ids: true
         }
+
         let url = QUERY_URL_JSON + "?" + jQuery.param(activityQuery);
         httpGetAsync(url, function(data) {
-            if (data) {
-                let queryResult = JSON.parse(data)[0];
+            if (data == "build") {
+                activityQuery["only_ids"] = false;
+                activityQuery["summaries"] = true;
+                activityQuery["streams"] = hires;
+                let streamQuery = QUERY_URL_SSE + "?" + jQuery.param(activityQuery);
+                // TODO: create and handle indexing stream
 
-                debugger;
+            } else {
+                let queryResult = JSON.parse(data)[0],
+                    resultSet = Set(queryResult);
+
+                // delete all items that aren't in queryResult from appState.items
+                for (let item of inClient) {
+                    if (!resultSet.has(item))
+                    delete appState.items[item];
+                }
+
+                // filter activitys to get by ones we don't already have
                 activityIds = queryResult.filter((id) => !inClient.has(id));
-                console.log(activityIds);
 
+                console.log(activityIds);
 
                 let streamQuery = {};
                 streamQuery[USER_ID] = {
                     activity_ids: activityIds,
                     summaries: true,
-                    streams: false
+                    streams: hires
                 };
 
                 httpPostAsync(POST_QUERY_URL, streamQuery, function(data) {
@@ -523,32 +522,28 @@ function renderLayers() {
                     let key = JSON.parse(data),
                         streamURL = `${KEY_QUERY_URL}${key}`;
 
-                    // let source = new EventSource(streamURL);
-                    // source.onmessage(handleSSEevent);
-
-
-                    // window.open(streamURL, '_blank');
-                    // open streamURL now and let stream event handler take it from here.
+                    renderStream(streamURL);
                 });
             }
         });
     }
 
+
+
+function renderStream(streamURL) {
     atable.clear();
 
 
-    var msgBox = L.control.window(map,
-        {position: 'top',
-        content:"<div class='data_message'></div><div><progress class='progbar' id='box'></progress></div>",
-        visible:true
-    }),
-    progress_bars = $('.progbar'),
-    rendering = true,
-    listening = true,
-    bounds = L.latLngBounds(),
-    source = new EventSource(
-        BASE_DATAURL + "?" + jQuery.param(query, true)
-        );
+    let msgBox = L.control.window(map,
+            {position: 'top',
+            content:"<div class='data_message'></div><div><progress class='progbar' id='box'></progress></div>",
+            visible:true
+        }),
+        progress_bars = $('.progbar'),
+        rendering = true,
+        listening = true,
+        bounds = L.latLngBounds(),
+        source = new EventSource(streamURL);
 
     $(".data_message").html("Rendering activities...");
     $("#abortButton").show();
@@ -557,6 +552,13 @@ function renderLayers() {
 
     function doneRendering(msg){
         if (rendering) {
+            appState['date1'] = date1;
+            appState["date2"] = date2;
+            appState["flowres"] = flowres;
+            appState["heatres"] = heatres;
+            updateState();
+
+
             $("#abortButton").hide();
             $(".progbar").hide();
             try {
@@ -565,47 +567,52 @@ function renderLayers() {
             catch(err) {
                 console.log(err.message);
             }
-            if ($("#autozoom:checked").val() && bounds.isValid())
+
+            // optional auto-zoom
+            if ($("#autozoom:checked").val() && bounds.isValid()){
                 map.fitBounds(bounds);
+            }
+
             var msg2 = msg + " " + Object.keys(appState.items).length + " activities rendered.";
             $(".data_message").html(msg2);
-            rendering = false;
-            if (dotFlow) {
-                DotLayer = new L.DotLayer(appState.items, {
-                    startPaused: appState.paused
-                });
 
-                // DotLayer.options.normal.dotColor = $("#normal-dotColor").val();
-                // $("#normal-dotColor").on("input", function (){
-                //     DotLayer.options.normal.dotColor = $(this).val();
-                // });
-
-                map.addLayer(DotLayer);
-                layerControl.addOverlay(DotLayer, "Dots");
-                $("#sepConst").val((Math.log2(DotLayer.C1) - SEP_SCALE.b) / SEP_SCALE.m ).trigger("change");
-                $("#speedConst").val(Math.sqrt(DotLayer.C2) / SPEED_SCALE).trigger("change");
-                $("#dotScale").val(DotLayer.dotScale).trigger("change");
-                setTimeout(function(){
-                    $("#period-value").html(DotLayer.periodInSecs().toFixed(2));
-                }, 500);
-
-                $("#showPaths").prop("checked", DotLayer.options.showPaths)
-                                .on("change", function(){
-                                     DotLayer.options.showPaths = $(this).prop("checked");
-                                     DotLayer._onLayerDidMove();
-                                });
-
-                // delete all members of inClient from appState.items
-                for (let item of inClient) {
-                    delete appState.items[item];
+            // initialize, update, or remove HeatLayer
+            if (heatres){
+                if (Heatlayer) {
+                    // update existing heatmap with new points
+                    Heatlayer.setLatLngs(latlngs_flat);
+                } else {
+                    // create new heatmap
+                    HeatLayer = L.heatLayer(latlngs_flat, HEATLAYER_DEFAULT_OPTIONS);
+                    map.addLayer(HeatLayer);
+                    layerControl.addOverlay(HeatLayer, "Point Density");
                 }
-
-
-                // render the activities table
-                atable.rows.add(Object.values(appState.items)).draw(false);
+            } else if (Heatlayer){
+                map.removeLayer(HeatLayer);
+                layerControl.removeLayer(HeatLayer);
+                HeatLayer = false;
             }
+
+
+            // initialize, update, or remove DotLayer
+            if (flowres){
+                if (!DotLayer) {
+                    initializeDotLayer();
+                }
+            } else {
+                map.removeLayer(DotLayer);
+                layerControl.removeLayer(DotLayer);
+                DotLayer = false;
+            }
+
+            // render the activities table
+            atable.rows.add(Object.values(appState.items)).draw(false);
+
+            rendering = false;
+
         }
     }
+
 
     function stopListening() {
         if (listening){
@@ -621,13 +628,6 @@ function renderLayers() {
         if (event.data == 'done') {
             doneRendering("Finished. ");
             stopListening();
-            appState['date1'] = date1;
-            appState["date2"] = date2;
-            appState["flowres"] = flowres;
-            appState["heatres"] = heatres;
-
-            if ("limit" in query) appState["limit"] = query.limit;
-            updateState();
         } else {
             var A = JSON.parse(event.data),
             heatpoints = false,
