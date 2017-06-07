@@ -666,7 +666,7 @@ class Users(UserMixin, db_sql.Model):
                          limit=None,
                          after=None, before=None,
                          only_ids=False,
-                         summaries=False,
+                         summaries=True,
                          streams=False,
                          owner_id=False,
                          pool=None,
@@ -678,7 +678,8 @@ class Users(UserMixin, db_sql.Model):
                     + "...<br>Please try again in a few seconds.<br>"
                     }]
 
-        app.logger.info({
+        app.logger.info("query_activities called with: {}".format({
+            "activity_ids": activity_ids,
             "limit": limit,
             "after": after,
             "before": before,
@@ -687,7 +688,7 @@ class Users(UserMixin, db_sql.Model):
             "streams": streams,
             "pool": pool,
             "out_queue": out_queue
-        })
+        }))
 
         def import_streams(client, queue, activity):
             # app.logger.debug("importing {}".format(activity["id"]))
@@ -720,32 +721,35 @@ class Users(UserMixin, db_sql.Model):
                 index_df = self.build_index(activity_ids, limit, after, before)
                 app.logger.info("building index for {}...done".format(self))
 
-            ids_df = index_df[index_df.summary_polyline.notnull()].id
+            if (not activity_ids):
+                ids_df = index_df[index_df.summary_polyline.notnull()].id
 
-            if limit:
-                 # only consider activities with a summary polyline
-                ids_df = ids_df.head(int(limit))
+                if limit:
+                     # only consider activities with a summary polyline
+                    ids_df = ids_df.head(int(limit))
 
-            elif before or after:
-                #  get ids of activities in date-range
-                try:
-                    after = dateutil.parser.parse(after)
+                elif before or after:
+                    #  get ids of activities in date-range
+                    try:
+                        after = dateutil.parser.parse(after)
+                        if before:
+                            before = dateutil.parser.parse(before)
+                            assert(before > after)
+                    except AssertionError:
+                        return [{"error": "Invalid Dates"}]
+
+                    if after:
+                        ids_df = ids_df[:after]
                     if before:
-                        before = dateutil.parser.parse(before)
-                        assert(before > after)
-                except AssertionError:
-                    return [{"error": "Invalid Dates"}]
+                        ids_df = ids_df[before:]
 
-                if after:
-                    ids_df = ids_df[:after]
-                if before:
-                    ids_df = ids_df[before:]
+                activity_ids = ids_df.tolist()
 
-            activity_ids = ids_df.tolist()
-            index_df = index_df.reset_index().set_index(
-                "id").astype(Users.index_df_out_dtypes)
-            index_df.ts_local = index_df.ts_local.astype(str)
-            index_df.ts_UTC = index_df.ts_UTC.astype(str)
+            index_df = (index_df.reset_index()
+                        .set_index("id")
+                        .astype(Users.index_df_out_dtypes))
+            # index_df.ts_local = index_df.ts_local.astype(str)
+            # index_df.ts_UTC = index_df.ts_UTC.astype(str)
 
         if only_ids:
             out_queue.put(activity_ids)

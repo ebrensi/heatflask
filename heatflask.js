@@ -493,7 +493,7 @@ function renderLayers() {
 
     // We will load in new items that aren't already in appState.items,
     //  and delete whatever is left.
-    var inClient = new Set(Object.keys(appState.items));
+    let inClient = new Set(Object.keys(appState.items).map(Number));
     if (inClient.size > 0 && (type != "activity_ids")) {
         activityQuery = {
             limit: (type == "activities")? Math.max(1, +num) : undefined,
@@ -504,8 +504,12 @@ function renderLayers() {
         let url = QUERY_URL_JSON + "?" + jQuery.param(activityQuery);
         httpGetAsync(url, function(data) {
             if (data) {
-                activityIds = JSON.parse(data)[0];
+                let queryResult = JSON.parse(data)[0];
+
+                debugger;
+                activityIds = queryResult.filter((id) => !inClient.has(id));
                 console.log(activityIds);
+
 
                 let streamQuery = {};
                 streamQuery[USER_ID] = {
@@ -513,17 +517,19 @@ function renderLayers() {
                     summaries: true,
                     streams: false
                 };
+
                 httpPostAsync(POST_QUERY_URL, streamQuery, function(data) {
                     console.log(data);
-                    let key = JSON.parse(data);
+                    let key = JSON.parse(data),
+                        streamURL = `${KEY_QUERY_URL}${key}`;
 
-                    let streamURL = `${KEY_QUERY_URL}${key}`;
-                    console.log(streamURL);
-                    window.open(streamURL, '_blank');
-                    debugger;
+                    // let source = new EventSource(streamURL);
+                    // source.onmessage(handleSSEevent);
+
+
+                    // window.open(streamURL, '_blank');
+                    // open streamURL now and let stream event handler take it from here.
                 });
-
-
             }
         });
     }
