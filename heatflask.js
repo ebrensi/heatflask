@@ -521,8 +521,8 @@ function renderLayers() {
                     let key = JSON.parse(data),
                         streamURL = `${KEY_QUERY_URL}${key}`;
 
-                    window.open(streamURL, target="_blank")
-                    // renderStream(streamURL, activityIds.length);
+                    // window.open(streamURL, target="_blank");
+                    renderStream(streamURL, activityIds.length);
                 });
             }
         });
@@ -544,7 +544,7 @@ function renderStream(streamURL, numActivities=null) {
         progress_bars = $('.progbar'),
         rendering = true,
         listening = true,
-        bounds = L.latLngBounds(),
+        totalBounds = L.latLngBounds(),
         source = new EventSource(streamURL),
         count = 0;
 
@@ -575,8 +575,8 @@ function renderStream(streamURL, numActivities=null) {
             }
 
             // optional auto-zoom
-            if ($("#autozoom:checked").val() && bounds.isValid()){
-                map.fitBounds(bounds);
+            if ($("#autozoom:checked").val() && totalBounds.isValid()){
+                map.fitBounds(totalBounds);
             }
 
             let num =  Object.keys(appState.items).length,
@@ -635,7 +635,6 @@ function renderStream(streamURL, numActivities=null) {
 
     // handle one incoming chunk from SSE stream
     source.onmessage = function(event) {
-        debugger;
         if (event.data == 'done') {
             stopListening();
             doneRendering("Finished.");
@@ -660,10 +659,14 @@ function renderStream(streamURL, numActivities=null) {
         }
 
         // At this point we know A is an activity object, not a message
-        let heatpoints = false,
-            flowpoints = false;
-        A.selected = false;
-        A.bounds = L.latLngBounds();
+        let heatpoints = null,
+            flowpoints = null,
+            hasBounds = A.bounds,
+            bounds = hasBounds?
+                L.latLngBounds(A.bounds.SW, A.bounds.NE) : L.latLngBounds();
+
+
+        // A.selected = false;
 
         // if (lores && A.summary_polyline) {
         //     let latlngs = L.PolylineUtil.decode(A.summary_polyline);
@@ -685,7 +688,10 @@ function renderStream(streamURL, numActivities=null) {
                 for (let i=0, ll; i<len; i++) {
                     ll = latLngArray[i];
 
-                    A.bounds.extend(ll);
+                    if (!hasBounds){
+                        bounds.extend(ll);
+                    }
+
                     idx = i*3;
                     latLngTime[idx] = ll[0];
                     latLngTime[idx+1] = ll[1];
@@ -702,7 +708,11 @@ function renderStream(streamURL, numActivities=null) {
 
         A.startTime = moment(A.ts_UTC || A.ts_local ).valueOf()
 
-        bounds.extend(A.bounds);
+        if (bounds) {
+            A.bounds = bounds;
+            totalBounds.extend(A.bounds);
+        }
+
         delete A.summary_polyline;
         delete A.polyline;
         delete A.time;
@@ -716,6 +726,8 @@ function renderStream(streamURL, numActivities=null) {
         if (numActivities) {
             progress_bars.val(count/numActivities);
         }
+
+
     }
 }
 
