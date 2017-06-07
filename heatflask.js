@@ -429,6 +429,15 @@ function activityDataPopup(id, latlng){
                 .openOn(map);
 }
 
+
+function getBounds(ids=[]) {
+    let bounds = L.latLngBounds();
+    for (let i=0; i<ids.length; i++){
+        bounds.extend( appState.items[ids[i]].bounds );
+    }
+    return bounds
+}
+
 function initializeDotLayer() {
     DotLayer = new L.DotLayer(appState.items, {
         startPaused: appState.paused
@@ -469,6 +478,10 @@ function renderLayers() {
           hires = (flowres == "high" || heatres == "high");
 
 
+    if (DotLayer) {
+        DotLayer.pause()
+    }
+
     // We will load in new items that aren't already in appState.items,
     //  and delete whatever is left.
     let inClient = new Set(Object.keys(appState.items).map(Number));
@@ -508,6 +521,10 @@ function renderLayers() {
                 activityIds = queryResult.filter((id) => !inClient.has(id));
 
                 // console.log(activityIds);
+                if (!activityIds.length){
+                    updateLayers();
+                    return;
+                }
 
                 let streamQuery = {};
                 streamQuery[USER_ID] = {
@@ -522,15 +539,66 @@ function renderLayers() {
                         streamURL = `${KEY_QUERY_URL}${key}`;
 
                     // window.open(streamURL, target="_blank");
-                    renderStream(streamURL, activityIds.length);
+                    readStream(streamURL, activityIds.length, updateLayers);
                 });
             }
         });
     }
+
+
+    function updateLayers() {
+        // optional auto-zoom
+        if ($("#autozoom:checked").val()){
+            let totalBounds = getBounds(Object.keys(appState.items));
+
+            if (totalBounds.isValid()){
+                map.fitBounds(totalBounds);
+            }
+        }
+
+        let num =  Object.keys(appState.items).length,
+            msg2 = " " + msg + " " + num  + " activities rendered";
+        $(".data_message").html(msg2);
+
+        // initialize, update, or remove HeatLayer
+        if (heatres){
+            if (HeatLayer) {
+                // update existing heatmap with new points
+                HeatLayer.setLatLngs(appState.latlngs_flat);
+            } else {
+                // create new heatmap
+                HeatLayer = L.heatLayer(appState.latlngs_flat, HEATLAYER_DEFAULT_OPTIONS);
+                map.addLayer(HeatLayer);
+                layerControl.addOverlay(HeatLayer, "Point Density");
+            }
+        } else if (HeatLayer){
+            map.removeLayer(HeatLayer);
+            layerControl.removeLayer(HeatLayer);
+            HeatLayer = false;
+        }
+
+
+        // initialize, update, or remove DotLayer
+        if (flowres){
+            if (DotLayer) {
+                DotLayer.reset();
+                !appState.paused && DotLayer.animate();
+            } else {
+                initializeDotLayer();
+            }
+        } else {
+            map.removeLayer(DotLayer);
+            layerControl.removeLayer(DotLayer);
+            DotLayer = false;
+        }
+
+        // render the activities table
+        atable.rows.add(Object.values(appState.items)).draw(false);
+    }
 }
 
 
-function renderStream(streamURL, numActivities=null) {
+function readStream(streamURL, numActivities=null, callback=null) {
     const flowres = $("#flowres").val(),
           heatres = $("#heatres").val(),
           lores = (flowres == "low" || heatres == "low"),
@@ -544,20 +612,23 @@ function renderStream(streamURL, numActivities=null) {
         progress_bars = $('.progbar'),
         rendering = true,
         listening = true,
-        totalBounds = L.latLngBounds(),
         source = new EventSource(streamURL),
         count = 0;
 
     atable.clear();
 
     $(".data_message").html("Rendering activities...");
-    $("#abortButton").show();
+
+    $('#abortButton').click(function(){
+        stopListening();
+        doneRendering("<font color='red'>Aborted:</font>");
+    }).show();
+
     $(".progbar").show();
     $('#renderButton').prop('disabled', true);
 
     function doneRendering(msg){
         if (rendering) {
-            debugger;
             appState['date1'] = date1;
             appState["date2"] = date2;
             appState["flowres"] = flowres;
@@ -573,50 +644,9 @@ function renderStream(streamURL, numActivities=null) {
             catch(err) {
                 console.log(err.message);
             }
-
-            // optional auto-zoom
-            if ($("#autozoom:checked").val() && totalBounds.isValid()){
-                map.fitBounds(totalBounds);
-            }
-
-            let num =  Object.keys(appState.items).length,
-                msg2 = `${msg}  ${num} activities rendered`;
-            $(".data_message").html(msg2);
-
-            // initialize, update, or remove HeatLayer
-            if (heatres){
-                if (HeatLayer) {
-                    // update existing heatmap with new points
-                    HeatLayer.setLatLngs(appState.latlngs_flat);
-                } else {
-                    // create new heatmap
-                    HeatLayer = L.heatLayer(appState.latlngs_flat, HEATLAYER_DEFAULT_OPTIONS);
-                    map.addLayer(HeatLayer);
-                    layerControl.addOverlay(HeatLayer, "Point Density");
-                }
-            } else if (HeatLayer){
-                map.removeLayer(HeatLayer);
-                layerControl.removeLayer(HeatLayer);
-                HeatLayer = false;
-            }
-
-
-            // initialize, update, or remove DotLayer
-            if (flowres){
-                if (!DotLayer) {
-                    initializeDotLayer();
-                }
-            } else {
-                map.removeLayer(DotLayer);
-                layerControl.removeLayer(DotLayer);
-                DotLayer = false;
-            }
-
-            // render the activities table
-            atable.rows.add(Object.values(appState.items)).draw(false);
-
             rendering = false;
 
+            callback && callback();
         }
     }
 
@@ -707,11 +737,7 @@ function renderStream(streamURL, numActivities=null) {
         // }
 
         A.startTime = moment(A.ts_UTC || A.ts_local ).valueOf()
-
-        if (bounds) {
-            A.bounds = bounds;
-            totalBounds.extend(A.bounds);
-        }
+        A.bounds = bounds;
 
         delete A.summary_polyline;
         delete A.polyline;
@@ -835,10 +861,6 @@ $(document).ready(function() {
     });
 
     $("#abortButton").hide();
-    $('#abortButton').click(function(){
-        renderStream.stopListening();
-        renderStream.doneRendering("<font color='red'>Aborted:</font>");
-    });
 
     $(".progbar").hide();
     $(".datepick").datepicker({ dateFormat: 'yy-mm-dd',
