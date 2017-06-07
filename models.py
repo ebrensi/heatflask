@@ -748,8 +748,6 @@ class Users(UserMixin, db_sql.Model):
             index_df = (index_df.reset_index()
                         .set_index("id")
                         .astype(Users.index_df_out_dtypes))
-            # index_df.ts_local = index_df.ts_local.astype(str)
-            # index_df.ts_UTC = index_df.ts_UTC.astype(str)
 
         if only_ids:
             out_queue.put(activity_ids)
@@ -758,11 +756,15 @@ class Users(UserMixin, db_sql.Model):
 
         for aid in activity_ids:
             result = {"id": int(aid)}
+
             if owner_id:
                 result.update({"owner_id": self.id})
 
             if summaries:
                 result.update(index_df.loc[int(aid)].to_dict())
+
+                # TODO: do this on the client
+                result.update(Activities.atype_properties(result["type"]))
 
             if not streams:
                 out_queue.put(result)
@@ -898,7 +900,7 @@ class Activities(object):
             SW = (min(lats), min(lngs))
             NE = (max(lats), max(lngs))
 
-            # app.logger.info("SW = {}, NE = {}".format(SW, NE))
+            #app.logger.info("SW = {}, NE = {}".format(SW, NE))
             return SW, NE
         else:
             return []
@@ -943,6 +945,9 @@ class Activities(object):
             "elapsed_time": int(a.elapsed_time.total_seconds()),
             "average_speed": float(a.average_speed)
         }
+
+        SW, NE = cls.bounds(a)
+        app.logger.info("SW = {}, NE = {}".format(SW, NE))
 
         return d
 
