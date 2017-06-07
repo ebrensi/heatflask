@@ -457,23 +457,6 @@ function initializeDotLayer() {
 }
 
 
-function makeTyped(latLngArray, time) {
-    let len = latLngArray.length,
-        latLngTime = new Float32Array(3*len);
-
-    for (let i=0, ll; i<len; i++) {
-        ll = latLngArray[i];
-
-        A.bounds.extend(ll);
-        idx = i*3;
-        latLngTime[idx] = ll[0];
-        latLngTime[idx+1] = ll[1];
-        latLngTime[idx+2] = time[i];
-    }
-    return latLngTime
-}
-
-
 /* Rendering */
 function renderLayers() {
     const flowres = $("#flowres").val(),
@@ -513,7 +496,7 @@ function renderLayers() {
 
             } else {
                 let queryResult = JSON.parse(data)[0],
-                    resultSet = Set(queryResult);
+                    resultSet = new Set(queryResult);
 
                 // delete all items that aren't in queryResult from appState.items
                 for (let item of inClient) {
@@ -524,7 +507,7 @@ function renderLayers() {
                 // filter activitys to get by ones we don't already have
                 activityIds = queryResult.filter((id) => !inClient.has(id));
 
-                console.log(activityIds);
+                // console.log(activityIds);
 
                 let streamQuery = {};
                 streamQuery[USER_ID] = {
@@ -534,11 +517,12 @@ function renderLayers() {
                 };
 
                 httpPostAsync(POST_QUERY_URL, streamQuery, function(data) {
-                    console.log(data);
+                    // console.log(data);
                     let key = JSON.parse(data),
                         streamURL = `${KEY_QUERY_URL}${key}`;
 
-                    renderStream(streamURL, activityIds.length);
+                    window.open(streamURL, target="_blank")
+                    // renderStream(streamURL, activityIds.length);
                 });
             }
         });
@@ -573,6 +557,7 @@ function renderStream(streamURL, numActivities=null) {
 
     function doneRendering(msg){
         if (rendering) {
+            debugger;
             appState['date1'] = date1;
             appState["date2"] = date2;
             appState["flowres"] = flowres;
@@ -600,16 +585,16 @@ function renderStream(streamURL, numActivities=null) {
 
             // initialize, update, or remove HeatLayer
             if (heatres){
-                if (Heatlayer) {
+                if (HeatLayer) {
                     // update existing heatmap with new points
-                    Heatlayer.setLatLngs(appState.latlngs_flat);
+                    HeatLayer.setLatLngs(appState.latlngs_flat);
                 } else {
                     // create new heatmap
                     HeatLayer = L.heatLayer(appState.latlngs_flat, HEATLAYER_DEFAULT_OPTIONS);
                     map.addLayer(HeatLayer);
                     layerControl.addOverlay(HeatLayer, "Point Density");
                 }
-            } else if (Heatlayer){
+            } else if (HeatLayer){
                 map.removeLayer(HeatLayer);
                 layerControl.removeLayer(HeatLayer);
                 HeatLayer = false;
@@ -650,25 +635,26 @@ function renderStream(streamURL, numActivities=null) {
 
     // handle one incoming chunk from SSE stream
     source.onmessage = function(event) {
+        debugger;
         if (event.data == 'done') {
-            doneRendering("Finished.");
             stopListening();
+            doneRendering("Finished.");
             return;
         }
 
-        let A = JSON.parse(event.data)
+        let A = JSON.parse(event.data);
 
-        if ("error" in A){
+        if (A.error){
             let msg = `<font color='red'>${A.error}</font><br>`;
             $(".data_message").html(msg);
             console.log(`Error activity ${A.id}: ${A.error}`);
             return;
 
-        } else if ("msg" in A) {
+        } else if (A.msg) {
             $(".data_message").html(msg);
             return;
 
-        } else if ("stop_rendering" in A){
+        } else if (A.stop_rendering){
             doneRendering("Done rendering.");
             return;
         }
@@ -678,10 +664,6 @@ function renderStream(streamURL, numActivities=null) {
             flowpoints = false;
         A.selected = false;
         A.bounds = L.latLngBounds();
-
-        if (numActivities) {
-            progress_bars.val(count/numActivities);
-        }
 
         // if (lores && A.summary_polyline) {
         //     let latlngs = L.PolylineUtil.decode(A.summary_polyline);
@@ -728,6 +710,11 @@ function renderStream(streamURL, numActivities=null) {
         // only add A to appState.items if it isn't already there
         if (!(A.id in appState.items)) {
             appState.items[A.id] = A;
+        }
+
+        count++;
+        if (numActivities) {
+            progress_bars.val(count/numActivities);
         }
     }
 }

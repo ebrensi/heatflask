@@ -743,7 +743,7 @@ def get_query_key():
     query = request.get_json(force=True)
     key = str(uuid.uuid1())
     redis.setex(key, json.dumps(query), 120)  # key is good for 30 secs
-    app.logger.debug("set key '{}' to {}".format(key, query))
+    # app.logger.debug("set key '{}' to {}".format(key, query))
     return jsonify(key)
 
 
@@ -766,7 +766,7 @@ def qtest(num_users):
 def getdata_with_key(query_key):
     query_obj = redis.get(query_key)
     query_obj = json.loads(query_obj)
-    app.logger.debug("retrieved key {} as {}".format(query_key, query_obj))
+    # app.logger.debug("retrieved key {} as {}".format(query_key, query_obj))
     # return jsonify(query_obj)
 
     if not query_obj:
@@ -779,7 +779,7 @@ def getdata_with_key(query_key):
                 if not user:
                     continue
 
-                app.logger.debug("querying {}: {}".format(user, options))
+                # app.logger.debug("async job querying {}: {}".format(user, options))
                 options.update({
                     "pool": pool,
                     "out_queue": out_queue
@@ -787,10 +787,10 @@ def getdata_with_key(query_key):
                 user.query_activities(**options)
                 gevent.sleep(0)
 
-        pool.join()
-        out_queue.put(None)
-        out_queue.put(StopIteration)
-        app.logger.debug("done")
+            pool.join()
+            out_queue.put(None)
+            out_queue.put(StopIteration)
+            # app.logger.debug("done")
 
     pool = gevent.pool.Pool(app.config.get("CONCURRENCY"))
     out_queue = gevent.queue.Queue()
