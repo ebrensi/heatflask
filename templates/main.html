@@ -24,6 +24,8 @@
               BASE_DATAURL = "{{ url_for('getdata', username=user.id) }}",
               QUERY_URL_JSON = "{{ url_for('query_activities', username=user.id, out_type='json') }}",
               QUERY_URL_SSE = "{{ url_for('query_activities', username=user.id, out_type='sse') }}",
+              POST_QUERY_URL = "{{ url_for('get_query_key') }}",
+              KEY_QUERY_URL = "{{ url_for('getdata_with_key', query_key='') }}",
               BASE_USER_URL = "{{ url_for('main', username=user.id) }}",
               GROUP_ACTIVITY_URL = "{{ url_for('related_activities', username=user.id, activity_id='') }}",
               USER_ID = "{{ user.id }}",
