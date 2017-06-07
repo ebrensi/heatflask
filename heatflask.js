@@ -90,11 +90,6 @@ var animationControl = L.easyButton({
 }).addTo(map);
 
 
-
-// Select activities button
-
-
-
 // Capture button
 var capture_button_states = [
     {
@@ -499,9 +494,38 @@ function renderLayers() {
     // We will load in new items that aren't already in appState.items,
     //  and delete whatever is left.
     var inClient = new Set(Object.keys(appState.items));
-    if (inClient.length > 0) {
-        url = QUERY_URL_JSON + "?" + jQuery.param(query, true)
-        httpGetAsync(url, callback);
+    if (inClient.size > 0 && (type != "activity_ids")) {
+        activityQuery = {
+            limit: (type == "activities")? Math.max(1, +num) : undefined,
+            after: date1? date1 : undefined,
+            before: (date2 && date2 != "now")? date2 : undefined,
+            only_ids: true
+        }
+        let url = QUERY_URL_JSON + "?" + jQuery.param(activityQuery);
+        httpGetAsync(url, function(data) {
+            if (data) {
+                activityIds = JSON.parse(data)[0];
+                console.log(activityIds);
+
+                let streamQuery = {};
+                streamQuery[USER_ID] = {
+                    activity_ids: activityIds,
+                    summaries: true,
+                    streams: false
+                };
+                httpPostAsync(POST_QUERY_URL, streamQuery, function(data) {
+                    console.log(data);
+                    let key = JSON.parse(data);
+
+                    let streamURL = `${KEY_QUERY_URL}${key}`;
+                    console.log(streamURL);
+                    window.open(streamURL, '_blank');
+                    debugger;
+                });
+
+
+            }
+        });
     }
 
     atable.clear();

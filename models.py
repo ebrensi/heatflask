@@ -711,7 +711,7 @@ class Users(UserMixin, db_sql.Model):
             put_stopIteration = True
 
         index_df = None
-        if summaries or limit or only_ids or after or before:
+        if (summaries or limit or only_ids or after or before):
             activity_index = self.get_index()
             if activity_index:
                 index_df = activity_index["index_df"]

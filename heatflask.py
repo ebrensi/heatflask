@@ -495,8 +495,10 @@ def getdata(username):
             if limit == 0:
                 limit == 1
 
-        options["after"] = request.args.get("date1") or request.args.get("after")
-        options["before"] = request.args.get("date2") or request.args.get("before")
+        options["after"] = request.args.get(
+            "date1") or request.args.get("after")
+        options["before"] = request.args.get(
+            "date2") or request.args.get("before")
         options["limit"] = 10 if not (options["after"] or
                                       options["before"] or
                                       limit) else limit
@@ -739,10 +741,10 @@ def query_activities(username, out_type):
 # @log_request_event
 def get_query_key():
     query = request.get_json(force=True)
-    app.logger.info(query)
     key = str(uuid.uuid1())
-    redis.setex(key, query, 30)  # key is good for 30 secs
-    return key
+    redis.setex(key, json.dumps(query), 120)  # key is good for 30 secs
+    app.logger.debug("set key '{}' to {}".format(key, query))
+    return jsonify(key)
 
 
 @app.route('/app/test/<int:num_users>')
@@ -763,29 +765,27 @@ def qtest(num_users):
 @app.route('/getdata/<query_key>')
 def getdata_with_key(query_key):
     query_obj = redis.get(query_key)
+    query_obj = json.loads(query_obj)
+    app.logger.debug("retrieved key {} as {}".format(query_key, query_obj))
+    # return jsonify(query_obj)
 
     if not query_obj:
         return errout("invalid query_key")
 
-    query_obj = json.loads(query_obj)
-    app.logger.debug(query_obj)
-
     def go(query_obj, pool, out_queue):
-        for username, options in query_obj.items():
-            user = Users.get(username)
-            if not user:
-                continue
+        with app.app_context():
+            for username, options in query_obj.items():
+                user = Users.get(username)
+                if not user:
+                    continue
 
-            app.logger.debug("querying {}: {}".format(user, options))
-            options.update({
-                "pool": pool,
-                "out_queue": out_queue,
-                "streams": True,
-                "summaries": True,
-                "owner_id": True
-            })
-            user.query_activities(**options)
-            gevent.sleep(0)
+                app.logger.debug("querying {}: {}".format(user, options))
+                options.update({
+                    "pool": pool,
+                    "out_queue": out_queue
+                })
+                user.query_activities(**options)
+                gevent.sleep(0)
 
         pool.join()
         out_queue.put(None)
