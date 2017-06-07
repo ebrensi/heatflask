@@ -11,7 +11,8 @@ var map_providers = ONLOAD_PARAMS.map_providers,
     appState = {
         baseLayers: map_providers,
         paused: ONLOAD_PARAMS.start_paused,
-        items: {}
+        items: {},
+        latlngs_flat: []
     };
 
 
@@ -235,7 +236,7 @@ if (FLASH_MESSAGES.length > 0) {
 }
 
 
-// Activity Table in sidebar
+// IInitialize Activity Table in sidebar
 var atable = $('#activitiesList').DataTable({
                 paging: false,
                 scrollY: "60vh",
@@ -456,6 +457,23 @@ function initializeDotLayer() {
 }
 
 
+function makeTyped(latLngArray, time) {
+    let len = latLngArray.length,
+        latLngTime = new Float32Array(3*len);
+
+    for (let i=0, ll; i<len; i++) {
+        ll = latLngArray[i];
+
+        A.bounds.extend(ll);
+        idx = i*3;
+        latLngTime[idx] = ll[0];
+        latLngTime[idx+1] = ll[1];
+        latLngTime[idx+2] = time[i];
+    }
+    return latLngTime
+}
+
+
 /* Rendering */
 function renderLayers() {
     const flowres = $("#flowres").val(),
@@ -466,8 +484,6 @@ function renderLayers() {
           num = $("#select_num").val(),
           lores = (flowres == "low" || heatres == "low"),
           hires = (flowres == "high" || heatres == "high");
-
-    let latlngs_flat = [];
 
 
     // We will load in new items that aren't already in appState.items,
@@ -522,17 +538,19 @@ function renderLayers() {
                     let key = JSON.parse(data),
                         streamURL = `${KEY_QUERY_URL}${key}`;
 
-                    renderStream(streamURL);
+                    renderStream(streamURL, activityIds.length);
                 });
             }
         });
     }
+}
 
 
-
-function renderStream(streamURL) {
-    atable.clear();
-
+function renderStream(streamURL, numActivities=null) {
+    const flowres = $("#flowres").val(),
+          heatres = $("#heatres").val(),
+          lores = (flowres == "low" || heatres == "low"),
+          hires = (flowres == "high" || heatres == "high");
 
     let msgBox = L.control.window(map,
             {position: 'top',
@@ -543,7 +561,10 @@ function renderStream(streamURL) {
         rendering = true,
         listening = true,
         bounds = L.latLngBounds(),
-        source = new EventSource(streamURL);
+        source = new EventSource(streamURL),
+        count = 0;
+
+    atable.clear();
 
     $(".data_message").html("Rendering activities...");
     $("#abortButton").show();
@@ -573,17 +594,18 @@ function renderStream(streamURL) {
                 map.fitBounds(bounds);
             }
 
-            var msg2 = msg + " " + Object.keys(appState.items).length + " activities rendered.";
+            let num =  Object.keys(appState.items).length,
+                msg2 = `${msg}  ${num} activities rendered`;
             $(".data_message").html(msg2);
 
             // initialize, update, or remove HeatLayer
             if (heatres){
                 if (Heatlayer) {
                     // update existing heatmap with new points
-                    Heatlayer.setLatLngs(latlngs_flat);
+                    Heatlayer.setLatLngs(appState.latlngs_flat);
                 } else {
                     // create new heatmap
-                    HeatLayer = L.heatLayer(latlngs_flat, HEATLAYER_DEFAULT_OPTIONS);
+                    HeatLayer = L.heatLayer(appState.latlngs_flat, HEATLAYER_DEFAULT_OPTIONS);
                     map.addLayer(HeatLayer);
                     layerControl.addOverlay(HeatLayer, "Point Density");
                 }
@@ -619,96 +641,93 @@ function renderStream(streamURL) {
             listening = false;
             source.close();
             $('#renderButton').prop('disabled', false);
-
         }
     }
 
 
+    // TODO: don't forget to deal with the case where
+    //      limit > number of available activities
+
+    // handle one incoming chunk from SSE stream
     source.onmessage = function(event) {
         if (event.data == 'done') {
-            doneRendering("Finished. ");
+            doneRendering("Finished.");
             stopListening();
-        } else {
-            var A = JSON.parse(event.data),
-            heatpoints = false,
+            return;
+        }
+
+        let A = JSON.parse(event.data)
+
+        if ("error" in A){
+            let msg = `<font color='red'>${A.error}</font><br>`;
+            $(".data_message").html(msg);
+            console.log(`Error activity ${A.id}: ${A.error}`);
+            return;
+
+        } else if ("msg" in A) {
+            $(".data_message").html(msg);
+            return;
+
+        } else if ("stop_rendering" in A){
+            doneRendering("Done rendering.");
+            return;
+        }
+
+        // At this point we know A is an activity object, not a message
+        let heatpoints = false,
             flowpoints = false;
-            A.selected = false;
-            A.bounds = L.latLngBounds();
+        A.selected = false;
+        A.bounds = L.latLngBounds();
 
-            if ("error" in A){
-                var msg = "<font color='red'>" + A.error +"</font><br>";
-                $(".data_message").html(A.msg);
-                console.log(`Error activity ${A.id}: ${A.error}`);
-                return;
-            } else if ("stop_rendering" in A){
-                doneRendering("Done rendering.");
-            } else if ("msg" in A) {
-                $(".data_message").html(A.msg);
-                if ("value" in A) {
-                    progress_bars.val(A.value);
+        if (numActivities) {
+            progress_bars.val(count/numActivities);
+        }
+
+        // if (lores && A.summary_polyline) {
+        //     let latlngs = L.PolylineUtil.decode(A.summary_polyline);
+        //     if (heatres == "low") heatpoints = latlngs;
+        //     // if (flowres == "low") flowpoints = latlngs;
+        // }
+
+
+        if (hires && A.polyline){
+            let latLngArray = L.PolylineUtil.decode(A.polyline);
+
+            // if (heatres == "high") heatpoints = latLngArray;
+
+            if (flowres == "high" && A.time) {
+                let len = latLngArray.length,
+                    latLngTime = new Float32Array(3*len),
+                    timeArray = streamDecode(A.time);
+
+                for (let i=0, ll; i<len; i++) {
+                    ll = latLngArray[i];
+
+                    A.bounds.extend(ll);
+                    idx = i*3;
+                    latLngTime[idx] = ll[0];
+                    latLngTime[idx+1] = ll[1];
+                    latLngTime[idx+2] = timeArray[i];
                 }
-                return;
+
+                A.latLngTime = latLngTime;
             }
-            else {
-                let alreadyIn = inClient.delete(A.id.toString())
+        }
 
-                // if A is already in appState.items then we can stop now
-                if (!heatres && alreadyIn) {
-                    return;
-                }
-            }
+        // if (heatpoints) {
+        //     latlngs_flat.push.apply(latlngs_flat, heatpoints);
+        // }
 
+        A.startTime = moment(A.ts_UTC || A.ts_local ).valueOf()
 
+        bounds.extend(A.bounds);
+        delete A.summary_polyline;
+        delete A.polyline;
+        delete A.time;
 
-            if (lores && ("summary_polyline" in A) && (A.summary_polyline)) {
-                let latlngs = L.PolylineUtil.decode(A.summary_polyline);
-                if (heatres == "low") heatpoints = latlngs;
-                // if (flowres == "low") flowpoints = latlngs;
-            }
-
-
-            if (query.hires && ("polyline" in A) && (A.polyline)){
-                let latLngArray = L.PolylineUtil.decode(A.polyline);
-
-                if (heatres == "high") heatpoints = latLngArray;
-
-                if (flowres == "high" && ("time" in A)) {
-                    let len = latLngArray.length,
-                        time = streamDecode(A.time),
-                        latLngTime = new Float32Array(3*len);
-
-                    for (let i=0, ll; i<len; i++) {
-                        ll = latLngArray[i];
-
-                        A.bounds.extend(ll);
-                        idx = i*3;
-                        latLngTime[idx] = ll[0];
-                        latLngTime[idx+1] = ll[1];
-                        latLngTime[idx+2] = time[i];
-                    }
-
-                    A.latLngTime = latLngTime;
-                    flowpoints = latLngTime;
-                }
-            }
-
-            if (heatpoints) {
-                latlngs_flat.push.apply(latlngs_flat, heatpoints);
-            }
-
-            if (heatpoints || flowpoints) {
-                A.startTime = moment(A.ts_UTC || A.ts_local ).valueOf()
-
-                bounds.extend(A.bounds);
-                delete A.summary_polyline;
-                delete A.polyline;
-                delete A.time;
-
-                // only add A to appState.items if it isn't already there
-                if (!(A.id in appState.items)) {
-                    appState.items[A.id] = A;
-                }
-            }
+        // only add A to appState.items if it isn't already there
+        if (!(A.id in appState.items)) {
+            appState.items[A.id] = A;
         }
     }
 }
@@ -818,8 +837,8 @@ $(document).ready(function() {
 
     $("#abortButton").hide();
     $('#abortButton').click(function(){
-        stopListening();
-        doneRendering("<font color='red'>Aborted:</font>");
+        renderStream.stopListening();
+        renderStream.doneRendering("<font color='red'>Aborted:</font>");
     });
 
     $(".progbar").hide();
