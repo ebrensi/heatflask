@@ -21,7 +21,6 @@
         // Constants defined via template
         const OFFLINE = {{ config.get('OFFLINE')|tojson }},
               HEATLAYER_DEFAULT_OPTIONS = {{ config["HEATMAP_DEFAULT_OPTIONS"]|tojson|safe }},
-              BASE_DATAURL = "{{ url_for('getdata', username=user.id) }}",
               QUERY_URL_JSON = "{{ url_for('query_activities', username=user.id, out_type='json') }}",
               QUERY_URL_SSE = "{{ url_for('query_activities', username=user.id, out_type='sse') }}",
               POST_QUERY_URL = "{{ url_for('get_query_key') }}",

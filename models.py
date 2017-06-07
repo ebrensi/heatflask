@@ -599,69 +599,6 @@ class Users(UserMixin, db_sql.Model):
         if to_update:
             return index_df
 
-    def query_index(self, activity_ids=None, limit=None,
-                    after=None, before=None, ids_out=False):
-
-        if self.indexing():
-            return [{
-                    "error": "Building activity index for {}".format(self.id)
-                    + "...<br>Please try again in a few seconds.<br>"
-                    }]
-
-        # Parse dates parameters and make sure the range is valid
-        if before or after:
-            try:
-                after = dateutil.parser.parse(after)
-                if before:
-                    before = dateutil.parser.parse(before)
-                    assert(before > after)
-            except AssertionError:
-                return [{"error": "Invalid Dates"}]
-
-        if limit:
-            try:
-                limit = int(limit)
-            except ValueError:
-                return [{"error": "Invalid limit value"}]
-
-        # Retrieve the index from storage
-        activity_index = self.get_index()
-        if activity_index:
-            index_df = activity_index["index_df"]
-            elapsed = (datetime.utcnow() -
-                       activity_index["dt_last_indexed"]).total_seconds()
-
-            # update the index if we need to
-            if (not OFFLINE) and (elapsed > INDEX_UPDATE_TIMEOUT):
-                index_df = self.update_index(index_df)
-
-            if activity_ids:
-                df = index_df[index_df["id"].isin(activity_ids)]
-            else:
-                if limit:
-                    # only consider activities with a summary polyline
-                    df = index_df[
-                        index_df.summary_polyline.notnull()
-                    ].head(limit)
-                else:
-                    df = index_df
-                    if after:
-                        df = df[:after]
-                    if before:
-                        df = df[before:]
-            df = df.reset_index()
-
-            if ids_out:
-                return df["id"].tolist()
-            else:
-                df.ts_local = df.ts_local.astype(str)
-                return df.to_dict("records")
-
-        # If there is no index then we need to build it
-        Q = Queue()
-        gevent.spawn(self.build_index, Q, limit, after, before)
-        return Q
-
     def query_activities(self, activity_ids=None,
                          limit=None,
                          after=None, before=None,
@@ -678,17 +615,17 @@ class Users(UserMixin, db_sql.Model):
                     + "...<br>Please try again in a few seconds.<br>"
                     }]
 
-        app.logger.info("query_activities called with: {}".format({
-            "activity_ids": activity_ids,
-            "limit": limit,
-            "after": after,
-            "before": before,
-            "only_ids": only_ids,
-            "summaries": summaries,
-            "streams": streams,
-            "pool": pool,
-            "out_queue": out_queue
-        }))
+        # app.logger.info("query_activities called with: {}".format({
+        #     "activity_ids": activity_ids,
+        #     "limit": limit,
+        #     "after": after,
+        #     "before": before,
+        #     "only_ids": only_ids,
+        #     "summaries": summaries,
+        #     "streams": streams,
+        #     "pool": pool,
+        #     "out_queue": out_queue
+        # }))
 
         def import_streams(client, queue, activity):
             # app.logger.debug("importing {}".format(activity["id"]))
@@ -945,12 +882,9 @@ class Activities(object):
             "ts_local": a.start_date_local,
             "total_distance": float(a.distance),
             "elapsed_time": int(a.elapsed_time.total_seconds()),
-            "average_speed": float(a.average_speed)
+            "average_speed": float(a.average_speed),
+            # "bounds": cls.bounds(a)
         }
-
-        SW, NE = cls.bounds(a)
-        app.logger.info("SW = {}, NE = {}".format(SW, NE))
-
         return d
 
     @staticmethod
