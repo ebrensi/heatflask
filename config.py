@@ -108,7 +108,7 @@ class StagingConfig(Config):
      (hosted test app)
     """
     DEVELOPMENT = True
-    DEBUG = True
+    DEBUG = False
 
     # webassets should not build bundles
     ASSETS_DEBUG = True
