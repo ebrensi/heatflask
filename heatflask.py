@@ -514,6 +514,7 @@ def toVal(obj):
 
 
 @app.route('/<username>/query_activities/<out_type>')
+@log_request_event
 def query_activities(username, out_type):
     user = Users.get(username)
     if user:
