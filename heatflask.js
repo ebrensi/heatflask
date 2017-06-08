@@ -476,29 +476,43 @@ function renderLayers() {
           num = $("#select_num").val(),
           lores = (flowres == "low" || heatres == "low"),
           hires = (flowres == "high" || heatres == "high"),
-          idString = (type == "activity_ids")? $("#activity_ids").val():null,
-          ids = null;
+          idString = (type == "activity_ids")? $("#activity_ids").val():null;
+
 
     if (idString) {
-        ids = idString.split(/\D/);
+        let streamQuery = {},
+            activityIds = idString.split(/\D/).map(Number);
+
+        streamQuery[USER_ID] = {
+            activity_ids: activityIds,
+            summaries: true,
+            streams: hires
+        };
+
+        httpPostAsync(POST_QUERY_URL, streamQuery, function(data) {
+            // console.log(data);
+            let key = JSON.parse(data),
+                streamURL = `${KEY_QUERY_URL}${key}`;
+            // window.open(streamURL, target="_blank");
+            readStream(streamURL, activityIds.length, updateLayers);
+        });
+
+        return;
     }
 
+
     if (DotLayer) {
-        DotLayer.pause()
+        DotLayer.pause();
     }
 
     // We will load in new items that aren't already in appState.items,
     //  and delete whatever is left.
     let inClient = new Set(Object.keys(appState.items).map(Number));
 
-
-
-
     activityQuery = {
         limit: (type == "activities")? Math.max(1, +num) : undefined,
         after: date1? date1 : undefined,
         before: (date2 && date2 != "now")? date2 : undefined,
-        activity_ids: ids? ids : undefined,
         only_ids: true
     }
 
@@ -548,7 +562,7 @@ function renderLayers() {
             });
         }
     });
-    }
+}
 
 
     function updateLayers() {
@@ -600,7 +614,7 @@ function renderLayers() {
         // render the activities table
         atable.rows.add(Object.values(appState.items)).draw(false);
     }
-}
+
 
 
 function readStream(streamURL, numActivities=null, callback=null) {
