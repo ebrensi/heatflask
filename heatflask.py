@@ -524,7 +524,7 @@ def query_activities(username, out_type):
 
         EventLogger.log_request(request,
                                 cuid="" if current_user.is_anonymous else current_user.id,
-                                msg="query for {}: {}".format(user.id, options))
+                                msg="{} query for {}: {}".format(out_type, user.id, options))
     else:
         return
 
