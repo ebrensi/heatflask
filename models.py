@@ -653,6 +653,7 @@ class Users(UserMixin, db_sql.Model):
         pool = pool or Pool(CONCURRENCY)
         client = self.client()
 
+        #  If out_queue is not supplied then query_activities is blocking
         put_stopIteration = False
         if not out_queue:
             out_queue = Queue()

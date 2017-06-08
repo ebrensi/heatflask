@@ -478,11 +478,17 @@ function renderLayers() {
           hires = (flowres == "high" || heatres == "high"),
           idString = (type == "activity_ids")? $("#activity_ids").val():null;
 
+    if (DotLayer) {
+        DotLayer.pause();
+    }
 
+    // Handle given activity_ids case first
     if (idString) {
         let streamQuery = {},
             activityIds = idString.split(/\D/).map(Number);
 
+        // TODO: remove any activities from appState.items that aren't in
+        //  activityIds
         streamQuery[USER_ID] = {
             activity_ids: activityIds,
             summaries: true,
@@ -501,10 +507,6 @@ function renderLayers() {
     }
 
 
-    if (DotLayer) {
-        DotLayer.pause();
-    }
-
     // We will load in new items that aren't already in appState.items,
     //  and delete whatever is left.
     let inClient = new Set(Object.keys(appState.items).map(Number));
@@ -520,16 +522,19 @@ function renderLayers() {
     httpGetAsync(url, function(data) {
         let queryResult = JSON.parse(data)[0];
 
+        // handle the case where there is no index for this user
         if (queryResult == "build") {
             activityQuery["only_ids"] = false;
             activityQuery["summaries"] = true;
             activityQuery["streams"] = hires;
-
+            // TODO: handle the unlikely case where there are items already in
+            //  appState.items
             let streamURL = QUERY_URL_SSE + "?" + jQuery.param(activityQuery);
             // window.open(streamURL, target="_blank");
             readStream(streamURL, null, updateLayers);
             return;
         }
+
 
         let resultSet = new Set(queryResult);
 
@@ -587,6 +592,7 @@ function renderLayers() {
             if (HeatLayer) {
                 // update existing heatmap with new points
                 HeatLayer.setLatLngs(appState.latlngs_flat);
+                HeatLayer.redraw();
             } else {
                 // create new heatmap
                 HeatLayer = L.heatLayer(appState.latlngs_flat, HEATLAYER_DEFAULT_OPTIONS);
@@ -628,9 +634,10 @@ function readStream(streamURL, numActivities=null, callback=null) {
           hires = (flowres == "high" || heatres == "high");
 
     let msgBox = L.control.window(map,
-            {position: 'top',
-            content:"<div class='data_message'></div><div><progress class='progbar' id='box'></progress></div>",
-            visible:true
+            {
+                position: 'top',
+                content:"<div class='data_message'></div><div><progress class='progbar' id='box'></progress></div>",
+                visible:true
         }),
         progress_bars = $('.progbar'),
         rendering = true,
