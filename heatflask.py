@@ -11,6 +11,7 @@ import flask_compress
 from datetime import datetime
 import sys
 import uuid
+import urllib
 import logging
 import os
 import re
@@ -528,11 +529,18 @@ def update_share_status(username):
     return jsonify(user=user.id, share=user.share_profile)
 
 
+def toVal(obj):
+    try:
+        return json.loads(obj)
+    except ValueError:
+        return obj
+
+
 @app.route('/<username>/query_activities/<out_type>')
 def query_activities(username, out_type):
     user = Users.get(username)
     if user:
-        options = {k: request.args.get(k) for k in request.args}
+        options = {k: toVal(request.args.get(k)) for k in request.args}
         if not options:
             options = {"limit": 10}
     else:
@@ -540,6 +548,7 @@ def query_activities(username, out_type):
 
     if out_type == "json":
         return jsonify(list(user.query_activities(**options)))
+
     else:
         def go(user, pool, out_queue):
             options["pool"] = pool
@@ -589,12 +598,13 @@ def qtest(num_users):
 @app.route('/getdata/<query_key>')
 def getdata_with_key(query_key):
     query_obj = redis.get(query_key)
-    query_obj = json.loads(query_obj)
     # app.logger.debug("retrieved key {} as {}".format(query_key, query_obj))
     # return jsonify(query_obj)
 
     if not query_obj:
         return errout("invalid query_key")
+
+    query_obj = json.loads(query_obj)
 
     def go(query_obj, pool, out_queue):
         with app.app_context():
