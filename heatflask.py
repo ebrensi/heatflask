@@ -519,6 +519,9 @@ def query_activities(username, out_type):
     user = Users.get(username)
     if user:
         options = {k: toVal(request.args.get(k)) for k in request.args}
+        # EventLogger.log_request(request,
+        #                         cuid="bot",
+        #                         msg=request.user_agent.string)
         if not options:
             options = {"limit": 10}
     else:

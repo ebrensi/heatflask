@@ -392,13 +392,6 @@ class Users(UserMixin, db_sql.Model):
         self.indexing(True)
         start_time = datetime.utcnow()
         app.logger.debug("building activity index for {}".format(self.id))
-        app.logger.debug({
-            "out_queue": out_queue,
-            "limit": limit,
-            "after": after,
-            "before": before,
-            "activity_ids": activity_ids
-        })
 
         activities_list = []
         count = 0
@@ -625,17 +618,17 @@ class Users(UserMixin, db_sql.Model):
                     + "...<br>Please try again in a few seconds.<br>"
                     }]
 
-        app.logger.info("query_activities called with: {}".format({
-            "activity_ids": activity_ids,
-            "limit": limit,
-            "after": after,
-            "before": before,
-            "only_ids": only_ids,
-            "summaries": summaries,
-            "streams": streams,
-            "pool": pool,
-            "out_queue": out_queue
-        }))
+        # app.logger.info("query_activities called with: {}".format({
+        #     "activity_ids": activity_ids,
+        #     "limit": limit,
+        #     "after": after,
+        #     "before": before,
+        #     "only_ids": only_ids,
+        #     "summaries": summaries,
+        #     "streams": streams,
+        #     "pool": pool,
+        #     "out_queue": out_queue
+        # }))
 
         def import_streams(client, queue, activity):
             # app.logger.debug("importing {}".format(activity["id"]))
