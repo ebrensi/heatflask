@@ -522,9 +522,12 @@ def query_activities(username, out_type):
         if not options:
             options = {"limit": 10}
 
+        anon = current_user.is_anonymous
         EventLogger.log_request(request,
-                                cuid="" if current_user.is_anonymous else current_user.id,
-                                msg="{} query for {}: {}".format(out_type, user.id, options))
+                                cuid="" if anon else current_user.id,
+                                msg="{} query for {}: {}".format(out_type,
+                                                                 user.id,
+                                                                 options))
     else:
         return
 
