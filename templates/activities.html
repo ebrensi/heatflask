@@ -40,10 +40,10 @@
     const MEASURMENT_PREFERENCE = "{{ current_user.measurement_preference if current_user.is_authenticated else user.measurement_preference }}",
           DIST_UNIT = (MEASURMENT_PREFERENCE=="feet")? 1609.34 : 1000.0,
           DIST_LABEL = (MEASURMENT_PREFERENCE=="feet")?  "mi" : "km",
-          //HEATFLASK_BUTTON = img("{{ url_for('static',filename='Heat.png') }}"),
           STRAVA_BUTTON = img("{{ url_for('static',filename='strava_button.png') }}"),
           USER_BASE_URL = "{{url_for('main',username=user.id)}}",
-          GROUP_ACTIVITY_URL = "{{ url_for('related_activities', username=user.id, activity_id='') }}";
+          GROUP_ACTIVITY_URL = "{{ url_for('related_activities', username=user.id, activity_id='') }}",
+          ACTIVITY_STREAM_URL = "{{ url_for('query_activities', username=user.id, out_type='sse') }}?limit=100000";
 
     function td(text) {
       return "<td>" + text +"</td>";
@@ -63,7 +63,7 @@
         let count = 0,
             count_DOM_element = $("#count"),
             table_body = $('#activities_list tbody'),
-            source = new EventSource("{{ url_for('activity_stream', username=user.id) }}");
+            source = new EventSource( ACTIVITY_STREAM_URL );
 
         $("#status_msg").text("Retrieving Activity Index...");
         $("#dist").html(`<i class="fa fa-arrows-h" aria-hidden="true"></i> (${DIST_LABEL})`);
