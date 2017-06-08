@@ -61,7 +61,7 @@ let heatpoints=null,flowpoints=null,hasBounds=A.bounds,bounds=hasBounds?L.latLng
 idx=i*3;latLngTime[idx]=ll[0];latLngTime[idx+1]=ll[1];latLngTime[idx+2]=timeArray[i];}
 A.latLngTime=latLngTime;}}
 A.startTime=moment(A.ts_UTC||A.ts_local).valueOf();A.bounds=bounds;delete A.summary_polyline;delete A.polyline;delete A.time;if(!(A.id in appState.items)){appState.items[A.id]=A;}
-count++;if(numActivities){progress_bars.val(count/numActivities);}};}
+count++;if(numActivities){progress_bars.val(count/numActivities);$(".data_message").html(count+"/"+numActivities);}else{$(".data_message").html(count+"/?");}};}
 function updateState(){var params={},type=$("#select_type").val(),num=$("#select_num").val();if(type=="activities"){params.limit=num;}else if(type=="activity_ids"){params.id=$("#activity_ids").val();}else if(type=="days"){params.preset=num;}else{if(appState.date1){params.date1=appState.date1;}
 if(appState.date2&&appState.date2!="now"){params.date2=appState.date2;}}
 if(appState.paused){params.paused="1";}
