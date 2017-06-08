@@ -523,11 +523,12 @@ def query_activities(username, out_type):
             options = {"limit": 10}
 
         anon = current_user.is_anonymous
-        EventLogger.log_request(request,
-                                cuid="" if anon else current_user.id,
-                                msg="{} query for {}: {}".format(out_type,
-                                                                 user.id,
-                                                                 options))
+        if anon or (not current_user.is_admin()):
+            EventLogger.log_request(request,
+                                    cuid="" if anon else current_user.id,
+                                    msg="{} query for {}: {}".format(out_type,
+                                                                     user.id,
+                                                                     options))
     else:
         return
 
