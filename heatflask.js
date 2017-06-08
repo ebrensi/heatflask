@@ -11,7 +11,8 @@ var map_providers = ONLOAD_PARAMS.map_providers,
     appState = {
         baseLayers: map_providers,
         paused: ONLOAD_PARAMS.start_paused,
-        items: {}
+        items: {},
+        latlngs_flat: []
     };
 
 
@@ -89,11 +90,6 @@ var animation_button_states = [
 var animationControl = L.easyButton({
     states: appState.paused? animation_button_states.reverse() : animation_button_states
 }).addTo(map);
-
-
-
-// Select activities button
-
 
 
 // Capture button
@@ -231,9 +227,6 @@ $(".dotscale-dial").knob({
 
 
 
-
-
-
 if (FLASH_MESSAGES.length > 0) {
     var msg = "<ul class=flashes>";
     for (let i=0, len=FLASH_MESSAGES.length; i<len; i++) {
@@ -244,7 +237,7 @@ if (FLASH_MESSAGES.length > 0) {
 }
 
 
-// Activity Table in sidebar
+// IInitialize Activity Table in sidebar
 var atable = $('#activitiesList').DataTable({
                 paging: false,
                 scrollY: "60vh",
@@ -437,94 +430,242 @@ function activityDataPopup(id, latlng){
                 .openOn(map);
 }
 
+
+function getBounds(ids=[]) {
+    let bounds = L.latLngBounds();
+    for (let i=0; i<ids.length; i++){
+        bounds.extend( appState.items[ids[i]].bounds );
+    }
+    return bounds
+}
+
+function initializeDotLayer() {
+    DotLayer = new L.DotLayer(appState.items, {
+        startPaused: appState.paused
+    });
+
+    // DotLayer.options.normal.dotColor = $("#normal-dotColor").val();
+    // $("#normal-dotColor").on("input", function (){
+    //     DotLayer.options.normal.dotColor = $(this).val();
+    // });
+
+    map.addLayer(DotLayer);
+    layerControl.addOverlay(DotLayer, "Dots");
+    $("#sepConst").val((Math.log2(DotLayer.C1) - SEP_SCALE.b) / SEP_SCALE.m ).trigger("change");
+    $("#speedConst").val(Math.sqrt(DotLayer.C2) / SPEED_SCALE).trigger("change");
+    $("#dotScale").val(DotLayer.dotScale).trigger("change");
+
+    setTimeout(function(){
+        $("#period-value").html(DotLayer.periodInSecs().toFixed(2));
+    }, 500);
+
+    $("#showPaths").prop("checked", DotLayer.options.showPaths)
+                    .on("change", function(){
+                         DotLayer.options.showPaths = $(this).prop("checked");
+                         DotLayer._onLayerDidMove();
+                    });
+}
+
+
 /* Rendering */
 function renderLayers() {
     const flowres = $("#flowres").val(),
-    heatres = $("#heatres").val(),
-    date1 = $("#date1").val(),
-    date2 = $("#date2").val(),
-    type = $("#select_type").val(),
-    num = $("#select_num").val(),
-    lores = (flowres == "low" || heatres == "low"),
-    hires = (flowres == "high" || heatres == "high");
-    dotFlow = true;
+          heatres = $("#heatres").val(),
+          date1 = $("#date1").val(),
+          date2 = $("#date2").val(),
+          type = $("#select_type").val(),
+          num = $("#select_num").val(),
+          lores = (flowres == "low" || heatres == "low"),
+          hires = (flowres == "high" || heatres == "high"),
+          idString = (type == "activity_ids")? $("#activity_ids").val():null;
 
-    var query = {};
-
-    if (type == "activity_ids") {
-        query.id = $("#activity_ids").val();
-    } else if (type=="activities") {
-        if (num == 0) {
-            query.limit = 1;
-        }
-        else {
-            query.limit = num;
-        }
-    } else {
-        if (date1) {
-            query.date1 = date1;
-        }
-        if (date2 && (date2 != "now")) {
-            query.date2 = date2;
-        }
+    if (DotLayer) {
+        DotLayer.pause();
     }
 
-    if (hires) {
-        query.hires = hires;
+    // Handle given activity_ids case first
+    if (idString) {
+        let streamQuery = {},
+            activityIds = idString.split(/\D/).map(Number);
+
+        // TODO: remove any activities from appState.items that aren't in
+        //  activityIds
+        streamQuery[USER_ID] = {
+            activity_ids: activityIds,
+            summaries: true,
+            streams: hires
+        };
+
+        httpPostAsync(POST_QUERY_URL, streamQuery, function(data) {
+            // console.log(data);
+            let key = JSON.parse(data),
+                streamURL = `${KEY_QUERY_URL}${key}`;
+            // window.open(streamURL, target="_blank");
+            readStream(streamURL, activityIds.length, updateLayers);
+        });
+
+        return;
     }
 
-
-    // Remove HeatLayer from map and control if it's there
-    if (HeatLayer){
-        map.removeLayer(HeatLayer);
-        layerControl.removeLayer(HeatLayer);
-        HeatLayer = false;
-    }
-
-    if (DotLayer){
-        map.removeLayer(DotLayer);
-        layerControl.removeLayer(DotLayer);
-        DotLayer = false;
-    }
-
-
-    // Add new blank HeatLayer to map if specified
-    var latlngs_flat = [];
-    if (heatres){
-        HeatLayer = L.heatLayer(latlngs_flat, HEATLAYER_DEFAULT_OPTIONS);
-        map.addLayer(HeatLayer);
-        layerControl.addOverlay(HeatLayer, "Point Density");
-    }
-
-    // appState.items = {};
 
     // We will load in new items that aren't already in appState.items,
     //  and delete whatever is left.
-    var toDelete = new Set(Object.keys(appState.items));
+    let inClient = new Set(Object.keys(appState.items).map(Number));
 
-    atable.clear();
+    activityQuery = {
+        limit: (type == "activities")? Math.max(1, +num) : undefined,
+        after: date1? date1 : undefined,
+        before: (date2 && date2 != "now")? date2 : undefined,
+        only_ids: true
+    }
+
+    let url = QUERY_URL_JSON + "?" + jQuery.param(activityQuery);
+    httpGetAsync(url, function(data) {
+        let queryResult = JSON.parse(data)[0];
+
+        // handle the case where there is no index for this user
+        if (queryResult == "build") {
+            activityQuery["only_ids"] = false;
+            activityQuery["summaries"] = true;
+            activityQuery["streams"] = hires;
+            // TODO: handle the unlikely case where there are items already in
+            //  appState.items
+            let streamURL = QUERY_URL_SSE + "?" + jQuery.param(activityQuery);
+            // window.open(streamURL, target="_blank");
+            readStream(streamURL, null, updateLayers);
+            return;
+        }
 
 
-    var msgBox = L.control.window(map,
-        {position: 'top',
-        content:"<div class='data_message'></div><div><progress class='progbar' id='box'></progress></div>",
-        visible:true
-    }),
-    progress_bars = $('.progbar'),
-    rendering = true,
-    listening = true,
-    bounds = L.latLngBounds(),
-    source = new EventSource(
-        BASE_DATAURL + "?" + jQuery.param(query, true)
-        );
+        let resultSet = new Set(queryResult);
+
+        // delete all items that aren't in queryResult from appState.items
+        for (let item of inClient) {
+            if (!resultSet.has(item))
+            delete appState.items[item];
+        }
+
+        // filter activitys to get by ones we don't already have
+        activityIds = queryResult.filter((id) => !inClient.has(id));
+
+        // console.log(activityIds);
+        if (!activityIds.length){
+            updateLayers();
+            return;
+        }
+
+        let streamQuery = {};
+        streamQuery[USER_ID] = {
+            activity_ids: activityIds,
+            summaries: true,
+            streams: hires
+        };
+
+        httpPostAsync(POST_QUERY_URL, streamQuery, function(data) {
+            // console.log(data);
+            let key = JSON.parse(data),
+                streamURL = `${KEY_QUERY_URL}${key}`;
+
+            // window.open(streamURL, target="_blank");
+            readStream(streamURL, activityIds.length, updateLayers);
+        });
+
+    });
+}
+
+
+    function updateLayers(msg) {
+        // optional auto-zoom
+        if ($("#autozoom:checked").val()){
+            let totalBounds = getBounds(Object.keys(appState.items));
+
+            if (totalBounds.isValid()){
+                map.fitBounds(totalBounds);
+            }
+        }
+
+        let num =  Object.keys(appState.items).length,
+            msg2 = " " + msg + " " + num  + " activities rendered.";
+        $(".data_message").html(msg2);
+
+        /*
+        // initialize, update, or remove HeatLayer
+        if (heatres){
+            if (HeatLayer) {
+                // update existing heatmap with new points
+                HeatLayer.setLatLngs(appState.latlngs_flat);
+                HeatLayer.redraw();
+            } else {
+                // create new heatmap
+                HeatLayer = L.heatLayer(appState.latlngs_flat, HEATLAYER_DEFAULT_OPTIONS);
+                map.addLayer(HeatLayer);
+                layerControl.addOverlay(HeatLayer, "Point Density");
+            }
+        } else if (HeatLayer){
+            map.removeLayer(HeatLayer);
+            layerControl.removeLayer(HeatLayer);
+            HeatLayer = false;
+        }
+        */
+
+        // initialize, update, or remove DotLayer
+        if (flowres){
+            if (DotLayer) {
+                DotLayer.reset();
+                !appState.paused && DotLayer.animate();
+            } else {
+                initializeDotLayer();
+            }
+        } else {
+            map.removeLayer(DotLayer);
+            layerControl.removeLayer(DotLayer);
+            DotLayer = false;
+        }
+
+        // render the activities table
+        atable.clear();
+        atable.rows.add(Object.values(appState.items)).draw();
+    }
+
+
+
+function readStream(streamURL, numActivities=null, callback=null) {
+    const flowres = $("#flowres").val(),
+          heatres = $("#heatres").val(),
+          lores = (flowres == "low" || heatres == "low"),
+          hires = (flowres == "high" || heatres == "high");
+
+    let msgBox = L.control.window(map,
+            {
+                position: 'top',
+                content:"<div class='data_message'></div><div><progress class='progbar' id='box'></progress></div>",
+                visible:true
+        }),
+        progress_bars = $('.progbar'),
+        rendering = true,
+        listening = true,
+        source = new EventSource(streamURL),
+        count = 0;
 
     $(".data_message").html("Rendering activities...");
-    $("#abortButton").show();
+
+    $('#abortButton').click(function(){
+        stopListening();
+        doneRendering("<font color='red'>Aborted:</font>");
+    }).show();
+
     $(".progbar").show();
     $('#renderButton').prop('disabled', true);
 
     function doneRendering(msg){
         if (rendering) {
+            appState['date1'] = date1;
+            appState["date2"] = date2;
+            appState["flowres"] = flowres;
+            appState["heatres"] = heatres;
+            updateState();
+
+
             $("#abortButton").hide();
             $(".progbar").hide();
             try {
@@ -533,151 +674,119 @@ function renderLayers() {
             catch(err) {
                 console.log(err.message);
             }
-            if ($("#autozoom:checked").val() && bounds.isValid())
-                map.fitBounds(bounds);
-            var msg2 = msg + " " + Object.keys(appState.items).length + " activities rendered.";
-            $(".data_message").html(msg2);
             rendering = false;
-            if (dotFlow) {
-                DotLayer = new L.DotLayer(appState.items, {
-                    startPaused: appState.paused
-                });
 
-                // DotLayer.options.normal.dotColor = $("#normal-dotColor").val();
-                // $("#normal-dotColor").on("input", function (){
-                //     DotLayer.options.normal.dotColor = $(this).val();
-                // });
-
-                map.addLayer(DotLayer);
-                layerControl.addOverlay(DotLayer, "Dots");
-                $("#sepConst").val((Math.log2(DotLayer.C1) - SEP_SCALE.b) / SEP_SCALE.m ).trigger("change");
-                $("#speedConst").val(Math.sqrt(DotLayer.C2) / SPEED_SCALE).trigger("change");
-                $("#dotScale").val(DotLayer.dotScale).trigger("change");
-                setTimeout(function(){
-                    $("#period-value").html(DotLayer.periodInSecs().toFixed(2));
-                }, 500);
-
-                $("#showPaths").prop("checked", DotLayer.options.showPaths)
-                                .on("change", function(){
-                                     DotLayer.options.showPaths = $(this).prop("checked");
-                                     DotLayer._onLayerDidMove();
-                                });
-
-                // delete all members of toDelete from appState.items
-                for (let item of toDelete) {
-                    delete appState.items[item];
-                }
-
-
-                // render the activities table
-                atable.rows.add(Object.values(appState.items)).draw(false);
-            }
+            callback && callback(msg);
         }
     }
+
 
     function stopListening() {
         if (listening){
             listening = false;
             source.close();
             $('#renderButton').prop('disabled', false);
-
         }
     }
 
 
+    // TODO: don't forget to deal with the case where
+    //      limit > number of available activities
+
+    // handle one incoming chunk from SSE stream
     source.onmessage = function(event) {
         if (event.data == 'done') {
-            doneRendering("Finished. ");
             stopListening();
-            appState['date1'] = date1;
-            appState["date2"] = date2;
-            appState["flowres"] = flowres;
-            appState["heatres"] = heatres;
+            doneRendering("Finished.");
+            return;
+        }
 
-            if ("limit" in query) appState["limit"] = query.limit;
-            updateState();
-        } else {
-            var A = JSON.parse(event.data),
-            heatpoints = false,
-            flowpoints = false;
-            A.selected = false;
-            A.bounds = L.latLngBounds();
+        let A = JSON.parse(event.data);
 
-            if ("error" in A){
-                var msg = "<font color='red'>" + A.error +"</font><br>";
-                $(".data_message").html(A.msg);
-                console.log(`Error activity ${A.id}: ${A.error}`);
-                return;
-            } else if ("stop_rendering" in A){
-                doneRendering("Done rendering.");
-            } else if ("msg" in A) {
-                $(".data_message").html(A.msg);
-                if ("value" in A) {
-                    progress_bars.val(A.value);
-                }
-                return;
-            }
-            else {
-                let alreadyIn = toDelete.delete(A.id.toString())
+        if (A.error){
+            let msg = `<font color='red'>${A.error}</font><br>`;
+            $(".data_message").html(msg);
+            console.log(`Error activity ${A.id}: ${A.error}`);
+            return;
 
-                // if A is already in appState.items then we can stop now
-                if (!heatres && alreadyIn) {
-                    return;
-                }
-            }
+        } else if (A.msg) {
+            $(".data_message").html(A.msg);
+            return;
+
+        } else if (A.stop_rendering){
+            doneRendering("Done rendering.");
+            return;
+        }
+
+        // At this point we know A is an activity object, not a message
+        let heatpoints = null,
+            flowpoints = null,
+            hasBounds = A.bounds,
+            bounds = hasBounds?
+                L.latLngBounds(A.bounds.SW, A.bounds.NE) : L.latLngBounds();
 
 
+        // A.selected = false;
 
-            if (lores && ("summary_polyline" in A) && (A.summary_polyline)) {
-                let latlngs = L.PolylineUtil.decode(A.summary_polyline);
-                if (heatres == "low") heatpoints = latlngs;
-                // if (flowres == "low") flowpoints = latlngs;
-            }
+        // if (lores && A.summary_polyline) {
+        //     let latlngs = L.PolylineUtil.decode(A.summary_polyline);
+        //     if (heatres == "low") heatpoints = latlngs;
+        //     // if (flowres == "low") flowpoints = latlngs;
+        // }
 
 
-            if (query.hires && ("polyline" in A) && (A.polyline)){
-                let latLngArray = L.PolylineUtil.decode(A.polyline);
+        if (hires && A.polyline){
+            let latLngArray = L.PolylineUtil.decode(A.polyline);
 
-                if (heatres == "high") heatpoints = latLngArray;
+            // if (heatres == "high") heatpoints = latLngArray;
 
-                if (flowres == "high" && ("time" in A)) {
-                    let len = latLngArray.length,
-                        time = streamDecode(A.time),
-                        latLngTime = new Float32Array(3*len);
+            if (flowres == "high" && A.time) {
+                let len = latLngArray.length,
+                    latLngTime = new Float32Array(3*len),
+                    timeArray = streamDecode(A.time);
 
-                    for (let i=0, ll; i<len; i++) {
-                        ll = latLngArray[i];
+                for (let i=0, ll; i<len; i++) {
+                    ll = latLngArray[i];
 
-                        A.bounds.extend(ll);
-                        idx = i*3;
-                        latLngTime[idx] = ll[0];
-                        latLngTime[idx+1] = ll[1];
-                        latLngTime[idx+2] = time[i];
+                    if (!hasBounds){
+                        bounds.extend(ll);
                     }
 
-                    A.latLngTime = latLngTime;
-                    flowpoints = latLngTime;
+                    idx = i*3;
+                    latLngTime[idx] = ll[0];
+                    latLngTime[idx+1] = ll[1];
+                    latLngTime[idx+2] = timeArray[i];
                 }
-            }
 
-            if (heatpoints) {
-                latlngs_flat.push.apply(latlngs_flat, heatpoints);
-            }
-
-            if (heatpoints || flowpoints) {
-                A.startTime = moment(A.ts_UTC || A.ts_local ).valueOf()
-
-                bounds.extend(A.bounds);
-                delete A.summary_polyline;
-                delete A.polyline;
-                delete A.time;
-
-                // only add A to appState.items if it isn't already there
-                if (!(A.id in appState.items)) {
-                    appState.items[A.id] = A;
-                }
+                A.latLngTime = latLngTime;
             }
         }
+
+        // if (heatpoints) {
+        //     latlngs_flat.push.apply(latlngs_flat, heatpoints);
+        // }
+
+        A.startTime = moment(A.ts_UTC || A.ts_local ).valueOf()
+        A.bounds = bounds;
+
+        delete A.summary_polyline;
+        delete A.polyline;
+        delete A.time;
+
+        // only add A to appState.items if it isn't already there
+        if (!(A.id in appState.items)) {
+            appState.items[A.id] = A;
+        }
+
+        count++;
+        if (numActivities) {
+            progress_bars.val(count/numActivities);
+            $(".data_message").html("imported " + count+"/"+numActivities);
+        } else {
+             $(".data_message").html("imported " + count+"/?");
+        }
+
+
     }
 }
 
@@ -785,10 +894,6 @@ $(document).ready(function() {
     });
 
     $("#abortButton").hide();
-    $('#abortButton').click(function(){
-        stopListening();
-        doneRendering("<font color='red'>Aborted:</font>");
-    });
 
     $(".progbar").hide();
     $(".datepick").datepicker({ dateFormat: 'yy-mm-dd',
@@ -832,7 +937,8 @@ $(document).ready(function() {
 
 
     $("#heatres").val(ONLOAD_PARAMS.heatres);
-    $("#flowres").val(ONLOAD_PARAMS.flowres)
+    $("#flowres").val(ONLOAD_PARAMS.flowres);
+
     $("#autozoom").prop('checked', ONLOAD_PARAMS.autozoom);
 
     if (ONLOAD_PARAMS.activity_ids) {
