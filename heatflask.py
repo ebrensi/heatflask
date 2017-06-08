@@ -306,7 +306,7 @@ def auth_callback():
         if user:
             # remember=True, for persistent login.
             login_user(user, remember=True)
-            app.logger.debug("authenticated {}".format(user))
+            # app.logger.debug("authenticated {}".format(user))
             EventLogger.new_event(msg="authenticated {}".format(user.id))
         else:
             app.loogger.error("user authenication error")
