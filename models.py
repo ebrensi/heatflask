@@ -378,7 +378,10 @@ class Users(UserMixin, db_sql.Model):
                 "dt_last_indexed": self.activity_index["dt_last_indexed"]
             }
 
-    def build_index(self, out_queue=None, limit=None, after=None, before=None, activity_ids=None):
+    def build_index(self, out_queue=None,
+                    limit=None, after=None, before=None,
+                    activity_ids=None):
+
         def enqueue(msg):
             if out_queue is None:
                 pass
@@ -421,25 +424,26 @@ class Users(UserMixin, db_sql.Model):
                         rendering = False
                         enqueue({"stop_rendering": "1"})
 
-                    if not (count % 10):
-                        enqueue({"msg": "indexing...{} activities"
-                                 .format(count)})
-                        gevent.sleep(0)
+                    enqueue({"msg": "indexing...{} activities"
+                             .format(count)})
+                    gevent.sleep(0)
 
             gevent.sleep(0)
         except Exception as e:
             enqueue({"error": str(e)})
             app.logger.error(e)
         else:
+            # If we are streaming to a client, this is where we tell it
+            #  stop listening by pushing a StopIteration the queue
             if not activities_list:
                 enqueue({"error": "No activities!"})
                 enqueue(StopIteration)
                 self.indexing(False)
-                EventLogger.new_event(
-                    msg="no activities for {}".format(self.id)
-                )
+                EventLogger.new_event(msg="no activities for {}"
+                                      .format(self.id))
                 return
 
+            enqueue(StopIteration)
             index_df = (pd.DataFrame(activities_list)
                         .set_index("ts_local")
                         .sort_index(ascending=False)
@@ -488,7 +492,6 @@ class Users(UserMixin, db_sql.Model):
 
         finally:
             self.indexing(False)
-            enqueue(StopIteration)
 
         if activities_list:
             return index_df
@@ -654,9 +657,18 @@ class Users(UserMixin, db_sql.Model):
             if activity_index:
                 index_df = activity_index["index_df"]
             else:
-                app.logger.info("building index for {}".format(self))
-                index_df = self.build_index(activity_ids, limit, after, before)
-                app.logger.info("building index for {}...done".format(self))
+                # There is no activity index, so we have to build it
+                if only_ids:
+                    return ["build"]
+                else:
+                    app.logger.info("building index for {}".format(self))
+                    gevent.spawn(self.build_index,
+                                 out_queue,
+                                 limit,
+                                 after,
+                                 before,
+                                 activity_ids)
+                    return out_queue
 
             if (not activity_ids):
                 ids_df = index_df[index_df.summary_polyline.notnull()].id
