@@ -573,7 +573,7 @@ function renderLayers() {
 }
 
 
-    function updateLayers() {
+    function updateLayers(msg) {
         // optional auto-zoom
         if ($("#autozoom:checked").val()){
             let totalBounds = getBounds(Object.keys(appState.items));
@@ -584,7 +584,7 @@ function renderLayers() {
         }
 
         let num =  Object.keys(appState.items).length,
-            msg2 = " " + msg + " " + num  + " activities rendered";
+            msg2 = " " + msg + " " + num  + " activities rendered.";
         $(".data_message").html(msg2);
 
         /*
@@ -675,7 +675,7 @@ function readStream(streamURL, numActivities=null, callback=null) {
             }
             rendering = false;
 
-            callback && callback();
+            callback && callback(msg);
         }
     }
 
@@ -932,10 +932,8 @@ $(document).ready(function() {
     $("#render-selection-button").click(openSelected);
 
 
-    // $("#heatres").val(ONLOAD_PARAMS.heatres);
-    // $("#flowres").val(ONLOAD_PARAMS.flowres);
-    $("#heatres").val("");
-    $("#flowres").val("high");
+    $("#heatres").val(ONLOAD_PARAMS.heatres);
+    $("#flowres").val(ONLOAD_PARAMS.flowres);
 
     $("#autozoom").prop('checked', ONLOAD_PARAMS.autozoom);
 
