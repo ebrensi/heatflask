@@ -21,7 +21,10 @@
         // Constants defined via template
         const OFFLINE = {{ config.get('OFFLINE')|tojson }},
               HEATLAYER_DEFAULT_OPTIONS = {{ config["HEATMAP_DEFAULT_OPTIONS"]|tojson|safe }},
-              BASE_DATAURL = "{{ url_for('getdata', username=user.id) }}",
+              QUERY_URL_JSON = "{{ url_for('query_activities', username=user.id, out_type='json') }}",
+              QUERY_URL_SSE = "{{ url_for('query_activities', username=user.id, out_type='sse') }}",
+              POST_QUERY_URL = "{{ url_for('get_query_key') }}",
+              KEY_QUERY_URL = "{{ url_for('getdata_with_key', query_key='') }}",
               BASE_USER_URL = "{{ url_for('main', username=user.id) }}",
               GROUP_ACTIVITY_URL = "{{ url_for('related_activities', username=user.id, activity_id='') }}",
               USER_ID = "{{ user.id }}",
@@ -143,22 +146,24 @@
 									</span>
 									<hr>
 
-									<span style="display:block">
+									<span style="display:none">
+									<!-- <span style="display:block"> -->
 										<label for="heatres" style="display:block">Heat Layer:</label>
 										<select id="heatres" name="renderHeat" form="renderform">
-											<option value="">None</option>
+											<option value="" selected>None</option>
 											<option value="high">High resolution</option>
 											<option value="low">Low resolution</option>
 										</select>
 									</span>
 
 
-									<span style="display:block">
+									<span style="display:none">
+									<!-- <span style="display:block"> -->
 										<label for="flowres" style="display:block">Flow Layer:</label>
 										<select id="flowres" name="renderFlow" form="renderform">
 											<option value="">None</option>
-											<option value="high">High resolution</option>
-											<!-- <option value="low" disabled="">Low resolution</option> -->
+											<option value="high" selected>High resolution</option>
+											<option value="low" disabled="">Low resolution</option>
 										</select>
 									</span>
 
@@ -251,7 +256,7 @@
 								<div class="sidebar-pane" id="info-pane">
 									<h1 class="sidebar-header">Info<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
 									<br>
-									The URL for a heat/flow map and the current location dates or preset, and zoom are embedded in the url so you can share that url and anyone who clicks on it will get the same view.
+									Thehe current location dates or preset, and zoom are embedded in the url so you can share that url and anyone who clicks on it will get the same view.
 									<br>
 									<div>
 									Note: You can specify a custom map baselayer by setting "baselayer={map}" in the URL, where {map} is one of the provider names from
