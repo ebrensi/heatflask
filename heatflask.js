@@ -587,6 +587,7 @@ function renderLayers() {
             msg2 = " " + msg + " " + num  + " activities rendered";
         $(".data_message").html(msg2);
 
+        /*
         // initialize, update, or remove HeatLayer
         if (heatres){
             if (HeatLayer) {
@@ -604,7 +605,7 @@ function renderLayers() {
             layerControl.removeLayer(HeatLayer);
             HeatLayer = false;
         }
-
+        */
 
         // initialize, update, or remove DotLayer
         if (flowres){
@@ -931,8 +932,9 @@ $(document).ready(function() {
     $("#render-selection-button").click(openSelected);
 
 
-    $("#heatres").val(ONLOAD_PARAMS.heatres);
-    $("#flowres").val(ONLOAD_PARAMS.flowres)
+    // $("#heatres").val(ONLOAD_PARAMS.heatres);
+    // $("#flowres").val(ONLOAD_PARAMS.flowres)
+
     $("#autozoom").prop('checked', ONLOAD_PARAMS.autozoom);
 
     if (ONLOAD_PARAMS.activity_ids) {

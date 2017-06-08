@@ -146,7 +146,8 @@
 									</span>
 									<hr>
 
-									<span style="display:block">
+									<span style="display:none">
+									<!-- <span style="display:block"> -->
 										<label for="heatres" style="display:block">Heat Layer:</label>
 										<select id="heatres" name="renderHeat" form="renderform">
 											<option value="">None</option>
@@ -156,12 +157,13 @@
 									</span>
 
 
-									<span style="display:block">
+									<span style="display:none">
+									<!-- <span style="display:block"> -->
 										<label for="flowres" style="display:block">Flow Layer:</label>
 										<select id="flowres" name="renderFlow" form="renderform">
 											<option value="">None</option>
 											<option value="high">High resolution</option>
-											<!-- <option value="low" disabled="">Low resolution</option> -->
+											<option value="low" disabled="">Low resolution</option>
 										</select>
 									</span>
 
@@ -254,7 +256,7 @@
 								<div class="sidebar-pane" id="info-pane">
 									<h1 class="sidebar-header">Info<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
 									<br>
-									The URL for a heat/flow map and the current location dates or preset, and zoom are embedded in the url so you can share that url and anyone who clicks on it will get the same view.
+									Thehe current location dates or preset, and zoom are embedded in the url so you can share that url and anyone who clicks on it will get the same view.
 									<br>
 									<div>
 									Note: You can specify a custom map baselayer by setting "baselayer={map}" in the URL, where {map} is one of the provider names from
