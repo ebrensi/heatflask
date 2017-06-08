@@ -477,30 +477,6 @@ def related_activities(username, activity_id):
     return jsonify(activities)
 
 
-# creates a SSE stream of current.user's activities, using the Strava API
-# arguments
-@app.route('/<username>/activities_sse')
-@admin_or_self_required
-def activity_stream(username):
-    url = url_for("query_activities", username=username, out_type="sse")
-    param = "?limit=10000"
-    app.logger.info(url + param)
-    # return url + param
-    return redirect(url + param)
-    # user = Users.get(username)
-    # options = {"limit": 10000}
-    # options.update({k: request.args.get(k) for k in request.args})
-    # result = user.query_activities(**options)
-
-    # def boo(result):
-    #     for a in result:
-    #         if "id" in a:
-    #             yield "data: {}\n\n".format(json.dumps(a))
-    #     yield "data: done\n\n"
-
-    # return Response(boo(result), mimetype='text/event-stream')
-
-
 @app.route('/<username>/activities')
 @log_request_event
 @admin_or_self_required
