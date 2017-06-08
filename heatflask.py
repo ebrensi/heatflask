@@ -10,6 +10,8 @@ from flask import Flask, Response, render_template, request, redirect, \
 import flask_compress
 from datetime import datetime
 import sys
+import uuid
+import urllib
 import logging
 import os
 import re
@@ -46,6 +48,14 @@ from models import Users, Activities, EventLogger, Utility, Webhooks,\
 redis.delete("db-reset")
 
 Analytics(app)
+
+
+def parseInt(s):
+    try:
+        return int(s)
+    except ValueError:
+        return
+
 
 # we bundle javascript and css dependencies to reduce client-side overhead
 # app.config["CLOSURE_COMPRESSOR_OPTIMIZATION"] = "WHITESPACE_ONLY"
@@ -296,7 +306,7 @@ def auth_callback():
         if user:
             # remember=True, for persistent login.
             login_user(user, remember=True)
-            app.logger.debug("authenticated {}".format(user))
+            # app.logger.debug("authenticated {}".format(user))
             EventLogger.new_event(msg="authenticated {}".format(user.id))
         else:
             app.loogger.error("user authenication error")
@@ -307,51 +317,47 @@ def auth_callback():
 
 
 @app.route("/<username>/logout")
-@log_request_event
+@admin_or_self_required
 @login_required
 def logout(username):
     user = Users.get(username)
-    if user == current_user:
-        user_id = user.id
-        username = user.username
-        current_user.uncache()
-        logout_user()
-        flash("user '{}' ({}) logged out"
-              .format(username, user_id))
+    user_id = user.id
+    username = user.username
+    current_user.uncache()
+    logout_user()
+    flash("user '{}' ({}) logged out"
+          .format(username, user_id))
     return redirect(url_for("splash"))
 
 
 @app.route("/<username>/delete_index")
-@login_required
+@admin_or_self_required
 def delete_index(username):
-    if Users.get(username) == current_user:
-        if current_user.is_authenticated:
-            current_user.delete_index()
+    user = Users.get(username)
+    if user:
+        current_user.delete_index()
         return "index for {} deleted".format(username)
     else:
-        return "sorry you can't delete index for {}".format(username)
+        return "no user {}".format(username)
 
 
 @app.route("/<username>/delete")
-@login_required
+@admin_or_self_required
 def delete(username):
     user = Users.get(username)
-    if user == current_user:
-        username = user.username
-        user_id = user.id
-        logout_user()
+    username = user.username
+    user_id = user.id
+    logout_user()
 
-        # the current user is now logged out
-        try:
-            user.delete()
-        except Exception as e:
-            flash(str(e))
-        else:
-            flash("user '{}' ({}) deleted".format(username, user_id))
-            EventLogger.new_event(msg="{} deleted".format(user_id))
-        return redirect(url_for("splash"))
+    # the current user is now logged out
+    try:
+        user.delete()
+    except Exception as e:
+        flash(str(e))
     else:
-        return "sorry, you cannot do that"
+        flash("user '{}' ({}) deleted".format(username, user_id))
+        EventLogger.new_event(msg="{} deleted".format(user_id))
+    return redirect(url_for("splash"))
 
 
 @app.route('/<username>')
@@ -374,8 +380,8 @@ def main(username):
               .format(username))
         return redirect(url_for('splash'))
 
-    date1 = request.args.get("date1", "")
-    date2 = request.args.get("date2", "")
+    date1 = request.args.get("date1", "") or request.args.get("after", "")
+    date2 = request.args.get("date2", "") or request.args.get("before", "")
     preset = request.args.get("preset", "")
     limit = request.args.get("limit", "")
     baselayer = request.args.getlist("baselayer")
@@ -451,170 +457,6 @@ def main(username):
     )
 
 
-@app.route('/<username>/getdata')
-def getdata(username):
-    user = Users.get(username)
-
-    def sse_out(obj=None):
-        data = json.dumps(obj) if obj else "done"
-        return "data: {}\n\n".format(data)
-
-    def errout(msg):
-        # outputs a terminating SSE stream consisting of one error message
-        data = {"error": "{}".format(msg)}
-        return Response(map(sse_out, [data, None]),
-                        mimetype='text/event-stream')
-
-    def cast_int(s):
-        try:
-            return int(s)
-        except ValueError:
-            return
-
-    if not user:
-        return errout("'{}' is not registered with this app".format(username))
-
-    # Parse arguments for query parameters
-    options = {}
-    ids_raw = request.args.get("id")
-    if ids_raw:
-        non_digit = re.compile("\D")
-
-        ids = [s for s in [cast_int(s) for s in non_digit.split(ids_raw)]
-               if s]
-
-        # app.logger.debug("'{}' => {}".format(ids_raw, ids))
-        options["activity_ids"] = ids
-    else:
-        limit = request.args.get("limit")
-        if limit:
-            options["limit"] = int(limit)
-            if limit == 0:
-                limit == 1
-
-        options["after"] = request.args.get("date1")
-        options["before"] = request.args.get("date2")
-        options["limit"] = 10 if not (options["after"] or
-                                      options["before"] or
-                                      limit) else limit
-
-    hires = bool(request.args.get("hires"))
-
-    #  Log event
-    if current_user.is_anonymous or (not current_user.is_admin()):
-        event_data = {
-            "ip": request.access_route[-1],
-            "cuid": "" if current_user.is_anonymous else current_user.id,
-            "agent": vars(request.user_agent),
-            "msg": Utility.href(request.url, request.full_path)
-        }
-    else:
-        event_data = None
-
-    def sse_iterator(user, options, Q):
-        start_time = datetime.utcnow()
-        client = user.client()
-
-        err_count_key = "status:{}:{}".format(user.id, start_time)
-
-        def import_and_queue(client, Q, err_count_key, activity):
-            stream_data = Activities.import_streams(
-                client, activity["id"], STREAMS_TO_CACHE)
-
-            data = {s: stream_data[s] for s in STREAMS_OUT + ["error"]
-                    if s in stream_data}
-            if "error" in data:
-                redis.incr(err_count_key)
-
-            data.update(activity)
-            # app.logger.debug("imported streams for {}".format(activity["id"]))
-            Q.put(sse_out(data))
-            gevent.sleep(0)
-
-        pool = gevent.pool.Pool(app.config.get("CONCURRENCY"))
-        Q.put(sse_out({"msg": "Retrieving Index..."}))
-
-        activity_data = user.query_index(**options)
-
-        if isinstance(activity_data, list):
-            total = len(activity_data)
-            ftotal = float(total)
-        else:
-            total = "?"
-            ftotal = None
-
-        count = 0
-        imported = 0
-        elapsed = 0
-        try:
-            for activity in activity_data:
-                # app.logger.debug("activity {}".format(activity))
-                if (("msg" in activity) or
-                    ("error" in activity) or
-                        ("stop_rendering" in activity)):
-                    Q.put(sse_out(activity))
-
-                    if "stop_rendering" in activity:
-                        elapsed = datetime.utcnow() - start_time
-
-                if (activity.get("summary_polyline") and
-                        activity.get("total_distance", 0) > 1):
-                    count += 1
-                    activity.update(
-                        Activities.atype_properties(activity["type"])
-                    )
-
-                    data = {"msg": "activity {0}/{1}...".format(count, total)}
-                    if ftotal:
-                        data["value"] = round(count / ftotal, 3)
-
-                    Q.put(sse_out(data))
-
-                    if hires:
-                        stream_data = Activities.get(activity["id"])
-
-                        if not stream_data:
-                            pool.spawn(import_and_queue,
-                                       client, Q, err_count_key, activity)
-                            imported += 1
-                        else:
-                            data = {s: stream_data[s] for s in STREAMS_OUT
-                                    if s in stream_data}
-                            data.update(activity)
-                            # app.logger.debug("sending {}".format(data))
-                            Q.put(sse_out(data))
-                            gevent.sleep(0)
-                    else:
-                        Q.put(sse_out(activity))
-                        gevent.sleep(0)
-        except Exception as e:
-            Q.put(sse_out({"error": str(e)}))
-
-        pool.join(timeout=10)  # make sure all spawned jobs are done
-        Q.put(sse_out())
-
-        # We must put a StopIteration here to close the (http?) connection,
-        # otherise we'll get an idle connection error from Heroku
-        Q.put(StopIteration)
-
-        if not elapsed:
-            elapsed = datetime.utcnow() - start_time
-        if event_data:
-            event_data["msg"] += (": elapsed={} sec, count={}, imported {}"
-                                  .format(round(elapsed.total_seconds(), 3),
-                                          count,
-                                          imported))
-            err_count = redis.get(err_count_key)
-            if err_count:
-                event_data["msg"] += ", errors={}".format(err_count)
-                redis.delete(err_count_key)
-            EventLogger.new_event(**event_data)
-
-    Q = gevent.queue.Queue()
-    gevent.spawn(sse_iterator, user, options, Q)
-    return Response(Q, mimetype='text/event-stream')
-
-
 @app.route('/<username>/related_activities/<activity_id>')
 def related_activities(username, activity_id):
     user = Users.get(username)
@@ -633,37 +475,6 @@ def related_activities(username, activity_id):
         activities.append(A)
 
     return jsonify(activities)
-
-
-# creates a SSE stream of current.user's activities, using the Strava API
-# arguments
-
-@app.route('/<username>/activities_sse')
-@admin_or_self_required
-def activity_stream(username):
-    user = Users.get(username)
-    options = {"limit": 10000}
-    options.update({k: request.args.get(k) for k in request.args})
-    # app.logger.info("query_index called with {}".format(options))
-    result = user.query_index(**options)
-
-    def boo(result):
-        for a in result:
-            if "id" in a:
-                yield "data: {}\n\n".format(json.dumps(a))
-        yield "data: done\n\n"
-
-    return Response(boo(result), mimetype='text/event-stream')
-
-
-#  Output json object of activities query
-@app.route('/<username>/activities_json')
-def activities_json(username):
-    user = Users.get(username)
-    options = {"limit": 10}
-    options.update({k: request.args.get(k) for k in request.args})
-    result = user.query_index(**options)
-    return jsonify(result)
 
 
 @app.route('/<username>/activities')
@@ -695,23 +506,117 @@ def update_share_status(username):
     return jsonify(user=user.id, share=user.share_profile)
 
 
-# ---- for single-stream ajax call ----
-@app.route('/<username>/stream/<activity_id>')
-@log_request_event
-def stream_ajax(username, activity_id):
-    stream_data = Activities.get(activity_id)
-    if not stream_data:
-        user = Users.get(username)
-        if not user:
-            return
+def toVal(obj):
+    try:
+        return json.loads(obj)
+    except ValueError:
+        return obj
 
-        data = Activities.import_streams(
-            user.client(), activity_id, STREAMS_TO_CACHE
-        )
 
-        stream_data = {s: data[s] for s in STREAMS_OUT + ["error"]
-                       if s in data}
-    return jsonify(stream_data)
+@app.route('/<username>/query_activities/<out_type>')
+def query_activities(username, out_type):
+    user = Users.get(username)
+    if user:
+        options = {k: toVal(request.args.get(k))
+                   for k in request.args if toVal(request.args.get(k))}
+        if not options:
+            options = {"limit": 10}
+
+        anon = current_user.is_anonymous
+        EventLogger.log_request(request,
+                                cuid="" if anon else current_user.id,
+                                msg="{} query for {}: {}".format(out_type,
+                                                                 user.id,
+                                                                 options))
+    else:
+        return
+
+    if out_type == "json":
+        return jsonify(list(user.query_activities(**options)))
+
+    else:
+        def go(user, pool, out_queue):
+            options["pool"] = pool
+            options["out_queue"] = out_queue
+            user.query_activities(**options)
+            pool.join()
+            out_queue.put(None)
+            out_queue.put(StopIteration)
+
+        pool = gevent.pool.Pool(app.config.get("CONCURRENCY"))
+        out_queue = gevent.queue.Queue()
+        gevent.spawn(go, user, pool, out_queue)
+        gevent.sleep(0)
+        return Response((sse_out(a) if a else sse_out() for a in out_queue),
+                        mimetype='text/event-stream')
+
+
+# ---- handle ajax call for streams ----
+# query is in the form { userId1: {...query1...},
+#                        userId2: {...query2...} }
+# the response to this call is a key that is used as a parameter for getdata
+@app.route('/stream_query', methods=["POST"])
+# @log_request_event
+def get_query_key():
+    query = request.get_json(force=True)
+    key = str(uuid.uuid1())
+    redis.setex(key, json.dumps(query), 120)  # key is good for 30 secs
+    # app.logger.debug("set key '{}' to {}".format(key, query))
+    return jsonify(key)
+
+
+@app.route('/app/test/<int:num_users>')
+def qtest(num_users):
+    all_users = list(Users.query)
+    users = all_users[0:num_users]
+    query_obj = json.dumps({user.id: {"limit": 2} for user in users})
+    # app.logger.info(query_obj)
+    key = "test"
+    redis.setex(key, query_obj, 10 * 60)
+    return jsonify({
+        "key": key,
+        "query_obj": query_obj,
+        "url": url_for("getdata_with_key", query_key=key, _external=True)
+    })
+
+
+@app.route('/getdata/<query_key>')
+def getdata_with_key(query_key):
+    query_obj = redis.get(query_key)
+    # app.logger.debug("retrieved key {} as {}".format(query_key, query_obj))
+    # return jsonify(query_obj)
+
+    if not query_obj:
+        return errout("invalid query_key")
+
+    query_obj = json.loads(query_obj)
+
+    def go(query_obj, pool, out_queue):
+        with app.app_context():
+            for username, options in query_obj.items():
+                user = Users.get(username)
+                if not user:
+                    continue
+
+                # app.logger.debug("async job querying {}: {}".format(user, options))
+                options.update({
+                    "pool": pool,
+                    "out_queue": out_queue
+                })
+                user.query_activities(**options)
+                gevent.sleep(0)
+
+            pool.join()
+            out_queue.put(None)
+            out_queue.put(StopIteration)
+            # app.logger.debug("done")
+
+    pool = gevent.pool.Pool(app.config.get("CONCURRENCY"))
+    out_queue = gevent.queue.Queue()
+    gevent.spawn(go, query_obj, pool, out_queue)
+    gevent.sleep(0)
+    return Response((sse_out(a) if a else sse_out() for a in out_queue),
+                    mimetype='text/event-stream')
 
 
 # ---- Shared views ----
@@ -864,6 +769,19 @@ def webhook_callback():
         update_raw = request.get_json(force=True)
         Webhooks.handle_update_callback(update_raw)
         return "success"
+
+
+# SSE (Server-Side Events) stuff
+def sse_out(obj=None):
+    data = json.dumps(obj) if obj else "done"
+    return "data: {}\n\n".format(data)
+
+
+def errout(msg):
+    # outputs a terminating SSE stream consisting of one error message
+    data = {"error": "{}".format(msg)}
+    return Response(map(sse_out, [data, None]),
+                    mimetype='text/event-stream')
 
 
 # makes python ignore sigpipe and prevents broken pipe exception when client
