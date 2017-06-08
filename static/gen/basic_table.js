@@ -322,6 +322,20 @@ function httpGetAsync(theUrl, callback) {
 }
 
 
+function httpPostAsync(theUrl, payload, callback) {
+    let xmlHttp = new XMLHttpRequest();
+    xmlHttp.onreadystatechange = function() {
+        if (xmlHttp.readyState == 4 && xmlHttp.status == 200)
+            callback(xmlHttp.responseText);
+    }
+    xmlHttp.open("POST", theUrl, true); // true for asynchronous
+    xmlHttp.setRequestHeader("Content-type", "application/json");
+    dataToSend = JSON.stringify(payload);
+    xmlHttp.send(dataToSend);
+}
+
+
+
 
 // decode a (possibly RLE-encoded) array of successive differences into
 //  an array of the original values

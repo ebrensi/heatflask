@@ -148,20 +148,25 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         map.on( this.getEvents(), this );
 
         if ( this._items ) {
-
-            // Set dotColors for these items
-            let itemsList = Object.values( this._items ),
-                numItems = itemsList.length;
-
-            this._colorPalette = colorPalette(numItems);
-            // this._colorPalette = createPalette( numItems );
-            for ( let i = 0; i < numItems; i++ ) {
-                itemsList[ i ].dotColor = this._colorPalette[ i ];
-            }
-
-            this._onLayerDidMove();
+            this.reset();
         }
     },
+
+    //-------------------------------------------------------------
+    // Call this function when items are added or reomved
+    reset: function() {
+        // Set dotColors for these items
+        let itemsList = Object.values( this._items ),
+            numItems = itemsList.length;
+
+        this._colorPalette = colorPalette(numItems);
+        for ( let i = 0; i < numItems; i++ ) {
+            itemsList[ i ].dotColor = this._colorPalette[ i ];
+        }
+
+        this._onLayerDidMove();
+    },
+
 
     //-------------------------------------------------------------
     onRemove: function( map ) {

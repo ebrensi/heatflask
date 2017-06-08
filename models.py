@@ -24,6 +24,16 @@ from heatflask import app
 
 import os
 
+CONCURRENCY = app.config["CONCURRENCY"]
+STREAMS_OUT = ["polyline", "time"]
+STREAMS_TO_CACHE = ["polyline", "time"]
+CACHE_USERS_TIMEOUT = app.config["CACHE_USERS_TIMEOUT"]
+CACHE_ACTIVITIES_TIMEOUT = app.config["CACHE_ACTIVITIES_TIMEOUT"]
+INDEX_UPDATE_TIMEOUT = app.config["INDEX_UPDATE_TIMEOUT"]
+LOCAL = os.environ.get("APP_SETTINGS") == "config.DevelopmentConfig"
+OFFLINE = app.config.get("OFFLINE")
+
+
 # PostgreSQL access via SQLAlchemy
 db_sql = SQLAlchemy(app)  # , session_options={'expire_on_commit': False})
 Column = db_sql.Column
@@ -35,12 +45,6 @@ mongodb = mongo_client.get_default_database()
 
 # Redis data-store
 redis = Redis.from_url(app.config["REDIS_URL"])
-
-CACHE_USERS_TIMEOUT = app.config["CACHE_USERS_TIMEOUT"]
-CACHE_ACTIVITIES_TIMEOUT = app.config["CACHE_ACTIVITIES_TIMEOUT"]
-INDEX_UPDATE_TIMEOUT = app.config["INDEX_UPDATE_TIMEOUT"]
-LOCAL = os.environ.get("APP_SETTINGS") == "config.DevelopmentConfig"
-OFFLINE = app.config.get("OFFLINE")
 
 
 class Users(UserMixin, db_sql.Model):
@@ -71,6 +75,15 @@ class Users(UserMixin, db_sql.Model):
         "total_distance": "float32",
         "elapsed_time": "uint32",
         "average_speed": "float16"
+    }
+
+    index_df_out_dtypes = {
+        "type": str,
+        "total_distance": float,
+        "elapsed_time": int,
+        "average_speed": float,
+        "ts_local": str,
+        "ts_UTC": str
     }
 
     def db_state(self):
@@ -307,7 +320,7 @@ class Users(UserMixin, db_sql.Model):
         # rebuild table with user backup updated with current info from Strava
         count_before = len(users_list)
         count = 0
-        P = Pool(app.config["CONCURRENCY"])
+        P = Pool(CONCURRENCY)
         for user_dict in P.imap_unordered(update_user_data, users_list):
             if user_dict:
                 user = cls.add_or_update(cache_timeout=10, **user_dict)
@@ -365,11 +378,15 @@ class Users(UserMixin, db_sql.Model):
                 "dt_last_indexed": self.activity_index["dt_last_indexed"]
             }
 
-    def build_index(self, out_queue=None, limit=None, after=None, before=None):
+    def build_index(self, out_queue=None,
+                    limit=None, after=None, before=None,
+                    activity_ids=None):
+
         def enqueue(msg):
             if out_queue is None:
                 pass
             else:
+                # app.logger.debug(msg)
                 out_queue.put(msg)
 
         self.indexing(True)
@@ -387,36 +404,43 @@ class Users(UserMixin, db_sql.Model):
                     count += 1
 
                     if (rendering and
+                        (activity_ids and (d["id"] in activity_ids)) or
                         ((limit and (count <= limit)) or
                          (after and (d["ts_local"] >= after)) or
                             (before and (d["ts_local"] <= before)))):
                         d2 = dict(d)
                         d2["ts_local"] = str(d2["ts_local"])
                         enqueue(d2)
-                        # app.logger.info("put {} on queue".format(d2["id"]))
+
+                        if activity_ids:
+                            activity_ids.remove(d["id"])
+                            if not activity_ids:
+                                rendering = False
+                                enqueue({"stop_rendering": "1"})
+
                     if (rendering and
                         ((limit and count >= limit) or
                             (after and (d["ts_local"] < after)))):
                         rendering = False
                         enqueue({"stop_rendering": "1"})
 
-                    if not (count % 10):
-                        enqueue({"msg": "indexing...{} activities"
-                                 .format(count)})
-                        gevent.sleep(0)
+                    enqueue({"msg": "indexing...{} activities"
+                             .format(count)})
+                    gevent.sleep(0)
 
             gevent.sleep(0)
         except Exception as e:
             enqueue({"error": str(e)})
             app.logger.error(e)
         else:
+            # If we are streaming to a client, this is where we tell it
+            #  stop listening by pushing a StopIteration the queue
             if not activities_list:
                 enqueue({"error": "No activities!"})
                 enqueue(StopIteration)
                 self.indexing(False)
-                EventLogger.new_event(
-                    msg="no activities for {}".format(self.id)
-                )
+                EventLogger.new_event(msg="no activities for {}"
+                                      .format(self.id))
                 return
 
             index_df = (pd.DataFrame(activities_list)
@@ -578,8 +602,15 @@ class Users(UserMixin, db_sql.Model):
         if to_update:
             return index_df
 
-    def query_index(self, activity_ids=None, limit=None,
-                    after=None, before=None, ids_out=False):
+    def query_activities(self, activity_ids=None,
+                         limit=None,
+                         after=None, before=None,
+                         only_ids=False,
+                         summaries=True,
+                         streams=False,
+                         owner_id=False,
+                         pool=None,
+                         out_queue=None):
 
         if self.indexing():
             return [{
@@ -587,57 +618,147 @@ class Users(UserMixin, db_sql.Model):
                     + "...<br>Please try again in a few seconds.<br>"
                     }]
 
-        # Parse dates parameters and make sure the range is valid
-        if before or after:
-            try:
-                after = dateutil.parser.parse(after)
-                if before:
-                    before = dateutil.parser.parse(before)
-                    assert(before > after)
-            except AssertionError:
-                return [{"error": "Invalid Dates"}]
+        # app.logger.info("query_activities called with: {}".format({
+        #     "activity_ids": activity_ids,
+        #     "limit": limit,
+        #     "after": after,
+        #     "before": before,
+        #     "only_ids": only_ids,
+        #     "summaries": summaries,
+        #     "streams": streams,
+        #     "pool": pool,
+        #     "out_queue": out_queue
+        # }))
 
-        if limit:
-            try:
-                limit = int(limit)
-            except ValueError:
-                return [{"error": "Invalid limit value"}]
+        def import_streams(client, queue, activity):
+            # app.logger.debug("importing {}".format(activity["id"]))
 
-        activity_index = self.get_index()
-        if activity_index:
-            index_df = activity_index["index_df"]
-            elapsed = (datetime.utcnow() -
-                       activity_index["dt_last_indexed"]).total_seconds()
+            stream_data = Activities.import_streams(
+                client, activity["id"], STREAMS_TO_CACHE)
 
-            # update the index if we need to
-            if (not OFFLINE) and (elapsed > INDEX_UPDATE_TIMEOUT):
-                index_df = self.update_index(index_df)
+            data = {s: stream_data[s] for s in STREAMS_OUT + ["error"]
+                    if s in stream_data}
+            data.update(activity)
+            queue.put(data)
+            # app.logger.debug("importing {}...queued!".format(activity["id"]))
+            gevent.sleep(0)
 
-            if activity_ids:
-                df = index_df[index_df["id"].isin(activity_ids)]
-            else:
-                if limit:
-                    # only consider activities with a summary polyline
-                    df = index_df[
-                        index_df.summary_polyline.notnull()
-                    ].head(limit)
+        pool = pool or Pool(CONCURRENCY)
+        client = self.client()
+
+        #  If out_queue is not supplied then query_activities is blocking
+        put_stopIteration = False
+        if not out_queue:
+            out_queue = Queue()
+            put_stopIteration = True
+
+        index_df = None
+        if (summaries or limit or only_ids or after or before):
+            activity_index = self.get_index()
+            if activity_index:
+                index_df = activity_index["index_df"]
+
+                if (not activity_ids):
+                    ids_df = index_df[index_df.summary_polyline.notnull()].id
+
+                    if limit:
+                         # only consider activities with a summary polyline
+                        ids_df = ids_df.head(int(limit))
+
+                    elif before or after:
+                        #  get ids of activities in date-range
+                        try:
+                            after = dateutil.parser.parse(after)
+                            if before:
+                                before = dateutil.parser.parse(before)
+                                assert(before > after)
+                        except AssertionError:
+                            return [{"error": "Invalid Dates"}]
+
+                        if after:
+                            ids_df = ids_df[:after]
+                        if before:
+                            ids_df = ids_df[before:]
+
+                    activity_ids = ids_df.tolist()
+
+                index_df = (index_df.reset_index()
+                            .set_index("id")
+                            .astype(Users.index_df_out_dtypes))
+
+                if only_ids:
+                    out_queue.put(activity_ids)
+                    out_queue.put(StopIteration)
+                    return out_queue
+
+                def gen():
+                    for aid in activity_ids:
+                        A = {"id": int(aid)}
+                        if summaries:
+                            A.update(index_df.loc[int(aid)].to_dict())
+                        yield A
+
+            else:  # There is no activity index, so we have to build it
+                if only_ids:
+                    return ["build"]
+
                 else:
-                    df = index_df
-                    if after:
-                        df = df[:after]
-                    if before:
-                        df = df[before:]
-            df = df.reset_index()
+                    myQueue = Queue()
+                    gevent.spawn(self.build_index,
+                                 myQueue,
+                                 limit,
+                                 after,
+                                 before,
+                                 activity_ids)
 
-            if ids_out:
-                return df["id"].tolist()
+                    def gen():
+                        for item in myQueue:
+                            yield item
+
+        for A in gen():
+            if "stop_rendering" in A:
+                pool.join()
+
+            if "id" not in A:
+                out_queue.put(A)
+                continue
+
+            if summaries:
+                if ("bounds" not in A):
+                    A["bounds"] = Activities.bounds(A["summary_polyline"])
+
+                # TODO: do this on the client
+                A.update(Activities.atype_properties(A["type"]))
+
+            if owner_id:
+                A.update({"owner_id": self.id})
+
+            if not streams:
+                out_queue.put(A)
+
             else:
-                df.ts_local = df.ts_local.astype(str)
-                return df.to_dict("records")
+                stream_data = Activities.get(A["id"])
 
-        Q = Queue()
-        gevent.spawn(self.build_index, Q, limit, after, before)
-        return Q
+                if stream_data:
+                    A.update(stream_data)
+                    if ("bounds" not in A):
+                        A["bounds"] = Activities.bounds(A["polyline"])
+                    out_queue.put(A)
+
+                elif not OFFLINE:
+                    pool.spawn(import_streams,
+                               client, out_queue, A)
+                gevent.sleep(0)
+
+        # If we are using our own queue, we make sure to put a stopIteration
+        #  at the end of it so we have to wait for all import jobs to finish.
+        #  If the caller supplies a queue, can return immediately and let them
+        #   handle responsibility of adding the stopIteration.
+        if put_stopIteration:
+            pool.join()
+            out_queue.put(StopIteration)
+
+        return out_queue
 
 
 class Indexes(object):
@@ -667,6 +788,33 @@ class Indexes(object):
 #  Activities class is only a proxy to underlying data structures.
 #  There are no Activity objects
 class Activities(object):
+
+    @classmethod
+    def init(cls, clear_cache=False):
+        # Create/Initialize Activity database
+        try:
+            result1 = mongodb.activities.drop()
+        except Exception as e:
+            app.logger.debug(
+                "error deleting activities collection from MongoDB.\n{}"
+                .format(e))
+            result1 = e
+
+        if clear_cache:
+            to_delete = redis.keys(cls.cache_key("*"))
+            if to_delete:
+                result2 = redis.delete(*to_delete)
+            else:
+                result2 = None
+
+        mongodb.create_collection("activities")
+
+        timeout = app.config["STORE_ACTIVITIES_TIMEOUT"]
+        mongodb["activities"].create_index(
+            "ts",
+            expireAfterSeconds=timeout
+        )
+        app.logger.info("initialized Activity collection")
 
     # This is a list of tuples specifying properties of the rendered objects,
     #  such as path color, speed/pace in description.  others can be added
@@ -713,18 +861,16 @@ class Activities(object):
     def bounds(poly):
         if poly:
             latlngs = polyline.decode(poly)
-            # app.logger.info("latlngs: {}".format(latlngs))
 
             lats = [ll[0] for ll in latlngs]
             lngs = [ll[1] for ll in latlngs]
 
-            SW = (min(lats), min(lngs))
-            NE = (max(lats), max(lngs))
-
-            # app.logger.info("SW = {}, NE = {}".format(SW, NE))
-            return SW, NE
+            return {
+                "SW": (min(lats), min(lngs)),
+                "NE": (max(lats), max(lngs))
+            }
         else:
-            return []
+            return {}
 
     @staticmethod
     def stream_encode(vals):
@@ -765,8 +911,8 @@ class Activities(object):
             "total_distance": float(a.distance),
             "elapsed_time": int(a.elapsed_time.total_seconds()),
             "average_speed": float(a.average_speed),
+            # "bounds": cls.bounds(a)
         }
-
         return d
 
     @staticmethod
@@ -819,38 +965,10 @@ class Activities(object):
 
             if document:
                 packed = document["mpk"]
-                # del document["_id"]
-                # del document["ts"]
                 redis.setex(key, packed, timeout)
                 # app.logger.debug("got activity {} data from MongoDB".format(id))
         if packed:
             return msgpack.unpackb(packed)
-
-    @classmethod
-    def init(cls, clear_cache=False):
-        try:
-            result1 = mongodb.activities.drop()
-        except Exception as e:
-            app.logger.debug(
-                "error deleting activities collection from MongoDB.\n{}"
-                .format(e))
-            result1 = e
-
-        if clear_cache:
-            to_delete = redis.keys(cls.cache_key("*"))
-            if to_delete:
-                result2 = redis.delete(*to_delete)
-            else:
-                result2 = None
-
-        mongodb.create_collection("activities")
-
-        timeout = app.config["STORE_ACTIVITIES_TIMEOUT"]
-        mongodb["activities"].create_index(
-            "ts",
-            expireAfterSeconds=timeout
-        )
-        app.logger.info("initialized Activity collection")
 
     @classmethod
     def import_streams(cls, client, activity_id, stream_names):
