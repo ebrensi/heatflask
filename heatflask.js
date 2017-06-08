@@ -701,7 +701,7 @@ function readStream(streamURL, numActivities=null, callback=null) {
             return;
 
         } else if (A.msg) {
-            $(".data_message").html(msg);
+            $(".data_message").html(A.msg);
             return;
 
         } else if (A.stop_rendering){

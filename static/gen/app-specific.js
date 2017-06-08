@@ -57,7 +57,7 @@ function readStream(streamURL,numActivities=null,callback=null){const flowres=$(
 rendering=false;callback&&callback();}}
 function stopListening(){if(listening){listening=false;source.close();$('#renderButton').prop('disabled',false);}}
 source.onmessage=function(event){if(event.data=='done'){stopListening();doneRendering("Finished.");return;}
-let A=JSON.parse(event.data);if(A.error){let msg=`<font color='red'>${A.error}</font><br>`;$(".data_message").html(msg);console.log(`Error activity ${A.id}:${A.error}`);return;}else if(A.msg){$(".data_message").html(msg);return;}else if(A.stop_rendering){doneRendering("Done rendering.");return;}
+let A=JSON.parse(event.data);if(A.error){let msg=`<font color='red'>${A.error}</font><br>`;$(".data_message").html(msg);console.log(`Error activity ${A.id}:${A.error}`);return;}else if(A.msg){$(".data_message").html(A.msg);return;}else if(A.stop_rendering){doneRendering("Done rendering.");return;}
 let heatpoints=null,flowpoints=null,hasBounds=A.bounds,bounds=hasBounds?L.latLngBounds(A.bounds.SW,A.bounds.NE):L.latLngBounds();if(hires&&A.polyline){let latLngArray=L.PolylineUtil.decode(A.polyline);if(flowres=="high"&&A.time){let len=latLngArray.length,latLngTime=new Float32Array(3*len),timeArray=streamDecode(A.time);for(let i=0,ll;i<len;i++){ll=latLngArray[i];if(!hasBounds){bounds.extend(ll);}
 idx=i*3;latLngTime[idx]=ll[0];latLngTime[idx+1]=ll[1];latLngTime[idx+2]=timeArray[i];}
 A.latLngTime=latLngTime;}}
