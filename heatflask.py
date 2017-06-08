@@ -317,51 +317,47 @@ def auth_callback():
 
 
 @app.route("/<username>/logout")
-@log_request_event
+@admin_or_self_required
 @login_required
 def logout(username):
     user = Users.get(username)
-    if user == current_user:
-        user_id = user.id
-        username = user.username
-        current_user.uncache()
-        logout_user()
-        flash("user '{}' ({}) logged out"
-              .format(username, user_id))
+    user_id = user.id
+    username = user.username
+    current_user.uncache()
+    logout_user()
+    flash("user '{}' ({}) logged out"
+          .format(username, user_id))
     return redirect(url_for("splash"))
 
 
 @app.route("/<username>/delete_index")
-@login_required
+@admin_or_self_required
 def delete_index(username):
-    if Users.get(username) == current_user:
-        if current_user.is_authenticated:
-            current_user.delete_index()
+    user = Users.get(username)
+    if user:
+        current_user.delete_index()
         return "index for {} deleted".format(username)
     else:
-        return "sorry you can't delete index for {}".format(username)
+        return "no user {}".format(username)
 
 
 @app.route("/<username>/delete")
-@login_required
+@admin_or_self_required
 def delete(username):
     user = Users.get(username)
-    if user == current_user:
-        username = user.username
-        user_id = user.id
-        logout_user()
+    username = user.username
+    user_id = user.id
+    logout_user()
 
-        # the current user is now logged out
-        try:
-            user.delete()
-        except Exception as e:
-            flash(str(e))
-        else:
-            flash("user '{}' ({}) deleted".format(username, user_id))
-            EventLogger.new_event(msg="{} deleted".format(user_id))
-        return redirect(url_for("splash"))
+    # the current user is now logged out
+    try:
+        user.delete()
+    except Exception as e:
+        flash(str(e))
     else:
-        return "sorry, you cannot do that"
+        flash("user '{}' ({}) deleted".format(username, user_id))
+        EventLogger.new_event(msg="{} deleted".format(user_id))
+    return redirect(url_for("splash"))
 
 
 @app.route('/<username>')
@@ -486,18 +482,23 @@ def related_activities(username, activity_id):
 @app.route('/<username>/activities_sse')
 @admin_or_self_required
 def activity_stream(username):
-    user = Users.get(username)
-    options = {"limit": 10000}
-    options.update({k: request.args.get(k) for k in request.args})
-    result = user.query_activities(**options)
+    url = url_for("query_activities", username=username, out_type="sse")
+    param = "?limit=10000"
+    app.logger.info(url + param)
+    # return url + param
+    return redirect(url + param)
+    # user = Users.get(username)
+    # options = {"limit": 10000}
+    # options.update({k: request.args.get(k) for k in request.args})
+    # result = user.query_activities(**options)
 
-    def boo(result):
-        for a in result:
-            if "id" in a:
-                yield "data: {}\n\n".format(json.dumps(a))
-        yield "data: done\n\n"
+    # def boo(result):
+    #     for a in result:
+    #         if "id" in a:
+    #             yield "data: {}\n\n".format(json.dumps(a))
+    #     yield "data: done\n\n"
 
-    return Response(boo(result), mimetype='text/event-stream')
+    # return Response(boo(result), mimetype='text/event-stream')
 
 
 @app.route('/<username>/activities')
