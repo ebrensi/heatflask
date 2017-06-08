@@ -514,16 +514,17 @@ def toVal(obj):
 
 
 @app.route('/<username>/query_activities/<out_type>')
-@log_request_event
 def query_activities(username, out_type):
     user = Users.get(username)
     if user:
-        options = {k: toVal(request.args.get(k)) for k in request.args}
-        # EventLogger.log_request(request,
-        #                         cuid="bot",
-        #                         msg=request.user_agent.string)
+        options = {k: toVal(request.args.get(k))
+                   for k in request.args if toVal(request.args.get(k))}
         if not options:
             options = {"limit": 10}
+
+        EventLogger.log_request(request,
+                                cuid="" if current_user.is_anonymous else current_user.id,
+                                msg="query for {}: {}".format(user.id, options))
     else:
         return
 
