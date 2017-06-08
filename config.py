@@ -110,11 +110,11 @@ class StagingConfig(Config):
     DEVELOPMENT = True
     DEBUG = False
 
-    # webassets should not build bundles
+    # webassets can do whatever in staging
     ASSETS_DEBUG = True
-    ASSETS_AUTO_BUILD = False
-    ASSETS_CACHE = False
-    ASSETS_MANIFEST = False
+    ASSETS_AUTO_BUILD = True
+    # ASSETS_CACHE = False
+    # ASSETS_MANIFEST = False
 
 
 class DevelopmentConfig(Config):
@@ -132,3 +132,4 @@ class DevelopmentConfig(Config):
 
     # Flask-Assets settings
     # ASSETS_DEBUG = True
+    ASSETS_AUTO_BUILD = True
