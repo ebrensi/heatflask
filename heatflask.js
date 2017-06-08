@@ -520,18 +520,15 @@ function renderLayers() {
     httpGetAsync(url, function(data) {
         let queryResult = JSON.parse(data)[0];
 
-        debugger;
-
         if (queryResult == "build") {
             activityQuery["only_ids"] = false;
             activityQuery["summaries"] = true;
             activityQuery["streams"] = hires;
-            console.log(queryResult);
-            let streamURL = QUERY_URL_SSE + "?" + jQuery.param(activityQuery);
-            window.open(streamURL, target="_blank");
-            // readStream(streamURL, null, updateLayers);
-            return;
 
+            let streamURL = QUERY_URL_SSE + "?" + jQuery.param(activityQuery);
+            // window.open(streamURL, target="_blank");
+            readStream(streamURL, null, updateLayers);
+            return;
         }
 
         let resultSet = new Set(queryResult);
@@ -618,7 +615,8 @@ function renderLayers() {
         }
 
         // render the activities table
-        atable.rows.add(Object.values(appState.items)).draw(false);
+        atable.clear();
+        atable.rows.add(Object.values(appState.items)).draw();
     }
 
 
@@ -639,8 +637,6 @@ function readStream(streamURL, numActivities=null, callback=null) {
         listening = true,
         source = new EventSource(streamURL),
         count = 0;
-
-    atable.clear();
 
     $(".data_message").html("Rendering activities...");
 

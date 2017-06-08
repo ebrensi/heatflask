@@ -386,11 +386,19 @@ class Users(UserMixin, db_sql.Model):
             if out_queue is None:
                 pass
             else:
+                # app.logger.debug(msg)
                 out_queue.put(msg)
 
         self.indexing(True)
         start_time = datetime.utcnow()
         app.logger.debug("building activity index for {}".format(self.id))
+        app.logger.debug({
+            "out_queue": out_queue,
+            "limit": limit,
+            "after": after,
+            "before": before,
+            "activity_ids": activity_ids
+        })
 
         activities_list = []
         count = 0
@@ -417,7 +425,6 @@ class Users(UserMixin, db_sql.Model):
                                 rendering = False
                                 enqueue({"stop_rendering": "1"})
 
-                        # app.logger.info("put {} on queue".format(d2["id"]))
                     if (rendering and
                         ((limit and count >= limit) or
                             (after and (d["ts_local"] < after)))):
@@ -618,17 +625,17 @@ class Users(UserMixin, db_sql.Model):
                     + "...<br>Please try again in a few seconds.<br>"
                     }]
 
-        # app.logger.info("query_activities called with: {}".format({
-        #     "activity_ids": activity_ids,
-        #     "limit": limit,
-        #     "after": after,
-        #     "before": before,
-        #     "only_ids": only_ids,
-        #     "summaries": summaries,
-        #     "streams": streams,
-        #     "pool": pool,
-        #     "out_queue": out_queue
-        # }))
+        app.logger.info("query_activities called with: {}".format({
+            "activity_ids": activity_ids,
+            "limit": limit,
+            "after": after,
+            "before": before,
+            "only_ids": only_ids,
+            "summaries": summaries,
+            "streams": streams,
+            "pool": pool,
+            "out_queue": out_queue
+        }))
 
         def import_streams(client, queue, activity):
             # app.logger.debug("importing {}".format(activity["id"]))
@@ -656,72 +663,87 @@ class Users(UserMixin, db_sql.Model):
             activity_index = self.get_index()
             if activity_index:
                 index_df = activity_index["index_df"]
-            else:
-                # There is no activity index, so we have to build it
+
+                if (not activity_ids):
+                    ids_df = index_df[index_df.summary_polyline.notnull()].id
+
+                    if limit:
+                         # only consider activities with a summary polyline
+                        ids_df = ids_df.head(int(limit))
+
+                    elif before or after:
+                        #  get ids of activities in date-range
+                        try:
+                            after = dateutil.parser.parse(after)
+                            if before:
+                                before = dateutil.parser.parse(before)
+                                assert(before > after)
+                        except AssertionError:
+                            return [{"error": "Invalid Dates"}]
+
+                        if after:
+                            ids_df = ids_df[:after]
+                        if before:
+                            ids_df = ids_df[before:]
+
+                    activity_ids = ids_df.tolist()
+
+                index_df = (index_df.reset_index()
+                            .set_index("id")
+                            .astype(Users.index_df_out_dtypes))
+
+                if only_ids:
+                    out_queue.put(activity_ids)
+                    out_queue.put(StopIteration)
+                    return out_queue
+
+                def gen():
+                    for aid in activity_ids:
+                        A = {"id": int(aid)}
+                        if summaries:
+                            A.update(index_df.loc[int(aid)].to_dict())
+                        yield A
+
+            else:  # There is no activity index, so we have to build it
                 if only_ids:
                     return ["build"]
+
                 else:
-                    app.logger.info("building index for {}".format(self))
+                    myQueue = Queue()
                     gevent.spawn(self.build_index,
-                                 out_queue,
+                                 myQueue,
                                  limit,
                                  after,
                                  before,
                                  activity_ids)
-                    return out_queue
 
-            if (not activity_ids):
-                ids_df = index_df[index_df.summary_polyline.notnull()].id
+                    def gen():
+                        for item in myQueue:
+                            yield item
 
-                if limit:
-                     # only consider activities with a summary polyline
-                    ids_df = ids_df.head(int(limit))
+        for A in gen():
+            if "stop_rendering" in A:
+                pool.join()
 
-                elif before or after:
-                    #  get ids of activities in date-range
-                    try:
-                        after = dateutil.parser.parse(after)
-                        if before:
-                            before = dateutil.parser.parse(before)
-                            assert(before > after)
-                    except AssertionError:
-                        return [{"error": "Invalid Dates"}]
-
-                    if after:
-                        ids_df = ids_df[:after]
-                    if before:
-                        ids_df = ids_df[before:]
-
-                activity_ids = ids_df.tolist()
-
-            index_df = (index_df.reset_index()
-                        .set_index("id")
-                        .astype(Users.index_df_out_dtypes))
-
-        if only_ids:
-            out_queue.put(activity_ids)
-            out_queue.put(StopIteration)
-            return out_queue
-
-        for aid in activity_ids:
-            A = {"id": int(aid)}
-
-            if owner_id:
-                A.update({"owner_id": self.id})
+            if "id" not in A:
+                out_queue.put(A)
+                continue
 
             if summaries:
-                A.update(index_df.loc[int(aid)].to_dict())
                 if ("bounds" not in A):
                     A["bounds"] = Activities.bounds(A["summary_polyline"])
 
                 # TODO: do this on the client
                 A.update(Activities.atype_properties(A["type"]))
 
+            if owner_id:
+                A.update({"owner_id": self.id})
+
             if not streams:
                 out_queue.put(A)
 
             else:
-                stream_data = Activities.get(aid)
+                stream_data = Activities.get(A["id"])
 
                 if stream_data:
                     A.update(stream_data)
