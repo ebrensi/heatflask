@@ -780,6 +780,9 @@ function readStream(streamURL, numActivities=null, callback=null) {
         count++;
         if (numActivities) {
             progress_bars.val(count/numActivities);
+            $(".data_message").html(count+"/"+numActivities);
+        } else {
+             $(".data_message").html(count+"/?");
         }
 
 
