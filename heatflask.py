@@ -561,7 +561,7 @@ def query_activities(username, out_type):
 def get_query_key():
     query = request.get_json(force=True)
     key = str(uuid.uuid1())
-    redis.setex(key, json.dumps(query), 120)  # key is good for 30 secs
+    redis.setex(key, json.dumps(query), 10)  # key is good for 30 secs
     # app.logger.debug("set key '{}' to {}".format(key, query))
     return jsonify(key)
 
