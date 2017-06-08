@@ -933,7 +933,9 @@ $(document).ready(function() {
 
 
     // $("#heatres").val(ONLOAD_PARAMS.heatres);
-    // $("#flowres").val(ONLOAD_PARAMS.flowres)
+    // $("#flowres").val(ONLOAD_PARAMS.flowres);
+    $("#heatres").val("");
+    $("#flowres").val("high");
 
     $("#autozoom").prop('checked', ONLOAD_PARAMS.autozoom);
 
