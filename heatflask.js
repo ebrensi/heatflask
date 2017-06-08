@@ -518,49 +518,55 @@ function renderLayers() {
 
     let url = QUERY_URL_JSON + "?" + jQuery.param(activityQuery);
     httpGetAsync(url, function(data) {
-        if (data == "build") {
+        let queryResult = JSON.parse(data)[0];
+
+        debugger;
+
+        if (queryResult == "build") {
             activityQuery["only_ids"] = false;
             activityQuery["summaries"] = true;
             activityQuery["streams"] = hires;
+            console.log(queryResult);
             let streamURL = QUERY_URL_SSE + "?" + jQuery.param(activityQuery);
             window.open(streamURL, target="_blank");
             // readStream(streamURL, null, updateLayers);
+            return;
 
-        } else {
-            let queryResult = JSON.parse(data)[0],
-                resultSet = new Set(queryResult);
-
-            // delete all items that aren't in queryResult from appState.items
-            for (let item of inClient) {
-                if (!resultSet.has(item))
-                delete appState.items[item];
-            }
-
-            // filter activitys to get by ones we don't already have
-            activityIds = queryResult.filter((id) => !inClient.has(id));
-
-            // console.log(activityIds);
-            if (!activityIds.length){
-                updateLayers();
-                return;
-            }
-
-            let streamQuery = {};
-            streamQuery[USER_ID] = {
-                activity_ids: activityIds,
-                summaries: true,
-                streams: hires
-            };
-
-            httpPostAsync(POST_QUERY_URL, streamQuery, function(data) {
-                // console.log(data);
-                let key = JSON.parse(data),
-                    streamURL = `${KEY_QUERY_URL}${key}`;
-
-                // window.open(streamURL, target="_blank");
-                readStream(streamURL, activityIds.length, updateLayers);
-            });
         }
+
+        let resultSet = new Set(queryResult);
+
+        // delete all items that aren't in queryResult from appState.items
+        for (let item of inClient) {
+            if (!resultSet.has(item))
+            delete appState.items[item];
+        }
+
+        // filter activitys to get by ones we don't already have
+        activityIds = queryResult.filter((id) => !inClient.has(id));
+
+        // console.log(activityIds);
+        if (!activityIds.length){
+            updateLayers();
+            return;
+        }
+
+        let streamQuery = {};
+        streamQuery[USER_ID] = {
+            activity_ids: activityIds,
+            summaries: true,
+            streams: hires
+        };
+
+        httpPostAsync(POST_QUERY_URL, streamQuery, function(data) {
+            // console.log(data);
+            let key = JSON.parse(data),
+                streamURL = `${KEY_QUERY_URL}${key}`;
+
+            // window.open(streamURL, target="_blank");
+            readStream(streamURL, activityIds.length, updateLayers);
+        });
+
     });
 }
 

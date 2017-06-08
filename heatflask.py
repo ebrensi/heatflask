@@ -488,8 +488,7 @@ def activity_stream(username):
     user = Users.get(username)
     options = {"limit": 10000}
     options.update({k: request.args.get(k) for k in request.args})
-    # app.logger.info("query_index called with {}".format(options))
-    result = user.query_index(**options)
+    result = user.query_activities(**options)
 
     def boo(result):
         for a in result:
