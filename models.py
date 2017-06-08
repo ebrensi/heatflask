@@ -450,7 +450,6 @@ class Users(UserMixin, db_sql.Model):
                                       .format(self.id))
                 return
 
-            enqueue(StopIteration)
             index_df = (pd.DataFrame(activities_list)
                         .set_index("ts_local")
                         .sort_index(ascending=False)
@@ -499,6 +498,7 @@ class Users(UserMixin, db_sql.Model):
 
         finally:
             self.indexing(False)
+            enqueue(StopIteration)
 
         if activities_list:
             return index_df
