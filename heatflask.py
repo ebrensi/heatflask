@@ -460,21 +460,10 @@ def main(username):
 @app.route('/<username>/related_activities/<activity_id>')
 def related_activities(username, activity_id):
     user = Users.get(username)
-    client = user.client()
-    try:
-        racts = list(client.get_related_activities(int(activity_id)))
-    except Exception as e:
-        app.logger.info("Error getting related activities: {}".format(e))
-        return str(e)
 
-    activities = []
+    out_queue = user.related_activities(activity_id, streams=True)
 
-    for a in racts:
-        A = Activities.strava2dict(a)
-        A["user"] = a.athlete.id
-        activities.append(A)
-
-    return jsonify(activities)
+    return Response((json.dumps(a) for a in out_queue), mimetype='text/event-stream')
 
 
 @app.route('/<username>/activities')
