@@ -699,6 +699,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         frameCtx.drawImage(baseCanvas, 0, 0);
         this.drawLayer(frameTime);
         frameCtx.drawImage(this._dotCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
+        frameTime += delay;
 
         // add initial frame_0 to clip.  We set the disposal to 1 (no disposal),
         //   so after this frame is displayed, it remains there.
