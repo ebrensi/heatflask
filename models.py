@@ -801,7 +801,7 @@ class Users(UserMixin, db_sql.Model):
                     A = Activities.strava2dict(obj)
                     A["ts_local"] = str(A["ts_local"])
                     A["owner"] = owner
-                    A["avatarURL"] = user.profile
+                    A["profile"] = user.profile
                     A["bounds"] = Activities.bounds(A["summary_polyline"])
 
                     streams = Activities.get(obj.id)

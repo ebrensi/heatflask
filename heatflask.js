@@ -264,8 +264,8 @@ let tableColumns = [
 
     imgColumn = {
         title: "<i class='fa fa-user' aria-hidden='true'></i>",
-        data: null,
-        render: (A) => img( A.avatarURL, alt=A.id )
+        data: "profile",
+        render: formatUserId
     };
 
 if (ONLOAD_PARAMS.group) {
