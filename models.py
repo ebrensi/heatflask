@@ -7,6 +7,7 @@ import dateutil
 import stravalib
 import polyline
 import pymongo
+import itertools
 
 from redis import Redis
 import pandas as pd
@@ -762,10 +763,24 @@ class Users(UserMixin, db_sql.Model):
 
     #  outputs a stream of activites of other Heatflask users that are
     #   considered by Strava to be part of a group-activity
-    def related_activities(self, activity_id, streams=False):
+    def related_activities(self, activity_id, streams=False,
+                           pool=None, out_queue=None):
         client = self.client()
-        out_queue = Queue()
-        pool = Pool(CONCURRENCY)
+
+        put_stopIteration = True if out_queue else False
+
+        out_queue = out_queue or Queue()
+        pool = pool or Pool(CONCURRENCY)
+
+        trivial_list = []
+
+        # First we put this activity
+        try:
+            A = client.get_activity(int(activity_id))
+        except Exception as e:
+            app.logger.info("Error getting this activity: {}".format(e))
+        else:
+            trivial_list.append(A)
 
         try:
             related_activities = client.get_related_activities(int(activity_id))
@@ -774,7 +789,7 @@ class Users(UserMixin, db_sql.Model):
             app.logger.info("Error getting related activities: {}".format(e))
             return [{"error": str(e)}]
 
-        for obj in related_activities:
+        for obj in itertools.chain(related_activities, trivial_list):
             owner = obj.athlete.id
 
             if streams:
@@ -783,8 +798,9 @@ class Users(UserMixin, db_sql.Model):
                 if A:
                     #  The stream is already cached
                     A.update(Activities.strava2dict(obj))
+                    A["ts_local"] = str(A["ts_local"])
                     A["owner"] = owner
-                    A["bounds"] = Activities.bounds(A["polyline"])
+                    A["bounds"] = Activities.bounds(A["summary_polyline"])
                     out_queue.put(A)
                 else:
 
@@ -792,16 +808,22 @@ class Users(UserMixin, db_sql.Model):
                     if user:
                         # Stream isn't cached but the owner is a Heatflask user
                         A = Activities.strava2dict(obj)
+                        A["ts_local"] = str(A["ts_local"])
                         A["owner"] = owner
-                        A["bounds"] = Activities.bounds(A["polyline"])
+                        A["bounds"] = Activities.bounds(A["summary_polyline"])
                         pool.spawn(
                             Activities.import_and_queue_streams,
                             user.client(), out_queue, A)
             else:
                 # we don't care about activity streams
+                A = Activities.strava2dict(obj)
+                A["ts_local"] = str(A["ts_local"])
                 A["owner"] = owner
-                A["bounds"] = Activities.bounds(A["polyline"])
+                A["bounds"] = Activities.bounds(A["summary_polyline"])
                 out_queue.put(A)
+
+        if put_stopIteration:
+            out_queue.put(StopIteration)
 
         return out_queue
 
