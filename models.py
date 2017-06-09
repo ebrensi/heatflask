@@ -794,24 +794,21 @@ class Users(UserMixin, db_sql.Model):
             owner = obj.athlete.id
 
             if streams:
-                A = Activities.get(obj.id)
+                user = self.__class__.get(owner)
 
-                if A:
-                    #  The stream is already cached
-                    A.update(Activities.strava2dict(obj))
+                if user:
+                    # the owner is a Heatflask user
+                    A = Activities.strava2dict(obj)
                     A["ts_local"] = str(A["ts_local"])
                     A["owner"] = owner
+                    A["avatarURL"] = user.profile
                     A["bounds"] = Activities.bounds(A["summary_polyline"])
-                    out_queue.put(A)
-                else:
 
-                    user = self.__class__.get(owner)
-                    if user:
-                        # Stream isn't cached but the owner is a Heatflask user
-                        A = Activities.strava2dict(obj)
-                        A["ts_local"] = str(A["ts_local"])
-                        A["owner"] = owner
-                        A["bounds"] = Activities.bounds(A["summary_polyline"])
+                    streams = Activities.get(obj.id)
+                    if streams:
+                        A.update(streams)
+                        out_queue.put(A)
+                    else:
                         pool.spawn(
                             Activities.import_and_queue_streams,
                             user.client(), out_queue, A)
@@ -820,6 +817,7 @@ class Users(UserMixin, db_sql.Model):
                 A = Activities.strava2dict(obj)
 
                 A["ts_local"] = str(A["ts_local"])
+                A["avatarURL"] = ""
                 A["owner"] = owner
                 A["bounds"] = Activities.bounds(A["summary_polyline"])
                 out_queue.put(A)
