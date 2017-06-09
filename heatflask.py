@@ -462,6 +462,7 @@ def related_activities(username, activity_id):
     user = Users.get(username)
 
     out_queue = user.related_activities(activity_id, streams=True)
+    app.logger.info(out_queue)
 
     return Response((json.dumps(a) for a in out_queue), mimetype='text/event-stream')
 

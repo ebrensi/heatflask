@@ -767,7 +767,7 @@ class Users(UserMixin, db_sql.Model):
                            pool=None, out_queue=None):
         client = self.client()
 
-        put_stopIteration = True if out_queue else False
+        put_stopIteration = True if not out_queue else False
 
         out_queue = out_queue or Queue()
         pool = pool or Pool(CONCURRENCY)
@@ -783,7 +783,8 @@ class Users(UserMixin, db_sql.Model):
             trivial_list.append(A)
 
         try:
-            related_activities = client.get_related_activities(int(activity_id))
+            related_activities = list(
+                client.get_related_activities(int(activity_id)))
 
         except Exception as e:
             app.logger.info("Error getting related activities: {}".format(e))
@@ -817,6 +818,7 @@ class Users(UserMixin, db_sql.Model):
             else:
                 # we don't care about activity streams
                 A = Activities.strava2dict(obj)
+
                 A["ts_local"] = str(A["ts_local"])
                 A["owner"] = owner
                 A["bounds"] = Activities.bounds(A["summary_polyline"])
