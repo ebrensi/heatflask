@@ -483,7 +483,16 @@ function renderLayers() {
         DotLayer.pause();
     }
 
-    // Handle given activity_ids case first
+    // Handle group-activity case
+    if (ONLOAD_PARAMS.group) {
+        debugger;
+        // window.open(GROUP_ACTIVITY_SSE, target="_blank");
+        readStream(GROUP_ACTIVITY_SSE, null, updateLayers);
+        return;
+    }
+
+
+    // Handle given activity_ids case
     if (idString) {
         let streamQuery = {},
             activityIds = idString.split(/\D/).map(Number);
