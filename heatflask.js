@@ -238,6 +238,40 @@ if (FLASH_MESSAGES.length > 0) {
 
 
 // IInitialize Activity Table in sidebar
+let tableColumns = [
+    {
+        title: '<i class="fa fa-calendar" aria-hidden="true"></i>',
+        data: null,
+        render: (A) => href( stravaActivityURL(A.id), A.ts_local.slice(0,10) )
+    },
+    { title: "Type", data: "type"},
+    {
+        title: `<i class="fa fa-arrows-h" aria-hidden="true"></i> (${DIST_LABEL})`,
+        data: "total_distance",
+        render: (data) => +(data / DIST_UNIT).toFixed(2)},
+    {
+        title: '<i class="fa fa-clock-o" aria-hidden="true"></i>',
+        data: "elapsed_time",
+        render: hhmmss},
+
+    { title: "Name", data: "name"},
+
+    {
+        title: '<i class="fa fa-users" aria-hidden="true"></i>',
+        data: "group",
+        render:  formatGroup
+    }],
+
+    imgColumn = {
+        title: "<i class='fa fa-user' aria-hidden='true'></i>",
+        data: null,
+        render: (A) => img( A.avatarURL, alt=A.id )
+    };
+
+if (ONLOAD_PARAMS.group) {
+    tableColumns = [imgColumn].concat(tableColumns);
+}
+
 var atable = $('#activitiesList').DataTable({
                 paging: false,
                 scrollY: "60vh",
@@ -247,28 +281,7 @@ var atable = $('#activitiesList').DataTable({
                 select: isMobileDevice()? "multi" : "os",
                 data: Object.values(appState.items),
                 idSrc: "id",
-                columns: [{
-                    title: '<i class="fa fa-calendar" aria-hidden="true"></i>',
-                    data: null,
-                    render: (A) => href( stravaActivityURL(A.id), A.ts_local.slice(0,10) )
-                },
-                { title: "Type", data: "type"},
-                {
-                    title: `<i class="fa fa-arrows-h" aria-hidden="true"></i> (${DIST_LABEL})`,
-                    data: "total_distance",
-                    render: (data) => +(data / DIST_UNIT).toFixed(2)},
-                {
-                    title: '<i class="fa fa-clock-o" aria-hidden="true"></i>',
-                    data: "elapsed_time",
-                    render: hhmmss},
-
-                { title: "Name", data: "name"},
-
-                {
-                    title: '<i class="fa fa-users" aria-hidden="true"></i>',
-                    data: "group",
-                    render:  formatGroup}
-                ]
+                columns: tableColumns,
             }).on( 'select', handle_table_selections)
               .on( 'deselect', handle_table_selections);
 
