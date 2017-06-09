@@ -746,7 +746,7 @@ class Users(UserMixin, db_sql.Model):
                     out_queue.put(A)
 
                 elif not OFFLINE:
-                    pool.spawn(import_streams,
+                    pool.spawn(Activities.import_and_queue_streams,
                                client, out_queue, A)
                 gevent.sleep(0)
 
@@ -757,6 +757,51 @@ class Users(UserMixin, db_sql.Model):
         if put_stopIteration:
             pool.join()
             out_queue.put(StopIteration)
+
+        return out_queue
+
+    #  outputs a stream of activites of other Heatflask users that are
+    #   considered by Strava to be part of a group-activity
+    def related_activities(self, activity_id, streams=False):
+        client = self.client()
+        out_queue = Queue()
+        pool = Pool(CONCURRENCY)
+
+        try:
+            related_activities = client.get_related_activities(int(activity_id))
+
+        except Exception as e:
+            app.logger.info("Error getting related activities: {}".format(e))
+            return [{"error": str(e)}]
+
+        for obj in related_activities:
+            owner = obj.athlete.id
+
+            if streams:
+                A = Activities.get(obj.id)
+
+                if A:
+                    #  The stream is already cached
+                    A.update(Activities.strava2dict(obj))
+                    A["owner"] = owner
+                    A["bounds"] = Activities.bounds(A["polyline"])
+                    out_queue.put(A)
+                else:
+
+                    user = self.__class__.get(owner)
+                    if user:
+                        # Stream isn't cached but the owner is a Heatflask user
+                        A = Activities.strava2dict(obj)
+                        A["owner"] = owner
+                        A["bounds"] = Activities.bounds(A["polyline"])
+                        pool.spawn(
+                            Activities.import_and_queue_streams,
+                            user.client(), out_queue, A)
+            else:
+                # we don't care about activity streams
+                A["owner"] = owner
+                A["bounds"] = Activities.bounds(A["polyline"])
+                out_queue.put(A)
 
         return out_queue
 
@@ -1007,6 +1052,20 @@ class Activities(object):
         output = {s: activity_streams[s] for s in stream_names}
         cls.set(activity_id, output)
         return output
+
+    @classmethod
+    def import_and_queue_streams(cls, client, queue, activity):
+        # app.logger.debug("importing {}".format(activity["id"]))
+
+        stream_data = cls.import_streams(
+            client, activity["id"], STREAMS_TO_CACHE)
+
+        data = {s: stream_data[s] for s in STREAMS_OUT + ["error"]
+                if s in stream_data}
+        data.update(activity)
+        queue.put(data)
+        # app.logger.debug("importing {}...queued!".format(activity["id"]))
+        gevent.sleep(0)
 
     @staticmethod
     def path_color(activity_type):
