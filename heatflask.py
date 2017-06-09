@@ -386,6 +386,7 @@ def main(username):
     limit = request.args.get("limit", "")
     baselayer = request.args.getlist("baselayer")
     ids = request.args.get("id", "")
+    group = request.args.get("group", "")
 
     if not ids:
         if (not date1) and (not date2):
@@ -401,6 +402,8 @@ def main(username):
                 except ValueError:
                     flash("'{}' is not a valid limit".format(limit))
                     limit = 1
+            elif group:
+                pass
             else:
                 limit = 10
 
@@ -444,6 +447,7 @@ def main(username):
         lng=lng,
         zoom=zoom,
         ids=ids,
+        group=group,
         preset=preset,
         date1=date1,
         date2=date2,
@@ -457,14 +461,24 @@ def main(username):
     )
 
 
-@app.route('/<username>/related_activities/<activity_id>')
-def related_activities(username, activity_id):
+@app.route('/<username>/group_stream/<activity_id>')
+def group_stream(username, activity_id):
+
+    def go(user, pool, out_queue):
+        with app.app_context():
+            user.related_activities(activity_id, streams=True,
+                                    pool=pool, out_queue=out_queue)
+            pool.join()
+            out_queue.put(None)
+            out_queue.put(StopIteration)
+
     user = Users.get(username)
-
-    out_queue = user.related_activities(activity_id, streams=True)
-    app.logger.info(out_queue)
-
-    return Response((json.dumps(a) for a in out_queue), mimetype='text/event-stream')
+    pool = gevent.pool.Pool(app.config.get("CONCURRENCY"))
+    out_queue = gevent.queue.Queue()
+    gevent.spawn(go, user, pool, out_queue)
+    gevent.sleep(0)
+    return Response((sse_out(a) if a else sse_out() for a in out_queue),
+                    mimetype='text/event-stream')
 
 
 @app.route('/<username>/activities')
