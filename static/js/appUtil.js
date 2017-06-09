@@ -52,7 +52,7 @@ function formatIP( data, type, row, meta ) {
 function formatUserId ( data, type, row ) {
     if ( data ) {
         if ( type == "display" ) {
-            return href( "/" + data, img( row.profile, w = 40, h = 40, alt = data ) );
+            return href( "/" + data, img( row.profile, w = 40, h = 40, alt = "img" ) );
         } else {
             return data;
         }
