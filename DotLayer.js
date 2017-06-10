@@ -398,7 +398,8 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             dotOffset = dotSize / 2.0,
             two_pi = this.two_pi,
             xOffset = this._pxOffset.x,
-            yOffset = this._pxOffset.y;
+            yOffset = this._pxOffset.y,
+            g = this._gifPatch;
 
         var timeOffset = s % period,
             count = 0,
@@ -436,7 +437,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                     ly = p[1] + dy * dt + yOffset;
 
                 if ( ( lx >= 0 && lx <= xmax ) && ( ly >= 0 && ly <= ymax ) ) {
-                    if ( highlighted ) {
+                    if ( highlighted & !g) {
                         ctx.beginPath();
                         ctx.arc( ~~(lx+0.5), ~~(ly+0.5), dotSize, 0, two_pi );
                         ctx.fill();
@@ -696,8 +697,13 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
 
         frameCtx.drawImage(baseCanvas, 0, 0);
+        let temp = this.dotScale;
+        this.dotScale *= 3;  // make the patch bigger than the dot would be
+        this._gifPatch = true;  // let drawDots know we are patching
         this.drawLayer(frameTime);
         frameCtx.drawImage(this._dotCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
+        this._gifPatch = false;
+        this.dotScale = temp;
         frameTime += delay;
 
         // add initial frame_0 to clip.  We set the disposal to 1 (no disposal),
