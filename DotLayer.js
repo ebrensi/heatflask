@@ -215,7 +215,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         this._mapPanePos = this._map._getMapPanePos();
         this._pxOrigin = this._map.getPixelOrigin();
         this._pxBounds = this._map.getPixelBounds();
-        this._pxOffset = this._mapPanePos.subtract( this._pxOrigin )._add( new L.Point( 0.5, 0.5 ) );
+        this._pxOffset = this._mapPanePos.subtract( this._pxOrigin );
 
         var lineCtx = this._lineCtx,
             z = this._zoom,
@@ -308,7 +308,6 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                             [ p[0], p[1] ]
                         ),
                         t1 = p[2],
-                        // isGood = (in0 && in1 && (t1-t0 < tThresh) )? 1:0;
                         isGood = ((in0 || in1) && (t1-t0 < tThresh))? 1:0;
                     segGood[i-1] = isGood;
                     goodSegCount += isGood;
@@ -396,7 +395,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             ymax = this._size.y,
             ctx = this._dotCtx,
             dotSize = Math.max(1, ~~(this.dotScale * Math.log( this._zoom ) + 0.5)),
-            dotOffset = ~~( this._dotSize / 2 + 0.5 ),
+            dotOffset = dotSize / 2.0,
             two_pi = this.two_pi,
             xOffset = this._pxOffset.x,
             yOffset = this._pxOffset.y;
@@ -433,18 +432,18 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             dt = t - p[2];
 
             if ( dt > 0 ) {
-                let lx = ~~( p[0] + dx * dt + xOffset ),
-                    ly = ~~( p[1] + dy * dt + yOffset );
+                let lx = p[0] + dx * dt + xOffset,
+                    ly = p[1] + dy * dt + yOffset;
 
                 if ( ( lx >= 0 && lx <= xmax ) && ( ly >= 0 && ly <= ymax ) ) {
                     if ( highlighted ) {
                         ctx.beginPath();
-                        ctx.arc( lx, ly, dotSize, 0, two_pi );
+                        ctx.arc( ~~(lx+0.5), ~~(ly+0.5), dotSize, 0, two_pi );
                         ctx.fill();
                         ctx.closePath();
                         ctx.stroke();
                     } else {
-                        ctx.fillRect( lx - dotOffset, ly - dotOffset, dotSize, dotSize );
+                        ctx.fillRect( ~~(lx - dotOffset + 0.5), ~~(ly - dotOffset + 0.5), dotSize, dotSize );
                     }
                     count++;
                 }
