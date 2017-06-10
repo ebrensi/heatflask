@@ -696,15 +696,10 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
 
 
-        frameCtx.drawImage(baseCanvas, 0, 0);
-        let temp = this.dotScale;
-        this.dotScale *= 3;  // make the patch bigger than the dot would be
-        this._gifPatch = true;  // let drawDots know we are patching
+        frameCtx.drawImage(baseCanvas, 0, 0);  //draw background on frameCanvas
         this.drawLayer(frameTime);
-        frameCtx.drawImage(this._dotCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
-        this._gifPatch = false;
-        this.dotScale = temp;
-        frameTime += delay;
+        frameCtx.drawImage(this._dotCanvas, sx, sy, sw, sh, 0, 0, sw, sh); // draw dots on frameCanvas
+        // window.open(frameCanvas.toDataURL("image/png"), target='_blank', name="patch"); // patch
 
         // add initial frame_0 to clip.  We set the disposal to 1 (no disposal),
         //   so after this frame is displayed, it remains there.
@@ -716,16 +711,33 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             transparent: null
         });
 
-        // Now we set all of baseCanvas to transparent except for where the dots
-        //  were in frame_0
+        // Draw the dots with which we will make a patch.  The "dots" are all
+        //   squares and larger than the normal dots would be.
+        let temp = this.dotScale;
+        this.dotScale *= 3;  // make the patch bigger than the dot would be
+        this._gifPatch = true;  // let drawDots know we are patching
+        this.drawLayer(frameTime);
+        this._gifPatch = false;
+        this.dotScale = temp;
+
+
+        // Now we set all of baseCanvas to transparent except for where
+        //  the patch is.
         this._dotCtx.save()
         this._dotCtx.globalCompositeOperation = 'source-in';
         this._dotCtx.drawImage(baseCanvas, 0, 0, sw, sh, sx, sy, sw, sh);
+        frameCtx.drawImage(this._dotCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
         this._dotCtx.restore()
 
         baseCtx.clearRect( 0, 0, sw, sh );
         baseCtx.drawImage(this._dotCanvas,  sx, sy, sw, sh, 0, 0, sw, sh);
+        // window.open(baseCanvas.toDataURL("image/png"), target='_blank', name="patch"); // patch
 
+
+        // frameCtx.drawImage(baseCanvas, 0, 0);  //draw patch onto frame_0
+        // window.open(frameCanvas.toDataURL("image/png"), target='_blank', name="patched"); // patched
+
+        frameTime += delay;
         // Add frames to the encoder
         for (let i=1, num=Math.round(numFrames); i<num; i++, frameTime+=delay){
             msg = `Rendering frames...${~~(i/num * 100)}%`;

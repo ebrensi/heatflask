@@ -206,7 +206,7 @@ $(".dotconst-dial").knob({
 
 $(".dotscale-dial").knob({
         min: 0.01,
-        max: 4,
+        max: 10,
         step: 0.01,
         width: "100",
         height: "100",
