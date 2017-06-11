@@ -401,9 +401,9 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             yOffset = this._pxOffset.y,
             g = this._gifPatch;
 
-        if (g && !highlighted){
-            return;
-        }
+        // if (g && !highlighted){
+        //     return;
+        // }
 
         var timeOffset = s % period,
             count = 0,
