@@ -698,13 +698,10 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         }.bind( this ) );
 
 
-
-
-
         frameCtx.drawImage(baseCanvas, 0, 0);  //draw background on frameCanvas
         this.drawLayer(frameTime);
         frameCtx.drawImage(this._dotCanvas, sx, sy, sw, sh, 0, 0, sw, sh); // draw dots on frameCanvas
-        // window.open(frameCanvas.toDataURL("image/png"), target='_blank', name="patch"); // patch
+        // window.open(frameCanvas.toDataURL("image/png"), target='_blank', name="patch"); // frame_0
 
         // add initial frame_0 to clip.  We set the disposal to 1 (no disposal),
         //   so after this frame is displayed, it remains there.
@@ -734,19 +731,20 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             this._dotCtx.save()
             this._dotCtx.globalCompositeOperation = 'source-in';
             this._dotCtx.drawImage(baseCanvas, 0, 0, sw, sh, sx, sy, sw, sh);
-            // frameCtx.drawImage(this._dotCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
             this._dotCtx.restore()
 
             ctx.clearRect( 0, 0, sw, sh );
             ctx.drawImage(this._dotCanvas,  sx, sy, sw, sh, 0, 0, sw, sh);
-            return patchCanvas
+            return canvas
         }
 
-        patchCanvas = makePatch(patchCanvas, frameTime)
-        window.open(patchCanvas.toDataURL("image/png"), target='_blank', name="patch"); // patch
+        // debugger;
+
+        patchCanvas = makePatch.bind(this)(patchCanvas, frameTime);
+        // window.open(patchCanvas.toDataURL("image/png"), target='_blank', name="patch"); // patch
 
 
-        // frameCtx.drawImage(baseCanvas, 0, 0);  //draw patch onto frame_0
+        // frameCtx.drawImage(patchCanvas, 0, 0);  //draw patch onto frame_0
         // window.open(frameCanvas.toDataURL("image/png"), target='_blank', name="patched"); // patched
 
         frameTime += delay;
