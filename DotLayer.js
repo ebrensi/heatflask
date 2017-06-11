@@ -645,10 +645,15 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
         let baseCtx = baseCanvas.getContext('2d'),
             frameCanvas = document.createElement('canvas'),
-            frameCtx = frameCanvas.getContext('2d');
+            frameCtx = frameCanvas.getContext('2d'),
+            patchCanvas = document.createElement('canvas'),
+            patchCtx = patchCanvas.getContext('2d');
 
         frameCanvas.width = sw;
         frameCanvas.height = sh;
+
+        patchCanvas.width = sw;
+        patchCanvas.height = sh;
 
         // set up GIF encoder
         let pd = this._progressDisplay,
@@ -711,27 +716,34 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             transparent: null
         });
 
-        // Draw the dots with which we will make a patch.  The "dots" are all
-        //   squares and larger than the normal dots would be.
-        let temp = this.dotScale;
-        this.dotScale *= 3;  // make the patch bigger than the dot would be
-        this._gifPatch = true;  // let drawDots know we are patching
-        this.drawLayer(frameTime);
-        this._gifPatch = false;
-        this.dotScale = temp;
+        function makePatch(canvas, frameTime) {
+            // Draw the dots with which we will make a patch.  The "dots" are all
+            //   squares and larger than the normal dots would be.
+            let temp = this.dotScale,
+                ctx = canvas.getContext('2d');
+
+            this.dotScale *= 2;  // make the patch bigger than the dot would be
+            this._gifPatch = true;  // let drawDots know we are patching
+            this.drawLayer(frameTime);
+            this._gifPatch = false;
+            this.dotScale = temp;
 
 
-        // Now we set all of baseCanvas to transparent except for where
-        //  the patch is.
-        this._dotCtx.save()
-        this._dotCtx.globalCompositeOperation = 'source-in';
-        this._dotCtx.drawImage(baseCanvas, 0, 0, sw, sh, sx, sy, sw, sh);
-        frameCtx.drawImage(this._dotCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
-        this._dotCtx.restore()
+            // Now we set all of baseCanvas to transparent except for where
+            //  the patch is.
+            this._dotCtx.save()
+            this._dotCtx.globalCompositeOperation = 'source-in';
+            this._dotCtx.drawImage(baseCanvas, 0, 0, sw, sh, sx, sy, sw, sh);
+            // frameCtx.drawImage(this._dotCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
+            this._dotCtx.restore()
 
-        baseCtx.clearRect( 0, 0, sw, sh );
-        baseCtx.drawImage(this._dotCanvas,  sx, sy, sw, sh, 0, 0, sw, sh);
-        // window.open(baseCanvas.toDataURL("image/png"), target='_blank', name="patch"); // patch
+            ctx.clearRect( 0, 0, sw, sh );
+            ctx.drawImage(this._dotCanvas,  sx, sy, sw, sh, 0, 0, sw, sh);
+            return patchCanvas
+        }
+
+        patchCanvas = makePatch(patchCanvas, frameTime)
+        window.open(patchCanvas.toDataURL("image/png"), target='_blank', name="patch"); // patch
 
 
         // frameCtx.drawImage(baseCanvas, 0, 0);  //draw patch onto frame_0
@@ -745,7 +757,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             pd.textContent = msg;
 
             frameCtx.clearRect( 0, 0, sw, sh);
-            frameCtx.drawImage(baseCanvas, 0, 0);
+            frameCtx.drawImage(patchCanvas, 0, 0);
 
             this.drawLayer(frameTime);
             frameCtx.drawImage(this._dotCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
