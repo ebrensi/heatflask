@@ -401,6 +401,10 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             yOffset = this._pxOffset.y,
             g = this._gifPatch;
 
+        if (g && !highlighted){
+            return;
+        }
+
         var timeOffset = s % period,
             count = 0,
             idx = dP[0],
@@ -664,7 +668,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
             encoder = new GIF({
                 workers: 8,
-                quality: 8,
+                quality: 5,
                 transparent: 'rgba(0,0,0,0)',
                 workerScript: GIFJS_WORKER_URL
             });
@@ -719,7 +723,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             let temp = this.dotScale,
                 ctx = canvas.getContext('2d');
 
-            this.dotScale *= 2;  // make the patch bigger than the dot would be
+            this.dotScale *= 2.2;  // make the patch bigger than the dot would be
             this._gifPatch = true;  // let drawDots know we are patching
             this.drawLayer(frameTime);
             this._gifPatch = false;
@@ -740,26 +744,33 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
         // debugger;
 
-        patchCanvas = makePatch.bind(this)(patchCanvas, frameTime);
-        // window.open(patchCanvas.toDataURL("image/png"), target='_blank', name="patch"); // patch
+        patch_0 = makePatch.bind(this)(patchCanvas, frameTime);
+        // window.open(patchCanvas.toDataURL("image/png"), target='_blank', name="patch_0"); // patch_0
 
 
         // frameCtx.drawImage(patchCanvas, 0, 0);  //draw patch onto frame_0
-        // window.open(frameCanvas.toDataURL("image/png"), target='_blank', name="patched"); // patched
+        // window.open(frameCanvas.toDataURL("image/png"), target='_blank', name="patched"); // frame_0 patched
 
         frameTime += delay;
+
         // Add frames to the encoder
         for (let i=1, num=Math.round(numFrames); i<num; i++, frameTime+=delay){
             msg = `Rendering frames...${~~(i/num * 100)}%`;
             // console.log(msg);
             pd.textContent = msg;
 
+            // debugger;
+
             frameCtx.clearRect( 0, 0, sw, sh);
-            frameCtx.drawImage(patchCanvas, 0, 0);
+            makePatch.bind(this)(frameCanvas, frameTime);  // make patch of this set of dots
+            frameCtx.drawImage(patch_0, 0, 0);  // apply patch_0
 
             this.drawLayer(frameTime);
+
+            // draw dots over that
             frameCtx.drawImage(this._dotCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
 
+            // window.open(frameCanvas.toDataURL("image/png"), target='_blank', name=`frame_${i}`); // frame_i
             encoder.addFrame(frameCanvas, {
                 copy: true,
                 delay: delay,
