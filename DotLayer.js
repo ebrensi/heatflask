@@ -731,8 +731,8 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             this.dotScale = temp;
 
 
-            // Now we set all of baseCanvas to transparent except for where
-            //  the patch is.
+            // Now draw the background image on to dotCanvas, using dotCanvas
+            //  as a mask
             this._dotCtx.save()
             this._dotCtx.globalCompositeOperation = 'source-in';
             this._dotCtx.drawImage(baseCanvas, 0, 0, sw, sh, sx, sy, sw, sh);
@@ -740,7 +740,8 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             ctx.clearRect( 0, 0, sw, sh );
             ctx.drawImage(this._dotCanvas,  sx, sy, sw, sh, 0, 0, sw, sh);
 
-            // get rid of any semi-transparent pixels
+            // get rid of any semi-transparent pixels.  This is the trick that
+            //  eliminates edge artifacts
             let imgData=ctx.getImageData(0, 0, sw, sh),
                 d = imgData.data,
                 len = d.length;
@@ -753,22 +754,6 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                 }
             }
             ctx.putImageData(imgData,0,0);
-
-
-            // let patch = this._dotCtx.getImageData(sx, sy, sw, sh),
-            //     patchData = patch.data,
-            //     bgData = baseCtx.getImageData(0, 0, sw, sh).data,
-            //     len = bgData.length;
-
-            // // without compositing
-            // for (let i=0; i < len; i++) {
-            //     if (patchData[i]) {
-            //         patchData[i] = bgData[i];
-            //     }
-            // }
-            // ctx.putImageData(patch,0,0);
-            // // debugger;
-
             return canvas
         }
 
