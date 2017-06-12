@@ -669,7 +669,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
             encoder = new GIF({
                 workers: 8,
-                quality: 5,
+                quality: 8,
                 transparent: 'rgba(0,0,0,0)',
                 workerScript: GIFJS_WORKER_URL
             });
@@ -733,13 +733,28 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
             // Now we set all of baseCanvas to transparent except for where
             //  the patch is.
-            this._dotCtx.save()
-            this._dotCtx.globalCompositeOperation = 'source-in';
-            this._dotCtx.drawImage(baseCanvas, 0, 0, sw, sh, sx, sy, sw, sh);
-            this._dotCtx.restore()
+            // this._dotCtx.save()
+            // this._dotCtx.globalCompositeOperation = 'source-in';
+            // this._dotCtx.drawImage(baseCanvas, 0, 0, sw, sh, sx, sy, sw, sh);
+            // this._dotCtx.restore()
 
-            ctx.clearRect( 0, 0, sw, sh );
-            ctx.drawImage(this._dotCanvas,  sx, sy, sw, sh, 0, 0, sw, sh);
+            let patch = this._dotCtx.getImageData(sx, sy, sw, sh),
+                patchData = patch.data,
+                bgData = baseCtx.getImageData(0, 0, sw, sh).data,
+                len = bgData.length;
+
+            // without compositing
+            for (let i=0; i < len; i++) {
+                if (patchData[i]) {
+                    patchData[i] = bgData[i];
+                }
+            }
+            ctx.putImageData(patch,0,0);
+            // debugger;
+
+
+            // ctx.clearRect( 0, 0, sw, sh );
+            // ctx.drawImage(this._dotCanvas,  sx, sy, sw, sh, 0, 0, sw, sh);
             return canvas
         }
 
@@ -759,8 +774,6 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             msg = `Rendering frames...${~~(i/num * 100)}%`;
             // console.log(msg);
             pd.textContent = msg;
-
-            // debugger;
 
             frameCtx.clearRect( 0, 0, sw, sh);
             makePatch.bind(this)(frameCanvas, frameTime);  // make patch of this set of dots
@@ -783,21 +796,6 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         // encode the Frame array
         encoder.render();
     },
-
-    /*
-    Disposal Method - Indicates the way in which the graphic is to
-            be treated after being displayed.
-            Values :    0 -   No disposal specified. The decoder is
-                              not required to take any action.
-                        1 -   Do not dispose. The graphic is to be left
-                              in place.
-                        2 -   Restore to background color. The area used by the
-                              graphic must be restored to the background color.
-                        3 -   Restore to previous. The decoder is required to
-                              restore the area overwritten by the graphic with
-                              what was there prior to rendering the graphic.
-                      4-7 -   To be defined.
-    */
 
     abortCapture: function() {
         // console.log("capture aborted");
