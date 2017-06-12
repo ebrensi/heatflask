@@ -394,7 +394,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             xmax = this._size.x,
             ymax = this._size.y,
             ctx = this._dotCtx,
-            dotSize = Math.max(1, ~~(this.dotScale * Math.log( this._zoom ) + 0.5)),
+            dotSize = this._dotSize,
             dotOffset = dotSize / 2.0,
             two_pi = this.two_pi,
             xOffset = this._pxOffset.x,
@@ -478,6 +478,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
         this._timeScale = this.C2 * zf;
         this._period = this.C1 * zf;
+        this._dotSize = Math.max(1, ~~(this.dotScale * Math.log( this._zoom ) + 0.5));
 
 
 
