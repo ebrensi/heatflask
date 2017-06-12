@@ -733,28 +733,42 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
             // Now we set all of baseCanvas to transparent except for where
             //  the patch is.
-            // this._dotCtx.save()
-            // this._dotCtx.globalCompositeOperation = 'source-in';
-            // this._dotCtx.drawImage(baseCanvas, 0, 0, sw, sh, sx, sy, sw, sh);
-            // this._dotCtx.restore()
+            this._dotCtx.save()
+            this._dotCtx.globalCompositeOperation = 'source-in';
+            this._dotCtx.drawImage(baseCanvas, 0, 0, sw, sh, sx, sy, sw, sh);
+            this._dotCtx.restore()
+            ctx.clearRect( 0, 0, sw, sh );
+            ctx.drawImage(this._dotCanvas,  sx, sy, sw, sh, 0, 0, sw, sh);
 
-            let patch = this._dotCtx.getImageData(sx, sy, sw, sh),
-                patchData = patch.data,
-                bgData = baseCtx.getImageData(0, 0, sw, sh).data,
-                len = bgData.length;
-
-            // without compositing
-            for (let i=0; i < len; i++) {
-                if (patchData[i]) {
-                    patchData[i] = bgData[i];
+            // get rid of any semi-transparent pixels
+            let imgData=ctx.getImageData(0, 0, sw, sh),
+                d = imgData.data,
+                len = d.length;
+            for (let i=0; i<len; i+=4){
+                if (d[i+3] < 200) {
+                    d[i] = 0;
+                    d[i+1] = 0;
+                    d[i+2] = 0;
+                    d[i+3] = 0;
                 }
             }
-            ctx.putImageData(patch,0,0);
-            // debugger;
+            ctx.putImageData(imgData,0,0);
 
 
-            // ctx.clearRect( 0, 0, sw, sh );
-            // ctx.drawImage(this._dotCanvas,  sx, sy, sw, sh, 0, 0, sw, sh);
+            // let patch = this._dotCtx.getImageData(sx, sy, sw, sh),
+            //     patchData = patch.data,
+            //     bgData = baseCtx.getImageData(0, 0, sw, sh).data,
+            //     len = bgData.length;
+
+            // // without compositing
+            // for (let i=0; i < len; i++) {
+            //     if (patchData[i]) {
+            //         patchData[i] = bgData[i];
+            //     }
+            // }
+            // ctx.putImageData(patch,0,0);
+            // // debugger;
+
             return canvas
         }
 
