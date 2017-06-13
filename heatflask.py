@@ -249,9 +249,7 @@ def demo():
     # Last 60 activities
     return redirect(url_for("main",
                             username="15972102",
-                            limit="60",
-                            info=1,
-                            autozoom=1
+                            limit="60"
                             )
                     )
 
@@ -408,9 +406,6 @@ def main(username):
     lng = request.args.get("lng")
     zoom = request.args.get("zoom")
     autozoom = request.args.get("autozoom") in ["1", "true"]
-    info = request.args.get("info") in ["1", "true"]
-    if not info:
-        info = 1
 
     if (not lat) or (not lng):
         lat, lng = app.config["MAP_CENTER"]
@@ -438,7 +433,6 @@ def main(username):
         date2=date2,
         limit=limit,
         autozoom=autozoom,
-        info=info,
         paused=paused,
         baselayer=baselayer,
         c1=c1,
