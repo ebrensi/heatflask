@@ -246,14 +246,10 @@ def splash():
 
 @app.route('/demo')
 def demo():
-    # https://heatflask.herokuapp.com/15972102?limit=100&info=1&lat=37.8022&lng=-122.2493&zoom=12&heatres=high&flowres=high
-
-    # Last 10 activities
+    # Last 60 activities
     return redirect(url_for("main",
                             username="15972102",
                             limit="60",
-                            # heatres="high",
-                            flowres="high",
                             info=1,
                             autozoom=1
                             )
@@ -404,16 +400,9 @@ def main(username):
             else:
                 limit = 10
 
-    flowres = request.args.get("flowres", "")
-    heatres = request.args.get("heatres", "")
-
-    # ******  Temporarily force hires for flow *****
-    if flowres:
-        flowres = "high"
-
-    if (not flowres) and (not heatres):
-        flowres = "high"
-        # heatres = "high"
+    c1 = request.args.get("c1", "")
+    c2 = request.args.get("c2", "")
+    sz = request.args.get("sz", "")
 
     lat = request.args.get("lat")
     lng = request.args.get("lng")
@@ -448,12 +437,13 @@ def main(username):
         date1=date1,
         date2=date2,
         limit=limit,
-        heatres=heatres,
-        flowres=flowres,
         autozoom=autozoom,
         info=info,
         paused=paused,
-        baselayer=baselayer
+        baselayer=baselayer,
+        c1=c1,
+        c2=c2,
+        sz=sz
     )
 
 
