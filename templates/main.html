@@ -33,8 +33,9 @@
               ADMIN = {{ (current_user.is_authenticated and current_user.is_admin())|tojson|safe }},
               FLASH_MESSAGES = {{ get_flashed_messages()|tojson|safe }},
               ONLOAD_PARAMS = {
-                    flowres: "{{ flowres }}",
-                    heatres: "{{ heatres }}",
+                    C1: {{ c1|tojson }},
+                    C2: {{ c2|tojson }},
+                    SZ: {{ sz|tojson }},
                     autozoom: {{ autozoom|tojson }},
                     activity_ids: "{{ ids }}",
                     limit: {{ limit|tojson }},
@@ -146,28 +147,6 @@
 									</span>
 									<hr>
 
-									<span style="display:none">
-									<!-- <span style="display:block"> -->
-										<label for="heatres" style="display:block">Heat Layer:</label>
-										<select id="heatres" name="renderHeat" form="renderform">
-											<option value="" selected>None</option>
-											<option value="high">High resolution</option>
-											<option value="low">Low resolution</option>
-										</select>
-									</span>
-
-
-									<span style="display:none">
-									<!-- <span style="display:block"> -->
-										<label for="flowres" style="display:block">Flow Layer:</label>
-										<select id="flowres" name="renderFlow" form="renderform">
-											<option value="">None</option>
-											<option value="high" selected>High resolution</option>
-											<option value="low" disabled="">Low resolution</option>
-										</select>
-									</span>
-
-
 									<div class="checkbox">
 										<label><input type="checkbox" id="autozoom" value="1">Auto-Zoom when finished</label>
 									</div>
@@ -256,7 +235,7 @@
 								<div class="sidebar-pane" id="info-pane">
 									<h1 class="sidebar-header">Info<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
 									<br>
-									The current location, dates or preset, and zoom are embedded in the url so you can share that url and anyone who clicks on it will get the same view.
+									The map state (center, zoom), and vizualization constants are embedded in the url so you can share that url and anyone who clicks on it will get the same view.
 									<br>
 									<div>
 									Note: You can specify a custom map baselayer by setting "baselayer={map}" in the URL, where {map} is one of the provider names from
