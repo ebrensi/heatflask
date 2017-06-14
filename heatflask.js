@@ -2,19 +2,15 @@ const SPEED_SCALE = 5.0,
       SEP_SCALE = {m: 0.14, b: 15.0};
 
 // Set up Map and base layers
-var map_providers = ONLOAD_PARAMS.map_providers,
+let map_providers = ONLOAD_PARAMS.map_providers,
     baseLayers = {"None": L.tileLayer("")},
     default_baseLayer = baseLayers["None"],
-    HeatLayer = false,
-    FlowLayer = false,
     DotLayer = false,
     appState = {
-        baseLayers: map_providers,
         paused: ONLOAD_PARAMS.start_paused,
         items: {},
-        latlngs_flat: []
+        currentBaseLayer: null
     };
-
 
 if (!OFFLINE) {
     var online_baseLayers = {
@@ -32,15 +28,21 @@ if (!OFFLINE) {
     Object.assign(baseLayers, online_baseLayers);
     if (map_providers.length) {
         for (var i = 0; i < map_providers.length; i++) {
-            provider = map_providers[i];
-            var tl = L.tileLayer.provider(provider);
-            baseLayers[provider] = tl;
-            if (i==0) default_baseLayer = tl;
+            let provider = map_providers[i];
+            if (!baseLayers[provider]) {
+                baseLayers[provider] = L.tileLayer.provider(provider);
+            }
+            if (i==0) default_baseLayer = baseLayers[provider];
         }
     } else {
         default_baseLayer = baseLayers["CartoDB.DarkMatter"];
     }
 }
+
+for (name in baseLayers) {
+    baseLayers[name].name = name;
+}
+
 
 var map = L.map('map', {
         center: ONLOAD_PARAMS.map_center,
@@ -49,6 +51,12 @@ var map = L.map('map', {
         preferCanvas: true,
         zoomAnimation: false
     });
+
+appState.currentBaseLayer = default_baseLayer;
+map.on('baselayerchange', function (e) {
+    appState.currentBaseLayer = e;
+    updateState();
+});
 
 
 
@@ -100,6 +108,8 @@ var selectButton_states = [
         title: 'select mode',
         onClick: function(btn, map) {
             btn.state('selecting');
+            map.dragging.disable();
+
         }
     },
     {
@@ -108,6 +118,7 @@ var selectButton_states = [
     title: 'select mode',
     onClick: function(btn, map) {
         btn.state('not-selecting');
+        map.dragging.enable();
     }
 },
 
@@ -115,6 +126,71 @@ var selectButton_states = [
     selectControl = L.easyButton({
         states: selectButton_states
     }).addTo(map);
+
+// drag-select rectangle (from https://stackoverflow.com/questions/10920665/draw-a-square-on-the-html5-canvas-with-touch-events)
+let selectControl = {
+
+    init: function() {
+        let size = map.getSize(),
+            rect = {},
+            drag = false;
+
+        canvas = L.DomUtil.create( "canvas", "leaflet-layer" );
+        this.canvas = canvas;
+        canvas.width = size.x;
+        canvas.height = size.y;
+
+        this.ctx = selectCanvas.getContext('2d');
+
+        map._panes.overlayPane.appendChild( selectCanvas );
+
+
+        canvas.addEventListener("touchstart", touchHandler, false);
+        canvas.addEventListener("touchmove", touchHandler, false);
+        canvas.addEventListener("touchend", touchHandler, false);
+    }
+
+
+    function touchHandler(event) {
+      if (event.targetTouches.length == 1) { //one finger touche
+        var touch = event.targetTouches[0];
+
+        if (event.type == "touchstart") {
+          rect.startX = touch.pageX;
+          rect.startY = touch.pageY;
+          drag = true;
+        } else if (event.type == "touchmove") {
+          if (drag) {
+            rect.w = touch.pageX - rect.startX;
+            rect.h = touch.pageY - rect.startY ;
+            drawRect();
+          }
+        } else if (event.type == "touchend" || event.type == "touchcancel") {
+          drag = false;
+        }
+      }
+    }
+
+    function drawRect() {
+        selectCtx.fillRect(rect.startX, rect.startY, rect.w, rect.h);
+    }
+
+    function remove() {
+        map._panes.shadowPane.removeChild( selectCanvas );
+        selectCanvas = null;
+    }
+    init();
+}
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -227,12 +303,15 @@ $(".dotconst-dial").knob({
                 captureControl.removeFrom(map);
                 captureControl.enabled = false;
             }
+        },
+        release: function() {
+            updateState();
         }
 });
 
 $(".dotscale-dial").knob({
         min: 0.01,
-        max: 4,
+        max: 10,
         step: 0.01,
         width: "100",
         height: "100",
@@ -247,6 +326,9 @@ $(".dotscale-dial").knob({
             if (DotLayer._paused) {
                 DotLayer.drawLayer(DotLayer._timePaused);
             }
+        },
+        release: function() {
+            updateState();
         }
 });
 
@@ -333,18 +415,15 @@ function handle_table_selections( e, dt, type, indexes ) {
             z = map.getZoom();
 
         if ( $("#zoom-table-selection").is(':checked') ) {
-            zoomToSelected();
+            zoomToSelectedPaths();
         }
 
         // If map didn't move then force a redraw
-        let c2 = map.getCenter();
-        if (DotLayer && c.x == c2.x &&  c.y == c2.y && z == map.getZoom()) {
-            DotLayer._onLayerDidMove();
-        }
+        DotLayer._onLayerDidMove();
     }
 }
 
-function zoomToSelected(){
+function zoomToSelectedPaths(){
     // Pan-Zoom to fit all selected activities
     var selection_bounds = L.latLngBounds();
     $.each(appState.items, (id, a) => {
@@ -451,7 +530,7 @@ function activityDataPopup(id, latlng){
                     `${A.name}<br>${A.type}: ${A.ts_local}<br>`+
                     `${dkm} km (${dmi} mi) in ${elapsed}<br>${vkm} (${vmi})<br>` +
                     `View in <a href='https://www.strava.com/activities/${A.id}' target='_blank'>Strava</a>`+
-                    `, <a href='${BASE_USER_URL}?id=${A.id}&flowres=high' target='_blank'>Heatflask</a>`
+                    `, <a href='${BASE_USER_URL}?id=${A.id}' target='_blank'>Heatflask</a>`
                     )
                 .openOn(map);
 }
@@ -475,6 +554,18 @@ function initializeDotLayer() {
     //     DotLayer.options.normal.dotColor = $(this).val();
     // });
 
+    if (ONLOAD_PARAMS.C1) {
+        DotLayer.C1 = ONLOAD_PARAMS.C1;
+    }
+
+    if (ONLOAD_PARAMS.C2) {
+        DotLayer.C2 = ONLOAD_PARAMS.C2;
+    }
+
+    if (ONLOAD_PARAMS.SZ) {
+        DotLayer.dotScale = ONLOAD_PARAMS.SZ;
+    }
+
     map.addLayer(DotLayer);
     layerControl.addOverlay(DotLayer, "Dots");
     $("#sepConst").val((Math.log2(DotLayer.C1) - SEP_SCALE.b) / SEP_SCALE.m ).trigger("change");
@@ -483,6 +574,24 @@ function initializeDotLayer() {
 
     setTimeout(function(){
         $("#period-value").html(DotLayer.periodInSecs().toFixed(2));
+
+        // Enable capture if period is less than CAPTURE_DURATION_MAX
+        let cycleDuration = DotLayer.periodInSecs().toFixed(2),
+            captureEnabled = captureControl.enabled;
+
+
+        $("#period-value").html(cycleDuration);
+        if (cycleDuration <= CAPTURE_DURATION_MAX) {
+            if (!captureEnabled) {
+                captureControl.addTo(map);
+                captureControl.enabled = true;
+            }
+        } else if (captureEnabled) {
+            captureControl.removeFrom(map);
+            captureControl.enabled = false;
+        }
+
+
     }, 500);
 
     $("#showPaths").prop("checked", DotLayer.options.showPaths)
@@ -495,14 +604,10 @@ function initializeDotLayer() {
 
 /* Rendering */
 function renderLayers() {
-    const flowres = $("#flowres").val(),
-          heatres = $("#heatres").val(),
-          date1 = $("#date1").val(),
+    const date1 = $("#date1").val(),
           date2 = $("#date2").val(),
           type = $("#select_type").val(),
           num = $("#select_num").val(),
-          lores = (flowres == "low" || heatres == "low"),
-          hires = (flowres == "high" || heatres == "high"),
           idString = (type == "activity_ids")? $("#activity_ids").val():null;
 
     if (DotLayer) {
@@ -519,7 +624,7 @@ function renderLayers() {
         streamQuery[USER_ID] = {
             activity_ids: activityIds,
             summaries: true,
-            streams: hires
+            streams: true
         };
 
         httpPostAsync(POST_QUERY_URL, streamQuery, function(data) {
@@ -553,7 +658,7 @@ function renderLayers() {
         if (queryResult == "build") {
             activityQuery["only_ids"] = false;
             activityQuery["summaries"] = true;
-            activityQuery["streams"] = hires;
+            activityQuery["streams"] = true;
             // TODO: handle the unlikely case where there are items already in
             //  appState.items
             let streamURL = QUERY_URL_SSE + "?" + jQuery.param(activityQuery);
@@ -584,7 +689,7 @@ function renderLayers() {
         streamQuery[USER_ID] = {
             activity_ids: activityIds,
             summaries: true,
-            streams: hires
+            streams: true
         };
 
         httpPostAsync(POST_QUERY_URL, streamQuery, function(data) {
@@ -614,38 +719,13 @@ function renderLayers() {
             msg2 = " " + msg + " " + num  + " activities rendered.";
         $(".data_message").html(msg2);
 
-        /*
-        // initialize, update, or remove HeatLayer
-        if (heatres){
-            if (HeatLayer) {
-                // update existing heatmap with new points
-                HeatLayer.setLatLngs(appState.latlngs_flat);
-                HeatLayer.redraw();
-            } else {
-                // create new heatmap
-                HeatLayer = L.heatLayer(appState.latlngs_flat, HEATLAYER_DEFAULT_OPTIONS);
-                map.addLayer(HeatLayer);
-                layerControl.addOverlay(HeatLayer, "Point Density");
-            }
-        } else if (HeatLayer){
-            map.removeLayer(HeatLayer);
-            layerControl.removeLayer(HeatLayer);
-            HeatLayer = false;
-        }
-        */
 
-        // initialize, update, or remove DotLayer
-        if (flowres){
-            if (DotLayer) {
-                DotLayer.reset();
-                !appState.paused && DotLayer.animate();
-            } else {
-                initializeDotLayer();
-            }
+        // initialize or update DotLayer
+        if (DotLayer) {
+            DotLayer.reset();
+            !appState.paused && DotLayer.animate();
         } else {
-            map.removeLayer(DotLayer);
-            layerControl.removeLayer(DotLayer);
-            DotLayer = false;
+            initializeDotLayer();
         }
 
         // render the activities table
@@ -656,11 +736,6 @@ function renderLayers() {
 
 
 function readStream(streamURL, numActivities=null, callback=null) {
-    const flowres = $("#flowres").val(),
-          heatres = $("#heatres").val(),
-          lores = (flowres == "low" || heatres == "low"),
-          hires = (flowres == "high" || heatres == "high");
-
     let msgBox = L.control.window(map,
             {
                 position: 'top',
@@ -685,10 +760,8 @@ function readStream(streamURL, numActivities=null, callback=null) {
 
     function doneRendering(msg){
         if (rendering) {
-            appState['date1'] = date1;
-            appState["date2"] = date2;
-            appState["flowres"] = flowres;
-            appState["heatres"] = heatres;
+            appState['date1'] = $("#date1").val();
+            appState["date2"] = $("#date2").val();
             updateState();
 
 
@@ -745,28 +818,14 @@ function readStream(streamURL, numActivities=null, callback=null) {
         }
 
         // At this point we know A is an activity object, not a message
-        let heatpoints = null,
-            flowpoints = null,
-            hasBounds = A.bounds,
+        let hasBounds = A.bounds,
             bounds = hasBounds?
                 L.latLngBounds(A.bounds.SW, A.bounds.NE) : L.latLngBounds();
 
-
-        // A.selected = false;
-
-        // if (lores && A.summary_polyline) {
-        //     let latlngs = L.PolylineUtil.decode(A.summary_polyline);
-        //     if (heatres == "low") heatpoints = latlngs;
-        //     // if (flowres == "low") flowpoints = latlngs;
-        // }
-
-
-        if (hires && A.polyline){
+        if (A.polyline){
             let latLngArray = L.PolylineUtil.decode(A.polyline);
 
-            // if (heatres == "high") heatpoints = latLngArray;
-
-            if (flowres == "high" && A.time) {
+            if (A.time) {
                 let len = latLngArray.length,
                     latLngTime = new Float32Array(3*len),
                     timeArray = streamDecode(A.time);
@@ -788,9 +847,7 @@ function readStream(streamURL, numActivities=null, callback=null) {
             }
         }
 
-        // if (heatpoints) {
-        //     latlngs_flat.push.apply(latlngs_flat, heatpoints);
-        // }
+
 
         A.startTime = moment(A.ts_UTC || A.ts_local ).valueOf()
         A.bounds = bounds;
@@ -859,15 +916,12 @@ function updateState(){
         params.zoom = zoom;
     }
 
-    if ($("#heatres").val()) {
-        params.heatres = $("#heatres").val();
-    }
 
-    if ($("#flowres").val()) {
-        params.flowres = $("#flowres").val();
-    }
+    params["c1"] = Math.round(DotLayer.C1);
+    params["c2"] = Math.round(DotLayer.C2);
+    params["sz"] = Math.round(DotLayer.dotScale);
 
-    params["baselayer"] = appState.baseLayers;
+    params["baselayer"] = appState.currentBaseLayer.name;
 
     var newURL = USER_ID + "?" + jQuery.param(params, true);
     window.history.pushState("", "", newURL);
@@ -949,7 +1003,7 @@ $(document).ready(function() {
     $("#zoom-table-selection").prop("checked", true);
     $("#zoom-table-selection").on("change", function(){
         if ( $("#zoom-table-selection").is(':checked')) {
-            zoomToSelected();
+            zoomToSelectedPaths();
         }
     });
 
@@ -960,10 +1014,6 @@ $(document).ready(function() {
 
     $("#renderButton").click(renderLayers);
     $("#render-selection-button").click(openSelected);
-
-
-    $("#heatres").val(ONLOAD_PARAMS.heatres);
-    $("#flowres").val(ONLOAD_PARAMS.flowres);
 
     $("#autozoom").prop('checked', ONLOAD_PARAMS.autozoom);
 

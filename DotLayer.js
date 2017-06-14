@@ -215,7 +215,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         this._mapPanePos = this._map._getMapPanePos();
         this._pxOrigin = this._map.getPixelOrigin();
         this._pxBounds = this._map.getPixelBounds();
-        this._pxOffset = this._mapPanePos.subtract( this._pxOrigin )._add( new L.Point( 0.5, 0.5 ) );
+        this._pxOffset = this._mapPanePos.subtract( this._pxOrigin );
 
         var lineCtx = this._lineCtx,
             z = this._zoom,
@@ -308,7 +308,6 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                             [ p[0], p[1] ]
                         ),
                         t1 = p[2],
-                        // isGood = (in0 && in1 && (t1-t0 < tThresh) )? 1:0;
                         isGood = ((in0 || in1) && (t1-t0 < tThresh))? 1:0;
                     segGood[i-1] = isGood;
                     goodSegCount += isGood;
@@ -395,11 +394,16 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             xmax = this._size.x,
             ymax = this._size.y,
             ctx = this._dotCtx,
-            dotSize = Math.max(1, ~~(this.dotScale * Math.log( this._zoom ) + 0.5)),
-            dotOffset = ~~( this._dotSize / 2 + 0.5 ),
+            dotSize = this._dotSize,
+            dotOffset = dotSize / 2.0,
             two_pi = this.two_pi,
             xOffset = this._pxOffset.x,
-            yOffset = this._pxOffset.y;
+            yOffset = this._pxOffset.y,
+            g = this._gifPatch;
+
+        // if (g && !highlighted){
+        //     return;
+        // }
 
         var timeOffset = s % period,
             count = 0,
@@ -433,18 +437,18 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             dt = t - p[2];
 
             if ( dt > 0 ) {
-                let lx = ~~( p[0] + dx * dt + xOffset ),
-                    ly = ~~( p[1] + dy * dt + yOffset );
+                let lx = p[0] + dx * dt + xOffset,
+                    ly = p[1] + dy * dt + yOffset;
 
                 if ( ( lx >= 0 && lx <= xmax ) && ( ly >= 0 && ly <= ymax ) ) {
-                    if ( highlighted ) {
+                    if ( highlighted & !g) {
                         ctx.beginPath();
-                        ctx.arc( lx, ly, dotSize, 0, two_pi );
+                        ctx.arc( ~~(lx+0.5), ~~(ly+0.5), dotSize, 0, two_pi );
                         ctx.fill();
                         ctx.closePath();
                         ctx.stroke();
                     } else {
-                        ctx.fillRect( lx - dotOffset, ly - dotOffset, dotSize, dotSize );
+                        ctx.fillRect( ~~(lx - dotOffset + 0.5), ~~(ly - dotOffset + 0.5), dotSize, dotSize );
                     }
                     count++;
                 }
@@ -474,6 +478,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
         this._timeScale = this.C2 * zf;
         this._period = this.C1 * zf;
+        this._dotSize = Math.max(1, ~~(this.dotScale * Math.log( this._zoom ) + 0.5));
 
 
 
@@ -643,12 +648,18 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             sh = this._size.y;
         }
 
+        // These canvases are not rendered on screen
         let baseCtx = baseCanvas.getContext('2d'),
             frameCanvas = document.createElement('canvas'),
-            frameCtx = frameCanvas.getContext('2d');
+            frameCtx = frameCanvas.getContext('2d'),
+            patchCanvas = document.createElement('canvas'),
+            patchCtx = patchCanvas.getContext('2d');
 
         frameCanvas.width = sw;
         frameCanvas.height = sh;
+
+        patchCanvas.width = sw;
+        patchCanvas.height = sh;
 
         // set up GIF encoder
         let pd = this._progressDisplay,
@@ -693,12 +704,10 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         }.bind( this ) );
 
 
-
-
-
-        frameCtx.drawImage(baseCanvas, 0, 0);
+        frameCtx.drawImage(baseCanvas, 0, 0);  //draw background on frameCanvas
         this.drawLayer(frameTime);
-        frameCtx.drawImage(this._dotCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
+        frameCtx.drawImage(this._dotCanvas, sx, sy, sw, sh, 0, 0, sw, sh); // draw dots on frameCanvas
+        // window.open(frameCanvas.toDataURL("image/png"), target='_blank', name="patch"); // frame_0
 
         // add initial frame_0 to clip.  We set the disposal to 1 (no disposal),
         //   so after this frame is displayed, it remains there.
@@ -710,15 +719,55 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             transparent: null
         });
 
-        // Now we set all of baseCanvas to transparent except for where the dots
-        //  were in frame_0
-        this._dotCtx.save()
-        this._dotCtx.globalCompositeOperation = 'source-in';
-        this._dotCtx.drawImage(baseCanvas, 0, 0, sw, sh, sx, sy, sw, sh);
-        this._dotCtx.restore()
+        function makePatch(canvas, frameTime) {
+            // Draw the dots with which we will make a patch.  The "dots" are all
+            //   squares and larger than the normal dots would be.
+            let temp = this.dotScale,
+                ctx = canvas.getContext('2d');
 
-        baseCtx.clearRect( 0, 0, sw, sh );
-        baseCtx.drawImage(this._dotCanvas,  sx, sy, sw, sh, 0, 0, sw, sh);
+            this.dotScale *= 3;  // make the patch bigger than the dot would be
+            this._gifPatch = true;  // let drawDots know we are patching
+            this.drawLayer(frameTime);
+            this._gifPatch = false;
+            this.dotScale = temp;
+
+
+            // Now draw the background image on to dotCanvas, using dotCanvas
+            //  as a mask
+            this._dotCtx.save()
+            this._dotCtx.globalCompositeOperation = 'source-in';
+            this._dotCtx.drawImage(baseCanvas, 0, 0, sw, sh, sx, sy, sw, sh);
+            this._dotCtx.restore()
+            ctx.clearRect( 0, 0, sw, sh );
+            ctx.drawImage(this._dotCanvas,  sx, sy, sw, sh, 0, 0, sw, sh);
+
+            // get rid of any semi-transparent pixels.  This is the trick that
+            //  eliminates edge artifacts
+            let imgData=ctx.getImageData(0, 0, sw, sh),
+                d = imgData.data,
+                len = d.length;
+            for (let i=0; i<len; i+=4){
+                if (d[i+3] < 200) {
+                    d[i] = 0;
+                    d[i+1] = 0;
+                    d[i+2] = 0;
+                    d[i+3] = 0;
+                }
+            }
+            ctx.putImageData(imgData,0,0);
+            return canvas
+        }
+
+        // debugger;
+
+        patch_0 = makePatch.bind(this)(patchCanvas, frameTime);
+        // window.open(patchCanvas.toDataURL("image/png"), target='_blank', name="patch_0"); // patch_0
+
+
+        // frameCtx.drawImage(patchCanvas, 0, 0);  //draw patch onto frame_0
+        // window.open(frameCanvas.toDataURL("image/png"), target='_blank', name="patched"); // frame_0 patched
+
+        frameTime += delay;
 
         // Add frames to the encoder
         for (let i=1, num=Math.round(numFrames); i<num; i++, frameTime+=delay){
@@ -727,11 +776,15 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             pd.textContent = msg;
 
             frameCtx.clearRect( 0, 0, sw, sh);
-            frameCtx.drawImage(baseCanvas, 0, 0);
+            makePatch.bind(this)(frameCanvas, frameTime);  // make patch of this set of dots
+            frameCtx.drawImage(patch_0, 0, 0);  // apply patch_0
 
             this.drawLayer(frameTime);
+
+            // draw dots over that
             frameCtx.drawImage(this._dotCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
 
+            // window.open(frameCanvas.toDataURL("image/png"), target='_blank', name=`frame_${i}`); // frame_i
             encoder.addFrame(frameCanvas, {
                 copy: true,
                 delay: delay,
@@ -743,21 +796,6 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         // encode the Frame array
         encoder.render();
     },
-
-    /*
-    Disposal Method - Indicates the way in which the graphic is to
-            be treated after being displayed.
-            Values :    0 -   No disposal specified. The decoder is
-                              not required to take any action.
-                        1 -   Do not dispose. The graphic is to be left
-                              in place.
-                        2 -   Restore to background color. The area used by the
-                              graphic must be restored to the background color.
-                        3 -   Restore to previous. The decoder is required to
-                              restore the area overwritten by the graphic with
-                              what was there prior to rendering the graphic.
-                      4-7 -   To be defined.
-    */
 
     abortCapture: function() {
         // console.log("capture aborted");
