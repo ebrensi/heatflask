@@ -26,9 +26,6 @@ if (!OFFLINE) {
     };
 
     Object.assign(baseLayers, online_baseLayers);
-
-    debugger;
-
     if (map_providers.length) {
         for (var i = 0; i < map_providers.length; i++) {
             let provider = map_providers[i];
