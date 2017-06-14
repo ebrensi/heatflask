@@ -27,10 +27,12 @@ if (!OFFLINE) {
 
     Object.assign(baseLayers, online_baseLayers);
 
+    debugger;
+
     if (map_providers.length) {
         for (var i = 0; i < map_providers.length; i++) {
             let provider = map_providers[i];
-            if (!online_baseLayers[provider]) {
+            if (!baseLayers[provider]) {
                 baseLayers[provider] = L.tileLayer.provider(provider);
             }
             if (i==0) default_baseLayer = baseLayers[provider];
