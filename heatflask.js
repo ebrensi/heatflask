@@ -652,8 +652,8 @@ function readStream(streamURL, numActivities=null, callback=null) {
 
     function doneRendering(msg){
         if (rendering) {
-            appState['date1'] = date1;
-            appState["date2"] = date2;
+            appState['date1'] = $("#date1").val();
+            appState["date2"] = $("#date2").val();
             updateState();
 
 
