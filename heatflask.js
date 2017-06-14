@@ -478,12 +478,30 @@ function initializeDotLayer() {
 
     map.addLayer(DotLayer);
     layerControl.addOverlay(DotLayer, "Dots");
-    $("#sepConst").val((Math.log2(DotLayer.C1) - SEP_SCALE.b) / SEP_SCALE.m ).trigger("change");
-    $("#speedConst").val(Math.sqrt(DotLayer.C2) / SPEED_SCALE).trigger("change");
-    $("#dotScale").val(DotLayer.dotScale).trigger("change");
+    $("#sepConst").val((Math.log2(DotLayer.C1) - SEP_SCALE.b) / SEP_SCALE.m );
+    $("#speedConst").val(Math.sqrt(DotLayer.C2) / SPEED_SCALE);
+    $("#dotScale").val(DotLayer.dotScale);
 
     setTimeout(function(){
         $("#period-value").html(DotLayer.periodInSecs().toFixed(2));
+
+        // Enable capture if period is less than CAPTURE_DURATION_MAX
+        let cycleDuration = DotLayer.periodInSecs().toFixed(2),
+            captureEnabled = captureControl.enabled;
+
+
+        $("#period-value").html(cycleDuration);
+        if (cycleDuration <= CAPTURE_DURATION_MAX) {
+            if (!captureEnabled) {
+                captureControl.addTo(map);
+                captureControl.enabled = true;
+            }
+        } else if (captureEnabled) {
+            captureControl.removeFrom(map);
+            captureControl.enabled = false;
+        }
+
+
     }, 500);
 
     $("#showPaths").prop("checked", DotLayer.options.showPaths)
