@@ -478,9 +478,9 @@ function initializeDotLayer() {
 
     map.addLayer(DotLayer);
     layerControl.addOverlay(DotLayer, "Dots");
-    $("#sepConst").val((Math.log2(DotLayer.C1) - SEP_SCALE.b) / SEP_SCALE.m );
-    $("#speedConst").val(Math.sqrt(DotLayer.C2) / SPEED_SCALE);
-    $("#dotScale").val(DotLayer.dotScale);
+    $("#sepConst").val((Math.log2(DotLayer.C1) - SEP_SCALE.b) / SEP_SCALE.m ).trigger("change");
+    $("#speedConst").val(Math.sqrt(DotLayer.C2) / SPEED_SCALE).trigger("change");
+    $("#dotScale").val(DotLayer.dotScale).trigger("change");
 
     setTimeout(function(){
         $("#period-value").html(DotLayer.periodInSecs().toFixed(2));
