@@ -724,7 +724,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             let temp = this.dotScale,
                 ctx = canvas.getContext('2d');
 
-            this.dotScale *= 2.5;  // make the patch bigger than the dot would be
+            this.dotScale *= 3;  // make the patch bigger than the dot would be
             this._gifPatch = true;  // let drawDots know we are patching
             this.drawLayer(frameTime);
             this._gifPatch = false;
