@@ -143,7 +143,8 @@ let selectControl = {
         canvas.height = size.y;
 
         this.ctx = canvas.getContext('2d');
-        this.ctx.globalAlpha = 0.5;
+        this.ctx.globalAlpha = 0.1;
+        this.ctx.fillStyle = "red";
 
         canvas.addEventListener("touchstart", this.touchHandler.bind(this), false);
         canvas.addEventListener("touchmove", this.touchHandler.bind(this), false);
