@@ -143,43 +143,76 @@ let selectControl = {
         canvas.height = size.y;
 
         this.ctx = canvas.getContext('2d');
-        this.ctx.globalAlpha = 0.1;
+        this.ctx.globalAlpha = 0.3;
         this.ctx.fillStyle = "red";
 
-        canvas.addEventListener("touchstart", this.touchHandler.bind(this), false);
-        canvas.addEventListener("touchmove", this.touchHandler.bind(this), false);
-        canvas.addEventListener("touchend", this.touchHandler.bind(this), false);
+        let touchEventNames = ["touchstart", "touchmove", "touchend", "touchcancel"],
+            mouseEventNames = ["mousedown", "mousemove", "mouseup"];
 
+        for (i=0; i<touchEventNames.length; i++) {
+            e = touchEventNames[i];
+            canvas.addEventListener(e, this.touchHandler.bind(this), false);
+        }
+
+        for (i=0; i<mouseEventNames.length; i++) {
+            e = touchEventNames[i];
+            canvas.addEventListener(e, this.mouseHandler.bind(this), false);
+        }
         return this;
     },
 
     // admissions@hackreactor
 
     touchHandler: function(event) {
+      event.preventDefault();
       if (event.targetTouches.length == 1) { //one finger touch
-        let touch = event.targetTouches[0];
+        let touch = event.targetTouches[0],
+            type = event.type;
 
-        if (event.type == "touchstart") {
-            console.log("touchstart");
+        if (type == "touchstart") {
+            console.log("drag-start");
             this.rect.startX = touch.pageX;
             this.rect.startY = touch.pageY;
             this.drag = true;
-        } else if (event.type == "touchmove") {
+        } else if (type == "touchmove") {
           if (this.drag) {
-            console.log("touchmove");
+            console.log("drag-move");
             this.rect.w = touch.pageX - this.rect.startX;
             this.rect.h = touch.pageY - this.rect.startY ;
             this.drawRect();
           }
-        } else if (event.type == "touchend" || event.type == "touchcancel") {
-            console.log("touchend");
+        } else if (type == "touchend" || type == "touchcancel") {
+            console.log("drag-end");
             this.drag = false;
         }
       }
     },
 
+    mouseHandler: function(event) {
+        let type = event.type;
+
+        if (type == "mousedown") {
+            console.log("drag-start");
+            this.rect.startX = touch.pageX;
+            this.rect.startY = touch.pageY;
+            this.drag = true;
+        } else if (type == "mousemove" ) {
+          if (this.drag) {
+            console.log("drag-move");
+            this.rect.w = touch.pageX - this.rect.startX;
+            this.rect.h = touch.pageY - this.rect.startY ;
+            this.drawRect();
+          }
+        } else if (type == "mouseup") {
+            console.log("drag-end");
+            this.drag = false;
+        }
+
+    },
+
     drawRect: function() {
         let rect = this.rect;
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.ctx.fillRect(rect.startX, rect.startY, rect.w, rect.h);
     },
 
