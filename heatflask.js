@@ -102,28 +102,29 @@ var animation_button_states = [
 
 // Select-activities-in-region button
 var selectButton_states = [
-    {
-        stateName: 'not-selecting',
-        icon: 'fa-object-group',
-        title: 'select mode',
-        onClick: function(btn, map) {
-            btn.state('selecting');
-            map.dragging.disable();
+        {
+            stateName: 'not-selecting',
+            icon: 'fa-object-group',
+            title: 'select mode',
+            onClick: function(btn, map) {
+                btn.state('selecting');
+                map.dragging.disable();
+                selectControl.addTo(map);
 
-        }
-    },
-    {
-    stateName: 'selecting',
-    icon: '<span>&cross;</span>',
-    title: 'select mode',
-    onClick: function(btn, map) {
-        btn.state('not-selecting');
-        map.dragging.enable();
-    }
-},
-
-],
-    selectControl = L.easyButton({
+            }
+        },
+        {
+            stateName: 'selecting',
+            icon: '<span>&cross;</span>',
+            title: 'select mode',
+            onClick: function(btn, map) {
+                btn.state('not-selecting');
+                map.dragging.enable();
+                selectControl.removeFrom(map);
+            }
+        },
+    ],
+    selectButton = L.easyButton({
         states: selectButton_states
     }).addTo(map);
 
@@ -131,58 +132,66 @@ var selectButton_states = [
 let selectControl = {
 
     init: function() {
-        let size = map.getSize(),
-            rect = {},
-            drag = false;
+        let size = map.getSize();
 
-        canvas = L.DomUtil.create( "canvas", "leaflet-layer" );
-        this.canvas = canvas;
+        this.rect = {};
+        this.drag = false;
+
+        this.canvas = L.DomUtil.create( "canvas", "leaflet-layer" );
+        canvas = this.canvas;
         canvas.width = size.x;
         canvas.height = size.y;
 
-        this.ctx = selectCanvas.getContext('2d');
+        this.ctx = canvas.getContext('2d');
+        this.ctx.globalAlpha = 0.5;
 
-        map._panes.overlayPane.appendChild( selectCanvas );
+        canvas.addEventListener("touchstart", this.touchHandler.bind(this), false);
+        canvas.addEventListener("touchmove", this.touchHandler.bind(this), false);
+        canvas.addEventListener("touchend", this.touchHandler.bind(this), false);
 
+        return this;
+    },
 
-        canvas.addEventListener("touchstart", touchHandler, false);
-        canvas.addEventListener("touchmove", touchHandler, false);
-        canvas.addEventListener("touchend", touchHandler, false);
-    }
+    // admissions@hackreactor
 
-
-    function touchHandler(event) {
-      if (event.targetTouches.length == 1) { //one finger touche
-        var touch = event.targetTouches[0];
+    touchHandler: function(event) {
+      if (event.targetTouches.length == 1) { //one finger touch
+        let touch = event.targetTouches[0];
 
         if (event.type == "touchstart") {
-          rect.startX = touch.pageX;
-          rect.startY = touch.pageY;
-          drag = true;
+            console.log("touchstart");
+            this.rect.startX = touch.pageX;
+            this.rect.startY = touch.pageY;
+            this.drag = true;
         } else if (event.type == "touchmove") {
-          if (drag) {
-            rect.w = touch.pageX - rect.startX;
-            rect.h = touch.pageY - rect.startY ;
-            drawRect();
+          if (this.drag) {
+            console.log("touchmove");
+            this.rect.w = touch.pageX - this.rect.startX;
+            this.rect.h = touch.pageY - this.rect.startY ;
+            this.drawRect();
           }
         } else if (event.type == "touchend" || event.type == "touchcancel") {
-          drag = false;
+            console.log("touchend");
+            this.drag = false;
         }
       }
-    }
+    },
 
-    function drawRect() {
-        selectCtx.fillRect(rect.startX, rect.startY, rect.w, rect.h);
-    }
+    drawRect: function() {
+        let rect = this.rect;
+        this.ctx.fillRect(rect.startX, rect.startY, rect.w, rect.h);
+    },
 
-    function remove() {
-        map._panes.shadowPane.removeChild( selectCanvas );
-        selectCanvas = null;
+    addTo: function(map) {
+        map._panes.overlayPane.appendChild( this.canvas );
+    },
+
+    removeFrom: function(map) {
+        map._panes.overlayPane.removeChild( this.canvas );
     }
-    init();
 }
 
-
+selectControl.init();
 
 
 
