@@ -100,7 +100,10 @@ var animation_button_states = [
     }).addTo(map);
 
 
-// Select-activities-in-region button
+
+
+// Select-activities-in-region functionality
+var selectControl = new L.AreaSelect2();
 var selectButton_states = [
         {
             stateName: 'not-selecting',
@@ -120,118 +123,13 @@ var selectButton_states = [
             onClick: function(btn, map) {
                 btn.state('not-selecting');
                 map.dragging.enable();
-                selectControl.removeFrom(map);
+                selectControl.remove();
             }
         },
     ],
     selectButton = L.easyButton({
         states: selectButton_states
     }).addTo(map);
-
-// drag-select rectangle (from https://stackoverflow.com/questions/10920665/draw-a-square-on-the-html5-canvas-with-touch-events)
-let selectControl = {
-
-    init: function() {
-        let size = map.getSize();
-
-        this.rect = {};
-        this.drag = false;
-
-        this.canvas = L.DomUtil.create( "canvas", "leaflet-layer" );
-        canvas = this.canvas;
-        canvas.width = size.x;
-        canvas.height = size.y;
-
-        this.ctx = canvas.getContext('2d');
-        this.ctx.globalAlpha = 0.3;
-        this.ctx.fillStyle = "red";
-
-        let touchEventNames = ["touchstart", "touchmove", "touchend", "touchcancel"],
-            mouseEventNames = ["mousedown", "mousemove", "mouseup"];
-
-        for (i=0; i<touchEventNames.length; i++) {
-            e = touchEventNames[i];
-            canvas.addEventListener(e, this.touchHandler.bind(this), false);
-        }
-
-        for (i=0; i<mouseEventNames.length; i++) {
-            e = touchEventNames[i];
-            canvas.addEventListener(e, this.mouseHandler.bind(this), false);
-        }
-        return this;
-    },
-
-    // admissions@hackreactor
-
-    touchHandler: function(event) {
-      event.preventDefault();
-      if (event.targetTouches.length == 1) { //one finger touch
-        let touch = event.targetTouches[0],
-            type = event.type;
-
-        if (type == "touchstart") {
-            console.log("drag-start");
-            this.rect.startX = touch.pageX;
-            this.rect.startY = touch.pageY;
-            this.drag = true;
-        } else if (type == "touchmove") {
-          if (this.drag) {
-            console.log("drag-move");
-            this.rect.w = touch.pageX - this.rect.startX;
-            this.rect.h = touch.pageY - this.rect.startY ;
-            this.drawRect();
-          }
-        } else if (type == "touchend" || type == "touchcancel") {
-            console.log("drag-end");
-            this.drag = false;
-        }
-      }
-    },
-
-    mouseHandler: function(event) {
-        let type = event.type;
-
-        if (type == "mousedown") {
-            console.log("drag-start");
-            this.rect.startX = touch.pageX;
-            this.rect.startY = touch.pageY;
-            this.drag = true;
-        } else if (type == "mousemove" ) {
-          if (this.drag) {
-            console.log("drag-move");
-            this.rect.w = touch.pageX - this.rect.startX;
-            this.rect.h = touch.pageY - this.rect.startY ;
-            this.drawRect();
-          }
-        } else if (type == "mouseup") {
-            console.log("drag-end");
-            this.drag = false;
-        }
-
-    },
-
-    drawRect: function() {
-        let rect = this.rect;
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        this.ctx.fillRect(rect.startX, rect.startY, rect.w, rect.h);
-    },
-
-    addTo: function(map) {
-        map._panes.overlayPane.appendChild( this.canvas );
-    },
-
-    removeFrom: function(map) {
-        map._panes.overlayPane.removeChild( this.canvas );
-    }
-}
-
-selectControl.init();
-
-
-
-
-
-
 
 
 
