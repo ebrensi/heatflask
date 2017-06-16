@@ -7,6 +7,7 @@ L.AreaSelect2 = L.Class.extend({
 
     initialize: function(options) {
         L.Util.setOptions(this, options);
+        this.callback = options.callback;
     },
 
     addTo: function(map) {
@@ -54,7 +55,20 @@ L.AreaSelect2 = L.Class.extend({
 
         canvas.onmouseup = function(event){
             this.dragging = false;
-            console.log("up");
+            let r = this.rect,
+                corner1 = new L.Point(r.startX, r.startY),
+                corner2 = new L.Point(r.startX + r.w, r.startY + r.h);
+                pxBounds = new L.Bounds(corner1, corner2),
+
+                ll1 = this.map.containerPointToLatLng(corner1),
+                ll2 = this.map.containerPointToLatLng(corner2),
+                llBounds = new L.LatLngBounds(ll1, ll2);
+
+            // console.log(pxBounds, llBounds);
+            this.callback && this.callback(
+                pxBounds=pxBounds,
+                latLngBounds=llBounds
+            );
         }.bind(this);
 
 
