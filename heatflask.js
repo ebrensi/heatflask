@@ -103,7 +103,18 @@ var animation_button_states = [
 
 
 // Select-activities-in-region functionality
-var selectControl = new L.AreaSelect2();
+var selectControl = new L.AreaSelect2({
+    callback: function(pxBounds, latLngBounds){
+        for (id in appState.items) {
+            let A = appState.items[id];
+            if (A.bounds.intersects(latLngBounds)) {
+                togglePathSelect(id);
+            }
+        }
+        DotLayer && DotLayer._onLayerDidMove();
+    }
+});
+
 var selectButton_states = [
         {
             stateName: 'not-selecting',
