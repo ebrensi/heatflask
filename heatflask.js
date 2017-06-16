@@ -111,7 +111,7 @@ var selectControl = new L.AreaSelect2({
                 togglePathSelect(id);
             }
         }
-        DotLayer && DotLayer._onLayerDidMove();
+        DotLayer && DotLayer.setSelectRegion(pxBounds);
     }
 });
 
