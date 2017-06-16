@@ -111,7 +111,7 @@ class StagingConfig(Config):
     DEBUG = False
 
     # webassets can do whatever in staging
-    ASSETS_DEBUG = True
+    # ASSETS_DEBUG = True
     ASSETS_AUTO_BUILD = True
     # ASSETS_CACHE = False
     # ASSETS_MANIFEST = False
