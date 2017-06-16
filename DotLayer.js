@@ -196,6 +196,12 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         };
     },
 
+    // -------------------------------------------------------------------
+    setSelectRegion: function(pxBounds) {
+        this.selectRegion = pxBounds;
+        this._onLayerDidMove();
+        this.selectRegion = null;
+    },
 
     // -------------------------------------------------------------------
     _setupWindow: function() {
@@ -245,8 +251,8 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                 continue;
             }
 
-            let A = this._items[ id ];
-            drawingLine = false;
+            let A = this._items[ id ],
+                drawingLine = false;
 
             // console.log("processing "+A.id);
 
@@ -365,6 +371,17 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                     } else {
                         lineCtx.stroke();
                     }
+                }
+
+                let selectRegion = this.selectRegion;
+                if (selectRegion){
+                    for (let i=0, len=projected.length; i<len; i+=3){
+                        if ( selectRegion.contains([projected[i], projected[i+1]]) ) {
+                            A.highlighted = !A.highlighted;
+                            break;
+                        }
+                    }
+
                 }
 
                 this._processedItems[ id ] = {
