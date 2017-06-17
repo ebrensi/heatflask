@@ -409,7 +409,6 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         elapsed = ( performance.now() - perf_t0 ).toFixed( 2 );
         // console.log(`dot context update took ${elapsed} ms`);
         // console.log(this._processedItems);
-        console.log(selectedIds);
         return selectedIds;
     },
 
