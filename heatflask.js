@@ -377,6 +377,12 @@ function handle_path_selections(ids) {
     }
     idStrings = ids.map((id) => "#"+id);
     atable.rows(idStrings).nodes().to$().toggleClass("selected");
+
+    for (let i=0; i<ids.length; i++){
+        togglePathSelect(ids[i]);
+    }
+    DotLayer._onLayerDidMove();
+
 }
 
 
@@ -430,10 +436,9 @@ function highlightPath(id) {
 
     A.highlighted = true;
 
-    atable.row("#"+id).select();
     // highlight table row and scroll to it if necessary
-    row.addClass('selected');
-    // tableScroller.scrollTop(row.prop('offsetTop') - tableScroller.height()/2);
+    // atable.row("#"+id).select();
+    //tableScroller.scrollTop(row.prop('offsetTop') - tableScroller.height()/2);
 
     return A;
 }
@@ -447,12 +452,13 @@ function unhighlightPath(id){
     A.highlighted = false;
 
     // un-highlight table row
-    $("#"+id).removeClass('selected');
+    // $("#"+id).removeClass('selected');
 
     return A;
 }
 
 function togglePathSelect(id){
+
     var A = appState.items[id];
     if (A.selected) {
         A.selected = false;

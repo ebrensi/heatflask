@@ -33,15 +33,16 @@ for(var i=0;i<unselectedItems.length;i++){if(unselectedItems[i].selected){toggle
 let c=map.getCenter(),z=map.getZoom();if($("#zoom-table-selection").is(':checked')){zoomToSelectedPaths();}
 DotLayer._onLayerDidMove();}}
 function handle_path_selections(ids){if(!ids.length){return;}
-idStrings=ids.map(id=>"#"+id);atable.rows(idStrings).nodes().to$().toggleClass("selected");}
+idStrings=ids.map(id=>"#"+id);atable.rows(idStrings).nodes().to$().toggleClass("selected");for(let i=0;i<ids.length;i++){togglePathSelect(ids[i]);}
+DotLayer._onLayerDidMove();}
 function zoomToSelectedPaths(){var selection_bounds=L.latLngBounds();$.each(appState.items,(id,a)=>{if(a.selected){selection_bounds.extend(a.bounds);}});if(selection_bounds.isValid()){map.fitBounds(selection_bounds);}}
 function selectedIDs(){return Object.values(appState.items).filter(a=>{return a.selected;}).map(function(a){return a.id;});}
 function openSelected(){ids=selectedIDs();if(ids.length>0){var url=BASE_USER_URL+"?id="+ids.join("+");if(appState.paused==true){url+="&paused=1";}
 window.open(url,'_blank');}}
 function pauseFlow(){DotLayer.pause();appState.paused=true;}
 function resumeFlow(){appState.paused=false;if(DotLayer){DotLayer.animate();}}
-function highlightPath(id){var A=appState.items[id];if(A.selected)return false;A.highlighted=true;atable.row("#"+id).select();row.addClass('selected');return A;}
-function unhighlightPath(id){var A=appState.items[id];if(A.selected)return false;A.highlighted=false;$("#"+id).removeClass('selected');return A;}
+function highlightPath(id){var A=appState.items[id];if(A.selected)return false;A.highlighted=true;return A;}
+function unhighlightPath(id){var A=appState.items[id];if(A.selected)return false;A.highlighted=false;return A;}
 function togglePathSelect(id){var A=appState.items[id];if(A.selected){A.selected=false;unhighlightPath(id);}else{highlightPath(id);A.selected=true;}}
 function activityDataPopup(id,latlng){var A=appState.items[id],d=parseFloat(A.total_distance),elapsed=hhmmss(parseFloat(A.elapsed_time)),v=parseFloat(A.average_speed);var dkm=+(d/1000).toFixed(2),dmi=+(d/1609.34).toFixed(2),vkm,vmi;if(A.vtype=="pace"){vkm=hhmmss(1000/v).slice(3)+"/km";vmi=hhmmss(1609.34/v).slice(3)+"/mi";}else{vkm=(v*3600/1000).toFixed(2)+"km/hr";vmi=(v*3600/1609.34).toFixed(2)+"mi/hr";}
 var popup=L.popup().setLatLng(latlng).setContent(`${A.name}<br>${A.type}:${A.ts_local}<br>`+`${dkm}km(${dmi}mi)in ${elapsed}<br>${vkm}(${vmi})<br>`+`View in<a href='https://www.strava.com/activities/${A.id}'target='_blank'>Strava</a>`+`,<a href='${BASE_USER_URL}?id=${A.id}'target='_blank'>Heatflask</a>`).openOn(map);}
