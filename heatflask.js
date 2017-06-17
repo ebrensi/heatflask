@@ -103,14 +103,7 @@ var animation_button_states = [
 
 function doneSelecting(bounds){
     let pxBounds = bounds.pxBounds;
-    DotLayer && DotLayer.setSelectRegion(pxBounds, callback=function(ids){
-        if (!ids.length) {
-            return;
-        }
-        for (let i=0; i<ids.length; i++) {
-            togglePathSelect(ids[i]);
-        }
-    });
+    DotLayer && DotLayer.setSelectRegion(pxBounds, callback=handle_path_selections);
 }
 
 // Select-activities-in-region functionality
@@ -308,7 +301,7 @@ var atable = $('#activitiesList').DataTable({
                 order: [[ 0, "desc" ]],
                 select: isMobileDevice()? "multi" : "os",
                 data: Object.values(appState.items),
-                idSrc: "id",
+                rowId: "id",
                 columns: [{
                     title: '<i class="fa fa-calendar" aria-hidden="true"></i>',
                     data: null,
@@ -335,7 +328,7 @@ var atable = $('#activitiesList').DataTable({
               .on( 'deselect', handle_table_selections);
 
 
-var tableScroller = $('.dataTables_scrollBody');
+var tableScroller = $('.dataTables_scrollBodgit y');
 
 
 
@@ -376,6 +369,18 @@ function handle_table_selections( e, dt, type, indexes ) {
         DotLayer._onLayerDidMove();
     }
 }
+
+
+function handle_path_selections(ids) {
+    if (!ids.length) {
+        return;
+    }
+    idStrings = ids.map((id) => "#"+id);
+    atable.rows(idStrings).nodes().to$().toggleClass("selected")
+}
+
+
+
 
 function zoomToSelectedPaths(){
     // Pan-Zoom to fit all selected activities
@@ -425,9 +430,7 @@ function highlightPath(id) {
 
     A.highlighted = true;
 
-    var row = $("#"+id),
-        flow = A.flowLayer;
-
+    atable.row("#"+id).select();
     // highlight table row and scroll to it if necessary
     row.addClass('selected');
     // tableScroller.scrollTop(row.prop('offsetTop') - tableScroller.height()/2);
