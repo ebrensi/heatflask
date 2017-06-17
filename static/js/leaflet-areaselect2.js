@@ -47,9 +47,13 @@ L.AreaSelect2 = L.Class.extend({
                 this.rect.w = event.pageX - this.rect.startX;
                 this.rect.h = event.pageY - this.rect.startY;
 
-                let rect = this.rect;
                 this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-                this.ctx.fillRect(rect.startX, rect.startY, rect.w, rect.h);
+
+                let rect = this.rect,
+                    corner = new L.Point(rect.startX, rect.startY),
+                    p = corner._subtract(this.map._getMapPanePos());
+
+                this.ctx.fillRect(p.x, p.y, rect.w, rect.h);
 
                 this.onmousemove && this.onmousemove(this.getBounds());
             }
