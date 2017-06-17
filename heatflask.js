@@ -49,7 +49,7 @@ var map = L.map('map', {
         zoom: ONLOAD_PARAMS.map_zoom,
         layers : [ default_baseLayer ],
         preferCanvas: true,
-        zoomAnimation: false
+        // zoomAnimation: false
     });
 
 appState.currentBaseLayer = default_baseLayer;
@@ -113,7 +113,7 @@ var selectButton_states = [
         {
             stateName: 'not-selecting',
             icon: 'fa-object-group',
-            title: 'Select Paths',
+            title: 'Toggle Path Selection',
             onClick: function(btn, map) {
                 btn.state('selecting');
                 map.dragging.disable();
