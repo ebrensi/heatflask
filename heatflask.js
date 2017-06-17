@@ -328,7 +328,7 @@ var atable = $('#activitiesList').DataTable({
               .on( 'deselect', handle_table_selections);
 
 
-var tableScroller = $('.dataTables_scrollBodgit y');
+var tableScroller = $('.dataTables_scrollBody');
 
 
 
@@ -376,7 +376,7 @@ function handle_path_selections(ids) {
         return;
     }
     idStrings = ids.map((id) => "#"+id);
-    atable.rows(idStrings).nodes().to$().toggleClass("selected")
+    atable.rows(idStrings).nodes().to$().toggleClass("selected");
 }
 
 
