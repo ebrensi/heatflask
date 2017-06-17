@@ -5,9 +5,10 @@ L.AreaSelect2 = L.Class.extend({
 
     },
 
-    initialize: function(options) {
+    initialize: function(options,doneSelecting=null, whileSelecting=null) {
         L.Util.setOptions(this, options);
-        this.callback = options.callback;
+        this.onmousemove = whileSelecting;
+        this.onmouseup = doneSelecting;
     },
 
     addTo: function(map) {
@@ -49,26 +50,17 @@ L.AreaSelect2 = L.Class.extend({
                 let rect = this.rect;
                 this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
                 this.ctx.fillRect(rect.startX, rect.startY, rect.w, rect.h);
+
+                this.onmousemove && this.onmousemove(this.getBounds());
             }
         }.bind(this);
 
 
         canvas.onmouseup = function(event){
             this.dragging = false;
-            let r = this.rect,
-                corner1 = new L.Point(r.startX, r.startY),
-                corner2 = new L.Point(r.startX + r.w, r.startY + r.h);
-                pxBounds = new L.Bounds(corner1, corner2),
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-                ll1 = this.map.containerPointToLatLng(corner1),
-                ll2 = this.map.containerPointToLatLng(corner2),
-                llBounds = new L.LatLngBounds(ll1, ll2);
-
-            // console.log(pxBounds, llBounds);
-            this.callback && this.callback(
-                pxBounds=pxBounds,
-                latLngBounds=llBounds
-            );
+            this.onmouseup & this.onmouseup(this.getBounds());
         }.bind(this);
 
 
@@ -82,26 +74,23 @@ L.AreaSelect2 = L.Class.extend({
 
     },
 
+    getBounds: function() {
+        let r = this.rect,
+            corner1 = new L.Point(r.startX, r.startY),
+            corner2 = new L.Point(r.startX + r.w, r.startY + r.h),
+            pxBounds = new L.Bounds(corner1, corner2),
+
+            ll1 = this.map.containerPointToLatLng(corner1),
+            ll2 = this.map.containerPointToLatLng(corner2),
+            llBounds = new L.LatLngBounds(ll1, ll2);
+
+        return {pxBounds: pxBounds, latLngBounds: llBounds};
+    },
+
     remove: function() {
         map._panes.markerPane.removeChild( this.canvas );
         this.canvas = null;
         self.map.dragging.enable();
-    },
-
-    getBounds: function() {
-        var size = this.map.getSize();
-        var topRight = new L.Point();
-        var bottomLeft = new L.Point();
-
-        bottomLeft.x = Math.round((size.x - this._width) / 2);
-        topRight.y = Math.round((size.y - this._height) / 2);
-        topRight.x = size.x - bottomLeft.x;
-        bottomLeft.y = size.y - topRight.y;
-
-        var sw = this.map.containerPointToLatLng(bottomLeft);
-        var ne = this.map.containerPointToLatLng(topRight);
-
-        return new L.LatLngBounds(sw, ne);
     }
 });
 

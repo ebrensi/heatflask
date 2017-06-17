@@ -83,14 +83,6 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
     _onLayerDidMove: function() {
         this._mapMoving = false;
 
-        let topLeft = this._map.containerPointToLayerPoint( [ 0, 0 ] );
-
-        this._dotCtx.clearRect( 0, 0, this._dotCanvas.width, this._dotCanvas.height );
-        L.DomUtil.setPosition( this._dotCanvas, topLeft );
-
-        this._lineCtx.clearRect( 0, 0, this._lineCanvas.width, this._lineCanvas.height );
-        L.DomUtil.setPosition( this._lineCanvas, topLeft );
-
         this._setupWindow();
 
         if (this._paused) {
@@ -197,19 +189,35 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
     },
 
     // -------------------------------------------------------------------
-    setSelectRegion: function(pxBounds) {
-        this.selectRegion = pxBounds;
-        this._onLayerDidMove();
-        this.selectRegion = null;
+    setSelectRegion: function(pxBounds, callback) {
+        let paused = this._paused;
+        this.pause();
+        let selectedIds = this._setupWindow(pxBounds);
+        if (paused){
+            this.drawLayer();
+        } else {
+            this.animate();
+        }
+        callback(selectedIds);
     },
 
     // -------------------------------------------------------------------
-    _setupWindow: function() {
+    _setupWindow: function(selectPxBounds=null) {
         if ( !this._map || !this._items ) {
             return;
         }
-
         const perf_t0 = performance.now();
+
+        let topLeft = this._map.containerPointToLayerPoint( [ 0, 0 ] ),
+            lineCtx = this._lineCtx,
+            dotCtx = this._dotCtx;
+
+        dotCtx.clearRect( 0, 0, this._dotCanvas.width, this._dotCanvas.height );
+        L.DomUtil.setPosition( this._dotCanvas, topLeft );
+
+        lineCtx.clearRect( 0, 0, this._lineCanvas.width, this._lineCanvas.height );
+        L.DomUtil.setPosition( this._lineCanvas, topLeft );
+
 
         // Get new map orientation
         this._zoom = this._map.getZoom();
@@ -223,8 +231,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         this._pxBounds = this._map.getPixelBounds();
         this._pxOffset = this._mapPanePos.subtract( this._pxOrigin );
 
-        var lineCtx = this._lineCtx,
-            z = this._zoom,
+        let z = this._zoom,
             ppos = this._mapPanePos,
             pxOrigin = this._pxOrigin,
             pxBounds = this._pxBounds,
@@ -233,7 +240,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         this._dotCtx.strokeStyle = this.options.selected.dotStrokeColor;
         this._zoomFactor = 1 / Math.pow( 2, z );
 
-        var tThresh = this._tThresh * DotLayer._zoomFactor;
+        let tThresh = this._tThresh * DotLayer._zoomFactor;
 
         // console.log( `zoom=${z}\nmapPanePos=${ppos}\nsize=${this._size}\n` +
         //             `pxOrigin=${pxOrigin}\npxBounds=[${pxBounds.min}, ${pxBounds.max}]`
@@ -243,7 +250,8 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         this._processedItems = {};
 
         let pxOffx = this._pxOffset.x,
-            pxOffy = this._pxOffset.y;
+            pxOffy = this._pxOffset.y,
+            selectedIds = [];
 
         for ( let id in items ) {
             if (!items.hasOwnProperty(id)) {
@@ -373,11 +381,15 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                     }
                 }
 
-                let selectRegion = this.selectRegion;
-                if (selectRegion){
+                if (selectPxBounds){
+
                     for (let i=0, len=projected.length; i<len; i+=3){
-                        if ( selectRegion.contains([projected[i], projected[i+1]]) ) {
-                            A.highlighted = !A.highlighted;
+                        let p = new L.Point(projected[i], projected[i+1])._add(this._pxOffset);
+
+                        // debugger;
+
+                        if ( selectPxBounds.contains( p ) ) {
+                            selectedIds.push(A.id);
                             break;
                         }
                     }
@@ -397,6 +409,8 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         elapsed = ( performance.now() - perf_t0 ).toFixed( 2 );
         // console.log(`dot context update took ${elapsed} ms`);
         // console.log(this._processedItems);
+        console.log(selectedIds);
+        return selectedIds;
     },
 
 

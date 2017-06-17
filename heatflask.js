@@ -61,7 +61,7 @@ map.on('baselayerchange', function (e) {
 
 
 var sidebarControl = L.control.sidebar('sidebar').addTo(map),
-    zoomControl = map.zoomControl.setPosition('bottomright'),
+    zoomControl = map.zoomControl.setPosition('bottomleft'),
     layerControl = L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map),
     fps_display = ADMIN? L.control.fps().addTo(map) : null,
     areaSelect = null;
@@ -101,25 +101,26 @@ var animation_button_states = [
 
 
 
+function doneSelecting(bounds){
+    let pxBounds = bounds.pxBounds;
+    DotLayer && DotLayer.setSelectRegion(pxBounds, callback=function(ids){
+        if (!ids.length) {
+            return;
+        }
+        for (let i=0; i<ids.length; i++) {
+            togglePathSelect(ids[i]);
+        }
+    });
+}
 
 // Select-activities-in-region functionality
-var selectControl = new L.AreaSelect2({
-    callback: function(pxBounds, latLngBounds){
-        for (id in appState.items) {
-            let A = appState.items[id];
-            if (A.bounds.intersects(latLngBounds)) {
-                togglePathSelect(id);
-            }
-        }
-        DotLayer && DotLayer.setSelectRegion(pxBounds);
-    }
-});
+var selectControl = new L.AreaSelect2(options={}, doneSelecting=doneSelecting);
 
 var selectButton_states = [
         {
             stateName: 'not-selecting',
             icon: 'fa-object-group',
-            title: 'select mode',
+            title: 'Select Paths',
             onClick: function(btn, map) {
                 btn.state('selecting');
                 map.dragging.disable();
@@ -130,7 +131,7 @@ var selectButton_states = [
         {
             stateName: 'selecting',
             icon: '<span>&cross;</span>',
-            title: 'select mode',
+            title: 'Stop Selecting',
             onClick: function(btn, map) {
                 btn.state('not-selecting');
                 map.dragging.enable();
@@ -139,7 +140,8 @@ var selectButton_states = [
         },
     ],
     selectButton = L.easyButton({
-        states: selectButton_states
+        states: selectButton_states,
+        position: "topright"
     }).addTo(map);
 
 
@@ -167,7 +169,7 @@ var capture_button_states = [
     {
         stateName: 'selecting',
         icon: 'fa-expand',
-        title: 'select capture region',
+        title: 'Select Capture Region',
         onClick: function (btn, map) {
             let size = map.getSize(),
                 w = areaSelect._width,
@@ -194,7 +196,7 @@ var capture_button_states = [
     {
         stateName: 'capturing',
         icon: 'fa-stop-circle',
-        title: 'Stop capturing',
+        title: 'Cancel Capture',
         onClick: function (btn, map) {
             if (DotLayer && DotLayer._capturing) {
                 DotLayer.abortCapture();
