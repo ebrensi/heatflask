@@ -61,8 +61,8 @@ map.on('baselayerchange', function (e) {
 
 
 var sidebarControl = L.control.sidebar('sidebar').addTo(map),
-    zoomControl = map.zoomControl.setPosition('topright'),
     layerControl = L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map),
+    zoomControl = map.zoomControl.setPosition('bottomright'),
     fps_display = ADMIN? L.control.fps().addTo(map) : null,
     areaSelect = null;
 
@@ -107,7 +107,7 @@ function doneSelecting(bounds){
 }
 
 // Select-activities-in-region functionality
-var selectControl = new L.AreaSelect2(options={}, doneSelecting=doneSelecting);
+var selectControl = new L.SwipeSelect(options={}, doneSelecting=doneSelecting);
 
 var selectButton_states = [
         {

@@ -1,11 +1,11 @@
-L.AreaSelect2 = L.Class.extend({
+L.SwipeSelect = L.Class.extend({
     includes: L.Mixin.Events,
 
     options: {
 
     },
 
-    initialize: function(options,doneSelecting=null, whileSelecting=null) {
+    initialize: function(options, doneSelecting=null, whileSelecting=null) {
         L.Util.setOptions(this, options);
         this.onmousemove = whileSelecting;
         this.onmouseup = doneSelecting;
@@ -37,24 +37,19 @@ L.AreaSelect2 = L.Class.extend({
 
             this.mapPanePos = this.map._getMapPanePos();
 
-            this.rect = {};
+            this.rect = {corner: new L.Point(event.pageX, event.pageY)};
             this.dragging = true;
-            this.rect.startX = event.pageX;
-            this.rect.startY = event.pageY;
         }.bind(this);
 
 
         canvas.onmousemove = function(event){
             if (this.dragging) {
-                this.rect.w = event.pageX - this.rect.startX;
-                this.rect.h = event.pageY - this.rect.startY;
+                let r = this.rect,
+                    currentPoint = new L.Point(event.pageX, event.pageY);
 
+                r.size = currentPoint.subtract(r.corner);
                 this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
-                let rect = this.rect,
-                    corner = new L.Point(rect.startX, rect.startY);
-
-                this.ctx.fillRect(corner.x, corner.y, rect.w, rect.h);
+                this.ctx.fillRect(r.corner.x, r.corner.y, r.size.x, r.size.y);
 
                 this.onmousemove && this.onmousemove(this.getBounds());
             }
@@ -81,8 +76,8 @@ L.AreaSelect2 = L.Class.extend({
 
     getBounds: function() {
         let r = this.rect,
-            corner1 = new L.Point(r.startX, r.startY),
-            corner2 = new L.Point(r.startX + r.w, r.startY + r.h),
+            corner1 = r.corner,
+            corner2 = r.corner.add(r.size),
             pxBounds = new L.Bounds(corner1, corner2),
 
             ll1 = this.map.containerPointToLatLng(corner1),
@@ -99,6 +94,6 @@ L.AreaSelect2 = L.Class.extend({
     }
 });
 
-L.areaSelect2 = function(options) {
-    return new L.AreaSelect2(options);
+L.swipeselect = function(options, doneSelecting=null, whileSelecting=null) {
+    return new L.SwipeSelect(options, doneSelecting=null, whileSelecting=null);
 }
