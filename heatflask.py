@@ -113,7 +113,7 @@ bundles = {
     "app_specific_js": flask_assets.Bundle(  # Heatflask-specific code
         'js/L.Control.fps.js',
         'js/appUtil.js',
-        'js/leaflet-areaselect2.js',
+        'js/L.SwipeSelect.js',
         '../heatflask.js',
         '../DotLayer.js',
         filters=["babel", 'rjsmin'],
