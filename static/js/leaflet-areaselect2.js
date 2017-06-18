@@ -14,16 +14,14 @@ L.AreaSelect2 = L.Class.extend({
     addTo: function(map) {
         this.map = map;
 
-        // if (!this._container)
-        //     return;
+        let size = map.getSize();
 
-        let size = this.map.getSize();
-
-        this.rect = {};
         this.drag = false;
 
         this.canvas = L.DomUtil.create( "canvas", "leaflet-layer" );
         canvas = this.canvas;
+        map._panes.markerPane.appendChild( canvas );
+
         canvas.width = size.x;
         canvas.height = size.y;
 
@@ -31,11 +29,15 @@ L.AreaSelect2 = L.Class.extend({
         this.ctx.globalAlpha = 0.3;
         this.ctx.fillStyle = "red";
 
-        map._panes.markerPane.appendChild( canvas );
-
         this.map.dragging.disable();
 
         canvas.onmousedown = function(event){
+            let topLeft = this.map.containerPointToLayerPoint( [ 0, 0 ] );
+            L.DomUtil.setPosition( this.canvas, topLeft );
+
+            this.mapPanePos = this.map._getMapPanePos();
+
+            this.rect = {};
             this.dragging = true;
             this.rect.startX = event.pageX;
             this.rect.startY = event.pageY;
@@ -50,10 +52,9 @@ L.AreaSelect2 = L.Class.extend({
                 this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
                 let rect = this.rect,
-                    corner = new L.Point(rect.startX, rect.startY),
-                    p = corner._subtract(this.map._getMapPanePos());
+                    corner = new L.Point(rect.startX, rect.startY);
 
-                this.ctx.fillRect(p.x, p.y, rect.w, rect.h);
+                this.ctx.fillRect(corner.x, corner.y, rect.w, rect.h);
 
                 this.onmousemove && this.onmousemove(this.getBounds());
             }
