@@ -96,4 +96,4 @@ L.SwipeSelect = L.Class.extend({
 
 L.swipeselect = function(options, doneSelecting=null, whileSelecting=null) {
     return new L.SwipeSelect(options, doneSelecting=null, whileSelecting=null);
-}
+};
