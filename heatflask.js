@@ -49,7 +49,7 @@ var map = L.map('map', {
         zoom: ONLOAD_PARAMS.map_zoom,
         layers : [ default_baseLayer ],
         preferCanvas: true,
-        // zoomAnimation: false
+        zoomAnimation: false
     });
 
 appState.currentBaseLayer = default_baseLayer;
