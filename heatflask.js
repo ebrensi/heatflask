@@ -61,7 +61,7 @@ map.on('baselayerchange', function (e) {
 
 
 var sidebarControl = L.control.sidebar('sidebar').addTo(map),
-    zoomControl = map.zoomControl.setPosition('bottomleft'),
+    zoomControl = map.zoomControl.setPosition('topright'),
     layerControl = L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map),
     fps_display = ADMIN? L.control.fps().addTo(map) : null,
     areaSelect = null;
