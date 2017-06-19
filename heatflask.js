@@ -341,51 +341,52 @@ function updateShareStatus(status) {
 }
 
 
+
 function handle_table_selections( e, dt, type, indexes ) {
     if ( type === 'row' ) {
-        var selectedItems = atable.rows( {selected: true} ).data(),
-            unselectedItems = atable.rows( {selected: false} ).data();
-
-        for (var i = 0; i < selectedItems.length; i++) {
-            if (!selectedItems[i].selected){
-                togglePathSelect(selectedItems[i].id);
-            }
+        let items = atable.rows( indexes ).data();
+         for (let i=0; i<items.length; i++) {
+            let A = items[i];
+            A.selected = !A.selected;
+            A.highlighted = !A.highlighted;
         }
+    }
 
-        for (var i = 0; i < unselectedItems.length; i++) {
-            if (unselectedItems[i].selected){
-                togglePathSelect(unselectedItems[i].id);
-            }
-        }
+    DotLayer && DotLayer._onLayerDidMove();
 
-        let c = map.getCenter(),
-            z = map.getZoom();
-
-        if ( $("#zoom-table-selection").is(':checked') ) {
-            zoomToSelectedPaths();
-        }
-
-        // If map didn't move then force a redraw
-        DotLayer._onLayerDidMove();
+    if ( $("#zoom-table-selection").is(':checked') ) {
+        zoomToSelectedPaths();
     }
 }
+
 
 
 function handle_path_selections(ids) {
     if (!ids.length) {
         return;
     }
-    idStrings = ids.map((id) => "#"+id);
-    atable.rows(idStrings).nodes().to$().toggleClass("selected");
 
-    for (let i=0; i<ids.length; i++){
-        togglePathSelect(ids[i]);
+    let toSelect = [],
+        toDeSelect = [];
+
+    for (let i=0; i<ids.length; i++) {
+        let A = appState.items[ids[i]],
+            tag = "#"+A.id;
+        if (A.selected) {
+            toDeSelect.push(tag);
+        } else {
+            toSelect.push(tag);
+        }
     }
-    DotLayer._onLayerDidMove();
 
+    // simulate table (de)selections
+    atable.rows(toSelect).select();
+    atable.rows(toDeSelect).deselect();
+
+    if (toSelect.length == 1) {
+        // tableScroller.scrollTop(row.prop('offsetTop') - tableScroller.height()/2);
+    }
 }
-
-
 
 
 function zoomToSelectedPaths(){
@@ -430,54 +431,16 @@ function resumeFlow(){
     }
 }
 
-function highlightPath(id) {
-    var A = appState.items[id];
-    if (A.selected) return false;
-
-    A.highlighted = true;
-
-    // highlight table row and scroll to it if necessary
-    // atable.row("#"+id).select();
-    //tableScroller.scrollTop(row.prop('offsetTop') - tableScroller.height()/2);
-
-    return A;
-}
-
-
-function unhighlightPath(id){
-
-    var A = appState.items[id];
-    if (A.selected) return false;
-
-    A.highlighted = false;
-
-    // un-highlight table row
-    // $("#"+id).removeClass('selected');
-
-    return A;
-}
-
-function togglePathSelect(id){
-
-    var A = appState.items[id];
-    if (A.selected) {
-        A.selected = false;
-        unhighlightPath(id);
-    } else {
-        highlightPath(id);
-        A.selected = true;
-    }
-}
 
 function activityDataPopup(id, latlng){
-    var A = appState.items[id],
-    d = parseFloat(A.total_distance),
-    elapsed = hhmmss(parseFloat(A.elapsed_time)),
-    v = parseFloat(A.average_speed);
-    var dkm = +(d / 1000).toFixed(2),
-    dmi = +(d / 1609.34).toFixed(2),
-    vkm,
-    vmi;
+    let A = appState.items[id],
+        d = A.total_distance,
+        elapsed = hhmmss(A.elapsed_time),
+        v = A.average_speed,
+        dkm = +(d / 1000).toFixed(2),
+        dmi = +(d / 1609.34).toFixed(2),
+        vkm,
+        vmi;
 
     if (A.vtype == "pace"){
         vkm = hhmmss(1000 / v).slice(3) + "/km";

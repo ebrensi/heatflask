@@ -28,23 +28,18 @@ let cycleDuration=DotLayer.periodInSecs().toFixed(2),captureEnabled=captureContr
 DotLayer.dotScale=val;if(DotLayer._paused){DotLayer.drawLayer(DotLayer._timePaused);}},release:function(){updateState();}});if(FLASH_MESSAGES.length>0){var msg="<ul class=flashes>";for(let i=0,len=FLASH_MESSAGES.length;i<len;i++){msg+="<li>"+FLASH_MESSAGES[i]+"</li>";}
 msg+="</ul>";L.control.window(map,{content:msg,visible:true});}
 var atable=$('#activitiesList').DataTable({paging:false,scrollY:"60vh",scrollX:true,scrollCollapse:true,order:[[0,"desc"]],select:isMobileDevice()?"multi":"os",data:Object.values(appState.items),rowId:"id",columns:[{title:'<i class="fa fa-calendar" aria-hidden="true"></i>',data:null,render:A=>href(stravaActivityURL(A.id),A.ts_local.slice(0,10))},{title:"Type",data:"type"},{title:`<i class="fa fa-arrows-h"aria-hidden="true"></i>(${DIST_LABEL})`,data:"total_distance",render:data=>+(data/DIST_UNIT).toFixed(2)},{title:'<i class="fa fa-clock-o" aria-hidden="true"></i>',data:"elapsed_time",render:hhmmss},{title:"Name",data:"name"},{title:'<i class="fa fa-users" aria-hidden="true"></i>',data:"group",render:formatGroup}]}).on('select',handle_table_selections).on('deselect',handle_table_selections);var tableScroller=$('.dataTables_scrollBody');function updateShareStatus(status){console.log("updating share status.");url=`${SHARE_STATUS_UPDATE_URL}?status=${status}`;httpGetAsync(url,function(responseText){console.log(`response:${responseText}`);});}
-function handle_table_selections(e,dt,type,indexes){if(type==='row'){var selectedItems=atable.rows({selected:true}).data(),unselectedItems=atable.rows({selected:false}).data();for(var i=0;i<selectedItems.length;i++){if(!selectedItems[i].selected){togglePathSelect(selectedItems[i].id);}}
-for(var i=0;i<unselectedItems.length;i++){if(unselectedItems[i].selected){togglePathSelect(unselectedItems[i].id);}}
-let c=map.getCenter(),z=map.getZoom();if($("#zoom-table-selection").is(':checked')){zoomToSelectedPaths();}
-DotLayer._onLayerDidMove();}}
+function handle_table_selections(e,dt,type,indexes){if(type==='row'){let items=atable.rows(indexes).data();for(let i=0;i<items.length;i++){let A=items[i];A.selected=!A.selected;A.highlighted=!A.highlighted;}}
+DotLayer&&DotLayer._onLayerDidMove();if($("#zoom-table-selection").is(':checked')){zoomToSelectedPaths();}}
 function handle_path_selections(ids){if(!ids.length){return;}
-idStrings=ids.map(id=>"#"+id);atable.rows(idStrings).nodes().to$().toggleClass("selected");for(let i=0;i<ids.length;i++){togglePathSelect(ids[i]);}
-DotLayer._onLayerDidMove();}
+let toSelect=[],toDeSelect=[];for(let i=0;i<ids.length;i++){let A=appState.items[ids[i]],tag="#"+A.id;if(A.selected){toDeSelect.push(tag);}else{toSelect.push(tag);}}
+atable.rows(toSelect).select();atable.rows(toDeSelect).deselect();if(toSelect.length==1){}}
 function zoomToSelectedPaths(){var selection_bounds=L.latLngBounds();$.each(appState.items,(id,a)=>{if(a.selected){selection_bounds.extend(a.bounds);}});if(selection_bounds.isValid()){map.fitBounds(selection_bounds);}}
 function selectedIDs(){return Object.values(appState.items).filter(a=>{return a.selected;}).map(function(a){return a.id;});}
 function openSelected(){ids=selectedIDs();if(ids.length>0){var url=BASE_USER_URL+"?id="+ids.join("+");if(appState.paused==true){url+="&paused=1";}
 window.open(url,'_blank');}}
 function pauseFlow(){DotLayer.pause();appState.paused=true;}
 function resumeFlow(){appState.paused=false;if(DotLayer){DotLayer.animate();}}
-function highlightPath(id){var A=appState.items[id];if(A.selected)return false;A.highlighted=true;return A;}
-function unhighlightPath(id){var A=appState.items[id];if(A.selected)return false;A.highlighted=false;return A;}
-function togglePathSelect(id){var A=appState.items[id];if(A.selected){A.selected=false;unhighlightPath(id);}else{highlightPath(id);A.selected=true;}}
-function activityDataPopup(id,latlng){var A=appState.items[id],d=parseFloat(A.total_distance),elapsed=hhmmss(parseFloat(A.elapsed_time)),v=parseFloat(A.average_speed);var dkm=+(d/1000).toFixed(2),dmi=+(d/1609.34).toFixed(2),vkm,vmi;if(A.vtype=="pace"){vkm=hhmmss(1000/v).slice(3)+"/km";vmi=hhmmss(1609.34/v).slice(3)+"/mi";}else{vkm=(v*3600/1000).toFixed(2)+"km/hr";vmi=(v*3600/1609.34).toFixed(2)+"mi/hr";}
+function activityDataPopup(id,latlng){let A=appState.items[id],d=A.total_distance,elapsed=hhmmss(A.elapsed_time),v=A.average_speed,dkm=+(d/1000).toFixed(2),dmi=+(d/1609.34).toFixed(2),vkm,vmi;if(A.vtype=="pace"){vkm=hhmmss(1000/v).slice(3)+"/km";vmi=hhmmss(1609.34/v).slice(3)+"/mi";}else{vkm=(v*3600/1000).toFixed(2)+"km/hr";vmi=(v*3600/1609.34).toFixed(2)+"mi/hr";}
 var popup=L.popup().setLatLng(latlng).setContent(`${A.name}<br>${A.type}:${A.ts_local}<br>`+`${dkm}km(${dmi}mi)in ${elapsed}<br>${vkm}(${vmi})<br>`+`View in<a href='https://www.strava.com/activities/${A.id}'target='_blank'>Strava</a>`+`,<a href='${BASE_USER_URL}?id=${A.id}'target='_blank'>Heatflask</a>`).openOn(map);}
 function getBounds(ids=[]){let bounds=L.latLngBounds();for(let i=0;i<ids.length;i++){bounds.extend(appState.items[ids[i]].bounds);}
 return bounds;}
