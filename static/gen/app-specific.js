@@ -32,7 +32,7 @@ function handle_table_selections(e,dt,type,indexes){if(type==='row'){let items=a
 DotLayer&&DotLayer._onLayerDidMove();if($("#zoom-table-selection").is(':checked')){zoomToSelectedPaths();}}
 function handle_path_selections(ids){if(!ids.length){return;}
 let toSelect=[],toDeSelect=[];for(let i=0;i<ids.length;i++){let A=appState.items[ids[i]],tag="#"+A.id;if(A.selected){toDeSelect.push(tag);}else{toSelect.push(tag);}}
-atable.rows(toSelect).select();atable.rows(toDeSelect).deselect();if(toSelect.length==1){}}
+atable.rows(toSelect).select();atable.rows(toDeSelect).deselect();if(toSelect.length==1){let row=$(toSelect[0]);tableScroller.scrollTop(row.prop('offsetTop')-tableScroller.height()/2);}}
 function zoomToSelectedPaths(){var selection_bounds=L.latLngBounds();$.each(appState.items,(id,a)=>{if(a.selected){selection_bounds.extend(a.bounds);}});if(selection_bounds.isValid()){map.fitBounds(selection_bounds);}}
 function selectedIDs(){return Object.values(appState.items).filter(a=>{return a.selected;}).map(function(a){return a.id;});}
 function openSelected(){ids=selectedIDs();if(ids.length>0){var url=BASE_USER_URL+"?id="+ids.join("+");if(appState.paused==true){url+="&paused=1";}

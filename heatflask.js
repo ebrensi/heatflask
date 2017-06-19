@@ -384,7 +384,8 @@ function handle_path_selections(ids) {
     atable.rows(toDeSelect).deselect();
 
     if (toSelect.length == 1) {
-        // tableScroller.scrollTop(row.prop('offsetTop') - tableScroller.height()/2);
+        let row = $(toSelect[0]);
+        tableScroller.scrollTop(row.prop('offsetTop') - tableScroller.height()/2);
     }
 }
 
