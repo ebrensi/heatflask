@@ -4,9 +4,24 @@ function isMobileDevice() {
 };
 
 
+//--------------------------------
+Number.prototype.pad = function(size) {
+  var s = String(this);
+  while (s.length < (size || 2)) {s = "0" + s;}
+  return s;
+}
+
 // ------------------------------
 function hhmmss( secs ) {
-    return new Date( secs * 1000 ).toISOString().substr( 11, 8 );
+    let totalSeconds = secs;
+
+    let hours = Math.floor(totalSeconds / 3600);
+    totalSeconds %= 3600;
+    let minutes = Math.floor(totalSeconds / 60).pad(2);
+    seconds = (totalSeconds % 60).pad(2);
+
+    return `${hours}:${minutes}:${seconds}`;
+    // return new Date( secs * 1000 ).toISOString().substr( 11, 8 );
 }
 
 function img( url, w=20, h=20, alt="" ) {
