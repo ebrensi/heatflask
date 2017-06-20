@@ -34,8 +34,9 @@
               ADMIN = {{ (current_user.is_authenticated and current_user.is_admin())|tojson|safe }},
               FLASH_MESSAGES = {{ get_flashed_messages()|tojson|safe }},
               ONLOAD_PARAMS = {
-                    flowres: "{{ flowres }}",
-                    heatres: "{{ heatres }}",
+                    C1: {{ c1|tojson }},
+                    C2: {{ c2|tojson }},
+                    SZ: {{ sz|tojson }},
                     autozoom: {{ autozoom|tojson }},
                     activity_ids: "{{ ids }}",
                     limit: {{ limit|tojson }},
@@ -46,8 +47,7 @@
                     start_paused: {{ paused|tojson }},
                     map_providers: {{ baselayer|tojson|safe }},
                     map_center: [{{ lat }}, {{ lng }}],
-                    map_zoom: {{ zoom }},
-                    info: {{ info|tojson }}
+                    map_zoom: {{ zoom }}
              },
              MEASURMENT_PREFERENCE = "{{ current_user.measurement_preference if current_user.is_authenticated else user.measurement_preference }}",
              DIST_UNIT = (MEASURMENT_PREFERENCE=="feet")? 1609.34 : 1000.0,
@@ -148,28 +148,6 @@
 									</span>
 									<hr>
 
-									<span style="display:none">
-									<!-- <span style="display:block"> -->
-										<label for="heatres" style="display:block">Heat Layer:</label>
-										<select id="heatres" name="renderHeat" form="renderform">
-											<option value="" selected>None</option>
-											<option value="high">High resolution</option>
-											<option value="low">Low resolution</option>
-										</select>
-									</span>
-
-
-									<span style="display:none">
-									<!-- <span style="display:block"> -->
-										<label for="flowres" style="display:block">Flow Layer:</label>
-										<select id="flowres" name="renderFlow" form="renderform">
-											<option value="">None</option>
-											<option value="high" selected>High resolution</option>
-											<option value="low" disabled="">Low resolution</option>
-										</select>
-									</span>
-
-
 									<div class="checkbox">
 										<label><input type="checkbox" id="autozoom" value="1">Auto-Zoom when finished</label>
 									</div>
@@ -258,7 +236,7 @@
 								<div class="sidebar-pane" id="info-pane">
 									<h1 class="sidebar-header">Info<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
 									<br>
-									Thehe current location dates or preset, and zoom are embedded in the url so you can share that url and anyone who clicks on it will get the same view.
+									The map state (center, zoom), and vizualization constants are embedded in the url so you can share that url and anyone who clicks on it will get the same view.
 									<br>
 									<div>
 									Note: You can specify a custom map baselayer by setting "baselayer={map}" in the URL, where {map} is one of the provider names from
@@ -271,10 +249,10 @@
 									<hr>
 									<h4>GIF Export</h4>
 									<p>
-									 if you adjust the cycle duration to less than 10 seconds then you have the option to capture and export the current view of your system as an animated gif.  It currrently works with only some map backgrounds, notably not Google Maps baselayers.
+									 if you adjust the cycle duration to less than 10 seconds then you have the option to capture and export the current view of your system as an animated gif.  It currrently works with only some map backgrounds, notably not Google Maps baselayers.</a>.
 									 </p>
 
-									<a href="https://github.com/ebrensi/heatflask"><i class="fa fa-github fa-2x"></i> Want to contribute?<i class="fa fa-github fa-2x"></i></a>
+									<a href="https://github.com/ebrensi/heatflask" target="_blank"><i class="fa fa-github fa-2x"></i> Want to contribute?<i class="fa fa-github fa-2x"></i></a>
 									<hr>
 								</div>
 
@@ -286,8 +264,8 @@
 
 									<div>
 										<br>
-										<input type="checkbox" name="szoom" id="zoom-table-selection" value="1">Auto-Zoom to selection
-										<button type="button" id="render-selection-button" class="btn btn-default btn-sm">Render selected</button>
+										<input type="checkbox" name="szoom" id="zoom-to-selection" value="1">Auto-Zoom to selection
+										<button type="button" id="render-selection-button" class="btn btn-info btn-sm">Render selected</button>
 									</div>
 								</div>
 
