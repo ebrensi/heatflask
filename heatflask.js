@@ -125,6 +125,18 @@ function doneSelecting(bounds){
         mapManipulation(true);
         selectButton.state("not-selecting");
         handle_path_selections(ids);
+
+         if (ids.length == 1) {
+            let id = ids[0],
+                A = appState.items[id];
+            if (!A.selected){
+                return;
+            }
+            let loc = bounds.latLngBounds.getCenter();
+            setTimeout(function (){
+                activityDataPopup(ids, loc);
+            }, 100);
+        }
     });
 
 }
@@ -158,6 +170,25 @@ var selectControl = new L.SwipeSelect(options={}, doneSelecting=doneSelecting),
     }).addTo(map);
 
 
+map.on("boxhookend", function(event){
+    let pxBounds = event.pxBounds;
+    DotLayer && DotLayer.setSelectRegion(pxBounds, callback=function(ids){
+        handle_path_selections(ids);
+
+        if (ids.length == 1) {
+            let id = ids[0],
+                A = appState.items[id];
+            if (!A.selected){
+                return;
+            }
+            let loc = event.latLngBounds.getCenter();
+            setTimeout(function (){
+                activityDataPopup(id, loc);
+            }, 100);
+
+        }
+    });
+});
 
 
 
@@ -488,10 +519,10 @@ function activityDataPopup(id, latlng){
     var popup = L.popup()
                 .setLatLng(latlng)
                 .setContent(
-                    `${A.name}<br>${A.type}: ${A.ts_local}<br>`+
-                    `${dkm} km (${dmi} mi) in ${elapsed}<br>${vkm} (${vmi})<br>` +
-                    `View in <a href='https://www.strava.com/activities/${A.id}' target='_blank'>Strava</a>`+
-                    `, <a href='${BASE_USER_URL}?id=${A.id}' target='_blank'>Heatflask</a>`
+                    `<b>${A.name}</b><br>${A.type}:&nbsp;${A.ts_local}<br>`+
+                    `${dkm}&nbsp;km&nbsp;(${dmi}&nbsp;mi)&nbsp;in&nbsp;${elapsed}<br>${vkm}&nbsp;(${vmi})<br>` +
+                    `View&nbsp;in&nbsp;<a href='https://www.strava.com/activities/${A.id}' target='_blank'>Strava</a>`+
+                    `,&nbsp;<a href='${BASE_USER_URL}?id=${A.id}'&nbsp;target='_blank'>Heatflask</a>`
                     )
                 .openOn(map);
 }
