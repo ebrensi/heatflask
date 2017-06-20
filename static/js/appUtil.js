@@ -25,7 +25,7 @@ function hhmmss( secs ) {
 }
 
 function img( url, w=20, h=20, alt="" ) {
-  return `<img src=${url} width=${w}px height=${h}px class="img-fluid" alt="${alt}">`;
+  return `<img src='${url}' width=${w}px height=${h}px class="img-fluid" alt="${alt}">`;
 }
 
 
