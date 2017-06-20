@@ -424,8 +424,6 @@ function handle_table_selections( e, dt, type, indexes ) {
     }
 }
 
-
-
 function handle_path_selections(ids) {
     if (!ids.length) {
         return;
@@ -484,6 +482,12 @@ function openSelected(){
         window.open(url,'_blank');
     }
 }
+
+function deselectAll(){
+    handle_path_selections(selectedIDs());
+}
+
+
 
 function pauseFlow(){
     DotLayer.pause();
@@ -1016,6 +1020,7 @@ $(document).ready(function() {
 
     $("#renderButton").click(renderLayers);
     $("#render-selection-button").click(openSelected);
+    $("#clear-selection-button").click(deselectAll);
 
     $("#autozoom").prop('checked', ONLOAD_PARAMS.autozoom);
 
