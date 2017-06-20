@@ -11,10 +11,8 @@ import flask_compress
 from datetime import datetime
 import sys
 import uuid
-import urllib
 import logging
 import os
-import re
 import json
 import stravalib
 import flask_login
@@ -114,6 +112,7 @@ bundles = {
         'js/L.Control.fps.js',
         'js/appUtil.js',
         'js/L.SwipeSelect.js',
+        'js/L.BoxHook.js',
         '../heatflask.js',
         '../DotLayer.js',
         filters=["babel", 'rjsmin'],
