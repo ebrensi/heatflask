@@ -339,7 +339,7 @@ let tableColumns = [
 
     imgColumn = {
         title: "<i class='fa fa-user' aria-hidden='true'></i>",
-        data: "profile",
+        data: "owner",
         render: formatUserId
     };
 
@@ -349,6 +349,7 @@ if (ONLOAD_PARAMS.group) {
 
 var atable = $('#activitiesList').DataTable({
                 paging: false,
+                deferRender: true,
                 scrollY: "60vh",
                 scrollX: true,
                 scrollCollapse: true,
