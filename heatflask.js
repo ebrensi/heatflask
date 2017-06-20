@@ -576,10 +576,10 @@ function renderLayers() {
     }
 
     // Handle group-activity case
-    if (ONLOAD_PARAMS.group) {
-        debugger;
+    if (type=="grouped_with") {
         // window.open(GROUP_ACTIVITY_SSE, target="_blank");
-        readStream(GROUP_ACTIVITY_SSE, null, updateLayers);
+        let group = $("#activity_ids").val();
+        readStream(GROUP_ACTIVITY_SSE + group, null, updateLayers);
         return;
     }
 
@@ -849,7 +849,9 @@ function updateState(){
     type = $("#select_type").val(),
     num = $("#select_num").val();
 
-    if (type == "activities") {
+    if (type == "grouped_with") {
+        params.group = +$("#activity_ids").val();;
+    } else if(type == "activities") {
         params.limit = num;
     } else if (type == "activity_ids") {
         params.id = $("#activity_ids").val();
@@ -866,11 +868,6 @@ function updateState(){
 
     if (appState.paused){
         params.paused = "1";
-    }
-
-    if ($("#info").is(':checked')) {
-        appState.info = true;
-        params.info = "1";
     }
 
     if ($("#autozoom").is(':checked')) {
@@ -905,8 +902,12 @@ function preset_sync() {
     num = $("#select_num").val(),
     type = $("#select_type").val();
 
-    $('#query_type').text(type);
-    if (type=="days"){
+    if (type=="grouped_with") {
+        $(".date_select").hide();
+        $("#num_select").hide();
+        $("#id_select").show();
+
+    } else if (type=="days"){
         $(".date_select").hide();
         $("#id_select").hide();
         $("#num_select").show();
@@ -987,7 +988,11 @@ $(document).ready(function() {
 
     $("#autozoom").prop('checked', ONLOAD_PARAMS.autozoom);
 
-    if (ONLOAD_PARAMS.activity_ids) {
+    if (ONLOAD_PARAMS.group) {
+        $("#select_type").val("grouped_with");
+        $("#activity_ids").val(ONLOAD_PARAMS.group);
+        $("#activity_ids").prop("readonly", true);
+    } else if (ONLOAD_PARAMS.activity_ids) {
         $("#activity_ids").val(ONLOAD_PARAMS.activity_ids);
         $("#select_type").val("activity_ids");
     } else if (ONLOAD_PARAMS.limit) {

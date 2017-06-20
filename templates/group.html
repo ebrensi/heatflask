@@ -27,7 +27,7 @@
               KEY_QUERY_URL = "{{ url_for('getdata_with_key', query_key='') }}",
               BASE_USER_URL = "{{ url_for('main', username=user.id) }}",
               GROUP_ACTIVITY_URL = BASE_USER_URL + "?group=",
-              GROUP_ACTIVITY_SSE = "{{ url_for('group_stream', username=user.id, activity_id='') }}",
+              GROUP_ACTIVITY_SSE = "{{ url_for('group_stream', username=user.id, activity_id=group) }}",
               USER_ID = "{{ user.id }}",
               SHARE_PROFILE = {{ user.share_profile|tojson|safe }},
               SHARE_STATUS_UPDATE_URL = "{{ url_for('update_share_status', username=user.id) }}",
@@ -127,7 +127,6 @@
 											<option value="days">recent days</option>
 											<option value="activities">recent activities</option>
 											<option value="activity_ids">Activity IDs</option>
-                                            <option value="grouped_with">Grouped With</option>
 											<option value="" selected="selected">Date-Range</option>
 										</select>
 									</span>
