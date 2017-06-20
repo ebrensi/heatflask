@@ -100,26 +100,46 @@ var animation_button_states = [
     }).addTo(map);
 
 
-
-function doneSelecting(bounds){
-    let pxBounds = bounds.pxBounds;
-    DotLayer && DotLayer.setSelectRegion(pxBounds, callback=handle_path_selections);
+// enable or disable pan/zoom
+function mapManipulation(state=false){
+    if (state) {
+        map.dragging.enable();
+        map.touchZoom.enable();
+        map.doubleClickZoom.enable();
+        map.scrollWheelZoom.enable();
+    } else {
+        map.dragging.disable();
+        map.touchZoom.disable();
+        map.doubleClickZoom.disable();
+        map.scrollWheelZoom.disable();
+    }
 }
 
 // Select-activities-in-region functionality
-var selectControl = new L.SwipeSelect(options={}, doneSelecting=doneSelecting);
+function doneSelecting(bounds){
+    // debugger;
+    let pxBounds = bounds.pxBounds;
 
-var selectButton_states = [
+    DotLayer && DotLayer.setSelectRegion(pxBounds, callback=function(ids){
+        selectControl.remove();
+        mapManipulation(true);
+        selectButton.state("not-selecting");
+        handle_path_selections(ids);
+    });
+
+}
+var selectControl = new L.SwipeSelect(options={}, doneSelecting=doneSelecting),
+    selectButton_states = [
         {
             stateName: 'not-selecting',
             icon: 'fa-object-group',
             title: 'Toggle Path Selection',
             onClick: function(btn, map) {
                 btn.state('selecting');
-                map.dragging.disable();
+                mapManipulation(false);
                 selectControl.addTo(map);
 
-            }
+            },
         },
         {
             stateName: 'selecting',
@@ -127,7 +147,7 @@ var selectButton_states = [
             title: 'Stop Selecting',
             onClick: function(btn, map) {
                 btn.state('not-selecting');
-                map.dragging.enable();
+                mapManipulation(true);
                 selectControl.remove();
             }
         },
@@ -354,7 +374,7 @@ function handle_table_selections( e, dt, type, indexes ) {
 
     DotLayer && DotLayer._onLayerDidMove();
 
-    if ( $("#zoom-table-selection").is(':checked') ) {
+    if ( $("#zoom-to-selection").is(':checked') ) {
         zoomToSelectedPaths();
     }
 }
@@ -927,9 +947,9 @@ $(document).ready(function() {
     });
 
 
-    $("#zoom-table-selection").prop("checked", true);
-    $("#zoom-table-selection").on("change", function(){
-        if ( $("#zoom-table-selection").is(':checked')) {
+    $("#zoom-to-selection").prop("checked", false);
+    $("#zoom-to-selection").on("change", function(){
+        if ( $("#zoom-to-selection").is(':checked')) {
             zoomToSelectedPaths();
         }
     });
