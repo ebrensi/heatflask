@@ -2,19 +2,15 @@ const SPEED_SCALE = 5.0,
       SEP_SCALE = {m: 0.14, b: 15.0};
 
 // Set up Map and base layers
-var map_providers = ONLOAD_PARAMS.map_providers,
+let map_providers = ONLOAD_PARAMS.map_providers,
     baseLayers = {"None": L.tileLayer("")},
     default_baseLayer = baseLayers["None"],
-    HeatLayer = false,
-    FlowLayer = false,
     DotLayer = false,
     appState = {
-        baseLayers: map_providers,
         paused: ONLOAD_PARAMS.start_paused,
         items: {},
-        latlngs_flat: []
+        currentBaseLayer: null
     };
-
 
 if (!OFFLINE) {
     var online_baseLayers = {
@@ -32,15 +28,21 @@ if (!OFFLINE) {
     Object.assign(baseLayers, online_baseLayers);
     if (map_providers.length) {
         for (var i = 0; i < map_providers.length; i++) {
-            provider = map_providers[i];
-            var tl = L.tileLayer.provider(provider);
-            baseLayers[provider] = tl;
-            if (i==0) default_baseLayer = tl;
+            let provider = map_providers[i];
+            if (!baseLayers[provider]) {
+                baseLayers[provider] = L.tileLayer.provider(provider);
+            }
+            if (i==0) default_baseLayer = baseLayers[provider];
         }
     } else {
         default_baseLayer = baseLayers["CartoDB.DarkMatter"];
     }
 }
+
+for (name in baseLayers) {
+    baseLayers[name].name = name;
+}
+
 
 var map = L.map('map', {
         center: ONLOAD_PARAMS.map_center,
@@ -50,11 +52,17 @@ var map = L.map('map', {
         zoomAnimation: false
     });
 
+appState.currentBaseLayer = default_baseLayer;
+map.on('baselayerchange', function (e) {
+    appState.currentBaseLayer = e;
+    updateState();
+});
+
 
 
 var sidebarControl = L.control.sidebar('sidebar').addTo(map),
-    zoomControl = map.zoomControl.setPosition('bottomright'),
     layerControl = L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map),
+    zoomControl = map.zoomControl.setPosition('bottomright'),
     fps_display = ADMIN? L.control.fps().addTo(map) : null,
     areaSelect = null;
 
@@ -85,11 +93,72 @@ var animation_button_states = [
             btn.state('animation-running');
         }
     }
-];
+],
 
-var animationControl = L.easyButton({
-    states: appState.paused? animation_button_states.reverse() : animation_button_states
-}).addTo(map);
+    animationControl = L.easyButton({
+        states: appState.paused? animation_button_states.reverse() : animation_button_states
+    }).addTo(map);
+
+
+// enable or disable pan/zoom
+function mapManipulation(state=false){
+    if (state) {
+        map.dragging.enable();
+        map.touchZoom.enable();
+        map.doubleClickZoom.enable();
+        map.scrollWheelZoom.enable();
+    } else {
+        map.dragging.disable();
+        map.touchZoom.disable();
+        map.doubleClickZoom.disable();
+        map.scrollWheelZoom.disable();
+    }
+}
+
+// Select-activities-in-region functionality
+function doneSelecting(bounds){
+    // debugger;
+    let pxBounds = bounds.pxBounds;
+
+    DotLayer && DotLayer.setSelectRegion(pxBounds, callback=function(ids){
+        selectControl.remove();
+        mapManipulation(true);
+        selectButton.state("not-selecting");
+        handle_path_selections(ids);
+    });
+
+}
+var selectControl = new L.SwipeSelect(options={}, doneSelecting=doneSelecting),
+    selectButton_states = [
+        {
+            stateName: 'not-selecting',
+            icon: 'fa-object-group',
+            title: 'Toggle Path Selection',
+            onClick: function(btn, map) {
+                btn.state('selecting');
+                mapManipulation(false);
+                selectControl.addTo(map);
+
+            },
+        },
+        {
+            stateName: 'selecting',
+            icon: '<span>&cross;</span>',
+            title: 'Stop Selecting',
+            onClick: function(btn, map) {
+                btn.state('not-selecting');
+                mapManipulation(true);
+                selectControl.remove();
+            }
+        },
+    ],
+    selectButton = L.easyButton({
+        states: selectButton_states,
+        position: "topright"
+    }).addTo(map);
+
+
+
 
 
 // Capture button
@@ -112,8 +181,8 @@ var capture_button_states = [
     },
     {
         stateName: 'selecting',
-        icon: 'fa-object-group',
-        title: 'select capture region',
+        icon: 'fa-expand',
+        title: 'Select Capture Region',
         onClick: function (btn, map) {
             let size = map.getSize(),
                 w = areaSelect._width,
@@ -139,8 +208,8 @@ var capture_button_states = [
     },
     {
         stateName: 'capturing',
-        icon: 'fa-stop',
-        title: 'Stop capturing',
+        icon: 'fa-stop-circle',
+        title: 'Cancel Capture',
         onClick: function (btn, map) {
             if (DotLayer && DotLayer._capturing) {
                 DotLayer.abortCapture();
@@ -201,12 +270,15 @@ $(".dotconst-dial").knob({
                 captureControl.removeFrom(map);
                 captureControl.enabled = false;
             }
+        },
+        release: function() {
+            updateState();
         }
 });
 
 $(".dotscale-dial").knob({
         min: 0.01,
-        max: 4,
+        max: 10,
         step: 0.01,
         width: "100",
         height: "100",
@@ -221,6 +293,9 @@ $(".dotscale-dial").knob({
             if (DotLayer._paused) {
                 DotLayer.drawLayer(DotLayer._timePaused);
             }
+        },
+        release: function() {
+            updateState();
         }
 });
 
@@ -280,8 +355,8 @@ var atable = $('#activitiesList').DataTable({
                 order: [[ 0, "desc" ]],
                 select: isMobileDevice()? "multi" : "os",
                 data: Object.values(appState.items),
-                idSrc: "id",
-                columns: tableColumns,
+                rowId: "id",
+                columns: tableColumns
             }).on( 'select', handle_table_selections)
               .on( 'deselect', handle_table_selections);
 
@@ -299,39 +374,56 @@ function updateShareStatus(status) {
 }
 
 
+
 function handle_table_selections( e, dt, type, indexes ) {
     if ( type === 'row' ) {
-        var selectedItems = atable.rows( {selected: true} ).data(),
-            unselectedItems = atable.rows( {selected: false} ).data();
-
-        for (var i = 0; i < selectedItems.length; i++) {
-            if (!selectedItems[i].selected){
-                togglePathSelect(selectedItems[i].id);
-            }
+        let items = atable.rows( indexes ).data();
+         for (let i=0; i<items.length; i++) {
+            let A = items[i];
+            A.selected = !A.selected;
+            A.highlighted = !A.highlighted;
         }
+    }
 
-        for (var i = 0; i < unselectedItems.length; i++) {
-            if (unselectedItems[i].selected){
-                togglePathSelect(unselectedItems[i].id);
-            }
-        }
+    DotLayer && DotLayer._onLayerDidMove();
 
-        let c = map.getCenter(),
-            z = map.getZoom();
-
-        if ( $("#zoom-table-selection").is(':checked') ) {
-            zoomToSelected();
-        }
-
-        // If map didn't move then force a redraw
-        let c2 = map.getCenter();
-        if (DotLayer && c.x == c2.x &&  c.y == c2.y && z == map.getZoom()) {
-            DotLayer._onLayerDidMove();
-        }
+    if ( $("#zoom-to-selection").is(':checked') ) {
+        zoomToSelectedPaths();
     }
 }
 
-function zoomToSelected(){
+
+
+function handle_path_selections(ids) {
+    if (!ids.length) {
+        return;
+    }
+
+    let toSelect = [],
+        toDeSelect = [];
+
+    for (let i=0; i<ids.length; i++) {
+        let A = appState.items[ids[i]],
+            tag = "#"+A.id;
+        if (A.selected) {
+            toDeSelect.push(tag);
+        } else {
+            toSelect.push(tag);
+        }
+    }
+
+    // simulate table (de)selections
+    atable.rows(toSelect).select();
+    atable.rows(toDeSelect).deselect();
+
+    if (toSelect.length == 1) {
+        let row = $(toSelect[0]);
+        tableScroller.scrollTop(row.prop('offsetTop') - tableScroller.height()/2);
+    }
+}
+
+
+function zoomToSelectedPaths(){
     // Pan-Zoom to fit all selected activities
     var selection_bounds = L.latLngBounds();
     $.each(appState.items, (id, a) => {
@@ -373,56 +465,16 @@ function resumeFlow(){
     }
 }
 
-function highlightPath(id) {
-    var A = appState.items[id];
-    if (A.selected) return false;
-
-    A.highlighted = true;
-
-    var row = $("#"+id),
-        flow = A.flowLayer;
-
-    // highlight table row and scroll to it if necessary
-    row.addClass('selected');
-    // tableScroller.scrollTop(row.prop('offsetTop') - tableScroller.height()/2);
-
-    return A;
-}
-
-
-function unhighlightPath(id){
-
-    var A = appState.items[id];
-    if (A.selected) return false;
-
-    A.highlighted = false;
-
-    // un-highlight table row
-    $("#"+id).removeClass('selected');
-
-    return A;
-}
-
-function togglePathSelect(id){
-    var A = appState.items[id];
-    if (A.selected) {
-        A.selected = false;
-        unhighlightPath(id);
-    } else {
-        highlightPath(id);
-        A.selected = true;
-    }
-}
 
 function activityDataPopup(id, latlng){
-    var A = appState.items[id],
-    d = parseFloat(A.total_distance),
-    elapsed = hhmmss(parseFloat(A.elapsed_time)),
-    v = parseFloat(A.average_speed);
-    var dkm = +(d / 1000).toFixed(2),
-    dmi = +(d / 1609.34).toFixed(2),
-    vkm,
-    vmi;
+    let A = appState.items[id],
+        d = A.total_distance,
+        elapsed = hhmmss(A.elapsed_time),
+        v = A.average_speed,
+        dkm = +(d / 1000).toFixed(2),
+        dmi = +(d / 1609.34).toFixed(2),
+        vkm,
+        vmi;
 
     if (A.vtype == "pace"){
         vkm = hhmmss(1000 / v).slice(3) + "/km";
@@ -438,7 +490,7 @@ function activityDataPopup(id, latlng){
                     `${A.name}<br>${A.type}: ${A.ts_local}<br>`+
                     `${dkm} km (${dmi} mi) in ${elapsed}<br>${vkm} (${vmi})<br>` +
                     `View in <a href='https://www.strava.com/activities/${A.id}' target='_blank'>Strava</a>`+
-                    `, <a href='${BASE_USER_URL}?id=${A.id}&flowres=high' target='_blank'>Heatflask</a>`
+                    `, <a href='${BASE_USER_URL}?id=${A.id}' target='_blank'>Heatflask</a>`
                     )
                 .openOn(map);
 }
@@ -462,6 +514,18 @@ function initializeDotLayer() {
     //     DotLayer.options.normal.dotColor = $(this).val();
     // });
 
+    if (ONLOAD_PARAMS.C1) {
+        DotLayer.C1 = ONLOAD_PARAMS.C1;
+    }
+
+    if (ONLOAD_PARAMS.C2) {
+        DotLayer.C2 = ONLOAD_PARAMS.C2;
+    }
+
+    if (ONLOAD_PARAMS.SZ) {
+        DotLayer.dotScale = ONLOAD_PARAMS.SZ;
+    }
+
     map.addLayer(DotLayer);
     layerControl.addOverlay(DotLayer, "Dots");
     $("#sepConst").val((Math.log2(DotLayer.C1) - SEP_SCALE.b) / SEP_SCALE.m ).trigger("change");
@@ -470,6 +534,24 @@ function initializeDotLayer() {
 
     setTimeout(function(){
         $("#period-value").html(DotLayer.periodInSecs().toFixed(2));
+
+        // Enable capture if period is less than CAPTURE_DURATION_MAX
+        let cycleDuration = DotLayer.periodInSecs().toFixed(2),
+            captureEnabled = captureControl.enabled;
+
+
+        $("#period-value").html(cycleDuration);
+        if (cycleDuration <= CAPTURE_DURATION_MAX) {
+            if (!captureEnabled) {
+                captureControl.addTo(map);
+                captureControl.enabled = true;
+            }
+        } else if (captureEnabled) {
+            captureControl.removeFrom(map);
+            captureControl.enabled = false;
+        }
+
+
     }, 500);
 
     $("#showPaths").prop("checked", DotLayer.options.showPaths)
@@ -482,14 +564,10 @@ function initializeDotLayer() {
 
 /* Rendering */
 function renderLayers() {
-    const flowres = $("#flowres").val(),
-          heatres = $("#heatres").val(),
-          date1 = $("#date1").val(),
+    const date1 = $("#date1").val(),
           date2 = $("#date2").val(),
           type = $("#select_type").val(),
           num = $("#select_num").val(),
-          lores = (flowres == "low" || heatres == "low"),
-          hires = (flowres == "high" || heatres == "high"),
           idString = (type == "activity_ids")? $("#activity_ids").val():null;
 
     if (DotLayer) {
@@ -515,7 +593,7 @@ function renderLayers() {
         streamQuery[USER_ID] = {
             activity_ids: activityIds,
             summaries: true,
-            streams: hires
+            streams: true
         };
 
         httpPostAsync(POST_QUERY_URL, streamQuery, function(data) {
@@ -549,7 +627,7 @@ function renderLayers() {
         if (queryResult == "build") {
             activityQuery["only_ids"] = false;
             activityQuery["summaries"] = true;
-            activityQuery["streams"] = hires;
+            activityQuery["streams"] = true;
             // TODO: handle the unlikely case where there are items already in
             //  appState.items
             let streamURL = QUERY_URL_SSE + "?" + jQuery.param(activityQuery);
@@ -580,7 +658,7 @@ function renderLayers() {
         streamQuery[USER_ID] = {
             activity_ids: activityIds,
             summaries: true,
-            streams: hires
+            streams: true
         };
 
         httpPostAsync(POST_QUERY_URL, streamQuery, function(data) {
@@ -610,38 +688,13 @@ function renderLayers() {
             msg2 = " " + msg + " " + num  + " activities rendered.";
         $(".data_message").html(msg2);
 
-        /*
-        // initialize, update, or remove HeatLayer
-        if (heatres){
-            if (HeatLayer) {
-                // update existing heatmap with new points
-                HeatLayer.setLatLngs(appState.latlngs_flat);
-                HeatLayer.redraw();
-            } else {
-                // create new heatmap
-                HeatLayer = L.heatLayer(appState.latlngs_flat, HEATLAYER_DEFAULT_OPTIONS);
-                map.addLayer(HeatLayer);
-                layerControl.addOverlay(HeatLayer, "Point Density");
-            }
-        } else if (HeatLayer){
-            map.removeLayer(HeatLayer);
-            layerControl.removeLayer(HeatLayer);
-            HeatLayer = false;
-        }
-        */
 
-        // initialize, update, or remove DotLayer
-        if (flowres){
-            if (DotLayer) {
-                DotLayer.reset();
-                !appState.paused && DotLayer.animate();
-            } else {
-                initializeDotLayer();
-            }
+        // initialize or update DotLayer
+        if (DotLayer) {
+            DotLayer.reset();
+            !appState.paused && DotLayer.animate();
         } else {
-            map.removeLayer(DotLayer);
-            layerControl.removeLayer(DotLayer);
-            DotLayer = false;
+            initializeDotLayer();
         }
 
         // render the activities table
@@ -652,11 +705,6 @@ function renderLayers() {
 
 
 function readStream(streamURL, numActivities=null, callback=null) {
-    const flowres = $("#flowres").val(),
-          heatres = $("#heatres").val(),
-          lores = (flowres == "low" || heatres == "low"),
-          hires = (flowres == "high" || heatres == "high");
-
     let msgBox = L.control.window(map,
             {
                 position: 'top',
@@ -681,10 +729,8 @@ function readStream(streamURL, numActivities=null, callback=null) {
 
     function doneRendering(msg){
         if (rendering) {
-            appState['date1'] = date1;
-            appState["date2"] = date2;
-            appState["flowres"] = flowres;
-            appState["heatres"] = heatres;
+            appState['date1'] = $("#date1").val();
+            appState["date2"] = $("#date2").val();
             updateState();
 
 
@@ -741,28 +787,14 @@ function readStream(streamURL, numActivities=null, callback=null) {
         }
 
         // At this point we know A is an activity object, not a message
-        let heatpoints = null,
-            flowpoints = null,
-            hasBounds = A.bounds,
+        let hasBounds = A.bounds,
             bounds = hasBounds?
                 L.latLngBounds(A.bounds.SW, A.bounds.NE) : L.latLngBounds();
 
-
-        // A.selected = false;
-
-        // if (lores && A.summary_polyline) {
-        //     let latlngs = L.PolylineUtil.decode(A.summary_polyline);
-        //     if (heatres == "low") heatpoints = latlngs;
-        //     // if (flowres == "low") flowpoints = latlngs;
-        // }
-
-
-        if (hires && A.polyline){
+        if (A.polyline){
             let latLngArray = L.PolylineUtil.decode(A.polyline);
 
-            // if (heatres == "high") heatpoints = latLngArray;
-
-            if (flowres == "high" && A.time) {
+            if (A.time) {
                 let len = latLngArray.length,
                     latLngTime = new Float32Array(3*len),
                     timeArray = streamDecode(A.time);
@@ -784,9 +816,7 @@ function readStream(streamURL, numActivities=null, callback=null) {
             }
         }
 
-        // if (heatpoints) {
-        //     latlngs_flat.push.apply(latlngs_flat, heatpoints);
-        // }
+
 
         A.startTime = moment(A.ts_UTC || A.ts_local ).valueOf()
         A.bounds = bounds;
@@ -855,15 +885,12 @@ function updateState(){
         params.zoom = zoom;
     }
 
-    if ($("#heatres").val()) {
-        params.heatres = $("#heatres").val();
-    }
 
-    if ($("#flowres").val()) {
-        params.flowres = $("#flowres").val();
-    }
+    params["c1"] = Math.round(DotLayer.C1);
+    params["c2"] = Math.round(DotLayer.C2);
+    params["sz"] = Math.round(DotLayer.dotScale);
 
-    params["baselayer"] = appState.baseLayers;
+    params["baselayer"] = appState.currentBaseLayer.name;
 
     var newURL = USER_ID + "?" + jQuery.param(params, true);
     window.history.pushState("", "", newURL);
@@ -942,10 +969,10 @@ $(document).ready(function() {
     });
 
 
-    $("#zoom-table-selection").prop("checked", true);
-    $("#zoom-table-selection").on("change", function(){
-        if ( $("#zoom-table-selection").is(':checked')) {
-            zoomToSelected();
+    $("#zoom-to-selection").prop("checked", false);
+    $("#zoom-to-selection").on("change", function(){
+        if ( $("#zoom-to-selection").is(':checked')) {
+            zoomToSelectedPaths();
         }
     });
 
@@ -956,10 +983,6 @@ $(document).ready(function() {
 
     $("#renderButton").click(renderLayers);
     $("#render-selection-button").click(openSelected);
-
-
-    $("#heatres").val(ONLOAD_PARAMS.heatres);
-    $("#flowres").val(ONLOAD_PARAMS.flowres);
 
     $("#autozoom").prop('checked', ONLOAD_PARAMS.autozoom);
 

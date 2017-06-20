@@ -41,7 +41,7 @@ class Config(object):
     # ASSETS_MANIFEST = None
 
     # Concurrency for Web-API fetching
-    CONCURRENCY = 4
+    CONCURRENCY = 5
 
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
@@ -111,7 +111,7 @@ class StagingConfig(Config):
     DEBUG = False
 
     # webassets can do whatever in staging
-    ASSETS_DEBUG = True
+    # ASSETS_DEBUG = True
     ASSETS_AUTO_BUILD = True
     # ASSETS_CACHE = False
     # ASSETS_MANIFEST = False
