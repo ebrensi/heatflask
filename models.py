@@ -803,10 +803,11 @@ class Users(UserMixin, db_sql.Model):
                     A["owner"] = owner
                     A["profile"] = user.profile
                     A["bounds"] = Activities.bounds(A["summary_polyline"])
+                    A.update(Activities.atype_properties(A["type"]))
 
-                    streams = Activities.get(obj.id)
-                    if streams:
-                        A.update(streams)
+                    stream_data = Activities.get(obj.id)
+                    if stream_data:
+                        A.update(stream_data)
                         out_queue.put(A)
                     else:
                         pool.spawn(
@@ -817,9 +818,10 @@ class Users(UserMixin, db_sql.Model):
                 A = Activities.strava2dict(obj)
 
                 A["ts_local"] = str(A["ts_local"])
-                A["avatarURL"] = ""
+                A["profile"] = "/avatar/athlete/medium.png"
                 A["owner"] = owner
                 A["bounds"] = Activities.bounds(A["summary_polyline"])
+                A.update(Activities.atype_properties(A["type"]))
                 out_queue.put(A)
 
         if put_stopIteration:
