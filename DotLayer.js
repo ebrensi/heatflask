@@ -34,15 +34,17 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         colorAll: true,
         normal: {
             dotColor: "#000000",
+            dotAlpha: 0.7,
             pathColor: "#000000",
-            pathOpacity: 0.5,
+            pathAlpha: 0.7,
             pathWidth: 1
         },
         selected: {
             dotColor: "#FFFFFF",
             dotStrokeColor: "#FFFFFF",
+            dotAlpha: 0.8,
             pathColor: "#000000",
-            pathOpacity: 0.7,
+            pathOpacity: 0.8,
             pathWidth: 1
         }
     },
@@ -429,7 +431,8 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             two_pi = this.two_pi,
             xOffset = this._pxOffset.x,
             yOffset = this._pxOffset.y,
-            g = this._gifPatch;
+            g = this._gifPatch,
+            dotType = highlighted? "selected":"normal";;
 
         // if (g && !highlighted){
         //     return;
@@ -443,7 +446,14 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             p = P.slice(idx, idx+3 );
 
         if (this.options.colorAll || highlighted) {
-            ctx.fillStyle = obj.dotColor || this.options.selected.dotColor;
+            ctx.fillStyle = obj.dotColor || this.options[dotType].dotColor;
+        }
+
+        let currentAlpha = ctx.globalAlpha,
+            dotAlpha = this.options[dotType].dotAlpha;
+
+        if (currentAlpha != dotAlpha) {
+            ctx.globalAlpha = dotAlpha;
         }
 
         if ( timeOffset < 0 ) {
