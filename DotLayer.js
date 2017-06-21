@@ -388,8 +388,6 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                     for (let i=0, len=projected.length; i<len; i+=3){
                         let p = new L.Point(projected[i], projected[i+1])._add(this._pxOffset);
 
-                        // debugger;
-
                         if ( selectPxBounds.contains( p ) ) {
                             selectedIds.push(A.id);
                             break;
@@ -452,9 +450,9 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         let currentAlpha = ctx.globalAlpha,
             dotAlpha = this.options[dotType].dotAlpha;
 
-        if (currentAlpha != dotAlpha) {
-            ctx.globalAlpha = dotAlpha;
-        }
+        // if (currentAlpha != dotAlpha) {
+        //     ctx.globalAlpha = dotAlpha;
+        // }
 
         if ( timeOffset < 0 ) {
             timeOffset += period;
@@ -776,6 +774,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             //  as a mask
             this._dotCtx.save()
             this._dotCtx.globalCompositeOperation = 'source-in';
+            // this._dotCtx.globalAlpha = 1;
             this._dotCtx.drawImage(baseCanvas, 0, 0, sw, sh, sx, sy, sw, sh);
             this._dotCtx.restore()
             ctx.clearRect( 0, 0, sw, sh );
@@ -879,7 +878,7 @@ function makeColorGradient(frequency1, frequency2, frequency3,
         let r = Math.round(Math.sin(frequency1*i + phase1) * width + center),
             g = Math.round(Math.sin(frequency2*i + phase2) * width + center),
             b = Math.round(Math.sin(frequency3*i + phase3) * width + center);
-        palette[i] = `rgb(${r}, ${g}, ${b})`;
+        palette[i] = `rgba(${r}, ${g}, ${b}, 0.8)`;
     }
     return palette;
 }
