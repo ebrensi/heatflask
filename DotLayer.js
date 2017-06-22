@@ -777,12 +777,12 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             // this._dotCtx.globalAlpha = 1;
             this._dotCtx.drawImage(baseCanvas, 0, 0, sw, sh, sx, sy, sw, sh);
             this._dotCtx.restore()
+
             ctx.clearRect( 0, 0, sw, sh );
-            ctx.drawImage(this._dotCanvas,  sx, sy, sw, sh, 0, 0, sw, sh);
 
             // get rid of any semi-transparent pixels.  This is the trick that
             //  eliminates edge artifacts
-            let imgData=ctx.getImageData(0, 0, sw, sh),
+            let imgData = this._dotCtx.getImageData(sx, sy, sw, sh, 0, 0, sw, sh),
                 d = imgData.data,
                 len = d.length;
             for (let i=0; i<len; i+=4){
