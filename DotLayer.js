@@ -797,14 +797,63 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             return canvas
         }
 
-        // debugger;
+        function applyPatch(patchCanvas, destCanvas){
+            let patchData = patchCanvas.getContext('2d').getImageData(0, 0, sw, sh),
+                destCtx = destCanvas.getContext('2d'),
+                destData = destCtx.getImageData(0, 0, sw, sh),
+                pd = patchData.data,
+                dd = destData.data,
+                len = dd.length;
+
+            for (let i=0; i<len; i+=4){
+                if (pd[i+3]) {
+                    dd[i] = pd[i];
+                    dd[i+1] = pd[i+1];
+                    dd[i+2] = pd[i+2];
+                    dd[i+3] = pd[i+3];
+                }
+            }
+            destCtx.putImageData(destData,0,0);
+        }
+
+
+        function canvasDiff(oldCanvas, newCanvas){
+            let ctxOld = oldCanvas.getContext('2d'),
+                dataOld = ctxOld.getImageData(),
+                dO = dataOld.data,
+                ctxNew = newCanvas.getContext('2d'),
+                dataNew = ctxNew.getImageData(),
+                dN = dataNew.data,
+                len = dO.length;
+            if (dN.length != len){
+                console.log("canvasDiff: canvases are different size");
+                return;
+            }
+            for (let i=0; i<len; i+=4) {
+                if (dO[i] == dN[i] &&
+                    dO[i+1] == dN[i+1] &&
+                    dO[i+2] == dN[i+2] &&
+                    dO[i+3] == dN[i+3]) {
+
+                    dN[i] = 0;
+                    dN[i+1] = 0;
+                    dN[i+2] = 0;
+                    dN[i+3] = 0;
+                }
+            }
+        }
+
+        debugger;
 
         patch_0 = makePatch.bind(this)(patchCanvas, frameTime);
-        // window.open(patchCanvas.toDataURL("image/png"), target='_blank', name="patch_0"); // patch_0
+        // window.open(patch_0.toDataURL("image/png"), target='_blank', name="patch_0"); // patch_0
 
 
-        // frameCtx.drawImage(patchCanvas, 0, 0);  //draw patch onto frame_0
+        // frameCtx.drawImage(patch_0, 0, 0);  //draw patch onto frame_0
+        applyPatch(patch_0, frameCtx);
         // window.open(frameCanvas.toDataURL("image/png"), target='_blank', name="patched"); // frame_0 patched
+
+        // debugger;
 
         frameTime += delay;
 
@@ -815,15 +864,23 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             pd.textContent = msg;
 
             frameCtx.clearRect( 0, 0, sw, sh);
-            makePatch.bind(this)(frameCanvas, frameTime);  // make patch of this set of dots
-            frameCtx.drawImage(patch_0, 0, 0);  // apply patch_0
 
+            // apply patch_0 to cover restore frame to background
+            // frameCtx.drawImage(patch_0, 0, 0);
+            applyPatch(patch_0, frameCtx);
+            window.open(frameCanvas.toDataURL("image/png"), target='_blank', name="patched");
+
+            // make patch from this set of dots
+            makePatch.bind(this)(frameCanvas, frameTime);
+            window.open(frameCanvas.toDataURL("image/png"), target='_blank', name="patched");
+
+            // render this set of dots
             this.drawLayer(frameTime);
 
             // draw dots over that
             frameCtx.drawImage(this._dotCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
+            window.open(frameCanvas.toDataURL("image/png"), target='_blank', name=`frame_${i}`); // frame_i
 
-            // window.open(frameCanvas.toDataURL("image/png"), target='_blank', name=`frame_${i}`); // frame_i
             encoder.addFrame(frameCanvas, {
                 copy: true,
                 delay: delay,
