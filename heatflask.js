@@ -100,30 +100,16 @@ var animation_button_states = [
     }).addTo(map);
 
 
-// enable or disable pan/zoom
-function mapManipulation(state=false){
-    if (state) {
-        map.dragging.enable();
-        map.touchZoom.enable();
-        map.doubleClickZoom.enable();
-        map.scrollWheelZoom.enable();
-    } else {
-        map.dragging.disable();
-        map.touchZoom.disable();
-        map.doubleClickZoom.disable();
-        map.scrollWheelZoom.disable();
-    }
-}
+
 
 // Select-activities-in-region functionality
-function doneSelecting(bounds){
-    // debugger;
-    let pxBounds = bounds.pxBounds;
+function doneSelecting(obj){
 
-    DotLayer && DotLayer.setSelectRegion(pxBounds, callback=function(ids){
-        selectControl.remove();
-        mapManipulation(true);
-        selectButton.state("not-selecting");
+    DotLayer && DotLayer.setSelectRegion(obj.pxBounds, callback=function(ids){
+        if (selectControl && selectControl.canvas) {
+            selectControl.remove();
+            selectButton.state("not-selecting");
+        }
         handle_path_selections(ids);
 
          if (ids.length == 1) {
@@ -132,7 +118,7 @@ function doneSelecting(bounds){
             if (!A.selected){
                 return;
             }
-            let loc = bounds.latLngBounds.getCenter();
+            let loc = obj.latLngBounds.getCenter();
             setTimeout(function (){
                 activityDataPopup(ids, loc);
             }, 100);
@@ -140,6 +126,11 @@ function doneSelecting(bounds){
     });
 
 }
+
+// set hooks for ctrl-drag
+map.on("boxhookend", doneSelecting);
+
+
 var selectControl = new L.SwipeSelect(options={}, doneSelecting=doneSelecting),
     selectButton_states = [
         {
@@ -148,9 +139,7 @@ var selectControl = new L.SwipeSelect(options={}, doneSelecting=doneSelecting),
             title: 'Toggle Path Selection',
             onClick: function(btn, map) {
                 btn.state('selecting');
-                mapManipulation(false);
                 selectControl.addTo(map);
-
             },
         },
         {
@@ -159,7 +148,6 @@ var selectControl = new L.SwipeSelect(options={}, doneSelecting=doneSelecting),
             title: 'Stop Selecting',
             onClick: function(btn, map) {
                 btn.state('not-selecting');
-                mapManipulation(true);
                 selectControl.remove();
             }
         },
@@ -168,27 +156,6 @@ var selectControl = new L.SwipeSelect(options={}, doneSelecting=doneSelecting),
         states: selectButton_states,
         position: "topright"
     }).addTo(map);
-
-
-map.on("boxhookend", function(event){
-    let pxBounds = event.pxBounds;
-    DotLayer && DotLayer.setSelectRegion(pxBounds, callback=function(ids){
-        handle_path_selections(ids);
-
-        if (ids.length == 1) {
-            let id = ids[0],
-                A = appState.items[id];
-            if (!A.selected){
-                return;
-            }
-            let loc = event.latLngBounds.getCenter();
-            setTimeout(function (){
-                activityDataPopup(id, loc);
-            }, 100);
-
-        }
-    });
-});
 
 
 

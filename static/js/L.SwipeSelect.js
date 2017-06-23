@@ -32,6 +32,8 @@ L.SwipeSelect = L.Class.extend({
         this.map.dragging.disable();
 
         canvas.onmousedown = function(event){
+            this.mapManipulation(false);
+
             let topLeft = this.map.containerPointToLayerPoint( [ 0, 0 ] );
             L.DomUtil.setPosition( this.canvas, topLeft );
 
@@ -59,6 +61,7 @@ L.SwipeSelect = L.Class.extend({
         canvas.onmouseup = function(event){
             this.dragging = false;
             this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            this.mapManipulation(true);
 
             this.onmouseup & this.onmouseup(this.getBounds());
         }.bind(this);
@@ -88,9 +91,26 @@ L.SwipeSelect = L.Class.extend({
     },
 
     remove: function() {
+        if (!this.canvas) {
+            return;
+        }
         map._panes.markerPane.removeChild( this.canvas );
         this.canvas = null;
-        self.map.dragging.enable();
+    },
+
+    // enable or disable pan/zoom
+    mapManipulation: function (state=false){
+        if (state) {
+            map.dragging.enable();
+            map.touchZoom.enable();
+            map.doubleClickZoom.enable();
+            map.scrollWheelZoom.enable();
+        } else {
+            map.dragging.disable();
+            map.touchZoom.disable();
+            map.doubleClickZoom.disable();
+            map.scrollWheelZoom.disable();
+        }
     }
 });
 
