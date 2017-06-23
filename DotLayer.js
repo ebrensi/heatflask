@@ -799,7 +799,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             encoder.addFrame(gifFrame, {
                 copy: true,
                 delay: delay,
-                transparent: "#000001",
+                transparent: (i==0)? null : "#000001",
                 dispose: 1 // leave as is
             });
 
