@@ -687,22 +687,12 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         }
 
         // These canvases are not rendered on screen
-        let baseCtx = baseCanvas.getContext('2d'),
-            frameCanvas = document.createElement('canvas'),
-            frameCtx = frameCanvas.getContext('2d'),
-            patchCanvas = document.createElement('canvas'),
-            patchCtx = patchCanvas.getContext('2d');
-
-        frameCanvas.width = sw;
-        frameCanvas.height = sh;
-
-        patchCanvas.width = sw;
-        patchCanvas.height = sh;
+        let baseCtx = baseCanvas.getContext('2d');
 
         // set up GIF encoder
         let pd = this._progressDisplay,
             frameTime = Date.now(),
-            frameRate = 30,
+            frameRate = this.target_fps,
             numFrames = durationSecs * frameRate,
             delay = 1000 / frameRate,
 
@@ -742,89 +732,18 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         }.bind( this ) );
 
 
-        frameCtx.drawImage(baseCanvas, 0, 0);  //draw background on frameCanvas
-        this.drawLayer(frameTime);
-        frameCtx.drawImage(this._dotCanvas, sx, sy, sw, sh, 0, 0, sw, sh); // draw dots on frameCanvas
-        // window.open(frameCanvas.toDataURL("image/png"), target='_blank', name="patch"); // frame_0
-
-        // add initial frame_0 to clip.  We set the disposal to 1 (no disposal),
-        //   so after this frame is displayed, it remains there.
-        //  Also, this frame is opaque (no transparency)
-        encoder.addFrame(frameCanvas, {
-            copy: true,
-            delay: delay,
-            dispose: 1, // no disposal for this frame
-            transparent: null
-        });
-
-        function makePatch(canvas, frameTime) {
-            // Draw the dots with which we will make a patch.  The "dots" are all
-            //   squares and larger than the normal dots would be.
-            let temp = this.dotScale,
-                ctx = canvas.getContext('2d');
-
-            this.dotScale *= 3;  // make the patch bigger than the dot would be
-            this._gifPatch = true;  // let drawDots know we are patching
-            this.drawLayer(frameTime);
-            this._gifPatch = false;
-            this.dotScale = temp;
-
-
-            // Now draw the background image on to dotCanvas, using dotCanvas
-            //  as a mask
-            this._dotCtx.save()
-            this._dotCtx.globalCompositeOperation = 'source-in';
-            // this._dotCtx.globalAlpha = 1;
-            this._dotCtx.drawImage(baseCanvas, 0, 0, sw, sh, sx, sy, sw, sh);
-            this._dotCtx.restore()
-
-            ctx.clearRect( 0, 0, sw, sh );
-
-            // get rid of any semi-transparent pixels.  This is the trick that
-            //  eliminates edge artifacts
-            let imgData = this._dotCtx.getImageData(sx, sy, sw, sh, 0, 0, sw, sh),
-                d = imgData.data,
-                len = d.length;
-            for (let i=0; i<len; i+=4){
-                if (d[i+3] < 200) {
-                    d[i] = 0;
-                    d[i+1] = 0;
-                    d[i+2] = 0;
-                    d[i+3] = 0;
-                }
+        function canvasSubtract(newCanvas, oldCanvas){
+            if (!oldCanvas) {
+                return newCanvas;
             }
-            ctx.putImageData(imgData,0,0);
-            return canvas
-        }
-
-        function applyPatch(patchCanvas, destCanvas){
-            let patchData = patchCanvas.getContext('2d').getImageData(0, 0, sw, sh),
-                destCtx = destCanvas.getContext('2d'),
-                destData = destCtx.getImageData(0, 0, sw, sh),
-                pd = patchData.data,
-                dd = destData.data,
-                len = dd.length;
-
-            for (let i=0; i<len; i+=4){
-                if (pd[i+3]) {
-                    dd[i] = pd[i];
-                    dd[i+1] = pd[i+1];
-                    dd[i+2] = pd[i+2];
-                    dd[i+3] = pd[i+3];
-                }
-            }
-            destCtx.putImageData(destData,0,0);
-        }
-
-
-        function canvasDiff(oldCanvas, newCanvas){
             let ctxOld = oldCanvas.getContext('2d'),
-                dataOld = ctxOld.getImageData(),
+                dataOld = ctxOld.getImageData(0,0,sw,sh),
                 dO = dataOld.data,
                 ctxNew = newCanvas.getContext('2d'),
-                dataNew = ctxNew.getImageData(),
+                dataNew = ctxNew.getImageData(0,0,sw,sh),
                 dN = dataNew.data,
                 len = dO.length;
+
             if (dN.length != len){
                 console.log("canvasDiff: canvases are different size");
                 return;
@@ -835,58 +754,62 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                     dO[i+2] == dN[i+2] &&
                     dO[i+3] == dN[i+3]) {
 
-                    dN[i] = 0;
-                    dN[i+1] = 0;
-                    dN[i+2] = 0;
-                    dN[i+3] = 0;
+                    dO[i] = 0;
+                    dO[i+1] = 0;
+                    dO[i+2] = 0;
+                    dO[i+3] = 0;
+                } else {
+                    dO[i] = dN[i];
+                    dO[i+1] = dN[i+1];
+                    dO[i+2] = dN[i+2];
+                    dO[i+3] = dN[i+3];
                 }
             }
+            ctxOld.putImageData(dataOld,0,0);
+            return oldCanvas;
         }
 
-        debugger;
+        function display(canvas, title){
+            let w = window.open(canvas.toDataURL("image/png"), target='_blank');
+            // w.document.write(`<title>${title}</title>`);
+        }
 
-        patch_0 = makePatch.bind(this)(patchCanvas, frameTime);
-        // window.open(patch_0.toDataURL("image/png"), target='_blank', name="patch_0"); // patch_0
-
-
-        // frameCtx.drawImage(patch_0, 0, 0);  //draw patch onto frame_0
-        applyPatch(patch_0, frameCtx);
-        // window.open(frameCanvas.toDataURL("image/png"), target='_blank', name="patched"); // frame_0 patched
-
-        // debugger;
-
-        frameTime += delay;
-
+        framePrev = null;
         // Add frames to the encoder
-        for (let i=1, num=Math.round(numFrames); i<num; i++, frameTime+=delay){
+        for (let i=0, num=Math.round(numFrames); i<num; i++, frameTime+=delay){
             msg = `Rendering frames...${~~(i/num * 100)}%`;
             // console.log(msg);
             pd.textContent = msg;
 
+            // create a new canvas
+            let frame = document.createElement('canvas');
+            frame.width = sw;
+            frame.height = sh;
+            frameCtx = frame.getContext('2d');
+
+            // clear the frame
             frameCtx.clearRect( 0, 0, sw, sh);
 
-            // apply patch_0 to cover restore frame to background
-            // frameCtx.drawImage(patch_0, 0, 0);
-            applyPatch(patch_0, frameCtx);
-            window.open(frameCanvas.toDataURL("image/png"), target='_blank', name="patched");
-
-            // make patch from this set of dots
-            makePatch.bind(this)(frameCanvas, frameTime);
-            window.open(frameCanvas.toDataURL("image/png"), target='_blank', name="patched");
+            // lay the baselayer down
+            frameCtx.drawImage( baseCanvas, 0, 0);
 
             // render this set of dots
             this.drawLayer(frameTime);
 
-            // draw dots over that
+            // draw dots onto frame
             frameCtx.drawImage(this._dotCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
-            window.open(frameCanvas.toDataURL("image/png"), target='_blank', name=`frame_${i}`); // frame_i
 
-            encoder.addFrame(frameCanvas, {
+            let gifFrame = canvasSubtract(frame, framePrev);
+            // display(gifFrame, `frame_${i}`);
+
+            encoder.addFrame(gifFrame, {
                 copy: true,
                 delay: delay,
-                transparent: 'rgba(0,0,1,0)',
-                dispose: 3 // restore to previous (frame_0)
+                transparent: "#000001",
+                dispose: 1 // leave as is
             });
+
+            framePrev = frame;
         }
 
         // encode the Frame array
