@@ -27,14 +27,13 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
     C1: 1000000.0,
     C2: 200.0,
     dotScale: 1,
-
     options: {
         startPaused: false,
         showPaths: true,
         colorAll: true,
+        dotAlpha: 0.8,
         normal: {
             dotColor: "#000000",
-            dotAlpha: 0.7,
             pathColor: "#000000",
             pathAlpha: 0.7,
             pathWidth: 1
@@ -42,7 +41,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         selected: {
             dotColor: "#FFFFFF",
             dotStrokeColor: "#FFFFFF",
-            dotAlpha: 0.8,
+            dotStrokeWidth: 0.5,
             pathColor: "#000000",
             pathOpacity: 0.8,
             pathWidth: 1
@@ -153,7 +152,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         let itemsList = Object.values( this._items ),
             numItems = itemsList.length;
 
-        this._colorPalette = colorPalette(numItems);
+        this._colorPalette = colorPalette(numItems, this.options.dotAlpha);
         for ( let i = 0; i < numItems; i++ ) {
             itemsList[ i ].dotColor = this._colorPalette[ i ];
         }
@@ -240,6 +239,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             items = this._items;
 
         this._dotCtx.strokeStyle = this.options.selected.dotStrokeColor;
+        this._dotCtx.lineWidth = this.options.selected.dotStrokeWidth;
         this._zoomFactor = 1 / Math.pow( 2, z );
 
         let tThresh = this._tThresh * DotLayer._zoomFactor;
@@ -447,12 +447,6 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             ctx.fillStyle = obj.dotColor || this.options[dotType].dotColor;
         }
 
-        let currentAlpha = ctx.globalAlpha,
-            dotAlpha = this.options[dotType].dotAlpha;
-
-        // if (currentAlpha != dotAlpha) {
-        //     ctx.globalAlpha = dotAlpha;
-        // }
 
         if ( timeOffset < 0 ) {
             timeOffset += period;
@@ -847,7 +841,7 @@ L.dotLayer = function( items, options ) {
 */
 function makeColorGradient(frequency1, frequency2, frequency3,
                              phase1, phase2, phase3,
-                             center, width, len) {
+                             center, width, len, alpha) {
     let palette = new Array(len);
 
     if (center == undefined)   center = 128;
@@ -858,17 +852,17 @@ function makeColorGradient(frequency1, frequency2, frequency3,
         let r = Math.round(Math.sin(frequency1*i + phase1) * width + center),
             g = Math.round(Math.sin(frequency2*i + phase2) * width + center),
             b = Math.round(Math.sin(frequency3*i + phase3) * width + center);
-        palette[i] = `rgba(${r}, ${g}, ${b}, 0.8)`;
+        palette[i] = `rgba(${r}, ${g}, ${b}, ${alpha})`;
     }
     return palette;
 }
 
-function colorPalette(n) {
+function colorPalette(n, alpha) {
     center = 128;
     width = 127;
     steps = 10;
     frequency = 2*Math.PI/steps;
-    return makeColorGradient(frequency,frequency,frequency,0,2,4,center,width,n);
+    return makeColorGradient(frequency,frequency,frequency,0,2,4,center,width,n,alpha);
 }
 
 
