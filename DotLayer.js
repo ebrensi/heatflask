@@ -686,7 +686,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         // set up GIF encoder
         let pd = this._progressDisplay,
             frameTime = Date.now(),
-            frameRate = this.target_fps,
+            frameRate = 30,
             numFrames = durationSecs * frameRate,
             delay = 1000 / frameRate,
 
