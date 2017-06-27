@@ -42,7 +42,7 @@
           DIST_LABEL = (MEASURMENT_PREFERENCE=="feet")?  "mi" : "km",
           STRAVA_BUTTON = img("{{ url_for('static',filename='strava_button.png') }}"),
           USER_BASE_URL = "{{url_for('main',username=user.id)}}",
-          GROUP_ACTIVITY_URL = "{{ url_for('related_activities', username=user.id, activity_id='') }}",
+          GROUP_ACTIVITY_URL = USER_BASE_URL + "?group=",
           ACTIVITY_STREAM_URL = "{{ url_for('query_activities', username=user.id, out_type='sse') }}?limit=100000";
 
     function td(text) {
