@@ -430,11 +430,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             xOffset = this._pxOffset.x,
             yOffset = this._pxOffset.y,
             g = this._gifPatch,
-            dotType = highlighted? "selected":"normal";;
-
-        // if (g && !highlighted){
-        //     return;
-        // }
+            dotType = highlighted? "selected":"normal";
 
         var timeOffset = s % period,
             count = 0,
@@ -658,22 +654,12 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
     captureGIF: function(selection=null, baseCanvas=null, durationSecs=2, callback=null) {
         this._mapMoving = true;
 
-        // crop baseFrame if necessary
         let sx, sy, sw, sh;
         if (selection) {
             sx = selection.topLeft.x;
             sy = selection.topLeft.y;
             sw = selection.width;
             sh = selection.height;
-            if (baseCanvas) {
-                // window.open(baseCanvas.toDataURL("image/png"), '_blank');
-                let croppedBaseCanvas = document.createElement('canvas');
-                croppedBaseCanvas.width = sw;
-                croppedBaseCanvas.height = sh;
-                croppedBaseCtx = croppedBaseCanvas.getContext('2d');
-                croppedBaseCtx.drawImage(baseCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
-                baseCanvas = croppedBaseCanvas;
-            }
         } else {
             sx = sy = 0;
             sw = this._size.x;
@@ -681,14 +667,14 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         }
 
         // These canvases are not rendered on screen
-        let baseCtx = baseCanvas.getContext('2d');
+        // let baseCtx = baseCanvas.getContext('2d');
 
         // set up GIF encoder
         let pd = this._progressDisplay,
             frameTime = Date.now(),
             frameRate = 30,
             numFrames = durationSecs * frameRate,
-            delay = 1000 / frameRate,
+            delay = 1000.0 / frameRate,
 
             encoder = new GIF({
                 workers: 8,
@@ -768,11 +754,17 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             // w.document.write(`<title>${title}</title>`);
         }
 
+
+        console.log(`# frames= ${numFrames.toFixed(4)}, delay=${delay.toFixed(4)}`);
+
         framePrev = null;
         // Add frames to the encoder
-        for (let i=0, num=Math.round(numFrames); i<num; i++, frameTime+=delay){
-            msg = `Rendering frames...${~~(i/num * 100)}%`;
-            // console.log(msg);
+        for (let i=0, num=~~numFrames; i<num; i++, frameTime+=delay){
+            let msg = `Rendering frames...${~~(i/num * 100)}%`;
+
+            // let timeOffset = (this._timeScale * frameTime) % this._period;
+            // console.log( `frame${i} @ ${timeOffset}`);
+
             pd.textContent = msg;
 
             // create a new canvas
@@ -785,7 +777,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             frameCtx.clearRect( 0, 0, sw, sh);
 
             // lay the baselayer down
-            frameCtx.drawImage( baseCanvas, 0, 0);
+            frameCtx.drawImage( baseCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
 
             // render this set of dots
             this.drawLayer(frameTime);
