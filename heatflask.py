@@ -626,6 +626,10 @@ def new_id():
     return _id
 
 
+
+# ---- Endpoints to cache and retrieve query urls that might be long
+#   we store them as integer ids and the key for access is that integer
+#   in base-36
 @app.route('/cache', methods=["GET", "POST"])
 def cache_put(query_key):
     obj = {}
