@@ -14,6 +14,8 @@ import uuid
 import logging
 import os
 import json
+import itertools
+import base36
 import stravalib
 import flask_login
 from flask_login import current_user, login_user, logout_user, login_required
@@ -494,7 +496,7 @@ def update_share_status(username):
     return jsonify(user=user.id, share=user.share_profile)
 
 
-def toVal(obj):
+def toObj(obj):
     try:
         return json.loads(obj)
     except ValueError:
@@ -505,8 +507,8 @@ def toVal(obj):
 def query_activities(username, out_type):
     user = Users.get(username)
     if user:
-        options = {k: toVal(request.args.get(k))
-                   for k in request.args if toVal(request.args.get(k))}
+        options = {k: toObj(request.args.get(k))
+                   for k in request.args if toObj(request.args.get(k))}
         if not options:
             options = {"limit": 10}
 
@@ -587,7 +589,8 @@ def getdata_with_key(query_key):
                 if not user:
                     continue
 
-                # app.logger.debug("async job querying {}: {}".format(user, options))
+                # app.logger.debug("async job querying {}: {}".format(user,
+                # options))
                 options.update({
                     "pool": pool,
                     "out_queue": out_queue
@@ -606,6 +609,83 @@ def getdata_with_key(query_key):
     gevent.sleep(0)
     return Response((sse_out(a) if a else sse_out() for a in out_queue),
                     mimetype='text/event-stream')
+
+
+def new_id():
+    ids = mongodb.queries.distinct("_id")
+    ids.sort()
+    _id = None
+
+    for a, b in itertools.izip(ids, ids[1:]):
+        if b - a > 1:
+            _id = a + 1
+            break
+    if not _id:
+        _id = b + 1
+
+    return _id
+
+
+@app.route('/cache', methods=["GET", "POST"])
+def cache_put(query_key):
+    obj = {}
+    if request.method == 'GET':
+        obj = {k: toObj(request.args.get(k))
+               for k in request.args if toObj(request.args.get(k))}
+
+    if request.method == 'POST':
+        obj = request.get_json(force=True)
+
+    if not obj:
+        return ""
+
+    h = hash(obj)
+
+    doc = mongodb.queries.find_one(
+        {"hash": h}
+    )
+
+    # if a record exists with this hash already then return
+    #  the id for that record
+    if doc:
+        _id = doc["_id"]
+
+    else:
+        _id = new_id(obj)
+        obj.update({
+            "_id": _id,
+            "hash": h,
+            "ts": datetime.utcnow()
+        })
+
+        try:
+            mongodb.queries.update_one(
+                {"_id": _id},
+                {"$set": obj},
+                upsert=True
+            )
+
+        except Exception as e:
+            app.logger.debug("error writing query {} to MongoDB: {}"
+                             .format(_id, e))
+            return
+
+    return jsonify(base36.dumps(_id))
+
+
+@app.route('/cache/<key>')
+def cache_retrieve(key):
+    result = mongodb.queries.find_one({"_id": key})
+    if not result:
+        return
+    else:
+        del result["_id"]
+        del result["hash"]
+        del result["ts"]
+        username = result["username"]
+        del result["username"]
+
+        return redirect(url_for("main", username=username, **result))
 
 
 # ---- Shared views ----
