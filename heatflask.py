@@ -246,14 +246,41 @@ def splash():
                                  url_for("splash")))
 
 
+DEMOS = {
+    "portland_6_2017": {
+        "username": "15972102",
+        "after": "2017-06-30",
+        "before": "2017-07-08",
+        "lat": "41.476",
+        "lng": "-119.290",
+        "zoom": "6",
+        "c1": "859579",
+        "c2": "169",
+        "sz": "4",
+        "baselayer": "Esri.NatGeoWorldMap"
+    },
+
+    "last60activities": {
+        "username": "15972102",
+        "limit": "60"
+    }
+}
+
+
+@app.route('/demos/<demo_key>')
+def demos(demo_key):
+    # Last 60 activities
+    params = DEMOS.get(demo_key)
+    if not params:
+        return 'demo "{}" does not exist'.format(demo_key)
+
+    return redirect(url_for("main", **params))
+
+
 @app.route('/demo')
 def demo():
     # Last 60 activities
-    return redirect(url_for("main",
-                            username="15972102",
-                            limit="60"
-                            )
-                    )
+    return redirect(url_for("demos", demo_key="last60activities"))
 
 
 # Attempt to authorize a user via Oauth(2)
@@ -376,8 +403,8 @@ def main(username):
               .format(username))
         return redirect(url_for('splash'))
 
-    date1 = request.args.get("date1", "") or request.args.get("after", "")
-    date2 = request.args.get("date2", "") or request.args.get("before", "")
+    date1 = request.args.get("date1") or request.args.get("after", "")
+    date2 = request.args.get("date2") or request.args.get("before", "")
     preset = request.args.get("preset", "")
     limit = request.args.get("limit", "")
     baselayer = request.args.getlist("baselayer")
@@ -624,7 +651,6 @@ def new_id():
         _id = b + 1
 
     return _id
-
 
 
 # ---- Endpoints to cache and retrieve query urls that might be long
