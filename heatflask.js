@@ -732,8 +732,8 @@ function readStream(streamURL, numActivities=null, callback=null) {
 
     function doneRendering(msg){
         if (rendering) {
-            appState['date1'] = $("#date1").val();
-            appState["date2"] = $("#date2").val();
+            appState['after'] = $("#date1").val();
+            appState["before"] = $("#date2").val();
             updateState();
 
 
@@ -860,11 +860,11 @@ function updateState(){
     } else if (type == "days") {
         params.preset = num;
     } else {
-        if (appState.date1) {
-            params.date1 = appState.date1;
+        if (appState.after) {
+            params.after = appState.after;
         }
-        if (appState.date2 && (appState.date2 != "now")) {
-            params.date2 = appState.date2;
+        if (appState.before && (appState.before != "now")) {
+            params.before = appState.before;
         }
     }
 
