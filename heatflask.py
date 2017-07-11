@@ -257,7 +257,7 @@ DEMOS = {
         "c1": "859579",
         "c2": "169",
         "sz": "4",
-        "baselayer": "Esri.NatGeoWorldMap"
+        "baselayer": "Google.Terrain"
     },
 
     "last60activities": {
