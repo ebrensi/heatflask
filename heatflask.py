@@ -106,7 +106,7 @@ bundles = {
     ),
 
     "gifjs_webworker_js": flask_assets.Bundle(
-        'js/gif.worker2.js',
+        'js/gif.worker.js',
         output="gen/gif.worker.js"
     ),
 
