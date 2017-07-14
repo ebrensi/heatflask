@@ -72,6 +72,7 @@ class Users(UserMixin, db_sql.Model):
     activity_index = None
     index_df_dtypes = {
         "id": "uint32",
+        "group": "uint16",
         "type": "category",
         "total_distance": "float32",
         "elapsed_time": "uint32",
@@ -84,7 +85,8 @@ class Users(UserMixin, db_sql.Model):
         "elapsed_time": int,
         "average_speed": float,
         "ts_local": str,
-        "ts_UTC": str
+        "ts_UTC": str,
+        "group": int
     }
 
     def db_state(self):
@@ -445,9 +447,10 @@ class Users(UserMixin, db_sql.Model):
                 return
 
             index_df = (pd.DataFrame(activities_list)
-                        .set_index("id")
-                        .sort_index(ascending=False)
-                        .astype(Users.index_df_dtypes))
+                        .astype(Users.index_df_dtypes)
+                        .sort_values(by="id", ascending=False))
+
+            # app.logger.info(index_df.info())
 
             packed = Binary(index_df.to_msgpack(compress='blosc'))
             self.activity_index = {
@@ -504,11 +507,11 @@ class Users(UserMixin, db_sql.Model):
         if index_df is None:
             activity_index = self.get_index()
             if activity_index:
-                index_df = (
-                    activity_index["index_df"].reset_index().set_index("id")
-                )
+                index_df = activity_index["index_df"]
             else:
                 return
+
+        index_df = index_df.set_index("id")
 
         activities_list = []
         app.logger.info("Updating activity index for {}".format(self))
@@ -552,10 +555,12 @@ class Users(UserMixin, db_sql.Model):
 
             index_df = (
                 index_df
-                .drop_duplicates()
                 .sort_index(ascending=False)
+                .reset_index()
                 .astype(Users.index_df_dtypes)
             )
+
+            # app.logger.info("after update: {}".format(index_df.info()))
 
             to_update["packed_index"] = (
                 Binary(index_df.to_msgpack(compress='blosc'))
@@ -602,7 +607,8 @@ class Users(UserMixin, db_sql.Model):
                          streams=False,
                          owner_id=False,
                          pool=None,
-                         out_queue=None):
+                         out_queue=None,
+                         **kwargs):
 
         if self.indexing():
             return [{
@@ -658,7 +664,8 @@ class Users(UserMixin, db_sql.Model):
                     index_df = self.update_index(index_df)
 
                 if (not activity_ids):
-                    ids_df = index_df[index_df.summary_polyline.notnull()].id
+                    ids_df = index_df[
+                        index_df.summary_polyline.notnull()].set_index("ts_local").id
 
                     if limit:
                          # only consider activities with a summary polyline
@@ -681,9 +688,8 @@ class Users(UserMixin, db_sql.Model):
 
                     activity_ids = ids_df.tolist()
 
-                index_df = (index_df.reset_index()
-                            .set_index("id")
-                            .astype(Users.index_df_out_dtypes))
+                index_df = index_df.astype(
+                    Users.index_df_out_dtypes).set_index("id")
 
                 if only_ids:
                     out_queue.put(activity_ids)
@@ -695,6 +701,7 @@ class Users(UserMixin, db_sql.Model):
                         A = {"id": int(aid)}
                         if summaries:
                             A.update(index_df.loc[int(aid)].to_dict())
+                        # app.logger.debug(A)
                         yield A
 
             else:  # There is no activity index, so we have to build it
