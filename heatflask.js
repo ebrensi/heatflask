@@ -10,7 +10,8 @@ let map_providers = ONLOAD_PARAMS.map_providers,
         paused: ONLOAD_PARAMS.start_paused,
         items: {},
         currentBaseLayer: null
-    };
+    },
+    msgBox = null;
 
 if (!OFFLINE) {
     var online_baseLayers = {
@@ -317,7 +318,9 @@ let tableColumns = [
         data: null,
         render: (A) => href( stravaActivityURL(A.id), A.ts_local.slice(0,10) )
     },
+
     { title: "Type", data: "type"},
+
     {
         title: `<i class="fa fa-arrows-h" aria-hidden="true"></i> (${DIST_LABEL})`,
         data: "total_distance",
@@ -325,7 +328,8 @@ let tableColumns = [
     {
         title: '<i class="fa fa-clock-o" aria-hidden="true"></i>',
         data: "elapsed_time",
-        render: hhmmss},
+        render: hhmmss
+    },
 
     { title: "Name", data: "name"},
 
@@ -577,6 +581,14 @@ function renderLayers() {
         DotLayer.pause();
     }
 
+    msgBox = L.control.window(map,{
+            position: 'top',
+            content:"<div class='data_message'></div><div><progress class='progbar' id='box'></progress></div>",
+            visible:true
+    });
+
+    $(".data_message").html("Retrieving activity data...");
+
     // Handle group-activity case
     if (type=="grouped_with") {
         // window.open(GROUP_ACTIVITY_SSE, target="_blank");
@@ -677,44 +689,38 @@ function renderLayers() {
 }
 
 
-    function updateLayers(msg) {
-        // optional auto-zoom
-        if ($("#autozoom:checked").val()){
-            let totalBounds = getBounds(Object.keys(appState.items));
+function updateLayers(msg) {
+    // optional auto-zoom
+    if ($("#autozoom:checked").val()){
+        let totalBounds = getBounds(Object.keys(appState.items));
 
-            if (totalBounds.isValid()){
-                map.fitBounds(totalBounds);
-            }
+        if (totalBounds.isValid()){
+            map.fitBounds(totalBounds);
         }
-
-        let num =  Object.keys(appState.items).length,
-            msg2 = " " + msg + " " + num  + " activities rendered.";
-        $(".data_message").html(msg2);
-
-
-        // initialize or update DotLayer
-        if (DotLayer) {
-            DotLayer.reset();
-            !appState.paused && DotLayer.animate();
-        } else {
-            initializeDotLayer();
-        }
-
-        // render the activities table
-        atable.clear();
-        atable.rows.add(Object.values(appState.items)).draw();
     }
+
+    let num =  Object.keys(appState.items).length,
+        msg2 = " " + msg + " " + num  + " activities rendered.";
+    $(".data_message").html(msg2);
+
+
+    // initialize or update DotLayer
+    if (DotLayer) {
+        DotLayer.reset();
+        !appState.paused && DotLayer.animate();
+    } else {
+        initializeDotLayer();
+    }
+
+    // render the activities table
+    atable.clear();
+    atable.rows.add(Object.values(appState.items)).draw();
+}
 
 
 
 function readStream(streamURL, numActivities=null, callback=null) {
-    let msgBox = L.control.window(map,
-            {
-                position: 'top',
-                content:"<div class='data_message'></div><div><progress class='progbar' id='box'></progress></div>",
-                visible:true
-        }),
-        progress_bars = $('.progbar'),
+    let progress_bars = $('.progbar'),
         rendering = true,
         listening = true,
         source = new EventSource(streamURL),
@@ -739,12 +745,12 @@ function readStream(streamURL, numActivities=null, callback=null) {
 
             $("#abortButton").hide();
             $(".progbar").hide();
-            try {
+
+            if (msgBox) {
                 msgBox.close();
+                msgBox = null;
             }
-            catch(err) {
-                console.log(err.message);
-            }
+
             rendering = false;
 
             callback && callback(msg);

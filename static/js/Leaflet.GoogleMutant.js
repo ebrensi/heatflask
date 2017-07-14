@@ -5,7 +5,7 @@
 // 🍂class GridLayer.GoogleMutant
 // 🍂extends GridLayer
 L.GridLayer.GoogleMutant = L.GridLayer.extend({
-	includes: L.Mixin.Events,
+	includes: L.Evented.prototype,
 
 	options: {
 		minZoom: 0,
@@ -239,7 +239,7 @@ L.GridLayer.GoogleMutant = L.GridLayer.extend({
 				x: match[2],
 				y: match[3]
 			};
-			if (this._imagesPerTile > 1) { 
+			if (this._imagesPerTile > 1) {
 				imgNode.style.zIndex = 1;
 				sublayer = 1;
 			}
@@ -268,9 +268,9 @@ L.GridLayer.GoogleMutant = L.GridLayer.extend({
 
 			if (key in this._tileCallbacks && this._tileCallbacks[key]) {
 // console.log('Fullfilling callback ', key);
-				//fullfill most recent tileCallback because there maybe callbacks that will never get a 
+				//fullfill most recent tileCallback because there maybe callbacks that will never get a
 				//corresponding mutation (because map moved to quickly...)
-				this._tileCallbacks[key].pop()(imgNode); 
+				this._tileCallbacks[key].pop()(imgNode);
 				if (!this._tileCallbacks[key].length) { delete this._tileCallbacks[key]; }
 			} else {
 				if (this._tiles[tileKey]) {
@@ -368,7 +368,7 @@ L.GridLayer.GoogleMutant = L.GridLayer.extend({
 			//ignore fractional zoom levels
 			if (!fractionalLevel && (zoom != mutantZoom)) {
 				this._mutant.setZoom(zoom);
-							
+
 				if (this._mutantIsReady) this._checkZoomLevels();
 				//else zoom level check will be done later by 'idle' handler
 			}
@@ -420,11 +420,11 @@ L.GridLayer.GoogleMutant = L.GridLayer.extend({
 
 		for (var i=0; i<this._imagesPerTile; i++) {
 			var key2 = key + '/' + i;
-			if (key2 in this._freshTiles) { 
+			if (key2 in this._freshTiles) {
 				var tileBounds = this._map && this._keyToBounds(key);
 				var stillVisible = this._map && tileBounds.overlaps(gMapBounds) && (tileZoom == gZoom);
 
-				if (!stillVisible) delete this._freshTiles[key2]; 
+				if (!stillVisible) delete this._freshTiles[key2];
 //				console.log('Prunning of ', key, (!stillVisible))
 			}
 		}
