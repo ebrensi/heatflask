@@ -550,14 +550,19 @@ class Users(UserMixin, db_sql.Model):
             to_update["dt_last_indexed"] = datetime.utcnow()
 
         if activities_list:
-            new_df = pd.DataFrame(activities_list).set_index("id")
-            index_df.update(new_df)
+            # new_df = (
+            #     pd.DataFrame(activities_list)
+            #     .astype(Users.index_df_dtypes)
+            #     .set_index("id")
+            # )
 
             index_df = (
-                index_df
+                pd.DataFrame(activities_list)
+                .astype(Users.index_df_dtypes)
+                .set_index("id")
+                .combine_first(index_df)
                 .sort_index(ascending=False)
                 .reset_index()
-                .astype(Users.index_df_dtypes)
             )
 
             # app.logger.info("after update: {}".format(index_df.info()))
