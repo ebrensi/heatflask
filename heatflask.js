@@ -720,7 +720,7 @@ function readStream(streamURL, numActivities=null, callback=null) {
         source = new EventSource(streamURL),
         count = 0;
 
-    $(".data_message").html("Rendering activities...");
+    $(".data_message").html("Retrieving activity data...");
 
     $('#abortButton').click(function(){
         stopListening();
