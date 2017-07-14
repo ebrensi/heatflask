@@ -1,6 +1,7 @@
 L.Control.Window = L.Control.extend({
 
-    includes: L.Mixin.Events,
+    includes: L.Evented.prototype,
+    // includes: L.Mixin.Events,
 
     options: {
         element: 'map',
@@ -99,14 +100,22 @@ L.Control.Window = L.Control.extend({
 
         // Unregister events to prevent memory leak
         var stop = L.DomEvent.stopPropagation;
-        L.DomEvent
-            .off(this._wrapper, 'contextmenu', stop)
-            .off(this._wrapper, 'click', stop)
-            .off(this._wrapper, 'mousedown', stop)
-            .off(this._wrapper, 'touchstart', stop)
-            .off(this._wrapper, 'dblclick', stop)
-            .off(this._wrapper, 'mousewheel', stop)
-            .off(this._wrapper, 'MozMousePixelScroll', stop);
+        // L.DomEvent
+        //     .off(this._wrapper, 'contextmenu', stop)
+        //     .off(this._wrapper, 'click', stop)
+        //     .off(this._wrapper, 'mousedown', stop)
+        //     .off(this._wrapper, 'touchstart', stop)
+        //     .off(this._wrapper, 'dblclick', stop)
+        //     .off(this._wrapper, 'mousewheel', stop)
+        //     .off(this._wrapper, 'MozMousePixelScroll', stop);
+
+        L.DomEvent.off(this._wrapper, 'contextmenu', stop);
+        L.DomEvent.off(this._wrapper, 'click', stop);
+        L.DomEvent.off(this._wrapper, 'mousedown', stop);
+        L.DomEvent.off(this._wrapper, 'touchstart', stop);
+        L.DomEvent.off(this._wrapper, 'dblclick', stop);
+        L.DomEvent.off(this._wrapper, 'mousewheel', stop);
+        L.DomEvent.off(this._wrapper, 'MozMousePixelScroll', stop);
 
        // map.off('resize',self.mapResized);
 
@@ -204,7 +213,7 @@ L.Control.Window = L.Control.extend({
         this.options.prompt = promptObject;
 
         this.setPromptCallback(promptObject.callback);
-        
+
         this.setActionCallback(promptObject.action);
 
         var cancel = this.options.prompt.buttonCancel || 'CANCEL';
@@ -222,9 +231,9 @@ L.Control.Window = L.Control.extend({
         var btnOK= L.DomUtil.create('button','',this._containerPromptButtons);
         L.DomEvent.on(btnOK, 'click',this.promptCallback, this);
         btnOK.innerHTML=ok;
-        
+
         this._btnOK=btnOK;
-        
+
         var btnCancel= L.DomUtil.create('button','',this._containerPromptButtons);
         L.DomEvent.on(btnCancel, 'click', this.close, this);
         btnCancel.innerHTML=cancel
