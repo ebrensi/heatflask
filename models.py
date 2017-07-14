@@ -501,7 +501,7 @@ class Users(UserMixin, db_sql.Model):
         start_time = datetime.utcnow()
 
         #  retrieve the current index if we have it, otherwise return nothing
-        if not index_df:
+        if index_df is None:
             activity_index = self.get_index()
             if activity_index:
                 index_df = (
@@ -548,10 +548,11 @@ class Users(UserMixin, db_sql.Model):
 
         if activities_list:
             new_df = pd.DataFrame(activities_list).set_index("id")
+            index_df.update(new_df)
 
             index_df = (
-                index_df.update(new_df)
-                # .drop_duplicates()
+                index_df
+                .drop_duplicates()
                 .sort_index(ascending=False)
                 .astype(Users.index_df_dtypes)
             )
