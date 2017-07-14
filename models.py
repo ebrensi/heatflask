@@ -664,11 +664,15 @@ class Users(UserMixin, db_sql.Model):
                     index_df = self.update_index(index_df)
 
                 if (not activity_ids):
-                    ids_df = index_df[
-                        index_df.summary_polyline.notnull()].set_index("ts_local").id
+                     # only consider activities with a summary polyline
+                    ids_df = (
+                        index_df[index_df.summary_polyline.notnull()]
+                        .set_index("ts_local")
+                        .sort_index(ascending=False)
+                        .id
+                    )
 
                     if limit:
-                         # only consider activities with a summary polyline
                         ids_df = ids_df.head(int(limit))
 
                     elif before or after:
