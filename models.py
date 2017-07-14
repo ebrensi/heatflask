@@ -445,7 +445,7 @@ class Users(UserMixin, db_sql.Model):
                 return
 
             index_df = (pd.DataFrame(activities_list)
-                        .set_index("ts_local")
+                        .set_index("id")
                         .sort_index(ascending=False)
                         .astype(Users.index_df_dtypes))
 
@@ -500,19 +500,20 @@ class Users(UserMixin, db_sql.Model):
     def update_index(self, index_df=None, activity_ids=[], reset_ttl=True):
         start_time = datetime.utcnow()
 
-        #  retrieve the current index if we have it, otherwise quit
-        if index_df is None:
+        #  retrieve the current index if we have it, otherwise return nothing
+        if not index_df:
             activity_index = self.get_index()
             if activity_index:
-                index_df = activity_index["index_df"]
+                index_df = (
+                    activity_index["index_df"].reset_index().set_index("id")
+                )
             else:
                 return
 
-        # if particular activity_ids are supplied, we will go fetch those
-        # activities and add/replace them. otherwise, we get new activities
-        # since the latest one in our current index
+        activities_list = []
+        app.logger.info("Updating activity index for {}".format(self))
+
         if activity_ids:
-            activities_list = []
             for aid in activity_ids:
                 try:
                     act = Activities.strava2dict(
@@ -523,32 +524,22 @@ class Users(UserMixin, db_sql.Model):
                                      .format(self, aid, e))
                 else:
                     activities_list.append(act)
-
-                # remove these activities from index_df they are there
-                index_df = index_df.ix[~index_df["id"].isin(activity_ids)]
-
-                # app.logger.info("updating activity {} in index {}"
-                #                 .format(aid, self.id))
         else:
-            # We will replace the 10 most recent activities, since these
-            #  are the ones most likely to have been manually modified
-            #  since last access.
-            index_df = index_df[10:]
-
-            already_got = set(index_df.id)
-            latest = index_df.index[0]
-            app.logger.info("getting new activites (since {}) for index {}"
-                            .format(latest, self.id))
+            # If ids of activities to update are not explicitly given
+            #   (most often the case), we will replace the 10 most recent
+            #  activities, since these are the ones most likely to have been
+            #  manually modified since last access.
             try:
-                activities_list = [Activities.strava2dict(
-                    a) for a in self.client().get_activities(after=latest)
-                    if a.id not in already_got]
+                activities_list = [
+                    Activities.strava2dict(a)
+                    for a in self.client().get_activities(limit=10)
+                ]
             except Exception as e:
                 app.logger.error(
-                    "was not able to retrieve {}'s latest activity data"
+                    "was not able to retrieve {}'s latest activity data: {}"
                     .format(self, e)
                 )
-                return self.get_index()["index_df"]
+                return index_df
 
         to_update = {}
         if reset_ttl:
@@ -556,12 +547,11 @@ class Users(UserMixin, db_sql.Model):
             to_update["dt_last_indexed"] = datetime.utcnow()
 
         if activities_list:
-            new_df = pd.DataFrame(activities_list).set_index(
-                "ts_local")
+            new_df = pd.DataFrame(activities_list).set_index("id")
 
             index_df = (
-                new_df.append(index_df)
-                .drop_duplicates()
+                index_df.update(new_df)
+                # .drop_duplicates()
                 .sort_index(ascending=False)
                 .astype(Users.index_df_dtypes)
             )
@@ -656,8 +646,15 @@ class Users(UserMixin, db_sql.Model):
         index_df = None
         if (summaries or limit or only_ids or after or before):
             activity_index = self.get_index()
+
             if activity_index:
                 index_df = activity_index["index_df"]
+                elapsed = (datetime.utcnow() -
+                           activity_index["dt_last_indexed"]).total_seconds()
+
+                # update the index if we need to
+                if (not OFFLINE) and (elapsed > INDEX_UPDATE_TIMEOUT):
+                    index_df = self.update_index(index_df)
 
                 if (not activity_ids):
                     ids_df = index_df[index_df.summary_polyline.notnull()].id
