@@ -381,8 +381,22 @@ class Users(UserMixin, db_sql.Model):
                 "dt_last_indexed": self.activity_index["dt_last_indexed"]
             }
 
+    @staticmethod
+    def to_datetime(obj):
+        if not obj:
+            return
+        if isinstance(obj, datetime):
+            return obj
+        try:
+            dt = dateutil.parser.parse(obj)
+        except ValueError:
+            return
+        else:
+            return dt
+
     def build_index(self, out_queue=None,
-                    limit=None, after=None, before=None,
+                    limit=None,
+                    after=None, before=None,  # datetime object or string
                     activity_ids=None):
 
         def enqueue(msg):
@@ -391,6 +405,9 @@ class Users(UserMixin, db_sql.Model):
             else:
                 # app.logger.debug(msg)
                 out_queue.put(msg)
+
+        before = self.__class__.to_datetime(before)
+        after = self.__class__.to_datetime(after)
 
         self.indexing(True)
         start_time = datetime.utcnow()
@@ -683,9 +700,9 @@ class Users(UserMixin, db_sql.Model):
                     elif before or after:
                         #  get ids of activities in date-range
                         try:
-                            after = dateutil.parser.parse(after)
+                            after = self.__class__.to_datetime(after)
                             if before:
-                                before = dateutil.parser.parse(before)
+                                before = self.__class__.to_datetime(before)
                                 assert(before > after)
                         except AssertionError:
                             return [{"error": "Invalid Dates"}]
