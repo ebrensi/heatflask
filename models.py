@@ -409,6 +409,17 @@ class Users(UserMixin, db_sql.Model):
         before = self.__class__.to_datetime(before)
         after = self.__class__.to_datetime(after)
 
+        def in_date_range(dt):
+            if not (before or after):
+                return
+
+            t1 = (not after) or (after <= dt)
+            t2 = (not before) or (dt <= before)
+            result = (t1 and t2)
+            # app.logger.info("{} <= {} <= {}: {}"
+            #                 .format(after, dt, before, result))
+            return result
+
         self.indexing(True)
         start_time = datetime.utcnow()
         app.logger.debug("building activity index for {}".format(self.id))
@@ -424,10 +435,10 @@ class Users(UserMixin, db_sql.Model):
                     count += 1
 
                     if (rendering and
-                        (activity_ids and (d["id"] in activity_ids)) or
-                        ((limit and (count <= limit)) or
-                         (after and (d["ts_local"] >= after)) or
-                            (before and (d["ts_local"] <= before)))):
+                        ((activity_ids and (d["id"] in activity_ids)) or
+                         (limit and (count <= limit)) or
+                            in_date_range(d["ts_local"]))):
+
                         d2 = dict(d)
                         d2["ts_local"] = str(d2["ts_local"])
                         enqueue(d2)
