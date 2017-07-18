@@ -166,4 +166,4 @@ class DevelopmentConfig(Config):
     # ASSETS_DEBUG = True
     ASSETS_AUTO_BUILD = True
 
-    INDEX_UPDATE_TIMEOUT = 1
+    # INDEX_UPDATE_TIMEOUT = 1

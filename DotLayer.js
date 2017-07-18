@@ -21,7 +21,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
     _pane: "shadowPane",
     two_pi: 2 * Math.PI,
-    target_fps: 32,
+    target_fps: 25,
     smoothFactor: 1.0,
     _tThresh: 100000000.0,
     C1: 1000000.0,
@@ -672,9 +672,11 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         // set up GIF encoder
         let pd = this._progressDisplay,
             frameTime = Date.now(),
-            frameRate = 30,
+            // we use a frame rate of 25 fps beecause that yields a nice
+            //  4 1/100-th second delay between frames
+            frameRate = 25,
             numFrames = durationSecs * frameRate,
-            delay = 1000.0 / frameRate,
+            delay = 1000 / frameRate,
 
             encoder = new GIF({
                 workers: 8,
@@ -755,7 +757,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         }
 
 
-        console.log(`# frames= ${numFrames.toFixed(4)}, delay=${delay.toFixed(4)}`);
+        // console.log(`# frames= ${numFrames.toFixed(4)}, delay=${delay.toFixed(4)}`);
 
         framePrev = null;
         // Add frames to the encoder
@@ -788,9 +790,13 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             let gifFrame = canvasSubtract(frame, framePrev);
             // display(gifFrame, `frame_${i}`);
 
+            let thisDelay = (i == num-1)? ~~(delay/2) : delay
+            console.log("frame "+i+": delay="+thisDelay);
+
             encoder.addFrame(gifFrame, {
                 copy: true,
-                delay: delay,
+                // shorter delay after final frame
+                delay: thisDelay,
                 transparent: (i==0)? null : "#000001",
                 dispose: 1 // leave as is
             });
