@@ -757,7 +757,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         }
 
 
-        // console.log(`# frames= ${numFrames.toFixed(4)}, delay=${delay.toFixed(4)}`);
+        console.log(`GIF output: ${numFrames.toFixed(4)} frames, delay=${delay.toFixed(4)}`);
 
         framePrev = null;
         // Add frames to the encoder
@@ -791,7 +791,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             // display(gifFrame, `frame_${i}`);
 
             let thisDelay = (i == num-1)? ~~(delay/2) : delay
-            console.log("frame "+i+": delay="+thisDelay);
+            // console.log("frame "+i+": delay="+thisDelay);
 
             encoder.addFrame(gifFrame, {
                 copy: true,
