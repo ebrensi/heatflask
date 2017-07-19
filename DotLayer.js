@@ -666,8 +666,6 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             sh = this._size.y;
         }
 
-        // These canvases are not rendered on screen
-        // let baseCtx = baseCanvas.getContext('2d');
 
         // set up GIF encoder
         let pd = this._progressDisplay,
@@ -684,6 +682,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                 transparent: 'rgba(0,0,0,0)',
                 workerScript: GIFJS_WORKER_URL
             });
+
 
         this._encoder = encoder;
 
@@ -733,8 +732,9 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             for (let i=0; i<len; i+=4) {
                 if (dO[i] == dN[i] &&
                     dO[i+1] == dN[i+1] &&
-                    dO[i+2] == dN[i+2] &&
-                    dO[i+3] == dN[i+3]) {
+                    dO[i+2] == dN[i+2]
+                    && dO[i+3] == dN[i+3]
+                    ) {
 
                     dO[i] = 0;
                     dO[i+1] = 0;
@@ -744,7 +744,9 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                     dO[i] = dN[i];
                     dO[i+1] = dN[i+1];
                     dO[i+2] = dN[i+2];
-                    dO[i+3] = dN[i+3];
+                    // dO[i+3] = dN[i+3];
+                    // console.log(dN[i+3]);
+                    dO[i+3] = 255;
                 }
             }
             ctxOld.putImageData(dataOld,0,0);
@@ -756,8 +758,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             // w.document.write(`<title>${title}</title>`);
         }
 
-
-        console.log(`GIF output: ${numFrames.toFixed(4)} frames, delay=${delay.toFixed(4)}`);
+        // console.log(`GIF output: ${numFrames.toFixed(4)} frames, delay=${delay.toFixed(4)}`);
 
         framePrev = null;
         // Add frames to the encoder
@@ -779,7 +780,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             frameCtx.clearRect( 0, 0, sw, sh);
 
             // lay the baselayer down
-            frameCtx.drawImage( baseCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
+            baseCanvas && frameCtx.drawImage( baseCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
 
             // render this set of dots
             this.drawLayer(frameTime);
@@ -797,7 +798,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                 copy: true,
                 // shorter delay after final frame
                 delay: thisDelay,
-                transparent: (i==0)? null : "#000001",
+                transparent: (i==0)? null : "#100001",
                 dispose: 1 // leave as is
             });
 
