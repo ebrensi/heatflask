@@ -798,7 +798,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                 copy: true,
                 // shorter delay after final frame
                 delay: thisDelay,
-                transparent: (i==0)? null : "#100001",
+                transparent: (i==0)? null : "#F0F0F0",
                 dispose: 1 // leave as is
             });
 
