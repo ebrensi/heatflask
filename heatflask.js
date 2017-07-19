@@ -578,7 +578,7 @@ function renderLayers() {
           idString = (type == "activity_ids")? $("#activity_ids").val():null;
 
     if (DotLayer) {
-        DotLayer.pause();
+        DotLayer._mapMoving = true;
     }
 
     // create a status box
@@ -678,9 +678,19 @@ function renderLayers() {
         // filter activityIds to get only ones we don't already have
         activityIds = queryResult.filter((id) => !inClient.has(id));
 
-        // console.log(activityIds);
+
+        // If we already have all the activities we wanted then we're done
         if (!activityIds.length){
-            updateLayers();
+            updateLayers("Done. ");
+
+            appState['after'] = $("#date1").val();
+            appState["before"] = $("#date2").val();
+            updateState();
+
+            if (msgBox) {
+                msgBox.close();
+                msgBox = null;
+            }
             return;
         }
 
@@ -722,12 +732,12 @@ function updateLayers(msg) {
     // initialize or update DotLayer
     if (DotLayer) {
         DotLayer.reset();
-        !appState.paused && DotLayer.animate();
+        // !appState.paused && DotLayer.animate();
     } else {
         initializeDotLayer();
     }
 
-    // render the activities table
+    // (re-)render the activities table
     atable.clear();
     atable.rows.add(Object.values(appState.items)).draw();
 }
