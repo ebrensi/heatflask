@@ -581,6 +581,7 @@ function renderLayers() {
         DotLayer.pause();
     }
 
+    // create a status box
     msgBox = L.control.window(map,{
             position: 'top',
             content:"<div class='data_message'></div><div><progress class='progbar' id='box'></progress></div>",
@@ -598,13 +599,26 @@ function renderLayers() {
     }
 
 
+    // We will load in new items that aren't already in appState.items,
+    //  and delete whatever is left.
+    let inClient = new Set(Object.keys(appState.items).map(Number));
+
     // Handle given activity_ids case
     if (idString) {
         let streamQuery = {},
             activityIds = idString.split(/\D/).map(Number);
 
-        // TODO: remove any activities from appState.items that aren't in
-        //  activityIds
+        let activityIdSet = new Set(activityIds);
+
+        // delete all items that aren't in activityIds from appState.items
+        for (let item of inClient) {
+            if (!activityIdSet.has(item))
+            delete appState.items[item];
+        }
+
+        // filter activityIds to get only ones we don't already have
+        activityIds = activityIds.filter((id) => !inClient.has(id));
+
         streamQuery[USER_ID] = {
             activity_ids: activityIds,
             summaries: true,
@@ -622,11 +636,7 @@ function renderLayers() {
         return;
     }
 
-
-    // We will load in new items that aren't already in appState.items,
-    //  and delete whatever is left.
-    let inClient = new Set(Object.keys(appState.items).map(Number));
-
+    // First we request only ids of activities for a given query
     activityQuery = {
         limit: (type == "activities")? Math.max(1, +num) : undefined,
         after: date1? date1 : undefined,
@@ -638,13 +648,18 @@ function renderLayers() {
     httpGetAsync(url, function(data) {
         let queryResult = JSON.parse(data)[0];
 
+        // TODO: Handle the case where the index is currently being built
+
         // handle the case where there is no index for this user
         if (queryResult == "build") {
             activityQuery["only_ids"] = false;
             activityQuery["summaries"] = true;
             activityQuery["streams"] = true;
+
             // TODO: handle the unlikely case where there are items already in
-            //  appState.items
+            //  appState.items and the user's index doesn't exist because
+            //  it got deleted.
+
             let streamURL = QUERY_URL_SSE + "?" + jQuery.param(activityQuery);
             // window.open(streamURL, target="_blank");
             readStream(streamURL, null, updateLayers);
@@ -660,7 +675,7 @@ function renderLayers() {
             delete appState.items[item];
         }
 
-        // filter activitys to get by ones we don't already have
+        // filter activityIds to get only ones we don't already have
         activityIds = queryResult.filter((id) => !inClient.has(id));
 
         // console.log(activityIds);
