@@ -882,9 +882,13 @@ function readStream(streamURL, numActivities=null, callback=null) {
 
 
 function updateState(){
-    var params = {},
-    type = $("#select_type").val(),
-    num = $("#select_num").val();
+    if (ONLOAD_PARAMS.key){
+        return;
+    }
+
+    let  params = {},
+         type = $("#select_type").val(),
+         num = $("#select_num").val();
 
     if (type == "grouped_with") {
         params.group = +$("#activity_ids").val();;
@@ -972,78 +976,78 @@ function preset_sync() {
 
 
 $(document).ready(function() {
-    // $("#normal-dotColor").val(DEFAULT_DOTCOLOR);
 
-    $("#select_num").keypress(function(event) {
-        if (event.which == 13) {
-            event.preventDefault();
-            renderLayers();
-        }
-    });
-
-    $("#abortButton").hide();
-
-    $(".progbar").hide();
-    $(".datepick").datepicker({ dateFormat: 'yy-mm-dd',
-        changeMonth: true,
-        changeYear: true
-    });
-
-
-    map.on('moveend', function(e) {
-        if (!appState.autozoom) {
-            updateState();
-        }
-    });
-
-
-    $("#autozoom").on("change", updateState);
-    $("#info").on("change", updateState);
-
-
-    $("#share").prop("checked", SHARE_PROFILE);
-    $("#share").on("change", function() {
-        var status = $("#share").is(":checked")? "public":"private";
-        updateShareStatus(status);
-    });
-
-
+    // activities table set-up
     $("#zoom-to-selection").prop("checked", false);
     $("#zoom-to-selection").on("change", function(){
         if ( $("#zoom-to-selection").is(':checked')) {
             zoomToSelectedPaths();
         }
     });
-
-    $(".datepick").on("change", function(){
-        $(".preset").val("");
-    });
-    $(".preset").on("change", preset_sync);
-
-    $("#renderButton").click(renderLayers);
     $("#render-selection-button").click(openSelected);
     $("#clear-selection-button").click(deselectAll);
 
-    $("#autozoom").prop('checked', ONLOAD_PARAMS.autozoom);
+    if (!ONLOAD_PARAMS.key) {
+        $("#select_num").keypress(function(event) {
+            if (event.which == 13) {
+                event.preventDefault();
+                renderLayers();
+            }
+        });
 
-    if (ONLOAD_PARAMS.group) {
-        $("#select_type").val("grouped_with");
-        $("#activity_ids").val(ONLOAD_PARAMS.group);
-        $("#activity_ids").prop("readonly", true);
-    } else if (ONLOAD_PARAMS.activity_ids) {
-        $("#activity_ids").val(ONLOAD_PARAMS.activity_ids);
-        $("#select_type").val("activity_ids");
-    } else if (ONLOAD_PARAMS.limit) {
-        $("#select_num").val(ONLOAD_PARAMS.limit);
-        $("#select_type").val("activities");
-    } else if (ONLOAD_PARAMS.preset) {
-        $("#select_num").val(ONLOAD_PARAMS.preset);
-        $("#select_type").val("days");
-        preset_sync();
-    } else {
-        $('#date1').val(ONLOAD_PARAMS.date1);
-        $('#date2').val(ONLOAD_PARAMS.date2);
-        $("#preset").val("");
+        $("#abortButton").hide();
+
+        $(".progbar").hide();
+        $(".datepick").datepicker({ dateFormat: 'yy-mm-dd',
+            changeMonth: true,
+            changeYear: true
+        });
+
+
+        map.on('moveend', function(e) {
+            if (!appState.autozoom) {
+                updateState();
+            }
+        });
+
+
+        $("#autozoom").on("change", updateState);
+
+        $("#share").prop("checked", SHARE_PROFILE);
+        $("#share").on("change", function() {
+            let status = $("#share").is(":checked")? "public":"private";
+            updateShareStatus(status);
+        });
+
+        $(".datepick").on("change", function(){
+            $(".preset").val("");
+        });
+        $(".preset").on("change", preset_sync);
+
+        $("#renderButton").click(renderLayers);
+
+
+        $("#autozoom").prop('checked', ONLOAD_PARAMS.autozoom);
+
+        if (ONLOAD_PARAMS.group) {
+            $("#select_type").val("grouped_with");
+            $("#activity_ids").val(ONLOAD_PARAMS.group);
+            $("#activity_ids").prop("readonly", true);
+        } else if (ONLOAD_PARAMS.activity_ids) {
+            $("#activity_ids").val(ONLOAD_PARAMS.activity_ids);
+            $("#select_type").val("activity_ids");
+        } else if (ONLOAD_PARAMS.limit) {
+            $("#select_num").val(ONLOAD_PARAMS.limit);
+            $("#select_type").val("activities");
+        } else if (ONLOAD_PARAMS.preset) {
+            $("#select_num").val(ONLOAD_PARAMS.preset);
+            $("#select_type").val("days");
+            preset_sync();
+        } else {
+            $('#date1').val(ONLOAD_PARAMS.date1);
+            $('#date2').val(ONLOAD_PARAMS.date2);
+            $("#preset").val("");
+        }
     }
 
     renderLayers();

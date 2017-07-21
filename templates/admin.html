@@ -129,14 +129,15 @@
                   after = date1? date1 : null,
                   before = (date2 && date2 != "now")? date2 : null,
                   POST_QUERY_URL = "{{ url_for('get_query_key') }}",
-                  KEY_QUERY_URL = "{{ url_for('getdata_with_key', query_key='') }}";
+                  KEY_QUERY_URL = "{{ url_for('getdata_with_key', query_key='') }}",
+                  APP_URL = "{{ url_for('main', username='') }}";
 
 
 
             let userIds = atable.rows( { selected: true } ).ids().toArray(),
                 query = {
                     summaries: true,
-                    // streams: true,
+                    streams: true,
                     owner_id: true,
                     build_index: false
                 },
@@ -161,8 +162,10 @@
 
             httpPostAsync(POST_QUERY_URL, mainQuery, function(data) {
                 let key = JSON.parse(data),
-                    streamURL = `${KEY_QUERY_URL}${key}`;
-                window.open(streamURL, target="_blank");
+                    // openURL = `${KEY_QUERY_URL}${key}`,
+                    openURL = APP_URL+key;
+
+                window.open(openURL, target="_blank");
                 // readStream(streamURL, activityIds.length, updateLayers);
             });
 

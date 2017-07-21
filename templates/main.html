@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title>{{ config["APP_NAME"] }} - {{ user.username or user.id }}</title>
+	<title>{{ config["APP_NAME"] }} - {{ (user.username or user.id) if user else "multi" }}</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 	<link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
 
@@ -19,18 +19,19 @@
 
     <script type="text/javascript">
         // Constants defined via template
-        const OFFLINE = {{ config.get('OFFLINE')|tojson }},
-              HEATLAYER_DEFAULT_OPTIONS = {{ config["HEATMAP_DEFAULT_OPTIONS"]|tojson|safe }},
+        {% if user %}
+        const USER_ID = "{{ user.id }}",
               QUERY_URL_JSON = "{{ url_for('query_activities', username=user.id, out_type='json') }}",
               QUERY_URL_SSE = "{{ url_for('query_activities', username=user.id, out_type='sse') }}",
+              BASE_USER_URL = "{{ url_for('main', username=user.id) }}",
+              GROUP_ACTIVITY_SSE = "{{ url_for('group_stream', username=user.id, activity_id='') }}",
+              SHARE_PROFILE = {{ user.share_profile|tojson|safe }},
+              SHARE_STATUS_UPDATE_URL = "{{ url_for('update_share_status', username=user.id) }}"
+        {% endif %}
+
+        const OFFLINE = {{ config.get('OFFLINE')|tojson }},
               POST_QUERY_URL = "{{ url_for('get_query_key') }}",
               KEY_QUERY_URL = "{{ url_for('getdata_with_key', query_key='') }}",
-              BASE_USER_URL = "{{ url_for('main', username=user.id) }}",
-              GROUP_ACTIVITY_URL = BASE_USER_URL + "?group=",
-              GROUP_ACTIVITY_SSE = "{{ url_for('group_stream', username=user.id, activity_id='') }}",
-              USER_ID = "{{ user.id }}",
-              SHARE_PROFILE = {{ user.share_profile|tojson|safe }},
-              SHARE_STATUS_UPDATE_URL = "{{ url_for('update_share_status', username=user.id) }}",
               ADMIN = {{ (current_user.is_authenticated and current_user.is_admin())|tojson|safe }},
               FLASH_MESSAGES = {{ get_flashed_messages()|tojson|safe }},
               ONLOAD_PARAMS = {
@@ -50,11 +51,16 @@
                     map_center: [{{ lat }}, {{ lng }}],
                     map_zoom: {{ zoom }}
              },
-             MEASURMENT_PREFERENCE = "{{ current_user.measurement_preference if current_user.is_authenticated else user.measurement_preference }}",
+             MEASURMENT_PREFERENCE = "{{ current_user.measurement_preference if current_user.is_authenticated else user.measurement_preference if user else 'feet'}}",
              DIST_UNIT = (MEASURMENT_PREFERENCE=="feet")? 1609.34 : 1000.0,
              DIST_LABEL = (MEASURMENT_PREFERENCE=="feet")?  "mi" : "km",
              CAPTURE_DURATION_MAX = {{ config.get('CAPTURE_DURATION_MAX')|tojson }},
              DEFAULT_DOTCOLOR = {{ config.get('DEFAULT_DOTCOLOR')|tojson }};
+
+        function GROUP_ACTIVITY_URL(user_id, activity_id) {
+            return "{{ url_for('main', username='') }}"+user_id+"?group="+activity_id;
+        }
+
         {% assets "gifjs_webworker_js" %}
         const GIFJS_WORKER_URL = "{{ ASSET_URL }}";
     	{% endassets %}
@@ -75,14 +81,12 @@
 					<a href="#activities" role="tab"><i class="fa fa-list"></i></a>
                 </li>
 
-				{% if current_user.is_authenticated
+				{% if user and current_user.is_authenticated
 				and ((current_user.id == user.id) or current_user.is_admin())%}
 				<li>
-                {% else %}
-				<li class="disabled">
-				{% endif %}
 					<a href="#profile" role="tab"><i class="fa fa-user"></i></a>
 				</li>
+                {% endif %}
 
 				<li><a href="#controls" role="tab"><i class="fa fa-sliders"></i></a></li>
 			</ul>
@@ -90,20 +94,19 @@
 			<ul role="tablist">
 				<li><a href="#info-pane" role="tab"><i class="fa fa-info"></i></a></li>
 
-				{% if current_user.is_authenticated
+				{% if user and current_user.is_authenticated
 				and ((current_user.id == user.id) or current_user.is_admin())%}
 				<li>
-				{% else %}
-				<li class="disabled">
-				{% endif %}
 					<a href="#settings" role="tab"><i class="fa fa-gear"></i></a>
 				</li>
+                {% endif %}
 			</ul>
 		</div>
 
 		<!-- Tab panes -->
 		<div class="sidebar-content">
 
+            {% if user %}
             <!-- Main Query tab -->
 			<div class="sidebar-pane" id="home">
 				<h1 class="sidebar-header">
@@ -262,6 +265,7 @@
 				<a href="https://github.com/ebrensi/heatflask" target="_blank"><i class="fa fa-github fa-2x"></i> Want to contribute?<i class="fa fa-github fa-2x"></i></a>
 				<hr>
 			</div>
+            {% endif %}
 
             <!-- Activity List/Table Tab -->
 			<div class="sidebar-pane" id="activities">

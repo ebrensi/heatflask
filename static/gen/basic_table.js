@@ -315,7 +315,10 @@ function formatGroup(data, type, row) {
         return ""
       }
       if (type == "display") {
-        let url = GROUP_ACTIVITY_URL + row.id;
+
+        let owner_id = row.owner? row.owner : USER_ID,
+            url = GROUP_ACTIVITY_URL(owner_id, row.id);
+
         return href(url, "<i class='fa fa-users'></i>");
       } else {
         return data;
