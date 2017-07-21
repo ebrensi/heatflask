@@ -616,8 +616,8 @@ def getdata_with_key(query_key):
                 if not user:
                     continue
 
-                # app.logger.debug("async job querying {}: {}".format(user,
-                # options))
+                app.logger.debug("async job querying {}: {}"
+                                 .format(user, options))
                 options.update({
                     "pool": pool,
                     "out_queue": out_queue
