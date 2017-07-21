@@ -649,6 +649,7 @@ function renderLayers() {
         let queryResult = JSON.parse(data)[0];
 
         // TODO: Handle the case where the index is currently being built
+        //   by another client
 
         // handle the case where there is no index for this user
         if (queryResult == "build") {
@@ -790,10 +791,6 @@ function readStream(streamURL, numActivities=null, callback=null) {
             $('#renderButton').prop('disabled', false);
         }
     }
-
-
-    // TODO: don't forget to deal with the case where
-    //      limit > number of available activities
 
     // handle one incoming chunk from SSE stream
     source.onmessage = function(event) {

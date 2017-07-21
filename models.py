@@ -2,7 +2,7 @@ from flask_login import UserMixin
 from sqlalchemy.dialects import postgresql as pg
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import inspect
-from datetime import datetime, timedelta
+from datetime import datetime
 import dateutil
 import stravalib
 import polyline
@@ -16,7 +16,7 @@ from gevent.queue import Queue
 from gevent.pool import Pool
 from exceptions import StopIteration
 import requests
-from requests.exceptions import HTTPError
+# from requests.exceptions import HTTPError
 import cPickle
 import msgpack
 from bson import ObjectId
@@ -639,6 +639,7 @@ class Users(UserMixin, db_sql.Model):
                          summaries=True,
                          streams=False,
                          owner_id=False,
+                         build_index=True,
                          pool=None,
                          out_queue=None,
                          **kwargs):
@@ -648,6 +649,16 @@ class Users(UserMixin, db_sql.Model):
                     "error": "Building activity index for {}".format(self.id)
                     + "...<br>Please try again in a few seconds.<br>"
                     }]
+
+        # convert date strings to datetimes, if applicable
+        if before or after:
+            try:
+                after = self.__class__.to_datetime(after)
+                if before:
+                    before = self.__class__.to_datetime(before)
+                    assert(before > after)
+            except AssertionError:
+                return [{"error": "Invalid Dates"}]
 
         # app.logger.info("query_activities called with: {}".format({
         #     "activity_ids": activity_ids,
@@ -710,14 +721,6 @@ class Users(UserMixin, db_sql.Model):
 
                     elif before or after:
                         #  get ids of activities in date-range
-                        try:
-                            after = self.__class__.to_datetime(after)
-                            if before:
-                                before = self.__class__.to_datetime(before)
-                                assert(before > after)
-                        except AssertionError:
-                            return [{"error": "Invalid Dates"}]
-
                         if after:
                             ids_df = ids_df[:after]
                         if before:
@@ -733,32 +736,41 @@ class Users(UserMixin, db_sql.Model):
                     out_queue.put(StopIteration)
                     return out_queue
 
-                def gen():
+                def summary_gen():
                     for aid in activity_ids:
                         A = {"id": int(aid)}
                         if summaries:
                             A.update(index_df.loc[int(aid)].to_dict())
                         # app.logger.debug(A)
                         yield A
+                gen = summary_gen()
 
-            else:  # There is no activity index, so we have to build it
+            elif build_index:
+                # There is no activity index and we are to build one
                 if only_ids:
                     return ["build"]
 
                 else:
-                    myQueue = Queue()
+                    gen = Queue()
                     gevent.spawn(self.build_index,
-                                 myQueue,
+                                 gen,
                                  limit,
                                  after,
                                  before,
                                  activity_ids)
+            else:
+                # Finally, if there is no index and rather than building one
+                # we are requested to get the summary data directily from Strava
+                gen = (
+                    Activities.strava2dict(a)
+                    for a in self.client().get_activities(
+                        limit=limit,
+                        before=before,
+                        after=after)
+                )
+                app.logger.info("getting summaries from Strava without build")
 
-                    def gen():
-                        for item in myQueue:
-                            yield item
-
-        for A in gen():
+        for A in gen:
             if "stop_rendering" in A:
                 pool.join()
 
@@ -769,6 +781,8 @@ class Users(UserMixin, db_sql.Model):
             if summaries:
                 if ("bounds" not in A):
                     A["bounds"] = Activities.bounds(A["summary_polyline"])
+
+                A["ts_local"] = str(A["ts_local"])
 
                 # TODO: do this on the client
                 A.update(Activities.atype_properties(A["type"]))

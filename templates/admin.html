@@ -87,18 +87,12 @@
 
         }
 
-        $(".datepick").on("change", function(){
-            $(".preset").val("");
-        });
-        $(".preset").on("change", preset_sync);
-
-
-
         const data = {{ data|tojson }};
         let atable = $('#users_table').DataTable({
             pageLength: 50,
             deferRender: true,
             data: data,
+            rowId: "id",
             columns: [
                 {title: "ID",    data: "id", render: formatUserId},
                 {title: "count", data: "app_activity_count"},
@@ -118,6 +112,63 @@
             select: isMobileDevice()? "multi" : "os",
             order: [[ 2, "desc" ]]
         });
+
+
+        $(".datepick").on("change", function(){
+            $(".preset").val("");
+        });
+
+        $(".preset").on("change", preset_sync);
+
+        $("#renderButton").click(function() {
+            const date1 = $("#date1").val(),
+                  date2 = $("#date2").val(),
+                  type = $("#select_type").val(),
+                  num = $("#select_num").val(),
+                  limit = (type == "activities")? Math.max(1, +num) : null,
+                  after = date1? date1 : null,
+                  before = (date2 && date2 != "now")? date2 : null,
+                  POST_QUERY_URL = "{{ url_for('get_query_key') }}",
+                  KEY_QUERY_URL = "{{ url_for('getdata_with_key', query_key='') }}";
+
+
+
+            let userIds = atable.rows( { selected: true } ).ids().toArray(),
+                query = {
+                    summaries: true,
+                    // streams: true,
+                    owner_id: true,
+                    build_index: false
+                },
+                mainQuery = {};
+
+            if (limit) {
+                query.limit = limit;
+            } else {
+                if (after) {
+                    query.after = after;
+                }
+                if (before) {
+                    query.before = before;
+                }
+            }
+
+            for (let i=0, len=userIds.length; i<len; i++) {
+                mainQuery[userIds[i]] = query;
+            }
+
+            console.log(mainQuery);
+
+            httpPostAsync(POST_QUERY_URL, mainQuery, function(data) {
+                let key = JSON.parse(data),
+                    streamURL = `${KEY_QUERY_URL}${key}`;
+                window.open(streamURL, target="_blank");
+                // readStream(streamURL, activityIds.length, updateLayers);
+            });
+
+
+        });
+
     </script>
 </body>
 </html>
