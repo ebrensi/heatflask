@@ -395,13 +395,17 @@ def main(username):
         else:
             current_user.update_usage()
 
-    # note: 'current_user' is the user that is currently logged in.
-    #       'user' is the user we are displaying data for.
-    user = Users.get(username)
-    if not user:
-        flash("user '{}' is not registered with this app"
-              .format(username))
-        return redirect(url_for('splash'))
+    key = redis.get(username) or ""
+    user = ""
+
+    if not key:
+        # note: 'current_user' is the user that is currently logged in.
+        #       'user' is the user we are displaying data for.
+        user = Users.get(username)
+        if not user:
+            flash("user '{}' is not registered with this app"
+                  .format(username))
+            return redirect(url_for('splash'))
 
     date1 = request.args.get("date1") or request.args.get("after", "")
     date2 = request.args.get("date2") or request.args.get("before", "")
@@ -461,6 +465,7 @@ def main(username):
         zoom=zoom,
         ids=ids,
         group=group,
+        key=key,
         preset=preset,
         date1=date1,
         date2=date2,
@@ -581,21 +586,6 @@ def get_query_key():
     redis.setex(key, json.dumps(query), 10)  # key is good for 30 secs
     # app.logger.debug("set key '{}' to {}".format(key, query))
     return jsonify(key)
-
-
-@app.route('/app/test/<int:num_users>')
-def qtest(num_users):
-    all_users = list(Users.query)
-    users = all_users[0:num_users]
-    query_obj = json.dumps({user.id: {"limit": 2} for user in users})
-    # app.logger.info(query_obj)
-    key = "test"
-    redis.setex(key, query_obj, 10 * 60)
-    return jsonify({
-        "key": key,
-        "query_obj": query_obj,
-        "url": url_for("getdata_with_key", query_key=key, _external=True)
-    })
 
 
 @app.route('/getdata/<query_key>')
