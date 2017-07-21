@@ -395,8 +395,8 @@ def main(username):
         else:
             current_user.update_usage()
 
-    key = redis.get(username) or ""
-    user = ""
+    user = None
+    key = username if redis.get("Q:" + username) else ""
 
     if not key:
         # note: 'current_user' is the user that is currently logged in.
@@ -413,7 +413,7 @@ def main(username):
     limit = request.args.get("limit", "")
     baselayer = request.args.getlist("baselayer")
     ids = request.args.get("id", "")
-    group = request.args.get("group", "")
+    group = "multi" if key else request.args.get("group", "")
 
     if not ids:
         if (not date1) and (not date2):
@@ -583,16 +583,15 @@ def query_activities(username, out_type):
 def get_query_key():
     query = request.get_json(force=True)
     key = str(uuid.uuid1())
-    redis.setex(key, json.dumps(query), 10)  # key is good for 30 secs
-    # app.logger.debug("set key '{}' to {}".format(key, query))
+    redis.setex("Q:" + key, json.dumps(query), 10)  # key is good for 30 secs
+    app.logger.debug("set key '{}' to {}".format(key, query))
     return jsonify(key)
 
 
 @app.route('/getdata/<query_key>')
 def getdata_with_key(query_key):
-    query_obj = redis.get(query_key)
-    # app.logger.debug("retrieved key {} as {}".format(query_key, query_obj))
-    # return jsonify(query_obj)
+    query_obj = redis.get("Q:" + query_key)
+    app.logger.debug("retrieved key {} as {}".format(query_key, query_obj))
 
     if not query_obj:
         return errout("invalid query_key")

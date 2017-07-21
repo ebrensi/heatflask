@@ -788,7 +788,7 @@ class Users(UserMixin, db_sql.Model):
                 A.update(Activities.atype_properties(A["type"]))
 
             if owner_id:
-                A.update({"owner_id": self.id})
+                A.update({"owner": self.id, "profile": self.profile})
 
             if not streams:
                 out_queue.put(A)
@@ -847,17 +847,15 @@ class Users(UserMixin, db_sql.Model):
             return [{"error": str(e)}]
 
         for obj in itertools.chain(related_activities, trivial_list):
-            owner = obj.athlete.id
-
             if streams:
-                user = self.__class__.get(owner)
+                owner = self.__class__.get(obj.athlete.id)
 
-                if user:
+                if owner:
                     # the owner is a Heatflask user
                     A = Activities.strava2dict(obj)
                     A["ts_local"] = str(A["ts_local"])
-                    A["owner"] = owner
-                    A["profile"] = user.profile
+                    A["owner"] = owner.id
+                    A["profile"] = owner.profile
                     A["bounds"] = Activities.bounds(A["summary_polyline"])
                     A.update(Activities.atype_properties(A["type"]))
 
@@ -868,14 +866,14 @@ class Users(UserMixin, db_sql.Model):
                     else:
                         pool.spawn(
                             Activities.import_and_queue_streams,
-                            user.client(), out_queue, A)
+                            owner.client(), out_queue, A)
             else:
                 # we don't care about activity streams
                 A = Activities.strava2dict(obj)
 
                 A["ts_local"] = str(A["ts_local"])
                 A["profile"] = "/avatar/athlete/medium.png"
-                A["owner"] = owner
+                A["owner"] = obj.athlete.id
                 A["bounds"] = Activities.bounds(A["summary_polyline"])
                 A.update(Activities.atype_properties(A["type"]))
                 out_queue.put(A)
