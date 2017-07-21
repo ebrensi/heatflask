@@ -590,6 +590,13 @@ function renderLayers() {
 
     $(".data_message").html("Retrieving activity data...");
 
+    // Handle explicitly given query-key
+    if (ONLOAD_PARAMS.key){
+        streamURL = `${KEY_QUERY_URL}${ONLOAD_PARAMS.key}`;
+        readStream(streamURL, null, updateLayers);
+        return;
+    }
+
     // Handle group-activity case
     if (type=="grouped_with") {
         // window.open(GROUP_ACTIVITY_SSE, target="_blank");
