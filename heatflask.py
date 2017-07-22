@@ -591,7 +591,7 @@ def get_query_key():
 @app.route('/getdata/<query_key>')
 def getdata_with_key(query_key):
     query_obj = redis.get("Q:" + query_key)
-    app.logger.debug("retrieved key {} as {}".format(query_key, query_obj))
+    # app.logger.debug("retrieved key {} as {}".format(query_key, query_obj))
 
     if not query_obj:
         return errout("invalid query_key")

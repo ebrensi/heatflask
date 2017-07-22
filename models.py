@@ -761,6 +761,9 @@ class Users(UserMixin, db_sql.Model):
             else:
                 # Finally, if there is no index and rather than building one
                 # we are requested to get the summary data directily from Strava
+                app.logger.info(
+                    "{}: getting summaries from Strava without build"
+                    .format(self))
                 gen = (
                     Activities.strava2dict(a)
                     for a in self.client().get_activities(
@@ -768,7 +771,6 @@ class Users(UserMixin, db_sql.Model):
                         before=before,
                         after=after)
                 )
-                app.logger.info("getting summaries from Strava without build")
 
         for A in gen:
             if "stop_rendering" in A:
