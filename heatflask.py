@@ -584,7 +584,7 @@ def get_query_key():
     query = request.get_json(force=True)
     key = str(uuid.uuid1())
     redis.setex("Q:" + key, json.dumps(query), 10)  # key is good for 30 secs
-    app.logger.debug("set key '{}' to {}".format(key, query))
+    # app.logger.debug("set key '{}' to {}".format(key, query))
     return jsonify(key)
 
 
@@ -600,6 +600,7 @@ def getdata_with_key(query_key):
 
     def go(query_obj, pool, out_queue):
         with app.app_context():
+            pool2 = gevent.pool.Pool()
             for username, options in query_obj.items():
                 user = Users.get(username)
                 if not user:
@@ -611,9 +612,11 @@ def getdata_with_key(query_key):
                     "pool": pool,
                     "out_queue": out_queue
                 })
-                user.query_activities(**options)
+                pool2.spawn(user.query_activities, **options)
+                # user.query_activities(**options)
                 gevent.sleep(0)
 
+            pool2.join()
             pool.join()
             out_queue.put(None)
             out_queue.put(StopIteration)

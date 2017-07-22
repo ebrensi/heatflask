@@ -660,17 +660,19 @@ class Users(UserMixin, db_sql.Model):
             except AssertionError:
                 return [{"error": "Invalid Dates"}]
 
-        # app.logger.info("query_activities called with: {}".format({
-        #     "activity_ids": activity_ids,
-        #     "limit": limit,
-        #     "after": after,
-        #     "before": before,
-        #     "only_ids": only_ids,
-        #     "summaries": summaries,
-        #     "streams": streams,
-        #     "pool": pool,
-        #     "out_queue": out_queue
-        # }))
+        app.logger.info("query_activities called with: {}".format({
+            "activity_ids": activity_ids,
+            "limit": limit,
+            "after": after,
+            "before": before,
+            "only_ids": only_ids,
+            "summaries": summaries,
+            "streams": streams,
+            "owner_id": owner_id,
+            "build_index": build_index,
+            "pool": pool,
+            "out_queue": out_queue
+        }))
 
         def import_streams(client, queue, activity):
             # app.logger.debug("importing {}".format(activity["id"]))
