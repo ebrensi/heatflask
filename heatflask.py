@@ -600,7 +600,7 @@ def getdata_with_key(query_key):
 
     def go(query_obj, pool, out_queue):
         with app.app_context():
-            pool2 = gevent.pool.Pool()
+            pool2 = gevent.pool.Pool(4)
             for username, options in query_obj.items():
                 user = Users.get(username)
                 if not user:
