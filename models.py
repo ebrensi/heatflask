@@ -642,6 +642,7 @@ class Users(UserMixin, db_sql.Model):
                          build_index=True,
                          pool=None,
                          out_queue=None,
+                         cache_timeout=CACHE_ACTIVITIES_TIMEOUT,
                          **kwargs):
 
         if self.indexing():
@@ -660,25 +661,25 @@ class Users(UserMixin, db_sql.Model):
             except AssertionError:
                 return [{"error": "Invalid Dates"}]
 
-        app.logger.info("query_activities called with: {}".format({
-            "activity_ids": activity_ids,
-            "limit": limit,
-            "after": after,
-            "before": before,
-            "only_ids": only_ids,
-            "summaries": summaries,
-            "streams": streams,
-            "owner_id": owner_id,
-            "build_index": build_index,
-            "pool": pool,
-            "out_queue": out_queue
-        }))
+        # app.logger.info("query_activities called with: {}".format({
+        #     "activity_ids": activity_ids,
+        #     "limit": limit,
+        #     "after": after,
+        #     "before": before,
+        #     "only_ids": only_ids,
+        #     "summaries": summaries,
+        #     "streams": streams,
+        #     "owner_id": owner_id,
+        #     "build_index": build_index,
+        #     "pool": pool,
+        #     "out_queue": out_queue
+        # }))
 
         def import_streams(client, queue, activity):
             # app.logger.debug("importing {}".format(activity["id"]))
 
             stream_data = Activities.import_streams(
-                client, activity["id"], STREAMS_TO_CACHE)
+                client, activity["id"], STREAMS_TO_CACHE, cache_timeout)
 
             data = {s: stream_data[s] for s in STREAMS_OUT + ["error"]
                     if s in stream_data}
@@ -763,9 +764,9 @@ class Users(UserMixin, db_sql.Model):
             else:
                 # Finally, if there is no index and rather than building one
                 # we are requested to get the summary data directily from Strava
-                app.logger.info(
-                    "{}: getting summaries from Strava without build"
-                    .format(self))
+                # app.logger.info(
+                #     "{}: getting summaries from Strava without build"
+                #     .format(self))
                 gen = (
                     Activities.strava2dict(a)
                     for a in self.client().get_activities(
@@ -1098,7 +1099,9 @@ class Activities(object):
             return msgpack.unpackb(packed)
 
     @classmethod
-    def import_streams(cls, client, activity_id, stream_names):
+    def import_streams(cls, client, activity_id, stream_names,
+                       timeout=CACHE_ACTIVITIES_TIMEOUT):
+
         streams_to_import = list(stream_names)
         if ("polyline" in stream_names):
             streams_to_import.append("latlng")
@@ -1110,15 +1113,18 @@ class Activities(object):
         except Exception as e:
             msg = ("Can't import streams for activity {}:\n{}"
                    .format(activity_id, e))
-            app.logger.error(msg)
+            # app.logger.error(msg)
             return {"error": msg}
 
         activity_streams = {name: streams[name].data for name in streams}
 
         # Encode/compress latlng data into polyline format
-        if ("polyline" in stream_names) and ("latlng" in activity_streams):
-            activity_streams["polyline"] = polyline.encode(
-                activity_streams['latlng'])
+        if "polyline" in stream_names:
+            if "latlng" in activity_streams:
+                activity_streams["polyline"] = polyline.encode(
+                    activity_streams['latlng'])
+            else:
+                return {"error": "no latlng stream for activity {}".format(activity_id)}
 
         for s in ["time", "altitude", "distance"]:
             # Encode/compress these streams
@@ -1132,7 +1138,7 @@ class Activities(object):
                     return {"error": msg}
 
         output = {s: activity_streams[s] for s in stream_names}
-        cls.set(activity_id, output)
+        cls.set(activity_id, output, timeout)
         return output
 
     @classmethod
