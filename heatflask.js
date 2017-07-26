@@ -23,7 +23,7 @@ if (!OFFLINE) {
         "CartoDB.DarkMatter": L.tileLayer.provider("CartoDB.DarkMatter"),
         "Google.Roadmap": L.gridLayer.googleMutant({type: 'roadmap'}),
         "Google.Terrain": L.gridLayer.googleMutant({type: 'terrain'}),
-        // "Google.Hybrid": L.gridLayer.googleMutant({type: 'hybrid'})
+        "Google.Hybrid": L.gridLayer.googleMutant({type: 'hybrid'})
     };
 
     Object.assign(baseLayers, online_baseLayers);
