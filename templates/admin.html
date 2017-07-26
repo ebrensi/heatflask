@@ -46,6 +46,12 @@
                 <input class="datepick" id="date2" type="text" value=""/>
             </span>
 
+            <span>
+                Key name:
+                <input id="key" type="text" value="">
+            </span>
+
+
             <button type="button" id="renderButton" class="btn btn-primary">Render Layers</button>
         </form>
     </div>
@@ -90,6 +96,7 @@
         const data = {{ data|tojson }};
         let atable = $('#users_table').DataTable({
             pageLength: 50,
+            lengthMenu: [ 50, 100, 500, 1000, 2000, -1],
             deferRender: true,
             data: data,
             rowId: "id",
@@ -126,6 +133,7 @@
                   date2 = $("#date2").val(),
                   type = $("#select_type").val(),
                   num = $("#select_num").val(),
+                  key_name = $("#key").val(),
                   limit = (type == "activities")? Math.max(1, +num) : null,
                   after = date1? date1 : null,
                   before = (date2 && date2 != "now")? date2 : null,
@@ -143,7 +151,7 @@
                     build_index: false,
                     cache_timeout: 60
                 },
-                mainQuery = {};
+                query_all = {};
 
             if (limit) {
                 query.limit = limit;
@@ -157,12 +165,17 @@
             }
 
             for (let i=0, len=userIds.length; i<len; i++) {
-                mainQuery[userIds[i]] = query;
+                query_all[userIds[i]] = query;
             }
 
-            console.log(mainQuery);
+            metaQuery = {
+                "key_timeout": 2 * 24 * 60 * 60, // 2 days
+                "key_name": key_name,
+                "query": query_all
+            };
 
-            httpPostAsync(POST_QUERY_URL, mainQuery, function(data) {
+
+            httpPostAsync(POST_QUERY_URL, metaQuery, function(data) {
                 let key = JSON.parse(data),
                     // openURL = `${KEY_QUERY_URL}${key}`,
                     openURL = APP_URL+key;
