@@ -22,12 +22,6 @@ class Config(object):
     DEFAULT_DOTCOLOR = "#FFFFFF"
 
     # Leaflet.js stuff
-    HEATMAP_DEFAULT_OPTIONS = {
-        "radius": 8,
-        "blur": 15,
-        "gradient": {0.4: 'blue', 0.65: 'lime', 1: 'red'}
-    }
-
     ATYPE_SPECS = [
         ("Ride", "speed", "#2B60DE"),  # Ocean Blue
         ("Run", "pace", "#FF0000"),  # Red
