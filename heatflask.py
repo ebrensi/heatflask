@@ -748,10 +748,10 @@ def users_restore():
 
 
 @app.route('/users/update')
-@log_request_event
 @admin_required
 def users_update():
-    iterator = Users.update_all(delete=request.args.get("delete"))
+    delete = request.args.get("delete")
+    iterator = Users.update_all(delete=delete)
     return Response(iterator, mimetype='text/event-stream')
 
 
