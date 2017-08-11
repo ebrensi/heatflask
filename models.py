@@ -1026,6 +1026,23 @@ class Activities(object):
             encoded.append(b)
         return encoded
 
+    @staticmethod
+    def stream_decode(rll_encoded, first_value=0):
+        running_sum = first_value
+        out_list = [first_value]
+
+        for el in rll_encoded:
+            if isinstance(el, list) and len(el) == 2:
+                val, num_repeats = el
+                for i in xrange(num_repeats):
+                    running_sum += val
+                    out_list.append(running_sum)
+            else:
+                running_sum += el
+                out_list.append(running_sum)
+
+        return out_list
+
     @classmethod
     def strava2dict(cls, a):
         d = {
