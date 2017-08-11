@@ -274,7 +274,7 @@ class Users(UserMixin, db_sql.Model):
                 )
 
                 yield (
-                    "done! {} invalid users deleted, old count: {], new count: {}"
+                    "done! {} invalid users deleted, old count: {}, new count: {}"
                     .format(num_deleted, count, count - num_deleted)
                 )
             except Exception as e:
