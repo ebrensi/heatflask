@@ -119,3 +119,4 @@ $RECYCLE.BIN/
 static/.webassets-cache/
 static/gen/build/
 
+test.py
