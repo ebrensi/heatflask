@@ -251,6 +251,8 @@ class Users(UserMixin, db_sql.Model):
                 return data if data else user
 
             P = Pool()
+            num_deleted = 0
+            count = 0
             try:
                 for obj in P.imap_unordered(user_data, cls.query):
                     if type(obj) == cls:
@@ -258,12 +260,23 @@ class Users(UserMixin, db_sql.Model):
                         if delete:
                             obj.delete()
                             msg += "...deleted"
+                            num_deleted += 1
                     else:
                         user = cls.add_or_update(cache_timeout=60, **obj)
                         msg = "successfully updated {}".format(user)
                     # app.logger.info(msg)
                     yield msg + "\n"
-                yield "done!"
+                    count += 1
+
+                EventLogger.new_event(
+                    msg="updated Users database: deleted {} invalid users, count={}"
+                        .format(num_deleted, count - num_deleted)
+                )
+
+                yield (
+                    "done! {} invalid users deleted, old count: {], new count: {}"
+                    .format(num_deleted, count, count - num_deleted)
+                )
             except Exception as e:
                 app.logger.info("error: {}".format(e))
                 P.kill()
