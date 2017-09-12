@@ -37,14 +37,16 @@ STREAMS_TO_CACHE = ["polyline", "time"]
 sslify = SSLify(app, skips=["webhook_callback"])
 
 # models depend app so we import them afterwards
-from models import Users, Activities, EventLogger, Utility, Webhooks,\
-    Indexes, db_sql, mongodb, redis
+from models import (
+    Users, Activities, EventLogger, Utility, Webhooks, Indexes,
+    db_sql, mongodb, redis
+)
 
 # just do once
-if not redis.get("db-reset"):
-    # Activities.init(clear_cache=True)
-    Indexes.init(clear_cache=True)
-    redis.set("db-reset", 1)
+# if not redis.get("db-reset"):
+#     # Activities.init(clear_cache=True)
+#     Indexes.init(clear_cache=True)
+#     redis.set("db-reset", 1)
 # redis.delete("db-reset")
 
 Analytics(app)
