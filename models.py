@@ -1158,7 +1158,7 @@ class Activities(object):
 
         for s in ["time", "altitude", "distance"]:
             # Encode/compress these streams
-            if (s in stream_names) and (s in activity_streams):
+            if (s in stream_names) and (activity_streams.get(s)):
                 try:
                     activity_streams[s] = cls.stream_encode(activity_streams[s])
                 except Exception as e:
