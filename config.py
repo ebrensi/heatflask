@@ -87,10 +87,10 @@ class Config(object):
 
     # We purge activities from Mongo that haven't been accessed for longer
     # than this
-    STORE_ACTIVITIES_TIMEOUT = 3 * 24 * 60 * 60  # 3 days
+    STORE_ACTIVITIES_TIMEOUT = 2 * 24 * 60 * 60  # 2 days
 
     # How long before a user's index is outated and needs an update
-    INDEX_UPDATE_TIMEOUT = 10 * 60  # 10 minutes
+    INDEX_UPDATE_TIMEOUT = 20 * 60  # 10 minutes
 
     # How long we Redis-cache hires activities
     CACHE_ACTIVITIES_TIMEOUT = 20 * 60  # 20 minutes

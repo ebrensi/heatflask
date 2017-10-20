@@ -121,3 +121,4 @@ static/gen/build/
 
 test.py
 env.sh
+.env
