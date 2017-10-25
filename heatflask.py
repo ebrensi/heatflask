@@ -330,7 +330,11 @@ def auth_callback():
         user_data = Users.strava_data_from_token(access_token)
         # app.logger.debug("user data: {}".format(user_data))
 
-        user = Users.add_or_update(**user_data)
+        try:
+            user = Users.add_or_update(**user_data)
+        except Exception as e:
+            app.logger.exception(e)
+            user = None
         if user:
             # remember=True, for persistent login.
             login_user(user, remember=True)
