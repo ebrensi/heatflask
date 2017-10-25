@@ -1159,6 +1159,12 @@ class Activities(object):
         for s in ["time", "altitude", "distance"]:
             # Encode/compress these streams
             if (s in stream_names) and (activity_streams.get(s)):
+                if len(activity_streams[s]) < 2:
+                    return {
+                        "error": "activity {} has no stream '{}'"
+                        .format(activity_id, s)
+                    }
+
                 try:
                     activity_streams[s] = cls.stream_encode(activity_streams[s])
                 except Exception as e:
