@@ -792,7 +792,7 @@ def app_init():
         Activities.init(),
         Indexes.init()
     }
-    return jsonify(info)
+    return "Activities and Indexes databases re-initialized"
 
 
 # ---- Event log stuff ----
