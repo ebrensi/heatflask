@@ -923,7 +923,8 @@ class Indexes(object):
             "dt_last_indexed",
             expireAfterSeconds=timeout
         )
-        app.logger.info("initialized Indexes collection")
+        app.logger.info("initialized Indexes collection with")
+        return result
 
 
 #  Activities class is only a proxy to underlying data structures.
@@ -951,11 +952,12 @@ class Activities(object):
         mongodb.create_collection("activities")
 
         timeout = app.config["STORE_ACTIVITIES_TIMEOUT"]
-        mongodb["activities"].create_index(
+        result = mongodb["activities"].create_index(
             "ts",
             expireAfterSeconds=timeout
         )
         app.logger.info("initialized Activity collection")
+        return result
 
     # This is a list of tuples specifying properties of the rendered objects,
     #  such as path color, speed/pace in description.  others can be added
