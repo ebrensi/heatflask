@@ -59,13 +59,35 @@ map.on('baselayerchange', function (e) {
     updateState();
 });
 
+// Define a watermark control
+L.Control.Watermark = L.Control.extend({
+
+    onAdd: function(map) {
+        var img = L.DomUtil.create('img');
+
+        img.src = this.options.image;
+        img.style.width = this.options.width;
+        img.style.opacity = this.options.opacity;
+        return img;
+    },
+
+    onRemove: function(map) {
+        // Nothing to do here
+    }
+});
+
+L.control.watermark = function(opts) {
+    return new L.Control.Watermark(opts);
+}
 
 
 var sidebarControl = L.control.sidebar('sidebar').addTo(map),
     layerControl = L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map),
     zoomControl = map.zoomControl.setPosition('bottomright'),
     fps_display = ADMIN? L.control.fps().addTo(map) : null,
-    areaSelect = null;
+    stravaLogo = L.control.watermark({ image: "static/pbs4.png", width: '100px', opacity:'0.5', position: 'bottomleft' }).addTo(map),
+    heatflaskLogo = L.control.watermark({ image: "static/logo.png", opacity: '0.5', width: '100px', position: 'bottomleft' }).addTo(map),
+    areaSelect;
 
 
 // Animation button
