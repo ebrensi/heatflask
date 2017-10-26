@@ -93,12 +93,14 @@ class Config(object):
     INDEX_UPDATE_TIMEOUT = 20 * 60  # 20 minutes
 
     # How long we Redis-cache hires activities
-    CACHE_ACTIVITIES_TIMEOUT = 20 * 60  # 20 minutes
+    CACHE_ACTIVITIES_TIMEOUT = 30 * 60  # 30 minutes
 
     # How long we hold a User object in memory
     CACHE_USERS_TIMEOUT = 20 * 60  # 20 minutes
 
-    SECRET_KEY = "pB\xeax\x9cJ\xd6\x81\xed\xd7\xf9\xd0\x99o\xad\rM\x92\xb1\x8b{7\x02r"
+    SECRET_KEY = (
+        "pB\xeax\x9cJ\xd6\x81\xed\xd7\xf9\xd0\x99o\xad\rM\x92\xb1\x8b{7\x02r"
+    )
 
     # Strava stuff
     STRAVA_CLIENT_ID = os.environ.get("STRAVA_CLIENT_ID")
@@ -126,6 +128,8 @@ class ProductionConfig(Config):
     ASSETS_AUTO_BUILD = False
     ASSETS_CACHE = False
     ASSETS_MANIFEST = False
+
+    REDIS_URL = os.environ.get("REDISGREEN_URL")
 
 
 class StagingConfig(Config):
@@ -161,3 +165,11 @@ class DevelopmentConfig(Config):
     ASSETS_AUTO_BUILD = True
 
     # INDEX_UPDATE_TIMEOUT = 1
+
+    # in local environment,
+    REDIS_URL = "redis://localhost"
+    STORE_INDEX_TIMEOUT = 10 * 24 * 60 * 60   # 10 days
+
+    # We purge activities from Mongo that haven't been accessed for longer
+    # than this
+    STORE_ACTIVITIES_TIMEOUT = 10 * 24 * 60 * 60  # 10 days
