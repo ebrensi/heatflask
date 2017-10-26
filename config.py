@@ -77,7 +77,7 @@ class Config(object):
     SQLALCHEMY_POOL_RECYCLE = 1 * 60 * 60
 
     MONGODB_URI = os.environ.get("MONGODB_URI")
-    REDIS_URL = os.environ.get('REDIS_URL')
+    # REDIS_URL = os.environ.get('REDIS_URL')
 
     # How long (seconds) we hold a user's index (in Mongo) before rebuilding it
     # We purge a user's activity index from Mongo if it has not been accessed
