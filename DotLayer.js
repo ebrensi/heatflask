@@ -27,6 +27,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
     C1: 1000000.0,
     C2: 200.0,
     dotScale: 1,
+
     options: {
         startPaused: false,
         showPaths: true,
@@ -63,6 +64,12 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         L.setOptions( this, options );
         this._paused = this.options.startPaused;
         this._timePaused = Date.now();
+
+        // this.heatflask_icon = new Image(20, 20);
+        // this.heatflask_icon.src = "static/logo.png";
+
+        // this.strava_icon = new Image();
+        // this.strava_icon.src = "static/pbs1.png";
     },
 
 
@@ -757,8 +764,8 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             let w = window.open(canvas.toDataURL("image/png"), target='_blank');
             // w.document.write(`<title>${title}</title>`);
         }
-
         // console.log(`GIF output: ${numFrames.toFixed(4)} frames, delay=${delay.toFixed(4)}`);
+
 
         framePrev = null;
         // Add frames to the encoder
@@ -787,6 +794,10 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
             // draw dots onto frame
             frameCtx.drawImage(this._dotCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
+
+            // Put Heatflask and Strava attribution images on the frame
+            // frameCtx.drawImage(this.heatflask_icon, 0, 0);
+            // frameCtx.drawImage(this.strava_icon, 100, 100);
 
             let gifFrame = canvasSubtract(frame, framePrev);
             // display(gifFrame, `frame_${i}`);
