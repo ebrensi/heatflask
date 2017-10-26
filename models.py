@@ -10,6 +10,7 @@ import pymongo
 import itertools
 
 from redis import Redis
+
 import pandas as pd
 import gevent
 from gevent.queue import Queue
@@ -1395,3 +1396,6 @@ if "history" not in mongodb.collection_names():
 
 if "activities" not in mongodb.collection_names():
     Activities.init()
+
+if "indexes" not in mongodb.collection_names():
+    Indexes.init()
