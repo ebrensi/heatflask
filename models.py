@@ -1159,7 +1159,7 @@ class Activities(object):
             else:
                 return {"error": "no latlng stream for activity {}".format(activity_id)}
 
-        for s in ["time", "altitude", "distance"]:
+        for s in ["time"]:
             # Encode/compress these streams
             if (s in stream_names) and (activity_streams.get(s)):
                 if len(activity_streams[s]) < 2:
