@@ -35,7 +35,6 @@ INDEX_UPDATE_TIMEOUT = app.config["INDEX_UPDATE_TIMEOUT"]
 LOCAL = os.environ.get("APP_SETTINGS") == "config.DevelopmentConfig"
 OFFLINE = app.config.get("OFFLINE")
 
-
 # PostgreSQL access via SQLAlchemy
 db_sql = SQLAlchemy(app)  # , session_options={'expire_on_commit': False})
 Column = db_sql.Column
@@ -43,7 +42,7 @@ String, Integer, Boolean = db_sql.String, db_sql.Integer, db_sql.Boolean
 
 # MongoDB access via PyMongo
 mongo_client = pymongo.MongoClient(app.config.get("MONGODB_URI"))
-mongodb = mongo_client.get_default_database()
+mongodb = mongo_client.get_database()
 
 # Redis data-store
 redis = Redis.from_url(app.config["REDIS_URL"])
@@ -1207,18 +1206,23 @@ class EventLogger(object):
 
     @classmethod
     def init(cls, rebuild=True, size=app.config["MAX_HISTORY_BYTES"]):
-        mongodb.create_collection("history_new",
-                                  capped=True,
-                                  # autoIndexId=False,
-                                  size=size)
 
         collections = mongodb.collection_names(include_system_collections=False)
+
         if ("history" in collections) and rebuild:
             all_docs = mongodb.history.find()
             mongodb.history_new.insert_many(all_docs)
-            mongodb.history.drop()
+            mongodb.create_collection("history_new",
+                                      capped=True,
+                                      # autoIndexId=False,
+                                      size=size)
+            mongodb.history_new.rename("history", dropTarget=True)
+        else:
+            mongodb.create_collection("history",
+                                      capped=True,
+                                      # autoIndexId=False,
+                                      size=size)
 
-        mongodb.history_new.rename("history")
         stats = mongodb.command("collstats", "history")
         cls.new_event(msg="rebuilt event log: {}".format(stats))
 

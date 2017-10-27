@@ -76,9 +76,7 @@ class Config(object):
     SQLALCHEMY_POOL_TIMEOUT = 10
     SQLALCHEMY_POOL_RECYCLE = 1 * 60 * 60
 
-    MONGODB_URI = os.environ.get("MONGODB_URI")
-
-    # REDIS_URL = os.environ.get('REDIS_URL')
+    MONGODB_URI = os.environ.get("ATLAS_MONGODB_URI")
 
     # How long (seconds) we hold a user's index (in Mongo) before rebuilding it
     # We purge a user's activity index from Mongo if it has not been accessed
@@ -86,18 +84,17 @@ class Config(object):
     #  for this user will be ignored after this timeout.
     STORE_INDEX_TIMEOUT = 2 * 24 * 60 * 60   # 2 days
 
-    # We purge activities from Mongo that haven't been accessed for longer
-    # than this
-    STORE_ACTIVITIES_TIMEOUT = 2 * 24 * 60 * 60  # 2 days
+    # How long we store Activity stream data in MongoDB
+    STORE_ACTIVITIES_TIMEOUT = 3 * 24 * 60 * 60  # 3 days
+
+    # How long we Redis-cache activity stream data
+    CACHE_ACTIVITIES_TIMEOUT = 30 * 60  # 30 minutes
+
+    # How long we Redis-cache a User object
+    CACHE_USERS_TIMEOUT = 1 * 24 * 60 * 60  # 1 day
 
     # How long before a user's index is outated and needs an update
     INDEX_UPDATE_TIMEOUT = 20 * 60  # 20 minutes
-
-    # How long we Redis-cache hires activities
-    CACHE_ACTIVITIES_TIMEOUT = 30 * 60  # 30 minutes
-
-    # How long we hold a User object in memory
-    CACHE_USERS_TIMEOUT = 20 * 60  # 20 minutes
 
     SECRET_KEY = (
         "pB\xeax\x9cJ\xd6\x81\xed\xd7\xf9\xd0\x99o\xad\rM\x92\xb1\x8b{7\x02r"
@@ -153,7 +150,8 @@ class DevelopmentConfig(Config):
     These are settings specific to the development environment
     (Developer's personal computer)
     """
-    OFFLINE = False
+    OFFLINE = os.environ.get("OFFLINE", False)
+    USE_LOCAL = os.environ.get("USE_LOCAL", False)
     DEVELOPMENT = True
     DEBUG = True
     CACHE_ACTIVITIES_TIMEOUT = 2 * 60 * 60
@@ -167,10 +165,11 @@ class DevelopmentConfig(Config):
 
     # INDEX_UPDATE_TIMEOUT = 1
 
-    # in local environment,
     REDIS_URL = "redis://localhost"
-    STORE_INDEX_TIMEOUT = 10 * 24 * 60 * 60   # 10 days
 
-    # We purge activities from Mongo that haven't been accessed for longer
-    # than this
-    STORE_ACTIVITIES_TIMEOUT = 10 * 24 * 60 * 60  # 10 days
+    if OFFLINE or USE_LOCAL:
+        # in local environment,
+        MONGODB_URI = "mongodb://localhost/heatflask"
+
+        STORE_INDEX_TIMEOUT = 365 * 24 * 60 * 60   # 365 days
+        STORE_ACTIVITIES_TIMEOUT = 365 * 24 * 60 * 60  # 365 days
