@@ -40,8 +40,9 @@ if (!OFFLINE) {
     }
 }
 
-for (name in baseLayers) {
-    baseLayers[name].name = name;
+for (let name in baseLayers) {
+    let basemap = baseLayers[name];
+    basemap.name = name;
 }
 
 
@@ -52,6 +53,8 @@ var map = L.map('map', {
         preferCanvas: true,
         zoomAnimation: false
     });
+
+map.getPane('tilePane').style.opacity = 0.9;
 
 appState.currentBaseLayer = default_baseLayer;
 map.on('baselayerchange', function (e) {
