@@ -65,11 +65,11 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         this._paused = this.options.startPaused;
         this._timePaused = Date.now();
 
-        // this.heatflask_icon = new Image(20, 20);
-        // this.heatflask_icon.src = "static/logo.png";
+        this.heatflask_icon = new Image();
+        this.heatflask_icon.src = "static/logo.png";
 
-        // this.strava_icon = new Image();
-        // this.strava_icon.src = "static/pbs1.png";
+        this.strava_icon = new Image();
+        this.strava_icon.src = "static/pbs4.png";
     },
 
 
@@ -765,7 +765,16 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             // w.document.write(`<title>${title}</title>`);
         }
         // console.log(`GIF output: ${numFrames.toFixed(4)} frames, delay=${delay.toFixed(4)}`);
+        let h1 = this.heatflask_icon.height,
+            w1 = this.heatflask_icon.width,
+            himg = [50, h1*50/w1],
+            hd = [2, sh-himg[0]-2, himg[0], himg[1]],
+            h2 = this.strava_icon.height,
+            w2 = this.strava_icon.width,
+            simg = [50, h2*50/w2],
+            sd = [sw-simg[0]-2, sh-simg[1]-2, simg[0], simg[1]];
 
+        debugger;
 
         framePrev = null;
         // Add frames to the encoder
@@ -796,8 +805,11 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             frameCtx.drawImage(this._dotCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
 
             // Put Heatflask and Strava attribution images on the frame
-            // frameCtx.drawImage(this.heatflask_icon, 0, 0);
-            // frameCtx.drawImage(this.strava_icon, 100, 100);
+            let ga = frameCtx.globalAlpha
+            frameCtx.globalAlpha = 0.3
+            frameCtx.drawImage(this.heatflask_icon, hd[0], hd[1], hd[2], hd[3]);
+            frameCtx.drawImage(this.strava_icon, sd[0], sd[1], sd[2], sd[3]);
+            frameCtx.globalAlpha = ga
 
             let gifFrame = canvasSubtract(frame, framePrev);
             // display(gifFrame, `frame_${i}`);
