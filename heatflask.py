@@ -222,7 +222,7 @@ def anon_photo():
 @app.route('/apple-touch-icon')
 def touch():
     return send_from_directory(os.path.join(app.root_path, 'static'),
-                               'Heat.png')
+                               'logo.png')
 
 
 @app.route("/robots.txt")
