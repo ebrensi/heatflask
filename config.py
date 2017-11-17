@@ -167,7 +167,6 @@ class DevelopmentConfig(Config):
     ASSETS_AUTO_BUILD = True
 
     # INDEX_UPDATE_TIMEOUT = 1
-
     REDIS_URL = "redis://localhost"
 
     if OFFLINE or USE_LOCAL:
