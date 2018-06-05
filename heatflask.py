@@ -341,7 +341,7 @@ def auth_callback():
             # app.logger.debug("authenticated {}".format(user))
             EventLogger.new_event(msg="authenticated {}".format(user.id))
         else:
-            app.loogger.error("user authenication error")
+            app.logger.error("user authenication error")
             flash("There was a problem authorizing user")
 
     return redirect(request.args.get("state") or
