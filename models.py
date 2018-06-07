@@ -361,7 +361,7 @@ class Users(UserMixin, db_sql.Model):
         self.activity_index = None
         result2 = self.cache()
         app.logger.debug("delete index for {}. mongo:{}, redis:{}"
-                         .format(self.id, vars(result1), result2))
+                         .format(self.id, result1, result2))
 
         return result1, result2
 
@@ -724,7 +724,8 @@ class Users(UserMixin, db_sql.Model):
                     index_df = self.update_index(index_df)
 
                 if (not activity_ids):
-                     # only consider activities with a summary polyline
+                    # only consider activities with a summary polyline
+
                     ids_df = (
                         index_df[index_df.summary_polyline.notnull()]
                         .set_index("ts_local")
