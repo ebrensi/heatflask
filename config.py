@@ -168,7 +168,7 @@ class DevelopmentConfig(Config):
 
     # INDEX_UPDATE_TIMEOUT = 1
     REDIS_URL = "redis://localhost"
-
+    
     if OFFLINE or USE_LOCAL:
         # in local environment,
         MONGODB_URI = "mongodb://localhost/heatflask"
