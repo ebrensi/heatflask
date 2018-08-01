@@ -113,8 +113,8 @@ class Users(UserMixin, db_sql.Model):
     def client(self):
         return stravalib.Client(
             access_token=self.access_token,
-            # rate_limit_requests=False
             rate_limiter = lambda x=None: None
+            #rate_limit_requests=False
         )
 
     def __repr__(self):
@@ -361,8 +361,8 @@ class Users(UserMixin, db_sql.Model):
 
         self.activity_index = None
         result2 = self.cache()
-        # app.logger.debug("delete index for {}. mongo:{}, redis:{}"
-        #                  .format(self.id, result1, result2))
+
+        #app.logger.debug("delete index for {}. mongo:{}, redis:{}".format(self.id, vars(result1), result2))
 
         return result1, result2
 
