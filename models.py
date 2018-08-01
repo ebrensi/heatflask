@@ -113,7 +113,8 @@ class Users(UserMixin, db_sql.Model):
     def client(self):
         return stravalib.Client(
             access_token=self.access_token,
-            rate_limit_requests=False
+            rate_limiter = lambda x=None: None
+            #rate_limit_requests=False
         )
 
     def __repr__(self):
@@ -360,8 +361,7 @@ class Users(UserMixin, db_sql.Model):
 
         self.activity_index = None
         result2 = self.cache()
-        app.logger.debug("delete index for {}. mongo:{}, redis:{}"
-                         .format(self.id, vars(result1), result2))
+        #app.logger.debug("delete index for {}. mongo:{}, redis:{}".format(self.id, vars(result1), result2))
 
         return result1, result2
 
@@ -475,6 +475,7 @@ class Users(UserMixin, db_sql.Model):
             gevent.sleep(0)
         except Exception as e:
             enqueue({"error": str(e)})
+            app.logger.debug("Error while building activity index")
             app.logger.error(e)
         else:
             # If we are streaming to a client, this is where we tell it
