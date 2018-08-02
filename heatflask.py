@@ -88,7 +88,6 @@ bundles = {
             'js/datatables.min.js',
             'js/leaflet.js',
             'js/leaflet-sidebar.min.js',
-            # 'js/leaflet-heat.js',
             'js/download.min.js',
             'js/gif2.js',  # Johan Nordberg: http://jnordberg.github.io/gif.js/
             output="gen/pre-compiled-dependencies.js"
