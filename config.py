@@ -16,7 +16,7 @@ class Config(object):
     ADMIN = [15972102]
 
     # We limit the capture duration to keep gif file size down
-    CAPTURE_DURATION_MAX = 10
+    CAPTURE_DURATION_MAX = 15
 
     # DotLayer options
     DEFAULT_DOTCOLOR = "#FFFFFF"
