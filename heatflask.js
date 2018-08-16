@@ -344,12 +344,16 @@ let tableColumns = [
         render: (A) => href( stravaActivityURL(A.id), A.ts_local.slice(0,10) )
     },
 
-    { title: "Type", data: "type"},
+    { 
+        title: "Type", 
+        data: null,
+        render: (A) => `<p style="color:${A.pathColor}">${A.type}</p>`
+    },
 
     {
         title: `<i class="fa fa-arrows-h" aria-hidden="true"></i> (${DIST_LABEL})`,
         data: "total_distance",
-        render: (data) => +(data / DIST_UNIT).toFixed(2)},
+        render: (A) => +(A / DIST_UNIT).toFixed(2)},
     {
         title: '<i class="fa fa-clock-o" aria-hidden="true"></i>',
         data: "elapsed_time",
@@ -360,7 +364,7 @@ let tableColumns = [
     { 
         title: "Name", 
         data: null,
-        render: (data) => `<p style="background-color:${data.dotColor}"> ${data.name}</p>`
+        render: (A) => `<p style="background-color:${A.dotColor}"> ${A.name}</p>`
     },
 
     {

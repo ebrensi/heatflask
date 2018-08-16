@@ -385,7 +385,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                         lineType = A.highlighted? "selected":"normal";
                         lineCtx.globalAlpha = this.options[lineType].pathOpacity;
                         lineCtx.lineWidth = this.options[lineType].pathWidth;
-                        lineCtx.strokeStyle = A.path_color || this.options[lineType].pathColor;
+                        lineCtx.strokeStyle = A.pathColor || this.options[lineType].pathColor;
                         lineCtx.stroke();
                     } else {
                         lineCtx.stroke();
