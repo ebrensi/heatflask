@@ -18,9 +18,6 @@ class Config(object):
     # We limit the capture duration to keep gif file size down
     CAPTURE_DURATION_MAX = 15
 
-    # DotLayer options
-    DEFAULT_DOTCOLOR = "#FFFFFF"
-
     # Leaflet.js stuff
     ATYPE_SPECS = [
         ("Ride", "speed", "#2B60DE"),  # Ocean Blue
