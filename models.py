@@ -996,7 +996,7 @@ class Activities(object):
         ("Yoga", None, None)
     ]
 
-    ATYPE_MAP = {atype.lower(): {"path_color": color, "vtype": vtype}
+    ATYPE_MAP = {atype.lower(): {"pathColor": color, "vtype": vtype}
                  for atype, vtype, color in ATYPE_SPECS}
 
     @classmethod
