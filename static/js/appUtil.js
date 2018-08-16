@@ -222,5 +222,5 @@ let ATYPE_MAP = {};
 for (let i=0; i < ATYPE_SPECS.length; i++) {
     let atype = ATYPE_SPECS[i];
 
-    ATYPE_MAP[atype[0]] = {"vtype": atype[1].toLowerCase(), "pathColor": atype[2]};
+    ATYPE_MAP[atype[0].toLowerCase()] = {"vtype": atype[1], "pathColor": atype[2]};
 }
