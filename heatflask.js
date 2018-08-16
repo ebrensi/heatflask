@@ -545,24 +545,11 @@ function getBounds(ids=[]) {
     return bounds
 }
 
+
 function initializeDotLayer() {
     DotLayer = new L.DotLayer(appState.items, {
         startPaused: appState.paused
     });
-
-    // DotLayer.options.normal.dotColor = $("#normal-dotColor").val();
-    // $("#normal-dotColor").on("input", function (){
-    //     DotLayer.options.normal.dotColor = $(this).val();
-    // });
-
-    let itemsList = Object.values( appState.items ),
-        numItems = itemsList.length;
-
-    DotLayer._colorPalette = colorPalette(numItems, DotLayer.options.dotAlpha);
-    for ( let i = 0; i < numItems; i++ ) {
-        itemsList[ i ].dotColor = DotLayer._colorPalette[ i ];
-    }
-
 
     if (ONLOAD_PARAMS.C1) {
         DotLayer.C1 = ONLOAD_PARAMS.C1;
@@ -575,7 +562,6 @@ function initializeDotLayer() {
     if (ONLOAD_PARAMS.SZ) {
         DotLayer.dotScale = ONLOAD_PARAMS.SZ;
     }
-
 
     map.addLayer(DotLayer);
     layerControl.addOverlay(DotLayer, "Dots");
@@ -783,6 +769,7 @@ function updateLayers(msg) {
 
     // initialize or update DotLayer
     if (DotLayer) {
+        DotLayer.setDotColors();
         DotLayer.reset();
         // !appState.paused && DotLayer.animate();
     } else {
