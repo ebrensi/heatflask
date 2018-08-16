@@ -805,8 +805,8 @@ class Users(UserMixin, db_sql.Model):
 
                 A["ts_local"] = str(A["ts_local"])
 
-                # TODO: do this on the client
-                A.update(Activities.atype_properties(A["type"]))
+                # # TODO: do this on the client
+                # A.update(Activities.atype_properties(A["type"]))
 
             if owner_id:
                 A.update({"owner": self.id, "profile": self.profile})
@@ -878,7 +878,7 @@ class Users(UserMixin, db_sql.Model):
                     A["owner"] = owner.id
                     A["profile"] = owner.profile
                     A["bounds"] = Activities.bounds(A["summary_polyline"])
-                    A.update(Activities.atype_properties(A["type"]))
+                    # A.update(Activities.atype_properties(A["type"]))
 
                     stream_data = Activities.get(obj.id)
                     if stream_data:
@@ -896,7 +896,7 @@ class Users(UserMixin, db_sql.Model):
                 A["profile"] = "/avatar/athlete/medium.png"
                 A["owner"] = obj.athlete.id
                 A["bounds"] = Activities.bounds(A["summary_polyline"])
-                A.update(Activities.atype_properties(A["type"]))
+                # A.update(Activities.atype_properties(A["type"]))
                 out_queue.put(A)
 
         if put_stopIteration:
@@ -964,44 +964,44 @@ class Activities(object):
 
     # This is a list of tuples specifying properties of the rendered objects,
     #  such as path color, speed/pace in description.  others can be added
-    ATYPE_SPECS = [
-        ("Ride", "speed", "#2B60DE"),  # Ocean Blue
-        ("Run", "pace", "#FF0000"),  # Red
-        ("Swim", "speed", "#00FF7F"),  # SpringGreen
-        ("Hike", "pace", "#FF1493"),  # DeepPink
-        ("Walk", "pace", "#FF00FF"),  # Fuchsia
-        ("AlpineSki", None, "#800080"),  # Purple
-        ("BackcountrySki", None, "#800080"),  # Purple
-        ("Canoeing", None, "#FFA500"),  # Orange
-        ("Crossfit", None, None),
-        ("EBikeRide", "speed", "#0000CD"),  # MediumBlue
-        ("Elliptical", None, None),
-        ("IceSkate", "speed", "#663399"),  # RebeccaPurple
-        ("InlineSkate", None, "#8A2BE2"),  # BlueViolet
-        ("Kayaking", None, "#FFA500"),  # Orange
-        ("Kitesurf", "speed", None),
-        ("NordicSki", None, "#800080"),  # purple
-        ("RockClimbing", None, "#4B0082"),  # Indigo
-        ("RollerSki", "speed", "#800080"),  # Purple
-        ("Rowing", "speed", "#FA8072"),  # Salmon
-        ("Snowboard", None, "#00FF00"),  # Lime
-        ("Snowshoe", "pace", "#800080"),  # Purple
-        ("StairStepper", None, None),
-        ("StandUpPaddling", None, None),
-        ("Surfing", None, "#006400"),  # DarkGreen
-        ("VirtualRide", "speed", "#1E90FF"),  # DodgerBlue
-        ("WeightTraining", None, None),
-        ("Windsurf", "speed", None),
-        ("Workout", None, None),
-        ("Yoga", None, None)
-    ]
+    # ATYPE_SPECS = [
+    #     ("Ride", "speed", "#2B60DE"),  # Ocean Blue
+    #     ("Run", "pace", "#FF0000"),  # Red
+    #     ("Swim", "speed", "#00FF7F"),  # SpringGreen
+    #     ("Hike", "pace", "#FF1493"),  # DeepPink
+    #     ("Walk", "pace", "#FF00FF"),  # Fuchsia
+    #     ("AlpineSki", None, "#800080"),  # Purple
+    #     ("BackcountrySki", None, "#800080"),  # Purple
+    #     ("Canoeing", None, "#FFA500"),  # Orange
+    #     ("Crossfit", None, None),
+    #     ("EBikeRide", "speed", "#0000CD"),  # MediumBlue
+    #     ("Elliptical", None, None),
+    #     ("IceSkate", "speed", "#663399"),  # RebeccaPurple
+    #     ("InlineSkate", None, "#8A2BE2"),  # BlueViolet
+    #     ("Kayaking", None, "#FFA500"),  # Orange
+    #     ("Kitesurf", "speed", None),
+    #     ("NordicSki", None, "#800080"),  # purple
+    #     ("RockClimbing", None, "#4B0082"),  # Indigo
+    #     ("RollerSki", "speed", "#800080"),  # Purple
+    #     ("Rowing", "speed", "#FA8072"),  # Salmon
+    #     ("Snowboard", None, "#00FF00"),  # Lime
+    #     ("Snowshoe", "pace", "#800080"),  # Purple
+    #     ("StairStepper", None, None),
+    #     ("StandUpPaddling", None, None),
+    #     ("Surfing", None, "#006400"),  # DarkGreen
+    #     ("VirtualRide", "speed", "#1E90FF"),  # DodgerBlue
+    #     ("WeightTraining", None, None),
+    #     ("Windsurf", "speed", None),
+    #     ("Workout", None, None),
+    #     ("Yoga", None, None)
+    # ]
 
-    ATYPE_MAP = {atype.lower(): {"pathColor": color, "vtype": vtype}
-                 for atype, vtype, color in ATYPE_SPECS}
+    # ATYPE_MAP = {atype.lower(): {"pathColor": color, "vtype": vtype}
+    #              for atype, vtype, color in ATYPE_SPECS}
 
-    @classmethod
-    def atype_properties(cls, atype):
-        return cls.ATYPE_MAP.get(atype.lower()) or cls.ATYPE_MAP.get("workout")
+    # @classmethod
+    # def atype_properties(cls, atype):
+    #     return cls.ATYPE_MAP.get(atype.lower()) or cls.ATYPE_MAP.get("workout")
 
     @staticmethod
     def bounds(poly):
