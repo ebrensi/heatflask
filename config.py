@@ -18,39 +18,6 @@ class Config(object):
     # We limit the capture duration to keep gif file size down
     CAPTURE_DURATION_MAX = 15
 
-    # Leaflet.js stuff
-    ATYPE_SPECS = [
-        ("Ride", "speed", "#2B60DE"),  # Ocean Blue
-        ("Run", "pace", "#FF0000"),  # Red
-        ("Swim", "speed", "#00FF7F"),  # SpringGreen
-        ("Hike", "pace", "#FF1493"),  # DeepPink
-        ("Walk", "pace", "#FF00FF"),  # Fuchsia
-        ("AlpineSki", None, "#800080"),  # Purple
-        ("BackcountrySki", None, "#800080"),  # Purple
-        ("Canoeing", None, "#FFA500"),  # Orange
-        ("Crossfit", None, None),
-        ("EBikeRide", "speed", "#0000CD"),  # MediumBlue
-        ("Elliptical", None, None),
-        ("IceSkate", "speed", "#663399"),  # RebeccaPurple
-        ("InlineSkate", None, "#8A2BE2"),  # BlueViolet
-        ("Kayaking", None, "#FFA500"),  # Orange
-        ("Kitesurf", "speed", None),
-        ("NordicSki", None, "#800080"),  # purple
-        ("RockClimbing", None, "#4B0082"),  # Indigo
-        ("RollerSki", "speed", "#800080"),  # Purple
-        ("Rowing", "speed", "#FA8072"),  # Salmon
-        ("Snowboard", None, "#00FF00"),  # Lime
-        ("Snowshoe", "pace", "#800080"),  # Purple
-        ("StairStepper", None, None),
-        ("StandUpPaddling", None, None),
-        ("Surfing", None, "#006400"),  # DarkGreen
-        ("VirtualRide", "speed", "#1E90FF"),  # DodgerBlue
-        ("WeightTraining", None, None),
-        ("Windsurf", "speed", None),
-        ("Workout", None, None),
-        ("Yoga", None, None)
-    ]
-
     MAP_CENTER = [27.53, 1.58]
     MAP_ZOOM = 3
 
