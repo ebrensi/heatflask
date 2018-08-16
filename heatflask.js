@@ -344,19 +344,28 @@ let tableColumns = [
         render: (A) => href( stravaActivityURL(A.id), A.ts_local.slice(0,10) )
     },
 
-    { title: "Type", data: "type"},
+    { 
+        title: "Type", 
+        data: null,
+        render: (A) => `<p style="color:${A.pathColor}">${A.type}</p>`
+    },
 
     {
         title: `<i class="fa fa-arrows-h" aria-hidden="true"></i> (${DIST_LABEL})`,
         data: "total_distance",
-        render: (data) => +(data / DIST_UNIT).toFixed(2)},
+        render: (A) => +(A / DIST_UNIT).toFixed(2)},
     {
         title: '<i class="fa fa-clock-o" aria-hidden="true"></i>',
         data: "elapsed_time",
         render: hhmmss
     },
 
-    { title: "Name", data: "name"},
+    // { title: "Name", data: "name"},
+    { 
+        title: "Name", 
+        data: null,
+        render: (A) => `<p style="background-color:${A.dotColor}"> ${A.name}</p>`
+    },
 
     {
         title: '<i class="fa fa-users" aria-hidden="true"></i>',
@@ -536,15 +545,11 @@ function getBounds(ids=[]) {
     return bounds
 }
 
+
 function initializeDotLayer() {
     DotLayer = new L.DotLayer(appState.items, {
         startPaused: appState.paused
     });
-
-    // DotLayer.options.normal.dotColor = $("#normal-dotColor").val();
-    // $("#normal-dotColor").on("input", function (){
-    //     DotLayer.options.normal.dotColor = $(this).val();
-    // });
 
     if (ONLOAD_PARAMS.C1) {
         DotLayer.C1 = ONLOAD_PARAMS.C1;
@@ -764,6 +769,7 @@ function updateLayers(msg) {
 
     // initialize or update DotLayer
     if (DotLayer) {
+        DotLayer.setDotColors();
         DotLayer.reset();
         // !appState.paused && DotLayer.animate();
     } else {

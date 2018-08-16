@@ -155,14 +155,17 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
     //-------------------------------------------------------------
     // Call this function when items are added or reomved
     reset: function() {
-        // Set dotColors for these items
-        let itemsList = Object.values( this._items ),
-            numItems = itemsList.length;
+        // Set dotColor to default for these items if necessary
+        // let itemsList = Object.values( this._items ),
+        //     numItems = itemsList.length;
 
-        this._colorPalette = colorPalette(numItems, this.options.dotAlpha);
-        for ( let i = 0; i < numItems; i++ ) {
-            itemsList[ i ].dotColor = this._colorPalette[ i ];
-        }
+        // for ( let i = 0; i < numItems; i++ ) {
+        //     let item = itemsList[ i ];
+        //     if (item.dotColor == undefined) {
+        //         item.dotColor = this.options.normal.dotColor;
+        //     }
+        // }
+        this.setDotColors();
 
         this._onLayerDidMove();
     },
@@ -383,7 +386,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                         lineType = A.highlighted? "selected":"normal";
                         lineCtx.globalAlpha = this.options[lineType].pathOpacity;
                         lineCtx.lineWidth = this.options[lineType].pathWidth;
-                        lineCtx.strokeStyle = A.path_color || this.options[lineType].pathColor;
+                        lineCtx.strokeStyle = A.pathColor || this.options[lineType].pathColor;
                         lineCtx.stroke();
                     } else {
                         lineCtx.stroke();
@@ -846,7 +849,23 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                 this.animate();
             }
         }
+    },
+
+    setDotColors: function() {
+    // DotLayer.options.normal.dotColor = $("#normal-dotColor").val();
+    // $("#normal-dotColor").on("input", function (){
+    //     DotLayer.options.normal.dotColor = $(this).val();
+    // });
+
+    let itemsList = Object.values( this._items ),
+        numItems = itemsList.length;
+
+    this._colorPalette = colorPalette(numItems, this.options.dotAlpha);
+    for ( let i = 0; i < numItems; i++ ) {
+        itemsList[ i ].dotColor = this._colorPalette[ i ];
     }
+   
+}
 
 } );  // end of L.DotLayer definition
 
@@ -855,7 +874,6 @@ L.dotLayer = function( items, options ) {
 };
 
 
-// ---------------------------------------------------------------------------
 
 /*
     From "Making annoying rainbows in javascript"
@@ -886,6 +904,5 @@ function colorPalette(n, alpha) {
     frequency = 2*Math.PI/steps;
     return makeColorGradient(frequency,frequency,frequency,0,2,4,center,width,n,alpha);
 }
-
 
 
