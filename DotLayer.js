@@ -155,13 +155,15 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
     //-------------------------------------------------------------
     // Call this function when items are added or reomved
     reset: function() {
-        // Set dotColors for these items
+        // Set dotColor to default for these items if necessary
         let itemsList = Object.values( this._items ),
             numItems = itemsList.length;
 
-        this._colorPalette = colorPalette(numItems, this.options.dotAlpha);
         for ( let i = 0; i < numItems; i++ ) {
-            itemsList[ i ].dotColor = this._colorPalette[ i ];
+            let item = itemsList[ i ];
+            if (item.dotColor == undefined) {
+                item.dotColor = this.options.normal.dotColor;
+            }
         }
 
         this._onLayerDidMove();
@@ -854,38 +856,6 @@ L.dotLayer = function( items, options ) {
     return new L.DotLayer( items, options );
 };
 
-
-// ---------------------------------------------------------------------------
-
-/*
-    From "Making annoying rainbows in javascript"
-    A tutorial by jim bumgardner
-*/
-function makeColorGradient(frequency1, frequency2, frequency3,
-                             phase1, phase2, phase3,
-                             center, width, len, alpha) {
-    let palette = new Array(len);
-
-    if (center == undefined)   center = 128;
-    if (width == undefined)    width = 127;
-    if (len == undefined)      len = 50;
-
-    for (let i = 0; i < len; ++i) {
-        let r = Math.round(Math.sin(frequency1*i + phase1) * width + center),
-            g = Math.round(Math.sin(frequency2*i + phase2) * width + center),
-            b = Math.round(Math.sin(frequency3*i + phase3) * width + center);
-        palette[i] = `rgba(${r}, ${g}, ${b}, ${alpha})`;
-    }
-    return palette;
-}
-
-function colorPalette(n, alpha) {
-    center = 128;
-    width = 127;
-    steps = 10;
-    frequency = 2*Math.PI/steps;
-    return makeColorGradient(frequency,frequency,frequency,0,2,4,center,width,n,alpha);
-}
 
 
 
