@@ -181,6 +181,10 @@ function touchHandler(event) {
 // document.addEventListener("touchcancel", touchHandler, true);
 
 
+
+
+// This is a list of tuples specifying properties of the rendered objects,
+//  such as path color, speed/pace in description.  others can be added
 ATYPE_SPECS = [
         ["Ride", "speed", "#2B60DE"],  // Ocean Blue
         ["Run", "pace", "#FF0000"],  // Red
@@ -217,6 +221,10 @@ ATYPE_SPECS = [
 let ATYPE_MAP = {};
 for (let i=0; i < ATYPE_SPECS.length; i++) {
     let atype = ATYPE_SPECS[i];
+
+    if (!atype) {
+        atype = ATYPE_SPECS["workout"];
+    }
 
     ATYPE_MAP[atype[0]] = {"vtype": atype[1], "pathColor": atype[2]};
 }
