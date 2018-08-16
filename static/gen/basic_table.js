@@ -415,3 +415,42 @@ function touchHandler(event) {
 // document.addEventListener("touchcancel", touchHandler, true);
 
 
+ATYPE_SPECS = [
+        ["Ride", "speed", "#2B60DE"],  // Ocean Blue
+        ["Run", "pace", "#FF0000"],  // Red
+        ["Swim", "speed", "#00FF7F"],  // SpringGreen
+        ["Hike", "pace", "#FF1493"],  // DeepPink
+        ["Walk", "pace", "#FF00FF"],  // Fuchsia
+        ["AlpineSki", null, "#800080"],  // Purple
+        ["BackcountrySki", null, "#800080"],  // Purple
+        ["Canoeing", null, "#FFA500"],  // Orange
+        ["Crossfit", null, null],
+        ["EBikeRide", "speed", "#0000CD"],  // MediumBlue
+        ["Elliptical", null, null],
+        ["IceSkate", "speed", "#663399"],  // RebeccaPurple
+        ["InlineSkate", null, "#8A2BE2"],  // BlueViolet
+        ["Kayaking", null, "#FFA500"],  // Orange
+        ["Kitesurf", "speed", null],
+        ["NordicSki", null, "#800080"],  // purple
+        ["RockClimbing", null, "#4B0082"],  // Indigo
+        ["RollerSki", "speed", "#800080"],  // Purple
+        ["Rowing", "speed", "#FA8072"],  // Salmon
+        ["Snowboard", null, "#00FF00"],  // Lime
+        ["Snowshoe", "pace", "#800080"],  // Purple
+        ["StairStepper", null, null],
+        ["StandUpPaddling", null, null],
+        ["Surfing", null, "#006400"],  // DarkGreen
+        ["VirtualRide", "speed", "#1E90FF"],  // DodgerBlue
+        ["WeightTraining", null, null],
+        ["Windsurf", "speed", null],
+        ["Workout", null, null],
+        ["Yoga", null, null]
+];
+
+
+let ATYPE_MAP = {};
+for (let i=0; i < ATYPE_SPECS.length; i++) {
+    let atype = ATYPE_SPECS[i];
+
+    ATYPE_MAP[atype[0]] = {"vtype": atype[1], "pathColor": atype[2]};
+}
