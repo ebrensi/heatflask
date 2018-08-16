@@ -356,7 +356,12 @@ let tableColumns = [
         render: hhmmss
     },
 
-    { title: "Name", data: "name"},
+    // { title: "Name", data: "name"},
+    { 
+        title: "Name", 
+        data: null,
+        render: (data) => `<p style="background-color:${data.dotColor}"> ${data.name}</p>`
+    },
 
     {
         title: '<i class="fa fa-users" aria-hidden="true"></i>',
