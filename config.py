@@ -58,7 +58,7 @@ class Config(object):
     CACHE_USERS_TIMEOUT = 1 * 24 * 60 * 60  # 1 day
 
     # How long before a user's index is outated and needs an update
-    INDEX_UPDATE_TIMEOUT = 20 * 60  # 20 minutes
+    INDEX_UPDATE_TIMEOUT = 30 * 60  # 20 minutes
 
     SECRET_KEY = (
         "pB\xeax\x9cJ\xd6\x81\xed\xd7\xf9\xd0\x99o\xad\rM\x92\xb1\x8b{7\x02r"
