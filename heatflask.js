@@ -546,6 +546,15 @@ function initializeDotLayer() {
     //     DotLayer.options.normal.dotColor = $(this).val();
     // });
 
+    let itemsList = Object.values( appState.items ),
+        numItems = itemsList.length;
+
+    DotLayer._colorPalette = colorPalette(numItems, DotLayer.options.dotAlpha);
+    for ( let i = 0; i < numItems; i++ ) {
+        itemsList[ i ].dotColor = DotLayer._colorPalette[ i ];
+    }
+
+
     if (ONLOAD_PARAMS.C1) {
         DotLayer.C1 = ONLOAD_PARAMS.C1;
     }
@@ -557,6 +566,7 @@ function initializeDotLayer() {
     if (ONLOAD_PARAMS.SZ) {
         DotLayer.dotScale = ONLOAD_PARAMS.SZ;
     }
+
 
     map.addLayer(DotLayer);
     layerControl.addOverlay(DotLayer, "Dots");
