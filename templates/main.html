@@ -214,7 +214,7 @@
 					</a>
 
 					<br><br>
-					If our index does not corrrectly reflect the current state of your Strava activities, try re-building the index here.
+					If you recently modified past activities try re-building your index here.
 					<form action="{{ url_for('activities', username=user.id) }}" target="_blank">
 						<input type="submit" class="btn btn-info" value="View activity index" />
 						<label><input type="checkbox" name="rebuild" value="1">Re-build</label>
