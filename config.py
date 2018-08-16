@@ -18,42 +18,6 @@ class Config(object):
     # We limit the capture duration to keep gif file size down
     CAPTURE_DURATION_MAX = 15
 
-    # DotLayer options
-    DEFAULT_DOTCOLOR = "#FFFFFF"
-
-    # Leaflet.js stuff
-    ATYPE_SPECS = [
-        ("Ride", "speed", "#2B60DE"),  # Ocean Blue
-        ("Run", "pace", "#FF0000"),  # Red
-        ("Swim", "speed", "#00FF7F"),  # SpringGreen
-        ("Hike", "pace", "#FF1493"),  # DeepPink
-        ("Walk", "pace", "#FF00FF"),  # Fuchsia
-        ("AlpineSki", None, "#800080"),  # Purple
-        ("BackcountrySki", None, "#800080"),  # Purple
-        ("Canoeing", None, "#FFA500"),  # Orange
-        ("Crossfit", None, None),
-        ("EBikeRide", "speed", "#0000CD"),  # MediumBlue
-        ("Elliptical", None, None),
-        ("IceSkate", "speed", "#663399"),  # RebeccaPurple
-        ("InlineSkate", None, "#8A2BE2"),  # BlueViolet
-        ("Kayaking", None, "#FFA500"),  # Orange
-        ("Kitesurf", "speed", None),
-        ("NordicSki", None, "#800080"),  # purple
-        ("RockClimbing", None, "#4B0082"),  # Indigo
-        ("RollerSki", "speed", "#800080"),  # Purple
-        ("Rowing", "speed", "#FA8072"),  # Salmon
-        ("Snowboard", None, "#00FF00"),  # Lime
-        ("Snowshoe", "pace", "#800080"),  # Purple
-        ("StairStepper", None, None),
-        ("StandUpPaddling", None, None),
-        ("Surfing", None, "#006400"),  # DarkGreen
-        ("VirtualRide", "speed", "#1E90FF"),  # DodgerBlue
-        ("WeightTraining", None, None),
-        ("Windsurf", "speed", None),
-        ("Workout", None, None),
-        ("Yoga", None, None)
-    ]
-
     MAP_CENTER = [27.53, 1.58]
     MAP_ZOOM = 3
 
@@ -94,7 +58,7 @@ class Config(object):
     CACHE_USERS_TIMEOUT = 1 * 24 * 60 * 60  # 1 day
 
     # How long before a user's index is outated and needs an update
-    INDEX_UPDATE_TIMEOUT = 20 * 60  # 20 minutes
+    INDEX_UPDATE_TIMEOUT = 30 * 60  # 20 minutes
 
     SECRET_KEY = (
         "pB\xeax\x9cJ\xd6\x81\xed\xd7\xf9\xd0\x99o\xad\rM\x92\xb1\x8b{7\x02r"

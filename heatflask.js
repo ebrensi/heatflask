@@ -896,7 +896,12 @@ function readStream(streamURL, numActivities=null, callback=null) {
 
         // only add A to appState.items if it isn't already there
         if (!(A.id in appState.items)) {
-            appState.items[A.id] = A;
+            let typeData = Object.assign(A, ATYPE_MAP[A.type.toLowerCase()]);
+
+            if (!typeData) {
+                typeData = ATYPE_MAP["workout"];
+            }
+                    appState.items[A.id] = typeData;
         }
 
         count++;
