@@ -114,7 +114,6 @@ class Users(UserMixin, db_sql.Model):
         return stravalib.Client(
             access_token=self.access_token,
             rate_limiter = lambda x=None: None
-            #rate_limit_requests=False
         )
 
     def __repr__(self):
@@ -925,7 +924,7 @@ class Indexes(object):
             "dt_last_indexed",
             expireAfterSeconds=timeout
         )
-        app.logger.info("initialized Indexes collection with")
+        app.logger.info("initialized Indexes collection")
         return result
 
 
@@ -1183,6 +1182,7 @@ class EventLogger(object):
                                       capped=True,
                                       # autoIndexId=False,
                                       size=size)
+            app.logger.info("Initialized history collection")
 
         stats = mongodb.command("collstats", "history")
         cls.new_event(msg="rebuilt event log: {}".format(stats))
