@@ -1338,20 +1338,34 @@ class Payments(object):
         mongodb.payments.create_index([
              ("ts", pymongo.DESCENDING),
              ("user", pymongo.ASCENDING)
-
         ])
         log.info("initialized Payments collection")
 
     @staticmethod
-    def get(user):
-        return mongodb.payments.find({"user": user.id})
+    def get(user=None, before=None, after=None):
+        query = {}
+
+        tsfltr = {}
+        if before:
+            tsfltr["$gte"] = before
+        if after:
+            tsfltr["$lt"] = after
+        if tsfltr:
+            query["ts"] = tsfltr
+            
+        if user:
+            query["user"] = user.id
+
+        docs = mongodb.payments.find(query)
+
+        return docs
 
     @staticmethod
     def add(user, amount):
-        mongodb.insert_one({
+        mongodb.payments.insert_one({
             "user": user.id,
             "amount": amount,
-            "ts": datetime.datetime.utcnow() 
+            "ts": datetime.utcnow()
         })
 
 
