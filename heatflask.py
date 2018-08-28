@@ -42,7 +42,7 @@ sslify = SSLify(app, skips=["webhook_callback"])
 
 # models depend app so we import them afterwards
 from models import (
-    Users, Activities, EventLogger, Utility, Webhooks, Indexes,
+    Users, Activities, EventLogger, Utility, Webhooks, Indexes, Payments,
     db_sql, mongodb, redis
 )
 
@@ -780,7 +780,8 @@ def app_info():
         "config": str(app.config),
         "mongodb": mongodb.command("dbstats"),
         "activities": mongodb.command("collstats", "activities"),
-        "indexes": mongodb.command("collstats", "indexes")
+        "indexes": mongodb.command("collstats", "indexes"),
+        "payments": mongodb.command("collstats", "payments")
     }
     return jsonify(info)
 
@@ -790,9 +791,10 @@ def app_info():
 def app_init():
     info = {
         Activities.init(),
-        Indexes.init()
+        Indexes.init(),
+        Payments.init()
     }
-    return "Activities and Indexes databases re-initialized"
+    return "Activities, Indexes, Payments databases re-initialized"
 
 
 # ---- Event log stuff ----
