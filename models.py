@@ -905,6 +905,13 @@ class Users(UserMixin, db_sql.Model):
 
         return out_queue
 
+    def make_payment(self, amount):
+        success = Payments.add(self, amount)
+        return success
+
+    def payment_record(self, after=None, before=None):
+        return Payments.get(self, after=after, before=before)
+
 
 class Indexes(object):
 
@@ -1352,11 +1359,14 @@ class Payments(object):
             tsfltr["$lt"] = after
         if tsfltr:
             query["ts"] = tsfltr
-            
+
+
+        field_selector = {"_id": False}
         if user:
             query["user"] = user.id
+            field_selector["user"] = False
 
-        docs = mongodb.payments.find(query)
+        docs = list(mongodb.payments.find(query, field_selector))
 
         return docs
 
