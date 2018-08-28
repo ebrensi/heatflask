@@ -1327,6 +1327,34 @@ class Webhooks(object):
             yield u
 
 
+class Payments(object):
+
+    @staticmethod
+    def init():
+        mongodb.payments.drop()
+
+        # create new indexes collection
+        mongodb.create_collection("payments")
+        mongodb.payments.create_index([
+             ("ts", pymongo.DESCENDING),
+             ("user", pymongo.ASCENDING)
+
+        ])
+        log.info("initialized Payments collection")
+
+    @staticmethod
+    def get(user):
+        return mongodb.payments.find({"user": user.id})
+
+    @staticmethod
+    def add(user, amount):
+        mongodb.insert_one({
+            "user": user.id,
+            "amount": amount,
+            "ts": datetime.datetime.utcnow() 
+        })
+
+
 class Utility():
 
     @staticmethod
@@ -1358,12 +1386,16 @@ class Utility():
         utc = dt.replace(tzinfo=from_zone)
         return utc.astimezone(to_zone)
 
+collections = mongodb.collection_names()
 
-if "history" not in mongodb.collection_names():
+if "history" not in collections:
     EventLogger.init()
 
-if "activities" not in mongodb.collection_names():
+if "activities" not in collections:
     Activities.init()
 
-if "indexes" not in mongodb.collection_names():
+if "indexes" not in collections:
     Indexes.init()
+
+if "payments" not in collections:
+    Payments.init()
