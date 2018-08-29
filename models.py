@@ -1343,8 +1343,8 @@ class Payments(object):
         # create new indexes collection
         mongodb.create_collection("payments")
         mongodb.payments.create_index([
-             ("ts", pymongo.DESCENDING),
-             ("user", pymongo.ASCENDING)
+            ("ts", pymongo.DESCENDING),
+            ("user", pymongo.ASCENDING)
         ])
         log.info("initialized Payments collection")
 
@@ -1359,7 +1359,6 @@ class Payments(object):
             tsfltr["$lt"] = after
         if tsfltr:
             query["ts"] = tsfltr
-
 
         field_selector = {"_id": False}
         if user:
