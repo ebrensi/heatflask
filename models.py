@@ -232,26 +232,38 @@ class Users(UserMixin, db_sql.Model):
 
         return user if user else None
 
-    def delete(self):
+    def delete(self, deauth=True):
         self.delete_index()
         self.uncache()
-        try:
-            self.client().deauthorize()
-        except Exception:
-            pass
+        if deauth:
+            try:
+                self.client().deauthorize()
+            except Exception:
+                pass
         db_sql.session.delete(self)
         db_sql.session.commit()
 
     @classmethod
-    def update_all(cls, delete=False):
+    def triage(cls, days_inactive=365, test_run=True):
+        # Delete all users from the database who have invalid access tokens
+        #  or have been inactive for a long time (defaults to a year)
+        now = datetime.utcnow()
+
         with app.app_context():
             def user_data(user):
-                data = cls.strava_data_from_token(user.access_token)
-                # check = "valid" if user else "INVALID"
-                # log.info(
-                #     "token for {} is {}".format(user, check)
-                # )
-                return data if data else user
+                if (now - user.dt_last_active).days < days_inactive:
+                    data = cls.strava_data_from_token(user.access_token)
+                    return data if data else user
+
+                elif not test_run:
+                    # if the user has been inactive then deauthorize
+                    #  (we don't delete from the database here because it
+                    #   might create more connections)
+                    try:
+                        user.client().deauthorize()
+                    except Exception:
+                        pass
+                return user
 
             P = Pool()
             num_deleted = 0
@@ -259,9 +271,9 @@ class Users(UserMixin, db_sql.Model):
             try:
                 for obj in P.imap_unordered(user_data, cls.query):
                     if type(obj) == cls:
-                        msg = "invalid access token for {}".format(obj)
-                        if delete:
-                            obj.delete()
+                        msg = "inactive or invalid user {}".format(obj)
+                        if not test_run:
+                            obj.delete(deauth=False)
                             msg += "...deleted"
                             num_deleted += 1
                     else:

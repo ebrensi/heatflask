@@ -760,7 +760,7 @@ def users_restore():
 @admin_required
 def users_update():
     delete = request.args.get("delete")
-    iterator = Users.update_all(delete=delete)
+    iterator = Users.triage(delete=delete)
     return Response(iterator, mimetype='text/event-stream')
 
 
