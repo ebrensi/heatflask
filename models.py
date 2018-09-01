@@ -129,13 +129,14 @@ class Users(UserMixin, db_sql.Model):
         return self.id in app.config["ADMIN"]
 
     @staticmethod
-    def strava_data_from_token(token):
+    def strava_data_from_token(token, log_error=True):
         client = stravalib.Client(access_token=token)
         try:
             strava_user = client.get_athlete()
         except Exception as e:
-            log.error("error getting user data from token: {}"
-                             .format(e))
+            if log_error:
+                log.error("error getting user data from token: {}"
+                          .format(e))
         else:
             return {
                 "id": strava_user.id,
@@ -253,7 +254,7 @@ class Users(UserMixin, db_sql.Model):
             def user_data(user):
                 last_active = user.dt_last_active
                 if last_active and (now - last_active).days < days_inactive:
-                    data = cls.strava_data_from_token(user.access_token)
+                    data = cls.strava_data_from_token(user.access_token, log_error=False)
                     return data if data else user
 
                 elif not test_run:
