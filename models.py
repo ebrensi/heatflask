@@ -1302,38 +1302,50 @@ class Webhooks(object):
     def handle_update_callback(cls, update_raw):
         # if an archived index exists for the user whose data is being updated,
         #  we will update his/her index.
-        user_id = int(update_raw["owner_id"])
-        archived_activity_index = mongodb.indexes.find_one(
-            {"_id": user_id}
-        )
+        
+        update = cls.client.handle_subscription_update(update_raw)
+        user_id = update.owner_id
 
-        updated = None
-        if archived_activity_index:
-            # an activity index assoiciated with this update was found in
-            # mongoDB, so most likely we have the associated user.
+        user = Users.get(user_id, timeout=60)
+        if not user:
+            log.debug("got webhook update for an unregistered user {}"
+                      .format(user_id))
+            return
+
+        if update.get("object_type") == "athlete":
+            pass
+
+        else:  # this is an activity update
+
+            # index might be cached, or in the db
+            archived_activity_index = mongodb.indexes.find_one(
+                {"_id": user_id}
+            )
+            if not archived_activity_index:
+                return
+
+            # an activity index associated with this update
+            #  was found in our database
             updated = False
-            user = Users.get(user_id, timeout=60)
-            if user:
-                ids = [int(update_raw["object_id"])]
-                user.activity_index = archived_activity_index
-                gevent.spawn(user.update_index,
-                             activity_ids=ids,
-                             reset_ttl=False)
-                gevent.sleep(0)
-                updated = True
-
-        obj = cls.client.handle_subscription_update(update_raw)
-
+            ids = [int(update_raw["object_id"])]
+            user.activity_index = archived_activity_index
+            gevent.spawn(user.update_index,
+                         activity_ids=ids,
+                         reset_ttl=False)
+            gevent.sleep(0)
+            updated = True
+        
         doc = {
             "dt": datetime.utcnow(),
-            "subscription_id": obj.subscription_id,
-            "owner_id": obj.owner_id,
-            "object_id": obj.object_id,
-            "object_type": obj.object_type,
-            "aspect_type": obj.aspect_type,
-            "event_time": str(obj.event_time),
+            "subscription_id": update.subscription_id,
+            "owner_id": update.owner_id,
+            "object_id": update.object_id,
+            "object_type": update.object_type,
+            "aspect_type": update.aspect_type,
+            "event_time": str(update.event_time),
             "updated": updated
         }
+
         result = mongodb.subscription.insert_one(doc)
         return result
 
