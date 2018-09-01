@@ -29,9 +29,10 @@ from signal import signal, SIGPIPE, SIG_DFL
 
 app = Flask(__name__)
 app.config.from_object(os.environ['APP_SETTINGS'])
+log = app.logger
 
-app.logger.addHandler(logging.StreamHandler(sys.stdout))
-app.logger.setLevel(logging.DEBUG)
+log.addHandler(logging.StreamHandler(sys.stdout))
+log.setLevel(logging.DEBUG)
 
 STREAMS_OUT = ["polyline", "time"]
 STREAMS_TO_CACHE = ["polyline", "time"]
@@ -41,7 +42,7 @@ sslify = SSLify(app, skips=["webhook_callback"])
 
 # models depend app so we import them afterwards
 from models import (
-    Users, Activities, EventLogger, Utility, Webhooks, Indexes,
+    Users, Activities, EventLogger, Utility, Webhooks, Indexes, Payments,
     db_sql, mongodb, redis
 )
 
@@ -322,25 +323,25 @@ def auth_callback():
             access_token = client.exchange_code_for_token(**args)
 
         except Exception as e:
-            app.logger.error("authorization error:\n{}".format(e))
+            log.error("authorization error:\n{}".format(e))
             flash(str(e))
             return redirect(state)
 
         user_data = Users.strava_data_from_token(access_token)
-        # app.logger.debug("user data: {}".format(user_data))
+        # log.debug("user data: {}".format(user_data))
 
         try:
             user = Users.add_or_update(**user_data)
         except Exception as e:
-            app.logger.exception(e)
+            log.exception(e)
             user = None
         if user:
             # remember=True, for persistent login.
             login_user(user, remember=True)
-            # app.logger.debug("authenticated {}".format(user))
+            # log.debug("authenticated {}".format(user))
             EventLogger.new_event(msg="authenticated {}".format(user.id))
         else:
-            app.logger.error("user authenication error")
+            log.error("user authenication error")
             flash("There was a problem authorizing user")
 
     return redirect(request.args.get("state") or
@@ -530,7 +531,7 @@ def update_share_status(username):
     db_sql.session.commit()
     user.cache()
 
-    app.logger.info("share status for {} set to {}"
+    log.info("share status for {} set to {}"
                     .format(user, status))
 
     return jsonify(user=user.id, share=user.share_profile)
@@ -594,14 +595,14 @@ def get_query_key():
     key_timeout = query.get("key_timeout") or 10
     query = query.get("query") or query
     redis.setex("Q:" + key, json.dumps(query),  key_timeout)
-    # app.logger.debug("set key '{}' to {}".format(key, query))
+    # log.debug("set key '{}' to {}".format(key, query))
     return jsonify(key)
 
 
 @app.route('/getdata/<query_key>')
 def getdata_with_key(query_key):
     query_obj = redis.get("Q:" + query_key)
-    # app.logger.debug("retrieved key {} as {}".format(query_key, query_obj))
+    # log.debug("retrieved key {} as {}".format(query_key, query_obj))
 
     if not query_obj:
         return errout("invalid query_key")
@@ -616,7 +617,7 @@ def getdata_with_key(query_key):
                 if not user:
                     continue
 
-                # app.logger.debug("async job querying {}: {}"
+                # log.debug("async job querying {}: {}"
                 #                  .format(user, options))
                 options.update({
                     "pool": pool,
@@ -630,7 +631,7 @@ def getdata_with_key(query_key):
             pool.join()
             out_queue.put(None)
             out_queue.put(StopIteration)
-            # app.logger.debug("done")
+            # log.debug("done")
 
     pool = gevent.pool.Pool(app.config.get("CONCURRENCY"))
     out_queue = gevent.queue.Queue()
@@ -698,7 +699,7 @@ def cache_put(query_key):
             )
 
         except Exception as e:
-            app.logger.debug("error writing query {} to MongoDB: {}"
+            log.debug("error writing query {} to MongoDB: {}"
                              .format(_id, e))
             return
 
@@ -759,7 +760,7 @@ def users_restore():
 @admin_required
 def users_update():
     delete = request.args.get("delete")
-    iterator = Users.update_all(delete=delete)
+    iterator = Users.triage(test_run=not delete)
     return Response(iterator, mimetype='text/event-stream')
 
 
@@ -779,7 +780,8 @@ def app_info():
         "config": str(app.config),
         "mongodb": mongodb.command("dbstats"),
         "activities": mongodb.command("collstats", "activities"),
-        "indexes": mongodb.command("collstats", "indexes")
+        "indexes": mongodb.command("collstats", "indexes"),
+        "payments": mongodb.command("collstats", "payments")
     }
     return jsonify(info)
 
@@ -789,9 +791,10 @@ def app_info():
 def app_init():
     info = {
         Activities.init(),
-        Indexes.init()
+        Indexes.init(),
+        Payments.init()
     }
-    return "Activities and Indexes databases re-initialized"
+    return "Activities, Indexes, Payments databases re-initialized"
 
 
 # ---- Event log stuff ----
@@ -859,10 +862,10 @@ def webhook_callback():
 
     if request.method == 'GET':
         if request.args.get("hub.challenge"):
-            app.logger.debug(
+            log.debug(
                 "subscription callback with {}".format(request.args))
             cb = Webhooks.handle_subscription_callback(request.args)
-            app.logger.debug(
+            log.debug(
                 "handle_subscription_callback returns {}".format(cb))
             return jsonify(cb)
 

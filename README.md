@@ -19,7 +19,7 @@ This project is licensed under GNU General Public License v3.0 [(GNU GPLv3)](htt
 
 Any user is free to suggest modifications, fork this repo, and/or make pull requests.  You are not free to use my code in a project that will make money.  If you feel you can improve on my ideas in your own project, do me a favor and reference my work and compensate me in some way that you think is fair.  Thanks!
 
-Copyright (c) 2017 [Efrem Rensi](mailto:rensi.efrem@gmail.com)
+Copyright (c) 2018 [Efrem Rensi](mailto:rensi.efrem@gmail.com)
 
 Feel free to [contact me](mailto:rensi.efrem@gmail.com) with questions or suggestions
 
