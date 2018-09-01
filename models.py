@@ -251,7 +251,8 @@ class Users(UserMixin, db_sql.Model):
 
         with app.app_context():
             def user_data(user):
-                if (now - user.dt_last_active).days < days_inactive:
+                last_active = user.dt_last_active
+                if last_active and (now - last_active).days < days_inactive:
                     data = cls.strava_data_from_token(user.access_token)
                     return data if data else user
 
