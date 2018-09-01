@@ -266,7 +266,7 @@ class Users(UserMixin, db_sql.Model):
                         pass
                 return user
 
-            P = Pool()
+            P = Pool(2)
             num_deleted = 0
             count = 0
             try:
