@@ -1313,7 +1313,7 @@ class Webhooks(object):
             "object_id": update.object_id,
             "object_type": update.object_type,
             "aspect_type": update.aspect_type,
-            "event_time": str(update.event_time),
+            # "event_time": str(update.event_time),
             "updates": update_raw.get("updates"),
             "valid_user": bool(user),
             "valid_index": bool(index)
