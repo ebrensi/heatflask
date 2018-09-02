@@ -1314,7 +1314,7 @@ class Webhooks(object):
             "object_type": update.object_type,
             "aspect_type": update.aspect_type,
             "event_time": str(update.event_time),
-            "updates": update.updates,
+            "updates": update_raw.get("updates"),
             "valid_user": bool(user),
             "valid_index": bool(index)
         }
