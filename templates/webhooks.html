@@ -41,16 +41,28 @@
         }
     }
 
+     function formatValidity (data, type, row) {
+        let u = row.valid_user? "T":"F",
+            i = row.valid_index? "T":"F";
+
+        return `${u}:${i}`;
+        
+    }
 
     $(document).ready(function() {
         let updates_table = $('#updates_table').DataTable({
-            pageLength: 50,
+            pageLength: 100,
             deferRender: true,
             data: data,
             columns: [
                 {title: "dt",    data: "dt", render: formatDate},
                 {title: "owner", data: "owner_id", render: formatID},
-                {title: "activity", data: "object_id", render: formatActivityID}
+                {title: "valid?", data: null, render: formatValidity},
+                {title: "object", data: "object_id"},
+                {title: "object_type", data: "object_type"},
+                {title: "aspect_type", data: "aspect_type"},
+                {title: "event_time", data: "event_time"},
+                {title: "updates", data: "updates"}
             ],
             scrollY: "80vh",
             scrollX: true,
