@@ -769,7 +769,8 @@ def users_update():
 @admin_or_self_required
 def user_profile(username):
     user = Users.get(username)
-    return jsonify(user.info())
+    output = user.info() if user else {}
+    return jsonify(output)
 
 
 # ---- App maintenance stuff -----
