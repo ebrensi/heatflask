@@ -49,6 +49,10 @@
         
     }
 
+    function formatUpdate()(data, type, row) {
+        return JSON.stringify(row.updates)
+    }
+
     $(document).ready(function() {
         let updates_table = $('#updates_table').DataTable({
             pageLength: 100,
@@ -62,7 +66,7 @@
                 {title: "object_type", data: "object_type"},
                 {title: "aspect_type", data: "aspect_type"},
                 // {title: "event_time", data: "event_time"},
-                {title: "updates", data: "updates"}
+                {title: "updates", data: null, render: formatUpdate}
             ],
             scrollY: "80vh",
             scrollX: true,
