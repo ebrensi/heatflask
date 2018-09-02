@@ -1305,6 +1305,8 @@ class Webhooks(object):
         user_id = update.owner_id
         user = Users.get(user_id, timeout=10)
         index = mongodb.indexes.find_one({"_id": user_id})
+        if not (user or index):
+            return
 
         record = {
             "dt": datetime.utcnow(),
