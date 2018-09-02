@@ -129,13 +129,14 @@ class Users(UserMixin, db_sql.Model):
         return self.id in app.config["ADMIN"]
 
     @staticmethod
-    def strava_data_from_token(token):
+    def strava_data_from_token(token, log_error=True):
         client = stravalib.Client(access_token=token)
         try:
             strava_user = client.get_athlete()
         except Exception as e:
-            log.error("error getting user data from token: {}"
-                             .format(e))
+            if log_error:
+                log.error("error getting user data from token: {}"
+                          .format(e))
         else:
             return {
                 "id": strava_user.id,
@@ -253,7 +254,7 @@ class Users(UserMixin, db_sql.Model):
             def user_data(user):
                 last_active = user.dt_last_active
                 if last_active and (now - last_active).days < days_inactive:
-                    data = cls.strava_data_from_token(user.access_token)
+                    data = cls.strava_data_from_token(user.access_token, log_error=False)
                     return data if data else user
 
                 elif not test_run:
@@ -1258,8 +1259,8 @@ class Webhooks(object):
         except Exception as e:
             return {"error": str(e)}
 
-        if "subscription" not in mongodb.collection_names():
-            mongodb.create_collection("subscription",
+        if "updates" not in mongodb.collection_names():
+            mongodb.create_collection("updates",
                                       capped=True,
                                       size=1 * 1024 * 1024)
         log.debug("create_subscription returns {}".format(subs))
@@ -1283,7 +1284,7 @@ class Webhooks(object):
                 return {"error": str(e)}
 
             if delete_collection:
-                mongodb.subscription.drop()
+                mongodb.updates.drop()
 
             result = {"success": "deleted subscription {}".format(
                 subscription_id)}
@@ -1299,46 +1300,62 @@ class Webhooks(object):
 
     @classmethod
     def handle_update_callback(cls, update_raw):
-        # if an archived index exists for the user whose data is being updated,
-        #  we will update his/her index.
-        user_id = int(update_raw["owner_id"])
-        archived_activity_index = mongodb.indexes.find_one(
-            {"_id": user_id}
-        )
 
-        updated = None
-        if archived_activity_index:
-            # an activity index assoiciated with this update was found in
-            # mongoDB, so most likely we have the associated user.
-            updated = False
-            user = Users.get(user_id, timeout=60)
-            if user:
-                ids = [int(update_raw["object_id"])]
-                user.activity_index = archived_activity_index
-                gevent.spawn(user.update_index,
-                             activity_ids=ids,
-                             reset_ttl=False)
-                gevent.sleep(0)
-                updated = True
+        update = cls.client.handle_subscription_update(update_raw)
+        user_id = update.owner_id
+        user = Users.get(user_id, timeout=10)
+        index = mongodb.indexes.find_one({"_id": user_id})
 
-        obj = cls.client.handle_subscription_update(update_raw)
-
-        doc = {
+        record = {
             "dt": datetime.utcnow(),
-            "subscription_id": obj.subscription_id,
-            "owner_id": obj.owner_id,
-            "object_id": obj.object_id,
-            "object_type": obj.object_type,
-            "aspect_type": obj.aspect_type,
-            "event_time": str(obj.event_time),
-            "updated": updated
+            "subscription_id": update.subscription_id,
+            "owner_id": update.owner_id,
+            "object_id": update.object_id,
+            "object_type": update.object_type,
+            "aspect_type": update.aspect_type,
+            "event_time": str(update.event_time),
+            "updates": update.updates,
+            "valid_user": bool(user),
+            "valid_index": bool(index)
         }
-        result = mongodb.subscription.insert_one(doc)
+
+        result = mongodb.updates.insert_one(record)
         return result
+        
+        # if not user:
+        #     log.debug("got webhook update for an unregistered user {}"
+        #               .format(user_id))
+        #     return
+
+        # if update.get("object_type") == "athlete":
+        #     pass
+
+        # else:  # this is an activity update
+
+        #     # index might be cached, or in the db
+        #     archived_activity_index = mongodb.indexes.find_one(
+        #         {"_id": user_id}
+        #     )
+        #     if not archived_activity_index:
+        #         return
+
+        #     # an activity index associated with this update
+        #     #  was found in our database
+        #     updated = False
+        #     ids = [int(update_raw["object_id"])]
+        #     user.activity_index = archived_activity_index
+        #     gevent.spawn(user.update_index,
+        #                  activity_ids=ids,
+        #                  reset_ttl=False)
+        #     gevent.sleep(0)
+        #     updated = True
+        
+        
+        # return result
 
     @staticmethod
     def iter_updates(limit=0):
-        updates = mongodb.subscription.find(
+        updates = mongodb.updates.find(
             sort=[("$natural", pymongo.DESCENDING)]
         ).limit(limit)
 
