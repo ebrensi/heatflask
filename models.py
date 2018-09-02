@@ -1304,7 +1304,11 @@ class Webhooks(object):
         update = cls.client.handle_subscription_update(update_raw)
         user_id = update.owner_id
         user = Users.get(user_id, timeout=10)
-        index = mongodb.indexes.find_one({"_id": user_id})
+        if user:
+            index = mongodb.indexes.find_one({"_id": user_id})
+        else:
+            index = None
+
         if not (user or index):
             return
 
@@ -1322,38 +1326,37 @@ class Webhooks(object):
         }
 
         result = mongodb.updates.insert_one(record)
-        return result
         
-        # if not user:
-        #     log.debug("got webhook update for an unregistered user {}"
-        #               .format(user_id))
-        #     return
+        if not user:
+            log.debug("got webhook update for an unregistered user {}"
+                      .format(user_id))
+            return
 
-        # if update.get("object_type") == "athlete":
-        #     pass
+        if update.get("object_type") == "athlete":
+             return
 
-        # else:  # this is an activity update
+        # Process activity update
+        # index might be cached, or in the db
+        archived_activity_index = mongodb.indexes.find_one(
+            {"_id": user_id}
+        )
+        if not archived_activity_index:
+            return
 
-        #     # index might be cached, or in the db
-        #     archived_activity_index = mongodb.indexes.find_one(
-        #         {"_id": user_id}
-        #     )
-        #     if not archived_activity_index:
-        #         return
+        # # an activity index associated with this update
+        # #  was found in our database
+        # updated = False
+        # ids = [int(update_raw["object_id"])]
+        # user.activity_index = archived_activity_index
 
-        #     # an activity index associated with this update
-        #     #  was found in our database
-        #     updated = False
-        #     ids = [int(update_raw["object_id"])]
-        #     user.activity_index = archived_activity_index
-        #     gevent.spawn(user.update_index,
-        #                  activity_ids=ids,
-        #                  reset_ttl=False)
-        #     gevent.sleep(0)
-        #     updated = True
+        # gevent.spawn(user.update_index,
+        #              activity_ids=ids,
+        #              reset_ttl=False)
+        # gevent.sleep(0)
+        # updated = True
         
         
-        # return result
+        return
 
     @staticmethod
     def iter_updates(limit=0):
