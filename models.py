@@ -927,10 +927,29 @@ class Users(UserMixin, db_sql.Model):
         return Payments.get(self, after=after, before=before)
 
 
-class Indexes(object):
+class Index(object):
+    compact_df_dtypes = {
+        "id": "uint32",
+        "group": "uint16",
+        "type": "category",
+        "total_distance": "float32",
+        "elapsed_time": "uint32",
+        "average_speed": "float16"
+    }
+
+    df_out_dtypes = {
+        "type": str,
+        "total_distance": float,
+        "elapsed_time": int,
+        "average_speed": float,
+        "ts_local": str,
+        "ts_UTC": str,
+        "group": int
+    }
 
     @staticmethod
-    def init(clear_cache=False):
+    # Initialize the database
+    def init_db(clear_cache=False):
         # drop the "indexes" collection
         mongodb.indexes.drop()
 
@@ -945,11 +964,95 @@ class Indexes(object):
 
         timeout = app.config["STORE_INDEX_TIMEOUT"]
         result = mongodb.indexes.create_index(
-            "dt_last_indexed",
+            "ts",
             expireAfterSeconds=timeout
         )
-        log.info("initialized Indexes collection")
+        log.info("initialized Index collection")
         return result
+
+    @classmethod
+    # get the Index object associated with a user from the database
+    def get(cls, user_id):
+        uid = unicode(user_id)
+        try:
+            doc = mongodb.indexes.find_one({"_id": uid})
+        except Exception as e:
+            log.error(
+                "error accessing mongodb indexes collection:\n{}"
+                .format(e))
+            return
+
+        if not doc:
+            return
+
+        DataFrame = pd.read_msgpack(doc["packed_df"]).astype({"type": str})
+        timestamp = doc["ts"]
+
+        return cls(uid, DataFrame, timestamp)
+
+    @classmethod
+    def add(cls, index_obj):
+        # add/replace an Index object into the database
+
+        index_obj.df = index_obj.df.sort_values(by="id", ascending=False)
+
+        packed_df = (
+            index_obj.df
+            .astype(cls.compact_df_dtypes)
+            .to_msgpack(compress='blosc')
+        )
+
+        doc = {
+            "_id": index_obj.id,
+            "ts": datetime.utcnow(),
+            "packed_df": Binary(packed_df)
+        }
+
+        try:
+            result = mongodb.indexes.replace_one(
+                {"_id": index_obj.id},
+                doc,
+                upsert=True
+            )
+        except Exception as e:
+            log.error(
+                "error accessing mongodb indexes collection:\n{}"
+                .format(e)
+            )
+            return
+
+        return result
+
+    @classmethod
+    def delete(cls, index_obj):
+        try:
+            result = mongodb.indexes.delete_one({'_id': index_obj.id})
+        except Exception as e:
+            log.error("error deleting index {} from MongoDB:\n{}"
+                      .format(index_obj, e))
+            result = e
+
+        return result
+
+    @classmethod
+    def build(cls, user):
+        pass
+
+    def __init__(self, user_id, DataFrame, timestamp):
+        # instantiate an Index object
+        self.df = DataFrame
+        self.ts = timestamp
+        self.id = user_id
+
+    def __repr__(self):
+        return "<Index {}>".format(self.id)
+
+    def archive(self):
+        self.__class__.add(self)
+
+    def update(self):
+        pass
+
 
 
 #  Activities class is only a proxy to underlying data structures.
@@ -1354,8 +1457,7 @@ class Webhooks(object):
         #              reset_ttl=False)
         # gevent.sleep(0)
         # updated = True
-        
-        
+
         return
 
     @staticmethod
@@ -1453,7 +1555,7 @@ if "activities" not in collections:
     Activities.init()
 
 if "indexes" not in collections:
-    Indexes.init()
+    Index.init_db()
 
 if "payments" not in collections:
     Payments.init()
