@@ -892,7 +892,7 @@ class Users(UserMixin, db_sql.Model):
                     # the owner is a Heatflask user
                     A = Activities.strava2dict(obj)
                     A["ts_local"] = str(A["ts_local"])
-                    A["owner"] = ownerubscription/updates.id
+                    A["owner"] = owner.id
                     A["profile"] = owner.profile
                     A["bounds"] = Activities.bounds(A["summary_polyline"])
                     
@@ -929,39 +929,23 @@ class Users(UserMixin, db_sql.Model):
 
 
 class Index(object):
-    compact_df_dtypes = {
-        "id": "uint32",
-        "group": "uint16",
-        "type": "category",
-        "total_distance": "float32",
-        "elapsed_time": "uint32",
-        "average_speed": "float16"
-    }
+    name = "index"
+    db = mongodb.get_collection(name)
 
-    df_out_dtypes = {
-        "type": str,
-        "total_distance": float,
-        "elapsed_time": int,
-        "average_speed": float,
-        "ts_local": str,
-        "ts_UTC": str,
-        "group": int
-    }
-
-    @staticmethod
+    @classmethod
     # Initialize the database
-    def init_db(clear_cache=False):
+    def init_db(cls, clear_cache=False):
         # drop the "indexes" collection
-        mongodb.index.drop()
+        mongodb.drop_collection(cls.name)
 
         # create new index collection
-        mongodb.create_collection("index")
+        mongodb.create_collection(cls.name)
 
         # timeout = app.config["STORE_INDEX_TIMEOUT"]
 
-        mongodb.index.create_index("user")
-        mongodb.index.create_index(("ts_UTC", mongodb.DESCENDING))
-        mongodb.index.create_index(("start_latlng", pymongo.GEO2D))
+        cls.db.create_index("user")
+        cls.db.create_index(("ts_UTC", mongodb.DESCENDING))
+        cls.db.create_index(("start_latlng", pymongo.GEO2D))
 
         log.info("initialized Index collection")
 
@@ -985,10 +969,40 @@ class Index(object):
         return d
 
     @classmethod
-    def delete_user_index(cls, user):
-        result = mongodb.index.delete_many({"user_id": user.id})
+    def add(cls, a):
+        doc = cls.strava2doc(a)
+        try:
+            result = cls.db.replace_one({"_id": a.id}, doc, upsert=True)
+        except Exception as e:
+            log.exception(e)
+            return
+
         return result
 
+    @classmethod
+    def delete(cls, id):
+        try:
+            return cls.db.delete_one({"_id": id})
+        except Exception as e:
+            log.exception(e)
+            return
+
+    @classmethod
+    def update(cls, id, updates):
+        if "title" in updates:
+            updates["name"] = updates["title"]
+            del updates["title"]
+        try:
+            return cls.db.update_one({"_id": id}, updates)
+        except Exception as e:
+            log.exception(e)
+
+    @classmethod
+    def delete_user_index(cls, user):
+        try:
+            return cls.db.index.delete_many({"user_id": user.id})
+        except Exception as e:
+            log.exception(e)
 
     @staticmethod
     def to_datetime(obj):
@@ -1003,12 +1017,17 @@ class Index(object):
         else:
             return dt
 
+    @classmethod
+    def update_user_index(cls, user, limit=10):
+        # fetch the latest activities and add/replace them in the index
+        cls.build_user_index(user, fetch_limit=limit)
 
     @classmethod
-    def create_user_index(cls, user, out_queue=None,
+    def build_user_index(cls, user, out_queue=None,
                           limit=None,
                           after=None, before=None,
-                          activity_ids=None):
+                          activity_ids=None,
+                          fetch_limit=0):
 
         before = cls.to_datetime(before)
         after = cls.to_datetime(after)
@@ -1029,7 +1048,7 @@ class Index(object):
         user.indexing(True)
 
         try:
-            for a in user.client().get_activities():
+            for a in user.client().get_activities(limit=fetch_limit):
                 if a.start_latlng:
                     d = cls.strava2doc(a)
                     log.debug("{}. {}".format(count, d))
@@ -1083,7 +1102,7 @@ class Index(object):
                 )
                 result = []
             else:
-                result = mongodb.index.bulk_write(
+                result = cls.db.index.bulk_write(
                     mongo_requests,
                     ordered=False
                 )
@@ -1099,15 +1118,14 @@ class Index(object):
         return result
 
     @classmethod
-    # get the Index object associated with a user from the database
-    def query(cls, user_id=None,
+    def query(cls, user=None,
               activity_ids=None,
               after=None, before=None,
               limit=0):
 
         query = {}
-        if user_id:
-            query["user_id"] = user_id
+        if user:
+            query["user_id"] = user.id
 
         if activity_ids:
             query["_id"] = {"$in": activity_ids}
@@ -1124,7 +1142,7 @@ class Index(object):
 
         log.debug(query)
         try:
-            cursor = mongodb.index.find(query).limit(limit)
+            cursor = cls.db.index.find(query).limit(limit)
         except Exception as e:
             log.error(
                 "error accessing mongodb indexes collection:\n{}"
@@ -1626,7 +1644,7 @@ if "history" not in collections:
 if "activities" not in collections:
     Activities.init()
 
-if "indexes" not in collections:
+if Index.name not in collections:
     Index.init_db()
 
 if "payments" not in collections:
