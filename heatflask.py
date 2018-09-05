@@ -42,14 +42,14 @@ sslify = SSLify(app, skips=["webhook_callback"])
 
 # models depend app so we import them afterwards
 from models import (
-    Users, Activities, EventLogger, Utility, Webhooks, Indexes, Payments,
+    Users, Activities, EventLogger, Utility, Webhooks, Index, Payments,
     db_sql, mongodb, redis
 )
 
 # just do once
 # if not redis.get("db-reset"):
 #     # Activities.init(clear_cache=True)
-#     Indexes.init(clear_cache=True)
+#     Index.init(clear_cache=True)
 #     redis.set("db-reset", 1)
 # redis.delete("db-reset")
 
@@ -792,10 +792,10 @@ def app_info():
 def app_init():
     info = {
         Activities.init(),
-        Indexes.init(),
+        Index.init(),
         Payments.init()
     }
-    return "Activities, Indexes, Payments databases re-initialized"
+    return "Activities, Index, Payments databases re-initialized"
 
 
 # ---- Event log stuff ----
