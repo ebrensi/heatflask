@@ -72,26 +72,6 @@ class Users(UserMixin, db_sql.Model):
     app_activity_count = Column(Integer, default=0)
     share_profile = Column(Boolean, default=False)
 
-    activity_index = None
-    index_df_dtypes = {
-        "id": "uint32",
-        "group": "uint16",
-        "type": "category",
-        "total_distance": "float32",
-        "elapsed_time": "uint32",
-        "average_speed": "float16"
-    }
-
-    index_df_out_dtypes = {
-        "type": str,
-        "total_distance": float,
-        "elapsed_time": int,
-        "average_speed": float,
-        "ts_local": str,
-        "ts_UTC": str,
-        "group": int
-    }
-
     def db_state(self):
         state = inspect(self)
         attrs = ["transient", "pending", "persistent", "deleted", "detached"]
@@ -114,10 +94,14 @@ class Users(UserMixin, db_sql.Model):
         return cPickle.loads(p)
 
     def client(self):
-        return stravalib.Client(
-            access_token=self.access_token,
-            rate_limiter = lambda x=None: None
-        )
+        try:
+            return self.cli
+        except AttributeError:
+            self.cli = stravalib.Client(
+                access_token=self.access_token,
+                rate_limiter=(lambda x=None: None)
+            )
+            return self.cli
 
     def __repr__(self):
         return "<User %r>" % (self.id)
@@ -158,6 +142,11 @@ class Users(UserMixin, db_sql.Model):
 
     def cache(self, identifier=None, timeout=CACHE_USERS_TIMEOUT):
         key = self.__class__.key(identifier or self.id)
+        try:
+            del self.cli
+        except Exception as e:
+            pass
+
         packed = self.serialize()
         # log.debug(
         #     "caching {} with key '{}' for {} sec. size={}"
@@ -368,19 +357,7 @@ class Users(UserMixin, db_sql.Model):
         }
 
     def delete_index(self):
-        try:
-            result1 = mongodb.indexes.delete_one({'_id': self.id})
-        except Exception as e:
-            log.error("error deleting index {} from MongoDB:\n{}"
-                             .format(self, e))
-            result1 = e
-
-        self.activity_index = None
-        result2 = self.cache()
-
-        #log.debug("delete index for {}. mongo:{}, redis:{}".format(self.id, vars(result1), result2))
-
-        return result1, result2
+        return Index.delete_user_entries(self)
 
     def indexing(self, status=None):
         # Indicate to other processes that we are currently indexing
@@ -393,275 +370,20 @@ class Users(UserMixin, db_sql.Model):
         else:
             redis.delete(key)
 
-    def get_index(self):
-        if not self.activity_index:
-            try:
-                self.activity_index = (mongodb.indexes
-                                       .find_one({"_id": self.id}))
-            except Exception as e:
-                log.error(
-                    "error accessing mongodb indexes collection:\n{}"
-                    .format(e))
-
-        if self.activity_index:
-            return {
-                "index_df": pd.read_msgpack(
-                    self.activity_index["packed_index"]
-                ).astype({"type": str}),
-                "dt_last_indexed": self.activity_index["dt_last_indexed"]
-            }
-
-    @staticmethod
-    def to_datetime(obj):
-        if not obj:
-            return
-        if isinstance(obj, datetime):
-            return obj
-        try:
-            dt = dateutil.parser.parse(obj)
-        except ValueError:
-            return
-        else:
-            return dt
-
-    def build_index(self, out_queue=None,
-                    limit=None,
-                    after=None, before=None,  # datetime object or string
-                    activity_ids=None):
-
-        def enqueue(msg):
-            if out_queue is None:
-                pass
-            else:
-                # log.debug(msg)
-                out_queue.put(msg)
-
-        before = self.__class__.to_datetime(before)
-        after = self.__class__.to_datetime(after)
-
-        def in_date_range(dt):
-            if not (before or after):
-                return
-
-            t1 = (not after) or (after <= dt)
-            t2 = (not before) or (dt <= before)
-            result = (t1 and t2)
-            # log.info("{} <= {} <= {}: {}"
-            #                 .format(after, dt, before, result))
-            return result
-
-        self.indexing(True)
-        start_time = datetime.utcnow()
-        log.debug("building activity index for {}".format(self.id))
-
-        activities_list = []
-        count = 0
-        rendering = True
-        try:
-            for a in self.client().get_activities():
-                d = Activities.strava2dict(a)
-                if d.get("summary_polyline"):
-                    activities_list.append(d)
-                    count += 1
-
-                    if (rendering and
-                        ((activity_ids and (d["id"] in activity_ids)) or
-                         (limit and (count <= limit)) or
-                            in_date_range(d["ts_local"]))):
-
-                        d2 = dict(d)
-                        d2["ts_local"] = str(d2["ts_local"])
-                        enqueue(d2)
-
-                        if activity_ids:
-                            activity_ids.remove(d["id"])
-                            if not activity_ids:
-                                rendering = False
-                                enqueue({"stop_rendering": "1"})
-
-                    if (rendering and
-                        ((limit and count >= limit) or
-                            (after and (d["ts_local"] < after)))):
-                        rendering = False
-                        enqueue({"stop_rendering": "1"})
-
-                    enqueue({"msg": "indexing...{} activities"
-                             .format(count)})
-                    gevent.sleep(0)
-
-            gevent.sleep(0)
-        except Exception as e:
-            enqueue({"error": str(e)})
-            log.debug("Error while building activity index")
-            log.error(e)
-        else:
-            # If we are streaming to a client, this is where we tell it
-            #  stop listening by pushing a StopIteration the queue
-            if not activities_list:
-                enqueue({"error": "No activities!"})
-                enqueue(StopIteration)
-                self.indexing(False)
-                EventLogger.new_event(msg="no activities for {}"
-                                      .format(self.id))
-                return
-
-            index_df = (pd.DataFrame(activities_list)
-                        .astype(Users.index_df_dtypes)
-                        .sort_values(by="id", ascending=False))
-
-            # log.info(index_df.info())
-
-            packed = Binary(index_df.to_msgpack(compress='blosc'))
-            self.activity_index = {
-                "dt_last_indexed": datetime.utcnow(),
-                "packed_index": packed
-            }
-
-            # update the cache for this user
-            self.cache()
-
-            # if MongoDB access fails then at least the activity index
-            # is cached with the user for a while.  Since we're using
-            # a cheap sandbox version of Mongo, it might be down sometimes.
-            try:
-                result = mongodb.indexes.update_one(
-                    {"_id": self.id},
-                    {"$set": self.activity_index},
-                    upsert=True)
-
-                # log.info(
-                #     "inserted activity index for {} in MongoDB: {}"
-                #     .format(self, vars(result))
-                # )
-            except Exception as e:
-                log.error(
-                    "error wrtiting activity index for {} to MongoDB:\n{}"
-                    .format(self, e)
-                )
-
-            elapsed = datetime.utcnow() - start_time
-            msg = (
-                "{}'s index built in {} sec. count={}, size={}"
-                .format(self.id,
-                        round(elapsed.total_seconds(), 3),
-                        count,
-                        len(packed))
-            )
-
-            log.debug(msg)
-            EventLogger.new_event(msg=msg)
-            enqueue({"msg": "done indexing {} activities.".format(count)})
-
-        finally:
-            self.indexing(False)
-            enqueue(StopIteration)
-
-        if activities_list:
-            return index_df
-
-    def update_index(self, index_df=None, activity_ids=[], reset_ttl=True):
-        start_time = datetime.utcnow()
-
-        #  retrieve the current index if we have it, otherwise return nothing
-        if index_df is None:
-            activity_index = self.get_index()
-            if activity_index:
-                index_df = activity_index["index_df"]
-            else:
-                return
-
-        index_df = index_df.set_index("id")
-
-        activities_list = []
-        log.info("Updating activity index for {}".format(self))
-
-        if activity_ids:
-            for aid in activity_ids:
-                try:
-                    act = Activities.strava2dict(
-                        self.client().get_activity(aid)
-                    )
-                except Exception as e:
-                    log.error("error getting {}'s activity {}: {}"
-                              .format(self, aid, e))
-                else:
-                    activities_list.append(act)
-        else:
-            # If ids of activities to update are not explicitly given
-            #   (most often the case), we will replace the 10 most recent
-            #  activities, since these are the ones most likely to have been
-            #  manually modified since last access.
-            try:
-                activities_list = [
-                    Activities.strava2dict(a)
-                    for a in self.client().get_activities(limit=10)
-                ]
-            except Exception as e:
-                log.error(
-                    "was not able to retrieve {}'s latest activity data: {}"
-                    .format(self, e)
-                )
-                return index_df
-
-        to_update = {}
-        if reset_ttl:
-            # update the timestamp
-            to_update["dt_last_indexed"] = datetime.utcnow()
-
-        if activities_list:
-            # new_df = (
-            #     pd.DataFrame(activities_list)
-            #     .astype(Users.index_df_dtypes)
-            #     .set_index("id")
-            # )
-
-            index_df = (
-                pd.DataFrame(activities_list)
-                .astype(Users.index_df_dtypes)
-                .set_index("id")
-                .combine_first(index_df)
-                .sort_index(ascending=False)
-                .reset_index()
-            )
-
-            # log.info("after update: {}".format(index_df.info()))
-
-            to_update["packed_index"] = (
-                Binary(index_df.to_msgpack(compress='blosc'))
-            )
-
-        if to_update:
-            # update activity_index in this user
-            self.activity_index.update(to_update)
-
-            # update the cache entry for this user (necessary?)
-            self.cache()
-
-            # update activity_index in MongoDB
-            try:
-                mongodb.indexes.update_one(
-                    {"_id": self.id},
-                    {"$set": to_update}
-                )
-            except Exception as e:
-                log.debug(
-                    "error updating activity index for {} in MongoDB:\n{}"
-                    .format(self, e)
-                )
-
-        elapsed = datetime.utcnow() - start_time
-        num = len(activities_list)
-        msg = (
-            "updated {} index activit{} for user {} in {} sec."
-            .format(num,
-                    "y" if num == 1 else "ies",
-                    self.id,
-                    round(elapsed.total_seconds(), 3))
+    def build_index(self, **args):
+        queue = Queue()
+        gevent.spawn(
+            Index.import_user,
+            self,
+            out_queue=queue,
+            out_query=args,
+            fetch_query={"limit": 0}
         )
+        gevent.sleep(0)
+        return queue
 
-        log.info(msg)
-        if to_update:
-            return index_df
+    def update_index(self, activity_ids=[], reset_ttl=True):
+        pass
 
     def query_activities(self, 
                          activity_ids=None,
@@ -686,26 +408,13 @@ class Users(UserMixin, db_sql.Model):
         # convert date strings to datetimes, if applicable
         if before or after:
             try:
-                after = self.__class__.to_datetime(after)
+                after = Utility.to_datetime(after)
                 if before:
-                    before = self.__class__.to_datetime(before)
+                    before = Utility.to_datetime(before)
                     assert(before > after)
             except AssertionError:
                 return [{"error": "Invalid Dates"}]
 
-        # log.info("query_activities called with: {}".format({
-        #     "activity_ids": activity_ids,
-        #     "limit": limit,
-        #     "after": after,
-        #     "before": before,
-        #     "only_ids": only_ids,
-        #     "summaries": summaries,
-        #     "streams": streams,
-        #     "owner_id": owner_id,
-        #     "build_index": build_index,
-        #     "pool": pool,
-        #     "out_queue": out_queue
-        # }))
 
         def import_streams(client, queue, activity):
             # log.debug("importing {}".format(activity["id"]))
@@ -993,44 +702,49 @@ class Index(object):
             updates["name"] = updates["title"]
             del updates["title"]
         try:
-            return cls.db.update_one({"_id": id}, updates)
+            return cls.db.update_one({"_id": id}, {"$set": updates})
         except Exception as e:
             log.exception(e)
 
     @classmethod
-    def delete_user_index(cls, user):
+    def delete_user_entries(cls, user):
         try:
             return cls.db.index.delete_many({"user_id": user.id})
         except Exception as e:
-            log.exception(e)
-
-    @staticmethod
-    def to_datetime(obj):
-        if not obj:
-            return
-        if isinstance(obj, datetime):
-            return obj
-        try:
-            dt = dateutil.parser.parse(obj)
-        except ValueError:
-            return
-        else:
-            return dt
+            log.error(
+                "error deleting index entries for user {} from MongoDB:\n{}"
+                .format(user, e)
+            )
 
     @classmethod
-    def update_user_index(cls, user, limit=10):
-        # fetch the latest activities and add/replace them in the index
-        cls.build_user_index(user, fetch_limit=limit)
+    def import_user(cls, user, out_queue=None,
+                        fetch_query={"limit": 0},
+                        out_query={}):
 
-    @classmethod
-    def build_user_index(cls, user, out_queue=None,
-                          limit=None,
-                          after=None, before=None,
-                          activity_ids=None,
-                          fetch_limit=0):
+        for query in [fetch_query, out_query]:
+            if "before" in query:
+                query["before"] = Utility.to_datetime(query["before"])
+            if "after" in query:
+                query["after"] = Utility.to_datetime(query["after"])
 
-        before = cls.to_datetime(before)
-        after = cls.to_datetime(after)
+        def enqueue(msg):
+            if out_queue is None:
+                pass
+            else:
+                # log.debug(msg)
+                out_queue.put(msg)
+
+        count = 0
+        mongo_requests = []
+        rendering = True
+        user.indexing(True)
+        start_time = datetime.utcnow()
+        log.debug("building activity index for {}".format(user))
+
+        activity_ids = out_query.get("activity_ids")
+        after = out_query.get("after")
+        before = out_query.get("before")
+        limit = out_query.get("limit")
 
         def in_date_range(dt):
             if not (before or after):
@@ -1041,17 +755,11 @@ class Index(object):
             result = (t1 and t2)
             return result
 
-        count = 0
-        mongo_requests = []
-        rendering = True
-
-        user.indexing(True)
-
         try:
-            for a in user.client().get_activities(limit=fetch_limit):
+            for a in user.client().get_activities(**fetch_query):
                 if a.start_latlng:
                     d = cls.strava2doc(a)
-                    log.debug("{}. {}".format(count, d))
+                    # log.debug("{}. {}".format(count, d))
                     mongo_requests.append(
                         pymongo.ReplaceOne({"_id": a.id}, d, upsert=True)
                     )
@@ -1088,7 +796,7 @@ class Index(object):
                             {"msg": "indexing...{} activities".format(count)}
                         )
                         gevent.sleep(0)
-
+            gevent.sleep(0)
 
 
             # If we are streaming to a client, this is where we tell it
@@ -1106,22 +814,41 @@ class Index(object):
                     mongo_requests,
                     ordered=False
                 )
-
-            user.indexing(False)
-    
         except Exception as e:
             if out_queue:
                 out_queue.put({"error": str(e)})
             log.debug("Error while building activity index")
             log.exception(e)
-            result = []
-        return result
+        else:
+            elapsed = datetime.utcnow() - start_time
+            msg = (
+                "{}'s index built in {} sec. count={}"
+                .format(user.id, round(elapsed.total_seconds(), 3), count)
+            )
+
+            log.debug(msg)
+            EventLogger.new_event(msg=msg)
+            if out_queue:
+                out_queue.put({"msg": "done indexing {} activities.".format(count)})
+        finally:
+            user.indexing(False)
+            if out_queue:
+                out_queue.put(StopIteration)
+
+    @classmethod
+    def import_by_id(cls, user, activity_ids):
+        fetch = user.client().get_activity
+        pool = Pool(CONCURRENCY)
+        strava_activities = pool.imap_unordered(fetch, activity_ids)
+        A = map(cls.strava2doc, strava_activities)
+        cls.db.insert_many(A)
 
     @classmethod
     def query(cls, user=None,
               activity_ids=None,
               after=None, before=None,
-              limit=0):
+              limit=0,
+              out_fields=None):
 
         query = {}
         if user:
@@ -1132,17 +859,22 @@ class Index(object):
 
         tsfltr = {}
         if before:
-            before = cls.to_datetime(before)
+            before = Utility.to_datetime(before)
             tsfltr["$lt"] = before
         if after:
-            after = cls.to_datetime(after)
+            after = Utility.to_datetime(after)
             tsfltr["$gte"] = after
         if tsfltr:
             query["ts_local"] = tsfltr
 
         log.debug(query)
         try:
-            cursor = cls.db.index.find(query).limit(limit)
+            if out_fields:
+                cursor = cls.db.index.find(query, out_fields)
+            else:
+                cursor = cls.db.index.find(query)
+            cursor = cursor.limit(limit).sort("ts_UTC", pymongo.DESCENDING)
+
         except Exception as e:
             log.error(
                 "error accessing mongodb indexes collection:\n{}"
@@ -1436,6 +1168,8 @@ class EventLogger(object):
 
 
 class Webhooks(object):
+    name = "subscription"
+
     client = stravalib.Client()
     credentials = {
         "client_id": app.config["STRAVA_CLIENT_ID"],
@@ -1496,15 +1230,14 @@ class Webhooks(object):
 
         update = cls.client.handle_subscription_update(update_raw)
         user_id = update.owner_id
-        user = Users.get(user_id, timeout=10)
+        user = Users.get(user_id, timeout=10) 
         if user:
-            index = mongodb.indexes.find_one({"_id": user_id})
+            user_index_exists = mongodb.index.find({"_id": user_id}).limit(1).count()
         else:
             index = None
 
         if not (user or index):
             return
-
         record = {
             "dt": datetime.utcnow(),
             "subscription_id": update.subscription_id,
@@ -1512,10 +1245,9 @@ class Webhooks(object):
             "object_id": update.object_id,
             "object_type": update.object_type,
             "aspect_type": update.aspect_type,
-            # "event_time": str(update.event_time),
             "updates": update_raw.get("updates"),
             "valid_user": bool(user),
-            "valid_index": bool(index)
+            "valid_index": bool(user_index_exists)
         }
 
         result = mongodb.updates.insert_one(record)
@@ -1528,27 +1260,25 @@ class Webhooks(object):
         if update.get("object_type") == "athlete":
              return
 
-        # Process activity update
-        # index might be cached, or in the db
-        archived_activity_index = mongodb.indexes.find_one(
-            {"_id": user_id}
-        )
-        if not archived_activity_index:
+        
+        if not user_index_exists:
             return
 
-        # # an activity index associated with this update
-        # #  was found in our database
-        # updated = False
-        # ids = [int(update_raw["object_id"])]
-        # user.activity_index = archived_activity_index
+        #  If we got here then we know there are index entries for this user
+        if update.aspect_type == "create":
+            # fetch activity and add it to the index
+            gevent.spawn(Index.import_by_id, user, [update.object_id])
 
-        # gevent.spawn(user.update_index,
-        #              activity_ids=ids,
-        #              reset_ttl=False)
-        # gevent.sleep(0)
-        # updated = True
+        elif update.aspect_type == "update":
+            # update the activity if it exists, or create it
+            result = Index.update(update.object_id, update.updates)
+            log.debug(result)
 
-        return
+        elif update.aspect_type == "delete":
+            # delete the activity from the index
+            result = Index.delete(update.object_id)
+            log.debug(result)
+
 
     @staticmethod
     def iter_updates(limit=0):
@@ -1635,6 +1365,21 @@ class Utility():
         to_zone = dateutil.tz.gettz(timezone)
         utc = dt.replace(tzinfo=from_zone)
         return utc.astimezone(to_zone)
+
+    @staticmethod
+    def to_datetime(obj):
+        if not obj:
+            return
+        if isinstance(obj, datetime):
+            return obj
+        try:
+            dt = dateutil.parser.parse(obj)
+        except ValueError:
+            return
+        else:
+            return dt
+
+
 
 collections = mongodb.collection_names()
 
