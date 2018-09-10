@@ -737,7 +737,8 @@ def public_directory():
 @admin_required
 def users():
     fields = ["id", "dt_last_active", "firstname", "lastname", "profile",
-              "app_activity_count", "city", "state", "country", "email"]
+              "app_activity_count", "city", "state", "country", "email",
+              "dt_indexed"]
     info = Users.dump(fields)
     return render_template("admin.html", data=info)
 
