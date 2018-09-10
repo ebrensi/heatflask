@@ -11,7 +11,6 @@ import itertools
 
 from redis import Redis
 
-import pandas as pd
 import gevent
 from gevent.queue import Queue
 from gevent.pool import Pool
@@ -69,6 +68,8 @@ class Users(UserMixin, db_sql.Model):
     email = Column(String())
 
     dt_last_active = Column(pg.TIMESTAMP)
+    dt_indexed = Column(pg.TIMESTAMP)
+
     app_activity_count = Column(Integer, default=0)
     share_profile = Column(Boolean, default=False)
 
@@ -382,9 +383,6 @@ class Users(UserMixin, db_sql.Model):
         gevent.sleep(0)
         return queue
 
-    def update_index(self, activity_ids=[], reset_ttl=True):
-        pass
-
     def query_activities(self, 
                          activity_ids=None,
                          limit=None,
@@ -438,44 +436,18 @@ class Users(UserMixin, db_sql.Model):
             out_queue = Queue()
             put_stopIteration = True
 
-        index_df = None
         if (summaries or limit or only_ids or after or before):
-            activity_index = self.get_index()
-
-            if activity_index:
-                index_df = activity_index["index_df"]
-                elapsed = (datetime.utcnow() -
-                           activity_index["dt_last_indexed"]).total_seconds()
-
-                # update the index if we need to
-                if (not OFFLINE) and (elapsed > INDEX_UPDATE_TIMEOUT):
-                    index_df = self.update_index(index_df)
+            index_exists = Index.user_index_exists(self)
+            if index_exists:
 
                 if (not activity_ids):
-                    # only consider activities with a summary polyline
-
-                    ids_df = (
-                        index_df[index_df.summary_polyline.notnull()]
-                        .set_index("ts_local")
-                        .sort_index(ascending=False)
-                        .id
+                    activity_ids = Index.query(
+                        user=self, 
+                        limit=limit, 
+                        after=after, before=before,
+                        ids_only=True
                     )
-
-                    if limit:
-                        ids_df = ids_df.head(int(limit))
-
-                    elif before or after:
-                        #  get ids of activities in date-range
-                        if after:
-                            ids_df = ids_df[:after]
-                        if before:
-                            ids_df = ids_df[before:]
-
-                    activity_ids = ids_df.tolist()
-
-                index_df = index_df.astype(
-                    Users.index_df_out_dtypes).set_index("id")
-
+                # TODO retrieve 
                 if only_ids:
                     out_queue.put(activity_ids)
                     out_queue.put(StopIteration)
@@ -640,6 +612,7 @@ class Users(UserMixin, db_sql.Model):
 class Index(object):
     name = "index"
     db = mongodb.get_collection(name)
+    USER_INDEX_TIMEOUT = app.config["STORE_INDEX_TIMEOUT"]
 
     @classmethod
     # Initialize the database
@@ -650,13 +623,28 @@ class Index(object):
         # create new index collection
         mongodb.create_collection(cls.name)
 
-        # timeout = app.config["STORE_INDEX_TIMEOUT"]
-
         cls.db.create_index("user")
         cls.db.create_index(("ts_UTC", mongodb.DESCENDING))
         cls.db.create_index(("start_latlng", pymongo.GEO2D))
 
         log.info("initialized Index collection")
+
+    @classmethod
+    def triage_user_indexes(cls, timeout=None):
+        if not timeout:
+            timeout = cls.USER_INDEX_TIMEOUT
+
+        result = {}
+
+        for user_id in cls.db.distinct("user_id"):
+            user = Users.get(user_id)
+            index_age = (datetime.utcnow() - user.dt_indexed).seconds
+            
+            if index_age > timeout:
+                result[user_id] = cls.db.delete_many({"user_id": user_id})
+                log.debug("deleted index entries for {}".format(user))
+
+        return result
 
     @classmethod
     def strava2doc(cls, a):
@@ -837,18 +825,24 @@ class Index(object):
 
     @classmethod
     def import_by_id(cls, user, activity_ids):
-        fetch = user.client().get_activity
+        client = user.client()
+        
+        def fetch(id):
+            A = client.get_activity(id)
+            a = cls.strava2doc(A)
+            log.debug(a)
+            return pymongo.ReplaceOne({"_id": A.id}, a, upsert=True)
+
         pool = Pool(CONCURRENCY)
-        strava_activities = pool.imap_unordered(fetch, activity_ids)
-        A = map(cls.strava2doc, strava_activities)
-        cls.db.insert_many(A)
+        mongo_requests = list(pool.imap_unordered(fetch, activity_ids))
+        return cls.db.bulk_write(mongo_requests)
 
     @classmethod
     def query(cls, user=None,
               activity_ids=None,
               after=None, before=None,
               limit=0,
-              out_fields=None):
+              ids_only=False):
 
         query = {}
         if user:
@@ -867,6 +861,9 @@ class Index(object):
         if tsfltr:
             query["ts_local"] = tsfltr
 
+        if ids_only:
+            out_fields = {"_id": True}
+
         log.debug(query)
         try:
             if out_fields:
@@ -874,13 +871,15 @@ class Index(object):
             else:
                 cursor = cls.db.index.find(query)
             cursor = cursor.limit(limit).sort("ts_UTC", pymongo.DESCENDING)
-
         except Exception as e:
             log.error(
                 "error accessing mongodb indexes collection:\n{}"
                 .format(e)
             )
             return []
+
+        if ids_only:
+                return (a["_id"] for a in cursor)
 
         return cursor
 
@@ -1224,19 +1223,19 @@ class Webhooks(object):
     def list(cls):
         subs = cls.client.list_subscriptions(**cls.credentials)
         return [sub.id for sub in subs]
+    @classmethod
+    def user_index_exists(cls, user):
+        return cls.db.find({"_id": user.id}).limit(1).count()
 
     @classmethod
     def handle_update_callback(cls, update_raw):
 
         update = cls.client.handle_subscription_update(update_raw)
         user_id = update.owner_id
-        user = Users.get(user_id, timeout=10) 
-        if user:
-            user_index_exists = mongodb.index.find({"_id": user_id}).limit(1).count()
-        else:
-            index = None
+        user = Users.get(user_id, timeout=10)
+        index_exists = cls.user_index_exists(user)
 
-        if not (user or index):
+        if not (user or index_exists):
             return
         record = {
             "dt": datetime.utcnow(),
@@ -1247,7 +1246,7 @@ class Webhooks(object):
             "aspect_type": update.aspect_type,
             "updates": update_raw.get("updates"),
             "valid_user": bool(user),
-            "valid_index": bool(user_index_exists)
+            "valid_index": bool(index_exists)
         }
 
         result = mongodb.updates.insert_one(record)
@@ -1261,7 +1260,7 @@ class Webhooks(object):
              return
 
         
-        if not user_index_exists:
+        if not index_exists:
             return
 
         #  If we got here then we know there are index entries for this user
