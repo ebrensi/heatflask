@@ -684,7 +684,7 @@ function renderLayers() {
     let url = QUERY_URL_JSON + "?" + jQuery.param(activityQuery);
     httpGetAsync(url, function(data) {
         let queryResult = JSON.parse(data)[0];
-        console.log(queryResult);
+        // console.log(queryResult);
 
         // TODO: Handle the case where the index is currently being built
         //   by another client
