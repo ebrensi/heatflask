@@ -4,6 +4,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import inspect
 from datetime import datetime
 import dateutil
+import dateutil.parser
 import stravalib
 import polyline
 import pymongo
@@ -413,18 +414,17 @@ class Users(UserMixin, db_sql.Model):
             except AssertionError:
                 return [{"error": "Invalid Dates"}]
 
-
         def import_streams(client, queue, activity):
-            # log.debug("importing {}".format(activity["id"]))
+            # log.debug("importing {}".format(activity["_id"]))
 
             stream_data = Activities.import_streams(
-                client, activity["id"], STREAMS_TO_CACHE, cache_timeout)
+                client, activity["_id"], STREAMS_TO_CACHE, cache_timeout)
 
             data = {s: stream_data[s] for s in STREAMS_OUT + ["error"]
                     if s in stream_data}
             data.update(activity)
             queue.put(data)
-            # log.debug("importing {}...queued!".format(activity["id"]))
+            # log.debug("importing {}...queued!".format(activity["_id"]))
             gevent.sleep(0)
 
         pool = pool or Pool(CONCURRENCY)
@@ -436,31 +436,24 @@ class Users(UserMixin, db_sql.Model):
             out_queue = Queue()
             put_stopIteration = True
 
+
+        index_exists = Index.user_index_exists(self)
+
         if (summaries or limit or only_ids or after or before):
-            index_exists = Index.user_index_exists(self)
+
             if index_exists:
 
-                if (not activity_ids):
-                    activity_ids = Index.query(
-                        user=self, 
-                        limit=limit, 
-                        after=after, before=before,
-                        ids_only=True
-                    )
-                # TODO retrieve 
+                gen = Index.query(
+                            user=self,
+                            limit=limit or 0,
+                            after=after, before=before,
+                            ids_only=only_ids
+                         )
+
                 if only_ids:
-                    out_queue.put(activity_ids)
+                    out_queue.put(list(gen))
                     out_queue.put(StopIteration)
                     return out_queue
-
-                def summary_gen():
-                    for aid in activity_ids:
-                        A = {"id": int(aid)}
-                        if summaries:
-                            A.update(index_df.loc[int(aid)].to_dict())
-                        # log.debug(A)
-                        yield A
-                gen = summary_gen()
 
             elif build_index:
                 # There is no activity index and we are to build one
@@ -482,7 +475,7 @@ class Users(UserMixin, db_sql.Model):
                 #     "{}: getting summaries from Strava without build"
                 #     .format(self))
                 gen = (
-                    Activities.strava2dict(a)
+                    Index.strava2doc(a)
                     for a in self.client().get_activities(
                         limit=limit,
                         before=before,
@@ -493,18 +486,12 @@ class Users(UserMixin, db_sql.Model):
             if "stop_rendering" in A:
                 pool.join()
 
-            if "id" not in A:
+            if "_id" not in A:
                 out_queue.put(A)
                 continue
 
             if summaries:
-                if ("bounds" not in A):
-                    A["bounds"] = Activities.bounds(A["summary_polyline"])
-
                 A["ts_local"] = str(A["ts_local"])
-
-                # # TODO: do this on the client
-                # A.update(Activities.atype_properties(A["type"]))
 
             if owner_id:
                 A.update({"owner": self.id, "profile": self.profile})
@@ -513,7 +500,7 @@ class Users(UserMixin, db_sql.Model):
                 out_queue.put(A)
 
             else:
-                stream_data = Activities.get(A["id"])
+                stream_data = Activities.get(A["_id"])
 
                 if stream_data:
                     A.update(stream_data)
@@ -571,11 +558,10 @@ class Users(UserMixin, db_sql.Model):
 
                 if owner:
                     # the owner is a Heatflask user
-                    A = Activities.strava2dict(obj)
+                    A = Index.strava2doc(obj)
                     A["ts_local"] = str(A["ts_local"])
                     A["owner"] = owner.id
                     A["profile"] = owner.profile
-                    A["bounds"] = Activities.bounds(A["summary_polyline"])
                     
                     stream_data = Activities.get(obj.id)
                     if stream_data:
@@ -587,12 +573,11 @@ class Users(UserMixin, db_sql.Model):
                             owner.client(), out_queue, A)
             else:
                 # we don't care about activity streams
-                A = Activities.strava2dict(obj)
+                A = Index.strava2doc(obj)
 
                 A["ts_local"] = str(A["ts_local"])
                 A["profile"] = "/avatar/athlete/medium.png"
                 A["owner"] = obj.athlete.id
-                A["bounds"] = Activities.bounds(A["summary_polyline"])
             
                 out_queue.put(A)
 
@@ -648,7 +633,7 @@ class Index(object):
 
     @classmethod
     def strava2doc(cls, a):
-        # polyline = a.map.summary_polyline
+        polyline = a.map.summary_polyline
         d = {
             "_id": a.id,
             "user_id": a.athlete.id,
@@ -661,7 +646,7 @@ class Index(object):
             "elapsed_time": int(a.elapsed_time.total_seconds()),
             "average_speed": float(a.average_speed),
             "start_latlng": a.start_latlng[0:2] if a.start_latlng else None,
-            # "bounds": cls.bounds(polyline) if polyline else None
+            "bounds": Activities.bounds(polyline) if polyline else None
         }
         return d
 
@@ -697,12 +682,16 @@ class Index(object):
     @classmethod
     def delete_user_entries(cls, user):
         try:
-            return cls.db.index.delete_many({"user_id": user.id})
+            return cls.db.delete_many({"user_id": user.id})
         except Exception as e:
             log.error(
                 "error deleting index entries for user {} from MongoDB:\n{}"
                 .format(user, e)
             )
+
+    @classmethod
+    def user_index_exists(cls, user):
+        return cls.db.find({"user_id": user.id}).limit(1).count()
 
     @classmethod
     def import_user(cls, user, out_queue=None,
@@ -845,8 +834,11 @@ class Index(object):
               ids_only=False):
 
         query = {}
+        out_fields = None
+
         if user:
             query["user_id"] = user.id
+            out_fields = {"user_id": False}
 
         if activity_ids:
             query["_id"] = {"$in": activity_ids}
@@ -1097,16 +1089,16 @@ class Activities(object):
 
     @classmethod
     def import_and_queue_streams(cls, client, queue, activity):
-        # log.debug("importing {}".format(activity["id"]))
+        # log.debug("importing {}".format(activity["_id"]))
 
         stream_data = cls.import_streams(
-            client, activity["id"], STREAMS_TO_CACHE)
+            client, activity["_id"], STREAMS_TO_CACHE)
 
         data = {s: stream_data[s] for s in STREAMS_OUT + ["error"]
                 if s in stream_data}
         data.update(activity)
         queue.put(data)
-        # log.debug("importing {}...queued!".format(activity["id"]))
+        # log.debug("importing {}...queued!".format(activity["_id"]))
         gevent.sleep(0)
 
 
@@ -1223,9 +1215,6 @@ class Webhooks(object):
     def list(cls):
         subs = cls.client.list_subscriptions(**cls.credentials)
         return [sub.id for sub in subs]
-    @classmethod
-    def user_index_exists(cls, user):
-        return cls.db.find({"_id": user.id}).limit(1).count()
 
     @classmethod
     def handle_update_callback(cls, update_raw):
@@ -1233,7 +1222,7 @@ class Webhooks(object):
         update = cls.client.handle_subscription_update(update_raw)
         user_id = update.owner_id
         user = Users.get(user_id, timeout=10)
-        index_exists = cls.user_index_exists(user)
+        index_exists = Index.user_index_exists(user)
 
         if not (user or index_exists):
             return

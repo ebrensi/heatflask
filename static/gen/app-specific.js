@@ -64,7 +64,7 @@ msgBox=L.control.window(map,{position:'top',content:"<div class='data_message'><
 if(type=="grouped_with"){let group=$("#activity_ids").val();readStream(GROUP_ACTIVITY_SSE+group,null,updateLayers);return;}
 let inClient=new Set(Object.keys(appState.items).map(Number));if(idString){let streamQuery={},activityIds=idString.split(/\D/).map(Number);let activityIdSet=new Set(activityIds);for(let item of inClient){if(!activityIdSet.has(item))delete appState.items[item];}
 activityIds=activityIds.filter(id=>!inClient.has(id));streamQuery[USER_ID]={activity_ids:activityIds,summaries:true,streams:true};httpPostAsync(POST_QUERY_URL,streamQuery,function(data){let key=JSON.parse(data),streamURL=`${KEY_QUERY_URL}${key}`;readStream(streamURL,activityIds.length,updateLayers);});return;}
-activityQuery={limit:type=="activities"?Math.max(1,+num):undefined,after:date1?date1:undefined,before:date2&&date2!="now"?date2:undefined,only_ids:true};let url=QUERY_URL_JSON+"?"+jQuery.param(activityQuery);httpGetAsync(url,function(data){let queryResult=JSON.parse(data)[0];if(queryResult=="build"){activityQuery["only_ids"]=false;activityQuery["summaries"]=true;activityQuery["streams"]=true;let streamURL=QUERY_URL_SSE+"?"+jQuery.param(activityQuery);readStream(streamURL,null,updateLayers);return;}
+activityQuery={limit:type=="activities"?Math.max(1,+num):undefined,after:date1?date1:undefined,before:date2&&date2!="now"?date2:undefined,only_ids:true};let url=QUERY_URL_JSON+"?"+jQuery.param(activityQuery);httpGetAsync(url,function(data){let queryResult=JSON.parse(data)[0];console.log(queryResult);if(queryResult=="build"){activityQuery["only_ids"]=false;activityQuery["summaries"]=true;activityQuery["streams"]=true;let streamURL=QUERY_URL_SSE+"?"+jQuery.param(activityQuery);readStream(streamURL,null,updateLayers);return;}
 let resultSet=new Set(queryResult);for(let item of inClient){if(!resultSet.has(item))delete appState.items[item];}
 activityIds=queryResult.filter(id=>!inClient.has(id));if(!activityIds.length){updateLayers("Done. ");appState['after']=$("#date1").val();appState["before"]=$("#date2").val();updateState();if(msgBox){msgBox.close();msgBox=null;}
 return;}
@@ -80,7 +80,8 @@ let A=JSON.parse(event.data);if(A.error){let msg=`<font color='red'>${A.error}</
 let hasBounds=A.bounds,bounds=hasBounds?L.latLngBounds(A.bounds.SW,A.bounds.NE):L.latLngBounds();if(A.polyline){let latLngArray=L.PolylineUtil.decode(A.polyline);if(A.time){let len=latLngArray.length,latLngTime=new Float32Array(3*len),timeArray=streamDecode(A.time);for(let i=0,ll;i<len;i++){ll=latLngArray[i];if(!hasBounds){bounds.extend(ll);}
 idx=i*3;latLngTime[idx]=ll[0];latLngTime[idx+1]=ll[1];latLngTime[idx+2]=timeArray[i];}
 A.latLngTime=latLngTime;}}
-A.startTime=moment(A.ts_UTC||A.ts_local).valueOf();A.bounds=bounds;delete A.summary_polyline;delete A.polyline;delete A.time;if(!(A.id in appState.items)){let typeData=Object.assign(A,ATYPE_MAP[A.type.toLowerCase()]);if(!typeData){typeData=ATYPE_MAP["workout"];}
+if(A._id){A.id=A._id;}
+A.startTime=moment(A.ts_UTC||A.ts_local).valueOf();A.bounds=bounds;delete A.summary_polyline;delete A.polyline;delete A.time;delete A._id;if(!(A.id in appState.items)){let typeData=Object.assign(A,ATYPE_MAP[A.type.toLowerCase()]);if(!typeData){typeData=ATYPE_MAP["workout"];}
 appState.items[A.id]=typeData;}
 count++;if(numActivities){progress_bars.val(count/numActivities);$(".data_message").html("imported "+count+"/"+numActivities);}else{$(".data_message").html("imported "+count+"/?");}};}
 function updateState(){if(ONLOAD_PARAMS.key){return;}
