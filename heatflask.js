@@ -684,6 +684,7 @@ function renderLayers() {
     let url = QUERY_URL_JSON + "?" + jQuery.param(activityQuery);
     httpGetAsync(url, function(data) {
         let queryResult = JSON.parse(data)[0];
+        console.log(queryResult);
 
         // TODO: Handle the case where the index is currently being built
         //   by another client
@@ -885,6 +886,9 @@ function readStream(streamURL, numActivities=null, callback=null) {
             }
         }
 
+        if (A._id) {
+            A.id = A._id
+        }
 
 
         A.startTime = moment(A.ts_UTC || A.ts_local ).valueOf()
@@ -893,6 +897,7 @@ function readStream(streamURL, numActivities=null, callback=null) {
         delete A.summary_polyline;
         delete A.polyline;
         delete A.time;
+        delete A._id;
 
         // only add A to appState.items if it isn't already there
         if (!(A.id in appState.items)) {
