@@ -492,6 +492,7 @@ class Users(UserMixin, db_sql.Model):
 
             if summaries:
                 A["ts_local"] = str(A["ts_local"])
+                A["ts_UTC"] = str(A["ts_UTC"])
 
             if owner_id:
                 A.update({"owner": self.id, "profile": self.profile})
@@ -560,6 +561,7 @@ class Users(UserMixin, db_sql.Model):
                     # the owner is a Heatflask user
                     A = Index.strava2doc(obj)
                     A["ts_local"] = str(A["ts_local"])
+                    A["ts_UTC"] = str(A["ts_UTC"])
                     A["owner"] = owner.id
                     A["profile"] = owner.profile
                     
@@ -576,6 +578,7 @@ class Users(UserMixin, db_sql.Model):
                 A = Index.strava2doc(obj)
 
                 A["ts_local"] = str(A["ts_local"])
+                A["ts_UTC"] = str(A["ts_UTC"])
                 A["profile"] = "/avatar/athlete/medium.png"
                 A["owner"] = obj.athlete.id
             
