@@ -505,8 +505,6 @@ class Users(UserMixin, db_sql.Model):
 
                 if stream_data:
                     A.update(stream_data)
-                    if ("bounds" not in A):
-                        A["bounds"] = Activities.bounds(A["polyline"])
                     out_queue.put(A)
 
                 elif not OFFLINE:

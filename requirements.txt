@@ -1,3 +1,5 @@
+wsaccel
+ujson
 traitlets==4.3.2
 stravalib==0.9.4
 simplegeneric==0.8.1
@@ -19,6 +21,7 @@ httplib2==0.10.3
 gunicorn==19.7.1
 gevent==1.2.2
 futures==3.1.1
+flask-sockets
 flask-sslify==0.1.5
 flask-sqlalchemy==2.3.2
 flask-login==0.4.0
@@ -31,4 +34,4 @@ blosc==1.5.1
 billiard==3.5.0.3
 base36==0.1.1
 backports.shutil-get-terminal-size==1.0.0
-anyjson==0.3.3
+
