@@ -25,6 +25,7 @@ from flask_login import current_user, login_user, logout_user, login_required
 import flask_assets
 from flask_analytics import Analytics
 from flask_sslify import SSLify
+from flask_sockets import Sockets
 from signal import signal, SIGPIPE, SIG_DFL
 
 app = Flask(__name__)
@@ -162,6 +163,10 @@ flask_compress.Compress(app)
 login_manager = flask_login.LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'splash'
+
+
+# Websockets
+sockets = Sockets(app)
 
 
 @login_manager.user_loader
@@ -896,4 +901,7 @@ signal(SIGPIPE, SIG_DFL)
 
 # python heatmapp.py works but you really should use `flask run`
 if __name__ == '__main__':
-    app.run()
+    from gevent import pywsgi
+    from geventwebsocket.handler import WebSocketHandler
+    server = pywsgi.WSGIServer(('', 5000), app, handler_class=WebSocketHandler)
+    server.serve_forever()
