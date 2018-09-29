@@ -386,6 +386,7 @@ class Users(UserMixin, db_sql.Model):
 
     def query_activities(self, 
                          activity_ids=None,
+                         exclude_ids=[],
                          limit=None,
                          after=None, before=None,
                          only_ids=False,
@@ -447,6 +448,7 @@ class Users(UserMixin, db_sql.Model):
                             user=self,
                             limit=limit or 0,
                             after=after, before=before,
+                            exclude_ids=exclude_ids,
                             ids_only=only_ids
                          )
 
@@ -830,10 +832,13 @@ class Index(object):
     @classmethod
     def query(cls, user=None,
               activity_ids=None,
+              exclude_ids=None,
               after=None, before=None,
               limit=0,
               ids_only=False):
 
+        activity_ids = Set(int(id) for id in activity_ids) if activity_ids else None
+        exclude_ids = Set(int(id) for id in exclude_ids) if exclude_ids else None
         query = {}
         out_fields = None
 
@@ -843,6 +848,11 @@ class Index(object):
 
         if activity_ids:
             query["_id"] = {"$in": activity_ids}
+
+        if exclude_ids:
+            if "_id" not in query:
+                query["_id"] = {}
+            query["_id"]["$nin"] = exclude_ids
 
         tsfltr = {}
         if before:
