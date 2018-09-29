@@ -541,18 +541,68 @@ def update_share_status(username):
     return jsonify(user=user.id, share=user.share_profile)
 
 
-def toObj(obj):
+def toObj(string):
     try:
-        return json.loads(obj)
+        return json.loads(string)
     except ValueError:
+        return string
+
+# We send and receive json objects (dictionaries) encoded as strings
+def sendObj(ws, obj):
+    if not ws:
+        return
+
+    try:
+        s = json.dumps(obj)
+    except Exception as e:
+        log.error(e)
+        return
+
+    try:
+        ws.send(s)
+    except Exception as e:
+        log.error(e)
+        try:
+            ws.close()
+        except:
+            pass
+        return
+
+    return True
+
+def receiveObj(ws):
+    try:
+        s = ws.receive()
+        obj = json.loads(s)
+    except TypeError:
+        return
+    except Exception as e:
+        log.exception(e)
+        return
+    else:
         return obj
+
+def socket_name(ws):
+    env = ws.environ
+    # return env
+
+    return "{REMOTE_ADDR}:{REMOTE_PORT}".format(**env)
 
 
 @sockets.route('/data_socket')
 def data_socket(ws):
+    name = socket_name(ws)
+    log.debug("socket {} OPEN".format(name))
     while not ws.closed:
-        message = ws.receive()
-        ws.send(message)
+        msg = receiveObj(ws)
+        if msg:
+            log.debug("{} says {}".format(name,msg))
+            if "query" in msg:
+                for a in Activities.query(**msg["query"]):
+                    sendObj(ws, a)
+    log.debug("socket {} CLOSED".format(name))
+
+
 
 
 @app.route('/<username>/query_activities/<out_type>')
