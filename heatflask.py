@@ -168,7 +168,6 @@ login_manager.login_view = 'splash'
 # Websockets
 sockets = Sockets(app)
 
-
 @login_manager.user_loader
 def load_user(user_id):
     user = Users.get(user_id)
@@ -547,6 +546,13 @@ def toObj(obj):
         return json.loads(obj)
     except ValueError:
         return obj
+
+
+@sockets.route('/data_socket')
+def data_socket(ws):
+    while not ws.closed:
+        message = ws.receive()
+        ws.send(message)
 
 
 @app.route('/<username>/query_activities/<out_type>')
