@@ -1,5 +1,6 @@
 const SPEED_SCALE = 5.0,
-      SEP_SCALE = {m: 0.14, b: 15.0};
+      SEP_SCALE = {m: 0.14, b: 15.0},
+      WEBSOCKET_URL = "ws://"+window.location.host+"/data_socket";
 
 // Set up Map and base layers
 let map_providers = ONLOAD_PARAMS.map_providers,
@@ -600,159 +601,6 @@ function initializeDotLayer() {
 
 
 /* Rendering */
-function renderLayers() {
-    const date1 = $("#date1").val(),
-          date2 = $("#date2").val(),
-          type = $("#select_type").val(),
-          num = $("#select_num").val(),
-          idString = (type == "activity_ids")? $("#activity_ids").val():null;
-
-    if (DotLayer) {
-        DotLayer._mapMoving = true;
-    }
-
-    // create a status box
-    msgBox = L.control.window(map,{
-            position: 'top',
-            content:"<div class='data_message'></div><div><progress class='progbar' id='box'></progress></div>",
-            visible:true
-    });
-
-    $(".data_message").html("Retrieving activity data...");
-
-    // Handle explicitly given query-key
-    if (ONLOAD_PARAMS.key){
-        streamURL = `${KEY_QUERY_URL}${ONLOAD_PARAMS.key}`;
-        readStream(streamURL, null, updateLayers);
-        return;
-    }
-
-    // Handle group-activity case
-    if (type=="grouped_with") {
-        // window.open(GROUP_ACTIVITY_SSE, target="_blank");
-        let group = $("#activity_ids").val();
-        readStream(GROUP_ACTIVITY_SSE + group, null, updateLayers);
-        return;
-    }
-
-
-    // We will load in new items that aren't already in appState.items,
-    //  and delete whatever is left.
-    let inClient = new Set(Object.keys(appState.items).map(Number));
-
-    // Handle given activity_ids case
-    if (idString) {
-        let streamQuery = {},
-            activityIds = idString.split(/\D/).map(Number);
-
-        let activityIdSet = new Set(activityIds);
-
-        // delete all items that aren't in activityIds from appState.items
-        for (let item of inClient) {
-            if (!activityIdSet.has(item))
-            delete appState.items[item];
-        }
-
-        // filter activityIds to get only ones we don't already have
-        activityIds = activityIds.filter((id) => !inClient.has(id));
-
-        streamQuery[USER_ID] = {
-            activity_ids: activityIds,
-            summaries: true,
-            streams: true
-        };
-
-        httpPostAsync(POST_QUERY_URL, streamQuery, function(data) {
-            // console.log(data);
-            let key = JSON.parse(data),
-                streamURL = `${KEY_QUERY_URL}${key}`;
-            // window.open(streamURL, target="_blank");
-            readStream(streamURL, activityIds.length, updateLayers);
-        });
-
-        return;
-    }
-
-    // First we request only ids of activities for a given query
-    activityQuery = {
-        limit: (type == "activities")? Math.max(1, +num) : undefined,
-        after: date1? date1 : undefined,
-        before: (date2 && date2 != "now")? date2 : undefined,
-        only_ids: true
-    }
-
-    let url = QUERY_URL_JSON + "?" + jQuery.param(activityQuery);
-    httpGetAsync(url, function(data) {
-        let queryResult = JSON.parse(data)[0];
-        // console.log(queryResult);
-
-        // TODO: Handle the case where the index is currently being built
-        //   by another client
-
-        // handle the case where there is no index for this user
-        if (queryResult == "build") {
-            activityQuery["only_ids"] = false;
-            activityQuery["summaries"] = true;
-            activityQuery["streams"] = true;
-
-            // TODO: handle the unlikely case where there are items already in
-            //  appState.items and the user's index doesn't exist because
-            //  it got deleted.
-
-            let streamURL = QUERY_URL_SSE + "?" + jQuery.param(activityQuery);
-            // window.open(streamURL, target="_blank");
-            readStream(streamURL, null, updateLayers);
-            return;
-        }
-
-
-        let resultSet = new Set(queryResult);
-
-        // delete all items that aren't in queryResult from appState.items
-        for (let item of inClient) {
-            if (!resultSet.has(item))
-            delete appState.items[item];
-        }
-
-        // filter activityIds to get only ones we don't already have
-        activityIds = queryResult.filter((id) => !inClient.has(id));
-
-
-        // If we already have all the activities we wanted then we're done
-        if (!activityIds.length){
-            updateLayers("Done. ");
-
-            appState['after'] = $("#date1").val();
-            appState["before"] = $("#date2").val();
-            updateState();
-
-            if (msgBox) {
-                msgBox.close();
-                msgBox = null;
-            }
-            return;
-        }
-
-        let streamQuery = {};
-        streamQuery[USER_ID] = {
-            activity_ids: activityIds,
-            summaries: true,
-            streams: true
-        };
-
-        httpPostAsync(POST_QUERY_URL, streamQuery, function(data) {
-            // console.log(data);
-            let key = JSON.parse(data),
-                streamURL = `${KEY_QUERY_URL}${key}`;
-
-            // window.open(streamURL, target="_blank");
-            readStream(streamURL, activityIds.length, updateLayers);
-        });
-
-    });
-}
-
-
 function updateLayers(msg) {
     // optional auto-zoom
     if ($("#autozoom:checked").val()){
@@ -783,12 +631,32 @@ function updateLayers(msg) {
 }
 
 
+function renderLayers() {
+    const date1 = $("#date1").val(),
+          date2 = $("#date2").val(),
+          type = $("#select_type").val(),
+          num = $("#select_num").val(),
+          idString = (type == "activity_ids")? $("#activity_ids").val():null,
+          to_exclude = new Set(Object.keys(appState.items).map(Number)),
+          numActivities = null;
 
-function readStream(streamURL, numActivities=null, callback=null) {
+    if (DotLayer) {
+        DotLayer._mapMoving = true;
+    }
+
+    // create a status box
+    msgBox = L.control.window(map,{
+            position: 'top',
+            content:"<div class='data_message'></div><div><progress class='progbar' id='box'></progress></div>",
+            visible:true
+    });
+
+    $(".data_message").html("Retrieving activity data...");
+
     let progress_bars = $('.progbar'),
         rendering = true,
         listening = true,
-        source = new EventSource(streamURL),
+        sock = new WebSocket(WEBSOCKET_URL),
         count = 0;
 
     $(".data_message").html("Retrieving activity data...");
@@ -817,8 +685,6 @@ function readStream(streamURL, numActivities=null, callback=null) {
             }
 
             rendering = false;
-
-            callback && callback(msg);
         }
     }
 
@@ -826,18 +692,46 @@ function readStream(streamURL, numActivities=null, callback=null) {
     function stopListening() {
         if (listening){
             listening = false;
-            source.close();
+            sock.close();
             $('#renderButton').prop('disabled', false);
         }
     }
 
+
+    sock.onopen = function(event) {
+        console.log("socket open: ", event);
+
+        queryObj = {};
+        queryObj[USER_ID] = {
+                limit: (type == "activities")? Math.max(1, +num) : undefined,
+                grouped: (type=="grouped_with")? true : undefined,
+                after: date1? date1 : undefined,
+                before: (date2 && date2 != "now")? date2 : undefined,
+                activity_ids: idString?  (new Set(idString.split(/\D/).map(Number))): undefined,
+                exclude_ids: to_exclude.length?  to_exclude: undefined,
+                streams: true
+        };
+
+        let msg = JSON.stringify({query: queryObj});
+        sock.send(msg);
+
+        setTimeout(function(){ sock.close(); }, 2000);
+    }
+
+    sock.onclose = function(event) {
+        console.log("socket closed: ", event);
+        updateLayers("done");
+    }
+
     // handle one incoming chunk from SSE stream
-    source.onmessage = function(event) {
+    sock.onmessage = function(event) {
         if (event.data == 'done') {
             stopListening();
             doneRendering("Finished.");
             return;
         }
+        
+        console.log(event.data);
 
         let A = JSON.parse(event.data);
 
