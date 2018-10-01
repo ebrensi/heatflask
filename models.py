@@ -439,6 +439,7 @@ class Users(UserMixin, db_sql.Model):
 
 
         index_exists = Index.user_index_exists(self)
+        count = None
 
         if (summaries or limit or only_ids or after or before):
 
@@ -457,13 +458,16 @@ class Users(UserMixin, db_sql.Model):
                     out_queue.put(StopIteration)
                     return out_queue
 
+                count = gen.count()
+
+
             elif build_index:
                 # There is no activity index and we are to build one
                 if only_ids:
                     return ["build"]
 
                 else:
-                    gen = Queue()
+                    gen = gevent.queue.Queue()
                     gevent.spawn(self.build_index,
                                  gen,
                                  limit,
@@ -522,7 +526,7 @@ class Users(UserMixin, db_sql.Model):
             pool.join()
             out_queue.put(StopIteration)
 
-        return out_queue
+        return count, out_queue
 
     #  outputs a stream of activites of other Heatflask users that are
     #   considered by Strava to be part of a group-activity
@@ -874,6 +878,7 @@ class Index(object):
             else:
                 cursor = cls.db.index.find(query)
             cursor = cursor.limit(limit).sort("ts_UTC", pymongo.DESCENDING)
+
         except Exception as e:
             log.error(
                 "error accessing mongodb indexes collection:\n{}"
@@ -1097,15 +1102,28 @@ class Activities(object):
 
     @classmethod
     def query(cls, queryObj):
-        Q = Queue()
+        total_count = 0
+        pool = gevent.pool.Pool(app.config.get("CONCURRENCY"))
+        queue = gevent.queue.Queue()
+
         for user_id in queryObj:
             user = Users.get(user_id)
             if not user:
                 continue
 
             query = queryObj[user_id]
-            user.query_activities(out_queue=Q, **query)
-        return Q
+            count, dummy = user.query_activities(out_queue=queue, pool=pool, **query)
+            total_count += count
+
+        def close_when_done():
+            pool.join()
+            queue.put(None)
+            queue.put(StopIteration)
+
+        queue.put({"count": total_count})
+        gevent.spawn(close_when_done)
+        gevent.sleep(0)
+        return queue
 
 
 class EventLogger(object):
