@@ -977,23 +977,6 @@ class Activities(object):
 
         return out_list
 
-    @classmethod
-    def strava2dict(cls, a):
-        d = {
-            "id": a.id,
-            "name": a.name,
-            "type": a.type,
-            "ts_UTC": a.start_date,
-            "group": a.athlete_count,
-            "ts_local": a.start_date_local,
-            "total_distance": float(a.distance),
-            "elapsed_time": int(a.elapsed_time.total_seconds()),
-            "average_speed": float(a.average_speed),
-            "start_latlng": a.start_latlng[0:2] if a.start_latlng else None,
-            "bounds": cls.bounds(a.map.summary_polyline) if a.map.summary_polyline else None
-        }
-        return d
-
     @staticmethod
     def cache_key(id):
         return "A:{}".format(id)
@@ -1111,6 +1094,18 @@ class Activities(object):
         queue.put(data)
         # log.debug("importing {}...queued!".format(activity["_id"]))
         gevent.sleep(0)
+
+    @classmethod
+    def query(cls, queryObj):
+        Q = Queue()
+        for user_id in queryObj:
+            user = Users.get(user_id)
+            if not user:
+                continue
+
+            query = queryObj[user_id]
+            user.query_activities(out_queue=Q, **query)
+        return Q
 
 
 class EventLogger(object):
