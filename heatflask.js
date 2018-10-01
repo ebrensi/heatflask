@@ -637,8 +637,7 @@ function renderLayers() {
           type = $("#select_type").val(),
           num = $("#select_num").val(),
           idString = (type == "activity_ids")? $("#activity_ids").val():null,
-          to_exclude = new Set(Object.keys(appState.items).map(Number)),
-          numActivities = null;
+          to_exclude = new Set(Object.keys(appState.items).map(Number));
 
     if (DotLayer) {
         DotLayer._mapMoving = true;
@@ -657,6 +656,7 @@ function renderLayers() {
         rendering = true,
         listening = true,
         sock = new WebSocket(WEBSOCKET_URL),
+        numActivities = null,
         count = 0;
 
     $(".data_message").html("Retrieving activity data...");
@@ -715,25 +715,32 @@ function renderLayers() {
         let msg = JSON.stringify({query: queryObj});
         sock.send(msg);
 
-        setTimeout(function(){ sock.close(); }, 2000);
+        // setTimeout(function(){ sock.close(); }, 2000);
     }
 
     sock.onclose = function(event) {
         console.log("socket closed: ", event);
+        if (listening){
+            listening = false;
+            $('#renderButton').prop('disabled', false);
+        }
+        // doneRendering("Finished.");
         updateLayers("done");
     }
 
     // handle one incoming chunk from SSE stream
     sock.onmessage = function(event) {
-        if (event.data == 'done') {
-            stopListening();
-            doneRendering("Finished.");
-            return;
-        }
-        
-        console.log(event.data);
 
         let A = JSON.parse(event.data);
+
+        console.log(A);
+
+         if (!A) {
+            stopListening();
+            doneRendering("Finished.");
+            sock.close();
+            return;
+        }
 
         if (A.error){
             let msg = `<font color='red'>${A.error}</font><br>`;
@@ -747,6 +754,9 @@ function renderLayers() {
 
         } else if (A.stop_rendering){
             doneRendering("Done rendering.");
+            return;
+        } else if (A.count) {
+            numActivities = A.count;
             return;
         }
 
@@ -795,12 +805,12 @@ function renderLayers() {
 
         // only add A to appState.items if it isn't already there
         if (!(A.id in appState.items)) {
-            let typeData = Object.assign(A, ATYPE_MAP[A.type.toLowerCase()]);
-
-            if (!typeData) {
-                typeData = ATYPE_MAP["workout"];
+            typeData = ATYPE_MAP["workout"];
+            if (A.type) {
+                let typeData = ATYPE_MAP[A.type.toLowerCase()];
             }
-                    appState.items[A.id] = typeData;
+            
+            appState.items[A.id] = Object.assign(A, typeData);
         }
 
         count++;
