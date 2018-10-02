@@ -445,7 +445,7 @@ class Users(UserMixin, db_sql.Model):
 
             if index_exists:
 
-                gen = Index.query(
+                gen, to_delete = Index.query(
                             user=self,
                             limit=limit or 0,
                             after=after, before=before,
@@ -458,8 +458,11 @@ class Users(UserMixin, db_sql.Model):
                     out_queue.put(StopIteration)
                     return out_queue
 
-                count = gen.count()
+                
+                if to_delete:
+                    out_queue.put({"delete": to_delete})
 
+                out_queue.put({"count": gen.count(True)})
 
             elif build_index:
                 # There is no activity index and we are to build one
@@ -526,7 +529,7 @@ class Users(UserMixin, db_sql.Model):
             pool.join()
             out_queue.put(StopIteration)
 
-        return count, out_queue
+        return out_queue
 
     #  outputs a stream of activites of other Heatflask users that are
     #   considered by Strava to be part of a group-activity
@@ -698,7 +701,7 @@ class Index(object):
 
     @classmethod
     def user_index_exists(cls, user):
-        return cls.db.find({"user_id": user.id}).limit(1).count()
+        return cls.db.count({"user_id": user.id}, limit=1)
 
     @classmethod
     def import_user(cls, user, out_queue=None,
@@ -841,8 +844,9 @@ class Index(object):
               limit=0,
               ids_only=False):
 
-        activity_ids = Set(int(id) for id in activity_ids) if activity_ids else None
-        exclude_ids = Set(int(id) for id in exclude_ids) if exclude_ids else None
+        activity_ids = set(int(id) for id in activity_ids) if activity_ids else None
+        exclude_ids = set(int(id) for id in exclude_ids) if exclude_ids else None
+        limit = int(limit)
         query = {}
         out_fields = None
 
@@ -853,26 +857,41 @@ class Index(object):
         if activity_ids:
             query["_id"] = {"$in": activity_ids}
 
+        to_delete = None
         if exclude_ids:
+            try:
+                query_ids = set( int(doc["_id"]) 
+                    for doc in cls.db.index.find(query, {"_id": True}).limit(limit) )
+            except Exception as e: 
+                log.exception(e)
+                return
+            
+            to_delete = list(exclude_ids - query_ids)
+
+
             if "_id" not in query:
                 query["_id"] = {}
-            query["_id"]["$nin"] = exclude_ids
+            query["_id"]["$nin"] = list(exclude_ids)
 
         tsfltr = {}
         if before:
             before = Utility.to_datetime(before)
             tsfltr["$lt"] = before
+
         if after:
             after = Utility.to_datetime(after)
             tsfltr["$gte"] = after
+        
         if tsfltr:
             query["ts_local"] = tsfltr
 
         if ids_only:
             out_fields = {"_id": True}
 
+
         log.debug(query)
-        try:
+
+        try: 
             if out_fields:
                 cursor = cls.db.index.find(query, out_fields)
             else:
@@ -887,9 +906,9 @@ class Index(object):
             return []
 
         if ids_only:
-                return (a["_id"] for a in cursor)
+                return (a["_id"] for a in cursor), to_delete
 
-        return cursor
+        return cursor, to_delete
 
 
 #  Activities class is only a proxy to underlying data structures.
@@ -1102,7 +1121,6 @@ class Activities(object):
 
     @classmethod
     def query(cls, queryObj):
-        total_count = 0
         pool = gevent.pool.Pool(app.config.get("CONCURRENCY"))
         queue = gevent.queue.Queue()
 
@@ -1112,15 +1130,13 @@ class Activities(object):
                 continue
 
             query = queryObj[user_id]
-            count, dummy = user.query_activities(out_queue=queue, pool=pool, **query)
-            total_count += count
+            user.query_activities(out_queue=queue, pool=pool, **query)
 
         def close_when_done():
             pool.join()
             queue.put(None)
             queue.put(StopIteration)
 
-        queue.put({"count": total_count})
         gevent.spawn(close_when_done)
         gevent.sleep(0)
         return queue

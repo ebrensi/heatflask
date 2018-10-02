@@ -637,7 +637,9 @@ function renderLayers() {
           type = $("#select_type").val(),
           num = $("#select_num").val(),
           idString = (type == "activity_ids")? $("#activity_ids").val():null,
-          to_exclude = new Set(Object.keys(appState.items).map(Number));
+          to_exclude = Object.keys(appState.items).map(Number);
+
+    console.log(`exclude ${to_exclude.length}  activities`, to_exclude);
 
     if (DotLayer) {
         DotLayer._mapMoving = true;
@@ -656,7 +658,7 @@ function renderLayers() {
         rendering = true,
         listening = true,
         sock = new WebSocket(WEBSOCKET_URL),
-        numActivities = null,
+        numActivities = 0,
         count = 0;
 
     $(".data_message").html("Retrieving activity data...");
@@ -707,7 +709,7 @@ function renderLayers() {
                 grouped: (type=="grouped_with")? true : undefined,
                 after: date1? date1 : undefined,
                 before: (date2 && date2 != "now")? date2 : undefined,
-                activity_ids: idString?  (new Set(idString.split(/\D/).map(Number))): undefined,
+                activity_ids: idString?  Array.from(new Set(idString.split(/\D/).map(Number))): undefined,
                 exclude_ids: to_exclude.length?  to_exclude: undefined,
                 streams: true
         };
@@ -733,7 +735,7 @@ function renderLayers() {
 
         let A = JSON.parse(event.data);
 
-        console.log(A);
+        // console.log(`count : ${count}`, A);
 
          if (!A) {
             stopListening();
@@ -755,8 +757,18 @@ function renderLayers() {
         } else if (A.stop_rendering){
             doneRendering("Done rendering.");
             return;
-        } else if (A.count) {
-            numActivities = A.count;
+        } else if (A.count){
+            numActivities += A.count;
+            return;
+        } else if (A.delete) {
+            // delete all ids in A.delete
+            for (let id of A.delete) {
+                delete appState.items[id];
+            }
+            return
+        }
+
+        if (!A._id) {
             return;
         }
 
@@ -805,11 +817,14 @@ function renderLayers() {
 
         // only add A to appState.items if it isn't already there
         if (!(A.id in appState.items)) {
-            typeData = ATYPE_MAP["workout"];
-            if (A.type) {
-                let typeData = ATYPE_MAP[A.type.toLowerCase()];
+            if (!A.type) {
+                return;
             }
-            
+
+            let typeData = ATYPE_MAP[A.type.toLowerCase()];
+            if  (!typeData) {
+                typeData = ATYPE_MAP["workout"];
+            }
             appState.items[A.id] = Object.assign(A, typeData);
         }
 
