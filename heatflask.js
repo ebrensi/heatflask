@@ -730,14 +730,16 @@ function renderLayers() {
         updateLayers("done");
     }
 
-    // handle one incoming chunk from SSE stream
+    // handle one incoming chunk from websocket stream
     sock.onmessage = function(event) {
 
         let A = JSON.parse(event.data);
 
         // console.log(`count : ${count}`, A);
+        // debugger;
 
-         if (!A) {
+
+        if (!A) {
             stopListening();
             doneRendering("Finished.");
             sock.close();
@@ -802,11 +804,8 @@ function renderLayers() {
             }
         }
 
-        if (A._id) {
-            A.id = A._id
-        }
-
-
+       
+        A.id = A._id
         A.startTime = moment(A.ts_UTC || A.ts_local ).valueOf()
         A.bounds = bounds;
 

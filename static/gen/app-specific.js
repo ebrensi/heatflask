@@ -74,8 +74,7 @@ if(!A._id){return;}
 let hasBounds=A.bounds,bounds=hasBounds?L.latLngBounds(A.bounds.SW,A.bounds.NE):L.latLngBounds();if(A.polyline){let latLngArray=L.PolylineUtil.decode(A.polyline);if(A.time){let len=latLngArray.length,latLngTime=new Float32Array(3*len),timeArray=streamDecode(A.time);for(let i=0,ll;i<len;i++){ll=latLngArray[i];if(!hasBounds){bounds.extend(ll);}
 idx=i*3;latLngTime[idx]=ll[0];latLngTime[idx+1]=ll[1];latLngTime[idx+2]=timeArray[i];}
 A.latLngTime=latLngTime;}}
-if(A._id){A.id=A._id;}
-A.startTime=moment(A.ts_UTC||A.ts_local).valueOf();A.bounds=bounds;delete A.summary_polyline;delete A.polyline;delete A.time;delete A._id;if(!(A.id in appState.items)){if(!A.type){return;}
+A.id=A._id;A.startTime=moment(A.ts_UTC||A.ts_local).valueOf();A.bounds=bounds;delete A.summary_polyline;delete A.polyline;delete A.time;delete A._id;if(!(A.id in appState.items)){if(!A.type){return;}
 let typeData=ATYPE_MAP[A.type.toLowerCase()];if(!typeData){typeData=ATYPE_MAP["workout"];}
 appState.items[A.id]=Object.assign(A,typeData);}
 count++;if(numActivities){progress_bars.val(count/numActivities);$(".data_message").html("imported "+count+"/"+numActivities);}else{$(".data_message").html("imported "+count+"/?");}};}
