@@ -867,11 +867,16 @@ class Index(object):
                 return
             
             to_delete = list(exclude_ids - query_ids)
+            to_fetch = list(query_ids - exclude_ids)
 
+            query["_id"] = {"$in": to_fetch}
 
-            if "_id" not in query:
-                query["_id"] = {}
-            query["_id"]["$nin"] = list(exclude_ids)
+            # log.debug("query ids: {}\nexclude: {}\nto_fetch: {}\ndelete: {}"
+            #     .format(
+            #         sorted(query_ids), 
+            #         sorted(exclude_ids),
+            #         sorted(to_fetch),
+            #         sorted(to_delete)))
 
         tsfltr = {}
         if before:
@@ -891,7 +896,7 @@ class Index(object):
 
         log.debug(query)
 
-        try: 
+        try:
             if out_fields:
                 cursor = cls.db.index.find(query, out_fields)
             else:
@@ -907,6 +912,9 @@ class Index(object):
 
         if ids_only:
                 return (a["_id"] for a in cursor), to_delete
+
+        # cursor = list(cursor)
+        # log.debug("query returns: {}".format([a["_id"] for a in cursor]))
 
         return cursor, to_delete
 
