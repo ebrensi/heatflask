@@ -854,6 +854,18 @@ class Index(object):
             query["user_id"] = user.id
             out_fields = {"user_id": False}
 
+        tsfltr = {}
+        if before:
+            before = Utility.to_datetime(before)
+            tsfltr["$lt"] = before
+
+        if after:
+            after = Utility.to_datetime(after)
+            tsfltr["$gte"] = after
+        
+        if tsfltr:
+            query["ts_local"] = tsfltr
+
         if activity_ids:
             query["_id"] = {"$in": activity_ids}
 
@@ -878,23 +890,13 @@ class Index(object):
             #         sorted(to_fetch),
             #         sorted(to_delete)))
 
-        tsfltr = {}
-        if before:
-            before = Utility.to_datetime(before)
-            tsfltr["$lt"] = before
+            if ids_only:
+                return (to_fetch, to_delete)
 
-        if after:
-            after = Utility.to_datetime(after)
-            tsfltr["$gte"] = after
-        
-        if tsfltr:
-            query["ts_local"] = tsfltr
+        log.debug(query)
 
         if ids_only:
             out_fields = {"_id": True}
-
-
-        log.debug(query)
 
         try:
             if out_fields:
@@ -911,7 +913,7 @@ class Index(object):
             return []
 
         if ids_only:
-                return (a["_id"] for a in cursor), to_delete
+            return (a["_id"] for a in cursor), to_delete
 
         # cursor = list(cursor)
         # log.debug("query returns: {}".format([a["_id"] for a in cursor]))
@@ -1139,6 +1141,7 @@ class Activities(object):
 
             query = queryObj[user_id]
             user.query_activities(out_queue=queue, pool=pool, **query)
+            gevent.sleep(0)
 
         def close_when_done():
             pool.join()
