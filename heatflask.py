@@ -523,6 +523,45 @@ def activities(username):
                            user=user)
 
 
+@app.route('/<username>/query_activities/<out_type>')
+def query_activities(username, out_type):
+    user = Users.get(username)
+    if user:
+        options = {k: toObj(request.args.get(k))
+                   for k in request.args if toObj(request.args.get(k))}
+        if not options:
+            options = {"limit": 10}
+
+        anon = current_user.is_anonymous
+        if anon or (not current_user.is_admin()):
+            EventLogger.log_request(request,
+                                    cuid="" if anon else current_user.id,
+                                    msg="{} query for {}: {}".format(out_type,
+                                                                     user.id,
+                                                                     options))
+    else:
+        return
+
+    if out_type == "json":
+        return jsonify(list(user.query_activities(**options)))
+
+    else:
+        def go(user, pool, out_queue):
+            options["pool"] = pool
+            options["out_queue"] = out_queue
+            user.query_activities(**options)
+            pool.join()
+            out_queue.put(None)
+            out_queue.put(StopIteration)
+
+        pool = gevent.pool.Pool(app.config.get("CONCURRENCY"))
+        out_queue = gevent.queue.Queue()
+        gevent.spawn(go, user, pool, out_queue)
+        gevent.sleep(0)
+        return Response((sse_out(a) if a else sse_out() for a in out_queue),
+                        mimetype='text/event-stream')
+
+
 @app.route('/<username>/update_info')
 @log_request_event
 @admin_or_self_required
@@ -596,111 +635,14 @@ def data_socket(ws):
     while not ws.closed:
         msg = receiveObj(ws)
         if msg:
-            # log.debug("{} says {}".format(name, msg))
+            log.debug("{} says {}".format(name, msg))
+
             if "query" in msg:
+                sendObj(ws, {"msg": "sending query {}...".format(msg["query"])})
                 for a in Activities.query(msg["query"]):
                     sendObj(ws, a)
 
     log.debug("socket {} CLOSED".format(name))
-
-
-
-
-@app.route('/<username>/query_activities/<out_type>')
-def query_activities(username, out_type):
-    user = Users.get(username)
-    if user:
-        options = {k: toObj(request.args.get(k))
-                   for k in request.args if toObj(request.args.get(k))}
-        if not options:
-            options = {"limit": 10}
-
-        anon = current_user.is_anonymous
-        if anon or (not current_user.is_admin()):
-            EventLogger.log_request(request,
-                                    cuid="" if anon else current_user.id,
-                                    msg="{} query for {}: {}".format(out_type,
-                                                                     user.id,
-                                                                     options))
-    else:
-        return
-
-    if out_type == "json":
-        return jsonify(list(user.query_activities(**options)))
-
-    else:
-        def go(user, pool, out_queue):
-            options["pool"] = pool
-            options["out_queue"] = out_queue
-            user.query_activities(**options)
-            pool.join()
-            out_queue.put(None)
-            out_queue.put(StopIteration)
-
-        pool = gevent.pool.Pool(app.config.get("CONCURRENCY"))
-        out_queue = gevent.queue.Queue()
-        gevent.spawn(go, user, pool, out_queue)
-        gevent.sleep(0)
-        return Response((sse_out(a) if a else sse_out() for a in out_queue),
-                        mimetype='text/event-stream')
-
-
-# ---- handle ajax call for streams ----
-# query is in the form { userId1: {...query1...},
-#                        userId2: {...query2...} }
-# the response to this call is a key that is used as a parameter for getdata
-@app.route('/stream_query', methods=["POST"])
-# @log_request_event
-def get_query_key():
-    query = request.get_json(force=True)
-    key = query.get("key_name") or str(uuid.uuid1())
-    key_timeout = query.get("key_timeout") or 10
-    query = query.get("query") or query
-    redis.setex("Q:" + key, json.dumps(query),  key_timeout)
-    # log.debug("set key '{}' to {}".format(key, query))
-    return jsonify(key)
-
-
-@app.route('/getdata/<query_key>')
-def getdata_with_key(query_key):
-    query_obj = redis.get("Q:" + query_key)
-    # log.debug("retrieved key {} as {}".format(query_key, query_obj))
-
-    if not query_obj:
-        return errout("invalid query_key")
-
-    query_obj = json.loads(query_obj)
-
-    def go(query_obj, pool, out_queue):
-        with app.app_context():
-            pool2 = gevent.pool.Pool(4)
-            for username, options in query_obj.items():
-                user = Users.get(username)
-                if not user:
-                    continue
-
-                # log.debug("async job querying {}: {}"
-                #                  .format(user, options))
-                options.update({
-                    "pool": pool,
-                    "out_queue": out_queue
-                })
-                pool2.spawn(user.query_activities, **options)
-                # user.query_activities(**options)
-                gevent.sleep(0)
-
-            pool2.join()
-            pool.join()
-            out_queue.put(None)
-            out_queue.put(StopIteration)
-            # log.debug("done")
-
-    pool = gevent.pool.Pool(app.config.get("CONCURRENCY"))
-    out_queue = gevent.queue.Queue()
-    gevent.spawn(go, query_obj, pool, out_queue)
-    gevent.sleep(0)
-    return Response((sse_out(a) if a else sse_out() for a in out_queue),
-                    mimetype='text/event-stream')
 
 
 def new_id():
