@@ -751,23 +751,27 @@ function renderLayers() {
             $(".data_message").html(msg);
             console.log(`Error activity ${A.id}: ${A.error}`);
             return;
+        } 
 
-        } else if (A.msg) {
+        if (A.msg) {
             $(".data_message").html(A.msg);
-            return;
 
-        } else if (A.stop_rendering){
+        } 
+
+        if (A.stop_rendering){
             doneRendering("Done rendering.");
             return;
-        } else if (A.count){
+        } 
+
+        if (A.count){
             numActivities += A.count;
-            return;
-        } else if (A.delete) {
+        } 
+
+        if (A.delete) {
             // delete all ids in A.delete
             for (let id of A.delete) {
                 delete appState.items[id];
             }
-            return
         }
 
         if (!A._id) {

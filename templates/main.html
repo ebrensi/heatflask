@@ -30,8 +30,6 @@
         {% endif %}
 
         const OFFLINE = {{ config.get('OFFLINE')|tojson }},
-              POST_QUERY_URL = "{{ url_for('get_query_key') }}",
-              KEY_QUERY_URL = "{{ url_for('getdata_with_key', query_key='') }}",
               ADMIN = {{ (current_user.is_authenticated and current_user.is_admin())|tojson|safe }},
               FLASH_MESSAGES = {{ get_flashed_messages()|tojson|safe }},
               ONLOAD_PARAMS = {
