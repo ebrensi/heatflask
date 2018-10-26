@@ -361,7 +361,6 @@ let tableColumns = [
         render: hhmmss
     },
 
-    // { title: "Name", data: "name"},
     { 
         title: "Name", 
         data: null,
@@ -372,7 +371,9 @@ let tableColumns = [
         title: '<i class="fa fa-users" aria-hidden="true"></i>',
         data: "group",
         render:  formatGroup
-    }],
+    }
+    
+    ],
 
     imgColumn = {
         title: "<i class='fa fa-user' aria-hidden='true'></i>",
