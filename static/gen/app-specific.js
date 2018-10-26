@@ -64,12 +64,14 @@ let num=Object.keys(appState.items).length,msg2=" "+msg+" "+num+" activities ren
 atable.clear();atable.rows.add(Object.values(appState.items)).draw();}
 function renderLayers(){const date1=$("#date1").val(),date2=$("#date2").val(),type=$("#select_type").val(),num=$("#select_num").val(),idString=type=="activity_ids"?$("#activity_ids").val():null,to_exclude=Object.keys(appState.items).map(Number);console.log(`exclude ${to_exclude.length}activities`,to_exclude);if(DotLayer){DotLayer._mapMoving=true;}
 msgBox=L.control.window(map,{position:'top',content:"<div class='data_message'></div><div><progress class='progbar' id='box'></progress></div>",visible:true});$(".data_message").html("Retrieving activity data...");let progress_bars=$('.progbar'),rendering=true,listening=true,sock=new WebSocket(WEBSOCKET_URL),numActivities=0,count=0;$(".data_message").html("Retrieving activity data...");$('#abortButton').click(function(){stopListening();doneRendering("<font color='red'>Aborted:</font>");}).show();$(".progbar").show();$('#renderButton').prop('disabled',true);function doneRendering(msg){if(rendering){appState['after']=$("#date1").val();appState["before"]=$("#date2").val();updateState();$("#abortButton").hide();$(".progbar").hide();if(msgBox){msgBox.close();msgBox=null;}
-rendering=false;}}
+rendering=false;}
+updateLayers(msg);}
 function stopListening(){if(listening){listening=false;sock.close();$('#renderButton').prop('disabled',false);}}
 sock.onopen=function(event){console.log("socket open: ",event);queryObj={};queryObj[USER_ID]={limit:type=="activities"?Math.max(1,+num):undefined,grouped:type=="grouped_with"?true:undefined,after:date1?date1:undefined,before:date2&&date2!="now"?date2:undefined,activity_ids:idString?Array.from(new Set(idString.split(/\D/).map(Number))):undefined,exclude_ids:to_exclude.length?to_exclude:undefined,streams:true};let msg=JSON.stringify({query:queryObj});sock.send(msg);};sock.onclose=function(event){console.log("socket closed: ",event);if(listening){listening=false;$('#renderButton').prop('disabled',false);}
-updateLayers("done");};sock.onmessage=function(event){let A=JSON.parse(event.data);if(!A){stopListening();doneRendering("Finished.");sock.close();return;}
+doneRendering("Finished.");};sock.onmessage=function(event){let A=JSON.parse(event.data);if(!A){stopListening();doneRendering("Finished.");sock.close();return;}
 if(A.error){let msg=`<font color='red'>${A.error}</font><br>`;$(".data_message").html(msg);console.log(`Error activity ${A.id}:${A.error}`);return;}
 if(A.msg){$(".data_message").html(A.msg);}
+if(A.idx){$(".data_message").html(`indexing...${A.idx}`);}
 if(A.stop_rendering){doneRendering("Done rendering.");return;}
 if(A.count){numActivities+=A.count;}
 if(A.delete){for(let id of A.delete){delete appState.items[id];}}
