@@ -372,13 +372,13 @@ class Users(UserMixin, db_sql.Model):
         else:
             redis.delete(key)
 
-    def build_index(self, out_queue=None, **args):
+    def build_index(self, out_queue=None, fetch_limit=0, **args):
         gevent.spawn(
             Index.import_user,
             self,
             out_queue=out_queue,
             out_query=args,
-            fetch_query={"limit": 0}
+            fetch_query={"limit": fetch_limit}
         )
         gevent.sleep(0)
         return out_queue
@@ -393,7 +393,7 @@ class Users(UserMixin, db_sql.Model):
                          streams=False,
                          owner_id=False,
                          build_index=True,
-                         update_index=True,
+                         update_index=False,
                          pool=None,
                          out_queue=None,
                          cache_timeout=CACHE_ACTIVITIES_TIMEOUT,
@@ -437,10 +437,7 @@ class Users(UserMixin, db_sql.Model):
             out_queue = Queue()
             put_stopIteration = True
 
-
         index_exists = Index.user_index_exists(self)
-        count = None
-
         if (summaries or limit or only_ids or after or before):
 
             if index_exists:
@@ -452,6 +449,16 @@ class Users(UserMixin, db_sql.Model):
                             exclude_ids=exclude_ids,
                             ids_only=only_ids
                          )
+                if update_index:
+                    log.debug("updating index")
+                    gevent.spawn(self.build_index,
+                                 out_queue=out_queue,
+                                 limit=limit,
+                                 after=after,
+                                 before=before,
+                                 fetch_limit=100,
+                                 activitiy_ids=activity_ids)
+
 
                 if only_ids:
                     out_queue.put(list(gen))
@@ -1148,8 +1155,6 @@ class Activities(object):
                 query = queryObj[user_id]
 
                 # log.debug("spawning query {}".format(query))
-
-                # user.query_activities(out_queue=queue, pool=pool, **query)
                 pool.spawn(user.query_activities, 
                     out_queue=queue, pool=pool, **query
                 )
