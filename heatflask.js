@@ -688,6 +688,8 @@ function renderLayers() {
 
             rendering = false;
         }
+
+        updateLayers(msg);
     }
 
 
@@ -716,8 +718,6 @@ function renderLayers() {
 
         let msg = JSON.stringify({query: queryObj});
         sock.send(msg);
-
-        // setTimeout(function(){ sock.close(); }, 2000);
     }
 
     sock.onclose = function(event) {
@@ -726,8 +726,8 @@ function renderLayers() {
             listening = false;
             $('#renderButton').prop('disabled', false);
         }
-        // doneRendering("Finished.");
-        updateLayers("done");
+        doneRendering("Finished.");
+        // updateLayers("done");
     }
 
     // handle one incoming chunk from websocket stream
@@ -756,10 +756,15 @@ function renderLayers() {
         if (A.msg) {
             $(".data_message").html(A.msg);
 
+        }
+
+        if (A.idx) {
+            $(".data_message").html(`indexing...${A.idx}`);
         } 
 
         if (A.stop_rendering){
             doneRendering("Done rendering.");
+            // console.log("rendering stopped")
             return;
         } 
 

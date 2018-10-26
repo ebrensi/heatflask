@@ -372,17 +372,16 @@ class Users(UserMixin, db_sql.Model):
         else:
             redis.delete(key)
 
-    def build_index(self, **args):
-        queue = Queue()
+    def build_index(self, out_queue=None, **args):
         gevent.spawn(
             Index.import_user,
             self,
-            out_queue=queue,
+            out_queue=out_queue,
             out_query=args,
             fetch_query={"limit": 0}
         )
         gevent.sleep(0)
-        return queue
+        return out_queue
 
     def query_activities(self, 
                          activity_ids=None,
@@ -394,6 +393,7 @@ class Users(UserMixin, db_sql.Model):
                          streams=False,
                          owner_id=False,
                          build_index=True,
+                         update_index=True,
                          pool=None,
                          out_queue=None,
                          cache_timeout=CACHE_ACTIVITIES_TIMEOUT,
@@ -472,11 +472,11 @@ class Users(UserMixin, db_sql.Model):
                 else:
                     gen = gevent.queue.Queue()
                     gevent.spawn(self.build_index,
-                                 gen,
-                                 limit,
-                                 after,
-                                 before,
-                                 activity_ids)
+                                 out_queue=gen,
+                                 limit=limit,
+                                 after=after,
+                                 before=before,
+                                 activitiy_ids=activity_ids)
             else:
                 # Finally, if there is no index and rather than building one
                 # we are requested to get the summary data directily from Strava
@@ -492,9 +492,6 @@ class Users(UserMixin, db_sql.Model):
                 )
 
         for A in gen:
-
-            if "stop_rendering" in A:
-                pool.join()
 
             if "_id" not in A:
                 out_queue.put(A)
@@ -759,33 +756,36 @@ class Index(object):
                     if out_queue:
                         # If we are also sending data to the front-end,
                         # we do this via a queue.
-                        if (rendering and
-                            ((activity_ids and (d["_id"] in activity_ids)) or
+
+                        out_queue.put(
+                            {"idx": count}
+                        )
+                        # log.debug("put index {}".format(count))
+
+                        if not rendering:
+                            continue
+
+                        if ((activity_ids and (d["_id"] in activity_ids)) or
                              (limit and (count <= limit)) or
-                                in_date_range(d["ts_local"]))):
+                                in_date_range(d["ts_local"])):
 
                             d2 = dict(d)
-                            d2["id"] = d2["_id"]
-                            del d2["_id"]
                             d2["ts_local"] = str(d2["ts_local"])
+                            d2["ts_UTC"] = str(d2["ts_UTC"])
 
                             out_queue.put(d2)
 
                             if activity_ids:
-                                activity_ids.remove(d["id"])
+                                activity_ids.remove(d["_id"])
                                 if not activity_ids:
                                     rendering = False
-                                    out_queue.put({"stop_rendering": "1"})
+                                    out_queue.put({"stop_rendering": 1})
 
-                        if (rendering and
-                            ((limit and count >= limit) or
-                                (after and (d["ts_local"] < after)))):
+                        if ((limit and count >= limit) or
+                                (after and (d["ts_local"] < after))):
                             rendering = False
-                            out_queue.put({"stop_rendering": "1"})
-
-                        out_queue.put(
-                            {"msg": "indexing...{} activities".format(count)}
-                        )
+                            out_queue.put({"stop_rendering": 1})
+                            # log.debug("got here: count = {}".format(count))
                         gevent.sleep(0)
             gevent.sleep(0)
 

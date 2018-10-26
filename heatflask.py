@@ -631,18 +631,18 @@ def socket_name(ws):
 @sockets.route('/data_socket')
 def data_socket(ws):
     name = socket_name(ws)
-    log.debug("socket {} OPEN".format(name))
+    # log.debug("socket {} OPEN".format(name))
     while not ws.closed:
         msg = receiveObj(ws)
         if msg:
             if "query" in msg:
-                sendObj(ws, {"msg": "sending query {}...".format(msg["query"])})
+                # sendObj(ws, {"msg": "sending query {}...".format(msg["query"])})
                 for a in Activities.query(msg["query"]):
                     sendObj(ws, a)
             else:
                 log.debug("{} says {}".format(name, msg))
 
-    log.debug("socket {} CLOSED".format(name))
+    # log.debug("socket {} CLOSED".format(name))
 
 
 def new_id():
