@@ -635,12 +635,12 @@ def data_socket(ws):
     while not ws.closed:
         msg = receiveObj(ws)
         if msg:
-            log.debug("{} says {}".format(name, msg))
-
             if "query" in msg:
                 sendObj(ws, {"msg": "sending query {}...".format(msg["query"])})
                 for a in Activities.query(msg["query"]):
                     sendObj(ws, a)
+            else:
+                log.debug("{} says {}".format(name, msg))
 
     log.debug("socket {} CLOSED".format(name))
 
