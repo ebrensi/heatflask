@@ -801,7 +801,7 @@ class Index(object):
                 )
                 result = []
             else:
-                result = cls.db.index.bulk_write(
+                result = cls.db.bulk_write(
                     mongo_requests,
                     ordered=False
                 )
@@ -877,7 +877,7 @@ class Index(object):
         if exclude_ids:
             try:
                 query_ids = set( int(doc["_id"]) 
-                    for doc in cls.db.index.find(query, {"_id": True}).limit(limit) )
+                    for doc in cls.db.find(query, {"_id": True}).limit(limit) )
             except Exception as e: 
                 log.exception(e)
                 return
@@ -904,9 +904,9 @@ class Index(object):
 
         try:
             if out_fields:
-                cursor = cls.db.index.find(query, out_fields)
+                cursor = cls.db.find(query, out_fields)
             else:
-                cursor = cls.db.index.find(query)
+                cursor = cls.db.find(query)
             cursor = cursor.limit(limit).sort("ts_UTC", pymongo.DESCENDING)
 
         except Exception as e:
