@@ -492,6 +492,7 @@ class Users(UserMixin, db_sql.Model):
                 )
 
         for A in gen:
+
             if "stop_rendering" in A:
                 pool.join()
 
@@ -505,6 +506,9 @@ class Users(UserMixin, db_sql.Model):
 
             if owner_id:
                 A.update({"owner": self.id, "profile": self.profile})
+
+            # log.debug("sending activity {}...".format(A["_id"]))
+            # gevent.sleep(0.5)  # test delay
 
             if not streams:
                 out_queue.put(A)
@@ -893,7 +897,7 @@ class Index(object):
             if ids_only:
                 return (to_fetch, to_delete)
 
-        log.debug(query)
+        # log.debug(query)
 
         if ids_only:
             out_fields = {"_id": True}
@@ -953,6 +957,7 @@ class Activities(object):
         log.info("initialized Activity collection")
         return result
         
+
     @staticmethod
     def bounds(poly):
         if poly:
@@ -1131,24 +1136,32 @@ class Activities(object):
 
     @classmethod
     def query(cls, queryObj):
-        pool = gevent.pool.Pool(app.config.get("CONCURRENCY"))
+        pool = gevent.pool.Pool(app.config.get("CONCURRENCY")+1)
         queue = gevent.queue.Queue()
 
-        for user_id in queryObj:
-            user = Users.get(user_id)
-            if not user:
-                continue
+        def go():
+            for user_id in queryObj:
+                user = Users.get(user_id)
+                if not user:
+                    continue
 
-            query = queryObj[user_id]
-            user.query_activities(out_queue=queue, pool=pool, **query)
-            gevent.sleep(0)
+                query = queryObj[user_id]
 
-        def close_when_done():
+                # log.debug("spawning query {}".format(query))
+
+                # user.query_activities(out_queue=queue, pool=pool, **query)
+                pool.spawn(user.query_activities, 
+                    out_queue=queue, pool=pool, **query
+                )
+
+            # log.debug("joining jobs...")
             pool.join()
             queue.put(None)
             queue.put(StopIteration)
+            # log.debug("done with query")
 
-        gevent.spawn(close_when_done)
+        
+        gevent.spawn(go)
         gevent.sleep(0)
         return queue
 
