@@ -38,12 +38,13 @@
 
   <script>
     const MEASURMENT_PREFERENCE = "{{ current_user.measurement_preference if current_user.is_authenticated else user.measurement_preference }}",
+          USER_ID = "{{ user.id }}",
           DIST_UNIT = (MEASURMENT_PREFERENCE=="feet")? 1609.34 : 1000.0,
           DIST_LABEL = (MEASURMENT_PREFERENCE=="feet")?  "mi" : "km",
           STRAVA_BUTTON = img("{{ url_for('static',filename='strava_button.png') }}"),
           USER_BASE_URL = "{{url_for('main',username=user.id)}}",
           GROUP_ACTIVITY_URL = USER_BASE_URL + "?group=",
-          ACTIVITY_STREAM_URL = "{{ url_for('query_activities', username=user.id, out_type='sse') }}?limit=100000";
+          WEBSOCKET_URL = "ws://"+window.location.host+"/data_socket";
 
     function td(text) {
       return "<td>" + text +"</td>";
@@ -63,14 +64,33 @@
         let count = 0,
             count_DOM_element = $("#count"),
             table_body = $('#activities_list tbody'),
-            source = new EventSource( ACTIVITY_STREAM_URL );
+            sock = new WebSocket(WEBSOCKET_URL);
 
         $("#status_msg").text("Retrieving Activity Index...");
         $("#dist").html(`<i class="fa fa-arrows-h" aria-hidden="true"></i> (${DIST_LABEL})`);
 
-        source.onmessage = function(event) {
-          if (event.data == 'done') {
-            source.close();
+        sock.onopen = function(event) {
+            console.log("socket open: ", event);
+
+            queryObj = {};
+            queryObj[USER_ID] = {
+                    limit: 0,
+                    streams: false
+            };
+
+            let msg = JSON.stringify({query: queryObj});
+            sock.send(msg);
+        }
+
+        sock.onclose = function(event) {
+            console.log("socket closed: ", event);
+        }
+
+        sock.onmessage = function(event) {
+          let A = JSON.parse(event.data);
+
+          if (!A) {
+            sock.close();
             $('#activities_list').DataTable({
                 paging: false,
                 scrollY: "80vh",
@@ -81,30 +101,33 @@
             });
 
             $("#status").hide();
-
-          } else {
-            let A = JSON.parse(event.data);
-            if ("id" in A) {
-              count_DOM_element.text(count++);
-              let heatflask_link = `${USER_BASE_URL}?id=${A.id}`,
-                  strava_link = href(`${stravaActivityURL( A.id ) }`, STRAVA_BUTTON),
-                  ts = A.ts_local.slice(0,10),
-                  dkm = +(A.total_distance / DIST_UNIT).toFixed(2),
-                  row = "<tr>" +
-                     td(href(heatflask_link, A.id)) +
-                     td(strava_link) +
-                     td(groupLink(A)) +
-                     td(ts) +
-                     td(A.type) +
-                     td(dkm) +
-                     td(hhmmss(A.elapsed_time)) +
-                     td(A.name) +
-                     "</tr>";
-              table_body.append(row);
-            }
+            return
           }
+          
+          if (!A._id) {
+            return
+          }
+
+          count_DOM_element.text(count++);
+          let heatflask_link = `${USER_BASE_URL}?id=${A._id}`,
+              strava_link = href(`${stravaActivityURL( A._id ) }`, STRAVA_BUTTON),
+              ts = A.ts_local.slice(0,10),
+              dkm = +(A.total_distance / DIST_UNIT).toFixed(2),
+              row = "<tr>" +
+                 td(href(heatflask_link, A._id)) +
+                 td(strava_link) +
+                 td(groupLink(A)) +
+                 td(ts) +
+                 td(A.type) +
+                 td(dkm) +
+                 td(hhmmss(A.elapsed_time)) +
+                 td(A.name) +
+                 "</tr>";
+          table_body.append(row);
         }
-    });
+      }
+        
+    );
   </script>
  </body>
 </html>

@@ -21,8 +21,6 @@
         // Constants defined via template
         {% if user %}
         const USER_ID = "{{ user.id }}",
-              QUERY_URL_JSON = "{{ url_for('query_activities', username=user.id, out_type='json') }}",
-              QUERY_URL_SSE = "{{ url_for('query_activities', username=user.id, out_type='sse') }}",
               BASE_USER_URL = "{{ url_for('main', username=user.id) }}",
               GROUP_ACTIVITY_SSE = "{{ url_for('group_stream', username=user.id, activity_id='') }}",
               SHARE_PROFILE = {{ user.share_profile|tojson|safe }},
