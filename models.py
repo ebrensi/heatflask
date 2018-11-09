@@ -700,7 +700,9 @@ class Index(object):
     @classmethod
     def delete_user_entries(cls, user):
         try:
-            return cls.db.delete_many({"user_id": user.id})
+            result = cls.db.delete_many({"user_id": user.id})
+            log.debug("deleted index entries for {}".format(user.id))
+            return result
         except Exception as e:
             log.error(
                 "error deleting index entries for user {} from MongoDB:\n{}"
