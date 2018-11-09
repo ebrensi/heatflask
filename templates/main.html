@@ -24,7 +24,8 @@
               BASE_USER_URL = "{{ url_for('main', username=user.id) }}",
               GROUP_ACTIVITY_SSE = "{{ url_for('group_stream', username=user.id, activity_id='') }}",
               SHARE_PROFILE = {{ user.share_profile|tojson|safe }},
-              SHARE_STATUS_UPDATE_URL = "{{ url_for('update_share_status', username=user.id) }}"
+              SHARE_STATUS_UPDATE_URL = "{{ url_for('update_share_status', username=user.id) }}",
+              ACTIVITY_LIST_URL = "{{ url_for('activities', username=user.id) }}";
         {% endif %}
 
         const OFFLINE = {{ config.get('OFFLINE')|tojson }},
@@ -210,12 +211,11 @@
 					</a>
 
 					<br><br>
-					If you recently modified past activities try re-building your index here.
-					<form action="{{ url_for('activities', username=user.id) }}" target="_blank">
-						<input type="submit" class="btn btn-info" value="View activity index" />
-						<label><input type="checkbox" name="rebuild" value="1">Re-build</label>
-					</form>
-
+					We keep a copy of your activity summaries for fast access.  If you recently changed any activites on Strava but they are not changed here, try re-building the index. 
+                    <button type="button" id="rebuild-button" class="btn btn-warning btn-sm">Re-build index</button>
+                    <br>
+                    <button type="button" id="activity-list-buton" class="btn btn-info">View index</button>
+                    <br>
 					<div class="checkbox">
 						<label><input type="checkbox" id="share" value="0">Include me in the
 							<a href="{{ url_for('public_directory')}}" target="_blank">
