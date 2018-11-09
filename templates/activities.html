@@ -60,74 +60,74 @@
 
     }
 
-    jQuery(document).ready(function($) {
-        let count = 0,
-            count_DOM_element = $("#count"),
-            table_body = $('#activities_list tbody'),
-            sock = new WebSocket(WEBSOCKET_URL);
 
-        $("#status_msg").text("Retrieving Activity Index...");
-        $("#dist").html(`<i class="fa fa-arrows-h" aria-hidden="true"></i> (${DIST_LABEL})`);
+    // Main code
+    let count = 0,
+        count_DOM_element = document.querySelector("#count"),
+        status_element = document.querySelector("#status_msg"),
+        table_body = $('#activities_list tbody'),
+        sock = new WebSocket(WEBSOCKET_URL);
 
-        sock.onopen = function(event) {
-            console.log("socket open: ", event);
+    status_element.innerText = "Retrieving Activity Index...";
+    document.querySelector("#dist").innerHtml = `<i class="fa fa-arrows-h" aria-hidden="true"></i> (${DIST_LABEL})`;
 
-            queryObj = {};
-            queryObj[USER_ID] = {
-                    limit: 0,
-                    streams: false
-            };
+    sock.onopen = function(event) {
+        console.log("socket open: ", event);
 
-            let msg = JSON.stringify({query: queryObj});
-            sock.send(msg);
-        }
+        queryObj = {};
+        queryObj[USER_ID] = {
+                limit: 0,
+                streams: false
+        };
 
-        sock.onclose = function(event) {
-            console.log("socket closed: ", event);
-        }
+        let msg = JSON.stringify({query: queryObj});
+        sock.send(msg);
+    }
 
-        sock.onmessage = function(event) {
-          let A = JSON.parse(event.data);
+    sock.onclose = function(event) {
+        console.log("socket closed: ", event);
+    }
 
-          if (!A) {
-            sock.close();
-            $('#activities_list').DataTable({
-                paging: false,
-                scrollY: "80vh",
-                scrollX: true,
-                scrollCollapse: true,
-                order: [[ 3, "desc" ]],
-                select: false
-            });
+    sock.onmessage = function(event) {
+      let A = JSON.parse(event.data);
 
-            $("#status").hide();
-            return
-          }
-          
-          if (!A._id) {
-            return
-          }
+      if (!A) {
+        sock.close();
+        $('#activities_list').DataTable({
+            paging: false,
+            scrollY: "80vh",
+            scrollX: true,
+            scrollCollapse: true,
+            order: [[ 3, "desc" ]],
+            select: false
+        });
 
-          count_DOM_element.text(count++);
-          let heatflask_link = `${USER_BASE_URL}?id=${A._id}`,
-              strava_link = href(`${stravaActivityURL( A._id ) }`, STRAVA_BUTTON),
-              ts = A.ts_local.slice(0,10),
-              dkm = +(A.total_distance / DIST_UNIT).toFixed(2),
-              row = "<tr>" +
-                 td(href(heatflask_link, A._id)) +
-                 td(strava_link) +
-                 td(groupLink(A)) +
-                 td(ts) +
-                 td(A.type) +
-                 td(dkm) +
-                 td(hhmmss(A.elapsed_time)) +
-                 td(A.name) +
-                 "</tr>";
-          table_body.append(row);
-        }
+        document.querySelector("#status").style.display = "none";
+        return
       }
-        
-    );
+      
+      if (!A._id) {
+        return
+      }
+
+      count_DOM_element.innerText = count++;
+      let heatflask_link = `${USER_BASE_URL}?id=${A._id}`,
+          strava_link = href(`${stravaActivityURL( A._id ) }`, STRAVA_BUTTON),
+          ts = A.ts_local.slice(0,10),
+          dkm = +(A.total_distance / DIST_UNIT).toFixed(2),
+          row = "<tr>" +
+             td(href(heatflask_link, A._id)) +
+             td(strava_link) +
+             td(groupLink(A)) +
+             td(ts) +
+             td(A.type) +
+             td(dkm) +
+             td(hhmmss(A.elapsed_time)) +
+             td(A.name) +
+             "</tr>";
+      table_body.append(row);
+    }
+  
   </script>
  </body>
 </html>
