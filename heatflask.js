@@ -849,6 +849,10 @@ function renderLayers() {
     }
 }
 
+function openActivityListPage(rebuild) {
+    let flag = rebuild? "?rebuild=1":""
+    window.open(ACTIVITY_LIST_URL+flag, "_blank")
+}
 
 function updateState(){
     if (ONLOAD_PARAMS.key){
@@ -994,6 +998,9 @@ $(document).ready(function() {
         $(".preset").on("change", preset_sync);
 
         $("#renderButton").click(renderLayers);
+
+        $("#activity-list-buton").click(() => openActivityListPage(false));
+        $("#rebuild-button").click(() => openActivityListPage(true));
 
 
         $("#autozoom").prop('checked', ONLOAD_PARAMS.autozoom);
