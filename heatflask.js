@@ -367,11 +367,11 @@ let tableColumns = [
         render: (A) => `<p style="background-color:${A.dotColor}"> ${A.name}</p>`
     },
 
-    {
-        title: '<i class="fa fa-users" aria-hidden="true"></i>',
-        data: "group",
-        render:  formatGroup
-    }
+    // {
+    //     title: '<i class="fa fa-users" aria-hidden="true"></i>',
+    //     data: "group",
+    //     render:  formatGroup
+    // }
     
     ],
 
@@ -637,7 +637,7 @@ function renderLayers() {
           date2 = $("#date2").val(),
           type = $("#select_type").val(),
           num = $("#select_num").val(),
-          idString = (type == "activity_ids")? $("#activity_ids").val():null,
+          idString = $("#activity_ids").val(),
           to_exclude = Object.keys(appState.items).map(Number);
 
     console.log(`exclude ${to_exclude.length}  activities`, to_exclude);

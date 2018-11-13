@@ -495,6 +495,7 @@ def main(username):
 
 @app.route('/<username>/group_stream/<activity_id>')
 def group_stream(username, activity_id):
+    log.debug("getting activities grouped with {}:{}".format(username, activity_id))
 
     def go(user, pool, out_queue):
         with app.app_context():
@@ -522,46 +523,6 @@ def activities(username):
         user.delete_index()
     return render_template("activities.html",
                            user=user)
-
-
-# @app.route('/<username>/query_activities/<out_type>')
-# def query_activities(username, out_type):
-#     user = Users.get(username)
-#     if user:
-#         options = {k: toObj(request.args.get(k))
-#                    for k in request.args if toObj(request.args.get(k))}
-#         if not options:
-#             options = {"limit": 10}
-
-#         anon = current_user.is_anonymous
-#         if anon or (not current_user.is_admin()):
-#             EventLogger.log_request(request,
-#                                     cuid="" if anon else current_user.id,
-#                                     msg="{} query for {}: {}".format(out_type,
-#                                                                      user.id,
-#                                                                      options))
-#     else:
-#         return
-
-#     if out_type == "json":
-#         return jsonify(list(user.query_activities(**options)))
-
-#     else:
-#         def go(user, pool, out_queue):
-#             options["pool"] = pool
-#             options["out_queue"] = out_queue
-#             user.query_activities(**options)
-#             pool.join()
-#             out_queue.put(None)
-#             out_queue.put(StopIteration)
-
-#         pool = gevent.pool.Pool(app.config.get("CONCURRENCY"))
-#         out_queue = gevent.queue.Queue()
-#         gevent.spawn(go, user, pool, out_queue)
-#         gevent.sleep(0)
-#         return Response((sse_out(a) if a else sse_out() for a in out_queue),
-#                         mimetype='text/event-stream')
-
 
 @app.route('/<username>/update_info')
 @log_request_event
