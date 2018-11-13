@@ -1159,7 +1159,7 @@ class Activities(object):
 
                 query = queryObj[user_id]
 
-                log.debug("spawning query {}".format(query))
+                # log.debug("spawning query {}".format(query))
                 pool.spawn(user.query_activities, 
                     out_queue=queue, pool=pool, **query
                 )
