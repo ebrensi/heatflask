@@ -385,6 +385,7 @@ class Users(UserMixin, db_sql.Model):
 
     def query_activities(self, 
                          activity_ids=None,
+                         grouped=False,
                          exclude_ids=[],
                          limit=None,
                          after=None, before=None,
@@ -429,6 +430,10 @@ class Users(UserMixin, db_sql.Model):
             gevent.sleep(0)
 
         pool = pool or Pool(CONCURRENCY)
+        
+        if grouped:
+            return self.related_activities(activity_ids[0], streams, pool, out_queue)
+
         client = self.client()
 
         #  If out_queue is not supplied then query_activities is blocking
@@ -444,11 +449,13 @@ class Users(UserMixin, db_sql.Model):
 
                 gen, to_delete = Index.query(
                             user=self,
+                            activity_ids=activity_ids,
                             limit=limit or 0,
                             after=after, before=before,
                             exclude_ids=exclude_ids,
                             ids_only=only_ids
                          )
+
                 if update_index:
                     log.debug("updating index")
                     gevent.spawn(self.build_index,
@@ -545,59 +552,55 @@ class Users(UserMixin, db_sql.Model):
                            pool=None, out_queue=None):
         client = self.client()
 
-        put_stopIteration = True if not out_queue else False
+        put_stopIteration = not out_queue
 
         out_queue = out_queue or Queue()
         pool = pool or Pool(CONCURRENCY)
 
-        trivial_list = []
+        # *** First we output this activity
+        A = Index.db.find_one({"_id": int(activity_id)})
+        log.debug("got group activity {}".format(A))
 
-        # First we put this activity
-        try:
-            A = client.get_activity(int(activity_id))
-        except Exception as e:
-            log.info("Error getting this activity: {}".format(e))
+        stream_data = Activities.get(activity_id)
+        if stream_data:
+            A.update(stream_data)
+            out_queue.put(A)
         else:
-            trivial_list.append(A)
+            pool.spawn(
+                Activities.import_and_queue_streams,
+                client, out_queue, A)
 
+        # Now output related activities
         try:
-            related_activities = list(
-                client.get_related_activities(int(activity_id)))
+            for obj in client.get_related_activities(int(activity_id)):
+                owner = self.__class__.get(obj.athlete.id)
+                
+                if not owner:
+                    continue
+           
+                A = Index.strava2doc(obj)
+                A["ts_local"] = str(A["ts_local"])
+                A["ts_UTC"] = str(A["ts_UTC"])
+                A["owner"] = owner.id
+                A["profile"] = owner.profile
+
+                log.debug("outputting {}".format(A))
+                
+                if not streams:
+                    out_queue.put(A)
+
+                stream_data = Activities.get(obj.id)
+                if stream_data:
+                    A.update(stream_data)
+                    out_queue.put(A)
+                else:
+                    pool.spawn(
+                        Activities.import_and_queue_streams,
+                        owner.client(), out_queue, A)
 
         except Exception as e:
             log.info("Error getting related activities: {}".format(e))
             return [{"error": str(e)}]
-
-        for obj in itertools.chain(related_activities, trivial_list):
-            if streams:
-                owner = self.__class__.get(obj.athlete.id)
-
-                if owner:
-                    # the owner is a Heatflask user
-                    A = Index.strava2doc(obj)
-                    A["ts_local"] = str(A["ts_local"])
-                    A["ts_UTC"] = str(A["ts_UTC"])
-                    A["owner"] = owner.id
-                    A["profile"] = owner.profile
-                    
-                    stream_data = Activities.get(obj.id)
-                    if stream_data:
-                        A.update(stream_data)
-                        out_queue.put(A)
-                    else:
-                        pool.spawn(
-                            Activities.import_and_queue_streams,
-                            owner.client(), out_queue, A)
-            else:
-                # we don't care about activity streams
-                A = Index.strava2doc(obj)
-
-                A["ts_local"] = str(A["ts_local"])
-                A["ts_UTC"] = str(A["ts_UTC"])
-                A["profile"] = "/avatar/athlete/medium.png"
-                A["owner"] = obj.athlete.id
-            
-                out_queue.put(A)
 
         if put_stopIteration:
             out_queue.put(StopIteration)
@@ -658,7 +661,7 @@ class Index(object):
             "name": a.name,
             "type": a.type,
             "ts_UTC": a.start_date,
-            "group": a.athlete_count,
+            # "group": a.athlete_count,
             "ts_local": a.start_date_local,
             "total_distance": float(a.distance),
             "elapsed_time": int(a.elapsed_time.total_seconds()),
@@ -1156,7 +1159,7 @@ class Activities(object):
 
                 query = queryObj[user_id]
 
-                # log.debug("spawning query {}".format(query))
+                log.debug("spawning query {}".format(query))
                 pool.spawn(user.query_activities, 
                     out_queue=queue, pool=pool, **query
                 )
