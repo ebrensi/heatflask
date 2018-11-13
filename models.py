@@ -1319,7 +1319,7 @@ class Webhooks(object):
                       .format(user_id))
             return
 
-        if update.get("object_type") == "athlete":
+        if update.object_type == "athlete":
              return
 
         
