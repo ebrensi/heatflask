@@ -23,7 +23,7 @@
     <thead>
       <th><i class="fa fa-link" aria-hidden="true"></i></th>
       <th><i class="fa fa-external-link" aria-hidden="true"></i></th>
-      <th><i class="fa fa-users" aria-hidden="true"></i></th>
+      <!-- <th><i class="fa fa-users" aria-hidden="true"></i></th> -->
       <th><i class="fa fa-calendar" aria-hidden="true"></i></th>
       <th>Type</th>
       <th id="dist"></th>
@@ -37,14 +37,21 @@
 
 
   <script>
+    if (window.location.protocol == "https:") {
+      WS_SCHEME = "wss://";
+    } else {
+      WS_SCHEME = "ws://";
+    };
+    
     const MEASURMENT_PREFERENCE = "{{ current_user.measurement_preference if current_user.is_authenticated else user.measurement_preference }}",
+          USER_ID = "{{ user.id }}",
           DIST_UNIT = (MEASURMENT_PREFERENCE=="feet")? 1609.34 : 1000.0,
           DIST_LABEL = (MEASURMENT_PREFERENCE=="feet")?  "mi" : "km",
           STRAVA_BUTTON = img("{{ url_for('static',filename='strava_button.png') }}"),
           USER_BASE_URL = "{{url_for('main',username=user.id)}}",
           GROUP_ACTIVITY_URL = USER_BASE_URL + "?group=",
-          ACTIVITY_STREAM_URL = "{{ url_for('query_activities', username=user.id, out_type='sse') }}?limit=100000";
-
+          WEBSOCKET_URL = WS_SCHEME+window.location.host+"/data_socket";
+          
     function td(text) {
       return "<td>" + text +"</td>";
     }
@@ -53,58 +60,80 @@
       if (A.group == 1) {
         return ""
       }
-      let url = GROUP_ACTIVITY_URL + A.id;
+      let url = GROUP_ACTIVITY_URL + A._id;
       return href(url, "<i class='fa fa-users'></i>");
       // return href(url, A.group);
 
     }
 
-    jQuery(document).ready(function($) {
-        let count = 0,
-            count_DOM_element = $("#count"),
-            table_body = $('#activities_list tbody'),
-            source = new EventSource( ACTIVITY_STREAM_URL );
 
-        $("#status_msg").text("Retrieving Activity Index...");
-        $("#dist").html(`<i class="fa fa-arrows-h" aria-hidden="true"></i> (${DIST_LABEL})`);
+    // Main code
+    let count = 0,
+        count_DOM_element = document.querySelector("#count"),
+        status_element = document.querySelector("#status_msg"),
+        table_body = $('#activities_list tbody'),
+        sock = new WebSocket(WEBSOCKET_URL);
 
-        source.onmessage = function(event) {
-          if (event.data == 'done') {
-            source.close();
-            $('#activities_list').DataTable({
-                paging: false,
-                scrollY: "80vh",
-                scrollX: true,
-                scrollCollapse: true,
-                order: [[ 3, "desc" ]],
-                select: false
-            });
+    status_element.innerText = "Retrieving Activity Index...";
+    document.querySelector("#dist").innerHtml = `<i class="fa fa-arrows-h" aria-hidden="true"></i> (${DIST_LABEL})`;
 
-            $("#status").hide();
+    sock.onopen = function(event) {
+        console.log("socket open: ", event);
 
-          } else {
-            let A = JSON.parse(event.data);
-            if ("id" in A) {
-              count_DOM_element.text(count++);
-              let heatflask_link = `${USER_BASE_URL}?id=${A.id}`,
-                  strava_link = href(`${stravaActivityURL( A.id ) }`, STRAVA_BUTTON),
-                  ts = A.ts_local.slice(0,10),
-                  dkm = +(A.total_distance / DIST_UNIT).toFixed(2),
-                  row = "<tr>" +
-                     td(href(heatflask_link, A.id)) +
-                     td(strava_link) +
-                     td(groupLink(A)) +
-                     td(ts) +
-                     td(A.type) +
-                     td(dkm) +
-                     td(hhmmss(A.elapsed_time)) +
-                     td(A.name) +
-                     "</tr>";
-              table_body.append(row);
-            }
-          }
-        }
-    });
+        queryObj = {};
+        queryObj[USER_ID] = {
+                limit: 100000,
+                streams: false
+        };
+
+        let msg = JSON.stringify({query: queryObj});
+        sock.send(msg);
+    }
+
+    sock.onclose = function(event) {
+        console.log("socket closed: ", event);
+    }
+
+    sock.onmessage = function(event) {
+      let A = JSON.parse(event.data);
+
+      if (!A) {
+        sock.close();
+        $('#activities_list').DataTable({
+            paging: false,
+            scrollY: "80vh",
+            scrollX: true,
+            scrollCollapse: true,
+            order: [[ 3, "desc" ]],
+            select: false
+        });
+
+        document.querySelector("#status").style.display = "none";
+        return
+      }
+      
+      if (!A._id) {
+        return
+      }
+
+      count_DOM_element.innerText = count++;
+      let heatflask_link = `${USER_BASE_URL}?id=${A._id}`,
+          strava_link = href(`${stravaActivityURL( A._id ) }`, STRAVA_BUTTON),
+          ts = A.ts_local.slice(0,10),
+          dkm = +(A.total_distance / DIST_UNIT).toFixed(2),
+          row = "<tr>" +
+             td(href(heatflask_link, A._id)) +
+             td(strava_link) +
+             // td(groupLink(A)) +
+             td(ts) +
+             td(A.type) +
+             td(dkm) +
+             td(hhmmss(A.elapsed_time)) +
+             td(A.name) +
+             "</tr>";
+      table_body.append(row);
+    }
+  
   </script>
  </body>
 </html>

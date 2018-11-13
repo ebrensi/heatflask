@@ -1,5 +1,12 @@
+if (window.location.protocol == "https:") {
+      WS_SCHEME = "wss://";
+    } else {
+      WS_SCHEME = "ws://";
+    };
+    
 const SPEED_SCALE = 5.0,
-      SEP_SCALE = {m: 0.14, b: 15.0};
+      SEP_SCALE = {m: 0.14, b: 15.0},
+      WEBSOCKET_URL = WS_SCHEME+window.location.host+"/data_socket";
 
 // Set up Map and base layers
 let map_providers = ONLOAD_PARAMS.map_providers,
@@ -360,18 +367,19 @@ let tableColumns = [
         render: hhmmss
     },
 
-    // { title: "Name", data: "name"},
     { 
         title: "Name", 
         data: null,
         render: (A) => `<p style="background-color:${A.dotColor}"> ${A.name}</p>`
     },
 
-    {
-        title: '<i class="fa fa-users" aria-hidden="true"></i>',
-        data: "group",
-        render:  formatGroup
-    }],
+    // {
+    //     title: '<i class="fa fa-users" aria-hidden="true"></i>',
+    //     data: "group",
+    //     render:  formatGroup
+    // }
+    
+    ],
 
     imgColumn = {
         title: "<i class='fa fa-user' aria-hidden='true'></i>",
@@ -600,158 +608,6 @@ function initializeDotLayer() {
 
 
 /* Rendering */
-function renderLayers() {
-    const date1 = $("#date1").val(),
-          date2 = $("#date2").val(),
-          type = $("#select_type").val(),
-          num = $("#select_num").val(),
-          idString = (type == "activity_ids")? $("#activity_ids").val():null;
-
-    if (DotLayer) {
-        DotLayer._mapMoving = true;
-    }
-
-    // create a status box
-    msgBox = L.control.window(map,{
-            position: 'top',
-            content:"<div class='data_message'></div><div><progress class='progbar' id='box'></progress></div>",
-            visible:true
-    });
-
-    $(".data_message").html("Retrieving activity data...");
-
-    // Handle explicitly given query-key
-    if (ONLOAD_PARAMS.key){
-        streamURL = `${KEY_QUERY_URL}${ONLOAD_PARAMS.key}`;
-        readStream(streamURL, null, updateLayers);
-        return;
-    }
-
-    // Handle group-activity case
-    if (type=="grouped_with") {
-        // window.open(GROUP_ACTIVITY_SSE, target="_blank");
-        let group = $("#activity_ids").val();
-        readStream(GROUP_ACTIVITY_SSE + group, null, updateLayers);
-        return;
-    }
-
-
-    // We will load in new items that aren't already in appState.items,
-    //  and delete whatever is left.
-    let inClient = new Set(Object.keys(appState.items).map(Number));
-
-    // Handle given activity_ids case
-    if (idString) {
-        let streamQuery = {},
-            activityIds = idString.split(/\D/).map(Number);
-
-        let activityIdSet = new Set(activityIds);
-
-        // delete all items that aren't in activityIds from appState.items
-        for (let item of inClient) {
-            if (!activityIdSet.has(item))
-            delete appState.items[item];
-        }
-
-        // filter activityIds to get only ones we don't already have
-        activityIds = activityIds.filter((id) => !inClient.has(id));
-
-        streamQuery[USER_ID] = {
-            activity_ids: activityIds,
-            summaries: true,
-            streams: true
-        };
-
-        httpPostAsync(POST_QUERY_URL, streamQuery, function(data) {
-            // console.log(data);
-            let key = JSON.parse(data),
-                streamURL = `${KEY_QUERY_URL}${key}`;
-            // window.open(streamURL, target="_blank");
-            readStream(streamURL, activityIds.length, updateLayers);
-        });
-
-        return;
-    }
-
-    // First we request only ids of activities for a given query
-    activityQuery = {
-        limit: (type == "activities")? Math.max(1, +num) : undefined,
-        after: date1? date1 : undefined,
-        before: (date2 && date2 != "now")? date2 : undefined,
-        only_ids: true
-    }
-
-    let url = QUERY_URL_JSON + "?" + jQuery.param(activityQuery);
-    httpGetAsync(url, function(data) {
-        let queryResult = JSON.parse(data)[0];
-
-        // TODO: Handle the case where the index is currently being built
-        //   by another client
-
-        // handle the case where there is no index for this user
-        if (queryResult == "build") {
-            activityQuery["only_ids"] = false;
-            activityQuery["summaries"] = true;
-            activityQuery["streams"] = true;
-
-            // TODO: handle the unlikely case where there are items already in
-            //  appState.items and the user's index doesn't exist because
-            //  it got deleted.
-
-            let streamURL = QUERY_URL_SSE + "?" + jQuery.param(activityQuery);
-            // window.open(streamURL, target="_blank");
-            readStream(streamURL, null, updateLayers);
-            return;
-        }
-
-
-        let resultSet = new Set(queryResult);
-
-        // delete all items that aren't in queryResult from appState.items
-        for (let item of inClient) {
-            if (!resultSet.has(item))
-            delete appState.items[item];
-        }
-
-        // filter activityIds to get only ones we don't already have
-        activityIds = queryResult.filter((id) => !inClient.has(id));
-
-
-        // If we already have all the activities we wanted then we're done
-        if (!activityIds.length){
-            updateLayers("Done. ");
-
-            appState['after'] = $("#date1").val();
-            appState["before"] = $("#date2").val();
-            updateState();
-
-            if (msgBox) {
-                msgBox.close();
-                msgBox = null;
-            }
-            return;
-        }
-
-        let streamQuery = {};
-        streamQuery[USER_ID] = {
-            activity_ids: activityIds,
-            summaries: true,
-            streams: true
-        };
-
-        httpPostAsync(POST_QUERY_URL, streamQuery, function(data) {
-            // console.log(data);
-            let key = JSON.parse(data),
-                streamURL = `${KEY_QUERY_URL}${key}`;
-
-            // window.open(streamURL, target="_blank");
-            readStream(streamURL, activityIds.length, updateLayers);
-        });
-
-    });
-}
-
-
 function updateLayers(msg) {
     // optional auto-zoom
     if ($("#autozoom:checked").val()){
@@ -782,12 +638,34 @@ function updateLayers(msg) {
 }
 
 
+function renderLayers() {
+    const date1 = $("#date1").val(),
+          date2 = $("#date2").val(),
+          type = $("#select_type").val(),
+          num = $("#select_num").val(),
+          idString = $("#activity_ids").val(),
+          to_exclude = Object.keys(appState.items).map(Number);
 
-function readStream(streamURL, numActivities=null, callback=null) {
+    console.log(`exclude ${to_exclude.length}  activities`, to_exclude);
+
+    if (DotLayer) {
+        DotLayer._mapMoving = true;
+    }
+
+    // create a status box
+    msgBox = L.control.window(map,{
+            position: 'top',
+            content:"<div class='data_message'></div><div><progress class='progbar' id='box'></progress></div>",
+            visible:true
+    });
+
+    $(".data_message").html("Retrieving activity data...");
+
     let progress_bars = $('.progbar'),
         rendering = true,
         listening = true,
-        source = new EventSource(streamURL),
+        sock = new WebSocket(WEBSOCKET_URL),
+        numActivities = 0,
         count = 0;
 
     $(".data_message").html("Retrieving activity data...");
@@ -816,42 +694,99 @@ function readStream(streamURL, numActivities=null, callback=null) {
             }
 
             rendering = false;
-
-            callback && callback(msg);
         }
+
+        updateLayers(msg);
     }
 
 
     function stopListening() {
         if (listening){
             listening = false;
-            source.close();
+            sock.close();
             $('#renderButton').prop('disabled', false);
         }
     }
 
-    // handle one incoming chunk from SSE stream
-    source.onmessage = function(event) {
-        if (event.data == 'done') {
-            stopListening();
-            doneRendering("Finished.");
-            return;
+
+    sock.onopen = function(event) {
+        console.log("socket open: ", event);
+
+        queryObj = {};
+        queryObj[USER_ID] = {
+                limit: (type == "activities")? Math.max(1, +num) : undefined,
+                grouped: (type=="grouped_with")? true : undefined,
+                after: date1? date1 : undefined,
+                before: (date2 && date2 != "now")? date2 : undefined,
+                activity_ids: idString?  Array.from(new Set(idString.split(/\D/).map(Number))): undefined,
+                exclude_ids: to_exclude.length?  to_exclude: undefined,
+                streams: true
+        };
+
+        let msg = JSON.stringify({query: queryObj});
+        sock.send(msg);
+    }
+
+    sock.onclose = function(event) {
+        console.log("socket closed: ", event);
+        if (listening){
+            listening = false;
+            $('#renderButton').prop('disabled', false);
         }
+        doneRendering("Finished.");
+        // updateLayers("done");
+    }
+
+    // handle one incoming chunk from websocket stream
+    sock.onmessage = function(event) {
 
         let A = JSON.parse(event.data);
+
+        // console.log(`count : ${count}`, A);
+        // debugger;
+
+
+        if (!A) {
+            stopListening();
+            doneRendering("Finished.");
+            sock.close();
+            return;
+        }
 
         if (A.error){
             let msg = `<font color='red'>${A.error}</font><br>`;
             $(".data_message").html(msg);
             console.log(`Error activity ${A.id}: ${A.error}`);
             return;
+        } 
 
-        } else if (A.msg) {
+        if (A.msg) {
             $(".data_message").html(A.msg);
-            return;
 
-        } else if (A.stop_rendering){
+        }
+
+        if (A.idx) {
+            $(".data_message").html(`indexing...${A.idx}`);
+        } 
+
+        if (A.stop_rendering){
             doneRendering("Done rendering.");
+            // console.log("rendering stopped")
+            return;
+        } 
+
+        if (A.count){
+            numActivities += A.count;
+        } 
+
+        if (A.delete) {
+            // delete all ids in A.delete
+            for (let id of A.delete) {
+                delete appState.items[id];
+            }
+        }
+
+        if (!A._id) {
             return;
         }
 
@@ -885,23 +820,27 @@ function readStream(streamURL, numActivities=null, callback=null) {
             }
         }
 
-
-
+       
+        A.id = A._id
         A.startTime = moment(A.ts_UTC || A.ts_local ).valueOf()
         A.bounds = bounds;
 
         delete A.summary_polyline;
         delete A.polyline;
         delete A.time;
+        delete A._id;
 
         // only add A to appState.items if it isn't already there
         if (!(A.id in appState.items)) {
-            let typeData = Object.assign(A, ATYPE_MAP[A.type.toLowerCase()]);
+            if (!A.type) {
+                return;
+            }
 
-            if (!typeData) {
+            let typeData = ATYPE_MAP[A.type.toLowerCase()];
+            if  (!typeData) {
                 typeData = ATYPE_MAP["workout"];
             }
-                    appState.items[A.id] = typeData;
+            appState.items[A.id] = Object.assign(A, typeData);
         }
 
         count++;
@@ -916,6 +855,10 @@ function readStream(streamURL, numActivities=null, callback=null) {
     }
 }
 
+function openActivityListPage(rebuild) {
+    let flag = rebuild? "?rebuild=1":""
+    window.open(ACTIVITY_LIST_URL+flag, "_blank")
+}
 
 function updateState(){
     if (ONLOAD_PARAMS.key){
@@ -1061,6 +1004,9 @@ $(document).ready(function() {
         $(".preset").on("change", preset_sync);
 
         $("#renderButton").click(renderLayers);
+
+        $("#activity-list-buton").click(() => openActivityListPage(false));
+        $("#rebuild-button").click(() => openActivityListPage(true));
 
 
         $("#autozoom").prop('checked', ONLOAD_PARAMS.autozoom);
