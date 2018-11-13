@@ -37,6 +37,13 @@
 
 
   <script>
+    let WS_SCHEME;
+    if (window.location.protocol == "https:") {
+      WS_SCHEME = "wss://";
+    } else {
+      WS_SCHEME = "ws://";
+    };
+    
     const MEASURMENT_PREFERENCE = "{{ current_user.measurement_preference if current_user.is_authenticated else user.measurement_preference }}",
           USER_ID = "{{ user.id }}",
           DIST_UNIT = (MEASURMENT_PREFERENCE=="feet")? 1609.34 : 1000.0,
@@ -44,7 +51,7 @@
           STRAVA_BUTTON = img("{{ url_for('static',filename='strava_button.png') }}"),
           USER_BASE_URL = "{{url_for('main',username=user.id)}}",
           GROUP_ACTIVITY_URL = USER_BASE_URL + "?group=",
-          WEBSOCKET_URL = "ws://"+window.location.host+"/data_socket";
+          WEBSOCKET_URL = WS_SCHEME+window.location.host+"/data_socket";
           
     function td(text) {
       return "<td>" + text +"</td>";

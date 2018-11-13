@@ -1,6 +1,12 @@
+if (window.location.protocol == "https:") {
+      WS_SCHEME = "wss://";
+    } else {
+      WS_SCHEME = "ws://";
+    };
+    
 const SPEED_SCALE = 5.0,
       SEP_SCALE = {m: 0.14, b: 15.0},
-      WEBSOCKET_URL = "ws://"+window.location.host+"/data_socket";
+      WEBSOCKET_URL = WS_SCHEME+window.location.host+"/data_socket";
 
 // Set up Map and base layers
 let map_providers = ONLOAD_PARAMS.map_providers,
