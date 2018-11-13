@@ -21,17 +21,14 @@
         // Constants defined via template
         {% if user %}
         const USER_ID = "{{ user.id }}",
-              QUERY_URL_JSON = "{{ url_for('query_activities', username=user.id, out_type='json') }}",
-              QUERY_URL_SSE = "{{ url_for('query_activities', username=user.id, out_type='sse') }}",
               BASE_USER_URL = "{{ url_for('main', username=user.id) }}",
               GROUP_ACTIVITY_SSE = "{{ url_for('group_stream', username=user.id, activity_id='') }}",
               SHARE_PROFILE = {{ user.share_profile|tojson|safe }},
-              SHARE_STATUS_UPDATE_URL = "{{ url_for('update_share_status', username=user.id) }}"
+              SHARE_STATUS_UPDATE_URL = "{{ url_for('update_share_status', username=user.id) }}",
+              ACTIVITY_LIST_URL = "{{ url_for('activities', username=user.id) }}";
         {% endif %}
 
         const OFFLINE = {{ config.get('OFFLINE')|tojson }},
-              POST_QUERY_URL = "{{ url_for('get_query_key') }}",
-              KEY_QUERY_URL = "{{ url_for('getdata_with_key', query_key='') }}",
               ADMIN = {{ (current_user.is_authenticated and current_user.is_admin())|tojson|safe }},
               FLASH_MESSAGES = {{ get_flashed_messages()|tojson|safe }},
               ONLOAD_PARAMS = {
@@ -214,12 +211,11 @@
 					</a>
 
 					<br><br>
-					If you recently modified past activities try re-building your index here.
-					<form action="{{ url_for('activities', username=user.id) }}" target="_blank">
-						<input type="submit" class="btn btn-info" value="View activity index" />
-						<label><input type="checkbox" name="rebuild" value="1">Re-build</label>
-					</form>
-
+					We keep a copy of your activity summaries for fast access.  If you recently changed any activites on Strava but they are not changed here, try re-building the index. 
+                    <button type="button" id="rebuild-button" class="btn btn-warning btn-sm">Re-build index</button>
+                    <br>
+                    <button type="button" id="activity-list-buton" class="btn btn-info">View index</button>
+                    <br>
 					<div class="checkbox">
 						<label><input type="checkbox" id="share" value="0">Include me in the
 							<a href="{{ url_for('public_directory')}}" target="_blank">
@@ -282,7 +278,7 @@
 				<a href="https://github.com/ebrensi/heatflask" target="_blank"><i class="fa fa-github fa-2x"></i> Want to contribute?<i class="fa fa-github fa-2x"></i></a>
 				<hr>
 
-                Help me pay the bills!
+                Buy me a cup of coffee!
                 <form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_blank">
                 <input type="hidden" name="cmd" value="_s-xclick">
                 <input type="hidden" name="hosted_button_id" value="W9L7ZUADWKE8L">
@@ -297,14 +293,14 @@
 			<div class="sidebar-pane" id="activities">
 				<h1 class="sidebar-header">Rendered Activities<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
                 <button type="button" id="clear-selection-button" class="btn btn-success btn-xs">Clear Selection</button>
-				<div>
-					<table id='activitiesList' class='display compact order-column'></table>
-				</div>
+                <button type="button" id="render-selection-button" class="btn btn-info btn-xs">Render selected</button>
+                <br>
+                <input type="checkbox" name="szoom" id="zoom-to-selection" value="1">Zoom to selection
+
+             
 
 				<div>
-					<br>
-					<input type="checkbox" name="szoom" id="zoom-to-selection" value="1">Auto-Zoom to selection
-					<button type="button" id="render-selection-button" class="btn btn-info btn-sm">Render selected</button>
+					<table id='activitiesList' class='display compact order-column'></table>
 				</div>
 			</div>
 

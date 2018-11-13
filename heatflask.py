@@ -25,6 +25,7 @@ from flask_login import current_user, login_user, logout_user, login_required
 import flask_assets
 from flask_analytics import Analytics
 from flask_sslify import SSLify
+from flask_sockets import Sockets
 from signal import signal, SIGPIPE, SIG_DFL
 
 app = Flask(__name__)
@@ -42,14 +43,14 @@ sslify = SSLify(app, skips=["webhook_callback"])
 
 # models depend app so we import them afterwards
 from models import (
-    Users, Activities, EventLogger, Utility, Webhooks, Indexes, Payments,
+    Users, Activities, EventLogger, Utility, Webhooks, Index, Payments,
     db_sql, mongodb, redis
 )
 
 # just do once
 # if not redis.get("db-reset"):
 #     # Activities.init(clear_cache=True)
-#     Indexes.init(clear_cache=True)
+#     Index.init(clear_cache=True)
 #     redis.set("db-reset", 1)
 # redis.delete("db-reset")
 
@@ -163,6 +164,9 @@ login_manager = flask_login.LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'splash'
 
+
+# Websockets
+sockets = Sockets(app)
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -368,6 +372,7 @@ def delete_index(username):
     user = Users.get(username)
     if user:
         current_user.delete_index()
+        EventLogger.new_event(msg="index for {} deleted".format(user.id))
         return "index for {} deleted".format(username)
     else:
         return "no user {}".format(username)
@@ -490,6 +495,7 @@ def main(username):
 
 @app.route('/<username>/group_stream/<activity_id>')
 def group_stream(username, activity_id):
+    log.debug("getting activities grouped with {}:{}".format(username, activity_id))
 
     def go(user, pool, out_queue):
         with app.app_context():
@@ -518,7 +524,6 @@ def activities(username):
     return render_template("activities.html",
                            user=user)
 
-
 @app.route('/<username>/update_info')
 @log_request_event
 @admin_or_self_required
@@ -537,108 +542,69 @@ def update_share_status(username):
     return jsonify(user=user.id, share=user.share_profile)
 
 
-def toObj(obj):
+def toObj(string):
     try:
-        return json.loads(obj)
+        return json.loads(string)
     except ValueError:
-        return obj
+        return string
 
-
-@app.route('/<username>/query_activities/<out_type>')
-def query_activities(username, out_type):
-    user = Users.get(username)
-    if user:
-        options = {k: toObj(request.args.get(k))
-                   for k in request.args if toObj(request.args.get(k))}
-        if not options:
-            options = {"limit": 10}
-
-        anon = current_user.is_anonymous
-        if anon or (not current_user.is_admin()):
-            EventLogger.log_request(request,
-                                    cuid="" if anon else current_user.id,
-                                    msg="{} query for {}: {}".format(out_type,
-                                                                     user.id,
-                                                                     options))
-    else:
+# We send and receive json objects (dictionaries) encoded as strings
+def sendObj(ws, obj):
+    if not ws:
         return
 
-    if out_type == "json":
-        return jsonify(list(user.query_activities(**options)))
+    try:
+        s = json.dumps(obj)
+    except Exception as e:
+        log.error(e)
+        return
 
+    try:
+        ws.send(s)
+    except Exception as e:
+        log.error(e)
+        try:
+            ws.close()
+        except:
+            pass
+        return
+
+    return True
+
+def receiveObj(ws):
+    try:
+        s = ws.receive()
+        obj = json.loads(s)
+    except TypeError:
+        return
+    except Exception as e:
+        log.exception(e)
+        return
     else:
-        def go(user, pool, out_queue):
-            options["pool"] = pool
-            options["out_queue"] = out_queue
-            user.query_activities(**options)
-            pool.join()
-            out_queue.put(None)
-            out_queue.put(StopIteration)
+        return obj
 
-        pool = gevent.pool.Pool(app.config.get("CONCURRENCY"))
-        out_queue = gevent.queue.Queue()
-        gevent.spawn(go, user, pool, out_queue)
-        gevent.sleep(0)
-        return Response((sse_out(a) if a else sse_out() for a in out_queue),
-                        mimetype='text/event-stream')
+def socket_name(ws):
+    env = ws.environ
+    # return env
+
+    return "{REMOTE_ADDR}:{REMOTE_PORT}".format(**env)
 
 
-# ---- handle ajax call for streams ----
-# query is in the form { userId1: {...query1...},
-#                        userId2: {...query2...} }
-# the response to this call is a key that is used as a parameter for getdata
-@app.route('/stream_query', methods=["POST"])
-# @log_request_event
-def get_query_key():
-    query = request.get_json(force=True)
-    key = query.get("key_name") or str(uuid.uuid1())
-    key_timeout = query.get("key_timeout") or 10
-    query = query.get("query") or query
-    redis.setex("Q:" + key, json.dumps(query),  key_timeout)
-    # log.debug("set key '{}' to {}".format(key, query))
-    return jsonify(key)
+@sockets.route('/data_socket')
+def data_socket(ws):
+    name = socket_name(ws)
+    # log.debug("socket {} OPEN".format(name))
+    while not ws.closed:
+        msg = receiveObj(ws)
+        if msg:
+            if "query" in msg:
+                # sendObj(ws, {"msg": "sending query {}...".format(msg["query"])})
+                for a in Activities.query(msg["query"]):
+                    sendObj(ws, a)
+            else:
+                log.debug("{} says {}".format(name, msg))
 
-
-@app.route('/getdata/<query_key>')
-def getdata_with_key(query_key):
-    query_obj = redis.get("Q:" + query_key)
-    # log.debug("retrieved key {} as {}".format(query_key, query_obj))
-
-    if not query_obj:
-        return errout("invalid query_key")
-
-    query_obj = json.loads(query_obj)
-
-    def go(query_obj, pool, out_queue):
-        with app.app_context():
-            pool2 = gevent.pool.Pool(4)
-            for username, options in query_obj.items():
-                user = Users.get(username)
-                if not user:
-                    continue
-
-                # log.debug("async job querying {}: {}"
-                #                  .format(user, options))
-                options.update({
-                    "pool": pool,
-                    "out_queue": out_queue
-                })
-                pool2.spawn(user.query_activities, **options)
-                # user.query_activities(**options)
-                gevent.sleep(0)
-
-            pool2.join()
-            pool.join()
-            out_queue.put(None)
-            out_queue.put(StopIteration)
-            # log.debug("done")
-
-    pool = gevent.pool.Pool(app.config.get("CONCURRENCY"))
-    out_queue = gevent.queue.Queue()
-    gevent.spawn(go, query_obj, pool, out_queue)
-    gevent.sleep(0)
-    return Response((sse_out(a) if a else sse_out() for a in out_queue),
-                    mimetype='text/event-stream')
+    # log.debug("socket {} CLOSED".format(name))
 
 
 def new_id():
@@ -737,7 +703,8 @@ def public_directory():
 @admin_required
 def users():
     fields = ["id", "dt_last_active", "firstname", "lastname", "profile",
-              "app_activity_count", "city", "state", "country", "email"]
+              "app_activity_count", "city", "state", "country", "email",
+              "dt_indexed"]
     info = Users.dump(fields)
     return render_template("admin.html", data=info)
 
@@ -769,7 +736,8 @@ def users_update():
 @admin_or_self_required
 def user_profile(username):
     user = Users.get(username)
-    return jsonify(user.info())
+    output = user.info() if user else {}
+    return jsonify(output)
 
 
 # ---- App maintenance stuff -----
@@ -791,10 +759,10 @@ def app_info():
 def app_init():
     info = {
         Activities.init(),
-        Indexes.init(),
+        Index.init(),
         Payments.init()
     }
-    return "Activities, Indexes, Payments databases re-initialized"
+    return "Activities, Index, Payments databases re-initialized"
 
 
 # ---- Event log stuff ----
@@ -894,4 +862,7 @@ signal(SIGPIPE, SIG_DFL)
 
 # python heatmapp.py works but you really should use `flask run`
 if __name__ == '__main__':
-    app.run()
+    from gevent import pywsgi
+    from geventwebsocket.handler import WebSocketHandler
+    server = pywsgi.WSGIServer(('', 5000), app, handler_class=WebSocketHandler)
+    server.serve_forever()

@@ -232,6 +232,15 @@ e){b.active(e===c)})}}});e(l).on("preInit.dt.dtSelect",function(b,a){"dt"===b.na
 
 
 
+let WS_SCHEME;
+
+if (window.location.protocol == "https:") {
+      WS_SCHEME = "wss://";
+    } else {
+      WS_SCHEME = "ws://";
+    };
+    
+
 // Courtesy of TwoFuckingDevelopers (@2fdevs, @elecash and @qmarcos)
 function isMobileDevice() {
     return (typeof window.orientation !== "undefined") || (navigator.userAgent.indexOf('IEMobile') !== -1);
