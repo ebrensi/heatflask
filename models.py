@@ -1296,10 +1296,13 @@ class Webhooks(object):
         update = cls.client.handle_subscription_update(update_raw)
         user_id = update.owner_id
         user = Users.get(user_id, timeout=10)
-        index_exists = Index.user_index_exists(user)
-
-        if not (user or index_exists):
+        if not user:
             return
+
+        index_exists = Index.user_index_exists(user)
+        if not index_exists:
+            return
+
         record = {
             "dt": datetime.utcnow(),
             "subscription_id": update.subscription_id,
