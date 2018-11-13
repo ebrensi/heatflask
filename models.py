@@ -1296,11 +1296,7 @@ class Webhooks(object):
         update = cls.client.handle_subscription_update(update_raw)
         user_id = update.owner_id
         user = Users.get(user_id, timeout=10)
-        if not user:
-            return
-
-        index_exists = Index.user_index_exists(user)
-        if not index_exists:
+        if (not user) or (not Index.user_index_exists(user)):
             return
 
         record = {
@@ -1310,29 +1306,19 @@ class Webhooks(object):
             "object_id": update.object_id,
             "object_type": update.object_type,
             "aspect_type": update.aspect_type,
-            "updates": update_raw.get("updates"),
-            "valid_user": bool(user),
-            "valid_index": bool(index_exists)
+            "updates": update_raw.get("updates")
         }
 
         result = mongodb.updates.insert_one(record)
-        
-        if not user:
-            log.debug("got webhook update for an unregistered user {}"
-                      .format(user_id))
-            return
 
         if update.object_type == "athlete":
-             return
-
-        
-        if not index_exists:
             return
 
         #  If we got here then we know there are index entries for this user
         if update.aspect_type == "create":
             # fetch activity and add it to the index
             gevent.spawn(Index.import_by_id, user, [update.object_id])
+            gevent.sleep(0)
 
         elif update.aspect_type == "update":
             # update the activity if it exists, or create it
