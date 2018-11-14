@@ -883,7 +883,7 @@ class Index(object):
             query["ts_local"] = tsfltr
 
         if activity_ids:
-            query["_id"] = {"$in": activity_ids}
+            query["_id"] = {"$in": list(activity_ids)}
 
         to_delete = None
         if exclude_ids:
