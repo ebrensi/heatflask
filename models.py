@@ -1110,6 +1110,7 @@ class Activities(object):
                     activity_streams["polyline"] = polyline.encode(
                         activity_streams['latlng'])
                 except Exception as e:
+                    log.error("problem encoding {}".format(activity_id))
                     log.exception(e)
                     return {
                         "error": "cannot polyline encode stream for activity {}"
