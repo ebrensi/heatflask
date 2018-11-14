@@ -1105,10 +1105,10 @@ class Activities(object):
 
         # Encode/compress latlng data into polyline format
         if "polyline" in stream_names:
-            if "latlng" in activity_streams:
+            latlng = activity_streams.get("latlng")
+            if latlng:
                 try:
-                    activity_streams["polyline"] = polyline.encode(
-                        activity_streams['latlng'])
+                    activity_streams["polyline"] = polyline.encode(latlng)
                 except Exception as e:
                     log.error("problem encoding {}".format(activity_id))
                     log.exception(e)
