@@ -137,8 +137,6 @@
                   limit = (type == "activities")? Math.max(1, +num) : null,
                   after = date1? date1 : null,
                   before = (date2 && date2 != "now")? date2 : null,
-                  POST_QUERY_URL = "{{ url_for('get_query_key') }}",
-                  KEY_QUERY_URL = "{{ url_for('getdata_with_key', query_key='') }}",
                   APP_URL = "{{ url_for('main', username='') }}";
 
 
@@ -173,17 +171,6 @@
                 "key_name": key_name,
                 "query": query_all
             };
-
-
-            httpPostAsync(POST_QUERY_URL, metaQuery, function(data) {
-                let key = JSON.parse(data),
-                    // openURL = `${KEY_QUERY_URL}${key}`,
-                    openURL = APP_URL+key;
-
-                window.open(openURL, target="_blank");
-                // readStream(streamURL, activityIds.length, updateLayers);
-            });
-
 
         });
 
