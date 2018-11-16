@@ -850,7 +850,7 @@ class Index(object):
         def fetch(id):
             A = client.get_activity(id)
             a = cls.strava2doc(A)
-            log.debug(a)
+            log.debug("fetched activity {} for {}".format(id, user))
             return pymongo.ReplaceOne({"_id": A.id}, a, upsert=True)
 
         pool = Pool(CONCURRENCY)
@@ -1333,7 +1333,8 @@ class Webhooks(object):
             result = Index.update(update.object_id, update.updates)
             if not result:
                 create = True
-            # log.debug(result)
+            else:
+                log.debug("{} index update: {}".format(user, result))
 
         #  If we got here then we know there are index entries for this user
         if create or (update.aspect_type == "create"):
