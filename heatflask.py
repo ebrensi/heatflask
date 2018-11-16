@@ -13,7 +13,6 @@ from flask import (
 import flask_compress
 from datetime import datetime
 import sys
-import uuid
 import logging
 import os
 import json
