@@ -52,7 +52,7 @@ class Config(object):
     STORE_ACTIVITIES_TIMEOUT = 3 * 24 * 60 * 60  # 3 days
 
     # How long we Redis-cache activity stream data
-    CACHE_ACTIVITIES_TIMEOUT = 30 * 60  # 30 minutes
+    CACHE_ACTIVITIES_TIMEOUT = 1 * 24 * 60 * 60  # 1 day
 
     # How long we Redis-cache a User object
     CACHE_USERS_TIMEOUT = 1 * 24 * 60 * 60  # 1 day

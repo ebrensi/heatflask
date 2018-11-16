@@ -692,9 +692,14 @@ class Index(object):
 
     @classmethod
     def update(cls, id, updates):
+        if not updates:
+            return
+
+        # log.debug("user {} got update {}".format(id, updates))
         if "title" in updates:
             updates["name"] = updates["title"]
             del updates["title"]
+
         try:
             return cls.db.update_one({"_id": id}, {"$set": updates})
         except Exception as e:
@@ -1111,7 +1116,7 @@ class Activities(object):
                     activity_streams["polyline"] = polyline.encode(latlng)
                 except Exception as e:
                     log.error("problem encoding {}".format(activity_id))
-                    log.exception(e)
+                    # log.exception(e)
                     return {
                         "error": "cannot polyline encode stream for activity {}"
                         .format(activity_id)
@@ -1322,16 +1327,19 @@ class Webhooks(object):
         if update.object_type == "athlete":
             return
 
+        create = False
+        if update.aspect_type == "update":
+            # update the activity if it exists, or create it
+            result = Index.update(update.object_id, update.updates)
+            if not result:
+                create = True
+            # log.debug(result)
+
         #  If we got here then we know there are index entries for this user
-        if update.aspect_type == "create":
+        if create or (update.aspect_type == "create"):
             # fetch activity and add it to the index
             gevent.spawn(Index.import_by_id, user, [update.object_id])
             gevent.sleep(0)
-
-        elif update.aspect_type == "update":
-            # update the activity if it exists, or create it
-            result = Index.update(update.object_id, update.updates)
-            log.debug(result)
 
         elif update.aspect_type == "delete":
             # delete the activity from the index
