@@ -848,8 +848,13 @@ class Index(object):
         client = user.client()
         
         def fetch(id):
-            A = client.get_activity(id)
-            a = cls.strava2doc(A)
+            try:
+                A = client.get_activity(id)
+                a = cls.strava2doc(A)
+            except Exception as e:
+                log.debug("fetch {}:{} failed".format(user, id))
+                return
+
             log.debug("fetched activity {} for {}".format(id, user))
             return pymongo.ReplaceOne({"_id": A.id}, a, upsert=True)
 
