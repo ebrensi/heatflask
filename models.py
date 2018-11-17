@@ -1105,7 +1105,7 @@ class Activities(object):
             streams = client.get_activity_streams(activity_id,
                                                   series_type='time',
                                                   types=streams_to_import)
-            assert streams is not null
+            assert streams is not None
             
         except Exception as e:
             msg = ("Can't import streams for activity {}:\n{}"
