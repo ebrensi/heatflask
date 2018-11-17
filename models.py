@@ -860,7 +860,8 @@ class Index(object):
 
         pool = Pool(CONCURRENCY)
         mongo_requests = list(req for req in pool.imap_unordered(fetch, activity_ids) if req)
-        return cls.db.bulk_write(mongo_requests)
+
+        return cls.db.bulk_write(mongo_requests) if mongo_requests else None
 
     @classmethod
     def query(cls, user=None,
