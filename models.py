@@ -859,7 +859,7 @@ class Index(object):
             return pymongo.ReplaceOne({"_id": A.id}, a, upsert=True)
 
         pool = Pool(CONCURRENCY)
-        mongo_requests = list(pool.imap_unordered(fetch, activity_ids))
+        mongo_requests = list(req for req in pool.imap_unordered(fetch, activity_ids) if req)
         return cls.db.bulk_write(mongo_requests)
 
     @classmethod
