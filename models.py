@@ -852,10 +852,10 @@ class Index(object):
                 A = client.get_activity(id)
                 a = cls.strava2doc(A)
             except Exception as e:
-                log.debug("fetch {}:{} failed".format(user, id))
+                # log.debug("fetch {}:{} failed".format(user, id))
                 return
 
-            log.debug("fetched activity {} for {}".format(id, user))
+            # log.debug("fetched activity {} for {}".format(id, user))
             return pymongo.ReplaceOne({"_id": A.id}, a, upsert=True)
 
         pool = Pool(CONCURRENCY)
