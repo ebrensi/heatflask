@@ -31,6 +31,8 @@ app = Flask(__name__)
 app.config.from_object(os.environ['APP_SETTINGS'])
 log = app.logger
 
+log.propagate = False
+
 log.addHandler(logging.StreamHandler(sys.stdout))
 log.setLevel(logging.DEBUG)
 
