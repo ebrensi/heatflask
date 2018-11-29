@@ -825,7 +825,8 @@ class Index(object):
         except Exception as e:
             if out_queue:
                 out_queue.put({"error": str(e)})
-            log.debug("Error while building activity index")
+            log.error(
+                "Error while building activity index for {}",format(user)
             log.exception(e)
         else:
             elapsed = datetime.utcnow() - start_time
@@ -1342,7 +1343,8 @@ class Webhooks(object):
             if not result:
                 create = True
             else:
-                log.debug("{} index update: {}".format(user, result))
+                pass
+                # log.debug("{} index update: {}".format(user, result))
 
         #  If we got here then we know there are index entries for this user
         if create or (update.aspect_type == "create"):
@@ -1353,7 +1355,7 @@ class Webhooks(object):
         elif update.aspect_type == "delete":
             # delete the activity from the index
             result = Index.delete(update.object_id)
-            log.debug(result)
+            # log.dssebug(result)
 
 
     @staticmethod

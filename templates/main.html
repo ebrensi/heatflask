@@ -22,7 +22,6 @@
         {% if user %}
         const USER_ID = "{{ user.id }}",
               BASE_USER_URL = "{{ url_for('main', username=user.id) }}",
-              GROUP_ACTIVITY_SSE = "{{ url_for('group_stream', username=user.id, activity_id='') }}",
               SHARE_PROFILE = {{ user.share_profile|tojson|safe }},
               SHARE_STATUS_UPDATE_URL = "{{ url_for('update_share_status', username=user.id) }}",
               ACTIVITY_LIST_URL = "{{ url_for('activities', username=user.id) }}";
