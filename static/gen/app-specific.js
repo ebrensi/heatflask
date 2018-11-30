@@ -2,7 +2,6 @@ L.Control.fps=L.Control.extend({lastCalledTime:1,options:{position:"topright"},o
 return s;};function hhmmss(secs){let totalSeconds=secs;let hours=Math.floor(totalSeconds/3600).pad(2);totalSeconds%=3600;let minutes=Math.floor(totalSeconds/60).pad(2);seconds=Math.round(totalSeconds%60).pad(2);return`${hours}:${minutes}:${seconds}`;}
 function img(url,w=20,h=20,alt=""){return`<img src='${url}'width=${w}px height=${h}px class="img-fluid"alt="${alt}">`;}
 function href(url,text){return`<a href='${url}'target='_blank'>${text}</a>`;}
-function ip_lookup_url(ip){return ip?"http://freegeoip.net/json/"+ip:"#";}
 function stravaActivityURL(id){return"https://www.strava.com/activities/"+id;}
 function stravaAthleteURL(id){return"https://www.strava.com/athletes/"+id;}
 function formatDate(data,type,row,meta){date=new Date(data);return type==="display"||type==="filter"?date.toLocaleString("en-US",{hour12:false}):date;}
