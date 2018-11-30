@@ -813,7 +813,7 @@ def ip_lookup():
 
     if cached:
         info = json.loads(cached)
-        log.debug("got cached info for {}".format(ip))
+        # log.debug("got cached info for {}".format(ip))
 
     else:
         url = (
