@@ -62,6 +62,7 @@ class Config(object):
     # How long before a user's index is outated and needs an update
     INDEX_UPDATE_TIMEOUT = 30 * 60  # 20 minutes
 
+    JSONIFY_PRETTYPRINT_REGULAR = True
 
     SECRET_KEY = (
         "pB\xeax\x9cJ\xd6\x81\xed\xd7\xf9\xd0\x99o\xad\rM\x92\xb1\x8b{7\x02r"
