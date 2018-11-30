@@ -43,10 +43,6 @@ function href( url, text ) {
     return `<a href='${url}' target='_blank'>${text}</a>`;
 }
 
-function ip_lookup_url( ip ) {
-    return ( ip? "http://freegeoip.net/json/"+ip : "#" );
-}
-
 // Strava specific stuff
 function stravaActivityURL( id ) {
     return "https://www.strava.com/activities/"+id;

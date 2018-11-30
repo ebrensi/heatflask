@@ -18,6 +18,7 @@ import os
 import json
 import itertools
 import base36
+import requests
 import stravalib
 import flask_login
 from flask_login import current_user, login_user, logout_user, login_required
@@ -749,7 +750,7 @@ def app_info():
         "config": str(app.config),
         "mongodb": mongodb.command("dbstats"),
         "activities": mongodb.command("collstats", "activities"),
-        "indexes": mongodb.command("collstats", "indexes"),
+        "index": mongodb.command("collstats", "indexes"),
         "payments": mongodb.command("collstats", "payments")
     }
     return jsonify(info)
@@ -797,6 +798,34 @@ def logged_event(event_id):
 def event_history_init():
     EventLogger.init()
     return redirect(url_for("event_history"))
+
+
+# IP lookup url
+@app.route('/ip_lookup')
+@admin_required
+def ip_lookup():
+    ip = request.args.get("ip")
+    if not ip:
+        return
+
+    key = "IP:{}".format(ip)
+    cached = redis.get(key)
+
+    if cached:
+        info = json.loads(cached)
+        log.debug("got cached info for {}".format(ip))
+
+    else:
+        url = (
+            "http://api.ipstack.com/{}?access_key={}"
+            .format(ip, os.environ["IPSTACK_ACCESS_KEY"])
+        )
+        resp = requests.get(url)
+        info = json.dumps(resp.json()) if resp else ""
+        if info:
+            redis.setex(key, info, app.config["CACHE_IP_INFO_TIMEOUT"])
+
+    return jsonify(info)
 
 
 # Stuff for subscription to Strava webhooks

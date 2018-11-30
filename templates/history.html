@@ -19,6 +19,11 @@
     const user_profile_url = "{{ url_for('user_profile', username='') }}",
           event_url = "{{ url_for('logged_event', event_id='') }}";
 
+
+    function ip_lookup_url( ip ) {
+        return ( ip? "{{ url_for('ip_lookup') }}" + `?ip=${ip}` : "#" );
+    }
+
     function formatID (data, type, row) {
         if (data) {
             if (type == "display") {
