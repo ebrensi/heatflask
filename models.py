@@ -514,7 +514,8 @@ class Users(UserMixin, db_sql.Model):
             if summaries:
                 A["ts_local"] = str(A["ts_local"])
                 A["ts_UTC"] = str(A["ts_UTC"])
-                del A["last_accessed"]
+                if "last_accessed" in A:
+                    del A["last_accessed"]
 
             if owner_id:
                 A.update({"owner": self.id, "profile": self.profile})
