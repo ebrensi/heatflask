@@ -506,7 +506,6 @@ def group_stream(username, activity_id):
             pool.join()
             out_queue.put(None)
             out_queue.put(StopIteration)
-
     user = Users.get(username)
     pool = gevent.pool.Pool(app.config.get("CONCURRENCY"))
     out_queue = gevent.queue.Queue()
@@ -514,7 +513,6 @@ def group_stream(username, activity_id):
     gevent.sleep(0)
     return Response((sse_out(a) if a else sse_out() for a in out_queue),
                     mimetype='text/event-stream')
-
 
 @app.route('/<username>/activities')
 @log_request_event
@@ -600,6 +598,7 @@ def data_socket(ws):
         msg = receiveObj(ws)
         if msg:
             if "query" in msg:
+                # log.debug("Received query: {}".format(msg["query"]))
                 # sendObj(ws, {"msg": "sending query {}...".format(msg["query"])})
                 for a in Activities.query(msg["query"]):
                     sendObj(ws, a)
