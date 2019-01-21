@@ -383,7 +383,7 @@ class Users(UserMixin, db_sql.Model):
         gevent.sleep(0)
         return out_queue
 
-    def query_activities(self, 
+    def query_activities(self,
                          activity_ids=None,
                          grouped=False,
                          exclude_ids=[],
@@ -902,9 +902,12 @@ class Index(object):
         to_delete = None
         if exclude_ids:
             try:
-                query_ids = set( int(doc["_id"]) 
-                    for doc in cls.db.find(query, {"_id": True}).limit(limit) )
-            except Exception as e: 
+                query_ids = set(int(doc["_id"]) 
+                    for doc in cls.db.find(
+                        query, {"_id": True}).sort("ts_UTC", pymongo.DESCENDING)
+                                             .limit(limit) )
+
+            except Exception as e:
                 log.exception(e)
                 return
             
@@ -933,7 +936,7 @@ class Index(object):
                 cursor = cls.db.find(query, out_fields)
             else:
                 cursor = cls.db.find(query)
-            cursor = cursor.limit(limit).sort("ts_UTC", pymongo.DESCENDING)
+            cursor = cursor.sort("ts_UTC", pymongo.DESCENDING).limit(limit)
 
         except Exception as e:
             log.error(
@@ -1193,8 +1196,7 @@ class Activities(object):
             queue.put(None)
             queue.put(StopIteration)
             # log.debug("done with query")
-
-        
+     
         gevent.spawn(go)
         gevent.sleep(0)
         return queue
