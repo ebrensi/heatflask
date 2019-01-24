@@ -754,9 +754,9 @@ function renderLayers() {
         }
 
         if (A.error){
-            let msg = `<font color='red'>${A.error}</font><br>`;
-            $(".data_message").html(msg);
-            console.log(`Error activity ${A.id}: ${A.error}`);
+            // let msg = `<font color='red'>${A.error}</font><br>`;
+            // $(".data_message").html(msg);
+            console.log(`Error: ${A.error}`);
             return;
         } 
 
