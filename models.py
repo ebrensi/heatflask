@@ -358,6 +358,9 @@ class Users(UserMixin, db_sql.Model):
             "after": count
         }
 
+    def index_count(self):
+        return Index.user_index_size(self)
+
     def delete_index(self):
         return Index.delete_user_entries(self)
 
@@ -442,10 +445,9 @@ class Users(UserMixin, db_sql.Model):
             out_queue = Queue()
             put_stopIteration = True
 
-        index_exists = Index.user_index_exists(self)
         if (summaries or limit or only_ids or after or before):
 
-            if index_exists:
+            if self.index_count():
 
                 gen, to_delete = Index.query(
                             user=self,
@@ -720,8 +722,14 @@ class Index(object):
             )
 
     @classmethod
-    def user_index_exists(cls, user):
-        return cls.db.count({"user_id": user.id}, limit=1)
+    def user_index_size(cls, user):
+        try:
+            activity_count = cls.db.count({"user_id": user.id})
+        except Exception as e:
+            log.error("Error retrieving activity count for {}".format{user})
+            return
+
+        return activity_count
 
     @classmethod
     def import_user(cls, user, out_queue=None,
@@ -1322,7 +1330,7 @@ class Webhooks(object):
         update = cls.client.handle_subscription_update(update_raw)
         user_id = update.owner_id
         user = Users.get(user_id, timeout=10)
-        if (not user) or (not Index.user_index_exists(user)):
+        if (not user) or (not user.index_count()):
             return
 
         record = {
