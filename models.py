@@ -726,7 +726,7 @@ class Index(object):
         try:
             activity_count = cls.db.count({"user_id": user.id})
         except Exception as e:
-            log.error("Error retrieving activity count for {}".format{user})
+            log.error("Error retrieving activity count for {}: {}".format(user, e))
             return
 
         return activity_count
