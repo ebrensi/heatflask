@@ -1,7 +1,7 @@
 <html>
   <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>{{ config["APP_NAME"] }}</title>
+    <title>{{ config["APP_NAME"]}}</title>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
 
     {% assets "splash_css" %}
     <link rel="stylesheet" href="{{ ASSET_URL }}" />
@@ -9,7 +9,6 @@
 
   </head>
   <body>
-
 
     <div class="container">
     {% with messages = get_flashed_messages() %}
@@ -21,9 +20,14 @@
           </ul>
         {% endif %}
     {% endwith %}
+      <br>
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="(heatflask logo)" height="128" width="128">
 
       <h1>{{ config["APP_NAME"] }}</h1>
 
+      <h3>Animated Activity Visualization</h3>
+
+      <br>
       <form action="{{ url_for('authorize') }}">
           <input type="image" src="{{ url_for('static', filename='btn_strava_connectwith_orange.svg') }}"
            alt="Authenticate with Strava" >
@@ -34,14 +38,17 @@
         <p class="error"><strong>Error:</strong> {{ error }}
       {% endif %}
 
-      <h1>or</h1>
+      <h4>or</h4>
       <FORM METHOD="LINK" ACTION="{{ url_for('demo') }}">
-      <INPUT class="btn btn-primary" TYPE="submit" VALUE="See Demo">
+      <INPUT class="btn btn-primary" TYPE="submit" VALUE="Demo">
       </FORM>
 
       <FORM METHOD="LINK" ACTION="{{ url_for('public_directory')}}">
-      <INPUT class="btn btn-primary" TYPE="submit" VALUE="Another Demo">
+      <INPUT class="btn btn-info" TYPE="submit" VALUE="Public User Directory">
       </FORM>
+
+      <img src="{{ url_for('static', filename='lake.gif') }}" alt="(sample-gif)" style="width:50%;">
+
     </div>
 
   </body>
