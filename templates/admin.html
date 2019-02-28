@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <title>{{ config["APP_NAME"] }} - Admin</title>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    
     {% assets "basic_table_css" %}
     <link rel="stylesheet" href="{{ ASSET_URL }}" />
     {% endassets %}

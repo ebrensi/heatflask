@@ -10,7 +10,7 @@ class Config(object):
 
     # Heatflask settings
     OFFLINE = False
-    APP_VERSION = "(alpha)"
+    APP_VERSION = ""
     APP_NAME = "Heatflask {}".format(APP_VERSION)
     APP_SETTINGS = os.environ.get("APP_SETTINGS")
     ADMIN = [15972102]
