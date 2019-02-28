@@ -2,7 +2,7 @@
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-    <title>{{ config["APP_NAME"]}}</title>
+    <title>{{ config["APP_NAME"]}} - Animated Activity Visualization</title>
     <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
 
     {% assets "splash_css" %}
@@ -25,9 +25,7 @@
       <br>
       <img src="{{ url_for('static', filename='logo.png') }}" alt="(heatflask logo)" height="128" width="128">
 
-      <h1>{{ config["APP_NAME"] }}</h1>
-
-      <h3>Animated Activity Visualization</h3>
+      <h3>Semi-Static Location Data Mapping</h3>
 
       <br>
       <form action="{{ url_for('authorize') }}">
@@ -40,7 +38,7 @@
         <p class="error"><strong>Error:</strong> {{ error }}
       {% endif %}
 
-      <h4>or</h4>
+      <br>
       <FORM METHOD="LINK" ACTION="{{ url_for('demo') }}">
       <INPUT class="btn btn-primary" TYPE="submit" VALUE="Demo">
       </FORM>
