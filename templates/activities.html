@@ -3,6 +3,7 @@
   <head>
     <title>{{ config["APP_NAME"] }} - {{ (user.username or user.id) }} - Activities List</title>
     <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <meta name="robots" content="noindex">
 
     {% assets "basic_table_css" %}
     <link rel="stylesheet" href="{{ ASSET_URL }}" />
