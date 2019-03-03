@@ -12,6 +12,11 @@
     {% assets "basic_table_js" %}
     <script type="text/javascript" src="{{ ASSET_URL }}"></script>
     {% endassets %}
+
+    {% if current_user.is_anonymous or (not current_user.is_admin()) %}
+    {{analytics}}
+    {% endif %}
+
   </head>
 
   <body>
