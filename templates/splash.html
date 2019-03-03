@@ -9,6 +9,9 @@
     <link rel="stylesheet" href="{{ ASSET_URL }}" />
     {% endassets %}
 
+    {% if current_user.is_anonymous or (not current_user.is_admin()) %}
+    {{analytics}}
+    {% endif %}
   </head>
   <body>
 
