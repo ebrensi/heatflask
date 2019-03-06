@@ -635,6 +635,16 @@ function updateLayers(msg) {
     // (re-)render the activities table
     atable.clear();
     atable.rows.add(Object.values(appState.items)).draw();
+
+    if (!ADMIN) {
+        // Record this to google analytics
+        ga('send', 'event', {
+            eventCategory: 'Activities',
+            eventAction: 'Render',
+            eventLabel: USER_ID,
+            eventValue: Object.keys(appState.items).length
+        });
+    }
 }
 
 
