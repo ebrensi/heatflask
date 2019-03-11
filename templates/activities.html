@@ -82,6 +82,7 @@
         sock = new WebSocket(WEBSOCKET_URL);
 
     status_element.innerText = "Retrieving Activity Index...";
+    
     document.querySelector("#dist").innerHtml = `<i class="fa fa-arrows-h" aria-hidden="true"></i> (${DIST_LABEL})`;
 
     sock.onopen = function(event) {
@@ -99,6 +100,13 @@
 
     sock.onclose = function(event) {
         console.log("socket closed: ", event);
+        if (!ADMIN) {
+        // Record this to google analytics
+        ga('send', 'event', {
+            eventCategory: USER_ID,
+            eventAction: 'View-Index'
+        });
+    }
     }
 
     sock.onmessage = function(event) {
