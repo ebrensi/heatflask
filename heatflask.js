@@ -232,6 +232,15 @@ var capture_button_states = [
             DotLayer.captureCycle(selection=selection, callback=function(){
                 btn.state('idle');
                 areaSelect.remove();
+                if (!ADMIN) {
+                    // Record this to google analytics
+                    let cycleDuration = Math.round(DotLayer.periodInSecs() * 1000);
+                    ga('send', 'event', {
+                        eventCategory: USER_ID,
+                        eventAction: 'Capture-GIF',
+                        eventValue: cycleDuration
+                    });
+                }
             });
 
             btn.state('capturing');
@@ -639,10 +648,9 @@ function updateLayers(msg) {
     if (!ADMIN) {
         // Record this to google analytics
         ga('send', 'event', {
-            eventCategory: 'Activities',
+            eventCategory: USER_ID,
             eventAction: 'Render',
-            eventLabel: USER_ID,
-            eventValue: Object.keys(appState.items).length
+            eventValue: num
         });
     }
 }
