@@ -232,7 +232,7 @@ var capture_button_states = [
             DotLayer.captureCycle(selection=selection, callback=function(){
                 btn.state('idle');
                 areaSelect.remove();
-                if (!ADMIN) {
+                if (!ADMIN && !OFFLINE) {
                     // Record this to google analytics
                     let cycleDuration = Math.round(DotLayer.periodInSecs() * 1000);
                     ga('send', 'event', {
@@ -645,7 +645,7 @@ function updateLayers(msg) {
     atable.clear();
     atable.rows.add(Object.values(appState.items)).draw();
 
-    if (!ADMIN) {
+    if (!ADMIN && !OFFLINE) {
         // Record this to google analytics
         ga('send', 'event', {
             eventCategory: USER_ID,
