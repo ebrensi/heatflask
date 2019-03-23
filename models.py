@@ -8,7 +8,6 @@ import dateutil.parser
 import stravalib
 import polyline
 import pymongo
-import itertools
 
 from redis import Redis
 
@@ -31,7 +30,6 @@ STREAMS_OUT = ["polyline", "time"]
 STREAMS_TO_CACHE = ["polyline", "time"]
 CACHE_USERS_TIMEOUT = app.config["CACHE_USERS_TIMEOUT"]
 CACHE_ACTIVITIES_TIMEOUT = app.config["CACHE_ACTIVITIES_TIMEOUT"]
-INDEX_UPDATE_TIMEOUT = app.config["INDEX_UPDATE_TIMEOUT"]
 LOCAL = os.environ.get("APP_SETTINGS") == "config.DevelopmentConfig"
 OFFLINE = app.config.get("OFFLINE")
 
@@ -429,6 +427,7 @@ class Users(UserMixin, db_sql.Model):
                     if s in stream_data}
             data.update(activity)
             queue.put(data)
+
             # log.debug("importing {}...queued!".format(activity["_id"]))
             gevent.sleep(0)
 
@@ -622,39 +621,57 @@ class Users(UserMixin, db_sql.Model):
 class Index(object):
     name = "index"
     db = mongodb.get_collection(name)
-    USER_INDEX_TIMEOUT = app.config["STORE_INDEX_TIMEOUT"]
-
+    DB_TTL = app.config["STORE_INDEX_TIMEOUT"]
+    
     @classmethod
     # Initialize the database
     def init_db(cls, clear_cache=False):
         # drop the "indexes" collection
-        mongodb.drop_collection(cls.name)
+        try:
+            mongodb.drop_collection(cls.name)
+        except Exception as e:
+            log.debug(
+                "error deleting '{}' collection from MongoDB.\n{}"
+                .format(cls.name, e))
+            result1 = e
+
 
         # create new index collection
         mongodb.create_collection(cls.name)
 
         cls.db.create_index("user")
-        cls.db.create_index(("ts_UTC", mongodb.DESCENDING))
-        cls.db.create_index(("start_latlng", pymongo.GEO2D))
+        cls.db.create_index([("ts_UTC", pymongo.DESCENDING)])
 
-        log.info("initialized Index collection")
+        # cls.db.create_index([("start_latlng", pymongo.GEO2D)])
+        result = cls.db.create_index(
+            "ts",
+            name="ts",
+            expireAfterSeconds=cls.DB_TTL
+        )
 
-    @classmethod
-    def triage_user_indexes(cls, timeout=None):
-        if not timeout:
-            timeout = cls.USER_INDEX_TIMEOUT
 
-        result = {}
+        log.info("initialized '{}' collection".format(cls.name))
 
-        for user_id in cls.db.distinct("user_id"):
-            user = Users.get(user_id)
-            index_age = (datetime.utcnow() - user.dt_indexed).seconds
-            
-            if index_age > timeout:
-                result[user_id] = cls.db.delete_many({"user_id": user_id})
-                log.debug("deleted index entries for {}".format(user))
 
-        return result
+    @classmethod 
+    def update_ttl(cls, timeout=DB_TTL):
+
+        # Update the MongoDB Index TTL if necessary 
+        info = cls.db.index_information()
+
+        current_ttl = info["ts"]["expireAfterSeconds"]
+
+        if current_ttl != timeout:
+            result = mongodb.command('collMod', cls.name,
+                        index={'keyPattern': {'ts': 1},
+                                'background': True,
+                                'expireAfterSeconds': timeout}
+                     )
+
+            log.info("`{}` db TTL updated: {}".format(cls.name, result))
+        else:
+            log.debug("no need to update TTL")
+
 
     @classmethod
     def strava2doc(cls, a):
@@ -946,6 +963,9 @@ class Index(object):
                 cursor = cls.db.find(query)
             cursor = cursor.sort("ts_UTC", pymongo.DESCENDING).limit(limit)
 
+            # Now update timestamp
+            cls.db.update_many(query, {"$set": {"ts": datetime.utcnow()}})
+
         except Exception as e:
             log.error(
                 "error accessing mongodb indexes collection:\n{}"
@@ -965,16 +985,21 @@ class Index(object):
 #  Activities class is only a proxy to underlying data structures.
 #  There are no Activity objects
 class Activities(object):
+    name = "activities"
+    db = mongodb.get_collection(name)
+
+    CACHE_TTL = app.config["CACHE_ACTIVITIES_TIMEOUT"]
+    DB_TTL = app.config["STORE_ACTIVITIES_TIMEOUT"]
 
     @classmethod
-    def init(cls, clear_cache=False):
+    def init_db(cls, clear_cache=False):
         # Create/Initialize Activity database
         try:
-            result1 = mongodb.activities.drop()
+            mongodb.drop_collection(cls.name)
         except Exception as e:
             log.debug(
-                "error deleting activities collection from MongoDB.\n{}"
-                .format(e))
+                "error deleting '{}' collection from MongoDB.\n{}"
+                .format(cls.name, e))
             result1 = e
 
         if clear_cache:
@@ -984,16 +1009,39 @@ class Activities(object):
             else:
                 result2 = None
 
-        mongodb.create_collection("activities")
-
-        timeout = app.config["STORE_ACTIVITIES_TIMEOUT"]
-        result = mongodb["activities"].create_index(
+        mongodb.create_collection(cls.name)
+        
+        result = cls.db.create_index(
             "ts",
-            expireAfterSeconds=timeout
+            name="ts",
+            expireAfterSeconds=cls.DB_TTL
         )
-        log.info("initialized Activity collection")
+        log.info("initialized '{}' collection".format(cls.name))
         return result
         
+    
+    @classmethod 
+    def update_ttl(cls, timeout=DB_TTL):
+
+        # Update the MongoDB Activities TTL if necessary 
+        info = cls.db.index_information()
+
+        log.debug(info)
+
+        current_ttl = info["ts"]["expireAfterSeconds"]
+
+
+        if current_ttl != timeout:
+            result = mongodb.command('collMod', cls.name,
+                        index={'keyPattern': {'ts': 1},
+                                'background': True,
+                                'expireAfterSeconds': timeout}
+                     )
+
+            log.info("`{}` db TTL updated: {}".format(cls.name, result))
+        else:
+            log.debug("no need to update TTL")
+
 
     @staticmethod
     def bounds(poly):
@@ -1058,7 +1106,7 @@ class Activities(object):
         return "A:{}".format(id)
 
     @classmethod
-    def set(cls, id, data, timeout=CACHE_ACTIVITIES_TIMEOUT):
+    def set(cls, id, data, timeout=CACHE_TTL):
         # cache it first, in case mongo is down
         packed = msgpack.packb(data)
         result1 = redis.setex(cls.cache_key(id), packed, timeout)
@@ -1068,7 +1116,7 @@ class Activities(object):
             "mpk": Binary(packed)
         }
         try:
-            result2 = mongodb.activities.update_one(
+            result2 = cls.db.update_one(
                 {"_id": int(id)},
                 {"$set": document},
                 upsert=True)
@@ -1079,7 +1127,7 @@ class Activities(object):
         return result1, result2
 
     @classmethod
-    def get(cls, id, timeout=CACHE_ACTIVITIES_TIMEOUT):
+    def get(cls, id, timeout=CACHE_TTL):
         packed = None
         key = cls.cache_key(id)
         cached = redis.get(key)
@@ -1090,7 +1138,7 @@ class Activities(object):
             packed = cached
         else:
             try:
-                document = mongodb.activities.find_one_and_update(
+                document = cls.db.find_one_and_update(
                     {"_id": int(id)},
                     {"$set": {"ts": datetime.utcnow()}}
                 )
@@ -1110,7 +1158,7 @@ class Activities(object):
 
     @classmethod
     def import_streams(cls, client, activity_id, stream_names,
-                       timeout=CACHE_ACTIVITIES_TIMEOUT):
+                       timeout=CACHE_TTL):
 
         streams_to_import = list(stream_names)
         if ("polyline" in stream_names):
@@ -1383,17 +1431,25 @@ class Webhooks(object):
 
 class Payments(object):
 
-    @staticmethod
-    def init():
-        mongodb.payments.drop()
+    name = "payments"
+    db = mongodb.get_collection(name)
+
+    @classmethod
+    def init_db(cls):
+        try:
+            mongodb.drop_collection(cls.name)
+        except Exception as e:
+            log.debug(
+                "error deleting '{}' collection from MongoDB.\n{}"
+                .format(cls.name, e))
+            result1 = e
 
         # create new indexes collection
-        mongodb.create_collection("payments")
-        mongodb.payments.create_index([
-            ("ts", pymongo.DESCENDING),
-            ("user", pymongo.ASCENDING)
-        ])
-        log.info("initialized Payments collection")
+        mongodb.create_collection(cls.name)
+        cls.db.create_index([("ts", pymongo.DESCENDING)])
+        cls.db.create_index([("user", pymongo.ASCENDING)])
+
+        log.info("initialized '{}' collection".format(cls.name))
 
     @staticmethod
     def get(user=None, before=None, after=None):
@@ -1476,11 +1532,15 @@ collections = mongodb.collection_names()
 if "history" not in collections:
     EventLogger.init()
 
-if "activities" not in collections:
-    Activities.init()
+if Activities.name not in collections:
+    Activities.init_db()
+else:
+    Activities.update_ttl()
 
 if Index.name not in collections:
     Index.init_db()
+else:
+    Index.update_ttl()
 
-if "payments" not in collections:
-    Payments.init()
+if Payments.name not in collections:
+    Payments.init_db()
