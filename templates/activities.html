@@ -33,7 +33,7 @@
       <!-- <th><i class="fa fa-users" aria-hidden="true"></i></th> -->
       <th><i class="fa fa-calendar" aria-hidden="true"></i></th>
       <th>Type</th>
-      <th id="dist"></th>
+      <th id="dist">Dist</th>
       <th><i class="fa fa-clock-o" aria-hidden="true"></i></th>
       <th>Name</th>
     </thead>
@@ -50,7 +50,9 @@
       WS_SCHEME = "ws://";
     };
     
-    const MEASURMENT_PREFERENCE = "{{ current_user.measurement_preference if current_user.is_authenticated else user.measurement_preference }}",
+    const OFFLINE = {{ config.get('OFFLINE')|tojson }},
+            ADMIN = {{ (current_user.is_authenticated and current_user.is_admin())|tojson|safe }},
+            MEASURMENT_PREFERENCE = "{{ current_user.measurement_preference if current_user.is_authenticated else user.measurement_preference }}",
           USER_ID = "{{ user.id }}",
           DIST_UNIT = (MEASURMENT_PREFERENCE=="feet")? 1609.34 : 1000.0,
           DIST_LABEL = (MEASURMENT_PREFERENCE=="feet")?  "mi" : "km",
@@ -100,7 +102,7 @@
 
     sock.onclose = function(event) {
         console.log("socket closed: ", event);
-        if (!ADMIN) {
+        if (!ADMIN && !OFFLINE) {
         // Record this to google analytics
         ga('send', 'event', {
             eventCategory: USER_ID,
@@ -119,7 +121,7 @@
             scrollY: "80vh",
             scrollX: true,
             scrollCollapse: true,
-            order: [[ 3, "desc" ]],
+            order: [[ 2, "desc" ]],
             select: false
         });
 
