@@ -42,11 +42,8 @@ class Config(object):
 
     MONGODB_URI = os.environ.get("ATLAS_MONGODB_URI")
 
-    # How long (seconds) we hold a user's index (in Mongo) before rebuilding it
-    # We purge a user's activity index from Mongo if it has not been accessed
-    #  for longer than this.  Note this also means that subscription updates
-    #  for this user will be ignored after this timeout.
-    STORE_INDEX_TIMEOUT = 2 * 24 * 60 * 60   # 2 days
+    # How long we store an index entry in MongoDB
+    STORE_INDEX_TIMEOUT = 30 * 24 * 60 * 60   # 30 days
 
     # How long we store Activity stream data in MongoDB
     STORE_ACTIVITIES_TIMEOUT = 3 * 24 * 60 * 60  # 3 days
@@ -58,9 +55,6 @@ class Config(object):
     CACHE_USERS_TIMEOUT = 1 * 24 * 60 * 60  # 1 day
 
     CACHE_IP_INFO_TIMEOUT = 1 * 24 * 60 * 60  # 1 day
-
-    # How long before a user's index is outated and needs an update
-    INDEX_UPDATE_TIMEOUT = 30 * 60  # 20 minutes
 
     JSONIFY_PRETTYPRINT_REGULAR = True
 
@@ -140,5 +134,5 @@ class DevelopmentConfig(Config):
         # in local environment,
         MONGODB_URI = "mongodb://localhost/heatflask"
 
-        STORE_INDEX_TIMEOUT = 365 * 24 * 60 * 60   # 365 days
-        STORE_ACTIVITIES_TIMEOUT = 365 * 24 * 60 * 60  # 365 days
+        STORE_INDEX_TIMEOUT = 2 * 24 * 60 * 60   # 2 days
+        STORE_ACTIVITIES_TIMEOUT = 2 * 24 * 60 * 60  # 2 days
