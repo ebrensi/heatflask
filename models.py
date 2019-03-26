@@ -1530,22 +1530,4 @@ class Utility():
         else:
             return dt
 
-
-
-collections = mongodb.collection_names()
-
-if "history" not in collections:
-    EventLogger.init()
-
-if Activities.name not in collections:
-    Activities.init_db()
-else:
-    Activities.update_ttl()
-
-if Index.name not in collections:
-    Index.init_db()
-else:
-    Index.update_ttl()
-
-if Payments.name not in collections:
-    Payments.init_db()
+            

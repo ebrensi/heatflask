@@ -49,12 +49,25 @@ from models import (
     db_sql, mongodb, redis
 )
 
-# just do once
-if not redis.get("db-reset"):
-    # Activities.init_db(clear_cache=True)
+# initialize MongoDB collections if necessary
+collections = mongodb.collection_names()
+
+if "history" not in collections:
+    EventLogger.init()
+
+if Activities.name not in collections:
+    Activities.init_db()
+else:
+    Activities.update_ttl()
+
+if Index.name not in collections:
     Index.init_db()
-    redis.set("db-reset", 1)
-# redis.delete("db-reset")
+else:
+    Index.update_ttl()
+
+if Payments.name not in collections:
+    Payments.init_db()
+
 
 Analytics(app)
 
