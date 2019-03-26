@@ -21,6 +21,12 @@
 
   <body>
   <h4>Activities list</h4>
+
+  <p>
+    TTL is "Time To Live" for index entries.  Index entries expire if not accessed for a while, in order to save memory.  
+    <button type="button" id="rebuild-button" class="btn btn-warning btn-sm">Re-build index</button>  
+  </p>
+  
   <div id="status">
     <span id="status_msg"></span>
     <span id="count"></span>
@@ -36,6 +42,8 @@
       <th id="dist">Dist</th>
       <th><i class="fa fa-clock-o" aria-hidden="true"></i></th>
       <th>Name</th>
+      <th>TTL <br> DD:HH:MM</th>
+
     </thead>
     <tbody>
     </tbody>
@@ -49,6 +57,12 @@
     } else {
       WS_SCHEME = "ws://";
     };
+
+    Number.prototype.pad = function(size) {
+      let s = String(this);
+      while (s.length < (size || 2)) {s = "0" + s;}
+      return s;
+    }
     
     const OFFLINE = {{ config.get('OFFLINE')|tojson }},
             ADMIN = {{ (current_user.is_authenticated and current_user.is_admin())|tojson|safe }},
@@ -61,6 +75,10 @@
           GROUP_ACTIVITY_URL = USER_BASE_URL + "?group=",
           WEBSOCKET_URL = WS_SCHEME+window.location.host+"/data_socket";
           
+
+    window.history.pushState({}, "", window.location.origin + window.location.pathname);
+
+
     function td(text) {
       return "<td>" + text +"</td>";
     }
@@ -73,6 +91,26 @@
       return href(url, "<i class='fa fa-users'></i>");
       // return href(url, A.group);
 
+    }
+
+    function secs2DDHHMM(sec){
+      // console.log(sec);
+
+      if (!sec || sec <= 0) {
+        return "??"
+      }
+      let days = Math.floor(sec / 86400);
+      sec -= days * 86400;
+
+      // calculate (and subtract) whole hours
+      let hours = Math.floor(sec / 3600) % 24;
+      sec -= hours * 3600;
+
+      // calculate (and subtract) whole minutes
+      let minutes = Math.floor(sec / 60) % 60;
+      sec -= minutes * 60;
+
+      return `${days.pad(2)}:${hours.pad(2)}:${minutes.pad(2)}` 
     }
 
 
@@ -93,7 +131,8 @@
         queryObj = {};
         queryObj[USER_ID] = {
                 limit: 100000,
-                streams: false
+                streams: false,
+                update_index_ts: false
         };
 
         let msg = JSON.stringify({query: queryObj});
@@ -147,9 +186,19 @@
              td(dkm) +
              td(hhmmss(A.elapsed_time)) +
              td(A.name) +
+             td(secs2DDHHMM(A.ts)) +
              "</tr>";
       table_body.append(row);
-    }
+      }
+
+      var link = document.getElementById('rebuild-button');
+
+      link.onclick = function () {
+          if( confirm("Rebuild your Heatflask Index from Strava Data?") ) {
+              window.location = window.location.href + "?rebuild=1";
+          }
+          return false;
+      };
   
   </script>
  </body>

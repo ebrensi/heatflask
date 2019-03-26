@@ -395,7 +395,7 @@ class Users(UserMixin, db_sql.Model):
                          streams=False,
                          owner_id=False,
                          build_index=True,
-                         update_index=False,
+                         update_index_ts=True,
                          pool=None,
                          out_queue=None,
                          cache_timeout=CACHE_ACTIVITIES_TIMEOUT,
@@ -454,19 +454,9 @@ class Users(UserMixin, db_sql.Model):
                             limit=limit or 0,
                             after=after, before=before,
                             exclude_ids=exclude_ids,
-                            ids_only=only_ids
+                            ids_only=only_ids,
+                            update_ts=update_index_ts
                          )
-
-                if update_index:
-                    log.debug("updating index")
-                    gevent.spawn(self.build_index,
-                                 out_queue=out_queue,
-                                 limit=limit,
-                                 after=after,
-                                 before=before,
-                                 fetch_limit=100,
-                                 activitiy_ids=activity_ids)
-
 
                 if only_ids:
                     out_queue.put(list(gen))
@@ -506,8 +496,11 @@ class Users(UserMixin, db_sql.Model):
                         after=after)
                 )
 
+        DB_TTL = app.config["STORE_INDEX_TIMEOUT"]
+        NOW = datetime.utcnow()
+        # log.debug("NOW: {}, DB_TTL: {}".format(NOW, DB_TTL))
         for A in gen:
-
+            # log.debug(A)
             if "_id" not in A:
                 out_queue.put(A)
                 continue
@@ -516,8 +509,15 @@ class Users(UserMixin, db_sql.Model):
                 A["ts_local"] = str(A["ts_local"])
                 A["ts_UTC"] = str(A["ts_UTC"])
                 if "ts" in A:
-                    del A["ts"]
-
+                    ts = A["ts"]
+                    try:
+                        delta = (NOW - ts).seconds if NOW >= ts else 0
+                        A["ts"] = DB_TTL - delta
+                        # log.debug("delta: {}, remain: {}".format(delta,  A["ts"]))
+                    except Exception as e:
+                        log.exception(e)
+                        del A["ts"]
+                        
             if owner_id:
                 A.update({"owner": self.id, "profile": self.profile})
 
@@ -670,7 +670,8 @@ class Index(object):
 
             log.info("`{}` db TTL updated: {}".format(cls.name, result))
         else:
-            log.debug("no need to update TTL")
+            # log.debug("no need to update TTL")
+            pass
 
 
     @classmethod
@@ -751,7 +752,7 @@ class Index(object):
 
     @classmethod
     def import_user(cls, user, out_queue=None,
-                        fetch_query={"limit": 0},
+                        fetch_query={"limit": 10},
                         out_query={}):
 
         for query in [fetch_query, out_query]:
@@ -805,6 +806,7 @@ class Index(object):
                         out_queue.put(
                             {"idx": count}
                         )
+
                         # log.debug("put index {}".format(count))
 
                         if not rendering:
@@ -898,7 +900,9 @@ class Index(object):
               exclude_ids=None,
               after=None, before=None,
               limit=0,
-              ids_only=False):
+              ids_only=False,
+              update_ts=False,
+              ):
 
         activity_ids = set(int(id) for id in activity_ids) if activity_ids else None
         exclude_ids = set(int(id) for id in exclude_ids) if exclude_ids else None
@@ -964,8 +968,9 @@ class Index(object):
                 cursor = cls.db.find(query)
             cursor = cursor.sort("ts_UTC", pymongo.DESCENDING).limit(limit)
 
-            # Now update timestamp
-            cls.db.update_many(query, {"$set": {"ts": datetime.utcnow()}})
+            if update_ts:
+                # Now update timestamp
+                cls.db.update_many(query, {"$set": {"ts": datetime.utcnow()}})
 
         except Exception as e:
             log.error(
@@ -1027,8 +1032,6 @@ class Activities(object):
         # Update the MongoDB Activities TTL if necessary 
         info = cls.db.index_information()
 
-        log.debug(info)
-
         current_ttl = info["ts"]["expireAfterSeconds"]
 
 
@@ -1041,7 +1044,8 @@ class Activities(object):
 
             log.info("`{}` db TTL updated: {}".format(cls.name, result))
         else:
-            log.debug("no need to update TTL")
+            # log.debug("no need to update TTL")
+            pass
 
 
     @staticmethod
