@@ -50,10 +50,10 @@ from models import (
 )
 
 # just do once
-# if not redis.get("db-reset"):
-#     Activities.init_db(clear_cache=True)
-#     Index.init_db(clear_cache=True)
-#     redis.set("db-reset", 1)
+if not redis.get("db-reset"):
+    # Activities.init_db(clear_cache=True)
+    Index.init_db()
+    redis.set("db-reset", 1)
 # redis.delete("db-reset")
 
 Analytics(app)
