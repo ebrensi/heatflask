@@ -748,9 +748,9 @@ def app_info():
     info = {
         "config": str(app.config),
         "mongodb": mongodb.command("dbstats"),
-        "activities": mongodb.command("collstats", "activities"),
-        "index": mongodb.command("collstats", "indexes"),
-        "payments": mongodb.command("collstats", "payments")
+        Activities.name: mongodb.command("collstats", Activities.name),
+        Index.name: mongodb.command("collstats", Index.name),
+        Payments.name: mongodb.command("collstats", Payments.name)
     }
     return jsonify(info)
 
@@ -759,9 +759,9 @@ def app_info():
 @admin_required
 def app_init():
     info = {
-        Activities.init(),
-        Index.init(),
-        Payments.init()
+        Activities.init_db(),
+        Index.init_db(),
+        Payments.init_db()
     }
     return "Activities, Index, Payments databases re-initialized"
 
