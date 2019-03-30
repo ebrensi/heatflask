@@ -463,11 +463,8 @@ class Users(UserMixin, db_sql.Model):
                     out_queue.put(StopIteration)
                     return out_queue
 
-                
                 if to_delete:
                     out_queue.put({"delete": to_delete})
-
-                out_queue.put({"count": gen.count(True)})
 
             elif build_index:
                 # There is no activity index and we are to build one
@@ -498,6 +495,7 @@ class Users(UserMixin, db_sql.Model):
 
         DB_TTL = app.config["STORE_INDEX_TIMEOUT"]
         NOW = datetime.utcnow()
+
         # log.debug("NOW: {}, DB_TTL: {}".format(NOW, DB_TTL))
         for A in gen:
             # log.debug(A)
@@ -803,11 +801,10 @@ class Index(object):
                         # If we are also sending data to the front-end,
                         # we do this via a queue.
 
-                        out_queue.put(
-                            {"idx": count}
-                        )
-
-                        # log.debug("put index {}".format(count))
+                        if not (count % 5):
+                            # only output count every 5 items to cut down on data
+                            out_queue.put({"idx": count})
+                            # log.debug("put index {}".format(count))
 
                         if not rendering:
                             continue
@@ -856,7 +853,7 @@ class Index(object):
             if out_queue:
                 out_queue.put({"error": str(e)})
             log.error(
-                "Error while building activity index for {}",format(user))
+                "Error while building activity index for {}".format(user))
             log.exception(e)
         else:
             elapsed = datetime.utcnow() - start_time
@@ -901,7 +898,7 @@ class Index(object):
               after=None, before=None,
               limit=0,
               ids_only=False,
-              update_ts=False,
+              update_ts=True
               ):
 
         activity_ids = set(int(id) for id in activity_ids) if activity_ids else None
@@ -968,10 +965,6 @@ class Index(object):
                 cursor = cls.db.find(query)
             cursor = cursor.sort("ts_UTC", pymongo.DESCENDING).limit(limit)
 
-            if update_ts:
-                # Now update timestamp
-                cls.db.update_many(query, {"$set": {"ts": datetime.utcnow()}})
-
         except Exception as e:
             log.error(
                 "error accessing mongodb indexes collection:\n{}"
@@ -979,13 +972,32 @@ class Index(object):
             )
             return []
 
-        if ids_only:
-            return (a["_id"] for a in cursor), to_delete
+        def iterator(cur):
+            ids = []
+            yield {"count": cur.count(True)}
+
+            for a in cur:
+                a_id = a["_id"]
+                if update_ts:
+                    ids.append(a_id)
+
+                if ids_only:
+                    yield a_id
+                else:
+                    yield a
+
+            if update_ts:
+
+                result = cls.db.update_many(
+                    {"_id": {"$in": ids}}, 
+                    {"$set": {"ts": datetime.utcnow()}}
+                )
+                log.debug("updated TTL for {}: {}".format(user.id, result.raw_result))
 
         # cursor = list(cursor)
         # log.debug("query returns: {}".format([a["_id"] for a in cursor]))
 
-        return cursor, to_delete
+        return iterator(cursor), to_delete
 
 
 #  Activities class is only a proxy to underlying data structures.
