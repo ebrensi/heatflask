@@ -135,5 +135,5 @@ class DevelopmentConfig(Config):
         MONGODB_URI = "mongodb://localhost/heatflask"
 
         # STORE_INDEX_TIMEOUT = 2 * 24 * 60 * 60   # 2 days
-        STORE_INDEX_TIMEOUT = 10 * 60
+        STORE_INDEX_TIMEOUT = 24 * 60 * 60
         STORE_ACTIVITIES_TIMEOUT = 2 * 24 * 60 * 60  # 2 days
