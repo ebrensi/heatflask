@@ -46,7 +46,7 @@ class Config(object):
     STORE_INDEX_TIMEOUT = 30 * 24 * 60 * 60   # 30 days
 
     # How long we store Activity stream data in MongoDB
-    STORE_ACTIVITIES_TIMEOUT = 3 * 24 * 60 * 60  # 3 days
+    STORE_ACTIVITIES_TIMEOUT = 10 * 24 * 60 * 60  # 10 days
 
     # How long we Redis-cache activity stream data
     CACHE_ACTIVITIES_TIMEOUT = 8 * 60 * 60  # 8 hours
