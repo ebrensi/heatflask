@@ -992,10 +992,7 @@ class Index(object):
                     {"_id": {"$in": ids}}, 
                     {"$set": {"ts": datetime.utcnow()}}
                 )
-                log.debug("updated TTL for {}: {}".format(user.id, result.raw_result))
-
-        # cursor = list(cursor)
-        # log.debug("query returns: {}".format([a["_id"] for a in cursor]))
+                # log.debug("updated TTL for {}: {}".format(user, result.raw_result))
 
         return iterator(cursor), to_delete
 
