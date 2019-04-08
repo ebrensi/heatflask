@@ -43,13 +43,13 @@ class Config(object):
     MONGODB_URI = os.environ.get("ATLAS_MONGODB_URI")
 
     # How long we store an index entry in MongoDB
-    STORE_INDEX_TIMEOUT = 30 * 24 * 60 * 60   # 30 days
+    STORE_INDEX_TIMEOUT = 10 * 24 * 60 * 60   # 10 days
 
     # How long we store Activity stream data in MongoDB
-    STORE_ACTIVITIES_TIMEOUT = 10 * 24 * 60 * 60  # 10 days
+    STORE_ACTIVITIES_TIMEOUT = 5 * 24 * 60 * 60  # 5 days
 
     # How long we Redis-cache activity stream data
-    CACHE_ACTIVITIES_TIMEOUT = 8 * 60 * 60  # 8 hours
+    CACHE_ACTIVITIES_TIMEOUT = 2 * 60 * 60  # 2 hours
 
     # How long we Redis-cache a User object
     CACHE_USERS_TIMEOUT = 1 * 24 * 60 * 60  # 1 day
