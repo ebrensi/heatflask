@@ -1147,6 +1147,31 @@ class Activities(object):
         return result1, result2
 
     @classmethod
+    def get_many(cls, ids, timeout=CACHE_TTL):
+
+        keys = [cls.cache_key(id) for id in ids]
+        read_pipe = redis.pipeline()
+        
+        for key in keys:
+            read_pipe.get(key)
+
+        results = read_pipe.execute()
+        
+        notcached = []
+        write_pipe = redis.pipeline()
+        for id, key, result in zip(ids, keys, results):
+            if result:
+                write_pipe.expire(key, timeout)
+            else:
+                notcached.append(id)
+        write_pipe.execute()
+
+        # *** Continue Here ***
+
+
+
+
+    @classmethod
     def get(cls, id, timeout=CACHE_TTL):
         packed = None
         key = cls.cache_key(id)
