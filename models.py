@@ -410,9 +410,11 @@ class Users(UserMixin, db_sql.Model):
         # convert date strings to datetimes, if applicable
         if before or after:
             try:
-                after = Utility.to_datetime(after)
+                if after:
+                    after = Utility.to_datetime(after)
                 if before:
                     before = Utility.to_datetime(before)
+                if before and after:
                     assert(before > after)
             except AssertionError:
                 return [{"error": "Invalid Dates"}]
