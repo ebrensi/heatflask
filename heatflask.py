@@ -309,7 +309,7 @@ def demo():
 
 # Attempt to authorize a user via Oauth(2)
 @app.route('/authorize')
-@log_request_event
+# @log_request_event
 def authorize():
     state = request.args.get("state")
     redirect_uri = url_for('auth_callback', _external=True)
