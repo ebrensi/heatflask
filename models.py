@@ -271,8 +271,6 @@ class Users(UserMixin, db_sql.Model):
                         if update:
                             user = cls.add_or_update(cache_timeout=60, **obj)
                             msg = "successfully updated {}".format(user)
-                        else:
-                            msg = "not updating/deleting {}".format(user)
                     # log.info(msg)
                     yield msg + "\n"
                     count += 1
