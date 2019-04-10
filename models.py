@@ -265,14 +265,13 @@ class Users(UserMixin, db_sql.Model):
                         msg = "inactive or invalid user {}".format(obj)
                         if not test_run:
                             obj.delete(deauth=False)
-                            msg += "...deleted"
+                            msg += "...deleted\n"
                             num_deleted += 1
+                            yield msg
                     else:
                         if update:
                             user = cls.add_or_update(cache_timeout=60, **obj)
-                            msg = "successfully updated {}".format(user)
-                    # log.info(msg)
-                    yield msg + "\n"
+                            yield "successfully updated {}\n".format(user)
                     count += 1
 
                 EventLogger.new_event(
