@@ -234,7 +234,7 @@ class Users(UserMixin, db_sql.Model):
         db_sql.session.commit()
 
     @classmethod
-    def triage(cls, days_inactive=365, test_run=True):
+    def triage(cls, update=False, days_inactive=365, test_run=True):
         # Delete all users from the database who have invalid access tokens
         #  or have been inactive for a long time (defaults to a year)
         now = datetime.utcnow()
@@ -268,8 +268,11 @@ class Users(UserMixin, db_sql.Model):
                             msg += "...deleted"
                             num_deleted += 1
                     else:
-                        user = cls.add_or_update(cache_timeout=60, **obj)
-                        msg = "successfully updated {}".format(user)
+                        if update:
+                            user = cls.add_or_update(cache_timeout=60, **obj)
+                            msg = "successfully updated {}".format(user)
+                        else:
+                            msg = "not updating/deleting {}".format(user)
                     # log.info(msg)
                     yield msg + "\n"
                     count += 1
@@ -1156,27 +1159,63 @@ class Activities(object):
     @classmethod
     def get_many(cls, ids, timeout=CACHE_TTL):
 
+        # We output Activities to a queue
+        queue = gevent.queue.Queue()
+
+        ids = list(ids)
         keys = [cls.cache_key(id) for id in ids]
-        read_pipe = redis.pipeline()
         
+        # Attempt to fetch activities with ids from redis cache
+        read_pipe = redis.pipeline()
         for key in keys:
             read_pipe.get(key)
 
+        # output and Update TTL for cached actitivities
+        notcached = {}
         results = read_pipe.execute()
-        
-        notcached = []
         write_pipe = redis.pipeline()
-        for id, key, result in zip(ids, keys, results):
-            if result:
+        for id, key, cached in zip(ids, keys, results):
+            if cached:
                 write_pipe.expire(key, timeout)
+                queue.put(msgpack.unpackb(cached))
             else:
-                notcached.append(id)
+                notcached[int(id)] = key
+        
+        # Batch update TTL
         write_pipe.execute()
 
-        # *** Continue Here ***
+        # Attempt to fetch uncached activities from MongoDB
+        try:
+            results = cls.db.find({"_id": {"$in": notcached.keys()}})
+        except Exception as e:
+            log.debug(
+                    "error accessing activities from MongoDB: {}"
+                    .format(id, e))
+            return
 
+        fetched = []
+        # iterate through results from MongoDB query
+        for doc in results:
+            id = int(doc["_id"])
+            packed = doc["mpk"]
 
+            # Store in redis cache
+            redis.setex(notcached.pop(id), packed, timeout)
+            fetched.append(id)
 
+            queue.put(msgpack.unpackb(packed))
+
+        # now update TTL for mongoDB records
+        cls.db.update_many(
+            {"_id": {"$in": fetched}},
+            {"$set": {"ts": datetime.utcnow()}}
+        )
+
+        # Remaining items in uncached need to be imported from Strava
+
+        # ...
+
+        return queue
 
     @classmethod
     def get(cls, id, timeout=CACHE_TTL):
@@ -1207,6 +1246,10 @@ class Activities(object):
                 # log.debug("got activity {} data from MongoDB".format(id))
         if packed:
             return msgpack.unpackb(packed)
+
+    @classmethod
+    def import_many(cls, user, ids, streams, timeout):
+        pass
 
     @classmethod
     def import_streams(cls, client, activity_id, stream_names,
