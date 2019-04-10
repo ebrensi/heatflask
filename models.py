@@ -417,19 +417,6 @@ class Users(UserMixin, db_sql.Model):
             except AssertionError:
                 return [{"error": "Invalid Dates"}]
 
-        def import_streams(client, queue, activity):
-            # log.debug("importing {}".format(activity["_id"]))
-
-            stream_data = Activities.import_streams(
-                client, activity["_id"], STREAMS_TO_CACHE, cache_timeout)
-
-            data = {s: stream_data[s] for s in STREAMS_OUT + ["error"]
-                    if s in stream_data}
-            data.update(activity)
-            queue.put(data)
-
-            # log.debug("importing {}...queued!".format(activity["_id"]))
-            gevent.sleep(0)
 
         pool = pool or Pool(CONCURRENCY)
         
@@ -496,6 +483,9 @@ class Users(UserMixin, db_sql.Model):
         DB_TTL = app.config["STORE_INDEX_TIMEOUT"]
         NOW = datetime.utcnow()
 
+        num_fetched = 0
+        num_imported = 0
+
         # log.debug("NOW: {}, DB_TTL: {}".format(NOW, DB_TTL))
         for A in gen:
             # log.debug(A)
@@ -531,11 +521,26 @@ class Users(UserMixin, db_sql.Model):
                 if stream_data:
                     A.update(stream_data)
                     out_queue.put(A)
+                    num_fetched += 1
 
                 elif not OFFLINE:
+                    num_imported += 1
                     pool.spawn(Activities.import_and_queue_streams,
                                client, out_queue, A)
                 gevent.sleep(0)
+
+        
+
+        msg = "{} queued {} ({} fetched, {} imported)".format(
+            self.id,
+            num_fetched + num_imported, 
+            num_fetched, 
+            num_imported
+        )
+
+        log.debug(msg)
+
+        EventLogger.new_event(msg=msg)
 
         # If we are using our own queue, we make sure to put a stopIteration
         #  at the end of it so we have to wait for all import jobs to finish.
