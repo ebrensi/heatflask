@@ -16,7 +16,6 @@ from gevent.queue import Queue
 from gevent.pool import Pool
 from exceptions import StopIteration
 import requests
-# from requests.exceptions import HTTPError
 import cPickle
 import msgpack
 from bson import ObjectId
@@ -47,6 +46,7 @@ redis = Redis.from_url(app.config["REDIS_URL"])
 
 
 log = app.logger
+# log = logging.getLogger()
 
 
 class Users(UserMixin, db_sql.Model):
