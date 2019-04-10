@@ -34,7 +34,7 @@ log = app.logger
 
 log.propagate = False
 
-log.addHandler(logging.StreamHandler(sys.stdout))
+# log.addHandler(logging.StreamHandler(sys.stdout))
 log.setLevel(logging.DEBUG)
 
 STREAMS_OUT = ["polyline", "time"]
