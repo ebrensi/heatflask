@@ -741,7 +741,9 @@ def users_restore():
 @admin_required
 def users_update():
     delete = request.args.get("delete")
-    iterator = Users.triage(test_run=not delete)
+    update = request.args.get("update")
+
+    iterator = Users.triage(test_run=not delete, update=update)
     return Response(iterator, mimetype='text/event-stream')
 
 
