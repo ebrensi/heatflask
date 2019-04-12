@@ -1154,10 +1154,11 @@ class Activities(object):
         return result1, result2
 
     @classmethod
-    def get_many(cls, ids, timeout=CACHE_TTL):
+    def get_many(cls, ids, user=None, queue=None, timeout=CACHE_TTL):
 
         # We output Activities to a queue
-        queue = gevent.queue.Queue()
+        if not queue:
+            queue = gevent.queue.Queue()
 
         ids = list(ids)
         keys = [cls.cache_key(id) for id in ids]
@@ -1209,6 +1210,8 @@ class Activities(object):
         )
 
         # Remaining items in uncached need to be imported from Strava
+        def fetch_from_strava(queue, user, ids):
+            client = user.client()
 
         # ...
 
@@ -1243,10 +1246,6 @@ class Activities(object):
                 # log.debug("got activity {} data from MongoDB".format(id))
         if packed:
             return msgpack.unpackb(packed)
-
-    @classmethod
-    def import_many(cls, user, ids, streams, timeout):
-        pass
 
     @classmethod
     def import_streams(cls, client, activity_id, stream_names,
