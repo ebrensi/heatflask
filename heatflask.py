@@ -221,6 +221,7 @@ def log_request_event(f):
         if anon or (not current_user.is_admin()):
             EventLogger.log_request(request,
                                     cuid="" if anon else current_user.id,
+                                    profile="" if anon else current_user.profile,
                                     msg=request.url)
         return f(*args, **kwargs)
     return decorated_function
