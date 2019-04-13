@@ -1259,7 +1259,10 @@ class Activities(object):
             streams = client.get_activity_streams(activity_id,
                                                   series_type='time',
                                                   types=streams_to_import)
-            assert streams is not None
+            if not streams:
+                cls.set(activity_id, {}, timeout)
+                return {"error": "no streams for activity {}:"
+                                  .format(activity_id)}
             
         except Exception as e:
             msg = ("Can't import streams for activity {}:\n{}"
@@ -1283,6 +1286,7 @@ class Activities(object):
                         .format(activity_id)
                     }
             else:
+                cls.set(activity_id, {}, timeout)
                 return {"error": "no latlng stream for activity {}".format(activity_id)}
 
         for s in ["time"]:
