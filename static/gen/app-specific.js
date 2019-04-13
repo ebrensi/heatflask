@@ -6,7 +6,7 @@ function stravaActivityURL(id){return"https://www.strava.com/activities/"+id;}
 function stravaAthleteURL(id){return"https://www.strava.com/athletes/"+id;}
 function formatDate(data,type,row,meta){date=new Date(data);return type==="display"||type==="filter"?date.toLocaleString("en-US",{hour12:false}):date;}
 function formatIP(data,type,row,meta){if(data){let ip=data;return type==="display"?href(ip_lookup_url(ip),ip):ip;}else{return"";}}
-function formatUserId(data,type,row){if(data){if(type=="display"){avatar=row.profile?img(row.profile,w=40,h=40,alt=data):"";return href("/"+data,avatar);}else{return data;}}else{return"";}}
+function formatUserId(data,type,row){if(data){if(type=="display"){if(row.profile){avatar=row.profile?img(row.profile,w=40,h=40,alt=data):"";return href("/"+data,avatar);}else{return data;}}else{return data;}}else{return"";}}
 function formatGroup(data,type,row){if(!data||data==1){return"";}
 if(type=="display"){let owner_id=row.owner?row.owner:USER_ID,url=GROUP_ACTIVITY_URL(owner_id,row.id);return href(url,"<i class='fa fa-users'></i>");}else{return data;}}
 function httpGetAsync(theUrl,callback){let xmlHttp=new XMLHttpRequest();xmlHttp.onreadystatechange=function(){if(xmlHttp.readyState==4&&xmlHttp.status==200)callback(xmlHttp.responseText);};xmlHttp.open("GET",theUrl,true);xmlHttp.send(null);}
