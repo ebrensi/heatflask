@@ -217,10 +217,10 @@ def admin_or_self_required(f):
 def log_request_event(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        anon = current_user.is_anonymous
-        if anon or (not current_user.is_admin()):
+        if not current_user.is_admin():
             event = {"msg": request.url}
-            if not anon:
+            
+            if not current_user.is_anonymous:
                 event.update({
                     "cuid": current_user.id,
                     "profile": current_user.profile
@@ -490,7 +490,7 @@ def main(username):
 
         if not current_user.is_anonymous:
             event.update({
-                "profile": user.profile,
+                "profile": current_user.profile,
                 "cuid": current_user.id
             })
 
