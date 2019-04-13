@@ -219,10 +219,13 @@ def log_request_event(f):
     def decorated_function(*args, **kwargs):
         anon = current_user.is_anonymous
         if anon or (not current_user.is_admin()):
-            EventLogger.log_request(request,
-                                    cuid="" if anon else current_user.id,
-                                    profile="" if anon else current_user.profile,
-                                    msg=request.url)
+            event = {"msg": request.url}
+            if not anon:
+                event.update({
+                    "cuid": current_user.id,
+                    "profile": current_user.profile
+                })
+            EventLogger.log_request(request, **event)
         return f(*args, **kwargs)
     return decorated_function
 
@@ -479,12 +482,19 @@ def main(username):
         autozoom = "1"
 
     if current_user.is_anonymous or (not current_user.is_admin()):
-        EventLogger.new_event(**{
+        event = {
             "ip": request.access_route[-1],
-            "cuid": "" if current_user.is_anonymous else current_user.id,
             "agent": vars(request.user_agent),
             "msg": Utility.href(request.url, request.full_path)
-        })
+        }
+
+        if not current_user.is_anonymous:
+            event.update({
+                "profile": user.profile,
+                "cuid": current_user.id
+            })
+
+        EventLogger.new_event(**event)
 
     paused = request.args.get("paused") in ["1", "true"]
     return render_template(
