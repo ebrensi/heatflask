@@ -217,15 +217,20 @@ def admin_or_self_required(f):
 def log_request_event(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if not current_user.is_admin():
-            event = {"msg": request.url}
-            
-            if not current_user.is_anonymous:
+        event = {"msg": request.url}
+
+        if not current_user.is_anonymous:
+            if not current_user.is_admin():
                 event.update({
                     "cuid": current_user.id,
                     "profile": current_user.profile
                 })
-            EventLogger.log_request(request, **event)
+            else:
+                # if current user is admin we don't bother logging this event
+                return f(*args, **kwargs)
+                
+        # If the user is anonymous or a regular user, we log the event
+        EventLogger.log_request(request, **event)
         return f(*args, **kwargs)
     return decorated_function
 
