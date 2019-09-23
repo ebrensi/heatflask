@@ -7,7 +7,7 @@ rjsmin==1.0.12
 redis==2.10.6
 requests
 python-editor==1.0.3
-pymongo==3.5.1
+pymongo==3.9.0
 pygments==2.2.0
 psycopg2==2.7.3.2
 prompt-toolkit==1.0.15
@@ -19,7 +19,7 @@ msgpack-python==0.4.8
 mako==1.0.7
 kombu==4.1.0
 httplib2==0.10.3
-gunicorn==19.7.1
+gunicorn==19.9.0
 gevent==1.2.2
 futures==3.1.1
 flask-sockets

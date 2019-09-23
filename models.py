@@ -38,7 +38,11 @@ Column = db_sql.Column
 String, Integer, Boolean = db_sql.String, db_sql.Integer, db_sql.Boolean
 
 # MongoDB access via PyMongo
-mongo_client = pymongo.MongoClient(app.config.get("MONGODB_URI"))
+mongo_client = pymongo.MongoClient(
+    app.config.get("MONGODB_URI"), 
+    connect=False, 
+    maxIdleTimeMS=30000
+)
 mongodb = mongo_client.get_database()
 
 # Redis data-store
