@@ -1004,12 +1004,16 @@ class Index(object):
                     yield a
 
             if update_ts:
-
-                result = cls.db.update_many(
-                    {"_id": {"$in": ids}}, 
-                    {"$set": {"ts": datetime.utcnow()}}
-                )
-                # log.debug("updated TTL for {}: {}".format(user, result.raw_result))
+                try:
+                    result = cls.db.update_many(
+                        {"_id": {"$in": ids}}, 
+                        {"$set": {"ts": datetime.utcnow()}}
+                    )
+                except Exception as e:
+                    log.error(
+                         "Could not update TTL for {}: {}"
+                        .format(user, e)
+                    )
 
         return iterator(cursor), to_delete
 
@@ -1192,7 +1196,7 @@ class Activities(object):
         except Exception as e:
             log.debug(
                     "error accessing activities from MongoDB: {}"
-                    .format(id, e))
+                    .format(e))
             return
 
         fetched = []
@@ -1208,10 +1212,16 @@ class Activities(object):
             queue.put(msgpack.unpackb(packed))
 
         # now update TTL for mongoDB records
-        cls.db.update_many(
-            {"_id": {"$in": fetched}},
-            {"$set": {"ts": datetime.utcnow()}}
-        )
+        try:
+            cls.db.update_many(
+                {"_id": {"$in": fetched}},
+                {"$set": {"ts": datetime.utcnow()}}
+            )
+        except Exception as e:
+            log.debug(
+                    "failed to update activities in mongoDB: {}"
+                    .format(e))
+            return
 
         # Remaining items in uncached need to be imported from Strava
         def fetch_from_strava(queue, user, ids):
