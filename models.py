@@ -247,8 +247,12 @@ class Users(UserMixin, db_sql.Model):
             def user_data(user):
                 last_active = user.dt_last_active
                 if last_active and (now - last_active).days < days_inactive:
-                    data = cls.strava_data_from_token(user.access_token, log_error=False)
-                    return data if data else user
+                    if update:
+                        data = cls.strava_data_from_token(user.access_token, log_error=False)
+                        return data if data else user
+
+                    # If user is valid and update not selected then don't do anything 
+                    return
 
                 elif not test_run:
                     # if the user has been inactive then deauthorize
