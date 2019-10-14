@@ -57,7 +57,7 @@ if (!OFFLINE) {
             if (i==0) default_baseLayer = baseLayers[provider];
         }
     } else {
-        default_baseLayer = baseLayers["CartoDB.DarkMatter"];
+        default_baseLayer = baseLayers["MapBox.Dark"];
     }
 }
 
@@ -72,7 +72,7 @@ var map = L.map('map', {
         zoom: ONLOAD_PARAMS.map_zoom,
         layers : [ default_baseLayer ],
         preferCanvas: true,
-        zoomAnimation: false
+        zoomAnimation: true
     });
 
 map.getPane('tilePane').style.opacity = 0.8;
