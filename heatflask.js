@@ -22,15 +22,29 @@ let map_providers = ONLOAD_PARAMS.map_providers,
 
 if (!OFFLINE) {
     var online_baseLayers = {
+        "MapBox.Dark": L.tileLayer.provider('MapBox', {
+            id: 'mapbox.dark',
+            accessToken: 'pk.eyJ1IjoiaGVhdGZsYXNrIiwiYSI6ImNrMXB3NDZtMjA0cG4zbW85N2U1M2p2ZmQifQ.UvD1v0VyI_V1gJSey0vRbg'
+        }),
+        "MapBox.Streets": L.tileLayer.provider('MapBox', {
+            id: 'mapbox.streets',
+            accessToken: 'pk.eyJ1IjoiaGVhdGZsYXNrIiwiYSI6ImNrMXB3NDZtMjA0cG4zbW85N2U1M2p2ZmQifQ.UvD1v0VyI_V1gJSey0vRbg'
+        }),
+        "MapBox.Streets-Basic": L.tileLayer.provider('MapBox', {
+            id: 'mapbox.streets-basic',
+            accessToken: 'pk.eyJ1IjoiaGVhdGZsYXNrIiwiYSI6ImNrMXB3NDZtMjA0cG4zbW85N2U1M2p2ZmQifQ.UvD1v0VyI_V1gJSey0vRbg'
+        }),
+        "MapBox.Satellite": L.tileLayer.provider('MapBox', {
+            id: 'mapbox.satellite',
+            accessToken: 'pk.eyJ1IjoiaGVhdGZsYXNrIiwiYSI6ImNrMXB3NDZtMjA0cG4zbW85N2U1M2p2ZmQifQ.UvD1v0VyI_V1gJSey0vRbg'
+        }),
+
         "Esri.WorldImagery": L.tileLayer.provider("Esri.WorldImagery"),
         "Esri.NatGeoWorldMap": L.tileLayer.provider("Esri.NatGeoWorldMap"),
         "Stamen.Terrain": L.tileLayer.provider("Stamen.Terrain"),
         "Stamen.TonerLite": L.tileLayer.provider("Stamen.TonerLite"),
         "CartoDB.Positron": L.tileLayer.provider("CartoDB.Positron"),
-        "CartoDB.DarkMatter": L.tileLayer.provider("CartoDB.DarkMatter"),
-        "Google.Roadmap": L.gridLayer.googleMutant({type: 'roadmap'}),
-        "Google.Terrain": L.gridLayer.googleMutant({type: 'terrain'}),
-        "Google.Hybrid": L.gridLayer.googleMutant({type: 'hybrid'})
+        "CartoDB.DarkMatter": L.tileLayer.provider("CartoDB.DarkMatter")
     };
 
     Object.assign(baseLayers, online_baseLayers);
@@ -61,7 +75,7 @@ var map = L.map('map', {
         zoomAnimation: false
     });
 
-map.getPane('tilePane').style.opacity = 0.9;
+map.getPane('tilePane').style.opacity = 0.8;
 
 appState.currentBaseLayer = default_baseLayer;
 map.on('baselayerchange', function (e) {
@@ -228,6 +242,12 @@ var capture_button_states = [
                     width: w,
                     height: h
                 };
+
+            let center = areaSelect.getBounds().getCenter(),
+                zoom = map.getZoom();
+            console.log(`center: `, center);
+            console.log(`width = ${w}, height = ${h}, zoom = ${zoom}`);
+
 
             DotLayer.captureCycle(selection=selection, callback=function(){
                 btn.state('idle');
