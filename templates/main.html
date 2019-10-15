@@ -11,10 +11,6 @@
 	<link rel="stylesheet" href="{{ ASSET_URL }}" />
 	{% endassets %}
 
-	{% if not config.get('OFFLINE') %}
-	<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBLvYWwPmLsBRCGXeMHh-InA9rq35jdVeA" async defer></script>
-	{% endif %}
-
 	{% if current_user.is_anonymous or (not current_user.is_admin()) %}
 	{{analytics}}
 	{% endif %}
