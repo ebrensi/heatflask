@@ -8,6 +8,7 @@ import dateutil.parser
 import stravalib
 import polyline
 import pymongo
+import json
 
 from redis import Redis
 
@@ -101,8 +102,9 @@ class Users(UserMixin, db_sql.Model):
         try:
             return self.cli
         except AttributeError:
+            access_info = json.loads(self.access_token)
             self.cli = stravalib.Client(
-                access_token=self.access_token,
+                access_token=access_info.get("access_token"),
                 rate_limiter=(lambda x=None: None)
             )
             return self.cli
@@ -118,7 +120,9 @@ class Users(UserMixin, db_sql.Model):
 
     @staticmethod
     def strava_data_from_token(token, log_error=True):
-        client = stravalib.Client(access_token=token)
+        access_info = json.loads(token)
+        access_token = access_info["access_token"]
+        client = stravalib.Client(access_token=access_token)
         try:
             strava_user = client.get_athlete()
         except Exception as e:
@@ -868,8 +872,8 @@ class Index(object):
             if out_queue:
                 out_queue.put({"error": str(e)})
             log.error(
-                "Error while building activity index for {}".format(user))
-            log.exception(e)
+                "Error while building activity index for {}: {}".format(user, str(e)))
+            # log.exception(e)
         else:
             elapsed = datetime.utcnow() - start_time
             msg = (
