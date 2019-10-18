@@ -79,6 +79,7 @@ class ProductionConfig(Config):
             'ACCOUNT': "UA-85621398-1"
         }
     }
+    
     DEBUG = False
 
     # Turn off webassets building for production, but we need to make sure
