@@ -106,7 +106,7 @@ class Users(UserMixin, db_sql.Model):
             try:
                 access_info = json.loads(self.access_token)
             except Exception as e:
-                log.exception(e)
+                log.error("{} using old-style access_token")
                 return
 
             self.cli = stravalib.Client(
@@ -489,16 +489,18 @@ class Users(UserMixin, db_sql.Model):
             else:
                 # Finally, if there is no index and rather than building one
                 # we are requested to get the summary data directily from Strava
-                # log.info(
-                #     "{}: getting summaries from Strava without build"
-                #     .format(self))
-                gen = (
-                    Index.strava2doc(a)
-                    for a in self.client().get_activities(
-                        limit=limit,
-                        before=before,
-                        after=after)
-                )
+                log.info(
+                    "{}: attempt to get summaries from Strava without build"
+                    .format(self))
+
+                return [{"error": "How did you get here??"}]
+                # gen = (
+                #     Index.strava2doc(a)
+                #     for a in self.client().get_activities(
+                #         limit=limit,
+                #         before=before,
+                #         after=after)
+                # )
 
         DB_TTL = app.config["STORE_INDEX_TIMEOUT"]
         NOW = datetime.utcnow()
@@ -1444,7 +1446,7 @@ class Webhooks(object):
         update = cls.client.handle_subscription_update(update_raw)
         user_id = update.owner_id
         user = Users.get(user_id, timeout=10)
-        if (not user) or (not user.index_count()):
+        if (not user) or (not user.index_count()) or (not user.client()):
             return
 
         record = {
