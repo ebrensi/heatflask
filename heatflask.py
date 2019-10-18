@@ -288,9 +288,7 @@ DEMOS = {
         "zoom": "6",
         "c1": "859579",
         "c2": "169",
-        "sz": "4",
-        "baselayer": "Google.Terrain"
-    },
+        "sz": "4"    },
 
     "last60activities": {
         "username": "15972102",
@@ -326,7 +324,8 @@ def authorize():
     auth_url = client.authorization_url(
         client_id=app.config["STRAVA_CLIENT_ID"],
         redirect_uri=redirect_uri,
-        # approval_prompt="force",
+        approval_prompt="force",
+        scope=["read", "activity:read", "activity:read_all"],
         state=state
     )
     return redirect(auth_url)
@@ -345,16 +344,22 @@ def auth_callback():
         args = {"code": request.args.get("code"),
                 "client_id": app.config["STRAVA_CLIENT_ID"],
                 "client_secret": app.config["STRAVA_CLIENT_SECRET"]}
+        
         client = stravalib.Client()
+        
         try:
-            access_token = client.exchange_code_for_token(**args)
+            access_info = client.exchange_code_for_token(**args)
 
         except Exception as e:
             log.error("authorization error:\n{}".format(e))
             flash(str(e))
             return redirect(state)
 
-        user_data = Users.strava_data_from_token(access_token)
+        # log.debug("got code exchange response: {}".format(access_info))
+        
+        access_info_string = json.dumps(access_info)
+        
+        user_data = Users.strava_data_from_token(access_info_string)
         # log.debug("user data: {}".format(user_data))
 
         try:
@@ -366,7 +371,8 @@ def auth_callback():
             # remember=True, for persistent login.
             login_user(user, remember=True)
             # log.debug("authenticated {}".format(user))
-            EventLogger.new_event(msg="authenticated {}".format(user.id))
+            EventLogger.new_event(msg="authenticated {}.  Token expires at {}."
+                                      .format(user.id, access_info.get("expires_at")))
         else:
             log.error("user authenication error")
             flash("There was a problem authorizing user")
@@ -443,6 +449,34 @@ def main(username):
             flash("user '{}' is not registered with this app"
                   .format(username))
             return redirect(url_for('splash'))
+        
+        try:
+            access_info = json.loads(user.access_token)
+            expires_at = datetime.utcfromtimestamp(access_info["expires_at"])
+        except Exception as e:
+            flash("Invalid access_token.  User '{}' must re-authenticate."
+                    .format(user))
+
+            # if a logged-in user has a bad access_token
+            #  then we log them out so they can re-authenticate
+            if current_user == user:
+                return redirect(url_for("logout", username=username))
+            else:
+                return redirect(url_for('splash'))
+
+        now = datetime.utcnow()
+        log.debug("valid token for {} expires in {}."
+                .format(user, expires_at-now))
+
+        if expires_at <= now:
+            # The existing token is expired
+            # TODO: try to refresh the expired authentication token.  
+            #   for now we just return an error and exit gracefully
+            flash("Expired access_token.  User '{}' must re-authenticate.".format(username))
+            if current_user == user:
+                return redirect(url_for("logout", username=username))
+            else:
+                return redirect(url_for('splash'))
 
     date1 = request.args.get("date1") or request.args.get("after", "")
     date2 = request.args.get("date2") or request.args.get("before", "")
@@ -521,26 +555,6 @@ def main(username):
         c2=c2,
         sz=sz
     )
-
-
-@app.route('/<username>/group_stream/<activity_id>')
-def group_stream(username, activity_id):
-    log.debug("getting activities grouped with {}:{}".format(username, activity_id))
-
-    def go(user, pool, out_queue):
-        with app.app_context():
-            user.related_activities(activity_id, streams=True,
-                                    pool=pool, out_queue=out_queue)
-            pool.join()
-            out_queue.put(None)
-            out_queue.put(StopIteration)
-    user = Users.get(username)
-    pool = gevent.pool.Pool(app.config.get("CONCURRENCY"))
-    out_queue = gevent.queue.Queue()
-    gevent.spawn(go, user, pool, out_queue)
-    gevent.sleep(0)
-    return Response((sse_out(a) if a else sse_out() for a in out_queue),
-                    mimetype='text/event-stream')
 
 @app.route('/<username>/activities')
 @log_request_event
