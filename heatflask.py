@@ -348,7 +348,6 @@ def auth_callback():
                 "client_secret": app.config["STRAVA_CLIENT_SECRET"]}
         
         client = stravalib.Client()
-        log.debug("got code: {}".format(args["code"]))
         
         try:
             access_info = client.exchange_code_for_token(**args)
@@ -363,8 +362,9 @@ def auth_callback():
         access_token = access_info["access_token"]
         expires_at = datetime.fromtimestamp(access_info["expires_at"])
         refresh_token = access_info["refresh_token"]
-        log.debug("access token {} expires at {} and will be refreshed with {}"
-                   .format(access_token, expires_at, refresh_token))
+        
+        # log.debug("access token {} expires at {} and will be refreshed with {}"
+        #            .format(access_token, expires_at, refresh_token))
 
         user_data = Users.strava_data_from_token(access_token)
         # log.debug("user data: {}".format(user_data))
@@ -378,7 +378,8 @@ def auth_callback():
             # remember=True, for persistent login.
             login_user(user, remember=True)
             # log.debug("authenticated {}".format(user))
-            EventLogger.new_event(msg="authenticated {}".format(user.id))
+            EventLogger.new_event(msg="authenticated {}.  Token expires at {}."
+                                      .format(user.id, expires_at))
         else:
             log.error("user authenication error")
             flash("There was a problem authorizing user")
