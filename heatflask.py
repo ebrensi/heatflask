@@ -326,7 +326,8 @@ def authorize():
     auth_url = client.authorization_url(
         client_id=app.config["STRAVA_CLIENT_ID"],
         redirect_uri=redirect_uri,
-        # approval_prompt="force",
+        approval_prompt="force",
+        scope=["read", "activity:read", "activity:read_all"],
         state=state
     )
     return redirect(auth_url)
@@ -345,14 +346,25 @@ def auth_callback():
         args = {"code": request.args.get("code"),
                 "client_id": app.config["STRAVA_CLIENT_ID"],
                 "client_secret": app.config["STRAVA_CLIENT_SECRET"]}
+        
         client = stravalib.Client()
+        log.debug("got code: {}".format(args["code"]))
+        
         try:
-            access_token = client.exchange_code_for_token(**args)
+            access_info = client.exchange_code_for_token(**args)
 
         except Exception as e:
             log.error("authorization error:\n{}".format(e))
             flash(str(e))
             return redirect(state)
+
+        log.debug("got code exchange response: {}".format(access_info))
+        
+        access_token = access_info["access_token"]
+        expires_at = datetime.fromtimestamp(access_info["expires_at"])
+        refresh_token = access_info["refresh_token"]
+        log.debug("access token {} expires at {} and will be refreshed with {}"
+                   .format(access_token, expires_at, refresh_token))
 
         user_data = Users.strava_data_from_token(access_token)
         # log.debug("user data: {}".format(user_data))
