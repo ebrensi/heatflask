@@ -106,7 +106,7 @@ class Users(UserMixin, db_sql.Model):
             try:
                 access_info = json.loads(self.access_token)
             except Exception as e:
-                log.error("{} using old-style access_token")
+                # log.error("{} using old-style access_token".format(self))
                 return
 
             self.cli = stravalib.Client(
