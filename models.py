@@ -871,8 +871,8 @@ class Index(object):
             if out_queue:
                 out_queue.put({"error": str(e)})
             log.error(
-                "Error while building activity index for {}".format(user))
-            log.exception(e)
+                "Error while building activity index for {}: {}".format(user, str(e)))
+            # log.exception(e)
         else:
             elapsed = datetime.utcnow() - start_time
             msg = (

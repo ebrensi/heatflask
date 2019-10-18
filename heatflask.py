@@ -288,9 +288,7 @@ DEMOS = {
         "zoom": "6",
         "c1": "859579",
         "c2": "169",
-        "sz": "4",
-        "baselayer": "Google.Terrain"
-    },
+        "sz": "4"    },
 
     "last60activities": {
         "username": "15972102",
@@ -451,6 +449,34 @@ def main(username):
             flash("user '{}' is not registered with this app"
                   .format(username))
             return redirect(url_for('splash'))
+        
+        try:
+            access_info = json.loads(user.access_token)
+            expires_at = access_info["expires_at"]
+        except Exception as e:
+            flash("Invalid access_token.  User '{}' must re-authenticate."
+                    .format{user})
+
+            # if a logged-in user has a bad access_token
+            #  then we log them out so they can re-authenticate
+            if current_user == user:
+                return redirect(url_for("logout", username))
+            else:
+                return redirect(url_for('splash'))
+
+        now = datetime.now().timestamp()
+
+        log.debug("expires at: {}, now: {}".format(expires_at, now))
+
+        if expires_at <= now:
+            # The existing token is expired
+            # TODO: try to refresh the expired authentication token.  
+            #   for now we just return an error and exit gracefully
+            flash("Expired access_token.  User '{}' must re-authenticate.".format(username))
+            if current_user == user:
+                return redirect(url_for("logout", username))
+            else:
+                return redirect(url_for('splash'))
 
     date1 = request.args.get("date1") or request.args.get("after", "")
     date2 = request.args.get("date2") or request.args.get("before", "")
@@ -529,26 +555,6 @@ def main(username):
         c2=c2,
         sz=sz
     )
-
-
-@app.route('/<username>/group_stream/<activity_id>')
-def group_stream(username, activity_id):
-    log.debug("getting activities grouped with {}:{}".format(username, activity_id))
-
-    def go(user, pool, out_queue):
-        with app.app_context():
-            user.related_activities(activity_id, streams=True,
-                                    pool=pool, out_queue=out_queue)
-            pool.join()
-            out_queue.put(None)
-            out_queue.put(StopIteration)
-    user = Users.get(username)
-    pool = gevent.pool.Pool(app.config.get("CONCURRENCY"))
-    out_queue = gevent.queue.Queue()
-    gevent.spawn(go, user, pool, out_queue)
-    gevent.sleep(0)
-    return Response((sse_out(a) if a else sse_out() for a in out_queue),
-                    mimetype='text/event-stream')
 
 @app.route('/<username>/activities')
 @log_request_event
