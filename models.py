@@ -102,7 +102,13 @@ class Users(UserMixin, db_sql.Model):
         try:
             return self.cli
         except AttributeError:
-            access_info = json.loads(self.access_token)
+            # handle attempt to use old-style access_token
+            try:
+                access_info = json.loads(self.access_token)
+            except Exception as e:
+                log.exception(e)
+                return
+
             self.cli = stravalib.Client(
                 access_token=access_info.get("access_token"),
                 rate_limiter=(lambda x=None: None)
@@ -433,11 +439,11 @@ class Users(UserMixin, db_sql.Model):
 
 
         pool = pool or Pool(CONCURRENCY)
-        
-        if grouped:
-            return self.related_activities(activity_ids[0], streams, pool, out_queue)
+
 
         client = self.client()
+        if not client:
+            return [{"error": "invalid access token. {} must re-authenticate".format(self)}]
 
         #  If out_queue is not supplied then query_activities is blocking
         put_stopIteration = False
@@ -566,67 +572,7 @@ class Users(UserMixin, db_sql.Model):
 
         return out_queue
 
-    #  outputs a stream of activites of other Heatflask users that are
-    #   considered by Strava to be part of a group-activity
-    def related_activities(self, activity_id, streams=False,
-                           pool=None, out_queue=None):
-        client = self.client()
-
-        put_stopIteration = not out_queue
-
-        out_queue = out_queue or Queue()
-        pool = pool or Pool(CONCURRENCY)
-
-        # *** First we output this activity
-        A = Index.db.find_one({"_id": int(activity_id)})
-        log.debug("got group activity {}".format(A))
-
-        stream_data = Activities.get(activity_id)
-        if stream_data:
-            A.update(stream_data)
-            out_queue.put(A)
-        else:
-            pool.spawn(
-                Activities.import_and_queue_streams,
-                client, out_queue, A)
-
-        # Now output related activities
-        try:
-            for obj in client.get_related_activities(int(activity_id)):
-                owner = self.__class__.get(obj.athlete.id)
-                
-                if not owner:
-                    continue
-           
-                A = Index.strava2doc(obj)
-                A["ts_local"] = str(A["ts_local"])
-                A["ts_UTC"] = str(A["ts_UTC"])
-                A["owner"] = owner.id
-                A["profile"] = owner.profile
-
-                log.debug("outputting {}".format(A))
-                
-                if not streams:
-                    out_queue.put(A)
-
-                stream_data = Activities.get(obj.id)
-                if stream_data:
-                    A.update(stream_data)
-                    out_queue.put(A)
-                else:
-                    pool.spawn(
-                        Activities.import_and_queue_streams,
-                        owner.client(), out_queue, A)
-
-        except Exception as e:
-            log.info("Error getting related activities: {}".format(e))
-            return [{"error": str(e)}]
-
-        if put_stopIteration:
-            out_queue.put(StopIteration)
-
-        return out_queue
-
+    
     def make_payment(self, amount):
         success = Payments.add(self, amount)
         return success
@@ -893,13 +839,16 @@ class Index(object):
     @classmethod
     def import_by_id(cls, user, activity_ids):
         client = user.client()
+        if not client:
+            log.error("fetch error: bad client")
+            return
         
         def fetch(id):
             try:
                 A = client.get_activity(id)
                 a = cls.strava2doc(A)
             except Exception as e:
-                # log.debug("fetch {}:{} failed".format(user, id))
+                log.debug("fetch {}:{} failed".format(user, id))
                 return
 
             # log.debug("fetched activity {} for {}".format(id, user))
