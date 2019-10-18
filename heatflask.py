@@ -452,21 +452,21 @@ def main(username):
         
         try:
             access_info = json.loads(user.access_token)
-            expires_at = access_info["expires_at"]
+            expires_at = datetime.utcfromtimestamp(access_info["expires_at"])
         except Exception as e:
             flash("Invalid access_token.  User '{}' must re-authenticate."
-                    .format{user})
+                    .format(user))
 
             # if a logged-in user has a bad access_token
             #  then we log them out so they can re-authenticate
             if current_user == user:
-                return redirect(url_for("logout", username))
+                return redirect(url_for("logout", username=username))
             else:
                 return redirect(url_for('splash'))
 
-        now = datetime.now().timestamp()
-
-        log.debug("expires at: {}, now: {}".format(expires_at, now))
+        now = datetime.utcnow()
+        log.debug("token for {} expires at: {}, now: {}. ({} remaining)"
+                .format(user, expires_at, now, expires_at-now))
 
         if expires_at <= now:
             # The existing token is expired
@@ -474,7 +474,7 @@ def main(username):
             #   for now we just return an error and exit gracefully
             flash("Expired access_token.  User '{}' must re-authenticate.".format(username))
             if current_user == user:
-                return redirect(url_for("logout", username))
+                return redirect(url_for("logout", username=username))
             else:
                 return redirect(url_for('splash'))
 
