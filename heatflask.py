@@ -465,8 +465,8 @@ def main(username):
                 return redirect(url_for('splash'))
 
         now = datetime.utcnow()
-        log.debug("token for {} expires at: {}, now: {}. ({} remaining)"
-                .format(user, expires_at, now, expires_at-now))
+        log.debug("valid token for {} expires in {}."
+                .format(user, expires_at-now))
 
         if expires_at <= now:
             # The existing token is expired
