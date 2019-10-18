@@ -357,16 +357,11 @@ def auth_callback():
             flash(str(e))
             return redirect(state)
 
-        log.debug("got code exchange response: {}".format(access_info))
+        # log.debug("got code exchange response: {}".format(access_info))
         
-        access_token = access_info["access_token"]
-        expires_at = datetime.fromtimestamp(access_info["expires_at"])
-        refresh_token = access_info["refresh_token"]
+        access_info_string = json.dumps(access_info)
         
-        # log.debug("access token {} expires at {} and will be refreshed with {}"
-        #            .format(access_token, expires_at, refresh_token))
-
-        user_data = Users.strava_data_from_token(access_token)
+        user_data = Users.strava_data_from_token(access_info_string)
         # log.debug("user data: {}".format(user_data))
 
         try:
@@ -379,7 +374,7 @@ def auth_callback():
             login_user(user, remember=True)
             # log.debug("authenticated {}".format(user))
             EventLogger.new_event(msg="authenticated {}.  Token expires at {}."
-                                      .format(user.id, expires_at))
+                                      .format(user.id, access_info.get("expires_at")))
         else:
             log.error("user authenication error")
             flash("There was a problem authorizing user")
