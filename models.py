@@ -883,7 +883,7 @@ class Index(object):
     def import_by_id(cls, user, activity_ids):
         client = user.client()
         if not client:
-            log.error("{}fetch error: bad client".format(user))
+            # log.error("{} fetch error: bad client".format(user))
             return
         
         def fetch(id):
