@@ -339,6 +339,13 @@ def auth_callback():
 
     if "error" in request.args:
         flash("Error: {}".format(request.args.get("error")))
+        return redirect(state or url_for("splash"))
+
+    scope = request.args.get("scope")
+    log.debug("scope: {}".format(scope))
+    if "activity:read" not in scope:
+        # We need to be able to read the user's activities
+        return redirect(url_for("authorize", state=state))
 
     if current_user.is_anonymous:
         args = {"code": request.args.get("code"),
@@ -377,8 +384,7 @@ def auth_callback():
             log.error("user authenication error")
             flash("There was a problem authorizing user")
 
-    return redirect(request.args.get("state") or
-                    url_for("main", username=user.id))
+    return redirect(state or url_for("main", username=user.id))
 
 
 @app.route("/<username>/logout")
@@ -468,16 +474,7 @@ def main(username):
         log.debug("valid token for {} expires in {}."
                 .format(user, expires_at-now))
 
-        if expires_at <= now:
-            # The existing token is expired
-            # TODO: try to refresh the expired authentication token.  
-            #   for now we just return an error and exit gracefully
-            flash("Expired access_token.  User '{}' must re-authenticate.".format(username))
-            if current_user == user:
-                return redirect(url_for("logout", username=username))
-            else:
-                return redirect(url_for('splash'))
-
+        
     date1 = request.args.get("date1") or request.args.get("after", "")
     date2 = request.args.get("date2") or request.args.get("before", "")
     preset = request.args.get("preset", "")
