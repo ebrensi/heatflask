@@ -72,7 +72,7 @@ var map = L.map('map', {
         zoom: ONLOAD_PARAMS.map_zoom,
         layers : [ default_baseLayer ],
         preferCanvas: true,
-        zoomAnimation: true
+        zoomAnimation: false
     });
 
 map.getPane('tilePane').style.opacity = 0.8;
