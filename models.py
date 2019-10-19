@@ -77,6 +77,8 @@ class Users(UserMixin, db_sql.Model):
     app_activity_count = Column(Integer, default=0)
     share_profile = Column(Boolean, default=False)
 
+    cli = None
+
     def db_state(self):
         state = inspect(self)
         attrs = ["transient", "pending", "persistent", "deleted", "detached"]
@@ -98,25 +100,48 @@ class Users(UserMixin, db_sql.Model):
     def from_serialized(cls, p):
         return cPickle.loads(p)
 
+
     def client(self):
         try:
-            return self.cli
-        except AttributeError:
-            # handle attempt to use old-style access_token
-            try:
-                access_info = json.loads(self.access_token)
-            except Exception as e:
-                # log.error("{} using old-style access_token".format(self))
-                return
+            access_info = json.loads(self.access_token)
+        except Exception:
+            log.debug("{} bad access_token".format(self))
+            return
 
+        if not self.cli:
             self.cli = stravalib.Client(
                 access_token=access_info.get("access_token"),
                 rate_limiter=(lambda x=None: None)
             )
-            return self.cli
+        
+        expires_at = datetime.utcfromtimestamp(access_info["expires_at"])
+        now = datetime.utcnow()
+        if now >= expires_at:
+            log.debug("{} access token expired. refreshing...")
+            # The existing access_token is expired
+            # Attempt to refresh the token
+            try:
+                new_access_info = self.cli.refresh_access_token(
+                                    client_id=app.config["STRAVA_CLIENT_ID"],
+                                    client_secret=app.config["STRAVA_CLIENT_SECRET"],
+                                    refresh_token=access_info.get("refresh_token"))
 
-    def __repr__(self):
-        return "<User %r>" % (self.id)
+            except Exception as e:
+                log.exception(e)
+                return
+            else:
+
+                self.access_token = json.dumps(new_access_info)
+                db_sql.session.commit()
+                self.cache()
+                self.cli = stravalib.Client(
+                    access_token=new_access_info.get("access_token"),
+                    rate_limiter=(lambda x=None: None)
+                )
+                log.debug("{} fresh token!: {}".format(self, self.access_token))
+
+        return self.cli
+
 
     def get_id(self):
         return unicode(self.id)
@@ -762,7 +787,11 @@ class Index(object):
             return result
 
         try:
-            for a in user.client().get_activities(**fetch_query):
+            client = user.client()
+            if not client:
+                raise Exception("Invalid access_token.  {} is not authenticated.".format(user))
+
+            for a in client.get_activities(**fetch_query):
                 if a.start_latlng:
                     d = cls.strava2doc(a)
                     # log.debug("{}. {}".format(count, d))
@@ -827,8 +856,8 @@ class Index(object):
             if out_queue:
                 out_queue.put({"error": str(e)})
             log.error(
-                "Error while building activity index for {}: {}".format(user, str(e)))
-            # log.exception(e)
+                "Error while building activity index for {}".format(user))
+            log.exception(e)
         else:
             elapsed = datetime.utcnow() - start_time
             msg = (
