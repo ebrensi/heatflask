@@ -101,7 +101,8 @@ class Users(UserMixin, db_sql.Model):
         return cPickle.loads(p)
 
 
-    def client(self):
+    def client(self, refresh=True):
+        # refresh = "force"
         try:
             access_info = json.loads(self.access_token)
         except Exception:
@@ -116,8 +117,8 @@ class Users(UserMixin, db_sql.Model):
         
         expires_at = datetime.utcfromtimestamp(access_info["expires_at"])
         now = datetime.utcnow()
-        if now >= expires_at:
-            log.debug("{} access token expired. refreshing...")
+        if ((now >= expires_at) and refresh) or (refresh == "force"):
+            log.debug("{} access token expired. refreshing...".format(self))
             # The existing access_token is expired
             # Attempt to refresh the token
             try:
