@@ -134,7 +134,7 @@ class Users(UserMixin, db_sql.Model):
                 try:
                     self.access_token = json.dumps(new_access_info)
                 except Exception as e:
-                    log.debug("{} bad refresh: {}".format(self, new access_info))
+                    log.debug("{} bad refresh: {}".format(self, new_access_info))
                     return
 
                 db_sql.session.commit()
