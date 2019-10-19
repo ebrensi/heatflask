@@ -1,9 +1,9 @@
 # Activities Visualization App
 
 #### A Flask app that displays cyclic animated visualizations from Strava activity data
-#### http://heatflask.herokuapp.com
+#### http://heatflask.com
 
-See a live demo with data at http://heatflask.herokuapp.com/demo
+See a live demo with data at http://heatflask.com/demo
 
 Currently it supports [Strava](https://www.strava.com) data and the [leaflet.js](http://leafletjs.com) map API.
 
