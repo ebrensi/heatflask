@@ -339,6 +339,13 @@ def auth_callback():
 
     if "error" in request.args:
         flash("Error: {}".format(request.args.get("error")))
+        return redirect(state or url_for("splash"))
+
+    scope = request.args.get("scope")
+    log.debug("scope: {}".format(scope))
+    if "activity:read" not in scope:
+        # We need to be able to read the user's activities
+        return redirect(url_for("authorize", state=state))
 
     if current_user.is_anonymous:
         args = {"code": request.args.get("code"),
@@ -377,8 +384,7 @@ def auth_callback():
             log.error("user authenication error")
             flash("There was a problem authorizing user")
 
-    return redirect(request.args.get("state") or
-                    url_for("main", username=user.id))
+    return redirect(state or url_for("main", username=user.id))
 
 
 @app.route("/<username>/logout")
