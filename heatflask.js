@@ -684,7 +684,7 @@ function renderLayers() {
           idString = $("#activity_ids").val(),
           to_exclude = Object.keys(appState.items).map(Number);
 
-    console.log(`exclude ${to_exclude.length}  activities`, to_exclude);
+    // console.log(`exclude ${to_exclude.length} activities`, to_exclude);
 
     if (DotLayer) {
         DotLayer._mapMoving = true;
@@ -748,7 +748,7 @@ function renderLayers() {
 
 
     sock.onopen = function(event) {
-        console.log("socket open: ", event);
+        // console.log("socket open: ", event);
 
         queryObj = {};
         queryObj[USER_ID] = {
@@ -766,7 +766,7 @@ function renderLayers() {
     }
 
     sock.onclose = function(event) {
-        console.log("socket closed: ", event);
+        // console.log("socket closed: ", event);
         if (listening){
             listening = false;
             $('#renderButton').prop('disabled', false);
@@ -792,8 +792,8 @@ function renderLayers() {
         }
 
         if (A.error){
-            // let msg = `<font color='red'>${A.error}</font><br>`;
-            // $(".data_message").html(msg);
+            let msg = `<font color='red'>${A.error}</font><br>`;
+            $(".data_message").html(msg);
             console.log(`Error: ${A.error}`);
             return;
         } 
