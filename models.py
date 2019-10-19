@@ -143,7 +143,7 @@ class Users(UserMixin, db_sql.Model):
                     access_token=new_access_info.get("access_token"),
                     rate_limiter=(lambda x=None: None)
                 )
-                log.debug("{} fresh token!".format(self))
+                log.debug("{} refreshed.".format(self))
 
         return self.cli
 
@@ -579,13 +579,17 @@ class Users(UserMixin, db_sql.Model):
                     if not client:
                         client = self.client()
                         if not client:
-                            return [{"error": "invalid access token. {} must re-authenticate".format(self)}]
-
+                            out_queue.put(
+                                {"error": "cannot import. invalid access token. {} must re-authenticate"
+                                 .format(self)})
+                            log.debug("{} cannot import. bad client.".format(self))
+                            num_imported = "xxx"
+                            break
+                    
                     num_imported += 1
-
                     pool.spawn(Activities.import_and_queue_streams,
-                               client, out_queue, A)
-                gevent.sleep(0)
+                       client, out_queue, A)
+                    gevent.sleep(0)
 
         
 
@@ -860,6 +864,7 @@ class Index(object):
         except Exception as e:
             if out_queue:
                 out_queue.put({"error": str(e)})
+
             log.error(
                 "Error while building activity index for {}".format(user))
             log.exception(e)
