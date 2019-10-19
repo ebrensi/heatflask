@@ -106,7 +106,7 @@ class Users(UserMixin, db_sql.Model):
         try:
             access_info = json.loads(self.access_token)
         except Exception:
-            log.debug("{} bad access_token".format(self))
+            # log.debug("{} bad access_token".format(self))
             return
 
         if not self.cli:
@@ -131,15 +131,19 @@ class Users(UserMixin, db_sql.Model):
                 log.exception(e)
                 return
             else:
+                try:
+                    self.access_token = json.dumps(new_access_info)
+                except Exception as e:
+                    log.debug("{} bad refresh: {}".format(self, new access_info))
+                    return
 
-                self.access_token = json.dumps(new_access_info)
                 db_sql.session.commit()
                 self.cache()
                 self.cli = stravalib.Client(
                     access_token=new_access_info.get("access_token"),
                     rate_limiter=(lambda x=None: None)
                 )
-                log.debug("{} fresh token!: {}".format(self, self.access_token))
+                log.debug("{} fresh token!: {}".format(self))
 
         return self.cli
 
@@ -879,7 +883,7 @@ class Index(object):
     def import_by_id(cls, user, activity_ids):
         client = user.client()
         if not client:
-            log.error("fetch error: bad client")
+            log.error("{}fetch error: bad client".format(user))
             return
         
         def fetch(id):
@@ -1273,7 +1277,7 @@ class Activities(object):
                                                   types=streams_to_import)
             if not streams:
                 cls.set(activity_id, EMPTY, timeout)
-                log.debug("no streams for activity {}:".format(activity_id))
+                # log.debug("no streams for activity {}:".format(activity_id))
                 return
             
         except Exception as e:
@@ -1483,7 +1487,7 @@ class Webhooks(object):
         update = cls.client.handle_subscription_update(update_raw)
         user_id = update.owner_id
         user = Users.get(user_id, timeout=10)
-        if (not user) or (not user.index_count()) or (not user.client()):
+        if (not user) or (not user.index_count()):
             return
 
         record = {
@@ -1520,7 +1524,7 @@ class Webhooks(object):
         elif update.aspect_type == "delete":
             # delete the activity from the index
             result = Index.delete(update.object_id)
-            # log.dssebug(result)
+            # log.debug(result)
 
 
     @staticmethod
