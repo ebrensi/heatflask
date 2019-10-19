@@ -143,7 +143,7 @@ class Users(UserMixin, db_sql.Model):
                     access_token=new_access_info.get("access_token"),
                     rate_limiter=(lambda x=None: None)
                 )
-                log.debug("{} fresh token!: {}".format(self))
+                log.debug("{} fresh token!".format(self))
 
         return self.cli
 
