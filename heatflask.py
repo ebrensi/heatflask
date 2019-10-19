@@ -342,7 +342,8 @@ def auth_callback():
         return redirect(state or url_for("splash"))
 
     scope = request.args.get("scope")
-    log.debug("scope: {}".format(scope))
+    # log.debug("scope: {}".format(scope))
+
     if "activity:read" not in scope:
         # We need to be able to read the user's activities
         return redirect(url_for("authorize", state=state))
@@ -378,10 +379,13 @@ def auth_callback():
             # remember=True, for persistent login.
             login_user(user, remember=True)
             # log.debug("authenticated {}".format(user))
-            EventLogger.new_event(msg="authenticated {}.  Token expires at {}."
-                                      .format(user.id, access_info.get("expires_at")))
+            EventLogger.new_event(
+                msg="{} authenticated as {}. Token expires at {}."
+                .format(user.id, scope,
+                        datetime.fromtimestamp(access_info.get("expires_at"))))
         else:
             log.error("user authenication error")
+            log.exception(e)
             flash("There was a problem authorizing user")
 
     return redirect(state or url_for("main", username=user.id))
@@ -458,7 +462,6 @@ def main(username):
         
         try:
             access_info = json.loads(user.access_token)
-            expires_at = datetime.utcfromtimestamp(access_info["expires_at"])
         except Exception as e:
             flash("Invalid access_token.  User '{}' must re-authenticate."
                     .format(user))
@@ -469,10 +472,6 @@ def main(username):
                 return redirect(url_for("logout", username=username))
             else:
                 return redirect(url_for('splash'))
-
-        now = datetime.utcnow()
-        log.debug("valid token for {} expires in {}."
-                .format(user, expires_at-now))
 
         
     date1 = request.args.get("date1") or request.args.get("after", "")
