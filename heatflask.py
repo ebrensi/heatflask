@@ -468,16 +468,7 @@ def main(username):
         log.debug("valid token for {} expires in {}."
                 .format(user, expires_at-now))
 
-        if expires_at <= now:
-            # The existing token is expired
-            # TODO: try to refresh the expired authentication token.  
-            #   for now we just return an error and exit gracefully
-            flash("Expired access_token.  User '{}' must re-authenticate.".format(username))
-            if current_user == user:
-                return redirect(url_for("logout", username=username))
-            else:
-                return redirect(url_for('splash'))
-
+        
     date1 = request.args.get("date1") or request.args.get("after", "")
     date2 = request.args.get("date2") or request.args.get("before", "")
     preset = request.args.get("preset", "")

@@ -404,7 +404,6 @@ class Users(UserMixin, db_sql.Model):
 
     def query_activities(self,
                          activity_ids=None,
-                         grouped=False,
                          exclude_ids=[],
                          limit=None,
                          after=None, before=None,
@@ -437,13 +436,6 @@ class Users(UserMixin, db_sql.Model):
             except AssertionError:
                 return [{"error": "Invalid Dates"}]
 
-
-        pool = pool or Pool(CONCURRENCY)
-
-
-        client = self.client()
-        if not client:
-            return [{"error": "invalid access token. {} must re-authenticate".format(self)}]
 
         #  If out_queue is not supplied then query_activities is blocking
         put_stopIteration = False
@@ -507,8 +499,13 @@ class Users(UserMixin, db_sql.Model):
 
         num_fetched = 0
         num_imported = 0
+        num_empty = 0
 
         # log.debug("NOW: {}, DB_TTL: {}".format(NOW, DB_TTL))
+
+        pool = pool or Pool(CONCURRENCY)
+        client = None
+
         for A in gen:
             # log.debug(A)
             if "_id" not in A:
@@ -541,23 +538,33 @@ class Users(UserMixin, db_sql.Model):
                 stream_data = Activities.get(A["_id"])
 
                 if stream_data:
-                    A.update(stream_data)
-                    out_queue.put(A)
-                    num_fetched += 1
+                    if stream_data.get("empty"):
+                        num_empty += 1
+                    else:
+                        A.update(stream_data)
+                        out_queue.put(A)
+                        num_fetched += 1
 
                 elif not OFFLINE:
+                    if not client:
+                        client = self.client()
+                        if not client:
+                            return [{"error": "invalid access token. {} must re-authenticate".format(self)}]
+
                     num_imported += 1
+
                     pool.spawn(Activities.import_and_queue_streams,
                                client, out_queue, A)
                 gevent.sleep(0)
 
         
 
-        msg = "{} queued {} ({} fetched, {} imported)".format(
+        msg = "{} queued {} ({} fetched, {} imported, {} empty)".format(
             self.id,
             num_fetched + num_imported, 
             num_fetched, 
-            num_imported
+            num_imported,
+            num_empty
         )
 
         log.debug(msg)
@@ -850,7 +857,8 @@ class Index(object):
                 A = client.get_activity(id)
                 a = cls.strava2doc(A)
             except Exception as e:
-                log.debug("fetch {}:{} failed".format(user, id))
+                log.exception(e)
+                log.debug("{} fetch {} failed".format(user, id))
                 return
 
             # log.debug("fetched activity {} for {}".format(id, user))
@@ -1223,6 +1231,7 @@ class Activities(object):
     @classmethod
     def import_streams(cls, client, activity_id, stream_names,
                        timeout=CACHE_TTL):
+        EMPTY = {"empty": True} 
 
         streams_to_import = list(stream_names)
         if ("polyline" in stream_names):
@@ -1233,15 +1242,15 @@ class Activities(object):
                                                   series_type='time',
                                                   types=streams_to_import)
             if not streams:
-                cls.set(activity_id, {}, timeout)
-                return {"error": "no streams for activity {}:"
-                                  .format(activity_id)}
+                cls.set(activity_id, EMPTY, timeout)
+                log.debug("no streams for activity {}:".format(activity_id))
+                return
             
         except Exception as e:
             msg = ("Can't import streams for activity {}:\n{}"
                    .format(activity_id, e))
-            # log.error(msg)
-            return {"error": msg}
+            log.error(msg)
+            return
 
         activity_streams = {name: streams[name].data for name in streams}
 
@@ -1253,23 +1262,19 @@ class Activities(object):
                     activity_streams["polyline"] = polyline.encode(latlng)
                 except Exception as e:
                     log.error("problem encoding {}".format(activity_id))
-                    # log.exception(e)
-                    return {
-                        "error": "cannot polyline encode stream for activity {}"
-                        .format(activity_id)
-                    }
+                    return
             else:
-                cls.set(activity_id, {}, timeout)
-                return {"error": "no latlng stream for activity {}".format(activity_id)}
+                cls.set(activity_id, EMPTY, timeout)
+                return
 
         for s in ["time"]:
             # Encode/compress these streams
             if (s in stream_names) and (activity_streams.get(s)):
                 if len(activity_streams[s]) < 2:
-                    return {
-                        "error": "activity {} has no stream '{}'"
-                        .format(activity_id, s)
-                    }
+                    log.debug("activity {} has no stream '{}'"
+                                .format(activity_id, s))
+                    cls.set(activity_id, EMPTY, timeout)
+                    return
 
                 try:
                     activity_streams[s] = cls.stream_encode(activity_streams[s])
@@ -1277,7 +1282,7 @@ class Activities(object):
                     msg = ("Can't encode stream '{}' for activity {} due to '{}':\n{}"
                            .format(s, activity_id, e, activity_streams[s]))
                     log.error(msg)
-                    return {"error": msg}
+                    return
 
         output = {s: activity_streams[s] for s in stream_names}
         cls.set(activity_id, output, timeout)
@@ -1290,8 +1295,10 @@ class Activities(object):
         stream_data = cls.import_streams(
             client, activity["_id"], STREAMS_TO_CACHE)
 
-        data = {s: stream_data[s] for s in STREAMS_OUT + ["error"]
-                if s in stream_data}
+        if not stream_data:
+            return
+
+        data = {s: stream_data[s] for s in STREAMS_OUT if s in stream_data}
         data.update(activity)
         queue.put(data)
         # log.debug("importing {}...queued!".format(activity["_id"]))
