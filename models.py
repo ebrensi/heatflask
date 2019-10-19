@@ -77,6 +77,8 @@ class Users(UserMixin, db_sql.Model):
     app_activity_count = Column(Integer, default=0)
     share_profile = Column(Boolean, default=False)
 
+    cli = None
+
     def db_state(self):
         state = inspect(self)
         attrs = ["transient", "pending", "persistent", "deleted", "detached"]
@@ -98,25 +100,49 @@ class Users(UserMixin, db_sql.Model):
     def from_serialized(cls, p):
         return cPickle.loads(p)
 
-    def client(self):
-        try:
-            return self.cli
-        except AttributeError:
-            # handle attempt to use old-style access_token
-            try:
-                access_info = json.loads(self.access_token)
-            except Exception as e:
-                # log.error("{} using old-style access_token".format(self))
-                return
 
+    def client(self, refresh=True):
+        # refresh = "force"
+        try:
+            access_info = json.loads(self.access_token)
+        except Exception:
+            log.debug("{} bad access_token".format(self))
+            return
+
+        if not self.cli:
             self.cli = stravalib.Client(
                 access_token=access_info.get("access_token"),
                 rate_limiter=(lambda x=None: None)
             )
-            return self.cli
+        
+        expires_at = datetime.utcfromtimestamp(access_info["expires_at"])
+        now = datetime.utcnow()
+        if ((now >= expires_at) and refresh) or (refresh == "force"):
+            log.debug("{} access token expired. refreshing...".format(self))
+            # The existing access_token is expired
+            # Attempt to refresh the token
+            try:
+                new_access_info = self.cli.refresh_access_token(
+                                    client_id=app.config["STRAVA_CLIENT_ID"],
+                                    client_secret=app.config["STRAVA_CLIENT_SECRET"],
+                                    refresh_token=access_info.get("refresh_token"))
 
-    def __repr__(self):
-        return "<User %r>" % (self.id)
+            except Exception as e:
+                log.exception(e)
+                return
+            else:
+
+                self.access_token = json.dumps(new_access_info)
+                db_sql.session.commit()
+                self.cache()
+                self.cli = stravalib.Client(
+                    access_token=new_access_info.get("access_token"),
+                    rate_limiter=(lambda x=None: None)
+                )
+                log.debug("{} fresh token!: {}".format(self, self.access_token))
+
+        return self.cli
+
 
     def get_id(self):
         return unicode(self.id)
@@ -404,7 +430,6 @@ class Users(UserMixin, db_sql.Model):
 
     def query_activities(self,
                          activity_ids=None,
-                         grouped=False,
                          exclude_ids=[],
                          limit=None,
                          after=None, before=None,
@@ -437,13 +462,6 @@ class Users(UserMixin, db_sql.Model):
             except AssertionError:
                 return [{"error": "Invalid Dates"}]
 
-
-        pool = pool or Pool(CONCURRENCY)
-
-
-        client = self.client()
-        if not client:
-            return [{"error": "invalid access token. {} must re-authenticate".format(self)}]
 
         #  If out_queue is not supplied then query_activities is blocking
         put_stopIteration = False
@@ -507,8 +525,13 @@ class Users(UserMixin, db_sql.Model):
 
         num_fetched = 0
         num_imported = 0
+        num_empty = 0
 
         # log.debug("NOW: {}, DB_TTL: {}".format(NOW, DB_TTL))
+
+        pool = pool or Pool(CONCURRENCY)
+        client = None
+
         for A in gen:
             # log.debug(A)
             if "_id" not in A:
@@ -541,23 +564,33 @@ class Users(UserMixin, db_sql.Model):
                 stream_data = Activities.get(A["_id"])
 
                 if stream_data:
-                    A.update(stream_data)
-                    out_queue.put(A)
-                    num_fetched += 1
+                    if stream_data.get("empty"):
+                        num_empty += 1
+                    else:
+                        A.update(stream_data)
+                        out_queue.put(A)
+                        num_fetched += 1
 
                 elif not OFFLINE:
+                    if not client:
+                        client = self.client()
+                        if not client:
+                            return [{"error": "invalid access token. {} must re-authenticate".format(self)}]
+
                     num_imported += 1
+
                     pool.spawn(Activities.import_and_queue_streams,
                                client, out_queue, A)
                 gevent.sleep(0)
 
         
 
-        msg = "{} queued {} ({} fetched, {} imported)".format(
+        msg = "{} queued {} ({} fetched, {} imported, {} empty)".format(
             self.id,
             num_fetched + num_imported, 
             num_fetched, 
-            num_imported
+            num_imported,
+            num_empty
         )
 
         log.debug(msg)
@@ -755,7 +788,11 @@ class Index(object):
             return result
 
         try:
-            for a in user.client().get_activities(**fetch_query):
+            client = user.client()
+            if not client:
+                raise Exception("Invalid access_token.  {} is not authenticated.".format(user))
+
+            for a in client.get_activities(**fetch_query):
                 if a.start_latlng:
                     d = cls.strava2doc(a)
                     # log.debug("{}. {}".format(count, d))
@@ -820,8 +857,8 @@ class Index(object):
             if out_queue:
                 out_queue.put({"error": str(e)})
             log.error(
-                "Error while building activity index for {}: {}".format(user, str(e)))
-            # log.exception(e)
+                "Error while building activity index for {}".format(user))
+            log.exception(e)
         else:
             elapsed = datetime.utcnow() - start_time
             msg = (
@@ -850,7 +887,8 @@ class Index(object):
                 A = client.get_activity(id)
                 a = cls.strava2doc(A)
             except Exception as e:
-                log.debug("fetch {}:{} failed".format(user, id))
+                log.exception(e)
+                log.debug("{} fetch {} failed".format(user, id))
                 return
 
             # log.debug("fetched activity {} for {}".format(id, user))
@@ -1223,6 +1261,7 @@ class Activities(object):
     @classmethod
     def import_streams(cls, client, activity_id, stream_names,
                        timeout=CACHE_TTL):
+        EMPTY = {"empty": True} 
 
         streams_to_import = list(stream_names)
         if ("polyline" in stream_names):
@@ -1233,15 +1272,15 @@ class Activities(object):
                                                   series_type='time',
                                                   types=streams_to_import)
             if not streams:
-                cls.set(activity_id, {}, timeout)
-                return {"error": "no streams for activity {}:"
-                                  .format(activity_id)}
+                cls.set(activity_id, EMPTY, timeout)
+                log.debug("no streams for activity {}:".format(activity_id))
+                return
             
         except Exception as e:
             msg = ("Can't import streams for activity {}:\n{}"
                    .format(activity_id, e))
-            # log.error(msg)
-            return {"error": msg}
+            log.error(msg)
+            return
 
         activity_streams = {name: streams[name].data for name in streams}
 
@@ -1253,23 +1292,19 @@ class Activities(object):
                     activity_streams["polyline"] = polyline.encode(latlng)
                 except Exception as e:
                     log.error("problem encoding {}".format(activity_id))
-                    # log.exception(e)
-                    return {
-                        "error": "cannot polyline encode stream for activity {}"
-                        .format(activity_id)
-                    }
+                    return
             else:
-                cls.set(activity_id, {}, timeout)
-                return {"error": "no latlng stream for activity {}".format(activity_id)}
+                cls.set(activity_id, EMPTY, timeout)
+                return
 
         for s in ["time"]:
             # Encode/compress these streams
             if (s in stream_names) and (activity_streams.get(s)):
                 if len(activity_streams[s]) < 2:
-                    return {
-                        "error": "activity {} has no stream '{}'"
-                        .format(activity_id, s)
-                    }
+                    log.debug("activity {} has no stream '{}'"
+                                .format(activity_id, s))
+                    cls.set(activity_id, EMPTY, timeout)
+                    return
 
                 try:
                     activity_streams[s] = cls.stream_encode(activity_streams[s])
@@ -1277,7 +1312,7 @@ class Activities(object):
                     msg = ("Can't encode stream '{}' for activity {} due to '{}':\n{}"
                            .format(s, activity_id, e, activity_streams[s]))
                     log.error(msg)
-                    return {"error": msg}
+                    return
 
         output = {s: activity_streams[s] for s in stream_names}
         cls.set(activity_id, output, timeout)
@@ -1290,8 +1325,10 @@ class Activities(object):
         stream_data = cls.import_streams(
             client, activity["_id"], STREAMS_TO_CACHE)
 
-        data = {s: stream_data[s] for s in STREAMS_OUT + ["error"]
-                if s in stream_data}
+        if not stream_data:
+            return
+
+        data = {s: stream_data[s] for s in STREAMS_OUT if s in stream_data}
         data.update(activity)
         queue.put(data)
         # log.debug("importing {}...queued!".format(activity["_id"]))
