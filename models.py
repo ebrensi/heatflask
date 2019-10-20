@@ -128,7 +128,7 @@ class Users(UserMixin, db_sql.Model):
                                     refresh_token=access_info.get("refresh_token"))
 
             except Exception as e:
-                log.error("{} refresh fail: {}".format(user, e))
+                log.error("{} refresh fail: {}".format(self, e))
                 return
             else:
                 try:
