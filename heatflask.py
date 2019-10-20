@@ -445,6 +445,7 @@ def main(username):
             assert current_user.id
         except AssertionError:
             logout_user()
+            flash("You need to re-authenticate (log-in).")
         else:
             current_user.update_usage()
 
@@ -463,11 +464,12 @@ def main(username):
         try:
             access_info = json.loads(user.access_token)
         except Exception as e:
-            flash("Invalid access_token.  User '{}' must re-authenticate."
+            flash("Invalid access_token.  {} must re-authenticate."
                     .format(user))
 
-            # if a logged-in user has a bad access_token
+            # if the logged-in user has a bad access_token
             #  then we log them out so they can re-authenticate
+            flash("Invalid access token for {}. please re-authenticate.")
             if current_user == user:
                 return redirect(url_for("logout", username=username))
             else:

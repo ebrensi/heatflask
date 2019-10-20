@@ -128,7 +128,7 @@ class Users(UserMixin, db_sql.Model):
                                     refresh_token=access_info.get("refresh_token"))
 
             except Exception as e:
-                log.exception(e)
+                log.error("{} refresh fail: {}".format(user, e))
                 return
             else:
                 try:
@@ -867,7 +867,7 @@ class Index(object):
 
             log.error(
                 "Error while building activity index for {}".format(user))
-            log.exception(e)
+            # log.exception(e)
         else:
             elapsed = datetime.utcnow() - start_time
             msg = (
@@ -897,7 +897,7 @@ class Index(object):
                 a = cls.strava2doc(A)
             except Exception as e:
                 log.exception(e)
-                log.debug("{} fetch {} failed".format(user, id))
+                log.debug("{} import {} failed".format(user, id))
                 return
 
             # log.debug("fetched activity {} for {}".format(id, user))
