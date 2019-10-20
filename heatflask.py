@@ -560,7 +560,12 @@ def main(username):
 def activities(username):
     user = Users.get(username)
     if request.args.get("rebuild"):
-        user.delete_index()
+        try:
+            user.delete_index()
+        except Exception as e:
+            log.error("error deleting index for {}".format(user))
+            log.exception(e)
+            
     return render_template("activities.html",
                            user=user)
 
