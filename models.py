@@ -583,7 +583,7 @@ class Users(UserMixin, db_sql.Model):
                                 {"error": "cannot import. invalid access token. {} must re-authenticate"
                                  .format(self)})
                             log.debug("{} cannot import. bad client.".format(self))
-                            num_imported = "xxx"
+                            # num_imported = "xxx"
                             break
                     
                     num_imported += 1
