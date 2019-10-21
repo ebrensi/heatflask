@@ -137,6 +137,7 @@ bundles = {
         'js/L.BoxHook.js',
         '../heatflask.js',
         '../DotLayer.js',
+        '../stripe-pay.js',
         filters=["babel", 'rjsmin'],
         output="gen/app-specific.js"
     ),
