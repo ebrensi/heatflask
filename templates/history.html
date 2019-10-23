@@ -64,10 +64,6 @@
 
     table.draw();
 
-    function redraw() {
-      table.draw(false);
-    }
-
     const evtSource = new EventSource(live_update_url);
     
     evtSource.onmessage = function(event) {
@@ -75,15 +71,10 @@
       if (!update) {
         return
       }
-
+      
       e = JSON.parse(event.data);
 
-      // dt = new Date(e.ts);
-      // console.log( dt.toLocaleString('en-US', { hour12: false }));
-      debugger;
-
-      table.row.add(update);
-      redraw();
+      r = table.row.add(e).draw(false);
     }
 
 
