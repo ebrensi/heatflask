@@ -21,6 +21,7 @@ import cPickle
 import msgpack
 from bson import ObjectId
 from bson.binary import Binary
+from bson.json_util import dumps
 from heatflask import app
 
 import os
@@ -1412,6 +1413,41 @@ class EventLogger(object):
         for e in events:
             e["_id"] = str(e["_id"])
         return events
+
+
+    @classmethod
+    def live_updates_gen(cls):
+        first = mongodb.history.find().sort('$natural', pymongo.DESCENDING).limit(1).next()
+        ts = first['ts']
+        
+        first["_id"] = str(first["_id"])
+        first["ts"] = "{} GMT".format(first["ts"])
+        event = dumps(first)
+        
+
+        cursor = mongodb.history.find(
+            {'ts': {'$gt': ts}},
+            cursor_type=pymongo.CursorType.TAILABLE_AWAIT
+        )
+
+        cls.update = True
+        # return str(cursor.next()["ts"])
+        def gen(dd):
+            yield "data: {}\n\n".format(dd)
+
+            while cursor.alive and cls.update:
+                for doc in cursor:
+                    doc["_id"] = str(doc["_id"])
+                    doc["ts"] = "{} GMT".format(doc["ts"])
+                    event = dumps(doc)
+                    yield "data: {}\n\n".format(event)
+                # We end up here if the find() returned no documents or if the
+                # tailable cursor timed out (no new documents were added to the
+                # collection for more than 1 secondd).
+                gevent.sleep(1)
+    
+        return gen(event)
+
 
     @staticmethod
     def new_event(**event):

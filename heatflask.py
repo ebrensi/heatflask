@@ -465,12 +465,9 @@ def main(username):
         try:
             access_info = json.loads(user.access_token)
         except Exception as e:
-            flash("Invalid access_token.  {} must re-authenticate."
-                    .format(user))
-
             # if the logged-in user has a bad access_token
             #  then we log them out so they can re-authenticate
-            flash("Invalid access token for {}. please re-authenticate.")
+            flash("Invalid access token for {}. please re-authenticate.".format(user))
             if current_user == user:
                 return redirect(url_for("logout", username=username))
             else:
@@ -823,6 +820,14 @@ def event_history():
     if events:
         return render_template("history.html", events=events)
     return "No history"
+
+@app.route('/history/live-updates')
+@log_request_event
+@admin_required
+def live_updates():
+    return Response(
+        EventLogger.live_updates_gen(),
+        content_type='text/event-stream')
 
 
 @app.route('/history/raw')
