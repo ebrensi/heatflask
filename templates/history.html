@@ -17,7 +17,8 @@
 
     <script>
     const user_profile_url = "{{ url_for('user_profile', username='') }}",
-          event_url = "{{ url_for('logged_event', event_id='') }}";
+          event_url = "{{ url_for('logged_event', event_id='') }}",
+          live_update_url = "{{ url_for('live_updates') }}";
 
 
     function ip_lookup_url( ip ) {
@@ -36,7 +37,6 @@
         }
     }
 
-
     function formatDate(data, type, row, meta) {
         date = new Date(data);
         return (type === "display" || type === "filter") ?
@@ -45,15 +45,15 @@
 
 
     let data = {{ events|tojson }},
-        dataTable = $('#events_table').DataTable({
+        table = $('#events_table').DataTable({
             pageLength: 100,
             data: data,
             deferRender: true,
             columns: [
-                {title: "time",    data: "ts", render: formatDate},
+                {title: "time",  data: "ts", render: formatDate},
                 {title: "ip",    data: "ip", defaultContent: "", render: formatIP},
-                {title: "user",    data: "cuid", defaultContent: "", render: formatUserId},
-                {title: "event",    data: "msg"}
+                {title: "user",  data: "cuid", defaultContent: "", render: formatUserId},
+                {title: "event", data: "msg"}
             ],
             scrollY: "80vh",
             scrollX: true,
@@ -61,6 +61,31 @@
             select: false,
             order: [[ 0, "desc" ]]
     });
+
+    table.draw();
+
+    function redraw() {
+      table.draw(false);
+    }
+
+    const evtSource = new EventSource(live_update_url);
+    
+    evtSource.onmessage = function(event) {
+      let  update = event.data;
+      if (!update) {
+        return
+      }
+
+      e = JSON.parse(event.data);
+
+      // dt = new Date(e.ts);
+      // console.log( dt.toLocaleString('en-US', { hour12: false }));
+      debugger;
+
+      table.row.add(update);
+      redraw();
+    }
+
 
     </script>
 </body>
