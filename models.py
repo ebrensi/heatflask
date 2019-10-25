@@ -1445,6 +1445,7 @@ class EventLogger(object):
                     # tailable cursor timed out (no new documents were added to the
                     # collection for more than 1 secondd).
                     gevent.sleep(1)
+                    yield " : \n\n"
 
         return gen()
 
