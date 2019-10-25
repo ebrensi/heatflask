@@ -119,7 +119,7 @@ class Users(UserMixin, db_sql.Model):
         expires_at = datetime.utcfromtimestamp(access_info["expires_at"])
         now = datetime.utcnow()
         if ((now >= expires_at) and refresh) or (refresh == "force"):
-            log.debug("{} access token expired. refreshing...".format(self))
+            # log.debug("{} access token expired. refreshing...".format(self))
             # The existing access_token is expired
             # Attempt to refresh the token
             try:
@@ -144,7 +144,7 @@ class Users(UserMixin, db_sql.Model):
                     access_token=new_access_info.get("access_token"),
                     rate_limiter=(lambda x=None: None)
                 )
-                log.debug("{} refreshed.".format(self))
+                # log.debug("{} refreshed.".format(self))
 
         return self.cli
 
@@ -1418,41 +1418,30 @@ class EventLogger(object):
     @classmethod
     def live_updates_gen(cls):
 
+        cls.update = True
+
         def gen():
             first = mongodb.history.find().sort('$natural', pymongo.DESCENDING).limit(1).next()
             ts = first['ts']
-            
-            first["_id"] = str(first["_id"])
-            first["ts"] = "{} GMT".format(first["ts"])
-            event = dumps(first)
-            
+                
+            while cls.update:
+                cursor = mongodb.history.find(
+                    {'ts': {'$gt': ts}},
+                    cursor_type=pymongo.CursorType.TAILABLE_AWAIT
+                )
 
-            cursor = mongodb.history.find(
-                {'ts': {'$gt': ts}},
-                cursor_type=pymongo.CursorType.TAILABLE_AWAIT
-            )
+                while cursor.alive:
+                    for doc in cursor:
+                        ts = doc["ts"]
+                        doc["ts"] = "{} GMT".format(ts)
+                        doc["_id"] = str(doc["_id"])
+                        event = dumps(doc)
+                        yield "data: {}\n\n".format(event)
+                    # We end up here if the find() returned no documents or if the
+                    # tailable cursor timed out (no new documents were added to the
+                    # collection for more than 1 secondd).
+                    gevent.sleep(1)
 
-            cls.update = True
-            while cursor.alive and cls.update:
-                for doc in cursor:
-                    doc["_id"] = str(doc["_id"])
-                    doc["ts"] = "{} GMT".format(doc["ts"])
-                    event = dumps(doc)
-                    yield "data: {}\n\n".format(event)
-                # We end up here if the find() returned no documents or if the
-                # tailable cursor timed out (no new documents were added to the
-                # collection for more than 1 secondd).
-                gevent.sleep(1)
-
-        def testgen():
-            cursor = mongodb.history.find().sort('$natural', pymongo.DESCENDING).limit(10)
-            for doc in cursor:
-                doc["_id"] = str(doc["_id"])
-                doc["ts"] = "{} GMT".format(doc["ts"])
-                event = dumps(doc)
-                yield "data: {}\n\n".format(event)
-                gevent.sleep(1)
-    
         return gen()
 
 
