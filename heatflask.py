@@ -22,7 +22,7 @@ import requests
 import stravalib
 import flask_login
 from flask_login import current_user, login_user, logout_user, login_required
-import flask_assets
+from flask_assets_bundles import flask_assets, bundles
 from flask_analytics import Analytics
 from flask_sslify import SSLify
 from flask_sockets import Sockets
@@ -48,7 +48,7 @@ TO_DOMAIN = "www.heatflask.com"
 
 sslify = SSLify(app, skips=["webhook_callback"])
 
-# models depend app so we import them afterwards
+# models depend on app so we import them afterwards
 from models import (
     Users, Activities, EventLogger, Utility, Webhooks, Index, Payments,
     db_sql, mongodb, redis
@@ -83,93 +83,6 @@ def parseInt(s):
     except ValueError:
         return
 
-
-# we bundle javascript and css dependencies to reduce client-side overhead
-bundles = {
-    "dependencies_css": flask_assets.Bundle(
-        'css/main.css',
-        'css/jquery-ui.css',
-        'css/bootstrap.min.css',
-        'css/font-awesome.min.css',
-        'css/leaflet.css',
-        'css/leaflet-sidebar.min.css',
-        'css/L.Control.Window.css',
-        'css/leaflet-areaselect.css',
-        'css/datatables.min.css',
-        'css/easy-button.css',
-        filters='cssmin',
-        output='gen/main.css'
-    ),
-    "dependencies_js": flask_assets.Bundle(
-        # minified dependencies
-        flask_assets.Bundle(
-            'js/jquery-3.2.1.min.js',
-            'js/jquery-ui.min.js',
-            'js/jquery.knob.min.js',  # Anthony Terrien
-            'js/datatables.min.js',
-            'js/leaflet.js',
-            'js/leaflet-sidebar.min.js',
-            'js/download.min.js',
-            'js/gif2.js',  # Johan Nordberg: http://jnordberg.github.io/gif.js/
-            output="gen/pre-compiled-dependencies.js"
-        ),
-        # un-minified dependencies
-        flask_assets.Bundle(
-            'js/eventsource.js',
-            'js/moment.js',
-            'js/Polyline.encoded.js',
-            'js/L.Control.Window.js',
-            'js/leaflet-providers.js',
-            'js/leaflet-image.js',  # Tom MacWright: https://github.com/mapbox/leaflet-image
-            'js/leaflet-areaselect.js',
-            'js/easy-button.js',
-            filters=["babel", "rjsmin"],
-            output="gen/build/non-compiled-dependencies.js"
-        ),
-        output='gen/dependencies.js'
-    ),
-
-    "gifjs_webworker_js": flask_assets.Bundle(
-        'js/gif.worker.js',
-        output="gen/gif.worker.js"
-    ),
-
-    "app_specific_js": flask_assets.Bundle(  # Heatflask-specific code
-        'js/L.Control.fps.js',
-        'js/appUtil.js',
-        'js/L.SwipeSelect.js',
-        'js/L.BoxHook.js',
-        '../heatflask.js',
-        '../DotLayer.js',
-        '../stripe-pay.js',
-        filters=["babel", 'rjsmin'],
-        output="gen/app-specific.js"
-    ),
-
-    "splash_css": flask_assets.Bundle(
-        'css/bootstrap.min.css',
-        'css/cover.css',
-        filters='cssmin',
-        output='gen/splash.css'
-    ),
-
-    "basic_table_css": flask_assets.Bundle(
-        'css/bootstrap.min.css',
-        'css/font-awesome.min.css',
-        'css/datatables.min.css',
-        'css/table-styling.css',
-        filters='cssmin',
-        output='gen/basic_table.css'
-    ),
-
-    "basic_table_js": flask_assets.Bundle(
-        'js/jquery-3.2.1.min.js',
-        'js/datatables.min.js',
-        'js/appUtil.js',
-        output='gen/basic_table.js'
-    )
-
-}
 assets = flask_assets.Environment(app)
 assets.register(bundles)
 
@@ -957,7 +870,7 @@ def errout(msg):
 #  aborts an SSE stream
 signal(SIGPIPE, SIG_DFL)
 
-# python heatmapp.py works but you really should use `flask run`
+# python heatflask.py works but you really should use `flask run`
 if __name__ == '__main__':
     from gevent import pywsgi
     from geventwebsocket.handler import WebSocketHandler
