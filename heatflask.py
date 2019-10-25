@@ -157,6 +157,10 @@ def log_request_event(f):
 def redirect_to_new_domain():
     urlparts = urlparse(request.url)
     log.debug("request to {}".format(urlparts))
+    
+    if urlparts.path == '/webhook_callback':
+        return
+
     if urlparts.netloc == FROM_DOMAIN:
         urlparts_list = list(urlparts)
         urlparts_list[1] = TO_DOMAIN
@@ -849,6 +853,9 @@ def webhook_callback():
             log.debug(
                 "handle_subscription_callback returns {}".format(cb))
             return jsonify(cb)
+
+        log.debug("webhook_callback: {}".format(request))
+        return "ok"
 
     elif request.method == 'POST':
         update_raw = request.get_json(force=True)
