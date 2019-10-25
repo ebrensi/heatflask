@@ -43,8 +43,8 @@ STREAMS_OUT = ["polyline", "time"]
 STREAMS_TO_CACHE = ["polyline", "time"]
 
 # Domain Redirect for people using herokuapp links
-FROM_DOMAIN = "heatflask.herokuapp.com"
-TO_DOMAIN = "www.heatflask.com"
+FROM_DOMAIN = "heatflask-staging.herokuapp.com"
+TO_DOMAIN = "www.heatflask2.com"
 
 sslify = SSLify(app, skips=["webhook_callback"])
 
