@@ -248,7 +248,7 @@ def anon_photo():
 
 
 @app.route('/apple-touch-icon')
-@app.route('/logo')
+@app.route('/logo.png')
 def touch():
     return send_from_directory(os.path.join(app.root_path, 'static'),
                                'logo.png')
