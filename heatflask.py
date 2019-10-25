@@ -156,7 +156,7 @@ def log_request_event(f):
 @app.before_request
 def redirect_to_new_domain():
     urlparts = urlparse(request.url)
-    log.debug("request to {}".format(urlparts))
+    # log.debug("request to {}".format(urlparts))
     
     if urlparts.path == '/webhook_callback':
         return
@@ -165,8 +165,8 @@ def redirect_to_new_domain():
         urlparts_list = list(urlparts)
         urlparts_list[1] = TO_DOMAIN
         new_url = urlunparse(urlparts_list)
-        log.debug("new url: {}".format(new_url))
-        return redirect(new_url, code=302)
+        # log.debug("new url: {}".format(new_url))
+        return redirect(new_url, code=301)
 
 
 @app.route('/favicon.ico')
