@@ -7,7 +7,7 @@ from functools import wraps
 
 from flask import (
     Flask, Response, render_template, request, redirect, jsonify, url_for,
-    flash, send_from_directory, render_template_string
+    flash, send_from_directory, render_template_string, redirect
 )
 
 import flask_compress
@@ -27,6 +27,8 @@ from flask_analytics import Analytics
 from flask_sslify import SSLify
 from flask_sockets import Sockets
 from signal import signal, SIGPIPE, SIG_DFL
+# from urllib.parse import urlparse, urlunparse #python3
+from urlparse import urlparse, urlunparse  # python2
 
 app = Flask(__name__)
 app.config.from_object(os.environ['APP_SETTINGS'])
@@ -40,6 +42,9 @@ log.setLevel(logging.DEBUG)
 STREAMS_OUT = ["polyline", "time"]
 STREAMS_TO_CACHE = ["polyline", "time"]
 
+# Domain Redirect for people using herokuapp links
+FROM_DOMAIN = "heatflask.herokuapp.com"
+TO_DOMAIN = "www.heatflask.com"
 
 sslify = SSLify(app, skips=["webhook_callback"])
 
@@ -80,7 +85,6 @@ def parseInt(s):
 
 
 # we bundle javascript and css dependencies to reduce client-side overhead
-# app.config["CLOSURE_COMPRESSOR_OPTIMIZATION"] = "WHITESPACE_ONLY"
 bundles = {
     "dependencies_css": flask_assets.Bundle(
         'css/main.css',
@@ -233,6 +237,16 @@ def log_request_event(f):
         EventLogger.log_request(request, **event)
         return f(*args, **kwargs)
     return decorated_function
+
+
+# Redirect any old domain urls to new domain
+@app.before_request
+def redirect_to_new_domain():
+    urlparts = urlparse(request.url)
+    if urlparts.netloc == FROM_DOMAIN:
+        urlparts_list = list(urlparts)
+        urlparts_list[1] = TO_DOMAIN
+        return redirect(urlunparse(urlparts_list), code=301)
 
 
 @app.route('/favicon.ico')
