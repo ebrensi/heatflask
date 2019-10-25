@@ -1374,40 +1374,44 @@ class Activities(object):
 
 
 class EventLogger(object):
+    name = "history"
+    db = mongodb.get_collection(name)
 
     @classmethod
     def init(cls, rebuild=True, size=app.config["MAX_HISTORY_BYTES"]):
 
         collections = mongodb.collection_names(include_system_collections=False)
 
-        if ("history" in collections) and rebuild:
-            all_docs = mongodb.history.find()
-            mongodb.history_new.insert_many(all_docs)
-            mongodb.create_collection("history_new",
-                                      capped=True,
-                                      # autoIndexId=False,
-                                      size=size)
-            mongodb.history_new.rename("history", dropTarget=True)
-        else:
-            mongodb.create_collection("history",
-                                      capped=True,
-                                      # autoIndexId=False,
-                                      size=size)
-            log.info("Initialized history collection")
+        if (cls.name in collections) and rebuild:
+            all_docs = cls.db.find()
 
-        stats = mongodb.command("collstats", "history")
+            mongodb.create_collection("temp",
+                                      capped=True,
+                                      # autoIndexId=False,
+                                      size=size)
+
+            mongodb.temp.insert_many(all_docs)
+
+            mongodb.temp.rename(cls.name, dropTarget=True)
+        else:
+            mongodb.create_collection(cls.name,
+                                      capped=True,
+                                      size=size)
+            log.info("Initialized {} collection".format(cls.name))
+
+        stats = mongodb.command("collstats", cls.name)
         cls.new_event(msg="rebuilt event log: {}".format(stats))
 
-    @staticmethod
-    def get_event(event_id):
-        event = mongodb.history.find_one({"_id": ObjectId(event_id)})
+    @classmethod
+    def get_event(cls, event_id):
+        event = cls.db.find_one({"_id": ObjectId(event_id)})
         event["_id"] = str(event["_id"])
         return event
 
-    @staticmethod
-    def get_log(limit=0):
+    @classmethod
+    def get_log(cls, limit=0):
         events = list(
-            mongodb.history.find(
+            cls.db.find(
                 sort=[("$natural", pymongo.DESCENDING)]).limit(limit)
         )
         for e in events:
@@ -1421,11 +1425,11 @@ class EventLogger(object):
         cls.update = True
 
         def gen():
-            first = mongodb.history.find().sort('$natural', pymongo.DESCENDING).limit(1).next()
+            first = cls.db.find().sort('$natural', pymongo.DESCENDING).limit(1).next()
             ts = first['ts']
                 
             while cls.update:
-                cursor = mongodb.history.find(
+                cursor = cls.db.find(
                     {'ts': {'$gt': ts}},
                     cursor_type=pymongo.CursorType.TAILABLE_AWAIT
                 )
@@ -1445,10 +1449,10 @@ class EventLogger(object):
         return gen()
 
 
-    @staticmethod
-    def new_event(**event):
+    @classmethod
+    def new_event(cls, **event):
         event["ts"] = datetime.utcnow()
-        mongodb.history.insert_one(event)
+        cls.db.insert_one(event)
 
     @classmethod
     def log_request(cls, flask_request_object, **args):
@@ -1576,7 +1580,6 @@ class Webhooks(object):
 
 
 class Payments(object):
-
     name = "payments"
     db = mongodb.get_collection(name)
 

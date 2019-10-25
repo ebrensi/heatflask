@@ -57,7 +57,7 @@ from models import (
 # initialize MongoDB collections if necessary
 collections = mongodb.collection_names()
 
-if "history" not in collections:
+if EventLogger.name not in collections:
     EventLogger.init()
 
 if Activities.name not in collections:
