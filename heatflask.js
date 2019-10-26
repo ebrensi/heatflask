@@ -764,7 +764,10 @@ function renderLayers() {
     sock.onopen = function(event) {
         // console.log("socket open: ", event);
 
-        queryObj = {};
+        queryObj = {
+            client_id: ONLOAD_PARAMS.client_id
+        };
+
         queryObj[USER_ID] = {
                 limit: (type == "activities")? Math.max(1, +num) : undefined,
                 grouped: (type=="grouped_with")? true : undefined,
@@ -786,7 +789,6 @@ function renderLayers() {
             $('#renderButton').prop('disabled', false);
         }
         doneRendering("Finished.");
-        // updateLayers("done");
     }
 
     // handle one incoming chunk from websocket stream

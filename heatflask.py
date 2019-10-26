@@ -21,6 +21,7 @@ import base36
 import requests
 import stravalib
 import flask_login
+import uuid
 from flask_login import current_user, login_user, logout_user, login_required
 from flask_assets_bundles import flask_assets, bundles
 from flask_analytics import Analytics
@@ -465,10 +466,21 @@ def main(username):
 
         EventLogger.new_event(**event)
 
+    # Assign an id to this web client in order to prevent
+    #  websocket access from unidentified users 
+    timeout = 60 * 60 * 24  # 1 day
+    web_client_id = uuid.uuid1().get_hex()
+    redis_key = "C:{}".format(web_client_id)
+    ip_address = request.access_route[-1]
+    redis.setex(redis_key, ip_address, timeout)
+
+
     paused = request.args.get("paused") in ["1", "true"]
+
     return render_template(
         'main.html',
         user=user,
+        client_id=web_client_id,
         lat=lat,
         lng=lng,
         zoom=zoom,
@@ -575,11 +587,33 @@ def data_socket(ws):
     while not ws.closed:
         msg = receiveObj(ws)
         if msg:
-            if "query" in msg:
+            query = msg.get("query")
+            if query:
                 # log.debug("Received query: {}".format(msg["query"]))
                 # sendObj(ws, {"msg": "sending query {}...".format(msg["query"])})
-                for a in Activities.query(msg["query"]):
-                    sendObj(ws, a)
+        
+                # Make sure this socket is being accessed by
+                #  a legitimate client
+                client_id = query.get("client_id")
+                client_ip = None
+                
+                if client_id:
+                    key = "C:{}".format(client_id)
+                    client_ip = redis.get(key)
+                
+                if client_ip:
+                    # log.debug("socket {} is a valid client".format(name))
+                    del query["client_id"]
+
+                    for a in Activities.query(query):
+                        sendObj(ws, a)
+                else:
+                    obj = {"error": "client_id does not exist or is expired. please refresh your browser. "}
+                    sendobj(ws, obj)
+                    ws.close()
+                    log.info("query from invalid client {} rejected"
+                                .format(name) )
+                    break;
             else:
                 log.debug("{} says {}".format(name, msg))
 

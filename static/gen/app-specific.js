@@ -66,7 +66,7 @@ msgBox=L.control.window(map,{position:'top',content:"<div class='data_message'><
 rendering=false;}
 updateLayers(msg);}
 function stopListening(){if(listening){listening=false;sock.close();$('#renderButton').prop('disabled',false);}}
-sock.onopen=function(event){queryObj={};queryObj[USER_ID]={limit:type=="activities"?Math.max(1,+num):undefined,grouped:type=="grouped_with"?true:undefined,after:date1?date1:undefined,before:date2&&date2!="now"?date2:undefined,activity_ids:idString?Array.from(new Set(idString.split(/\D/).map(Number))):undefined,exclude_ids:to_exclude.length?to_exclude:undefined,streams:true};let msg=JSON.stringify({query:queryObj});sock.send(msg);};sock.onclose=function(event){if(listening){listening=false;$('#renderButton').prop('disabled',false);}
+sock.onopen=function(event){queryObj={client_id:ONLOAD_PARAMS.client_id};queryObj[USER_ID]={limit:type=="activities"?Math.max(1,+num):undefined,grouped:type=="grouped_with"?true:undefined,after:date1?date1:undefined,before:date2&&date2!="now"?date2:undefined,activity_ids:idString?Array.from(new Set(idString.split(/\D/).map(Number))):undefined,exclude_ids:to_exclude.length?to_exclude:undefined,streams:true};let msg=JSON.stringify({query:queryObj});sock.send(msg);};sock.onclose=function(event){if(listening){listening=false;$('#renderButton').prop('disabled',false);}
 doneRendering("Finished.");};sock.onmessage=function(event){let A=JSON.parse(event.data);if(!A){stopListening();doneRendering("Finished.");sock.close();return;}
 if(A.error){let msg=`<font color='red'>${A.error}</font><br>`;$(".data_message").html(msg);console.log(`Error:${A.error}`);return;}
 if(A.msg){$(".data_message").html(A.msg);}

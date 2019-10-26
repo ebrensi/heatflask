@@ -43,7 +43,8 @@
                     start_paused: {{ paused|tojson }},
                     map_providers: {{ baselayer|tojson|safe }},
                     map_center: [{{ lat }}, {{ lng }}],
-                    map_zoom: {{ zoom }}
+                    map_zoom: {{ zoom }},
+                    client_id: "{{ client_id }}"
              },
              MEASURMENT_PREFERENCE = "{{ current_user.measurement_preference if current_user.is_authenticated else user.measurement_preference if user else 'feet'}}",
              DIST_UNIT = (MEASURMENT_PREFERENCE=="feet")? 1609.34 : 1000.0,
