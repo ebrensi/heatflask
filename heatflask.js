@@ -52,9 +52,14 @@ if (!OFFLINE) {
         for (var i = 0; i < map_providers.length; i++) {
             let provider = map_providers[i];
             if (!baseLayers[provider]) {
-                baseLayers[provider] = L.tileLayer.provider(provider);
+                try {
+                        baseLayers[provider] = L.tileLayer.provider(provider);
+                }
+                catch(err) {
+                    // do nothing if the user-supplied baselayer is not valid
+                }
             }
-            if (i==0) default_baseLayer = baseLayers[provider];
+            if (i==0 && baseLayers[provider]) default_baseLayer = baseLayers[provider];
         }
     } else {
         default_baseLayer = baseLayers["MapBox.Dark"];
@@ -255,11 +260,17 @@ var capture_button_states = [
                 if (!ADMIN && !OFFLINE) {
                     // Record this to google analytics
                     let cycleDuration = Math.round(DotLayer.periodInSecs() * 1000);
-                    ga('send', 'event', {
-                        eventCategory: USER_ID,
-                        eventAction: 'Capture-GIF',
-                        eventValue: cycleDuration
-                    });
+                    try{
+                        ga('send', 'event', {
+                            eventCategory: USER_ID,
+                            eventAction: 'Capture-GIF',
+                            eventValue: cycleDuration
+                        });
+                    }
+                    catch(err){
+                        //
+                    }
+
                 }
             });
 
@@ -667,11 +678,14 @@ function updateLayers(msg) {
 
     if (!ADMIN && !OFFLINE) {
         // Record this to google analytics
-        ga('send', 'event', {
-            eventCategory: USER_ID,
-            eventAction: 'Render',
-            eventValue: num
-        });
+        try{
+            ga('send', 'event', {
+                eventCategory: USER_ID,
+                eventAction: 'Render',
+                eventValue: num
+            });
+        }
+        catch(err){}
     }
 }
 
