@@ -863,6 +863,19 @@ def webhook_callback():
         return "success"
 
 
+# Donation/Payment notification handler
+#  Handle calls from Paypal's PDT and IPN APIs 
+#  PDT:
+#  https://developer.paypal.com/docs/classic/products/payment-data-transfer/
+#  IPN:
+#  https://developer.paypal.com/docs/classic/products/instant-payment-notification/
+@app.route('/paypal_callback', methods=["POST"])
+def paypal_callback():
+    pass
+
+
+
+
 # SSE (Server-Side Events) stuff
 def sse_out(obj=None):
     data = json.dumps(obj) if obj else "done"
