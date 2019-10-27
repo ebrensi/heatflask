@@ -13,6 +13,8 @@ class Config(object):
     APP_VERSION = ""
     APP_NAME = "Heatflask {}".format(APP_VERSION)
     APP_SETTINGS = os.environ.get("APP_SETTINGS")
+
+    # User ids of people to give administrative priviledge
     ADMIN = [15972102]
 
     # We limit the capture duration to keep gif file size down
@@ -30,25 +32,26 @@ class Config(object):
     # ASSETS_CACHE = False
     # ASSETS_MANIFEST = None
 
-    # Concurrency for Web-API fetching
+    # Concurrency for async Web-API fetching
     CONCURRENCY = 5
 
-    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_POOL_SIZE = 16
     SQLALCHEMY_MAX_OVERFLOW = 2
     SQLALCHEMY_POOL_TIMEOUT = 10
     SQLALCHEMY_POOL_RECYCLE = 1 * 60 * 60
 
-    MONGODB_URI = os.environ.get("ATLAS_MONGODB_URI")
+    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
+    MONGODB_URI = os.environ.get("MONGODB_URI")
+    REDIS_URL = os.environ.get("REDIS_URL")
 
-    # How long we store an index entry in MongoDB
+    # How long we store an Index entry in MongoDB
     STORE_INDEX_TIMEOUT = 10 * 24 * 60 * 60   # 10 days
 
     # How long we store Activity stream data in MongoDB
     STORE_ACTIVITIES_TIMEOUT = 5 * 24 * 60 * 60  # 5 days
 
-    # How long we Redis-cache activity stream data
+    # How long we Redis-cache Activity stream data
     CACHE_ACTIVITIES_TIMEOUT = 2 * 60 * 60  # 2 hours
 
     # How long we Redis-cache a User object
@@ -68,7 +71,6 @@ class Config(object):
 
     # Maximum size of event history (for capped MongoDB collection)
     MAX_HISTORY_BYTES = 2 * 1024 * 1024  # 2MB
-
 
     # Paypal Stuff
     # PAYPAL_VERIFY_URL = 'https://ipnpb.paypal.com/cgi-bin/webscr'
@@ -95,7 +97,9 @@ class ProductionConfig(Config):
     ASSETS_CACHE = False
     ASSETS_MANIFEST = False
 
+    MONGODB_URI = os.environ.get("ATLAS_MONGODB_URI")
     REDIS_URL = os.environ.get("REDISGREEN_URL")
+
 
 
 class StagingConfig(Config):
@@ -106,26 +110,34 @@ class StagingConfig(Config):
     DEVELOPMENT = True
     DEBUG = False
 
-    REDIS_URL = os.environ.get("REDISGREEN_URL")
-    MONGODB_URI = os.environ.get("ATLAS_MONGODB_URI")
-
     # webassets can do whatever in staging
     # ASSETS_DEBUG = True
     ASSETS_AUTO_BUILD = True
     # ASSETS_CACHE = False
     # ASSETS_MANIFEST = False
 
+    MONGODB_URI = os.environ.get("ATLAS_MONGODB_URI")
+    REDIS_URL = os.environ.get("REDISGREEN_URL")
+
+
 
 class DevelopmentConfig(Config):
     """
     These are settings specific to the development environment
-    (Developer's personal computer)
+    (A developer's personal computer)
+    Note that this file is part of the repo so any changes you make
+    here will affect all developers.
     """
+    
+    # OFFLINE setting suppresses any internet access
     OFFLINE = os.environ.get("OFFLINE", False)
-    USE_LOCAL = os.environ.get("USE_LOCAL", False)
+
+    USE_REMOTE_DB = (
+        False if OFFLINE else os.environ.get("USE_REMOTE_DB")
+    )
+
     DEVELOPMENT = True
     DEBUG = True
-    CACHE_ACTIVITIES_TIMEOUT = 2 * 60 * 60
 
     # SSLIFY Settings
     SSLIFY_PERMANENT = False
@@ -133,14 +145,23 @@ class DevelopmentConfig(Config):
     # Flask-Assets settings
     # ASSETS_DEBUG = True
     ASSETS_AUTO_BUILD = True
-
-    # INDEX_UPDATE_TIMEOUT = 1
-    REDIS_URL = "redis://localhost"
     
-    if OFFLINE or USE_LOCAL:
-        # in local environment,
-        MONGODB_URI = "mongodb://localhost/heatflask"
+    if USE_REMOTE_DB:
+        MONGODB_URI = os.environ.get("REMOTE_MONGODB_URL")
+        SQLALCHEMY_DATABASE_URI = os.environ.get("REMOTE_POSTGRES_URL")
+        REDIS_URL = os.environ.get("REMOTE_REDIS_URL", Config.REDIS_URL)
 
-        # STORE_INDEX_TIMEOUT = 2 * 24 * 60 * 60   # 2 days
-        STORE_INDEX_TIMEOUT = 24 * 60 * 60
-        STORE_ACTIVITIES_TIMEOUT = 2 * 24 * 60 * 60  # 2 days
+    else:
+        # How long we Redis-cache Activity stream data
+        CACHE_ACTIVITIES_TIMEOUT = 2 * 60 * 60  # 30 minutes
+        
+        # How long we Redis-cache a User object
+        CACHE_USERS_TIMEOUT = 2 * 60 * 60  # 30 minutes
+
+        # How long we store Activity stream data in MongoDB
+        STORE_ACTIVITIES_TIMEOUT = 60 * 24 * 60 * 60  # 60 days
+
+        # How long we store an Index entry in MongoDB
+        STORE_INDEX_TIMEOUT = 10 * 24 * 60 * 60   # 60 days
+
+        

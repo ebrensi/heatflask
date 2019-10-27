@@ -58,11 +58,11 @@
       WS_SCHEME = "ws://";
     };
 
-    Number.prototype.pad = function(size) {
-      let s = String(this);
-      while (s.length < (size || 2)) {s = "0" + s;}
-      return s;
-    }
+    // Number.prototype.pad = function(size) {
+    //   let s = String(this);
+    //   while (s.length < (size || 2)) {s = "0" + s;}
+    //   return s;
+    // }
     
     const OFFLINE = {{ config.get('OFFLINE')|tojson }},
           ADMIN = {{ (current_user.is_authenticated and current_user.is_admin())|tojson|safe }},
@@ -72,7 +72,6 @@
           DIST_LABEL = (MEASURMENT_PREFERENCE=="feet")?  "mi" : "km",
           STRAVA_BUTTON = img("{{ url_for('static',filename='strava_button.png') }}"),
           USER_BASE_URL = "{{url_for('main',username=user.id)}}",
-          GROUP_ACTIVITY_URL = USER_BASE_URL + "?group=",
           WEBSOCKET_URL = WS_SCHEME+window.location.host+"/data_socket",
           CLIENT_ID = "{{ client_id }}";
           

@@ -7,8 +7,6 @@ function stravaAthleteURL(id){return"https://www.strava.com/athletes/"+id;}
 function formatDate(data,type,row,meta){date=new Date(data);return type==="display"||type==="filter"?date.toLocaleString("en-US",{hour12:false}):date;}
 function formatIP(data,type,row,meta){if(data){let ip=data;return type==="display"?href(ip_lookup_url(ip),ip):ip;}else{return"";}}
 function formatUserId(data,type,row){if(data){if(type=="display"){let link="/"+data;if(row.profile){avatar=img(row.profile,w=40,h=40,alt=data);return href(link,avatar);}else{return href(link,data);}}else{return data;}}else{return"";}}
-function formatGroup(data,type,row){if(!data||data==1){return"";}
-if(type=="display"){let owner_id=row.owner?row.owner:USER_ID,url=GROUP_ACTIVITY_URL(owner_id,row.id);return href(url,"<i class='fa fa-users'></i>");}else{return data;}}
 function httpGetAsync(theUrl,callback){let xmlHttp=new XMLHttpRequest();xmlHttp.onreadystatechange=function(){if(xmlHttp.readyState==4&&xmlHttp.status==200)callback(xmlHttp.responseText);};xmlHttp.open("GET",theUrl,true);xmlHttp.send(null);}
 function httpPostAsync(theUrl,payload,callback){let xmlHttp=new XMLHttpRequest();xmlHttp.onreadystatechange=function(){if(xmlHttp.readyState==4&&xmlHttp.status==200)callback(xmlHttp.responseText);};xmlHttp.open("POST",theUrl,true);xmlHttp.setRequestHeader("Content-type","application/json");dataToSend=JSON.stringify(payload);xmlHttp.send(dataToSend);}
 function streamDecode(rle_list,first_value=0){let running_sum=first_value,outArray=[first_value],len=rle_list.length;for(let i=0;i<len;i++){el=rle_list[i];if(el instanceof Array){for(let j=0;j<el[1];j++){running_sum+=el[0];outArray.push(running_sum);}}else{running_sum+=el;outArray.push(running_sum);}}

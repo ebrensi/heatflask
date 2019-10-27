@@ -970,10 +970,11 @@ def errout(msg):
 
 
 # makes python ignore sigpipe and prevents broken pipe exception when client
-#  aborts an SSE stream
+#  aborts an SSE stream by closing the browser window
 signal(SIGPIPE, SIG_DFL)
 
-# python heatflask.py works but you really should use `flask run`
+# To start the webserver, execute ./run.sh
+
 if __name__ == '__main__':
     from gevent import pywsgi
     from geventwebsocket.handler import WebSocketHandler
