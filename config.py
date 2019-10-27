@@ -69,6 +69,12 @@ class Config(object):
     # Maximum size of event history (for capped MongoDB collection)
     MAX_HISTORY_BYTES = 2 * 1024 * 1024  # 2MB
 
+
+    # Paypal Stuff
+    # PAYPAL_VERIFY_URL = 'https://ipnpb.paypal.com/cgi-bin/webscr'
+    PAYPAL_VERIFY_URL = 'https://ipnpb.sandbox.paypal.com/cgi-bin/webscr'
+
+
 class ProductionConfig(Config):
     """
     These are settings specific to the production environment
