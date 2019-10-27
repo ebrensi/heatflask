@@ -51,10 +51,7 @@
              DIST_LABEL = (MEASURMENT_PREFERENCE=="feet")?  "mi" : "km",
              CAPTURE_DURATION_MAX = {{ config.get('CAPTURE_DURATION_MAX')|tojson }},
              DEFAULT_DOTCOLOR = {{ config.get('DEFAULT_DOTCOLOR')|tojson }};
-
-        function GROUP_ACTIVITY_URL(user_id, activity_id) {
-            return "{{ url_for('main', username='') }}"+user_id+"?group="+activity_id;
-        }
+             
 
         {% assets "gifjs_webworker_js" %}
         const GIFJS_WORKER_URL = "{{ ASSET_URL }}";
