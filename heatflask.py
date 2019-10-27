@@ -612,7 +612,7 @@ def data_socket(ws):
                         sendObj(ws, a)
                 else:
                     obj = {"error": "client_id does not exist or is expired. please refresh your browser. "}
-                    sendobj(ws, obj)
+                    sendObj(ws, obj)
                     ws.close()
                     log.info("query from invalid client {} rejected"
                                 .format(name) )
