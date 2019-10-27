@@ -510,9 +510,12 @@ def activities(username):
         except Exception as e:
             log.error("error deleting index for {}".format(user))
             log.exception(e)
-            
-    return render_template("activities.html",
+    try:      
+        return render_template("activities.html",
                            user=user)
+    except Exception as e:
+        log.exception(e)
+
 
 @app.route('/<username>/update_info')
 @log_request_event
