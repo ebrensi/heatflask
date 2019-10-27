@@ -897,16 +897,44 @@ def webhook_callback():
         return "success"
 
 
+
+# Paypal stuff
+@app.route('/paypal/success')
+def success():
+    try:
+        return "Thanks for your donation!"
+    except Exception, e:
+        return(str(e))
+
+
+
 # Donation/Payment notification handler
 #  Handle calls from Paypal's PDT and IPN APIs 
 #  PDT:
-#  https://developer.paypal.com/docs/classic/products/payment-data-transfer/
+#  https://developer.paypal.com/docs/classic/products/payment-data-transfer
 #  IPN:
-#  https://developer.paypal.com/docs/classic/products/instant-payment-notification/
-@app.route('/paypal_callback', methods=["POST"])
-def paypal_callback():
-    pass
+#  https://developer.paypal.com/docs/classic/products/instant-payment-notification
+@app.route('/paypal/ipn', methods=['POST'])
+def paypal_ipn_handler():
 
+    # Check with Paypal to confirm that this POST form data comes from them
+    r = requests.post(
+        app.config.get("PAYPAL_VERIFY_URL"), 
+        headers={
+            'User-Agent': 'PYTHON-IPN-VerificationScript',
+            'content-type': 'application/x-www-form-urlencoded'
+        },
+        data='cmd=_notify-validate&{}'.format(request.data)
+    )
+    log.debug("ipn verification:  {}".format(r))
+
+    if r.text == 'VERIFIED':
+        log.info("Received verified data: {}".format(request.form))
+        # Here we take some action based on the data from Paypal, 
+        #  with info about a payment from a user.
+        return "Paypal IPN message verified.", 200
+    else:
+        return "Paypal IPN message could not be verified.", 403
 
 
 
