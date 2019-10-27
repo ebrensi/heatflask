@@ -38,9 +38,10 @@
     }
 
     function formatDate(data, type, row, meta) {
-        date = new Date(data);
+        let date = new Date(0);
+        date.setUTCSeconds(data)
         return (type === "display" || type === "filter") ?
-            href(event_url + row["_id"], date.toLocaleString('en-US', { hour12: false })) : date;
+            href(event_url + row["_id"], date.toLocaleString('en-US', { hour12: false })) : data;
     }
 
 
@@ -65,16 +66,21 @@
     table.draw();
 
     const evtSource = new EventSource(live_update_url);
-    
     evtSource.onmessage = function(event) {
       let  update = event.data;
       if (!update) {
-        return
+        return;
       }
       
-      e = JSON.parse(event.data);
+      // console.log(event);
 
-      r = table.row.add(e).draw(false);
+
+      let e = JSON.parse(update),
+          r = table.row.add(e).select().draw(false).node();
+
+      setTimeout(function(){
+        table.row(r).deselect();
+      }, 5000);
     }
 
 

@@ -50,6 +50,7 @@ mongodb = mongo_client.get_database()
 # Redis data-store
 redis = Redis.from_url(app.config["REDIS_URL"])
 
+EPOC = datetime.utcfromtimestamp(0)
 
 log = app.logger
 # log = logging.getLogger()
@@ -1416,38 +1417,54 @@ class EventLogger(object):
         )
         for e in events:
             e["_id"] = str(e["_id"])
+            ts = e["ts"]
+            tss = (ts - EPOC).total_seconds()
+            e["ts"] = tss
         return events
 
 
     @classmethod
-    def live_updates_gen(cls):
+    def live_updates_gen(cls, ts=None):
 
-        cls.update = True
-
-        def gen():
+        if not ts:
             first = cls.db.find().sort('$natural', pymongo.DESCENDING).limit(1).next()
             ts = first['ts']
-                
+            
+        cls.update = True
+        def gen(ts):
+            yield "retry: 5000"
             while cls.update:
+                # log.debug("initiate cursor at {}".format(ts))
                 cursor = cls.db.find(
                     {'ts': {'$gt': ts}},
                     cursor_type=pymongo.CursorType.TAILABLE_AWAIT
                 )
-
+                elapsed = 0
                 while cursor.alive:
                     for doc in cursor:
+                        elapsed = 0
                         ts = doc["ts"]
-                        doc["ts"] = "{} GMT".format(ts)
+                        tss = (ts - EPOC).total_seconds()
+                        doc["ts"] = tss
                         doc["_id"] = str(doc["_id"])
                         event = dumps(doc)
-                        yield "data: {}\n\n".format(event)
+
+                        string = ("id: {}\ndata: {}\n\n"
+                            .format(tss, event))
+                        # log.debug(string)
+                        yield string
                     # We end up here if the find() returned no documents or if the
                     # tailable cursor timed out (no new documents were added to the
                     # collection for more than 1 secondd).
                     gevent.sleep(1)
-                    yield " : \n\n"
+                    elapsed += 1
+                    if elapsed > 10:
+                        # log.debug("no docs in cursor")
+                        elapsed = 0
+                        yield ": \n\n"
 
-        return gen()
+
+        return gen(ts)
 
 
     @classmethod
