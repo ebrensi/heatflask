@@ -65,15 +65,16 @@
     }
     
     const OFFLINE = {{ config.get('OFFLINE')|tojson }},
-            ADMIN = {{ (current_user.is_authenticated and current_user.is_admin())|tojson|safe }},
-            MEASURMENT_PREFERENCE = "{{ current_user.measurement_preference if current_user.is_authenticated else user.measurement_preference }}",
+          ADMIN = {{ (current_user.is_authenticated and current_user.is_admin())|tojson|safe }},
+          MEASURMENT_PREFERENCE = "{{ current_user.measurement_preference if current_user.is_authenticated else user.measurement_preference }}",
           USER_ID = "{{ user.id }}",
           DIST_UNIT = (MEASURMENT_PREFERENCE=="feet")? 1609.34 : 1000.0,
           DIST_LABEL = (MEASURMENT_PREFERENCE=="feet")?  "mi" : "km",
           STRAVA_BUTTON = img("{{ url_for('static',filename='strava_button.png') }}"),
           USER_BASE_URL = "{{url_for('main',username=user.id)}}",
           GROUP_ACTIVITY_URL = USER_BASE_URL + "?group=",
-          WEBSOCKET_URL = WS_SCHEME+window.location.host+"/data_socket";
+          WEBSOCKET_URL = WS_SCHEME+window.location.host+"/data_socket",
+          CLIENT_ID = "{{ client_id }}";
           
 
     window.history.pushState({}, "", window.location.origin + window.location.pathname);
@@ -128,7 +129,7 @@
     sock.onopen = function(event) {
         console.log("socket open: ", event);
 
-        queryObj = {};
+        queryObj = {client_id: CLIENT_ID};
         queryObj[USER_ID] = {
                 limit: 100000,
                 streams: false,

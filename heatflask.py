@@ -510,9 +510,20 @@ def activities(username):
         except Exception as e:
             log.error("error deleting index for {}".format(user))
             log.exception(e)
+    
+
+    # Assign an id to this web client in order to prevent
+    #  websocket access from unidentified users 
+    timeout = 60 * 30  # 30 min
+    web_client_id = uuid.uuid1().get_hex()
+    redis_key = "C:{}".format(web_client_id)
+    ip_address = request.access_route[-1]
+    redis.setex(redis_key, ip_address, timeout)
+
     try:      
         return render_template("activities.html",
-                           user=user)
+                           user=user,
+                           client_id=web_client_id)
     except Exception as e:
         log.exception(e)
 
