@@ -797,8 +797,12 @@ def event_history():
 @log_request_event
 @admin_required
 def live_updates():
+    # log.debug(request.headers)
+    secs = float(request.headers.get("Last-Event-Id", 0))
+    ts = datetime.utcfromtimestamp(secs) if secs else None
+    # log.debug("live-updates init at {}".format(ts))
     return Response(
-        EventLogger.live_updates_gen(),
+        EventLogger.live_updates_gen(ts),
         content_type='text/event-stream')
 
 
