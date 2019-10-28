@@ -6,6 +6,7 @@ class Config(object):
     # Flask settings
     DEBUG = False
     TESTING = False
+    DEVELOPMENT = False
     CSRF_ENABLED = True
 
     # Heatflask settings
@@ -59,6 +60,9 @@ class Config(object):
 
     CACHE_IP_INFO_TIMEOUT = 1 * 24 * 60 * 60  # 1 day
 
+    # How long we will allow data requests from the same identified client
+    WEB_CLIENT_ID_TIMEOUT = 60 * 60 * 24  # 1 day
+
     JSONIFY_PRETTYPRINT_REGULAR = True
 
     SECRET_KEY = (
@@ -69,12 +73,35 @@ class Config(object):
     STRAVA_CLIENT_ID = os.environ.get("STRAVA_CLIENT_ID")
     STRAVA_CLIENT_SECRET = os.environ.get("STRAVA_CLIENT_SECRET")
 
+    # IPstack
+    IPSTACK_ACCESS_KEY = os.environ["IPSTACK_ACCESS_KEY"]
+
     # Maximum size of event history (for capped MongoDB collection)
     MAX_HISTORY_BYTES = 2 * 1024 * 1024  # 2MB
 
     # Paypal Stuff
     # PAYPAL_VERIFY_URL = 'https://ipnpb.paypal.com/cgi-bin/webscr'
     PAYPAL_VERIFY_URL = 'https://ipnpb.sandbox.paypal.com/cgi-bin/webscr'
+
+
+    # A few Demos 
+    DEMOS = {
+        "portland_6_2017": {
+            "username": "15972102",
+            "after": "2017-06-30",
+            "before": "2017-07-08",
+            "lat": "41.476",
+            "lng": "-119.290",
+            "zoom": "6",
+            "c1": "859579",
+            "c2": "169",
+            "sz": "4"    },
+
+        "last60activities": {
+            "username": "15972102",
+            "limit": "60"
+            }
+        }
 
 
 class ProductionConfig(Config):

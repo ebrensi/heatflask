@@ -35,8 +35,6 @@
                     autozoom: {{ autozoom|tojson }},
                     activity_ids: "{{ ids }}",
                     limit: {{ limit|tojson }},
-                    group: {{ group | tojson}},
-                    key: {{ key | tojson}},
                     preset: {{ preset| tojson }},
                     date1: "{{ date1 }}",
                     date2: "{{ date2 }}",
@@ -123,7 +121,6 @@
 								<option value="days">recent days</option>
 								<option value="activities">recent activities</option>
 								<option value="activity_ids">Activity IDs</option>
-                                <option value="grouped_with">Grouped With</option>
 								<option value="" selected="selected">Date-Range</option>
 							</select>
 						</span>
