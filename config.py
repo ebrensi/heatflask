@@ -84,6 +84,10 @@ class Config(object):
     PAYPAL_VERIFY_URL = 'https://ipnpb.sandbox.paypal.com/cgi-bin/webscr'
 
 
+    # MapBox stuff
+    MAPBOX_ACCESS_TOKEN = os.environ.get("MAPBOX_ACCESS_TOKEN")
+
+
     # A few Demos 
     DEMOS = {
         "portland_6_2017": {

@@ -24,19 +24,19 @@ if (!OFFLINE) {
     var online_baseLayers = {
         "MapBox.Dark": L.tileLayer.provider('MapBox', {
             id: 'mapbox.dark',
-            accessToken: 'pk.eyJ1IjoiaGVhdGZsYXNrIiwiYSI6ImNrMXB3NDZtMjA0cG4zbW85N2U1M2p2ZmQifQ.UvD1v0VyI_V1gJSey0vRbg'
+            accessToken: MAPBOX_ACCESS_TOKEN
         }),
         "MapBox.Streets": L.tileLayer.provider('MapBox', {
             id: 'mapbox.streets',
-            accessToken: 'pk.eyJ1IjoiaGVhdGZsYXNrIiwiYSI6ImNrMXB3NDZtMjA0cG4zbW85N2U1M2p2ZmQifQ.UvD1v0VyI_V1gJSey0vRbg'
+            accessToken: MAPBOX_ACCESS_TOKEN
         }),
         "MapBox.Streets-Basic": L.tileLayer.provider('MapBox', {
             id: 'mapbox.streets-basic',
-            accessToken: 'pk.eyJ1IjoiaGVhdGZsYXNrIiwiYSI6ImNrMXB3NDZtMjA0cG4zbW85N2U1M2p2ZmQifQ.UvD1v0VyI_V1gJSey0vRbg'
+            accessToken: MAPBOX_ACCESS_TOKEN
         }),
         "MapBox.Satellite": L.tileLayer.provider('MapBox', {
             id: 'mapbox.satellite',
-            accessToken: 'pk.eyJ1IjoiaGVhdGZsYXNrIiwiYSI6ImNrMXB3NDZtMjA0cG4zbW85N2U1M2p2ZmQifQ.UvD1v0VyI_V1gJSey0vRbg'
+            accessToken: MAPBOX_ACCESS_TOKEN
         }),
 
         "Esri.WorldImagery": L.tileLayer.provider("Esri.WorldImagery"),
@@ -48,6 +48,7 @@ if (!OFFLINE) {
     };
 
     Object.assign(baseLayers, online_baseLayers);
+
     if (map_providers.length) {
         for (var i = 0; i < map_providers.length; i++) {
             let provider = map_providers[i];
@@ -119,7 +120,7 @@ var sidebarControl = L.control.sidebar('sidebar').addTo(map),
     areaSelect;
 
 
-// Animation button
+// Animation play/pause button
 var animation_button_states = [
     {
         stateName: 'animation-running',
@@ -441,6 +442,8 @@ var tableScroller = $('.dataTables_scrollBody');
 
 
 function updateShareStatus(status) {
+    if (OFFLINE) return;
+
     console.log("updating share status.");
     url = `${SHARE_STATUS_UPDATE_URL}?status=${status}`;
     httpGetAsync(url, function(responseText) {
@@ -899,8 +902,7 @@ function renderLayers() {
 }
 
 function openActivityListPage(rebuild) {
-    let flag = rebuild? "?rebuild=1":""
-    window.open(ACTIVITY_LIST_URL+flag, "_blank")
+    window.open(ACTIVITY_LIST_URL, "_blank")
 }
 
 function updateState(){

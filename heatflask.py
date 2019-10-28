@@ -201,7 +201,6 @@ def splash():
 
 # Attempt to authorize a user via Oauth(2)
 @app.route('/authorize')
-# @log_request_event
 def authorize():
     state = request.args.get("state")
     redirect_uri = url_for('auth_callback', _external=True)
@@ -914,7 +913,7 @@ def paypal_ipn_handler():
 
     if r.text == 'VERIFIED':
         log.info("Received verified data: {}".format(request.form))
-        
+
         # Here we take some action based on the data from Paypal, 
         #  with info about a payment from a user.
         return "Paypal IPN message verified.", 200
