@@ -323,20 +323,7 @@ function formatUserId ( data, type, row ) {
     }
 }
 
-function formatGroup(data, type, row) {
-      if (!data || data == 1) {
-        return ""
-      }
-      if (type == "display") {
 
-        let owner_id = row.owner? row.owner : USER_ID,
-            url = GROUP_ACTIVITY_URL(owner_id, row.id);
-
-        return href(url, "<i class='fa fa-users'></i>");
-      } else {
-        return data;
-      }
-    }
 // ------------------------
 
 

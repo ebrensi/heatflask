@@ -22,7 +22,7 @@
               BASE_USER_URL = "{{ url_for('main', username=user.id) }}",
               SHARE_PROFILE = {{ user.share_profile|tojson|safe }},
               SHARE_STATUS_UPDATE_URL = "{{ url_for('update_share_status', username=user.id) }}",
-              ACTIVITY_LIST_URL = "{{ url_for('activities', username=user.id) }}",
+              ACTIVITY_LIST_URL = "{{ url_for('activities', username=user.id) }}";
         {% endif %}
 
         const OFFLINE = {{ config.get('OFFLINE')|tojson }},
@@ -179,12 +179,15 @@
 
                     <div id="error-message"></div>
                     <br>
+
+                    {% if not config.get('OFFLINE') %}
                     <form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_blank">
                     <input type="hidden" name="cmd" value="_s-xclick">
                     <input type="hidden" name="hosted_button_id" value="W9L7ZUADWKE8L">
                     <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" border="0" name="submit" alt="PayPal - The safer, easier way to pay online!">
                     <img alt="" border="0" src="https://www.paypalobjects.com/en_US/i/scr/pixel.gif" width="1" height="1">
                     </form>
+                    {% endif %}
                     <br>
                     <a href="mailto:info@heatflask.com">Contact us!</a>
 			</div>
@@ -236,12 +239,14 @@
 					</form>
 
                     <br>
+                    {% if not config.get('OFFLINE') %}
                     <form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_blank">
                     <input type="hidden" name="cmd" value="_s-xclick">
                     <input type="hidden" name="hosted_button_id" value="W9L7ZUADWKE8L">
                     <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" border="0" name="submit" alt="PayPal - The safer, easier way to pay online!">
                     <img alt="" border="0" src="https://www.paypalobjects.com/en_US/i/scr/pixel.gif" width="1" height="1">
                     </form>
+                    {% endif %}
 			</div>
 			{% endif %}
 
@@ -275,6 +280,7 @@
 
 				<hr>
 
+                {% if not config.get('OFFLINE') %}
                 Buy me a cup of coffee!
                 <form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_blank">
                 <input type="hidden" name="cmd" value="_s-xclick">
@@ -282,6 +288,7 @@
                 <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" border="0" name="submit" alt="PayPal - The safer, easier way to pay online!">
                 <img alt="" border="0" src="https://www.paypalobjects.com/en_US/i/scr/pixel.gif" width="1" height="1">
                 </form>
+                {% endif %}
 
 			</div>
             {% endif %}
