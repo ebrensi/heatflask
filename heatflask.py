@@ -74,7 +74,7 @@ login_manager.login_view = 'splash'
 sockets = Sockets(app)
 
 # -------------------------------------------------------------
- 
+
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -350,10 +350,12 @@ def main(username):
         #  Catch any registered users that still have the old access_token
         json.loads(user.access_token)
 
-    except Exception as e:
+    except Exception:
         # if the logged-in user has a bad access_token
         #  then we log them out so they can re-authenticate
-        flash("Invalid access token for {}. please re-authenticate.".format(user))
+        flash(
+            "Invalid access token for {}. please re-authenticate."
+            .format(user))
         if current_user == user:
             return redirect(url_for("logout", username=username))
         else:

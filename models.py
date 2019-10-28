@@ -21,7 +21,6 @@ from bson import ObjectId
 from bson.binary import Binary
 from bson.json_util import dumps
 from heatflask import app
-import logging
 
 
 CONCURRENCY = app.config["CONCURRENCY"]
@@ -29,7 +28,6 @@ STREAMS_OUT = ["polyline", "time"]
 STREAMS_TO_CACHE = ["polyline", "time"]
 CACHE_USERS_TIMEOUT = app.config["CACHE_USERS_TIMEOUT"]
 CACHE_ACTIVITIES_TIMEOUT = app.config["CACHE_ACTIVITIES_TIMEOUT"]
-LOCAL = app.config.get("APP_SETTINGS") == "config.DevelopmentConfig"
 OFFLINE = app.config.get("OFFLINE")
 
 # PostgreSQL access via SQLAlchemy
@@ -51,8 +49,8 @@ redis = Redis.from_url(app.config["REDIS_URL"])
 EPOC = datetime.utcfromtimestamp(0)
 
 # Using the logger from the Flask app. This is a hack and will get fixed.
-# log = app.logger
-log = logging.getLogger()
+log = app.logger
+# log = logging.getLogger()
 
 
 class Users(UserMixin, db_sql.Model):
@@ -1377,6 +1375,91 @@ class Activities(object):
         queue.put(data)
         # log.debug("importing {}...queued!".format(activity["_id"]))
         gevent.sleep(0)
+
+    @classmethod
+    def import_many(cls, client, activity_ids, stream_names):
+        if OFFLINE:
+            return
+
+        EMPTY = {"empty": True}  # Placeholder for non-GIS activity
+
+        streams_to_import = list(stream_names)
+        
+        if ("polyline" in stream_names):
+            streams_to_import.append("latlng")
+            streams_to_import.remove("polyline")
+        
+        error_count = 0
+
+        def import_one(activity_id):
+            try:
+                streams = client.get_activity_streams(
+                    int(activity_id),
+                    series_type='time',
+                    types=streams_to_import)
+            except Exception as e:
+                log.error(e)
+                return (activity_id, 1)
+            else:
+                return (activity_id, streams)
+
+        P = Pool(CONCURRENCY)
+        for activity_id, streams in P.imap_unordered(import_one, activity_ids):
+            if not streams:
+                cls.set(activity_id, EMPTY)
+                # log.debug("no streams for activity {}:".format(activity_id))
+
+            elif streams == 1:
+                error_count += 1
+
+            else:
+                activity_streams = {
+                    name: streams[name].data for name in streams
+                }
+
+                output = {}
+                for s in stream_names:
+                    
+                    if s == "polyline":
+                        # Encode/compress latlng data into polyline format
+                        latlng = activity_streams.get("latlng")
+                        if latlng:
+                            try:
+                                output[s] = polyline.encode(latlng)
+                                continue
+                            except Exception:
+                                log.error(
+                                    "problem encoding {}"
+                                    .format(activity_id))
+                                break
+                        else:
+                            output = EMPTY
+                            break
+
+                    # Encode/compress this stream
+                    stream = activity_streams.get(s)
+                    if stream:
+                        if len(stream) < 2:
+                            log.debug(
+                                "activity {} has no stream '{}'"
+                                .format(activity_id, s))
+                            output = EMPTY
+                            break
+                        
+                        try:
+                            output[s] = cls.stream_encode(stream)
+                        except Exception:
+                            msg = (
+                                "Can't encode stream '{}' for activity {}:\n{}"
+                                .format(s, activity_id, stream))
+                            log.error(msg)
+                            output = None
+                            break
+
+                if output:
+                    cls.set(activity_id, output)
+                    yield output
+
 
     @classmethod
     def query(cls, queryObj):
