@@ -9,9 +9,12 @@
     <link rel="stylesheet" href="{{ ASSET_URL }}" />
     {% endassets %}
 
+    {% if not config.get("OFFLINE") %}
     {% if current_user.is_anonymous or (not current_user.is_admin()) %}
     {{analytics}}
     {% endif %}
+    {% endif %}
+
   </head>
   <body>
 
@@ -31,11 +34,13 @@
       <h3>Semi-Static Location Data Mapping</h3>
 
       <br>
+      {% if not config.get("OFFLINE") %}
       <form action="{{ url_for('authorize') }}">
           <input type="image" src="{{ url_for('static', filename='btn_strava_connectwith_orange.svg') }}"
            alt="Authenticate with Strava" >
           <input type="hidden" name="state" value="{{ next }}">
       </form>
+      {% endif %}
 
       {% if error %}
         <p class="error"><strong>Error:</strong> {{ error }}

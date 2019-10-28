@@ -9,9 +9,7 @@ import stravalib
 import polyline
 import pymongo
 import json
-
 from redis import Redis
-
 import gevent
 from gevent.queue import Queue
 from gevent.pool import Pool
@@ -23,6 +21,7 @@ from bson import ObjectId
 from bson.binary import Binary
 from bson.json_util import dumps
 from heatflask import app
+import logging
 
 
 CONCURRENCY = app.config["CONCURRENCY"]
@@ -52,8 +51,8 @@ redis = Redis.from_url(app.config["REDIS_URL"])
 EPOC = datetime.utcfromtimestamp(0)
 
 # Using the logger from the Flask app. This is a hack and will get fixed.
-log = app.logger
-# log = logging.getLogger()
+# log = app.logger
+log = logging.getLogger()
 
 
 class Users(UserMixin, db_sql.Model):

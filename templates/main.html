@@ -11,9 +11,11 @@
 	<link rel="stylesheet" href="{{ ASSET_URL }}" />
 	{% endassets %}
 
+    {% if not config.get("OFFLINE") %}
 	{% if current_user.is_anonymous or (not current_user.is_admin()) %}
 	{{analytics}}
 	{% endif %}
+    {% endif %}
 
     <script type="text/javascript">
         // Constants defined via template
@@ -169,11 +171,13 @@
 					</form>
 					{% else %}
 
+                    {% if not config.get("OFFLINE") %}
 					Create an account and/or log in.
                     
 					<form action="{{ url_for('authorize') }}" >
 						<input type="image" src="{{ url_for('static', filename='btn_strava_connectwith_orange.svg') }}" alt="Log-In with Strava" >
 					</form>
+                    {% endif %}
 
 					{% endif %}
 
