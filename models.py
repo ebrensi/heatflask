@@ -51,6 +51,7 @@ redis = Redis.from_url(app.config["REDIS_URL"])
 
 EPOC = datetime.utcfromtimestamp(0)
 
+# Using the logger from the Flask app. This is a hack and will get fixed.
 log = app.logger
 # log = logging.getLogger()
 
@@ -101,13 +102,14 @@ class Users(UserMixin, db_sql.Model):
     def from_serialized(cls, p):
         return cPickle.loads(p)
 
-
     def client(self, refresh=True):
-        # refresh = "force"
         try:
             access_info = json.loads(self.access_token)
         except Exception:
             # log.debug("{} bad access_token".format(self))
+            return
+
+        if OFFLINE:
             return
 
         if not self.cli:
@@ -148,7 +150,6 @@ class Users(UserMixin, db_sql.Model):
 
         return self.cli
 
-
     def get_id(self):
         return unicode(self.id)
 
@@ -157,6 +158,9 @@ class Users(UserMixin, db_sql.Model):
 
     @staticmethod
     def strava_data_from_token(token, log_error=True):
+        if OFFLINE:
+            return
+
         access_info = json.loads(token)
         access_token = access_info["access_token"]
         client = stravalib.Client(access_token=access_token)
@@ -166,7 +170,10 @@ class Users(UserMixin, db_sql.Model):
             if log_error:
                 log.error("error getting user data from token: {}"
                           .format(e))
+            return
+
         else:
+
             return {
                 "id": strava_user.id,
                 "username": strava_user.username,
@@ -240,6 +247,7 @@ class Users(UserMixin, db_sql.Model):
     def get(cls, user_identifier, timeout=CACHE_USERS_TIMEOUT):
         key = cls.key(user_identifier)
         cached = redis.get(key)
+        
         if cached:
             redis.expire(key, CACHE_USERS_TIMEOUT)
             try:
@@ -278,8 +286,13 @@ class Users(UserMixin, db_sql.Model):
         db_sql.session.delete(self)
         db_sql.session.commit()
 
+
+    # TODO: triage needs to be totally redone
+    #  Every time it runs Python runs out of memory
+    #   and the app.context is just horrid
     @classmethod
     def triage(cls, update=False, days_inactive=365, test_run=True):
+
         # Delete all users from the database who have invalid access tokens
         #  or have been inactive for a long time (defaults to a year)
         now = datetime.utcnow()
@@ -423,6 +436,9 @@ class Users(UserMixin, db_sql.Model):
             redis.delete(key)
 
     def build_index(self, out_queue=None, fetch_limit=0, **args):
+        if OFFLINE:
+            return
+
         gevent.spawn(
             Index.import_user,
             self,
@@ -468,7 +484,6 @@ class Users(UserMixin, db_sql.Model):
                 return [{"error": "Invalid Dates"}]
 
 
-        #  If out_queue is not supplied then query_activities is blocking
         put_stopIteration = False
         if not out_queue:
             out_queue = Queue()
@@ -479,14 +494,14 @@ class Users(UserMixin, db_sql.Model):
             if self.index_count():
 
                 gen, to_delete = Index.query(
-                            user=self,
-                            activity_ids=activity_ids,
-                            limit=limit or 0,
-                            after=after, before=before,
-                            exclude_ids=exclude_ids,
-                            ids_only=only_ids,
-                            update_ts=update_index_ts
-                         )
+                    user=self,
+                    activity_ids=activity_ids,
+                    limit=limit or 0,
+                    after=after, before=before,
+                    exclude_ids=exclude_ids,
+                    ids_only=only_ids,
+                    update_ts=update_index_ts
+                )
 
                 if only_ids:
                     out_queue.put(list(gen))
@@ -502,6 +517,10 @@ class Users(UserMixin, db_sql.Model):
                     return ["build"]
 
                 else:
+                    if OFFLINE:
+                        out_queue.put({"error": "No Network Connection"})
+                        return out_queue
+
                     gen = gevent.queue.Queue()
                     gevent.spawn(self.build_index,
                                  out_queue=gen,
@@ -512,18 +531,12 @@ class Users(UserMixin, db_sql.Model):
             else:
                 # Finally, if there is no index and rather than building one
                 # we are requested to get the summary data directily from Strava
-                log.info(
+                log.error(
                     "{}: attempt to get summaries from Strava without build"
                     .format(self))
 
-                return [{"error": "How did you get here??"}]
-                # gen = (
-                #     Index.strava2doc(a)
-                #     for a in self.client().get_activities(
-                #         limit=limit,
-                #         before=before,
-                #         after=after)
-                # )
+                return [{"error": "Sorry. not gonna do it."}]
+                
 
         DB_TTL = app.config["STORE_INDEX_TIMEOUT"]
         NOW = datetime.utcnow()
@@ -531,6 +544,11 @@ class Users(UserMixin, db_sql.Model):
         num_fetched = 0
         num_imported = 0
         num_empty = 0
+
+        # At this point we have a generator called gen
+        #  that yields Activity summaries, without streams
+        #  we will attempt to get the stream associated with 
+        #  each summary and put it in the queue.
 
         # log.debug("NOW: {}, DB_TTL: {}".format(NOW, DB_TTL))
 
@@ -540,6 +558,8 @@ class Users(UserMixin, db_sql.Model):
         for A in gen:
             # log.debug(A)
             if "_id" not in A:
+                # This is not an activity. It is
+                #  an error message or something
                 out_queue.put(A)
                 continue
 
@@ -588,11 +608,13 @@ class Users(UserMixin, db_sql.Model):
                             break
                     
                     num_imported += 1
-                    pool.spawn(Activities.import_and_queue_streams,
-                       client, out_queue, A)
+                    pool.spawn(
+                        Activities.import_and_queue_streams,
+                        client,
+                        out_queue,
+                        A
+                    )
                     gevent.sleep(0)
-
-        
 
         msg = "{} queued {} ({} fetched, {} imported, {} empty)".format(
             self.id,
@@ -603,7 +625,6 @@ class Users(UserMixin, db_sql.Model):
         )
 
         log.debug(msg)
-
         EventLogger.new_event(msg=msg)
 
         # If we are using our own queue, we make sure to put a stopIteration
@@ -640,13 +661,11 @@ class Index(object):
             log.debug(
                 "error deleting '{}' collection from MongoDB.\n{}"
                 .format(cls.name, e))
-            result1 = e
-
 
         # create new index collection
         mongodb.create_collection(cls.name)
 
-        cls.db.create_index("user")
+        cls.db.create_index("user_id")
         cls.db.create_index([("ts_UTC", pymongo.DESCENDING)])
 
         # cls.db.create_index([("start_latlng", pymongo.GEO2D)])
@@ -657,29 +676,32 @@ class Index(object):
         )
 
 
-        log.info("initialized '{}' collection".format(cls.name))
+        log.info(
+            "initialized '{}' collection: {}".format(
+                cls.name,
+                result))
 
-
-    @classmethod 
+    @classmethod
     def update_ttl(cls, timeout=DB_TTL):
 
-        # Update the MongoDB Index TTL if necessary 
+        # Update the MongoDB Index TTL if necessary
         info = cls.db.index_information()
 
         current_ttl = info["ts"]["expireAfterSeconds"]
 
         if current_ttl != timeout:
-            result = mongodb.command('collMod', cls.name,
-                        index={'keyPattern': {'ts': 1},
-                                'background': True,
-                                'expireAfterSeconds': timeout}
-                     )
+            result = mongodb.command(
+                'collMod',
+                cls.name,
+                index={'keyPattern': {'ts': 1},
+                       'background': True,
+                       'expireAfterSeconds': timeout}
+            )
 
             log.info("`{}` db TTL updated: {}".format(cls.name, result))
         else:
             # log.debug("no need to update TTL")
             pass
-
 
     @classmethod
     def strava2doc(cls, a):
@@ -690,7 +712,6 @@ class Index(object):
             "name": a.name,
             "type": a.type,
             "ts_UTC": a.start_date,
-            # "group": a.athlete_count,
             "ts_local": a.start_date_local,
             "ts": datetime.utcnow(),
             "total_distance": float(a.distance),
@@ -752,7 +773,9 @@ class Index(object):
         try:
             activity_count = cls.db.count({"user_id": user.id})
         except Exception as e:
-            log.error("Error retrieving activity count for {}: {}".format(user, e))
+            log.error(
+                "Error retrieving activity count for {}: {}"
+                .format(user, e))
             return
 
         return activity_count
@@ -762,18 +785,25 @@ class Index(object):
                         fetch_query={"limit": 10},
                         out_query={}):
 
-        for query in [fetch_query, out_query]:
-            if "before" in query:
-                query["before"] = Utility.to_datetime(query["before"])
-            if "after" in query:
-                query["after"] = Utility.to_datetime(query["after"])
-
         def enqueue(msg):
             if out_queue is None:
                 pass
             else:
                 # log.debug(msg)
                 out_queue.put(msg)
+
+        if OFFLINE:
+            enqueue({"error": "No network connection"})
+            enqueue(StopIteration)
+            return
+
+        for query in [fetch_query, out_query]:
+            if "before" in query:
+                query["before"] = Utility.to_datetime(query["before"])
+            if "after" in query:
+                query["after"] = Utility.to_datetime(query["after"])
+
+        
 
         count = 0
         mongo_requests = []
@@ -814,7 +844,7 @@ class Index(object):
                         # If we are also sending data to the front-end,
                         # we do this via a queue.
 
-                        if not (count % 5):
+                        if not (count % 10):
                             # only output count every 5 items to cut down on data
                             out_queue.put({"idx": count})
                             # log.debug("put index {}".format(count))
@@ -842,7 +872,6 @@ class Index(object):
                                 (after and (d["ts_local"] < after))):
                             rendering = False
                             out_queue.put({"stop_rendering": 1})
-                            # log.debug("got here: count = {}".format(count))
                         gevent.sleep(0)
             gevent.sleep(0)
 
@@ -850,9 +879,8 @@ class Index(object):
             # If we are streaming to a client, this is where we tell it
             #  stop listening by pushing a StopIteration the queue
             if not mongo_requests:
-                if out_queue:
-                    out_queue.put({"error": "No activities!"})
-                    out_queue.put(StopIteration)
+                enqueue({"error": "No activities!"})
+                enqueue(StopIteration)
                 EventLogger.new_event(
                     msg="no activities for {}".format(user.id)
                 )
@@ -863,8 +891,7 @@ class Index(object):
                     ordered=False
                 )
         except Exception as e:
-            if out_queue:
-                out_queue.put({"error": str(e)})
+            enqueue({"error": str(e)})
 
             log.error(
                 "Error while building activity index for {}".format(user))
@@ -878,12 +905,10 @@ class Index(object):
 
             log.debug(msg)
             EventLogger.new_event(msg=msg)
-            if out_queue:
-                out_queue.put({"msg": "done indexing {} activities.".format(count)})
+            enqueue({"msg": "done indexing {} activities.".format(count)})
         finally:
             user.indexing(False)
-            if out_queue:
-                out_queue.put(StopIteration)
+            enqueue(StopIteration)
 
     @classmethod
     def import_by_id(cls, user, activity_ids):
@@ -905,15 +930,18 @@ class Index(object):
             return pymongo.ReplaceOne({"_id": A.id}, a, upsert=True)
 
         pool = Pool(CONCURRENCY)
-        mongo_requests = list(req for req in pool.imap_unordered(fetch, activity_ids) if req)
+        mongo_requests = list(
+            req for req in pool.imap_unordered(fetch, activity_ids)
+            if req
+        )
+
+        if not mongo_requests:
+            return
 
         try:
-            result = cls.db.bulk_write(mongo_requests) if mongo_requests else None
+            cls.db.bulk_write(mongo_requests)
         except Exception as e:
-            log.info("Error fetching activities by id")
-            return
-        
-        return result
+            log.exception(e)
 
     @classmethod
     def query(cls, user=None,
@@ -925,8 +953,12 @@ class Index(object):
               update_ts=True
               ):
 
-        activity_ids = set(int(id) for id in activity_ids) if activity_ids else None
-        exclude_ids = set(int(id) for id in exclude_ids) if exclude_ids else None
+        if activity_ids:
+            activity_ids = set(int(id) for id in activity_ids)
+
+        if exclude_ids:
+            exclude_ids = set(int(id) for id in exclude_ids)
+
         limit = int(limit)
         query = {}
         out_fields = None
@@ -953,10 +985,16 @@ class Index(object):
         to_delete = None
         if exclude_ids:
             try:
-                query_ids = set(int(doc["_id"]) 
-                    for doc in cls.db.find(
-                        query, {"_id": True}).sort("ts_UTC", pymongo.DESCENDING)
-                                             .limit(limit) )
+                result = cls.db.find(
+                    query,
+                    {"_id": True}
+                ).sort(
+                    "ts_UTC",
+                    pymongo.DESCENDING
+                ).limit(limit)
+
+            query_ids = set(
+                int(doc["_id"]) for doc in result)
 
             except Exception as e:
                 log.exception(e)
@@ -991,7 +1029,7 @@ class Index(object):
 
         except Exception as e:
             log.error(
-                "error accessing mongodb indexes collection:\n{}"
+                "error accessing mongodb Index collection:\n{}"
                 .format(e)
             )
             return []
@@ -1084,7 +1122,6 @@ class Activities(object):
             # log.debug("no need to update TTL")
             pass
 
-
     @staticmethod
     def bounds(poly):
         if poly:
@@ -1169,7 +1206,7 @@ class Activities(object):
         return result1, result2
 
     @classmethod
-    def get_many(cls, ids, user=None, queue=None, timeout=CACHE_TTL):
+    def get_many(cls, ids, timeout=CACHE_TTL):
 
         # We output Activities to a queue
         if not queue:
@@ -1230,13 +1267,7 @@ class Activities(object):
                     .format(e))
             return
 
-        # Remaining items in uncached need to be imported from Strava
-        def fetch_from_strava(queue, user, ids):
-            client = user.client()
-
-        # ...
-
-        return queue
+        return queue, notcached.keys()
 
     @classmethod
     def get(cls, id, timeout=CACHE_TTL):
@@ -1271,7 +1302,10 @@ class Activities(object):
     @classmethod
     def import_streams(cls, client, activity_id, stream_names,
                        timeout=CACHE_TTL):
-        EMPTY = {"empty": True} 
+        if OFFLINE:
+            return
+
+        EMPTY = {"empty": True}
 
         streams_to_import = list(stream_names)
         if ("polyline" in stream_names):
@@ -1380,7 +1414,8 @@ class EventLogger(object):
     @classmethod
     def init(cls, rebuild=True, size=app.config["MAX_HISTORY_BYTES"]):
 
-        collections = mongodb.collection_names(include_system_collections=False)
+        collections = mongodb.collection_names(
+            include_system_collections=False)
 
         if (cls.name in collections) and rebuild:
             all_docs = cls.db.find()
@@ -1426,10 +1461,15 @@ class EventLogger(object):
     def live_updates_gen(cls, ts=None):
 
         if not ts:
-            first = cls.db.find().sort('$natural', pymongo.DESCENDING).limit(1).next()
+            first = cls.db.find().sort(
+                '$natural',
+                pymongo.DESCENDING
+            ).limit(1).next()
+
             ts = first['ts']
             
         cls.update = True
+
         def gen(ts):
             yield "retry: 5000"
             while cls.update:
@@ -1448,13 +1488,17 @@ class EventLogger(object):
                         doc["_id"] = str(doc["_id"])
                         event = dumps(doc)
 
-                        string = ("id: {}\ndata: {}\n\n"
+                        string = (
+                            "id: {}\ndata: {}\n\n"
                             .format(tss, event))
                         # log.debug(string)
                         yield string
-                    # We end up here if the find() returned no documents or if the
-                    # tailable cursor timed out (no new documents were added to the
-                    # collection for more than 1 secondd).
+
+                    # We end up here if the find() returned no
+                    # documents or if the tailable cursor timed out
+                    # (no new documents were added to the
+                    # collection for more than 1 second)
+
                     gevent.sleep(1)
                     elapsed += 1
                     if elapsed > 10:
@@ -1462,9 +1506,7 @@ class EventLogger(object):
                         elapsed = 0
                         yield ": \n\n"
 
-
         return gen(ts)
-
 
     @classmethod
     def new_event(cls, **event):
@@ -1584,7 +1626,6 @@ class Webhooks(object):
             result = Index.delete(update.object_id)
             # log.debug(result)
 
-
     @staticmethod
     def iter_updates(limit=0):
         updates = mongodb.updates.find(
@@ -1691,8 +1732,6 @@ class Utility():
         else:
             return dt
 
-            
-
 ## Executing code
 # initialize MongoDB collections if necessary
 collections = mongodb.collection_names()
@@ -1712,4 +1751,3 @@ else:
 
 if Payments.name not in collections:
     Payments.init_db()
-    

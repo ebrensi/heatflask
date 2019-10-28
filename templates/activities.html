@@ -194,6 +194,11 @@
       var link = document.getElementById('rebuild-button');
 
       link.onclick = function () {
+          if (OFFLINE) {
+             alert("Sorry, I am offline");
+             return
+          }
+
           if( confirm("Rebuild your Heatflask Index from Strava Data?") ) {
               window.location = window.location.href + "?rebuild=1";
           }

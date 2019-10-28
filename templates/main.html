@@ -22,12 +22,13 @@
               BASE_USER_URL = "{{ url_for('main', username=user.id) }}",
               SHARE_PROFILE = {{ user.share_profile|tojson|safe }},
               SHARE_STATUS_UPDATE_URL = "{{ url_for('update_share_status', username=user.id) }}",
-              ACTIVITY_LIST_URL = "{{ url_for('activities', username=user.id) }}";
+              ACTIVITY_LIST_URL = "{{ url_for('activities', username=user.id) }}",
         {% endif %}
 
         const OFFLINE = {{ config.get('OFFLINE')|tojson }},
               ADMIN = {{ (current_user.is_authenticated and current_user.is_admin())|tojson|safe }},
               FLASH_MESSAGES = {{ get_flashed_messages()|tojson|safe }},
+              MAPBOX_ACCESS_TOKEN = "{{ config.get('MAPBOX_ACCESS_TOKEN') }}",
               ONLOAD_PARAMS = {
                     C1: {{ c1|tojson }},
                     C2: {{ c2|tojson }},
@@ -169,6 +170,7 @@
 					{% else %}
 
 					Create an account and/or log in.
+                    
 					<form action="{{ url_for('authorize') }}" >
 						<input type="image" src="{{ url_for('static', filename='btn_strava_connectwith_orange.svg') }}" alt="Log-In with Strava" >
 					</form>
