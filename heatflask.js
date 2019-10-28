@@ -385,39 +385,33 @@ if (FLASH_MESSAGES.length > 0) {
 
 // IInitialize Activity Table in sidebar
 let tableColumns = [
-    {
-        title: '<i class="fa fa-calendar" aria-hidden="true"></i>',
-        data: null,
-        render: (A) => href( stravaActivityURL(A.id), A.ts_local.slice(0,10) )
-    },
+        {
+            title: '<i class="fa fa-calendar" aria-hidden="true"></i>',
+            data: null,
+            render: (A) => href( stravaActivityURL(A.id), A.ts_local.slice(0,10) )
+        },
 
-    { 
-        title: "Type", 
-        data: null,
-        render: (A) => `<p style="color:${A.pathColor}">${A.type}</p>`
-    },
+        { 
+            title: "Type", 
+            data: null,
+            render: (A) => `<p style="color:${A.pathColor}">${A.type}</p>`
+        },
 
-    {
-        title: `<i class="fa fa-arrows-h" aria-hidden="true"></i> (${DIST_LABEL})`,
-        data: "total_distance",
-        render: (A) => +(A / DIST_UNIT).toFixed(2)},
-    {
-        title: '<i class="fa fa-clock-o" aria-hidden="true"></i>',
-        data: "elapsed_time",
-        render: hhmmss
-    },
+        {
+            title: `<i class="fa fa-arrows-h" aria-hidden="true"></i> (${DIST_LABEL})`,
+            data: "total_distance",
+            render: (A) => +(A / DIST_UNIT).toFixed(2)},
+        {
+            title: '<i class="fa fa-clock-o" aria-hidden="true"></i>',
+            data: "elapsed_time",
+            render: hhmmss
+        },
 
-    { 
-        title: "Name", 
-        data: null,
-        render: (A) => `<p style="background-color:${A.dotColor}"> ${A.name}</p>`
-    },
-
-    // {
-    //     title: '<i class="fa fa-users" aria-hidden="true"></i>',
-    //     data: "group",
-    //     render:  formatGroup
-    // }
+        { 
+            title: "Name", 
+            data: null,
+            render: (A) => `<p style="background-color:${A.dotColor}"> ${A.name}</p>`
+        },
     
     ],
 
@@ -426,10 +420,6 @@ let tableColumns = [
         data: "owner",
         render: formatUserId
     };
-
-if (ONLOAD_PARAMS.group) {
-    tableColumns = [imgColumn].concat(tableColumns);
-}
 
 var atable = $('#activitiesList').DataTable({
                 paging: false,
@@ -770,7 +760,6 @@ function renderLayers() {
 
         queryObj[USER_ID] = {
                 limit: (type == "activities")? Math.max(1, +num) : undefined,
-                grouped: (type=="grouped_with")? true : undefined,
                 after: date1? date1 : undefined,
                 before: (date2 && date2 != "now")? date2 : undefined,
                 activity_ids: idString?  Array.from(new Set(idString.split(/\D/).map(Number))): undefined,
@@ -915,17 +904,11 @@ function openActivityListPage(rebuild) {
 }
 
 function updateState(){
-    if (ONLOAD_PARAMS.key){
-        return;
-    }
-
     let  params = {},
          type = $("#select_type").val(),
          num = $("#select_num").val();
 
-    if (type == "grouped_with") {
-        params.group = +$("#activity_ids").val();;
-    } else if(type == "activities") {
+    if(type == "activities") {
         params.limit = num;
     } else if (type == "activity_ids") {
         params.id = $("#activity_ids").val();
@@ -976,12 +959,7 @@ function preset_sync() {
     num = $("#select_num").val(),
     type = $("#select_type").val();
 
-    if (type=="grouped_with") {
-        $(".date_select").hide();
-        $("#num_select").hide();
-        $("#id_select").show();
-
-    } else if (type=="days"){
+    if (type=="days"){
         $(".date_select").hide();
         $("#id_select").hide();
         $("#num_select").show();
@@ -1020,71 +998,66 @@ $(document).ready(function() {
     $("#render-selection-button").click(openSelected);
     $("#clear-selection-button").click(deselectAll);
 
-    if (!ONLOAD_PARAMS.key) {
-        $("#select_num").keypress(function(event) {
-            if (event.which == 13) {
-                event.preventDefault();
-                renderLayers();
-            }
-        });
-
-        $("#abortButton").hide();
-
-        $(".progbar").hide();
-        $(".datepick").datepicker({ dateFormat: 'yy-mm-dd',
-            changeMonth: true,
-            changeYear: true
-        });
-
-
-        map.on('moveend', function(e) {
-            if (!appState.autozoom) {
-                updateState();
-            }
-        });
-
-
-        $("#autozoom").on("change", updateState);
-
-        $("#share").prop("checked", SHARE_PROFILE);
-        $("#share").on("change", function() {
-            let status = $("#share").is(":checked")? "public":"private";
-            updateShareStatus(status);
-        });
-
-        $(".datepick").on("change", function(){
-            $(".preset").val("");
-        });
-        $(".preset").on("change", preset_sync);
-
-        $("#renderButton").click(renderLayers);
-
-        $("#activity-list-buton").click(() => openActivityListPage(false));
-        $("#rebuild-button").click(() => openActivityListPage(true));
-
-
-        $("#autozoom").prop('checked', ONLOAD_PARAMS.autozoom);
-
-        if (ONLOAD_PARAMS.group) {
-            $("#select_type").val("grouped_with");
-            $("#activity_ids").val(ONLOAD_PARAMS.group);
-            $("#activity_ids").prop("readonly", true);
-        } else if (ONLOAD_PARAMS.activity_ids) {
-            $("#activity_ids").val(ONLOAD_PARAMS.activity_ids);
-            $("#select_type").val("activity_ids");
-        } else if (ONLOAD_PARAMS.limit) {
-            $("#select_num").val(ONLOAD_PARAMS.limit);
-            $("#select_type").val("activities");
-        } else if (ONLOAD_PARAMS.preset) {
-            $("#select_num").val(ONLOAD_PARAMS.preset);
-            $("#select_type").val("days");
-            preset_sync();
-        } else {
-            $('#date1').val(ONLOAD_PARAMS.date1);
-            $('#date2').val(ONLOAD_PARAMS.date2);
-            $("#preset").val("");
+    $("#select_num").keypress(function(event) {
+        if (event.which == 13) {
+            event.preventDefault();
+            renderLayers();
         }
+    });
+
+    $("#abortButton").hide();
+
+    $(".progbar").hide();
+    $(".datepick").datepicker({ dateFormat: 'yy-mm-dd',
+        changeMonth: true,
+        changeYear: true
+    });
+
+
+    map.on('moveend', function(e) {
+        if (!appState.autozoom) {
+            updateState();
+        }
+    });
+
+
+    $("#autozoom").on("change", updateState);
+
+    $("#share").prop("checked", SHARE_PROFILE);
+    $("#share").on("change", function() {
+        let status = $("#share").is(":checked")? "public":"private";
+        updateShareStatus(status);
+    });
+
+    $(".datepick").on("change", function(){
+        $(".preset").val("");
+    });
+    $(".preset").on("change", preset_sync);
+
+    $("#renderButton").click(renderLayers);
+
+    $("#activity-list-buton").click(() => openActivityListPage(false));
+    $("#rebuild-button").click(() => openActivityListPage(true));
+
+
+    $("#autozoom").prop('checked', ONLOAD_PARAMS.autozoom);
+
+    if (ONLOAD_PARAMS.activity_ids) {
+        $("#activity_ids").val(ONLOAD_PARAMS.activity_ids);
+        $("#select_type").val("activity_ids");
+    } else if (ONLOAD_PARAMS.limit) {
+        $("#select_num").val(ONLOAD_PARAMS.limit);
+        $("#select_type").val("activities");
+    } else if (ONLOAD_PARAMS.preset) {
+        $("#select_num").val(ONLOAD_PARAMS.preset);
+        $("#select_type").val("days");
+        preset_sync();
+    } else {
+        $('#date1').val(ONLOAD_PARAMS.date1);
+        $('#date2').val(ONLOAD_PARAMS.date2);
+        $("#preset").val("");
     }
+    
 
     renderLayers();
     preset_sync();

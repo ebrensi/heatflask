@@ -1,18 +1,14 @@
 #! usr/bin/env python
 from __future__ import unicode_literals
-
-import gevent
-from exceptions import StopIteration
 from functools import wraps
 
 from flask import (
     Flask, Response, render_template, request, redirect, jsonify, url_for,
-    flash, send_from_directory, render_template_string, redirect
+    flash, send_from_directory, render_template_string
 )
 
 import flask_compress
 from datetime import datetime
-import sys
 import logging
 import os
 import json
@@ -33,10 +29,11 @@ from urlparse import urlparse, urlunparse  # python2
 
 app = Flask(__name__)
 app.config.from_object(os.environ['APP_SETTINGS'])
+
+
+# Logging is still confusing.  This works but not sure why.
 log = app.logger
-
 log.propagate = False
-
 # log.addHandler(logging.StreamHandler(sys.stdout))
 log.setLevel(logging.DEBUG)
 
@@ -55,35 +52,10 @@ from models import (
     db_sql, mongodb, redis
 )
 
-# initialize MongoDB collections if necessary
-collections = mongodb.collection_names()
-
-if EventLogger.name not in collections:
-    EventLogger.init()
-
-if Activities.name not in collections:
-    Activities.init_db()
-else:
-    Activities.update_ttl()
-
-if Index.name not in collections:
-    Index.init_db()
-else:
-    Index.update_ttl()
-
-if Payments.name not in collections:
-    Payments.init_db()
-
-
+# For instering Google Analytics script in web pages
 Analytics(app)
 
-
-def parseInt(s):
-    try:
-        return int(s)
-    except ValueError:
-        return
-
+# Bundles JavaScript and CSS for insertion in web pages
 assets = flask_assets.Environment(app)
 assets.register(bundles)
 
@@ -92,14 +64,17 @@ assets.register(bundles)
 flask_compress.Compress(app)
 
 
-# Flask-login stuff
+# Handles logging-in and logging-out users via cookies
 login_manager = flask_login.LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'splash'
 
 
-# Websockets
+# Websockets for serving data to clients
 sockets = Sockets(app)
+
+# -------------------------------------------------------------
+ 
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -108,6 +83,7 @@ def load_user(user_id):
 
 
 def admin_required(f):
+    # Views wrapped with this wrapper will only allow admin users
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if (current_user.is_authenticated and
@@ -119,6 +95,7 @@ def admin_required(f):
 
 
 def admin_or_self_required(f):
+    #  Only allow users viewing their own data
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if current_user.is_authenticated:
@@ -159,6 +136,8 @@ def redirect_to_new_domain():
     urlparts = urlparse(request.url)
     # log.debug("request to {}".format(urlparts))
     
+    # Don't redirect calls to /webhook _callback.
+    #  They cause an error for some reason
     if urlparts.path == '/webhook_callback':
         return
 
@@ -170,6 +149,9 @@ def redirect_to_new_domain():
         return redirect(new_url, code=301)
 
 
+
+#  ------------- Serve some static files -----------------------------
+#  TODO: There might be a better way to do this.
 @app.route('/favicon.ico')
 def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static'),
@@ -198,6 +180,8 @@ def robots_txt():
                                'robots.txt')
 
 
+# -----------------------------------------------------------------------------
+#  **** "routes" are our endpoints ***
 @app.route('/')
 def splash():
     if current_user.is_authenticated:
@@ -213,41 +197,6 @@ def splash():
     return render_template("splash.html",
                            next=(request.args.get("next") or
                                  url_for("splash")))
-
-
-DEMOS = {
-    "portland_6_2017": {
-        "username": "15972102",
-        "after": "2017-06-30",
-        "before": "2017-07-08",
-        "lat": "41.476",
-        "lng": "-119.290",
-        "zoom": "6",
-        "c1": "859579",
-        "c2": "169",
-        "sz": "4"    },
-
-    "last60activities": {
-        "username": "15972102",
-        "limit": "60"
-    }
-}
-
-
-@app.route('/demos/<demo_key>')
-def demos(demo_key):
-    # Last 60 activities
-    params = DEMOS.get(demo_key)
-    if not params:
-        return 'demo "{}" does not exist'.format(demo_key)
-
-    return redirect(url_for("main", **params))
-
-
-@app.route('/demo')
-def demo():
-    # Last 60 activities
-    return redirect(url_for("demos", demo_key="last60activities"))
 
 
 # Attempt to authorize a user via Oauth(2)
@@ -387,37 +336,37 @@ def main(username):
             current_user.update_usage()
 
     user = None
-    key = username if redis.get("Q:" + username) else ""
 
-    if not key:
-        # note: 'current_user' is the user that is currently logged in.
-        #       'user' is the user we are displaying data for.
-        user = Users.get(username)
-        if not user:
-            flash("user '{}' is not registered with this app"
-                  .format(username))
+    #
+    # note: 'current_user' is the user that is currently logged in.
+    #       'user' is the user we are displaying data for.
+    
+    user = Users.get(username)
+    if not user:
+        flash("user '{}' is not registered with this app"
+              .format(username))
+        return redirect(url_for('splash'))
+    
+    try:
+        #  Catch any registered users that still have the old access_token
+        json.loads(user.access_token)
+
+    except Exception as e:
+        # if the logged-in user has a bad access_token
+        #  then we log them out so they can re-authenticate
+        flash("Invalid access token for {}. please re-authenticate.".format(user))
+        if current_user == user:
+            return redirect(url_for("logout", username=username))
+        else:
             return redirect(url_for('splash'))
-        
-        try:
-            access_info = json.loads(user.access_token)
-        except Exception as e:
-            # if the logged-in user has a bad access_token
-            #  then we log them out so they can re-authenticate
-            flash("Invalid access token for {}. please re-authenticate.".format(user))
-            if current_user == user:
-                return redirect(url_for("logout", username=username))
-            else:
-                return redirect(url_for('splash'))
 
-        
     date1 = request.args.get("date1") or request.args.get("after", "")
     date2 = request.args.get("date2") or request.args.get("before", "")
-    preset = request.args.get("preset", "")
+    preset = request.args.get("days", "") or request.args.get("preset", "")
     limit = request.args.get("limit", "")
     baselayer = request.args.getlist("baselayer")
     ids = request.args.get("id", "")
-    group = "multi" if key else request.args.get("group", "")
-
+    
     if not ids:
         if (not date1) and (not date2):
             if preset:
@@ -432,8 +381,6 @@ def main(username):
                 except ValueError:
                     flash("'{}' is not a valid limit".format(limit))
                     limit = 1
-            elif group:
-                pass
             else:
                 limit = 10
 
@@ -467,8 +414,8 @@ def main(username):
         EventLogger.new_event(**event)
 
     # Assign an id to this web client in order to prevent
-    #  websocket access from unidentified users 
-    timeout = 60 * 60 * 24  # 1 day
+    #  websocket access from unidentified connections 
+    timeout = app.config["WEB_CLIENT_ID_TIMEOUT"]
     web_client_id = uuid.uuid1().get_hex()
     redis_key = "C:{}".format(web_client_id)
     ip_address = request.access_route[-1]
@@ -485,8 +432,6 @@ def main(username):
         lng=lng,
         zoom=zoom,
         ids=ids,
-        group=group,
-        key=key,
         preset=preset,
         date1=date1,
         date2=date2,
@@ -647,6 +592,29 @@ def new_id():
         _id = b + 1
 
     return _id
+
+
+
+#  Endpoints for named demos
+@app.route('/demos/<demo_key>')
+def demos(demo_key):
+    # Last 60 activities
+    demos = app.config.get("DEMOS")
+    if not demos:
+        return "No Demos defined"
+    
+    params = demos.get(demo_key)
+    if not params:
+        return 'demo "{}" does not exist'.format(demo_key)
+
+    return redirect(url_for("main", **params))
+
+
+@app.route('/demo')
+def demo():
+    # Last 60 activities
+    return redirect(url_for("demos", demo_key="last60activities"))
+
 
 
 # ---- Endpoints to cache and retrieve query urls that might be long
@@ -857,7 +825,7 @@ def ip_lookup():
     else:
         url = (
             "http://api.ipstack.com/{}?access_key={}"
-            .format(ip, os.environ["IPSTACK_ACCESS_KEY"])
+            .format(ip, app.config.get("IPSTACK_ACCESS_KEY"))
         )
         resp = requests.get(url)
         info = json.dumps(resp.json()) if resp else ""

@@ -24,14 +24,13 @@ from bson.binary import Binary
 from bson.json_util import dumps
 from heatflask import app
 
-import os
 
 CONCURRENCY = app.config["CONCURRENCY"]
 STREAMS_OUT = ["polyline", "time"]
 STREAMS_TO_CACHE = ["polyline", "time"]
 CACHE_USERS_TIMEOUT = app.config["CACHE_USERS_TIMEOUT"]
 CACHE_ACTIVITIES_TIMEOUT = app.config["CACHE_ACTIVITIES_TIMEOUT"]
-LOCAL = os.environ.get("APP_SETTINGS") == "config.DevelopmentConfig"
+LOCAL = app.config.get("APP_SETTINGS") == "config.DevelopmentConfig"
 OFFLINE = app.config.get("OFFLINE")
 
 # PostgreSQL access via SQLAlchemy
@@ -1693,3 +1692,24 @@ class Utility():
             return dt
 
             
+
+## Executing code
+# initialize MongoDB collections if necessary
+collections = mongodb.collection_names()
+
+if EventLogger.name not in collections:
+    EventLogger.init()
+
+if Activities.name not in collections:
+    Activities.init_db()
+else:
+    Activities.update_ttl()
+
+if Index.name not in collections:
+    Index.init_db()
+else:
+    Index.update_ttl()
+
+if Payments.name not in collections:
+    Payments.init_db()
+    
