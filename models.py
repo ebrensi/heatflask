@@ -991,15 +991,16 @@ class Index(object):
                 ).sort(
                     "ts_UTC",
                     pymongo.DESCENDING
-                ).limit(limit)
-
-            query_ids = set(
-                int(doc["_id"]) for doc in result)
+                ).limit(limit) 
 
             except Exception as e:
                 log.exception(e)
                 return
             
+            query_ids = set(
+                int(doc["_id"]) for doc in result
+            )
+
             to_delete = list(exclude_ids - query_ids)
             to_fetch = list(query_ids - exclude_ids)
 
