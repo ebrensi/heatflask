@@ -579,22 +579,6 @@ def data_socket(ws):
     # log.debug("socket {} CLOSED".format(name))
 
 
-def new_id():
-    ids = mongodb.queries.distinct("_id")
-    ids.sort()
-    _id = None
-
-    for a, b in itertools.izip(ids, ids[1:]):
-        if b - a > 1:
-            _id = a + 1
-            break
-    if not _id:
-        _id = b + 1
-
-    return _id
-
-
-
 #  Endpoints for named demos
 @app.route('/demos/<demo_key>')
 def demos(demo_key):
@@ -615,6 +599,20 @@ def demo():
     # Last 60 activities
     return redirect(url_for("demos", demo_key="last60activities"))
 
+
+def new_id():
+    ids = mongodb.queries.distinct("_id")
+    ids.sort()
+    _id = None
+
+    for a, b in itertools.izip(ids, ids[1:]):
+        if b - a > 1:
+            _id = a + 1
+            break
+    if not _id:
+        _id = b + 1
+
+    return _id
 
 
 # ---- Endpoints to cache and retrieve query urls that might be long
@@ -772,6 +770,7 @@ def event_history():
         return render_template("history.html", events=events)
     return "No history"
 
+
 @app.route('/history/live-updates')
 @log_request_event
 @admin_required
@@ -892,10 +891,9 @@ def success():
     except Exception, e:
         return(str(e))
 
-
-
+#
 # Donation/Payment notification handler
-#  Handle calls from Paypal's PDT and IPN APIs 
+#  Handle calls from Paypal's PDT and IPN APIs
 #  PDT:
 #  https://developer.paypal.com/docs/classic/products/payment-data-transfer
 #  IPN:
@@ -916,25 +914,12 @@ def paypal_ipn_handler():
 
     if r.text == 'VERIFIED':
         log.info("Received verified data: {}".format(request.form))
+        
         # Here we take some action based on the data from Paypal, 
         #  with info about a payment from a user.
         return "Paypal IPN message verified.", 200
     else:
         return "Paypal IPN message could not be verified.", 403
-
-
-
-# SSE (Server-Side Events) stuff
-def sse_out(obj=None):
-    data = json.dumps(obj) if obj else "done"
-    return "data: {}\n\n".format(data)
-
-
-def errout(msg):
-    # outputs a terminating SSE stream consisting of one error message
-    data = {"error": "{}".format(msg)}
-    return Response(map(sse_out, [data, None]),
-                    mimetype='text/event-stream')
 
 
 # makes python ignore sigpipe and prevents broken pipe exception when client
