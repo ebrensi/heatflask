@@ -121,7 +121,7 @@ class Users(UserMixin, db_sql.Model):
             # log.debug("{} access token expired. refreshing...".format(self))
             # The existing access_token is expired
             # Attempt to refresh the token
-            log.debug("{} expired token. refreshing...".format(self))
+            # log.debug("{} expired token. refreshing...".format(self))
             try:
                 new_access_info = self.cli.refresh_access_token(
                     client_id=app.config["STRAVA_CLIENT_ID"],
@@ -293,8 +293,12 @@ class Users(UserMixin, db_sql.Model):
                 self.client().deauthorize()
             except Exception:
                 pass
-        db_sql.session.delete(self)
-        db_sql.session.commit()
+        try:
+            db_sql.session.delete(self)
+            db_sql.session.commit()
+        except Exception as e:
+            log.exception(e)
+            
         log.debug("{} deleted".format(self))
 
     def verify(self, days_inactive_cutoff=None, update=True):
@@ -882,7 +886,7 @@ class Index(object):
                 a = cls.strava2doc(A)
             except Exception as e:
                 log.exception(e)
-                log.debug("{} import {} failed".format(user, id))
+                # log.debug("{} import {} failed".format(user, id))
                 return
 
             # log.debug("fetched activity {} for {}".format(id, user))
