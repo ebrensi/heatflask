@@ -251,7 +251,7 @@ def auth_callback():
             flash(str(e))
             return redirect(state)
 
-        log.debug("got code exchange response: {}".format(access_info))
+        # log.debug("got code exchange response: {}".format(access_info))
         user_data = Users.strava_user_data(
             access_info=access_info)
         # log.debug("user data: {}".format(user_data))
