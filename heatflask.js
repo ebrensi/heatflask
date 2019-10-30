@@ -713,6 +713,8 @@ function renderLayers() {
         numActivities = 0,
         count = 0;
 
+    sock.binaryType = 'arraybuffer';
+
     $(".data_message").html("Retrieving activity data...");
 
     $('#abortButton').click(function(){
@@ -785,10 +787,18 @@ function renderLayers() {
 
     // handle one incoming chunk from websocket stream
     sock.onmessage = function(event) {
+        let A;
+        // let A = JSON.parse(event.data);
+        try {
+            A = msgpack.decode(new Uint8Array(event.data));
+        } 
+        catch(e) {
+            console.log(event);
+            console.log(event.data);
+            console.log(e);
+        };
 
-        let A = JSON.parse(event.data);
-
-        // console.log(`count : ${count}`, A);
+       
         // debugger;
 
 
