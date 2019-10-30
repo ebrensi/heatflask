@@ -243,17 +243,17 @@ def auth_callback():
         
         try:
             access_info = client.exchange_code_for_token(**args)
+            # access_info is a dict containing the access_token, 
+            #  date of expire, and a refresh token
 
         except Exception as e:
             log.error("authorization error:\n{}".format(e))
             flash(str(e))
             return redirect(state)
 
-        # log.debug("got code exchange response: {}".format(access_info))
-        
-        access_info_string = json.dumps(access_info)
-        
-        user_data = Users.strava_data_from_token(access_info_string)
+        log.debug("got code exchange response: {}".format(access_info))
+        user_data = Users.strava_user_data(
+            access_info=access_info)
         # log.debug("user data: {}".format(user_data))
 
         try:
@@ -725,7 +725,7 @@ def users_update():
     delete = request.args.get("delete")
     update = request.args.get("update")
 
-    iterator = Users.triage(test_run=not delete, update=update)
+    iterator = Users.triage(delete=delete, update=update)
     return Response(iterator, mimetype='text/event-stream')
 
 

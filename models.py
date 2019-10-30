@@ -37,8 +37,8 @@ String, Integer, Boolean = db_sql.String, db_sql.Integer, db_sql.Boolean
 
 # MongoDB access via PyMongo
 mongo_client = pymongo.MongoClient(
-    app.config.get("MONGODB_URI"), 
-    connect=False, 
+    app.config.get("MONGODB_URI"),
+    connect=False,
     maxIdleTimeMS=30000
 )
 mongodb = mongo_client.get_database()
@@ -121,20 +121,23 @@ class Users(UserMixin, db_sql.Model):
             # log.debug("{} access token expired. refreshing...".format(self))
             # The existing access_token is expired
             # Attempt to refresh the token
+            log.debug("{} expired token. refreshing...".format(self))
             try:
                 new_access_info = self.cli.refresh_access_token(
-                                    client_id=app.config["STRAVA_CLIENT_ID"],
-                                    client_secret=app.config["STRAVA_CLIENT_SECRET"],
-                                    refresh_token=access_info.get("refresh_token"))
+                    client_id=app.config["STRAVA_CLIENT_ID"],
+                    client_secret=app.config["STRAVA_CLIENT_SECRET"],
+                    refresh_token=access_info.get("refresh_token"))
 
             except Exception as e:
-                log.error("{} refresh fail: {}".format(self, e))
+                log.error("{} token refresh fail: {}".format(self, e))
                 return
             else:
                 try:
                     self.access_token = json.dumps(new_access_info)
                 except Exception as e:
-                    log.debug("{} bad refresh: {}".format(self, new_access_info))
+                    log.debug(
+                        "{} bad refresh data: {}"
+                        .format(self, new_access_info))
                     return
 
                 db_sql.session.commit()
@@ -154,19 +157,29 @@ class Users(UserMixin, db_sql.Model):
         return self.id in app.config["ADMIN"]
 
     @staticmethod
-    def strava_data_from_token(token, log_error=True):
+    def strava_user_data(user=None, access_info=None):
+        # fetch user data from Strava given user object or just a token
         if OFFLINE:
             return
 
-        access_info = json.loads(token)
-        access_token = access_info["access_token"]
-        client = stravalib.Client(access_token=access_token)
+        if user:
+            client = user.client()
+            access_info_string = user.access_token
+
+        elif access_info:
+            access_token = access_info["access_token"]
+            access_info_string = json.dumps(access_info)
+            client = stravalib.Client(access_token=access_token)
+
+        else:
+            return
+        
         try:
             strava_user = client.get_athlete()
         except Exception as e:
-            if log_error:
-                log.error("error getting user data from token: {}"
-                          .format(e))
+            log.debug(
+                "error getting user data from token: {}"
+                .format(e))
             return
 
         else:
@@ -182,7 +195,7 @@ class Users(UserMixin, db_sql.Model):
                 "state": strava_user.state,
                 "country": strava_user.country,
                 "email": strava_user.email,
-                "access_token": token
+                "access_token": access_info_string
             }
 
     @staticmethod
@@ -282,138 +295,87 @@ class Users(UserMixin, db_sql.Model):
                 pass
         db_sql.session.delete(self)
         db_sql.session.commit()
+        log.debug("{} deleted".format(self))
 
-
-    # TODO: triage needs to be totally redone
-    #  Every time it runs Python runs out of memory
-    #   and the app.context is just horrid
-    @classmethod
-    def triage(cls, update=False, days_inactive=365, test_run=True):
-
-        # Delete all users from the database who have invalid access tokens
-        #  or have been inactive for a long time (defaults to a year)
+    def verify(self, days_inactive_cutoff=None, update=True):
         now = datetime.utcnow()
 
-        with app.app_context():
-            def user_data(user):
-                last_active = user.dt_last_active
-                if last_active and (now - last_active).days < days_inactive:
-                    if update:
-                        data = cls.strava_data_from_token(user.access_token, log_error=False)
-                        return data if data else user
+        last_active = self.dt_last_active
+        if not last_active:
+            log.debug("{} was never active".format(self))
+            return
 
-                    # If user is valid and update not selected then don't do anything 
-                    return
+        days_inactive = (now - last_active).days
+        cutoff = days_inactive_cutoff or app.config["DAYS_INACTIVE_CUTOFF"]
 
-                elif not test_run:
-                    # if the user has been inactive then deauthorize
-                    #  (we don't delete from the database here because it
-                    #   might create more connections)
-                    try:
-                        user.client().deauthorize()
-                    except Exception:
-                        pass
-                return user
+        if days_inactive >= cutoff:
+            log.debug("{} inactive {} days".format(self, days_inactive))
+            return
 
-            P = Pool(2)
-            num_deleted = 0
-            count = 0
-            try:
-                for obj in P.imap_unordered(user_data, cls.query):
-                    if type(obj) == cls:
-                        msg = "inactive or invalid user {}".format(obj)
-                        if not test_run:
-                            obj.delete(deauth=False)
-                            msg += "...deleted\n"
-                            num_deleted += 1
-                            yield msg
-                    else:
-                        if update:
-                            user = cls.add_or_update(cache_timeout=60, **obj)
-                            yield "successfully updated {}\n".format(user)
-                    count += 1
+        # if we got here then the user has been active recently
+        #  they may have revoked our access, which we can only
+        #  know if we try to get some data on their behalf
+        if update and not OFFLINE:
+            user_data = self.__class__.strava_user_data(user=self)
 
-                EventLogger.new_event(
-                    msg="updated Users database: deleted {} invalid users, count={}"
-                        .format(num_deleted, count - num_deleted)
-                )
+            if user_data:
+                self.__class__.add_or_update(cache_timeout=60, **user_data)
+                log.debug("{} successfully updated".format(self))
+                return "updated"
 
-                yield (
-                    "done! {} invalid users deleted, old count: {}, new count: {}"
-                    .format(num_deleted, count, count - num_deleted)
-                )
-            except Exception as e:
-                log.info("error: {}".format(e))
-                P.kill()
+            else:
+                log.debug("{} has invalid token".format(self))
+                return
 
+        return "ok"
+
+    @classmethod
+    def triage(cls, days_inactive_cutoff=None, delete=False, update=False):
+
+        def triage_user(user):
+            result = user.verify(
+                days_inactive_cutoff=days_inactive_cutoff,
+                update=update
+            )
+
+            if (not result) and delete:
+                user.delete()
+                return (user, "deleted")
+
+            return (user, result)
+
+
+        P = Pool(2)
+        deleted = 0
+        updated = 0
+        invalid = 0
+        count = 0
+      
+        for user, status in P.imap_unordered(triage_user, cls.query):
+            count += 1
+            if status == "invalid...deleted":
+                deleted += 1
+                invalid += 1
+
+            elif status == "ok...updated":
+                updated += 1
+
+            elif not status:
+                status = "invalid"
+                invalid += 1
+
+            yield "{}: {}".format(user.id, status)
+
+        EventLogger.new_event(
+            msg="Users db triage: count={}, invalid={}, updated={}, deleted={}, "
+                .format(count, invalid, updated, deleted)
+        )
+ 
     @classmethod
     def dump(cls, attrs, **filter_by):
         dump = [{attr: getattr(user, attr) for attr in attrs}
                 for user in cls.query.filter_by(**filter_by)]
         return dump
-
-    @classmethod
-    def backup(cls):
-        fields = [
-            "id", "access_token", "dt_last_active", "app_activity_count",
-            "share_profile"
-        ]
-        dump = cls.dump(fields)
-
-        mongodb.users.insert_one({"backup": dump, "ts": datetime.utcnow()})
-        return dump
-
-    @classmethod
-    def restore(cls, users_list=None):
-
-        def update_user_data(user_data):
-            strava_data = cls.strava_data_from_token(
-                user_data.get("access_token")
-            )
-            if strava_data:
-                user_data.update(strava_data)
-                return user_data
-            else:
-                log.info("problem updating user {}"
-                                .format(user_data["id"]))
-
-        if not users_list:
-            doc = mongodb.users.find_one()
-            if doc:
-                users_list = doc.get("backup")
-            else:
-                return
-
-        # erase user table
-        result = db_sql.drop_all()
-        log.info("dropping Users table: {}".format(result))
-
-        # delete all users from the Redis cache
-        keys_to_delete = redis.keys(Users.key("*"))
-        if keys_to_delete:
-            result = redis.delete(*keys_to_delete)
-            log.info("dropping cached User objects: {}".format(result))
-
-        # create new user table
-        result = db_sql.create_all()
-        log.info("creating Users table: {}".format(result))
-
-        # rebuild table with user backup updated with current info from Strava
-        count_before = len(users_list)
-        count = 0
-        P = Pool(CONCURRENCY)
-        for user_dict in P.imap_unordered(update_user_data, users_list):
-            if user_dict:
-                user = cls.add_or_update(cache_timeout=10, **user_dict)
-                if user:
-                    count += 1
-                    log.debug("successfully restored/updated {}"
-                                     .format(user))
-        return {
-            "operation": "users restore",
-            "before": count_before,
-            "after": count
-        }
 
     def index_count(self):
         return Index.user_index_size(self)
@@ -428,7 +390,7 @@ class Users(UserMixin, db_sql.Model):
         if status is None:
             return redis.get(key) == "True"
         elif status:
-            return redis.setex(key, 60, status)
+            return redis.setex(key, 60, str(status))
         else:
             redis.delete(key)
 
