@@ -5,7 +5,7 @@ stravalib==0.10.2
 simplegeneric==0.8.1
 rjsmin==1.0.12
 redis==3.3
-requests
+requests==2.22
 python-editor==1.0.3
 pymongo==3.9.0
 pygments==2.2.0
@@ -15,13 +15,14 @@ polyline==1.3.2
 pickleshare==0.7.4
 pexpect==4.2.1
 pastedeploy==1.5.2
-msgpack-python==0.4.8
+msgpack==0.6.2
 mako==1.0.7
 kombu==4.1.0
 httplib2==0.10.3
 gunicorn==19.9.0
 gevent==1.4
 futures==3.1.1
+flask==1.1.1
 flask-sockets
 flask-sslify==0.1.5
 flask-sqlalchemy==2.3.2

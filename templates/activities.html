@@ -121,6 +121,8 @@
         table_body = $('#activities_list tbody'),
         sock = new WebSocket(WEBSOCKET_URL);
 
+    sock.binaryType = 'arraybuffer';
+
     status_element.innerText = "Retrieving Activity Index...";
     
     document.querySelector("#dist").innerHtml = `<i class="fa fa-arrows-h" aria-hidden="true"></i> (${DIST_LABEL})`;
@@ -151,7 +153,8 @@
     }
 
     sock.onmessage = function(event) {
-      let A = JSON.parse(event.data);
+      let A = msgpack.decode(new Uint8Array(event.data));
+      // let A = JSON.parse(event.data);
 
       if (!A) {
         sock.close();

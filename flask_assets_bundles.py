@@ -19,6 +19,7 @@ bundles = {
     "dependencies_js": flask_assets.Bundle(
         # minified dependencies
         flask_assets.Bundle(
+            'js/msgpack.min.js',
             'js/jquery-3.2.1.min.js',
             'js/jquery-ui.min.js',
             'js/jquery.knob.min.js',  # Anthony Terrien
@@ -78,6 +79,7 @@ bundles = {
     ),
 
     "basic_table_js": flask_assets.Bundle(
+        'js/msgpack.min.js',
         'js/jquery-3.2.1.min.js',
         'js/datatables.min.js',
         'js/appUtil.js',
