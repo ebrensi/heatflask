@@ -1204,13 +1204,8 @@ class Activities(object):
         return result1, result2
 
     @classmethod
-    def get_many(cls, ids, timeout=CACHE_TTL):
+    def get_many(cls, ids, ttl=CACHE_TTL):
 
-        # We output Activities to a queue
-        if not queue:
-            queue = gevent.queue.Queue()
-
-        ids = list(ids)
         keys = [cls.cache_key(id) for id in ids]
         
         # Attempt to fetch activities with ids from redis cache
@@ -1221,15 +1216,17 @@ class Activities(object):
         # output and Update TTL for cached actitivities
         notcached = {}
         results = read_pipe.execute()
+
         write_pipe = redis.pipeline()
+
         for id, key, cached in zip(ids, keys, results):
             if cached:
-                write_pipe.expire(key, timeout)
-                queue.put(msgpack.unpackb(cached))
+                write_pipe.expire(key, ttl)
+                yield (id, msgpack.unpackb(cached))
             else:
                 notcached[int(id)] = key
         
-        # Batch update TTL
+        # Batch update TTL for redis cached activity streams
         write_pipe.execute()
 
         # Attempt to fetch uncached activities from MongoDB
@@ -1248,25 +1245,24 @@ class Activities(object):
             packed = doc["mpk"]
 
             # Store in redis cache
-            redis.setex(notcached.pop(id), packed, timeout)
+            redis.setex(notcached[id], packed, ttl)
             fetched.append(id)
 
-            queue.put(msgpack.unpackb(packed))
+            yield (id, msgpack.unpackb(packed))
 
         # now update TTL for mongoDB records
+        now = datetime.utcnow()
         try:
             cls.db.update_many(
                 {"_id": {"$in": fetched}},
-                {"$set": {"ts": datetime.utcnow()}}
+                {"$set": {"ts": now}}
             )
         except Exception as e:
             log.debug(
                     "failed to update activities in mongoDB: {}"
                     .format(e))
-            return
 
-        return queue, notcached.keys()
-
+        
     @classmethod
     def get(cls, id, timeout=CACHE_TTL):
         packed = None
@@ -1377,7 +1373,7 @@ class Activities(object):
         gevent.sleep(0)
 
     @classmethod
-    def import_many(cls, client, activity_ids, stream_names):
+    def import_many(cls, client, activity_ids, stream_names, ttl=CACHE_TTL):
         if OFFLINE:
             return
 
@@ -1457,8 +1453,8 @@ class Activities(object):
                             break
 
                 if output:
-                    cls.set(activity_id, output)
-                    yield output
+                    cls.set(activity_id, output, ttl)  # maybe do this in bulk
+                    yield (activity_id, output)
 
 
     @classmethod
