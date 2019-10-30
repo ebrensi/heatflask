@@ -18,6 +18,7 @@ import requests
 import stravalib
 import flask_login
 import uuid
+import msgpack
 from flask_login import current_user, login_user, logout_user, login_required
 from flask_assets_bundles import flask_assets, bundles
 from flask_analytics import Analytics
@@ -504,18 +505,19 @@ def sendObj(ws, obj):
         return
 
     try:
-        s = json.dumps(obj)
+        # s = json.dumps(obj)
+        b = msgpack.packb(obj)  #, use_bin_type=True)
     except Exception as e:
         log.error(e)
         return
 
     try:
-        ws.send(s)
+        ws.send(b, binary=True)
     except Exception as e:
         log.error(e)
         try:
             ws.close()
-        except:
+        except Exception:
             pass
         return
 
