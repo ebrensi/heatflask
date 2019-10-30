@@ -420,7 +420,7 @@ def main(username):
     web_client_id = uuid.uuid1().get_hex()
     redis_key = "C:{}".format(web_client_id)
     ip_address = request.access_route[-1]
-    redis.setex(redis_key, ip_address, timeout)
+    redis.setex(redis_key, timeout, ip_address)
 
 
     paused = request.args.get("paused") in ["1", "true"]
@@ -464,7 +464,7 @@ def activities(username):
     web_client_id = uuid.uuid1().get_hex()
     redis_key = "C:{}".format(web_client_id)
     ip_address = request.access_route[-1]
-    redis.setex(redis_key, ip_address, timeout)
+    redis.setex(redis_key, timeout, ip_address)
 
     try:      
         return render_template("activities.html",
@@ -573,7 +573,7 @@ def data_socket(ws):
                     ws.close()
                     log.info("query from invalid client {} rejected"
                                 .format(name) )
-                    break;
+                    break
             else:
                 log.debug("{} says {}".format(name, msg))
 
@@ -830,7 +830,7 @@ def ip_lookup():
         resp = requests.get(url)
         info = json.dumps(resp.json()) if resp else ""
         if info:
-            redis.setex(key, info, app.config["CACHE_IP_INFO_TIMEOUT"])
+            redis.setex(key, app.config["CACHE_IP_INFO_TIMEOUT"], info)
 
     return jsonify(info)
 

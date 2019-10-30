@@ -189,11 +189,11 @@ class Users(UserMixin, db_sql.Model):
     def key(identifier):
         return "U:{}".format(identifier)
 
-    def cache(self, identifier=None, timeout=CACHE_USERS_TIMEOUT):
+    def cache(self, identifier=None, ttl=CACHE_USERS_TIMEOUT):
         key = self.__class__.key(identifier or self.id)
         try:
             del self.cli
-        except Exception as e:
+        except Exception:
             pass
 
         packed = self.serialize()
@@ -201,7 +201,7 @@ class Users(UserMixin, db_sql.Model):
         #     "caching {} with key '{}' for {} sec. size={}"
         #     .format(self, key, timeout, len(packed))
         # )
-        return redis.setex(key, packed, timeout)
+        return redis.setex(key, ttl, packed)
 
     def uncache(self):
         # log.debug("uncaching {}".format(self))
@@ -428,7 +428,7 @@ class Users(UserMixin, db_sql.Model):
         if status is None:
             return redis.get(key) == "True"
         elif status:
-            return redis.setex(key, status, 60)
+            return redis.setex(key, 60, status)
         else:
             redis.delete(key)
 
@@ -1054,7 +1054,7 @@ class Index(object):
                     )
                 except Exception as e:
                     log.error(
-                         "Could not update TTL for {}: {}"
+                         "Could not update ts for {}: {}"
                         .format(user, e)
                     )
 
@@ -1183,10 +1183,10 @@ class Activities(object):
         return "A:{}".format(id)
 
     @classmethod
-    def set(cls, id, data, timeout=CACHE_TTL):
+    def set(cls, id, data, ttl=CACHE_TTL):
         # cache it first, in case mongo is down
         packed = msgpack.packb(data)
-        result1 = redis.setex(cls.cache_key(id), packed, timeout)
+        result1 = redis.setex(cls.cache_key(id), ttl, packed)
 
         document = {
             "ts": datetime.utcnow(),
@@ -1245,7 +1245,7 @@ class Activities(object):
             packed = doc["mpk"]
 
             # Store in redis cache
-            redis.setex(notcached[id], packed, ttl)
+            redis.setex(notcached[id], ttl, packed)
             fetched.append(id)
 
             yield (id, msgpack.unpackb(packed))
@@ -1264,13 +1264,13 @@ class Activities(object):
 
         
     @classmethod
-    def get(cls, id, timeout=CACHE_TTL):
+    def get(cls, id, ttl=CACHE_TTL):
         packed = None
         key = cls.cache_key(id)
         cached = redis.get(key)
 
         if cached:
-            redis.expire(key, timeout)  # reset expiration timeout
+            redis.expire(key, ttl)  # reset expiration timeout
             # log.debug("got Activity {} from cache".format(id))
             packed = cached
         else:
@@ -1288,7 +1288,7 @@ class Activities(object):
 
             if document:
                 packed = document["mpk"]
-                redis.setex(key, packed, timeout)
+                redis.setex(key, ttl, packed)
                 # log.debug("got activity {} data from MongoDB".format(id))
         if packed:
             return msgpack.unpackb(packed)
