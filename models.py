@@ -189,11 +189,11 @@ class Users(UserMixin, db_sql.Model):
     def key(identifier):
         return "U:{}".format(identifier)
 
-    def cache(self, identifier=None, timeout=CACHE_USERS_TIMEOUT):
+    def cache(self, identifier=None, ttl=CACHE_USERS_TIMEOUT):
         key = self.__class__.key(identifier or self.id)
         try:
             del self.cli
-        except Exception as e:
+        except Exception:
             pass
 
         packed = self.serialize()
@@ -201,7 +201,7 @@ class Users(UserMixin, db_sql.Model):
         #     "caching {} with key '{}' for {} sec. size={}"
         #     .format(self, key, timeout, len(packed))
         # )
-        return redis.setex(key, packed, timeout)
+        return redis.setex(key, ttl, packed)
 
     def uncache(self):
         # log.debug("uncaching {}".format(self))
@@ -428,7 +428,7 @@ class Users(UserMixin, db_sql.Model):
         if status is None:
             return redis.get(key) == "True"
         elif status:
-            return redis.setex(key, status, 60)
+            return redis.setex(key, 60, status)
         else:
             redis.delete(key)
 
@@ -1054,7 +1054,7 @@ class Index(object):
                     )
                 except Exception as e:
                     log.error(
-                         "Could not update TTL for {}: {}"
+                         "Could not update ts for {}: {}"
                         .format(user, e)
                     )
 
@@ -1183,10 +1183,10 @@ class Activities(object):
         return "A:{}".format(id)
 
     @classmethod
-    def set(cls, id, data, timeout=CACHE_TTL):
+    def set(cls, id, data, ttl=CACHE_TTL):
         # cache it first, in case mongo is down
         packed = msgpack.packb(data)
-        result1 = redis.setex(cls.cache_key(id), packed, timeout)
+        result1 = redis.setex(cls.cache_key(id), ttl, packed)
 
         document = {
             "ts": datetime.utcnow(),
@@ -1204,13 +1204,8 @@ class Activities(object):
         return result1, result2
 
     @classmethod
-    def get_many(cls, ids, timeout=CACHE_TTL):
+    def get_many(cls, ids, ttl=CACHE_TTL):
 
-        # We output Activities to a queue
-        if not queue:
-            queue = gevent.queue.Queue()
-
-        ids = list(ids)
         keys = [cls.cache_key(id) for id in ids]
         
         # Attempt to fetch activities with ids from redis cache
@@ -1221,15 +1216,17 @@ class Activities(object):
         # output and Update TTL for cached actitivities
         notcached = {}
         results = read_pipe.execute()
+
         write_pipe = redis.pipeline()
+
         for id, key, cached in zip(ids, keys, results):
             if cached:
-                write_pipe.expire(key, timeout)
-                queue.put(msgpack.unpackb(cached))
+                write_pipe.expire(key, ttl)
+                yield (id, msgpack.unpackb(cached))
             else:
                 notcached[int(id)] = key
         
-        # Batch update TTL
+        # Batch update TTL for redis cached activity streams
         write_pipe.execute()
 
         # Attempt to fetch uncached activities from MongoDB
@@ -1248,33 +1245,32 @@ class Activities(object):
             packed = doc["mpk"]
 
             # Store in redis cache
-            redis.setex(notcached.pop(id), packed, timeout)
+            redis.setex(notcached[id], ttl, packed)
             fetched.append(id)
 
-            queue.put(msgpack.unpackb(packed))
+            yield (id, msgpack.unpackb(packed))
 
         # now update TTL for mongoDB records
+        now = datetime.utcnow()
         try:
             cls.db.update_many(
                 {"_id": {"$in": fetched}},
-                {"$set": {"ts": datetime.utcnow()}}
+                {"$set": {"ts": now}}
             )
         except Exception as e:
             log.debug(
                     "failed to update activities in mongoDB: {}"
                     .format(e))
-            return
 
-        return queue, notcached.keys()
-
+        
     @classmethod
-    def get(cls, id, timeout=CACHE_TTL):
+    def get(cls, id, ttl=CACHE_TTL):
         packed = None
         key = cls.cache_key(id)
         cached = redis.get(key)
 
         if cached:
-            redis.expire(key, timeout)  # reset expiration timeout
+            redis.expire(key, ttl)  # reset expiration timeout
             # log.debug("got Activity {} from cache".format(id))
             packed = cached
         else:
@@ -1292,7 +1288,7 @@ class Activities(object):
 
             if document:
                 packed = document["mpk"]
-                redis.setex(key, packed, timeout)
+                redis.setex(key, ttl, packed)
                 # log.debug("got activity {} data from MongoDB".format(id))
         if packed:
             return msgpack.unpackb(packed)
@@ -1377,7 +1373,7 @@ class Activities(object):
         gevent.sleep(0)
 
     @classmethod
-    def import_many(cls, client, activity_ids, stream_names):
+    def import_many(cls, client, activity_ids, stream_names, ttl=CACHE_TTL):
         if OFFLINE:
             return
 
@@ -1457,8 +1453,8 @@ class Activities(object):
                             break
 
                 if output:
-                    cls.set(activity_id, output)
-                    yield output
+                    cls.set(activity_id, output, ttl)  # maybe do this in bulk
+                    yield (activity_id, output)
 
 
     @classmethod
