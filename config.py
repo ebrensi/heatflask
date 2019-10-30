@@ -87,6 +87,9 @@ class Config(object):
     # MapBox stuff
     MAPBOX_ACCESS_TOKEN = os.environ.get("MAPBOX_ACCESS_TOKEN")
 
+    # We are free to delete users who have been inactive for a while
+    DAYS_INACTIVE_CUTOFF = 60
+
 
     # A few Demos 
     DEMOS = {
