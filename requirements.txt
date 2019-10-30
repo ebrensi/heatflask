@@ -22,6 +22,7 @@ httplib2==0.10.3
 gunicorn==19.9.0
 gevent==1.4
 futures==3.1.1
+flask=1.1.1
 flask-sockets
 flask-sslify==0.1.5
 flask-sqlalchemy==2.3.2
