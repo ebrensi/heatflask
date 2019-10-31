@@ -298,7 +298,7 @@ class Users(UserMixin, db_sql.Model):
             db_sql.session.commit()
         except Exception as e:
             log.exception(e)
-            
+
         log.debug("{} deleted".format(self))
 
     def verify(self, days_inactive_cutoff=None, update=True):
@@ -885,7 +885,7 @@ class Index(object):
                 A = client.get_activity(id)
                 a = cls.strava2doc(A)
             except Exception as e:
-                log.exception(e)
+                # log.exception(e)
                 # log.debug("{} import {} failed".format(user, id))
                 return
 
@@ -954,7 +954,7 @@ class Index(object):
                 ).sort(
                     "ts_UTC",
                     pymongo.DESCENDING
-                ).limit(limit) 
+                ).limit(limit)
 
             except Exception as e:
                 log.exception(e)
