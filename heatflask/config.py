@@ -65,9 +65,7 @@ class Config(object):
 
     JSONIFY_PRETTYPRINT_REGULAR = True
 
-    SECRET_KEY = (
-        "pB\xeax\x9cJ\xd6\x81\xed\xd7\xf9\xd0\x99o\xad\rM\x92\xb1\x8b{7\x02r"
-    )
+    SECRET_KEY = os.environ.get("SECRET_KEY")
 
     # Strava stuff
     STRAVA_CLIENT_ID = os.environ.get("STRAVA_CLIENT_ID")
@@ -89,6 +87,14 @@ class Config(object):
 
     # We are free to delete users who have been inactive for a while
     DAYS_INACTIVE_CUTOFF = 60
+
+
+    STREAMS_OUT = ["polyline", "time"]
+    STREAMS_TO_CACHE = ["polyline", "time"]
+
+    # Domain Redirect for people using herokuapp links
+    FROM_DOMAIN = "heatflask.herokuapp.com"
+    TO_DOMAIN = "www.heatflask.com"
 
 
     # A few Demos 
