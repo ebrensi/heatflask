@@ -116,9 +116,10 @@ $RECYCLE.BIN/
 .hidden
 .fuse*
 
-static/.webassets-cache/
-static/gen/build/
+*/.webassets-cache/
+*/gen/build/
 
 test.py
 env.sh
+clean.sh
 .env

@@ -30,8 +30,8 @@ CACHE_USERS_TIMEOUT = app.config["CACHE_USERS_TIMEOUT"]
 CACHE_ACTIVITIES_TIMEOUT = app.config["CACHE_ACTIVITIES_TIMEOUT"]
 OFFLINE = app.config.get("OFFLINE")
 
-# PostgreSQL access via SQLAlchemy
-db_sql = SQLAlchemy(app)  # , session_options={'expire_on_commit': False})
+db_sql = SQLAlchemy()  # , session_options={'expire_on_commit': False})
+
 Column = db_sql.Column
 String, Integer, Boolean = db_sql.String, db_sql.Integer, db_sql.Boolean
 

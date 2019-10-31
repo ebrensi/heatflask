@@ -29,8 +29,14 @@ from signal import signal, SIGPIPE, SIG_DFL
 from urlparse import urlparse, urlunparse  # python2
 
 app = Flask(__name__)
+
 app.config.from_object(os.environ['APP_SETTINGS'])
 
+from models import (
+    Users, Activities, EventLogger, Utility, Webhooks, Index, Payments,
+    db_sql, mongodb, redis
+)
+db_sql.init_app(app)
 
 # Logging is still confusing.  This works but not sure why.
 log = app.logger
@@ -46,12 +52,6 @@ FROM_DOMAIN = "heatflask.herokuapp.com"
 TO_DOMAIN = "www.heatflask.com"
 
 sslify = SSLify(app, skips=["webhook_callback"])
-
-# models depend on app so we import them afterwards
-from models import (
-    Users, Activities, EventLogger, Utility, Webhooks, Index, Payments,
-    db_sql, mongodb, redis
-)
 
 # For instering Google Analytics script in web pages
 Analytics(app)
@@ -939,8 +939,8 @@ elif app.config.get("USE_REMOTE_DB"):
 
 log.info("Heatflask server started{}".format(loc_status))
 
-if __name__ == '__main__':
-    from gevent import pywsgi
-    from geventwebsocket.handler import WebSocketHandler
-    server = pywsgi.WSGIServer(('', 5000), app, handler_class=WebSocketHandler)
-    server.serve_forever()
+# if __name__ == '__main__':
+#     from gevent import pywsgi
+#     from geventwebsocket.handler import WebSocketHandler
+#     server = pywsgi.WSGIServer(('', 5000), app, handler_class=WebSocketHandler)
+#     server.serve_forever()
