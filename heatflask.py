@@ -251,7 +251,7 @@ def auth_callback():
             flash(str(e))
             return redirect(state)
 
-        log.debug("got code exchange response: {}".format(access_info))
+        # log.debug("got code exchange response: {}".format(access_info))
         user_data = Users.strava_user_data(
             access_info=access_info)
         # log.debug("user data: {}".format(user_data))
@@ -930,6 +930,14 @@ def paypal_ipn_handler():
 signal(SIGPIPE, SIG_DFL)
 
 # To start the webserver, execute ./run.sh
+
+loc_status = ""
+if app.config.get("OFFLINE"):
+    loc_status = ": OFFLINE"
+elif app.config.get("USE_REMOTE_DB"):
+    loc_status = ": USING REMOTE DATA-STORES"
+
+log.info("Heatflask server started{}".format(loc_status))
 
 if __name__ == '__main__':
     from gevent import pywsgi
