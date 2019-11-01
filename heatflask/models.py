@@ -1,15 +1,12 @@
 from flask_login import UserMixin
 from sqlalchemy.dialects import postgresql as pg
-
 from sqlalchemy import inspect
 from datetime import datetime
 import dateutil
 import dateutil.parser
 import stravalib
 import polyline
-import pymongo
 import json
-from redis import Redis
 import gevent
 from gevent.queue import Queue
 from gevent.pool import Pool
@@ -20,7 +17,7 @@ import msgpack
 from bson import ObjectId
 from bson.binary import Binary
 from bson.json_util import dumps
-from heatflask import app
+from . import app, mongo, db_sql, redis
 
 
 CONCURRENCY = app.config["CONCURRENCY"]
@@ -28,20 +25,7 @@ CACHE_USERS_TIMEOUT = app.config["CACHE_USERS_TIMEOUT"]
 CACHE_ACTIVITIES_TIMEOUT = app.config["CACHE_ACTIVITIES_TIMEOUT"]
 OFFLINE = app.config.get("OFFLINE")
 
-
-Column = db_sql.Column
-String, Integer, Boolean = db_sql.String, db_sql.Integer, db_sql.Boolean
-
-# MongoDB access via PyMongo
-mongo_client = pymongo.MongoClient(
-    app.config.get("MONGODB_URI"),
-    connect=False,
-    maxIdleTimeMS=30000
-)
-mongodb = mongo_client.get_database()
-
-# Redis data-store
-redis = Redis.from_url(app.config["REDIS_URL"])
+mongodb = mongo.db
 
 EPOC = datetime.utcfromtimestamp(0)
 
@@ -51,6 +35,11 @@ log = app.logger
 
 
 class Users(UserMixin, db_sql.Model):
+    Column = db_sql.Column
+    String = db_sql.String
+    Integer = db_sql.Integer
+    Boolean = db_sql.Boolean
+
     id = Column(Integer, primary_key=True, autoincrement=False)
 
     # These fields get refreshed every time the user logs in.
