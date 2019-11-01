@@ -1,6 +1,6 @@
 from flask_login import UserMixin
 from sqlalchemy.dialects import postgresql as pg
-from flask_sqlalchemy import SQLAlchemy
+
 from sqlalchemy import inspect
 from datetime import datetime
 import dateutil
@@ -24,13 +24,10 @@ from heatflask import app
 
 
 CONCURRENCY = app.config["CONCURRENCY"]
-STREAMS_OUT = ["polyline", "time"]
-STREAMS_TO_CACHE = ["polyline", "time"]
 CACHE_USERS_TIMEOUT = app.config["CACHE_USERS_TIMEOUT"]
 CACHE_ACTIVITIES_TIMEOUT = app.config["CACHE_ACTIVITIES_TIMEOUT"]
 OFFLINE = app.config.get("OFFLINE")
 
-db_sql = SQLAlchemy()  # , session_options={'expire_on_commit': False})
 
 Column = db_sql.Column
 String, Integer, Boolean = db_sql.String, db_sql.Integer, db_sql.Boolean
@@ -1327,12 +1324,12 @@ class Activities(object):
         # log.debug("importing {}".format(activity["_id"]))
 
         stream_data = cls.import_streams(
-            client, activity["_id"], STREAMS_TO_CACHE)
+            client, activity["_id"], app.config["STREAMS_TO_CACHE"])
 
         if not stream_data:
             return
 
-        data = {s: stream_data[s] for s in STREAMS_OUT if s in stream_data}
+        data = {s: stream_data[s] for s in app.config["STREAMS_OUT"] if s in stream_data}
         data.update(activity)
         queue.put(data)
         # log.debug("importing {}...queued!".format(activity["_id"]))

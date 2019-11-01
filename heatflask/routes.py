@@ -7,7 +7,6 @@ from flask import (
     flash, send_from_directory, render_template_string
 )
 
-import flask_compress
 from datetime import datetime
 import logging
 import os
@@ -16,27 +15,20 @@ import itertools
 import base36
 import requests
 import stravalib
-import flask_login
 import uuid
 import msgpack
 from flask_login import current_user, login_user, logout_user, login_required
-from flask_assets_bundles import flask_assets, bundles
-from flask_analytics import Analytics
-from flask_sslify import SSLify
-from flask_sockets import Sockets
-from signal import signal, SIGPIPE, SIG_DFL
+
 # from urllib.parse import urlparse, urlunparse #python3
 from urlparse import urlparse, urlunparse  # python2
 
-app = Flask(__name__)
+from . import app, login_manager
 
-app.config.from_object(os.environ['APP_SETTINGS'])
 
 from models import (
     Users, Activities, EventLogger, Utility, Webhooks, Index, Payments,
     db_sql, mongodb, redis
 )
-db_sql.init_app(app)
 
 # Logging is still confusing.  This works but not sure why.
 log = app.logger
@@ -44,35 +36,10 @@ log.propagate = False
 # log.addHandler(logging.StreamHandler(sys.stdout))
 log.setLevel(logging.DEBUG)
 
-STREAMS_OUT = ["polyline", "time"]
-STREAMS_TO_CACHE = ["polyline", "time"]
-
-# Domain Redirect for people using herokuapp links
-FROM_DOMAIN = "heatflask.herokuapp.com"
-TO_DOMAIN = "www.heatflask.com"
-
-sslify = SSLify(app, skips=["webhook_callback"])
-
-# For instering Google Analytics script in web pages
-Analytics(app)
-
-# Bundles JavaScript and CSS for insertion in web pages
-assets = flask_assets.Environment(app)
-assets.register(bundles)
-
-
-# views will be sent as gzip encoded
-flask_compress.Compress(app)
-
 
 # Handles logging-in and logging-out users via cookies
-login_manager = flask_login.LoginManager()
-login_manager.init_app(app)
 login_manager.login_view = 'splash'
 
-
-# Websockets for serving data to clients
-sockets = Sockets(app)
 
 # -------------------------------------------------------------
 
@@ -142,9 +109,9 @@ def redirect_to_new_domain():
     if urlparts.path == '/webhook_callback':
         return
 
-    if urlparts.netloc == FROM_DOMAIN:
+    if urlparts.netloc == app.config["FROM_DOMAIN"]:
         urlparts_list = list(urlparts)
-        urlparts_list[1] = TO_DOMAIN
+        urlparts_list[1] = app.config["TO_DOMAIN"]
         new_url = urlunparse(urlparts_list)
         # log.debug("new url: {}".format(new_url))
         return redirect(new_url, code=301)
@@ -925,22 +892,4 @@ def paypal_ipn_handler():
         return "Paypal IPN message could not be verified.", 403
 
 
-# makes python ignore sigpipe and prevents broken pipe exception when client
-#  aborts an SSE stream by closing the browser window
-signal(SIGPIPE, SIG_DFL)
 
-# To start the webserver, execute ./run.sh
-
-loc_status = ""
-if app.config.get("OFFLINE"):
-    loc_status = ": OFFLINE"
-elif app.config.get("USE_REMOTE_DB"):
-    loc_status = ": USING REMOTE DATA-STORES"
-
-log.info("Heatflask server started{}".format(loc_status))
-
-# if __name__ == '__main__':
-#     from gevent import pywsgi
-#     from geventwebsocket.handler import WebSocketHandler
-#     server = pywsgi.WSGIServer(('', 5000), app, handler_class=WebSocketHandler)
-#     server.serve_forever()

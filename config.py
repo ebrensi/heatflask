@@ -26,6 +26,7 @@ class Config(object):
 
     # SSLIFY Settings
     SSLIFY_PERMANENT = True
+    SSLIFY_SKIPS = ["webhook_callback"]
 
     # We make Flask-Assets Default to manual build without caching
     # ASSETS_AUTO_BUILD = False
@@ -43,7 +44,7 @@ class Config(object):
     SQLALCHEMY_POOL_RECYCLE = 1 * 60 * 60
 
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
-    MONGODB_URI = os.environ.get("MONGODB_URI")
+    MONGO_URI = os.environ.get("MONGODB_URI")
     REDIS_URL = os.environ.get("REDIS_URL")
 
     # How long we store an Index entry in MongoDB
@@ -137,7 +138,7 @@ class ProductionConfig(Config):
     ASSETS_CACHE = False
     ASSETS_MANIFEST = False
 
-    MONGODB_URI = os.environ.get("ATLAS_MONGODB_URI")
+    MONGO_URI = os.environ.get("ATLAS_MONGODB_URI")
     REDIS_URL = os.environ.get("REDISGREEN_URL")
 
 
@@ -156,7 +157,7 @@ class StagingConfig(Config):
     # ASSETS_CACHE = False
     # ASSETS_MANIFEST = False
 
-    MONGODB_URI = os.environ.get("ATLAS_MONGODB_URI")
+    MONGO_URI = os.environ.get("ATLAS_MONGODB_URI")
     REDIS_URL = os.environ.get("REDISGREEN_URL")
 
 
@@ -187,7 +188,7 @@ class DevelopmentConfig(Config):
     ASSETS_AUTO_BUILD = True
     
     if USE_REMOTE_DB:
-        MONGODB_URI = os.environ.get("REMOTE_MONGODB_URL")
+        MONGO_URI = os.environ.get("REMOTE_MONGODB_URL")
         SQLALCHEMY_DATABASE_URI = os.environ.get("REMOTE_POSTGRES_URL")
         REDIS_URL = os.environ.get("REMOTE_REDIS_URL", Config.REDIS_URL)
 
