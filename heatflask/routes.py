@@ -22,13 +22,14 @@ from flask_login import current_user, login_user, logout_user, login_required
 # from urllib.parse import urlparse, urlunparse #python3
 from urlparse import urlparse, urlunparse  # python2
 
-from . import app, login_manager
+from . import app, login_manager, db_sql, redis, mongo
 
 
 from models import (
-    Users, Activities, EventLogger, Utility, Webhooks, Index, Payments,
-    db_sql, mongodb, redis
+    Users, Activities, EventLogger, Utility, Webhooks, Index, Payments
 )
+
+mongodb = mongo.db
 
 # Logging is still confusing.  This works but not sure why.
 log = app.logger
