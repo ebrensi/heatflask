@@ -1,3 +1,4 @@
+from flask import current_app as app
 from flask_login import UserMixin
 from sqlalchemy.dialects import postgresql as pg
 from sqlalchemy import inspect
@@ -17,7 +18,7 @@ import msgpack
 from bson import ObjectId
 from bson.binary import Binary
 from bson.json_util import dumps
-from . import app, mongo, db_sql, redis
+from . import mongo, db_sql, redis
 
 
 CONCURRENCY = app.config["CONCURRENCY"]
@@ -1443,7 +1444,7 @@ class EventLogger(object):
     db = mongodb.get_collection(name)
 
     @classmethod
-    def init(cls, rebuild=True, size=app.config["MAX_HISTORY_BYTES"]):
+    def init_db(cls, rebuild=True, size=app.config["MAX_HISTORY_BYTES"]):
 
         collections = mongodb.collection_names(
             include_system_collections=False)
@@ -1763,22 +1764,3 @@ class Utility():
         else:
             return dt
 
-## Executing code
-# initialize MongoDB collections if necessary
-collections = mongodb.collection_names()
-
-if EventLogger.name not in collections:
-    EventLogger.init()
-
-if Activities.name not in collections:
-    Activities.init_db()
-else:
-    Activities.update_ttl()
-
-if Index.name not in collections:
-    Index.init_db()
-else:
-    Index.update_ttl()
-
-if Payments.name not in collections:
-    Payments.init_db()
