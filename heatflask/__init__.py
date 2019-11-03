@@ -8,7 +8,6 @@ from flask_analytics import Analytics
 from flask_sslify import SSLify
 from flask_sockets import Sockets
 from flask_assets import Environment
-from js_bundles import bundles
 
 import os
 
@@ -16,6 +15,7 @@ import os
 db_sql = SQLAlchemy()
 redis = FlaskRedis()
 mongo = PyMongo()
+
 compress = Compress()
 login_manager = LoginManager()
 sslify = SSLify()
@@ -23,7 +23,7 @@ sslify = SSLify()
 sockets = Sockets()
 analytics = Analytics()
 assets = Environment()
-assets.register(bundles)
+
 
 def create_app():
 
@@ -48,4 +48,40 @@ def create_app():
     # except OSError:
     #     pass
 
-    return app
+    with app.app_context():
+
+        from js_bundles import bundles
+        
+        assets.register(bundles)
+        #  maybe build bundles here
+
+        import routes
+        from models import (
+            Users, Activities, EventLogger, Utility, Webhooks, Index, Payments
+        )
+
+        # initialize/update data-stores
+        db_sql.create_all()
+
+        mongodb = mongo.db
+        collections = mongodb.collection_names()
+
+        if EventLogger.name not in collections:
+            EventLogger.init_db()
+
+        if Activities.name not in collections:
+            Activities.init_db()
+        else:
+            Activities.update_ttl()
+
+        if Index.name not in collections:
+            Index.init_db()
+        else:
+            Index.update_ttl()
+
+        if Payments.name not in collections:
+            Payments.init_db()
+
+
+        return app
+
