@@ -87,7 +87,7 @@ class Config(object):
     MAPBOX_ACCESS_TOKEN = os.environ.get("MAPBOX_ACCESS_TOKEN")
 
     # We are free to delete users who have been inactive for a while
-    DAYS_INACTIVE_CUTOFF = 60
+    DAYS_INACTIVE_CUTOFF = 365
 
 
     STREAMS_OUT = ["polyline", "time"]
@@ -109,7 +109,8 @@ class Config(object):
             "zoom": "6",
             "c1": "859579",
             "c2": "169",
-            "sz": "4"    },
+            "sz": "4"
+        },
 
         "last60activities": {
             "username": "15972102",

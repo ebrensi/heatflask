@@ -5,7 +5,7 @@ from functools import wraps
 from flask import current_app as app
 from flask import (
     Response, render_template, request, redirect, jsonify, url_for,
-    flash, send_from_directory
+    flash, send_from_directory, stream_with_context
 )
 from datetime import datetime
 # import logging
@@ -692,9 +692,28 @@ def users_restore():
 def users_update():
     delete = request.args.get("delete")
     update = request.args.get("update")
+    days = request.args.get("days")
+    
+    if days:
+        try:
+            days = int(days)
+        except Exception:
+            return "bad days value"
 
-    iterator = Users.triage(delete=delete, update=update)
-    return Response(iterator, mimetype='text/event-stream')
+    iterator = Users.triage(
+        days_inactive_cutoff=days,
+        delete=delete,
+        update=update
+    )
+
+    stream = (
+        "{}: {}\n".format(id, status)
+        for id, status in iterator
+    )
+    return Response(
+        stream_with_context(stream),
+        mimetype='text/event-stream'
+    )
 
 
 @app.route('/users/<username>')
@@ -750,8 +769,10 @@ def live_updates():
     secs = float(request.headers.get("Last-Event-Id", 0))
     ts = datetime.utcfromtimestamp(secs) if secs else None
     # log.debug("live-updates init at {}".format(ts))
+    
+    stream = EventLogger.live_updates_gen(ts)
     return Response(
-        EventLogger.live_updates_gen(ts),
+        stream_with_context(stream),
         content_type='text/event-stream')
 
 
