@@ -8,21 +8,20 @@ from flask_analytics import Analytics
 from flask_sslify import SSLify
 from flask_sockets import Sockets
 from flask_assets import Environment
-
+from datetime import datetime
 import os
 
 # Globally accessible libraries
 db_sql = SQLAlchemy()
 redis = FlaskRedis()
 mongo = PyMongo()
-
-compress = Compress()
 login_manager = LoginManager()
-sslify = SSLify()
-# sslify = SSLify(app, skips=["webhook_callback"])
 sockets = Sockets()
-analytics = Analytics()
 assets = Environment()
+
+
+# Global variables
+EPOCH = datetime.utcfromtimestamp(0)
 
 
 def create_app():
@@ -32,16 +31,6 @@ def create_app():
 
     app.config.from_object(os.environ['APP_SETTINGS'])
 
-    # Initialize Plugins
-    db_sql.init_app(app)
-    redis.init_app(app)
-    mongo.init_app(app, maxIdleTimeMS=30000)
-    compress.init_app(app)
-    login_manager.init_app(app)
-    sslify.init_app(app)
-    sockets.init_app(app)
-    assets.init_app(app)
-
     # ensure the instance folder exists
     # try:
     #     os.makedirs(app.instance_path)
@@ -50,13 +39,26 @@ def create_app():
 
     with app.app_context():
 
+        Analytics(app)
+        Compress(app)
+        SSLify(app, skips=["webhook_callback"])
+
         from js_bundles import bundles
         
         assets.register(bundles)
-        #  maybe build bundles here
+        for bundle in bundles.values():
+            bundle.build()
+
+        db_sql.init_app(app)
+        redis.init_app(app)
+        mongo.init_app(app, maxIdleTimeMS=30000)
+        login_manager.init_app(app)
+        sockets.init_app(app)
+        assets.init_app(app)
 
         from models import (
-            Users, Activities, EventLogger, Utility, Webhooks, Index, Payments
+            Users, Activities, EventLogger, Utility,
+            Webhooks, Index, Payments
         )
 
         import routes

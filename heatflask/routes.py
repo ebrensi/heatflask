@@ -1,12 +1,12 @@
 #! usr/bin/env python
+
 from __future__ import unicode_literals
 from functools import wraps
-
+from flask import current_app as app
 from flask import (
     Response, render_template, request, redirect, jsonify, url_for,
-    flash, send_from_directory, render_template_string,
+    flash, send_from_directory
 )
-from flask import current_app as app
 from datetime import datetime
 import logging
 import os
@@ -22,7 +22,9 @@ from flask_login import current_user, login_user, logout_user, login_required
 # from urllib.parse import urlparse, urlunparse #python3
 from urlparse import urlparse, urlunparse  # python2
 
-from . import login_manager, db_sql, redis, mongo
+
+# Local imports
+from . import login_manager, db_sql, redis, mongo, sockets
 
 
 from .models import (
@@ -473,7 +475,6 @@ def sendObj(ws, obj):
         return
 
     try:
-        # s = json.dumps(obj)
         b = msgpack.packb(obj)  #, use_bin_type=True)
     except Exception as e:
         log.error(e)
