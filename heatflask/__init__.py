@@ -55,10 +55,11 @@ def create_app():
         assets.register(bundles)
         #  maybe build bundles here
 
-        import routes
         from models import (
             Users, Activities, EventLogger, Utility, Webhooks, Index, Payments
         )
+
+        import routes
 
         # initialize/update data-stores
         db_sql.create_all()
