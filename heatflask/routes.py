@@ -8,7 +8,7 @@ from flask import (
     flash, send_from_directory
 )
 from datetime import datetime
-import logging
+# import logging
 import os
 import json
 import itertools
@@ -33,12 +33,7 @@ from .models import (
 
 mongodb = mongo.db
 
-# Logging is still confusing.  This works but not sure why.
 log = app.logger
-log.propagate = False
-# log.addHandler(logging.StreamHandler(sys.stdout))
-log.setLevel(logging.DEBUG)
-
 
 # Handles logging-in and logging-out users via cookies
 login_manager.login_view = 'splash'
