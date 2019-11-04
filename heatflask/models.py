@@ -303,7 +303,7 @@ class Users(UserMixin, db_sql.Model):
         cutoff = days_inactive_cutoff or DAYS_INACTIVE_CUTOFF
 
         if days_inactive >= cutoff:
-            log.debug("{} inactive {} days".format(self, days_inactive))
+            # log.debug("{} inactive {} days".format(self, days_inactive))
             return
 
         # if we got here then the user has been active recently
@@ -346,23 +346,25 @@ class Users(UserMixin, db_sql.Model):
       
         for user, status in P.imap_unordered(triage_user, cls.query):
             count += 1
-            if status == "invalid...deleted":
+            if status == "deleted":
                 deleted += 1
                 invalid += 1
 
-            elif status == "ok...updated":
+            elif status == "updated":
                 updated += 1
 
             elif not status:
                 status = "invalid"
                 invalid += 1
 
-            yield "{}: {}".format(user.id, status)
+            yield (user.id, status)
 
-        EventLogger.new_event(
-            msg="Users db triage: count={}, invalid={}, updated={}, deleted={}, "
-                .format(count, invalid, updated, deleted)
+        msg = (
+            "Users db triage: count={}, invalid={}, updated={}, deleted={}, "
+            .format(count, invalid, updated, deleted)
         )
+        log.debug(msg)
+        EventLogger.new_event(msg=msg)
  
     @classmethod
     def dump(cls, attrs, **filter_by):
