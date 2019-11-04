@@ -1602,16 +1602,14 @@ class Webhooks(object):
             # update the activity if it exists, or create it
             result = Index.update(update.object_id, update.updates)
             if not result:
-                create = True
-            else:
-                pass
+                log.debug("{} index update failed: {}".format(user, update.updates))
+                return
                 # log.debug("{} index update: {}".format(user, result))
 
         #  If we got here then we know there are index entries for this user
         if create or (update.aspect_type == "create"):
             # fetch activity and add it to the index
-            gevent.spawn(Index.import_by_id, user, [update.object_id])
-            gevent.sleep(0)
+            Index.import_by_id(user, [update.object_id])
 
         elif update.aspect_type == "delete":
             # delete the activity from the index
