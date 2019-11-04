@@ -10,9 +10,7 @@ import stravalib
 import polyline
 import json
 import gevent
-from gevent.queue import Queue
 from gevent.pool import Pool
-from exceptions import StopIteration
 import requests
 import cPickle
 import msgpack
@@ -389,19 +387,15 @@ class Users(UserMixin, db_sql.Model):
         else:
             redis.delete(key)
 
-    def build_index(self, out_queue=None, fetch_limit=0, **args):
+    def build_index(self, fetch_limit=0, **args):
         if OFFLINE:
             return
 
-        gevent.spawn(
-            Index.import_user,
+        return Index.import_user(
             self,
-            out_queue=out_queue,
             out_query=args,
             fetch_query={"limit": fetch_limit}
         )
-        gevent.sleep(0)
-        return out_queue
 
     def query_activities(self,
                          activity_ids=None,
@@ -497,7 +491,7 @@ class Users(UserMixin, db_sql.Model):
         # At this point we have a generator called gen
         #  that yields Activity summaries, without streams
         #  we will attempt to get the stream associated with 
-        #  each summary and put it in the queue.
+        #  each summary and yield it.
 
         # log.debug("NOW: {}, DB_TTL: {}".format(NOW, DB_TTL))
 
@@ -730,20 +724,10 @@ class Index(object):
         return activity_count
 
     @classmethod
-    def import_user(cls, user, out_queue=None,
-                        fetch_query={"limit": 10},
-                        out_query={}):
-
-        def enqueue(msg):
-            if out_queue is None:
-                pass
-            else:
-                # log.debug(msg)
-                out_queue.put(msg)
+    def import_user(cls, user, fetch_query={"limit": 10}, out_query={}):
 
         if OFFLINE:
-            enqueue({"error": "No network connection"})
-            enqueue(StopIteration)
+            yield {"error": "No network connection"}
             return
 
         for query in [fetch_query, out_query]:
@@ -789,58 +773,52 @@ class Index(object):
                     )
                     count += 1
 
-                    if out_queue:
-                        # If we are also sending data to the front-end,
-                        # we do this via a queue.
+                   
 
-                        if not (count % 10):
-                            # only output count every 5 items to cut down on data
-                            out_queue.put({"idx": count})
-                            # log.debug("put index {}".format(count))
+                    if not (count % 5):
+                        # only output count every 5 items to cut down on data
+                        yield {"idx": count}
+                        # log.debug("put index {}".format(count))
 
-                        if not rendering:
-                            continue
+                    if not rendering:
+                        continue
 
-                        if ((activity_ids and (d["_id"] in activity_ids)) or
-                             (limit and (count <= limit)) or
-                                in_date_range(d["ts_local"])):
+                    if ((activity_ids and (d["_id"] in activity_ids)) or
+                         (limit and (count <= limit)) or
+                            in_date_range(d["ts_local"])):
 
-                            d2 = dict(d)
-                            d2["ts_local"] = str(d2["ts_local"])
-                            d2["ts_UTC"] = str(d2["ts_UTC"])
+                        d2 = dict(d)
+                        d2["ts_local"] = str(d2["ts_local"])
+                        d2["ts_UTC"] = str(d2["ts_UTC"])
 
-                            out_queue.put(d2)
+                        yield d2
 
-                            if activity_ids:
-                                activity_ids.remove(d["_id"])
-                                if not activity_ids:
-                                    rendering = False
-                                    out_queue.put({"stop_rendering": 1})
+                        if activity_ids:
+                            activity_ids.remove(d["_id"])
+                            if not activity_ids:
+                                rendering = False
+                                yield {"stop_rendering": 1}
 
-                        if ((limit and count >= limit) or
-                                (after and (d["ts_local"] < after))):
-                            rendering = False
-                            out_queue.put({"stop_rendering": 1})
-                        gevent.sleep(0)
-            gevent.sleep(0)
-
-
-            # If we are streaming to a client, this is where we tell it
-            #  stop listening by pushing a StopIteration the queue
+                    if ((limit and count >= limit) or
+                            (after and (d["ts_local"] < after))):
+                        rendering = False
+                        yield {"stop_rendering": 1}
+                  
             if not mongo_requests:
-                enqueue({"error": "No activities!"})
-                enqueue(StopIteration)
                 EventLogger.new_event(
                     msg="no activities for {}".format(user.id)
                 )
                 result = []
+
+                yield {"error": "No activities!"}
+            
             else:
                 result = cls.db.bulk_write(
                     mongo_requests,
                     ordered=False
                 )
         except Exception as e:
-            enqueue({"error": str(e)})
+            yield {"error": str(e)}
 
             log.error(
                 "Error while building activity index for {}".format(user))
@@ -854,10 +832,11 @@ class Index(object):
 
             log.debug(msg)
             EventLogger.new_event(msg=msg)
-            enqueue({"msg": "done indexing {} activities.".format(count)})
+            yield {"msg": "done indexing {} activities.".format(count)}
+        
         finally:
             user.indexing(False)
-            enqueue(StopIteration)
+
 
     @classmethod
     def import_by_id(cls, user, activity_ids):
