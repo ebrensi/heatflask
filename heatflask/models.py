@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from flask import current_app as app
 from flask_login import UserMixin
 from sqlalchemy.dialects import postgresql as pg
@@ -36,6 +37,19 @@ MAX_HISTORY_BYTES = app.config["MAX_HISTORY_BYTES"]
 
 mongodb = mongo.db
 log = app.logger
+
+
+@contextmanager
+def session_scope():
+    """Provide a transactional scope around a series of operations."""
+    session = db_sql.session()
+    try:
+        yield session
+    except:
+        log.debug("could not create db_sql session")
+        raise
+    finally:
+        session.close()
 
 
 class Users(UserMixin, db_sql.Model):
@@ -89,7 +103,7 @@ class Users(UserMixin, db_sql.Model):
     def from_serialized(cls, p):
         return cPickle.loads(p)
 
-    def client(self, refresh=True):
+    def client(self, refresh=True, session=db_sql.session):
         try:
             access_info = json.loads(self.access_token)
         except Exception:
@@ -130,7 +144,7 @@ class Users(UserMixin, db_sql.Model):
                         .format(self, new_access_info))
                     return
 
-                db_sql.session.commit()
+                session.commit()
                 self.cache()
                 self.cli = stravalib.Client(
                     access_token=new_access_info.get("access_token"),
@@ -147,13 +161,13 @@ class Users(UserMixin, db_sql.Model):
         return self.id in ADMIN
 
     @staticmethod
-    def strava_user_data(user=None, access_info=None):
+    def strava_user_data(user=None, access_info=None, session=db_sql.session):
         # fetch user data from Strava given user object or just a token
         if OFFLINE:
             return
 
         if user:
-            client = user.client()
+            client = user.client(session=session)
             access_info_string = user.access_token
 
         elif access_info:
@@ -213,15 +227,15 @@ class Users(UserMixin, db_sql.Model):
         redis.delete(self.__class__.key(self.id))
         redis.delete(self.__class__.key(self.username))
 
-    def update_usage(self):
+    def update_usage(self, session=db_sql.session):
         self.dt_last_active = datetime.utcnow()
         self.app_activity_count = self.app_activity_count + 1
-        db_sql.session.commit()
+        session.commit()
         self.cache()
         return self
 
     @classmethod
-    def add_or_update(cls, cache_timeout=CACHE_USERS_TIMEOUT, **kwargs):
+    def add_or_update(cls, cache_timeout=CACHE_USERS_TIMEOUT, session=db_sql.session, **kwargs):
         if not kwargs:
             log.debug("attempted to add_or_update user with no data")
             return
@@ -229,11 +243,11 @@ class Users(UserMixin, db_sql.Model):
         # Creates a new user or updates an existing user (with the same id)
         detached_user = cls(**kwargs)
         try:
-            persistent_user = db_sql.session.merge(detached_user)
-            db_sql.session.commit()
+            persistent_user = session.merge(detached_user)
+            session.commit()
 
         except Exception as e:
-            db_sql.session.rollback()
+            session.rollback()
             log.error(
                 "error adding/updating user {}: {}".format(kwargs, e))
         else:
@@ -244,7 +258,7 @@ class Users(UserMixin, db_sql.Model):
             return persistent_user
 
     @classmethod
-    def get(cls, user_identifier, timeout=CACHE_USERS_TIMEOUT):
+    def get(cls, user_identifier, session=db_sql.session, timeout=CACHE_USERS_TIMEOUT):
         key = cls.key(user_identifier)
         cached = redis.get(key)
         
@@ -254,7 +268,7 @@ class Users(UserMixin, db_sql.Model):
                 user = cls.from_serialized(cached)
                 # log.debug(
                 #     "retrieved {} from cache with key {}".format(user, key))
-                return db_sql.session.merge(user, load=False)
+                return session.merge(user, load=False)
             except Exception:
                 # apparently this cached user object is no good so let's
                 #  delete it
@@ -275,7 +289,7 @@ class Users(UserMixin, db_sql.Model):
 
         return user if user else None
 
-    def delete(self, deauth=True):
+    def delete(self, deauth=True, session=db_sql.session):
         self.delete_index()
         self.uncache()
         if deauth:
@@ -284,14 +298,14 @@ class Users(UserMixin, db_sql.Model):
             except Exception:
                 pass
         try:
-            db_sql.session.delete(self)
-            db_sql.session.commit()
+            session.delete(self)
+            session.commit()
         except Exception as e:
             log.exception(e)
 
         log.debug("{} deleted".format(self))
 
-    def verify(self, days_inactive_cutoff=None, update=True):
+    def verify(self, days_inactive_cutoff=None, update=True, session=db_sql.session):
         now = datetime.utcnow()
 
         last_active = self.dt_last_active
@@ -313,7 +327,12 @@ class Users(UserMixin, db_sql.Model):
             user_data = self.__class__.strava_user_data(user=self)
 
             if user_data:
-                self.__class__.add_or_update(cache_timeout=60, **user_data)
+                self.__class__.add_or_update(
+                    cache_timeout=60,
+                    session=session,
+                    **user_data
+                )
+
                 log.debug("{} successfully updated".format(self))
                 return "updated"
 
@@ -325,46 +344,48 @@ class Users(UserMixin, db_sql.Model):
 
     @classmethod
     def triage(cls, days_inactive_cutoff=None, delete=False, update=False):
+        with session_scope() as session:
 
-        def triage_user(user):
-            result = user.verify(
-                days_inactive_cutoff=days_inactive_cutoff,
-                update=update
+            def triage_user(user):
+                result = user.verify(
+                    days_inactive_cutoff=days_inactive_cutoff,
+                    update=update,
+                    session=session
+                )
+
+                if (not result) and delete:
+                    user.delete(session=session)
+                    return (user, "deleted")
+
+                return (user, result)
+
+            P = Pool(2)
+            deleted = 0
+            updated = 0
+            invalid = 0
+            count = 0
+          
+            for user, status in P.imap_unordered(triage_user, cls.query):
+                count += 1
+                if status == "deleted":
+                    deleted += 1
+                    invalid += 1
+
+                elif status == "updated":
+                    updated += 1
+
+                elif not status:
+                    status = "invalid"
+                    invalid += 1
+
+                yield (user.id, status)
+            
+            msg = (
+                "Users db triage: count={}, invalid={}, updated={}, deleted={}, "
+                .format(count, invalid, updated, deleted)
             )
-
-            if (not result) and delete:
-                user.delete()
-                return (user, "deleted")
-
-            return (user, result)
-
-        P = Pool(2)
-        deleted = 0
-        updated = 0
-        invalid = 0
-        count = 0
-      
-        for user, status in P.imap_unordered(triage_user, cls.query):
-            count += 1
-            if status == "deleted":
-                deleted += 1
-                invalid += 1
-
-            elif status == "updated":
-                updated += 1
-
-            elif not status:
-                status = "invalid"
-                invalid += 1
-
-            yield (user.id, status)
-
-        msg = (
-            "Users db triage: count={}, invalid={}, updated={}, deleted={}, "
-            .format(count, invalid, updated, deleted)
-        )
-        log.debug(msg)
-        EventLogger.new_event(msg=msg)
+            log.debug(msg)
+            EventLogger.new_event(msg=msg)
  
     @classmethod
     def dump(cls, attrs, **filter_by):
