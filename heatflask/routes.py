@@ -431,14 +431,18 @@ def activities(username):
     redis_key = "C:{}".format(web_client_id)
     ip_address = request.access_route[-1]
     redis.setex(redis_key, timeout, ip_address)
-
-    try:      
-        return render_template("activities.html",
-                           user=user,
-                           client_id=web_client_id)
+    
+    try:
+        html = render_template(
+            "activities.html",
+            user=user,
+            client_id=web_client_id)     
+        
     except Exception as e:
         log.exception(e)
-
+        html = "?? Something is wrong.  Contact us at info@heatflask.com"
+    
+    return html     
 
 @app.route('/<username>/update_info')
 @log_request_event
