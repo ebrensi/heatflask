@@ -20,10 +20,6 @@ from bson.json_util import dumps
 from . import mongo, db_sql, redis  # Global database clients
 from . import EPOCH
 
-# from app.config import (
-#     CONCURRENCY, CACHE_USERS_TIMEOUT, CACHE_ACTIVITIES_TIMEOUT, 
-#     OFFLINE, STREAMS_OUT, STREAMS_TO_CACHE
-# )
 CONCURRENCY = app.config["CONCURRENCY"]
 CACHE_USERS_TIMEOUT = app.config["CACHE_USERS_TIMEOUT"]
 CACHE_ACTIVITIES_TIMEOUT = app.config["CACHE_ACTIVITIES_TIMEOUT"]
@@ -32,10 +28,7 @@ STREAMS_TO_CACHE = app.config["STREAMS_TO_CACHE"]
 OFFLINE = app.config.get("OFFLINE")
 
 mongodb = mongo.db
-
-# Using the logger from the Flask app. This is a hack and will get fixed.
 log = app.logger
-# log = logging.getLogger()
 
 
 class Users(UserMixin, db_sql.Model):
