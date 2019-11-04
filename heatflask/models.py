@@ -1,59 +1,42 @@
+from flask import current_app as app
 from flask_login import UserMixin
 from sqlalchemy.dialects import postgresql as pg
-from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import inspect
+import pymongo
 from datetime import datetime
 import dateutil
 import dateutil.parser
 import stravalib
 import polyline
-import pymongo
 import json
-from redis import Redis
 import gevent
-from gevent.queue import Queue
 from gevent.pool import Pool
-from exceptions import StopIteration
 import requests
 import cPickle
 import msgpack
 from bson import ObjectId
 from bson.binary import Binary
 from bson.json_util import dumps
-from heatflask import app
-
+from . import mongo, db_sql, redis  # Global database clients
+from . import EPOCH
 
 CONCURRENCY = app.config["CONCURRENCY"]
-STREAMS_OUT = ["polyline", "time"]
-STREAMS_TO_CACHE = ["polyline", "time"]
 CACHE_USERS_TIMEOUT = app.config["CACHE_USERS_TIMEOUT"]
 CACHE_ACTIVITIES_TIMEOUT = app.config["CACHE_ACTIVITIES_TIMEOUT"]
+STREAMS_OUT = app.config["STREAMS_OUT"]
+STREAMS_TO_CACHE = app.config["STREAMS_TO_CACHE"]
 OFFLINE = app.config.get("OFFLINE")
 
-# PostgreSQL access via SQLAlchemy
-db_sql = SQLAlchemy(app)  # , session_options={'expire_on_commit': False})
-Column = db_sql.Column
-String, Integer, Boolean = db_sql.String, db_sql.Integer, db_sql.Boolean
-
-# MongoDB access via PyMongo
-mongo_client = pymongo.MongoClient(
-    app.config.get("MONGODB_URI"),
-    connect=False,
-    maxIdleTimeMS=30000
-)
-mongodb = mongo_client.get_database()
-
-# Redis data-store
-redis = Redis.from_url(app.config["REDIS_URL"])
-
-EPOC = datetime.utcfromtimestamp(0)
-
-# Using the logger from the Flask app. This is a hack and will get fixed.
+mongodb = mongo.db
 log = app.logger
-# log = logging.getLogger()
 
 
 class Users(UserMixin, db_sql.Model):
+    Column = db_sql.Column
+    String = db_sql.String
+    Integer = db_sql.Integer
+    Boolean = db_sql.Boolean
+
     id = Column(Integer, primary_key=True, autoincrement=False)
 
     # These fields get refreshed every time the user logs in.
@@ -348,7 +331,6 @@ class Users(UserMixin, db_sql.Model):
 
             return (user, result)
 
-
         P = Pool(2)
         deleted = 0
         updated = 0
@@ -398,19 +380,15 @@ class Users(UserMixin, db_sql.Model):
         else:
             redis.delete(key)
 
-    def build_index(self, out_queue=None, fetch_limit=0, **args):
+    def build_index(self, fetch_limit=0, **args):
         if OFFLINE:
             return
 
-        gevent.spawn(
-            Index.import_user,
+        return Index.import_user(
             self,
-            out_queue=out_queue,
             out_query=args,
             fetch_query={"limit": fetch_limit}
         )
-        gevent.sleep(0)
-        return out_queue
 
     def query_activities(self,
                          activity_ids=None,
@@ -423,16 +401,15 @@ class Users(UserMixin, db_sql.Model):
                          owner_id=False,
                          build_index=True,
                          update_index_ts=True,
-                         pool=None,
-                         out_queue=None,
                          cache_timeout=CACHE_ACTIVITIES_TIMEOUT,
                          **kwargs):
 
         if self.indexing():
-            return [{
-                    "error": "Building activity index for {}".format(self.id)
-                    + "...<br>Please try again in a few seconds.<br>"
-                    }]
+            yield {
+                "error": ("Building activity index for {}...<br>Please try again in a few seconds.<br>"
+                            .format(self.id))   
+            }
+            return
 
         # convert date strings to datetimes, if applicable
         if before or after:
@@ -444,13 +421,8 @@ class Users(UserMixin, db_sql.Model):
                 if before and after:
                     assert(before > after)
             except AssertionError:
-                return [{"error": "Invalid Dates"}]
-
-
-        put_stopIteration = False
-        if not out_queue:
-            out_queue = Queue()
-            put_stopIteration = True
+                yield {"error": "Invalid Dates"}
+                return
 
         if (summaries or limit or only_ids or after or before):
 
@@ -467,30 +439,30 @@ class Users(UserMixin, db_sql.Model):
                 )
 
                 if only_ids:
-                    out_queue.put(list(gen))
-                    out_queue.put(StopIteration)
-                    return out_queue
+                    for id in gen:
+                        yield id
+                    return
 
                 if to_delete:
-                    out_queue.put({"delete": to_delete})
+                    yield {"delete": to_delete}
 
             elif build_index:
                 # There is no activity index and we are to build one
                 if only_ids:
-                    return ["build"]
+                    yield {"error": "{} has no index".format(self)}
+                    return
 
                 else:
                     if OFFLINE:
-                        out_queue.put({"error": "No Network Connection"})
-                        return out_queue
+                        yield {"error": "No Network Connection"}
+                        return
 
-                    gen = gevent.queue.Queue()
-                    gevent.spawn(self.build_index,
-                                 out_queue=gen,
-                                 limit=limit,
-                                 after=after,
-                                 before=before,
-                                 activitiy_ids=activity_ids)
+                    gen = self.build_index(
+                        limit=limit,
+                        after=after,
+                        before=before,
+                        activitiy_ids=activity_ids
+                    )
             else:
                 # Finally, if there is no index and rather than building one
                 # we are requested to get the summary data directily from Strava
@@ -498,7 +470,8 @@ class Users(UserMixin, db_sql.Model):
                     "{}: attempt to get summaries from Strava without build"
                     .format(self))
 
-                return [{"error": "Sorry. not gonna do it."}]
+                yield{"error": "Sorry. not gonna do it."}
+                return
                 
 
         DB_TTL = app.config["STORE_INDEX_TIMEOUT"]
@@ -511,19 +484,18 @@ class Users(UserMixin, db_sql.Model):
         # At this point we have a generator called gen
         #  that yields Activity summaries, without streams
         #  we will attempt to get the stream associated with 
-        #  each summary and put it in the queue.
+        #  each summary and yield it.
 
         # log.debug("NOW: {}, DB_TTL: {}".format(NOW, DB_TTL))
 
-        pool = pool or Pool(CONCURRENCY)
-        client = None
+        to_import = []
 
         for A in gen:
             # log.debug(A)
             if "_id" not in A:
                 # This is not an activity. It is
                 #  an error message or something
-                out_queue.put(A)
+                yield A
                 continue
 
             if summaries:
@@ -546,7 +518,7 @@ class Users(UserMixin, db_sql.Model):
             # gevent.sleep(0.5)  # test delay
 
             if not streams:
-                out_queue.put(A)
+                yield A
 
             else:
                 stream_data = Activities.get(A["_id"])
@@ -556,33 +528,44 @@ class Users(UserMixin, db_sql.Model):
                         num_empty += 1
                     else:
                         A.update(stream_data)
-                        out_queue.put(A)
+                        yield A
                         num_fetched += 1
 
                 elif not OFFLINE:
-                    if not client:
-                        client = self.client()
-                        if not client:
-                            out_queue.put(
-                                {"error": "cannot import. invalid access token. {} must re-authenticate"
-                                 .format(self)})
-                            log.debug("{} cannot import. bad client.".format(self))
-                            # num_imported = "xxx"
-                            break
-                    
+                    to_import.append(A)
+
+        if not OFFLINE:
+            client = self.client()
+            if not client:
+                log.debug(
+                    "{} cannot import. bad client.".format(self)
+                )
+                yield (
+                    {"error": "cannot import. invalid access token. {} must re-authenticate"
+                     .format(self)}
+                )
+                
+                return
+
+            P = Pool(CONCURRENCY)
+
+            def import_activity_stream(A):
+                return Activities.import_streams(client, A)
+            
+            imported = P.imap_unordered(
+                import_activity_stream,
+                to_import
+            )
+
+            for A in imported:
+                if A:
                     num_imported += 1
-                    pool.spawn(
-                        Activities.import_and_queue_streams,
-                        client,
-                        out_queue,
-                        A
-                    )
-                    gevent.sleep(0)
+                    yield A
 
         msg = "{} queued {} ({} fetched, {} imported, {} empty)".format(
             self.id,
-            num_fetched + num_imported, 
-            num_fetched, 
+            num_fetched + num_imported,
+            num_fetched,
             num_imported,
             num_empty
         )
@@ -590,17 +573,7 @@ class Users(UserMixin, db_sql.Model):
         log.debug(msg)
         EventLogger.new_event(msg=msg)
 
-        # If we are using our own queue, we make sure to put a stopIteration
-        #  at the end of it so we have to wait for all import jobs to finish.
-        #  If the caller supplies a queue, can return immediately and let them
-        #   handle responsibility of adding the stopIteration.
-        if put_stopIteration:
-            pool.join()
-            out_queue.put(StopIteration)
 
-        return out_queue
-
-    
     def make_payment(self, amount):
         success = Payments.add(self, amount)
         return success
@@ -744,20 +717,10 @@ class Index(object):
         return activity_count
 
     @classmethod
-    def import_user(cls, user, out_queue=None,
-                        fetch_query={"limit": 10},
-                        out_query={}):
-
-        def enqueue(msg):
-            if out_queue is None:
-                pass
-            else:
-                # log.debug(msg)
-                out_queue.put(msg)
+    def import_user(cls, user, fetch_query={"limit": 10}, out_query={}):
 
         if OFFLINE:
-            enqueue({"error": "No network connection"})
-            enqueue(StopIteration)
+            yield {"error": "No network connection"}
             return
 
         for query in [fetch_query, out_query]:
@@ -803,58 +766,52 @@ class Index(object):
                     )
                     count += 1
 
-                    if out_queue:
-                        # If we are also sending data to the front-end,
-                        # we do this via a queue.
+                   
 
-                        if not (count % 10):
-                            # only output count every 5 items to cut down on data
-                            out_queue.put({"idx": count})
-                            # log.debug("put index {}".format(count))
+                    if not (count % 5):
+                        # only output count every 5 items to cut down on data
+                        yield {"idx": count}
+                        # log.debug("put index {}".format(count))
 
-                        if not rendering:
-                            continue
+                    if not rendering:
+                        continue
 
-                        if ((activity_ids and (d["_id"] in activity_ids)) or
-                             (limit and (count <= limit)) or
-                                in_date_range(d["ts_local"])):
+                    if ((activity_ids and (d["_id"] in activity_ids)) or
+                         (limit and (count <= limit)) or
+                            in_date_range(d["ts_local"])):
 
-                            d2 = dict(d)
-                            d2["ts_local"] = str(d2["ts_local"])
-                            d2["ts_UTC"] = str(d2["ts_UTC"])
+                        d2 = dict(d)
+                        d2["ts_local"] = str(d2["ts_local"])
+                        d2["ts_UTC"] = str(d2["ts_UTC"])
 
-                            out_queue.put(d2)
+                        yield d2
 
-                            if activity_ids:
-                                activity_ids.remove(d["_id"])
-                                if not activity_ids:
-                                    rendering = False
-                                    out_queue.put({"stop_rendering": 1})
+                        if activity_ids:
+                            activity_ids.remove(d["_id"])
+                            if not activity_ids:
+                                rendering = False
+                                yield {"stop_rendering": 1}
 
-                        if ((limit and count >= limit) or
-                                (after and (d["ts_local"] < after))):
-                            rendering = False
-                            out_queue.put({"stop_rendering": 1})
-                        gevent.sleep(0)
-            gevent.sleep(0)
-
-
-            # If we are streaming to a client, this is where we tell it
-            #  stop listening by pushing a StopIteration the queue
+                    if ((limit and count >= limit) or
+                            (after and (d["ts_local"] < after))):
+                        rendering = False
+                        yield {"stop_rendering": 1}
+                  
             if not mongo_requests:
-                enqueue({"error": "No activities!"})
-                enqueue(StopIteration)
                 EventLogger.new_event(
                     msg="no activities for {}".format(user.id)
                 )
                 result = []
+
+                yield {"error": "No activities!"}
+            
             else:
                 result = cls.db.bulk_write(
                     mongo_requests,
                     ordered=False
                 )
         except Exception as e:
-            enqueue({"error": str(e)})
+            yield {"error": str(e)}
 
             log.error(
                 "Error while building activity index for {}".format(user))
@@ -868,10 +825,11 @@ class Index(object):
 
             log.debug(msg)
             EventLogger.new_event(msg=msg)
-            enqueue({"msg": "done indexing {} activities.".format(count)})
+            yield {"msg": "done indexing {} activities.".format(count)}
+        
         finally:
             user.indexing(False)
-            enqueue(StopIteration)
+
 
     @classmethod
     def import_by_id(cls, user, activity_ids):
@@ -1260,21 +1218,26 @@ class Activities(object):
             return msgpack.unpackb(packed)
 
     @classmethod
-    def import_streams(cls, client, activity_id, stream_names,
-                       timeout=CACHE_TTL):
+    def import_streams(cls, client, activity, timeout=CACHE_TTL):
         if OFFLINE:
             return
 
         EMPTY = {"empty": True}
 
+        stream_names = STREAMS_TO_CACHE
         streams_to_import = list(stream_names)
+
+        activity_id = activity["_id"]
         if ("polyline" in stream_names):
             streams_to_import.append("latlng")
             streams_to_import.remove("polyline")
         try:
-            streams = client.get_activity_streams(activity_id,
-                                                  series_type='time',
-                                                  types=streams_to_import)
+            streams = client.get_activity_streams(
+                activity_id,
+                series_type='time',
+                types=streams_to_import
+            )
+
             if not streams:
                 cls.set(activity_id, EMPTY, timeout)
                 # log.debug("no streams for activity {}:".format(activity_id))
@@ -1305,8 +1268,9 @@ class Activities(object):
             # Encode/compress these streams
             if (s in stream_names) and (activity_streams.get(s)):
                 if len(activity_streams[s]) < 2:
-                    log.debug("activity {} has no stream '{}'"
-                                .format(activity_id, s))
+                    log.debug(
+                        "activity {} has no stream '{}'"
+                        .format(activity_id, s))
                     cls.set(activity_id, EMPTY, timeout)
                     return
 
@@ -1318,26 +1282,16 @@ class Activities(object):
                     log.error(msg)
                     return
 
-        output = {s: activity_streams[s] for s in stream_names}
-        cls.set(activity_id, output, timeout)
-        return output
+        cached_streams = {s: activity_streams[s] for s in stream_names}
+        cls.set(activity_id, cached_streams, timeout)
 
-    @classmethod
-    def import_and_queue_streams(cls, client, queue, activity):
-        # log.debug("importing {}".format(activity["_id"]))
+        for s in STREAMS_OUT:
+            if s in cached_streams:
+                activity[s] = cached_streams[s]
 
-        stream_data = cls.import_streams(
-            client, activity["_id"], STREAMS_TO_CACHE)
+        return activity
 
-        if not stream_data:
-            return
-
-        data = {s: stream_data[s] for s in STREAMS_OUT if s in stream_data}
-        data.update(activity)
-        queue.put(data)
-        # log.debug("importing {}...queued!".format(activity["_id"]))
-        gevent.sleep(0)
-
+    
     @classmethod
     def import_many(cls, client, activity_ids, stream_names, ttl=CACHE_TTL):
         if OFFLINE:
@@ -1425,31 +1379,17 @@ class Activities(object):
 
     @classmethod
     def query(cls, queryObj):
-        pool = gevent.pool.Pool(app.config.get("CONCURRENCY")+1)
-        queue = gevent.queue.Queue()
+        
+        for user_id in queryObj:
+            user = Users.get(user_id)
+            if not user:
+                continue
 
-        def go():
-            for user_id in queryObj:
-                user = Users.get(user_id)
-                if not user:
-                    continue
-
-                query = queryObj[user_id]
-
-                # log.debug("spawning query {}".format(query))
-                pool.spawn(user.query_activities, 
-                    out_queue=queue, pool=pool, **query
-                )
-
-            # log.debug("joining jobs...")
-            pool.join()
-            queue.put(None)
-            queue.put(StopIteration)
-            # log.debug("done with query")
-     
-        gevent.spawn(go)
-        gevent.sleep(0)
-        return queue
+            query = queryObj[user_id]
+            
+            for a in user.query_activities(**query):
+                yield a
+        yield ""
 
 
 class EventLogger(object):
@@ -1457,7 +1397,7 @@ class EventLogger(object):
     db = mongodb.get_collection(name)
 
     @classmethod
-    def init(cls, rebuild=True, size=app.config["MAX_HISTORY_BYTES"]):
+    def init_db(cls, rebuild=True, size=app.config["MAX_HISTORY_BYTES"]):
 
         collections = mongodb.collection_names(
             include_system_collections=False)
@@ -1497,7 +1437,7 @@ class EventLogger(object):
         for e in events:
             e["_id"] = str(e["_id"])
             ts = e["ts"]
-            tss = (ts - EPOC).total_seconds()
+            tss = (ts - EPOCH).total_seconds()
             e["ts"] = tss
         return events
 
@@ -1528,7 +1468,7 @@ class EventLogger(object):
                     for doc in cursor:
                         elapsed = 0
                         ts = doc["ts"]
-                        tss = (ts - EPOC).total_seconds()
+                        tss = (ts - EPOCH).total_seconds()
                         doc["ts"] = tss
                         doc["_id"] = str(doc["_id"])
                         event = dumps(doc)
@@ -1777,22 +1717,3 @@ class Utility():
         else:
             return dt
 
-## Executing code
-# initialize MongoDB collections if necessary
-collections = mongodb.collection_names()
-
-if EventLogger.name not in collections:
-    EventLogger.init()
-
-if Activities.name not in collections:
-    Activities.init_db()
-else:
-    Activities.update_ttl()
-
-if Index.name not in collections:
-    Index.init_db()
-else:
-    Index.update_ttl()
-
-if Payments.name not in collections:
-    Payments.init_db()
