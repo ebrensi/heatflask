@@ -26,6 +26,7 @@ class Config(object):
 
     # SSLIFY Settings
     SSLIFY_PERMANENT = True
+    SSLIFY_SKIPS = ["webhook_callback"]
 
     # We make Flask-Assets Default to manual build without caching
     # ASSETS_AUTO_BUILD = False
@@ -43,7 +44,7 @@ class Config(object):
     SQLALCHEMY_POOL_RECYCLE = 1 * 60 * 60
 
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
-    MONGODB_URI = os.environ.get("MONGODB_URI")
+    MONGO_URI = os.environ.get("MONGODB_URI")
     REDIS_URL = os.environ.get("REDIS_URL")
 
     # How long we store an Index entry in MongoDB
@@ -65,9 +66,7 @@ class Config(object):
 
     JSONIFY_PRETTYPRINT_REGULAR = True
 
-    SECRET_KEY = (
-        "pB\xeax\x9cJ\xd6\x81\xed\xd7\xf9\xd0\x99o\xad\rM\x92\xb1\x8b{7\x02r"
-    )
+    SECRET_KEY = os.environ.get("SECRET_KEY")
 
     # Strava stuff
     STRAVA_CLIENT_ID = os.environ.get("STRAVA_CLIENT_ID")
@@ -89,6 +88,14 @@ class Config(object):
 
     # We are free to delete users who have been inactive for a while
     DAYS_INACTIVE_CUTOFF = 60
+
+
+    STREAMS_OUT = ["polyline", "time"]
+    STREAMS_TO_CACHE = ["polyline", "time"]
+
+    # Domain Redirect for people using herokuapp links
+    FROM_DOMAIN = "heatflask.herokuapp.com"
+    TO_DOMAIN = "www.heatflask.com"
 
 
     # A few Demos 
@@ -131,7 +138,7 @@ class ProductionConfig(Config):
     ASSETS_CACHE = False
     ASSETS_MANIFEST = False
 
-    MONGODB_URI = os.environ.get("ATLAS_MONGODB_URI")
+    MONGO_URI = os.environ.get("ATLAS_MONGODB_URI")
     REDIS_URL = os.environ.get("REDISGREEN_URL")
 
 
@@ -150,7 +157,7 @@ class StagingConfig(Config):
     # ASSETS_CACHE = False
     # ASSETS_MANIFEST = False
 
-    MONGODB_URI = os.environ.get("ATLAS_MONGODB_URI")
+    MONGO_URI = os.environ.get("ATLAS_MONGODB_URI")
     REDIS_URL = os.environ.get("REDISGREEN_URL")
 
 
@@ -181,7 +188,7 @@ class DevelopmentConfig(Config):
     ASSETS_AUTO_BUILD = True
     
     if USE_REMOTE_DB:
-        MONGODB_URI = os.environ.get("REMOTE_MONGODB_URL")
+        MONGO_URI = os.environ.get("REMOTE_MONGODB_URL")
         SQLALCHEMY_DATABASE_URI = os.environ.get("REMOTE_POSTGRES_URL")
         REDIS_URL = os.environ.get("REMOTE_REDIS_URL", Config.REDIS_URL)
 
