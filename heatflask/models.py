@@ -26,6 +26,13 @@ CACHE_ACTIVITIES_TIMEOUT = app.config["CACHE_ACTIVITIES_TIMEOUT"]
 STREAMS_OUT = app.config["STREAMS_OUT"]
 STREAMS_TO_CACHE = app.config["STREAMS_TO_CACHE"]
 OFFLINE = app.config.get("OFFLINE")
+STRAVA_CLIENT_ID = app.config["STRAVA_CLIENT_ID"]
+STRAVA_CLIENT_SECRET = app.config["STRAVA_CLIENT_SECRET"]
+ADMIN = app.config["ADMIN"]
+DAYS_INACTIVE_CUTOFF = app.config["DAYS_INACTIVE_CUTOFF"]
+STORE_INDEX_TIMEOUT = app.config["STORE_INDEX_TIMEOUT"]
+STORE_ACTIVITIES_TIMEOUT = app.config["STORE_ACTIVITIES_TIMEOUT"]
+MAX_HISTORY_BYTES = app.config["MAX_HISTORY_BYTES"]
 
 mongodb = mongo.db
 log = app.logger
@@ -107,8 +114,8 @@ class Users(UserMixin, db_sql.Model):
             # log.debug("{} expired token. refreshing...".format(self))
             try:
                 new_access_info = self.cli.refresh_access_token(
-                    client_id=app.config["STRAVA_CLIENT_ID"],
-                    client_secret=app.config["STRAVA_CLIENT_SECRET"],
+                    client_id=STRAVA_CLIENT_ID,
+                    client_secret=STRAVA_CLIENT_SECRET,
                     refresh_token=access_info.get("refresh_token"))
 
             except Exception as e:
@@ -137,7 +144,7 @@ class Users(UserMixin, db_sql.Model):
         return unicode(self.id)
 
     def is_admin(self):
-        return self.id in app.config["ADMIN"]
+        return self.id in ADMIN
 
     @staticmethod
     def strava_user_data(user=None, access_info=None):
@@ -293,7 +300,7 @@ class Users(UserMixin, db_sql.Model):
             return
 
         days_inactive = (now - last_active).days
-        cutoff = days_inactive_cutoff or app.config["DAYS_INACTIVE_CUTOFF"]
+        cutoff = days_inactive_cutoff or DAYS_INACTIVE_CUTOFF
 
         if days_inactive >= cutoff:
             log.debug("{} inactive {} days".format(self, days_inactive))
@@ -474,7 +481,7 @@ class Users(UserMixin, db_sql.Model):
                 return
                 
 
-        DB_TTL = app.config["STORE_INDEX_TIMEOUT"]
+        DB_TTL = STORE_INDEX_TIMEOUT
         NOW = datetime.utcnow()
 
         num_fetched = 0
@@ -585,7 +592,7 @@ class Users(UserMixin, db_sql.Model):
 class Index(object):
     name = "index"
     db = mongodb.get_collection(name)
-    DB_TTL = app.config["STORE_INDEX_TIMEOUT"]
+    DB_TTL = STORE_INDEX_TIMEOUT
     
     @classmethod
     # Initialize the database
@@ -991,8 +998,8 @@ class Activities(object):
     name = "activities"
     db = mongodb.get_collection(name)
 
-    CACHE_TTL = app.config["CACHE_ACTIVITIES_TIMEOUT"]
-    DB_TTL = app.config["STORE_ACTIVITIES_TIMEOUT"]
+    CACHE_TTL = CACHE_ACTIVITIES_TIMEOUT
+    DB_TTL = STORE_ACTIVITIES_TIMEOUT
 
     @classmethod
     def init_db(cls, clear_cache=False):
@@ -1397,7 +1404,7 @@ class EventLogger(object):
     db = mongodb.get_collection(name)
 
     @classmethod
-    def init_db(cls, rebuild=True, size=app.config["MAX_HISTORY_BYTES"]):
+    def init_db(cls, rebuild=True, size=MAX_HISTORY_BYTES):
 
         collections = mongodb.collection_names(
             include_system_collections=False)
@@ -1513,8 +1520,8 @@ class Webhooks(object):
 
     client = stravalib.Client()
     credentials = {
-        "client_id": app.config["STRAVA_CLIENT_ID"],
-        "client_secret": app.config["STRAVA_CLIENT_SECRET"]
+        "client_id": STRAVA_CLIENT_ID,
+        "client_secret": STRAVA_CLIENT_SECRET
     }
 
     @classmethod
