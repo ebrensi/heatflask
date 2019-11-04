@@ -2,6 +2,7 @@ from flask import current_app as app
 from flask_login import UserMixin
 from sqlalchemy.dialects import postgresql as pg
 from sqlalchemy import inspect
+import pymongo
 from datetime import datetime
 import dateutil
 import dateutil.parser
@@ -18,17 +19,21 @@ import msgpack
 from bson import ObjectId
 from bson.binary import Binary
 from bson.json_util import dumps
-from . import mongo, db_sql, redis
+from . import mongo, db_sql, redis  # Global database clients
+from . import EPOCH
 
-
+# from app.config import (
+#     CONCURRENCY, CACHE_USERS_TIMEOUT, CACHE_ACTIVITIES_TIMEOUT, 
+#     OFFLINE, STREAMS_OUT, STREAMS_TO_CACHE
+# )
 CONCURRENCY = app.config["CONCURRENCY"]
 CACHE_USERS_TIMEOUT = app.config["CACHE_USERS_TIMEOUT"]
 CACHE_ACTIVITIES_TIMEOUT = app.config["CACHE_ACTIVITIES_TIMEOUT"]
+STREAMS_OUT = app.config["STREAMS_OUT"]
+STREAMS_TO_CACHE = app.config["STREAMS_TO_CACHE"]
 OFFLINE = app.config.get("OFFLINE")
 
 mongodb = mongo.db
-
-EPOC = datetime.utcfromtimestamp(0)
 
 # Using the logger from the Flask app. This is a hack and will get fixed.
 log = app.logger
@@ -335,7 +340,6 @@ class Users(UserMixin, db_sql.Model):
 
             return (user, result)
 
-
         P = Pool(2)
         deleted = 0
         updated = 0
@@ -410,16 +414,15 @@ class Users(UserMixin, db_sql.Model):
                          owner_id=False,
                          build_index=True,
                          update_index_ts=True,
-                         pool=None,
-                         out_queue=None,
                          cache_timeout=CACHE_ACTIVITIES_TIMEOUT,
                          **kwargs):
 
         if self.indexing():
-            return [{
-                    "error": "Building activity index for {}".format(self.id)
-                    + "...<br>Please try again in a few seconds.<br>"
-                    }]
+            yield {
+                "error": ("Building activity index for {}...<br>Please try again in a few seconds.<br>"
+                            .format(self.id))   
+            }
+            return
 
         # convert date strings to datetimes, if applicable
         if before or after:
@@ -431,13 +434,8 @@ class Users(UserMixin, db_sql.Model):
                 if before and after:
                     assert(before > after)
             except AssertionError:
-                return [{"error": "Invalid Dates"}]
-
-
-        put_stopIteration = False
-        if not out_queue:
-            out_queue = Queue()
-            put_stopIteration = True
+                yield {"error": "Invalid Dates"}
+                return
 
         if (summaries or limit or only_ids or after or before):
 
@@ -454,30 +452,30 @@ class Users(UserMixin, db_sql.Model):
                 )
 
                 if only_ids:
-                    out_queue.put(list(gen))
-                    out_queue.put(StopIteration)
-                    return out_queue
+                    for id in gen:
+                        yield id
+                    return
 
                 if to_delete:
-                    out_queue.put({"delete": to_delete})
+                    yield {"delete": to_delete}
 
             elif build_index:
                 # There is no activity index and we are to build one
                 if only_ids:
-                    return ["build"]
+                    yield {"error": "{} has no index".format(self)}
+                    return
 
                 else:
                     if OFFLINE:
-                        out_queue.put({"error": "No Network Connection"})
-                        return out_queue
+                        yield {"error": "No Network Connection"}
+                        return
 
-                    gen = gevent.queue.Queue()
-                    gevent.spawn(self.build_index,
-                                 out_queue=gen,
-                                 limit=limit,
-                                 after=after,
-                                 before=before,
-                                 activitiy_ids=activity_ids)
+                    gen = self.build_index(
+                        limit=limit,
+                        after=after,
+                        before=before,
+                        activitiy_ids=activity_ids
+                    )
             else:
                 # Finally, if there is no index and rather than building one
                 # we are requested to get the summary data directily from Strava
@@ -485,7 +483,8 @@ class Users(UserMixin, db_sql.Model):
                     "{}: attempt to get summaries from Strava without build"
                     .format(self))
 
-                return [{"error": "Sorry. not gonna do it."}]
+                yield{"error": "Sorry. not gonna do it."}
+                return
                 
 
         DB_TTL = app.config["STORE_INDEX_TIMEOUT"]
@@ -502,15 +501,14 @@ class Users(UserMixin, db_sql.Model):
 
         # log.debug("NOW: {}, DB_TTL: {}".format(NOW, DB_TTL))
 
-        pool = pool or Pool(CONCURRENCY)
-        client = None
+        to_import = []
 
         for A in gen:
             # log.debug(A)
             if "_id" not in A:
                 # This is not an activity. It is
                 #  an error message or something
-                out_queue.put(A)
+                yield A
                 continue
 
             if summaries:
@@ -533,7 +531,7 @@ class Users(UserMixin, db_sql.Model):
             # gevent.sleep(0.5)  # test delay
 
             if not streams:
-                out_queue.put(A)
+                yield A
 
             else:
                 stream_data = Activities.get(A["_id"])
@@ -543,33 +541,44 @@ class Users(UserMixin, db_sql.Model):
                         num_empty += 1
                     else:
                         A.update(stream_data)
-                        out_queue.put(A)
+                        yield A
                         num_fetched += 1
 
                 elif not OFFLINE:
-                    if not client:
-                        client = self.client()
-                        if not client:
-                            out_queue.put(
-                                {"error": "cannot import. invalid access token. {} must re-authenticate"
-                                 .format(self)})
-                            log.debug("{} cannot import. bad client.".format(self))
-                            # num_imported = "xxx"
-                            break
-                    
+                    to_import.append(A)
+
+        if not OFFLINE:
+            client = self.client()
+            if not client:
+                log.debug(
+                    "{} cannot import. bad client.".format(self)
+                )
+                yield (
+                    {"error": "cannot import. invalid access token. {} must re-authenticate"
+                     .format(self)}
+                )
+                
+                return
+
+            P = Pool(CONCURRENCY)
+
+            def import_activity_stream(A):
+                return Activities.import_streams(client, A)
+            
+            imported = P.imap_unordered(
+                import_activity_stream,
+                to_import
+            )
+
+            for A in imported:
+                if A:
                     num_imported += 1
-                    pool.spawn(
-                        Activities.import_and_queue_streams,
-                        client,
-                        out_queue,
-                        A
-                    )
-                    gevent.sleep(0)
+                    yield A
 
         msg = "{} queued {} ({} fetched, {} imported, {} empty)".format(
             self.id,
-            num_fetched + num_imported, 
-            num_fetched, 
+            num_fetched + num_imported,
+            num_fetched,
             num_imported,
             num_empty
         )
@@ -577,17 +586,7 @@ class Users(UserMixin, db_sql.Model):
         log.debug(msg)
         EventLogger.new_event(msg=msg)
 
-        # If we are using our own queue, we make sure to put a stopIteration
-        #  at the end of it so we have to wait for all import jobs to finish.
-        #  If the caller supplies a queue, can return immediately and let them
-        #   handle responsibility of adding the stopIteration.
-        if put_stopIteration:
-            pool.join()
-            out_queue.put(StopIteration)
 
-        return out_queue
-
-    
     def make_payment(self, amount):
         success = Payments.add(self, amount)
         return success
@@ -1247,21 +1246,26 @@ class Activities(object):
             return msgpack.unpackb(packed)
 
     @classmethod
-    def import_streams(cls, client, activity_id, stream_names,
-                       timeout=CACHE_TTL):
+    def import_streams(cls, client, activity, timeout=CACHE_TTL):
         if OFFLINE:
             return
 
         EMPTY = {"empty": True}
 
+        stream_names = STREAMS_TO_CACHE
         streams_to_import = list(stream_names)
+
+        activity_id = activity["_id"]
         if ("polyline" in stream_names):
             streams_to_import.append("latlng")
             streams_to_import.remove("polyline")
         try:
-            streams = client.get_activity_streams(activity_id,
-                                                  series_type='time',
-                                                  types=streams_to_import)
+            streams = client.get_activity_streams(
+                activity_id,
+                series_type='time',
+                types=streams_to_import
+            )
+
             if not streams:
                 cls.set(activity_id, EMPTY, timeout)
                 # log.debug("no streams for activity {}:".format(activity_id))
@@ -1292,8 +1296,9 @@ class Activities(object):
             # Encode/compress these streams
             if (s in stream_names) and (activity_streams.get(s)):
                 if len(activity_streams[s]) < 2:
-                    log.debug("activity {} has no stream '{}'"
-                                .format(activity_id, s))
+                    log.debug(
+                        "activity {} has no stream '{}'"
+                        .format(activity_id, s))
                     cls.set(activity_id, EMPTY, timeout)
                     return
 
@@ -1305,26 +1310,16 @@ class Activities(object):
                     log.error(msg)
                     return
 
-        output = {s: activity_streams[s] for s in stream_names}
-        cls.set(activity_id, output, timeout)
-        return output
+        cached_streams = {s: activity_streams[s] for s in stream_names}
+        cls.set(activity_id, cached_streams, timeout)
 
-    @classmethod
-    def import_and_queue_streams(cls, client, queue, activity):
-        # log.debug("importing {}".format(activity["_id"]))
+        for s in STREAMS_OUT:
+            if s in cached_streams:
+                activity[s] = cached_streams[s]
 
-        stream_data = cls.import_streams(
-            client, activity["_id"], app.config["STREAMS_TO_CACHE"])
+        return activity
 
-        if not stream_data:
-            return
-
-        data = {s: stream_data[s] for s in app.config["STREAMS_OUT"] if s in stream_data}
-        data.update(activity)
-        queue.put(data)
-        # log.debug("importing {}...queued!".format(activity["_id"]))
-        gevent.sleep(0)
-
+    
     @classmethod
     def import_many(cls, client, activity_ids, stream_names, ttl=CACHE_TTL):
         if OFFLINE:
@@ -1412,31 +1407,17 @@ class Activities(object):
 
     @classmethod
     def query(cls, queryObj):
-        pool = gevent.pool.Pool(app.config.get("CONCURRENCY")+1)
-        queue = gevent.queue.Queue()
+        
+        for user_id in queryObj:
+            user = Users.get(user_id)
+            if not user:
+                continue
 
-        def go():
-            for user_id in queryObj:
-                user = Users.get(user_id)
-                if not user:
-                    continue
-
-                query = queryObj[user_id]
-
-                # log.debug("spawning query {}".format(query))
-                pool.spawn(user.query_activities, 
-                    out_queue=queue, pool=pool, **query
-                )
-
-            # log.debug("joining jobs...")
-            pool.join()
-            queue.put(None)
-            queue.put(StopIteration)
-            # log.debug("done with query")
-     
-        gevent.spawn(go)
-        gevent.sleep(0)
-        return queue
+            query = queryObj[user_id]
+            
+            for a in user.query_activities(**query):
+                yield a
+        yield ""
 
 
 class EventLogger(object):
@@ -1484,7 +1465,7 @@ class EventLogger(object):
         for e in events:
             e["_id"] = str(e["_id"])
             ts = e["ts"]
-            tss = (ts - EPOC).total_seconds()
+            tss = (ts - EPOCH).total_seconds()
             e["ts"] = tss
         return events
 
@@ -1515,7 +1496,7 @@ class EventLogger(object):
                     for doc in cursor:
                         elapsed = 0
                         ts = doc["ts"]
-                        tss = (ts - EPOC).total_seconds()
+                        tss = (ts - EPOCH).total_seconds()
                         doc["ts"] = tss
                         doc["_id"] = str(doc["_id"])
                         event = dumps(doc)
