@@ -38,7 +38,6 @@ MAX_HISTORY_BYTES = app.config["MAX_HISTORY_BYTES"]
 mongodb = mongo.db
 log = app.logger
 
-
 @contextmanager
 def session_scope():
     """Provide a transactional scope around a series of operations."""
