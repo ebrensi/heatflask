@@ -442,7 +442,8 @@ def activities(username):
         log.exception(e)
         html = "?? Something is wrong.  Contact us at info@heatflask.com"
     
-    return html     
+    return html if html else "There is a problem here."
+
 
 @app.route('/<username>/update_info')
 @log_request_event
@@ -671,20 +672,6 @@ def users():
               "dt_indexed"]
     info = Users.dump(fields)
     return render_template("admin.html", data=info)
-
-
-@app.route('/users/backup')
-@log_request_event
-@admin_required
-def users_backup():
-    return jsonify(Users.backup())
-
-
-@app.route('/users/restore')
-@log_request_event
-@admin_required
-def users_restore():
-    return jsonify(Users.restore())
 
 
 @app.route('/users/update')
