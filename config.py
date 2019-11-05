@@ -35,7 +35,7 @@ class Config(object):
     # ASSETS_MANIFEST = None
 
     # Concurrency for async Web-API fetching
-    CONCURRENCY = 5
+    CONCURRENCY = 16
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_POOL_SIZE = 16
@@ -54,7 +54,7 @@ class Config(object):
     STORE_ACTIVITIES_TIMEOUT = 5 * 24 * 60 * 60  # 5 days
 
     # How long we Redis-cache Activity stream data
-    CACHE_ACTIVITIES_TIMEOUT = 2 * 60 * 60  # 2 hours
+    CACHE_ACTIVITIES_TIMEOUT = 8 * 60 * 60  # 8 hours
 
     # How long we Redis-cache a User object
     CACHE_USERS_TIMEOUT = 1 * 24 * 60 * 60  # 1 day
