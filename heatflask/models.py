@@ -516,9 +516,7 @@ class Users(UserMixin, db_sql.Model):
         #  each summary and yield it.
 
         # log.debug("NOW: {}, DB_TTL: {}".format(NOW, DB_TTL))
-
-        to_import = []
-
+        to_fetch = {}
         for A in gen:
             # log.debug(A)
             if "_id" not in A:
@@ -550,18 +548,17 @@ class Users(UserMixin, db_sql.Model):
                 yield A
 
             else:
-                stream_data = Activities.get(A["_id"])
+                to_fetch[A["_id"]] = A
 
-                if stream_data:
-                    if stream_data.get("empty"):
-                        num_empty += 1
-                    else:
-                        A.update(stream_data)
-                        yield A
-                        num_fetched += 1
-
-                elif not OFFLINE:
-                    to_import.append(A)
+        for id, stream_data in Activities.get_many(to_fetch.keys()):
+            if stream_data:
+                if stream_data.get("empty"):
+                    num_empty += 1
+                else:
+                    A = to_fetch.pop(id)
+                    A.update(stream_data)
+                    yield A
+                    num_fetched += 1
 
         if not OFFLINE:
             client = self.client()
@@ -576,20 +573,23 @@ class Users(UserMixin, db_sql.Model):
                 
                 return
 
-            P = Pool(CONCURRENCY)
+            to_import = to_fetch.values()
 
-            def import_activity_stream(A):
-                return Activities.import_streams(client, A)
-            
-            imported = P.imap_unordered(
-                import_activity_stream,
-                to_import
-            )
+            if to_import:
+                P = Pool(CONCURRENCY)
 
-            for A in imported:
-                if A:
-                    num_imported += 1
-                    yield A
+                def import_activity_stream(A):
+                    return Activities.import_streams(client, A)
+                
+                imported = P.imap_unordered(
+                    import_activity_stream,
+                    to_import
+                )
+
+                for A in imported:
+                    if A:
+                        num_imported += 1
+                        yield A
 
         msg = "{} queued {} ({} fetched, {} imported, {} empty)".format(
             self.id,
@@ -1180,42 +1180,67 @@ class Activities(object):
                 notcached[int(id)] = key
         
         # Batch update TTL for redis cached activity streams
-        write_pipe.execute()
-
-        # Attempt to fetch uncached activities from MongoDB
-        try:
-            results = cls.db.find({"_id": {"$in": notcached.keys()}})
-        except Exception as e:
-            log.debug(
-                    "error accessing activities from MongoDB: {}"
-                    .format(e))
-            return
-
+        # write_pipe.execute()
         fetched = []
-        # iterate through results from MongoDB query
-        for doc in results:
-            id = int(doc["_id"])
-            packed = doc["mpk"]
+        if notcached:
+            # Attempt to fetch uncached activities from MongoDB
+            try:
+                results = cls.db.find({"_id": {"$in": notcached.keys()}})
+            except Exception as e:
+                log.debug(
+                        "error accessing activities from MongoDB: {}"
+                        .format(e))
+                return
 
-            # Store in redis cache
-            redis.setex(notcached[id], ttl, packed)
-            fetched.append(id)
+            # iterate through results from MongoDB query
+            for doc in results:
+                id = int(doc["_id"])
+                packed = doc["mpk"]
 
-            yield (id, msgpack.unpackb(packed))
+                # Store in redis cache
+                write_pipe.setex(notcached[id], ttl, packed)
+                fetched.append(id)
 
-        # now update TTL for mongoDB records
+                yield (id, msgpack.unpackb(packed))
+
+        # All fetched streams have been sent to the client
+        # now we update the data-stores
         now = datetime.utcnow()
-        try:
-            cls.db.update_many(
-                {"_id": {"$in": fetched}},
-                {"$set": {"ts": now}}
-            )
-        except Exception as e:
-            log.debug(
-                    "failed to update activities in mongoDB: {}"
-                    .format(e))
 
-        
+        # We need to make sure we don't exceed the limit
+        #  of how many bulk writes we can do at one time
+        redis_result = write_pipe.execute()
+
+        if redis_result:
+            elapsed = (datetime.utcnow() - now).total_seconds()
+            log.debug(
+                "{} redis batch writes took {} secs: {}, {}"
+                .format(
+                    len(redis_result), elapsed,
+                    redis_result.count(True),
+                    redis_result.count(False)
+                )
+            )
+
+        if fetched:
+            # now update TTL for mongoDB records if there were any
+            now = datetime.utcnow()
+            try:
+                mongo_result = cls.db.update_many(
+                    {"_id": {"$in": fetched}},
+                    {"$set": {"ts": now}}
+                )
+            except Exception as e:
+                log.debug(
+                        "failed to update activities in mongoDB: {}"
+                        .format(e))
+
+            elapsed = (datetime.utcnow() - now).total_seconds()
+            log.debug(
+                "MongoDB batch write took {} secs: {}"
+                .format(elapsed, mongo_result.raw_result)
+            )
+
     @classmethod
     def get(cls, id, ttl=CACHE_TTL):
         packed = None
