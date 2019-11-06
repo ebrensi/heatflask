@@ -63,7 +63,7 @@ if (!OFFLINE) {
             if (i==0 && baseLayers[provider]) default_baseLayer = baseLayers[provider];
         }
     } else {
-        default_baseLayer = baseLayers["MapBox.Dark"];
+        default_baseLayer = baseLayers["CartoDB.DarkMatter"];
     }
 }
 
