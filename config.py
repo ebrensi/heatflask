@@ -97,6 +97,9 @@ class Config(object):
     FROM_DOMAIN = "heatflask.herokuapp.com"
     TO_DOMAIN = "www.heatflask.com"
 
+    # The number of failed stream import requests we will allow before
+    #  aborting an import.
+    MAX_IMPORT_ERRORS = 100
 
     # A few Demos 
     DEMOS = {
