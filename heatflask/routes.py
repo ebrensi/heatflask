@@ -22,7 +22,6 @@ from flask_login import current_user, login_user, logout_user, login_required
 # from urllib.parse import urlparse, urlunparse #python3
 from urlparse import urlparse, urlunparse  # python2
 
-
 # Local imports
 from . import login_manager, db_sql, redis, mongo, sockets
 
