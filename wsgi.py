@@ -21,7 +21,6 @@ log.info("Heatflask server starting{}".format(loc_status))
 #  aborts an SSE stream by closing the browser window
 signal(SIGPIPE, SIG_DFL)
 
-
 # if __name__ == '__main__':
 #     from gevent import pywsgi
 #     from geventwebsocket.handler import WebSocketHandler
