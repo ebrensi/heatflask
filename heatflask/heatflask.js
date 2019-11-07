@@ -682,6 +682,7 @@ function updateLayers(msg) {
     }
 }
 
+let sock;
 
 function renderLayers() {
     const date1 = $("#date1").val(),
@@ -709,11 +710,16 @@ function renderLayers() {
     let progress_bars = $('.progbar'),
         rendering = true,
         listening = true,
-        sock = new WebSocket(WEBSOCKET_URL),
         numActivities = 0,
         count = 0;
 
-    sock.binaryType = 'arraybuffer';
+    if (!sock || sock.readyState > 1) {
+        sock = new WebSocket(WEBSOCKET_URL);
+        sock.binaryType = 'arraybuffer';
+    } else {
+        sendQuery();
+    }
+    
 
     $(".data_message").html("Retrieving activity data...");
 
@@ -743,6 +749,7 @@ function renderLayers() {
             rendering = false;
         }
 
+        $('#renderButton').prop('disabled', false);
         updateLayers(msg);
     }
 
@@ -750,15 +757,14 @@ function renderLayers() {
     function stopListening() {
         if (listening){
             listening = false;
+            sock.send(JSON.stringify({close: 1}));
             sock.close();
-            $('#renderButton').prop('disabled', false);
+            // $('#renderButton').prop('disabled', false);
         }
     }
 
 
-    sock.onopen = function(event) {
-        // console.log("socket open: ", event);
-
+    function sendQuery() {
         queryObj = {
             client_id: ONLOAD_PARAMS.client_id
         };
@@ -776,14 +782,19 @@ function renderLayers() {
         sock.send(msg);
     }
 
-    sock.onclose = function(event) {
-        // console.log("socket closed: ", event);
-        if (listening){
-            listening = false;
-            $('#renderButton').prop('disabled', false);
-        }
-        doneRendering("Finished.");
+    sock.onopen = function(event) {
+        // console.log("socket open: ", event);
+        sendQuery();
     }
+
+    // sock.onclose = function(event) {
+    //     // console.log("socket closed: ", event);
+    //     if (listening){
+    //         listening = false;
+    //         $('#renderButton').prop('disabled', false);
+    //     }
+    //     doneRendering("Finished.");
+    // }
 
     // handle one incoming chunk from websocket stream
     sock.onmessage = function(event) {
@@ -803,9 +814,9 @@ function renderLayers() {
 
 
         if (!A) {
-            stopListening();
+            // stopListening();
             doneRendering("Finished.");
-            sock.close();
+            // sock.close();
             return;
         }
 

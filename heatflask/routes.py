@@ -544,6 +544,10 @@ def data_socket(ws):
                     log.info("query from invalid client {} rejected"
                                 .format(name) )
                     break
+            elif msg.get("close"):
+                ws.close()
+                log.debug("socket {} CLOSED".format(name))
+
             else:
                 log.debug("{} says {}".format(name, msg))
 

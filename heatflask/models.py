@@ -34,6 +34,7 @@ DAYS_INACTIVE_CUTOFF = app.config["DAYS_INACTIVE_CUTOFF"]
 STORE_INDEX_TIMEOUT = app.config["STORE_INDEX_TIMEOUT"]
 STORE_ACTIVITIES_TIMEOUT = app.config["STORE_ACTIVITIES_TIMEOUT"]
 MAX_HISTORY_BYTES = app.config["MAX_HISTORY_BYTES"]
+MAX_IMPORT_ERRORS = app.config["MAX_IMPORT_ERRORS"]
 
 mongodb = mongo.db
 log = app.logger
@@ -509,6 +510,7 @@ class Users(UserMixin, db_sql.Model):
         num_fetched = 0
         num_imported = 0
         num_empty = 0
+        num_errors = 0
 
         # At this point we have a generator called gen
         #  that yields Activity summaries, without streams
@@ -590,16 +592,24 @@ class Users(UserMixin, db_sql.Model):
                     if A:
                         num_imported += 1
                         yield A
+                    elif A is False:
+                        num_errors += 1
+                        if num_errors > MAX_IMPORT_ERRORS:
+                            log.info(
+                                "too many errors. aborting import for {}".format(self)
+                            )
+                            break
 
-        msg = "{} queued {} ({} fetched, {} imported, {} empty)".format(
+        msg = "{} queued {} ({} fetched, {} imported, {} empty, {} errors)".format(
             self.id,
             num_fetched + num_imported,
             num_fetched,
             num_imported,
-            num_empty
+            num_empty,
+            num_errors
         )
 
-        log.debug(msg)
+        log.info(msg)
         EventLogger.new_event(msg=msg)
 
 
@@ -1291,17 +1301,17 @@ class Activities(object):
                 series_type='time',
                 types=streams_to_import
             )
-
-            if not streams:
-                cls.set(activity_id, EMPTY, timeout)
-                # log.debug("no streams for activity {}:".format(activity_id))
-                return
             
         except Exception as e:
             msg = ("Can't import streams for activity {}:\n{}"
                    .format(activity_id, e))
             log.error(msg)
-            return
+            return False
+
+        if not streams:
+                cls.set(activity_id, EMPTY, timeout)
+                # log.debug("no streams for activity {}:".format(activity_id))
+                return
 
         activity_streams = {name: streams[name].data for name in streams}
 
@@ -1334,7 +1344,7 @@ class Activities(object):
                     msg = ("Can't encode stream '{}' for activity {} due to '{}':\n{}"
                            .format(s, activity_id, e, activity_streams[s]))
                     log.error(msg)
-                    return
+                    return False
 
         cached_streams = {s: activity_streams[s] for s in stream_names}
         cls.set(activity_id, cached_streams, timeout)
