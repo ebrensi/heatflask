@@ -1429,7 +1429,7 @@ class EventLogger(object):
         def gen(ts):
             gen_id = uuid.uuid1().get_hex()
             redis_key = "H:{}".format(gen_id)
-            redis.setex(redis_key, 60 * 60 * 1, 1)
+            redis.setex(redis_key, 60 * 60 * 24, 1)
             obj = {"genID": redis_key}
             yield "data: {}\n\n".format(json.dumps(obj))
             yield "retry: 5000\n\n"
