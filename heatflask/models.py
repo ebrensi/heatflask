@@ -520,11 +520,16 @@ class Users(UserMixin, db_sql.Model):
         # log.debug("NOW: {}, DB_TTL: {}".format(NOW, DB_TTL))
         to_fetch = {}
         for A in gen:
+
             # log.debug(A)
             if "_id" not in A:
                 # This is not an activity. It is
                 #  an error message or something
                 yield A
+                continue
+
+            elif "empty" in A:
+                num_empty += 1
                 continue
 
             if summaries:
@@ -554,7 +559,7 @@ class Users(UserMixin, db_sql.Model):
 
         for id, stream_data in Activities.get_many(to_fetch.keys()):
             if stream_data:
-                if stream_data.get("empty"):
+                if "empty" in stream_data:
                     num_empty += 1
                 else:
                     A = to_fetch.pop(id)
@@ -698,17 +703,6 @@ class Index(object):
         return d
 
     @classmethod
-    def add(cls, a):
-        doc = cls.strava2doc(a)
-        try:
-            result = cls.db.replace_one({"_id": a.id}, doc, upsert=True)
-        except Exception as e:
-            log.exception(e)
-            return
-
-        return result
-
-    @classmethod
     def delete(cls, id):
         try:
             return cls.db.delete_one({"_id": id})
@@ -717,9 +711,15 @@ class Index(object):
             return
 
     @classmethod
-    def update(cls, id, updates):
+    def update(cls, id, updates, replace=False):
         if not updates:
             return
+
+        if replace:
+            doc = {"_id": id}
+            updates.update(doc)
+            cls.db.replace_one(doc, updates, upsert=True)
+
 
         # log.debug("user {} got update {}".format(id, updates))
         if "title" in updates:
@@ -768,8 +768,6 @@ class Index(object):
             if "after" in query:
                 query["after"] = Utility.to_datetime(query["after"])
 
-        
-
         count = 0
         mongo_requests = []
         rendering = True
@@ -805,9 +803,7 @@ class Index(object):
                     )
                     count += 1
 
-                   
-
-                    if not (count % 5):
+                    if count % 5:
                         # only output count every 5 items to cut down on data
                         yield {"idx": count}
                         # log.debug("put index {}".format(count))
@@ -868,7 +864,6 @@ class Index(object):
         
         finally:
             user.indexing(False)
-
 
     @classmethod
     def import_by_id(cls, user, activity_ids):
@@ -1247,8 +1242,8 @@ class Activities(object):
 
             elapsed = (datetime.utcnow() - now).total_seconds()
             log.debug(
-                "MongoDB batch write took {} secs: {}"
-                .format(elapsed, mongo_result.raw_result)
+                "{} MongoDB batch writes took {} secs"
+                .format(mongo_result.raw_result["n"], elapsed)
             )
 
     @classmethod
@@ -1309,7 +1304,7 @@ class Activities(object):
             return False
 
         if not streams:
-                cls.set(activity_id, EMPTY, timeout)
+                Index.update(activity_id, EMPTY, replace=True)
                 # log.debug("no streams for activity {}:".format(activity_id))
                 return
 
@@ -1325,7 +1320,7 @@ class Activities(object):
                     log.error("problem encoding {}".format(activity_id))
                     return
             else:
-                cls.set(activity_id, EMPTY, timeout)
+                Index.update(activity_id, EMPTY, replace=True)
                 return
 
         for s in ["time"]:
@@ -1335,7 +1330,7 @@ class Activities(object):
                     log.debug(
                         "activity {} has no stream '{}'"
                         .format(activity_id, s))
-                    cls.set(activity_id, EMPTY, timeout)
+                    Index.update(activity_id, EMPTY, replace=True)
                     return
 
                 try:
@@ -1354,92 +1349,6 @@ class Activities(object):
                 activity[s] = cached_streams[s]
 
         return activity
-
-    
-    @classmethod
-    def import_many(cls, client, activity_ids, stream_names, ttl=CACHE_TTL):
-        if OFFLINE:
-            return
-
-        EMPTY = {"empty": True}  # Placeholder for non-GIS activity
-
-        streams_to_import = list(stream_names)
-        
-        if ("polyline" in stream_names):
-            streams_to_import.append("latlng")
-            streams_to_import.remove("polyline")
-        
-        error_count = 0
-
-        def import_one(activity_id):
-            try:
-                streams = client.get_activity_streams(
-                    int(activity_id),
-                    series_type='time',
-                    types=streams_to_import)
-            except Exception as e:
-                log.error(e)
-                return (activity_id, 1)
-            else:
-                return (activity_id, streams)
-
-        P = Pool(CONCURRENCY)
-        for activity_id, streams in P.imap_unordered(import_one, activity_ids):
-            if not streams:
-                cls.set(activity_id, EMPTY)
-                # log.debug("no streams for activity {}:".format(activity_id))
-
-            elif streams == 1:
-                error_count += 1
-
-            else:
-                activity_streams = {
-                    name: streams[name].data for name in streams
-                }
-
-                output = {}
-                for s in stream_names:
-                    
-                    if s == "polyline":
-                        # Encode/compress latlng data into polyline format
-                        latlng = activity_streams.get("latlng")
-                        if latlng:
-                            try:
-                                output[s] = polyline.encode(latlng)
-                                continue
-                            except Exception:
-                                log.error(
-                                    "problem encoding {}"
-                                    .format(activity_id))
-                                break
-                        else:
-                            output = EMPTY
-                            break
-
-                    # Encode/compress this stream
-                    stream = activity_streams.get(s)
-                    if stream:
-                        if len(stream) < 2:
-                            log.debug(
-                                "activity {} has no stream '{}'"
-                                .format(activity_id, s))
-                            output = EMPTY
-                            break
-                        
-                        try:
-                            output[s] = cls.stream_encode(stream)
-                        except Exception:
-                            msg = (
-                                "Can't encode stream '{}' for activity {}:\n{}"
-                                .format(s, activity_id, stream))
-                            log.error(msg)
-                            output = None
-                            break
-
-                if output:
-                    cls.set(activity_id, output, ttl)  # maybe do this in bulk
-                    yield (activity_id, output)
-
 
     @classmethod
     def query(cls, queryObj):
