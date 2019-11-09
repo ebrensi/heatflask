@@ -456,8 +456,10 @@ def update_share_status(username):
     db_sql.session.commit()
     user.cache()
 
-    log.info("share status for {} set to {}"
-                    .format(user, status))
+    log.info(
+        "share status for {} set to {}"
+        .format(user, status)
+    )
 
     return jsonify(user=user.id, share=user.share_profile)
 
@@ -467,6 +469,7 @@ def toObj(string):
         return json.loads(string)
     except ValueError:
         return string
+
 
 # We send and receive json objects (dictionaries) encoded as strings
 def sendObj(ws, obj):
@@ -633,8 +636,10 @@ def cache_put(query_key):
             )
 
         except Exception as e:
-            log.debug("error writing query {} to MongoDB: {}"
-                             .format(_id, e))
+            log.debug(
+                "error writing query {} to MongoDB: {}"
+                .format(_id, e)
+            )
             return
 
     return jsonify(base36.dumps(_id))
@@ -738,6 +743,12 @@ def app_init():
         Payments.init_db()
     }
     return "Activities, Index, Payments databases re-initialized"
+
+@app.route("/beacon_handler", methods=["POST"])
+def beacon_handler():
+    log.debug("recieved beacon: {}".format(request.data))
+    redis.delete(request.data)
+    return "ok"
 
 
 # ---- Event log stuff ----
@@ -862,7 +873,6 @@ def webhook_callback():
         update_raw = request.get_json(force=True)
         Webhooks.handle_update_callback(update_raw)
         return "success"
-
 
 
 # Paypal stuff
