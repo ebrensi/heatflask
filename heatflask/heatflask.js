@@ -684,6 +684,14 @@ function updateLayers(msg) {
 
 let sock;
 
+window.addEventListener('beforeunload', function (event) {
+    // if (!navigator.sendBeacon) return;
+    // status = navigator.sendBeacon(beacon_handler_url, genID);
+    if (sock && sock.readyState == 1) {
+        sock.close()
+    }
+});
+
 function renderLayers() {
     const date1 = $("#date1").val(),
           date2 = $("#date2").val(),
@@ -786,15 +794,6 @@ function renderLayers() {
         // console.log("socket open: ", event);
         sendQuery();
     }
-
-    // sock.onclose = function(event) {
-    //     // console.log("socket closed: ", event);
-    //     if (listening){
-    //         listening = false;
-    //         $('#renderButton').prop('disabled', false);
-    //     }
-    //     doneRendering("Finished.");
-    // }
 
     // handle one incoming chunk from websocket stream
     sock.onmessage = function(event) {
@@ -911,11 +910,13 @@ function renderLayers() {
         }
 
         count++;
-        if (numActivities) {
-            progress_bars.val(count/numActivities);
-            $(".data_message").html("imported " + count+"/"+numActivities);
-        } else {
-             $(".data_message").html("imported " + count+"/?");
+        if (!(count % 5)) {
+            if (numActivities) {
+                progress_bars.val(count/numActivities);
+                $(".data_message").html("imported " + count+"/"+numActivities);
+            } else {
+                 $(".data_message").html("imported " + count+"/?");
+            }
         }
 
 
