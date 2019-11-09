@@ -10,6 +10,7 @@ import dateutil.parser
 import stravalib
 import polyline
 import json
+import uuid
 import gevent
 from gevent.pool import Pool
 import requests
@@ -1414,7 +1415,6 @@ class EventLogger(object):
             e["ts"] = tss
         return events
 
-
     @classmethod
     def live_updates_gen(cls, ts=None):
 
@@ -1425,19 +1425,22 @@ class EventLogger(object):
             ).limit(1).next()
 
             ts = first['ts']
-            
-        cls.update = True
 
         def gen(ts):
-            yield "retry: 5000"
-            while cls.update:
+            gen_id = uuid.uuid1().get_hex()
+            redis_key = "H:{}".format(gen_id)
+            redis.setex(redis_key, 60 * 60 * 1, 1)
+            obj = {"genID": redis_key}
+            yield "data: {}\n\n".format(json.dumps(obj))
+            yield "retry: 5000\n\n"
+            while redis.exists(redis_key):
                 # log.debug("initiate cursor at {}".format(ts))
                 cursor = cls.db.find(
                     {'ts': {'$gt': ts}},
                     cursor_type=pymongo.CursorType.TAILABLE_AWAIT
                 )
                 elapsed = 0
-                while cursor.alive:
+                while cursor.alive & redis.exists(redis_key):
                     for doc in cursor:
                         elapsed = 0
                         ts = doc["ts"]
@@ -1463,6 +1466,7 @@ class EventLogger(object):
                         # log.debug("no docs in cursor")
                         elapsed = 0
                         yield ": \n\n"
+            log.debug("exiting live-updates gen")
 
         return gen(ts)
 

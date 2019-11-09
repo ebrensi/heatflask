@@ -18,7 +18,8 @@
     <script>
     const user_profile_url = "{{ url_for('user_profile', username='') }}",
           event_url = "{{ url_for('logged_event', event_id='') }}",
-          live_update_url = "{{ url_for('live_updates') }}";
+          live_update_url = "{{ url_for('live_updates') }}",
+          beacon_handler_url = "{{ url_for('beacon_handler') }}";
 
 
     function ip_lookup_url( ip ) {
@@ -65,18 +66,32 @@
 
     table.draw();
 
+    let genID;
+    
+    window.addEventListener('beforeunload', function (event) {
+        if (!navigator.sendBeacon) return;
+        status = navigator.sendBeacon(beacon_handler_url, genID);
+    });
+
     const evtSource = new EventSource(live_update_url);
     evtSource.onmessage = function(event) {
       let  update = event.data;
       if (!update) {
         return;
       }
-      
+    
       // console.log(event);
 
 
-      let e = JSON.parse(update),
-          r = table.row.add(e).select().draw(false).node();
+      let e = JSON.parse(update);
+
+      if (e.genID) {
+        genID = e.genID;
+        // console.log("SSE ID "+genID);
+        return;
+      }
+
+      r = table.row.add(e).select().draw(false).node();
 
       setTimeout(function(){
         table.row(r).deselect();
