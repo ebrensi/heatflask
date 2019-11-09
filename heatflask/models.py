@@ -1353,6 +1353,11 @@ class Activities(object):
 
     @classmethod
     def query(cls, queryObj):
+        # gen_id = uuid.uuid1().get_hex()
+        # redis_key = "G:{}".format(gen_id)
+        # redis.setex(redis_key, 60 * 10, 1)
+        # obj = {"genID": redis_key}
+        # yield obj
         
         for user_id in queryObj:
             user = Users.get(user_id)
