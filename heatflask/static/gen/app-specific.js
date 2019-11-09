@@ -58,7 +58,7 @@ map.addLayer(DotLayer);layerControl.addOverlay(DotLayer,"Dots");$("#sepConst").v
 function updateLayers(msg){if($("#autozoom:checked").val()){let totalBounds=getBounds(Object.keys(appState.items));if(totalBounds.isValid()){map.fitBounds(totalBounds);}}
 let num=Object.keys(appState.items).length,msg2=" "+msg+" "+num+" activities rendered.";$(".data_message").html(msg2);if(DotLayer){DotLayer.setDotColors();DotLayer.reset();}else{initializeDotLayer();}
 atable.clear();atable.rows.add(Object.values(appState.items)).draw();if(!ADMIN&&!OFFLINE){try{ga('send','event',{eventCategory:USER_ID,eventAction:'Render',eventValue:num});}catch(err){}}}
-let sock;function renderLayers(){const date1=$("#date1").val(),date2=$("#date2").val(),type=$("#select_type").val(),num=$("#select_num").val(),idString=$("#activity_ids").val(),to_exclude=Object.keys(appState.items).map(Number);if(DotLayer){DotLayer._mapMoving=true;}
+let sock;window.addEventListener('beforeunload',function(event){if(sock&&sock.readyState==1){sock.close();}});function renderLayers(){const date1=$("#date1").val(),date2=$("#date2").val(),type=$("#select_type").val(),num=$("#select_num").val(),idString=$("#activity_ids").val(),to_exclude=Object.keys(appState.items).map(Number);if(DotLayer){DotLayer._mapMoving=true;}
 msgBox=L.control.window(map,{position:'top',content:"<div class='data_message'></div><div><progress class='progbar' id='box'></progress></div>",visible:true});$(".data_message").html("Retrieving activity data...");let progress_bars=$('.progbar'),rendering=true,listening=true,numActivities=0,count=0;if(!sock||sock.readyState>1){sock=new WebSocket(WEBSOCKET_URL);sock.binaryType='arraybuffer';}else{sendQuery();}
 $(".data_message").html("Retrieving activity data...");$('#abortButton').click(function(){stopListening();doneRendering("<font color='red'>Aborted:</font>");}).show();$(".progbar").show();$('#renderButton').prop('disabled',true);function doneRendering(msg){if(rendering){appState['after']=$("#date1").val();appState["before"]=$("#date2").val();updateState();$("#abortButton").hide();$(".progbar").hide();if(msgBox){msgBox.close();msgBox=null;}
 rendering=false;}
@@ -79,7 +79,7 @@ A.latLngTime=latLngTime;}}
 A.id=A._id;A.startTime=moment(A.ts_UTC||A.ts_local).valueOf();A.bounds=bounds;delete A.summary_polyline;delete A.polyline;delete A.time;delete A._id;if(!(A.id in appState.items)){if(!A.type){return;}
 let typeData=ATYPE_MAP[A.type.toLowerCase()];if(!typeData){typeData=ATYPE_MAP["workout"];}
 appState.items[A.id]=Object.assign(A,typeData);}
-count++;if(numActivities){progress_bars.val(count/numActivities);$(".data_message").html("imported "+count+"/"+numActivities);}else{$(".data_message").html("imported "+count+"/?");}};}
+count++;if(!(count%5)){if(numActivities){progress_bars.val(count/numActivities);$(".data_message").html("imported "+count+"/"+numActivities);}else{$(".data_message").html("imported "+count+"/?");}}};}
 function openActivityListPage(rebuild){window.open(ACTIVITY_LIST_URL,"_blank");}
 function updateState(){let params={},type=$("#select_type").val(),num=$("#select_num").val();if(type=="activities"){params.limit=num;}else if(type=="activity_ids"){params.id=$("#activity_ids").val();}else if(type=="days"){params.preset=num;}else{if(appState.after){params.after=appState.after;}
 if(appState.before&&appState.before!="now"){params.before=appState.before;}}
