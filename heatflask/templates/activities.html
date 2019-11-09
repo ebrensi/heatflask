@@ -17,6 +17,19 @@
     {{analytics}}
     {% endif %}
 
+    <script type="text/javascript">
+    const OFFLINE = {{ config.get('OFFLINE')|tojson }},
+          ADMIN = {{ (current_user.is_authenticated and current_user.is_admin())|tojson|safe }},
+          MEASURMENT_PREFERENCE = "{{ current_user.measurement_preference if current_user.is_authenticated else user.measurement_preference }}",
+          USER_ID = "{{ user.id }}",
+          DIST_UNIT = (MEASURMENT_PREFERENCE=="feet")? 1609.34 : 1000.0,
+          DIST_LABEL = (MEASURMENT_PREFERENCE=="feet")?  "mi" : "km",
+          STRAVA_BUTTON = img("{{ url_for('static',filename='strava_button.png') }}"),
+          USER_BASE_URL = "{{url_for('main',username=user.id)}}",
+          WEBSOCKET_URL = WS_SCHEME+window.location.host+"/data_socket",
+          CLIENT_ID = "{{ client_id }}";
+    </script>
+
   </head>
 
   <body>
@@ -57,24 +70,7 @@
     } else {
       WS_SCHEME = "ws://";
     };
-
-    // Number.prototype.pad = function(size) {
-    //   let s = String(this);
-    //   while (s.length < (size || 2)) {s = "0" + s;}
-    //   return s;
-    // }
     
-    const OFFLINE = {{ config.get('OFFLINE')|tojson }},
-          ADMIN = {{ (current_user.is_authenticated and current_user.is_admin())|tojson|safe }},
-          MEASURMENT_PREFERENCE = "{{ current_user.measurement_preference if current_user.is_authenticated else user.measurement_preference }}",
-          USER_ID = "{{ user.id }}",
-          DIST_UNIT = (MEASURMENT_PREFERENCE=="feet")? 1609.34 : 1000.0,
-          DIST_LABEL = (MEASURMENT_PREFERENCE=="feet")?  "mi" : "km",
-          STRAVA_BUTTON = img("{{ url_for('static',filename='strava_button.png') }}"),
-          USER_BASE_URL = "{{url_for('main',username=user.id)}}",
-          WEBSOCKET_URL = WS_SCHEME+window.location.host+"/data_socket",
-          CLIENT_ID = "{{ client_id }}";
-          
 
     window.history.pushState({}, "", window.location.origin + window.location.pathname);
 
