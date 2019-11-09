@@ -123,6 +123,14 @@
 
     sock.binaryType = 'arraybuffer';
 
+    window.addEventListener('beforeunload', function (event) {
+    // if (!navigator.sendBeacon) return;
+    // status = navigator.sendBeacon(beacon_handler_url, genID);
+      if (sock && sock.readyState == 1) {
+          sock.close()
+      }
+    });
+
     status_element.innerText = "Retrieving Activity Index...";
     
     document.querySelector("#dist").innerHtml = `<i class="fa fa-arrows-h" aria-hidden="true"></i> (${DIST_LABEL})`;
@@ -132,7 +140,7 @@
 
         queryObj = {client_id: CLIENT_ID};
         queryObj[USER_ID] = {
-                limit: 100000,
+                limit: 1000000,
                 streams: false,
                 update_index_ts: false
         };
