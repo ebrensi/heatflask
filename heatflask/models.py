@@ -1049,7 +1049,7 @@ class StravaClient(object):
     #  so we have our own in-house client
 
     PAGE_SIZE = 200
-    REQUEST_CONCURRENCY = 2
+    REQUEST_CONCURRENCY = 3
     BASE_URL = "https://www.strava.com/api/v3"
     GET_ACTIVITIES_URL = "/athlete/activities"
 
@@ -1091,6 +1091,8 @@ class StravaClient(object):
             .format(before, after, limit)
         )
 
+        limit = 1000
+
         done = False
 
         def request_page(pagenum):
@@ -1131,7 +1133,7 @@ class StravaClient(object):
                     raise StopIteration
 
                 activities = response.json()
-                # log.debug("page {}: {}".format(pagenum, activities))
+                log.debug("page {}: {}".format(pagenum, len(activities)))
 
                 num = len(activities)
                 if (num < cls.PAGE_SIZE) or (limit and (num + total_retrieved >= limit)):
