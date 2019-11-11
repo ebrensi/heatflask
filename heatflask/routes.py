@@ -7,7 +7,7 @@ from flask import (
     Response, render_template, request, redirect, jsonify, url_for,
     flash, send_from_directory, stream_with_context
 )
-from datetime import datetime
+from datetime import datetime, timedelta
 # import logging
 import os
 import json
@@ -27,7 +27,7 @@ from . import login_manager, db_sql, redis, mongo, sockets
 
 
 from .models import (
-    Users, Activities, EventLogger, Utility, Webhooks, Index, Payments
+    Users, Activities, EventLogger, Utility, Webhooks, Index, Payments, StravaClient
 )
 
 mongodb = mongo.db
@@ -409,6 +409,35 @@ def main(username):
         c2=c2,
         sz=sz
     )
+
+
+@app.route('/<username>/list')
+def list_activities(username):
+    user = Users.get(username)
+    if not user:
+        return "no user {}".format(username)
+
+    try:
+        client = StravaClient(user=user)
+    except Exception as e:
+        log.exception(e)
+        return "sorry, there was an error"
+    
+    args = dict(
+        limit=request.args.get("limit", 100),
+    )
+    if request.args.get("days"):
+        days = int(request.args.get("days"))
+        args["after"] = datetime.utcnow() - timedelta(days=days)
+
+    stream = ("{}\n\n".format(a) for a in client.get_index(**args))
+
+    
+
+    return Response(stream_with_context(
+        stream
+    ), mimetype='text/event-stream')
+
 
 @app.route('/<username>/activities')
 @log_request_event
