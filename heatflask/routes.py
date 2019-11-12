@@ -382,10 +382,9 @@ def main(username):
     # Assign an id to this web client in order to prevent
     #  websocket access from unidentified connections 
     timeout = app.config["WEB_CLIENT_ID_TIMEOUT"]
-    web_client_id = uuid.uuid1().get_hex()
-    redis_key = "C:{}".format(web_client_id)
+    web_client_id = "C:{}".format(uuid.uuid1().get_hex())
     ip_address = request.access_route[-1]
-    redis.setex(redis_key, timeout, ip_address)
+    redis.setex(web_client_id, timeout, ip_address)
 
 
     paused = request.args.get("paused") in ["1", "true"]
@@ -455,16 +454,15 @@ def activities(username):
     # Assign an id to this web client in order to prevent
     #  websocket access from unidentified users 
     timeout = 60 * 30  # 30 min
-    web_client_id = uuid.uuid1().get_hex()
-    redis_key = "C:{}".format(web_client_id)
+    web_client_id = "C:{}".format(uuid.uuid1().get_hex())
     ip_address = request.access_route[-1]
-    redis.setex(redis_key, timeout, ip_address)
+    redis.setex(web_client_id, timeout, ip_address)
     
     try:
         html = render_template(
             "activities.html",
             user=user,
-            client_id=web_client_id)     
+            client_id=web_client_id)
         
     except Exception as e:
         log.exception(e)
@@ -560,8 +558,7 @@ def data_socket(ws):
                 client_ip = None
                 
                 if client_id:
-                    key = "C:{}".format(client_id)
-                    client_ip = redis.get(key)
+                    client_ip = redis.get(client_id)
                 
                 if client_ip:
                     # log.debug("socket {} is a valid client".format(name))
