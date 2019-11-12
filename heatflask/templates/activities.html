@@ -116,7 +116,8 @@
         count_DOM_element = document.querySelector("#count"),
         status_element = document.querySelector("#status_msg"),
         table_body = $('#activities_list tbody'),
-        genID, sock;
+        genID, 
+        sock = new WebSocket(WEBSOCKET_URL);
 
 
     window.addEventListener('beforeunload', function (event) {
@@ -134,8 +135,6 @@
       
     });
 
-
-    sock = new WebSocket(WEBSOCKET_URL),
     sock.binaryType = 'arraybuffer';
 
     status_element.innerText = "Retrieving Activity Index...";
@@ -170,7 +169,6 @@
 
     sock.onmessage = function(event) {
       let A = msgpack.decode(new Uint8Array(event.data));
-      // let A = JSON.parse(event.data);
 
       if (!A) {
         sock.close();
