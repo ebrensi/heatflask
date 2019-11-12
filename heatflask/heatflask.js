@@ -682,12 +682,17 @@ function updateLayers(msg) {
     }
 }
 
-let sock;
+let sock, genID;
 
 window.addEventListener('beforeunload', function (event) {
-    // if (!navigator.sendBeacon) return;
-    // status = navigator.sendBeacon(beacon_handler_url, genID);
+    if (navigator.sendBeacon) {
+        if (genID) {
+            navigator.sendBeacon(BEACON_HANDLER_URL, genID);
+        }
+        navigator.sendBeacon(BEACON_HANDLER_URL, ONLOAD_PARAMS.client_id);
+    }
     if (sock && sock.readyState == 1) {
+        sock.send(JSON.stringify({close: 1}));
         sock.close()
     }
 });
@@ -767,6 +772,10 @@ function renderLayers() {
             listening = false;
             sock.send(JSON.stringify({close: 1}));
             sock.close();
+            if (navigator.sendBeacon && genID) {
+                navigator.sendBeacon(BEACON_HANDLER_URL, genID);
+            }
+            genID = null;
             // $('#renderButton').prop('disabled', false);
         }
     }
@@ -815,7 +824,7 @@ function renderLayers() {
         if (!A) {
             // stopListening();
             doneRendering("Finished.");
-            // sock.close();
+            transactionID = null;
             return;
         }
 
@@ -850,6 +859,10 @@ function renderLayers() {
             for (let id of A.delete) {
                 delete appState.items[id];
             }
+        }
+
+        if (A.genID) {
+            genID = A.genID;
         }
 
         if (!A._id) {

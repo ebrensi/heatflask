@@ -27,6 +27,7 @@
           STRAVA_BUTTON = img("{{ url_for('static',filename='strava_button.png') }}"),
           USER_BASE_URL = "{{url_for('main',username=user.id)}}",
           WEBSOCKET_URL = WS_SCHEME+window.location.host+"/data_socket",
+          BEACON_HANDLER_URL = "{{ url_for('beacon_handler') }}",
           CLIENT_ID = "{{ client_id }}";
     </script>
 
@@ -115,17 +116,27 @@
         count_DOM_element = document.querySelector("#count"),
         status_element = document.querySelector("#status_msg"),
         table_body = $('#activities_list tbody'),
-        sock = new WebSocket(WEBSOCKET_URL);
+        genID, sock;
 
-    sock.binaryType = 'arraybuffer';
 
     window.addEventListener('beforeunload', function (event) {
-    // if (!navigator.sendBeacon) return;
-    // status = navigator.sendBeacon(beacon_handler_url, genID);
-      if (sock && sock.readyState == 1) {
-          sock.close()
+      if (navigator.sendBeacon) {
+        if (genID) {
+          navigator.sendBeacon(BEACON_HANDLER_URL, genID);
+        }
+        navigator.sendBeacon(BEACON_HANDLER_URL, CLIENT_ID);
       }
+ 
+      if (sock && sock.readyState == 1) {
+            sock.send(JSON.stringify({close: 1}));
+            sock.close()
+      }
+      
     });
+
+
+    sock = new WebSocket(WEBSOCKET_URL),
+    sock.binaryType = 'arraybuffer';
 
     status_element.innerText = "Retrieving Activity Index...";
     
@@ -147,6 +158,7 @@
 
     sock.onclose = function(event) {
         console.log("socket closed: ", event);
+        genID = null;
         if (!ADMIN && !OFFLINE) {
         // Record this to google analytics
         ga('send', 'event', {
@@ -173,6 +185,11 @@
 
         document.querySelector("#status").style.display = "none";
         return
+      }
+
+      if (A.genID) {
+        genID = A.genID;
+        console.log("got genID "+A.genID)
       }
       
       if (!A._id) {

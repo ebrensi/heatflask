@@ -556,11 +556,13 @@ class Users(UserMixin, db_sql.Model):
             # log.debug("sending activity {}...".format(A["_id"]))
             # gevent.sleep(0.5)  # test delay
 
-            if not streams:
-                yield A
-
-            else:
+            if streams:
                 to_fetch[A["_id"]] = A
+            else:
+                yield A
+                
+        if not streams:
+            return
 
         for id, stream_data in Activities.get_many(to_fetch.keys()):
             if stream_data:
@@ -1049,7 +1051,7 @@ class StravaClient(object):
     #  so we have our own in-house client
 
     PAGE_SIZE = 200
-    REQUEST_CONCURRENCY = 3
+    REQUEST_CONCURRENCY = 6
     BASE_URL = "https://www.strava.com/api/v3"
     GET_ACTIVITIES_URL = "/athlete/activities"
 
@@ -1058,13 +1060,15 @@ class StravaClient(object):
             self.access_token = access_token
         elif user:
             self.access_token = user.client().access_token
+            # self.access_token = None
 
-
-    def get_activities(self, before=None, after=None, limit=0):
-        cls = self.__class__
-        headers = {
+    def headers(self):
+        return {
             "Authorization": "Bearer {}".format(self.access_token)
         }
+
+    def get_activities(self, before=None, after=None, limit=0, abort_key=None):
+        cls = self.__class__
 
         query_base_url = (
             cls.BASE_URL + cls.GET_ACTIVITIES_URL +
@@ -1091,34 +1095,55 @@ class StravaClient(object):
             .format(before, after, limit)
         )
 
-        limit = 1000
+        # limit = 1000
 
-        done = False
+
+        self.max_page = 100000
 
         def request_page(pagenum):
-            if done:
-                log.debug("{}: sorry cant do it".format(pagenum))
+
+            if pagenum > self.max_page:
+                # log.debug("{}: sorry cant do it".format(pagenum))
                 return pagenum, None
 
             url = query_base_url + "&page={}".format(pagenum)
             
-            log.debug("requesting page {}: {}".format(pagenum, url))
+            log.debug("requesting page {}".format(pagenum))
+            start = datetime.utcnow()
 
             try:
-                response = requests.get(url, headers=headers)
+                response = requests.get(url, headers=self.headers())
+
+                log.debug("page {} took {} secs".format(
+                    pagenum,
+                    (datetime.utcnow() - start).total_seconds()))
+                
+                if response.status_code in [204]:
+                    raise StopIteration
+
+                activities = response.json()
+
+                if "errors" in activities:
+                    raise Exception(activities)
+
+                if len(activities) < cls.PAGE_SIZE:
+                    log.debug("page has {}".format(len(activities)))
+                    self.max_page = pagenum
+
             except Exception as e:
                 log.exception(e)
-                response = None
-            
-            log.debug("got response for page {}: ".format(pagenum, response))
-            
-            return pagenum, response
+                self.max_page = pagenum
+                activities = None
+
+            log.debug("got response for page {}: max={}".format(pagenum, self.max_page))
+            return pagenum, activities
 
         total_retrieved = 0
         pool = Pool(cls.REQUEST_CONCURRENCY)
 
         pages_to_request = range(1, 100)
 
+        pagenum = 0
         try:
             jobs = pool.imap(
                 request_page,
@@ -1126,20 +1151,17 @@ class StravaClient(object):
                 maxsize=cls.REQUEST_CONCURRENCY + 10
             )
 
-            while not done:
-                pagenum, response = next(jobs)
+            while pagenum <= self.max_page:
+                pagenum, activities = next(jobs)
 
-                if done or not response or response.status_code in [204]:
+                if not activities:
                     raise StopIteration
 
-                activities = response.json()
-                log.debug("page {}: {}".format(pagenum, len(activities)))
-
                 num = len(activities)
-                if (num < cls.PAGE_SIZE) or (limit and (num + total_retrieved >= limit)):
+                if limit and (num + total_retrieved >= limit):
                     # make sure no more requests are made
                     log.debug("no more pages after this")
-                    done = True
+                    self.max_page = pagenum
 
                 for a in activities:
                     if a.get("start_latlng"):
@@ -1149,12 +1171,15 @@ class StravaClient(object):
                         if limit and (total_retrieved >= limit):
                             raise StopIteration
 
+                    if abort_key and not redis.exist(abort_key):
+                        raise StopIteration
+                    
         except StopIteration:
             pass
         except Exception as e:
             log.exception(e)
         finally:
-            done = True
+            self.max_page = pagenum
             pool.kill()
 
 #  Activities class is only a proxy to underlying data structures.
@@ -1490,11 +1515,8 @@ class Activities(object):
 
     @classmethod
     def query(cls, queryObj):
-        # gen_id = uuid.uuid1().get_hex()
-        # redis_key = "G:{}".format(gen_id)
-        # redis.setex(redis_key, 60 * 10, 1)
-        # obj = {"genID": redis_key}
-        # yield obj
+        genID = Utility.genID()
+        yield {"genID": genID}
         
         for user_id in queryObj:
             user = Users.get(user_id)
@@ -1504,6 +1526,9 @@ class Activities(object):
             query = queryObj[user_id]
             
             for a in user.query_activities(**query):
+                if not redis.exists(genID):
+                    log.debug("query aborted")
+                    break
                 yield a
         yield ""
 
@@ -1569,20 +1594,18 @@ class EventLogger(object):
             ts = first['ts']
 
         def gen(ts):
-            gen_id = uuid.uuid1().get_hex()
-            redis_key = "H:{}".format(gen_id)
-            redis.setex(redis_key, 60 * 60 * 24, 1)
-            obj = {"genID": redis_key}
+            genID = Utility.genID(ttl=60 * 60 * 24)
+            obj = {"genID": genID}
             yield "data: {}\n\n".format(json.dumps(obj))
             yield "retry: 5000\n\n"
-            while redis.exists(redis_key):
+            while redis.exists(genID):
                 # log.debug("initiate cursor at {}".format(ts))
                 cursor = cls.db.find(
                     {'ts': {'$gt': ts}},
                     cursor_type=pymongo.CursorType.TAILABLE_AWAIT
                 )
                 elapsed = 0
-                while cursor.alive & redis.exists(redis_key):
+                while cursor.alive & redis.exists(genID):
                     for doc in cursor:
                         elapsed = 0
                         ts = doc["ts"]
@@ -1833,4 +1856,10 @@ class Utility():
             return
         else:
             return dt
+
+    @staticmethod
+    def genID(ttl=600):
+        genID = "G:{}".format(uuid.uuid4().get_hex())
+        redis.setex(genID, ttl, 1)
+        return genID
 
