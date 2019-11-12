@@ -575,7 +575,7 @@ def data_socket(ws):
                     break
             elif msg.get("close"):
                 ws.close()
-                log.debug("socket {} CLOSED".format(name))
+                # log.debug("socket {} CLOSED".format(name))
 
             else:
                 log.debug("{} says {}".format(name, msg))
@@ -772,8 +772,8 @@ def app_init():
 
 @app.route("/beacon_handler", methods=["POST"])
 def beacon_handler():
-    log.debug("recieved beacon: {}".format(request.data))
-    redis.delete(request.data)
+    # log.debug("received beacon: {}".format(request.data))
+    Utility.del_genID(request.data)
     return "ok"
 
 

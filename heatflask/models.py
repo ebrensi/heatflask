@@ -1058,7 +1058,9 @@ class StravaClient(object):
     def __init__(self, access_token=None, user=None):
         if access_token:
             self.access_token = access_token
+            self.user = None
         elif user:
+            self.user = user
             self.access_token = user.client().access_token
             # self.access_token = None
 
@@ -1090,14 +1092,14 @@ class StravaClient(object):
             after = int((after - EPOCH).total_seconds())
             query_base_url += "&after={}".format(after)
 
-        log.debug(
-            "before={}, after={}, limit={}"
-            .format(before, after, limit)
-        )
+        # log.debug(
+        #     "before={}, after={}, limit={}"
+        #     .format(before, after, limit)
+        # )
 
         # limit = 1000
 
-
+        self.download_times = {}
         self.max_page = 100000
 
         def request_page(pagenum):
@@ -1108,15 +1110,11 @@ class StravaClient(object):
 
             url = query_base_url + "&page={}".format(pagenum)
             
-            log.debug("requesting page {}".format(pagenum))
+            # log.debug("requesting page {}".format(pagenum))
             start = datetime.utcnow()
 
             try:
                 response = requests.get(url, headers=self.headers())
-
-                log.debug("page {} took {} secs".format(
-                    pagenum,
-                    (datetime.utcnow() - start).total_seconds()))
                 
                 if response.status_code in [204]:
                     raise StopIteration
@@ -1126,16 +1124,22 @@ class StravaClient(object):
                 if "errors" in activities:
                     raise Exception(activities)
 
-                if len(activities) < cls.PAGE_SIZE:
-                    log.debug("page has {}".format(len(activities)))
-                    self.max_page = pagenum
-
             except Exception as e:
                 log.exception(e)
                 self.max_page = pagenum
                 activities = None
 
-            log.debug("got response for page {}: max={}".format(pagenum, self.max_page))
+            num = len(activities)
+            if num < cls.PAGE_SIZE:
+                self.max_page = pagenum
+
+            elapsed = (datetime.utcnow() - start).total_seconds()
+                
+            self.download_times[pagenum] = (num, elapsed)
+
+            log.debug("{} index page {} in {} secs: count={}".format(
+                self.user, pagenum, elapsed, num))
+
             return pagenum, activities
 
         total_retrieved = 0
@@ -1160,7 +1164,7 @@ class StravaClient(object):
                 num = len(activities)
                 if limit and (num + total_retrieved >= limit):
                     # make sure no more requests are made
-                    log.debug("no more pages after this")
+                    # log.debug("no more pages after this")
                     self.max_page = pagenum
 
                 for a in activities:
@@ -1375,20 +1379,22 @@ class Activities(object):
         # now we update the data-stores
         now = datetime.utcnow()
 
+        # results = {}
+
         # We need to make sure we don't exceed the limit
         #  of how many bulk writes we can do at one time
         redis_result = write_pipe.execute()
 
-        if redis_result:
-            elapsed = (datetime.utcnow() - now).total_seconds()
-            log.debug(
-                "{} redis batch writes took {} secs: {}, {}"
-                .format(
-                    len(redis_result), elapsed,
-                    redis_result.count(True),
-                    redis_result.count(False)
-                )
-            )
+        # if redis_result:
+        #     elapsed = (datetime.utcnow() - now).total_seconds()
+        #     log.debug(
+        #         "{} redis batch writes took {} secs: {}, {}"
+        #         .format(
+        #             len(redis_result), elapsed,
+        #             redis_result.count(True),
+        #             redis_result.count(False)
+        #         )
+        #     )
 
         if fetched:
             # now update TTL for mongoDB records if there were any
@@ -1403,11 +1409,11 @@ class Activities(object):
                         "failed to update activities in mongoDB: {}"
                         .format(e))
 
-            elapsed = (datetime.utcnow() - now).total_seconds()
-            log.debug(
-                "{} MongoDB batch writes took {} secs"
-                .format(mongo_result.raw_result["n"], elapsed)
-            )
+            # elapsed = (datetime.utcnow() - now).total_seconds()
+            # log.debug(
+            #     "{} MongoDB batch writes took {} secs"
+            #     .format(mongo_result.raw_result["n"], elapsed)
+            # )
 
     @classmethod
     def get(cls, id, ttl=CACHE_TTL):
@@ -1515,7 +1521,7 @@ class Activities(object):
 
     @classmethod
     def query(cls, queryObj):
-        genID = Utility.genID()
+        genID = Utility.set_genID()
         yield {"genID": genID}
         
         for user_id in queryObj:
@@ -1594,7 +1600,7 @@ class EventLogger(object):
             ts = first['ts']
 
         def gen(ts):
-            genID = Utility.genID(ttl=60 * 60 * 24)
+            genID = Utility.set_genID(ttl=60 * 60 * 24)
             obj = {"genID": genID}
             yield "data: {}\n\n".format(json.dumps(obj))
             yield "retry: 5000\n\n"
@@ -1858,8 +1864,15 @@ class Utility():
             return dt
 
     @staticmethod
-    def genID(ttl=600):
+    def set_genID(ttl=600):
         genID = "G:{}".format(uuid.uuid4().get_hex())
         redis.setex(genID, ttl, 1)
         return genID
+
+    @staticmethod
+    def del_genID(genID):
+        content = redis.get(genID)
+        if content:
+            redis.delete(genID)
+            
 
