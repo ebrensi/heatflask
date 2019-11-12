@@ -1148,7 +1148,7 @@ class StravaClient(object):
             jobs = pool.imap(
                 request_page,
                 pages_to_request,
-                maxsize=cls.REQUEST_CONCURRENCY + 10
+                maxsize=cls.REQUEST_CONCURRENCY + 2
             )
 
             while pagenum <= self.max_page:
