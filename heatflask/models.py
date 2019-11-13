@@ -472,7 +472,7 @@ class Users(UserMixin, db_sql.Model):
                 gen, to_delete = Index.query(
                     user=self,
                     activity_ids=activity_ids,
-                    limit=limit or 0,
+                    limit=limit + 10 if limit else 0,
                     after=after, before=before,
                     exclude_ids=exclude_ids,
                     ids_only=only_ids,
@@ -503,7 +503,7 @@ class Users(UserMixin, db_sql.Model):
                         return
 
                     gen = self.build_index(
-                        limit=limit,
+                        limit=limit + 10 if limit else 0,
                         after=after,
                         before=before,
                         activitiy_ids=activity_ids,
@@ -522,11 +522,6 @@ class Users(UserMixin, db_sql.Model):
         DB_TTL = STORE_INDEX_TIMEOUT
         NOW = datetime.utcnow()
 
-        num_fetched = 0
-        num_imported = 0
-        num_empty = 0
-        num_errors = 0
-
         # At this point we have a generator called gen
         #  that yields Activity summaries, without streams
         #  we will attempt to get the stream associated with 
@@ -534,6 +529,8 @@ class Users(UserMixin, db_sql.Model):
 
         # log.debug("NOW: {}, DB_TTL: {}".format(NOW, DB_TTL))
         to_fetch = {}
+        num_fetched = 0
+
         for A in gen:
             # log.debug(A)
             if "_id" not in A:
@@ -543,7 +540,6 @@ class Users(UserMixin, db_sql.Model):
                 continue
 
             elif "empty" in A:
-                num_empty += 1
                 continue
 
             if summaries:
@@ -569,9 +565,18 @@ class Users(UserMixin, db_sql.Model):
                 to_fetch[A["_id"]] = A
             else:
                 yield A
+
+            num_fetched += 1
+            if limit and num_fetched >= limit:
+                break
                 
         if not streams:
             return
+
+        num_empty = 0
+        num_fetched = 0
+        num_imported = 0
+        num_errors = 0
 
         for id, stream_data in Activities.get_many(to_fetch.keys()):
 
@@ -628,7 +633,7 @@ class Users(UserMixin, db_sql.Model):
                     if A:
                         num_imported += 1
                         yield A
-                        
+
                     elif A is False:
                         num_errors += 1
                         if num_errors > MAX_IMPORT_ERRORS:
