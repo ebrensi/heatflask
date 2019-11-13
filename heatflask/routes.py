@@ -23,7 +23,7 @@ from flask_login import current_user, login_user, logout_user, login_required
 from urlparse import urlparse, urlunparse  # python2
 
 # Local imports
-from . import login_manager, db_sql, redis, mongo, sockets
+from . import login_manager, redis, mongo, sockets
 
 
 from .models import (
@@ -479,19 +479,13 @@ def update_share_status(username):
     user = Users.get(username)
 
     # set user's share status
-    user.share_profile = (status == "public")
-    try:    
-        db_sql.session.commit()
-        user.cache()
-    except Exception as e:
-        log.exception(e)
-
+    status = user.is_public(status == "public")
     log.info(
         "share status for {} set to {}"
         .format(user, status)
     )
 
-    return jsonify(user=user.id, share=user.share_profile)
+    return jsonify(user=user.id, share=status)
 
 
 def toObj(string):
