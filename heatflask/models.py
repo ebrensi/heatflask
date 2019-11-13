@@ -593,7 +593,12 @@ class Users(UserMixin, db_sql.Model):
                 P = Pool(CONCURRENCY)
 
                 def import_activity_stream(A):
-                    return Activities.import_streams(client, A)
+                    imported = Activities.import_streams(client, A)
+
+                    elapsed = (datetime.utcnow() - start).total_seconds()
+                    log.debug("imported {} in {} secs".format(A["_id"], elapsed))
+
+                    return imported
                 
                 imported = P.imap_unordered(
                     import_activity_stream,
@@ -1051,7 +1056,8 @@ class StravaClient(object):
     #  so we have our own in-house client
 
     PAGE_SIZE = 200
-    REQUEST_CONCURRENCY = 6
+    REQUEST_CONCURRENCY = 10
+    MAX_PAGE = 100
     BASE_URL = "https://www.strava.com/api/v3"
     GET_ACTIVITIES_URL = "/athlete/activities"
 
@@ -1097,20 +1103,18 @@ class StravaClient(object):
         #     .format(before, after, limit)
         # )
 
-        # limit = 1000
-
         self.download_times = {}
-        self.max_page = 100000
+        self.final_page = cls.MAX_PAGE
 
         def request_page(pagenum):
 
-            if pagenum > self.max_page:
-                # log.debug("{}: sorry cant do it".format(pagenum))
+            if pagenum > self.final_page:
+                log.debug("{} page {} cancelled".format(self.user, pagenum))
                 return pagenum, None
 
             url = query_base_url + "&page={}".format(pagenum)
             
-            # log.debug("requesting page {}".format(pagenum))
+            log.debug("{} requesting page {}".format(self.user, pagenum))
             start = datetime.utcnow()
 
             try:
@@ -1126,36 +1130,45 @@ class StravaClient(object):
 
             except Exception as e:
                 log.exception(e)
-                self.max_page = pagenum
+                self.final_page = pagenum
                 activities = None
 
-            num = len(activities)
-            if num < cls.PAGE_SIZE:
-                self.max_page = pagenum
+            size = len(activities)
+            if size < cls.PAGE_SIZE:
+                #  if this page has fewer than PAGE_SIZE entries
+                #  then this is the final page.
+                #  make sure no more requests are made
+                self.final_page = pagenum
 
             elapsed = (datetime.utcnow() - start).total_seconds()
                 
-            self.download_times[pagenum] = (num, elapsed)
+            self.download_times[pagenum] = (size, elapsed)
 
             log.debug("{} index page {} in {} secs: count={}".format(
-                self.user, pagenum, elapsed, num))
+                self.user, pagenum, elapsed, size))
 
             return pagenum, activities
 
         total_retrieved = 0
         pool = Pool(cls.REQUEST_CONCURRENCY)
 
-        pages_to_request = range(1, 100)
+        pages_to_request = range(1, MAX_PAGE)
 
         pagenum = 0
-        try:
-            jobs = pool.imap(
+
+        # imap_unordered gives a little better performance if order
+        #   of results doesn't matter, which is the case if we aren't
+        #   limited to the first n elements.  
+        mapper = pool.imap if limit else pool.imap_unordered
+
+        jobs = mapper(
                 request_page,
                 pages_to_request,
                 maxsize=cls.REQUEST_CONCURRENCY + 2
             )
 
-            while pagenum <= self.max_page:
+        try:
+            while pagenum <= self.final_page:
                 pagenum, activities = next(jobs)
 
                 if not activities:
@@ -1165,10 +1178,10 @@ class StravaClient(object):
                 if limit and (num + total_retrieved >= limit):
                     # make sure no more requests are made
                     # log.debug("no more pages after this")
-                    self.max_page = pagenum
+                    self.final_page = pagenum
 
                 for a in activities:
-                    if a.get("start_latlng"):
+                    if "start_latlng" in a:
                         yield a
 
                         total_retrieved += 1
@@ -1183,7 +1196,7 @@ class StravaClient(object):
         except Exception as e:
             log.exception(e)
         finally:
-            self.max_page = pagenum
+            self.final_page = pagenum
             pool.kill()
 
 #  Activities class is only a proxy to underlying data structures.
@@ -1459,13 +1472,17 @@ class Activities(object):
         if ("polyline" in stream_names):
             streams_to_import.append("latlng")
             streams_to_import.remove("polyline")
+
+        start = datetime.utcnow()
+        log.debug("request import {}".format(A["_id"]))
         try:
             streams = client.get_activity_streams(
                 activity_id,
                 series_type='time',
                 types=streams_to_import
             )
-            
+        response_time = (datetime.utcnow() - start).total_seconds()
+
         except Exception as e:
             msg = ("Can't import streams for activity {}:\n{}"
                    .format(activity_id, e))

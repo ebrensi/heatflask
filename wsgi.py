@@ -8,6 +8,8 @@ gunicorn_logger = logging.getLogger('gunicorn.error')
 app.logger.handlers = gunicorn_logger.handlers
 app.logger.setLevel(gunicorn_logger.level)
 
+
+
 loc_status = ""
 if app.config.get("OFFLINE"):
     loc_status = ": OFFLINE"
@@ -16,6 +18,8 @@ elif app.config.get("USE_REMOTE_DB"):
 
 log = app.logger
 log.info("Heatflask server starting{}".format(loc_status))
+
+log.info(log.config.format)
 
 # makes python ignore sigpipe and prevents broken pipe exception when client
 #  aborts an SSE stream by closing the browser window
