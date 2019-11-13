@@ -480,8 +480,11 @@ def update_share_status(username):
 
     # set user's share status
     user.share_profile = (status == "public")
-    db_sql.session.commit()
-    user.cache()
+    try:    
+        db_sql.session.commit()
+        user.cache()
+    except Exception as e:
+        log.exception(e)
 
     log.info(
         "share status for {} set to {}"
