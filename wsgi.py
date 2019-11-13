@@ -19,8 +19,6 @@ elif app.config.get("USE_REMOTE_DB"):
 log = app.logger
 log.info("Heatflask server starting{}".format(loc_status))
 
-log.info(log.config.format)
-
 # makes python ignore sigpipe and prevents broken pipe exception when client
 #  aborts an SSE stream by closing the browser window
 signal(SIGPIPE, SIG_DFL)
