@@ -1142,6 +1142,8 @@ class StravaClient(object):
             after = int((after - EPOCH).total_seconds())
             query_base_url += "&after={}".format(after)
 
+        pagenum = 0
+
         def request_page(pagenum):
 
             if pagenum > self.final_page:
@@ -1165,9 +1167,9 @@ class StravaClient(object):
                     raise Exception(activities)
 
             except Exception as e:
-                log.exception(e)
+                log.error(e)
                 self.final_page = pagenum
-                activities = None
+                return pagenum, None
 
             size = len(activities)
             if size < cls.PAGE_SIZE:
@@ -1177,7 +1179,7 @@ class StravaClient(object):
 
             elapsed = (datetime.utcnow() - start).total_seconds()
                 
-            self.download_times[pagenum] = (size, elapsed)
+            # self.download_times[pagenum] = (size, elapsed)
 
             log.debug("{} index page {} in {} secs: count={}".format(
                 self.user, pagenum, elapsed, size))
