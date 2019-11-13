@@ -232,6 +232,20 @@ class Users(UserMixin, db_sql.Model):
         redis.delete(self.__class__.key(self.id))
         redis.delete(self.__class__.key(self.username))
 
+    def is_public(self, setting=None):
+
+        if setting is None:
+            return self.share_profile
+
+        if setting != self.share_profile:
+            self.share_profile = setting
+            try:
+                db_sql.session.commit()
+                self.cache()
+            except Exception as e:
+                log.exception(e)
+        return self.share_profile
+
     def update_usage(self, session=db_sql.session):
         self.dt_last_active = datetime.utcnow()
         self.app_activity_count = self.app_activity_count + 1

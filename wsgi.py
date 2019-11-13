@@ -5,6 +5,8 @@ import logging
 app = create_app()
 
 gunicorn_logger = logging.getLogger('gunicorn.error')
+# handler = gunicorn_logger.handlers[0]
+# app.logger.handlers = [handler]
 app.logger.handlers = gunicorn_logger.handlers
 app.logger.setLevel(gunicorn_logger.level)
 
