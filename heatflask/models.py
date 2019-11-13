@@ -364,13 +364,18 @@ class Users(UserMixin, db_sql.Model):
 
                 return (user, result)
 
-            P = Pool(2)
+            TRIAGE_CONCURRENCY = 5
+            P = Pool(TRIAGE_CONCURRENCY)
             deleted = 0
             updated = 0
             invalid = 0
             count = 0
           
-            for user, status in P.imap_unordered(triage_user, cls.query):
+            triage_jobs = P.imap_unordered(
+                triage_user, cls.query,
+                maxsize=TRIAGE_CONCURRENCY + 2
+            )
+            for user, status in triage_jobs:
                 count += 1
                 if status == "deleted":
                     deleted += 1
@@ -437,6 +442,7 @@ class Users(UserMixin, db_sql.Model):
                          build_index=True,
                          update_index_ts=True,
                          cache_timeout=CACHE_ACTIVITIES_TIMEOUT,
+                         cancel_key=None,
                          **kwargs):
 
         if self.indexing():
@@ -466,12 +472,16 @@ class Users(UserMixin, db_sql.Model):
                 gen, to_delete = Index.query(
                     user=self,
                     activity_ids=activity_ids,
-                    limit=limit or 0,
+                    limit=limit + 10 if limit else 0,
                     after=after, before=before,
                     exclude_ids=exclude_ids,
                     ids_only=only_ids,
                     update_ts=update_index_ts
                 )
+
+                if cancel_key and not redis.exists(cancel_key):
+                    log.debug("activities query for %s cancelled", self)
+                    return
 
                 if only_ids:
                     for id in gen:
@@ -493,10 +503,11 @@ class Users(UserMixin, db_sql.Model):
                         return
 
                     gen = self.build_index(
-                        limit=limit,
+                        limit=limit + 10 if limit else 0,
                         after=after,
                         before=before,
-                        activitiy_ids=activity_ids
+                        activitiy_ids=activity_ids,
+                        cancel_key=cancel_key
                     )
             else:
                 # Finally, if there is no index and rather than building one
@@ -507,15 +518,9 @@ class Users(UserMixin, db_sql.Model):
 
                 yield{"error": "Sorry. not gonna do it."}
                 return
-                
 
         DB_TTL = STORE_INDEX_TIMEOUT
         NOW = datetime.utcnow()
-
-        num_fetched = 0
-        num_imported = 0
-        num_empty = 0
-        num_errors = 0
 
         # At this point we have a generator called gen
         #  that yields Activity summaries, without streams
@@ -524,8 +529,9 @@ class Users(UserMixin, db_sql.Model):
 
         # log.debug("NOW: {}, DB_TTL: {}".format(NOW, DB_TTL))
         to_fetch = {}
-        for A in gen:
+        num_fetched = 0
 
+        for A in gen:
             # log.debug(A)
             if "_id" not in A:
                 # This is not an activity. It is
@@ -534,7 +540,6 @@ class Users(UserMixin, db_sql.Model):
                 continue
 
             elif "empty" in A:
-                num_empty += 1
                 continue
 
             if summaries:
@@ -560,11 +565,25 @@ class Users(UserMixin, db_sql.Model):
                 to_fetch[A["_id"]] = A
             else:
                 yield A
+
+            num_fetched += 1
+            if limit and num_fetched >= limit:
+                break
                 
         if not streams:
             return
 
+        num_empty = 0
+        num_fetched = 0
+        num_imported = 0
+        num_errors = 0
+
         for id, stream_data in Activities.get_many(to_fetch.keys()):
+
+            if cancel_key and not redis.exists(cancel_key):
+                log.debug("activities query for %s cancelled", self)
+                return
+
             if stream_data:
                 if "empty" in stream_data:
                     num_empty += 1
@@ -590,26 +609,39 @@ class Users(UserMixin, db_sql.Model):
             to_import = to_fetch.values()
 
             if to_import:
+                cancel_imports = False
                 P = Pool(CONCURRENCY)
 
                 def import_activity_stream(A):
-                    return Activities.import_streams(client, A)
+                    if cancel_imports or (cancel_key and not redis.exists(cancel_key)):
+                        # log.debug("%s import cancelled", A["_id"])
+                        return
+
+                    imported = Activities.import_streams(client, A)
+                    return imported
                 
                 imported = P.imap_unordered(
                     import_activity_stream,
-                    to_import
+                    to_import,
+                    maxsize=CONCURRENCY + 2
                 )
 
                 for A in imported:
+                    if cancel_imports:
+                        break
+
                     if A:
                         num_imported += 1
                         yield A
+
                     elif A is False:
                         num_errors += 1
                         if num_errors > MAX_IMPORT_ERRORS:
                             log.info(
                                 "too many errors. aborting import for {}".format(self)
                             )
+                            cancel_imports = True
+                            P.kill()
                             break
 
         msg = "{} queued {} ({} fetched, {} imported, {} empty, {} errors)".format(
@@ -781,7 +813,7 @@ class Index(object):
         return activity_count
 
     @classmethod
-    def import_user(cls, user, fetch_query={"limit": 10}, out_query={}):
+    def import_user(cls, user, fetch_query={"limit": 10}, out_query={}, cancel_key=None):
 
         if OFFLINE:
             yield {"error": "No network connection"}
@@ -818,11 +850,15 @@ class Index(object):
             client = StravaClient(user=user)
 
             if not client:
-                raise Exception("Invalid access_token.  {} is not authenticated.".format(user))
+                raise Exception("Invalid access_token. {} is not authenticated.".format(user))
 
-            summaries = client.get_activities(**fetch_query)
+            summaries = client.get_activities(
+                cancel_key=cancel_key,
+                **fetch_query
+            )
 
             for a in summaries:
+
                 d = cls.strava2doc2(a)
                 # log.debug("{}. {}".format(count, d))
                 mongo_requests.append(
@@ -903,9 +939,8 @@ class Index(object):
             try:
                 A = client.get_activity(id)
                 a = cls.strava2doc(A)
-            except Exception as e:
-                # log.exception(e)
-                # log.debug("{} import {} failed".format(user, id))
+            except Exception:
+                # log.exception("%s import %s failed", user, id)
                 return
 
             # log.debug("fetched activity {} for {}".format(id, user))
@@ -1051,7 +1086,8 @@ class StravaClient(object):
     #  so we have our own in-house client
 
     PAGE_SIZE = 200
-    REQUEST_CONCURRENCY = 6
+    PAGE_REQUEST_CONCURRENCY = 10
+    MAX_PAGE = 100
     BASE_URL = "https://www.strava.com/api/v3"
     GET_ACTIVITIES_URL = "/athlete/activities"
 
@@ -1069,7 +1105,7 @@ class StravaClient(object):
             "Authorization": "Bearer {}".format(self.access_token)
         }
 
-    def get_activities(self, before=None, after=None, limit=0, abort_key=None):
+    def get_activities(self, before=None, after=None, limit=0, cancel_key=None):
         cls = self.__class__
 
         query_base_url = (
@@ -1092,25 +1128,15 @@ class StravaClient(object):
             after = int((after - EPOCH).total_seconds())
             query_base_url += "&after={}".format(after)
 
-        # log.debug(
-        #     "before={}, after={}, limit={}"
-        #     .format(before, after, limit)
-        # )
-
-        # limit = 1000
-
-        self.download_times = {}
-        self.max_page = 100000
-
         def request_page(pagenum):
 
-            if pagenum > self.max_page:
-                # log.debug("{}: sorry cant do it".format(pagenum))
+            if pagenum > self.final_page:
+                # log.debug("{} page {} cancelled".format(self.user, pagenum))
                 return pagenum, None
 
             url = query_base_url + "&page={}".format(pagenum)
             
-            # log.debug("requesting page {}".format(pagenum))
+            # log.debug("{} requesting page {}".format(self.user, pagenum))
             start = datetime.utcnow()
 
             try:
@@ -1126,64 +1152,84 @@ class StravaClient(object):
 
             except Exception as e:
                 log.exception(e)
-                self.max_page = pagenum
+                self.final_page = pagenum
                 activities = None
 
-            num = len(activities)
-            if num < cls.PAGE_SIZE:
-                self.max_page = pagenum
+            size = len(activities)
+            if size < cls.PAGE_SIZE:
+                #  if this page has fewer than PAGE_SIZE entries
+                #  then there cannot be any higher pages
+                self.final_page = pagenum
 
             elapsed = (datetime.utcnow() - start).total_seconds()
                 
-            self.download_times[pagenum] = (num, elapsed)
+            self.download_times[pagenum] = (size, elapsed)
 
             log.debug("{} index page {} in {} secs: count={}".format(
-                self.user, pagenum, elapsed, num))
+                self.user, pagenum, elapsed, size))
 
             return pagenum, activities
 
-        total_retrieved = 0
-        pool = Pool(cls.REQUEST_CONCURRENCY)
+        pool = Pool(cls.PAGE_REQUEST_CONCURRENCY)
+# 
+        num_activities_retrieved = 0
+        num_pages_processed = 0
 
-        pages_to_request = range(1, 100)
+        self.download_times = {}
+        self.final_page = cls.MAX_PAGE
 
-        pagenum = 0
+        def page_iterator():
+            page = 1
+            while page <= self.final_page:
+                yield page
+                page += 1
+
+        # imap_unordered gives a little better performance if order
+        #   of results doesn't matter, which is the case if we aren't
+        #   limited to the first n elements.  
+        mapper = pool.imap if limit else pool.imap_unordered
+
+        # mapper = pool.imap
+        jobs = mapper(
+            request_page,
+            page_iterator(),
+            maxsize=cls.PAGE_REQUEST_CONCURRENCY + 2
+        )
+
         try:
-            jobs = pool.imap(
-                request_page,
-                pages_to_request,
-                maxsize=cls.REQUEST_CONCURRENCY + 2
-            )
-
-            while pagenum <= self.max_page:
+            while num_pages_processed <= self.final_page:
                 pagenum, activities = next(jobs)
 
                 if not activities:
-                    raise StopIteration
+                    continue
 
                 num = len(activities)
-                if limit and (num + total_retrieved >= limit):
+
+                if limit and (num + num_activities_retrieved > limit):
                     # make sure no more requests are made
                     # log.debug("no more pages after this")
-                    self.max_page = pagenum
+                    self.final_page = pagenum
 
                 for a in activities:
-                    if a.get("start_latlng"):
+                    if "start_latlng" in a:
                         yield a
 
-                        total_retrieved += 1
-                        if limit and (total_retrieved >= limit):
+                        num_activities_retrieved += 1
+                        if limit and (num_activities_retrieved >= limit):
                             raise StopIteration
 
-                    if abort_key and not redis.exist(abort_key):
+                    if cancel_key and not redis.exist(cancel_key):
+                        log.debug("%s get_actvities cancelled", self.user)
                         raise StopIteration
+
+                num_pages_processed += 1
                     
         except StopIteration:
             pass
         except Exception as e:
             log.exception(e)
         finally:
-            self.max_page = pagenum
+            self.final_page = pagenum
             pool.kill()
 
 #  Activities class is only a proxy to underlying data structures.
@@ -1451,71 +1497,70 @@ class Activities(object):
             return
 
         EMPTY = {"empty": True}
-
-        stream_names = STREAMS_TO_CACHE
-        streams_to_import = list(stream_names)
-
-        activity_id = activity["_id"]
-        if ("polyline" in stream_names):
-            streams_to_import.append("latlng")
+        ESSENTIAL_STREAMS = ["time"]
+ 
+        streams_to_import = list(STREAMS_TO_CACHE) + ["latlng"]
+        try:
             streams_to_import.remove("polyline")
+        except Exception:
+            pass
+
+        _id = activity["_id"]
+
+        # start = datetime.utcnow()
+        # log.debug("request import {}".format(_id))
+
         try:
             streams = client.get_activity_streams(
-                activity_id,
+                _id,
                 series_type='time',
                 types=streams_to_import
             )
+
+            if not streams:
+                raise UserWarning("no streams")
+
+            imported_streams = {name: streams[name].data for name in streams}
+
+            # Encode/compress latlng data into polyline format
+            try:
+                latlng = imported_streams.pop("latlng")
+            except KeyError:
+                raise UserWarning("no stream 'latlng'")
             
-        except Exception as e:
-            msg = ("Can't import streams for activity {}:\n{}"
-                   .format(activity_id, e))
-            log.error(msg)
-            return False
+            imported_streams["polyline"] = polyline.encode(latlng)
 
-        if not streams:
-                Index.update(activity_id, EMPTY, replace=True)
-                # log.debug("no streams for activity {}:".format(activity_id))
-                return
-
-        activity_streams = {name: streams[name].data for name in streams}
-
-        # Encode/compress latlng data into polyline format
-        if "polyline" in stream_names:
-            latlng = activity_streams.get("latlng")
-            if latlng:
+            for s in set(STREAMS_TO_CACHE) - set(["polyline"]):
+                # Encode/compress these streams
                 try:
-                    activity_streams["polyline"] = polyline.encode(latlng)
-                except Exception as e:
-                    log.error("problem encoding {}".format(activity_id))
-                    return
-            else:
-                Index.update(activity_id, EMPTY, replace=True)
-                return
+                    stream = imported_streams[s]
+                    assert len(stream) > 2
+                except Exception:
+                    if s in ESSENTIAL_STREAMS:
+                        raise UserWarning("no stream '{}'".format(s))
+                    else:
+                        continue
+        
+                imported_streams[s] = cls.stream_encode(stream)
+                
+        except UserWarning as e:
+            Index.update(_id, EMPTY, replace=True)
+            log.debug("activity %s EMPTY: %s", _id, e)
+            return
+        except Exception:
+            log.exception("error importing activity %s", _id)
+            return
 
-        for s in ["time"]:
-            # Encode/compress these streams
-            if (s in stream_names) and (activity_streams.get(s)):
-                if len(activity_streams[s]) < 2:
-                    log.debug(
-                        "activity {} has no stream '{}'"
-                        .format(activity_id, s))
-                    Index.update(activity_id, EMPTY, replace=True)
-                    return
-
-                try:
-                    activity_streams[s] = cls.stream_encode(activity_streams[s])
-                except Exception as e:
-                    msg = ("Can't encode stream '{}' for activity {} due to '{}':\n{}"
-                           .format(s, activity_id, e, activity_streams[s]))
-                    log.error(msg)
-                    return False
-
-        cached_streams = {s: activity_streams[s] for s in stream_names}
-        cls.set(activity_id, cached_streams, timeout)
+        cls.set(_id, imported_streams, timeout)
 
         for s in STREAMS_OUT:
-            if s in cached_streams:
-                activity[s] = cached_streams[s]
+            try:
+                activity[s] = imported_streams[s]
+            except Exception:
+                pass
+        
+        # elapsed = (datetime.utcnow() - start).total_seconds()
+        # log.debug("import {} took {} secs".format(_id, elapsed))
 
         return activity
 
@@ -1531,12 +1576,11 @@ class Activities(object):
 
             query = queryObj[user_id]
             
-            for a in user.query_activities(**query):
-                if not redis.exists(genID):
-                    log.debug("query aborted")
-                    break
+            for a in user.query_activities(cancel_key=genID, **query):
                 yield a
+        
         yield ""
+        Utility.del_genID(genID)
 
 
 class EventLogger(object):
