@@ -518,7 +518,6 @@ class Users(UserMixin, db_sql.Model):
 
                 yield{"error": "Sorry. not gonna do it."}
                 return
-                
 
         DB_TTL = STORE_INDEX_TIMEOUT
         NOW = datetime.utcnow()
@@ -610,7 +609,7 @@ class Users(UserMixin, db_sql.Model):
 
                 def import_activity_stream(A):
                     if cancel_imports or (cancel_key and not redis.exists(cancel_key)):
-                        log.debug("%s import cancelled", A["_id"])
+                        # log.debug("%s import cancelled", A["_id"])
                         return
 
                     imported = Activities.import_streams(client, A)
@@ -623,9 +622,13 @@ class Users(UserMixin, db_sql.Model):
                 )
 
                 for A in imported:
+                    if cancel_imports:
+                        break
+
                     if A:
                         num_imported += 1
                         yield A
+                        
                     elif A is False:
                         num_errors += 1
                         if num_errors > MAX_IMPORT_ERRORS:
@@ -634,6 +637,7 @@ class Users(UserMixin, db_sql.Model):
                             )
                             cancel_imports = True
                             P.kill()
+                            break
 
         msg = "{} queued {} ({} fetched, {} imported, {} empty, {} errors)".format(
             self.id,
@@ -1077,7 +1081,7 @@ class StravaClient(object):
     #  so we have our own in-house client
 
     PAGE_SIZE = 200
-    REQUEST_CONCURRENCY = 10
+    PAGE_REQUEST_CONCURRENCY = 10
     MAX_PAGE = 100
     BASE_URL = "https://www.strava.com/api/v3"
     GET_ACTIVITIES_URL = "/athlete/activities"
@@ -1161,7 +1165,7 @@ class StravaClient(object):
 
             return pagenum, activities
 
-        pool = Pool(cls.REQUEST_CONCURRENCY)
+        pool = Pool(cls.PAGE_REQUEST_CONCURRENCY)
 # 
         num_activities_retrieved = 0
         num_pages_processed = 0
@@ -1184,7 +1188,7 @@ class StravaClient(object):
         jobs = mapper(
             request_page,
             page_iterator(),
-            maxsize=cls.REQUEST_CONCURRENCY + 2
+            maxsize=cls.PAGE_REQUEST_CONCURRENCY + 2
         )
 
         try:
@@ -1498,8 +1502,8 @@ class Activities(object):
 
         _id = activity["_id"]
 
-        start = datetime.utcnow()
-        log.debug("request import {}".format(_id))
+        # start = datetime.utcnow()
+        # log.debug("request import {}".format(_id))
 
         try:
             streams = client.get_activity_streams(
@@ -1550,8 +1554,8 @@ class Activities(object):
             except Exception:
                 pass
         
-        elapsed = (datetime.utcnow() - start).total_seconds()
-        log.debug("import {} took {} secs".format(_id, elapsed))
+        # elapsed = (datetime.utcnow() - start).total_seconds()
+        # log.debug("import {} took {} secs".format(_id, elapsed))
 
         return activity
 
