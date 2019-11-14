@@ -1164,6 +1164,8 @@ class StravaClient(object):
                 activities = response.json()
 
                 if "errors" in activities:
+                    if "invalid" in activities["errors"]:
+                        return pagenum, "abort"
                     raise Exception(activities)
 
             except Exception as e:
@@ -1187,7 +1189,7 @@ class StravaClient(object):
             return pagenum, activities
 
         pool = Pool(cls.PAGE_REQUEST_CONCURRENCY)
-# 
+
         num_activities_retrieved = 0
         num_pages_processed = 0
 
@@ -1219,6 +1221,13 @@ class StravaClient(object):
                 if not activities:
                     continue
 
+                if activities == "abort":
+                    self.user.delete()
+                    raise Exception(
+                        "{} deleted. invalid access_token"
+                        .format(self.user)
+                    )
+                   
                 num = len(activities)
 
                 if limit and (num + num_activities_retrieved > limit):
