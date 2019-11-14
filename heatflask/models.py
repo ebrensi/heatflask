@@ -1164,8 +1164,8 @@ class StravaClient(object):
                 activities = response.json()
 
                 if "errors" in activities:
-                    if "invalid" in activities["errors"]:
-                        return pagenum, "abort"
+                    if "authorization" in activities["messgage"]:
+                        return pagenum, "invalid"
                     raise Exception(activities)
 
             except Exception as e:
@@ -1221,7 +1221,7 @@ class StravaClient(object):
                 if not activities:
                     continue
 
-                if activities == "abort":
+                if activities == "invalid":
                     self.user.delete()
                     raise Exception(
                         "{} deleted. invalid access_token"
