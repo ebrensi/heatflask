@@ -1164,9 +1164,9 @@ class StravaClient(object):
                 activities = response.json()
 
                 if "errors" in activities:
-                    if "authorization" in activities["messgage"]:
+                    if "Authorization" in activities["messgage"]:
                         return pagenum, "invalid"
-                    raise Exception(activities)
+                    raise Exception(str(activities))
 
             except Exception as e:
                 log.error(e)
