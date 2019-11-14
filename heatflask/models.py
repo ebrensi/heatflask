@@ -1222,10 +1222,7 @@ class StravaClient(object):
 
                 if activities == "invalid":
                     self.user.delete()
-                    raise Exception(
-                        "{} deleted. invalid access_token"
-                        .format(self.user)
-                    )
+                    break
                    
                 num = len(activities)
 
