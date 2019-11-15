@@ -428,9 +428,9 @@ class Users(UserMixin, db_sql.Model):
         #  This should not take any longer than 30 seconds
         key = "indexing {}".format(self.id)
         if status is None:
-            return redis.get(key) == "True"
+            return redis.get(key)
         elif status:
-            return redis.setex(key, 60, str(status))
+            return redis.setex(key, 60, datetime.utcnow())
         else:
             redis.delete(key)
 
@@ -736,25 +736,6 @@ class Index(object):
             # log.debug("no need to update TTL")
             pass
 
-    @classmethod
-    def strava2doc2(cls, a):
-        polyline = a["map"]["summary_polyline"]
-        d = {
-            "_id": a["id"],
-            "user_id": a["athlete"]["id"],
-            "name": a["name"],
-            "type": a["type"],
-            "ts_UTC": a["start_date"],
-            "ts_local": a["start_date_local"],
-            "ts": datetime.utcnow(),
-            "total_distance": float(a["distance"]),
-            "elapsed_time": int(a["elapsed_time"]),
-            "average_speed": float(a["average_speed"]),
-            "start_latlng": a["start_latlng"] if "start_latlng" in a else None,
-            "bounds": Activities.bounds(polyline) if polyline else None
-        }
-        return d
-
     def strava2doc(cls, a):
         polyline = a.map.summary_polyline
         d = {
@@ -827,7 +808,9 @@ class Index(object):
         return activity_count
 
     @classmethod
-    def import_user(cls, user, fetch_query={"limit": 10}, out_query={}, cancel_key=None):
+    def import_user(cls, user,
+                    fetch_query={}, out_query={},
+                    yielding=True, cancel_key=None):
 
         if OFFLINE:
             yield {"error": "No network connection"}
@@ -841,8 +824,10 @@ class Index(object):
 
         count = 0
         mongo_requests = []
-        rendering = True
         user.indexing(True)
+
+        yield_activities = yielding
+
         start_time = datetime.utcnow()
         log.debug("building activity index for {}".format(user))
 
@@ -851,10 +836,9 @@ class Index(object):
         before = out_query.get("before")
         limit = out_query.get("limit")
 
+        check_dates = (before or after)
+        
         def in_date_range(dt):
-            if not (before or after):
-                return
-
             t1 = (not after) or (after <= dt)
             t2 = (not before) or (dt <= before)
             result = (t1 and t2)
@@ -871,63 +855,52 @@ class Index(object):
                 **fetch_query
             )
 
-            for a in summaries:
+            for d in summaries:
+                if not d:
+                    continue
+                
+                d["ts"] = start_time
 
-                d = cls.strava2doc2(a)
                 # log.debug("{}. {}".format(count, d))
                 mongo_requests.append(
                     pymongo.ReplaceOne({"_id": d["_id"]}, d, upsert=True)
                 )
+
                 count += 1
 
-                if count % 5:
-                    # only output count every 5 items to cut down on data
+                if yielding and count % 5:
                     yield {"idx": count}
-                    # log.debug("put index {}".format(count))
 
-                if not rendering:
+                if not yield_activities:
                     continue
 
-                if ((activity_ids and (d["_id"] in activity_ids)) or
-                     (limit and (count <= limit)) or
-                        in_date_range(d["ts_local"])):
+                if limit and count > limit:
+                    continue
 
-                    d2 = dict(d)
-                    d2["ts_local"] = str(d2["ts_local"])
-                    d2["ts_UTC"] = str(d2["ts_UTC"])
+                # TODO: fix this
+                if check_dates and not in_date_range(d["ts_local"]):
+                    continue
 
-                    yield d2
+                # Now we have eliminated all reasons not to yield
+                #  this activity
+                yield d
 
-                    if activity_ids:
-                        activity_ids.remove(d["_id"])
-                        if not activity_ids:
-                            rendering = False
-                            yield {"stop_rendering": 1}
-
-                if ((limit and count >= limit) or
-                        (after and (d["ts_local"] < after))):
-                    rendering = False
-                    yield {"stop_rendering": 1}
+                if activity_ids and d["_id"] in activity_ids:
+                    activity_ids.remove(d["_id"])
+                    if not activity_ids:
+                        yield_activities = False
+                        yield {"stop_rendering": 1}
+                    continue
                   
-            if not mongo_requests:
-                EventLogger.new_event(
-                    msg="no activities for {}".format(user.id)
-                )
-                result = []
-
-                yield {"error": "No activities!"}
-            
-            else:
-                result = cls.db.bulk_write(
+            if mongo_requests:
+                cls.db.bulk_write(
                     mongo_requests,
                     ordered=False
                 )
         except Exception as e:
-            yield {"error": str(e)}
-
-            log.error(
-                "Error while building activity index for {}".format(user))
-            log.exception(e)
+            if yielding:
+                yield {"error": str(e)}
+            log.exception("Error while building activity index for %s", user)
         else:
             elapsed = datetime.utcnow() - start_time
             msg = (
@@ -937,8 +910,8 @@ class Index(object):
 
             log.debug(msg)
             EventLogger.new_event(msg=msg)
-            yield {"msg": "done indexing {} activities.".format(count)}
-        
+            if yielding:
+                yield {"msg": "done indexing {} activities.".format(count)}
         finally:
             user.indexing(False)
 
@@ -1106,13 +1079,40 @@ class StravaClient(object):
     GET_ACTIVITIES_URL = "/athlete/activities"
 
     def __init__(self, access_token=None, user=None):
+        self.user = None
+
         if access_token:
             self.access_token = access_token
-            self.user = None
         elif user:
             self.user = user
             self.access_token = user.client().access_token
             # self.access_token = None
+
+    @classmethod
+    def strava2doc(cls, a):
+        if ("_id" not in a) or ("start_latlng" not in a):
+            return
+
+        try:
+            d = dict(
+                _id=a["id"],
+                user_id=a["athlete"]["id"],
+                name=a["name"],
+                type=a["type"],
+                # group=a["athlete_count"],
+                ts_UTC=a["start_date"],
+                ts_local=a["start_date_local"],
+                # ts=datetime.utcnow(),
+                total_distance=float(a["distance"]),
+                elapsed_time=int(a["elapsed_time"]),
+                average_speed=float(a["average_speed"]),
+                start_latlng=a["start_latlng"],
+                bounds=Activities.bounds(a["map"]["summary_polyline"])
+            )
+        except Exception:
+            log.exception()
+            return
+        return d
 
     def headers(self):
         return {
@@ -1122,66 +1122,60 @@ class StravaClient(object):
     def get_activities(self, before=None, after=None, limit=0, cancel_key=None):
         cls = self.__class__
 
-        query_base_url = (
-            cls.BASE_URL + cls.GET_ACTIVITIES_URL +
-            "?per_page={}".format(cls.PAGE_SIZE)
+        query_base_url = "{}{}?per_page={}".format(
+            cls.BASE_URL,
+            cls.GET_ACTIVITIES_URL,
+            cls.PAGE_SIZE
         )
-
+        
         #  handle parameters
         try:
             limit = int(limit)
-        except Exception as e:
-            log.exception(e)
+
+            if before:
+                before = int((before - EPOCH).total_seconds())
+                query_base_url += "&before={}".format(before)
+        
+            if after:
+                after = int((after - EPOCH).total_seconds())
+                query_base_url += "&after={}".format(after)
+
+        except Exception:
+            log.exception()
             return
 
-        if before:
-            before = int((before - EPOCH).total_seconds())
-            query_base_url += "&before={}".format(before)
-        
-        if after:
-            after = int((after - EPOCH).total_seconds())
-            query_base_url += "&after={}".format(after)
-
-        pagenum = 0
+        def page_iterator():
+            page = 1
+            while page <= self.final_index_page:
+                yield page
+                page += 1
 
         def request_page(pagenum):
 
-            if pagenum > self.final_page:
+            if pagenum > self.final_index_page:
                 # log.debug("{} page {} cancelled".format(self.user, pagenum))
                 return pagenum, None
 
             url = query_base_url + "&page={}".format(pagenum)
             
             # log.debug("{} requesting page {}".format(self.user, pagenum))
-            start = datetime.utcnow()
+            # start = datetime.utcnow()
 
             try:
                 response = requests.get(url, headers=self.headers())
-                
-                if response.status_code in [204]:
-                    raise StopIteration
-
                 activities = response.json()
 
-                if "errors" in activities:
-                    log.debug(activities)
-                    return pagenum, "invalid"
-
-            except Exception as e:
-                log.error(e)
-                self.final_page = pagenum
-                return pagenum, None
+            except Exception:
+                log.exception()
+                activities = {}
 
             size = len(activities)
             if size < cls.PAGE_SIZE:
                 #  if this page has fewer than PAGE_SIZE entries
-                #  then there cannot be any higher pages
-                self.final_page = pagenum
+                #  then there cannot be any further pages
+                self.final_index_page = min(self.final_index_page, pagenum)
 
-            elapsed = (datetime.utcnow() - start).total_seconds()
-                
-            # self.download_times[pagenum] = (size, elapsed)
-
+            # elapsed = (datetime.utcnow() - start).total_seconds()
             # log.debug("{} index page {} in {} secs: count={}".format(
             #     self.user, pagenum, elapsed, size))
 
@@ -1192,21 +1186,13 @@ class StravaClient(object):
         num_activities_retrieved = 0
         num_pages_processed = 0
 
-        self.download_times = {}
-        self.final_page = cls.MAX_PAGE
-
-        def page_iterator():
-            page = 1
-            while page <= self.final_page:
-                yield page
-                page += 1
+        self.final_index_page = cls.MAX_PAGE
 
         # imap_unordered gives a little better performance if order
         #   of results doesn't matter, which is the case if we aren't
         #   limited to the first n elements.  
         mapper = pool.imap if limit else pool.imap_unordered
 
-        # mapper = pool.imap
         jobs = mapper(
             request_page,
             page_iterator(),
@@ -1214,43 +1200,43 @@ class StravaClient(object):
         )
 
         try:
-            while num_pages_processed <= self.final_page:
+            while num_pages_processed <= self.final_index_page:
                 pagenum, activities = next(jobs)
 
                 if not activities:
                     continue
 
-                if activities == "invalid":
-                    self.user.delete()
-                    break
+                if "errors" in activities:
+                    raise UserWarning("Strava error")
                    
                 num = len(activities)
 
                 if limit and (num + num_activities_retrieved > limit):
                     # make sure no more requests are made
                     # log.debug("no more pages after this")
-                    self.final_page = pagenum
+                    self.final_index_page = pagenum
 
                 for a in activities:
-                    if "start_latlng" in a:
-                        yield a
-
-                        num_activities_retrieved += 1
-                        if limit and (num_activities_retrieved >= limit):
-                            raise StopIteration
-
                     if cancel_key and not redis.exist(cancel_key):
                         log.debug("%s get_actvities cancelled", self.user)
-                        raise StopIteration
+                        break
+
+                    yield cls.strava2doc(a)
+
+                    num_activities_retrieved += 1
+                    if limit and (num_activities_retrieved >= limit):
+                        break
 
                 num_pages_processed += 1
-                    
-        except StopIteration:
-            pass
+
+        except UserWarning:
+            # TODO: find a more graceful way to do this
+            log.exception("%s", activities)
+            self.user.delete()
         except Exception as e:
             log.exception(e)
         finally:
-            self.final_page = pagenum
+            self.final_index_page = min(pagenum, self.final_index_page)
             pool.kill()
 
 #  Activities class is only a proxy to underlying data structures.
