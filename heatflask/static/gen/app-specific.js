@@ -65,7 +65,7 @@ msgBox=L.control.window(map,{position:'top',content:"<div class='data_message'><
 $(".data_message").html("Retrieving activity data...");$('#abortButton').click(function(){stopListening();doneRendering("<font color='red'>Aborted:</font>");}).show();$(".progbar").show();$('#renderButton').prop('disabled',true);function doneRendering(msg){if(rendering){appState['after']=$("#date1").val();appState["before"]=$("#date2").val();updateState();$("#abortButton").hide();$(".progbar").hide();if(msgBox){msgBox.close();msgBox=null;}
 rendering=false;}
 $('#renderButton').prop('disabled',false);updateLayers(msg);}
-function stopListening(){if(listening){listening=false;sock.send(JSON.stringify({close:1}));sock.close();if(navigator.sendBeacon&&genID){navigator.sendBeacon(BEACON_HANDLER_URL,genID);}
+function stopListening(){console.log("stopListening called");if(listening){listening=false;sock.send(JSON.stringify({close:1}));sock.close();if(navigator.sendBeacon&&genID){navigator.sendBeacon(BEACON_HANDLER_URL,genID);}
 genID=null;}}
 function sendQuery(){queryObj={client_id:ONLOAD_PARAMS.client_id};queryObj[USER_ID]={limit:type=="activities"?Math.max(1,+num):undefined,after:date1?date1:undefined,before:date2&&date2!="now"?date2:undefined,activity_ids:idString?Array.from(new Set(idString.split(/\D/).map(Number))):undefined,exclude_ids:to_exclude.length?to_exclude:undefined,streams:true};let msg=JSON.stringify({query:queryObj});sock.send(msg);}
 sock.onopen=function(event){sendQuery();};sock.onmessage=function(event){let A;try{A=msgpack.decode(new Uint8Array(event.data));}catch(e){console.log(event);console.log(event.data);console.log(e);};if(!A){doneRendering("Finished.");transactionID=null;return;}

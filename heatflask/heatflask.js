@@ -744,6 +744,7 @@ function renderLayers() {
     $(".progbar").show();
     $('#renderButton').prop('disabled', true);
 
+
     function doneRendering(msg){
         if (rendering) {
             appState['after'] = $("#date1").val();
@@ -768,6 +769,7 @@ function renderLayers() {
 
 
     function stopListening() {
+        console.log("stopListening called")
         if (listening){
             listening = false;
             sock.send(JSON.stringify({close: 1}));
