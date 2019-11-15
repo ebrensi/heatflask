@@ -826,7 +826,7 @@ function renderLayers() {
         if (!A) {
             // stopListening();
             doneRendering("Finished.");
-            transactionID = null;
+            genID = null;
             return;
         }
 
