@@ -1601,7 +1601,7 @@ class Activities(object):
                 yield a
         
         yield ""
-        Utility.del_genID(genID)
+        # Utility.del_genID(genID)
 
 
 class EventLogger(object):
