@@ -1152,7 +1152,7 @@ class StravaClient(object):
 
             url = query_base_url + "&page={}".format(pagenum)
             
-            log.debug("{} requesting page {}".format(self.user, pagenum))
+            # log.debug("{} requesting page {}".format(self.user, pagenum))
             start = datetime.utcnow()
 
             try:
@@ -1182,8 +1182,8 @@ class StravaClient(object):
                 
             # self.download_times[pagenum] = (size, elapsed)
 
-            log.debug("{} index page {} in {} secs: count={}".format(
-                self.user, pagenum, elapsed, size))
+            # log.debug("{} index page {} in {} secs: count={}".format(
+            #     self.user, pagenum, elapsed, size))
 
             return pagenum, activities
 
@@ -1529,7 +1529,7 @@ class Activities(object):
         _id = activity["_id"]
 
         start = datetime.utcnow()
-        log.debug("request import {}".format(_id))
+        # log.debug("request import {}".format(_id))
 
         try:
             streams = client.get_activity_streams(
@@ -1569,7 +1569,7 @@ class Activities(object):
                 
         except UserWarning as e:
             Index.update(_id, EMPTY, replace=True)
-            log.debug("activity %s EMPTY: %s", _id, e)
+            # log.debug("activity %s EMPTY: %s", _id, e)
             return
         except Exception:
             log.exception("error importing activity %s", _id)
@@ -1583,8 +1583,8 @@ class Activities(object):
             except Exception:
                 pass
         
-        elapsed = (datetime.utcnow() - start).total_seconds()
-        log.debug("import {} took {} secs".format(_id, elapsed))
+        # elapsed = (datetime.utcnow() - start).total_seconds()
+        # log.debug("import {} took {} secs".format(_id, elapsed))
 
         return activity
 
