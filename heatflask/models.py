@@ -486,7 +486,7 @@ class Users(UserMixin, db_sql.Model):
                 gen, to_delete = Index.query(
                     user=self,
                     activity_ids=activity_ids,
-                    limit=limit + 10 if limit else 0,
+                    limit=limit if limit else 0,
                     after=after, before=before,
                     exclude_ids=exclude_ids,
                     ids_only=only_ids,
@@ -517,7 +517,7 @@ class Users(UserMixin, db_sql.Model):
                         return
 
                     gen = self.build_index(
-                        limit=limit + 10 if limit else 0,
+                        limit=limit if limit else 0,
                         after=after,
                         before=before,
                         activitiy_ids=activity_ids,
@@ -580,9 +580,9 @@ class Users(UserMixin, db_sql.Model):
             else:
                 yield A
 
-            num_fetched += 1
-            if limit and num_fetched >= limit:
-                break
+            # num_fetched += 1
+            # if limit and num_fetched >= limit:
+            #     break
                 
         if not streams:
             return
@@ -1152,7 +1152,7 @@ class StravaClient(object):
 
             url = query_base_url + "&page={}".format(pagenum)
             
-            # log.debug("{} requesting page {}".format(self.user, pagenum))
+            log.debug("{} requesting page {}".format(self.user, pagenum))
             start = datetime.utcnow()
 
             try:
@@ -1528,8 +1528,8 @@ class Activities(object):
 
         _id = activity["_id"]
 
-        # start = datetime.utcnow()
-        # log.debug("request import {}".format(_id))
+        start = datetime.utcnow()
+        log.debug("request import {}".format(_id))
 
         try:
             streams = client.get_activity_streams(
@@ -1539,6 +1539,7 @@ class Activities(object):
             )
 
             if not streams:
+                log.debug(activity)
                 raise UserWarning("no streams")
 
             imported_streams = {name: streams[name].data for name in streams}
@@ -1547,6 +1548,7 @@ class Activities(object):
             try:
                 latlng = imported_streams.pop("latlng")
             except KeyError:
+                log.debug(activity)
                 raise UserWarning("no stream 'latlng'")
             
             imported_streams["polyline"] = polyline.encode(latlng)
@@ -1558,6 +1560,7 @@ class Activities(object):
                     assert len(stream) > 2
                 except Exception:
                     if s in ESSENTIAL_STREAMS:
+                        log.debug(activity)
                         raise UserWarning("no stream '{}'".format(s))
                     else:
                         continue
@@ -1580,8 +1583,8 @@ class Activities(object):
             except Exception:
                 pass
         
-        # elapsed = (datetime.utcnow() - start).total_seconds()
-        # log.debug("import {} took {} secs".format(_id, elapsed))
+        elapsed = (datetime.utcnow() - start).total_seconds()
+        log.debug("import {} took {} secs".format(_id, elapsed))
 
         return activity
 
@@ -1601,7 +1604,7 @@ class Activities(object):
                 yield a
         
         yield ""
-        # Utility.del_genID(genID)
+        Utility.del_genID(genID)
 
 
 class EventLogger(object):
