@@ -823,7 +823,7 @@ class Index(object):
                 query["after"] = Utility.to_datetime(query["after"])
 
         count = 0
-        mongo_requests = []
+        mongo_requests = set()
         user.indexing(True)
 
         yield_activities = yielding
@@ -831,7 +831,7 @@ class Index(object):
         start_time = datetime.utcnow()
         log.debug("building activity index for {}".format(user))
 
-        activity_ids = out_query.get("activity_ids")
+        activity_ids = set(out_query.get("activity_ids"))
         after = out_query.get("after")
         before = out_query.get("before")
         limit = out_query.get("limit")
@@ -859,38 +859,37 @@ class Index(object):
                 if not d:
                     continue
                 
-                d["ts"] = start_time
+                if yielding:
 
-                # log.debug("{}. {}".format(count, d))
-                mongo_requests.append(
+                    count += 1
+                    if count % 5:
+                        yield {"idx": count}
+
+                    if yield_activities:
+
+                        # cases for yielding
+                        if activity_ids and d["_id"] in activity_ids:
+                            yield d
+                            activity_ids.discard(d["_id"])
+                            if not activity_ids:
+                                yield_activities = False
+                                yield {"stop_rendering": 1}
+
+                        elif limit and count <= limit:
+                            yield d
+
+                        elif check_dates:
+                            ts_local = Utility.to_datetime(d["ts_local"])
+                            if in_date_range(ts_local):
+                                yield d
+
+                # put d in storage
+                d["ts"] = start_time
+                d["ts_UTC"] = Utility.to_datetime(d["ts_UTC"])
+
+                mongo_requests.add(
                     pymongo.ReplaceOne({"_id": d["_id"]}, d, upsert=True)
                 )
-
-                count += 1
-
-                if yielding and count % 5:
-                    yield {"idx": count}
-
-                if not yield_activities:
-                    continue
-
-                if limit and count > limit:
-                    continue
-
-                # TODO: fix this
-                if check_dates and not in_date_range(d["ts_local"]):
-                    continue
-
-                # Now we have eliminated all reasons not to yield
-                #  this activity
-                yield d
-
-                if activity_ids and d["_id"] in activity_ids:
-                    activity_ids.remove(d["_id"])
-                    if not activity_ids:
-                        yield_activities = False
-                        yield {"stop_rendering": 1}
-                    continue
                   
             if mongo_requests:
                 cls.db.bulk_write(
@@ -904,7 +903,7 @@ class Index(object):
         else:
             elapsed = datetime.utcnow() - start_time
             msg = (
-                "{}'s index built in {} sec. count={}"
+                "{} index built in {} sec. count={}"
                 .format(user.id, round(elapsed.total_seconds(), 3), count)
             )
 
