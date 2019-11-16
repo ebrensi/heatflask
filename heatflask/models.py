@@ -390,8 +390,6 @@ class Users(UserMixin, db_sql.Model):
                          exclude_ids=[],
                          limit=None,
                          after=None, before=None,
-                         only_ids=False,
-                         summaries=True,
                          streams=False,
                          owner_id=False,
                          build_index=True,
@@ -420,59 +418,30 @@ class Users(UserMixin, db_sql.Model):
                 yield {"error": "Invalid Dates"}
                 return
 
-        if (summaries or limit or only_ids or after or before):
+        if self.index_count():
 
-            if self.index_count():
+            gen = Index.query(
+                user=self,
+                activity_ids=activity_ids,
+                limit=limit,
+                after=after, before=before,
+                exclude_ids=exclude_ids,
+                update_ts=update_index_ts
+            )
 
-                gen, to_delete = Index.query(
-                    user=self,
-                    activity_ids=activity_ids,
-                    limit=limit if limit else 0,
-                    after=after, before=before,
-                    exclude_ids=exclude_ids,
-                    ids_only=only_ids,
-                    update_ts=update_index_ts
-                )
-
-                if cancel_key and not redis.exists(cancel_key):
-                    log.debug("activities query for %s cancelled", self)
-                    return
-
-                if only_ids:
-                    for id in gen:
-                        yield id
-                    return
-
-                if to_delete:
-                    yield {"delete": to_delete}
-
-            elif build_index:
-                # There is no activity index and we are to build one
-                if only_ids:
-                    yield {"error": "{} has no index".format(self)}
-                    return
-
-                else:
-                    if OFFLINE:
-                        yield {"error": "No Network Connection"}
-                        return
-
-                    gen = self.build_index(
-                        limit=limit,
-                        after=after,
-                        before=before,
-                        activitiy_ids=activity_ids,
-                        cancel_key=cancel_key
-                    )
-            else:
-                # Finally, if there is no index and rather than building one
-                # we are requested to get the summary data directily from Strava
-                log.error(
-                    "{}: attempt to get summaries from Strava without build"
-                    .format(self))
-
-                yield{"error": "Sorry. not gonna do it."}
+        elif build_index:
+            # There is no activity index and we are to build one
+            if OFFLINE:
+                yield {"error": "No Network Connection"}
                 return
+
+            gen = self.build_index(
+                limit=limit,
+                after=after,
+                before=before,
+                activitiy_ids=activity_ids,
+                cancel_key=cancel_key
+            )
 
         DB_TTL = STORE_INDEX_TIMEOUT
         NOW = datetime.utcnow()
@@ -487,7 +456,6 @@ class Users(UserMixin, db_sql.Model):
         num_fetched = 0
 
         for A in gen:
-            # log.debug(A)
             if "_id" not in A:
                 # This is not an activity. It is
                 #  an error message or something
@@ -497,18 +465,16 @@ class Users(UserMixin, db_sql.Model):
             elif "empty" in A:
                 continue
 
-            if summaries:
-                A["ts_local"] = str(A["ts_local"])
-                A["ts_UTC"] = str(A["ts_UTC"])
-                if "ts" in A:
-                    ts = A["ts"]
-                    try:
-                        delta = (NOW - ts).seconds if NOW >= ts else 0
-                        A["ts"] = DB_TTL - delta
-                        # log.debug("delta: {}, remain: {}".format(delta,  A["ts"]))
-                    except Exception as e:
-                        log.exception(e)
-                        del A["ts"]
+            A["ts_local"] = str(A["ts_local"])
+            if "ts" in A:
+                ts = A["ts"]
+                try:
+                    delta = (NOW - ts).seconds if NOW >= ts else 0
+                    A["ts"] = DB_TTL - delta
+                    # log.debug("delta: {}, remain: {}".format(delta,  A["ts"]))
+                except Exception as e:
+                    log.exception(e)
+                    del A["ts"]
                         
             if owner_id:
                 A.update({"owner": self.id, "profile": self.profile})
@@ -798,15 +764,15 @@ class Index(object):
                 **fetch_query
             )
 
-            ts_local = None
             for d in summaries:
                 if not d:
                     continue
                 
                 d["ts"] = start_time
+                ts_local = None
 
                 if yielding:
-
+                    d2 = d.copy()
                     count += 1
                     if count % 5:
                         yield {"idx": count}
@@ -815,24 +781,24 @@ class Index(object):
                         # cases for outputting this activity summary
                         try:
                             if activity_ids:
-                                if d["_id"] in activity_ids:
-                                    yield d
-                                    activity_ids.discard(d["_id"])
+                                if d2["_id"] in activity_ids:
+                                    yield d2
+                                    activity_ids.discard(d2["_id"])
                                     if not activity_ids:
                                         raise StopIteration
 
                             elif limit:
                                 if count <= limit:
-                                    yield d
+                                    yield d2
                                 else:
                                     raise StopIteration
 
                             elif check_dates:
-                                ts_local = Utility.to_datetime(d["ts_local"])
+                                ts_local = Utility.to_datetime(d2["ts_local"])
                                 if in_date_range(ts_local):
-                                    yield d
+                                    yield d2
                             else:
-                                yield d
+                                yield d2
 
                         except StopIteration:
                             yield_activities = False
@@ -911,7 +877,6 @@ class Index(object):
               exclude_ids=None,
               after=None, before=None,
               limit=0,
-              ids_only=False,
               update_ts=True
               ):
 
@@ -921,7 +886,8 @@ class Index(object):
         if exclude_ids:
             exclude_ids = set(int(id) for id in exclude_ids)
 
-        limit = int(limit)
+        limit = int(limit) if limit else 0
+
         query = {}
         out_fields = None
 
@@ -967,6 +933,8 @@ class Index(object):
             to_delete = list(exclude_ids - query_ids)
             to_fetch = list(query_ids - exclude_ids)
 
+            yield dict(delete=to_delete, count=len(to_fetch))
+
             query["_id"] = {"$in": to_fetch}
 
             # log.debug("query ids: {}\nexclude: {}\nto_fetch: {}\ndelete: {}"
@@ -975,56 +943,39 @@ class Index(object):
             #         sorted(exclude_ids),
             #         sorted(to_fetch),
             #         sorted(to_delete)))
+        else:
+            yield dict(count=cls.db.count_documents(query))
 
-            if ids_only:
-                return (to_fetch, to_delete)
-
-        # log.debug(query)
-
-        if ids_only:
-            out_fields = {"_id": True}
-
+        if not limit:
+            limit = 0
         try:
             if out_fields:
                 cursor = cls.db.find(query, out_fields)
             else:
                 cursor = cls.db.find(query)
+
             cursor = cursor.sort("ts_UTC", pymongo.DESCENDING).limit(limit)
 
         except Exception as e:
-            log.error(
-                "error accessing mongodb Index collection:\n{}"
-                .format(e)
-            )
-            return []
+            log.exception(e)
+            return
 
-        def iterator(cur):
-            ids = []
-            yield {"count": cur.count(True)}
+        ids = set()
 
-            for a in cur:
-                a_id = a["_id"]
-                if update_ts:
-                    ids.append(a_id)
-
-                if ids_only:
-                    yield a_id
-                else:
-                    yield a
-
+        for a in cursor:
             if update_ts:
-                try:
-                    result = cls.db.update_many(
-                        {"_id": {"$in": ids}}, 
-                        {"$set": {"ts": datetime.utcnow()}}
-                    )
-                except Exception as e:
-                    log.error(
-                        "Could not update ts for {}: {}"
-                        .format(user, e)
-                    )
+                ids.add(a["_id"])
+            yield a
 
-        return iterator(cursor), to_delete
+        if update_ts:
+            try:
+                result = cls.db.update_many(
+                    {"_id": {"$in": list(ids)}},
+                    {"$set": {"ts": datetime.utcnow()}}
+                )
+            except Exception as e:
+                log.exception(e)
+                
 
 class StravaClient(object):
     # Stravalib includes a lot of unnecessary overhead
