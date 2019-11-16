@@ -14,16 +14,12 @@ import uuid
 import gevent
 from gevent.pool import Pool
 import requests
-import cPickle
 import msgpack
 from bson import ObjectId
 from bson.binary import Binary
 from bson.json_util import dumps
 from . import mongo, db_sql, redis  # Global database clients
 from . import EPOCH
-from urllib import urlencode  #python2
-# from urllib.parse import urlencode  #python3
-
 
 CONCURRENCY = app.config["CONCURRENCY"]
 CACHE_USERS_TIMEOUT = app.config["CACHE_USERS_TIMEOUT"]
@@ -92,9 +88,6 @@ class Users(UserMixin, db_sql.Model):
         attrs = ["transient", "pending", "persistent", "deleted", "detached"]
         return [attr for attr in attrs if getattr(state, attr)]
 
-    def serialize(self):
-        return cPickle.dumps(self)
-
     def info(self):
         profile = {}
         profile.update(vars(self))
@@ -103,10 +96,6 @@ class Users(UserMixin, db_sql.Model):
             del profile["activity_index"]
         # log.debug("{}: {}".format(self, profile))
         return profile
-
-    @classmethod
-    def from_serialized(cls, p):
-        return cPickle.loads(p)
 
     def client(self, refresh=True, session=db_sql.session):
         try:
@@ -150,7 +139,6 @@ class Users(UserMixin, db_sql.Model):
                     return
 
                 session.commit()
-                self.cache()
                 self.cli = stravalib.Client(
                     access_token=new_access_info.get("access_token"),
                     rate_limiter=(lambda x=None: None)
@@ -207,30 +195,6 @@ class Users(UserMixin, db_sql.Model):
                 "access_token": access_info_string
             }
 
-    @staticmethod
-    def key(identifier):
-        return "U:{}".format(identifier)
-
-    def cache(self, identifier=None, ttl=CACHE_USERS_TIMEOUT):
-        key = self.__class__.key(identifier or self.id)
-        try:
-            del self.cli
-        except Exception:
-            pass
-
-        packed = self.serialize()
-        # log.debug(
-        #     "caching {} with key '{}' for {} sec. size={}"
-        #     .format(self, key, timeout, len(packed))
-        # )
-        return redis.setex(key, ttl, packed)
-
-    def uncache(self):
-        # log.debug("uncaching {}".format(self))
-
-        # delete from cache too.  It may be under two different keys
-        redis.delete(self.__class__.key(self.id))
-        redis.delete(self.__class__.key(self.username))
 
     def is_public(self, setting=None):
 
@@ -241,7 +205,6 @@ class Users(UserMixin, db_sql.Model):
             self.share_profile = setting
             try:
                 db_sql.session.commit()
-                self.cache()
             except Exception as e:
                 log.exception(e)
         return self.share_profile
@@ -250,7 +213,6 @@ class Users(UserMixin, db_sql.Model):
         self.dt_last_active = datetime.utcnow()
         self.app_activity_count = self.app_activity_count + 1
         session.commit()
-        self.cache()
         return self
 
     @classmethod
@@ -270,28 +232,10 @@ class Users(UserMixin, db_sql.Model):
             log.error(
                 "error adding/updating user {}: {}".format(kwargs, e))
         else:
-            if persistent_user:
-                persistent_user.cache(cache_timeout)
-                # log.info("updated {} with {}"
-                #                 .format(persistent_user, kwargs))
             return persistent_user
 
     @classmethod
     def get(cls, user_identifier, session=db_sql.session, timeout=CACHE_USERS_TIMEOUT):
-        key = cls.key(user_identifier)
-        cached = redis.get(key)
-        
-        if cached:
-            redis.expire(key, CACHE_USERS_TIMEOUT)
-            try:
-                user = cls.from_serialized(cached)
-                # log.debug(
-                #     "retrieved {} from cache with key {}".format(user, key))
-                return session.merge(user, load=False)
-            except Exception:
-                # apparently this cached user object is no good so let's
-                #  delete it
-                redis.delete(key)
 
         # Get user from db by id or username
         try:
@@ -303,14 +247,10 @@ class Users(UserMixin, db_sql.Model):
         else:
             user = cls.query.get(user_id)
 
-        if user:
-            user.cache(user_identifier, timeout)
-
         return user if user else None
 
     def delete(self, deauth=True, session=db_sql.session):
         self.delete_index()
-        self.uncache()
         if deauth:
             try:
                 self.client().deauthorize()
@@ -430,7 +370,8 @@ class Users(UserMixin, db_sql.Model):
         if status is None:
             return redis.get(key)
         elif status:
-            return redis.setex(key, 60, datetime.utcnow())
+            epoch_now = Utility.to_epoch(datetime.utcnow())
+            return redis.setex(key, 60, epoch_now)
         else:
             redis.delete(key)
 
@@ -1132,11 +1073,11 @@ class StravaClient(object):
             limit = int(limit)
 
             if before:
-                before = int((before - EPOCH).total_seconds())
+                before = Utility.to_epoch(before)
                 query_base_url += "&before={}".format(before)
         
             if after:
-                after = int((after - EPOCH).total_seconds())
+                after = Utility.to_epoch(after)
                 query_base_url += "&after={}".format(after)
 
         except Exception:
@@ -1405,7 +1346,7 @@ class Activities(object):
         
         # Batch update TTL for redis cached activity streams
         # write_pipe.execute()
-        fetched = []
+        fetched = set()
         if notcached:
             # Attempt to fetch uncached activities from MongoDB
             try:
@@ -1423,7 +1364,7 @@ class Activities(object):
 
                 # Store in redis cache
                 write_pipe.setex(notcached[id], ttl, packed)
-                fetched.append(id)
+                fetched.add(id)
 
                 yield (id, msgpack.unpackb(packed))
 
@@ -1909,12 +1850,18 @@ class Utility():
             return
         if isinstance(obj, datetime):
             return obj
+        elif isinstance(obj, int):
+            return datetime.utcfromtimestamp(obj)
         try:
             dt = dateutil.parser.parse(obj)
         except ValueError:
             return
         else:
             return dt
+
+    @staticmethod
+    def to_epoch(dt):
+        return int((dt - EPOCH).total_seconds())
 
     @staticmethod
     def set_genID(ttl=600):
