@@ -46,8 +46,8 @@ def session_scope():
     session = db_sql.session()
     try:
         yield session
-    except:
-        log.debug("could not create db_sql session")
+    except Exception as e:
+        log.exception(e)
         raise
     finally:
         session.close()
@@ -375,14 +375,14 @@ class Users(UserMixin, db_sql.Model):
         else:
             redis.delete(key)
 
-    def build_index(self, fetch_limit=0, **args):
+    def build_index(self, **args):
         if OFFLINE:
             return
 
         return Index.import_user(
             self,
             out_query=args,
-            fetch_query={"limit": fetch_limit}
+            yielding=True
         )
 
     def query_activities(self,
@@ -458,7 +458,7 @@ class Users(UserMixin, db_sql.Model):
                         return
 
                     gen = self.build_index(
-                        limit=limit if limit else 0,
+                        limit=limit,
                         after=after,
                         before=before,
                         activitiy_ids=activity_ids,
@@ -751,7 +751,7 @@ class Index(object):
     @classmethod
     def import_user(cls, user,
                     fetch_query={}, out_query={},
-                    yielding=True, cancel_key=None):
+                    yielding=False, cancel_key=None):
 
         if OFFLINE:
             yield {"error": "No network connection"}
@@ -772,7 +772,9 @@ class Index(object):
         start_time = datetime.utcnow()
         log.debug("building activity index for {}".format(user))
 
-        activity_ids = set(out_query.get("activity_ids"))
+        activity_ids = out_query.get("activity_ids")
+        if activity_ids:
+            activity_ids = set(int(aid) for aid in activity_ids)
         after = out_query.get("after")
         before = out_query.get("before")
         limit = out_query.get("limit")
@@ -796,10 +798,13 @@ class Index(object):
                 **fetch_query
             )
 
+            ts_local = None
             for d in summaries:
                 if not d:
                     continue
                 
+                d["ts"] = start_time
+
                 if yielding:
 
                     count += 1
@@ -807,26 +812,37 @@ class Index(object):
                         yield {"idx": count}
 
                     if yield_activities:
+                        # cases for outputting this activity summary
+                        try:
+                            if activity_ids:
+                                if d["_id"] in activity_ids:
+                                    yield d
+                                    activity_ids.discard(d["_id"])
+                                    if not activity_ids:
+                                        raise StopIteration
 
-                        # cases for yielding
-                        if activity_ids and d["_id"] in activity_ids:
-                            yield d
-                            activity_ids.discard(d["_id"])
-                            if not activity_ids:
-                                yield_activities = False
-                                yield {"stop_rendering": 1}
+                            elif limit:
+                                if count <= limit:
+                                    yield d
+                                else:
+                                    raise StopIteration
 
-                        elif limit and count <= limit:
-                            yield d
-
-                        elif check_dates:
-                            ts_local = Utility.to_datetime(d["ts_local"])
-                            if in_date_range(ts_local):
+                            elif check_dates:
+                                ts_local = Utility.to_datetime(d["ts_local"])
+                                if in_date_range(ts_local):
+                                    yield d
+                            else:
                                 yield d
 
+                        except StopIteration:
+                            yield_activities = False
+                            yield {"stop_rendering": 1}
+
                 # put d in storage
-                d["ts"] = start_time
-                d["ts_UTC"] = Utility.to_datetime(d["ts_UTC"])
+                if ts_local:
+                    d["ts_local"] = ts_local
+                else:
+                    d["ts_local"] = Utility.to_datetime(d["ts_local"])
 
                 mongo_requests.add(
                     pymongo.ReplaceOne({"_id": d["_id"]}, d, upsert=True)
@@ -834,13 +850,15 @@ class Index(object):
                   
             if mongo_requests:
                 cls.db.bulk_write(
-                    mongo_requests,
+                    list(mongo_requests),
                     ordered=False
                 )
         except Exception as e:
+            log.error("Error while building activity index for %s", user)
+            log.exception(e)
             if yielding:
                 yield {"error": str(e)}
-            log.exception("Error while building activity index for %s", user)
+            
         else:
             elapsed = datetime.utcnow() - start_time
             msg = (
@@ -1030,7 +1048,7 @@ class StravaClient(object):
 
     @classmethod
     def strava2doc(cls, a):
-        if ("_id" not in a) or ("start_latlng" not in a):
+        if ("id" not in a) or not a["start_latlng"]:
             return
 
         try:
@@ -1049,8 +1067,8 @@ class StravaClient(object):
                 start_latlng=a["start_latlng"],
                 bounds=Activities.bounds(a["map"]["summary_polyline"])
             )
-        except Exception:
-            log.exception()
+        except Exception as e:
+            log.exception(e)
             return
         return d
 
@@ -1059,7 +1077,7 @@ class StravaClient(object):
             "Authorization": "Bearer {}".format(self.access_token)
         }
 
-    def get_activities(self, before=None, after=None, limit=0, cancel_key=None):
+    def get_activities(self, before=None, after=None, limit=None, cancel_key=None):
         cls = self.__class__
 
         query_base_url = "{}{}?per_page={}".format(
@@ -1070,7 +1088,8 @@ class StravaClient(object):
         
         #  handle parameters
         try:
-            limit = int(limit)
+            if limit:
+                limit = int(limit)
 
             if before:
                 before = Utility.to_epoch(before)
@@ -1080,8 +1099,8 @@ class StravaClient(object):
                 after = Utility.to_epoch(after)
                 query_base_url += "&after={}".format(after)
 
-        except Exception:
-            log.exception()
+        except Exception as e:
+            log.exception(e)
             return
 
         def page_iterator():
@@ -1105,9 +1124,9 @@ class StravaClient(object):
                 response = requests.get(url, headers=self.headers())
                 activities = response.json()
 
-            except Exception:
-                log.exception()
-                activities = {}
+            except Exception as e:
+                log.exception(e)
+                activities = []
 
             size = len(activities)
             if size < cls.PAGE_SIZE:
@@ -1169,6 +1188,8 @@ class StravaClient(object):
 
                 num_pages_processed += 1
 
+        except StopIteration:
+            pass
         except UserWarning:
             # TODO: find a more graceful way to do this
             log.exception("%s", activities)
@@ -1394,13 +1415,14 @@ class Activities(object):
             now = datetime.utcnow()
             try:
                 mongo_result = cls.db.update_many(
-                    {"_id": {"$in": fetched}},
+                    {"_id": {"$in": list(fetched)}},
                     {"$set": {"ts": now}}
                 )
             except Exception as e:
                 log.debug(
-                        "failed to update activities in mongoDB: {}"
-                        .format(e))
+                    "failed to update activities in mongoDB: {}"
+                    .format(e)
+                )
 
             # elapsed = (datetime.utcnow() - now).total_seconds()
             # log.debug(
@@ -1497,8 +1519,9 @@ class Activities(object):
             Index.update(_id, EMPTY, replace=True)
             # log.debug("activity %s EMPTY: %s", _id, e)
             return
-        except Exception:
-            log.exception("error importing activity %s", _id)
+        except Exception as e:
+            log.error("error importing activity %s", _id)
+            log.exception(e)
             return
 
         cls.set(_id, imported_streams, timeout)

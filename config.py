@@ -56,9 +56,6 @@ class Config(object):
     # How long we Redis-cache Activity stream data
     CACHE_ACTIVITIES_TIMEOUT = 8 * 60 * 60  # 8 hours
 
-    # How long we Redis-cache a User object
-    CACHE_USERS_TIMEOUT = 1 * 24 * 60 * 60  # 1 day
-
     CACHE_IP_INFO_TIMEOUT = 1 * 24 * 60 * 60  # 1 day
 
     # How long we will allow data requests from the same identified client
