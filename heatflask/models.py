@@ -14,16 +14,12 @@ import uuid
 import gevent
 from gevent.pool import Pool
 import requests
-import cPickle
 import msgpack
 from bson import ObjectId
 from bson.binary import Binary
 from bson.json_util import dumps
 from . import mongo, db_sql, redis  # Global database clients
 from . import EPOCH
-from urllib import urlencode  #python2
-# from urllib.parse import urlencode  #python3
-
 
 CONCURRENCY = app.config["CONCURRENCY"]
 CACHE_USERS_TIMEOUT = app.config["CACHE_USERS_TIMEOUT"]
@@ -50,8 +46,8 @@ def session_scope():
     session = db_sql.session()
     try:
         yield session
-    except:
-        log.debug("could not create db_sql session")
+    except Exception as e:
+        log.exception(e)
         raise
     finally:
         session.close()
@@ -92,9 +88,6 @@ class Users(UserMixin, db_sql.Model):
         attrs = ["transient", "pending", "persistent", "deleted", "detached"]
         return [attr for attr in attrs if getattr(state, attr)]
 
-    def serialize(self):
-        return cPickle.dumps(self)
-
     def info(self):
         profile = {}
         profile.update(vars(self))
@@ -103,10 +96,6 @@ class Users(UserMixin, db_sql.Model):
             del profile["activity_index"]
         # log.debug("{}: {}".format(self, profile))
         return profile
-
-    @classmethod
-    def from_serialized(cls, p):
-        return cPickle.loads(p)
 
     def client(self, refresh=True, session=db_sql.session):
         try:
@@ -150,7 +139,6 @@ class Users(UserMixin, db_sql.Model):
                     return
 
                 session.commit()
-                self.cache()
                 self.cli = stravalib.Client(
                     access_token=new_access_info.get("access_token"),
                     rate_limiter=(lambda x=None: None)
@@ -207,30 +195,6 @@ class Users(UserMixin, db_sql.Model):
                 "access_token": access_info_string
             }
 
-    @staticmethod
-    def key(identifier):
-        return "U:{}".format(identifier)
-
-    def cache(self, identifier=None, ttl=CACHE_USERS_TIMEOUT):
-        key = self.__class__.key(identifier or self.id)
-        try:
-            del self.cli
-        except Exception:
-            pass
-
-        packed = self.serialize()
-        # log.debug(
-        #     "caching {} with key '{}' for {} sec. size={}"
-        #     .format(self, key, timeout, len(packed))
-        # )
-        return redis.setex(key, ttl, packed)
-
-    def uncache(self):
-        # log.debug("uncaching {}".format(self))
-
-        # delete from cache too.  It may be under two different keys
-        redis.delete(self.__class__.key(self.id))
-        redis.delete(self.__class__.key(self.username))
 
     def is_public(self, setting=None):
 
@@ -241,7 +205,6 @@ class Users(UserMixin, db_sql.Model):
             self.share_profile = setting
             try:
                 db_sql.session.commit()
-                self.cache()
             except Exception as e:
                 log.exception(e)
         return self.share_profile
@@ -250,7 +213,6 @@ class Users(UserMixin, db_sql.Model):
         self.dt_last_active = datetime.utcnow()
         self.app_activity_count = self.app_activity_count + 1
         session.commit()
-        self.cache()
         return self
 
     @classmethod
@@ -270,28 +232,10 @@ class Users(UserMixin, db_sql.Model):
             log.error(
                 "error adding/updating user {}: {}".format(kwargs, e))
         else:
-            if persistent_user:
-                persistent_user.cache(cache_timeout)
-                # log.info("updated {} with {}"
-                #                 .format(persistent_user, kwargs))
             return persistent_user
 
     @classmethod
     def get(cls, user_identifier, session=db_sql.session, timeout=CACHE_USERS_TIMEOUT):
-        key = cls.key(user_identifier)
-        cached = redis.get(key)
-        
-        if cached:
-            redis.expire(key, CACHE_USERS_TIMEOUT)
-            try:
-                user = cls.from_serialized(cached)
-                # log.debug(
-                #     "retrieved {} from cache with key {}".format(user, key))
-                return session.merge(user, load=False)
-            except Exception:
-                # apparently this cached user object is no good so let's
-                #  delete it
-                redis.delete(key)
 
         # Get user from db by id or username
         try:
@@ -303,14 +247,10 @@ class Users(UserMixin, db_sql.Model):
         else:
             user = cls.query.get(user_id)
 
-        if user:
-            user.cache(user_identifier, timeout)
-
         return user if user else None
 
     def delete(self, deauth=True, session=db_sql.session):
         self.delete_index()
-        self.uncache()
         if deauth:
             try:
                 self.client().deauthorize()
@@ -424,24 +364,25 @@ class Users(UserMixin, db_sql.Model):
         return Index.delete_user_entries(self)
 
     def indexing(self, status=None):
-        # Indicate to other processes that we are currently indexing
-        #  This should not take any longer than 30 seconds
-        key = "indexing {}".format(self.id)
+        # return or set the current state of index building
+        #  for this user
+        key = "IDX:{}".format(self.id)
         if status is None:
-            return redis.get(key) == "True"
-        elif status:
-            return redis.setex(key, 60, str(status))
+            return redis.get(key)
+        
+        elif status is False:
+            return redis.delete(key)
         else:
-            redis.delete(key)
+            return redis.setex(key, 60, status)
 
-    def build_index(self, fetch_limit=0, **args):
+    def build_index(self, **args):
         if OFFLINE:
             return
 
         return Index.import_user(
             self,
             out_query=args,
-            fetch_query={"limit": fetch_limit}
+            yielding=True
         )
 
     def query_activities(self,
@@ -449,22 +390,16 @@ class Users(UserMixin, db_sql.Model):
                          exclude_ids=[],
                          limit=None,
                          after=None, before=None,
-                         only_ids=False,
-                         summaries=True,
                          streams=False,
                          owner_id=False,
-                         build_index=True,
                          update_index_ts=True,
                          cache_timeout=CACHE_ACTIVITIES_TIMEOUT,
                          cancel_key=None,
                          **kwargs):
 
-        if self.indexing():
-            yield {
-                "error": ("Building activity index for {}...<br>Please try again in a few seconds.<br>"
-                            .format(self.id))   
-            }
-            return
+        while self.indexing():
+            yield dict(idx=self.indexing())
+            gevent.sleep(0.5)
 
         # convert date strings to datetimes, if applicable
         if before or after:
@@ -479,59 +414,34 @@ class Users(UserMixin, db_sql.Model):
                 yield {"error": "Invalid Dates"}
                 return
 
-        if (summaries or limit or only_ids or after or before):
+        client_query = dict(
+            limit=limit,
+            after=after,
+            before=before,
+            activitiy_ids=activity_ids
+        )
 
-            if self.index_count():
+        if self.index_count():
 
-                gen, to_delete = Index.query(
-                    user=self,
-                    activity_ids=activity_ids,
-                    limit=limit if limit else 0,
-                    after=after, before=before,
-                    exclude_ids=exclude_ids,
-                    ids_only=only_ids,
-                    update_ts=update_index_ts
-                )
+            gen = Index.query(
+                user=self,
+                exclude_ids=exclude_ids,
+                update_ts=update_index_ts,
+                **client_query
+            )
 
-                if cancel_key and not redis.exists(cancel_key):
-                    log.debug("activities query for %s cancelled", self)
-                    return
-
-                if only_ids:
-                    for id in gen:
-                        yield id
-                    return
-
-                if to_delete:
-                    yield {"delete": to_delete}
-
-            elif build_index:
-                # There is no activity index and we are to build one
-                if only_ids:
-                    yield {"error": "{} has no index".format(self)}
-                    return
-
-                else:
-                    if OFFLINE:
-                        yield {"error": "No Network Connection"}
-                        return
-
-                    gen = self.build_index(
-                        limit=limit if limit else 0,
-                        after=after,
-                        before=before,
-                        activitiy_ids=activity_ids,
-                        cancel_key=cancel_key
-                    )
-            else:
-                # Finally, if there is no index and rather than building one
-                # we are requested to get the summary data directily from Strava
-                log.error(
-                    "{}: attempt to get summaries from Strava without build"
-                    .format(self))
-
-                yield{"error": "Sorry. not gonna do it."}
+        else:
+            # There is no activity index and we are to build one
+            if OFFLINE:
+                yield {"error": "Cannot build index for {}. No Network Connection".format(self)}
                 return
+
+            gen = Index.import_user(
+                self,
+                out_query=client_query,
+                yielding=True,
+                cancel_key=cancel_key
+            )
 
         DB_TTL = STORE_INDEX_TIMEOUT
         NOW = datetime.utcnow()
@@ -546,7 +456,6 @@ class Users(UserMixin, db_sql.Model):
         num_fetched = 0
 
         for A in gen:
-            # log.debug(A)
             if "_id" not in A:
                 # This is not an activity. It is
                 #  an error message or something
@@ -556,18 +465,16 @@ class Users(UserMixin, db_sql.Model):
             elif "empty" in A:
                 continue
 
-            if summaries:
-                A["ts_local"] = str(A["ts_local"])
-                A["ts_UTC"] = str(A["ts_UTC"])
-                if "ts" in A:
-                    ts = A["ts"]
-                    try:
-                        delta = (NOW - ts).seconds if NOW >= ts else 0
-                        A["ts"] = DB_TTL - delta
-                        # log.debug("delta: {}, remain: {}".format(delta,  A["ts"]))
-                    except Exception as e:
-                        log.exception(e)
-                        del A["ts"]
+            A["ts_local"] = str(A["ts_local"])
+            if "ts" in A:
+                ts = A["ts"]
+                try:
+                    delta = (NOW - ts).seconds if NOW >= ts else 0
+                    A["ts"] = DB_TTL - delta
+                    # log.debug("delta: {}, remain: {}".format(delta,  A["ts"]))
+                except Exception as e:
+                    log.exception(e)
+                    del A["ts"]
                         
             if owner_id:
                 A.update({"owner": self.id, "profile": self.profile})
@@ -736,25 +643,6 @@ class Index(object):
             # log.debug("no need to update TTL")
             pass
 
-    @classmethod
-    def strava2doc2(cls, a):
-        polyline = a["map"]["summary_polyline"]
-        d = {
-            "_id": a["id"],
-            "user_id": a["athlete"]["id"],
-            "name": a["name"],
-            "type": a["type"],
-            "ts_UTC": a["start_date"],
-            "ts_local": a["start_date_local"],
-            "ts": datetime.utcnow(),
-            "total_distance": float(a["distance"]),
-            "elapsed_time": int(a["elapsed_time"]),
-            "average_speed": float(a["average_speed"]),
-            "start_latlng": a["start_latlng"] if "start_latlng" in a else None,
-            "bounds": Activities.bounds(polyline) if polyline else None
-        }
-        return d
-
     def strava2doc(cls, a):
         polyline = a.map.summary_polyline
         d = {
@@ -827,7 +715,9 @@ class Index(object):
         return activity_count
 
     @classmethod
-    def import_user(cls, user, fetch_query={"limit": 10}, out_query={}, cancel_key=None):
+    def import_user(cls, user,
+                    fetch_query={}, out_query={},
+                    yielding=False, cancel_key=None):
 
         if OFFLINE:
             yield {"error": "No network connection"}
@@ -839,22 +729,32 @@ class Index(object):
             if "after" in query:
                 query["after"] = Utility.to_datetime(query["after"])
 
-        count = 0
-        mongo_requests = []
-        rendering = True
-        user.indexing(True)
-        start_time = datetime.utcnow()
-        log.debug("building activity index for {}".format(user))
-
         activity_ids = out_query.get("activity_ids")
+        if activity_ids:
+            activity_ids = set(int(aid) for aid in activity_ids)
         after = out_query.get("after")
         before = out_query.get("before")
         limit = out_query.get("limit")
 
-        def in_date_range(dt):
-            if not (before or after):
-                return
+        activities_ordered = False
+        if limit:
+            fetch_query["ordered"] = True
+            activities_ordered = True
 
+        check_dates = (before or after)
+        
+        count = 0
+        in_range = False
+        mongo_requests = set()
+        user.indexing(0)
+
+        yield_activities = yielding
+
+        start_time = datetime.utcnow()
+        log.debug("building activity index for {}".format(user))
+
+        def in_date_range(dt):
+            # log.debug(dict(dt=dt, after=after, before=before))
             t1 = (not after) or (after <= dt)
             t2 = (not before) or (dt <= before)
             result = (t1 and t2)
@@ -867,78 +767,101 @@ class Index(object):
                 raise Exception("Invalid access_token. {} is not authenticated.".format(user))
 
             summaries = client.get_activities(
-                cancel_key=cancel_key,
                 **fetch_query
             )
 
-            for a in summaries:
+            for d in summaries:
+                if cancel_key and not redis.exists(cancel_key):
+                    #  we will try to continue building index even if
+                    #  the client is no longer there
+                    yielding = False
+                    cancel_key = None
+                    yield StopIteration
 
-                d = cls.strava2doc2(a)
-                # log.debug("{}. {}".format(count, d))
-                mongo_requests.append(
-                    pymongo.ReplaceOne({"_id": d["_id"]}, d, upsert=True)
-                )
-                count += 1
-
-                if count % 5:
-                    # only output count every 5 items to cut down on data
-                    yield {"idx": count}
-                    # log.debug("put index {}".format(count))
-
-                if not rendering:
+                if not d:
                     continue
+                
+                d["ts"] = start_time
+                ts_local = None
 
-                if ((activity_ids and (d["_id"] in activity_ids)) or
-                     (limit and (count <= limit)) or
-                        in_date_range(d["ts_local"])):
+                if yielding:
+                    d2 = d.copy()
+                    count += 1
+                    if count % 5:
+                        user.indexing(count)
+                        yield {"idx": count}
 
-                    d2 = dict(d)
-                    d2["ts_local"] = str(d2["ts_local"])
-                    d2["ts_UTC"] = str(d2["ts_UTC"])
+                    if yield_activities:
+                        # cases for outputting this activity summary
+                        try:
+                            if activity_ids:
+                                if d2["_id"] in activity_ids:
+                                    yield d2
+                                    activity_ids.discard(d2["_id"])
+                                    if not activity_ids:
+                                        raise StopIteration
+                            
+                            elif limit:
+                                if count <= limit:
+                                    yield d2
+                                else:
+                                    raise StopIteration
 
-                    yield d2
+                            elif check_dates:
+                                ts_local = Utility.to_datetime(d2["ts_local"])
+                                if in_date_range(ts_local):
+                                    yield d2
+                                    
+                                    if activities_ordered:
+                                        in_range = True
 
-                    if activity_ids:
-                        activity_ids.remove(d["_id"])
-                        if not activity_ids:
-                            rendering = False
+                                elif in_range:
+                                    # the current activity's date was in range
+                                    # but is no longer. (and are in order)
+                                    # so we can safely say there will not be any more
+                                    # activities in range
+                                    raise StopIteration
+
+                            else:
+                                yield d2
+
+                        except StopIteration:
+                            log.debug("requesting stop rendering")
+                            yield_activities = False
                             yield {"stop_rendering": 1}
 
-                if ((limit and count >= limit) or
-                        (after and (d["ts_local"] < after))):
-                    rendering = False
-                    yield {"stop_rendering": 1}
-                  
-            if not mongo_requests:
-                EventLogger.new_event(
-                    msg="no activities for {}".format(user.id)
-                )
-                result = []
+                # put d in storage
+                if ts_local:
+                    d["ts_local"] = ts_local
+                else:
+                    d["ts_local"] = Utility.to_datetime(d["ts_local"])
 
-                yield {"error": "No activities!"}
-            
-            else:
-                result = cls.db.bulk_write(
-                    mongo_requests,
+                mongo_requests.add(
+                    pymongo.ReplaceOne({"_id": d["_id"]}, d, upsert=True)
+                )
+                  
+            if mongo_requests:
+                cls.db.bulk_write(
+                    list(mongo_requests),
                     ordered=False
                 )
         except Exception as e:
-            yield {"error": str(e)}
-
-            log.error(
-                "Error while building activity index for {}".format(user))
+            log.error("Error while building activity index for %s", user)
             log.exception(e)
+            if yielding:
+                yield {"error": str(e)}
+            
         else:
             elapsed = datetime.utcnow() - start_time
             msg = (
-                "{}'s index built in {} sec. count={}"
+                "{} index built in {} sec. count={}"
                 .format(user.id, round(elapsed.total_seconds(), 3), count)
             )
 
             log.debug(msg)
             EventLogger.new_event(msg=msg)
-            yield {"msg": "done indexing {} activities.".format(count)}
-        
+            if yielding:
+                yield {"msg": "done indexing {} activities.".format(count)}
         finally:
             user.indexing(False)
 
@@ -980,7 +903,6 @@ class Index(object):
               exclude_ids=None,
               after=None, before=None,
               limit=0,
-              ids_only=False,
               update_ts=True
               ):
 
@@ -990,7 +912,8 @@ class Index(object):
         if exclude_ids:
             exclude_ids = set(int(id) for id in exclude_ids)
 
-        limit = int(limit)
+        limit = int(limit) if limit else 0
+
         query = {}
         out_fields = None
 
@@ -1014,7 +937,7 @@ class Index(object):
             query["_id"] = {"$in": list(activity_ids)}
 
         to_delete = None
-
+        
         if exclude_ids:
             try:
                 result = cls.db.find(
@@ -1036,6 +959,8 @@ class Index(object):
             to_delete = list(exclude_ids - query_ids)
             to_fetch = list(query_ids - exclude_ids)
 
+            yield dict(delete=to_delete, count=len(to_fetch))
+
             query["_id"] = {"$in": to_fetch}
 
             # log.debug("query ids: {}\nexclude: {}\nto_fetch: {}\ndelete: {}"
@@ -1044,56 +969,41 @@ class Index(object):
             #         sorted(exclude_ids),
             #         sorted(to_fetch),
             #         sorted(to_delete)))
+        else:
+            count = cls.db.count_documents(query)
+            log.debug(count)
+            yield dict(count=count)
 
-            if ids_only:
-                return (to_fetch, to_delete)
-
-        # log.debug(query)
-
-        if ids_only:
-            out_fields = {"_id": True}
-
+        if not limit:
+            limit = 0
         try:
             if out_fields:
                 cursor = cls.db.find(query, out_fields)
             else:
                 cursor = cls.db.find(query)
+
             cursor = cursor.sort("ts_UTC", pymongo.DESCENDING).limit(limit)
 
         except Exception as e:
-            log.error(
-                "error accessing mongodb Index collection:\n{}"
-                .format(e)
-            )
-            return []
+            log.exception(e)
+            return
 
-        def iterator(cur):
-            ids = []
-            yield {"count": cur.count(True)}
+        ids = set()
 
-            for a in cur:
-                a_id = a["_id"]
-                if update_ts:
-                    ids.append(a_id)
-
-                if ids_only:
-                    yield a_id
-                else:
-                    yield a
-
+        for a in cursor:
             if update_ts:
-                try:
-                    result = cls.db.update_many(
-                        {"_id": {"$in": ids}}, 
-                        {"$set": {"ts": datetime.utcnow()}}
-                    )
-                except Exception as e:
-                    log.error(
-                        "Could not update ts for {}: {}"
-                        .format(user, e)
-                    )
+                ids.add(a["_id"])
+            yield a
 
-        return iterator(cursor), to_delete
+        if update_ts:
+            try:
+                result = cls.db.update_many(
+                    {"_id": {"$in": list(ids)}},
+                    {"$set": {"ts": datetime.utcnow()}}
+                )
+            except Exception as e:
+                log.exception(e)
+                
 
 class StravaClient(object):
     # Stravalib includes a lot of unnecessary overhead
@@ -1101,87 +1011,110 @@ class StravaClient(object):
 
     PAGE_SIZE = 200
     PAGE_REQUEST_CONCURRENCY = 10
-    MAX_PAGE = 100
+    # MAX_PAGE = 100
+    MAX_PAGE = 2  # for testing
     BASE_URL = "https://www.strava.com/api/v3"
     GET_ACTIVITIES_URL = "/athlete/activities"
 
     def __init__(self, access_token=None, user=None):
+        self.user = None
+
         if access_token:
             self.access_token = access_token
-            self.user = None
         elif user:
             self.user = user
             self.access_token = user.client().access_token
             # self.access_token = None
+
+    @classmethod
+    def strava2doc(cls, a):
+        if ("id" not in a) or not a["start_latlng"]:
+            return
+
+        try:
+            d = dict(
+                _id=a["id"],
+                user_id=a["athlete"]["id"],
+                name=a["name"],
+                type=a["type"],
+                # group=a["athlete_count"],
+                ts_UTC=a["start_date"],
+                ts_local=a["start_date_local"],
+                # ts=datetime.utcnow(),
+                total_distance=float(a["distance"]),
+                elapsed_time=int(a["elapsed_time"]),
+                average_speed=float(a["average_speed"]),
+                start_latlng=a["start_latlng"],
+                bounds=Activities.bounds(a["map"]["summary_polyline"])
+            )
+        except Exception as e:
+            log.exception(e)
+            return
+        return d
 
     def headers(self):
         return {
             "Authorization": "Bearer {}".format(self.access_token)
         }
 
-    def get_activities(self, before=None, after=None, limit=0, cancel_key=None):
+    def get_activities(self, before=None, after=None, limit=None, cancel_key=None, ordered=False):
         cls = self.__class__
 
-        query_base_url = (
-            cls.BASE_URL + cls.GET_ACTIVITIES_URL +
-            "?per_page={}".format(cls.PAGE_SIZE)
+        query_base_url = "{}{}?per_page={}".format(
+            cls.BASE_URL,
+            cls.GET_ACTIVITIES_URL,
+            cls.PAGE_SIZE
         )
-
+        
         #  handle parameters
         try:
-            limit = int(limit)
+            if limit:
+                limit = int(limit)
+
+            if before:
+                before = Utility.to_epoch(before)
+                query_base_url += "&before={}".format(before)
+        
+            if after:
+                after = Utility.to_epoch(after)
+                query_base_url += "&after={}".format(after)
+
         except Exception as e:
             log.exception(e)
             return
 
-        if before:
-            before = int((before - EPOCH).total_seconds())
-            query_base_url += "&before={}".format(before)
-        
-        if after:
-            after = int((after - EPOCH).total_seconds())
-            query_base_url += "&after={}".format(after)
-
-        pagenum = 0
+        def page_iterator():
+            page = 1
+            while page <= self.final_index_page:
+                yield page
+                page += 1
 
         def request_page(pagenum):
 
-            if pagenum > self.final_page:
+            if pagenum > self.final_index_page:
                 # log.debug("{} page {} cancelled".format(self.user, pagenum))
                 return pagenum, None
 
             url = query_base_url + "&page={}".format(pagenum)
             
             # log.debug("{} requesting page {}".format(self.user, pagenum))
-            start = datetime.utcnow()
+            # start = datetime.utcnow()
 
             try:
                 response = requests.get(url, headers=self.headers())
-                
-                if response.status_code in [204]:
-                    raise StopIteration
-
                 activities = response.json()
 
-                if "errors" in activities:
-                    log.debug(activities)
-                    return pagenum, "invalid"
-
             except Exception as e:
-                log.error(e)
-                self.final_page = pagenum
-                return pagenum, None
+                log.exception(e)
+                activities = []
 
             size = len(activities)
             if size < cls.PAGE_SIZE:
                 #  if this page has fewer than PAGE_SIZE entries
-                #  then there cannot be any higher pages
-                self.final_page = pagenum
+                #  then there cannot be any further pages
+                self.final_index_page = min(self.final_index_page, pagenum)
 
-            elapsed = (datetime.utcnow() - start).total_seconds()
-                
-            # self.download_times[pagenum] = (size, elapsed)
-
+            # elapsed = (datetime.utcnow() - start).total_seconds()
             # log.debug("{} index page {} in {} secs: count={}".format(
             #     self.user, pagenum, elapsed, size))
 
@@ -1192,21 +1125,13 @@ class StravaClient(object):
         num_activities_retrieved = 0
         num_pages_processed = 0
 
-        self.download_times = {}
-        self.final_page = cls.MAX_PAGE
-
-        def page_iterator():
-            page = 1
-            while page <= self.final_page:
-                yield page
-                page += 1
+        self.final_index_page = cls.MAX_PAGE
 
         # imap_unordered gives a little better performance if order
         #   of results doesn't matter, which is the case if we aren't
         #   limited to the first n elements.  
-        mapper = pool.imap if limit else pool.imap_unordered
+        mapper = pool.imap if (limit or ordered) else pool.imap_unordered
 
-        # mapper = pool.imap
         jobs = mapper(
             request_page,
             page_iterator(),
@@ -1214,43 +1139,45 @@ class StravaClient(object):
         )
 
         try:
-            while num_pages_processed <= self.final_page:
+            while num_pages_processed <= self.final_index_page:
                 pagenum, activities = next(jobs)
 
                 if not activities:
                     continue
 
-                if activities == "invalid":
-                    self.user.delete()
-                    break
+                if "errors" in activities:
+                    raise UserWarning("Strava error")
                    
                 num = len(activities)
 
                 if limit and (num + num_activities_retrieved > limit):
                     # make sure no more requests are made
                     # log.debug("no more pages after this")
-                    self.final_page = pagenum
+                    self.final_index_page = pagenum
 
                 for a in activities:
-                    if "start_latlng" in a:
-                        yield a
-
-                        num_activities_retrieved += 1
-                        if limit and (num_activities_retrieved >= limit):
-                            raise StopIteration
-
-                    if cancel_key and not redis.exist(cancel_key):
+                    if cancel_key and not redis.exists(cancel_key):
                         log.debug("%s get_actvities cancelled", self.user)
-                        raise StopIteration
+                        break
+
+                    yield cls.strava2doc(a)
+
+                    num_activities_retrieved += 1
+                    if limit and (num_activities_retrieved >= limit):
+                        break
 
                 num_pages_processed += 1
-                    
+
         except StopIteration:
             pass
+        except UserWarning:
+            # TODO: find a more graceful way to do this
+            log.exception("%s", activities)
+            self.user.delete()
         except Exception as e:
             log.exception(e)
         finally:
-            self.final_page = pagenum
+            self.final_index_page = min(pagenum, self.final_index_page)
             pool.kill()
 
 #  Activities class is only a proxy to underlying data structures.
@@ -1420,7 +1347,7 @@ class Activities(object):
         
         # Batch update TTL for redis cached activity streams
         # write_pipe.execute()
-        fetched = []
+        fetched = set()
         if notcached:
             # Attempt to fetch uncached activities from MongoDB
             try:
@@ -1438,7 +1365,7 @@ class Activities(object):
 
                 # Store in redis cache
                 write_pipe.setex(notcached[id], ttl, packed)
-                fetched.append(id)
+                fetched.add(id)
 
                 yield (id, msgpack.unpackb(packed))
 
@@ -1468,13 +1395,14 @@ class Activities(object):
             now = datetime.utcnow()
             try:
                 mongo_result = cls.db.update_many(
-                    {"_id": {"$in": fetched}},
+                    {"_id": {"$in": list(fetched)}},
                     {"$set": {"ts": now}}
                 )
             except Exception as e:
                 log.debug(
-                        "failed to update activities in mongoDB: {}"
-                        .format(e))
+                    "failed to update activities in mongoDB: {}"
+                    .format(e)
+                )
 
             # elapsed = (datetime.utcnow() - now).total_seconds()
             # log.debug(
@@ -1571,8 +1499,9 @@ class Activities(object):
             Index.update(_id, EMPTY, replace=True)
             # log.debug("activity %s EMPTY: %s", _id, e)
             return
-        except Exception:
-            log.exception("error importing activity %s", _id)
+        except Exception as e:
+            log.error("error importing activity %s", _id)
+            log.exception(e)
             return
 
         cls.set(_id, imported_streams, timeout)
@@ -1585,14 +1514,10 @@ class Activities(object):
         
         # elapsed = (datetime.utcnow() - start).total_seconds()
         # log.debug("import {} took {} secs".format(_id, elapsed))
-
         return activity
 
     @classmethod
-    def query(cls, queryObj):
-        genID = Utility.set_genID()
-        yield {"genID": genID}
-        
+    def query(cls, queryObj, cancel_key=None):
         for user_id in queryObj:
             user = Users.get(user_id)
             if not user:
@@ -1600,12 +1525,11 @@ class Activities(object):
 
             query = queryObj[user_id]
             
-            for a in user.query_activities(cancel_key=genID, **query):
+            for a in user.query_activities(cancel_key=cancel_key, **query):
                 yield a
         
         yield ""
-        Utility.del_genID(genID)
-
+        
 
 class EventLogger(object):
     name = "history"
@@ -1924,12 +1848,18 @@ class Utility():
             return
         if isinstance(obj, datetime):
             return obj
+        elif isinstance(obj, int):
+            return datetime.utcfromtimestamp(obj)
         try:
-            dt = dateutil.parser.parse(obj)
+            dt = dateutil.parser.parse(obj, ignoretz=True)
         except ValueError:
             return
         else:
             return dt
+
+    @staticmethod
+    def to_epoch(dt):
+        return int((dt - EPOCH).total_seconds())
 
     @staticmethod
     def set_genID(ttl=600):
@@ -1944,3 +1874,76 @@ class Utility():
             redis.delete(genID)
             
 
+class BinaryWebsocketClient(object):
+    # WebsocketClient is a wrapper for a websocket
+    #  It attempts to gracefully handle broken connections
+    def __init__(self, websocket, ttl=60 * 60 * 24):
+        self.ws = websocket
+        self.birthday = datetime.utcnow()
+
+        # this is a the client_id for the web-page accessing this websocket
+        self.client_id = None
+        
+        bdsec = int(
+            (self.birthday - datetime.utcfromtimestamp(0))
+            .total_seconds()
+        )
+        loc = "{REMOTE_ADDR}:{REMOTE_PORT}".format(**websocket.environ)
+        
+        self.key = "WS:{}:{}".format(loc, bdsec)
+        
+        redis.setex(self.key, ttl, self.key)
+
+        self.send_key()
+
+    def __repr__(self):
+        return self.key
+
+    # We send and receive json objects (dictionaries) encoded as strings
+    def sendObj(self, obj):
+        if not self.ws:
+            return
+
+        try:
+            b = msgpack.packb(obj)
+        except Exception as e:
+            log.error(e)
+            return
+
+        try:
+            self.ws.send(b, binary=True)
+        except Exception as e:
+
+            log.exception(e)
+            self.close()
+            return
+
+        return True
+
+    def receiveObj(self):
+        try:
+            s = self.ws.receive()
+            obj = json.loads(s)
+        except TypeError:
+            return
+        except Exception as e:
+            log.exception(e)
+            return
+        else:
+            return obj
+
+    def close(self):
+        redis.delete(self.key)
+        try:
+            self.ws.close()
+        except Exception:
+            pass
+
+    def send_key(self):
+        self.sendbj(dict(wskey=self.key))
+
+
+
+
+
+        

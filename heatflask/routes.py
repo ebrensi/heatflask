@@ -27,7 +27,8 @@ from . import login_manager, redis, mongo, sockets
 
 
 from .models import (
-    Users, Activities, EventLogger, Utility, Webhooks, Index, Payments, StravaClient
+    Users, Activities, EventLogger, Utility, Webhooks, Index, Payments,
+    StravaClient, BinaryWebsocketClient
 )
 
 mongodb = mongo.db
@@ -234,7 +235,7 @@ def auth_callback():
                 .format(user.id, scope,
                         datetime.fromtimestamp(access_info.get("expires_at"))))
         else:
-            log.error("user authenication error")
+            log.error("user authentication error")
             log.exception(e)
             flash("There was a problem authorizing user")
 
@@ -248,7 +249,6 @@ def logout(username):
     user = Users.get(username)
     user_id = user.id
     username = user.username
-    current_user.uncache()
     logout_user()
     flash("user '{}' ({}) logged out"
           .format(username, user_id))
@@ -495,88 +495,53 @@ def toObj(string):
         return string
 
 
-# We send and receive json objects (dictionaries) encoded as strings
-def sendObj(ws, obj):
-    if not ws:
-        return
-
-    try:
-        b = msgpack.packb(obj)  #, use_bin_type=True)
-    except Exception as e:
-        log.error(e)
-        return
-
-    try:
-        ws.send(b, binary=True)
-    except Exception as e:
-        log.error(e)
-        try:
-            ws.close()
-        except Exception:
-            pass
-        return
-
-    return True
-
-def receiveObj(ws):
-    try:
-        s = ws.receive()
-        obj = json.loads(s)
-    except TypeError:
-        return
-    except Exception as e:
-        log.exception(e)
-        return
-    else:
-        return obj
-
-def socket_name(ws):
-    env = ws.environ
-    # return env
-
-    return "{REMOTE_ADDR}:{REMOTE_PORT}".format(**env)
-
-
 @sockets.route('/data_socket')
 def data_socket(ws):
-    name = socket_name(ws)
-    # log.debug("socket {} OPEN".format(name))
+
+    wsclient = BinaryWebsocketClient(ws)
+
     while not ws.closed:
-        msg = receiveObj(ws)
+        msg = wsclient.receiveObj()
+
         if msg:
-            query = msg.get("query")
-            if query:
-                # log.debug("Received query: {}".format(msg["query"]))
-                # sendObj(ws, {"msg": "sending query {}...".format(msg["query"])})
-        
+            if "query" in msg:
                 # Make sure this socket is being accessed by
                 #  a legitimate client
-                client_id = query.get("client_id")
-                client_ip = None
-                
-                if client_id:
-                    client_ip = redis.get(client_id)
-                
-                if client_ip:
-                    # log.debug("socket {} is a valid client".format(name))
-                    del query["client_id"]
-
-                    for a in Activities.query(query):
-                        sendObj(ws, a)
-                else:
-                    obj = {"error": "client_id does not exist or is expired. please refresh your browser. "}
-                    sendObj(ws, obj)
-                    ws.close()
-                    log.info("query from invalid client {} rejected"
-                                .format(name) )
+                query = msg["query"]
+                try:
+                    assert redis.exists(query["client_id"])
+                except Exception:
+                    obj = {"error": "client does not exist or is expired. please refresh your browser. "}
+                    wsclient.sendObj(obj)
+                    log.info(
+                        "query from invalid client {} rejected"
+                        .format(wsclient)
+                    )
                     break
-            elif msg.get("close"):
-                ws.close()
-                # log.debug("socket {} CLOSED".format(name))
+    
+                wsclient.client_id = query.pop("client_id")
 
+                query_result = Activities.query(query)
+                for a in query_result:
+                    if ws.closed:
+                        wsclient.close()
+                        try:
+                            # make the generator yield one more time in order
+                            #  to let it wrap up, ideally in the code right after
+                            next(query_result)
+                        except Exception:
+                            pass
+                        return
+
+                    wsclient.sendObj(a)
+               
+            elif "close" in msg:
+                log.debug("{} close request".format(wsclient))
+                break
             else:
-                log.debug("{} says {}".format(name, msg))
+                log.debug("{} says {}".format(wsclient, msg))
 
+    wsclient.close()
     # log.debug("socket {} CLOSED".format(name))
 
 
