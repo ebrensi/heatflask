@@ -16,7 +16,6 @@ import base36
 import requests
 import stravalib
 import uuid
-import msgpack
 from flask_login import current_user, login_user, logout_user, login_required
 
 # from urllib.parse import urlparse, urlunparse #python3
