@@ -364,16 +364,16 @@ class Users(UserMixin, db_sql.Model):
         return Index.delete_user_entries(self)
 
     def indexing(self, status=None):
-        # Indicate to other processes that we are currently indexing
-        #  This should not take any longer than 30 seconds
-        key = "indexing {}".format(self.id)
+        # return or set the current state of index building
+        #  for this user
+        key = "IDX:{}".format(self.id)
         if status is None:
             return redis.get(key)
-        elif status:
-            epoch_now = Utility.to_epoch(datetime.utcnow())
-            return redis.setex(key, 60, epoch_now)
+        
+        elif status is False:
+            return redis.delete(key)
         else:
-            redis.delete(key)
+            return redis.setex(key, 60, status)
 
     def build_index(self, **args):
         if OFFLINE:
@@ -392,18 +392,14 @@ class Users(UserMixin, db_sql.Model):
                          after=None, before=None,
                          streams=False,
                          owner_id=False,
-                         build_index=True,
                          update_index_ts=True,
                          cache_timeout=CACHE_ACTIVITIES_TIMEOUT,
                          cancel_key=None,
                          **kwargs):
 
-        if self.indexing():
-            yield {
-                "error": ("Building activity index for {}...<br>Please try again in a few seconds.<br>"
-                            .format(self.id))   
-            }
-            return
+        while self.indexing():
+            yield dict(idx=self.indexing())
+            gevent.sleep(0.5)
 
         # convert date strings to datetimes, if applicable
         if before or after:
@@ -418,38 +414,31 @@ class Users(UserMixin, db_sql.Model):
                 yield {"error": "Invalid Dates"}
                 return
 
-        q = dict(limit=limit,
-                after=after,
-                before=before,
-                activitiy_ids=activity_ids)
+        client_query = dict(
+            limit=limit,
+            after=after,
+            before=before,
+            activitiy_ids=activity_ids
+        )
 
         if self.index_count():
 
             gen = Index.query(
                 user=self,
-                activity_ids=activity_ids,
-                limit=limit,
-                after=after, before=before,
                 exclude_ids=exclude_ids,
-                update_ts=update_index_ts
+                update_ts=update_index_ts,
+                **client_query
             )
 
-        elif build_index:
+        else:
             # There is no activity index and we are to build one
             if OFFLINE:
-                yield {"error": "No Network Connection"}
+                yield {"error": "Cannot build index for {}. No Network Connection".format(self)}
                 return
-            
-            q = dict(
-                limit=limit,
-                after=after,
-                before=before,
-                activitiy_ids=activity_ids
-            )
 
             gen = Index.import_user(
                 self,
-                out_query=q,
+                out_query=client_query,
                 yielding=True,
                 cancel_key=cancel_key
             )
@@ -740,7 +729,6 @@ class Index(object):
             if "after" in query:
                 query["after"] = Utility.to_datetime(query["after"])
 
-       
         activity_ids = out_query.get("activity_ids")
         if activity_ids:
             activity_ids = set(int(aid) for aid in activity_ids)
@@ -758,13 +746,12 @@ class Index(object):
         count = 0
         in_range = False
         mongo_requests = set()
-        user.indexing(True)
+        user.indexing(0)
 
         yield_activities = yielding
 
         start_time = datetime.utcnow()
         log.debug("building activity index for {}".format(user))
-
 
         def in_date_range(dt):
             # log.debug(dict(dt=dt, after=after, before=before))
@@ -789,6 +776,7 @@ class Index(object):
                     #  the client is no longer there
                     yielding = False
                     cancel_key = None
+                    yield StopIteration
 
                 if not d:
                     continue
@@ -800,6 +788,7 @@ class Index(object):
                     d2 = d.copy()
                     count += 1
                     if count % 5:
+                        user.indexing(count)
                         yield {"idx": count}
 
                     if yield_activities:
@@ -1525,14 +1514,10 @@ class Activities(object):
         
         # elapsed = (datetime.utcnow() - start).total_seconds()
         # log.debug("import {} took {} secs".format(_id, elapsed))
-
         return activity
 
     @classmethod
-    def query(cls, queryObj):
-        genID = Utility.set_genID()
-        yield {"genID": genID}
-        
+    def query(cls, queryObj, cancel_key=None):
         for user_id in queryObj:
             user = Users.get(user_id)
             if not user:
@@ -1540,12 +1525,11 @@ class Activities(object):
 
             query = queryObj[user_id]
             
-            for a in user.query_activities(cancel_key=genID, **query):
+            for a in user.query_activities(cancel_key=cancel_key, **query):
                 yield a
         
         yield ""
-        Utility.del_genID(genID)
-
+        
 
 class EventLogger(object):
     name = "history"
