@@ -682,12 +682,12 @@ function updateLayers(msg) {
     }
 }
 
-let sock, genID;
+let sock, wskey;
 
 window.addEventListener('beforeunload', function (event) {
     if (navigator.sendBeacon) {
-        if (genID) {
-            navigator.sendBeacon(BEACON_HANDLER_URL, genID);
+        if (wskey) {
+            navigator.sendBeacon(BEACON_HANDLER_URL, wskey);
         }
         navigator.sendBeacon(BEACON_HANDLER_URL, ONLOAD_PARAMS.client_id);
     }
@@ -763,7 +763,6 @@ function renderLayers() {
             rendering = false;
         }
 
-        $('#renderButton').prop('disabled', false);
         updateLayers(msg);
     }
 
@@ -774,11 +773,11 @@ function renderLayers() {
             listening = false;
             sock.send(JSON.stringify({close: 1}));
             sock.close();
-            if (navigator.sendBeacon && genID) {
-                navigator.sendBeacon(BEACON_HANDLER_URL, genID);
+            if (navigator.sendBeacon && wskey) {
+                navigator.sendBeacon(BEACON_HANDLER_URL, wskey);
             }
-            genID = null;
-            // $('#renderButton').prop('disabled', false);
+            wskey = null;
+            $('#renderButton').prop('disabled', false);
         }
     }
 
@@ -826,7 +825,8 @@ function renderLayers() {
         if (!A) {
             // stopListening();
             doneRendering("Finished.");
-            genID = null;
+            $('#renderButton').prop('disabled', false);
+            // wskey = null;
             return;
         }
 
@@ -847,8 +847,8 @@ function renderLayers() {
         } 
 
         if (A.stop_rendering){
+            console.log("got stop rendering")
             doneRendering("Done rendering.");
-            // console.log("rendering stopped")
             return;
         } 
 
@@ -863,8 +863,8 @@ function renderLayers() {
             }
         }
 
-        if (A.genID) {
-            genID = A.genID;
+        if (A.wskey) {
+            wskey = A.wskey;
         }
 
         if (!A._id) {
