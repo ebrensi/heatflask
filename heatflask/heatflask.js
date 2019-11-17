@@ -763,7 +763,6 @@ function renderLayers() {
             rendering = false;
         }
 
-        $('#renderButton').prop('disabled', false);
         updateLayers(msg);
     }
 
@@ -778,7 +777,7 @@ function renderLayers() {
                 navigator.sendBeacon(BEACON_HANDLER_URL, wskey);
             }
             wskey = null;
-            // $('#renderButton').prop('disabled', false);
+            $('#renderButton').prop('disabled', false);
         }
     }
 
@@ -826,7 +825,8 @@ function renderLayers() {
         if (!A) {
             // stopListening();
             doneRendering("Finished.");
-            wskey = null;
+            $('#renderButton').prop('disabled', false);
+            // wskey = null;
             return;
         }
 
