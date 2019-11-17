@@ -234,7 +234,7 @@ def auth_callback():
                 .format(user.id, scope,
                         datetime.fromtimestamp(access_info.get("expires_at"))))
         else:
-            log.error("user authenication error")
+            log.error("user authentication error")
             log.exception(e)
             flash("There was a problem authorizing user")
 
@@ -248,7 +248,6 @@ def logout(username):
     user = Users.get(username)
     user_id = user.id
     username = user.username
-    current_user.uncache()
     logout_user()
     flash("user '{}' ({}) logged out"
           .format(username, user_id))

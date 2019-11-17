@@ -418,6 +418,11 @@ class Users(UserMixin, db_sql.Model):
                 yield {"error": "Invalid Dates"}
                 return
 
+        q = dict(limit=limit,
+                after=after,
+                before=before,
+                activitiy_ids=activity_ids)
+
         if self.index_count():
 
             gen = Index.query(
@@ -434,12 +439,18 @@ class Users(UserMixin, db_sql.Model):
             if OFFLINE:
                 yield {"error": "No Network Connection"}
                 return
-
-            gen = self.build_index(
+            
+            q = dict(
                 limit=limit,
                 after=after,
                 before=before,
-                activitiy_ids=activity_ids,
+                activitiy_ids=activity_ids
+            )
+
+            gen = Index.import_user(
+                self,
+                out_query=q,
+                yielding=True,
                 cancel_key=cancel_key
             )
 
@@ -745,9 +756,13 @@ class Index(object):
         before = out_query.get("before")
         limit = out_query.get("limit")
 
+        if limit:
+            fetch_query["ordered"] = True
+
         check_dates = (before or after)
         
         def in_date_range(dt):
+            # log.debug(dict(dt=dt, after=after, before=before))
             t1 = (not after) or (after <= dt)
             t2 = (not before) or (dt <= before)
             result = (t1 and t2)
@@ -911,7 +926,7 @@ class Index(object):
             query["_id"] = {"$in": list(activity_ids)}
 
         to_delete = None
-
+        
         if exclude_ids:
             try:
                 result = cls.db.find(
@@ -944,7 +959,9 @@ class Index(object):
             #         sorted(to_fetch),
             #         sorted(to_delete)))
         else:
-            yield dict(count=cls.db.count_documents(query))
+            count = cls.db.count_documents(query)
+            log.debug(count)
+            yield dict(count=count)
 
         if not limit:
             limit = 0
@@ -984,6 +1001,7 @@ class StravaClient(object):
     PAGE_SIZE = 200
     PAGE_REQUEST_CONCURRENCY = 10
     MAX_PAGE = 100
+    # MAX_PAGE = 2  # for testing
     BASE_URL = "https://www.strava.com/api/v3"
     GET_ACTIVITIES_URL = "/athlete/activities"
 
@@ -1028,7 +1046,7 @@ class StravaClient(object):
             "Authorization": "Bearer {}".format(self.access_token)
         }
 
-    def get_activities(self, before=None, after=None, limit=None, cancel_key=None):
+    def get_activities(self, before=None, after=None, limit=None, cancel_key=None, ordered=False):
         cls = self.__class__
 
         query_base_url = "{}{}?per_page={}".format(
@@ -1101,7 +1119,7 @@ class StravaClient(object):
         # imap_unordered gives a little better performance if order
         #   of results doesn't matter, which is the case if we aren't
         #   limited to the first n elements.  
-        mapper = pool.imap if limit else pool.imap_unordered
+        mapper = pool.imap if (limit or ordered) else pool.imap_unordered
 
         jobs = mapper(
             request_page,
@@ -1127,7 +1145,7 @@ class StravaClient(object):
                     self.final_index_page = pagenum
 
                 for a in activities:
-                    if cancel_key and not redis.exist(cancel_key):
+                    if cancel_key and not redis.exists(cancel_key):
                         log.debug("%s get_actvities cancelled", self.user)
                         break
 
@@ -1827,7 +1845,7 @@ class Utility():
         elif isinstance(obj, int):
             return datetime.utcfromtimestamp(obj)
         try:
-            dt = dateutil.parser.parse(obj)
+            dt = dateutil.parser.parse(obj, ignoretz=True)
         except ValueError:
             return
         else:
