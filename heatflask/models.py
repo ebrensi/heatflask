@@ -286,7 +286,6 @@ class Users(UserMixin, db_sql.Model):
 
             if user_data:
                 self.__class__.add_or_update(
-                    cache_timeout=60,
                     session=session,
                     **user_data
                 )
@@ -1717,7 +1716,7 @@ class Webhooks(object):
 
         update = cls.client.handle_subscription_update(update_raw)
         user_id = update.owner_id
-        user = Users.get(user_id, timeout=10)
+        user = Users.get(user_id)
         if (not user) or (not user.index_count()):
             return
 
@@ -1738,11 +1737,12 @@ class Webhooks(object):
 
         create = False
         if update.aspect_type == "update":
-            # update the activity if it exists, or create it
-            result = Index.update(update.object_id, update.updates)
-            if not result:
-                log.debug("{} index update failed: {}".format(user, update.updates))
-                return
+            if update.updates:
+                # update the activity if it exists, or create it
+                result = Index.update(update.object_id, update.updates)
+                if not result:
+                    log.debug("{} index update failed: {}".format(user, update.updates))
+                    return
                 # log.debug("{} index update: {}".format(user, result))
 
         #  If we got here then we know there are index entries for this user
