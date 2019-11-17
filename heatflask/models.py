@@ -1892,7 +1892,7 @@ class BinaryWebsocketClient(object):
         
         self.key = "WS:{}:{}".format(loc, bdsec)
         
-        redis.sextex(self.key, ttl, self.key)
+        redis.setex(self.key, ttl, self.key)
 
         self.send_key()
 

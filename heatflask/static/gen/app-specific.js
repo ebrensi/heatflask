@@ -58,24 +58,24 @@ map.addLayer(DotLayer);layerControl.addOverlay(DotLayer,"Dots");$("#sepConst").v
 function updateLayers(msg){if($("#autozoom:checked").val()){let totalBounds=getBounds(Object.keys(appState.items));if(totalBounds.isValid()){map.fitBounds(totalBounds);}}
 let num=Object.keys(appState.items).length,msg2=" "+msg+" "+num+" activities rendered.";$(".data_message").html(msg2);if(DotLayer){DotLayer.setDotColors();DotLayer.reset();}else{initializeDotLayer();}
 atable.clear();atable.rows.add(Object.values(appState.items)).draw();if(!ADMIN&&!OFFLINE){try{ga('send','event',{eventCategory:USER_ID,eventAction:'Render',eventValue:num});}catch(err){}}}
-let sock,genID;window.addEventListener('beforeunload',function(event){if(navigator.sendBeacon){if(genID){navigator.sendBeacon(BEACON_HANDLER_URL,genID);}
+let sock,wskey;window.addEventListener('beforeunload',function(event){if(navigator.sendBeacon){if(wskey){navigator.sendBeacon(BEACON_HANDLER_URL,wskey);}
 navigator.sendBeacon(BEACON_HANDLER_URL,ONLOAD_PARAMS.client_id);}
 if(sock&&sock.readyState==1){sock.send(JSON.stringify({close:1}));sock.close();}});function renderLayers(){const date1=$("#date1").val(),date2=$("#date2").val(),type=$("#select_type").val(),num=$("#select_num").val(),idString=$("#activity_ids").val(),to_exclude=Object.keys(appState.items).map(Number);if(DotLayer){DotLayer._mapMoving=true;}
 msgBox=L.control.window(map,{position:'top',content:"<div class='data_message'></div><div><progress class='progbar' id='box'></progress></div>",visible:true});$(".data_message").html("Retrieving activity data...");let progress_bars=$('.progbar'),rendering=true,listening=true,numActivities=0,count=0;if(!sock||sock.readyState>1){sock=new WebSocket(WEBSOCKET_URL);sock.binaryType='arraybuffer';}else{sendQuery();}
 $(".data_message").html("Retrieving activity data...");$('#abortButton').click(function(){stopListening();doneRendering("<font color='red'>Aborted:</font>");}).show();$(".progbar").show();$('#renderButton').prop('disabled',true);function doneRendering(msg){if(rendering){appState['after']=$("#date1").val();appState["before"]=$("#date2").val();updateState();$("#abortButton").hide();$(".progbar").hide();if(msgBox){msgBox.close();msgBox=null;}
 rendering=false;}
-$('#renderButton').prop('disabled',false);updateLayers(msg);}
-function stopListening(){console.log("stopListening called");if(listening){listening=false;sock.send(JSON.stringify({close:1}));sock.close();if(navigator.sendBeacon&&genID){navigator.sendBeacon(BEACON_HANDLER_URL,genID);}
-genID=null;}}
+updateLayers(msg);}
+function stopListening(){console.log("stopListening called");if(listening){listening=false;sock.send(JSON.stringify({close:1}));sock.close();if(navigator.sendBeacon&&wskey){navigator.sendBeacon(BEACON_HANDLER_URL,wskey);}
+wskey=null;$('#renderButton').prop('disabled',false);}}
 function sendQuery(){queryObj={client_id:ONLOAD_PARAMS.client_id};queryObj[USER_ID]={limit:type=="activities"?Math.max(1,+num):undefined,after:date1?date1:undefined,before:date2&&date2!="now"?date2:undefined,activity_ids:idString?Array.from(new Set(idString.split(/\D/).map(Number))):undefined,exclude_ids:to_exclude.length?to_exclude:undefined,streams:true};let msg=JSON.stringify({query:queryObj});sock.send(msg);}
-sock.onopen=function(event){sendQuery();};sock.onmessage=function(event){let A;try{A=msgpack.decode(new Uint8Array(event.data));}catch(e){console.log(event);console.log(event.data);console.log(e);};if(!A){doneRendering("Finished.");genID=null;return;}
+sock.onopen=function(event){sendQuery();};sock.onmessage=function(event){let A;try{A=msgpack.decode(new Uint8Array(event.data));}catch(e){console.log(event);console.log(event.data);console.log(e);};if(!A){doneRendering("Finished.");$('#renderButton').prop('disabled',false);return;}
 if(A.error){let msg=`<font color='red'>${A.error}</font><br>`;$(".data_message").html(msg);console.log(`Error:${A.error}`);return;}
 if(A.msg){$(".data_message").html(A.msg);}
 if(A.idx){$(".data_message").html(`indexing...${A.idx}`);}
 if(A.stop_rendering){console.log("got stop rendering");doneRendering("Done rendering.");return;}
 if(A.count){numActivities+=A.count;}
 if(A.delete){for(let id of A.delete){delete appState.items[id];}}
-if(A.genID){genID=A.genID;}
+if(A.wskey){wskey=A.wskey;}
 if(!A._id){return;}
 let hasBounds=A.bounds,bounds=hasBounds?L.latLngBounds(A.bounds.SW,A.bounds.NE):L.latLngBounds();if(A.polyline){let latLngArray=L.PolylineUtil.decode(A.polyline);if(A.time){let len=latLngArray.length,latLngTime=new Float32Array(3*len),timeArray=streamDecode(A.time);for(let i=0,ll;i<len;i++){ll=latLngArray[i];if(!hasBounds){bounds.extend(ll);}
 idx=i*3;latLngTime[idx]=ll[0];latLngTime[idx+1]=ll[1];latLngTime[idx+2]=timeArray[i];}
