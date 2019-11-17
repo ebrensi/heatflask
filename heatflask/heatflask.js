@@ -824,8 +824,8 @@ function renderLayers() {
 
         if (!A) {
             // stopListening();
-            doneRendering("Finished.");
             $('#renderButton').prop('disabled', false);
+            doneRendering("Finished.");
             // wskey = null;
             return;
         }
