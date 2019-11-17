@@ -72,7 +72,7 @@ sock.onopen=function(event){sendQuery();};sock.onmessage=function(event){let A;t
 if(A.error){let msg=`<font color='red'>${A.error}</font><br>`;$(".data_message").html(msg);console.log(`Error:${A.error}`);return;}
 if(A.msg){$(".data_message").html(A.msg);}
 if(A.idx){$(".data_message").html(`indexing...${A.idx}`);}
-if(A.stop_rendering){doneRendering("Done rendering.");return;}
+if(A.stop_rendering){console.log("got stop rendering");doneRendering("Done rendering.");return;}
 if(A.count){numActivities+=A.count;}
 if(A.delete){for(let id of A.delete){delete appState.items[id];}}
 if(A.genID){genID=A.genID;}

@@ -740,7 +740,23 @@ class Index(object):
             if "after" in query:
                 query["after"] = Utility.to_datetime(query["after"])
 
+       
+        activity_ids = out_query.get("activity_ids")
+        if activity_ids:
+            activity_ids = set(int(aid) for aid in activity_ids)
+        after = out_query.get("after")
+        before = out_query.get("before")
+        limit = out_query.get("limit")
+
+        activities_ordered = False
+        if limit:
+            fetch_query["ordered"] = True
+            activities_ordered = True
+
+        check_dates = (before or after)
+        
         count = 0
+        in_range = False
         mongo_requests = set()
         user.indexing(True)
 
@@ -749,18 +765,7 @@ class Index(object):
         start_time = datetime.utcnow()
         log.debug("building activity index for {}".format(user))
 
-        activity_ids = out_query.get("activity_ids")
-        if activity_ids:
-            activity_ids = set(int(aid) for aid in activity_ids)
-        after = out_query.get("after")
-        before = out_query.get("before")
-        limit = out_query.get("limit")
 
-        if limit:
-            fetch_query["ordered"] = True
-
-        check_dates = (before or after)
-        
         def in_date_range(dt):
             # log.debug(dict(dt=dt, after=after, before=before))
             t1 = (not after) or (after <= dt)
@@ -775,11 +780,16 @@ class Index(object):
                 raise Exception("Invalid access_token. {} is not authenticated.".format(user))
 
             summaries = client.get_activities(
-                cancel_key=cancel_key,
                 **fetch_query
             )
 
             for d in summaries:
+                if cancel_key and not redis.exists(cancel_key):
+                    #  we will try to continue building index even if
+                    #  the client is no longer there
+                    yielding = False
+                    cancel_key = None
+
                 if not d:
                     continue
                 
@@ -801,7 +811,7 @@ class Index(object):
                                     activity_ids.discard(d2["_id"])
                                     if not activity_ids:
                                         raise StopIteration
-
+                            
                             elif limit:
                                 if count <= limit:
                                     yield d2
@@ -812,10 +822,22 @@ class Index(object):
                                 ts_local = Utility.to_datetime(d2["ts_local"])
                                 if in_date_range(ts_local):
                                     yield d2
+                                    
+                                    if activities_ordered:
+                                        in_range = True
+
+                                elif in_range:
+                                    # the current activity's date was in range
+                                    # but is no longer. (and are in order)
+                                    # so we can safely say there will not be any more
+                                    # activities in range
+                                    raise StopIteration
+
                             else:
                                 yield d2
 
                         except StopIteration:
+                            log.debug("requesting stop rendering")
                             yield_activities = False
                             yield {"stop_rendering": 1}
 
@@ -1000,8 +1022,8 @@ class StravaClient(object):
 
     PAGE_SIZE = 200
     PAGE_REQUEST_CONCURRENCY = 10
-    MAX_PAGE = 100
-    # MAX_PAGE = 2  # for testing
+    # MAX_PAGE = 100
+    MAX_PAGE = 2  # for testing
     BASE_URL = "https://www.strava.com/api/v3"
     GET_ACTIVITIES_URL = "/athlete/activities"
 
@@ -1868,3 +1890,76 @@ class Utility():
             redis.delete(genID)
             
 
+class BinaryWebsocketClient(object):
+    # WebsocketClient is a wrapper for a websocket
+    #  It attempts to gracefully handle broken connections
+    def __init__(self, websocket, ttl=60 * 60 * 24):
+        self.ws = websocket
+        self.birthday = datetime.utcnow()
+
+        # this is a the client_id for the web-page accessing this websocket
+        self.client_id = None
+        
+        bdsec = int(
+            (self.birthday - datetime.utcfromtimestamp(0))
+            .total_seconds()
+        )
+        loc = "{REMOTE_ADDR}:{REMOTE_PORT}".format(**websocket.environ)
+        
+        self.key = "WS:{}:{}".format(loc, bdsec)
+        
+        redis.sextex(self.key, ttl, self.key)
+
+        self.send_key()
+
+    def __repr__(self):
+        return self.key
+
+    # We send and receive json objects (dictionaries) encoded as strings
+    def sendObj(self, obj):
+        if not self.ws:
+            return
+
+        try:
+            b = msgpack.packb(obj)
+        except Exception as e:
+            log.error(e)
+            return
+
+        try:
+            self.ws.send(b, binary=True)
+        except Exception as e:
+
+            log.exception(e)
+            self.close()
+            return
+
+        return True
+
+    def receiveObj(self):
+        try:
+            s = self.ws.receive()
+            obj = json.loads(s)
+        except TypeError:
+            return
+        except Exception as e:
+            log.exception(e)
+            return
+        else:
+            return obj
+
+    def close(self):
+        redis.delete(self.key)
+        try:
+            self.ws.close()
+        except Exception:
+            pass
+
+    def send_key(self):
+        self.sendbj(dict(wskey=self.key))
+
+
+
+
+
+        
