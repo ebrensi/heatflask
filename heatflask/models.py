@@ -22,7 +22,6 @@ from . import mongo, db_sql, redis  # Global database clients
 from . import EPOCH
 
 CONCURRENCY = app.config["CONCURRENCY"]
-CACHE_USERS_TIMEOUT = app.config["CACHE_USERS_TIMEOUT"]
 CACHE_ACTIVITIES_TIMEOUT = app.config["CACHE_ACTIVITIES_TIMEOUT"]
 STREAMS_OUT = app.config["STREAMS_OUT"]
 STREAMS_TO_CACHE = app.config["STREAMS_TO_CACHE"]
@@ -418,7 +417,7 @@ class Users(UserMixin, db_sql.Model):
             limit=limit,
             after=after,
             before=before,
-            activitiy_ids=activity_ids
+            activity_ids=activity_ids
         )
 
         if self.index_count():
@@ -826,7 +825,7 @@ class Index(object):
                                 yield d2
 
                         except StopIteration:
-                            log.debug("requesting stop rendering")
+                            # log.debug("requesting stop rendering")
                             yield_activities = False
                             yield {"stop_rendering": 1}
 
@@ -971,7 +970,7 @@ class Index(object):
             #         sorted(to_delete)))
         else:
             count = cls.db.count_documents(query)
-            log.debug(count)
+            # log.debug(count)
             yield dict(count=count)
 
         if not limit:
@@ -1011,8 +1010,8 @@ class StravaClient(object):
 
     PAGE_SIZE = 200
     PAGE_REQUEST_CONCURRENCY = 10
-    # MAX_PAGE = 100
-    MAX_PAGE = 2  # for testing
+    MAX_PAGE = 100
+    # MAX_PAGE = 2  # for testing
     BASE_URL = "https://www.strava.com/api/v3"
     GET_ACTIVITIES_URL = "/athlete/activities"
 
@@ -1605,6 +1604,10 @@ class EventLogger(object):
                 elapsed = 0
                 while cursor.alive & redis.exists(genID):
                     for doc in cursor:
+
+                        if not redis.exists(genID):
+                            break
+
                         elapsed = 0
                         ts = doc["ts"]
                         tss = (ts - EPOCH).total_seconds()
@@ -1616,6 +1619,7 @@ class EventLogger(object):
                             "id: {}\ndata: {}\n\n"
                             .format(tss, event))
                         # log.debug(string)
+                        
                         yield string
 
                     # We end up here if the find() returned no
@@ -1629,6 +1633,8 @@ class EventLogger(object):
                         # log.debug("no docs in cursor")
                         elapsed = 0
                         yield ": \n\n"
+
+            Utility.del_genID()
             log.debug("exiting live-updates gen")
 
         return gen(ts)
@@ -1940,7 +1946,7 @@ class BinaryWebsocketClient(object):
             pass
 
     def send_key(self):
-        self.sendbj(dict(wskey=self.key))
+        self.sendObj(dict(wskey=self.key))
 
 
 
