@@ -1633,7 +1633,7 @@ class EventLogger(object):
                         elapsed = 0
                         yield ": \n\n"
 
-            Utility.del_genID()
+            Utility.del_genID(genID)
             log.debug("exiting live-updates gen")
 
         return gen(ts)
