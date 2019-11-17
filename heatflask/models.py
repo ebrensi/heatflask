@@ -215,7 +215,7 @@ class Users(UserMixin, db_sql.Model):
         return self
 
     @classmethod
-    def add_or_update(cls, cache_timeout=CACHE_USERS_TIMEOUT, session=db_sql.session, **kwargs):
+    def add_or_update(cls, session=db_sql.session, **kwargs):
         if not kwargs:
             log.debug("attempted to add_or_update user with no data")
             return
@@ -234,7 +234,7 @@ class Users(UserMixin, db_sql.Model):
             return persistent_user
 
     @classmethod
-    def get(cls, user_identifier, session=db_sql.session, timeout=CACHE_USERS_TIMEOUT):
+    def get(cls, user_identifier, session=db_sql.session):
 
         # Get user from db by id or username
         try:
