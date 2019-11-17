@@ -117,14 +117,14 @@
         count_DOM_element = document.querySelector("#count"),
         status_element = document.querySelector("#status_msg"),
         table_body = $('#activities_list tbody'),
-        genID, 
+        wskey, 
         sock = new WebSocket(WEBSOCKET_URL);
 
 
     window.addEventListener('beforeunload', function (event) {
       if (navigator.sendBeacon) {
-        if (genID) {
-          navigator.sendBeacon(BEACON_HANDLER_URL, genID);
+        if (wskey) {
+          navigator.sendBeacon(BEACON_HANDLER_URL, wskey);
         }
         navigator.sendBeacon(BEACON_HANDLER_URL, CLIENT_ID);
       }
@@ -157,7 +157,7 @@
 
     sock.onclose = function(event) {
         console.log("socket closed: ", event);
-        genID = null;
+        wskey = null;
         if (!ADMIN && !OFFLINE) {
         // Record this to google analytics
         ga('send', 'event', {
@@ -185,9 +185,9 @@
         return
       }
 
-      if (A.genID) {
-        genID = A.genID;
-        console.log("got genID "+A.genID)
+      if (A.wskey) {
+        wskey = A.wskey;
+        console.log("got wskey "+A.wskey)
       }
       
       if (!A._id) {
