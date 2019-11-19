@@ -380,7 +380,7 @@ class Users(UserMixin, db_sql.Model):
         return Index.import_user(
             self,
             out_query=args,
-            yielding=True
+            yielding=False
         )
 
     def query_activities(self,
@@ -603,8 +603,12 @@ class Index(object):
         # create new index collection
         mongodb.create_collection(cls.name)
 
-        cls.db.create_index("user_id")
-        cls.db.create_index([("ts_UTC", pymongo.DESCENDING)])
+        # cls.db.create_index("user_id")
+        # cls.db.create_index([("ts_UTC", pymongo.DESCENDING)])
+        cls.db.create_index([
+            ("user_id", pymongo.ASCENDING),
+            ("ts_local", pymongo.DESCENDING)
+        ])
 
         # cls.db.create_index([("start_latlng", pymongo.GEO2D)])
         result = cls.db.create_index(
@@ -613,11 +617,10 @@ class Index(object):
             expireAfterSeconds=cls.DB_TTL
         )
 
-
         log.info(
-            "initialized '{}' collection: {}".format(
-                cls.name,
-                result))
+            "initialized '{}' collection: {}"
+            .format(cls.name, result)
+        )
 
     @classmethod
     def update_ttl(cls, timeout=DB_TTL):
@@ -942,7 +945,7 @@ class Index(object):
                     query,
                     {"_id": True}
                 ).sort(
-                    "ts_UTC",
+                    "ts_local",
                     pymongo.DESCENDING
                 ).limit(limit)
 
@@ -1028,6 +1031,10 @@ class StravaClient(object):
     def strava2doc(cls, a):
         if ("id" not in a) or not a["start_latlng"]:
             return
+        
+        bounds = Activities.bounds(a["map"]["summary_polyline"])
+        if not bounds:
+            return
 
         try:
             d = dict(
@@ -1042,7 +1049,7 @@ class StravaClient(object):
                 elapsed_time=int(a["elapsed_time"]),
                 average_speed=float(a["average_speed"]),
                 start_latlng=a["start_latlng"],
-                bounds=Activities.bounds(a["map"]["summary_polyline"])
+                bounds=bounds
             )
         except Exception as e:
             log.exception(e)
@@ -1054,7 +1061,7 @@ class StravaClient(object):
             "Authorization": "Bearer {}".format(self.access_token)
         }
 
-    def get_activities(self, before=None, after=None, limit=None, cancel_key=None, ordered=False):
+    def get_activities(self, cancel_key=None, ordered=False, **query):
         cls = self.__class__
 
         query_base_url = "{}{}?per_page={}".format(
@@ -1065,15 +1072,15 @@ class StravaClient(object):
         
         #  handle parameters
         try:
-            if limit:
-                limit = int(limit)
+            if "limit" in query:
+                limit = int(query["limit"])
 
-            if before:
-                before = Utility.to_epoch(before)
+            if "before" in query:
+                before = Utility.to_epoch(query["before"])
                 query_base_url += "&before={}".format(before)
         
-            if after:
-                after = Utility.to_epoch(after)
+            if "after" in query:
+                after = Utility.to_epoch(query["after"])
                 query_base_url += "&after={}".format(after)
 
         except Exception as e:
@@ -1146,6 +1153,9 @@ class StravaClient(object):
                     raise UserWarning("Strava error")
                    
                 num = len(activities)
+                if num < cls.PAGE_SIZE:
+                    total_num_activities = (pagenum - 1) * cls.PAGE_SIZE + num
+                    yield dict(count=total_num_activities)
 
                 if limit and (num + num_activities_retrieved > limit):
                     # make sure no more requests are made
@@ -1157,7 +1167,11 @@ class StravaClient(object):
                         log.debug("%s get_actvities cancelled", self.user)
                         break
 
-                    yield cls.strava2doc(a)
+                    doc = cls.strava2doc(a)
+                    if not doc:
+                        continue
+                    
+                    yield doc
 
                     num_activities_retrieved += 1
                     if limit and (num_activities_retrieved >= limit):
@@ -1442,7 +1456,6 @@ class Activities(object):
         if OFFLINE:
             return
 
-        EMPTY = {"empty": True}
         ESSENTIAL_STREAMS = ["time"]
  
         streams_to_import = list(STREAMS_TO_CACHE) + ["latlng"]
@@ -1490,14 +1503,16 @@ class Activities(object):
                 imported_streams[s] = cls.stream_encode(stream)
                 
         except UserWarning as e:
-            log.debug(activity)
-            Index.update(_id, EMPTY, replace=True)
-            # log.debug("activity %s EMPTY: %s", _id, e)
+            # delete this activity from the index if it
+            #  does not have the neccessary streams
+            Index.delete(_id)
+            # log.exception("activity %s EMPTY: %s", _id, e)
             return
+
         except Exception as e:
             log.error("error importing activity %s", _id)
             log.exception(e)
-            return
+            return False
 
         cls.set(_id, imported_streams, timeout)
 
@@ -1505,7 +1520,7 @@ class Activities(object):
             try:
                 activity[s] = imported_streams[s]
             except Exception:
-                pass
+                return False
         
         # elapsed = (datetime.utcnow() - start).total_seconds()
         # log.debug("import {} took {} secs".format(_id, elapsed))
