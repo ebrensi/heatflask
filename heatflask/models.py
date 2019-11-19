@@ -1453,7 +1453,7 @@ class Activities(object):
 
         _id = activity["_id"]
 
-        start = datetime.utcnow()
+        # start = datetime.utcnow()
         # log.debug("request import {}".format(_id))
 
         try:
@@ -1464,7 +1464,6 @@ class Activities(object):
             )
 
             if not streams:
-                log.debug(activity)
                 raise UserWarning("no streams")
 
             imported_streams = {name: streams[name].data for name in streams}
@@ -1473,7 +1472,6 @@ class Activities(object):
             try:
                 latlng = imported_streams.pop("latlng")
             except KeyError:
-                log.debug(activity)
                 raise UserWarning("no stream 'latlng'")
             
             imported_streams["polyline"] = polyline.encode(latlng)
@@ -1485,7 +1483,6 @@ class Activities(object):
                     assert len(stream) > 2
                 except Exception:
                     if s in ESSENTIAL_STREAMS:
-                        log.debug(activity)
                         raise UserWarning("no stream '{}'".format(s))
                     else:
                         continue
@@ -1493,6 +1490,7 @@ class Activities(object):
                 imported_streams[s] = cls.stream_encode(stream)
                 
         except UserWarning as e:
+            log.debug(activity)
             Index.update(_id, EMPTY, replace=True)
             # log.debug("activity %s EMPTY: %s", _id, e)
             return
