@@ -1,16 +1,23 @@
+# wsgi.py
+#  this is run by gunicorn
+
 from heatflask import create_app
 from signal import signal, SIGPIPE, SIG_DFL
 import logging
 
 app = create_app()
 
+log = app.logger
 gunicorn_logger = logging.getLogger('gunicorn.error')
-# handler = gunicorn_logger.handlers[0]
-# app.logger.handlers = [handler]
+handlers = gunicorn_logger.handlers
+
 app.logger.handlers = gunicorn_logger.handlers
 app.logger.setLevel(gunicorn_logger.level)
 
-
+for handler in handlers:
+    formatter = handler.setFormatter(logging.Formatter(
+        '[%(process)d] [%(levelname)s] %(message)s'
+    ))
 
 loc_status = ""
 if app.config.get("OFFLINE"):
@@ -18,7 +25,7 @@ if app.config.get("OFFLINE"):
 elif app.config.get("USE_REMOTE_DB"):
     loc_status = ": USING REMOTE DATA-STORES"
 
-log = app.logger
+
 log.info("Heatflask server starting{}".format(loc_status))
 
 # makes python ignore sigpipe and prevents broken pipe exception when client
