@@ -263,7 +263,8 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
         let pxOffx = this._pxOffset.x,
             pxOffy = this._pxOffset.y,
-            selectedIds = [];
+            selectedIds = [],
+            overlaps = false;
 
         for ( let id in items ) {
             if (!items.hasOwnProperty(id)) {
@@ -280,7 +281,18 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                 A.projected = {};
             }
 
-            if ( A.latLngTime && this._latLngBounds.overlaps( A.bounds )) {
+            // ---- get rid of this slow code in production!!
+            try {
+                overlaps = this._latLngBounds.overlaps( A.bounds )
+            } catch(err) {
+                console.error(err);
+                console.log("there is a problem with ", A);
+                delete this._items[ id ];
+                continue;
+            }
+            // -----------------------------------------------
+
+            if (A.latLngTime && overlaps) {
                 let projected = A.projected[ z ],
                     llt = A.latLngTime;
 

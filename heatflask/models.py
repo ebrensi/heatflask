@@ -1038,7 +1038,6 @@ class StravaClient(object):
                 # group=a["athlete_count"],
                 ts_UTC=a["start_date"],
                 ts_local=a["start_date_local"],
-                # ts=datetime.utcnow(),
                 total_distance=float(a["distance"]),
                 elapsed_time=int(a["elapsed_time"]),
                 average_speed=float(a["average_speed"]),
