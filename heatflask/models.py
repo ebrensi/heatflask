@@ -1074,6 +1074,8 @@ class StravaClient(object):
         try:
             if "limit" in query:
                 limit = int(query["limit"])
+            else:
+                limit = None
 
             if "before" in query:
                 before = Utility.to_epoch(query["before"])
