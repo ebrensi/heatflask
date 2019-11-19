@@ -779,7 +779,7 @@ class Index(object):
                     cancel_key = None
                     yield StopIteration
 
-                if not d:
+                if not d or "_id" not in d:
                     continue
                 
                 d["ts"] = start_time
