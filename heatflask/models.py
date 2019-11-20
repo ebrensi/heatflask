@@ -788,7 +788,7 @@ class Index(object):
                 if yielding:
                     d2 = d.copy()
                     count += 1
-                    if count % 5:
+                    if not (count % 5):
                         user.indexing(count)
                         yield {"idx": count}
 
@@ -964,19 +964,13 @@ class Index(object):
 
             query["_id"] = {"$in": to_fetch}
 
-            # log.debug("query ids: {}\nexclude: {}\nto_fetch: {}\ndelete: {}"
-            #     .format(
-            #         sorted(query_ids), 
-            #         sorted(exclude_ids),
-            #         sorted(to_fetch),
-            #         sorted(to_delete)))
         else:
             count = cls.db.count_documents(query)
-            # log.debug(count)
-            yield dict(count=count)
+            if limit:
+                count = min(limit, count)
 
-        if not limit:
-            limit = 0
+            yield dict(count=count)
+        
         try:
             if out_fields:
                 cursor = cls.db.find(query, out_fields)
@@ -1512,8 +1506,8 @@ class Activities(object):
             return
 
         except Exception as e:
-            log.error("error importing activity %s", _id)
-            log.exception(e)
+            log.error("error importing activity %s: %s", _id, activity)
+            log.error(e)
             return False
 
         cls.set(_id, imported_streams, timeout)

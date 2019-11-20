@@ -272,7 +272,7 @@ def logout(username):
 def delete_index(username):
     user = Users.get(username)
     if user:
-        current_user.delete_index()
+        user.delete_index()
         EventLogger.new_event(msg="index for {} deleted".format(user.id))
         return "index for {} deleted".format(username)
     else:
