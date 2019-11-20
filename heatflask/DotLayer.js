@@ -584,7 +584,6 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             return;
         }
         this._frame = null;
-        // debugger;
 
         let ts = Date.now(),
             now = ts - this._timeOffset;
@@ -788,9 +787,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             w2 = this.strava_icon.width,
             simg = [50, h2*50/w2],
             sd = [sw-simg[0]-2, sh-simg[1]-2, simg[0], simg[1]];
-
-        debugger;
-
+            
         framePrev = null;
         // Add frames to the encoder
         for (let i=0, num=~~numFrames; i<num; i++, frameTime+=delay){
