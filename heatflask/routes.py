@@ -7,8 +7,7 @@ from flask import (
     Response, render_template, request, redirect, jsonify, url_for,
     flash, send_from_directory, stream_with_context
 )
-from datetime import datetime, timedelta
-# import logging
+from datetime import datetime
 import os
 import json
 import itertools
@@ -24,10 +23,9 @@ from urlparse import urlparse, urlunparse  # python2
 # Local imports
 from . import login_manager, redis, mongo, sockets
 
-
 from .models import (
     Users, Activities, EventLogger, Utility, Webhooks, Index, Payments,
-    StravaClient, BinaryWebsocketClient
+    BinaryWebsocketClient
 )
 
 mongodb = mongo.db
@@ -47,6 +45,13 @@ def load_user(user_id):
     return user
 
 
+@login_manager.unauthorized_handler
+def handle_needs_login():
+    # flash("You have to be logged in to access this page.")
+    log.debug(request)
+    return redirect(url_for('authorize', state=request.full_path))
+
+
 def admin_required(f):
     # Views wrapped with this wrapper will only allow admin users
     @wraps(f)
@@ -63,14 +68,20 @@ def admin_or_self_required(f):
     #  Only allow users viewing their own data
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if current_user.is_authenticated:
-            user_identifier = request.view_args.get("username")
-            if (current_user.is_admin() or
-                (user_identifier == current_user.username) or
-                    (user_identifier == str(current_user.id))):
-                return f(*args, **kwargs)
-            else:
-                return login_manager.unauthorized()
+
+        if current_user.is_anonymous:
+            return login_manager.unauthorized()
+
+        if current_user.is_admin():
+            return f(*args, **kwargs)
+        
+        user_identifier = request.view_args.get("username")
+
+        if user_identifier in [current_user.username, str(current_user.id)]:
+            return f(*args, **kwargs)
+        else:
+            return login_manager.unauthorized()
+
     return decorated_function
 
 
@@ -79,16 +90,17 @@ def log_request_event(f):
     def decorated_function(*args, **kwargs):
         event = {"msg": request.url}
 
-        if not current_user.is_anonymous:
-            if not current_user.is_admin():
-                event.update({
-                    "cuid": current_user.id,
-                    "profile": current_user.profile
-                })
-            else:
-                # if current user is admin we don't bother logging this event
+        if current_user.is_authenticated:
+            if current_user.is_admin():
+                # if current user is admin
+                # we don't bother logging this event
                 return f(*args, **kwargs)
-                
+
+            event.update({
+                "cuid": current_user.id,
+                "profile": current_user.profile
+            })
+        
         # If the user is anonymous or a regular user, we log the event
         EventLogger.log_request(request, **event)
         return f(*args, **kwargs)
@@ -112,7 +124,6 @@ def redirect_to_new_domain():
         new_url = urlunparse(urlparts_list)
         # log.debug("new url: {}".format(new_url))
         return redirect(new_url, code=301)
-
 
 
 #  ------------- Serve some static files -----------------------------
@@ -151,17 +162,19 @@ def robots_txt():
 def splash():
     if current_user.is_authenticated:
         if hasattr(current_user, "id"):
-            return redirect(url_for('main',
-                                    username=current_user.id))
+            return redirect(
+                url_for('main', username=current_user.id)
+            )
         else:
             # If a user is logged in but has no record in our database.
             #  i.e. was deleted.  We direct them to initialize a new account.
             logout_user()
             flash("oops! Please log back in.")
 
-    return render_template("splash.html",
-                           next=(request.args.get("next") or
-                                 url_for("splash")))
+    return render_template(
+        "splash.html",
+        next=(request.args.get("next") or url_for("splash"))
+    )
 
 
 # Attempt to authorize a user via Oauth(2)
@@ -409,32 +422,32 @@ def main(username):
     )
 
 
-@app.route('/<username>/list')
-def list_activities(username):
-    user = Users.get(username)
-    if not user:
-        return "no user {}".format(username)
+# @app.route('/<username>/list')
+# def list_activities(username):
+#     user = Users.get(username)
+#     if not user:
+#         return "no user {}".format(username)
 
-    try:
-        client = StravaClient(user=user)
-    except Exception as e:
-        log.exception(e)
-        return "sorry, there was an error"
+#     try:
+#         client = StravaClient(user=user)
+#     except Exception as e:
+#         log.exception(e)
+#         return "sorry, there was an error"
     
-    args = dict(
-        limit=request.args.get("limit", 100),
-    )
-    if request.args.get("days"):
-        days = int(request.args.get("days"))
-        args["after"] = datetime.utcnow() - timedelta(days=days)
+#     args = dict(
+#         limit=request.args.get("limit", 100),
+#     )
+#     if request.args.get("days"):
+#         days = int(request.args.get("days"))
+#         args["after"] = datetime.utcnow() - timedelta(days=days)
 
-    stream = ("{}\n\n".format(a) for a in client.get_index(**args))
+#     stream = ("{}\n\n".format(a) for a in client.get_index(**args))
 
     
 
-    return Response(stream_with_context(
-        stream
-    ), mimetype='text/event-stream')
+#     return Response(stream_with_context(
+#         stream
+#     ), mimetype='text/event-stream')
 
 
 @app.route('/<username>/activities')
@@ -457,17 +470,12 @@ def activities(username):
     ip_address = request.access_route[-1]
     redis.setex(web_client_id, timeout, ip_address)
     
-    try:
-        html = render_template(
-            "activities.html",
-            user=user,
-            client_id=web_client_id)
-        
-    except Exception as e:
-        log.exception(e)
-        html = "?? Something is wrong.  Contact us at info@heatflask.com"
-    
-    return html if html else "There is a problem here."
+    return render_template(
+        "activities.html",
+        user=user,
+        client_id=web_client_id
+    )
+
 
 
 @app.route('/<username>/update_info')
@@ -485,13 +493,6 @@ def update_share_status(username):
     )
 
     return jsonify(user=user.id, share=status)
-
-
-def toObj(string):
-    try:
-        return json.loads(string)
-    except ValueError:
-        return string
 
 
 @sockets.route('/data_socket')
@@ -535,7 +536,7 @@ def data_socket(ws):
                     wsclient.sendObj(a)
                
             elif "close" in msg:
-                log.debug("{} close request".format(wsclient))
+                # log.debug("{} close request".format(wsclient))
                 break
             else:
                 log.debug("{} says {}".format(wsclient, msg))
@@ -565,30 +566,29 @@ def demo():
     return redirect(url_for("demos", demo_key="last60activities"))
 
 
-def new_id():
-    ids = mongodb.queries.distinct("_id")
-    ids.sort()
-    _id = None
-
-    for a, b in itertools.izip(ids, ids[1:]):
-        if b - a > 1:
-            _id = a + 1
-            break
-    if not _id:
-        _id = b + 1
-
-    return _id
-
 
 # ---- Endpoints to cache and retrieve query urls that might be long
 #   we store them as integer ids and the key for access is that integer
 #   in base-36
 @app.route('/cache', methods=["GET", "POST"])
 def cache_put(query_key):
+    def new_id():
+        ids = mongodb.queries.distinct("_id")
+        ids.sort()
+        _id = None
+
+        for a, b in itertools.izip(ids, ids[1:]):
+            if b - a > 1:
+                _id = a + 1
+                break
+        if not _id:
+            _id = b + 1
+
+        return _id
+
     obj = {}
     if request.method == 'GET':
-        obj = {k: toObj(request.args.get(k))
-               for k in request.args if toObj(request.args.get(k))}
+        obj = request.args.to_dict()
 
     if request.method == 'POST':
         obj = request.get_json(force=True)
@@ -659,7 +659,6 @@ def public_directory():
 
 # ---- User admin stuff ----
 @app.route('/users')
-@log_request_event
 @admin_required
 def users():
     fields = ["id", "dt_last_active", "firstname", "lastname", "profile",
@@ -716,7 +715,6 @@ def app_info():
         "mongodb": mongodb.command("dbstats"),
         Activities.name: mongodb.command("collstats", Activities.name),
         Index.name: mongodb.command("collstats", Index.name),
-        Payments.name: mongodb.command("collstats", Payments.name)
     }
     return jsonify(info)
 
@@ -727,9 +725,9 @@ def app_init():
     info = {
         Activities.init_db(),
         Index.init_db(),
-        Payments.init_db()
     }
     return "Activities, Index, Payments databases re-initialized"
+
 
 @app.route("/beacon_handler", methods=["POST"])
 def beacon_handler():
@@ -740,7 +738,6 @@ def beacon_handler():
 
 # ---- Event log stuff ----
 @app.route('/history')
-@log_request_event
 @admin_required
 def event_history():
     events = EventLogger.get_log(int(request.args.get("n", 100)))
@@ -750,7 +747,6 @@ def event_history():
 
 
 @app.route('/history/live-updates')
-@log_request_event
 @admin_required
 def live_updates():
     # log.debug(request.headers)
@@ -762,20 +758,6 @@ def live_updates():
     return Response(
         stream_with_context(stream),
         content_type='text/event-stream')
-
-
-@app.route('/history/raw')
-@log_request_event
-@admin_required
-def event_history_raw():
-    return jsonify(EventLogger.get_log())
-
-
-@app.route('/history/<event_id>')
-@log_request_event
-@admin_required
-def logged_event(event_id):
-    return jsonify(EventLogger.get_event(event_id))
 
 
 @app.route('/history/init')
