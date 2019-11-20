@@ -7,6 +7,7 @@ from flask import (
     Response, render_template, request, redirect, jsonify, url_for,
     flash, send_from_directory, stream_with_context
 )
+from datetime import datetime
 import os
 import json
 import itertools
@@ -21,7 +22,6 @@ from urlparse import urlparse, urlunparse  # python2
 
 # Local imports
 from . import login_manager, redis, mongo, sockets
-
 
 from .models import (
     Users, Activities, EventLogger, Utility, Webhooks, Index, Payments,
@@ -45,12 +45,11 @@ def load_user(user_id):
     return user
 
 
-# @login_manager.unauthorized_handler
-# def unauthorized():
-#     return url_for(
-#         "authorize",
-#         state=url_for("splash")
-#     )
+@login_manager.unauthorized_handler
+def handle_needs_login():
+    # flash("You have to be logged in to access this page.")
+    log.debug(request)
+    return redirect(url_for('authorize', state=request.full_path))
 
 
 def admin_required(f):
