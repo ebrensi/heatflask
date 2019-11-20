@@ -818,9 +818,6 @@ function renderLayers() {
             console.log(e);
         };
 
-       
-        // debugger;
-
 
         if (!A) {
             // stopListening();
@@ -848,6 +845,7 @@ function renderLayers() {
 
         if (A.stop_rendering){
             console.log("got stop rendering")
+            debugger;
             doneRendering("Done rendering.");
             return;
         } 
