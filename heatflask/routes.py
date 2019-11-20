@@ -47,6 +47,14 @@ def load_user(user_id):
     return user
 
 
+# @login_manager.unauthorized_handler
+# def unauthorized():
+#     return url_for(
+#         "authorize",
+#         state=url_for("splash")
+#     )
+
+
 def admin_required(f):
     # Views wrapped with this wrapper will only allow admin users
     @wraps(f)
@@ -63,14 +71,20 @@ def admin_or_self_required(f):
     #  Only allow users viewing their own data
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if current_user.is_authenticated:
-            user_identifier = request.view_args.get("username")
-            if (current_user.is_admin() or
-                (user_identifier == current_user.username) or
-                    (user_identifier == str(current_user.id))):
-                return f(*args, **kwargs)
-            else:
-                return login_manager.unauthorized()
+
+        if current_user.is_anonymous:
+            return login_manager.unauthorized()
+
+        if current_user.is_admin():
+            return f(*args, **kwargs)
+        
+        user_identifier = request.view_args.get("username")
+
+        if user_identifier in [current_user.username, str(current_user.id)]:
+            return f(*args, **kwargs)
+        else:
+            return login_manager.unauthorized()
+
     return decorated_function
 
 
@@ -79,16 +93,17 @@ def log_request_event(f):
     def decorated_function(*args, **kwargs):
         event = {"msg": request.url}
 
-        if not current_user.is_anonymous:
-            if not current_user.is_admin():
-                event.update({
-                    "cuid": current_user.id,
-                    "profile": current_user.profile
-                })
-            else:
-                # if current user is admin we don't bother logging this event
+        if current_user.is_authenticated:
+            if current_user.is_admin():
+                # if current user is admin
+                # we don't bother logging this event
                 return f(*args, **kwargs)
-                
+
+            event.update({
+                "cuid": current_user.id,
+                "profile": current_user.profile
+            })
+        
         # If the user is anonymous or a regular user, we log the event
         EventLogger.log_request(request, **event)
         return f(*args, **kwargs)
@@ -112,7 +127,6 @@ def redirect_to_new_domain():
         new_url = urlunparse(urlparts_list)
         # log.debug("new url: {}".format(new_url))
         return redirect(new_url, code=301)
-
 
 
 #  ------------- Serve some static files -----------------------------
@@ -151,17 +165,19 @@ def robots_txt():
 def splash():
     if current_user.is_authenticated:
         if hasattr(current_user, "id"):
-            return redirect(url_for('main',
-                                    username=current_user.id))
+            return redirect(
+                url_for('main', username=current_user.id)
+            )
         else:
             # If a user is logged in but has no record in our database.
             #  i.e. was deleted.  We direct them to initialize a new account.
             logout_user()
             flash("oops! Please log back in.")
 
-    return render_template("splash.html",
-                           next=(request.args.get("next") or
-                                 url_for("splash")))
+    return render_template(
+        "splash.html",
+        next=(request.args.get("next") or url_for("splash"))
+    )
 
 
 # Attempt to authorize a user via Oauth(2)
@@ -475,16 +491,16 @@ def activities(username):
 @admin_or_self_required
 def update_share_status(username):
     status = request.args.get("status")
-    user = Users.get(username)
+    # user = Users.get(username)
 
     # set user's share status
-    status = user.is_public(status == "public")
+    status = current_user.is_public(status == "public")
     log.info(
         "share status for {} set to {}"
-        .format(user, status)
+        .format(current_user, status)
     )
 
-    return jsonify(user=user.id, share=status)
+    return jsonify(user=current_user.id, share=status)
 
 
 def toObj(string):
