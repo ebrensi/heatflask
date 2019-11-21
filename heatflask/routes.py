@@ -187,7 +187,7 @@ def authorize():
     auth_url = client.authorization_url(
         client_id=app.config["STRAVA_CLIENT_ID"],
         redirect_uri=redirect_uri,
-        approval_prompt="force",
+        # approval_prompt="force",
         scope=["read", "activity:read", "activity:read_all"],
         state=state
     )
@@ -253,10 +253,8 @@ def auth_callback():
 
     return redirect(state or url_for("main", username=user.id))
 
-
 @app.route("/<username>/logout")
 @admin_or_self_required
-@login_required
 def logout(username):
     user = Users.get(username)
     user_id = user.id
@@ -745,6 +743,12 @@ def event_history():
         return render_template("history.html", events=events)
     return "No history"
 
+
+@app.route('/history/<event_id>')
+@log_request_event
+@admin_required
+def logged_event(event_id):
+    return jsonify(EventLogger.get_event(event_id))
 
 @app.route('/history/live-updates')
 @admin_required
