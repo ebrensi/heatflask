@@ -497,6 +497,7 @@ class Users(UserMixin, db_sql.Model):
         def append_streams(summaries):
             not_in_db = set()
             num_fetched = 0
+
             for A in Activities.append_streams_from_db(summaries):
                 if A:
                     if "_id" not in A or "time" in A:
@@ -541,9 +542,9 @@ class Users(UserMixin, db_sql.Model):
                 return
 
         self.pool = Pool(CONCURRENCY)
-        CHUNK_SIZE = 200
+        CHUNK_SIZE = 5
         chunks = Utility.chunks(summaries_generator, size=CHUNK_SIZE)
-
+        
         self.fetch_result = dict(
             num_empty=0,
             num_fetched=0,
@@ -553,18 +554,27 @@ class Users(UserMixin, db_sql.Model):
 
         start_time = time.time()
 
-        activities_with_streams = itertools.chain.from_iterable(
-            self.pool.imap_unordered(append_streams, chunks, maxsize=3)
-        )
+        count = 1
+        for chunk in chunks:
+            good = append_streams(chunk)
+            log.debug("chunk %s", count)
+            for A in good:
+                log.debug(A)
 
-        for A in itertools.imap(export, activities_with_streams):
-            yield A
+        # activities_with_streams = itertools.chain.from_iterable(
+        #     self.pool.imap_unordered(append_streams, chunks, maxsize=3)
+        # )
 
-        self.fetch_result["elapsed"] = int(time.time() - start_time)
-        msg = "{}: {}".format(self.id, self.fetch_result)
 
-        log.info(msg)
-        EventLogger.new_event(msg=msg)
+
+        # for A in itertools.imap(export, activities_with_streams):
+        #     yield A
+
+        # self.fetch_result["elapsed"] = int(time.time() - start_time)
+        # msg = "{}: {}".format(self.id, self.fetch_result)
+
+        # log.info(msg)
+        # EventLogger.new_event(msg=msg)
 
 
     def make_payment(self, amount):
@@ -1525,25 +1535,28 @@ class Activities(object):
         # log.debug("import {} took {} secs".format(_id, elapsed))
         return activity
 
-    def append_streams_from_db(self, summaries):
+    @classmethod
+    def append_streams_from_db(cls, summaries):
         # adds actvity streams to an iterable of summaries
         #  summaries must be manageable by a single batch operation
+        # log.debug(list(summaries))
         ids = set()
         for A in summaries:
             if "_id" not in A:
                 yield A
             ids.add(A["_id"])
 
-        for id, stream_data in self.get_many(ids):
+        for id, stream_data in cls.get_many(ids):
             if stream_data:
                 A.update(stream_data)
             yield A
 
-    def append_streams_from_import(self, summaries, client, pool=None):
+    @classmethod
+    def append_streams_from_import(cls, summaries, client, pool=None):
         P = pool or Pool(CONCURRENCY)
 
         def import_activity_stream(A):
-            imported = self.import_streams(client, A)
+            imported = cls.import_streams(client, A)
             return imported
         
         return P.imap_unordered(
@@ -1919,12 +1932,23 @@ class Utility():
 
     @staticmethod
     def chunks(iterable, size=10):
-        iterator = iter(iterable)
-        for first in iterator:
-            yield itertools.chain(
-                [first],
-                itertools.islice(iterator, size - 1)
-            )  
+        chunk = []
+        count = 0
+        for thing in iterable:
+            chunk.append(thing)
+            count += 1
+            if count >= size:
+                yield chunk
+                chunk = []
+                count = 0
+        yield chunk
+
+        # iterator = iter(iterable)
+        # for first in iterator:
+        #     yield itertools.chain(
+        #         [first],
+        #         itertools.islice(iterator, size - 1)
+        #     )  
 
 class BinaryWebsocketClient(object):
     # WebsocketClient is a wrapper for a websocket
