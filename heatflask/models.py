@@ -414,8 +414,6 @@ class Users(UserMixin, db_sql.Model):
                 yield {"error": "Invalid Dates"}
                 return
 
-        start_time = time.time()
-
         client_query = dict(
             limit=limit,
             after=after,
@@ -464,10 +462,10 @@ class Users(UserMixin, db_sql.Model):
                 return A
 
             A["ts_local"] = str(A["ts_local"])
-            ttl = (A["ts"] - now).total_seconds + STORE_INDEX_TIMEOUT
-            A["ttl"] = min(0, ttl)
+            ttl = (A["ts"] - now).total_seconds() + STORE_INDEX_TIMEOUT
+            A["ttl"] = max(0, int(ttl))
             del A["ts"]
-                        
+
             if owner_id:
                 A.update({"owner": self.id, "profile": self.profile})
 
@@ -480,11 +478,6 @@ class Users(UserMixin, db_sql.Model):
             for A in itertools.imap(export, summaries_generator):
                 yield A
                 count += 1
-            elapsed = int(time.time() - start_time)
-            log.debug(
-                "%s exported %s summaries in %d",
-                self.id, count, elapsed
-            )
             return
 
         #  summaries_generator yields activity summaries without streams
@@ -500,13 +493,13 @@ class Users(UserMixin, db_sql.Model):
 
             for A in Activities.append_streams_from_db(summaries):
                 if A:
-                    if "_id" not in A or "time" in A:
+                    if ("_id" not in A) or ("time" in A):
                         yield A
                         num_fetched += 1
                     else:
                         not_in_db.add(A)
 
-            self.fetch_result["num_fetched"] += num_fetched
+            self.fetch_result["fetched"] += num_fetched
 
             if OFFLINE:
                 return
@@ -521,11 +514,11 @@ class Users(UserMixin, db_sql.Model):
                 if A:
                     yield A
                 elif A is False:
-                    self.fetch_result["num_errors"] += 1
+                    self.fetch_result["errors"] += 1
                 else:
-                    self.fetch_result["num_empty"] += 1
+                    self.fetch_result["empty"] += 1
 
-            self.fetch_result["num_imported"] += num_imported
+            self.fetch_result["imported"] += num_imported
         #-------------------------------------------------------
 
         
@@ -542,39 +535,32 @@ class Users(UserMixin, db_sql.Model):
                 return
 
         self.pool = Pool(CONCURRENCY)
-        CHUNK_SIZE = 5
+        # self.pool = Pool(2)
+        CHUNK_SIZE = app.config["BATCH_CHUNK_SIZE"]
+
         chunks = Utility.chunks(summaries_generator, size=CHUNK_SIZE)
         
         self.fetch_result = dict(
-            num_empty=0,
-            num_fetched=0,
-            num_imported=0,
-            num_errors=0
+            empty=0,
+            fetched=0,
+            imported=0,
+            errors=0
         )
 
         start_time = time.time()
+          
+        activities_with_streams = itertools.chain.from_iterable(
+            self.pool.imap_unordered(append_streams, chunks, maxsize=3)
+        )
 
-        count = 1
-        for chunk in chunks:
-            good = append_streams(chunk)
-            log.debug("chunk %s", count)
-            for A in good:
-                log.debug(A)
+        for A in itertools.imap(export, activities_with_streams):
+            yield A
 
-        # activities_with_streams = itertools.chain.from_iterable(
-        #     self.pool.imap_unordered(append_streams, chunks, maxsize=3)
-        # )
+        self.fetch_result["elapsed"] = int(time.time() - start_time)
+        msg = "{}: {}".format(self.id, self.fetch_result)
 
-
-
-        # for A in itertools.imap(export, activities_with_streams):
-        #     yield A
-
-        # self.fetch_result["elapsed"] = int(time.time() - start_time)
-        # msg = "{}: {}".format(self.id, self.fetch_result)
-
-        # log.info(msg)
-        # EventLogger.new_event(msg=msg)
+        log.info(msg)
+        EventLogger.new_event(msg=msg)
 
 
     def make_payment(self, amount):
@@ -779,7 +765,6 @@ class Index(object):
                     #  the client is no longer there
                     yielding = False
                     cancel_key = None
-                    yield StopIteration
 
                 if not d or "_id" not in d:
                     continue
@@ -832,7 +817,7 @@ class Index(object):
 
                     except StopIteration:
                         # log.debug("requesting stop rendering")
-                        yield StopIteration
+                        yield {"done": 1}
                         yielding = False
 
                 # put d in storage
@@ -845,11 +830,11 @@ class Index(object):
                     pymongo.ReplaceOne({"_id": d["_id"]}, d, upsert=True)
                 )
                   
-            # if mongo_requests:
-            #     cls.db.bulk_write(
-            #         list(mongo_requests),
-            #         ordered=False
-            #     )
+            if mongo_requests:
+                cls.db.bulk_write(
+                    list(mongo_requests),
+                    ordered=False
+                )
         except Exception as e:
             log.error("Error while building activity index for %s", user)
             log.exception(e)
@@ -1010,8 +995,8 @@ class StravaClient(object):
 
     PAGE_SIZE = 200
     PAGE_REQUEST_CONCURRENCY = 10
-    # MAX_PAGE = 100
-    MAX_PAGE = 2  # for testing
+    MAX_PAGE = 100
+    # MAX_PAGE = 3  # for testing
 
     BASE_URL = "https://www.strava.com/api/v3"
     GET_ACTIVITIES_URL = "/athlete/activities"
@@ -1102,8 +1087,8 @@ class StravaClient(object):
 
             url = query_base_url + "&page={}".format(pagenum)
             
-            # log.debug("{} requesting page {}".format(self.user, pagenum))
-            # start = datetime.utcnow()
+            log.debug("{} requesting page {}".format(self.user, pagenum))
+            start = datetime.utcnow()
 
             try:
                 response = requests.get(url, headers=self.headers())
@@ -1119,9 +1104,9 @@ class StravaClient(object):
                 #  then there cannot be any further pages
                 self.final_index_page = min(self.final_index_page, pagenum)
 
-            # elapsed = (datetime.utcnow() - start).total_seconds()
-            # log.debug("{} index page {} in {} secs: count={}".format(
-            #     self.user, pagenum, elapsed, size))
+            elapsed = (datetime.utcnow() - start).total_seconds()
+            log.debug("{} index page {} in {} secs: count={}".format(
+                self.user, pagenum, elapsed, size))
 
             return pagenum, activities
 
@@ -1346,7 +1331,7 @@ class Activities(object):
 
         # note we are creating a list from the entire iterable of ids!
         keys = [cls.cache_key(id) for id in ids]
-        
+    
         # Attempt to fetch activities with ids from redis cache
         read_pipe = redis.pipeline()
         for key in keys:
@@ -1475,8 +1460,8 @@ class Activities(object):
 
         _id = activity["_id"]
 
-        # start = datetime.utcnow()
-        # log.debug("request import {}".format(_id))
+        start = datetime.utcnow()
+        log.debug("request import {}".format(_id))
 
         try:
             streams = client.get_activity_streams(
@@ -1531,8 +1516,8 @@ class Activities(object):
             except Exception:
                 return False
         
-        # elapsed = (datetime.utcnow() - start).total_seconds()
-        # log.debug("import {} took {} secs".format(_id, elapsed))
+        elapsed = (datetime.utcnow() - start).total_seconds()
+        log.debug("import {} took {} secs".format(_id, elapsed))
         return activity
 
     @classmethod
@@ -1540,13 +1525,16 @@ class Activities(object):
         # adds actvity streams to an iterable of summaries
         #  summaries must be manageable by a single batch operation
         # log.debug(list(summaries))
-        ids = set()
+        temp = {}
         for A in summaries:
             if "_id" not in A:
                 yield A
-            ids.add(A["_id"])
+            else:
+                temp[A["_id"]] = A
 
-        for id, stream_data in cls.get_many(ids):
+        # log.debug(ids)
+        for id, stream_data in cls.get_many(temp.keys()):
+            A = temp[id]
             if stream_data:
                 A.update(stream_data)
             yield A
@@ -1931,24 +1919,16 @@ class Utility():
             redis.delete(genID)
 
     @staticmethod
-    def chunks(iterable, size=10):
+    def chunks(iterable, size=10):        
         chunk = []
-        count = 0
         for thing in iterable:
             chunk.append(thing)
-            count += 1
-            if count >= size:
+            if len(chunk) == size:
                 yield chunk
                 chunk = []
-                count = 0
-        yield chunk
-
-        # iterator = iter(iterable)
-        # for first in iterator:
-        #     yield itertools.chain(
-        #         [first],
-        #         itertools.islice(iterator, size - 1)
-        #     )  
+        if chunk: 
+            yield chunk
+        
 
 class BinaryWebsocketClient(object):
     # WebsocketClient is a wrapper for a websocket

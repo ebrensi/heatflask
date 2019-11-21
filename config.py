@@ -36,6 +36,7 @@ class Config(object):
 
     # Concurrency for async Web-API fetching
     CONCURRENCY = 16
+    BATCH_CHUNK_SIZE = 100
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_POOL_SIZE = 16
@@ -204,6 +205,6 @@ class DevelopmentConfig(Config):
         STORE_ACTIVITIES_TIMEOUT = 60 * 24 * 60 * 60  # 60 days
 
         # How long we store an Index entry in MongoDB
-        STORE_INDEX_TIMEOUT = 10 * 24 * 60 * 60   # 60 days
+        STORE_INDEX_TIMEOUT = 60 * 24 * 60 * 60   # 60 days
 
         
