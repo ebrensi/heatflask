@@ -488,7 +488,7 @@ class Users(UserMixin, db_sql.Model):
         #  append streams to each one
         # -----------------------------------------------------------
         def append_streams(summaries):
-            not_in_db = set()
+            not_in_db = []
             num_fetched = 0
 
             for A in Activities.append_streams_from_db(summaries):
@@ -497,7 +497,7 @@ class Users(UserMixin, db_sql.Model):
                         yield A
                         num_fetched += 1
                     else:
-                        not_in_db.add(A)
+                        not_in_db.append(A)
 
             self.fetch_result["fetched"] += num_fetched
 
@@ -507,12 +507,12 @@ class Users(UserMixin, db_sql.Model):
             num_imported = 0
             for A in Activities.append_streams_from_import(
                 not_in_db,
-                self.client(),
-                self.pool
+                self.client()
             ):
 
                 if A:
                     yield A
+                    num_imported += 1
                 elif A is False:
                     self.fetch_result["errors"] += 1
                 else:
@@ -534,7 +534,7 @@ class Users(UserMixin, db_sql.Model):
                 
                 return
 
-        self.pool = Pool(CONCURRENCY)
+        self.pool = Pool(3)
         # self.pool = Pool(2)
         CHUNK_SIZE = app.config["BATCH_CHUNK_SIZE"]
 
@@ -1187,10 +1187,10 @@ class Activities(object):
     DB_TTL = STORE_ACTIVITIES_TIMEOUT
 
     @classmethod
-    def init_db(cls, clear_cache=False):
+    def init_db(cls, clear_cache=True):
         # Create/Initialize Activity database
         try:
-            mongodb.drop_collection(cls.name)
+            result1 = mongodb.drop_collection(cls.name)
         except Exception as e:
             log.debug(
                 "error deleting '{}' collection from MongoDB.\n{}"
@@ -1204,7 +1204,7 @@ class Activities(object):
             else:
                 result2 = None
 
-        mongodb.create_collection(cls.name)
+        result3 = mongodb.create_collection(cls.name)
         
         result = cls.db.create_index(
             "ts",
@@ -1378,23 +1378,11 @@ class Activities(object):
         # now we update the data-stores
         now = datetime.utcnow()
 
-        # results = {}
-
         # We need to make sure we don't exceed the limit
         #  of how many bulk writes we can do at one time
         redis_result = write_pipe.execute()
 
-        # if redis_result:
-        #     elapsed = (datetime.utcnow() - now).total_seconds()
-        #     log.debug(
-        #         "{} redis batch writes took {} secs: {}, {}"
-        #         .format(
-        #             len(redis_result), elapsed,
-        #             redis_result.count(True),
-        #             redis_result.count(False)
-        #         )
-        #     )
-
+        
         if fetched:
             # now update TTL for mongoDB records if there were any
             now = datetime.utcnow()
@@ -1408,12 +1396,6 @@ class Activities(object):
                     "failed to update activities in mongoDB: {}"
                     .format(e)
                 )
-
-            # elapsed = (datetime.utcnow() - now).total_seconds()
-            # log.debug(
-            #     "{} MongoDB batch writes took {} secs"
-            #     .format(mongo_result.raw_result["n"], elapsed)
-            # )
 
     @classmethod
     def get(cls, id, ttl=CACHE_TTL):
@@ -1525,18 +1507,21 @@ class Activities(object):
         # adds actvity streams to an iterable of summaries
         #  summaries must be manageable by a single batch operation
         # log.debug(list(summaries))
-        temp = {}
+        to_fetch = {}
         for A in summaries:
             if "_id" not in A:
                 yield A
             else:
-                temp[A["_id"]] = A
+                to_fetch[A["_id"]] = A
 
         # log.debug(ids)
-        for id, stream_data in cls.get_many(temp.keys()):
-            A = temp[id]
+        for id, stream_data in cls.get_many(to_fetch.keys()):
+            A = to_fetch[id]
             if stream_data:
                 A.update(stream_data)
+            yield A
+
+        for A in to_fetch.values():
             yield A
 
     @classmethod
