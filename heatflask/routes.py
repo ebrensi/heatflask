@@ -15,7 +15,7 @@ import base36
 import requests
 import stravalib
 import uuid
-from flask_login import current_user, login_user, logout_user, login_required
+from flask_login import current_user, login_user, logout_user
 
 # from urllib.parse import urlparse, urlunparse #python3
 from urlparse import urlparse, urlunparse  # python2
@@ -420,34 +420,6 @@ def main(username):
     )
 
 
-# @app.route('/<username>/list')
-# def list_activities(username):
-#     user = Users.get(username)
-#     if not user:
-#         return "no user {}".format(username)
-
-#     try:
-#         client = StravaClient(user=user)
-#     except Exception as e:
-#         log.exception(e)
-#         return "sorry, there was an error"
-    
-#     args = dict(
-#         limit=request.args.get("limit", 100),
-#     )
-#     if request.args.get("days"):
-#         days = int(request.args.get("days"))
-#         args["after"] = datetime.utcnow() - timedelta(days=days)
-
-#     stream = ("{}\n\n".format(a) for a in client.get_index(**args))
-
-    
-
-#     return Response(stream_with_context(
-#         stream
-#     ), mimetype='text/event-stream')
-
-
 @app.route('/<username>/activities')
 @log_request_event
 @admin_or_self_required
@@ -473,7 +445,6 @@ def activities(username):
         user=user,
         client_id=web_client_id
     )
-
 
 
 @app.route('/<username>/update_info')
@@ -506,18 +477,11 @@ def data_socket(ws):
                 # Make sure this socket is being accessed by
                 #  a legitimate client
                 query = msg["query"]
-                try:
-                    assert redis.exists(query["client_id"])
-                except Exception:
-                    obj = {"error": "client does not exist or is expired. please refresh your browser. "}
-                    wsclient.sendObj(obj)
-                    log.info(
-                        "query from invalid client {} rejected"
-                        .format(wsclient)
-                    )
-                    break
-    
-                wsclient.client_id = query.pop("client_id")
+
+                if "client_id" in query:
+                    wsclient.client_id = query.pop("client_id")
+                else:
+                    log.info("no client id!")
 
                 query_result = Activities.query(query)
                 for a in query_result:
@@ -721,10 +685,11 @@ def app_info():
 @admin_required
 def app_init():
     info = {
-        Activities.init_db(),
-        Index.init_db(),
+        "redis": redis.delete(*redis.keys("*")),
+        "Activities": Activities.init_db(),
+        "Index": Index.init_db()
     }
-    return "Activities, Index, Payments databases re-initialized"
+    return "Activities, Index initialized and redis cleared\n{}".format(info)
 
 
 @app.route("/beacon_handler", methods=["POST"])
