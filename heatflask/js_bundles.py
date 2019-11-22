@@ -28,11 +28,11 @@ bundles = {
             'js/leaflet-sidebar.min.js',
             'js/download.min.js',
             'js/gif2.js',  # Johan Nordberg: http://jnordberg.github.io/gif.js/
+            'js/localforage.min.js',
             output="gen/pre-compiled-dependencies.js"
         ),
         # un-minified dependencies
         flask_assets.Bundle(
-            'js/eventsource.js',
             'js/moment.js',
             'js/Polyline.encoded.js',
             'js/L.Control.Window.js',
