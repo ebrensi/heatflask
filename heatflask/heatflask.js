@@ -761,9 +761,8 @@ function renderLayers() {
             }
 
             rendering = false;
+            updateLayers(msg);
         }
-
-        updateLayers(msg);
     }
 
 
@@ -857,6 +856,7 @@ function renderLayers() {
         }
 
         if ("done" in A){
+            console.log("received done");
             doneRendering("Done rendering.");
             return;
         } 
@@ -927,7 +927,6 @@ function renderLayers() {
             }
         }
 
-
     }
 }
 
@@ -942,45 +941,46 @@ function updateState(){
          ids = $("#activity_ids").val();
 
     if (type == "activities") {
-        if (num) params.limit = num;
-        else delete params["limit"]
-    } else if ((type == "activity_ids") && ids) {
-        params.id = ids;
-    } else if ((type == "days") && num) {
-        params.preset = num;
+        params["limit"] = num;
+    } else if (type == "activity_ids") {
+        if (ids) params["id"] = ids;
+    } else if (type == "days") {
+        params["preset"] = num;
     } else {
-        if (appState.after) {
-            params.after = appState.after;
+        if (appState["after"]) {
+            params["after"] = appState.after;
         }
-        if (appState.before && (appState.before != "now")) {
-            params.before = appState.before;
+        if (appState["before"] && (appState["before"] != "now")) {
+            params["before"] = appState["before"];
         }
     }
 
-    if (appState.paused){
-        params.paused = "1";
+    if (appState["paused"]){
+        params["paused"] = "1";
     }
 
     if ($("#autozoom").is(':checked')) {
-        appState.autozoom = true;
-        params.autozoom = "1";
+        appState["autozoom"] = true;
+        params["autozoom"] = "1";
     } else {
-        appState.autozoom = false;
+        appState["autozoom"] = false;
         var zoom = map.getZoom(),
             center = map.getCenter(),
             precision = Math.max(0, Math.ceil(Math.log(zoom) / Math.LN2));
         
-        params.lat = center.lat.toFixed(precision);
-        params.lng = center.lng.toFixed(precision);
-        params.zoom = zoom;
+        if (center) {  
+            params.lat = center.lat.toFixed(precision);
+            params.lng = center.lng.toFixed(precision);
+            params.zoom = zoom;
+        }
     }
 
+    if (DotLayer["C1"]) params["c1"] = Math.round(DotLayer["C1"]);
+    if (DotLayer["C2"]) params["c2"] = Math.round(DotLayer["C2"]);
+    if (DotLayer["dotScale"]) params["sz"] = Math.round(DotLayer["dotScale"]);
 
-    params["c1"] = Math.round(DotLayer.C1);
-    params["c2"] = Math.round(DotLayer.C2);
-    params["sz"] = Math.round(DotLayer.dotScale);
-
-    params["baselayer"] = appState.currentBaseLayer.name;
+    if (appState.currentBaseLayer.name)
+        params["baselayer"] = appState.currentBaseLayer.name;
 
     var newURL = USER_ID + "?" + jQuery.param(params, true);
     window.history.pushState("", "", newURL);
