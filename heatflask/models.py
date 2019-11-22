@@ -1010,6 +1010,7 @@ class StravaClient(object):
 
     BASE_URL = "https://www.strava.com/api/v3"
     GET_ACTIVITIES_URL = "/athlete/activities"
+    GET_STREAMS_URL = "/activities/{id}/streams?keys={keys}&key_by_type={type}"
 
     def __init__(self, access_token=None, user=None):
         self.user = None
@@ -1054,6 +1055,7 @@ class StravaClient(object):
         return {
             "Authorization": "Bearer {}".format(self.access_token)
         }
+
 
     def get_activities(self, cancel_key=None, ordered=False, **query):
         cls = self.__class__
@@ -1186,6 +1188,27 @@ class StravaClient(object):
         finally:
             self.final_index_page = min(pagenum, self.final_index_page)
             pool.kill()
+
+    def get_activity_streams(self, _id):
+        cls = self.__class__
+
+        endpoint = cls.GET_STREAMS_URL.format(dict(
+            id=_id,
+            keys=["time", "latlng"],
+            type="true"
+        ))
+
+        url = cls.BASE_URL + endpoint
+        try:
+            response = requests.get(url, headers=self.headers())
+            streams = response.json()
+
+        except Exception as e:
+            log.exception(e)
+            return False
+
+
+
 
 #  Activities class is only a proxy to underlying data structures.
 #  There are no Activity objects
@@ -1946,7 +1969,7 @@ class BinaryWebsocketClient(object):
         
         self.key = "WS:{}:{}".format(loc, bdsec)
         
-        redis.setex(self.key, ttl, self.key)
+        redis.setex(self.key, ttl, int(time.time()))
 
         self.send_key()
 
@@ -1987,6 +2010,9 @@ class BinaryWebsocketClient(object):
             return obj
 
     def close(self):
+        start_time = redis.get(self.key)
+        now = time.time()
+        log.debug("%s closed. elapsed=%s", now - start_time)
         redis.delete(self.key)
         try:
             self.ws.close()
