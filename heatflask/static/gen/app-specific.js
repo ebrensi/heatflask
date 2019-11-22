@@ -69,14 +69,14 @@ function stopListening(){console.log("stopListening called");if(listening){liste
 wskey=null;$('#renderButton').prop('disabled',false);}}
 function sendQuery(){queryObj={client_id:ONLOAD_PARAMS.client_id};queryObj[USER_ID]={limit:type=="activities"?Math.max(1,+num):undefined,after:date1?date1:undefined,before:date2&&date2!="now"?date2:undefined,activity_ids:idString?Array.from(new Set(idString.split(/\D/).map(Number))):undefined,exclude_ids:to_exclude.length?to_exclude:undefined,streams:true};let msg=JSON.stringify({query:queryObj});sock.send(msg);}
 sock.onopen=function(event){sendQuery();};sock.onmessage=function(event){let A;try{A=msgpack.decode(new Uint8Array(event.data));}catch(e){console.log(event);console.log(event.data);console.log(e);};if(!A){$('#renderButton').prop('disabled',false);doneRendering("Finished.");return;}
-if(A.error){let msg=`<font color='red'>${A.error}</font><br>`;$(".data_message").html(msg);console.log(`Error:${A.error}`);return;}
-if(A.msg){$(".data_message").html(A.msg);}
-if(A.idx){$(".data_message").html(`indexing...${A.idx}`);}
-if(A.stop_rendering){console.log("got stop rendering");debugger;doneRendering("Done rendering.");return;}
-if(A.count){numActivities+=A.count;}
-if(A.delete){for(let id of A.delete){delete appState.items[id];}}
-if(A.wskey){wskey=A.wskey;}
-if(!A._id){return;}
+if("error"in A){let msg=`<font color='red'>${A.error}</font><br>`;$(".data_message").html(msg);console.log(`Error:${A.error}`);return;}
+if("msg"in A){$(".data_message").html(A.msg);}
+if("idx"in A){$(".data_message").html(`indexing...${A.idx}`);}
+if("count"in A){numActivities+=A.count;}
+if("delete"in A){for(let id of A.delete){delete appState.items[id];}}
+if("wskey"in A){wskey=A.wskey;}
+if("done"in A){doneRendering("Done rendering.");return;}
+if(!("_id"in A)){return;}
 let hasBounds=A.bounds,bounds=hasBounds?L.latLngBounds(A.bounds.SW,A.bounds.NE):L.latLngBounds();if(A.polyline){let latLngArray=L.PolylineUtil.decode(A.polyline);if(A.time){let len=latLngArray.length,latLngTime=new Float32Array(3*len),timeArray=streamDecode(A.time);for(let i=0,ll;i<len;i++){ll=latLngArray[i];if(!hasBounds){bounds.extend(ll);}
 idx=i*3;latLngTime[idx]=ll[0];latLngTime[idx+1]=ll[1];latLngTime[idx+2]=timeArray[i];}
 A.latLngTime=latLngTime;}}

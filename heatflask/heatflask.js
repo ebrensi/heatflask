@@ -820,52 +820,47 @@ function renderLayers() {
 
 
         if (!A) {
-            // stopListening();
             $('#renderButton').prop('disabled', false);
             doneRendering("Finished.");
-            // wskey = null;
             return;
         }
 
-        if (A.error){
+        if ("error" in A){
             let msg = `<font color='red'>${A.error}</font><br>`;
             $(".data_message").html(msg);
             console.log(`Error: ${A.error}`);
             return;
         } 
 
-        if (A.msg) {
+        if ("msg" in A) {
             $(".data_message").html(A.msg);
 
         }
 
-        if (A.idx) {
+        if ("idx" in A) {
             $(".data_message").html(`indexing...${A.idx}`);
         } 
 
-        if (A.stop_rendering){
-            console.log("got stop rendering")
-            debugger;
-            doneRendering("Done rendering.");
-            return;
-        } 
-
-        if (A.count){
+        if ("count" in A){
             numActivities += A.count;
         } 
 
-        if (A.delete) {
+        if ("delete" in A) {
             // delete all ids in A.delete
             for (let id of A.delete) {
                 delete appState.items[id];
             }
         }
 
-        if (A.wskey) {
+        if ("wskey" in A) {
             wskey = A.wskey;
         }
 
-        if (!A._id) {
+        if ("done" in A){
+            doneRendering("Done rendering.");
+            return;
+        } 
+        if (!("_id" in A)) {
             return;
         }
 
@@ -943,13 +938,15 @@ function openActivityListPage(rebuild) {
 function updateState(){
     let  params = {},
          type = $("#select_type").val(),
-         num = $("#select_num").val();
+         num = $("#select_num").val(),
+         ids = $("#activity_ids").val();
 
-    if(type == "activities") {
-        params.limit = num;
-    } else if (type == "activity_ids") {
-        params.id = $("#activity_ids").val();
-    } else if (type == "days") {
+    if (type == "activities") {
+        if (num) params.limit = num;
+        else delete params["limit"]
+    } else if ((type == "activity_ids") && ids) {
+        params.id = ids;
+    } else if ((type == "days") && num) {
         params.preset = num;
     } else {
         if (appState.after) {
@@ -970,8 +967,9 @@ function updateState(){
     } else {
         appState.autozoom = false;
         var zoom = map.getZoom(),
-        center = map.getCenter(),
-        precision = Math.max(0, Math.ceil(Math.log(zoom) / Math.LN2));
+            center = map.getCenter(),
+            precision = Math.max(0, Math.ceil(Math.log(zoom) / Math.LN2));
+        
         params.lat = center.lat.toFixed(precision);
         params.lng = center.lng.toFixed(precision);
         params.zoom = zoom;
