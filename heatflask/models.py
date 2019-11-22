@@ -488,7 +488,7 @@ class Users(UserMixin, db_sql.Model):
         #  append streams to each one
         # -----------------------------------------------------------
         def append_streams(summaries):
-            not_in_db = []
+            to_import = []
             num_fetched = 0
             
             for A in Activities.append_streams_from_db(summaries):
@@ -503,16 +503,16 @@ class Users(UserMixin, db_sql.Model):
                     yield A
                 
                 else:
-                    not_in_db.append(A)
+                    to_import.append(A)
 
             self.fetch_result["fetched"] += num_fetched
 
-            if OFFLINE:
+            if OFFLINE or (not to_import):
                 return
 
             num_imported = 0
             for A in Activities.append_streams_from_import(
-                not_in_db,
+                to_import,
                 self.client()
             ):
 
@@ -540,8 +540,8 @@ class Users(UserMixin, db_sql.Model):
                 
                 return
 
-        self.pool = Pool(3)
-        # self.pool = Pool(2)
+        CHUNK_CONCURRENCY = 3
+        self.pool = Pool(CHUNK_CONCURRENCY)
         CHUNK_SIZE = app.config["BATCH_CHUNK_SIZE"]
 
         chunks = Utility.chunks(summaries_generator, size=CHUNK_SIZE)
@@ -556,7 +556,11 @@ class Users(UserMixin, db_sql.Model):
         start_time = time.time()
           
         activities_with_streams = itertools.chain.from_iterable(
-            self.pool.imap_unordered(append_streams, chunks, maxsize=3)
+            self.pool.imap_unordered(
+                append_streams,
+                chunks,
+                maxsize=CHUNK_CONCURRENCY
+            )
         )
 
         for A in itertools.imap(export, activities_with_streams):
@@ -823,6 +827,7 @@ class Index(object):
                     except StopIteration:
                         # log.debug("requesting stop rendering")
                         yield {"done": 1}
+                        log.debug("sent done")
                         yielding = False
 
                 # put d in storage
@@ -1092,8 +1097,8 @@ class StravaClient(object):
 
             url = query_base_url + "&page={}".format(pagenum)
             
-            log.debug("{} requesting page {}".format(self.user, pagenum))
-            start = datetime.utcnow()
+            # log.debug("{} requesting page {}".format(self.user, pagenum))
+            # start = datetime.utcnow()
 
             try:
                 response = requests.get(url, headers=self.headers())
@@ -1109,9 +1114,9 @@ class StravaClient(object):
                 #  then there cannot be any further pages
                 self.final_index_page = min(self.final_index_page, pagenum)
 
-            elapsed = (datetime.utcnow() - start).total_seconds()
-            log.debug("{} index page {} in {} secs: count={}".format(
-                self.user, pagenum, elapsed, size))
+            # elapsed = (datetime.utcnow() - start).total_seconds()
+            # log.debug("{} index page {} in {} secs: count={}".format(
+            #     self.user, pagenum, elapsed, size))
 
             return pagenum, activities
 
@@ -1447,8 +1452,8 @@ class Activities(object):
 
         _id = activity["_id"]
 
-        start = datetime.utcnow()
-        log.debug("request import {}".format(_id))
+        # start = datetime.utcnow()
+        # log.debug("request import {}".format(_id))
 
         try:
             streams = client.get_activity_streams(
@@ -1503,8 +1508,8 @@ class Activities(object):
             except Exception:
                 return False
         
-        elapsed = (datetime.utcnow() - start).total_seconds()
-        log.debug("import {} took {} secs".format(_id, elapsed))
+        # elapsed = (datetime.utcnow() - start).total_seconds()
+        # log.debug("import {} took {} secs".format(_id, elapsed))
         return activity
 
     @classmethod
@@ -1519,7 +1524,9 @@ class Activities(object):
             else:
                 to_fetch[A["_id"]] = A
 
-        # log.debug(ids)
+        if not to_fetch:
+            return
+
         for _id, stream_data in cls.get_many(to_fetch.keys()):
             A = to_fetch.pop(_id)
             if stream_data:
