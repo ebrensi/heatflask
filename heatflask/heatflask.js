@@ -761,9 +761,8 @@ function renderLayers() {
             }
 
             rendering = false;
+            updateLayers(msg);
         }
-
-        updateLayers(msg);
     }
 
 
@@ -818,56 +817,50 @@ function renderLayers() {
             console.log(e);
         };
 
-       
-        // debugger;
-
 
         if (!A) {
-            // stopListening();
             $('#renderButton').prop('disabled', false);
             doneRendering("Finished.");
-            // wskey = null;
             return;
         }
 
-        if (A.error){
+        if ("error" in A){
             let msg = `<font color='red'>${A.error}</font><br>`;
             $(".data_message").html(msg);
             console.log(`Error: ${A.error}`);
             return;
         } 
 
-        if (A.msg) {
+        if ("msg" in A) {
             $(".data_message").html(A.msg);
 
         }
 
-        if (A.idx) {
+        if ("idx" in A) {
             $(".data_message").html(`indexing...${A.idx}`);
         } 
 
-        if (A.stop_rendering){
-            console.log("got stop rendering")
-            doneRendering("Done rendering.");
-            return;
-        } 
-
-        if (A.count){
+        if ("count" in A){
             numActivities += A.count;
         } 
 
-        if (A.delete) {
+        if ("delete" in A) {
             // delete all ids in A.delete
             for (let id of A.delete) {
                 delete appState.items[id];
             }
         }
 
-        if (A.wskey) {
+        if ("wskey" in A) {
             wskey = A.wskey;
         }
 
-        if (!A._id) {
+        if ("done" in A){
+            console.log("received done");
+            doneRendering("Done rendering.");
+            return;
+        } 
+        if (!("_id" in A)) {
             return;
         }
 
@@ -934,7 +927,6 @@ function renderLayers() {
             }
         }
 
-
     }
 }
 
@@ -945,46 +937,50 @@ function openActivityListPage(rebuild) {
 function updateState(){
     let  params = {},
          type = $("#select_type").val(),
-         num = $("#select_num").val();
+         num = $("#select_num").val(),
+         ids = $("#activity_ids").val();
 
-    if(type == "activities") {
-        params.limit = num;
+    if (type == "activities") {
+        params["limit"] = num;
     } else if (type == "activity_ids") {
-        params.id = $("#activity_ids").val();
+        if (ids) params["id"] = ids;
     } else if (type == "days") {
-        params.preset = num;
+        params["preset"] = num;
     } else {
-        if (appState.after) {
-            params.after = appState.after;
+        if (appState["after"]) {
+            params["after"] = appState.after;
         }
-        if (appState.before && (appState.before != "now")) {
-            params.before = appState.before;
+        if (appState["before"] && (appState["before"] != "now")) {
+            params["before"] = appState["before"];
         }
     }
 
-    if (appState.paused){
-        params.paused = "1";
+    if (appState["paused"]){
+        params["paused"] = "1";
     }
 
     if ($("#autozoom").is(':checked')) {
-        appState.autozoom = true;
-        params.autozoom = "1";
+        appState["autozoom"] = true;
+        params["autozoom"] = "1";
     } else {
-        appState.autozoom = false;
+        appState["autozoom"] = false;
         var zoom = map.getZoom(),
-        center = map.getCenter(),
-        precision = Math.max(0, Math.ceil(Math.log(zoom) / Math.LN2));
-        params.lat = center.lat.toFixed(precision);
-        params.lng = center.lng.toFixed(precision);
-        params.zoom = zoom;
+            center = map.getCenter(),
+            precision = Math.max(0, Math.ceil(Math.log(zoom) / Math.LN2));
+        
+        if (center) {  
+            params.lat = center.lat.toFixed(precision);
+            params.lng = center.lng.toFixed(precision);
+            params.zoom = zoom;
+        }
     }
 
+    if (DotLayer["C1"]) params["c1"] = Math.round(DotLayer["C1"]);
+    if (DotLayer["C2"]) params["c2"] = Math.round(DotLayer["C2"]);
+    if (DotLayer["dotScale"]) params["sz"] = Math.round(DotLayer["dotScale"]);
 
-    params["c1"] = Math.round(DotLayer.C1);
-    params["c2"] = Math.round(DotLayer.C2);
-    params["sz"] = Math.round(DotLayer.dotScale);
-
-    params["baselayer"] = appState.currentBaseLayer.name;
+    if (appState.currentBaseLayer.name)
+        params["baselayer"] = appState.currentBaseLayer.name;
 
     var newURL = USER_ID + "?" + jQuery.param(params, true);
     window.history.pushState("", "", newURL);

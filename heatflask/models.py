@@ -18,6 +18,8 @@ import msgpack
 from bson import ObjectId
 from bson.binary import Binary
 from bson.json_util import dumps
+import itertools
+import time
 from . import mongo, db_sql, redis  # Global database clients
 from . import EPOCH
 
@@ -421,7 +423,7 @@ class Users(UserMixin, db_sql.Model):
 
         if self.index_count():
 
-            gen = Index.query(
+            summaries_generator = Index.query(
                 user=self,
                 exclude_ids=exclude_ids,
                 update_ts=update_index_ts,
@@ -434,87 +436,100 @@ class Users(UserMixin, db_sql.Model):
                 yield {"error": "Cannot build index for {}. No Network Connection".format(self)}
                 return
 
-            gen = Index.import_user(
+            summaries_generator = Index.import_user(
                 self,
                 out_query=client_query,
                 yielding=True,
                 cancel_key=cancel_key
             )
 
-        DB_TTL = STORE_INDEX_TIMEOUT
-        NOW = datetime.utcnow()
+        # At this point we have a generator called summaries_generator
+        #  that yields Activity summaries, without streams.
 
-        # At this point we have a generator called gen
-        #  that yields Activity summaries, without streams
-        #  we will attempt to get the stream associated with 
-        #  each summary and yield it.
+        # Here we introduce a mapper that readys an activity summary
+        #  (with or without streams) to be yielded to the client
+        now = datetime.utcnow()
 
-        # log.debug("NOW: {}, DB_TTL: {}".format(NOW, DB_TTL))
-        to_fetch = {}
-        num_fetched = 0
+        def export(A):
+            if not A:
+                return A
 
-        for A in gen:
+            # get an actvity object ready to send to client
             if "_id" not in A:
                 # This is not an activity. It is
                 #  an error message or something
-                yield A
-                continue
-
-            elif "empty" in A:
-                continue
+                #  so pass it on.
+                return A
 
             A["ts_local"] = str(A["ts_local"])
-            if "ts" in A:
-                ts = A["ts"]
-                try:
-                    delta = (NOW - ts).seconds if NOW >= ts else 0
-                    A["ts"] = DB_TTL - delta
-                    # log.debug("delta: {}, remain: {}".format(delta,  A["ts"]))
-                except Exception as e:
-                    log.exception(e)
-                    del A["ts"]
-                        
+            ttl = (A["ts"] - now).total_seconds() + STORE_INDEX_TIMEOUT
+            A["ttl"] = max(0, int(ttl))
+            del A["ts"]
+
             if owner_id:
                 A.update({"owner": self.id, "profile": self.profile})
 
-            # log.debug("sending activity {}...".format(A["_id"]))
-            # gevent.sleep(0.5)  # test delay
-
-            if streams:
-                to_fetch[A["_id"]] = A
-            else:
-                yield A
-
-            # num_fetched += 1
-            # if limit and num_fetched >= limit:
-            #     break
-                
+            return A
+        
+        # if we are only sending summaries to client,
+        #  get them ready to export and yield them
+        count = 0
         if not streams:
+            for A in itertools.imap(export, summaries_generator):
+                yield A
+                count += 1
             return
 
-        num_empty = 0
-        num_fetched = 0
-        num_imported = 0
-        num_errors = 0
+        #  summaries_generator yields activity summaries without streams
+        #  We want to attach a stream to each one, get it ready to export,
+        #  and yield it.
 
-        for id, stream_data in Activities.get_many(to_fetch.keys()):
-
-            if cancel_key and not redis.exists(cancel_key):
-                log.debug("activities query for %s cancelled", self)
-                return
-
-            if stream_data:
-                if "empty" in stream_data:
-                    num_empty += 1
-                else:
-                    A = to_fetch.pop(id)
-                    A.update(stream_data)
+        # This generator takes a number of summaries ans attempts to
+        #  append streams to each one
+        # -----------------------------------------------------------
+        def append_streams(summaries):
+            to_import = []
+            num_fetched = 0
+            
+            for A in Activities.append_streams_from_db(summaries):
+                if not A:
+                    continue
+                
+                if "time" in A:
                     yield A
                     num_fetched += 1
+                
+                elif "_id" not in A:
+                    yield A
+                
+                else:
+                    to_import.append(A)
 
+            self.fetch_result["fetched"] += num_fetched
+
+            if OFFLINE or (not to_import):
+                return
+
+            num_imported = 0
+            for A in Activities.append_streams_from_import(
+                to_import,
+                self.client()
+            ):
+
+                if A:
+                    yield A
+                    num_imported += 1
+                elif A is False:
+                    self.fetch_result["errors"] += 1
+                else:
+                    self.fetch_result["empty"] += 1
+
+            self.fetch_result["imported"] += num_imported
+        #-------------------------------------------------------
+
+        
         if not OFFLINE:
-            client = self.client()
-            if not client:
+            if not self.client():
                 log.debug(
                     "{} cannot import. bad client.".format(self)
                 )
@@ -525,56 +540,37 @@ class Users(UserMixin, db_sql.Model):
                 
                 return
 
-            to_import = to_fetch.values()
+        CHUNK_CONCURRENCY = 3
+        self.pool = Pool(CHUNK_CONCURRENCY)
+        CHUNK_SIZE = app.config["BATCH_CHUNK_SIZE"]
 
-            if to_import:
-                cancel_imports = False
-                P = Pool(CONCURRENCY)
-
-                def import_activity_stream(A):
-                    if cancel_imports or (cancel_key and not redis.exists(cancel_key)):
-                        # log.debug("%s import cancelled", A["_id"])
-                        return
-
-                    imported = Activities.import_streams(client, A)
-                    return imported
-                
-                imported = P.imap_unordered(
-                    import_activity_stream,
-                    to_import,
-                    maxsize=CONCURRENCY + 2
-                )
-
-                for A in imported:
-                    if cancel_imports:
-                        break
-
-                    if A:
-                        num_imported += 1
-                        yield A
-
-                    elif A is False:
-                        num_errors += 1
-                        if num_errors > MAX_IMPORT_ERRORS:
-                            log.info(
-                                "too many errors. aborting import for {}".format(self)
-                            )
-                            cancel_imports = True
-                            P.kill()
-                            break
-
-        msg = "{} queued {} ({} fetched, {} imported, {} empty, {} errors)".format(
-            self.id,
-            num_fetched + num_imported,
-            num_fetched,
-            num_imported,
-            num_empty,
-            num_errors
+        chunks = Utility.chunks(summaries_generator, size=CHUNK_SIZE)
+        
+        self.fetch_result = dict(
+            empty=0,
+            fetched=0,
+            imported=0,
+            errors=0
         )
+
+        start_time = time.time()
+          
+        activities_with_streams = itertools.chain.from_iterable(
+            self.pool.imap_unordered(
+                append_streams,
+                chunks,
+                maxsize=CHUNK_CONCURRENCY
+            )
+        )
+
+        for A in itertools.imap(export, activities_with_streams):
+            yield A
+
+        self.fetch_result["elapsed"] = int(time.time() - start_time)
+        msg = "{}: {}".format(self.id, self.fetch_result)
 
         log.info(msg)
         EventLogger.new_event(msg=msg)
-
 
     def make_payment(self, amount):
         success = Payments.add(self, amount)
@@ -732,7 +728,7 @@ class Index(object):
 
         activity_ids = out_query.get("activity_ids")
         if activity_ids:
-            activity_ids = set(int(aid) for aid in activity_ids)
+            activity_ids = set(int(_id) for _id in activity_ids)
         after = out_query.get("after")
         before = out_query.get("before")
         limit = out_query.get("limit")
@@ -749,10 +745,8 @@ class Index(object):
         mongo_requests = set()
         user.indexing(0)
 
-        yield_activities = yielding
-
         start_time = datetime.utcnow()
-        log.debug("building activity index for {}".format(user))
+        log.debug("building activity index for %s", user)
 
         def in_date_range(dt):
             # log.debug(dict(dt=dt, after=after, before=before))
@@ -765,7 +759,10 @@ class Index(object):
             client = StravaClient(user=user)
 
             if not client:
-                raise Exception("Invalid access_token. {} is not authenticated.".format(user))
+                raise Exception(
+                    "Invalid access_token. %s is not authenticated.",
+                    user
+                )
 
             summaries = client.get_activities(
                 **fetch_query
@@ -777,7 +774,6 @@ class Index(object):
                     #  the client is no longer there
                     yielding = False
                     cancel_key = None
-                    yield StopIteration
 
                 if not d or "_id" not in d:
                     continue
@@ -785,51 +781,54 @@ class Index(object):
                 d["ts"] = start_time
                 ts_local = None
 
-                if yielding:
-                    d2 = d.copy()
-                    count += 1
-                    if count % 5:
-                        user.indexing(count)
+                count += 1
+                if not (count % 5):
+                    user.indexing(count)
+
+                    if yielding:
                         yield {"idx": count}
 
-                    if yield_activities:
-                        # cases for outputting this activity summary
-                        try:
-                            if activity_ids:
-                                if d2["_id"] in activity_ids:
-                                    yield d2
-                                    activity_ids.discard(d2["_id"])
-                                    if not activity_ids:
-                                        raise StopIteration
-                            
-                            elif limit:
-                                if count <= limit:
-                                    yield d2
-                                else:
-                                    raise StopIteration
+                if yielding:
+                    d2 = d.copy()
 
-                            elif check_dates:
-                                ts_local = Utility.to_datetime(d2["ts_local"])
-                                if in_date_range(ts_local):
-                                    yield d2
-                                    
-                                    if activities_ordered:
-                                        in_range = True
-
-                                elif in_range:
-                                    # the current activity's date was in range
-                                    # but is no longer. (and are in order)
-                                    # so we can safely say there will not be any more
-                                    # activities in range
-                                    raise StopIteration
-
-                            else:
+                    # cases for outputting this activity summary
+                    try:
+                        if activity_ids:
+                            if d2["_id"] in activity_ids:
                                 yield d2
+                                activity_ids.discard(d2["_id"])
+                                if not activity_ids:
+                                    raise StopIteration
+                        
+                        elif limit:
+                            if count <= limit:
+                                yield d2
+                            else:
+                                raise StopIteration
 
-                        except StopIteration:
-                            # log.debug("requesting stop rendering")
-                            yield_activities = False
-                            yield {"stop_rendering": 1}
+                        elif check_dates:
+                            ts_local = Utility.to_datetime(d2["ts_local"])
+                            if in_date_range(ts_local):
+                                yield d2
+                                
+                                if activities_ordered:
+                                    in_range = True
+
+                            elif in_range:
+                                # the current activity's date was in range
+                                # but is no longer. (and are in order)
+                                # so we can safely say there will not be any more
+                                # activities in range
+                                raise StopIteration
+
+                        else:
+                            yield d2
+
+                    except StopIteration:
+                        # log.debug("requesting stop rendering")
+                        yield {"done": 1}
+                        log.debug("sent done")
+                        yielding = False
 
                 # put d in storage
                 if ts_local:
@@ -964,19 +963,13 @@ class Index(object):
 
             query["_id"] = {"$in": to_fetch}
 
-            # log.debug("query ids: {}\nexclude: {}\nto_fetch: {}\ndelete: {}"
-            #     .format(
-            #         sorted(query_ids), 
-            #         sorted(exclude_ids),
-            #         sorted(to_fetch),
-            #         sorted(to_delete)))
         else:
             count = cls.db.count_documents(query)
-            # log.debug(count)
-            yield dict(count=count)
+            if limit:
+                count = min(limit, count)
 
-        if not limit:
-            limit = 0
+            yield dict(count=count)
+        
         try:
             if out_fields:
                 cursor = cls.db.find(query, out_fields)
@@ -1013,7 +1006,8 @@ class StravaClient(object):
     PAGE_SIZE = 200
     PAGE_REQUEST_CONCURRENCY = 10
     MAX_PAGE = 100
-    # MAX_PAGE = 2  # for testing
+    # MAX_PAGE = 3  # for testing
+
     BASE_URL = "https://www.strava.com/api/v3"
     GET_ACTIVITIES_URL = "/athlete/activities"
 
@@ -1203,10 +1197,10 @@ class Activities(object):
     DB_TTL = STORE_ACTIVITIES_TIMEOUT
 
     @classmethod
-    def init_db(cls, clear_cache=False):
+    def init_db(cls, clear_cache=True):
         # Create/Initialize Activity database
         try:
-            mongodb.drop_collection(cls.name)
+            result1 = mongodb.drop_collection(cls.name)
         except Exception as e:
             log.debug(
                 "error deleting '{}' collection from MongoDB.\n{}"
@@ -1220,7 +1214,7 @@ class Activities(object):
             else:
                 result2 = None
 
-        mongodb.create_collection(cls.name)
+        result3 = mongodb.create_collection(cls.name)
         
         result = cls.db.create_index(
             "ts",
@@ -1336,10 +1330,18 @@ class Activities(object):
         return result1, result2
 
     @classmethod
-    def get_many(cls, ids, ttl=CACHE_TTL):
+    def get_many(cls, ids, ttl=CACHE_TTL, ordered=False):
+        #  for each id in the ids iterable of activity-ids, this
+        #  generator yields either a dict of streams
+        #  or None if the streams for that activity are not in our
+        #  stores.
+        #  This generator uses batch operations to process the entire
+        #  iterator of ids, so call it in chunks if ids iterator is
+        #  a stream.
 
+        # note we are creating a list from the entire iterable of ids!
         keys = [cls.cache_key(id) for id in ids]
-        
+    
         # Attempt to fetch activities with ids from redis cache
         read_pipe = redis.pipeline()
         for key in keys:
@@ -1386,23 +1388,11 @@ class Activities(object):
         # now we update the data-stores
         now = datetime.utcnow()
 
-        # results = {}
-
         # We need to make sure we don't exceed the limit
         #  of how many bulk writes we can do at one time
         redis_result = write_pipe.execute()
 
-        # if redis_result:
-        #     elapsed = (datetime.utcnow() - now).total_seconds()
-        #     log.debug(
-        #         "{} redis batch writes took {} secs: {}, {}"
-        #         .format(
-        #             len(redis_result), elapsed,
-        #             redis_result.count(True),
-        #             redis_result.count(False)
-        #         )
-        #     )
-
+        
         if fetched:
             # now update TTL for mongoDB records if there were any
             now = datetime.utcnow()
@@ -1416,12 +1406,6 @@ class Activities(object):
                     "failed to update activities in mongoDB: {}"
                     .format(e)
                 )
-
-            # elapsed = (datetime.utcnow() - now).total_seconds()
-            # log.debug(
-            #     "{} MongoDB batch writes took {} secs"
-            #     .format(mongo_result.raw_result["n"], elapsed)
-            # )
 
     @classmethod
     def get(cls, id, ttl=CACHE_TTL):
@@ -1512,8 +1496,8 @@ class Activities(object):
             return
 
         except Exception as e:
-            log.error("error importing activity %s", _id)
-            log.exception(e)
+            log.error("error importing activity %s: %s", _id, activity)
+            log.error(e)
             return False
 
         cls.set(_id, imported_streams, timeout)
@@ -1527,6 +1511,46 @@ class Activities(object):
         # elapsed = (datetime.utcnow() - start).total_seconds()
         # log.debug("import {} took {} secs".format(_id, elapsed))
         return activity
+
+    @classmethod
+    def append_streams_from_db(cls, summaries):
+        # adds actvity streams to an iterable of summaries
+        #  summaries must be manageable by a single batch operation
+        # log.debug(list(summaries))
+        to_fetch = {}
+        for A in summaries:
+            if "_id" not in A:
+                yield A
+            else:
+                to_fetch[A["_id"]] = A
+
+        if not to_fetch:
+            return
+
+        for _id, stream_data in cls.get_many(to_fetch.keys()):
+            A = to_fetch.pop(_id)
+            if stream_data:
+                A.update(stream_data)
+            yield A
+
+        for A in to_fetch.values():
+            yield A
+
+    @classmethod
+    def append_streams_from_import(cls, summaries, client, pool=None):
+        P = pool or Pool(CONCURRENCY)
+
+        def import_activity_stream(A):
+            if not A or "_id" not in A:
+                return A
+            imported = cls.import_streams(client, A)
+            return imported
+        
+        return P.imap_unordered(
+            import_activity_stream,
+            summaries,
+            maxsize=P.size
+        )
 
     @classmethod
     def query(cls, queryObj, cancel_key=None):
@@ -1892,7 +1916,17 @@ class Utility():
         content = redis.get(genID)
         if content:
             redis.delete(genID)
-            
+
+    @staticmethod
+    def chunks(iterable, size=10):        
+        chunk = []
+        for thing in iterable:
+            chunk.append(thing)
+            if len(chunk) == size:
+                yield chunk
+                chunk = []
+        yield chunk
+        
 
 class BinaryWebsocketClient(object):
     # WebsocketClient is a wrapper for a websocket
