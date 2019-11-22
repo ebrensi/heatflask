@@ -490,14 +490,20 @@ class Users(UserMixin, db_sql.Model):
         def append_streams(summaries):
             not_in_db = []
             num_fetched = 0
-
+            
             for A in Activities.append_streams_from_db(summaries):
-                if A:
-                    if ("_id" not in A) or ("time" in A):
-                        yield A
-                        num_fetched += 1
-                    else:
-                        not_in_db.append(A)
+                if not A:
+                    continue
+                
+                if "time" in A:
+                    yield A
+                    num_fetched += 1
+                
+                elif "_id" not in A:
+                    yield A
+                
+                else:
+                    not_in_db.append(A)
 
             self.fetch_result["fetched"] += num_fetched
 
@@ -561,7 +567,6 @@ class Users(UserMixin, db_sql.Model):
 
         log.info(msg)
         EventLogger.new_event(msg=msg)
-
 
     def make_payment(self, amount):
         success = Payments.add(self, amount)
@@ -719,7 +724,7 @@ class Index(object):
 
         activity_ids = out_query.get("activity_ids")
         if activity_ids:
-            activity_ids = set(int(aid) for aid in activity_ids)
+            activity_ids = set(int(_id) for _id in activity_ids)
         after = out_query.get("after")
         before = out_query.get("before")
         limit = out_query.get("limit")
@@ -1515,8 +1520,8 @@ class Activities(object):
                 to_fetch[A["_id"]] = A
 
         # log.debug(ids)
-        for id, stream_data in cls.get_many(to_fetch.keys()):
-            A = to_fetch[id]
+        for _id, stream_data in cls.get_many(to_fetch.keys()):
+            A = to_fetch.pop(_id)
             if stream_data:
                 A.update(stream_data)
             yield A
@@ -1529,6 +1534,8 @@ class Activities(object):
         P = pool or Pool(CONCURRENCY)
 
         def import_activity_stream(A):
+            if not A or "_id" not in A:
+                return A
             imported = cls.import_streams(client, A)
             return imported
         
@@ -1911,8 +1918,7 @@ class Utility():
             if len(chunk) == size:
                 yield chunk
                 chunk = []
-        if chunk: 
-            yield chunk
+        yield chunk
         
 
 class BinaryWebsocketClient(object):
