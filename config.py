@@ -69,7 +69,7 @@ class Config(object):
     CACHE_IP_INFO_TIMEOUT = 1 * 24 * 60 * 60  # 1 day
 
     # How long we will allow data requests from the same identified client
-    WEB_CLIENT_ID_TIMEOUT = 60 * 60 * 24  # 1 day
+    WEB_CLIENT_ID_TIMEOUT = 10 * 60 * 60 * 24  # 10 days
 
     JSONIFY_PRETTYPRINT_REGULAR = True
 
