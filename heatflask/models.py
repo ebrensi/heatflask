@@ -771,6 +771,7 @@ class Index(object):
                 **fetch_query
             )
 
+            dtnow = datetime.utcnow()
             for d in summaries:
                 if cancel_key and not redis.exists(cancel_key):
                     #  we will try to continue building index even if
@@ -782,7 +783,7 @@ class Index(object):
                 if not d or "_id" not in d:
                     continue
                 
-                d["ts"] = start_time
+                d["ts"] = dtnow
                 ts_local = None
 
                 count += 1
