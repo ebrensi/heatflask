@@ -829,7 +829,7 @@ class Index(object):
                     except StopIteration:
                         output(StopIteration)
                         #  this iterator is done, as far as the consumer is concerned
-                        log.debug("%s: index build done yielding")
+                        log.debug("%s: index build done yielding", user.id)
                         queue = None
 
                 # put d in storage
@@ -872,8 +872,8 @@ class Index(object):
     def import_user_index(
         cls,
         user,
-        fetch_query=None,
-        out_query=None,
+        fetch_query={},
+        out_query={},
         blocking=True,
         cancel_key=None
     ):
@@ -1424,7 +1424,7 @@ class Activities(object):
             # Attempt to fetch uncached activities from MongoDB
             try:
                 query = {"_id": {"$in": notcached.keys()}}
-                cls.db.find(query)
+                results = cls.db.find(query)
             except Exception:
                 log.exception("Failed mongodb query: %s", query)
                 return
@@ -1653,7 +1653,7 @@ class EventLogger(object):
         )
         for e in events:
             e["_id"] = str(e["_id"])
-            e["ts"] = Utility.to_epoc(e["ts"])
+            e["ts"] = Utility.to_epoch(e["ts"])
         return events
 
     @classmethod
@@ -1983,7 +1983,7 @@ class BinaryWebsocketClient(object):
         # accessing this websocket
         self.client_id = None
         
-        bdsec = Utility.to_epoc(self.birthday)
+        bdsec = Utility.to_epoch(self.birthday)
 
         loc = "{REMOTE_ADDR}:{REMOTE_PORT}".format(**websocket.environ)
         
