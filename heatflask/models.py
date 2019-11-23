@@ -1812,7 +1812,12 @@ class Webhooks(object):
 
         update = cls.client.handle_subscription_update(update_raw)
         user_id = update.owner_id
-        user = Users.get(user_id)
+        try:
+            user = Users.get(user_id)
+        except Exception:
+            log.exception("problem fetching user for update %s", update_raw)
+            return
+            
         if (not user) or (not user.index_count()):
             return
 
