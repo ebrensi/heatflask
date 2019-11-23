@@ -470,7 +470,7 @@ def data_socket(ws):
     wsclient = BinaryWebsocketClient(ws)
 
     while not ws.closed:
-        msg = wsclient.receiveObj()
+        msg = wsclient.receiveobj()
 
         if msg:
             if "query" in msg:
@@ -495,7 +495,7 @@ def data_socket(ws):
                             pass
                         return
 
-                    wsclient.sendObj(a)
+                    wsclient.sendobj(a)
                
             elif "close" in msg:
                 # log.debug("{} close request".format(wsclient))
