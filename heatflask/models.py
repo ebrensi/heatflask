@@ -4,7 +4,7 @@ from flask_login import UserMixin
 from sqlalchemy.dialects import postgresql as pg
 from sqlalchemy import inspect
 import pymongo
-from datetime import datetime
+from datetime import datetime, timedelta
 import dateutil
 import dateutil.parser
 import stravalib
@@ -24,7 +24,6 @@ from . import mongo, db_sql, redis  # Global database clients
 from . import EPOCH
 
 CONCURRENCY = app.config["CONCURRENCY"]
-CACHE_ACTIVITIES_TIMEOUT = app.config["CACHE_ACTIVITIES_TIMEOUT"]
 STREAMS_OUT = app.config["STREAMS_OUT"]
 STREAMS_TO_CACHE = app.config["STREAMS_TO_CACHE"]
 OFFLINE = app.config.get("OFFLINE")
@@ -390,7 +389,7 @@ class Users(UserMixin, db_sql.Model):
                          streams=False,
                          owner_id=False,
                          update_index_ts=True,
-                         cache_timeout=CACHE_ACTIVITIES_TIMEOUT,
+                         cache_timeout=app.config["CACHE_ACTIVITIES_TIMEOUT"],
                          cancel_key=None,
                          **kwargs):
 
@@ -1148,7 +1147,7 @@ class StravaClient(object):
                 #  then there cannot be any further pages
                 self.final_index_page = min(self.final_index_page, pagenum)
 
-            elapsed = time.time() - start
+            elapsed = round(time.time() - start, 3)
             log.debug(
                 "%s: response page %s %s",
                 self.user.id,
@@ -1252,7 +1251,7 @@ class Activities(object):
     name = "activities"
     db = mongodb.get_collection(name)
 
-    CACHE_TTL = CACHE_ACTIVITIES_TIMEOUT
+    CACHE_TTL = app.config["CACHE_ACTIVITIES_TIMEOUT"]
     DB_TTL = STORE_ACTIVITIES_TIMEOUT
 
     @classmethod
@@ -1552,7 +1551,7 @@ class Activities(object):
             except Exception:
                 return False
         
-        elapsed = time.time() - start
+        elapsed = round(time.time() - start, 3)
         log.debug("imported %s: elapsed=%s", _id, elapsed)
         return activity
 
@@ -2027,7 +2026,8 @@ class BinaryWebsocketClient(object):
     def close(self):
         start_time = redis.get(self.key)
         now = time.time()
-        log.debug("%s closed. elapsed=%s", now - start_time)
+        elapsed_td  = timedelta(seconds=now-start_time)
+        log.debug("%s closed. open for %s", elapsed_td)
         redis.delete(self.key)
         try:
             self.ws.close()
