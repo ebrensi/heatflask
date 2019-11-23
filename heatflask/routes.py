@@ -7,7 +7,7 @@ from flask import (
     Response, render_template, request, redirect, jsonify, url_for,
     flash, send_from_directory, stream_with_context
 )
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import json
 import itertools
@@ -16,6 +16,7 @@ import requests
 import stravalib
 import uuid
 from flask_login import current_user, login_user, logout_user
+import time
 
 # from urllib.parse import urlparse, urlunparse #python3
 from urlparse import urlparse, urlunparse  # python2
@@ -391,11 +392,14 @@ def main(username):
 
     # Assign an id to this web client in order to prevent
     #  websocket access from unidentified connections 
-    timeout = app.config["WEB_CLIENT_ID_TIMEOUT"]
-    web_client_id = "C:{}".format(uuid.uuid1().get_hex())
-    ip_address = request.access_route[-1]
-    redis.setex(web_client_id, timeout, ip_address)
+    # ip_address = request.access_route[-1]
 
+    timeout = app.config["WEB_CLIENT_ID_TIMEOUT"]
+    loc = "{REMOTE_ADDR}:{REMOTE_PORT}".format(**request.environ)
+    web_client_id = "H:{}".format(loc)
+    redis.setex(web_client_id, timeout, int(time.time()))
+
+    log.debug("new client %s", web_client_id)
 
     paused = request.args.get("paused") in ["1", "true"]
 
@@ -470,7 +474,7 @@ def data_socket(ws):
     wsclient = BinaryWebsocketClient(ws)
 
     while not ws.closed:
-        msg = wsclient.receiveObj()
+        msg = wsclient.receiveobj()
 
         if msg:
             if "query" in msg:
@@ -495,7 +499,7 @@ def data_socket(ws):
                             pass
                         return
 
-                    wsclient.sendObj(a)
+                    wsclient.sendobj(a)
                
             elif "close" in msg:
                 # log.debug("{} close request".format(wsclient))
@@ -694,8 +698,14 @@ def app_init():
 
 @app.route("/beacon_handler", methods=["POST"])
 def beacon_handler():
-    # log.debug("received beacon: {}".format(request.data))
-    Utility.del_genID(request.data)
+    key = request.data
+    if key.startswith("H"):
+        start_ts = float(redis.get(key))
+        elapsed = round(time.time() - start_ts, 1)
+        elapsed_td = timedelta(seconds=elapsed)
+        log.debug("%s closed. elapsed %s", key, elapsed_td)
+    
+    redis.delete(key)
     return "ok"
 
 
