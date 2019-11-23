@@ -25,7 +25,8 @@ from . import EPOCH
 
 mongodb = mongo.db
 log = app.logger
-
+OFFLINE = app.config["OFFLINE"]
+CACHE_ACTIVITIES_TIMEOUT = app.config["CACHE_ACTIVITIES_TIMEOUT"]
 
 @contextmanager
 def session_scope():
@@ -41,6 +42,7 @@ def session_scope():
 
 
 class Users(UserMixin, db_sql.Model):
+    DAYS_INACTIVE_CUTOFF = app.config["DAYS_INACTIVE_CUTOFF"]
     Column = db_sql.Column
     String = db_sql.String
     Integer = db_sql.Integer
@@ -90,7 +92,7 @@ class Users(UserMixin, db_sql.Model):
             # log.debug("{} bad access_token".format(self))
             return
 
-        if app.config["OFFLINE"]:
+        if OFFLINE:
             return
 
         if not self.cli:
@@ -136,7 +138,7 @@ class Users(UserMixin, db_sql.Model):
     @staticmethod
     def strava_user_data(user=None, access_info=None, session=db_sql.session):
         # fetch user data from Strava given user object or just a token
-        if app.config["OFFLINE"]:
+        if OFFLINE:
             return
 
         if user:
@@ -253,7 +255,7 @@ class Users(UserMixin, db_sql.Model):
             return
 
         days_inactive = (now - last_active).days
-        cutoff = days_inactive_cutoff or app.config["DAYS_INACTIVE_CUTOFF"]
+        cutoff = days_inactive_cutoff or cls.DAYS_INACTIVE_CUTOFF
 
         if days_inactive >= cutoff:
             # log.debug("{} inactive {} days".format(self, days_inactive))
@@ -262,7 +264,7 @@ class Users(UserMixin, db_sql.Model):
         # if we got here then the user has been active recently
         #  they may have revoked our access, which we can only
         #  know if we try to get some data on their behalf
-        if update and not app.config["OFFLINE"]:
+        if update and not OFFLINE:
             user_data = self.__class__.strava_user_data(user=self)
 
             if user_data:
@@ -359,7 +361,7 @@ class Users(UserMixin, db_sql.Model):
             return redis.setex(key, 60, status)
 
     def build_index(self, **args):
-        if app.config["OFFLINE"]:
+        if OFFLINE:
             return
 
         return Index.import_user_index(
@@ -376,7 +378,7 @@ class Users(UserMixin, db_sql.Model):
                          streams=False,
                          owner_id=False,
                          update_index_ts=True,
-                         cache_timeout=app.config["CACHE_ACTIVITIES_TIMEOUT"],
+                         cache_timeout=CACHE_ACTIVITIES_TIMEOUT,
                          cancel_key=None,
                          **kwargs):
 
@@ -415,7 +417,7 @@ class Users(UserMixin, db_sql.Model):
 
         else:
             # There is no activity index and we are to build one
-            if app.config["OFFLINE"]:
+            if OFFLINE:
                 yield dict(error="No Network Connection!")
                 return
 
@@ -460,6 +462,13 @@ class Users(UserMixin, db_sql.Model):
             for A in itertools.imap(export, summaries_generator):
                 yield A
                 count += 1
+            elapsed = round(time.time() - Utility.to_epoch(now), 3)
+            log.debug(
+                "%s: exported %s summaries in %s",
+                self.id,
+                count,
+                elapsed
+            )
             return
 
         #  summaries_generator yields activity summaries without streams
@@ -489,7 +498,7 @@ class Users(UserMixin, db_sql.Model):
 
             self.fetch_result["fetched"] += num_fetched
 
-            if app.config["OFFLINE"] or (not to_import):
+            if OFFLINE or (not to_import):
                 return
 
             num_imported = 0
@@ -509,7 +518,7 @@ class Users(UserMixin, db_sql.Model):
             self.fetch_result["imported"] += num_imported
         #-------------------------------------------------------
 
-        if not app.config["OFFLINE"]:
+        if not OFFLINE:
             if not self.client():
                 log.debug("%s cannot import. bad client.", self)
                 yield (dict(
@@ -544,7 +553,7 @@ class Users(UserMixin, db_sql.Model):
         for A in itertools.imap(export, activities_with_streams):
             yield A
 
-        self.fetch_result["elapsed"] = int(time.time() - start_time)
+        self.fetch_result["elapsed"] = round(time.time() - start_time, 3)
         msg = "{}: {}".format(self.id, self.fetch_result)
 
         log.info(msg)
@@ -562,6 +571,8 @@ class Index(object):
     name = "index"
     db = mongodb.get_collection(name)
     DB_TTL = app.config["STORE_INDEX_TIMEOUT"]
+    OFFLINE = OFFLINE
+    IMPORT_CONCURRENCY = app.config["IMPORT_CONCURRENCY"]
     
     @classmethod
     # Initialize the database
@@ -595,6 +606,10 @@ class Index(object):
 
         # Update the MongoDB Index TTL if necessary
         info = cls.db.index_information()
+
+        if "ts" not in info:
+            cls.init_db
+            return
 
         current_ttl = info["ts"]["expireAfterSeconds"]
 
@@ -697,7 +712,7 @@ class Index(object):
         cancel_key=None
     ):
 
-        if app.config["OFFLINE"]:
+        if cls.OFFLINE:
             if queue:
                 queue.put(dict(error="No network connection"))
             return
@@ -900,7 +915,7 @@ class Index(object):
             # log.debug("fetched activity {} for {}".format(id, user))
             return pymongo.ReplaceOne({"_id": A.id}, a, upsert=True)
 
-        pool = Pool(app.config["IMPORT_CONCURRENCY"])
+        pool = Pool(cls.IMPORT_CONCURRENCY)
         mongo_requests = list(
             req for req in pool.imap_unordered(fetch, activity_ids)
             if req
@@ -1019,7 +1034,7 @@ class Index(object):
 class StravaClient(object):
     # Stravalib includes a lot of unnecessary overhead
     #  so we have our own in-house client
-
+    PAGE_REQUEST_CONCURRENCY = app.config["PAGE_REQUEST_CONCURRENCY"]
     PAGE_SIZE = 200
     MAX_PAGE = 100
     # MAX_PAGE = 3  # for testing
@@ -1142,7 +1157,7 @@ class StravaClient(object):
 
             return pagenum, activities
 
-        pool = Pool(app.config["PAGE_REQUEST_CONCURRENCY"])
+        pool = Pool(cls.PAGE_REQUEST_CONCURRENCY)
 
         num_activities_retrieved = 0
         num_pages_processed = 0
@@ -1157,7 +1172,7 @@ class StravaClient(object):
         jobs = mapper(
             request_page,
             page_iterator(),
-            maxsize=app.config["PAGE_REQUEST_CONCURRENCY"] + 2
+            maxsize=cls.PAGE_REQUEST_CONCURRENCY + 2
         )
 
         try:
@@ -1236,8 +1251,13 @@ class Activities(object):
     name = "activities"
     db = mongodb.get_collection(name)
 
+    IMPORT_CONCURRENCY = app.config["IMPORT_CONCURRENCY"]
     CACHE_TTL = app.config["CACHE_ACTIVITIES_TIMEOUT"]
+    STREAMS_TO_CACHE = app.config["STREAMS_TO_CACHE"]
+    STREAMS_OUT = app.config["STREAMS_OUT"]
+    ESSENTIAL_STREAMS = app.config["ESSENTIAL_STREAMS"]
     DB_TTL = app.config["STORE_ACTIVITIES_TIMEOUT"]
+    OFFLINE = OFFLINE
 
     @classmethod
     def init_db(cls, clear_cache=True):
@@ -1254,7 +1274,11 @@ class Activities(object):
 
         if clear_cache:
             to_delete = redis.keys(cls.cache_key("*"))
-            result["redis"] = redis.delete(*to_delete)
+            pipe = redis.pipeline()
+            for k in to_delete:
+                pipe.delete(k)
+
+            result["redis"] = pipe.execute()
 
         result["mongo_create"] = mongodb.create_collection(cls.name)
         
@@ -1272,6 +1296,10 @@ class Activities(object):
 
         # Update the MongoDB Activities TTL if necessary 
         info = cls.db.index_information()
+
+        if "ts" not in info:
+            cls.init_db()
+            return
 
         current_ttl = info["ts"]["expireAfterSeconds"]
 
@@ -1468,10 +1496,10 @@ class Activities(object):
 
     @classmethod
     def import_streams(cls, client, activity, timeout=CACHE_TTL):
-        if app.config["OFFLINE"]:
+        if cls.OFFLINE:
             return
  
-        streams_to_import = list(app.config["STREAMS_TO_CACHE"]) + ["latlng"]
+        streams_to_import = list(cls.STREAMS_TO_CACHE) + ["latlng"]
         try:
             streams_to_import.remove("polyline")
         except Exception:
@@ -1502,13 +1530,13 @@ class Activities(object):
             
             imported_streams["polyline"] = polyline.encode(latlng)
 
-            for s in set(app.config["STREAMS_TO_CACHE"]) - set(["polyline"]):
+            for s in set(cls.STREAMS_TO_CACHE) - set(["polyline"]):
                 # Encode/compress these streams
                 try:
                     stream = imported_streams[s]
                     assert len(stream) > 2
                 except Exception:
-                    if s in app.config["ESSENTIAL_STREAMS"]:
+                    if s in cls.ESSENTIAL_STREAMS:
                         raise UserWarning("no stream '{}'".format(s))
                     else:
                         continue
@@ -1530,7 +1558,7 @@ class Activities(object):
 
         cls.set(_id, imported_streams, timeout)
 
-        for s in app.config["STREAMS_OUT"]:
+        for s in cls.STREAMS_OUT:
             try:
                 activity[s] = imported_streams[s]
             except Exception:
@@ -1565,7 +1593,7 @@ class Activities(object):
 
     @classmethod
     def append_streams_from_import(cls, summaries, client, pool=None):
-        P = pool or Pool(app.config["IMPORT_CONCURRENCY"])
+        P = pool or Pool(cls.IMPORT_CONCURRENCY)
 
         def import_activity_stream(A):
             if not A or "_id" not in A:
@@ -1972,9 +2000,10 @@ class BinaryWebsocketClient(object):
 
         loc = "{REMOTE_ADDR}:{REMOTE_PORT}".format(**websocket.environ)
         
-        self.key = "WS:{}:{}".format(loc, bdsec)
+        self.key = "WS:{}".format(loc)
         
-        redis.setex(self.key, ttl, int(time.time()))
+        redis.setex(self.key, ttl, bdsec)
+        log.debug("%s open", self.key)
 
         self.send_key()
 
@@ -2009,10 +2038,10 @@ class BinaryWebsocketClient(object):
             return obj
 
     def close(self):
-        start_time = redis.get(self.key)
-        now = time.time()
-        elapsed_td  = timedelta(seconds=now-start_time)
-        log.debug("%s closed. open for %s", elapsed_td)
+        start_time = float(redis.get(self.key))
+        elapsed = round(time.time() - start_time, 1)
+        elapsed_td  = timedelta(seconds=elapsed)
+        log.debug("%s closed. open for %s", self.key, elapsed_td)
         redis.delete(self.key)
         try:
             self.ws.close()
