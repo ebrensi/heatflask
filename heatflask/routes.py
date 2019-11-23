@@ -399,7 +399,7 @@ def main(username):
     web_client_id = "H:{}".format(loc)
     redis.setex(web_client_id, timeout, int(time.time()))
 
-    log.debug("new client %s", web_client_id)
+    log.info("NEW CLIENT %s", web_client_id)
 
     paused = request.args.get("paused") in ["1", "true"]
 
@@ -699,11 +699,20 @@ def app_init():
 @app.route("/beacon_handler", methods=["POST"])
 def beacon_handler():
     key = request.data
+    val = redis.get(key)
+    if not val:
+        log.info("close from expired key %s", key)
+        return "ok"
+    
     if key.startswith("H"):
-        start_ts = float(redis.get(key))
-        elapsed = round(time.time() - start_ts, 1)
-        elapsed_td = timedelta(seconds=elapsed)
-        log.debug("%s closed. elapsed %s", key, elapsed_td)
+        try:
+            start_ts = float(val)
+        except Exception:
+            log.exception("problem with key '%s'", val)
+        else:
+            elapsed = round(time.time() - start_ts, 1)
+            elapsed_td = timedelta(seconds=elapsed)
+            log.info("%s CLIENT CLOSED. elapsed %s", key, elapsed_td)
     
     redis.delete(key)
     return "ok"
