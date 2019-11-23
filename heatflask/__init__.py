@@ -51,7 +51,7 @@ def create_app():
 
         db_sql.init_app(app)
         redis.init_app(app)
-        mongo.init_app(app, maxIdleTimeMS=30000)
+        mongo.init_app(app, maxIdleTimeMS=30000, connect=False)
         login_manager.init_app(app)
         sockets.init_app(app)
         assets.init_app(app)
