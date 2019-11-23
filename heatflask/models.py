@@ -23,19 +23,6 @@ import time
 from . import mongo, db_sql, redis  # Global database clients
 from . import EPOCH
 
-CONCURRENCY = app.config["CONCURRENCY"]
-STREAMS_OUT = app.config["STREAMS_OUT"]
-STREAMS_TO_CACHE = app.config["STREAMS_TO_CACHE"]
-OFFLINE = app.config.get("OFFLINE")
-STRAVA_CLIENT_ID = app.config["STRAVA_CLIENT_ID"]
-STRAVA_CLIENT_SECRET = app.config["STRAVA_CLIENT_SECRET"]
-ADMIN = app.config["ADMIN"]
-DAYS_INACTIVE_CUTOFF = app.config["DAYS_INACTIVE_CUTOFF"]
-STORE_INDEX_TIMEOUT = app.config["STORE_INDEX_TIMEOUT"]
-STORE_ACTIVITIES_TIMEOUT = app.config["STORE_ACTIVITIES_TIMEOUT"]
-MAX_HISTORY_BYTES = app.config["MAX_HISTORY_BYTES"]
-MAX_IMPORT_ERRORS = app.config["MAX_IMPORT_ERRORS"]
-
 mongodb = mongo.db
 log = app.logger
 
@@ -103,7 +90,7 @@ class Users(UserMixin, db_sql.Model):
             # log.debug("{} bad access_token".format(self))
             return
 
-        if OFFLINE:
+        if app.config["OFFLINE"]:
             return
 
         if not self.cli:
@@ -120,8 +107,8 @@ class Users(UserMixin, db_sql.Model):
             # log.debug("%s expired token. refreshing...", self.id)
             try:
                 new_access_info = self.cli.refresh_access_token(
-                    client_id=STRAVA_CLIENT_ID,
-                    client_secret=STRAVA_CLIENT_SECRET,
+                    client_id=app.config["STRAVA_CLIENT_ID"],
+                    client_secret=app.config["STRAVA_CLIENT_SECRET"],
                     refresh_token=access_info.get("refresh_token"))
                 
                 self.access_token = json.dumps(new_access_info)
@@ -144,12 +131,12 @@ class Users(UserMixin, db_sql.Model):
         return unicode(self.id)
 
     def is_admin(self):
-        return self.id in ADMIN
+        return self.id in app.config["ADMIN"]
 
     @staticmethod
     def strava_user_data(user=None, access_info=None, session=db_sql.session):
         # fetch user data from Strava given user object or just a token
-        if OFFLINE:
+        if app.config["OFFLINE"]:
             return
 
         if user:
@@ -266,7 +253,7 @@ class Users(UserMixin, db_sql.Model):
             return
 
         days_inactive = (now - last_active).days
-        cutoff = days_inactive_cutoff or DAYS_INACTIVE_CUTOFF
+        cutoff = days_inactive_cutoff or app.config["DAYS_INACTIVE_CUTOFF"]
 
         if days_inactive >= cutoff:
             # log.debug("{} inactive {} days".format(self, days_inactive))
@@ -275,7 +262,7 @@ class Users(UserMixin, db_sql.Model):
         # if we got here then the user has been active recently
         #  they may have revoked our access, which we can only
         #  know if we try to get some data on their behalf
-        if update and not OFFLINE:
+        if update and not app.config["OFFLINE"]:
             user_data = self.__class__.strava_user_data(user=self)
 
             if user_data:
@@ -310,8 +297,8 @@ class Users(UserMixin, db_sql.Model):
 
                 return (user, result)
 
-            TRIAGE_CONCURRENCY = 5
-            P = Pool(TRIAGE_CONCURRENCY)
+            
+            P = Pool(app.config["TRIAGE_CONCURRENCY"])
             deleted = 0
             updated = 0
             invalid = 0
@@ -319,7 +306,7 @@ class Users(UserMixin, db_sql.Model):
           
             triage_jobs = P.imap_unordered(
                 triage_user, cls.query,
-                maxsize=TRIAGE_CONCURRENCY + 2
+                maxsize=app.config["TRIAGE_CONCURRENCY"] + 2
             )
 
             for user, status in triage_jobs:
@@ -372,7 +359,7 @@ class Users(UserMixin, db_sql.Model):
             return redis.setex(key, 60, status)
 
     def build_index(self, **args):
-        if OFFLINE:
+        if app.config["OFFLINE"]:
             return
 
         return Index.import_user_index(
@@ -428,7 +415,7 @@ class Users(UserMixin, db_sql.Model):
 
         else:
             # There is no activity index and we are to build one
-            if OFFLINE:
+            if app.config["OFFLINE"]:
                 yield dict(error="No Network Connection!")
                 return
 
@@ -457,7 +444,7 @@ class Users(UserMixin, db_sql.Model):
                 return A
 
             A["ts_local"] = str(A["ts_local"])
-            ttl = (A["ts"] - now).total_seconds() + STORE_INDEX_TIMEOUT
+            ttl = (A["ts"] - now).total_seconds() + app.config["STORE_INDEX_TIMEOUT"]
             A["ttl"] = max(0, int(ttl))
             del A["ts"]
 
@@ -502,7 +489,7 @@ class Users(UserMixin, db_sql.Model):
 
             self.fetch_result["fetched"] += num_fetched
 
-            if OFFLINE or (not to_import):
+            if app.config["OFFLINE"] or (not to_import):
                 return
 
             num_imported = 0
@@ -522,7 +509,7 @@ class Users(UserMixin, db_sql.Model):
             self.fetch_result["imported"] += num_imported
         #-------------------------------------------------------
 
-        if not OFFLINE:
+        if not app.config["OFFLINE"]:
             if not self.client():
                 log.debug("%s cannot import. bad client.", self)
                 yield (dict(
@@ -532,8 +519,7 @@ class Users(UserMixin, db_sql.Model):
                 
                 return
 
-        CHUNK_CONCURRENCY = 3
-        self.pool = Pool(CHUNK_CONCURRENCY)
+        self.pool = Pool(app.config["CHUNK_CONCURRENCY"])
         CHUNK_SIZE = app.config["BATCH_CHUNK_SIZE"]
 
         chunks = Utility.chunks(summaries_generator, size=CHUNK_SIZE)
@@ -551,7 +537,7 @@ class Users(UserMixin, db_sql.Model):
             self.pool.imap_unordered(
                 append_streams,
                 chunks,
-                maxsize=CHUNK_CONCURRENCY
+                maxsize=app.config["CHUNK_CONCURRENCY"]
             )
         )
 
@@ -575,7 +561,7 @@ class Users(UserMixin, db_sql.Model):
 class Index(object):
     name = "index"
     db = mongodb.get_collection(name)
-    DB_TTL = STORE_INDEX_TIMEOUT
+    DB_TTL = app.config["STORE_INDEX_TIMEOUT"]
     
     @classmethod
     # Initialize the database
@@ -711,7 +697,7 @@ class Index(object):
         cancel_key=None
     ):
 
-        if OFFLINE:
+        if app.config["OFFLINE"]:
             if queue:
                 queue.put(dict(error="No network connection"))
             return
@@ -914,7 +900,7 @@ class Index(object):
             # log.debug("fetched activity {} for {}".format(id, user))
             return pymongo.ReplaceOne({"_id": A.id}, a, upsert=True)
 
-        pool = Pool(CONCURRENCY)
+        pool = Pool(app.config["IMPORT_CONCURRENCY"])
         mongo_requests = list(
             req for req in pool.imap_unordered(fetch, activity_ids)
             if req
@@ -1035,7 +1021,6 @@ class StravaClient(object):
     #  so we have our own in-house client
 
     PAGE_SIZE = 200
-    PAGE_REQUEST_CONCURRENCY = 10
     MAX_PAGE = 100
     # MAX_PAGE = 3  # for testing
 
@@ -1157,7 +1142,7 @@ class StravaClient(object):
 
             return pagenum, activities
 
-        pool = Pool(cls.PAGE_REQUEST_CONCURRENCY)
+        pool = Pool(app.config["PAGE_REQUEST_CONCURRENCY"])
 
         num_activities_retrieved = 0
         num_pages_processed = 0
@@ -1172,7 +1157,7 @@ class StravaClient(object):
         jobs = mapper(
             request_page,
             page_iterator(),
-            maxsize=cls.PAGE_REQUEST_CONCURRENCY + 2
+            maxsize=app.config["PAGE_REQUEST_CONCURRENCY"] + 2
         )
 
         try:
@@ -1252,7 +1237,7 @@ class Activities(object):
     db = mongodb.get_collection(name)
 
     CACHE_TTL = app.config["CACHE_ACTIVITIES_TIMEOUT"]
-    DB_TTL = STORE_ACTIVITIES_TIMEOUT
+    DB_TTL = app.config["STORE_ACTIVITIES_TIMEOUT"]
 
     @classmethod
     def init_db(cls, clear_cache=True):
@@ -1483,10 +1468,10 @@ class Activities(object):
 
     @classmethod
     def import_streams(cls, client, activity, timeout=CACHE_TTL):
-        if OFFLINE:
+        if app.config["OFFLINE"]:
             return
  
-        streams_to_import = list(STREAMS_TO_CACHE) + ["latlng"]
+        streams_to_import = list(app.config["STREAMS_TO_CACHE"]) + ["latlng"]
         try:
             streams_to_import.remove("polyline")
         except Exception:
@@ -1517,7 +1502,7 @@ class Activities(object):
             
             imported_streams["polyline"] = polyline.encode(latlng)
 
-            for s in set(STREAMS_TO_CACHE) - set(["polyline"]):
+            for s in set(app.config["STREAMS_TO_CACHE"]) - set(["polyline"]):
                 # Encode/compress these streams
                 try:
                     stream = imported_streams[s]
@@ -1545,7 +1530,7 @@ class Activities(object):
 
         cls.set(_id, imported_streams, timeout)
 
-        for s in STREAMS_OUT:
+        for s in app.config["STREAMS_OUT"]:
             try:
                 activity[s] = imported_streams[s]
             except Exception:
@@ -1580,7 +1565,7 @@ class Activities(object):
 
     @classmethod
     def append_streams_from_import(cls, summaries, client, pool=None):
-        P = pool or Pool(CONCURRENCY)
+        P = pool or Pool(app.config["IMPORT_CONCURRENCY"])
 
         def import_activity_stream(A):
             if not A or "_id" not in A:
@@ -1614,7 +1599,7 @@ class EventLogger(object):
     db = mongodb.get_collection(name)
 
     @classmethod
-    def init_db(cls, rebuild=True, size=MAX_HISTORY_BYTES):
+    def init_db(cls, rebuild=True, size=app.config["MAX_HISTORY_BYTES"]):
 
         collections = mongodb.collection_names(
             include_system_collections=False)
@@ -1729,8 +1714,8 @@ class Webhooks(object):
 
     client = stravalib.Client()
     credentials = {
-        "client_id": STRAVA_CLIENT_ID,
-        "client_secret": STRAVA_CLIENT_SECRET
+        "client_id": app.config["STRAVA_CLIENT_ID"],
+        "client_secret": app.config["STRAVA_CLIENT_SECRET"]
     }
 
     @classmethod
