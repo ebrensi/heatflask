@@ -27,6 +27,10 @@ mongodb = mongo.db
 log = app.logger
 OFFLINE = app.config["OFFLINE"]
 CACHE_ACTIVITIES_TIMEOUT = app.config["CACHE_ACTIVITIES_TIMEOUT"]
+STRAVA_CLIENT_ID = app.config["STRAVA_CLIENT_ID"]
+STRAVA_CLIENT_SECRET = app.config["STRAVA_CLIENT_SECRET"]
+STORE_INDEX_TIMEOUT = app.config["STORE_INDEX_TIMEOUT"]
+
 
 @contextmanager
 def session_scope():
@@ -109,8 +113,8 @@ class Users(UserMixin, db_sql.Model):
             # log.debug("%s expired token. refreshing...", self.id)
             try:
                 new_access_info = self.cli.refresh_access_token(
-                    client_id=app.config["STRAVA_CLIENT_ID"],
-                    client_secret=app.config["STRAVA_CLIENT_SECRET"],
+                    client_id=STRAVA_CLIENT_ID,
+                    client_secret=STRAVA_CLIENT_SECRET,
                     refresh_token=access_info.get("refresh_token"))
                 
                 self.access_token = json.dumps(new_access_info)
@@ -446,7 +450,7 @@ class Users(UserMixin, db_sql.Model):
                 return A
 
             A["ts_local"] = str(A["ts_local"])
-            ttl = (A["ts"] - now).total_seconds() + app.config["STORE_INDEX_TIMEOUT"]
+            ttl = (A["ts"] - now).total_seconds() + STORE_INDEX_TIMEOUT
             A["ttl"] = max(0, int(ttl))
             del A["ts"]
 
@@ -570,7 +574,7 @@ class Users(UserMixin, db_sql.Model):
 class Index(object):
     name = "index"
     db = mongodb.get_collection(name)
-    DB_TTL = app.config["STORE_INDEX_TIMEOUT"]
+    DB_TTL = STORE_INDEX_TIMEOUT
     OFFLINE = OFFLINE
     IMPORT_CONCURRENCY = app.config["IMPORT_CONCURRENCY"]
     
@@ -1742,8 +1746,8 @@ class Webhooks(object):
 
     client = stravalib.Client()
     credentials = {
-        "client_id": app.config["STRAVA_CLIENT_ID"],
-        "client_secret": app.config["STRAVA_CLIENT_SECRET"]
+        "client_id": STRAVA_CLIENT_ID,
+        "client_secret": STRAVA_CLIENT_SECRET
     }
 
     @classmethod
