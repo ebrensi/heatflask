@@ -48,7 +48,6 @@ def load_user(user_id):
 
 @login_manager.unauthorized_handler
 def handle_needs_login():
-    # flash("You have to be logged in to access this page.")
     log.debug(request)
     return redirect(url_for('authorize', state=request.full_path))
 
@@ -89,7 +88,7 @@ def admin_or_self_required(f):
 def log_request_event(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        event = {"msg": request.url}
+        event = dict(msg=request.url)
 
         if current_user.is_authenticated:
             if current_user.is_admin():
@@ -97,10 +96,10 @@ def log_request_event(f):
                 # we don't bother logging this event
                 return f(*args, **kwargs)
 
-            event.update({
-                "cuid": current_user.id,
-                "profile": current_user.profile
-            })
+            event.update(dict(
+                cuid=current_user.id,
+                profile=current_user.profile
+            ))
         
         # If the user is anonymous or a regular user, we log the event
         EventLogger.log_request(request, **event)
@@ -119,42 +118,56 @@ def redirect_to_new_domain():
     if urlparts.path == '/webhook_callback':
         return
 
+    urlparts_list = list(urlparts)
+
+    if urlparts.scheme.lower() == "http":
+        urlparts_list[0] = "https"
+
     if urlparts.netloc == app.config["FROM_DOMAIN"]:
-        urlparts_list = list(urlparts)
         urlparts_list[1] = app.config["TO_DOMAIN"]
-        new_url = urlunparse(urlparts_list)
-        # log.debug("new url: {}".format(new_url))
-        return redirect(new_url, code=301)
+    
+    new_url = urlunparse(urlparts_list)
+    return redirect(new_url, code=301)
 
 
 #  ------------- Serve some static files -----------------------------
 #  TODO: There might be a better way to do this.
 @app.route('/favicon.ico')
 def favicon():
-    return send_from_directory(os.path.join(app.root_path, 'static'),
-                               'favicon.ico')
+    return send_from_directory(
+        os.path.join(app.root_path, 'static'),
+        'favicon.ico'
+    )
 
 
 @app.route('/avatar/athlete/medium.png')
 def anon_photo():
-    return send_from_directory(os.path.join(app.root_path, 'static'),
-                               'anon-photo.jpg')
+    return send_from_directory(
+        os.path.join(app.root_path, 'static'),
+        'anon-photo.jpg'
+    )
 
 
 @app.route('/apple-touch-icon')
 @app.route('/logo.png')
 def touch():
-    return send_from_directory(os.path.join(app.root_path, 'static'),
-                               'logo.png')
+    return send_from_directory(
+        os.path.join(app.root_path, 'static'),
+        'logo.png'
+    )
 
 
 @app.route("/robots.txt")
 def robots_txt():
-    EventLogger.log_request(request,
-                            cuid="bot",
-                            msg=request.user_agent.string)
-    return send_from_directory(os.path.join(app.root_path, 'static'),
-                               'robots.txt')
+    EventLogger.log_request(
+        request,
+        cuid="bot",
+        msg=request.user_agent.string
+    )
+    return send_from_directory(
+        os.path.join(app.root_path, 'static'),
+        'robots.txt'
+    )
 
 
 # -----------------------------------------------------------------------------
@@ -206,16 +219,16 @@ def auth_callback():
         return redirect(state or url_for("splash"))
 
     scope = request.args.get("scope")
-    # log.debug("scope: {}".format(scope))
-
     if "activity:read" not in scope:
         # We need to be able to read the user's activities
         return redirect(url_for("authorize", state=state))
 
     if current_user.is_anonymous:
-        args = {"code": request.args.get("code"),
-                "client_id": app.config["STRAVA_CLIENT_ID"],
-                "client_secret": app.config["STRAVA_CLIENT_SECRET"]}
+        args = dict(
+            code=request.args.get("code"),
+            client_id=app.config["STRAVA_CLIENT_ID"],
+            client_secret=app.config["STRAVA_CLIENT_SECRET"]
+        )
         
         client = stravalib.Client()
         
@@ -223,36 +236,33 @@ def auth_callback():
             access_info = client.exchange_code_for_token(**args)
             # access_info is a dict containing the access_token, 
             #  date of expire, and a refresh token
-
-        except Exception as e:
-            log.error("authorization error:\n{}".format(e))
-            flash(str(e))
-            return redirect(state)
-
-        # log.debug("got code exchange response: {}".format(access_info))
-        user_data = Users.strava_user_data(
-            access_info=access_info)
-        # log.debug("user data: {}".format(user_data))
-
-        try:
+            user_data = Users.strava_user_data(
+                access_info=access_info
+            )
+            
+            assert user_data
+            
+            new_user = "" if Users.get(user_data["id"]) else " NEW USER"
+            
             user = Users.add_or_update(**user_data)
-        except Exception as e:
-            log.exception(e)
-            user = None
-        if user:
-            # remember=True, for persistent login.
-            login_user(user, remember=True)
-            # log.debug("authenticated {}".format(user))
-            EventLogger.new_event(
-                msg="{} authenticated as {}. Token expires at {}."
-                .format(user.id, scope,
-                        datetime.fromtimestamp(access_info.get("expires_at"))))
-        else:
-            log.error("user authentication error")
-            log.exception(e)
-            flash("There was a problem authorizing user")
+            
+            assert user
+
+        except Exception:
+            log.exception("authorization error")
+            flash("Authorization Error: {}".format(datetime.utcnow()))
+            return redirect(state)
+        
+        # remember=True, for persistent login.
+        login_user(user, remember=True)
+
+        msg = "Authenticated{} as {}".format(new_user, user, scope)
+        log.info(msg)
+        if new_user:
+            EventLogger.new_event(msg=msg)
 
     return redirect(state or url_for("main", username=user.id))
+
 
 @app.route("/<username>/logout")
 @admin_or_self_required
@@ -272,8 +282,9 @@ def delete_index(username):
     user = Users.get(username)
     if user:
         user.delete_index()
-        EventLogger.new_event(msg="index for {} deleted".format(user.id))
-        return "index for {} deleted".format(username)
+        msg = "index for {} deleted".format(user)
+        EventLogger.new_event()
+        return msg
     else:
         return "no user {}".format(username)
 
@@ -306,9 +317,8 @@ def main(username):
             assert current_user.id
         except AssertionError:
             logout_user()
-            flash("You need to re-authenticate (log-in).")
-        else:
-            current_user.update_usage()
+            return login_manager.unauthorized()
+        current_user.update_usage()
 
     user = None
 
@@ -318,7 +328,7 @@ def main(username):
     
     user = Users.get(username)
     if not user:
-        flash("user '{}' is not registered with this app"
+        flash("user '{}' is not registered with heatflask"
               .format(username))
         return redirect(url_for('splash'))
     
@@ -333,47 +343,51 @@ def main(username):
             "Invalid access token for {}. please re-authenticate."
             .format(user))
         if current_user == user:
-            return redirect(url_for("logout", username=username))
+            logout_user()
+            return login_manager.unauthorized()
         else:
             return redirect(url_for('splash'))
 
-    date1 = request.args.get("date1") or request.args.get("after", "")
-    date2 = request.args.get("date2") or request.args.get("before", "")
-    preset = request.args.get("days", "") or request.args.get("preset", "")
-    limit = request.args.get("limit", "")
-    baselayer = request.args.getlist("baselayer")
-    ids = request.args.get("id", "")
-    
-    if not ids:
-        if (not date1) and (not date2):
-            if preset:
+    timeout = app.config["WEB_CLIENT_ID_TIMEOUT"]
+    loc = "{REMOTE_ADDR}:{REMOTE_PORT}".format(**request.environ)
+    web_client_id = "H:{}".format(loc)
+    redis.setex(web_client_id, timeout, int(time.time()))
+
+    log.info("NEW CLIENT %s", web_client_id)
+
+    query = dict(
+        user=user,
+        client_id=web_client_id,
+        autozoom=1,
+        baselayer=request.args.getlist("baselayer"),
+        zoom=app.config["MAP_ZOOM"]
+    )
+
+    query["lat"], query["lng"] = app.config["MAP_CENTER"]
+
+    # populate query dict with values from this urls's query string
+    for field in app.config["URL_QUERY_SPEC"]:
+        query[field] = ""
+        for option in field:
+            if option in request.args:
+                query[field] = request.args[option]
+                break
+
+    if not any(query[x] for x in ["date1", "date2", "ids"]):
+        for field in ["days", "limit"]:
+            if query[field]:
                 try:
-                    preset = int(preset)
+                    query[field] = int(query[field])
                 except ValueError:
-                    flash("'{}' is not a valid preset".format(preset))
-                    preset = 7
-            elif limit:
-                try:
-                    limit = int(limit)
-                except ValueError:
-                    flash("'{}' is not a valid limit".format(limit))
-                    limit = 1
-            else:
-                limit = 10
+                    flash(
+                        "'{}' is not a valid value for {}. default is 10"
+                        .format(query[field], field)
+                    )
+                    query[field] = 10
+                break
 
-    c1 = request.args.get("c1", "")
-    c2 = request.args.get("c2", "")
-    sz = request.args.get("sz", "")
-
-    lat = request.args.get("lat")
-    lng = request.args.get("lng")
-    zoom = request.args.get("zoom")
-    autozoom = request.args.get("autozoom") in ["1", "true"]
-
-    if (not lat) or (not lng):
-        lat, lng = app.config["MAP_CENTER"]
-        zoom = app.config["MAP_ZOOM"]
-        autozoom = "1"
+        # This is the default if nothing is specified
+        query["limit"] = 10
 
     if current_user.is_anonymous or (not current_user.is_admin()):
         event = {
@@ -390,38 +404,7 @@ def main(username):
 
         EventLogger.new_event(**event)
 
-    # Assign an id to this web client in order to prevent
-    #  websocket access from unidentified connections 
-    # ip_address = request.access_route[-1]
-
-    timeout = app.config["WEB_CLIENT_ID_TIMEOUT"]
-    loc = "{REMOTE_ADDR}:{REMOTE_PORT}".format(**request.environ)
-    web_client_id = "H:{}".format(loc)
-    redis.setex(web_client_id, timeout, int(time.time()))
-
-    log.info("NEW CLIENT %s", web_client_id)
-
-    paused = request.args.get("paused") in ["1", "true"]
-
-    return render_template(
-        'main.html',
-        user=user,
-        client_id=web_client_id,
-        lat=lat,
-        lng=lng,
-        zoom=zoom,
-        ids=ids,
-        preset=preset,
-        date1=date1,
-        date2=date2,
-        limit=limit,
-        autozoom=autozoom,
-        paused=paused,
-        baselayer=baselayer,
-        c1=c1,
-        c2=c2,
-        sz=sz
-    )
+    return render_template('main.html', **query)
 
 
 @app.route('/<username>/activities')
@@ -432,9 +415,8 @@ def activities(username):
     if request.args.get("rebuild"):
         try:
             user.delete_index()
-        except Exception as e:
-            log.error("error deleting index for {}".format(user))
-            log.exception(e)
+        except Exception:
+            log.exception("error deleting index for {}".format(user))
     
 
     # Assign an id to this web client in order to prevent
@@ -461,10 +443,10 @@ def update_share_status(username):
     # set user's share status
     status = user.is_public(status == "public")
     log.info(
-        "share status for {} set to {}"
-        .format(user, status)
+        "share status for %s set to %s",
+        user,
+        status
     )
-
     return jsonify(user=user.id, share=status)
 
 

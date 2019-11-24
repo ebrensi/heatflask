@@ -109,6 +109,19 @@ class Config(object):
     #  aborting an import.
     MAX_IMPORT_ERRORS = 100
 
+    # This is the spec for parsing urls.  The pattern is
+    URL_QUERY_SPEC = dict(
+        date1=["after", "date1", "a"],
+        date2=["before", "date2", "b"],
+        preset=["days", "preset", "d"],
+        limit=["limit", "l"],
+        ids=["id", "ids"],
+        lat=["lat"], lng=["lng"], zoom=["zoom", "z"],
+        autozoom=["autozoom", "az"],
+        c1=["c1"], c2=["c2"], sz=["sz"],
+        paused=["paused", "p"]
+    )
+
     # A few Demos 
     DEMOS = {
         "portland_6_2017": {
