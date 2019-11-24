@@ -106,16 +106,19 @@ def log_request_event(f):
         return f(*args, **kwargs)
     return decorated_function
 
-
-# Redirect any old domain urls to new domain
+#Redirect any old domain urls to new domain
 @app.before_request
 def redirect_to_new_domain():
     urlparts = urlparse(request.url)
-    # log.debug("request to {}".format(urlparts))
+    log.debug("request to {}".format(urlparts))
     
     # Don't redirect calls to /webhook _callback.
     #  They cause an error for some reason
     if urlparts.path == '/webhook_callback':
+        return
+
+    # ignore localhost requests
+    if urlparts.path.netloc.startswith("127"):
         return
 
     urlparts_list = list(urlparts)
