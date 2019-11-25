@@ -1,13 +1,14 @@
 import os
 basedir = os.path.abspath(os.path.dirname(__file__))
 
-
 class Config(object):
     # Flask settings
     DEBUG = False
     TESTING = False
     DEVELOPMENT = False
     CSRF_ENABLED = True
+
+    LOG_LEVEL = os.environ.get("LOG_LEVEL", "DEBUG")
 
     # Heatflask settings
     OFFLINE = False
@@ -148,6 +149,7 @@ class ProductionConfig(Config):
     These are settings specific to the production environment
     (the main app running on Heroku)
     """
+    
     ANALYTICS = {
         'GOOGLE_UNIVERSAL_ANALYTICS': {
             'ACCOUNT': "UA-85621398-1"
@@ -174,7 +176,6 @@ class StagingConfig(Config):
      (hosted test app)
     """
     DEVELOPMENT = True
-    DEBUG = False
 
     # webassets can do whatever in staging
     # ASSETS_DEBUG = True
@@ -203,7 +204,6 @@ class DevelopmentConfig(Config):
     )
 
     DEVELOPMENT = True
-    DEBUG = True
 
     # SSLIFY Settings
     SSLIFY_PERMANENT = False
