@@ -1,8 +1,9 @@
 from flask import Flask
+from werkzeug.debug import DebuggedApplication
 from flask_sqlalchemy import SQLAlchemy
 from flask_redis import FlaskRedis
 from flask_pymongo import PyMongo
-# from flask_compress import Compress
+from flask_compress import Compress
 from flask_login import LoginManager
 from flask_analytics import Analytics
 from flask_sslify import SSLify
@@ -40,7 +41,7 @@ def create_app():
     with app.app_context():
 
         Analytics(app)
-        # Compress(app)
+        Compress(app)
         SSLify(app, skips=["webhook_callback"])
 
         from .js_bundles import bundles
@@ -85,6 +86,8 @@ def create_app():
         if Payments.name not in collections:
             Payments.init_db()
 
+        if app.debug:
+            app.wsgi_app = DebuggedApplication(app.wsgi_app, evalex=True)
 
         return app
 
