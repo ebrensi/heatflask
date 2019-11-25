@@ -110,7 +110,6 @@ def log_request_event(f):
 @app.before_request
 def redirect_to_new_domain():
     urlparts = urlparse(request.url)
-    log.debug("request to {}".format(urlparts))
     
     # Don't redirect calls to /webhook _callback.
     #  They cause an error for some reason
@@ -118,20 +117,28 @@ def redirect_to_new_domain():
         return
 
     # ignore localhost requests
-    if urlparts.path.netloc.startswith("127"):
+    if urlparts.netloc.startswith("127"):
         return
 
     urlparts_list = list(urlparts)
 
+    changed = False
     if urlparts.scheme.lower() == "http":
         urlparts_list[0] = "https"
+        changed = True
 
     if urlparts.netloc == app.config["FROM_DOMAIN"]:
         urlparts_list[1] = app.config["TO_DOMAIN"]
+        changed = True
     
-    new_url = urlunparse(urlparts_list)
-    return redirect(new_url, code=301)
+    if changed:
+        new_url = urlunparse(urlparts_list)
+        log.debug("request to {}".format(request.url))
+        log.debug("redirected to %s", new_url)
 
+        return redirect(new_url, code=301)
+
+    return
 
 #  ------------- Serve some static files -----------------------------
 #  TODO: There might be a better way to do this.
@@ -358,26 +365,28 @@ def main(username):
 
     log.info("NEW CLIENT %s", web_client_id)
 
-    query = dict(
+    mc = app.config["MAP_CENTER"]
+    query = {field: None for field in app.config["URL_QUERY_SPEC"]}
+    query.update(dict(
         user=user,
         client_id=web_client_id,
         autozoom=1,
         baselayer=request.args.getlist("baselayer"),
-        zoom=app.config["MAP_ZOOM"]
-    )
+        zoom=app.config["MAP_ZOOM"],
+        lat=mc[0],
+        lng=mc[1]
+    ))
 
-    query["lat"], query["lng"] = app.config["MAP_CENTER"]
-
+    log.debug(query)
     # populate query dict with values from this urls's query string
     for field in app.config["URL_QUERY_SPEC"]:
-        query[field] = ""
         for option in field:
             if option in request.args:
                 query[field] = request.args[option]
                 break
 
     if not any(query[x] for x in ["date1", "date2", "ids"]):
-        for field in ["days", "limit"]:
+        for field in ["preset", "limit"]:
             if query[field]:
                 try:
                     query[field] = int(query[field])
@@ -391,6 +400,8 @@ def main(username):
 
         # This is the default if nothing is specified
         query["limit"] = 10
+
+    log.debug(query)
 
     if current_user.is_anonymous or (not current_user.is_admin()):
         event = {

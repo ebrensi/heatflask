@@ -2,7 +2,7 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_redis import FlaskRedis
 from flask_pymongo import PyMongo
-from flask_compress import Compress
+# from flask_compress import Compress
 from flask_login import LoginManager
 from flask_analytics import Analytics
 from flask_sslify import SSLify
@@ -40,10 +40,10 @@ def create_app():
     with app.app_context():
 
         Analytics(app)
-        Compress(app)
+        # Compress(app)
         SSLify(app, skips=["webhook_callback"])
 
-        from js_bundles import bundles
+        from .js_bundles import bundles
         
         assets.register(bundles)
         for bundle in bundles.values():
@@ -51,7 +51,7 @@ def create_app():
 
         db_sql.init_app(app)
         redis.init_app(app)
-        mongo.init_app(app, maxIdleTimeMS=30000, connect=False)
+        mongo.init_app(app, maxIdleTimeMS=30000)
         login_manager.init_app(app)
         sockets.init_app(app)
         assets.init_app(app)
