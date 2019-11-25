@@ -733,7 +733,8 @@ class Index(object):
             if queue:
                 queue.put(dict(error="No network connection"))
             return
-
+        user = client.user
+        
         for query in [fetch_query, out_query]:
             if "before" in query:
                 query["before"] = Utility.to_datetime(query["before"])
@@ -777,6 +778,7 @@ class Index(object):
                 queue.put(obj, timeout=10)
 
         try:
+            
             summaries = client.get_activities(
                 **fetch_query
             )
@@ -891,8 +893,8 @@ class Index(object):
         client = StravaClient(user=user)
 
         if not client:
-            return
-
+            return []
+        
         args = dict(fetch_query=fetch_query, out_query=out_query)
 
         if out_query:
