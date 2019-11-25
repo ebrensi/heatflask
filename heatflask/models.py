@@ -709,7 +709,7 @@ class Index(object):
     @classmethod
     def _import(
         cls,
-        user,
+        client,
         queue=None,
         fetch_query={},
         out_query={},
@@ -720,7 +720,8 @@ class Index(object):
             if queue:
                 queue.put(dict(error="No network connection"))
             return
-
+        user = client.user
+        
         for query in [fetch_query, out_query]:
             if "before" in query:
                 query["before"] = Utility.to_datetime(query["before"])
@@ -763,13 +764,6 @@ class Index(object):
                 queue.put(obj, timeout=10)
 
         try:
-            client = StravaClient(user=user)
-
-            if not client:
-                raise Exception(
-                    "Invalid access_token. %s is not authenticated.",
-                    user
-                )
 
             summaries = client.get_activities(
                 **fetch_query
@@ -883,6 +877,11 @@ class Index(object):
         cancel_key=None
     ):
 
+        client = StravaClient(user=user)
+
+        if not client:
+            return []
+        
         args = dict(fetch_query=fetch_query, out_query=out_query)
 
         if out_query:
@@ -893,13 +892,13 @@ class Index(object):
                 queue=queue,
                 cancel_key=cancel_key
             ))
-            gevent.spawn(cls._import, user, **args)
+            gevent.spawn(cls._import, client, **args)
             return queue
 
         if blocking:
-            cls._import(user, **args)
+            cls._import(client, **args)
         else:
-            gevent.spawn(cls._import, user, **args)
+            gevent.spawn(cls._import, client, **args)
         
     @classmethod
     def import_by_id(cls, user, activity_ids):
