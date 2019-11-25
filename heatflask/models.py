@@ -520,10 +520,20 @@ class Users(UserMixin, db_sql.Model):
             if OFFLINE or (not to_import):
                 return
 
+            client = self.client()
+            if not client:
+                log.info("%s cannot import streams. bad client.", self)
+                yield (dict(
+                    error="cannot import. invalid access token." +
+                    " {} must re-authenticate".format(self)
+                ))
+                
+                return
+
             num_imported = 0
             for A in Activities.append_streams_from_import(
                 to_import,
-                self.client()
+                client
             ):
 
                 if A:
@@ -535,17 +545,7 @@ class Users(UserMixin, db_sql.Model):
                     self.fetch_result["empty"] += 1
 
             self.fetch_result["imported"] += num_imported
-        #-------------------------------------------------------
-
-        if not OFFLINE:
-            if not self.client():
-                log.info("%s cannot import. bad client.", self)
-                yield (dict(
-                    error="cannot import. invalid access token." +
-                    " {} must re-authenticate".format(self)
-                ))
-                
-                return
+        #-------------------------------------------------------  
 
         self.pool = Pool(CHUNK_CONCURRENCY)
 
