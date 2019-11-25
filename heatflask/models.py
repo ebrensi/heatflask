@@ -2060,7 +2060,7 @@ class BinaryWebsocketClient(object):
     def close(self):
         start_time = float(redis.get(self.key))
         elapsed = round(time.time() - start_time, 1)
-        elapsed_td = round(timedelta(seconds=elapsed), 1)
+        elapsed_td = timedelta(seconds=elapsed)
         log.info("%s CLOSED. elapsed=%s", self.key, elapsed_td)
         redis.delete(self.key)
         try:
