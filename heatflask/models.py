@@ -433,7 +433,7 @@ class Users(UserMixin, db_sql.Model):
         else:
             # There is no activity index and we are to build one
             if OFFLINE:
-                yield dict(error="No Network Connection!")
+                yield dict(error="OFFLINE MODE")
                 return
 
             summaries_generator = Index.import_user_index(
@@ -441,6 +441,10 @@ class Users(UserMixin, db_sql.Model):
                 out_query=client_query,
                 cancel_key=cancel_key
             )
+
+            if not summaries_generator:
+                log.info("Could not build index for %s", self)
+                return
 
         # At this point we have a generator called summaries_generator
         #  that yields Activity summaries, without streams.
@@ -715,12 +719,15 @@ class Index(object):
     @classmethod
     def _import(
         cls,
-        user,
+        client,
         queue=None,
         fetch_query={},
         out_query={},
         cancel_key=None
     ):
+        # this method runs in a greenlet and does not have access to the
+        #   current_app object.  anything that requires app context will
+        #   raise a RuntimeError
 
         if cls.OFFLINE:
             if queue:
@@ -752,6 +759,7 @@ class Index(object):
         count = 0
         in_range = False
         mongo_requests = set()
+        user = client.user
         user.indexing(0)
 
         start_time = time.time()
@@ -769,14 +777,6 @@ class Index(object):
                 queue.put(obj, timeout=10)
 
         try:
-            client = StravaClient(user=user)
-
-            if not client:
-                raise Exception(
-                    "Invalid access_token. %s is not authenticated.",
-                    user
-                )
-
             summaries = client.get_activities(
                 **fetch_query
             )
@@ -888,6 +888,11 @@ class Index(object):
         cancel_key=None
     ):
 
+        client = StravaClient(user=user)
+
+        if not client:
+            return
+
         args = dict(fetch_query=fetch_query, out_query=out_query)
 
         if out_query:
@@ -898,13 +903,13 @@ class Index(object):
                 queue=queue,
                 cancel_key=cancel_key
             ))
-            gevent.spawn(cls._import, user, **args)
+            gevent.spawn(cls._import, client, **args)
             return queue
 
         if blocking:
-            cls._import(user, **args)
+            cls._import(client, **args)
         else:
-            gevent.spawn(cls._import, user, **args)
+            gevent.spawn(cls._import, client, **args)
         
     @classmethod
     def import_by_id(cls, user, activity_ids):
@@ -1618,9 +1623,11 @@ class Activities(object):
                 continue
 
             query = queryObj[user_id]
-            
-            for a in user.query_activities(cancel_key=cancel_key, **query):
-                yield a
+            activities = user.query_activities(cancel_key=cancel_key, **query)
+
+            if activities:
+                for a in activities:
+                    yield a
         
         yield ""
         
