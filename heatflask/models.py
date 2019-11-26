@@ -32,15 +32,15 @@ STRAVA_CLIENT_SECRET = app.config["STRAVA_CLIENT_SECRET"]
 STORE_INDEX_TIMEOUT = app.config["STORE_INDEX_TIMEOUT"]
 TRIAGE_CONCURRENCY = app.config["TRIAGE_CONCURRENCY"]
 ADMIN = app.config["ADMIN"]
-CHUNK_CONCURRENCY = app.config["CHUNK_CONCURRENCY"]
+BATCH_CHUNK_CONCURRENCY = app.config["CHUNK_CONCURRENCY"]
 BATCH_CHUNK_SIZE = app.config["BATCH_CHUNK_SIZE"]
 IMPORT_CONCURRENCY = app.config["IMPORT_CONCURRENCY"]
 STORE_ACTIVITIES_TIMEOUT = app.config["STORE_ACTIVITIES_TIMEOUT"]
-
 CACHE_TTL = app.config["CACHE_ACTIVITIES_TIMEOUT"]
 STREAMS_TO_CACHE = app.config["STREAMS_TO_CACHE"]
 STREAMS_OUT = app.config["STREAMS_OUT"]
 ESSENTIAL_STREAMS = app.config["ESSENTIAL_STREAMS"]
+DAYS_INACTIVE_CUTOFF = app.config["DAYS_INACTIVE_CUTOFF"]
 
 @contextmanager
 def session_scope():
@@ -56,7 +56,7 @@ def session_scope():
 
 
 class Users(UserMixin, db_sql.Model):
-    DAYS_INACTIVE_CUTOFF = app.config["DAYS_INACTIVE_CUTOFF"]
+    
     Column = db_sql.Column
     String = db_sql.String
     Integer = db_sql.Integer
@@ -257,22 +257,23 @@ class Users(UserMixin, db_sql.Model):
 
     def verify(
         self,
-        days_inactive_cutoff=None,
+        days_inactive_cutoff=DAYS_INACTIVE_CUTOFF,
         update=True,
         session=db_sql.session
     ):
         cls = self.__class__
         now = datetime.utcnow()
-
+        
+        cls = self.__class__
+        
         last_active = self.dt_last_active
         if not last_active:
             log.info("%s was never active", self)
             return
 
         days_inactive = (now - last_active).days
-        cutoff = days_inactive_cutoff or cls.DAYS_INACTIVE_CUTOFF
 
-        if days_inactive >= cutoff:
+        if days_inactive >= days_inactive_cutoff:
             log.info("%s inactive %s days", self, days_inactive)
             return
 
@@ -520,20 +521,11 @@ class Users(UserMixin, db_sql.Model):
             if OFFLINE or (not to_import):
                 return
 
-            client = self.client()
-            if not client:
-                log.info("%s cannot import streams. bad client.", self)
-                yield (dict(
-                    error="cannot import. invalid access token." +
-                    " {} must re-authenticate".format(self)
-                ))
-                
-                return
-
             num_imported = 0
             for A in Activities.append_streams_from_import(
                 to_import,
-                client
+                self.client(),
+                pool=self.import_pool
             ):
 
                 if A:
@@ -547,8 +539,18 @@ class Users(UserMixin, db_sql.Model):
             self.fetch_result["imported"] += num_imported
         #-------------------------------------------------------  
 
-        self.pool = Pool(CHUNK_CONCURRENCY)
+        if not OFFLINE:
+            if not self.client():
+                log.debug("%s cannot import. bad client.", self)
+                yield (dict(
+                    error="cannot import. invalid access token." +
+                    " {} must re-authenticate".format(self)
+                ))
+                
+                return
 
+        chunk_pool = Pool(BATCH_CHUNK_CONCURRENCY)
+        self.import_pool = Pool(BATCH_CHUNK_SIZE)
         chunks = Utility.chunks(summaries_generator, size=BATCH_CHUNK_SIZE)
         
         self.fetch_result = dict(
@@ -561,10 +563,10 @@ class Users(UserMixin, db_sql.Model):
         start_time = time.time()
           
         activities_with_streams = itertools.chain.from_iterable(
-            self.pool.imap_unordered(
+            chunk_pool.imap_unordered(
                 append_streams,
                 chunks,
-                maxsize=CHUNK_CONCURRENCY
+                maxsize=BATCH_CHUNK_CONCURRENCY
             )
         )
 
