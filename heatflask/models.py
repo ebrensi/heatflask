@@ -30,7 +30,7 @@ CACHE_ACTIVITIES_TIMEOUT = app.config["CACHE_ACTIVITIES_TIMEOUT"]
 STRAVA_CLIENT_ID = app.config["STRAVA_CLIENT_ID"]
 STRAVA_CLIENT_SECRET = app.config["STRAVA_CLIENT_SECRET"]
 STORE_INDEX_TIMEOUT = app.config["STORE_INDEX_TIMEOUT"]
-
+CHUNK_SIZE = app.config["BATCH_CHUNK_SIZE"]
 
 @contextmanager
 def session_scope():
@@ -252,7 +252,9 @@ class Users(UserMixin, db_sql.Model):
         session=db_sql.session
     ):
         now = datetime.utcnow()
-
+        
+        cls = self.__class__
+        
         last_active = self.dt_last_active
         if not last_active:
             log.debug("{} was never active".format(self))
@@ -508,7 +510,8 @@ class Users(UserMixin, db_sql.Model):
             num_imported = 0
             for A in Activities.append_streams_from_import(
                 to_import,
-                self.client()
+                self.client(),
+                pool=self.import_pool
             ):
 
                 if A:
@@ -532,9 +535,10 @@ class Users(UserMixin, db_sql.Model):
                 
                 return
 
-        self.pool = Pool(app.config["CHUNK_CONCURRENCY"])
+        chunk_pool = Pool(app.config["CHUNK_CONCURRENCY"])
         CHUNK_SIZE = app.config["BATCH_CHUNK_SIZE"]
-
+        self.import_pool = Pool(CHUNK_SIZE)
+        
         chunks = Utility.chunks(summaries_generator, size=CHUNK_SIZE)
         
         self.fetch_result = dict(
@@ -547,7 +551,7 @@ class Users(UserMixin, db_sql.Model):
         start_time = time.time()
           
         activities_with_streams = itertools.chain.from_iterable(
-            self.pool.imap_unordered(
+            chunk_pool.imap_unordered(
                 append_streams,
                 chunks,
                 maxsize=app.config["CHUNK_CONCURRENCY"]
