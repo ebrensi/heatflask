@@ -1600,7 +1600,7 @@ class Activities(object):
 
     @classmethod
     def append_streams_from_import(cls, summaries, client, pool=None):
-        	if pool is None:
+        if pool is None:
             pool = Pool(cls.IMPORT_CONCURRENCY)
 
         def import_activity_stream(A):
