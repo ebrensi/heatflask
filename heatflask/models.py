@@ -537,7 +537,7 @@ class Users(UserMixin, db_sql.Model):
 
         chunk_pool = Pool(app.config["CHUNK_CONCURRENCY"])
         CHUNK_SIZE = app.config["BATCH_CHUNK_SIZE"]
-        self.import_pool = Pool(CHUNK_SIZE)
+        self.import_pool = Pool(app.config["IMPORT_CONCURRENCY"])
         
         chunks = Utility.chunks(summaries_generator, size=CHUNK_SIZE)
         
@@ -1612,7 +1612,7 @@ class Activities(object):
         return pool.imap_unordered(
             import_activity_stream,
             summaries,
-            maxsize=pool.size
+            maxsize=CHUNK_SIZE
         )
 
     @classmethod
