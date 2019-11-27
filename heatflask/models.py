@@ -1600,7 +1600,8 @@ class Activities(object):
 
     @classmethod
     def append_streams_from_import(cls, summaries, client, pool=None):
-        P = pool or Pool(cls.IMPORT_CONCURRENCY)
+        	if pool is None:
+            pool = Pool(cls.IMPORT_CONCURRENCY)
 
         def import_activity_stream(A):
             if not A or "_id" not in A:
@@ -1608,10 +1609,10 @@ class Activities(object):
             imported = cls.import_streams(client, A)
             return imported
         
-        return P.imap_unordered(
+        return pool.imap_unordered(
             import_activity_stream,
             summaries,
-            maxsize=P.size
+            maxsize=pool.size
         )
 
     @classmethod
