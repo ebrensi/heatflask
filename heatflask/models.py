@@ -549,8 +549,8 @@ class Users(UserMixin, db_sql.Model):
                 
                 return
 
-        chunk_pool = Pool(BATCH_CHUNK_CONCURRENCY)
-        self.import_pool = Pool(BATCH_CHUNK_SIZE)
+        chunk_pool = Pool(app.config["CHUNK_CONCURRENCY"])
+        self.import_pool = Pool(app.config["IMPORT_CONCURRENCY"])
         chunks = Utility.chunks(summaries_generator, size=BATCH_CHUNK_SIZE)
         
         self.fetch_result = dict(
@@ -1302,7 +1302,6 @@ class Activities(object):
         log.info("initialized '{}' collection".format(cls.name))
         return result
         
-    
     @classmethod 
     def update_ttl(cls, timeout=STORE_ACTIVITIES_TIMEOUT):
 
@@ -1605,7 +1604,8 @@ class Activities(object):
 
     @classmethod
     def append_streams_from_import(cls, summaries, client, pool=None):
-        P = pool or Pool(IMPORT_CONCURRENCY)
+        if pool is None:
+            pool = Pool(IMPORT_CONCURRENCY)
 
         def import_activity_stream(A):
             if not A or "_id" not in A:
@@ -1613,10 +1613,10 @@ class Activities(object):
             imported = cls.import_streams(client, A)
             return imported
         
-        return P.imap_unordered(
+        return pool.imap_unordered(
             import_activity_stream,
             summaries,
-            maxsize=P.size
+            maxsize=BATCH_CHUNK_SIZE
         )
 
     @classmethod
