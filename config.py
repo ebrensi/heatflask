@@ -90,10 +90,7 @@ class Config(object):
     # We are free to delete users who have been inactive for a while
     DAYS_INACTIVE_CUTOFF = 365
 
-
-    STREAMS_OUT = ["polyline", "time"]
-    STREAMS_TO_CACHE = ["polyline", "time"]
-    ESSENTIAL_STREAMS = ["time"]
+    STREAMS_TO_IMPORT = ["latlng", "time"]
 
     # The number of failed stream import requests we will allow before
     #  aborting an import.
@@ -108,15 +105,13 @@ class Config(object):
     #  take a look at
     #  https://github.com/GoogleCloudPlatform/flask-talisman#content-security-policy
 
-    # CONTENT_SECURITY_POLICY = {
-    #     "default-src": ['*', 'unsafe-inline' 'unsafe-eval'],
-    #     "script-src":  ['*', 'unsafe-inline' 'unsafe-eval'],
-    #     "connect-src": ['unsafe-inline'],
-    #     "frame-src": '*',
-    #     "style-src": ['*' 'unsafe-inline'];
-
-    # }
-
+    CONTENT_SECURITY_POLICY = {
+        'default-src': [
+            '\'self\'',
+            '*',
+        ],
+        'img-src': '*'
+    }
 
     # This is the spec for parsing urls.  The pattern is
     #  field_name: ([query_string options], default-value) 
@@ -130,7 +125,7 @@ class Config(object):
         lat=(["lat"], None),
         lng=(["lng"], None),
         zoom=(["zoom", "z"], 3),
-        autozoom=(["autozoom", "az"], 1),
+        autozoom=(["autozoom", "az"], False),
         c1=(["c1"], 0),
         c2=(["c2"], 0),
         sz=(["sz"], 0),
