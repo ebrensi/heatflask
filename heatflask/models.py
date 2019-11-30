@@ -41,6 +41,7 @@ STREAMS_TO_CACHE = app.config["STREAMS_TO_CACHE"]
 STREAMS_OUT = app.config["STREAMS_OUT"]
 ESSENTIAL_STREAMS = app.config["ESSENTIAL_STREAMS"]
 DAYS_INACTIVE_CUTOFF = app.config["DAYS_INACTIVE_CUTOFF"]
+MAX_IMPORT_ERRORS = app.config["MAX_IMPORT_ERRORS"]
 
 @contextmanager
 def session_scope():
@@ -112,7 +113,6 @@ class Users(UserMixin, db_sql.Model):
         if OFFLINE:
             return
 
-        t1 = time.time()
         if not self.cli:
             self.cli = stravalib.Client(
                 access_token=access_info.get("access_token"),
@@ -122,6 +122,8 @@ class Users(UserMixin, db_sql.Model):
         token_expired = access_info["expires_at"] - time.time() < 60 * 30
         
         if (token_expired and refresh) or (refresh == "force"):
+            t1 = time.time()
+
             # The existing access_token is expired
             # Attempt to refresh the token
             try:
@@ -142,8 +144,9 @@ class Users(UserMixin, db_sql.Model):
                 log.exception("%s token refresh fail", self)
                 return
 
-        elapsed = round(time.time() - t1, 1)
-        log.info("%s token refresh elapsed=%s", self, elapsed)
+            elapsed = round(time.time() - t1, 2)
+            log.info("%s token refresh elapsed=%s", self, elapsed)
+
         return self.cli
 
     def get_id(self):
@@ -398,10 +401,6 @@ class Users(UserMixin, db_sql.Model):
                          cancel_key=None,
                          **kwargs):
 
-        while self.indexing():
-            yield dict(idx=self.indexing())
-            gevent.sleep(0.5)
-
         # convert date strings to datetimes, if applicable
         if before or after:
             try:
@@ -422,8 +421,19 @@ class Users(UserMixin, db_sql.Model):
             activity_ids=activity_ids
         )
 
-        if self.index_count():
+        log.debug("received query %s", client_query)
 
+        # exit if this query is empty
+        if not any([limit, activity_ids, before, after]):
+            log.debug("%s empty query", self)
+            return
+
+
+        while self.indexing():
+            yield dict(idx=self.indexing())
+            gevent.sleep(0.5)
+
+        if self.index_count():
             summaries_generator = Index.query(
                 user=self,
                 exclude_ids=exclude_ids,
@@ -499,6 +509,9 @@ class Users(UserMixin, db_sql.Model):
         #  append streams to each one
         # -----------------------------------------------------------
         def append_streams(summaries):
+            if not summaries:
+                return
+
             to_import = []
             num_fetched = 0
             
@@ -522,21 +535,42 @@ class Users(UserMixin, db_sql.Model):
                 return
 
             num_imported = 0
+            try:
+                append_streams.chunk += 1
+            except AttributeError:
+                append_streams.chunk = 1
+
+            log.info("%s importing chunk %s", self, append_streams.chunk)
+            append_streams.start = time.time()
+
             for A in Activities.append_streams_from_import(
                 to_import,
                 self.client(),
                 pool=self.import_pool
             ):
-
                 if A:
                     yield A
                     num_imported += 1
                 elif A is False:
                     self.fetch_result["errors"] += 1
+                    if self.fetch_result["errors"] >= MAX_IMPORT_ERRORS:
+                        log.info("%s Too many import errors", self)
+                        return
+
                 else:
                     self.fetch_result["empty"] += 1
 
             self.fetch_result["imported"] += num_imported
+            
+            elapsed = round(time.time() - append_streams.start, 2)
+
+            log.info(
+                "%s imported chunk %s: %s took %s",
+                self,
+                append_streams.chunk,
+                num_imported,
+                elapsed
+            )
         #-------------------------------------------------------  
 
         if not OFFLINE:
@@ -573,8 +607,11 @@ class Users(UserMixin, db_sql.Model):
         for A in itertools.imap(export, activities_with_streams):
             yield A
 
-        self.fetch_result["elapsed"] = round(time.time() - start_time, 3)
-        msg = "{} {}".format(self, self.fetch_result)
+        elapsed = time.time() - start_time
+        self.fetch_result["elapsed"] = round(elapsed, 2)
+        self.fetch_result["rate"] = round(self.fetch_result["imported"] / elapsed, 2) 
+        
+        msg = "{} {}".format(self, Utility.cleandict(self.fetch_result))
 
         log.info(msg)
         EventLogger.new_event(msg=msg)
@@ -731,7 +768,7 @@ class Index(object):
         #   current_app object.  anything that requires app context will
         #   raise a RuntimeError
 
-        if cls.OFFLINE:
+        if OFFLINE:
             if queue:
                 queue.put(dict(error="No network connection"))
             return
@@ -1507,7 +1544,7 @@ class Activities(object):
 
     @classmethod
     def import_streams(cls, client, activity, timeout=CACHE_TTL):
-        if cls.OFFLINE:
+        if OFFLINE:
             return
  
         streams_to_import = list(STREAMS_TO_CACHE) + ["latlng"]
@@ -1616,7 +1653,7 @@ class Activities(object):
         return pool.imap_unordered(
             import_activity_stream,
             summaries,
-            maxsize=BATCH_CHUNK_SIZE
+            maxsize=pool.size
         )
 
     @classmethod
@@ -1936,6 +1973,10 @@ class Payments(object):
 
 
 class Utility():
+
+    @staticmethod
+    def cleandict(d):
+        return {k: v for k, v in d.items() if v}
 
     @staticmethod
     def href(url, text):

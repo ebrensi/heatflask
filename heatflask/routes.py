@@ -17,12 +17,13 @@ import stravalib
 import uuid
 from flask_login import current_user, login_user, logout_user
 import time
+import re
 
 # from urllib.parse import urlparse, urlunparse #python3
 from urlparse import urlparse, urlunparse  # python2
 
 # Local imports
-from . import login_manager, redis, mongo, sockets
+from . import login_manager, redis, mongo, sockets, talisman
 
 from .models import (
     Users, Activities, EventLogger, Utility, Webhooks, Index, Payments,
@@ -122,19 +123,14 @@ def redirect_to_new_domain():
 
     urlparts_list = list(urlparts)
 
-    # changed = False
-    # if urlparts.scheme.lower() == "http":
-    #     urlparts_list[0] = "https"
-    #     changed = True
-
     if urlparts.netloc == app.config["FROM_DOMAIN"]:
         urlparts_list[1] = app.config["TO_DOMAIN"]
         changed = True
     
     if changed:
         new_url = urlunparse(urlparts_list)
-        log.debug("request to {}".format(request.url))
-        log.debug("redirected to %s", new_url)
+        # log.debug("request to {}".format(request.url))
+        # log.debug("redirected to %s", new_url)
 
         return redirect(new_url, code=301)
 
@@ -365,25 +361,35 @@ def main(username):
 
     log.info("NEW CLIENT %s", web_client_id)
 
-    mc = app.config["MAP_CENTER"]
-    query = {field: None for field in app.config["URL_QUERY_SPEC"]}
-    query.update(dict(
+    query = dict(
         user=user,
         client_id=web_client_id,
-        autozoom=1,
-        baselayer=request.args.getlist("baselayer"),
-        zoom=app.config["MAP_ZOOM"],
-        lat=mc[0],
-        lng=mc[1]
-    ))
+        baselayer=(
+            request.args.getlist("baselayer") or
+            request.args.getlist("bl")
+        )
+    )
 
-    log.debug(query)
+    query_spec = app.config["URL_QUERY_SPEC"]
     # populate query dict with values from this urls's query string
-    for field in app.config["URL_QUERY_SPEC"]:
-        for option in field:
+    for field in query_spec:
+        options, default = query_spec[field]
+        query[field] = default
+        for option in options:
             if option in request.args:
                 query[field] = request.args[option]
                 break
+            
+
+    # Here we defal with special cases
+    if all(query.get(x) for x in ["lat", "lng"]):
+        # "lat" and "lng" given in query string override "center"
+        query["map_center"] = [query["lat"], query["lng"]]
+        del query["lat"]
+        del query["lng"]
+
+    if query.get("ids"):
+        query["ids"] = re.split(';|,| ', query["ids"])
 
     if not any(query[x] for x in ["date1", "date2", "ids"]):
         for field in ["preset", "limit"]:
@@ -401,7 +407,7 @@ def main(username):
         # This is the default if nothing is specified
         query["limit"] = 10
 
-    log.debug(query)
+    log.debug("created query: %s", query)
 
     if current_user.is_anonymous or (not current_user.is_admin()):
         event = {
@@ -417,7 +423,6 @@ def main(username):
             })
 
         EventLogger.new_event(**event)
-
     return render_template('main.html', **query)
 
 
@@ -808,6 +813,7 @@ def subscription_endpoint(operation):
 
 
 @app.route('/webhook_callback', methods=["GET", "POST"])
+@talisman(force_https=False)
 def webhook_callback():
 
     if request.method == 'GET':

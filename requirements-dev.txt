@@ -12,10 +12,10 @@ gunicorn
 futures
 flask
 flask-sockets
-flask-sslify
+flask_talisman
 flask-sqlalchemy
 flask-login
-#flask-compress
+flask-compress
 flask-assets
 flask-analytics
 Flask-PyMongo

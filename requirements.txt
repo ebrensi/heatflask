@@ -24,7 +24,7 @@ gevent==1.4
 futures==3.1.1
 flask==1.1.1
 flask-sockets
-flask-sslify==0.1.5
+flask_talisman
 flask-sqlalchemy==2.3.2
 flask-login==0.4
 flask-compress==1.4.0
