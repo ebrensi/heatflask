@@ -6,7 +6,7 @@ from flask_pymongo import PyMongo
 from flask_compress import Compress
 from flask_login import LoginManager
 from flask_analytics import Analytics
-from flask_sslify import SSLify
+from flask_talisman import Talisman
 from flask_sockets import Sockets
 from flask_assets import Environment
 from datetime import datetime
@@ -19,6 +19,8 @@ mongo = PyMongo()
 login_manager = LoginManager()
 sockets = Sockets()
 assets = Environment()
+talisman = Talisman()
+
 
 
 # Global variables
@@ -42,8 +44,6 @@ def create_app():
 
         Analytics(app)
         Compress(app)
-        SSLify(app, skips=["webhook_callback"])
-
         from .js_bundles import bundles
         
         assets.register(bundles)
@@ -56,7 +56,10 @@ def create_app():
         login_manager.init_app(app)
         sockets.init_app(app)
         assets.init_app(app)
-
+        # talisman.init_app(
+        #     app,
+        #     content_security_policy=app.config["CONTENT_SECURITY_POLICY"]
+        # )
         from models import (
             Users, Activities, EventLogger, Utility,
             Webhooks, Index, Payments

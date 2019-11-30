@@ -37,14 +37,14 @@
                     C2: {{ c2|tojson }},
                     SZ: {{ sz|tojson }},
                     autozoom: {{ autozoom|tojson }},
-                    activity_ids: "{{ ids }}",
+                    activity_ids: {{ ids|tojson }},
                     limit: {{ limit|tojson }},
                     preset: {{ preset| tojson }},
                     date1: "{{ date1 }}",
                     date2: "{{ date2 }}",
                     start_paused: {{ paused|tojson }},
                     map_providers: {{ baselayer|tojson|safe }},
-                    map_center: [{{ lat }}, {{ lng }}],
+                    map_center: {{ map_center|tojson }},
                     map_zoom: {{ zoom }},
                     client_id: "{{ client_id }}"
              },
@@ -52,7 +52,7 @@
              DIST_UNIT = (MEASURMENT_PREFERENCE=="feet")? 1609.34 : 1000.0,
              DIST_LABEL = (MEASURMENT_PREFERENCE=="feet")?  "mi" : "km",
              CAPTURE_DURATION_MAX = {{ config.get('CAPTURE_DURATION_MAX')|tojson }},
-             DEFAULT_DOTCOLOR = {{ config.get('DEFAULT_DOTCOLOR')|tojson }};
+             DEFAULT_DOTCOLOR = {{ config.get('DEFAULT_DOTCOLOR')|tojson|safe }};
              
 
         {% assets "gifjs_webworker_js" %}
