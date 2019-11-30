@@ -2120,9 +2120,9 @@ class BinaryWebsocketClient(object):
             return obj
 
     def close(self):
-        elapsed = round(time.time() - self.birthday, 2)
-        elapsed_td = timedelta(seconds=elapsed)
-        log.info("%s CLOSED. elapsed=%s", self.key, elapsed_td)
+        elapsed = datetime.utcnow() - self.birthday
+        log.info("%s CLOSED. open for %s", self.key, elapsed)
+
         redis.delete(self.key)
         try:
             self.ws.close()
