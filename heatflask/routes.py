@@ -27,7 +27,7 @@ from . import login_manager, redis, mongo, sockets, talisman
 
 from .models import (
     Users, Activities, EventLogger, Utility, Webhooks, Index, Payments,
-    BinaryWebsocketClient
+    BinaryWebsocketClient, StravaClient
 )
 
 mongodb = mongo.db
@@ -359,8 +359,6 @@ def main(username):
     web_client_id = "H:{}".format(loc)
     redis.setex(web_client_id, timeout, int(time.time()))
 
-    log.info("NEW CLIENT %s", web_client_id)
-
     query = dict(
         user=user,
         client_id=web_client_id,
@@ -380,6 +378,7 @@ def main(username):
                 query[field] = request.args[option]
                 break
             
+    # log.debug("received query %s", request.args)
 
     # Here we defal with special cases
     if all(query.get(x) for x in ["lat", "lng"]):
@@ -391,23 +390,12 @@ def main(username):
     if query.get("ids"):
         query["ids"] = re.split(';|,| ', query["ids"])
 
-    if not any(query[x] for x in ["date1", "date2", "ids"]):
-        for field in ["preset", "limit"]:
-            if query[field]:
-                try:
-                    query[field] = int(query[field])
-                except ValueError:
-                    flash(
-                        "'{}' is not a valid value for {}. default is 10"
-                        .format(query[field], field)
-                    )
-                    query[field] = 10
-                break
-
+    if not any(query[x] for x in ["date1", "date2", "ids", "preset", "limit"]):
         # This is the default if nothing is specified
         query["limit"] = 10
+        query["autozoom"] = True
 
-    log.debug("created query: %s", query)
+    # log.debug("created query: %s", query)
 
     if current_user.is_anonymous or (not current_user.is_admin()):
         event = {
@@ -873,4 +861,26 @@ def paypal_ipn_handler():
         return "Paypal IPN message could not be verified.", 403
 
 
+@app.route('/test', methods=["GET", "POST"])
+def test_endpoint():
+    u = Users.get("e_rensi")
+    query = dict(limit=10)
 
+    summaries = Index.query(
+        user=u,
+        update_ts=False,
+        **query
+    )
+
+    client = StravaClient(user=u)
+
+    def gen():
+        for a in summaries:
+            if "_id" in a:
+                a = Activities.import_streams(client, a)
+                yield a
+
+    return Response(
+        stream_with_context("{}\n\n".format(a) for a in gen()),
+        content_type='text/event-stream'
+    )

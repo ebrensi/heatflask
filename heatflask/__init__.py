@@ -7,6 +7,7 @@ from flask_compress import Compress
 from flask_login import LoginManager
 from flask_analytics import Analytics
 from flask_talisman import Talisman
+from flask_sslify import SSLify
 from flask_sockets import Sockets
 from flask_assets import Environment
 from datetime import datetime
@@ -20,8 +21,6 @@ login_manager = LoginManager()
 sockets = Sockets()
 assets = Environment()
 talisman = Talisman()
-
-
 
 # Global variables
 EPOCH = datetime.utcfromtimestamp(0)
@@ -44,6 +43,7 @@ def create_app():
 
         Analytics(app)
         Compress(app)
+        # SSLify(app, skips=["webhook_callback"])
         from .js_bundles import bundles
         
         assets.register(bundles)

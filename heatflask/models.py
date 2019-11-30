@@ -37,9 +37,6 @@ BATCH_CHUNK_SIZE = app.config["BATCH_CHUNK_SIZE"]
 IMPORT_CONCURRENCY = app.config["IMPORT_CONCURRENCY"]
 STORE_ACTIVITIES_TIMEOUT = app.config["STORE_ACTIVITIES_TIMEOUT"]
 CACHE_TTL = app.config["CACHE_ACTIVITIES_TIMEOUT"]
-STREAMS_TO_CACHE = app.config["STREAMS_TO_CACHE"]
-STREAMS_OUT = app.config["STREAMS_OUT"]
-ESSENTIAL_STREAMS = app.config["ESSENTIAL_STREAMS"]
 DAYS_INACTIVE_CUTOFF = app.config["DAYS_INACTIVE_CUTOFF"]
 MAX_IMPORT_ERRORS = app.config["MAX_IMPORT_ERRORS"]
 
@@ -414,20 +411,21 @@ class Users(UserMixin, db_sql.Model):
                 yield {"error": "Invalid Dates"}
                 return
 
-        client_query = dict(
+        client_query = Utility.cleandict(dict(
             limit=limit,
             after=after,
             before=before,
             activity_ids=activity_ids
-        )
+        ))
 
-        log.debug("received query %s", client_query)
+        # log.debug("received query %s", client_query)
+
+        self.strava_client = None
 
         # exit if this query is empty
         if not any([limit, activity_ids, before, after]):
             log.debug("%s empty query", self)
             return
-
 
         while self.indexing():
             yield dict(idx=self.indexing())
@@ -447,10 +445,12 @@ class Users(UserMixin, db_sql.Model):
                 yield dict(error="OFFLINE MODE")
                 return
 
+            self.strava_client = StravaClient(user=self)
             summaries_generator = Index.import_user_index(
                 self,
                 out_query=client_query,
-                cancel_key=cancel_key
+                cancel_key=cancel_key,
+                client=self.strava_client
             )
 
             if not summaries_generator:
@@ -543,9 +543,12 @@ class Users(UserMixin, db_sql.Model):
             log.info("%s importing chunk %s", self, append_streams.chunk)
             append_streams.start = time.time()
 
+            if not self.strava_client:
+                self.strava_client = StravaClient(user=self)
+
             for A in Activities.append_streams_from_import(
                 to_import,
-                self.client(),
+                self.strava_client,
                 pool=self.import_pool
             ):
                 if A:
@@ -575,7 +578,7 @@ class Users(UserMixin, db_sql.Model):
 
         if not OFFLINE:
             if not self.client():
-                log.debug("%s cannot import. bad client.", self)
+                log.info("%s cannot import. bad client.", self)
                 yield (dict(
                     error="cannot import. invalid access token." +
                     " {} must re-authenticate".format(self)
@@ -922,15 +925,14 @@ class Index(object):
     @classmethod
     def import_user_index(
         cls,
-        user,
+        client=None,
+        user=None,
         fetch_query={},
         out_query={},
-        blocking=True,
-        cancel_key=None
+        blocking=True
     ):
 
-        client = StravaClient(user=user)
-
+        client = client or StravaClient(user=user)
         if not client:
             return []
         
@@ -940,10 +942,7 @@ class Index(object):
             # The presence of out_query means the caller wants
             #  us to output activities while building the index
             queue = gevent.queue.Queue()
-            args.update(dict(
-                queue=queue,
-                cancel_key=cancel_key
-            ))
+            args.update(dict(queue=queue))
             gevent.spawn(cls._import, client, **args)
             return queue
 
@@ -1092,20 +1091,37 @@ class StravaClient(object):
     PAGE_REQUEST_CONCURRENCY = app.config["PAGE_REQUEST_CONCURRENCY"]
     PAGE_SIZE = 200
     MAX_PAGE = 100
+
+    STREAMS_TO_IMPORT = app.config["STREAMS_TO_IMPORT"]
     # MAX_PAGE = 3  # for testing
 
     BASE_URL = "https://www.strava.com/api/v3"
-    GET_ACTIVITIES_URL = "/athlete/activities"
-    GET_STREAMS_URL = "/activities/{id}/streams?keys={keys}&key_by_type={type}"
+    
+    GET_ACTIVITIES_ENDPOINT = "/athlete/activities?per_page={page_size}"
+    GET_ACTIVITIES_URL = BASE_URL + GET_ACTIVITIES_ENDPOINT.format(
+        page_size=PAGE_SIZE
+    )
+
+    GET_STREAMS_ENDPOINT = "/activities/{id}/streams?keys={keys}&key_by_type=true&series_type=time&resolution=high"
+    GET_STREAMS_URL = BASE_URL + GET_STREAMS_ENDPOINT.format(
+        id="{id}",
+        keys=",".join(STREAMS_TO_IMPORT)
+    )
 
     def __init__(self, access_token=None, user=None):
         self.user = None
+        self.id = uuid.uuid4().clock_seq
+        self.cancel_stream_import = False
+        self.cancel_index_import = False
 
         if access_token:
             self.access_token = access_token
         elif user:
             self.user = user
             self.access_token = user.client().access_token
+
+    def __repr__(self):
+        return "C:{}".format(self.id)
 
     @classmethod
     def strava2doc(cls, a):
@@ -1142,14 +1158,11 @@ class StravaClient(object):
         }
 
 
-    def get_activities(self, cancel_key=None, ordered=False, **query):
+    def get_activities(self, ordered=False, **query):
         cls = self.__class__
+        self.cancel_index_import = False
 
-        query_base_url = "{}{}?per_page={}".format(
-            cls.BASE_URL,
-            cls.GET_ACTIVITIES_URL,
-            cls.PAGE_SIZE
-        )
+        query_base_url = cls.GET_ACTIVITIES_URL
         
         #  handle parameters
         try:
@@ -1179,12 +1192,12 @@ class StravaClient(object):
         def request_page(pagenum):
 
             if pagenum > self.final_index_page:
-                log.debug("%s page %s cancelled", self.user, pagenum)
+                log.debug("%s page %s cancelled", self, pagenum)
                 return pagenum, None
 
             url = query_base_url + "&page={}".format(pagenum)
             
-            log.debug("%s request page %s", self.user, pagenum)
+            log.debug("%s request page %s", self, pagenum)
             start = time.time()
 
             try:
@@ -1204,7 +1217,7 @@ class StravaClient(object):
             elapsed = round(time.time() - start, 2)
             log.debug(
                 "%s response page %s %s",
-                self.user,
+                self,
                 pagenum,
                 dict(elapsed=elapsed, count=size
             ))
@@ -1231,6 +1244,9 @@ class StravaClient(object):
 
         try:
             while num_pages_processed <= self.final_index_page:
+                if self.cancel_index_import:
+                    raise Exception("cancelled by user")
+
                 pagenum, activities = next(jobs)
 
                 if not activities:
@@ -1250,9 +1266,8 @@ class StravaClient(object):
                     self.final_index_page = pagenum
 
                 for a in activities:
-                    if cancel_key and not redis.exists(cancel_key):
-                        log.debug("%s get_actvities cancelled", self.user)
-                        break
+                    if self.cancel_index_import:
+                        raise Exception("cancelled by user")
 
                     doc = cls.strava2doc(a)
                     if not doc:
@@ -1279,28 +1294,54 @@ class StravaClient(object):
             pool.kill()
 
     def get_activity_streams(self, _id):
+        if self.cancel_stream_import:
+            log.debug("%s import %s canceled", self, _id)
+            return False
+
         cls = self.__class__
 
-        endpoint = cls.GET_STREAMS_URL.format(dict(
-            id=_id,
-            keys=["time", "latlng"],
-            type="true"
-        ))
-
-        url = cls.BASE_URL + endpoint
+        url = cls.GET_STREAMS_URL.format(id=_id)
+        streams = {}
         try:
             response = requests.get(url, headers=self.headers())
-            streams = response.json()
+            stream_dict = response.json()
+
+            if not stream_dict:
+                raise UserWarning("%s no streams for %s", self, _id)
+
+            for stream_name in cls.STREAMS_TO_IMPORT:
+                if stream_name not in stream_dict:
+                    raise UserWarning(
+                        "%s stream %s not in activity %s",
+                        self,
+                        stream_name,
+                        _id
+                    )
+
+            for stream_name, stream_info in stream_dict.items():
+                stream = stream_info["data"]
+                if len(stream) < 3:
+                    raise UserWarning(
+                        "%s insufficient stream %s for activity %s",
+                        self,
+                        stream_name,
+                        _id
+                    )
+                streams[stream_name] = stream
+
+        except UserWarning as e:
+            log.info(e)
+            return
 
         except Exception:
             log.exception(
                 "%s failed get streams for activity %s",
-                self.user,
+                self,
                 _id
             )
             return False
-        return streams
 
+        return streams
 
 #  Activities class is only a proxy to underlying data structures.
 #  There are no Activity objects
@@ -1546,72 +1587,48 @@ class Activities(object):
     def import_streams(cls, client, activity, timeout=CACHE_TTL):
         if OFFLINE:
             return
- 
-        streams_to_import = list(STREAMS_TO_CACHE) + ["latlng"]
-        try:
-            streams_to_import.remove("polyline")
-        except Exception:
-            pass
 
         _id = activity["_id"]
 
         start = time.time()
-        log.debug("request import %s", _id)
+        log.debug("%s request import %s", client.user, _id)
+
+        result = client.get_activity_streams(_id)
+        
+        if not result:
+            if result is None:
+                # a result of None means this activity has no streams
+                Index.delete(_id)
+                log.info("activity %s EMPTY: %s", _id)
+
+            # a result of False means there was an error
+            return result
+
+        encoded_streams = {}
 
         try:
-            streams = client.get_activity_streams(
-                _id,
-                series_type='time',
-                types=streams_to_import
-            )
-
-            if not streams:
-                raise UserWarning("no streams")
-
-            imported_streams = {name: streams[name].data for name in streams}
-
             # Encode/compress latlng data into polyline format
-            try:
-                latlng = imported_streams.pop("latlng")
-            except KeyError:
-                raise UserWarning("no stream 'latlng'")
-            
-            imported_streams["polyline"] = polyline.encode(latlng)
-
-            for s in set(STREAMS_TO_CACHE) - set(["polyline"]):
-                # Encode/compress these streams
-                try:
-                    stream = imported_streams[s]
-                    assert len(stream) > 2
-                except Exception:
-                    if s in ESSENTIAL_STREAMS:
-                        raise UserWarning("no stream '{}'".format(s))
-                    else:
-                        continue
-        
-                imported_streams[s] = cls.stream_encode(stream)
-                
-        except UserWarning as e:
-            # delete this activity from the index if it
-            #  does not have the neccessary streams
-            Index.delete(_id)
-            log.info("activity %s EMPTY: %s", _id, e)
-            return
-
-        except Exception:
-            log.exception(
-                "error importing activity %s: %s", _id, activity
+            encoded_streams["polyline"] = polyline.encode(
+                result.pop("latlng")
             )
+        except Exception:
+            log.exception("failed polyline encode for activity %s", _id)
             return False
 
-        cls.set(_id, imported_streams, timeout)
-
-        for s in STREAMS_OUT:
+        for name, stream in result.items():
+            # Encode/compress these streams
             try:
-                activity[s] = imported_streams[s]
+                encoded_streams[name] = cls.stream_encode(stream)
             except Exception:
+                log.exception(
+                    "failed RLE encoding stream '%s' for activity %s",
+                    name, _id)
                 return False
+     
+        cls.set(_id, encoded_streams, timeout)
         
+        activity.update(encoded_streams)
+
         elapsed = round(time.time() - start, 2)
         log.debug("imported %s: elapsed=%s", _id, elapsed)
         return activity
@@ -2103,8 +2120,7 @@ class BinaryWebsocketClient(object):
             return obj
 
     def close(self):
-        start_time = float(redis.get(self.key))
-        elapsed = round(time.time() - start_time, 1)
+        elapsed = round(time.time() - self.birthday, 2)
         elapsed_td = timedelta(seconds=elapsed)
         log.info("%s CLOSED. elapsed=%s", self.key, elapsed_td)
         redis.delete(self.key)
