@@ -395,7 +395,6 @@ class Users(UserMixin, db_sql.Model):
                          owner_id=False,
                          update_index_ts=True,
                          cache_timeout=CACHE_ACTIVITIES_TIMEOUT,
-                         cancel_key=None,
                          **kwargs):
 
         # convert date strings to datetimes, if applicable
@@ -449,7 +448,6 @@ class Users(UserMixin, db_sql.Model):
             summaries_generator = Index.import_user_index(
                 self,
                 out_query=client_query,
-                cancel_key=cancel_key,
                 client=self.strava_client
             )
 
@@ -765,7 +763,6 @@ class Index(object):
         queue=None,
         fetch_query={},
         out_query={},
-        cancel_key=None
     ):
         # this method runs in a greenlet and does not have access to the
         #   current_app object.  anything that requires app context will
@@ -827,13 +824,6 @@ class Index(object):
 
             dtnow = datetime.utcnow()
             for d in summaries:
-                if cancel_key and not redis.exists(cancel_key):
-                    #  we will try to continue building index even if
-                    #  the client is no longer there
-                    cancel_key = None
-                    output(StopIteration)
-                    queue = None
-                    
                 if not d or "_id" not in d:
                     continue
                 
@@ -929,14 +919,17 @@ class Index(object):
         user=None,
         fetch_query={},
         out_query={},
-        blocking=True
+        blocking=True,
     ):
 
         client = client or StravaClient(user=user)
         if not client:
             return []
         
-        args = dict(fetch_query=fetch_query, out_query=out_query)
+        args = dict(
+            fetch_query=fetch_query,
+            out_query=out_query,
+        )
 
         if out_query:
             # The presence of out_query means the caller wants
@@ -1674,14 +1667,14 @@ class Activities(object):
         )
 
     @classmethod
-    def query(cls, queryObj, cancel_key=None):
+    def query(cls, queryObj):
         for user_id in queryObj:
             user = Users.get(user_id)
             if not user:
                 continue
 
             query = queryObj[user_id]
-            activities = user.query_activities(cancel_key=cancel_key, **query)
+            activities = user.query_activities(**query)
 
             if activities:
                 for a in activities:
