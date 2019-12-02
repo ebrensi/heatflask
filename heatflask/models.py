@@ -142,7 +142,7 @@ class Users(UserMixin, db_sql.Model):
                 return
 
             elapsed = round(time.time() - t1, 2)
-            log.info("%s token refresh elapsed=%s", self, elapsed)
+            log.debug("%s token refresh elapsed=%s", self, elapsed)
 
         return self.cli
 
@@ -940,8 +940,6 @@ class Index(object):
             except Exception:
                 log.error("%s import %s failed", user, _id)
                 return
-
-            log.debug("%s fetched activity %s by id", user, _id)
             return d
 
         pool = Pool(IMPORT_CONCURRENCY)
@@ -1927,9 +1925,9 @@ class Webhooks(object):
             # fetch activity and add it to the index
             result = Index.import_by_id(user, [_id])
             if result:
-                log.debug("Webhook: imported %s for %s", _id, user)
+                log.debug("Webhook: %s imported %s", user, _id)
             else:
-                log.info("Webhook: import failed: %s", update_raw)
+                log.info("Webhook: %s import %s failed", user, update_raw)
 
         elif update.aspect_type == "delete":
             # delete the activity from the index
