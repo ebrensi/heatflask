@@ -27,7 +27,7 @@ from . import login_manager, redis, mongo, sockets, talisman
 
 from .models import (
     Users, Activities, EventLogger, Utility, Webhooks, Index, Payments,
-    BinaryWebsocketClient, StravaClient
+    BinaryWebsocketClient, StravaClient, Timer, JobQueue
 )
 
 mongodb = mongo.db
@@ -871,15 +871,32 @@ def test_endpoint():
         update_ts=False,
         **query
     )
+    timer = Timer()
+
+    factory = JobQueue()
 
     client = StravaClient(user=u)
 
-    def gen():
-        for a in summaries:
-            if "_id" in a:
-                a = Activities.import_streams(client, a)
-                yield a
+    def append_streams(A):
+        return Activities.import_streams(client, A)
 
+    def gen():
+        count = 0
+        for result in factory.imap_undordered(
+            append_streams,
+            summaries
+        ):
+
+            if not result:
+                continue
+
+            _id = result["_id"] if "_id" in result else result
+            # log.debug("%s received %s (%s)", timer.elapsed(), jobs[_id], _id)
+            yield _id
+            count += 1
+        
+        elapsed = timer.elapsed()
+        log.debug("Import of %s streams took %s: rate=%s", count, elapsed, count/elapsed)
     return Response(
         stream_with_context("{}\n\n".format(a) for a in gen()),
         content_type='text/event-stream'
