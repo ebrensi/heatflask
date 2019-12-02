@@ -12,7 +12,6 @@ import polyline
 import json
 import uuid
 import gevent
-from gevent.pool import Pool
 import requests
 import msgpack
 from bson import ObjectId
@@ -142,7 +141,7 @@ class Users(UserMixin, db_sql.Model):
                 return
 
             elapsed = round(time.time() - t1, 2)
-            log.info("%s token refresh elapsed=%s", self, elapsed)
+            log.debug("%s token refresh elapsed=%s", self, elapsed)
 
         return self.cli
 
@@ -316,7 +315,7 @@ class Users(UserMixin, db_sql.Model):
                     user.delete(session=session)
                     return (user, "deleted")
             
-            P = Pool(TRIAGE_CONCURRENCY)
+            P = gevent.pool.Pool(TRIAGE_CONCURRENCY)
             deleted = 0
             updated = 0
             invalid = 0
@@ -583,8 +582,8 @@ class Users(UserMixin, db_sql.Model):
                 
                 return
 
-        chunk_pool = Pool(app.config["CHUNK_CONCURRENCY"])
-        self.import_pool = Pool(app.config["IMPORT_CONCURRENCY"])
+        chunk_pool = gevent.pool.Pool(app.config["CHUNK_CONCURRENCY"])
+        self.import_pool = gevent.pool.Pool(app.config["IMPORT_CONCURRENCY"])
         chunks = Utility.chunks(summaries_generator, size=BATCH_CHUNK_SIZE)
         
         self.fetch_result = dict(
@@ -940,11 +939,9 @@ class Index(object):
             except Exception:
                 log.error("%s import %s failed", user, _id)
                 return
-
-            log.debug("%s fetched activity %s by id", user, _id)
             return d
 
-        pool = Pool(IMPORT_CONCURRENCY)
+        pool = gevent.pool.Pool(IMPORT_CONCURRENCY)
         dtnow = datetime.utcnow()
 
         mongo_requests = []
@@ -1101,7 +1098,7 @@ class StravaClient(object):
 
     def __init__(self, access_token=None, user=None):
         self.user = user
-        self.id = uuid.uuid4().clock_seq
+        self.id = str(user)
         self.cancel_stream_import = False
         self.cancel_index_import = False
 
@@ -1225,7 +1222,7 @@ class StravaClient(object):
 
             return pagenum, activities
 
-        pool = Pool(cls.PAGE_REQUEST_CONCURRENCY)
+        pool = gevent.pool.Pool(cls.PAGE_REQUEST_CONCURRENCY)
 
         num_activities_retrieved = 0
         num_pages_processed = 0
@@ -1589,8 +1586,8 @@ class Activities(object):
 
         _id = activity["_id"]
 
-        # start = time.time()
-        # log.debug("%s request import %s", client, _id)
+        start = time.time()
+        log.debug("%s request import %s", client, _id)
 
         result = client.get_activity_streams(_id)
         
@@ -1628,8 +1625,8 @@ class Activities(object):
         
         activity.update(encoded_streams)
 
-        # elapsed = round(time.time() - start, 2)
-        # log.debug("%s imported %s: elapsed=%s", client, _id, elapsed)
+        elapsed = round(time.time() - start, 2)
+        log.debug("%s imported %s: elapsed=%s", client, _id, elapsed)
         return activity
 
     @classmethod
@@ -1658,7 +1655,7 @@ class Activities(object):
     @classmethod
     def append_streams_from_import(cls, summaries, client, pool=None):
         if pool is None:
-            pool = Pool(IMPORT_CONCURRENCY)
+            pool = gevent.pool.Pool(IMPORT_CONCURRENCY)
 
         def import_activity_stream(A):
             if not A or "_id" not in A:
@@ -1927,9 +1924,9 @@ class Webhooks(object):
             # fetch activity and add it to the index
             result = Index.import_by_id(user, [_id])
             if result:
-                log.debug("Webhook: imported %s for %s", _id, user)
+                log.debug("Webhook: %s imported %s", user, _id)
             else:
-                log.info("Webhook: import failed: %s", update_raw)
+                log.info("Webhook: %s import %s failed", user, update_raw)
 
         elif update.aspect_type == "delete":
             # delete the activity from the index
@@ -2073,29 +2070,40 @@ class Utility():
 
 
 class JobQueue(object):
+    MAX_QUEUE_SIZE = 200
     
     def __init__(self, name=""):
+        cls = self.__class__
         self.name = name
-        self.input_queue = gevent.queue.Queue()
-        self.output_queue = gevent.queue.Queue()
+
         self._workers = None
-
-        self.get = self.output_queue.get
-        self._put_args = {}
-
-        self.put = self.input_queue.put
-        self._get_args = {}
-
         self.working = False
 
+        self.in_queue = gevent.queue.Queue(maxsize=cls.MAX_QUEUE_SIZE)
+        self.put = self.in_queue.put
+        self.put_nowait = self.in_queue.put_nowait
+
+        self._get_args = {}
+
+        self.out_queue = gevent.queue.Queue(maxsize=cls.MAX_QUEUE_SIZE)
+        self.get = self.out_queue.get
+        self.get_nowait = self.in_queue.get_nowait
+
+        self._put_args = {}
+        
+        self.watchdog_timeout = 2
+        self.busy_worker_timeout = 10
+
+        self.feeders = {}
+
     def __repr__(self):
-        return "WQ:{}".format(self.name)
+        return "Q:{}".format(self.name)
     
     def __len__(self):
-        return (len(self.input_queue), len(self.output_queue))
+        return (len(self.in_queue), len(self.out_queue))
 
     def __iter__(self):
-        return self.output_queue.__iter__()
+        return self.out_queue.__iter__()
 
     def __next__(self):
         result = self.get()
@@ -2105,12 +2113,25 @@ class JobQueue(object):
 
     next = __next__ # Py2
 
-    def imap_undordered(self, func, iterable, workers=5):
-        for el in iterable:
-            job = (func, (el,), {})
-            self.put(job)
+    # consume is a non-blocking method that sets
+    # a function/iterable mapping as a source for this queue
+    # the iterable does not need to be finite
+    def consume(self, func, iterable, **argv):
         if not self.working:
-            self.start(num_workers=workers)
+            self.start(**argv)
+
+        def feeder(ref):
+            log.debug("%s feeder %s started", self, ref)
+            for el in iterable:
+                job = (func, (el,), {})
+                self.put(job)
+            if ref in self.feeders:
+                del self.feeders[ref]
+            log.debug("%s feeder %s done", self, ref)
+
+        ref = uuid.uuid4().get_hex()
+        self.feeders[ref] = self.pool.spawn(feeder, ref)
+        # gevent.sleep(0)
         return self
 
     def _worker(self, my_id):
@@ -2121,12 +2142,12 @@ class JobQueue(object):
         
         while self.working:
             try:
-                func, args, kwargs = self.input_queue.get(**gargs)
+                func, args, kwargs = self.in_queue.get(**gargs)
                 self._workers[my_id]["busy"] = True
 
                 result = func(*args, **kwargs)
                 
-                self.output_queue.put(result, **pargs)
+                self.out_queue.put(result, **pargs)
                 self._workers[my_id]["busy"] = False
             except gevent.queue.Empty:
                 log.error("%s:%s input_queue EMPTY", self, my_id)
@@ -2144,34 +2165,34 @@ class JobQueue(object):
             pass
         log.debug("%s:%s stopped", self, my_id)
 
-    def _watchdog(self, timeout):
+    def _watchdog(self):
         try:
             while self.working:
-                # log.debug("%s queues not empty", self)
+                log.debug("%s queues not empty", self)
                 #  Sleep while queues are not empty
-                while not (self.input_queue.empty() and self.input_queue.empty()):
+                while not (self.in_queue.empty() and self.out_queue.empty()):
                     assert self._workers and self.working
                     gevent.sleep(0.5)
 
-                # log.debug("%s queues empty", self)
+                log.debug("%s queues empty", self)
 
                 time0 = time.time()
                 while self.busy() and self.working:
-                    # log.debug("%s still busy", self)
+                    log.debug("%s still busy", self)
                     # the queues are empty but at least one worker
                     # is handling a job. We will wait on it for 7 seconds
-                    if time.time() - time0 > 10:
+                    if time.time() - time0 > self.busy_worker_timeout:
                         raise Exception("%s busy worker timed out" % self)
-                    gevent.sleep(0.5)
+                    gevent.sleep(1)
 
                 # if both queues are empty for longer than timeout then quit
                 #   unless timeout is null
                 time0 = time.time()
-                while self.input_queue.empty() and self.input_queue.empty():
+                while self.in_queue.empty() and self.in_queue.empty():
                     assert self._workers and self.working
-                    if timeout and (time.time() - time0 > timeout):
+                    if time.time() - time0 > self.watchdog_timeout:
                         raise StopIteration
-                    gevent.sleep(0.5)
+                    gevent.sleep(1)
 
         except AssertionError as e:
             log.debug(e)
@@ -2180,25 +2201,27 @@ class JobQueue(object):
         except Exception as e:
             log.exception(e)
         finally:
-            # log.debug("%s watchdog stopped", self)
+            log.debug("%s watchdog stopped", self)
             self.stop()
 
-    def start(self, num_workers=5, timeout=1):
+    def start(self, num_workers=5, timeout=None):
+        if timeout:
+            self.watchdog_timeout = timeout
         self.working = True
-        self.pool = gevent.pool.Pool(num_workers + 1)
+        self.pool = gevent.pool.Pool(num_workers + 11)
         self._workers = {
             _id: dict(worker=self.pool.spawn(self._worker, _id), busy=False)
             for _id in range(1, num_workers + 1)
         }
-        self.watcher = self.pool.spawn(self._watchdog, timeout)
-        log.debug("%s started with %s workers", self, len(self._workers))
+        self.watchdog = self.pool.spawn(self._watchdog)
+        log.debug("%s started with %s workers", self, num_workers)
 
     def stop(self):
         self.working = False
         self.workers = None
-        self.watcher = None
+        self.watchdog = None
         try:
-            self.output_queue.put(StopIteration)
+            self.out_queue.put(StopIteration)
         except Exception:
             log.exception()
         log.debug("%s stopped", self)

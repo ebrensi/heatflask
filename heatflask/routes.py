@@ -693,7 +693,6 @@ def beacon_handler():
     key = request.data
     val = redis.get(key)
     if not val:
-        log.info("close from expired key %s", key)
         return "ok"
     
     if key.startswith("H"):
@@ -886,7 +885,7 @@ def test_endpoint():
 
     def gen():
         count = 0
-        for result in factory.imap_undordered(
+        for result in factory.consume(
             append_streams,
             summaries
         ):
