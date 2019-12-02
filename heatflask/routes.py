@@ -356,10 +356,8 @@ def main(username):
         else:
             return redirect(url_for('splash'))
 
-    timeout = app.config["WEB_CLIENT_ID_TIMEOUT"]
-    loc = "{REMOTE_ADDR}:{REMOTE_PORT}".format(**request.environ)
-    web_client_id = "H:{}".format(loc)
-    redis.setex(web_client_id, timeout, int(time.time()))
+    web_client_id = "H:{}".format(int(time.time()))
+    log.info("%s OPEN", web_client_id)
 
     query = dict(
         user=user,
@@ -431,10 +429,8 @@ def activities(username):
 
     # Assign an id to this web client in order to prevent
     #  websocket access from unidentified users 
-    timeout = 60 * 30  # 30 min
-    web_client_id = "C:{}".format(uuid.uuid1().get_hex())
-    ip_address = request.access_route[-1]
-    redis.setex(web_client_id, timeout, ip_address)
+    web_client_id = "HA:{}".format(int(time.time()))
+    log.info("%s OPEN", web_client_id)
     
     return render_template(
         "activities.html",
@@ -691,21 +687,16 @@ def app_init():
 @app.route("/beacon_handler", methods=["POST"])
 def beacon_handler():
     key = request.data
-    val = redis.get(key)
-    if not val:
-        return "ok"
     
-    if key.startswith("H"):
-        try:
-            start_ts = float(val)
-        except Exception:
-            log.exception("problem with key '%s'", val)
-        else:
-            elapsed = round(time.time() - start_ts, 1)
-            elapsed_td = timedelta(seconds=elapsed)
-            log.info("%s CLIENT CLOSED. elapsed %s", key, elapsed_td)
-    
-    redis.delete(key)
+    try:
+        ts = int(key.split(":")[-1])
+    except Exception:
+        log.info("%s CLOSED.", key)
+    else:
+        elapsed = round(time.time() - ts, 2)
+        elapsed_td = timedelta(seconds=elapsed)
+        log.info("%s CLOSED. elapsed=%s", key, elapsed_td)
+
     return "ok"
 
 
