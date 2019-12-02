@@ -931,22 +931,19 @@ class Index(object):
         if not client:
             log.error("{} bad client".format(user))
             return
-        
-        def fetch(_id):
-            try:
-                d = client.get_activity(_id)
-                assert d and "_id" in d
-            except Exception:
-                log.error("%s import %s failed", user, _id)
-                return
-            return d
 
         pool = gevent.pool.Pool(IMPORT_CONCURRENCY)
         dtnow = datetime.utcnow()
 
+        import_stats = dict(errors=0, imported=0, empty=0)
         mongo_requests = []
-        for d in pool.imap_unordered(fetch, activity_ids):
-            if not d or "_id" not in d:
+        timer = Timer()
+        for d in pool.imap_unordered(client.get_activity, activity_ids):
+            if not d:
+                if d is False:
+                    import_stats["errors"] += 1
+                else:
+                    import_stats["empty"] += 1
                 continue
 
             d["ts"] = dtnow
@@ -956,17 +953,17 @@ class Index(object):
                 pymongo.ReplaceOne({"_id": d["_id"]}, d, upsert=True)
             )
 
-        if not mongo_requests:
-            return
+        if mongo_requests:
+            try:
+                cls.db.bulk_write(mongo_requests, ordered=False)
+            except Exception:
+                log.exception("mongo error")
+            else:
+                import_stats["imported"] += len(mongo_requests)
         
-        count = len(mongo_requests)
+        import_stats["elapsed"] = timer.elapsed()
         
-        try:
-            cls.db.bulk_write(mongo_requests, ordered=False)
-        except Exception:
-            log.exception("mongo error")
-
-        return count
+        return Utility.cleandict(import_stats)
 
     @classmethod
     def query(cls, user=None,
@@ -1151,10 +1148,13 @@ class StravaClient(object):
         # log.debug("sent request %s", url)
         try:
             response = requests.get(url, headers=self.headers())
-            Araw = response.json()
-            return cls.strava2doc(Araw)
+            raw = response.json()
+            if "id" not in raw:
+                raise UserWarning(raw)
+            return cls.strava2doc(raw)
         except Exception:
-            log.exception("error importing summary %s", _id)
+            log.exception("%s import-by-id %s failed", self, _id)
+            return False
 
     def get_activities(self, ordered=False, **query):
         cls = self.__class__
@@ -1924,9 +1924,9 @@ class Webhooks(object):
             # fetch activity and add it to the index
             result = Index.import_by_id(user, [_id])
             if result:
-                log.debug("webhook: %s imported %s", user, _id)
+                log.debug("webhook: %s create %s %s", user, _id, result)
             else:
-                log.info("webhook: %s import %s failed", user, update_raw)
+                log.info("webhook: %s create %s failed", user, _id)
 
         elif update.aspect_type == "delete":
             # delete the activity from the index
