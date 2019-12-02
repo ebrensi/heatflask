@@ -17,16 +17,17 @@ import stravalib
 import uuid
 from flask_login import current_user, login_user, logout_user
 import time
+import re
 
 # from urllib.parse import urlparse, urlunparse #python3
 from urlparse import urlparse, urlunparse  # python2
 
 # Local imports
-from . import login_manager, redis, mongo, sockets
+from . import login_manager, redis, mongo, sockets#, talisman
 
 from .models import (
     Users, Activities, EventLogger, Utility, Webhooks, Index, Payments,
-    BinaryWebsocketClient
+    BinaryWebsocketClient, StravaClient, Timer, JobQueue
 )
 
 mongodb = mongo.db
@@ -48,7 +49,6 @@ def load_user(user_id):
 
 @login_manager.unauthorized_handler
 def handle_needs_login():
-    # flash("You have to be logged in to access this page.")
     log.debug(request)
     return redirect(url_for('authorize', state=request.full_path))
 
@@ -89,7 +89,7 @@ def admin_or_self_required(f):
 def log_request_event(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        event = {"msg": request.url}
+        event = dict(msg=request.url)
 
         if current_user.is_authenticated:
             if current_user.is_admin():
@@ -97,64 +97,83 @@ def log_request_event(f):
                 # we don't bother logging this event
                 return f(*args, **kwargs)
 
-            event.update({
-                "cuid": current_user.id,
-                "profile": current_user.profile
-            })
+            event.update(dict(
+                cuid=current_user.id,
+                profile=current_user.profile
+            ))
         
         # If the user is anonymous or a regular user, we log the event
         EventLogger.log_request(request, **event)
         return f(*args, **kwargs)
     return decorated_function
 
-
-# Redirect any old domain urls to new domain
+#Redirect any old domain urls to new domain
 @app.before_request
 def redirect_to_new_domain():
     urlparts = urlparse(request.url)
-    # log.debug("request to {}".format(urlparts))
     
     # Don't redirect calls to /webhook _callback.
     #  They cause an error for some reason
     if urlparts.path == '/webhook_callback':
         return
 
+    # ignore localhost requests
+    if urlparts.netloc.startswith("127"):
+        return
+
+    urlparts_list = list(urlparts)
+
     if urlparts.netloc == app.config["FROM_DOMAIN"]:
-        urlparts_list = list(urlparts)
         urlparts_list[1] = app.config["TO_DOMAIN"]
+        changed = True
+    
+    if changed:
         new_url = urlunparse(urlparts_list)
-        # log.debug("new url: {}".format(new_url))
+        # log.debug("request to {}".format(request.url))
+        # log.debug("redirected to %s", new_url)
+
         return redirect(new_url, code=301)
 
+    return
 
 #  ------------- Serve some static files -----------------------------
 #  TODO: There might be a better way to do this.
 @app.route('/favicon.ico')
 def favicon():
-    return send_from_directory(os.path.join(app.root_path, 'static'),
-                               'favicon.ico')
+    return send_from_directory(
+        os.path.join(app.root_path, 'static'),
+        'favicon.ico'
+    )
 
 
 @app.route('/avatar/athlete/medium.png')
 def anon_photo():
-    return send_from_directory(os.path.join(app.root_path, 'static'),
-                               'anon-photo.jpg')
+    return send_from_directory(
+        os.path.join(app.root_path, 'static'),
+        'anon-photo.jpg'
+    )
 
 
 @app.route('/apple-touch-icon')
 @app.route('/logo.png')
 def touch():
-    return send_from_directory(os.path.join(app.root_path, 'static'),
-                               'logo.png')
+    return send_from_directory(
+        os.path.join(app.root_path, 'static'),
+        'logo.png'
+    )
 
 
 @app.route("/robots.txt")
 def robots_txt():
-    EventLogger.log_request(request,
-                            cuid="bot",
-                            msg=request.user_agent.string)
-    return send_from_directory(os.path.join(app.root_path, 'static'),
-                               'robots.txt')
+    EventLogger.log_request(
+        request,
+        cuid="bot",
+        msg=request.user_agent.string
+    )
+    return send_from_directory(
+        os.path.join(app.root_path, 'static'),
+        'robots.txt'
+    )
 
 
 # -----------------------------------------------------------------------------
@@ -206,16 +225,16 @@ def auth_callback():
         return redirect(state or url_for("splash"))
 
     scope = request.args.get("scope")
-    # log.debug("scope: {}".format(scope))
-
     if "activity:read" not in scope:
         # We need to be able to read the user's activities
         return redirect(url_for("authorize", state=state))
 
     if current_user.is_anonymous:
-        args = {"code": request.args.get("code"),
-                "client_id": app.config["STRAVA_CLIENT_ID"],
-                "client_secret": app.config["STRAVA_CLIENT_SECRET"]}
+        args = dict(
+            code=request.args.get("code"),
+            client_id=app.config["STRAVA_CLIENT_ID"],
+            client_secret=app.config["STRAVA_CLIENT_SECRET"]
+        )
         
         client = stravalib.Client()
         
@@ -223,36 +242,33 @@ def auth_callback():
             access_info = client.exchange_code_for_token(**args)
             # access_info is a dict containing the access_token, 
             #  date of expire, and a refresh token
-
-        except Exception as e:
-            log.error("authorization error:\n{}".format(e))
-            flash(str(e))
-            return redirect(state)
-
-        # log.debug("got code exchange response: {}".format(access_info))
-        user_data = Users.strava_user_data(
-            access_info=access_info)
-        # log.debug("user data: {}".format(user_data))
-
-        try:
+            user_data = Users.strava_user_data(
+                access_info=access_info
+            )
+            
+            assert user_data
+            
+            new_user = "" if Users.get(user_data["id"]) else " NEW USER"
+            
             user = Users.add_or_update(**user_data)
-        except Exception as e:
-            log.exception(e)
-            user = None
-        if user:
-            # remember=True, for persistent login.
-            login_user(user, remember=True)
-            # log.debug("authenticated {}".format(user))
-            EventLogger.new_event(
-                msg="{} authenticated as {}. Token expires at {}."
-                .format(user.id, scope,
-                        datetime.fromtimestamp(access_info.get("expires_at"))))
-        else:
-            log.error("user authentication error")
-            log.exception(e)
-            flash("There was a problem authorizing user")
+            
+            assert user
+
+        except Exception:
+            log.exception("authorization error")
+            flash("Authorization Error: {}".format(datetime.utcnow()))
+            return redirect(state)
+        
+        # remember=True, for persistent login.
+        login_user(user, remember=True)
+
+        msg = "Authenticated{} as {}".format(new_user, user, scope)
+        log.info(msg)
+        if new_user:
+            EventLogger.new_event(msg=msg)
 
     return redirect(state or url_for("main", username=user.id))
+
 
 @app.route("/<username>/logout")
 @admin_or_self_required
@@ -272,8 +288,9 @@ def delete_index(username):
     user = Users.get(username)
     if user:
         user.delete_index()
-        EventLogger.new_event(msg="index for {} deleted".format(user.id))
-        return "index for {} deleted".format(username)
+        msg = "index for {} deleted".format(user)
+        EventLogger.new_event()
+        return msg
     else:
         return "no user {}".format(username)
 
@@ -306,9 +323,8 @@ def main(username):
             assert current_user.id
         except AssertionError:
             logout_user()
-            flash("You need to re-authenticate (log-in).")
-        else:
-            current_user.update_usage()
+            return login_manager.unauthorized()
+        current_user.update_usage()
 
     user = None
 
@@ -318,7 +334,7 @@ def main(username):
     
     user = Users.get(username)
     if not user:
-        flash("user '{}' is not registered with this app"
+        flash("user '{}' is not registered with heatflask"
               .format(username))
         return redirect(url_for('splash'))
     
@@ -333,47 +349,54 @@ def main(username):
             "Invalid access token for {}. please re-authenticate."
             .format(user))
         if current_user == user:
-            return redirect(url_for("logout", username=username))
+            logout_user()
+            return login_manager.unauthorized()
         else:
             return redirect(url_for('splash'))
 
-    date1 = request.args.get("date1") or request.args.get("after", "")
-    date2 = request.args.get("date2") or request.args.get("before", "")
-    preset = request.args.get("days", "") or request.args.get("preset", "")
-    limit = request.args.get("limit", "")
-    baselayer = request.args.getlist("baselayer")
-    ids = request.args.get("id", "")
-    
-    if not ids:
-        if (not date1) and (not date2):
-            if preset:
-                try:
-                    preset = int(preset)
-                except ValueError:
-                    flash("'{}' is not a valid preset".format(preset))
-                    preset = 7
-            elif limit:
-                try:
-                    limit = int(limit)
-                except ValueError:
-                    flash("'{}' is not a valid limit".format(limit))
-                    limit = 1
-            else:
-                limit = 10
+    timeout = app.config["WEB_CLIENT_ID_TIMEOUT"]
+    loc = "{REMOTE_ADDR}:{REMOTE_PORT}".format(**request.environ)
+    web_client_id = "H:{}".format(loc)
+    redis.setex(web_client_id, timeout, int(time.time()))
 
-    c1 = request.args.get("c1", "")
-    c2 = request.args.get("c2", "")
-    sz = request.args.get("sz", "")
+    query = dict(
+        user=user,
+        client_id=web_client_id,
+        baselayer=(
+            request.args.getlist("baselayer") or
+            request.args.getlist("bl")
+        )
+    )
 
-    lat = request.args.get("lat")
-    lng = request.args.get("lng")
-    zoom = request.args.get("zoom")
-    autozoom = request.args.get("autozoom") in ["1", "true"]
+    query_spec = app.config["URL_QUERY_SPEC"]
+    # populate query dict with values from this urls's query string
+    for field in query_spec:
+        options, default = query_spec[field]
+        query[field] = default
+        for option in options:
+            if option in request.args:
+                query[field] = request.args[option]
+                break
+            
+    # log.debug("received query %s", request.args)
 
-    if (not lat) or (not lng):
-        lat, lng = app.config["MAP_CENTER"]
-        zoom = app.config["MAP_ZOOM"]
-        autozoom = "1"
+    # Here we defal with special cases
+    if all(query.get(x) for x in ["lat", "lng"]):
+        # "lat" and "lng" given in query string override "center"
+        query["map_center"] = [query["lat"], query["lng"]]
+        query["autozoom"] = False
+        del query["lat"]
+        del query["lng"]
+
+    if query.get("ids"):
+        query["ids"] = re.split(';|,| ', query["ids"])
+
+    if not any(query[x] for x in ["date1", "date2", "ids", "preset", "limit"]):
+        # This is the default if nothing is specified
+        query["limit"] = 10
+        query["autozoom"] = True
+
+    # log.debug("created query: %s", query)
 
     if current_user.is_anonymous or (not current_user.is_admin()):
         event = {
@@ -389,39 +412,7 @@ def main(username):
             })
 
         EventLogger.new_event(**event)
-
-    # Assign an id to this web client in order to prevent
-    #  websocket access from unidentified connections 
-    # ip_address = request.access_route[-1]
-
-    timeout = app.config["WEB_CLIENT_ID_TIMEOUT"]
-    loc = "{REMOTE_ADDR}:{REMOTE_PORT}".format(**request.environ)
-    web_client_id = "H:{}".format(loc)
-    redis.setex(web_client_id, timeout, int(time.time()))
-
-    log.info("NEW CLIENT %s", web_client_id)
-
-    paused = request.args.get("paused") in ["1", "true"]
-
-    return render_template(
-        'main.html',
-        user=user,
-        client_id=web_client_id,
-        lat=lat,
-        lng=lng,
-        zoom=zoom,
-        ids=ids,
-        preset=preset,
-        date1=date1,
-        date2=date2,
-        limit=limit,
-        autozoom=autozoom,
-        paused=paused,
-        baselayer=baselayer,
-        c1=c1,
-        c2=c2,
-        sz=sz
-    )
+    return render_template('main.html', **query)
 
 
 @app.route('/<username>/activities')
@@ -432,9 +423,8 @@ def activities(username):
     if request.args.get("rebuild"):
         try:
             user.delete_index()
-        except Exception as e:
-            log.error("error deleting index for {}".format(user))
-            log.exception(e)
+        except Exception:
+            log.exception("error deleting index for {}".format(user))
     
 
     # Assign an id to this web client in order to prevent
@@ -461,10 +451,10 @@ def update_share_status(username):
     # set user's share status
     status = user.is_public(status == "public")
     log.info(
-        "share status for {} set to {}"
-        .format(user, status)
+        "share status for %s set to %s",
+        user,
+        status
     )
-
     return jsonify(user=user.id, share=status)
 
 
@@ -812,6 +802,7 @@ def subscription_endpoint(operation):
 
 
 @app.route('/webhook_callback', methods=["GET", "POST"])
+# @talisman(force_https=False)
 def webhook_callback():
 
     if request.method == 'GET':
@@ -871,4 +862,69 @@ def paypal_ipn_handler():
         return "Paypal IPN message could not be verified.", 403
 
 
+@app.route('/test', methods=["GET", "POST"])
+@admin_required
+def test_endpoint():
+    u = Users.get("e_rensi")
+    query = dict(limit=10)
 
+    summaries = Index.query(
+        user=u,
+        update_ts=False,
+        **query
+    )
+    timer = Timer()
+
+    factory = JobQueue()
+
+    client = StravaClient(user=u)
+
+    def append_streams(A):
+        return Activities.import_streams(client, A)
+
+    def gen():
+        count = 0
+        for result in factory.imap_undordered(
+            append_streams,
+            summaries
+        ):
+
+            if not result:
+                continue
+
+            _id = result["_id"] if "_id" in result else result
+            # log.debug("%s received %s (%s)", timer.elapsed(), jobs[_id], _id)
+            yield _id
+            count += 1
+        
+        elapsed = timer.elapsed()
+        log.debug("Import of %s streams took %s: rate=%s", count, elapsed, count/elapsed)
+        yield "done"
+
+    return Response(
+        stream_with_context("{}\n\n".format(a) for a in gen()),
+        content_type='text/event-stream'
+    )
+
+@app.route('/test2', methods=["GET", "POST"])
+@admin_required
+def test_endpoint2():
+    u = Users.get("e_rensi")
+
+    query = dict(limit=10)
+
+    summaries = Index.query(
+        user=u,
+        update_ts=False,
+        **query
+    )
+
+    ids = [a["_id"] for a in summaries if "_id" in a]
+
+    try:
+        result = Index.import_by_id(u, ids)
+    except Exception:
+        log.exception("oops")
+        return "oops"
+
+    return jsonify(result)

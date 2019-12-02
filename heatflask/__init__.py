@@ -1,10 +1,12 @@
 from flask import Flask
+from werkzeug.debug import DebuggedApplication
 from flask_sqlalchemy import SQLAlchemy
 from flask_redis import FlaskRedis
 from flask_pymongo import PyMongo
 from flask_compress import Compress
 from flask_login import LoginManager
 from flask_analytics import Analytics
+from flask_talisman import Talisman
 from flask_sslify import SSLify
 from flask_sockets import Sockets
 from flask_assets import Environment
@@ -18,7 +20,7 @@ mongo = PyMongo()
 login_manager = LoginManager()
 sockets = Sockets()
 assets = Environment()
-
+talisman = Talisman()
 
 # Global variables
 EPOCH = datetime.utcfromtimestamp(0)
@@ -42,8 +44,7 @@ def create_app():
         Analytics(app)
         Compress(app)
         SSLify(app, skips=["webhook_callback"])
-
-        from js_bundles import bundles
+        from .js_bundles import bundles
         
         assets.register(bundles)
         for bundle in bundles.values():
@@ -51,11 +52,14 @@ def create_app():
 
         db_sql.init_app(app)
         redis.init_app(app)
-        mongo.init_app(app, maxIdleTimeMS=30000, connect=False)
+        mongo.init_app(app, maxIdleTimeMS=30000)
         login_manager.init_app(app)
         sockets.init_app(app)
         assets.init_app(app)
-
+        # talisman.init_app(
+        #     app,
+        #     content_security_policy=app.config["CONTENT_SECURITY_POLICY"]
+        # )
         from models import (
             Users, Activities, EventLogger, Utility,
             Webhooks, Index, Payments
@@ -85,6 +89,8 @@ def create_app():
         if Payments.name not in collections:
             Payments.init_db()
 
+        if app.debug:
+            app.wsgi_app = DebuggedApplication(app.wsgi_app, evalex=True)
 
         return app
 
