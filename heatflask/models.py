@@ -2250,13 +2250,10 @@ class BinaryWebsocketClient(object):
         
         bdsec = Utility.to_epoch(self.birthday)
 
-        loc = "{REMOTE_ADDR}:{REMOTE_PORT}".format(**websocket.environ)
-        
-        self.key = "WS:{}".format(loc)
-        
-        redis.setex(self.key, ttl, bdsec)
+        # loc = "{REMOTE_ADDR}:{REMOTE_PORT}".format(**websocket.environ)
+        ip = websocket.environ["REMOTE_ADDR"]
+        self.key = "WS:{}:{}".format(ip, bdsec)
         log.debug("%s OPEN", self.key)
-
         self.send_key()
 
     def __repr__(self):
@@ -2293,7 +2290,6 @@ class BinaryWebsocketClient(object):
         elapsed = datetime.utcnow() - self.birthday
         log.debug("%s CLOSED. open for %s", self.key, elapsed)
 
-        redis.delete(self.key)
         try:
             self.ws.close()
         except Exception:
