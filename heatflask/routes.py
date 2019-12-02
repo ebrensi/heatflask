@@ -123,6 +123,8 @@ def redirect_to_new_domain():
 
     urlparts_list = list(urlparts)
 
+    changed = False
+    
     if urlparts.netloc == app.config["FROM_DOMAIN"]:
         urlparts_list[1] = app.config["TO_DOMAIN"]
         changed = True
