@@ -378,7 +378,7 @@ def main(username):
                 query[field] = request.args[option]
                 break
             
-    log.debug("received query %s", request.args)
+    # log.debug("received query %s", request.args)
 
     # Here we defal with special cases
     if all(query.get(x) for x in ["lat", "lng"]):
@@ -396,7 +396,7 @@ def main(username):
         query["limit"] = 10
         query["autozoom"] = True
 
-    log.debug("created query: %s", query)
+    # log.debug("created query: %s", query)
 
     if current_user.is_anonymous or (not current_user.is_admin()):
         event = {
