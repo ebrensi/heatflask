@@ -1308,25 +1308,21 @@ class StravaClient(object):
             stream_dict = response.json()
 
             if not stream_dict:
-                raise UserWarning("%s no streams for %s", self, _id)
+                raise UserWarning("{} no streams for {}".format(self, _id))
 
             for stream_name in cls.STREAMS_TO_IMPORT:
                 if stream_name not in stream_dict:
                     raise UserWarning(
-                        "%s stream %s not in activity %s",
-                        self,
-                        stream_name,
-                        _id
+                        "{} stream {} not in activity {}"
+                        .format(self, stream_name, _id)
                     )
 
             for stream_name, stream_info in stream_dict.items():
                 stream = stream_info["data"]
                 if len(stream) < 3:
                     raise UserWarning(
-                        "%s insufficient stream %s for activity %s",
-                        self,
-                        stream_name,
-                        _id
+                        "{} insufficient stream {} for activity {}"
+                        .format(self, stream_name, _id)
                     )
                 streams[stream_name] = stream
 
@@ -2165,7 +2161,7 @@ class JobQueue(object):
                     # the queues are empty but at least one worker
                     # is handling a job. We will wait on it for 7 seconds
                     if time.time() - time0 > 10:
-                        raise Exception("%s busy worker timed out", self)
+                        raise Exception("%s busy worker timed out" % self)
                     gevent.sleep(0.5)
 
                 # if both queues are empty for longer than timeout then quit
