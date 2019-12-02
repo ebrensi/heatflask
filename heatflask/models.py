@@ -381,7 +381,7 @@ class Users(UserMixin, db_sql.Model):
             return
 
         return Index.import_user_index(
-            self,
+            user=self,
             out_query=args,
             yielding=False
         )
@@ -446,7 +446,6 @@ class Users(UserMixin, db_sql.Model):
 
             self.strava_client = StravaClient(user=self)
             summaries_generator = Index.import_user_index(
-                self,
                 out_query=client_query,
                 client=self.strava_client
             )
@@ -612,7 +611,7 @@ class Users(UserMixin, db_sql.Model):
         self.fetch_result["elapsed"] = round(elapsed, 2)
         self.fetch_result["rate"] = round(self.fetch_result["imported"] / elapsed, 2) 
         
-        msg = "{} {}".format(self, Utility.cleandict(self.fetch_result))
+        msg = "{} fetch done. {}".format(self, Utility.cleandict(self.fetch_result))
 
         log.info(msg)
         EventLogger.new_event(msg=msg)
@@ -922,7 +921,10 @@ class Index(object):
         blocking=True,
     ):
 
-        client = client or StravaClient(user=user)
+        log.debug(client)
+        if not client:
+            client = StravaClient(user=user)
+
         if not client:
             return []
         
@@ -1580,11 +1582,13 @@ class Activities(object):
     def import_streams(cls, client, activity, timeout=CACHE_TTL):
         if OFFLINE:
             return
+        if "_id" not in activity:
+            return activity
 
         _id = activity["_id"]
 
-        start = time.time()
-        log.debug("%s request import %s", client.user, _id)
+        # start = time.time()
+        # log.debug("%s request import %s", client, _id)
 
         result = client.get_activity_streams(_id)
         
@@ -1622,8 +1626,8 @@ class Activities(object):
         
         activity.update(encoded_streams)
 
-        elapsed = round(time.time() - start, 2)
-        log.debug("imported %s: elapsed=%s", _id, elapsed)
+        # elapsed = round(time.time() - start, 2)
+        # log.debug("%s imported %s: elapsed=%s", client, _id, elapsed)
         return activity
 
     @classmethod
@@ -2058,7 +2062,151 @@ class Utility():
                 chunk = []
         if chunk:
             yield chunk
+
+
+class JobQueue(object):
+    
+    def __init__(self, name=""):
+        self.name = name
+        self.input_queue = gevent.queue.Queue()
+        self.output_queue = gevent.queue.Queue()
+        self._workers = None
+
+        self.get = self.output_queue.get
+        self._put_args = {}
+
+        self.put = self.input_queue.put
+        self._get_args = {}#dict(timeout=1)
+
+        self.working = False
+
+    def __repr__(self):
+        return "WQ:{}".format(self.name)
+    
+    def __len__(self):
+        return (len(self.input_queue), len(self.output_queue))
+
+    def __iter__(self):
+        return self.output_queue.__iter__()
+
+    def __next__(self):
+        result = self.get()
+        if result is StopIteration:
+            raise result
+        return result
+
+    next = __next__ # Py2
+
+    def imap_undordered(self, func, iterable, workers=5):
+        for el in iterable:
+            job = (func, (el,), {})
+            self.put(job)
+        if not self.working:
+            self.start(num_workers=workers)
+        return self
+
+    def _worker(self, my_id):
+        # log.debug("%s:%s started", self, my_id)
         
+        gargs = self._get_args
+        pargs = self._put_args
+        
+        while self.working:
+            try:
+                func, args, kwargs = self.input_queue.get(**gargs)
+                self._workers[my_id]["busy"] = True
+
+                result = func(*args, **kwargs)
+                
+                self.output_queue.put(result, **pargs)
+                self._workers[my_id]["busy"] = False
+            except gevent.queue.Empty:
+                log.error("%s:%s input_queue EMPTY", self, my_id)
+                gevent.sleep(0.5)
+                continue
+            except gevent.queue.Full:
+                log.error("%s:%s output_queue FULL", self, my_id)
+                break
+            except Exception:
+                log.exception("%s:%s error", self, my_id)
+                break
+        try:
+            del self._workers[my_id]
+        except Exception:
+            pass
+        log.debug("%s:%s stopped", self, my_id)
+
+    def _watchdog(self, timeout):
+        try:
+            while self.working:
+                # log.debug("%s queues not empty", self)
+                #  Sleep while queues are not empty
+                while not (self.input_queue.empty() and self.input_queue.empty()):
+                    assert self._workers and self.working
+                    gevent.sleep(0.5)
+
+                # log.debug("%s queues empty", self)
+
+                time0 = time.time()
+                while self.busy() and self.working:
+                    # log.debug("%s still busy", self)
+                    # the queues are empty but at least one worker
+                    # is handling a job. We will wait on it for 7 seconds
+                    if time.time() - time0 > 10:
+                        raise Exception("%s busy worker timed out", self)
+                    gevent.sleep(0.5)
+
+                # if both queues are empty for longer than timeout then quit
+                #   unless timeout is null
+                time0 = time.time()
+                while self.input_queue.empty() and self.input_queue.empty():
+                    assert self._workers and self.working
+                    if timeout and (time.time() - time0 > timeout):
+                        raise StopIteration
+                    gevent.sleep(0.5)
+
+        except AssertionError as e:
+            log.debug(e)
+        except StopIteration:
+            pass
+        except Exception as e:
+            log.exception(e)
+        finally:
+            # log.debug("%s watchdog stopped", self)
+            self.stop()
+
+    def start(self, num_workers=5, timeout=1):
+        self.working = True
+        self.pool = gevent.pool.Pool(num_workers + 1)
+        self._workers = {
+            _id: dict(worker=self.pool.spawn(self._worker, _id), busy=False)
+            for _id in range(1, num_workers + 1)
+        }
+        self.watcher = self.pool.spawn(self._watchdog, timeout)
+        log.debug("%s started with %s workers", self, len(self._workers))
+
+    def stop(self):
+        self.working = False
+        self.workers = None
+        self.watcher = None
+        try:
+            self.output_queue.put(StopIteration)
+        except Exception:
+            log.exception()
+        log.debug("%s stopped", self)
+        self.pool.kill()
+
+    def busy(self):
+        if self._workers:
+            return any(worker["busy"] for worker in self._workers.values())
+
+class Timer(object):
+    
+    def __init__(self):
+        self.start = time.time()
+
+    def elapsed(self):
+        return round(time.time() - self.start, 2)
 
 class BinaryWebsocketClient(object):
     # WebsocketClient is a wrapper for a websocket
