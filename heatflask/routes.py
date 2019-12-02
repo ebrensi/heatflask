@@ -693,7 +693,6 @@ def beacon_handler():
     key = request.data
     val = redis.get(key)
     if not val:
-        log.info("close from expired key %s", key)
         return "ok"
     
     if key.startswith("H"):
