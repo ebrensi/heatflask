@@ -186,12 +186,6 @@ class StagingConfig(Config):
     """
     DEVELOPMENT = True
 
-    # webassets can do whatever in staging
-    # ASSETS_DEBUG = True
-    ASSETS_AUTO_BUILD = True
-    # ASSETS_CACHE = False
-    # ASSETS_MANIFEST = False
-
     MONGO_URI = os.environ.get("ATLAS_MONGODB_URI")
     REDIS_URL = os.environ.get("REDISGREEN_URL")
 
