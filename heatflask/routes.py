@@ -318,6 +318,7 @@ def delete(username):
 
 @app.route('/<username>')
 def main(username):
+    raise
     if current_user.is_authenticated:
         # If a user is logged in from a past session but has no record in our
         #  database (was deleted), we log them out and consider them anonymous

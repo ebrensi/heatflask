@@ -12,7 +12,6 @@ import polyline
 import json
 import uuid
 import gevent
-from gevent.pool import Pool
 import requests
 import msgpack
 from bson import ObjectId
@@ -316,7 +315,7 @@ class Users(UserMixin, db_sql.Model):
                     user.delete(session=session)
                     return (user, "deleted")
             
-            P = Pool(TRIAGE_CONCURRENCY)
+            P = gevent.pool.Pool(TRIAGE_CONCURRENCY)
             deleted = 0
             updated = 0
             invalid = 0
@@ -583,8 +582,8 @@ class Users(UserMixin, db_sql.Model):
                 
                 return
 
-        chunk_pool = Pool(app.config["CHUNK_CONCURRENCY"])
-        self.import_pool = Pool(app.config["IMPORT_CONCURRENCY"])
+        chunk_pool = gevent.pool.Pool(app.config["CHUNK_CONCURRENCY"])
+        self.import_pool = gevent.pool.Pool(app.config["IMPORT_CONCURRENCY"])
         chunks = Utility.chunks(summaries_generator, size=BATCH_CHUNK_SIZE)
         
         self.fetch_result = dict(
@@ -942,7 +941,7 @@ class Index(object):
                 return
             return d
 
-        pool = Pool(IMPORT_CONCURRENCY)
+        pool = gevent.pool.Pool(IMPORT_CONCURRENCY)
         dtnow = datetime.utcnow()
 
         mongo_requests = []
@@ -1223,7 +1222,7 @@ class StravaClient(object):
 
             return pagenum, activities
 
-        pool = Pool(cls.PAGE_REQUEST_CONCURRENCY)
+        pool = gevent.pool.Pool(cls.PAGE_REQUEST_CONCURRENCY)
 
         num_activities_retrieved = 0
         num_pages_processed = 0
@@ -1656,7 +1655,7 @@ class Activities(object):
     @classmethod
     def append_streams_from_import(cls, summaries, client, pool=None):
         if pool is None:
-            pool = Pool(IMPORT_CONCURRENCY)
+            pool = gevent.pool.Pool(IMPORT_CONCURRENCY)
 
         def import_activity_stream(A):
             if not A or "_id" not in A:
