@@ -125,7 +125,7 @@ class Config(object):
         lat=(["lat"], None),
         lng=(["lng"], None),
         zoom=(["zoom", "z"], 3),
-        autozoom=(["autozoom", "az"], False),
+        autozoom=(["autozoom", "az"], True),
         c1=(["c1"], 0),
         c2=(["c2"], 0),
         sz=(["sz"], 0),
@@ -213,9 +213,11 @@ class DevelopmentConfig(Config):
     )
 
     DEVELOPMENT = True
+    DEBUG = True
+    TESTING = True
 
-    # # SSLIFY Settings
-    # SSLIFY_PERMANENT = False
+    # SSLIFY Settings
+    SSLIFY_PERMANENT = False
 
     # Flask-Assets settings
     # ASSETS_DEBUG = True
