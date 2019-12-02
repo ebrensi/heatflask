@@ -862,6 +862,7 @@ def paypal_ipn_handler():
 
 
 @app.route('/test', methods=["GET", "POST"])
+@admin_required
 def test_endpoint():
     u = Users.get("e_rensi")
     query = dict(limit=10)
@@ -897,7 +898,32 @@ def test_endpoint():
         
         elapsed = timer.elapsed()
         log.debug("Import of %s streams took %s: rate=%s", count, elapsed, count/elapsed)
+        yield "done"
+
     return Response(
         stream_with_context("{}\n\n".format(a) for a in gen()),
         content_type='text/event-stream'
     )
+
+@app.route('/test2', methods=["GET", "POST"])
+@admin_required
+def test_endpoint2():
+    u = Users.get("e_rensi")
+
+    query = dict(limit=10)
+
+    summaries = Index.query(
+        user=u,
+        update_ts=False,
+        **query
+    )
+
+    ids = [a["_id"] for a in summaries if "_id" in a]
+
+    try:
+        result = Index.import_by_id(u, ids)
+    except Exception:
+        log.exception("oops")
+        return "oops"
+
+    return jsonify(result)
