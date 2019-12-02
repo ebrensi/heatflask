@@ -4,7 +4,7 @@ from flask_login import UserMixin
 from sqlalchemy.dialects import postgresql as pg
 from sqlalchemy import inspect
 import pymongo
-from datetime import datetime, timedelta
+from datetime import datetime
 import dateutil
 import dateutil.parser
 import stravalib
@@ -681,24 +681,6 @@ class Index(object):
             # log.debug("no need to update TTL")
             pass
 
-    def strava2doc(cls, a):
-        polyline = a.map.summary_polyline
-        d = {
-            "_id": a.id,
-            "user_id": a.athlete.id,
-            "name": a.name,
-            "type": a.type,
-            "ts_UTC": a.start_date,
-            "ts_local": a.start_date_local,
-            "ts": datetime.utcnow(),
-            "total_distance": float(a.distance),
-            "elapsed_time": int(a.elapsed_time.total_seconds()),
-            "average_speed": float(a.average_speed),
-            "start_latlng": a.start_latlng[0:2] if a.start_latlng else None,
-            "bounds": Activities.bounds(polyline) if polyline else None
-        }
-        return d
-
     @classmethod
     def delete(cls, id):
         try:
@@ -887,10 +869,8 @@ class Index(object):
                 )
                   
             if mongo_requests:
-                cls.db.bulk_write(
-                    list(mongo_requests),
-                    ordered=False
-                )
+                cls.db.bulk_write(list(mongo_requests), ordered=False)
+
         except Exception as e:
             log.exception("%s index import error", user)
             output(dict(error=str(e)))
@@ -948,35 +928,48 @@ class Index(object):
         
     @classmethod
     def import_by_id(cls, user, activity_ids):
-        client = user.client()
+        client = StravaClient(user=user)
         if not client:
-            log.error("{} fetch error: bad client".format(user))
+            log.error("{} bad client".format(user))
             return
         
-        def fetch(id):
+        def fetch(_id):
             try:
-                A = client.get_activity(id)
-                a = cls.strava2doc(A)
+                d = client.get_activity(_id)
+                assert d and "_id" in d
             except Exception:
-                log.error("%s import %s failed", user, id)
+                log.error("%s import %s failed", user, _id)
                 return
 
-            log.debug("%s fetched activity %s", user, id)
-            return pymongo.ReplaceOne({"_id": A.id}, a, upsert=True)
+            log.debug("%s fetched activity %s by id", user, _id)
+            return d
 
-        pool = Pool(cls.IMPORT_CONCURRENCY)
-        mongo_requests = list(
-            req for req in pool.imap_unordered(fetch, activity_ids)
-            if req
-        )
+        pool = Pool(IMPORT_CONCURRENCY)
+        dtnow = datetime.utcnow()
+
+        mongo_requests = []
+        for d in pool.imap_unordered(fetch, activity_ids):
+            if not d or "_id" not in d:
+                continue
+
+            d["ts"] = dtnow
+            d["ts_local"] = Utility.to_datetime(d["ts_local"])
+            
+            mongo_requests.append(
+                pymongo.ReplaceOne({"_id": d["_id"]}, d, upsert=True)
+            )
 
         if not mongo_requests:
             return
-
+        
+        count = len(mongo_requests)
+        
         try:
-            cls.db.bulk_write(mongo_requests)
+            cls.db.bulk_write(mongo_requests, ordered=False)
         except Exception:
             log.exception("mongo error")
+
+        return count
 
     @classmethod
     def query(cls, user=None,
@@ -1103,8 +1096,11 @@ class StravaClient(object):
         keys=",".join(STREAMS_TO_IMPORT)
     )
 
+    GET_ACTIVITY_ENDPOINT = "/activities/{id}?include_all_efforts=false"
+    GET_ACTIVITY_URL = BASE_URL + GET_ACTIVITY_ENDPOINT.format(id="{id}")
+
     def __init__(self, access_token=None, user=None):
-        self.user = None
+        self.user = user
         self.id = uuid.uuid4().clock_seq
         self.cancel_stream_import = False
         self.cancel_index_import = False
@@ -1112,7 +1108,6 @@ class StravaClient(object):
         if access_token:
             self.access_token = access_token
         elif user:
-            self.user = user
             self.access_token = user.client().access_token
 
     def __repr__(self):
@@ -1152,6 +1147,17 @@ class StravaClient(object):
             "Authorization": "Bearer {}".format(self.access_token)
         }
 
+    def get_activity(self, _id):
+        cls = self.__class__
+        # get one activity summary object from strava
+        url = cls.GET_ACTIVITY_URL.format(id=_id)
+        # log.debug("sent request %s", url)
+        try:
+            response = requests.get(url, headers=self.headers())
+            Araw = response.json()
+            return cls.strava2doc(Araw)
+        except Exception:
+            log.exception("error importing summary %s", _id)
 
     def get_activities(self, ordered=False, **query):
         cls = self.__class__
@@ -1897,6 +1903,8 @@ class Webhooks(object):
             updates=update_raw.get("updates")
         )
 
+        _id = update.object_id
+
         try:
             mongodb.updates.insert_one(record)
         except Exception:
@@ -1908,7 +1916,7 @@ class Webhooks(object):
         if update.aspect_type == "update":
             if update.updates:
                 # update the activity if it exists
-                result = Index.update(update.object_id, update.updates)
+                result = Index.update(_id, update.updates)
                 if not result:
                     log.info(
                         "%s index update failed for update %s",
@@ -1921,11 +1929,15 @@ class Webhooks(object):
         #  for this user
         if update.aspect_type == "create":
             # fetch activity and add it to the index
-            Index.import_by_id(user, [update.object_id])
+            result = Index.import_by_id(user, [_id])
+            if result:
+                log.debug("Webhook: imported %s for %s", _id, user)
+            else:
+                log.info("Webhook: import failed: %s", update_raw)
 
         elif update.aspect_type == "delete":
             # delete the activity from the index
-            Index.delete(update.object_id)
+            Index.delete(_id)
 
     @staticmethod
     def iter_updates(limit=0):
@@ -2076,7 +2088,7 @@ class JobQueue(object):
         self._put_args = {}
 
         self.put = self.input_queue.put
-        self._get_args = {}#dict(timeout=1)
+        self._get_args = {}
 
         self.working = False
 
