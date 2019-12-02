@@ -318,7 +318,6 @@ def delete(username):
 
 @app.route('/<username>')
 def main(username):
-    raise
     if current_user.is_authenticated:
         # If a user is logged in from a past session but has no record in our
         #  database (was deleted), we log them out and consider them anonymous
@@ -886,7 +885,7 @@ def test_endpoint():
 
     def gen():
         count = 0
-        for result in factory.imap_undordered(
+        for result in factory.consume(
             append_streams,
             summaries
         ):
