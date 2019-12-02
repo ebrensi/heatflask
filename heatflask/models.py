@@ -537,7 +537,7 @@ class Users(UserMixin, db_sql.Model):
                 append_streams.chunk = 1
 
             log.info("%s importing chunk %s", self, append_streams.chunk)
-            append_streams.start = time.time()
+            timer = Timer()
 
             if not self.strava_client:
                 self.strava_client = StravaClient(user=self)
@@ -561,14 +561,12 @@ class Users(UserMixin, db_sql.Model):
 
             self.fetch_result["imported"] += num_imported
             
-            elapsed = round(time.time() - append_streams.start, 2)
-
+            stats = dict(elapsed=timer.elapsed(), imported=num_imported)
             log.info(
-                "%s imported chunk %s: %s took %s",
+                "%s chunk %s %s",
                 self,
                 append_streams.chunk,
-                num_imported,
-                elapsed
+                stats
             )
         #-------------------------------------------------------  
 
@@ -1190,12 +1188,12 @@ class StravaClient(object):
         def request_page(pagenum):
 
             if pagenum > self.final_index_page:
-                log.debug("%s page %s cancelled", self, pagenum)
+                log.info("%s index page %s cancelled", self, pagenum)
                 return pagenum, None
 
             url = query_base_url + "&page={}".format(pagenum)
             
-            log.debug("%s request page %s", self, pagenum)
+            log.info("%s request index page %s", self, pagenum)
             start = time.time()
 
             try:
@@ -1213,8 +1211,8 @@ class StravaClient(object):
                 self.final_index_page = min(self.final_index_page, pagenum)
 
             elapsed = round(time.time() - start, 2)
-            log.debug(
-                "%s response page %s %s",
+            log.info(
+                "%s index page %s %s",
                 self,
                 pagenum,
                 dict(elapsed=elapsed, count=size)
