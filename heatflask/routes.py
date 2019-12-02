@@ -356,7 +356,8 @@ def main(username):
         else:
             return redirect(url_for('splash'))
 
-    web_client_id = "H:{}".format(int(time.time()))
+    ip = Utility.ip_address(request)
+    web_client_id = "H:{}:{}".format(ip, int(time.time()))
     log.info("%s OPEN", web_client_id)
 
     query = dict(
@@ -428,8 +429,9 @@ def activities(username):
     
 
     # Assign an id to this web client in order to prevent
-    #  websocket access from unidentified users 
-    web_client_id = "HA:{}".format(int(time.time()))
+    #  websocket access from unidentified users
+    ip = Utility.ip_address(request)
+    web_client_id = "HA:{}:{}".format(ip, int(time.time()))
     log.info("%s OPEN", web_client_id)
     
     return render_template(
