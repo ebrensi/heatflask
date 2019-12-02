@@ -141,7 +141,7 @@ class Users(UserMixin, db_sql.Model):
                 return
 
             elapsed = round(time.time() - t1, 2)
-            log.debug("%s token refresh elapsed=%s", self, elapsed)
+            log.info("%s token refresh elapsed=%s", self, elapsed)
 
         return self.cli
 
@@ -1217,8 +1217,8 @@ class StravaClient(object):
                 "%s response page %s %s",
                 self,
                 pagenum,
-                dict(elapsed=elapsed, count=size
-            ))
+                dict(elapsed=elapsed, count=size)
+            )
 
             return pagenum, activities
 
@@ -1595,7 +1595,7 @@ class Activities(object):
             if result is None:
                 # a result of None means this activity has no streams
                 Index.delete(_id)
-                log.info("activity %s EMPTY: %s", _id)
+                log.info("%s activity %s EMPTY", client, _id)
 
             # a result of False means there was an error
             return result
@@ -1912,7 +1912,7 @@ class Webhooks(object):
                 result = Index.update(_id, update.updates)
                 if not result:
                     log.info(
-                        "%s index update failed for update %s",
+                        "webhook: %s index update failed for update %s",
                         user,
                         update.updates
                     )
@@ -1924,9 +1924,9 @@ class Webhooks(object):
             # fetch activity and add it to the index
             result = Index.import_by_id(user, [_id])
             if result:
-                log.debug("Webhook: %s imported %s", user, _id)
+                log.debug("webhook: %s imported %s", user, _id)
             else:
-                log.info("Webhook: %s import %s failed", user, update_raw)
+                log.info("webhook: %s import %s failed", user, update_raw)
 
         elif update.aspect_type == "delete":
             # delete the activity from the index
@@ -2257,7 +2257,7 @@ class BinaryWebsocketClient(object):
         self.key = "WS:{}".format(loc)
         
         redis.setex(self.key, ttl, bdsec)
-        log.info("%s OPEN", self.key)
+        log.debug("%s OPEN", self.key)
 
         self.send_key()
 
@@ -2293,7 +2293,7 @@ class BinaryWebsocketClient(object):
 
     def close(self):
         elapsed = datetime.utcnow() - self.birthday
-        log.info("%s CLOSED. open for %s", self.key, elapsed)
+        log.debug("%s CLOSED. open for %s", self.key, elapsed)
 
         redis.delete(self.key)
         try:
