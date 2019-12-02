@@ -1,13 +1,14 @@
 import os
 basedir = os.path.abspath(os.path.dirname(__file__))
 
-
 class Config(object):
     # Flask settings
     DEBUG = False
     TESTING = False
     DEVELOPMENT = False
     CSRF_ENABLED = True
+
+    LOG_LEVEL = os.environ.get("LOG_LEVEL", "DEBUG")
 
     # Heatflask settings
     OFFLINE = False
@@ -20,13 +21,6 @@ class Config(object):
 
     # We limit the capture duration to keep gif file size down
     CAPTURE_DURATION_MAX = 15
-
-    MAP_CENTER = [27.53, 1.58]
-    MAP_ZOOM = 3
-
-    # SSLIFY Settings
-    SSLIFY_PERMANENT = True
-    SSLIFY_SKIPS = ["webhook_callback"]
 
     # We make Flask-Assets Default to manual build without caching
     # ASSETS_AUTO_BUILD = False
@@ -96,20 +90,49 @@ class Config(object):
     # We are free to delete users who have been inactive for a while
     DAYS_INACTIVE_CUTOFF = 365
 
-
-    STREAMS_OUT = ["polyline", "time"]
-    STREAMS_TO_CACHE = ["polyline", "time"]
-    ESSENTIAL_STREAMS = ["time"]
-
-    # Domain Redirect for people using herokuapp links
-    FROM_DOMAIN = "heatflask.herokuapp.com"
-    TO_DOMAIN = "www.heatflask.com"
+    STREAMS_TO_IMPORT = ["latlng", "time"]
 
     # The number of failed stream import requests we will allow before
     #  aborting an import.
     MAX_IMPORT_ERRORS = 100
 
-    # A few Demos 
+    # Domain Redirect for people using herokuapp links
+    FROM_DOMAIN = "heatflask.herokuapp.com"
+    TO_DOMAIN = "www.heatflask.com"
+
+    # This is added by flask-talisman to headers of https responses
+    #  for more info about content security policies
+    #  take a look at
+    #  https://github.com/GoogleCloudPlatform/flask-talisman#content-security-policy
+
+    CONTENT_SECURITY_POLICY = {
+        'default-src': [
+            '\'self\'',
+            '*',
+        ],
+        'img-src': '*'
+    }
+
+    # This is the spec for parsing urls.  The pattern is
+    #  field_name: ([query_string options], default-value) 
+    URL_QUERY_SPEC = dict(
+        date1=(["after", "date1", "a"], ""),
+        date2=(["before", "date2", "b"], ""),
+        preset=(["days", "preset", "d"], None),
+        limit=(["limit", "l"], None),
+        ids=(["id", "ids"], None),
+        map_center=(["center"], [27.53, 1.58]),
+        lat=(["lat"], None),
+        lng=(["lng"], None),
+        zoom=(["zoom", "z"], 3),
+        autozoom=(["autozoom", "az"], True),
+        c1=(["c1"], 0),
+        c2=(["c2"], 0),
+        sz=(["sz"], 0),
+        paused=(["paused", "p"], 0)
+    )
+
+    # A few Demos
     DEMOS = {
         "portland_6_2017": {
             "username": "15972102",
@@ -135,6 +158,7 @@ class ProductionConfig(Config):
     These are settings specific to the production environment
     (the main app running on Heroku)
     """
+    
     ANALYTICS = {
         'GOOGLE_UNIVERSAL_ANALYTICS': {
             'ACCOUNT': "UA-85621398-1"
@@ -161,7 +185,6 @@ class StagingConfig(Config):
      (hosted test app)
     """
     DEVELOPMENT = True
-    DEBUG = False
 
     # webassets can do whatever in staging
     # ASSETS_DEBUG = True
@@ -191,6 +214,7 @@ class DevelopmentConfig(Config):
 
     DEVELOPMENT = True
     DEBUG = True
+    TESTING = True
 
     # SSLIFY Settings
     SSLIFY_PERMANENT = False

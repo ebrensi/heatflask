@@ -465,7 +465,7 @@ function handle_table_selections( e, dt, type, indexes ) {
 
     DotLayer && DotLayer._onLayerDidMove();
 
-    if ( $("#zoom-to-selection").is(':checked') ) {
+    if ( domIdProp("zoom-to-selection", 'checked') ) {
         zoomToSelectedPaths();
     }
 }
@@ -643,7 +643,7 @@ function initializeDotLayer() {
 /* Rendering */
 function updateLayers(msg) {
     // optional auto-zoom
-    if ($("#autozoom:checked").val()){
+    if (domIdProp("autozoom", "checked")){
         let totalBounds = getBounds(Object.keys(appState.items));
 
         if (totalBounds.isValid()){
@@ -697,12 +697,12 @@ window.addEventListener('beforeunload', function (event) {
     }
 });
 
-function renderLayers() {
-    const date1 = $("#date1").val(),
-          date2 = $("#date2").val(),
-          type = $("#select_type").val(),
-          num = $("#select_num").val(),
-          idString = $("#activity_ids").val(),
+function renderLayers(query={}) {
+    const date1 = domIdVal("date1"),
+          date2 = domIdVal("date2"),
+          type = domIdVal("select_type"),
+          num = domIdVal("select_num"),
+          idString = domIdVal("activity_ids"),
           to_exclude = Object.keys(appState.items).map(Number);
 
     // console.log(`exclude ${to_exclude.length} activities`, to_exclude);
@@ -747,12 +747,11 @@ function renderLayers() {
 
     function doneRendering(msg){
         if (rendering) {
-            appState['after'] = $("#date1").val();
-            appState["before"] = $("#date2").val();
+            appState['after'] = domIdVal("date1");
+            appState["before"] = domIdVal("date2");
             updateState();
 
-
-            $("#abortButton").hide();
+            domIdShow("abortButton", false);
             $(".progbar").hide();
 
             if (msgBox) {
@@ -936,9 +935,9 @@ function openActivityListPage(rebuild) {
 
 function updateState(){
     let  params = {},
-         type = $("#select_type").val(),
-         num = $("#select_num").val(),
-         ids = $("#activity_ids").val();
+         type = domIdVal("select_type"),
+         num = domIdVal("select_num"),
+         ids = domIdVal("activity_ids");
 
     if (type == "activities") {
         params["limit"] = num;
@@ -959,7 +958,7 @@ function updateState(){
         params["paused"] = "1";
     }
 
-    if ($("#autozoom").is(':checked')) {
+    if (domIdProp("autozoom", 'checked')) {
         appState["autozoom"] = true;
         params["autozoom"] = "1";
     } else {
@@ -991,56 +990,105 @@ function updateState(){
 
 function preset_sync() {
     var F = "YYYY-MM-DD",
-    num = $("#select_num").val(),
-    type = $("#select_type").val();
+    num = domIdVal("select_num"),
+    type = domIdVal("select_type");
 
     if (type=="days"){
         $(".date_select").hide();
-        $("#id_select").hide();
-        $("#num_select").show();
-        $('#date1').val(moment().subtract(num, 'days').format(F));
-        $('#date2').val("now");
+        domIdShow("id_select", false);
+        domIdShow("num_select", true);
+        domIdVal('date1', moment().subtract(num, 'days').format(F));
+        domIdVal('date2', "now");
     } else if (type=="activities") {
         $(".date_select").hide();
-        $("#id_select").hide();
-        $("#num_select").show();
-        $('#date1').val("");
-        $('#date2').val("now");
+        domIdShow("id_select", false);
+        domIdShow("num_select", true);
+        domIdVal('date1', "");
+        domIdVal('date2', "now");
     }
     else if (type=="activity_ids") {
         $(".date_select").hide();
-        $("#num_select").hide();
-        $("#id_select").show();
+        domIdShow("num_select", false);
+        domIdShow("id_select", true);
     } else {
         $(".date_select").show();
-        $("#select_num").val("");
-        $("#num_select").hide();
-        $("#id_select").hide();
+        domIdVal("select_num", "");
+        domIdShow("num_select", false);
+        domIdShow("id_select", false);
     }
 
 }
 
 
+function domIdVal(id, val=null) {
+    let domObj = document.getElementById(id);
+    if (domObj) {
+        if (val === null) {    
+            return (domObj)? domObj.value : null; 
+        } else {
+            return domObj.value = val;
+        }
+    }
+}
+
+function domIdEvent(id, type, func) {
+    obj = document.getElementById(id);
+    if (obj) {
+        if (obj.addEventListener)
+            obj.addEventListener(type, func, false);
+        else
+            console.log("sorry, I cannot work with this browser");
+    }
+}
+
+function domIdProp(id, prop, val=null) {
+    let domObj = document.getElementById(id);
+    if (domObj) {
+        if (val === null) { 
+            return (domObj)? domObj[prop] : null; 
+        } else {
+            return domObj[prop] = val
+        }
+    }
+}
+
+function domIdShow(id, show=null) {
+    let domObj = document.getElementById(id);
+    if (domObj) {
+        if (show === null) {
+            return (domObj.style.display == "block");
+        } else if (show)
+            domObj.style.display = 'block';
+        else
+            domObj.style.display = 'none';
+    }
+}
+
+
 $(document).ready(function() {
 
+    debugger;
+
     // activities table set-up
-    $("#zoom-to-selection").prop("checked", false);
-    $("#zoom-to-selection").on("change", function(){
-        if ( $("#zoom-to-selection").is(':checked')) {
+    domIdProp("zoom-to-selection", "checked", false);
+
+    domIdEvent("zoom-to-selection", "change", function(){
+        if ( domIdProp("zoom-to-selection", 'checked') ) {
             zoomToSelectedPaths();
         }
     });
-    $("#render-selection-button").click(openSelected);
-    $("#clear-selection-button").click(deselectAll);
 
-    $("#select_num").keypress(function(event) {
+    domIdEvent("render-selection-button", "click", openSelected);
+    domIdEvent("clear-selection-button", "click", deselectAll);
+
+    domIdEvent("select_num", "keypress", function(event) {
         if (event.which == 13) {
             event.preventDefault();
             renderLayers();
         }
     });
 
-    $("#abortButton").hide();
+    domIdShow("abortButton", false);
 
     $(".progbar").hide();
     $(".datepick").datepicker({ dateFormat: 'yy-mm-dd',
@@ -1056,11 +1104,11 @@ $(document).ready(function() {
     });
 
 
-    $("#autozoom").on("change", updateState);
+    domIdEvent("autozoom", "change", updateState);
 
-    $("#share").prop("checked", SHARE_PROFILE);
-    $("#share").on("change", function() {
-        let status = $("#share").is(":checked")? "public":"private";
+    domIdProp("share", "checked", SHARE_PROFILE);
+    domIdEvent("share", "change", function() {
+        let status = domIdProp("share", "checked")? "public":"private";
         updateShareStatus(status);
     });
 
@@ -1069,31 +1117,28 @@ $(document).ready(function() {
     });
     $(".preset").on("change", preset_sync);
 
-    $("#renderButton").click(renderLayers);
+    domIdEvent("renderButton", "click", renderLayers);
 
-    $("#activity-list-buton").click(() => openActivityListPage(false));
-    $("#rebuild-button").click(() => openActivityListPage(true));
+    domIdEvent("activity-list-buton", "click", () => openActivityListPage(false));
 
-
-    $("#autozoom").prop('checked', ONLOAD_PARAMS.autozoom);
+    domIdProp("autozoom", 'checked', ONLOAD_PARAMS.autozoom);
 
     if (ONLOAD_PARAMS.activity_ids) {
-        $("#activity_ids").val(ONLOAD_PARAMS.activity_ids);
-        $("#select_type").val("activity_ids");
+        domIdVal("activity_ids", ONLOAD_PARAMS.activity_ids);
+        domIdVal("select_type", "activity_ids");
     } else if (ONLOAD_PARAMS.limit) {
-        $("#select_num").val(ONLOAD_PARAMS.limit);
-        $("#select_type").val("activities");
+        domIdVal("select_num", ONLOAD_PARAMS.limit);
+        domIdVal("select_type", "activities");
     } else if (ONLOAD_PARAMS.preset) {
-        $("#select_num").val(ONLOAD_PARAMS.preset);
-        $("#select_type").val("days");
+        domIdVal("select_num", ONLOAD_PARAMS.preset);
+        domIdVal("select_type", "days");
         preset_sync();
     } else {
-        $('#date1').val(ONLOAD_PARAMS.date1);
-        $('#date2').val(ONLOAD_PARAMS.date2);
-        $("#preset").val("");
+        domIdVal('date1', ONLOAD_PARAMS.date1);
+        domIdVal('date2', ONLOAD_PARAMS.date2);
+        domIdVal('preset', "");
     }
-    
-
+     
     renderLayers();
     preset_sync();
 });

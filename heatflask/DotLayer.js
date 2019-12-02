@@ -861,18 +861,13 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
     },
 
     setDotColors: function() {
-    // DotLayer.options.normal.dotColor = $("#normal-dotColor").val();
-    // $("#normal-dotColor").on("input", function (){
-    //     DotLayer.options.normal.dotColor = $(this).val();
-    // });
+        let itemsList = Object.values( this._items ),
+            numItems = itemsList.length;
 
-    let itemsList = Object.values( this._items ),
-        numItems = itemsList.length;
-
-    this._colorPalette = colorPalette(numItems, this.options.dotAlpha);
-    for ( let i = 0; i < numItems; i++ ) {
-        itemsList[ i ].dotColor = this._colorPalette[ i ];
-    }
+        this._colorPalette = colorPalette(numItems, this.options.dotAlpha);
+        for ( let i = 0; i < numItems; i++ ) {
+            itemsList[ i ].dotColor = this._colorPalette[ i ];
+        }
    
 }
 
