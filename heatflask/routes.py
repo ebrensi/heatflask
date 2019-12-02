@@ -23,7 +23,7 @@ import re
 from urlparse import urlparse, urlunparse  # python2
 
 # Local imports
-from . import login_manager, redis, mongo, sockets, talisman
+from . import login_manager, redis, mongo, sockets#, talisman
 
 from .models import (
     Users, Activities, EventLogger, Utility, Webhooks, Index, Payments,
@@ -378,12 +378,13 @@ def main(username):
                 query[field] = request.args[option]
                 break
             
-    # log.debug("received query %s", request.args)
+    log.debug("received query %s", request.args)
 
     # Here we defal with special cases
     if all(query.get(x) for x in ["lat", "lng"]):
         # "lat" and "lng" given in query string override "center"
         query["map_center"] = [query["lat"], query["lng"]]
+        query["autozoom"] = False
         del query["lat"]
         del query["lng"]
 
@@ -395,7 +396,7 @@ def main(username):
         query["limit"] = 10
         query["autozoom"] = True
 
-    # log.debug("created query: %s", query)
+    log.debug("created query: %s", query)
 
     if current_user.is_anonymous or (not current_user.is_admin()):
         event = {
@@ -801,7 +802,7 @@ def subscription_endpoint(operation):
 
 
 @app.route('/webhook_callback', methods=["GET", "POST"])
-@talisman(force_https=False)
+# @talisman(force_https=False)
 def webhook_callback():
 
     if request.method == 'GET':

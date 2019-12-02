@@ -43,7 +43,7 @@ def create_app():
 
         Analytics(app)
         Compress(app)
-        # SSLify(app, skips=["webhook_callback"])
+        SSLify(app, skips=["webhook_callback"])
         from .js_bundles import bundles
         
         assets.register(bundles)
