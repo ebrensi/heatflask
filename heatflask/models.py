@@ -493,51 +493,51 @@ class Users(UserMixin, db_sql.Model):
 
         #     #--------------------------------------
 
-        stats = dict(fetched=0, imported=0, errors=0, empty=0)
-        pool = gevent.pool.Pool()
-        to_export = gevent.queue.Queue()
-        to_yield = itertools.imap(export, to_export)
+        # stats = dict(fetched=0, imported=0, errors=0, empty=0)
+        # pool = gevent.pool.Pool()
+        # to_export = gevent.queue.Queue()
+        # to_yield = itertools.imap(export, to_export)
 
-        to_import = gevent.queue.Queue()
-        imported = pool.imap_unordered(Activities.import_streams, to_import)
+        # to_import = gevent.queue.Queue()
+        # imported = pool.imap_unordered(Activities.import_streams, to_import)
         
-        def handle_imported(A):
-            if A:
-                to_export.put(A)
-                stats["imported"] += 1
-            elif A is False:
-                stats["errors"] += 1
-                if self.fetch_result["errors"] >= MAX_IMPORT_ERRORS:
-                    log.info("%s Too many import errors", self)
-                    pool.kill()
-                    return
-            else:
-                stats["empty"] += 1
-        pool.map_async(handle_imported, imported)
+        # def handle_imported(A):
+        #     if A:
+        #         to_export.put(A)
+        #         stats["imported"] += 1
+        #     elif A is False:
+        #         stats["errors"] += 1
+        #         if self.fetch_result["errors"] >= MAX_IMPORT_ERRORS:
+        #             log.info("%s Too many import errors", self)
+        #             pool.kill()
+        #             return
+        #     else:
+        #         stats["empty"] += 1
+        # pool.map_async(handle_imported, imported)
 
-        def master_func(stats):
-            def handle_chunk(chunk):
-                def handle_fetched(A):
-                    if not A:
-                        continue
+        # def master_func(stats):
+        #     def handle_chunk(chunk):
+        #         def handle_fetched(A):
+        #             if not A:
+        #                 continue
                     
-                    if "time" in A:
-                        to_export.put(A)
-                        stats["fetched"] += 1
+        #             if "time" in A:
+        #                 to_export.put(A)
+        #                 stats["fetched"] += 1
                     
-                    elif "_id" not in A:
-                        to_export.put(A)
+        #             elif "_id" not in A:
+        #                 to_export.put(A)
                     
-                    else:
-                        to_import.put(A)
-                fetched = Activities.append_streams_from_db(chunk)
-                pool.map_async(handle_fetched, fetched)
-            return handle_chunk
+        #             else:
+        #                 to_import.put(A)
+        #         fetched = Activities.append_streams_from_db(chunk)
+        #         pool.map_async(handle_fetched, fetched)
+        #     return handle_chunk
 
-        pool.map_async(master_func(stats), Utility.chunks(summaries_generator))
+        # pool.map_async(master_func(stats), Utility.chunks(summaries_generator))
         
-        for A in to_yield:
-            yield A
+        # for A in to_yield:
+        #     yield A
 
 
 
@@ -2351,17 +2351,15 @@ class BinaryWebsocketClient(object):
     #  It attempts to gracefully handle broken connections
     def __init__(self, websocket, ttl=60 * 60 * 24):
         self.ws = websocket
-        self.birthday = datetime.utcnow()
+        self.birthday = time.time()
 
         # this is a the client_id for the web-page
         # accessing this websocket
         self.client_id = None
-        
-        bdsec = Utility.to_epoch(self.birthday)
 
         # loc = "{REMOTE_ADDR}:{REMOTE_PORT}".format(**websocket.environ)
         ip = websocket.environ["REMOTE_ADDR"]
-        self.key = "WS:{}:{}".format(ip, bdsec)
+        self.key = "WS:{}:{}".format(ip, int(self.birthday))
         log.debug("%s OPEN", self.key)
         self.send_key()
 
@@ -2396,7 +2394,7 @@ class BinaryWebsocketClient(object):
             return obj
 
     def close(self):
-        elapsed = datetime.utcnow() - self.birthday
+        elapsed = int(time.time() - self.birthday)
         log.debug("%s CLOSED. open for %s", self.key, elapsed)
 
         try:

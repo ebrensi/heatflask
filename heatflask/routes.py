@@ -14,7 +14,7 @@ import itertools
 import base36
 import requests
 import stravalib
-import uuid
+import gevent
 from flask_login import current_user, login_user, logout_user
 import time
 import re
@@ -458,6 +458,15 @@ def update_share_status(username):
     return jsonify(user=user.id, share=status)
 
 
+def canceller(wsclient):
+    while not wsclient.ws.closed:
+        msg = wsclient.receiveobj()
+        if "close" in msg:
+            break
+    wsclient.close()
+    log.debug("by bye")
+
+
 @sockets.route('/data_socket')
 def data_socket(ws):
 
@@ -477,9 +486,13 @@ def data_socket(ws):
                 else:
                     log.info("no client id!")
 
+                # TODO: spawn a greenlet for this so we can resume listening
                 query_result = Activities.query(query)
+
+                job = gevent.spawn(canceller, wsclient)
+
                 for a in query_result:
-                    if ws.closed:
+                    if wsclient.ws.closed:
                         wsclient.close()
                         try:
                             # make the generator yield one more time in order
@@ -490,7 +503,9 @@ def data_socket(ws):
                         return
 
                     wsclient.sendobj(a)
-               
+                
+                job.kill()
+
             elif "close" in msg:
                 # log.debug("{} close request".format(wsclient))
                 break
@@ -695,7 +710,7 @@ def beacon_handler():
     except Exception:
         log.info("%s CLOSED.", key)
     else:
-        elapsed = round(time.time() - ts, 2)
+        elapsed = int(time.time() - ts)
         elapsed_td = timedelta(seconds=elapsed)
         log.info("%s CLOSED. elapsed=%s", key, elapsed_td)
 
