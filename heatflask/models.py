@@ -455,6 +455,45 @@ class Users(UserMixin, db_sql.Model):
 
         # At this point we have a generator called summaries_generator
         #  that yields Activity summaries, without streams.
+        # def result(summaries_generator):
+        #     #-----------------------------------------
+        #     def master_job(chunk_of_summaries):
+
+        #         na, done, notdone = fetch_cache(chunk_of_summaries)
+        #         factory.imap(pass_through, na)
+        #         factory.imap(export, done)
+
+        #         done, notdone = fetch_db(notdone)
+        #         factory.imap(export, done)
+
+        #         factory.imap(import_and_export, notdone)
+            
+        #     def canceller(cancel_key):
+        #         while redis.exists(cancel_key):
+        #             gevent.sleep(2)
+        #         factory.stop()
+
+        #     def finishup():
+        #         do_mongo_batch(mongo_requests)
+        #         do_redis_batch(redis_requests)
+
+        #     factory = JobQueue(10)
+        #     factory._before_stop = finishup
+        #     batch_size = 50
+        #     mongo_requests = gevent.queue.Queue() # we need iterables that block
+        #     redis_requests = gevent.queue.Queue()
+
+        #     factory.imap(do_mongo_batch, mongo_requests, chunk_size=batch_size)
+        #     factory.imap(do_redis_batch, redis_requests, chunk_size=batch_size)
+        #     factory.imap(master_job, summaries, chunk_size)
+        #     factory.put((canceller, (cancel_key,), {}))
+
+        #     for A in factory.out_queue:
+
+        #     #--------------------------------------
+
+
+
 
         # Here we introduce a mapper that readys an activity summary
         #  (with or without streams) to be yielded to the client
@@ -2114,11 +2153,9 @@ class JobQueue(object):
     # consume is a non-blocking method that sets
     # a function/iterable mapping as a source for this queue
     # the iterable does not need to be finite
-    def consume(self, func, iterable, **argv):
-        if not self.working:
-            self.start(**argv)
-
-        def feeder(ref):
+    def imap(self, func, iterable, name=None, chunk_size=1, **kwargs):
+        
+        def feeder(iterable, ref):
             log.debug("%s feeder %s started", self, ref)
             for el in iterable:
                 job = (func, (el,), {})
@@ -2127,9 +2164,16 @@ class JobQueue(object):
                 del self.feeders[ref]
             log.debug("%s feeder %s done", self, ref)
 
-        ref = uuid.uuid4().get_hex()
-        self.feeders[ref] = self.pool.spawn(feeder, ref)
-        # gevent.sleep(0)
+        ref = name or uuid.uuid4().get_hex()
+        if chunk_size == 1:
+            feed = iterable
+        else:
+            feed = Utility.chunks(iterable, chunk_size)
+        
+        job = (feeder, (feed, ref), {})
+        self.put(job)
+        self.start(**kwargs)
+
         return self
 
     def _worker(self, my_id):
@@ -2140,13 +2184,25 @@ class JobQueue(object):
         
         while self.working:
             try:
-                func, args, kwargs = self.in_queue.get(**gargs)
+
+                job = self.in_queue.get(**gargs)
                 self._workers[my_id]["busy"] = True
 
-                result = func(*args, **kwargs)
-                
-                self.out_queue.put(result, **pargs)
+                if isinstance(job, (tuple, list)):
+                    if len(job) == 2:
+                        func, args = job
+                        result = func(*args)
+                    else:
+                        func, args, kwargs = job
+                        result = func(*args, **kwrgs)
+                else:
+                    result = job()
+
+                if result:
+                    self.out_queue.put(result, **pargs)
+
                 self._workers[my_id]["busy"] = False
+            
             except gevent.queue.Empty:
                 log.error("%s:%s input_queue EMPTY", self, my_id)
                 gevent.sleep(0.5)
@@ -2203,6 +2259,8 @@ class JobQueue(object):
             self.stop()
 
     def start(self, num_workers=5, timeout=None):
+        if self.working:
+            return
         if timeout:
             self.watchdog_timeout = timeout
         self.working = True
@@ -2214,20 +2272,25 @@ class JobQueue(object):
         self.watchdog = self.pool.spawn(self._watchdog)
         log.debug("%s started with %s workers", self, num_workers)
 
+    def busy(self):
+        if self._workers:
+            return any(worker["busy"] for worker in self._workers.values())
+
+    def _before_stop(self):
+        # implement this function to do whatever wrapping up
+        #  you need to do before workers get killed
+        return
+
     def stop(self):
-        self.working = False
-        self.workers = None
-        self.watchdog = None
+        self.before_stop()
         try:
             self.out_queue.put(StopIteration)
         except Exception:
             log.exception()
         log.debug("%s stopped", self)
-        self.pool.kill()
 
-    def busy(self):
-        if self._workers:
-            return any(worker["busy"] for worker in self._workers.values())
+        self.working = False
+        self.pool.kill()
 
 class Timer(object):
     
