@@ -489,9 +489,55 @@ class Users(UserMixin, db_sql.Model):
         #     factory.put((canceller, (cancel_key,), {}))
 
         #     for A in factory.out_queue:
+        #        yield A
 
         #     #--------------------------------------
 
+        stats = dict(fetched=0, imported=0, errors=0, empty=0)
+        pool = gevent.pool.Pool()
+        to_export = gevent.queue.Queue()
+        to_yield = itertools.imap(export, to_export)
+
+        to_import = gevent.queue.Queue()
+        imported = pool.imap_unordered(Activities.import_streams, to_import)
+        
+        def handle_imported(A):
+            if A:
+                to_export.put(A)
+                stats["imported"] += 1
+            elif A is False:
+                stats["errors"] += 1
+                if self.fetch_result["errors"] >= MAX_IMPORT_ERRORS:
+                    log.info("%s Too many import errors", self)
+                    pool.kill()
+                    return
+            else:
+                stats["empty"] += 1
+        pool.map_async(handle_imported, imported)
+
+        def master_func(stats):
+            def handle_chunk(chunk):
+                def handle_fetched(A):
+                    if not A:
+                        continue
+                    
+                    if "time" in A:
+                        to_export.put(A)
+                        stats["fetched"] += 1
+                    
+                    elif "_id" not in A:
+                        to_export.put(A)
+                    
+                    else:
+                        to_import.put(A)
+                fetched = Activities.append_streams_from_db(chunk)
+                pool.map_async(handle_fetched, fetched)
+            return handle_chunk
+
+        pool.map_async(master_func(stats), Utility.chunks(summaries_generator))
+        
+        for A in to_yield:
+            yield A
 
 
 
