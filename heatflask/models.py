@@ -493,53 +493,7 @@ class Users(UserMixin, db_sql.Model):
 
         #     #--------------------------------------
 
-        # stats = dict(fetched=0, imported=0, errors=0, empty=0)
-        # pool = gevent.pool.Pool()
-        # to_export = gevent.queue.Queue()
-        # to_yield = itertools.imap(export, to_export)
-
-        # to_import = gevent.queue.Queue()
-        # imported = pool.imap_unordered(Activities.import_streams, to_import)
         
-        # def handle_imported(A):
-        #     if A:
-        #         to_export.put(A)
-        #         stats["imported"] += 1
-        #     elif A is False:
-        #         stats["errors"] += 1
-        #         if self.fetch_result["errors"] >= MAX_IMPORT_ERRORS:
-        #             log.info("%s Too many import errors", self)
-        #             pool.kill()
-        #             return
-        #     else:
-        #         stats["empty"] += 1
-        # pool.map_async(handle_imported, imported)
-
-        # def master_func(stats):
-        #     def handle_chunk(chunk):
-        #         def handle_fetched(A):
-        #             if not A:
-        #                 continue
-                    
-        #             if "time" in A:
-        #                 to_export.put(A)
-        #                 stats["fetched"] += 1
-                    
-        #             elif "_id" not in A:
-        #                 to_export.put(A)
-                    
-        #             else:
-        #                 to_import.put(A)
-        #         fetched = Activities.append_streams_from_db(chunk)
-        #         pool.map_async(handle_fetched, fetched)
-        #     return handle_chunk
-
-        # pool.map_async(master_func(stats), Utility.chunks(summaries_generator))
-        
-        # for A in to_yield:
-        #     yield A
-
-
 
         # Here we introduce a mapper that readys an activity summary
         #  (with or without streams) to be yielded to the client
@@ -585,8 +539,52 @@ class Users(UserMixin, db_sql.Model):
         #  summaries_generator yields activity summaries without streams
         #  We want to attach a stream to each one, get it ready to export,
         #  and yield it.
+        
+        stats = dict(fetched=0, imported=0, errors=0, empty=0)
+        to_export = gevent.queue.Queue(maxsize=10)
+        to_import = gevent.queue.Queue(maxsize=10)
 
-        # This generator takes a number of summaries ans attempts to
+        def handle_fetched(A):
+            if not A:
+                return
+            if "time" in A:
+                to_export.put(A)
+                stats["fetched"] += 1
+            elif "_id" not in A:
+                to_export.put(A)
+            else:
+                to_import.put(A)
+
+        def handle_imported(A):
+            if A:
+                to_export.put(A)
+                stats["imported"] += 1
+            elif A is False:
+                stats["errors"] += 1
+                if stats["errors"] >= MAX_IMPORT_ERRORS:
+                    log.info("%s Too many import errors", self)
+                    pool.kill()
+                    return
+            else:
+                stats["empty"] += 1
+
+        def handle_raw(raw_summaries):
+            fetched = Activities.append_streams_from_db(raw_summaries)
+            pool.map_async(handle_fetched, fetched)
+        
+        
+        pool = gevent.pool.Pool(10)
+        itertools.imap(handle_raw, Utility.chunks(summaries_generator))
+        imported = pool.imap_unordered(Activities.import_streams, to_import)
+        itertools.imap(handle_imported, imported)
+
+        to_yield = itertools.imap(export, to_export)
+        
+        for A in to_yield:
+            yield A
+
+
+        # This generator takes a number of summaries and attempts to
         #  append streams to each one
         # -----------------------------------------------------------
         def append_streams(summaries):
@@ -1726,12 +1724,16 @@ class Activities(object):
         if not to_fetch:
             return
 
+        # yield stream-appended summaries that we were able to
+        #  fetch streams for
         for _id, stream_data in cls.get_many(to_fetch.keys()):
+            if not stream_data:
+                continue
             A = to_fetch.pop(_id)
-            if stream_data:
-                A.update(stream_data)
+            A.update(stream_data)
             yield A
 
+        # now we yield the rest of the summaries
         for A in to_fetch.values():
             yield A
 
