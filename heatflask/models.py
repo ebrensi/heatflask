@@ -476,10 +476,11 @@ class Users(UserMixin, db_sql.Model):
         #  (with or without streams) to be yielded to the client
         now = datetime.utcnow()
         timer = Timer()
-        abort_signal = False
+        self.abort_signal = False
 
         def export(A):
-            # if abort_signal: return
+            if self.abort_signal:
+                return
             if not A:
                 return A
 
@@ -526,7 +527,7 @@ class Users(UserMixin, db_sql.Model):
             to_import = FakeQueue()
 
         def handle_fetched(A):
-            if not A: # or abort_signal
+            if not A or self.abort_signal:
                 return
             if "time" in A:
                 to_export.put(A)
@@ -537,22 +538,25 @@ class Users(UserMixin, db_sql.Model):
                 to_import.put(A)
 
         def import_activity_streams(A):
-            # if abort_signal: return
             if not (A and "_id" in A):
                 return A
-            imported = Activities.import_streams(self.strava_client, A)
-            return imported
+            if self.abort_signal:
+                # log.debug("%s import %s aborted", self, A["_id"])
+                return
+
+            return Activities.import_streams(self.strava_client, A)
 
         def handle_imported(A):
-            # if abort_signal: return
+            if self.abort_signal:
+                return
             if A:
                 to_export.put(A)
                 stats["imported"] += 1
             elif A is False:
                 stats["errors"] += 1
                 if stats["errors"] >= MAX_IMPORT_ERRORS:
-                    log.info("%s Too many import errors", self)
-                    import_pool.kill()
+                    log.info("%s Too many import errors. quitting", self)
+                    self.abort_signal = True
                     return
             else:
                 stats["empty"] += 1
@@ -560,39 +564,10 @@ class Users(UserMixin, db_sql.Model):
         def handle_raw(raw_summaries):
             fetched = Activities.append_streams_from_db(raw_summaries)
             map(handle_fetched, fetched)
-            
-        def _watchdog():
-            try:
-                empty_timeout = 7
-                while True:
-                    # if both queues are empty for longer than timeout then quit
-                    #   unless timeout is null
-                    time0 = time.time()
-                    while to_import.empty() and to_export.empty():
-                        elapsed = time.time() - time0
-                        log.debug("queues empty %s", elapsed)
-                        if elapsed > empty_timeout:
-                            raise StopIteration("done")
-                        gevent.sleep(0.5)
 
-                    #  Sleep while queues are not empty
-                    while not (to_import.empty() and to_export.empty()):
-                        log.debug("queues not empty")
-                        empty_timeout = 1
-                        gevent.sleep(0.5)
-                    
-            except StopIteration:
-                log.debug("watchdog says peace")
-                to_export.put(StopIteration)
-                import_pool.kill()
-                aux_pool.kill()
-
-
-
-        def stop(self):
-            to_export.put(StopIteration)
-            import_pool.kill()
-            aux_pool.kill()
+        # this is where the action happens
+        stats = dict(fetched=0, imported=0, errors=0, empty=0)
+        timer = Timer()
 
         import_pool = gevent.pool.Pool(IMPORT_CONCURRENCY)
         aux_pool = gevent.pool.Pool(3)
@@ -605,31 +580,31 @@ class Users(UserMixin, db_sql.Model):
                 import_activity_streams, to_import
             )
 
+            def imported_done(result):
+                log.debug("%s done with imports. elapsed=%s", self, timer.elapsed())
+                to_export.put(StopIteration)
+
             # this background job fills export queue
             # with activities from imported
-            aux_pool.spawn(any, (handle_imported(A) for A in imported))
+            aux_pool.spawn(any, (handle_imported(A) for A in imported)).link(imported_done)
 
         # background job filling import and export queues
         #  it will pause when either queue is full
-        chunks_of_summaries = Utility.chunks(summaries_generator, size=BATCH_CHUNK_SIZE)
-        aux_pool.spawn(
-            any,
-            (handle_raw(chunk) for chunk in chunks_of_summaries)
-        )
+        chunks = Utility.chunks(summaries_generator, size=BATCH_CHUNK_SIZE)
+        
+        def raw_done(result):
+            # The value of result will be False
+            log.debug("%s done with raw summaries. elapsed=%s", self, timer.elapsed())
+            to_import.put(StopIteration)
 
-        aux_pool.spawn(_watchdog)
-        # this is where the action happens
-        stats = dict(fetched=0, imported=0, errors=0, empty=0)
-        timer = Timer()
+        aux_pool.spawn(any, (handle_raw(chunk) for chunk in chunks)).link(raw_done)
 
         for A in itertools.imap(export, to_export):
-            abort_signal = yield A
+            self.abort_signal = yield A
             
-            if abort_signal:
-                log.info("activity query aborted")
+            if self.abort_signal:
+                log.info("%s received abort_signal. quitting...", self)
                 summaries_generator.send(abort_signal)
-                import_pool.kill()
-                aux_pool.kill()
                 break
 
         elapsed = timer.elapsed()
