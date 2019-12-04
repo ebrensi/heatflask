@@ -461,13 +461,15 @@ def update_share_status(username):
 def canceller(wsclient, gen):
     while not wsclient.ws.closed:
         msg = wsclient.receiveobj()
+        if not msg:
+            break
         if "close" in msg:
             abort_signal = True
-            log.info("%s activity query cancelled by user")
+            log.info("canceller: activity query cancelled by user")
             try:
                 gen.send(abort_signal)
             except Exception:
-                log.exception("oops")
+                log.error("canceller")
             break
     wsclient.close()
 
@@ -501,7 +503,7 @@ def data_socket(ws):
                         try:
                             query_result.send(abort_signal)
                         except Exception:
-                            log.exception("oops")
+                            log.exception("not canceller")
                         log.info()
                         wsclient.close()
                         return
