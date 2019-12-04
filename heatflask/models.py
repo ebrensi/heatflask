@@ -542,7 +542,13 @@ class Users(UserMixin, db_sql.Model):
         
         stats = dict(fetched=0, imported=0, errors=0, empty=0)
         to_export = gevent.queue.Queue(maxsize=10)
-        to_import = gevent.queue.Queue(maxsize=10)
+
+        if OFFLINE or bad_client:
+            def to_import():
+                def put(x):
+                    return
+        else:
+            to_import = gevent.queue.Queue(maxsize=10)
 
         def handle_fetched(A):
             if not A:
@@ -554,6 +560,12 @@ class Users(UserMixin, db_sql.Model):
                 to_export.put(A)
             else:
                 to_import.put(A)
+
+        def import_activity_streams(A):
+            if not A or "_id" not in A:
+                return A
+            imported = Activities.import_streams(client, A)
+            return imported
 
         def handle_imported(A):
             if A:
@@ -568,90 +580,32 @@ class Users(UserMixin, db_sql.Model):
             else:
                 stats["empty"] += 1
 
-        def handle_raw(raw_summaries):
+        def handle_raw_chunk(raw_summaries):
             fetched = Activities.append_streams_from_db(raw_summaries)
-            pool.map_async(handle_fetched, fetched)
+            map(handle_fetched, fetched)
         
         
-        pool = gevent.pool.Pool(10)
-        itertools.imap(handle_raw, Utility.chunks(summaries_generator))
-        imported = pool.imap_unordered(Activities.import_streams, to_import)
-        itertools.imap(handle_imported, imported)
+        import_pool = gevent.pool.Pool(10)
+        aux_pool = gevent.pool.Pool(3)
+       
+        # this is a lazy iterator that pulls activites from import queue
+        #  and generates activities with streams
+        #  Roughly equivalent to ( import_activity_streams(A) for A in to_import ) 
+        imported = import_pool.imap_unordered(import_activity_streams, to_import)
 
-        to_yield = itertools.imap(export, to_export)
+        # this background job fills export queue with activities from imported
+        aux_pool.spawn(any, (handle_import(A) for A in imported))
+
+        # background job filling import and export queues
+        #  it will pause when either queue is full
+        chunks_of_summaries = Utility.chunks(summaries_generator)
+        aux_pool.spawn(any, handle_raw(chunk) for chunk in chunks_of_summaries)
         
-        for A in to_yield:
+
+        for A in itertools.imap(export, to_export):
             yield A
 
 
-        # This generator takes a number of summaries and attempts to
-        #  append streams to each one
-        # -----------------------------------------------------------
-        def append_streams(summaries):
-            if not summaries:
-                return
-
-            to_import = []
-            num_fetched = 0
-            
-            for A in Activities.append_streams_from_db(summaries):
-                if not A:
-                    continue
-                
-                if "time" in A:
-                    yield A
-                    num_fetched += 1
-                
-                elif "_id" not in A:
-                    yield A
-                
-                else:
-                    to_import.append(A)
-
-            self.fetch_result["fetched"] += num_fetched
-
-            if OFFLINE or (not to_import):
-                return
-
-            num_imported = 0
-            try:
-                append_streams.chunk += 1
-            except AttributeError:
-                append_streams.chunk = 1
-
-            log.info("%s importing chunk %s", self, append_streams.chunk)
-            timer = Timer()
-
-            if not self.strava_client:
-                self.strava_client = StravaClient(user=self)
-
-            for A in Activities.append_streams_from_import(
-                to_import,
-                self.strava_client,
-                pool=self.import_pool
-            ):
-                if A:
-                    yield A
-                    num_imported += 1
-                elif A is False:
-                    self.fetch_result["errors"] += 1
-                    if self.fetch_result["errors"] >= MAX_IMPORT_ERRORS:
-                        log.info("%s Too many import errors", self)
-                        return
-
-                else:
-                    self.fetch_result["empty"] += 1
-
-            self.fetch_result["imported"] += num_imported
-            
-            stats = dict(elapsed=timer.elapsed(), imported=num_imported)
-            log.info(
-                "%s chunk %s %s",
-                self,
-                append_streams.chunk,
-                stats
-            )
-        #-------------------------------------------------------  
 
         if not OFFLINE:
             if not self.client():
