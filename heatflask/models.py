@@ -519,9 +519,9 @@ class Users(UserMixin, db_sql.Model):
         #  We want to attach a stream to each one, get it ready to export,
         #  and yield it.
         
-        to_export = gevent.queue.Queue(maxsize=10)
+        to_export = gevent.queue.Queue(maxsize=100)
         if self.strava_client:
-            to_import = gevent.queue.Queue(maxsize=10)
+            to_import = gevent.queue.Queue(maxsize=100)
         else:
             to_import = FakeQueue()
 
@@ -560,8 +560,41 @@ class Users(UserMixin, db_sql.Model):
         def handle_raw(raw_summaries):
             fetched = Activities.append_streams_from_db(raw_summaries)
             map(handle_fetched, fetched)
-        
-        import_pool = gevent.pool.Pool(10)
+            
+        def _watchdog():
+            try:
+                empty_timeout = 7
+                while True:
+                    # if both queues are empty for longer than timeout then quit
+                    #   unless timeout is null
+                    time0 = time.time()
+                    while to_import.empty() and to_export.empty():
+                        elapsed = time.time() - time0
+                        log.debug("queues empty %s", elapsed)
+                        if elapsed > empty_timeout:
+                            raise StopIteration("done")
+                        gevent.sleep(0.5)
+
+                    #  Sleep while queues are not empty
+                    while not (to_import.empty() and to_export.empty()):
+                        log.debug("queues not empty")
+                        empty_timeout = 1
+                        gevent.sleep(0.5)
+                    
+            except StopIteration:
+                log.debug("watchdog says peace")
+                to_export.put(StopIteration)
+                import_pool.kill()
+                aux_pool.kill()
+
+
+
+        def stop(self):
+            to_export.put(StopIteration)
+            import_pool.kill()
+            aux_pool.kill()
+
+        import_pool = gevent.pool.Pool(IMPORT_CONCURRENCY)
         aux_pool = gevent.pool.Pool(3)
        
         if self.strava_client:
@@ -578,12 +611,13 @@ class Users(UserMixin, db_sql.Model):
 
         # background job filling import and export queues
         #  it will pause when either queue is full
-        chunks_of_summaries = Utility.chunks(summaries_generator)
+        chunks_of_summaries = Utility.chunks(summaries_generator, size=BATCH_CHUNK_SIZE)
         aux_pool.spawn(
             any,
             (handle_raw(chunk) for chunk in chunks_of_summaries)
         )
 
+        aux_pool.spawn(_watchdog)
         # this is where the action happens
         stats = dict(fetched=0, imported=0, errors=0, empty=0)
         timer = Timer()
@@ -599,10 +633,10 @@ class Users(UserMixin, db_sql.Model):
                 break
 
         elapsed = timer.elapsed()
-        self.stats["elapsed"] = round(elapsed, 2)
-        self.stats["rate"] = round(self.stats["imported"] / elapsed, 2)
+        stats["elapsed"] = round(elapsed, 2)
+        stats["rate"] = round(stats["imported"] / elapsed, 2)
         
-        msg = "{} fetch done. {}".format(self, Utility.cleandict(self.stats))
+        msg = "{} fetch done. {}".format(self, Utility.cleandict(stats))
 
         log.info(msg)
         EventLogger.new_event(msg=msg)
@@ -784,8 +818,11 @@ class Index(object):
             result = (t1 and t2)
             return result
 
-        if not queue:
+        if not (queue and out_query):
             queue = FakeQueue()
+        
+        if out_query:
+            yielding = True
         
         try:
             
@@ -806,7 +843,7 @@ class Index(object):
                     user.indexing(count)
                     queue.put({"idx": count})
 
-                if queue:
+                if yielding:
                     d2 = d.copy()
 
                     # cases for outputting this activity summary
@@ -847,6 +884,7 @@ class Index(object):
                         #  this iterator is done, as far as the consumer is concerned
                         log.debug("%s index build done yielding", user)
                         queue = FakeQueue()
+                        yielding = False
 
                 # put d in storage
                 if ts_local:
