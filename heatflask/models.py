@@ -115,11 +115,14 @@ class Users(UserMixin, db_sql.Model):
                 rate_limiter=(lambda x=None: None)
             )
         
-        token_expired = access_info["expires_at"] - time.time() < 60 * 30
+        now = time.time()
+        one_hour = 60 * 60
+        ttl = access_info["expires_at"] - now
         
+        token_expired = ttl < one_hour
+        start = now
         if (token_expired and refresh) or (refresh == "force"):
-            t1 = time.time()
-
+            
             # The existing access_token is expired
             # Attempt to refresh the token
             try:
@@ -130,7 +133,10 @@ class Users(UserMixin, db_sql.Model):
                 
                 self.access_token = json.dumps(new_access_info)
 
-                session.commit()
+                try:
+                    session.commit()
+                except Exception:
+                    log.exception("postgres error")
             
                 self.cli = stravalib.Client(
                     access_token=new_access_info.get("access_token"),
@@ -138,10 +144,10 @@ class Users(UserMixin, db_sql.Model):
                 )
             except Exception:
                 log.exception("%s token refresh fail", self)
-                return
-
-            elapsed = round(time.time() - t1, 2)
-            log.info("%s token refresh elapsed=%s", self, elapsed)
+                self.cli = None
+            else:
+                elapsed = round(time.time() - start, 2)
+                log.info("%s token refresh elapsed=%s", self, elapsed)
 
         return self.cli
 
@@ -169,6 +175,9 @@ class Users(UserMixin, db_sql.Model):
         else:
             return
         
+        if not client:
+            return
+
         try:
             strava_user = client.get_athlete()
         except Exception:
@@ -321,6 +330,7 @@ class Users(UserMixin, db_sql.Model):
             invalid = 0
             count = 0
           
+            abort_signal = False
             triage_jobs = P.imap_unordered(
                 triage_user, cls.query,
                 maxsize=TRIAGE_CONCURRENCY + 2
@@ -339,7 +349,10 @@ class Users(UserMixin, db_sql.Model):
                     status = "invalid"
                     invalid += 1
 
-                yield (user.id, status)
+                abort_signal = yield (user.id, status)
+                if abort_signal:
+                    log.info("user triage aborted")
+                    break
             
             results = dict(
                 count=count,
@@ -415,10 +428,13 @@ class Users(UserMixin, db_sql.Model):
             before=before,
             activity_ids=activity_ids
         ))
-
         # log.debug("received query %s", client_query)
 
         self.strava_client = None
+        if not OFFLINE:
+            self.strava_client = StravaClient(user=self)
+            if not self.strava_client:
+                yield {"error": "bad StravaClient. cannot import"}
 
         # exit if this query is empty
         if not any([limit, activity_ids, before, after]):
@@ -426,7 +442,7 @@ class Users(UserMixin, db_sql.Model):
             return
 
         while self.indexing():
-            yield dict(idx=self.indexing())
+            yield {"idx": self.indexing()}
             gevent.sleep(0.5)
 
         if self.index_count():
@@ -440,10 +456,13 @@ class Users(UserMixin, db_sql.Model):
         else:
             # There is no activity index and we are to build one
             if OFFLINE:
-                yield dict(error="OFFLINE MODE")
+                yield {"error": "cannot build index OFFLINE MODE"}
                 return
 
-            self.strava_client = StravaClient(user=self)
+            if not self.strava_client:
+                yield {"error": "could not create StravaClient. authenticate?"}
+                return
+
             summaries_generator = Index.import_user_index(
                 out_query=client_query,
                 client=self.strava_client
@@ -452,54 +471,15 @@ class Users(UserMixin, db_sql.Model):
             if not summaries_generator:
                 log.info("Could not build index for %s", self)
                 return
-
-        # At this point we have a generator called summaries_generator
-        #  that yields Activity summaries, without streams.
-        # def result(summaries_generator):
-        #     #-----------------------------------------
-        #     def master_job(chunk_of_summaries):
-
-        #         na, done, notdone = fetch_cache(chunk_of_summaries)
-        #         factory.imap(pass_through, na)
-        #         factory.imap(export, done)
-
-        #         done, notdone = fetch_db(notdone)
-        #         factory.imap(export, done)
-
-        #         factory.imap(import_and_export, notdone)
-            
-        #     def canceller(cancel_key):
-        #         while redis.exists(cancel_key):
-        #             gevent.sleep(2)
-        #         factory.stop()
-
-        #     def finishup():
-        #         do_mongo_batch(mongo_requests)
-        #         do_redis_batch(redis_requests)
-
-        #     factory = JobQueue(10)
-        #     factory._before_stop = finishup
-        #     batch_size = 50
-        #     mongo_requests = gevent.queue.Queue() # we need iterables that block
-        #     redis_requests = gevent.queue.Queue()
-
-        #     factory.imap(do_mongo_batch, mongo_requests, chunk_size=batch_size)
-        #     factory.imap(do_redis_batch, redis_requests, chunk_size=batch_size)
-        #     factory.imap(master_job, summaries, chunk_size)
-        #     factory.put((canceller, (cancel_key,), {}))
-
-        #     for A in factory.out_queue:
-        #        yield A
-
-        #     #--------------------------------------
-
         
-
         # Here we introduce a mapper that readys an activity summary
         #  (with or without streams) to be yielded to the client
         now = datetime.utcnow()
+        timer = Timer()
+        abort_signal = False
 
         def export(A):
+            # if abort_signal: return
             if not A:
                 return A
 
@@ -525,14 +505,13 @@ class Users(UserMixin, db_sql.Model):
         count = 0
         if not streams:
             for A in itertools.imap(export, summaries_generator):
-                yield A
+                abort_signal = yield A
                 count += 1
-            elapsed = round(time.time() - Utility.to_epoch(now), 1)
+                if abort_signal:
+                    summaries_generator.send(abort_signal)
+                    break
             log.debug(
-                "%s exported %s summaries in %s",
-                self,
-                count,
-                elapsed
+                "%s exported %s summaries in %s", self, count, timer.elapsed()
             )
             return
 
@@ -540,18 +519,14 @@ class Users(UserMixin, db_sql.Model):
         #  We want to attach a stream to each one, get it ready to export,
         #  and yield it.
         
-        stats = dict(fetched=0, imported=0, errors=0, empty=0)
         to_export = gevent.queue.Queue(maxsize=10)
-
-        if OFFLINE or bad_client:
-            def to_import():
-                def put(x):
-                    return
-        else:
+        if self.strava_client:
             to_import = gevent.queue.Queue(maxsize=10)
+        else:
+            to_import = FakeQueue()
 
         def handle_fetched(A):
-            if not A:
+            if not A: # or abort_signal
                 return
             if "time" in A:
                 to_export.put(A)
@@ -562,12 +537,14 @@ class Users(UserMixin, db_sql.Model):
                 to_import.put(A)
 
         def import_activity_streams(A):
-            if not A or "_id" not in A:
+            # if abort_signal: return
+            if not (A and "_id" in A):
                 return A
-            imported = Activities.import_streams(client, A)
+            imported = Activities.import_streams(self.strava_client, A)
             return imported
 
         def handle_imported(A):
+            # if abort_signal: return
             if A:
                 to_export.put(A)
                 stats["imported"] += 1
@@ -575,77 +552,57 @@ class Users(UserMixin, db_sql.Model):
                 stats["errors"] += 1
                 if stats["errors"] >= MAX_IMPORT_ERRORS:
                     log.info("%s Too many import errors", self)
-                    pool.kill()
+                    import_pool.kill()
                     return
             else:
                 stats["empty"] += 1
 
-        def handle_raw_chunk(raw_summaries):
+        def handle_raw(raw_summaries):
             fetched = Activities.append_streams_from_db(raw_summaries)
             map(handle_fetched, fetched)
-        
         
         import_pool = gevent.pool.Pool(10)
         aux_pool = gevent.pool.Pool(3)
        
-        # this is a lazy iterator that pulls activites from import queue
-        #  and generates activities with streams
-        #  Roughly equivalent to ( import_activity_streams(A) for A in to_import ) 
-        imported = import_pool.imap_unordered(import_activity_streams, to_import)
+        if self.strava_client:
+            # this is a lazy iterator that pulls activites from import queue
+            #  and generates activities with streams. Roughly equivalent to
+            #   imported = ( import_activity_streams(A) for A in to_import )
+            imported = import_pool.imap_unordered(
+                import_activity_streams, to_import
+            )
 
-        # this background job fills export queue with activities from imported
-        aux_pool.spawn(any, (handle_import(A) for A in imported))
+            # this background job fills export queue
+            # with activities from imported
+            aux_pool.spawn(any, (handle_imported(A) for A in imported))
 
         # background job filling import and export queues
         #  it will pause when either queue is full
         chunks_of_summaries = Utility.chunks(summaries_generator)
-        aux_pool.spawn(any, handle_raw(chunk) for chunk in chunks_of_summaries)
-        
+        aux_pool.spawn(
+            any,
+            (handle_raw(chunk) for chunk in chunks_of_summaries)
+        )
+
+        # this is where the action happens
+        stats = dict(fetched=0, imported=0, errors=0, empty=0)
+        timer = Timer()
 
         for A in itertools.imap(export, to_export):
-            yield A
+            abort_signal = yield A
+            
+            if abort_signal:
+                log.info("activity query aborted")
+                summaries_generator.send(abort_signal)
+                import_pool.kill()
+                aux_pool.kill()
+                break
 
-
-
-        if not OFFLINE:
-            if not self.client():
-                log.info("%s cannot import. bad client.", self)
-                yield (dict(
-                    error="cannot import. invalid access token." +
-                    " {} must re-authenticate".format(self)
-                ))
-                
-                return
-
-        chunk_pool = gevent.pool.Pool(app.config["CHUNK_CONCURRENCY"])
-        self.import_pool = gevent.pool.Pool(app.config["IMPORT_CONCURRENCY"])
-        chunks = Utility.chunks(summaries_generator, size=BATCH_CHUNK_SIZE)
+        elapsed = timer.elapsed()
+        self.stats["elapsed"] = round(elapsed, 2)
+        self.stats["rate"] = round(self.stats["imported"] / elapsed, 2)
         
-        self.fetch_result = dict(
-            empty=0,
-            fetched=0,
-            imported=0,
-            errors=0
-        )
-
-        start_time = time.time()
-          
-        activities_with_streams = itertools.chain.from_iterable(
-            chunk_pool.imap_unordered(
-                append_streams,
-                chunks,
-                maxsize=BATCH_CHUNK_CONCURRENCY
-            )
-        )
-
-        for A in itertools.imap(export, activities_with_streams):
-            yield A
-
-        elapsed = time.time() - start_time
-        self.fetch_result["elapsed"] = round(elapsed, 2)
-        self.fetch_result["rate"] = round(self.fetch_result["imported"] / elapsed, 2) 
-        
-        msg = "{} fetch done. {}".format(self, Utility.cleandict(self.fetch_result))
+        msg = "{} fetch done. {}".format(self, Utility.cleandict(self.stats))
 
         log.info(msg)
         EventLogger.new_event(msg=msg)
@@ -827,10 +784,9 @@ class Index(object):
             result = (t1 and t2)
             return result
 
-        def output(obj):
-            if queue:
-                queue.put(obj, timeout=10)
-
+        if not queue:
+            queue = FakeQueue()
+        
         try:
             
             summaries = client.get_activities(
@@ -846,9 +802,9 @@ class Index(object):
                 ts_local = None
 
                 count += 1
-                if not (count % 5):
+                if not (count % 10):
                     user.indexing(count)
-                    output(dict(idx=count))
+                    queue.put({"idx": count})
 
                 if queue:
                     d2 = d.copy()
@@ -857,21 +813,21 @@ class Index(object):
                     try:
                         if activity_ids:
                             if d2["_id"] in activity_ids:
-                                output(d2)
+                                queue.put(d2)
                                 activity_ids.discard(d2["_id"])
                                 if not activity_ids:
                                     raise StopIteration
                         
                         elif limit:
                             if count <= limit:
-                                output(d2)
+                                queue.put(d2)
                             else:
                                 raise StopIteration
 
                         elif check_dates:
                             ts_local = Utility.to_datetime(d2["ts_local"])
                             if in_date_range(ts_local):
-                                output(d2)
+                                queue.put(d2)
 
                                 if not in_range:
                                     in_range = True
@@ -884,13 +840,13 @@ class Index(object):
                                 raise StopIteration
 
                         else:
-                            output(d2)
+                            queue.put(d2)
 
                     except StopIteration:
-                        output(StopIteration)
+                        queue.put(StopIteration)
                         #  this iterator is done, as far as the consumer is concerned
                         log.debug("%s index build done yielding", user)
-                        queue = None
+                        queue = FakeQueue()
 
                 # put d in storage
                 if ts_local:
@@ -907,7 +863,7 @@ class Index(object):
 
         except Exception as e:
             log.exception("%s index import error", user)
-            output(dict(error=str(e)))
+            queue.put(dict(error=str(e)))
             
         else:
             elapsed = round(time.time() - start_time, 1)
@@ -918,11 +874,11 @@ class Index(object):
 
             log.debug(msg)
             EventLogger.new_event(msg=msg)
-            output(dict(
+            queue.put(dict(
                 msg="done indexing {} activities.".format(count)
             ))
         finally:
-            output(StopIteration)
+            queue.put(StopIteration)
             user.indexing(False)
 
     @classmethod
@@ -940,7 +896,7 @@ class Index(object):
             client = StravaClient(user=user)
 
         if not client:
-            return []
+            return [{"error": "invalid user client. not authenticated?"}]
         
         args = dict(
             fetch_query=fetch_query,
@@ -953,7 +909,14 @@ class Index(object):
             queue = gevent.queue.Queue()
             args.update(dict(queue=queue))
             gevent.spawn(cls._import, client, **args)
-            return queue
+
+            def index_gen(queue):
+                abort_signal = False
+                for A in queue:
+                    if not abort_signal:
+                        abort_signal = yield A
+                    
+            return index_gen(queue)
 
         if blocking:
             cls._import(client, **args)
@@ -964,7 +927,6 @@ class Index(object):
     def import_by_id(cls, user, activity_ids):
         client = StravaClient(user=user)
         if not client:
-            log.error("{} bad client".format(user))
             return
 
         pool = gevent.pool.Pool(IMPORT_CONCURRENCY)
@@ -1062,7 +1024,7 @@ class Index(object):
             to_delete = list(exclude_ids - query_ids)
             to_fetch = list(query_ids - exclude_ids)
 
-            yield dict(delete=to_delete, count=len(to_fetch))
+            yield {"delete": to_delete, "count": len(to_fetch)}
 
             query["_id"] = {"$in": to_fetch}
 
@@ -1070,8 +1032,7 @@ class Index(object):
             count = cls.db.count_documents(query)
             if limit:
                 count = min(limit, count)
-
-            yield dict(count=count)
+            yield {"count": count}
         
         try:
             if out_fields:
@@ -1137,7 +1098,10 @@ class StravaClient(object):
         if access_token:
             self.access_token = access_token
         elif user:
-            self.access_token = user.client().access_token
+            stravalib_client = user.client()
+            if not stravalib_client:
+                return
+            self.access_token = stravalib_client.access_token
 
     def __repr__(self):
         return "C:{}".format(self.id)
@@ -1277,8 +1241,6 @@ class StravaClient(object):
 
         try:
             while num_pages_processed <= self.final_index_page:
-                if self.cancel_index_import:
-                    raise Exception("cancelled by user")
 
                 pagenum, activities = next(jobs)
 
@@ -1291,7 +1253,7 @@ class StravaClient(object):
                 num = len(activities)
                 if num < cls.PAGE_SIZE:
                     total_num_activities = (pagenum - 1) * cls.PAGE_SIZE + num
-                    yield dict(count=total_num_activities)
+                    yield {"count": total_num_activities}
 
                 if limit and (num + num_activities_retrieved > limit):
                     # make sure no more requests are made
@@ -1299,14 +1261,15 @@ class StravaClient(object):
                     self.final_index_page = pagenum
 
                 for a in activities:
-                    if self.cancel_index_import:
-                        raise Exception("cancelled by user")
-
                     doc = cls.strava2doc(a)
                     if not doc:
                         continue
                     
-                    yield doc
+                    abort_signal = yield doc
+
+                    if abort_signal:
+                        log.info("%s get_activities aborted", self)
+                        raise StopIteration("cancelled by user")
 
                     num_activities_retrieved += 1
                     if limit and (num_activities_retrieved >= limit):
@@ -1720,7 +1683,12 @@ class Activities(object):
 
             if activities:
                 for a in activities:
-                    yield a
+
+                    abort_signal = yield a
+                    
+                    if abort_signal:
+                        activities.send(abort_signal)
+                        return
         
         yield ""
         
@@ -1794,6 +1762,7 @@ class EventLogger(object):
                     cursor_type=pymongo.CursorType.TAILABLE_AWAIT
                 )
                 elapsed = 0
+                abort_signal = False
                 while cursor.alive & redis.exists(genID):
                     for doc in cursor:
 
@@ -1809,7 +1778,11 @@ class EventLogger(object):
                             "id: {}\ndata: {}\n\n"
                             .format(doc["ts"], event)
                         )                        
-                        yield string
+                        abort_signal = yield string
+                        if abort_signal:
+                            log.info("live-updates aborted")
+                            Utility.del_genID(genID)
+                            return
 
                     # We end up here if the find() returned no
                     # documents or if the tailable cursor timed out
@@ -2107,6 +2080,11 @@ class Utility():
         if chunk:
             yield chunk
 
+# FakeQueue is a a queue that does nothing.  We use this for import queue if
+#  the user is offline or does not have a valid access token
+class FakeQueue(object):
+    def put(self, x):
+        return
 
 class JobQueue(object):
     MAX_QUEUE_SIZE = 200

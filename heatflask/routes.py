@@ -458,13 +458,18 @@ def update_share_status(username):
     return jsonify(user=user.id, share=status)
 
 
-def canceller(wsclient):
+def canceller(wsclient, gen):
     while not wsclient.ws.closed:
         msg = wsclient.receiveobj()
         if "close" in msg:
+            abort_signal = True
+            log.info("%s activity query cancelled by user")
+            try:
+                gen.send(abort_signal)
+            except Exception:
+                log.exception("oops")
             break
     wsclient.close()
-    log.debug("by bye")
 
 
 @sockets.route('/data_socket')
@@ -486,20 +491,19 @@ def data_socket(ws):
                 else:
                     log.info("no client id!")
 
-                # TODO: spawn a greenlet for this so we can resume listening
                 query_result = Activities.query(query)
 
-                job = gevent.spawn(canceller, wsclient)
+                job = gevent.spawn(canceller, wsclient, query_result)
 
                 for a in query_result:
                     if wsclient.ws.closed:
-                        wsclient.close()
+                        abort_signal = True
                         try:
-                            # make the generator yield one more time in order
-                            #  to let it wrap up, ideally in the code right after
-                            next(query_result)
+                            query_result.send(abort_signal)
                         except Exception:
-                            pass
+                            log.exception("oops")
+                        log.info()
+                        wsclient.close()
                         return
 
                     wsclient.sendobj(a)
