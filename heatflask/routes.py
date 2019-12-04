@@ -465,11 +465,12 @@ def canceller(wsclient, gen):
             break
         if "close" in msg:
             abort_signal = True
-            log.info("canceller: activity query cancelled by user")
+            log.info("canceller: websocket abort signal")
             try:
                 gen.send(abort_signal)
             except Exception:
-                log.error("canceller")
+                pass
+                # log.error("canceller")
             break
     wsclient.close()
 
@@ -499,12 +500,12 @@ def data_socket(ws):
 
                 for a in query_result:
                     if wsclient.ws.closed:
+                        log.exception("%s terminated", wsclient)
                         abort_signal = True
                         try:
                             query_result.send(abort_signal)
                         except Exception:
-                            log.exception("not canceller")
-                        log.info()
+                            pass
                         wsclient.close()
                         return
 
