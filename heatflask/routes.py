@@ -14,7 +14,7 @@ import itertools
 import base36
 import requests
 import stravalib
-import uuid
+import gevent
 from flask_login import current_user, login_user, logout_user
 import time
 import re
@@ -458,6 +458,23 @@ def update_share_status(username):
     return jsonify(user=user.id, share=status)
 
 
+def canceller(wsclient, gen):
+    while not wsclient.ws.closed:
+        msg = wsclient.receiveobj()
+        if not msg:
+            break
+        if "close" in msg:
+            abort_signal = True
+            log.info("canceller: websocket abort signal")
+            try:
+                gen.send(abort_signal)
+            except Exception:
+                pass
+                # log.error("canceller")
+            break
+    wsclient.close()
+
+
 @sockets.route('/data_socket')
 def data_socket(ws):
 
@@ -478,19 +495,24 @@ def data_socket(ws):
                     log.info("no client id!")
 
                 query_result = Activities.query(query)
+
+                job = gevent.spawn(canceller, wsclient, query_result)
+
                 for a in query_result:
-                    if ws.closed:
-                        wsclient.close()
+                    if wsclient.ws.closed:
+                        log.exception("%s terminated", wsclient)
+                        abort_signal = True
                         try:
-                            # make the generator yield one more time in order
-                            #  to let it wrap up, ideally in the code right after
-                            next(query_result)
+                            query_result.send(abort_signal)
                         except Exception:
                             pass
+                        wsclient.close()
                         return
 
                     wsclient.sendobj(a)
-               
+                
+                job.kill()
+
             elif "close" in msg:
                 # log.debug("{} close request".format(wsclient))
                 break
@@ -695,7 +717,7 @@ def beacon_handler():
     except Exception:
         log.info("%s CLOSED.", key)
     else:
-        elapsed = round(time.time() - ts, 2)
+        elapsed = int(time.time() - ts)
         elapsed_td = timedelta(seconds=elapsed)
         log.info("%s CLOSED. elapsed=%s", key, elapsed_td)
 
