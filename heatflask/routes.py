@@ -49,7 +49,6 @@ def load_user(user_id):
 
 @login_manager.unauthorized_handler
 def handle_needs_login():
-    log.debug(request)
     return redirect(url_for('authorize', state=request.full_path))
 
 
