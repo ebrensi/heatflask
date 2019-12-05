@@ -31,14 +31,12 @@ class Config(object):
     # Concurrency for User database triage
     TRIAGE_CONCURRENCY = 5
 
-    # Concurrency for activiry import
-    IMPORT_CONCURRENCY = 16
+    # Concurrency for activity import
+    IMPORT_CONCURRENCY = 32
 
     # Concurrency for Index page import
     PAGE_REQUEST_CONCURRENCY = 10
 
-    # Concurrency for chunked export 
-    CHUNK_CONCURRENCY = 3
     BATCH_CHUNK_SIZE = 100
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
