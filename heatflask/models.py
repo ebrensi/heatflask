@@ -520,9 +520,9 @@ class Users(UserMixin, db_sql.Model):
         #  We want to attach a stream to each one, get it ready to export,
         #  and yield it.
         
-        to_export = gevent.queue.Queue(maxsize=100)
+        to_export = gevent.queue.Queue(maxsize=512)
         if self.strava_client:
-            to_import = gevent.queue.Queue(maxsize=100)
+            to_import = gevent.queue.Queue(maxsize=512)
         else:
             to_import = FakeQueue()
 
@@ -579,7 +579,6 @@ class Users(UserMixin, db_sql.Model):
         # this is where the action happens
         stats = dict(fetched=0)
         import_stats = dict(count=0, errors=0, empty=0, elapsed=0)
-        timer = Timer()
 
         import_pool = gevent.pool.Pool(IMPORT_CONCURRENCY)
         aux_pool = gevent.pool.Pool(3)
@@ -597,12 +596,12 @@ class Users(UserMixin, db_sql.Model):
                     count = import_stats["count"]
                     elapsed = import_stats["elapsed"]
                     import_stats["avg_resp"] = round(elapsed / count, 2)
+                    import_stats["rate"] = round(count / timer.elapsed(), 2)
                     log.info(
                         "%s done with imports. %s",
                         self,
                         Utility.cleandict(import_stats)
                     )
-                log.debug("%s done with imports (none)")
                 to_export.put(StopIteration)
 
             # this background job fills export queue
@@ -620,10 +619,10 @@ class Users(UserMixin, db_sql.Model):
 
         aux_pool.spawn(any, (handle_raw(chunk) for chunk in chunks)).link(raw_done)
 
+        count = 0
         for A in itertools.imap(export, to_export):
             self.abort_signal = yield A
-            
-            log.debug(dict(to_import=len(to_import), to_export=len(to_export)))
+            count += 1
 
             if self.abort_signal:
                 log.info("%s received abort_signal. quitting...", self)
@@ -632,8 +631,6 @@ class Users(UserMixin, db_sql.Model):
 
         elapsed = timer.elapsed()
         stats["elapsed"] = round(elapsed, 2)
-        stats["rate"] = round(stats["imported"] / elapsed, 2)
-        
         msg = "{} fetch done. {}".format(self, Utility.cleandict(stats))
 
         log.info(msg)
