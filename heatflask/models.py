@@ -543,13 +543,13 @@ class Users(UserMixin, db_sql.Model):
                 # log.debug("%s import %s aborted", self, A["_id"])
                 return
             
-            mytimer = Timer()
+            start = time.time()
             _id = A["_id"]
             log.debug("%s request import %s", self, _id)
 
             A = Activities.import_streams(self.strava_client, A)
             
-            elapsed = mytimer.elapsed()
+            elapsed = time.time() - start
             log.debug("%s imported %s: elapsed=%s", self, _id, elapsed)
             
             if A:
@@ -594,6 +594,7 @@ class Users(UserMixin, db_sql.Model):
                 if import_stats["count"]:
                     count = import_stats["count"]
                     elapsed = import_stats["elapsed"]
+                    import_stats["elapsed"] = round(elapsed, 2)
                     import_stats["avg_resp"] = round(elapsed / count, 2)
                     import_stats["rate"] = round(count / timer.elapsed(), 2)
                     log.debug("%s done importing")
