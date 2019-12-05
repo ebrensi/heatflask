@@ -597,11 +597,7 @@ class Users(UserMixin, db_sql.Model):
                     elapsed = import_stats["elapsed"]
                     import_stats["avg_resp"] = round(elapsed / count, 2)
                     import_stats["rate"] = round(count / timer.elapsed(), 2)
-                    log.info(
-                        "%s done with imports. %s",
-                        self,
-                        Utility.cleandict(import_stats)
-                    )
+                    log.debug("%s done importing")
                 to_export.put(StopIteration)
 
             # this background job fills export queue
@@ -631,8 +627,11 @@ class Users(UserMixin, db_sql.Model):
 
         elapsed = timer.elapsed()
         stats["elapsed"] = round(elapsed, 2)
-        msg = "{} fetch done. {}".format(self, Utility.cleandict(stats))
+        import_stats = Utility.cleandict(import_stats)
+        if import_stats:
+            stats["import"] = import_stats
 
+        msg = "{} fetch done. {}".format(self, Utility.cleandict(stats))
         log.info(msg)
         EventLogger.new_event(msg=msg)
 
