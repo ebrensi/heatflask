@@ -148,7 +148,8 @@
         queryObj = {client_id: CLIENT_ID};
         queryObj[USER_ID] = {
                 streams: false,
-                update_index_ts: false
+                update_index_ts: false,
+                limit: 100000
         };
 
         let msg = JSON.stringify({query: queryObj});
