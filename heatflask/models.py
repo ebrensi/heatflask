@@ -520,9 +520,9 @@ class Users(UserMixin, db_sql.Model):
         #  We want to attach a stream to each one, get it ready to export,
         #  and yield it.
         
-        to_export = gevent.queue.Queue(maxsize=100)
+        to_export = gevent.queue.Queue(maxsize=512)
         if self.strava_client:
-            to_import = gevent.queue.Queue(maxsize=100)
+            to_import = gevent.queue.Queue(maxsize=512)
         else:
             to_import = FakeQueue()
 
@@ -543,31 +543,42 @@ class Users(UserMixin, db_sql.Model):
             if self.abort_signal:
                 # log.debug("%s import %s aborted", self, A["_id"])
                 return
+            
+            mytimer = Timer()
+            _id = A["_id"]
+            log.debug("%s request import %s", self, _id)
 
-            return Activities.import_streams(self.strava_client, A)
-
-        def handle_imported(A):
-            if self.abort_signal:
-                return
+            A = Activities.import_streams(self.strava_client, A)
+            
+            elapsed = mytimer.elapsed()
+            log.debug("%s imported %s: elapsed=%s", self, _id, elapsed)
+            
             if A:
-                to_export.put(A)
-                stats["imported"] += 1
+                import_stats["count"] += 1
+                import_stats["elapsed"] += elapsed
+
             elif A is False:
-                stats["errors"] += 1
-                if stats["errors"] >= MAX_IMPORT_ERRORS:
+                import_stats["errors"] += 1
+                if import_stats["errors"] >= MAX_IMPORT_ERRORS:
                     log.info("%s Too many import errors. quitting", self)
                     self.abort_signal = True
                     return
             else:
-                stats["empty"] += 1
+                import_stats["empty"] += 1
+
+            return A
+
+        def handle_imported(A):
+            if A and not self.abort_signal:
+                to_export.put(A)
 
         def handle_raw(raw_summaries):
             fetched = Activities.append_streams_from_db(raw_summaries)
             map(handle_fetched, fetched)
 
         # this is where the action happens
-        stats = dict(fetched=0, imported=0, errors=0, empty=0)
-        timer = Timer()
+        stats = dict(fetched=0)
+        import_stats = dict(count=0, errors=0, empty=0, elapsed=0)
 
         import_pool = gevent.pool.Pool(IMPORT_CONCURRENCY)
         aux_pool = gevent.pool.Pool(3)
@@ -581,7 +592,16 @@ class Users(UserMixin, db_sql.Model):
             )
 
             def imported_done(result):
-                log.debug("%s done with imports. elapsed=%s", self, timer.elapsed())
+                if import_stats["count"]:
+                    count = import_stats["count"]
+                    elapsed = import_stats["elapsed"]
+                    import_stats["avg_resp"] = round(elapsed / count, 2)
+                    import_stats["rate"] = round(count / timer.elapsed(), 2)
+                    log.info(
+                        "%s done with imports. %s",
+                        self,
+                        Utility.cleandict(import_stats)
+                    )
                 to_export.put(StopIteration)
 
             # this background job fills export queue
@@ -599,9 +619,11 @@ class Users(UserMixin, db_sql.Model):
 
         aux_pool.spawn(any, (handle_raw(chunk) for chunk in chunks)).link(raw_done)
 
+        count = 0
         for A in itertools.imap(export, to_export):
             self.abort_signal = yield A
-            
+            count += 1
+
             if self.abort_signal:
                 log.info("%s received abort_signal. quitting...", self)
                 summaries_generator.send(abort_signal)
@@ -609,8 +631,6 @@ class Users(UserMixin, db_sql.Model):
 
         elapsed = timer.elapsed()
         stats["elapsed"] = round(elapsed, 2)
-        stats["rate"] = round(stats["imported"] / elapsed, 2)
-        
         msg = "{} fetch done. {}".format(self, Utility.cleandict(stats))
 
         log.info(msg)
@@ -882,7 +902,7 @@ class Index(object):
             elapsed = round(time.time() - start_time, 1)
             msg = (
                 "{}: index import done. {}"
-                .format(user.id, dict(elapsed=elapsed, count=count))
+                .format(user, dict(elapsed=elapsed, count=count))
             )
 
             log.debug(msg)
@@ -1597,8 +1617,8 @@ class Activities(object):
 
         _id = activity["_id"]
 
-        start = time.time()
-        log.debug("%s request import %s", client, _id)
+        # start = time.time()
+        # log.debug("%s request import %s", client, _id)
 
         result = client.get_activity_streams(_id)
         
@@ -1636,8 +1656,8 @@ class Activities(object):
         
         activity.update(encoded_streams)
 
-        elapsed = round(time.time() - start, 2)
-        log.debug("%s imported %s: elapsed=%s", client, _id, elapsed)
+        # elapsed = round(time.time() - start, 2)
+        # log.debug("%s imported %s: elapsed=%s", client, _id, elapsed)
         return activity
 
     @classmethod
