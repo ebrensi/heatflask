@@ -16,7 +16,6 @@ import requests
 import msgpack
 from bson import ObjectId
 from bson.binary import Binary
-from bson.json_util import dumps
 import itertools
 import time
 from . import mongo, db_sql, redis  # Global database clients
@@ -1775,6 +1774,29 @@ class EventLogger(object):
 
     @classmethod
     def live_updates_gen(cls, ts=None):
+        def gen(ts):
+            abort_signal = None
+            while not abort_signal:
+                cursor = cls.db.find(
+                    {'ts': {'$gt': ts}},
+                    cursor_type=pymongo.CursorType.TAILABLE_AWAIT
+                )
+
+                while cursor.alive and not abort_signal:
+                    for doc in cursor:
+                        doc["ts"] = Utility.to_epoch(ts)
+                        doc["_id"] = str(doc["_id"])
+
+                        abort_signal = yield doc
+                        if abort_signal:
+                            log.info("live-updates aborted")
+                            return
+
+                    # We end up here if the find() returned no
+                    # documents or if the tailable cursor timed out
+                    # (no new documents were added to the
+                    # collection for more than 1 second)
+                    gevent.sleep(2)
 
         if not ts:
             first = cls.db.find().sort(
@@ -1784,51 +1806,6 @@ class EventLogger(object):
 
             ts = first['ts']
 
-        def gen(ts):
-            genID = Utility.set_genID(ttl=60 * 60 * 24)
-            obj = {"genID": genID}
-            yield "data: {}\n\n".format(json.dumps(obj))
-            yield "retry: 5000\n\n"
-            while redis.exists(genID):
-                cursor = cls.db.find(
-                    {'ts': {'$gt': ts}},
-                    cursor_type=pymongo.CursorType.TAILABLE_AWAIT
-                )
-                elapsed = 0
-                abort_signal = False
-                while cursor.alive & redis.exists(genID):
-                    for doc in cursor:
-
-                        if not redis.exists(genID):
-                            break
-
-                        elapsed = 0
-                        doc["ts"] = Utility.to_epoch(ts)
-                        doc["_id"] = str(doc["_id"])
-                        event = dumps(doc)
-
-                        string = (
-                            "id: {}\ndata: {}\n\n"
-                            .format(doc["ts"], event)
-                        )                        
-                        abort_signal = yield string
-                        if abort_signal:
-                            log.info("live-updates aborted")
-                            Utility.del_genID(genID)
-                            return
-
-                    # We end up here if the find() returned no
-                    # documents or if the tailable cursor timed out
-                    # (no new documents were added to the
-                    # collection for more than 1 second)
-
-                    gevent.sleep(1)
-                    elapsed += 1
-                    if elapsed > 10:
-                        elapsed = 0
-                        yield ": \n\n"
-
-            Utility.del_genID(genID)
         return gen(ts)
 
     @classmethod
@@ -2113,197 +2090,13 @@ class Utility():
         if chunk:
             yield chunk
 
+
 # FakeQueue is a a queue that does nothing.  We use this for import queue if
 #  the user is offline or does not have a valid access token
 class FakeQueue(object):
     def put(self, x):
         return
 
-class JobQueue(object):
-    MAX_QUEUE_SIZE = 200
-    
-    def __init__(self, name=""):
-        cls = self.__class__
-        self.name = name
-
-        self._workers = None
-        self.working = False
-
-        self.in_queue = gevent.queue.Queue(maxsize=cls.MAX_QUEUE_SIZE)
-        self.put = self.in_queue.put
-        self.put_nowait = self.in_queue.put_nowait
-
-        self._get_args = {}
-
-        self.out_queue = gevent.queue.Queue(maxsize=cls.MAX_QUEUE_SIZE)
-        self.get = self.out_queue.get
-        self.get_nowait = self.in_queue.get_nowait
-
-        self._put_args = {}
-        
-        self.watchdog_timeout = 2
-        self.busy_worker_timeout = 10
-
-        self.feeders = {}
-
-    def __repr__(self):
-        return "Q:{}".format(self.name)
-    
-    def __len__(self):
-        return (len(self.in_queue), len(self.out_queue))
-
-    def __iter__(self):
-        return self.out_queue.__iter__()
-
-    def __next__(self):
-        result = self.get()
-        if result is StopIteration:
-            raise result
-        return result
-
-    next = __next__ # Py2
-
-    # consume is a non-blocking method that sets
-    # a function/iterable mapping as a source for this queue
-    # the iterable does not need to be finite
-    def imap(self, func, iterable, name=None, chunk_size=1, **kwargs):
-        
-        def feeder(iterable, ref):
-            log.debug("%s feeder %s started", self, ref)
-            for el in iterable:
-                job = (func, (el,), {})
-                self.put(job)
-            if ref in self.feeders:
-                del self.feeders[ref]
-            log.debug("%s feeder %s done", self, ref)
-
-        ref = name or uuid.uuid4().get_hex()
-        if chunk_size == 1:
-            feed = iterable
-        else:
-            feed = Utility.chunks(iterable, chunk_size)
-        
-        job = (feeder, (feed, ref), {})
-        self.put(job)
-        self.start(**kwargs)
-
-        return self
-
-    def _worker(self, my_id):
-        # log.debug("%s:%s started", self, my_id)
-        
-        gargs = self._get_args
-        pargs = self._put_args
-        
-        while self.working:
-            try:
-
-                job = self.in_queue.get(**gargs)
-                self._workers[my_id]["busy"] = True
-
-                if isinstance(job, (tuple, list)):
-                    if len(job) == 2:
-                        func, args = job
-                        result = func(*args)
-                    else:
-                        func, args, kwargs = job
-                        result = func(*args, **kwrgs)
-                else:
-                    result = job()
-
-                if result:
-                    self.out_queue.put(result, **pargs)
-
-                self._workers[my_id]["busy"] = False
-            
-            except gevent.queue.Empty:
-                log.error("%s:%s input_queue EMPTY", self, my_id)
-                gevent.sleep(0.5)
-                continue
-            except gevent.queue.Full:
-                log.error("%s:%s output_queue FULL", self, my_id)
-                break
-            except Exception:
-                log.exception("%s:%s error", self, my_id)
-                break
-        try:
-            del self._workers[my_id]
-        except Exception:
-            pass
-        log.debug("%s:%s stopped", self, my_id)
-
-    def _watchdog(self):
-        try:
-            while self.working:
-                log.debug("%s queues not empty", self)
-                #  Sleep while queues are not empty
-                while not (self.in_queue.empty() and self.out_queue.empty()):
-                    assert self._workers and self.working
-                    gevent.sleep(0.5)
-
-                log.debug("%s queues empty", self)
-
-                time0 = time.time()
-                while self.busy() and self.working:
-                    log.debug("%s still busy", self)
-                    # the queues are empty but at least one worker
-                    # is handling a job. We will wait on it for 7 seconds
-                    if time.time() - time0 > self.busy_worker_timeout:
-                        raise Exception("%s busy worker timed out" % self)
-                    gevent.sleep(1)
-
-                # if both queues are empty for longer than timeout then quit
-                #   unless timeout is null
-                time0 = time.time()
-                while self.in_queue.empty() and self.in_queue.empty():
-                    assert self._workers and self.working
-                    if time.time() - time0 > self.watchdog_timeout:
-                        raise StopIteration
-                    gevent.sleep(1)
-
-        except AssertionError as e:
-            log.debug(e)
-        except StopIteration:
-            pass
-        except Exception as e:
-            log.exception(e)
-        finally:
-            log.debug("%s watchdog stopped", self)
-            self.stop()
-
-    def start(self, num_workers=5, timeout=None):
-        if self.working:
-            return
-        if timeout:
-            self.watchdog_timeout = timeout
-        self.working = True
-        self.pool = gevent.pool.Pool(num_workers + 11)
-        self._workers = {
-            _id: dict(worker=self.pool.spawn(self._worker, _id), busy=False)
-            for _id in range(1, num_workers + 1)
-        }
-        self.watchdog = self.pool.spawn(self._watchdog)
-        log.debug("%s started with %s workers", self, num_workers)
-
-    def busy(self):
-        if self._workers:
-            return any(worker["busy"] for worker in self._workers.values())
-
-    def _before_stop(self):
-        # implement this function to do whatever wrapping up
-        #  you need to do before workers get killed
-        return
-
-    def stop(self):
-        self.before_stop()
-        try:
-            self.out_queue.put(StopIteration)
-        except Exception:
-            log.exception()
-        log.debug("%s stopped", self)
-
-        self.working = False
-        self.pool.kill()
 
 class Timer(object):
     
@@ -2313,12 +2106,14 @@ class Timer(object):
     def elapsed(self):
         return round(time.time() - self.start, 2)
 
+
 class BinaryWebsocketClient(object):
     # WebsocketClient is a wrapper for a websocket
     #  It attempts to gracefully handle broken connections
     def __init__(self, websocket, ttl=60 * 60 * 24):
         self.ws = websocket
         self.birthday = time.time()
+        self.gen = None
 
         # this is a the client_id for the web-page
         # accessing this websocket
@@ -2371,4 +2166,36 @@ class BinaryWebsocketClient(object):
 
     def send_key(self):
         self.sendobj(dict(wskey=self.key))
+
+    def send_from(self, gen):
+        # send everything from gen, a generator of dict objects.
+        watchdog = gevent.spawn(self._watchdog, gen)
+
+        for obj in gen:
+            if self.ws.closed:
+                break
+            self.sendobj(obj)
+        
+        watchdog.kill()
+
+    def _watchdog(self, gen):
+        # This method runs in a separate thread, monitoring socket
+        #  input while we send stuff from interable gen to the
+        #  client device.  This allows us to receive an abort signal
+        #  among other things.
+        # log.debug("%s watchdog: yo!")
+        while not self.ws.closed:
+            msg = self.receiveobj()
+            if not msg:
+                break
+            if "close" in msg:
+                abort_signal = True
+                log.info("%s watchdog: abort signal", self)
+                try:
+                    gen.send(abort_signal)
+                except Exception:
+                    pass
+                break
+        # log.debug("%s watchdog: bye bye", self)
+        self.close()
 
