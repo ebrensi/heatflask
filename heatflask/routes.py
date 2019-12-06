@@ -357,7 +357,7 @@ def main(username):
 
     ip = Utility.ip_address(request)
     web_client_id = "H:{}:{}".format(ip, int(time.time()))
-    log.info("%s OPEN", web_client_id)
+    log.debug("%s OPEN", web_client_id)
 
     query = dict(
         user=user,
@@ -431,7 +431,7 @@ def activities(username):
     #  websocket access from unidentified users
     ip = Utility.ip_address(request)
     web_client_id = "HA:{}:{}".format(ip, int(time.time()))
-    log.info("%s OPEN", web_client_id)
+    log.debug("%s OPEN", web_client_id)
     
     return render_template(
         "activities.html",
@@ -714,11 +714,11 @@ def beacon_handler():
     try:
         ts = int(key.split(":")[-1])
     except Exception:
-        log.info("%s CLOSED.", key)
+        log.debug("%s CLOSED.", key)
     else:
         elapsed = int(time.time() - ts)
         elapsed_td = timedelta(seconds=elapsed)
-        log.info("%s CLOSED. elapsed=%s", key, elapsed_td)
+        log.debug("%s CLOSED. elapsed=%s", key, elapsed_td)
 
     return "ok"
 

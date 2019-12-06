@@ -550,7 +550,6 @@ class Users(UserMixin, db_sql.Model):
             A = Activities.import_streams(self.strava_client, A)
             
             elapsed = time.time() - start
-            log.debug("%s imported %s: elapsed=%s", self, _id, elapsed)
             
             if A:
                 import_stats["count"] += 1
@@ -564,6 +563,8 @@ class Users(UserMixin, db_sql.Model):
                     return
             else:
                 import_stats["empty"] += 1
+
+            log.debug(import_stats)
 
             return A
 
@@ -597,7 +598,7 @@ class Users(UserMixin, db_sql.Model):
                     import_stats["elapsed"] = round(elapsed, 2)
                     import_stats["avg_resp"] = round(elapsed / count, 2)
                     import_stats["rate"] = round(count / timer.elapsed(), 2)
-                    log.debug("%s done importing")
+                    log.debug("%s done importing", self)
                 to_export.put(StopIteration)
 
             # this background job fills export queue
@@ -802,8 +803,8 @@ class Index(object):
         user = client.user
         user.indexing(0)
 
-        start_time = time.time()
-        log.debug("%s building index", user)
+        timer = Timer()
+        log.info("%s building index", user)
 
         def in_date_range(dt):
             # log.debug(dict(dt=dt, after=after, before=before))
@@ -876,7 +877,7 @@ class Index(object):
                     except StopIteration:
                         queue.put(StopIteration)
                         #  this iterator is done, as far as the consumer is concerned
-                        log.debug("%s index build done yielding", user)
+                        log.info("%s index build done yielding", user)
                         queue = FakeQueue()
                         yielding = False
 
@@ -898,13 +899,13 @@ class Index(object):
             queue.put(dict(error=str(e)))
             
         else:
-            elapsed = round(time.time() - start_time, 1)
+            elapsed = timer.elapsed()
             msg = (
                 "{}: index import done. {}"
                 .format(user, dict(elapsed=elapsed, count=count))
             )
 
-            log.debug(msg)
+            log.info(msg)
             EventLogger.new_event(msg=msg)
             queue.put(dict(
                 msg="done indexing {} activities.".format(count)
@@ -1209,7 +1210,7 @@ class StravaClient(object):
                 query_base_url += "&after={}".format(after)
 
         except Exception:
-            log.exception("parameter error")
+            log.exception("%s get_activities: parameter error", self)
             return
 
         def page_iterator():
@@ -1221,13 +1222,13 @@ class StravaClient(object):
         def request_page(pagenum):
 
             if pagenum > self.final_index_page:
-                log.info("%s index page %s cancelled", self, pagenum)
+                log.debug("%s index page %s cancelled", self, pagenum)
                 return pagenum, None
 
             url = query_base_url + "&page={}".format(pagenum)
             
-            log.info("%s request index page %s", self, pagenum)
-            start = time.time()
+            log.debug("%s request index page %s", self, pagenum)
+            timer = Timer()
 
             try:
                 response = requests.get(url, headers=self.headers())
@@ -1243,8 +1244,8 @@ class StravaClient(object):
                 #  then there cannot be any further pages
                 self.final_index_page = min(self.final_index_page, pagenum)
 
-            elapsed = round(time.time() - start, 2)
-            log.info(
+            elapsed = timer.elapsed()
+            log.debug(
                 "%s index page %s %s",
                 self,
                 pagenum,
@@ -2361,7 +2362,7 @@ class BinaryWebsocketClient(object):
 
     def close(self):
         elapsed = int(time.time() - self.birthday)
-        log.debug("%s CLOSED. open for %s", self.key, elapsed)
+        log.debug("%s CLOSED. elapsed=%s", self.key, elapsed)
 
         try:
             self.ws.close()

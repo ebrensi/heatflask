@@ -115,8 +115,8 @@ var sidebarControl = L.control.sidebar('sidebar').addTo(map),
     layerControl = L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map),
     zoomControl = map.zoomControl.setPosition('bottomright'),
     fps_display = ADMIN? L.control.fps().addTo(map) : null,
-    stravaLogo = L.control.watermark({ image: "static/pbs4.png", width: '100px', opacity:'0.5', position: 'bottomleft' }).addTo(map),
-    heatflaskLogo = L.control.watermark({ image: "static/logo.png", opacity: '0.5', width: '100px', position: 'bottomleft' }).addTo(map),
+    stravaLogo = L.control.watermark({ image: "static/pbs4.png", width: '20%', opacity:'0.5', position: 'bottomleft' }).addTo(map),
+    heatflaskLogo = L.control.watermark({ image: "static/logo.png", opacity: '0.5', width: '20%', position: 'bottomleft' }).addTo(map),
     areaSelect;
 
 
@@ -739,9 +739,11 @@ function renderLayers(query={}) {
     $('#abortButton').click(function(){
         stopListening();
         doneRendering("<font color='red'>Aborted:</font>");
-    }).show();
+    });
 
-    $(".progbar").show();
+    $('#abortButton').fadeIn();
+
+    $(".progbar").fadeIn();
     $('#renderButton').prop('disabled', true);
 
 
@@ -751,8 +753,9 @@ function renderLayers(query={}) {
             appState["before"] = domIdVal("date2");
             updateState();
 
-            domIdShow("abortButton", false);
-            $(".progbar").hide();
+            // domIdShow("abortButton", false);
+            $("#abortButton").fadeOut();
+            $(".progbar").fadeOut();
 
             if (msgBox) {
                 msgBox.close();
@@ -1066,8 +1069,6 @@ function domIdShow(id, show=null) {
 
 
 $(document).ready(function() {
-
-    debugger;
 
     // activities table set-up
     domIdProp("zoom-to-selection", "checked", false);

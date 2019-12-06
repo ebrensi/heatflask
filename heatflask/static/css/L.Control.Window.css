@@ -29,13 +29,19 @@
 .leaflet-control-window{
     position: absolute;
     z-index: 2000;
-    border-radius: 2px;
+    border-radius: 15px;
     margin: 8px;
+    animation: fadeInAndOut 1s;
 
     /** BOX SHADOW **/
     -webkit-box-shadow: 2px 2px 10px 0px rgba(0,0,0,0.75);
     -moz-box-shadow: 2px 2px 10px 0px rgba(0,0,0,0.75);
     box-shadow: 2px 2px 10px 0px rgba(0,0,0,0.75);
+}
+
+@keyframes fadeInAndOut {
+  0%,100% { opacity: 0 }
+  50% { opacity: 1 }
 }
 
 .control-window{
@@ -67,8 +73,8 @@
     background-color: rgba(0, 0, 0, 0.40);
     transition-property: background;
     transition-duration: 0.2s;
+    animation: fadeOutLoad 1s;
     transition-timing-function: linear;
-
 
     color: #e4e4e4;
     font-size: 22pt;

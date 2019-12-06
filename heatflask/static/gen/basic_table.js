@@ -416,7 +416,15 @@ function touchHandler(event) {
 // document.addEventListener("touchend", touchHandler, true);
 // document.addEventListener("touchcancel", touchHandler, true);
 
+function fadeIn(el){
+  el.classList.add('show');
+  el.classList.remove('hide');  
+}
 
+function fadeOut(el){
+  el.classList.add('hide');
+  el.classList.remove('show');
+}
 
 
 // This is a list of tuples specifying properties of the rendered objects,
