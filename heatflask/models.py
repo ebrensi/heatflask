@@ -146,7 +146,7 @@ class Users(UserMixin, db_sql.Model):
                 self.cli = None
             else:
                 elapsed = round(time.time() - start, 2)
-                log.info("%s token refresh elapsed=%s", self, elapsed)
+                log.debug("%s token refresh elapsed=%s", self, elapsed)
 
         return self.cli
 
@@ -1969,7 +1969,7 @@ class Webhooks(object):
             # fetch activity and add it to the index
             result = Index.import_by_id(user, [_id])
             if result:
-                log.debug("webhook: %s create %s %s", user, _id, result)
+                log.info("webhook: %s create %s %s", user, _id, result)
             else:
                 log.info("webhook: %s create %s failed", user, _id)
 
