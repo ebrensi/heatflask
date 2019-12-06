@@ -73,7 +73,6 @@
       WS_SCHEME = "ws://";
     };
     
-
     window.history.pushState({}, "", window.location.origin + window.location.pathname);
 
 
@@ -119,7 +118,7 @@
         table_body = $('#activities_list tbody'),
         wskey, 
         sock = new WebSocket(WEBSOCKET_URL);
-
+    sock.binaryType = 'arraybuffer';
 
     window.addEventListener('beforeunload', function (event) {
       if (navigator.sendBeacon) {
@@ -136,7 +135,7 @@
       
     });
 
-    sock.binaryType = 'arraybuffer';
+    
 
     status_element.innerText = "Retrieving Activity Index...";
     
@@ -186,7 +185,7 @@
         return
       }
 
-      if (A.wskey) {
+      if ("wskey" in A) {
         wskey = A.wskey;
         console.log("got wskey "+A.wskey)
       }
