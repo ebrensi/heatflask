@@ -26,7 +26,6 @@
 
     const user_profile_url = "{{ url_for('user_profile', username='') }}",
           event_url = "{{ url_for('logged_event', event_id='') }}",
-          // live_update_url = "{{ url_for('live_updates') }}",
           WEBSOCKET_URL = WS_SCHEME+window.location.host+"/data_socket",
           beacon_handler_url = "{{ url_for('beacon_handler') }}";
 
@@ -77,7 +76,9 @@
 
     // Now set up websocket
     let wskey, 
-        sock = new WebSocket(WEBSOCKET_URL);
+        sock = new WebSocket(WEBSOCKET_URL),
+        last_ts = null;
+
     sock.binaryType = 'arraybuffer';
     
     window.addEventListener('beforeunload', function (event) {
@@ -99,14 +100,14 @@
     sock.onopen = function(event) {
         console.log("socket open: ", event);
 
-        let msg = JSON.stringify({"admin": "events"});
+        let msg = JSON.stringify({"admin": {"events": last_ts}});
         sock.send(msg);
     }
 
     sock.onclose = function(event) {
         console.log("socket closed: ", event);
         wskey = null;
-      }
+    }
 
     sock.onmessage = function(event) {
       if (!event.data) {
@@ -114,16 +115,20 @@
       }
 
       let update = msgpack.decode(new Uint8Array(event.data));
-    
-      // console.log(event);
+
+      console.log(`received`, update);
+
       if ("wskey" in update) {
         wskey = update.wskey;
-        // console.log("got wskey " + update.wskey)
+        return
+      }
+
+      if ("ts" in update) {
+        last_ts = update.ts
       }
 
       r = table.row.add(update).draw(false).node();
     }
-
 
     </script>
 </body>
