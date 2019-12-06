@@ -14,7 +14,6 @@ import itertools
 import base36
 import requests
 import stravalib
-import gevent
 from flask_login import current_user, login_user, logout_user
 import time
 import re
@@ -23,11 +22,11 @@ import re
 from urlparse import urlparse, urlunparse  # python2
 
 # Local imports
-from . import login_manager, redis, mongo, sockets#, talisman
+from . import login_manager, redis, mongo, sockets  #, talisman
 
 from .models import (
     Users, Activities, EventLogger, Utility, Webhooks, Index, Payments,
-    BinaryWebsocketClient, StravaClient, Timer, JobQueue
+    BinaryWebsocketClient, StravaClient, Timer
 )
 
 mongodb = mongo.db
@@ -457,23 +456,6 @@ def update_share_status(username):
     return jsonify(user=user.id, share=status)
 
 
-def canceller(wsclient, gen):
-    while not wsclient.ws.closed:
-        msg = wsclient.receiveobj()
-        if not msg:
-            break
-        if "close" in msg:
-            abort_signal = True
-            log.info("canceller: websocket abort signal")
-            try:
-                gen.send(abort_signal)
-            except Exception:
-                pass
-                # log.error("canceller")
-            break
-    wsclient.close()
-
-
 @sockets.route('/data_socket')
 def data_socket(ws):
 
@@ -481,40 +463,28 @@ def data_socket(ws):
 
     while not ws.closed:
         msg = wsclient.receiveobj()
-
         if msg:
-            if "query" in msg:
+            if "close" in msg:
+                break
+
+            elif "query" in msg:
                 # Make sure this socket is being accessed by
                 #  a legitimate client
                 query = msg["query"]
 
                 if "client_id" in query:
                     wsclient.client_id = query.pop("client_id")
-                else:
-                    log.info("no client id!")
-
-                query_result = Activities.query(query)
-
-                job = gevent.spawn(canceller, wsclient, query_result)
-
-                for a in query_result:
-                    if wsclient.ws.closed:
-                        log.exception("%s terminated", wsclient)
-                        abort_signal = True
-                        try:
-                            query_result.send(abort_signal)
-                        except Exception:
-                            pass
-                        wsclient.close()
-                        return
-
-                    wsclient.sendobj(a)
                 
-                job.kill()
+                query_result = Activities.query(query)
+                wsclient.send_from(query_result)
 
-            elif "close" in msg:
-                # log.debug("{} close request".format(wsclient))
-                break
+            elif "admin" in msg:
+                admin_request = msg["admin"]
+                if "events" in admin_request:
+                    ts = admin_request.get("events") or time.time()
+                    start = datetime.utcfromtimestamp(ts)
+                    event_stream = EventLogger.live_updates_gen(start)
+                    wsclient.send_from(event_stream)
             else:
                 log.debug("{} says {}".format(wsclient, msg))
 
@@ -541,7 +511,6 @@ def demos(demo_key):
 def demo():
     # Last 60 activities
     return redirect(url_for("demos", demo_key="last60activities"))
-
 
 
 # ---- Endpoints to cache and retrieve query urls that might be long
@@ -724,36 +693,23 @@ def beacon_handler():
 
 
 # ---- Event log stuff ----
-@app.route('/history')
+@app.route('/events')
 @admin_required
 def event_history():
     events = EventLogger.get_log(int(request.args.get("n", 100)))
     if events:
-        return render_template("history.html", events=events)
+        return render_template("events.html", events=events)
     return "No history"
 
 
-@app.route('/history/<event_id>')
+@app.route('/events/<event_id>')
 @log_request_event
 @admin_required
 def logged_event(event_id):
     return jsonify(EventLogger.get_event(event_id))
 
-@app.route('/history/live-updates')
-@admin_required
-def live_updates():
-    # log.debug(request.headers)
-    secs = float(request.headers.get("Last-Event-Id", 0))
-    ts = datetime.utcfromtimestamp(secs) if secs else None
-    # log.debug("live-updates init at {}".format(ts))
-    
-    stream = EventLogger.live_updates_gen(ts)
-    return Response(
-        stream_with_context(stream),
-        content_type='text/event-stream')
 
-
-@app.route('/history/init')
+@app.route('/events/init')
 @log_request_event
 @admin_required
 def event_history_init():
@@ -880,66 +836,4 @@ def paypal_ipn_handler():
 @app.route('/test', methods=["GET", "POST"])
 @admin_required
 def test_endpoint():
-    u = Users.get("e_rensi")
-    query = dict(limit=10)
-
-    summaries = Index.query(
-        user=u,
-        update_ts=False,
-        **query
-    )
-    timer = Timer()
-
-    factory = JobQueue()
-
-    client = StravaClient(user=u)
-
-    def append_streams(A):
-        return Activities.import_streams(client, A)
-
-    def gen():
-        count = 0
-        for result in factory.consume(
-            append_streams,
-            summaries
-        ):
-
-            if not result:
-                continue
-
-            _id = result["_id"] if "_id" in result else result
-            # log.debug("%s received %s (%s)", timer.elapsed(), jobs[_id], _id)
-            yield _id
-            count += 1
-        
-        elapsed = timer.elapsed()
-        log.debug("Import of %s streams took %s: rate=%s", count, elapsed, count/elapsed)
-        yield "done"
-
-    return Response(
-        stream_with_context("{}\n\n".format(a) for a in gen()),
-        content_type='text/event-stream'
-    )
-
-@app.route('/test2', methods=["GET", "POST"])
-@admin_required
-def test_endpoint2():
-    u = Users.get("e_rensi")
-
-    query = dict(limit=10)
-
-    summaries = Index.query(
-        user=u,
-        update_ts=False,
-        **query
-    )
-
-    ids = [a["_id"] for a in summaries if "_id" in a]
-
-    try:
-        result = Index.import_by_id(u, ids)
-    except Exception:
-        log.exception("oops")
-        return "oops"
-
-    return jsonify(result)
+    return "yo!"
