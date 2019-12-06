@@ -20,6 +20,7 @@ import itertools
 import time
 from . import mongo, db_sql, redis  # Global database clients
 from . import EPOCH
+from geventwebsocket import WebSocketError
 
 mongodb = mongo.db
 log = app.logger
@@ -2136,6 +2137,8 @@ class BinaryWebsocketClient(object):
         try:
             b = msgpack.packb(obj)
             self.ws.send(b, binary=True)
+        except WebSocketError:
+            pass
         except Exception:
             log.exception("error in sendobj")
             self.close()
