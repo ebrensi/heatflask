@@ -463,9 +463,6 @@ def data_socket(ws):
 
     while not ws.closed:
         msg = wsclient.receiveobj()
-
-        log.debug("data_socket received: %s", msg)
-
         if msg:
             if "close" in msg:
                 break
@@ -487,7 +484,6 @@ def data_socket(ws):
                     ts = admin_request.get("events") or time.time()
                     start = datetime.utcfromtimestamp(ts)
                     event_stream = EventLogger.live_updates_gen(start)
-                    log.debug("sending events")
                     wsclient.send_from(event_stream)
             else:
                 log.debug("{} says {}".format(wsclient, msg))
@@ -515,7 +511,6 @@ def demos(demo_key):
 def demo():
     # Last 60 activities
     return redirect(url_for("demos", demo_key="last60activities"))
-
 
 
 # ---- Endpoints to cache and retrieve query urls that might be long
