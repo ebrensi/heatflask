@@ -16,9 +16,18 @@
     </table>
 
     <script>
+    /*
+    if (window.location.protocol == "https:") {
+      WS_SCHEME = "wss://";
+    } else {
+      WS_SCHEME = "ws://";
+    };
+    */
+
     const user_profile_url = "{{ url_for('user_profile', username='') }}",
           event_url = "{{ url_for('logged_event', event_id='') }}",
-          live_update_url = "{{ url_for('live_updates') }}",
+          // live_update_url = "{{ url_for('live_updates') }}",
+          WEBSOCKET_URL = WS_SCHEME+window.location.host+"/data_socket",
           beacon_handler_url = "{{ url_for('beacon_handler') }}";
 
 
@@ -66,36 +75,53 @@
 
     table.draw();
 
-    let genID;
+    // Now set up websocket
+    let wskey, 
+        sock = new WebSocket(WEBSOCKET_URL);
+    sock.binaryType = 'arraybuffer';
     
     window.addEventListener('beforeunload', function (event) {
-        if (!navigator.sendBeacon) return;
-        status = navigator.sendBeacon(beacon_handler_url, genID);
+      if (navigator.sendBeacon) {
+        if (wskey) {
+          navigator.sendBeacon(BEACON_HANDLER_URL, wskey);
+        }
+        // navigator.sendBeacon(BEACON_HANDLER_URL, CLIENT_ID);
+      }
+ 
+      if (sock && sock.readyState == 1) {
+            sock.send(JSON.stringify({close: 1}));
+            sock.close()
+      }
+      
     });
 
-    const evtSource = new EventSource(live_update_url);
-    evtSource.onmessage = function(event) {
-      let  update = event.data;
-      if (!update) {
+
+    sock.onopen = function(event) {
+        console.log("socket open: ", event);
+
+        let msg = JSON.stringify({"admin": "events"});
+        sock.send(msg);
+    }
+
+    sock.onclose = function(event) {
+        console.log("socket closed: ", event);
+        wskey = null;
+      }
+
+    sock.onmessage = function(event) {
+      if (!event.data) {
         return;
       }
+
+      let update = msgpack.decode(new Uint8Array(event.data));
     
       // console.log(event);
-
-
-      let e = JSON.parse(update);
-
-      if (e.genID) {
-        genID = e.genID;
-        // console.log("SSE ID "+genID);
-        return;
+      if ("wskey" in update) {
+        wskey = update.wskey;
+        // console.log("got wskey " + update.wskey)
       }
 
-      r = table.row.add(e).select().draw(false).node();
-
-      setTimeout(function(){
-        table.row(r).deselect();
-      }, 5000);
+      r = table.row.add(update).draw(false).node();
     }
 
 
