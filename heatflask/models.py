@@ -1144,11 +1144,9 @@ class StravaClient(object):
         if ("id" not in a) or not a["start_latlng"]:
             return
         
-        bounds = Activities.bounds(a["map"]["summary_polyline"])
-        if not bounds:
-            return
-
         try:
+            polyline = a["map"]["summary_polyline"]
+            bounds = Activities.bounds(polyline)
             d = dict(
                 _id=a["id"],
                 user_id=a["athlete"]["id"],
@@ -1163,6 +1161,8 @@ class StravaClient(object):
                 start_latlng=a["start_latlng"],
                 bounds=bounds
             )
+        except KeyError:
+            return
         except Exception:
             log.exception("strava2doc error")
             return
@@ -1355,7 +1355,7 @@ class StravaClient(object):
                 streams[stream_name] = stream
 
         except UserWarning as e:
-            log.info(e)
+            log.debug(e)
             return
 
         except Exception:
@@ -1626,7 +1626,7 @@ class Activities(object):
             if result is None:
                 # a result of None means this activity has no streams
                 Index.delete(_id)
-                log.info("%s activity %s EMPTY", client, _id)
+                log.debug("%s activity %s EMPTY", client, _id)
 
             # a result of False means there was an error
             return result
