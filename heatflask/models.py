@@ -2162,7 +2162,8 @@ class BinaryWebsocketClient(object):
             s = self.ws.receive()
             obj = json.loads(s)
         except (TypeError, ValueError):
-            log.info("%s recieved non-json-object: %s", self, s)
+            if s:
+                log.info("%s recieved non-json-object: %s", self, s)
         except Exception:
             log.exception("error in receiveobj")
             return
