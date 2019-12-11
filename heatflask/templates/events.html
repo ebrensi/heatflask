@@ -117,7 +117,7 @@
 
       let update = msgpack.decode(new Uint8Array(event.data));
 
-      console.log(`received`, update);
+      // console.log(`received`, update);
 
       if ("wskey" in update) {
         wskey = update.wskey;
