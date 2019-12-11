@@ -564,7 +564,7 @@ class Users(UserMixin, db_sql.Model):
             else:
                 import_stats["empty"] += 1
 
-            log.debug(import_stats)
+            log.debug("%s response %s in %s", self, _id, import_stats, elapsed)
 
             return A
 
