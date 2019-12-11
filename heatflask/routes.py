@@ -462,31 +462,33 @@ def data_socket(ws):
     wsclient = BinaryWebsocketClient(ws)
 
     while not ws.closed:
-        msg = wsclient.receiveobj()
-        if msg:
-            if "close" in msg:
-                break
+        obj = wsclient.receiveobj()
+        if not obj:
+            continue
+       
+        if "close" in obj:
+            break
 
-            elif "query" in msg:
-                # Make sure this socket is being accessed by
-                #  a legitimate client
-                query = msg["query"]
+        elif "query" in obj:
+            # Make sure this socket is being accessed by
+            #  a legitimate client
+            query = obj["query"]
 
-                if "client_id" in query:
-                    wsclient.client_id = query.pop("client_id")
-                
-                query_result = Activities.query(query)
-                wsclient.send_from(query_result)
+            if "client_id" in query:
+                wsclient.client_id = query.pop("client_id")
+            
+            query_result = Activities.query(query)
+            wsclient.send_from(query_result)
 
-            elif "admin" in msg:
-                admin_request = msg["admin"]
-                if "events" in admin_request:
-                    ts = admin_request.get("events") or time.time()
-                    start = datetime.utcfromtimestamp(ts)
-                    event_stream = EventLogger.live_updates_gen(start)
-                    wsclient.send_from(event_stream)
-            else:
-                log.debug("{} says {}".format(wsclient, msg))
+        elif "admin" in obj:
+            admin_request = obj["admin"]
+            if "events" in admin_request:
+                ts = admin_request.get("events") or time.time()
+                start = datetime.utcfromtimestamp(ts)
+                event_stream = EventLogger.live_updates_gen(start)
+                wsclient.send_from(event_stream)
+        else:
+            log.debug("%s received object %s", wsclient, obj)
 
     wsclient.close()
     # log.debug("socket {} CLOSED".format(name))

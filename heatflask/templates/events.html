@@ -76,10 +76,8 @@
 
     // Now set up websocket
     let wskey, 
-        sock = new PersistentWebSocket(WEBSOCKET_URL, {
-          pingTimeout: 30 * 1000 // Reconnect if no message received in 30s.
-        }),
-        last_ts = null;
+        sock = new PersistentWebSocket(WEBSOCKET_URL),
+        last_ts = data[0].ts + 1;
 
     sock.binaryType = 'arraybuffer';
     
@@ -103,6 +101,7 @@
         console.log("socket open: ", event);
 
         let msg = JSON.stringify({"admin": {"events": last_ts}});
+        console.log(msg);
         sock.send(msg);
     }
 
