@@ -76,7 +76,7 @@
 
     // Now set up websocket
     let wskey, 
-        sock = new PersistentWebSocket(WEBSOCKET_URL),
+        sock = new WebSocket(WEBSOCKET_URL),
         last_ts = data[0].ts + 1;
 
     sock.binaryType = 'arraybuffer';
@@ -93,7 +93,6 @@
             sock.send(JSON.stringify({close: 1}));
             sock.close()
       }
-      
     });
 
 
