@@ -20,6 +20,7 @@ bundles = {
     "dependencies_js": flask_assets.Bundle(
         # minified dependencies
         flask_assets.Bundle(
+            'js/pws.min.js', # persistent websocket https://github.com/porsager/pws
             'js/msgpack.min.js',
             'js/jquery-3.2.1.min.js',
             'js/jquery-ui.min.js',
@@ -30,7 +31,7 @@ bundles = {
             'js/download.min.js',
             'js/gif2.js',  # Johan Nordberg: http://jnordberg.github.io/gif.js/
             # 'js/localforage.min.js',  # for local storage
-            'js/idb-keyval-iife.min.js', # for local sorage
+            # 'js/idb-keyval-iife.min.js', # for local sorage
             output="gen/pre-compiled-dependencies.js"
         ),
         # un-minified dependencies
@@ -42,7 +43,7 @@ bundles = {
             'js/leaflet-image.js',  # Tom MacWright: https://github.com/mapbox/leaflet-image
             'js/leaflet-areaselect.js',
             'js/easy-button.js',
-            # 'js/lv.js',
+            # 'js/lv.js', # nicer progress indicators
             filters=["babel", "rjsmin"],
             output="gen/build/non-compiled-dependencies.js"
         ),
@@ -82,6 +83,7 @@ bundles = {
     ),
 
     "basic_table_js": flask_assets.Bundle(
+        'js/pws.min.js', # persistent websocket https://github.com/porsager/pws
         'js/msgpack.min.js',
         'js/jquery-3.2.1.min.js',
         'js/datatables.min.js',

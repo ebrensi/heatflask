@@ -727,7 +727,10 @@ function renderLayers(query={}) {
         count = 0;
 
     if (!sock || sock.readyState > 1) {
-        sock = new WebSocket(WEBSOCKET_URL);
+        sock = new PersistentWebSocket(WEBSOCKET_URL, {
+          pingTimeout: 30 * 1000 // Reconnect if no message received in 30s.
+        });
+
         sock.binaryType = 'arraybuffer';
     } else {
         sendQuery();
