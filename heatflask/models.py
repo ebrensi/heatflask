@@ -595,15 +595,17 @@ class Users(UserMixin, db_sql.Model):
                 if import_stats["count"]:
                     count = import_stats["count"]
                     elapsed = import_stats["elapsed"]
-                    import_stats["elapsed"] = round(elapsed, 2)
                     import_stats["avg_resp"] = round(elapsed / count, 2)
-                    import_stats["rate"] = round(count / timer.elapsed(), 2)
+                    # import_stats["elapsed"] = round(elapsed, 2)
+                    # import_stats["rate"] = round(count / timer.elapsed(), 2)
                     log.debug("%s done importing", self)
                 to_export.put(StopIteration)
 
             # this background job fills export queue
             # with activities from imported
-            aux_pool.spawn(any, (handle_imported(A) for A in imported)).link(imported_done)
+            aux_pool.spawn(any, (
+                handle_imported(A) for A in imported
+            )).link(imported_done)
 
         # background job filling import and export queues
         #  it will pause when either queue is full
@@ -611,10 +613,14 @@ class Users(UserMixin, db_sql.Model):
         
         def raw_done(result):
             # The value of result will be False
-            log.debug("%s done with raw summaries. elapsed=%s", self, timer.elapsed())
+            log.debug(
+                "%s done with raw summaries. elapsed=%s", self, timer.elapsed()
+            )
             to_import.put(StopIteration)
 
-        aux_pool.spawn(any, (handle_raw(chunk) for chunk in chunks)).link(raw_done)
+        aux_pool.spawn(any, (
+            handle_raw(chunk) for chunk in chunks)
+        ).link(raw_done)
 
         count = 0
         for A in itertools.imap(export, to_export):
@@ -630,6 +636,7 @@ class Users(UserMixin, db_sql.Model):
         stats["elapsed"] = round(elapsed, 2)
         import_stats = Utility.cleandict(import_stats)
         if import_stats:
+            import_stats["t_rel"] = round(import_stats.pop("elapsed") / elapsed, 2)
             stats["import"] = import_stats
 
         msg = "{} fetch done. {}".format(self, Utility.cleandict(stats))
@@ -877,7 +884,7 @@ class Index(object):
                     except StopIteration:
                         queue.put(StopIteration)
                         #  this iterator is done, as far as the consumer is concerned
-                        log.info("%s index build done yielding", user)
+                        log.debug("%s index build done yielding", user)
                         queue = FakeQueue()
                         yielding = False
 
@@ -1947,7 +1954,7 @@ class Webhooks(object):
             # fetch activity and add it to the index
             result = Index.import_by_id(user, [_id])
             if result:
-                log.info("webhook: %s create %s %s", user, _id, result)
+                log.debug("webhook: %s create %s %s", user, _id, result)
             else:
                 log.info("webhook: %s create %s failed", user, _id)
 

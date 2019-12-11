@@ -22,7 +22,7 @@ import re
 from urlparse import urlparse, urlunparse  # python2
 
 # Local imports
-from . import login_manager, redis, mongo, sockets  #, talisman
+from . import login_manager, redis, mongo, sockets  #talisman
 
 from .models import (
     Users, Activities, EventLogger, Utility, Webhooks, Index, Payments,
