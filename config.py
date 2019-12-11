@@ -20,7 +20,7 @@ class Config(object):
     ADMIN = [15972102]
 
     # We limit the capture duration to keep gif file size down
-    CAPTURE_DURATION_MAX = 15
+    CAPTURE_DURATION_MAX = 20
 
     # We make Flask-Assets Default to manual build without caching
     # ASSETS_AUTO_BUILD = False
@@ -31,8 +31,8 @@ class Config(object):
     # Concurrency for User database triage
     TRIAGE_CONCURRENCY = 5
 
-    # Concurrency for activity import
-    IMPORT_CONCURRENCY = 32
+    # Concurrency for activity streams import
+    IMPORT_CONCURRENCY = 64
 
     # Concurrency for Index page import
     PAGE_REQUEST_CONCURRENCY = 10
