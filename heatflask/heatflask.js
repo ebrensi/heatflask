@@ -820,7 +820,6 @@ function renderLayers(query={}) {
             console.log(e);
         };
 
-
         if (!A) {
             $('#renderButton').prop('disabled', false);
             doneRendering("Finished.");
