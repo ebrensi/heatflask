@@ -76,7 +76,9 @@
 
     // Now set up websocket
     let wskey, 
-        sock = new WebSocket(WEBSOCKET_URL),
+        sock = new PersistentWebSocket(WEBSOCKET_URL, {
+          pingTimeout: 30 * 1000 // Reconnect if no message received in 30s.
+        }),
         last_ts = null;
 
     sock.binaryType = 'arraybuffer';
