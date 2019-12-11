@@ -564,7 +564,7 @@ class Users(UserMixin, db_sql.Model):
             else:
                 import_stats["empty"] += 1
 
-            log.debug("%s response %s in %s", self, _id, import_stats, elapsed)
+            log.debug("%s response %s in %s", self, _id, round(elapsed, 2))
 
             return A
 
@@ -634,14 +634,18 @@ class Users(UserMixin, db_sql.Model):
 
         elapsed = timer.elapsed()
         stats["elapsed"] = round(elapsed, 2)
+        stats = Utility.cleandict(stats)
         import_stats = Utility.cleandict(import_stats)
         if import_stats:
             import_stats["t_rel"] = round(import_stats.pop("elapsed") / elapsed, 2)
+            # stats["import"] = import_stats
+            log.info("%s import done. %s", self, import_stats)
+        
+        log.info("%s fetch done. %s", self, stats)
+        
+        if import_stats:
             stats["import"] = import_stats
-
-        msg = "{} fetch done. {}".format(self, Utility.cleandict(stats))
-        log.info(msg)
-        EventLogger.new_event(msg=msg)
+        EventLogger.new_event(msg="{} fetch: {}".format(self, stats))
 
     def make_payment(self, amount):
         success = Payments.add(self, amount)
@@ -1270,7 +1274,7 @@ class StravaClient(object):
 
         # imap_unordered gives a little better performance if order
         #   of results doesn't matter, which is the case if we aren't
-        #   limited to the first n elements.  
+        #   limited to the first n elements.
         mapper = pool.imap if (limit or ordered) else pool.imap_unordered
 
         jobs = mapper(
