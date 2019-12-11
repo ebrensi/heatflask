@@ -727,7 +727,7 @@ function renderLayers(query={}) {
         count = 0;
 
     if (!sock || sock.readyState > 1) {
-        sock = new PersistentWebSocket(WEBSOCKET_URL);
+        sock = new WebSocket(WEBSOCKET_URL);
 
         sock.binaryType = 'arraybuffer';
     } else {
