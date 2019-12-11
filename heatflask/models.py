@@ -1796,7 +1796,7 @@ class EventLogger(object):
 
                 while cursor.alive and not abort_signal:
                     for doc in cursor:
-                        doc["ts"] = Utility.to_epoch(ts)
+                        doc["ts"] = Utility.to_epoch(doc["ts"])
                         doc["_id"] = str(doc["_id"])
 
                         abort_signal = yield doc
