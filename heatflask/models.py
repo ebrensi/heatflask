@@ -2161,8 +2161,8 @@ class BinaryWebsocketClient(object):
         try:
             s = self.ws.receive()
             obj = json.loads(s)
-        except TypeError:
-            return
+        except (TypeError, ValueError):
+            log.info("%s recieved non-json-object: %s", self, s)
         except Exception:
             log.exception("error in receiveobj")
             return
@@ -2201,7 +2201,7 @@ class BinaryWebsocketClient(object):
         while not self.ws.closed:
             msg = self.receiveobj()
             if not msg:
-                break
+                continue
             if "close" in msg:
                 abort_signal = True
                 log.info("%s watchdog: abort signal", self)

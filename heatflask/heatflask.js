@@ -727,9 +727,7 @@ function renderLayers(query={}) {
         count = 0;
 
     if (!sock || sock.readyState > 1) {
-        sock = new PersistentWebSocket(WEBSOCKET_URL, {
-          pingTimeout: 30 * 1000 // Reconnect if no message received in 30s.
-        });
+        sock = new PersistentWebSocket(WEBSOCKET_URL);
 
         sock.binaryType = 'arraybuffer';
     } else {
