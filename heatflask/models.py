@@ -1102,7 +1102,7 @@ class StravaClient(object):
     # Stravalib includes a lot of unnecessary overhead
     #  so we have our own in-house client
     PAGE_REQUEST_CONCURRENCY = app.config["PAGE_REQUEST_CONCURRENCY"]
-    PAGE_SIZE = 200
+    PAGE_SIZE = app.config.get("PAGE_SIZE", 200)
     MAX_PAGE = 100
 
     STREAMS_TO_IMPORT = app.config["STREAMS_TO_IMPORT"]
