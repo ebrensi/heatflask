@@ -727,8 +727,7 @@ function renderLayers(query={}) {
         count = 0;
 
     if (!sock || sock.readyState > 1) {
-        sock = new WebSocket(WEBSOCKET_URL);
-
+        sock = new PersistentWebSocket(WEBSOCKET_URL);
         sock.binaryType = 'arraybuffer';
     } else {
         sendQuery();
@@ -804,13 +803,13 @@ function renderLayers(query={}) {
 
     sock.onopen = function(event) {
         // console.log("socket open: ", event);
-        sendQuery();
+        if (rendering) sendQuery();
     }
 
     // handle one incoming chunk from websocket stream
     sock.onmessage = function(event) {
         let A;
-        // let A = JSON.parse(event.data);
+
         try {
             A = msgpack.decode(new Uint8Array(event.data));
         } 
@@ -818,7 +817,8 @@ function renderLayers(query={}) {
             console.log(event);
             console.log(event.data);
             console.log(e);
-        };
+            return;
+        }
 
         if (!A) {
             $('#renderButton').prop('disabled', false);
