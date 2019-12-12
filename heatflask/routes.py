@@ -634,15 +634,16 @@ def users_update():
         delete=delete,
         update=update
     )
+    return "ok"
 
-    stream = (
-        "{}: {}\n".format(id, status)
-        for id, status in iterator
-    )
-    return Response(
-        stream_with_context(stream),
-        mimetype='text/event-stream'
-    )
+    # stream = (
+    #     "{}: {}\n".format(id, status)
+    #     for id, status in iterator
+    # )
+    # return Response(
+    #     stream_with_context(stream),
+    #     mimetype='text/event-stream'
+    # )
 
 
 @app.route('/users/<username>')
