@@ -802,8 +802,12 @@ function renderLayers(query={}) {
     }
 
     sock.onopen = function(event) {
-        // console.log("socket open: ", event);
+        console.log("socket open: ", event);
         if (rendering) sendQuery();
+    }
+
+    sock.onclose = function(event) {
+        console.log(`socket ${wskey} closed:`, event);
     }
 
     // handle one incoming chunk from websocket stream
