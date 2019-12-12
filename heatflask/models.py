@@ -281,7 +281,7 @@ class Users(UserMixin, db_sql.Model):
         days_inactive = (now - last_active).days
 
         if days_inactive >= days_inactive_cutoff:
-            log.info("%s inactive %s days", self, days_inactive)
+            log.debug("%s inactive %s days > %s", self, days_inactive)
             return
 
         # if we got here then the user has been active recently
@@ -319,7 +319,7 @@ class Users(UserMixin, db_sql.Model):
                 return (user, result)
 
             def handle_verify_result(verify_user_output):
-                result, user = verify_user_output
+                user, result = verify_user_output
                 stats["count"] += 1
                 if not result:
                     if delete:
@@ -329,6 +329,9 @@ class Users(UserMixin, db_sql.Model):
                     stats["invalid"] += 1
                 if result == "updated":
                     stats["updated"] += 1
+
+                if not (stats["count"] % 10):
+                    log.info("triage: %s", stats)
 
             def when_done(dummy):
                 msg = "Users db triage: {}".format(stats)
