@@ -76,7 +76,7 @@
 
     // Now set up websocket
     let wskey, 
-        sock = new WebSocket(WEBSOCKET_URL),
+        sock = new PersistentWebSocket(WEBSOCKET_URL),
         last_ts = data[0].ts + 1;
 
     sock.binaryType = 'arraybuffer';

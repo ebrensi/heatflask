@@ -262,7 +262,7 @@ def auth_callback():
         # remember=True, for persistent login.
         login_user(user, remember=True)
 
-        msg = "Authenticated{} as {}".format(new_user, user, scope)
+        msg = "Authenticated{} {}".format(new_user, user, scope)
         log.info(msg)
         if new_user:
             EventLogger.new_event(msg=msg)
@@ -461,7 +461,7 @@ def data_socket(ws):
 
     wsclient = BinaryWebsocketClient(ws)
 
-    while not ws.closed:
+    while not wsclient.closed:
         obj = wsclient.receiveobj()
         if not obj:
             continue

@@ -2133,12 +2133,20 @@ class BinaryWebsocketClient(object):
 
         # loc = "{REMOTE_ADDR}:{REMOTE_PORT}".format(**websocket.environ)
         ip = websocket.environ["REMOTE_ADDR"]
-        self.key = "WS:{}:{}".format(ip, int(self.birthday))
+        self.name = "WS:{}".format(ip)
+        self.key = "{}:{}".format(self.name, int(self.birthday))
         log.debug("%s OPEN", self.key)
         self.send_key()
 
+        self.gpool = gevent.pool.Pool(2)
+        self.gpool.spawn(self._pinger)
+
     def __repr__(self):
         return self.key
+
+    @property
+    def closed(self):
+        return self.ws.closed
 
     # We send and receive json objects (dictionaries) encoded as strings
     def sendobj(self, obj):
@@ -2184,14 +2192,23 @@ class BinaryWebsocketClient(object):
 
     def send_from(self, gen):
         # send everything from gen, a generator of dict objects.
-        watchdog = gevent.spawn(self._watchdog, gen)
+        watchdog = self.gpool.spawn(self._watchdog, gen)
 
         for obj in gen:
-            if self.ws.closed:
+            if self.closed:
                 break
             self.sendobj(obj)
         
         watchdog.kill()
+
+    def _pinger(self, delay=25):
+        # This method runs in a separate thread, sending a ping message
+        #  periodically, to keep connection from timing out.
+        while not self.closed:
+            gevent.sleep(25)
+            # self.send("ping")
+            self.ws.send_frame("ping", self.ws.OPCODE_PING)
+            log.debug("%s sent ping", self)
 
     def _watchdog(self, gen):
         # This method runs in a separate thread, monitoring socket
@@ -2199,7 +2216,7 @@ class BinaryWebsocketClient(object):
         #  client device.  This allows us to receive an abort signal
         #  among other things.
         # log.debug("%s watchdog: yo!")
-        while not self.ws.closed:
+        while not self.closed:
             msg = self.receiveobj()
             if not msg:
                 continue
