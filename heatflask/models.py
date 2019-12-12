@@ -493,8 +493,9 @@ class Users(UserMixin, db_sql.Model):
         count = 0
         if not streams:
             for A in itertools.imap(export, summaries_generator):
+                if A and "_id" in A:
+                    count += 1
                 abort_signal = yield A
-                count += 1
                 if abort_signal:
                     summaries_generator.send(abort_signal)
                     break
