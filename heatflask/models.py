@@ -2207,7 +2207,12 @@ class BinaryWebsocketClient(object):
         while not self.closed:
             gevent.sleep(25)
             # self.send("ping")
-            self.ws.send_frame("ping", self.ws.OPCODE_PING)
+            try:
+                self.ws.send_frame("ping", self.ws.OPCODE_PING)
+            except WebSocketError:
+                pass
+            except Exception:
+                log.exception("%s error sending ping", self)
             log.debug("%s sent ping", self)
 
     def _watchdog(self, gen):
