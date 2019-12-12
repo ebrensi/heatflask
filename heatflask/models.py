@@ -626,7 +626,7 @@ class Users(UserMixin, db_sql.Model):
         import_stats = Utility.cleandict(import_stats)
         if import_stats:
             import_stats["t_rel"] = round(import_stats.pop("elapsed") / elapsed, 2)
-            # stats["import"] = import_stats
+            import_stats["rate"] = round(import_stats["count"] / elapsed, 2)
             log.info("%s import done. %s", self, import_stats)
         
         log.info("%s fetch done. %s", self, stats)
@@ -900,8 +900,11 @@ class Index(object):
         else:
             elapsed = timer.elapsed()
             msg = (
-                "{}: index import done. {}"
-                .format(user, dict(elapsed=elapsed, count=count))
+                "{}: index import done. {}".format(
+                    user,
+                    dict(elapsed=elapsed,
+                    count=count,
+                    rate=round(count / elapsed, 2)))
             )
 
             log.info(msg)
@@ -1212,6 +1215,8 @@ class StravaClient(object):
             log.exception("%s get_activities: parameter error", self)
             return
 
+        page_stats = dict(count=0, elapsed=0)
+
         def page_iterator():
             page = 1
             while page <= self.final_index_page:
@@ -1227,7 +1232,7 @@ class StravaClient(object):
             url = query_base_url + "&page={}".format(pagenum)
             
             log.debug("%s request index page %s", self, pagenum)
-            timer = Timer()
+            page_timer = Timer()
 
             try:
                 response = requests.get(url, headers=self.headers())
@@ -1243,7 +1248,10 @@ class StravaClient(object):
                 #  then there cannot be any further pages
                 self.final_index_page = min(self.final_index_page, pagenum)
 
-            elapsed = timer.elapsed()
+            elapsed = page_timer.elapsed()
+            page_stats["elapsed"] += elapsed
+            page_stats["count"] += 1
+
             log.debug(
                 "%s index page %s %s",
                 self,
@@ -1253,6 +1261,7 @@ class StravaClient(object):
 
             return pagenum, activities
 
+        tot_timer = Timer()
         pool = gevent.pool.Pool(cls.PAGE_REQUEST_CONCURRENCY)
 
         num_activities_retrieved = 0
@@ -1317,9 +1326,16 @@ class StravaClient(object):
             self.user.delete()
         except Exception as e:
             log.exception(e)
-        finally:
-            self.final_index_page = min(pagenum, self.final_index_page)
-            pool.kill()
+        
+        try:
+            page_stats["avg_resp"] = round(page_stats.pop("elapsed") / page_stats["count"], 2)
+            page_stats["rate"] = round(page_stats["count"] / tot_timer.elapsed(), 2)
+            log.info("%s index pages: %s", self, page_stats)
+        except Exception:
+            log.exception("page stats error")
+
+        self.final_index_page = min(pagenum, self.final_index_page)
+        pool.kill()
 
     def get_activity_streams(self, _id):
         if self.cancel_stream_import:
