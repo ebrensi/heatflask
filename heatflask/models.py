@@ -271,8 +271,6 @@ class Users(UserMixin, db_sql.Model):
         cls = self.__class__
         now = datetime.utcnow()
         
-        cls = self.__class__
-        
         last_active = self.dt_last_active
         if not last_active:
             log.info("%s was never active", self)
@@ -288,21 +286,15 @@ class Users(UserMixin, db_sql.Model):
         #  they may have revoked our access, which we can only
         #  know if we try to get some data on their behalf
         if update and not OFFLINE:
-            user_data = cls.strava_user_data(user=self)
-
-            if user_data:
-                self.__class__.add_or_update(
-                    session=session,
-                    **user_data
-                )
-
-                log.debug("%s successfully updated", self)
-                return "updated"
-
-            else:
-                log.debug("%s has invalid token", self)
-                return
-
+        	client = StravaClient(user=self)
+        
+	        if client:
+				log.debug("%s  valid access_token", self)
+                return "updated"     
+           
+            log.debug("%s has invalid token", self)
+            return
+            
         return True
 
     @classmethod
@@ -316,12 +308,11 @@ class Users(UserMixin, db_sql.Model):
                     session=session
                 )
 
-                if result:
-                    return (user, result)
-
-                if delete:
+                if not result and delete:
                     user.delete(session=session)
                     return (user, "deleted")
+               
+				return (user, result)
             
             P = gevent.pool.Pool(TRIAGE_CONCURRENCY)
             deleted = 0
