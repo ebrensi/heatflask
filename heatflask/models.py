@@ -260,7 +260,7 @@ class Users(UserMixin, db_sql.Model):
         except Exception:
             log.exception("error deleting %s from Postgres", self)
 
-        log.debug("%s deleted", self)
+        log.info("%s deleted", self)
 
     def verify(
         self,
