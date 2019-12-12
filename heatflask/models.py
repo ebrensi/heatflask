@@ -266,10 +266,12 @@ class Users(UserMixin, db_sql.Model):
         self,
         days_inactive_cutoff=DAYS_INACTIVE_CUTOFF,
         update=True,
-        session=db_sql.session
+        session=db_sql.session,
+        now=None
     ):
-        cls = self.__class__
-        now = datetime.utcnow()
+        # cls = self.__class__
+
+        now = now or datetime.utcnow()
         
         last_active = self.dt_last_active
         if not last_active:
@@ -286,74 +288,66 @@ class Users(UserMixin, db_sql.Model):
         #  they may have revoked our access, which we can only
         #  know if we try to get some data on their behalf
         if update and not OFFLINE:
-        	client = StravaClient(user=self)
-        
-	        if client:
-				log.debug("%s  valid access_token", self)
-                return "updated"     
-           
-            log.debug("%s has invalid token", self)
-            return
+            client = StravaClient(user=self)
+
+            if client:
+                log.debug("%s updated")
+                return "updated"
             
+            log.debug("%s can't create client", self)
+            return
         return True
 
     @classmethod
     def triage(cls, days_inactive_cutoff=None, delete=False, update=False):
         with session_scope() as session:
-
-            def triage_user(user):
+            now = datetime.utcnow()
+            stats = dict(
+                count=0,
+                invalid=0,
+                updated=0,
+                deleted=0
+            )
+            
+            def verify_user(user):
                 result = user.verify(
                     days_inactive_cutoff=days_inactive_cutoff,
                     update=update,
-                    session=session
+                    session=session,
+                    now=now
                 )
+                return (user, result)
 
-                if not result and delete:
-                    user.delete(session=session)
-                    return (user, "deleted")
-               
-				return (user, result)
-            
-            P = gevent.pool.Pool(TRIAGE_CONCURRENCY)
-            deleted = 0
-            updated = 0
-            invalid = 0
-            count = 0
-          
-            abort_signal = False
-            triage_jobs = P.imap_unordered(
-                triage_user, cls.query,
+            def handle_verify_result(verify_user_output):
+                result, user = verify_user_output
+                stats["count"] += 1
+                if not result:
+                    if delete:
+                        user.delete(session=session)
+                        # log.debug("...%s deleted")
+                        stats["deleted"] += 1
+                    stats["invalid"] += 1
+                if result == "updated":
+                    stats["updated"] += 1
+
+            def when_done(dummy):
+                msg = "Users db triage: {}".format(stats)
+                log.debug(msg)
+                EventLogger.new_event(msg=msg)
+                log.info("Triage Done: %s", stats)
+
+            P = gevent.pool.Pool(TRIAGE_CONCURRENCY + 1)
+
+            results = P.imap_unordered(
+                verify_user, cls.query,
                 maxsize=TRIAGE_CONCURRENCY + 2
             )
 
-            for user, status in triage_jobs:
-                count += 1
-                if status == "deleted":
-                    deleted += 1
-                    invalid += 1
+            return P.spawn(
+                any,
+                itertools.imap(handle_verify_result, results)
+            ).link(when_done)
 
-                elif status == "updated":
-                    updated += 1
-
-                elif not status:
-                    status = "invalid"
-                    invalid += 1
-
-                abort_signal = yield (user.id, status)
-                if abort_signal:
-                    log.info("user triage aborted")
-                    break
-            
-            results = dict(
-                count=count,
-                invalid=invalid,
-                updated=updated,
-                deleted=deleted
-            )
-            msg = "Users db triage: {}".format(results)
-            log.debug(msg)
-            EventLogger.new_event(msg=msg)
- 
     @classmethod
     def dump(cls, attrs, **filter_by):
         dump = [{attr: getattr(user, attr) for attr in attrs}
