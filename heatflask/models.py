@@ -2186,6 +2186,7 @@ class BinaryWebsocketClient(object):
             self.ws.close()
         except Exception:
             pass
+        self.gpool.kill()
 
     def send_key(self):
         self.sendobj(dict(wskey=self.key))
@@ -2210,7 +2211,9 @@ class BinaryWebsocketClient(object):
             try:
                 self.ws.send_frame("ping", self.ws.OPCODE_PING)
             except WebSocketError:
-                pass
+                log.debug("can't ping. closing...")
+                self.close()
+                return
             except Exception:
                 log.exception("%s error sending ping", self)
             log.debug("%s sent ping", self)

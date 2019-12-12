@@ -69,7 +69,7 @@ rendering=false;updateLayers(msg);}}
 function stopListening(){console.log("stopListening called");if(listening){listening=false;sock.send(JSON.stringify({close:1}));sock.close();if(navigator.sendBeacon&&wskey){navigator.sendBeacon(BEACON_HANDLER_URL,wskey);}
 wskey=null;$('#renderButton').prop('disabled',false);}}
 function sendQuery(){queryObj={client_id:ONLOAD_PARAMS.client_id};queryObj[USER_ID]={limit:type=="activities"?Math.max(1,+num):undefined,after:date1?date1:undefined,before:date2&&date2!="now"?date2:undefined,activity_ids:idString?Array.from(new Set(idString.split(/\D/).map(Number))):undefined,exclude_ids:to_exclude.length?to_exclude:undefined,streams:true};let msg=JSON.stringify({query:queryObj});sock.send(msg);}
-sock.onopen=function(event){if(rendering)sendQuery();};sock.onmessage=function(event){let A;try{A=msgpack.decode(new Uint8Array(event.data));}catch(e){console.log(event);console.log(event.data);console.log(e);return;}
+sock.onopen=function(event){console.log("socket open: ",event);if(rendering)sendQuery();};sock.onclose=function(event){console.log(`socket ${wskey}closed:`,event);};sock.onmessage=function(event){let A;try{A=msgpack.decode(new Uint8Array(event.data));}catch(e){console.log(event);console.log(event.data);console.log(e);return;}
 if(!A){$('#renderButton').prop('disabled',false);doneRendering("Finished.");return;}
 if("error"in A){let msg=`<font color='red'>${A.error}</font><br>`;$(".data_message").html(msg);console.log(`Error:${A.error}`);return;}
 if("msg"in A){$(".data_message").html(A.msg);}
