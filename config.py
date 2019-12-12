@@ -35,8 +35,8 @@ class Config(object):
     IMPORT_CONCURRENCY = 64
 
     # Concurrency for Index page import
-    PAGE_SIZE = 100
-    PAGE_REQUEST_CONCURRENCY = 10
+    PAGE_SIZE = 200
+    PAGE_REQUEST_CONCURRENCY = 16
 
     BATCH_CHUNK_SIZE = 100
 
