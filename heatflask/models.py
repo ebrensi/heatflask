@@ -330,7 +330,7 @@ class Users(UserMixin, db_sql.Model):
                 if result == "updated":
                     stats["updated"] += 1
 
-                if not (stats["count"] % 10):
+                if not (stats["count"] % 1000):
                     log.info("triage: %s", stats)
 
             def when_done(dummy):
