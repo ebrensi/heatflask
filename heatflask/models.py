@@ -1219,7 +1219,7 @@ class StravaClient(object):
             log.exception("%s get_activities: parameter error", self)
             return
 
-        page_stats = dict(count=0, pages=0, elapsed=0, empty=0)
+        page_stats = dict(pages=0, elapsed=0, empty=0)
 
         def page_iterator():
             page = 1
@@ -1338,8 +1338,9 @@ class StravaClient(object):
             log.exception(e)
         
         try:
-            page_stats["avg_resp"] = round(page_stats.pop("elapsed") / page_stats["count"], 2)
-            page_stats["rate"] = round(page_stats["count"] / tot_timer.elapsed(), 2)
+            pages = page_stats["pages"]
+            page_stats["avg_resp"] = round(page_stats.pop("elapsed") / pages , 2)
+            page_stats["rate"] = round(pages / tot_timer.elapsed(), 2)
             log.info("%s index: %s", self, page_stats)
         except Exception:
             log.exception("page stats error")
