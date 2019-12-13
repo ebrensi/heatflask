@@ -1346,32 +1346,34 @@ class StravaClient(object):
         cls = self.__class__
 
         url = cls.GET_STREAMS_URL.format(id=_id)
-        streams = {}
+
+        def extract_stream(stream_dict, s):
+                if s not in stream_dict:
+                    raise UserWarning(
+                        "{} {} not in activity {}".format(self, s, _id))
+                stream = stream_dict[s]["data"]
+                if len(stream) < 3:
+                    raise UserWarning(
+                        "{} insufficient stream {} for activity {}"
+                        .format(self, s, _id)
+                    )
+                return stream
+        
         try:
             response = requests.get(url, headers=self.headers())
+            response.raise_for_status()
+
             stream_dict = response.json()
 
             if not stream_dict:
                 raise UserWarning("{} no streams for {}".format(self, _id))
 
-            for stream_name in cls.STREAMS_TO_IMPORT:
-                if stream_name not in stream_dict:
-                    raise UserWarning(
-                        "{} stream {} not in activity {}"
-                        .format(self, stream_name, _id)
-                    )
-
-            for stream_name, stream_info in stream_dict.items():
-                stream = stream_info["data"]
-                if len(stream) < 3:
-                    raise UserWarning(
-                        "{} insufficient stream {} for activity {}"
-                        .format(self, stream_name, _id)
-                    )
-                streams[stream_name] = stream
-
+            streams = {
+                s: extract_stream(stream_dict, s) for s in cls.STREAMS_TO_IMPORT
+            }
+            
         except UserWarning as e:
-            log.debug(e)
+            log.info(e)
             return
 
         except Exception:
