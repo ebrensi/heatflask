@@ -1,6 +1,5 @@
 # while read requirement; do conda install --yes $requirement; done < requirements-dev.txt
 
-
 stravalib
 rjsmin
 redis
@@ -11,15 +10,17 @@ msgpack
 gunicorn
 futures
 flask
-flask-sockets
-flask_talisman
-flask-sqlalchemy
-flask-login
-flask-compress
-flask-assets
-flask-analytics
-Flask-PyMongo
 flask-redis
+flask-login
+flask-assets
+flask-sslify
+Flask-PyMongo
+flask-sockets
+flask-talisman
+flask-compress
+flask-analytics
+flask-sqlalchemy
+
 cssmin
 base36
 
