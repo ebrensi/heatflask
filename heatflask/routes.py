@@ -1,25 +1,24 @@
 #! usr/bin/env python
 
-from __future__ import unicode_literals
+import os
+import re
+import time
+import json
+import itertools
 from functools import wraps
+from datetime import datetime, timedelta
+from urllib.parse import urlparse, urlunparse #python3
+
 from flask import current_app as app
 from flask import (
     Response, render_template, request, redirect, jsonify, url_for,
     flash, send_from_directory, stream_with_context
 )
-from datetime import datetime, timedelta
-import os
-import json
-import itertools
+
 import base36
 import requests
 import stravalib
 from flask_login import current_user, login_user, logout_user
-import time
-import re
-
-# from urllib.parse import urlparse, urlunparse #python3
-from urlparse import urlparse, urlunparse  # python2
 
 # Local imports
 from . import login_manager, redis, mongo, sockets  #talisman
@@ -802,7 +801,7 @@ def webhook_callback():
 def success():
     try:
         return "Thanks for your donation!"
-    except Exception, e:
+    except Exception as e:
         return(str(e))
 
 #

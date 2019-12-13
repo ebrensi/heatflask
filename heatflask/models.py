@@ -1,4 +1,10 @@
 from contextlib import contextmanager
+import json
+import uuid
+import time
+from bson import ObjectId
+from bson.binary import Binary
+
 from flask import current_app as app
 from flask_login import UserMixin
 from sqlalchemy.dialects import postgresql as pg
@@ -9,18 +15,13 @@ import dateutil
 import dateutil.parser
 import stravalib
 import polyline
-import json
-import uuid
 import gevent
+
 import requests
 import msgpack
-from bson import ObjectId
-from bson.binary import Binary
-import itertools
-import time
+
 from . import mongo, db_sql, redis  # Global database clients
 from . import EPOCH
-from geventwebsocket import WebSocketError
 
 mongodb = mongo.db
 log = app.logger
@@ -348,7 +349,7 @@ class Users(UserMixin, db_sql.Model):
 
             return P.spawn(
                 any,
-                itertools.imap(handle_verify_result, results)
+                map(handle_verify_result, results)
             ).link(when_done)
 
     @classmethod
@@ -492,7 +493,7 @@ class Users(UserMixin, db_sql.Model):
         #  get them ready to export and yield them
         count = 0
         if not streams:
-            for A in itertools.imap(export, summaries_generator):
+            for A in map(export, summaries_generator):
                 if A and "_id" in A:
                     count += 1
                 abort_signal = yield A
@@ -612,7 +613,7 @@ class Users(UserMixin, db_sql.Model):
         ).link(raw_done)
 
         count = 0
-        for A in itertools.imap(export, to_export):
+        for A in map(export, to_export):
             self.abort_signal = yield A
             count += 1
 
@@ -799,7 +800,7 @@ class Index(object):
         
         count = 0
         in_range = False
-        mongo_requests = set()
+        mongo_requests = []
         user = client.user
         user.indexing(0)
 
@@ -887,7 +888,7 @@ class Index(object):
                 else:
                     d["ts_local"] = Utility.to_datetime(d["ts_local"])
 
-                mongo_requests.add(
+                mongo_requests.append(
                     pymongo.ReplaceOne({"_id": d["_id"]}, d, upsert=True)
                 )
                   
