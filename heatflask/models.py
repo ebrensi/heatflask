@@ -529,8 +529,9 @@ class Users(UserMixin, db_sql.Model):
         def import_activity_streams(A):
             if not (A and "_id" in A):
                 return A
+
             if self.abort_signal:
-                # log.debug("%s import %s aborted", self, A["_id"])
+                log.debug("%s import %s aborted", self, A["_id"])
                 return
             
             start = time.time()
@@ -1184,6 +1185,8 @@ class StravaClient(object):
         # log.debug("sent request %s", url)
         try:
             response = requests.get(url, headers=self.headers())
+            response.raise_for_status()
+
             raw = response.json()
             if "id" not in raw:
                 raise UserWarning(raw)
@@ -1217,7 +1220,7 @@ class StravaClient(object):
             log.exception("%s get_activities: parameter error", self)
             return
 
-        page_stats = dict(count=0, elapsed=0)
+        page_stats = dict(pages=0, elapsed=0, empty=0)
 
         def page_iterator():
             page = 1
@@ -1238,22 +1241,28 @@ class StravaClient(object):
 
             try:
                 response = requests.get(url, headers=self.headers())
+                response.raise_for_status()
                 activities = response.json()
 
-            except Exception as e:
-                log.exception(e)
+            except Exception:
+                log.exception("%s failed index page request", self)
                 activities = []
-
+            
+            elapsed = page_timer.elapsed()
             size = len(activities)
+
+            #  if this page has fewer than PAGE_SIZE entries
+            #  then there cannot be any further pages
             if size < cls.PAGE_SIZE:
-                #  if this page has fewer than PAGE_SIZE entries
-                #  then there cannot be any further pages
                 self.final_index_page = min(self.final_index_page, pagenum)
 
-            elapsed = page_timer.elapsed()
-            page_stats["elapsed"] += elapsed
-            page_stats["count"] += 1
-
+            # record stats
+            if size:
+                page_stats["elapsed"] += elapsed
+                page_stats["pages"] += 1
+            else:
+                page_stats["empty"] += 1
+            
             log.debug(
                 "%s index page %s %s",
                 self,
@@ -1330,9 +1339,10 @@ class StravaClient(object):
             log.exception(e)
         
         try:
-            page_stats["avg_resp"] = round(page_stats.pop("elapsed") / page_stats["count"], 2)
-            page_stats["rate"] = round(page_stats["count"] / tot_timer.elapsed(), 2)
-            log.info("%s index pages: %s", self, page_stats)
+            pages = page_stats["pages"]
+            page_stats["avg_resp"] = round(page_stats.pop("elapsed") / pages , 2)
+            page_stats["rate"] = round(pages / tot_timer.elapsed(), 2)
+            log.info("%s index: %s", self, page_stats)
         except Exception:
             log.exception("page stats error")
 
@@ -1347,32 +1357,34 @@ class StravaClient(object):
         cls = self.__class__
 
         url = cls.GET_STREAMS_URL.format(id=_id)
-        streams = {}
+
+        def extract_stream(stream_dict, s):
+                if s not in stream_dict:
+                    raise UserWarning(
+                        "{} {} not in activity {}".format(self, s, _id))
+                stream = stream_dict[s]["data"]
+                if len(stream) < 3:
+                    raise UserWarning(
+                        "{} insufficient stream {} for activity {}"
+                        .format(self, s, _id)
+                    )
+                return stream
+        
         try:
             response = requests.get(url, headers=self.headers())
+            response.raise_for_status()
+
             stream_dict = response.json()
 
             if not stream_dict:
                 raise UserWarning("{} no streams for {}".format(self, _id))
 
-            for stream_name in cls.STREAMS_TO_IMPORT:
-                if stream_name not in stream_dict:
-                    raise UserWarning(
-                        "{} stream {} not in activity {}"
-                        .format(self, stream_name, _id)
-                    )
-
-            for stream_name, stream_info in stream_dict.items():
-                stream = stream_info["data"]
-                if len(stream) < 3:
-                    raise UserWarning(
-                        "{} insufficient stream {} for activity {}"
-                        .format(self, stream_name, _id)
-                    )
-                streams[stream_name] = stream
-
+            streams = {
+                s: extract_stream(stream_dict, s) for s in cls.STREAMS_TO_IMPORT
+            }
+            
         except UserWarning as e:
-            log.debug(e)
+            log.info(e)
             return
 
         except Exception:
@@ -1658,6 +1670,10 @@ class Activities(object):
         except Exception:
             log.exception("failed polyline encode for activity %s", _id)
             return False
+
+        # encoded_streams = {
+        #     name: encoded_stream(stream) for name, stream in result.items
+        # }
 
         for name, stream in result.items():
             # Encode/compress these streams
