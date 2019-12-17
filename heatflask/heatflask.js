@@ -386,7 +386,12 @@ let tableColumns = [
         {
             title: '<i class="fa fa-calendar" aria-hidden="true"></i>',
             data: null,
-            render: (A) => href( stravaActivityURL(A.id), A.tsLoc.toLocaleString())
+            render: (data, type, row) => {
+                if ( type === 'display' || type === 'filter' ) {
+                    return href( stravaActivityURL(row.id), row.tsLoc.toLocaleString());
+                } else 
+                    return row.startTime;
+            }
         },
 
         { 
