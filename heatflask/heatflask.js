@@ -371,9 +371,6 @@ $(".dotscale-dial").knob({
         }
 });
 
-
-
-
 if (FLASH_MESSAGES.length > 0) {
     var msg = "<ul class=flashes>";
     for (let i=0, len=FLASH_MESSAGES.length; i<len; i++) {
