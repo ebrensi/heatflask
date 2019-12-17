@@ -1,26 +1,32 @@
-from contextlib import contextmanager
-from flask import current_app as app
-from flask_login import UserMixin
-from sqlalchemy.dialects import postgresql as pg
-from sqlalchemy import inspect
-import pymongo
-from datetime import datetime
-import dateutil
-import dateutil.parser
-import stravalib
-import polyline
+# Standard library imports
 import json
 import uuid
-import gevent
-import requests
-import msgpack
-from bson import ObjectId
-from bson.binary import Binary
-import itertools
 import time
+from bson import ObjectId
+from operator import truth
+from bson.binary import Binary
+from contextlib import contextmanager
+from datetime import datetime, timedelta
+from itertools import islice, repeat, starmap, takewhile
+
+# Third party imports
+import gevent
+import msgpack
+import pymongo
+import requests
+import polyline
+import stravalib
+import dateutil
+import dateutil.parser
+from sqlalchemy import inspect
+from flask import current_app as app
+from flask_login import UserMixin
+from geventwebsocket import WebSocketError
+from sqlalchemy.dialects import postgresql as pg
+
+# Local application imports
 from . import mongo, db_sql, redis  # Global database clients
 from . import EPOCH
-from geventwebsocket import WebSocketError
 
 mongodb = mongo.db
 log = app.logger
@@ -151,7 +157,7 @@ class Users(UserMixin, db_sql.Model):
         return self.cli
 
     def get_id(self):
-        return unicode(self.id)
+        return str(self.id)
 
     def is_admin(self):
         return self.id in ADMIN
@@ -346,10 +352,11 @@ class Users(UserMixin, db_sql.Model):
                 maxsize=TRIAGE_CONCURRENCY + 2
             )
 
-            return P.spawn(
-                any,
-                itertools.imap(handle_verify_result, results)
-            ).link(when_done)
+            def do_it():
+                for result in results:
+                    handle_verify_result(result)
+            
+            return P.spawn(do_it).link(when_done)
 
     @classmethod
     def dump(cls, attrs, **filter_by):
@@ -478,21 +485,27 @@ class Users(UserMixin, db_sql.Model):
                 #  so pass it on.
                 return A
 
-            A["ts_local"] = str(A["ts_local"])
             ttl = (A["ts"] - now).total_seconds() + STORE_INDEX_TIMEOUT
             A["ttl"] = max(0, int(ttl))
-            del A["ts"]
+
+            ts_local = int(A.pop("ts_local").timestamp())
+            ts_UTC = int(Utility.to_datetime(A.pop("ts_UTC")).timestamp())
+            
+            # A["ts"] received by the client will be a tuple (UTC, diff)
+            #  where UTC is the time of activity (GMT), and diff is
+            #  hours offset so that
+            #   ts_local= UTC + 3600 * diff
+            A["ts"] = (ts_UTC, (ts_local - ts_UTC) / 3600)
 
             if owner_id:
                 A.update(dict(owner=self.id, profile=self.profile))
-
             return A
         
         # if we are only sending summaries to client,
         #  get them ready to export and yield them
         count = 0
         if not streams:
-            for A in itertools.imap(export, summaries_generator):
+            for A in map(export, summaries_generator):
                 if A and "_id" in A:
                     count += 1
                 abort_signal = yield A
@@ -513,17 +526,6 @@ class Users(UserMixin, db_sql.Model):
             to_import = gevent.queue.Queue(maxsize=512)
         else:
             to_import = FakeQueue()
-
-        def handle_fetched(A):
-            if not A or self.abort_signal:
-                return
-            if "time" in A:
-                to_export.put(A)
-                stats["fetched"] += 1
-            elif "_id" not in A:
-                to_export.put(A)
-            else:
-                to_import.put(A)
 
         def import_activity_streams(A):
             if not (A and "_id" in A):
@@ -558,14 +560,6 @@ class Users(UserMixin, db_sql.Model):
 
             return A
 
-        def handle_imported(A):
-            if A and not self.abort_signal:
-                to_export.put(A)
-
-        def handle_raw(raw_summaries):
-            fetched = Activities.append_streams_from_db(raw_summaries)
-            map(handle_fetched, fetched)
-
         # this is where the action happens
         stats = dict(fetched=0)
         import_stats = dict(count=0, errors=0, empty=0, elapsed=0)
@@ -581,39 +575,58 @@ class Users(UserMixin, db_sql.Model):
                 import_activity_streams, to_import
             )
 
+            def handle_imported(imported):
+                for A in imported:
+                    if A and not self.abort_signal:
+                        to_export.put(A)
+
             def imported_done(result):
                 if import_stats["count"]:
                     count = import_stats["count"]
                     elapsed = import_stats["elapsed"]
                     import_stats["avg_resp"] = round(elapsed / count, 2)
-                    # import_stats["elapsed"] = round(elapsed, 2)
-                    # import_stats["rate"] = round(count / timer.elapsed(), 2)
                     log.debug("%s done importing", self)
                 to_export.put(StopIteration)
 
             # this background job fills export queue
             # with activities from imported
-            aux_pool.spawn(any, (
-                handle_imported(A) for A in imported
-            )).link(imported_done)
+            aux_pool.spawn(handle_imported, imported).link(imported_done)
 
         # background job filling import and export queues
         #  it will pause when either queue is full
         chunks = Utility.chunks(summaries_generator, size=BATCH_CHUNK_SIZE)
-        
-        def raw_done(result):
+
+        def process_chunks(chunks):
+            for chunk in chunks:
+                handle_raw(chunk)
+
+        def handle_raw(raw_summaries):
+            for A in Activities.append_streams_from_db(raw_summaries):
+                handle_fetched(A)
+
+        def handle_fetched(A):
+            if not A or self.abort_signal:
+                return
+            if "time" in A:
+                to_export.put(A)
+                stats["fetched"] += 1
+            elif "_id" not in A:
+                to_export.put(A)
+            else:
+                to_import.put(A)
+
+        def raw_done(dummy):
             # The value of result will be False
             log.debug(
                 "%s done with raw summaries. elapsed=%s", self, timer.elapsed()
             )
             to_import.put(StopIteration)
 
-        aux_pool.spawn(any, (
-            handle_raw(chunk) for chunk in chunks)
-        ).link(raw_done)
+        aux_pool.spawn(process_chunks, chunks).link(raw_done)
 
         count = 0
-        for A in itertools.imap(export, to_export):
+        for A in map(export, to_export):
+
             self.abort_signal = yield A
             count += 1
 
@@ -627,7 +640,8 @@ class Users(UserMixin, db_sql.Model):
         stats = Utility.cleandict(stats)
         import_stats = Utility.cleandict(import_stats)
         if import_stats:
-            import_stats["t_rel"] = round(import_stats.pop("elapsed") / elapsed, 2)
+            import_stats["t_rel"] = round(
+                import_stats.pop("elapsed") / elapsed, 2)
             import_stats["rate"] = round(import_stats["count"] / elapsed, 2)
             log.info("%s import done. %s", self, import_stats)
         
@@ -800,7 +814,7 @@ class Index(object):
         
         count = 0
         in_range = False
-        mongo_requests = set()
+        mongo_requests = []
         user = client.user
         user.indexing(0)
 
@@ -888,7 +902,7 @@ class Index(object):
                 else:
                     d["ts_local"] = Utility.to_datetime(d["ts_local"])
 
-                mongo_requests.add(
+                mongo_requests.append(
                     pymongo.ReplaceOne({"_id": d["_id"]}, d, upsert=True)
                 )
                   
@@ -1568,7 +1582,7 @@ class Activities(object):
         for id, key, cached in zip(ids, keys, results):
             if cached:
                 write_pipe.expire(key, ttl)
-                yield (id, msgpack.unpackb(cached))
+                yield (id, msgpack.unpackb(cached, encoding="utf-8"))
             else:
                 notcached[int(id)] = key
         
@@ -1578,7 +1592,7 @@ class Activities(object):
         if notcached:
             # Attempt to fetch uncached activities from MongoDB
             try:
-                query = {"_id": {"$in": notcached.keys()}}
+                query = {"_id": {"$in": list(notcached.keys())}}
                 results = cls.db.find(query)
             except Exception:
                 log.exception("Failed mongodb query: %s", query)
@@ -1593,7 +1607,7 @@ class Activities(object):
                 write_pipe.setex(notcached[id], ttl, packed)
                 fetched.add(id)
 
-                yield (id, msgpack.unpackb(packed))
+                yield (id, msgpack.unpackb(packed, encoding="utf-8"))
 
         # All fetched streams have been sent to the client
         # now we update the data-stores
@@ -1634,7 +1648,7 @@ class Activities(object):
                 packed = document["mpk"]
                 redis.setex(key, ttl, packed)
         if packed:
-            return msgpack.unpackb(packed)
+            return msgpack.unpackb(packed, encoding="utf-8")
 
     @classmethod
     def import_streams(cls, client, activity, timeout=CACHE_TTL):
@@ -1708,7 +1722,7 @@ class Activities(object):
 
         # yield stream-appended summaries that we were able to
         #  fetch streams for
-        for _id, stream_data in cls.get_many(to_fetch.keys()):
+        for _id, stream_data in cls.get_many(list(to_fetch.keys())):
             if not stream_data:
                 continue
             A = to_fetch.pop(_id)
@@ -2114,14 +2128,18 @@ class Utility():
 
     @staticmethod
     def chunks(iterable, size=10):
-        chunk = []
-        for thing in iterable:
-            chunk.append(thing)
-            if len(chunk) == size:
-                yield chunk
-                chunk = []
-        if chunk:
-            yield chunk
+        return takewhile(
+            truth,
+            map(tuple, starmap(islice, repeat((iter(iterable), size))))
+        )
+        # chunk = []
+        # for thing in iterable:
+        #     chunk.append(thing)
+        #     if len(chunk) == size:
+        #         yield chunk
+        #         chunk = []
+        # if chunk:
+        #     yield chunk
 
 
 # FakeQueue is a a queue that does nothing.  We use this for import queue if
@@ -2200,7 +2218,8 @@ class BinaryWebsocketClient(object):
             return obj
 
     def close(self):
-        elapsed = int(time.time() - self.birthday)
+        opensecs = int(time.time() - self.birthday)
+        elapsed = timedelta(seconds=opensecs)
         log.debug("%s CLOSED. elapsed=%s", self.key, elapsed)
 
         try:

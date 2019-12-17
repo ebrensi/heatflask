@@ -1,32 +1,32 @@
 #! usr/bin/env python
 
-from __future__ import unicode_literals
-from functools import wraps
-from flask import current_app as app
-from flask import (
-    Response, render_template, request, redirect, jsonify, url_for,
-    flash, send_from_directory, stream_with_context
-)
-from datetime import datetime, timedelta
+# Standard library imports
 import os
+import re
+import time
 import json
 import itertools
+from functools import wraps
+from datetime import datetime, timedelta
+from urllib.parse import urlparse, urlunparse
+
+# Third party imports
 import base36
 import requests
 import stravalib
+from flask import current_app as app
+from flask import (
+    Response, render_template, request, redirect,
+    jsonify, url_for, flash, send_from_directory
+)
 from flask_login import current_user, login_user, logout_user
-import time
-import re
-
-# from urllib.parse import urlparse, urlunparse #python3
-from urlparse import urlparse, urlunparse  # python2
 
 # Local imports
-from . import login_manager, redis, mongo, sockets  #talisman
+from . import login_manager, redis, mongo, sockets
 
 from .models import (
-    Users, Activities, EventLogger, Utility, Webhooks, Index, Payments,
-    BinaryWebsocketClient, StravaClient, Timer
+    Users, Activities, EventLogger, Utility, Webhooks, Index,
+    Payments, BinaryWebsocketClient, StravaClient, Timer
 )
 
 mongodb = mongo.db
@@ -307,7 +307,7 @@ def delete(username):
     try:
         user.delete()
     except Exception as e:
-        flash(str(e))
+        flash(str(e, "utf-8"))
     else:
         flash("user '{}' ({}) deleted".format(username, user_id))
         EventLogger.new_event(msg="{} deleted".format(user_id))
@@ -681,16 +681,16 @@ def app_init():
 
 @app.route("/beacon_handler", methods=["POST"])
 def beacon_handler():
-    key = request.data
+    key = str(request.data, "utf-8")
     
     try:
         ts = int(key.split(":")[-1])
     except Exception:
-        log.debug("%s CLOSED.", key)
+        log.debug("beacon: %s CLOSED.", key)
     else:
         elapsed = int(time.time() - ts)
         elapsed_td = timedelta(seconds=elapsed)
-        log.debug("%s CLOSED. elapsed=%s", key, elapsed_td)
+        log.debug("beacon: %s CLOSED. elapsed=%s", key, elapsed_td)
 
     return "ok"
 
@@ -802,8 +802,8 @@ def webhook_callback():
 def success():
     try:
         return "Thanks for your donation!"
-    except Exception, e:
-        return(str(e))
+    except Exception as e:
+        return(str(e, "utf-8"))
 
 #
 # Donation/Payment notification handler

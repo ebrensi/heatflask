@@ -1,17 +1,18 @@
-from flask import Flask
+from datetime import datetime
+import os
+
 from werkzeug.debug import DebuggedApplication
+from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_redis import FlaskRedis
 from flask_pymongo import PyMongo
 from flask_compress import Compress
 from flask_login import LoginManager
 from flask_analytics import Analytics
-from flask_talisman import Talisman
+# from flask_talisman import Talisman
 from flask_sslify import SSLify
 from flask_sockets import Sockets
 from flask_assets import Environment
-from datetime import datetime
-import os
 
 # Globally accessible libraries
 db_sql = SQLAlchemy()
@@ -20,7 +21,7 @@ mongo = PyMongo()
 login_manager = LoginManager()
 sockets = Sockets()
 assets = Environment()
-talisman = Talisman()
+# talisman = Talisman()
 
 # Global variables
 EPOCH = datetime.utcfromtimestamp(0)
@@ -60,13 +61,11 @@ def create_app():
         #     app,
         #     content_security_policy=app.config["CONTENT_SECURITY_POLICY"]
         # )
-        from models import (
-            Users, Activities, EventLogger, Utility,
-            Webhooks, Index, Payments
+        from .models import (
+            Activities, EventLogger, Index, Payments
         )
 
-        import routes
-
+        import heatflask.routes
         # initialize/update data-stores
         db_sql.create_all()
 
@@ -93,4 +92,3 @@ def create_app():
             app.wsgi_app = DebuggedApplication(app.wsgi_app, evalex=True)
 
         return app
-
