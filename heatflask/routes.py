@@ -664,6 +664,7 @@ def app_info():
         "mongodb": mongodb.command("dbstats"),
         Activities.name: mongodb.command("collstats", Activities.name),
         Index.name: mongodb.command("collstats", Index.name),
+        "config": app.config
     }
     return jsonify(info)
 
@@ -671,8 +672,9 @@ def app_info():
 @app.route('/app/dbinit')
 @admin_required
 def app_init():
+    keys = redis.keys("*")
     info = {
-        "redis": redis.delete(*redis.keys("*")),
+        "redis": redis.delete(*keys) if keys else [],
         "Activities": Activities.init_db(),
         "Index": Index.init_db()
     }
