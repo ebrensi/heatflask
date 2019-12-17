@@ -199,7 +199,7 @@
           strava_link = href(`${stravaActivityURL( A._id ) }`, STRAVA_BUTTON),
           tup = A["ts"],
           dt = new Date((tup[0] + tup[1]*3600) * 1000),
-          date = dt.toLocaleDateString(),
+          date = dt.toLocaleString(),
           dkm = +(A.total_distance / DIST_UNIT).toFixed(2),
           row = "<tr>" +
              td(href(heatflask_link, A._id)) +
