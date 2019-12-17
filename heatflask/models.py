@@ -1235,7 +1235,7 @@ class StravaClient(object):
                 yield page
                 page += 1
 
-        def request_page(pagenum, page_size):
+        def request_page(pagenum):
 
             if pagenum > self.final_index_page:
                 log.debug("%s index page %s cancelled", self, pagenum)
