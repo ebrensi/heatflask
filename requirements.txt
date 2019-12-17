@@ -22,6 +22,6 @@ base36
 
 python-dateutil
 psycopg2==2.8
-gevent==1.5
+gevent==1.4
 
 wsaccel
