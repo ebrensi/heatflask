@@ -157,7 +157,7 @@ class Users(UserMixin, db_sql.Model):
         return self.cli
 
     def get_id(self):
-        return unicode(self.id)
+        return str(self.id)
 
     def is_admin(self):
         return self.id in ADMIN
