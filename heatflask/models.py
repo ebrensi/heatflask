@@ -520,16 +520,6 @@ class Users(UserMixin, db_sql.Model):
         else:
             to_import = FakeQueue()
 
-        def handle_fetched(A):
-            if not A or self.abort_signal:
-                return
-            if "time" in A:
-                to_export.put(A)
-                stats["fetched"] += 1
-            elif "_id" not in A:
-                to_export.put(A)
-            else:
-                to_import.put(A)
 
         def import_activity_streams(A):
             if not (A and "_id" in A):
@@ -607,6 +597,17 @@ class Users(UserMixin, db_sql.Model):
         def handle_raw(raw_summaries):
             for A in Activities.append_streams_from_db(raw_summaries):
                 handle_fetched(A)
+
+        def handle_fetched(A):
+            if not A or self.abort_signal:
+                return
+            if "time" in A:
+                to_export.put(A)
+                stats["fetched"] += 1
+            elif "_id" not in A:
+                to_export.put(A)
+            else:
+                to_import.put(A)
 
         def raw_done(dummy):
             # The value of result will be False
@@ -1575,7 +1576,7 @@ class Activities(object):
         for id, key, cached in zip(ids, keys, results):
             if cached:
                 write_pipe.expire(key, ttl)
-                yield (id, msgpack.unpackb(cached))
+                yield (id, msgpack.unpackb(cached, encoding="utf-8"))
             else:
                 notcached[int(id)] = key
         
@@ -1600,7 +1601,7 @@ class Activities(object):
                 write_pipe.setex(notcached[id], ttl, packed)
                 fetched.add(id)
 
-                yield (id, msgpack.unpackb(packed))
+                yield (id, msgpack.unpackb(packed, encoding="utf-8"))
 
         # All fetched streams have been sent to the client
         # now we update the data-stores
@@ -1641,7 +1642,7 @@ class Activities(object):
                 packed = document["mpk"]
                 redis.setex(key, ttl, packed)
         if packed:
-            return msgpack.unpackb(packed)
+            return msgpack.unpackb(packed, encoding="utf-8")
 
     @classmethod
     def import_streams(cls, client, activity, timeout=CACHE_TTL):
