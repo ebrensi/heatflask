@@ -1353,8 +1353,9 @@ class StravaClient(object):
         
         try:
             pages = page_stats["pages"]
-            page_stats["avg_resp"] = round(page_stats.pop("elapsed") / pages , 2)
-            page_stats["rate"] = round(pages / tot_timer.elapsed(), 2)
+            if pages:
+                page_stats["avg_resp"] = round(page_stats.pop("elapsed") / pages , 2)
+                page_stats["rate"] = round(pages / tot_timer.elapsed(), 2)
             log.info("%s index: %s", self, page_stats)
         except Exception:
             log.exception("page stats error")
