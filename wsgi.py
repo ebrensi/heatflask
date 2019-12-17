@@ -14,7 +14,7 @@ handlers = gunicorn_logger.handlers or log.handlers
 
 for handler in handlers:
     formatter = handler.setFormatter(logging.Formatter(
-        '[%(process)d] [%(levelname)s] %(message)s'
+        '%(process)d %(levelname).1s %(message)s'
     ))
 
 log.handlers = handlers
@@ -46,3 +46,4 @@ if __name__ == "__main__":
     from geventwebsocket.handler import WebSocketHandler
     server = pywsgi.WSGIServer(('', 5000), app, handler_class=WebSocketHandler)
     server.serve_forever()
+
