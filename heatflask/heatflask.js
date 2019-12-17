@@ -389,7 +389,7 @@ let tableColumns = [
         {
             title: '<i class="fa fa-calendar" aria-hidden="true"></i>',
             data: null,
-            render: (A) => href( stravaActivityURL(A.id), A.tsLoc.toLocaleDateString() )
+            render: (A) => href( stravaActivityURL(A.id), A.tsLoc.toLocaleString())
         },
 
         { 
