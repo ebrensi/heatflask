@@ -488,8 +488,14 @@ class Users(UserMixin, db_sql.Model):
             ttl = (A["ts"] - now).total_seconds() + STORE_INDEX_TIMEOUT
             A["ttl"] = max(0, int(ttl))
 
-            ts_local = int(A.pop("ts_local").timestamp())
-            ts_UTC = int(Utility.to_datetime(A.pop("ts_UTC")).timestamp())
+            try:
+                ts_local = A.pop("ts_local")
+                ts_UTC = A.pop("ts_UTC")
+
+                ts_local = int(Utility.to_datetime(ts_local).timestamp())
+                ts_UTC = int(Utility.to_datetime(ts_UTC).timestamp())
+            except Exception:
+                log.exception("%s, %s", ts_local, ts_UTC)
             
             # A["ts"] received by the client will be a tuple (UTC, diff)
             #  where UTC is the time of activity (GMT), and diff is
