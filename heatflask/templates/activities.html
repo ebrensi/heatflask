@@ -76,8 +76,11 @@
     window.history.pushState({}, "", window.location.origin + window.location.pathname);
 
 
-    function td(text) {
-      return "<td>" + text +"</td>";
+    function td(text, sortable=null) {
+      let tag;
+      if (sortable) tag = `data-order=${sortable}`;
+      else tag = "";
+      return `<td ${tag}>` + text +"</td>";
     }
 
     function groupLink(A) {
@@ -89,6 +92,7 @@
       // return href(url, A.group);
 
     }
+
 
     function secs2DDHHMM(sec){
       // console.log(sec);
@@ -204,7 +208,7 @@
           row = "<tr>" +
              td(href(heatflask_link, A._id)) +
              td(strava_link) +
-             td(date) +
+             td(date, sortable=tup[0]) +
              td(A.type) +
              td(dkm) +
              td(hhmmss(A.elapsed_time)) +
