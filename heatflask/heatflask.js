@@ -389,7 +389,7 @@ let tableColumns = [
         {
             title: '<i class="fa fa-calendar" aria-hidden="true"></i>',
             data: null,
-            render: (A) => href( stravaActivityURL(A.id), A.ts_local.slice(0,10) )
+            render: (A) => href( stravaActivityURL(A.id), A.tsLoc.toLocaleDateString() )
         },
 
         { 
@@ -569,7 +569,7 @@ function activityDataPopup(id, latlng){
     var popup = L.popup()
                 .setLatLng(latlng)
                 .setContent(
-                    `<b>${A.name}</b><br>${A.type}:&nbsp;${A.ts_local}<br>`+
+                    `<b>${A.name}</b><br>${A.type}:&nbsp;${A.tsLoc}<br>`+
                     `${dkm}&nbsp;km&nbsp;(${dmi}&nbsp;mi)&nbsp;in&nbsp;${elapsed}<br>${vkm}&nbsp;(${vmi})<br>` +
                     `View&nbsp;in&nbsp;<a href='https://www.strava.com/activities/${A.id}' target='_blank'>Strava</a>`+
                     `,&nbsp;<a href='${BASE_USER_URL}?id=${A.id}'&nbsp;target='_blank'>Heatflask</a>`
@@ -871,7 +871,7 @@ function renderLayers(query={}) {
         }
 
         // At this point we know A is an activity object, not a message
-        let hasBounds = A.bounds,
+        let hasBounds = ("bounds" in A),
             bounds = hasBounds?
                 L.latLngBounds(A.bounds.SW, A.bounds.NE) : L.latLngBounds();
 
@@ -900,15 +900,18 @@ function renderLayers(query={}) {
             }
         }
 
-       
-        A.id = A._id
-        A.startTime = moment(A.ts_UTC || A.ts_local ).valueOf()
-        A.bounds = bounds;
+        A["id"] = A["_id"];
+        let tup = A["ts"];
+
+        A["tsLoc"] = new Date((tup[0] + tup[1]*3600) * 1000);
+        A["startTime"] = new Date(tup[0]* 1000);        
+        A["bounds"] = bounds;
 
         delete A.summary_polyline;
         delete A.polyline;
         delete A.time;
         delete A._id;
+        delete A.ts;
 
         // only add A to appState.items if it isn't already there
         if (!(A.id in appState.items)) {

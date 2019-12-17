@@ -485,10 +485,17 @@ class Users(UserMixin, db_sql.Model):
                 #  so pass it on.
                 return A
 
-            A["ts_local"] = str(A["ts_local"])
             ttl = (A["ts"] - now).total_seconds() + STORE_INDEX_TIMEOUT
             A["ttl"] = max(0, int(ttl))
-            del A["ts"]
+
+            ts_local = int(A.pop("ts_local").timestamp())
+            ts_UTC = int(Utility.to_datetime(A.pop("ts_UTC")).timestamp())
+            
+            # A["ts"] received by the client will be a tuple (UTC, diff)
+            #  where UTC is the time of activity (GMT), and diff is
+            #  hours offset so that
+            #   ts_local= UTC + 3600 * diff
+            A["ts"] = (ts_UTC, (ts_local - ts_UTC) / 3600)
 
             if owner_id:
                 A.update(dict(owner=self.id, profile=self.profile))
@@ -519,7 +526,6 @@ class Users(UserMixin, db_sql.Model):
             to_import = gevent.queue.Queue(maxsize=512)
         else:
             to_import = FakeQueue()
-
 
         def import_activity_streams(A):
             if not (A and "_id" in A):

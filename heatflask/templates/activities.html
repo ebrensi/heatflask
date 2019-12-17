@@ -148,7 +148,7 @@
         queryObj[USER_ID] = {
                 streams: false,
                 update_index_ts: false,
-                limit: 100000
+                limit: 1000000
         };
 
         let msg = JSON.stringify({query: queryObj});
@@ -197,13 +197,14 @@
       count_DOM_element.innerText = count++;
       let heatflask_link = `${USER_BASE_URL}?id=${A._id}`,
           strava_link = href(`${stravaActivityURL( A._id ) }`, STRAVA_BUTTON),
-          ts = A.ts_local.slice(0,10),
+          tup = A["ts"],
+          dt = new Date((tup[0] + tup[1]*3600) * 1000),
+          date = dt.toLocaleDateString(),
           dkm = +(A.total_distance / DIST_UNIT).toFixed(2),
           row = "<tr>" +
              td(href(heatflask_link, A._id)) +
              td(strava_link) +
-             // td(groupLink(A)) +
-             td(ts) +
+             td(date) +
              td(A.type) +
              td(dkm) +
              td(hhmmss(A.elapsed_time)) +
