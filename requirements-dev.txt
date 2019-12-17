@@ -8,7 +8,6 @@ pymongo
 polyline
 msgpack
 gunicorn
-futures
 flask
 flask-redis
 flask-login
