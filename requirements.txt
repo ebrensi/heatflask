@@ -15,7 +15,7 @@ Flask-PyMongo==2.3
 flask-sockets
 flask-compress
 flask-analytics
-flask-sqlalchemy==2
+flask-sqlalchemy==2.4.1
 
 cssmin
 base36
