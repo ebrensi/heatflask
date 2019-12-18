@@ -1411,7 +1411,7 @@ class StravaClient(object):
             log.info(
                 "%s http error %s for activity %s",
                 self, e.response.status_code, _id)
-            return
+            return False
         except UserWarning as e:
             log.info(e)
             return
