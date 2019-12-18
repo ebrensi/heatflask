@@ -23,6 +23,7 @@ from flask import current_app as app
 from flask_login import UserMixin
 from geventwebsocket import WebSocketError
 from sqlalchemy.dialects import postgresql as pg
+from requests.exceptions import HTTPError
 
 # Local application imports
 from . import mongo, db_sql, redis  # Global database clients
@@ -1210,6 +1211,9 @@ class StravaClient(object):
             if "id" not in raw:
                 raise UserWarning(raw)
             return cls.strava2doc(raw)
+        except HTTPError as e:
+            log.error(e)
+            return False
         except Exception:
             log.exception("%s import-by-id %s failed", self, _id)
             return False
@@ -1400,9 +1404,14 @@ class StravaClient(object):
                 raise UserWarning("{} no streams for {}".format(self, _id))
 
             streams = {
-                s: extract_stream(stream_dict, s) for s in cls.STREAMS_TO_IMPORT
+                s: extract_stream(stream_dict, s)
+                for s in cls.STREAMS_TO_IMPORT
             }
-            
+        except HTTPError as e:
+            log.info(
+                "%s http error %s for activity %s",
+                self, e.response.status_code, _id)
+            return
         except UserWarning as e:
             log.info(e)
             return
@@ -1416,6 +1425,7 @@ class StravaClient(object):
             return False
 
         return streams
+
 
 #  Activities class is only a proxy to underlying data structures.
 #  There are no Activity objects
