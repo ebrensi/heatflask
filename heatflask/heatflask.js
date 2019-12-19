@@ -826,88 +826,70 @@ function renderLayers(query={}) {
             return;
         }
 
+
         if (!A) {
             $('#renderButton').prop('disabled', false);
             doneRendering("Finished.");
             return;
-        }
+        } else 
 
-        if ("error" in A){
-            let msg = `<font color='red'>${A.error}</font><br>`;
-            $(".data_message").html(msg);
-            console.log(`Error: ${A.error}`);
-            return;
-        } 
-
-        if ("msg" in A) {
-            $(".data_message").html(A.msg);
-
-        }
-
-        if ("idx" in A) {
-            $(".data_message").html(`indexing...${A.idx}`);
-        } 
-
-        if ("count" in A){
-            numActivities += A.count;
-        } 
-
-        if ("delete" in A) {
-            // delete all ids in A.delete
-            for (let id of A.delete) {
-                delete appState.items[id];
-            }
-        }
-
-        if ("wskey" in A) {
-            wskey = A.wskey;
-        }
-
-        if ("done" in A){
-            console.log("received done");
-            doneRendering("Done rendering.");
-            return;
-        } 
         if (!("_id" in A)) {
+
+            if ("idx" in A)
+                $(".data_message").html(`indexing...${A.idx}`);
+            
+            else if ("count" in A)
+                numActivities += A.count;
+            
+            else if ("wskey" in A) 
+                wskey = A.wskey;
+            
+            else if ("delete" in A) {
+                // delete all ids in A.delete
+                for (let id of A.delete) {
+                    delete appState.items[id];
+                }
+            
+            } else if ("done" in A) {
+                console.log("received done");
+                doneRendering("Done rendering.");
+                return;
+            
+            } else if ("error" in A) {
+                let msg = `<font color='red'>${A.error}</font><br>`;
+                $(".data_message").html(msg);
+                console.log(`Error: ${A.error}`);
+                return;
+            } else if ("msg" in A) {
+                $(".data_message").html(A.msg);
+
+            }
+            
             return;
         }
 
         // At this point we know A is an activity object, not a message
-        let hasBounds = ("bounds" in A),
-            bounds = hasBounds?
-                L.latLngBounds(A.bounds.SW, A.bounds.NE) : L.latLngBounds();
+        let latLngArray = L.PolylineUtil.decode(A.polyline),
+            timeArray = streamDecode(A.time),
+            len = latLngArray.length,
+            latLngTime = new Float32Array(3*len),
+            tup = A.ts;
 
-        if (A.polyline){
-            let latLngArray = L.PolylineUtil.decode(A.polyline);
+        A.tsLoc = new Date((tup[0] + tup[1]*3600) * 1000);
+        A.startTime = new Date(tup[0]* 1000);        
+        A.bounds = L.latLngBounds(A.bounds.SW, A.bounds.NE);
 
-            if (A.time) {
-                let len = latLngArray.length,
-                    latLngTime = new Float32Array(3*len),
-                    timeArray = streamDecode(A.time);
-
-                for (let i=0, ll; i<len; i++) {
-                    ll = latLngArray[i];
-
-                    if (!hasBounds){
-                        bounds.extend(ll);
-                    }
-
-                    idx = i*3;
-                    latLngTime[idx] = ll[0];
-                    latLngTime[idx+1] = ll[1];
-                    latLngTime[idx+2] = timeArray[i];
-                }
-
-                A.latLngTime = latLngTime;
-            }
+        // create LatLngTime array 
+        for (let i=0, ll; i<len; i++) {
+            ll = latLngArray[i];
+            idx = i*3;
+            latLngTime[idx] = ll[0];
+            latLngTime[idx+1] = ll[1];
+            latLngTime[idx+2] = timeArray[i];
         }
 
-        A["id"] = A["_id"];
-        let tup = A["ts"];
-
-        A["tsLoc"] = new Date((tup[0] + tup[1]*3600) * 1000);
-        A["startTime"] = new Date(tup[0]* 1000);        
-        A["bounds"] = bounds;
+        A.latLngTime = latLngTime;
+        A.id = A._id;
 
         delete A.summary_polyline;
         delete A.polyline;
@@ -1148,7 +1130,7 @@ $(document).ready(function() {
         domIdVal('date2', ONLOAD_PARAMS.date2);
         domIdVal('preset', "");
     }
-     
+    
     renderLayers();
     preset_sync();
 });

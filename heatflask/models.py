@@ -549,6 +549,7 @@ class Users(UserMixin, db_sql.Model):
             A = Activities.import_streams(self.strava_client, A)
             
             elapsed = time.time() - start
+            log.debug("%s response %s in %s", self, _id, round(elapsed, 2))
             
             if A:
                 import_stats["count"] += 1
@@ -562,9 +563,7 @@ class Users(UserMixin, db_sql.Model):
                     return
             else:
                 import_stats["empty"] += 1
-
-            log.debug("%s response %s in %s", self, _id, round(elapsed, 2))
-
+            
             return A
 
         # this is where the action happens
@@ -581,7 +580,7 @@ class Users(UserMixin, db_sql.Model):
             imported = import_pool.imap_unordered(
                 import_activity_streams, to_import
             )
-
+            
             def handle_imported(imported):
                 for A in imported:
                     if A and not self.abort_signal:
@@ -2273,7 +2272,7 @@ class BinaryWebsocketClient(object):
                 return
             except Exception:
                 log.exception("%s error sending ping", self)
-            log.debug("%s sent ping", self)
+            # log.debug("%s sent ping", self)
 
     def _watchdog(self, gen):
         # This method runs in a separate thread, monitoring socket
