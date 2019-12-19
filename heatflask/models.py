@@ -563,7 +563,7 @@ class Users(UserMixin, db_sql.Model):
                     return
             else:
                 import_stats["empty"] += 1
-            
+
             return A
 
         # this is where the action happens
@@ -580,7 +580,7 @@ class Users(UserMixin, db_sql.Model):
             imported = import_pool.imap_unordered(
                 import_activity_streams, to_import
             )
-            
+
             def handle_imported(imported):
                 for A in imported:
                     if A and not self.abort_signal:
@@ -588,10 +588,9 @@ class Users(UserMixin, db_sql.Model):
 
             def imported_done(result):
                 if import_stats["count"]:
-                    count = import_stats["count"]
-                    elapsed = import_stats["elapsed"]
-                    import_stats["avg_resp"] = round(elapsed / count, 2)
-                    log.debug("%s done importing", self)
+                    import_stats["avg_resp"] = round(
+                        import_stats["elapsed"] / import_stats["count"], 2)
+                log.debug("%s done importing", self)
                 to_export.put(StopIteration)
 
             # this background job fills export queue
@@ -646,9 +645,13 @@ class Users(UserMixin, db_sql.Model):
         stats = Utility.cleandict(stats)
         import_stats = Utility.cleandict(import_stats)
         if import_stats:
-            import_stats["t_rel"] = round(
-                import_stats.pop("elapsed") / elapsed, 2)
-            import_stats["rate"] = round(import_stats["count"] / elapsed, 2)
+            try:
+                import_stats["t_rel"] = round(
+                    import_stats.pop("elapsed") / elapsed, 2)
+                import_stats["rate"] = round(
+                    import_stats["count"] / elapsed, 2)
+            except Exception:
+                pass
             log.info("%s import done. %s", self, import_stats)
         
         log.info("%s fetch done. %s", self, stats)
@@ -1407,10 +1410,11 @@ class StravaClient(object):
                 for s in cls.STREAMS_TO_IMPORT
             }
         except HTTPError as e:
+            code = e.response.status_code
             log.info(
                 "%s http error %s for activity %s",
-                self, e.response.status_code, _id)
-            return False
+                self, code, _id)
+            return None if code == 404 else False
         except UserWarning as e:
             log.info(e)
             return
@@ -2263,7 +2267,6 @@ class BinaryWebsocketClient(object):
         #  periodically, to keep connection from timing out.
         while not self.closed:
             gevent.sleep(25)
-            # self.send("ping")
             try:
                 self.ws.send_frame("ping", self.ws.OPCODE_PING)
             except WebSocketError:
