@@ -41,10 +41,13 @@ class Config(object):
     BATCH_CHUNK_SIZE = 100
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_POOL_SIZE = 16
-    SQLALCHEMY_MAX_OVERFLOW = 2
-    SQLALCHEMY_POOL_TIMEOUT = 10
-    SQLALCHEMY_POOL_RECYCLE = 1 * 60 * 60
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_pre_ping": True,
+        "pool_size": 6,
+        "max_overflow": 8,
+        "pool_timeout": 10,
+        "pool_recycle": 300
+    }
 
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
     MONGO_URI = os.environ.get("MONGODB_URI")
