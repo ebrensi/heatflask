@@ -341,7 +341,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             // determine whether or not each projected point is in the
             // currently visible area
             let numProjected = projected.length / 3,
-                numSegs = numProjected -1,
+                numSegs = numProjected-1,
                 segGood = new Int8Array(numProjected-2),
                 goodSegCount = 0,
                 t0 = projected[2],
