@@ -456,17 +456,21 @@ function updateShareStatus(status) {
 
 
 function handle_table_selections( e, dt, type, indexes ) {
+    let redraw = false,
+        mapBounds = map.getBounds();
+
     if ( type === 'row' ) {
         let items = atable.rows( indexes ).data();
          for (let i=0; i<items.length; i++) {
             let A = items[i];
             A.selected = !A.selected;
             A.highlighted = !A.highlighted;
+            redraw |= mapBounds.overlaps(A.bounds);
         }
     }
 
-    DotLayer && DotLayer._onLayerDidMove();
-
+    redraw && DotLayer && DotLayer._onLayerDidMove();
+    
     if ( domIdProp("zoom-to-selection", 'checked') ) {
         zoomToSelectedPaths();
     }
