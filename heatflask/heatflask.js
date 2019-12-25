@@ -85,7 +85,7 @@ map.getPane('tilePane').style.opacity = 0.8;
 
 appState.currentBaseLayer = default_baseLayer;
 map.on('baselayerchange', function (e) {
-    appState.currentBaseLayer = e;
+    appState.currentBaseLayer = e.layer;
     updateState();
 });
 
