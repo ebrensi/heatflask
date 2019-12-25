@@ -105,3 +105,44 @@ function simplify(points, tolerance, highestQuality) {
     return points;
 }
 // -----------------------------------------------------------------------------
+const contains = function (obj) { // (LatLngBounds) or (LatLng) -> Boolean
+    if (typeof obj[0] === 'number' || obj instanceof LatLng || 'lat' in obj) {
+        obj = toLatLng(obj);
+    } else {
+        obj = toLatLngBounds(obj);
+    }
+
+    var sw = this._southWest,
+        ne = this._northEast,
+        sw2, ne2;
+
+    if (obj instanceof LatLngBounds) {
+        sw2 = obj.getSouthWest();
+        ne2 = obj.getNorthEast();
+    } else {
+        sw2 = ne2 = obj;
+    }
+
+    return (sw2.lat >= sw.lat) && (ne2.lat <= ne.lat) &&
+           (sw2.lng >= sw.lng) && (ne2.lng <= ne.lng);
+}
+
+// @method project(latlng: LatLng, zoom: Number): Point
+    // Projects a geographical coordinate `LatLng` according to the projection
+    // of the map's CRS, then scales it according to `zoom` and the CRS's
+    // `Transformation`. The result is pixel coordinate relative to
+    // the CRS origin.
+const project = function (latlng, zoom) {
+    zoom = zoom === undefined ? this._zoom : zoom;
+    return this.options.crs.latLngToPoint(toLatLng(latlng), zoom);
+}
+
+CRS = {  // EPSG:3857
+    // @method latLngToPoint(latlng: LatLng, zoom: Number): Point
+    // Projects geographical coordinates into pixel coordinates for a given zoom.
+    latLngToPoint: function (latlng, zoom) {
+        var projectedPoint = this.projection.project(latlng),
+            scale = this.scale(zoom);
+
+        return this.transformation._transform(projectedPoint, scale);
+}
