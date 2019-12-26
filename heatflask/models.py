@@ -1084,7 +1084,8 @@ class Index(object):
             to_delete = list(exclude_ids - query_ids)
             to_fetch = list(query_ids - exclude_ids)
 
-            yield {"delete": to_delete, "count": len(to_fetch)}
+            yield {"delete": to_delete}
+            yield {"count": len(to_fetch)}
 
             query["_id"] = {"$in": to_fetch}
 
