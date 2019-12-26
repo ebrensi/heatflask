@@ -225,6 +225,14 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         return latOverlaps && lngOverlaps;
     },
 
+    _contains: function (pxBounds, point) {
+        let x = point[0],
+            y = point[1];
+
+        return (pxBounds.min.x <= x) && (x <= pxBounds.max.x) &&
+               (pxBounds.min.y <= y) && (y <= pxBounds.max.y);
+    },
+
     _project: function(A) {
         let llt = A.latLngTime,
             numPoints = llt.length / 3,
@@ -345,18 +353,13 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
                 segGood = new Int8Array(numProjected-2),
                 goodSegCount = 0,
                 t0 = projected[2],
-                in0 = this._pxBounds.contains(
-                    [ projected[0], projected[1] ]
-                );
-
+                in0 = this._contains(pxBounds, projected.slice(0, 2));
 
             for (let i=1, idx; i<numSegs; i++) {
                 let idx = 3 * i,
-                    p = projected.slice(idx, idx+3),
-                    in1 = this._pxBounds.contains(
-                        [ p[0], p[1] ]
-                    ),
-                    t1 = p[2],
+                    p = projected.slice(idx, idx+2),
+                    in1 = this._contains(pxBounds, p),
+                    t1 = projected[idx+2],
                     isGood = ((in0 || in1) && (t1-t0 < tThresh))? 1:0;
                 segGood[i-1] = isGood;
                 goodSegCount += isGood;
@@ -419,9 +422,10 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             if (selectPxBounds){
 
                 for (let i=0, len=projected.length; i<len; i+=3){
-                    let p = new L.Point(projected[i], projected[i+1])._add(this._pxOffset);
+                    let x = projected[i] + this._pxOffset.x,
+                        y = projected[i+1] + this._pxOffset.y;
 
-                    if ( selectPxBounds.contains( p ) ) {
+                    if ( this._contains(selectPxBounds, [x, y]) ) {
                         selectedIds.push(A.id);
                         break;
                     }
