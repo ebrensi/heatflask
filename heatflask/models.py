@@ -771,7 +771,7 @@ class Index(object):
     @classmethod
     def user_index_size(cls, user):
         try:
-            activity_count = cls.db.count({"user_id": user.id})
+            activity_count = cls.db.count_documents({"user_id": user.id})
         except Exception:
             log.exception(
                 "Error retrieving activity count for %s",

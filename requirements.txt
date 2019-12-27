@@ -3,6 +3,7 @@ rjsmin
 redis==3
 requests
 pymongo==3.9
+pymongo[tls,srv]
 polyline==1.4
 msgpack==0.6
 gunicorn==20
@@ -13,7 +14,7 @@ flask-assets
 flask-sslify
 Flask-PyMongo==2.3
 flask-sockets
-flask-compress
+flask-compres
 flask-analytics
 flask-sqlalchemy==2.4.1
 
