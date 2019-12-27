@@ -14,7 +14,7 @@ flask-assets
 flask-sslify
 Flask-PyMongo==2.3
 flask-sockets
-flask-compres
+flask-compress
 flask-analytics
 flask-sqlalchemy==2.4.1
 
