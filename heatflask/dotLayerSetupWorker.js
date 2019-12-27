@@ -1,135 +1,8 @@
-/*
-    simplify.js
-    ------------------------------------
-*/
 
+/* Standalone map.project method for use without requiring leaflet.
+ *  This will eventually be used in a web worker.
+ */ 
 
-
-// both algorithms combined for awesome performance
-function simplify(points, tolerance, highestQuality) {
-    // square distance between 2 points
-    function getSqDist(p1, p2) {
-
-        var dx = p1.x - p2.x,
-            dy = p1.y - p2.y;
-
-        return dx * dx + dy * dy;
-    }
-
-    // square distance from a point to a segment
-    function getSqSegDist(p, p1, p2) {
-
-        var x = p1.x,
-            y = p1.y,
-            dx = p2.x - x,
-            dy = p2.y - y;
-
-        if (dx !== 0 || dy !== 0) {
-
-            var t = ((p.x - x) * dx + (p.y - y) * dy) / (dx * dx + dy * dy);
-
-            if (t > 1) {
-                x = p2.x;
-                y = p2.y;
-
-            } else if (t > 0) {
-                x += dx * t;
-                y += dy * t;
-            }
-        }
-
-        dx = p.x - x;
-        dy = p.y - y;
-
-        return dx * dx + dy * dy;
-    }
-    // rest of the code doesn't care about point format
-
-    // basic distance-based simplification
-    function simplifyRadialDist(points, sqTolerance) {
-
-        var prevPoint = points[0],
-            newPoints = [prevPoint],
-            point;
-
-        for (var i = 1, len = points.length; i < len; i++) {
-            point = points[i];
-
-            if (getSqDist(point, prevPoint) > sqTolerance) {
-                newPoints.push(point);
-                prevPoint = point;
-            }
-        }
-
-        if (prevPoint !== point) newPoints.push(point);
-
-        return newPoints;
-    }
-
-    function simplifyDPStep(points, first, last, sqTolerance, simplified) {
-        var maxSqDist = sqTolerance,
-            index;
-
-        for (var i = first + 1; i < last; i++) {
-            var sqDist = getSqSegDist(points[i], points[first], points[last]);
-
-            if (sqDist > maxSqDist) {
-                index = i;
-                maxSqDist = sqDist;
-            }
-        }
-
-        if (maxSqDist > sqTolerance) {
-            if (index - first > 1) simplifyDPStep(points, first, index, sqTolerance, simplified);
-            simplified.push(points[index]);
-            if (last - index > 1) simplifyDPStep(points, index, last, sqTolerance, simplified);
-        }
-    }
-
-    // simplification using Ramer-Douglas-Peucker algorithm
-    function simplifyDouglasPeucker(points, sqTolerance) {
-        var last = points.length - 1;
-
-        var simplified = [points[0]];
-        simplifyDPStep(points, 0, last, sqTolerance, simplified);
-        simplified.push(points[last]);
-
-        return simplified;
-    }
-
-    if (points.length <= 2) return points;
-
-    var sqTolerance = tolerance !== undefined ? tolerance * tolerance : 1;
-
-    points = highestQuality ? points : simplifyRadialDist(points, sqTolerance);
-    points = simplifyDouglasPeucker(points, sqTolerance);
-
-    return points;
-}
-
-// -----------------------------------------------------------------------------
-
-const contains = function (obj) { // (LatLngBounds) or (LatLng) -> Boolean
-    if (typeof obj[0] === 'number' || obj instanceof LatLng || 'lat' in obj) {
-        obj = toLatLng(obj);
-    } else {
-        obj = toLatLngBounds(obj);
-    }
-
-    var sw = this._southWest,
-        ne = this._northEast,
-        sw2, ne2;
-
-    if (obj instanceof LatLngBounds) {
-        sw2 = obj.getSouthWest();
-        ne2 = obj.getNorthEast();
-    } else {
-        sw2 = ne2 = obj;
-    }
-
-    return (sw2.lat >= sw.lat) && (ne2.lat <= ne.lat) &&
-           (sw2.lng >= sw.lng) && (ne2.lng <= ne.lng);
-}
 
 // @method project(latlng: LatLng, zoom: Number): Point
     // Projects a geographical coordinate `LatLng` according to the projection
@@ -137,43 +10,73 @@ const contains = function (obj) { // (LatLngBounds) or (LatLng) -> Boolean
     // `Transformation`. The result is pixel coordinate relative to
     // the CRS origin.
 const project = function (latlng, zoom) {
-    zoom = zoom === undefined ? this._zoom : zoom;
-    return this.options.crs.latLngToPoint(toLatLng(latlng), zoom);
+    if (!zoom)
+        zoom = this._zoom;
+    return crs.latLngToPoint(toLatLng(latlng), zoom);
 }
 
-CRS = {  // EPSG:3857
-    // @method latLngToPoint(latlng: LatLng, zoom: Number): Point
+crs = {
+    code: 'EPSG:3857',
+
     // Projects geographical coordinates into pixel coordinates for a given zoom.
     latLngToPoint: function (latlng, zoom) {
         var projectedPoint = this.projection.project(latlng),
             scale = this.scale(zoom);
 
         return this.transformation._transform(projectedPoint, scale);
-}
+    },
 
+    // Returns the scale used when transforming projected coordinates into
+    // pixel coordinates for a particular zoom.
+    // For example, it returns `256 * 2^zoom` for Mercator-based CRS.
+    scale: function (zoom) {
+        return 256 * Math.pow(2, zoom);
+    },
 
+    projection: {
+        // SphericalMercator Projection
 
-import {Earth} from './CRS.Earth';
-import {SphericalMercator} from '../projection/Projection.SphericalMercator';
-import {toTransformation} from '../../geometry/Transformation';
-import * as Util from '../../core/Util';
+        earthRadius: 6378137,
+        R: earthRadius,
+        MAX_LATITUDE: 85.0511287798,
 
-/*
- * @namespace CRS
- * @crs L.CRS.EPSG3857
- *
- * The most common CRS for online maps, used by almost all free and commercial
- * tile providers. Uses Spherical Mercator projection. Set in by default in
- * Map's `crs` option.
- */
+        project: function (latlng) {
+            var d = Math.PI / 180,
+                max = this.MAX_LATITUDE,
+                lat = Math.max(Math.min(max, latlng.lat), -max),
+                sin = Math.sin(lat * d);
 
-export var EPSG3857 = Util.extend({}, Earth, {
-    code: 'EPSG:3857',
-    projection: SphericalMercator,
+            return new Point(
+                this.R * latlng.lng * d,
+                this.R * Math.log((1 + sin) / (1 - sin)) / 2);
+        }
+    },
 
-    transformation: (function () {
+    transformation: function () {
         var scale = 0.5 / (Math.PI * SphericalMercator.R);
-        return toTransformation(scale, 0.5, -scale, 0.5);
-    }())
-});
+        [a, b, c, d] = [scale, 0.5, -scale, 0.5]
+        this._a = a;
+        this._b = b;
+        this._c = c;
+        this._d = d;
 
+        _transform = function (point, scale) {
+            scale = scale || 1;
+            point.x = scale * (this._a * point.x + this._b);
+            point.y = scale * (this._c * point.y + this._d);
+            return point;
+        }
+    },
+
+     // distance between two geographical points using spherical law of cosines approximation
+    distance: function (latlng1, latlng2) {
+        var rad = Math.PI / 180,
+            lat1 = latlng1.lat * rad,
+            lat2 = latlng2.lat * rad,
+            sinDLat = Math.sin((latlng2.lat - latlng1.lat) * rad / 2),
+            sinDLon = Math.sin((latlng2.lng - latlng1.lng) * rad / 2),
+            a = sinDLat * sinDLat + Math.cos(lat1) * Math.cos(lat2) * sinDLon * sinDLon,
+            c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return this.R * c;
+    }
+}
