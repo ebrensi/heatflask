@@ -2,7 +2,8 @@ stravalib
 rjsmin
 redis==3
 requests
-pymongo==3.9
+#pymongo==3.9
+pymongo[srv]
 polyline==1.4
 msgpack==0.6
 gunicorn==20
