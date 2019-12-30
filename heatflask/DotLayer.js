@@ -5,19 +5,19 @@
 */
 // -- L.DomUtil.setTransform from leaflet 1.0.0 to work on 0.0.7
 //------------------------------------------------------------------------------
-L.DomUtil.setTransform = L.DomUtil.setTransform || function( el, offset, scale ) {
-    var pos = offset || new L.Point( 0, 0 );
+// L.DomUtil.setTransform = L.DomUtil.setTransform || function( el, offset, scale ) {
+//     var pos = offset || new L.Point( 0, 0 );
 
-    el.style[ L.DomUtil.TRANSFORM ] =
-        ( L.Browser.ie3d ?
-            "translate(" + pos.x + "px," + pos.y + "px)" :
-            "translate3d(" + pos.x + "px," + pos.y + "px,0)" ) +
-        ( scale ? " scale(" + scale + ")" : "" );
-};
+//     el.style[ L.DomUtil.TRANSFORM ] =
+//         ( L.Browser.ie3d ?
+//             "translate(" + pos.x + "px," + pos.y + "px)" :
+//             "translate3d(" + pos.x + "px," + pos.y + "px,0)" ) +
+//         ( scale ? " scale(" + scale + ")" : "" );
+// };
 
-L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
+// L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
-// L.DotLayer = L.Layer.extend( {
+L.DotLayer = L.Layer.extend( {
 
     _pane: "shadowPane",
     two_pi: 2 * Math.PI,
@@ -204,18 +204,18 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
     // -------------------------------------------------------------------
 
-    _simplify: function(points, tolerance, highestQuality) {
+    Simplifier: {
         // square distance between 2 points
-        function getSqDist(p1, p2) {
+        getSqDist: function(p1, p2) {
 
             var dx = p1.x - p2.x,
                 dy = p1.y - p2.y;
 
             return dx * dx + dy * dy;
-        }
+        },
 
         // square distance from a point to a segment
-        function getSqSegDist(p, p1, p2) {
+        getSqSegDist: function(p, p1, p2) {
 
             var x = p1.x,
                 y = p1.y,
@@ -240,11 +240,11 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             dy = p.y - y;
 
             return dx * dx + dy * dy;
-        }
+        },
         // rest of the code doesn't care about point format
 
         // basic distance-based simplification
-        function simplifyRadialDist(points, sqTolerance) {
+        simplifyRadialDist: function(points, sqTolerance) {
 
             var prevPoint = points[0],
                 newPoints = [prevPoint],
@@ -253,7 +253,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             for (var i = 1, len = points.length; i < len; i++) {
                 point = points[i];
 
-                if (getSqDist(point, prevPoint) > sqTolerance) {
+                if (this.getSqDist(point, prevPoint) > sqTolerance) {
                     newPoints.push(point);
                     prevPoint = point;
                 }
@@ -262,14 +262,14 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             if (prevPoint !== point) newPoints.push(point);
 
             return newPoints;
-        }
+        },
 
-        function simplifyDPStep(points, first, last, sqTolerance, simplified) {
+        simplifyDPStep: function(points, first, last, sqTolerance, simplified) {
             var maxSqDist = sqTolerance,
                 index;
 
             for (var i = first + 1; i < last; i++) {
-                var sqDist = getSqSegDist(points[i], points[first], points[last]);
+                var sqDist = this.getSqSegDist(points[i], points[first], points[last]);
 
                 if (sqDist > maxSqDist) {
                     index = i;
@@ -278,77 +278,83 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             }
 
             if (maxSqDist > sqTolerance) {
-                if (index - first > 1) simplifyDPStep(points, first, index, sqTolerance, simplified);
+                if (index - first > 1)
+                    this.simplifyDPStep(points, first, index, sqTolerance, simplified);
+                
                 simplified.push(points[index]);
-                if (last - index > 1) simplifyDPStep(points, index, last, sqTolerance, simplified);
+                
+                if (last - index > 1) 
+                    this.simplifyDPStep(points, index, last, sqTolerance, simplified);
             }
-        }
+        },
 
         // simplification using Ramer-Douglas-Peucker algorithm
-        function simplifyDouglasPeucker(points, sqTolerance) {
+        simplifyDouglasPeucker: function(points, sqTolerance) {
             var last = points.length - 1;
 
             var simplified = [points[0]];
-            simplifyDPStep(points, 0, last, sqTolerance, simplified);
+            this.simplifyDPStep(points, 0, last, sqTolerance, simplified);
             simplified.push(points[last]);
 
             return simplified;
+        },
+
+        simplify: function(points, tolerance, highestQuality) {
+
+            if (points.length <= 2) return points;
+
+            var sqTolerance = tolerance !== undefined ? tolerance * tolerance : 1;
+
+            points = highestQuality ? points : this.simplifyRadialDist(points, sqTolerance);
+            points = this.simplifyDouglasPeucker(points, sqTolerance);
+
+            return points;
         }
-
-        if (points.length <= 2) return points;
-
-        var sqTolerance = tolerance !== undefined ? tolerance * tolerance : 1;
-
-        points = highestQuality ? points : simplifyRadialDist(points, sqTolerance);
-        points = simplifyDouglasPeucker(points, sqTolerance);
-
-        return points;
     },
 
-    CRS: function() {
-        const MAX_LATITUDE = 85.0511287798,
-              EARTH_RADIUS = 6378137,
-              RAD = Math.PI / 180,
-              S = 0.5 / (Math.PI * EARTH_RADIUS),
-              A = S,
-              B = 0.5,
-              C = -S,
-              D = 0.5;
-        
-        const project = function(latlng, zoom) {
+    CRS: {
+        // This is a streamlined version of Leaflet's EPSG:3857 crs,
+        // which can run independently of Leaflet.js (i.e. in a worker thread)
+        //  latlngpt is a a 2d-array [lat,lng] rather than a latlng object
+        code: 'EPSG:3857',
+        MAX_LATITUDE: 85.0511287798,
+        EARTH_RADIUS: 6378137,
+        RAD: Math.PI / 180,
+        T: null,
+
+        makeTransformation: function() {
+            const S = 0.5 / (Math.PI * this.EARTH_RADIUS),
+                  T = {A: S, B: 0.5, C: -S, D: 0.5};
+            this.T = T;
+            return T;
+        },
+     
+        project: function(latlngpt, zoom) {
             const max = this.MAX_LATITUDE,
                 R = this.EARTH_RADIUS,
                 rad = this.RAD,
-                lat = Math.max(Math.min(max, latlng[0]), -max),
+                lat = Math.max(Math.min(max, latlngpt[0]), -max),
                 sin = Math.sin(lat * rad),
-                x = R * latlng[1] * rad,
-                y = R * Math.log((1 + sin) / (1 - sin)) / 2,
-                scale = 256 * Math.pow(2, zoom),
-
-                point = new L.Point(x,y);
+                scale = 256 * Math.pow(2, zoom);
             
-            // Transformation
-            point.x = scale * (this.A * point.x + this.B);
-            point.y = scale * (this.C * point.y + this.D);
-            return point
-        };
+            let x = R * latlngpt[1] * rad,
+                y = R * Math.log((1 + sin) / (1 - sin)) / 2;
 
-        const setTransformation = function(a,b,c,d) {
-            this.A = a;
-            this.B = b;
-            this.C = c;
-            this.D = d;
-            return
-        };
+            // Transformation
+            T = this.T || this.makeTransformation();
+            x = scale * (T.A * x + T.B);
+            y = scale * (T.C * y + T.D);
+            return [x,y]
+        },
 
         // distance between two geographical points using spherical law of cosines approximation
-        const distance = function(latlng1, latlng2) {
+        distance: function(latlngpt1, latlngpt2) {
             const rad = this.RAD,
-                lat1 = latlng1.lat * rad,
-                lat2 = latlng2.lat * rad,
+                lat1 = latlngpt1[0] * rad,
+                lat2 = latlngpt2[0] * rad,
                 R2 = rad / 2,
-                sinDLat = Math.sin((latlng2.lat - latlng1.lat) * R2),
-                sinDLon = Math.sin((latlng2.lng - latlng1.lng) * R2),
+                sinDLat = Math.sin((latlngpt2[0] - latlngpt1[0]) * R2),
+                sinDLon = Math.sin((latlngpt2[1] - latlngpt1[1]) * R2),
                 a = sinDLat * sinDLat + Math.cos(lat1) * Math.cos(lat2) * sinDLon * sinDLon,
                 c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
             return this.EARTH_RADIUS * c;
@@ -376,20 +382,20 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
     },
 
     _project: function(A) {
-        let llt = A.latLngTime,
-            numPoints = llt.length / 3,
-            projectedObjs = new Array(numPoints);
+        const llt = A.latLngTime,
+            numPoints = llt.length / 3;
+            
+        let projectedObjs = new Array(numPoints);
 
         for (let i=0; i<numPoints; i++) {
             let idx = 3*i,
-                p = this._map.project( [llt[idx], llt[idx+1]] );
-            debugger;
-            let p1 = this.crs.project( [llt[idx], llt[idx+1]], this._zoom );
+                p = this.CRS.project( [llt[idx], llt[idx+1]], this._zoom );
+            p = new L.Point(p[0], p[1]);
             p.t = llt[idx+2];
             projectedObjs[i] = p;
         }
 
-        projectedObjs = this._simplify( projectedObjs, this.smoothFactor, true);
+        projectedObjs = this.Simplifier.simplify( projectedObjs, this.smoothFactor, true);
 
         // now projectedObjs is an Array of objects, so we convert it
         // to a Float32Array
