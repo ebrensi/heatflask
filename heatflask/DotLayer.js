@@ -1,9 +1,8 @@
 /*
-  DotLayer Efrem Rensi, 2017,
-  based on L.CanvasLayer by Stanislav Sumbera,  2016 , sumbera.com
+  DotLayer Efrem Rensi, 2020,
+  inspired by L.CanvasLayer by Stanislav Sumbera,  2016 , sumbera.com
   license MIT
 */
-
 // -- L.DomUtil.setTransform from leaflet 1.0.0 to work on 0.0.7
 //------------------------------------------------------------------------------
 L.DomUtil.setTransform = L.DomUtil.setTransform || function( el, offset, scale ) {
@@ -17,6 +16,8 @@ L.DomUtil.setTransform = L.DomUtil.setTransform || function( el, offset, scale )
 };
 
 L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
+
+// L.DotLayer = L.Layer.extend( {
 
     _pane: "shadowPane",
     two_pi: 2 * Math.PI,
@@ -71,6 +72,38 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         this.strava_icon.src = "static/pbs4.png";
     },
 
+    //-------------------------------------------------------------
+    onAdd: function( map ) {
+        this._map = map;
+
+        let size = this._map.getSize(),
+            zoomAnimated = this._map.options.zoomAnimation && L.Browser.any3d;
+
+        // dotlayer canvas
+        this._dotCanvas = L.DomUtil.create( "canvas", "leaflet-layer" );
+        this._dotCanvas.width = size.x;
+        this._dotCanvas.height = size.y;
+        this._dotCtx = this._dotCanvas.getContext( "2d" );
+        L.DomUtil.addClass( this._dotCanvas, "leaflet-zoom-" + ( zoomAnimated ? "animated" : "hide" ) );
+        map._panes.shadowPane.style.pointerEvents = "none";
+        map._panes.shadowPane.appendChild( this._dotCanvas );
+
+        // create Canvas for polyline-ish things
+        this._lineCanvas = L.DomUtil.create( "canvas", "leaflet-layer" );
+        this._lineCanvas.width = size.x;
+        this._lineCanvas.height = size.y;
+        this._lineCtx = this._lineCanvas.getContext( "2d" );
+        this._lineCtx.lineCap = "round";
+        this._lineCtx.lineJoin = "round";
+        L.DomUtil.addClass( this._lineCanvas, "leaflet-zoom-" + ( zoomAnimated ? "animated" : "hide" ) );
+        map._panes.overlayPane.appendChild( this._lineCanvas );
+
+        map.on( this.getEvents(), this );
+
+        if ( this._items ) {
+            this.reset();
+        }
+    },
 
     //-------------------------------------------------------------
     _onLayerDidResize: function( resizeEvent ) {
@@ -115,40 +148,6 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         }
 
         return events;
-    },
-
-
-    //-------------------------------------------------------------
-    onAdd: function( map ) {
-        this._map = map;
-
-        let size = this._map.getSize(),
-            zoomAnimated = this._map.options.zoomAnimation && L.Browser.any3d;
-
-        // dotlayer canvas
-        this._dotCanvas = L.DomUtil.create( "canvas", "leaflet-layer" );
-        this._dotCanvas.width = size.x;
-        this._dotCanvas.height = size.y;
-        this._dotCtx = this._dotCanvas.getContext( "2d" );
-        L.DomUtil.addClass( this._dotCanvas, "leaflet-zoom-" + ( zoomAnimated ? "animated" : "hide" ) );
-        map._panes.shadowPane.style.pointerEvents = "none";
-        map._panes.shadowPane.appendChild( this._dotCanvas );
-
-        // create Canvas for polyline-ish things
-        this._lineCanvas = L.DomUtil.create( "canvas", "leaflet-layer" );
-        this._lineCanvas.width = size.x;
-        this._lineCanvas.height = size.y;
-        this._lineCtx = this._lineCanvas.getContext( "2d" );
-        this._lineCtx.lineCap = "round";
-        this._lineCtx.lineJoin = "round";
-        L.DomUtil.addClass( this._lineCanvas, "leaflet-zoom-" + ( zoomAnimated ? "animated" : "hide" ) );
-        map._panes.overlayPane.appendChild( this._lineCanvas );
-
-        map.on( this.getEvents(), this );
-
-        if ( this._items ) {
-            this.reset();
-        }
     },
 
     //-------------------------------------------------------------
@@ -306,52 +305,52 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         return points;
     },
 
-    crs: {
-        MAX_LATITUDE: 85.0511287798,
-        EARTH_RADIUS: 6378137,
-        RAD: Math.PI / 180,
-        S: 0.5 / (Math.PI * EARTH_RADIUS),
-        A: S,
-        B: 0.5,
-        C:-S,
-        D: 0.5,
+    CRS: function() {
+        const MAX_LATITUDE = 85.0511287798,
+              EARTH_RADIUS = 6378137,
+              RAD = Math.PI / 180,
+              S = 0.5 / (Math.PI * EARTH_RADIUS),
+              A = S,
+              B = 0.5,
+              C = -S,
+              D = 0.5;
         
-        project: function(latlng, zoom) {
+        const project = function(latlng, zoom) {
             const max = this.MAX_LATITUDE,
                 R = this.EARTH_RADIUS,
                 rad = this.RAD,
-                lat = Math.max(Math.min(max, latlng.lat), -max),
+                lat = Math.max(Math.min(max, latlng[0]), -max),
                 sin = Math.sin(lat * rad),
-                x = R * latlng.lng * rad,
+                x = R * latlng[1] * rad,
                 y = R * Math.log((1 + sin) / (1 - sin)) / 2,
-                scale = 256 * Math.pow(2, zoom);
+                scale = 256 * Math.pow(2, zoom),
 
-            let point = new Point(x,y);
+                point = new L.Point(x,y);
             
             // Transformation
-            point.x = scale * (A * point.x + B);
-            point.y = scale * (C * point.y + D);
+            point.x = scale * (this.A * point.x + this.B);
+            point.y = scale * (this.C * point.y + this.D);
             return point
-        },
+        };
 
-        setTransformation: function(a,b,c,d){
+        const setTransformation = function(a,b,c,d) {
             this.A = a;
             this.B = b;
             this.C = c;
             this.D = d;
             return
-        }
+        };
 
-         // distance between two geographical points using spherical law of cosines approximation
-        distance = function (latlng1, latlng2) {
+        // distance between two geographical points using spherical law of cosines approximation
+        const distance = function(latlng1, latlng2) {
             const rad = this.RAD,
-                  lat1 = latlng1.lat * rad,
-                  lat2 = latlng2.lat * rad,
-                  R2 = rad / 2,
-                  sinDLat = Math.sin((latlng2.lat - latlng1.lat) * R2),
-                  sinDLon = Math.sin((latlng2.lng - latlng1.lng) * R2),
-                  a = sinDLat * sinDLat + Math.cos(lat1) * Math.cos(lat2) * sinDLon * sinDLon,
-                  c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                lat1 = latlng1.lat * rad,
+                lat2 = latlng2.lat * rad,
+                R2 = rad / 2,
+                sinDLat = Math.sin((latlng2.lat - latlng1.lat) * R2),
+                sinDLon = Math.sin((latlng2.lng - latlng1.lng) * R2),
+                a = sinDLat * sinDLat + Math.cos(lat1) * Math.cos(lat2) * sinDLon * sinDLon,
+                c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
             return this.EARTH_RADIUS * c;
         }
     },
@@ -381,9 +380,11 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             numPoints = llt.length / 3,
             projectedObjs = new Array(numPoints);
 
-        for (let i=0, p, idx; i<numPoints; i++) {
-            idx = 3*i;
-            p = this._map.project( [llt[idx], llt[idx+1]] );
+        for (let i=0; i<numPoints; i++) {
+            let idx = 3*i,
+                p = this._map.project( [llt[idx], llt[idx+1]] );
+            debugger;
+            let p1 = this.crs.project( [llt[idx], llt[idx+1]], this._zoom );
             p.t = llt[idx+2];
             projectedObjs[i] = p;
         }
@@ -1026,7 +1027,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             itemsList[ i ].dotColor = this._colorPalette[ i ];
         }
    
-}
+    }
 
 } );  // end of L.DotLayer definition
 
