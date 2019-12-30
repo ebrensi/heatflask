@@ -16,7 +16,6 @@ L.DomUtil.setTransform = L.DomUtil.setTransform || function( el, offset, scale )
         ( scale ? " scale(" + scale + ")" : "" );
 };
 
-// -- support for both  0.0.7 and 1.0.0 rc2 leaflet
 L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
     _pane: "shadowPane",
@@ -305,6 +304,56 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         points = simplifyDouglasPeucker(points, sqTolerance);
 
         return points;
+    },
+
+    crs: {
+        MAX_LATITUDE: 85.0511287798,
+        EARTH_RADIUS: 6378137,
+        RAD: Math.PI / 180,
+        S: 0.5 / (Math.PI * EARTH_RADIUS),
+        A: S,
+        B: 0.5,
+        C:-S,
+        D: 0.5,
+        
+        project: function(latlng, zoom) {
+            const max = this.MAX_LATITUDE,
+                R = this.EARTH_RADIUS,
+                rad = this.RAD,
+                lat = Math.max(Math.min(max, latlng.lat), -max),
+                sin = Math.sin(lat * rad),
+                x = R * latlng.lng * rad,
+                y = R * Math.log((1 + sin) / (1 - sin)) / 2,
+                scale = 256 * Math.pow(2, zoom);
+
+            let point = new Point(x,y);
+            
+            // Transformation
+            point.x = scale * (A * point.x + B);
+            point.y = scale * (C * point.y + D);
+            return point
+        },
+
+        setTransformation: function(a,b,c,d){
+            this.A = a;
+            this.B = b;
+            this.C = c;
+            this.D = d;
+            return
+        }
+
+         // distance between two geographical points using spherical law of cosines approximation
+        distance = function (latlng1, latlng2) {
+            const rad = this.RAD,
+                  lat1 = latlng1.lat * rad,
+                  lat2 = latlng2.lat * rad,
+                  R2 = rad / 2,
+                  sinDLat = Math.sin((latlng2.lat - latlng1.lat) * R2),
+                  sinDLon = Math.sin((latlng2.lng - latlng1.lng) * R2),
+                  a = sinDLat * sinDLat + Math.cos(lat1) * Math.cos(lat2) * sinDLon * sinDLon,
+                  c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return this.EARTH_RADIUS * c;
+        }
     },
 
     _overlaps: function(mapBounds, activityBounds) {
