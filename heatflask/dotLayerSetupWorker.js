@@ -12,7 +12,8 @@
 const project = function (latlng, zoom) {
     if (!zoom)
         zoom = this._zoom;
-    return crs.latLngToPoint(toLatLng(latlng), zoom);
+    // return crs.latLngToPoint(toLatLng(latlng), zoom);
+    let scale = 256 * Math.pow(2, zoom)
 }
 
 crs = {
