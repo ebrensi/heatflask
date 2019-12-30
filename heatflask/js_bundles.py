@@ -40,6 +40,7 @@ bundles = {
             'js/leaflet-image.js',  # Tom MacWright: https://github.com/mapbox/leaflet-image
             'js/leaflet-areaselect.js',
             'js/easy-button.js',
+            'js/FastBitSet.js',
             filters=["babel", "rjsmin"],
             output="gen/build/non-compiled-dependencies.js"
         ),

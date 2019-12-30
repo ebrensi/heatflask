@@ -384,7 +384,7 @@ L.DotLayer = L.Layer.extend( {
     _project: function(A) {
         const llt = A.latLngTime,
             numPoints = llt.length / 3;
-            
+
         let projectedObjs = new Array(numPoints);
 
         for (let i=0; i<numPoints; i++) {
@@ -395,7 +395,7 @@ L.DotLayer = L.Layer.extend( {
             projectedObjs[i] = p;
         }
 
-        projectedObjs = this.Simplifier.simplify( projectedObjs, this.smoothFactor, true);
+        projectedObjs = this.Simplifier.simplify( projectedObjs, this.smoothFactor, false);
 
         // now projectedObjs is an Array of objects, so we convert it
         // to a Float32Array
@@ -507,7 +507,7 @@ L.DotLayer = L.Layer.extend( {
 
             for (let i=1, idx; i<numSegs; i++) {
                 let idx = 3 * i,
-                    p = projected.slice(idx, idx+2),
+                    p = [projected[idx], projected[idx+1]],
                     in1 = this._contains(pxBounds, p),
                     t1 = projected[idx+2],
                     isGood = ((in0 || in1) && (t1-t0 < tThresh))? 1:0;
