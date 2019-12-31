@@ -52,7 +52,7 @@ class Config(object):
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
 
     MONGO_OPTIONS = {
-        "maxIdleTimeMS": 5000,
+        "maxIdleTimeMS": 10000,
         "maxPoolSize": 100
     }
 

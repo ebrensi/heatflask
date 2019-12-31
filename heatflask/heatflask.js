@@ -470,7 +470,7 @@ function handle_table_selections( e, dt, type, indexes ) {
     }
 
     redraw && DotLayer && DotLayer._onLayerDidMove();
-    
+
     if ( domIdProp("zoom-to-selection", 'checked') ) {
         zoomToSelectedPaths();
     }
@@ -880,7 +880,7 @@ function renderLayers(query={}) {
             tup = A.ts;
 
         A.tsLoc = new Date((tup[0] + tup[1]*3600) * 1000);
-        A.startTime = new Date(tup[0]* 1000);        
+        A.startTime = new Date(tup[0]* 1000);  
         A.bounds = L.latLngBounds(A.bounds.SW, A.bounds.NE);
 
         // create LatLngTime array 
