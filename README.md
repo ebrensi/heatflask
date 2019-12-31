@@ -1,6 +1,6 @@
 # Activities Visualization App
 
-#### A Flask app that displays cyclic animated visualizations from Strava activity data
+#### Cyclic animated visualizations from Strava activity data
 #### http://heatflask.com
 
 See a live demo with data at http://heatflask.com/demo
