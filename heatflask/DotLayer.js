@@ -1,23 +1,23 @@
 /*
-  DotLayer Efrem Rensi, 2017,
-  based on L.CanvasLayer by Stanislav Sumbera,  2016 , sumbera.com
+  DotLayer Efrem Rensi, 2020,
+  inspired by L.CanvasLayer by Stanislav Sumbera,  2016 , sumbera.com
   license MIT
 */
-
 // -- L.DomUtil.setTransform from leaflet 1.0.0 to work on 0.0.7
 //------------------------------------------------------------------------------
-L.DomUtil.setTransform = L.DomUtil.setTransform || function( el, offset, scale ) {
-    var pos = offset || new L.Point( 0, 0 );
+// L.DomUtil.setTransform = L.DomUtil.setTransform || function( el, offset, scale ) {
+//     var pos = offset || new L.Point( 0, 0 );
 
-    el.style[ L.DomUtil.TRANSFORM ] =
-        ( L.Browser.ie3d ?
-            "translate(" + pos.x + "px," + pos.y + "px)" :
-            "translate3d(" + pos.x + "px," + pos.y + "px,0)" ) +
-        ( scale ? " scale(" + scale + ")" : "" );
-};
+//     el.style[ L.DomUtil.TRANSFORM ] =
+//         ( L.Browser.ie3d ?
+//             "translate(" + pos.x + "px," + pos.y + "px)" :
+//             "translate3d(" + pos.x + "px," + pos.y + "px,0)" ) +
+//         ( scale ? " scale(" + scale + ")" : "" );
+// };
 
-// -- support for both  0.0.7 and 1.0.0 rc2 leaflet
-L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
+// L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
+
+L.DotLayer = L.Layer.extend( {
 
     _pane: "shadowPane",
     two_pi: 2 * Math.PI,
@@ -72,6 +72,38 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         this.strava_icon.src = "static/pbs4.png";
     },
 
+    //-------------------------------------------------------------
+    onAdd: function( map ) {
+        this._map = map;
+
+        let size = this._map.getSize(),
+            zoomAnimated = this._map.options.zoomAnimation && L.Browser.any3d;
+
+        // dotlayer canvas
+        this._dotCanvas = L.DomUtil.create( "canvas", "leaflet-layer" );
+        this._dotCanvas.width = size.x;
+        this._dotCanvas.height = size.y;
+        this._dotCtx = this._dotCanvas.getContext( "2d" );
+        L.DomUtil.addClass( this._dotCanvas, "leaflet-zoom-" + ( zoomAnimated ? "animated" : "hide" ) );
+        map._panes.shadowPane.style.pointerEvents = "none";
+        map._panes.shadowPane.appendChild( this._dotCanvas );
+
+        // create Canvas for polyline-ish things
+        this._lineCanvas = L.DomUtil.create( "canvas", "leaflet-layer" );
+        this._lineCanvas.width = size.x;
+        this._lineCanvas.height = size.y;
+        this._lineCtx = this._lineCanvas.getContext( "2d" );
+        this._lineCtx.lineCap = "round";
+        this._lineCtx.lineJoin = "round";
+        L.DomUtil.addClass( this._lineCanvas, "leaflet-zoom-" + ( zoomAnimated ? "animated" : "hide" ) );
+        map._panes.overlayPane.appendChild( this._lineCanvas );
+
+        map.on( this.getEvents(), this );
+
+        if ( this._items ) {
+            this.reset();
+        }
+    },
 
     //-------------------------------------------------------------
     _onLayerDidResize: function( resizeEvent ) {
@@ -118,40 +150,6 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         return events;
     },
 
-
-    //-------------------------------------------------------------
-    onAdd: function( map ) {
-        this._map = map;
-
-        let size = this._map.getSize(),
-            zoomAnimated = this._map.options.zoomAnimation && L.Browser.any3d;
-
-        // dotlayer canvas
-        this._dotCanvas = L.DomUtil.create( "canvas", "leaflet-layer" );
-        this._dotCanvas.width = size.x;
-        this._dotCanvas.height = size.y;
-        this._dotCtx = this._dotCanvas.getContext( "2d" );
-        L.DomUtil.addClass( this._dotCanvas, "leaflet-zoom-" + ( zoomAnimated ? "animated" : "hide" ) );
-        map._panes.shadowPane.style.pointerEvents = "none";
-        map._panes.shadowPane.appendChild( this._dotCanvas );
-
-        // create Canvas for polyline-ish things
-        this._lineCanvas = L.DomUtil.create( "canvas", "leaflet-layer" );
-        this._lineCanvas.width = size.x;
-        this._lineCanvas.height = size.y;
-        this._lineCtx = this._lineCanvas.getContext( "2d" );
-        this._lineCtx.lineCap = "round";
-        this._lineCtx.lineJoin = "round";
-        L.DomUtil.addClass( this._lineCanvas, "leaflet-zoom-" + ( zoomAnimated ? "animated" : "hide" ) );
-        map._panes.overlayPane.appendChild( this._lineCanvas );
-
-        map.on( this.getEvents(), this );
-
-        if ( this._items ) {
-            this.reset();
-        }
-    },
-
     //-------------------------------------------------------------
     // Call this function when items are added or reomved
     reset: function() {
@@ -191,14 +189,6 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         return this;
     },
 
-    // --------------------------------------------------------------------
-    LatLonToMercator: function( latlon ) {
-        return {
-            x: latlon.lng * 6378137 * Math.PI / 180,
-            y: Math.log( Math.tan( ( 90 + latlon.lat ) * Math.PI / 360 ) ) * 6378137
-        };
-    },
-
     // -------------------------------------------------------------------
     setSelectRegion: function(pxBounds, callback) {
         let paused = this._paused;
@@ -213,6 +203,215 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
     },
 
     // -------------------------------------------------------------------
+
+    Simplifier: {
+        // square distance between 2 points
+        getSqDist: function(p1, p2) {
+
+            var dx = p1.x - p2.x,
+                dy = p1.y - p2.y;
+
+            return dx * dx + dy * dy;
+        },
+
+        // square distance from a point to a segment
+        getSqSegDist: function(p, p1, p2) {
+
+            var x = p1.x,
+                y = p1.y,
+                dx = p2.x - x,
+                dy = p2.y - y;
+
+            if (dx !== 0 || dy !== 0) {
+
+                var t = ((p.x - x) * dx + (p.y - y) * dy) / (dx * dx + dy * dy);
+
+                if (t > 1) {
+                    x = p2.x;
+                    y = p2.y;
+
+                } else if (t > 0) {
+                    x += dx * t;
+                    y += dy * t;
+                }
+            }
+
+            dx = p.x - x;
+            dy = p.y - y;
+
+            return dx * dx + dy * dy;
+        },
+        // rest of the code doesn't care about point format
+
+        // basic distance-based simplification
+        simplifyRadialDist: function(points, sqTolerance) {
+
+            var prevPoint = points[0],
+                newPoints = [prevPoint],
+                point;
+
+            for (var i = 1, len = points.length; i < len; i++) {
+                point = points[i];
+
+                if (this.getSqDist(point, prevPoint) > sqTolerance) {
+                    newPoints.push(point);
+                    prevPoint = point;
+                }
+            }
+
+            if (prevPoint !== point) newPoints.push(point);
+
+            return newPoints;
+        },
+
+        simplifyDPStep: function(points, first, last, sqTolerance, simplified) {
+            var maxSqDist = sqTolerance,
+                index;
+
+            for (var i = first + 1; i < last; i++) {
+                var sqDist = this.getSqSegDist(points[i], points[first], points[last]);
+
+                if (sqDist > maxSqDist) {
+                    index = i;
+                    maxSqDist = sqDist;
+                }
+            }
+
+            if (maxSqDist > sqTolerance) {
+                if (index - first > 1)
+                    this.simplifyDPStep(points, first, index, sqTolerance, simplified);
+                
+                simplified.push(points[index]);
+                
+                if (last - index > 1) 
+                    this.simplifyDPStep(points, index, last, sqTolerance, simplified);
+            }
+        },
+
+        // simplification using Ramer-Douglas-Peucker algorithm
+        simplifyDouglasPeucker: function(points, sqTolerance) {
+            var last = points.length - 1;
+
+            var simplified = [points[0]];
+            this.simplifyDPStep(points, 0, last, sqTolerance, simplified);
+            simplified.push(points[last]);
+
+            return simplified;
+        },
+
+        simplify: function(points, tolerance, highestQuality) {
+
+            if (points.length <= 2) return points;
+
+            var sqTolerance = tolerance !== undefined ? tolerance * tolerance : 1;
+
+            points = highestQuality ? points : this.simplifyRadialDist(points, sqTolerance);
+            points = this.simplifyDouglasPeucker(points, sqTolerance);
+
+            return points;
+        }
+    },
+
+    CRS: {
+        // This is a streamlined version of Leaflet's EPSG:3857 crs,
+        // which can run independently of Leaflet.js (i.e. in a worker thread)
+        //  latlngpt is a a 2d-array [lat,lng] rather than a latlng object
+        code: 'EPSG:3857',
+        MAX_LATITUDE: 85.0511287798,
+        EARTH_RADIUS: 6378137,
+        RAD: Math.PI / 180,
+        T: null,
+
+        makeTransformation: function() {
+            const S = 0.5 / (Math.PI * this.EARTH_RADIUS),
+                  T = {A: S, B: 0.5, C: -S, D: 0.5};
+            this.T = T;
+            return T;
+        },
+     
+        project: function(latlngpt, zoom) {
+            const max = this.MAX_LATITUDE,
+                R = this.EARTH_RADIUS,
+                rad = this.RAD,
+                lat = Math.max(Math.min(max, latlngpt[0]), -max),
+                sin = Math.sin(lat * rad),
+                scale = 256 * Math.pow(2, zoom);
+            
+            let x = R * latlngpt[1] * rad,
+                y = R * Math.log((1 + sin) / (1 - sin)) / 2;
+
+            // Transformation
+            T = this.T || this.makeTransformation();
+            x = scale * (T.A * x + T.B);
+            y = scale * (T.C * y + T.D);
+            return [x,y]
+        },
+
+        // distance between two geographical points using spherical law of cosines approximation
+        distance: function(latlngpt1, latlngpt2) {
+            const rad = this.RAD,
+                lat1 = latlngpt1[0] * rad,
+                lat2 = latlngpt2[0] * rad,
+                R2 = rad / 2,
+                sinDLat = Math.sin((latlngpt2[0] - latlngpt1[0]) * R2),
+                sinDLon = Math.sin((latlngpt2[1] - latlngpt1[1]) * R2),
+                a = sinDLat * sinDLat + Math.cos(lat1) * Math.cos(lat2) * sinDLon * sinDLon,
+                c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return this.EARTH_RADIUS * c;
+        }
+    },
+
+    _overlaps: function(mapBounds, activityBounds) {
+        let sw = mapBounds._southWest,
+            ne = mapBounds._northEast,
+            sw2 = activityBounds._southWest,
+            ne2 = activityBounds._northEast,
+
+            latOverlaps = (ne2.lat > sw.lat) && (sw2.lat < ne.lat),
+            lngOverlaps = (ne2.lng > sw.lng) && (sw2.lng < ne.lng);
+
+        return latOverlaps && lngOverlaps;
+    },
+
+    _contains: function (pxBounds, point) {
+        let x = point[0],
+            y = point[1];
+
+        return (pxBounds.min.x <= x) && (x <= pxBounds.max.x) &&
+               (pxBounds.min.y <= y) && (y <= pxBounds.max.y);
+    },
+
+    _project: function(A) {
+        const llt = A.latLngTime,
+            numPoints = llt.length / 3;
+
+        let projectedObjs = new Array(numPoints);
+
+        for (let i=0; i<numPoints; i++) {
+            let idx = 3*i,
+                p = this.CRS.project( [llt[idx], llt[idx+1]], this._zoom );
+            p = new L.Point(p[0], p[1]);
+            p.t = llt[idx+2];
+            projectedObjs[i] = p;
+        }
+
+        projectedObjs = this.Simplifier.simplify( projectedObjs, this.smoothFactor, false);
+
+        // now projectedObjs is an Array of objects, so we convert it
+        // to a Float32Array
+        let numObjs = projectedObjs.length,
+
+        projected = new Float32Array(numObjs * 3);
+        for (let i=0, obj, idx; i<numObjs; i++) {
+            obj = projectedObjs[i];
+            idx = 3 * i;
+            projected[idx] = obj.x;
+            projected[idx+1] = obj.y;
+            projected[idx+2] = obj.t;
+        }
+        return projected;
+    },
+
     _setupWindow: function(selectPxBounds=null) {
         if ( !this._map || !this._items ) {
             return;
@@ -264,7 +463,8 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
         let pxOffx = this._pxOffset.x,
             pxOffy = this._pxOffset.y,
             selectedIds = [],
-            overlaps = false;
+            overlaps = false,
+            llb = this._latLngBounds;
 
         for ( let id in items ) {
             if (!items.hasOwnProperty(id)) {
@@ -275,15 +475,8 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             let A = this._items[ id ],
                 drawingLine = false;
 
-            // console.log("processing "+A.id);
-
-            if ( !A.projected ) {
-                A.projected = {};
-            }
-
-            // ---- get rid of this slow code in production!!
             try {
-                overlaps = this._latLngBounds.overlaps( A.bounds )
+                overlaps = this._overlaps(llb, A.bounds)
             } catch(err) {
                 console.error(err);
                 console.log("there is a problem with ", A);
@@ -292,140 +485,111 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             }
             // -----------------------------------------------
 
-            if (A.latLngTime && overlaps) {
-                let projected = A.projected[ z ],
-                    llt = A.latLngTime;
+            if (!A.latLngTime || !overlaps)
+                continue;
 
-                // Compute projected points if necessary
-                if ( !projected ) {
-                    let numPoints = llt.length / 3,
-                        projectedObjs = new Array(numPoints);
+            if ( !A.projected )
+                A.projected = {};
 
-                    for (let i=0, p, idx; i<numPoints; i++) {
-                        idx = 3*i;
-                        p = this._map.project( [llt[idx], llt[idx+1]] );
-                        p.t = llt[idx+2];
-                        projectedObjs[i] = p;
-                    }
+            if (!A.projected[ z ])
+                A.projected[z] = this._project(A);
+                
+            let projected = A.projected[z];
 
-                    projectedObjs = L.LineUtil.simplify( projectedObjs, this.smoothFactor );
+            // determine whether or not each projected point is in the
+            // currently visible area
+            let numProjected = projected.length / 3,
+                numSegs = numProjected-1,
+                segGood = new Int8Array(numProjected-2),
+                goodSegCount = 0,
+                t0 = projected[2],
+                in0 = this._contains(pxBounds, projected.slice(0, 2));
 
-                    // now projectedObjs is an Array of objects, so we convert it
-                    // to a Float32Array
-                    let numObjs = projectedObjs.length,
-
-                    projected = new Float32Array(numObjs * 3);
-                    for (let i=0, obj, idx; i<numObjs; i++) {
-                        obj = projectedObjs[i];
-                        idx = 3 * i;
-                        projected[idx] = obj.x;
-                        projected[idx+1] = obj.y;
-                        projected[idx+2] = obj.t;
-                    }
-                    A.projected[ z ] = projected;
-                }
-
-
-                projected = A.projected[z];
-                // determine whether or not each projected point is in the
-                // currently visible area
-                let numProjected = projected.length / 3,
-                    numSegs = numProjected -1,
-                    segGood = new Int8Array(numProjected-2),
-                    goodSegCount = 0,
-                    t0 = projected[2],
-                    in0 = this._pxBounds.contains(
-                        [ projected[0], projected[1] ]
-                    );
-
-
-                for (let i=1, idx; i<numSegs; i++) {
-                    let idx = 3 * i,
-                        p = projected.slice(idx, idx+3),
-                        in1 = this._pxBounds.contains(
-                            [ p[0], p[1] ]
-                        ),
-                        t1 = p[2],
-                        isGood = ((in0 || in1) && (t1-t0 < tThresh))? 1:0;
-                    segGood[i-1] = isGood;
-                    goodSegCount += isGood;
-                    in0 = in1;
-                    t0 = t1;
-                }
-
-                // console.log(segGood);
-                if (goodSegCount == 0) {
-                    continue;
-                }
-
-                let dP = new Float32Array(goodSegCount*3);
-
-                for ( let i=0, j=0; i < numSegs; i++ ) {
-                    // Is the current segment in the visible area?
-                    if ( segGood[i] ) {
-                        let pidx = 3 * i,
-                            didx = 3 * j,
-                            p = projected.slice(pidx, pidx+6);
-                        j++;
-
-                        // p[0:2] are p1.x, p1.y, and p1.t
-                        // p[3:5] are p2.x, p2.y, and p2.t
-
-                        // Compute derivative for this segment
-                        dP[didx] = pidx;
-                        dt = p[5] - p[2];
-                        dP[didx+1] = (p[3] - p[0]) / dt;
-                        dP[didx+2] = (p[4] - p[1]) / dt;
-
-                        if (this.options.showPaths) {
-                            if (!drawingLine) {
-                                lineCtx.beginPath();
-                                drawingLine = true;
-                            }
-                            // draw polyline segment from p1 to p2
-                            let c1x = ~~(p[0] + pxOffx),
-                                c1y = ~~(p[1] + pxOffy),
-                                c2x = ~~(p[3] + pxOffx),
-                                c2y = ~~(p[4] + pxOffy);
-                            lineCtx.moveTo(c1x, c1y);
-                            lineCtx.lineTo(c2x, c2y);
-                        }
-                    }
-                }
-
-                if (this.options.showPaths) {
-                    if (drawingLine) {
-                        lineType = A.highlighted? "selected":"normal";
-                        lineCtx.globalAlpha = this.options[lineType].pathOpacity;
-                        lineCtx.lineWidth = this.options[lineType].pathWidth;
-                        lineCtx.strokeStyle = A.pathColor || this.options[lineType].pathColor;
-                        lineCtx.stroke();
-                    } else {
-                        lineCtx.stroke();
-                    }
-                }
-
-                if (selectPxBounds){
-
-                    for (let i=0, len=projected.length; i<len; i+=3){
-                        let p = new L.Point(projected[i], projected[i+1])._add(this._pxOffset);
-
-                        if ( selectPxBounds.contains( p ) ) {
-                            selectedIds.push(A.id);
-                            break;
-                        }
-                    }
-
-                }
-
-                this._processedItems[ id ] = {
-                    dP: dP,
-                    P: projected,
-                    dotColor: A.dotColor,
-                    startTime: A.startTime,
-                    totSec: projected.slice( -1 )[ 0 ]
-                };
+            for (let i=1, idx; i<numSegs; i++) {
+                let idx = 3 * i,
+                    p = [projected[idx], projected[idx+1]],
+                    in1 = this._contains(pxBounds, p),
+                    t1 = projected[idx+2],
+                    isGood = ((in0 || in1) && (t1-t0 < tThresh))? 1:0;
+                segGood[i-1] = isGood;
+                goodSegCount += isGood;
+                in0 = in1;
+                t0 = t1;
             }
+
+            // console.log(segGood);
+            if (goodSegCount == 0) {
+                continue;
+            }
+
+            let dP = new Float32Array(goodSegCount*3);
+
+            for ( let i=0, j=0; i < numSegs; i++ ) {
+                // Is the current segment in the visible area?
+                if ( segGood[i] ) {
+                    let pidx = 3 * i,
+                        didx = 3 * j,
+                        p = projected.slice(pidx, pidx+6);
+                    j++;
+
+                    // p[0:2] are p1.x, p1.y, and p1.t
+                    // p[3:5] are p2.x, p2.y, and p2.t
+
+                    // Compute derivative for this segment
+                    dP[didx] = pidx;
+                    dt = p[5] - p[2];
+                    dP[didx+1] = (p[3] - p[0]) / dt;
+                    dP[didx+2] = (p[4] - p[1]) / dt;
+
+                    if (this.options.showPaths) {
+                        if (!drawingLine) {
+                            lineCtx.beginPath();
+                            drawingLine = true;
+                        }
+                        // draw polyline segment from p1 to p2
+                        let c1x = ~~(p[0] + pxOffx),
+                            c1y = ~~(p[1] + pxOffy),
+                            c2x = ~~(p[3] + pxOffx),
+                            c2y = ~~(p[4] + pxOffy);
+                        lineCtx.moveTo(c1x, c1y);
+                        lineCtx.lineTo(c2x, c2y);
+                    }
+                }
+            }
+
+            if (this.options.showPaths) {
+                if (drawingLine) {
+                    lineType = A.highlighted? "selected":"normal";
+                    lineCtx.globalAlpha = this.options[lineType].pathOpacity;
+                    lineCtx.lineWidth = this.options[lineType].pathWidth;
+                    lineCtx.strokeStyle = A.pathColor || this.options[lineType].pathColor;
+                    lineCtx.stroke();
+                } else {
+                    lineCtx.stroke();
+                }
+            }
+
+            if (selectPxBounds){
+
+                for (let i=0, len=projected.length; i<len; i+=3){
+                    let x = projected[i] + this._pxOffset.x,
+                        y = projected[i+1] + this._pxOffset.y;
+
+                    if ( this._contains(selectPxBounds, [x, y]) ) {
+                        selectedIds.push(A.id);
+                        break;
+                    }
+                }
+
+            }
+
+            this._processedItems[ id ] = {
+                dP: dP,
+                P: projected,
+                dotColor: A.dotColor,
+                startTime: A.startTime,
+                totSec: projected.slice( -1 )[ 0 ]
+            };
         }
 
         elapsed = ( performance.now() - perf_t0 ).toFixed( 2 );
@@ -869,7 +1033,7 @@ L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
             itemsList[ i ].dotColor = this._colorPalette[ i ];
         }
    
-}
+    }
 
 } );  // end of L.DotLayer definition
 
