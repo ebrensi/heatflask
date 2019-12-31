@@ -3,19 +3,6 @@
   inspired by L.CanvasLayer by Stanislav Sumbera,  2016 , sumbera.com
   license MIT
 */
-// -- L.DomUtil.setTransform from leaflet 1.0.0 to work on 0.0.7
-//------------------------------------------------------------------------------
-// L.DomUtil.setTransform = L.DomUtil.setTransform || function( el, offset, scale ) {
-//     var pos = offset || new L.Point( 0, 0 );
-
-//     el.style[ L.DomUtil.TRANSFORM ] =
-//         ( L.Browser.ie3d ?
-//             "translate(" + pos.x + "px," + pos.y + "px)" :
-//             "translate3d(" + pos.x + "px," + pos.y + "px,0)" ) +
-//         ( scale ? " scale(" + scale + ")" : "" );
-// };
-
-// L.DotLayer = ( L.Layer ? L.Layer : L.Class ).extend( {
 
 L.DotLayer = L.Layer.extend( {
 
@@ -137,7 +124,7 @@ L.DotLayer = L.Layer.extend( {
     getEvents: function() {
         var events = {
             movestart: function() {
-                this._mapMoving = true;
+                // this._mapMoving = true;
             },
             moveend: this._onLayerDidMove,
             resize: this._onLayerDidResize
@@ -153,18 +140,7 @@ L.DotLayer = L.Layer.extend( {
     //-------------------------------------------------------------
     // Call this function when items are added or reomved
     reset: function() {
-        // Set dotColor to default for these items if necessary
-        // let itemsList = Object.values( this._items ),
-        //     numItems = itemsList.length;
-
-        // for ( let i = 0; i < numItems; i++ ) {
-        //     let item = itemsList[ i ];
-        //     if (item.dotColor == undefined) {
-        //         item.dotColor = this.options.normal.dotColor;
-        //     }
-        // }
         this.setDotColors();
-
         this._onLayerDidMove();
     },
 
@@ -765,19 +741,6 @@ L.DotLayer = L.Layer.extend( {
         }
 
         this._frame = L.Util.requestAnimFrame( this._animate, this );
-    },
-
-
-    // -- L.DomUtil.setTransform from leaflet 1.0.0 to work on 0.0.7
-    //------------------------------------------------------------------------------
-    _setTransform: function( el, offset, scale ) {
-        var pos = offset || new L.Point( 0, 0 );
-
-        el.style[ L.DomUtil.TRANSFORM ] =
-            ( L.Browser.ie3d ?
-              "translate(" + pos.x + "px," + pos.y + "px)" :
-              "translate3d(" + pos.x + "px," + pos.y + "px,0)" ) +
-            ( scale ? " scale(" + scale + ")" : "" );
     },
 
     //------------------------------------------------------------------------------
