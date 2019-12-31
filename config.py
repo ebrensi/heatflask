@@ -157,8 +157,13 @@ class Config(object):
         "last60activities": {
             "username": "15972102",
             "limit": "60"
-            }
+        },
+
+        "last500activities": {
+            "username": "15972102",
+            "limit": "500"
         }
+    }
 
 
 class ProductionConfig(Config):

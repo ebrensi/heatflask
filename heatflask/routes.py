@@ -512,7 +512,7 @@ def demos(demo_key):
 @app.route('/demo')
 def demo():
     # Last 60 activities
-    return redirect(url_for("demos", demo_key="last60activities"))
+    return redirect(url_for("demos", demo_key="last500activities"))
 
 
 # ---- Endpoints to cache and retrieve query urls that might be long
