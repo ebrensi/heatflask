@@ -337,6 +337,7 @@ L.DotLayer = L.Layer.extend( {
         }
     },
 
+
     _overlaps: function(mapBounds, activityBounds) {
         let sw = mapBounds._southWest,
             ne = mapBounds._northEast,
@@ -349,12 +350,44 @@ L.DotLayer = L.Layer.extend( {
         return latOverlaps && lngOverlaps;
     },
 
+    overlaps: function (mapBounds, items, bitarray=null) {
+        const L = items.length;
+
+        if (bitarray === null) {
+            bitarray = new FastBitArray(L); 
+        }
+        
+        for ( let i=0; i < L; i++ )
+            bitarray.set(i, this._overlaps(mapBounds, items[i].bounds));
+
+        return bitarray
+    },
+
     _contains: function (pxBounds, point) {
         let x = point[0],
             y = point[1];
 
         return (pxBounds.min.x <= x) && (x <= pxBounds.max.x) &&
                (pxBounds.min.y <= y) && (y <= pxBounds.max.y);
+    },
+
+    contains: function(pxBounds, projected, bitarray=null) {
+        const L = projected.length;
+        if (bitarray === null) {
+            bitarray = new FastBitArray(L); 
+        }
+
+        for (let i=0; i<L; i+=3) {
+            let p = [projected[i], projected[i+1]],
+            bitarray.set(i, this._contains(pxBounds, p));
+        }
+        return bitarray
+    },
+
+    updateInclusion: function(mapBounds, pxBounds) {
+        let tracks = this._items.values();
+        this._overlapsArray = this.overlaps(mapBounds, tracks, this._overlapsArray);
+
     },
 
     _project: function(A) {

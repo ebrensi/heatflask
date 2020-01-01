@@ -13,14 +13,33 @@ function FastBitArray(size) {
   this.words = new Uint32Array((size + 32) >>> 5);
 }
 
-// Add the value (Set the bit at index to true)
-FastBitArray.prototype.set = function(index) {
-  this.words[index >>> 5] |= 1 << index ;
-};
 
-// Set the bit at index to false
-FastBitArray.prototype.unset = function(index) {
-  this.words[index  >>> 5] &= ~(1 << index);
+// create a FastBitArray by applying a boolean-valued function func
+// to every member of iterable, reusing an existing FastBitArray
+// if one is supplied 
+FastBitArray.filter = function(func, iterable, bitArray=null) {
+  if (!bitarray)
+    bitArray = new FastBitArray(iterable.length);
+  
+  let i = 0;
+  for (obj of iterable) {
+    bitArray.set(i, func(obj));
+    i++;
+  }
+  return bitArray  
+}
+
+
+FastBitArray.prototype.filter = function(func, iterable) {
+  return FastBitArray.filter(func, iterable, this);
+}
+// Add the value (Set the bit at index to true)
+
+FastBitArray.prototype.set = function(index, val) {
+  if (val)
+    this.words[index >>> 5] |= 1 << index;
+  else
+    this.words[index  >>> 5] &= ~(1 << index);
 };
 
 // If the value was not in the set, add it, otherwise remove it (flip bit at index)
