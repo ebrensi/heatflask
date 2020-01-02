@@ -109,7 +109,7 @@ class Users(UserMixin, db_sql.Model):
         try:
             access_info = json.loads(self.access_token)
         except Exception:
-            log.info("%s using bad access_token", self)
+            log.debug("%s using bad access_token", self)
             return
 
         if OFFLINE:
@@ -306,7 +306,7 @@ class Users(UserMixin, db_sql.Model):
         return True
 
     @classmethod
-    def triage(cls, days_inactive_cutoff=None, delete=False, update=False):
+    def triage(cls, days_inactive_cutoff=DAYS_INACTIVE_CUTOFF, delete=True, update=True):
         with session_scope() as session:
             now = datetime.utcnow()
             stats = dict(
@@ -555,23 +555,23 @@ class Users(UserMixin, db_sql.Model):
             log.debug("%s response %s in %s", self, _id, round(elapsed, 2))
             
             if A:
-                import_stats["count"] += 1
-                import_stats["elapsed"] += elapsed
+                import_stats["n"] += 1
+                import_stats["dt"] += elapsed
 
             elif A is False:
-                import_stats["errors"] += 1
-                if import_stats["errors"] >= MAX_IMPORT_ERRORS:
+                import_stats["err"] += 1
+                if import_stats["err"] >= MAX_IMPORT_ERRORS:
                     log.info("%s Too many import errors. quitting", self)
                     self.abort_signal = True
                     return
             else:
-                import_stats["empty"] += 1
+                import_stats["emp"] += 1
 
             return A
 
         # this is where the action happens
-        stats = dict(fetched=0)
-        import_stats = dict(count=0, errors=0, empty=0, elapsed=0)
+        stats = dict(n=0)
+        import_stats = dict(n=0, err=0, emp=0, dt=0)
 
         import_pool = gevent.pool.Pool(IMPORT_CONCURRENCY)
         aux_pool = gevent.pool.Pool(3)
@@ -592,9 +592,9 @@ class Users(UserMixin, db_sql.Model):
             def imported_done(result):
                 batch_queue.put(StopIteration)
                 write_result = Activities.set_many(batch_queue)
-                if import_stats["count"]:
+                if import_stats["n"]:
                     import_stats["avg_resp"] = round(
-                        import_stats["elapsed"] / import_stats["count"], 2)
+                        import_stats["dt"] / import_stats["n"], 2)
                 log.debug("%s done importing: %s", self, write_result)
                 to_export.put(StopIteration)
 
@@ -619,7 +619,7 @@ class Users(UserMixin, db_sql.Model):
                 return
             if "time" in A:
                 to_export.put(A)
-                stats["fetched"] += 1
+                stats["n"] += 1
             elif "_id" not in A:
                 to_export.put(A)
             else:
@@ -646,24 +646,27 @@ class Users(UserMixin, db_sql.Model):
                 break
 
         elapsed = timer.elapsed()
-        stats["elapsed"] = round(elapsed, 2)
+        stats["dt"] = round(elapsed, 2)
         stats = Utility.cleandict(stats)
         import_stats = Utility.cleandict(import_stats)
         if import_stats:
             try:
                 import_stats["t_rel"] = round(
-                    import_stats.pop("elapsed") / elapsed, 2)
+                    import_stats.pop("dt") / elapsed, 2)
                 import_stats["rate"] = round(
-                    import_stats["count"] / elapsed, 2)
+                    import_stats["n"] / elapsed, 2)
             except Exception:
                 pass
-            log.info("%s import done. %s", self, import_stats)
+            log.info("%s import %s", self, import_stats)
         
-        log.info("%s fetch done. %s", self, stats)
+        if "n" in stats:
+            log.info("%s fetch %s", self, stats)
         
         if import_stats:
             stats["import"] = import_stats
-        EventLogger.new_event(msg="{} fetch: {}".format(self, stats))
+        
+        if ("n" in stats) or import_stats:
+            EventLogger.new_event(msg="{} fetch {}".format(self, stats))
 
     def make_payment(self, amount):
         success = Payments.add(self, amount)
@@ -833,7 +836,7 @@ class Index(object):
         user.indexing(0)
 
         timer = Timer()
-        log.info("%s building index", user)
+        log.debug("%s building index", user)
 
         def in_date_range(dt):
             # log.debug(dict(dt=dt, after=after, before=before))
@@ -930,7 +933,7 @@ class Index(object):
             
         else:
             elapsed = timer.elapsed()
-            msg = "{}: index import done. {}".format(
+            msg = "{} index {}".format(
                 user,
                 dict(
                     elapsed=elapsed, count=count,
@@ -1374,7 +1377,7 @@ class StravaClient(object):
             if pages:
                 page_stats["avg_resp"] = round(page_stats.pop("elapsed") / pages , 2)
                 page_stats["rate"] = round(pages / tot_timer.elapsed(), 2)
-            log.info("%s index: %s", self, page_stats)
+            log.info("%s index %s", self, page_stats)
         except Exception:
             log.exception("page stats error")
 
@@ -1549,7 +1552,7 @@ class Activities(object):
         for el in rll_encoded:
             if isinstance(el, list) and len(el) == 2:
                 val, num_repeats = el
-                for i in xrange(num_repeats):
+                for i in range(num_repeats):
                     running_sum += val
                     out_list.append(running_sum)
             else:
