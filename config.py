@@ -66,7 +66,7 @@ class Config(object):
     STORE_INDEX_TIMEOUT = int(os.environ.get("INDEX_TTL", 10 * DAY))
 
     # How long we store Activity stream data in MongoDB
-    STORE_ACTIVITIES_TIMEOUT = int(os.environ.get("DB_TTL", 5 * DAY))
+    STORE_ACTIVITIES_TIMEOUT = int(os.environ.get("DB_TTL", 4 * DAY))
 
     # How long we Redis-cache Activity stream data
     CACHE_ACTIVITIES_TIMEOUT = int(os.environ.get("CACHE_TTL", 8 * HOUR))
