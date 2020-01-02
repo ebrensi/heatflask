@@ -48,6 +48,7 @@ L.DotLayer = L.Layer.extend( {
         this._items = items || null;
         this._timeOffset = 0;
         this._colorPalette = [];
+        this._overlapsArray = null;
         L.setOptions( this, options );
         this._paused = this.options.startPaused;
         this._timePaused = Date.now();
@@ -350,19 +351,6 @@ L.DotLayer = L.Layer.extend( {
         return latOverlaps && lngOverlaps;
     },
 
-    overlaps: function (mapBounds, items, bitarray=null) {
-        const L = items.length;
-
-        if (bitarray === null) {
-            bitarray = new FastBitArray(L); 
-        }
-        
-        for ( let i=0; i < L; i++ )
-            bitarray.set(i, this._overlaps(mapBounds, items[i].bounds));
-
-        return bitarray
-    },
-
     _contains: function (pxBounds, point) {
         let x = point[0],
             y = point[1];
@@ -385,9 +373,19 @@ L.DotLayer = L.Layer.extend( {
     },
 
     updateInclusion: function(mapBounds, pxBounds) {
-        let tracks = this._items.values();
-        this._overlapsArray = this.overlaps(mapBounds, tracks, this._overlapsArray);
+        const tracks = this._items.values(),
+              overlap = (track) => this._overlaps(mapBounds, track.bounds);
 
+        // make a bitArray indicating which tracks bounds overlap the current view
+        this._overlapsArray = FastBitArray.filter(overlap, tracks, this._overlapsArray);
+
+        // for each overlapped track, make a bitArray indicating which points
+        // are in the current view
+        const contain = (i) => {
+            tracks[i].inCurrentView
+            // Resume here
+        }
+        this._overlapsArray.forEach();
     },
 
     _project: function(A) {
