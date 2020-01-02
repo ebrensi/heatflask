@@ -34,7 +34,7 @@ keys = {
     "STORE_ACTIVITIES_TIMEOUT",
     "CACHE_ACTIVITIES_TIMEOUT"
 }
-ttls = {s: timedelta(seconds=app.config[s]) for s in keys}
+ttls = {s: "{}".format(timedelta(seconds=app.config[s])) for s in keys}
 
 log.info(
     "Heatflask server starting%s LOG_LEVEL=%s: %s",
