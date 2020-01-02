@@ -63,18 +63,15 @@ class Config(object):
     DAY = 24 * HOUR
     
     # How long we store an Index entry in MongoDB
-    STORE_INDEX_TIMEOUT = int(os.environ.get("INDEX_TTL", 10 * DAY))   # default 10 days
+    STORE_INDEX_TIMEOUT = int(os.environ.get("INDEX_TTL", 10 * DAY))
 
     # How long we store Activity stream data in MongoDB
-    STORE_ACTIVITIES_TIMEOUT = int(os.environ.get("DB_TTL", 5 * DAY))  # default 5 days
+    STORE_ACTIVITIES_TIMEOUT = int(os.environ.get("DB_TTL", 5 * DAY))
 
     # How long we Redis-cache Activity stream data
-    CACHE_ACTIVITIES_TIMEOUT = int(os.environ.get("CACHE_TTL", 8 * HOUR))  # default 8 hours
+    CACHE_ACTIVITIES_TIMEOUT = int(os.environ.get("CACHE_TTL", 8 * HOUR))
 
     CACHE_IP_INFO_TIMEOUT = 1 * 24 * 60 * 60  # 1 day
-
-    # How long we will allow data requests from the same identified client
-    WEB_CLIENT_ID_TIMEOUT = 10 * 60 * 60 * 24  # 10 days
 
     JSONIFY_PRETTYPRINT_REGULAR = True
 
