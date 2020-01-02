@@ -58,20 +58,20 @@ class Config(object):
 
     MONGO_URI = os.environ.get("MONGODB_URI")
     REDIS_URL = os.environ.get("REDIS_URL")
-
+    
+    HOUR = 60 * 60
+    DAY = 24 * HOUR
+    
     # How long we store an Index entry in MongoDB
-    STORE_INDEX_TIMEOUT = 10 * 24 * 60 * 60   # 10 days
+    STORE_INDEX_TIMEOUT = int(os.environ.get("INDEX_TTL", 10 * DAY))
 
     # How long we store Activity stream data in MongoDB
-    STORE_ACTIVITIES_TIMEOUT = 5 * 24 * 60 * 60  # 5 days
+    STORE_ACTIVITIES_TIMEOUT = int(os.environ.get("DB_TTL", 5 * DAY))
 
     # How long we Redis-cache Activity stream data
-    CACHE_ACTIVITIES_TIMEOUT = 8 * 60 * 60  # 8 hours
+    CACHE_ACTIVITIES_TIMEOUT = int(os.environ.get("CACHE_TTL", 8 * HOUR))
 
     CACHE_IP_INFO_TIMEOUT = 1 * 24 * 60 * 60  # 1 day
-
-    # How long we will allow data requests from the same identified client
-    WEB_CLIENT_ID_TIMEOUT = 10 * 60 * 60 * 24  # 10 days
 
     JSONIFY_PRETTYPRINT_REGULAR = True
 
@@ -189,8 +189,7 @@ class ProductionConfig(Config):
 
     MONGO_URI = os.environ.get("ATLAS_MONGODB_URI")
     REDIS_URL = os.environ.get("REDISGREEN_URL")
-
-
+    LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
 
 class StagingConfig(Config):
     """

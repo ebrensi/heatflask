@@ -531,6 +531,7 @@ class Users(UserMixin, db_sql.Model):
         to_export = gevent.queue.Queue(maxsize=512)
         if self.strava_client:
             to_import = gevent.queue.Queue(maxsize=512)
+            batch_queue = gevent.queue.Queue()
         else:
             to_import = FakeQueue()
 
@@ -546,7 +547,9 @@ class Users(UserMixin, db_sql.Model):
             _id = A["_id"]
             log.debug("%s request import %s", self, _id)
 
-            A = Activities.import_streams(self.strava_client, A)
+            A = Activities.import_streams(
+                self.strava_client, A,
+                batch_queue=batch_queue)
             
             elapsed = time.time() - start
             log.debug("%s response %s in %s", self, _id, round(elapsed, 2))
@@ -587,10 +590,12 @@ class Users(UserMixin, db_sql.Model):
                         to_export.put(A)
 
             def imported_done(result):
+                batch_queue.put(StopIteration)
+                write_result = Activities.set_many(batch_queue)
                 if import_stats["count"]:
                     import_stats["avg_resp"] = round(
                         import_stats["elapsed"] / import_stats["count"], 2)
-                log.debug("%s done importing", self)
+                log.debug("%s done importing: %s", self, write_result)
                 to_export.put(StopIteration)
 
             # this background job fills export queue
@@ -916,7 +921,8 @@ class Index(object):
                 )
                   
             if mongo_requests:
-                cls.db.bulk_write(list(mongo_requests), ordered=False)
+                result = cls.db.bulk_write(list(mongo_requests), ordered=False)
+                # log.debug(result.bulk_api_result)
 
         except Exception as e:
             log.exception("%s index import error", user)
@@ -924,13 +930,12 @@ class Index(object):
             
         else:
             elapsed = timer.elapsed()
-            msg = (
-                "{}: index import done. {}".format(
-                    user,
-                    dict(elapsed=elapsed,
-                    count=count,
-                    rate=round(count / elapsed, 2)))
-            )
+            msg = "{}: index import done. {}".format(
+                user,
+                dict(
+                    elapsed=elapsed, count=count,
+                    rate=round(count / elapsed, 2))
+                )
 
             log.info(msg)
             EventLogger.new_event(msg=msg)
@@ -1558,10 +1563,10 @@ class Activities(object):
         return "A:{}".format(id)
 
     @classmethod
-    def set(cls, id, data, ttl=CACHE_TTL):
+    def set(cls, _id, data, ttl=CACHE_TTL):
         # cache it first, in case mongo is down
         packed = msgpack.packb(data)
-        redis.setex(cls.cache_key(id), ttl, packed)
+        redis.setex(cls.cache_key(_id), ttl, packed)
 
         document = {
             "ts": datetime.utcnow(),
@@ -1569,12 +1574,41 @@ class Activities(object):
         }
         try:
             cls.db.update_one(
-                {"_id": int(id)},
+                {"_id": int(_id)},
                 {"$set": document},
                 upsert=True)
         except Exception:
             log.exception("failed mongodb write: activity %s", id)
-        return
+
+    @classmethod
+    def set_many(cls, batch_queue, ttl=CACHE_TTL):
+      
+        now = datetime.utcnow()
+        redis_pipe = redis.pipeline()
+        mongo_batch = []
+        for _id, data in batch_queue:
+            packed = msgpack.packb(data)
+            redis_pipe.setex(cls.cache_key(id), ttl, packed)
+
+            document = {
+                "ts": now,
+                "mpk": Binary(packed)
+            }
+            mongo_batch.append(pymongo.UpdateOne(
+                {"_id": int(_id)},
+                {"$set": document},
+                upsert=True))
+        
+        if not mongo_batch:
+            return
+
+        redis_pipe.execute()
+
+        try:
+            result = cls.db.bulk_write(mongo_batch, ordered=False)
+            return result.bulk_api_result
+        except Exception:
+            log.exception("Failed mongodb batch write")
 
     @classmethod
     def get_many(cls, ids, ttl=CACHE_TTL, ordered=False):
@@ -1672,7 +1706,7 @@ class Activities(object):
             return msgpack.unpackb(packed, encoding="utf-8")
 
     @classmethod
-    def import_streams(cls, client, activity, timeout=CACHE_TTL):
+    def import_streams(cls, client, activity, batch_queue=None):
         if OFFLINE:
             return
         if "_id" not in activity:
@@ -1719,7 +1753,10 @@ class Activities(object):
                     name, _id)
                 return False
      
-        cls.set(_id, encoded_streams, timeout)
+        if batch_queue:
+            batch_queue.put((_id, encoded_streams))
+        else:
+            cls.set(_id, encoded_streams)
         
         activity.update(encoded_streams)
 
@@ -1753,23 +1790,6 @@ class Activities(object):
         # now we yield the rest of the summaries
         for A in to_fetch.values():
             yield A
-
-    @classmethod
-    def append_streams_from_import(cls, summaries, client, pool=None):
-        if pool is None:
-            pool = gevent.pool.Pool(IMPORT_CONCURRENCY)
-
-        def import_activity_stream(A):
-            if not A or "_id" not in A:
-                return A
-            imported = cls.import_streams(client, A)
-            return imported
-        
-        return pool.imap_unordered(
-            import_activity_stream,
-            summaries,
-            maxsize=pool.size
-        )
 
     @classmethod
     def query(cls, queryObj):
@@ -2153,14 +2173,6 @@ class Utility():
             truth,
             map(tuple, starmap(islice, repeat((iter(iterable), size))))
         )
-        # chunk = []
-        # for thing in iterable:
-        #     chunk.append(thing)
-        #     if len(chunk) == size:
-        #         yield chunk
-        #         chunk = []
-        # if chunk:
-        #     yield chunk
 
 
 # FakeQueue is a a queue that does nothing.  We use this for import queue if
