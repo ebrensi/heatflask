@@ -2,7 +2,6 @@
 *.sublime-project
 *.sublime-workspace
 
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -55,8 +54,6 @@ coverage.xml
 
 #Flask stuff
 instance/
-
-
 
 # Sphinx documentation
 docs/_build/

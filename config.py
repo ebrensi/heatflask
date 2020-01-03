@@ -59,19 +59,19 @@ class Config(object):
     MONGO_URI = os.environ.get("MONGODB_URI")
     REDIS_URL = os.environ.get("REDIS_URL")
     
-    HOUR = 60 * 60
-    DAY = 24 * HOUR
+    SECS_IN_HOUR = 60 * 60
+    SECS_IN_DAY = 24 * SECS_IN_HOUR
     
-    # How long we store an Index entry in MongoDB
-    STORE_INDEX_TIMEOUT = int(os.environ.get("INDEX_TTL", 10 * DAY))
+    # How long we store Index entry in MongoDB
+    TTL_INDEX = int(os.environ.get("TTL_INDEX", 10)) * SECS_IN_DAY
 
     # How long we store Activity stream data in MongoDB
-    STORE_ACTIVITIES_TIMEOUT = int(os.environ.get("DB_TTL", 5 * DAY))
+    TTL_DB = int(os.environ.get("TTL_DB", 4)) * SECS_IN_DAY
 
     # How long we Redis-cache Activity stream data
-    CACHE_ACTIVITIES_TIMEOUT = int(os.environ.get("CACHE_TTL", 8 * HOUR))
+    TTL_CACHE = int(os.environ.get("TTL_CACHE", 4)) * SECS_IN_HOUR
 
-    CACHE_IP_INFO_TIMEOUT = 1 * 24 * 60 * 60  # 1 day
+    CACHE_IP_INFO_TIMEOUT = 1 * SECS_IN_DAY # 1 day
 
     JSONIFY_PRETTYPRINT_REGULAR = True
 
@@ -107,19 +107,6 @@ class Config(object):
     # Domain Redirect for people using herokuapp links
     FROM_DOMAIN = "heatflask.herokuapp.com"
     TO_DOMAIN = "www.heatflask.com"
-
-    # This is added by flask-talisman to headers of https responses
-    #  for more info about content security policies
-    #  take a look at
-    #  https://github.com/GoogleCloudPlatform/flask-talisman#content-security-policy
-
-    CONTENT_SECURITY_POLICY = {
-        'default-src': [
-            '\'self\'',
-            '*',
-        ],
-        'img-src': '*'
-    }
 
     # This is the spec for parsing urls.  The pattern is
     #  field_name: ([query_string options], default-value) 
@@ -191,6 +178,7 @@ class ProductionConfig(Config):
     REDIS_URL = os.environ.get("REDISGREEN_URL")
     LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
 
+
 class StagingConfig(Config):
     """
     These are settings specific to the staging environment
@@ -236,15 +224,15 @@ class DevelopmentConfig(Config):
 
     else:
         # How long we Redis-cache Activity stream data
-        CACHE_ACTIVITIES_TIMEOUT = 2 * 60 * 60  # 30 minutes
+        TTL_CACHE = 2 * Config.SECS_IN_HOUR
         
         # How long we Redis-cache a User object
-        CACHE_USERS_TIMEOUT = 2 * 60 * 60  # 30 minutes
+        CACHE_USERS_TIMEOUT = 2 * Config.SECS_IN_HOUR
 
         # How long we store Activity stream data in MongoDB
-        STORE_ACTIVITIES_TIMEOUT = 60 * 24 * 60 * 60  # 60 days
+        TTL_DB = 60 * Config.SECS_IN_DAY
 
         # How long we store an Index entry in MongoDB
-        STORE_INDEX_TIMEOUT = 60 * 24 * 60 * 60   # 60 days
+        STORE_INDEX_TIMEOUT = 60 * Config.SECS_IN_DAY   # 60 days
 
         

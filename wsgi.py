@@ -1,10 +1,10 @@
 # wsgi.py
 #  this is run by gunicorn
+
 from datetime import timedelta
 import logging
 
 from heatflask import create_app
-# from signal import signal, SIGPIPE, SIG_DFL
 
 app = create_app()
 
@@ -29,11 +29,7 @@ if app.config.get("OFFLINE"):
 elif app.config.get("USE_REMOTE_DB"):
     loc_status = " USING REMOTE DATA-STORES"
 
-keys = {
-    "STORE_INDEX_TIMEOUT",
-    "STORE_ACTIVITIES_TIMEOUT",
-    "CACHE_ACTIVITIES_TIMEOUT"
-}
+keys = {"TTL_INDEX", "TTL_DB", "TTL_CACHE"}
 ttls = {s: "{}".format(timedelta(seconds=app.config[s])) for s in keys}
 
 log.info(
@@ -42,11 +38,6 @@ log.info(
     log_level_name,
     ttls
 )
-
-# makes python ignore sigpipe and prevents broken pipe exception when client
-#  aborts an SSE stream by closing the browser window
-
-# signal(SIGPIPE, SIG_DFL)
 
 if __name__ == "__main__":
     from gevent import pywsgi
