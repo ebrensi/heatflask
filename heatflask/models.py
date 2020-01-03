@@ -593,7 +593,7 @@ class Users(UserMixin, db_sql.Model):
                 batch_queue.put(StopIteration)
                 write_result = Activities.set_many(batch_queue)
                 if import_stats["n"]:
-                    import_stats["avg_resp"] = round(
+                    import_stats["resp"] = round(
                         import_stats["dt"] / import_stats["n"], 2)
                 log.debug("%s done importing: %s", self, write_result)
                 to_export.put(StopIteration)
@@ -908,7 +908,7 @@ class Index(object):
 
                     except StopIteration:
                         queue.put(StopIteration)
-                        #  this iterator is done, as far as the consumer is concerned
+                        #  this iterator is done for the consumer
                         log.debug("%s index build done yielding", user)
                         queue = FakeQueue()
                         yielding = False
@@ -924,7 +924,9 @@ class Index(object):
                 )
                   
             if mongo_requests:
-                result = cls.db.bulk_write(list(mongo_requests), ordered=False)
+                result = cls.db.bulk_write(
+                    list(mongo_requests),
+                    ordered=False)
                 # log.debug(result.bulk_api_result)
 
         except Exception as e:
@@ -936,7 +938,7 @@ class Index(object):
             msg = "{} index {}".format(
                 user,
                 dict(
-                    elapsed=elapsed, count=count,
+                    dt=elapsed, n=count,
                     rate=round(count / elapsed, 2))
                 )
 
@@ -1209,7 +1211,7 @@ class StravaClient(object):
             "Authorization": "Bearer {}".format(self.access_token)
         }
 
-    def get_activity(self, _id):
+    def get_raw_activity(self, _id):
         cls = self.__class__
         # get one activity summary object from strava
         url = cls.GET_ACTIVITY_URL.format(id=_id)
@@ -1221,10 +1223,20 @@ class StravaClient(object):
             raw = response.json()
             if "id" not in raw:
                 raise UserWarning(raw)
-            return cls.strava2doc(raw)
+            return raw
         except HTTPError as e:
             log.error(e)
             return False
+        except Exception:
+            log.exception("%s import-by-id %s failed", self, _id)
+            return False
+
+    def get_activity(self, _id):
+        cls = self.__class__
+        # get one activity summary object from strava
+        raw = self.get_raw_activity(_id)
+        try:
+            return cls.strava2doc(raw)
         except Exception:
             log.exception("%s import-by-id %s failed", self, _id)
             return False
@@ -1254,7 +1266,7 @@ class StravaClient(object):
             log.exception("%s get_activities: parameter error", self)
             return
 
-        page_stats = dict(pages=0, elapsed=0, empty=0)
+        page_stats = dict(pages=0, dt=0, emp=0)
 
         def page_iterator():
             page = 1
@@ -1292,16 +1304,16 @@ class StravaClient(object):
 
             # record stats
             if size:
-                page_stats["elapsed"] += elapsed
+                page_stats["dt"] += elapsed
                 page_stats["pages"] += 1
             else:
-                page_stats["empty"] += 1
+                page_stats["emp"] += 1
             
             log.debug(
                 "%s index page %s %s",
                 self,
                 pagenum,
-                dict(elapsed=elapsed, count=size)
+                dict(dt=elapsed, n=size)
             )
 
             return pagenum, activities
@@ -1375,7 +1387,7 @@ class StravaClient(object):
         try:
             pages = page_stats["pages"]
             if pages:
-                page_stats["avg_resp"] = round(page_stats.pop("elapsed") / pages , 2)
+                page_stats["resp"] = round(page_stats.pop("dt") / pages , 2)
                 page_stats["rate"] = round(pages / tot_timer.elapsed(), 2)
             log.info("%s index %s", self, page_stats)
         except Exception:

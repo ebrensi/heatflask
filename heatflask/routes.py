@@ -425,7 +425,6 @@ def activities(username):
         except Exception:
             log.exception("error deleting index for {}".format(user))
     
-
     # Assign an id to this web client in order to prevent
     #  websocket access from unidentified users
     ip = Utility.ip_address(request)
@@ -437,6 +436,15 @@ def activities(username):
         user=user,
         client_id=web_client_id
     )
+
+
+@app.route('/<username>/activities/<int:_id>')
+@admin_or_self_required
+def activity(username, _id):
+    user = Users.get(username)
+    client = StravaClient(user=user)
+    raw = client.get_raw_activity(_id)
+    return jsonify(raw)
 
 
 @app.route('/<username>/update_info')
