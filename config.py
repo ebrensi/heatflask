@@ -108,19 +108,6 @@ class Config(object):
     FROM_DOMAIN = "heatflask.herokuapp.com"
     TO_DOMAIN = "www.heatflask.com"
 
-    # This is added by flask-talisman to headers of https responses
-    #  for more info about content security policies
-    #  take a look at
-    #  https://github.com/GoogleCloudPlatform/flask-talisman#content-security-policy
-
-    CONTENT_SECURITY_POLICY = {
-        'default-src': [
-            '\'self\'',
-            '*',
-        ],
-        'img-src': '*'
-    }
-
     # This is the spec for parsing urls.  The pattern is
     #  field_name: ([query_string options], default-value) 
     URL_QUERY_SPEC = dict(
