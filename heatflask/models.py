@@ -1387,7 +1387,7 @@ class StravaClient(object):
         try:
             pages = page_stats["pages"]
             if pages:
-                page_stats["resp"] = round(page_stats.pop("dt") / pages , 2)
+                page_stats["resp"] = round(page_stats.pop("dt") / pages, 2)
                 page_stats["rate"] = round(pages / tot_timer.elapsed(), 2)
             log.info("%s index %s", self, page_stats)
         except Exception:
@@ -1408,13 +1408,11 @@ class StravaClient(object):
         def extract_stream(stream_dict, s):
                 if s not in stream_dict:
                     raise UserWarning(
-                        "{} {} not in activity {}".format(self, s, _id))
+                        "stream {} absent".format(s))
                 stream = stream_dict[s]["data"]
                 if len(stream) < 3:
                     raise UserWarning(
-                        "{} insufficient stream {} for activity {}"
-                        .format(self, s, _id)
-                    )
+                        "stream {} insufficient".format(s))
                 return stream
         
         try:
@@ -1424,7 +1422,7 @@ class StravaClient(object):
             stream_dict = response.json()
 
             if not stream_dict:
-                raise UserWarning("{} no streams for {}".format(self, _id))
+                raise UserWarning("no streams")
 
             streams = {
                 s: extract_stream(stream_dict, s)
@@ -1432,20 +1430,15 @@ class StravaClient(object):
             }
         except HTTPError as e:
             code = e.response.status_code
-            log.info(
-                "%s http error %s for activity %s",
-                self, code, _id)
+            log.info("%s A:%s http error %s", self, _id, code)
             return None if code == 404 else False
+
         except UserWarning as e:
-            log.info(e)
+            log.info("%s A:%s %s", self, _id, e)
             return
 
         except Exception:
-            log.exception(
-                "%s failed get streams for activity %s",
-                self,
-                _id
-            )
+            log.exception("%s A:%s failed get streams", self, _id)
             return False
 
         return streams
