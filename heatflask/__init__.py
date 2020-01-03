@@ -12,7 +12,6 @@ from flask_pymongo import PyMongo
 from flask_compress import Compress
 from flask_login import LoginManager
 from flask_analytics import Analytics
-# from flask_talisman import Talisman
 from flask_sslify import SSLify
 from flask_sockets import Sockets
 from flask_assets import Environment
@@ -29,9 +28,7 @@ assets = Environment()
 # Global variables
 EPOCH = datetime.utcfromtimestamp(0)
 
-
 def create_app():
-
     """Initialize the core application"""
     app = Flask(__name__)
 

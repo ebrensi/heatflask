@@ -32,18 +32,19 @@ from . import EPOCH
 mongodb = mongo.db
 log = app.logger
 OFFLINE = app.config["OFFLINE"]
-CACHE_ACTIVITIES_TIMEOUT = app.config["CACHE_ACTIVITIES_TIMEOUT"]
 STRAVA_CLIENT_ID = app.config["STRAVA_CLIENT_ID"]
 STRAVA_CLIENT_SECRET = app.config["STRAVA_CLIENT_SECRET"]
-STORE_INDEX_TIMEOUT = app.config["STORE_INDEX_TIMEOUT"]
 TRIAGE_CONCURRENCY = app.config["TRIAGE_CONCURRENCY"]
 ADMIN = app.config["ADMIN"]
 BATCH_CHUNK_SIZE = app.config["BATCH_CHUNK_SIZE"]
 IMPORT_CONCURRENCY = app.config["IMPORT_CONCURRENCY"]
-STORE_ACTIVITIES_TIMEOUT = app.config["STORE_ACTIVITIES_TIMEOUT"]
-CACHE_TTL = app.config["CACHE_ACTIVITIES_TIMEOUT"]
 DAYS_INACTIVE_CUTOFF = app.config["DAYS_INACTIVE_CUTOFF"]
 MAX_IMPORT_ERRORS = app.config["MAX_IMPORT_ERRORS"]
+
+TTL_INDEX = app.config["TTL_INDEX"]
+TTL_CACHE = app.config["TTL_CACHE"]
+TTL_DB = app.config["TTL_DB"]
+
 
 @contextmanager
 def session_scope():
@@ -59,7 +60,6 @@ def session_scope():
 
 
 class Users(UserMixin, db_sql.Model):
-    
     Column = db_sql.Column
     String = db_sql.String
     Integer = db_sql.Integer
@@ -401,7 +401,7 @@ class Users(UserMixin, db_sql.Model):
                          streams=False,
                          owner_id=False,
                          update_index_ts=True,
-                         cache_timeout=CACHE_ACTIVITIES_TIMEOUT,
+                         cache_timeout=TTL_CACHE,
                          **kwargs):
 
         # convert date strings to datetimes, if applicable
@@ -486,7 +486,7 @@ class Users(UserMixin, db_sql.Model):
                 #  so pass it on.
                 return A
 
-            ttl = (A["ts"] - now).total_seconds() + STORE_INDEX_TIMEOUT
+            ttl = (A["ts"] - now).total_seconds() + TTL_INDEX
             A["ttl"] = max(0, int(ttl))
 
             try:
@@ -697,7 +697,7 @@ class Index(object):
             cls.db.create_index(
                 "ts",
                 name="ts",
-                expireAfterSeconds=STORE_INDEX_TIMEOUT
+                expireAfterSeconds=TTL_INDEX
             )
         except Exception:
             log.exception(
@@ -708,7 +708,7 @@ class Index(object):
         log.info("initialized '%s' collection:", cls.name)
 
     @classmethod
-    def update_ttl(cls, timeout=STORE_INDEX_TIMEOUT):
+    def update_ttl(cls, timeout=TTL_INDEX):
 
         # Update the MongoDB Index TTL if necessary
         info = cls.db.index_information()
@@ -1471,13 +1471,13 @@ class Activities(object):
         result = cls.db.create_index(
             "ts",
             name="ts",
-            expireAfterSeconds=STORE_ACTIVITIES_TIMEOUT
+            expireAfterSeconds=TTL_DB
         )
         log.info("initialized '{}' collection".format(cls.name))
         return result
         
     @classmethod 
-    def update_ttl(cls, timeout=STORE_ACTIVITIES_TIMEOUT):
+    def update_ttl(cls, timeout=TTL_DB):
 
         # Update the MongoDB Activities TTL if necessary 
         info = cls.db.index_information()
@@ -1566,7 +1566,7 @@ class Activities(object):
         return "A:{}".format(id)
 
     @classmethod
-    def set(cls, _id, data, ttl=CACHE_TTL):
+    def set(cls, _id, data, ttl=TTL_CACHE):
         # cache it first, in case mongo is down
         packed = msgpack.packb(data)
         redis.setex(cls.cache_key(_id), ttl, packed)
@@ -1584,7 +1584,7 @@ class Activities(object):
             log.exception("failed mongodb write: activity %s", id)
 
     @classmethod
-    def set_many(cls, batch_queue, ttl=CACHE_TTL):
+    def set_many(cls, batch_queue, ttl=TTL_CACHE):
       
         now = datetime.utcnow()
         redis_pipe = redis.pipeline()
@@ -1614,7 +1614,7 @@ class Activities(object):
             log.exception("Failed mongodb batch write")
 
     @classmethod
-    def get_many(cls, ids, ttl=CACHE_TTL, ordered=False):
+    def get_many(cls, ids, ttl=TTL_CACHE, ordered=False):
         #  for each id in the ids iterable of activity-ids, this
         #  generator yields either a dict of streams
         #  or None if the streams for that activity are not in our
@@ -1683,7 +1683,7 @@ class Activities(object):
                 log.exception("Failed mongoDB update_many")
 
     @classmethod
-    def get(cls, _id, ttl=CACHE_TTL):
+    def get(cls, _id, ttl=TTL_CACHE):
         packed = None
         key = cls.cache_key(id)
         cached = redis.get(key)
