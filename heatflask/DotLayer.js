@@ -366,7 +366,7 @@ L.DotLayer = L.Layer.extend( {
         }
 
         for (let i=0; i<L; i+=3) {
-            let p = [projected[i], projected[i+1]],
+            let p = [projected[i], projected[i+1]];
             bitarray.set(i, this._contains(pxBounds, p));
         }
         return bitarray
@@ -473,6 +473,9 @@ L.DotLayer = L.Layer.extend( {
             overlaps = false,
             llb = this._latLngBounds;
 
+        // lineCtx.translate(pxOffx, pxOffy);
+        // dotCtx.translate(pxOffx, pxOffy);
+
         for ( let id in items ) {
             if (!items.hasOwnProperty(id)) {
                 //The current property is not a direct property of p
@@ -554,10 +557,10 @@ L.DotLayer = L.Layer.extend( {
                             drawingLine = true;
                         }
                         // draw polyline segment from p1 to p2
-                        let c1x = ~~(p[0] + pxOffx),
-                            c1y = ~~(p[1] + pxOffy),
-                            c2x = ~~(p[3] + pxOffx),
-                            c2y = ~~(p[4] + pxOffy);
+                        let c1x = p[0] + pxOffx,
+                            c1y = p[1] + pxOffy,
+                            c2x = p[3] + pxOffx,
+                            c2y = p[4] + pxOffy;
                         lineCtx.moveTo(c1x, c1y);
                         lineCtx.lineTo(c2x, c2y);
                     }
@@ -579,8 +582,8 @@ L.DotLayer = L.Layer.extend( {
             if (selectPxBounds){
 
                 for (let i=0, len=projected.length; i<len; i+=3){
-                    let x = projected[i] + this._pxOffset.x,
-                        y = projected[i+1] + this._pxOffset.y;
+                    let x = projected[i] + pxOffx,
+                        y = projected[i+1] + pxOffy;
 
                     if ( this._contains(selectPxBounds, [x, y]) ) {
                         selectedIds.push(A.id);
@@ -608,7 +611,7 @@ L.DotLayer = L.Layer.extend( {
 
     // --------------------------------------------------------------------
     drawDots: function( obj, now, highlighted ) {
-        var P = obj.P,
+        let P = obj.P,
             dP = obj.dP,
             len_dP = dP.length,
             totSec = obj.totSec,
@@ -625,7 +628,7 @@ L.DotLayer = L.Layer.extend( {
             g = this._gifPatch,
             dotType = highlighted? "selected":"normal";
 
-        var timeOffset = s % period,
+        let timeOffset = s % period,
             count = 0,
             idx = dP[0],
             dx = dP[1],
@@ -661,18 +664,16 @@ L.DotLayer = L.Layer.extend( {
                 let lx = p[0] + dx * dt + xOffset,
                     ly = p[1] + dy * dt + yOffset;
 
-                if ( ( lx >= 0 && lx <= xmax ) && ( ly >= 0 && ly <= ymax ) ) {
-                    if ( highlighted & !g) {
-                        ctx.beginPath();
-                        ctx.arc( ~~(lx+0.5), ~~(ly+0.5), dotSize, 0, two_pi );
-                        ctx.fill();
-                        ctx.closePath();
-                        ctx.stroke();
-                    } else {
-                        ctx.fillRect( ~~(lx - dotOffset + 0.5), ~~(ly - dotOffset + 0.5), dotSize, dotSize );
-                    }
-                    count++;
+                if ( highlighted & !g) {
+                    ctx.beginPath();
+                    ctx.arc( lx, ly, dotSize, 0, two_pi );
+                    ctx.fill();
+                    ctx.closePath();
+                    ctx.stroke();
+                } else {
+                    ctx.fillRect( (lx - dotOffset), (ly - dotOffset), dotSize, dotSize );
                 }
+                count++;
             }
         }
         return count;
