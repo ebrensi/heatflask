@@ -590,12 +590,10 @@ class Users(UserMixin, db_sql.Model):
                         to_export.put(A)
 
             def imported_done(result):
-                batch_queue.put(StopIteration)
-                write_result = Activities.set_many(batch_queue)
                 if import_stats["n"]:
                     import_stats["resp"] = round(
                         import_stats["dt"] / import_stats["n"], 2)
-                log.debug("%s done importing: %s", self, write_result)
+                log.debug("%s done importing", self)
                 to_export.put(StopIteration)
 
             # this background job fills export queue
@@ -650,6 +648,8 @@ class Users(UserMixin, db_sql.Model):
         stats = Utility.cleandict(stats)
         import_stats = Utility.cleandict(import_stats)
         if import_stats:
+            batch_queue.put(StopIteration)
+            write_result = Activities.set_many(batch_queue)
             try:
                 import_stats["t_rel"] = round(
                     import_stats.pop("dt") / elapsed, 2)

@@ -427,12 +427,13 @@ L.DotLayer = L.Layer.extend( {
 
         let topLeft = this._map.containerPointToLayerPoint( [ 0, 0 ] ),
             lineCtx = this._lineCtx,
-            dotCtx = this._dotCtx;
+            dotCtx = this._dotCtx,
+            c = {x:0, y:0, w: this._dotCanvas.width, h: this._dotCanvas.height};
 
-        dotCtx.clearRect( 0, 0, this._dotCanvas.width, this._dotCanvas.height );
+        dotCtx.clearRect(c.x, c.y, c.w, c.h );
         L.DomUtil.setPosition( this._dotCanvas, topLeft );
 
-        lineCtx.clearRect( 0, 0, this._lineCanvas.width, this._lineCanvas.height );
+        lineCtx.clearRect(c.x, c.y, c.w, c.h );
         L.DomUtil.setPosition( this._lineCanvas, topLeft );
 
 
@@ -471,7 +472,8 @@ L.DotLayer = L.Layer.extend( {
             pxOffy = this._pxOffset.y,
             selectedIds = [],
             overlaps = false,
-            llb = this._latLngBounds;
+            llb = this._latLngBounds,
+            xmin, xmax, ymin, ymax;
 
         // lineCtx.translate(pxOffx, pxOffy);
         // dotCtx.translate(pxOffx, pxOffy);
@@ -513,7 +515,13 @@ L.DotLayer = L.Layer.extend( {
                 segGood = new Int8Array(numProjected-2),
                 goodSegCount = 0,
                 t0 = projected[2],
-                in0 = this._contains(pxBounds, projected.slice(0, 2));
+                p = projected.slice(0, 2),
+                in0 = this._contains(pxBounds, p);
+            
+            if (!xmax) {
+                xmin = xmax = p[0];
+                ymin = ymax = p[1];
+            }
 
             for (let i=1, idx; i<numSegs; i++) {
                 let idx = 3 * i,
@@ -551,6 +559,14 @@ L.DotLayer = L.Layer.extend( {
                     dP[didx+1] = (p[3] - p[0]) / dt;
                     dP[didx+2] = (p[4] - p[1]) / dt;
 
+                    // determine boundaries for plotted points 
+                    // so we can minimize the area to clear
+                    xmin = Math.min(p[0], p[3], xmin);
+                    xmax = Math.max(p[0], p[3], xmax);
+                    ymin = Math.min(p[1], p[4], ymin);
+                    ymax = Math.max(p[1], p[4], ymax);
+
+                    
                     if (this.options.showPaths) {
                         if (!drawingLine) {
                             lineCtx.beginPath();
@@ -602,6 +618,11 @@ L.DotLayer = L.Layer.extend( {
             };
         }
 
+        if (xmax) {
+            this._clearRect = {x: xmin + pxOffx, y: ymin + pxOffy, w: xmax-xmin, h: ymax-ymin};
+        }
+        console.log(this._clearRect);
+
         elapsed = ( performance.now() - perf_t0 ).toFixed( 2 );
         // console.log(`dot context update took ${elapsed} ms`);
         // console.log(this._processedItems);
@@ -633,7 +654,9 @@ L.DotLayer = L.Layer.extend( {
             idx = dP[0],
             dx = dP[1],
             dy = dP[2],
-            p = P.slice(idx, idx+3 );
+            px = P[idx], 
+            py = P[idx+1],
+            pt = P[idx+2];
 
         if (this.options.colorAll || highlighted) {
             ctx.fillStyle = obj.dotColor || this.options[dotType].dotColor;
@@ -653,16 +676,18 @@ L.DotLayer = L.Layer.extend( {
                         return count;
                     }
                 }
-                p = P.slice(idx, idx+3);
+                px = P[idx];
+                py = P[idx+1];
+                pt = P[idx+2];
                 dx = dP[i+1];
                 dy = dP[i+2];
             }
 
-            dt = t - p[2];
+            dt = t - pt;
 
             if ( dt > 0 ) {
-                let lx = p[0] + dx * dt + xOffset,
-                    ly = p[1] + dy * dt + yOffset;
+                let lx = px + dx * dt + xOffset,
+                    ly = py + dy * dt + yOffset;
 
                 if ( highlighted & !g) {
                     ctx.beginPath();
@@ -671,7 +696,7 @@ L.DotLayer = L.Layer.extend( {
                     ctx.closePath();
                     ctx.stroke();
                 } else {
-                    ctx.fillRect( (lx - dotOffset), (ly - dotOffset), dotSize, dotSize );
+                    ctx.fillRect( lx - dotOffset, ly - dotOffset, dotSize, dotSize );
                 }
                 count++;
             }
@@ -693,9 +718,10 @@ L.DotLayer = L.Layer.extend( {
             pItem,
             pItems = this._processedItems,
             highlighted_items = [],
-            zf = this._zoomFactor;
+            zf = this._zoomFactor,
+            c = this._clearRect;
 
-        ctx.clearRect( 0, 0, this._dotCanvas.width, this._dotCanvas.height );
+        ctx.clearRect( c.x, c.y, c.w, c.h );
         ctx.fillStyle = this.options.normal.dotColor;
 
         this._timeScale = this.C2 * zf;
