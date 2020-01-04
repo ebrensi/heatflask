@@ -621,7 +621,6 @@ L.DotLayer = L.Layer.extend( {
         if (xmax) {
             this._clearRect = {x: xmin + pxOffx, y: ymin + pxOffy, w: xmax-xmin, h: ymax-ymin};
         }
-        console.log(this._clearRect);
 
         elapsed = ( performance.now() - perf_t0 ).toFixed( 2 );
         // console.log(`dot context update took ${elapsed} ms`);
