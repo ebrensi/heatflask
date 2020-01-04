@@ -48,6 +48,7 @@ L.DotLayer = L.Layer.extend( {
         this._items = items || null;
         this._timeOffset = 0;
         this._colorPalette = [];
+        this._overlapsArray = null;
         L.setOptions( this, options );
         this._paused = this.options.startPaused;
         this._timePaused = Date.now();
@@ -337,6 +338,7 @@ L.DotLayer = L.Layer.extend( {
         }
     },
 
+
     _overlaps: function(mapBounds, activityBounds) {
         let sw = mapBounds._southWest,
             ne = mapBounds._northEast,
@@ -355,6 +357,35 @@ L.DotLayer = L.Layer.extend( {
 
         return (pxBounds.min.x <= x) && (x <= pxBounds.max.x) &&
                (pxBounds.min.y <= y) && (y <= pxBounds.max.y);
+    },
+
+    contains: function(pxBounds, projected, bitarray=null) {
+        const L = projected.length;
+        if (bitarray === null) {
+            bitarray = new FastBitArray(L); 
+        }
+
+        for (let i=0; i<L; i+=3) {
+            let p = [projected[i], projected[i+1]];
+            bitarray.set(i, this._contains(pxBounds, p));
+        }
+        return bitarray
+    },
+
+    updateInclusion: function(mapBounds, pxBounds) {
+        const tracks = this._items.values(),
+              overlap = (track) => this._overlaps(mapBounds, track.bounds);
+
+        // make a bitArray indicating which tracks bounds overlap the current view
+        this._overlapsArray = FastBitArray.filter(overlap, tracks, this._overlapsArray);
+
+        // for each overlapped track, make a bitArray indicating which points
+        // are in the current view
+        const contain = (i) => {
+            tracks[i].inCurrentView
+            // Resume here
+        }
+        this._overlapsArray.forEach();
     },
 
     _project: function(A) {
@@ -396,12 +427,13 @@ L.DotLayer = L.Layer.extend( {
 
         let topLeft = this._map.containerPointToLayerPoint( [ 0, 0 ] ),
             lineCtx = this._lineCtx,
-            dotCtx = this._dotCtx;
+            dotCtx = this._dotCtx,
+            c = {x:0, y:0, w: this._dotCanvas.width, h: this._dotCanvas.height};
 
-        dotCtx.clearRect( 0, 0, this._dotCanvas.width, this._dotCanvas.height );
+        dotCtx.clearRect(c.x, c.y, c.w, c.h );
         L.DomUtil.setPosition( this._dotCanvas, topLeft );
 
-        lineCtx.clearRect( 0, 0, this._lineCanvas.width, this._lineCanvas.height );
+        lineCtx.clearRect(c.x, c.y, c.w, c.h );
         L.DomUtil.setPosition( this._lineCanvas, topLeft );
 
 
@@ -440,7 +472,11 @@ L.DotLayer = L.Layer.extend( {
             pxOffy = this._pxOffset.y,
             selectedIds = [],
             overlaps = false,
-            llb = this._latLngBounds;
+            llb = this._latLngBounds,
+            xmin, xmax, ymin, ymax;
+
+        // lineCtx.translate(pxOffx, pxOffy);
+        // dotCtx.translate(pxOffx, pxOffy);
 
         for ( let id in items ) {
             if (!items.hasOwnProperty(id)) {
@@ -479,7 +515,13 @@ L.DotLayer = L.Layer.extend( {
                 segGood = new Int8Array(numProjected-2),
                 goodSegCount = 0,
                 t0 = projected[2],
-                in0 = this._contains(pxBounds, projected.slice(0, 2));
+                p = projected.slice(0, 2),
+                in0 = this._contains(pxBounds, p);
+            
+            if (!xmax) {
+                xmin = xmax = p[0];
+                ymin = ymax = p[1];
+            }
 
             for (let i=1, idx; i<numSegs; i++) {
                 let idx = 3 * i,
@@ -517,16 +559,24 @@ L.DotLayer = L.Layer.extend( {
                     dP[didx+1] = (p[3] - p[0]) / dt;
                     dP[didx+2] = (p[4] - p[1]) / dt;
 
+                    // determine boundaries for plotted points 
+                    // so we can minimize the area to clear
+                    xmin = Math.min(p[0], p[3], xmin);
+                    xmax = Math.max(p[0], p[3], xmax);
+                    ymin = Math.min(p[1], p[4], ymin);
+                    ymax = Math.max(p[1], p[4], ymax);
+
+                    
                     if (this.options.showPaths) {
                         if (!drawingLine) {
                             lineCtx.beginPath();
                             drawingLine = true;
                         }
                         // draw polyline segment from p1 to p2
-                        let c1x = ~~(p[0] + pxOffx),
-                            c1y = ~~(p[1] + pxOffy),
-                            c2x = ~~(p[3] + pxOffx),
-                            c2y = ~~(p[4] + pxOffy);
+                        let c1x = p[0] + pxOffx,
+                            c1y = p[1] + pxOffy,
+                            c2x = p[3] + pxOffx,
+                            c2y = p[4] + pxOffy;
                         lineCtx.moveTo(c1x, c1y);
                         lineCtx.lineTo(c2x, c2y);
                     }
@@ -548,8 +598,8 @@ L.DotLayer = L.Layer.extend( {
             if (selectPxBounds){
 
                 for (let i=0, len=projected.length; i<len; i+=3){
-                    let x = projected[i] + this._pxOffset.x,
-                        y = projected[i+1] + this._pxOffset.y;
+                    let x = projected[i] + pxOffx,
+                        y = projected[i+1] + pxOffy;
 
                     if ( this._contains(selectPxBounds, [x, y]) ) {
                         selectedIds.push(A.id);
@@ -568,6 +618,11 @@ L.DotLayer = L.Layer.extend( {
             };
         }
 
+        if (xmax) {
+            this._clearRect = {x: xmin + pxOffx, y: ymin + pxOffy, w: xmax-xmin, h: ymax-ymin};
+        }
+        console.log(this._clearRect);
+
         elapsed = ( performance.now() - perf_t0 ).toFixed( 2 );
         // console.log(`dot context update took ${elapsed} ms`);
         // console.log(this._processedItems);
@@ -577,7 +632,7 @@ L.DotLayer = L.Layer.extend( {
 
     // --------------------------------------------------------------------
     drawDots: function( obj, now, highlighted ) {
-        var P = obj.P,
+        let P = obj.P,
             dP = obj.dP,
             len_dP = dP.length,
             totSec = obj.totSec,
@@ -594,12 +649,14 @@ L.DotLayer = L.Layer.extend( {
             g = this._gifPatch,
             dotType = highlighted? "selected":"normal";
 
-        var timeOffset = s % period,
+        let timeOffset = s % period,
             count = 0,
             idx = dP[0],
             dx = dP[1],
             dy = dP[2],
-            p = P.slice(idx, idx+3 );
+            px = P[idx], 
+            py = P[idx+1],
+            pt = P[idx+2];
 
         if (this.options.colorAll || highlighted) {
             ctx.fillStyle = obj.dotColor || this.options[dotType].dotColor;
@@ -619,29 +676,29 @@ L.DotLayer = L.Layer.extend( {
                         return count;
                     }
                 }
-                p = P.slice(idx, idx+3);
+                px = P[idx];
+                py = P[idx+1];
+                pt = P[idx+2];
                 dx = dP[i+1];
                 dy = dP[i+2];
             }
 
-            dt = t - p[2];
+            dt = t - pt;
 
             if ( dt > 0 ) {
-                let lx = p[0] + dx * dt + xOffset,
-                    ly = p[1] + dy * dt + yOffset;
+                let lx = px + dx * dt + xOffset,
+                    ly = py + dy * dt + yOffset;
 
-                if ( ( lx >= 0 && lx <= xmax ) && ( ly >= 0 && ly <= ymax ) ) {
-                    if ( highlighted & !g) {
-                        ctx.beginPath();
-                        ctx.arc( ~~(lx+0.5), ~~(ly+0.5), dotSize, 0, two_pi );
-                        ctx.fill();
-                        ctx.closePath();
-                        ctx.stroke();
-                    } else {
-                        ctx.fillRect( ~~(lx - dotOffset + 0.5), ~~(ly - dotOffset + 0.5), dotSize, dotSize );
-                    }
-                    count++;
+                if ( highlighted & !g) {
+                    ctx.beginPath();
+                    ctx.arc( lx, ly, dotSize, 0, two_pi );
+                    ctx.fill();
+                    ctx.closePath();
+                    ctx.stroke();
+                } else {
+                    ctx.fillRect( lx - dotOffset, ly - dotOffset, dotSize, dotSize );
                 }
+                count++;
             }
         }
         return count;
@@ -661,9 +718,10 @@ L.DotLayer = L.Layer.extend( {
             pItem,
             pItems = this._processedItems,
             highlighted_items = [],
-            zf = this._zoomFactor;
+            zf = this._zoomFactor,
+            c = this._clearRect;
 
-        ctx.clearRect( 0, 0, this._dotCanvas.width, this._dotCanvas.height );
+        ctx.clearRect( c.x, c.y, c.w, c.h );
         ctx.fillStyle = this.options.normal.dotColor;
 
         this._timeScale = this.C2 * zf;
