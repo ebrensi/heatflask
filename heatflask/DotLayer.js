@@ -185,8 +185,8 @@ L.DotLayer = L.Layer.extend( {
         // square distance between 2 points
         getSqDist: function(p1, p2) {
 
-            var dx = p1.x - p2.x,
-                dy = p1.y - p2.y;
+            var dx = p1[0] - p2[0],
+                dy = p1[1] - p2[1];
 
             return dx * dx + dy * dy;
         },
@@ -194,18 +194,18 @@ L.DotLayer = L.Layer.extend( {
         // square distance from a point to a segment
         getSqSegDist: function(p, p1, p2) {
 
-            var x = p1.x,
-                y = p1.y,
-                dx = p2.x - x,
-                dy = p2.y - y;
+            var x = p1[0],
+                y = p1[1],
+                dx = p2[0] - x,
+                dy = p2[1] - y;
 
             if (dx !== 0 || dy !== 0) {
 
-                var t = ((p.x - x) * dx + (p.y - y) * dy) / (dx * dx + dy * dy);
+                var t = ((p[0] - x) * dx + (p[1] - y) * dy) / (dx * dx + dy * dy);
 
                 if (t > 1) {
-                    x = p2.x;
-                    y = p2.y;
+                    x = p2[0];
+                    y = p2[1];
 
                 } else if (t > 0) {
                     x += dx * t;
@@ -213,8 +213,8 @@ L.DotLayer = L.Layer.extend( {
                 }
             }
 
-            dx = p.x - x;
-            dy = p.y - y;
+            dx = p[0] - x;
+            dy = p[1] - y;
 
             return dx * dx + dy * dy;
         },
@@ -397,9 +397,7 @@ L.DotLayer = L.Layer.extend( {
         for (let i=0; i<numPoints; i++) {
             let idx = 3*i,
                 p = this.CRS.project( [llt[idx], llt[idx+1]], this._zoom );
-            p = new L.Point(p[0], p[1]);
-            p.t = llt[idx+2];
-            projectedObjs[i] = p;
+            projectedObjs[i] = [ p[0], p[1], llt[idx+2] ];
         }
 
         projectedObjs = this.Simplifier.simplify( projectedObjs, this.smoothFactor, false);
@@ -412,9 +410,9 @@ L.DotLayer = L.Layer.extend( {
         for (let i=0, obj, idx; i<numObjs; i++) {
             obj = projectedObjs[i];
             idx = 3 * i;
-            projected[idx] = obj.x;
-            projected[idx+1] = obj.y;
-            projected[idx+2] = obj.t;
+            projected[idx] = obj[0];
+            projected[idx+1] = obj[1];
+            projected[idx+2] = obj[2];
         }
         return projected;
     },
@@ -506,16 +504,16 @@ L.DotLayer = L.Layer.extend( {
             if (!A.projected[ z ])
                 A.projected[z] = this._project(A);
                 
-            let projected = A.projected[z];
+            let P = A.projected[z];
 
             // determine whether or not each projected point is in the
             // currently visible area
-            let numProjected = projected.length / 3,
-                numSegs = numProjected-1,
-                segGood = new Int8Array(numProjected-2),
+            let nP = P.length / 3,
+                numSegs = nP-1,
+                segGood = new Int8Array(nP-2),
                 goodSegCount = 0,
-                t0 = projected[2],
-                p = projected.slice(0, 2),
+                t0 = P[2],
+                p = [P[0], P[1]],
                 in0 = this._contains(pxBounds, p);
             
             if (!xmax) {
@@ -525,9 +523,9 @@ L.DotLayer = L.Layer.extend( {
 
             for (let i=1, idx; i<numSegs; i++) {
                 let idx = 3 * i,
-                    p = [projected[idx], projected[idx+1]],
+                    p = [P[idx], P[idx+1]],
                     in1 = this._contains(pxBounds, p),
-                    t1 = projected[idx+2],
+                    t1 = P[idx+2],
                     isGood = ((in0 || in1) && (t1-t0 < tThresh))? 1:0;
                 segGood[i-1] = isGood;
                 goodSegCount += isGood;
@@ -547,24 +545,22 @@ L.DotLayer = L.Layer.extend( {
                 if ( segGood[i] ) {
                     let pidx = 3 * i,
                         didx = 3 * j,
-                        p = projected.slice(pidx, pidx+6);
+                        p1x = P[pidx],   p1y = P[pidx+1], p1t = P[pidx+2],
+                        p2x = P[pidx+3], p2y = P[pidx+4], p2t = P[pidx+5];
                     j++;
-
-                    // p[0:2] are p1.x, p1.y, and p1.t
-                    // p[3:5] are p2.x, p2.y, and p2.t
 
                     // Compute derivative for this segment
                     dP[didx] = pidx;
-                    dt = p[5] - p[2];
-                    dP[didx+1] = (p[3] - p[0]) / dt;
-                    dP[didx+2] = (p[4] - p[1]) / dt;
+                    dt = p2t - p1t;
+                    dP[didx+1] = (p2x - p1x) / dt;
+                    dP[didx+2] = (p2y - p1y) / dt;
 
                     // determine boundaries for plotted points 
                     // so we can minimize the area to clear
-                    xmin = Math.min(p[0], p[3], xmin);
-                    xmax = Math.max(p[0], p[3], xmax);
-                    ymin = Math.min(p[1], p[4], ymin);
-                    ymax = Math.max(p[1], p[4], ymax);
+                    xmin = Math.min(p1x, p2x, xmin);
+                    xmax = Math.max(p1x, p2x, xmax);
+                    ymin = Math.min(p1y, p2y, ymin);
+                    ymax = Math.max(p1y, p2y, ymax);
 
                     
                     if (this.options.showPaths) {
@@ -573,10 +569,10 @@ L.DotLayer = L.Layer.extend( {
                             drawingLine = true;
                         }
                         // draw polyline segment from p1 to p2
-                        let c1x = p[0] + pxOffx,
-                            c1y = p[1] + pxOffy,
-                            c2x = p[3] + pxOffx,
-                            c2y = p[4] + pxOffy;
+                        let c1x = p1x + pxOffx,
+                            c1y = p1y + pxOffy,
+                            c2x = p2x + pxOffx,
+                            c2y = p2y + pxOffy;
                         lineCtx.moveTo(c1x, c1y);
                         lineCtx.lineTo(c2x, c2y);
                     }
@@ -597,9 +593,9 @@ L.DotLayer = L.Layer.extend( {
 
             if (selectPxBounds){
 
-                for (let i=0, len=projected.length; i<len; i+=3){
-                    let x = projected[i] + pxOffx,
-                        y = projected[i+1] + pxOffy;
+                for (let i=0, len=P.length; i<len; i+=3){
+                    let x = P[i] + pxOffx,
+                        y = P[i+1] + pxOffy;
 
                     if ( this._contains(selectPxBounds, [x, y]) ) {
                         selectedIds.push(A.id);
@@ -611,17 +607,16 @@ L.DotLayer = L.Layer.extend( {
 
             this._processedItems[ id ] = {
                 dP: dP,
-                P: projected,
+                P: P,
                 dotColor: A.dotColor,
                 startTime: A.startTime,
-                totSec: projected.slice( -1 )[ 0 ]
+                totSec: P.slice( -1 )[ 0 ]
             };
         }
 
         if (xmax) {
             this._clearRect = {x: xmin + pxOffx, y: ymin + pxOffy, w: xmax-xmin, h: ymax-ymin};
         }
-        console.log(this._clearRect);
 
         elapsed = ( performance.now() - perf_t0 ).toFixed( 2 );
         // console.log(`dot context update took ${elapsed} ms`);
