@@ -460,7 +460,7 @@ L.DotLayer = L.Layer.extend( {
               mapBounds = this._latLngBounds,
               smoothFactor = this.smoothFactor;
         
-        let xmin, xmax, ymin, ymax;
+        this.totalBounds = L.latLngBounds();
 
         for (A of this._items.values()) {
             let in = A.inView = this._overlaps(mapBounds, A.bounds);
@@ -468,9 +468,12 @@ L.DotLayer = L.Layer.extend( {
             if ( !in )
                 continue;
 
+            totalBounds.extend(A.bounds);
+
             if ( !A.projected )
                 A.projected = {};
 
+            // project activity latLngs to pane coords
             if (!A.projected[ z ])
                 A.projected[z] = this._project(A.latLngTime, z, this.smoothFactor);
                 
@@ -479,39 +482,33 @@ L.DotLayer = L.Layer.extend( {
 
             if (this.options.showPaths)
                 this.drawPath(A, pxOffset);
+
+            // this._processedItems[ id ] = {
+            //     dP: dP,
+            //     P: P,
+            //     dotColor: A.dotColor,
+            //     startTime: A.startTime,
+            //     totSec: P.slice( -1 )[ 0 ]
+            // };
         };
 
+        let sw = this.totalBounds._southWest,
+            ne = this.totalBounds._northEast,
+            cSW = this.CRS.project( [sw.lat, sw.lng], z ),
+            cNE = this.CRS.project( [ne.lat, ne.lng], z ),
+            xmin = Math.min(cSW[0], cNE[0]),
+            ymin = Math.min(cSW[1], cNE[1]);
+        
+        this.drawRect = {
+            x: xmin + pxOffset.x,
+            y: ymin + pxOffset.y,
+            w: Math.abs(cSW[0] - cNE[0]),
+            h: Math.abs(cSW[1] - cNE[1])
+        };
 
         elapsed = ( performance.now() - perf_t0 ).toFixed( 2 );
         // console.log(`dot context update took ${elapsed} ms`);
         // console.log(this._processedItems);
-
-
-        /*
-        if (!xmax) {
-            xmin = xmax = p[0];
-            ymin = ymax = p[1];
-        }
-
-        // determine boundaries for plotted points 
-        // so we can minimize the area to clear
-        xmin = Math.min(p1x, p2x, xmin);
-        xmax = Math.max(p1x, p2x, xmax);
-        ymin = Math.min(p1y, p2y, ymin);
-        ymax = Math.max(p1y, p2y, ymax);
-
-        this._processedItems[ id ] = {
-            dP: dP,
-            P: P,
-            dotColor: A.dotColor,
-            startTime: A.startTime,
-            totSec: P.slice( -1 )[ 0 ]
-        };
-
-        if (xmax) {
-            this._clearRect = {x: xmin + pxOffx, y: ymin + pxOffy, w: xmax-xmin, h: ymax-ymin};
-        }
-        */
     },
 
     drawPath: function(A, pxOffset, isolated=true) {
@@ -626,26 +623,22 @@ L.DotLayer = L.Layer.extend( {
             zoom = this._zoom,
             count = 0,
             t0 = performance.now(),
-            item,
-            items = this._items,
-            pItem,
-            pItems = this._processedItems,
             highlighted_items = [],
-            zf = this._zoomFactor,
-            c = this._clearRect;
+            zf = this._zoomFactor = 1 / Math.pow( 2, zoom ),
+            c = this._drawRect || {x:0, y:0, w: this._dotCanvas.width, h: this._dotCanvas.height};
 
         ctx.clearRect( c.x, c.y, c.w, c.h );
         ctx.fillStyle = this.options.normal.dotColor;
 
         this._timeScale = this.C2 * zf;
         this._period = this.C1 * zf;
-        this._dotSize = Math.max(1, ~~(this.dotScale * Math.log( this._zoom ) + 0.5));
+        this._dotSize = Math.max(1, ~~(this.dotScale * Math.log( zoom ) + 0.5));
 
 
 
-        for (let id in pItems ) {
+        for ( let A of this._items.values() ) {
             item = pItems[ id ];
-            if ( items[ id ].highlighted ) {
+            if ( A.highlighted ) {
                 highlighted_items.push( item );
             } else {
                 count += this.drawDots( item, now, false );
