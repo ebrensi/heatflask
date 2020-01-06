@@ -170,7 +170,7 @@ L.DotLayer = L.Layer.extend( {
     setSelectRegion: function(pxBounds, callback) {
         let paused = this._paused;
         this.pause();
-        let selectedIds = this._setupWindow(pxBounds);
+        let selectedIds = this.getSelected(pxBounds);
         if (paused){
             this.drawLayer();
         } else {
@@ -322,22 +322,8 @@ L.DotLayer = L.Layer.extend( {
             x = scale * (T.A * x + T.B);
             y = scale * (T.C * y + T.D);
             return [x,y]
-        },
-
-        // distance between two geographical points using spherical law of cosines approximation
-        distance: function(latlngpt1, latlngpt2) {
-            const rad = this.RAD,
-                lat1 = latlngpt1[0] * rad,
-                lat2 = latlngpt2[0] * rad,
-                R2 = rad / 2,
-                sinDLat = Math.sin((latlngpt2[0] - latlngpt1[0]) * R2),
-                sinDLon = Math.sin((latlngpt2[1] - latlngpt1[1]) * R2),
-                a = sinDLat * sinDLat + Math.cos(lat1) * Math.cos(lat2) * sinDLon * sinDLon,
-                c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            return this.EARTH_RADIUS * c;
         }
     },
-
 
     _overlaps: function(mapBounds, activityBounds) {
         let sw = mapBounds._southWest,
@@ -351,6 +337,22 @@ L.DotLayer = L.Layer.extend( {
         return latOverlaps && lngOverlaps;
     },
 
+    itemMask: function(mapBounds, bitArray=null) {
+        const items = this._items,
+              itemKeys = Object.keys(items),
+              L = itemKeys.length;
+
+        if (bitarray === null)
+            bitarray = new FastBitArray(L);
+
+
+        for (i = 0; i < L; i++) {
+            let itemBounds = items[itemKeys[i]];
+            bitarray.set(i, this._overlaps(mapBounds, itemBounds));
+        }
+        return bitarray
+    },
+
     _contains: function (pxBounds, point) {
         let x = point[0],
             y = point[1];
@@ -359,79 +361,75 @@ L.DotLayer = L.Layer.extend( {
                (pxBounds.min.y <= y) && (y <= pxBounds.max.y);
     },
 
-    contains: function(pxBounds, projected, bitarray=null) {
-        const L = projected.length;
-        if (bitarray === null) {
-            bitarray = new FastBitArray(L); 
-        }
+    _segMask: function(pxBounds, projected, bitarray=null) {
+        const L = (projected.length / 3) - 1;
+        if (bitarray === null)
+            bitarray = new FastBitArray(L);
 
-        for (let i=0; i<L; i+=3) {
-            let p = [projected[i], projected[i+1]];
-            bitarray.set(i, this._contains(pxBounds, p));
+        for (let idx=0; idx<L; idx++) {
+            let i = 3*idx,
+                p = [projected[i], projected[i+1]];
+            bitarray.set(idx, this._contains(pxBounds, p));
         }
         return bitarray
     },
 
-    updateInclusion: function(mapBounds, pxBounds) {
-        const tracks = this._items.values(),
-              overlap = (track) => this._overlaps(mapBounds, track.bounds);
-
-        // make a bitArray indicating which tracks bounds overlap the current view
-        this._overlapsArray = FastBitArray.filter(overlap, tracks, this._overlapsArray);
-
-        // for each overlapped track, make a bitArray indicating which points
-        // are in the current view
-        const contain = (i) => {
-            tracks[i].inCurrentView
-            // Resume here
-        }
-        this._overlapsArray.forEach();
-    },
-
-    _project: function(A) {
-        const llt = A.latLngTime,
-            numPoints = llt.length / 3;
-
-        let projectedObjs = new Array(numPoints);
+    _project: function(llt, zoom, smoothFactor, hq=false, ttol=60) {
+        let numPoints = llt.length / 3,
+            points = new Array(numPoints);
 
         for (let i=0; i<numPoints; i++) {
             let idx = 3*i,
-                p = this.CRS.project( [llt[idx], llt[idx+1]], this._zoom );
-            projectedObjs[i] = [ p[0], p[1], llt[idx+2] ];
+                p = this.CRS.project( [llt[idx], llt[idx+1]], zoom );
+            points[i] = [ p[0], p[1], llt[idx+2] ];
         }
 
-        projectedObjs = this.Simplifier.simplify( projectedObjs, this.smoothFactor, false);
+        points = this.Simplifier.simplify(points, smoothFactor, hq);
 
-        // now projectedObjs is an Array of objects, so we convert it
-        // to a Float32Array
-        let numObjs = projectedObjs.length,
+        // now points is an Array of points, so we put it
+        // into a Float32Array buffer
+        // TODO: modify Simplify to work directly with TypedArray 
+        numPoints = points.length;
 
-        projected = new Float32Array(numObjs * 3);
-        for (let i=0, obj, idx; i<numObjs; i++) {
-            obj = projectedObjs[i];
-            idx = 3 * i;
-            projected[idx] = obj[0];
-            projected[idx+1] = obj[1];
-            projected[idx+2] = obj[2];
+        let P = new Float32Array(numPoints * 3);
+        for (let idx=0; idx<numPoints; idx++) {
+            let point = points[idx],
+                i = 3 * idx;
+            P[i] = point[0];
+            P[i+1] = point[1];
+            P[i+2] = point[2];
         }
-        return projected;
+
+        // Compute speed for each valid segment
+        // A segment is valid if it doesn't have too large time gap
+        let numSegs = numPoints - 1,
+            dP = new Float32Array(numSegs * 2);
+
+        for ( let idx = 0; idx < numSegs; idx++ ) {
+            let i = 3 * idx,
+                j = 2 * idx,
+                dt = P[i+5] - P[i+2];
+
+            dP[j] = (P[i+3] - P[i]) / dt;
+            dP[j+1] = (P[i+4] - P[i+1]) / dt;
+        }
+
+        return {P: P, dP: dP}
     },
 
-    _setupWindow: function(selectPxBounds=null) {
+    _setupWindow: function() {
         if ( !this._map || !this._items ) {
             return;
         }
         const perf_t0 = performance.now();
 
         let topLeft = this._map.containerPointToLayerPoint( [ 0, 0 ] ),
-            lineCtx = this._lineCtx,
-            dotCtx = this._dotCtx,
             c = {x:0, y:0, w: this._dotCanvas.width, h: this._dotCanvas.height};
 
-        dotCtx.clearRect(c.x, c.y, c.w, c.h );
+        this._dotCtx.clearRect(c.x, c.y, c.w, c.h );
         L.DomUtil.setPosition( this._dotCanvas, topLeft );
 
-        lineCtx.clearRect(c.x, c.y, c.w, c.h );
+        this._lineCtx.clearRect(c.x, c.y, c.w, c.h );
         L.DomUtil.setPosition( this._lineCanvas, topLeft );
 
 
@@ -440,190 +438,110 @@ L.DotLayer = L.Layer.extend( {
         this._center = this._map.getCenter;
         this._size = this._map.getSize();
 
-
         this._latLngBounds = this._map.getBounds();
         this._mapPanePos = this._map._getMapPanePos();
         this._pxOrigin = this._map.getPixelOrigin();
-        this._pxBounds = this._map.getPixelBounds();
         this._pxOffset = this._mapPanePos.subtract( this._pxOrigin );
+        this._pxBounds = this._map.getPixelBounds();
 
-        let z = this._zoom,
-            ppos = this._mapPanePos,
+        let ppos = this._mapPanePos,
             pxOrigin = this._pxOrigin,
             pxBounds = this._pxBounds,
-            items = this._items;
+            z = this._zoom;
 
         this._dotCtx.strokeStyle = this.options.selected.dotStrokeColor;
         this._dotCtx.lineWidth = this.options.selected.dotStrokeWidth;
-        this._zoomFactor = 1 / Math.pow( 2, z );
-
-        let tThresh = this._tThresh * DotLayer._zoomFactor;
 
         // console.log( `zoom=${z}\nmapPanePos=${ppos}\nsize=${this._size}\n` +
         //             `pxOrigin=${pxOrigin}\npxBounds=[${pxBounds.min}, ${pxBounds.max}]`
         //              );
 
+        const pxOffset = this.pxOffset,
+              mapBounds = this._latLngBounds,
+              smoothFactor = this.smoothFactor;
+        
+        let xmin, xmax, ymin, ymax;
 
-        this._processedItems = {};
+        for (A of this._items.values()) {
+            let in = A.inView = this._overlaps(mapBounds, A.bounds);
 
-        let pxOffx = this._pxOffset.x,
-            pxOffy = this._pxOffset.y,
-            selectedIds = [],
-            overlaps = false,
-            llb = this._latLngBounds,
-            xmin, xmax, ymin, ymax;
-
-        // lineCtx.translate(pxOffx, pxOffy);
-        // dotCtx.translate(pxOffx, pxOffy);
-
-        for ( let id in items ) {
-            if (!items.hasOwnProperty(id)) {
-                //The current property is not a direct property of p
-                continue;
-            }
-
-            let A = this._items[ id ],
-                drawingLine = false;
-
-            try {
-                overlaps = this._overlaps(llb, A.bounds)
-            } catch(err) {
-                console.error(err);
-                console.log("there is a problem with ", A);
-                delete this._items[ id ];
-                continue;
-            }
-            // -----------------------------------------------
-
-            if (!A.latLngTime || !overlaps)
+            if ( !in )
                 continue;
 
             if ( !A.projected )
                 A.projected = {};
 
             if (!A.projected[ z ])
-                A.projected[z] = this._project(A);
+                A.projected[z] = this._project(A.latLngTime, z, this.smoothFactor);
                 
-            let P = A.projected[z];
+            let projectedPoints = A.projected[z].P,
+                segMask = A.segMask = this._segMask(this._pxBounds, projectedPoints, A.segMask);
 
-            // determine whether or not each projected point is in the
-            // currently visible area
-            let nP = P.length / 3,
-                numSegs = nP-1,
-                segGood = new Int8Array(nP-2),
-                goodSegCount = 0,
-                t0 = P[2],
-                p = [P[0], P[1]],
-                in0 = this._contains(pxBounds, p);
-            
-            if (!xmax) {
-                xmin = xmax = p[0];
-                ymin = ymax = p[1];
-            }
+            if (this.options.showPaths)
+                this.drawPath(A, pxOffset);
+        };
 
-            for (let i=1, idx; i<numSegs; i++) {
-                let idx = 3 * i,
-                    p = [P[idx], P[idx+1]],
-                    in1 = this._contains(pxBounds, p),
-                    t1 = P[idx+2],
-                    isGood = ((in0 || in1) && (t1-t0 < tThresh))? 1:0;
-                segGood[i-1] = isGood;
-                goodSegCount += isGood;
-                in0 = in1;
-                t0 = t1;
-            }
-
-            // console.log(segGood);
-            if (goodSegCount == 0) {
-                continue;
-            }
-
-            let dP = new Float32Array(goodSegCount*3);
-
-            for ( let i=0, j=0; i < numSegs; i++ ) {
-                // Is the current segment in the visible area?
-                if ( segGood[i] ) {
-                    let pidx = 3 * i,
-                        didx = 3 * j,
-                        p1x = P[pidx],   p1y = P[pidx+1], p1t = P[pidx+2],
-                        p2x = P[pidx+3], p2y = P[pidx+4], p2t = P[pidx+5];
-                    j++;
-
-                    // Compute derivative for this segment
-                    dP[didx] = pidx;
-                    dt = p2t - p1t;
-                    dP[didx+1] = (p2x - p1x) / dt;
-                    dP[didx+2] = (p2y - p1y) / dt;
-
-                    // determine boundaries for plotted points 
-                    // so we can minimize the area to clear
-                    xmin = Math.min(p1x, p2x, xmin);
-                    xmax = Math.max(p1x, p2x, xmax);
-                    ymin = Math.min(p1y, p2y, ymin);
-                    ymax = Math.max(p1y, p2y, ymax);
-
-                    
-                    if (this.options.showPaths) {
-                        if (!drawingLine) {
-                            lineCtx.beginPath();
-                            drawingLine = true;
-                        }
-                        // draw polyline segment from p1 to p2
-                        let c1x = p1x + pxOffx,
-                            c1y = p1y + pxOffy,
-                            c2x = p2x + pxOffx,
-                            c2y = p2y + pxOffy;
-                        lineCtx.moveTo(c1x, c1y);
-                        lineCtx.lineTo(c2x, c2y);
-                    }
-                }
-            }
-
-            if (this.options.showPaths) {
-                if (drawingLine) {
-                    lineType = A.highlighted? "selected":"normal";
-                    lineCtx.globalAlpha = this.options[lineType].pathOpacity;
-                    lineCtx.lineWidth = this.options[lineType].pathWidth;
-                    lineCtx.strokeStyle = A.pathColor || this.options[lineType].pathColor;
-                    lineCtx.stroke();
-                } else {
-                    lineCtx.stroke();
-                }
-            }
-
-            if (selectPxBounds){
-
-                for (let i=0, len=P.length; i<len; i+=3){
-                    let x = P[i] + pxOffx,
-                        y = P[i+1] + pxOffy;
-
-                    if ( this._contains(selectPxBounds, [x, y]) ) {
-                        selectedIds.push(A.id);
-                        break;
-                    }
-                }
-
-            }
-
-            this._processedItems[ id ] = {
-                dP: dP,
-                P: P,
-                dotColor: A.dotColor,
-                startTime: A.startTime,
-                totSec: P.slice( -1 )[ 0 ]
-            };
-        }
-
-        if (xmax) {
-            this._clearRect = {x: xmin + pxOffx, y: ymin + pxOffy, w: xmax-xmin, h: ymax-ymin};
-        }
 
         elapsed = ( performance.now() - perf_t0 ).toFixed( 2 );
         // console.log(`dot context update took ${elapsed} ms`);
         // console.log(this._processedItems);
-        return selectedIds;
+
+
+        /*
+        if (!xmax) {
+            xmin = xmax = p[0];
+            ymin = ymax = p[1];
+        }
+
+        // determine boundaries for plotted points 
+        // so we can minimize the area to clear
+        xmin = Math.min(p1x, p2x, xmin);
+        xmax = Math.max(p1x, p2x, xmax);
+        ymin = Math.min(p1y, p2y, ymin);
+        ymax = Math.max(p1y, p2y, ymax);
+
+        this._processedItems[ id ] = {
+            dP: dP,
+            P: P,
+            dotColor: A.dotColor,
+            startTime: A.startTime,
+            totSec: P.slice( -1 )[ 0 ]
+        };
+
+        if (xmax) {
+            this._clearRect = {x: xmin + pxOffx, y: ymin + pxOffy, w: xmax-xmin, h: ymax-ymin};
+        }
+        */
     },
 
+    drawPath: function(A, pxOffset, isolated=true) {
+        const ctx = this._lineCtx,
+              P = points,
+              ox = pxOffset.x,
+              oy = pxOffset.y;
+
+        if (isolated)
+            ctx.beginPath();
+
+        segmask.forEach(idx => {
+            let i = 3 * idx,
+                p1x = P[i]   + ox, p1y = P[i+1] + oy,
+                p2x = P[i+3] + ox, p2y = P[i+4] + oy;
+
+                lineCtx.moveTo(p1x, p1y);
+                lineCtx.lineTo(p2x, p2y);
+        });
+            
+
+        if (isolated) {
+            lineType = A.highlighted? "selected":"normal";
+            lineCtx.globalAlpha = this.options[lineType].pathOpacity;
+            lineCtx.lineWidth = this.options[lineType].pathWidth;
+            lineCtx.strokeStyle = A.pathColor || this.options[lineType].pathColor;
+            lineCtx.stroke();
+        }
+
+    },
 
     // --------------------------------------------------------------------
     drawDots: function( obj, now, highlighted ) {
@@ -752,6 +670,34 @@ L.DotLayer = L.Layer.extend( {
             fps_display.update( now, `${elapsed} ms/f, n=${count}, z=${this._zoom},\nP=${progress}/${periodInSecs.toFixed(2)}` );
         }
     },
+
+    getSelected: function(selectPxBounds) {
+        const z = this._zoom,
+              pxOffset = this._pxOffset,
+              ox = pxOffset.x,
+              oy = pxOffset.y;
+
+        let selectedIds = [];
+
+        for (A of this._items.values()) {
+            if (!A.inView)
+                continue;
+
+            P = A.projected[z].P;
+
+            for (let j=0, len=P.length; j<len; j++){
+                let i = 3 * j,
+                    x = P[i]   + ox,
+                    y = P[i+1] + oy;
+
+                if ( this._contains(selectPxBounds, [x, y]) ) {
+                    selectedIds.push(A.id);
+                }
+            }
+        }
+
+        return selectedIds
+    },  
 
     // --------------------------------------------------------------------
     animate: function() {

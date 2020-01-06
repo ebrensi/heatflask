@@ -13,38 +13,16 @@ function FastBitArray(size) {
   this.words = new Uint32Array((size + 32) >>> 5);
 }
 
-
-// create a FastBitArray by applying a boolean-valued function func
-// to every member of iterable, reusing an existing FastBitArray
-// if one is supplied 
-FastBitArray.filter = function(func, iterable, bitArray=null) {
-  if (!bitarray)
-    bitArray = new FastBitArray(iterable.length);
-  
-  let i = 0;
-  for (obj of iterable) {
-    bitArray.set(i, func(obj));
-    i++;
-  }
-  return bitArray  
-}
-
-
-FastBitArray.prototype.filter = function(func, iterable) {
-  return FastBitArray.filter(func, iterable, this);
-}
-// Add the value (Set the bit at index to true)
-
+// Add the value (Set the bit at index to val)
 FastBitArray.prototype.set = function(index, val) {
+  // if ((count << 5) <= index) {
+  //   this.resize(index); //nothing to do
+  // }
+  
   if (val)
     this.words[index >>> 5] |= 1 << index;
   else
     this.words[index  >>> 5] &= ~(1 << index);
-};
-
-// If the value was not in the set, add it, otherwise remove it (flip bit at index)
-FastBitArray.prototype.flip = function(index) {
-  this.words[index >>> 5] ^= 1 << index ;
 };
 
 // Is the value contained in the set? Is the bit at index true or false? Returns a boolean
@@ -99,7 +77,8 @@ FastBitArray.prototype.count = function() {
 // Return an array with the set bit locations (values)
 FastBitArray.prototype.array = function() {
   let count = this.count(),
-      answer = new Array(count),
+      ArrayConstructor = (count >> 16)? Uint32Array : Uint16Array
+      answer =  new ArrayConstructor(count),
       pos = 0 | 0;
       wc = this.words.length | 0;
   for (let k = 0; k < wc; ++k) {

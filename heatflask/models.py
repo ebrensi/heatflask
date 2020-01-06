@@ -1211,7 +1211,7 @@ class StravaClient(object):
             "Authorization": "Bearer {}".format(self.access_token)
         }
 
-    def get_raw_activity(self, _id):
+    def get_raw_activity(self, _id, streams=True):
         cls = self.__class__
         # get one activity summary object from strava
         url = cls.GET_ACTIVITY_URL.format(id=_id)
@@ -1223,13 +1223,16 @@ class StravaClient(object):
             raw = response.json()
             if "id" not in raw:
                 raise UserWarning(raw)
-            return raw
         except HTTPError as e:
             log.error(e)
             return False
         except Exception:
             log.exception("%s import-by-id %s failed", self, _id)
             return False
+
+        if streams:
+            raw = Activities.import_streams(self, raw)
+        return raw
 
     def get_activity(self, _id):
         cls = self.__class__
