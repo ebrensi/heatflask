@@ -619,7 +619,14 @@ L.DotLayer = L.Layer.extend( {
         }
 
         if (xmax) {
-            this._clearRect = {x: xmin + pxOffx, y: ymin + pxOffy, w: xmax-xmin, h: ymax-ymin};
+            let d = (this._dotSize || 25) + 5;
+            xmin = Math.max(0, xmin + pxOffx - d);
+            ymin = Math.max(0, ymin + pxOffy - d);
+            xmax = Math.min(xmax + pxOffx + d, this._lineCanvas.width);
+            ymax = Math.min(ymax + pxOffy + d, this._lineCanvas.height);
+            this._clearRect = {x: xmin, y: ymin, w: xmax-xmin, h: ymax-ymin};
+            let c = this._clearRect;
+            this._lineCtx.strokeRect(c.x, c.y, c.w, c.h);
         }
 
         elapsed = ( performance.now() - perf_t0 ).toFixed( 2 );
