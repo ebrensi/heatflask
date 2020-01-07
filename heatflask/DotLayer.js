@@ -584,7 +584,7 @@ L.DotLayer = L.Layer.extend( {
         for (const A of Object.values(this._items))
             llb.extend(A.bounds);
 
-        const dotSize = this._dotSize || 10,
+        const pad = (this._dotSize || 25 ) + 5,
               pxOffset = this._pxOffset,
               canvas = this._lineCanvas,
               z = this._zoom,
@@ -593,10 +593,10 @@ L.DotLayer = L.Layer.extend( {
               pSW = this.CRS.project( [sw.lat, sw.lng], z ),
               pNE = this.CRS.project( [ne.lat, ne.lng], z ),
 
-              xmin = Math.max(pSW[0] + pxOffset.x - dotSize, 0),
-              xmax = Math.min(pNE[0] + pxOffset.x + dotSize, canvas.width)
-              ymin = Math.max(pNE[1] + pxOffset.y - dotSize, 0),
-              ymax = Math.min(pSW[1] + pxOffset.y + dotSize, canvas.height);
+              xmin = Math.max(pSW[0] + pxOffset.x - pad, 0),
+              xmax = Math.min(pNE[0] + pxOffset.x + pad, canvas.width)
+              ymin = Math.max(pNE[1] + pxOffset.y - pad, 0),
+              ymax = Math.min(pSW[1] + pxOffset.y + pad, canvas.height);
         
         this._drawRect = {
             x: xmin,
