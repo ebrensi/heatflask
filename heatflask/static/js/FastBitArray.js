@@ -117,4 +117,4 @@ FastBitArray.prototype.toString = function() {
   return '{' + this.array().join(',') + '}';
 };
 
-module.exports = FastBitArray;
+// module.exports = FastBitArray;

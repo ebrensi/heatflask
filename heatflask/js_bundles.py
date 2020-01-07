@@ -41,7 +41,7 @@ bundles = {
             'js/leaflet-areaselect.js',
             'js/easy-button.js',
             'js/FastBitArray.js',
-            filters=["babel", "rjsmin"],
+            # filters=["babel", "rjsmin"],
             output="gen/build/non-compiled-dependencies.js"
         ),
         output='gen/dependencies.js'
@@ -59,7 +59,7 @@ bundles = {
         'js/L.BoxHook.js',
         '../heatflask.js',
         '../DotLayer.js',
-        filters=["babel", 'rjsmin'],
+        # filters=["babel", 'rjsmin'],
         output="gen/app-specific.js"
     ),
 

@@ -93,16 +93,12 @@ map.on('baselayerchange', function (e) {
 L.Control.Watermark = L.Control.extend({
 
     onAdd: function(map) {
-        var img = L.DomUtil.create('img');
+        let img = L.DomUtil.create('img');
 
         img.src = this.options.image;
         img.style.width = this.options.width;
         img.style.opacity = this.options.opacity;
         return img;
-    },
-
-    onRemove: function(map) {
-        // Nothing to do here
     }
 });
 
@@ -111,7 +107,7 @@ L.control.watermark = function(opts) {
 }
 
 
-var sidebarControl = L.control.sidebar('sidebar').addTo(map),
+let sidebarControl = L.control.sidebar('sidebar').addTo(map),
     layerControl = L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map),
     zoomControl = map.zoomControl.setPosition('bottomright'),
     fps_display = ADMIN? L.control.fps().addTo(map) : null,
@@ -121,7 +117,7 @@ var sidebarControl = L.control.sidebar('sidebar').addTo(map),
 
 
 // Animation play/pause button
-var animation_button_states = [
+let animation_button_states = [
     {
         stateName: 'animation-running',
         icon:      'fa-pause',
@@ -213,7 +209,7 @@ var selectControl = new L.SwipeSelect(options={}, doneSelecting=doneSelecting),
 
 
 // Capture button
-var capture_button_states = [
+let capture_button_states = [
     {
         stateName: 'idle',
         icon: 'fa-video-camera',
@@ -294,7 +290,7 @@ var capture_button_states = [
 
 
 // Capture control button
-var captureControl = L.easyButton({
+let captureControl = L.easyButton({
     states: capture_button_states
 });
 captureControl.enabled = false;
@@ -424,7 +420,7 @@ let tableColumns = [
         render: formatUserId
     };
 
-var atable = $('#activitiesList').DataTable({
+let atable = $('#activitiesList').DataTable({
                 paging: false,
                 deferRender: true,
                 scrollY: "60vh",
@@ -439,7 +435,7 @@ var atable = $('#activitiesList').DataTable({
               .on( 'deselect', handle_table_selections);
 
 
-var tableScroller = $('.dataTables_scrollBody');
+let tableScroller = $('.dataTables_scrollBody');
 
 
 
@@ -447,7 +443,7 @@ function updateShareStatus(status) {
     if (OFFLINE) return;
 
     console.log("updating share status.");
-    url = `${SHARE_STATUS_UPDATE_URL}?status=${status}`;
+    const url = `${SHARE_STATUS_UPDATE_URL}?status=${status}`;
     httpGetAsync(url, function(responseText) {
         console.log(`response: ${responseText}`);
     });
@@ -460,9 +456,8 @@ function handle_table_selections( e, dt, type, indexes ) {
         mapBounds = map.getBounds();
 
     if ( type === 'row' ) {
-        let items = atable.rows( indexes ).data();
-         for (let i=0; i<items.length; i++) {
-            let A = items[i];
+        let rows = atable.rows( indexes ).data();
+         for (let A of rows.values()) {
             A.selected = !A.selected;
             A.highlighted = !A.highlighted;
             redraw |= mapBounds.overlaps(A.bounds);
@@ -507,7 +502,7 @@ function handle_path_selections(ids) {
 
 function zoomToSelectedPaths(){
     // Pan-Zoom to fit all selected activities
-    var selection_bounds = L.latLngBounds();
+    let selection_bounds = L.latLngBounds();
     $.each(appState.items, (id, a) => {
         if (a.selected) {
             selection_bounds.extend(a.bounds);
@@ -525,9 +520,9 @@ function selectedIDs(){
 }
 
 function openSelected(){
-    ids = selectedIDs();
+    let ids = selectedIDs();
     if (ids.length > 0) {
-        var url = BASE_USER_URL + "?id=" + ids.join("+");
+        let url = BASE_USER_URL + "?id=" + ids.join("+");
         if (appState.paused == true){
             url += "&paused=1"
         }
@@ -961,9 +956,9 @@ function updateState(){
         params["autozoom"] = "1";
     } else {
         appState["autozoom"] = false;
-        var zoom = map.getZoom(),
-            center = map.getCenter(),
-            precision = Math.max(0, Math.ceil(Math.log(zoom) / Math.LN2));
+        const zoom = map.getZoom(),
+              center = map.getCenter(),
+              precision = Math.max(0, Math.ceil(Math.log(zoom) / Math.LN2));
         
         if (center) {  
             params.lat = center.lat.toFixed(precision);
@@ -1030,7 +1025,7 @@ function domIdVal(id, val=null) {
 }
 
 function domIdEvent(id, type, func) {
-    obj = document.getElementById(id);
+    let obj = document.getElementById(id);
     if (obj) {
         if (obj.addEventListener)
             obj.addEventListener(type, func, false);

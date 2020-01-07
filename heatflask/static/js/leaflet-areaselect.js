@@ -189,4 +189,4 @@ L.AreaSelect = L.Class.extend({
 
 L.areaSelect = function(options) {
     return new L.AreaSelect(options);
-}
+};

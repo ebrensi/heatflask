@@ -3,6 +3,7 @@
   inspired by L.CanvasLayer by Stanislav Sumbera,  2016 , sumbera.com
   license MIT
 */
+'use strict';
 
 L.DotLayer = L.Layer.extend( {
 
@@ -19,17 +20,20 @@ L.DotLayer = L.Layer.extend( {
         startPaused: false,
         showPaths: true,
         colorAll: true,
-        dotAlpha: 0.8,
         normal: {
             dotColor: "#000000",
+            dotOpacity: 0.8,
+
             pathColor: "#000000",
-            pathAlpha: 0.7,
+            pathOpacity: 0.7,
             pathWidth: 1
         },
         selected: {
             dotColor: "#FFFFFF",
+            dotOpacity: 0.9,
             dotStrokeColor: "#FFFFFF",
             dotStrokeWidth: 0.5,
+
             pathColor: "#000000",
             pathOpacity: 0.8,
             pathWidth: 1
@@ -185,8 +189,8 @@ L.DotLayer = L.Layer.extend( {
         // square distance between 2 points
         getSqDist: function(p1, p2) {
 
-            var dx = p1[0] - p2[0],
-                dy = p1[1] - p2[1];
+            const dx = p1[0] - p2[0],
+                  dy = p1[1] - p2[1];
 
             return dx * dx + dy * dy;
         },
@@ -194,14 +198,14 @@ L.DotLayer = L.Layer.extend( {
         // square distance from a point to a segment
         getSqSegDist: function(p, p1, p2) {
 
-            var x = p1[0],
+            let x = p1[0],
                 y = p1[1],
                 dx = p2[0] - x,
                 dy = p2[1] - y;
 
             if (dx !== 0 || dy !== 0) {
 
-                var t = ((p[0] - x) * dx + (p[1] - y) * dy) / (dx * dx + dy * dy);
+                const t = ((p[0] - x) * dx + (p[1] - y) * dy) / (dx * dx + dy * dy);
 
                 if (t > 1) {
                     x = p2[0];
@@ -223,11 +227,11 @@ L.DotLayer = L.Layer.extend( {
         // basic distance-based simplification
         simplifyRadialDist: function(points, sqTolerance) {
 
-            var prevPoint = points[0],
+            let prevPoint = points[0],
                 newPoints = [prevPoint],
                 point;
 
-            for (var i = 1, len = points.length; i < len; i++) {
+            for (let i = 1, len = points.length; i < len; i++) {
                 point = points[i];
 
                 if (this.getSqDist(point, prevPoint) > sqTolerance) {
@@ -242,11 +246,11 @@ L.DotLayer = L.Layer.extend( {
         },
 
         simplifyDPStep: function(points, first, last, sqTolerance, simplified) {
-            var maxSqDist = sqTolerance,
+            let maxSqDist = sqTolerance,
                 index;
 
-            for (var i = first + 1; i < last; i++) {
-                var sqDist = this.getSqSegDist(points[i], points[first], points[last]);
+            for (let i = first + 1; i < last; i++) {
+                const sqDist = this.getSqSegDist(points[i], points[first], points[last]);
 
                 if (sqDist > maxSqDist) {
                     index = i;
@@ -267,9 +271,9 @@ L.DotLayer = L.Layer.extend( {
 
         // simplification using Ramer-Douglas-Peucker algorithm
         simplifyDouglasPeucker: function(points, sqTolerance) {
-            var last = points.length - 1;
+            const last = points.length - 1;
 
-            var simplified = [points[0]];
+            let simplified = [points[0]];
             this.simplifyDPStep(points, 0, last, sqTolerance, simplified);
             simplified.push(points[last]);
 
@@ -280,11 +284,15 @@ L.DotLayer = L.Layer.extend( {
 
             if (points.length <= 2) return points;
 
-            var sqTolerance = tolerance !== undefined ? tolerance * tolerance : 1;
+            const sqTolerance = tolerance !== undefined ? tolerance * tolerance : 1;
 
+            // console.time("RDsimp");
             points = highestQuality ? points : this.simplifyRadialDist(points, sqTolerance);
+            // console.timeEnd("RDsimp");
+            // console.log(`n = ${points.length}`)
+            // console.time("DPsimp")
             points = this.simplifyDouglasPeucker(points, sqTolerance);
-
+            // console.timeEnd("DPsimp");
             return points;
         }
     },
@@ -378,13 +386,19 @@ L.DotLayer = L.Layer.extend( {
         let numPoints = llt.length / 3,
             points = new Array(numPoints);
 
+        // console.time("project");
         for (let i=0; i<numPoints; i++) {
             let idx = 3*i,
                 p = this.CRS.project( [llt[idx], llt[idx+1]], zoom );
             points[i] = [ p[0], p[1], llt[idx+2] ];
-        }
+        };
+        // console.timeEnd("project");
+        // console.log(`n = ${points.length}`);
 
+        // console.time("simplify");
         points = this.Simplifier.simplify(points, smoothFactor, hq);
+        // console.timeEnd("simplify");
+        // console.log(`n = ${points.length}`);
 
         // now points is an Array of points, so we put it
         // into a Float32Array buffer
@@ -423,15 +437,13 @@ L.DotLayer = L.Layer.extend( {
         }
         const perf_t0 = performance.now();
 
-        let topLeft = this._map.containerPointToLayerPoint( [ 0, 0 ] ),
-            c = {x:0, y:0, w: this._dotCanvas.width, h: this._dotCanvas.height};
+        // reset map orientation
+        this._drawRect = null;
+        this.clearCanvas();
 
-        this._dotCtx.clearRect(c.x, c.y, c.w, c.h );
+        let topLeft = this._map.containerPointToLayerPoint( [ 0, 0 ] );
         L.DomUtil.setPosition( this._dotCanvas, topLeft );
-
-        this._lineCtx.clearRect(c.x, c.y, c.w, c.h );
         L.DomUtil.setPosition( this._lineCanvas, topLeft );
-
 
         // Get new map orientation
         this._zoom = this._map.getZoom();
@@ -453,36 +465,60 @@ L.DotLayer = L.Layer.extend( {
         this._dotCtx.lineWidth = this.options.selected.dotStrokeWidth;
 
         // console.log( `zoom=${z}\nmapPanePos=${ppos}\nsize=${this._size}\n` +
-        //             `pxOrigin=${pxOrigin}\npxBounds=[${pxBounds.min}, ${pxBounds.max}]`
-        //              );
+        //             `pxOrigin=${pxOrigin}\npxBounds=[${pxBounds.min}, ${pxBounds.max}]\n`+
+        //              `pxOffset=${this._pxOffset}`);
 
-        const pxOffset = this.pxOffset,
-              mapBounds = this._latLngBounds,
+        const mapBounds = this._latLngBounds,
               smoothFactor = this.smoothFactor;
-        
-        this.totalBounds = L.latLngBounds();
 
-        for (A of this._items.values()) {
-            let in = A.inView = this._overlaps(mapBounds, A.bounds);
+        let count = {projected: 0, in:0, out:0};
+        console.time("all items")
+        for (let [id, A] of Object.entries(this._items)) {
+            // console.log("Activity: "+id, A);
+            // console.time("activity");
+            A.inView = this._overlaps(mapBounds, A.bounds);
 
-            if ( !in )
+            if ( !A.inView ) {
+                count.out++
                 continue;
+            }
 
-            totalBounds.extend(A.bounds);
-
+            count.in++
             if ( !A.projected )
                 A.projected = {};
 
             // project activity latLngs to pane coords
-            if (!A.projected[ z ])
-                A.projected[z] = this._project(A.latLngTime, z, this.smoothFactor);
-                
+            if (!A.projected[ z ]){
+                // console.time("projectSimplify");
+                A.projected[z] = this._project(A.latLngTime, z, this.smoothFactor, hq=false);
+                // console.timeEnd("projectSimplify");
+                count.projected++;
+            }
+
             let projectedPoints = A.projected[z].P,
                 segMask = A.segMask = this._segMask(this._pxBounds, projectedPoints, A.segMask);
 
-            if (this.options.showPaths)
-                this.drawPath(A, pxOffset);
+            if (this.options.showPaths) {
+                // console.time("drawPath");
 
+                const lineType = A.highlighted? "selected":"normal",
+                      lineWidth = this.options[lineType].pathWidth,
+                      strokeStyle = A.pathColor || this.options[lineType].pathColor,
+                      opacity = this.options[lineType].pathOpacity;
+
+                this._drawPath(
+                    this._lineCtx,
+                    projectedPoints,
+                    segMask,
+                    this._pxOffset,
+                    lineWidth,
+                    strokeStyle,
+                    opacity
+                );
+                // console.timeEnd("drawPath");
+            }
+            
+            // console.timeEnd("activity");
             // this._processedItems[ id ] = {
             //     dP: dP,
             //     P: P,
@@ -492,52 +528,100 @@ L.DotLayer = L.Layer.extend( {
             // };
         };
 
-        let sw = this.totalBounds._southWest,
-            ne = this.totalBounds._northEast,
-            cSW = this.CRS.project( [sw.lat, sw.lng], z ),
-            cNE = this.CRS.project( [ne.lat, ne.lng], z ),
-            xmin = Math.min(cSW[0], cNE[0]),
-            ymin = Math.min(cSW[1], cNE[1]);
-        
-        this.drawRect = {
-            x: xmin + pxOffset.x,
-            y: ymin + pxOffset.y,
-            w: Math.abs(cSW[0] - cNE[0]),
-            h: Math.abs(cSW[1] - cNE[1])
-        };
+        // if (this.options.showPaths)
+        //     this.drawPaths();
 
-        elapsed = ( performance.now() - perf_t0 ).toFixed( 2 );
-        // console.log(`dot context update took ${elapsed} ms`);
-        // console.log(this._processedItems);
+        console.timeEnd("all items");
+        console.log(count);
+
+        d = this.setDrawRect();
+        this._lineCtx.strokeStyle = "rgba(0,255,0,0.5)";
+        this._lineCtx.strokeRect(d.x, d.y, d.w, d.h);
+        // console.log("drawRect", this._drawRect);
     },
 
-    drawPath: function(A, pxOffset, isolated=true) {
-        const ctx = this._lineCtx,
-              P = points,
+    _drawPath: function(ctx, points, segMask, pxOffset, lineWidth, strokeStyle, opacity, isolated=true) {
+        const P = points,
               ox = pxOffset.x,
               oy = pxOffset.y;
 
         if (isolated)
             ctx.beginPath();
 
-        segmask.forEach(idx => {
-            let i = 3 * idx,
-                p1x = P[i]   + ox, p1y = P[i+1] + oy,
-                p2x = P[i+3] + ox, p2y = P[i+4] + oy;
+        segMask.forEach(idx => {
+            const i = 3 * idx,
+                  p1x = P[i]   + ox, p1y = P[i+1] + oy,
+                  p2x = P[i+3] + ox, p2y = P[i+4] + oy;
 
-                lineCtx.moveTo(p1x, p1y);
-                lineCtx.lineTo(p2x, p2y);
+                ctx.moveTo(p1x, p1y);
+                ctx.lineTo(p2x, p2y);
         });
-            
 
         if (isolated) {
-            lineType = A.highlighted? "selected":"normal";
-            lineCtx.globalAlpha = this.options[lineType].pathOpacity;
-            lineCtx.lineWidth = this.options[lineType].pathWidth;
-            lineCtx.strokeStyle = A.pathColor || this.options[lineType].pathColor;
-            lineCtx.stroke();
+            ctx.globalAlpha = opacity;
+            ctx.lineWidth = lineWidth;
+            ctx.strokeStyle = strokeStyle;
+            ctx.stroke();
         }
 
+    },
+
+    // Draw all paths for the current items
+    //  This is more efficient than calling drawPath repeatedly
+    //   for each activity, since we group strokes together.
+    drawPaths: function() {
+        const zoom = this._zoom,
+              ctx = this._lineCtx,
+              pxOffset = this._pxOffset;
+
+        // TODO: finish writing this
+
+    },
+
+    setDrawRect: function() {
+        let llb = L.latLngBounds();
+
+        for (const A of Object.values(this._items))
+            llb.extend(A.bounds);
+
+        const dotSize = this._dotSize || 10,
+              pxOffset = this._pxOffset,
+              canvas = this._lineCanvas,
+              z = this._zoom,
+              sw = llb._southWest,
+              ne = llb._northEast,
+              pSW = this.CRS.project( [sw.lat, sw.lng], z ),
+              pNE = this.CRS.project( [ne.lat, ne.lng], z ),
+
+              xmin = Math.max(pSW[0] + pxOffset.x - dotSize, 0),
+              xmax = Math.min(pNE[0] + pxOffset.x + dotSize, canvas.width)
+              ymin = Math.max(pNE[1] + pxOffset.y - dotSize, 0),
+              ymax = Math.min(pSW[1] + pxOffset.y + dotSize, canvas.height);
+        
+        this._drawRect = {
+            x: xmin,
+            y: ymin,
+            w: xmax - xmin,
+            h: ymax - ymin
+        };
+        return this._drawRect
+    },
+
+    clearCanvas: function(ctx) {
+        const canvas = this._lineCanvas;
+              defaultRect = {x:0, y:0, w: canvas.width, h: canvas.height};
+        
+        let rect;
+        
+        if (ctx){
+            rect = this._drawRect || defaultRect;
+            ctx.clearRect( rect.x, rect.y, rect.w, rect.h );
+        }
+        else {
+            rect = defaultRect;
+            this._lineCtx.clearRect( rect.x, rect.y, rect.w, rect.h );
+            this._dotCtx.clearRect( rect.x, rect.y, rect.w, rect.h );
+        }
     },
 
     // --------------------------------------------------------------------
@@ -614,27 +698,26 @@ L.DotLayer = L.Layer.extend( {
         return count;
     },
 
-    drawLayer: function(now ) {
+    drawLayer: function(now) {
         if ( !this._map ) {
             return;
         }
 
         let ctx = this._dotCtx,
             zoom = this._zoom,
+            canvas = this._dotCanvas,
             count = 0,
             t0 = performance.now(),
             highlighted_items = [],
-            zf = this._zoomFactor = 1 / Math.pow( 2, zoom ),
-            c = this._drawRect || {x:0, y:0, w: this._dotCanvas.width, h: this._dotCanvas.height};
+            zf = this._zoomFactor = 1 / Math.pow( 2, zoom );
 
-        ctx.clearRect( c.x, c.y, c.w, c.h );
         ctx.fillStyle = this.options.normal.dotColor;
 
         this._timeScale = this.C2 * zf;
         this._period = this.C1 * zf;
         this._dotSize = Math.max(1, ~~(this.dotScale * Math.log( zoom ) + 0.5));
 
-
+        this.clearCanvas(ctx);
 
         for ( let A of this._items.values() ) {
             item = pItems[ id ];
@@ -648,19 +731,21 @@ L.DotLayer = L.Layer.extend( {
         // Now plot highlighted paths
         let hlen = highlighted_items.length;
         if ( hlen ) {
+            ctx.globalAlpha = this.options.selected.dotOpacity
             for (let i = 0; i < hlen; i++ ) {
                 item = highlighted_items[ i ];
                 count += this.drawDots( item, now, true );
             }
+            ctx.globalAlpha = this.options.normal.dotOpacity
         }
 
 
         if (fps_display) {
             let periodInSecs = this.periodInSecs(),
-                progress = ((now/1000) % periodInSecs).toFixed(1),
+                progress = (((now/1000) % periodInSecs) / periodInSecs).toFixed(1),
                 elapsed = ( performance.now() - t0 ).toFixed( 1 );
 
-            fps_display.update( now, `${elapsed} ms/f, n=${count}, z=${this._zoom},\nP=${progress}/${periodInSecs.toFixed(2)}` );
+            fps_display.update( now, `z=${this._zoom}, dt=${elapsed} ms/f, n=${count}` );
         }
     },
 
@@ -717,20 +802,20 @@ L.DotLayer = L.Layer.extend( {
         }
         this._frame = null;
 
-        let ts = Date.now(),
-            now = ts - this._timeOffset;
+        // let ts = Date.now(),
+        //     now = ts - this._timeOffset;
 
-        if ( this._paused || this._mapMoving ) {
-            // Ths is so we can start where we left off when we resume
-            this._timePaused = ts;
-            return;
-        }
+        // if ( this._paused || this._mapMoving ) {
+        //     // Ths is so we can start where we left off when we resume
+        //     this._timePaused = ts;
+        //     return;
+        // }
 
 
-        if (now - this.lastCalledTime > this.minDelay) {
-            this.lastCalledTime = now;
-            this.drawLayer( now );
-        }
+        // if (now - this.lastCalledTime > this.minDelay) {
+        //     this.lastCalledTime = now;
+        //     this.drawLayer( now );
+        // }
 
         this._frame = L.Util.requestAnimFrame( this._animate, this );
     },
@@ -984,7 +1069,7 @@ L.DotLayer = L.Layer.extend( {
             numItems = itemsList.length;
 
         this._colorPalette = colorPalette(numItems, this.options.dotAlpha);
-        for ( let i = 0; i < numItems; i++ ) {
+        for ( item of itemsList ) {
             itemsList[ i ].dotColor = this._colorPalette[ i ];
         }
    
@@ -1015,10 +1100,11 @@ function makeColorGradient(frequency1, frequency2, frequency3,
         let r = Math.round(Math.sin(frequency1*i + phase1) * width + center),
             g = Math.round(Math.sin(frequency2*i + phase2) * width + center),
             b = Math.round(Math.sin(frequency3*i + phase3) * width + center);
-        palette[i] = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        // palette[i] = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        palette[i] = `rgb(${r}, ${g}, ${b})`;
     }
     return palette;
-}
+};
 
 function colorPalette(n, alpha) {
     center = 128;
@@ -1026,6 +1112,6 @@ function colorPalette(n, alpha) {
     steps = 10;
     frequency = 2*Math.PI/steps;
     return makeColorGradient(frequency,frequency,frequency,0,2,4,center,width,n,alpha);
-}
+};
 
 

@@ -264,103 +264,2483 @@ L.Control.Sidebar=L.Control.extend({includes:L.Evented.prototype||L.Mixin.Events
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.GIF=f()}})(function(){var define,module,exports;return function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s}({1:[function(require,module,exports){function EventEmitter(){this._events=this._events||{};this._maxListeners=this._maxListeners||undefined}module.exports=EventEmitter;EventEmitter.EventEmitter=EventEmitter;EventEmitter.prototype._events=undefined;EventEmitter.prototype._maxListeners=undefined;EventEmitter.defaultMaxListeners=10;EventEmitter.prototype.setMaxListeners=function(n){if(!isNumber(n)||n<0||isNaN(n))throw TypeError("n must be a positive number");this._maxListeners=n;return this};EventEmitter.prototype.emit=function(type){var er,handler,len,args,i,listeners;if(!this._events)this._events={};if(type==="error"){if(!this._events.error||isObject(this._events.error)&&!this._events.error.length){er=arguments[1];if(er instanceof Error){throw er}else{var err=new Error('Uncaught, unspecified "error" event. ('+er+")");err.context=er;throw err}}}handler=this._events[type];if(isUndefined(handler))return false;if(isFunction(handler)){switch(arguments.length){case 1:handler.call(this);break;case 2:handler.call(this,arguments[1]);break;case 3:handler.call(this,arguments[1],arguments[2]);break;default:args=Array.prototype.slice.call(arguments,1);handler.apply(this,args)}}else if(isObject(handler)){args=Array.prototype.slice.call(arguments,1);listeners=handler.slice();len=listeners.length;for(i=0;i<len;i++)listeners[i].apply(this,args)}return true};EventEmitter.prototype.addListener=function(type,listener){var m;if(!isFunction(listener))throw TypeError("listener must be a function");if(!this._events)this._events={};if(this._events.newListener)this.emit("newListener",type,isFunction(listener.listener)?listener.listener:listener);if(!this._events[type])this._events[type]=listener;else if(isObject(this._events[type]))this._events[type].push(listener);else this._events[type]=[this._events[type],listener];if(isObject(this._events[type])&&!this._events[type].warned){if(!isUndefined(this._maxListeners)){m=this._maxListeners}else{m=EventEmitter.defaultMaxListeners}if(m&&m>0&&this._events[type].length>m){this._events[type].warned=true;console.error("(node) warning: possible EventEmitter memory "+"leak detected. %d listeners added. "+"Use emitter.setMaxListeners() to increase limit.",this._events[type].length);if(typeof console.trace==="function"){console.trace()}}}return this};EventEmitter.prototype.on=EventEmitter.prototype.addListener;EventEmitter.prototype.once=function(type,listener){if(!isFunction(listener))throw TypeError("listener must be a function");var fired=false;function g(){this.removeListener(type,g);if(!fired){fired=true;listener.apply(this,arguments)}}g.listener=listener;this.on(type,g);return this};EventEmitter.prototype.removeListener=function(type,listener){var list,position,length,i;if(!isFunction(listener))throw TypeError("listener must be a function");if(!this._events||!this._events[type])return this;list=this._events[type];length=list.length;position=-1;if(list===listener||isFunction(list.listener)&&list.listener===listener){delete this._events[type];if(this._events.removeListener)this.emit("removeListener",type,listener)}else if(isObject(list)){for(i=length;i-- >0;){if(list[i]===listener||list[i].listener&&list[i].listener===listener){position=i;break}}if(position<0)return this;if(list.length===1){list.length=0;delete this._events[type]}else{list.splice(position,1)}if(this._events.removeListener)this.emit("removeListener",type,listener)}return this};EventEmitter.prototype.removeAllListeners=function(type){var key,listeners;if(!this._events)return this;if(!this._events.removeListener){if(arguments.length===0)this._events={};else if(this._events[type])delete this._events[type];return this}if(arguments.length===0){for(key in this._events){if(key==="removeListener")continue;this.removeAllListeners(key)}this.removeAllListeners("removeListener");this._events={};return this}listeners=this._events[type];if(isFunction(listeners)){this.removeListener(type,listeners)}else if(listeners){while(listeners.length)this.removeListener(type,listeners[listeners.length-1])}delete this._events[type];return this};EventEmitter.prototype.listeners=function(type){var ret;if(!this._events||!this._events[type])ret=[];else if(isFunction(this._events[type]))ret=[this._events[type]];else ret=this._events[type].slice();return ret};EventEmitter.prototype.listenerCount=function(type){if(this._events){var evlistener=this._events[type];if(isFunction(evlistener))return 1;else if(evlistener)return evlistener.length}return 0};EventEmitter.listenerCount=function(emitter,type){return emitter.listenerCount(type)};function isFunction(arg){return typeof arg==="function"}function isNumber(arg){return typeof arg==="number"}function isObject(arg){return typeof arg==="object"&&arg!==null}function isUndefined(arg){return arg===void 0}},{}],2:[function(require,module,exports){var UA,browser,mode,platform,ua;ua=navigator.userAgent.toLowerCase();platform=navigator.platform.toLowerCase();UA=ua.match(/(opera|ie|firefox|chrome|version)[\s\/:]([\w\d\.]+)?.*?(safari|version[\s\/:]([\w\d\.]+)|$)/)||[null,"unknown",0];mode=UA[1]==="ie"&&document.documentMode;browser={name:UA[1]==="version"?UA[3]:UA[1],version:mode||parseFloat(UA[1]==="opera"&&UA[4]?UA[4]:UA[2]),platform:{name:ua.match(/ip(?:ad|od|hone)/)?"ios":(ua.match(/(?:webos|android)/)||platform.match(/mac|win|linux/)||["other"])[0]}};browser[browser.name]=true;browser[browser.name+parseInt(browser.version,10)]=true;browser.platform[browser.platform.name]=true;module.exports=browser},{}],3:[function(require,module,exports){var EventEmitter,GIF,browser,extend=function(child,parent){for(var key in parent){if(hasProp.call(parent,key))child[key]=parent[key]}function ctor(){this.constructor=child}ctor.prototype=parent.prototype;child.prototype=new ctor;child.__super__=parent.prototype;return child},hasProp={}.hasOwnProperty,indexOf=[].indexOf||function(item){for(var i=0,l=this.length;i<l;i++){if(i in this&&this[i]===item)return i}return-1},slice=[].slice;EventEmitter=require("events").EventEmitter;browser=require("./browser.coffee");GIF=function(superClass){var defaults,frameDefaults;extend(GIF,superClass);defaults={workerScript:"gif.worker.js",workers:2,repeat:0,background:"#fff",quality:10,width:null,height:null,transparent:null,debug:false,dither:false};frameDefaults={delay:500,copy:false,dispose:-1,transparent:defaults.transparent};function GIF(options){var base,key,value;this.running=false;this.options={};this.frames=[];this.freeWorkers=[];this.activeWorkers=[];this.setOptions(options);for(key in defaults){value=defaults[key];if((base=this.options)[key]==null){base[key]=value}}}GIF.prototype.setOption=function(key,value){this.options[key]=value;if(this._canvas!=null&&(key==="width"||key==="height")){return this._canvas[key]=value}};GIF.prototype.setOptions=function(options){var key,results,value;results=[];for(key in options){if(!hasProp.call(options,key))continue;value=options[key];results.push(this.setOption(key,value))}return results};GIF.prototype.addFrame=function(image,options){var frame,key;if(options==null){options={}}frame={};for(key in frameDefaults){frame[key]=options[key]||frameDefaults[key]}if(this.options.width==null){this.setOption("width",image.width)}if(this.options.height==null){this.setOption("height",image.height)}if(typeof ImageData!=="undefined"&&ImageData!==null&&image instanceof ImageData){frame.data=image.data}else if(typeof CanvasRenderingContext2D!=="undefined"&&CanvasRenderingContext2D!==null&&image instanceof CanvasRenderingContext2D||typeof WebGLRenderingContext!=="undefined"&&WebGLRenderingContext!==null&&image instanceof WebGLRenderingContext){if(options.copy){frame.data=this.getContextData(image)}else{frame.context=image}}else if(image.childNodes!=null){if(options.copy){frame.data=this.getImageData(image)}else{frame.image=image}}else{throw new Error("Invalid image")}return this.frames.push(frame)};GIF.prototype.render=function(){var i,j,numWorkers,ref;if(this.running){throw new Error("Already running")}if(this.options.width==null||this.options.height==null){throw new Error("Width and height must be set prior to rendering")}this.running=true;this.nextFrame=0;this.finishedFrames=0;this.imageParts=function(){var j,ref,results;results=[];for(i=j=0,ref=this.frames.length;0<=ref?j<ref:j>ref;i=0<=ref?++j:--j){results.push(null)}return results}.call(this);numWorkers=this.spawnWorkers();if(this.options.globalPalette===true){this.renderNextFrame()}else{for(i=j=0,ref=numWorkers;0<=ref?j<ref:j>ref;i=0<=ref?++j:--j){this.renderNextFrame()}}this.emit("start");return this.emit("progress",0)};GIF.prototype.abort=function(){var worker;while(true){worker=this.activeWorkers.shift();if(worker==null){break}this.log("killing active worker");worker.terminate()}this.running=false;return this.emit("abort")};GIF.prototype.spawnWorkers=function(){var j,numWorkers,ref,results;numWorkers=Math.min(this.options.workers,this.frames.length);(function(){results=[];for(var j=ref=this.freeWorkers.length;ref<=numWorkers?j<numWorkers:j>numWorkers;ref<=numWorkers?j++:j--){results.push(j)}return results}).apply(this).forEach(function(_this){return function(i){var worker;_this.log("spawning worker "+i);worker=new Worker(_this.options.workerScript);worker.onmessage=function(event){_this.activeWorkers.splice(_this.activeWorkers.indexOf(worker),1);_this.freeWorkers.push(worker);return _this.frameFinished(event.data)};return _this.freeWorkers.push(worker)}}(this));return numWorkers};GIF.prototype.frameFinished=function(frame){var i,j,ref;this.log("frame "+frame.index+" finished - "+this.activeWorkers.length+" active");this.finishedFrames++;this.emit("progress",this.finishedFrames/this.frames.length);this.imageParts[frame.index]=frame;if(this.options.globalPalette===true){this.options.globalPalette=frame.globalPalette;this.log("global palette analyzed");if(this.frames.length>2){for(i=j=1,ref=this.freeWorkers.length;1<=ref?j<ref:j>ref;i=1<=ref?++j:--j){this.renderNextFrame()}}}if(indexOf.call(this.imageParts,null)>=0){return this.renderNextFrame()}else{return this.finishRendering()}};GIF.prototype.finishRendering=function(){var data,frame,i,image,j,k,l,len,len1,len2,len3,offset,page,ref,ref1,ref2;len=0;ref=this.imageParts;for(j=0,len1=ref.length;j<len1;j++){frame=ref[j];len+=(frame.data.length-1)*frame.pageSize+frame.cursor}len+=frame.pageSize-frame.cursor;this.log("rendering finished - filesize "+Math.round(len/1e3)+"kb");data=new Uint8Array(len);offset=0;ref1=this.imageParts;for(k=0,len2=ref1.length;k<len2;k++){frame=ref1[k];ref2=frame.data;for(i=l=0,len3=ref2.length;l<len3;i=++l){page=ref2[i];data.set(page,offset);if(i===frame.data.length-1){offset+=frame.cursor}else{offset+=frame.pageSize}}}image=new Blob([data],{type:"image/gif"});return this.emit("finished",image,data)};GIF.prototype.renderNextFrame=function(){var frame,task,worker;if(this.freeWorkers.length===0){throw new Error("No free workers")}if(this.nextFrame>=this.frames.length){return}frame=this.frames[this.nextFrame++];worker=this.freeWorkers.shift();task=this.getTask(frame);this.log("starting frame "+(task.index+1)+" of "+this.frames.length);this.activeWorkers.push(worker);return worker.postMessage(task)};GIF.prototype.getContextData=function(ctx){return ctx.getImageData(0,0,this.options.width,this.options.height).data};GIF.prototype.getImageData=function(image){var ctx;if(this._canvas==null){this._canvas=document.createElement("canvas");this._canvas.width=this.options.width;this._canvas.height=this.options.height}ctx=this._canvas.getContext("2d");ctx.setFill=this.options.background;ctx.fillRect(0,0,this.options.width,this.options.height);ctx.drawImage(image,0,0);return this.getContextData(ctx)};GIF.prototype.getTask=function(frame){var index,task;index=this.frames.indexOf(frame);task={index:index,last:index===this.frames.length-1,delay:frame.delay,dispose:frame.dispose,transparent:frame.transparent,width:this.options.width,height:this.options.height,quality:this.options.quality,dither:this.options.dither,globalPalette:this.options.globalPalette,repeat:this.options.repeat,canTransfer:browser.name==="chrome"};if(frame.data!=null){task.data=frame.data}else if(frame.context!=null){task.data=this.getContextData(frame.context)}else if(frame.image!=null){task.data=this.getImageData(frame.image)}else{throw new Error("Invalid frame")}return task};GIF.prototype.log=function(){var args;args=1<=arguments.length?slice.call(arguments,0):[];if(!this.options.debug){return}return console.log.apply(console,args)};return GIF}(EventEmitter);module.exports=GIF},{"./browser.coffee":2,events:1}]},{},[3])(3)});
 //# sourceMappingURL=gif.js.map
 
-!function(e,t){"object"==typeof exports&&"undefined"!=typeof module?module.exports=t():"function"==typeof define&&define.amd?define(t):e.moment=t();}(this,function(){"use strict";var e,i;function c(){return e.apply(null,arguments);}function o(e){return e instanceof Array||"[object Array]"===Object.prototype.toString.call(e);}function u(e){return null!=e&&"[object Object]"===Object.prototype.toString.call(e);}function l(e){return void 0===e;}function h(e){return"number"==typeof e||"[object Number]"===Object.prototype.toString.call(e);}function d(e){return e instanceof Date||"[object Date]"===Object.prototype.toString.call(e);}function f(e,t){var n,s=[];for(n=0;n<e.length;++n)s.push(t(e[n],n));return s;}function m(e,t){return Object.prototype.hasOwnProperty.call(e,t);}function _(e,t){for(var n in t)m(t,n)&&(e[n]=t[n]);return m(t,"toString")&&(e.toString=t.toString),m(t,"valueOf")&&(e.valueOf=t.valueOf),e;}function y(e,t,n,s){return Tt(e,t,n,s,!0).utc();}function g(e){return null==e._pf&&(e._pf={empty:!1,unusedTokens:[],unusedInput:[],overflow:-2,charsLeftOver:0,nullInput:!1,invalidMonth:null,invalidFormat:!1,userInvalidated:!1,iso:!1,parsedDateParts:[],meridiem:null,rfc2822:!1,weekdayMismatch:!1}),e._pf;}function v(e){if(null==e._isValid){var t=g(e),n=i.call(t.parsedDateParts,function(e){return null!=e;}),s=!isNaN(e._d.getTime())&&t.overflow<0&&!t.empty&&!t.invalidMonth&&!t.invalidWeekday&&!t.weekdayMismatch&&!t.nullInput&&!t.invalidFormat&&!t.userInvalidated&&(!t.meridiem||t.meridiem&&n);if(e._strict&&(s=s&&0===t.charsLeftOver&&0===t.unusedTokens.length&&void 0===t.bigHour),null!=Object.isFrozen&&Object.isFrozen(e))return s;e._isValid=s;}return e._isValid;}function p(e){var t=y(NaN);return null!=e?_(g(t),e):g(t).userInvalidated=!0,t;}i=Array.prototype.some?Array.prototype.some:function(e){for(var t=Object(this),n=t.length>>>0,s=0;s<n;s++)if(s in t&&e.call(this,t[s],s,t))return!0;return!1;};var r=c.momentProperties=[];function w(e,t){var n,s,i;if(l(t._isAMomentObject)||(e._isAMomentObject=t._isAMomentObject),l(t._i)||(e._i=t._i),l(t._f)||(e._f=t._f),l(t._l)||(e._l=t._l),l(t._strict)||(e._strict=t._strict),l(t._tzm)||(e._tzm=t._tzm),l(t._isUTC)||(e._isUTC=t._isUTC),l(t._offset)||(e._offset=t._offset),l(t._pf)||(e._pf=g(t)),l(t._locale)||(e._locale=t._locale),0<r.length)for(n=0;n<r.length;n++)l(i=t[s=r[n]])||(e[s]=i);return e;}var t=!1;function M(e){w(this,e),this._d=new Date(null!=e._d?e._d.getTime():NaN),this.isValid()||(this._d=new Date(NaN)),!1===t&&(t=!0,c.updateOffset(this),t=!1);}function k(e){return e instanceof M||null!=e&&null!=e._isAMomentObject;}function S(e){return e<0?Math.ceil(e)||0:Math.floor(e);}function D(e){var t=+e,n=0;return 0!==t&&isFinite(t)&&(n=S(t)),n;}function a(e,t,n){var s,i=Math.min(e.length,t.length),r=Math.abs(e.length-t.length),a=0;for(s=0;s<i;s++)(n&&e[s]!==t[s]||!n&&D(e[s])!==D(t[s]))&&a++;return a+r;}function Y(e){!1===c.suppressDeprecationWarnings&&"undefined"!=typeof console&&console.warn&&console.warn("Deprecation warning: "+e);}function n(i,r){var a=!0;return _(function(){if(null!=c.deprecationHandler&&c.deprecationHandler(null,i),a){for(var e,t=[],n=0;n<arguments.length;n++){if(e="","object"==typeof arguments[n]){for(var s in e+="\n["+n+"] ",arguments[0])e+=s+": "+arguments[0][s]+", ";e=e.slice(0,-2);}else e=arguments[n];t.push(e);}Y(i+"\nArguments: "+Array.prototype.slice.call(t).join("")+"\n"+new Error().stack),a=!1;}return r.apply(this,arguments);},r);}var s,O={};function T(e,t){null!=c.deprecationHandler&&c.deprecationHandler(e,t),O[e]||(Y(t),O[e]=!0);}function b(e){return e instanceof Function||"[object Function]"===Object.prototype.toString.call(e);}function x(e,t){var n,s=_({},e);for(n in t)m(t,n)&&(u(e[n])&&u(t[n])?(s[n]={},_(s[n],e[n]),_(s[n],t[n])):null!=t[n]?s[n]=t[n]:delete s[n]);for(n in e)m(e,n)&&!m(t,n)&&u(e[n])&&(s[n]=_({},s[n]));return s;}function P(e){null!=e&&this.set(e);}c.suppressDeprecationWarnings=!1,c.deprecationHandler=null,s=Object.keys?Object.keys:function(e){var t,n=[];for(t in e)m(e,t)&&n.push(t);return n;};var W={};function C(e,t){var n=e.toLowerCase();W[n]=W[n+"s"]=W[t]=e;}function H(e){return"string"==typeof e?W[e]||W[e.toLowerCase()]:void 0;}function R(e){var t,n,s={};for(n in e)m(e,n)&&(t=H(n))&&(s[t]=e[n]);return s;}var U={};function F(e,t){U[e]=t;}function L(e,t,n){var s=""+Math.abs(e),i=t-s.length;return(0<=e?n?"+":"":"-")+Math.pow(10,Math.max(0,i)).toString().substr(1)+s;}var N=/(\[[^\[]*\])|(\\)?([Hh]mm(ss)?|Mo|MM?M?M?|Do|DDDo|DD?D?D?|ddd?d?|do?|w[o|w]?|W[o|W]?|Qo?|YYYYYY|YYYYY|YYYY|YY|gg(ggg?)?|GG(GGG?)?|e|E|a|A|hh?|HH?|kk?|mm?|ss?|S{1,9}|x|X|zz?|ZZ?|.)/g,G=/(\[[^\[]*\])|(\\)?(LTS|LT|LL?L?L?|l{1,4})/g,V={},E={};function I(e,t,n,s){var i=s;"string"==typeof s&&(i=function(){return this[s]();}),e&&(E[e]=i),t&&(E[t[0]]=function(){return L(i.apply(this,arguments),t[1],t[2]);}),n&&(E[n]=function(){return this.localeData().ordinal(i.apply(this,arguments),e);});}function A(e,t){return e.isValid()?(t=j(t,e.localeData()),V[t]=V[t]||function(s){var e,i,t,r=s.match(N);for(e=0,i=r.length;e<i;e++)E[r[e]]?r[e]=E[r[e]]:r[e]=(t=r[e]).match(/\[[\s\S]/)?t.replace(/^\[|\]$/g,""):t.replace(/\\/g,"");return function(e){var t,n="";for(t=0;t<i;t++)n+=b(r[t])?r[t].call(e,s):r[t];return n;};}(t),V[t](e)):e.localeData().invalidDate();}function j(e,t){var n=5;function s(e){return t.longDateFormat(e)||e;}for(G.lastIndex=0;0<=n&&G.test(e);)e=e.replace(G,s),G.lastIndex=0,n-=1;return e;}var Z=/\d/,z=/\d\d/,$=/\d{3}/,q=/\d{4}/,J=/[+-]?\d{6}/,B=/\d\d?/,Q=/\d\d\d\d?/,X=/\d\d\d\d\d\d?/,K=/\d{1,3}/,ee=/\d{1,4}/,te=/[+-]?\d{1,6}/,ne=/\d+/,se=/[+-]?\d+/,ie=/Z|[+-]\d\d:?\d\d/gi,re=/Z|[+-]\d\d(?::?\d\d)?/gi,ae=/[0-9]{0,256}['a-z\u00A0-\u05FF\u0700-\uD7FF\uF900-\uFDCF\uFDF0-\uFF07\uFF10-\uFFEF]{1,256}|[\u0600-\u06FF\/]{1,256}(\s*?[\u0600-\u06FF]{1,256}){1,2}/i,oe={};function ue(e,n,s){oe[e]=b(n)?n:function(e,t){return e&&s?s:n;};}function le(e,t){return m(oe,e)?oe[e](t._strict,t._locale):new RegExp(he(e.replace("\\","").replace(/\\(\[)|\\(\])|\[([^\]\[]*)\]|\\(.)/g,function(e,t,n,s,i){return t||n||s||i;})));}function he(e){return e.replace(/[-\/\\^$*+?.()|[\]{}]/g,"\\$&");}var de={};function ce(e,n){var t,s=n;for("string"==typeof e&&(e=[e]),h(n)&&(s=function(e,t){t[n]=D(e);}),t=0;t<e.length;t++)de[e[t]]=s;}function fe(e,i){ce(e,function(e,t,n,s){n._w=n._w||{},i(e,n._w,n,s);});}var me=0,_e=1,ye=2,ge=3,ve=4,pe=5,we=6,Me=7,ke=8;function Se(e){return De(e)?366:365;}function De(e){return e%4==0&&e%100!=0||e%400==0;}I("Y",0,0,function(){var e=this.year();return e<=9999?""+e:"+"+e;}),I(0,["YY",2],0,function(){return this.year()%100;}),I(0,["YYYY",4],0,"year"),I(0,["YYYYY",5],0,"year"),I(0,["YYYYYY",6,!0],0,"year"),C("year","y"),F("year",1),ue("Y",se),ue("YY",B,z),ue("YYYY",ee,q),ue("YYYYY",te,J),ue("YYYYYY",te,J),ce(["YYYYY","YYYYYY"],me),ce("YYYY",function(e,t){t[me]=2===e.length?c.parseTwoDigitYear(e):D(e);}),ce("YY",function(e,t){t[me]=c.parseTwoDigitYear(e);}),ce("Y",function(e,t){t[me]=parseInt(e,10);}),c.parseTwoDigitYear=function(e){return D(e)+(68<D(e)?1900:2e3);};var Ye,Oe=Te("FullYear",!0);function Te(t,n){return function(e){return null!=e?(xe(this,t,e),c.updateOffset(this,n),this):be(this,t);};}function be(e,t){return e.isValid()?e._d["get"+(e._isUTC?"UTC":"")+t]():NaN;}function xe(e,t,n){e.isValid()&&!isNaN(n)&&("FullYear"===t&&De(e.year())&&1===e.month()&&29===e.date()?e._d["set"+(e._isUTC?"UTC":"")+t](n,e.month(),Pe(n,e.month())):e._d["set"+(e._isUTC?"UTC":"")+t](n));}function Pe(e,t){if(isNaN(e)||isNaN(t))return NaN;var n,s=(t%(n=12)+n)%n;return e+=(t-s)/12,1===s?De(e)?29:28:31-s%7%2;}Ye=Array.prototype.indexOf?Array.prototype.indexOf:function(e){var t;for(t=0;t<this.length;++t)if(this[t]===e)return t;return-1;},I("M",["MM",2],"Mo",function(){return this.month()+1;}),I("MMM",0,0,function(e){return this.localeData().monthsShort(this,e);}),I("MMMM",0,0,function(e){return this.localeData().months(this,e);}),C("month","M"),F("month",8),ue("M",B),ue("MM",B,z),ue("MMM",function(e,t){return t.monthsShortRegex(e);}),ue("MMMM",function(e,t){return t.monthsRegex(e);}),ce(["M","MM"],function(e,t){t[_e]=D(e)-1;}),ce(["MMM","MMMM"],function(e,t,n,s){var i=n._locale.monthsParse(e,s,n._strict);null!=i?t[_e]=i:g(n).invalidMonth=e;});var We=/D[oD]?(\[[^\[\]]*\]|\s)+MMMM?/,Ce="January_February_March_April_May_June_July_August_September_October_November_December".split("_");var He="Jan_Feb_Mar_Apr_May_Jun_Jul_Aug_Sep_Oct_Nov_Dec".split("_");function Re(e,t){var n;if(!e.isValid())return e;if("string"==typeof t)if(/^\d+$/.test(t))t=D(t);else if(!h(t=e.localeData().monthsParse(t)))return e;return n=Math.min(e.date(),Pe(e.year(),t)),e._d["set"+(e._isUTC?"UTC":"")+"Month"](t,n),e;}function Ue(e){return null!=e?(Re(this,e),c.updateOffset(this,!0),this):be(this,"Month");}var Fe=ae;var Le=ae;function Ne(){function e(e,t){return t.length-e.length;}var t,n,s=[],i=[],r=[];for(t=0;t<12;t++)n=y([2e3,t]),s.push(this.monthsShort(n,"")),i.push(this.months(n,"")),r.push(this.months(n,"")),r.push(this.monthsShort(n,""));for(s.sort(e),i.sort(e),r.sort(e),t=0;t<12;t++)s[t]=he(s[t]),i[t]=he(i[t]);for(t=0;t<24;t++)r[t]=he(r[t]);this._monthsRegex=new RegExp("^("+r.join("|")+")","i"),this._monthsShortRegex=this._monthsRegex,this._monthsStrictRegex=new RegExp("^("+i.join("|")+")","i"),this._monthsShortStrictRegex=new RegExp("^("+s.join("|")+")","i");}function Ge(e){var t;if(e<100&&0<=e){var n=Array.prototype.slice.call(arguments);n[0]=e+400,t=new Date(Date.UTC.apply(null,n)),isFinite(t.getUTCFullYear())&&t.setUTCFullYear(e);}else t=new Date(Date.UTC.apply(null,arguments));return t;}function Ve(e,t,n){var s=7+t-n;return-((7+Ge(e,0,s).getUTCDay()-t)%7)+s-1;}function Ee(e,t,n,s,i){var r,a,o=1+7*(t-1)+(7+n-s)%7+Ve(e,s,i);return a=o<=0?Se(r=e-1)+o:o>Se(e)?(r=e+1,o-Se(e)):(r=e,o),{year:r,dayOfYear:a};}function Ie(e,t,n){var s,i,r=Ve(e.year(),t,n),a=Math.floor((e.dayOfYear()-r-1)/7)+1;return a<1?s=a+Ae(i=e.year()-1,t,n):a>Ae(e.year(),t,n)?(s=a-Ae(e.year(),t,n),i=e.year()+1):(i=e.year(),s=a),{week:s,year:i};}function Ae(e,t,n){var s=Ve(e,t,n),i=Ve(e+1,t,n);return(Se(e)-s+i)/7;}I("w",["ww",2],"wo","week"),I("W",["WW",2],"Wo","isoWeek"),C("week","w"),C("isoWeek","W"),F("week",5),F("isoWeek",5),ue("w",B),ue("ww",B,z),ue("W",B),ue("WW",B,z),fe(["w","ww","W","WW"],function(e,t,n,s){t[s.substr(0,1)]=D(e);});function je(e,t){return e.slice(t,7).concat(e.slice(0,t));}I("d",0,"do","day"),I("dd",0,0,function(e){return this.localeData().weekdaysMin(this,e);}),I("ddd",0,0,function(e){return this.localeData().weekdaysShort(this,e);}),I("dddd",0,0,function(e){return this.localeData().weekdays(this,e);}),I("e",0,0,"weekday"),I("E",0,0,"isoWeekday"),C("day","d"),C("weekday","e"),C("isoWeekday","E"),F("day",11),F("weekday",11),F("isoWeekday",11),ue("d",B),ue("e",B),ue("E",B),ue("dd",function(e,t){return t.weekdaysMinRegex(e);}),ue("ddd",function(e,t){return t.weekdaysShortRegex(e);}),ue("dddd",function(e,t){return t.weekdaysRegex(e);}),fe(["dd","ddd","dddd"],function(e,t,n,s){var i=n._locale.weekdaysParse(e,s,n._strict);null!=i?t.d=i:g(n).invalidWeekday=e;}),fe(["d","e","E"],function(e,t,n,s){t[s]=D(e);});var Ze="Sunday_Monday_Tuesday_Wednesday_Thursday_Friday_Saturday".split("_");var ze="Sun_Mon_Tue_Wed_Thu_Fri_Sat".split("_");var $e="Su_Mo_Tu_We_Th_Fr_Sa".split("_");var qe=ae;var Je=ae;var Be=ae;function Qe(){function e(e,t){return t.length-e.length;}var t,n,s,i,r,a=[],o=[],u=[],l=[];for(t=0;t<7;t++)n=y([2e3,1]).day(t),s=this.weekdaysMin(n,""),i=this.weekdaysShort(n,""),r=this.weekdays(n,""),a.push(s),o.push(i),u.push(r),l.push(s),l.push(i),l.push(r);for(a.sort(e),o.sort(e),u.sort(e),l.sort(e),t=0;t<7;t++)o[t]=he(o[t]),u[t]=he(u[t]),l[t]=he(l[t]);this._weekdaysRegex=new RegExp("^("+l.join("|")+")","i"),this._weekdaysShortRegex=this._weekdaysRegex,this._weekdaysMinRegex=this._weekdaysRegex,this._weekdaysStrictRegex=new RegExp("^("+u.join("|")+")","i"),this._weekdaysShortStrictRegex=new RegExp("^("+o.join("|")+")","i"),this._weekdaysMinStrictRegex=new RegExp("^("+a.join("|")+")","i");}function Xe(){return this.hours()%12||12;}function Ke(e,t){I(e,0,0,function(){return this.localeData().meridiem(this.hours(),this.minutes(),t);});}function et(e,t){return t._meridiemParse;}I("H",["HH",2],0,"hour"),I("h",["hh",2],0,Xe),I("k",["kk",2],0,function(){return this.hours()||24;}),I("hmm",0,0,function(){return""+Xe.apply(this)+L(this.minutes(),2);}),I("hmmss",0,0,function(){return""+Xe.apply(this)+L(this.minutes(),2)+L(this.seconds(),2);}),I("Hmm",0,0,function(){return""+this.hours()+L(this.minutes(),2);}),I("Hmmss",0,0,function(){return""+this.hours()+L(this.minutes(),2)+L(this.seconds(),2);}),Ke("a",!0),Ke("A",!1),C("hour","h"),F("hour",13),ue("a",et),ue("A",et),ue("H",B),ue("h",B),ue("k",B),ue("HH",B,z),ue("hh",B,z),ue("kk",B,z),ue("hmm",Q),ue("hmmss",X),ue("Hmm",Q),ue("Hmmss",X),ce(["H","HH"],ge),ce(["k","kk"],function(e,t,n){var s=D(e);t[ge]=24===s?0:s;}),ce(["a","A"],function(e,t,n){n._isPm=n._locale.isPM(e),n._meridiem=e;}),ce(["h","hh"],function(e,t,n){t[ge]=D(e),g(n).bigHour=!0;}),ce("hmm",function(e,t,n){var s=e.length-2;t[ge]=D(e.substr(0,s)),t[ve]=D(e.substr(s)),g(n).bigHour=!0;}),ce("hmmss",function(e,t,n){var s=e.length-4,i=e.length-2;t[ge]=D(e.substr(0,s)),t[ve]=D(e.substr(s,2)),t[pe]=D(e.substr(i)),g(n).bigHour=!0;}),ce("Hmm",function(e,t,n){var s=e.length-2;t[ge]=D(e.substr(0,s)),t[ve]=D(e.substr(s));}),ce("Hmmss",function(e,t,n){var s=e.length-4,i=e.length-2;t[ge]=D(e.substr(0,s)),t[ve]=D(e.substr(s,2)),t[pe]=D(e.substr(i));});var tt,nt=Te("Hours",!0),st={calendar:{sameDay:"[Today at] LT",nextDay:"[Tomorrow at] LT",nextWeek:"dddd [at] LT",lastDay:"[Yesterday at] LT",lastWeek:"[Last] dddd [at] LT",sameElse:"L"},longDateFormat:{LTS:"h:mm:ss A",LT:"h:mm A",L:"MM/DD/YYYY",LL:"MMMM D, YYYY",LLL:"MMMM D, YYYY h:mm A",LLLL:"dddd, MMMM D, YYYY h:mm A"},invalidDate:"Invalid date",ordinal:"%d",dayOfMonthOrdinalParse:/\d{1,2}/,relativeTime:{future:"in %s",past:"%s ago",s:"a few seconds",ss:"%d seconds",m:"a minute",mm:"%d minutes",h:"an hour",hh:"%d hours",d:"a day",dd:"%d days",M:"a month",MM:"%d months",y:"a year",yy:"%d years"},months:Ce,monthsShort:He,week:{dow:0,doy:6},weekdays:Ze,weekdaysMin:$e,weekdaysShort:ze,meridiemParse:/[ap]\.?m?\.?/i},it={},rt={};function at(e){return e?e.toLowerCase().replace("_","-"):e;}function ot(e){var t=null;if(!it[e]&&"undefined"!=typeof module&&module&&module.exports)try{t=tt._abbr,require("./locale/"+e),ut(t);}catch(e){}return it[e];}function ut(e,t){var n;return e&&((n=l(t)?ht(e):lt(e,t))?tt=n:"undefined"!=typeof console&&console.warn&&console.warn("Locale "+e+" not found. Did you forget to load it?")),tt._abbr;}function lt(e,t){if(null===t)return delete it[e],null;var n,s=st;if(t.abbr=e,null!=it[e])T("defineLocaleOverride","use moment.updateLocale(localeName, config) to change an existing locale. moment.defineLocale(localeName, config) should only be used for creating a new locale See http://momentjs.com/guides/#/warnings/define-locale/ for more info."),s=it[e]._config;else if(null!=t.parentLocale)if(null!=it[t.parentLocale])s=it[t.parentLocale]._config;else{if(null==(n=ot(t.parentLocale)))return rt[t.parentLocale]||(rt[t.parentLocale]=[]),rt[t.parentLocale].push({name:e,config:t}),null;s=n._config;}return it[e]=new P(x(s,t)),rt[e]&&rt[e].forEach(function(e){lt(e.name,e.config);}),ut(e),it[e];}function ht(e){var t;if(e&&e._locale&&e._locale._abbr&&(e=e._locale._abbr),!e)return tt;if(!o(e)){if(t=ot(e))return t;e=[e];}return function(e){for(var t,n,s,i,r=0;r<e.length;){for(t=(i=at(e[r]).split("-")).length,n=(n=at(e[r+1]))?n.split("-"):null;0<t;){if(s=ot(i.slice(0,t).join("-")))return s;if(n&&n.length>=t&&a(i,n,!0)>=t-1)break;t--;}r++;}return tt;}(e);}function dt(e){var t,n=e._a;return n&&-2===g(e).overflow&&(t=n[_e]<0||11<n[_e]?_e:n[ye]<1||n[ye]>Pe(n[me],n[_e])?ye:n[ge]<0||24<n[ge]||24===n[ge]&&(0!==n[ve]||0!==n[pe]||0!==n[we])?ge:n[ve]<0||59<n[ve]?ve:n[pe]<0||59<n[pe]?pe:n[we]<0||999<n[we]?we:-1,g(e)._overflowDayOfYear&&(t<me||ye<t)&&(t=ye),g(e)._overflowWeeks&&-1===t&&(t=Me),g(e)._overflowWeekday&&-1===t&&(t=ke),g(e).overflow=t),e;}function ct(e,t,n){return null!=e?e:null!=t?t:n;}function ft(e){var t,n,s,i,r,a=[];if(!e._d){var o,u;for(o=e,u=new Date(c.now()),s=o._useUTC?[u.getUTCFullYear(),u.getUTCMonth(),u.getUTCDate()]:[u.getFullYear(),u.getMonth(),u.getDate()],e._w&&null==e._a[ye]&&null==e._a[_e]&&function(e){var t,n,s,i,r,a,o,u;if(null!=(t=e._w).GG||null!=t.W||null!=t.E)r=1,a=4,n=ct(t.GG,e._a[me],Ie(bt(),1,4).year),s=ct(t.W,1),((i=ct(t.E,1))<1||7<i)&&(u=!0);else{r=e._locale._week.dow,a=e._locale._week.doy;var l=Ie(bt(),r,a);n=ct(t.gg,e._a[me],l.year),s=ct(t.w,l.week),null!=t.d?((i=t.d)<0||6<i)&&(u=!0):null!=t.e?(i=t.e+r,(t.e<0||6<t.e)&&(u=!0)):i=r;}s<1||s>Ae(n,r,a)?g(e)._overflowWeeks=!0:null!=u?g(e)._overflowWeekday=!0:(o=Ee(n,s,i,r,a),e._a[me]=o.year,e._dayOfYear=o.dayOfYear);}(e),null!=e._dayOfYear&&(r=ct(e._a[me],s[me]),(e._dayOfYear>Se(r)||0===e._dayOfYear)&&(g(e)._overflowDayOfYear=!0),n=Ge(r,0,e._dayOfYear),e._a[_e]=n.getUTCMonth(),e._a[ye]=n.getUTCDate()),t=0;t<3&&null==e._a[t];++t)e._a[t]=a[t]=s[t];for(;t<7;t++)e._a[t]=a[t]=null==e._a[t]?2===t?1:0:e._a[t];24===e._a[ge]&&0===e._a[ve]&&0===e._a[pe]&&0===e._a[we]&&(e._nextDay=!0,e._a[ge]=0),e._d=(e._useUTC?Ge:function(e,t,n,s,i,r,a){var o;return e<100&&0<=e?(o=new Date(e+400,t,n,s,i,r,a),isFinite(o.getFullYear())&&o.setFullYear(e)):o=new Date(e,t,n,s,i,r,a),o;}).apply(null,a),i=e._useUTC?e._d.getUTCDay():e._d.getDay(),null!=e._tzm&&e._d.setUTCMinutes(e._d.getUTCMinutes()-e._tzm),e._nextDay&&(e._a[ge]=24),e._w&&void 0!==e._w.d&&e._w.d!==i&&(g(e).weekdayMismatch=!0);}}var mt=/^\s*((?:[+-]\d{6}|\d{4})-(?:\d\d-\d\d|W\d\d-\d|W\d\d|\d\d\d|\d\d))(?:(T| )(\d\d(?::\d\d(?::\d\d(?:[.,]\d+)?)?)?)([\+\-]\d\d(?::?\d\d)?|\s*Z)?)?$/,_t=/^\s*((?:[+-]\d{6}|\d{4})(?:\d\d\d\d|W\d\d\d|W\d\d|\d\d\d|\d\d))(?:(T| )(\d\d(?:\d\d(?:\d\d(?:[.,]\d+)?)?)?)([\+\-]\d\d(?::?\d\d)?|\s*Z)?)?$/,yt=/Z|[+-]\d\d(?::?\d\d)?/,gt=[["YYYYYY-MM-DD",/[+-]\d{6}-\d\d-\d\d/],["YYYY-MM-DD",/\d{4}-\d\d-\d\d/],["GGGG-[W]WW-E",/\d{4}-W\d\d-\d/],["GGGG-[W]WW",/\d{4}-W\d\d/,!1],["YYYY-DDD",/\d{4}-\d{3}/],["YYYY-MM",/\d{4}-\d\d/,!1],["YYYYYYMMDD",/[+-]\d{10}/],["YYYYMMDD",/\d{8}/],["GGGG[W]WWE",/\d{4}W\d{3}/],["GGGG[W]WW",/\d{4}W\d{2}/,!1],["YYYYDDD",/\d{7}/]],vt=[["HH:mm:ss.SSSS",/\d\d:\d\d:\d\d\.\d+/],["HH:mm:ss,SSSS",/\d\d:\d\d:\d\d,\d+/],["HH:mm:ss",/\d\d:\d\d:\d\d/],["HH:mm",/\d\d:\d\d/],["HHmmss.SSSS",/\d\d\d\d\d\d\.\d+/],["HHmmss,SSSS",/\d\d\d\d\d\d,\d+/],["HHmmss",/\d\d\d\d\d\d/],["HHmm",/\d\d\d\d/],["HH",/\d\d/]],pt=/^\/?Date\((\-?\d+)/i;function wt(e){var t,n,s,i,r,a,o=e._i,u=mt.exec(o)||_t.exec(o);if(u){for(g(e).iso=!0,t=0,n=gt.length;t<n;t++)if(gt[t][1].exec(u[1])){i=gt[t][0],s=!1!==gt[t][2];break;}if(null==i)return void(e._isValid=!1);if(u[3]){for(t=0,n=vt.length;t<n;t++)if(vt[t][1].exec(u[3])){r=(u[2]||" ")+vt[t][0];break;}if(null==r)return void(e._isValid=!1);}if(!s&&null!=r)return void(e._isValid=!1);if(u[4]){if(!yt.exec(u[4]))return void(e._isValid=!1);a="Z";}e._f=i+(r||"")+(a||""),Yt(e);}else e._isValid=!1;}var Mt=/^(?:(Mon|Tue|Wed|Thu|Fri|Sat|Sun),?\s)?(\d{1,2})\s(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s(\d{2,4})\s(\d\d):(\d\d)(?::(\d\d))?\s(?:(UT|GMT|[ECMP][SD]T)|([Zz])|([+-]\d{4}))$/;function kt(e,t,n,s,i,r){var a=[function(e){var t=parseInt(e,10);{if(t<=49)return 2e3+t;if(t<=999)return 1900+t;}return t;}(e),He.indexOf(t),parseInt(n,10),parseInt(s,10),parseInt(i,10)];return r&&a.push(parseInt(r,10)),a;}var St={UT:0,GMT:0,EDT:-240,EST:-300,CDT:-300,CST:-360,MDT:-360,MST:-420,PDT:-420,PST:-480};function Dt(e){var t,n,s,i=Mt.exec(e._i.replace(/\([^)]*\)|[\n\t]/g," ").replace(/(\s\s+)/g," ").replace(/^\s\s*/,"").replace(/\s\s*$/,""));if(i){var r=kt(i[4],i[3],i[2],i[5],i[6],i[7]);if(t=i[1],n=r,s=e,t&&ze.indexOf(t)!==new Date(n[0],n[1],n[2]).getDay()&&(g(s).weekdayMismatch=!0,!(s._isValid=!1)))return;e._a=r,e._tzm=function(e,t,n){if(e)return St[e];if(t)return 0;var s=parseInt(n,10),i=s%100;return(s-i)/100*60+i;}(i[8],i[9],i[10]),e._d=Ge.apply(null,e._a),e._d.setUTCMinutes(e._d.getUTCMinutes()-e._tzm),g(e).rfc2822=!0;}else e._isValid=!1;}function Yt(e){if(e._f!==c.ISO_8601){if(e._f!==c.RFC_2822){e._a=[],g(e).empty=!0;var t,n,s,i,r,a,o,u,l=""+e._i,h=l.length,d=0;for(s=j(e._f,e._locale).match(N)||[],t=0;t<s.length;t++)i=s[t],(n=(l.match(le(i,e))||[])[0])&&(0<(r=l.substr(0,l.indexOf(n))).length&&g(e).unusedInput.push(r),l=l.slice(l.indexOf(n)+n.length),d+=n.length),E[i]?(n?g(e).empty=!1:g(e).unusedTokens.push(i),a=i,u=e,null!=(o=n)&&m(de,a)&&de[a](o,u._a,u,a)):e._strict&&!n&&g(e).unusedTokens.push(i);g(e).charsLeftOver=h-d,0<l.length&&g(e).unusedInput.push(l),e._a[ge]<=12&&!0===g(e).bigHour&&0<e._a[ge]&&(g(e).bigHour=void 0),g(e).parsedDateParts=e._a.slice(0),g(e).meridiem=e._meridiem,e._a[ge]=function(e,t,n){var s;if(null==n)return t;return null!=e.meridiemHour?e.meridiemHour(t,n):(null!=e.isPM&&((s=e.isPM(n))&&t<12&&(t+=12),s||12!==t||(t=0)),t);}(e._locale,e._a[ge],e._meridiem),ft(e),dt(e);}else Dt(e);}else wt(e);}function Ot(e){var t,n,s,i,r=e._i,a=e._f;return e._locale=e._locale||ht(e._l),null===r||void 0===a&&""===r?p({nullInput:!0}):("string"==typeof r&&(e._i=r=e._locale.preparse(r)),k(r)?new M(dt(r)):(d(r)?e._d=r:o(a)?function(e){var t,n,s,i,r;if(0===e._f.length)return g(e).invalidFormat=!0,e._d=new Date(NaN);for(i=0;i<e._f.length;i++)r=0,t=w({},e),null!=e._useUTC&&(t._useUTC=e._useUTC),t._f=e._f[i],Yt(t),v(t)&&(r+=g(t).charsLeftOver,r+=10*g(t).unusedTokens.length,g(t).score=r,(null==s||r<s)&&(s=r,n=t));_(e,n||t);}(e):a?Yt(e):l(n=(t=e)._i)?t._d=new Date(c.now()):d(n)?t._d=new Date(n.valueOf()):"string"==typeof n?(s=t,null===(i=pt.exec(s._i))?(wt(s),!1===s._isValid&&(delete s._isValid,Dt(s),!1===s._isValid&&(delete s._isValid,c.createFromInputFallback(s)))):s._d=new Date(+i[1])):o(n)?(t._a=f(n.slice(0),function(e){return parseInt(e,10);}),ft(t)):u(n)?function(e){if(!e._d){var t=R(e._i);e._a=f([t.year,t.month,t.day||t.date,t.hour,t.minute,t.second,t.millisecond],function(e){return e&&parseInt(e,10);}),ft(e);}}(t):h(n)?t._d=new Date(n):c.createFromInputFallback(t),v(e)||(e._d=null),e));}function Tt(e,t,n,s,i){var r,a={};return!0!==n&&!1!==n||(s=n,n=void 0),(u(e)&&function(e){if(Object.getOwnPropertyNames)return 0===Object.getOwnPropertyNames(e).length;var t;for(t in e)if(e.hasOwnProperty(t))return!1;return!0;}(e)||o(e)&&0===e.length)&&(e=void 0),a._isAMomentObject=!0,a._useUTC=a._isUTC=i,a._l=n,a._i=e,a._f=t,a._strict=s,(r=new M(dt(Ot(a))))._nextDay&&(r.add(1,"d"),r._nextDay=void 0),r;}function bt(e,t,n,s){return Tt(e,t,n,s,!1);}c.createFromInputFallback=n("value provided is not in a recognized RFC2822 or ISO format. moment construction falls back to js Date(), which is not reliable across all browsers and versions. Non RFC2822/ISO date formats are discouraged and will be removed in an upcoming major release. Please refer to http://momentjs.com/guides/#/warnings/js-date/ for more info.",function(e){e._d=new Date(e._i+(e._useUTC?" UTC":""));}),c.ISO_8601=function(){},c.RFC_2822=function(){};var xt=n("moment().min is deprecated, use moment.max instead. http://momentjs.com/guides/#/warnings/min-max/",function(){var e=bt.apply(null,arguments);return this.isValid()&&e.isValid()?e<this?this:e:p();}),Pt=n("moment().max is deprecated, use moment.min instead. http://momentjs.com/guides/#/warnings/min-max/",function(){var e=bt.apply(null,arguments);return this.isValid()&&e.isValid()?this<e?this:e:p();});function Wt(e,t){var n,s;if(1===t.length&&o(t[0])&&(t=t[0]),!t.length)return bt();for(n=t[0],s=1;s<t.length;++s)t[s].isValid()&&!t[s][e](n)||(n=t[s]);return n;}var Ct=["year","quarter","month","week","day","hour","minute","second","millisecond"];function Ht(e){var t=R(e),n=t.year||0,s=t.quarter||0,i=t.month||0,r=t.week||t.isoWeek||0,a=t.day||0,o=t.hour||0,u=t.minute||0,l=t.second||0,h=t.millisecond||0;this._isValid=function(e){for(var t in e)if(-1===Ye.call(Ct,t)||null!=e[t]&&isNaN(e[t]))return!1;for(var n=!1,s=0;s<Ct.length;++s)if(e[Ct[s]]){if(n)return!1;parseFloat(e[Ct[s]])!==D(e[Ct[s]])&&(n=!0);}return!0;}(t),this._milliseconds=+h+1e3*l+6e4*u+1e3*o*60*60,this._days=+a+7*r,this._months=+i+3*s+12*n,this._data={},this._locale=ht(),this._bubble();}function Rt(e){return e instanceof Ht;}function Ut(e){return e<0?-1*Math.round(-1*e):Math.round(e);}function Ft(e,n){I(e,0,0,function(){var e=this.utcOffset(),t="+";return e<0&&(e=-e,t="-"),t+L(~~(e/60),2)+n+L(~~e%60,2);});}Ft("Z",":"),Ft("ZZ",""),ue("Z",re),ue("ZZ",re),ce(["Z","ZZ"],function(e,t,n){n._useUTC=!0,n._tzm=Nt(re,e);});var Lt=/([\+\-]|\d\d)/gi;function Nt(e,t){var n=(t||"").match(e);if(null===n)return null;var s=((n[n.length-1]||[])+"").match(Lt)||["-",0,0],i=60*s[1]+D(s[2]);return 0===i?0:"+"===s[0]?i:-i;}function Gt(e,t){var n,s;return t._isUTC?(n=t.clone(),s=(k(e)||d(e)?e.valueOf():bt(e).valueOf())-n.valueOf(),n._d.setTime(n._d.valueOf()+s),c.updateOffset(n,!1),n):bt(e).local();}function Vt(e){return 15*-Math.round(e._d.getTimezoneOffset()/15);}function Et(){return!!this.isValid()&&this._isUTC&&0===this._offset;}c.updateOffset=function(){};var It=/^(\-|\+)?(?:(\d*)[. ])?(\d+)\:(\d+)(?:\:(\d+)(\.\d*)?)?$/,At=/^(-|\+)?P(?:([-+]?[0-9,.]*)Y)?(?:([-+]?[0-9,.]*)M)?(?:([-+]?[0-9,.]*)W)?(?:([-+]?[0-9,.]*)D)?(?:T(?:([-+]?[0-9,.]*)H)?(?:([-+]?[0-9,.]*)M)?(?:([-+]?[0-9,.]*)S)?)?$/;function jt(e,t){var n,s,i,r=e,a=null;return Rt(e)?r={ms:e._milliseconds,d:e._days,M:e._months}:h(e)?(r={},t?r[t]=e:r.milliseconds=e):(a=It.exec(e))?(n="-"===a[1]?-1:1,r={y:0,d:D(a[ye])*n,h:D(a[ge])*n,m:D(a[ve])*n,s:D(a[pe])*n,ms:D(Ut(1e3*a[we]))*n}):(a=At.exec(e))?(n="-"===a[1]?-1:1,r={y:Zt(a[2],n),M:Zt(a[3],n),w:Zt(a[4],n),d:Zt(a[5],n),h:Zt(a[6],n),m:Zt(a[7],n),s:Zt(a[8],n)}):null==r?r={}:"object"==typeof r&&("from"in r||"to"in r)&&(i=function(e,t){var n;if(!e.isValid()||!t.isValid())return{milliseconds:0,months:0};t=Gt(t,e),e.isBefore(t)?n=zt(e,t):((n=zt(t,e)).milliseconds=-n.milliseconds,n.months=-n.months);return n;}(bt(r.from),bt(r.to)),(r={}).ms=i.milliseconds,r.M=i.months),s=new Ht(r),Rt(e)&&m(e,"_locale")&&(s._locale=e._locale),s;}function Zt(e,t){var n=e&&parseFloat(e.replace(",","."));return(isNaN(n)?0:n)*t;}function zt(e,t){var n={};return n.months=t.month()-e.month()+12*(t.year()-e.year()),e.clone().add(n.months,"M").isAfter(t)&&--n.months,n.milliseconds=+t-+e.clone().add(n.months,"M"),n;}function $t(s,i){return function(e,t){var n;return null===t||isNaN(+t)||(T(i,"moment()."+i+"(period, number) is deprecated. Please use moment()."+i+"(number, period). See http://momentjs.com/guides/#/warnings/add-inverted-param/ for more info."),n=e,e=t,t=n),qt(this,jt(e="string"==typeof e?+e:e,t),s),this;};}function qt(e,t,n,s){var i=t._milliseconds,r=Ut(t._days),a=Ut(t._months);e.isValid()&&(s=null==s||s,a&&Re(e,be(e,"Month")+a*n),r&&xe(e,"Date",be(e,"Date")+r*n),i&&e._d.setTime(e._d.valueOf()+i*n),s&&c.updateOffset(e,r||a));}jt.fn=Ht.prototype,jt.invalid=function(){return jt(NaN);};var Jt=$t(1,"add"),Bt=$t(-1,"subtract");function Qt(e,t){var n=12*(t.year()-e.year())+(t.month()-e.month()),s=e.clone().add(n,"months");return-(n+(t-s<0?(t-s)/(s-e.clone().add(n-1,"months")):(t-s)/(e.clone().add(n+1,"months")-s)))||0;}function Xt(e){var t;return void 0===e?this._locale._abbr:(null!=(t=ht(e))&&(this._locale=t),this);}c.defaultFormat="YYYY-MM-DDTHH:mm:ssZ",c.defaultFormatUtc="YYYY-MM-DDTHH:mm:ss[Z]";var Kt=n("moment().lang() is deprecated. Instead, use moment().localeData() to get the language configuration. Use moment().locale() to change languages.",function(e){return void 0===e?this.localeData():this.locale(e);});function en(){return this._locale;}var tn=126227808e5;function nn(e,t){return(e%t+t)%t;}function sn(e,t,n){return e<100&&0<=e?new Date(e+400,t,n)-tn:new Date(e,t,n).valueOf();}function rn(e,t,n){return e<100&&0<=e?Date.UTC(e+400,t,n)-tn:Date.UTC(e,t,n);}function an(e,t){I(0,[e,e.length],0,t);}function on(e,t,n,s,i){var r;return null==e?Ie(this,s,i).year:((r=Ae(e,s,i))<t&&(t=r),function(e,t,n,s,i){var r=Ee(e,t,n,s,i),a=Ge(r.year,0,r.dayOfYear);return this.year(a.getUTCFullYear()),this.month(a.getUTCMonth()),this.date(a.getUTCDate()),this;}.call(this,e,t,n,s,i));}I(0,["gg",2],0,function(){return this.weekYear()%100;}),I(0,["GG",2],0,function(){return this.isoWeekYear()%100;}),an("gggg","weekYear"),an("ggggg","weekYear"),an("GGGG","isoWeekYear"),an("GGGGG","isoWeekYear"),C("weekYear","gg"),C("isoWeekYear","GG"),F("weekYear",1),F("isoWeekYear",1),ue("G",se),ue("g",se),ue("GG",B,z),ue("gg",B,z),ue("GGGG",ee,q),ue("gggg",ee,q),ue("GGGGG",te,J),ue("ggggg",te,J),fe(["gggg","ggggg","GGGG","GGGGG"],function(e,t,n,s){t[s.substr(0,2)]=D(e);}),fe(["gg","GG"],function(e,t,n,s){t[s]=c.parseTwoDigitYear(e);}),I("Q",0,"Qo","quarter"),C("quarter","Q"),F("quarter",7),ue("Q",Z),ce("Q",function(e,t){t[_e]=3*(D(e)-1);}),I("D",["DD",2],"Do","date"),C("date","D"),F("date",9),ue("D",B),ue("DD",B,z),ue("Do",function(e,t){return e?t._dayOfMonthOrdinalParse||t._ordinalParse:t._dayOfMonthOrdinalParseLenient;}),ce(["D","DD"],ye),ce("Do",function(e,t){t[ye]=D(e.match(B)[0]);});var un=Te("Date",!0);I("DDD",["DDDD",3],"DDDo","dayOfYear"),C("dayOfYear","DDD"),F("dayOfYear",4),ue("DDD",K),ue("DDDD",$),ce(["DDD","DDDD"],function(e,t,n){n._dayOfYear=D(e);}),I("m",["mm",2],0,"minute"),C("minute","m"),F("minute",14),ue("m",B),ue("mm",B,z),ce(["m","mm"],ve);var ln=Te("Minutes",!1);I("s",["ss",2],0,"second"),C("second","s"),F("second",15),ue("s",B),ue("ss",B,z),ce(["s","ss"],pe);var hn,dn=Te("Seconds",!1);for(I("S",0,0,function(){return~~(this.millisecond()/100);}),I(0,["SS",2],0,function(){return~~(this.millisecond()/10);}),I(0,["SSS",3],0,"millisecond"),I(0,["SSSS",4],0,function(){return 10*this.millisecond();}),I(0,["SSSSS",5],0,function(){return 100*this.millisecond();}),I(0,["SSSSSS",6],0,function(){return 1e3*this.millisecond();}),I(0,["SSSSSSS",7],0,function(){return 1e4*this.millisecond();}),I(0,["SSSSSSSS",8],0,function(){return 1e5*this.millisecond();}),I(0,["SSSSSSSSS",9],0,function(){return 1e6*this.millisecond();}),C("millisecond","ms"),F("millisecond",16),ue("S",K,Z),ue("SS",K,z),ue("SSS",K,$),hn="SSSS";hn.length<=9;hn+="S")ue(hn,ne);function cn(e,t){t[we]=D(1e3*("0."+e));}for(hn="S";hn.length<=9;hn+="S")ce(hn,cn);var fn=Te("Milliseconds",!1);I("z",0,0,"zoneAbbr"),I("zz",0,0,"zoneName");var mn=M.prototype;function _n(e){return e;}mn.add=Jt,mn.calendar=function(e,t){var n=e||bt(),s=Gt(n,this).startOf("day"),i=c.calendarFormat(this,s)||"sameElse",r=t&&(b(t[i])?t[i].call(this,n):t[i]);return this.format(r||this.localeData().calendar(i,this,bt(n)));},mn.clone=function(){return new M(this);},mn.diff=function(e,t,n){var s,i,r;if(!this.isValid())return NaN;if(!(s=Gt(e,this)).isValid())return NaN;switch(i=6e4*(s.utcOffset()-this.utcOffset()),t=H(t)){case"year":r=Qt(this,s)/12;break;case"month":r=Qt(this,s);break;case"quarter":r=Qt(this,s)/3;break;case"second":r=(this-s)/1e3;break;case"minute":r=(this-s)/6e4;break;case"hour":r=(this-s)/36e5;break;case"day":r=(this-s-i)/864e5;break;case"week":r=(this-s-i)/6048e5;break;default:r=this-s;}return n?r:S(r);},mn.endOf=function(e){var t;if(void 0===(e=H(e))||"millisecond"===e||!this.isValid())return this;var n=this._isUTC?rn:sn;switch(e){case"year":t=n(this.year()+1,0,1)-1;break;case"quarter":t=n(this.year(),this.month()-this.month()%3+3,1)-1;break;case"month":t=n(this.year(),this.month()+1,1)-1;break;case"week":t=n(this.year(),this.month(),this.date()-this.weekday()+7)-1;break;case"isoWeek":t=n(this.year(),this.month(),this.date()-(this.isoWeekday()-1)+7)-1;break;case"day":case"date":t=n(this.year(),this.month(),this.date()+1)-1;break;case"hour":t=this._d.valueOf(),t+=36e5-nn(t+(this._isUTC?0:6e4*this.utcOffset()),36e5)-1;break;case"minute":t=this._d.valueOf(),t+=6e4-nn(t,6e4)-1;break;case"second":t=this._d.valueOf(),t+=1e3-nn(t,1e3)-1;break;}return this._d.setTime(t),c.updateOffset(this,!0),this;},mn.format=function(e){e||(e=this.isUtc()?c.defaultFormatUtc:c.defaultFormat);var t=A(this,e);return this.localeData().postformat(t);},mn.from=function(e,t){return this.isValid()&&(k(e)&&e.isValid()||bt(e).isValid())?jt({to:this,from:e}).locale(this.locale()).humanize(!t):this.localeData().invalidDate();},mn.fromNow=function(e){return this.from(bt(),e);},mn.to=function(e,t){return this.isValid()&&(k(e)&&e.isValid()||bt(e).isValid())?jt({from:this,to:e}).locale(this.locale()).humanize(!t):this.localeData().invalidDate();},mn.toNow=function(e){return this.to(bt(),e);},mn.get=function(e){return b(this[e=H(e)])?this[e]():this;},mn.invalidAt=function(){return g(this).overflow;},mn.isAfter=function(e,t){var n=k(e)?e:bt(e);return!(!this.isValid()||!n.isValid())&&("millisecond"===(t=H(t)||"millisecond")?this.valueOf()>n.valueOf():n.valueOf()<this.clone().startOf(t).valueOf());},mn.isBefore=function(e,t){var n=k(e)?e:bt(e);return!(!this.isValid()||!n.isValid())&&("millisecond"===(t=H(t)||"millisecond")?this.valueOf()<n.valueOf():this.clone().endOf(t).valueOf()<n.valueOf());},mn.isBetween=function(e,t,n,s){var i=k(e)?e:bt(e),r=k(t)?t:bt(t);return!!(this.isValid()&&i.isValid()&&r.isValid())&&("("===(s=s||"()")[0]?this.isAfter(i,n):!this.isBefore(i,n))&&(")"===s[1]?this.isBefore(r,n):!this.isAfter(r,n));},mn.isSame=function(e,t){var n,s=k(e)?e:bt(e);return!(!this.isValid()||!s.isValid())&&("millisecond"===(t=H(t)||"millisecond")?this.valueOf()===s.valueOf():(n=s.valueOf(),this.clone().startOf(t).valueOf()<=n&&n<=this.clone().endOf(t).valueOf()));},mn.isSameOrAfter=function(e,t){return this.isSame(e,t)||this.isAfter(e,t);},mn.isSameOrBefore=function(e,t){return this.isSame(e,t)||this.isBefore(e,t);},mn.isValid=function(){return v(this);},mn.lang=Kt,mn.locale=Xt,mn.localeData=en,mn.max=Pt,mn.min=xt,mn.parsingFlags=function(){return _({},g(this));},mn.set=function(e,t){if("object"==typeof e)for(var n=function(e){var t=[];for(var n in e)t.push({unit:n,priority:U[n]});return t.sort(function(e,t){return e.priority-t.priority;}),t;}(e=R(e)),s=0;s<n.length;s++)this[n[s].unit](e[n[s].unit]);else if(b(this[e=H(e)]))return this[e](t);return this;},mn.startOf=function(e){var t;if(void 0===(e=H(e))||"millisecond"===e||!this.isValid())return this;var n=this._isUTC?rn:sn;switch(e){case"year":t=n(this.year(),0,1);break;case"quarter":t=n(this.year(),this.month()-this.month()%3,1);break;case"month":t=n(this.year(),this.month(),1);break;case"week":t=n(this.year(),this.month(),this.date()-this.weekday());break;case"isoWeek":t=n(this.year(),this.month(),this.date()-(this.isoWeekday()-1));break;case"day":case"date":t=n(this.year(),this.month(),this.date());break;case"hour":t=this._d.valueOf(),t-=nn(t+(this._isUTC?0:6e4*this.utcOffset()),36e5);break;case"minute":t=this._d.valueOf(),t-=nn(t,6e4);break;case"second":t=this._d.valueOf(),t-=nn(t,1e3);break;}return this._d.setTime(t),c.updateOffset(this,!0),this;},mn.subtract=Bt,mn.toArray=function(){var e=this;return[e.year(),e.month(),e.date(),e.hour(),e.minute(),e.second(),e.millisecond()];},mn.toObject=function(){var e=this;return{years:e.year(),months:e.month(),date:e.date(),hours:e.hours(),minutes:e.minutes(),seconds:e.seconds(),milliseconds:e.milliseconds()};},mn.toDate=function(){return new Date(this.valueOf());},mn.toISOString=function(e){if(!this.isValid())return null;var t=!0!==e,n=t?this.clone().utc():this;return n.year()<0||9999<n.year()?A(n,t?"YYYYYY-MM-DD[T]HH:mm:ss.SSS[Z]":"YYYYYY-MM-DD[T]HH:mm:ss.SSSZ"):b(Date.prototype.toISOString)?t?this.toDate().toISOString():new Date(this.valueOf()+60*this.utcOffset()*1e3).toISOString().replace("Z",A(n,"Z")):A(n,t?"YYYY-MM-DD[T]HH:mm:ss.SSS[Z]":"YYYY-MM-DD[T]HH:mm:ss.SSSZ");},mn.inspect=function(){if(!this.isValid())return"moment.invalid(/* "+this._i+" */)";var e="moment",t="";this.isLocal()||(e=0===this.utcOffset()?"moment.utc":"moment.parseZone",t="Z");var n="["+e+'("]',s=0<=this.year()&&this.year()<=9999?"YYYY":"YYYYYY",i=t+'[")]';return this.format(n+s+"-MM-DD[T]HH:mm:ss.SSS"+i);},mn.toJSON=function(){return this.isValid()?this.toISOString():null;},mn.toString=function(){return this.clone().locale("en").format("ddd MMM DD YYYY HH:mm:ss [GMT]ZZ");},mn.unix=function(){return Math.floor(this.valueOf()/1e3);},mn.valueOf=function(){return this._d.valueOf()-6e4*(this._offset||0);},mn.creationData=function(){return{input:this._i,format:this._f,locale:this._locale,isUTC:this._isUTC,strict:this._strict};},mn.year=Oe,mn.isLeapYear=function(){return De(this.year());},mn.weekYear=function(e){return on.call(this,e,this.week(),this.weekday(),this.localeData()._week.dow,this.localeData()._week.doy);},mn.isoWeekYear=function(e){return on.call(this,e,this.isoWeek(),this.isoWeekday(),1,4);},mn.quarter=mn.quarters=function(e){return null==e?Math.ceil((this.month()+1)/3):this.month(3*(e-1)+this.month()%3);},mn.month=Ue,mn.daysInMonth=function(){return Pe(this.year(),this.month());},mn.week=mn.weeks=function(e){var t=this.localeData().week(this);return null==e?t:this.add(7*(e-t),"d");},mn.isoWeek=mn.isoWeeks=function(e){var t=Ie(this,1,4).week;return null==e?t:this.add(7*(e-t),"d");},mn.weeksInYear=function(){var e=this.localeData()._week;return Ae(this.year(),e.dow,e.doy);},mn.isoWeeksInYear=function(){return Ae(this.year(),1,4);},mn.date=un,mn.day=mn.days=function(e){if(!this.isValid())return null!=e?this:NaN;var t,n,s=this._isUTC?this._d.getUTCDay():this._d.getDay();return null!=e?(t=e,n=this.localeData(),e="string"!=typeof t?t:isNaN(t)?"number"==typeof(t=n.weekdaysParse(t))?t:null:parseInt(t,10),this.add(e-s,"d")):s;},mn.weekday=function(e){if(!this.isValid())return null!=e?this:NaN;var t=(this.day()+7-this.localeData()._week.dow)%7;return null==e?t:this.add(e-t,"d");},mn.isoWeekday=function(e){if(!this.isValid())return null!=e?this:NaN;if(null==e)return this.day()||7;var t,n,s=(t=e,n=this.localeData(),"string"==typeof t?n.weekdaysParse(t)%7||7:isNaN(t)?null:t);return this.day(this.day()%7?s:s-7);},mn.dayOfYear=function(e){var t=Math.round((this.clone().startOf("day")-this.clone().startOf("year"))/864e5)+1;return null==e?t:this.add(e-t,"d");},mn.hour=mn.hours=nt,mn.minute=mn.minutes=ln,mn.second=mn.seconds=dn,mn.millisecond=mn.milliseconds=fn,mn.utcOffset=function(e,t,n){var s,i=this._offset||0;if(!this.isValid())return null!=e?this:NaN;if(null==e)return this._isUTC?i:Vt(this);if("string"==typeof e){if(null===(e=Nt(re,e)))return this;}else Math.abs(e)<16&&!n&&(e*=60);return!this._isUTC&&t&&(s=Vt(this)),this._offset=e,this._isUTC=!0,null!=s&&this.add(s,"m"),i!==e&&(!t||this._changeInProgress?qt(this,jt(e-i,"m"),1,!1):this._changeInProgress||(this._changeInProgress=!0,c.updateOffset(this,!0),this._changeInProgress=null)),this;},mn.utc=function(e){return this.utcOffset(0,e);},mn.local=function(e){return this._isUTC&&(this.utcOffset(0,e),this._isUTC=!1,e&&this.subtract(Vt(this),"m")),this;},mn.parseZone=function(){if(null!=this._tzm)this.utcOffset(this._tzm,!1,!0);else if("string"==typeof this._i){var e=Nt(ie,this._i);null!=e?this.utcOffset(e):this.utcOffset(0,!0);}return this;},mn.hasAlignedHourOffset=function(e){return!!this.isValid()&&(e=e?bt(e).utcOffset():0,(this.utcOffset()-e)%60==0);},mn.isDST=function(){return this.utcOffset()>this.clone().month(0).utcOffset()||this.utcOffset()>this.clone().month(5).utcOffset();},mn.isLocal=function(){return!!this.isValid()&&!this._isUTC;},mn.isUtcOffset=function(){return!!this.isValid()&&this._isUTC;},mn.isUtc=Et,mn.isUTC=Et,mn.zoneAbbr=function(){return this._isUTC?"UTC":"";},mn.zoneName=function(){return this._isUTC?"Coordinated Universal Time":"";},mn.dates=n("dates accessor is deprecated. Use date instead.",un),mn.months=n("months accessor is deprecated. Use month instead",Ue),mn.years=n("years accessor is deprecated. Use year instead",Oe),mn.zone=n("moment().zone is deprecated, use moment().utcOffset instead. http://momentjs.com/guides/#/warnings/zone/",function(e,t){return null!=e?("string"!=typeof e&&(e=-e),this.utcOffset(e,t),this):-this.utcOffset();}),mn.isDSTShifted=n("isDSTShifted is deprecated. See http://momentjs.com/guides/#/warnings/dst-shifted/ for more information",function(){if(!l(this._isDSTShifted))return this._isDSTShifted;var e={};if(w(e,this),(e=Ot(e))._a){var t=e._isUTC?y(e._a):bt(e._a);this._isDSTShifted=this.isValid()&&0<a(e._a,t.toArray());}else this._isDSTShifted=!1;return this._isDSTShifted;});var yn=P.prototype;function gn(e,t,n,s){var i=ht(),r=y().set(s,t);return i[n](r,e);}function vn(e,t,n){if(h(e)&&(t=e,e=void 0),e=e||"",null!=t)return gn(e,t,n,"month");var s,i=[];for(s=0;s<12;s++)i[s]=gn(e,s,n,"month");return i;}function pn(e,t,n,s){t=("boolean"==typeof e?h(t)&&(n=t,t=void 0):(t=e,e=!1,h(n=t)&&(n=t,t=void 0)),t||"");var i,r=ht(),a=e?r._week.dow:0;if(null!=n)return gn(t,(n+a)%7,s,"day");var o=[];for(i=0;i<7;i++)o[i]=gn(t,(i+a)%7,s,"day");return o;}yn.calendar=function(e,t,n){var s=this._calendar[e]||this._calendar.sameElse;return b(s)?s.call(t,n):s;},yn.longDateFormat=function(e){var t=this._longDateFormat[e],n=this._longDateFormat[e.toUpperCase()];return t||!n?t:(this._longDateFormat[e]=n.replace(/MMMM|MM|DD|dddd/g,function(e){return e.slice(1);}),this._longDateFormat[e]);},yn.invalidDate=function(){return this._invalidDate;},yn.ordinal=function(e){return this._ordinal.replace("%d",e);},yn.preparse=_n,yn.postformat=_n,yn.relativeTime=function(e,t,n,s){var i=this._relativeTime[n];return b(i)?i(e,t,n,s):i.replace(/%d/i,e);},yn.pastFuture=function(e,t){var n=this._relativeTime[0<e?"future":"past"];return b(n)?n(t):n.replace(/%s/i,t);},yn.set=function(e){var t,n;for(n in e)b(t=e[n])?this[n]=t:this["_"+n]=t;this._config=e,this._dayOfMonthOrdinalParseLenient=new RegExp((this._dayOfMonthOrdinalParse.source||this._ordinalParse.source)+"|"+/\d{1,2}/.source);},yn.months=function(e,t){return e?o(this._months)?this._months[e.month()]:this._months[(this._months.isFormat||We).test(t)?"format":"standalone"][e.month()]:o(this._months)?this._months:this._months.standalone;},yn.monthsShort=function(e,t){return e?o(this._monthsShort)?this._monthsShort[e.month()]:this._monthsShort[We.test(t)?"format":"standalone"][e.month()]:o(this._monthsShort)?this._monthsShort:this._monthsShort.standalone;},yn.monthsParse=function(e,t,n){var s,i,r;if(this._monthsParseExact)return function(e,t,n){var s,i,r,a=e.toLocaleLowerCase();if(!this._monthsParse)for(this._monthsParse=[],this._longMonthsParse=[],this._shortMonthsParse=[],s=0;s<12;++s)r=y([2e3,s]),this._shortMonthsParse[s]=this.monthsShort(r,"").toLocaleLowerCase(),this._longMonthsParse[s]=this.months(r,"").toLocaleLowerCase();return n?"MMM"===t?-1!==(i=Ye.call(this._shortMonthsParse,a))?i:null:-1!==(i=Ye.call(this._longMonthsParse,a))?i:null:"MMM"===t?-1!==(i=Ye.call(this._shortMonthsParse,a))?i:-1!==(i=Ye.call(this._longMonthsParse,a))?i:null:-1!==(i=Ye.call(this._longMonthsParse,a))?i:-1!==(i=Ye.call(this._shortMonthsParse,a))?i:null;}.call(this,e,t,n);for(this._monthsParse||(this._monthsParse=[],this._longMonthsParse=[],this._shortMonthsParse=[]),s=0;s<12;s++){if(i=y([2e3,s]),n&&!this._longMonthsParse[s]&&(this._longMonthsParse[s]=new RegExp("^"+this.months(i,"").replace(".","")+"$","i"),this._shortMonthsParse[s]=new RegExp("^"+this.monthsShort(i,"").replace(".","")+"$","i")),n||this._monthsParse[s]||(r="^"+this.months(i,"")+"|^"+this.monthsShort(i,""),this._monthsParse[s]=new RegExp(r.replace(".",""),"i")),n&&"MMMM"===t&&this._longMonthsParse[s].test(e))return s;if(n&&"MMM"===t&&this._shortMonthsParse[s].test(e))return s;if(!n&&this._monthsParse[s].test(e))return s;}},yn.monthsRegex=function(e){return this._monthsParseExact?(m(this,"_monthsRegex")||Ne.call(this),e?this._monthsStrictRegex:this._monthsRegex):(m(this,"_monthsRegex")||(this._monthsRegex=Le),this._monthsStrictRegex&&e?this._monthsStrictRegex:this._monthsRegex);},yn.monthsShortRegex=function(e){return this._monthsParseExact?(m(this,"_monthsRegex")||Ne.call(this),e?this._monthsShortStrictRegex:this._monthsShortRegex):(m(this,"_monthsShortRegex")||(this._monthsShortRegex=Fe),this._monthsShortStrictRegex&&e?this._monthsShortStrictRegex:this._monthsShortRegex);},yn.week=function(e){return Ie(e,this._week.dow,this._week.doy).week;},yn.firstDayOfYear=function(){return this._week.doy;},yn.firstDayOfWeek=function(){return this._week.dow;},yn.weekdays=function(e,t){var n=o(this._weekdays)?this._weekdays:this._weekdays[e&&!0!==e&&this._weekdays.isFormat.test(t)?"format":"standalone"];return!0===e?je(n,this._week.dow):e?n[e.day()]:n;},yn.weekdaysMin=function(e){return!0===e?je(this._weekdaysMin,this._week.dow):e?this._weekdaysMin[e.day()]:this._weekdaysMin;},yn.weekdaysShort=function(e){return!0===e?je(this._weekdaysShort,this._week.dow):e?this._weekdaysShort[e.day()]:this._weekdaysShort;},yn.weekdaysParse=function(e,t,n){var s,i,r;if(this._weekdaysParseExact)return function(e,t,n){var s,i,r,a=e.toLocaleLowerCase();if(!this._weekdaysParse)for(this._weekdaysParse=[],this._shortWeekdaysParse=[],this._minWeekdaysParse=[],s=0;s<7;++s)r=y([2e3,1]).day(s),this._minWeekdaysParse[s]=this.weekdaysMin(r,"").toLocaleLowerCase(),this._shortWeekdaysParse[s]=this.weekdaysShort(r,"").toLocaleLowerCase(),this._weekdaysParse[s]=this.weekdays(r,"").toLocaleLowerCase();return n?"dddd"===t?-1!==(i=Ye.call(this._weekdaysParse,a))?i:null:"ddd"===t?-1!==(i=Ye.call(this._shortWeekdaysParse,a))?i:null:-1!==(i=Ye.call(this._minWeekdaysParse,a))?i:null:"dddd"===t?-1!==(i=Ye.call(this._weekdaysParse,a))?i:-1!==(i=Ye.call(this._shortWeekdaysParse,a))?i:-1!==(i=Ye.call(this._minWeekdaysParse,a))?i:null:"ddd"===t?-1!==(i=Ye.call(this._shortWeekdaysParse,a))?i:-1!==(i=Ye.call(this._weekdaysParse,a))?i:-1!==(i=Ye.call(this._minWeekdaysParse,a))?i:null:-1!==(i=Ye.call(this._minWeekdaysParse,a))?i:-1!==(i=Ye.call(this._weekdaysParse,a))?i:-1!==(i=Ye.call(this._shortWeekdaysParse,a))?i:null;}.call(this,e,t,n);for(this._weekdaysParse||(this._weekdaysParse=[],this._minWeekdaysParse=[],this._shortWeekdaysParse=[],this._fullWeekdaysParse=[]),s=0;s<7;s++){if(i=y([2e3,1]).day(s),n&&!this._fullWeekdaysParse[s]&&(this._fullWeekdaysParse[s]=new RegExp("^"+this.weekdays(i,"").replace(".","\\.?")+"$","i"),this._shortWeekdaysParse[s]=new RegExp("^"+this.weekdaysShort(i,"").replace(".","\\.?")+"$","i"),this._minWeekdaysParse[s]=new RegExp("^"+this.weekdaysMin(i,"").replace(".","\\.?")+"$","i")),this._weekdaysParse[s]||(r="^"+this.weekdays(i,"")+"|^"+this.weekdaysShort(i,"")+"|^"+this.weekdaysMin(i,""),this._weekdaysParse[s]=new RegExp(r.replace(".",""),"i")),n&&"dddd"===t&&this._fullWeekdaysParse[s].test(e))return s;if(n&&"ddd"===t&&this._shortWeekdaysParse[s].test(e))return s;if(n&&"dd"===t&&this._minWeekdaysParse[s].test(e))return s;if(!n&&this._weekdaysParse[s].test(e))return s;}},yn.weekdaysRegex=function(e){return this._weekdaysParseExact?(m(this,"_weekdaysRegex")||Qe.call(this),e?this._weekdaysStrictRegex:this._weekdaysRegex):(m(this,"_weekdaysRegex")||(this._weekdaysRegex=qe),this._weekdaysStrictRegex&&e?this._weekdaysStrictRegex:this._weekdaysRegex);},yn.weekdaysShortRegex=function(e){return this._weekdaysParseExact?(m(this,"_weekdaysRegex")||Qe.call(this),e?this._weekdaysShortStrictRegex:this._weekdaysShortRegex):(m(this,"_weekdaysShortRegex")||(this._weekdaysShortRegex=Je),this._weekdaysShortStrictRegex&&e?this._weekdaysShortStrictRegex:this._weekdaysShortRegex);},yn.weekdaysMinRegex=function(e){return this._weekdaysParseExact?(m(this,"_weekdaysRegex")||Qe.call(this),e?this._weekdaysMinStrictRegex:this._weekdaysMinRegex):(m(this,"_weekdaysMinRegex")||(this._weekdaysMinRegex=Be),this._weekdaysMinStrictRegex&&e?this._weekdaysMinStrictRegex:this._weekdaysMinRegex);},yn.isPM=function(e){return"p"===(e+"").toLowerCase().charAt(0);},yn.meridiem=function(e,t,n){return 11<e?n?"pm":"PM":n?"am":"AM";},ut("en",{dayOfMonthOrdinalParse:/\d{1,2}(th|st|nd|rd)/,ordinal:function(e){var t=e%10;return e+(1===D(e%100/10)?"th":1===t?"st":2===t?"nd":3===t?"rd":"th");}}),c.lang=n("moment.lang is deprecated. Use moment.locale instead.",ut),c.langData=n("moment.langData is deprecated. Use moment.localeData instead.",ht);var wn=Math.abs;function Mn(e,t,n,s){var i=jt(t,n);return e._milliseconds+=s*i._milliseconds,e._days+=s*i._days,e._months+=s*i._months,e._bubble();}function kn(e){return e<0?Math.floor(e):Math.ceil(e);}function Sn(e){return 4800*e/146097;}function Dn(e){return 146097*e/4800;}function Yn(e){return function(){return this.as(e);};}var On=Yn("ms"),Tn=Yn("s"),bn=Yn("m"),xn=Yn("h"),Pn=Yn("d"),Wn=Yn("w"),Cn=Yn("M"),Hn=Yn("Q"),Rn=Yn("y");function Un(e){return function(){return this.isValid()?this._data[e]:NaN;};}var Fn=Un("milliseconds"),Ln=Un("seconds"),Nn=Un("minutes"),Gn=Un("hours"),Vn=Un("days"),En=Un("months"),In=Un("years");var An=Math.round,jn={ss:44,s:45,m:45,h:22,d:26,M:11};var Zn=Math.abs;function zn(e){return(0<e)-(e<0)||+e;}function $n(){if(!this.isValid())return this.localeData().invalidDate();var e,t,n=Zn(this._milliseconds)/1e3,s=Zn(this._days),i=Zn(this._months);t=S((e=S(n/60))/60),n%=60,e%=60;var r=S(i/12),a=i%=12,o=s,u=t,l=e,h=n?n.toFixed(3).replace(/\.?0+$/,""):"",d=this.asSeconds();if(!d)return"P0D";var c=d<0?"-":"",f=zn(this._months)!==zn(d)?"-":"",m=zn(this._days)!==zn(d)?"-":"",_=zn(this._milliseconds)!==zn(d)?"-":"";return c+"P"+(r?f+r+"Y":"")+(a?f+a+"M":"")+(o?m+o+"D":"")+(u||l||h?"T":"")+(u?_+u+"H":"")+(l?_+l+"M":"")+(h?_+h+"S":"");}var qn=Ht.prototype;return qn.isValid=function(){return this._isValid;},qn.abs=function(){var e=this._data;return this._milliseconds=wn(this._milliseconds),this._days=wn(this._days),this._months=wn(this._months),e.milliseconds=wn(e.milliseconds),e.seconds=wn(e.seconds),e.minutes=wn(e.minutes),e.hours=wn(e.hours),e.months=wn(e.months),e.years=wn(e.years),this;},qn.add=function(e,t){return Mn(this,e,t,1);},qn.subtract=function(e,t){return Mn(this,e,t,-1);},qn.as=function(e){if(!this.isValid())return NaN;var t,n,s=this._milliseconds;if("month"===(e=H(e))||"quarter"===e||"year"===e)switch(t=this._days+s/864e5,n=this._months+Sn(t),e){case"month":return n;case"quarter":return n/3;case"year":return n/12;}else switch(t=this._days+Math.round(Dn(this._months)),e){case"week":return t/7+s/6048e5;case"day":return t+s/864e5;case"hour":return 24*t+s/36e5;case"minute":return 1440*t+s/6e4;case"second":return 86400*t+s/1e3;case"millisecond":return Math.floor(864e5*t)+s;default:throw new Error("Unknown unit "+e);}},qn.asMilliseconds=On,qn.asSeconds=Tn,qn.asMinutes=bn,qn.asHours=xn,qn.asDays=Pn,qn.asWeeks=Wn,qn.asMonths=Cn,qn.asQuarters=Hn,qn.asYears=Rn,qn.valueOf=function(){return this.isValid()?this._milliseconds+864e5*this._days+this._months%12*2592e6+31536e6*D(this._months/12):NaN;},qn._bubble=function(){var e,t,n,s,i,r=this._milliseconds,a=this._days,o=this._months,u=this._data;return 0<=r&&0<=a&&0<=o||r<=0&&a<=0&&o<=0||(r+=864e5*kn(Dn(o)+a),o=a=0),u.milliseconds=r%1e3,e=S(r/1e3),u.seconds=e%60,t=S(e/60),u.minutes=t%60,n=S(t/60),u.hours=n%24,o+=i=S(Sn(a+=S(n/24))),a-=kn(Dn(i)),s=S(o/12),o%=12,u.days=a,u.months=o,u.years=s,this;},qn.clone=function(){return jt(this);},qn.get=function(e){return e=H(e),this.isValid()?this[e+"s"]():NaN;},qn.milliseconds=Fn,qn.seconds=Ln,qn.minutes=Nn,qn.hours=Gn,qn.days=Vn,qn.weeks=function(){return S(this.days()/7);},qn.months=En,qn.years=In,qn.humanize=function(e){if(!this.isValid())return this.localeData().invalidDate();var t,n,s,i,r,a,o,u,l,h,d,c=this.localeData(),f=(n=!e,s=c,i=jt(t=this).abs(),r=An(i.as("s")),a=An(i.as("m")),o=An(i.as("h")),u=An(i.as("d")),l=An(i.as("M")),h=An(i.as("y")),(d=r<=jn.ss&&["s",r]||r<jn.s&&["ss",r]||a<=1&&["m"]||a<jn.m&&["mm",a]||o<=1&&["h"]||o<jn.h&&["hh",o]||u<=1&&["d"]||u<jn.d&&["dd",u]||l<=1&&["M"]||l<jn.M&&["MM",l]||h<=1&&["y"]||["yy",h])[2]=n,d[3]=0<+t,d[4]=s,function(e,t,n,s,i){return i.relativeTime(t||1,!!n,e,s);}.apply(null,d));return e&&(f=c.pastFuture(+this,f)),c.postformat(f);},qn.toISOString=$n,qn.toString=$n,qn.toJSON=$n,qn.locale=Xt,qn.localeData=en,qn.toIsoString=n("toIsoString() is deprecated. Please use toISOString() instead (notice the capitals)",$n),qn.lang=Kt,I("X",0,0,"unix"),I("x",0,0,"valueOf"),ue("x",se),ue("X",/[+-]?\d+(\.\d{1,3})?/),ce("X",function(e,t,n){n._d=new Date(1e3*parseFloat(e,10));}),ce("x",function(e,t,n){n._d=new Date(D(e));}),c.version="2.24.0",e=bt,c.fn=mn,c.min=function(){return Wt("isBefore",[].slice.call(arguments,0));},c.max=function(){return Wt("isAfter",[].slice.call(arguments,0));},c.now=function(){return Date.now?Date.now():+new Date();},c.utc=y,c.unix=function(e){return bt(1e3*e);},c.months=function(e,t){return vn(e,t,"months");},c.isDate=d,c.locale=ut,c.invalid=p,c.duration=jt,c.isMoment=k,c.weekdays=function(e,t,n){return pn(e,t,n,"weekdays");},c.parseZone=function(){return bt.apply(null,arguments).parseZone();},c.localeData=ht,c.isDuration=Rt,c.monthsShort=function(e,t){return vn(e,t,"monthsShort");},c.weekdaysMin=function(e,t,n){return pn(e,t,n,"weekdaysMin");},c.defineLocale=lt,c.updateLocale=function(e,t){if(null!=t){var n,s,i=st;null!=(s=ot(e))&&(i=s._config),(n=new P(t=x(i,t))).parentLocale=it[e],it[e]=n,ut(e);}else null!=it[e]&&(null!=it[e].parentLocale?it[e]=it[e].parentLocale:null!=it[e]&&delete it[e]);return it[e];},c.locales=function(){return s(it);},c.weekdaysShort=function(e,t,n){return pn(e,t,n,"weekdaysShort");},c.normalizeUnits=H,c.relativeTimeRounding=function(e){return void 0===e?An:"function"==typeof e&&(An=e,!0);},c.relativeTimeThreshold=function(e,t){return void 0!==jn[e]&&(void 0===t?jn[e]:(jn[e]=t,"s"===e&&(jn.ss=t-1),!0));},c.calendarFormat=function(e,t){var n=e.diff(t,"days",!0);return n<-6?"sameElse":n<-1?"lastWeek":n<0?"lastDay":n<1?"sameDay":n<2?"nextDay":n<7?"nextWeek":"sameElse";},c.prototype=mn,c.HTML5_FMT={DATETIME_LOCAL:"YYYY-MM-DDTHH:mm",DATETIME_LOCAL_SECONDS:"YYYY-MM-DDTHH:mm:ss",DATETIME_LOCAL_MS:"YYYY-MM-DDTHH:mm:ss.SSS",DATE:"YYYY-MM-DD",TIME:"HH:mm",TIME_SECONDS:"HH:mm:ss",TIME_MS:"HH:mm:ss.SSS",WEEK:"GGGG-[W]WW",MONTH:"YYYY-MM"},c;});(function(){'use strict';var defaultOptions=function(options){if(typeof options==='number'){options={precision:options};}else{options=options||{};}
-options.precision=options.precision||5;options.factor=options.factor||Math.pow(10,options.precision);options.dimension=options.dimension||2;return options;};var PolylineUtil={encode:function(points,options){options=defaultOptions(options);var flatPoints=[];for(var i=0,len=points.length;i<len;++i){var point=points[i];if(options.dimension===2){flatPoints.push(point.lat||point[0]);flatPoints.push(point.lng||point[1]);}else{for(var dim=0;dim<options.dimension;++dim){flatPoints.push(point[dim]);}}}
-return this.encodeDeltas(flatPoints,options);},decode:function(encoded,options){options=defaultOptions(options);var flatPoints=this.decodeDeltas(encoded,options);var points=[];for(var i=0,len=flatPoints.length;i+(options.dimension-1)<len;){var point=[];for(var dim=0;dim<options.dimension;++dim){point.push(flatPoints[i++]);}
-points.push(point);}
-return points;},encodeDeltas:function(numbers,options){options=defaultOptions(options);var lastNumbers=[];for(var i=0,len=numbers.length;i<len;){for(var d=0;d<options.dimension;++d,++i){var num=numbers[i];var delta=num-(lastNumbers[d]||0);lastNumbers[d]=num;numbers[i]=delta;}}
-return this.encodeFloats(numbers,options);},decodeDeltas:function(encoded,options){options=defaultOptions(options);var lastNumbers=[];var numbers=this.decodeFloats(encoded,options);for(var i=0,len=numbers.length;i<len;){for(var d=0;d<options.dimension;++d,++i){numbers[i]=Math.round((lastNumbers[d]=numbers[i]+(lastNumbers[d]||0))*options.factor)/options.factor;}}
-return numbers;},encodeFloats:function(numbers,options){options=defaultOptions(options);for(var i=0,len=numbers.length;i<len;++i){numbers[i]=Math.round(numbers[i]*options.factor);}
-return this.encodeSignedIntegers(numbers);},decodeFloats:function(encoded,options){options=defaultOptions(options);var numbers=this.decodeSignedIntegers(encoded);for(var i=0,len=numbers.length;i<len;++i){numbers[i]/=options.factor;}
-return numbers;},encodeSignedIntegers:function(numbers){for(var i=0,len=numbers.length;i<len;++i){var num=numbers[i];numbers[i]=num<0?~(num<<1):num<<1;}
-return this.encodeUnsignedIntegers(numbers);},decodeSignedIntegers:function(encoded){var numbers=this.decodeUnsignedIntegers(encoded);for(var i=0,len=numbers.length;i<len;++i){var num=numbers[i];numbers[i]=num&1?~(num>>1):num>>1;}
-return numbers;},encodeUnsignedIntegers:function(numbers){var encoded='';for(var i=0,len=numbers.length;i<len;++i){encoded+=this.encodeUnsignedInteger(numbers[i]);}
-return encoded;},decodeUnsignedIntegers:function(encoded){var numbers=[];var current=0;var shift=0;for(var i=0,len=encoded.length;i<len;++i){var b=encoded.charCodeAt(i)-63;current|=(b&0x1f)<<shift;if(b<0x20){numbers.push(current);current=0;shift=0;}else{shift+=5;}}
-return numbers;},encodeSignedInteger:function(num){num=num<0?~(num<<1):num<<1;return this.encodeUnsignedInteger(num);},encodeUnsignedInteger:function(num){var value,encoded='';while(num>=0x20){value=(0x20|num&0x1f)+63;encoded+=String.fromCharCode(value);num>>=5;}
-value=num+63;encoded+=String.fromCharCode(value);return encoded;}};if(typeof module==='object'&&typeof module.exports==='object'){module.exports=PolylineUtil;}
-if(typeof L==='object'){if(!L.Polyline.prototype.fromEncoded){L.Polyline.fromEncoded=function(encoded,options){return L.polyline(PolylineUtil.decode(encoded),options);};}
-if(!L.Polygon.prototype.fromEncoded){L.Polygon.fromEncoded=function(encoded,options){return L.polygon(PolylineUtil.decode(encoded),options);};}
-var encodeMixin={encodePath:function(){return PolylineUtil.encode(this.getLatLngs());}};if(!L.Polyline.prototype.encodePath){L.Polyline.include(encodeMixin);}
-if(!L.Polygon.prototype.encodePath){L.Polygon.include(encodeMixin);}
-L.PolylineUtil=PolylineUtil;}})();L.Control.Window=L.Control.extend({includes:L.Evented.prototype,options:{element:'map',className:'control-window',visible:false,title:undefined,closeButton:true,content:undefined,prompt:undefined,maxWidth:600,modal:false,position:'center'},initialize:function(container,options){var self=this;if(container.hasOwnProperty('options')){container=container.getContainer();}
-options.element=container;L.setOptions(this,options);var modality='nonmodal';if(this.options.modal){modality='modal';}
-this._wrapper=L.DomUtil.create('div',modality+' leaflet-control-window-wrapper',L.DomUtil.get(this.options.element));this._container=L.DomUtil.create('div','leaflet-control leaflet-control-window '+this.options.className,this._wrapper);this._container.setAttribute('style','max-width:'+this.options.maxWidth+'px');this._containerTitleBar=L.DomUtil.create('div','titlebar',this._container);this.titleContent=L.DomUtil.create('h2','title',this._containerTitleBar);this._containerContent=L.DomUtil.create('div','content',this._container);this._containerPromptButtons=L.DomUtil.create('div','promptButtons',this._container);if(this.options.closeButton){this._closeButton=L.DomUtil.create('a','close',this._containerTitleBar);this._closeButton.innerHTML='&times;';}
-var stop=L.DomEvent.stopPropagation;L.DomEvent.on(this._wrapper,'contextmenu',stop).on(this._wrapper,'click',stop).on(this._wrapper,'mousedown',stop).on(this._wrapper,'touchstart',stop).on(this._wrapper,'dblclick',stop).on(this._wrapper,'mousewheel',stop).on(this._wrapper,'MozMousePixelScroll',stop);if(this.options.closeButton){var close=this._closeButton;L.DomEvent.on(close,'click',this.hide,this);}
-if(this.options.title){this.title(this.options.title);}
-if(this.options.content){this.content(this.options.content);}
-if(typeof this.options.prompt=='object'){this.prompt(this.options.prompt);}
-if(this.options.visible){this.show();}},disableBtn:function(){this._btnOK.disabled=true;this._btnOK.className='disabled';},enableBtn:function(){this._btnOK.disabled=false;this._btnOK.className='';},title:function(titleContent){if(titleContent==undefined){return this.options.title;}
-this.options.title=titleContent;var title=titleContent||'';this.titleContent.innerHTML=title;return this;},remove:function(){L.DomUtil.get(this.options.element).removeChild(this._wrapper);var stop=L.DomEvent.stopPropagation;L.DomEvent.off(this._wrapper,'contextmenu',stop);L.DomEvent.off(this._wrapper,'click',stop);L.DomEvent.off(this._wrapper,'mousedown',stop);L.DomEvent.off(this._wrapper,'touchstart',stop);L.DomEvent.off(this._wrapper,'dblclick',stop);L.DomEvent.off(this._wrapper,'mousewheel',stop);L.DomEvent.off(this._wrapper,'MozMousePixelScroll',stop);if(this._closeButton&&this._close){var close=this._closeButton;L.DomEvent.off(close,'click',this.close,this);}
-return this;},mapResized:function(){},show:function(position){if(position){this.options.position=position;}
-L.DomUtil.addClass(this._wrapper,'visible');this.setContentMaxHeight();var thisWidth=this._container.offsetWidth;var thisHeight=this._container.offsetHeight;var margin=8;var el=L.DomUtil.get(this.options.element);var rect=el.getBoundingClientRect();var width=rect.right-rect.left||Math.max(document.documentElement.clientWidth,window.innerWidth||0);var height=rect.bottom-rect.top||Math.max(document.documentElement.clientHeight,window.innerHeight||0);var top=rect.top;var left=rect.left;var offset=0;if(this.options.position=='topLeft'){this.showOn([left,top+offset]);}else if(this.options.position=='left'){this.showOn([left,top+height/2-thisHeight/2-margin+offset]);}else if(this.options.position=='bottomLeft'){this.showOn([left,top+height-thisHeight-margin*2-offset]);}else if(this.options.position=='top'){this.showOn([left+width/2-thisWidth/2-margin,top+offset]);}else if(this.options.position=='topRight'){this.showOn([left+width-thisWidth-margin*2,top+offset]);}else if(this.options.position=='right'){this.showOn([left+width-thisWidth-margin*2,top+height/2-thisHeight/2-margin+offset]);}else if(this.options.position=='bottomRight'){this.showOn([left+width-thisWidth-margin*2,top+height-thisHeight-margin*2-offset]);}else if(this.options.position=='bottom'){this.showOn([left+width/2-thisWidth/2-margin,top+height-thisHeight-margin*2-offset]);}else{this.showOn([left+width/2-thisWidth/2-margin,top+top+height/2-thisHeight/2-margin+offset]);}
-return this;},showOn:function(point){this.setContentMaxHeight();L.DomUtil.setPosition(this._container,L.point(Math.round(point[0]),Math.round(point[1]),true));var draggable=new L.Draggable(this._container,this._containerTitleBar);draggable.enable();L.DomUtil.addClass(this._wrapper,'visible');this.fire('show');return this;},hide:function(e){L.DomUtil.removeClass(this._wrapper,'visible');this.fire('hide');return this;},getContainer:function(){return this._containerContent;},content:function(content){if(content==undefined){return this.options.content;}
-this.options.content=content;this.getContainer().innerHTML=content;return this;},prompt:function(promptObject){if(promptObject==undefined){return this.options.prompt;}
-this.options.prompt=promptObject;this.setPromptCallback(promptObject.callback);this.setActionCallback(promptObject.action);var cancel=this.options.prompt.buttonCancel||'CANCEL';var ok=this.options.prompt.buttonOK||'OK';var action=this.options.prompt.buttonAction||undefined;if(action!=undefined){var btnAction=L.DomUtil.create('button','',this._containerPromptButtons);L.DomEvent.on(btnAction,'click',this.action,this);btnAction.innerHTML=action;}
-var btnOK=L.DomUtil.create('button','',this._containerPromptButtons);L.DomEvent.on(btnOK,'click',this.promptCallback,this);btnOK.innerHTML=ok;this._btnOK=btnOK;var btnCancel=L.DomUtil.create('button','',this._containerPromptButtons);L.DomEvent.on(btnCancel,'click',this.close,this);btnCancel.innerHTML=cancel;return this;},container:function(containerContent){if(containerContent==undefined){return this._container.innerHTML;}
-this._container.innerHTML=containerContent;if(this.options.closeButton){this._closeButton=L.DomUtil.create('a','close',this._container);this._closeButton.innerHTML='&times;';L.DomEvent.on(this._closeButton,'click',this.close,this);}
-return this;},setPromptCallback:function(callback){var self=this;if(typeof callback!='function'){callback=function(){console.warn('No callback function specified!');};}
-var cb=function(){self.close();callback();};this.promptCallback=cb;return this;},setActionCallback:function(callback){var self=this;if(typeof callback!='function'){callback=function(){console.warn('No callback function specified!');};}
-var cb=function(){self.hide();callback();};this.action=cb;return this;},setContentMaxHeight:function(){var margin=68;if(this.options.title){margin+=this._containerTitleBar.offsetHeight-36;}
-if(typeof this.options.prompt=='object'){margin+=this._containerPromptButtons.offsetHeight-20;}
-var el=L.DomUtil.get(this.options.element);var rect=el.getBoundingClientRect();var height=rect.bottom-rect.top;var maxHeight=height-margin;this._containerContent.setAttribute('style','max-height:'+maxHeight+'px');},close:function(){this.hide();this.remove();this.fire('close');return undefined;}});L.control.window=function(container,options){return new L.Control.Window(container,options);};(function(root,factory){if(typeof define==='function'&&define.amd){define(['leaflet'],factory);}else if(typeof modules==='object'&&module.exports){module.exports=factory(require('leaflet'));}else{factory(L);}})(this,function(L){'use strict';L.TileLayer.Provider=L.TileLayer.extend({initialize:function(arg,options){var providers=L.TileLayer.Provider.providers;var parts=arg.split('.');var providerName=parts[0];var variantName=parts[1];if(!providers[providerName]){throw'No such provider ('+providerName+')';}
-var provider={url:providers[providerName].url,options:providers[providerName].options};if(variantName&&'variants'in providers[providerName]){if(!(variantName in providers[providerName].variants)){throw'No such variant of '+providerName+' ('+variantName+')';}
-var variant=providers[providerName].variants[variantName];var variantOptions;if(typeof variant==='string'){variantOptions={variant:variant};}else{variantOptions=variant.options;}
-provider={url:variant.url||provider.url,options:L.Util.extend({},provider.options,variantOptions)};}
-var attributionReplacer=function(attr){if(attr.indexOf('{attribution.')===-1){return attr;}
-return attr.replace(/\{attribution.(\w*)\}/g,function(match,attributionName){return attributionReplacer(providers[attributionName].options.attribution);});};provider.options.attribution=attributionReplacer(provider.options.attribution);var layerOpts=L.Util.extend({},provider.options,options);L.TileLayer.prototype.initialize.call(this,provider.url,layerOpts);}});L.TileLayer.Provider.providers={OpenStreetMap:{url:'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',options:{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'},variants:{Mapnik:{},DE:{url:'https://{s}.tile.openstreetmap.de/tiles/osmde/{z}/{x}/{y}.png',options:{maxZoom:18}},CH:{url:'https://tile.osm.ch/switzerland/{z}/{x}/{y}.png',options:{maxZoom:18,bounds:[[45,5],[48,11]]}},France:{url:'https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png',options:{maxZoom:20,attribution:'&copy; Openstreetmap France | {attribution.OpenStreetMap}'}},HOT:{url:'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',options:{attribution:'{attribution.OpenStreetMap}, '+'Tiles style by <a href="https://www.hotosm.org/" target="_blank">Humanitarian OpenStreetMap Team</a> '+'hosted by <a href="https://openstreetmap.fr/" target="_blank">OpenStreetMap France</a>'}},BZH:{url:'https://tile.openstreetmap.bzh/br/{z}/{x}/{y}.png',options:{attribution:'{attribution.OpenStreetMap}, Tiles courtesy of <a href="http://www.openstreetmap.bzh/" target="_blank">Breton OpenStreetMap Team</a>',bounds:[[46.2,-5.5],[50,0.7]]}}}},OpenSeaMap:{url:'https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png',options:{attribution:'Map data: &copy; <a href="http://www.openseamap.org">OpenSeaMap</a> contributors'}},OpenPtMap:{url:'http://openptmap.org/tiles/{z}/{x}/{y}.png',options:{maxZoom:17,attribution:'Map data: &copy; <a href="http://www.openptmap.org">OpenPtMap</a> contributors'}},OpenTopoMap:{url:'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',options:{maxZoom:17,attribution:'Map data: {attribution.OpenStreetMap}, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'}},OpenRailwayMap:{url:'https://{s}.tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png',options:{maxZoom:19,attribution:'Map data: {attribution.OpenStreetMap} | Map style: &copy; <a href="https://www.OpenRailwayMap.org">OpenRailwayMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'}},OpenFireMap:{url:'http://openfiremap.org/hytiles/{z}/{x}/{y}.png',options:{maxZoom:19,attribution:'Map data: {attribution.OpenStreetMap} | Map style: &copy; <a href="http://www.openfiremap.org">OpenFireMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'}},SafeCast:{url:'https://s3.amazonaws.com/te512.safecast.org/{z}/{x}/{y}.png',options:{maxZoom:16,attribution:'Map data: {attribution.OpenStreetMap} | Map style: &copy; <a href="https://blog.safecast.org/about/">SafeCast</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'}},Thunderforest:{url:'https://{s}.tile.thunderforest.com/{variant}/{z}/{x}/{y}.png?apikey={apikey}',options:{attribution:'&copy; <a href="http://www.thunderforest.com/">Thunderforest</a>, {attribution.OpenStreetMap}',variant:'cycle',apikey:'<insert your api key here>',maxZoom:22},variants:{OpenCycleMap:'cycle',Transport:{options:{variant:'transport'}},TransportDark:{options:{variant:'transport-dark'}},SpinalMap:{options:{variant:'spinal-map'}},Landscape:'landscape',Outdoors:'outdoors',Pioneer:'pioneer',MobileAtlas:'mobile-atlas',Neighbourhood:'neighbourhood'}},CyclOSM:{url:'https://dev.{s}.tile.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',options:{maxZoom:20,attribution:'<a href="https://github.com/cyclosm/cyclosm-cartocss-style/releases" title="CyclOSM - Open Bicycle render">CyclOSM</a> | Map data: {attribution.OpenStreetMap}'}},OpenMapSurfer:{url:'https://maps.heigit.org/openmapsurfer/tiles/{variant}/webmercator/{z}/{x}/{y}.png',options:{maxZoom:19,variant:'roads',attribution:'Imagery from <a href="http://giscience.uni-hd.de/">GIScience Research Group @ University of Heidelberg</a> | Map data '},variants:{Roads:{options:{variant:'roads',attribution:'{attribution.OpenMapSurfer}{attribution.OpenStreetMap}'}},Hybrid:{options:{variant:'hybrid',attribution:'{attribution.OpenMapSurfer}{attribution.OpenStreetMap}'}},AdminBounds:{options:{variant:'adminb',maxZoom:18,attribution:'{attribution.OpenMapSurfer}{attribution.OpenStreetMap}'}},ContourLines:{options:{variant:'asterc',maxZoom:18,minZoom:13,attribution:'{attribution.OpenMapSurfer} <a href="https://lpdaac.usgs.gov/products/aster_policies">ASTER GDEM</a>'}},Hillshade:{options:{variant:'asterh',maxZoom:18,attribution:'{attribution.OpenMapSurfer} <a href="https://lpdaac.usgs.gov/products/aster_policies">ASTER GDEM</a>, <a href="http://srtm.csi.cgiar.org/">SRTM</a>'}},ElementsAtRisk:{options:{variant:'elements_at_risk',attribution:'{attribution.OpenMapSurfer}{attribution.OpenStreetMap}'}}}},Hydda:{url:'https://{s}.tile.openstreetmap.se/hydda/{variant}/{z}/{x}/{y}.png',options:{maxZoom:18,variant:'full',attribution:'Tiles courtesy of <a href="http://openstreetmap.se/" target="_blank">OpenStreetMap Sweden</a> &mdash; Map data {attribution.OpenStreetMap}'},variants:{Full:'full',Base:'base',RoadsAndLabels:'roads_and_labels'}},MapBox:{url:'https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}{r}.png?access_token={accessToken}',options:{attribution:'<a href="https://www.mapbox.com/about/maps/" target="_blank">&copy; Mapbox</a> '+'{attribution.OpenStreetMap} '+'<a href="https://www.mapbox.com/map-feedback/" target="_blank">Improve this map</a>',subdomains:'abcd',id:'mapbox.streets',accessToken:'<insert your access token here>'}},Stamen:{url:'https://stamen-tiles-{s}.a.ssl.fastly.net/{variant}/{z}/{x}/{y}{r}.{ext}',options:{attribution:'Map tiles by <a href="http://stamen.com">Stamen Design</a>, '+'<a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; '+'Map data {attribution.OpenStreetMap}',subdomains:'abcd',minZoom:0,maxZoom:20,variant:'toner',ext:'png'},variants:{Toner:'toner',TonerBackground:'toner-background',TonerHybrid:'toner-hybrid',TonerLines:'toner-lines',TonerLabels:'toner-labels',TonerLite:'toner-lite',Watercolor:{url:'https://stamen-tiles-{s}.a.ssl.fastly.net/{variant}/{z}/{x}/{y}.{ext}',options:{variant:'watercolor',ext:'jpg',minZoom:1,maxZoom:16}},Terrain:{options:{variant:'terrain',minZoom:0,maxZoom:18}},TerrainBackground:{options:{variant:'terrain-background',minZoom:0,maxZoom:18}},TerrainLabels:{options:{variant:'terrain-labels',minZoom:0,maxZoom:18}},TopOSMRelief:{url:'https://stamen-tiles-{s}.a.ssl.fastly.net/{variant}/{z}/{x}/{y}.{ext}',options:{variant:'toposm-color-relief',ext:'jpg',bounds:[[22,-132],[51,-56]]}},TopOSMFeatures:{options:{variant:'toposm-features',bounds:[[22,-132],[51,-56]],opacity:0.9}}}},TomTom:{url:'https://{s}.api.tomtom.com/map/1/tile/{variant}/{style}/{z}/{x}/{y}.{ext}?key={apikey}',options:{variant:'basic',maxZoom:22,attribution:'<a href="https://tomtom.com" target="_blank">&copy;  1992 - '+new Date().getFullYear()+' TomTom.</a> ',subdomains:'abcd',style:'main',ext:'png',apikey:'<insert your API key here>'},variants:{Basic:'basic',Hybrid:'hybrid',Labels:'labels'}},Esri:{url:'https://server.arcgisonline.com/ArcGIS/rest/services/{variant}/MapServer/tile/{z}/{y}/{x}',options:{variant:'World_Street_Map',attribution:'Tiles &copy; Esri'},variants:{WorldStreetMap:{options:{attribution:'{attribution.Esri} &mdash; '+'Source: Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, NRCAN, Esri Japan, METI, Esri China (Hong Kong), Esri (Thailand), TomTom, 2012'}},DeLorme:{options:{variant:'Specialty/DeLorme_World_Base_Map',minZoom:1,maxZoom:11,attribution:'{attribution.Esri} &mdash; Copyright: &copy;2012 DeLorme'}},WorldTopoMap:{options:{variant:'World_Topo_Map',attribution:'{attribution.Esri} &mdash; '+'Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community'}},WorldImagery:{options:{variant:'World_Imagery',attribution:'{attribution.Esri} &mdash; '+'Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'}},WorldTerrain:{options:{variant:'World_Terrain_Base',maxZoom:13,attribution:'{attribution.Esri} &mdash; '+'Source: USGS, Esri, TANA, DeLorme, and NPS'}},WorldShadedRelief:{options:{variant:'World_Shaded_Relief',maxZoom:13,attribution:'{attribution.Esri} &mdash; Source: Esri'}},WorldPhysical:{options:{variant:'World_Physical_Map',maxZoom:8,attribution:'{attribution.Esri} &mdash; Source: US National Park Service'}},OceanBasemap:{options:{variant:'Ocean_Basemap',maxZoom:13,attribution:'{attribution.Esri} &mdash; Sources: GEBCO, NOAA, CHS, OSU, UNH, CSUMB, National Geographic, DeLorme, NAVTEQ, and Esri'}},NatGeoWorldMap:{options:{variant:'NatGeo_World_Map',maxZoom:16,attribution:'{attribution.Esri} &mdash; National Geographic, Esri, DeLorme, NAVTEQ, UNEP-WCMC, USGS, NASA, ESA, METI, NRCAN, GEBCO, NOAA, iPC'}},WorldGrayCanvas:{options:{variant:'Canvas/World_Light_Gray_Base',maxZoom:16,attribution:'{attribution.Esri} &mdash; Esri, DeLorme, NAVTEQ'}}}},OpenWeatherMap:{url:'http://{s}.tile.openweathermap.org/map/{variant}/{z}/{x}/{y}.png?appid={apiKey}',options:{maxZoom:19,attribution:'Map data &copy; <a href="http://openweathermap.org">OpenWeatherMap</a>',apiKey:'<insert your api key here>',opacity:0.5},variants:{Clouds:'clouds',CloudsClassic:'clouds_cls',Precipitation:'precipitation',PrecipitationClassic:'precipitation_cls',Rain:'rain',RainClassic:'rain_cls',Pressure:'pressure',PressureContour:'pressure_cntr',Wind:'wind',Temperature:'temp',Snow:'snow'}},HERE:{url:'https://{s}.{base}.maps.api.here.com/maptile/2.1/'+'{type}/{mapID}/{variant}/{z}/{x}/{y}/{size}/{format}?'+'app_id={app_id}&app_code={app_code}&lg={language}',options:{attribution:'Map &copy; 1987-'+new Date().getFullYear()+' <a href="http://developer.here.com">HERE</a>',subdomains:'1234',mapID:'newest','app_id':'<insert your app_id here>','app_code':'<insert your app_code here>',base:'base',variant:'normal.day',maxZoom:20,type:'maptile',language:'eng',format:'png8',size:'256'},variants:{normalDay:'normal.day',normalDayCustom:'normal.day.custom',normalDayGrey:'normal.day.grey',normalDayMobile:'normal.day.mobile',normalDayGreyMobile:'normal.day.grey.mobile',normalDayTransit:'normal.day.transit',normalDayTransitMobile:'normal.day.transit.mobile',normalDayTraffic:{options:{variant:'normal.traffic.day',base:'traffic',type:'traffictile'}},normalNight:'normal.night',normalNightMobile:'normal.night.mobile',normalNightGrey:'normal.night.grey',normalNightGreyMobile:'normal.night.grey.mobile',normalNightTransit:'normal.night.transit',normalNightTransitMobile:'normal.night.transit.mobile',reducedDay:'reduced.day',reducedNight:'reduced.night',basicMap:{options:{type:'basetile'}},mapLabels:{options:{type:'labeltile',format:'png'}},trafficFlow:{options:{base:'traffic',type:'flowtile'}},carnavDayGrey:'carnav.day.grey',hybridDay:{options:{base:'aerial',variant:'hybrid.day'}},hybridDayMobile:{options:{base:'aerial',variant:'hybrid.day.mobile'}},hybridDayTransit:{options:{base:'aerial',variant:'hybrid.day.transit'}},hybridDayGrey:{options:{base:'aerial',variant:'hybrid.grey.day'}},hybridDayTraffic:{options:{variant:'hybrid.traffic.day',base:'traffic',type:'traffictile'}},pedestrianDay:'pedestrian.day',pedestrianNight:'pedestrian.night',satelliteDay:{options:{base:'aerial',variant:'satellite.day'}},terrainDay:{options:{base:'aerial',variant:'terrain.day'}},terrainDayMobile:{options:{base:'aerial',variant:'terrain.day.mobile'}}}},FreeMapSK:{url:'http://t{s}.freemap.sk/T/{z}/{x}/{y}.jpeg',options:{minZoom:8,maxZoom:16,subdomains:'1234',bounds:[[47.204642,15.996093],[49.830896,22.576904]],attribution:'{attribution.OpenStreetMap}, vizualization CC-By-SA 2.0 <a href="http://freemap.sk">Freemap.sk</a>'}},MtbMap:{url:'http://tile.mtbmap.cz/mtbmap_tiles/{z}/{x}/{y}.png',options:{attribution:'{attribution.OpenStreetMap} &amp; USGS'}},CartoDB:{url:'https://{s}.basemaps.cartocdn.com/{variant}/{z}/{x}/{y}{r}.png',options:{attribution:'{attribution.OpenStreetMap} &copy; <a href="https://carto.com/attributions">CARTO</a>',subdomains:'abcd',maxZoom:19,variant:'light_all'},variants:{Positron:'light_all',PositronNoLabels:'light_nolabels',PositronOnlyLabels:'light_only_labels',DarkMatter:'dark_all',DarkMatterNoLabels:'dark_nolabels',DarkMatterOnlyLabels:'dark_only_labels',Voyager:'rastertiles/voyager',VoyagerNoLabels:'rastertiles/voyager_nolabels',VoyagerOnlyLabels:'rastertiles/voyager_only_labels',VoyagerLabelsUnder:'rastertiles/voyager_labels_under'}},HikeBike:{url:'https://tiles.wmflabs.org/{variant}/{z}/{x}/{y}.png',options:{maxZoom:19,attribution:'{attribution.OpenStreetMap}',variant:'hikebike'},variants:{HikeBike:{},HillShading:{options:{maxZoom:15,variant:'hillshading'}}}},BasemapAT:{url:'https://maps{s}.wien.gv.at/basemap/{variant}/normal/google3857/{z}/{y}/{x}.{format}',options:{maxZoom:19,attribution:'Datenquelle: <a href="https://www.basemap.at">basemap.at</a>',subdomains:['','1','2','3','4'],format:'png',bounds:[[46.358770,8.782379],[49.037872,17.189532]],variant:'geolandbasemap'},variants:{basemap:{options:{maxZoom:20,variant:'geolandbasemap'}},grau:'bmapgrau',overlay:'bmapoverlay',highdpi:{options:{variant:'bmaphidpi',format:'jpeg'}},orthofoto:{options:{maxZoom:20,variant:'bmaporthofoto30cm',format:'jpeg'}}}},nlmaps:{url:'https://geodata.nationaalgeoregister.nl/tiles/service/wmts/{variant}/EPSG:3857/{z}/{x}/{y}.png',options:{minZoom:6,maxZoom:19,bounds:[[50.5,3.25],[54,7.6]],attribution:'Kaartgegevens &copy; <a href="kadaster.nl">Kadaster</a>'},variants:{'standaard':'brtachtergrondkaart','pastel':'brtachtergrondkaartpastel','grijs':'brtachtergrondkaartgrijs','luchtfoto':{'url':'https://geodata.nationaalgeoregister.nl/luchtfoto/rgb/wmts/1.0.0/2016_ortho25/EPSG:3857/{z}/{x}/{y}.png'}}},NASAGIBS:{url:'https://map1.vis.earthdata.nasa.gov/wmts-webmerc/{variant}/default/{time}/{tilematrixset}{maxZoom}/{z}/{y}/{x}.{format}',options:{attribution:'Imagery provided by services from the Global Imagery Browse Services (GIBS), operated by the NASA/GSFC/Earth Science Data and Information System '+'(<a href="https://earthdata.nasa.gov">ESDIS</a>) with funding provided by NASA/HQ.',bounds:[[-85.0511287776,-179.999999975],[85.0511287776,179.999999975]],minZoom:1,maxZoom:9,format:'jpg',time:'',tilematrixset:'GoogleMapsCompatible_Level'},variants:{ModisTerraTrueColorCR:'MODIS_Terra_CorrectedReflectance_TrueColor',ModisTerraBands367CR:'MODIS_Terra_CorrectedReflectance_Bands367',ViirsEarthAtNight2012:{options:{variant:'VIIRS_CityLights_2012',maxZoom:8}},ModisTerraLSTDay:{options:{variant:'MODIS_Terra_Land_Surface_Temp_Day',format:'png',maxZoom:7,opacity:0.75}},ModisTerraSnowCover:{options:{variant:'MODIS_Terra_Snow_Cover',format:'png',maxZoom:8,opacity:0.75}},ModisTerraAOD:{options:{variant:'MODIS_Terra_Aerosol',format:'png',maxZoom:6,opacity:0.75}},ModisTerraChlorophyll:{options:{variant:'MODIS_Terra_Chlorophyll_A',format:'png',maxZoom:7,opacity:0.75}}}},NLS:{url:'https://nls-{s}.tileserver.com/nls/{z}/{x}/{y}.jpg',options:{attribution:'<a href="http://geo.nls.uk/maps/">National Library of Scotland Historic Maps</a>',bounds:[[49.6,-12],[61.7,3]],minZoom:1,maxZoom:18,subdomains:'0123'}},JusticeMap:{url:'http://www.justicemap.org/tile/{size}/{variant}/{z}/{x}/{y}.png',options:{attribution:'<a href="http://www.justicemap.org/terms.php">Justice Map</a>',size:'county',bounds:[[14,-180],[72,-56]]},variants:{income:'income',americanIndian:'indian',asian:'asian',black:'black',hispanic:'hispanic',multi:'multi',nonWhite:'nonwhite',white:'white',plurality:'plural'}},Wikimedia:{url:'https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}{r}.png',options:{attribution:'<a href="https://wikimediafoundation.org/wiki/Maps_Terms_of_Use">Wikimedia</a>',minZoom:1,maxZoom:19}},GeoportailFrance:{url:'https://wxs.ign.fr/{apikey}/geoportail/wmts?REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0&STYLE={style}&TILEMATRIXSET=PM&FORMAT={format}&LAYER={variant}&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',options:{attribution:'<a target="_blank" href="https://www.geoportail.gouv.fr/">Geoportail France</a>',bounds:[[-75,-180],[81,180]],minZoom:2,maxZoom:18,apikey:'choisirgeoportail',format:'image/jpeg',style:'normal',variant:'GEOGRAPHICALGRIDSYSTEMS.MAPS.SCAN-EXPRESS.STANDARD'},variants:{parcels:{options:{variant:'CADASTRALPARCELS.PARCELS',maxZoom:20,style:'bdparcellaire',format:'image/png'}},ignMaps:'GEOGRAPHICALGRIDSYSTEMS.MAPS',maps:'GEOGRAPHICALGRIDSYSTEMS.MAPS.SCAN-EXPRESS.STANDARD',orthos:{options:{maxZoom:19,variant:'ORTHOIMAGERY.ORTHOPHOTOS'}}}},OneMapSG:{url:'https://maps-{s}.onemap.sg/v3/{variant}/{z}/{x}/{y}.png',options:{variant:'Default',minZoom:11,maxZoom:18,bounds:[[1.56073,104.11475],[1.16,103.502]],attribution:'<img src="https://docs.onemap.sg/maps/images/oneMap64-01.png" style="height:20px;width:20px;"/> New OneMap | Map data &copy; contributors, <a href="http://SLA.gov.sg">Singapore Land Authority</a>'},variants:{Default:'Default',Night:'Night',Original:'Original',Grey:'Grey',LandLot:'LandLot'}}};L.tileLayer.provider=function(provider,options){return new L.TileLayer.Provider(provider,options);};return L;});(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f();}else if(typeof define==="function"&&define.amd){define([],f);}else{var g;if(typeof window!=="undefined"){g=window;}else if(typeof global!=="undefined"){g=global;}else if(typeof self!=="undefined"){g=self;}else{g=this;}g.leafletImage=f();}})(function(){var define,module,exports;return function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f;}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e);},l,l.exports,e,t,n,r);}return n[o].exports;}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s;}({1:[function(require,module,exports){var queue=require('d3-queue').queue;var cacheBusterDate=+new Date();module.exports=function leafletImage(map,callback){var hasMapbox=!!L.mapbox;var dimensions=map.getSize(),layerQueue=new queue(1);var canvas=document.createElement('canvas');canvas.width=dimensions.x;canvas.height=dimensions.y;var ctx=canvas.getContext('2d');var dummycanvas=document.createElement('canvas');dummycanvas.width=1;dummycanvas.height=1;var dummyctx=dummycanvas.getContext('2d');dummyctx.fillStyle='rgba(0,0,0,0)';dummyctx.fillRect(0,0,1,1);map.eachLayer(drawTileLayer);map.eachLayer(drawEsriDynamicLayer);if(map._pathRoot){layerQueue.defer(handlePathRoot,map._pathRoot);}else if(map._panes){var firstCanvas=map._panes.overlayPane.getElementsByTagName('canvas').item(0);if(firstCanvas){layerQueue.defer(handlePathRoot,firstCanvas);}}
-map.eachLayer(drawMarkerLayer);layerQueue.awaitAll(layersDone);function drawTileLayer(l){if(l instanceof L.TileLayer)layerQueue.defer(handleTileLayer,l);else if(l._heat)layerQueue.defer(handlePathRoot,l._canvas);}
-function drawMarkerLayer(l){if(l instanceof L.Marker&&l.options.icon instanceof L.Icon){layerQueue.defer(handleMarkerLayer,l);}}
-function drawEsriDynamicLayer(l){if(!L.esri)return;if(l instanceof L.esri.DynamicMapLayer){layerQueue.defer(handleEsriDymamicLayer,l);}}
-function done(){callback(null,canvas);}
-function layersDone(err,layers){if(err)throw err;layers.forEach(function(layer){if(layer&&layer.canvas){ctx.drawImage(layer.canvas,0,0);}});done();}
-function handleTileLayer(layer,callback){var isCanvasLayer=L.TileLayer.Canvas&&layer instanceof L.TileLayer.Canvas,canvas=document.createElement('canvas');canvas.width=dimensions.x;canvas.height=dimensions.y;var ctx=canvas.getContext('2d'),bounds=map.getPixelBounds(),zoom=map.getZoom(),tileSize=layer.options.tileSize;if(zoom>layer.options.maxZoom||zoom<layer.options.minZoom||hasMapbox&&layer instanceof L.mapbox.tileLayer&&!layer.options.tiles){return callback();}
-var tileBounds=L.bounds(bounds.min.divideBy(tileSize)._floor(),bounds.max.divideBy(tileSize)._floor()),tiles=[],j,i,tileQueue=new queue(1);for(j=tileBounds.min.y;j<=tileBounds.max.y;j++){for(i=tileBounds.min.x;i<=tileBounds.max.x;i++){tiles.push(new L.Point(i,j));}}
-tiles.forEach(function(tilePoint){var originalTilePoint=tilePoint.clone();if(layer._adjustTilePoint){layer._adjustTilePoint(tilePoint);}
-var tilePos=originalTilePoint.scaleBy(new L.Point(tileSize,tileSize)).subtract(bounds.min);if(tilePoint.y>=0){if(isCanvasLayer){var tile=layer._tiles[tilePoint.x+':'+tilePoint.y];tileQueue.defer(canvasTile,tile,tilePos,tileSize);}else{var url=addCacheString(layer.getTileUrl(tilePoint));tileQueue.defer(loadTile,url,tilePos,tileSize);}}});tileQueue.awaitAll(tileQueueFinish);function canvasTile(tile,tilePos,tileSize,callback){callback(null,{img:tile,pos:tilePos,size:tileSize});}
-function loadTile(url,tilePos,tileSize,callback){var im=new Image();im.crossOrigin='';im.onload=function(){callback(null,{img:this,pos:tilePos,size:tileSize});};im.onerror=function(e){if(layer.options.errorTileUrl!=''&&e.target.errorCheck===undefined){e.target.errorCheck=true;e.target.src=layer.options.errorTileUrl;}else{callback(null,{img:dummycanvas,pos:tilePos,size:tileSize});}};im.src=url;}
-function tileQueueFinish(err,data){data.forEach(drawTile);callback(null,{canvas:canvas});}
-function drawTile(d){ctx.drawImage(d.img,Math.floor(d.pos.x),Math.floor(d.pos.y),d.size,d.size);}}
-function handlePathRoot(root,callback){var bounds=map.getPixelBounds(),origin=map.getPixelOrigin(),canvas=document.createElement('canvas');canvas.width=dimensions.x;canvas.height=dimensions.y;var ctx=canvas.getContext('2d');var pos=L.DomUtil.getPosition(root).subtract(bounds.min).add(origin);try{ctx.drawImage(root,pos.x,pos.y,canvas.width-pos.x*2,canvas.height-pos.y*2);callback(null,{canvas:canvas});}catch(e){console.error('Element could not be drawn on canvas',root);}}
-function handleMarkerLayer(marker,callback){var canvas=document.createElement('canvas'),ctx=canvas.getContext('2d'),pixelBounds=map.getPixelBounds(),minPoint=new L.Point(pixelBounds.min.x,pixelBounds.min.y),pixelPoint=map.project(marker.getLatLng()),isBase64=/^data\:/.test(marker._icon.src),url=isBase64?marker._icon.src:addCacheString(marker._icon.src),im=new Image(),options=marker.options.icon.options,size=options.iconSize,pos=pixelPoint.subtract(minPoint),anchor=L.point(options.iconAnchor||size&&size.divideBy(2,true));if(size instanceof L.Point)size=[size.x,size.y];var x=Math.round(pos.x-size[0]+anchor.x),y=Math.round(pos.y-anchor.y);canvas.width=dimensions.x;canvas.height=dimensions.y;im.crossOrigin='';im.onload=function(){ctx.drawImage(this,x,y,size[0],size[1]);callback(null,{canvas:canvas});};im.src=url;if(isBase64)im.onload();}
-function handleEsriDymamicLayer(dynamicLayer,callback){var canvas=document.createElement('canvas');canvas.width=dimensions.x;canvas.height=dimensions.y;var ctx=canvas.getContext('2d');var im=new Image();im.crossOrigin='';im.src=addCacheString(dynamicLayer._currentImage._image.src);im.onload=function(){ctx.drawImage(im,0,0);callback(null,{canvas:canvas});};}
-function addCacheString(url){if(isDataURL(url)||url.indexOf('mapbox.com/styles/v1')!==-1){return url;}
-return url+(url.match(/\?/)?'&':'?')+'cache='+cacheBusterDate;}
-function isDataURL(url){var dataURLRegex=/^\s*data:([a-z]+\/[a-z]+(;[a-z\-]+\=[a-z\-]+)?)?(;base64)?,[a-z0-9\!\$\&\'\,\(\)\*\+\,\;\=\-\.\_\~\:\@\/\?\%\s]*\s*$/i;return!!url.match(dataURLRegex);}};},{"d3-queue":2}],2:[function(require,module,exports){(function(global,factory){typeof exports==='object'&&typeof module!=='undefined'?factory(exports):typeof define==='function'&&define.amd?define(['exports'],factory):factory(global.d3_queue=global.d3_queue||{});})(this,function(exports){'use strict';var version="2.0.3";var slice=[].slice;var noabort={};function Queue(size){if(!(size>=1))throw new Error();this._size=size;this._call=this._error=null;this._tasks=[];this._data=[];this._waiting=this._active=this._ended=this._start=0;}
-Queue.prototype=queue.prototype={constructor:Queue,defer:function(callback){if(typeof callback!=="function"||this._call)throw new Error();if(this._error!=null)return this;var t=slice.call(arguments,1);t.push(callback);++this._waiting,this._tasks.push(t);poke(this);return this;},abort:function(){if(this._error==null)abort(this,new Error("abort"));return this;},await:function(callback){if(typeof callback!=="function"||this._call)throw new Error();this._call=function(error,results){callback.apply(null,[error].concat(results));};maybeNotify(this);return this;},awaitAll:function(callback){if(typeof callback!=="function"||this._call)throw new Error();this._call=callback;maybeNotify(this);return this;}};function poke(q){if(!q._start)try{start(q);}
-catch(e){if(q._tasks[q._ended+q._active-1])abort(q,e);}}
-function start(q){while(q._start=q._waiting&&q._active<q._size){var i=q._ended+q._active,t=q._tasks[i],j=t.length-1,c=t[j];t[j]=end(q,i);--q._waiting,++q._active;t=c.apply(null,t);if(!q._tasks[i])continue;q._tasks[i]=t||noabort;}}
-function end(q,i){return function(e,r){if(!q._tasks[i])return;--q._active,++q._ended;q._tasks[i]=null;if(q._error!=null)return;if(e!=null){abort(q,e);}else{q._data[i]=r;if(q._waiting)poke(q);else maybeNotify(q);}};}
-function abort(q,e){var i=q._tasks.length,t;q._error=e;q._data=undefined;q._waiting=NaN;while(--i>=0){if(t=q._tasks[i]){q._tasks[i]=null;if(t.abort)try{t.abort();}catch(e){}}}
-q._active=NaN;maybeNotify(q);}
-function maybeNotify(q){if(!q._active&&q._call)q._call(q._error,q._data);}
-function queue(concurrency){return new Queue(arguments.length?+concurrency:Infinity);}
-exports.version=version;exports.queue=queue;});},{}]},{},[1])(1);});L.AreaSelect=L.Class.extend({includes:L.Evented.prototype,options:{width:200,height:300,keepAspectRatio:false},initialize:function(options){L.Util.setOptions(this,options);this._width=this.options.width;this._height=this.options.height;},addTo:function(map){this.map=map;this._createElements();this._render();return this;},getBounds:function(){var size=this.map.getSize();var topRight=new L.Point();var bottomLeft=new L.Point();bottomLeft.x=Math.round((size.x-this._width)/2);topRight.y=Math.round((size.y-this._height)/2);topRight.x=size.x-bottomLeft.x;bottomLeft.y=size.y-topRight.y;var sw=this.map.containerPointToLatLng(bottomLeft);var ne=this.map.containerPointToLatLng(topRight);return new L.LatLngBounds(sw,ne);},remove:function(){this.map.off("moveend",this._onMapChange);this.map.off("zoomend",this._onMapChange);this.map.off("resize",this._onMapResize);this._container.parentNode.removeChild(this._container);},setDimensions:function(dimensions){if(!dimensions)return;this._height=parseInt(dimensions.height)||this._height;this._width=parseInt(dimensions.width)||this._width;this._render();this.fire("change");},_createElements:function(){if(!!this._container)return;this._container=L.DomUtil.create("div","leaflet-areaselect-container",this.map._controlContainer);this._topShade=L.DomUtil.create("div","leaflet-areaselect-shade leaflet-control",this._container);this._bottomShade=L.DomUtil.create("div","leaflet-areaselect-shade leaflet-control",this._container);this._leftShade=L.DomUtil.create("div","leaflet-areaselect-shade leaflet-control",this._container);this._rightShade=L.DomUtil.create("div","leaflet-areaselect-shade leaflet-control",this._container);this._nwHandle=L.DomUtil.create("div","leaflet-areaselect-handle leaflet-control",this._container);this._swHandle=L.DomUtil.create("div","leaflet-areaselect-handle leaflet-control",this._container);this._neHandle=L.DomUtil.create("div","leaflet-areaselect-handle leaflet-control",this._container);this._seHandle=L.DomUtil.create("div","leaflet-areaselect-handle leaflet-control",this._container);this._setUpHandlerEvents(this._nwHandle);this._setUpHandlerEvents(this._neHandle,-1,1);this._setUpHandlerEvents(this._swHandle,1,-1);this._setUpHandlerEvents(this._seHandle,-1,-1);this.map.on("moveend",this._onMapChange,this);this.map.on("zoomend",this._onMapChange,this);this.map.on("resize",this._onMapResize,this);this.fire("change");},_setUpHandlerEvents:function(handle,xMod,yMod){xMod=xMod||1;yMod=yMod||1;var self=this;function onMouseDown(event){event.stopPropagation();self.map.dragging.disable();L.DomEvent.removeListener(this,"mousedown",onMouseDown);var curX=event.pageX;var curY=event.pageY;var ratio=self._width/self._height;var size=self.map.getSize();function onMouseMove(event){if(self.options.keepAspectRatio){var maxHeight=(self._height>=self._width?size.y:size.y*(1/ratio))-30;self._height+=(curY-event.originalEvent.pageY)*2*yMod;self._height=Math.max(30,self._height);self._height=Math.min(maxHeight,self._height);self._width=self._height*ratio;}else{self._width+=(curX-event.originalEvent.pageX)*2*xMod;self._height+=(curY-event.originalEvent.pageY)*2*yMod;self._width=Math.max(30,self._width);self._height=Math.max(30,self._height);self._width=Math.min(size.x-30,self._width);self._height=Math.min(size.y-30,self._height);}
-curX=event.originalEvent.pageX;curY=event.originalEvent.pageY;self._render();}
-function onMouseUp(event){self.map.dragging.enable();L.DomEvent.removeListener(self.map,"mouseup",onMouseUp);L.DomEvent.removeListener(self.map,"mousemove",onMouseMove);L.DomEvent.addListener(handle,"mousedown",onMouseDown);self.fire("change");}
-L.DomEvent.addListener(self.map,"mousemove",onMouseMove);L.DomEvent.addListener(self.map,"mouseup",onMouseUp);}
-L.DomEvent.addListener(handle,"mousedown",onMouseDown);if(touchHandler){handle.addEventListener("touchstart",touchHandler,true);handle.addEventListener("touchmove",touchHandler,true);handle.addEventListener("touchend",touchHandler,true);handle.addEventListener("touchcancel",touchHandler,true);}},_onMapResize:function(){this._render();},_onMapChange:function(){this.fire("change");},_render:function(){var size=this.map.getSize();var handleOffset=Math.round(this._nwHandle.offsetWidth/2);var topBottomHeight=Math.round((size.y-this._height)/2);var leftRightWidth=Math.round((size.x-this._width)/2);function setDimensions(element,dimension){element.style.width=dimension.width+"px";element.style.height=dimension.height+"px";element.style.top=dimension.top+"px";element.style.left=dimension.left+"px";element.style.bottom=dimension.bottom+"px";element.style.right=dimension.right+"px";}
-setDimensions(this._topShade,{width:size.x,height:topBottomHeight,top:0,left:0});setDimensions(this._bottomShade,{width:size.x,height:topBottomHeight,bottom:0,left:0});setDimensions(this._leftShade,{width:leftRightWidth,height:size.y-topBottomHeight*2,top:topBottomHeight,left:0});setDimensions(this._rightShade,{width:leftRightWidth,height:size.y-topBottomHeight*2,top:topBottomHeight,right:0});setDimensions(this._nwHandle,{left:leftRightWidth-handleOffset,top:topBottomHeight-7});setDimensions(this._neHandle,{right:leftRightWidth-handleOffset,top:topBottomHeight-7});setDimensions(this._swHandle,{left:leftRightWidth-handleOffset,bottom:topBottomHeight-7});setDimensions(this._seHandle,{right:leftRightWidth-handleOffset,bottom:topBottomHeight-7});}});L.areaSelect=function(options){return new L.AreaSelect(options);};(function(){L.Control.EasyBar=L.Control.extend({options:{position:'topleft',id:null,leafletClasses:true},initialize:function(buttons,options){if(options){L.Util.setOptions(this,options);}
-this._buildContainer();this._buttons=[];for(var i=0;i<buttons.length;i++){buttons[i]._bar=this;buttons[i]._container=buttons[i].button;this._buttons.push(buttons[i]);this.container.appendChild(buttons[i].button);}},_buildContainer:function(){this._container=this.container=L.DomUtil.create('div','');this.options.leafletClasses&&L.DomUtil.addClass(this.container,'leaflet-bar easy-button-container leaflet-control');this.options.id&&(this.container.id=this.options.id);},enable:function(){L.DomUtil.addClass(this.container,'enabled');L.DomUtil.removeClass(this.container,'disabled');this.container.setAttribute('aria-hidden','false');return this;},disable:function(){L.DomUtil.addClass(this.container,'disabled');L.DomUtil.removeClass(this.container,'enabled');this.container.setAttribute('aria-hidden','true');return this;},onAdd:function(){return this.container;},addTo:function(map){this._map=map;for(var i=0;i<this._buttons.length;i++){this._buttons[i]._map=map;}
-var container=this._container=this.onAdd(map),pos=this.getPosition(),corner=map._controlCorners[pos];L.DomUtil.addClass(container,'leaflet-control');if(pos.indexOf('bottom')!==-1){corner.insertBefore(container,corner.firstChild);}else{corner.appendChild(container);}
-return this;}});L.easyBar=function(){var args=[L.Control.EasyBar];for(var i=0;i<arguments.length;i++){args.push(arguments[i]);}
-return new(Function.prototype.bind.apply(L.Control.EasyBar,args))();};L.Control.EasyButton=L.Control.extend({options:{position:'topleft',id:null,type:'replace',states:[],leafletClasses:true,tagName:'button'},initialize:function(icon,onClick,title,id){this.options.states=[];if(id!=null){this.options.id=id;}
-this.storage={};if(typeof arguments[arguments.length-1]==='object'){L.Util.setOptions(this,arguments[arguments.length-1]);}
-if(this.options.states.length===0&&typeof icon==='string'&&typeof onClick==='function'){this.options.states.push({icon:icon,onClick:onClick,title:typeof title==='string'?title:''});}
-this._states=[];for(var i=0;i<this.options.states.length;i++){this._states.push(new State(this.options.states[i],this));}
-this._buildButton();this._activateState(this._states[0]);},_buildButton:function(){this.button=L.DomUtil.create(this.options.tagName,'');if(this.tagName==='button'){this.button.type='button';}
-if(this.options.id){this.button.id=this.options.id;}
-if(this.options.leafletClasses){L.DomUtil.addClass(this.button,'easy-button-button leaflet-bar-part leaflet-interactive');}
-L.DomEvent.addListener(this.button,'dblclick',L.DomEvent.stop);L.DomEvent.addListener(this.button,'mousedown',L.DomEvent.stop);L.DomEvent.addListener(this.button,'click',function(e){L.DomEvent.stop(e);this._currentState.onClick(this,this._map?this._map:null);this._map.getContainer().focus();},this);if(this.options.type=='replace'){this.button.appendChild(this._currentState.icon);}else{for(var i=0;i<this._states.length;i++){this.button.appendChild(this._states[i].icon);}}},_currentState:{stateName:'unnamed',icon:function(){return document.createElement('span');}()},_states:null,state:function(newState){if(typeof newState=='string'){this._activateStateNamed(newState);}else if(typeof newState=='number'){this._activateState(this._states[newState]);}
-return this;},_activateStateNamed:function(stateName){for(var i=0;i<this._states.length;i++){if(this._states[i].stateName==stateName){this._activateState(this._states[i]);}}},_activateState:function(newState){if(newState===this._currentState){return;}else{if(this.options.type=='replace'){this.button.appendChild(newState.icon);this.button.removeChild(this._currentState.icon);}
-if(newState.title){this.button.title=newState.title;}else{this.button.removeAttribute('title');}
-for(var i=0;i<this._states.length;i++){L.DomUtil.removeClass(this._states[i].icon,this._currentState.stateName+'-active');L.DomUtil.addClass(this._states[i].icon,newState.stateName+'-active');}
-L.DomUtil.removeClass(this.button,this._currentState.stateName+'-active');L.DomUtil.addClass(this.button,newState.stateName+'-active');this._currentState=newState;}},enable:function(){L.DomUtil.addClass(this.button,'enabled');L.DomUtil.removeClass(this.button,'disabled');this.button.setAttribute('aria-hidden','false');return this;},disable:function(){L.DomUtil.addClass(this.button,'disabled');L.DomUtil.removeClass(this.button,'enabled');this.button.setAttribute('aria-hidden','true');return this;},removeFrom:function(map){this._container.parentNode.removeChild(this._container);this._map=null;return this;},onAdd:function(){var containerObj=L.easyBar([this],{position:this.options.position,leafletClasses:this.options.leafletClasses});this._container=containerObj.container;return this._container;}});L.easyButton=function(){var args=Array.prototype.concat.apply([L.Control.EasyButton],arguments);return new(Function.prototype.bind.apply(L.Control.EasyButton,args))();};function State(template,easyButton){this.title=template.title;this.stateName=template.stateName?template.stateName:'unnamed-state';this.icon=L.DomUtil.create('span','');L.DomUtil.addClass(this.icon,'button-state state-'+this.stateName.replace(/(^\s*|\s*$)/g,''));this.icon.innerHTML=buildIcon(template.icon);this.onClick=L.Util.bind(template.onClick?template.onClick:function(){},easyButton);}
-function buildIcon(ambiguousIconString){var tmpIcon;if(ambiguousIconString.match(/[&;=<>"']/)){tmpIcon=ambiguousIconString;}else{ambiguousIconString=ambiguousIconString.replace(/(^\s*|\s*$)/g,'');tmpIcon=L.DomUtil.create('span','');if(ambiguousIconString.indexOf('fa-')===0){L.DomUtil.addClass(tmpIcon,'fa '+ambiguousIconString);}else if(ambiguousIconString.indexOf('glyphicon-')===0){L.DomUtil.addClass(tmpIcon,'glyphicon '+ambiguousIconString);}else{L.DomUtil.addClass(tmpIcon,ambiguousIconString);}
-tmpIcon=tmpIcon.outerHTML;}
-return tmpIcon;}})();'use strict';function FastBitArray(size){this.words=new Uint32Array(size+32>>>5);}
-FastBitArray.filter=function(func,iterable,bitArray=null){if(!bitarray)bitArray=new FastBitArray(iterable.length);let i=0;for(obj of iterable){bitArray.set(i,func(obj));i++;}
-return bitArray;};FastBitArray.prototype.filter=function(func,iterable){return FastBitArray.filter(func,iterable,this);};FastBitArray.prototype.set=function(index,val){if(val)this.words[index>>>5]|=1<<index;else this.words[index>>>5]&=~(1<<index);};FastBitArray.prototype.flip=function(index){this.words[index>>>5]^=1<<index;};FastBitArray.prototype.val=function(index){try{return(this.words[index>>>5]&1<<index)!==0;}catch(e){return false;}};FastBitArray.prototype.trim=function(){let nl=this.words.length;while(nl>0&&this.words[nl-1]===0){nl--;}
-this.words=this.words.slice(0,nl);};FastBitArray.prototype.resize=function(index){let count=this.words.length;if(count<<5>index){return;}
-count=index+32>>>5;let newwords=new Uint32Array(count);newwords.set(this.words);this.words=newwords;};FastBitArray.prototype.hammingWeight=function(v){v-=v>>>1&0x55555555;v=(v&0x33333333)+(v>>>2&0x33333333);return(v+(v>>>4)&0xF0F0F0F)*0x1010101>>>24;};FastBitArray.prototype.count=function(){let answer=0,c=this.words.length;for(let i=0;i<c;i++){answer+=this.hammingWeight(this.words[i]|0);}
-return answer;};FastBitArray.prototype.array=function(){let count=this.count(),answer=new Array(count),pos=0|0;wc=this.words.length|0;for(let k=0;k<wc;++k){let w=this.words[k];while(w!=0){let t=w&-w;answer[pos++]=(k<<5)+this.hammingWeight(t-1|0);w^=t;}}
-return answer;};FastBitArray.prototype.forEach=function(fnc){let wc=this.words.length|0;for(let k=0;k<wc;++k){let w=this.words[k];while(w!=0){let t=w&-w;fnc((k<<5)+this.hammingWeight(t-1));w^=t;}}};FastBitArray.prototype.clone=function(){let clone=Object.create(FastBitArray.prototype);clone.words=new Uint32Array(this.words);return clone;};FastBitArray.prototype.toString=function(){return'{'+this.array().join(',')+'}';};module.exports=FastBitArray;
+!function(e,t){"object"==typeof exports&&"undefined"!=typeof module?module.exports=t():"function"==typeof define&&define.amd?define(t):e.moment=t()}(this,function(){"use strict";var e,i;function c(){return e.apply(null,arguments)}function o(e){return e instanceof Array||"[object Array]"===Object.prototype.toString.call(e)}function u(e){return null!=e&&"[object Object]"===Object.prototype.toString.call(e)}function l(e){return void 0===e}function h(e){return"number"==typeof e||"[object Number]"===Object.prototype.toString.call(e)}function d(e){return e instanceof Date||"[object Date]"===Object.prototype.toString.call(e)}function f(e,t){var n,s=[];for(n=0;n<e.length;++n)s.push(t(e[n],n));return s}function m(e,t){return Object.prototype.hasOwnProperty.call(e,t)}function _(e,t){for(var n in t)m(t,n)&&(e[n]=t[n]);return m(t,"toString")&&(e.toString=t.toString),m(t,"valueOf")&&(e.valueOf=t.valueOf),e}function y(e,t,n,s){return Tt(e,t,n,s,!0).utc()}function g(e){return null==e._pf&&(e._pf={empty:!1,unusedTokens:[],unusedInput:[],overflow:-2,charsLeftOver:0,nullInput:!1,invalidMonth:null,invalidFormat:!1,userInvalidated:!1,iso:!1,parsedDateParts:[],meridiem:null,rfc2822:!1,weekdayMismatch:!1}),e._pf}function v(e){if(null==e._isValid){var t=g(e),n=i.call(t.parsedDateParts,function(e){return null!=e}),s=!isNaN(e._d.getTime())&&t.overflow<0&&!t.empty&&!t.invalidMonth&&!t.invalidWeekday&&!t.weekdayMismatch&&!t.nullInput&&!t.invalidFormat&&!t.userInvalidated&&(!t.meridiem||t.meridiem&&n);if(e._strict&&(s=s&&0===t.charsLeftOver&&0===t.unusedTokens.length&&void 0===t.bigHour),null!=Object.isFrozen&&Object.isFrozen(e))return s;e._isValid=s}return e._isValid}function p(e){var t=y(NaN);return null!=e?_(g(t),e):g(t).userInvalidated=!0,t}i=Array.prototype.some?Array.prototype.some:function(e){for(var t=Object(this),n=t.length>>>0,s=0;s<n;s++)if(s in t&&e.call(this,t[s],s,t))return!0;return!1};var r=c.momentProperties=[];function w(e,t){var n,s,i;if(l(t._isAMomentObject)||(e._isAMomentObject=t._isAMomentObject),l(t._i)||(e._i=t._i),l(t._f)||(e._f=t._f),l(t._l)||(e._l=t._l),l(t._strict)||(e._strict=t._strict),l(t._tzm)||(e._tzm=t._tzm),l(t._isUTC)||(e._isUTC=t._isUTC),l(t._offset)||(e._offset=t._offset),l(t._pf)||(e._pf=g(t)),l(t._locale)||(e._locale=t._locale),0<r.length)for(n=0;n<r.length;n++)l(i=t[s=r[n]])||(e[s]=i);return e}var t=!1;function M(e){w(this,e),this._d=new Date(null!=e._d?e._d.getTime():NaN),this.isValid()||(this._d=new Date(NaN)),!1===t&&(t=!0,c.updateOffset(this),t=!1)}function k(e){return e instanceof M||null!=e&&null!=e._isAMomentObject}function S(e){return e<0?Math.ceil(e)||0:Math.floor(e)}function D(e){var t=+e,n=0;return 0!==t&&isFinite(t)&&(n=S(t)),n}function a(e,t,n){var s,i=Math.min(e.length,t.length),r=Math.abs(e.length-t.length),a=0;for(s=0;s<i;s++)(n&&e[s]!==t[s]||!n&&D(e[s])!==D(t[s]))&&a++;return a+r}function Y(e){!1===c.suppressDeprecationWarnings&&"undefined"!=typeof console&&console.warn&&console.warn("Deprecation warning: "+e)}function n(i,r){var a=!0;return _(function(){if(null!=c.deprecationHandler&&c.deprecationHandler(null,i),a){for(var e,t=[],n=0;n<arguments.length;n++){if(e="","object"==typeof arguments[n]){for(var s in e+="\n["+n+"] ",arguments[0])e+=s+": "+arguments[0][s]+", ";e=e.slice(0,-2)}else e=arguments[n];t.push(e)}Y(i+"\nArguments: "+Array.prototype.slice.call(t).join("")+"\n"+(new Error).stack),a=!1}return r.apply(this,arguments)},r)}var s,O={};function T(e,t){null!=c.deprecationHandler&&c.deprecationHandler(e,t),O[e]||(Y(t),O[e]=!0)}function b(e){return e instanceof Function||"[object Function]"===Object.prototype.toString.call(e)}function x(e,t){var n,s=_({},e);for(n in t)m(t,n)&&(u(e[n])&&u(t[n])?(s[n]={},_(s[n],e[n]),_(s[n],t[n])):null!=t[n]?s[n]=t[n]:delete s[n]);for(n in e)m(e,n)&&!m(t,n)&&u(e[n])&&(s[n]=_({},s[n]));return s}function P(e){null!=e&&this.set(e)}c.suppressDeprecationWarnings=!1,c.deprecationHandler=null,s=Object.keys?Object.keys:function(e){var t,n=[];for(t in e)m(e,t)&&n.push(t);return n};var W={};function C(e,t){var n=e.toLowerCase();W[n]=W[n+"s"]=W[t]=e}function H(e){return"string"==typeof e?W[e]||W[e.toLowerCase()]:void 0}function R(e){var t,n,s={};for(n in e)m(e,n)&&(t=H(n))&&(s[t]=e[n]);return s}var U={};function F(e,t){U[e]=t}function L(e,t,n){var s=""+Math.abs(e),i=t-s.length;return(0<=e?n?"+":"":"-")+Math.pow(10,Math.max(0,i)).toString().substr(1)+s}var N=/(\[[^\[]*\])|(\\)?([Hh]mm(ss)?|Mo|MM?M?M?|Do|DDDo|DD?D?D?|ddd?d?|do?|w[o|w]?|W[o|W]?|Qo?|YYYYYY|YYYYY|YYYY|YY|gg(ggg?)?|GG(GGG?)?|e|E|a|A|hh?|HH?|kk?|mm?|ss?|S{1,9}|x|X|zz?|ZZ?|.)/g,G=/(\[[^\[]*\])|(\\)?(LTS|LT|LL?L?L?|l{1,4})/g,V={},E={};function I(e,t,n,s){var i=s;"string"==typeof s&&(i=function(){return this[s]()}),e&&(E[e]=i),t&&(E[t[0]]=function(){return L(i.apply(this,arguments),t[1],t[2])}),n&&(E[n]=function(){return this.localeData().ordinal(i.apply(this,arguments),e)})}function A(e,t){return e.isValid()?(t=j(t,e.localeData()),V[t]=V[t]||function(s){var e,i,t,r=s.match(N);for(e=0,i=r.length;e<i;e++)E[r[e]]?r[e]=E[r[e]]:r[e]=(t=r[e]).match(/\[[\s\S]/)?t.replace(/^\[|\]$/g,""):t.replace(/\\/g,"");return function(e){var t,n="";for(t=0;t<i;t++)n+=b(r[t])?r[t].call(e,s):r[t];return n}}(t),V[t](e)):e.localeData().invalidDate()}function j(e,t){var n=5;function s(e){return t.longDateFormat(e)||e}for(G.lastIndex=0;0<=n&&G.test(e);)e=e.replace(G,s),G.lastIndex=0,n-=1;return e}var Z=/\d/,z=/\d\d/,$=/\d{3}/,q=/\d{4}/,J=/[+-]?\d{6}/,B=/\d\d?/,Q=/\d\d\d\d?/,X=/\d\d\d\d\d\d?/,K=/\d{1,3}/,ee=/\d{1,4}/,te=/[+-]?\d{1,6}/,ne=/\d+/,se=/[+-]?\d+/,ie=/Z|[+-]\d\d:?\d\d/gi,re=/Z|[+-]\d\d(?::?\d\d)?/gi,ae=/[0-9]{0,256}['a-z\u00A0-\u05FF\u0700-\uD7FF\uF900-\uFDCF\uFDF0-\uFF07\uFF10-\uFFEF]{1,256}|[\u0600-\u06FF\/]{1,256}(\s*?[\u0600-\u06FF]{1,256}){1,2}/i,oe={};function ue(e,n,s){oe[e]=b(n)?n:function(e,t){return e&&s?s:n}}function le(e,t){return m(oe,e)?oe[e](t._strict,t._locale):new RegExp(he(e.replace("\\","").replace(/\\(\[)|\\(\])|\[([^\]\[]*)\]|\\(.)/g,function(e,t,n,s,i){return t||n||s||i})))}function he(e){return e.replace(/[-\/\\^$*+?.()|[\]{}]/g,"\\$&")}var de={};function ce(e,n){var t,s=n;for("string"==typeof e&&(e=[e]),h(n)&&(s=function(e,t){t[n]=D(e)}),t=0;t<e.length;t++)de[e[t]]=s}function fe(e,i){ce(e,function(e,t,n,s){n._w=n._w||{},i(e,n._w,n,s)})}var me=0,_e=1,ye=2,ge=3,ve=4,pe=5,we=6,Me=7,ke=8;function Se(e){return De(e)?366:365}function De(e){return e%4==0&&e%100!=0||e%400==0}I("Y",0,0,function(){var e=this.year();return e<=9999?""+e:"+"+e}),I(0,["YY",2],0,function(){return this.year()%100}),I(0,["YYYY",4],0,"year"),I(0,["YYYYY",5],0,"year"),I(0,["YYYYYY",6,!0],0,"year"),C("year","y"),F("year",1),ue("Y",se),ue("YY",B,z),ue("YYYY",ee,q),ue("YYYYY",te,J),ue("YYYYYY",te,J),ce(["YYYYY","YYYYYY"],me),ce("YYYY",function(e,t){t[me]=2===e.length?c.parseTwoDigitYear(e):D(e)}),ce("YY",function(e,t){t[me]=c.parseTwoDigitYear(e)}),ce("Y",function(e,t){t[me]=parseInt(e,10)}),c.parseTwoDigitYear=function(e){return D(e)+(68<D(e)?1900:2e3)};var Ye,Oe=Te("FullYear",!0);function Te(t,n){return function(e){return null!=e?(xe(this,t,e),c.updateOffset(this,n),this):be(this,t)}}function be(e,t){return e.isValid()?e._d["get"+(e._isUTC?"UTC":"")+t]():NaN}function xe(e,t,n){e.isValid()&&!isNaN(n)&&("FullYear"===t&&De(e.year())&&1===e.month()&&29===e.date()?e._d["set"+(e._isUTC?"UTC":"")+t](n,e.month(),Pe(n,e.month())):e._d["set"+(e._isUTC?"UTC":"")+t](n))}function Pe(e,t){if(isNaN(e)||isNaN(t))return NaN;var n,s=(t%(n=12)+n)%n;return e+=(t-s)/12,1===s?De(e)?29:28:31-s%7%2}Ye=Array.prototype.indexOf?Array.prototype.indexOf:function(e){var t;for(t=0;t<this.length;++t)if(this[t]===e)return t;return-1},I("M",["MM",2],"Mo",function(){return this.month()+1}),I("MMM",0,0,function(e){return this.localeData().monthsShort(this,e)}),I("MMMM",0,0,function(e){return this.localeData().months(this,e)}),C("month","M"),F("month",8),ue("M",B),ue("MM",B,z),ue("MMM",function(e,t){return t.monthsShortRegex(e)}),ue("MMMM",function(e,t){return t.monthsRegex(e)}),ce(["M","MM"],function(e,t){t[_e]=D(e)-1}),ce(["MMM","MMMM"],function(e,t,n,s){var i=n._locale.monthsParse(e,s,n._strict);null!=i?t[_e]=i:g(n).invalidMonth=e});var We=/D[oD]?(\[[^\[\]]*\]|\s)+MMMM?/,Ce="January_February_March_April_May_June_July_August_September_October_November_December".split("_");var He="Jan_Feb_Mar_Apr_May_Jun_Jul_Aug_Sep_Oct_Nov_Dec".split("_");function Re(e,t){var n;if(!e.isValid())return e;if("string"==typeof t)if(/^\d+$/.test(t))t=D(t);else if(!h(t=e.localeData().monthsParse(t)))return e;return n=Math.min(e.date(),Pe(e.year(),t)),e._d["set"+(e._isUTC?"UTC":"")+"Month"](t,n),e}function Ue(e){return null!=e?(Re(this,e),c.updateOffset(this,!0),this):be(this,"Month")}var Fe=ae;var Le=ae;function Ne(){function e(e,t){return t.length-e.length}var t,n,s=[],i=[],r=[];for(t=0;t<12;t++)n=y([2e3,t]),s.push(this.monthsShort(n,"")),i.push(this.months(n,"")),r.push(this.months(n,"")),r.push(this.monthsShort(n,""));for(s.sort(e),i.sort(e),r.sort(e),t=0;t<12;t++)s[t]=he(s[t]),i[t]=he(i[t]);for(t=0;t<24;t++)r[t]=he(r[t]);this._monthsRegex=new RegExp("^("+r.join("|")+")","i"),this._monthsShortRegex=this._monthsRegex,this._monthsStrictRegex=new RegExp("^("+i.join("|")+")","i"),this._monthsShortStrictRegex=new RegExp("^("+s.join("|")+")","i")}function Ge(e){var t;if(e<100&&0<=e){var n=Array.prototype.slice.call(arguments);n[0]=e+400,t=new Date(Date.UTC.apply(null,n)),isFinite(t.getUTCFullYear())&&t.setUTCFullYear(e)}else t=new Date(Date.UTC.apply(null,arguments));return t}function Ve(e,t,n){var s=7+t-n;return-((7+Ge(e,0,s).getUTCDay()-t)%7)+s-1}function Ee(e,t,n,s,i){var r,a,o=1+7*(t-1)+(7+n-s)%7+Ve(e,s,i);return a=o<=0?Se(r=e-1)+o:o>Se(e)?(r=e+1,o-Se(e)):(r=e,o),{year:r,dayOfYear:a}}function Ie(e,t,n){var s,i,r=Ve(e.year(),t,n),a=Math.floor((e.dayOfYear()-r-1)/7)+1;return a<1?s=a+Ae(i=e.year()-1,t,n):a>Ae(e.year(),t,n)?(s=a-Ae(e.year(),t,n),i=e.year()+1):(i=e.year(),s=a),{week:s,year:i}}function Ae(e,t,n){var s=Ve(e,t,n),i=Ve(e+1,t,n);return(Se(e)-s+i)/7}I("w",["ww",2],"wo","week"),I("W",["WW",2],"Wo","isoWeek"),C("week","w"),C("isoWeek","W"),F("week",5),F("isoWeek",5),ue("w",B),ue("ww",B,z),ue("W",B),ue("WW",B,z),fe(["w","ww","W","WW"],function(e,t,n,s){t[s.substr(0,1)]=D(e)});function je(e,t){return e.slice(t,7).concat(e.slice(0,t))}I("d",0,"do","day"),I("dd",0,0,function(e){return this.localeData().weekdaysMin(this,e)}),I("ddd",0,0,function(e){return this.localeData().weekdaysShort(this,e)}),I("dddd",0,0,function(e){return this.localeData().weekdays(this,e)}),I("e",0,0,"weekday"),I("E",0,0,"isoWeekday"),C("day","d"),C("weekday","e"),C("isoWeekday","E"),F("day",11),F("weekday",11),F("isoWeekday",11),ue("d",B),ue("e",B),ue("E",B),ue("dd",function(e,t){return t.weekdaysMinRegex(e)}),ue("ddd",function(e,t){return t.weekdaysShortRegex(e)}),ue("dddd",function(e,t){return t.weekdaysRegex(e)}),fe(["dd","ddd","dddd"],function(e,t,n,s){var i=n._locale.weekdaysParse(e,s,n._strict);null!=i?t.d=i:g(n).invalidWeekday=e}),fe(["d","e","E"],function(e,t,n,s){t[s]=D(e)});var Ze="Sunday_Monday_Tuesday_Wednesday_Thursday_Friday_Saturday".split("_");var ze="Sun_Mon_Tue_Wed_Thu_Fri_Sat".split("_");var $e="Su_Mo_Tu_We_Th_Fr_Sa".split("_");var qe=ae;var Je=ae;var Be=ae;function Qe(){function e(e,t){return t.length-e.length}var t,n,s,i,r,a=[],o=[],u=[],l=[];for(t=0;t<7;t++)n=y([2e3,1]).day(t),s=this.weekdaysMin(n,""),i=this.weekdaysShort(n,""),r=this.weekdays(n,""),a.push(s),o.push(i),u.push(r),l.push(s),l.push(i),l.push(r);for(a.sort(e),o.sort(e),u.sort(e),l.sort(e),t=0;t<7;t++)o[t]=he(o[t]),u[t]=he(u[t]),l[t]=he(l[t]);this._weekdaysRegex=new RegExp("^("+l.join("|")+")","i"),this._weekdaysShortRegex=this._weekdaysRegex,this._weekdaysMinRegex=this._weekdaysRegex,this._weekdaysStrictRegex=new RegExp("^("+u.join("|")+")","i"),this._weekdaysShortStrictRegex=new RegExp("^("+o.join("|")+")","i"),this._weekdaysMinStrictRegex=new RegExp("^("+a.join("|")+")","i")}function Xe(){return this.hours()%12||12}function Ke(e,t){I(e,0,0,function(){return this.localeData().meridiem(this.hours(),this.minutes(),t)})}function et(e,t){return t._meridiemParse}I("H",["HH",2],0,"hour"),I("h",["hh",2],0,Xe),I("k",["kk",2],0,function(){return this.hours()||24}),I("hmm",0,0,function(){return""+Xe.apply(this)+L(this.minutes(),2)}),I("hmmss",0,0,function(){return""+Xe.apply(this)+L(this.minutes(),2)+L(this.seconds(),2)}),I("Hmm",0,0,function(){return""+this.hours()+L(this.minutes(),2)}),I("Hmmss",0,0,function(){return""+this.hours()+L(this.minutes(),2)+L(this.seconds(),2)}),Ke("a",!0),Ke("A",!1),C("hour","h"),F("hour",13),ue("a",et),ue("A",et),ue("H",B),ue("h",B),ue("k",B),ue("HH",B,z),ue("hh",B,z),ue("kk",B,z),ue("hmm",Q),ue("hmmss",X),ue("Hmm",Q),ue("Hmmss",X),ce(["H","HH"],ge),ce(["k","kk"],function(e,t,n){var s=D(e);t[ge]=24===s?0:s}),ce(["a","A"],function(e,t,n){n._isPm=n._locale.isPM(e),n._meridiem=e}),ce(["h","hh"],function(e,t,n){t[ge]=D(e),g(n).bigHour=!0}),ce("hmm",function(e,t,n){var s=e.length-2;t[ge]=D(e.substr(0,s)),t[ve]=D(e.substr(s)),g(n).bigHour=!0}),ce("hmmss",function(e,t,n){var s=e.length-4,i=e.length-2;t[ge]=D(e.substr(0,s)),t[ve]=D(e.substr(s,2)),t[pe]=D(e.substr(i)),g(n).bigHour=!0}),ce("Hmm",function(e,t,n){var s=e.length-2;t[ge]=D(e.substr(0,s)),t[ve]=D(e.substr(s))}),ce("Hmmss",function(e,t,n){var s=e.length-4,i=e.length-2;t[ge]=D(e.substr(0,s)),t[ve]=D(e.substr(s,2)),t[pe]=D(e.substr(i))});var tt,nt=Te("Hours",!0),st={calendar:{sameDay:"[Today at] LT",nextDay:"[Tomorrow at] LT",nextWeek:"dddd [at] LT",lastDay:"[Yesterday at] LT",lastWeek:"[Last] dddd [at] LT",sameElse:"L"},longDateFormat:{LTS:"h:mm:ss A",LT:"h:mm A",L:"MM/DD/YYYY",LL:"MMMM D, YYYY",LLL:"MMMM D, YYYY h:mm A",LLLL:"dddd, MMMM D, YYYY h:mm A"},invalidDate:"Invalid date",ordinal:"%d",dayOfMonthOrdinalParse:/\d{1,2}/,relativeTime:{future:"in %s",past:"%s ago",s:"a few seconds",ss:"%d seconds",m:"a minute",mm:"%d minutes",h:"an hour",hh:"%d hours",d:"a day",dd:"%d days",M:"a month",MM:"%d months",y:"a year",yy:"%d years"},months:Ce,monthsShort:He,week:{dow:0,doy:6},weekdays:Ze,weekdaysMin:$e,weekdaysShort:ze,meridiemParse:/[ap]\.?m?\.?/i},it={},rt={};function at(e){return e?e.toLowerCase().replace("_","-"):e}function ot(e){var t=null;if(!it[e]&&"undefined"!=typeof module&&module&&module.exports)try{t=tt._abbr,require("./locale/"+e),ut(t)}catch(e){}return it[e]}function ut(e,t){var n;return e&&((n=l(t)?ht(e):lt(e,t))?tt=n:"undefined"!=typeof console&&console.warn&&console.warn("Locale "+e+" not found. Did you forget to load it?")),tt._abbr}function lt(e,t){if(null===t)return delete it[e],null;var n,s=st;if(t.abbr=e,null!=it[e])T("defineLocaleOverride","use moment.updateLocale(localeName, config) to change an existing locale. moment.defineLocale(localeName, config) should only be used for creating a new locale See http://momentjs.com/guides/#/warnings/define-locale/ for more info."),s=it[e]._config;else if(null!=t.parentLocale)if(null!=it[t.parentLocale])s=it[t.parentLocale]._config;else{if(null==(n=ot(t.parentLocale)))return rt[t.parentLocale]||(rt[t.parentLocale]=[]),rt[t.parentLocale].push({name:e,config:t}),null;s=n._config}return it[e]=new P(x(s,t)),rt[e]&&rt[e].forEach(function(e){lt(e.name,e.config)}),ut(e),it[e]}function ht(e){var t;if(e&&e._locale&&e._locale._abbr&&(e=e._locale._abbr),!e)return tt;if(!o(e)){if(t=ot(e))return t;e=[e]}return function(e){for(var t,n,s,i,r=0;r<e.length;){for(t=(i=at(e[r]).split("-")).length,n=(n=at(e[r+1]))?n.split("-"):null;0<t;){if(s=ot(i.slice(0,t).join("-")))return s;if(n&&n.length>=t&&a(i,n,!0)>=t-1)break;t--}r++}return tt}(e)}function dt(e){var t,n=e._a;return n&&-2===g(e).overflow&&(t=n[_e]<0||11<n[_e]?_e:n[ye]<1||n[ye]>Pe(n[me],n[_e])?ye:n[ge]<0||24<n[ge]||24===n[ge]&&(0!==n[ve]||0!==n[pe]||0!==n[we])?ge:n[ve]<0||59<n[ve]?ve:n[pe]<0||59<n[pe]?pe:n[we]<0||999<n[we]?we:-1,g(e)._overflowDayOfYear&&(t<me||ye<t)&&(t=ye),g(e)._overflowWeeks&&-1===t&&(t=Me),g(e)._overflowWeekday&&-1===t&&(t=ke),g(e).overflow=t),e}function ct(e,t,n){return null!=e?e:null!=t?t:n}function ft(e){var t,n,s,i,r,a=[];if(!e._d){var o,u;for(o=e,u=new Date(c.now()),s=o._useUTC?[u.getUTCFullYear(),u.getUTCMonth(),u.getUTCDate()]:[u.getFullYear(),u.getMonth(),u.getDate()],e._w&&null==e._a[ye]&&null==e._a[_e]&&function(e){var t,n,s,i,r,a,o,u;if(null!=(t=e._w).GG||null!=t.W||null!=t.E)r=1,a=4,n=ct(t.GG,e._a[me],Ie(bt(),1,4).year),s=ct(t.W,1),((i=ct(t.E,1))<1||7<i)&&(u=!0);else{r=e._locale._week.dow,a=e._locale._week.doy;var l=Ie(bt(),r,a);n=ct(t.gg,e._a[me],l.year),s=ct(t.w,l.week),null!=t.d?((i=t.d)<0||6<i)&&(u=!0):null!=t.e?(i=t.e+r,(t.e<0||6<t.e)&&(u=!0)):i=r}s<1||s>Ae(n,r,a)?g(e)._overflowWeeks=!0:null!=u?g(e)._overflowWeekday=!0:(o=Ee(n,s,i,r,a),e._a[me]=o.year,e._dayOfYear=o.dayOfYear)}(e),null!=e._dayOfYear&&(r=ct(e._a[me],s[me]),(e._dayOfYear>Se(r)||0===e._dayOfYear)&&(g(e)._overflowDayOfYear=!0),n=Ge(r,0,e._dayOfYear),e._a[_e]=n.getUTCMonth(),e._a[ye]=n.getUTCDate()),t=0;t<3&&null==e._a[t];++t)e._a[t]=a[t]=s[t];for(;t<7;t++)e._a[t]=a[t]=null==e._a[t]?2===t?1:0:e._a[t];24===e._a[ge]&&0===e._a[ve]&&0===e._a[pe]&&0===e._a[we]&&(e._nextDay=!0,e._a[ge]=0),e._d=(e._useUTC?Ge:function(e,t,n,s,i,r,a){var o;return e<100&&0<=e?(o=new Date(e+400,t,n,s,i,r,a),isFinite(o.getFullYear())&&o.setFullYear(e)):o=new Date(e,t,n,s,i,r,a),o}).apply(null,a),i=e._useUTC?e._d.getUTCDay():e._d.getDay(),null!=e._tzm&&e._d.setUTCMinutes(e._d.getUTCMinutes()-e._tzm),e._nextDay&&(e._a[ge]=24),e._w&&void 0!==e._w.d&&e._w.d!==i&&(g(e).weekdayMismatch=!0)}}var mt=/^\s*((?:[+-]\d{6}|\d{4})-(?:\d\d-\d\d|W\d\d-\d|W\d\d|\d\d\d|\d\d))(?:(T| )(\d\d(?::\d\d(?::\d\d(?:[.,]\d+)?)?)?)([\+\-]\d\d(?::?\d\d)?|\s*Z)?)?$/,_t=/^\s*((?:[+-]\d{6}|\d{4})(?:\d\d\d\d|W\d\d\d|W\d\d|\d\d\d|\d\d))(?:(T| )(\d\d(?:\d\d(?:\d\d(?:[.,]\d+)?)?)?)([\+\-]\d\d(?::?\d\d)?|\s*Z)?)?$/,yt=/Z|[+-]\d\d(?::?\d\d)?/,gt=[["YYYYYY-MM-DD",/[+-]\d{6}-\d\d-\d\d/],["YYYY-MM-DD",/\d{4}-\d\d-\d\d/],["GGGG-[W]WW-E",/\d{4}-W\d\d-\d/],["GGGG-[W]WW",/\d{4}-W\d\d/,!1],["YYYY-DDD",/\d{4}-\d{3}/],["YYYY-MM",/\d{4}-\d\d/,!1],["YYYYYYMMDD",/[+-]\d{10}/],["YYYYMMDD",/\d{8}/],["GGGG[W]WWE",/\d{4}W\d{3}/],["GGGG[W]WW",/\d{4}W\d{2}/,!1],["YYYYDDD",/\d{7}/]],vt=[["HH:mm:ss.SSSS",/\d\d:\d\d:\d\d\.\d+/],["HH:mm:ss,SSSS",/\d\d:\d\d:\d\d,\d+/],["HH:mm:ss",/\d\d:\d\d:\d\d/],["HH:mm",/\d\d:\d\d/],["HHmmss.SSSS",/\d\d\d\d\d\d\.\d+/],["HHmmss,SSSS",/\d\d\d\d\d\d,\d+/],["HHmmss",/\d\d\d\d\d\d/],["HHmm",/\d\d\d\d/],["HH",/\d\d/]],pt=/^\/?Date\((\-?\d+)/i;function wt(e){var t,n,s,i,r,a,o=e._i,u=mt.exec(o)||_t.exec(o);if(u){for(g(e).iso=!0,t=0,n=gt.length;t<n;t++)if(gt[t][1].exec(u[1])){i=gt[t][0],s=!1!==gt[t][2];break}if(null==i)return void(e._isValid=!1);if(u[3]){for(t=0,n=vt.length;t<n;t++)if(vt[t][1].exec(u[3])){r=(u[2]||" ")+vt[t][0];break}if(null==r)return void(e._isValid=!1)}if(!s&&null!=r)return void(e._isValid=!1);if(u[4]){if(!yt.exec(u[4]))return void(e._isValid=!1);a="Z"}e._f=i+(r||"")+(a||""),Yt(e)}else e._isValid=!1}var Mt=/^(?:(Mon|Tue|Wed|Thu|Fri|Sat|Sun),?\s)?(\d{1,2})\s(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s(\d{2,4})\s(\d\d):(\d\d)(?::(\d\d))?\s(?:(UT|GMT|[ECMP][SD]T)|([Zz])|([+-]\d{4}))$/;function kt(e,t,n,s,i,r){var a=[function(e){var t=parseInt(e,10);{if(t<=49)return 2e3+t;if(t<=999)return 1900+t}return t}(e),He.indexOf(t),parseInt(n,10),parseInt(s,10),parseInt(i,10)];return r&&a.push(parseInt(r,10)),a}var St={UT:0,GMT:0,EDT:-240,EST:-300,CDT:-300,CST:-360,MDT:-360,MST:-420,PDT:-420,PST:-480};function Dt(e){var t,n,s,i=Mt.exec(e._i.replace(/\([^)]*\)|[\n\t]/g," ").replace(/(\s\s+)/g," ").replace(/^\s\s*/,"").replace(/\s\s*$/,""));if(i){var r=kt(i[4],i[3],i[2],i[5],i[6],i[7]);if(t=i[1],n=r,s=e,t&&ze.indexOf(t)!==new Date(n[0],n[1],n[2]).getDay()&&(g(s).weekdayMismatch=!0,!(s._isValid=!1)))return;e._a=r,e._tzm=function(e,t,n){if(e)return St[e];if(t)return 0;var s=parseInt(n,10),i=s%100;return(s-i)/100*60+i}(i[8],i[9],i[10]),e._d=Ge.apply(null,e._a),e._d.setUTCMinutes(e._d.getUTCMinutes()-e._tzm),g(e).rfc2822=!0}else e._isValid=!1}function Yt(e){if(e._f!==c.ISO_8601)if(e._f!==c.RFC_2822){e._a=[],g(e).empty=!0;var t,n,s,i,r,a,o,u,l=""+e._i,h=l.length,d=0;for(s=j(e._f,e._locale).match(N)||[],t=0;t<s.length;t++)i=s[t],(n=(l.match(le(i,e))||[])[0])&&(0<(r=l.substr(0,l.indexOf(n))).length&&g(e).unusedInput.push(r),l=l.slice(l.indexOf(n)+n.length),d+=n.length),E[i]?(n?g(e).empty=!1:g(e).unusedTokens.push(i),a=i,u=e,null!=(o=n)&&m(de,a)&&de[a](o,u._a,u,a)):e._strict&&!n&&g(e).unusedTokens.push(i);g(e).charsLeftOver=h-d,0<l.length&&g(e).unusedInput.push(l),e._a[ge]<=12&&!0===g(e).bigHour&&0<e._a[ge]&&(g(e).bigHour=void 0),g(e).parsedDateParts=e._a.slice(0),g(e).meridiem=e._meridiem,e._a[ge]=function(e,t,n){var s;if(null==n)return t;return null!=e.meridiemHour?e.meridiemHour(t,n):(null!=e.isPM&&((s=e.isPM(n))&&t<12&&(t+=12),s||12!==t||(t=0)),t)}(e._locale,e._a[ge],e._meridiem),ft(e),dt(e)}else Dt(e);else wt(e)}function Ot(e){var t,n,s,i,r=e._i,a=e._f;return e._locale=e._locale||ht(e._l),null===r||void 0===a&&""===r?p({nullInput:!0}):("string"==typeof r&&(e._i=r=e._locale.preparse(r)),k(r)?new M(dt(r)):(d(r)?e._d=r:o(a)?function(e){var t,n,s,i,r;if(0===e._f.length)return g(e).invalidFormat=!0,e._d=new Date(NaN);for(i=0;i<e._f.length;i++)r=0,t=w({},e),null!=e._useUTC&&(t._useUTC=e._useUTC),t._f=e._f[i],Yt(t),v(t)&&(r+=g(t).charsLeftOver,r+=10*g(t).unusedTokens.length,g(t).score=r,(null==s||r<s)&&(s=r,n=t));_(e,n||t)}(e):a?Yt(e):l(n=(t=e)._i)?t._d=new Date(c.now()):d(n)?t._d=new Date(n.valueOf()):"string"==typeof n?(s=t,null===(i=pt.exec(s._i))?(wt(s),!1===s._isValid&&(delete s._isValid,Dt(s),!1===s._isValid&&(delete s._isValid,c.createFromInputFallback(s)))):s._d=new Date(+i[1])):o(n)?(t._a=f(n.slice(0),function(e){return parseInt(e,10)}),ft(t)):u(n)?function(e){if(!e._d){var t=R(e._i);e._a=f([t.year,t.month,t.day||t.date,t.hour,t.minute,t.second,t.millisecond],function(e){return e&&parseInt(e,10)}),ft(e)}}(t):h(n)?t._d=new Date(n):c.createFromInputFallback(t),v(e)||(e._d=null),e))}function Tt(e,t,n,s,i){var r,a={};return!0!==n&&!1!==n||(s=n,n=void 0),(u(e)&&function(e){if(Object.getOwnPropertyNames)return 0===Object.getOwnPropertyNames(e).length;var t;for(t in e)if(e.hasOwnProperty(t))return!1;return!0}(e)||o(e)&&0===e.length)&&(e=void 0),a._isAMomentObject=!0,a._useUTC=a._isUTC=i,a._l=n,a._i=e,a._f=t,a._strict=s,(r=new M(dt(Ot(a))))._nextDay&&(r.add(1,"d"),r._nextDay=void 0),r}function bt(e,t,n,s){return Tt(e,t,n,s,!1)}c.createFromInputFallback=n("value provided is not in a recognized RFC2822 or ISO format. moment construction falls back to js Date(), which is not reliable across all browsers and versions. Non RFC2822/ISO date formats are discouraged and will be removed in an upcoming major release. Please refer to http://momentjs.com/guides/#/warnings/js-date/ for more info.",function(e){e._d=new Date(e._i+(e._useUTC?" UTC":""))}),c.ISO_8601=function(){},c.RFC_2822=function(){};var xt=n("moment().min is deprecated, use moment.max instead. http://momentjs.com/guides/#/warnings/min-max/",function(){var e=bt.apply(null,arguments);return this.isValid()&&e.isValid()?e<this?this:e:p()}),Pt=n("moment().max is deprecated, use moment.min instead. http://momentjs.com/guides/#/warnings/min-max/",function(){var e=bt.apply(null,arguments);return this.isValid()&&e.isValid()?this<e?this:e:p()});function Wt(e,t){var n,s;if(1===t.length&&o(t[0])&&(t=t[0]),!t.length)return bt();for(n=t[0],s=1;s<t.length;++s)t[s].isValid()&&!t[s][e](n)||(n=t[s]);return n}var Ct=["year","quarter","month","week","day","hour","minute","second","millisecond"];function Ht(e){var t=R(e),n=t.year||0,s=t.quarter||0,i=t.month||0,r=t.week||t.isoWeek||0,a=t.day||0,o=t.hour||0,u=t.minute||0,l=t.second||0,h=t.millisecond||0;this._isValid=function(e){for(var t in e)if(-1===Ye.call(Ct,t)||null!=e[t]&&isNaN(e[t]))return!1;for(var n=!1,s=0;s<Ct.length;++s)if(e[Ct[s]]){if(n)return!1;parseFloat(e[Ct[s]])!==D(e[Ct[s]])&&(n=!0)}return!0}(t),this._milliseconds=+h+1e3*l+6e4*u+1e3*o*60*60,this._days=+a+7*r,this._months=+i+3*s+12*n,this._data={},this._locale=ht(),this._bubble()}function Rt(e){return e instanceof Ht}function Ut(e){return e<0?-1*Math.round(-1*e):Math.round(e)}function Ft(e,n){I(e,0,0,function(){var e=this.utcOffset(),t="+";return e<0&&(e=-e,t="-"),t+L(~~(e/60),2)+n+L(~~e%60,2)})}Ft("Z",":"),Ft("ZZ",""),ue("Z",re),ue("ZZ",re),ce(["Z","ZZ"],function(e,t,n){n._useUTC=!0,n._tzm=Nt(re,e)});var Lt=/([\+\-]|\d\d)/gi;function Nt(e,t){var n=(t||"").match(e);if(null===n)return null;var s=((n[n.length-1]||[])+"").match(Lt)||["-",0,0],i=60*s[1]+D(s[2]);return 0===i?0:"+"===s[0]?i:-i}function Gt(e,t){var n,s;return t._isUTC?(n=t.clone(),s=(k(e)||d(e)?e.valueOf():bt(e).valueOf())-n.valueOf(),n._d.setTime(n._d.valueOf()+s),c.updateOffset(n,!1),n):bt(e).local()}function Vt(e){return 15*-Math.round(e._d.getTimezoneOffset()/15)}function Et(){return!!this.isValid()&&(this._isUTC&&0===this._offset)}c.updateOffset=function(){};var It=/^(\-|\+)?(?:(\d*)[. ])?(\d+)\:(\d+)(?:\:(\d+)(\.\d*)?)?$/,At=/^(-|\+)?P(?:([-+]?[0-9,.]*)Y)?(?:([-+]?[0-9,.]*)M)?(?:([-+]?[0-9,.]*)W)?(?:([-+]?[0-9,.]*)D)?(?:T(?:([-+]?[0-9,.]*)H)?(?:([-+]?[0-9,.]*)M)?(?:([-+]?[0-9,.]*)S)?)?$/;function jt(e,t){var n,s,i,r=e,a=null;return Rt(e)?r={ms:e._milliseconds,d:e._days,M:e._months}:h(e)?(r={},t?r[t]=e:r.milliseconds=e):(a=It.exec(e))?(n="-"===a[1]?-1:1,r={y:0,d:D(a[ye])*n,h:D(a[ge])*n,m:D(a[ve])*n,s:D(a[pe])*n,ms:D(Ut(1e3*a[we]))*n}):(a=At.exec(e))?(n="-"===a[1]?-1:1,r={y:Zt(a[2],n),M:Zt(a[3],n),w:Zt(a[4],n),d:Zt(a[5],n),h:Zt(a[6],n),m:Zt(a[7],n),s:Zt(a[8],n)}):null==r?r={}:"object"==typeof r&&("from"in r||"to"in r)&&(i=function(e,t){var n;if(!e.isValid()||!t.isValid())return{milliseconds:0,months:0};t=Gt(t,e),e.isBefore(t)?n=zt(e,t):((n=zt(t,e)).milliseconds=-n.milliseconds,n.months=-n.months);return n}(bt(r.from),bt(r.to)),(r={}).ms=i.milliseconds,r.M=i.months),s=new Ht(r),Rt(e)&&m(e,"_locale")&&(s._locale=e._locale),s}function Zt(e,t){var n=e&&parseFloat(e.replace(",","."));return(isNaN(n)?0:n)*t}function zt(e,t){var n={};return n.months=t.month()-e.month()+12*(t.year()-e.year()),e.clone().add(n.months,"M").isAfter(t)&&--n.months,n.milliseconds=+t-+e.clone().add(n.months,"M"),n}function $t(s,i){return function(e,t){var n;return null===t||isNaN(+t)||(T(i,"moment()."+i+"(period, number) is deprecated. Please use moment()."+i+"(number, period). See http://momentjs.com/guides/#/warnings/add-inverted-param/ for more info."),n=e,e=t,t=n),qt(this,jt(e="string"==typeof e?+e:e,t),s),this}}function qt(e,t,n,s){var i=t._milliseconds,r=Ut(t._days),a=Ut(t._months);e.isValid()&&(s=null==s||s,a&&Re(e,be(e,"Month")+a*n),r&&xe(e,"Date",be(e,"Date")+r*n),i&&e._d.setTime(e._d.valueOf()+i*n),s&&c.updateOffset(e,r||a))}jt.fn=Ht.prototype,jt.invalid=function(){return jt(NaN)};var Jt=$t(1,"add"),Bt=$t(-1,"subtract");function Qt(e,t){var n=12*(t.year()-e.year())+(t.month()-e.month()),s=e.clone().add(n,"months");return-(n+(t-s<0?(t-s)/(s-e.clone().add(n-1,"months")):(t-s)/(e.clone().add(n+1,"months")-s)))||0}function Xt(e){var t;return void 0===e?this._locale._abbr:(null!=(t=ht(e))&&(this._locale=t),this)}c.defaultFormat="YYYY-MM-DDTHH:mm:ssZ",c.defaultFormatUtc="YYYY-MM-DDTHH:mm:ss[Z]";var Kt=n("moment().lang() is deprecated. Instead, use moment().localeData() to get the language configuration. Use moment().locale() to change languages.",function(e){return void 0===e?this.localeData():this.locale(e)});function en(){return this._locale}var tn=126227808e5;function nn(e,t){return(e%t+t)%t}function sn(e,t,n){return e<100&&0<=e?new Date(e+400,t,n)-tn:new Date(e,t,n).valueOf()}function rn(e,t,n){return e<100&&0<=e?Date.UTC(e+400,t,n)-tn:Date.UTC(e,t,n)}function an(e,t){I(0,[e,e.length],0,t)}function on(e,t,n,s,i){var r;return null==e?Ie(this,s,i).year:((r=Ae(e,s,i))<t&&(t=r),function(e,t,n,s,i){var r=Ee(e,t,n,s,i),a=Ge(r.year,0,r.dayOfYear);return this.year(a.getUTCFullYear()),this.month(a.getUTCMonth()),this.date(a.getUTCDate()),this}.call(this,e,t,n,s,i))}I(0,["gg",2],0,function(){return this.weekYear()%100}),I(0,["GG",2],0,function(){return this.isoWeekYear()%100}),an("gggg","weekYear"),an("ggggg","weekYear"),an("GGGG","isoWeekYear"),an("GGGGG","isoWeekYear"),C("weekYear","gg"),C("isoWeekYear","GG"),F("weekYear",1),F("isoWeekYear",1),ue("G",se),ue("g",se),ue("GG",B,z),ue("gg",B,z),ue("GGGG",ee,q),ue("gggg",ee,q),ue("GGGGG",te,J),ue("ggggg",te,J),fe(["gggg","ggggg","GGGG","GGGGG"],function(e,t,n,s){t[s.substr(0,2)]=D(e)}),fe(["gg","GG"],function(e,t,n,s){t[s]=c.parseTwoDigitYear(e)}),I("Q",0,"Qo","quarter"),C("quarter","Q"),F("quarter",7),ue("Q",Z),ce("Q",function(e,t){t[_e]=3*(D(e)-1)}),I("D",["DD",2],"Do","date"),C("date","D"),F("date",9),ue("D",B),ue("DD",B,z),ue("Do",function(e,t){return e?t._dayOfMonthOrdinalParse||t._ordinalParse:t._dayOfMonthOrdinalParseLenient}),ce(["D","DD"],ye),ce("Do",function(e,t){t[ye]=D(e.match(B)[0])});var un=Te("Date",!0);I("DDD",["DDDD",3],"DDDo","dayOfYear"),C("dayOfYear","DDD"),F("dayOfYear",4),ue("DDD",K),ue("DDDD",$),ce(["DDD","DDDD"],function(e,t,n){n._dayOfYear=D(e)}),I("m",["mm",2],0,"minute"),C("minute","m"),F("minute",14),ue("m",B),ue("mm",B,z),ce(["m","mm"],ve);var ln=Te("Minutes",!1);I("s",["ss",2],0,"second"),C("second","s"),F("second",15),ue("s",B),ue("ss",B,z),ce(["s","ss"],pe);var hn,dn=Te("Seconds",!1);for(I("S",0,0,function(){return~~(this.millisecond()/100)}),I(0,["SS",2],0,function(){return~~(this.millisecond()/10)}),I(0,["SSS",3],0,"millisecond"),I(0,["SSSS",4],0,function(){return 10*this.millisecond()}),I(0,["SSSSS",5],0,function(){return 100*this.millisecond()}),I(0,["SSSSSS",6],0,function(){return 1e3*this.millisecond()}),I(0,["SSSSSSS",7],0,function(){return 1e4*this.millisecond()}),I(0,["SSSSSSSS",8],0,function(){return 1e5*this.millisecond()}),I(0,["SSSSSSSSS",9],0,function(){return 1e6*this.millisecond()}),C("millisecond","ms"),F("millisecond",16),ue("S",K,Z),ue("SS",K,z),ue("SSS",K,$),hn="SSSS";hn.length<=9;hn+="S")ue(hn,ne);function cn(e,t){t[we]=D(1e3*("0."+e))}for(hn="S";hn.length<=9;hn+="S")ce(hn,cn);var fn=Te("Milliseconds",!1);I("z",0,0,"zoneAbbr"),I("zz",0,0,"zoneName");var mn=M.prototype;function _n(e){return e}mn.add=Jt,mn.calendar=function(e,t){var n=e||bt(),s=Gt(n,this).startOf("day"),i=c.calendarFormat(this,s)||"sameElse",r=t&&(b(t[i])?t[i].call(this,n):t[i]);return this.format(r||this.localeData().calendar(i,this,bt(n)))},mn.clone=function(){return new M(this)},mn.diff=function(e,t,n){var s,i,r;if(!this.isValid())return NaN;if(!(s=Gt(e,this)).isValid())return NaN;switch(i=6e4*(s.utcOffset()-this.utcOffset()),t=H(t)){case"year":r=Qt(this,s)/12;break;case"month":r=Qt(this,s);break;case"quarter":r=Qt(this,s)/3;break;case"second":r=(this-s)/1e3;break;case"minute":r=(this-s)/6e4;break;case"hour":r=(this-s)/36e5;break;case"day":r=(this-s-i)/864e5;break;case"week":r=(this-s-i)/6048e5;break;default:r=this-s}return n?r:S(r)},mn.endOf=function(e){var t;if(void 0===(e=H(e))||"millisecond"===e||!this.isValid())return this;var n=this._isUTC?rn:sn;switch(e){case"year":t=n(this.year()+1,0,1)-1;break;case"quarter":t=n(this.year(),this.month()-this.month()%3+3,1)-1;break;case"month":t=n(this.year(),this.month()+1,1)-1;break;case"week":t=n(this.year(),this.month(),this.date()-this.weekday()+7)-1;break;case"isoWeek":t=n(this.year(),this.month(),this.date()-(this.isoWeekday()-1)+7)-1;break;case"day":case"date":t=n(this.year(),this.month(),this.date()+1)-1;break;case"hour":t=this._d.valueOf(),t+=36e5-nn(t+(this._isUTC?0:6e4*this.utcOffset()),36e5)-1;break;case"minute":t=this._d.valueOf(),t+=6e4-nn(t,6e4)-1;break;case"second":t=this._d.valueOf(),t+=1e3-nn(t,1e3)-1;break}return this._d.setTime(t),c.updateOffset(this,!0),this},mn.format=function(e){e||(e=this.isUtc()?c.defaultFormatUtc:c.defaultFormat);var t=A(this,e);return this.localeData().postformat(t)},mn.from=function(e,t){return this.isValid()&&(k(e)&&e.isValid()||bt(e).isValid())?jt({to:this,from:e}).locale(this.locale()).humanize(!t):this.localeData().invalidDate()},mn.fromNow=function(e){return this.from(bt(),e)},mn.to=function(e,t){return this.isValid()&&(k(e)&&e.isValid()||bt(e).isValid())?jt({from:this,to:e}).locale(this.locale()).humanize(!t):this.localeData().invalidDate()},mn.toNow=function(e){return this.to(bt(),e)},mn.get=function(e){return b(this[e=H(e)])?this[e]():this},mn.invalidAt=function(){return g(this).overflow},mn.isAfter=function(e,t){var n=k(e)?e:bt(e);return!(!this.isValid()||!n.isValid())&&("millisecond"===(t=H(t)||"millisecond")?this.valueOf()>n.valueOf():n.valueOf()<this.clone().startOf(t).valueOf())},mn.isBefore=function(e,t){var n=k(e)?e:bt(e);return!(!this.isValid()||!n.isValid())&&("millisecond"===(t=H(t)||"millisecond")?this.valueOf()<n.valueOf():this.clone().endOf(t).valueOf()<n.valueOf())},mn.isBetween=function(e,t,n,s){var i=k(e)?e:bt(e),r=k(t)?t:bt(t);return!!(this.isValid()&&i.isValid()&&r.isValid())&&("("===(s=s||"()")[0]?this.isAfter(i,n):!this.isBefore(i,n))&&(")"===s[1]?this.isBefore(r,n):!this.isAfter(r,n))},mn.isSame=function(e,t){var n,s=k(e)?e:bt(e);return!(!this.isValid()||!s.isValid())&&("millisecond"===(t=H(t)||"millisecond")?this.valueOf()===s.valueOf():(n=s.valueOf(),this.clone().startOf(t).valueOf()<=n&&n<=this.clone().endOf(t).valueOf()))},mn.isSameOrAfter=function(e,t){return this.isSame(e,t)||this.isAfter(e,t)},mn.isSameOrBefore=function(e,t){return this.isSame(e,t)||this.isBefore(e,t)},mn.isValid=function(){return v(this)},mn.lang=Kt,mn.locale=Xt,mn.localeData=en,mn.max=Pt,mn.min=xt,mn.parsingFlags=function(){return _({},g(this))},mn.set=function(e,t){if("object"==typeof e)for(var n=function(e){var t=[];for(var n in e)t.push({unit:n,priority:U[n]});return t.sort(function(e,t){return e.priority-t.priority}),t}(e=R(e)),s=0;s<n.length;s++)this[n[s].unit](e[n[s].unit]);else if(b(this[e=H(e)]))return this[e](t);return this},mn.startOf=function(e){var t;if(void 0===(e=H(e))||"millisecond"===e||!this.isValid())return this;var n=this._isUTC?rn:sn;switch(e){case"year":t=n(this.year(),0,1);break;case"quarter":t=n(this.year(),this.month()-this.month()%3,1);break;case"month":t=n(this.year(),this.month(),1);break;case"week":t=n(this.year(),this.month(),this.date()-this.weekday());break;case"isoWeek":t=n(this.year(),this.month(),this.date()-(this.isoWeekday()-1));break;case"day":case"date":t=n(this.year(),this.month(),this.date());break;case"hour":t=this._d.valueOf(),t-=nn(t+(this._isUTC?0:6e4*this.utcOffset()),36e5);break;case"minute":t=this._d.valueOf(),t-=nn(t,6e4);break;case"second":t=this._d.valueOf(),t-=nn(t,1e3);break}return this._d.setTime(t),c.updateOffset(this,!0),this},mn.subtract=Bt,mn.toArray=function(){var e=this;return[e.year(),e.month(),e.date(),e.hour(),e.minute(),e.second(),e.millisecond()]},mn.toObject=function(){var e=this;return{years:e.year(),months:e.month(),date:e.date(),hours:e.hours(),minutes:e.minutes(),seconds:e.seconds(),milliseconds:e.milliseconds()}},mn.toDate=function(){return new Date(this.valueOf())},mn.toISOString=function(e){if(!this.isValid())return null;var t=!0!==e,n=t?this.clone().utc():this;return n.year()<0||9999<n.year()?A(n,t?"YYYYYY-MM-DD[T]HH:mm:ss.SSS[Z]":"YYYYYY-MM-DD[T]HH:mm:ss.SSSZ"):b(Date.prototype.toISOString)?t?this.toDate().toISOString():new Date(this.valueOf()+60*this.utcOffset()*1e3).toISOString().replace("Z",A(n,"Z")):A(n,t?"YYYY-MM-DD[T]HH:mm:ss.SSS[Z]":"YYYY-MM-DD[T]HH:mm:ss.SSSZ")},mn.inspect=function(){if(!this.isValid())return"moment.invalid(/* "+this._i+" */)";var e="moment",t="";this.isLocal()||(e=0===this.utcOffset()?"moment.utc":"moment.parseZone",t="Z");var n="["+e+'("]',s=0<=this.year()&&this.year()<=9999?"YYYY":"YYYYYY",i=t+'[")]';return this.format(n+s+"-MM-DD[T]HH:mm:ss.SSS"+i)},mn.toJSON=function(){return this.isValid()?this.toISOString():null},mn.toString=function(){return this.clone().locale("en").format("ddd MMM DD YYYY HH:mm:ss [GMT]ZZ")},mn.unix=function(){return Math.floor(this.valueOf()/1e3)},mn.valueOf=function(){return this._d.valueOf()-6e4*(this._offset||0)},mn.creationData=function(){return{input:this._i,format:this._f,locale:this._locale,isUTC:this._isUTC,strict:this._strict}},mn.year=Oe,mn.isLeapYear=function(){return De(this.year())},mn.weekYear=function(e){return on.call(this,e,this.week(),this.weekday(),this.localeData()._week.dow,this.localeData()._week.doy)},mn.isoWeekYear=function(e){return on.call(this,e,this.isoWeek(),this.isoWeekday(),1,4)},mn.quarter=mn.quarters=function(e){return null==e?Math.ceil((this.month()+1)/3):this.month(3*(e-1)+this.month()%3)},mn.month=Ue,mn.daysInMonth=function(){return Pe(this.year(),this.month())},mn.week=mn.weeks=function(e){var t=this.localeData().week(this);return null==e?t:this.add(7*(e-t),"d")},mn.isoWeek=mn.isoWeeks=function(e){var t=Ie(this,1,4).week;return null==e?t:this.add(7*(e-t),"d")},mn.weeksInYear=function(){var e=this.localeData()._week;return Ae(this.year(),e.dow,e.doy)},mn.isoWeeksInYear=function(){return Ae(this.year(),1,4)},mn.date=un,mn.day=mn.days=function(e){if(!this.isValid())return null!=e?this:NaN;var t,n,s=this._isUTC?this._d.getUTCDay():this._d.getDay();return null!=e?(t=e,n=this.localeData(),e="string"!=typeof t?t:isNaN(t)?"number"==typeof(t=n.weekdaysParse(t))?t:null:parseInt(t,10),this.add(e-s,"d")):s},mn.weekday=function(e){if(!this.isValid())return null!=e?this:NaN;var t=(this.day()+7-this.localeData()._week.dow)%7;return null==e?t:this.add(e-t,"d")},mn.isoWeekday=function(e){if(!this.isValid())return null!=e?this:NaN;if(null==e)return this.day()||7;var t,n,s=(t=e,n=this.localeData(),"string"==typeof t?n.weekdaysParse(t)%7||7:isNaN(t)?null:t);return this.day(this.day()%7?s:s-7)},mn.dayOfYear=function(e){var t=Math.round((this.clone().startOf("day")-this.clone().startOf("year"))/864e5)+1;return null==e?t:this.add(e-t,"d")},mn.hour=mn.hours=nt,mn.minute=mn.minutes=ln,mn.second=mn.seconds=dn,mn.millisecond=mn.milliseconds=fn,mn.utcOffset=function(e,t,n){var s,i=this._offset||0;if(!this.isValid())return null!=e?this:NaN;if(null==e)return this._isUTC?i:Vt(this);if("string"==typeof e){if(null===(e=Nt(re,e)))return this}else Math.abs(e)<16&&!n&&(e*=60);return!this._isUTC&&t&&(s=Vt(this)),this._offset=e,this._isUTC=!0,null!=s&&this.add(s,"m"),i!==e&&(!t||this._changeInProgress?qt(this,jt(e-i,"m"),1,!1):this._changeInProgress||(this._changeInProgress=!0,c.updateOffset(this,!0),this._changeInProgress=null)),this},mn.utc=function(e){return this.utcOffset(0,e)},mn.local=function(e){return this._isUTC&&(this.utcOffset(0,e),this._isUTC=!1,e&&this.subtract(Vt(this),"m")),this},mn.parseZone=function(){if(null!=this._tzm)this.utcOffset(this._tzm,!1,!0);else if("string"==typeof this._i){var e=Nt(ie,this._i);null!=e?this.utcOffset(e):this.utcOffset(0,!0)}return this},mn.hasAlignedHourOffset=function(e){return!!this.isValid()&&(e=e?bt(e).utcOffset():0,(this.utcOffset()-e)%60==0)},mn.isDST=function(){return this.utcOffset()>this.clone().month(0).utcOffset()||this.utcOffset()>this.clone().month(5).utcOffset()},mn.isLocal=function(){return!!this.isValid()&&!this._isUTC},mn.isUtcOffset=function(){return!!this.isValid()&&this._isUTC},mn.isUtc=Et,mn.isUTC=Et,mn.zoneAbbr=function(){return this._isUTC?"UTC":""},mn.zoneName=function(){return this._isUTC?"Coordinated Universal Time":""},mn.dates=n("dates accessor is deprecated. Use date instead.",un),mn.months=n("months accessor is deprecated. Use month instead",Ue),mn.years=n("years accessor is deprecated. Use year instead",Oe),mn.zone=n("moment().zone is deprecated, use moment().utcOffset instead. http://momentjs.com/guides/#/warnings/zone/",function(e,t){return null!=e?("string"!=typeof e&&(e=-e),this.utcOffset(e,t),this):-this.utcOffset()}),mn.isDSTShifted=n("isDSTShifted is deprecated. See http://momentjs.com/guides/#/warnings/dst-shifted/ for more information",function(){if(!l(this._isDSTShifted))return this._isDSTShifted;var e={};if(w(e,this),(e=Ot(e))._a){var t=e._isUTC?y(e._a):bt(e._a);this._isDSTShifted=this.isValid()&&0<a(e._a,t.toArray())}else this._isDSTShifted=!1;return this._isDSTShifted});var yn=P.prototype;function gn(e,t,n,s){var i=ht(),r=y().set(s,t);return i[n](r,e)}function vn(e,t,n){if(h(e)&&(t=e,e=void 0),e=e||"",null!=t)return gn(e,t,n,"month");var s,i=[];for(s=0;s<12;s++)i[s]=gn(e,s,n,"month");return i}function pn(e,t,n,s){t=("boolean"==typeof e?h(t)&&(n=t,t=void 0):(t=e,e=!1,h(n=t)&&(n=t,t=void 0)),t||"");var i,r=ht(),a=e?r._week.dow:0;if(null!=n)return gn(t,(n+a)%7,s,"day");var o=[];for(i=0;i<7;i++)o[i]=gn(t,(i+a)%7,s,"day");return o}yn.calendar=function(e,t,n){var s=this._calendar[e]||this._calendar.sameElse;return b(s)?s.call(t,n):s},yn.longDateFormat=function(e){var t=this._longDateFormat[e],n=this._longDateFormat[e.toUpperCase()];return t||!n?t:(this._longDateFormat[e]=n.replace(/MMMM|MM|DD|dddd/g,function(e){return e.slice(1)}),this._longDateFormat[e])},yn.invalidDate=function(){return this._invalidDate},yn.ordinal=function(e){return this._ordinal.replace("%d",e)},yn.preparse=_n,yn.postformat=_n,yn.relativeTime=function(e,t,n,s){var i=this._relativeTime[n];return b(i)?i(e,t,n,s):i.replace(/%d/i,e)},yn.pastFuture=function(e,t){var n=this._relativeTime[0<e?"future":"past"];return b(n)?n(t):n.replace(/%s/i,t)},yn.set=function(e){var t,n;for(n in e)b(t=e[n])?this[n]=t:this["_"+n]=t;this._config=e,this._dayOfMonthOrdinalParseLenient=new RegExp((this._dayOfMonthOrdinalParse.source||this._ordinalParse.source)+"|"+/\d{1,2}/.source)},yn.months=function(e,t){return e?o(this._months)?this._months[e.month()]:this._months[(this._months.isFormat||We).test(t)?"format":"standalone"][e.month()]:o(this._months)?this._months:this._months.standalone},yn.monthsShort=function(e,t){return e?o(this._monthsShort)?this._monthsShort[e.month()]:this._monthsShort[We.test(t)?"format":"standalone"][e.month()]:o(this._monthsShort)?this._monthsShort:this._monthsShort.standalone},yn.monthsParse=function(e,t,n){var s,i,r;if(this._monthsParseExact)return function(e,t,n){var s,i,r,a=e.toLocaleLowerCase();if(!this._monthsParse)for(this._monthsParse=[],this._longMonthsParse=[],this._shortMonthsParse=[],s=0;s<12;++s)r=y([2e3,s]),this._shortMonthsParse[s]=this.monthsShort(r,"").toLocaleLowerCase(),this._longMonthsParse[s]=this.months(r,"").toLocaleLowerCase();return n?"MMM"===t?-1!==(i=Ye.call(this._shortMonthsParse,a))?i:null:-1!==(i=Ye.call(this._longMonthsParse,a))?i:null:"MMM"===t?-1!==(i=Ye.call(this._shortMonthsParse,a))?i:-1!==(i=Ye.call(this._longMonthsParse,a))?i:null:-1!==(i=Ye.call(this._longMonthsParse,a))?i:-1!==(i=Ye.call(this._shortMonthsParse,a))?i:null}.call(this,e,t,n);for(this._monthsParse||(this._monthsParse=[],this._longMonthsParse=[],this._shortMonthsParse=[]),s=0;s<12;s++){if(i=y([2e3,s]),n&&!this._longMonthsParse[s]&&(this._longMonthsParse[s]=new RegExp("^"+this.months(i,"").replace(".","")+"$","i"),this._shortMonthsParse[s]=new RegExp("^"+this.monthsShort(i,"").replace(".","")+"$","i")),n||this._monthsParse[s]||(r="^"+this.months(i,"")+"|^"+this.monthsShort(i,""),this._monthsParse[s]=new RegExp(r.replace(".",""),"i")),n&&"MMMM"===t&&this._longMonthsParse[s].test(e))return s;if(n&&"MMM"===t&&this._shortMonthsParse[s].test(e))return s;if(!n&&this._monthsParse[s].test(e))return s}},yn.monthsRegex=function(e){return this._monthsParseExact?(m(this,"_monthsRegex")||Ne.call(this),e?this._monthsStrictRegex:this._monthsRegex):(m(this,"_monthsRegex")||(this._monthsRegex=Le),this._monthsStrictRegex&&e?this._monthsStrictRegex:this._monthsRegex)},yn.monthsShortRegex=function(e){return this._monthsParseExact?(m(this,"_monthsRegex")||Ne.call(this),e?this._monthsShortStrictRegex:this._monthsShortRegex):(m(this,"_monthsShortRegex")||(this._monthsShortRegex=Fe),this._monthsShortStrictRegex&&e?this._monthsShortStrictRegex:this._monthsShortRegex)},yn.week=function(e){return Ie(e,this._week.dow,this._week.doy).week},yn.firstDayOfYear=function(){return this._week.doy},yn.firstDayOfWeek=function(){return this._week.dow},yn.weekdays=function(e,t){var n=o(this._weekdays)?this._weekdays:this._weekdays[e&&!0!==e&&this._weekdays.isFormat.test(t)?"format":"standalone"];return!0===e?je(n,this._week.dow):e?n[e.day()]:n},yn.weekdaysMin=function(e){return!0===e?je(this._weekdaysMin,this._week.dow):e?this._weekdaysMin[e.day()]:this._weekdaysMin},yn.weekdaysShort=function(e){return!0===e?je(this._weekdaysShort,this._week.dow):e?this._weekdaysShort[e.day()]:this._weekdaysShort},yn.weekdaysParse=function(e,t,n){var s,i,r;if(this._weekdaysParseExact)return function(e,t,n){var s,i,r,a=e.toLocaleLowerCase();if(!this._weekdaysParse)for(this._weekdaysParse=[],this._shortWeekdaysParse=[],this._minWeekdaysParse=[],s=0;s<7;++s)r=y([2e3,1]).day(s),this._minWeekdaysParse[s]=this.weekdaysMin(r,"").toLocaleLowerCase(),this._shortWeekdaysParse[s]=this.weekdaysShort(r,"").toLocaleLowerCase(),this._weekdaysParse[s]=this.weekdays(r,"").toLocaleLowerCase();return n?"dddd"===t?-1!==(i=Ye.call(this._weekdaysParse,a))?i:null:"ddd"===t?-1!==(i=Ye.call(this._shortWeekdaysParse,a))?i:null:-1!==(i=Ye.call(this._minWeekdaysParse,a))?i:null:"dddd"===t?-1!==(i=Ye.call(this._weekdaysParse,a))?i:-1!==(i=Ye.call(this._shortWeekdaysParse,a))?i:-1!==(i=Ye.call(this._minWeekdaysParse,a))?i:null:"ddd"===t?-1!==(i=Ye.call(this._shortWeekdaysParse,a))?i:-1!==(i=Ye.call(this._weekdaysParse,a))?i:-1!==(i=Ye.call(this._minWeekdaysParse,a))?i:null:-1!==(i=Ye.call(this._minWeekdaysParse,a))?i:-1!==(i=Ye.call(this._weekdaysParse,a))?i:-1!==(i=Ye.call(this._shortWeekdaysParse,a))?i:null}.call(this,e,t,n);for(this._weekdaysParse||(this._weekdaysParse=[],this._minWeekdaysParse=[],this._shortWeekdaysParse=[],this._fullWeekdaysParse=[]),s=0;s<7;s++){if(i=y([2e3,1]).day(s),n&&!this._fullWeekdaysParse[s]&&(this._fullWeekdaysParse[s]=new RegExp("^"+this.weekdays(i,"").replace(".","\\.?")+"$","i"),this._shortWeekdaysParse[s]=new RegExp("^"+this.weekdaysShort(i,"").replace(".","\\.?")+"$","i"),this._minWeekdaysParse[s]=new RegExp("^"+this.weekdaysMin(i,"").replace(".","\\.?")+"$","i")),this._weekdaysParse[s]||(r="^"+this.weekdays(i,"")+"|^"+this.weekdaysShort(i,"")+"|^"+this.weekdaysMin(i,""),this._weekdaysParse[s]=new RegExp(r.replace(".",""),"i")),n&&"dddd"===t&&this._fullWeekdaysParse[s].test(e))return s;if(n&&"ddd"===t&&this._shortWeekdaysParse[s].test(e))return s;if(n&&"dd"===t&&this._minWeekdaysParse[s].test(e))return s;if(!n&&this._weekdaysParse[s].test(e))return s}},yn.weekdaysRegex=function(e){return this._weekdaysParseExact?(m(this,"_weekdaysRegex")||Qe.call(this),e?this._weekdaysStrictRegex:this._weekdaysRegex):(m(this,"_weekdaysRegex")||(this._weekdaysRegex=qe),this._weekdaysStrictRegex&&e?this._weekdaysStrictRegex:this._weekdaysRegex)},yn.weekdaysShortRegex=function(e){return this._weekdaysParseExact?(m(this,"_weekdaysRegex")||Qe.call(this),e?this._weekdaysShortStrictRegex:this._weekdaysShortRegex):(m(this,"_weekdaysShortRegex")||(this._weekdaysShortRegex=Je),this._weekdaysShortStrictRegex&&e?this._weekdaysShortStrictRegex:this._weekdaysShortRegex)},yn.weekdaysMinRegex=function(e){return this._weekdaysParseExact?(m(this,"_weekdaysRegex")||Qe.call(this),e?this._weekdaysMinStrictRegex:this._weekdaysMinRegex):(m(this,"_weekdaysMinRegex")||(this._weekdaysMinRegex=Be),this._weekdaysMinStrictRegex&&e?this._weekdaysMinStrictRegex:this._weekdaysMinRegex)},yn.isPM=function(e){return"p"===(e+"").toLowerCase().charAt(0)},yn.meridiem=function(e,t,n){return 11<e?n?"pm":"PM":n?"am":"AM"},ut("en",{dayOfMonthOrdinalParse:/\d{1,2}(th|st|nd|rd)/,ordinal:function(e){var t=e%10;return e+(1===D(e%100/10)?"th":1===t?"st":2===t?"nd":3===t?"rd":"th")}}),c.lang=n("moment.lang is deprecated. Use moment.locale instead.",ut),c.langData=n("moment.langData is deprecated. Use moment.localeData instead.",ht);var wn=Math.abs;function Mn(e,t,n,s){var i=jt(t,n);return e._milliseconds+=s*i._milliseconds,e._days+=s*i._days,e._months+=s*i._months,e._bubble()}function kn(e){return e<0?Math.floor(e):Math.ceil(e)}function Sn(e){return 4800*e/146097}function Dn(e){return 146097*e/4800}function Yn(e){return function(){return this.as(e)}}var On=Yn("ms"),Tn=Yn("s"),bn=Yn("m"),xn=Yn("h"),Pn=Yn("d"),Wn=Yn("w"),Cn=Yn("M"),Hn=Yn("Q"),Rn=Yn("y");function Un(e){return function(){return this.isValid()?this._data[e]:NaN}}var Fn=Un("milliseconds"),Ln=Un("seconds"),Nn=Un("minutes"),Gn=Un("hours"),Vn=Un("days"),En=Un("months"),In=Un("years");var An=Math.round,jn={ss:44,s:45,m:45,h:22,d:26,M:11};var Zn=Math.abs;function zn(e){return(0<e)-(e<0)||+e}function $n(){if(!this.isValid())return this.localeData().invalidDate();var e,t,n=Zn(this._milliseconds)/1e3,s=Zn(this._days),i=Zn(this._months);t=S((e=S(n/60))/60),n%=60,e%=60;var r=S(i/12),a=i%=12,o=s,u=t,l=e,h=n?n.toFixed(3).replace(/\.?0+$/,""):"",d=this.asSeconds();if(!d)return"P0D";var c=d<0?"-":"",f=zn(this._months)!==zn(d)?"-":"",m=zn(this._days)!==zn(d)?"-":"",_=zn(this._milliseconds)!==zn(d)?"-":"";return c+"P"+(r?f+r+"Y":"")+(a?f+a+"M":"")+(o?m+o+"D":"")+(u||l||h?"T":"")+(u?_+u+"H":"")+(l?_+l+"M":"")+(h?_+h+"S":"")}var qn=Ht.prototype;return qn.isValid=function(){return this._isValid},qn.abs=function(){var e=this._data;return this._milliseconds=wn(this._milliseconds),this._days=wn(this._days),this._months=wn(this._months),e.milliseconds=wn(e.milliseconds),e.seconds=wn(e.seconds),e.minutes=wn(e.minutes),e.hours=wn(e.hours),e.months=wn(e.months),e.years=wn(e.years),this},qn.add=function(e,t){return Mn(this,e,t,1)},qn.subtract=function(e,t){return Mn(this,e,t,-1)},qn.as=function(e){if(!this.isValid())return NaN;var t,n,s=this._milliseconds;if("month"===(e=H(e))||"quarter"===e||"year"===e)switch(t=this._days+s/864e5,n=this._months+Sn(t),e){case"month":return n;case"quarter":return n/3;case"year":return n/12}else switch(t=this._days+Math.round(Dn(this._months)),e){case"week":return t/7+s/6048e5;case"day":return t+s/864e5;case"hour":return 24*t+s/36e5;case"minute":return 1440*t+s/6e4;case"second":return 86400*t+s/1e3;case"millisecond":return Math.floor(864e5*t)+s;default:throw new Error("Unknown unit "+e)}},qn.asMilliseconds=On,qn.asSeconds=Tn,qn.asMinutes=bn,qn.asHours=xn,qn.asDays=Pn,qn.asWeeks=Wn,qn.asMonths=Cn,qn.asQuarters=Hn,qn.asYears=Rn,qn.valueOf=function(){return this.isValid()?this._milliseconds+864e5*this._days+this._months%12*2592e6+31536e6*D(this._months/12):NaN},qn._bubble=function(){var e,t,n,s,i,r=this._milliseconds,a=this._days,o=this._months,u=this._data;return 0<=r&&0<=a&&0<=o||r<=0&&a<=0&&o<=0||(r+=864e5*kn(Dn(o)+a),o=a=0),u.milliseconds=r%1e3,e=S(r/1e3),u.seconds=e%60,t=S(e/60),u.minutes=t%60,n=S(t/60),u.hours=n%24,o+=i=S(Sn(a+=S(n/24))),a-=kn(Dn(i)),s=S(o/12),o%=12,u.days=a,u.months=o,u.years=s,this},qn.clone=function(){return jt(this)},qn.get=function(e){return e=H(e),this.isValid()?this[e+"s"]():NaN},qn.milliseconds=Fn,qn.seconds=Ln,qn.minutes=Nn,qn.hours=Gn,qn.days=Vn,qn.weeks=function(){return S(this.days()/7)},qn.months=En,qn.years=In,qn.humanize=function(e){if(!this.isValid())return this.localeData().invalidDate();var t,n,s,i,r,a,o,u,l,h,d,c=this.localeData(),f=(n=!e,s=c,i=jt(t=this).abs(),r=An(i.as("s")),a=An(i.as("m")),o=An(i.as("h")),u=An(i.as("d")),l=An(i.as("M")),h=An(i.as("y")),(d=r<=jn.ss&&["s",r]||r<jn.s&&["ss",r]||a<=1&&["m"]||a<jn.m&&["mm",a]||o<=1&&["h"]||o<jn.h&&["hh",o]||u<=1&&["d"]||u<jn.d&&["dd",u]||l<=1&&["M"]||l<jn.M&&["MM",l]||h<=1&&["y"]||["yy",h])[2]=n,d[3]=0<+t,d[4]=s,function(e,t,n,s,i){return i.relativeTime(t||1,!!n,e,s)}.apply(null,d));return e&&(f=c.pastFuture(+this,f)),c.postformat(f)},qn.toISOString=$n,qn.toString=$n,qn.toJSON=$n,qn.locale=Xt,qn.localeData=en,qn.toIsoString=n("toIsoString() is deprecated. Please use toISOString() instead (notice the capitals)",$n),qn.lang=Kt,I("X",0,0,"unix"),I("x",0,0,"valueOf"),ue("x",se),ue("X",/[+-]?\d+(\.\d{1,3})?/),ce("X",function(e,t,n){n._d=new Date(1e3*parseFloat(e,10))}),ce("x",function(e,t,n){n._d=new Date(D(e))}),c.version="2.24.0",e=bt,c.fn=mn,c.min=function(){return Wt("isBefore",[].slice.call(arguments,0))},c.max=function(){return Wt("isAfter",[].slice.call(arguments,0))},c.now=function(){return Date.now?Date.now():+new Date},c.utc=y,c.unix=function(e){return bt(1e3*e)},c.months=function(e,t){return vn(e,t,"months")},c.isDate=d,c.locale=ut,c.invalid=p,c.duration=jt,c.isMoment=k,c.weekdays=function(e,t,n){return pn(e,t,n,"weekdays")},c.parseZone=function(){return bt.apply(null,arguments).parseZone()},c.localeData=ht,c.isDuration=Rt,c.monthsShort=function(e,t){return vn(e,t,"monthsShort")},c.weekdaysMin=function(e,t,n){return pn(e,t,n,"weekdaysMin")},c.defineLocale=lt,c.updateLocale=function(e,t){if(null!=t){var n,s,i=st;null!=(s=ot(e))&&(i=s._config),(n=new P(t=x(i,t))).parentLocale=it[e],it[e]=n,ut(e)}else null!=it[e]&&(null!=it[e].parentLocale?it[e]=it[e].parentLocale:null!=it[e]&&delete it[e]);return it[e]},c.locales=function(){return s(it)},c.weekdaysShort=function(e,t,n){return pn(e,t,n,"weekdaysShort")},c.normalizeUnits=H,c.relativeTimeRounding=function(e){return void 0===e?An:"function"==typeof e&&(An=e,!0)},c.relativeTimeThreshold=function(e,t){return void 0!==jn[e]&&(void 0===t?jn[e]:(jn[e]=t,"s"===e&&(jn.ss=t-1),!0))},c.calendarFormat=function(e,t){var n=e.diff(t,"days",!0);return n<-6?"sameElse":n<-1?"lastWeek":n<0?"lastDay":n<1?"sameDay":n<2?"nextDay":n<7?"nextWeek":"sameElse"},c.prototype=mn,c.HTML5_FMT={DATETIME_LOCAL:"YYYY-MM-DDTHH:mm",DATETIME_LOCAL_SECONDS:"YYYY-MM-DDTHH:mm:ss",DATETIME_LOCAL_MS:"YYYY-MM-DDTHH:mm:ss.SSS",DATE:"YYYY-MM-DD",TIME:"HH:mm",TIME_SECONDS:"HH:mm:ss",TIME_MS:"HH:mm:ss.SSS",WEEK:"GGGG-[W]WW",MONTH:"YYYY-MM"},c});
+/*
+ * Utility functions to decode/encode numbers and array's of numbers
+ * to/from strings (Google maps polyline encoding)
+ *
+ * Extends the L.Polyline and L.Polygon object with methods to convert
+ * to and create from these strings.
+ *
+ * Jan Pieter Waagmeester <jieter@jieter.nl>
+ *
+ * Original code from:
+ * http://facstaff.unca.edu/mcmcclur/GoogleMaps/EncodePolyline/
+ * (which is down as of december 2014)
+ */
+
+(function () {
+    'use strict';
+
+    var defaultOptions = function (options) {
+        if (typeof options === 'number') {
+            // Legacy
+            options = {
+                precision: options
+            };
+        } else {
+            options = options || {};
+        }
+
+        options.precision = options.precision || 5;
+        options.factor = options.factor || Math.pow(10, options.precision);
+        options.dimension = options.dimension || 2;
+        return options;
+    };
+
+    var PolylineUtil = {
+        encode: function (points, options) {
+            options = defaultOptions(options);
+
+            var flatPoints = [];
+            for (var i = 0, len = points.length; i < len; ++i) {
+                var point = points[i];
+
+                if (options.dimension === 2) {
+                    flatPoints.push(point.lat || point[0]);
+                    flatPoints.push(point.lng || point[1]);
+                } else {
+                    for (var dim = 0; dim < options.dimension; ++dim) {
+                        flatPoints.push(point[dim]);
+                    }
+                }
+            }
+
+            return this.encodeDeltas(flatPoints, options);
+        },
+
+        decode: function (encoded, options) {
+            options = defaultOptions(options);
+
+            var flatPoints = this.decodeDeltas(encoded, options);
+
+            var points = [];
+            for (var i = 0, len = flatPoints.length; i + (options.dimension - 1) < len;) {
+                var point = [];
+
+                for (var dim = 0; dim < options.dimension; ++dim) {
+                    point.push(flatPoints[i++]);
+                }
+
+                points.push(point);
+            }
+
+            return points;
+        },
+
+        encodeDeltas: function (numbers, options) {
+            options = defaultOptions(options);
+
+            var lastNumbers = [];
+
+            for (var i = 0, len = numbers.length; i < len;) {
+                for (var d = 0; d < options.dimension; ++d, ++i) {
+                    var num = numbers[i];
+                    var delta = num - (lastNumbers[d] || 0);
+                    lastNumbers[d] = num;
+
+                    numbers[i] = delta;
+                }
+            }
+
+            return this.encodeFloats(numbers, options);
+        },
+
+        decodeDeltas: function (encoded, options) {
+            options = defaultOptions(options);
+
+            var lastNumbers = [];
+
+            var numbers = this.decodeFloats(encoded, options);
+            for (var i = 0, len = numbers.length; i < len;) {
+                for (var d = 0; d < options.dimension; ++d, ++i) {
+                    numbers[i] = Math.round((lastNumbers[d] = numbers[i] + (lastNumbers[d] || 0)) * options.factor) / options.factor;
+                }
+            }
+
+            return numbers;
+        },
+
+        encodeFloats: function (numbers, options) {
+            options = defaultOptions(options);
+
+            for (var i = 0, len = numbers.length; i < len; ++i) {
+                numbers[i] = Math.round(numbers[i] * options.factor);
+            }
+
+            return this.encodeSignedIntegers(numbers);
+        },
+
+        decodeFloats: function (encoded, options) {
+            options = defaultOptions(options);
+
+            var numbers = this.decodeSignedIntegers(encoded);
+            for (var i = 0, len = numbers.length; i < len; ++i) {
+                numbers[i] /= options.factor;
+            }
+
+            return numbers;
+        },
+
+        encodeSignedIntegers: function (numbers) {
+            for (var i = 0, len = numbers.length; i < len; ++i) {
+                var num = numbers[i];
+                numbers[i] = (num < 0) ? ~(num << 1) : (num << 1);
+            }
+
+            return this.encodeUnsignedIntegers(numbers);
+        },
+
+        decodeSignedIntegers: function (encoded) {
+            var numbers = this.decodeUnsignedIntegers(encoded);
+
+            for (var i = 0, len = numbers.length; i < len; ++i) {
+                var num = numbers[i];
+                numbers[i] = (num & 1) ? ~(num >> 1) : (num >> 1);
+            }
+
+            return numbers;
+        },
+
+        encodeUnsignedIntegers: function (numbers) {
+            var encoded = '';
+            for (var i = 0, len = numbers.length; i < len; ++i) {
+                encoded += this.encodeUnsignedInteger(numbers[i]);
+            }
+            return encoded;
+        },
+
+        decodeUnsignedIntegers: function (encoded) {
+            var numbers = [];
+
+            var current = 0;
+            var shift = 0;
+
+            for (var i = 0, len = encoded.length; i < len; ++i) {
+                var b = encoded.charCodeAt(i) - 63;
+
+                current |= (b & 0x1f) << shift;
+
+                if (b < 0x20) {
+                    numbers.push(current);
+                    current = 0;
+                    shift = 0;
+                } else {
+                    shift += 5;
+                }
+            }
+
+            return numbers;
+        },
+
+        encodeSignedInteger: function (num) {
+            num = (num < 0) ? ~(num << 1) : (num << 1);
+            return this.encodeUnsignedInteger(num);
+        },
+
+        // This function is very similar to Google's, but I added
+        // some stuff to deal with the double slash issue.
+        encodeUnsignedInteger: function (num) {
+            var value, encoded = '';
+            while (num >= 0x20) {
+                value = (0x20 | (num & 0x1f)) + 63;
+                encoded += (String.fromCharCode(value));
+                num >>= 5;
+            }
+            value = num + 63;
+            encoded += (String.fromCharCode(value));
+
+            return encoded;
+        }
+    };
+
+    // Export Node module
+    if (typeof module === 'object' && typeof module.exports === 'object') {
+        module.exports = PolylineUtil;
+    }
+
+    // Inject functionality into Leaflet
+    if (typeof L === 'object') {
+        if (!(L.Polyline.prototype.fromEncoded)) {
+            L.Polyline.fromEncoded = function (encoded, options) {
+                return L.polyline(PolylineUtil.decode(encoded), options);
+            };
+        }
+        if (!(L.Polygon.prototype.fromEncoded)) {
+            L.Polygon.fromEncoded = function (encoded, options) {
+                return L.polygon(PolylineUtil.decode(encoded), options);
+            };
+        }
+
+        var encodeMixin = {
+            encodePath: function () {
+                return PolylineUtil.encode(this.getLatLngs());
+            }
+        };
+
+        if (!L.Polyline.prototype.encodePath) {
+            L.Polyline.include(encodeMixin);
+        }
+        if (!L.Polygon.prototype.encodePath) {
+            L.Polygon.include(encodeMixin);
+        }
+
+        L.PolylineUtil = PolylineUtil;
+    }
+})();
+
+L.Control.Window = L.Control.extend({
+
+    includes: L.Evented.prototype,
+    // includes: L.Mixin.Events,
+
+    options: {
+        element: 'map',
+        className: 'control-window',
+        visible: false,
+        title: undefined,
+        closeButton: true,
+        content: undefined,
+        prompt: undefined,
+        maxWidth: 600,
+        modal: false,
+        position: 'center'
+    },
+    initialize: function (container, options) {
+        var self = this;
+
+        if (container.hasOwnProperty('options')) { container = container.getContainer(); }
+
+        options.element = container;
+        L.setOptions(this, options);
+
+        var modality = 'nonmodal';
+
+        if (this.options.modal){
+            modality = 'modal'
+        }
+
+        // Create popup window container
+        this._wrapper = L.DomUtil.create('div',modality+' leaflet-control-window-wrapper', L.DomUtil.get(this.options.element));
+
+        this._container = L.DomUtil.create('div', 'leaflet-control leaflet-control-window '+this.options.className,this._wrapper);
+        this._container.setAttribute('style','max-width:'+this.options.maxWidth+'px');
+
+        this._containerTitleBar = L.DomUtil.create('div', 'titlebar',this._container);
+        this.titleContent = L.DomUtil.create('h2', 'title',this._containerTitleBar);
+        this._containerContent =  L.DomUtil.create('div', 'content' ,this._container);
+        this._containerPromptButtons =  L.DomUtil.create('div', 'promptButtons' ,this._container);
+
+        if (this.options.closeButton) {
+            this._closeButton = L.DomUtil.create('a', 'close',this._containerTitleBar);
+            this._closeButton.innerHTML = '&times;';
+        }
+
+        // Make sure we don't drag the map when we interact with the content
+        var stop = L.DomEvent.stopPropagation;
+        L.DomEvent
+            .on(this._wrapper, 'contextmenu', stop)
+            .on(this._wrapper, 'click', stop)
+            .on(this._wrapper, 'mousedown', stop)
+            .on(this._wrapper, 'touchstart', stop)
+            .on(this._wrapper, 'dblclick', stop)
+            .on(this._wrapper, 'mousewheel', stop)
+            .on(this._wrapper, 'MozMousePixelScroll', stop)
+
+        // Attach event to close button
+        if (this.options.closeButton) {
+            var close = this._closeButton;
+            L.DomEvent.on(close, 'click', this.hide, this);
+        }
+        if (this.options.title){
+            this.title(this.options.title);
+        }
+        if (this.options.content) {
+            this.content(this.options.content);
+        }
+        if (typeof(this.options.prompt)=='object') {
+            this.prompt(this.options.prompt);
+        }
+        if (this.options.visible){
+            this.show();
+        }
+
+        //map.on('resize',function(){self.mapResized()});
+    },
+    disableBtn: function(){
+			this._btnOK.disabled=true;
+			this._btnOK.className='disabled';
+	},
+	enableBtn: function(){
+			this._btnOK.disabled=false;
+			this._btnOK.className='';
+	},
+    title: function(titleContent){
+        if (titleContent==undefined){
+            return this.options.title
+        }
+
+        this.options.title = titleContent;
+        var title = titleContent || '';
+        this.titleContent.innerHTML = title;
+        return this;
+    },
+    remove: function () {
+
+        L.DomUtil.get(this.options.element).removeChild(this._wrapper);
+
+        // Unregister events to prevent memory leak
+        var stop = L.DomEvent.stopPropagation;
+        // L.DomEvent
+        //     .off(this._wrapper, 'contextmenu', stop)
+        //     .off(this._wrapper, 'click', stop)
+        //     .off(this._wrapper, 'mousedown', stop)
+        //     .off(this._wrapper, 'touchstart', stop)
+        //     .off(this._wrapper, 'dblclick', stop)
+        //     .off(this._wrapper, 'mousewheel', stop)
+        //     .off(this._wrapper, 'MozMousePixelScroll', stop);
+
+        L.DomEvent.off(this._wrapper, 'contextmenu', stop);
+        L.DomEvent.off(this._wrapper, 'click', stop);
+        L.DomEvent.off(this._wrapper, 'mousedown', stop);
+        L.DomEvent.off(this._wrapper, 'touchstart', stop);
+        L.DomEvent.off(this._wrapper, 'dblclick', stop);
+        L.DomEvent.off(this._wrapper, 'mousewheel', stop);
+        L.DomEvent.off(this._wrapper, 'MozMousePixelScroll', stop);
+
+       // map.off('resize',self.mapResized);
+
+        if (this._closeButton && this._close) {
+            var close = this._closeButton;
+            L.DomEvent.off(close, 'click', this.close, this);
+        }
+        return this;
+    },
+    mapResized : function(){
+      // this.show()
+    },
+    show: function (position) {
+
+        if (position){
+            this.options.position = position
+        }
+
+        L.DomUtil.addClass(this._wrapper, 'visible');
+
+
+        this.setContentMaxHeight();
+        var thisWidth = this._container.offsetWidth;
+        var thisHeight = this._container.offsetHeight;
+        var margin = 8;
+
+        var el =  L.DomUtil.get(this.options.element);
+        var rect = el.getBoundingClientRect();
+        var width = rect.right -rect.left ||  Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+        var height = rect.bottom -rect.top ||  Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+
+        var top = rect.top;
+        var left = rect.left;
+        var offset =0;
+
+        // SET POSITION OF WINDOW
+        if (this.options.position == 'topLeft'){
+            this.showOn([left,top+offset])
+            } else if (this.options.position == 'left') {
+            this.showOn([left, top+height/2-thisHeight/2-margin+offset])
+        } else if (this.options.position == 'bottomLeft') {
+            this.showOn([left, top+height-thisHeight-margin*2-offset])
+        } else if (this.options.position == 'top') {
+            this.showOn([left+width/2-thisWidth/2-margin,top+offset])
+        } else if (this.options.position == 'topRight') {
+            this.showOn([left+width-thisWidth-margin*2,top+ offset])
+        } else if (this.options.position == 'right') {
+            this.showOn([left+width-thisWidth-margin*2, top+height/2-thisHeight/2-margin+offset])
+        } else if (this.options.position == 'bottomRight') {
+            this.showOn([left+width-thisWidth-margin*2,top+ height-thisHeight-margin*2-offset])
+        } else if (this.options.position == 'bottom') {
+            this.showOn([left+width/2-thisWidth/2-margin,top+ height-thisHeight-margin*2-offset])
+        } else {
+            this.showOn([left+width/2-thisWidth/2-margin, top+top+height/2-thisHeight/2-margin+offset])
+        }
+
+        return this;
+    },
+    showOn: function(point){
+
+        this.setContentMaxHeight();
+        L.DomUtil.setPosition(this._container, L.point(Math.round(point[0]),Math.round(point[1]),true));
+
+        var draggable = new L.Draggable(this._container,this._containerTitleBar);
+        draggable.enable();
+
+        L.DomUtil.addClass(this._wrapper, 'visible');
+        this.fire('show');
+        return this;
+    },
+    hide: function (e) {
+
+        L.DomUtil.removeClass(this._wrapper, 'visible');
+        this.fire('hide');
+        return this;
+    },
+
+    getContainer: function () {
+        return this._containerContent;
+    },
+    content: function (content) {
+        if (content==undefined){
+            return this.options.content
+        }
+        this.options.content = content;
+        this.getContainer().innerHTML = content;
+        return this;
+    },
+    prompt : function(promptObject){
+
+        if (promptObject==undefined){
+            return this.options.prompt
+        }
+
+        this.options.prompt = promptObject;
+
+        this.setPromptCallback(promptObject.callback);
+
+        this.setActionCallback(promptObject.action);
+
+        var cancel = this.options.prompt.buttonCancel || 'CANCEL';
+
+        var ok = this.options.prompt.buttonOK || 'OK';
+
+        var action = this.options.prompt.buttonAction || undefined;
+
+        if (action != undefined) {
+            var btnAction = L.DomUtil.create('button','',this._containerPromptButtons);
+            L.DomEvent.on(btnAction, 'click',this.action, this);
+            btnAction.innerHTML=action;
+        }
+
+        var btnOK= L.DomUtil.create('button','',this._containerPromptButtons);
+        L.DomEvent.on(btnOK, 'click',this.promptCallback, this);
+        btnOK.innerHTML=ok;
+
+        this._btnOK=btnOK;
+
+        var btnCancel= L.DomUtil.create('button','',this._containerPromptButtons);
+        L.DomEvent.on(btnCancel, 'click', this.close, this);
+        btnCancel.innerHTML=cancel
+
+        return this;
+    },
+    container : function(containerContent){
+        if (containerContent==undefined){
+            return this._container.innerHTML
+        }
+
+        this._container.innerHTML = containerContent;
+
+        if (this.options.closeButton) {
+            this._closeButton = L.DomUtil.create('a', 'close',this._container);
+            this._closeButton.innerHTML = '&times;';
+            L.DomEvent.on(this._closeButton, 'click', this.close, this);
+        }
+        return this;
+
+    },
+    setPromptCallback : function(callback){
+        var self = this;
+        if (typeof(callback)!= 'function') { callback = function() {console.warn('No callback function specified!');}}
+        var cb = function() { self.close();callback();};
+        this.promptCallback = cb;
+        return this;
+    },
+    setActionCallback : function(callback){
+        var self = this;
+        if (typeof(callback)!= 'function') { callback = function() {console.warn('No callback function specified!');}}
+        var cb = function() { self.hide();callback();};
+        this.action = cb;
+        return this;
+    },
+
+    setContentMaxHeight : function(){
+        var margin = 68;
+
+        if (this.options.title){
+            margin += this._containerTitleBar.offsetHeight-36;
+        }
+        if (typeof(this.options.prompt) == 'object'){
+            margin += this._containerPromptButtons.offsetHeight-20
+        }
+
+        var el =  L.DomUtil.get(this.options.element)
+        var rect = el.getBoundingClientRect();
+        var height = rect.bottom -rect.top;
+
+        var maxHeight = height - margin;
+        this._containerContent.setAttribute('style','max-height:'+maxHeight+'px')
+    },
+    close : function(){
+        this.hide();
+        this.remove();
+        this.fire('close');
+        return undefined;
+    }
+});
+
+L.control.window = function (container,options) {
+    return new L.Control.Window(container,options);
+};
+
+(function (root, factory) {
+	if (typeof define === 'function' && define.amd) {
+		// AMD. Register as an anonymous module.
+		define(['leaflet'], factory);
+	} else if (typeof modules === 'object' && module.exports) {
+		// define a Common JS module that relies on 'leaflet'
+		module.exports = factory(require('leaflet'));
+	} else {
+		// Assume Leaflet is loaded into global object L already
+		factory(L);
+	}
+}(this, function (L) {
+	'use strict';
+
+	L.TileLayer.Provider = L.TileLayer.extend({
+		initialize: function (arg, options) {
+			var providers = L.TileLayer.Provider.providers;
+
+			var parts = arg.split('.');
+
+			var providerName = parts[0];
+			var variantName = parts[1];
+
+			if (!providers[providerName]) {
+				throw 'No such provider (' + providerName + ')';
+			}
+
+			var provider = {
+				url: providers[providerName].url,
+				options: providers[providerName].options
+			};
+
+			// overwrite values in provider from variant.
+			if (variantName && 'variants' in providers[providerName]) {
+				if (!(variantName in providers[providerName].variants)) {
+					throw 'No such variant of ' + providerName + ' (' + variantName + ')';
+				}
+				var variant = providers[providerName].variants[variantName];
+				var variantOptions;
+				if (typeof variant === 'string') {
+					variantOptions = {
+						variant: variant
+					};
+				} else {
+					variantOptions = variant.options;
+				}
+				provider = {
+					url: variant.url || provider.url,
+					options: L.Util.extend({}, provider.options, variantOptions)
+				};
+			}
+
+			// replace attribution placeholders with their values from toplevel provider attribution,
+			// recursively
+			var attributionReplacer = function (attr) {
+				if (attr.indexOf('{attribution.') === -1) {
+					return attr;
+				}
+				return attr.replace(/\{attribution.(\w*)\}/g,
+					function (match, attributionName) {
+						return attributionReplacer(providers[attributionName].options.attribution);
+					}
+				);
+			};
+			provider.options.attribution = attributionReplacer(provider.options.attribution);
+
+			// Compute final options combining provider options with any user overrides
+			var layerOpts = L.Util.extend({}, provider.options, options);
+			L.TileLayer.prototype.initialize.call(this, provider.url, layerOpts);
+		}
+	});
+
+	/**
+	 * Definition of providers.
+	 * see http://leafletjs.com/reference.html#tilelayer for options in the options map.
+	 */
+
+	L.TileLayer.Provider.providers = {
+		OpenStreetMap: {
+			url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+			options: {
+				maxZoom: 19,
+				attribution:
+					'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+			},
+			variants: {
+				Mapnik: {},
+				DE: {
+					url: 'https://{s}.tile.openstreetmap.de/tiles/osmde/{z}/{x}/{y}.png',
+					options: {
+						maxZoom: 18
+					}
+				},
+				CH: {
+					url: 'https://tile.osm.ch/switzerland/{z}/{x}/{y}.png',
+					options: {
+						maxZoom: 18,
+						bounds: [[45, 5], [48, 11]]
+					}
+				},
+				France: {
+					url: 'https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png',
+					options: {
+						maxZoom: 20,
+						attribution: '&copy; Openstreetmap France | {attribution.OpenStreetMap}'
+					}
+				},
+				HOT: {
+					url: 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
+					options: {
+						attribution:
+							'{attribution.OpenStreetMap}, ' +
+							'Tiles style by <a href="https://www.hotosm.org/" target="_blank">Humanitarian OpenStreetMap Team</a> ' +
+							'hosted by <a href="https://openstreetmap.fr/" target="_blank">OpenStreetMap France</a>'
+					}
+				},
+				BZH: {
+					url: 'https://tile.openstreetmap.bzh/br/{z}/{x}/{y}.png',
+					options: {
+						attribution: '{attribution.OpenStreetMap}, Tiles courtesy of <a href="http://www.openstreetmap.bzh/" target="_blank">Breton OpenStreetMap Team</a>',
+						bounds: [[46.2, -5.5], [50, 0.7]]
+					}
+				}
+			}
+		},
+		OpenSeaMap: {
+			url: 'https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png',
+			options: {
+				attribution: 'Map data: &copy; <a href="http://www.openseamap.org">OpenSeaMap</a> contributors'
+			}
+		},
+		OpenPtMap: {
+			url: 'http://openptmap.org/tiles/{z}/{x}/{y}.png',
+			options: {
+				maxZoom: 17,
+				attribution: 'Map data: &copy; <a href="http://www.openptmap.org">OpenPtMap</a> contributors'
+			}
+		},
+		OpenTopoMap: {
+			url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+			options: {
+				maxZoom: 17,
+				attribution: 'Map data: {attribution.OpenStreetMap}, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
+			}
+		},
+		OpenRailwayMap: {
+			url: 'https://{s}.tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png',
+			options: {
+				maxZoom: 19,
+				attribution: 'Map data: {attribution.OpenStreetMap} | Map style: &copy; <a href="https://www.OpenRailwayMap.org">OpenRailwayMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
+			}
+		},
+		OpenFireMap: {
+			url: 'http://openfiremap.org/hytiles/{z}/{x}/{y}.png',
+			options: {
+				maxZoom: 19,
+				attribution: 'Map data: {attribution.OpenStreetMap} | Map style: &copy; <a href="http://www.openfiremap.org">OpenFireMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
+			}
+		},
+		SafeCast: {
+			url: 'https://s3.amazonaws.com/te512.safecast.org/{z}/{x}/{y}.png',
+			options: {
+				maxZoom: 16,
+				attribution: 'Map data: {attribution.OpenStreetMap} | Map style: &copy; <a href="https://blog.safecast.org/about/">SafeCast</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
+			}
+		},
+		Thunderforest: {
+			url: 'https://{s}.tile.thunderforest.com/{variant}/{z}/{x}/{y}.png?apikey={apikey}',
+			options: {
+				attribution:
+					'&copy; <a href="http://www.thunderforest.com/">Thunderforest</a>, {attribution.OpenStreetMap}',
+				variant: 'cycle',
+				apikey: '<insert your api key here>',
+				maxZoom: 22
+			},
+			variants: {
+				OpenCycleMap: 'cycle',
+				Transport: {
+					options: {
+						variant: 'transport'
+					}
+				},
+				TransportDark: {
+					options: {
+						variant: 'transport-dark'
+					}
+				},
+				SpinalMap: {
+					options: {
+						variant: 'spinal-map'
+					}
+				},
+				Landscape: 'landscape',
+				Outdoors: 'outdoors',
+				Pioneer: 'pioneer',
+				MobileAtlas: 'mobile-atlas',
+				Neighbourhood: 'neighbourhood'
+			}
+		},
+		CyclOSM: {
+			url: 'https://dev.{s}.tile.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',
+			options: {
+				maxZoom: 20,
+				attribution: '<a href="https://github.com/cyclosm/cyclosm-cartocss-style/releases" title="CyclOSM - Open Bicycle render">CyclOSM</a> | Map data: {attribution.OpenStreetMap}'
+			}
+		},
+		OpenMapSurfer: {
+			url: 'https://maps.heigit.org/openmapsurfer/tiles/{variant}/webmercator/{z}/{x}/{y}.png',
+			options: {
+				maxZoom: 19,
+				variant: 'roads',
+				attribution: 'Imagery from <a href="http://giscience.uni-hd.de/">GIScience Research Group @ University of Heidelberg</a> | Map data '
+			},
+			variants: {
+				Roads: {
+					options: {
+						variant: 'roads',
+						attribution: '{attribution.OpenMapSurfer}{attribution.OpenStreetMap}'
+					}
+				},
+				Hybrid: {
+					options: {
+						variant: 'hybrid',
+						attribution: '{attribution.OpenMapSurfer}{attribution.OpenStreetMap}'
+					}
+				},
+				AdminBounds: {
+					options: {
+						variant: 'adminb',
+						maxZoom: 18,
+						attribution: '{attribution.OpenMapSurfer}{attribution.OpenStreetMap}'
+					}
+				},
+				ContourLines: {
+					options: {
+						variant: 'asterc',
+						maxZoom: 18,
+						minZoom: 13,
+						attribution: '{attribution.OpenMapSurfer} <a href="https://lpdaac.usgs.gov/products/aster_policies">ASTER GDEM</a>'
+					}
+				},
+				Hillshade: {
+					options: {
+						variant: 'asterh',
+						maxZoom: 18,
+						attribution: '{attribution.OpenMapSurfer} <a href="https://lpdaac.usgs.gov/products/aster_policies">ASTER GDEM</a>, <a href="http://srtm.csi.cgiar.org/">SRTM</a>'
+					}
+				},
+				ElementsAtRisk: {
+					options: {
+						variant: 'elements_at_risk',
+						attribution: '{attribution.OpenMapSurfer}{attribution.OpenStreetMap}'
+					}
+				}
+			}
+		},
+		Hydda: {
+			url: 'https://{s}.tile.openstreetmap.se/hydda/{variant}/{z}/{x}/{y}.png',
+			options: {
+				maxZoom: 18,
+				variant: 'full',
+				attribution: 'Tiles courtesy of <a href="http://openstreetmap.se/" target="_blank">OpenStreetMap Sweden</a> &mdash; Map data {attribution.OpenStreetMap}'
+			},
+			variants: {
+				Full: 'full',
+				Base: 'base',
+				RoadsAndLabels: 'roads_and_labels'
+			}
+		},
+		MapBox: {
+			url: 'https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}{r}.png?access_token={accessToken}',
+			options: {
+				attribution:
+					'<a href="https://www.mapbox.com/about/maps/" target="_blank">&copy; Mapbox</a> ' +
+					'{attribution.OpenStreetMap} ' +
+					'<a href="https://www.mapbox.com/map-feedback/" target="_blank">Improve this map</a>',
+				subdomains: 'abcd',
+				id: 'mapbox.streets',
+				accessToken: '<insert your access token here>',
+			}
+		},
+		Stamen: {
+			url: 'https://stamen-tiles-{s}.a.ssl.fastly.net/{variant}/{z}/{x}/{y}{r}.{ext}',
+			options: {
+				attribution:
+					'Map tiles by <a href="http://stamen.com">Stamen Design</a>, ' +
+					'<a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; ' +
+					'Map data {attribution.OpenStreetMap}',
+				subdomains: 'abcd',
+				minZoom: 0,
+				maxZoom: 20,
+				variant: 'toner',
+				ext: 'png'
+			},
+			variants: {
+				Toner: 'toner',
+				TonerBackground: 'toner-background',
+				TonerHybrid: 'toner-hybrid',
+				TonerLines: 'toner-lines',
+				TonerLabels: 'toner-labels',
+				TonerLite: 'toner-lite',
+				Watercolor: {
+					url: 'https://stamen-tiles-{s}.a.ssl.fastly.net/{variant}/{z}/{x}/{y}.{ext}',
+					options: {
+						variant: 'watercolor',
+						ext: 'jpg',
+						minZoom: 1,
+						maxZoom: 16
+					}
+				},
+				Terrain: {
+					options: {
+						variant: 'terrain',
+						minZoom: 0,
+						maxZoom: 18
+					}
+				},
+				TerrainBackground: {
+					options: {
+						variant: 'terrain-background',
+						minZoom: 0,
+						maxZoom: 18
+					}
+				},
+				TerrainLabels: {
+					options: {
+						variant: 'terrain-labels',
+						minZoom: 0,
+						maxZoom: 18
+					}
+				},
+				TopOSMRelief: {
+					url: 'https://stamen-tiles-{s}.a.ssl.fastly.net/{variant}/{z}/{x}/{y}.{ext}',
+					options: {
+						variant: 'toposm-color-relief',
+						ext: 'jpg',
+						bounds: [[22, -132], [51, -56]]
+					}
+				},
+				TopOSMFeatures: {
+					options: {
+						variant: 'toposm-features',
+						bounds: [[22, -132], [51, -56]],
+						opacity: 0.9
+					}
+				}
+			}
+		},
+		TomTom: {
+			url: 'https://{s}.api.tomtom.com/map/1/tile/{variant}/{style}/{z}/{x}/{y}.{ext}?key={apikey}',
+			options: {
+				variant: 'basic',
+				maxZoom: 22,
+				attribution:
+					'<a href="https://tomtom.com" target="_blank">&copy;  1992 - ' + new Date().getFullYear() + ' TomTom.</a> ',
+				subdomains: 'abcd',
+				style: 'main',
+				ext: 'png',
+				apikey: '<insert your API key here>',
+			},
+			variants: {
+				Basic: 'basic',
+				Hybrid: 'hybrid',
+				Labels: 'labels'
+			}
+		},
+		Esri: {
+			url: 'https://server.arcgisonline.com/ArcGIS/rest/services/{variant}/MapServer/tile/{z}/{y}/{x}',
+			options: {
+				variant: 'World_Street_Map',
+				attribution: 'Tiles &copy; Esri'
+			},
+			variants: {
+				WorldStreetMap: {
+					options: {
+						attribution:
+							'{attribution.Esri} &mdash; ' +
+							'Source: Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, NRCAN, Esri Japan, METI, Esri China (Hong Kong), Esri (Thailand), TomTom, 2012'
+					}
+				},
+				DeLorme: {
+					options: {
+						variant: 'Specialty/DeLorme_World_Base_Map',
+						minZoom: 1,
+						maxZoom: 11,
+						attribution: '{attribution.Esri} &mdash; Copyright: &copy;2012 DeLorme'
+					}
+				},
+				WorldTopoMap: {
+					options: {
+						variant: 'World_Topo_Map',
+						attribution:
+							'{attribution.Esri} &mdash; ' +
+							'Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community'
+					}
+				},
+				WorldImagery: {
+					options: {
+						variant: 'World_Imagery',
+						attribution:
+							'{attribution.Esri} &mdash; ' +
+							'Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+					}
+				},
+				WorldTerrain: {
+					options: {
+						variant: 'World_Terrain_Base',
+						maxZoom: 13,
+						attribution:
+							'{attribution.Esri} &mdash; ' +
+							'Source: USGS, Esri, TANA, DeLorme, and NPS'
+					}
+				},
+				WorldShadedRelief: {
+					options: {
+						variant: 'World_Shaded_Relief',
+						maxZoom: 13,
+						attribution: '{attribution.Esri} &mdash; Source: Esri'
+					}
+				},
+				WorldPhysical: {
+					options: {
+						variant: 'World_Physical_Map',
+						maxZoom: 8,
+						attribution: '{attribution.Esri} &mdash; Source: US National Park Service'
+					}
+				},
+				OceanBasemap: {
+					options: {
+						variant: 'Ocean_Basemap',
+						maxZoom: 13,
+						attribution: '{attribution.Esri} &mdash; Sources: GEBCO, NOAA, CHS, OSU, UNH, CSUMB, National Geographic, DeLorme, NAVTEQ, and Esri'
+					}
+				},
+				NatGeoWorldMap: {
+					options: {
+						variant: 'NatGeo_World_Map',
+						maxZoom: 16,
+						attribution: '{attribution.Esri} &mdash; National Geographic, Esri, DeLorme, NAVTEQ, UNEP-WCMC, USGS, NASA, ESA, METI, NRCAN, GEBCO, NOAA, iPC'
+					}
+				},
+				WorldGrayCanvas: {
+					options: {
+						variant: 'Canvas/World_Light_Gray_Base',
+						maxZoom: 16,
+						attribution: '{attribution.Esri} &mdash; Esri, DeLorme, NAVTEQ'
+					}
+				}
+			}
+		},
+		OpenWeatherMap: {
+			url: 'http://{s}.tile.openweathermap.org/map/{variant}/{z}/{x}/{y}.png?appid={apiKey}',
+			options: {
+				maxZoom: 19,
+				attribution: 'Map data &copy; <a href="http://openweathermap.org">OpenWeatherMap</a>',
+				apiKey:'<insert your api key here>',
+				opacity: 0.5
+			},
+			variants: {
+				Clouds: 'clouds',
+				CloudsClassic: 'clouds_cls',
+				Precipitation: 'precipitation',
+				PrecipitationClassic: 'precipitation_cls',
+				Rain: 'rain',
+				RainClassic: 'rain_cls',
+				Pressure: 'pressure',
+				PressureContour: 'pressure_cntr',
+				Wind: 'wind',
+				Temperature: 'temp',
+				Snow: 'snow'
+			}
+		},
+		HERE: {
+			/*
+			 * HERE maps, formerly Nokia maps.
+			 * These basemaps are free, but you need an API key. Please sign up at
+			 * https://developer.here.com/plans
+			 */
+			url:
+				'https://{s}.{base}.maps.api.here.com/maptile/2.1/' +
+				'{type}/{mapID}/{variant}/{z}/{x}/{y}/{size}/{format}?' +
+				'app_id={app_id}&app_code={app_code}&lg={language}',
+			options: {
+				attribution:
+					'Map &copy; 1987-' + new Date().getFullYear() + ' <a href="http://developer.here.com">HERE</a>',
+				subdomains: '1234',
+				mapID: 'newest',
+				'app_id': '<insert your app_id here>',
+				'app_code': '<insert your app_code here>',
+				base: 'base',
+				variant: 'normal.day',
+				maxZoom: 20,
+				type: 'maptile',
+				language: 'eng',
+				format: 'png8',
+				size: '256'
+			},
+			variants: {
+				normalDay: 'normal.day',
+				normalDayCustom: 'normal.day.custom',
+				normalDayGrey: 'normal.day.grey',
+				normalDayMobile: 'normal.day.mobile',
+				normalDayGreyMobile: 'normal.day.grey.mobile',
+				normalDayTransit: 'normal.day.transit',
+				normalDayTransitMobile: 'normal.day.transit.mobile',
+				normalDayTraffic: {
+					options: {
+						variant: 'normal.traffic.day',
+						base: 'traffic',
+						type: 'traffictile'
+					}
+				},
+				normalNight: 'normal.night',
+				normalNightMobile: 'normal.night.mobile',
+				normalNightGrey: 'normal.night.grey',
+				normalNightGreyMobile: 'normal.night.grey.mobile',
+				normalNightTransit: 'normal.night.transit',
+				normalNightTransitMobile: 'normal.night.transit.mobile',
+				reducedDay: 'reduced.day',
+				reducedNight: 'reduced.night',
+				basicMap: {
+					options: {
+						type: 'basetile'
+					}
+				},
+				mapLabels: {
+					options: {
+						type: 'labeltile',
+						format: 'png'
+					}
+				},
+				trafficFlow: {
+					options: {
+						base: 'traffic',
+						type: 'flowtile'
+					}
+				},
+				carnavDayGrey: 'carnav.day.grey',
+				hybridDay: {
+					options: {
+						base: 'aerial',
+						variant: 'hybrid.day'
+					}
+				},
+				hybridDayMobile: {
+					options: {
+						base: 'aerial',
+						variant: 'hybrid.day.mobile'
+					}
+				},
+				hybridDayTransit: {
+					options: {
+						base: 'aerial',
+						variant: 'hybrid.day.transit'
+					}
+				},
+				hybridDayGrey: {
+					options: {
+						base: 'aerial',
+						variant: 'hybrid.grey.day'
+					}
+				},
+				hybridDayTraffic: {
+					options: {
+						variant: 'hybrid.traffic.day',
+						base: 'traffic',
+						type: 'traffictile'
+					}
+				},
+				pedestrianDay: 'pedestrian.day',
+				pedestrianNight: 'pedestrian.night',
+				satelliteDay: {
+					options: {
+						base: 'aerial',
+						variant: 'satellite.day'
+					}
+				},
+				terrainDay: {
+					options: {
+						base: 'aerial',
+						variant: 'terrain.day'
+					}
+				},
+				terrainDayMobile: {
+					options: {
+						base: 'aerial',
+						variant: 'terrain.day.mobile'
+					}
+				}
+			}
+		},
+		FreeMapSK: {
+			url: 'http://t{s}.freemap.sk/T/{z}/{x}/{y}.jpeg',
+			options: {
+				minZoom: 8,
+				maxZoom: 16,
+				subdomains: '1234',
+				bounds: [[47.204642, 15.996093], [49.830896, 22.576904]],
+				attribution:
+					'{attribution.OpenStreetMap}, vizualization CC-By-SA 2.0 <a href="http://freemap.sk">Freemap.sk</a>'
+			}
+		},
+		MtbMap: {
+			url: 'http://tile.mtbmap.cz/mtbmap_tiles/{z}/{x}/{y}.png',
+			options: {
+				attribution:
+					'{attribution.OpenStreetMap} &amp; USGS'
+			}
+		},
+		CartoDB: {
+			url: 'https://{s}.basemaps.cartocdn.com/{variant}/{z}/{x}/{y}{r}.png',
+			options: {
+				attribution: '{attribution.OpenStreetMap} &copy; <a href="https://carto.com/attributions">CARTO</a>',
+				subdomains: 'abcd',
+				maxZoom: 19,
+				variant: 'light_all'
+			},
+			variants: {
+				Positron: 'light_all',
+				PositronNoLabels: 'light_nolabels',
+				PositronOnlyLabels: 'light_only_labels',
+				DarkMatter: 'dark_all',
+				DarkMatterNoLabels: 'dark_nolabels',
+				DarkMatterOnlyLabels: 'dark_only_labels',
+				Voyager: 'rastertiles/voyager',
+				VoyagerNoLabels: 'rastertiles/voyager_nolabels',
+				VoyagerOnlyLabels: 'rastertiles/voyager_only_labels',
+				VoyagerLabelsUnder: 'rastertiles/voyager_labels_under'
+			}
+		},
+		HikeBike: {
+			url: 'https://tiles.wmflabs.org/{variant}/{z}/{x}/{y}.png',
+			options: {
+				maxZoom: 19,
+				attribution: '{attribution.OpenStreetMap}',
+				variant: 'hikebike'
+			},
+			variants: {
+				HikeBike: {},
+				HillShading: {
+					options: {
+						maxZoom: 15,
+						variant: 'hillshading'
+					}
+				}
+			}
+		},
+		BasemapAT: {
+			url: 'https://maps{s}.wien.gv.at/basemap/{variant}/normal/google3857/{z}/{y}/{x}.{format}',
+			options: {
+				maxZoom: 19,
+				attribution: 'Datenquelle: <a href="https://www.basemap.at">basemap.at</a>',
+				subdomains: ['', '1', '2', '3', '4'],
+				format: 'png',
+				bounds: [[46.358770, 8.782379], [49.037872, 17.189532]],
+				variant: 'geolandbasemap'
+			},
+			variants: {
+				basemap: {
+					options: {
+						maxZoom: 20, // currently only in Vienna
+						variant: 'geolandbasemap'
+					}
+				},
+				grau: 'bmapgrau',
+				overlay: 'bmapoverlay',
+				highdpi: {
+					options: {
+						variant: 'bmaphidpi',
+						format: 'jpeg'
+					}
+				},
+				orthofoto: {
+					options: {
+						maxZoom: 20, // currently only in Vienna
+						variant: 'bmaporthofoto30cm',
+						format: 'jpeg'
+					}
+				}
+			}
+		},
+		nlmaps: {
+			url: 'https://geodata.nationaalgeoregister.nl/tiles/service/wmts/{variant}/EPSG:3857/{z}/{x}/{y}.png',
+			options: {
+				minZoom: 6,
+				maxZoom: 19,
+				bounds: [[50.5, 3.25], [54, 7.6]],
+				attribution: 'Kaartgegevens &copy; <a href="kadaster.nl">Kadaster</a>'
+			},
+			variants: {
+				'standaard': 'brtachtergrondkaart',
+				'pastel': 'brtachtergrondkaartpastel',
+				'grijs': 'brtachtergrondkaartgrijs',
+				'luchtfoto': {
+					'url': 'https://geodata.nationaalgeoregister.nl/luchtfoto/rgb/wmts/1.0.0/2016_ortho25/EPSG:3857/{z}/{x}/{y}.png',
+				}
+			}
+		},
+		NASAGIBS: {
+			url: 'https://map1.vis.earthdata.nasa.gov/wmts-webmerc/{variant}/default/{time}/{tilematrixset}{maxZoom}/{z}/{y}/{x}.{format}',
+			options: {
+				attribution:
+					'Imagery provided by services from the Global Imagery Browse Services (GIBS), operated by the NASA/GSFC/Earth Science Data and Information System ' +
+					'(<a href="https://earthdata.nasa.gov">ESDIS</a>) with funding provided by NASA/HQ.',
+				bounds: [[-85.0511287776, -179.999999975], [85.0511287776, 179.999999975]],
+				minZoom: 1,
+				maxZoom: 9,
+				format: 'jpg',
+				time: '',
+				tilematrixset: 'GoogleMapsCompatible_Level'
+			},
+			variants: {
+				ModisTerraTrueColorCR: 'MODIS_Terra_CorrectedReflectance_TrueColor',
+				ModisTerraBands367CR: 'MODIS_Terra_CorrectedReflectance_Bands367',
+				ViirsEarthAtNight2012: {
+					options: {
+						variant: 'VIIRS_CityLights_2012',
+						maxZoom: 8
+					}
+				},
+				ModisTerraLSTDay: {
+					options: {
+						variant: 'MODIS_Terra_Land_Surface_Temp_Day',
+						format: 'png',
+						maxZoom: 7,
+						opacity: 0.75
+					}
+				},
+				ModisTerraSnowCover: {
+					options: {
+						variant: 'MODIS_Terra_Snow_Cover',
+						format: 'png',
+						maxZoom: 8,
+						opacity: 0.75
+					}
+				},
+				ModisTerraAOD: {
+					options: {
+						variant: 'MODIS_Terra_Aerosol',
+						format: 'png',
+						maxZoom: 6,
+						opacity: 0.75
+					}
+				},
+				ModisTerraChlorophyll: {
+					options: {
+						variant: 'MODIS_Terra_Chlorophyll_A',
+						format: 'png',
+						maxZoom: 7,
+						opacity: 0.75
+					}
+				}
+			}
+		},
+		NLS: {
+			// NLS maps are copyright National library of Scotland.
+			// http://maps.nls.uk/projects/api/index.html
+			// Please contact NLS for anything other than non-commercial low volume usage
+			//
+			// Map sources: Ordnance Survey 1:1m to 1:63K, 1920s-1940s
+			//   z0-9  - 1:1m
+			//  z10-11 - quarter inch (1:253440)
+			//  z12-18 - one inch (1:63360)
+			url: 'https://nls-{s}.tileserver.com/nls/{z}/{x}/{y}.jpg',
+			options: {
+				attribution: '<a href="http://geo.nls.uk/maps/">National Library of Scotland Historic Maps</a>',
+				bounds: [[49.6, -12], [61.7, 3]],
+				minZoom: 1,
+				maxZoom: 18,
+				subdomains: '0123',
+			}
+		},
+		JusticeMap: {
+			// Justice Map (http://www.justicemap.org/)
+			// Visualize race and income data for your community, county and country.
+			// Includes tools for data journalists, bloggers and community activists.
+			url: 'http://www.justicemap.org/tile/{size}/{variant}/{z}/{x}/{y}.png',
+			options: {
+				attribution: '<a href="http://www.justicemap.org/terms.php">Justice Map</a>',
+				// one of 'county', 'tract', 'block'
+				size: 'county',
+				// Bounds for USA, including Alaska and Hawaii
+				bounds: [[14, -180], [72, -56]]
+			},
+			variants: {
+				income: 'income',
+				americanIndian: 'indian',
+				asian: 'asian',
+				black: 'black',
+				hispanic: 'hispanic',
+				multi: 'multi',
+				nonWhite: 'nonwhite',
+				white: 'white',
+				plurality: 'plural'
+			}
+		},
+		Wikimedia: {
+			url: 'https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}{r}.png',
+			options: {
+				attribution: '<a href="https://wikimediafoundation.org/wiki/Maps_Terms_of_Use">Wikimedia</a>',
+				minZoom: 1,
+				maxZoom: 19
+			}
+		},
+		GeoportailFrance: {
+			url: 'https://wxs.ign.fr/{apikey}/geoportail/wmts?REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0&STYLE={style}&TILEMATRIXSET=PM&FORMAT={format}&LAYER={variant}&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
+			options: {
+				attribution: '<a target="_blank" href="https://www.geoportail.gouv.fr/">Geoportail France</a>',
+				bounds: [[-75, -180], [81, 180]],
+				minZoom: 2,
+				maxZoom: 18,
+				// Get your own geoportail apikey here : http://professionnels.ign.fr/ign/contrats/
+				// NB : 'choisirgeoportail' is a demonstration key that comes with no guarantee
+				apikey: 'choisirgeoportail',
+				format: 'image/jpeg',
+				style : 'normal',
+				variant: 'GEOGRAPHICALGRIDSYSTEMS.MAPS.SCAN-EXPRESS.STANDARD'
+			},
+			variants: {
+				parcels: {
+					options : {
+						variant: 'CADASTRALPARCELS.PARCELS',
+						maxZoom: 20,
+						style : 'bdparcellaire',
+						format: 'image/png'
+					}
+				},
+				ignMaps: 'GEOGRAPHICALGRIDSYSTEMS.MAPS',
+				maps: 'GEOGRAPHICALGRIDSYSTEMS.MAPS.SCAN-EXPRESS.STANDARD',
+				orthos: {
+					options: {
+						maxZoom: 19,
+						variant: 'ORTHOIMAGERY.ORTHOPHOTOS'
+					}
+				}
+			}
+		},
+		OneMapSG: {
+			url: 'https://maps-{s}.onemap.sg/v3/{variant}/{z}/{x}/{y}.png',
+			options: {
+				variant: 'Default',
+				minZoom: 11,
+				maxZoom: 18,
+				bounds: [[1.56073, 104.11475], [1.16, 103.502]],
+				attribution: '<img src="https://docs.onemap.sg/maps/images/oneMap64-01.png" style="height:20px;width:20px;"/> New OneMap | Map data &copy; contributors, <a href="http://SLA.gov.sg">Singapore Land Authority</a>'
+			},
+			variants: {
+				Default: 'Default',
+				Night: 'Night',
+				Original: 'Original',
+				Grey: 'Grey',
+				LandLot: 'LandLot'
+			}
+		}
+	};
+
+	L.tileLayer.provider = function (provider, options) {
+		return new L.TileLayer.Provider(provider, options);
+	};
+
+	return L;
+}));
+
+(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.leafletImage = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+/* global L */
+
+var queue = require('d3-queue').queue;
+
+var cacheBusterDate = +new Date();
+
+// leaflet-image
+module.exports = function leafletImage(map, callback) {
+
+    var hasMapbox = !!L.mapbox;
+
+    var dimensions = map.getSize(),
+        layerQueue = new queue(1);
+
+    var canvas = document.createElement('canvas');
+    canvas.width = dimensions.x;
+    canvas.height = dimensions.y;
+    var ctx = canvas.getContext('2d');
+
+    // dummy canvas image when loadTile get 404 error
+    // and layer don't have errorTileUrl
+    var dummycanvas = document.createElement('canvas');
+    dummycanvas.width = 1;
+    dummycanvas.height = 1;
+    var dummyctx = dummycanvas.getContext('2d');
+    dummyctx.fillStyle = 'rgba(0,0,0,0)';
+    dummyctx.fillRect(0, 0, 1, 1);
+
+    // layers are drawn in the same order as they are composed in the DOM:
+    // tiles, paths, and then markers
+    map.eachLayer(drawTileLayer);
+    map.eachLayer(drawEsriDynamicLayer);
+    
+    if (map._pathRoot) {
+        layerQueue.defer(handlePathRoot, map._pathRoot);
+    } else if (map._panes) {
+        var firstCanvas = map._panes.overlayPane.getElementsByTagName('canvas').item(0);
+        if (firstCanvas) { layerQueue.defer(handlePathRoot, firstCanvas); }
+    }
+    map.eachLayer(drawMarkerLayer);
+    layerQueue.awaitAll(layersDone);
+
+    function drawTileLayer(l) {
+        if (l instanceof L.TileLayer) layerQueue.defer(handleTileLayer, l);
+        else if (l._heat) layerQueue.defer(handlePathRoot, l._canvas);
+    }
+
+    function drawMarkerLayer(l) {
+        if (l instanceof L.Marker && l.options.icon instanceof L.Icon) {
+            layerQueue.defer(handleMarkerLayer, l);
+        }
+    }
+    
+    function drawEsriDynamicLayer(l) {
+        if (!L.esri) return;
+       
+        if (l instanceof L.esri.DynamicMapLayer) {                       
+            layerQueue.defer(handleEsriDymamicLayer, l);
+        }
+    }
+
+    function done() {
+        callback(null, canvas);
+    }
+
+    function layersDone(err, layers) {
+        if (err) throw err;
+        layers.forEach(function (layer) {
+            if (layer && layer.canvas) {
+                ctx.drawImage(layer.canvas, 0, 0);
+            }
+        });
+        done();
+    }
+
+    function handleTileLayer(layer, callback) {
+        // `L.TileLayer.Canvas` was removed in leaflet 1.0
+        var isCanvasLayer = (L.TileLayer.Canvas && layer instanceof L.TileLayer.Canvas),
+            canvas = document.createElement('canvas');
+
+        canvas.width = dimensions.x;
+        canvas.height = dimensions.y;
+
+        var ctx = canvas.getContext('2d'),
+            bounds = map.getPixelBounds(),
+            zoom = map.getZoom(),
+            tileSize = layer.options.tileSize;
+
+        if (zoom > layer.options.maxZoom ||
+            zoom < layer.options.minZoom ||
+            // mapbox.tileLayer
+            (hasMapbox &&
+                layer instanceof L.mapbox.tileLayer && !layer.options.tiles)) {
+            return callback();
+        }
+
+        var tileBounds = L.bounds(
+            bounds.min.divideBy(tileSize)._floor(),
+            bounds.max.divideBy(tileSize)._floor()),
+            tiles = [],
+            j, i,
+            tileQueue = new queue(1);
+
+        for (j = tileBounds.min.y; j <= tileBounds.max.y; j++) {
+            for (i = tileBounds.min.x; i <= tileBounds.max.x; i++) {
+                tiles.push(new L.Point(i, j));
+            }
+        }
+
+        tiles.forEach(function (tilePoint) {
+            var originalTilePoint = tilePoint.clone();
+
+            if (layer._adjustTilePoint) {
+                layer._adjustTilePoint(tilePoint);
+            }
+
+            var tilePos = originalTilePoint
+                .scaleBy(new L.Point(tileSize, tileSize))
+                .subtract(bounds.min);
+
+            if (tilePoint.y >= 0) {
+                if (isCanvasLayer) {
+                    var tile = layer._tiles[tilePoint.x + ':' + tilePoint.y];
+                    tileQueue.defer(canvasTile, tile, tilePos, tileSize);
+                } else {
+                    var url = addCacheString(layer.getTileUrl(tilePoint));
+                    tileQueue.defer(loadTile, url, tilePos, tileSize);
+                }
+            }
+        });
+
+        tileQueue.awaitAll(tileQueueFinish);
+
+        function canvasTile(tile, tilePos, tileSize, callback) {
+            callback(null, {
+                img: tile,
+                pos: tilePos,
+                size: tileSize
+            });
+        }
+
+        function loadTile(url, tilePos, tileSize, callback) {
+            var im = new Image();
+            im.crossOrigin = '';
+            im.onload = function () {
+                callback(null, {
+                    img: this,
+                    pos: tilePos,
+                    size: tileSize
+                });
+            };
+            im.onerror = function (e) {
+                // use canvas instead of errorTileUrl if errorTileUrl get 404
+                if (layer.options.errorTileUrl != '' && e.target.errorCheck === undefined) {
+                    e.target.errorCheck = true;
+                    e.target.src = layer.options.errorTileUrl;
+                } else {
+                    callback(null, {
+                        img: dummycanvas,
+                        pos: tilePos,
+                        size: tileSize
+                    });
+                }
+            };
+            im.src = url;
+        }
+
+        function tileQueueFinish(err, data) {
+            data.forEach(drawTile);
+            callback(null, { canvas: canvas });
+        }
+
+        function drawTile(d) {
+            ctx.drawImage(d.img, Math.floor(d.pos.x), Math.floor(d.pos.y),
+                d.size, d.size);
+        }
+    }
+
+    function handlePathRoot(root, callback) {
+        var bounds = map.getPixelBounds(),
+            origin = map.getPixelOrigin(),
+            canvas = document.createElement('canvas');
+        canvas.width = dimensions.x;
+        canvas.height = dimensions.y;
+        var ctx = canvas.getContext('2d');
+        var pos = L.DomUtil.getPosition(root).subtract(bounds.min).add(origin);
+        try {
+            ctx.drawImage(root, pos.x, pos.y, canvas.width - (pos.x * 2), canvas.height - (pos.y * 2));
+            callback(null, {
+                canvas: canvas
+            });
+        } catch(e) {
+            console.error('Element could not be drawn on canvas', root); // eslint-disable-line no-console
+        }
+    }
+
+    function handleMarkerLayer(marker, callback) {
+        var canvas = document.createElement('canvas'),
+            ctx = canvas.getContext('2d'),
+            pixelBounds = map.getPixelBounds(),
+            minPoint = new L.Point(pixelBounds.min.x, pixelBounds.min.y),
+            pixelPoint = map.project(marker.getLatLng()),
+            isBase64 = /^data\:/.test(marker._icon.src),
+            url = isBase64 ? marker._icon.src : addCacheString(marker._icon.src),
+            im = new Image(),
+            options = marker.options.icon.options,
+            size = options.iconSize,
+            pos = pixelPoint.subtract(minPoint),
+            anchor = L.point(options.iconAnchor || size && size.divideBy(2, true));
+
+        if (size instanceof L.Point) size = [size.x, size.y];
+
+        var x = Math.round(pos.x - size[0] + anchor.x),
+            y = Math.round(pos.y - anchor.y);
+
+        canvas.width = dimensions.x;
+        canvas.height = dimensions.y;
+        im.crossOrigin = '';
+
+        im.onload = function () {
+            ctx.drawImage(this, x, y, size[0], size[1]);
+            callback(null, {
+                canvas: canvas
+            });
+        };
+
+        im.src = url;
+
+        if (isBase64) im.onload();
+    }
+    
+    function handleEsriDymamicLayer(dynamicLayer, callback) {
+        var canvas = document.createElement('canvas');
+        canvas.width = dimensions.x;
+        canvas.height = dimensions.y;
+    
+        var ctx = canvas.getContext('2d');
+    
+        var im = new Image();
+        im.crossOrigin = '';
+        im.src = addCacheString(dynamicLayer._currentImage._image.src);
+    
+        im.onload = function() {
+            ctx.drawImage(im, 0, 0);
+            callback(null, {
+                canvas: canvas
+            });
+        };
+    }
+
+    function addCacheString(url) {
+        // If it's a data URL we don't want to touch this.
+        if (isDataURL(url) || url.indexOf('mapbox.com/styles/v1') !== -1) {
+            return url;
+        }
+        return url + ((url.match(/\?/)) ? '&' : '?') + 'cache=' + cacheBusterDate;
+    }
+
+    function isDataURL(url) {
+        var dataURLRegex = /^\s*data:([a-z]+\/[a-z]+(;[a-z\-]+\=[a-z\-]+)?)?(;base64)?,[a-z0-9\!\$\&\'\,\(\)\*\+\,\;\=\-\.\_\~\:\@\/\?\%\s]*\s*$/i;
+        return !!url.match(dataURLRegex);
+    }
+
+};
+
+},{"d3-queue":2}],2:[function(require,module,exports){
+(function (global, factory) {
+  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
+  typeof define === 'function' && define.amd ? define(['exports'], factory) :
+  (factory((global.d3_queue = global.d3_queue || {})));
+}(this, function (exports) { 'use strict';
+
+  var version = "2.0.3";
+
+  var slice = [].slice;
+
+  var noabort = {};
+
+  function Queue(size) {
+    if (!(size >= 1)) throw new Error;
+    this._size = size;
+    this._call =
+    this._error = null;
+    this._tasks = [];
+    this._data = [];
+    this._waiting =
+    this._active =
+    this._ended =
+    this._start = 0; // inside a synchronous task callback?
+  }
+
+  Queue.prototype = queue.prototype = {
+    constructor: Queue,
+    defer: function(callback) {
+      if (typeof callback !== "function" || this._call) throw new Error;
+      if (this._error != null) return this;
+      var t = slice.call(arguments, 1);
+      t.push(callback);
+      ++this._waiting, this._tasks.push(t);
+      poke(this);
+      return this;
+    },
+    abort: function() {
+      if (this._error == null) abort(this, new Error("abort"));
+      return this;
+    },
+    await: function(callback) {
+      if (typeof callback !== "function" || this._call) throw new Error;
+      this._call = function(error, results) { callback.apply(null, [error].concat(results)); };
+      maybeNotify(this);
+      return this;
+    },
+    awaitAll: function(callback) {
+      if (typeof callback !== "function" || this._call) throw new Error;
+      this._call = callback;
+      maybeNotify(this);
+      return this;
+    }
+  };
+
+  function poke(q) {
+    if (!q._start) try { start(q); } // let the current task complete
+    catch (e) { if (q._tasks[q._ended + q._active - 1]) abort(q, e); } // task errored synchronously
+  }
+
+  function start(q) {
+    while (q._start = q._waiting && q._active < q._size) {
+      var i = q._ended + q._active,
+          t = q._tasks[i],
+          j = t.length - 1,
+          c = t[j];
+      t[j] = end(q, i);
+      --q._waiting, ++q._active;
+      t = c.apply(null, t);
+      if (!q._tasks[i]) continue; // task finished synchronously
+      q._tasks[i] = t || noabort;
+    }
+  }
+
+  function end(q, i) {
+    return function(e, r) {
+      if (!q._tasks[i]) return; // ignore multiple callbacks
+      --q._active, ++q._ended;
+      q._tasks[i] = null;
+      if (q._error != null) return; // ignore secondary errors
+      if (e != null) {
+        abort(q, e);
+      } else {
+        q._data[i] = r;
+        if (q._waiting) poke(q);
+        else maybeNotify(q);
+      }
+    };
+  }
+
+  function abort(q, e) {
+    var i = q._tasks.length, t;
+    q._error = e; // ignore active callbacks
+    q._data = undefined; // allow gc
+    q._waiting = NaN; // prevent starting
+
+    while (--i >= 0) {
+      if (t = q._tasks[i]) {
+        q._tasks[i] = null;
+        if (t.abort) try { t.abort(); }
+        catch (e) { /* ignore */ }
+      }
+    }
+
+    q._active = NaN; // allow notification
+    maybeNotify(q);
+  }
+
+  function maybeNotify(q) {
+    if (!q._active && q._call) q._call(q._error, q._data);
+  }
+
+  function queue(concurrency) {
+    return new Queue(arguments.length ? +concurrency : Infinity);
+  }
+
+  exports.version = version;
+  exports.queue = queue;
+
+}));
+},{}]},{},[1])(1)
+});
+L.AreaSelect = L.Class.extend({
+    includes: L.Evented.prototype,
+
+    options: {
+        width: 200,
+        height: 300,
+        keepAspectRatio: false,
+    },
+
+    initialize: function(options) {
+        L.Util.setOptions(this, options);
+
+        this._width = this.options.width;
+        this._height = this.options.height;
+    },
+
+    addTo: function(map) {
+        this.map = map;
+        this._createElements();
+        this._render();
+        return this;
+    },
+
+    getBounds: function() {
+        var size = this.map.getSize();
+        var topRight = new L.Point();
+        var bottomLeft = new L.Point();
+
+        bottomLeft.x = Math.round((size.x - this._width) / 2);
+        topRight.y = Math.round((size.y - this._height) / 2);
+        topRight.x = size.x - bottomLeft.x;
+        bottomLeft.y = size.y - topRight.y;
+
+        var sw = this.map.containerPointToLatLng(bottomLeft);
+        var ne = this.map.containerPointToLatLng(topRight);
+
+        return new L.LatLngBounds(sw, ne);
+    },
+
+    remove: function() {
+        this.map.off("moveend", this._onMapChange);
+        this.map.off("zoomend", this._onMapChange);
+        this.map.off("resize", this._onMapResize);
+
+        this._container.parentNode.removeChild(this._container);
+    },
+
+
+    setDimensions: function(dimensions) {
+        if (!dimensions)
+            return;
+
+        this._height = parseInt(dimensions.height) || this._height;
+        this._width = parseInt(dimensions.width) || this._width;
+        this._render();
+        this.fire("change");
+    },
+
+
+    _createElements: function() {
+        if (!!this._container)
+            return;
+
+        this._container = L.DomUtil.create("div", "leaflet-areaselect-container", this.map._controlContainer)
+        this._topShade = L.DomUtil.create("div", "leaflet-areaselect-shade leaflet-control", this._container);
+        this._bottomShade = L.DomUtil.create("div", "leaflet-areaselect-shade leaflet-control", this._container);
+        this._leftShade = L.DomUtil.create("div", "leaflet-areaselect-shade leaflet-control", this._container);
+        this._rightShade = L.DomUtil.create("div", "leaflet-areaselect-shade leaflet-control", this._container);
+
+        this._nwHandle = L.DomUtil.create("div", "leaflet-areaselect-handle leaflet-control", this._container);
+        this._swHandle = L.DomUtil.create("div", "leaflet-areaselect-handle leaflet-control", this._container);
+        this._neHandle = L.DomUtil.create("div", "leaflet-areaselect-handle leaflet-control", this._container);
+        this._seHandle = L.DomUtil.create("div", "leaflet-areaselect-handle leaflet-control", this._container);
+
+        this._setUpHandlerEvents(this._nwHandle);
+        this._setUpHandlerEvents(this._neHandle, -1, 1);
+        this._setUpHandlerEvents(this._swHandle, 1, -1);
+        this._setUpHandlerEvents(this._seHandle, -1, -1);
+
+        this.map.on("moveend", this._onMapChange, this);
+        this.map.on("zoomend", this._onMapChange, this);
+        this.map.on("resize", this._onMapResize, this);
+
+        this.fire("change");
+    },
+
+    _setUpHandlerEvents: function(handle, xMod, yMod) {
+        xMod = xMod || 1;
+        yMod = yMod || 1;
+
+        var self = this;
+        function onMouseDown(event) {
+            event.stopPropagation();
+            self.map.dragging.disable();
+            L.DomEvent.removeListener(this, "mousedown", onMouseDown);
+            var curX = event.pageX;
+            var curY = event.pageY;
+            var ratio = self._width / self._height;
+            var size = self.map.getSize();
+
+            function onMouseMove(event) {
+                if (self.options.keepAspectRatio) {
+                    var maxHeight = (self._height >= self._width ? size.y : size.y * (1/ratio) ) - 30;
+                    self._height += (curY - event.originalEvent.pageY) * 2 * yMod;
+                    self._height = Math.max(30, self._height);
+                    self._height = Math.min(maxHeight, self._height);
+                    self._width = self._height * ratio;
+                } else {
+                    self._width += (curX - event.originalEvent.pageX) * 2 * xMod;
+                    self._height += (curY - event.originalEvent.pageY) * 2 * yMod;
+                    self._width = Math.max(30, self._width);
+                    self._height = Math.max(30, self._height);
+                    self._width = Math.min(size.x-30, self._width);
+                    self._height = Math.min(size.y-30, self._height);
+
+                }
+
+                curX = event.originalEvent.pageX;
+                curY = event.originalEvent.pageY;
+                self._render();
+            }
+            function onMouseUp(event) {
+                self.map.dragging.enable();
+                L.DomEvent.removeListener(self.map, "mouseup", onMouseUp);
+                L.DomEvent.removeListener(self.map, "mousemove", onMouseMove);
+                L.DomEvent.addListener(handle, "mousedown", onMouseDown);
+                self.fire("change");
+            }
+
+            L.DomEvent.addListener(self.map, "mousemove", onMouseMove);
+            L.DomEvent.addListener(self.map, "mouseup", onMouseUp);
+        }
+        L.DomEvent.addListener(handle, "mousedown", onMouseDown);
+
+        if (touchHandler) {
+            // make touch events simulate mouse events via touchHandler
+            handle.addEventListener("touchstart", touchHandler, true);
+            handle.addEventListener("touchmove", touchHandler, true);
+            handle.addEventListener("touchend", touchHandler, true);
+            handle.addEventListener("touchcancel", touchHandler, true);
+        }
+    },
+
+    _onMapResize: function() {
+        this._render();
+    },
+
+    _onMapChange: function() {
+        this.fire("change");
+    },
+
+    _render: function() {
+        var size = this.map.getSize();
+        var handleOffset = Math.round(this._nwHandle.offsetWidth/2);
+
+        var topBottomHeight = Math.round((size.y-this._height)/2);
+        var leftRightWidth = Math.round((size.x-this._width)/2);
+
+        function setDimensions(element, dimension) {
+            element.style.width = dimension.width + "px";
+            element.style.height = dimension.height + "px";
+            element.style.top = dimension.top + "px";
+            element.style.left = dimension.left + "px";
+            element.style.bottom = dimension.bottom + "px";
+            element.style.right = dimension.right + "px";
+        }
+
+        setDimensions(this._topShade, {width:size.x, height:topBottomHeight, top:0, left:0});
+        setDimensions(this._bottomShade, {width:size.x, height:topBottomHeight, bottom:0, left:0});
+        setDimensions(this._leftShade, {
+            width: leftRightWidth,
+            height: size.y-(topBottomHeight*2),
+            top: topBottomHeight,
+            left: 0
+        });
+        setDimensions(this._rightShade, {
+            width: leftRightWidth,
+            height: size.y-(topBottomHeight*2),
+            top: topBottomHeight,
+            right: 0
+        });
+
+        setDimensions(this._nwHandle, {left:leftRightWidth-handleOffset, top:topBottomHeight-7});
+        setDimensions(this._neHandle, {right:leftRightWidth-handleOffset, top:topBottomHeight-7});
+        setDimensions(this._swHandle, {left:leftRightWidth-handleOffset, bottom:topBottomHeight-7});
+        setDimensions(this._seHandle, {right:leftRightWidth-handleOffset, bottom:topBottomHeight-7});
+    }
+});
+
+L.areaSelect = function(options) {
+    return new L.AreaSelect(options);
+};
+
+(function(){
+
+// This is for grouping buttons into a bar
+// takes an array of `L.easyButton`s and
+// then the usual `.addTo(map)`
+L.Control.EasyBar = L.Control.extend({
+
+  options: {
+    position:       'topleft',  // part of leaflet's defaults
+    id:             null,       // an id to tag the Bar with
+    leafletClasses: true        // use leaflet classes?
+  },
+
+
+  initialize: function(buttons, options){
+
+    if(options){
+      L.Util.setOptions( this, options );
+    }
+
+    this._buildContainer();
+    this._buttons = [];
+
+    for(var i = 0; i < buttons.length; i++){
+      buttons[i]._bar = this;
+      buttons[i]._container = buttons[i].button;
+      this._buttons.push(buttons[i]);
+      this.container.appendChild(buttons[i].button);
+    }
+
+  },
+
+
+  _buildContainer: function(){
+    this._container = this.container = L.DomUtil.create('div', '');
+    this.options.leafletClasses && L.DomUtil.addClass(this.container, 'leaflet-bar easy-button-container leaflet-control');
+    this.options.id && (this.container.id = this.options.id);
+  },
+
+
+  enable: function(){
+    L.DomUtil.addClass(this.container, 'enabled');
+    L.DomUtil.removeClass(this.container, 'disabled');
+    this.container.setAttribute('aria-hidden', 'false');
+    return this;
+  },
+
+
+  disable: function(){
+    L.DomUtil.addClass(this.container, 'disabled');
+    L.DomUtil.removeClass(this.container, 'enabled');
+    this.container.setAttribute('aria-hidden', 'true');
+    return this;
+  },
+
+
+  onAdd: function () {
+    return this.container;
+  },
+
+  addTo: function (map) {
+    this._map = map;
+
+    for(var i = 0; i < this._buttons.length; i++){
+      this._buttons[i]._map = map;
+    }
+
+    var container = this._container = this.onAdd(map),
+        pos = this.getPosition(),
+        corner = map._controlCorners[pos];
+
+    L.DomUtil.addClass(container, 'leaflet-control');
+
+    if (pos.indexOf('bottom') !== -1) {
+      corner.insertBefore(container, corner.firstChild);
+    } else {
+      corner.appendChild(container);
+    }
+
+    return this;
+  }
+
+});
+
+L.easyBar = function(){
+  var args = [L.Control.EasyBar];
+  for(var i = 0; i < arguments.length; i++){
+    args.push( arguments[i] );
+  }
+  return new (Function.prototype.bind.apply(L.Control.EasyBar, args));
+};
+
+// L.EasyButton is the actual buttons
+// can be called without being grouped into a bar
+L.Control.EasyButton = L.Control.extend({
+
+  options: {
+    position:  'topleft',       // part of leaflet's defaults
+
+    id:        null,            // an id to tag the button with
+
+    type:      'replace',       // [(replace|animate)]
+                                // replace swaps out elements
+                                // animate changes classes with all elements inserted
+
+    states:    [],              // state names look like this
+                                // {
+                                //   stateName: 'untracked',
+                                //   onClick: function(){ handle_nav_manually(); };
+                                //   title: 'click to make inactive',
+                                //   icon: 'fa-circle',    // wrapped with <a>
+                                // }
+
+    leafletClasses:   true,     // use leaflet styles for the button
+    tagName:          'button',
+  },
+
+
+
+  initialize: function(icon, onClick, title, id){
+
+    // clear the states manually
+    this.options.states = [];
+
+    // add id to options
+    if(id != null){
+      this.options.id = id;
+    }
+
+    // storage between state functions
+    this.storage = {};
+
+    // is the last item an object?
+    if( typeof arguments[arguments.length-1] === 'object' ){
+
+      // if so, it should be the options
+      L.Util.setOptions( this, arguments[arguments.length-1] );
+    }
+
+    // if there aren't any states in options
+    // use the early params
+    if( this.options.states.length === 0 &&
+        typeof icon  === 'string' &&
+        typeof onClick === 'function'){
+
+      // turn the options object into a state
+      this.options.states.push({
+        icon: icon,
+        onClick: onClick,
+        title: typeof title === 'string' ? title : ''
+      });
+    }
+
+    // curate and move user's states into
+    // the _states for internal use
+    this._states = [];
+
+    for(var i = 0; i < this.options.states.length; i++){
+      this._states.push( new State(this.options.states[i], this) );
+    }
+
+    this._buildButton();
+
+    this._activateState(this._states[0]);
+
+  },
+
+  _buildButton: function(){
+
+    this.button = L.DomUtil.create(this.options.tagName, '');
+
+    // the next three if statements should be collapsed into the options
+    // when it's time for breaking changes.
+    if (this.tagName === 'button') {
+        this.button.type = 'button';
+    }
+
+    if (this.options.id ){
+      this.button.id = this.options.id;
+    }
+
+    if (this.options.leafletClasses){
+      L.DomUtil.addClass(this.button, 'easy-button-button leaflet-bar-part leaflet-interactive');
+    }
+
+    // don't let double clicks and mousedown get to the map
+    L.DomEvent.addListener(this.button, 'dblclick', L.DomEvent.stop);
+    L.DomEvent.addListener(this.button, 'mousedown', L.DomEvent.stop);
+
+    // take care of normal clicks
+    L.DomEvent.addListener(this.button,'click', function(e){
+      L.DomEvent.stop(e);
+      this._currentState.onClick(this, this._map ? this._map : null );
+      this._map.getContainer().focus();
+    }, this);
+
+    // prep the contents of the control
+    if(this.options.type == 'replace'){
+      this.button.appendChild(this._currentState.icon);
+    } else {
+      for(var i=0;i<this._states.length;i++){
+        this.button.appendChild(this._states[i].icon);
+      }
+    }
+  },
+
+
+  _currentState: {
+    // placeholder content
+    stateName: 'unnamed',
+    icon: (function(){ return document.createElement('span'); })()
+  },
+
+
+
+  _states: null, // populated on init
+
+
+
+  state: function(newState){
+
+    // activate by name
+    if(typeof newState == 'string'){
+
+      this._activateStateNamed(newState);
+
+    // activate by index
+    } else if (typeof newState == 'number'){
+
+      this._activateState(this._states[newState]);
+    }
+
+    return this;
+  },
+
+
+  _activateStateNamed: function(stateName){
+    for(var i = 0; i < this._states.length; i++){
+      if( this._states[i].stateName == stateName ){
+        this._activateState( this._states[i] );
+      }
+    }
+  },
+
+  _activateState: function(newState){
+
+    if( newState === this._currentState ){
+
+      // don't touch the dom if it'll just be the same after
+      return;
+
+    } else {
+
+      // swap out elements... if you're into that kind of thing
+      if( this.options.type == 'replace' ){
+        this.button.appendChild(newState.icon);
+        this.button.removeChild(this._currentState.icon);
+      }
+
+      if( newState.title ){
+        this.button.title = newState.title;
+      } else {
+        this.button.removeAttribute('title');
+      }
+
+      // update classes for animations
+      for(var i=0;i<this._states.length;i++){
+        L.DomUtil.removeClass(this._states[i].icon, this._currentState.stateName + '-active');
+        L.DomUtil.addClass(this._states[i].icon, newState.stateName + '-active');
+      }
+
+      // update classes for animations
+      L.DomUtil.removeClass(this.button, this._currentState.stateName + '-active');
+      L.DomUtil.addClass(this.button, newState.stateName + '-active');
+
+      // update the record
+      this._currentState = newState;
+
+    }
+  },
+
+
+
+  enable: function(){
+    L.DomUtil.addClass(this.button, 'enabled');
+    L.DomUtil.removeClass(this.button, 'disabled');
+    this.button.setAttribute('aria-hidden', 'false');
+    return this;
+  },
+
+
+
+  disable: function(){
+    L.DomUtil.addClass(this.button, 'disabled');
+    L.DomUtil.removeClass(this.button, 'enabled');
+    this.button.setAttribute('aria-hidden', 'true');
+    return this;
+  },
+
+
+  removeFrom: function (map) {
+
+    this._container.parentNode.removeChild(this._container);
+    this._map = null;
+
+    return this;
+  },
+
+  onAdd: function(){
+    var containerObj = L.easyBar([this], {
+      position: this.options.position,
+      leafletClasses: this.options.leafletClasses
+    });
+    this._container = containerObj.container;
+    return this._container;
+  }
+
+
+});
+
+L.easyButton = function(/* args will pass automatically */){
+  var args = Array.prototype.concat.apply([L.Control.EasyButton],arguments);
+  return new (Function.prototype.bind.apply(L.Control.EasyButton, args));
+};
+
+/*************************
+ *
+ * util functions
+ *
+ *************************/
+
+// constructor for states so only curated
+// states end up getting called
+function State(template, easyButton){
+
+  this.title = template.title;
+  this.stateName = template.stateName ? template.stateName : 'unnamed-state';
+
+  // build the wrapper
+  this.icon = L.DomUtil.create('span', '');
+
+  L.DomUtil.addClass(this.icon, 'button-state state-' + this.stateName.replace(/(^\s*|\s*$)/g,''));
+  this.icon.innerHTML = buildIcon(template.icon);
+  this.onClick = L.Util.bind(template.onClick?template.onClick:function(){}, easyButton);
+}
+
+function buildIcon(ambiguousIconString) {
+
+  var tmpIcon;
+
+  // does this look like html? (i.e. not a class)
+  if( ambiguousIconString.match(/[&;=<>"']/) ){
+
+    // if so, the user should have put in html
+    // so move forward as such
+    tmpIcon = ambiguousIconString;
+
+  // then it wasn't html, so
+  // it's a class list, figure out what kind
+  } else {
+      ambiguousIconString = ambiguousIconString.replace(/(^\s*|\s*$)/g,'');
+      tmpIcon = L.DomUtil.create('span', '');
+
+      if( ambiguousIconString.indexOf('fa-') === 0 ){
+        L.DomUtil.addClass(tmpIcon, 'fa '  + ambiguousIconString)
+      } else if ( ambiguousIconString.indexOf('glyphicon-') === 0 ) {
+        L.DomUtil.addClass(tmpIcon, 'glyphicon ' + ambiguousIconString)
+      } else {
+        L.DomUtil.addClass(tmpIcon, /*rollwithit*/ ambiguousIconString)
+      }
+
+      // make this a string so that it's easy to set innerHTML below
+      tmpIcon = tmpIcon.outerHTML;
+  }
+
+  return tmpIcon;
+}
+
+})();
+
+/**
+ * FastBitArray.js : a fast bit array implementation in JavaScript.
+ * This is a very minimal fork of TypedFastBitSet.js by Daniel Lemire.
+ * No type checking, error checking, or auto-resizing is done
+ * so make sure you know what you are doing. 
+ */
+'use strict';
+
+// FastBitArray is initialized with a number representing
+// the maximum index we expect. an exception is thrown if 
+// typed arrays are not supported
+function FastBitArray(size) {
+  this.words = new Uint32Array((size + 32) >>> 5);
+}
+
+// Add the value (Set the bit at index to val)
+FastBitArray.prototype.set = function(index, val) {
+  // if ((count << 5) <= index) {
+  //   this.resize(index); //nothing to do
+  // }
+  
+  if (val)
+    this.words[index >>> 5] |= 1 << index;
+  else
+    this.words[index  >>> 5] &= ~(1 << index);
+};
+
+// Is the value contained in the set? Is the bit at index true or false? Returns a boolean
+FastBitArray.prototype.val = function(index) {
+  try {
+    return (this.words[index  >>> 5] & (1 << index)) !== 0;
+  }
+  catch(e) {
+    return false;
+  }
+};
+
+// Reduce the memory usage to a minimum
+FastBitArray.prototype.trim = function() {
+  let nl = this.words.length
+  while ((nl > 0) && (this.words[nl - 1] === 0)) {
+      nl--;
+  }
+  this.words = this.words.slice(0,nl);
+};
+
+// Resize the bitset so that we can write a value at index
+FastBitArray.prototype.resize = function(index) {
+  let count = this.words.length
+  if ((count << 5) > index) {
+    return; //nothing to do
+  }
+  count = (index + 32) >>> 5;
+  let newwords = new Uint32Array(count);
+  newwords.set(this.words);// hopefully, this copy is fast
+  this.words = newwords;
+};
+
+// fast function to compute the Hamming weight of a 32-bit unsigned integer
+FastBitArray.prototype.hammingWeight = function(v) {
+  v -= ((v >>> 1) & 0x55555555);// works with signed or unsigned shifts
+  v = (v & 0x33333333) + ((v >>> 2) & 0x33333333);
+  return ((v + (v >>> 4) & 0xF0F0F0F) * 0x1010101) >>> 24;
+};
+
+
+// How many values stored in the set? How many set bits?
+FastBitArray.prototype.count = function() {
+  let answer = 0,
+      c = this.words.length;
+  for (let i = 0; i < c; i++) {
+    answer += this.hammingWeight(this.words[i] | 0);
+  }
+  return answer;
+};
+
+// Return an array with the set bit locations (values)
+FastBitArray.prototype.array = function() {
+  let count = this.count(),
+      ArrayConstructor = (count >> 16)? Uint32Array : Uint16Array
+      answer =  new ArrayConstructor(count),
+      pos = 0 | 0;
+      wc = this.words.length | 0;
+  for (let k = 0; k < wc; ++k) {
+    let w =  this.words[k];
+    while (w != 0) {
+      let t = w & -w;
+      answer[pos++] = (k << 5) + this.hammingWeight((t - 1) | 0);
+      w ^= t;
+    }
+  }
+  return answer;
+};
+
+// Return an array with the set bit locations (values)
+FastBitArray.prototype.forEach = function(fnc) {
+  let wc = this.words.length | 0;
+  for (let k = 0; k < wc; ++k) {
+    let w =  this.words[k];
+    while (w != 0) {
+      let t = w & -w;
+      fnc((k << 5) + this.hammingWeight(t - 1));
+      w ^= t;
+    }
+  }
+};
+
+// Creates a copy of this bitmap
+FastBitArray.prototype.clone = function() {
+  let clone = Object.create(FastBitArray.prototype);
+  clone.words = new Uint32Array(this.words);
+  return clone;
+};
+
+// Returns a string representation
+FastBitArray.prototype.toString = function() {
+  return '{' + this.array().join(',') + '}';
+};
+
+// module.exports = FastBitArray;
