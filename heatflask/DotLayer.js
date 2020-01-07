@@ -184,6 +184,11 @@ L.DotLayer = L.Layer.extend( {
     // -------------------------------------------------------------------
 
     Simplifier: {
+        /* 
+            Adapted from V. Agafonkin's simplify.js implementation of
+            Douglas-Peucker simplification algorithm
+        */
+
         // square distance between 2 points
         getSqDist: function(p1, p2) {
 
@@ -224,13 +229,14 @@ L.DotLayer = L.Layer.extend( {
 
         // basic distance-based simplification
         simplifyRadialDist: function(points, sqTolerance) {
+            const T = this.transform;
 
-            let prevPoint = points[0],
+            let prevPoint = T(points[0]),
                 newPoints = [prevPoint],
                 point;
 
             for (let i = 1, len = points.length; i < len; i++) {
-                point = points[i];
+                point = T(points[i]);
 
                 if (this.getSqDist(point, prevPoint) > sqTolerance) {
                     newPoints.push(point);
@@ -278,20 +284,25 @@ L.DotLayer = L.Layer.extend( {
             return simplified;
         },
 
-        simplify: function(points, tolerance, highestQuality) {
+        simplify: function(points, tolerance, hq=false, transform=null) {
 
             if (points.length <= 2) return points;
 
             const sqTolerance = tolerance !== undefined ? tolerance * tolerance : 1;
+            this.transform = transform || this.transform;
 
             // console.time("RDsimp");
-            points = highestQuality ? points : this.simplifyRadialDist(points, sqTolerance);
+            points = hq ? points : this.simplifyRadialDist(points, sqTolerance);
             // console.timeEnd("RDsimp");
             // console.log(`n = ${points.length}`)
             // console.time("DPsimp")
             points = this.simplifyDouglasPeucker(points, sqTolerance);
             // console.timeEnd("DPsimp");
             return points;
+        },
+
+        transform: function(point) {
+            return point;
         }
     },
 
@@ -394,14 +405,19 @@ L.DotLayer = L.Layer.extend( {
         // console.time("project");
         for (let i=0; i<numPoints; i++) {
             let idx = 3*i,
-                p = this.CRS.project( [llt[idx], llt[idx+1]], zoom );
+                p = [llt[idx], llt[idx+1]];
             points[i] = [ p[0], p[1], llt[idx+2] ];
         };
         // console.timeEnd("project");
         // console.log(`n = ${points.length}`);
 
         // console.time("simplify");
-        points = this.Simplifier.simplify(points, smoothFactor, hq);
+        points = this.Simplifier.simplify(
+            points,
+            smoothFactor,
+            hq=hq,
+            transform=(latLng) => this.CRS.project(latLng, zoom)
+        );
         // console.timeEnd("simplify");
         // console.log(`n = ${points.length}`);
 
