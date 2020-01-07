@@ -128,9 +128,7 @@ L.DotLayer = L.Layer.extend( {
     //-------------------------------------------------------------
     getEvents: function() {
         var events = {
-            movestart: function() {
-                // this._mapMoving = true;
-            },
+            move: this._onLayerDidMove,
             moveend: this._onLayerDidMove,
             resize: this._onLayerDidResize
         };
@@ -370,14 +368,21 @@ L.DotLayer = L.Layer.extend( {
     },
 
     _segMask: function(pxBounds, projected, bitarray=null) {
-        const L = (projected.length / 3) - 1;
+        const numPoints = projected.length / 3;
         if (bitarray === null)
-            bitarray = new FastBitArray(L);
+            bitarray = new FastBitArray(numPoints);
 
-        for (let idx=0; idx<L; idx++) {
+        let pLast = [ projected[0], projected[1] ];
+
+        for (let idx = 1; idx < numPoints; idx++) {
             let i = 3*idx,
                 p = [projected[i], projected[i+1]];
-            bitarray.set(idx, this._contains(pxBounds, p));
+                segInView = (
+                    this._contains(pxBounds, p) ||
+                    this._contains(pxBounds, pLast)
+                );
+            bitarray.set(idx-1, segInView);
+            pLast = p;
         }
         return bitarray
     },
@@ -438,7 +443,7 @@ L.DotLayer = L.Layer.extend( {
         const perf_t0 = performance.now();
 
         // reset map orientation
-        this._drawRect = null;
+        this._drawRect = undefined;
         this.clearCanvas();
 
         let topLeft = this._map.containerPointToLayerPoint( [ 0, 0 ] );
@@ -471,7 +476,7 @@ L.DotLayer = L.Layer.extend( {
         const mapBounds = this._latLngBounds,
               smoothFactor = this.smoothFactor;
 
-        let count = {projected: 0, in:0, out:0};
+        let count = {projected: 0, in:0, out:0, segs:0};
         console.time("all items")
         for (let [id, A] of Object.entries(this._items)) {
             // console.log("Activity: "+id, A);
@@ -495,8 +500,12 @@ L.DotLayer = L.Layer.extend( {
                 count.projected++;
             }
 
-            let projectedPoints = A.projected[z].P,
-                segMask = A.segMask = this._segMask(this._pxBounds, projectedPoints, A.segMask);
+            let projectedPoints = A.projected[z].P;
+                
+            A.segMask = this._segMask(this._pxBounds, projectedPoints);
+            count.segs += A.segMask.count();
+            // if (A.segMask.isEmpty())
+            //     console.log(`${id} empty`);
 
             if (this.options.showPaths) {
                 // console.time("drawPath");
@@ -509,7 +518,7 @@ L.DotLayer = L.Layer.extend( {
                 this._drawPath(
                     this._lineCtx,
                     projectedPoints,
-                    segMask,
+                    A.segMask,
                     this._pxOffset,
                     lineWidth,
                     strokeStyle,
@@ -535,9 +544,11 @@ L.DotLayer = L.Layer.extend( {
         console.log(count);
 
         d = this.setDrawRect();
-        this._lineCtx.strokeStyle = "rgba(0,255,0,0.5)";
-        this._lineCtx.strokeRect(d.x, d.y, d.w, d.h);
-        // console.log("drawRect", this._drawRect);
+        if (d) {
+            this._lineCtx.strokeStyle = "rgba(0,255,0,0.5)";
+            this._lineCtx.strokeRect(d.x, d.y, d.w, d.h);
+            // console.log("drawRect", this._drawRect);
+        }
     },
 
     _drawPath: function(ctx, points, segMask, pxOffset, lineWidth, strokeStyle, opacity, isolated=true) {
@@ -580,9 +591,17 @@ L.DotLayer = L.Layer.extend( {
 
     setDrawRect: function() {
         let llb = L.latLngBounds();
+        const mapBounds = this._latLngBounds;
+        for (const A of Object.values(this._items)){
+            if (A.inView && !A.segMask.isEmpty())
+                llb.extend(A.bounds);
+        }
 
-        for (const A of Object.values(this._items))
-            llb.extend(A.bounds);
+        if (!llb.isValid()) {
+            // no paths on screen in this view
+            this._drawRect = null;
+            return null;
+        }
 
         const pad = (this._dotSize || 25 ) + 5,
               pxOffset = this._pxOffset,
@@ -608,6 +627,9 @@ L.DotLayer = L.Layer.extend( {
     },
 
     clearCanvas: function(ctx) {
+        if (this._drawRect === null)
+            return;
+
         const canvas = this._lineCanvas;
               defaultRect = {x:0, y:0, w: canvas.width, h: canvas.height};
         
@@ -702,6 +724,7 @@ L.DotLayer = L.Layer.extend( {
         if ( !this._map ) {
             return;
         }
+        return;
 
         let ctx = this._dotCtx,
             zoom = this._zoom,
@@ -719,7 +742,7 @@ L.DotLayer = L.Layer.extend( {
 
         this.clearCanvas(ctx);
 
-        for ( let A of this._items.values() ) {
+        for ( const [id, A] of Object.entries(this._items) ) {
             item = pItems[ id ];
             if ( A.highlighted ) {
                 highlighted_items.push( item );
