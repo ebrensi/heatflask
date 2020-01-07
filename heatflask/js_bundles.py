@@ -33,7 +33,6 @@ bundles = {
         ),
         # un-minified dependencies
         flask_assets.Bundle(
-            'js/moment.min.js',
             'js/Polyline.encoded.js',
             'js/L.Control.Window.js',
             'js/leaflet-providers.js',

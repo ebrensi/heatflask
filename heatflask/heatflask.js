@@ -982,7 +982,6 @@ function updateState(){
 
 
 function preset_sync() {
-    var F = "YYYY-MM-DD",
     num = domIdVal("select_num"),
     type = domIdVal("select_type");
 
@@ -990,8 +989,11 @@ function preset_sync() {
         $(".date_select").hide();
         domIdShow("id_select", false);
         domIdShow("num_select", true);
-        domIdVal('date1', moment().subtract(num, 'days').format(F));
         domIdVal('date2', "now");
+        let d = new Date();
+        d.setDate(d.getDate()-num);
+        dstr = d.toISOString().split('T')[0];
+        domIdVal('date1', dstr);
     } else if (type=="activities") {
         $(".date_select").hide();
         domIdShow("id_select", false);

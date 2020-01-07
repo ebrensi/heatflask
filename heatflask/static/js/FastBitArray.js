@@ -74,6 +74,15 @@ FastBitArray.prototype.count = function() {
   return answer;
 };
 
+// Return true if no bit is set
+FastBitArray.prototype.isEmpty = function(index) {
+  const c = this.words.length;
+  for (var  i = 0; i < c; i++) {
+    if (this.words[i] !== 0) return false;
+  }
+  return true;
+};
+
 // Return an array with the set bit locations (values)
 FastBitArray.prototype.array = function() {
   let count = this.count(),
