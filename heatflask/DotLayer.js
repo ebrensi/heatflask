@@ -502,6 +502,7 @@ L.DotLayer = L.Layer.extend( {
 
             let projectedPoints = A.projected[z].P;
                 
+            // TODO: figure out why reusing segMask doesn't work and fix that
             A.segMask = this._segMask(this._pxBounds, projectedPoints);
             count.segs += A.segMask.count();
             // if (A.segMask.isEmpty())
@@ -543,7 +544,7 @@ L.DotLayer = L.Layer.extend( {
         console.timeEnd("all items");
         console.log(count);
 
-        d = this.setDrawRect();
+        let d = this.setDrawRect();
         if (d) {
             this._lineCtx.strokeStyle = "rgba(0,255,0,0.5)";
             this._lineCtx.strokeRect(d.x, d.y, d.w, d.h);
@@ -590,32 +591,43 @@ L.DotLayer = L.Layer.extend( {
     },
 
     setDrawRect: function() {
-        let llb = L.latLngBounds();
-        const mapBounds = this._latLngBounds;
+        const canvas = this._lineCanvas,
+              zoom = this._zoom;
+        let anySegs = false,
+            xmin, xmax, ymin, ymax;
+
+        // find the pixel bounds of all relevant segments
         for (const A of Object.values(this._items)){
-            if (A.inView && !A.segMask.isEmpty())
-                llb.extend(A.bounds);
+            if (A.inView && !A.segMask.isEmpty()) {
+                anySegs = true;
+                let points = A.projected[zoom].P;
+                A.segMask.forEach((idx) => {
+                    const i = 3*idx,
+                          px = points[i],
+                          py = points[i+1];
+
+                    if (!xmin || (px < xmin)) xmin = px;
+                    if (!xmax || (px > xmax)) xmax = px;
+                    if (!ymin || (py < ymin)) ymin = py;
+                    if (!ymax || (py > ymax)) ymax = py;
+                });
+                
+            }
         }
 
-        if (!llb.isValid()) {
+        if (!anySegs) {
             // no paths on screen in this view
             this._drawRect = null;
             return null;
         }
 
-        const pad = (this._dotSize || 25 ) + 5,
-              pxOffset = this._pxOffset,
-              canvas = this._lineCanvas,
-              z = this._zoom,
-              sw = llb._southWest,
-              ne = llb._northEast,
-              pSW = this.CRS.project( [sw.lat, sw.lng], z ),
-              pNE = this.CRS.project( [ne.lat, ne.lng], z ),
+        const pxOffset = this._pxOffset,
+              pad = (this._dotSize || 25) + 5;
 
-              xmin = Math.max(pSW[0] + pxOffset.x - pad, 0),
-              xmax = Math.min(pNE[0] + pxOffset.x + pad, canvas.width)
-              ymin = Math.max(pNE[1] + pxOffset.y - pad, 0),
-              ymax = Math.min(pSW[1] + pxOffset.y + pad, canvas.height);
+        xmin = ~~Math.max(xmin + pxOffset.x - pad, 0);
+        xmax = ~~Math.min(xmax + pxOffset.x + pad, canvas.width);
+        ymin = ~~Math.max(ymin + pxOffset.y - pad, 0);
+        ymax = ~~Math.min(ymax + pxOffset.y + pad, canvas.height);
         
         this._drawRect = {
             x: xmin,
