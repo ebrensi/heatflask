@@ -1059,8 +1059,24 @@ function domIdShow(id, show=null) {
     }
 }
 
+// What to do when user changes to a different tab or window
+function handleVisibilityChange() {
+    if (document.hidden) {
+        let title = document.title;
+        handleVisibilityChange.title = title;
+        document.title = `${title} (paused)`;
+        if (!appState.paused)
+            DotLayer.pause();
+    } else if (!appState.paused && DotLayer) {
+        DotLayer.animate();
+        document.title = handleVisibilityChange.title;
+
+    }
+}
+
 
 $(document).ready(function() {
+    document.onvisibilitychange = handleVisibilityChange;
 
     // activities table set-up
     domIdProp("zoom-to-selection", "checked", false);
