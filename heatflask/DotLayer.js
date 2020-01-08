@@ -15,6 +15,7 @@ L.DotLayer = L.Layer.extend( {
     C1: 1000000.0,
     C2: 200.0,
     dotScale: 1,
+    numWorkers: 0,
 
     options: {
         startPaused: false,
@@ -62,6 +63,24 @@ L.DotLayer = L.Layer.extend( {
 
         this.strava_icon = new Image();
         this.strava_icon.src = "static/pbs4.png";
+
+        this._workers = null;
+        this._jobIndex = {};
+
+        if (window.Worker) {
+            const n = this.options.numWorkers;
+            if (n) {
+                this._workers = [];
+                for (let i=0; i<n; i++) {
+                    const worker = new Worker("dotLayerWorker.js");
+                    worker.onMessage = this._handleWorkerMessage;
+                    this._workers.push(worker);
+                    worker.postMessage({"hello": `worker_${i}`});
+                }
+            }
+        } else {
+            console.log("This browser apparently doesn\'t support web workers");
+        }
     },
 
     //-------------------------------------------------------------
@@ -227,7 +246,7 @@ L.DotLayer = L.Layer.extend( {
         },
         // rest of the code doesn't care about point format
 
-        // basic distance-based simplification
+        // basic distance-based simplification with transform
         simplifyRadialDist: function(pointsBuf, sqTolerance) {
             const T = this.transform,
                   P = pointsBuf,
@@ -418,19 +437,15 @@ L.DotLayer = L.Layer.extend( {
     },
 
     _project: function(llt, zoom, smoothFactor, hq=false, ttol=60) {
-        // console.time("simplify-project");
-        P = this.Simplifier.simplify(
+        const P = this.Simplifier.simplify(
             llt,
             smoothFactor,
             hq=hq,
             transform=(latLng) => this.CRS.project(latLng, zoom)
         );
-        // console.timeEnd("simplify-project");
-        // console.log(`n = ${P.length/3}`);
 
         // Compute speed for each valid segment
         // A segment is valid if it doesn't have too large time gap
-        // console.time("deriv");
         let numSegs = numPoints - 1,
             dP = new Float32Array(numSegs * 2);
 
@@ -442,7 +457,6 @@ L.DotLayer = L.Layer.extend( {
             dP[j] = (P[i+3] - P[i]) / dt;
             dP[j+1] = (P[i+4] - P[i+1]) / dt;
         }
-        // console.timeEnd("deriv");
 
         return {P: P, dP: dP}
     },
@@ -466,61 +480,89 @@ L.DotLayer = L.Layer.extend( {
         this._center = this._map.getCenter;
         this._size = this._map.getSize();
 
+        const mapPanePos = this._map._getMapPanePos(),
+              pxOrigin = this._map.getPixelOrigin();
+
         this._latLngBounds = this._map.getBounds();
-        this._mapPanePos = this._map._getMapPanePos();
-        this._pxOrigin = this._map.getPixelOrigin();
-        this._pxOffset = this._mapPanePos.subtract( this._pxOrigin );
+        this._pxOffset = mapPanePos.subtract( pxOrigin );
         this._pxBounds = this._map.getPixelBounds();
 
-        let ppos = this._mapPanePos,
-            pxOrigin = this._pxOrigin,
-            pxBounds = this._pxBounds,
+        let pxBounds = this._pxBounds,
             z = this._zoom;
 
         this._dotCtx.strokeStyle = this.options.selected.dotStrokeColor;
         this._dotCtx.lineWidth = this.options.selected.dotStrokeWidth;
 
-        // console.log( `zoom=${z}\nmapPanePos=${ppos}\nsize=${this._size}\n` +
-        //             `pxOrigin=${pxOrigin}\npxBounds=[${pxBounds.min}, ${pxBounds.max}]\n`+
-        //              `pxOffset=${this._pxOffset}`);
-
         const mapBounds = this._latLngBounds,
               smoothFactor = this.smoothFactor;
-
-        let count = {projected: 0, in:0, out:0, segs:0};
-        console.time("redraw")
+        
+        const batchId = ~~performance.now();
+        this._jobIndex[batchId] = 0;
+        
         for (let [id, A] of Object.entries(this._items)) {
-            // console.log("Activity: "+id, A);
-            // console.time("activity");
+    
             A.inView = this._overlaps(mapBounds, A.bounds);
 
             if ( !A.inView ) {
-                count.out++
                 continue;
             }
 
-            count.in++
             if ( !A.projected )
                 A.projected = {};
 
-            // project activity latLngs to pane coords
-            if (!A.projected[ z ]){
-                // console.time("projectSimplify");
-                A.projected[z] = this._project(A.latLngTime, z, this.smoothFactor, hq=false);
-                // console.timeEnd("projectSimplify");
-                count.projected++;
-            }
+            this._jobIndex[batchId]++;
 
-            let projectedPoints = A.projected[z].P;
-                
+            // if a projection for this zoom level already exists,
+            // we don't need to do anything
+            if (A.projected[ z ])
+                this._afterProjected(A, z, batchId);
+                continue;
+
+            // if A is occupied by another thread
+            if (!A.latLngTime.length)
+                continue;
+
+            if (this._workers){
+                this._workerPool.send({
+                    project: batchId,
+                    id: id,
+                    zoom: z,
+                    smoothFactor: this.smoothFactor,
+                    hq: false,
+                    llt: A.latLngTime
+                });
+            } else {
+                A.projected[z] = this._project(
+                    A.latLngTime, z, this.smoothFactor, hq=false
+                );
+                this._afterProjected(A, z, batchId);
+            }
+        }
+    },
+
+    _handleWorkerMessage: function(event) {
+        const msg = event.data;
+        if ("project" in msg) {
+            const batch = msg.project,
+                  workerName = msg.name;
+
+            let A = this._items[msg.id];
+            A.projected[msg.zoom] = msg.P;
+            // A.latLngTime = msg.llt;
+            this._afterProjected(A, msg.zoom, batch);
+        }
+    },
+
+    _afterProjected: function(A, zoom, batch) {
+
+        // zoom level has changed since this job was started
+        if (zoom == this._zoom) {
+            const projectedPoints = A.projected[zoom].P;
+        
             // TODO: figure out why reusing segMask doesn't work and fix that
             A.segMask = this._segMask(this._pxBounds, projectedPoints);
-            count.segs += A.segMask.count();
-            // if (A.segMask.isEmpty())
-            //     console.log(`${id} empty`);
 
-            if (this.options.showPaths) {
-                // console.time("drawPath");
+            if (this.options.showPaths && !A.segMask.isEmpty()) {
 
                 const lineType = A.highlighted? "selected":"normal",
                       lineWidth = this.options[lineType].pathWidth,
@@ -536,9 +578,27 @@ L.DotLayer = L.Layer.extend( {
                     strokeStyle,
                     opacity
                 );
-                // console.timeEnd("drawPath");
             }
-            
+        }
+
+        this._jobIndex[batch]--;
+
+        if (this._jobIndex[batch])
+            return
+
+        // this batch is done
+        delete this._jobIndex[batch];
+
+        // if (this.options.showPaths)
+        //     this.drawPaths();
+
+        let d = this.setDrawRect();
+
+        if (d) {
+            this._lineCtx.strokeStyle = "rgba(0,255,0,0.5)";
+            this._lineCtx.strokeRect(d.x, d.y, d.w, d.h);
+        }
+                
             // console.timeEnd("activity");
             // this._processedItems[ id ] = {
             //     dP: dP,
@@ -547,18 +607,6 @@ L.DotLayer = L.Layer.extend( {
             //     startTime: A.startTime,
             //     totSec: P.slice( -1 )[ 0 ]
             // };
-        };
-
-        // if (this.options.showPaths)
-        //     this.drawPaths();
-
-        console.timeEnd("redraw");
-        console.log(count);
-        let d = this.setDrawRect();
-        if (d) {
-            this._lineCtx.strokeStyle = "rgba(0,255,0,0.5)";
-            this._lineCtx.strokeRect(d.x, d.y, d.w, d.h);
-        }
     },
 
     _drawPath: function(ctx, points, segMask, pxOffset, lineWidth, strokeStyle, opacity, isolated=true) {
