@@ -23,7 +23,7 @@ onmessage = function(event) {
 
         msg.name = name;
 
-        postMessage(msg); // ,[P.P.buffer, P.dP.buffer]);
+        postMessage(msg, [msg.llt.buffer, msg.P.P.buffer, msg.P.dP.buffer]);
 
     } else if ("hello" in msg){  
 

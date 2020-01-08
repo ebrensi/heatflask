@@ -528,14 +528,16 @@ L.DotLayer = L.Layer.extend( {
             }
 
             if (this._workers){
-                this._postMessage({
+                this._postToWorkers({
                     project: batchId,
                     id: id,
                     zoom: z,
                     smoothFactor: this.smoothFactor,
                     hq: false,
                     llt: A.latLngTime
-                });
+                }, [A.latLngTime.buffer]);
+                // console.log("after transfer", A);
+                // debugger;
             } else {
                 A.projected[z] = this._project(
                     A.latLngTime, z, this.smoothFactor, hq=false
@@ -545,10 +547,10 @@ L.DotLayer = L.Layer.extend( {
         }
     },
 
-    _postMessage: function(msg) {
+    _postToWorkers: function(msg, transferables) {
         let w = this._currentWorker || 0,
             n = this.options.numWorkers;
-        this._workers[w].postMessage(msg);
+        this._workers[w].postMessage(msg, transferables);
         w++;
         this._currentWorker = w % n;
     },
@@ -561,7 +563,7 @@ L.DotLayer = L.Layer.extend( {
 
             let A = this._items[msg.id];
             A.projected[msg.zoom] = msg.P;
-            // A.latLngTime = msg.llt;
+            A.latLngTime = msg.llt;
             this._afterProjected(A, msg.zoom, batch);
         }
     },
