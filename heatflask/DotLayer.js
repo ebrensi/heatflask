@@ -128,7 +128,7 @@ L.DotLayer = L.Layer.extend( {
     //-------------------------------------------------------------
     getEvents: function() {
         var events = {
-            move: this._onLayerDidMove,
+            // move: this._onLayerDidMove,
             moveend: this._onLayerDidMove,
             resize: this._onLayerDidResize
         };
@@ -228,15 +228,22 @@ L.DotLayer = L.Layer.extend( {
         // rest of the code doesn't care about point format
 
         // basic distance-based simplification
-        simplifyRadialDist: function(points, sqTolerance) {
-            const T = this.transform;
+        simplifyRadialDist: function(pointsBuf, sqTolerance) {
+            const T = this.transform,
+                  P = pointsBuf,
+                  numPoints = pointsBuf.length / 3;
 
-            let prevPoint = T(points[0]),
-                newPoints = [prevPoint],
-                point;
+            let newPoints = new Array(),
+                tP = T( [P[0], P[1]] ),
+                prevPoint = [tP[0], tP[1], P[2]],
+                point, j=1;
 
-            for (let i = 1, len = points.length; i < len; i++) {
-                point = T(points[i]);
+            newPoints.push(prevPoint);
+
+            for (let idx=1; idx < numPoints; idx++) {
+                let i = 3*idx;
+                tP = T( [P[i], P[i+1]] );
+                point = [tP[0], tP[1], P[i+2]];
 
                 if (this.getSqDist(point, prevPoint) > sqTolerance) {
                     newPoints.push(point);
@@ -286,8 +293,6 @@ L.DotLayer = L.Layer.extend( {
 
         simplify: function(points, tolerance, hq=false, transform=null) {
 
-            if (points.length <= 2) return points;
-
             const sqTolerance = tolerance !== undefined ? tolerance * tolerance : 1;
             this.transform = transform || this.transform;
 
@@ -298,7 +303,21 @@ L.DotLayer = L.Layer.extend( {
             // console.time("DPsimp")
             points = this.simplifyDouglasPeucker(points, sqTolerance);
             // console.timeEnd("DPsimp");
-            return points;
+
+            // now points is an Array of points, so we put it
+            // into a Float32Array buffer
+            numPoints = points.length;
+
+            let P = new Float32Array(numPoints * 3);
+            for (let idx=0; idx<numPoints; idx++) {
+                let point = points[idx],
+                    i = 3 * idx;
+                P[i] = point[0];
+                P[i+1] = point[1];
+                P[i+2] = point[2];
+            }
+
+            return P;
         },
 
         transform: function(point) {
@@ -399,44 +418,19 @@ L.DotLayer = L.Layer.extend( {
     },
 
     _project: function(llt, zoom, smoothFactor, hq=false, ttol=60) {
-        let numPoints = llt.length / 3,
-            points = new Array(numPoints);
-
-        // console.time("project");
-        for (let i=0; i<numPoints; i++) {
-            let idx = 3*i,
-                p = [llt[idx], llt[idx+1]];
-            points[i] = [ p[0], p[1], llt[idx+2] ];
-        };
-        // console.timeEnd("project");
-        // console.log(`n = ${points.length}`);
-
-        // console.time("simplify");
-        points = this.Simplifier.simplify(
-            points,
+        // console.time("simplify-project");
+        P = this.Simplifier.simplify(
+            llt,
             smoothFactor,
             hq=hq,
             transform=(latLng) => this.CRS.project(latLng, zoom)
         );
-        // console.timeEnd("simplify");
-        // console.log(`n = ${points.length}`);
-
-        // now points is an Array of points, so we put it
-        // into a Float32Array buffer
-        // TODO: modify Simplify to work directly with TypedArray 
-        numPoints = points.length;
-
-        let P = new Float32Array(numPoints * 3);
-        for (let idx=0; idx<numPoints; idx++) {
-            let point = points[idx],
-                i = 3 * idx;
-            P[i] = point[0];
-            P[i+1] = point[1];
-            P[i+2] = point[2];
-        }
+        // console.timeEnd("simplify-project");
+        // console.log(`n = ${P.length/3}`);
 
         // Compute speed for each valid segment
         // A segment is valid if it doesn't have too large time gap
+        // console.time("deriv");
         let numSegs = numPoints - 1,
             dP = new Float32Array(numSegs * 2);
 
@@ -448,6 +442,7 @@ L.DotLayer = L.Layer.extend( {
             dP[j] = (P[i+3] - P[i]) / dt;
             dP[j+1] = (P[i+4] - P[i+1]) / dt;
         }
+        // console.timeEnd("deriv");
 
         return {P: P, dP: dP}
     },
@@ -493,7 +488,7 @@ L.DotLayer = L.Layer.extend( {
               smoothFactor = this.smoothFactor;
 
         let count = {projected: 0, in:0, out:0, segs:0};
-        console.time("all items")
+        console.time("redraw")
         for (let [id, A] of Object.entries(this._items)) {
             // console.log("Activity: "+id, A);
             // console.time("activity");
@@ -557,14 +552,12 @@ L.DotLayer = L.Layer.extend( {
         // if (this.options.showPaths)
         //     this.drawPaths();
 
-        console.timeEnd("all items");
+        console.timeEnd("redraw");
         console.log(count);
-
         let d = this.setDrawRect();
         if (d) {
             this._lineCtx.strokeStyle = "rgba(0,255,0,0.5)";
             this._lineCtx.strokeRect(d.x, d.y, d.w, d.h);
-            // console.log("drawRect", this._drawRect);
         }
     },
 
