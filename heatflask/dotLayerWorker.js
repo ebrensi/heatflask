@@ -14,15 +14,11 @@
 
 */
 let name;
-
-onMessage = function(event) {
-    console.log(`${name} got message:`, event)
+onmessage = function(event) {
     let msg = event.data;
-
     if ("project" in msg) {
-
         msg.P = projectAndSimplify(
-            msg.id, msg.llt, msg.zoom, msg.smoothFactor, msg.hq
+            msg.llt, msg.zoom, msg.smoothFactor, msg.hq
         );
 
         msg.name = name;
@@ -35,7 +31,7 @@ onMessage = function(event) {
         console.log(`${name} started`)
     
     } else {
-        console.log("recieved ", msg);
+        console.log(`${name} recieved`, msg);
     }
 };
 

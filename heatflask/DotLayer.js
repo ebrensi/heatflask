@@ -15,9 +15,9 @@ L.DotLayer = L.Layer.extend( {
     C1: 1000000.0,
     C2: 200.0,
     dotScale: 1,
-    numWorkers: 0,
 
     options: {
+        numWorkers: 2,
         startPaused: false,
         showPaths: true,
         colorAll: true,
@@ -72,8 +72,8 @@ L.DotLayer = L.Layer.extend( {
             if (n) {
                 this._workers = [];
                 for (let i=0; i<n; i++) {
-                    const worker = new Worker("dotLayerWorker.js");
-                    worker.onMessage = this._handleWorkerMessage;
+                    const worker = new Worker(DOTLAYER_WORKER_URL);
+                    worker.onmessage = this._handleWorkerMessage.bind(this);
                     this._workers.push(worker);
                     worker.postMessage({"hello": `worker_${i}`});
                 }
@@ -496,34 +496,39 @@ L.DotLayer = L.Layer.extend( {
         const mapBounds = this._latLngBounds,
               smoothFactor = this.smoothFactor;
         
-        const batchId = ~~performance.now();
-        this._jobIndex[batchId] = 0;
-        
-        for (let [id, A] of Object.entries(this._items)) {
+        const batchId = performance.now(),
+              jobIndex = this._jobIndex,
+              activities = Object.entries(this._items);
+
+        jobIndex[batchId] = {count: activities.length};
+
+        for (let [id, A] of activities) {
     
             A.inView = this._overlaps(mapBounds, A.bounds);
 
             if ( !A.inView ) {
+                jobIndex[batchId].count--;
                 continue;
             }
 
             if ( !A.projected )
                 A.projected = {};
 
-            this._jobIndex[batchId]++;
-
             // if a projection for this zoom level already exists,
             // we don't need to do anything
-            if (A.projected[ z ])
+            if (A.projected[ z ]) {
                 this._afterProjected(A, z, batchId);
                 continue;
+            }
 
             // if A is occupied by another thread
-            if (!A.latLngTime.length)
+            if (!A.latLngTime.length) {
+                jobIndex[batchId].count--;
                 continue;
+            }
 
             if (this._workers){
-                this._workerPool.send({
+                this._postMessage({
                     project: batchId,
                     id: id,
                     zoom: z,
@@ -538,6 +543,14 @@ L.DotLayer = L.Layer.extend( {
                 this._afterProjected(A, z, batchId);
             }
         }
+    },
+
+    _postMessage: function(msg) {
+        let w = this._currentWorker || 0,
+            n = this.options.numWorkers;
+        this._workers[w].postMessage(msg);
+        w++;
+        this._currentWorker = w % n;
     },
 
     _handleWorkerMessage: function(event) {
@@ -581,14 +594,17 @@ L.DotLayer = L.Layer.extend( {
             }
         }
 
-        this._jobIndex[batch]--;
+        const jobIndex = this._jobIndex;
+        jobIndex[batch].count--;
 
-        if (this._jobIndex[batch])
+        if (jobIndex[batch].count)
             return
 
         // this batch is done
         delete this._jobIndex[batch];
 
+        elapsed = performance.now() - batch;
+        console.log(`batch ${batch} took ${elapsed}`);
         // if (this.options.showPaths)
         //     this.drawPaths();
 
@@ -632,7 +648,6 @@ L.DotLayer = L.Layer.extend( {
             ctx.strokeStyle = strokeStyle;
             ctx.stroke();
         }
-
     },
 
     // Draw all paths for the current items
@@ -654,22 +669,21 @@ L.DotLayer = L.Layer.extend( {
             xmin, xmax, ymin, ymax;
 
         // find the pixel bounds of all relevant segments
-        for (const A of Object.values(this._items)){
-            if (A.inView && !A.segMask.isEmpty()) {
-                anySegs = true;
-                let points = A.projected[zoom].P;
-                A.segMask.forEach((idx) => {
-                    const i = 3*idx,
-                          px = points[i],
-                          py = points[i+1];
+        for (const A of Object.values(this._items)) {
+            if (!A.inView || A.segMask.isEmpty() || !A.projected[zoom])
+                continue;
+            anySegs = true;
+            let points = A.projected[zoom].P;
+            A.segMask.forEach((idx) => {
+                const i = 3*idx,
+                      px = points[i],
+                      py = points[i+1];
 
-                    if (!xmin || (px < xmin)) xmin = px;
-                    if (!xmax || (px > xmax)) xmax = px;
-                    if (!ymin || (py < ymin)) ymin = py;
-                    if (!ymax || (py > ymax)) ymax = py;
-                });
-                
-            }
+                if (!xmin || (px < xmin)) xmin = px;
+                if (!xmax || (px > xmax)) xmax = px;
+                if (!ymin || (py < ymin)) ymin = py;
+                if (!ymax || (py > ymax)) ymax = py;     
+            });
         }
 
         if (!anySegs) {
@@ -1161,10 +1175,8 @@ L.DotLayer = L.Layer.extend( {
             numItems = itemsList.length;
 
         this._colorPalette = colorPalette(numItems, this.options.dotAlpha);
-        for ( item of itemsList ) {
-            itemsList[ i ].dotColor = this._colorPalette[ i ];
-        }
-   
+        for ( item of itemsList )
+            item.dotColor = this._colorPalette[ i ];
     }
 
 } );  // end of L.DotLayer definition

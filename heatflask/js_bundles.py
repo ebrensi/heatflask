@@ -51,6 +51,11 @@ bundles = {
         output="gen/gif.worker.js"
     ),
 
+    "DotLayerWorker_js": flask_assets.Bundle(
+        '../dotLayerWorker.js',
+        output="gen/dotLayer.worker.js"
+    ),
+
     "app_specific_js": flask_assets.Bundle(  # Heatflask-specific code
         'js/L.Control.fps.js',
         'js/appUtil.js',
