@@ -17,7 +17,7 @@ L.DotLayer = L.Layer.extend( {
     dotScale: 1,
 
     options: {
-        numWorkers: 1,
+        numWorkers: 2,
         startPaused: false,
         showPaths: true,
         colorAll: true,
@@ -1169,11 +1169,12 @@ L.DotLayer = L.Layer.extend( {
 
     setDotColors: function() {
         let itemsList = Object.values( this._items ),
-            numItems = itemsList.length;
+            numItems = itemsList.length,
+            i = 0;
 
         this._colorPalette = colorPalette(numItems, this.options.dotAlpha);
         for ( item of itemsList )
-            item.dotColor = this._colorPalette[ i ];
+            item.dotColor = this._colorPalette[ i++ ];
     }
 
 } );  // end of L.DotLayer definition
