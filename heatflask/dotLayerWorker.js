@@ -17,7 +17,7 @@ let name;
 onmessage = function(event) {
     let msg = event.data;
     if ("project" in msg) {
-        msg.P = projectAndSimplify(
+        msg.P = project(
             msg.llt, msg.zoom, msg.smoothFactor, msg.hq
         );
 
@@ -36,7 +36,7 @@ onmessage = function(event) {
 };
 
 
-function projectAndSimplify(llt, zoom, smoothFactor, hq=false, ttol=60) {
+function project(llt, zoom, smoothFactor, hq=false, ttol=60) {
     // console.time("simplify-project");
     P = Simplifier.simplify(
         llt,
@@ -50,8 +50,9 @@ function projectAndSimplify(llt, zoom, smoothFactor, hq=false, ttol=60) {
     // Compute speed for each valid segment
     // A segment is valid if it doesn't have too large time gap
     // console.time("deriv");
-    let numSegs = numPoints - 1,
-        dP = new Float32Array(numSegs * 2);
+    const numPoints = P.length/3,
+          numSegs = numPoints - 1;
+    let dP = new Float32Array(numSegs * 2);
 
     for ( let idx = 0; idx < numSegs; idx++ ) {
         let i = 3 * idx,
@@ -190,7 +191,7 @@ Simplifier = {
 
         // now points is an Array of points, so we put it
         // into a Float32Array buffer
-        numPoints = points.length;
+        const numPoints = points.length;
 
         let P = new Float32Array(numPoints * 3);
         for (let idx=0; idx<numPoints; idx++) {

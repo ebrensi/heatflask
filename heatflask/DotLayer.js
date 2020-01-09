@@ -17,7 +17,7 @@ L.DotLayer = L.Layer.extend( {
     dotScale: 1,
 
     options: {
-        numWorkers: 2,
+        numWorkers: 1,
         startPaused: false,
         showPaths: true,
         colorAll: true,
@@ -53,7 +53,6 @@ L.DotLayer = L.Layer.extend( {
         this._items = items || null;
         this._timeOffset = 0;
         this._colorPalette = [];
-        this._overlapsArray = null;
         L.setOptions( this, options );
         this._paused = this.options.startPaused;
         this._timePaused = Date.now();
@@ -325,7 +324,7 @@ L.DotLayer = L.Layer.extend( {
 
             // now points is an Array of points, so we put it
             // into a Float32Array buffer
-            numPoints = points.length;
+            const numPoints = points.length;
 
             let P = new Float32Array(numPoints * 3);
             for (let idx=0; idx<numPoints; idx++) {
@@ -446,8 +445,9 @@ L.DotLayer = L.Layer.extend( {
 
         // Compute speed for each valid segment
         // A segment is valid if it doesn't have too large time gap
-        let numSegs = numPoints - 1,
-            dP = new Float32Array(numSegs * 2);
+        const numPoints = P.length/3, 
+              numSegs = numPoints - 1;
+        let dP = new Float32Array(numSegs * 2);
 
         for ( let idx = 0; idx < numSegs; idx++ ) {
             let i = 3 * idx,
@@ -576,8 +576,10 @@ L.DotLayer = L.Layer.extend( {
         
             // TODO: figure out why reusing segMask doesn't work and fix that
             A.segMask = this._segMask(this._pxBounds, projectedPoints);
+            if (A.segMask.isEmpty())
+                A.inView = false;
 
-            if (this.options.showPaths && !A.segMask.isEmpty()) {
+            if (this.options.showPaths && A.inView) {
 
                 const lineType = A.highlighted? "selected":"normal",
                       lineWidth = this.options[lineType].pathWidth,
@@ -606,7 +608,7 @@ L.DotLayer = L.Layer.extend( {
         delete this._jobIndex[batch];
 
         elapsed = performance.now() - batch;
-        console.log(`batch ${batch} took ${elapsed}`);
+        // console.log(`batch ${batch} took ${elapsed}`);
         // if (this.options.showPaths)
         //     this.drawPaths();
 
@@ -616,15 +618,6 @@ L.DotLayer = L.Layer.extend( {
             this._lineCtx.strokeStyle = "rgba(0,255,0,0.5)";
             this._lineCtx.strokeRect(d.x, d.y, d.w, d.h);
         }
-                
-            // console.timeEnd("activity");
-            // this._processedItems[ id ] = {
-            //     dP: dP,
-            //     P: P,
-            //     dotColor: A.dotColor,
-            //     startTime: A.startTime,
-            //     totSec: P.slice( -1 )[ 0 ]
-            // };
     },
 
     _drawPath: function(ctx, points, segMask, pxOffset, lineWidth, strokeStyle, opacity, isolated=true) {
@@ -732,35 +725,35 @@ L.DotLayer = L.Layer.extend( {
     },
 
     // --------------------------------------------------------------------
-    drawDots: function( obj, now, highlighted ) {
-        let P = obj.P,
-            dP = obj.dP,
-            len_dP = dP.length,
-            totSec = obj.totSec,
-            period = this._period,
-            s = this._timeScale * ( now - obj.startTime ),
-            xmax = this._size.x,
-            ymax = this._size.y,
-            ctx = this._dotCtx,
-            dotSize = this._dotSize,
-            dotOffset = dotSize / 2.0,
-            two_pi = this.two_pi,
-            xOffset = this._pxOffset.x,
-            yOffset = this._pxOffset.y,
-            g = this._gifPatch,
-            dotType = highlighted? "selected":"normal";
+    drawDots: function( now, start, P, dP, segMask, dotColor, highlighted) {
+        const idxArray = segMask.array(),
+              n = idxArray.length,
+              firstT = P[3*idxArray[0]+2],
+              lastT = P[3*idxArray[n-1]+2],
+              s = this._timeScale * ( now - start + firstT),
+              period = this._period,
+              ctx = this._dotCtx,
+              dotSize = this._dotSize,
+              dotOffset = dotSize / 2.0,
+              two_pi = this.two_pi,
+              xOffset = this._pxOffset.x,
+              yOffset = this._pxOffset.y,
+              g = this._gifPatch,
+              dotType = highlighted? "selected":"normal";
 
         let timeOffset = s % period,
             count = 0,
-            idx = dP[0],
-            dx = dP[1],
-            dy = dP[2],
-            px = P[idx], 
-            py = P[idx+1],
-            pt = P[idx+2];
+            idx = idxArray[0],
+            pi = 3 * idx,
+            di = 2 * idx,
+            dx = dP[di],
+            dy = dP[di+1],
+            px = P[pi], 
+            py = P[pi+1],
+            pt = P[pi+2];
 
         if (this.options.colorAll || highlighted) {
-            ctx.fillStyle = obj.dotColor || this.options[dotType].dotColor;
+            ctx.fillStyle = dotColor || this.options[dotType].dotColor;
         }
 
 
@@ -768,20 +761,22 @@ L.DotLayer = L.Layer.extend( {
             timeOffset += period;
         }
 
-        for (let t=timeOffset, i=0, dt; t < totSec; t += period) {
-            if (t >= P[idx+5]) {
-                while ( t >= P[idx+5] ) {
-                    i += 3;
-                    idx = dP[i];
-                    if ( i >= len_dP ) {
+        for (let t=timeOffset, i=0, dt; t < lastT; t += period) {
+            if (t >= P[pi+5]) {
+                while ( t >= P[pi+5] ) {
+                    i++;
+                    const idx = idxArray[i];
+                    pi = 3 * idx;
+                    di = 2 * idx;
+                    if ( i >= n ) {
                         return count;
                     }
                 }
-                px = P[idx];
-                py = P[idx+1];
-                pt = P[idx+2];
-                dx = dP[i+1];
-                dy = dP[i+2];
+                px = P[pi];
+                py = P[pi+1];
+                pt = P[pi+2];
+                dx = dP[di];
+                dy = dP[di+1];
             }
 
             dt = t - pt;
@@ -809,7 +804,6 @@ L.DotLayer = L.Layer.extend( {
         if ( !this._map ) {
             return;
         }
-        return;
 
         let ctx = this._dotCtx,
             zoom = this._zoom,
@@ -827,26 +821,26 @@ L.DotLayer = L.Layer.extend( {
 
         this.clearCanvas(ctx);
 
-        for ( const [id, A] of Object.entries(this._items) ) {
-            item = pItems[ id ];
+        for ( const A of Object.values(this._items) ) {
+            if (!A.inView || !A.projected[zoom])
+                continue; 
+
             if ( A.highlighted ) {
-                highlighted_items.push( item );
+                highlighted_items.push( A );
             } else {
-                count += this.drawDots( item, now, false );
+                const P = A.projected[zoom];
+                count += this.drawDots(now, A.startTime, P.P, P.dP, A.segMask, A.dotColor, false);
             }
         }
 
         // Now plot highlighted paths
-        let hlen = highlighted_items.length;
-        if ( hlen ) {
+        if ( highlighted_items.length ) {
             ctx.globalAlpha = this.options.selected.dotOpacity
-            for (let i = 0; i < hlen; i++ ) {
-                item = highlighted_items[ i ];
-                count += this.drawDots( item, now, true );
+            for (const A in highlighted_items) {
+                count += this.drawDots(now, A.startTime, P.P, P.dP, A.segMask, A.dotColor, true);
             }
             ctx.globalAlpha = this.options.normal.dotOpacity
         }
-
 
         if (fps_display) {
             let periodInSecs = this.periodInSecs(),
@@ -865,13 +859,13 @@ L.DotLayer = L.Layer.extend( {
 
         let selectedIds = [];
 
-        for (A of this._items.values()) {
+        for (let A of this._items.values()) {
             if (!A.inView)
                 continue;
 
-            P = A.projected[z].P;
+            const P = A.projected[z].P;
 
-            for (let j=0, len=P.length; j<len; j++){
+            for (let j=0, len=P.length/3; j<len; j++){
                 let i = 3 * j,
                     x = P[i]   + ox,
                     y = P[i+1] + oy;
@@ -887,6 +881,7 @@ L.DotLayer = L.Layer.extend( {
 
     // --------------------------------------------------------------------
     animate: function() {
+        // debugger;
         this._paused = false;
         if ( this._timePaused ) {
             this._timeOffset = Date.now() - this._timePaused;
@@ -910,20 +905,20 @@ L.DotLayer = L.Layer.extend( {
         }
         this._frame = null;
 
-        // let ts = Date.now(),
-        //     now = ts - this._timeOffset;
+        let ts = Date.now(),
+            now = ts - this._timeOffset;
 
-        // if ( this._paused || this._mapMoving ) {
-        //     // Ths is so we can start where we left off when we resume
-        //     this._timePaused = ts;
-        //     return;
-        // }
+        if ( this._paused || this._mapMoving ) {
+            // Ths is so we can start where we left off when we resume
+            this._timePaused = ts;
+            return;
+        }
 
 
-        // if (now - this.lastCalledTime > this.minDelay) {
-        //     this.lastCalledTime = now;
-        //     this.drawLayer( now );
-        // }
+        if (now - this.lastCalledTime > this.minDelay) {
+            this.lastCalledTime = now;
+            this.drawLayer( now );
+        }
 
         this._frame = L.Util.requestAnimFrame( this._animate, this );
     },
