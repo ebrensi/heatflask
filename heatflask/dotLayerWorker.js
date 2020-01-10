@@ -24,7 +24,6 @@ onmessage = function(event) {
     } 
 
     if ("removeItems" in msg) {
-        debugger;
         for (id in msg.removeItems){
             if (id in myItems)
                 delete myItems[id];
@@ -68,13 +67,6 @@ onmessage = function(event) {
     }
 };
 
-function _forEach(llt, func) {
-    for (const idx=0, len=llt.length/3; idx < len; idx++) {
-        const i = 3*idx,
-              p = llt.subarray(i, i+2);
-        func(p);
-    }
-} 
 
 
 function project(llt, zoom, smoothFactor, hq=false, ttol=60) {
@@ -160,16 +152,16 @@ Simplifier = {
               numPoints = pointsBuf.length / 3;
 
         let newPoints = new Array(),
-            tP = T( [P[0], P[1]] ),
-            prevPoint = [tP[0], tP[1], P[2]],
+            tP = T( P.subarray(0,2) ),
+            prevPoint = new Float32Array([tP[0], tP[1], P[2]]),
             point, j=1;
 
         newPoints.push(prevPoint);
 
         for (let idx=1; idx < numPoints; idx++) {
             let i = 3*idx;
-            tP = T( [P[i], P[i+1]] );
-            point = [tP[0], tP[1], P[i+2]];
+            tP = T( P.subarray(i, i+2) );
+            point = new Float32Array([tP[0], tP[1], P[i+2]]);
 
             if (this.getSqDist(point, prevPoint) > sqTolerance) {
                 newPoints.push(point);
@@ -181,7 +173,7 @@ Simplifier = {
 
         return newPoints;
     },
-
+    
     simplifyDPStep: function(points, first, last, sqTolerance, simplified) {
         let maxSqDist = sqTolerance,
             index;

@@ -204,184 +204,6 @@ L.DotLayer = L.Layer.extend( {
 
     // -------------------------------------------------------------------
 
-    Simplifier: {
-        /* 
-            Adapted from V. Agafonkin's simplify.js implementation of
-            Douglas-Peucker simplification algorithm
-        */
-
-        // square distance between 2 points
-        getSqDist: function(p1, p2) {
-
-            const dx = p1[0] - p2[0],
-                  dy = p1[1] - p2[1];
-
-            return dx * dx + dy * dy;
-        },
-
-        // square distance from a point to a segment
-        getSqSegDist: function(p, p1, p2) {
-
-            let x = p1[0],
-                y = p1[1],
-                dx = p2[0] - x,
-                dy = p2[1] - y;
-
-            if (dx !== 0 || dy !== 0) {
-
-                const t = ((p[0] - x) * dx + (p[1] - y) * dy) / (dx * dx + dy * dy);
-
-                if (t > 1) {
-                    x = p2[0];
-                    y = p2[1];
-
-                } else if (t > 0) {
-                    x += dx * t;
-                    y += dy * t;
-                }
-            }
-
-            dx = p[0] - x;
-            dy = p[1] - y;
-
-            return dx * dx + dy * dy;
-        },
-        // rest of the code doesn't care about point format
-
-        // basic distance-based simplification with transform
-        simplifyRadialDist: function(pointsBuf, sqTolerance) {
-            const T = this.transform,
-                  P = pointsBuf,
-                  numPoints = pointsBuf.length / 3;
-
-            let newPoints = new Array(),
-                tP = T( [P[0], P[1]] ),
-                prevPoint = [tP[0], tP[1], P[2]],
-                point, j=1;
-
-            newPoints.push(prevPoint);
-
-            for (let idx=1; idx < numPoints; idx++) {
-                let i = 3*idx;
-                tP = T( [P[i], P[i+1]] );
-                point = [tP[0], tP[1], P[i+2]];
-
-                if (this.getSqDist(point, prevPoint) > sqTolerance) {
-                    newPoints.push(point);
-                    prevPoint = point;
-                }
-            }
-
-            if (prevPoint !== point) newPoints.push(point);
-
-            return newPoints;
-        },
-
-        simplifyDPStep: function(points, first, last, sqTolerance, simplified) {
-            let maxSqDist = sqTolerance,
-                index;
-
-            for (let i = first + 1; i < last; i++) {
-                const sqDist = this.getSqSegDist(points[i], points[first], points[last]);
-
-                if (sqDist > maxSqDist) {
-                    index = i;
-                    maxSqDist = sqDist;
-                }
-            }
-
-            if (maxSqDist > sqTolerance) {
-                if (index - first > 1)
-                    this.simplifyDPStep(points, first, index, sqTolerance, simplified);
-                
-                simplified.push(points[index]);
-                
-                if (last - index > 1) 
-                    this.simplifyDPStep(points, index, last, sqTolerance, simplified);
-            }
-        },
-
-        // simplification using Ramer-Douglas-Peucker algorithm
-        simplifyDouglasPeucker: function(points, sqTolerance) {
-            const last = points.length - 1;
-
-            let simplified = [points[0]];
-            this.simplifyDPStep(points, 0, last, sqTolerance, simplified);
-            simplified.push(points[last]);
-
-            return simplified;
-        },
-
-        simplify: function(points, tolerance, hq=false, transform=null) {
-
-            const sqTolerance = tolerance !== undefined ? tolerance * tolerance : 1;
-            this.transform = transform || this.transform;
-
-            // console.time("RDsimp");
-            points = hq ? points : this.simplifyRadialDist(points, sqTolerance);
-            // console.timeEnd("RDsimp");
-            // console.log(`n = ${points.length}`)
-            // console.time("DPsimp")
-            points = this.simplifyDouglasPeucker(points, sqTolerance);
-            // console.timeEnd("DPsimp");
-
-            // now points is an Array of points, so we put it
-            // into a Float32Array buffer
-            const numPoints = points.length;
-
-            let P = new Float32Array(numPoints * 3);
-            for (let idx=0; idx<numPoints; idx++) {
-                let point = points[idx],
-                    i = 3 * idx;
-                P[i] = point[0];
-                P[i+1] = point[1];
-                P[i+2] = point[2];
-            }
-
-            return P;
-        },
-
-        transform: function(point) {
-            return point;
-        }
-    },
-
-    CRS: {
-        // This is a streamlined version of Leaflet's EPSG:3857 crs,
-        // which can run independently of Leaflet.js (i.e. in a worker thread)
-        //  latlngpt is a a 2d-array [lat,lng] rather than a latlng object
-        code: 'EPSG:3857',
-        MAX_LATITUDE: 85.0511287798,
-        EARTH_RADIUS: 6378137,
-        RAD: Math.PI / 180,
-        T: null,
-
-        makeTransformation: function() {
-            const S = 0.5 / (Math.PI * this.EARTH_RADIUS),
-                  T = {A: S, B: 0.5, C: -S, D: 0.5};
-            this.T = T;
-            return T;
-        },
-     
-        project: function(latlngpt, zoom) {
-            const max = this.MAX_LATITUDE,
-                R = this.EARTH_RADIUS,
-                rad = this.RAD,
-                lat = Math.max(Math.min(max, latlngpt[0]), -max),
-                sin = Math.sin(lat * rad),
-                scale = 256 * Math.pow(2, zoom);
-            
-            let x = R * latlngpt[1] * rad,
-                y = R * Math.log((1 + sin) / (1 - sin)) / 2;
-
-            // Transformation
-            T = this.T || this.makeTransformation();
-            x = scale * (T.A * x + T.B);
-            y = scale * (T.C * y + T.D);
-            return [x,y]
-        }
-    },
-
     _overlaps: function(mapBounds, activityBounds) {
         let sw = mapBounds._southWest,
             ne = mapBounds._northEast,
@@ -394,20 +216,20 @@ L.DotLayer = L.Layer.extend( {
         return latOverlaps && lngOverlaps;
     },
 
-    itemMask: function(mapBounds, bitArray=null) {
-        const items = this._items,
-              itemKeys = Object.keys(items),
-              L = itemKeys.length;
+    itemMask: function(bitArray=null) {
+        const items = Object.values(this._items),
+              mapBounds = this.mapBounds,
+              n = items.length;
 
-        if (bitarray === null)
-            bitarray = new FastBitArray(L);
+        if (bitArray === null || bitArray.count() != n)
+            bitArray = new FastBitArray(n);
 
+        let i = 0;
+        items.forEach(
+            A => bitArray.set(i++, A.inView = this._overlaps(mapBounds, itemBounds))
+        );
 
-        for (i = 0; i < L; i++) {
-            let itemBounds = items[itemKeys[i]];
-            bitarray.set(i, this._overlaps(mapBounds, itemBounds));
-        }
-        return bitarray
+        return bitArray
     },
 
     _contains: function (pxBounds, point) {
@@ -418,24 +240,25 @@ L.DotLayer = L.Layer.extend( {
                (pxBounds.min.y <= y) && (y <= pxBounds.max.y);
     },
 
-    _segMask: function(pxBounds, projected, bitarray=null) {
-        const numPoints = projected.length / 3;
-        if (bitarray === null)
-            bitarray = new FastBitArray(numPoints);
+    _segMask: function(pxBounds, projected, bitArray=null) {
+        const n = projected.length / 3;
+        
+        if (bitArray === null || bitArray.count() != n)
+            bitArray = new FastBitArray(n);
 
-        let pLast = [ projected[0], projected[1] ];
+        let pLast = projected.subarray(0,2);
 
-        for (let idx = 1; idx < numPoints; idx++) {
+        for (let idx = 1; idx < n; idx++) {
             let i = 3*idx,
-                p = [projected[i], projected[i+1]];
+                p = projected.subarray(i, i+2);
                 segInView = (
                     this._contains(pxBounds, p) ||
                     this._contains(pxBounds, pLast)
                 );
-            bitarray.set(idx-1, segInView);
+            bitArray.set(idx-1, segInView);
             pLast = p;
         }
-        return bitarray
+        return bitArray
     },
 
     _project: function(llt, zoom, smoothFactor, hq=false, ttol=60) {
@@ -503,15 +326,16 @@ L.DotLayer = L.Layer.extend( {
               jobIndex = this._jobIndex,
               activities = Object.entries(this._items);
 
-        jobIndex[batchId] = {count: activities.length};
-        let to_project = [];
+        
+        let to_project = [],
+            job = jobIndex[batchId] = {count: activities.length};
 
         for (let [id, A] of activities) {
     
             A.inView = this._overlaps(mapBounds, A.bounds);
 
             if ( !A.inView ) {
-                jobIndex[batchId].count--;
+                job.count--;
                 continue;
             }
 
@@ -595,34 +419,7 @@ L.DotLayer = L.Layer.extend( {
     },
 
     _afterProjected: function(A, zoom, batch) {
-        // zoom level has changed since this job was started
-        // if (zoom == this._zoom) {
-        //     const projectedPoints = A.projected[zoom].P;
-        
-        //     // TODO: figure out why reusing segMask doesn't work and fix that
-        //     A.segMask = this._segMask(this._pxBounds, projectedPoints);
-        //     if (A.segMask.isEmpty())
-        //         A.inView = false;
-
-        //     if (this.options.showPaths && A.inView) {
-
-        //         const lineType = A.highlighted? "selected":"normal",
-        //               lineWidth = this.options[lineType].pathWidth,
-        //               strokeStyle = A.pathColor || this.options[lineType].pathColor,
-        //               opacity = this.options[lineType].pathOpacity;
-
-        //         this._drawPath(
-        //             this._lineCtx,
-        //             projectedPoints,
-        //             A.segMask,
-        //             this._pxOffset,
-        //             lineWidth,
-        //             strokeStyle,
-        //             opacity
-        //         );
-        //     }
-        // }
-
+    
         const jobIndex = this._jobIndex;
         jobIndex[batch].count--;
 
@@ -705,7 +502,7 @@ L.DotLayer = L.Layer.extend( {
 
                 for (const A of bucket){
                     const projectedPoints = A.projected[zoom].P;
-                    A.segMask = this._segMask(this._pxBounds, projectedPoints);
+                    A.segMask = this._segMask(this._pxBounds, projectedPoints, A.segMask);
                     if (A.segMask.isEmpty()) {
                         A.inView = false;
                         continue;
