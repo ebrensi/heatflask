@@ -596,36 +596,37 @@ L.DotLayer = L.Layer.extend( {
 
     _afterProjected: function(A, zoom, batch) {
         // zoom level has changed since this job was started
-        if (zoom == this._zoom) {
-            const projectedPoints = A.projected[zoom].P;
+        // if (zoom == this._zoom) {
+        //     const projectedPoints = A.projected[zoom].P;
         
-            // TODO: figure out why reusing segMask doesn't work and fix that
-            A.segMask = this._segMask(this._pxBounds, projectedPoints);
-            if (A.segMask.isEmpty())
-                A.inView = false;
+        //     // TODO: figure out why reusing segMask doesn't work and fix that
+        //     A.segMask = this._segMask(this._pxBounds, projectedPoints);
+        //     if (A.segMask.isEmpty())
+        //         A.inView = false;
 
-            if (this.options.showPaths && A.inView) {
+        //     if (this.options.showPaths && A.inView) {
 
-                const lineType = A.highlighted? "selected":"normal",
-                      lineWidth = this.options[lineType].pathWidth,
-                      strokeStyle = A.pathColor || this.options[lineType].pathColor,
-                      opacity = this.options[lineType].pathOpacity;
+        //         const lineType = A.highlighted? "selected":"normal",
+        //               lineWidth = this.options[lineType].pathWidth,
+        //               strokeStyle = A.pathColor || this.options[lineType].pathColor,
+        //               opacity = this.options[lineType].pathOpacity;
 
-                this._drawPath(
-                    this._lineCtx,
-                    projectedPoints,
-                    A.segMask,
-                    this._pxOffset,
-                    lineWidth,
-                    strokeStyle,
-                    opacity
-                );
-            }
-        }
+        //         this._drawPath(
+        //             this._lineCtx,
+        //             projectedPoints,
+        //             A.segMask,
+        //             this._pxOffset,
+        //             lineWidth,
+        //             strokeStyle,
+        //             opacity
+        //         );
+        //     }
+        // }
 
         const jobIndex = this._jobIndex;
         jobIndex[batch].count--;
-        if (jobIndex[batch].count)
+
+        if (jobIndex[batch].count || zoom != this._zoom)
             return
 
         // this batch is done
@@ -633,8 +634,9 @@ L.DotLayer = L.Layer.extend( {
 
         elapsed = performance.now() - batch;
         console.log(`batch ${batch} took ${elapsed}`);
-        // if (this.options.showPaths)
-        //     this.drawPaths();
+        
+        if (this.options.showPaths)
+            this.drawPaths();
 
         let d = this.setDrawRect();
 
@@ -677,20 +679,18 @@ L.DotLayer = L.Layer.extend( {
               ctx = this._lineCtx,
               pxOffset = this._pxOffset,
               items = Object.values(this._items),
-              numItems = items.length;
-
-
-        pathColors = new Set(items.map(A => A.pathColor));
+              numItems = items.length,
+              pathColors = new Set(items.map(A => A.pathColor));
 
         this.clearCanvas();
 
         for (const status of ["selected", "normal"]) {
-            query = (status=="selected")? A => !!A.highlighted : A => !A.highlighted;
-            
+            const query = (status=="selected")? A => !!A.highlighted : A => !A.highlighted;
+        
             for (const color of pathColors) {
                 let bucket = [];
                 
-                for (A of items){
+                for (const A of items){
                     if (A.inView && (A.pathColor == color) && query(A))
                         bucket.push(A);
                 }
@@ -703,7 +703,7 @@ L.DotLayer = L.Layer.extend( {
 
                 ctx.beginPath();
 
-                for (A of bucket){
+                for (const A of bucket){
                     const projectedPoints = A.projected[zoom].P;
                     A.segMask = this._segMask(this._pxBounds, projectedPoints);
                     if (A.segMask.isEmpty()) {
@@ -718,7 +718,7 @@ L.DotLayer = L.Layer.extend( {
                         null,
                         null,
                         null,
-                        isolated=true
+                        isolated=false
                     );
                 }
 
