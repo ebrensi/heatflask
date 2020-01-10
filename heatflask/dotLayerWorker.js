@@ -13,27 +13,67 @@
 
 
 */
-let name;
+let name, myItems = {};
+
 onmessage = function(event) {
     let msg = event.data;
+
+    if ("addItems" in msg) {
+        const newItems = msg.addItems;
+        Object.assign(myItems, newItems);
+    } 
+
+    if ("removeItems" in msg) {
+        for (id in msg.removeItems){
+            if (id in myItems)
+                delete myItems[id];
+        }
+    } 
+
     if ("project" in msg) {
-        msg.P = project(
-            msg.llt, msg.zoom, msg.smoothFactor, msg.hq
-        );
+        const ids_to_project = msg.project;
+
+        let projected = {}, transferables = [];
+
+        for (const id of ids_to_project) {
+            if (id in myItems) {
+                let A = myItems[id],
+                    zoom = msg.zoom;
+
+                if (!A.projected)
+                    A.projected = {}
+
+                if (!A.projected[zoom])
+                    A.projected[zoom] = project(A.llt, zoom, msg.smoothFactor, msg.hq);
+
+                const P = A.projected[zoom];
+
+                projected[id] = P;
+                // transferables.push(P.P.buffer);
+                // transferables.push(P.dP.buffer);
+            }
+        } 
 
         msg.name = name;
+        msg.project = Object.keys(projected);
+        msg.projected = projected;
 
-        postMessage(msg, [msg.llt.buffer, msg.P.P.buffer, msg.P.dP.buffer]);
-
+        postMessage(msg);
+        // console.log(`${name} projected`, msg);
+   
     } else if ("hello" in msg){  
-
         name = msg["hello"];
         console.log(`${name} started`)
-    
-    } else {
-        console.log(`${name} recieved`, msg);
     }
 };
+
+function _forEach(llt, func) {
+    for (const idx=0, len=llt.length/3; idx < len; idx++) {
+        const i = 3*idx,
+              p = llt.subarray(i, i+2);
+        func(p);
+    }
+} 
 
 
 function project(llt, zoom, smoothFactor, hq=false, ttol=60) {

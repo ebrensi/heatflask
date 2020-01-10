@@ -589,7 +589,7 @@ function getBounds(ids=[]) {
 
 
 function initializeDotLayer() {
-    DotLayer = new L.DotLayer(appState.items, {
+    DotLayer = new L.DotLayer(null, {
         startPaused: appState.paused
     });
 
@@ -612,10 +612,11 @@ function initializeDotLayer() {
     $("#dotScale").val(DotLayer.dotScale).trigger("change");
 
     setTimeout(function(){
-        $("#period-value").html(DotLayer.periodInSecs().toFixed(2));
+        let T = DotLayer.periodInSecs().toFixed(2);
+        $("#period-value").html(T);
 
         // Enable capture if period is less than CAPTURE_DURATION_MAX
-        let cycleDuration = DotLayer.periodInSecs().toFixed(2),
+        let cycleDuration = T,
             captureEnabled = captureControl.enabled;
 
 
@@ -656,15 +657,12 @@ function updateLayers(msg) {
         msg2 = " " + msg + " " + num  + " activities rendered.";
     $(".data_message").html(msg2);
 
+    // debugger;
 
-    // initialize or update DotLayer
-    if (DotLayer) {
-        DotLayer.setDotColors();
-        DotLayer.reset();
-        // !appState.paused && DotLayer.animate();
-    } else {
-        initializeDotLayer();
-    }
+    DotLayer.setDotColors();
+    DotLayer.reset();
+    // !appState.paused && DotLayer.animate();
+   
 
     // (re-)render the activities table
     atable.clear();
@@ -848,6 +846,7 @@ function renderLayers(query={}) {
                 for (let id of A.delete) {
                     delete appState.items[id];
                 }
+                DotLayer.removeItems(A.delete);
             
             } else if ("done" in A) {
                 console.log("received done");
@@ -874,10 +873,6 @@ function renderLayers(query={}) {
             latLngTime = new Float32Array(3*len),
             tup = A.ts;
 
-        A.tsLoc = new Date((tup[0] + tup[1]*3600) * 1000);
-        A.startTime = new Date(tup[0]* 1000);  
-        A.bounds = L.latLngBounds(A.bounds.SW, A.bounds.NE);
-
         // create LatLngTime array 
         for (let i=0, ll; i<len; i++) {
             ll = latLngArray[i];
@@ -889,6 +884,10 @@ function renderLayers(query={}) {
 
         A.latLngTime = latLngTime;
         A.id = A._id;
+
+        A.tsLoc = new Date((tup[0] + tup[1]*3600) * 1000);
+        A.startTime = new Date(tup[0]* 1000);  
+        A.bounds = L.latLngBounds(A.bounds.SW, A.bounds.NE);
 
         delete A.summary_polyline;
         delete A.polyline;
@@ -907,6 +906,7 @@ function renderLayers(query={}) {
                 typeData = ATYPE_MAP["workout"];
             }
             appState.items[A.id] = Object.assign(A, typeData);
+            DotLayer.addItem(A);
         }
 
         count++;
@@ -1148,6 +1148,7 @@ $(document).ready(function() {
         domIdVal('preset', "");
     }
     
+    initializeDotLayer();
     renderLayers();
     preset_sync();
 });

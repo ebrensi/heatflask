@@ -17,7 +17,7 @@ L.DotLayer = L.Layer.extend( {
     dotScale: 1,
 
     options: {
-        numWorkers: 2,
+        numWorkers: 4,
         startPaused: false,
         showPaths: true,
         colorAll: true,
@@ -50,7 +50,7 @@ L.DotLayer = L.Layer.extend( {
         this._dotCtx = null;
         this._lineCtx = null;
         this._frame  = null;
-        this._items = items || null;
+        this._items = null;
         this._timeOffset = 0;
         this._colorPalette = [];
         L.setOptions( this, options );
@@ -76,6 +76,9 @@ L.DotLayer = L.Layer.extend( {
                     this._workers.push(worker);
                     worker.postMessage({"hello": `worker_${i}`});
                 }
+
+                if (items)
+                    this.addItems(items)
             }
         } else {
             console.log("This browser apparently doesn\'t support web workers");
@@ -501,6 +504,7 @@ L.DotLayer = L.Layer.extend( {
               activities = Object.entries(this._items);
 
         jobIndex[batchId] = {count: activities.length};
+        let to_project = [];
 
         for (let [id, A] of activities) {
     
@@ -519,57 +523,78 @@ L.DotLayer = L.Layer.extend( {
             if (A.projected[ z ]) {
                 this._afterProjected(A, z, batchId);
                 continue;
-            }
-
-            // if A is occupied by another thread
-            if (!A.latLngTime.length) {
-                jobIndex[batchId].count--;
-                continue;
-            }
-
-            if (this._workers){
-                this._postToWorkers({
-                    project: batchId,
-                    id: id,
-                    zoom: z,
-                    smoothFactor: this.smoothFactor,
-                    hq: false,
-                    llt: A.latLngTime
-                }, [A.latLngTime.buffer]);
-                // console.log("after transfer", A);
-                // debugger;
-            } else {
-                A.projected[z] = this._project(
-                    A.latLngTime, z, this.smoothFactor, hq=false
-                );
-                this._afterProjected(A, z, batchId);
-            }
+            } else
+                to_project.push(id);
         }
+
+        if (to_project.length)
+            this._postToAllWorkers({ 
+                project: to_project,
+                batch: batchId,
+                zoom: z,
+                smoothFactor: this.smoothFactor,
+                hq: false,
+            });
     },
 
-    _postToWorkers: function(msg, transferables) {
+    addItem: function(A) {
+        if (!this._items)
+            this._items = {}
+
+        this._items[A.id] = A;
+        msg = {addItems: {}};
+        msg.addItems[A.id] = {llt: A.latLngTime, bounds: A.bounds};
+
+        this._postToWorker(msg, [A.latLngTime.buffer]);
+    },
+
+    removeItems: function(ids) {
+        _postToAllWorkers({removeItems: ids});
+    },
+
+    _postToAllWorkers: function(msg) {
+        for (const worker of this._workers)
+            worker.postMessage(msg);
+    }, 
+
+    _postToWorker: function(msg, transferables) {
         let w = this._currentWorker || 0,
             n = this.options.numWorkers;
+
+        this._currentWorker = (w + 1) % n;
+        msg.ts = performance.now();
+
         this._workers[w].postMessage(msg, transferables);
-        w++;
-        this._currentWorker = w % n;
+        // console.log(`${msg.ts} ${msg.id} posted to ${w}`);
     },
 
     _handleWorkerMessage: function(event) {
         const msg = event.data;
         if ("project" in msg) {
-            const batch = msg.project,
-                  workerName = msg.name;
 
-            let A = this._items[msg.id];
-            A.projected[msg.zoom] = msg.P;
-            A.latLngTime = msg.llt;
-            this._afterProjected(A, msg.zoom, batch);
+            const batch = msg.batch,
+                  workerName = msg.name,
+                  zoom = msg.zoom;
+
+            for (let [id, P] of Object.entries(msg.projected)) {
+                let A = this._items[id];
+                A.projected[zoom] = P;
+                this._afterProjected(A, msg.zoom, batch);
+            }
+
+        } else if ("pong" in msg) {
+            if (msg.pong) {
+                msg.ping = msg.pong;
+                this._postToWorkers(msg);
+            } else {
+                let elapsed = performance.now() - msg.ts;
+                console.log(`ping-pong took ${elapsed}`);
+            }
+
         }
     },
 
     _afterProjected: function(A, zoom, batch) {
-
         // zoom level has changed since this job was started
         if (zoom == this._zoom) {
             const projectedPoints = A.projected[zoom].P;
@@ -600,7 +625,6 @@ L.DotLayer = L.Layer.extend( {
 
         const jobIndex = this._jobIndex;
         jobIndex[batch].count--;
-
         if (jobIndex[batch].count)
             return
 
@@ -608,7 +632,7 @@ L.DotLayer = L.Layer.extend( {
         delete this._jobIndex[batch];
 
         elapsed = performance.now() - batch;
-        // console.log(`batch ${batch} took ${elapsed}`);
+        console.log(`batch ${batch} took ${elapsed}`);
         // if (this.options.showPaths)
         //     this.drawPaths();
 
@@ -618,6 +642,8 @@ L.DotLayer = L.Layer.extend( {
             this._lineCtx.strokeStyle = "rgba(0,255,0,0.5)";
             this._lineCtx.strokeRect(d.x, d.y, d.w, d.h);
         }
+
+        // this._postToWorkers({ts: performance.now(), ping: 100000});
     },
 
     _drawPath: function(ctx, points, segMask, pxOffset, lineWidth, strokeStyle, opacity, isolated=true) {
@@ -653,6 +679,7 @@ L.DotLayer = L.Layer.extend( {
               ctx = this._lineCtx,
               pxOffset = this._pxOffset;
 
+        this.clearCanvas();
         // TODO: finish writing this
 
     },
@@ -881,7 +908,6 @@ L.DotLayer = L.Layer.extend( {
 
     // --------------------------------------------------------------------
     animate: function() {
-        // debugger;
         this._paused = false;
         if ( this._timePaused ) {
             this._timeOffset = Date.now() - this._timePaused;
