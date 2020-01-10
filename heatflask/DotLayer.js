@@ -785,18 +785,20 @@ L.DotLayer = L.Layer.extend( {
         if ( timeOffset < 0 ) {
             timeOffset += period;
         }
+        ctx.beginPath();
 
-        for (let t=timeOffset, i=0, dt; t < lastT; t += period) {
-            if (t >= P[pi+5]) {
-                while ( t >= P[pi+5] ) {
-                    i++;
-                    const idx = idxArray[i];
-                    pi = 3 * idx;
-                    di = 2 * idx;
-                    if ( i >= n ) {
+        for (let t=timeOffset, i=0, dt, t2, idx; t < lastT; t += period) {
+            t2 = P[pi+5];
+            if (t >= t2) {
+                while ( t >= t2 ) {
+                    if ( ++i == n )
                         return count;
-                    }
+                    idx = idxArray[i];
+                    pi = 3 * idx;
+                    t2 = P[pi+5];
                 }
+                di = 2 * idx;
+
                 px = P[pi];
                 py = P[pi+1];
                 pt = P[pi+2];
@@ -810,18 +812,18 @@ L.DotLayer = L.Layer.extend( {
                 let lx = px + dx * dt + xOffset,
                     ly = py + dy * dt + yOffset;
 
-                if ( highlighted & !g) {
-                    ctx.beginPath();
+                if ( highlighted & !g)
                     ctx.arc( lx, ly, dotSize, 0, two_pi );
-                    ctx.fill();
-                    ctx.closePath();
-                    ctx.stroke();
-                } else {
-                    ctx.fillRect( lx - dotOffset, ly - dotOffset, dotSize, dotSize );
-                }
+                else
+                    ctx.rect( lx - dotOffset, ly - dotOffset, dotSize, dotSize );
                 count++;
             }
         }
+        ctx.fill();
+
+        if ( highlighted & !g)
+            ctx.stroke();
+
         return count;
     },
 
