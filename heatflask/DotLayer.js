@@ -675,11 +675,56 @@ L.DotLayer = L.Layer.extend( {
     drawPaths: function() {
         const zoom = this._zoom,
               ctx = this._lineCtx,
-              pxOffset = this._pxOffset;
+              pxOffset = this._pxOffset,
+              items = Object.values(this._items),
+              numItems = items.length;
+
+
+        pathColors = new Set(items.map(A => A.pathColor));
 
         this.clearCanvas();
-        // TODO: finish writing this
 
+        for (const status of ["selected", "normal"]) {
+            query = (status=="selected")? A => !!A.highlighted : A => !A.highlighted;
+            
+            for (const color of pathColors) {
+                let bucket = [];
+                
+                for (A of items){
+                    if (A.inView && (A.pathColor == color) && query(A))
+                        bucket.push(A);
+                }
+
+                if (!bucket.length) continue;
+
+                ctx.lineWidth = this.options[status].pathWidth;
+                ctx.globalAlpha = this.options[status].pathOpacity;
+                ctx.strokeStyle = color;
+
+                ctx.beginPath();
+
+                for (A of bucket){
+                    const projectedPoints = A.projected[zoom].P;
+                    A.segMask = this._segMask(this._pxBounds, projectedPoints);
+                    if (A.segMask.isEmpty()) {
+                        A.inView = false;
+                        continue;
+                    }
+                    this._drawPath(
+                        this._lineCtx,
+                        projectedPoints,
+                        A.segMask,
+                        this._pxOffset,
+                        null,
+                        null,
+                        null,
+                        isolated=true
+                    );
+                }
+
+                ctx.stroke();
+            }
+        }
     },
 
     setDrawRect: function() {
@@ -748,6 +793,34 @@ L.DotLayer = L.Layer.extend( {
             this._dotCtx.clearRect( rect.x, rect.y, rect.w, rect.h );
         }
     },
+
+    getSelected: function(selectPxBounds) {
+        const z = this._zoom,
+              pxOffset = this._pxOffset,
+              ox = pxOffset.x,
+              oy = pxOffset.y;
+
+        let selectedIds = [];
+
+        for (let A of this._items.values()) {
+            if (!A.inView)
+                continue;
+
+            const P = A.projected[z].P;
+
+            for (let j=0, len=P.length/3; j<len; j++){
+                let i = 3 * j,
+                    x = P[i]   + ox,
+                    y = P[i+1] + oy;
+
+                if ( this._contains(selectPxBounds, [x, y]) ) {
+                    selectedIds.push(A.id);
+                }
+            }
+        }
+
+        return selectedIds
+    },  
 
     // --------------------------------------------------------------------
     drawDots: function( now, start, P, dP, segMask, dotColor, highlighted) {
@@ -878,34 +951,7 @@ L.DotLayer = L.Layer.extend( {
         }
     },
 
-    getSelected: function(selectPxBounds) {
-        const z = this._zoom,
-              pxOffset = this._pxOffset,
-              ox = pxOffset.x,
-              oy = pxOffset.y;
-
-        let selectedIds = [];
-
-        for (let A of this._items.values()) {
-            if (!A.inView)
-                continue;
-
-            const P = A.projected[z].P;
-
-            for (let j=0, len=P.length/3; j<len; j++){
-                let i = 3 * j,
-                    x = P[i]   + ox,
-                    y = P[i+1] + oy;
-
-                if ( this._contains(selectPxBounds, [x, y]) ) {
-                    selectedIds.push(A.id);
-                }
-            }
-        }
-
-        return selectedIds
-    },  
-
+   
     // --------------------------------------------------------------------
     animate: function() {
         this._paused = false;
