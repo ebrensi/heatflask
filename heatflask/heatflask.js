@@ -657,8 +657,6 @@ function updateLayers(msg) {
         msg2 = " " + msg + " " + num  + " activities rendered.";
     $(".data_message").html(msg2);
 
-    // debugger;
-
     DotLayer.setDotColors();
     DotLayer.reset();
     // !appState.paused && DotLayer.animate();
@@ -841,7 +839,7 @@ function renderLayers(query={}) {
             else if ("wskey" in A) 
                 wskey = A.wskey;
             
-            else if ("delete" in A) {
+            else if ("delete" in A && A.delete.length) {
                 // delete all ids in A.delete
                 for (let id of A.delete) {
                     delete appState.items[id];

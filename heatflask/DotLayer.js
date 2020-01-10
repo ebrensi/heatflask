@@ -149,7 +149,7 @@ L.DotLayer = L.Layer.extend( {
     //-------------------------------------------------------------
     getEvents: function() {
         var events = {
-            // move: this._onLayerDidMove,
+            move: this._onLayerDidMove,
             moveend: this._onLayerDidMove,
             resize: this._onLayerDidResize
         };
@@ -549,7 +549,7 @@ L.DotLayer = L.Layer.extend( {
     },
 
     removeItems: function(ids) {
-        _postToAllWorkers({removeItems: ids});
+        this._postToAllWorkers({removeItems: ids});
     },
 
     _postToAllWorkers: function(msg) {
@@ -642,8 +642,6 @@ L.DotLayer = L.Layer.extend( {
             this._lineCtx.strokeStyle = "rgba(0,255,0,0.5)";
             this._lineCtx.strokeRect(d.x, d.y, d.w, d.h);
         }
-
-        // this._postToWorkers({ts: performance.now(), ping: 100000});
     },
 
     _drawPath: function(ctx, points, segMask, pxOffset, lineWidth, strokeStyle, opacity, isolated=true) {

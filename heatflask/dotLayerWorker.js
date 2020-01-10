@@ -24,6 +24,7 @@ onmessage = function(event) {
     } 
 
     if ("removeItems" in msg) {
+        debugger;
         for (id in msg.removeItems){
             if (id in myItems)
                 delete myItems[id];
