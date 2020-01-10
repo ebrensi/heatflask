@@ -17,7 +17,7 @@ L.DotLayer = L.Layer.extend( {
     dotScale: 1,
 
     options: {
-        numWorkers: 4,
+        numWorkers: 1,
         startPaused: false,
         showPaths: true,
         colorAll: true,
@@ -218,7 +218,7 @@ L.DotLayer = L.Layer.extend( {
 
     itemMask: function(bitArray=null) {
         const items = Object.values(this._items),
-              mapBounds = this.mapBounds,
+              mapBounds = this._latLngBounds,
               n = items.length;
 
         if (bitArray === null || bitArray.count() != n)
@@ -226,7 +226,7 @@ L.DotLayer = L.Layer.extend( {
 
         let i = 0;
         items.forEach(
-            A => bitArray.set(i++, A.inView = this._overlaps(mapBounds, itemBounds))
+            A => bitArray.set(i++, A.inView = this._overlaps(mapBounds, A.bounds))
         );
 
         return bitArray
@@ -319,39 +319,35 @@ L.DotLayer = L.Layer.extend( {
         this._dotCtx.strokeStyle = this.options.selected.dotStrokeColor;
         this._dotCtx.lineWidth = this.options.selected.dotStrokeWidth;
 
-        const mapBounds = this._latLngBounds,
-              smoothFactor = this.smoothFactor;
-        
         const batchId = performance.now(),
               jobIndex = this._jobIndex,
-              activities = Object.entries(this._items);
+              items = Object.entries(this._items),
+              itemMask = this._itemMask = this.itemMask(this._itemMask),
+              count = itemMask.count();
 
-        
-        let to_project = [],
-            job = jobIndex[batchId] = {count: activities.length};
+        if (!count)
+            return;
 
-        for (let [id, A] of activities) {
-    
-            A.inView = this._overlaps(mapBounds, A.bounds);
+        let job = jobIndex[batchId] = {count: count},
+            toProjectMask = new FastBitArray(items.length);
 
-            if ( !A.inView ) {
-                job.count--;
-                continue;
-            }
+        itemMask.forEach(i => {
+            let [id, A] = items[i];
 
             if ( !A.projected )
                 A.projected = {};
 
             // if a projection for this zoom level already exists,
             // we don't need to do anything
-            if (A.projected[ z ]) {
-                this._afterProjected(A, z, batchId);
-                continue;
-            } else
-                to_project.push(id);
-        }
+            if (A.projected[ z ])
+                this._afterProjected(A, z, batchId)
+            else
+                toProjectMask.set(i, true);
+        });
 
-        if (to_project.length)
+        let to_project = Array.from(toProjectMask.array()).map(i => items[i][0]);
+
+        if (toProjectMask.count())
             this._postToAllWorkers({ 
                 project: to_project,
                 batch: batchId,
