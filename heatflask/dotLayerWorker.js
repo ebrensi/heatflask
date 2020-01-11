@@ -148,7 +148,7 @@ Simplifier = {
     simplifyRadialDist: function(pointsBuf, sqTolerance) {
         const T = this.transform,
               P = pointsBuf,
-              numPoints = pointsBuf.length / 3;
+              size = pointsBuf.length;
 
         let newPoints = new Float32Array(pointsBuf.length),
             tP = T( P.subarray(0,2) );
@@ -156,18 +156,16 @@ Simplifier = {
         newPoints.set([tP[0], tP[1], P[2]], 0);
         let prevPoint = newPoints.subarray(0,2),
             point = newPoints.subarray(3, 5),
-            jdx = 1;
             j = 3; 
 
-        for (let idx=1; idx < numPoints; idx++) {
-            let i = 3*idx;
-            tP = T( P.subarray(i, i+2) );
+        for (let i=3; i < size; i+=3) {
+            let i2 = i+2,
+                tP = T( P.subarray(i, i+2) );
             newPoints.set([tP[0], tP[1], P[i+2]], j);
             
             if (this.getSqDist(point, prevPoint) > sqTolerance) {
                 prevPoint = point;
-                jdx++;
-                j = 3*jdx;
+                j += 3;
                 point = newPoints.subarray(j, j+2);
             }
         }
