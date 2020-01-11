@@ -17,7 +17,7 @@ L.DotLayer = L.Layer.extend( {
     dotScale: 1,
 
     options: {
-        numWorkers: 1,
+        numWorkers: null,
         startPaused: false,
         showPaths: true,
         colorAll: true,
@@ -66,8 +66,10 @@ L.DotLayer = L.Layer.extend( {
         this._workers = null;
         this._jobIndex = {};
 
+
+        let default_n = window.navigator.hardwareConcurrency;
         if (window.Worker) {
-            const n = this.options.numWorkers;
+            const n = this.options.numWorkers || default_n;
             if (n) {
                 this._workers = [];
                 for (let i=0; i<n; i++) {
@@ -83,6 +85,10 @@ L.DotLayer = L.Layer.extend( {
         } else {
             console.log("This browser apparently doesn\'t support web workers");
         }
+    },
+
+    WorkerPool:  {
+        //
     },
 
     //-------------------------------------------------------------
@@ -352,7 +358,7 @@ L.DotLayer = L.Layer.extend( {
 
     _postToWorker: function(msg, transferables) {
         let w = this._currentWorker || 0,
-            n = this.options.numWorkers;
+            n = this._workers.length;
 
         this._currentWorker = (w + 1) % n;
         msg.ts = performance.now();
@@ -374,16 +380,6 @@ L.DotLayer = L.Layer.extend( {
                 A.projected[zoom] = P;
                 this._afterProjected(A, msg.zoom, batch);
             }
-
-        } else if ("pong" in msg) {
-            if (msg.pong) {
-                msg.ping = msg.pong;
-                this._postToWorkers(msg);
-            } else {
-                let elapsed = performance.now() - msg.ts;
-                console.log(`ping-pong took ${elapsed}`);
-            }
-
         }
     },
 
@@ -399,7 +395,7 @@ L.DotLayer = L.Layer.extend( {
         delete this._jobIndex[batch];
 
         elapsed = performance.now() - batch;
-        console.log(`batch ${batch} took ${elapsed}`);
+        // console.log(`batch ${batch} took ${elapsed}`);
         
         if (this.options.showPaths)
             this.drawPaths();
@@ -449,7 +445,9 @@ L.DotLayer = L.Layer.extend( {
               pathColors = new Set(items.map(A => A.pathColor));
 
         this.clearCanvas();
+        
 
+        
         for (const status of ["selected", "normal"]) {
             const query = (status=="selected")? A => !!A.highlighted : A => !A.highlighted;
         

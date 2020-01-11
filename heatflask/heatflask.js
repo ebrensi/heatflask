@@ -457,7 +457,7 @@ function handle_table_selections( e, dt, type, indexes ) {
 
     if ( type === 'row' ) {
         let rows = atable.rows( indexes ).data();
-         for (let A of rows.values()) {
+         for ( let A of Object.values(rows) ) {
             A.selected = !A.selected;
             A.highlighted = !A.highlighted;
             redraw |= mapBounds.overlaps(A.bounds);

@@ -34,23 +34,22 @@ onmessage = function(event) {
         const ids_to_project = msg.project;
 
         let projected = {}, transferables = [];
-
         for (const id of ids_to_project) {
             if (id in myItems) {
                 let A = myItems[id],
                     zoom = msg.zoom;
 
-                if (!A.projected)
-                    A.projected = {}
+                // if (!A.projected)
+                //     A.projected = {}
 
-                if (!A.projected[zoom])
-                    A.projected[zoom] = project(A.llt, zoom, msg.smoothFactor, msg.hq);
+                // if (!A.projected[zoom])
+                //     A.projected[zoom] = project(A.llt, zoom, msg.smoothFactor, msg.hq);
 
-                const P = A.projected[zoom];
+                const P = project(A.llt, zoom, msg.smoothFactor, msg.hq);
 
                 projected[id] = P;
-                // transferables.push(P.P.buffer);
-                // transferables.push(P.dP.buffer);
+                transferables.push(P.P.buffer);
+                transferables.push(P.dP.buffer);
             }
         } 
 
@@ -58,7 +57,7 @@ onmessage = function(event) {
         msg.project = Object.keys(projected);
         msg.projected = projected;
 
-        postMessage(msg);
+        postMessage(msg, transferables);
         // console.log(`${name} projected`, msg);
    
     } else if ("hello" in msg){  
@@ -173,7 +172,7 @@ Simplifier = {
         if (point[0] != 0 || point[1] != 0)
             j += 3;
 
-        console.log(`reduction ${j / pointsBuf.length}`);
+        // console.log(`reduction ${j / pointsBuf.length}`);
         return newPoints.slice(0,j);
     },
 
