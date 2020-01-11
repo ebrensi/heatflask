@@ -261,32 +261,6 @@ L.DotLayer = L.Layer.extend( {
         return bitArray
     },
 
-    _project: function(llt, zoom, smoothFactor, hq=false, ttol=60) {
-        const P = this.Simplifier.simplify(
-            llt,
-            smoothFactor,
-            hq=hq,
-            transform=(latLng) => this.CRS.project(latLng, zoom)
-        );
-
-        // Compute speed for each valid segment
-        // A segment is valid if it doesn't have too large time gap
-        const numPoints = P.length/3, 
-              numSegs = numPoints - 1;
-        let dP = new Float32Array(numSegs * 2);
-
-        for ( let idx = 0; idx < numSegs; idx++ ) {
-            let i = 3 * idx,
-                j = 2 * idx,
-                dt = P[i+5] - P[i+2];
-
-            dP[j] = (P[i+3] - P[i]) / dt;
-            dP[j+1] = (P[i+4] - P[i+1]) / dt;
-        }
-
-        return {P: P, dP: dP}
-    },
-
     _setupWindow: function() {
         if ( !this._map || !this._items ) {
             return;
@@ -353,7 +327,6 @@ L.DotLayer = L.Layer.extend( {
                 batch: batchId,
                 zoom: z,
                 smoothFactor: this.smoothFactor,
-                hq: false,
             });
     },
 

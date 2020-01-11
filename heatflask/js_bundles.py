@@ -53,6 +53,7 @@ bundles = {
 
     "DotLayerWorker_js": flask_assets.Bundle(
         '../dotLayerWorker.js',
+        'js/FastBitArray.js',
         output="gen/dotLayer.worker.js"
     ),
 

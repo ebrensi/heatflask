@@ -69,12 +69,11 @@ onmessage = function(event) {
 
 
 
-function project(llt, zoom, smoothFactor, hq=false, ttol=60) {
+function project(llt, zoom, smoothFactor, ttol=60) {
     // console.time("simplify-project");
     P = Simplifier.simplify(
         llt,
         smoothFactor,
-        hq=hq,
         transform=(latLngPoint) => CRS.project(latLngPoint, zoom)
     );
     // console.timeEnd("simplify-project");
@@ -151,91 +150,103 @@ Simplifier = {
               P = pointsBuf,
               numPoints = pointsBuf.length / 3;
 
-        let newPoints = new Array(),
-            tP = T( P.subarray(0,2) ),
-            prevPoint = new Float32Array([tP[0], tP[1], P[2]]),
-            point, j=1;
+        let newPoints = new Float32Array(pointsBuf.length),
+            tP = T( P.subarray(0,2) );
 
-        newPoints.push(prevPoint);
+        newPoints.set([tP[0], tP[1], P[2]], 0);
+        let prevPoint = newPoints.subarray(0,2),
+            point = newPoints.subarray(3, 5),
+            jdx = 1;
+            j = 3; 
 
         for (let idx=1; idx < numPoints; idx++) {
             let i = 3*idx;
             tP = T( P.subarray(i, i+2) );
-            point = new Float32Array([tP[0], tP[1], P[i+2]]);
-
+            newPoints.set([tP[0], tP[1], P[i+2]], j);
+            
             if (this.getSqDist(point, prevPoint) > sqTolerance) {
-                newPoints.push(point);
                 prevPoint = point;
+                jdx++;
+                j = 3*jdx;
+                point = newPoints.subarray(j, j+2);
             }
         }
 
-        if (prevPoint !== point) newPoints.push(point);
+        if (point[0] != 0 || point[1] != 0)
+            j += 3;
 
-        return newPoints;
+        console.log(`reduction ${j / pointsBuf.length}`);
+        return newPoints.slice(0,j);
     },
-    
-    simplifyDPStep: function(points, first, last, sqTolerance, simplified) {
+
+    simplifyDPStep: function(points, first, last, sqTolerance, bitArray) {
         let maxSqDist = sqTolerance,
             index;
 
-        for (let i = first + 1; i < last; i++) {
-            const sqDist = this.getSqSegDist(points[i], points[first], points[last]);
+        for (let idx = first + 1; idx < last; idx++) {
+            const fi = 3*first,
+                i = 3*idx,
+                li = 3*last,
+                pf = points.subarray(fi, fi+2),
+                pi = points.subarray(i, i+2),
+                pl = points.subarray(li, li+2),
+                sqDist = this.getSqSegDist(pi, pf, pl);
 
             if (sqDist > maxSqDist) {
-                index = i;
+                index = idx;
                 maxSqDist = sqDist;
             }
         }
 
         if (maxSqDist > sqTolerance) {
             if (index - first > 1)
-                this.simplifyDPStep(points, first, index, sqTolerance, simplified);
+                this.simplifyDPStep(points, first, index, sqTolerance, bitArray);
             
-            simplified.push(points[index]);
+            bitArray.set(index, true);
             
             if (last - index > 1) 
-                this.simplifyDPStep(points, index, last, sqTolerance, simplified);
+                this.simplifyDPStep(points, index, last, sqTolerance, bitArray);
         }
     },
 
     // simplification using Ramer-Douglas-Peucker algorithm
     simplifyDouglasPeucker: function(points, sqTolerance) {
-        const last = points.length - 1;
+        const n = points.length/3;
 
-        let simplified = [points[0]];
-        this.simplifyDPStep(points, 0, last, sqTolerance, simplified);
-        simplified.push(points[last]);
+        let bitArray = new FastBitArray(n);
 
-        return simplified;
+        bitArray.set(0, true);
+        bitArray.set(n-1, true);
+
+        this.simplifyDPStep(points, 0, n-1, sqTolerance, bitArray);
+
+        const newPoints = new Float32Array(3*bitArray.count());
+        
+        let j = 0;
+        bitArray.forEach(idx => {
+            const i = 3 * idx,
+                  point = points.subarray(i, i+3);
+            newPoints.set(point, j);
+            j += 3;
+        });
+
+        return newPoints
     },
 
-    simplify: function(points, tolerance, hq=false, transform=null) {
+    simplify: function(points, tolerance, transform=null) {
 
-        const sqTolerance = tolerance !== undefined ? tolerance * tolerance : 1;
+        const sqTolerance = tolerance * tolerance;
         this.transform = transform || this.transform;
 
         // console.time("RDsimp");
-        points = hq ? points : this.simplifyRadialDist(points, sqTolerance);
+        points = this.simplifyRadialDist(points, sqTolerance);
         // console.timeEnd("RDsimp");
         // console.log(`n = ${points.length}`)
         // console.time("DPsimp")
         points = this.simplifyDouglasPeucker(points, sqTolerance);
         // console.timeEnd("DPsimp");
 
-        // now points is an Array of points, so we put it
-        // into a Float32Array buffer
-        const numPoints = points.length;
-
-        let P = new Float32Array(numPoints * 3);
-        for (let idx=0; idx<numPoints; idx++) {
-            let point = points[idx],
-                i = 3 * idx;
-            P[i] = point[0];
-            P[i+1] = point[1];
-            P[i+2] = point[2];
-        }
-
-        return P;
+        return points;
     },
 
     transform: function(point) {
