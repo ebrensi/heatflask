@@ -296,8 +296,8 @@ L.DotLayer = L.Layer.extend( {
         let pxBounds = this._pxBounds,
             z = this._zoom;
 
-        this._dotCtx.strokeStyle = this.options.selected.dotStrokeColor;
-        this._dotCtx.lineWidth = this.options.selected.dotStrokeWidth;
+        // this._dotCtx.strokeStyle = this.options.selected.dotStrokeColor;
+        // this._dotCtx.lineWidth = this.options.selected.dotStrokeWidth;
 
         const batchId = performance.now(),
               jobIndex = this._jobIndex,
@@ -399,6 +399,9 @@ L.DotLayer = L.Layer.extend( {
         
         if (this.options.showPaths)
             this.drawPaths();
+
+        if (this._paused)
+            this.drawLayer();
 
         let d = this.setDrawRect();
 
@@ -567,7 +570,7 @@ L.DotLayer = L.Layer.extend( {
         let selectedIds = [];
 
         for (let A of this._items.values()) {
-            if (!A.inView)
+            if (!A.inView || !A.projected[z])
                 continue;
 
             const P = A.projected[z].P;
@@ -675,7 +678,7 @@ L.DotLayer = L.Layer.extend( {
             count = 0,
             t0 = performance.now(),
             highlighted_items = [],
-            zf = this._zoomFactor = 1 / Math.pow( 2, zoom );
+            zf = this._zoomFactor = 1 / (2**zoom);
 
         ctx.fillStyle = this.options.normal.dotColor;
 
@@ -686,7 +689,7 @@ L.DotLayer = L.Layer.extend( {
         this.clearCanvas(ctx);
 
         for ( const A of Object.values(this._items) ) {
-            if (!A.inView || !A.projected[zoom])
+            if (!A.inView || !A.projected[zoom] || !A.segMask)
                 continue; 
 
             if ( A.highlighted ) {

@@ -86,7 +86,8 @@ FastBitArray.prototype.isEmpty = function(index) {
 // Return an array with the set bit locations (values)
 FastBitArray.prototype.array = function() {
   let count = this.count(),
-      ArrayConstructor = (count >> 16)? Uint32Array : Uint16Array
+      ArrayConstructor = (count >> 16)? 
+          Uint32Array : (count >> 8) ? Uint16Array : Uint8Array,
       answer =  new ArrayConstructor(count),
       pos = 0 | 0;
       wc = this.words.length | 0;
@@ -100,6 +101,23 @@ FastBitArray.prototype.array = function() {
   }
   return answer;
 };
+
+// FastBitArray.prototype.iterate = function() {
+//   let count = this.count(),
+//       pos = 0 | 0;
+//       wc = this.words.length | 0;
+//   for (let k = 0; k < wc; ++k) {
+//     let w =  this.words[k];
+//     while (w != 0) {
+//       let t = w & -w;
+//       yield (k << 5) + this.hammingWeight((t - 1) | 0);
+      
+//       pos++;
+//       w ^= t;
+//     }
+//   }
+//   return answer;
+// };
 
 // Return an array with the set bit locations (values)
 FastBitArray.prototype.forEach = function(fnc) {
@@ -117,7 +135,7 @@ FastBitArray.prototype.forEach = function(fnc) {
 FastBitArray.filter = function(array, fnc, bitArray=null) {
   const n = array.length,
         i=0;
-        
+
   bitArray = bitArray || Object.create(FastBitArray.prototype, n);
 
   for (let obj of array)
