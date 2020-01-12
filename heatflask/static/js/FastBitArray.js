@@ -114,6 +114,32 @@ FastBitArray.prototype.forEach = function(fnc) {
   }
 };
 
+FastBitArray.filter = function(array, fnc, bitArray=null) {
+  const n = array.length,
+        i=0;
+        
+  bitArray = bitArray || Object.create(FastBitArray.prototype, n);
+
+  for (let obj of array)
+    bitArray.set(i++, !!func(obj));
+
+  return bitArray
+};
+
+// Computes the intersection between this bitset and another one,
+// a new bitmap is generated
+FastBitArray.prototype.intersection = function(otherbitmap) {
+  let answer = Object.create(FastBitArray.prototype),
+      count = Math.min(this.count(), otherbitmap.count);
+
+  answer.words = new Uint32Array(count);
+  const c = answer.count;
+  for (let k = 0 | 0; k < c; ++k) {
+    answer.words[k] = this.words[k] & otherbitmap.words[k];
+  }
+  return answer;
+};
+
 // Creates a copy of this bitmap
 FastBitArray.prototype.clone = function() {
   let clone = Object.create(FastBitArray.prototype);

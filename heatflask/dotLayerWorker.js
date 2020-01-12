@@ -1,43 +1,46 @@
 
 /*
 
- For projectio job, this worker expects an object
- {
-    project: {batch id},
-    id: {activity id},
-    zoom: {map zoom level},
-    smoothFactor: {for simplify},
-    hq: {high quality switch for simplify},
-    llt: {latlngtime Float32Array}
- } 
-
 
 */
-let name, myItems = {};
+
+let N;
+const MY_ITEMS = {},
+      POINTBUF = new Float32Array(2),
+      PROJECTIONS = {};
 
 onmessage = function(event) {
     let msg = event.data;
 
     if ("addItems" in msg) {
         const newItems = msg.addItems;
-        Object.assign(myItems, newItems);
+        Object.assign(MY_ITEMS, newItems);
     } 
 
     if ("removeItems" in msg) {
         for (id in msg.removeItems){
-            if (id in myItems)
-                delete myItems[id];
+            if (id in MY_ITEMS)
+                delete MY_ITEMS[id];
         }
     } 
 
     if ("project" in msg) {
-        const ids_to_project = msg.project;
+        const ids_to_project = msg.project,
+              zoom = msg.zoom;
+        
+        if (!PROJECTIONS[zoom])
+            PROJECTIONS[zoom] = CRS.makeProjection(zoom, POINTBUF);
 
-        let projected = {}, transferables = [];
+        const projectPoint = PROJECTIONS[zoom],
+              sf = msg.smoothFactor,
+              ttol = msg.ttol,
+              TS = llt => this.transformSimplify(llt, sf, projectPoint, ttol),
+              projected = {},
+              transferables = [];
+
         for (const id of ids_to_project) {
-            if (id in myItems) {
-                let A = myItems[id],
-                    zoom = msg.zoom;
+            if (id in MY_ITEMS) {
+                let A = MY_ITEMS[id];
 
                 // if (!A.projected)
                 //     A.projected = {}
@@ -45,7 +48,7 @@ onmessage = function(event) {
                 // if (!A.projected[zoom])
                 //     A.projected[zoom] = project(A.llt, zoom, msg.smoothFactor, msg.hq);
 
-                const P = project(A.llt, zoom, msg.smoothFactor, msg.hq);
+                const P = TS(A.llt);
 
                 projected[id] = P;
                 transferables.push(P.P.buffer);
@@ -53,27 +56,37 @@ onmessage = function(event) {
             }
         } 
 
-        msg.name = name;
+        msg.name = N;
         msg.project = Object.keys(projected);
         msg.projected = projected;
 
         postMessage(msg, transferables);
-        // console.log(`${name} projected`, msg);
+        // console.log(`${N} projected`, msg);
    
     } else if ("hello" in msg){  
-        name = msg["hello"];
-        console.log(`${name} started`)
+        N = msg["hello"];
+        console.log(`${N} started`)
     }
 };
 
 
 
-function project(llt, zoom, smoothFactor, ttol=60) {
+function transformSimplify(llt, smoothFactor, transform=null, ttol=60) {
+    // const n = llt.length / 3,
+    //       badSeg = new FastBitArray(n-1);
+    
+    // for (let i=1, tprev=llt[2]; i<n; i++) {
+    //     let t = llt[3*i + 2];
+    //     if (t - tprev > ttol)
+    //         badSeg[i-1] = true;
+    //     tprev = t;
+    // }
+
     // console.time("simplify-project");
     P = Simplifier.simplify(
         llt,
         smoothFactor,
-        transform=(latLngPoint) => CRS.project(latLngPoint, zoom)
+        transform
     );
     // console.timeEnd("simplify-project");
     // console.log(`n = ${P.length/3}`);
@@ -259,30 +272,31 @@ CRS = {
     MAX_LATITUDE: 85.0511287798,
     EARTH_RADIUS: 6378137,
     RAD: Math.PI / 180,
-    T: null,
 
-    makeTransformation: function() {
+    makeTransformation: function(zoom, POINTBUF) {
         const S = 0.5 / (Math.PI * this.EARTH_RADIUS),
-              T = {A: S, B: 0.5, C: -S, D: 0.5};
-        this.T = T;
-        return T;
-    },
- 
-    project: function(latlngpt, zoom) {
-        const max = this.MAX_LATITUDE,
-            R = this.EARTH_RADIUS,
-            rad = this.RAD,
-            lat = Math.max(Math.min(max, latlngpt[0]), -max),
-            sin = Math.sin(lat * rad),
-            scale = 256 * Math.pow(2, zoom);
+              A = S, B = 0.5, C = -S, D = 0.5,
+              scale = 1 << (8 + zoom);    
         
-        let x = R * latlngpt[1] * rad,
-            y = R * Math.log((1 + sin) / (1 - sin)) / 2;
+        return (x,y)  => {
+            POINTBUF[0] = scale * (A * x + B);
+            POINTBUF[1] = scale * (C * y + D);
+            return POINTBUF
+        };
+    },
 
-        // Transformation
-        T = this.T || this.makeTransformation();
-        x = scale * (T.A * x + T.B);
-        y = scale * (T.C * y + T.D);
-        return [x,y]
+    makeProjection: function(zoom, POINTBUF) {
+        const max = this.MAX_LATITUDE,
+              R = this.EARTH_RADIUS,
+              rad = this.RAD,
+              T = this.makeTransformation(zoom, POINTBUF);
+
+        return latlngpt => {
+            const lat = Math.max(Math.min(max, latlngpt[0]), -max),
+                  sin = Math.sin(lat * rad),
+                  x = R * latlngpt[1] * rad,
+                  y = R * Math.log((1 + sin) / (1 - sin)) / 2;
+            return T(x,y)
+        };
     }
 };

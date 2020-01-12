@@ -156,7 +156,7 @@ L.DotLayer = L.Layer.extend( {
     getEvents: function() {
         var events = {
             move: this._onLayerDidMove,
-            moveend: this._onLayerDidMove,
+            // moveend: this._onLayerDidMove,
             resize: this._onLayerDidResize
         };
 
@@ -445,9 +445,9 @@ L.DotLayer = L.Layer.extend( {
               pathColors = new Set(items.map(A => A.pathColor));
 
         this.clearCanvas();
-        
 
-        
+        // TODO: speed this up!!
+
         for (const status of ["selected", "normal"]) {
             const query = (status=="selected")? A => !!A.highlighted : A => !A.highlighted;
         
@@ -720,7 +720,7 @@ L.DotLayer = L.Layer.extend( {
     animate: function() {
         this._paused = false;
         if ( this._timePaused ) {
-            this._timeOffset = Date.now() - this._timePaused;
+            this._timeOffset = performance.now() - this._timePaused;
             this._timePaused = null;
         }
         this.lastCalledTime = 0;
@@ -741,7 +741,7 @@ L.DotLayer = L.Layer.extend( {
         }
         this._frame = null;
 
-        let ts = Date.now(),
+        let ts = performance.now(),
             now = ts - this._timeOffset;
 
         if ( this._paused || this._mapMoving ) {
@@ -755,6 +755,7 @@ L.DotLayer = L.Layer.extend( {
             this.lastCalledTime = now;
             this.drawLayer( now );
         }
+        // this.drawLayer( now );
 
         this._frame = L.Util.requestAnimFrame( this._animate, this );
     },
