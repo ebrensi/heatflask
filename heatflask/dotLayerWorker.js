@@ -61,7 +61,8 @@ onmessage = function(event) {
         msg.project = Object.keys(projected);
         msg.projected = projected;
 
-        postMessage(msg, transferables);
+        if (msg.project.length)
+            postMessage(msg, transferables);
         // console.log(`${N} projected`, msg);
    
     } else if ("hello" in msg){  

@@ -256,8 +256,9 @@ L.DotLayer = L.Layer.extend( {
 
         const points = A.projected[zoom].P,
               buflength = points.length,
-              n = buflength / 3;
-        
+              n = buflength / 3,
+              pxBounds = this._pxBounds;
+
         let segMask = FastBitArray.recycle(A.segMask, n);
 
         let p = points.subarray(0,2);
@@ -371,10 +372,10 @@ L.DotLayer = L.Layer.extend( {
         let alreadyProjected = itemsToProject.negate().intersect(itemsInView);
 
         if (!alreadyProjected.isEmpty())
-            for (A of alreadyProjected.iterate()){
-                debugger
-            }
-            // alreadyProjected.forEach(A => this._afterProjected(A, zoom, batch));
+            // for (A of alreadyProjected.iterate()){
+            //     debugger
+            // }
+            alreadyProjected.forEach(A => this._afterProjected(A, zoom, batch));
         
     },
 
@@ -420,7 +421,7 @@ L.DotLayer = L.Layer.extend( {
             for (let [id, P] of Object.entries(msg.projected)) {
                 let A = this._items[id];
                 A.projected[zoom] = P;
-                this._afterProjected(A, msg.zoom, batch);
+                this._afterProjected(A, zoom, batch);
             }
         }
     },
@@ -439,7 +440,6 @@ L.DotLayer = L.Layer.extend( {
         elapsed = performance.now() - batch;
         // console.log(`batch ${batch} took ${elapsed}`);
         
-        debugger;
         if (this.options.showPaths)
             this.drawPaths();
 
@@ -491,7 +491,7 @@ L.DotLayer = L.Layer.extend( {
 
         debugger;
 
-        this._filter = (this._filter.maxSize <= n)?  this._filter : new FastBitArray(n);
+        this._filter = FastBitArray.recycle(this._filter, n);
         const inView = this._itemsInView;
 
         this.clearCanvas();
@@ -508,7 +508,7 @@ L.DotLayer = L.Layer.extend( {
                 this._filter.copyFrom(inView);
                 this._filter.intersect(cfilter);
                 // this._filter.intersect(sfilter);
-                if (this._filter.empty())
+                if (this._filter.isEmpty())
                     continue;
 
                 ctx.beginPath();
@@ -518,20 +518,19 @@ L.DotLayer = L.Layer.extend( {
 
                     const projectedPoints = A.projected[zoom].P;
                     segMask = this.makeSegMask(A, zoom);
-                    if (A.segMask.isEmpty()) {
+                    if (A.segMask.isEmpty())
                         inView.set(idx,  false);
-                        continue;
-                    }
-                    this._drawPath(
-                        ctx,
-                        projectedPoints,
-                        segMask,
-                        this._pxOffset,
-                        null,
-                        null,
-                        null,
-                        isolated=false
-                    );
+                    else
+                        this._drawPath(
+                            ctx,
+                            projectedPoints,
+                            segMask,
+                            this._pxOffset,
+                            null,
+                            null,
+                            null,
+                            isolated=false
+                        );
                 });
 
                 ctx.stroke();
