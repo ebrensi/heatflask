@@ -4,10 +4,11 @@
 
 */
 
-let N;
+let N, BITARRAY;
 const MY_ITEMS = {},
       POINTBUF = new Float32Array(2),
       PROJECTIONS = {};
+
 
 onmessage = function(event) {
     let msg = event.data;
@@ -223,7 +224,7 @@ Simplifier = {
     simplifyDouglasPeucker: function(points, sqTolerance) {
         const n = points.length/3;
 
-        let bitArray = new FastBitArray(n);
+        let bitArray = BITARRAY = FastBitArray.recycle(BITARRAY, n);
 
         bitArray.set(0, true);
         bitArray.set(n-1, true);

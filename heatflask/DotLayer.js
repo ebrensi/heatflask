@@ -154,9 +154,16 @@ L.DotLayer = L.Layer.extend( {
 
     //-------------------------------------------------------------
     getEvents: function() {
+        loggit = (e) => console.log(e);
+
         var events = {
-            move: this._onLayerDidMove,
-            // moveend: this._onLayerDidMove,
+            movestart: loggit,
+            // move: this._onLayerDidMove,
+            // move: loggit,
+            moveend: this._onLayerDidMove,
+            // zoomstart: loggit,
+            // zoom: loggit,
+            // zoomend: loggit,
             resize: this._onLayerDidResize
         };
 
@@ -170,7 +177,22 @@ L.DotLayer = L.Layer.extend( {
     //-------------------------------------------------------------
     // Call this function when items are added or reomved
     reset: function() {
+        this._itemsArray = Object.values(this._items);
+        if (!this._itemsArray.length)
+            return
+
         this.setDotColors();
+
+        let pathColors = new Set(this._itemsArray.map(A => A.pathColor));
+        this._colorFilters = {};
+
+        for (color of pathColors) {
+            this._colorFilters[color] = FastBitArray.filter(
+                this._itemsArray,
+                A => A.pathColor == color
+            )
+        }
+
         this._onLayerDidMove();
     },
 
@@ -222,22 +244,6 @@ L.DotLayer = L.Layer.extend( {
         return latOverlaps && lngOverlaps;
     },
 
-    itemMask: function(bitArray=null) {
-        const items = Object.values(this._items),
-              mapBounds = this._latLngBounds,
-              n = items.length;
-
-        if (bitArray === null || bitArray.count() != n)
-            bitArray = new FastBitArray(n);
-
-        let i = 0;
-        items.forEach(
-            A => bitArray.set(i++, A.inView = this._overlaps(mapBounds, A.bounds))
-        );
-
-        return bitArray
-    },
-
     _contains: function (pxBounds, point) {
         let x = point[0],
             y = point[1];
@@ -246,94 +252,130 @@ L.DotLayer = L.Layer.extend( {
                (pxBounds.min.y <= y) && (y <= pxBounds.max.y);
     },
 
-    _segMask: function(pxBounds, projected, bitArray=null) {
-        const n = projected.length / 3;
+    makeSegMask: function(A, zoom) {
+
+        const points = A.projected[zoom].P,
+              buflength = points.length,
+              n = buflength / 3;
         
-        if (bitArray === null || bitArray.count() != n)
-            bitArray = new FastBitArray(n);
+        let segMask = FastBitArray.recycle(A.segMask, n);
 
-        let pLast = projected.subarray(0,2);
+        let p = points.subarray(0,2);
 
-        for (let idx = 1; idx < n; idx++) {
-            let i = 3*idx,
-                p = projected.subarray(i, i+2);
-                segInView = (
+        for (let i = 3, j=0; i < buflength; i += 3, j++) {
+            let pnext = points.subarray(i, i+2);
+                inView = (
                     this._contains(pxBounds, p) ||
-                    this._contains(pxBounds, pLast)
+                    this._contains(pxBounds, pnext)
                 );
-            bitArray.set(idx-1, segInView);
-            pLast = p;
+            if (inView)
+                segMask.set(j, true);
+            p = pnext;
         }
-        return bitArray
+        return segMask
     },
 
     _setupWindow: function() {
         if ( !this._map || !this._items ) {
             return;
         }
-        const perf_t0 = performance.now();
 
-        // reset map orientation
-        this._drawRect = undefined;
-        this.clearCanvas();
+        // Get map orientation
+        const zoom = this._map.getZoom(),
+              center = this._map.getCenter(),
+              size = this._map.getSize();
 
+        // if orientation hasn't changed then nothing to do
+        if (center.equals(this._center) &&
+            size.equals(this._size) &&
+            zoom == this._zoom)
+            return;
+
+        this._zoom = zoom;
+        this._center = center;
+        this._size = size;
+
+        const t0 = performance.now();
+
+        // recalibrate
         let topLeft = this._map.containerPointToLayerPoint( [ 0, 0 ] );
         L.DomUtil.setPosition( this._dotCanvas, topLeft );
         L.DomUtil.setPosition( this._lineCanvas, topLeft );
+        this._drawRect = undefined;
 
-        // Get new map orientation
-        this._zoom = this._map.getZoom();
-        this._center = this._map.getCenter;
-        this._size = this._map.getSize();
 
         const mapPanePos = this._map._getMapPanePos(),
-              pxOrigin = this._map.getPixelOrigin();
-
-        this._latLngBounds = this._map.getBounds();
+              pxOrigin = this._map.getPixelOrigin(),
+              mapBounds = this._latLngBounds = this._map.getBounds(),
+              pxBounds = this._pxBounds = this._map.getPixelBounds();
+        
         this._pxOffset = mapPanePos.subtract( pxOrigin );
-        this._pxBounds = this._map.getPixelBounds();
 
-        let pxBounds = this._pxBounds,
-            z = this._zoom;
+        const stats = {
+            zoom: zoom, center: center,
+            size: size, bounds: mapBounds,
+            offset: this._pxOffset, time: t0
+        };
 
-        // this._dotCtx.strokeStyle = this.options.selected.dotStrokeColor;
-        // this._dotCtx.lineWidth = this.options.selected.dotStrokeWidth;
+        console.log(stats);
 
-        const batchId = performance.now(),
-              jobIndex = this._jobIndex,
-              items = Object.entries(this._items),
-              itemMask = this._itemMask = this.itemMask(this._itemMask),
-              count = itemMask.count();
+        const items = Object.entries(this._items),
+              n = items.length;
 
-        if (!count)
-            return;
+        // make preliminary item mask based on bounds overlap
+        let itemsInView = this._itemsInView = FastBitArray.recycle(this._itemsInView, n);
 
-        let job = jobIndex[batchId] = {count: count},
-            toProjectMask = new FastBitArray(items.length);
-
-        itemMask.forEach(i => {
-            let [id, A] = items[i];
-
-            if ( !A.projected )
-                A.projected = {};
-
-            // if a projection for this zoom level already exists,
-            // we don't need to do anything
-            if (A.projected[ z ])
-                this._afterProjected(A, z, batchId)
-            else
-                toProjectMask.set(i, true);
+        let i = 0;
+        items.forEach(
+            obj => {
+                const [id, A] = obj;
+                if (this._overlaps(mapBounds, A.bounds))
+                    itemsInView.set(i++, true);
         });
 
-        let to_project = Array.from(toProjectMask.array()).map(i => items[i][0]);
+        let count = itemsInView.count();
 
-        if (toProjectMask.count())
+        if (!count)
+            return
+
+        const batch = performance.now(),
+              jobIndex = this._jobIndex,
+              job = jobIndex[batch] = {count: count};
+
+        // determine which activities we need to make projections for
+        let itemsToProject = this._itemsToProject = FastBitArray.recycle(this._itemsToProject, n);
+     
+        itemsInView.forEach(i => {
+            let [id, A] = items[i];
+
+            if (!A.projected)
+                A.projected = {}
+            // if a projection for this zoom level already exists,
+            // we don't need to do anything
+            if (!A.projected[ zoom ])
+                itemsToProject.set(i, true);
+        });
+
+        let ids;
+        // Send ids of items to project to the worker pool
+        if (itemsToProject.count())
+            ids = Array.from(itemsToProject.array()).map(i => items[i][0]);
+
             this._postToAllWorkers({ 
-                project: to_project,
-                batch: batchId,
-                zoom: z,
+                project: ids,
+                batch: batch,
+                zoom: zoom,
                 smoothFactor: this.smoothFactor,
             });
+        
+        let alreadyProjected = itemsToProject.negate().intersect(itemsInView);
+
+        if (!alreadyProjected.isEmpty())
+            for (A of alreadyProjected.iterate()){
+                debugger
+            }
+            // alreadyProjected.forEach(A => this._afterProjected(A, zoom, batch));
+        
     },
 
     addItem: function(A) {
@@ -397,6 +439,7 @@ L.DotLayer = L.Layer.extend( {
         elapsed = performance.now() - batch;
         // console.log(`batch ${batch} took ${elapsed}`);
         
+        debugger;
         if (this.options.showPaths)
             this.drawPaths();
 
@@ -444,54 +487,56 @@ L.DotLayer = L.Layer.extend( {
               ctx = this._lineCtx,
               pxOffset = this._pxOffset,
               items = Object.values(this._items),
-              numItems = items.length,
-              pathColors = new Set(items.map(A => A.pathColor));
+              n = items.length;
+
+        debugger;
+
+        this._filter = (this._filter.maxSize <= n)?  this._filter : new FastBitArray(n);
+        const inView = this._itemsInView;
 
         this.clearCanvas();
 
-        // TODO: speed this up!!
+        // const query = (status=="selected")? A => !!A.highlighted : A => !A.highlighted;
 
-        for (const status of ["selected", "normal"]) {
-            const query = (status=="selected")? A => !!A.highlighted : A => !A.highlighted;
-        
-            for (const color of pathColors) {
-                let bucket = [];
-                
-                for (const A of items){
-                    if (A.inView && (A.pathColor == color) && query(A))
-                        bucket.push(A);
-                }
+        // for (let [status, sfilter] of Object.entries(this._emphFilters)) {
+        //     ctx.lineWidth = this.options[status].pathWidth;
+        //     ctx.globalAlpha = this.options[status].pathOpacity;
 
-                if (!bucket.length) continue;
-
-                ctx.lineWidth = this.options[status].pathWidth;
-                ctx.globalAlpha = this.options[status].pathOpacity;
+            for (let [color, cfilter] of Object.entries(this._colorFilters)) {
                 ctx.strokeStyle = color;
+
+                this._filter.copyFrom(inView);
+                this._filter.intersect(cfilter);
+                // this._filter.intersect(sfilter);
+                if (this._filter.empty())
+                    continue;
 
                 ctx.beginPath();
 
-                for (const A of bucket){
+                this._filter.forEach( idx => {
+                    let A = items[idx];
+
                     const projectedPoints = A.projected[zoom].P;
-                    A.segMask = this._segMask(this._pxBounds, projectedPoints, A.segMask);
+                    segMask = this.makeSegMask(A, zoom);
                     if (A.segMask.isEmpty()) {
-                        A.inView = false;
+                        inView.set(idx,  false);
                         continue;
                     }
                     this._drawPath(
-                        this._lineCtx,
+                        ctx,
                         projectedPoints,
-                        A.segMask,
+                        segMask,
                         this._pxOffset,
                         null,
                         null,
                         null,
                         isolated=false
                     );
-                }
+                });
 
                 ctx.stroke();
             }
-        }
+        // }
     },
 
     setDrawRect: function() {

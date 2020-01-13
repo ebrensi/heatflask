@@ -10,23 +10,45 @@
 // the maximum index we expect. an exception is thrown if 
 // typed arrays are not supported
 function FastBitArray(size) {
-  this.words = new Uint32Array((size + 32) >>> 5);
+  this.size = size;
+  this.words = new Uint32Array((size + 31) >>> 5);
 }
 
 // Add the value (Set the bit at index to val)
 FastBitArray.prototype.set = function(index, val) {
-  // if ((count << 5) <= index) {
-  //   this.resize(index); //nothing to do
-  // }
-  
+  if (index >= this.size)
+    return
+
   if (val)
     this.words[index >>> 5] |= 1 << index;
   else
     this.words[index  >>> 5] &= ~(1 << index);
 };
 
+// negate this array up to size
+FastBitArray.prototype.negate = function() {
+  const W = this.size >>> 5,
+        L = this.words.length;
+
+  for (let w=0; w <= W; w++) {
+    this.words[w] = ~this.words[w];
+  }
+
+  const mask = (1 << (this.size % 32)) - 1;
+
+  this.words[W] &= mask;
+
+  for (let w=W+1; w < L; w++) {
+    this.words[w] = 0;
+  }
+  return this;
+};
+
 // Is the value contained in the set? Is the bit at index true or false? Returns a boolean
 FastBitArray.prototype.val = function(index) {
+  if (index >= this.size)
+    return
+
   try {
     return (this.words[index  >>> 5] & (1 << index)) !== 0;
   }
@@ -42,18 +64,42 @@ FastBitArray.prototype.trim = function() {
       nl--;
   }
   this.words = this.words.slice(0,nl);
+  return this
+};
+
+FastBitArray.prototype.clear = function(){
+  this.words.fill(0);
+  return this
+};
+
+FastBitArray.prototype.maxSize = function() {
+  return this.words.length << 5;
+}
+
+
+FastBitArray.recycle = function(bitArray, size) {
+  if (bitArray)
+    return bitArray.reuse(size);
+  else
+    return new FastBitArray(size);
 };
 
 // Resize the bitset so that we can write a value at index
-FastBitArray.prototype.resize = function(index) {
+FastBitArray.prototype.reuse = function(n, clear=true) {
+  this.size = n;
   let count = this.words.length
-  if ((count << 5) > index) {
-    return; //nothing to do
+  if ((count << 5) >= n) {
+    if (clear)
+      this.clear();
+  } else {
+    count = (n + 31) >>> 5;
+    let newwords = new Uint32Array(count);
+    if (!clear) {
+      newwords.set(this.words);// hopefully, this copy is fast
+      this.words = newwords;
+    }
   }
-  count = (index + 32) >>> 5;
-  let newwords = new Uint32Array(count);
-  newwords.set(this.words);// hopefully, this copy is fast
-  this.words = newwords;
+  return this
 };
 
 // fast function to compute the Hamming weight of a 32-bit unsigned integer
@@ -102,22 +148,20 @@ FastBitArray.prototype.array = function() {
   return answer;
 };
 
-// FastBitArray.prototype.iterate = function() {
-//   let count = this.count(),
-//       pos = 0 | 0;
-//       wc = this.words.length | 0;
-//   for (let k = 0; k < wc; ++k) {
-//     let w =  this.words[k];
-//     while (w != 0) {
-//       let t = w & -w;
-//       yield (k << 5) + this.hammingWeight((t - 1) | 0);
+FastBitArray.prototype.iterate = function*(n) {
+  let pos = 0 | 0;
+      wc = this.words.length | 0;
+  for (let k = 0; k < wc; ++k) {
+    let w =  this.words[k];
+    while ((w != 0) && (!n || pos < n) ) {
+      let t = w & -w;
+      yield (k << 5) + this.hammingWeight((t - 1) | 0);
       
-//       pos++;
-//       w ^= t;
-//     }
-//   }
-//   return answer;
-// };
+      pos++;
+      w ^= t;
+    }
+  }
+};
 
 // Return an array with the set bit locations (values)
 FastBitArray.prototype.forEach = function(fnc) {
@@ -132,31 +176,37 @@ FastBitArray.prototype.forEach = function(fnc) {
   }
 };
 
-FastBitArray.filter = function(array, fnc, bitArray=null) {
-  const n = array.length,
-        i=0;
+FastBitArray.filter = function(array, func, bitArray=null) {
+  const n = array.length;;
 
-  bitArray = bitArray || Object.create(FastBitArray.prototype, n);
+  bitArray = bitArray || new FastBitArray(n);
 
+  let i = 0;
   for (let obj of array)
     bitArray.set(i++, !!func(obj));
 
   return bitArray
 };
 
-// Computes the intersection between this bitset and another one,
-// a new bitmap is generated
-FastBitArray.prototype.intersection = function(otherbitmap) {
-  let answer = Object.create(FastBitArray.prototype),
-      count = Math.min(this.count(), otherbitmap.count);
-
-  answer.words = new Uint32Array(count);
-  const c = answer.count;
-  for (let k = 0 | 0; k < c; ++k) {
-    answer.words[k] = this.words[k] & otherbitmap.words[k];
-  }
-  return answer;
+FastBitArray.prototype.filter = function(array, func) {
+  return FastBitArray.filter(array, func, self)
 };
+
+// Computes the intersection between this bitset and another one,
+// this is overwritten
+FastBitArray.prototype.intersect = function(sourcebitmap) {
+  const c = this.count();
+  for (let k = 0 | 0; k < c; ++k) {
+    this.words[k] &= sourcebitmap.words[k];
+  }
+  return this;
+};
+
+
+FastBitArray.prototype.copyFrom = function(sourcebitmap) {
+  this.words.set(sourcebitmap.words);
+  return this
+}
 
 // Creates a copy of this bitmap
 FastBitArray.prototype.clone = function() {
