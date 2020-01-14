@@ -87,7 +87,7 @@ FastBitArray.recycle = function(bitArray, size) {
 // Resize the bitset so that we can write a value at index
 FastBitArray.prototype.reuse = function(n, clear=true) {
   this.size = n;
-  let count = this.words.length
+  let count = this.words.length;
   if ((count << 5) >= n) {
     if (clear)
       this.clear();
