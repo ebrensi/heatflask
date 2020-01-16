@@ -367,7 +367,7 @@ L.DotLayer = L.Layer.extend( {
 
 
         // recalibrate
-        if (zoomChange) {
+        if (true) {
             const topLeft = this._map.containerPointToLayerPoint( [ 0, 0 ] );
             L.DomUtil.setPosition( this._dotCanvas, topLeft );
             L.DomUtil.setPosition( this._lineCanvas, topLeft );
@@ -388,13 +388,18 @@ L.DotLayer = L.Layer.extend( {
               inMapBounds = A => overlaps(mapBounds, A.bounds);
 
         // this will eventually be replaced by async calls
-        const toProject = new BitSet().resize(n);
+        const toProject = new BitSet(),
+              itemsInView = this._itemMask = this._itemMask || new BitSet();
+
+        itemsInView.clear();
 
         for (let i=0; i<n; i++){
             const A = itemsArray[i];
             
             if (!inMapBounds(A))
                 continue;
+
+            itemsInView.add(i);
 
             if (!A.projected[zoom]) {
                 // prevent another instance of this function from
@@ -455,6 +460,7 @@ L.DotLayer = L.Layer.extend( {
                         
             for (let [id, P] of Object.entries(msg.projected)) {
                 const A = this._items[id];
+                P.segMask = new BitSet();
                 A.projected[zoom] = P;
 
                 if (zoom == this._zoom) {
@@ -462,7 +468,7 @@ L.DotLayer = L.Layer.extend( {
                           opacity = 0.8;
                     
                     this._drawPath(
-                        this._lineCtx, P.P, this._pxBounds, this._pxOffset,
+                        this._lineCtx, P, this._pxOffset,
                         lineWidth, A.pathColor, opacity
                     );
                     // if paused draw dots
@@ -471,12 +477,15 @@ L.DotLayer = L.Layer.extend( {
         }
     },
 
-    _drawPath: function(ctx, pointsBuf, pxBounds, pxOffset, lineWidth, strokeStyle, opacity, isolated=true) {
+    _drawPath: function(ctx, P, pxOffset, lineWidth, strokeStyle, opacity, isolated=true) {
         const ox = pxOffset.x,
               oy = pxOffset.y,
+              pointsBuf = P.P,
+              mask = P.segMask.clear(),
               nSegs = pointsBuf.length / 3 - 1,
               contains = this._contains,
-              inBounds = point => contains(pxBounds, point),
+              // pxBounds = this._map.getPixelBounds(),
+              inBounds = point => contains(this._map.getPixelBounds(), point),
               points = i => pointsBuf.subarray(i, i+2);
 
 
@@ -493,7 +502,8 @@ L.DotLayer = L.Layer.extend( {
             pnextIn = inBounds(pnext);
 
             if (pIn || pnextIn) {
-                anySegs = true;
+                mask.add(s-1);
+
                 const p1x = p[0]     + ox, p1y = p[1]     + oy,
                       p2x = pnext[0] + ox, p2y = pnext[1] + oy;
 
@@ -537,10 +547,9 @@ L.DotLayer = L.Layer.extend( {
               zoom = this._zoom,
               itemsArray = this._itemsArray,
               n = itemsArray.length,
-              mapBounds = this._map.getBounds(),
+              // mapBounds = this._map.getBounds(),
               overlaps = this._overlaps,
-              inMapBounds = A => overlaps(mapBounds, A.bounds),
-              pxBounds = this._map.getPixelBounds(),
+              inMapBounds = A => overlaps(this._map.getBounds(), A.bounds),
               pxOffset = this._pxOffset;
        
         let anySegs = false,
@@ -548,7 +557,7 @@ L.DotLayer = L.Layer.extend( {
 
         this._drawRect = undefined;
         this.clearCanvas();
-
+    
         // const query = (status=="selected")? A => !!A.highlighted : A => !A.highlighted;
 
         // for (let [status, sfilter] of Object.entries(this._emphFilters)) {
@@ -567,9 +576,9 @@ L.DotLayer = L.Layer.extend( {
             cfilter.forEach( i => {
                 const A = itemsArray[i];
                 if ( inMapBounds(A) && (A.projected[zoom] || {}).P ) {
-                    const pbuf = A.projected[zoom].P,
+                    const P = A.projected[zoom],
                           dim = this._drawPath(
-                            ctx, pbuf, pxBounds, pxOffset, null, null, null, false
+                            ctx, P, pxOffset, null, null, null, false
                           );
 
                     if (dim) {
@@ -622,7 +631,7 @@ L.DotLayer = L.Layer.extend( {
         
         let rect;
         
-        if (ctx){
+        if (ctx) {
             rect = this._drawRect || defaultRect;
             ctx.clearRect( rect.x, rect.y, rect.w, rect.h );
         }
@@ -663,8 +672,11 @@ L.DotLayer = L.Layer.extend( {
     },  
 
     // --------------------------------------------------------------------
-    drawDots: function( now, start, P, dP, segMask, drawDot ) {
-        const idxArray = segMask.array(),
+    drawDots: function( now, start, projected, drawDot ) {
+        const P = projected.P,
+              dP = projected.dP,
+              segMask = projected.segMask,
+              idxArray = segMask.array(),
               n = idxArray.length,
               firstT = P[3*idxArray[0]+2],
               lastT = P[3*idxArray[n-1]+2],
@@ -672,8 +684,6 @@ L.DotLayer = L.Layer.extend( {
               period = this._period,
               xOffset = this._pxOffset.x,
               yOffset = this._pxOffset.y;
-        
-        // debugger;
 
         let timeOffset = s % period,
             count = 0,
@@ -744,9 +754,10 @@ L.DotLayer = L.Layer.extend( {
     },
 
     drawLayer: function(now) {
-        if ( !this._ready || !this._itemMask || this._itemMask.isEmpty()) {
+        if ( !this._itemMask || this._itemMask.isEmpty()) {
             return;
         }
+
         if (!now)
             now = this._timePaused || this.UTCnowSecs();
 
@@ -762,22 +773,19 @@ L.DotLayer = L.Layer.extend( {
         this._period = this.C1 * zf;
         this._dotSize = Math.max(1, ~~(this.dotScale * Math.log( zoom ) + 0.5));
 
-        this.clearCanvas(ctx);
-        let count = 0;
+        let count = 0,
+            drawDotFunc = this.makeSquareDrawFunc();
 
-        let drawDotFunc = this.makeSquareDrawFunc();
+        this.clearCanvas(ctx);
         this._itemMask.forEach(i => {
-            // debugger;
-            const A = items[i];
-            if (A.projected && A.projected[zoom] && 
-                A.segMask && !A.segMask.isEmpty()) {
+            const A = items[i],
+                  P = A.projected[zoom] || {};
+            if (P.P && !P.segMask.isEmpty()) {
                 ctx.fillStyle = A.dotColor || this.normal.dotColor;
                 
-                const P = A.projected[zoom],
-                      start = A.UTCtimestamp,
-                      mask = A.segMask;
+                const start = A.UTCtimestamp;
                 ctx.beginPath();
-                count += this.drawDots(now, start, P.P, P.dP, mask, drawDotFunc);
+                count += this.drawDots(now, start, P, drawDotFunc);
                 ctx.fill();
             }
         });
