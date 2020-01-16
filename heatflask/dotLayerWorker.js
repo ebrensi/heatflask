@@ -4,10 +4,8 @@
 
 */
 
-let N, BITARRAY;
-const MY_ITEMS = {},
-      POINTBUF = new Float32Array(2),
-      PROJECTIONS = {};
+let myItems = {};
+let name;
 
 
 onmessage = function(event) {
@@ -15,24 +13,21 @@ onmessage = function(event) {
 
     if ("addItems" in msg) {
         const newItems = msg.addItems;
-        Object.assign(MY_ITEMS, newItems);
+        Object.assign(myItems, newItems);
     } 
 
     if ("removeItems" in msg) {
         for (id in msg.removeItems){
-            if (id in MY_ITEMS)
-                delete MY_ITEMS[id];
+            if (id in myItems)
+                delete myItems[id];
         }
     } 
 
     if ("project" in msg) {
         const ids_to_project = msg.project,
               zoom = msg.zoom;
-        
-        if (!PROJECTIONS[zoom])
-            PROJECTIONS[zoom] = CRS.makeProjection(zoom, POINTBUF);
 
-        const projectPoint = PROJECTIONS[zoom],
+        const projectPoint = CRS.makeProjection(zoom),
               sf = msg.smoothFactor,
               ttol = msg.ttol,
               TS = llt => this.transformSimplify(llt, sf, projectPoint, ttol),
@@ -40,8 +35,8 @@ onmessage = function(event) {
               transferables = [];
 
         for (const id of ids_to_project) {
-            if (id in MY_ITEMS) {
-                let A = MY_ITEMS[id];
+            if (id in myItems) {
+                const A = myItems[id];
 
                 // if (!A.projected)
                 //     A.projected = {}
@@ -57,7 +52,7 @@ onmessage = function(event) {
             }
         } 
 
-        msg.name = N;
+        msg.name = self.name;
         msg.project = Object.keys(projected);
         msg.projected = projected;
 
@@ -66,8 +61,8 @@ onmessage = function(event) {
         // console.log(`${N} projected`, msg);
    
     } else if ("hello" in msg){  
-        N = msg["hello"];
-        console.log(`${N} started`)
+        self.name = msg["hello"];
+        console.log(`${self.name} started`)
     }
 };
 
@@ -75,7 +70,7 @@ onmessage = function(event) {
 
 function transformSimplify(llt, smoothFactor, transform=null, ttol=60) {
     // const n = llt.length / 3,
-    //       badSeg = new FastBitArray(n-1);
+    //       badSeg = new BitSet(n-1);
     
     // for (let i=1, tprev=llt[2]; i<n; i++) {
     //     let t = llt[3*i + 2];
@@ -191,7 +186,7 @@ Simplifier = {
         return newPoints.slice(0,j);
     },
 
-    simplifyDPStep: function(points, first, last, sqTolerance, bitArray) {
+    simplifyDPStep: function(points, first, last, sqTolerance, bitSet) {
         let maxSqDist = sqTolerance,
             index;
 
@@ -212,12 +207,12 @@ Simplifier = {
 
         if (maxSqDist > sqTolerance) {
             if (index - first > 1)
-                this.simplifyDPStep(points, first, index, sqTolerance, bitArray);
+                this.simplifyDPStep(points, first, index, sqTolerance, bitSet);
             
-            bitArray.set(index, true);
+            bitSet.add(index);
             
             if (last - index > 1) 
-                this.simplifyDPStep(points, index, last, sqTolerance, bitArray);
+                this.simplifyDPStep(points, index, last, sqTolerance, bitSet);
         }
     },
 
@@ -225,17 +220,17 @@ Simplifier = {
     simplifyDouglasPeucker: function(points, sqTolerance) {
         const n = points.length/3;
 
-        let bitArray = BITARRAY = FastBitArray.recycle(BITARRAY, n);
+        let bitSet = new BitSet().resize(n);
 
-        bitArray.set(0, true);
-        bitArray.set(n-1, true);
+        bitSet.add(0);
+        bitSet.add(n-1);
 
-        this.simplifyDPStep(points, 0, n-1, sqTolerance, bitArray);
+        this.simplifyDPStep(points, 0, n-1, sqTolerance, bitSet);
 
-        const newPoints = new Float32Array(3*bitArray.count());
+        const newPoints = new Float32Array(3*n);
         
         let j = 0;
-        bitArray.forEach(idx => {
+        bitSet.forEach(idx => {
             const i = 3 * idx,
                   point = points.subarray(i, i+3);
             newPoints.set(point, j);
@@ -275,23 +270,23 @@ CRS = {
     EARTH_RADIUS: 6378137,
     RAD: Math.PI / 180,
 
-    makeTransformation: function(zoom, POINTBUF) {
+    makeTransformation: function(zoom) {
         const S = 0.5 / (Math.PI * this.EARTH_RADIUS),
               A = S, B = 0.5, C = -S, D = 0.5,
               scale = 1 << (8 + zoom);    
         
         return (x,y)  => {
-            POINTBUF[0] = scale * (A * x + B);
-            POINTBUF[1] = scale * (C * y + D);
-            return POINTBUF
+            const Tx = scale * (A * x + B),
+                  Ty = scale * (C * y + D);
+            return [Tx, Ty]
         };
     },
 
-    makeProjection: function(zoom, POINTBUF) {
+    makeProjection: function(zoom) {
         const max = this.MAX_LATITUDE,
               R = this.EARTH_RADIUS,
               rad = this.RAD,
-              T = this.makeTransformation(zoom, POINTBUF);
+              T = this.makeTransformation(zoom);
 
         return latlngpt => {
             const lat = Math.max(Math.min(max, latlngpt[0]), -max),

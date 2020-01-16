@@ -386,7 +386,7 @@ let tableColumns = [
                 if ( type === 'display' || type === 'filter' ) {
                     return href( stravaActivityURL(row.id), row.tsLoc.toLocaleString());
                 } else 
-                    return row.startTime;
+                    return row.UTCtimestamp;
             }
         },
 
@@ -656,10 +656,8 @@ function updateLayers(msg) {
     let num =  Object.keys(appState.items).length,
         msg2 = " " + msg + " " + num  + " activities rendered.";
     $(".data_message").html(msg2);
-
-    DotLayer.setDotColors();
     DotLayer.reset();
-    // !appState.paused && DotLayer.animate();
+    // appState.paused || DotLayer.animate();
    
 
     // (re-)render the activities table
@@ -809,6 +807,7 @@ function renderLayers(query={}) {
 
     // handle one incoming chunk from websocket stream
     sock.onmessage = function(event) {
+        
         let A;
 
         try {
@@ -882,9 +881,8 @@ function renderLayers(query={}) {
 
         A.latLngTime = latLngTime;
         A.id = A._id;
-
         A.tsLoc = new Date((tup[0] + tup[1]*3600) * 1000);
-        A.startTime = new Date(tup[0]* 1000);  
+        A.UTCtimestamp = tup[0];  
         A.bounds = L.latLngBounds(A.bounds.SW, A.bounds.NE);
 
         delete A.summary_polyline;

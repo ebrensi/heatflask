@@ -14,9 +14,10 @@ L.DotLayer = L.Layer.extend( {
     _tThresh: 100000000.0,
     C1: 1000000.0,
     C2: 200.0,
-    dotScale: 1,
+    dotScale: 1.0,
 
     options: {
+        debug: true,
         numWorkers: null,
         startPaused: false,
         showPaths: true,
@@ -43,29 +44,16 @@ L.DotLayer = L.Layer.extend( {
 
     // -- initialized is called on prototype
     initialize: function( items, options ) {
-        this._map    = null;
-        this._dotCanvas = null;
-        this._lineCanvas = null;
-        this._capturing = null;
-        this._dotCtx = null;
-        this._lineCtx = null;
-        this._frame  = null;
-        this._items = null;
         this._timeOffset = 0;
-        this._colorPalette = [];
         L.setOptions( this, options );
         this._paused = this.options.startPaused;
-        this._timePaused = Date.now();
+        this._timePaused = this.UTCnowSecs();
 
         this.heatflask_icon = new Image();
         this.heatflask_icon.src = "static/logo.png";
 
         this.strava_icon = new Image();
         this.strava_icon.src = "static/pbs4.png";
-
-        this._workers = null;
-        this._jobIndex = {};
-
 
         let default_n = window.navigator.hardwareConcurrency;
         if (window.Worker) {
@@ -89,6 +77,10 @@ L.DotLayer = L.Layer.extend( {
 
     WorkerPool:  {
         //
+    },
+
+    UTCnowSecs: function() {
+        return new Date().getTime();
     },
 
     //-------------------------------------------------------------
@@ -117,15 +109,25 @@ L.DotLayer = L.Layer.extend( {
         L.DomUtil.addClass( this._lineCanvas, "leaflet-zoom-" + ( zoomAnimated ? "animated" : "hide" ) );
         map._panes.overlayPane.appendChild( this._lineCanvas );
 
-        map.on( this.getEvents(), this );
+        if (this.options.debug) {
+            // create Canvas for debugging canvas stuff
+            this._debugCanvas = L.DomUtil.create( "canvas", "leaflet-layer" );
+            this._debugCanvas.width = size.x;
+            this._debugCanvas.height = size.y;
+            this._debugCtx = this._debugCanvas.getContext( "2d" );
+            L.DomUtil.addClass( this._debugCanvas, "leaflet-zoom-" + ( zoomAnimated ? "animated" : "hide" ) );
+            map._panes.overlayPane.appendChild( this._debugCanvas );
 
-        if ( this._items ) {
-            this.reset();
+            this._debugCtx.strokeStyle = "rgb(0,255,0,0.5)";
+            this._debugCtx.lineWidth = 5;
+            this._debugCtx.setLineDash([4, 10]);
         }
+
+        map.on( this.getEvents(), this );
     },
 
     //-------------------------------------------------------------
-    _onLayerDidResize: function( resizeEvent ) {
+    _onLayerResize: function( resizeEvent ) {
         let newWidth = resizeEvent.newSize.x,
             newHeight = resizeEvent.newSize.y;
 
@@ -135,36 +137,33 @@ L.DotLayer = L.Layer.extend( {
         this._lineCanvas.width = newWidth;
         this._lineCanvas.height = newHeight;
 
-        this._onLayerDidMove();
+        if (this.options.debug) {
+            this._debugCanvas.width = newWidth;
+            this._debugCanvas.height = newHeight;
+        }
+
+        this._redraw();
     },
 
     //-------------------------------------------------------------
-    _onLayerDidMove: function() {
-        this._mapMoving = false;
+    _onLayerMove: function() {
 
-        this._setupWindow();
-
-        if (this._paused) {
-            this.drawLayer(this._timePaused);
-        } else {
-            this.animate();
-        }
-
+        this._redraw();
     },
 
     //-------------------------------------------------------------
     getEvents: function() {
-        loggit = (e) => console.log(e);
+        const loggit = (e) => console.log(e);
 
-        var events = {
-            movestart: loggit,
-            // move: this._onLayerDidMove,
+        const events = {
+            // movestart: loggit,
+            // move: this._onLayerMove,
             // move: loggit,
-            moveend: this._onLayerDidMove,
+            moveend: this._onLayerMove,
             // zoomstart: loggit,
             // zoom: loggit,
             // zoomend: loggit,
-            resize: this._onLayerDidResize
+            resize: this._onLayerResize
         };
 
         if ( this._map.options.zoomAnimation && L.Browser.any3d ) {
@@ -175,25 +174,46 @@ L.DotLayer = L.Layer.extend( {
     },
 
     //-------------------------------------------------------------
-    // Call this function when items are added or reomved
+    // Call this function after items are added or reomved
     reset: function() {
-        this._itemsArray = Object.values(this._items);
-        if (!this._itemsArray.length)
+        if (!this._map || !this._items)
             return
 
-        this.setDotColors();
+        t0 = performance.now();
 
-        let pathColors = new Set(this._itemsArray.map(A => A.pathColor));
-        this._colorFilters = {};
+        this._ready = false;
 
-        for (color of pathColors) {
-            this._colorFilters[color] = FastBitArray.filter(
-                this._itemsArray,
-                A => A.pathColor == color
-            )
+        this._itemsArray = Object.values(this._items);
+        const n = this._itemsArray.length;
+
+        if (n) {
+
+            this.setDotColors();
+
+            const pathColors = new Set(this._itemsArray.map(A => A.pathColor));
+            this._colorFilters = {};
+
+            for (color of pathColors) {
+                this._colorFilters[color] = BitSet.new_filter(
+                    this._itemsArray,
+                    A => A.pathColor == color
+                );
+            }
+
+            const zoomLevels = Object.keys(this._projectedItems || {});
+            this._projectedItems = {};
+            for (zoomLevel of zoomLevels) {
+                this._projectedItems[zoomLevel] = BitSet.new_filter(
+                    this._itemsArray,
+                    A => !!(A.projected || {})[zoomLevel]
+                );
+            }
+            
+            this._redraw();
         }
 
-        this._onLayerDidMove();
+        this. _ready = true
+        this._paused || this.animate();
     },
 
 
@@ -206,6 +226,11 @@ L.DotLayer = L.Layer.extend( {
 
         map._panes.overlayPane.removeChild( this._lineCanvas );
         this._lineCanvas = null;
+
+        if (this.options.debug) {
+            map._panes.overlayPane.removeChild( this._debugCanvas );
+            this._debugCanvas = null;
+        }
 
         map.off( this.getEvents(), this );
     },
@@ -244,6 +269,19 @@ L.DotLayer = L.Layer.extend( {
         return latOverlaps && lngOverlaps;
     },
 
+    makeItemMask: function(createNew=false) {
+        const arr = this._itemsArray,
+              mapBounds = this._latLngBounds,
+              overlaps = this._overlaps,
+              func = A => overlaps(mapBounds, A.bounds);
+        if (createNew)
+            this._itemMask = BitSet.new_filter(arr, func);
+        else
+            this._itemMask = (this._itemMask || new BitSet()).filter(arr, func);
+        
+        return this._itemMask;
+    },
+
     _contains: function (pxBounds, point) {
         let x = point[0],
             y = point[1];
@@ -252,56 +290,85 @@ L.DotLayer = L.Layer.extend( {
                (pxBounds.min.y <= y) && (y <= pxBounds.max.y);
     },
 
-    makeSegMask: function(A, zoom) {
+    drawPxBounds: function() {
+        const b = this._pxBounds,
+              o = this._pxOffset,
+              x = b.min.x + o.x + 5,
+              y = b.min.y + o.y + 5,
+              w = b.max.x - b.min.x - 10,
+              h = b.max.y - b.min.y - 10;
 
-        const points = A.projected[zoom].P,
-              buflength = points.length,
-              n = buflength / 3,
-              pxBounds = this._pxBounds,
-              inBounds = point => this._contains(pxBounds, point);
-
-        let mask = A.segMask = FastBitArray.recycle(A.segMask, n);
-
-        let p = points.subarray(0,2);
-        for (let i = 3, j=0; i < buflength; i += 3, j++) {
-            const pnext = points.subarray(i, i+2);
-            if (inBounds(p) || inBounds(pnext))
-                mask.set(j, true);
-            p = pnext;
-        }
-        return mask
+        this._debugCtx.strokeRect(x, y, w, h);
+        return {x: x, y:y, w:w, h:h}
     },
 
-    _setupWindow: function() {
-        if ( !this._map || !this._items ) {
-            return;
+    drawSeg: function(P1, P2) {
+        const o = this._pxOffset,
+              p1 = [P1[0]+o.x, P1[1]+o.y],
+              p2 = [P2[0]+o.x, P2[1]+o.y];
+
+        this._debugCtx.beginPath();
+        this._debugCtx.moveTo(p1[0], p1[1]);
+        this._debugCtx.lineTo(p2[0], p2[1]);
+        this._debugCtx.stroke();
+        return {p1: p1, p2: p2}
+    },
+
+    makeSegMask: function(A, zoom, createNew=false) {
+        const pbuf = A.projected[zoom].P,
+              buflength = pbuf.length,
+              nSegs = buflength / 3 - 1,
+              pxBounds = this._pxBounds,
+              contains = this._contains,
+              inBounds = i => contains(pxBounds, pbuf.subarray(i, i+2));
+
+        let mask;
+
+        if (createNew)
+            mask = new BitSet();
+        else
+            mask = A.segMask || new BitSet();
+
+        mask.clear();
+        mask.resize(nsegs);
+
+        for (let s=1, pIn = inBounds(0), pnextIn; s < nSegs; s++) {    
+            let pnextIn = inBounds(3*s);
+            if (pIn || pnextIn)
+                mask.add(s-1);
+            pIn = pnextIn;
         }
+        return A.segMask = mask
+    },
+
+    _redraw: function() {
+        if ( !this._ready )
+            return;
 
         // Get map orientation
         const zoom = this._map.getZoom(),
               center = this._map.getCenter(),
-              size = this._map.getSize();
+              size = this._map.getSize(),
+              zoomChange = zoom != this._zoom;
 
         // if orientation hasn't changed then nothing to do
         if (center.equals(this._center) &&
             size.equals(this._size) &&
-            zoom == this._zoom)
+            !zoomChange)
             return;
 
-        const zoomChange = zoom != this._zoom
-
+        // update state
         this._zoom = zoom;
         this._center = center;
         this._size = size;
 
-        const t0 = performance.now();
 
         // recalibrate
         if (zoomChange) {
-            // debugger;
             const topLeft = this._map.containerPointToLayerPoint( [ 0, 0 ] );
             L.DomUtil.setPosition( this._dotCanvas, topLeft );
             L.DomUtil.setPosition( this._lineCanvas, topLeft );
+            this.options.debug && L.DomUtil.setPosition( this._debugCanvas, topLeft );
 
             const mapPanePos = this._map._getMapPanePos(),
                   pxOrigin = this._map.getPixelOrigin();
@@ -310,59 +377,45 @@ L.DotLayer = L.Layer.extend( {
             this._drawRect = undefined;
         }
 
-        
-
         const mapBounds = this._latLngBounds = this._map.getBounds(),
-              pxBounds = this._pxBounds = this._map.getPixelBounds();
-        
-        const stats = {
-            zoom: zoom, center: center,
-            size: size, bounds: mapBounds,
-            offset: this._pxOffset, time: t0
-        };
+              pxBounds = this._pxBounds = this._map.getPixelBounds(),
+              itemsArray = this._itemsArray,
+              n = itemsArray.length,
+              batch = performance.now(),
+              jobIndex = this._jobIndex = this._jobIndex || {},
+              job = jobIndex[batch] = {count: n},
+              overlaps = this._overlaps,
+              inMapBounds = A => overlaps(mapBounds, A.bounds);
 
-        console.log(stats);
+        // this will eventually be replaced by async calls
+        const toProject = new BitSet().resize(n),
+              alreadyProjected = new BitSet().resize(n);
 
-        const items = this._itemsArray,
-              n = items.length;
-
-        // make preliminary item mask based on bounds overlap
-        let itemsInView = this._itemsInView = FastBitArray.recycle(this._itemsInView, n);
-
-        let i = 0;
-        items.forEach(
-            A => {
-                if (this._overlaps(mapBounds, A.bounds))
-                    itemsInView.set(i++, true);
-        });
-
-        let count = itemsInView.count();
-
-        if (!count)
-            return
-
-        const batch = performance.now(),
-              jobIndex = this._jobIndex,
-              job = jobIndex[batch] = {count: count};
-
-        // determine which activities we need to make projections for
-        let itemsToProject = this._itemsToProject = FastBitArray.recycle(this._itemsToProject, n);
-     
-        itemsInView.forEach(i => {
-            const A = items[i];
-
+        for (let i=0; i<n; i++){
+            const A = itemsArray[i];
+            
+            if (!inMapBounds(A)) {
+                job.count--;
+                continue;
+            }
+            
             if (!A.projected)
-                A.projected = {}
-            // if a projection for this zoom level already exists,
-            // we don't need to do anything
-            if (!A.projected[ zoom ])
-                itemsToProject.set(i, true);
-        });
+                A.projected = {};
+    
+            const P = A.projected[zoom];
 
-        let ids;
-        // Send ids of items to project to the worker pool
-        if (!itemsToProject.isEmpty()) {
-            ids = Array.from(itemsToProject.array()).map(i => items[i].id);
+            if (P) {
+                if (P.P)
+                    alreadyProjected.add(i);
+            } else {
+                // lets other threads know this is being handled
+                A.projected[zoom] = {};
+                toProject.add(i);
+            }
+        }
+
+        if (!toProject.isEmpty()) {
+            ids = toProject.map(i => itemsArray[i].id);
             this._postToAllWorkers({ 
                 project: ids,
                 batch: batch,
@@ -370,16 +423,15 @@ L.DotLayer = L.Layer.extend( {
                 smoothFactor: this.smoothFactor,
             });
         }
-        
-        let alreadyProjected = itemsToProject.negate().intersect(itemsInView);
 
         if (!alreadyProjected.isEmpty())
-            alreadyProjected.forEach(i => this._afterProjected(items[i], zoom, batch));
+            alreadyProjected.forEach(
+                i => this._afterProjected(itemsArray[i], zoom, batch)
+            );
     },
 
     addItem: function(A) {
-        if (!this._items)
-            this._items = {}
+        this._items = this._items || {}
 
         this._items[A.id] = A;
         msg = {addItems: {}};
@@ -425,34 +477,31 @@ L.DotLayer = L.Layer.extend( {
     },
 
     _afterProjected: function(A, zoom, batch) {
-        // debugger;
 
         const batchDone = !(--this._jobIndex[batch].count);
 
         if (batchDone)
             delete this._jobIndex[batch];
 
-        if (zoom != this._zoom)
+        if ( zoom != this._zoom || !(((A.projected || {})[zoom] || {})).P )
             return;
 
-        // debugger;
-        this.makeSegMask(A, zoom);
+        // this.makeSegMask(A, zoom, true);
 
         if (!batchDone)
             return
 
         // this batch is done
         elapsed = performance.now() - batch;
-        // console.log(`batch ${batch} took ${elapsed}`);
-        
+        console.log(`batch ${batch} took ${elapsed}`);
+        debugger;
         let d = this.setDrawRect();
 
         if (this.options.showPaths)
             this.drawPaths();
 
         if (d) {
-            this._lineCtx.strokeStyle = "rgba(0,255,0,0.5)";
-            this._lineCtx.strokeRect(d.x, d.y, d.w, d.h);
+            this._debugCtx.strokeRect(d.x, d.y, d.w, d.h);
         }
 
         if (this._paused)
@@ -494,8 +543,7 @@ L.DotLayer = L.Layer.extend( {
               items = this._itemsArray,
               n = items.length;
 
-        this._filter = FastBitArray.recycle(this._filter, n);
-        const inView = this._itemsInView;
+        const filter = new BitSet.resize(n);
 
         this.clearCanvas();
 
@@ -538,33 +586,48 @@ L.DotLayer = L.Layer.extend( {
     setDrawRect: function() {
         const canvas = this._lineCanvas,
               zoom = this._zoom,
-              items = this._itemsArray,
-              inView = this._itemsInView;
+              itemsArray = this._itemsArray,
+              n = items.length,
+              mapBounds = this._map.getBounds(),
+              overlaps = this._overlaps,
+              inMapBounds = A => overlaps(mapBounds, A.bounds),
 
+              pxBounds = this._map.getPixelBounds(),
+              contains = this._contains,
+              inPxBounds = point => contains(pxBounds, point),
+              makePoints = pbuf => i => pbuf.subarray(i, i+2);
+              
+       
         let anySegs = false,
             xmin, xmax, ymin, ymax;
 
-        // find the pixel bounds of all relevant segments
-        inView.forEach(i => {
+        // iterate through each activity
+        for (let i=0; i<n; i++) {
             const A = items[i];
-            if (A.segMask.isEmpty())
-                inView.set(i,  false);
-            else {
-                anySegs = true;
-                let points = A.projected[zoom].P;
-                A.segMask.forEach((idx) => {
-                    const i = 3*idx,
-                          px = points[i],
-                          py = points[i+1];
+            if (!inMapBounds(A))
+                continue
 
+            const pbuf = A.projected[zoom].P,
+                  nSegs = pbuf.length / 3 - 1,
+                  points = makePoints(pbuf);
+            
+            // iterate through every segment (pair of points)
+            for (let s=1, p=points(0), pIn = inBounds(p), pnextIn; s < nSegs; s++) {    
+                let pnext = points(3*s),
+                    pnextIn = inBounds(pnext);
+
+                if (pIn || pnextIn) {
+
+                    // do something with points pIn and pnextIn
                     if (!xmin || (px < xmin)) xmin = px;
                     if (!xmax || (px > xmax)) xmax = px;
                     if (!ymin || (py < ymin)) ymin = py;
                     if (!ymax || (py > ymax)) ymax = py;     
-                });
-            }
-
-        });
+                }
+        
+                pIn = pnextIn;
+            } 
+        }
 
         if (!anySegs) {
             // no paths on screen in this view
@@ -607,6 +670,7 @@ L.DotLayer = L.Layer.extend( {
             rect = defaultRect;
             this._lineCtx.clearRect( rect.x, rect.y, rect.w, rect.h );
             this._dotCtx.clearRect( rect.x, rect.y, rect.w, rect.h );
+            this.options.debug && this._debugCtx.clearRect( rect.x, rect.y, rect.w, rect.h );
         }
     },
 
@@ -639,21 +703,17 @@ L.DotLayer = L.Layer.extend( {
     },  
 
     // --------------------------------------------------------------------
-    drawDots: function( now, start, P, dP, segMask, dotColor, highlighted) {
+    drawDots: function( now, start, P, dP, segMask, drawDot ) {
         const idxArray = segMask.array(),
               n = idxArray.length,
               firstT = P[3*idxArray[0]+2],
               lastT = P[3*idxArray[n-1]+2],
               s = this._timeScale * ( now - start + firstT),
               period = this._period,
-              ctx = this._dotCtx,
-              dotSize = this._dotSize,
-              dotOffset = dotSize / 2.0,
-              two_pi = this.two_pi,
               xOffset = this._pxOffset.x,
-              yOffset = this._pxOffset.y,
-              g = this._gifPatch,
-              dotType = highlighted? "selected":"normal";
+              yOffset = this._pxOffset.y;
+        
+        // debugger;
 
         let timeOffset = s % period,
             count = 0,
@@ -666,20 +726,14 @@ L.DotLayer = L.Layer.extend( {
             py = P[pi+1],
             pt = P[pi+2];
 
-        if (this.options.colorAll || highlighted) {
-            ctx.fillStyle = dotColor || this.options[dotType].dotColor;
-        }
-
-
         if ( timeOffset < 0 ) {
             timeOffset += period;
         }
-        ctx.beginPath();
 
-        for (let t=timeOffset, i=0, dt, t2, idx; t < lastT; t += period) {
+        for (let t=timeOffset, i=0, dt, t2, idx,x,y; t < lastT; t += period) {
             t2 = P[pi+5];
             if (t >= t2) {
-                while ( t >= t2 ) {
+                while ( t >= t2) {
                     if ( ++i == n )
                         return count;
                     idx = idxArray[i];
@@ -698,53 +752,79 @@ L.DotLayer = L.Layer.extend( {
             dt = t - pt;
 
             if ( dt > 0 ) {
-                let lx = px + dx * dt + xOffset,
-                    ly = py + dy * dt + yOffset;
+                x = px + dx * dt + xOffset,
+                y = py + dy * dt + yOffset;
 
-                if ( highlighted & !g)
-                    ctx.arc( lx, ly, dotSize, 0, two_pi );
-                else
-                    ctx.rect( lx - dotOffset, ly - dotOffset, dotSize, dotSize );
+                drawDot(x,y);
                 count++;
             }
         }
-        ctx.fill();
-
-        if ( highlighted & !g)
-            ctx.stroke();
-
+    
         return count;
     },
 
+    makeCircleDrawFunc: function() {
+        const two_pi = this.two_pi,
+              ctx = this._dotCtx,
+              dotSize = this._dotSize;
+
+        return function(x,y){
+            ctx.arc( x, y, dotSize, 0, two_pi );
+        }
+    },
+
+    makeSquareDrawFunc: function() {
+        const ctx = this._dotCtx,
+              dotSize = this._dotSize
+              dotOffset = dotSize / 2.0;
+
+        return function(x,y){
+            ctx.rect( x - dotOffset, y - dotOffset, dotSize, dotSize );
+        }
+    },
+
     drawLayer: function(now) {
-        if ( !this._map ) {
+        if ( !this._ready || !this._itemMask || this._itemMask.isEmpty()) {
             return;
         }
-        let ctx = this._dotCtx,
+        if (!now)
+            now = this._timePaused || this.UTCnowSecs();
+
+        const ctx = this._dotCtx,
             zoom = this._zoom,
             canvas = this._dotCanvas,
-            count = 0,
             t0 = performance.now(),
-            highlighted_items = [],
-            zf = this._zoomFactor = 1 / (2**zoom);
-
-        ctx.fillStyle = this.options.normal.dotColor;
+            zf = this._zoomFactor = 1 / (2**zoom),
+            g = this._gifPatch,
+            items = this._itemsArray;
 
         this._timeScale = this.C2 * zf;
         this._period = this.C1 * zf;
         this._dotSize = Math.max(1, ~~(this.dotScale * Math.log( zoom ) + 0.5));
 
         this.clearCanvas(ctx);
+        let count = 0;
 
-        items = this._itemsArray;
-
-        this._itemsInView.forEach(i => {
+        let drawDotFunc = this.makeSquareDrawFunc();
+        this._itemMask.forEach(i => {
+            // debugger;
             const A = items[i];
-            if (A.projected[zoom] && A.segMask) {
-                const P = A.projected[zoom];
-                count += this.drawDots(now, A.startTime, P.P, P.dP, A.segMask, A.dotColor, false);
+            if (A.projected && A.projected[zoom] && 
+                A.segMask && !A.segMask.isEmpty()) {
+                ctx.fillStyle = A.dotColor || this.normal.dotColor;
+                
+                const P = A.projected[zoom],
+                      start = A.UTCtimestamp,
+                      mask = A.segMask;
+                ctx.beginPath();
+                count += this.drawDots(now, start, P.P, P.dP, mask, drawDotFunc);
+                ctx.fill();
             }
         });
+
+        // drawDotFunc = makeCircleDrawFunc();
+        // if ( A.highlighted & !g)
+        //     ctx.stroke();
 
         // for ( const A of Object.values(this._items) ) {
         //     if (!A.inView || !A.projected[zoom] || !A.segMask)
@@ -768,20 +848,18 @@ L.DotLayer = L.Layer.extend( {
         // }
 
         if (fps_display) {
-            let periodInSecs = this.periodInSecs(),
-                progress = (((now/1000) % periodInSecs) / periodInSecs).toFixed(1),
-                elapsed = ( performance.now() - t0 ).toFixed( 1 );
-
-            fps_display.update( now, `z=${this._zoom}, dt=${elapsed} ms/f, n=${count}` );
+            const elapsed = ( performance.now() - t0 ).toFixed( 1 );
+            fps_display.update( now, `z=${this._zoom}, dt=${elapsed} ms, n=${count}` );
         }
     },
 
    
     // --------------------------------------------------------------------
     animate: function() {
+
         this._paused = false;
         if ( this._timePaused ) {
-            this._timeOffset = performance.now() - this._timePaused;
+            this._timeOffset = (this.UTCnowSecs() - this._timePaused);
             this._timePaused = null;
         }
         this.lastCalledTime = 0;
@@ -797,15 +875,16 @@ L.DotLayer = L.Layer.extend( {
 
     // --------------------------------------------------------------------
     _animate: function() {
-        if (!this._frame) {
+        if (!this._frame || !this._ready)
             return;
-        }
+
         this._frame = null;
 
-        let ts = performance.now(),
+        // debugger;
+        let ts = this.UTCnowSecs();
             now = ts - this._timeOffset;
 
-        if ( this._paused || this._mapMoving ) {
+        if ( this._paused ) {
             // Ths is so we can start where we left off when we resume
             this._timePaused = ts;
             return;
@@ -1065,12 +1144,12 @@ L.DotLayer = L.Layer.extend( {
     },
 
     setDotColors: function() {
-        let itemsList = Object.values( this._items ),
-            numItems = itemsList.length,
+        let items = this._itemsArray,
+            numItems = items.length,
             i = 0;
 
         this._colorPalette = colorPalette(numItems, this.options.dotAlpha);
-        for ( item of itemsList )
+        for ( item of items )
             item.dotColor = this._colorPalette[ i++ ];
     }
 

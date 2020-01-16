@@ -634,7 +634,6 @@ class Users(UserMixin, db_sql.Model):
 
         count = 0
         for A in map(export, to_export):
-
             self.abort_signal = yield A
             count += 1
 
