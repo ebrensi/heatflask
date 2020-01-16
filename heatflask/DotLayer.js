@@ -297,7 +297,7 @@ L.DotLayer = L.Layer.extend( {
               y = b.min.y + o.y + 5,
               w = b.max.x - b.min.x - 10,
               h = b.max.y - b.min.y - 10;
-
+            
         this._debugCtx.strokeRect(x, y, w, h);
         return {x: x, y:y, w:w, h:h}
     },
@@ -493,14 +493,9 @@ L.DotLayer = L.Layer.extend( {
 
         // this batch is done
         elapsed = performance.now() - batch;
-        console.log(`batch ${batch} took ${elapsed}`);
+        // console.log(`batch ${batch} took ${elapsed}`);
         
-        // debugger;
-        let d = this.drawPaths();
-
-        if (d) {
-            this._debugCtx.strokeRect(d.x, d.y, d.w, d.h);
-        }
+        this.drawPaths();
 
         if (this._paused)
             this.drawLayer();
@@ -520,9 +515,8 @@ L.DotLayer = L.Layer.extend( {
         
         let p = points(0),
             pIn = inBounds(p),
-            xmin = xmax = p[0],
-            ymin = ymax = p[1],
-            anySegs = false;
+            xmin, xmax,
+            ymin, ymax;
 
         for (let s=1, pnext, pnextIn; s<nSegs; s++) {    
             pnext = points(3*s);
@@ -538,10 +532,10 @@ L.DotLayer = L.Layer.extend( {
                 ctx.lineTo(p2x, p2y);
 
                 // determine min and max
-                if (p2x < xmin) xmin = p2x;
-                if (p2x > xmax) xmax = p2x;
-                if (p2y < ymin) ymin = p2y;
-                if (p2y > ymax) ymax = p2y;     
+                if (!xmin || (p2x < xmin)) xmin = p2x;
+                if (!xmax || (p2x > xmax)) xmax = p2x;
+                if (!ymin || (p2y < ymin)) ymin = p2y;
+                if (!ymax || (p2y > ymax)) ymax = p2y;     
             }
 
             p = pnext;
@@ -555,9 +549,8 @@ L.DotLayer = L.Layer.extend( {
             ctx.stroke();
         }
 
-        if (anySegs){
+        if (xmax)
             return {xmin: xmin, ymin: ymin, xmax: xmax, ymax: ymax}
-        }
     },
 
     
@@ -565,6 +558,8 @@ L.DotLayer = L.Layer.extend( {
     //  This is more efficient than calling drawPath repeatedly
     //   for each activity, since we group strokes together.
     drawPaths: function() {
+        console.time("drawPaths")
+
         const canvas = this._lineCanvas,
               ctx = this._lineCtx,
               zoom = this._zoom,
@@ -604,7 +599,7 @@ L.DotLayer = L.Layer.extend( {
                           dim = this._drawPath(
                             ctx, pbuf, pxBounds, pxOffset, null, null, null, false
                           );
-                    
+
                     if (dim) {
                         // extend min and max
                         if (!xmin || (dim.xmin < xmin)) xmin = dim.xmin;
@@ -626,18 +621,23 @@ L.DotLayer = L.Layer.extend( {
 
         const pad = (this._dotSize || 25) + 5;
 
-        xmin = ~~Math.max(xmin + pxOffset.x - pad, 0);
-        xmax = ~~Math.min(xmax + pxOffset.x + pad, canvas.width);
-        ymin = ~~Math.max(ymin + pxOffset.y - pad, 0);
-        ymax = ~~Math.min(ymax + pxOffset.y + pad, canvas.height);
+        xmin = ~~Math.max(xmin - pad, 0);
+        xmax = ~~Math.min(xmax + pad, canvas.width);
+        ymin = ~~Math.max(ymin - pad, 0);
+        ymax = ~~Math.min(ymax + pad, canvas.height);
         
-        this._drawRect = {
+        d = this._drawRect = {
             x: xmin,
             y: ymin,
             w: xmax - xmin,
             h: ymax - ymin
         };
 
+        console.timeEnd("drawPaths");
+
+        if (this.options.debug)
+            this._debugCtx.strokeRect(d.x, d.y, d.w, d.h);
+        
         return this._drawRect
     },
 
