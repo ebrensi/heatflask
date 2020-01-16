@@ -178,12 +178,12 @@ Simplifier = {
                 point = newPoints.subarray(j, j+2);
             }
         }
-
+        
         if (point[0] != 0 || point[1] != 0)
             j += 3;
 
         // console.log(`reduction ${j / pointsBuf.length}`);
-        return newPoints.slice(0,j);
+        return [newPoints, j/3];
     },
 
     simplifyDPStep: function(points, first, last, sqTolerance, bitSet) {
@@ -217,17 +217,17 @@ Simplifier = {
     },
 
     // simplification using Ramer-Douglas-Peucker algorithm
-    simplifyDouglasPeucker: function(points, sqTolerance) {
-        const n = points.length/3;
+    simplifyDouglasPeucker: function(points, n, sqTolerance) {
+        // const n = points.length / 3;
 
-        let bitSet = new BitSet().resize(n);
-
+        let bitSet = new BitSet();
+        
         bitSet.add(0);
         bitSet.add(n-1);
 
         this.simplifyDPStep(points, 0, n-1, sqTolerance, bitSet);
 
-        const newPoints = new Float32Array(3*n);
+        const newPoints = new Float32Array(3*bitSet.size());
         
         let j = 0;
         bitSet.forEach(idx => {
@@ -246,11 +246,11 @@ Simplifier = {
         this.transform = transform || this.transform;
 
         // console.time("RDsimp");
-        points = this.simplifyRadialDist(points, sqTolerance);
+        [pointsBuf, n] = this.simplifyRadialDist(points, sqTolerance);
         // console.timeEnd("RDsimp");
         // console.log(`n = ${points.length}`)
         // console.time("DPsimp")
-        points = this.simplifyDouglasPeucker(points, sqTolerance);
+        points = this.simplifyDouglasPeucker(pointsBuf, n, sqTolerance);
         // console.timeEnd("DPsimp");
 
         return points;

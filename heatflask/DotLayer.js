@@ -494,11 +494,9 @@ L.DotLayer = L.Layer.extend( {
         // this batch is done
         elapsed = performance.now() - batch;
         console.log(`batch ${batch} took ${elapsed}`);
-        debugger;
-        let d = this.setDrawRect();
-
-        if (this.options.showPaths)
-            this.drawPaths();
+        
+        // debugger;
+        let d = this.drawPaths();
 
         if (d) {
             this._debugCtx.strokeRect(d.x, d.y, d.w, d.h);
@@ -508,22 +506,47 @@ L.DotLayer = L.Layer.extend( {
             this.drawLayer();
     },
 
-    _drawPath: function(ctx, points, segMask, pxOffset, lineWidth, strokeStyle, opacity, isolated=true) {
-        const P = points,
-              ox = pxOffset.x,
-              oy = pxOffset.y;
+    _drawPath: function(ctx, pointsBuf, pxBounds, pxOffset, lineWidth, strokeStyle, opacity, isolated=true) {
+        const ox = pxOffset.x,
+              oy = pxOffset.y,
+              nSegs = pointsBuf.length / 3 - 1,
+              contains = this._contains,
+              inBounds = point => contains(pxBounds, point),
+              points = i => pointsBuf.subarray(i, i+2);
+
 
         if (isolated)
             ctx.beginPath();
+        
+        let p = points(0),
+            pIn = inBounds(p),
+            xmin = xmax = p[0],
+            ymin = ymax = p[1],
+            anySegs = false;
 
-        segMask.forEach(idx => {
-            const i = 3 * idx,
-                  p1x = P[i]   + ox, p1y = P[i+1] + oy,
-                  p2x = P[i+3] + ox, p2y = P[i+4] + oy;
+        for (let s=1, pnext, pnextIn; s<nSegs; s++) {    
+            pnext = points(3*s);
+            pnextIn = inBounds(pnext);
 
+            if (pIn || pnextIn) {
+                anySegs = true;
+                const p1x = p[0]     + ox, p1y = p[1]     + oy,
+                      p2x = pnext[0] + ox, p2y = pnext[1] + oy;
+
+                // draw segment
                 ctx.moveTo(p1x, p1y);
                 ctx.lineTo(p2x, p2y);
-        });
+
+                // determine min and max
+                if (p2x < xmin) xmin = p2x;
+                if (p2x > xmax) xmax = p2x;
+                if (p2y < ymin) ymin = p2y;
+                if (p2y > ymax) ymax = p2y;     
+            }
+
+            p = pnext;
+            pIn = pnextIn;
+        }
 
         if (isolated) {
             ctx.globalAlpha = opacity;
@@ -531,20 +554,32 @@ L.DotLayer = L.Layer.extend( {
             ctx.strokeStyle = strokeStyle;
             ctx.stroke();
         }
+
+        if (anySegs){
+            return {xmin: xmin, ymin: ymin, xmax: xmax, ymax: ymax}
+        }
     },
 
+    
     // Draw all paths for the current items
     //  This is more efficient than calling drawPath repeatedly
     //   for each activity, since we group strokes together.
     drawPaths: function() {
-        const zoom = this._zoom,
+        const canvas = this._lineCanvas,
               ctx = this._lineCtx,
-              pxOffset = this._pxOffset,
-              items = this._itemsArray,
-              n = items.length;
+              zoom = this._zoom,
+              itemsArray = this._itemsArray,
+              n = itemsArray.length,
+              mapBounds = this._map.getBounds(),
+              overlaps = this._overlaps,
+              inMapBounds = A => overlaps(mapBounds, A.bounds),
+              pxBounds = this._map.getPixelBounds(),
+              pxOffset = this._pxOffset;
+       
+        let anySegs = false,
+            xmin, xmax, ymin, ymax;
 
-        const filter = new BitSet.resize(n);
-
+        this._drawRect = undefined;
         this.clearCanvas();
 
         // const query = (status=="selected")? A => !!A.highlighted : A => !A.highlighted;
@@ -553,90 +588,43 @@ L.DotLayer = L.Layer.extend( {
         //     ctx.lineWidth = this.options[status].pathWidth;
         //     ctx.globalAlpha = this.options[status].pathOpacity;
 
-            for (let [color, cfilter] of Object.entries(this._colorFilters)) {
-                ctx.strokeStyle = color;
 
-                this._filter.copyFrom(inView);
-                this._filter.intersect(cfilter);
-                // this._filter.intersect(sfilter);
-                if (this._filter.isEmpty())
-                    continue;
+        for (const [color, cfilter] of Object.entries(this._colorFilters)) {
+             // this._filter.intersect(sfilter);
+            // if (cfilter.isEmpty())
+            //     continue;
 
-                ctx.beginPath();
-
-                this._filter.forEach( idx => {
-                    const A = items[idx];
-                    this._drawPath(
-                        ctx,
-                        A.projected[zoom].P,
-                        A.segMask,
-                        this._pxOffset,
-                        null,
-                        null,
-                        null,
-                        isolated=false
-                    );
-                });
-
-                ctx.stroke();
-            }
-        // }
-    },
-
-    setDrawRect: function() {
-        const canvas = this._lineCanvas,
-              zoom = this._zoom,
-              itemsArray = this._itemsArray,
-              n = items.length,
-              mapBounds = this._map.getBounds(),
-              overlaps = this._overlaps,
-              inMapBounds = A => overlaps(mapBounds, A.bounds),
-
-              pxBounds = this._map.getPixelBounds(),
-              contains = this._contains,
-              inPxBounds = point => contains(pxBounds, point),
-              makePoints = pbuf => i => pbuf.subarray(i, i+2);
-              
-       
-        let anySegs = false,
-            xmin, xmax, ymin, ymax;
-
-        // iterate through each activity
-        for (let i=0; i<n; i++) {
-            const A = items[i];
-            if (!inMapBounds(A))
-                continue
-
-            const pbuf = A.projected[zoom].P,
-                  nSegs = pbuf.length / 3 - 1,
-                  points = makePoints(pbuf);
+            ctx.strokeStyle = color;
+            ctx.beginPath();
             
-            // iterate through every segment (pair of points)
-            for (let s=1, p=points(0), pIn = inBounds(p), pnextIn; s < nSegs; s++) {    
-                let pnext = points(3*s),
-                    pnextIn = inBounds(pnext);
-
-                if (pIn || pnextIn) {
-
-                    // do something with points pIn and pnextIn
-                    if (!xmin || (px < xmin)) xmin = px;
-                    if (!xmax || (px > xmax)) xmax = px;
-                    if (!ymin || (py < ymin)) ymin = py;
-                    if (!ymax || (py > ymax)) ymax = py;     
+            cfilter.forEach( i => {
+                const A = itemsArray[i];
+                if (inMapBounds(A)) {
+                    const pbuf = A.projected[zoom].P,
+                          dim = this._drawPath(
+                            ctx, pbuf, pxBounds, pxOffset, null, null, null, false
+                          );
+                    
+                    if (dim) {
+                        // extend min and max
+                        if (!xmin || (dim.xmin < xmin)) xmin = dim.xmin;
+                        if (!xmax || (dim.xmax > xmax)) xmax = dim.xmax;
+                        if (!ymin || (dim.ymin < ymin)) ymin = dim.ymin;
+                        if (!ymax || (dim.ymax > ymax)) ymax = dim.ymax;
+                    }
                 }
-        
-                pIn = pnextIn;
-            } 
-        }
+            });
 
-        if (!anySegs) {
+            ctx.stroke();
+        } 
+
+        if (!xmax) {
             // no paths on screen in this view
             this._drawRect = null;
             return null;
         }
 
-        const pxOffset = this._pxOffset,
-              pad = (this._dotSize || 25) + 5;
+        const pad = (this._dotSize || 25) + 5;
 
         xmin = ~~Math.max(xmin + pxOffset.x - pad, 0);
         xmax = ~~Math.min(xmax + pxOffset.x + pad, canvas.width);
