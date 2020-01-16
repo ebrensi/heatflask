@@ -18,7 +18,7 @@ L.DotLayer = L.Layer.extend( {
 
     options: {
         debug: true,
-        numWorkers: 2,
+        numWorkers: null,
         startPaused: false,
         showPaths: true,
         colorAll: true,
@@ -89,6 +89,7 @@ L.DotLayer = L.Layer.extend( {
     //-------------------------------------------------------------
     onAdd: function( map ) {
         this._map = map;
+        this.DrawBox.initialize(map);
 
         let size = this._map.getSize(),
             zoomAnimated = this._map.options.zoomAnimation && L.Browser.any3d;
@@ -367,7 +368,7 @@ L.DotLayer = L.Layer.extend( {
 
 
         // recalibrate
-        if (true) {
+        if (zoomChange) {
             const topLeft = this._map.containerPointToLayerPoint( [ 0, 0 ] );
             L.DomUtil.setPosition( this._dotCanvas, topLeft );
             L.DomUtil.setPosition( this._lineCanvas, topLeft );
@@ -1114,6 +1115,55 @@ L.DotLayer = L.Layer.extend( {
         this._colorPalette = colorPalette(numItems, this.options.dotAlpha);
         for ( item of items )
             item.dotColor = this._colorPalette[ i++ ];
+    },
+
+    DrawBox: {
+        _dim: {},
+        _map: null,
+
+        initialize: function(map) {
+            this._map = map;
+            this.reset;
+        },
+
+        reset: function() {
+            const mapSize = this._map.getSize(),
+                  d = this._dim;
+            d.xmin = 0;
+            d.xmax = mapSize.x;
+            d.ymin = 0;
+            d.ymax = mapSize.y;
+        },
+
+        update: function(point) {
+            const x = point[0],
+                  y = point[1],
+                  d = this._dim;
+            if (x < d.xmin) d.xmin = x;
+            else if (x > d.xmax) d.xmax = x;
+            if (y < d.ymin) d.ymin = y;
+            else if (y > d.ymax) d.ymax = y;
+        },
+
+        rect: function() {
+            const d = this._dim;
+            return {
+                x: d.xmin, y: d.ymin, 
+                w: d.xmax - d.xmin,
+                h: d.ymax - d.ymin
+            }
+        },
+
+        draw: function(ctx, pad=0) {
+            const r = this.rect(),
+                  p2 = 2 * pad;
+            ctx.strokeRect( r.x + pad, r.y + pad, r.w + p2, r.h + p2 );
+        },
+
+        clear: function(ctx, pad=0) {
+            const r = this.rect();
+            ctx.clearRect( r.x + pad, r.y + pad, r.w + p2, r.h + p2 );
+        }
     }
 
 } );  // end of L.DotLayer definition
