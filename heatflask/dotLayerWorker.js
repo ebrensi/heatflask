@@ -61,8 +61,9 @@ onmessage = function(event) {
         // console.log(`${N} projected`, msg);
    
     } else if ("hello" in msg){  
-        self.name = msg["hello"];
-        console.log(`${self.name} started`)
+        self.name = msg.hello;
+        // console.log(`${self.name} started`);
+        postMessage(msg);
     }
 };
 
@@ -221,7 +222,7 @@ Simplifier = {
         // const n = points.length / 3;
 
         let bitSet = new BitSet();
-        
+
         bitSet.add(0);
         bitSet.add(n-1);
 

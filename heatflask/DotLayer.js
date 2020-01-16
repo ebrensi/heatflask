@@ -18,7 +18,7 @@ L.DotLayer = L.Layer.extend( {
 
     options: {
         debug: true,
-        numWorkers: null,
+        numWorkers: 2,
         startPaused: false,
         showPaths: true,
         colorAll: true,
@@ -64,7 +64,10 @@ L.DotLayer = L.Layer.extend( {
                     const worker = new Worker(DOTLAYER_WORKER_URL);
                     worker.onmessage = this._handleWorkerMessage.bind(this);
                     this._workers.push(worker);
-                    worker.postMessage({"hello": `worker_${i}`});
+                    worker.postMessage({
+                        hello: `worker_${i}`,
+                        ts: performance.now()}
+                     );
                 }
 
                 if (items)
@@ -140,6 +143,9 @@ L.DotLayer = L.Layer.extend( {
         if (this.options.debug) {
             this._debugCanvas.width = newWidth;
             this._debugCanvas.height = newHeight;
+            this._debugCtx.strokeStyle = "rgb(0,255,0,0.5)";
+            this._debugCtx.lineWidth = 5;
+            this._debugCtx.setLineDash([4, 10]);
         }
 
         this._redraw();
@@ -157,9 +163,9 @@ L.DotLayer = L.Layer.extend( {
 
         const events = {
             // movestart: loggit,
-            // move: this._onLayerMove,
+            move: this._redraw,
             // move: loggit,
-            moveend: this._onLayerMove,
+            moveend: e => this._redraw(true),
             // zoomstart: loggit,
             // zoom: loggit,
             // zoomend: loggit,
@@ -197,15 +203,6 @@ L.DotLayer = L.Layer.extend( {
                 this._colorFilters[color] = BitSet.new_filter(
                     this._itemsArray,
                     A => A.pathColor == color
-                );
-            }
-
-            const zoomLevels = Object.keys(this._projectedItems || {});
-            this._projectedItems = {};
-            for (zoomLevel of zoomLevels) {
-                this._projectedItems[zoomLevel] = BitSet.new_filter(
-                    this._itemsArray,
-                    A => !!(A.projected || {})[zoomLevel]
                 );
             }
             
@@ -297,7 +294,7 @@ L.DotLayer = L.Layer.extend( {
               y = b.min.y + o.y + 5,
               w = b.max.x - b.min.x - 10,
               h = b.max.y - b.min.y - 10;
-            
+
         this._debugCtx.strokeRect(x, y, w, h);
         return {x: x, y:y, w:w, h:h}
     },
@@ -341,9 +338,15 @@ L.DotLayer = L.Layer.extend( {
         return A.segMask = mask
     },
 
-    _redraw: function() {
+    _redraw: function(force) {
         if ( !this._ready )
             return;
+
+        // prevent redrawing more often than necessary
+        const ts = performance.now(),
+              lr = this._lastRedraw;
+        if (!force && ts - lr < 100) return;
+        this._lastRedraw = ts;
 
         // Get map orientation
         const zoom = this._map.getZoom(),
@@ -381,58 +384,42 @@ L.DotLayer = L.Layer.extend( {
               pxBounds = this._pxBounds = this._map.getPixelBounds(),
               itemsArray = this._itemsArray,
               n = itemsArray.length,
-              batch = performance.now(),
-              jobIndex = this._jobIndex = this._jobIndex || {},
-              job = jobIndex[batch] = {count: n},
               overlaps = this._overlaps,
               inMapBounds = A => overlaps(mapBounds, A.bounds);
 
         // this will eventually be replaced by async calls
-        const toProject = new BitSet().resize(n),
-              alreadyProjected = new BitSet().resize(n);
+        const toProject = new BitSet().resize(n);
 
         for (let i=0; i<n; i++){
             const A = itemsArray[i];
             
-            if (!inMapBounds(A)) {
-                job.count--;
+            if (!inMapBounds(A))
                 continue;
-            }
-            
-            if (!A.projected)
-                A.projected = {};
-    
-            const P = A.projected[zoom];
 
-            if (P) {
-                if (P.P)
-                    alreadyProjected.add(i);
-            } else {
-                // lets other threads know this is being handled
+            if (!A.projected[zoom]) {
+                // prevent another instance of this function from
+                // doing this
                 A.projected[zoom] = {};
                 toProject.add(i);
             }
         }
 
+        // TODO: replace this loop with async calls
         if (!toProject.isEmpty()) {
             ids = toProject.map(i => itemsArray[i].id);
             this._postToAllWorkers({ 
                 project: ids,
-                batch: batch,
                 zoom: zoom,
                 smoothFactor: this.smoothFactor,
             });
         }
 
-        if (!alreadyProjected.isEmpty())
-            alreadyProjected.forEach(
-                i => this._afterProjected(itemsArray[i], zoom, batch)
-            );
+        this.drawPaths();
     },
 
     addItem: function(A) {
         this._items = this._items || {}
-
+        A.projected = {};
         this._items[A.id] = A;
         msg = {addItems: {}};
         msg.addItems[A.id] = {llt: A.latLngTime, bounds: A.bounds};
@@ -464,41 +451,24 @@ L.DotLayer = L.Layer.extend( {
         const msg = event.data;
         if ("project" in msg) {
 
-            const batch = msg.batch,
-                  workerName = msg.name,
-                  zoom = msg.zoom;
-
+            const zoom = msg.zoom;
+                        
             for (let [id, P] of Object.entries(msg.projected)) {
-                let A = this._items[id];
+                const A = this._items[id];
                 A.projected[zoom] = P;
-                this._afterProjected(A, zoom, batch);
+
+                if (zoom == this._zoom) {
+                    const lineWidth = 1,
+                          opacity = 0.8;
+                    
+                    this._drawPath(
+                        this._lineCtx, P.P, this._pxBounds, this._pxOffset,
+                        lineWidth, A.pathColor, opacity
+                    );
+                    // if paused draw dots
+                }
             }
         }
-    },
-
-    _afterProjected: function(A, zoom, batch) {
-
-        const batchDone = !(--this._jobIndex[batch].count);
-
-        if (batchDone)
-            delete this._jobIndex[batch];
-
-        if ( zoom != this._zoom || !(((A.projected || {})[zoom] || {})).P )
-            return;
-
-        // this.makeSegMask(A, zoom, true);
-
-        if (!batchDone)
-            return
-
-        // this batch is done
-        elapsed = performance.now() - batch;
-        // console.log(`batch ${batch} took ${elapsed}`);
-        
-        this.drawPaths();
-
-        if (this._paused)
-            this.drawLayer();
     },
 
     _drawPath: function(ctx, pointsBuf, pxBounds, pxOffset, lineWidth, strokeStyle, opacity, isolated=true) {
@@ -558,7 +528,9 @@ L.DotLayer = L.Layer.extend( {
     //  This is more efficient than calling drawPath repeatedly
     //   for each activity, since we group strokes together.
     drawPaths: function() {
-        console.time("drawPaths")
+        if (!this._itemsArray || !this._map)
+            return
+        // console.time("drawPaths")
 
         const canvas = this._lineCanvas,
               ctx = this._lineCtx,
@@ -594,7 +566,7 @@ L.DotLayer = L.Layer.extend( {
             
             cfilter.forEach( i => {
                 const A = itemsArray[i];
-                if (inMapBounds(A)) {
+                if ( inMapBounds(A) && (A.projected[zoom] || {}).P ) {
                     const pbuf = A.projected[zoom].P,
                           dim = this._drawPath(
                             ctx, pbuf, pxBounds, pxOffset, null, null, null, false
@@ -633,7 +605,7 @@ L.DotLayer = L.Layer.extend( {
             h: ymax - ymin
         };
 
-        console.timeEnd("drawPaths");
+        // console.timeEnd("drawPaths");
 
         if (this.options.debug)
             this._debugCtx.strokeRect(d.x, d.y, d.w, d.h);
@@ -905,8 +877,6 @@ L.DotLayer = L.Layer.extend( {
     },
 
 
-
-
     // -----------------------------------------------------------------------
 
     captureCycle: function(selection=null, callback=null) {
@@ -939,9 +909,6 @@ L.DotLayer = L.Layer.extend( {
             }
         }.bind(this));
     },
-
-
-
 
     captureGIF: function(selection=null, baseCanvas=null, durationSecs=2, callback=null) {
         this._mapMoving = true;
