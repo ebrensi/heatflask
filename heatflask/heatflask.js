@@ -379,7 +379,7 @@ $(".shadow-dial").knob({
         height: "60",
         cursor: 20,
         inline: true,
-        displayInput: true,
+        displayInput: false,
         change: function (val) {
             if (!DotLayer) {
                 return;
