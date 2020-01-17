@@ -468,11 +468,14 @@ L.DotLayer = L.Layer.extend( {
                     const lineWidth = 1,
                           opacity = 0.8;
                     
-                    this._drawPath(
-                        this._lineCtx, P, this._pxOffset,
-                        lineWidth, A.pathColor, opacity
-                    );
+                    // this._drawPath(
+                    //     this._lineCtx, P, this._pxOffset,
+                    //     lineWidth, A.pathColor, opacity
+                    // );
                     // if paused draw dots
+                    this.drawPaths();
+                    if (this._paused)
+                        this.drawLayer()
                 }
             }
         }
@@ -613,62 +616,46 @@ L.DotLayer = L.Layer.extend( {
     drawDots: function( now, start, projected, drawDot ) {
         const P = projected.P,
               dP = projected.dP,
-              segMask = projected.segMask,
-              idxArray = segMask.array(),
-              n = idxArray.length,
-              firstT = P[3*idxArray[0]+2],
-              lastT = P[3*idxArray[n-1]+2],
-              s = this._timeScale * ( now - start + firstT),
-              period = this._period,
+              segmentIndex = projected.segMask.iterate(),
               xOffset = this._pxOffset.x,
-              yOffset = this._pxOffset.y;
+              yOffset = this._pxOffset.y,
+              segment = i => P.subarray(j=3*i, j+6),   // two points (x,y,t)
+              velocity = i => dP.subarray(j=2*i, j+2); // one velocity (vx,vy)             
 
-        let timeOffset = s % period,
-            count = 0,
-            idx = idxArray[0],
-            pi = 3 * idx,
-            di = 2 * idx,
-            dx = dP[di],
-            dy = dP[di+1],
-            px = P[pi], 
-            py = P[pi+1],
-            pt = P[pi+2];
+        let obj = segmentIndex.next(),
+            count = 0;
 
-        if ( timeOffset < 0 ) {
-            timeOffset += period;
-        }
+        const T = this._period,
+              first_t = segment(obj.value)[2],
+              timeOffset = (this._timeScale * ( now - (start + first_t))) % T;
 
-        for (let t=timeOffset, i=0, dt, t2, idx,x,y; t < lastT; t += period) {
-            t2 = P[pi+5];
-            if (t >= t2) {
-                while ( t >= t2) {
-                    if ( ++i == n )
-                        return count;
-                    idx = idxArray[i];
-                    pi = 3 * idx;
-                    t2 = P[pi+5];
+        // loop over segments
+        while (!obj.done) {
+            let i = obj.value,
+                s = segment(i),
+                ta = s[2], tb = s[5],
+                jfirst = Math.ceil((ta - timeOffset) / T),
+                jlast = Math.floor((tb - timeOffset) / T);
+                       
+            if (jfirst <= jlast) {
+                // loop within segment i   
+                for (let j = jfirst; j <= jlast; j++) {
+                    const t = j * T + timeOffset,
+                          dt = t - ta;
+                    if (dt > 0) {
+                        const v = velocity(i);
+                              x = s[0] + v[0] * dt + xOffset,
+                              y = s[1] + v[1] * dt + yOffset;
+
+                        drawDot(x,y);
+                        count++;
+                    }
                 }
-                di = 2 * idx;
-
-                px = P[pi];
-                py = P[pi+1];
-                pt = P[pi+2];
-                dx = dP[di];
-                dy = dP[di+1];
             }
 
-            dt = t - pt;
-
-            if ( dt > 0 ) {
-                x = px + dx * dt + xOffset,
-                y = py + dy * dt + yOffset;
-
-                drawDot(x,y);
-                count++;
-            }
-        }
-    
-        return count;
+            obj = segmentIndex.next();
+        }    
+        return count
     },
 
     makeCircleDrawFunc: function() {
