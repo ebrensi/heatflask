@@ -121,11 +121,9 @@ L.DotLayer = L.Layer.extend( {
             this._debugCtx = this._debugCanvas.getContext( "2d" );
             L.DomUtil.addClass( this._debugCanvas, "leaflet-zoom-" + ( zoomAnimated ? "animated" : "hide" ) );
             map._panes.overlayPane.appendChild( this._debugCanvas );
-
-            this._debugCtx.strokeStyle = "rgb(0,255,0,0.5)";
-            this._debugCtx.lineWidth = 5;
-            this._debugCtx.setLineDash([4, 10]);
         }
+
+        this._calibrate();
 
         map.on( this.getEvents(), this );
     },
@@ -149,13 +147,7 @@ L.DotLayer = L.Layer.extend( {
             this._debugCtx.setLineDash([4, 10]);
         }
 
-        this._redraw();
-    },
-
-    //-------------------------------------------------------------
-    _onLayerMove: function() {
-
-        this._redraw();
+        this._redraw(true);
     },
 
     //-------------------------------------------------------------
@@ -164,12 +156,12 @@ L.DotLayer = L.Layer.extend( {
 
         const events = {
             // movestart: loggit,
-            move: this._redraw,
-            // move: loggit,
+            move: e => this._redraw(false),
             moveend: e => this._redraw(true),
             // zoomstart: loggit,
             // zoom: loggit,
-            // zoomend: loggit,
+            zoomend: this._calibrate,
+            viewreset: this._calibrate,
             resize: this._onLayerResize
         };
 
@@ -207,7 +199,7 @@ L.DotLayer = L.Layer.extend( {
                 );
             }
             
-            this._redraw();
+            this._redraw(true);
         }
 
         this. _ready = true
@@ -339,6 +331,27 @@ L.DotLayer = L.Layer.extend( {
         return A.segMask = mask
     },
 
+    _calibrate: function() {
+        // This is necessary on zoom or viewreset events
+        const topLeft = this._map.containerPointToLayerPoint( [ 0, 0 ] );
+        L.DomUtil.setPosition( this._dotCanvas, topLeft );
+        L.DomUtil.setPosition( this._lineCanvas, topLeft );
+        
+        if (this.options.debug) {
+            L.DomUtil.setPosition( this._debugCanvas, topLeft );
+            this._debugCtx.strokeStyle = "rgb(0,255,0,0.5)";
+            this._debugCtx.lineWidth = 5;
+            this._debugCtx.setLineDash([4, 10]);
+        }
+
+        const mapPanePos = this._map._getMapPanePos(),
+              pxOrigin = this._map.getPixelOrigin();
+                
+        this._pxOffset = mapPanePos.subtract( pxOrigin );
+        this.DrawBox.reset();
+        this._redraw(true);
+    },
+
     _redraw: function(force) {
         if ( !this._ready )
             return;
@@ -352,34 +365,18 @@ L.DotLayer = L.Layer.extend( {
         // Get map orientation
         const zoom = this._map.getZoom(),
               center = this._map.getCenter(),
-              size = this._map.getSize(),
-              zoomChange = zoom != this._zoom;
+              size = this._map.getSize();
 
         // if orientation hasn't changed then nothing to do
         if (center.equals(this._center) &&
             size.equals(this._size) &&
-            !zoomChange)
+            zoom != this._zoom)
             return;
 
         // update state
         this._zoom = zoom;
         this._center = center;
         this._size = size;
-
-
-        // recalibrate
-        if (zoomChange) {
-            const topLeft = this._map.containerPointToLayerPoint( [ 0, 0 ] );
-            L.DomUtil.setPosition( this._dotCanvas, topLeft );
-            L.DomUtil.setPosition( this._lineCanvas, topLeft );
-            this.options.debug && L.DomUtil.setPosition( this._debugCanvas, topLeft );
-
-            const mapPanePos = this._map._getMapPanePos(),
-                  pxOrigin = this._map.getPixelOrigin();
-            
-            this._pxOffset = mapPanePos.subtract( pxOrigin );
-            this._drawRect = undefined;
-        }
 
         const mapBounds = this._latLngBounds = this._map.getBounds(),
               pxBounds = this._pxBounds = this._map.getPixelBounds(),
@@ -421,6 +418,9 @@ L.DotLayer = L.Layer.extend( {
         }
 
         this.drawPaths();
+        if (this._paused)
+            this.drawLayer()
+
     },
 
     addItem: function(A) {
@@ -483,21 +483,19 @@ L.DotLayer = L.Layer.extend( {
               oy = pxOffset.y,
               pointsBuf = P.P,
               mask = P.segMask.clear(),
+              drawBox = this.DrawBox,
               nSegs = pointsBuf.length / 3 - 1,
               contains = this._contains,
-              // pxBounds = this._map.getPixelBounds(),
-              inBounds = point => contains(this._map.getPixelBounds(), point),
+              pxBounds = this._map.getPixelBounds(),
+              inBounds = point => contains(pxBounds, point) && drawBox.update(point),
               points = i => pointsBuf.subarray(i, i+2);
-
 
         if (isolated)
             ctx.beginPath();
         
         let p = points(0),
-            pIn = inBounds(p),
-            xmin, xmax,
-            ymin, ymax;
-
+            pIn = inBounds(p);
+        
         for (let s=1, pnext, pnextIn; s<nSegs; s++) {    
             pnext = points(3*s);
             pnextIn = inBounds(pnext);
@@ -510,13 +508,7 @@ L.DotLayer = L.Layer.extend( {
 
                 // draw segment
                 ctx.moveTo(p1x, p1y);
-                ctx.lineTo(p2x, p2y);
-
-                // determine min and max
-                if (!xmin || (p2x < xmin)) xmin = p2x;
-                if (!xmax || (p2x > xmax)) xmax = p2x;
-                if (!ymin || (p2y < ymin)) ymin = p2y;
-                if (!ymax || (p2y > ymax)) ymax = p2y;     
+                ctx.lineTo(p2x, p2y);    
             }
 
             p = pnext;
@@ -528,10 +520,9 @@ L.DotLayer = L.Layer.extend( {
             ctx.lineWidth = lineWidth;
             ctx.strokeStyle = strokeStyle;
             ctx.stroke();
+            if (this.options.debug)
+                drawBox.clear(this._debugCtx).draw(this._debugCtx); 
         }
-
-        if (xmax)
-            return {xmin: xmin, ymin: ymin, xmax: xmax, ymax: ymax}
     },
 
     
@@ -546,18 +537,15 @@ L.DotLayer = L.Layer.extend( {
         const canvas = this._lineCanvas,
               ctx = this._lineCtx,
               zoom = this._zoom,
+              drawBox = this.DrawBox,
               itemsArray = this._itemsArray,
               n = itemsArray.length,
-              // mapBounds = this._map.getBounds(),
+              mapBounds = this._map.getBounds(),
               overlaps = this._overlaps,
-              inMapBounds = A => overlaps(this._map.getBounds(), A.bounds),
+              inMapBounds = A => overlaps(mapBounds, A.bounds),
               pxOffset = this._pxOffset;
        
-        let anySegs = false,
-            xmin, xmax, ymin, ymax;
-
-        this._drawRect = undefined;
-        this.clearCanvas();
+        drawBox.reset().clear(ctx).clear(this._debugCtx);
     
         // const query = (status=="selected")? A => !!A.highlighted : A => !A.highlighted;
 
@@ -577,71 +565,20 @@ L.DotLayer = L.Layer.extend( {
             cfilter.forEach( i => {
                 const A = itemsArray[i];
                 if ( inMapBounds(A) && (A.projected[zoom] || {}).P ) {
-                    const P = A.projected[zoom],
-                          dim = this._drawPath(
-                            ctx, P, pxOffset, null, null, null, false
-                          );
-
-                    if (dim) {
-                        // extend min and max
-                        if (!xmin || (dim.xmin < xmin)) xmin = dim.xmin;
-                        if (!xmax || (dim.xmax > xmax)) xmax = dim.xmax;
-                        if (!ymin || (dim.ymin < ymin)) ymin = dim.ymin;
-                        if (!ymax || (dim.ymax > ymax)) ymax = dim.ymax;
-                    }
+                    const P = A.projected[zoom];
+                    // debugger;
+                    this._drawPath(
+                        ctx, P, pxOffset, null, null, null, false
+                    );
                 }
             });
 
             ctx.stroke();
         } 
 
-        if (!xmax) {
-            // no paths on screen in this view
-            this._drawRect = null;
-            return null;
-        }
-
-        const pad = (this._dotSize || 25) + 5;
-
-        xmin = ~~Math.max(xmin - pad, 0);
-        xmax = ~~Math.min(xmax + pad, canvas.width);
-        ymin = ~~Math.max(ymin - pad, 0);
-        ymax = ~~Math.min(ymax + pad, canvas.height);
-        
-        d = this._drawRect = {
-            x: xmin,
-            y: ymin,
-            w: xmax - xmin,
-            h: ymax - ymin
-        };
-
         // console.timeEnd("drawPaths");
-
         if (this.options.debug)
-            this._debugCtx.strokeRect(d.x, d.y, d.w, d.h);
-        
-        return this._drawRect
-    },
-
-    clearCanvas: function(ctx) {
-        if (this._drawRect === null)
-            return;
-
-        const canvas = this._lineCanvas;
-              defaultRect = {x:0, y:0, w: canvas.width, h: canvas.height};
-        
-        let rect;
-        
-        if (ctx) {
-            rect = this._drawRect || defaultRect;
-            ctx.clearRect( rect.x, rect.y, rect.w, rect.h );
-        }
-        else {
-            rect = defaultRect;
-            this._lineCtx.clearRect( rect.x, rect.y, rect.w, rect.h );
-            this._dotCtx.clearRect( rect.x, rect.y, rect.w, rect.h );
-            this.options.debug && this._debugCtx.clearRect( rect.x, rect.y, rect.w, rect.h );
-        }
+            drawBox.draw(this._debugCtx);        
     },
 
     getSelected: function(selectPxBounds) {
@@ -759,13 +696,14 @@ L.DotLayer = L.Layer.extend( {
             return;
         }
 
+        const t0 = performance.now();
+
         if (!now)
             now = this._timePaused || this.UTCnowSecs();
-
+        
         const ctx = this._dotCtx,
             zoom = this._zoom,
             canvas = this._dotCanvas,
-            t0 = performance.now(),
             zf = this._zoomFactor = 1 / (2**zoom),
             g = this._gifPatch,
             items = this._itemsArray;
@@ -777,7 +715,8 @@ L.DotLayer = L.Layer.extend( {
         let count = 0,
             drawDotFunc = this.makeSquareDrawFunc();
 
-        this.clearCanvas(ctx);
+        this.DrawBox.clear(ctx);
+
         this._itemMask.forEach(i => {
             const A = items[i],
                   P = A.projected[zoom] || {};
@@ -1117,52 +1056,74 @@ L.DotLayer = L.Layer.extend( {
             item.dotColor = this._colorPalette[ i++ ];
     },
 
+    /* DrawBox represents the rectangular region that bounds
+     *   all of our drawing on the canvas. We use it primarily
+     *   to minimize how much we need to clear between frames
+     *   of the animation. 
+     */  
     DrawBox: {
-        _dim: {},
+        _dim: undefined,
         _map: null,
+        _pad: 25,
 
         initialize: function(map) {
             this._map = map;
-            this.reset;
+            this.reset();
         },
 
         reset: function() {
-            const mapSize = this._map.getSize(),
-                  d = this._dim;
-            d.xmin = 0;
-            d.xmax = mapSize.x;
-            d.ymin = 0;
-            d.ymax = mapSize.y;
+            const pxb = this._map.getPixelBounds();
+            this._dim = undefined;
+            return this
         },
 
         update: function(point) {
             const x = point[0],
                   y = point[1],
-                  d = this._dim;
-            if (x < d.xmin) d.xmin = x;
-            else if (x > d.xmax) d.xmax = x;
-            if (y < d.ymin) d.ymin = y;
-            else if (y > d.ymax) d.ymax = y;
+                  d = this._dim || {};
+            if (!d.xmin || (x < d.xmin)) d.xmin = x;
+            if (!d.xmax || (x > d.xmax)) d.xmax = x;
+            if (!d.ymin || (y < d.ymin)) d.ymin = y;
+            if (!d.ymax || (y > d.ymax)) d.ymax = y;
+
+            return this._dim = d;
         },
 
-        rect: function() {
+        defaultRect: function() {
+            const mapSize = this._map.getSize();
+            return {x:0, y:0, w: mapSize.x, h: mapSize.y}
+        },
+
+        rect: function(pad) {
+            pad = pad || this._pad;
             const d = this._dim;
+            if (!d) return this.defaultRect();
+            const mapSize = this._map.getSize(),
+                  o = this._map.getPixelOrigin(),
+                  xmin = ~~Math.max(d.xmin - o.x - pad, 0),
+                  xmax = ~~Math.min(d.xmax - o.x + pad, mapSize.x),
+                  ymin = ~~Math.max(d.ymin - o.y - pad, 0),
+                  ymax = ~~Math.min(d.ymax - o.y + pad, mapSize.y);
+
             return {
-                x: d.xmin, y: d.ymin, 
-                w: d.xmax - d.xmin,
-                h: d.ymax - d.ymin
+                x: xmin, y: ymin, 
+                w: xmax - xmin,
+                h: ymax - ymin
             }
         },
 
-        draw: function(ctx, pad=0) {
-            const r = this.rect(),
-                  p2 = 2 * pad;
-            ctx.strokeRect( r.x + pad, r.y + pad, r.w + p2, r.h + p2 );
+        draw: function(ctx, rect) {
+            const r = rect || this.rect();
+            if (!r) return;
+            ctx.strokeRect( r.x, r.y, r.w, r.h );
+            return this
         },
 
-        clear: function(ctx, pad=0) {
-            const r = this.rect();
-            ctx.clearRect( r.x + pad, r.y + pad, r.w + p2, r.h + p2 );
+        clear: function(ctx, rect) {
+            const r = rect || this.rect();
+            if (!r) return
+            ctx.clearRect( r.x, r.y, r.w, r.h );
+            return this
         }
     }
 
