@@ -46,7 +46,8 @@
                     map_providers: {{ baselayer|tojson|safe }},
                     map_center: {{ map_center|tojson }},
                     map_zoom: {{ zoom }},
-                    client_id: "{{ client_id }}"
+                    client_id: "{{ client_id }}",
+                    shadows: {{shadows|tojson}}
              },
              MEASURMENT_PREFERENCE = "{{ current_user.measurement_preference if current_user.is_authenticated else user.measurement_preference if user else 'feet'}}",
              DIST_UNIT = (MEASURMENT_PREFERENCE=="feet")? 1609.34 : 1000.0,
@@ -366,6 +367,22 @@
 							<input type="checkbox" id="showPaths" checked>
 							<label for="showPaths">Show Paths</label>
 						</div>
+                        <br>
+                        <div>
+                            <input type="checkbox" id="shadows">
+                            <label for="showshadows">Shadows (CPU intensive)</label>
+                        </div>
+                        
+                        <div> 
+                            <div>
+                                <label for="shadowHeight">Height</label>
+                                <input type="text" class="shadow-dial" id="shadowHeight">
+                            <!-- </div>
+                            <div> -->
+                                <label for="shadowBlur">Blur</label>
+                                <input type="text" class="shadow-dial" id="shadowBlur">
+                            </div>
+                        </div>
 
 					</form>
 			  </div>

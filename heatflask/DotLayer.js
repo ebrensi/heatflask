@@ -23,16 +23,24 @@ L.DotLayer = L.Layer.extend( {
         normal: {
             dotColor: "#000000",
             pathColor: "#000000",
-            pathAlpha: 0.7,
-            pathWidth: 1
+            pathOpacity: 0.7,
+            pathWidth: 1,
         },
+
         selected: {
             dotColor: "#FFFFFF",
             dotStrokeColor: "#FFFFFF",
             dotStrokeWidth: 0.5,
             pathColor: "#000000",
             pathOpacity: 0.8,
-            pathWidth: 1
+            pathWidth: 1,
+        },
+
+        dotShadows: {
+            enabled: false,
+            x: 0, y: 2,
+            blur: 5,
+            color: "#000000"
         }
     },
 
@@ -453,8 +461,20 @@ L.DotLayer = L.Layer.extend( {
             pxBounds = this._pxBounds,
             items = this._items;
 
+        if (this.options.dotShadows.enabled) {
+            const sx = this._dotCtx.shadowOffsetX = this.options.dotShadows.x,
+                  sy = this._dotCtx.shadowOffsetY = this.options.dotShadows.y
+            this._dotCtx.shadowBlur = this.options.dotShadows.blur
+            this._dotCtx.shadowColor = this.options.dotShadows.color
+        } else {
+            this._dotCtx.shadowOffsetX = 0;
+            this._dotCtx.shadowOffsetY = 0;
+            this._dotCtx.shadowBlur = 0;
+        }
+
         this._dotCtx.strokeStyle = this.options.selected.dotStrokeColor;
         this._dotCtx.lineWidth = this.options.selected.dotStrokeWidth;
+
         this._zoomFactor = 1 / Math.pow( 2, z );
 
         let tThresh = this._tThresh * DotLayer._zoomFactor;
@@ -615,7 +635,7 @@ L.DotLayer = L.Layer.extend( {
         }
 
         if (xmax) {
-            let d = (this._dotSize || 25) + 5;
+            let d = (this._dotSize || 25) + 30;
             xmin = Math.max(0, xmin + pxOffx - d);
             ymin = Math.max(0, ymin + pxOffy - d);
             xmax = Math.min(xmax + pxOffx + d, this._lineCanvas.width);
@@ -695,7 +715,7 @@ L.DotLayer = L.Layer.extend( {
                     ctx.beginPath();
                     ctx.arc( lx, ly, dotSize, 0, two_pi );
                     ctx.fill();
-                    ctx.closePath();
+                    // ctx.closePath();
                     ctx.stroke();
                 } else {
                     ctx.fillRect( lx - dotOffset, ly - dotOffset, dotSize, dotSize );
