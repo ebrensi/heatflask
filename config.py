@@ -124,7 +124,8 @@ class Config(object):
         c1=(["c1"], 0),
         c2=(["c2"], 0),
         sz=(["sz"], 0),
-        paused=(["paused", "p"], 0)
+        paused=(["paused", "p"], 0),
+        shadows=(["sh", "shadows"], None)
     )
 
     # A few Demos

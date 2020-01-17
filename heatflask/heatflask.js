@@ -371,6 +371,33 @@ $(".dotscale-dial").knob({
         }
 });
 
+$(".shadow-dial").knob({
+        min: 0,
+        max: 10,
+        step: 0.01,
+        width: "60",
+        height: "60",
+        cursor: 20,
+        inline: true,
+        displayInput: true,
+        change: function (val) {
+            if (!DotLayer) {
+                return;
+            }
+            if (this.$[0].id == "shadowHeight") {
+                DotLayer.options.dotShadows.y = val;
+            } else {
+                DotLayer.options.dotShadows.blur = val + 2;
+            }
+            DotLayer._onLayerDidMove();
+        },
+
+        release: function() {
+            DotLayer._onLayerDidMove();
+        }
+});
+
+
 if (FLASH_MESSAGES.length > 0) {
     var msg = "<ul class=flashes>";
     for (let i=0, len=FLASH_MESSAGES.length; i<len; i++) {
@@ -616,6 +643,19 @@ function initializeDotLayer() {
     $("#speedConst").val(Math.sqrt(DotLayer.C2) / SPEED_SCALE).trigger("change");
     $("#dotScale").val(DotLayer.dotScale).trigger("change");
 
+
+    if (ONLOAD_PARAMS.shadows)
+        domIdVal("shadows", "checked");
+    $("#shadowHeight").val(DotLayer.options.dotShadows.y).trigger("change");
+    $("#shadowBlur").val(DotLayer.options.dotShadows.blur).trigger("change");
+    $("#shadows").prop("checked", DotLayer.options.dotShadows.enabled);
+    domIdEvent("shadows", "change", (e) => {
+        if (!DotLayer)
+            return;
+        DotLayer.options.dotShadows.enabled = e.target.checked;
+        DotLayer._setupWindow();
+    });
+
     setTimeout(function(){
         $("#period-value").html(DotLayer.periodInSecs().toFixed(2));
 
@@ -739,7 +779,6 @@ function renderLayers(query={}) {
         sendQuery();
     }
     
-
     $(".data_message").html("Retrieving activity data...");
 
     $('#abortButton').click(function(){

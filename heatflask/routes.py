@@ -395,7 +395,7 @@ def main(username):
         query["limit"] = 10
         query["autozoom"] = True
 
-    # log.debug("created query: %s", query)
+    log.debug("created query: %s", query)
 
     if current_user.is_anonymous or (not current_user.is_admin()):
         event = {
