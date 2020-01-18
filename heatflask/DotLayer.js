@@ -131,41 +131,17 @@ L.DotLayer = L.Layer.extend( {
             map._panes.overlayPane.appendChild( this._debugCanvas );
         }
 
-        this._calibrate();
-
         map.on( this.getEvents(), this );
+        this._calibrate();
     },
 
-    //-------------------------------------------------------------
-    _onLayerResize: function( resizeEvent ) {
-        let newWidth = resizeEvent.newSize.x,
-            newHeight = resizeEvent.newSize.y;
-
-        this._dotCanvas.width = newWidth;
-        this._dotCanvas.height = newHeight;
-
-        this._lineCanvas.width = newWidth;
-        this._lineCanvas.height = newHeight;
-
-        if (this.options.debug) {
-            this._debugCanvas.width = newWidth;
-            this._debugCanvas.height = newHeight;
-            this._debugCtx.strokeStyle = "rgb(0,255,0,0.5)";
-            this._debugCtx.lineWidth = 5;
-            this._debugCtx.setLineDash([4, 10]);
-        }
-
-        this._redraw(true);
-    },
-
-    //-------------------------------------------------------------
     getEvents: function() {
         const loggit = (e) => console.log(e);
 
         const events = {
             // movestart: loggit,
-            move: e => this._redraw(false),
-            moveend: e => this._redraw(true),
+            move: e => this._redraw(false, e),
+            moveend: e => this._redraw(true, e),
             // zoomstart: loggit,
             // zoom: loggit,
             zoomend: this._calibrate,
@@ -180,7 +156,32 @@ L.DotLayer = L.Layer.extend( {
         return events;
     },
 
+    addTo: function( map ) {
+        map.addLayer( this );
+        return this;
+    },
+
     //-------------------------------------------------------------
+    onRemove: function( map ) {
+        this.onLayerWillUnmount && this.onLayerWillUnmount(); // -- callback
+
+        map._panes.shadowPane.removeChild( this._dotCanvas );
+        this._dotCanvas = null;
+
+        map._panes.overlayPane.removeChild( this._lineCanvas );
+        this._lineCanvas = null;
+
+        if (this.options.debug) {
+            map._panes.overlayPane.removeChild( this._debugCanvas );
+            this._debugCanvas = null;
+        }
+
+        map.off( this.getEvents(), this );
+    },
+
+
+    // --------------------------------------------------------------------
+
     // Call this function after items are added or reomved
     reset: function() {
         if (!this._map || !this._items)
@@ -206,7 +207,7 @@ L.DotLayer = L.Layer.extend( {
                     A => A.pathColor == color
                 );
             }
-            this._redraw(true);
+            this._calibrate();
         }
 
         this. _ready = true
@@ -215,42 +216,52 @@ L.DotLayer = L.Layer.extend( {
 
 
     //-------------------------------------------------------------
-    onRemove: function( map ) {
-        this.onLayerWillUnmount && this.onLayerWillUnmount(); // -- callback
+    _onLayerResize: function( resizeEvent ) {
+        let newWidth = resizeEvent.newSize.x,
+            newHeight = resizeEvent.newSize.y;
 
-        map._panes.shadowPane.removeChild( this._dotCanvas );
-        this._dotCanvas = null;
 
-        map._panes.overlayPane.removeChild( this._lineCanvas );
-        this._lineCanvas = null;
+        console.log("resizing canvas to",newHeight,newWidth );
+
+        this._dotCanvas.width = newWidth;
+        this._dotCanvas.height = newHeight;
+
+        this._lineCanvas.width = newWidth;
+        this._lineCanvas.height = newHeight;
 
         if (this.options.debug) {
-            map._panes.overlayPane.removeChild( this._debugCanvas );
-            this._debugCanvas = null;
+            this._debugCanvas.width = newWidth;
+            this._debugCanvas.height = newHeight;
+            this._debugCtx.strokeStyle = "rgb(0,255,0,0.5)";
+            this._debugCtx.lineWidth = 5;
+            this._debugCtx.setLineDash([4, 10]);
         }
 
-        map.off( this.getEvents(), this );
+        this._calibrate();
     },
 
+    _calibrate: function() {
+        // This is necessary on zoom, resize, or viewreset events
+        const topLeft = this._map.containerPointToLayerPoint( [ 0, 0 ] );
+        L.DomUtil.setPosition( this._dotCanvas, topLeft );
+        L.DomUtil.setPosition( this._lineCanvas, topLeft );
 
-    // --------------------------------------------------------------------
-    addTo: function( map ) {
-        map.addLayer( this );
-        return this;
-    },
-
-    // -------------------------------------------------------------------
-    setSelectRegion: function(pxBounds, callback) {
-        let paused = this._paused;
-        this.pause();
-        let selectedIds = this.getSelected(pxBounds);
-        if (paused){
-            this.drawDotLayer();
-        } else {
-            this.animate();
+        if (this.options.debug) {
+            L.DomUtil.setPosition( this._debugCanvas, topLeft );
+            this._debugCtx.strokeStyle = "rgb(0,255,0,0.5)";
+            this._debugCtx.lineWidth = 5;
+            this._debugCtx.setLineDash([4, 10]);
         }
-        callback(selectedIds);
+
+        const mapPanePos = this._map._getMapPanePos(),
+              pxOrigin = this._map.getPixelOrigin();
+        
+        this._zoom = this._map.getZoom(); 
+        this._pxOffset = mapPanePos.subtract( pxOrigin );
+
+        this._redraw(true);
     },
+    //-------------------------------------------------------------
 
     // -------------------------------------------------------------------
 
@@ -266,19 +277,7 @@ L.DotLayer = L.Layer.extend( {
         return latOverlaps && lngOverlaps;
     },
 
-    makeItemMask: function(createNew=false) {
-        const arr = this._itemsArray,
-              mapBounds = this._latLngBounds,
-              overlaps = this._overlaps,
-              func = A => overlaps(mapBounds, A.bounds);
-        if (createNew)
-            this._itemMask = BitSet.new_filter(arr, func);
-        else
-            this._itemMask = (this._itemMask || new BitSet()).filter(arr, func);
-        
-        return this._itemMask;
-    },
-
+    
     _contains: function (pxBounds, point) {
         let x = point[0],
             y = point[1];
@@ -338,31 +337,19 @@ L.DotLayer = L.Layer.extend( {
         return A.segMask = mask
     },
 
-    _calibrate: function() {
-        // This is necessary on zoom or viewreset events
-        const topLeft = this._map.containerPointToLayerPoint( [ 0, 0 ] );
-        L.DomUtil.setPosition( this._dotCanvas, topLeft );
-        L.DomUtil.setPosition( this._lineCanvas, topLeft );
-        
-        if (this.options.debug) {
-            L.DomUtil.setPosition( this._debugCanvas, topLeft );
-            this._debugCtx.strokeStyle = "rgb(0,255,0,0.5)";
-            this._debugCtx.lineWidth = 5;
-            this._debugCtx.setLineDash([4, 10]);
-        }
-
-        const mapPanePos = this._map._getMapPanePos(),
-              pxOrigin = this._map.getPixelOrigin();
-                
-        this._pxOffset = mapPanePos.subtract( pxOrigin );
-        this.DrawBox.reset();
-        this._redraw(true);
-    },
-
-    _redraw: function(force) {
-        if ( !this._ready )
+    _redraw: function(force, event) {
+        if ( !this._map )
             return;
 
+        if (event) {
+            debugger;
+        }
+
+        const zoom = this._zoom;
+
+        if (this._map.getZoom() != zoom || !this._itemsArray || !this._ready)
+            return
+        
         // prevent redrawing more often than necessary
         const ts = performance.now(),
               lr = this._lastRedraw;
@@ -370,15 +357,8 @@ L.DotLayer = L.Layer.extend( {
         this._lastRedraw = ts;
 
         // Get map orientation
-        const zoom = this._map.getZoom(),
-              center = this._map.getCenter(),
+        const center = this._map.getCenter(),
               size = this._map.getSize();
-
-        // if orientation hasn't changed then nothing to do
-        if (center.equals(this._center) &&
-            size.equals(this._size) &&
-            zoom != this._zoom)
-            return;
 
         // update state
         this._zoom = zoom;
@@ -593,34 +573,6 @@ L.DotLayer = L.Layer.extend( {
             drawBox.draw(this._debugCtx);        
     },
 
-    getSelected: function(selectPxBounds) {
-        const z = this._zoom,
-              pxOffset = this._pxOffset,
-              ox = pxOffset.x,
-              oy = pxOffset.y;
-
-        let selectedIds = [];
-
-        for (let A of this._items.values()) {
-            if (!A.inView || !A.projected[z])
-                continue;
-
-            const P = A.projected[z].P;
-
-            for (let j=0, len=P.length/3; j<len; j++){
-                let i = 3 * j,
-                    x = P[i]   + ox,
-                    y = P[i+1] + oy;
-
-                if ( this._contains(selectPxBounds, [x, y]) ) {
-                    selectedIds.push(A.id);
-                }
-            }
-        }
-
-        return selectedIds
-    },  
-
     // --------------------------------------------------------------------
     drawActivityDots: function( now, start, projected, drawDot ) {
         const P = projected.P,
@@ -818,6 +770,48 @@ L.DotLayer = L.Layer.extend( {
     },
 
 
+// -------------------------------------------------------------------
+    setSelectRegion: function(pxBounds, callback) {
+        let paused = this._paused;
+        this.pause();
+        let selectedIds = this.getSelected(pxBounds);
+        if (paused){
+            this.drawDotLayer();
+        } else {
+            this.animate();
+        }
+        callback(selectedIds);
+    },
+
+    getSelected: function(selectPxBounds) {
+        const z = this._zoom,
+              pxOffset = this._pxOffset,
+              ox = pxOffset.x,
+              oy = pxOffset.y;
+
+        let selectedIds = [];
+
+        for (let A of this._items.values()) {
+            if (!A.inView || !A.projected[z])
+                continue;
+
+            const P = A.projected[z].P;
+
+            for (let j=0, len=P.length/3; j<len; j++){
+                let i = 3 * j,
+                    x = P[i]   + ox,
+                    y = P[i+1] + oy;
+
+                if ( this._contains(selectPxBounds, [x, y]) ) {
+                    selectedIds.push(A.id);
+                }
+            }
+        }
+
+        return selectedIds
+    },  
+
+
     // -----------------------------------------------------------------------
 
     captureCycle: function(selection=null, callback=null) {
@@ -877,7 +871,7 @@ L.DotLayer = L.Layer.extend( {
             delay = 1000 / frameRate,
 
             encoder = new GIF({
-                workers: 8,
+                workers: window.navigator.hardwareConcurrency,
                 quality: 8,
                 transparent: 'rgba(0,0,0,0)',
                 workerScript: GIFJS_WORKER_URL
