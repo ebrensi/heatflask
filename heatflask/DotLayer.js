@@ -28,8 +28,9 @@ L.DotLayer = L.Layer.extend( {
 
             pathColor: "#000000",
             pathOpacity: 0.7,
-            pathWidth: 1
+            pathWidth: 1,
         },
+
         selected: {
             dotColor: "#FFFFFF",
             dotOpacity: 0.9,
@@ -38,7 +39,14 @@ L.DotLayer = L.Layer.extend( {
 
             pathColor: "#000000",
             pathOpacity: 0.8,
-            pathWidth: 1
+            pathWidth: 1,
+        },
+
+        dotShadows: {
+            enabled: false,
+            x: 0, y: 2,
+            blur: 5,
+            color: "#000000"
         }
     },
 
@@ -198,7 +206,6 @@ L.DotLayer = L.Layer.extend( {
                     A => A.pathColor == color
                 );
             }
-            
             this._redraw(true);
         }
 
@@ -377,6 +384,17 @@ L.DotLayer = L.Layer.extend( {
         this._zoom = zoom;
         this._center = center;
         this._size = size;
+
+        if (this.options.dotShadows.enabled) {
+            const sx = this._dotCtx.shadowOffsetX = this.options.dotShadows.x,
+                  sy = this._dotCtx.shadowOffsetY = this.options.dotShadows.y
+            this._dotCtx.shadowBlur = this.options.dotShadows.blur
+            this._dotCtx.shadowColor = this.options.dotShadows.color
+        } else {
+            this._dotCtx.shadowOffsetX = 0;
+            this._dotCtx.shadowOffsetY = 0;
+            this._dotCtx.shadowBlur = 0;
+        }
 
         const mapBounds = this._latLngBounds = this._map.getBounds(),
               pxBounds = this._pxBounds = this._map.getPixelBounds(),
@@ -654,9 +672,7 @@ L.DotLayer = L.Layer.extend( {
               ctx = this._dotCtx,
               dotSize = this._dotSize;
 
-        return function(x,y){
-            ctx.arc( x, y, dotSize, 0, two_pi );
-        }
+        return (x,y) => ctx.arc( x, y, dotSize, 0, two_pi );
     },
 
     makeSquareDrawFunc: function() {
@@ -664,9 +680,8 @@ L.DotLayer = L.Layer.extend( {
               dotSize = this._dotSize
               dotOffset = dotSize / 2.0;
 
-        return function(x,y){
+        return (x,y) =>
             ctx.rect( x - dotOffset, y - dotOffset, dotSize, dotSize );
-        }
     },
 
     drawDotLayer: function(now) {

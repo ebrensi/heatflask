@@ -367,6 +367,33 @@ $(".dotscale-dial").knob({
         }
 });
 
+$(".shadow-dial").knob({
+        min: 0,
+        max: 10,
+        step: 0.01,
+        width: "60",
+        height: "60",
+        cursor: 20,
+        inline: true,
+        displayInput: false,
+        change: function (val) {
+            if (!DotLayer) {
+                return;
+            }
+            if (this.$[0].id == "shadowHeight") {
+                DotLayer.options.dotShadows.y = val;
+            } else {
+                DotLayer.options.dotShadows.blur = val + 2;
+            }
+            DotLayer._redraw(true);
+        },
+
+        release: function() {
+            DotLayer._redraw(true);
+        }
+});
+
+
 if (FLASH_MESSAGES.length > 0) {
     var msg = "<ul class=flashes>";
     for (let i=0, len=FLASH_MESSAGES.length; i<len; i++) {
@@ -464,7 +491,7 @@ function handle_table_selections( e, dt, type, indexes ) {
         }
     }
 
-    redraw && DotLayer && DotLayer._onLayerDidMove();
+    redraw && DotLayer && DotLayer._redraw();
 
     if ( domIdProp("zoom-to-selection", 'checked') ) {
         zoomToSelectedPaths();
@@ -611,6 +638,19 @@ function initializeDotLayer() {
     $("#speedConst").val(Math.sqrt(DotLayer.C2) / SPEED_SCALE).trigger("change");
     $("#dotScale").val(DotLayer.dotScale).trigger("change");
 
+
+    if (ONLOAD_PARAMS.shadows)
+        domIdVal("shadows", "checked");
+    $("#shadowHeight").val(DotLayer.options.dotShadows.y).trigger("change");
+    $("#shadowBlur").val(DotLayer.options.dotShadows.blur).trigger("change");
+    $("#shadows").prop("checked", DotLayer.options.dotShadows.enabled);
+    domIdEvent("shadows", "change", (e) => {
+        if (!DotLayer)
+            return;
+        DotLayer.options.dotShadows.enabled = e.target.checked;
+        DotLayer._redraw();
+    });
+
     setTimeout(function(){
         let T = DotLayer.periodInSecs().toFixed(2);
         $("#period-value").html(T);
@@ -637,7 +677,7 @@ function initializeDotLayer() {
     $("#showPaths").prop("checked", DotLayer.options.showPaths)
                     .on("change", function(){
                          DotLayer.options.showPaths = $(this).prop("checked");
-                         DotLayer._onLayerDidMove();
+                         DotLayer._redraw();
                     });
 }
 
@@ -728,7 +768,6 @@ function renderLayers(query={}) {
         sendQuery();
     }
     
-
     $(".data_message").html("Retrieving activity data...");
 
     $('#abortButton').click(function(){
