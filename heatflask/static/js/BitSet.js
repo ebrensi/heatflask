@@ -221,7 +221,7 @@ BitSet.prototype.forEach = function(fnc) {
 };
 
 BitSet.prototype.imap = function*(fnc) {
-  fnc = fnc || i => i;
+  fnc = fnc || (i => i);
   let c = this.words.length;
   for (let k = 0; k < c; ++k) {
     let w =  this.words[k];

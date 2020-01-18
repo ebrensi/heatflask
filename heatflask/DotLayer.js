@@ -238,7 +238,7 @@ L.DotLayer = L.Layer.extend( {
         this.pause();
         let selectedIds = this.getSelected(pxBounds);
         if (paused){
-            this.drawLayer();
+            this.drawDotLayer();
         } else {
             this.animate();
         }
@@ -386,10 +386,8 @@ L.DotLayer = L.Layer.extend( {
               inMapBounds = A => overlaps(mapBounds, A.bounds);
 
         // this will eventually be replaced by async calls
-        const toProject = new BitSet(),
-              itemsInView = this._itemMask = this._itemMask || new BitSet();
-
-        itemsInView.clear();
+        const toProject = this._toProject = (this._toProject || new BitSet()).clear(),
+              itemsInView = this._itemMask = (this._itemMask || new BitSet()).clear();
 
         for (let i=0; i<n; i++){
             const A = itemsArray[i];
@@ -409,7 +407,7 @@ L.DotLayer = L.Layer.extend( {
 
         // TODO: replace this loop with async calls
         if (!toProject.isEmpty()) {
-            ids = toProject.map(i => itemsArray[i].id);
+            ids = Array.from(toProject.imap(i => itemsArray[i].id));
             this._postToAllWorkers({ 
                 project: ids,
                 zoom: zoom,
@@ -419,7 +417,7 @@ L.DotLayer = L.Layer.extend( {
 
         this.drawPaths();
         if (this._paused)
-            this.drawLayer()
+            this.drawDotLayer()
 
     },
 
@@ -467,17 +465,10 @@ L.DotLayer = L.Layer.extend( {
                 if (zoom == this._zoom) {
                     const lineWidth = 1,
                           opacity = 0.8;
-                    
-                    // this._drawPath(
-                    //     this._lineCtx, P, this._pxOffset,
-                    //     lineWidth, A.pathColor, opacity
-                    // );
-                    // if paused draw dots
-                    this.drawPaths();
-                    if (this._paused)
-                        this.drawLayer()
                 }
             }
+            this.drawPaths();
+            this.drawDotLayer();
         }
     },
 
@@ -532,8 +523,8 @@ L.DotLayer = L.Layer.extend( {
     // Draw all paths for the current items
     //  This is more efficient than calling drawPath repeatedly
     //   for each activity, since we group strokes together.
-    drawPaths: function() {
-        if (!this._itemsArray || !this._map)
+    drawPaths: function(itemMask) {
+        if (!(this._itemsArray || itemMask) || !this._map)
             return
         // console.time("drawPaths")
 
@@ -548,7 +539,7 @@ L.DotLayer = L.Layer.extend( {
               inMapBounds = A => overlaps(mapBounds, A.bounds),
               pxOffset = this._pxOffset;
        
-        drawBox.reset().clear(ctx).clear(this._debugCtx);
+        drawBox.reset().clear(ctx).clear(this._debugCtx).clear(this._dotCtx);
     
         // const query = (status=="selected")? A => !!A.highlighted : A => !A.highlighted;
 
@@ -613,15 +604,15 @@ L.DotLayer = L.Layer.extend( {
     },  
 
     // --------------------------------------------------------------------
-    drawDots: function( now, start, projected, drawDot ) {
+    drawActivityDots: function( now, start, projected, drawDot ) {
         const P = projected.P,
               dP = projected.dP,
-              segmentIndex = projected.segMask.iterate(),
               xOffset = this._pxOffset.x,
               yOffset = this._pxOffset.y,
               segment = i => P.subarray(j=3*i, j+6),   // two points (x,y,t)
-              velocity = i => dP.subarray(j=2*i, j+2); // one velocity (vx,vy)             
-
+              velocity = i => dP.subarray(j=2*i, j+2), // one velocity (vx,vy)             
+              segmentIndex = projected.segMask.imap();
+              
         let obj = segmentIndex.next(),
             count = 0;
 
@@ -678,7 +669,7 @@ L.DotLayer = L.Layer.extend( {
         }
     },
 
-    drawLayer: function(now) {
+    drawDotLayer: function(now) {
         if ( !this._itemMask || this._itemMask.isEmpty()) {
             return;
         }
@@ -689,11 +680,12 @@ L.DotLayer = L.Layer.extend( {
             now = this._timePaused || this.UTCnowSecs();
         
         const ctx = this._dotCtx,
-            zoom = this._zoom,
-            canvas = this._dotCanvas,
-            zf = this._zoomFactor = 1 / (2**zoom),
-            g = this._gifPatch,
-            items = this._itemsArray;
+              zoom = this._zoom,
+              canvas = this._dotCanvas,
+              zf = this._zoomFactor = 1 / (2**zoom),
+              g = this._gifPatch,
+              itemsArray = this._itemsArray,
+              mask = this._itemMask;
 
         this._timeScale = this.C2 * zf;
         this._period = this.C1 * zf;
@@ -704,18 +696,17 @@ L.DotLayer = L.Layer.extend( {
 
         this.DrawBox.clear(ctx);
 
-        this._itemMask.forEach(i => {
-            const A = items[i],
-                  P = A.projected[zoom] || {};
+        for (A of this._itemMask.imap(i => itemsArray[i])) {
+            const P = A.projected[zoom] || {};
             if (P.P && !P.segMask.isEmpty()) {
                 ctx.fillStyle = A.dotColor || this.normal.dotColor;
                 
                 const start = A.UTCtimestamp;
                 ctx.beginPath();
-                count += this.drawDots(now, start, P, drawDotFunc);
+                count += this.drawActivityDots(now, start, P, drawDotFunc);
                 ctx.fill();
             }
-        });
+        };
 
         // drawDotFunc = makeCircleDrawFunc();
         // if ( A.highlighted & !g)
@@ -729,7 +720,7 @@ L.DotLayer = L.Layer.extend( {
         //         highlighted_items.push( A );
         //     } else {
         //         const P = A.projected[zoom];
-        //         count += this.drawDots(now, A.startTime, P.P, P.dP, A.segMask, A.dotColor, false);
+        //         count += this.drawActivityDots(now, A.startTime, P.P, P.dP, A.segMask, A.dotColor, false);
         //     }
         // }
 
@@ -737,7 +728,7 @@ L.DotLayer = L.Layer.extend( {
         // if ( highlighted_items.length ) {
         //     ctx.globalAlpha = this.options.selected.dotOpacity
         //     for (const A in highlighted_items) {
-        //         count += this.drawDots(now, A.startTime, P.P, P.dP, A.segMask, A.dotColor, true);
+        //         count += this.drawActivityDots(now, A.startTime, P.P, P.dP, A.segMask, A.dotColor, true);
         //     }
         //     ctx.globalAlpha = this.options.normal.dotOpacity
         // }
@@ -788,7 +779,7 @@ L.DotLayer = L.Layer.extend( {
 
         if (now - this.lastCalledTime > this.minDelay) {
             this.lastCalledTime = now;
-            this.drawLayer( now );
+            this.drawDotLayer( now );
         }
 
         this._frame = L.Util.requestAnimFrame( this._animate, this );
@@ -984,7 +975,7 @@ L.DotLayer = L.Layer.extend( {
             baseCanvas && frameCtx.drawImage( baseCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
 
             // render this set of dots
-            this.drawLayer(frameTime);
+            this.drawDotLayer(frameTime);
 
             // draw dots onto frame
             frameCtx.drawImage(this._dotCanvas, sx, sy, sw, sh, 0, 0, sw, sh);

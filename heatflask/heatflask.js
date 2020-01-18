@@ -321,7 +321,7 @@ $(".dotconst-dial").knob({
             }
 
             if (DotLayer._paused) {
-                DotLayer.drawLayer(DotLayer._timePaused);
+                DotLayer.drawDotLayer(DotLayer._timePaused);
             }
 
             // Enable capture if period is less than CAPTURE_DURATION_MAX
@@ -359,7 +359,7 @@ $(".dotscale-dial").knob({
             }
             DotLayer.dotScale = val;
             if (DotLayer._paused) {
-                DotLayer.drawLayer(DotLayer._timePaused);
+                DotLayer.drawDotLayer(DotLayer._timePaused);
             }
         },
         release: function() {
