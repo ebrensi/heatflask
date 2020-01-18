@@ -207,21 +207,6 @@ BitSet.prototype.array = function() {
   return answer;
 };
 
-BitSet.prototype.map = function(fnc) {
-  let answer = new Array(this.size());
-  let pos = 0 | 0;
-  let c = this.words.length;
-  for (let k = 0; k < c; ++k) {
-    let w =  this.words[k];
-    while (w != 0) {
-      let t = w & -w;
-      answer[pos++] = fnc( (k << 5) + this.hammingWeight((t - 1) | 0) );
-      w ^= t;
-    }
-  }
-  return answer;
-};
-
 // Return an array with the set bit locations (values)
 BitSet.prototype.forEach = function(fnc) {
   let c = this.words.length;
@@ -235,14 +220,14 @@ BitSet.prototype.forEach = function(fnc) {
   }
 };
 
-
-BitSet.prototype.iterate = function*() {
+BitSet.prototype.imap = function*(fnc) {
+  fnc = fnc || i => i;
   let c = this.words.length;
   for (let k = 0; k < c; ++k) {
     let w =  this.words[k];
     while (w != 0) {
       let t = w & -w;
-      yield (k << 5) + this.hammingWeight((t - 1) | 0);
+      yield fnc((k << 5) + this.hammingWeight((t - 1) | 0));
       w ^= t;
     }
   }
