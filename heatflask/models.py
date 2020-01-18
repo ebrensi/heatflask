@@ -1294,7 +1294,7 @@ class StravaClient(object):
 
             except Exception:
                 log.exception("%s failed index page request", self)
-                activities = []
+                activities = None
             
             elapsed = page_timer.elapsed()
             size = len(activities)
@@ -1345,9 +1345,6 @@ class StravaClient(object):
                 pagenum, activities = next(jobs)
 
                 if not activities:
-                    continue
-
-                if "errors" in activities:
                     raise UserWarning("Strava error")
                    
                 num = len(activities)
