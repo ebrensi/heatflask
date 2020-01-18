@@ -938,7 +938,7 @@ class Index(object):
                 user,
                 dict(
                     dt=elapsed, n=count,
-                    rate=round(count / elapsed, 2))
+                    rate=round(count / elapsed, 2)) if elapsed else None
                 )
 
             log.info(msg)
