@@ -91,7 +91,7 @@ L.DotLayer = L.Layer.extend( {
     },
 
     UTCnowSecs: function() {
-        return new Date().getTime();
+        return performance.timing.navigationStart + performance.now();
     },
 
     //-------------------------------------------------------------
@@ -341,10 +341,6 @@ L.DotLayer = L.Layer.extend( {
         if ( !this._map )
             return;
 
-        if (event) {
-            debugger;
-        }
-
         const zoom = this._zoom;
 
         if (this._map.getZoom() != zoom || !this._itemsArray || !this._ready)
@@ -353,12 +349,17 @@ L.DotLayer = L.Layer.extend( {
         // prevent redrawing more often than necessary
         const ts = performance.now(),
               lr = this._lastRedraw;
-        if (!force && ts - lr < 100) return;
+        if (!force && ts - lr < 200) return;
         this._lastRedraw = ts;
 
         // Get map orientation
         const center = this._map.getCenter(),
               size = this._map.getSize();
+
+        // prevent getting called if map position has not changed
+        // and we have not been explicitly told to do so
+        if (!force && center == this._center && size == this._size)
+            return
 
         // update state
         this._zoom = zoom;
