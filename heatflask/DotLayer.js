@@ -22,6 +22,7 @@ L.DotLayer = L.Layer.extend( {
         startPaused: false,
         showPaths: true,
         colorAll: true,
+        segment_ttol: 30,
         normal: {
             dotColor: "#000000",
             dotOpacity: 0.8,
@@ -144,8 +145,8 @@ L.DotLayer = L.Layer.extend( {
             moveend: e => this._redraw(true, e),
             // zoomstart: loggit,
             // zoom: loggit,
-            zoomend: this._calibrate,
-            viewreset: this._calibrate,
+            // zoomend: this._calibrate,
+            // viewreset: this._calibrate,
             resize: this._onLayerResize
         };
 
@@ -237,7 +238,18 @@ L.DotLayer = L.Layer.extend( {
             this._debugCtx.setLineDash([4, 10]);
         }
 
-        this._calibrate();
+        if (this.options.dotShadows.enabled) {
+            const sx = this._dotCtx.shadowOffsetX = this.options.dotShadows.x,
+                  sy = this._dotCtx.shadowOffsetY = this.options.dotShadows.y
+            this._dotCtx.shadowBlur = this.options.dotShadows.blur
+            this._dotCtx.shadowColor = this.options.dotShadows.color
+        } else {
+            this._dotCtx.shadowOffsetX = 0;
+            this._dotCtx.shadowOffsetY = 0;
+            this._dotCtx.shadowBlur = 0;
+        }
+
+        // this._calibrate();
     },
 
     _calibrate: function() {
@@ -259,7 +271,7 @@ L.DotLayer = L.Layer.extend( {
         this._zoom = this._map.getZoom(); 
         this._pxOffset = mapPanePos.subtract( pxOrigin );
 
-        this._redraw(true);
+        // this._redraw(true);
     },
     //-------------------------------------------------------------
 
@@ -310,33 +322,6 @@ L.DotLayer = L.Layer.extend( {
         return {p1: p1, p2: p2}
     },
 
-    makeSegMask: function(A, zoom, createNew=false) {
-        const pbuf = A.projected[zoom].P,
-              buflength = pbuf.length,
-              nSegs = buflength / 3 - 1,
-              pxBounds = this._pxBounds,
-              contains = this._contains,
-              inBounds = i => contains(pxBounds, pbuf.subarray(i, i+2));
-
-        let mask;
-
-        if (createNew)
-            mask = new BitSet();
-        else
-            mask = A.segMask || new BitSet();
-
-        mask.clear();
-        mask.resize(nsegs);
-
-        for (let s=1, pIn = inBounds(0), pnextIn; s < nSegs; s++) {    
-            let pnextIn = inBounds(3*s);
-            if (pIn || pnextIn)
-                mask.add(s-1);
-            pIn = pnextIn;
-        }
-        return A.segMask = mask
-    },
-
     _redraw: function(force, event) {
         if ( !this._map )
             return;
@@ -366,16 +351,20 @@ L.DotLayer = L.Layer.extend( {
         this._center = center;
         this._size = size;
 
-        if (this.options.dotShadows.enabled) {
-            const sx = this._dotCtx.shadowOffsetX = this.options.dotShadows.x,
-                  sy = this._dotCtx.shadowOffsetY = this.options.dotShadows.y
-            this._dotCtx.shadowBlur = this.options.dotShadows.blur
-            this._dotCtx.shadowColor = this.options.dotShadows.color
-        } else {
-            this._dotCtx.shadowOffsetX = 0;
-            this._dotCtx.shadowOffsetY = 0;
-            this._dotCtx.shadowBlur = 0;
-        }
+
+        this._calibrate();
+
+        // const pos = L.DomUtil.getPosition(this._map.getPanes().mapPane);
+        // if (pos) {
+        //   L.DomUtil.setPosition(this._dotCanvas, { x: -pos.x, y: -pos.y });
+        //   L.DomUtil.setPosition(this._lineCanvas, { x: -pos.x, y: -pos.y });
+        //   if (this.options.debug)
+        //     L.DomUtil.setPosition(this._debugCanvas, { x: -pos.x, y: -pos.y });
+        // }
+
+        const mapPanePos = this._map._getMapPanePos(),
+              pxOrigin = this._map.getPixelOrigin();
+        this._pxOffset = mapPanePos.subtract( pxOrigin );
 
         const mapBounds = this._latLngBounds = this._map.getBounds(),
               pxBounds = this._pxBounds = this._map.getPixelBounds(),
@@ -384,7 +373,9 @@ L.DotLayer = L.Layer.extend( {
               overlaps = this._overlaps,
               inMapBounds = A => overlaps(mapBounds, A.bounds);
 
-        // this will eventually be replaced by async calls
+        this.DrawBox._pxOffset = this._pxOffset;
+        this.DrawBox._pxBounds = pxBounds;
+
         const toProject = this._toProject = (this._toProject || new BitSet()).clear(),
               itemsInView = this._itemMask = (this._itemMask || new BitSet()).clear();
 
@@ -411,6 +402,7 @@ L.DotLayer = L.Layer.extend( {
                 project: ids,
                 zoom: zoom,
                 smoothFactor: this.smoothFactor,
+                ttol: this.options.segment_ttol
             });
         }
 
@@ -426,8 +418,8 @@ L.DotLayer = L.Layer.extend( {
         this._items[A.id] = A;
         msg = {addItems: {}};
         msg.addItems[A.id] = {llt: A.latLngTime, bounds: A.bounds};
-
         this._postToWorker(msg, [A.latLngTime.buffer]);
+        
     },
 
     removeItems: function(ids) {
@@ -435,6 +427,7 @@ L.DotLayer = L.Layer.extend( {
     },
 
     _postToAllWorkers: function(msg) {
+        msg.ts = performance.now();
         for (const worker of this._workers)
             worker.postMessage(msg);
     }, 
@@ -444,7 +437,6 @@ L.DotLayer = L.Layer.extend( {
             n = this._workers.length;
 
         this._currentWorker = (w + 1) % n;
-        msg.ts = performance.now();
 
         this._workers[w].postMessage(msg, transferables);
         // console.log(`${msg.ts} ${msg.id} posted to ${w}`);
@@ -458,55 +450,88 @@ L.DotLayer = L.Layer.extend( {
                         
             for (let [id, P] of Object.entries(msg.projected)) {
                 const A = this._items[id];
-                P.segMask = new BitSet();
                 A.projected[zoom] = P;
-
-                if (zoom == this._zoom) {
-                    const lineWidth = 1,
-                          opacity = 0.8;
-                }
             }
-            this.drawPaths();
-            this.drawDotLayer();
+
+            if (zoom == this._zoom) {
+                this.drawPaths();
+                this.drawDotLayer();
+            }
         }
     },
 
-    _drawPath: function(ctx, P, pxOffset, lineWidth, strokeStyle, opacity, isolated=true) {
+    makeSegMask: function(pbuf, badSegs, oldSegmask) {
+        const buflength = pbuf.length,
+              nSegs = buflength / 3 - 1,
+              pxBounds = this._pxBounds,
+              contains = this._contains,
+              drawBox = this.DrawBox,
+              points = i => pbuf.subarray(j=3*i, j+2),
+              inBounds = i => contains(pxBounds, p=points(i)) && drawBox.update(p);
+
+        let mask = (oldSegmask || new BitSet()).clear().resize(nSegs);
+
+        for (let s=1, pIn = inBounds(0), pnextIn; s < nSegs; s++) {    
+            let pnextIn = inBounds(s);
+            if (pIn || pnextIn)
+                mask.add(s-1);
+            pIn = pnextIn;
+        }
+
+        if (badSegs)
+            for (s of badSegs)
+                mask.remove(s)
+        return mask
+    },
+
+    _drawPath: function(ctx, pointsBuf, segMask, pxOffset, lineWidth, strokeStyle, opacity, isolated=true) {
         const ox = pxOffset.x,
               oy = pxOffset.y,
-              pointsBuf = P.P,
-              mask = P.segMask.clear(),
-              drawBox = this.DrawBox,
-              nSegs = pointsBuf.length / 3 - 1,
-              contains = this._contains,
-              pxBounds = this._map.getPixelBounds(),
-              inBounds = point => contains(pxBounds, point) && drawBox.update(point),
-              points = i => pointsBuf.subarray(i, i+2);
+              // pointsBuf = P.P,
+              // mask = P.segMask.clear(),
+              // drawBox = this.DrawBox,
+              // nSegs = pointsBuf.length / 3 - 1,
+              // contains = this._contains,
+              // pxBounds = this._pxBounds,
+              // inBounds = point => contains(pxBounds, point) && drawBox.update(point),
+              // points = i => pointsBuf.subarray(j=3*i, j+2);
+              seg = i => pointsBuf.subarray(j=3*i, j+6);
 
         if (isolated)
             ctx.beginPath();
         
-        let p = points(0),
-            pIn = inBounds(p);
+        // let p = points(0),
+        //     pIn = inBounds(p);
         
-        for (let s=1, pnext, pnextIn; s<nSegs; s++) {    
-            pnext = points(3*s);
-            pnextIn = inBounds(pnext);
+        // for (let s=1, pnext, pnextIn; s<nSegs; s++) {    
+        //     pnext = points(s);
+        //     pnextIn = inBounds(pnext);
 
-            if (pIn || pnextIn) {
-                mask.add(s-1);
+        //     if (pIn || pnextIn) {
+        //         mask.add(s-1);
 
-                const p1x = p[0]     + ox, p1y = p[1]     + oy,
-                      p2x = pnext[0] + ox, p2y = pnext[1] + oy;
+        //         const p1x = p[0]     + ox, p1y = p[1]     + oy,
+        //               p2x = pnext[0] + ox, p2y = pnext[1] + oy;
 
-                // draw segment
-                ctx.moveTo(p1x, p1y);
-                ctx.lineTo(p2x, p2y);    
-            }
+        //         // draw segment
+        //         ctx.moveTo(p1x, p1y);
+        //         ctx.lineTo(p2x, p2y);    
+        //     }
 
-            p = pnext;
-            pIn = pnextIn;
-        }
+        //     p = pnext;
+        //     pIn = pnextIn;
+        // }
+ 
+        segMask.forEach( i => {
+            const s = seg(i),
+                  p1x = s[0] + ox, p1y = s[1] + oy,
+                  p2x = s[3] + ox, p2y = s[4] + oy;
+
+            // draw segment
+            ctx.moveTo(p1x, p1y);
+            ctx.lineTo(p2x, p2y);
+
+        });
 
         if (isolated) {
             ctx.globalAlpha = opacity;
@@ -533,7 +558,7 @@ L.DotLayer = L.Layer.extend( {
               drawBox = this.DrawBox,
               itemsArray = this._itemsArray,
               n = itemsArray.length,
-              mapBounds = this._map.getBounds(),
+              mapBounds = this._latLngBounds,
               overlaps = this._overlaps,
               inMapBounds = A => overlaps(mapBounds, A.bounds),
               pxOffset = this._pxOffset;
@@ -558,10 +583,13 @@ L.DotLayer = L.Layer.extend( {
             cfilter.forEach( i => {
                 const A = itemsArray[i];
                 if ( inMapBounds(A) && (A.projected[zoom] || {}).P ) {
+                    debugger;
                     const P = A.projected[zoom];
+                    A.segMask = this.makeSegMask(P.P, P.bad, A.segMask);
+
                     // debugger;
                     this._drawPath(
-                        ctx, P, pxOffset, null, null, null, false
+                        ctx, P.P, A.segMask, pxOffset, null, null, null, false
                     );
                 }
             });
@@ -1060,7 +1088,7 @@ L.DotLayer = L.Layer.extend( {
         },
 
         reset: function() {
-            const pxb = this._map.getPixelBounds();
+            const pxb = this._pxBounds;
             this._dim = undefined;
             return this
         },
@@ -1087,11 +1115,11 @@ L.DotLayer = L.Layer.extend( {
             const d = this._dim;
             if (!d) return this.defaultRect();
             const mapSize = this._map.getSize(),
-                  o = this._map.getPixelOrigin(),
-                  xmin = ~~Math.max(d.xmin - o.x - pad, 0),
-                  xmax = ~~Math.min(d.xmax - o.x + pad, mapSize.x),
-                  ymin = ~~Math.max(d.ymin - o.y - pad, 0),
-                  ymax = ~~Math.min(d.ymax - o.y + pad, mapSize.y);
+                  o = this._pxOffset,
+                  xmin = ~~Math.max(d.xmin + o.x - pad, 0),
+                  xmax = ~~Math.min(d.xmax + o.x + pad, mapSize.x),
+                  ymin = ~~Math.max(d.ymin + o.y - pad, 0),
+                  ymax = ~~Math.min(d.ymax + o.y + pad, mapSize.y);
 
             return {
                 x: xmin, y: ymin, 
@@ -1154,4 +1182,19 @@ function colorPalette(n, alpha) {
     return makeColorGradient(frequency,frequency,frequency,0,2,4,center,width,n,alpha);
 };
 
+// {
+// // @method latLngToLayerPoint(latlng: LatLng): Point
+//     // Given a geographical coordinate, returns the corresponding pixel coordinate
+//     // relative to the [origin pixel](#map-getpixelorigin).
+//     latLngToLayerPoint = latlng => {
+//         var projectedPoint = this.project(toLatLng(latlng))._round();
+//         return projectedPoint._subtract(this.getPixelOrigin());
+//     }
 
+//     // @method layerPointToContainerPoint(point: Point): Point
+//     // Given a pixel coordinate relative to the [origin pixel](#map-getpixelorigin),
+//     // returns the corresponding pixel coordinate relative to the map container.
+//     layerPointToContainerPoint = point => { // (Point)
+//         return toPoint(point).add(this._getMapPanePos());
+//     }
+// }

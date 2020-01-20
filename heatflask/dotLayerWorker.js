@@ -14,7 +14,7 @@ onmessage = function(event) {
     if ("addItems" in msg) {
         const newItems = msg.addItems;
         Object.assign(myItems, newItems);
-    } 
+    }
 
     if ("removeItems" in msg) {
         for (id in msg.removeItems){
@@ -29,37 +29,49 @@ onmessage = function(event) {
 
         const projectPoint = CRS.makeProjection(zoom),
               sf = msg.smoothFactor,
-              ttol = msg.ttol,
-              TS = llt => this.transformSimplify(llt, sf, projectPoint, ttol),
+              TS = llt => this.transformSimplify(llt, sf, projectPoint),
               projected = {},
               transferables = [];
 
         for (const id of ids_to_project) {
-            if (id in myItems) {
-                const A = myItems[id];
+            if (!(id in myItems))
+                continue
 
-                // if (!A.projected)
-                //     A.projected = {}
+            const A = myItems[id],
+                  P = TS(A.llt);
 
-                // if (!A.projected[zoom])
-                //     A.projected[zoom] = project(A.llt, zoom, msg.smoothFactor, msg.hq);
+            // mask the indices of any bad segments
+            if ( !("badSegTimes" in A) )
+                A.badSegTimes = badSegTimes(A.llt, msg.ttol);
 
-                const P = TS(A.llt);
-
-                projected[id] = P;
-                transferables.push(P.P.buffer);
-                transferables.push(P.dP.buffer);
+            let bst = A.badSegTimes;
+            
+            if (bst && bst.length) {
+                let time = i => A.llt[3*i+2],
+                    start = 0,
+                    end = A.llt.length / 3;
+                    
+                P.bad = [];
+                for (const t of bst) {
+                    const i = binarySearch(time, t, start, end);
+                    if (i) P.bad.push(i);
+                    start = i;
+               } 
             }
-        } 
 
-        msg.name = self.name;
-        msg.project = Object.keys(projected);
-        msg.projected = projected;
+            // Send results back to main thread
+            projected[id] = P;
+            transferables.push(P.P.buffer);
+            transferables.push(P.dP.buffer);
 
+            msg.name = self.name;
+            msg.project = Object.keys(projected);
+            msg.projected = projected;
+        }
+        
         if (msg.project.length)
             postMessage(msg, transferables);
-        // console.log(`${N} projected`, msg);
-   
+
     } else if ("hello" in msg){  
         self.name = msg.hello;
         // console.log(`${self.name} started`);
@@ -67,18 +79,43 @@ onmessage = function(event) {
     }
 };
 
-
-
-function transformSimplify(llt, smoothFactor, transform=null, ttol=60) {
-    // const n = llt.length / 3,
-    //       badSeg = new BitSet(n-1);
+function badSegTimes(llt, ttol) {
+    const n = llt.length / 3,
+          time = i => llt[3*i+2],
+          arr = [];
     
-    // for (let i=1, tprev=llt[2]; i<n; i++) {
-    //     let t = llt[3*i + 2];
-    //     if (t - tprev > ttol)
-    //         badSeg[i-1] = true;
-    //     tprev = t;
-    // }
+    let max = 0;
+
+    for (let i=1, tprev=time(0); i<n; i++) {
+        let t = time(i),
+            dt = t - tprev;
+        
+        if (dt > ttol)
+            arr.push(tprev);
+        
+        if (dt > max)
+            max = dt;
+
+        tprev = t;
+    }
+    arr.sort((a,b) => a-b);
+    return arr.length? arr : null
+}
+
+function binarySearch(map, x, start, end) {        
+    if (start > end) return false; 
+   
+    let mid = Math.floor((start + end) / 2); 
+
+    if (map(mid) === x) return mid; 
+          
+    if(map(mid) > x)  
+        return binarySearch(map, x, start, mid-1); 
+    else
+        return binarySearch(map, x, mid+1, end); 
+} 
+
+function transformSimplify(llt, smoothFactor, transform=null) {
 
     // console.time("simplify-project");
     P = Simplifier.simplify(
@@ -108,7 +145,6 @@ function transformSimplify(llt, smoothFactor, transform=null, ttol=60) {
 
     return {P: P, dP: dP}
 };
-
 
 Simplifier = {
     /* 
@@ -189,16 +225,15 @@ Simplifier = {
 
     simplifyDPStep: function(points, first, last, sqTolerance, bitSet) {
         let maxSqDist = sqTolerance,
+            point = i => points.subarray(j=3*i, j+2),
             index;
 
         for (let idx = first + 1; idx < last; idx++) {
-            const fi = 3*first,
-                i = 3*idx,
-                li = 3*last,
-                pf = points.subarray(fi, fi+2),
-                pi = points.subarray(i, i+2),
-                pl = points.subarray(li, li+2),
-                sqDist = this.getSqSegDist(pi, pf, pl);
+            const sqDist = this.getSqSegDist(
+                point(idx),
+                point(first),
+                point(last)
+            );
 
             if (sqDist > maxSqDist) {
                 index = idx;

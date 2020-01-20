@@ -56,6 +56,10 @@ function BitSet(iterable) {
   }
 }
 
+BitSet.fromWords = function(words) {
+  const answer = Object.create(BitSet.prototype);
+  answer.words = words; 
+}
 
 BitSet.new_filter = function(iterable, fnc) {
   const answer = Object.create(BitSet.prototype);
