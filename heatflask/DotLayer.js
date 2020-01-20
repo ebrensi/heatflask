@@ -37,7 +37,7 @@ L.DotLayer = L.Layer.extend( {
         },
 
         dotShadows: {
-            enabled: false,
+            enabled: true,
             x: 0, y: 2,
             blur: 5,
             color: "#000000"
