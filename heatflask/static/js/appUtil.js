@@ -118,35 +118,6 @@ function httpPostAsync(theUrl, payload, callback) {
     xmlHttp.send(dataToSend);
 }
 
-
-
-
-// decode a (possibly RLE-encoded) array of successive differences into
-//  an array of the original values
-//  This will decode both [1, 2,2,2,2,2,2, 5] and [1, [2,6], 5] into
-//    [0, 1, 3, 5, 7, 9, 11, 13, 18]
-function streamDecode(rle_list, first_value=0) {
-    let running_sum = first_value,
-    outArray = [first_value],
-    len = rle_list.length;
-    for (let i=0; i<len; i++) {
-        el = rle_list[i];
-        if (el instanceof Array) {
-            for (let j=0; j<el[1]; j++) {
-                running_sum += el[0];
-                outArray.push(running_sum);
-            }
-        } else {
-            running_sum += el;
-            outArray.push(running_sum);
-        }
-    }
-    return outArray;
-}
-
-
-
-
 // ---------------------------------------
 function touchHandler(event) {
     // Add touch support by converting touch events to mouse events

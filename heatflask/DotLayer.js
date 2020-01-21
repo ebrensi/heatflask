@@ -44,7 +44,7 @@ L.DotLayer = L.Layer.extend( {
         },
 
         dotShadows: {
-            enabled: false,
+            enabled: true,
             x: 0, y: 2,
             blur: 5,
             color: "#000000"
@@ -395,7 +395,6 @@ L.DotLayer = L.Layer.extend( {
             }
         }
 
-        // TODO: replace this loop with async calls
         if (!toProject.isEmpty()) {
             ids = Array.from(toProject.imap(i => itemsArray[i].id));
             this._postToAllWorkers({ 
@@ -415,7 +414,7 @@ L.DotLayer = L.Layer.extend( {
     addItem: function(A) {
         this._items = this._items || {}
         A.projected = {};
-        this._items[A.id] = A;
+        this._items[ A.id ] = A;
         msg = {addItems: {}};
         msg.addItems[A.id] = {llt: A.latLngTime, bounds: A.bounds};
         this._postToWorker(msg, [A.latLngTime.buffer]);
@@ -445,17 +444,21 @@ L.DotLayer = L.Layer.extend( {
     _handleWorkerMessage: function(event) {
         const msg = event.data;
         if ("project" in msg) {
-
-            const zoom = msg.zoom;
+            const zoom = msg.zoom,
+                  relevant = zoom == this._zoom;
                         
-            for (let [id, P] of Object.entries(msg.projected)) {
-                const A = this._items[id];
-                A.projected[zoom] = P;
+            for (let id in msg.projected) {
+                const A = this._items[id],
+                      P = A.projected[zoom] = msg.projected[id];
+
+                // if (relevant)
+                //     A.segMask = this.makeSegMask(P.P, P.bad, A.segMask);
             }
 
-            if (zoom == this._zoom) {
+            if (relevant) {
                 this.drawPaths();
-                this.drawDotLayer();
+                if (this._paused)
+                    this.drawDotLayer();
             }
         }
     },
@@ -484,43 +487,13 @@ L.DotLayer = L.Layer.extend( {
         return mask
     },
 
-    _drawPath: function(ctx, pointsBuf, segMask, pxOffset, lineWidth, strokeStyle, opacity, isolated=true) {
+    _drawPath: function(ctx, pointsBuf, segMask, pxOffset, lineWidth, strokeStyle, opacity, isolated=false) {
         const ox = pxOffset.x,
               oy = pxOffset.y,
-              // pointsBuf = P.P,
-              // mask = P.segMask.clear(),
-              // drawBox = this.DrawBox,
-              // nSegs = pointsBuf.length / 3 - 1,
-              // contains = this._contains,
-              // pxBounds = this._pxBounds,
-              // inBounds = point => contains(pxBounds, point) && drawBox.update(point),
-              // points = i => pointsBuf.subarray(j=3*i, j+2);
               seg = i => pointsBuf.subarray(j=3*i, j+6);
 
         if (isolated)
             ctx.beginPath();
-        
-        // let p = points(0),
-        //     pIn = inBounds(p);
-        
-        // for (let s=1, pnext, pnextIn; s<nSegs; s++) {    
-        //     pnext = points(s);
-        //     pnextIn = inBounds(pnext);
-
-        //     if (pIn || pnextIn) {
-        //         mask.add(s-1);
-
-        //         const p1x = p[0]     + ox, p1y = p[1]     + oy,
-        //               p2x = pnext[0] + ox, p2y = pnext[1] + oy;
-
-        //         // draw segment
-        //         ctx.moveTo(p1x, p1y);
-        //         ctx.lineTo(p2x, p2y);    
-        //     }
-
-        //     p = pnext;
-        //     pIn = pnextIn;
-        // }
  
         segMask.forEach( i => {
             const s = seg(i),
@@ -547,8 +520,8 @@ L.DotLayer = L.Layer.extend( {
     // Draw all paths for the current items
     //  This is more efficient than calling drawPath repeatedly
     //   for each activity, since we group strokes together.
-    drawPaths: function(itemMask) {
-        if (!(this._itemsArray || itemMask) || !this._map)
+    drawPaths: function(itemsToDraw) {
+        if (!(itemsToDraw || this._itemMask) || !this._map)
             return
         // console.time("drawPaths")
 
@@ -557,13 +530,12 @@ L.DotLayer = L.Layer.extend( {
               zoom = this._zoom,
               drawBox = this.DrawBox,
               itemsArray = this._itemsArray,
-              n = itemsArray.length,
-              mapBounds = this._latLngBounds,
-              overlaps = this._overlaps,
-              inMapBounds = A => overlaps(mapBounds, A.bounds),
               pxOffset = this._pxOffset;
        
-        drawBox.reset().clear(ctx).clear(this._debugCtx).clear(this._dotCtx);
+        if (!itemsToDraw) {
+            itemsToDraw = this._itemMask.clone();
+            drawBox.reset().clear(ctx).clear(this._debugCtx).clear(this._dotCtx);
+        }
     
         // const query = (status=="selected")? A => !!A.highlighted : A => !A.highlighted;
 
@@ -574,23 +546,22 @@ L.DotLayer = L.Layer.extend( {
 
         for (const [color, cfilter] of Object.entries(this._colorFilters)) {
              // this._filter.intersect(sfilter);
-            // if (cfilter.isEmpty())
-            //     continue;
+            
+            if (cfilter.isEmpty() || !itemsToDraw.intersection_size(cfilter))
+                continue;
+
+            itemsToDraw.intersection(cfilter);
 
             ctx.strokeStyle = color;
             ctx.beginPath();
             
-            cfilter.forEach( i => {
+            itemsToDraw.forEach( i => {
                 const A = itemsArray[i];
-                if ( inMapBounds(A) && (A.projected[zoom] || {}).P ) {
-                    debugger;
+                if ( (A.projected[zoom] || {}).P ) {
                     const P = A.projected[zoom];
                     A.segMask = this.makeSegMask(P.P, P.bad, A.segMask);
 
-                    // debugger;
-                    this._drawPath(
-                        ctx, P.P, A.segMask, pxOffset, null, null, null, false
-                    );
+                    this._drawPath(ctx, P.P, A.segMask, pxOffset);
                 }
             });
 
@@ -603,14 +574,14 @@ L.DotLayer = L.Layer.extend( {
     },
 
     // --------------------------------------------------------------------
-    drawActivityDots: function( now, start, projected, drawDot ) {
+    drawActivityDots: function( now, start, projected, segMask, drawDot ) {
         const P = projected.P,
               dP = projected.dP,
               xOffset = this._pxOffset.x,
               yOffset = this._pxOffset.y,
               segment = i => P.subarray(j=3*i, j+6),   // two points (x,y,t)
               velocity = i => dP.subarray(j=2*i, j+2), // one velocity (vx,vy)             
-              segmentIndex = projected.segMask.imap();
+              segmentIndex = segMask.imap();
               
         let obj = segmentIndex.next(),
             count = 0;
@@ -694,12 +665,12 @@ L.DotLayer = L.Layer.extend( {
 
         for (A of this._itemMask.imap(i => itemsArray[i])) {
             const P = A.projected[zoom] || {};
-            if (P.P && !P.segMask.isEmpty()) {
+            if (P.P && A.segMask && !A.segMask.isEmpty()) {
                 ctx.fillStyle = A.dotColor || this.normal.dotColor;
                 
                 const start = A.UTCtimestamp;
                 ctx.beginPath();
-                count += this.drawActivityDots(now, start, P, drawDotFunc);
+                count += this.drawActivityDots(now, start, P, A.segMask, drawDotFunc);
                 ctx.fill();
             }
         };
@@ -1067,9 +1038,42 @@ L.DotLayer = L.Layer.extend( {
             numItems = items.length,
             i = 0;
 
-        this._colorPalette = colorPalette(numItems, this.options.dotAlpha);
+        this._colorPalette = this.ColorPalette.palette(numItems, this.options.dotAlpha);
         for ( item of items )
             item.dotColor = this._colorPalette[ i++ ];
+    },
+
+    ColorPalette: {
+        /*
+        From "Making annoying rainbows in javascript"
+        A tutorial by jim bumgardner
+        */
+        makeColorGradient: function(frequency1, frequency2, frequency3,
+                                     phase1, phase2, phase3,
+                                     center, width, len, alpha) {
+            let palette = new Array(len);
+
+            if (center == undefined)   center = 128;
+            if (width == undefined)    width = 127;
+            if (len == undefined)      len = 50;
+
+            for (let i = 0; i < len; ++i) {
+                let r = Math.round(Math.sin(frequency1*i + phase1) * width + center),
+                    g = Math.round(Math.sin(frequency2*i + phase2) * width + center),
+                    b = Math.round(Math.sin(frequency3*i + phase3) * width + center);
+                // palette[i] = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+                palette[i] = `rgb(${r}, ${g}, ${b})`;
+            }
+            return palette;
+        },
+
+        palette: function (n, alpha) {
+            center = 128;
+            width = 127;
+            steps = 10;
+            frequency = 2*Math.PI/steps;
+            return this.makeColorGradient(frequency,frequency,frequency,0,2,4,center,width,n,alpha);
+        }
     },
 
     /* DrawBox represents the rectangular region that bounds
@@ -1150,37 +1154,35 @@ L.dotLayer = function( items, options ) {
 };
 
 
+L.Control.fps = L.Control.extend({
+    lastCalledTime: 1,
 
-/*
-    From "Making annoying rainbows in javascript"
-    A tutorial by jim bumgardner
-*/
-function makeColorGradient(frequency1, frequency2, frequency3,
-                             phase1, phase2, phase3,
-                             center, width, len, alpha) {
-    let palette = new Array(len);
+    options: {
+        position: "topright"
+    },
 
-    if (center == undefined)   center = 128;
-    if (width == undefined)    width = 127;
-    if (len == undefined)      len = 50;
+    onAdd: function (map) {
+        // Control container
+        this._container = L.DomUtil.create('div', 'leaflet-control-fps');
+        L.DomEvent.disableClickPropagation(this._container);
+        this._container.style.backgroundColor = 'white';
+        this.update(0);
+        return this._container;
+    },
 
-    for (let i = 0; i < len; ++i) {
-        let r = Math.round(Math.sin(frequency1*i + phase1) * width + center),
-            g = Math.round(Math.sin(frequency2*i + phase2) * width + center),
-            b = Math.round(Math.sin(frequency3*i + phase3) * width + center);
-        // palette[i] = `rgba(${r}, ${g}, ${b}, ${alpha})`;
-        palette[i] = `rgb(${r}, ${g}, ${b})`;
+    update: function(now=Date.now(), msg="") {
+        let fps = ~~(1000 / (now - this.lastCalledTime) + 0.5);
+        this._container.innerHTML = `${fps} f/s, ${msg}`;
+        this.lastCalledTime = now;
+        return fps;
     }
-    return palette;
+});
+
+//constructor registration
+L.control.fps = function(options) {
+  return new L.Control.fps();
 };
 
-function colorPalette(n, alpha) {
-    center = 128;
-    width = 127;
-    steps = 10;
-    frequency = 2*Math.PI/steps;
-    return makeColorGradient(frequency,frequency,frequency,0,2,4,center,width,n,alpha);
-};
 
 // {
 // // @method latLngToLayerPoint(latlng: LatLng): Point

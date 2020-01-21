@@ -33,7 +33,7 @@ bundles = {
         ),
         # un-minified dependencies
         flask_assets.Bundle(
-            'js/Polyline.encoded.js',
+            # 'js/Polyline.encoded.js',
             'js/L.Control.Window.js',
             'js/leaflet-providers.js',
             'js/leaflet-image.js',  # Tom MacWright: https://github.com/mapbox/leaflet-image
@@ -54,11 +54,12 @@ bundles = {
     "DotLayerWorker_js": flask_assets.Bundle(
         '../dotLayerWorker.js',
         'js/BitSet.js',
+        'js/Codecs.js',
         output="gen/dotLayer.worker.js"
     ),
 
     "app_specific_js": flask_assets.Bundle(  # Heatflask-specific code
-        'js/L.Control.fps.js',
+        'js/Codecs.js'
         'js/appUtil.js',
         'js/L.SwipeSelect.js',
         'js/L.BoxHook.js',

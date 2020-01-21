@@ -506,6 +506,7 @@ class Users(UserMixin, db_sql.Model):
 
             if owner_id:
                 A.update(dict(owner=self.id, profile=self.profile))
+
             return A
         
         # if we are only sending summaries to client,
@@ -1739,16 +1740,12 @@ class Activities(object):
 
         try:
             # Encode/compress latlng data into polyline format
-            encoded_streams["polyline"] = polyline.encode(
-                result.pop("latlng")
-            )
+            p = result.pop("latlng")
+            encoded_streams["polyline"] = polyline.encode(p)
+            encoded_streams["n"] = len(p)
         except Exception:
             log.exception("failed polyline encode for activity %s", _id)
             return False
-
-        # encoded_streams = {
-        #     name: encoded_stream(stream) for name, stream in result.items
-        # }
 
         for name, stream in result.items():
             # Encode/compress these streams
@@ -1790,6 +1787,7 @@ class Activities(object):
         for _id, stream_data in cls.get_many(list(to_fetch.keys())):
             if not stream_data:
                 continue
+                
             A = to_fetch.pop(_id)
             A.update(stream_data)
             yield A

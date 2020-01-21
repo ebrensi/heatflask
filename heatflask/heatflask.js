@@ -903,19 +903,23 @@ function renderLayers(query={}) {
         }
 
         // At this point we know A is an activity object, not a message
-        let latLngArray = L.PolylineUtil.decode(A.polyline),
-            timeArray = streamDecode(A.time),
-            len = latLngArray.length,
+        // let latLngArray = L.PolylineUtil.decode(A.polyline),
+        let latLngGen = Polyline.decode(A.polyline)
+            timeGen = StreamRLE.decodeList(A.time),
+            len = A.len,
             latLngTime = new Float32Array(3*len),
-            tup = A.ts;
+            tup = A.ts,
+            lltPoint = i => latLngTime.subarray(j=3*i, j+3);
 
         // create LatLngTime array 
-        for (let i=0, ll; i<len; i++) {
-            ll = latLngArray[i];
-            idx = i*3;
-            latLngTime[idx] = ll[0];
-            latLngTime[idx+1] = ll[1];
-            latLngTime[idx+2] = timeArray[i];
+        for (let i=0, ll, t, p; i<len; i++) {
+            ll = latLngGen.next().value;
+            t = timeGen.next().value;
+            p = lltPoint(i);
+
+            p[0] = ll[0];
+            p[1] = ll[1];
+            p[2] = t;
         }
 
         A.latLngTime = latLngTime;
