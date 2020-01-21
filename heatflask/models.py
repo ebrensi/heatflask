@@ -1740,9 +1740,9 @@ class Activities(object):
 
         try:
             # Encode/compress latlng data into polyline format
-            encoded_streams["polyline"] = polyline.encode(
-                result.pop("latlng")
-            )
+            p = result.pop("latlng")
+            encoded_streams["polyline"] = polyline.encode(p)
+            encoded_streams["n"] = len(p)
         except Exception:
             log.exception("failed polyline encode for activity %s", _id)
             return False
