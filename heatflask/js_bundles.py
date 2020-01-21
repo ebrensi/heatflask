@@ -59,12 +59,12 @@ bundles = {
     ),
 
     "app_specific_js": flask_assets.Bundle(  # Heatflask-specific code
-        'js/Codecs.js'
+        'js/Codecs.js',
         'js/appUtil.js',
         'js/L.SwipeSelect.js',
         'js/L.BoxHook.js',
-        '../heatflask.js',
         '../DotLayer.js',
+        '../heatflask.js',
         # filters=["babel", 'rjsmin'],
         output="gen/app-specific.js"
     ),

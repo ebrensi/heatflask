@@ -415,9 +415,10 @@ L.DotLayer = L.Layer.extend( {
         this._items = this._items || {}
         A.projected = {};
         this._items[ A.id ] = A;
+        
         msg = {addItems: {}};
-        msg.addItems[A.id] = {llt: A.latLngTime, bounds: A.bounds};
-        this._postToWorker(msg, [A.latLngTime.buffer]);
+        msg.addItems[A.id] = {data: A.data};
+        this._postToWorker(msg, [A.data.latLng.buffer, A.data.time]);
         
     },
 

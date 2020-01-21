@@ -902,27 +902,11 @@ function renderLayers(query={}) {
             return;
         }
 
-        // At this point we know A is an activity object, not a message
-        // let latLngArray = L.PolylineUtil.decode(A.polyline),
-        let latLngGen = Polyline.decode(A.polyline)
-            timeGen = StreamRLE.decodeList(A.time),
-            len = A.len,
-            latLngTime = new Float32Array(3*len),
-            tup = A.ts,
-            lltPoint = i => latLngTime.subarray(j=3*i, j+3);
-
-        // create LatLngTime array 
-        for (let i=0, ll, t, p; i<len; i++) {
-            ll = latLngGen.next().value;
-            t = timeGen.next().value;
-            p = lltPoint(i);
-
-            p[0] = ll[0];
-            p[1] = ll[1];
-            p[2] = t;
+        A.data = {
+            time: StreamRLE.transcode2CompressedBuf(A.time),
+            latLng: Polyline.decode2Buf(A.polyline, A.n)
         }
-
-        A.latLngTime = latLngTime;
+        
         A.id = A._id;
         A.tsLoc = new Date((tup[0] + tup[1]*3600) * 1000);
         A.UTCtimestamp = tup[0];  
@@ -933,6 +917,7 @@ function renderLayers(query={}) {
         delete A.time;
         delete A._id;
         delete A.ts;
+        delete A.n;
 
         // only add A to appState.items if it isn't already there
         if (!(A.id in appState.items)) {
