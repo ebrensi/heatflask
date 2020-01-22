@@ -101,6 +101,12 @@ const Polyline = {
             buf.set(latLng, i++ << 1);
         }
         return buf
+    },
+
+    iterBuf: function*(buf){
+        const len = buf.length;
+        for (let i=0; i<len; i+=2)
+            yield buf.subarray(i, i+2);
     }
 
 };

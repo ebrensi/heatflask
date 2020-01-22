@@ -27,9 +27,9 @@ onmessage = function(event) {
         const ids_to_project = msg.project,
               zoom = msg.zoom;
 
-        const projectPoint = CRS.makeProjection(zoom),
+        const projectPoint = CRS.makePT(zoom),
               sf = msg.smoothFactor,
-              TS = llt => this.transformSimplify(llt, sf, projectPoint),
+              TS = streamData => this.transformSimplify(streamData, sf, projectPoint),
               projected = {},
               transferables = [];
 
@@ -38,26 +38,26 @@ onmessage = function(event) {
                 continue
 
             const A = myItems[id],
-                  P = TS(A.llt);
+                  P = TS(A.data);
 
             // mask the indices of any bad segments
-            if ( !("badSegTimes" in A) )
-                A.badSegTimes = badSegTimes(A.llt, msg.ttol);
+            // if ( !("badSegTimes" in A) )
+            //     A.badSegTimes = badSegTimes(A.data, msg.ttol);
 
-            let bst = A.badSegTimes;
+            // let bst = A.badSegTimes;
             
-            if (bst && bst.length) {
-                let time = i => A.llt[3*i+2],
-                    start = 0,
-                    end = A.llt.length / 3;
+            // if (bst && bst.length) {
+            //     let time = i => A.llt[3*i+2],
+            //         start = 0,
+            //         end = A.llt.length / 3;
                     
-                P.bad = [];
-                for (const t of bst) {
-                    const i = binarySearch(time, t, start, end);
-                    if (i) P.bad.push(i);
-                    start = i;
-               } 
-            }
+            //     P.bad = [];
+            //     for (const t of bst) {
+            //         const i = binarySearch(time, t, start, end);
+            //         if (i) P.bad.push(i);
+            //         start = i;
+            //    } 
+            // }
 
             // Send results back to main thread
             projected[id] = P;
@@ -115,11 +115,11 @@ function binarySearch(map, x, start, end) {
         return binarySearch(map, x, mid+1, end); 
 } 
 
-function transformSimplify(llt, smoothFactor, transform=null) {
+function transformSimplify(streamData, smoothFactor, transform=null) {
 
     // console.time("simplify-project");
     P = Simplifier.simplify(
-        llt,
+        streamData,
         smoothFactor,
         transform
     );
@@ -151,6 +151,22 @@ Simplifier = {
         Adapted from V. Agafonkin's simplify.js implementation of
         Douglas-Peucker simplification algorithm
     */
+
+    simplify: function(points, tolerance, transform=null) {
+
+        const sqTolerance = tolerance * tolerance;
+        this.transform = transform || p => p;
+
+        // console.time("RDsimp");
+        [pointsBuf, n] = this.simplifyRadialDist(points, sqTolerance);
+        // console.timeEnd("RDsimp");
+        // console.log(`n = ${points.length}`)
+        // console.time("DPsimp")
+        points = this.simplifyDouglasPeucker(pointsBuf, n, sqTolerance);
+        // console.timeEnd("DPsimp");
+
+        return points;
+    },
 
     // square distance between 2 points
     getSqDist: function(p1, p2) {
@@ -188,39 +204,58 @@ Simplifier = {
 
         return dx * dx + dy * dy;
     },
-    // rest of the code doesn't care about point format
 
-    // basic distance-based simplification with transform
-    simplifyRadialDist: function(pointsBuf, sqTolerance) {
-        const T = this.transform,
-              P = pointsBuf,
-              size = pointsBuf.length;
+    // basic distance-based simplification
+    //  where input is a generator. n is the
+    //  estimated size (in points) of the output
+    simplifyRadialDist: function(pointsGen, n, sqTolerance) {
+        let j;
+        const selectedIdx = new BitSet(),
+              newPoints = new Float32Array(2*n),
+              points = i => newPoints.subarray(j=2*i, j+2);
 
-        let newPoints = new Float32Array(pointsBuf.length),
-            tP = T( P.subarray(0,2) );
+        let firstPoint = pointsGen.next().value;
+        newPoints.set(firstPoint);
+        selectedIdx.add(0);
 
-        newPoints.set([tP[0], tP[1], P[2]], 0);
-        let prevPoint = newPoints.subarray(0,2),
-            point = newPoints.subarray(3, 5),
-            j = 3; 
+        let prevPoint = points(0),
+            i = 1; 
 
-        for (let i=3; i < size; i+=3) {
-            let i2 = i+2,
-                tP = T( P.subarray(i, i+2) );
-            newPoints.set([tP[0], tP[1], P[i+2]], j);
+        for (p of pointsGen) {
+            let point = points(i);
+            point.set(p);
             
             if (this.getSqDist(point, prevPoint) > sqTolerance) {
+                selectedIdx.add(i++);
                 prevPoint = point;
-                j += 3;
-                point = newPoints.subarray(j, j+2);
             }
         }
         
-        if (point[0] != 0 || point[1] != 0)
-            j += 3;
+        if (point[0] != prevPoint[0] || point[1] != prevPoint[1])
+            selectedIdx.add(i++)
 
-        // console.log(`reduction ${j / pointsBuf.length}`);
-        return [newPoints, j/3];
+        return {mask: selectedIdx, points: newPoints, count: i};
+    },
+
+     // simplification using Ramer-Douglas-Peucker algorithm
+    simplifyDouglasPeucker: function(points, n, sqTolerance) {
+        let bitSet = new BitSet(), z;
+
+        bitSet.add(0);
+        bitSet.add(n-1);
+
+        this.simplifyDPStep(points, 0, n-1, sqTolerance, bitSet);
+
+        const newPoints = new Float32Array(2*bitSet.size()),
+              point = i => points.subarray(z=2*i, z+2);
+        
+        let j = 0;
+        bitSet.forEach(i => {
+            newPoints.set(point(i), j);
+            j += 2;
+        });
+
+        return newPoints
     },
 
     simplifyDPStep: function(points, first, last, sqTolerance, bitSet) {
@@ -250,50 +285,6 @@ Simplifier = {
             if (last - index > 1) 
                 this.simplifyDPStep(points, index, last, sqTolerance, bitSet);
         }
-    },
-
-    // simplification using Ramer-Douglas-Peucker algorithm
-    simplifyDouglasPeucker: function(points, n, sqTolerance) {
-        // const n = points.length / 3;
-
-        let bitSet = new BitSet();
-
-        bitSet.add(0);
-        bitSet.add(n-1);
-
-        this.simplifyDPStep(points, 0, n-1, sqTolerance, bitSet);
-
-        const newPoints = new Float32Array(3*bitSet.size());
-        
-        let j = 0;
-        bitSet.forEach(idx => {
-            const i = 3 * idx,
-                  point = points.subarray(i, i+3);
-            newPoints.set(point, j);
-            j += 3;
-        });
-
-        return newPoints
-    },
-
-    simplify: function(points, tolerance, transform=null) {
-
-        const sqTolerance = tolerance * tolerance;
-        this.transform = transform || this.transform;
-
-        // console.time("RDsimp");
-        [pointsBuf, n] = this.simplifyRadialDist(points, sqTolerance);
-        // console.timeEnd("RDsimp");
-        // console.log(`n = ${points.length}`)
-        // console.time("DPsimp")
-        points = this.simplifyDouglasPeucker(pointsBuf, n, sqTolerance);
-        // console.timeEnd("DPsimp");
-
-        return points;
-    },
-
-    transform: function(point) {
-        return point;
     }
 };
 
@@ -306,30 +297,39 @@ CRS = {
     EARTH_RADIUS: 6378137,
     RAD: Math.PI / 180,
 
-    makeTransformation: function(zoom) {
-        const S = 0.5 / (Math.PI * this.EARTH_RADIUS),
-              A = S, B = 0.5, C = -S, D = 0.5,
-              scale = 1 << (8 + zoom);    
-        
-        return (x,y)  => {
-            const Tx = scale * (A * x + B),
-                  Ty = scale * (C * y + D);
-            return [Tx, Ty]
-        };
-    },
-
-    makeProjection: function(zoom) {
+    // This projects LatLng coordinates onto a rectangular grid 
+    Projection: function() {
         const max = this.MAX_LATITUDE,
               R = this.EARTH_RADIUS,
               rad = this.RAD,
-              T = this.makeTransformation(zoom);
+              p_out = new Float32Array(2);
 
         return latlngpt => {
             const lat = Math.max(Math.min(max, latlngpt[0]), -max),
-                  sin = Math.sin(lat * rad),
-                  x = R * latlngpt[1] * rad,
-                  y = R * Math.log((1 + sin) / (1 - sin)) / 2;
-            return T(x,y)
+                  sin = Math.sin(lat * rad);
+            p_out[0] = R * latlngpt[1] * rad;
+            p_out[1] = R * Math.log((1 + sin) / (1 - sin)) / 2;
+            return p_out
         };
+    },
+
+    // This scales distances between points to a given zoom level
+    Transformation: function(zoom) {
+        const S = 0.5 / (Math.PI * this.EARTH_RADIUS),
+              A = S, B = 0.5, C = -S, D = 0.5,
+              scale = 1 << (8 + zoom),
+              p_out = new Float32Array(2);    
+        
+        return (p_in)  => {
+            p_out[0] = scale * (A * p_in[0] + B);
+            p_out[1] = scale * (C * p_in[1] + D);
+            return p_out
+        };
+    },
+
+    makePT(zoom) {
+        const P = this.Projection(),
+              T = this.Transformation(zoom);
+        return llpt => T(P(llpt));
     }
 };

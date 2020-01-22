@@ -111,7 +111,7 @@ BitSet.prototype.clear = function() {
 // Set the bit at index to false
 BitSet.prototype.remove = function(index) {
   this.resize(index);
-  this.words[index  >>> 5] &= ~(1 << index);
+  this.words[index >>> 5] &= ~(1 << index);
 };
 
 // Return true if no bit is set
@@ -232,6 +232,48 @@ BitSet.prototype.imap = function*(fnc) {
     while (w != 0) {
       let t = w & -w;
       yield fnc((k << 5) + this.hammingWeight((t - 1) | 0));
+      w ^= t;
+    }
+  }
+};
+
+// retrieve the i-th set bit
+//  (the i-th element of this set) 
+BitSet.prototype.subset = function(otherbitmap) {
+  const idxGen = otherbitmap.imap();
+  let c = this.words.length,
+      next = idxGen.next().value,
+      i = 0;
+
+  for (let k = 0; k < c; ++k) {
+    let w =  this.words[k];
+    while (w != 0) {
+      let t = w & -w;
+      if (i++ == next)
+        next = idxGen.next().value;
+      else
+        this.remove((k << 5) + this.hammingWeight((t - 1) | 0))  
+      w ^= t;
+    }
+  }
+};
+
+BitSet.prototype.new_subset = function(otherbitmap) {
+  const idxGen = otherbitmap.imap(),
+        newSet = Object.create(BitSet.prototype);
+
+  let c = this.words.length,
+      next = idxGen.next().value,
+      i = 0;
+
+  for (let k = 0; k < c; ++k) {
+    let w =  this.words[k];
+    while (w != 0) {
+      let t = w & -w;
+      if (i++ == next) {
+        newSet.add((k << 5) + this.hammingWeight((t - 1) | 0));
+        next = idxGen.next().value;
+      }
       w ^= t;
     }
   }
