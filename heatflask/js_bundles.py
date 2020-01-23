@@ -33,13 +33,13 @@ bundles = {
         ),
         # un-minified dependencies
         flask_assets.Bundle(
-            # 'js/Polyline.encoded.js',
             'js/L.Control.Window.js',
             'js/leaflet-providers.js',
             'js/leaflet-image.js',  # Tom MacWright: https://github.com/mapbox/leaflet-image
             'js/leaflet-areaselect.js',
             'js/easy-button.js',
-            'js/BitSet.js',
+            'js/L.SwipeSelect.js',
+            'js/L.BoxHook.js',
             # filters=["babel", "rjsmin"],
             output="gen/build/non-compiled-dependencies.js"
         ),
@@ -55,14 +55,15 @@ bundles = {
         '../dotLayerWorker.js',
         'js/BitSet.js',
         'js/Codecs.js',
+        "js/MapUtil.js",
         output="gen/dotLayer.worker.js"
     ),
 
     "app_specific_js": flask_assets.Bundle(  # Heatflask-specific code
-        'js/Codecs.js',
         'js/appUtil.js',
-        'js/L.SwipeSelect.js',
-        'js/L.BoxHook.js',
+        'js/BitSet.js',
+        'js/Codecs.js',
+        "js/MapUtil.js",
         '../DotLayer.js',
         '../heatflask.js',
         # filters=["babel", 'rjsmin'],

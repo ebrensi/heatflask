@@ -180,8 +180,8 @@ function doneSelecting(obj){
 map.on("boxhookend", doneSelecting);
 
 
-var selectControl = new L.SwipeSelect(options={}, doneSelecting=doneSelecting),
-    selectButton_states = [
+const selectControl = new L.SwipeSelect(options={}, doneSelecting=doneSelecting),
+      selectButton_states = [
         {
             stateName: 'not-selecting',
             icon: 'fa-object-group',
@@ -209,7 +209,7 @@ var selectControl = new L.SwipeSelect(options={}, doneSelecting=doneSelecting),
 
 
 // Capture button
-let capture_button_states = [
+const capture_button_states = [
     {
         stateName: 'idle',
         icon: 'fa-video-camera',
@@ -902,34 +902,29 @@ function renderLayers(query={}) {
             return;
         }
 
-        A.data = {
-            time: StreamRLE.transcode2CompressedBuf(A.time),
-            latLng: Polyline.decode2Buf(A.polyline, A.n)
-        }
-        
-        A.id = A._id;
-        A.tsLoc = new Date((tup[0] + tup[1]*3600) * 1000);
-        A.UTCtimestamp = tup[0];  
-        A.bounds = L.latLngBounds(A.bounds.SW, A.bounds.NE);
-
-        delete A.summary_polyline;
-        delete A.polyline;
-        delete A.time;
-        delete A._id;
-        delete A.ts;
-        delete A.n;
-
         // only add A to appState.items if it isn't already there
-        if (!(A.id in appState.items)) {
-            if (!A.type) {
+        if (!(A._id in appState.items)) {
+            if (!A.type)
                 return;
-            }
 
             let typeData = ATYPE_MAP[A.type.toLowerCase()];
             if  (!typeData) {
                 typeData = ATYPE_MAP["workout"];
             }
             appState.items[A.id] = Object.assign(A, typeData);
+
+            let tup = A.ts;
+            delete A.ts;
+
+            A.id = A._id;
+            delete A._id;
+
+            delete A.summary_polyline;
+
+            A.tsLoc = new Date((tup[0] + tup[1]*3600) * 1000);
+            A.UTCtimestamp = tup[0];  
+            A.bounds = L.latLngBounds(A.bounds.SW, A.bounds.NE);
+
             DotLayer.addItem(A);
         }
 

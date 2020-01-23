@@ -18,7 +18,7 @@ L.DotLayer = L.Layer.extend( {
 
     options: {
         debug: true,
-        numWorkers: null,
+        numWorkers: 0,
         startPaused: false,
         showPaths: true,
         colorAll: true,
@@ -85,10 +85,6 @@ L.DotLayer = L.Layer.extend( {
         } else {
             console.log("This browser apparently doesn\'t support web workers");
         }
-    },
-
-    WorkerPool:  {
-        //
     },
 
     UTCnowSecs: function() {
@@ -248,8 +244,6 @@ L.DotLayer = L.Layer.extend( {
             this._dotCtx.shadowOffsetY = 0;
             this._dotCtx.shadowBlur = 0;
         }
-
-        // this._calibrate();
     },
 
     _calibrate: function() {
@@ -270,8 +264,6 @@ L.DotLayer = L.Layer.extend( {
         
         this._zoom = this._map.getZoom(); 
         this._pxOffset = mapPanePos.subtract( pxOrigin );
-
-        // this._redraw(true);
     },
     //-------------------------------------------------------------
 
@@ -413,12 +405,41 @@ L.DotLayer = L.Layer.extend( {
 
     addItem: function(A) {
         this._items = this._items || {}
-        A.projected = {};
         this._items[ A.id ] = A;
+
+        let j;
+        A.projected = {};
+        const project = this._project = this._project || CRS.makePT(0),
+              pointBuf = new Float32Array(2*A.n),
+              points = i => pointBuf.subarray(j=2*i, j+2);
+
+        let i = 0;
+        for (const ll of Polyline.decode(A.polyline))
+            points(i++).set(project(ll))
+
+        A.data = {
+            time: StreamRLE.transcode2CompressedBuf(A.time),
+            pointBuf: pointBuf
+        }
         
-        msg = {addItems: {}};
-        msg.addItems[A.id] = {data: A.data};
-        this._postToWorker(msg, [A.data.latLng.buffer, A.data.time]);
+        let zoom = 12
+            zf = 2**zoom;
+        debugger;
+        let bitset = Simplifier.simplify(points, A.n, 1 / zf),
+            idx = bitset.array(Uint16Array);
+
+        let ppoint = i => pointBuf.subarray(j=2*i,j+2).map(c => zf*c);
+        
+        delete A.n;
+        delete A.polyline;
+        delete A.time;
+
+        
+        debugger;
+
+        // msg = {addItems: {}};
+        // msg.addItems[A.id] = A.data;
+        // this._postToWorker(msg, [A.data.latLng.buffer, A.data.time]);
         
     },
 
@@ -1201,3 +1222,4 @@ L.control.fps = function(options) {
 //         return toPoint(point).add(this._getMapPanePos());
 //     }
 // }
+
