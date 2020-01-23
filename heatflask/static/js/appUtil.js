@@ -15,7 +15,7 @@ function isMobileDevice() {
 
 //--------------------------------
 Number.prototype.pad = function(size) {
-  var s = String(this);
+  let s = String(this);
   while (s.length < (size || 2)) {s = "0" + s;}
   return s;
 }
@@ -164,7 +164,7 @@ function fadeOut(el){
 
 // This is a list of tuples specifying properties of the rendered objects,
 //  such as path color, speed/pace in description.  others can be added
-ATYPE_SPECS = [
+const ATYPE_SPECS = [
         ["Ride", "speed", "#2B60DE"],  // Ocean Blue
         ["Run", "pace", "#FF0000"],    // Red
         ["Swim", "speed", "#00FF7F"],  // SpringGreen
@@ -197,9 +197,9 @@ ATYPE_SPECS = [
 ];
 
 
-let ATYPE_MAP = {};
+const ATYPE_MAP = {};
 for (let i=0; i < ATYPE_SPECS.length; i++) {
     let atype = ATYPE_SPECS[i];
 
     ATYPE_MAP[atype[0].toLowerCase()] = {"vtype": atype[1], "pathColor": atype[2]};
-}
+};

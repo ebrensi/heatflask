@@ -428,8 +428,30 @@ L.DotLayer = L.Layer.extend( {
         let bitset = Simplifier.simplify(points, A.n, 1 / zf),
             idx = bitset.array(Uint16Array);
 
-        let ppoint = i => pointBuf.subarray(j=2*i,j+2).map(c => zf*c);
+        // in reality we won't multiply zf until necessary
+        let ppoint = i => pointBuf.subarray(j=2*idx[i],j+2).map(c => zf*c);
         
+        let ppoints = bitset.imap(i => pointBuf.subarray(j=2*i,j+2).map(c => zf*c));
+
+        const time = StreamRLE.decodeCompressedBuf(A.time);
+        i = 0; j=0;
+        let t;
+        const times = new Uint16Array(bitset.size());
+        bitset.forEach(idx => {
+            while (i++ < idx)
+                t = time.next();
+            times[j++] = t.value;
+        });
+
+        iterTime = function*(bitset, RLEstream) {
+            const stream = StreamRLE.decodeCompressedBuf(RLEstream);
+            bitset.forEach(idx => {
+                while (i++ < idx)
+                    s = stream.next();
+                yield s.value;
+            });
+        }
+
         delete A.n;
         delete A.polyline;
         delete A.time;

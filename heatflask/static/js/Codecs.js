@@ -70,8 +70,6 @@ const Polyline = {
 
             yield latLng;
         }
-
-        return coordinates;
     },
 
     lengthInPoints: function(str) {

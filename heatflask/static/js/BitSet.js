@@ -196,8 +196,9 @@ BitSet.prototype.size = function() {
 };
 
 // Return an array with the set bit locations (values)
-BitSet.prototype.array = function() {
-  let answer = new Array(this.size());
+BitSet.prototype.array = function(ArrayConstructor) {
+  ArrayConstructor = ArrayConstructor || Array
+  let answer = new ArrayConstructor(this.size());
   let pos = 0 | 0;
   let c = this.words.length;
   for (let k = 0; k < c; ++k) {
@@ -256,6 +257,7 @@ BitSet.prototype.subset = function(otherbitmap) {
       w ^= t;
     }
   }
+  return this
 };
 
 BitSet.prototype.new_subset = function(otherbitmap) {
@@ -277,6 +279,7 @@ BitSet.prototype.new_subset = function(otherbitmap) {
       w ^= t;
     }
   }
+  return newSet
 };
 
 // Creates a copy of this bitmap
@@ -502,10 +505,3 @@ BitSet.prototype.union_size = function(otherbitmap) {
   }
   return answer;
 };
-
-
-
-
-///////////////
-
-//module.exports = BitSet;
