@@ -78,9 +78,6 @@ L.DotLayer = L.Layer.extend( {
                         ts: performance.now()}
                      );
                 }
-
-                if (items)
-                    this.addItems(items)
             }
         } else {
             console.log("This browser apparently doesn\'t support web workers");
@@ -127,6 +124,37 @@ L.DotLayer = L.Layer.extend( {
             L.DomUtil.addClass( this._debugCanvas, "leaflet-zoom-" + ( zoomAnimated ? "animated" : "hide" ) );
             map._panes.overlayPane.appendChild( this._debugCanvas );
         }
+
+        this._state = {
+            pxBounds: new Float32Array(4),
+            llBounds: new Float32Array(4),
+            map: this._map,
+            project; this._project,
+            update: function() {
+                const m = this.map;
+
+                this.zoom = m.getZoom();
+                this.size = m.getSize();
+                this.center = m.getCenter();
+                this.mapPanePos = m._getMapPanePos();
+                this.pxOrigin = m.getPixelOrigin();
+                
+                const llb = m.getBounds(),
+                      sw = llb._southWest,
+                      ne = llb._northEast;
+                // this.llBounds.set([sw.lat. sw.lng, ne.lat,ne.lng]);
+                // this.pxBounds.set(this.project(this.llBounds[0]), 0);
+                // this.pxBounds.set(this.project(this.llBounds[1]), 0);
+            },
+            overlaps: function(activityBounds) {
+                const llb = this.llBounds,
+                      ab = activityBounds,
+                      latOverlaps = (ab[0] > llb[0]) && (ab[0] < llb[2]),
+                      lngOverlaps = (ab[1] > llb[1]) && (sw2.lng < ne.lng);
+            }
+        };
+
+        this.DrawBox._state = this._state
 
         map.on( this.getEvents(), this );
         this._calibrate();
@@ -186,8 +214,6 @@ L.DotLayer = L.Layer.extend( {
 
         t0 = performance.now();
 
-        this._ready = false;
-
         this._itemsArray = Object.values(this._items);
         const n = this._itemsArray.length;
 
@@ -207,8 +233,10 @@ L.DotLayer = L.Layer.extend( {
             this._calibrate();
         }
 
-        this. _ready = true
-        this._paused || this.animate();
+        if (this._paused)
+            this.drawDotLayer();
+        else
+            this.animate();
     },
 
 
@@ -261,13 +289,22 @@ L.DotLayer = L.Layer.extend( {
 
         const mapPanePos = this._map._getMapPanePos(),
               pxOrigin = this._map.getPixelOrigin();
-        
-        this._zoom = this._map.getZoom(); 
-        this._pxOffset = mapPanePos.subtract( pxOrigin );
+
+        this._state.pxOffset = mapPanePos.subtract( pxOrigin );
+        this.DrawBox.reset();
     },
     //-------------------------------------------------------------
 
     // -------------------------------------------------------------------
+
+    getllBounds: function() {
+        const ll = this._map.getBounds();
+
+    },
+
+    getPxBounds: function() {
+
+    },
 
     _overlaps: function(mapBounds, activityBounds) {
         let sw = mapBounds._southWest,
@@ -291,8 +328,8 @@ L.DotLayer = L.Layer.extend( {
     },
 
     drawPxBounds: function() {
-        const b = this._pxBounds,
-              o = this._pxOffset,
+        const b = this._state.pxBounds,
+              o = this._state.pxOffset,
               x = b.min.x + o.x + 5,
               y = b.min.y + o.y + 5,
               w = b.max.x - b.min.x - 10,
@@ -303,7 +340,7 @@ L.DotLayer = L.Layer.extend( {
     },
 
     drawSeg: function(P1, P2) {
-        const o = this._pxOffset,
+        const o = this._state.pxOffset,
               p1 = [P1[0]+o.x, P1[1]+o.y],
               p2 = [P2[0]+o.x, P2[1]+o.y];
 
@@ -315,13 +352,8 @@ L.DotLayer = L.Layer.extend( {
     },
 
     _redraw: function(force, event) {
-        if ( !this._map )
+        if ( !this._map || !this._itemsArray)
             return;
-
-        const zoom = this._zoom;
-
-        if (this._map.getZoom() != zoom || !this._itemsArray || !this._ready)
-            return
         
         // prevent redrawing more often than necessary
         const ts = performance.now(),
@@ -329,44 +361,35 @@ L.DotLayer = L.Layer.extend( {
         if (!force && ts - lr < 200) return;
         this._lastRedraw = ts;
 
+        const S = this._state,
+              zoom = this._map.getZoom();
+
+        if (zoom != S.zoom) {
+            this._calibrate();
+            S.zoom = zoom;
+            S.zf = 2 ** zoom,
+            S.tol = 1 / S.zf;
+        }
+
         // Get map orientation
         const center = this._map.getCenter(),
               size = this._map.getSize();
 
         // prevent getting called if map position has not changed
         // and we have not been explicitly told to do so
-        if (!force && center == this._center && size == this._size)
+        if (!force && center == S.center && size == S.size)
             return
 
         // update state
-        this._zoom = zoom;
-        this._center = center;
-        this._size = size;
+        this._state.update();
 
-
-        this._calibrate();
-
-        // const pos = L.DomUtil.getPosition(this._map.getPanes().mapPane);
-        // if (pos) {
-        //   L.DomUtil.setPosition(this._dotCanvas, { x: -pos.x, y: -pos.y });
-        //   L.DomUtil.setPosition(this._lineCanvas, { x: -pos.x, y: -pos.y });
-        //   if (this.options.debug)
-        //     L.DomUtil.setPosition(this._debugCanvas, { x: -pos.x, y: -pos.y });
-        // }
-
-        const mapPanePos = this._map._getMapPanePos(),
-              pxOrigin = this._map.getPixelOrigin();
-        this._pxOffset = mapPanePos.subtract( pxOrigin );
-
-        const mapBounds = this._latLngBounds = this._map.getBounds(),
-              pxBounds = this._pxBounds = this._map.getPixelBounds(),
+        const mapBounds = S.llbounds = this._map.getBounds(),
+              pxBounds = S.pxBounds = this._map.getPixelBounds(),
               itemsArray = this._itemsArray,
               n = itemsArray.length,
               overlaps = this._overlaps,
-              inMapBounds = A => overlaps(mapBounds, A.bounds);
-
-        this.DrawBox._pxOffset = this._pxOffset;
-        this.DrawBox._pxBounds = pxBounds;
+              inMapBounds = A => overlaps(mapBounds, A.llbounds),
+              points = A => i => {let j; return A.px.subarray(j=2*i, j+2)};
 
         const toProject = this._toProject = (this._toProject || new BitSet()).clear(),
               itemsInView = this._itemMask = (this._itemMask || new BitSet()).clear();
@@ -377,87 +400,74 @@ L.DotLayer = L.Layer.extend( {
             if (!inMapBounds(A))
                 continue;
 
-            itemsInView.add(i);
-
-            if (!A.projected[zoom]) {
+            if (A.zoomed[zoom]) {
+                let mask = A.segMask = this.makeSegMask(A.px, null, A.segMask);
+                if (!mask.isEmpty())
+                    itemsInView.add(i);
+            
+            } else {
                 // prevent another instance of this function from
                 // doing this
-                A.projected[zoom] = {};
+                A.zoomed[zoom] = {};
                 toProject.add(i);
             }
         }
 
-        if (!toProject.isEmpty()) {
-            ids = Array.from(toProject.imap(i => itemsArray[i].id));
-            this._postToAllWorkers({ 
-                project: ids,
-                zoom: zoom,
-                smoothFactor: this.smoothFactor,
-                ttol: this.options.segment_ttol
-            });
+        if (this.options.drawPaths) {
+            this.drawPaths();
+            if (this._paused)
+                this.drawDotLayer();
         }
 
-        this.drawPaths();
-        if (this._paused)
-            this.drawDotLayer()
+        if (!toProject.isEmpty()) {
+            // ids = Array.from(toProject.imap(i => itemsArray[i].id));
+            // this._postToAllWorkers({ 
+            //     project: ids,
+            //     zoom: zoom,
+            //     smoothFactor: this.smoothFactor,
+            //     ttol: this.options.segment_ttol
+            // });
 
+            toProject.forEach(i => {
+                const A = this._itemsArray[i];
+
+                A.zoomed[zoom] = Simplifier.simplify(points(A), A.n, S.tol);
+                A.segMask = this.makeSegMask(A.px, null, A.segMask);
+                
+                if (!A.segMask.isEmpty())
+                    itemsInView.add(i);
+            });
+
+            if (this.options.drawPaths) {
+                this.drawPaths(toProject);
+                if (this._paused)
+                    this.drawDotLayer();
+            }
+        }        
     },
 
-    addItem: function(A) {
-        this._items = this._items || {}
-        this._items[ A.id ] = A;
+    addItem: function(id, polyline, times, llbounds, n) {
+        const A = {
+                id: parseInt(id),
+                llbounds: llbounds,
+                px: Polyline.decode2Buf(polyline, n),
+                time: StreamRLE.transcode2CompressedBuf(time),
+                zoomed: {}
+            };
 
-        let j;
-        A.projected = {};
-        const project = this._project = this._project || CRS.makePT(0),
-              pointBuf = new Float32Array(2*A.n),
-              points = i => pointBuf.subarray(j=2*i, j+2);
+        this._project = this._project || CRS.makePT(0);
+        this._items = this._items || {};
+        this._items[ id ] = A;
 
-        let i = 0;
-        for (const ll of Polyline.decode(A.polyline))
-            points(i++).set(project(ll))
-
-        A.data = {
-            time: StreamRLE.transcode2CompressedBuf(A.time),
-            pointBuf: pointBuf
-        }
-        
-        let zoom = 12
-            zf = 2**zoom;
-        debugger;
-        let bitset = Simplifier.simplify(points, A.n, 1 / zf),
-            idx = bitset.array(Uint16Array);
-
-        // in reality we won't multiply zf until necessary
-        let ppoint = i => pointBuf.subarray(j=2*idx[i],j+2).map(c => zf*c);
-        
-        let ppoints = bitset.imap(i => pointBuf.subarray(j=2*i,j+2).map(c => zf*c));
-
-        const time = StreamRLE.decodeCompressedBuf(A.time);
-        i = 0; j=0;
-        let t;
-        const times = new Uint16Array(bitset.size());
-        bitset.forEach(idx => {
-            while (i++ < idx)
-                t = time.next();
-            times[j++] = t.value;
-        });
-
-        iterTime = function*(bitset, RLEstream) {
-            const stream = StreamRLE.decodeCompressedBuf(RLEstream);
-            bitset.forEach(idx => {
-                while (i++ < idx)
-                    s = stream.next();
-                yield s.value;
-            });
-        }
-
-        delete A.n;
-        delete A.polyline;
-        delete A.time;
-
-        
-        debugger;
+        // let iterTime = function*(bitset, RLEstream) {
+        //     const stream = StreamRLE.decodeCompressedBuf(RLEstream);
+        //     bitset.forEach(idx => {
+        //         let s = stream.next();
+        //         while (i++ < idx)
+        //             s = stream.next();
+        //         yield s.value;
+        //     });
+        // }
 
         // msg = {addItems: {}};
         // msg.addItems[A.id] = A.data;
@@ -510,7 +520,7 @@ L.DotLayer = L.Layer.extend( {
     makeSegMask: function(pbuf, badSegs, oldSegmask) {
         const buflength = pbuf.length,
               nSegs = buflength / 3 - 1,
-              pxBounds = this._pxBounds,
+              pxBounds = this._state.pxBounds,
               contains = this._contains,
               drawBox = this.DrawBox,
               points = i => pbuf.subarray(j=3*i, j+2),

@@ -92,12 +92,11 @@ const Polyline = {
     decode2Buf: function(str, n, precision) {
         n = n || this.lengthInPoints(str);
         const buf = new Float32Array(2*n);
-            decoder = this.decode(str, precision);
+              decoder = this.decode(str, precision);
         
         let i = 0;
-        for (let latLng of decoder) {
-            buf.set(latLng, i++ << 1);
-        }
+        for (const latLng of decoder)
+            buf.set(latLng, 2*i++);
         return buf
     },
 
