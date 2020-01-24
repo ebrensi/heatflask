@@ -5,8 +5,10 @@ if (window.location.protocol == "https:") {
     } else {
       WS_SCHEME = "ws://";
     };
-    
-(function() {
+
+heatflask();
+
+function heatflask() {
     const SPEED_SCALE = 5.0,
           SEP_SCALE = {m: 0.14, b: 15.0},
           WEBSOCKET_URL = WS_SCHEME+window.location.host+"/data_socket";
@@ -696,12 +698,11 @@ if (window.location.protocol == "https:") {
             }
         }
 
+        DotLayer.reset();
+
         let num =  Object.keys(appState.items).length,
             msg2 = " " + msg + " " + num  + " activities rendered.";
-        $(".data_message").html(msg2);
-        DotLayer.reset();
-        // appState.paused || DotLayer.animate();
-       
+        $(".data_message").html(msg2);       
 
         // (re-)render the activities table
         atable.clear();
@@ -1172,5 +1173,4 @@ if (window.location.protocol == "https:") {
         renderLayers();
         preset_sync();
     });
-
-});
+};

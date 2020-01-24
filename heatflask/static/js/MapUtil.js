@@ -161,10 +161,10 @@ const CRS = {
     Transformation: function(zoom) {
         const S = 0.5 / (Math.PI * this.EARTH_RADIUS),
               A = S, B = 0.5, C = -S, D = 0.5,
-              scale = 2 ** (8 + zoom),
-              p_out = p_in;    
+              scale = 2 ** (8 + zoom);   
         
         return (p_in)  => {
+            const p_out = p_in;
             p_out[0] = scale * (A * p_in[0] + B);
             p_out[1] = scale * (C * p_in[1] + D);
             return p_out
