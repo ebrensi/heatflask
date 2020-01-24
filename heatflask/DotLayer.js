@@ -447,8 +447,6 @@ L.DotLayer = L.Layer.extend( {
         if ( !this._ready )
             return;
 
-        
-
         // prevent redrawing more often than necessary
         const ts = performance.now(),
               lr = this._lastRedraw;
@@ -460,13 +458,16 @@ L.DotLayer = L.Layer.extend( {
         const S = this.crs,
               zoom = this._map.getZoom();
 
-        if (zoom != S.zoom) {
+         // debugger;
+
+        // if (zoom != S.zoom) {
+        if (true) {
             this._calibrate();
-        }     
-        this._calibrate();   
-        S.update();
-        S.drawPxBounds(this._debugCtx);
+            S.update();  
+        }
         
+        S.drawPxBounds(this._debugCtx);
+
         const itemsArray = this._itemsArray,
               n = itemsArray.length,
               inMapBounds = A => S.overlaps(A.bounds);
@@ -481,7 +482,7 @@ L.DotLayer = L.Layer.extend( {
                 continue;
 
             if (A.zoomed[zoom]) {
-                let mask = A.segMask = this.makeSegMask(A.px, null, A.segMask);
+                let mask = A.segMask = this.makeSegMask(A);
                 if (!mask.isEmpty())
                     itemsInView.add(i);
             
@@ -494,7 +495,7 @@ L.DotLayer = L.Layer.extend( {
         }
 
         if (this.options.showPaths && itemsInView.difference_size(toProject)) {
-            drawBox.reset().clear(ctx).clear(this._debugCtx).clear(this._dotCtx);
+            this.DrawBox.reset().clear(this._lineCtx).clear(this._debugCtx).clear(this._dotCtx);
             this.drawPaths(itemsInView.new_difference(toProject));
             if (this._paused)
                 this.drawDotLayer();
