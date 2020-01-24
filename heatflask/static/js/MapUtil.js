@@ -19,7 +19,7 @@ const Simplifier = {
                 subset, idx.length, sqTolerance
             );
         
-        idxBitSet = idxBitSet.subset(idxBitSubset);
+        idxBitSet = idxBitSet.new_subset(idxBitSubset);
 
         return idxBitSet
     },

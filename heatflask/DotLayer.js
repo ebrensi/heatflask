@@ -124,11 +124,11 @@ L.DotLayer = L.Layer.extend( {
         drawPxBounds: function(ctx, pxBounds) {
             const b = pxBounds || this.pxBounds,
                   xmin = b[0], xmax = b[2], 
-                  ymin = b[3], ymax = b[1];
+                  ymin = b[3], ymax = b[1],
 
                   ul = this.px2Container([xmin, ymin]),
                   lr = this.px2Container([xmax, ymax]),
-                  x = ul[0] + 5
+                  x = ul[0] + 5,
                   y = ul[1] + 5,
                   w = lr[0] - ul[0] - 10,
                   h = lr[1] - ul[1] - 10;
@@ -477,8 +477,6 @@ L.DotLayer = L.Layer.extend( {
         for (let i=0; i<n; i++){
             const A = itemsArray[i];
             
-            debugger;
-
             if (!inMapBounds(A))
                 continue;
 
@@ -495,8 +493,9 @@ L.DotLayer = L.Layer.extend( {
             }
         }
 
-        if (this.options.showPaths) {
-            this.drawPaths();
+        if (this.options.showPaths && itemsInView.difference_size(toProject)) {
+            drawBox.reset().clear(ctx).clear(this._debugCtx).clear(this._dotCtx);
+            this.drawPaths(itemsInView.new_difference(toProject));
             if (this._paused)
                 this.drawDotLayer();
         }
@@ -516,13 +515,13 @@ L.DotLayer = L.Layer.extend( {
                 const A = this._itemsArray[i];
 
                 const idx = A.zoomed[zoom] = Simplifier.simplify(points(A), A.n, S.tol);
-                A.segMask = this.makeSegMask(A);
+                segMask = this.makeSegMask(A);
                 
-                if (!A.segMask.isEmpty())
+                if (!segMask.isEmpty())
                     itemsInView.add(i);
             });
 
-            if (this.options.drawPaths) {
+            if (this.options.showPaths) {
                 this.drawPaths(toProject);
                 if (this._paused)
                     this.drawDotLayer();
@@ -530,14 +529,15 @@ L.DotLayer = L.Layer.extend( {
         }        
     },
 
-    addItem: function(id, polyline, time, llBounds, n) {
+    addItem: function(id, polyline, pathColor, time, llBounds, n) {
         const A = {
                 id: parseInt(id),
                 bounds: null,
                 px: Polyline.decode2Buf(polyline, n),
                 time: StreamRLE.transcode2CompressedBuf(time),
                 zoomed: {},
-                n: n
+                n: n,
+                pathColor: pathColor
             };
         
         // convert latlng bounds to pixel bounds
@@ -613,21 +613,76 @@ L.DotLayer = L.Layer.extend( {
         }
     },
 
+    _points: function(A, idxSet) {
+        // the i-th point of our baseline set (projected to zoom-level 0)
+        function point(i){
+            let j;
+            return A.px.subarray(j=2*i, j+2)
+        };
+
+        if (idxSet)
+            return idxSet.imap( i => point(i) );
+        else
+            return function*() {
+                for (let i=0, len=A.px.length/2; i<len; i++)
+                    yield point(i)
+            }
+    },
+
+    points: function(A, zoom) {
+        if (zoom == 0) return this._points(A);
+
+        if (!zoom)
+            zoom = this.crs.zoom;
+
+        const idxSet = A.zoomed[zoom];
+        if (!idxSet) return;
+
+        return this._points(A, idxSet);
+    },
+
+    segments: function*(A, zoom, segMask) {
+        let points = this.points(A, zoom);
+        if (!segMask)
+            segMask = A.segMask;
+
+    
+        let j = 0, 
+            first = points.next(),
+            second;
+
+        for (i of segMask.imap()) {
+            while (j++ < i){
+                first = points.next();
+            }
+            second = points.next();
+            yield [first.value, second.value];
+            first = second;
+        }
+        // segMask.forEach(i => {
+        //     while (j++ < i){
+        //         first = points.next();
+        //     }
+        //     second = points.next();
+        //     yield [first.value, second.value];
+        //     first = second;
+        // });
+    },
+
     makeSegMask: function(A) {
         const pbuf = A.px,
               idxSet = A.zoomed[this.crs.zoom],
-              contains = this.crs.contains,
               drawBox = this.DrawBox,
               point = i => {let j; return pbuf.subarray(j=2*i, j+2)},
-              inBounds = i => {let p; return contains(p=point(i)) && drawBox.update(p)};
+              inBounds = p => this.crs.contains(p) && drawBox.update(p);
 
-        const mask = (A.segmask || new BitSet()).clear(),
-            inclusion = idxSet.imap(i => inBounds(i));        
-        
-        let pIn = inclusion.next().value,
+        const mask = (A.segMask || new BitSet()).clear(),
+              isIn = idxSet.imap(i => !!inBounds(point(i)));        
+
+        let pIn = isIn.next().value,
             s = 0;
 
-        for (const pnextIn of inclusion) {
+        for (const pnextIn of isIn) {
             if (pIn || pnextIn)
                 mask.add(s);
             pIn = pnextIn;
@@ -637,27 +692,22 @@ L.DotLayer = L.Layer.extend( {
         if (A.badSegs)
             for (s of A.badSegs)
                 mask.remove(s)
-        return mask
+        return A.segMask = mask
     },
 
-    _drawPath: function(ctx, pointsBuf, segMask, pxOffset, lineWidth, strokeStyle, opacity, isolated=false) {
-        const ox = pxOffset.x,
-              oy = pxOffset.y,
-              seg = i => pointsBuf.subarray(j=3*i, j+6);
-
+    _drawPath: function(ctx, A, lineWidth, strokeStyle, opacity, isolated=false) {
+        
         if (isolated)
             ctx.beginPath();
- 
-        segMask.forEach( i => {
-            const s = seg(i),
-                  p1x = s[0] + ox, p1y = s[1] + oy,
-                  p2x = s[3] + ox, p2y = s[4] + oy;
+
+        for (const [px1, px2] of this.segments(A)) {
+            const p1 = this.crs.px2Container(px1),
+                  p2 = this.crs.px2Container(px2);
 
             // draw segment
-            ctx.moveTo(p1x, p1y);
-            ctx.lineTo(p2x, p2y);
-
-        });
+            ctx.moveTo(p1[0], p1[1]);
+            ctx.lineTo(p2[0], p2[1]);
+        }
 
         if (isolated) {
             ctx.globalAlpha = opacity;
@@ -665,7 +715,7 @@ L.DotLayer = L.Layer.extend( {
             ctx.strokeStyle = strokeStyle;
             ctx.stroke();
             if (this.options.debug)
-                drawBox.clear(this._debugCtx).draw(this._debugCtx); 
+                this.DrawBox.clear(this._debugCtx).draw(this._debugCtx); 
         }
     },
 
@@ -674,56 +724,37 @@ L.DotLayer = L.Layer.extend( {
     //  This is more efficient than calling drawPath repeatedly
     //   for each activity, since we group strokes together.
     drawPaths: function(itemsToDraw) {
-        if (!(itemsToDraw || this._itemMask) || !this._map)
-            return
-        // console.time("drawPaths")
+        itemsToDraw = itemsToDraw || this._itemMask;
 
-        const canvas = this._lineCanvas,
-              ctx = this._lineCtx,
-              zoom = this._zoom,
-              drawBox = this.DrawBox,
-              itemsArray = this._itemsArray,
-              pxOffset = this._pxOffset;
-       
-        if (!itemsToDraw) {
-            itemsToDraw = this._itemMask.clone();
-            drawBox.reset().clear(ctx).clear(this._debugCtx).clear(this._dotCtx);
-        }
-    
+        if (!this._map || !itemsToDraw || itemsToDraw.isEmpty())
+            return
+
+        const ctx = this._lineCtx;
+        
         // const query = (status=="selected")? A => !!A.highlighted : A => !A.highlighted;
 
         // for (let [status, sfilter] of Object.entries(this._emphFilters)) {
         //     ctx.lineWidth = this.options[status].pathWidth;
         //     ctx.globalAlpha = this.options[status].pathOpacity;
 
+        const toDraw = itemsToDraw.clone();
 
-        for (const [color, cfilter] of Object.entries(this._colorFilters)) {
-             // this._filter.intersect(sfilter);
+        for (const [color, withThisColor] of Object.entries(this._colorFilters)) {
             
-            if (cfilter.isEmpty() || !itemsToDraw.intersection_size(cfilter))
+            if (!toDraw.intersection_size(withThisColor))
                 continue;
 
-            itemsToDraw.intersection(cfilter);
-
+            toDraw.intersection(withThisColor);
             ctx.strokeStyle = color;
+
             ctx.beginPath();
-            
-            itemsToDraw.forEach( i => {
-                const A = itemsArray[i];
-                if ( (A.projected[zoom] || {}).P ) {
-                    const P = A.projected[zoom];
-                    A.segMask = this.makeSegMask(P.P, P.bad, A.segMask);
-
-                    this._drawPath(ctx, P.P, A.segMask, pxOffset);
-                }
-            });
-
+            toDraw.forEach( i => this._drawPath(ctx, this._itemsArray[i]));
             ctx.stroke();
         } 
 
         // console.timeEnd("drawPaths");
         if (this.options.debug)
-            drawBox.draw(this._debugCtx);        
+            this.DrawBox.draw(this._debugCtx);        
     },
 
     // --------------------------------------------------------------------

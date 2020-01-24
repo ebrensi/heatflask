@@ -916,7 +916,6 @@ function heatflask() {
                     typeData = ATYPE_MAP["workout"];
                 }
                 appState.items[A.id] = Object.assign(A, typeData);
-
                 let tup = A.ts;
                 A.id = A._id;
 
@@ -924,7 +923,7 @@ function heatflask() {
                 A.UTCtimestamp = tup[0];  
                 A.bounds = L.latLngBounds(A.bounds.SW, A.bounds.NE);
 
-                DotLayer.addItem(A.id, A.polyline, A.time, A.bounds, A.n);
+                DotLayer.addItem(A.id, A.polyline, A.pathColor, A.time, A.bounds, A.n);
                 delete A._id;
                 delete A.summary_polyline;
                 delete A.ts;

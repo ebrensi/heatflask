@@ -263,6 +263,7 @@ BitSet.prototype.subset = function(otherbitmap) {
 BitSet.prototype.new_subset = function(otherbitmap) {
   const idxGen = otherbitmap.imap(),
         newSet = Object.create(BitSet.prototype);
+  newSet.words = [];
 
   let c = this.words.length,
       next = idxGen.next().value,
