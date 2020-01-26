@@ -5,7 +5,14 @@
 */
 'use strict';
 
-L.DotLayer = L.Layer.extend( {
+/*  Note the consistent use of string literals for object
+ *  properties.  We do this for external objects so that
+ *  Closure-compiler won't change the names.
+ */
+
+const Leaflet = window["L"];
+
+Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
     _pane: "shadowPane",
     two_pi: 2 * Math.PI,
@@ -15,63 +22,70 @@ L.DotLayer = L.Layer.extend( {
     C2: 200.0,
     dotScale: 1.0,
 
-    options: {
-        debug: true,
-        numWorkers: 0,
-        startPaused: false,
-        showPaths: true,
-        colorAll: true,
-        segment_ttol: 30,
-        normal: {
-            dotColor: "#000000",
-            dotOpacity: 0.8,
+    "options": {
+        "debug": true,
+        "numWorkers": 0,
+        "startPaused": false,
+        "showPaths": true,
+        "normal": {
+            "dotColor": "#000000",
+            "dotOpacity": 0.8,
 
-            pathColor: "#000000",
-            pathOpacity: 0.7,
-            pathWidth: 1,
+            "pathColor": "#000000",
+            "pathOpacity": 0.7,
+            "pathWidth": 1,
         },
 
-        selected: {
-            dotColor: "#FFFFFF",
-            dotOpacity: 0.9,
-            dotStrokeColor: "#FFFFFF",
-            dotStrokeWidth: 0.5,
+        "selected": {
+            "dotColor": "#FFFFFF",
+            "dotOpacity": 0.9,
+            "dotStrokeColor": "#FFFFFF",
+            "dotStrokeWidth": 0.5,
 
-            pathColor: "#000000",
-            pathOpacity: 0.8,
-            pathWidth: 1,
+            "pathColor": "#000000",
+            "pathOpacity": 0.8,
+            "pathWidth": 1,
         },
 
-        dotShadows: {
-            enabled: true,
-            x: 0, y: 2,
-            blur: 5,
-            color: "#000000"
+        "dotShadows": {
+            "enabled": true,
+            "x": 0, "y": 5,
+            "blur": 5,
+            "color": "#000000"
         }
     },
 
     crs: {
 
-        initialize: function(map) {
+        initialize: function(map, fps_display) {
             this.map = map;
             this.latLng2px = CRS.makePT(0);
             this.update();
+            this.fps_display = fps_display;
+        },
+
+        getMapSize: function() {
+            return this.map["getSize"]();
+        },
+
+        tol: function(zoom) {
+            return zoom? 1/(2**zoom) : this._zf 
         },
 
         // called on zoom change
         update: function() {
             const m = this.map;
             
-            this.zoom = m.getZoom();
+            this.size = this.getMapSize();
+            this.zoom = m["getZoom"]();
             this._zf = 2 ** this.zoom;
-            this.tol = 1 / (2 ** this.zoom);
-            this.pxBounds = this.latLng2pxBounds(m.getBounds());
+            this.pxBounds = this.latLng2pxBounds(m["getBounds"]());
 
             // these are zoom-adjusted already
-            const pxOrigin = m.getPixelOrigin(),
-                  mapPanePos = m._getMapPanePos();
+            const pxOrigin = m["getPixelOrigin"](),
+                  mapPanePos = m["_getMapPanePos"]();
 
-            this.pxOffset = mapPanePos.subtract(pxOrigin);
+            this.pxOffset = mapPanePos["subtract"](pxOrigin);
         },
 
         px2Container: function(px) {
@@ -89,8 +103,8 @@ L.DotLayer = L.Layer.extend( {
             if (!pxObj)
                 pxObj = new Float32Array(4);
 
-            const sw = llBounds._southWest,
-                  ne = llBounds._northEast,
+            const sw = llBounds["_southWest"],
+                  ne = llBounds["_northEast"],
                   project = this.latLng2px;
             
             pxObj[0] = sw.lat;  // xmin
@@ -144,8 +158,6 @@ L.DotLayer = L.Layer.extend( {
      *   of the animation. 
      */  
     DrawBox: {
-        _dim: undefined,
-        _map: null,
         _pad: 25,
 
         initialize: function(crs) {
@@ -171,7 +183,7 @@ L.DotLayer = L.Layer.extend( {
         },
 
         defaultRect: function() {
-            const mapSize = this.crs.map.getSize();
+            const mapSize = this.crs.getMapSize();
             return {x:0, y:0, w: mapSize.x, h: mapSize.y}
         },
 
@@ -180,7 +192,7 @@ L.DotLayer = L.Layer.extend( {
             const d = this._dim;
             if (!d) return this.defaultRect();
             const c = this.crs,
-                  mapSize = c.map.getSize(),
+                  mapSize = c.size,
                   min = c.px2Container([d.xmin, d.ymin]),
                   max = c.px2Container([d.xmax, d.ymax]),
                   xmin = ~~Math.max(min[0] - pad, 0),
@@ -213,7 +225,7 @@ L.DotLayer = L.Layer.extend( {
     // -- initialized is called on prototype
     initialize: function( items, options ) {
         this._timeOffset = 0;
-        L.setOptions( this, options );
+        Leaflet["setOptions"]( this, options );
         this._paused = this.options.startPaused;
         this._timePaused = this.UTCnowSecs();
 
@@ -232,7 +244,7 @@ L.DotLayer = L.Layer.extend( {
             if (n) {
                 this._workers = [];
                 for (let i=0; i<n; i++) {
-                    const worker = new Worker(DOTLAYER_WORKER_URL);
+                    const worker = new Worker(window["DOTLAYER_WORKER_URL"]);
                     worker.onmessage = this._handleWorkerMessage.bind(this);
                     this._workers.push(worker);
                     worker.postMessage({
@@ -253,43 +265,48 @@ L.DotLayer = L.Layer.extend( {
     //-------------------------------------------------------------
     onAdd: function( map ) {
         this._map = map;
+        let size = map["getSize"](),
+            zoomAnimated = map["options"]["zoomAnimation"] && Leaflet["Browser"]["any3d"];
 
-        let size = this._map.getSize(),
-            zoomAnimated = this._map.options.zoomAnimation && L.Browser.any3d;
+        const DomUtil = Leaflet["DomUtil"],
+              create = DomUtil["create"],
+              addClass = DomUtil["addClass"],
+              panes = map["_panes"],
+              appendChild = pane => obj => panes[pane]["appendChild"](obj);
 
         // dotlayer canvas
-        this._dotCanvas = L.DomUtil.create( "canvas", "leaflet-layer" );
-        this._dotCanvas.width = size.x;
-        this._dotCanvas.height = size.y;
-        this._dotCtx = this._dotCanvas.getContext( "2d" );
-        L.DomUtil.addClass( this._dotCanvas, "leaflet-zoom-" + ( zoomAnimated ? "animated" : "hide" ) );
-        map._panes.shadowPane.style.pointerEvents = "none";
-        map._panes.shadowPane.appendChild( this._dotCanvas );
+        this._dotCanvas = create( "canvas", "leaflet-layer" );
+        this._dotCanvas["width"] = size["x"];
+        this._dotCanvas["height"] = size["y"];
+        this._dotCtx = this._dotCanvas["getContext"]( "2d" );
+        addClass( this._dotCanvas, "leaflet-zoom-" + ( zoomAnimated ? "animated" : "hide" ) );
+        panes["shadowPane"]["style"]["pointerEvents"] = "none";
+        appendChild("shadowPane")( this._dotCanvas );
 
         // create Canvas for polyline-ish things
-        this._lineCanvas = L.DomUtil.create( "canvas", "leaflet-layer" );
-        this._lineCanvas.width = size.x;
-        this._lineCanvas.height = size.y;
-        this._lineCtx = this._lineCanvas.getContext( "2d" );
-        this._lineCtx.lineCap = "round";
-        this._lineCtx.lineJoin = "round";
-        L.DomUtil.addClass( this._lineCanvas, "leaflet-zoom-" + ( zoomAnimated ? "animated" : "hide" ) );
-        map._panes.overlayPane.appendChild( this._lineCanvas );
+        this._lineCanvas = create( "canvas", "leaflet-layer" );
+        this._lineCanvas["width"] = size["x"];
+        this._lineCanvas["height"] = size["y"];
+        this._lineCtx = this._lineCanvas["getContext"]( "2d" );
+        this._lineCtx["lineCap"] = "round";
+        this._lineCtx["lineJoin"] = "round";
+        addClass( this._lineCanvas, "leaflet-zoom-" + ( zoomAnimated ? "animated" : "hide" ) );
+        appendChild("overlayPane")( this._lineCanvas );
 
         if (this.options.debug) {
             // create Canvas for debugging canvas stuff
-            this._debugCanvas = L.DomUtil.create( "canvas", "leaflet-layer" );
-            this._debugCanvas.width = size.x;
-            this._debugCanvas.height = size.y;
-            this._debugCtx = this._debugCanvas.getContext( "2d" );
-            L.DomUtil.addClass( this._debugCanvas, "leaflet-zoom-" + ( zoomAnimated ? "animated" : "hide" ) );
-            map._panes.overlayPane.appendChild( this._debugCanvas );
+            this._debugCanvas = create( "canvas", "leaflet-layer" );
+            this._debugCanvas["width"] = size["x"];
+            this._debugCanvas["height"] = size["y"];
+            this._debugCtx = this._debugCanvas["getContext"]( "2d" );
+            addClass( this._debugCanvas, "leaflet-zoom-" + ( zoomAnimated ? "animated" : "hide" ) );
+            appendChild("overlayPane")( this._debugCanvas );
         }
 
-        this.crs.initialize(this._map);
+        this.crs.initialize(map);
         this.DrawBox.initialize(this.crs);
 
-        map.on( this.getEvents(), this );
+        map["on"]( this.getEvents(), this );
         this._calibrate();
     },
 
@@ -298,8 +315,8 @@ L.DotLayer = L.Layer.extend( {
 
         const events = {
             // movestart: loggit,
-            // move: e => this._redraw(false, e),
-            moveend: e => this._redraw(true, e),
+            move: this.onMove,
+            moveend: this._redraw,
             // zoomstart: loggit,
             // zoom: loggit,
             // zoomend: this._calibrate,
@@ -307,59 +324,72 @@ L.DotLayer = L.Layer.extend( {
             resize: this._onLayerResize
         };
 
-        if ( this._map.options.zoomAnimation && L.Browser.any3d ) {
-            events.zoomanim =  this._animateZoom;
+        if ( this._map["options"]["zoomAnimation"] && Leaflet["Browser"]["any3d"] ) {
+            events["zoomanim"] =  this._animateZoom;
         }
 
         return events;
     },
 
     addTo: function( map ) {
-        map.addLayer( this );
+        map["addLayer"]( this );
         return this;
     },
 
     //-------------------------------------------------------------
     onRemove: function( map ) {
-        this.onLayerWillUnmount && this.onLayerWillUnmount(); // -- callback
+        const panes = map["_panes"],
+              removeChild = pane => panes[pane]["removeChild"];
 
-        map._panes.shadowPane.removeChild( this._dotCanvas );
+        removeChild( this._dotCanvas );
         this._dotCanvas = null;
 
-        map._panes.overlayPane.removeChild( this._lineCanvas );
+        removeChild( this._lineCanvas );
         this._lineCanvas = null;
 
         if (this.options.debug) {
-            map._panes.overlayPane.removeChild( this._debugCanvas );
+            removeChild( this._debugCanvas );
             this._debugCanvas = null;
         }
 
-        map.off( this.getEvents(), this );
+        map["off"]( this.getEvents(), this );
     },
 
     // --------------------------------------------------------------------
 
     // Call this function after items are added or reomved
     reset: function() {
-        if (!this._map || !this._items)
+        if (!this._items)
             return
 
         this._ready = false;
 
-        t0 = performance.now();
-
         this._itemsArray = Object.values(this._items);
+
         const n = this._itemsArray.length;
 
         if (n) {
 
             this.setDotColors();
 
-            const pathColors = new Set(this._itemsArray.map(A => A.pathColor));
-            this._colorFilters = {};
+            // make quick lookup bit-array for each dot color indicating 
+            // which items have that color 
+            const dotColors = new Set(this._itemsArray.map(A => A.dotColor));
+            this._dotColorFilters = {};
 
-            for (color of pathColors) {
-                this._colorFilters[color] = BitSet.new_filter(
+            for (const color of dotColors) {
+                this._dotColorFilters[color] = BitSet.new_filter(
+                    this._itemsArray,
+                    A => A.dotColor == color
+                );
+            }
+
+            // do the same with path colors
+            const pathColors = new Set(this._itemsArray.map(A => A.pathColor));
+            this._pathColorFilters = {};
+
+            for (const color of pathColors) {
+                this._pathColorFilters[color] = BitSet.new_filter(
                     this._itemsArray,
                     A => A.pathColor == color
                 );
@@ -380,49 +410,55 @@ L.DotLayer = L.Layer.extend( {
 
     //-------------------------------------------------------------
     _onLayerResize: function( resizeEvent ) {
-        let newWidth = resizeEvent.newSize.x,
-            newHeight = resizeEvent.newSize.y;
+        const newWidth = resizeEvent["newSize"]["x"],
+              newHeight = resizeEvent["newSize"]["y"],
+              options = this["options"];
 
 
-        console.log("resizing canvas to",newHeight,newWidth );
+        console.log("resizing canvas to", newHeight, newWidth );
 
-        this._dotCanvas.width = newWidth;
-        this._dotCanvas.height = newHeight;
-
-        this._lineCanvas.width = newWidth;
-        this._lineCanvas.height = newHeight;
-
-        if (this.options.debug) {
-            this._debugCanvas.width = newWidth;
-            this._debugCanvas.height = newHeight;
-            this._debugCtx.strokeStyle = "rgb(0,255,0,0.5)";
-            this._debugCtx.lineWidth = 5;
-            this._debugCtx.setLineDash([4, 10]);
+        for (const canvas of [this._dotCanvas, this._lineCanvas]){
+            canvas["width"] = newWidth;
+            canvas["height"] = newHeight;
         }
 
-        if (this.options.dotShadows.enabled) {
-            const sx = this._dotCtx.shadowOffsetX = this.options.dotShadows.x,
-                  sy = this._dotCtx.shadowOffsetY = this.options.dotShadows.y
-            this._dotCtx.shadowBlur = this.options.dotShadows.blur
-            this._dotCtx.shadowColor = this.options.dotShadows.color
+        if (options["debug"]) {
+            canvas = this._debugCanvas;
+            canvas["width"] = newWidth;
+            canvas["height"] = newHeight;
+            this._debugCtx["strokeStyle"] = "rgb(0,255,0,0.5)";
+            this._debugCtx["lineWidth"] = 5;
+            this._debugCtx["setLineDash"]([4, 10]);
+        }
+
+        if (options["dotShadows"]["enabled"]) {
+            const ctx = this._dotCtx,
+                  shadowOpts = options["dotShadows"],
+                  sx = ctx["shadowOffsetX"] = ["x"],
+                  sy = ctx["shadowOffsetY"] = shadowOpts["y"];
+            ctx["shadowBlur"] = shadowOpts["blur"];
+            ctx["shadowColor"] = shadowOpts["color"];
+
         } else {
-            this._dotCtx.shadowOffsetX = 0;
-            this._dotCtx.shadowOffsetY = 0;
-            this._dotCtx.shadowBlur = 0;
+            ctx["shadowOffsetX"] = 0;
+            ctx["shadowOffsetY"] = 0;
+            ctx["shadowBlur"] = 0;
         }
     },
 
     _calibrate: function() {
         // This is necessary on zoom, resize, or viewreset events
-        const topLeft = this._map.containerPointToLayerPoint( [ 0, 0 ] );
-        L.DomUtil.setPosition( this._dotCanvas, topLeft );
-        L.DomUtil.setPosition( this._lineCanvas, topLeft );
+        const topLeft = this.crs.map["containerPointToLayerPoint"]( [ 0, 0 ] ),
+              setPosition = Leaflet["DomUtil"]["setPosition"];
+
+        setPosition( this._dotCanvas, topLeft );
+        setPosition( this._lineCanvas, topLeft );
 
         if (this.options.debug) {
-            L.DomUtil.setPosition( this._debugCanvas, topLeft );
-            this._debugCtx.strokeStyle = "rgb(0,255,0,0.5)";
-            this._debugCtx.lineWidth = 5;
-            this._debugCtx.setLineDash([4, 10]);
+            setPosition( this._debugCanvas, topLeft );
+            this._debugCtx["strokeStyle"] = "rgb(0,255,0,0.5)";
+            this._debugCtx["lineWidth"] = 5;
+            this._debugCtx["setLineDash"]([4, 10]);
         }
 
         this.DrawBox.reset();
@@ -432,102 +468,81 @@ L.DotLayer = L.Layer.extend( {
     // -------------------------------------------------------------------
 
     drawSeg: function(P1, P2) {
-        const o = this._state.pxOffset,
-              p1 = [P1[0]+o.x, P1[1]+o.y],
-              p2 = [P2[0]+o.x, P2[1]+o.y];
+        const crs = this.crs,
+              p1 = px2Container(P1),
+              p2 = px2Container(P2);
 
-        this._debugCtx.beginPath();
-        this._debugCtx.moveTo(p1[0], p1[1]);
-        this._debugCtx.lineTo(p2[0], p2[1]);
-        this._debugCtx.stroke();
+        this._debugCtx["beginPath"]();
+        this._debugCtx["moveTo"](p1[0], p1[1]);
+        this._debugCtx["lineTo"](p2[0], p2[1]);
+        this._debugCtx["stroke"]();
         return {p1: p1, p2: p2}
     },
 
-    _redraw: function(force, event) {
-        if ( !this._ready )
-            return;
-
+    onMove: function om(event) {
         // prevent redrawing more often than necessary
         const ts = performance.now(),
-              lr = this._lastRedraw;
-        if (!force && ts - lr < 200)
+              lr = om.lastRedraw || 0;
+        if (ts - lr < 500)
             return;
 
-        this._lastRedraw = ts;
+        om.lastRedraw = ts;
+        this._redraw(event);
+    },
 
-        const S = this.crs,
-              zoom = this._map.getZoom();
+    _redraw: function(event) {
+        if ( !this._ready )
+            return;        
 
-         // debugger;
+        const crs = this.crs,
+              zoom = crs.map["getZoom"]();
 
-        // if (zoom != S.zoom) {
-        if (true) {
-            this._calibrate();
-            S.update();  
-        }
-        
-        S.drawPxBounds(this._debugCtx);
+        // if (zoom != crs.zoom) {
+        //     this._calibrate();
+        //     this.DrawBox.reset();
+        //     crs.update();
+        // }
+
+        this._calibrate();
+        this.DrawBox.reset();
+        crs.update();
 
         const itemsArray = this._itemsArray,
               n = itemsArray.length,
-              inMapBounds = A => S.overlaps(A.bounds);
-
-        const toProject = this._toProject = (this._toProject || new BitSet()).clear(),
+              toProject = this._toProject = (this._toProject || new BitSet()).clear(),
               itemsInView = this._itemMask = (this._itemMask || new BitSet()).clear();
 
         for (let i=0; i<n; i++){
             const A = itemsArray[i];
             
-            if (!inMapBounds(A))
+            if (!this.inMapBounds(A))
                 continue;
 
-            if (A.zoomed[zoom]) {
-                let mask = A.segMask = this.makeSegMask(A);
-                if (!mask.isEmpty())
-                    itemsInView.add(i);
-            
-            } else {
+            itemsInView.add(i);
+
+            if (!A.idxSet[zoom]) {    
                 // prevent another instance of this function from
                 // doing this
-                A.zoomed[zoom] = {};
+                A.idxSet[zoom] = null;
                 toProject.add(i);
             }
         }
 
-        if (this.options.showPaths && itemsInView.difference_size(toProject)) {
-            this.DrawBox.reset().clear(this._lineCtx).clear(this._debugCtx).clear(this._dotCtx);
-            this.drawPaths(itemsInView.new_difference(toProject));
-            if (this._paused)
-                this.drawDotLayer();
+        // nothing to show? let's get out of here.
+        if (itemsInView.isEmpty())
+            return;
+
+        // simplification for these activities at this zoom level all done?
+        //   draw paths quickly and get out of here.
+        if (toProject.isEmpty()) {
+            this.drawPaths();
+            return
         }
 
-        if (!toProject.isEmpty()) {
-            // ids = Array.from(toProject.imap(i => itemsArray[i].id));
-            // this._postToAllWorkers({ 
-            //     project: ids,
-            //     zoom: zoom,
-            //     smoothFactor: this.smoothFactor,
-            //     ttol: this.options.segment_ttol
-            // });
+        toProject.forEach(i => this._simplify(itemsArray[i]));
 
-            const points = A => i => {let j; return A.px.subarray(j=2*i, j+2)};
+        this.drawPaths();
 
-            toProject.forEach(i => {
-                const A = this._itemsArray[i];
-
-                const idx = A.zoomed[zoom] = Simplifier.simplify(points(A), A.n, S.tol);
-                segMask = this.makeSegMask(A);
-                
-                if (!segMask.isEmpty())
-                    itemsInView.add(i);
-            });
-
-            if (this.options.showPaths) {
-                this.drawPaths(toProject);
-                if (this._paused)
-                    this.drawDotLayer();
-            }
-        }        
     },
 
     addItem: function(id, polyline, pathColor, time, llBounds, n) {
@@ -536,7 +551,7 @@ L.DotLayer = L.Layer.extend( {
                 bounds: null,
                 px: Polyline.decode2Buf(polyline, n),
                 time: StreamRLE.transcode2CompressedBuf(time),
-                zoomed: {},
+                idxSet: {},
                 n: n,
                 pathColor: pathColor
             };
@@ -565,54 +580,55 @@ L.DotLayer = L.Layer.extend( {
         //         yield s.value;
         //     });
         // }
-
-        // msg = {addItems: {}};
-        // msg.addItems[A.id] = A.data;
-        // this._postToWorker(msg, [A.data.latLng.buffer, A.data.time]);
         
     },
 
-    removeItems: function(ids) {
-        this._postToAllWorkers({removeItems: ids});
+    removeItems: function(ids, reset=true) {
+        // this._postToAllWorkers({removeItems: ids});
+        for (id of ids)
+            delete this._itemsArray[id]
+        
+        if (reset)
+            this.reset()
     },
 
-    _postToAllWorkers: function(msg) {
-        msg.ts = performance.now();
-        for (const worker of this._workers)
-            worker.postMessage(msg);
-    }, 
+    // _postToAllWorkers: function(msg) {
+    //     msg.ts = performance.now();
+    //     for (const worker of this._workers)
+    //         worker.postMessage(msg);
+    // }, 
 
-    _postToWorker: function(msg, transferables) {
-        let w = this._currentWorker || 0,
-            n = this._workers.length;
+    // _postToWorker: function(msg, transferables) {
+    //     let w = this._currentWorker || 0,
+    //         n = this._workers.length;
 
-        this._currentWorker = (w + 1) % n;
+    //     this._currentWorker = (w + 1) % n;
 
-        this._workers[w].postMessage(msg, transferables);
-        // console.log(`${msg.ts} ${msg.id} posted to ${w}`);
-    },
+    //     this._workers[w].postMessage(msg, transferables);
+    //     // console.log(`${msg.ts} ${msg.id} posted to ${w}`);
+    // },
 
-    _handleWorkerMessage: function(event) {
-        const msg = event.data;
-        if ("project" in msg) {
-            const zoom = msg.zoom,
-                  relevant = zoom == this._zoom;
+    // _handleWorkerMessage: function(event) {
+    //     const msg = event.data;
+    //     if ("project" in msg) {
+    //         const zoom = msg["zoom"],
+    //               relevant = zoom == this.crs.zoom;
                         
-            for (let id in msg.projected) {
-                const A = this._items[id],
-                      P = A.projected[zoom] = msg.projected[id];
+    //         for (let id in msg["projected"]) {
+    //             const A = this._items[id],
+    //                   P = A.projected[zoom] = msg.projected[id];
 
-                // if (relevant)
-                //     A.segMask = this.makeSegMask(P.P, P.bad, A.segMask);
-            }
+    //             // if (relevant)
+    //             //     A.segMask = this.makeSegMask(P.P, P.bad, A.segMask);
+    //         }
 
-            if (relevant) {
-                this.drawPaths();
-                if (this._paused)
-                    this.drawDotLayer();
-            }
-        }
-    },
+    //         if (relevant) {
+    //             this.drawPaths();
+    //             if (this._paused)
+    //                 this.drawDotLayer();
+    //         }
+    //     }
+    // },
 
     _points: function(A, idxSet) {
         // the i-th point of our baseline set (projected to zoom-level 0)
@@ -636,43 +652,44 @@ L.DotLayer = L.Layer.extend( {
         if (!zoom)
             zoom = this.crs.zoom;
 
-        const idxSet = A.zoomed[zoom];
-        if (!idxSet) return;
-
+        const idxSet = A.idxSet[zoom];
         return this._points(A, idxSet);
+    },
+
+    _simplify: function(A, zoom) {
+        if (!zoom) zoom = this.crs.zoom;
+        A.idxSet[zoom] = Simplifier.simplify(this.points(A), A.n, this.crs.tol(zoom));
     },
 
     segments: function*(A, zoom, segMask) {
         let points = this.points(A, zoom);
         if (!segMask)
             segMask = A.segMask;
-
     
         let j = 0, 
             first = points.next(),
             second;
 
-        for (i of segMask.imap()) {
-            while (j++ < i){
+        for (const i of segMask.imap()) {
+
+            while (j++ < i)
                 first = points.next();
-            }
+
             second = points.next();
+
             yield [first.value, second.value];
+
             first = second;
         }
-        // segMask.forEach(i => {
-        //     while (j++ < i){
-        //         first = points.next();
-        //     }
-        //     second = points.next();
-        //     yield [first.value, second.value];
-        //     first = second;
-        // });
+    },
+
+    inMapBounds: function(A) {
+        return this.crs.overlaps(A.bounds);
     },
 
     makeSegMask: function(A) {
         const pbuf = A.px,
-              idxSet = A.zoomed[this.crs.zoom],
+              idxSet = A.idxSet[this.crs.zoom],
               drawBox = this.DrawBox,
               point = i => {let j; return pbuf.subarray(j=2*i, j+2)},
               inBounds = p => this.crs.contains(p) && drawBox.update(p);
@@ -697,64 +714,83 @@ L.DotLayer = L.Layer.extend( {
     },
 
     _drawPath: function(ctx, A, lineWidth, strokeStyle, opacity, isolated=false) {
-        
+
         if (isolated)
-            ctx.beginPath();
+            ctx["beginPath"]();
 
         for (const [px1, px2] of this.segments(A)) {
             const p1 = this.crs.px2Container(px1),
                   p2 = this.crs.px2Container(px2);
 
             // draw segment
-            ctx.moveTo(p1[0], p1[1]);
-            ctx.lineTo(p2[0], p2[1]);
+            ctx["moveTo"](p1[0], p1[1]);
+            ctx["lineTo"](p2[0], p2[1]);
         }
 
         if (isolated) {
-            ctx.globalAlpha = opacity;
-            ctx.lineWidth = lineWidth;
-            ctx.strokeStyle = strokeStyle;
-            ctx.stroke();
-            if (this.options.debug)
+            ctx["globalAlpha"] = opacity;
+            ctx["lineWidth"] = lineWidth;
+            ctx["strokeStyle"] = strokeStyle;
+            ctx["stroke"]();
+            if (this["options"]["debug"])
                 this.DrawBox.clear(this._debugCtx).draw(this._debugCtx); 
         }
     },
 
-    
-    // Draw all paths for the current items
-    //  This is more efficient than calling drawPath repeatedly
-    //   for each activity, since we group strokes together.
-    drawPaths: function(itemsToDraw) {
-        itemsToDraw = itemsToDraw || this._itemMask;
-
-        if (!this._map || !itemsToDraw || itemsToDraw.isEmpty())
-            return
-
+    _drawPaths: function(itemsToDraw) {
         const ctx = this._lineCtx;
         
-        // const query = (status=="selected")? A => !!A.highlighted : A => !A.highlighted;
-
-        // for (let [status, sfilter] of Object.entries(this._emphFilters)) {
-        //     ctx.lineWidth = this.options[status].pathWidth;
-        //     ctx.globalAlpha = this.options[status].pathOpacity;
-
-        const toDraw = itemsToDraw.clone();
-
-        for (const [color, withThisColor] of Object.entries(this._colorFilters)) {
+        for (const [color, withThisColor] of Object.entries(this._pathColorFilters)) {
             
-            if (!toDraw.intersection_size(withThisColor))
+            if (!itemsToDraw.intersects(withThisColor))
                 continue;
 
-            toDraw.intersection(withThisColor);
+            itemsToDraw.intersection(withThisColor);
             ctx.strokeStyle = color;
 
             ctx.beginPath();
-            toDraw.forEach( i => this._drawPath(ctx, this._itemsArray[i]));
+            itemsToDraw.forEach( i => this._drawPath(ctx, this._itemsArray[i]));
             ctx.stroke();
         } 
 
-        // console.timeEnd("drawPaths");
-        if (this.options.debug)
+    },
+    
+    // Draw all paths for the current items in such a way 
+    // that we group stroke-styles together in batch calls.
+    drawPaths: function(itemsToDraw, clear=true) {
+        itemsToDraw = itemsToDraw || this._itemMask;
+
+        if (!itemsToDraw || itemsToDraw.isEmpty())
+            return
+
+        const ctx = this._lineCtx,
+              filter = this._selected,
+              options = this["options"],
+              itemsArray = this._itemsArray;
+
+        this.DrawBox.reset();
+        itemsToDraw.forEach(i => this.makeSegMask(itemsArray[i]));
+
+        if (clear) {
+            const clear = this.DrawBox.clear,
+                  rect = this.DrawBox.defaultRect(); 
+            clear(this._lineCtx, rect);
+            clear(this._debugCtx, rect);
+            clear(this._dotCtx, rect);
+        }
+
+        if (this._selectedFilter) {
+            const toDraw = itemsToDraw.new_intersection(selected);
+            for (emph of ["deselected", "selected"]) {
+                ctx["lineWidth"] = options[emph]["pathWidth"];
+                ctx["globalAlpha"] = options[emph]["pathOpacity"];
+                this._drawPaths(toDraw);
+                // to_draw.negate();
+            }
+        } else
+            this._drawPaths(itemsToDraw);
+
+        if (this["options"]["debug"])
             this.DrawBox.draw(this._debugCtx);        
     },
 
@@ -764,8 +800,8 @@ L.DotLayer = L.Layer.extend( {
               dP = projected.dP,
               xOffset = this._pxOffset.x,
               yOffset = this._pxOffset.y,
-              segment = i => P.subarray(j=3*i, j+6),   // two points (x,y,t)
-              velocity = i => dP.subarray(j=2*i, j+2), // one velocity (vx,vy)             
+              segment = i => {let j; return P.subarray(j=3*i, j+6)},   // two points (x,y,t)
+              velocity = i => {let j; return dP.subarray(j=2*i, j+2)}, // one velocity (vx,vy)             
               segmentIndex = segMask.imap();
               
         let obj = segmentIndex.next(),
@@ -790,8 +826,8 @@ L.DotLayer = L.Layer.extend( {
                           dt = t - ta;
                     if (dt > 0) {
                         const v = velocity(i);
-                              x = s[0] + v[0] * dt + xOffset,
-                              y = s[1] + v[1] * dt + yOffset;
+                              const x = s[0] + v[0] * dt + xOffset,
+                                    y = s[1] + v[1] * dt + yOffset;
 
                         drawDot(x,y);
                         count++;
@@ -809,16 +845,16 @@ L.DotLayer = L.Layer.extend( {
               ctx = this._dotCtx,
               dotSize = this._dotSize;
 
-        return (x,y) => ctx.arc( x, y, dotSize, 0, two_pi );
+        return (x,y) => ctx["arc"]( x, y, dotSize, 0, two_pi );
     },
 
     makeSquareDrawFunc: function() {
         const ctx = this._dotCtx,
-              dotSize = this._dotSize
+              dotSize = this._dotSize,
               dotOffset = dotSize / 2.0;
 
         return (x,y) =>
-            ctx.rect( x - dotOffset, y - dotOffset, dotSize, dotSize );
+            ctx["rect"]( x - dotOffset, y - dotOffset, dotSize, dotSize );
     },
 
     drawDotLayer: function(now) {
@@ -834,9 +870,9 @@ L.DotLayer = L.Layer.extend( {
             now = this._timePaused || this.UTCnowSecs();
         
         const ctx = this._dotCtx,
-              zoom = this._zoom,
+              zoom = this.crs.zoom,
               canvas = this._dotCanvas,
-              zf = this._zoomFactor = 1 / (2**zoom),
+              zf = this.crs._zf,
               g = this._gifPatch,
               itemsArray = this._itemsArray,
               mask = this._itemMask;
@@ -850,15 +886,15 @@ L.DotLayer = L.Layer.extend( {
 
         this.DrawBox.clear(ctx);
 
-        for (A of this._itemMask.imap(i => itemsArray[i])) {
+        for (const A of this._itemMask.imap(i => itemsArray[i])) {
             const P = A.projected[zoom] || {};
             if (P.P && A.segMask && !A.segMask.isEmpty()) {
-                ctx.fillStyle = A.dotColor || this.normal.dotColor;
+                ctx["fillStyle"] = A.dotColor || this.normal.dotColor;
                 
                 const start = A.UTCtimestamp;
-                ctx.beginPath();
+                ctx["beginPath"]();
                 count += this.drawActivityDots(now, start, P, A.segMask, drawDotFunc);
-                ctx.fill();
+                ctx["fill"]();
             }
         };
 
@@ -887,9 +923,9 @@ L.DotLayer = L.Layer.extend( {
         //     ctx.globalAlpha = this.options.normal.dotOpacity
         // }
 
-        if (fps_display) {
+        if (this.fps_display) {
             const elapsed = ( performance.now() - t0 ).toFixed( 1 );
-            fps_display.update( now, `z=${this._zoom}, dt=${elapsed} ms, n=${count}` );
+            this.fps_display.update( now, `z=${this.crs.zoom}, dt=${elapsed} ms, n=${count}` );
         }
     },
 
@@ -921,7 +957,7 @@ L.DotLayer = L.Layer.extend( {
         this._frame = null;
 
         // debugger;
-        let ts = this.UTCnowSecs();
+        let ts = this.UTCnowSecs(),
             now = ts - this._timeOffset;
 
         if ( this._paused ) {
@@ -941,14 +977,17 @@ L.DotLayer = L.Layer.extend( {
 
     //------------------------------------------------------------------------------
     _animateZoom: function( e ) {
-        var scale = this._map.getZoomScale( e.zoom );
+        const m = this.crs.map,
+              z = e.zoom,
+              scale = m["getZoomScale"]( z );
 
         // -- different calc of offset in leaflet 1.0.0 and 0.0.7 thanks for 1.0.0-rc2 calc @jduggan1
-        var offset = L.Layer ? this._map._latLngToNewLayerPoint( this._map.getBounds().getNorthWest(), e.zoom, e.center ) :
-                               this._map._getCenterOffset( e.center )._multiplyBy( -scale ).subtract( this._map._getMapPanePos() );
+        const offset = Leaflet["Layer"] ? m["_latLngToNewLayerPoint"]( m[".getBounds"]()["getNorthWest"](), z, e.center ) :
+                               m["_getCenterOffset"]( e.center )["_multiplyBy"]( -scale )["subtract"]( m["_getMapPanePos"]() );
 
-        L.DomUtil.setTransform( this._dotCanvas, offset, scale );
-        L.DomUtil.setTransform( this._lineCanvas, offset, scale );
+        const setTransform = Leaflet["DomUtil"]["setTransform"];
+        setTransform( this._dotCanvas, offset, scale );
+        setTransform( this._lineCanvas, offset, scale );
     },
 
 
@@ -971,14 +1010,14 @@ L.DotLayer = L.Layer.extend( {
     },
 
     getSelected: function(selectPxBounds) {
-        const z = this._zoom,
+        const z = this.crs.zoom,
               pxOffset = this._pxOffset,
               ox = pxOffset.x,
               oy = pxOffset.y;
 
         let selectedIds = [];
 
-        for (let A of this._items.values()) {
+        for (const A of this._itemsArray) {
             if (!A.inView || !A.projected[z])
                 continue;
 
@@ -1007,7 +1046,7 @@ L.DotLayer = L.Layer.extend( {
         this._capturing = true;
 
         // set up display
-        pd = document.createElement( 'div' );
+        const pd = document.createElement( 'div' );
         pd.style.position = 'absolute';
         pd.style.left = pd.style.top = 0
         pd.style.backgroundColor = 'black';
@@ -1023,7 +1062,7 @@ L.DotLayer = L.Layer.extend( {
         // console.log(msg);
         pd.textContent = msg;
 
-        leafletImage(this._map, function(err, canvas) {
+        window["leafletImage"](this.crs.map, function(err, canvas) {
             //download(canvas.toDataURL("image/png"), "mapView.png", "image/png");
             console.log("leaflet-image: " + err);
             if (canvas) {
@@ -1037,14 +1076,14 @@ L.DotLayer = L.Layer.extend( {
 
         let sx, sy, sw, sh;
         if (selection) {
-            sx = selection.topLeft.x;
-            sy = selection.topLeft.y;
-            sw = selection.width;
-            sh = selection.height;
+            sx = selection["topLeft"]["x"];
+            sy = selection["topLeft"]["y"];
+            sw = selection["width"];
+            sh = selection["height"];
         } else {
             sx = sy = 0;
-            sw = this._size.x;
-            sh = this._size.y;
+            sw = this.crs.size["x"];
+            sh = this.crs.size["y"];
         }
 
 
@@ -1057,27 +1096,27 @@ L.DotLayer = L.Layer.extend( {
             numFrames = durationSecs * frameRate,
             delay = 1000 / frameRate,
 
-            encoder = new GIF({
+            encoder = new window["GIF"]({
                 workers: window.navigator.hardwareConcurrency,
                 quality: 8,
                 transparent: 'rgba(0,0,0,0)',
-                workerScript: GIFJS_WORKER_URL
+                workerScript: window["GIFJS_WORKER_URL"]
             });
 
 
         this._encoder = encoder;
 
-        encoder.on( 'progress', function( p ) {
-            msg = `Encoding frames...${~~(p*100)}%`;
+        encoder["on"]( 'progress', function( p ) {
+            const msg = `Encoding frames...${~~(p*100)}%`;
             // console.log(msg);
-            this._progressDisplay.textContent = msg;
+            this._progressDisplay["textContent"] = msg;
         }.bind( this ) );
 
-        encoder.on('finished', function( blob ) {
+        encoder["on"]('finished', function( blob ) {
             // window.open(URL.createObjectURL(blob));
 
             if (blob) {
-                download(blob, "output.gif", 'image/gif' );
+                window["download"](blob, "output.gif", 'image/gif' );
             }
 
             document.body.removeChild( this._progressDisplay );
@@ -1106,7 +1145,7 @@ L.DotLayer = L.Layer.extend( {
                 dN = dataNew.data,
                 len = dO.length;
 
-            if (dN.length != len){
+            if (dN["length"] != len){
                 console.log("canvasDiff: canvases are different size");
                 return;
             }
@@ -1135,7 +1174,7 @@ L.DotLayer = L.Layer.extend( {
         }
 
         function display(canvas, title){
-            let w = window.open(canvas.toDataURL("image/png"), target='_blank');
+            let w = window["open"](canvas["toDataURL"]("image/png"), '_blank');
             // w.document.write(`<title>${title}</title>`);
         }
         // console.log(`GIF output: ${numFrames.toFixed(4)} frames, delay=${delay.toFixed(4)}`);
@@ -1148,7 +1187,7 @@ L.DotLayer = L.Layer.extend( {
             simg = [50, h2*50/w2],
             sd = [sw-simg[0]-2, sh-simg[1]-2, simg[0], simg[1]];
             
-        framePrev = null;
+        let framePrev = null;
         // Add frames to the encoder
         for (let i=0, num=~~numFrames; i<num; i++, frameTime+=delay){
             let msg = `Rendering frames...${~~(i/num * 100)}%`;
@@ -1156,13 +1195,14 @@ L.DotLayer = L.Layer.extend( {
             // let timeOffset = (this._timeScale * frameTime) % this._period;
             // console.log( `frame${i} @ ${timeOffset}`);
 
-            pd.textContent = msg;
+            pd["textContent"] = msg;
 
             // create a new canvas
-            let frame = document.createElement('canvas');
+            const frame = document.createElement('canvas');
             frame.width = sw;
             frame.height = sh;
-            frameCtx = frame.getContext('2d');
+
+            const frameCtx = frame.getContext('2d');
 
             // clear the frame
             frameCtx.clearRect( 0, 0, sw, sh);
@@ -1201,14 +1241,14 @@ L.DotLayer = L.Layer.extend( {
         }
 
         // encode the Frame array
-        encoder.render();
+        encoder["render"]();
     },
 
     abortCapture: function() {
         // console.log("capture aborted");
-        this._progressDisplay.textContent = "aborting...";
+        this._progressDisplay["textContent"] = "aborting...";
         if (this._encoder) {
-            this._encoder.abort();
+            this._encoder["abort"]();
             document.body.removeChild( this._progressDisplay );
             delete this._progressDisplay
 
@@ -1225,8 +1265,8 @@ L.DotLayer = L.Layer.extend( {
             numItems = items.length,
             i = 0;
 
-        this._colorPalette = this.ColorPalette.palette(numItems, this.options.dotAlpha);
-        for ( item of items )
+        this._colorPalette = this.ColorPalette.palette(numItems, this["options"].dotAlpha);
+        for ( const item of items )
             item.dotColor = this._colorPalette[ i++ ];
     },
 
@@ -1255,21 +1295,21 @@ L.DotLayer = L.Layer.extend( {
         },
 
         palette: function (n, alpha) {
-            center = 128;
-            width = 127;
-            steps = 10;
-            frequency = 2*Math.PI/steps;
+            const center = 128,
+                  width = 127,
+                  steps = 10,
+                  frequency = 2*Math.PI/steps;
             return this.makeColorGradient(frequency,frequency,frequency,0,2,4,center,width,n,alpha);
         }
     }
 } );  // end of L.DotLayer definition
 
-L.dotLayer = function( items, options ) {
-    return new L.DotLayer( items, options );
+Leaflet["dotLayer"] = function( items, options ) {
+    return new Leaflet["DotLayer"]( items, options );
 };
 
 
-L.Control.fps = L.Control.extend({
+Leaflet["Control"].fps = Leaflet["Control"]["extend"]({
     lastCalledTime: 1,
 
     options: {
@@ -1278,41 +1318,22 @@ L.Control.fps = L.Control.extend({
 
     onAdd: function (map) {
         // Control container
-        this._container = L.DomUtil.create('div', 'leaflet-control-fps');
-        L.DomEvent.disableClickPropagation(this._container);
-        this._container.style.backgroundColor = 'white';
+        this._container = Leaflet["DomUtil"]["create"]('div', 'leaflet-control-fps');
+        Leaflet["DomEvent"]["disableClickPropagation"](this._container);
+        this._container["style"]["backgroundColor"] = 'white';
         this.update(0);
         return this._container;
     },
 
     update: function(now=Date.now(), msg="") {
         let fps = ~~(1000 / (now - this.lastCalledTime) + 0.5);
-        this._container.innerHTML = `${fps} f/s, ${msg}`;
+        this._container["innerHTML"] = `${fps} f/s, ${msg}`;
         this.lastCalledTime = now;
         return fps;
     }
 });
 
 //constructor registration
-L.control.fps = function(options) {
-  return new L.Control.fps();
+Leaflet["control"].fps = function(options) {
+  return new Leaflet["Control"].fps();
 };
-
-
-// {
-// // @method latLngToLayerPoint(latlng: LatLng): Point
-//     // Given a geographical coordinate, returns the corresponding pixel coordinate
-//     // relative to the [origin pixel](#map-getpixelorigin).
-//     latLngToLayerPoint = latlng => {
-//         var projectedPoint = this.project(toLatLng(latlng))._round();
-//         return projectedPoint._subtract(this.getPixelOrigin());
-//     }
-
-//     // @method layerPointToContainerPoint(point: Point): Point
-//     // Given a pixel coordinate relative to the [origin pixel](#map-getpixelorigin),
-//     // returns the corresponding pixel coordinate relative to the map container.
-//     layerPointToContainerPoint = point => { // (Point)
-//         return toPoint(point).add(this._getMapPanePos());
-//     }
-// }
-

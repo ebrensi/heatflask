@@ -24,7 +24,7 @@ function heatflask() {
             currentBaseLayer: null
         },
         msgBox = null;
-
+        
     if (!OFFLINE) {
         var online_baseLayers = {
             "MapBox.Dark": L.tileLayer.provider('MapBox', {
@@ -185,7 +185,7 @@ function heatflask() {
     map.on("boxhookend", doneSelecting);
 
 
-    const selectControl = new L.SwipeSelect(options={}, doneSelecting=doneSelecting),
+    const selectControl = new L.SwipeSelect({}, doneSelecting),
           selectButton_states = [
             {
                 stateName: 'not-selecting',
@@ -621,7 +621,7 @@ function heatflask() {
 
 
     function initializeDotLayer() {
-        DotLayer = new L.DotLayer(null, {
+        DotLayer = new L.DotLayer(null, fps_display, {
             startPaused: appState.paused
         });
 
@@ -822,7 +822,7 @@ function heatflask() {
 
 
         function sendQuery() {
-            queryObj = {
+            const queryObj = {
                 client_id: ONLOAD_PARAMS.client_id
             };
 
@@ -1002,8 +1002,8 @@ function heatflask() {
 
 
     function preset_sync() {
-        num = domIdVal("select_num"),
-        type = domIdVal("select_type");
+        const num = domIdVal("select_num"),
+              type = domIdVal("select_type");
 
         if (type=="days"){
             $(".date_select").hide();

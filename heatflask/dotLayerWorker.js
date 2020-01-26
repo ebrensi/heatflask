@@ -8,7 +8,7 @@ let myItems = {};
 let name;
 
 
-onmessage = function(event) {
+window.onmessage = function(event) {
     let msg = event.data;
     const project = CRS.makePT(0);
 
@@ -16,13 +16,13 @@ onmessage = function(event) {
         const newItems = msg.addItems;
         Object.assign(myItems, newItems);
 
-        for (A of Object[newItems].values()) {
+        for (const A of Object[newItems].values()) {
             
         }
     }
 
     if ("removeItems" in msg) {
-        for (id in msg.removeItems){
+        for (const id in msg.removeItems){
             if (id in myItems)
                 delete myItems[id];
         }
@@ -123,7 +123,7 @@ function binarySearch(map, x, start, end) {
 function transformSimplify(streamData, smoothFactor, transform=null) {
 
     // console.time("simplify-project");
-    P = Simplifier.simplify(
+    const P = Simplifier.simplify(
         streamData,
         smoothFactor,
         transform

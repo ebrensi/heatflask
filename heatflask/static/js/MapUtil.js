@@ -13,11 +13,11 @@ const Simplifier = {
         let idxBitSet = this.simplifyRadialDist(points, n, sqTolerance);
         
         const idx = idxBitSet.array(Uint16Array),
-              subset = i => points(idx[i]);
+              subset = i => points(idx[i]),
         
-        idxBitSubset = this.simplifyDouglasPeucker(
+              idxBitSubset = this.simplifyDouglasPeucker(
                 subset, idx.length, sqTolerance
-            );
+              );
         
         idxBitSet = idxBitSet.new_subset(idxBitSubset);
 

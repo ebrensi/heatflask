@@ -29,7 +29,7 @@ bundles = {
             'js/leaflet-sidebar.min.js',
             'js/download.min.js',
             'js/gif2.js',  # Johan Nordberg: http://jnordberg.github.io/gif.js/ 
-            output="gen/pre-compiled-dependencies.js"
+            # output="gen/pre-compiled-dependencies.js"
         ),
         # un-minified dependencies
         flask_assets.Bundle(
@@ -40,8 +40,8 @@ bundles = {
             'js/easy-button.js',
             'js/L.SwipeSelect.js',
             'js/L.BoxHook.js',
-            # filters=["babel", "rjsmin"],
-            output="gen/build/non-compiled-dependencies.js"
+            filters=["rjsmin"],
+            # output="gen/build/non-compiled-dependencies.js"
         ),
         output='gen/dependencies.js'
     ),
@@ -56,17 +56,26 @@ bundles = {
         'js/BitSet.js',
         'js/Codecs.js',
         "js/MapUtil.js",
+        filters=["closure_js"],
         output="gen/dotLayer.worker.js"
     ),
 
-    "app_specific_js": flask_assets.Bundle(  # Heatflask-specific code
-        'js/appUtil.js',
-        'js/BitSet.js',
-        'js/Codecs.js',
-        "js/MapUtil.js",
-        '../DotLayer.js',
-        '../heatflask.js',
-        # filters=["babel", 'rjsmin'],
+    # Heatflask-specific code
+    "app_specific_js": flask_assets.Bundle(
+        flask_assets.Bundle(
+            'js/BitSet.js',
+            'js/Codecs.js',
+            "js/MapUtil.js",
+            '../DotLayer.js',
+            # filters=["rjsmin"]
+            filters=["closure_js"],
+        ),
+        # code to leave out of closure compiling
+        flask_assets.Bundle(
+            'js/appUtil.js',
+            '../heatflask.js',
+            filters=["rjsmin"]
+        ),
         output="gen/app-specific.js"
     ),
 

@@ -27,7 +27,7 @@ function hhmmss( secs ) {
     let hours = Math.floor(totalSeconds / 3600).pad(2);
     totalSeconds %= 3600;
     let minutes = Math.floor(totalSeconds / 60).pad(2);
-    seconds = Math.round((totalSeconds % 60)).pad(2);
+    let seconds = Math.round((totalSeconds % 60)).pad(2);
 
     return `${hours}:${minutes}:${seconds}`;
     // return new Date( secs * 1000 ).toISOString().substr( 11, 8 );

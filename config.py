@@ -27,6 +27,7 @@ class Config(object):
     # ASSETS_DEBUG = False
     # ASSETS_CACHE = False
     # ASSETS_MANIFEST = None
+    CLOSURE_COMPRESSOR_OPTIMIZATION = "ADVANCED_OPTIMIZATIONS"
 
     # Concurrency for User database triage
     TRIAGE_CONCURRENCY = 5
@@ -215,8 +216,8 @@ class DevelopmentConfig(Config):
     SSLIFY_PERMANENT = False
 
     # Flask-Assets settings
-    # ASSETS_DEBUG = True
-    ASSETS_AUTO_BUILD = True
+    ASSETS_DEBUG = "merge"
+    # ASSETS_AUTO_BUILD = True
     
     if USE_REMOTE_DB:
         MONGO_URI = os.environ.get("REMOTE_MONGODB_URL")
