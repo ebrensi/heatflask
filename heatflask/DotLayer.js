@@ -57,11 +57,15 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
     ViewBox: {
 
-        initialize: function(map, fps_display) {
+        initialize: function(map, canvases, fps_display) {
             this.map = map;
-            this.latLng2px = CRS.makePT(0);
-            this.update();
+            this.canvases = canvases;
             this.fps_display = fps_display;
+            this.latLng2px = CRS.makePT(0);
+            this.itemIds = new BitSet();
+            this.update();
+
+            return this
         },
 
         getMapSize: function() {
@@ -72,14 +76,34 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             return zoom? 1/(2**zoom) : 1 / this._zf 
         },
 
-        // called on zoom change
-        update: function() {
-            const m = this.map;
+        update: function(reset) {
+            const m = this.map,
+                  zoom = m["getZoom"](),
+                  latLngMapBounds = m["getBounds"]();
             
+            // some stuff that needs to be done on zoom change
+            if (reset || zoom != this.zoom) {
+                this.reset(zoom);
+                reset = true;
+            }
+
+            this.pxBounds = this.latLng2pxBounds(latLngMapBounds);
+
+            return reset;
+        },
+
+        reset: function(zoom) {
+            // This is necessary on zoom, resize, or viewreset events
+            const m = this.map,
+                  topLeft = m["containerPointToLayerPoint"]( [ 0, 0 ] ),
+                  setPosition = Leaflet["DomUtil"]["setPosition"];
+
+            for (let i=0, len=this.canvases.length; i<len; i++)
+                setPosition( this.canvases[i], topLeft );
+
             this.size = this.getMapSize();
-            this.zoom = m["getZoom"]();
-            this._zf = 2 ** this.zoom;
-            this.pxBounds = this.latLng2pxBounds(m["getBounds"]());
+            this.zoom = zoom;
+            this._zf = 2 ** zoom;
 
             // these are zoom-adjusted already
             const pxOrigin = m["getPixelOrigin"](),
@@ -226,7 +250,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
     "initialize": function( items, options ) {
         this._timeOffset = 0;
         Leaflet["setOptions"]( this, options );
-        this._paused = this.options.startPaused;
+        this._paused = this["options"]["startPaused"];
         this._timePaused = this.UTCnowSecs();
 
         this.heatflask_icon = new Image();
@@ -235,27 +259,29 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         this.strava_icon = new Image();
         this.strava_icon.src = "static/pbs4.png";
 
-        // if (this.options.numWorkers == 0)
-        //     return
+        this._toProject = new BitSet();
 
-        // let default_n = window.navigator.hardwareConcurrency;
-        // if (window.Worker) {
-        //     const n = this.options.numWorkers || default_n;
-        //     if (n) {
-        //         this._workers = [];
-        //         for (let i=0; i<n; i++) {
-        //             const worker = new Worker(window["DOTLAYER_WORKER_URL"]);
-        //             worker.onmessage = this._handleWorkerMessage.bind(this);
-        //             this._workers.push(worker);
-        //             worker.postMessage({
-        //                 hello: `worker_${i}`,
-        //                 ts: performance.now()}
-        //              );
-        //         }
-        //     }
-        // } else {
-        //     console.log("This browser apparently doesn\'t support web workers");
-        // }
+    //     if (this["options"]["numWorkers"] == 0)
+    //         return
+
+    //     let default_n = window.navigator.hardwareConcurrency;
+    //     if (window.Worker) {
+    //         const n = this["options"]["numWorkers"] || default_n;
+    //         if (n) {
+    //             this._workers = [];
+    //             for (let i=0; i<n; i++) {
+    //                 const worker = new Worker(window["DOTLAYER_WORKER_URL"]);
+    //                 worker.onmessage = this._handleWorkerMessage.bind(this);
+    //                 this._workers.push(worker);
+    //                 worker.postMessage({
+    //                     hello: `worker_${i}`,
+    //                     ts: performance.now()}
+    //                  );
+    //             }
+    //         }
+    //     } else {
+    //         console.log("This browser apparently doesn\'t support web workers");
+    //     }
     },
 
     UTCnowSecs: function() {
@@ -268,11 +294,11 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         let size = map["getSize"](),
             zoomAnimated = map["options"]["zoomAnimation"] && Leaflet["Browser"]["any3d"];
 
-        const DomUtil = Leaflet["DomUtil"],
-              create = DomUtil["create"],
-              addClass = DomUtil["addClass"],
+        const create = Leaflet["DomUtil"]["create"],
+              addClass = Leaflet["DomUtil"]["addClass"],
               panes = map["_panes"],
-              appendChild = pane => obj => panes[pane]["appendChild"](obj);
+              appendChild = pane => obj => panes[pane]["appendChild"](obj),
+              canvases = [];
 
         // dotlayer canvas
         this._dotCanvas = create( "canvas", "leaflet-layer" );
@@ -282,6 +308,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         addClass( this._dotCanvas, "leaflet-zoom-" + ( zoomAnimated ? "animated" : "hide" ) );
         panes["shadowPane"]["style"]["pointerEvents"] = "none";
         appendChild("shadowPane")( this._dotCanvas );
+        canvases.push(this._dotCanvas);
 
         // create Canvas for polyline-ish things
         this._lineCanvas = create( "canvas", "leaflet-layer" );
@@ -292,8 +319,9 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         this._lineCtx["lineJoin"] = "round";
         addClass( this._lineCanvas, "leaflet-zoom-" + ( zoomAnimated ? "animated" : "hide" ) );
         appendChild("overlayPane")( this._lineCanvas );
+        canvases.push(this._lineCanvas);
 
-        if (this.options.debug) {
+        if (this["options"]["debug"]) {
             // create Canvas for debugging canvas stuff
             this._debugCanvas = create( "canvas", "leaflet-layer" );
             this._debugCanvas["width"] = size["x"];
@@ -301,13 +329,13 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             this._debugCtx = this._debugCanvas["getContext"]( "2d" );
             addClass( this._debugCanvas, "leaflet-zoom-" + ( zoomAnimated ? "animated" : "hide" ) );
             appendChild("overlayPane")( this._debugCanvas );
+            canvases.push(this._debugCanvas);
         }
 
-        this.ViewBox.initialize(map);
+        this.ViewBox.initialize(map, canvases, this.fps_display);
         this.DrawBox.initialize(this.ViewBox);
 
         map["on"]( this.getEvents(), this );
-        this._calibrate();
     },
 
     getEvents: function() {
@@ -315,12 +343,12 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
         const events = {
             // movestart: loggit,
-            move: this.onMove,
+            // move: this.onMove,
             moveend: this._redraw,
             // zoomstart: loggit,
             // zoom: loggit,
-            // zoomend: this._calibrate,
-            // viewreset: this._calibrate,
+            // zoomend: loggit,
+            // viewreset: loggit,
             resize: this._onLayerResize
         };
 
@@ -338,17 +366,14 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
     //-------------------------------------------------------------
     "onRemove": function( map ) {
-        const panes = map["_panes"],
-              removeChild = pane => panes[pane]["removeChild"];
-
-        removeChild( this._dotCanvas );
+        map["_panes"]["shadowPane"]["removeChild"]( this._dotCanvas )
         this._dotCanvas = null;
 
-        removeChild( this._lineCanvas );
+        map["_panes"]["overlayPane"]["removeChild"]( this._lineCanvas );
         this._lineCanvas = null;
 
-        if (this.options.debug) {
-            removeChild( this._debugCanvas );
+        if (this["options"]["debug"]) {
+            map["_panes"]["overlayPane"]["removeChild"]( this._debugCanvas );
             this._debugCanvas = null;
         }
 
@@ -394,7 +419,6 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
                     A => A.pathColor == color
                 );
             }
-            this._calibrate();
         }
 
         this._ready = true;
@@ -423,9 +447,8 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         }
 
         if (options["debug"]) {
-            const canvas = this._debugCanvas;
-            canvas["width"] = newWidth;
-            canvas["height"] = newHeight;
+            this._debugCanvas["width"] = newWidth;
+            this._debugCanvas["height"] = newHeight;
             this._debugCtx["strokeStyle"] = "rgb(0,255,0,0.5)";
             this._debugCtx["lineWidth"] = 5;
             this._debugCtx["setLineDash"]([4, 10]);
@@ -445,28 +468,17 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             ctx["shadowOffsetY"] = 0;
             ctx["shadowBlur"] = 0;
         }
-    },
 
-    _calibrate: function() {
-        // This is necessary on zoom, resize, or viewreset events
-        const topLeft = this.ViewBox.map["containerPointToLayerPoint"]( [ 0, 0 ] ),
-              setPosition = Leaflet["DomUtil"]["setPosition"];
-
-        setPosition( this._dotCanvas, topLeft );
-        setPosition( this._lineCanvas, topLeft );
-
-        if (this.options.debug) {
-            setPosition( this._debugCanvas, topLeft );
-            this._debugCtx["strokeStyle"] = "rgb(0,255,0,0.5)";
-            this._debugCtx["lineWidth"] = 5;
-            this._debugCtx["setLineDash"]([4, 10]);
-        }
-
-        this.DrawBox.reset();
+        // this.ViewBox.update(true);
     },
     //-------------------------------------------------------------
 
     // -------------------------------------------------------------------
+    _debugCtxReset: function() {
+        this._debugCtx["strokeStyle"] = "rgb(0,255,0,0.5)";
+        this._debugCtx["lineWidth"] = 5;
+        this._debugCtx["setLineDash"]([4, 10]);
+    },
 
     drawSeg: function(P1, P2) {
         const vb = this.ViewBox,
@@ -495,23 +507,14 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         if ( !this._ready )
             return;        
 
-        const ViewBox = this.ViewBox,
-              zoom = ViewBox.map["getZoom"]();
-
-        if (zoom != ViewBox.zoom) {
-            this._calibrate();
-            this.DrawBox.reset();
-            ViewBox.update();
-        }
-
-        // this._calibrate();
-        // this.DrawBox.reset();
-        // ViewBox.update();
+        this.ViewBox.update();
+        this.DrawBox.reset();
 
         const itemsArray = this._itemsArray,
               n = itemsArray.length,
-              toProject = this._toProject = (this._toProject || new BitSet()).clear(),
-              inView = this.ViewBox.itemIds = (this.ViewBox.itemIds || new BitSet()).clear();
+              inView = this.ViewBox.itemIds.clear(),
+              toProject = this._toProject.clear(),
+              zoom = this.ViewBox.zoom;
 
         for (let i=0; i<n; i++){
             const A = itemsArray[i];
@@ -521,7 +524,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
             inView.add(i);
 
-            if (!A.idxSet[zoom]) {    
+            if (!(zoom in A.idxSet)) {    
                 // prevent another instance of this function from
                 // doing this
                 A.idxSet[zoom] = null;
@@ -540,7 +543,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             return
         }
 
-        toProject.forEach(i => this._simplify(itemsArray[i]));
+        toProject.forEach(i => this.simplify(itemsArray[i], zoom));
 
         this.drawPaths();
 
@@ -569,7 +572,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             project(px.subarray(i, i+2));
 
         // create a baseline simplification
-        this._simplify(A, 18);
+        this._simplify(A, 20);
 
         // let iterTime = function*(bitset, RLEstream) {
         //     const stream = StreamRLE.decodeCompressedBuf(RLEstream);
@@ -630,43 +633,51 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
     //     }
     // },
 
+    _rawPoint: function(A) {
+        return j => A.px.subarray(j, j+2);
+    },
+
     // _pointsArray returns an "array" function from which we can directly
     //   access the i-th data point for any given idxSet 
     _pointsArray: function(A, idxSet) {
-        let point = j => A.px.subarray(j, j+2);
+        let point = this._rawPoint(A),
+            arrayFunc;
+
         if (idxSet) {
-            const idx = idxSet.array();
-            return i => point(idx[i]);
+            const idx = idxSet.array(); // this is expensive. avoid it.
+            arrayFunc = i => point(2*idx[i]);
         }  
         else
-            return i => point(i);
+            arrayFunc = i => point(2*i);
+
+        return arrayFunc
     },
 
     pointsArray: function(A, zoom) {
         return this._pointsArray(A, A.idxSet[zoom]);
     },
 
-    _points: function(A, idxSet) {
-        // the i-th point of our baseline set (projected to zoom-level 0)
-        let point = j => A.px.subarray(j, j+2);
+    _rawPointsGen: function*(A) {
+        const pointAt = this._rawPoint(A);
 
-        if (idxSet)
-            return idxSet.imap( i => point(2*i) );
-        else
-            return (function*() {
-                for (let i=0, len=A.px.length; i<len; i+=2)
-                    yield point(i)
-            })()
+        for (const j=0, n = A.px.length; j < n; j +=2 )
+            yield pointAt(j);
     },
 
-    points: function(A, zoom) {
-        if (zoom === 0) return this._points(A);
+    _pointsGen: function(A, idxSet) {
+        if (idxSet)
+            return idxSet.imap( this._pointsArray(A, null) );
+        else
+            return this._rawPointsGen(A);
+    },
+
+    pointsGen: function(A, zoom) {
+        if (zoom === 0) return this._pointsGen(A);
 
         if (!zoom)
             zoom = this.ViewBox.zoom;
 
-        const idxSet = A.idxSet[zoom];
-        return this._points(A, idxSet);
+        return this._pointsGen(A, A.idxSet[zoom]);
     },
 
     _simplify: function(A, toZoom, fromZoom) {
@@ -689,13 +700,14 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
         // simplify from the first available zoom level 
         //  higher than this one if one exists
-        const zoomLevels = A.idxSet.keys().filter(k => k > zoom);
-        return this._simplify(A, zoom, zoomLevels[0]);
+        // const nextZoomLevel = 20;
+        return this._simplify(A, zoom);
     },
 
     segments: function*(A, zoom, segMask) {
-        let points = this.points(A, zoom);
-        // segmask === null means we iterate through all segments 
+        let points = this.pointsGen(A, zoom);
+        // segmask === null means we iterate through all segments at this zoom level,
+        // not just the ones in the current view 
         if (segMask === null) {
             let p = points.next().value;
 
@@ -712,19 +724,28 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         if (!segMask)
             segMask = A.segMask;
     
+
+        /// **************experimental****************
+        // const pointsArray = this._pointsArray(A, null),
+        //       segsIdx = segMask.imap(),
+        //       firstSegIdx = segs.next().value,
+        //       points = idxSet.imap_skip( pointsArray, firstSegIdx );
+
+        // for (const nextSegIdx of segsIdx) {
+        //     const p1 = points.next().value,
+        //           p2 = points.next(nextSegIdx).value;
+        //     yield [p1, p2]; 
+        // }
+        //// **************************************
+
         let j = 0, 
             first = points.next(),
             second;
-
         for (const i of segMask.imap()) {
-
             while (j++ < i)
                 first = points.next();
-
             second = points.next();
-
             yield [first.value, second.value];
-
             first = second;
         }
     },
@@ -733,11 +754,17 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         return this.ViewBox.overlaps(A.bounds);
     },
 
+    // A segMask is a BitSet containing the index of the start-point of each
+    //  segment that is in view and is not bad.  A segment is considered to be 
+    //  in view if one of its points is in the current view.
+    // A "bad" segment is one that represents a gap in GPS data.
+    //  The indices are relative to the current zoom's idxSet mask,
+    //  so that the i-th good segment corresponds to the i-th member of
+    //  this idxSet.
     makeSegMask: function(A) {
-        const pbuf = A.px,
-              drawBox = this.DrawBox,
+        const drawBox = this.DrawBox,
               viewBox = this.ViewBox,
-              points = this.points(A, viewBox.zoom),
+              points = this.pointsGen(A, viewBox.zoom),
               inBounds = p => viewBox.contains(p) && drawBox.update(p);
 
         A.segMask = (A.segMask || new BitSet()).clear();
@@ -757,10 +784,10 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         if (A.badSegs)
             for (s of A.badSegs)
                 A.segMask.remove(s);
+        return A.segMask
     },
 
     _drawPath: function(ctx, A, lineWidth, strokeStyle, opacity, isolated=false) {
-
         if (isolated)
             ctx["beginPath"]();
 
@@ -792,11 +819,11 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
                 continue;
 
             itemsToDraw.intersection(withThisColor);
-            ctx.strokeStyle = color;
+            ctx["strokeStyle"] = color;
 
-            ctx.beginPath();
+            ctx["beginPath"]();
             itemsToDraw.forEach( i => this._drawPath(ctx, this._itemsArray[i]));
-            ctx.stroke();
+            ctx["stroke"]();
         } 
 
     },
@@ -810,11 +837,13 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             return
 
         const ctx = this._lineCtx,
-              options = this["options"],
               itemsArray = this._itemsArray;
 
         this.DrawBox.reset();
-        toDraw.forEach(i => this.makeSegMask(itemsArray[i]));
+        toDraw.forEach(i => {
+            if ( this.makeSegMask(itemsArray[i]).isEmpty() )
+                this.ViewBox.itemIds.remove(i);
+        });
 
         if (clear) {
             const clear = this.DrawBox.clear,
@@ -825,7 +854,9 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         }
 
         if (this._selectedFilter) {
-            const selected = toDraw.new_intersection(this._selectedFilter);
+            const selected = toDraw.new_intersection(this._selectedFilter),
+                  options = this["options"];
+
             for (const emph of ["deselected", "selected"]) {
                 ctx["lineWidth"] = options[emph]["pathWidth"];
                 ctx["globalAlpha"] = options[emph]["pathOpacity"];
@@ -835,8 +866,10 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         } else
             this._drawPaths(toDraw);
 
-        if (this["options"]["debug"])
-            this.DrawBox.draw(this._debugCtx);        
+        if (this["options"]["debug"]) {
+            this._debugCtxReset();
+            this.DrawBox.draw(this._debugCtx);
+        }        
     },
 
     // --------------------------------------------------------------------
@@ -934,7 +967,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         for (const A of this.ViewBox.itemIds.imap(i => itemsArray[i])) {
             const P = A.projected[zoom] || {};
             if (P.P && A.segMask && !A.segMask.isEmpty()) {
-                ctx["fillStyle"] = A.dotColor || this.normal.dotColor;
+                ctx["fillStyle"] = A.dotColor || this["options"]["normal"]["dotColor"];
                 
                 const start = A.UTCtimestamp;
                 ctx["beginPath"]();

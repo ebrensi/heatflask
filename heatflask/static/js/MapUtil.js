@@ -142,7 +142,7 @@ const CRS = {
     // Note: These operations are done in-place!!
 
     // This projects LatLng coordinate onto a rectangular grid 
-    Projection: function EPSG3857proj() {
+    Projection: function() {
         const max = this.MAX_LATITUDE,
               R = this.EARTH_RADIUS,
               rad = this.RAD;
@@ -159,7 +159,7 @@ const CRS = {
     },
 
     // This scales distances between points to a given zoom level
-    Transformation: function proj2px(zoom) {
+    Transformation: function(zoom) {
         const S = 0.5 / (Math.PI * this.EARTH_RADIUS),
               A = S, B = 0.5, C = -S, D = 0.5,
               scale = 2 ** (8 + zoom);   

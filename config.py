@@ -216,7 +216,7 @@ class DevelopmentConfig(Config):
     SSLIFY_PERMANENT = False
 
     # Flask-Assets settings
-    # ASSETS_DEBUG = "merge"
+    ASSETS_DEBUG = "merge"
     # ASSETS_AUTO_BUILD = True
     
     if USE_REMOTE_DB:
