@@ -38,21 +38,20 @@
 
 // you can provide an iterable
 function BitSet(iterable) {
-  this.words = []
+  this.words = [];
 
-  if (iterable) {
-    if (Symbol && Symbol.iterator && iterable[Symbol.iterator] !== undefined) {
+  if ( Array.isArray(iterable) ||
+    (ArrayBuffer.isView(iterable) && !(iterable instanceof DataView)) ) {
+      for (let i=0,len=iterable.length;i<len;i++) {
+        this.add(iterable[i]);
+    }
+  } else if (iterable && (iterable[Symbol.iterator] !== undefined)) {
       let iterator = iterable[Symbol.iterator]();
       let current = iterator.next();
       while(!current.done) {
         this.add(current.value);
         current = iterator.next();
       }
-    } else {
-      for (let i=0,len=iterable.length;i<len;i++) {
-        this.add(iterable[i]);
-      }
-    }
   }
 }
 
@@ -67,8 +66,16 @@ BitSet.new_filter = function(iterable, fnc) {
 };
 
 BitSet.prototype.filter = function(iterable, fnc) {
-  if (Symbol && Symbol.iterator && iterable[Symbol.iterator] !== undefined) {
-      this.clear();
+  this.clear();
+  if ( Array.isArray(iterable) ||
+    (ArrayBuffer.isView(iterable) && !(iterable instanceof DataView)) ) {
+      const n = iterable.length;
+      this.resize(n);
+      for (let i=0;i<n;i++) {
+        if (fnc(iterable[i]))
+          this.words[i >>> 5] |= 1 << i ;
+      }
+  } else if (iterable[Symbol.iterator] !== undefined) {
       let iterator = iterable[Symbol.iterator]();
       let current = iterator.next();
       let i = 0;
@@ -77,17 +84,8 @@ BitSet.prototype.filter = function(iterable, fnc) {
           this.add(i++);
         current = iterator.next();
       }
-    } else {
-      const n = iterable.length;
-      this.resize(n);
-      for (let i=0;i<n;i++) {
-        if (fnc(iterable[i]))
-          this.words[i >>> 5] |= 1 << i ;
-        else
-          this.words[i >>> 5] &= ~(1 << i);
-      }
-    }
-    return this;
+  }
+  return this;
 }
 
 // Add the value (Set the bit at index to true)
@@ -225,11 +223,12 @@ BitSet.prototype.forEach = function(fnc) {
   }
 };
 
+// Iterate the members of this BitSet
 BitSet.prototype.imap = function*(fnc) {
   fnc = fnc || (i => i);
-  let c = this.words.length;
+  const c = this.words.length;
   for (let k = 0; k < c; ++k) {
-    let w =  this.words[k];
+    let w = this.words[k];
     while (w != 0) {
       let t = w & -w;
       yield fnc((k << 5) + this.hammingWeight((t - 1) | 0));
@@ -238,33 +237,57 @@ BitSet.prototype.imap = function*(fnc) {
   }
 };
 
-// retrieve the i-th set bit
-//  (the i-th element of this set) 
-BitSet.prototype.subset = function(otherbitmap) {
-  const idxGen = otherbitmap.imap();
-  let c = this.words.length,
-      next = idxGen.next().value,
-      i = 0;
+//   with the option to "fast-forward" to a position set by this.next(pos)
+BitSet.prototype.imap_skip = function*(fnc, next_pos) {
+  fnc = fnc || (i => i);
+  const n = this.size();
 
-  for (let k = 0; k < c; ++k) {
-    let w =  this.words[k];
-    while (w != 0) {
-      let t = w & -w;
-      if (i++ == next)
-        next = idxGen.next().value;
-      else
-        this.remove((k << 5) + this.hammingWeight((t - 1) | 0))  
+  let pos = 0,
+      k = 0, 
+      w = this.words[0];
+  
+  next_pos = next_pos || 0;
+
+  while (pos <= next_pos && next_pos < n) {
+    while (pos++ < next_pos) {
+      t = w & -w;
       w ^= t;
+      if (w == 0)
+        w = this.words[++k];
     }
+    next_pos = yield fnc((k << 5) + this.hammingWeight((t - 1) | 0)) || pos + 1;
   }
-  return this
 };
 
-BitSet.prototype.new_subset = function(otherbitmap) {
-  const idxGen = otherbitmap.imap(),
-        newSet = Object.create(BitSet.prototype);
-  newSet.words = [];
+BitSet.prototype[Symbol.iterator] = BitSet.imap;
 
+// iterate a subset of this BitSet, where the subset is a BitSet
+// i.e. for each i in subBitSet, yield the i-th member of this BitSet
+BitSet.prototype.imap_subset = function*(bitSubSet, fnc) {
+  let pos = 0,
+      next = idxGen.next(),
+      k = 0, 
+      w = this.words[0];
+
+  while (!next.done) {
+    next_pos = next.value
+    while (pos++ < next_pos) {
+      t = w & -w;
+      w ^= t;
+      if (w == 0)
+        w = this.words[++k];
+    }
+    yield fnc((k << 5) + this.hammingWeight((t - 1) | 0));
+    next_pos = idxGen.next();
+  }
+};
+
+BitSet.prototype.new_subset = function(bitSubSet) {
+  const newSet = Object.create(BitSet.prototype),
+        idxGen = bitSubSet.imap();
+
+  newSet.words = new Array(this.words.length);
+        
   let c = this.words.length,
       next = idxGen.next().value,
       i = 0;
@@ -273,11 +296,11 @@ BitSet.prototype.new_subset = function(otherbitmap) {
     let w =  this.words[k];
     while (w != 0) {
       let t = w & -w;
+      w ^= t;
       if (i++ == next) {
         newSet.add((k << 5) + this.hammingWeight((t - 1) | 0));
         next = idxGen.next().value;
       }
-      w ^= t;
     }
   }
   return newSet

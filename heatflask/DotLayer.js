@@ -423,7 +423,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         }
 
         if (options["debug"]) {
-            canvas = this._debugCanvas;
+            const canvas = this._debugCanvas;
             canvas["width"] = newWidth;
             canvas["height"] = newHeight;
             this._debugCtx["strokeStyle"] = "rgb(0,255,0,0.5)";
@@ -497,15 +497,15 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         const ViewBox = this.ViewBox,
               zoom = ViewBox.map["getZoom"]();
 
-        // if (zoom != ViewBox.zoom) {
-        //     this._calibrate();
-        //     this.DrawBox.reset();
-        //     ViewBox.update();
-        // }
+        if (zoom != ViewBox.zoom) {
+            this._calibrate();
+            this.DrawBox.reset();
+            ViewBox.update();
+        }
 
-        this._calibrate();
-        this.DrawBox.reset();
-        ViewBox.update();
+        // this._calibrate();
+        // this.DrawBox.reset();
+        // ViewBox.update();
 
         const itemsArray = this._itemsArray,
               n = itemsArray.length,
@@ -548,17 +548,14 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
     addItem: function(id, polyline, pathColor, time, llBounds, n) {
         const A = {
                 id: parseInt(id),
-                bounds: null,
+                bounds: this.ViewBox.latLng2pxBounds(llBounds),
                 px: Polyline.decode2Buf(polyline, n),
-                time: StreamRLE.transcode2CompressedBuf(time),
                 idxSet: {},
+                time: StreamRLE.transcode2CompressedBuf(time),
                 n: n,
                 pathColor: pathColor
             };
         
-        // convert latlng bounds to pixel bounds
-        A.bounds = this.ViewBox.latLng2pxBounds(llBounds);
-
         this._items = this._items || {};
         this._items[ id ] = A;
 
@@ -570,6 +567,8 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         for (let i=0, len=px.length; i<len; i+=2)
             project(px.subarray(i, i+2));
 
+        // create a baseline simplification
+        this._simplify(A, 18);
 
         // let iterTime = function*(bitset, RLEstream) {
         //     const stream = StreamRLE.decodeCompressedBuf(RLEstream);
@@ -630,24 +629,37 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
     //     }
     // },
 
+    // _pointsArray returns an "array" function from which we can directly
+    //   access the i-th data point for any given idxSet 
+    _pointsArray: function(A, idxSet) {
+        let point = j => A.px.subarray(j, j+2);
+        if (idxSet) {
+            const idx = idxSet.array();
+            return i => point(idx[i]);
+        }  
+        else
+            return i => point(i);
+    },
+
+    pointsArray: function(A, zoom) {
+        return this._pointsArray(A, A.idxSet[zoom]);
+    },
+
     _points: function(A, idxSet) {
         // the i-th point of our baseline set (projected to zoom-level 0)
-        function point(i){
-            let j;
-            return A.px.subarray(j=2*i, j+2)
-        };
+        let point = j => A.px.subarray(j, j+2);
 
         if (idxSet)
-            return idxSet.imap( i => point(i) );
+            return idxSet.imap( i => point(2*i) );
         else
-            return function*() {
-                for (let i=0, len=A.px.length/2; i<len; i++)
+            return (function*() {
+                for (let i=0, len=A.px.length; i<len; i+=2)
                     yield point(i)
-            }
+            })()
     },
 
     points: function(A, zoom) {
-        if (zoom == 0) return this._points(A);
+        if (zoom === 0) return this._points(A);
 
         if (!zoom)
             zoom = this.ViewBox.zoom;
@@ -656,10 +668,28 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         return this._points(A, idxSet);
     },
 
-    _simplify: function(A, zoom) {
-        if (!zoom) zoom = this.ViewBox.zoom;
-        debugger;
-        A.idxSet[zoom] = Simplifier.simplify(this.points(A), A.n, this.ViewBox.tol(zoom));
+    _simplify: function(A, toZoom, fromZoom) {
+        const idxSet = A.idxSet[fromZoom],
+              nPoints = (fromZoom == undefined)? A.px.length/2 : idxSet.size();
+
+        const subSet = Simplifier.simplify(
+            this.pointsArray(A, fromZoom),
+            nPoints,
+            this.ViewBox.tol(toZoom)
+        );
+
+        A.idxSet[toZoom] = (fromZoom == undefined)? subSet : idxSet.new_subset(subSet);
+        return A.idxSet[toZoom]
+    },
+
+    simplify: function(A, zoom) {
+        if (zoom === undefined)
+            zoom = this.ViewBox.zoom;
+
+        // simplify from the first available zoom level 
+        //  higher than this one if one exists
+        const zoomLevels = A.idxSet.keys().filter(k => k > zoom);
+        return this._simplify(A, zoom, zoomLevels[0]);
     },
 
     segments: function*(A, zoom, segMask) {

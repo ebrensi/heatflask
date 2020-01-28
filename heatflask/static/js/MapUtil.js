@@ -6,8 +6,9 @@ const Simplifier = {
         Douglas-Peucker simplification algorithm
     */
 
+    // points is a function p(i) that directly accesses the i-th point
+    // of our data set. 
     simplify: function(points, n, tolerance) {
-
         const sqTolerance = tolerance * tolerance;
         
         let idxBitSet = this.simplifyRadialDist(points, n, sqTolerance);
@@ -141,7 +142,7 @@ const CRS = {
     // Note: These operations are done in-place!!
 
     // This projects LatLng coordinate onto a rectangular grid 
-    Projection: function() {
+    Projection: function EPSG3857proj() {
         const max = this.MAX_LATITUDE,
               R = this.EARTH_RADIUS,
               rad = this.RAD;
@@ -158,7 +159,7 @@ const CRS = {
     },
 
     // This scales distances between points to a given zoom level
-    Transformation: function(zoom) {
+    Transformation: function proj2px(zoom) {
         const S = 0.5 / (Math.PI * this.EARTH_RADIUS),
               A = S, B = 0.5, C = -S, D = 0.5,
               scale = 2 ** (8 + zoom);   
