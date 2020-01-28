@@ -244,7 +244,8 @@ BitSet.prototype.imap_skip = function*(fnc, next_pos) {
 
   let pos = 0,
       k = 0, 
-      w = this.words[0];
+      w = this.words[0],
+      t;
   
   next_pos = next_pos || 0;
 
@@ -264,13 +265,15 @@ BitSet.prototype[Symbol.iterator] = BitSet.imap;
 // iterate a subset of this BitSet, where the subset is a BitSet
 // i.e. for each i in subBitSet, yield the i-th member of this BitSet
 BitSet.prototype.imap_subset = function*(bitSubSet, fnc) {
+  const idxGen = bitSubSet.imap();
+
   let pos = 0,
       next = idxGen.next(),
       k = 0, 
       w = this.words[0];
 
   while (!next.done) {
-    next_pos = next.value
+    let t, next_pos = next.value;
     while (pos++ < next_pos) {
       t = w & -w;
       w ^= t;
@@ -278,7 +281,7 @@ BitSet.prototype.imap_subset = function*(bitSubSet, fnc) {
         w = this.words[++k];
     }
     yield fnc((k << 5) + this.hammingWeight((t - 1) | 0));
-    next_pos = idxGen.next();
+    next = idxGen.next();
   }
 };
 

@@ -223,7 +223,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
     },
 
     // -- initialized is called on prototype
-    initialize: function( items, options ) {
+    "initialize": function( items, options ) {
         this._timeOffset = 0;
         Leaflet["setOptions"]( this, options );
         this._paused = this.options.startPaused;
@@ -235,27 +235,27 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         this.strava_icon = new Image();
         this.strava_icon.src = "static/pbs4.png";
 
-        if (this.options.numWorkers == 0)
-            return
+        // if (this.options.numWorkers == 0)
+        //     return
 
-        let default_n = window.navigator.hardwareConcurrency;
-        if (window.Worker) {
-            const n = this.options.numWorkers || default_n;
-            if (n) {
-                this._workers = [];
-                for (let i=0; i<n; i++) {
-                    const worker = new Worker(window["DOTLAYER_WORKER_URL"]);
-                    worker.onmessage = this._handleWorkerMessage.bind(this);
-                    this._workers.push(worker);
-                    worker.postMessage({
-                        hello: `worker_${i}`,
-                        ts: performance.now()}
-                     );
-                }
-            }
-        } else {
-            console.log("This browser apparently doesn\'t support web workers");
-        }
+        // let default_n = window.navigator.hardwareConcurrency;
+        // if (window.Worker) {
+        //     const n = this.options.numWorkers || default_n;
+        //     if (n) {
+        //         this._workers = [];
+        //         for (let i=0; i<n; i++) {
+        //             const worker = new Worker(window["DOTLAYER_WORKER_URL"]);
+        //             worker.onmessage = this._handleWorkerMessage.bind(this);
+        //             this._workers.push(worker);
+        //             worker.postMessage({
+        //                 hello: `worker_${i}`,
+        //                 ts: performance.now()}
+        //              );
+        //         }
+        //     }
+        // } else {
+        //     console.log("This browser apparently doesn\'t support web workers");
+        // }
     },
 
     UTCnowSecs: function() {
@@ -263,7 +263,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
     },
 
     //-------------------------------------------------------------
-    onAdd: function( map ) {
+    "onAdd": function( map ) {
         this._map = map;
         let size = map["getSize"](),
             zoomAnimated = map["options"]["zoomAnimation"] && Leaflet["Browser"]["any3d"];
@@ -331,13 +331,13 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         return events;
     },
 
-    addTo: function( map ) {
+    "addTo": function( map ) {
         map["addLayer"]( this );
         return this;
     },
 
     //-------------------------------------------------------------
-    onRemove: function( map ) {
+    "onRemove": function( map ) {
         const panes = map["_panes"],
               removeChild = pane => panes[pane]["removeChild"];
 
@@ -431,9 +431,10 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             this._debugCtx["setLineDash"]([4, 10]);
         }
 
+        const ctx = this._dotCtx;
+                  
         if (options["dotShadows"]["enabled"]) {
-            const ctx = this._dotCtx,
-                  shadowOpts = options["dotShadows"],
+            const shadowOpts = options["dotShadows"],
                   sx = ctx["shadowOffsetX"] = ["x"],
                   sy = ctx["shadowOffsetY"] = shadowOpts["y"];
             ctx["shadowBlur"] = shadowOpts["blur"];
@@ -468,9 +469,9 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
     // -------------------------------------------------------------------
 
     drawSeg: function(P1, P2) {
-        const ViewBox = this.ViewBox,
-              p1 = px2Container(P1),
-              p2 = px2Container(P2);
+        const vb = this.ViewBox,
+              p1 = vb.px2Container(P1),
+              p2 = vb.px2Container(P2);
 
         this._debugCtx["beginPath"]();
         this._debugCtx["moveTo"](p1[0], p1[1]);
@@ -584,7 +585,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
     removeItems: function(ids, reset=true) {
         // this._postToAllWorkers({removeItems: ids});
-        for (id of ids)
+        for (const id of ids)
             delete this._itemsArray[id]
         
         if (reset)
@@ -825,7 +826,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
         if (this._selectedFilter) {
             const selected = toDraw.new_intersection(this._selectedFilter);
-            for (emph of ["deselected", "selected"]) {
+            for (const emph of ["deselected", "selected"]) {
                 ctx["lineWidth"] = options[emph]["pathWidth"];
                 ctx["globalAlpha"] = options[emph]["pathOpacity"];
                 this._drawPaths(selected);
@@ -984,7 +985,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         }
         this.lastCalledTime = 0;
         this.minDelay = ~~( 1000 / this.target_fps + 0.5 );
-        this._frame = L.Util.requestAnimFrame( this._animate, this );
+        this._frame = Leaflet["Util"]["requestAnimFrame"]( this._animate, this );
     },
 
     // --------------------------------------------------------------------
@@ -1016,7 +1017,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             this.drawDotLayer( now );
         }
 
-        this._frame = L.Util.requestAnimFrame( this._animate, this );
+        this._frame = Leaflet["Util"]["requestAnimFrame"]( this._animate, this );
     },
 
     //------------------------------------------------------------------------------
@@ -1353,14 +1354,14 @@ Leaflet["dotLayer"] = function( items, options ) {
 };
 
 
-Leaflet["Control"].fps = Leaflet["Control"]["extend"]({
+Leaflet["Control"]["fps"] = Leaflet["Control"]["extend"]({
     lastCalledTime: 1,
 
     options: {
         position: "topright"
     },
 
-    onAdd: function (map) {
+    "onAdd": function (map) {
         // Control container
         this._container = Leaflet["DomUtil"]["create"]('div', 'leaflet-control-fps');
         Leaflet["DomEvent"]["disableClickPropagation"](this._container);
@@ -1378,6 +1379,6 @@ Leaflet["Control"].fps = Leaflet["Control"]["extend"]({
 });
 
 //constructor registration
-Leaflet["control"].fps = function(options) {
-  return new Leaflet["Control"].fps();
+Leaflet["control"]["fps"] = function(options) {
+  return new Leaflet["Control"]["fps"]();
 };

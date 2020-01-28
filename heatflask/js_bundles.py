@@ -29,7 +29,6 @@ bundles = {
             'js/leaflet-sidebar.min.js',
             'js/download.min.js',
             'js/gif2.js',  # Johan Nordberg: http://jnordberg.github.io/gif.js/ 
-            # output="gen/pre-compiled-dependencies.js"
         ),
         # un-minified dependencies
         flask_assets.Bundle(
@@ -41,7 +40,6 @@ bundles = {
             'js/L.SwipeSelect.js',
             'js/L.BoxHook.js',
             filters=["rjsmin"],
-            # output="gen/build/non-compiled-dependencies.js"
         ),
         output='gen/dependencies.js'
     ),
