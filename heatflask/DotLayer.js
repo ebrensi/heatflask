@@ -306,8 +306,8 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         this._dotCanvas["height"] = size["y"];
         this._dotCtx = this._dotCanvas["getContext"]( "2d" );
         addClass( this._dotCanvas, "leaflet-zoom-" + ( zoomAnimated ? "animated" : "hide" ) );
-        panes["shadowPane"]["style"]["pointerEvents"] = "none";
-        appendChild("shadowPane")( this._dotCanvas );
+        panes[this._pane]["style"]["pointerEvents"] = "none";
+        appendChild(this._pane)( this._dotCanvas );
         canvases.push(this._dotCanvas);
 
         // create Canvas for polyline-ish things
@@ -516,8 +516,6 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
               toProject = this._toProject.clear(),
               zoom = this.ViewBox.zoom;
 
-        // debugger;
-
         for (let i=0; i<n; i++){
             const A = itemsArray[i];
             
@@ -538,16 +536,19 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         if (inView.isEmpty())
             return;
 
-        // simplification for these activities at this zoom level all done?
-        //   draw paths quickly and get out of here.
-        if (toProject.isEmpty()) {
-            this.drawPaths();
-            return
-        }
+        
+        let t0 = performance.now();
 
-        toProject.forEach(i => this.simplify(itemsArray[i], zoom));
-
+        if (!toProject.isEmpty())
+            toProject.forEach(i => this.simplify(itemsArray[i], zoom));
+       
+        let t1 = performance.now();
+        
         this.drawPaths();
+        
+        let t2 = performance.now();
+
+        console.log(`simplify: ${t1-t0}, draw: ${t2-t1}`)
 
     },
 
@@ -981,9 +982,14 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
         this.DrawBox.clear(ctx);
 
+        if (!this.ViewBox.dotData)
+            this.ViewBox.dotData = {};
+
         for (const [color, withThisColor] of Object.entries(this._dotColorFilters)) {
+            
             if (!inView.intersects(withThisColor))
                 continue;
+            
             // TODO: only compute this once on view change
             const toDraw = inView.new_intersection(withThisColor);
             ctx["fillStyle"] = color || this["options"]["normal"]["dotColor"];
