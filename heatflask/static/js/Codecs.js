@@ -116,6 +116,7 @@ const StreamRLE = {
     decodeList: function*(rle_list, first_value=0) {
         let running_sum = first_value,
             len = rle_list.length;
+        yield running_sum;
         for (let i=0, el; i<len; i++) {
             el = rle_list[i];
             if (el instanceof Array) {
@@ -130,13 +131,23 @@ const StreamRLE = {
         }
     },
 
+    _decodedListLength: function(rle_list) {
+      let len = 0; // We don't count the start value!
+      for (const el of rle_list) {
+        if (el instanceof Array)
+          len += 2;
+        else
+          len++;
+      }
+      return len
+    },
+
     transcode2CompressedBuf: function(rle_list) {
-        let len = rle_list.length,
-            buf = new Int16Array(len);
+        const len = this._decodedListLength(rle_list),
+              buf = new Int16Array(len);
 
-        for (let i=0, j=0, el; i<len; i++) {
-            el = rle_list[i];
-
+        let j = 0;
+        for (const el of rle_list) {
             if (el instanceof Array) {
                 buf[j++] = -el[1];
                 buf[j++] = el[0];
@@ -150,6 +161,8 @@ const StreamRLE = {
     decodeBuf: function*(buf, first_value=0) {
         let running_sum = first_value,
             len = buf.length;
+
+        yield running_sum;
 
         for (let i=0, el; i<len; i++) {
             el = buf[i];
@@ -170,6 +183,7 @@ const StreamRLE = {
         const bufGen = VByte.uncompressSigned(cbuf);
 
         let running_sum = first_value;
+        yield running_sum;
 
         for (const el of bufGen) {
             if (el < 0) {
