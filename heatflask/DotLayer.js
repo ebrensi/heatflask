@@ -104,13 +104,6 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         },
 
         reset: function(zoom) {
-            // This is necessary on zoom, resize, or viewreset events
-            // const m = this.map,
-            //       topLeft = m["containerPointToLayerPoint"]( [ 0, 0 ] ),
-            //       setPosition = Leaflet["DomUtil"]["setPosition"];
-
-            // for (let i=0, len=this.canvases.length; i<len; i++)
-            //     setPosition( this.canvases[i], topLeft );
 
             this.size = this.getMapSize();
             this.zoom = zoom;
@@ -266,6 +259,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         this.strava_icon.src = "static/pbs4.png";
 
         this._toProject = new BitSet();
+        this._items = new Map();
 
     //     if (this["options"]["numWorkers"] == 0)
     //         return
@@ -390,12 +384,12 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
     // Call this function after items are added or reomved
     reset: function() {
-        if (!this._items)
+        if (!this._items.size)
             return
 
         this._ready = false;
 
-        this._itemsArray = Object.values(this._items);
+        this._itemsArray = Array.from(this._items.values());
 
         const n = this._itemsArray.length;
 
@@ -475,7 +469,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             ctx["shadowBlur"] = 0;
         }
 
-        // this.ViewBox.update(true);
+        this.ViewBox.update(true);
     },
     //-------------------------------------------------------------
 
@@ -570,8 +564,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
             };
         
-        this._items = this._items || {};
-        this._items[ id ] = A;
+        this._items.set(id, A);
 
         // make baseline projection (convert latLngs to pixel points)
         // in-place
@@ -583,13 +576,13 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         
     },
 
-    removeItems: function(ids, reset=true) {
+    removeItems: function(ids) {
         // this._postToAllWorkers({removeItems: ids});
-        for (const id of ids)
-            delete this._itemsArray[id]
         
-        if (reset)
-            this.reset()
+        for (const id of ids)
+            this._items.delete(id)
+        
+        this.reset()
     },
 
     // _postToAllWorkers: function(msg) {
@@ -679,29 +672,23 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
     _iterRLEstream: function(RLEstream, idxSet) {
         const stream = StreamRLE.decodeCompressedBuf(RLEstream);
+        if (!idxSet)
+            return stream;
+
         let i = 0;
         return idxSet.imap(idx => {
             let s = stream.next();
             while (i++ < idx)
                 s = stream.next();
+            // console.log(`${i}: ${s.value}`);
             return s.value;
         });
+
     },
 
     times: function(A) {
         const zoom = this.ViewBox.zoom,
               stream = this._iterRLEstream(A.time, A.idxSet[zoom]);
-
-        // let j = 0, 
-        //     first = stream.next(),
-        //     second;
-        // for (const idx of segMask.imap()) {
-        //     while (j++ < idx)
-        //         first = stream.next();
-        //     second = stream.next();
-        //     yield [first.value, second.value];
-        //     first = second;
-        // }
 
         let j = 0,
             second = stream.next();
@@ -913,21 +900,23 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
               times = this.times(A),
               zf = this.ViewBox._zf,
               pxo = this.ViewBox.pxOffset,
-              start = A.ts;
+              start = A.ts,
+              segments = this.segments(A);
+
+        let obj = times.next();
+
+        const first_time = obj.value[0],
+              timeOffset = (this._timeScale * ( now - (start + first_time))) % T;
         
-        debugger;
-
-        let [ta, tb] = times.next().value;
-        const timeOffset = (this._timeScale * ( now - (start + ta))) % T;
         let count = 0;
-
-        // loop over segments
-        for (const [pa, pb] of this.segments(A)) {
-            let jfirst = Math.ceil((ta - timeOffset) / T),
-                jlast = Math.floor((tb - timeOffset) / T);
+        while (!obj.done) {
+            let [ta, tb] = obj.value,
+                jfirst = Math.ceil((ta - timeOffset) / T),
+                jlast = Math.floor((tb - timeOffset) / T),
+                seg = segments.next();
                        
             if (jfirst <= jlast) {
-                // loop within segment i   
+                const [pa, pb] = seg.value;
                 for (let j = jfirst; j <= jlast; j++) {
                     const t = j * T + timeOffset,
                           dt = t - ta;
@@ -944,7 +933,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
                 }
             }
 
-            [ta, tb] = times.next().value;
+            obj = times.next();
         }    
         return count
     },
@@ -982,8 +971,8 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
               zf = this.ViewBox._zf,
               zoom = this.ViewBox.zoom;
 
-        this._timeScale = this.C2 * zf;
-        this._period = this.C1 * zf;
+        this._timeScale = this.C2 / zf;
+        this._period = this.C1 / zf;
         this._dotSize = Math.max(1, ~~(this.dotScale * Math.log( zoom ) + 0.5));
 
         let count = 0,
