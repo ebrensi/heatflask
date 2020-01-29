@@ -969,7 +969,8 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
               itemsArray = this._itemsArray,
               mask = this.ViewBox.itemIds,
               zf = this.ViewBox._zf,
-              zoom = this.ViewBox.zoom;
+              zoom = this.ViewBox.zoom,
+              inView = this.ViewBox.itemIds;
 
         this._timeScale = this.C2 / zf;
         this._period = this.C1 / zf;
@@ -980,16 +981,20 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
         this.DrawBox.clear(ctx);
 
-        for (const A of this.ViewBox.itemIds.imap(i => itemsArray[i])) {
-            if (A.idxSet[zoom] && A.segMask && !A.segMask.isEmpty()) {
-                ctx["fillStyle"] = A.dotColor || this["options"]["normal"]["dotColor"];
-                
-                ctx["beginPath"]();
-                count += this._drawDots(now, A, drawDotFunc);
-                ctx["fill"]();
-            }
-        };
+        for (const [color, withThisColor] of Object.entries(this._dotColorFilters)) {
+            if (!inView.intersects(withThisColor))
+                continue;
+            // TODO: only compute this once on view change
+            const toDraw = inView.new_intersection(withThisColor);
+            ctx["fillStyle"] = color || this["options"]["normal"]["dotColor"];
+            ctx["beginPath"]();
 
+            for (const A of toDraw.imap(i => itemsArray[i]))
+                if (A.idxSet[zoom] && A.segMask && !A.segMask.isEmpty())
+                    count += this._drawDots(now, A, drawDotFunc);
+
+            ctx["fill"]();
+        }
    
         if (this.fps_display) {
             const elapsed = ( performance.now() - t0 ).toFixed( 1 );

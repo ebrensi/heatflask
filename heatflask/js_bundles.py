@@ -41,6 +41,23 @@ bundles = {
             'js/L.BoxHook.js',
             filters=["rjsmin"],
         ),
+        # Heatflask-specific code
+        flask_assets.Bundle(
+            flask_assets.Bundle(
+                'js/BitSet.js',
+                'js/Codecs.js',
+                "js/MapUtil.js",
+                '../DotLayer.js',
+                # filters=["rjsmin"]
+                filters=["closure_js"],
+            ),
+            # code to leave out of closure compiling
+            flask_assets.Bundle(
+                'js/appUtil.js',
+                '../heatflask.js',
+                filters=["rjsmin"]
+            ),
+        ),
         output='gen/dependencies.js'
     ),
 
@@ -56,25 +73,6 @@ bundles = {
         "js/MapUtil.js",
         filters=["closure_js"],
         output="gen/dotLayer.worker.js"
-    ),
-
-    # Heatflask-specific code
-    "app_specific_js": flask_assets.Bundle(
-        flask_assets.Bundle(
-            'js/BitSet.js',
-            'js/Codecs.js',
-            "js/MapUtil.js",
-            '../DotLayer.js',
-            # filters=["rjsmin"]
-            filters=["closure_js"],
-        ),
-        # code to leave out of closure compiling
-        flask_assets.Bundle(
-            'js/appUtil.js',
-            '../heatflask.js',
-            filters=["rjsmin"]
-        ),
-        output="gen/app-specific.js"
     ),
 
     "splash_css": flask_assets.Bundle(
