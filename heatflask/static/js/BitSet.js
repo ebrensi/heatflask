@@ -195,8 +195,10 @@ BitSet.prototype.size = function() {
 
 // Return an array with the set bit locations (values)
 BitSet.prototype.array = function(ArrayConstructor) {
-  ArrayConstructor = ArrayConstructor || Array
-  let answer = new ArrayConstructor(this.size());
+  const n = this.size();
+  ArrayConstructor = ArrayConstructor || (n >> 8)? ((n >> 16)? Uint32Array : Uint16Array) : Uint8Array 
+
+  let answer = new ArrayConstructor(n);
   let pos = 0 | 0;
   let c = this.words.length;
   for (let k = 0; k < c; ++k) {
@@ -237,30 +239,28 @@ BitSet.prototype.imap = function*(fnc) {
   }
 };
 
+BitSet.prototype[Symbol.iterator] = BitSet.imap;
+
 //   with the option to "fast-forward" to a position set by this.next(pos)
 BitSet.prototype.imap_skip = function*(fnc, next_pos) {
-  fnc = fnc || (i => i);
-  const n = this.size();
-
-  let pos = 0,
-      k = 0, 
+  let c = this.words.length,
       w = this.words[0],
-      t;
-  
-  next_pos = next_pos || 0;
+      pos = 0,
+      k = 0;
 
-  while (pos <= next_pos && next_pos < n) {
-    while (pos++ < next_pos) {
-      t = w & -w;
+  for (let k = 0; k < c; ++k) {
+    let w = this.words[k];
+    while (w != 0) {
+      let t = w & -w;
+
+      if (next_pos === undefined || pos == next_pos)
+        next_pos = yield fnc((k << 5) + this.hammingWeight((t - 1) | 0));
+      
       w ^= t;
-      if (w == 0)
-        w = this.words[++k];
+      pos++;
     }
-    next_pos = yield fnc((k << 5) + this.hammingWeight((t - 1) | 0)) || pos + 1;
   }
 };
-
-BitSet.prototype[Symbol.iterator] = BitSet.imap;
 
 // iterate a subset of this BitSet, where the subset is a BitSet
 // i.e. for each i in subBitSet, yield the i-th member of this BitSet
@@ -289,7 +289,7 @@ BitSet.prototype.new_subset = function(bitSubSet) {
   const newSet = Object.create(BitSet.prototype),
         idxGen = bitSubSet.imap();
 
-  newSet.words = new Array(this.words.length);
+  newSet.words = [];
         
   let c = this.words.length,
       next = idxGen.next().value,
