@@ -557,7 +557,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
     },
 
-    addItem: function(id, polyline, pathColor, time, llBounds, n) {
+    addItem: function(id, polyline, pathColor, time, UTCtimestamp, llBounds, n) {
         const A = {
                 id: parseInt(id),
                 bounds: this.ViewBox.latLng2pxBounds(llBounds),
@@ -565,7 +565,9 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
                 idxSet: {},
                 time: StreamRLE.transcode2CompressedBuf(time),
                 n: n,
+                ts: UTCtimestamp,
                 pathColor: pathColor
+
             };
         
         this._items = this._items || {};
@@ -578,19 +580,6 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
         for (let i=0, len=px.length; i<len; i+=2)
             project(px.subarray(i, i+2));
-
-        // create a baseline simplification
-        this._simplify(A, 20);
-
-        // let iterTime = function*(bitset, RLEstream) {
-        //     const stream = StreamRLE.decodeCompressedBuf(RLEstream);
-        //     bitset.forEach(idx => {
-        //         let s = stream.next();
-        //         while (i++ < idx)
-        //             s = stream.next();
-        //         yield s.value;
-        //     });
-        // }
         
     },
 
@@ -668,7 +657,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
     _rawPointsGen: function*(A) {
         const pointAt = this._rawPoint(A);
 
-        for (const j=0, n = A.px.length; j < n; j +=2 )
+        for ( let j=0, n = A.px.length; j < n; j +=2 )
             yield pointAt(j);
     },
 
@@ -686,6 +675,43 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             zoom = this.ViewBox.zoom;
 
         return this._pointsGen(A, A.idxSet[zoom]);
+    },
+
+    _iterRLEstream: function(RLEstream, idxSet) {
+        const stream = StreamRLE.decodeCompressedBuf(RLEstream);
+        let i = 0;
+        return idxSet.imap(idx => {
+            let s = stream.next();
+            while (i++ < idx)
+                s = stream.next();
+            return s.value;
+        });
+    },
+
+    times: function(A) {
+        const zoom = this.ViewBox.zoom,
+              stream = this._iterRLEstream(A.time, A.idxSet[zoom]);
+
+        // let j = 0, 
+        //     first = stream.next(),
+        //     second;
+        // for (const idx of segMask.imap()) {
+        //     while (j++ < idx)
+        //         first = stream.next();
+        //     second = stream.next();
+        //     yield [first.value, second.value];
+        //     first = second;
+        // }
+
+        let j = 0,
+            second = stream.next();
+        return A.segMask.imap(idx => {
+            let first = second;
+            while (j++ < idx)
+                first = stream.next();
+            second = stream.next();
+            return [first.value, second.value];
+        });
     },
 
     _simplify: function(A, toZoom, fromZoom) {
@@ -714,6 +740,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
     segments: function*(A, zoom, segMask) {
         let points = this.pointsGen(A, zoom);
+
         // segmask === null means we iterate through all segments at this zoom level,
         // not just the ones in the current view 
         if (segMask === null) {
@@ -732,16 +759,16 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         if (!segMask)
             segMask = A.segMask;
     
-
         /// **************experimental****************
         // const pointsArray = this._pointsArray(A, null),
+        //       idxSet = A.idxSet[this.ViewBox.zoom],
         //       segsIdx = segMask.imap(),
-        //       firstSegIdx = segs.next().value,
-        //       points = idxSet.imap_skip( pointsArray, firstSegIdx );
+        //       firstSegIdx = segsIdx.next().value,
+        //       pointsGen = idxSet.imap_skip( pointsArray, firstSegIdx );
 
         // for (const nextSegIdx of segsIdx) {
-        //     const p1 = points.next().value,
-        //           p2 = points.next(nextSegIdx).value;
+        //     const p1 = pointsGen.next().value,
+        //           p2 = pointsGen.next(nextSegIdx).value;
         //     yield [p1, p2]; 
         // }
         //// **************************************
@@ -881,28 +908,22 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
     },
 
     // --------------------------------------------------------------------
-    drawActivityDots: function( now, start, projected, segMask, drawDot ) {
-        const P = projected.P,
-              dP = projected.dP,
-              xOffset = this._pxOffset.x,
-              yOffset = this._pxOffset.y,
-              segment = i => {let j; return P.subarray(j=3*i, j+6)},   // two points (x,y,t)
-              velocity = i => {let j; return dP.subarray(j=2*i, j+2)}, // one velocity (vx,vy)             
-              segmentIndex = segMask.imap();
-              
-        let obj = segmentIndex.next(),
-            count = 0;
-
+    _drawDots: function( now, A, drawDot ) {      
         const T = this._period,
-              first_t = segment(obj.value)[2],
-              timeOffset = (this._timeScale * ( now - (start + first_t))) % T;
+              times = this.times(A),
+              zf = this.ViewBox._zf,
+              pxo = this.ViewBox.pxOffset,
+              start = A.ts;
+        
+        debugger;
+
+        let [ta, tb] = times.next().value;
+        const timeOffset = (this._timeScale * ( now - (start + ta))) % T;
+        let count = 0;
 
         // loop over segments
-        while (!obj.done) {
-            let i = obj.value,
-                s = segment(i),
-                ta = s[2], tb = s[5],
-                jfirst = Math.ceil((ta - timeOffset) / T),
+        for (const [pa, pb] of this.segments(A)) {
+            let jfirst = Math.ceil((ta - timeOffset) / T),
                 jlast = Math.floor((tb - timeOffset) / T);
                        
             if (jfirst <= jlast) {
@@ -911,9 +932,11 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
                     const t = j * T + timeOffset,
                           dt = t - ta;
                     if (dt > 0) {
-                        const v = velocity(i);
-                              const x = s[0] + v[0] * dt + xOffset,
-                                    y = s[1] + v[1] * dt + yOffset;
+                        const tab = tb - ta,
+                              vx = (pb[0] - pa[0]) / tab,
+                              vy = (pb[1] - pa[1]) / tab,
+                              x = (pa[0] + vx * dt) * zf + pxo.x,
+                              y = (pa[1] + vy * dt) * zf + pxo.y; 
 
                         drawDot(x,y);
                         count++;
@@ -921,7 +944,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
                 }
             }
 
-            obj = segmentIndex.next();
+            [ta, tb] = times.next().value;
         }    
         return count
     },
@@ -943,12 +966,9 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             ctx["rect"]( x - dotOffset, y - dotOffset, dotSize, dotSize );
     },
 
-    drawDotLayer: function(now) {
-        return;
-
-        if ( !this._ready || this.ViewBox.itemIds.isEmpty() ) {
+    drawDots: function(now) {
+        if ( !this._ready || this.ViewBox.itemIds.isEmpty() )
             return;
-        }
 
         const t0 = performance.now();
 
@@ -956,12 +976,11 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             now = this._timePaused || this.UTCnowSecs();
         
         const ctx = this._dotCtx,
-              zoom = this.ViewBox.zoom,
-              canvas = this._dotCanvas,
-              zf = this.ViewBox._zf,
               g = this._gifPatch,
               itemsArray = this._itemsArray,
-              mask = this.ViewBox.itemIds;
+              mask = this.ViewBox.itemIds,
+              zf = this.ViewBox._zf,
+              zoom = this.ViewBox.zoom;
 
         this._timeScale = this.C2 * zf;
         this._period = this.C1 * zf;
@@ -973,42 +992,16 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         this.DrawBox.clear(ctx);
 
         for (const A of this.ViewBox.itemIds.imap(i => itemsArray[i])) {
-            const P = A.projected[zoom] || {};
-            if (P.P && A.segMask && !A.segMask.isEmpty()) {
+            if (A.idxSet[zoom] && A.segMask && !A.segMask.isEmpty()) {
                 ctx["fillStyle"] = A.dotColor || this["options"]["normal"]["dotColor"];
                 
-                const start = A.UTCtimestamp;
                 ctx["beginPath"]();
-                count += this.drawActivityDots(now, start, P, A.segMask, drawDotFunc);
+                count += this._drawDots(now, A, drawDotFunc);
                 ctx["fill"]();
             }
         };
 
-        // drawDotFunc = makeCircleDrawFunc();
-        // if ( A.highlighted & !g)
-        //     ctx.stroke();
-
-        // for ( const A of Object.values(this._items) ) {
-        //     if (!A.inViewBox || !A.projected[zoom] || !A.segMask)
-        //         continue; 
-
-        //     if ( A.highlighted ) {
-        //         highlighted_items.push( A );
-        //     } else {
-        //         const P = A.projected[zoom];
-        //         count += this.drawActivityDots(now, A.startTime, P.P, P.dP, A.segMask, A.dotColor, false);
-        //     }
-        // }
-
-        // // Now plot highlighted paths
-        // if ( highlighted_items.length ) {
-        //     ctx.globalAlpha = this.options.selected.dotOpacity
-        //     for (const A in highlighted_items) {
-        //         count += this.drawActivityDots(now, A.startTime, P.P, P.dP, A.segMask, A.dotColor, true);
-        //     }
-        //     ctx.globalAlpha = this.options.normal.dotOpacity
-        // }
-
+   
         if (this.fps_display) {
             const elapsed = ( performance.now() - t0 ).toFixed( 1 );
             this.fps_display.update( now, `z=${this.ViewBox.zoom}, dt=${elapsed} ms, n=${count}` );
@@ -1054,7 +1047,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
         if (now - this.lastCalledTime > this.minDelay) {
             this.lastCalledTime = now;
-            this.drawDotLayer( now );
+            this.drawDots( now );
         }
 
         this._frame = Leaflet["Util"]["requestAnimFrame"]( this._animate, this );

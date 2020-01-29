@@ -56,10 +56,6 @@ def create_app():
         mongo.init_app(app, **app.config["MONGO_OPTIONS"])
         login_manager.init_app(app)
         sockets.init_app(app)
-
-        # assets.config['CLOSURE_COMPRESSOR_OPTIMIZATION'] = (
-        #     app.config['CLOSURE_COMPRESSOR_OPTIMIZATION']
-        # )
         assets.init_app(app)
         # talisman.init_app(
         #     app,

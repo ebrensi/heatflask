@@ -28,7 +28,10 @@ class Config(object):
     # ASSETS_CACHE = False
     # ASSETS_MANIFEST = None
     CLOSURE_COMPRESSOR_OPTIMIZATION = "ADVANCED_OPTIMIZATIONS"
-
+    CLOSURE_EXTRA_ARGS = [
+        "--create_source_map", "./static/gen/DotLayer.map",
+        "--debug"
+    ]
     # Concurrency for User database triage
     TRIAGE_CONCURRENCY = 5
 

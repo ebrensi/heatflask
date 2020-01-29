@@ -147,7 +147,7 @@ const CRS = {
               R = this.EARTH_RADIUS,
               rad = this.RAD;
 
-        return latlngpt => {
+        return function(latlngpt){
             const lat = Math.max(Math.min(max, latlngpt[0]), -max),
                   sin = Math.sin(lat * rad),
                   p_out = latlngpt;
@@ -164,7 +164,7 @@ const CRS = {
               A = S, B = 0.5, C = -S, D = 0.5,
               scale = 2 ** (8 + zoom);   
         
-        return (p_in)  => {
+        return function(p_in){
             const p_out = p_in;
             p_out[0] = scale * (A * p_in[0] + B);
             p_out[1] = scale * (C * p_in[1] + D);
@@ -175,6 +175,6 @@ const CRS = {
     makePT(zoom) {
         const P = this.Projection(),
               T = this.Transformation(zoom);
-        return llpt => T(P(llpt));
+        return function(llpt){ return T(P(llpt)) };
     }
 };

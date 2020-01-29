@@ -923,7 +923,7 @@ function heatflask() {
                 A.UTCtimestamp = tup[0];  
                 A.bounds = L.latLngBounds(A.bounds.SW, A.bounds.NE);
 
-                DotLayer.addItem(A.id, A.polyline, A.pathColor, A.time, A.bounds, A.n);
+                DotLayer.addItem(A.id, A.polyline, A.pathColor, A.time, tup[0], A.bounds, A.n);
                 delete A._id;
                 delete A.summary_polyline;
                 delete A.ts;
