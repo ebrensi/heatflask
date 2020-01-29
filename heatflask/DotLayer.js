@@ -87,29 +87,35 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
                 reset = true;
             }
 
+            const topLeft = m["containerPointToLayerPoint"]( [ 0, 0 ] ),
+                   setPosition = Leaflet["DomUtil"]["setPosition"],
+                    pxOrigin = m["getPixelOrigin"](),
+                    mapPanePos = m["_getMapPanePos"]();
+
+            for (let i=0, len=this.canvases.length; i<len; i++)
+                setPosition( this.canvases[i], topLeft );
+
+            this.pxOffset = mapPanePos["subtract"](pxOrigin);
             this.pxBounds = this.latLng2pxBounds(latLngMapBounds);
+
+            // debugger;
 
             return reset;
         },
 
         reset: function(zoom) {
             // This is necessary on zoom, resize, or viewreset events
-            const m = this.map,
-                  topLeft = m["containerPointToLayerPoint"]( [ 0, 0 ] ),
-                  setPosition = Leaflet["DomUtil"]["setPosition"];
+            // const m = this.map,
+            //       topLeft = m["containerPointToLayerPoint"]( [ 0, 0 ] ),
+            //       setPosition = Leaflet["DomUtil"]["setPosition"];
 
-            for (let i=0, len=this.canvases.length; i<len; i++)
-                setPosition( this.canvases[i], topLeft );
+            // for (let i=0, len=this.canvases.length; i<len; i++)
+            //     setPosition( this.canvases[i], topLeft );
 
             this.size = this.getMapSize();
             this.zoom = zoom;
             this._zf = 2 ** zoom;
 
-            // these are zoom-adjusted already
-            const pxOrigin = m["getPixelOrigin"](),
-                  mapPanePos = m["_getMapPanePos"]();
-
-            this.pxOffset = mapPanePos["subtract"](pxOrigin);
         },
 
         px2Container: function(px) {
@@ -128,15 +134,14 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
                 pxObj = new Float32Array(4);
 
             const sw = llBounds["_southWest"],
-                  ne = llBounds["_northEast"],
-                  project = this.latLng2px;
+                  ne = llBounds["_northEast"];
             
             pxObj[0] = sw.lat;  // xmin
             pxObj[1] = sw.lng;  // ymax
             pxObj[2] = ne.lat;  // xmax
             pxObj[3] = ne.lng;  // ymin
-            project(pxObj.subarray(0,2));
-            project(pxObj.subarray(2,4));
+            this.latLng2px(pxObj.subarray(0,2));
+            this.latLng2px(pxObj.subarray(2,4));
             return pxObj
         },
 
@@ -168,11 +173,12 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
                   lr = this.px2Container([xmax, ymax]),
                   x = ul[0] + 5,
                   y = ul[1] + 5,
-                  w = lr[0] - ul[0] - 10,
-                  h = lr[1] - ul[1] - 10;
+                  w = (lr[0] - ul[0]) - 10,
+                  h = (lr[1] - ul[1]) - 10,
+                  rect = {x: x, y:y, w:w, h:h};
 
             ctx.strokeRect(x, y, w, h);
-            return {x: x, y:y, w:w, h:h}
+            return rect
         },
     },
 
@@ -343,7 +349,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
         const events = {
             // movestart: loggit,
-            // move: this.onMove,
+            move: this.onMove,
             moveend: this._redraw,
             // zoomstart: loggit,
             // zoom: loggit,
@@ -449,7 +455,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         if (options["debug"]) {
             this._debugCanvas["width"] = newWidth;
             this._debugCanvas["height"] = newHeight;
-            this._debugCtx["strokeStyle"] = "rgb(0,255,0,0.5)";
+            this._debugCtx["strokeStyle"] = "rgb(0,255,0,1)";
             this._debugCtx["lineWidth"] = 5;
             this._debugCtx["setLineDash"]([4, 10]);
         }
@@ -475,9 +481,9 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
     // -------------------------------------------------------------------
     _debugCtxReset: function() {
-        this._debugCtx["strokeStyle"] = "rgb(0,255,0,0.5)";
-        this._debugCtx["lineWidth"] = 5;
-        this._debugCtx["setLineDash"]([4, 10]);
+        this._debugCtx["strokeStyle"] = "rgb(0,255,0,1)";
+        this._debugCtx["lineWidth"] = 10;
+        this._debugCtx["setLineDash"]([10, 5]);
     },
 
     drawSeg: function(P1, P2) {
@@ -515,6 +521,8 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
               inView = this.ViewBox.itemIds.clear(),
               toProject = this._toProject.clear(),
               zoom = this.ViewBox.zoom;
+
+        // debugger;
 
         for (let i=0; i<n; i++){
             const A = itemsArray[i];
@@ -806,7 +814,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             ctx["strokeStyle"] = strokeStyle;
             ctx["stroke"]();
             if (this["options"]["debug"])
-                this.DrawBox.clear(this._debugCtx).draw(this._debugCtx); 
+                this.DrawBox.clear(this._debugCtx).draw(this._debugCtx);
         }
     },
 
@@ -814,15 +822,13 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         const ctx = this._lineCtx;
 
         for (const [color, withThisColor] of Object.entries(this._pathColorFilters)) {
-            
             if (!itemsToDraw.intersects(withThisColor))
                 continue;
 
-            itemsToDraw.intersection(withThisColor);
+            const toDraw = itemsToDraw.new_intersection(withThisColor);
             ctx["strokeStyle"] = color;
-
             ctx["beginPath"]();
-            itemsToDraw.forEach( i => this._drawPath(ctx, this._itemsArray[i]));
+            toDraw.forEach( i => this._drawPath(ctx, this._itemsArray[i]));
             ctx["stroke"]();
         } 
 
@@ -865,10 +871,12 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             }
         } else
             this._drawPaths(toDraw);
-
+        
         if (this["options"]["debug"]) {
             this._debugCtxReset();
             this.DrawBox.draw(this._debugCtx);
+            this._debugCtx["strokeStyle"] = "rgb(255,0,255,1)";
+            this.ViewBox.drawPxBounds(this._debugCtx);
         }        
     },
 
@@ -1034,7 +1042,6 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
         this._frame = null;
 
-        // debugger;
         let ts = this.UTCnowSecs(),
             now = ts - this._timeOffset;
 
