@@ -108,7 +108,6 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             this.size = this.getMapSize();
             this.zoom = zoom;
             this._zf = 2 ** zoom;
-
         },
 
         px2Container: function(px) {
@@ -258,7 +257,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         this.strava_icon = new Image();
         this.strava_icon.src = "static/pbs4.png";
 
-        this._toProject = new BitSet();
+        this._toSimplify = new BitSet();
         this._items = new Map();
 
     //     if (this["options"]["numWorkers"] == 0)
@@ -438,35 +437,9 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
               newHeight = resizeEvent["newSize"]["y"],
               options = this["options"];
 
-
-        console.log("resizing canvas to", newHeight, newWidth );
-
         for (const canvas of [this._dotCanvas, this._lineCanvas]){
             canvas["width"] = newWidth;
             canvas["height"] = newHeight;
-        }
-
-        if (options["debug"]) {
-            this._debugCanvas["width"] = newWidth;
-            this._debugCanvas["height"] = newHeight;
-            this._debugCtx["strokeStyle"] = "rgb(0,255,0,1)";
-            this._debugCtx["lineWidth"] = 5;
-            this._debugCtx["setLineDash"]([4, 10]);
-        }
-
-        const ctx = this._dotCtx;
-                  
-        if (options["dotShadows"]["enabled"]) {
-            const shadowOpts = options["dotShadows"],
-                  sx = ctx["shadowOffsetX"] = ["x"],
-                  sy = ctx["shadowOffsetY"] = shadowOpts["y"];
-            ctx["shadowBlur"] = shadowOpts["blur"];
-            ctx["shadowColor"] = shadowOpts["color"];
-
-        } else {
-            ctx["shadowOffsetX"] = 0;
-            ctx["shadowOffsetY"] = 0;
-            ctx["shadowBlur"] = 0;
         }
 
         this.ViewBox.update(true);
@@ -510,10 +483,27 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         this.ViewBox.update();
         this.DrawBox.reset();
 
+        const ctx = this._dotCtx;
+        let ns= 0,
+            ns2 = 0;
+
+        if (this["options"]["dotShadows"]["enabled"]) {
+            const shadowOpts = this["options"]["dotShadows"],
+                  sx = ctx["shadowOffsetX"] = ["x"],
+                  sy = ctx["shadowOffsetY"] = shadowOpts["y"];
+            ctx["shadowBlur"] = shadowOpts["blur"];
+            ctx["shadowColor"] = shadowOpts["color"];
+
+        } else {
+            ctx["shadowOffsetX"] = 0;
+            ctx["shadowOffsetY"] = 0;
+            ctx["shadowBlur"] = 0;
+        }
+
         const itemsArray = this._itemsArray,
               n = itemsArray.length,
               inView = this.ViewBox.itemIds.clear(),
-              toProject = this._toProject.clear(),
+              toSimplify = this._toSimplify.clear(),
               zoom = this.ViewBox.zoom;
 
         for (let i=0; i<n; i++){
@@ -528,7 +518,8 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
                 // prevent another instance of this function from
                 // doing this
                 A.idxSet[zoom] = null;
-                toProject.add(i);
+                toSimplify.add(i);
+                ns += A.n;
             }
         }
         
@@ -539,8 +530,8 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         
         let t0 = performance.now();
 
-        if (!toProject.isEmpty())
-            toProject.forEach(i => this.simplify(itemsArray[i], zoom));
+        if (ns)
+            toSimplify.forEach(i => ns2 =+ this.simplify(itemsArray[i], zoom));
        
         let t1 = performance.now();
         
@@ -548,7 +539,8 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         
         let t2 = performance.now();
 
-        console.log(`simplify: ${t1-t0}, draw: ${t2-t1}`)
+        if (ns)
+            console.log(`simplify: ${ns} -> ${ns2} in ${~~(t1-t0)}:  ${(ns-ns2)/(t1-t0)}`)
 
     },
 
@@ -585,44 +577,6 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         
         this.reset()
     },
-
-    // _postToAllWorkers: function(msg) {
-    //     msg.ts = performance.now();
-    //     for (const worker of this._workers)
-    //         worker.postMessage(msg);
-    // }, 
-
-    // _postToWorker: function(msg, transferables) {
-    //     let w = this._currentWorker || 0,
-    //         n = this._workers.length;
-
-    //     this._currentWorker = (w + 1) % n;
-
-    //     this._workers[w].postMessage(msg, transferables);
-    //     // console.log(`${msg.ts} ${msg.id} posted to ${w}`);
-    // },
-
-    // _handleWorkerMessage: function(event) {
-    //     const msg = event.data;
-    //     if ("project" in msg) {
-    //         const zoom = msg["zoom"],
-    //               relevant = zoom == this.ViewBox.zoom;
-                        
-    //         for (let id in msg["projected"]) {
-    //             const A = this._items[id],
-    //                   P = A.projected[zoom] = msg.projected[id];
-
-    //             // if (relevant)
-    //             //     A.segMask = this.makeSegMask(P.P, P.bad, A.segMask);
-    //         }
-
-    //         if (relevant) {
-    //             this.drawPaths();
-    //             if (this._paused)
-    //                 this.drawDotLayer();
-    //         }
-    //     }
-    // },
 
     _rawPoint: function(A) {
         return j => A.px.subarray(j, j+2);
@@ -713,7 +667,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         );
 
         A.idxSet[toZoom] = (fromZoom == undefined)? subSet : idxSet.new_subset(subSet);
-        return A.idxSet[toZoom]
+        return subSet.size()
     },
 
     simplify: function(A, zoom) {
@@ -989,7 +943,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             
             if (!inView.intersects(withThisColor))
                 continue;
-            
+
             // TODO: only compute this once on view change
             const toDraw = inView.new_intersection(withThisColor);
             ctx["fillStyle"] = color || this["options"]["normal"]["dotColor"];
