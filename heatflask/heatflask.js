@@ -621,8 +621,9 @@ function heatflask() {
 
 
     function initializeDotLayer() {
-        DotLayer = new L.DotLayer(null, fps_display, {
-            startPaused: appState.paused
+        DotLayer = new L.DotLayer(fps_display, {
+            startPaused: appState.paused,
+            workerUrl: DOTLAYER_WORKER_URL
         });
 
         if (ONLOAD_PARAMS.C1) {

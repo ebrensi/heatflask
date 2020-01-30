@@ -29,8 +29,7 @@ class Config(object):
     # ASSETS_MANIFEST = None
     CLOSURE_COMPRESSOR_OPTIMIZATION = "SIMPLE"
     CLOSURE_EXTRA_ARGS = [
-        "--create_source_map", "./static/gen/DotLayer.map",
-        "--warning_level", "VERBOSE"
+        "--create_source_map", "./heatflask/static/gen/DotLayer.map",
         # "--debug"
     ]
     # Concurrency for User database triage

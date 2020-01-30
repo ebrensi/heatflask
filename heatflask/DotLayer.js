@@ -11,7 +11,6 @@
  */
 
 const Leaflet = window["L"];
-
 Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
     _pane: "shadowPane",
@@ -23,7 +22,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
     dotScale: 1.0,
 
     "options": {
-        "debug": true,
+        "debug": false,
         "numWorkers": 0,
         "startPaused": false,
         "showPaths": true,
@@ -55,15 +54,22 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         }
     },
 
+    /*
+     *  ViewBox represents the the rectangle in which everything 
+     *  we are doing happens
+     *
+     */
+
     ViewBox: {
 
         initialize: function(map, canvases, fps_display) {
             this.map = map;
             this.canvases = canvases;
             this.fps_display = fps_display;
-            this.latLng2px = CRS.makePT(0);
+            this.latLng2px = CRS.makePT(0); // operates in-place!
             this.itemIds = new BitSet();
             this.update();
+            this.point = {x:0, y:0};
 
             return this
         },
@@ -80,7 +86,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             const m = this.map,
                   zoom = m["getZoom"](),
                   latLngMapBounds = m["getBounds"]();
-            
+
             // some stuff that needs to be done on zoom change
             if (reset || zoom != this.zoom) {
                 this.reset(zoom);
@@ -88,17 +94,16 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             }
 
             const topLeft = m["containerPointToLayerPoint"]( [ 0, 0 ] ),
-                   setPosition = Leaflet["DomUtil"]["setPosition"],
-                    pxOrigin = m["getPixelOrigin"](),
-                    mapPanePos = m["_getMapPanePos"]();
+                   setPosition = Leaflet["DomUtil"]["setPosition"];
 
             for (let i=0, len=this.canvases.length; i<len; i++)
                 setPosition( this.canvases[i], topLeft );
 
+            const pxOrigin = m["getPixelOrigin"](),
+                  mapPanePos = m["_getMapPanePos"]();
+
             this.pxOffset = mapPanePos["subtract"](pxOrigin);
             this.pxBounds = this.latLng2pxBounds(latLngMapBounds);
-
-            // debugger;
 
             return reset;
         },
@@ -110,15 +115,16 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             this._zf = 2 ** zoom;
         },
 
-        px2Container: function(px) {
+        // this function reuses the returned point object!
+        px2Container: function(x,y) {
             const offset = this.pxOffset,
-                  zf = this._zf;
+                  zf = this._zf
+                  p = this.point;
 
-            let x = px[0], y = px[1];
-            x = zf*x + offset.x;
-            y = zf*y + offset.y;
+            p.x = zf*x + offset.x;
+            p.y = zf*y + offset.y;
 
-            return [x,y]; 
+            return p; 
         },
 
         latLng2pxBounds: function(llBounds, pxObj) {
@@ -161,12 +167,13 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
                   xmin = b[0], xmax = b[2], 
                   ymin = b[3], ymax = b[1],
 
-                  ul = this.px2Container([xmin, ymin]),
-                  lr = this.px2Container([xmax, ymax]),
-                  x = ul[0] + 5,
-                  y = ul[1] + 5,
-                  w = (lr[0] - ul[0]) - 10,
-                  h = (lr[1] - ul[1]) - 10,
+                  ul = this.px2Container(xmin, ymin),
+                  x = ul.x + 5,
+                  y = ul.y + 5,
+
+                  lr = this.px2Container(xmax, ymax),
+                  w = (lr.x - x) - 10,
+                  h = (lr.y - y) - 10,
                   rect = {x: x, y:y, w:w, h:h};
 
             ctx.strokeRect(x, y, w, h);
@@ -215,12 +222,13 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             if (!d) return this.defaultRect();
             const c = this.ViewBox,
                   mapSize = c.size,
-                  min = c.px2Container([d.xmin, d.ymin]),
-                  max = c.px2Container([d.xmax, d.ymax]),
-                  xmin = ~~Math.max(min[0] - pad, 0),
-                  xmax = ~~Math.min(max[0] + pad, mapSize.x),
-                  ymin = ~~Math.max(min[1] - pad, 0),
-                  ymax = ~~Math.min(max[1] + pad, mapSize.y);
+                  min = c.px2Container(d.xmin, d.ymin),
+                  xmin = ~~Math.max(min.x - pad, 0),
+                  ymin = ~~Math.max(min.y - pad, 0),
+
+                  max = c.px2Container(d.xmax, d.ymax),
+                  xmax = ~~Math.min(max.x + pad, mapSize.x),
+                  ymax = ~~Math.min(max.y + pad, mapSize.y);
 
             return {
                 x: xmin, y: ymin, 
@@ -244,9 +252,60 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         }
     },
 
+    WorkerPool: {
+        initialize: function(numWorkers, url) {
+            if (numWorkers == 0)
+                return
+
+            if (!window.Worker) {
+                console.log("This browser apparently doesn\'t support web workers");
+                return;
+            }
+
+            if (!numWorkers)
+                 numWorkers = window.navigator.hardwareConcurrency;
+
+            this._workers = [];
+            this.currentWorker = 0;
+
+            for (let i=0; i<numWorkers; i++) {
+                const worker = new this.DotLayerWorker(url);
+                this._workers.push(worker);
+                worker.post({hello: `worker_${i}`}).then(msg => console.log(msg));
+            }
+        },
+
+        DotLayerWorker: function(url) {
+            this.worker = new Worker(url);
+
+            this.post = function(msg, transferables) {
+                return new Promise(resolve => {
+                    this.worker.onmessage = event => resolve(event.data);
+                    this.worker.postMessage(msg, transferables);
+                });         
+            }
+        },
+
+        nextWorker: function() {
+            return this.currentWorker %= this._workers.length;
+        },
+
+        post: function(msg, transferables) {
+            const worker = this._workers[this.nextWorker()];
+            return worker.post(msg, transferables);
+        },
+
+        postAll: function(msg) {
+            const promises = this._workers.map(worker => worker.postMessage(msg));
+            return Promise.all(promises);
+        }
+    },
+
+
     // -- initialized is called on prototype
-    "initialize": function( items, options ) {
+    "initialize": function( fps_display, options ) {
         this._timeOffset = 0;
+        this.fps_display = fps_display;
         Leaflet["setOptions"]( this, options );
         this._paused = this["options"]["startPaused"];
         this._timePaused = this.UTCnowSecs();
@@ -260,27 +319,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         this._toSimplify = new BitSet();
         this._items = new Map();
 
-    //     if (this["options"]["numWorkers"] == 0)
-    //         return
-
-    //     let default_n = window.navigator.hardwareConcurrency;
-    //     if (window.Worker) {
-    //         const n = this["options"]["numWorkers"] || default_n;
-    //         if (n) {
-    //             this._workers = [];
-    //             for (let i=0; i<n; i++) {
-    //                 const worker = new Worker(window["DOTLAYER_WORKER_URL"]);
-    //                 worker.onmessage = this._handleWorkerMessage.bind(this);
-    //                 this._workers.push(worker);
-    //                 worker.postMessage({
-    //                     hello: `worker_${i}`,
-    //                     ts: performance.now()}
-    //                  );
-    //             }
-    //         }
-    //     } else {
-    //         console.log("This browser apparently doesn\'t support web workers");
-    //     }
+        // this.WorkerPool.initialize(this["options"]["numWorkers"], options["workerUrl"]);
     },
 
     UTCnowSecs: function() {
@@ -425,7 +464,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         this._redraw();
 
         if (this._paused)
-            this.drawDotLayer();
+            this.drawDots();
         else
             this.animate();
     },
@@ -453,16 +492,21 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         this._debugCtx["setLineDash"]([10, 5]);
     },
 
-    drawSeg: function(P1, P2) {
-        const vb = this.ViewBox,
-              p1 = vb.px2Container(P1),
-              p2 = vb.px2Container(P2);
+    _dotCtxReset: function() {
+        if (!this["options"]["debug"]) return;
+        const ctx = this._debugCtx;
+        if (this["options"]["dotShadows"]["enabled"]) {
+            const shadowOpts = this["options"]["dotShadows"],
+                  sx = ctx["shadowOffsetX"] = shadowOpts["x"],
+                  sy = ctx["shadowOffsetY"] = shadowOpts["y"];
+            ctx["shadowBlur"] = shadowOpts["blur"];
+            ctx["shadowColor"] = shadowOpts["color"];
 
-        this._debugCtx["beginPath"]();
-        this._debugCtx["moveTo"](p1[0], p1[1]);
-        this._debugCtx["lineTo"](p2[0], p2[1]);
-        this._debugCtx["stroke"]();
-        return {p1: p1, p2: p2}
+        } else {
+            ctx["shadowOffsetX"] = 0;
+            ctx["shadowOffsetY"] = 0;
+            ctx["shadowBlur"] = 0;
+        }
     },
 
     onMove: function om(event) {
@@ -482,23 +526,10 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
         this.ViewBox.update();
         this.DrawBox.reset();
+        this._dotCtxReset();
 
-        const ctx = this._dotCtx;
         let ns= 0,
             ns2 = 0;
-
-        if (this["options"]["dotShadows"]["enabled"]) {
-            const shadowOpts = this["options"]["dotShadows"],
-                  sx = ctx["shadowOffsetX"] = ["x"],
-                  sy = ctx["shadowOffsetY"] = shadowOpts["y"];
-            ctx["shadowBlur"] = shadowOpts["blur"];
-            ctx["shadowColor"] = shadowOpts["color"];
-
-        } else {
-            ctx["shadowOffsetX"] = 0;
-            ctx["shadowOffsetY"] = 0;
-            ctx["shadowBlur"] = 0;
-        }
 
         const itemsArray = this._itemsArray,
               n = itemsArray.length,
@@ -527,20 +558,48 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         if (inView.isEmpty())
             return;
 
-        
         let t0 = performance.now();
+        if (ns){
+            toSimplify.forEach(i => ns2 =+ this.simplify(itemsArray[i], zoom))
+            // const tbls = [],
+            //       pxs = new Map(),
+            //       items = this._items;
 
-        if (ns)
-            toSimplify.forEach(i => ns2 =+ this.simplify(itemsArray[i], zoom));
-       
+            // toSimplify.forEach(i => {
+            //     const A = itemsArray[i];
+            //     tbls.push(A.px.buffer);
+            //     pxs.set(A.id, A.px);
+            // });
+
+            // const promise = this.WorkerPool.post({"simplify": {
+            //     "tol": this.ViewBox.tol(zoom),
+            //     "px": pxs
+            // }}, tbls);
+
+            // promise.then(result => {
+            //     let i = 0,
+            //         args = result["simplify"];
+            //                         debugger;
+
+            //     args["px"].forEach((px, id) => {
+            //         const A = items[id];
+            //         A.px = px;
+            //         A.idxSet[zoom] = BitSet.fromWords(result["simplify"]["idx"][i++]);
+            //     });
+            // });
+        }
+
         let t1 = performance.now();
         
         this.drawPaths();
+
+        if (this._paused)
+            this.drawDots();
         
         let t2 = performance.now();
 
-        if (ns)
-            console.log(`simplify: ${ns} -> ${ns2} in ${~~(t1-t0)}:  ${(ns-ns2)/(t1-t0)}`)
+        // if (ns)
+        //     console.log(`simplify: ${ns} -> ${ns2} in ${~~(t1-t0)}:  ${(ns-ns2)/(t1-t0)}`)
 
     },
 
@@ -569,9 +628,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         
     },
 
-    removeItems: function(ids) {
-        // this._postToAllWorkers({removeItems: ids});
-        
+    removeItems: function(ids) {        
         for (const id of ids)
             this._items.delete(id)
         
@@ -643,7 +700,8 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
     times: function(A) {
         const zoom = this.ViewBox.zoom,
-              stream = this._iterRLEstream(A.time, A.idxSet[zoom]);
+              stream = this._iterRLEstream(A.time, A.idxSet[zoom]),
+              obj = {a:0, b:0};
 
         let j = 0,
             second = stream.next();
@@ -652,7 +710,9 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             while (j++ < idx)
                 first = stream.next();
             second = stream.next();
-            return [first.value, second.value];
+            obj.a = first.value;
+            obj.b = second.value;
+            return obj;
         });
     },
 
@@ -681,7 +741,8 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
     },
 
     segments: function*(A, zoom, segMask) {
-        let points = this.pointsGen(A, zoom);
+        let points = this.pointsGen(A, zoom),
+            seg = {a:0, b:0};
 
         // segmask === null means we iterate through all segments at this zoom level,
         // not just the ones in the current view 
@@ -690,7 +751,9 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
             for (let nextp of points) {
                 nextp = nextp.value;
-                yield [p, nextp];
+                seg.a = p;
+                seg.b = nextp;
+                yield seg;
                 p = nextp;
             }
             return
@@ -722,7 +785,9 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             while (j++ < i)
                 first = points.next();
             second = points.next();
-            yield [first.value, second.value];
+            seg.a = first.value;
+            seg.b = second.value;
+            yield seg;
             first = second;
         }
     },
@@ -768,13 +833,14 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         if (isolated)
             ctx["beginPath"]();
 
-        for (const [px1, px2] of this.segments(A)) {
-            const p1 = this.ViewBox.px2Container(px1),
-                  p2 = this.ViewBox.px2Container(px2);
+        for (const seg of this.segments(A)) {
+            const p1 = this.ViewBox.px2Container(seg.a[0], seg.a[1]),
+                  p1x = p1.x, p1y = p1.y,
+                  p2 = this.ViewBox.px2Container(seg.b[0], seg.b[1]);
 
             // draw segment
-            ctx["moveTo"](p1[0], p1[1]);
-            ctx["lineTo"](p2[0], p2[1]);
+            ctx["moveTo"](p1x, p1y);
+            ctx["lineTo"](p2.x, p2.y);
         }
 
         if (isolated) {
@@ -824,8 +890,9 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             const clear = this.DrawBox.clear,
                   rect = this.DrawBox.defaultRect(); 
             clear(this._lineCtx, rect);
-            clear(this._debugCtx, rect);
             clear(this._dotCtx, rect);
+            if (this["options"]["debug"])
+                clear(this._debugCtx, rect);
         }
 
         if (this._selectedFilter) {
@@ -855,34 +922,40 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
               times = this.times(A),
               zf = this.ViewBox._zf,
               pxo = this.ViewBox.pxOffset,
+              transform = this.ViewBox.px2Container.bind(this.ViewBox),
               start = A.ts,
               segments = this.segments(A);
 
         let obj = times.next();
 
-        const first_time = obj.value[0],
+        const first_time = obj.value.a,
               timeOffset = (this._timeScale * ( now - (start + first_time))) % T;
-        
+
         let count = 0;
         while (!obj.done) {
-            let [ta, tb] = obj.value,
-                jfirst = Math.ceil((ta - timeOffset) / T),
-                jlast = Math.floor((tb - timeOffset) / T),
-                seg = segments.next();
+            const ta = obj.value.a,
+                  tb = obj.value.b,
+                  jfirst = Math.ceil((ta - timeOffset) / T),
+                  jlast = Math.floor((tb - timeOffset) / T),
+                  seg = segments.next();
                        
             if (jfirst <= jlast) {
-                const [pa, pb] = seg.value;
+                const pa = seg.value.a,
+                      pb = seg.value.b,
+                      tab = tb - ta,
+                      vx = (pb[0] - pa[0]) / tab,
+                      vy = (pb[1] - pa[1]) / tab;
+
                 for (let j = jfirst; j <= jlast; j++) {
                     const t = j * T + timeOffset,
                           dt = t - ta;
                     if (dt > 0) {
-                        const tab = tb - ta,
-                              vx = (pb[0] - pa[0]) / tab,
-                              vy = (pb[1] - pa[1]) / tab,
-                              x = (pa[0] + vx * dt) * zf + pxo.x,
-                              y = (pa[1] + vy * dt) * zf + pxo.y; 
+                        const p = transform(
+                            pa[0] + vx * dt,  // x-value
+                            pa[1] + vy * dt   // y-value
+                        );
 
-                        drawDot(x,y);
+                        drawDot(p.x, p.y);
                         count++;
                     }
                 }
@@ -913,8 +986,6 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
     drawDots: function(now) {
         if ( !this._ready || this.ViewBox.itemIds.isEmpty() )
             return;
-
-        const t0 = performance.now();
 
         if (!now)
             now = this._timePaused || this.UTCnowSecs();
@@ -955,11 +1026,8 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
             ctx["fill"]();
         }
+        return count
    
-        if (this.fps_display) {
-            const elapsed = ( performance.now() - t0 ).toFixed( 1 );
-            this.fps_display.update( now, `z=${this.ViewBox.zoom}, dt=${elapsed} ms, n=${count}` );
-        }
     },
 
    
@@ -1001,7 +1069,16 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
         if (now - this.lastCalledTime > this.minDelay) {
             this.lastCalledTime = now;
-            this.drawDots( now );
+
+            const t0 = performance.now();
+
+            count = this.drawDots( now );
+
+            if (this.fps_display) {
+                const elapsed = ( performance.now() - t0 ).toFixed( 0 );
+                this.fps_display.update( now, `z=${this.ViewBox.zoom}, dt=${elapsed} ms, n=${count}` );
+            }
+
         }
 
         this._frame = Leaflet["Util"]["requestAnimFrame"]( this._animate, this );
@@ -1333,7 +1410,46 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
                   frequency = 2*Math.PI/steps;
             return this.makeColorGradient(frequency,frequency,frequency,0,2,4,center,width,n,alpha);
         }
-    }
+    },
+
+    /*
+    badSegTimes: function(llt, ttol) {
+        const n = llt.length / 3,
+              time = i => llt[3*i+2],
+              arr = [];
+        
+        let max = 0;
+
+        for (let i=1, tprev=time(0); i<n; i++) {
+            let t = time(i),
+                dt = t - tprev;
+            
+            if (dt > ttol)
+                arr.push(tprev);
+            
+            if (dt > max)
+                max = dt;
+
+            tprev = t;
+        }
+        arr.sort((a,b) => a-b);
+        return arr.length? arr : null
+    },
+
+    binarySearch: function(map, x, start, end) {        
+        if (start > end) return false; 
+       
+        let mid = Math.floor((start + end) / 2); 
+
+        if (map(mid) === x) return mid; 
+              
+        if(map(mid) > x)  
+            return binarySearch(map, x, start, mid-1); 
+        else
+            return binarySearch(map, x, mid+1, end); 
+    } 
+    */
+
 } );  // end of L.DotLayer definition
 
 Leaflet["dotLayer"] = function( items, options ) {
@@ -1367,5 +1483,5 @@ Leaflet["Control"]["fps"] = Leaflet["Control"]["extend"]({
 
 //constructor registration
 Leaflet["control"]["fps"] = function(options) {
-  return new Leaflet["Control"]["fps"]();
+  return new Leaflet["Control"]["fps"](options);
 };
