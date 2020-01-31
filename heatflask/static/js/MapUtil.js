@@ -29,7 +29,6 @@ const Simplifier = {
     simplifyRadialDist: function(points, n, sqTolerance) {
         const selectedIdx = new BitSet();
 
-        // let prevPoint = pointsIterator.next().value;
         let prevPoint = points(0),
             point, i;
         selectedIdx.add(0);

@@ -68,6 +68,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             this.fps_display = fps_display;
             this.latLng2px = CRS.makePT(0); // operates in-place!
             this.itemIds = new BitSet();
+            this.pxOffset = new Float32Array(2);
             this.update();
             return this
         },
@@ -713,7 +714,6 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
     times: function(A) {
         const zoom = this.ViewBox.zoom,
-              // stream = this._iterRLEstream(A.time, A.idxSet[zoom]),
               stream = StreamRLE.decodeCompressedBuf2(A.time, A.idxSet[zoom]),
               obj = {a:0, b:0};
         let j = 0,
