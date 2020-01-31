@@ -69,8 +69,6 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             this.latLng2px = CRS.makePT(0); // operates in-place!
             this.itemIds = new BitSet();
             this.update();
-            this.point = {x:0, y:0};
-
             return this
         },
 
@@ -115,14 +113,13 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             this._zf = 2 ** zoom;
         },
 
-        // this function reuses the returned point object!
-        px2Container: function(x,y) {
+        // this function operates in-place!
+        px2Container: function(p) {
             const offset = this.pxOffset,
-                  zf = this._zf
-                  p = this.point;
+                  zf = this._zf;
 
-            p.x = zf*x + offset.x;
-            p.y = zf*y + offset.y;
+            p[0] = zf*p[0] + offset.x;
+            p[1] = zf*p[1] + offset.y;
 
             return p; 
         },
@@ -167,13 +164,13 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
                   xmin = b[0], xmax = b[2], 
                   ymin = b[3], ymax = b[1],
 
-                  ul = this.px2Container(xmin, ymin),
-                  x = ul.x + 5,
-                  y = ul.y + 5,
+                  ul = this.px2Container([xmin, ymin]),
+                  x = ul[0] + 5,
+                  y = ul[1] + 5,
 
-                  lr = this.px2Container(xmax, ymax),
-                  w = (lr.x - x) - 10,
-                  h = (lr.y - y) - 10,
+                  lr = this.px2Container([xmax, ymax]),
+                  w = (lr[0] - x) - 10,
+                  h = (lr[1] - y) - 10,
                   rect = {x: x, y:y, w:w, h:h};
 
             ctx.strokeRect(x, y, w, h);
@@ -192,6 +189,8 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         initialize: function(ViewBox) {
             this.ViewBox = ViewBox;
             this.reset();
+            this._defaultRect = new Float32Array([0,0,0,0]);
+            this._rect = new Float32Array(4); // [x, y, w, h]
         },
 
         reset: function() {
@@ -213,7 +212,9 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
         defaultRect: function() {
             const mapSize = this.ViewBox.getMapSize();
-            return {x:0, y:0, w: mapSize.x, h: mapSize.y}
+            this._defaultRect[2] = mapSize.x;
+            this._defaultRect[3] = mapSize.y;
+            return this._defaultRect
         },
 
         rect: function(pad) {
@@ -222,32 +223,33 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             if (!d) return this.defaultRect();
             const c = this.ViewBox,
                   mapSize = c.size,
-                  min = c.px2Container(d.xmin, d.ymin),
-                  xmin = ~~Math.max(min.x - pad, 0),
-                  ymin = ~~Math.max(min.y - pad, 0),
+                  r = this._rect;
+            r[0] = d.xmin;
+            r[1] = d.ymin;
+            c.px2Container(r);
+            r[0] = ~~Math.max(r[0] - pad, 0);
+            r[1] = ~~Math.max(r[1] - pad, 0);
 
-                  max = c.px2Container(d.xmax, d.ymax),
-                  xmax = ~~Math.min(max.x + pad, mapSize.x),
-                  ymax = ~~Math.min(max.y + pad, mapSize.y);
+            r[2] = d.xmax; 
+            r[3] = d.ymax;
+            c.px2Container(r.subarray(2,4));
+            r[2] = ~~Math.min(r[2] + pad, mapSize.x);
+            r[3] = ~~Math.min(r[3] + pad, mapSize.y);
 
-            return {
-                x: xmin, y: ymin, 
-                w: xmax - xmin,
-                h: ymax - ymin
-            }
+            return r
         },
 
         draw: function(ctx, rect) {
             const r = rect || this.rect();
             if (!r) return;
-            ctx.strokeRect( r.x, r.y, r.w, r.h );
+            ctx.strokeRect( r[0], r[1], r[2], r[3] );
             return this
         },
 
         clear: function(ctx, rect) {
             const r = rect || this.rect();
             if (!r) return
-            ctx.clearRect( r.x, r.y, r.w, r.h );
+            ctx.clearRect( r[0], r[1], r[2], r[3] );
             return this
         }
     },
@@ -755,21 +757,6 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         let points = this.pointsGen(A, zoom),
             seg = {};
 
-        // segmask === null means we iterate through all segments at this zoom level,
-        // not just the ones in the current view 
-        if (segMask === null) {
-            let p = points.next().value;
-
-            for (let nextp of points) {
-                nextp = nextp.value;
-                seg.a = p;
-                seg.b = nextp;
-                yield seg;
-                p = nextp;
-            }
-            return
-        }
-
         // here we assume A has a segmask and use the segmask for the
         // current view-box if one isn't provided
         if (!segMask)
@@ -860,13 +847,18 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
     _drawPath: function(ctx, A, lineWidth, strokeStyle, opacity, isolated=false) {
         if (isolated)
             ctx["beginPath"]();
+        const p = new Float32Array(2);
 
         for (const seg of this.segments(A)) {
-            let p = this.ViewBox.px2Container(seg.a[0], seg.a[1]);
-            ctx["moveTo"](p.x, p.y);
+            p[0] = seg.a[0];
+            p[1] = seg.a[1];
+            this.ViewBox.px2Container(p);
+            ctx["moveTo"](p[0], p[1]);
 
-            p = this.ViewBox.px2Container(seg.b[0], seg.b[1]);
-            ctx["lineTo"](p.x, p.y);
+            p[0] = seg.b[0];
+            p[1] = seg.b[1];
+            this.ViewBox.px2Container(p);
+            ctx["lineTo"](p[0], p[1]);
         }
 
         if (isolated) {
@@ -953,7 +945,8 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
               pxo = this.ViewBox.pxOffset,
               transform = this.ViewBox.px2Container.bind(this.ViewBox),
               start = A.ts,
-              segments = this.segments(A);
+              segments = this.segments(A),
+              p = new Float32Array(2);
 
         let obj = times.next();
 
@@ -979,12 +972,10 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
                     const t = j * T + timeOffset,
                           dt = t - ta;
                     if (dt > 0) {
-                        const p = transform(
-                            pa[0] + vx * dt,  // x-value
-                            pa[1] + vy * dt   // y-value
-                        );
-
-                        // drawDot(p.x, p.y);
+                        p[0] = pa[0] + vx * dt;
+                        p[1] = pa[1] + vy * dt;
+                        transform(p);
+                        drawDot(p[0], p[1]);
                         count++;
                     }
                 }
@@ -1047,13 +1038,13 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             // TODO: only compute this once on view change
             const toDraw = inView.new_intersection(withThisColor);
             ctx["fillStyle"] = color || this["options"]["normal"]["dotColor"];
-            // ctx["beginPath"]();
+            ctx["beginPath"]();
 
             for (const A of toDraw.imap(i => itemsArray[i]))
                 if (A.idxSet[zoom] && A.segMask && !A.segMask.isEmpty())
                     count += this._drawDots(now, A, drawDotFunc);
 
-            // ctx["fill"]();
+            ctx["fill"]();
         }
         return count
    
