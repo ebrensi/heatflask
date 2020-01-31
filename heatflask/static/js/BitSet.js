@@ -239,10 +239,12 @@ BitSet.prototype.imap = function*(fnc) {
   }
 };
 
-BitSet.prototype[Symbol.iterator] = BitSet.imap;
+// BitSet.prototype[Symbol.iterator] = function (){
+//   return this.imap()
+// };
 
 //   with the option to "fast-forward" to a position set by this.next(pos)
-BitSet.prototype.imap_skip = function*(fnc, next_pos) {
+BitSet.prototype.imap_find = function*(fnc, next_pos) {
   let c = this.words.length,
       w = this.words[0],
       pos = 0,
@@ -253,11 +255,11 @@ BitSet.prototype.imap_skip = function*(fnc, next_pos) {
     while (w != 0) {
       let t = w & -w;
 
-      if (next_pos === undefined || pos == next_pos)
+      if (next_pos === undefined || pos == next_pos) {
         next_pos = yield fnc((k << 5) + this.hammingWeight((t - 1) | 0));
-      
-      w ^= t;
+      }
       pos++;
+      w ^= t;
     }
   }
 };

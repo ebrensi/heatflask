@@ -651,8 +651,6 @@ function heatflask() {
         $("#shadowBlur").val(DotLayer.options.dotShadows.blur).trigger("change");
         $("#shadows").prop("checked", DotLayer.options.dotShadows.enabled);
         domIdEvent("shadows", "change", (e) => {
-            if (!DotLayer)
-                return;
             DotLayer.options.dotShadows.enabled = e.target.checked;
             DotLayer._redraw();
         });

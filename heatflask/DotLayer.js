@@ -487,14 +487,14 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
     // -------------------------------------------------------------------
     _debugCtxReset: function() {
+        if (!this["options"]["debug"]) return;
         this._debugCtx["strokeStyle"] = "rgb(0,255,0,1)";
         this._debugCtx["lineWidth"] = 10;
         this._debugCtx["setLineDash"]([10, 5]);
     },
 
     _dotCtxReset: function() {
-        if (!this["options"]["debug"]) return;
-        const ctx = this._debugCtx;
+        const ctx = this._dotCtx;
         if (this["options"]["dotShadows"]["enabled"]) {
             const shadowOpts = this["options"]["dotShadows"],
                   sx = ctx["shadowOffsetX"] = shadowOpts["x"],
@@ -639,6 +639,17 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         return j => A.px.subarray(j, j+2);
     },
 
+    point: function() {
+        const point = new Float32Array(2),
+              px = A.px;
+        
+        return j => {
+            point[0] = px[j];
+            point[1] = px[j+1];
+            return point
+        };
+    },
+
     // _pointsArray returns an "array" function from which we can directly
     //   access the i-th data point for any given idxSet 
     _pointsArray: function(A, idxSet) {
@@ -700,9 +711,9 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
     times: function(A) {
         const zoom = this.ViewBox.zoom,
-              stream = this._iterRLEstream(A.time, A.idxSet[zoom]),
+              // stream = this._iterRLEstream(A.time, A.idxSet[zoom]),
+              stream = StreamRLE.decodeCompressedBuf2(A.time, A.idxSet[zoom]),
               obj = {a:0, b:0};
-
         let j = 0,
             second = stream.next();
         return A.segMask.imap(idx => {
@@ -742,7 +753,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
     segments: function*(A, zoom, segMask) {
         let points = this.pointsGen(A, zoom),
-            seg = {a:0, b:0};
+            seg = {};
 
         // segmask === null means we iterate through all segments at this zoom level,
         // not just the ones in the current view 
@@ -763,24 +774,15 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         // current view-box if one isn't provided
         if (!segMask)
             segMask = A.segMask;
-    
-        /// **************experimental****************
-        // const pointsArray = this._pointsArray(A, null),
-        //       idxSet = A.idxSet[this.ViewBox.zoom],
-        //       segsIdx = segMask.imap(),
-        //       firstSegIdx = segsIdx.next().value,
-        //       pointsGen = idxSet.imap_skip( pointsArray, firstSegIdx );
 
-        // for (const nextSegIdx of segsIdx) {
-        //     const p1 = pointsGen.next().value,
-        //           p2 = pointsGen.next(nextSegIdx).value;
-        //     yield [p1, p2]; 
-        // }
-        //// **************************************
-
+        /*
+         * Method 1: this is more efficient if most segments are
+         *  included, but not so much if we need to skip a lot.
+         */
         let j = 0, 
             first = points.next(),
             second;
+
         for (const i of segMask.imap()) {
             while (j++ < i)
                 first = points.next();
@@ -790,6 +792,32 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             yield seg;
             first = second;
         }
+
+        /*
+         * Method 2: this is more efficient if most segments are
+         *  we need to skip a lot od segments.
+         */
+        // const pointsArray = this._pointsArray(A, null),
+        //       idxSet = A.idxSet[this.ViewBox.zoom],
+        //       segsIdx = segMask.imap();
+
+        // let i = segsIdx.next().value;
+        // const points2 = idxSet.imap_find( pointsArray, i );
+
+        // seg.a = points2.next().value; // point i
+        // seg.b = points2.next().value; // point i+1
+        // yield seg
+        // let last_i = i;
+        
+        // for (i of segsIdx) {
+        //     if (i == last_i + 1)
+        //         seg.a = seg.b;
+        //     else
+        //         seg.a = points2.next(i).value;
+        //     seg.b = points2.next().value;
+        //     last_i = i;
+        //     yield seg    
+        // }
     },
 
     inMapBounds: function(A) {
@@ -834,13 +862,11 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             ctx["beginPath"]();
 
         for (const seg of this.segments(A)) {
-            const p1 = this.ViewBox.px2Container(seg.a[0], seg.a[1]),
-                  p1x = p1.x, p1y = p1.y,
-                  p2 = this.ViewBox.px2Container(seg.b[0], seg.b[1]);
+            let p = this.ViewBox.px2Container(seg.a[0], seg.a[1]);
+            ctx["moveTo"](p.x, p.y);
 
-            // draw segment
-            ctx["moveTo"](p1x, p1y);
-            ctx["lineTo"](p2.x, p2.y);
+            p = this.ViewBox.px2Container(seg.b[0], seg.b[1]);
+            ctx["lineTo"](p.x, p.y);
         }
 
         if (isolated) {
@@ -894,6 +920,9 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             if (this["options"]["debug"])
                 clear(this._debugCtx, rect);
         }
+
+        if (!this["options"]["showPaths"])
+            return
 
         if (this._selectedFilter) {
             const selected = toDraw.new_intersection(this._selectedFilter),
@@ -955,7 +984,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
                             pa[1] + vy * dt   // y-value
                         );
 
-                        drawDot(p.x, p.y);
+                        // drawDot(p.x, p.y);
                         count++;
                     }
                 }
@@ -1018,13 +1047,13 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             // TODO: only compute this once on view change
             const toDraw = inView.new_intersection(withThisColor);
             ctx["fillStyle"] = color || this["options"]["normal"]["dotColor"];
-            ctx["beginPath"]();
+            // ctx["beginPath"]();
 
             for (const A of toDraw.imap(i => itemsArray[i]))
                 if (A.idxSet[zoom] && A.segMask && !A.segMask.isEmpty())
                     count += this._drawDots(now, A, drawDotFunc);
 
-            ctx["fill"]();
+            // ctx["fill"]();
         }
         return count
    

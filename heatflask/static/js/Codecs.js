@@ -135,6 +135,17 @@ const StreamRLE = {
       let len = 0; // We don't count the start value!
       for (const el of rle_list) {
         if (el instanceof Array)
+          len += el[1];
+        else
+          len++;
+      }
+      return len
+    },
+
+    _transcodedListLength: function(rle_list) {
+      let len = 0; // We don't count the start value!
+      for (const el of rle_list) {
+        if (el instanceof Array)
           len += 2;
         else
           len++;
@@ -142,8 +153,8 @@ const StreamRLE = {
       return len
     },
 
-    transcode2CompressedBuf: function(rle_list) {
-        const len = this._decodedListLength(rle_list),
+    transcode2Buf: function(rle_list) {
+        const len = this._transcodedListLength(rle_list),
               buf = new Int16Array(len);
 
         let j = 0;
@@ -154,7 +165,11 @@ const StreamRLE = {
             } else
                 buf[j++] = el;
         }
+        return buf
+    },
 
+    transcode2CompressedBuf: function(rle_list) {
+        const buf = this.transcode2Buf(rle_list);
         return VByte.compressSigned(buf);
     },
 
@@ -198,11 +213,50 @@ const StreamRLE = {
                 yield running_sum;
             }
         }
+    },
+
+    decodeCompressedBuf2: function(cbuf, idxSet, first_value=0) {
+        const bufGen = VByte.uncompressSigned(cbuf);
+        let j = 0, k, repeated,
+            sum = first_value; // j is our counter for bufGen
+
+        return idxSet.imap(i => {
+          // we will return the i-th element of bufGen
+          
+          // ..if we are continuing a repeat streak
+          while (k > 0) {
+            sum += repeated;
+            k--;
+            if (++j == i)
+              return sum
+          }
+
+          if (j == i) 
+            return sum
+          else {
+
+            while (j < i) {
+              const el = bufGen.next().value;
+              if (el < 0) {
+                k = -el;
+                repeated = bufGen.next().value;
+                while (k--) {
+                  sum += repeated;
+                  if (++j == i)
+                    return sum
+                }
+
+              } else {
+                sum += el;
+                j++;
+              }
+            }
+            return sum
+          }
+
+        });
     }
-
 };
-
-
 
 /**
  * FastIntegerCompression.js : a fast integer compression library in JavaScript.
