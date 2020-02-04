@@ -243,7 +243,8 @@ BitSet.prototype.imap = function*(fnc) {
 //   return this.imap()
 // };
 
-//   with the option to "fast-forward" to a position set by this.next(pos)
+//   with the option to "fast-forward" 
+//  to a position set by this.next(position).
 BitSet.prototype.imap_find = function*(fnc, next_pos) {
   let c = this.words.length,
       w = this.words[0],

@@ -7,13 +7,15 @@ const Simplifier = {
     */
 
     // points is a function p(i) that directly accesses the i-th point
-    // of our data set. 
+    // of our data set.  we must assume that the point we get is
+    // a pointer to he same memory location every time, so we need to make copy
+    // ourselves.
     simplify: function(points, n, tolerance) {
         const sqTolerance = tolerance * tolerance;
-        
+
         let idxBitSet = this.simplifyRadialDist(points, n, sqTolerance);
         
-        const idx = idxBitSet.array(Uint16Array),
+        const idx = idxBitSet.array(),
               subset = i => points(idx[i]),
         
               idxBitSubset = this.simplifyDouglasPeucker(
@@ -27,48 +29,58 @@ const Simplifier = {
 
     // basic distance-based simplification
     simplifyRadialDist: function(points, n, sqTolerance) {
-        const selectedIdx = new BitSet();
+        const selectedIdx = new BitSet(),
+              prevPoint = new Float32Array(2);
 
-        let prevPoint = points(0),
-            point, i;
+
+        let point = points(0), i;
+        prevPoint[0] = point[0];
+        prevPoint[1] = point[1];
         selectedIdx.add(0);
 
         for (i=1; i<n; i++) {
             point = points(i); 
             if (this.getSqDist(point, prevPoint) > sqTolerance) {
                 selectedIdx.add(i++);
-                prevPoint = point;
+                prevPoint[0] = point[0];
+                prevPoint[1] = point[1];
             }
         }
         
         if (!this.equal(point, prevPoint))
-            selectedIdx.add(i++)
+            selectedIdx.add(i)
 
         return selectedIdx;
     },
 
     // simplification using Ramer-Douglas-Peucker algorithm
     simplifyDouglasPeucker: function(points, n, sqTolerance) {
-        let bitSet = new BitSet();
-
+        const bitSet = new BitSet(),
+              buffer = new Float32Array(4),
+              p1 = buffer.subarray(0, 2),
+              p2 = buffer.subarray(2, 4);
+        
         bitSet.add(0);
-        bitSet.add(n-1);
+        const first = points(0);
+        p1[0] = first[0];
+        p1[1] = first[1];
 
-        this.simplifyDPStep(points, 0, n-1, sqTolerance, bitSet);
+        bitSet.add(n-1);
+        const last = points(n-1);
+        p2[0] = last[0];
+        p2[1] = last[1];
+
+        this.simplifyDPStep(points, 0, n-1, sqTolerance, bitSet, p1, p2);
 
         return bitSet
     },
 
-    simplifyDPStep: function(points, first, last, sqTolerance, bitSet) {
+    simplifyDPStep: function(points, firstIdx, lastIdx, sqTolerance, bitSet, p1, p2) {
         let maxSqDist = sqTolerance,
             index;
 
-        for (let idx = first + 1; idx < last; idx++) {
-            const sqDist = this.getSqSegDist(
-                points(idx),
-                points(first),
-                points(last)
-            );
+        for (let idx = firstIdx + 1; idx < lastIdx; idx++) {
+            const sqDist = this.getSqSegDist( points(idx), p1, p2 );
 
             if (sqDist > maxSqDist) {
                 index = idx;
@@ -77,13 +89,21 @@ const Simplifier = {
         }
 
         if (maxSqDist > sqTolerance) {
-            if (index - first > 1)
-                this.simplifyDPStep(points, first, index, sqTolerance, bitSet);
+            if (index - firstIdx > 1) {
+                const p = points(index);
+                p2[0] = p[0];
+                p2[1] = p[1];
+                this.simplifyDPStep(points, firstIdx, index, sqTolerance, bitSet, p1, p2);
+            }
             
             bitSet.add(index);
             
-            if (last - index > 1) 
-                this.simplifyDPStep(points, index, last, sqTolerance, bitSet);
+            if (lastIdx - index > 1) {
+                const p = points(index);
+                p1[0] = p[0];
+                p1[1] = p[1];
+                this.simplifyDPStep(points, index, lastIdx, sqTolerance, bitSet, p1, p2);
+            }
         }
     },
 
