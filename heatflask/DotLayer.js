@@ -527,7 +527,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
     _redraw: function(event) {
         if ( !this._ready )
             return;        
-
+        
         this.ViewBox.update();
         this.DrawBox.reset();
         this._dotCtxReset();
@@ -641,7 +641,10 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
     // this returns a reference to the same buffer every time
     _rawPoint: function(A) {
-        const buf = new Float32Array(2),
+        // px is a Float32Array but JavaScript internally
+        // does computation using 64 bit floats,
+        // so we use a regular Array.
+        const buf = [NaN, NaN],  
               px = A.px;
         return j => {
             buf[0] = px[ j ];
@@ -675,49 +678,33 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         return arrayFunc;
     },
 
-    _rawPointsGen: function*(A) {
+    _iterAllPoints: function*(A) {
         const pointAt = this._rawPoint(A);
 
         for ( let j=0, n = A.px.length; j < n; j +=2 )
             yield pointAt(j);
     },
 
-    _pointsGen: function(A, idxSet) {
+    _iterPoints: function(A, idxSet) {
         if (idxSet)
             return idxSet.imap( this.pointsArray(A, null) );
         else
-            return this._rawPointsGen(A);
+            return this._iterAllPoints(A);
     },
 
-    pointsGen: function(A, zoom) {
-        if (zoom === 0) return this._pointsGen(A);
+    iterPoints: function(A, zoom) {
+        if (zoom === 0) return this._iterAllPoints(A);
 
         if (!zoom)
             zoom = this.ViewBox.zoom;
 
-        return this._pointsGen(A, A.idxSet[zoom]);
+        return this._iterPoints(A, A.idxSet[zoom]);
     },
 
-    _iterRLEstream: function(RLEstream, idxSet) {
-        const stream = StreamRLE.decodeCompressedBuf(RLEstream);
-        if (!idxSet)
-            return stream;
-
-        let i = 0;
-        return idxSet.imap(idx => {
-            let s = stream.next();
-            while (i++ < idx)
-                s = stream.next();
-            // console.log(`${i}: ${s.value}`);
-            return s.value;
-        });
-
-    },
-
-    times: function(A) {
+    iterTimeIntervals: function(A) {
         const zoom = this.ViewBox.zoom,
               stream = StreamRLE.decodeCompressedBuf2(A.time, A.idxSet[zoom]),
-              timeInterval = new Float32Array(2);
+              timeInterval = [NaN, NaN];
         let j = 0,
             second = stream.next();
         return A.segMask.imap(idx => {
@@ -755,10 +742,13 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         return this._simplify(A, zoom);
     },
 
-    segments: function(A, zoom, segMask) {
-        const points = this.pointsGen(A, zoom),
-              buf = new Float32Array(4),
-              seg = {a: buf.subarray(0,2), b: buf.subarray(2,4)};
+    // this returns an iterator of segment objects
+    iterSegments: function(A, zoom, segMask) {
+        const seg = {a: [NaN, NaN], b: [NaN, NaN]},
+              set = (s, p) => {
+                s[0] = p[0];
+                s[1] = p[1];
+              };
 
         // note: points() returns the a reference to the same
         // object every time so if we need to deal with more than
@@ -770,6 +760,10 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
          * Method 1: this is more efficient if most segments are
          *  included, but not so much if we need to skip a lot.
          */
+
+        const points = this.iterPoints(A, zoom),
+              a = seg.a,
+              b = seg.b;
         let j = 0, 
             obj = points.next();
 
@@ -777,39 +771,38 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             
             while (j++ < i)
                 obj = points.next();
-            
-            let p = obj.value;
-            buf[0] = p[0];
-            buf[1] = p[1];
-
-            p = points.next().value;
-            buf[2] = p[0];
-            buf[3] = p[1];
+            set(a, obj.value);
+            set(b, points.next().value);
+         
             return seg;
         });
 
         /*
          * Method 2: this is more efficient if most segments are
          *  we need to skip a lot of segments.
-         */
+         */              
         // const pointsArray = this.pointsArray(A, null),
         //       idxSet = A.idxSet[zoom],
-        //       segsIdx = segMask.imap();
+        //       segsIdx = segMask.imap(),
+        //       a = seg.a,
+        //       b = seg.b;
 
         // let i = segsIdx.next().value;
         // const points2 = idxSet.imap_find( pointsArray, i );
 
-        // seg.a = points2.next().value; // point i
-        // seg.b = points2.next().value; // point i+1
+        // set(a, points2.next().value) // point i
+        // set(b, points2.next().value) // point i+1
+        
         // yield seg
+        
         // let last_i = i;
         
         // for (i of segsIdx) {
         //     if (i == last_i + 1)
         //         seg.a = seg.b;
         //     else
-        //         seg.a = points2.next(i).value;
-        //     seg.b = points2.next().value;
+        //         set(a, points2.next(i).value);
+        //     set(b, points2.next().value);
         //     last_i = i;
         //     yield seg    
         // }
@@ -829,7 +822,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
     makeSegMask: function(A) {
         const drawBox = this.DrawBox,
               viewBox = this.ViewBox,
-              points = this.pointsGen(A, viewBox.zoom),
+              points = this.iterPoints(A, viewBox.zoom),
               inBounds = p => viewBox.contains(p) && drawBox.update(p);
 
         A.segMask = (A.segMask || new BitSet()).clear();
@@ -852,21 +845,40 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         return A.segMask
     },
 
-    _drawPath: function(ctx, A) {
-        const segs = this.segments(A),
+    _drawPathFromSegIter: function(ctx, A) {
+        const segs = this.iterSegments(A),
               seg = segs.next().value,
               a = seg.a,
               b = seg.b;
 
+        let i = 0;
         do {
             this.ViewBox.px2Container(a);
             ctx["moveTo"](a[0], a[1]);
 
             this.ViewBox.px2Container(b);
             ctx["lineTo"](b[0], b[1]);
+
         } while (!segs.next().done)
     },
 
+    _drawPathFromPointArray: function(ctx, A) {
+        const zoom = this.ViewBox.zoom,
+              segMask = A.segMask,
+              points = this.pointsArray(A, zoom),
+              point = i => this.ViewBox.px2Container(points(i));
+
+        segMask.forEach(i => {
+            let p = point(i);
+            ctx["moveTo"](p[0], p[1]);
+
+            p = point(i+1);
+            ctx["lineTo"](p[0], p[1]);
+        });
+    },
+
+    // this function modifies itemsToDraw so make a copy 
+    // if you want to use it agin.
     _drawPaths: function(itemsToDraw) {
         const ctx = this._lineCtx;
 
@@ -875,11 +887,11 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             if (!itemsToDraw.intersects(withThisColor))
                 continue;
 
-            const toDraw = itemsToDraw.new_intersection(withThisColor);
+            const toDraw = itemsToDraw.intersection(withThisColor);
             
             ctx["strokeStyle"] = color;
             ctx["beginPath"]();
-            toDraw.forEach( i => this._drawPath(ctx, this._itemsArray[i]));
+            toDraw.forEach( i => this._drawPathFromSegIter(ctx, this._itemsArray[i]));
             ctx["stroke"]();
         } 
     },
@@ -938,25 +950,23 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
     _drawDots: function( now, A, drawDot ) {      
         const T = this._period,
               start = A.ts,
-              p = [0,0];
+              p = [NaN, NaN];
 
         // segments yields the same object seg every time with
         // the same views a and b to the same memory buffer.
         //  So we only need to define the references once.
-        const segments = this.segments(A),
+        const segments = this.iterSegments(A),
               seg = segments.next().value,
               p_a = seg.a,
               p_b = seg.b;
 
-        const times = this.times(A),
+        const times = this.iterTimeIntervals(A),
               timeInterval = times.next().value;
 
         const timeOffset = (this._timeScale * ( now - (start + timeInterval[0]))) % T;
 
         let count = 0;
         let obj;
-
-        // debugger;
 
         do {
             const t_a = timeInterval[0],
@@ -977,12 +987,11 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
                         p[1] = p_a[1] + vy * dt;
                         drawDot(p);
                         count++;
-                    } else
-                        console.log("dt was < 0");
+                    }
                 }
             }
             
-        } while( !(segments.next() && times.next()).done ) 
+        } while( !segments.next().done && !times.next().done ) 
 
         return count
     },

@@ -193,12 +193,29 @@ BitSet.prototype.size = function() {
   return answer;
 };
 
+BitSet.prototype.max = function() {
+  let pos = 0 | 0;
+  let c = this.words.length-1;
+  for (let k = c; k >= 0; --k) {
+    let w =  this.words[k];
+    if (w != 0) {
+      let t = 0;
+      while (w != 0) {
+        t = w & -w;
+        w ^= t;
+      }
+      return (k << 5) + this.hammingWeight((t - 1) | 0);
+    }
+  }
+  return 0
+};
+
 // Return an array with the set bit locations (values)
 BitSet.prototype.array = function(ArrayConstructor) {
-  const n = this.size();
-  ArrayConstructor = ArrayConstructor || (n >> 8)? ((n >> 16)? Uint32Array : Uint16Array) : Uint8Array 
+  const max = this.max();
+  ArrayConstructor = ArrayConstructor || (max >> 8)? ((max >> 16)? Uint32Array : Uint16Array) : Uint8Array 
 
-  let answer = new ArrayConstructor(n);
+  let answer = new ArrayConstructor(max);
   let pos = 0 | 0;
   let c = this.words.length;
   for (let k = 0; k < c; ++k) {
