@@ -640,12 +640,16 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
     },
 
     // this returns a reference to the same buffer every time
-    _rawPoint: function(A) {
+    _rawPoint: function _rawPoint(A) {
         // px is a Float32Array but JavaScript internally
         // does computation using 64 bit floats,
         // so we use a regular Array.
-        const buf = [NaN, NaN],  
+        if (!_rawPoint.buf)
+            _rawPoint.buf = [NaN, NaN]
+        
+        const buf = _rawPoint.buf,  
               px = A.px;
+
         return j => {
             buf[0] = px[ j ];
             buf[1] = px[j+1];
@@ -701,10 +705,16 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         return this._iterPoints(A, A.idxSet[zoom]);
     },
 
+    TimeInterval: function interval() {
+        if (!interval._interval)
+            interval._interval = [NaN, NaN];
+        return interval._interval
+    },
+
     iterTimeIntervals: function(A) {
         const zoom = this.ViewBox.zoom,
               stream = StreamRLE.decodeCompressedBuf2(A.time, A.idxSet[zoom]),
-              timeInterval = [NaN, NaN];
+              timeInterval = this.TimeInterval();
         let j = 0,
             second = stream.next();
         return A.segMask.imap(idx => {
@@ -742,17 +752,28 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         return this._simplify(A, zoom);
     },
 
+    Segment: function segment() {
+        if (!segment._segment)
+            segment._segment = {
+                a: [NaN, NaN],
+                b: [NaN, NaN],
+                temp: [NaN, NaN]
+            };
+
+        return segment._segment;
+    },
+
     // this returns an iterator of segment objects
     iterSegments: function(A, zoom, segMask) {
-        const seg = {a: [NaN, NaN], b: [NaN, NaN]},
+        const seg = this.Segment(),
+              a = seg.a, 
+              b = seg.b,
+              temp = seg.temp,
               set = (s, p) => {
                 s[0] = p[0];
                 s[1] = p[1];
               };
 
-        // note: points() returns the a reference to the same
-        // object every time so if we need to deal with more than
-        // one at a time we will need to make a copy. 
         if (!segMask)
             segMask = A.segMask;
 
@@ -761,51 +782,55 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
          *  included, but not so much if we need to skip a lot.
          */
 
-        const points = this.iterPoints(A, zoom),
-              a = seg.a,
-              b = seg.b;
-        let j = 0, 
-            obj = points.next();
+        // note: this.iterPoints() returns the a reference to the same
+        // object every time so if we need to deal with more than
+        // one at a time we will need to make a copy. 
+        
+        // const points = this.iterPoints(A, zoom);
+        // let j = 0, 
+        //     obj = points.next();
 
-        return segMask.imap( i => {
-            
-            while (j++ < i)
-                obj = points.next();
-            set(a, obj.value);
-            set(b, points.next().value);
+        // return segMask.imap( i => {
+        //     while (j++ < i)
+        //         obj = points.next();
+        //     set(a, obj.value);
+
+        //     obj = points.next();
+        //     set(b, obj.value);
          
-            return seg;
-        });
+        //     return seg;
+        // });
 
         /*
-         * Method 2: this is more efficient if most segments are
+         * Method 2: this is more efficient if
          *  we need to skip a lot of segments.
          */              
-        // const pointsArray = this.pointsArray(A, null),
-        //       idxSet = A.idxSet[zoom],
-        //       segsIdx = segMask.imap(),
-        //       a = seg.a,
-        //       b = seg.b;
+        const pointsArray = this.pointsArray(A, null),
+              idxSet = A.idxSet[this.ViewBox.zoom],
+              segsIdx = segMask.imap(),
+              firstIdx = segsIdx.next().value,
+              points = idxSet.imap_find( pointsArray, firstIdx );
 
-        // let i = segsIdx.next().value;
-        // const points2 = idxSet.imap_find( pointsArray, i );
-
-        // set(a, points2.next().value) // point i
-        // set(b, points2.next().value) // point i+1
-        
-        // yield seg
-        
-        // let last_i = i;
-        
-        // for (i of segsIdx) {
-        //     if (i == last_i + 1)
-        //         seg.a = seg.b;
-        //     else
-        //         set(a, points2.next(i).value);
-        //     set(b, points2.next().value);
-        //     last_i = i;
-        //     yield seg    
-        // }
+        function* iterSegs() {
+            set(a, points.next().value); // point at firstIdx
+            set(temp, points.next().value);
+            set(b, temp); // point at firstIdx + 1
+            
+            yield seg
+            
+            let last_i = firstIdx;
+            for (const i of segsIdx) {
+                if (i === ++last_i)
+                    set(a, temp);
+                else
+                    set(a, points.next(i).value);
+                set(temp, points.next().value);
+                set(b, temp);
+                last_i = i;
+                yield seg    
+            }
+        }
+        return iterSegs();
     },
 
     inMapBounds: function(A) {
