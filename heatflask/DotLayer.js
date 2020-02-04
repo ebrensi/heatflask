@@ -540,7 +540,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
               inView = this.ViewBox.itemIds.clear(),
               toSimplify = this._toSimplify.clear(),
               zoom = this.ViewBox.zoom;
-
+        
         for (let i=0; i<n; i++){
             const A = itemsArray[i];
             
@@ -912,7 +912,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             if (!itemsToDraw.intersects(withThisColor))
                 continue;
 
-            const toDraw = itemsToDraw.intersection(withThisColor);
+            const toDraw = itemsToDraw.new_intersection(withThisColor);
             
             ctx["strokeStyle"] = color;
             ctx["beginPath"]();
@@ -1074,9 +1074,12 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             ctx["fillStyle"] = color || this["options"]["normal"]["dotColor"];
             ctx["beginPath"]();
 
-            for (const A of toDraw.imap(i => itemsArray[i]))
+            toDraw.forEach(i => {
+                const A = itemsArray[i];
+                
                 if (A.idxSet[zoom] && A.segMask && !A.segMask.isEmpty())
                     count += this._drawDots(now, A, drawDot);
+            });
 
             ctx["fill"]();
         }

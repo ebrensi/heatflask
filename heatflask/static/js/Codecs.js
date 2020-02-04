@@ -142,26 +142,50 @@ const StreamRLE = {
       return len
     },
 
-    _transcodedListLength: function(rle_list) {
-      let len = 0; // We don't count the start value!
+    // We store RLE stream data locally a little differently.
+    //  a run of repeated values is represented by 
+    //  3 consecutive values 0, runlength, value
+    //  which allows us to avoid storing negative numbers.
+    _transcodeInfo: function(rle_list) {
+      let len = 0, // We don't count the start value!
+          max = 0;
+
       for (const el of rle_list) {
-        if (el instanceof Array)
-          len += 2;
+        if (el instanceof Array) {
+            if (el[1] > 2)
+              len += 3;
+            else
+              len += 2;
+
+            if (el[0] > max) max = el[0];
+        }
         else
+          if (el > max) max = el;
           len++;
       }
-      return len
+      return {len: len, max: max}
     },
 
     transcode2Buf: function(rle_list) {
-        const len = this._transcodedListLength(rle_list),
-              buf = new Int16Array(len);
+        const {len, max} = this._transcodeInfo(rle_list),
+              ArrayConstructor = (max >> 8)? ((max >> 16)? Uint32Array : Uint16Array) : Uint8Array, 
+              buf = new ArrayConstructor(len);
 
         let j = 0;
         for (const el of rle_list) {
             if (el instanceof Array) {
-                buf[j++] = -el[1];
-                buf[j++] = el[0];
+                if (el[1] > 2) {
+                  // this is only efficient if we have a
+                  // run of 3 or more repeated values
+                  buf[j++] = 0;
+                  buf[j++] = el[1];
+                  buf[j++] = el[0];
+                } else {
+                  // we only have two so we flatten it
+                  buf[j++] = el[0];
+                  buf[j++] = el[0];
+                }
+          
             } else
                 buf[j++] = el;
         }
@@ -170,7 +194,7 @@ const StreamRLE = {
 
     transcode2CompressedBuf: function(rle_list) {
         const buf = this.transcode2Buf(rle_list);
-        return VByte.compressSigned(buf);
+        return VByte.compress(buf);
     },
 
     decodeBuf: function*(buf, first_value=0) {
@@ -181,9 +205,10 @@ const StreamRLE = {
 
         for (let i=0, el; i<len; i++) {
             el = buf[i];
-            if (el < 0) {
-                const repeated = buf[++i];
-                for (let j=0; j<-el; j++) {
+            if (el === 0) {
+                const n = buf[++i],
+                      repeated = buf[++i];
+                for (let j=0; j<n; j++) {
                     running_sum += repeated;
                     yield running_sum;
                 }
@@ -195,16 +220,17 @@ const StreamRLE = {
     },
 
     decodeCompressedBuf: function*(cbuf, first_value=0) {
-        const bufGen = VByte.uncompressSigned(cbuf);
+        const bufGen = VByte.uncompress(cbuf);
 
         let running_sum = first_value;
         yield running_sum;
 
         for (const el of bufGen) {
-            if (el < 0) {
-                const repeated = bufGen.next().value;
+            if (el === 0) {
+                const n = bufGen.next().value,
+                      repeated = bufGen.next().value;
 
-                for (let j=0; j<-el; j++) {
+                for (let j=0; j<n; j++) {
                     running_sum += repeated;
                     yield running_sum;
                 }
@@ -216,7 +242,7 @@ const StreamRLE = {
     },
 
     decodeCompressedBuf2: function(cbuf, idxSet, first_value=0) {
-        const bufGen = VByte.uncompressSigned(cbuf);
+        const bufGen = VByte.uncompress(cbuf);
         let j = 0, k, repeated,
             sum = first_value; // j is our counter for bufGen
 
@@ -237,8 +263,8 @@ const StreamRLE = {
 
             while (j < i) {
               const el = bufGen.next().value;
-              if (el < 0) {
-                k = -el;
+              if (el === 0) {
+                k = bufGen.next().value;
                 repeated = bufGen.next().value;
                 while (k--) {
                   sum += repeated;
@@ -283,19 +309,115 @@ const VByte =  {
       return 5;
     },
 
-    // private function
+    // compute how many bytes an array of integers would use once compressed
+// input is expected to be an array of non-negative integers
+    compressedSizeInBytes: function(input) {
+      const c = input.length;
+      let answer = 0;
+      for(let i = 0; i < c; i++) {
+        answer += this._bytelog(input[i]);
+      }
+      return answer;
+    },
+
+    // Compress an array of integers, return a compressed buffer (as an ArrayBuffer).
+    // It is expected that the integers are non-negative: the caller is responsible
+    // for making this check. Floating-point numbers are not supported.
+    compress: function(input) {
+      const c = input.length,
+            buf = new ArrayBuffer(this.compressedSizeInBytes(input)),
+            view   = new Int8Array(buf);
+      let pos = 0;
+      for(let i = 0; i < c; i++) {
+        const val = input[i];
+        if (val < (1 << 7)) {
+          view[pos++] = val ;
+        } else if (val < (1 << 14)) {
+          view[pos++] = (val & 0x7F) | 0x80;
+          view[pos++] = val >>> 7;
+        } else if (val < (1 << 21)) {
+          view[pos++] = (val & 0x7F) | 0x80;
+          view[pos++] = ( (val >>> 7) & 0x7F ) | 0x80;
+          view[pos++] = val >>> 14;
+        } else if (val < (1 << 28)) {
+          view[pos++] = (val & 0x7F ) | 0x80 ;
+          view[pos++] = ( (val >>> 7) & 0x7F ) | 0x80;
+          view[pos++] = ( (val >>> 14) & 0x7F ) | 0x80;
+          view[pos++] = val >>> 21;
+        } else {
+          view[pos++] = ( val & 0x7F ) | 0x80;
+          view[pos++] = ( (val >>> 7) & 0x7F ) | 0x80;
+          view[pos++] = ( (val >>> 14) & 0x7F ) | 0x80;
+          view[pos++] = ( (val >>> 21) & 0x7F ) | 0x80;
+          view[pos++] = val >>> 28;
+        }
+      }
+      return buf;
+    },
+
+    // from a compressed array of integers stored ArrayBuffer, compute the number of compressed integers by scanning the input
+    computeHowManyIntegers: function(input) {
+      const view = new Int8Array(input),
+            c = view.length;
+
+      let count = 0;
+      for(let i = 0; i < c; i++) {
+        count += (input[i]>>>7);
+      }
+
+      return c - count;
+    },
+
+    // uncompress an array of integer from an ArrayBuffer, return the array
+    // it is assumed that they were compressed using the compress function, the caller
+    // is responsible for ensuring that it is the case.
+    uncompress: function*(input) {
+      const inbyte = new Int8Array(input),
+            end = inbyte.length;
+      let pos = 0;
+      while (end > pos) {
+            let c = inbyte[pos++],
+                v = c & 0x7F;
+            if (c >= 0) {
+              yield v;
+              continue;
+            }
+            c = inbyte[pos++];
+            v |= (c & 0x7F) << 7;
+            if (c >= 0) {
+              yield v;
+              continue;
+            }
+            c = inbyte[pos++];
+            v |= (c & 0x7F) << 14;
+            if (c >= 0) {
+              yield v;
+              continue;
+            }
+            c = inbyte[pos++];
+            v |= (c & 0x7F) << 21;
+            if (c >= 0) {
+              yield v;
+              continue;
+            }
+            c = inbyte[pos++];
+            v |= c << 28;
+            yield v;
+      }
+    },
+
+    // ***** For Signed Integers *********
     _zigzag_encode: function(val) {
       return (val + val) ^ (val >> 31);;
     },
 
-    // private function
     _zigzag_decode: function(val) {
       return  (val >> 1) ^ (- (val & 1));
     },
 
     // compute how many bytes an array of integers would use once compressed
     // input is expected to be an array of integers, some of them can be negative
-    computeCompressedSizeInBytesSigned: function(input) {
+    compressedSizeInBytesSigned: function(input) {
       const c = input.length;
       const bytelog = this._bytelog,
             zze = this._zigzag_encode,
