@@ -277,7 +277,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
                 worker.post({hello: `worker_${i}`}).then(msg => console.log(msg));
             }
         },
-
+        // DotLayerWorker object def
         DotLayerWorker: function(url) {
             this.worker = new Worker(url);
 

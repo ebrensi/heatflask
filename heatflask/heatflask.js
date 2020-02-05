@@ -20,7 +20,7 @@ function heatflask() {
         DotLayer = false,
         appState = {
             paused: ONLOAD_PARAMS.start_paused,
-            items: {},
+            items: new Map(),
             currentBaseLayer: null
         },
         msgBox = null;
@@ -168,7 +168,7 @@ function heatflask() {
 
              if (ids.length == 1) {
                 let id = ids[0],
-                    A = appState.items[id];
+                    A = appState.items.get(id);
                 if (!A.selected){
                     return;
                 }
@@ -460,7 +460,7 @@ function heatflask() {
                     scrollCollapse: true,
                     order: [[ 0, "desc" ]],
                     select: isMobileDevice()? "multi" : "os",
-                    data: Object.values(appState.items),
+                    data: appState.items.values(),
                     rowId: "id",
                     columns: tableColumns
                 }).on( 'select', handle_table_selections)
@@ -512,7 +512,7 @@ function heatflask() {
             toDeSelect = [];
 
         for (let i=0; i<ids.length; i++) {
-            let A = appState.items[ids[i]],
+            let A = appState.items.get(ids[i]),
                 tag = "#"+A.id;
             if (A.selected) {
                 toDeSelect.push(tag);
@@ -535,7 +535,7 @@ function heatflask() {
     function zoomToSelectedPaths(){
         // Pan-Zoom to fit all selected activities
         let selection_bounds = L.latLngBounds();
-        $.each(appState.items, (id, a) => {
+        appState.items.forEach((a, id) => {
             if (a.selected) {
                 selection_bounds.extend(a.bounds);
             }
@@ -546,7 +546,7 @@ function heatflask() {
     }
 
     function selectedIDs(){
-        return Object.values(appState.items).filter(
+        return appState.items.values().filter(
             (a) => { return a.selected; }
             ).map(function(a) { return a.id; });
     }
@@ -582,7 +582,7 @@ function heatflask() {
 
 
     function activityDataPopup(id, latlng){
-        let A = appState.items[id],
+        let A = appState.items.get(id),
             d = A.total_distance,
             elapsed = hhmmss(A.elapsed_time),
             v = A.average_speed,
@@ -611,10 +611,10 @@ function heatflask() {
     }
 
 
-    function getBounds(ids=[]) {
+    function getBounds(ids) {
         let bounds = L.latLngBounds();
-        for (let i=0; i<ids.length; i++){
-            bounds.extend( appState.items[ids[i]].bounds );
+        for (id of ids){
+            bounds.extend( appState.items.get(id).bounds );
         }
         return bounds
     }
@@ -688,24 +688,20 @@ function heatflask() {
 
     /* Rendering */
     function updateLayers(msg) {
-        // optional auto-zoom
         if (domIdProp("autozoom", "checked")){
-            let totalBounds = getBounds(Object.keys(appState.items));
+            let totalBounds = getBounds(appState.items.keys());
 
             if (totalBounds.isValid()){
                 map.fitBounds(totalBounds);
             }
         }
 
-        DotLayer.reset();
-
-        let num =  Object.keys(appState.items).length,
-            msg2 = " " + msg + " " + num  + " activities rendered.";
-        $(".data_message").html(msg2);       
+        const num = appState.items.size;
+        $(".data_message").html(` ${msg} ${num} activities rendered.`);       
 
         // (re-)render the activities table
         atable.clear();
-        atable.rows.add(Object.values(appState.items)).draw();
+        atable.rows.add(Array.from(appState.items.values())).draw();
 
         if (!ADMIN && !OFFLINE) {
             // Record this to google analytics
@@ -718,6 +714,8 @@ function heatflask() {
             }
             catch(err){}
         }
+
+        DotLayer.reset();
     }
 
     let sock, wskey;
@@ -741,16 +739,10 @@ function heatflask() {
               type = domIdVal("select_type"),
               num = domIdVal("select_num"),
               idString = domIdVal("activity_ids"),
-              to_exclude = Object.keys(appState.items).map(Number);
-
-        // console.log(`exclude ${to_exclude.length} activities`, to_exclude);
-
-        if (DotLayer) {
-            DotLayer._mapMoving = true;
-        }
+              to_exclude = Array.from(appState.items.keys()).map(Number);
 
         // create a status box
-        msgBox = L.control.window(map,{
+        msgBox = L.control.window(map, {
                 position: 'top',
                 content:"<div class='data_message'></div><div><progress class='progbar' id='box'></progress></div>",
                 visible:true
@@ -767,9 +759,8 @@ function heatflask() {
         if (!sock || sock.readyState > 1) {
             sock = new PersistentWebSocket(WEBSOCKET_URL);
             sock.binaryType = 'arraybuffer';
-        } else {
+        } else
             sendQuery();
-        }
         
         $(".data_message").html("Retrieving activity data...");
 
@@ -784,39 +775,40 @@ function heatflask() {
         $('#renderButton').prop('disabled', true);
 
 
-        function doneRendering(msg){
-            if (rendering) {
-                appState['after'] = domIdVal("date1");
-                appState["before"] = domIdVal("date2");
-                updateState();
+        function doneRendering(msg) {
 
-                // domIdShow("abortButton", false);
-                $("#abortButton").fadeOut();
-                $(".progbar").fadeOut();
+            if (!rendering)
+                return;
 
-                if (msgBox) {
-                    msgBox.close();
-                    msgBox = null;
-                }
+            appState['after'] = domIdVal("date1");
+            appState["before"] = domIdVal("date2");
+            updateState();
 
-                rendering = false;
-                updateLayers(msg);
+            $("#abortButton").fadeOut();
+            $(".progbar").fadeOut();
+
+            if (msgBox) {
+                msgBox.close();
+                msgBox = undefined;
             }
+
+            rendering = false;
+            updateLayers(msg);
+        
         }
 
-
         function stopListening() {
-            console.log("stopListening called")
-            if (listening){
-                listening = false;
-                sock.send(JSON.stringify({close: 1}));
-                sock.close();
-                if (navigator.sendBeacon && wskey) {
-                    navigator.sendBeacon(BEACON_HANDLER_URL, wskey);
-                }
-                wskey = null;
-                $('#renderButton').prop('disabled', false);
+            if (!listening)
+                return 
+            listening = false;
+            sock.send(JSON.stringify({close: 1}));
+            sock.close();
+            if (navigator.sendBeacon && wskey) {
+                navigator.sendBeacon(BEACON_HANDLER_URL, wskey);
             }
+            wskey = null;
+            $('#renderButton').prop('disabled', false);
+            
         }
 
 
@@ -839,12 +831,12 @@ function heatflask() {
         }
 
         sock.onopen = function(event) {
-            console.log("socket open: ", event);
+            // console.log("socket open: ", event);
             if (rendering) sendQuery();
         }
 
         sock.onclose = function(event) {
-            console.log(`socket ${wskey} closed:`, event);
+            // console.log(`socket ${wskey} closed:`, event);
         }
 
         // handle one incoming chunk from websocket stream
@@ -882,9 +874,8 @@ function heatflask() {
                 
                 else if ("delete" in A && A.delete.length) {
                     // delete all ids in A.delete
-                    for (let id of A.delete) {
-                        delete appState.items[id];
-                    }
+                    for (let id of A.delete)
+                        appState.items.delete(id);
                     DotLayer.removeItems(A.delete);
                 
                 } else if ("done" in A) {
@@ -904,32 +895,34 @@ function heatflask() {
                 
                 return;
             }
-
+            
             // only add A to appState.items if it isn't already there
-            if (!(A._id in appState.items)) {
+            if ( !appState.items.has(A._id) ) {
                 if (!A.type)
                     return;
 
-                let typeData = ATYPE_MAP[A.type.toLowerCase()];
-                if  (!typeData) {
-                    typeData = ATYPE_MAP["workout"];
-                }
-                appState.items[A.id] = Object.assign(A, typeData);
-                let tup = A.ts;
+                let typeData = ATYPE_MAP[A.type.toLowerCase()] || ATYPE_MAP["workout"];
+                Object.assign(A, typeData);
                 A.id = A._id;
-
-                A.tsLoc = new Date((tup[0] + tup[1]*3600) * 1000);
-                A.UTCtimestamp = tup[0];  
-                A.bounds = L.latLngBounds(A.bounds.SW, A.bounds.NE);
-
-                DotLayer.addItem(A.id, A.polyline, A.pathColor, A.time, tup[0], A.bounds, A.n);
                 delete A._id;
-                delete A.summary_polyline;
+
+                const tup = A.ts;
                 delete A.ts;
+                
+                A.tsLoc = new Date((tup[0] + tup[1]*3600) * 1000);
+                A.UTCtimestamp = tup[0];
+
+                A.bounds = L.latLngBounds(A.bounds.SW, A.bounds.NE);
+                
+                DotLayer.addItem(A.id, A.polyline, A.pathColor, A.time, tup[0], A.bounds, A.n);
+                appState.items.set(A.id, A);
+
+                delete A.n;
+                delete A.ttl;
             }
 
             count++;
-            if (!(count % 5)) {
+            if (count % 5 === 0) {
                 if (numActivities) {
                     progress_bars.val(count/numActivities);
                     $(".data_message").html("imported " + count+"/"+numActivities);
@@ -941,7 +934,7 @@ function heatflask() {
         }
     }
 
-    function openActivityListPage(rebuild) {
+    function openActivityListPage() {
         window.open(ACTIVITY_LIST_URL, "_blank")
     }
 
@@ -1094,81 +1087,79 @@ function heatflask() {
     }
 
 
-    $(document).ready(function() {
-        document.onvisibilitychange = handleVisibilityChange;
+    document.onvisibilitychange = handleVisibilityChange;
 
-        // activities table set-up
-        domIdProp("zoom-to-selection", "checked", false);
+    // activities table set-up
+    domIdProp("zoom-to-selection", "checked", false);
 
-        domIdEvent("zoom-to-selection", "change", function(){
-            if ( domIdProp("zoom-to-selection", 'checked') ) {
-                zoomToSelectedPaths();
-            }
-        });
-
-        domIdEvent("render-selection-button", "click", openSelected);
-        domIdEvent("clear-selection-button", "click", deselectAll);
-
-        domIdEvent("select_num", "keypress", function(event) {
-            if (event.which == 13) {
-                event.preventDefault();
-                renderLayers();
-            }
-        });
-
-        domIdShow("abortButton", false);
-
-        $(".progbar").hide();
-        $(".datepick").datepicker({ dateFormat: 'yy-mm-dd',
-            changeMonth: true,
-            changeYear: true
-        });
-
-
-        map.on('moveend', function(e) {
-            if (!appState.autozoom) {
-                updateState();
-            }
-        });
-
-
-        domIdEvent("autozoom", "change", updateState);
-
-        domIdProp("share", "checked", SHARE_PROFILE);
-        domIdEvent("share", "change", function() {
-            let status = domIdProp("share", "checked")? "public":"private";
-            updateShareStatus(status);
-        });
-
-        $(".datepick").on("change", function(){
-            $(".preset").val("");
-        });
-        $(".preset").on("change", preset_sync);
-
-        domIdEvent("renderButton", "click", renderLayers);
-
-        domIdEvent("activity-list-buton", "click", () => openActivityListPage(false));
-
-        domIdProp("autozoom", 'checked', ONLOAD_PARAMS.autozoom);
-
-        if (ONLOAD_PARAMS.activity_ids) {
-            domIdVal("activity_ids", ONLOAD_PARAMS.activity_ids);
-            domIdVal("select_type", "activity_ids");
-        } else if (ONLOAD_PARAMS.limit) {
-            domIdVal("select_num", ONLOAD_PARAMS.limit);
-            domIdVal("select_type", "activities");
-        } else if (ONLOAD_PARAMS.preset) {
-            domIdVal("select_num", ONLOAD_PARAMS.preset);
-            domIdVal("select_type", "days");
-            preset_sync();
-        } else {
-            domIdVal('date1', ONLOAD_PARAMS.date1);
-            domIdVal('date2', ONLOAD_PARAMS.date2);
-            domIdVal('preset', "");
+    domIdEvent("zoom-to-selection", "change", function(){
+        if ( domIdProp("zoom-to-selection", 'checked') ) {
+            zoomToSelectedPaths();
         }
-        
-        initializeDotLayer();
-        renderLayers();
-        preset_sync();
     });
+
+    domIdEvent("render-selection-button", "click", openSelected);
+    domIdEvent("clear-selection-button", "click", deselectAll);
+
+    domIdEvent("select_num", "keypress", function(event) {
+        if (event.which == 13) {
+            event.preventDefault();
+            renderLayers();
+        }
+    });
+
+    domIdShow("abortButton", false);
+
+    $(".progbar").hide();
+    $(".datepick").datepicker({ dateFormat: 'yy-mm-dd',
+        changeMonth: true,
+        changeYear: true
+    });
+
+
+    map.on('moveend', function(e) {
+        if (!appState.autozoom) {
+            updateState();
+        }
+    });
+
+
+    domIdEvent("autozoom", "change", updateState);
+
+    domIdProp("share", "checked", SHARE_PROFILE);
+    domIdEvent("share", "change", function() {
+        let status = domIdProp("share", "checked")? "public":"private";
+        updateShareStatus(status);
+    });
+
+    $(".datepick").on("change", function(){
+        $(".preset").val("");
+    });
+    $(".preset").on("change", preset_sync);
+
+    domIdEvent("renderButton", "click", renderLayers);
+
+    domIdEvent("activity-list-buton", "click", () => openActivityListPage(false));
+
+    domIdProp("autozoom", 'checked', ONLOAD_PARAMS.autozoom);
+
+    if (ONLOAD_PARAMS.activity_ids) {
+        domIdVal("activity_ids", ONLOAD_PARAMS.activity_ids);
+        domIdVal("select_type", "activity_ids");
+    } else if (ONLOAD_PARAMS.limit) {
+        domIdVal("select_num", ONLOAD_PARAMS.limit);
+        domIdVal("select_type", "activities");
+    } else if (ONLOAD_PARAMS.preset) {
+        domIdVal("select_num", ONLOAD_PARAMS.preset);
+        domIdVal("select_type", "days");
+        preset_sync();
+    } else {
+        domIdVal('date1', ONLOAD_PARAMS.date1);
+        domIdVal('date2', ONLOAD_PARAMS.date2);
+        domIdVal('preset', "");
+    }
+    
+    initializeDotLayer();
+    renderLayers();
+    preset_sync();
 };

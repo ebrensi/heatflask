@@ -32,7 +32,6 @@ const Simplifier = {
         const selectedIdx = new BitSet(),
               prevPoint = new Float32Array(2);
 
-
         let point = points(0), i;
         prevPoint[0] = point[0];
         prevPoint[1] = point[1];
