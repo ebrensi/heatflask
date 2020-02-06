@@ -217,7 +217,7 @@ BitSet.prototype.array = function(ArrayConstructor) {
   const max = this.max();
   ArrayConstructor = ArrayConstructor || (max >> 8)? ((max >> 16)? Uint32Array : Uint16Array) : Uint8Array 
 
-  let answer = new ArrayConstructor(max);
+  let answer = new ArrayConstructor(this.size());
   let pos = 0 | 0;
   let c = this.words.length;
   for (let k = 0; k < c; ++k) {
