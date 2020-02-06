@@ -1237,15 +1237,12 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         const itemIds = this._itemIds,
               selectedItems = this._selectedItems || new BitSet();
 
-        console.log("selections")
         for (const [id, selected] of Object.entries(selections)) {
             idx = itemIds.indexOf(+id);
             if (selected)
                 selectedItems.add(idx);
             else
                 selectedItems.remove(idx);
-
-            console.log(`${idx} : ${id} : ${selected}`);
         }
         this._selectedItems = selectedItems.isEmpty()? null : selectedItems;
         
