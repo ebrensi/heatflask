@@ -14,12 +14,12 @@ L.SwipeSelect = L.Class.extend({
     addTo: function(map) {
         this.map = map;
 
-        let size = map.getSize();
+        const size = map.getSize();
 
         this.drag = false;
 
         this.canvas = L.DomUtil.create( "canvas", "leaflet-layer" );
-        canvas = this.canvas;
+        const canvas = this.canvas;
         map._panes.markerPane.appendChild( canvas );
 
         canvas.width = size.x;
@@ -34,7 +34,7 @@ L.SwipeSelect = L.Class.extend({
         canvas.onmousedown = function(event){
             this.mapManipulation(false);
 
-            let topLeft = this.map.containerPointToLayerPoint( [ 0, 0 ] );
+            const topLeft = this.map.containerPointToLayerPoint( [ 0, 0 ] );
             L.DomUtil.setPosition( this.canvas, topLeft );
 
             this.mapPanePos = this.map._getMapPanePos();
@@ -46,7 +46,7 @@ L.SwipeSelect = L.Class.extend({
 
         canvas.onmousemove = function(event){
             if (this.dragging) {
-                let r = this.rect,
+                const r = this.rect,
                     currentPoint = new L.Point(event.pageX, event.pageY);
 
                 r.size = currentPoint.subtract(r.corner);
@@ -78,7 +78,7 @@ L.SwipeSelect = L.Class.extend({
     },
 
     getBounds: function() {
-        let r = this.rect,
+        const r = this.rect,
             corner1 = r.corner,
             corner2 = r.corner.add(r.size),
             pxBounds = new L.Bounds(corner1, corner2),
@@ -94,12 +94,13 @@ L.SwipeSelect = L.Class.extend({
         if (!this.canvas) {
             return;
         }
-        map._panes.markerPane.removeChild( this.canvas );
+        this.map._panes.markerPane.removeChild( this.canvas );
         this.canvas = null;
     },
 
     // enable or disable pan/zoom
     mapManipulation: function (state=false){
+        const map = this.map;
         if (state) {
             map.dragging.enable();
             map.touchZoom.enable();

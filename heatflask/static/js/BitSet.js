@@ -92,6 +92,7 @@ BitSet.prototype.filter = function(iterable, fnc) {
 BitSet.prototype.add = function(index) {
   this.resize(index);
   this.words[index >>> 5] |= 1 << index ;
+  return this
 };
 
 // If the value was not in the set, add it, otherwise remove it (flip bit at index)
@@ -110,6 +111,7 @@ BitSet.prototype.clear = function() {
 BitSet.prototype.remove = function(index) {
   this.resize(index);
   this.words[index >>> 5] &= ~(1 << index);
+  return this
 };
 
 // Return true if no bit is set
@@ -256,9 +258,9 @@ BitSet.prototype.imap = function*(fnc) {
   }
 };
 
-// BitSet.prototype[Symbol.iterator] = function (){
-//   return this.imap()
-// };
+BitSet.prototype[Symbol.iterator] = function (){
+  return this.imap()
+};
 
 //   with the option to "fast-forward" 
 //  to a position set by this.next(position).

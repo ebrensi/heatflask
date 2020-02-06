@@ -169,9 +169,6 @@ function heatflask() {
              if (ids.length == 1) {
                 let id = ids[0],
                     A = appState.items.get(id);
-                if (!A.selected){
-                    return;
-                }
                 let loc = obj.latLngBounds.getCenter();
                 setTimeout(function (){
                     activityDataPopup(ids, loc);
@@ -484,19 +481,22 @@ function heatflask() {
 
 
     function handle_table_selections( e, dt, type, indexes ) {
-        let redraw = false,
-            mapBounds = map.getBounds();
+        let redraw = false;
+        const mapBounds = map.getBounds();
 
         if ( type === 'row' ) {
-            let rows = atable.rows( indexes ).data();
-             for ( let A of Object.values(rows) ) {
+            const rows = atable.rows( indexes ).data();
+             for ( const A of Object.values(rows) ) {
+                if (!A.id)
+                    break;
                 A.selected = !A.selected;
-                A.highlighted = !A.highlighted;
+                DotLayer.setItemSelect(A.id, A.selected);
                 redraw |= mapBounds.overlaps(A.bounds);
             }
         }
 
-        redraw && DotLayer && DotLayer._redraw();
+        if (redraw && DotLayer)
+            DotLayer._redraw();
 
         if ( domIdProp("zoom-to-selection", 'checked') ) {
             zoomToSelectedPaths();
@@ -504,21 +504,22 @@ function heatflask() {
     }
 
     function handle_path_selections(ids) {
-        if (!ids.length) {
-            return;
-        }
+        if (!ids) return;
 
-        let toSelect = [],
-            toDeSelect = [];
+        const toSelect = [],
+              toDeSelect = [];
 
-        for (let i=0; i<ids.length; i++) {
-            let A = appState.items.get(ids[i]),
-                tag = "#"+A.id;
+        for (id of ids) {
+            const A = appState.items.get(id),
+                  tag = `#${A.id}`;
             if (A.selected) {
                 toDeSelect.push(tag);
+                A.selected = false;
             } else {
                 toSelect.push(tag);
+                A.selected = true;
             }
+            DotLayer.setItemSelect(id, A.selected);
         }
 
         // simulate table (de)selections
@@ -535,9 +536,9 @@ function heatflask() {
     function zoomToSelectedPaths(){
         // Pan-Zoom to fit all selected activities
         let selection_bounds = L.latLngBounds();
-        appState.items.forEach((a, id) => {
-            if (a.selected) {
-                selection_bounds.extend(a.bounds);
+        appState.items.forEach((A, id) => {
+            if (A.selected) {
+                selection_bounds.extend(S.bounds);
             }
         });
         if (selection_bounds.isValid()) {
@@ -546,9 +547,8 @@ function heatflask() {
     }
 
     function selectedIDs(){
-        return appState.items.values().filter(
-            (a) => { return a.selected; }
-            ).map(function(a) { return a.id; });
+        return appState.items.values().filter(A => A.selected)
+                                      .map(A => A.id );
     }
 
     function openSelected(){
@@ -919,6 +919,8 @@ function heatflask() {
 
                 delete A.n;
                 delete A.ttl;
+                delete A.polyline;
+                delete A.time;
             }
 
             count++;
