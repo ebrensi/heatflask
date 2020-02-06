@@ -60,7 +60,6 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
      *  we are doing happens
      *
      */
-
     ViewBox: {
 
         initialize: function(map, canvases, fps_display) {
@@ -69,6 +68,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             this.fps_display = fps_display;
             this.latLng2px = CRS.makePT(0); // operates in-place!
             this.items = new BitSet();
+            this.memoized = {};
             this.pxOffset = new Float32Array(2);
             this.update();
             return this
@@ -953,21 +953,23 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         if (!options["showPaths"])
             return
 
-        const selectedItems = this._selectedItems;
+        const S = this._selectedItems,
+              drawSelected = S && toDraw.intersects(S),
+              selected = drawSelected? toDraw.new_intersection(S) : null,
+              unselected = selected? toDraw.new_difference(selected) : toDraw;
 
-        if ( selectedItems ) {
+        // draw unselected paths
+        ctx["lineWidth"] = options["normal"]["pathWidth"];
+        ctx["globalAlpha"] = options["normal"]["pathOpacity"];
+        this._drawPaths(unselected, options["normal"]["pathColor"]);
+
+        if ( selected ) {
+            // draw selected paths
             ctx["lineWidth"] = options["selected"]["pathWidth"];
             ctx["globalAlpha"] = options["selected"]["pathOpacity"];
-            this._drawPaths(selectedItems, options["selected"]["pathColor"]);
-
-            ctx["lineWidth"] = options["normal"]["pathWidth"];
-            ctx["globalAlpha"] = options["normal"]["pathOpacity"];
-            const unselectedItems = toDraw.difference( this._selectedItems );
-            this._drawPaths(unselectedItems, options["normal"]["pathColor"]);
-
-        } else
-            this._drawPaths(toDraw, options["normal"]["pathColor"]);
-        
+            this._drawPaths(selected, options["selected"]["pathColor"]);
+        }
+            
         if (options["debug"]) {
             this._debugCtxReset();
             this.DrawBox.draw(this._debugCtx);
@@ -1031,7 +1033,10 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
               ctx = this._dotCtx,
               dotSize = this._dotSize;
 
-        return p => ctx["arc"]( p[0], p[1], dotSize, 0, two_pi );
+        return p => {
+            ctx["arc"]( p[0], p[1], dotSize, 0, two_pi );
+            ctx["closePath"]();
+        };
     },
 
     makeSquareDrawFunc: function() {
@@ -1044,8 +1049,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
     },
 
     __drawDots: function(now, toDraw, drawDot) {
-        const inView = this.ViewBox.items,
-              ctx = this._dotCtx,
+        const ctx = this._dotCtx,
               itemsArray = this._itemsArray,
               zoom = this.ViewBox.zoom;
         
@@ -1053,15 +1057,15 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
         for (const [color, withThisColor] of Object.entries(this._dotColorFilters)) {
             
-            if (!inView.intersects(withThisColor))
+            if (!toDraw.intersects(withThisColor))
                 continue;
 
             // TODO: only compute this once on view change
-            const toDraw = inView.new_intersection(withThisColor);
+            const items = toDraw.new_intersection(withThisColor);
             ctx["fillStyle"] = color || this["options"]["normal"]["dotColor"];
             ctx["beginPath"]();
 
-            toDraw.forEach(i => {
+            items.forEach(i => {
                 const A = itemsArray[i];
                 
                 if (A.idxSet[zoom] && A.segMask && !A.segMask.isEmpty())
@@ -1097,29 +1101,24 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         let count = 0;
         const options = this["options"];
 
-        const selectedItems = this._selectedItems;
+        const S = this._selectedItems,
+              drawSelected = S && inView.intersects(S),
+              selected = drawSelected? inView.new_intersection(S) : null,
+              unselected = selected? inView.new_difference(selected) : inView;
+        
+        // draw normal activity dots
+        ctx["globalAlpha"] = options["normal"]["dotOpacity"];
+        let drawDotFunc = this.makeSquareDrawFunc(),
+            drawDot = p => drawDotFunc(transform(p));
+        count += this.__drawDots(now, unselected, drawDot, options["normal"]["dotColor"]);
 
-        if ( selectedItems && inView.intersects(selectedItems)) {
-            // first draw normal activity dots
-            ctx["globalAlpha"] = options["normal"]["dotOpacity"];
-            const unselectedItems = inView.new_difference( selectedItems );
-            let drawDotFunc = this.makeSquareDrawFunc(),
-                drawDot = p => drawDotFunc(transform(p));
-            this.__drawDots(unselectedItems, drawDot, options["normal"]["dotColor"]);
-
-            // next draw selected activity dots
-            const mySelectedItems = inView.new_intersection( selectedItems );
+        if ( selected ) {
+            // draw selected activity dots
             drawDotFunc = this.makeCircleDrawFunc();
             drawDot = p => drawDotFunc(transform(p));
             ctx["globalAlpha"] = options["selected"]["dotOpacity"];
-            count += this.__drawDots(now, selectedItems, drawDot, options["selected"]["dotColor"]);
-        
-        } else {
-            ctx["globalAlpha"] = options["normal"]["dotOpacity"];
-            let drawDotFunc = this.makeSquareDrawFunc(),
-                drawDot = p => drawDotFunc(transform(p));
-            count += this.__drawDots(now, inView, drawDot, options["normal"]["dotColor"]);
-        }
+            count += this.__drawDots(now, selected, drawDot, options["selected"]["dotColor"]);
+        } 
         
         if (options["debug"]) {
             this._debugCtxReset();

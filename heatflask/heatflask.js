@@ -538,7 +538,7 @@ function heatflask() {
         let selection_bounds = L.latLngBounds();
         appState.items.forEach((A, id) => {
             if (A.selected) {
-                selection_bounds.extend(S.bounds);
+                selection_bounds.extend(A.bounds);
             }
         });
         if (selection_bounds.isValid()) {
