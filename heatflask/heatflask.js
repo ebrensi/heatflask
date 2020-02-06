@@ -164,14 +164,17 @@ function heatflask() {
                 selectControl.remove();
                 selectButton.state("not-selecting");
             }
-            handle_path_selections(ids);
 
-             if (ids.length == 1) {
-                let id = ids[0],
-                    A = appState.items.get(id);
-                let loc = obj.latLngBounds.getCenter();
+            // handle_path_selections returns the id of the single
+            // selected activity if only one is selected
+            const id = handle_path_selections(ids);
+
+            if (id) {
+                const A = appState.items.get(id),
+                    loc = A.bounds.getCenter();
+
                 setTimeout(function (){
-                    activityDataPopup(ids, loc);
+                    activityDataPopup(id, loc);
                 }, 100);
             }
         });
@@ -482,7 +485,8 @@ function heatflask() {
 
     function handle_table_selections( e, dt, type, indexes ) {
         let redraw = false;
-        const mapBounds = map.getBounds();
+        const mapBounds = map.getBounds(),
+              selections = {};
 
         if ( type === 'row' ) {
             const rows = atable.rows( indexes ).data();
@@ -490,17 +494,20 @@ function heatflask() {
                 if (!A.id)
                     break;
                 A.selected = !A.selected;
-                DotLayer.setItemSelect(A.id, A.selected);
-                redraw |= mapBounds.overlaps(A.bounds);
+                selections[A.id] = A.selected;
+                if (!redraw)
+                    redraw |= mapBounds.overlaps(A.bounds);
             }
         }
 
-        if (redraw && DotLayer)
-            DotLayer._redraw();
+        if (DotLayer)
+            DotLayer.setItemSelect(selections, false);
 
-        if ( domIdProp("zoom-to-selection", 'checked') ) {
+        if ( domIdProp("zoom-to-selection", 'checked') )
             zoomToSelectedPaths();
-        }
+        
+        else if (redraw)
+            DotLayer._redraw();
     }
 
     function handle_path_selections(ids) {
@@ -509,20 +516,23 @@ function heatflask() {
         const toSelect = [],
               toDeSelect = [];
 
+        let count = 0,
+            id;
+
         for (id of ids) {
             const A = appState.items.get(id),
                   tag = `#${A.id}`;
-            if (A.selected) {
+            if (A.selected)
                 toDeSelect.push(tag);
-                A.selected = false;
-            } else {
+            else 
                 toSelect.push(tag);
-                A.selected = true;
-            }
-            DotLayer.setItemSelect(id, A.selected);
+
+            count++;
         }
 
         // simulate table (de)selections
+        // note that table selection events get triggered
+        // either way
         atable.rows(toSelect).select();
         atable.rows(toDeSelect).deselect();
 
@@ -530,6 +540,9 @@ function heatflask() {
             let row = $(toSelect[0]);
             tableScroller.scrollTop(row.prop('offsetTop') - tableScroller.height()/2);
         }
+
+        if (count === 1)
+            return id
     }
 
 

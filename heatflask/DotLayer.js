@@ -68,9 +68,9 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             this.fps_display = fps_display;
             this.latLng2px = CRS.makePT(0); // operates in-place!
             this.items = new BitSet();
-            this.memoized = {};
+            this._selections = {selected: null, unselected: null};
             this.pxOffset = new Float32Array(2);
-            this.update();
+            // this.update();
             return this
         },
 
@@ -82,16 +82,15 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             return zoom? 1/(2**zoom) : 1 / this._zf 
         },
 
-        update: function(reset) {
+        update: function() {
             const m = this.map,
                   zoom = m["getZoom"](),
                   latLngMapBounds = m["getBounds"]();
 
+            const zoomChange = zoom != this.zoom;
             // some stuff that needs to be done on zoom change
-            if (reset || zoom != this.zoom) {
+            if (zoomChange)
                 this.reset(zoom);
-                reset = true;
-            }
 
             const topLeft = m["containerPointToLayerPoint"]( [ 0, 0 ] ),
                    setPosition = Leaflet["DomUtil"]["setPosition"];
@@ -105,7 +104,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             this.pxOffset = mapPanePos["subtract"](pxOrigin);
             this.pxBounds = this.latLng2pxBounds(latLngMapBounds);
 
-            return reset;
+            return zoomChange
         },
 
         reset: function(zoom) {
@@ -178,6 +177,27 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             ctx.strokeRect(x, y, w, h);
             return rect
         },
+
+        updateSelections: function(selectedItems) {
+            let selected = selectedItems && this.items.intersects(selectedItems),
+                unselected;
+
+            if (selected) {
+                this._selections.selected = this.items.new_intersection(selectedItems);
+                unselected = this.items.new_difference(selectedItems);
+            } else {
+                this._selections.selected = null;
+                unselected = this.items;
+            }
+
+            this._selections.unselected = unselected.isEmpty()? null : unselected;
+
+            return this._selections;
+        },
+
+        getItems: function() {
+            return this._selections;
+        }
     },
 
     /* DrawBox represents the rectangular region that bounds
@@ -529,7 +549,16 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         if ( !this._ready )
             return;        
         
-        this.ViewBox.update();
+        const vb = this.ViewBox;
+
+        if (vb.update()) {
+            const zf = vb._zf,
+                  zoom = vb.zoom;
+            this._timeScale = this.C2 / zf;
+            this._period = this.C1 / zf;
+            this._dotSize = Math.max(1, ~~(this.dotScale * Math.log( zoom ) + 0.5));
+        }
+
         this.DrawBox.reset();
         this._dotCtxReset();
 
@@ -538,9 +567,9 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
         const itemsArray = this._itemsArray,
               n = itemsArray.length,
-              inView = this.ViewBox.items.clear(),
+              inView = vb.items.clear(),
               toSimplify = this._toSimplify.clear(),
-              zoom = this.ViewBox.zoom;
+              zoom = vb.zoom;
         
         for (let i=0; i<n; i++){
             const A = itemsArray[i];
@@ -907,14 +936,14 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
     // if you want to use it agin.
     _drawPaths: function(itemsToDraw, defaultColor) {
         const ctx = this._lineCtx;
-        // debugger;
+
         for (const [color, withThisColor] of Object.entries(this._pathColorFilters)) {
             
             if (!itemsToDraw.intersects(withThisColor))
                 continue;
 
             const toDraw = itemsToDraw.new_intersection(withThisColor);
-            // debugger;
+
             ctx["strokeStyle"] = color || defaultColor;
             ctx["beginPath"]();
             toDraw.forEach( i => this._drawPathFromSegIter(ctx, this._itemsArray[i]));
@@ -924,22 +953,21 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
     
     // Draw all paths for the current items in such a way 
     // that we group stroke-styles together in batch calls.
-    drawPaths: function(toDraw, clear=true) {
-        toDraw = toDraw || this.ViewBox.items;
-
-        if ( !toDraw || toDraw.isEmpty() )
-            return
-
+    drawPaths: function(clear=true) {
         const ctx = this._lineCtx,
               itemsArray = this._itemsArray,
-              options = this["options"];
+              options = this["options"],
+              vb = this.ViewBox;
 
         this.DrawBox.reset();
 
-        toDraw.forEach(i => {
+        vb.items.forEach(i => {
             if ( this.makeSegMask(itemsArray[i]).isEmpty() )
-                this.ViewBox.items.remove(i);
+                vb.items.remove(i);
         });
+
+        vb.updateSelections(this._selectedItems);
+        toDraw = vb.getItems();
 
         if (clear) {
             const clear = this.DrawBox.clear,
@@ -953,21 +981,18 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         if (!options["showPaths"])
             return
 
-        const S = this._selectedItems,
-              drawSelected = S && toDraw.intersects(S),
-              selected = drawSelected? toDraw.new_intersection(S) : null,
-              unselected = selected? toDraw.new_difference(selected) : toDraw;
+        if (toDraw.unselected){
+            // draw unselected paths
+            ctx["lineWidth"] = options["normal"]["pathWidth"];
+            ctx["globalAlpha"] = options["normal"]["pathOpacity"];
+            this._drawPaths(toDraw.unselected, options["normal"]["pathColor"]);
+        }
 
-        // draw unselected paths
-        ctx["lineWidth"] = options["normal"]["pathWidth"];
-        ctx["globalAlpha"] = options["normal"]["pathOpacity"];
-        this._drawPaths(unselected, options["normal"]["pathColor"]);
-
-        if ( selected ) {
+        if (toDraw.selected) {
             // draw selected paths
             ctx["lineWidth"] = options["selected"]["pathWidth"];
             ctx["globalAlpha"] = options["selected"]["pathOpacity"];
-            this._drawPaths(selected, options["selected"]["pathColor"]);
+            this._drawPaths(toDraw.selected, options["selected"]["pathColor"]);
         }
             
         if (options["debug"]) {
@@ -1052,7 +1077,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         const ctx = this._dotCtx,
               itemsArray = this._itemsArray,
               zoom = this.ViewBox.zoom;
-        
+
         let count = 0;
 
         for (const [color, withThisColor] of Object.entries(this._dotColorFilters)) {
@@ -1078,7 +1103,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
     },
 
     drawDots: function(now) {
-        if ( !this._ready || this.ViewBox.items.isEmpty() )
+        if ( !this._ready )
             return;
 
         if (!now)
@@ -1087,32 +1112,32 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         const ctx = this._dotCtx,
               g = this._gifPatch,
               itemsArray = this._itemsArray,
-              zf = this.ViewBox._zf,
-              zoom = this.ViewBox.zoom,
-              inView = this.ViewBox.items,
-              transform = this.ViewBox.px2Container.bind(this.ViewBox);
-
-        this._timeScale = this.C2 / zf;
-        this._period = this.C1 / zf;
-        this._dotSize = Math.max(1, ~~(this.dotScale * Math.log( zoom ) + 0.5));
+              toDraw = this.ViewBox.getItems(),
+              vb = this.ViewBox,
+              transform = vb.px2Container.bind(this.ViewBox);
 
         this.DrawBox.clear(ctx);
 
         let count = 0;
         const options = this["options"];
 
-        const S = this._selectedItems,
-              drawSelected = S && inView.intersects(S),
-              selected = drawSelected? inView.new_intersection(S) : null,
-              unselected = selected? inView.new_difference(selected) : inView;
-        
-        // draw normal activity dots
-        ctx["globalAlpha"] = options["normal"]["dotOpacity"];
-        let drawDotFunc = this.makeSquareDrawFunc(),
-            drawDot = p => drawDotFunc(transform(p));
-        count += this.__drawDots(now, unselected, drawDot, options["normal"]["dotColor"]);
+        let unselected = toDraw.unselected,
+              selected = toDraw.selected;
 
-        if ( selected ) {
+        if (this._gifPatch) {
+            unselected = vb.items;
+            selected = null;
+        }
+
+        if (unselected) {
+            // draw normal activity dots
+            ctx["globalAlpha"] = options["normal"]["dotOpacity"];
+            let drawDotFunc = this.makeSquareDrawFunc(),
+                drawDot = p => drawDotFunc(transform(p));
+            count += this.__drawDots(now, unselected, drawDot, options["normal"]["dotColor"]);
+        }
+
+        if (selected) {
             // draw selected activity dots
             drawDotFunc = this.makeCircleDrawFunc();
             drawDot = p => drawDotFunc(transform(p));
@@ -1124,7 +1149,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             this._debugCtxReset();
             this.DrawBox.draw(this._debugCtx);
             this._debugCtx["strokeStyle"] = "rgb(255,0,255,1)";
-            this.ViewBox.drawPxBounds(this._debugCtx);
+            vb.drawPxBounds(this._debugCtx);
         }        
 
         return count
@@ -1207,31 +1232,25 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
 
 // -------------------------------------------------------------------
-    itemIndex: function(id) {
-        return this._itemIds.indexOf(id);
-    },
+    setItemSelect: function(selections, redraw=true) {
+        let idx = 0;
+        const itemIds = this._itemIds,
+              selectedItems = this._selectedItems || new BitSet();
 
-    setItemSelect: function(id, value) {
-        const func = value? this.selectItem : this.deselectItem;
-        return func.bind(this)(id)
-    },
+        console.log("selections")
+        for (const [id, selected] of Object.entries(selections)) {
+            idx = itemIds.indexOf(+id);
+            if (selected)
+                selectedItems.add(idx);
+            else
+                selectedItems.remove(idx);
 
-    selectItem: function(id) {
-        if (!this._selectedItems)
-            this._selectedItems = new BitSet();
-
-        const i = this.itemIndex(id);
-        this._selectedItems.add(i);
-    },
-
-    deselectItem: function(id) {
-        if (!this._selectedItems)
-            return;
-
-        const i = this.itemIndex(id);
-        this._selectedItems.remove( i );
-        if ( this._selectedItems.isEmpty() ) 
-            this._selectedItems = null; 
+            console.log(`${idx} : ${id} : ${selected}`);
+        }
+        this._selectedItems = selectedItems.isEmpty()? null : selectedItems;
+        
+        if (redraw)
+            this._redraw;
     },
 
     setSelectRegion: function(pxBounds, callback) {
@@ -1240,15 +1259,23 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
     },
 
     itemsInRegion: function(selectPxBounds) {
-        const vb = this.ViewBox,
-              itemsArray = this._itemsArray;
+        const pxOffset = this.ViewBox.pxOffset,
+              zf = this.ViewBox._zf;
+        
+        // un-transform screen coordinates given by the selection
+        // plugin to absolute values that we can compare ours to.
+        selectPxBounds.min._subtract(pxOffset)._divideBy(zf);
+        selectPxBounds.max._subtract(pxOffset)._divideBy(zf);
+
+        const itemsArray = this._itemsArray;
         
         let selected = new BitSet();
+        
 
-        vb.items.forEach(i => {
+        this.ViewBox.items.forEach(i => {
             const A = itemsArray[i];
-            for (seg of this.iterSegments(A)) {
-                if ( vb.contains(seg.a) )
+            for (const seg of this.iterSegments(A)) {
+                if ( selectPxBounds.contains(seg.a) )
                     selected.add(i);
             }
         });
