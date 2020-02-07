@@ -638,11 +638,10 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
                 n: n,
                 ts: UTCtimestamp,
                 pathColor: pathColor
-
             };
         
         this._items.set(id, A);
-
+        
         // make baseline projection (convert latLngs to pixel points)
         // in-place
         const px = A.px,

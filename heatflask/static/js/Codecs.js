@@ -158,12 +158,14 @@ const StreamRLE = {
               len += 2;
 
             if (el[0] > max) max = el[0];
+            if (el[1] > max) max = el[1];
+
+        } else if (el > max) {
+            max = el;
+            len++;
         }
-        else
-          if (el > max) max = el;
-          len++;
+        return {len: len, max: max}
       }
-      return {len: len, max: max}
     },
 
     transcode2Buf: function(rle_list) {
