@@ -160,15 +160,16 @@ const StreamRLE = {
             if (el[0] > max) max = el[0];
             if (el[1] > max) max = el[1];
 
-        } else if (el > max) {
-            max = el;
+        } else {
             len++;
+            if (el > max) max = el;
         }
-        return {len: len, max: max}
       }
+      return {len: len, max: max}
     },
 
     transcode2Buf: function(rle_list) {
+      // debugger;
         const {len, max} = this._transcodeInfo(rle_list),
               ArrayConstructor = (max >> 8)? ((max >> 16)? Uint32Array : Uint16Array) : Uint8Array, 
               buf = new ArrayConstructor(len);
