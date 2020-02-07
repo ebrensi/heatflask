@@ -319,14 +319,10 @@ function heatflask() {
                 let newVal;
                 if (this.$[0].id == "sepConst") {
                     newVal = Math.pow(2, val * SEP_SCALE.m + SEP_SCALE.b);
-                    DotLayer.C1 = newVal;
+                    DotLayer.updateDotSettings({C1: newVal});
                 } else {
                     newVal = val * val * SPEED_SCALE;
-                    DotLayer.C2 = newVal;
-                }
-
-                if (DotLayer._paused) {
-                    DotLayer.drawDotLayer(DotLayer._timePaused);
+                    DotLayer.updateDotSettings({C2: newVal});;
                 }
 
                 // Enable capture if period is less than CAPTURE_DURATION_MAX
@@ -359,13 +355,8 @@ function heatflask() {
             inline: true,
             displayInput: false,
             change: function (val) {
-                if (!DotLayer) {
-                    return;
-                }
-                DotLayer.dotScale = val;
-                if (DotLayer._paused) {
-                    DotLayer.drawDotLayer(DotLayer._timePaused);
-                }
+                if (!DotLayer) return;
+                DotLayer.updateDotSettings({dotScale: val});
             },
             release: function() {
                 updateState();
@@ -382,15 +373,12 @@ function heatflask() {
             inline: true,
             displayInput: false,
             change: function (val) {
-                if (!DotLayer) {
-                    return;
-                }
-                if (this.$[0].id == "shadowHeight") {
-                    DotLayer.options.dotShadows.y = val;
-                } else {
-                    DotLayer.options.dotShadows.blur = val + 2;
-                }
-                DotLayer._redraw(true);
+                if (!DotLayer) return;
+
+                if (this.$[0].id == "shadowHeight")
+                    DotLayer.updateDotSettings(null, {"y": val});
+                else 
+                    DotLayer.updateDotSettings(null, {"blur": val+2});
             },
 
             release: function() {
@@ -560,8 +548,9 @@ function heatflask() {
     }
 
     function selectedIDs(){
-        return appState.items.values().filter(A => A.selected)
-                                      .map(A => A.id );
+        return Array.from(appState.items.values())
+                    .filter(A => A.selected)
+                    .map(A => A.id );
     }
 
     function openSelected(){
@@ -639,23 +628,25 @@ function heatflask() {
             workerUrl: DOTLAYER_WORKER_URL
         });
 
-        if (ONLOAD_PARAMS.C1) {
-            DotLayer.C1 = ONLOAD_PARAMS.C1;
-        }
+        let ds = {};
+        if (ONLOAD_PARAMS.C1)
+            ds["C1"] = ONLOAD_PARAMS["C1"];
 
-        if (ONLOAD_PARAMS.C2) {
-            DotLayer.C2 = ONLOAD_PARAMS.C2;
-        }
+        if (ONLOAD_PARAMS.C2)
+            ds["C2"] = ONLOAD_PARAMS["C2"];
 
-        if (ONLOAD_PARAMS.SZ) {
-            DotLayer.dotScale = ONLOAD_PARAMS.SZ;
-        }
+        if (ONLOAD_PARAMS.SZ)
+            ds["dotScale"] = ONLOAD_PARAMS["SZ"];
+
+        DotLayer.updateDotSettings(ds);
+        ds = DotLayer.getDotSettings();
 
         map.addLayer(DotLayer);
         layerControl.addOverlay(DotLayer, "Dots");
-        $("#sepConst").val((Math.log2(DotLayer.C1) - SEP_SCALE.b) / SEP_SCALE.m ).trigger("change");
-        $("#speedConst").val(Math.sqrt(DotLayer.C2) / SPEED_SCALE).trigger("change");
-        $("#dotScale").val(DotLayer.dotScale).trigger("change");
+
+        $("#sepConst").val((Math.log2(ds["C1"]) - SEP_SCALE.b) / SEP_SCALE.m ).trigger("change");
+        $("#speedConst").val(Math.sqrt(ds["C2"]) / SPEED_SCALE).trigger("change");
+        $("#dotScale").val(ds["dotScale"]).trigger("change");
 
 
         if (ONLOAD_PARAMS.shadows)
@@ -663,9 +654,9 @@ function heatflask() {
         $("#shadowHeight").val(DotLayer.options.dotShadows.y).trigger("change");
         $("#shadowBlur").val(DotLayer.options.dotShadows.blur).trigger("change");
         $("#shadows").prop("checked", DotLayer.options.dotShadows.enabled);
+        
         domIdEvent("shadows", "change", (e) => {
-            DotLayer.options.dotShadows.enabled = e.target.checked;
-            DotLayer._redraw();
+            DotLayer.updateDotSettings(null, {"enabled": e.target.checked})
         });
 
         setTimeout(function(){
@@ -994,9 +985,13 @@ function heatflask() {
             }
         }
 
-        if (DotLayer["C1"]) params["c1"] = Math.round(DotLayer["C1"]);
-        if (DotLayer["C2"]) params["c2"] = Math.round(DotLayer["C2"]);
-        if (DotLayer["dotScale"]) params["sz"] = Math.round(DotLayer["dotScale"]);
+        if (DotLayer) {
+            ds = DotLayer.getDotSettings();
+
+            params["c1"] = Math.round(ds["C1"]);
+            params["c2"] = Math.round(ds["C2"]);
+            params["sz"] = Math.round(ds["dotScale"]);
+        }
 
         if (appState.currentBaseLayer.name)
             params["baselayer"] = appState.currentBaseLayer.name;

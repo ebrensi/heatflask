@@ -16,10 +16,6 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
     _pane: "shadowPane",
     two_pi: 2 * Math.PI,
     target_fps: 25,
-    _tThresh: 100000000.0,
-    C1: 1000000.0,
-    C2: 200.0,
-    dotScale: 1.0,
 
     "options": {
         "debug": false,
@@ -551,13 +547,8 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         
         const vb = this.ViewBox;
 
-        if (vb.update()) {
-            const zf = vb._zf,
-                  zoom = vb.zoom;
-            this._timeScale = this.C2 / zf;
-            this._period = this.C1 / zf;
-            this._dotSize = Math.max(1, ~~(this.dotScale * Math.log( zoom ) + 0.5));
-        }
+        if (vb.update())
+            this.updateDotSettings();
 
         this.DrawBox.reset();
         this._dotCtxReset();
@@ -854,6 +845,8 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
                     set(a, temp);
                 else
                     set(a, points.next(i).value);
+
+                // there is a weird bug here
                 set(temp, points.next().value);
                 set(b, temp);
                 last_i = i;
@@ -1005,7 +998,8 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
     // --------------------------------------------------------------------
     _drawDots: function( now, A, drawDot ) {      
-        const T = this._period,
+        const ds = this.dotSettings,
+              T = ds._period,
               start = A.ts,
               p = [NaN, NaN];
 
@@ -1020,7 +1014,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         const times = this.iterTimeIntervals(A),
               timeInterval = times.next().value;
 
-        const timeOffset = (this._timeScale * ( now - (start + timeInterval[0]))) % T;
+        const timeOffset = (ds._timeScale * ( now - (start + timeInterval[0]))) % T;
 
         let count = 0;
         let obj;
@@ -1056,7 +1050,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
     makeCircleDrawFunc: function() {
         const two_pi = this.two_pi,
               ctx = this._dotCtx,
-              dotSize = this._dotSize;
+              dotSize = this.dotSettings._dotSize;
 
         return p => {
             ctx["arc"]( p[0], p[1], dotSize, 0, two_pi );
@@ -1066,7 +1060,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
     makeSquareDrawFunc: function() {
         const ctx = this._dotCtx,
-              dotSize = this._dotSize,
+              dotSize = this.dotSettings._dotSize,
               dotOffset = dotSize / 2.0;
 
         return p =>
@@ -1142,7 +1136,9 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             drawDotFunc = this.makeCircleDrawFunc();
             drawDot = p => drawDotFunc(transform(p));
             ctx["globalAlpha"] = options["selected"]["dotOpacity"];
-            count += this.__drawDots(now, selected, drawDot, options["selected"]["dotColor"]);
+            ctx["strokeStyle"] = options["selected"]["dotStrokeColor"];
+            ctx["strokeWidth"] = options["selected"]["dotStrokeColor"];
+            count += this.__drawDots(now, selected, drawDot, options["selected"]["dotStrokeWidth"]);
         } 
         
         if (options["debug"]) {
@@ -1227,7 +1223,8 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
 
     periodInSecs: function() {
-        return this._period / (this._timeScale * 1000);
+        const ds = this.dotSettings;
+        return ds._period / (ds._timeScale * 1000);
     },
 
 
@@ -1436,7 +1433,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         for (let i=0, num=~~numFrames; i<num; i++, frameTime+=delay){
             let msg = `Rendering frames...${~~(i/num * 100)}%`;
 
-            // let timeOffset = (this._timeScale * frameTime) % this._period;
+            // let timeOffset = (this.dotSettings._timeScale * frameTime) % this._period;
             // console.log( `frame${i} @ ${timeOffset}`);
 
             pd["textContent"] = msg;
@@ -1512,6 +1509,38 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         this._colorPalette = this.ColorPalette.palette(numItems, this["options"].dotAlpha);
         for ( const item of items )
             item.dotColor = this._colorPalette[ i++ ];
+    },
+    
+    dotSettings: {
+        C1: 1000000.0,
+        C2: 200.0,
+        dotScale: 1.0,
+    },
+
+    getDotSettings: function() {
+        return this.dotSettings;
+    },
+
+    updateDotSettings: function(settings, shadowSettings) {
+
+        const ds = this.dotSettings;
+        if (settings)
+            Object.assign(ds, settings);
+
+        const vb = this.ViewBox,
+              zf = vb._zf,
+              zoom = vb.zoom;
+        ds._timeScale = ds.C2 / zf;
+        ds._period = ds.C1 / zf;
+        ds._dotSize = Math.max(1, ~~(ds.dotScale * Math.log( zoom ) + 0.5));
+
+        if (shadowSettings) {
+            Object.assign(this["options"]["dotShadows"], shadowSettings);
+            this._dotCtxReset();
+        }
+
+        if (this._paused)
+            this.drawDots();
     },
 
     ColorPalette: {
