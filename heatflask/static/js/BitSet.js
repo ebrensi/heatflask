@@ -62,6 +62,7 @@ BitSet.fromWords = function(words) {
 
 BitSet.new_filter = function(iterable, fnc) {
   const answer = Object.create(BitSet.prototype);
+  answer.words = [];
   return answer.filter(iterable, fnc) 
 };
 
@@ -81,7 +82,7 @@ BitSet.prototype.filter = function(iterable, fnc) {
       let i = 0;
       while(!current.done) {
         if (fnc(current.value))
-          this.add(i++);
+          this.words[i >>> 5] |= 1 << i ;
         current = iterator.next();
       }
   }
@@ -109,8 +110,9 @@ BitSet.prototype.clear = function() {
 
 // Set the bit at index to false
 BitSet.prototype.remove = function(index) {
-  this.resize(index);
-  this.words[index >>> 5] &= ~(1 << index);
+  const w = index >>> 5;
+  if (w <= this.words.length)
+    this.words[w] &= ~(1 << index);
   return this
 };
 
@@ -408,8 +410,6 @@ BitSet.prototype.new_intersection = function(otherbitmap) {
   return answer;
 };
 
-// Computes the intersection between this bitset and another one,
-// the current bitmap is modified
 BitSet.prototype.equals = function(otherbitmap) {
   let mcount = Math.min(this.words.length , otherbitmap.words.length);
   for (let k = 0 | 0; k < mcount; ++k) {
@@ -427,6 +427,27 @@ BitSet.prototype.equals = function(otherbitmap) {
     }
   }
   return true;
+};
+
+// Computes the change (XOR) between this bitset and another one,
+// the current bitset is modified (and returned by the function)
+BitSet.prototype.change = function(otherbitmap) {
+  let newcount = Math.max(this.words.length, otherbitmap.words.length);
+  let k = 0 | 0;
+  for (; k + 7 < newcount; k += 8) {
+    this.words[k] ^= otherbitmap.words[k];
+    this.words[k + 1] ^= otherbitmap.words[k + 1];
+    this.words[k + 2] ^= otherbitmap.words[k + 2];
+    this.words[k + 3] ^= otherbitmap.words[k + 3];
+    this.words[k + 4] ^= otherbitmap.words[k + 4];
+    this.words[k + 5] ^= otherbitmap.words[k + 5];
+    this.words[k + 6] ^= otherbitmap.words[k + 6];
+    this.words[k + 7] ^= otherbitmap.words[k + 7];
+  }
+  for (; k < newcount; ++k) {
+    this.words[k] ^= otherbitmap.words[k];
+  }
+  return this;
 };
 
 // Computes the difference between this bitset and another one,
