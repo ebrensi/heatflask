@@ -11,22 +11,20 @@ heatflask();
 function heatflask() {
     const SPEED_SCALE = 5.0,
           SEP_SCALE = {m: 0.14, b: 15.0},
-          WEBSOCKET_URL = WS_SCHEME+window.location.host+"/data_socket";
-
-    // Set up Map and base layers
-    let map_providers = ONLOAD_PARAMS.map_providers,
-        baseLayers = {"None": L.tileLayer("")},
-        default_baseLayer = baseLayers["None"],
-        DotLayer = false,
-        appState = {
+          WEBSOCKET_URL = WS_SCHEME+window.location.host+"/data_socket",
+          appState = {
             paused: ONLOAD_PARAMS.start_paused,
             items: new Map(),
             currentBaseLayer: null
-        },
-        msgBox = null;
+          };
+
+    // Set up Map and layers
+    const map_providers = ONLOAD_PARAMS.map_providers,
+          baseLayers = {"None": L.tileLayer("")};
+    let default_baseLayer = baseLayers["None"];
         
     if (!OFFLINE) {
-        var online_baseLayers = {
+        const online_baseLayers = {
             "MapBox.Dark": L.tileLayer.provider('MapBox', {
                 id: 'mapbox.dark',
                 accessToken: MAPBOX_ACCESS_TOKEN
@@ -72,21 +70,26 @@ function heatflask() {
         }
     }
 
-    for (let name in baseLayers) {
+    // ?? look into this
+    for (const name in baseLayers) {
         let basemap = baseLayers[name];
         basemap.name = name;
     }
 
+    let msgBox = null;
 
-    var map = L.map('map', {
+    const map = L.map('map', {
             center: ONLOAD_PARAMS.map_center,
             zoom: ONLOAD_PARAMS.map_zoom,
             layers : [ default_baseLayer ],
             preferCanvas: true,
             zoomAnimation: false
-        });
+          }),
 
-    map.getPane('tilePane').style.opacity = 0.8;
+          dotLayer = L.dotLayer({
+            startPaused: appState.paused,
+            workerUrl: DOTLAYER_WORKER_URL
+          }).addTo(map);
 
     appState.currentBaseLayer = default_baseLayer;
     map.on('baselayerchange', function (e) {
@@ -94,35 +97,19 @@ function heatflask() {
         updateState();
     });
 
-    // Define a watermark control
-    L.Control.Watermark = L.Control.extend({
+    // map.getPane('tilePane').style.opacity = 0.8;
 
-        onAdd: function(map) {
-            let img = L.DomUtil.create('img');
+    
+    const controls = {
+        _sidebarControl: L.control.sidebar('sidebar').addTo(map),
+        _layerControl: L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map),
+        _zoomControl: map.zoomControl.setPosition('bottomright'),
+        _stravaLogo: L.control.watermark({ image: "static/pbs4.png", width: '20%', opacity:'0.5', position: 'bottomleft' }).addTo(map),
+        _heatflaskLogo: L.control.watermark({image: "static/logo.png", opacity: '0.5', width: '20%', position: 'bottomleft' }).addTo(map),
+        areaSelect: L.areaSelect({width:200, height:200})
+    };
 
-            img.src = this.options.image;
-            img.style.width = this.options.width;
-            img.style.opacity = this.options.opacity;
-            return img;
-        }
-    });
-
-    L.control.watermark = function(opts) {
-        return new L.Control.Watermark(opts);
-    }
-
-
-    let sidebarControl = L.control.sidebar('sidebar').addTo(map),
-        layerControl = L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map),
-        zoomControl = map.zoomControl.setPosition('bottomright'),
-        fps_display = ADMIN? L.control.fps().addTo(map) : null,
-        stravaLogo = L.control.watermark({ image: "static/pbs4.png", width: '20%', opacity:'0.5', position: 'bottomleft' }).addTo(map),
-        heatflaskLogo = L.control.watermark({ image: "static/logo.png", opacity: '0.5', width: '20%', position: 'bottomleft' }).addTo(map),
-        areaSelect;
-
-
-    // Animation play/pause button
-    let animation_button_states = [
+    const button_states = [
         {
             stateName: 'animation-running',
             icon:      'fa-pause',
@@ -140,29 +127,26 @@ function heatflask() {
             title:     'Resume Animation',
             onClick: function(btn, map) {
                 resumeFlow();
-                if (DotLayer) {
-                    DotLayer.animate();
+                if (dotLayer) {
+                    dotLayer.animate();
                 }
                 updateState();
                 btn.state('animation-running');
             }
         }
-    ],
+    ];
 
-        animationControl = L.easyButton({
-            states: appState.paused? animation_button_states.reverse() : animation_button_states
-        }).addTo(map);
-
-
-
+    // Animation play/pause button
+    controls._animationControl =  L.easyButton({
+        states: appState.paused? button_states.reverse() : button_states 
+    }).addTo(map);    
 
     // Select-activities-in-region functionality
-    function doneSelecting(obj){
-
-        DotLayer && DotLayer.setSelectRegion(obj.pxBounds, callback=function(ids){
-            if (selectControl && selectControl.canvas) {
-                selectControl.remove();
-                selectButton.state("not-selecting");
+    function doneSelecting(obj) {
+        dotLayer && dotLayer.setSelectRegion(obj.pxBounds, callback=function(ids){
+            if (controls.selectControl && controls.selectControl.canvas) {
+                controls.selectControl.remove();
+                controls.selectButton.state("not-selecting");
             }
 
             // handle_path_selections returns the id of the single
@@ -185,31 +169,33 @@ function heatflask() {
     map.on("boxhookend", doneSelecting);
 
 
-    const selectControl = new L.SwipeSelect({}, doneSelecting),
-          selectButton_states = [
-            {
-                stateName: 'not-selecting',
-                icon: 'fa-object-group',
-                title: 'Toggle Path Selection',
-                onClick: function(btn, map) {
-                    btn.state('selecting');
-                    selectControl.addTo(map);
-                },
+    controls.selectControl = new L.SwipeSelect({}, doneSelecting);
+    
+    selectButton_states = [
+        {
+            stateName: 'not-selecting',
+            icon: 'fa-object-group',
+            title: 'Toggle Path Selection',
+            onClick: function(btn, map) {
+                btn.state('selecting');
+                controls.selectControl.addTo(map);
             },
-            {
-                stateName: 'selecting',
-                icon: '<span>&cross;</span>',
-                title: 'Stop Selecting',
-                onClick: function(btn, map) {
-                    btn.state('not-selecting');
-                    selectControl.remove();
-                }
-            },
-        ],
-        selectButton = L.easyButton({
-            states: selectButton_states,
-            position: "topright"
-        }).addTo(map);
+        },
+        {
+            stateName: 'selecting',
+            icon: '<span>&cross;</span>',
+            title: 'Stop Selecting',
+            onClick: function(btn, map) {
+                btn.state('not-selecting');
+                controls.selectControl.remove();
+            }
+        },
+    ];
+    
+    controls.selectButton = L.easyButton({
+        states: selectButton_states,
+        position: "topright"
+    }).addTo(map);
 
 
 
@@ -220,14 +206,14 @@ function heatflask() {
             icon: 'fa-video-camera',
             title: 'Capture GIF',
             onClick: function (btn, map) {
-                if (!DotLayer) {
+                if (!dotLayer) {
                     return;
                 }
                 let size = map.getSize();
-                areaSelect = L.areaSelect({width:200, height:200});
-                areaSelect._width = ~~(0.8 * size.x);
-                areaSelect._height = ~~(0.8 * size.y);
-                areaSelect.addTo(map);
+                areaSelect = 
+                controls.areaSelect._width = ~~(0.8 * size.x);
+                controls.areaSelect._height = ~~(0.8 * size.y);
+                controls.areaSelect.addTo(map);
                 btn.state('selecting');
             }
         },
@@ -237,8 +223,8 @@ function heatflask() {
             title: 'Select Capture Region',
             onClick: function (btn, map) {
                 let size = map.getSize(),
-                    w = areaSelect._width,
-                    h = areaSelect._height,
+                    w = controls.areaSelect._width,
+                    h = controls.areaSelect._height,
                     topLeft = {
                         x: Math.round((size.x - w) / 2),
                         y: Math.round((size.y - h) / 2)
@@ -250,18 +236,18 @@ function heatflask() {
                         height: h
                     };
 
-                let center = areaSelect.getBounds().getCenter(),
+                let center = controls.areaSelect.getBounds().getCenter(),
                     zoom = map.getZoom();
                 console.log(`center: `, center);
                 console.log(`width = ${w}, height = ${h}, zoom = ${zoom}`);
 
 
-                DotLayer.captureCycle(selection=selection, callback=function(){
+                dotLayer.captureCycle(selection=selection, callback=function(){
                     btn.state('idle');
-                    areaSelect.remove();
+                    controls.areaSelect.remove();
                     if (!ADMIN && !OFFLINE) {
                         // Record this to google analytics
-                        let cycleDuration = Math.round(DotLayer.periodInSecs() * 1000);
+                        let cycleDuration = Math.round(dotLayer.periodInSecs() * 1000);
                         try{
                             ga('send', 'event', {
                                 eventCategory: USER_ID,
@@ -284,9 +270,9 @@ function heatflask() {
             icon: 'fa-stop-circle',
             title: 'Cancel Capture',
             onClick: function (btn, map) {
-                if (DotLayer && DotLayer._capturing) {
-                    DotLayer.abortCapture();
-                    areaSelect.remove();
+                if (dotLayer && dotLayer._capturing) {
+                    dotLayer.abortCapture();
+                    controls.areaSelect.remove();
                     btn.state('idle');
                 }
             }
@@ -295,10 +281,10 @@ function heatflask() {
 
 
     // Capture control button
-    let captureControl = L.easyButton({
+    controls.captureControl = L.easyButton({
         states: capture_button_states
     });
-    captureControl.enabled = false;
+    controls.captureControl.enabled = false;
 
 
     // set up dial-controls
@@ -312,32 +298,28 @@ function heatflask() {
             inline: true,
             displayInput: false,
             change: function (val) {
-                if (!DotLayer) {
-                    return;
-                }
-
                 let newVal;
                 if (this.$[0].id == "sepConst") {
                     newVal = Math.pow(2, val * SEP_SCALE.m + SEP_SCALE.b);
-                    DotLayer.updateDotSettings({C1: newVal});
+                    dotLayer.updateDotSettings({C1: newVal});
                 } else {
                     newVal = val * val * SPEED_SCALE;
-                    DotLayer.updateDotSettings({C2: newVal});;
+                    dotLayer.updateDotSettings({C2: newVal});;
                 }
 
                 // Enable capture if period is less than CAPTURE_DURATION_MAX
-                let cycleDuration = DotLayer.periodInSecs().toFixed(2),
-                    captureEnabled = captureControl.enabled;
+                let cycleDuration = dotLayer.periodInSecs().toFixed(2),
+                    captureEnabled = controls.captureControl.enabled;
 
                 $("#period-value").html(cycleDuration);
                 if (cycleDuration <= CAPTURE_DURATION_MAX) {
                     if (!captureEnabled) {
-                        captureControl.addTo(map);
-                        captureControl.enabled = true;
+                        controls.captureControl.addTo(map);
+                        controls.captureControl.enabled = true;
                     }
                 } else if (captureEnabled) {
-                    captureControl.removeFrom(map);
-                    captureControl.enabled = false;
+                    controls.captureControl.removeFrom(map);
+                    controls.captureControl.enabled = false;
                 }
             },
             release: function() {
@@ -355,8 +337,8 @@ function heatflask() {
             inline: true,
             displayInput: false,
             change: function (val) {
-                if (!DotLayer) return;
-                DotLayer.updateDotSettings({dotScale: val});
+                if (!dotLayer) return;
+                dotLayer.updateDotSettings({dotScale: val});
             },
             release: function() {
                 updateState();
@@ -373,22 +355,22 @@ function heatflask() {
             inline: true,
             displayInput: false,
             change: function (val) {
-                if (!DotLayer) return;
+                if (!dotLayer) return;
 
                 if (this.$[0].id == "shadowHeight")
-                    DotLayer.updateDotSettings(null, {"y": val});
+                    dotLayer.updateDotSettings(null, {"y": val});
                 else 
-                    DotLayer.updateDotSettings(null, {"blur": val+2});
+                    dotLayer.updateDotSettings(null, {"blur": val+2});
             },
 
             release: function() {
-                DotLayer._redraw(true);
+                dotLayer._redraw(true);
             }
     });
 
 
     if (FLASH_MESSAGES.length > 0) {
-        var msg = "<ul class=flashes>";
+        let msg = "<ul class=flashes>";
         for (let i=0, len=FLASH_MESSAGES.length; i<len; i++) {
             msg += "<li>" + FLASH_MESSAGES[i] + "</li>";
         }
@@ -440,7 +422,7 @@ function heatflask() {
             render: formatUserId
         };
 
-    let atable = $('#activitiesList').DataTable({
+    const atable = $('#activitiesList').DataTable({
                     paging: false,
                     deferRender: true,
                     scrollY: "60vh",
@@ -455,14 +437,12 @@ function heatflask() {
                   .on( 'deselect', handle_table_selections);
 
 
-    let tableScroller = $('.dataTables_scrollBody');
+    const tableScroller = $('.dataTables_scrollBody');
 
 
 
     function updateShareStatus(status) {
         if (OFFLINE) return;
-
-        console.log("updating share status.");
         const url = `${SHARE_STATUS_UPDATE_URL}?status=${status}`;
         httpGetAsync(url, function(responseText) {
             console.log(`response: ${responseText}`);
@@ -488,14 +468,10 @@ function heatflask() {
             }
         }
 
-        if (DotLayer)
-            DotLayer.setItemSelect(selections, false);
-
         if ( domIdProp("zoom-to-selection", 'checked') )
             zoomToSelectedPaths();
-        
-        else if (redraw)
-            DotLayer._redraw();
+
+        dotLayer.setItemSelect(selections);
     }
 
     function handle_path_selections(ids) {
@@ -571,14 +547,14 @@ function heatflask() {
 
 
     function pauseFlow(){
-        DotLayer.pause();
+        dotLayer.pause();
         appState.paused = true;
     }
 
     function resumeFlow(){
         appState.paused = false;
-        if (DotLayer) {
-            DotLayer.animate();
+        if (dotLayer) {
+            dotLayer.animate();
         }
     }
 
@@ -601,7 +577,7 @@ function heatflask() {
             vmi = (v * 3600 / 1609.34).toFixed(2) + "mi/hr";
         }
 
-        var popup = L.popup()
+        const popup = L.popup()
                     .setLatLng(latlng)
                     .setContent(
                         `<b>${A.name}</b><br>${A.type}:&nbsp;${A.tsLoc}<br>`+
@@ -614,20 +590,15 @@ function heatflask() {
 
 
     function getBounds(ids) {
-        let bounds = L.latLngBounds();
-        for (id of ids){
+        const bounds = L.latLngBounds();
+        for (const id of ids){
             bounds.extend( appState.items.get(id).bounds );
         }
         return bounds
     }
 
 
-    function initializeDotLayer() {
-        DotLayer = new L.DotLayer(fps_display, {
-            startPaused: appState.paused,
-            workerUrl: DOTLAYER_WORKER_URL
-        });
-
+    function initializedotLayer() {
         let ds = {};
         if (ONLOAD_PARAMS.C1)
             ds["C1"] = ONLOAD_PARAMS["C1"];
@@ -638,12 +609,6 @@ function heatflask() {
         if (ONLOAD_PARAMS.SZ)
             ds["dotScale"] = ONLOAD_PARAMS["SZ"];
 
-        DotLayer.updateDotSettings(ds);
-        ds = DotLayer.getDotSettings();
-
-        map.addLayer(DotLayer);
-        layerControl.addOverlay(DotLayer, "Dots");
-
         $("#sepConst").val((Math.log2(ds["C1"]) - SEP_SCALE.b) / SEP_SCALE.m ).trigger("change");
         $("#speedConst").val(Math.sqrt(ds["C2"]) / SPEED_SCALE).trigger("change");
         $("#dotScale").val(ds["dotScale"]).trigger("change");
@@ -651,42 +616,22 @@ function heatflask() {
 
         if (ONLOAD_PARAMS.shadows)
             domIdVal("shadows", "checked");
-        $("#shadowHeight").val(DotLayer.options.dotShadows.y).trigger("change");
-        $("#shadowBlur").val(DotLayer.options.dotShadows.blur).trigger("change");
-        $("#shadows").prop("checked", DotLayer.options.dotShadows.enabled);
+        $("#shadowHeight").val(dotLayer.options.dotShadows.y).trigger("change");
+        $("#shadowBlur").val(dotLayer.options.dotShadows.blur).trigger("change");
+        $("#shadows").prop("checked", dotLayer.options.dotShadows.enabled);
         
         domIdEvent("shadows", "change", (e) => {
-            DotLayer.updateDotSettings(null, {"enabled": e.target.checked})
+            dotLayer.updateDotSettings(null, {"enabled": e.target.checked})
         });
 
-        setTimeout(function(){
-            let T = DotLayer.periodInSecs().toFixed(2);
-            $("#period-value").html(T);
+        $("#showPaths")
+            .prop("checked", dotLayer.options.showPaths)
+            .on("change", function(){
+                 dotLayer.options.showPaths = $(this).prop("checked");
+                 dotLayer._redraw();
+        });
 
-            // Enable capture if period is less than CAPTURE_DURATION_MAX
-            let cycleDuration = T,
-                captureEnabled = captureControl.enabled;
-
-
-            $("#period-value").html(cycleDuration);
-            if (cycleDuration <= CAPTURE_DURATION_MAX) {
-                if (!captureEnabled) {
-                    captureControl.addTo(map);
-                    captureControl.enabled = true;
-                }
-            } else if (captureEnabled) {
-                captureControl.removeFrom(map);
-                captureControl.enabled = false;
-            }
-
-
-        }, 500);
-
-        $("#showPaths").prop("checked", DotLayer.options.showPaths)
-                        .on("change", function(){
-                             DotLayer.options.showPaths = $(this).prop("checked");
-                             DotLayer._redraw();
-                        });
+        dotLayer.updateDotSettings(ds);
     }
 
 
@@ -719,7 +664,10 @@ function heatflask() {
             catch(err){}
         }
 
-        DotLayer.reset();
+        dotLayer.reset();
+        const ds = dotLayer.getDotSettings();
+        let T = dotLayer.periodInSecs().toFixed(2);
+        $("#period-value").html(T).trigger("change");
     }
 
     let sock, wskey;
@@ -880,7 +828,7 @@ function heatflask() {
                     // delete all ids in A.delete
                     for (let id of A.delete)
                         appState.items.delete(id);
-                    DotLayer.removeItems(A.delete);
+                    dotLayer.removeItems(A.delete);
                 
                 } else if ("done" in A) {
                     console.log("received done");
@@ -918,7 +866,7 @@ function heatflask() {
 
                 A.bounds = L.latLngBounds(A.bounds.SW, A.bounds.NE);
                 
-                DotLayer.addItem(A.id, A.polyline, A.pathColor, A.time, tup[0], A.bounds, A.n);
+                dotLayer.addItem(A.id, A.polyline, A.pathColor, A.time, tup[0], A.bounds, A.n);
                 appState.items.set(A.id, A);
 
                 delete A.n;
@@ -985,8 +933,8 @@ function heatflask() {
             }
         }
 
-        if (DotLayer) {
-            ds = DotLayer.getDotSettings();
+        if (dotLayer) {
+            ds = dotLayer.getDotSettings();
 
             params["c1"] = Math.round(ds["C1"]);
             params["c2"] = Math.round(ds["C2"]);
@@ -996,7 +944,7 @@ function heatflask() {
         if (appState.currentBaseLayer.name)
             params["baselayer"] = appState.currentBaseLayer.name;
 
-        var newURL = USER_ID + "?" + jQuery.param(params, true);
+        const newURL = USER_ID + "?" + jQuery.param(params, true);
         window.history.pushState("", "", newURL);
 
         $(".current-url").val(newURL);
@@ -1038,7 +986,7 @@ function heatflask() {
 
 
     function domIdVal(id, val=null) {
-        let domObj = document.getElementById(id);
+        const domObj = document.getElementById(id);
         if (domObj) {
             if (val === null) {    
                 return (domObj)? domObj.value : null; 
@@ -1049,7 +997,7 @@ function heatflask() {
     }
 
     function domIdEvent(id, type, func) {
-        let obj = document.getElementById(id);
+        const obj = document.getElementById(id);
         if (obj) {
             if (obj.addEventListener)
                 obj.addEventListener(type, func, false);
@@ -1059,7 +1007,7 @@ function heatflask() {
     }
 
     function domIdProp(id, prop, val=null) {
-        let domObj = document.getElementById(id);
+        const domObj = document.getElementById(id);
         if (domObj) {
             if (val === null) { 
                 return (domObj)? domObj[prop] : null; 
@@ -1070,7 +1018,7 @@ function heatflask() {
     }
 
     function domIdShow(id, show=null) {
-        let domObj = document.getElementById(id);
+        const domObj = document.getElementById(id);
         if (domObj) {
             if (show === null) {
                 return (domObj.style.display == "block");
@@ -1084,13 +1032,13 @@ function heatflask() {
     // What to do when user changes to a different tab or window
     function handleVisibilityChange() {
         if (document.hidden) {
-            let title = document.title;
+            const title = document.title;
             handleVisibilityChange.title = title;
             document.title = `${title} (paused)`;
             if (!appState.paused)
-                DotLayer.pause();
-        } else if (!appState.paused && DotLayer) {
-            DotLayer.animate();
+                dotLayer.pause();
+        } else if (!appState.paused && dotLayer) {
+            dotLayer.animate();
             document.title = handleVisibilityChange.title;
 
         }
@@ -1169,7 +1117,7 @@ function heatflask() {
         domIdVal('preset', "");
     }
     
-    initializeDotLayer();
+    initializedotLayer();
     renderLayers();
     preset_sync();
 };

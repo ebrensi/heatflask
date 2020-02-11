@@ -32,6 +32,7 @@ bundles = {
         ),
         # un-minified dependencies
         flask_assets.Bundle(
+            'js/L.Control.Watermark.js',
             'js/L.Control.Window.js',
             'js/leaflet-providers.js',
             'js/leaflet-image.js',  # Tom MacWright: https://github.com/mapbox/leaflet-image
