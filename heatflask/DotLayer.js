@@ -268,10 +268,12 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             const offset = this.pxOffset,
                   zf = this._zf;
 
-            p[0] = zf*p[0] + offset.x;
-            p[1] = zf*p[1] + offset.y;
+            return p => {
+                p[0] = zf*p[0] + offset.x;
+                p[1] = zf*p[1] + offset.y;
 
-            return p; 
+                return p;
+            }
         },
 
         latLng2pxBounds: function(llBounds, pxObj) {
@@ -313,12 +315,13 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             const b = pxBounds || this.pxBounds,
                   xmin = b[0], xmax = b[2], 
                   ymin = b[3], ymax = b[1],
+                  transform = this.px2Container(),
 
-                  ul = this.px2Container([xmin, ymin]),
+                  ul = transform([xmin, ymin]),
                   x = ul[0] + 5,
                   y = ul[1] + 5,
 
-                  lr = this.px2Container([xmax, ymax]),
+                  lr = transform([xmax, ymax]),
                   w = (lr[0] - x) - 10,
                   h = (lr[1] - y) - 10,
                   rect = {x: x, y:y, w:w, h:h};
@@ -373,16 +376,17 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             if (!d) return this.defaultRect();
             const c = this.ViewBox,
                   mapSize = c.getMapSize(),
+                  transform = c.px2Container(),
                   r = this._rect;
             r[0] = d.xmin;
             r[1] = d.ymin;
-            c.px2Container(r);
+            transform(r);
             r[0] = ~~Math.max(r[0] - pad, 0);
             r[1] = ~~Math.max(r[1] - pad, 0);
 
             r[2] = d.xmax; 
             r[3] = d.ymax;
-            c.px2Container(r.subarray(2,4));
+            transform(r.subarray(2,4));
             r[2] = ~~Math.min(r[2] + pad, mapSize.x);
             r[3] = ~~Math.min(r[3] + pad, mapSize.y);
 
@@ -1012,16 +1016,17 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
     _drawPathFromSegIter: function(ctx, A) {
         const segs = this.iterSegments(A),
+              transform = this.ViewBox.px2Container(),
               seg = segs.next().value,
               a = seg.a,
               b = seg.b;
 
         let i = 0;
         do {
-            this.ViewBox.px2Container(a);
+            transform(a);
             ctx["moveTo"](a[0], a[1]);
 
-            this.ViewBox.px2Container(b);
+            transform(b);
             ctx["lineTo"](b[0], b[1]);
 
         } while (!segs.next().done)
@@ -1031,7 +1036,8 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         const zoom = this.ViewBox.zoom,
               segMask = A.segMask,
               points = this.pointsArray(A, zoom),
-              point = i => this.ViewBox.px2Container(points(i));
+              transform = this.ViewBox.px2Container(),
+              point = i => transform(points(i));
 
         segMask.forEach(i => {
             let p = point(i);
@@ -1149,21 +1155,26 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
     makeCircleDrawFunc: function() {
         const two_pi = this.two_pi,
               ctx = this._dotCtx,
-              dotSize = this.dotSettings._dotSize;
+              dotSize = this.dotSettings._dotSize,
+              transform = this.ViewBox.px2Container();
 
         return p => {
-            ctx["arc"]( p[0], p[1], dotSize, 0, two_pi );
-            ctx["closePath"]();
+            transform(p);
+            // ctx["arc"]( p[0], p[1], dotSize, 0, two_pi );
+            // ctx["closePath"]();
         };
     },
 
     makeSquareDrawFunc: function() {
         const ctx = this._dotCtx,
               dotSize = this.dotSettings._dotSize,
-              dotOffset = dotSize / 2.0;
+              dotOffset = dotSize / 2.0,
+              transform = this.ViewBox.px2Container();
 
-        return p =>
-            ctx["rect"]( p[0] - dotOffset, p[1] - dotOffset, dotSize, dotSize );
+        return p => {
+            transform(p);
+            // ctx["rect"]( p[0] - dotOffset, p[1] - dotOffset, dotSize, dotSize );
+        }
     },
 
     _drawDotsByColor: function(now, colorGroups, drawDot) {
@@ -1197,8 +1208,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
               ctx = this._dotCtx,
               g = this._gifPatch,
               itemsArray = this._itemsArray,
-              vb = this.ViewBox,
-              transform = vb.px2Container.bind(vb);
+              vb = this.ViewBox;
 
         const colorGroups = vb.dotColorGroups();
         
@@ -1219,22 +1229,19 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         if (selected) {
             // draw normal activity dots
             ctx["globalAlpha"] = options["unselected"]["dotOpacity"];
-            let drawDotFunc = this.makeSquareDrawFunc(),
-                drawDot = p => drawDotFunc(transform(p))
-            count += this._drawDotsByColor(now, unselected, drawDot, options["unselected"]["dotColor"]);
+            let drawDotFunc = this.makeSquareDrawFunc();
+            count += this._drawDotsByColor(now, unselected, drawDotFunc, options["unselected"]["dotColor"]);
 
             // draw selected activity dots
             drawDotFunc = this.makeCircleDrawFunc();
-            drawDot = p => drawDotFunc(transform(p));
             ctx["globalAlpha"] = options["selected"]["dotOpacity"];
-            count += this._drawDotsByColor(now, selected, drawDot, options["selected"]["dotColor"]);
+            count += this._drawDotsByColor(now, selected, drawDotFunc, options["selected"]["dotColor"]);
         
         } else if (unselected) {
             // draw normal activity dots
             ctx["globalAlpha"] = options["normal"]["dotOpacity"];
-            let drawDotFunc = this.makeSquareDrawFunc(),
-                drawDot = p => drawDotFunc(transform(p))
-            count += this._drawDotsByColor(now, unselected, drawDot, options["normal"]["dotColor"]);
+            let drawDotFunc = this.makeSquareDrawFunc();
+            count += this._drawDotsByColor(now, unselected, drawDotFunc, options["normal"]["dotColor"]);
         }
         
         if (options["debug"]) {
