@@ -188,8 +188,8 @@ BitSet.prototype.hammingWeight4 = function(v1,v2,v3,v4) {
 // How many values stored in the set? How many set bits?
 BitSet.prototype.size = function() {
   let answer = 0;
-  let c = this.words.length;
-  let w = this.words;
+  const c = this.words.length;
+  const w = this.words;
   let i = 0;
   for (; i < c; i++) {
     answer += this.hammingWeight(w[i]);
@@ -197,9 +197,21 @@ BitSet.prototype.size = function() {
   return answer;
 };
 
+BitSet.prototype.min = function() {
+  const c = this.words.length;
+  let w;
+  for (let k = 0; k < c; ++k) {
+    w =  this.words[k];
+    if (w != 0) {
+      const t = w & -w;
+      return (k << 5) + this.hammingWeight((t - 1) | 0);
+    }
+  }
+};
+
 BitSet.prototype.max = function() {
   let pos = 0 | 0;
-  let c = this.words.length-1;
+  const c = this.words.length-1;
   for (let k = c; k >= 0; --k) {
     let w =  this.words[k];
     if (w != 0) {
@@ -219,9 +231,9 @@ BitSet.prototype.array = function(ArrayConstructor) {
   const max = this.max();
   ArrayConstructor = ArrayConstructor || (max >> 8)? ((max >> 16)? Uint32Array : Uint16Array) : Uint8Array 
 
-  let answer = new ArrayConstructor(this.size());
+  const answer = new ArrayConstructor(this.size());
   let pos = 0 | 0;
-  let c = this.words.length;
+  const c = this.words.length;
   for (let k = 0; k < c; ++k) {
     let w =  this.words[k];
     while (w != 0) {
@@ -235,7 +247,7 @@ BitSet.prototype.array = function(ArrayConstructor) {
 
 // Return an array with the set bit locations (values)
 BitSet.prototype.forEach = function(fnc) {
-  let c = this.words.length;
+  const c = this.words.length;
   for (let k = 0; k < c; ++k) {
     let w =  this.words[k];
     while (w != 0) {
@@ -267,9 +279,10 @@ BitSet.prototype[Symbol.iterator] = function (){
 //   with the option to "fast-forward" 
 //  to a position set by this.next(position).
 BitSet.prototype.imap_find = function*(fnc, next_pos) {
-  let c = this.words.length,
-      w = this.words[0],
-      pos = 0,
+  const c = this.words.length,
+        w = this.words[0];
+
+  let pos = 0,
       k = 0;
 
   for (let k = 0; k < c; ++k) {

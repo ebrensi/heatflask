@@ -38,7 +38,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             "dotOpacity": 0.9,
 
             "pathColor": "#000000",
-            "pathOpacity": 0.8,
+            "pathOpacity": 0.7,
             "pathWidth": 5,
         },
 
@@ -847,9 +847,25 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         return this._iterPoints(A, A.idxSet[zoom]);
     },
 
+    timesArray: function(A, zoom) {
+        const key = `T${A.id}:${zoom}`;
+        let arr = this._lru.get(key);
+        
+        if (!arr) {
+            arr = Uint16Array.from(
+                StreamRLE.decodeCompressedBuf2(A.time, A.idxSet[zoom])
+            );
+            this._lru.set(key, arr);
+        }
+
+        arrayFunc = i => arr[i];
+      
+        return arrayFunc;
+    },
+
     TimeInterval: function interval() {
         if (!interval._interval)
-            interval._interval = [NaN, NaN];
+            interval._interval = {a: NaN, b: NaN};
         return interval._interval
     },
 
@@ -864,8 +880,8 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             while (j++ < idx)
                 first = stream.next();
             second = stream.next();
-            timeInterval[0] = first.value;
-            timeInterval[1] = second.value;
+            timeInterval.a = first.value;
+            timeInterval.b = second.value;
             return timeInterval;
         });
     },
@@ -895,22 +911,26 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
     },
 
     Segment: function segment() {
-        if (!segment._segment)
-            segment._segment = {
-                a: [NaN, NaN],
-                b: [NaN, NaN],
+        if (!segment._data)
+            segment._data = {
+                segment: {
+                    a: [NaN, NaN],
+                    b: [NaN, NaN]
+                },
+
                 temp: [NaN, NaN]
             };
 
-        return segment._segment;
+        return segment._data;
     },
 
     // this returns an iterator of segment objects
     iterSegments: function(A, zoom, segMask) {
-        const seg = this.Segment(),
+        const obj = this.Segment(),
+              seg = obj.segment,
               a = seg.a, 
               b = seg.b,
-              temp = seg.temp,
+              temp = obj.temp,
               set = (s, p) => {
                 s[0] = p[0];
                 s[1] = p[1];
@@ -1056,7 +1076,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             const group = colorGroups[color];
             ctx["strokeStyle"] = color || defaultColor;
             ctx["beginPath"]();
-            group.forEach( i => this._drawPathFromSegIter(ctx, items[i]));
+            group.forEach( i => this._drawPathFromPointArray(ctx, items[i]));
             ctx["stroke"]();
         } 
     },
@@ -1101,8 +1121,34 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         }        
     },
 
+    test: function(A) {
+        const zoom = this.ViewBox.zoom,
+              segs = this.iterSegments(A),
+              ints = this.iterTimeIntervals(A),
+              points = this.pointsArray(A, zoom),
+              times = this.timesArray(A, zoom),
+              segMask = A.segMask,
+              equalSegs = (s1, s2) => 
+                   s1.a[0] == s2.a[0] && s1.a[1] == s2.a[1] &&
+                   s1.b[0] == s2.b[0] && s1.b[1] == s2.b[1],
+              equalInts = (i1, i2) => i1.a == i2.a && i1.b == i2.b;
+
+
+        segMask.forEach(i => {
+            const seg0 = {a: points(i).slice(0), b: points(i+1)},
+                  int0 = {a: times(i), b: times(i+1)},
+
+                  seg1 = segs.next().value,
+                  int1 = ints.next().value;
+            if (!equalInts(int0, int1) || !equalSegs(seg0, seg1)) {
+                console.log(`i:`, seg0, seg1, int0, int1)
+                debugger;
+            }
+        });
+    },
+
     // --------------------------------------------------------------------
-    _drawDots: function( now, A, drawDot ) {      
+    dotPointsIterFromSegs: function*(A, now) {      
         const ds = this.getDotSettings(),
               T = ds._period,
               start = A.ts,
@@ -1119,17 +1165,82 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         const times = this.iterTimeIntervals(A),
               timeInterval = times.next().value;
 
-        const timeOffset = (ds._timeScale * ( now - (start + timeInterval[0]))) % T;
+        // debugger;
 
-        let count = 0;
+        const timeOffset = (ds._timeScale * ( now - (start + timeInterval.a))) % T;
+
+        // let count = 0;
 
         do {
-            const t_a = timeInterval[0],
-                  t_b = timeInterval[1],
+            const t_a = timeInterval.a,
+                  t_b = timeInterval.b,
                   lowest = Math.ceil((t_a - timeOffset) / T),
                   highest = Math.floor((t_b - timeOffset) / T);
                        
             if (lowest <= highest) {
+                // console.log(`${t_a}, ${t_b}`);
+                const t_ab = t_b - t_a,
+                      vx = (p_b[0] - p_a[0]) / t_ab,
+                      vy = (p_b[1] - p_a[1]) / t_ab;
+
+                // console.log(`${p_a}, ${p_b}`);
+                for (let j = lowest; j <= highest; j++) {
+                    const t = j * T + timeOffset,
+                          dt = t - t_a;
+                    // console.log(t);
+                    if (dt > 0) {
+                        p[0] = p_a[0] + vx * dt;
+                        p[1] = p_a[1] + vy * dt;
+                        // drawDot(p);
+                        yield p;
+                        // count++;
+                    }
+                }
+            }
+            
+        } while( !segments.next().done && !times.next().done ) 
+
+        // return count
+    },
+
+    dotPointsIterFromArray: function*(A, now) {      
+        const ds = this.getDotSettings(),
+              T = ds._period,
+              start = A.ts,
+              p = [NaN, NaN],
+              zoom = this.ViewBox.zoom,
+              points = this.pointsArray(A, zoom),
+              times = this.timesArray(A, zoom),
+              p_a = [NaN, NaN],
+              p_b = [NaN, NaN],
+              set = (d, s) => {
+                d[0] = s[0];
+                d[1] = s[1];
+                return d;
+              },
+              i0 = A.segMask.min();
+
+        // this.test(A);
+        // return
+
+        const timeOffset = (ds._timeScale * ( now - (start + times(i0) ))) % T;
+
+        let count = 0;
+
+        // A.segMask.forEach(i => {
+        for (const i of A.segMask) {
+            const t_a = times(i),
+                  t_b = times(i+1),
+                  lowest = Math.ceil((t_a - timeOffset) / T),
+                  highest = Math.floor((t_b - timeOffset) / T);
+            // console.log(`${t_a}, ${t_b}`);
+
+            if (lowest <= highest) {
+                set(p_a, points(i));
+                set(p_b, points(i+1));
+                // const p_a = set(p, points(i)),
+                //       p_b = points(i+1);
+                // console.log(`${p_a}, ${p_b}`);
                 const t_ab = t_b - t_a,
                       vx = (p_b[0] - p_a[0]) / t_ab,
                       vy = (p_b[1] - p_a[1]) / t_ab;
@@ -1137,18 +1248,19 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
                 for (let j = lowest; j <= highest; j++) {
                     const t = j * T + timeOffset,
                           dt = t - t_a;
+                    // console.log(t);
                     if (dt > 0) {
                         p[0] = p_a[0] + vx * dt;
                         p[1] = p_a[1] + vy * dt;
-                        drawDot(p);
-                        count++;
+                        // drawDot(p_a);
+                        yield p;
+                        // count++;
                     }
                 }
             }
-            
-        } while( !segments.next().done && !times.next().done ) 
-
-        return count
+        }
+        // });
+        // return count
     },
 
     makeCircleDrawFunc: function() {
@@ -1176,6 +1288,15 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         }
     },
 
+    _drawDots: function(pointsIterator, drawDotFunc) {
+        let count = 0;
+        for (const p of pointsIterator) {
+            drawDotFunc(p);
+            count++;
+        }
+        return count
+    },
+
     _drawDotsByColor: function(now, colorGroups, drawDot) {
         const ctx = this._dotCtx,
               itemsArray = this._itemsArray;
@@ -1187,9 +1308,11 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             ctx["fillStyle"] = color || this["options"]["normal"]["dotColor"];
             ctx["beginPath"]();
 
-            group.forEach(
-                i => count += this._drawDots(now, itemsArray[i], drawDot)
-            );
+            group.forEach(i => {
+                // const dotLocs = this.dotPointsIterFromSegs(itemsArray[i], now);
+                const dotLocs = this.dotPointsIterFromArray(itemsArray[i], now);
+                count += this._drawDots(dotLocs, drawDot);
+            });
 
             ctx["fill"]();
         }
@@ -1310,7 +1433,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
     //------------------------------------------------------------------------------
     _animateZoom: function( e ) {
-        const m = this.ViewBox.map,
+        const m = this.ViewBox._map,
               z = e.zoom,
               scale = m["getZoomScale"]( z );
 
@@ -1402,7 +1525,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         // console.log(msg);
         pd.textContent = msg;
 
-        window["leafletImage"](this.ViewBox.map, function(err, canvas) {
+        window["leafletImage"](this.ViewBox._map, function(err, canvas) {
             //download(canvas.toDataURL("image/png"), "mapViewBox.png", "image/png");
             console.log("leaflet-image: " + err);
             if (canvas) {
