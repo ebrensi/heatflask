@@ -22,10 +22,11 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         "numWorkers": 0,
         "startPaused": false,
         "showPaths": true,
+        "fps_display": true,
         
         "normal": {
             "dotColor": "#000000",
-            "dotOpacity": 0.8,
+            "dotOpacity": 0.7,
 
             "pathColor": "#000000",
             "pathOpacity": 0.7,
@@ -35,12 +36,19 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         "selected": {
             "dotColor": "#FFFFFF",
             "dotOpacity": 0.9,
-            "dotStrokeColor": "#FFFFFF",
-            "dotStrokeWidth": 0.5,
 
             "pathColor": "#000000",
             "pathOpacity": 0.8,
             "pathWidth": 5,
+        },
+
+        "unselected": {
+            "dotColor": "#000000",
+            "dotOpacity": 0.2,
+
+            "pathColor": "#000000",
+            "pathOpacity": 0.2,
+            "pathWidth": 1,
         },
 
         "dotShadows": {
@@ -449,7 +457,6 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
     // -- initialized is called on prototype
     "initialize": function( options ) {
         this._timeOffset = 0;
-        // this.fps_display = fps_display;
         Leaflet["setOptions"]( this, options );
         this._paused = this["options"]["startPaused"];
         this._timePaused = this.UTCnowSecs();
@@ -459,9 +466,10 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
         this.strava_icon = new Image();
         this.strava_icon.src = "static/pbs4.png";
+        // debugger;
 
-        if (this["options"]["fps_display"])
-            this.fps_display = Leaflet.control.fps().addTo(this._map);
+        // if (this["options"]["fps_display"])
+        //     this.fps_display = Leaflet.control.fps().addTo(this._map);
 
         this._items = new Map();
         this._lru = new Map();  // turn this into a real LRU-cache
@@ -1062,18 +1070,21 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
               selected = cg.selected,
               unselected = cg.unselected;
 
-        if (unselected){
-            // draw unselected paths
-            ctx["lineWidth"] = options["normal"]["pathWidth"];
-            ctx["globalAlpha"] = options["normal"]["pathOpacity"];
-            this._drawPathsByColor(unselected, options["normal"]["pathColor"]);
-        }
-
         if (selected) {
+            ctx["lineWidth"] = options["unselected"]["pathWidth"];
+            ctx["globalAlpha"] = options["unselected"]["pathOpacity"];
+            this._drawPathsByColor(unselected, options["unselected"]["pathColor"]);
+
             // draw selected paths
             ctx["lineWidth"] = options["selected"]["pathWidth"];
             ctx["globalAlpha"] = options["selected"]["pathOpacity"];
             this._drawPathsByColor(selected, options["selected"]["pathColor"]);
+        
+        } else if (unselected) {
+            // draw unselected paths
+            ctx["lineWidth"] = options["normal"]["pathWidth"];
+            ctx["globalAlpha"] = options["normal"]["pathOpacity"];
+            this._drawPathsByColor(unselected, options["normal"]["pathColor"]);
         }
             
         if (options["debug"]) {
@@ -1203,23 +1214,28 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             selected = null;
         } else 
 
-        if (unselected) {
+        
+
+        if (selected) {
+            // draw normal activity dots
+            ctx["globalAlpha"] = options["unselected"]["dotOpacity"];
+            let drawDotFunc = this.makeSquareDrawFunc(),
+                drawDot = p => drawDotFunc(transform(p))
+            count += this._drawDotsByColor(now, unselected, drawDot, options["unselected"]["dotColor"]);
+
+            // draw selected activity dots
+            drawDotFunc = this.makeCircleDrawFunc();
+            drawDot = p => drawDotFunc(transform(p));
+            ctx["globalAlpha"] = options["selected"]["dotOpacity"];
+            count += this._drawDotsByColor(now, selected, drawDot, options["selected"]["dotColor"]);
+        
+        } else if (unselected) {
             // draw normal activity dots
             ctx["globalAlpha"] = options["normal"]["dotOpacity"];
             let drawDotFunc = this.makeSquareDrawFunc(),
                 drawDot = p => drawDotFunc(transform(p))
             count += this._drawDotsByColor(now, unselected, drawDot, options["normal"]["dotColor"]);
         }
-
-        if (selected) {
-            // draw selected activity dots
-            drawDotFunc = this.makeCircleDrawFunc();
-            drawDot = p => drawDotFunc(transform(p));
-            ctx["globalAlpha"] = options["selected"]["dotOpacity"];
-            ctx["strokeStyle"] = options["selected"]["dotStrokeColor"];
-            ctx["strokeWidth"] = options["selected"]["dotStrokeWidth"];
-            count += this._drawDotsByColor(now, selected, drawDot, options["selected"]["dotStrokeWidth"]);
-        } 
         
         if (options["debug"]) {
             this._debugCtxReset();
