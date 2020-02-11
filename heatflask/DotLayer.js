@@ -1122,7 +1122,6 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         const timeOffset = (ds._timeScale * ( now - (start + timeInterval[0]))) % T;
 
         let count = 0;
-        let obj;
 
         do {
             const t_a = timeInterval[0],
@@ -1160,8 +1159,8 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
         return p => {
             transform(p);
-            // ctx["arc"]( p[0], p[1], dotSize, 0, two_pi );
-            // ctx["closePath"]();
+            ctx["arc"]( p[0], p[1], dotSize, 0, two_pi );
+            ctx["closePath"]();
         };
     },
 
@@ -1173,7 +1172,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
         return p => {
             transform(p);
-            // ctx["rect"]( p[0] - dotOffset, p[1] - dotOffset, dotSize, dotSize );
+            ctx["rect"]( p[0] - dotOffset, p[1] - dotOffset, dotSize, dotSize );
         }
     },
 
