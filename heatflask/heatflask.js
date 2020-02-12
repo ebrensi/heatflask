@@ -293,8 +293,8 @@ function heatflask() {
         min: 0,
         max: 100,
         step: 0.1,
-        width: "130",
-        height: "130",
+        width: "140",
+        height: "140",
         cursor: 20,
         inline: true,
         displayInput: false,
@@ -604,7 +604,7 @@ function heatflask() {
 
 
     function initializedotLayer() {
-        let ds = {};
+        let ds = dotLayer.getDotSettings();
         if (ONLOAD_PARAMS.C1)
             ds["C1"] = ONLOAD_PARAMS["C1"];
 
@@ -1038,14 +1038,10 @@ function heatflask() {
     // What to do when user changes to a different tab or window
     function handleVisibilityChange() {
         if (document.hidden) {
-            const title = document.title;
-            handleVisibilityChange.title = title;
-            document.title = `${title} (paused)`;
             if (!appState.paused)
                 dotLayer.pause();
         } else if (!appState.paused && dotLayer) {
             dotLayer.animate();
-            document.title = handleVisibilityChange.title;
 
         }
     }
