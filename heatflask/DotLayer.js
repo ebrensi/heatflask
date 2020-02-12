@@ -478,7 +478,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         this._items = new Map();
         this._lru = new Map();  // turn this into a real LRU-cache
 
-        // this.WorkerPool.initialize(this["options"]["numWorkers"], options["workerUrl"]);
+        // this.WorkerPool.initialize(this["options"]["numWorkers"], options["dotWorkerUrl"]);
     },
 
     UTCnowSecs: function() {
@@ -1407,7 +1407,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         let ts = this.UTCnowSecs(),
             now = ts - this._timeOffset;
 
-        if ( this._paused ) {
+        if ( this._paused || this._capturing ) {
             // Ths is so we can start where we left off when we resume
             this._timePaused = ts;
             return;
@@ -1505,7 +1505,6 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
     captureCycle: function(selection=null, callback=null) {
         let periodInSecs = this.periodInSecs();
-        this._mapMoving = true;
         this._capturing = true;
 
         // set up display
@@ -1526,7 +1525,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         pd.textContent = msg;
 
         window["leafletImage"](this.ViewBox._map, function(err, canvas) {
-            //download(canvas.toDataURL("image/png"), "mapViewBox.png", "image/png");
+            // download(canvas.toDataURL("image/png"), "mapViewBox.png", "image/png");
             console.log("leaflet-image: " + err);
             if (canvas) {
                 this.captureGIF(selection, canvas, periodInSecs, callback=callback);
@@ -1535,8 +1534,6 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
     },
 
     captureGIF: function(selection=null, baseCanvas=null, durationSecs=2, callback=null) {
-        this._mapMoving = true;
-
         let sx, sy, sw, sh;
         if (selection) {
             sx = selection["topLeft"]["x"];
@@ -1563,9 +1560,10 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
                 workers: window.navigator.hardwareConcurrency,
                 quality: 8,
                 transparent: 'rgba(0,0,0,0)',
-                workerScript: window["GIFJS_WORKER_URL"]
+                workerScript: this["options"]["gifWorkerUrl"]
             });
 
+        debugger;
 
         this._encoder = encoder;
 
@@ -1585,7 +1583,6 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             document.body.removeChild( this._progressDisplay );
             delete this._progressDisplay
 
-            this._mapMoving = false;
             this._capturing = false;
             if (!this._paused) {
                 this.animate();
@@ -1674,7 +1671,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             baseCanvas && frameCtx.drawImage( baseCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
 
             // render this set of dots
-            this.drawDotLayer(frameTime);
+            this.drawDots(frameTime);
 
             // draw dots onto frame
             frameCtx.drawImage(this._dotCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
@@ -1715,7 +1712,6 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
             document.body.removeChild( this._progressDisplay );
             delete this._progressDisplay
 
-            this._mapMoving = false;
             this._capturing = false;
             if (!this._paused) {
                 this.animate();
