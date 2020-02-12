@@ -344,28 +344,30 @@
 						<h4>System Constants</h4>
 						<div>
 							<span style="text-align: center;">
-							<label for="speedConst">
-							Speed:
+							<label for="speedConst">Speed
 							<input type="text" class="dotconst-dial" id="speedConst">
 							</label>
 							</span>
 
 							<span style="text-align: center;">
-							<label for="sepConst">Sparsity:
+							<label for="sepConst">Sparsity
 							<input type="text" class="dotconst-dial" id="sepConst">
 							</label>
 							</span>
 
-							<div id="period-display"> Period T =
+							<div id="period-display">Period T =
 							<span id="period-value"></span>
 							sec
 							</div>
 						</div>
 
 						<div>
-							<label for="dotScale">Dot Size Scale</label>
-							<input type="text" class="dotscale-dial" id="dotScale">
-						</div>
+							<label for="dotScale">Scale</label>
+							<input type="text" class="dotconst-dial-small" id="dotScale">
+						
+                            <label for="dotAlpha">Opacity</label>
+                            <input type="text" class="dotconst-dial-small" id="dotAlpha">
+                        </div>
 
 						<div>
 							<input type="checkbox" id="showPaths" checked>
@@ -377,17 +379,17 @@
                             <label for="showshadows">Shadows (CPU intensive)</label>
                         </div>
                         
-                        <div> 
+                        <!-- <div> 
                             <div>
                                 <label for="shadowHeight">Height</label>
                                 <input type="text" class="shadow-dial" id="shadowHeight">
-                            <!-- </div>
-                            <div> -->
+                            </div>
+                            <div>
                                 <label for="shadowBlur">Blur</label>
                                 <input type="text" class="shadow-dial" id="shadowBlur">
                             </div>
                         </div>
-
+ -->
 					</form>
 			  </div>
 			</div>

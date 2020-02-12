@@ -44,10 +44,10 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
         "unselected": {
             "dotColor": "#000000",
-            "dotOpacity": 0.2,
+            "dotOpacity": 0.3,
 
             "pathColor": "#000000",
-            "pathOpacity": 0.2,
+            "pathOpacity": 0.3,
             "pathWidth": 1,
         },
 
@@ -693,7 +693,6 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
         const clear = this.DrawBox.clear,
               rect = this.DrawBox.defaultRect(); 
-        clear(this._lineCtx, rect);
         
         if (event)
             clear(this._dotCtx, rect);
@@ -703,6 +702,8 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
         if (this["options"]["showPaths"])
             this.drawPaths();
+        else
+            clear(this._lineCtx, rect);
 
         let t2 = performance.now();
 
@@ -1096,20 +1097,24 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
               selected = cg.selected,
               unselected = cg.unselected;
 
+        const alphaScale = this.dotSettings.alphaScale;
+
+        this.DrawBox.clear(ctx, this.DrawBox.defaultRect());
+
         if (selected) {
             ctx["lineWidth"] = options["unselected"]["pathWidth"];
-            ctx["globalAlpha"] = options["unselected"]["pathOpacity"];
+            ctx["globalAlpha"] = options["unselected"]["pathOpacity"] * alphaScale;
             this._drawPathsByColor(unselected, options["unselected"]["pathColor"]);
 
             // draw selected paths
             ctx["lineWidth"] = options["selected"]["pathWidth"];
-            ctx["globalAlpha"] = options["selected"]["pathOpacity"];
+            ctx["globalAlpha"] = options["selected"]["pathOpacity"] * alphaScale;
             this._drawPathsByColor(selected, options["selected"]["pathColor"]);
         
         } else if (unselected) {
             // draw unselected paths
             ctx["lineWidth"] = options["normal"]["pathWidth"];
-            ctx["globalAlpha"] = options["normal"]["pathOpacity"];
+            ctx["globalAlpha"] = options["normal"]["pathOpacity"] * alphaScale;
             this._drawPathsByColor(unselected, options["normal"]["pathColor"]);
         }
             
@@ -1344,24 +1349,24 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         if (this._gifPatch) {
             unselected = {...selected, ...unselected};
             selected = null;
-        } else 
-
+        }
         
+        const alphaScale = this.dotSettings.alphaScale;
 
         if (selected) {
             // draw normal activity dots
-            ctx["globalAlpha"] = options["unselected"]["dotOpacity"];
+            ctx["globalAlpha"] = options["unselected"]["dotOpacity"] * alphaScale;
             let drawDotFunc = this.makeSquareDrawFunc();
             count += this._drawDotsByColor(now, unselected, drawDotFunc, options["unselected"]["dotColor"]);
 
             // draw selected activity dots
             drawDotFunc = this.makeCircleDrawFunc();
-            ctx["globalAlpha"] = options["selected"]["dotOpacity"];
+            ctx["globalAlpha"] = options["selected"]["dotOpacity"] * alphaScale;
             count += this._drawDotsByColor(now, selected, drawDotFunc, options["selected"]["dotColor"]);
         
         } else if (unselected) {
             // draw normal activity dots
-            ctx["globalAlpha"] = options["normal"]["dotOpacity"];
+            ctx["globalAlpha"] = options["normal"]["dotOpacity"] * alphaScale;
             let drawDotFunc = this.makeSquareDrawFunc();
             count += this._drawDotsByColor(now, unselected, drawDotFunc, options["normal"]["dotColor"]);
         }
@@ -1731,6 +1736,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         C1: 1000000.0,
         C2: 200.0,
         dotScale: 1.0,
+        alphaScale: 0.9
     },
 
     getDotSettings: function() {

@@ -10,7 +10,7 @@ heatflask();
 
 function heatflask() {
     const SPEED_SCALE = 5.0,
-          SEP_SCALE = {m: 0.14, b: 15.0},
+          SEP_SCALE = {m: 0.15, b: 15.0},
           WEBSOCKET_URL = WS_SCHEME+window.location.host+"/data_socket",
           appState = {
             paused: ONLOAD_PARAMS.start_paused,
@@ -290,84 +290,88 @@ function heatflask() {
 
     // set up dial-controls
     $(".dotconst-dial").knob({
-            min: 0,
-            max: 100,
-            step: 0.1,
-            width: "150",
-            height: "150",
-            cursor: 20,
-            inline: true,
-            displayInput: false,
-            change: function (val) {
-                let newVal;
-                if (this.$[0].id == "sepConst") {
-                    newVal = Math.pow(2, val * SEP_SCALE.m + SEP_SCALE.b);
-                    dotLayer.updateDotSettings({C1: newVal});
-                } else {
-                    newVal = val * val * SPEED_SCALE;
-                    dotLayer.updateDotSettings({C2: newVal});;
-                }
-
-                // Enable capture if period is less than CAPTURE_DURATION_MAX
-                let cycleDuration = dotLayer.periodInSecs().toFixed(2),
-                    captureEnabled = controls.captureControl.enabled;
-
-                $("#period-value").html(cycleDuration);
-                if (cycleDuration <= CAPTURE_DURATION_MAX) {
-                    if (!captureEnabled) {
-                        controls.captureControl.addTo(map);
-                        controls.captureControl.enabled = true;
-                    }
-                } else if (captureEnabled) {
-                    controls.captureControl.removeFrom(map);
-                    controls.captureControl.enabled = false;
-                }
-            },
-            release: function() {
-                updateState();
+        min: 0,
+        max: 100,
+        step: 0.1,
+        width: "130",
+        height: "130",
+        cursor: 20,
+        inline: true,
+        displayInput: false,
+        change: function (val) {
+            let newVal;
+            if (this.$[0].id == "sepConst") {
+                newVal = Math.pow(2, val * SEP_SCALE.m + SEP_SCALE.b);
+                dotLayer.updateDotSettings({C1: newVal});
+            } else {
+                newVal = val * val * SPEED_SCALE;
+                dotLayer.updateDotSettings({C2: newVal});;
             }
+
+            // Enable capture if period is less than CAPTURE_DURATION_MAX
+            let cycleDuration = dotLayer.periodInSecs().toFixed(2),
+                captureEnabled = controls.captureControl.enabled;
+
+            $("#period-value").html(cycleDuration);
+            if (cycleDuration <= CAPTURE_DURATION_MAX) {
+                if (!captureEnabled) {
+                    controls.captureControl.addTo(map);
+                    controls.captureControl.enabled = true;
+                }
+            } else if (captureEnabled) {
+                controls.captureControl.removeFrom(map);
+                controls.captureControl.enabled = false;
+            }
+        },
+        release: function() {
+            updateState();
+        }
     });
 
-    $(".dotscale-dial").knob({
-            min: 0.01,
-            max: 10,
-            step: 0.01,
-            width: "100",
-            height: "100",
-            cursor: 20,
-            inline: true,
-            displayInput: false,
-            change: function (val) {
-                if (!dotLayer) return;
+    $(".dotconst-dial-small").knob({
+        min: 0.01,
+        max: 10,
+        step: 0.01,
+        width: "100",
+        height: "100",
+        cursor: 20,
+        inline: true,
+        displayInput: false,
+        change: function (val) {
+            if (this.$[0].id == "dotScale")
                 dotLayer.updateDotSettings({dotScale: val});
-            },
-            release: function() {
-                updateState();
+            else {
+                dotLayer.updateDotSettings({alphaScale: val / 10});
+                dotLayer.drawPaths();
             }
+        },
+        release: function() {
+            updateState();
+        }
     });
 
-    $(".shadow-dial").knob({
-            min: 0,
-            max: 10,
-            step: 0.01,
-            width: "60",
-            height: "60",
-            cursor: 20,
-            inline: true,
-            displayInput: false,
-            change: function (val) {
-                if (!dotLayer) return;
+    // $(".shadow-dial").knob({
+    //         min: 0,
+    //         max: 10,
+    //         step: 0.01,
+    //         width: "60",
+    //         height: "60",
+    //         cursor: 20,
+    //         inline: true,
+    //         displayInput: false,
+    //         change: function (val) {
+    //             if (!dotLayer) return;
 
-                if (this.$[0].id == "shadowHeight")
-                    dotLayer.updateDotSettings(null, {"y": val});
-                else 
-                    dotLayer.updateDotSettings(null, {"blur": val+2});
-            },
+    //             if (this.$[0].id == "shadowHeight")
+    //                 dotLayer.updateDotSettings(null, {"y": val});
+    //             else 
+    //                 dotLayer.updateDotSettings(null, {"blur": val+2});
+    //         },
 
-            release: function() {
-                dotLayer._redraw(true);
-            }
-    });
+    //         release: function() {
+    //             dotLayer._redraw(true);
+    //         }
+    // });
 
 
     if (FLASH_MESSAGES.length > 0) {
@@ -613,6 +617,7 @@ function heatflask() {
         $("#sepConst").val((Math.log2(ds["C1"]) - SEP_SCALE.b) / SEP_SCALE.m ).trigger("change");
         $("#speedConst").val(Math.sqrt(ds["C2"]) / SPEED_SCALE).trigger("change");
         $("#dotScale").val(ds["dotScale"]).trigger("change");
+        $("#dotAlpha").val(ds["dotAlpha"]).trigger("change");
 
 
         if (ONLOAD_PARAMS.shadows)
