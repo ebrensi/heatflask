@@ -1563,8 +1563,6 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
                 workerScript: this["options"]["gifWorkerUrl"]
             });
 
-        debugger;
-
         this._encoder = encoder;
 
         encoder["on"]( 'progress', function( p ) {
