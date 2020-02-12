@@ -22,7 +22,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         "numWorkers": 0,
         "startPaused": false,
         "showPaths": true,
-        "fps_display": true,
+        "fps_display": false,
         
         "normal": {
             "dotColor": "#000000",
@@ -650,7 +650,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         // prevent redrawing more often than necessary
         const ts = performance.now(),
               lr = om.lastRedraw || 0;
-        if (ts - lr < 500)
+        if (ts - lr < 300)
             return;
 
         om.lastRedraw = ts;
