@@ -1,0 +1,31 @@
+
+.leaflet-container {
+    background: black
+}
+
+.sidebar-content {
+    background-color: rgba(0,0,0,0.5);
+    color: white;
+}
+
+.sidebar-tabs {
+    background-color: rgba(0,0,0,0.8);
+}
+
+.sidebar-tabs>li, .sidebar-tabs>ul>li { 
+    color: rgba(255,255,255,1);
+}
+
+.sidebar-header {
+    background-color: rgba(0,0,0,0.5);
+}
+
+.sidebar {
+  transition: width 0.5s;
+}
+
+.sidebar-tabs>li.active, .sidebar-tabs>ul>li.active {
+  color: #fff;
+  background-color: #0074d9;
+}
+
