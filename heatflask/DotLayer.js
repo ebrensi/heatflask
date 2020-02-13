@@ -539,7 +539,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
 
         const events = {
             // movestart: loggit,
-            move: this.onMove,
+            // move: this.onMove,
             moveend: this._redraw,
             // zoomstart: loggit,
             // zoom: loggit,
@@ -650,7 +650,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
         // prevent redrawing more often than necessary
         const ts = performance.now(),
               lr = om.lastRedraw || 0;
-        if (ts - lr < 300)
+        if (ts - lr < 500)
             return;
 
         om.lastRedraw = ts;

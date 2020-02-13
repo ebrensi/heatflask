@@ -13,6 +13,7 @@ bundles = {
         'css/leaflet-areaselect.css',
         'css/datatables.min.css',
         'css/easy-button.css',
+        '../heatflask.css',
         filters='cssmin',
         output='gen/main.css'
     ),

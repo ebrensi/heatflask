@@ -1,0 +1,70 @@
+
+.leaflet-container {
+    background: black
+}
+
+.sidebar-content {
+    background-color: rgba(0,0,0,0.5);
+    color: white;
+}
+
+.sidebar-tabs {
+  background-color: rgba(0,0,0,0.5);
+  color: rgba(255,255,255,0.8);
+}
+
+.sidebar-tabs>li, .sidebar-tabs>ul>li {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.sidebar-tabs>li.active, .sidebar-tabs>ul>li.active {
+  color: #fff;
+  background-color: rgba(0,0,0,0.8);
+}
+
+.sidebar-header {
+    background-color: rgba(0,0,0,0.6);
+}
+
+.sidebar {
+  transition: width 0.5s;
+}
+
+
+.sidebar {
+  transition: width 0s;
+}
+
+
+button, input, select, textarea {
+  background: rgba(0,0,0,0.2);
+  border-color: rgb(169, 169, 169);
+}
+
+.dataTables_wrapper .dataTables_length, .dataTables_wrapper .dataTables_filter, .dataTables_wrapper .dataTables_info, .dataTables_wrapper .dataTables_processing, .dataTables_wrapper .dataTables_paginate {
+  color: inherit;
+}
+
+.sidebar-left~.sidebar-map .leaflet-left {
+  transition: left 0s;
+}
+
+.leaflet-control-layers-expanded {
+  color: rgba(255,255,255,0.9);
+  background: rgba(0,0,0,0.5);
+}
+
+
+.leaflet-control-layers {
+  background: rgba(0,0,0,0.5);
+}
+
+.leaflet-bar button {
+  background: rgba(0,0,0,0.5);
+  color: rgba(255,255,255,0.9);
+}
+
+.leaflet-bar a {
+  background: rgba(0,0,0,0.5);
+  color: rgba(255,255,255,0.9);
+}
