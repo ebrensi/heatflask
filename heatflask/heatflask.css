@@ -26,6 +26,6 @@
 
 .sidebar-tabs>li.active, .sidebar-tabs>ul>li.active {
   color: #fff;
-  background-color: #0074d9;
+  background-color: rgba(0,0,0,0.9);
 }
 
