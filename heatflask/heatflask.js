@@ -859,8 +859,9 @@ function heatflask() {
                 if (!A.type)
                     return;
 
-                let typeData = ATYPE_MAP[A.type.toLowerCase()] || ATYPE_MAP["workout"];
-                Object.assign(A, typeData);
+                debugger;
+                // assign this activity a path color and speed type (pace, mph)
+                Object.assign( A, ATYPE.specs(A.type) );
                 A.id = A._id;
                 delete A._id;
 

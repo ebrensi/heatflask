@@ -56,6 +56,7 @@ bundles = {
             # code to leave out of closure compiling
             flask_assets.Bundle(
                 'js/appUtil.js',
+                'js/strava.js',
                 '../heatflask.js',
                 filters=["rjsmin"]
             ),
@@ -98,6 +99,7 @@ bundles = {
         'js/msgpack.min.js',
         'js/jquery-3.2.1.min.js',
         'js/datatables.min.js',
+        'js/strava.js',
         'js/appUtil.js',
         output='gen/basic_table.js'
     )
