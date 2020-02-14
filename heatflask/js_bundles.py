@@ -3,7 +3,6 @@ import flask_assets
 # we bundle javascript and css dependencies to reduce client-side overhead
 bundles = {
     "dependencies_css": flask_assets.Bundle(
-        'css/main.css',
         'css/jquery-ui.css',
         'css/bootstrap.min.css',
         'css/font-awesome.min.css',
@@ -41,6 +40,7 @@ bundles = {
             'js/easy-button.js',
             'js/L.SwipeSelect.js',
             'js/L.BoxHook.js',
+            'js/Dom.js',
             filters=["rjsmin"],
         ),
         # Heatflask-specific code
@@ -53,6 +53,7 @@ bundles = {
                 # filters=["rjsmin"]
                 filters=["closure_js"],
             ),
+
             # code to leave out of closure compiling
             flask_assets.Bundle(
                 'js/appUtil.js',
@@ -101,6 +102,7 @@ bundles = {
         'js/datatables.min.js',
         'js/strava.js',
         'js/appUtil.js',
+        'js/Dom.js',
         output='gen/basic_table.js'
     )
 
