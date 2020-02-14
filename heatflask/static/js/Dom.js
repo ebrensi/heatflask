@@ -2,31 +2,29 @@
 // This will eventually replace JQuery
 
 const Dom = {
-    doFunc: function(selector, func) {
-        if (selector[0] == "#") {
-            
-            const el = document.querySelector(selector);
-            if (!el) {
-                console.warn(`DOM element "${selector}" does not exist.`);
-                return
-            }
-            
-            return func(el); 
-        
-        } else if (selector[0] = ".") {
-            const result = [],
-                  elList = document.querySelectorAll(selector);
+    el: function(selector) {
+        if (selector[0] == "#")
+            return document.querySelector(selector);
+        else if (selector[0] = ".")
+            return document.querySelectorAll(selector);
+    },
 
-            if (!elList) {
-                console.warn(`DOM element "${selector}" does not exist.`);
-                return
-            }
+    doFunc: function(selector, func) {
+        const el = this.el(selector);
+        if (!el) {
+            console.warn(`DOM element "${selector}" does not exist.`);
+            return
+        } else if (NodeList.prototype.isPrototypeOf(el)) {
+            const elList = el,
+                  result = [];
 
             for (const el of elList) 
                 result.push(func(el));
             return result
-        }
+        } else
+            return func(el);
     },
+
     // get or set a property of a dom element or class of elements
     prop: function prop(string, prop, val) {
         if (val === undefined)   
