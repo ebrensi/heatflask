@@ -1147,7 +1147,7 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
                   int1 = ints.next().value;
             if (!equalInts(int0, int1) || !equalSegs(seg0, seg1)) {
                 console.log(`i:`, seg0, seg1, int0, int1)
-                debugger;
+                // debugger;
             }
         });
     },

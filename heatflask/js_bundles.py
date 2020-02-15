@@ -12,6 +12,7 @@ bundles = {
         'css/leaflet-areaselect.css',
         'css/datatables.min.css',
         'css/easy-button.css',
+        'css/pikaday.css',
         '../heatflask.css',
         filters='cssmin',
         output='gen/main.css'
@@ -28,6 +29,7 @@ bundles = {
             'js/leaflet.js',
             'js/leaflet-sidebar.min.js',
             'js/download.min.js',
+            'js/pikaday.js',
             'js/gif2.js',  # Johan Nordberg: http://jnordberg.github.io/gif.js/ 
         ),
         # un-minified dependencies

@@ -312,7 +312,7 @@ function heatflask() {
             let cycleDuration = dotLayer.periodInSecs().toFixed(2),
                 captureEnabled = controls.captureControl.enabled;
 
-            $("#period-value").html(cycleDuration);
+            Dom.html("#period-value", cycleDuration);
             if (cycleDuration <= CAPTURE_DURATION_MAX) {
                 if (!captureEnabled) {
                     controls.captureControl.addTo(map);
@@ -824,6 +824,7 @@ function heatflask() {
                 return;
             }
 
+            // debugger;
 
             if (!A) {
                 Dom.prop('#renderButton', 'disabled', false);
@@ -839,8 +840,8 @@ function heatflask() {
                 else if ("count" in A)
                     numActivities += A.count;
                 
-                else if ("appState.wskey" in A) 
-                    appState.wskey = A.appState.wskey;
+                else if ("wskey" in A) 
+                    appState.wskey = A.wskey;
                 
                 else if ("delete" in A && A.delete.length) {
                     // delete all ids in A.delete
@@ -870,7 +871,6 @@ function heatflask() {
                 if (!A.type)
                     return;
 
-                debugger;
                 // assign this activity a path color and speed type (pace, mph)
                 Object.assign( A, ATYPE.specs(A.type) );
                 A.id = A._id;
@@ -966,6 +966,7 @@ function heatflask() {
                   return encodeURIComponent(param) + '=' + 
                   encodeURIComponent(params[param])
               }).join('&'),
+
               newURL = `${USER_ID}?${paramsString}`;
 
         window.history.pushState("", "", newURL);
@@ -983,16 +984,21 @@ function heatflask() {
             Dom.hide("#id_select");
             Dom.show("#num_select");
             Dom.set('#date2', "now");
+            // date2picker.setDate(new Date());
+            
             let d = new Date();
             d.setDate(d.getDate()-num);
             dstr = d.toISOString().split('T')[0];
             Dom.set('#date1', dstr);
+            // date2picker.setDate(d);
+
         } else if (type=="activities") {
             Dom.hide(".date_select");
             Dom.hide("#id_select");
             Dom.show("#num_select");
             Dom.set('#date1', "");
             Dom.set('#date2', "now");
+            // date2picker.setDate(new Date());
         }
         else if (type=="activity_ids") {
             Dom.hide(".date_select");
@@ -1042,15 +1048,36 @@ function heatflask() {
 
     Dom.hide(".progbar");
 
-    // find a non-jquery datepicker
-    $(".datepick").datepicker({ dateFormat: 'yy-mm-dd',
+    function makeDatePicker(selector) {
+        const el = Dom.el(selector);
+        picker = new Pikaday({ 
+            field: el,
+            onSelect: function(date) {
+                el.value = date.toISOString().split('T')[0];
+                Dom.set(".preset", "");
+            } 
+        });
+        return picker
+    }
+
+    const date1picker = makeDatePicker('#date1'),
+          date2picker = makeDatePicker('#date2');
+
+    debugger;
+    
+    // continue here
+    // debugger;
+
+    /* 
+    $(".datepick").datepicker({ 
+        dateFormat: 'yy-mm-dd',
         changeMonth: true,
         changeYear: true
     });
     $(".datepick").on("change", function(){
         Dom.set(".preset", "");
     });
-
+    */
 
     map.on('moveend', function(e) {
         if (!appState.autozoom) {

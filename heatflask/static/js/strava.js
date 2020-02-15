@@ -15,6 +15,7 @@ const ATYPE = {
     // This is a list of tuples specifying properties of the rendered objects,
     //  such as path color, speed/pace in description.  others can be added
     _specs: {
+        "canoeing": [null, null],
         "crossfit": [null, null], 
         "ebikeride": ["speed", "#0000cd"], // mediumblue  
         "elliptical": [null, null],   
@@ -58,7 +59,8 @@ const ATYPE = {
 
     specs: function(atypeString) {
         const atype = atypeString.toLowerCase(),
-              spec = this._specs[atype];
+              spec = this._specs[atype] || this._specs[undefined];
+              
         return {"atype": spec[0], "pathColor": spec[1] }
     }
 
