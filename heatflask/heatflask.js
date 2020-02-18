@@ -1,377 +1,389 @@
 'use strict';
 
-if (window.location.protocol == "https:") {
-      WS_SCHEME = "wss://";
-    } else {
-      WS_SCHEME = "ws://";
-    };
-
 heatflask();
 
 function heatflask() {
     const SPEED_SCALE = 5.0,
           SEP_SCALE = {m: 0.15, b: 15.0},
           WEBSOCKET_URL = WS_SCHEME+window.location.host+"/data_socket",
+
           appState = {
             paused: ONLOAD_PARAMS.start_paused,
             items: new Map(),
             currentBaseLayer: null
-          };
-    
-    // Set up Map and layers
-    const map_providers = ONLOAD_PARAMS.map_providers,
-          baseLayers = {"None": L.tileLayer("")};
-    let default_baseLayer = baseLayers["None"];
-        
-    if (!OFFLINE) {
-        const online_baseLayers = {
-            "MapBox.Dark": L.tileLayer.provider('MapBox', {
-                id: 'mapbox.dark',
-                accessToken: MAPBOX_ACCESS_TOKEN
-            }),
-            "MapBox.Streets": L.tileLayer.provider('MapBox', {
-                id: 'mapbox.streets',
-                accessToken: MAPBOX_ACCESS_TOKEN
-            }),
-            "MapBox.Streets-Basic": L.tileLayer.provider('MapBox', {
-                id: 'mapbox.streets-basic',
-                accessToken: MAPBOX_ACCESS_TOKEN
-            }),
-            "MapBox.Satellite": L.tileLayer.provider('MapBox', {
-                id: 'mapbox.satellite',
-                accessToken: MAPBOX_ACCESS_TOKEN
-            }),
+          },
 
-            "Esri.WorldImagery": L.tileLayer.provider("Esri.WorldImagery"),
-            "Esri.NatGeoWorldMap": L.tileLayer.provider("Esri.NatGeoWorldMap"),
-            "Stamen.Terrain": L.tileLayer.provider("Stamen.Terrain"),
-            "Stamen.TonerLite": L.tileLayer.provider("Stamen.TonerLite"),
-            "CartoDB.Positron": L.tileLayer.provider("CartoDB.Positron"),
-            "CartoDB.DarkMatter": L.tileLayer.provider("CartoDB.DarkMatter")
-        };
-
-        Object.assign(baseLayers, online_baseLayers);
-
-        if (map_providers.length) {
-            for (var i = 0; i < map_providers.length; i++) {
-                let provider = map_providers[i];
-                if (!baseLayers[provider]) {
-                    try {
-                            baseLayers[provider] = L.tileLayer.provider(provider);
-                    }
-                    catch(err) {
-                        // do nothing if the user-supplied baselayer is not valid
-                    }
-                }
-                if (i==0 && baseLayers[provider]) default_baseLayer = baseLayers[provider];
-            }
-        } else {
-            default_baseLayer = baseLayers["CartoDB.DarkMatter"];
-        }
-    }
-
-    // ?? look into this
-    for (const name in baseLayers) {
-        let basemap = baseLayers[name];
-        basemap.name = name;
-    }
-
-    let msgBox = null;
-
-    const map = L.map('map', {
+          // the leaflet map
+          map = L.map('map', {
             center: ONLOAD_PARAMS.map_center,
             zoom: ONLOAD_PARAMS.map_zoom,
-            layers : [ default_baseLayer ],
+            // layers : [ default_baseLayer ],
             preferCanvas: true,
             zoomAnimation: false
           }),
 
+          // map controls
+          controls = {
+            _sidebarControl: L.control.sidebar('sidebar').addTo(map),
+            _zoomControl: map.zoomControl.setPosition('bottomright'),
+            _stravaLogo: L.control.watermark({ image: "static/pbs4.png", width: '20%', opacity:'0.5', position: 'bottomleft' }).addTo(map),
+            _heatflaskLogo: L.control.watermark({image: "static/logo.png", opacity: '0.5', width: '20%', position: 'bottomleft' }).addTo(map),
+            areaSelect: L.areaSelect({width:200, height:200})  
+          },
+
+          // the DotLayer
           dotLayer = L.dotLayer({
             startPaused: appState.paused,
             dotWorkerUrl: DOTLAYER_WORKER_URL,
             gifWorkerUrl: GIFJS_WORKER_URL
           }).addTo(map);
 
-    appState.currentBaseLayer = default_baseLayer;
-    map.on('baselayerchange', function (e) {
-        appState.currentBaseLayer = e.layer;
-        updateState();
-    });
+    let msgBox = null;
 
-    // map.getPane('tilePane').style.opacity = 0.8;
+    // baselayers IIFE
+    (() => {
+        const map_providers = ONLOAD_PARAMS.map_providers,
+              baseLayers = {"None": L.tileLayer("")};
+        let default_baseLayer = baseLayers["None"];
+            
+        if (!OFFLINE) {
+            const online_baseLayers = {
+                "MapBox.Dark": L.tileLayer.provider('MapBox', {
+                    id: 'mapbox.dark',
+                    accessToken: MAPBOX_ACCESS_TOKEN
+                }),
+                "MapBox.Streets": L.tileLayer.provider('MapBox', {
+                    id: 'mapbox.streets',
+                    accessToken: MAPBOX_ACCESS_TOKEN
+                }),
+                "MapBox.Streets-Basic": L.tileLayer.provider('MapBox', {
+                    id: 'mapbox.streets-basic',
+                    accessToken: MAPBOX_ACCESS_TOKEN
+                }),
+                "MapBox.Satellite": L.tileLayer.provider('MapBox', {
+                    id: 'mapbox.satellite',
+                    accessToken: MAPBOX_ACCESS_TOKEN
+                }),
 
-    
-    const controls = {
-        _sidebarControl: L.control.sidebar('sidebar').addTo(map),
-        _layerControl: L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map),
-        _zoomControl: map.zoomControl.setPosition('bottomright'),
-        _stravaLogo: L.control.watermark({ image: "static/pbs4.png", width: '20%', opacity:'0.5', position: 'bottomleft' }).addTo(map),
-        _heatflaskLogo: L.control.watermark({image: "static/logo.png", opacity: '0.5', width: '20%', position: 'bottomleft' }).addTo(map),
-        areaSelect: L.areaSelect({width:200, height:200})
-    };
+                "Esri.WorldImagery": L.tileLayer.provider("Esri.WorldImagery"),
+                "Esri.NatGeoWorldMap": L.tileLayer.provider("Esri.NatGeoWorldMap"),
+                "Stamen.Terrain": L.tileLayer.provider("Stamen.Terrain"),
+                "Stamen.TonerLite": L.tileLayer.provider("Stamen.TonerLite"),
+                "CartoDB.Positron": L.tileLayer.provider("CartoDB.Positron"),
+                "CartoDB.DarkMatter": L.tileLayer.provider("CartoDB.DarkMatter")
+            };
 
-    const button_states = [
-        {
-            stateName: 'animation-running',
-            icon:      'fa-pause',
-            title:     'Pause Animation',
-            onClick: function(btn, map) {
-                pauseFlow();
-                updateState();
-                btn.state('animation-paused');
+            Object.assign(baseLayers, online_baseLayers);
+
+            if (map_providers.length) {
+                for (var i = 0; i < map_providers.length; i++) {
+                    let provider = map_providers[i];
+                    if (!baseLayers[provider]) {
+                        try {
+                                baseLayers[provider] = L.tileLayer.provider(provider);
+                        }
+                        catch(err) {
+                            // do nothing if the user-supplied baselayer is not valid
+                        }
+                    }
+                    if (i==0 && baseLayers[provider]) default_baseLayer = baseLayers[provider];
                 }
-        },
-
-        {
-            stateName: 'animation-paused',
-            icon:      'fa-play',
-            title:     'Resume Animation',
-            onClick: function(btn, map) {
-                resumeFlow();
-                if (dotLayer) {
-                    dotLayer.animate();
-                }
-                updateState();
-                btn.state('animation-running');
+            } else {
+                default_baseLayer = baseLayers["CartoDB.DarkMatter"];
             }
         }
-    ];
 
-    // Animation play/pause button
-    controls._animationControl =  L.easyButton({
-        states: appState.paused? button_states.reverse() : button_states 
-    }).addTo(map);    
+        for (const name in baseLayers)
+            baseLayers[name].name = name;
 
-    // Select-activities-in-region functionality
-    function doneSelecting(obj) {
-        dotLayer && dotLayer.setSelectRegion(obj.pxBounds, callback=function(ids){
-            if (controls.selectControl && controls.selectControl.canvas) {
-                controls.selectControl.remove();
-                controls.selectButton.state("not-selecting");
+        controls._layerControl = L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map)
+
+        appState.currentBaseLayer = default_baseLayer;
+
+        default_baseLayer.addTo(map);
+
+        map.on('baselayerchange', function (e) {
+            appState.currentBaseLayer = e.layer;
+            updateState();
+        });
+
+        // map.getPane('tilePane').style.opacity = 0.8;
+
+    })();
+
+    // set animation controls IIFE
+    (() => {
+        const button_states = [
+            {
+                stateName: 'animation-running',
+                icon:      'fa-pause',
+                title:     'Pause Animation',
+                onClick: function(btn, map) {
+                    pauseFlow();
+                    updateState();
+                    btn.state('animation-paused');
+                    }
+            },
+
+            {
+                stateName: 'animation-paused',
+                icon:      'fa-play',
+                title:     'Resume Animation',
+                onClick: function(btn, map) {
+                    resumeFlow();
+                    if (dotLayer) {
+                        dotLayer.animate();
+                    }
+                    updateState();
+                    btn.state('animation-running');
+                }
             }
+        ];
 
-            // handle_path_selections returns the id of the single
-            // selected activity if only one is selected
-            const id = handle_path_selections(ids);
+        // Animation play/pause button
+        controls._animationControl =  L.easyButton({
+            states: appState.paused? button_states.reverse() : button_states 
+        }).addTo(map);
+    })();
 
-            if (id) {
-                const A = appState.items.get(id),
-                    loc = A.bounds.getCenter();
 
-                setTimeout(function (){
-                    activityDataPopup(id, loc);
-                }, 100);
+      
+
+    // Select-activities-in-region functionality IIFE
+    (() => {
+        function doneSelecting(obj) {
+            dotLayer && dotLayer.setSelectRegion(obj.pxBounds, callback=function(ids){
+                if (controls.selectControl && controls.selectControl.canvas) {
+                    controls.selectControl.remove();
+                    controls.selectButton.state("not-selecting");
+                }
+
+                // handle_path_selections returns the id of the single
+                // selected activity if only one is selected
+                const id = handle_path_selections(ids);
+
+                if (id) {
+                    const A = appState.items.get(id),
+                        loc = A.bounds.getCenter();
+
+                    setTimeout(function (){
+                        activityDataPopup(id, loc);
+                    }, 100);
+                }
+            });
+        }
+    
+        // set hooks for ctrl-drag
+        map.on("boxhookend", doneSelecting);
+        controls.selectControl = new L.SwipeSelect({}, doneSelecting);
+
+
+        // button for selecting via touchscreen 
+        selectButton_states = [
+            {
+                stateName: 'not-selecting',
+                icon: 'fa-object-group',
+                title: 'Toggle Path Selection',
+                onClick: function(btn, map) {
+                    btn.state('selecting');
+                    controls.selectControl.addTo(map);
+                },
+            },
+            {
+                stateName: 'selecting',
+                icon: '<span>&cross;</span>',
+                title: 'Stop Selecting',
+                onClick: function(btn, map) {
+                    btn.state('not-selecting');
+                    controls.selectControl.remove();
+                }
+            },
+        ];
+        
+        controls.selectButton = L.easyButton({
+            states: selectButton_states,
+            position: "topright"
+        }).addTo(map);
+    })();
+
+
+
+    // Capture button IIFE
+    (() => {
+        const capture_button_states = [
+            {
+                stateName: 'idle',
+                icon: 'fa-video-camera',
+                title: 'Capture GIF',
+                onClick: function (btn, map) {
+                    if (!dotLayer) {
+                        return;
+                    }
+                    let size = map.getSize();
+                    areaSelect = 
+                    controls.areaSelect._width = ~~(0.8 * size.x);
+                    controls.areaSelect._height = ~~(0.8 * size.y);
+                    controls.areaSelect.addTo(map);
+                    btn.state('selecting');
+                }
+            },
+            {
+                stateName: 'selecting',
+                icon: 'fa-expand',
+                title: 'Select Capture Region',
+                onClick: function (btn, map) {
+                    let size = map.getSize(),
+                        w = controls.areaSelect._width,
+                        h = controls.areaSelect._height,
+                        topLeft = {
+                            x: Math.round((size.x - w) / 2),
+                            y: Math.round((size.y - h) / 2)
+                        },
+
+                        selection = {
+                            topLeft: topLeft,
+                            width: w,
+                            height: h
+                        };
+
+                    let center = controls.areaSelect.getBounds().getCenter(),
+                        zoom = map.getZoom();
+                    console.log(`center: `, center);
+                    console.log(`width = ${w}, height = ${h}, zoom = ${zoom}`);
+
+
+                    dotLayer.captureCycle(selection=selection, callback=function(){
+                        btn.state('idle');
+                        controls.areaSelect.remove();
+                        if (!ADMIN && !OFFLINE) {
+                            // Record this to google analytics
+                            let cycleDuration = Math.round(dotLayer.periodInSecs() * 1000);
+                            try{
+                                ga('send', 'event', {
+                                    eventCategory: USER_ID,
+                                    eventAction: 'Capture-GIF',
+                                    eventValue: cycleDuration
+                                });
+                            }
+                            catch(err){
+                                //
+                            }
+
+                        }
+                    });
+
+                    btn.state('capturing');
+                }
+            },
+            {
+                stateName: 'capturing',
+                icon: 'fa-stop-circle',
+                title: 'Cancel Capture',
+                onClick: function (btn, map) {
+                    if (dotLayer && dotLayer._capturing) {
+                        dotLayer.abortCapture();
+                        controls.areaSelect.remove();
+                        btn.state('idle');
+                    }
+                }
+            }
+        ];
+
+        // Capture control button
+        controls.captureControl = L.easyButton({
+            states: capture_button_states
+        });
+
+        controls.captureControl.enabled = false;
+
+    })();
+
+    // set up dial-controls
+    (() => {
+        $(".dotconst-dial").knob({
+            min: 0,
+            max: 100,
+            step: 0.1,
+            width: "140",
+            height: "140",
+            cursor: 20,
+            inline: true,
+            displayInput: false,
+            change: function (val) {
+                let newVal;
+                if (this.$[0].id == "sepConst") {
+                    newVal = Math.pow(2, val * SEP_SCALE.m + SEP_SCALE.b);
+                    dotLayer.updateDotSettings({C1: newVal});
+                } else {
+                    newVal = val * val * SPEED_SCALE;
+                    dotLayer.updateDotSettings({C2: newVal});;
+                }
+
+                // Enable capture if period is less than CAPTURE_DURATION_MAX
+                let cycleDuration = dotLayer.periodInSecs().toFixed(2),
+                    captureEnabled = controls.captureControl.enabled;
+
+                Dom.html("#period-value", cycleDuration);
+                if (cycleDuration <= CAPTURE_DURATION_MAX) {
+                    if (!captureEnabled) {
+                        controls.captureControl.addTo(map);
+                        controls.captureControl.enabled = true;
+                    }
+                } else if (captureEnabled) {
+                    controls.captureControl.removeFrom(map);
+                    controls.captureControl.enabled = false;
+                }
+            },
+            release: function() {
+                updateState();
             }
         });
 
-    }
-
-    // set hooks for ctrl-drag
-    map.on("boxhookend", doneSelecting);
-
-
-    controls.selectControl = new L.SwipeSelect({}, doneSelecting);
-    
-    selectButton_states = [
-        {
-            stateName: 'not-selecting',
-            icon: 'fa-object-group',
-            title: 'Toggle Path Selection',
-            onClick: function(btn, map) {
-                btn.state('selecting');
-                controls.selectControl.addTo(map);
+        $(".dotconst-dial-small").knob({
+            min: 0.01,
+            max: 10,
+            step: 0.01,
+            width: "100",
+            height: "100",
+            cursor: 20,
+            inline: true,
+            displayInput: false,
+            change: function (val) {
+                if (this.$[0].id == "dotScale")
+                    dotLayer.updateDotSettings({dotScale: val});
+                else {
+                    dotLayer.updateDotSettings({alphaScale: val / 10});
+                    dotLayer.drawPaths();
+                }
             },
-        },
-        {
-            stateName: 'selecting',
-            icon: '<span>&cross;</span>',
-            title: 'Stop Selecting',
-            onClick: function(btn, map) {
-                btn.state('not-selecting');
-                controls.selectControl.remove();
+            release: function() {
+                updateState();
             }
-        },
-    ];
-    
-    controls.selectButton = L.easyButton({
-        states: selectButton_states,
-        position: "topright"
-    }).addTo(map);
+        });
 
+        // $(".shadow-dial").knob({
+        //         min: 0,
+        //         max: 10,
+        //         step: 0.01,
+        //         width: "60",
+        //         height: "60",
+        //         cursor: 20,
+        //         inline: true,
+        //         displayInput: false,
+        //         change: function (val) {
+        //             if (!dotLayer) return;
 
+        //             if (this.$[0].id == "shadowHeight")
+        //                 dotLayer.updateDotSettings(null, {"y": val});
+        //             else 
+        //                 dotLayer.updateDotSettings(null, {"blur": val+2});
+        //         },
 
-    // Capture button
-    const capture_button_states = [
-        {
-            stateName: 'idle',
-            icon: 'fa-video-camera',
-            title: 'Capture GIF',
-            onClick: function (btn, map) {
-                if (!dotLayer) {
-                    return;
-                }
-                let size = map.getSize();
-                areaSelect = 
-                controls.areaSelect._width = ~~(0.8 * size.x);
-                controls.areaSelect._height = ~~(0.8 * size.y);
-                controls.areaSelect.addTo(map);
-                btn.state('selecting');
-            }
-        },
-        {
-            stateName: 'selecting',
-            icon: 'fa-expand',
-            title: 'Select Capture Region',
-            onClick: function (btn, map) {
-                let size = map.getSize(),
-                    w = controls.areaSelect._width,
-                    h = controls.areaSelect._height,
-                    topLeft = {
-                        x: Math.round((size.x - w) / 2),
-                        y: Math.round((size.y - h) / 2)
-                    },
-
-                    selection = {
-                        topLeft: topLeft,
-                        width: w,
-                        height: h
-                    };
-
-                let center = controls.areaSelect.getBounds().getCenter(),
-                    zoom = map.getZoom();
-                console.log(`center: `, center);
-                console.log(`width = ${w}, height = ${h}, zoom = ${zoom}`);
-
-
-                dotLayer.captureCycle(selection=selection, callback=function(){
-                    btn.state('idle');
-                    controls.areaSelect.remove();
-                    if (!ADMIN && !OFFLINE) {
-                        // Record this to google analytics
-                        let cycleDuration = Math.round(dotLayer.periodInSecs() * 1000);
-                        try{
-                            ga('send', 'event', {
-                                eventCategory: USER_ID,
-                                eventAction: 'Capture-GIF',
-                                eventValue: cycleDuration
-                            });
-                        }
-                        catch(err){
-                            //
-                        }
-
-                    }
-                });
-
-                btn.state('capturing');
-            }
-        },
-        {
-            stateName: 'capturing',
-            icon: 'fa-stop-circle',
-            title: 'Cancel Capture',
-            onClick: function (btn, map) {
-                if (dotLayer && dotLayer._capturing) {
-                    dotLayer.abortCapture();
-                    controls.areaSelect.remove();
-                    btn.state('idle');
-                }
-            }
-        }
-    ];
-
-
-    // Capture control button
-    controls.captureControl = L.easyButton({
-        states: capture_button_states
-    });
-    controls.captureControl.enabled = false;
-
-
-    // set up dial-controls
-    $(".dotconst-dial").knob({
-        min: 0,
-        max: 100,
-        step: 0.1,
-        width: "140",
-        height: "140",
-        cursor: 20,
-        inline: true,
-        displayInput: false,
-        change: function (val) {
-            let newVal;
-            if (this.$[0].id == "sepConst") {
-                newVal = Math.pow(2, val * SEP_SCALE.m + SEP_SCALE.b);
-                dotLayer.updateDotSettings({C1: newVal});
-            } else {
-                newVal = val * val * SPEED_SCALE;
-                dotLayer.updateDotSettings({C2: newVal});;
-            }
-
-            // Enable capture if period is less than CAPTURE_DURATION_MAX
-            let cycleDuration = dotLayer.periodInSecs().toFixed(2),
-                captureEnabled = controls.captureControl.enabled;
-
-            Dom.html("#period-value", cycleDuration);
-            if (cycleDuration <= CAPTURE_DURATION_MAX) {
-                if (!captureEnabled) {
-                    controls.captureControl.addTo(map);
-                    controls.captureControl.enabled = true;
-                }
-            } else if (captureEnabled) {
-                controls.captureControl.removeFrom(map);
-                controls.captureControl.enabled = false;
-            }
-        },
-        release: function() {
-            updateState();
-        }
-    });
-
-    $(".dotconst-dial-small").knob({
-        min: 0.01,
-        max: 10,
-        step: 0.01,
-        width: "100",
-        height: "100",
-        cursor: 20,
-        inline: true,
-        displayInput: false,
-        change: function (val) {
-            if (this.$[0].id == "dotScale")
-                dotLayer.updateDotSettings({dotScale: val});
-            else {
-                dotLayer.updateDotSettings({alphaScale: val / 10});
-                dotLayer.drawPaths();
-            }
-        },
-        release: function() {
-            updateState();
-        }
-    });
-
-    // $(".shadow-dial").knob({
-    //         min: 0,
-    //         max: 10,
-    //         step: 0.01,
-    //         width: "60",
-    //         height: "60",
-    //         cursor: 20,
-    //         inline: true,
-    //         displayInput: false,
-    //         change: function (val) {
-    //             if (!dotLayer) return;
-
-    //             if (this.$[0].id == "shadowHeight")
-    //                 dotLayer.updateDotSettings(null, {"y": val});
-    //             else 
-    //                 dotLayer.updateDotSettings(null, {"blur": val+2});
-    //         },
-
-    //         release: function() {
-    //             dotLayer._redraw(true);
-    //         }
-    // });
+        //         release: function() {
+        //             dotLayer._redraw(true);
+        //         }
+        // });
+    })();
 
 
     if (FLASH_MESSAGES.length > 0) {
@@ -824,8 +836,6 @@ function heatflask() {
                 return;
             }
 
-            // debugger;
-
             if (!A) {
                 Dom.prop('#renderButton', 'disabled', false);
                 doneRendering("Finished.");
@@ -984,13 +994,15 @@ function heatflask() {
             Dom.hide("#id_select");
             Dom.show("#num_select");
             Dom.set('#date2', "now");
-            // date2picker.setDate(new Date());
+            date2picker.gotoToday();
+            date2picker.setEndRange(new Date());
             
             let d = new Date();
             d.setDate(d.getDate()-num);
             dstr = d.toISOString().split('T')[0];
             Dom.set('#date1', dstr);
-            // date2picker.setDate(d);
+            date1picker.gotoDate(d);
+            date1picker.setStartRange(d)
 
         } else if (type=="activities") {
             Dom.hide(".date_select");
@@ -998,7 +1010,7 @@ function heatflask() {
             Dom.show("#num_select");
             Dom.set('#date1', "");
             Dom.set('#date2', "now");
-            // date2picker.setDate(new Date());
+            date2picker.gotoToday();
         }
         else if (type=="activity_ids") {
             Dom.hide(".date_select");
@@ -1055,29 +1067,16 @@ function heatflask() {
             onSelect: function(date) {
                 el.value = date.toISOString().split('T')[0];
                 Dom.set(".preset", "");
-            } 
+            },
+            yearRange: [2000, 2022],
+            theme: "dark-theme"
+
         });
         return picker
     }
 
     const date1picker = makeDatePicker('#date1'),
           date2picker = makeDatePicker('#date2');
-
-    debugger;
-    
-    // continue here
-    // debugger;
-
-    /* 
-    $(".datepick").datepicker({ 
-        dateFormat: 'yy-mm-dd',
-        changeMonth: true,
-        changeYear: true
-    });
-    $(".datepick").on("change", function(){
-        Dom.set(".preset", "");
-    });
-    */
 
     map.on('moveend', function(e) {
         if (!appState.autozoom) {
