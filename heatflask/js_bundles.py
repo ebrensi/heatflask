@@ -3,7 +3,6 @@ import flask_assets
 # we bundle javascript and css dependencies to reduce client-side overhead
 bundles = {
     "dependencies_css": flask_assets.Bundle(
-        'css/jquery-ui.css',
         'css/bootstrap.min.css',
         'css/font-awesome.min.css',
         'css/leaflet.css',
@@ -23,7 +22,6 @@ bundles = {
             'js/pws.min.js', # persistent websocket https://github.com/porsager/pws
             'js/msgpack.min.js',
             'js/jquery-3.2.1.min.js',
-            'js/jquery-ui.min.js',
             'js/jquery.knob.min.js',  # Anthony Terrien
             'js/datatables.min.js',
             'js/leaflet.js',
