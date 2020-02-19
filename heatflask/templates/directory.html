@@ -37,6 +37,7 @@
         let atable = $('#users_table').DataTable({
             pageLength: 100,
             deferRender: true,
+            scroller: true,
             data: data,
             columns: [
                 {title: "",    data: "id", render: formatUserId},

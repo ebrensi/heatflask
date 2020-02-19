@@ -38,7 +38,7 @@
 
   <p>
     TTL is "Time To Live" for index entries.  Index entries expire if not accessed for a while, in order to save memory.  
-    <button type="button" id="rebuild-button" class="btn btn-warning btn-sm">Re-build index</button>  
+    <button type="button" id="rebuild-button" class="btn btn-b btn-sm">Re-build index</button>  
   </p>
   
   <div id="status">
@@ -50,8 +50,7 @@
   <table id='activities_list' class='display order-column compact' style="width:100%">
     <thead>
       <th><i class="fa fa-link" aria-hidden="true"></i></th>
-      <th><i class="fa fa-external-link" aria-hidden="true"></i></th>
-      <!-- <th><i class="fa fa-users" aria-hidden="true"></i></th> -->
+      <th><i class="fa fa-external-link-alt" aria-hidden="true"></i></th>
       <th><i class="fa fa-calendar" aria-hidden="true"></i></th>
       <th>Type</th>
       <th id="dist">Dist</th>
@@ -182,6 +181,7 @@
             scrollX: true,
             scrollCollapse: true,
             order: [[ 2, "desc" ]],
+            deferRender: true,
             select: false
         });
 
@@ -199,6 +199,7 @@
       }
 
       count_DOM_element.innerText = count++;
+
       let heatflask_link = `${USER_BASE_URL}?id=${A._id}`,
           strava_link = href(`${stravaActivityURL( A._id ) }`, STRAVA_BUTTON),
           tup = A["ts"],
@@ -216,23 +217,22 @@
              td(secs2DDHHMM(A.ttl)) +
              "</tr>";
       table_body.append(row);
-      }
+    }
 
-      var link = document.getElementById('rebuild-button');
+    var link = document.getElementById('rebuild-button');
 
-      link.onclick = function () {
-          if (OFFLINE) {
-             alert("Sorry, I am offline");
-             return
-          }
+    link.onclick = function () {
+        if (OFFLINE) {
+           alert("Sorry, I am offline");
+           return
+        }
 
-          if( confirm("Rebuild your Heatflask Index from Strava Data?") ) {
-              window.location = window.location.href + "?rebuild=1";
-          }
-          return false;
-      };
+        if( confirm("Rebuild your Heatflask Index from Strava Data?") ) {
+            window.location = window.location.href + "?rebuild=1";
+        }
+        return false;
+    };
   
   </script>
  </body>
 </html>
-

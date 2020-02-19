@@ -29,7 +29,6 @@ class Config(object):
     # ASSETS_MANIFEST = None
     CLOSURE_COMPRESSOR_OPTIMIZATION = "SIMPLE"
     CLOSURE_EXTRA_ARGS = [
-        "--create_source_map", "./heatflask/static/gen/DotLayer.map",
         # "--debug"
     ]
     # Concurrency for User database triage
@@ -190,6 +189,12 @@ class StagingConfig(Config):
      (hosted test app)
     """
     DEVELOPMENT = True
+    DEBUG = True
+
+    ASSETS_DEBUG = False
+    ASSETS_AUTO_BUILD = False
+    ASSETS_CACHE = False
+    ASSETS_MANIFEST = False
 
     MONGO_URI = os.environ.get("ATLAS_MONGODB_URI")
     REDIS_URL = os.environ.get("REDISGREEN_URL")

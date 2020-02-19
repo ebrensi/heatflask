@@ -9,6 +9,15 @@
     <link rel="stylesheet" href="{{ ASSET_URL }}" />
     {% endassets %}
 
+    <style> 
+      body {
+        background-image: url("{{ url_for('static', filename='lake.gif') }}");
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+        background-size: cover;
+      }
+    </style>
+
     {% if not config.get("OFFLINE") %}
     {% if current_user.is_anonymous or (not current_user.is_admin()) %}
     {{analytics}}
@@ -17,11 +26,10 @@
 
   </head>
   <body>
-
     <div class="container">
     {% with messages = get_flashed_messages() %}
         {% if messages %}
-          <ul class=flashes>
+          <ul class=flashes >
           {% for message in messages %}
             <li>{{ message }}</li>
           {% endfor %}
@@ -29,14 +37,14 @@
         {% endif %}
     {% endwith %}
       <br>
-      <img src="{{ url_for('static', filename='logo.png') }}" alt="(heatflask logo)" height="128" width="128">
+      <img class=logo src="{{ url_for('static', filename='logo.png') }}" alt="" >
 
-      <h3>Semi-Static Location Data Mapping</h3>
+      <h2>Motion Mapping For your Strava Data</h2>
 
       <br>
       {% if not config.get("OFFLINE") %}
-      <form action="{{ url_for('authorize') }}">
-          <input type="image" src="{{ url_for('static', filename='btn_strava_connectwith_orange.svg') }}"
+      <form method="link" action="{{ url_for('authorize') }}">
+          <input class="strava-button" type="image" src="{{ url_for('static', filename='btn_strava_connectwith_orange.svg') }}"
            alt="Authenticate with Strava" >
           <input type="hidden" name="state" value="{{ next }}">
       </form>
@@ -48,15 +56,15 @@
 
       <br>
       <FORM METHOD="LINK" ACTION="{{ url_for('demo') }}">
-      <INPUT class="btn btn-primary" TYPE="submit" VALUE="Demo">
+      <INPUT class="btn btn-a" TYPE="submit" VALUE="Demo">
       </FORM>
 
       <FORM METHOD="LINK" ACTION="{{ url_for('public_directory')}}">
-      <INPUT class="btn btn-info" TYPE="submit" VALUE="Public User Directory">
+      <INPUT class="btn btn-b" TYPE="submit" VALUE="Public User Directory">
       </FORM>
 
-      <img src="{{ url_for('static', filename='lake.gif') }}" alt="(sample-gif)" style="width:50%;">
-
+     <!--  <img src="{{ url_for('static', filename='lake.gif') }}" style="width:50%;">
+ -->
     </div>
 
   </body>

@@ -27,7 +27,7 @@
               ACTIVITY_LIST_URL = "{{ url_for('activities', username=user.id) }}",
               BEACON_HANDLER_URL = "{{ url_for('beacon_handler') }}";
         {% endif %}
-
+        
         const OFFLINE = {{ config.get('OFFLINE')|tojson }},
               ADMIN = {{ (current_user.is_authenticated and current_user.is_admin())|tojson|safe }},
               FLASH_MESSAGES = {{ get_flashed_messages()|tojson|safe }},
@@ -89,7 +89,7 @@
 				</li>
                 {% endif %}
 
-				<li><a href="#controls" role="tab"><i class="fa fa-sliders"></i></a></li>
+				<li><a href="#controls" role="tab"><i class="fa fa-sliders-h"></i></a></li>
 			</ul>
 
 			<ul role="tablist">
@@ -150,31 +150,31 @@
 							End:
 							<input class="datepick" id="date2" type="text" value=""/>
 						</span>
-						<hr>
+						<br>
 
 						<div class="checkbox">
 							<label><input type="checkbox" id="autozoom" value="1">Auto-Zoom when finished</label>
 						</div>
 
-						<hr>
+						<br>
 						<div class="data_message"></div>
 						<div><progress id='tab' class='progbar'></progress></div>
-						<hr>
+						<br>
 
-						<button type="button" id="renderButton" class="btn btn-primary">Render Layers</button>
-						<button type="button" id="abortButton" class="btn btn-danger">Abort</button>
+						<button type="button" id="renderButton" class="btn btn-a btn-sm smooth">Render Layers</button>
+						<button type="button" id="abortButton" class="btn btn-c btn-sm smooth">Abort</button>
 
 					</form>
 
-					<hr>
+					<br>
 					{% if current_user.is_authenticated %}
 					You are logged in as
 					<a href="{{ url_for('main', username=current_user.id) }}"
 					target="_blank">{{ current_user.username or current_user.id}}</a>
-					<br>
+					<br><br>
 
 					<form action="{{ url_for('logout', username=current_user.id) }}">
-						<input type="submit" class="btn btn-danger" value="Log Out" />
+						<input type="submit" class="btn btn-sm btn-c" value="Log Out" />
 					</form>
 					{% else %}
 
@@ -195,7 +195,7 @@
                     <form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_blank">
                     <input type="hidden" name="cmd" value="_s-xclick">
                     <input type="hidden" name="hosted_button_id" value="W9L7ZUADWKE8L">
-                    <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" border="0" name="submit" alt="PayPal - The safer, easier way to pay online!">
+                    <input class="paypal_button" type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" border="0" name="submit" alt="PayPal - The safer, easier way to pay online!">
                     <img alt="" border="0" src="https://www.paypalobjects.com/en_US/i/scr/pixel.gif" width="1" height="1">
                     </form>
                     {% endif %}
@@ -223,7 +223,7 @@
 					<br><br>
 					We index your activity summaries for fast access. 
                     <br>
-                    <button type="button" id="activity-list-buton" class="btn btn-info">View index</button>
+                    <button type="button" id="activity-list-buton" class="btn btn-a btn-sm">View index</button>
                     <br>
                     <hr>
 					<div class="checkbox">
@@ -239,14 +239,14 @@
 
 					<br>
 					<form action="{{ url_for('logout', username=user.id) }}">
-						<input type="submit" class="btn btn-danger" value="Log Out" />
+						<input type="submit" class="btn btn-c btn-sm" value="Log Out" />
 					</form>
 
 					<br>
 					<hr>
 					<br><br>
 					<form action="{{ url_for('delete', username=user.id) }}" onsubmit="return confirm('Delete your info from our database?');">
-						<input type="submit" class="btn btn-danger" value="Delete Account" />
+						<input type="submit" class="btn btn-c btn-sm" value="Delete Account" />
 					</form>
 
                     <br>
@@ -254,7 +254,7 @@
                     <form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_blank">
                     <input type="hidden" name="cmd" value="_s-xclick">
                     <input type="hidden" name="hosted_button_id" value="W9L7ZUADWKE8L">
-                    <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" border="0" name="submit" alt="PayPal - The safer, easier way to pay online!">
+                    <input class="paypal_button" type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" border="0" name="submit" alt="PayPal - The safer, easier way to pay online!">
                     <img alt="" border="0" src="https://www.paypalobjects.com/en_US/i/scr/pixel.gif" width="1" height="1">
                     </form>
                     {% endif %}
@@ -289,11 +289,11 @@
                 Check us out on social media!<br>
                 
                 <a href="https://www.linkedin.com/company/heatflask" target="_blank">
-                    <i class="fa fa-linkedin-square" style="font-size:32px;color:blue"></i>
+                    <i class="fa fa-linkedin" style="font-size:32px;color:blue"></i>
                 </a>
                 &nbsp
                 <a href="https://twitter.com/heatflask" target="_blank">
-                    <i class="fa fa-twitter-square" style="font-size:32px;color:blue"></i>
+                    <i class="fa fa-twitter" style="font-size:32px;color:blue"></i>
                 </a>
                 &nbsp
                 <a href="https://www.instagram.com/heatflask" target="_blank">
@@ -314,7 +314,7 @@
                 <form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_blank">
                 <input type="hidden" name="cmd" value="_s-xclick">
                 <input type="hidden" name="hosted_button_id" value="W9L7ZUADWKE8L">
-                <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" border="0" name="submit" alt="PayPal - The safer, easier way to pay online!">
+                <input class="paypal_button" type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" border="0" name="submit" alt="PayPal - The safer, easier way to pay online!">
                 <img alt="" border="0" src="https://www.paypalobjects.com/en_US/i/scr/pixel.gif" width="1" height="1">
                 </form>
                 {% endif %}
@@ -325,15 +325,15 @@
             <!-- Activity List/Table Tab -->
 			<div class="sidebar-pane" id="activities">
 				<h1 class="sidebar-header">Rendered Activities<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
-                <button type="button" id="clear-selection-button" class="btn btn-success btn-xs">Clear Selection</button>
-                <button type="button" id="render-selection-button" class="btn btn-info btn-xs">Render selected</button>
+                <button type="button" id="clear-selection-button" class="btn btn-b btn-sm">Clear Selection</button>
+                <button type="button" id="render-selection-button" class="btn btn-a btn-sm">Render selected</button>
                 <br>
                 <input type="checkbox" name="szoom" id="zoom-to-selection" value="1">Zoom to selection
 
              
 
 				<div>
-					<table id='activitiesList' class='display order-column'></table>
+					<table id='activitiesList' class='display order-column compact'></table>
 				</div>
 			</div>
 

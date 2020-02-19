@@ -213,7 +213,7 @@ function heatflask() {
         const capture_button_states = [
             {
                 stateName: 'idle',
-                icon: 'fa-video-camera',
+                icon: 'fa-video',
                 title: 'Capture GIF',
                 onClick: function (btn, map) {
                     if (!dotLayer) {
@@ -298,6 +298,9 @@ function heatflask() {
 
     })();
 
+    const dialfg = "rgba(0,255,255,0.8)",
+          dialbg = "rgba(255,255,255,0.2)";
+
     // set up dial-controls
     (() => {
         $(".dotconst-dial").knob({
@@ -309,6 +312,8 @@ function heatflask() {
             cursor: 20,
             inline: true,
             displayInput: false,
+            fgColor: dialfg,
+            bgColor : dialbg,
             change: function (val) {
                 let newVal;
                 if (this.$[0].id == "sepConst") {
@@ -348,6 +353,8 @@ function heatflask() {
             cursor: 20,
             inline: true,
             displayInput: false,
+            fgColor: dialfg,
+            bgColor : dialbg,
             change: function (val) {
                 if (this.$[0].id == "dotScale")
                     dotLayer.updateDotSettings({dotScale: val});
@@ -440,11 +447,12 @@ function heatflask() {
         };
 
     const atable = $('#activitiesList').DataTable({
-                    paging: false,
+                    paging: true,
                     deferRender: true,
                     scrollY: "60vh",
                     scrollX: true,
                     scrollCollapse: true,
+                    scroller: true,
                     order: [[ 0, "desc" ]],
                     select: isMobileDevice()? "multi" : "os",
                     data: appState.items.values(),

@@ -1,3 +1,5 @@
+
+
 /*
  * Globals
  */
@@ -9,17 +11,37 @@ a:hover {
   color: #fff;
 }
 
-/* Custom default button */
-.btn-default,
-.btn-default:hover,
-.btn-default:focus {
-  color: #333;
-  text-shadow: none; /* Prevent inheritance from `body` */
-  background-color: #fff;
-  border: 1px solid #fff;
+textarea, input, select {
+  border: inherit;
 }
 
+.flashes {
+  background: rgba(255,0,0,0.5)
+}
 
+.logo {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  width: 20%;
+  opacity: 0.9;
+}
+
+/* buttons */
+.btn {
+  opacity: 0.9;
+}
+
+.strava-button {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  width: 20%;
+}
+
+.strava-button :hover {
+  opacity: 0.5;
+}
 /*
  * Base structure
  */
