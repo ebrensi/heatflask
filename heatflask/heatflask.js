@@ -175,7 +175,7 @@
     // Select-activities-in-region functionality IIFE
     (() => {
         function doneSelecting(obj) {
-            dotLayer && dotLayer.setSelectRegion(obj.pxBounds, callback=function(ids){
+            dotLayer && dotLayer.setSelectRegion(obj.pxBounds, function(ids){
                 if (controls.selectControl && controls.selectControl.canvas) {
                     controls.selectControl.remove();
                     controls.selectButton.state("not-selecting");
@@ -275,7 +275,7 @@
                     console.log(`width = ${w}, height = ${h}, zoom = ${zoom}`);
 
 
-                    dotLayer.captureCycle(selection=selection, callback=function(){
+                    dotLayer.captureCycle(selection, function(){
                         btn.state('idle');
                         controls.areaSelect.remove();
                         if (!ADMIN && !OFFLINE) {
@@ -995,7 +995,7 @@
         }
 
         if (dotLayer) {
-            ds = dotLayer.getDotSettings();
+            const ds = dotLayer.getDotSettings();
 
             params["c1"] = Math.round(ds["C1"]);
             params["c2"] = Math.round(ds["C2"]);
