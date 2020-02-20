@@ -18,49 +18,40 @@
     {% endif %}
 
     <script type="text/javascript">
-        // Constants defined via template         
-        {% if user %}
-        const USER_ID = "{{ user.id }}",
-              BASE_USER_URL = "{{ url_for('main', username=user.id) }}",
-              SHARE_PROFILE = {{ user.share_profile|tojson|safe }},
-              SHARE_STATUS_UPDATE_URL = "{{ url_for('update_share_status', username=user.id) }}",
-              ACTIVITY_LIST_URL = "{{ url_for('activities', username=user.id) }}",
-              BEACON_HANDLER_URL = "{{ url_for('beacon_handler') }}";
-        {% endif %}
-        
-        const OFFLINE = {{ config.get('OFFLINE')|tojson }},
-              ADMIN = {{ (current_user.is_authenticated and current_user.is_admin())|tojson|safe }},
-              FLASH_MESSAGES = {{ get_flashed_messages()|tojson|safe }},
-              MAPBOX_ACCESS_TOKEN = "{{ config.get('MAPBOX_ACCESS_TOKEN') }}",
-              ONLOAD_PARAMS = {
-                    C1: {{ c1|tojson }},
-                    C2: {{ c2|tojson }},
-                    SZ: {{ sz|tojson }},
-                    autozoom: {{ autozoom|tojson }},
-                    activity_ids: {{ ids|tojson }},
-                    limit: {{ limit|tojson }},
-                    preset: {{ preset| tojson }},
-                    date1: "{{ date1 }}",
-                    date2: "{{ date2 }}",
-                    start_paused: {{ paused|tojson }},
-                    map_providers: {{ baselayer|tojson|safe }},
-                    map_center: {{ map_center|tojson }},
-                    map_zoom: {{ zoom }},
-                    client_id: "{{ client_id }}",
-                    shadows: {{shadows|tojson}}
-             },
-             MEASURMENT_PREFERENCE = "{{ current_user.measurement_preference if current_user.is_authenticated else user.measurement_preference if user else 'feet'}}",
-             CAPTURE_DURATION_MAX = {{ config.get('CAPTURE_DURATION_MAX')|tojson }},
-             DEFAULT_DOTCOLOR = {{ config.get('DEFAULT_DOTCOLOR')|tojson|safe }};
-             
+
+        // Constants passed from the server at runtime       
+        window._runtime = {
+            QUERY: {{ query | tojson | safe }},
+            CLIENT_ID: "{{ client_id }}",
+            OFFLINE: {{ config.get('OFFLINE')|tojson }},
+            ADMIN: {{ (current_user.is_authenticated and current_user.is_admin()) | tojson | safe }},
+            FLASH_MESSAGES: {{ get_flashed_messages() | tojson | safe }},
+            MAPBOX_ACCESS_TOKEN: "{{ config.get('MAPBOX_ACCESS_TOKEN') }}",
+            CAPTURE_DURATION_MAX: {{ config.get('CAPTURE_DURATION_MAX')|tojson }},
+            DEFAULT_DOTCOLOR: {{ config.get('DEFAULT_DOTCOLOR')|tojson|safe }},
+            MEASURMENT_PREFERENCE: "{{ current_user.measurement_preference if current_user.is_authenticated else user.measurement_preference if user else 'feet'}}",
+        };
 
         {% assets "gifjs_webworker_js" %}
-        const GIFJS_WORKER_URL = "{{ ASSET_URL }}";
-    	{% endassets %}
+        window._runtime.GIFJS_WORKER_URL = "{{ ASSET_URL }}";
+        {% endassets %}
 
         {% assets "DotLayerWorker_js" %}
-        const DOTLAYER_WORKER_URL = "{{ ASSET_URL }}";
+        window._runtime.DOTLAYER_WORKER_URL = "{{ ASSET_URL }}";
         {% endassets %}
+
+               
+        {% if user %}
+        Object.assign(window._runtime, {
+            USER_ID: "{{ user.id }}",
+            BASE_USER_URL: "{{ url_for('main', username=user.id) }}",
+            SHARE_PROFILE: {{ user.share_profile | tojson | safe }},
+            SHARE_STATUS_UPDATE_URL: "{{ url_for('update_share_status', username=user.id) }}",
+            ACTIVITY_LIST_URL: "{{ url_for('activities', username=user.id) }}",
+            BEACON_HANDLER_URL: "{{ url_for('beacon_handler') }}"
+        });
+        {% endif %}
+
     </script>
 
 </head>

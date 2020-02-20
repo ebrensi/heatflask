@@ -85,20 +85,15 @@ bundles = {
         Leaflet_js,
 
         # Heatflask-specific code
-        flask_assets.Bundle(
-            flask_assets.Bundle(
-                'js/BitSet.js',
-                'js/Codecs.js',
-                'js/MapUtil.js',
-                DotLayer_js,
-            ),
+        'js/BitSet.js',
+        'js/Codecs.js',
+        'js/MapUtil.js',
+        DotLayer_js,
 
-            flask_assets.Bundle(
-                'js/strava.js',
-                'js/appUtil.js',
-                '../heatflask.js',
-            ),
-        ),
+        'js/strava.js',
+        'js/appUtil.js',
+        '../heatflask.js',
+
         filters=["closure_js"],
         output='gen/dependencies.js'
     ),

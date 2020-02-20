@@ -1,9 +1,29 @@
 
 'use strict';
 
-heatflask();
+(function heatflask(R) {
 
-function heatflask() {
+    // R is defined at runtime and has attributes with these exact names
+    // so we don't want closure compiler renaming them
+    const ONLOAD_PARAMS = R["QUERY"],
+          CLIENT_ID = R["CLIENT_ID"],
+          OFFLINE = R["OFFLINE"],
+          ADMIN = R["ADMIN"],
+          FLASH_MESSAGES = R["FLASH_MESSAGES"],
+          MAPBOX_ACCESS_TOKEN = R["MAPBOX_ACCESS_TOKEN"],
+          CAPTURE_DURATION_MAX = R["CAPTURE_DURATION_MAX"],
+          DEFAULT_DOTCOLOR = R["DEFAULT_DOTCOLOR"],
+          MEASURMENT_PREFERENCE = R["MEASURMENT_PREFERENCE"],
+          GIFJS_WORKER_URL = R["GIFJS_WORKER_URL"],
+          DOTLAYER_WORKER_URL = R["DOTLAYER_WORKER_URL"],
+          USER_ID = R["USER_ID"],
+          BASE_USER_URL = R["BASE_USER_URL"],
+          SHARE_PROFILE = R["SHARE_PROFILE"],
+          SHARE_STATUS_UPDATE_URL = R["SHARE_STATUS_UPDATE_URL"],
+          ACTIVITY_LIST_URL = R["ACTIVITY_LIST_URL"],
+          BEACON_HANDLER_URL = R["BEACON_HANDLER_URL"];
+
+
     const DIST_UNIT = (MEASURMENT_PREFERENCE=="feet")? 1609.34 : 1000.0,
           DIST_LABEL = (MEASURMENT_PREFERENCE=="feet")?  "mi" : "km",
           SPEED_SCALE = 5.0,
@@ -720,7 +740,7 @@ function heatflask() {
             if (appState.wskey) {
                 navigator.sendBeacon(BEACON_HANDLER_URL, appState.wskey);
             }
-            navigator.sendBeacon(BEACON_HANDLER_URL, ONLOAD_PARAMS.client_id);
+            navigator.sendBeacon(BEACON_HANDLER_URL, CLIENT_ID);
         }
         if (sock && sock.readyState == 1) {
             sock.send(JSON.stringify({close: 1}));
@@ -809,7 +829,7 @@ function heatflask() {
 
         function sendQuery() {
             const queryObj = {
-                client_id: ONLOAD_PARAMS.client_id
+                client_id: CLIENT_ID
             };
 
             queryObj[USER_ID] = {
@@ -1134,4 +1154,4 @@ function heatflask() {
     initializedotLayer();
     renderLayers();
     preset_sync();
-};
+})(window["_runtime"]);

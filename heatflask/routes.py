@@ -358,14 +358,12 @@ def main(username):
     web_client_id = "H:{}:{}".format(ip, int(time.time()))
     log.debug("%s OPEN", web_client_id)
 
-    query = dict(
-        user=user,
-        client_id=web_client_id,
-        baselayer=(
+    query = {
+        "map_providers": (
             request.args.getlist("baselayer") or
             request.args.getlist("bl")
         )
-    )
+    }
 
     query_spec = app.config["URL_QUERY_SPEC"]
     # populate query dict with values from this urls's query string
@@ -384,18 +382,16 @@ def main(username):
         # "lat" and "lng" given in query string override "center"
         query["map_center"] = [query["lat"], query["lng"]]
         query["autozoom"] = False
-        del query["lat"]
-        del query["lng"]
+    del query["lat"]
+    del query["lng"]
 
-    if query.get("ids"):
-        query["ids"] = re.split(';|,| ', query["ids"])
+    if query.get("activity_ids"):
+        query["activity_ids"] = re.split(';|,| ', query["activity_ids"])
 
-    if not any(query[x] for x in ["date1", "date2", "ids", "preset", "limit"]):
+    if not any(query[x] for x in ["date1", "date2", "activity_ids", "preset", "limit"]):
         # This is the default if nothing is specified
         query["limit"] = 10
         query["autozoom"] = True
-
-    # log.debug("created query: %s", query)
 
     if current_user.is_anonymous or (not current_user.is_admin()):
         event = {
@@ -411,7 +407,15 @@ def main(username):
             })
 
         EventLogger.new_event(**event)
-    return render_template('main.html', **query)
+    
+    # log.debug("created query: %s", query)
+
+    return render_template(
+        'main.html',
+        user=user,
+        query=query,
+        client_id=web_client_id,
+    )
 
 
 @app.route('/<username>/activities')
