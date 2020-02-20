@@ -24,10 +24,10 @@ Number.prototype.pad = function(size) {
 function hhmmss( secs ) {
     let totalSeconds = secs;
 
-    let hours = Math.floor(totalSeconds / 3600).pad(2);
+    const hours = Math.floor(totalSeconds / 3600).pad(2);
     totalSeconds %= 3600;
-    let minutes = Math.floor(totalSeconds / 60).pad(2);
-    let seconds = Math.round((totalSeconds % 60)).pad(2);
+    const minutes = Math.floor(totalSeconds / 60).pad(2);
+    const seconds = Math.round((totalSeconds % 60)).pad(2);
 
     return `${hours}:${minutes}:${seconds}`;
     // return new Date( secs * 1000 ).toISOString().substr( 11, 8 );
@@ -43,26 +43,16 @@ function href( url, text ) {
     return `<a href='${url}' target='_blank'>${text}</a>`;
 }
 
-// Strava specific stuff
-function stravaActivityURL( id ) {
-    return "https://www.strava.com/activities/"+id;
-}
-
-function stravaAthleteURL( id ) {
-    return "https://www.strava.com/athletes/"+id;
-}
-
-
 // For DataTables
 function formatDate( data, type, row, meta ) {
-    date = new Date( data );
+    const date = new Date( data );
     return ( type === "display" || type === "filter" ) ?
         date.toLocaleString( "en-US", { hour12: false } ) : date;
 }
 
 function formatIP( data, type, row, meta ) {
     if ( data ) {
-        let ip = data;
+        const ip = data;
         return ( type === "display" ) ? href( ip_lookup_url( ip ), ip ) : ip;
     } else {
         return "";
@@ -72,7 +62,7 @@ function formatIP( data, type, row, meta ) {
 function formatUserId ( data, type, row ) {
     if ( data ) {
         if ( type == "display" ) {
-            let link = "/" + data;
+            const link = "/" + data;
             if (row.profile) {
                 avatar = img( row.profile, w = 40, h = 40, alt = data );
                 return href( link, avatar );
@@ -123,7 +113,7 @@ function touchHandler(event) {
     // Add touch support by converting touch events to mouse events
     // Source: http://stackoverflow.com/a/6362527/725573
 
-    var touches = event.changedTouches,
+    const touches = event.changedTouches,
         first = touches[0],
         type = "";
 
@@ -135,7 +125,7 @@ function touchHandler(event) {
     }
 
     //Convert the touch event into it's corresponding mouse event
-    var simulatedEvent = document.createEvent("MouseEvent");
+    const simulatedEvent = document.createEvent("MouseEvent");
     simulatedEvent.initMouseEvent(type, true, true, window, 1,
                               first.screenX, first.screenY,
                               first.clientX, first.clientY, false,
@@ -151,55 +141,6 @@ function touchHandler(event) {
 // document.addEventListener("touchend", touchHandler, true);
 // document.addEventListener("touchcancel", touchHandler, true);
 
-function fadeIn(el){
-  el.classList.add('show');
-  el.classList.remove('hide');  
-}
-
-function fadeOut(el){
-  el.classList.add('hide');
-  el.classList.remove('show');
-}
 
 
-// This is a list of tuples specifying properties of the rendered objects,
-//  such as path color, speed/pace in description.  others can be added
-const ATYPE_SPECS = [
-        ["Ride", "speed", "#2B60DE"],  // Ocean Blue
-        ["Run", "pace", "#FF0000"],    // Red
-        ["Swim", "speed", "#00FF7F"],  // SpringGreen
-        ["Hike", "pace", "#FF1493"],   // DeepPink
-        ["Walk", "pace", "#FF00FF"],   // Fuchsia
-        ["AlpineSki", null, "#800080"],// Purple
-        ["BackcountrySki", null, "#800080"],  // Purple
-        ["Canoeing", null, "#FFA500"],  // Orange
-        ["Crossfit", null, null],
-        ["EBikeRide", "speed", "#0000CD"], // MediumBlue
-        ["Elliptical", null, null],
-        ["IceSkate", "speed", "#663399"],  // RebeccaPurple
-        ["InlineSkate", null, "#8A2BE2"],  // BlueViolet
-        ["Kayaking", null, "#FFA500"],  // Orange
-        ["Kitesurf", "speed", null],
-        ["NordicSki", null, "#800080"], // purple
-        ["RockClimbing", null, "#4B0082"],  // Indigo
-        ["RollerSki", "speed", "#800080"],  // Purple
-        ["Rowing", "speed", "#FA8072"],  // Salmon
-        ["Snowboard", null, "#00FF00"],  // Lime
-        ["Snowshoe", "pace", "#800080"], // Purple
-        ["StairStepper", null, null],
-        ["StandUpPaddling", null, null],
-        ["Surfing", null, "#006400"],  // DarkGreen
-        ["VirtualRide", "speed", "#1E90FF"],  // DodgerBlue
-        ["WeightTraining", null, null],
-        ["Windsurf", "speed", null],
-        ["Workout", null, null],
-        ["Yoga", null, null]
-];
 
-
-const ATYPE_MAP = {};
-for (let i=0; i < ATYPE_SPECS.length; i++) {
-    let atype = ATYPE_SPECS[i];
-
-    ATYPE_MAP[atype[0].toLowerCase()] = {"vtype": atype[1], "pathColor": atype[2]};
-};
