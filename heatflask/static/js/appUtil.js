@@ -1,10 +1,10 @@
 let WS_SCHEME;
 
 if (window.location.protocol == "https:") {
-      WS_SCHEME = "wss://";
-    } else {
-      WS_SCHEME = "ws://";
-    };
+  WS_SCHEME = "wss://";
+} else {
+  WS_SCHEME = "ws://";
+};
     
 
 // Courtesy of TwoFuckingDevelopers (@2fdevs, @elecash and @qmarcos)
@@ -18,7 +18,7 @@ Number.prototype.pad = function(size) {
   let s = String(this);
   while (s.length < (size || 2)) {s = "0" + s;}
   return s;
-}
+};
 
 // ------------------------------
 function hhmmss( secs ) {
@@ -30,7 +30,6 @@ function hhmmss( secs ) {
     const seconds = Math.round((totalSeconds % 60)).pad(2);
 
     return `${hours}:${minutes}:${seconds}`;
-    // return new Date( secs * 1000 ).toISOString().substr( 11, 8 );
 }
 
 function img( url, w=20, h=20, alt="" ) {
@@ -114,8 +113,8 @@ function touchHandler(event) {
     // Source: http://stackoverflow.com/a/6362527/725573
 
     const touches = event.changedTouches,
-        first = touches[0],
-        type = "";
+        first = touches[0];
+    let type = "";
 
     switch(event.type) {
         case "touchstart": type = "mousedown"; break;

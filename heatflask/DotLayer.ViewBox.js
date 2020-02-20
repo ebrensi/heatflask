@@ -28,7 +28,7 @@ DotLayer.ViewBox = {
     },
 
     getMapSize: function () {
-        return this._map["getSize"]()
+        return this._map.getSize()
     },
 
 
@@ -168,8 +168,8 @@ DotLayer.ViewBox = {
 
     update: function(calibrate=true) {
         const m = this._map,
-              zoom = m["getZoom"](),
-              latLngMapBounds = m["getBounds"]();
+              zoom = m.getZoom(),
+              latLngMapBounds = m.getBounds();
 
         const zoomChange = zoom != this.zoom;
         // stuff that (only) needs to be done on zoom change
@@ -178,16 +178,16 @@ DotLayer.ViewBox = {
 
         if (calibrate) {
             // calibrate screen coordinates
-            const topLeft = m["containerPointToLayerPoint"]( [ 0, 0 ] ),
-                   setPosition = Leaflet["DomUtil"]["setPosition"],
+            const topLeft = m.containerPointToLayerPoint( [ 0, 0 ] ),
+                   setPosition = L.DomUtil.setPosition,
                    canvases = this._canvases;
             
             for (let i=0, len=canvases.length; i<len; i++)
                 setPosition( canvases[i], topLeft );
             
-            const pxOrigin = m["getPixelOrigin"](),
-                  mapPanePos = m["_getMapPanePos"]();
-            this.pxOffset = mapPanePos["subtract"](pxOrigin);
+            const pxOrigin = m.getPixelOrigin(),
+                  mapPanePos = m._getMapPanePos();
+            this.pxOffset = mapPanePos.subtract(pxOrigin);
         }
 
         this.pxBounds = this.latLng2pxBounds(latLngMapBounds);
@@ -219,8 +219,8 @@ DotLayer.ViewBox = {
         if (!pxObj)
             pxObj = new Float32Array(4);
 
-        const sw = llBounds["_southWest"],
-              ne = llBounds["_northEast"];
+        const sw = llBounds._southWest,
+              ne = llBounds._northEast;
         
         pxObj[0] = sw.lat;  // xmin
         pxObj[1] = sw.lng;  // ymax

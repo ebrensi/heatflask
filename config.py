@@ -28,9 +28,9 @@ class Config(object):
     # ASSETS_CACHE = False
     # ASSETS_MANIFEST = None
     CLOSURE_COMPRESSOR_OPTIMIZATION = "SIMPLE"
-    CLOSURE_EXTRA_ARGS = [
-        # "--debug"
-    ]
+    # CLOSURE_EXTRA_ARGS = [
+    #     # "--debug"
+    # ]
     # Concurrency for User database triage
     TRIAGE_CONCURRENCY = 5
 

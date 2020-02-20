@@ -18,7 +18,7 @@
     {% endif %}
 
     <script type="text/javascript">
-        // Constants defined via template
+        // Constants defined via template         
         {% if user %}
         const USER_ID = "{{ user.id }}",
               BASE_USER_URL = "{{ url_for('main', username=user.id) }}",
@@ -50,8 +50,6 @@
                     shadows: {{shadows|tojson}}
              },
              MEASURMENT_PREFERENCE = "{{ current_user.measurement_preference if current_user.is_authenticated else user.measurement_preference if user else 'feet'}}",
-             DIST_UNIT = (MEASURMENT_PREFERENCE=="feet")? 1609.34 : 1000.0,
-             DIST_LABEL = (MEASURMENT_PREFERENCE=="feet")?  "mi" : "km",
              CAPTURE_DURATION_MAX = {{ config.get('CAPTURE_DURATION_MAX')|tojson }},
              DEFAULT_DOTCOLOR = {{ config.get('DEFAULT_DOTCOLOR')|tojson|safe }};
              

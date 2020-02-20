@@ -92,4 +92,6 @@ const Dom = {
         this.setDisplayStyle(string, "none");
     }
 
-}
+};
+
+

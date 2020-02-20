@@ -1,11 +1,12 @@
-'use strict';
 
-debugger;
+'use strict';
 
 heatflask();
 
 function heatflask() {
-    const SPEED_SCALE = 5.0,
+    const DIST_UNIT = (MEASURMENT_PREFERENCE=="feet")? 1609.34 : 1000.0,
+          DIST_LABEL = (MEASURMENT_PREFERENCE=="feet")?  "mi" : "km",
+          SPEED_SCALE = 5.0,
           SEP_SCALE = {m: 0.15, b: 15.0},
           WEBSOCKET_URL = WS_SCHEME+window.location.host+"/data_socket",
 

@@ -26,4 +26,3 @@ L.Control.fps = L.Control.extend({
 L.control.fps = function(options) {
   return new L.Control.fps(options);
 };
-

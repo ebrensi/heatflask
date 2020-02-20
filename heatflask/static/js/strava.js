@@ -2,13 +2,12 @@
  * Strava related stuff
 */
 
-// Strava specific stuff
 function stravaActivityURL( id ) {
-    return "https://www.strava.com/activities/"+id;
+    return `https://www.strava.com/activities/${id}`;
 }
 
 function stravaAthleteURL( id ) {
-    return "https://www.strava.com/athletes/"+id;
+    return `https://www.strava.com/athletes/${id}`;
 }
 
 const ATYPE = {
@@ -64,4 +63,6 @@ const ATYPE = {
         return {"atype": spec[0], "pathColor": spec[1], "type": spec[2] || A.type}
     }
 
-}
+};
+
+

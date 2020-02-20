@@ -16,53 +16,53 @@ DotLayer = {
     two_pi: 2 * Math.PI,
     target_fps: 25,
 
-    "options": {
-        "debug": false,
-        "numWorkers": 0,
-        "startPaused": false,
-        "showPaths": true,
-        "fps_display": false,
+    options: {
+        debug: false,
+        numWorkers: 0,
+        startPaused: false,
+        showPaths: true,
+        fps_display: false,
         
-        "normal": {
-            "dotColor": "#000000",
-            "dotOpacity": 0.7,
+        normal: {
+            dotColor: "#000000",
+            dotOpacity: 0.7,
 
-            "pathColor": "#000000",
-            "pathOpacity": 0.7,
-            "pathWidth": 1,
+            pathColor: "#000000",
+            pathOpacity: 0.7,
+            pathWidth: 1,
         },
 
-        "selected": {
-            "dotColor": "#FFFFFF",
-            "dotOpacity": 0.9,
+        selected: {
+            dotColor: "#FFFFFF",
+            dotOpacity: 0.9,
 
-            "pathColor": "#000000",
-            "pathOpacity": 0.7,
-            "pathWidth": 5,
+            pathColor: "#000000",
+            pathOpacity: 0.7,
+            pathWidth: 5,
         },
 
-        "unselected": {
-            "dotColor": "#000000",
-            "dotOpacity": 0.3,
+        unselected: {
+            dotColor: "#000000",
+            dotOpacity: 0.3,
 
-            "pathColor": "#000000",
-            "pathOpacity": 0.3,
-            "pathWidth": 1,
+            pathColor: "#000000",
+            pathOpacity: 0.3,
+            pathWidth: 1,
         },
 
-        "dotShadows": {
-            "enabled": true,
-            "x": 0, "y": 5,
-            "blur": 5,
-            "color": "#000000"
+        dotShadows: {
+            enabled: true,
+            x: 0, y: 5,
+            blur: 5,
+            color: "#000000"
         }
     },
 
     // -- initialized is called on prototype
-    "initialize": function( options ) {
+    initialize: function( options ) {
         this._timeOffset = 0;
-        Leaflet["setOptions"]( this, options );
-        this._paused = this["options"]["startPaused"];
+        L.setOptions( this, options );
+        this._paused = this.options.startPaused;
         this._timePaused = this.UTCnowSecs();
 
         this.heatflask_icon = new Image();
@@ -74,7 +74,7 @@ DotLayer = {
         this._items = new Map();
         this._lru = new Map();  // turn this into a real LRU-cache
 
-        // this.WorkerPool.initialize(this["options"]["numWorkers"], options["dotWorkerUrl"]);
+        // this.WorkerPool.initialize(this.options["numWorkers"], options["dotWorkerUrl"]);
     },
 
     UTCnowSecs: function() {
@@ -82,23 +82,23 @@ DotLayer = {
     },
 
     //-------------------------------------------------------------
-    "onAdd": function( map ) {
-        debugger;
-        this._map = map;
-        let size = map["getSize"](),
-            zoomAnimated = map["options"]["zoomAnimation"] && Leaflet["Browser"]["any3d"];
+    onAdd: function( map ) {
 
-        const create = Leaflet["DomUtil"]["create"],
-              addClass = Leaflet["DomUtil"]["addClass"],
-              panes = map["_panes"],
-              appendChild = pane => obj => panes[pane]["appendChild"](obj),
+        this._map = map;
+        let size = map.getSize(),
+            zoomAnimated = map.options.zoomAnimation && L.Browser.any3d;
+
+        const create = L.DomUtil.create,
+              addClass = L.DomUtil.addClass,
+              panes = map._panes,
+              appendChild = pane => obj => panes[pane].appendChild(obj),
               canvases = [];
 
         // dotlayer canvas
         this._dotCanvas = create( "canvas", "leaflet-layer" );
-        this._dotCanvas["width"] = size["x"];
-        this._dotCanvas["height"] = size["y"];
-        this._dotCtx = this._dotCanvas["getContext"]( "2d" );
+        this._dotCanvas.width = size.x;
+        this._dotCanvas.height = size.y;
+        this._dotCtx = this._dotCanvas.getContext( "2d" );
         addClass( this._dotCanvas, "leaflet-zoom-" + ( zoomAnimated ? "animated" : "hide" ) );
         panes[this._pane]["style"]["pointerEvents"] = "none";
         appendChild(this._pane)( this._dotCanvas );
@@ -106,32 +106,32 @@ DotLayer = {
 
         // create Canvas for polyline-ish things
         this._lineCanvas = create( "canvas", "leaflet-layer" );
-        this._lineCanvas["width"] = size["x"];
-        this._lineCanvas["height"] = size["y"];
-        this._lineCtx = this._lineCanvas["getContext"]( "2d" );
-        this._lineCtx["lineCap"] = "round";
-        this._lineCtx["lineJoin"] = "round";
+        this._lineCanvas.width = size.x;
+        this._lineCanvas.height = size.y;
+        this._lineCtx = this._lineCanvas.getContext( "2d" );
+        this._lineCtx.lineCap = "round";
+        this._lineCtx.lineJoin = "round";
         addClass( this._lineCanvas, "leaflet-zoom-" + ( zoomAnimated ? "animated" : "hide" ) );
         appendChild("overlayPane")( this._lineCanvas );
         canvases.push(this._lineCanvas);
 
-        if (this["options"]["debug"]) {
+        if (this.options.debug) {
             // create Canvas for debugging canvas stuff
             this._debugCanvas = create( "canvas", "leaflet-layer" );
-            this._debugCanvas["width"] = size["x"];
-            this._debugCanvas["height"] = size["y"];
-            this._debugCtx = this._debugCanvas["getContext"]( "2d" );
+            this._debugCanvas.width = size.x;
+            this._debugCanvas.height = size.y;
+            this._debugCtx = this._debugCanvas.getContext( "2d" );
             addClass( this._debugCanvas, "leaflet-zoom-" + ( zoomAnimated ? "animated" : "hide" ) );
             appendChild("overlayPane")( this._debugCanvas );
             canvases.push(this._debugCanvas);
         }
 
-         if (this["options"]["fps_display"])
-            this.fps_display = Leaflet.control.fps().addTo(this._map);
+         if (this.options.fps_display)
+            this.fps_display = L.control.fps().addTo(this._map);
 
         this.ViewBox.initialize(this._map, canvases);
         this.DrawBox.initialize(this.ViewBox);
-        map["on"]( this.getEvents(), this );
+        map.on( this.getEvents(), this );
     },
 
     getEvents: function() {
@@ -148,32 +148,32 @@ DotLayer = {
             resize: this._onLayerResize
         };
 
-        if ( this._map["options"]["zoomAnimation"] && Leaflet["Browser"]["any3d"] ) {
-            events["zoomanim"] =  this._animateZoom;
+        if ( this._map.options.zoomAnimation && L.Browser.any3d ) {
+            events.zoomanim =  this._animateZoom;
         }
 
         return events;
     },
 
-    "addTo": function( map ) {
-        map["addLayer"]( this );
+    addTo: function( map ) {
+        map.addLayer( this );
         return this;
     },
 
     //-------------------------------------------------------------
-    "onRemove": function( map ) {
-        map["_panes"]["shadowPane"]["removeChild"]( this._dotCanvas )
+    onRemove: function( map ) {
+        map._panes.shadowPane.removeChild( this._dotCanvas )
         this._dotCanvas = null;
 
-        map["_panes"]["overlayPane"]["removeChild"]( this._lineCanvas );
+        map._panes.overlayPane.removeChild( this._lineCanvas );
         this._lineCanvas = null;
 
-        if (this["options"]["debug"]) {
-            map["_panes"]["overlayPane"]["removeChild"]( this._debugCanvas );
+        if (this.options.debug) {
+            map._panes.overlayPane.removeChild( this._debugCanvas );
             this._debugCanvas = null;
         }
 
-        map["off"]( this.getEvents(), this );
+        map.off( this.getEvents(), this );
     },
 
     // --------------------------------------------------------------------
@@ -203,13 +203,13 @@ DotLayer = {
 
     //-------------------------------------------------------------
     _onLayerResize: function( resizeEvent ) {
-        const newWidth = resizeEvent["newSize"]["x"],
-              newHeight = resizeEvent["newSize"]["y"],
-              options = this["options"];
+        const newWidth = resizeEvent.newSize.x,
+              newHeight = resizeEvent.newSize.y,
+              options = this.options;
 
         for (const canvas of [this._dotCanvas, this._lineCanvas]){
-            canvas["width"] = newWidth;
-            canvas["height"] = newHeight;
+            canvas.width = newWidth;
+            canvas.height = newHeight;
         }
 
         this._redraw();
@@ -224,25 +224,25 @@ DotLayer = {
 
     // -------------------------------------------------------------------
     _debugCtxReset: function() {
-        if (!this["options"]["debug"]) return;
-        this._debugCtx["strokeStyle"] = "rgb(0,255,0,1)";
-        this._debugCtx["lineWidth"] = 10;
-        this._debugCtx["setLineDash"]([10, 5]);
+        if (!this.options.debug) return;
+        this._debugCtx.strokeStyle = "rgb(0,255,0,1)";
+        this._debugCtx.lineWidth = 10;
+        this._debugCtx.setLineDash([10, 5]);
     },
 
     _dotCtxReset: function() {
         const ctx = this._dotCtx;
-        if (this["options"]["dotShadows"]["enabled"]) {
-            const shadowOpts = this["options"]["dotShadows"],
-                  sx = ctx["shadowOffsetX"] = shadowOpts["x"],
-                  sy = ctx["shadowOffsetY"] = shadowOpts["y"];
-            ctx["shadowBlur"] = shadowOpts["blur"];
-            ctx["shadowColor"] = shadowOpts["color"];
+        if (this.options.dotShadows.enabled) {
+            const shadowOpts = this.options.dotShadows,
+                  sx = ctx.shadowOffsetX = shadowOpts.x,
+                  sy = ctx.shadowOffsetY = shadowOpts.y;
+            ctx.shadowBlur = shadowOpts.blur;
+            ctx.shadowColor = shadowOpts.color;
 
         } else {
-            ctx["shadowOffsetX"] = 0;
-            ctx["shadowOffsetY"] = 0;
-            ctx["shadowBlur"] = 0;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+            ctx.shadowBlur = 0;
         }
     },
 
@@ -297,10 +297,10 @@ DotLayer = {
         if (event)
             clear(this._dotCtx, rect);
 
-        if (this["options"]["debug"])
+        if (this.options.debug)
             clear(this._debugCtx, rect);
 
-        if (this["options"]["showPaths"])
+        if (this.options.showPaths)
             this.drawPaths();
         else
             clear(this._lineCtx, rect);
@@ -645,10 +645,10 @@ DotLayer = {
         let i = 0;
         do {
             transform(a);
-            ctx["moveTo"](a[0], a[1]);
+            ctx.moveTo(a[0], a[1]);
 
             transform(b);
-            ctx["lineTo"](b[0], b[1]);
+            ctx.lineTo(b[0], b[1]);
 
         } while (!segs.next().done)
     },
@@ -662,10 +662,10 @@ DotLayer = {
 
         segMask.forEach(i => {
             let p = point(i);
-            ctx["moveTo"](p[0], p[1]);
+            ctx.moveTo(p[0], p[1]);
 
             p = point(i+1);
-            ctx["lineTo"](p[0], p[1]);
+            ctx.lineTo(p[0], p[1]);
         });
     },
 
@@ -675,10 +675,10 @@ DotLayer = {
 
         for (const color in colorGroups) {
             const group = colorGroups[color];
-            ctx["strokeStyle"] = color || defaultColor;
-            ctx["beginPath"]();
+            ctx.strokeStyle = color || defaultColor;
+            ctx.beginPath();
             group.forEach( i => this._drawPathFromPointArray(ctx, items[i]));
-            ctx["stroke"]();
+            ctx.stroke();
         } 
     },
     
@@ -690,7 +690,7 @@ DotLayer = {
 
         const ctx = this._lineCtx,
               itemsArray = this._itemsArray,
-              options = this["options"],
+              options = this.options,
               vb = this.ViewBox;
 
         const cg = vb.pathColorGroups(),
@@ -702,26 +702,26 @@ DotLayer = {
         this.DrawBox.clear(ctx, this.DrawBox.defaultRect());
 
         if (selected) {
-            ctx["lineWidth"] = options["unselected"]["pathWidth"];
-            ctx["globalAlpha"] = options["unselected"]["pathOpacity"] * alphaScale;
-            this._drawPathsByColor(unselected, options["unselected"]["pathColor"]);
+            ctx.lineWidth = options.unselected.pathWidth;
+            ctx.globalAlpha = options.unselected.pathOpacity * alphaScale;
+            this._drawPathsByColor(unselected, options.unselected.pathColor);
 
             // draw selected paths
-            ctx["lineWidth"] = options["selected"]["pathWidth"];
-            ctx["globalAlpha"] = options["selected"]["pathOpacity"] * alphaScale;
-            this._drawPathsByColor(selected, options["selected"]["pathColor"]);
+            ctx.lineWidth = options.selected.pathWidth;
+            ctx.globalAlpha = options.selected.pathOpacity * alphaScale;
+            this._drawPathsByColor(selected, options.selected.pathColor);
         
         } else if (unselected) {
             // draw unselected paths
-            ctx["lineWidth"] = options["normal"]["pathWidth"];
-            ctx["globalAlpha"] = options["normal"]["pathOpacity"] * alphaScale;
-            this._drawPathsByColor(unselected, options["normal"]["pathColor"]);
+            ctx.lineWidth = options.normal.pathWidth;
+            ctx.globalAlpha = options.normal.pathOpacity * alphaScale;
+            this._drawPathsByColor(unselected, options.normal.pathColor);
         }
             
-        if (options["debug"]) {
+        if (options.debug) {
             this._debugCtxReset();
             this.DrawBox.draw(this._debugCtx);
-            this._debugCtx["strokeStyle"] = "rgb(255,0,255,1)";
+            this._debugCtx.strokeStyle = "rgb(255,0,255,1)";
             this.ViewBox.drawPxBounds(this._debugCtx);
         }        
     },
@@ -836,8 +836,8 @@ DotLayer = {
 
         return p => {
             transform(p);
-            ctx["arc"]( p[0], p[1], dotSize, 0, two_pi );
-            ctx["closePath"]();
+            ctx.arc( p[0], p[1], dotSize, 0, two_pi );
+            ctx.closePath();
         };
     },
 
@@ -849,7 +849,7 @@ DotLayer = {
 
         return p => {
             transform(p);
-            ctx["rect"]( p[0] - dotOffset, p[1] - dotOffset, dotSize, dotSize );
+            ctx.rect( p[0] - dotOffset, p[1] - dotOffset, dotSize, dotSize );
         }
     },
 
@@ -870,8 +870,8 @@ DotLayer = {
 
         for (const color in colorGroups) {
             const group = colorGroups[color];
-            ctx["fillStyle"] = color || this["options"]["normal"]["dotColor"];
-            ctx["beginPath"]();
+            ctx.fillStyle = color || this.options.normal.dotColor;
+            ctx.beginPath();
 
             group.forEach(i => {
                 // const dotLocs = this.dotPointsIterFromSegs(itemsArray[i], now);
@@ -879,7 +879,7 @@ DotLayer = {
                 count += this._drawDots(dotLocs, drawDot);
             });
 
-            ctx["fill"]();
+            ctx.fill();
         }
         return count
     },
@@ -891,7 +891,7 @@ DotLayer = {
         if (!now)
             now = this._timePaused || this.UTCnowSecs();
         
-        const options = this["options"],
+        const options = this.options,
               ctx = this._dotCtx,
               g = this._gifPatch,
               itemsArray = this._itemsArray,
@@ -915,31 +915,30 @@ DotLayer = {
 
         if (selected) {
             // draw normal activity dots
-            ctx["globalAlpha"] = options["unselected"]["dotOpacity"] * alphaScale;
+            ctx.globalAlpha = options.unselected.dotOpacity * alphaScale;
             let drawDotFunc = this.makeSquareDrawFunc();
-            count += this._drawDotsByColor(now, unselected, drawDotFunc, options["unselected"]["dotColor"]);
+            count += this._drawDotsByColor(now, unselected, drawDotFunc, options.unselected.dotColor);
 
             // draw selected activity dots
             drawDotFunc = this.makeCircleDrawFunc();
-            ctx["globalAlpha"] = options["selected"]["dotOpacity"] * alphaScale;
-            count += this._drawDotsByColor(now, selected, drawDotFunc, options["selected"]["dotColor"]);
+            ctx.globalAlpha = options.selected.dotOpacity * alphaScale;
+            count += this._drawDotsByColor(now, selected, drawDotFunc, options.selected.dotColor);
         
         } else if (unselected) {
             // draw normal activity dots
-            ctx["globalAlpha"] = options["normal"]["dotOpacity"] * alphaScale;
+            ctx.globalAlpha = options.normal.dotOpacity * alphaScale;
             let drawDotFunc = this.makeSquareDrawFunc();
-            count += this._drawDotsByColor(now, unselected, drawDotFunc, options["normal"]["dotColor"]);
+            count += this._drawDotsByColor(now, unselected, drawDotFunc, options.normal.dotColor);
         }
         
-        if (options["debug"]) {
+        if (options.debug) {
             this._debugCtxReset();
             this.DrawBox.draw(this._debugCtx);
-            this._debugCtx["strokeStyle"] = "rgb(255,0,255,1)";
+            this._debugCtx.strokeStyle = "rgb(255,0,255,1)";
             vb.drawPxBounds(this._debugCtx);
         }        
 
         return count
-   
     },
 
    
@@ -953,7 +952,7 @@ DotLayer = {
         }
         this.lastCalledTime = 0;
         this.minDelay = ~~( 1000 / this.target_fps + 0.5 );
-        this._frame = Leaflet["Util"]["requestAnimFrame"]( this._animate, this );
+        this._frame = L.Util.requestAnimFrame( this._animate, this );
     },
 
     // --------------------------------------------------------------------
@@ -993,20 +992,20 @@ DotLayer = {
 
         }
 
-        this._frame = Leaflet["Util"]["requestAnimFrame"]( this._animate, this );
+        this._frame = L.Util.requestAnimFrame( this._animate, this );
     },
 
     //------------------------------------------------------------------------------
     _animateZoom: function( e ) {
         const m = this.ViewBox._map,
               z = e.zoom,
-              scale = m["getZoomScale"]( z );
+              scale = m.getZoomScale( z );
 
         // -- different calc of offset in leaflet 1.0.0 and 0.0.7 thanks for 1.0.0-rc2 calc @jduggan1
-        const offset = Leaflet["Layer"] ? m["_latLngToNewLayerPoint"]( m[".getBounds"]()["getNorthWest"](), z, e.center ) :
-                               m["_getCenterOffset"]( e.center )["_multiplyBy"]( -scale )["subtract"]( m["_getMapPanePos"]() );
+        const offset = L.Layer ? m._latLngToNewLayerPoint( m.getBounds().getNorthWest(), z, e.center ) :
+                               m._getCenterOffset( e.center )._multiplyBy( -scale ).subtract( m._getMapPanePos() );
 
-        const setTransform = Leaflet["DomUtil"]["setTransform"];
+        const setTransform = L.DomUtil.setTransform;
         setTransform( this._dotCanvas, offset, scale );
         setTransform( this._lineCanvas, offset, scale );
     },
@@ -1085,11 +1084,11 @@ DotLayer = {
         document.body.appendChild( pd );
         this._progressDisplay = pd;
 
-        let msg = "capturing static map frame...";
+        let msg = "loading map baseLayer (may take several seconds)...";
         // console.log(msg);
         pd.textContent = msg;
 
-        window["leafletImage"](this.ViewBox._map, function(err, canvas) {
+        leafletImage(this.ViewBox._map, function(err, canvas) {
             // download(canvas.toDataURL("image/png"), "mapViewBox.png", "image/png");
             console.log("leaflet-image: " + err);
             if (canvas) {
@@ -1101,14 +1100,14 @@ DotLayer = {
     captureGIF: function(selection=null, baseCanvas=null, durationSecs=2, callback=null) {
         let sx, sy, sw, sh;
         if (selection) {
-            sx = selection["topLeft"]["x"];
-            sy = selection["topLeft"]["y"];
-            sw = selection["width"];
-            sh = selection["height"];
+            sx = selection.topLeft.x;
+            sy = selection.topLeft.y;
+            sw = selection.width;
+            sh = selection.height;
         } else {
             sx = sy = 0;
-            sw = this.ViewBox.size["x"];
-            sh = this.ViewBox.size["y"];
+            sw = this.ViewBox.size.x;
+            sh = this.ViewBox.size.y;
         }
 
 
@@ -1121,26 +1120,26 @@ DotLayer = {
             numFrames = durationSecs * frameRate,
             delay = 1000 / frameRate,
 
-            encoder = new window["GIF"]({
+            encoder = new GIF({
                 workers: window.navigator.hardwareConcurrency,
                 quality: 8,
                 transparent: 'rgba(0,0,0,0)',
-                workerScript: this["options"]["gifWorkerUrl"]
+                workerScript: this.options.gifWorkerUrl
             });
 
         this._encoder = encoder;
 
-        encoder["on"]( 'progress', function( p ) {
+        encoder.on( 'progress', function( p ) {
             const msg = `Encoding frames...${~~(p*100)}%`;
             // console.log(msg);
-            this._progressDisplay["textContent"] = msg;
+            this._progressDisplay.textContent = msg;
         }.bind( this ) );
 
-        encoder["on"]('finished', function( blob ) {
+        encoder.on('finished', function( blob ) {
             // window.open(URL.createObjectURL(blob));
 
             if (blob) {
-                window["download"](blob, "output.gif", 'image/gif' );
+                download(blob, "output.gif", 'image/gif' );
             }
 
             document.body.removeChild( this._progressDisplay );
@@ -1168,7 +1167,7 @@ DotLayer = {
                 dN = dataNew.data,
                 len = dO.length;
 
-            if (dN["length"] != len){
+            if (dN.length != len){
                 console.log("canvasDiff: canvases are different size");
                 return;
             }
@@ -1197,7 +1196,7 @@ DotLayer = {
         }
 
         function display(canvas, title){
-            let w = window["open"](canvas["toDataURL"]("image/png"), '_blank');
+            let w = open(canvas["toDataURL"]("image/png"), '_blank');
             // w.document.write(`<title>${title}</title>`);
         }
         // console.log(`GIF output: ${numFrames.toFixed(4)} frames, delay=${delay.toFixed(4)}`);
@@ -1218,7 +1217,7 @@ DotLayer = {
             // let timeOffset = (this.dotSettings._timeScale * frameTime) % this._period;
             // console.log( `frame${i} @ ${timeOffset}`);
 
-            pd["textContent"] = msg;
+            pd.textContent = msg;
 
             // create a new canvas
             const frame = document.createElement('canvas');
@@ -1264,14 +1263,14 @@ DotLayer = {
         }
 
         // encode the Frame array
-        encoder["render"]();
+        encoder.render();
     },
 
     abortCapture: function() {
         // console.log("capture aborted");
-        this._progressDisplay["textContent"] = "aborting...";
+        this._progressDisplay.textContent = "aborting...";
         if (this._encoder) {
-            this._encoder["abort"]();
+            this._encoder.abort();
             document.body.removeChild( this._progressDisplay );
             delete this._progressDisplay
 
@@ -1287,7 +1286,7 @@ DotLayer = {
             numItems = items.length,
             i = 0;
 
-        this._colorPalette = this.ColorPalette.palette(numItems, this["options"].dotAlpha);
+        this._colorPalette = this.ColorPalette.palette(numItems, this.options.dotAlpha);
         for ( const item of items )
             item.dotColor = this._colorPalette[ i++ ];
     },
@@ -1322,7 +1321,7 @@ DotLayer = {
         ds._dotSize = Math.max(1, ~~(ds.dotScale * Math.log( zoom ) + 0.5));
 
         if (shadowSettings) {
-            Object.assign(this["options"]["dotShadows"], shadowSettings);
+            Object.assign(this.options.dotShadows, shadowSettings);
         }
 
         this._dotCtxReset();

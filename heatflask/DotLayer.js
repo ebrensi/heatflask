@@ -1,7 +1,9 @@
-const Leaflet = window["L"];
+// const Leaflet = window["L"];
 
-Leaflet["DotLayer"] = Leaflet["Layer"]["extend"](DotLayer);
+// Leaflet["DotLayer"] = Leaflet["Layer"]["extend"](DotLayer);
 
-Leaflet["dotLayer"] = function( options ) {
-    return new Leaflet["DotLayer"]( options );
+L.DotLayer = L.Layer.extend(DotLayer);
+
+L.dotLayer = function( options ) {
+    return new L.DotLayer( options );
 };
