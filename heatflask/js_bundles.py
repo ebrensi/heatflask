@@ -19,6 +19,14 @@ frappe_datatable_css = flask_assets.Bundle(
     "frappe-datatable-dark.css"
 )
 
+DotLayer_js = flask_assets.Bundle(
+    '../_DotLayer.js',
+    "../DotLayer.WorkerPool.js",
+    "../DotLayer.ViewBox.js",
+    "../DotLayer.DrawBox.js",
+    '../DotLayer.js'
+)
+
 # we bundle javascript and css dependencies to reduce client-side overhead
 bundles = {
     "dependencies_css": flask_assets.Bundle(
@@ -57,6 +65,7 @@ bundles = {
 
         # un-minified dependencies
         flask_assets.Bundle(
+            'js/L.Control.fps.js',
             'js/L.Control.Watermark.js',
             'js/L.Control.Window.js',
             'js/leaflet-providers.js',
@@ -75,7 +84,7 @@ bundles = {
                 'js/BitSet.js',
                 'js/Codecs.js',
                 "js/MapUtil.js",
-                '../DotLayer.js',
+                DotLayer_js,
                 # filters=["rjsmin"]
                 filters=["closure_js"],
             ),
