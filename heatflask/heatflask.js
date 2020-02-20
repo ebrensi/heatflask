@@ -1,5 +1,7 @@
 'use strict';
 
+debugger;
+
 heatflask();
 
 function heatflask() {
