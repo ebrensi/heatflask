@@ -410,6 +410,7 @@ function heatflask() {
                 data: null,
                 render: (data, type, row) => {
                     if ( type === 'display' || type === 'filter' ) {
+                        dstr = row.tsLoc.toISOString().split('T')[0];
                         return href( stravaActivityURL(row.id), row.tsLoc.toLocaleString());
                     } else 
                         return row.UTCtimestamp;
@@ -447,12 +448,12 @@ function heatflask() {
         };
 
     const atable = $('#activitiesList').DataTable({
-                    paging: true,
+                    paging: false,
                     deferRender: true,
                     scrollY: "60vh",
-                    scrollX: true,
+                    // scrollX: true,
                     scrollCollapse: true,
-                    scroller: true,
+                    // scroller: true,
                     order: [[ 0, "desc" ]],
                     select: isMobileDevice()? "multi" : "os",
                     data: appState.items.values(),
@@ -686,7 +687,8 @@ function heatflask() {
 
         // (re-)render the activities table
         atable.clear();
-        atable.rows.add(Array.from(appState.items.values())).draw();
+        atable.rows.add(Array.from(appState.items.values()));
+        atable.columns.adjust().draw()
 
         if (!ADMIN && !OFFLINE) {
             // Record this to google analytics
@@ -890,7 +892,7 @@ function heatflask() {
                     return;
 
                 // assign this activity a path color and speed type (pace, mph)
-                Object.assign( A, ATYPE.specs(A.type) );
+                Object.assign( A, ATYPE.specs(A) );
                 A.id = A._id;
                 delete A._id;
 

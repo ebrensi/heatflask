@@ -42,7 +42,7 @@ const Dom = {
     },
 
     html: function html(string, val) {
-        return this.prop(string, "innerHtml", val)
+        return this.prop(string, "innerHTML", val)
     },
 
     addEvent: function addEvent(string, eventName, eventHandler) {

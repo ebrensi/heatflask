@@ -179,10 +179,11 @@
 					{% else %}
 
                     {% if not config.get("OFFLINE") %}
+                    <br>
 					Create an account and/or log in.
-                    
+                    <br>
 					<form action="{{ url_for('authorize') }}" >
-						<input type="image" src="{{ url_for('static', filename='btn_strava_connectwith_orange.svg') }}" alt="Log-In with Strava" >
+						<input class="strava-button" type="image" src="{{ url_for('static', filename='btn_strava_connectwith_orange.svg') }}" alt="Log-In with Strava" >
 					</form>
                     {% endif %}
 
@@ -327,13 +328,13 @@
 				<h1 class="sidebar-header">Rendered Activities<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
                 <button type="button" id="clear-selection-button" class="btn btn-b btn-sm">Clear Selection</button>
                 <button type="button" id="render-selection-button" class="btn btn-a btn-sm">Render selected</button>
-                <br>
+                <br><br>
                 <input type="checkbox" name="szoom" id="zoom-to-selection" value="1">Zoom to selection
 
              
 
 				<div>
-					<table id='activitiesList' class='display order-column compact'></table>
+					<table id='activitiesList' class='display order-column compact wrap'></table>
 				</div>
 			</div>
 

@@ -1225,27 +1225,20 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
               },
               i0 = A.segMask.min();
 
-        // this.test(A);
-        // return
-
         const timeOffset = (ds._timeScale * ( now - (start + times(i0) ))) % T;
 
         let count = 0;
 
-        // A.segMask.forEach(i => {
         for (const i of A.segMask) {
             const t_a = times(i),
                   t_b = times(i+1),
                   lowest = Math.ceil((t_a - timeOffset) / T),
                   highest = Math.floor((t_b - timeOffset) / T);
-            // console.log(`${t_a}, ${t_b}`);
 
             if (lowest <= highest) {
                 set(p_a, points(i));
                 set(p_b, points(i+1));
-                // const p_a = set(p, points(i)),
-                //       p_b = points(i+1);
-                // console.log(`${p_a}, ${p_b}`);
+            
                 const t_ab = t_b - t_a,
                       vx = (p_b[0] - p_a[0]) / t_ab,
                       vy = (p_b[1] - p_a[1]) / t_ab;
@@ -1253,19 +1246,14 @@ Leaflet["DotLayer"] = Leaflet["Layer"]["extend"]( {
                 for (let j = lowest; j <= highest; j++) {
                     const t = j * T + timeOffset,
                           dt = t - t_a;
-                    // console.log(t);
                     if (dt > 0) {
                         p[0] = p_a[0] + vx * dt;
                         p[1] = p_a[1] + vy * dt;
-                        // drawDot(p_a);
                         yield p;
-                        // count++;
                     }
                 }
             }
         }
-        // });
-        // return count
     },
 
     makeCircleDrawFunc: function() {
