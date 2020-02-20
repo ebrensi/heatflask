@@ -202,7 +202,7 @@
 
 
         // button for selecting via touchscreen 
-        selectButton_states = [
+        const selectButton_states = [
             {
                 stateName: 'not-selecting',
                 icon: 'fa-object-group',
@@ -433,7 +433,7 @@
                 data: null,
                 render: (data, type, row) => {
                     if ( type === 'display' || type === 'filter' ) {
-                        dstr = row.tsLoc.toISOString().split('T')[0];
+                        // const dstr = row.tsLoc.toISOString().split('T')[0];
                         return href( stravaActivityURL(row.id), row.tsLoc.toLocaleString());
                     } else 
                         return row.UTCtimestamp;
@@ -1094,8 +1094,8 @@
     Dom.hide(".progbar");
 
     function makeDatePicker(selector) {
-        const el = Dom.el(selector);
-        picker = new Pikaday({ 
+        const el = Dom.el(selector),
+              picker = new Pikaday({ 
             field: el,
             onSelect: function(date) {
                 el.value = date.toISOString().split('T')[0];

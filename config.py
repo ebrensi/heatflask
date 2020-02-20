@@ -27,7 +27,7 @@ class Config(object):
     # ASSETS_DEBUG = False
     # ASSETS_CACHE = False
     # ASSETS_MANIFEST = None
-    CLOSURE_COMPRESSOR_OPTIMIZATION = "SIMPLE"
+    CLOSURE_COMPRESSOR_OPTIMIZATION = "ADVANCED"
     # CLOSURE_EXTRA_ARGS = [
     #     # "--debug"
     # ]

@@ -10,7 +10,7 @@
  *  Closure-compiler won't change the names.
  */
 
-DotLayer = {
+const DotLayer = {
 
     _pane: "shadowPane",
     two_pi: 2 * Math.PI,
@@ -457,11 +457,8 @@ DotLayer = {
                 StreamRLE.decodeCompressedBuf2(A.time, A.idxSet[zoom])
             );
             this._lru.set(key, arr);
-        }
-
-        arrayFunc = i => arr[i];
-      
-        return arrayFunc;
+        }      
+        return i => arr[i];
     },
 
     TimeInterval: function interval() {
@@ -983,7 +980,7 @@ DotLayer = {
 
             const t0 = performance.now();
 
-            count = this.drawDots( now );
+            const count = this.drawDots( now );
 
             if (this.fps_display) {
                 const elapsed = ( performance.now() - t0 ).toFixed( 0 );

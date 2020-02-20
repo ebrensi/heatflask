@@ -63,7 +63,7 @@ function formatUserId ( data, type, row ) {
         if ( type == "display" ) {
             const link = "/" + data;
             if (row.profile) {
-                avatar = img( row.profile, w = 40, h = 40, alt = data );
+                const avatar = img( row.profile, 40, 40, data );
                 return href( link, avatar );
             }
             else {
