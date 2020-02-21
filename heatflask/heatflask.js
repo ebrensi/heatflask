@@ -22,7 +22,8 @@
           SHARE_STATUS_UPDATE_URL = R["SHARE_STATUS_UPDATE_URL"],
           ACTIVITY_LIST_URL = R["ACTIVITY_LIST_URL"],
           BEACON_HANDLER_URL = R["BEACON_HANDLER_URL"];
-
+    
+    // debugger;
 
     const DIST_UNIT = (MEASURMENT_PREFERENCE=="feet")? 1609.34 : 1000.0,
           DIST_LABEL = (MEASURMENT_PREFERENCE=="feet")?  "mi" : "km",
@@ -243,7 +244,6 @@
                         return;
                     }
                     let size = map.getSize();
-                    areaSelect = 
                     controls.areaSelect._width = ~~(0.8 * size.x);
                     controls.areaSelect._height = ~~(0.8 * size.y);
                     controls.areaSelect.addTo(map);
@@ -1032,8 +1032,7 @@
             
             let d = new Date();
             d.setDate(d.getDate()-num);
-            dstr = d.toISOString().split('T')[0];
-            Dom.set('#date1', dstr);
+            Dom.set('#date1', d.toISOString().split('T')[0] );
             date1picker.gotoDate(d);
             date1picker.setStartRange(d)
 

@@ -27,10 +27,8 @@ class Config(object):
     # ASSETS_DEBUG = False
     # ASSETS_CACHE = False
     # ASSETS_MANIFEST = None
-    CLOSURE_COMPRESSOR_OPTIMIZATION = "ADVANCED"
-    # CLOSURE_EXTRA_ARGS = [
-    #     # "--debug"
-    # ]
+    CLOSURE_COMPRESSOR_OPTIMIZATION = "simple"
+    
     # Concurrency for User database triage
     TRIAGE_CONCURRENCY = 5
 
@@ -224,9 +222,17 @@ class DevelopmentConfig(Config):
     SSLIFY_PERMANENT = False
 
     # Flask-Assets settings
-    # ASSETS_DEBUG = "merge"
+    ASSETS_DEBUG = "merge"
     # ASSETS_AUTO_BUILD = True
     
+    # CLOSURE_COMPRESSOR_OPTIMIZATION = "advanced"
+    # CLOSURE_COMPRESSOR_OPTIMIZATION = "simple"
+    CLOSURE_EXTRA_ARGS = [
+        # "--process_common_js_modules",
+        # "--dependency_mode=STRICT"
+        # "--debug"
+    ]
+
     if USE_REMOTE_DB:
         MONGO_URI = os.environ.get("REMOTE_MONGODB_URL")
         SQLALCHEMY_DATABASE_URI = os.environ.get("REMOTE_POSTGRES_URL")

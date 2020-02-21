@@ -49,6 +49,10 @@ function formatDate( data, type, row, meta ) {
         date.toLocaleString( "en-US", { hour12: false } ) : date;
 }
 
+function ip_lookup_url(ip) {
+    return
+}
+
 function formatIP( data, type, row, meta ) {
     if ( data ) {
         const ip = data;
@@ -103,7 +107,7 @@ function httpPostAsync(theUrl, payload, callback) {
     }
     xmlHttp.open("POST", theUrl, true); // true for asynchronous
     xmlHttp.setRequestHeader("Content-type", "application/json");
-    dataToSend = JSON.stringify(payload);
+    const dataToSend = JSON.stringify(payload);
     xmlHttp.send(dataToSend);
 }
 
