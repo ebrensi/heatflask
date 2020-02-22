@@ -45,7 +45,7 @@ bundles = {
         "css/font-awesome-lite.css",
         min_css,
         Leaflet_css,
-        'css/datatables.css',
+        "css/simple-datatables.css",
         'css/pikaday.css',
         '../heatflask.css',
         filters='cssmin',
@@ -57,12 +57,8 @@ bundles = {
         # Minified
         'js/pws.min.js', # persistent websocket https://github.com/porsager/pws
         'js/msgpack.min.js',
-        "js/jquery-3.4.1.slim.min.js",
-        # 'js/cash.min.js',  # cash.js is a minimal jquery substitute,
-        # 'js/zepto.min.js',
-        # 'js/cash_jquery_helper.js',
-        'js/jquery.knob.min.js',  # Anthony Terrien
-        'js/datatables.js',
+        "js/round-slider.min.js",
+        "js/simple-datatables.js",
         'js/gif2.js',  # Johan Nordberg: http://jnordberg.github.io/gif.js/
 
         # unMinified
@@ -112,7 +108,7 @@ bundles = {
     "basic_table_css": flask_assets.Bundle(
         "css/font-awesome-lite.css",
         min_css,
-        'css/datatables.css',
+        'css/simple-datatables.css',
         filters=['cssmin'],
         output='gen/basic_table.css'
     ),
@@ -120,8 +116,7 @@ bundles = {
     "basic_table_js": flask_assets.Bundle(
         'js/pws.min.js', # persistent websocket https://github.com/porsager/pws
         'js/msgpack.min.js',
-        "js/jquery-3.4.1.slim.min.js",
-        'js/datatables.js',
+        "js/simple-datatables.js",
         'js/strava.js',
         'js/appUtil.js',
         'js/Dom.js',

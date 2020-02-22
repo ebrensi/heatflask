@@ -108,53 +108,6 @@ button, input, select, textarea {
   padding: 10px 10px;
 }
 
-/* DataTable stuff */
-.dataTables_wrapper .dataTables_length, .dataTables_wrapper .dataTables_filter,
- .dataTables_wrapper .dataTables_info, .dataTables_wrapper .dataTables_processing, 
- .dataTables_wrapper .dataTables_paginate {
-  color: inherit;
-}
-
-table.dataTable.stripe tbody tr.odd, table.dataTable.display tbody tr.odd {
-  /*background-color: #f9f9f980;*/
-  background-color: #0b0c0eb0
-}
-table.dataTable tbody tr {
-  background-color: #0b0c0e80;
-  /*background-color: #00000080;*/
-}
-
-table.dataTable.display tbody tr.even > .sorting_1, table.dataTable.order-column.stripe tbody tr.even > .sorting_1 {
-  background-color: #fafafa20;
-  /*background-color: #0b0c0ee0;*/
-}
-
-table.dataTable.display tbody tr.odd > .sorting_1, table.dataTable.order-column.stripe tbody tr.odd > .sorting_1 {
-  background-color: #f1f1f120;
-  /*background-color: #0b0c0ee0;*/
-}
-
-table.dataTable.hover tbody tr:hover, table.dataTable.display tbody tr:hover {
-  /*background-color: #f6f6f640;*/
-    background-color: #00600040;
-}
-table.dataTable.hover tbody tr:hover.selected, table.dataTable.display tbody tr:hover.selected {
-  /*background-color: #aab7d140;*/
-  background-color: #00600040;
-}
-
-div.dts div.dataTables_scrollBody {
-  background: transparent;
-}
-
-div.dataTables_scrollBody {
-  background: transparent !important; 
-}
-
-table.dataTable.compact tbody th, table.dataTable.compact tbody td {
-  padding: 2px;
-}
-
 
 /*!
  * Pikaday
@@ -225,3 +178,18 @@ table.dataTable.compact tbody th, table.dataTable.compact tbody td {
 
 /* end pikaday */
 
+
+round-slider {
+  max-width: 200px;
+  transition: all 1.3s ease-out 0s;
+  /*--round-slider-path-width: 10;*/
+}
+
+round-slider.scaling:hover {
+  max-width: 400px;
+}
+
+g.slider {
+  width: 120px;
+  height: 120px;
+}

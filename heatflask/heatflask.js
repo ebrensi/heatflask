@@ -324,72 +324,72 @@
     const dialfg = "rgba(0,255,255,0.8)",
           dialbg = "rgba(255,255,255,0.2)";
 
-    // set up dial-controls
-    (() => {
-        $(".dotconst-dial").knob({
-            min: 0,
-            max: 100,
-            step: 0.1,
-            width: "140",
-            height: "140",
-            cursor: 20,
-            inline: true,
-            displayInput: false,
-            fgColor: dialfg,
-            bgColor : dialbg,
-            change: function (val) {
-                let newVal;
-                if (this.$[0].id == "sepConst") {
-                    newVal = Math.pow(2, val * SEP_SCALE.m + SEP_SCALE.b);
-                    dotLayer.updateDotSettings({C1: newVal});
-                } else {
-                    newVal = val * val * SPEED_SCALE;
-                    dotLayer.updateDotSettings({C2: newVal});;
-                }
+    // // set up dial-controls
+    // (() => {
+    //     $(".dotconst-dial").knob({
+    //         min: 0,
+    //         max: 100,
+    //         step: 0.1,
+    //         width: "140",
+    //         height: "140",
+    //         cursor: 20,
+    //         inline: true,
+    //         displayInput: false,
+    //         fgColor: dialfg,
+    //         bgColor : dialbg,
+    //         change: function (val) {
+    //             let newVal;
+    //             if (this.$[0].id == "sepConst") {
+    //                 newVal = Math.pow(2, val * SEP_SCALE.m + SEP_SCALE.b);
+    //                 dotLayer.updateDotSettings({C1: newVal});
+    //             } else {
+    //                 newVal = val * val * SPEED_SCALE;
+    //                 dotLayer.updateDotSettings({C2: newVal});;
+    //             }
 
-                // Enable capture if period is less than CAPTURE_DURATION_MAX
-                let cycleDuration = dotLayer.periodInSecs().toFixed(2),
-                    captureEnabled = controls.captureControl.enabled;
+    //             // Enable capture if period is less than CAPTURE_DURATION_MAX
+    //             let cycleDuration = dotLayer.periodInSecs().toFixed(2),
+    //                 captureEnabled = controls.captureControl.enabled;
 
-                Dom.html("#period-value", cycleDuration);
-                if (cycleDuration <= CAPTURE_DURATION_MAX) {
-                    if (!captureEnabled) {
-                        controls.captureControl.addTo(map);
-                        controls.captureControl.enabled = true;
-                    }
-                } else if (captureEnabled) {
-                    controls.captureControl.removeFrom(map);
-                    controls.captureControl.enabled = false;
-                }
-            },
-            release: function() {
-                updateState();
-            }
-        });
+    //             Dom.html("#period-value", cycleDuration);
+    //             if (cycleDuration <= CAPTURE_DURATION_MAX) {
+    //                 if (!captureEnabled) {
+    //                     controls.captureControl.addTo(map);
+    //                     controls.captureControl.enabled = true;
+    //                 }
+    //             } else if (captureEnabled) {
+    //                 controls.captureControl.removeFrom(map);
+    //                 controls.captureControl.enabled = false;
+    //             }
+    //         },
+    //         release: function() {
+    //             updateState();
+    //         }
+    //     });
 
-        $(".dotconst-dial-small").knob({
-            min: 0.01,
-            max: 10,
-            step: 0.01,
-            width: "100",
-            height: "100",
-            cursor: 20,
-            inline: true,
-            displayInput: false,
-            fgColor: dialfg,
-            bgColor : dialbg,
-            change: function (val) {
-                if (this.$[0].id == "dotScale")
-                    dotLayer.updateDotSettings({dotScale: val});
-                else {
-                    dotLayer.updateDotSettings({alphaScale: val / 10});
-                    dotLayer.drawPaths();
-                }
-            },
-            release: function() {
-                updateState();
-            }
-        });
+    //     $(".dotconst-dial-small").knob({
+    //         min: 0.01,
+    //         max: 10,
+    //         step: 0.01,
+    //         width: "100",
+    //         height: "100",
+    //         cursor: 20,
+    //         inline: true,
+    //         displayInput: false,
+    //         fgColor: dialfg,
+    //         bgColor : dialbg,
+    //         change: function (val) {
+    //             if (this.$[0].id == "dotScale")
+    //                 dotLayer.updateDotSettings({dotScale: val});
+    //             else {
+    //                 dotLayer.updateDotSettings({alphaScale: val / 10});
+    //                 dotLayer.drawPaths();
+    //             }
+    //         },
+    //         release: function() {
+    //             updateState();
+    //         }
+    //     });
 
         // $(".shadow-dial").knob({
         //         min: 0,
@@ -413,7 +413,7 @@
         //             dotLayer._redraw(true);
         //         }
         // });
-    })();
+    // })();
 
 
     if (FLASH_MESSAGES.length > 0) {
@@ -427,6 +427,66 @@
 
 
     // IInitialize Activity Table in sidebar
+    // let tableColumns = [
+    //         {
+    //             title: '<i class="fa fa-calendar" aria-hidden="true"></i>',
+    //             data: null,
+    //             render: (data, type, row) => {
+    //                 if ( type === 'display' || type === 'filter' ) {
+    //                     // const dstr = row.tsLoc.toISOString().split('T')[0];
+    //                     return href( stravaActivityURL(row.id), row.tsLoc.toLocaleString());
+    //                 } else 
+    //                     return row.UTCtimestamp;
+    //             }
+    //         },
+
+    //         { 
+    //             title: "Type", 
+    //             data: null,
+    //             render: (A) => `<p style="color:${A.pathColor}">${A.type}</p>`
+    //         },
+
+    //         {
+    //             title: `<i class="fa fa-arrows-h" aria-hidden="true"></i> (${DIST_LABEL})`,
+    //             data: "total_distance",
+    //             render: (A) => +(A / DIST_UNIT).toFixed(2)},
+    //         {
+    //             title: '<i class="fa fa-clock-o" aria-hidden="true"></i>',
+    //             data: "elapsed_time",
+    //             render: hhmmss
+    //         },
+
+    //         { 
+    //             title: "Name", 
+    //             data: null,
+    //             render: (A) => `<p style="background-color:${A.dotColor}"> ${A.name}</p>`
+    //         },
+        
+    //     ],
+
+    //     imgColumn = {
+    //         title: "<i class='fa fa-user' aria-hidden='true'></i>",
+    //         data: "owner",
+    //         render: formatUserId
+    //     };
+
+    // const atable = $('#activitiesList').DataTable({
+    //                 paging: false,
+    //                 deferRender: true,
+    //                 scrollY: "60vh",
+    //                 // scrollX: true,
+    //                 scrollCollapse: true,
+    //                 // scroller: true,
+    //                 order: [[ 0, "desc" ]],
+    //                 select: isMobileDevice()? "multi" : "os",
+    //                 data: appState.items.values(),
+    //                 rowId: "id",
+    //                 columns: tableColumns
+    //             }).on( 'select', handle_table_selections)
+    //               .on( 'deselect', handle_table_selections);
+
+    // const tableScroller = $('.dataTables_scrollBody');
+
     let tableColumns = [
             {
                 title: '<i class="fa fa-calendar" aria-hidden="true"></i>',
@@ -470,23 +530,44 @@
             render: formatUserId
         };
 
-    const atable = $('#activitiesList').DataTable({
-                    paging: false,
-                    deferRender: true,
-                    scrollY: "60vh",
-                    // scrollX: true,
-                    scrollCollapse: true,
-                    // scroller: true,
-                    order: [[ 0, "desc" ]],
-                    select: isMobileDevice()? "multi" : "os",
-                    data: appState.items.values(),
-                    rowId: "id",
-                    columns: tableColumns
-                }).on( 'select', handle_table_selections)
-                  .on( 'deselect', handle_table_selections);
 
-    const tableScroller = $('.dataTables_scrollBody');
+    function makeTable(items) {
+        const colData = [];
 
+        for (const id of items.keys()) {
+            colData.push([id, id, id, id, id]) ;
+        }
+
+        const data = {
+          headings: [
+            '<i class="fa fa-calendar" aria-hidden="true"></i>',
+            "Type",
+            `<i class="fa fa-arrows-h" aria-hidden="true"></i> (${DIST_LABEL})`,
+            '<i class="fa fa-clock-o" aria-hidden="true"></i>',
+            "Name"          
+          ],
+          data: colData
+        };
+        
+        const config = {
+          data,
+          columns: [
+            { select: 0, type: "string", render: id => items.get(+id).tsLoc.toLocaleString() },
+            { select: 1, type: "string", render: id => items.get(+id).type },
+            { select: 2, type: "number", render: id => items.get(+id).total_distance },
+            { select: 3, type: "number", render: id => hhmmss(items.get(+id).elapsed_time) },
+            { select: 4, type: "string", render: id => items.get(+id).name },
+          ],
+          sortable: true,
+          searchable: true,
+          paging: false,
+          scrollY: "60vh"
+        };
+        const dt = new simpleDatatables.DataTable("#activitiesList", config);
+
+
+    }
+    
 
 
     function updateShareStatus(status) {
@@ -709,9 +790,12 @@
         Dom.html(".data_message",` ${msg} ${num} activities rendered.`);       
 
         // (re-)render the activities table
-        atable.clear();
-        atable.rows.add(Array.from(appState.items.values()));
-        atable.columns.adjust().draw()
+        // atable.clear();
+        // atable.rows.add(Array.from(appState.items.values()));
+        // atable.columns.adjust().draw()
+
+        // debugger;
+        makeTable(appState.items);
 
         if (!ADMIN && !OFFLINE) {
             // Record this to google analytics

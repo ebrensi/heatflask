@@ -336,13 +336,15 @@
 						<div>
 							<span style="text-align: center;">
 							<label for="speedConst">Speed
-							<input type="text" class="dotconst-dial" id="speedConst">
+							<!-- <input type="text" class="dotconst-dial" id="speedConst"> -->
+                             <round-slider class="dotconst-dial" id="speedConst"  value=50 arcLength=90 startAngle=180></round-slider>
 							</label>
 							</span>
 
 							<span style="text-align: center;">
-							<label for="sepConst">Sparsity
-							<input type="text" class="dotconst-dial" id="sepConst">
+                            <label for="sepConst">Sparsity
+                            <round-slider class="dotconst-dial" id="sepConst"></round-slider>
+							<!-- <input type="text" class="dotconst-dial" id="sepConst"> -->
 							</label>
 							</span>
 
@@ -353,11 +355,14 @@
 						</div>
 
 						<div>
-                            <label for="dotAlpha">Alpha</label>
-                            <input type="text" class="dotconst-dial-small" id="dotAlpha">
-
-                            <label for="dotScale">Scale</label>
-                            <input type="text" class="dotconst-dial-small" id="dotScale">
+                            <label for="dotAlpha">Alpha
+                            <round-slider class="dotconst-dial-small" id="dotAlpha" value=50 arcLength=90 startAngle=180></round-slider>
+                            </label>
+                            
+                            <label for="dotScale">Scale
+                             <round-slider class="dotconst-dial-small scaling" id="dotScale"></round-slider>
+                            </label>
+                           <!--  <input type="text" class="dotconst-dial-small" id="dotScale"> -->
                         </div>
 
 						<div>
