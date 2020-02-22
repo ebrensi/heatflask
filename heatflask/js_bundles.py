@@ -5,34 +5,6 @@ min_css = flask_assets.Bundle(
     filters='cssmin'
 )
 
-frappe_datatable_js = flask_assets.Bundle(
-    "frappe-datatable/Sortable.min.js",
-    "frappe-datatable/clusterize.min.js",
-    # "frappe-datatable/frappe-datatable.min.js"
-    "frappe-datatable/body-renderer.js",
-    "frappe-datatable/cellmanager.js",
-    "frappe-datatable/columnmanager.js",
-    "frappe-datatable/datamanager.js",
-    "frappe-datatable/datatable.js",
-    "frappe-datatable/defaults.js",
-    "frappe-datatable/dom.js",
-    "frappe-datatable/filterRows.js",
-    "frappe-datatable/icons.js",
-    "frappe-datatable/index.js",
-    "frappe-datatable/keyboard.js",
-    "frappe-datatable/rowmanager.js",
-    "frappe-datatable/style.js",
-    "frappe-datatable/utils.js"
-
-)
-
-frappe_datatable_css = flask_assets.Bundle(
-    "frappe-datatable/clusterize.css",
-    "frappe-datatable/frappe-datatable.css",
-    "frappe-datatable/dark.css",
-    "frappe-datatable/style.css"
-)
-
 Leaflet_css = flask_assets.Bundle(
     'css/leaflet.css',
     'css/leaflet-sidebar.min.css',
