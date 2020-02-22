@@ -335,17 +335,16 @@
 						<h4>System Constants</h4>
 						<div>
 							<span style="text-align: center;">
-							<label for="speedConst">Speed
-							<!-- <input type="text" class="dotconst-dial" id="speedConst"> -->
-                             <round-slider class="dotconst-dial" id="speedConst"  value=50 arcLength=90 startAngle=180></round-slider>
-							</label>
+
+    							<label for="speedConst">Speed</label>
+    							
+                                <round-slider class="dotconst-dial" id="speedConst" arcLength=90 startAngle=205 value=210></round-slider>
+							
 							</span>
 
 							<span style="text-align: center;">
-                            <label for="sepConst">Sparsity
-                            <round-slider class="dotconst-dial" id="sepConst"></round-slider>
-							<!-- <input type="text" class="dotconst-dial" id="sepConst"> -->
-							</label>
+                                <label for="sepConst">Density</label>
+                                <round-slider class="dotconst-dial" id="sepConst" startAngle=205 arcLength=40 value=300></round-slider>
 							</span>
 
 							<div id="period-display">Period T =
@@ -355,14 +354,13 @@
 						</div>
 
 						<div>
-                            <label for="dotAlpha">Alpha
-                            <round-slider class="dotconst-dial-small" id="dotAlpha" value=50 arcLength=90 startAngle=180></round-slider>
-                            </label>
+                            <label for="dotAlpha">Alpha</label>
+                            <round-slider class="dotconst-dial-small" id="dotAlpha" arcLength=90 startAngle=250 value=300></round-slider>
                             
-                            <label for="dotScale">Scale
-                             <round-slider class="dotconst-dial-small scaling" id="dotScale"></round-slider>
-                            </label>
-                           <!--  <input type="text" class="dotconst-dial-small" id="dotScale"> -->
+                            
+                            <label for="dotScale">Scale</label>
+                            <round-slider class="dotconst-dial-small scaling" id="dotScale" startAngle=270 arcLength=360 value=0></round-slider>
+                            
                         </div>
 
 						<div>

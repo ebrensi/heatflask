@@ -182,14 +182,8 @@ button, input, select, textarea {
 round-slider {
   max-width: 200px;
   transition: all 1.3s ease-out 0s;
-  /*--round-slider-path-width: 10;*/
 }
 
 round-slider.scaling:hover {
-  max-width: 400px;
-}
-
-g.slider {
-  width: 120px;
-  height: 120px;
+  max-width: 200px;
 }
