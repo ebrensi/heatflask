@@ -563,7 +563,7 @@
           paging: false,
           scrollY: "60vh"
         };
-        const dt = new DataTable("#activitiesList", config);
+        const dt = new simpleDatatables.DataTable("#activitiesList", config);
 
 
     }

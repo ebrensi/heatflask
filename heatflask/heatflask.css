@@ -187,3 +187,17 @@ round-slider {
 round-slider.scaling:hover {
   max-width: 200px;
 }
+
+
+.dataTable-table > thead > tr {
+  background-color: #0000ff50;
+}
+
+/*.dataTable-table > tbody > tr :hover{
+  background-color: #0000ff40;
+}*/
+
+.dataTable-table tbody > tr:hover{
+  background-color: #00ff0040;
+}
+

@@ -41,11 +41,11 @@ DotLayer_js = flask_assets.Bundle(
 
 
 day_js = flask_assets.Bundle(
-    # "simple-datatables/dayjs.min.js",
-    "dayjs/constant.js",
-    "dayjs/en.js",
-    "dayjs/utils.js",
-    "dayjs/index.js"
+    "simple-datatables/dayjs.min.js",
+    # "dayjs/constant.js",
+    # "dayjs/en.js",
+    # "dayjs/utils.js",
+    # "dayjs/index.js"
 )
 
 simple_datatables_js = flask_assets.Bundle(
@@ -77,7 +77,7 @@ bundles = {
         # "js/setup.js",
         
         # Minified
-        # "js/simple-datatables.js",
+        "js/simple-datatables.js",
         'js/msgpack.min.js',
         "js/round-slider.min.js",
         'js/gif2.js',  # Johan Nordberg: http://jnordberg.github.io/gif.js/
@@ -86,7 +86,7 @@ bundles = {
         'js/pws.js', # persistent websocket https://github.com/porsager/pws
         'js/Dom.js',
         'js/pikaday.js',
-        simple_datatables_js,
+        # simple_datatables_js,
 
         # both
         Leaflet_js,
