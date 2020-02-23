@@ -39,6 +39,27 @@ DotLayer_js = flask_assets.Bundle(
     '../DotLayer.js'
 )
 
+
+day_js = flask_assets.Bundle(
+    # "simple-datatables/dayjs.min.js",
+    "dayjs/constant.js",
+    "dayjs/en.js",
+    "dayjs/utils.js",
+    "dayjs/index.js"
+)
+
+simple_datatables_js = flask_assets.Bundle(
+    day_js,
+    "simple-datatables/helpers.js",
+    "simple-datatables/rows.js",
+    "simple-datatables/columns.js",
+    "simple-datatables/table.js",
+    "simple-datatables/config.js",
+    "simple-datatables/date.js",
+    "simple-datatables/datatable.js"
+)
+
+
 # we bundle javascript and css dependencies to reduce client-side overhead
 bundles = {
     "dependencies_css": flask_assets.Bundle(
@@ -54,17 +75,19 @@ bundles = {
 
     "dependencies_js": flask_assets.Bundle(
         # "js/setup.js",
+        
         # Minified
-        'js/pws.min.js', # persistent websocket https://github.com/porsager/pws
+        # "js/simple-datatables.js",
         'js/msgpack.min.js',
         "js/round-slider.min.js",
-        "js/simple-datatables.js",
         'js/gif2.js',  # Johan Nordberg: http://jnordberg.github.io/gif.js/
 
         # unMinified
+        'js/pws.js', # persistent websocket https://github.com/porsager/pws
         'js/Dom.js',
         'js/pikaday.js',
-        
+        simple_datatables_js,
+
         # both
         Leaflet_js,
 
@@ -114,9 +137,10 @@ bundles = {
     ),
 
     "basic_table_js": flask_assets.Bundle(
-        'js/pws.min.js', # persistent websocket https://github.com/porsager/pws
+        'js/pws.js', # persistent websocket https://github.com/porsager/pws
         'js/msgpack.min.js',
-        "js/simple-datatables.js",
+        # "js/simple-datatables.js",
+        simple_datatables_js,
         'js/strava.js',
         'js/appUtil.js',
         'js/Dom.js',

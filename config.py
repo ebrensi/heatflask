@@ -226,7 +226,7 @@ class DevelopmentConfig(Config):
     # ASSETS_AUTO_BUILD = True
     
     # CLOSURE_COMPRESSOR_OPTIMIZATION = "advanced"
-    # CLOSURE_COMPRESSOR_OPTIMIZATION = "simple"
+    CLOSURE_COMPRESSOR_OPTIMIZATION = "simple"
     CLOSURE_EXTRA_ARGS = [
         # "--process_common_js_modules",
         # "--dependency_mode=STRICT"
