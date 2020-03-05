@@ -15,11 +15,12 @@ Leaflet_css = flask_assets.Bundle(
 
 Leaflet_js = flask_assets.Bundle(
     # Minified
-    'js/leaflet.js',
-    'js/leaflet-sidebar.min.js',
-    'js/download.min.js',
+    # 'js/leaflet.js',
 
     # unMinified
+    'js/leaflet-src.js',
+    'js/leaflet-sidebar.js',
+    "js/heatflaskTileLayer.js",
     'js/L.Control.fps.js',
     'js/L.Control.Watermark.js',
     'js/L.Control.Window.js',
@@ -32,6 +33,7 @@ Leaflet_js = flask_assets.Bundle(
 )
 
 DotLayer_js = flask_assets.Bundle(
+    'js/download.min.js',
     '../_DotLayer.js',
     "../DotLayer.WorkerPool.js",
     "../DotLayer.ViewBox.js",
@@ -78,29 +80,33 @@ bundles = {
         
         # Minified
         "js/simple-datatables.js",
-        'js/msgpack.min.js',
-        "js/round-slider.min.js",
+        # "js/round-slider.min.js",
+        # "js/round-slider.js",
         'js/gif2.js',  # Johan Nordberg: http://jnordberg.github.io/gif.js/
-
-        # unMinified
         'js/pws.js', # persistent websocket https://github.com/porsager/pws
-        'js/Dom.js',
         'js/pikaday.js',
-        # simple_datatables_js,
+        flask_assets.Bundle(
+            # unMinified
+            "js/msgpack.js",
+            'js/Dom.js',
+        
+            # simple_datatables_js,
 
-        # both
-        Leaflet_js,
+            # both
+            Leaflet_js,
 
-        # Heatflask-specific code
-        'js/BitSet.js',
-        'js/Codecs.js',
-        'js/MapUtil.js',
-        DotLayer_js,
+            # Heatflask-specific code
+            'js/BitSet.js',
+            'js/Codecs.js',
+            'js/MapUtil.js',
+            "js/idb-keyval-iife.js",
+            DotLayer_js,
 
-        'js/strava.js',
-        'js/appUtil.js',
-        '../heatflask.js',
-
+            'js/strava.js',
+            'js/appUtil.js',
+            '../heatflask.js',
+            # filters=["closure_js"]
+        ),
         filters=["closure_js"],
         output='gen/dependencies.js'
     ),
@@ -139,12 +145,12 @@ bundles = {
     "basic_table_js": flask_assets.Bundle(
         'js/pws.js', # persistent websocket https://github.com/porsager/pws
         'js/msgpack.min.js',
-        # "js/simple-datatables.js",
-        simple_datatables_js,
+        "js/simple-datatables.js",
+        # simple_datatables_js,
         'js/strava.js',
         'js/appUtil.js',
         'js/Dom.js',
-        filters=["closure_js"],
+        # filters=["closure_js"],
         output='gen/basic_table.js'
     )
 
