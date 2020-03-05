@@ -5,19 +5,6 @@ min_css = flask_assets.Bundle(
     filters='cssmin'
 )
 
-frappe_datatable_js = flask_assets.Bundle(
-    "frappe-datatable/Sortable.min.js",
-    "frappe-datatable/clusterize.min.js",
-    "frappe-datatable/frappe-datatable.min.js"
-)
-
-frappe_datatable_css = flask_assets.Bundle(
-    "frappe-datatable/clusterize.css",
-    # "frappe-datatable/frappe-datatable.css",
-    "frappe-datatable/frappe-datatable.min.css",
-    "frappe-datatable-dark.css"
-)
-
 Leaflet_css = flask_assets.Bundle(
     'css/leaflet.css',
     'css/leaflet-sidebar.min.css',
@@ -29,6 +16,7 @@ Leaflet_css = flask_assets.Bundle(
 Leaflet_js = flask_assets.Bundle(
     # Minified
     'js/leaflet.js',
+    "js/heatflaskTileLayer.js",
     'js/leaflet-sidebar.min.js',
     'js/download.min.js',
 
@@ -71,8 +59,6 @@ bundles = {
         'js/msgpack.min.js',
         "js/jquery-3.4.1.slim.min.js",
         # 'js/cash.min.js',  # cash.js is a minimal jquery substitute,
-        # 'js/zepto.min.js',
-        # 'js/cash_jquery_helper.js',
         'js/jquery.knob.min.js',  # Anthony Terrien
         'js/datatables.js',
         'js/gif2.js',  # Johan Nordberg: http://jnordberg.github.io/gif.js/
