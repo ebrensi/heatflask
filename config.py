@@ -223,12 +223,18 @@ class DevelopmentConfig(Config):
 
     # Flask-Assets settings
     ASSETS_DEBUG = "merge"
-    # ASSETS_AUTO_BUILD = True
+    # ASSETS_DEBUG = True
+    ASSETS_AUTO_BUILD = True
     
-    # CLOSURE_COMPRESSOR_OPTIMIZATION = "advanced"
-    CLOSURE_COMPRESSOR_OPTIMIZATION = "simple"
+    CLOSURE_COMPRESSOR_OPTIMIZATION = "advanced"
+    # CLOSURE_COMPRESSOR_OPTIMIZATION = "simple"
     CLOSURE_EXTRA_ARGS = [
+        "--language_in", "ECMASCRIPT_2019",
+        "--language_out", "ECMASCRIPT_2016",
+        "--warning_level", "DEFAULT",
         # "--process_common_js_modules",
+        "--strict_mode_input",
+
         # "--dependency_mode=STRICT"
         # "--debug"
     ]

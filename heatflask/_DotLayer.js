@@ -17,7 +17,7 @@ const DotLayer = {
     target_fps: 25,
 
     options: {
-        debug: false,
+        debug: true,
         numWorkers: 0,
         startPaused: false,
         showPaths: true,

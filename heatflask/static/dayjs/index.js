@@ -50,7 +50,7 @@ Utils.l = parseLocale
 Utils.i = isDayjs
 Utils.w = wrapper
 
-const parseDate = (cfg) => {
+const parsedate2 = (cfg) => {
   const { date, utc } = cfg
   if (date === null) return new Date(NaN) // null is invalid
   if (Utils.u(date)) return new Date() // today
@@ -76,7 +76,7 @@ class Dayjs {
   }
 
   parse(cfg) {
-    this.$d = parseDate(cfg)
+    this.$d = parsedate2(cfg)
     this.init()
   }
 

@@ -35,28 +35,29 @@
             paused: ONLOAD_PARAMS.start_paused,
             items: new Map(),
             currentBaseLayer: null
-          },
+          };
 
-          // the leaflet map
-          map = L.map('map', {
+    // debugger;
+
+    const map = L.map('map', {
             center: ONLOAD_PARAMS.map_center,
             zoom: ONLOAD_PARAMS.map_zoom,
             // layers : [ default_baseLayer ],
             preferCanvas: true,
             zoomAnimation: false
-          }),
+          });
 
           // map controls
-          controls = {
+    const controls = {
             _sidebarControl: L.control.sidebar('sidebar').addTo(map),
             _zoomControl: map.zoomControl.setPosition('bottomright'),
             _stravaLogo: L.control.watermark({ image: "static/pbs4.png", width: '20%', opacity:'0.5', position: 'bottomleft' }).addTo(map),
             _heatflaskLogo: L.control.watermark({image: "static/logo.png", opacity: '0.5', width: '20%', position: 'bottomleft' }).addTo(map),
             areaSelect: L.areaSelect({width:200, height:200})  
-          },
+          };
 
           // the DotLayer
-          dotLayer = L.dotLayer({
+    const dotLayer = L.dotLayer({
             startPaused: appState.paused,
             dotWorkerUrl: DOTLAYER_WORKER_URL,
             gifWorkerUrl: GIFJS_WORKER_URL
@@ -67,38 +68,37 @@
     // baselayers IIFE
     (() => {
         const map_providers = ONLOAD_PARAMS.map_providers,
-              baseLayers = {"None": L.tileLayer("")};
+              baseLayers = {"None": L.tileLayer("", {useCache: false})};
         let default_baseLayer = baseLayers["None"];
-            
-        if (!OFFLINE) {
-            const online_baseLayers = {
-                "MapBox.Dark": L.tileLayer.provider('MapBox', {
-                    id: 'mapbox.dark',
-                    accessToken: MAPBOX_ACCESS_TOKEN
-                }),
-                "MapBox.Streets": L.tileLayer.provider('MapBox', {
-                    id: 'mapbox.streets',
-                    accessToken: MAPBOX_ACCESS_TOKEN
-                }),
-                "MapBox.Streets-Basic": L.tileLayer.provider('MapBox', {
-                    id: 'mapbox.streets-basic',
-                    accessToken: MAPBOX_ACCESS_TOKEN
-                }),
-                "MapBox.Satellite": L.tileLayer.provider('MapBox', {
-                    id: 'mapbox.satellite',
-                    accessToken: MAPBOX_ACCESS_TOKEN
-                }),
 
+        if (!OFFLINE) {
+
+            const mapBox_layernames = [
+                "MapBox.Dark",
+                "MapBox.Streets", 
+                "MapBox.Streets-Basic",
+                "MapBox.Satellite"
+            ];
+
+            const online_baseLayers = {};
+
+            for (const name of mapBox_layernames) {
+                baseLayers[name] = L.tileLayer.provider('MapBox', {
+                    id: name.toLowerCase(),
+                    accessToken: MAPBOX_ACCESS_TOKEN
+                })
+            }
+
+            Object.assign(baseLayers, {
                 "Esri.WorldImagery": L.tileLayer.provider("Esri.WorldImagery"),
                 "Esri.NatGeoWorldMap": L.tileLayer.provider("Esri.NatGeoWorldMap"),
                 "Stamen.Terrain": L.tileLayer.provider("Stamen.Terrain"),
                 "Stamen.TonerLite": L.tileLayer.provider("Stamen.TonerLite"),
                 "CartoDB.Positron": L.tileLayer.provider("CartoDB.Positron"),
                 "CartoDB.DarkMatter": L.tileLayer.provider("CartoDB.DarkMatter")
-            };
+            });
 
-            Object.assign(baseLayers, online_baseLayers);
-
+            
             if (map_providers.length) {
                 for (var i = 0; i < map_providers.length; i++) {
                     let provider = map_providers[i];
@@ -130,9 +130,7 @@
             appState.currentBaseLayer = e.layer;
             updateState();
         });
-
-        // map.getPane('tilePane').style.opacity = 0.8;
-
+        
     })();
 
     // set animation controls IIFE
@@ -553,7 +551,10 @@
           data,
           columns: [
             { select: 0, type: "string", render: id => items.get(+id).tsLoc.toLocaleString() },
-            { select: 1, type: "string", render: id => items.get(+id).type },
+            { select: 1, type: "string", render: id => {
+                const A = items.get(+id);
+                return `<p style="color:${A.pathColor}">${A.type}</p>`;
+            }},
             { select: 2, type: "number", render: id => items.get(+id).total_distance },
             { select: 3, type: "number", render: id => hhmmss(items.get(+id).elapsed_time) },
             { select: 4, type: "string", render: id => items.get(+id).name },
@@ -581,61 +582,61 @@
 
 
     function handle_table_selections( e, dt, type, indexes ) {
-        let redraw = false;
-        const mapBounds = map.getBounds(),
-              selections = {};
+        // let redraw = false;
+        // const mapBounds = map.getBounds(),
+        //       selections = {};
 
-        if ( type === 'row' ) {
-            const rows = atable.rows( indexes ).data();
-             for ( const A of Object.values(rows) ) {
-                if (!A.id)
-                    break;
-                A.selected = !A.selected;
-                selections[A.id] = A.selected;
-                if (!redraw)
-                    redraw |= mapBounds.overlaps(A.bounds);
-            }
-        }
+        // if ( type === 'row' ) {
+        //     const rows = atable.rows( indexes ).data();
+        //      for ( const A of Object.values(rows) ) {
+        //         if (!A.id)
+        //             break;
+        //         A.selected = !A.selected;
+        //         selections[A.id] = A.selected;
+        //         if (!redraw)
+        //             redraw |= mapBounds.overlaps(A.bounds);
+        //     }
+        // }
 
-        if ( Dom.prop("#zoom-to-selection", 'checked') )
-            zoomToSelectedPaths();
+        // if ( Dom.prop("#zoom-to-selection", 'checked') )
+        //     zoomToSelectedPaths();
 
-        dotLayer.setItemSelect(selections);
+        // dotLayer.setItemSelect(selections);
     }
 
     function handle_path_selections(ids) {
-        if (!ids) return;
+        // if (!ids) return;
 
-        const toSelect = [],
-              toDeSelect = [];
+        // const toSelect = [],
+        //       toDeSelect = [];
 
-        let count = 0,
-            id;
+        // let count = 0,
+        //     id;
 
-        for (id of ids) {
-            const A = appState.items.get(id),
-                  tag = `#${A.id}`;
-            if (A.selected)
-                toDeSelect.push(tag);
-            else 
-                toSelect.push(tag);
+        // for (id of ids) {
+        //     const A = appState.items.get(id),
+        //           tag = `#${A.id}`;
+        //     if (A.selected)
+        //         toDeSelect.push(tag);
+        //     else 
+        //         toSelect.push(tag);
 
-            count++;
-        }
+        //     count++;
+        // }
 
-        // simulate table (de)selections
-        // note that table selection events get triggered
-        // either way
-        atable.rows(toSelect).select();
-        atable.rows(toDeSelect).deselect();
+        // // simulate table (de)selections
+        // // note that table selection events get triggered
+        // // either way
+        // // atable.rows(toSelect).select();
+        // // atable.rows(toDeSelect).deselect();
 
-        if (toSelect.length == 1) {
-            let row = $(toSelect[0]);
-            tableScroller.scrollTop(row.prop('offsetTop') - tableScroller.height()/2);
-        }
+        // if (toSelect.length == 1) {
+        //     let row = $(toSelect[0]);
+        //     tableScroller.scrollTop(row.prop('offsetTop') - tableScroller.height()/2);
+        // }
 
-        if (count === 1)
-            return id
+        // if (count === 1)
+        //     return id
     }
 
 
@@ -754,11 +755,11 @@
         if (ONLOAD_PARAMS.shadows)
             Dom.set("#shadows", "checked");
 
-        Dom.set("#shadowHeight", dotLayer.options.dotShadows.y);
-        Dom.trigger("#shadowHeight", "change");
+        // Dom.set("#shadowHeight", dotLayer.options.dotShadows.y);
+        // Dom.trigger("#shadowHeight", "change");
 
-        Dom.set("#shadowBlur", dotLayer.options.dotShadows.blur);
-        Dom.trigger("#shadowHeight","change");
+        // Dom.set("#shadowBlur", dotLayer.options.dotShadows.blur);
+        // Dom.trigger("#shadowHeight","change");
 
         Dom.prop("#shadows", "checked", dotLayer.options.dotShadows.enabled);
         
