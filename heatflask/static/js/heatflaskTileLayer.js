@@ -219,7 +219,7 @@ L.TileLayer.include({
             // Online, not cached, fetch the tile
             if (this.options.saveToCache) {
                 // console.log('fetching tile', tileUrl);
-                t0 = performance.now();
+                // t0 = performance.now();
 
                 fetch(tileUrl)
                     .then( response => response.blob() )
