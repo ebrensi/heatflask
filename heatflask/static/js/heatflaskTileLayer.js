@@ -43,7 +43,6 @@ L.TileLayer.include({
 
     // returns the unique and compact lookup key for this tile
     onAdd: function(map) {
-        debugger;
         if (this.options.useCache) {
             this._db = new idbKeyval.Store(this.options.dbName, this.name);
         }
