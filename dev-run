@@ -6,7 +6,7 @@
 source .env
 
 # export GUNICORN_CMD_ARGS="--reload --worker-class flask_sockets.worker --log-level=debug --certfile=cert.pem --keyfile=key.pem --bind '127.0.0.1:5000'"
-GUNICORN_CMD_ARGS="--reload --worker-class flask_sockets.worker --log-level=debug --bind '127.0.0.1:5000'"
+GUNICORN_CMD_ARGS="--reload --worker-class flask_sockets.worker --log-level=debug --bind '0.0.0.0:5000'"
 
 FILE=/usr/bin/heroku
 
