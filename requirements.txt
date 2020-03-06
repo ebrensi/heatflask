@@ -17,6 +17,7 @@ flask-sockets
 flask-compress
 flask-analytics
 flask-sqlalchemy==2.4.1
+flask-limiter
 
 cssmin
 base36

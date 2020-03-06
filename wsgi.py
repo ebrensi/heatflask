@@ -4,7 +4,7 @@
 from datetime import timedelta
 import logging
 
-from heatflask import create_app
+from heatflask import create_app, limiter
 
 app = create_app()
 
@@ -14,6 +14,8 @@ gunicorn_logger = logging.getLogger('gunicorn.error')
 handlers = gunicorn_logger.handlers or log.handlers
 
 for handler in handlers:
+    limiter.logger.addHandler(handler)
+    
     formatter = handler.setFormatter(logging.Formatter(
         '%(process)d %(levelname).1s %(message)s'
     ))

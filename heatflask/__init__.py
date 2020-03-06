@@ -16,6 +16,9 @@ from flask_sslify import SSLify
 from flask_sockets import Sockets
 from flask_assets import Environment
 
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+
 # Globally accessible libraries
 db_sql = SQLAlchemy()
 redis = FlaskRedis()
@@ -23,6 +26,7 @@ mongo = PyMongo()
 login_manager = LoginManager()
 sockets = Sockets()
 assets = Environment()
+limiter = Limiter(key_func=get_remote_address)
 # talisman = Talisman()
 
 # Global variables
@@ -33,12 +37,6 @@ def create_app():
     app = Flask(__name__)
 
     app.config.from_object(os.environ['APP_SETTINGS'])
-
-    # ensure the instance folder exists
-    # try:
-    #     os.makedirs(app.instance_path)
-    # except OSError:
-    #     pass
 
     with app.app_context():
 
@@ -57,6 +55,8 @@ def create_app():
         login_manager.init_app(app)
         sockets.init_app(app)
         assets.init_app(app)
+        limiter.init_app(app)
+
         # talisman.init_app(
         #     app,
         #     content_security_policy=app.config["CONTENT_SECURITY_POLICY"]
