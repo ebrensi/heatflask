@@ -111,14 +111,6 @@ class Config(object):
     FROM_DOMAIN = "heatflask.herokuapp.com"
     TO_DOMAIN = "www.heatflask.com"
 
-    #  Rate limits via Flask-Limiter to mitgate DOS attacks
-    #  and other strange bursts of requests
-    RATELIMIT_DEFAULT = "200/day;50/hour;1/second"
-    RATELIMIT_STORAGE_URL = REDIS_URL
-    RATELIMIT_STRATEGY = "fixed-window-elastic-expiry"
-    RATELIMIT_IN_MEMORY_FALLBACK_ENABLED = True
-
-
     # This is the spec for parsing urls.  The pattern is
     #  field_name: ([query_string options], default-value) 
     URL_QUERY_SPEC = dict(
@@ -206,7 +198,12 @@ class StagingConfig(Config):
     MONGO_URI = os.environ.get("ATLAS_MONGODB_URI")
     REDIS_URL = os.environ.get("REDISGREEN_URL")
 
-
+    #  Rate limits via Flask-Limiter to mitgate DOS attacks
+    #  and other strange bursts of requests
+    RATELIMIT_DEFAULT = "200/day;50/hour;1/second"
+    RATELIMIT_STORAGE_URL = REDIS_URL
+    RATELIMIT_STRATEGY = "fixed-window-elastic-expiry"
+    RATELIMIT_IN_MEMORY_FALLBACK_ENABLED = True
 
 class DevelopmentConfig(Config):
     """
