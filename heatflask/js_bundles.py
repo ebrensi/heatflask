@@ -66,6 +66,7 @@ bundles = {
         # unMinified
         'js/Dom.js',
         'js/pikaday.js',
+        "js/idb-keyval-iife.js",
         
         # both
         Leaflet_js,
