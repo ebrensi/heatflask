@@ -202,7 +202,7 @@ L.TileLayer.include({
     },
 
     _tileOnLoad: function(done, tile) {
-        // URL.revokeObjectURL(tile.src);
+        URL.revokeObjectURL(tile.src);
         done(null, tile);
     },
 
