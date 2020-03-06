@@ -82,9 +82,11 @@ bundles = {
         "js/simple-datatables.js",
         # "js/round-slider.min.js",
         # "js/round-slider.js",
+
         'js/gif2.js',  # Johan Nordberg: http://jnordberg.github.io/gif.js/
         'js/pws.js', # persistent websocket https://github.com/porsager/pws
         'js/pikaday.js',
+
         flask_assets.Bundle(
             # unMinified
             "js/msgpack.js",

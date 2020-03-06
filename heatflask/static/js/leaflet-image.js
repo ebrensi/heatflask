@@ -100,7 +100,7 @@ module.exports = function leafletImage(map, callback) {
             bounds.max.divideBy(tileSize)._floor()),
             tiles = [],
             j, i,
-            tileQueue = new queue(1);
+            tileQueue = new queue(5);
 
         for (j = tileBounds.min.y; j <= tileBounds.max.y; j++) {
             for (i = tileBounds.min.x; i <= tileBounds.max.x; i++) {
@@ -124,8 +124,8 @@ module.exports = function leafletImage(map, callback) {
                     var tile = layer._tiles[tilePoint.x + ':' + tilePoint.y];
                     tileQueue.defer(canvasTile, tile, tilePos, tileSize);
                 } else {
-                    var url = addCacheString(layer.getTileUrl(tilePoint));
-                    tileQueue.defer(loadTile, url, tilePos, tileSize);
+                    // var url = addCacheString(layer.getTileUrl(tilePoint));
+                    tileQueue.defer(loadCachedTile, tilePoint, tilePos, tileSize);
                 }
             }
         });
@@ -138,6 +138,19 @@ module.exports = function leafletImage(map, callback) {
                 pos: tilePos,
                 size: tileSize
             });
+        }
+
+        // this mod takes advantage of tile caching in heatflaskTileLayer
+        function loadCachedTile(tilePoint, tilePos, tileSize, callback) {
+            const done =  function(dummy, tile) {
+                // debugger;
+                callback(null, {
+                    img: tile,
+                    pos: tilePos,
+                    size: tileSize
+                })
+            }
+            layer.createTile(tilePoint, done);
         }
 
         function loadTile(url, tilePos, tileSize, callback) {

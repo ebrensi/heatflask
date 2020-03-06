@@ -32,18 +32,10 @@ L.TileLayer.prototype.options.dbName = "tile-storage";
 
 L.TileLayer.prototype.options.updateInterval = 0;
 
-// L.TileLayer.addInitHook(function() {
-//     debugger;
-//     if (this.options.useCache)
-//         this._db = new idbKeyval.Store(this.options.dbName, this.name);
-// });
-
-
 L.TileLayer.include({
 
     // returns the unique and compact lookup key for this tile
     onAdd: function(map) {
-        // debugger;
         if (this.options.useCache) {
             this._db = new idbKeyval.Store(this.options.dbName, this.name);
         }
@@ -202,7 +194,7 @@ L.TileLayer.include({
     },
 
     _tileOnLoad: function(done, tile) {
-        // URL.revokeObjectURL(tile.src);
+        URL.revokeObjectURL(tile.src);
         done(null, tile);
     },
 

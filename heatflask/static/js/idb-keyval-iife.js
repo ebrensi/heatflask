@@ -18,7 +18,7 @@ class Store {
             openreq.onsuccess = onsuccess;
             
             function onupgradeneeded(e) {
-                console.log(`"${dbName}" onupgradeneeded: adding "${storeName}"`, e);
+                // console.log(`"${dbName}" onupgradeneeded: adding "${storeName}"`, e);
                 db = e.target.result;
                 if (keyPath === undefined)
                     db.createObjectStore(storeName);
@@ -32,7 +32,7 @@ class Store {
             }
 
             function onsuccess(event) {
-                console.log(`"${dbName}" success`, event)
+                // console.log(`"${dbName}" success`, event)
                 db = event.target.result;
                 
                 db.onversionchange = onversionchange;
@@ -41,13 +41,13 @@ class Store {
                     resolve(db);
                 
                 else {
-                    console.log(`"${storeName}" not in "${dbName}". attempting upgrade...`)
+                    // console.log(`"${storeName}" not in "${dbName}". attempting upgrade...`)
                     upgrade();   
                 }
             }
 
             function onversionchange() {
-                console.log(`"${dbName}" versionchange`);
+                // console.log(`"${dbName}" versionchange`);
                 upgrade();
             }
 
