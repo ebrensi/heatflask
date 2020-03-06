@@ -710,6 +710,8 @@ function heatflask() {
               T = dotLayer.periodInSecs().toFixed(2);
         Dom.html("#period-value", T)
         Dom.trigger("#period-value", "change");
+
+        updateState();
     }
 
 
@@ -933,7 +935,7 @@ function heatflask() {
         window.open(ACTIVITY_LIST_URL, "_blank")
     }
 
-    function updateState(){
+    function updateState(event){
         let  params = {},
              type = Dom.get("#select_type"),
              num = Dom.get("#select_num"),
@@ -973,13 +975,29 @@ function heatflask() {
                 params.zoom = zoom;
             }
         }
-
+        
         if (dotLayer) {
             ds = dotLayer.getDotSettings();
 
             params["c1"] = Math.round(ds["C1"]);
             params["c2"] = Math.round(ds["C2"]);
             params["sz"] = Math.round(ds["dotScale"]);
+
+            // Enable capture if period is less than CAPTURE_DURATION_MAX
+            const cycleDuration = dotLayer.periodInSecs().toFixed(2),
+                  captureEnabled = controls.captureControl.enabled;
+            
+            Dom.html("#period-value", cycleDuration);
+            
+            if (cycleDuration <= CAPTURE_DURATION_MAX) {
+                if (!captureEnabled) {
+                    controls.captureControl.addTo(map);
+                    controls.captureControl.enabled = true;
+                }
+            } else if (captureEnabled) {
+                controls.captureControl.removeFrom(map);
+                controls.captureControl.enabled = false;
+            }
         }
 
         if (appState.currentBaseLayer.name)
@@ -1091,11 +1109,7 @@ function heatflask() {
     const date1picker = makeDatePicker('#date1'),
           date2picker = makeDatePicker('#date2');
 
-    map.on('moveend', function(e) {
-        if (!appState.autozoom) {
-            updateState();
-        }
-    });
+    map.on('moveend', updateState);
 
     Dom.prop("#autozoom", "change", updateState);
 
