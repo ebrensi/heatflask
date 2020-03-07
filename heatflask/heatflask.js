@@ -1115,9 +1115,11 @@
 
               newURL = `${USER_ID}?${paramsString}`;
 
-        window.history.pushState("", "", newURL);
-
-        Dom.set(".current-url", newURL);
+        if (appState.url != newURL) {
+            // console.log(`pushing: ${newURL}`);
+            appState.url = newURL;
+            window.history.replaceState("", "", newURL);    
+        }
     }
 
 
