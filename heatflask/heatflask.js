@@ -46,7 +46,7 @@ function heatflask() {
     // baselayers IIFE
     (() => {
         const map_providers = ONLOAD_PARAMS.map_providers,
-              baseLayers = {"None": L.tileLayer("")};
+              baseLayers = {"None": L.tileLayer("", {useCache: false})};
         let default_baseLayer = baseLayers["None"];
             
         if (!OFFLINE) {
@@ -96,8 +96,17 @@ function heatflask() {
             }
         }
 
-        for (const name in baseLayers)
-            baseLayers[name].name = name;
+        for (const name in baseLayers) {
+            const layer = baseLayers[name],
+                  maxZoom = layer.options.maxZoom;
+            layer.name = name;
+            
+            if (maxZoom) {
+                layer.options.maxNativeZoom = maxZoom;
+                layer.options.maxZoom = 22;
+                layer.options.minZoom = 3;
+            }
+        }
 
         controls._layerControl = L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map)
 
@@ -109,8 +118,6 @@ function heatflask() {
             appState.currentBaseLayer = e.layer;
             updateState();
         });
-
-        // map.getPane('tilePane').style.opacity = 0.8;
 
     })();
 
