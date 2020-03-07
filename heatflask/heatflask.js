@@ -117,8 +117,17 @@
             }
         }
 
-        for (const name in baseLayers)
-            baseLayers[name].name = name;
+        for (const name in baseLayers) {
+            const layer = baseLayers[name],
+                  maxZoom = layer.options.maxZoom;
+            layer.name = name;
+            
+            if (maxZoom) {
+                layer.options.maxNativeZoom = maxZoom;
+                layer.options.maxZoom = 22;
+                layer.options.minZoom = 3;
+            }
+        }
 
         controls._layerControl = L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map)
 
