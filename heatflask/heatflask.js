@@ -23,8 +23,6 @@
           ACTIVITY_LIST_URL = R["ACTIVITY_LIST_URL"],
           BEACON_HANDLER_URL = R["BEACON_HANDLER_URL"];
     
-    // debugger;
-
     const DIST_UNIT = (MEASURMENT_PREFERENCE=="feet")? 1609.34 : 1000.0,
           DIST_LABEL = (MEASURMENT_PREFERENCE=="feet")?  "mi" : "km",
           SPEED_SCALE = 5.0,
@@ -36,8 +34,6 @@
             items: new Map(),
             currentBaseLayer: null
           };
-
-    // debugger;
 
     const map = L.map('map', {
             center: ONLOAD_PARAMS.map_center,
@@ -139,7 +135,6 @@
             appState.currentBaseLayer = e.layer;
             updateState();
         });
-        
     })();
 
     // set animation controls IIFE
