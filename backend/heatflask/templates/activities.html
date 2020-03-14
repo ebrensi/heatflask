@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>{{ config["APP_NAME"] }} - {{ (user.username or user.id) }} - Activities List</title>
-    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="shortcut icon" href="static/images/favicon.ico">
     <meta name="robots" content="noindex">
 
     {% assets "basic_table_css" %}
@@ -24,7 +24,7 @@
           USER_ID = "{{ user.id }}",
           DIST_UNIT = (MEASURMENT_PREFERENCE=="feet")? 1609.34 : 1000.0,
           DIST_LABEL = (MEASURMENT_PREFERENCE=="feet")?  "mi" : "km",
-          STRAVA_BUTTON = img("{{ url_for('static',filename='strava_button.png') }}"),
+          STRAVA_BUTTON = img("static/strava_button.png"),
           USER_BASE_URL = "{{url_for('main',username=user.id)}}",
           WEBSOCKET_URL = WS_SCHEME+window.location.host+"/data_socket",
           BEACON_HANDLER_URL = "{{ url_for('beacon_handler') }}",
@@ -37,10 +37,13 @@
   <h4>Activities list</h4>
 
   <p>
-    TTL is "Time To Live" for index entries.  Index entries expire if not accessed for a while, in order to save memory.  
-    <button type="button" id="rebuild-button" class="btn btn-b btn-sm">Re-build index</button>  
+    TTL is "Time To Live" for index entries.  Index entries expire if
+    not accessed for a while, in order to save memory.
+    <button type="button" id="rebuild-button"
+            class="btn btn-b btn-sm">Re-build index
+    </button>
   </p>
-  
+
   <div id="status">
     <span id="status_msg"></span>
     <progress id="progress"></progress>
@@ -71,8 +74,11 @@
     } else {
       WS_SCHEME = "ws://";
     };
-    
-    window.history.pushState({}, "", window.location.origin + window.location.pathname);
+
+    window.history.pushState(
+      {}, "",
+      window.location.origin + window.location.pathname
+    );
 
 
     function td(text, sortable=null) {
@@ -110,7 +116,7 @@
       let minutes = Math.floor(sec / 60) % 60;
       sec -= minutes * 60;
 
-      return `${days.pad(2)}:${hours.pad(2)}:${minutes.pad(2)}` 
+      return `${days.pad(2)}:${hours.pad(2)}:${minutes.pad(2)}`
     }
 
 
@@ -119,7 +125,7 @@
         count_DOM_element = document.querySelector("#count"),
         status_element = document.querySelector("#status_msg"),
         table_body = $('#activities_list tbody'),
-        wskey, 
+        wskey,
         sock = new WebSocket(WEBSOCKET_URL);
     sock.binaryType = 'arraybuffer';
 
@@ -130,19 +136,21 @@
         }
         navigator.sendBeacon(BEACON_HANDLER_URL, CLIENT_ID);
       }
- 
+
       if (sock && sock.readyState == 1) {
             sock.send(JSON.stringify({close: 1}));
             sock.close()
       }
-      
+
     });
 
-    
+
 
     status_element.innerText = "Retrieving Activity Index...";
-    
-    document.querySelector("#dist").innerHtml = `<i class="fa fa-arrows-h" aria-hidden="true"></i> (${DIST_LABEL})`;
+
+    document
+    .querySelector("#dist")
+    .innerHtml = `<i class="fa fa-arrows-h" aria-hidden="true"></i> (${DIST_LABEL})`;
 
     sock.onopen = function(event) {
         console.log("socket open: ", event);
@@ -193,7 +201,7 @@
         wskey = A.wskey;
         console.log("got wskey "+A.wskey)
       }
-      
+
       if (!A._id) {
         return
       }
@@ -232,7 +240,7 @@
         }
         return false;
     };
-  
+
   </script>
  </body>
 </html>

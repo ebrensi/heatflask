@@ -1,5 +1,5 @@
 /*
- *  ViewBox represents the the rectangle in which everything 
+ *  ViewBox represents the the rectangle in which everything
  *  we are doing happens
  *
  */
@@ -73,23 +73,23 @@ DotLayer.ViewBox = {
         // update which items are in the current view
         for (let i=0, len=allItems.length; i<len; i++) {
             if ( this.overlaps(allItems[i].bounds) )
-                currentInView.add(i); 
+                currentInView.add(i);
         }
-        
+
         // update items that have changed since last time
         const changed = inView.last.change(inView.current);
         changed.forEach(i => {
             const A = allItems[i],
                   emph = !!A.selected;
             let pgroup = sets.colorGroups.path,
-                dgroup = sets.colorGroups.dot; 
-            
+                dgroup = sets.colorGroups.dot;
+
             if ( !( emph in pgroup) )
                 pgroup[emph] = {};
             pgroup = pgroup[emph];
-            
+
             if ( !( emph in dgroup) )
-                dgroup[emph] = {};                
+                dgroup[emph] = {};
             dgroup = dgroup[emph];
 
             // update pathColorGroup
@@ -181,10 +181,10 @@ DotLayer.ViewBox = {
             const topLeft = m.containerPointToLayerPoint( [ 0, 0 ] ),
                    setPosition = L.DomUtil.setPosition,
                    canvases = this._canvases;
-            
+
             for (let i=0, len=canvases.length; i<len; i++)
                 setPosition( canvases[i], topLeft );
-            
+
             const pxOrigin = m.getPixelOrigin(),
                   mapPanePos = m._getMapPanePos();
             this.pxOffset = mapPanePos.subtract(pxOrigin);
@@ -221,7 +221,7 @@ DotLayer.ViewBox = {
 
         const sw = llBounds._southWest,
               ne = llBounds._northEast;
-        
+
         pxObj[0] = sw.lat;  // xmin
         pxObj[1] = sw.lng;  // ymax
         pxObj[2] = ne.lat;  // xmax
@@ -243,7 +243,7 @@ DotLayer.ViewBox = {
         const mb = this.pxBounds,
               x = point[0],
               y = point[1],
-              xmin = mb[0], xmax = mb[2], 
+              xmin = mb[0], xmax = mb[2],
               ymin = mb[3], ymax = mb[1];
 
         return (xmin <= x) && (x <= xmax) &&
@@ -252,7 +252,7 @@ DotLayer.ViewBox = {
 
     drawPxBounds: function(ctx, pxBounds) {
         const b = pxBounds || this.pxBounds,
-              xmin = b[0], xmax = b[2], 
+              xmin = b[0], xmax = b[2],
               ymin = b[3], ymax = b[1],
               transform = this.px2Container(),
 

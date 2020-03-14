@@ -73,7 +73,7 @@ def admin_or_self_required(f):
 
         if current_user.is_admin():
             return f(*args, **kwargs)
-        
+
         user_identifier = request.view_args.get("username")
 
         if user_identifier in [current_user.username, str(current_user.id)]:
@@ -99,7 +99,7 @@ def log_request_event(f):
                 cuid=current_user.id,
                 profile=current_user.profile
             ))
-        
+
         # If the user is anonymous or a regular user, we log the event
         EventLogger.log_request(request, **event)
         return f(*args, **kwargs)
@@ -109,7 +109,7 @@ def log_request_event(f):
 @app.before_request
 def redirect_to_new_domain():
     urlparts = urlparse(request.url)
-    
+
     # Don't redirect calls to /webhook _callback.
     #  They cause an error for some reason
     if urlparts.path == '/webhook_callback':
@@ -122,45 +122,51 @@ def redirect_to_new_domain():
     urlparts_list = list(urlparts)
 
     changed = False
-    
+
     if urlparts.netloc == app.config["FROM_DOMAIN"]:
         urlparts_list[1] = app.config["TO_DOMAIN"]
         changed = True
-    
+
     if changed:
         new_url = urlunparse(urlparts_list)
         # log.debug("request to {}".format(request.url))
         # log.debug("redirected to %s", new_url)
 
         return redirect(new_url, code=301)
-
     return
 
 #  ------------- Serve some static files -----------------------------
 #  TODO: There might be a better way to do this.
+IMAGE_PATH = os.path.join(app.root_path, 'static/images')
+FONTS_PATH = os.path.join(app.root_path, 'static/fonts')
+STATIC_PATH = os.path.join(app.root_path, 'static')
+
+def static_file_url(filename):
+    return send_from_directory(STATIC_PATH, filename)
+
+def image_url(img_filename):
+    return send_from_directory(IMAGE_PATH, img_filename)
+
 @app.route('/favicon.ico')
 def favicon():
-    return send_from_directory(
-        os.path.join(app.root_path, 'static'),
-        'favicon.ico'
-    )
+    return image_url('favicon.ico')
 
+@app.route('/fonts/<filename>')
+def font(filename):
+    return send_from_directory(FONTS_PATH, filename)
+
+@app.route('/images/<filename>')
+def image(filename):
+    return send_from_directory(IMAGE_PATH, filename)
 
 @app.route('/avatar/athlete/medium.png')
 def anon_photo():
-    return send_from_directory(
-        os.path.join(app.root_path, 'static'),
-        'anon-photo.jpg'
-    )
-
+    return image_url('anon-photo.jpg')
 
 @app.route('/apple-touch-icon')
 @app.route('/logo.png')
 def touch():
-    return send_from_directory(
-        os.path.join(app.root_path, 'static'),
-        'logo.png'
-    )
+    return image_url('logo.png')
 
 
 @app.route("/robots.txt")
@@ -170,10 +176,7 @@ def robots_txt():
         cuid="bot",
         msg=request.user_agent.string
     )
-    return send_from_directory(
-        os.path.join(app.root_path, 'static'),
-        'robots.txt'
-    )
+    return static_file_url("robots.txt")
 
 
 # -----------------------------------------------------------------------------
@@ -235,30 +238,30 @@ def auth_callback():
             client_id=app.config["STRAVA_CLIENT_ID"],
             client_secret=app.config["STRAVA_CLIENT_SECRET"]
         )
-        
+
         client = stravalib.Client()
-        
+
         try:
             access_info = client.exchange_code_for_token(**args)
-            # access_info is a dict containing the access_token, 
+            # access_info is a dict containing the access_token,
             #  date of expire, and a refresh token
             user_data = Users.strava_user_data(
                 access_info=access_info
             )
-            
+
             assert user_data
-            
+
             new_user = "" if Users.get(user_data["id"]) else " NEW USER"
-            
+
             user = Users.add_or_update(**user_data)
-            
+
             assert user
 
         except Exception:
             log.exception("authorization error")
             flash("Authorization Error: {}".format(datetime.utcnow()))
             return redirect(state)
-        
+
         # remember=True, for persistent login.
         login_user(user, remember=True)
 
@@ -331,13 +334,13 @@ def main(username):
     #
     # note: 'current_user' is the user that is currently logged in.
     #       'user' is the user we are displaying data for.
-    
+
     user = Users.get(username)
     if not user:
         flash("user '{}' is not registered with heatflask"
               .format(username))
         return redirect(url_for('splash'))
-    
+
     try:
         #  Catch any registered users that still have the old access_token
         json.loads(user.access_token)
@@ -374,7 +377,7 @@ def main(username):
             if option in request.args:
                 query[field] = request.args[option]
                 break
-            
+
     # log.debug("received query %s", request.args)
 
     # Here we defal with special cases
@@ -407,7 +410,7 @@ def main(username):
             })
 
         EventLogger.new_event(**event)
-    
+
     # log.debug("created query: %s", query)
 
     return render_template(
@@ -428,13 +431,13 @@ def activities(username):
             user.delete_index()
         except Exception:
             log.exception("error deleting index for {}".format(user))
-    
+
     # Assign an id to this web client in order to prevent
     #  websocket access from unidentified users
     ip = Utility.ip_address(request)
     web_client_id = "HA:{}:{}".format(ip, int(time.time()))
     log.debug("%s OPEN", web_client_id)
-    
+
     return render_template(
         "activities.html",
         user=user,
@@ -477,7 +480,7 @@ def data_socket(ws):
         obj = wsclient.receiveobj()
         if not obj:
             continue
-       
+
         if "close" in obj:
             break
 
@@ -488,7 +491,7 @@ def data_socket(ws):
 
             if "client_id" in query:
                 wsclient.client_id = query.pop("client_id")
-            
+
             query_result = Activities.query(query)
             wsclient.send_from(query_result)
 
@@ -513,7 +516,7 @@ def demos(demo_key):
     demos = app.config.get("DEMOS")
     if not demos:
         return "No Demos defined"
-    
+
     params = demos.get(demo_key)
     if not params:
         return 'demo "{}" does not exist'.format(demo_key)
@@ -634,7 +637,7 @@ def users_update():
     delete = request.args.get("delete")
     update = request.args.get("update")
     days = request.args.get("days")
-    
+
     if days:
         try:
             days = int(days)
@@ -696,7 +699,7 @@ def app_init():
 @app.route("/beacon_handler", methods=["POST"])
 def beacon_handler():
     key = str(request.data, "utf-8")
-    
+
     try:
         ts = int(key.split(":")[-1])
     except Exception:
@@ -831,7 +834,7 @@ def paypal_ipn_handler():
 
     # Check with Paypal to confirm that this POST form data comes from them
     r = requests.post(
-        app.config.get("PAYPAL_VERIFY_URL"), 
+        app.config.get("PAYPAL_VERIFY_URL"),
         headers={
             'User-Agent': 'PYTHON-IPN-VerificationScript',
             'content-type': 'application/x-www-form-urlencoded'
@@ -843,7 +846,7 @@ def paypal_ipn_handler():
     if r.text == 'VERIFIED':
         log.info("Received verified data: {}".format(request.form))
 
-        # Here we take some action based on the data from Paypal, 
+        # Here we take some action based on the data from Paypal,
         #  with info about a payment from a user.
         return "Paypal IPN message verified.", 200
     else:

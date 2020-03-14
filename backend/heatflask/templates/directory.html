@@ -4,8 +4,8 @@
     <title>{{ config["APP_NAME"] }} Public User Directory</title>
     <meta name="robots" content="noindex">
 
-    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
-    
+    <link rel="shortcut icon" href="static/favicon.ico">
+
     {% assets "basic_table_css" %}
     <link rel="stylesheet" href="{{ ASSET_URL }}" />
     {% endassets %}
@@ -17,7 +17,7 @@
     {% if current_user.is_anonymous or (not current_user.is_admin()) %}
     {{analytics}}
     {% endif %}
-    
+
 </head>
 
 <body>
@@ -30,8 +30,6 @@
         function combineNames(data, type, row, meta) {
             return row.lastname + ", " + row.firstname;
         }
-
-
 
         const data = {{ data|tojson }};
         let atable = $('#users_table').DataTable({

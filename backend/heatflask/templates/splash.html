@@ -1,17 +1,19 @@
 <html>
   <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
     <title>{{ config["APP_NAME"]}} - Animated Activity Visualization</title>
-    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="shortcut icon"
+          href="static/images/favicon.ico">
 
     {% assets "splash_css" %}
     <link rel="stylesheet" href="{{ ASSET_URL }}" />
     {% endassets %}
 
-    <style> 
+    <style>
       body {
-        background-image: url("{{ url_for('static', filename='lake.gif') }}");
+        background-image: url("static/images/lake.gif");
         background-repeat: no-repeat;
         background-attachment: fixed;
         background-size: cover;
@@ -37,15 +39,16 @@
         {% endif %}
     {% endwith %}
       <br>
-      <img class=logo src="{{ url_for('static', filename='logo.png') }}" alt="" >
+      <img class=logo src="static/images/logo.png" alt="" >
 
       <h2>Motion Mapping For your Strava Data</h2>
 
       <br>
       {% if not config.get("OFFLINE") %}
       <form method="link" action="{{ url_for('authorize') }}">
-          <input class="strava-button" type="image" src="{{ url_for('static', filename='btn_strava_connectwith_orange.svg') }}"
-           alt="Authenticate with Strava" >
+          <input class="strava-button" type="image"
+                 src="static/images/btn_strava_connectwith_orange.svg"
+                 alt="Authenticate with Strava" >
           <input type="hidden" name="state" value="{{ next }}">
       </form>
       {% endif %}
@@ -62,9 +65,6 @@
       <FORM METHOD="LINK" ACTION="{{ url_for('public_directory')}}">
       <INPUT class="btn btn-b" TYPE="submit" VALUE="Public User Directory">
       </FORM>
-
-     <!--  <img src="{{ url_for('static', filename='lake.gif') }}" style="width:50%;">
- -->
     </div>
 
   </body>

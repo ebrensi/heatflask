@@ -43,11 +43,9 @@ def create_app():
         Analytics(app)
         Compress(app)
         SSLify(app, skips=["webhook_callback"])
-        from .js_bundles import bundles
-        
+
+        from .webassets_bundler import bundles
         assets.register(bundles)
-        for bundle in bundles.values():
-            bundle.build()
 
         db_sql.init_app(app)
         redis.init_app(app)
@@ -61,6 +59,7 @@ def create_app():
         #     app,
         #     content_security_policy=app.config["CONTENT_SECURITY_POLICY"]
         # )
+
         from .models import (
             Activities, EventLogger, Index, Payments
         )

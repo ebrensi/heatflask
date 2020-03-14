@@ -16,13 +16,6 @@
     </table>
 
     <script>
-    /*
-    if (window.location.protocol == "https:") {
-      WS_SCHEME = "wss://";
-    } else {
-      WS_SCHEME = "ws://";
-    };
-    */
 
     const user_profile_url = "{{ url_for('user_profile', username='') }}",
           event_url = "{{ url_for('logged_event', event_id='') }}",
@@ -75,12 +68,12 @@
     table.draw();
 
     // Now set up websocket
-    let wskey, 
+    let wskey,
         sock = new PersistentWebSocket(WEBSOCKET_URL),
         last_ts = data[0].ts + 1;
 
     sock.binaryType = 'arraybuffer';
-    
+
     window.addEventListener('beforeunload', function (event) {
       if (navigator.sendBeacon) {
         if (wskey) {
@@ -88,7 +81,7 @@
         }
         // navigator.sendBeacon(BEACON_HANDLER_URL, CLIENT_ID);
       }
- 
+
       if (sock && sock.readyState == 1) {
             sock.send(JSON.stringify({close: 1}));
             sock.close()

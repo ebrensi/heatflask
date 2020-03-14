@@ -22,7 +22,7 @@
           SHARE_STATUS_UPDATE_URL = R["SHARE_STATUS_UPDATE_URL"],
           ACTIVITY_LIST_URL = R["ACTIVITY_LIST_URL"],
           BEACON_HANDLER_URL = R["BEACON_HANDLER_URL"];
-    
+
     const DIST_UNIT = (MEASURMENT_PREFERENCE=="feet")? 1609.34 : 1000.0,
           DIST_LABEL = (MEASURMENT_PREFERENCE=="feet")?  "mi" : "km",
           SPEED_SCALE = 5.0,
@@ -47,9 +47,9 @@
     const controls = {
             _sidebarControl: L.control.sidebar('sidebar').addTo(map),
             _zoomControl: map.zoomControl.setPosition('bottomright'),
-            _stravaLogo: L.control.watermark({ image: "static/pbs4.png", width: '20%', opacity:'0.5', position: 'bottomleft' }).addTo(map),
-            _heatflaskLogo: L.control.watermark({image: "static/logo.png", opacity: '0.5', width: '20%', position: 'bottomleft' }).addTo(map),
-            areaSelect: L.areaSelect({width:200, height:200})  
+            _stravaLogo: L.control.watermark({ image: "images/pbs4.png", width: '20%', opacity:'0.5', position: 'bottomleft' }).addTo(map),
+            _heatflaskLogo: L.control.watermark({image: "images/logo.png", opacity: '0.5', width: '20%', position: 'bottomleft' }).addTo(map),
+            areaSelect: L.areaSelect({width:200, height:200})
           };
 
           // the DotLayer
@@ -71,7 +71,7 @@
 
             const mapBox_layernames = [
                 "MapBox.Dark",
-                "MapBox.Streets", 
+                "MapBox.Streets",
                 "MapBox.Streets-Basic",
                 "MapBox.Satellite"
             ];
@@ -94,7 +94,7 @@
                 "CartoDB.DarkMatter": L.tileLayer.provider("CartoDB.DarkMatter")
             });
 
-            
+
             if (map_providers.length) {
                 for (var i = 0; i < map_providers.length; i++) {
                     let provider = map_providers[i];
@@ -117,7 +117,7 @@
             const layer = baseLayers[name],
                   maxZoom = layer.options.maxZoom;
             layer.name = name;
-            
+
             if (maxZoom) {
                 layer.options.maxNativeZoom = maxZoom;
                 layer.options.maxZoom = 22;
@@ -168,12 +168,12 @@
 
         // Animation play/pause button
         controls._animationControl =  L.easyButton({
-            states: appState.paused? button_states.reverse() : button_states 
+            states: appState.paused? button_states.reverse() : button_states
         }).addTo(map);
     })();
 
 
-      
+
 
     // Select-activities-in-region functionality IIFE
     (() => {
@@ -198,13 +198,13 @@
                 }
             });
         }
-    
+
         // set hooks for ctrl-drag
         map.on("boxhookend", doneSelecting);
         controls.selectControl = new L.SwipeSelect({}, doneSelecting);
 
 
-        // button for selecting via touchscreen 
+        // button for selecting via touchscreen
         const selectButton_states = [
             {
                 stateName: 'not-selecting',
@@ -225,7 +225,7 @@
                 }
             },
         ];
-        
+
         controls.selectButton = L.easyButton({
             states: selectButton_states,
             position: "topright"
@@ -407,7 +407,7 @@
 
         //             if (this.$[0].id == "shadowHeight")
         //                 dotLayer.updateDotSettings(null, {"y": val});
-        //             else 
+        //             else
         //                 dotLayer.updateDotSettings(null, {"blur": val+2});
         //         },
 
@@ -437,13 +437,13 @@
     //                 if ( type === 'display' || type === 'filter' ) {
     //                     // const dstr = row.tsLoc.toISOString().split('T')[0];
     //                     return href( stravaActivityURL(row.id), row.tsLoc.toLocaleString());
-    //                 } else 
+    //                 } else
     //                     return row.UTCtimestamp;
     //             }
     //         },
 
-    //         { 
-    //             title: "Type", 
+    //         {
+    //             title: "Type",
     //             data: null,
     //             render: (A) => `<p style="color:${A.pathColor}">${A.type}</p>`
     //         },
@@ -458,12 +458,12 @@
     //             render: hhmmss
     //         },
 
-    //         { 
-    //             title: "Name", 
+    //         {
+    //             title: "Name",
     //             data: null,
     //             render: (A) => `<p style="background-color:${A.dotColor}"> ${A.name}</p>`
     //         },
-        
+
     //     ],
 
     //     imgColumn = {
@@ -497,13 +497,13 @@
                     if ( type === 'display' || type === 'filter' ) {
                         // const dstr = row.tsLoc.toISOString().split('T')[0];
                         return href( stravaActivityURL(row.id), row.tsLoc.toLocaleString());
-                    } else 
+                    } else
                         return row.UTCtimestamp;
                 }
             },
 
-            { 
-                title: "Type", 
+            {
+                title: "Type",
                 data: null,
                 render: (A) => `<p style="color:${A.pathColor}">${A.type}</p>`
             },
@@ -518,12 +518,12 @@
                 render: hhmmss
             },
 
-            { 
-                title: "Name", 
+            {
+                title: "Name",
                 data: null,
                 render: (A) => `<p style="background-color:${A.dotColor}"> ${A.name}</p>`
             },
-        
+
         ],
 
         imgColumn = {
@@ -546,11 +546,11 @@
             "Type",
             `<i class="fa fa-arrows-h" aria-hidden="true"></i> (${DIST_LABEL})`,
             '<i class="fa fa-clock-o" aria-hidden="true"></i>',
-            "Name"          
+            "Name"
           ],
           data: colData
         };
-        
+
         const config = {
           data,
           columns: [
@@ -572,7 +572,7 @@
 
 
     }
-    
+
 
 
     function updateShareStatus(status) {
@@ -622,7 +622,7 @@
         //           tag = `#${A.id}`;
         //     if (A.selected)
         //         toDeSelect.push(tag);
-        //     else 
+        //     else
         //         toSelect.push(tag);
 
         //     count++;
@@ -742,12 +742,12 @@
 
         if (ONLOAD_PARAMS.SZ)
             ds["dotScale"] = ONLOAD_PARAMS["SZ"];
-        
+
         Dom.set("#sepConst", (Math.log2(ds["C1"]) - SEP_SCALE.b) / SEP_SCALE.m );
         Dom.set("#speedConst", Math.sqrt(ds["C2"]) / SPEED_SCALE );
         Dom.set("#dotScale", ds["dotScale"]);
         Dom.set("#dotAlpha", ds["dotAlpha"]);
-        
+
         Dom.trigger("#sepConst",   "change");
         Dom.trigger("#speedConst", "change");
         Dom.trigger("#dotScale",   "change");
@@ -766,7 +766,7 @@
         // Dom.trigger("#shadowHeight","change");
 
         Dom.prop("#shadows", "checked", dotLayer.options.dotShadows.enabled);
-        
+
         Dom.addEvent("#shadows", "change", (e) => {
             dotLayer.updateDotSettings(null, {"enabled": e.target.checked})
         });
@@ -792,7 +792,7 @@
         }
 
         const num = appState.items.size;
-        Dom.html(".data_message",` ${msg} ${num} activities rendered.`);       
+        Dom.html(".data_message",` ${msg} ${num} activities rendered.`);
 
         // (re-)render the activities table
         // atable.clear();
@@ -867,7 +867,7 @@
             sock.binaryType = 'arraybuffer';
         } else
             sendQuery();
-        
+
         Dom.html(".data_message", "Retrieving activity data...");
 
         if (!appState.abortButtonListener)
@@ -900,12 +900,12 @@
 
             rendering = false;
             updateLayers(msg);
-        
+
         }
 
         function stopListening() {
             if (!listening)
-                return 
+                return
             listening = false;
             sock.send(JSON.stringify({close: 1}));
             sock.close();
@@ -914,7 +914,7 @@
             }
             appState.wskey = null;
             Dom.prop('#renderButton', 'disabled', false);
-            
+
         }
 
 
@@ -947,12 +947,12 @@
 
         // handle one incoming chunk from websocket stream
         sock.onmessage = function(event) {
-            
+
             let A;
 
             try {
                 A = msgpack.decode(new Uint8Array(event.data));
-            } 
+            }
             catch(e) {
                 console.log(event);
                 console.log(event.data);
@@ -964,30 +964,30 @@
                 Dom.prop('#renderButton', 'disabled', false);
                 doneRendering("Finished.");
                 return;
-            } else 
+            } else
 
             if (!("_id" in A)) {
 
                 if ("idx" in A)
                     Dom.html(".data_message", `indexing...${A.idx}`);
-                
+
                 else if ("count" in A)
                     numActivities += A.count;
-                
-                else if ("wskey" in A) 
+
+                else if ("wskey" in A)
                     appState.wskey = A.wskey;
-                
+
                 else if ("delete" in A && A.delete.length) {
                     // delete all ids in A.delete
                     for (let id of A.delete)
                         appState.items.delete(id);
                     dotLayer.removeItems(A.delete);
-                
+
                 } else if ("done" in A) {
                     console.log("received done");
                     doneRendering("Done rendering.");
                     return;
-                
+
                 } else if ("error" in A) {
                     let msg = `<font color='red'>${A.error}</font><br>`;
                     Dom.html(".data_message", msg);
@@ -996,10 +996,10 @@
                 } else if ("msg" in A) {
                     Dom.html(".data_message", A.msg);
                 }
-                
+
                 return;
             }
-            
+
             // only add A to appState.items if it isn't already there
             if ( !appState.items.has(A._id) ) {
                 if (!A.type)
@@ -1012,12 +1012,12 @@
 
                 const tup = A.ts;
                 delete A.ts;
-                
+
                 A.tsLoc = new Date((tup[0] + tup[1]*3600) * 1000);
                 A.UTCtimestamp = tup[0];
 
                 A.bounds = L.latLngBounds(A.bounds.SW, A.bounds.NE);
-                
+
                 dotLayer.addItem(A.id, A.polyline, A.pathColor, A.time, tup[0], A.bounds, A.n);
                 appState.items.set(A.id, A);
 
@@ -1077,14 +1077,14 @@
             const zoom = map.getZoom(),
                   center = map.getCenter(),
                   precision = Math.max(0, Math.ceil(Math.log(zoom) / Math.LN2));
-            
-            if (center) {  
+
+            if (center) {
                 params.lat = center.lat.toFixed(precision);
                 params.lng = center.lng.toFixed(precision);
                 params.zoom = zoom;
             }
         }
-        
+
         if (dotLayer) {
             const ds = dotLayer.getDotSettings();
 
@@ -1095,9 +1095,9 @@
             // Enable capture if period is less than CAPTURE_DURATION_MAX
             const cycleDuration = dotLayer.periodInSecs().toFixed(2),
                   captureEnabled = controls.captureControl.enabled;
-            
+
             Dom.html("#period-value", cycleDuration);
-            
+
             if (cycleDuration <= CAPTURE_DURATION_MAX) {
                 if (!captureEnabled) {
                     controls.captureControl.addTo(map);
@@ -1113,7 +1113,7 @@
             params["baselayer"] = appState.currentBaseLayer.name;
 
         const paramsString = Object.keys(params).map(function(param) {
-                  return encodeURIComponent(param) + '=' + 
+                  return encodeURIComponent(param) + '=' +
                   encodeURIComponent(params[param])
               }).join('&'),
 
@@ -1122,7 +1122,7 @@
         if (appState.url != newURL) {
             // console.log(`pushing: ${newURL}`);
             appState.url = newURL;
-            window.history.replaceState("", "", newURL);    
+            window.history.replaceState("", "", newURL);
         }
     }
 
@@ -1138,7 +1138,7 @@
             Dom.set('#date2', "now");
             date2picker.gotoToday();
             date2picker.setEndRange(new Date());
-            
+
             let d = new Date();
             d.setDate(d.getDate()-num);
             Dom.set('#date1', d.toISOString().split('T')[0] );
@@ -1203,7 +1203,7 @@
 
     function makeDatePicker(selector) {
         const el = Dom.el(selector),
-              picker = new Pikaday({ 
+              picker = new Pikaday({
             field: el,
             onSelect: function(date) {
                 el.value = date.toISOString().split('T')[0];
@@ -1229,7 +1229,7 @@
         updateShareStatus(status);
     });
 
-    
+
 
     Dom.addEvent(".preset", "change", preset_sync);
 
@@ -1254,7 +1254,7 @@
         Dom.set('#date2', ONLOAD_PARAMS.date2);
         Dom.set('#preset', "");
     }
-    
+
     initializedotLayer();
     renderLayers();
     preset_sync();

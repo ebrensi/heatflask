@@ -22,7 +22,7 @@ const DotLayer = {
         startPaused: false,
         showPaths: true,
         fps_display: false,
-        
+
         normal: {
             dotColor: "#000000",
             dotOpacity: 0.7,
@@ -66,10 +66,10 @@ const DotLayer = {
         this._timePaused = this.UTCnowSecs();
 
         this.heatflask_icon = new Image();
-        this.heatflask_icon.src = "static/logo.png";
+        this.heatflask_icon.src = "images/logo.png";
 
         this.strava_icon = new Image();
-        this.strava_icon.src = "static/pbs4.png";
+        this.strava_icon.src = "images/pbs4.png";
 
         this._items = new Map();
         this._lru = new Map();  // turn this into a real LRU-cache
@@ -189,7 +189,7 @@ const DotLayer = {
         this._itemIds = Array.from(this._items.keys());
         const n = this._itemsArray.length;
 
-        if (!n) return; 
+        if (!n) return;
 
         this.setDotColors();
         this.ViewBox.reset(this._itemsArray);
@@ -259,7 +259,7 @@ const DotLayer = {
 
     _redraw: function(event) {
         if ( !this._ready )
-            return;        
+            return;
 
         const oldzoom = this.ViewBox.zoom;
 
@@ -275,13 +275,13 @@ const DotLayer = {
 
         inView.forEach(i => {
             const A = itemsArray[i];
-            if (!(zoom in A.idxSet)) {    
+            if (!(zoom in A.idxSet)) {
                 // prevent another instance of this function from doing this
                 A.idxSet[zoom] = null;
                 ns += A.n;
 
                 // TODO: add this to a list of promises instead
-                //  and Promise.all() them to allow for 
+                //  and Promise.all() them to allow for
                 // concurrency
                 ns2 += this.simplify(A, zoom);
             }
@@ -292,8 +292,8 @@ const DotLayer = {
         let t1 = performance.now();
 
         const clear = this.DrawBox.clear,
-              rect = this.DrawBox.defaultRect(); 
-        
+              rect = this.DrawBox.defaultRect();
+
         if (event)
             clear(this._dotCtx, rect);
 
@@ -312,11 +312,11 @@ const DotLayer = {
         }
         else if (this._paused)
             this.drawDots();
-        
+
         // if (ns)
         //     console.log(`simplify: ${ns} -> ${ns2} in ${~~(t1-t0)}:  ${(ns-ns2)/(t1-t0)}`)
 
-        
+
         /*
 
         const tbls = [],
@@ -347,8 +347,8 @@ const DotLayer = {
         });
 
        */
-        
-        
+
+
     },
 
     addItem: function(id, polyline, pathColor, time, UTCtimestamp, llBounds, n) {
@@ -362,7 +362,7 @@ const DotLayer = {
                 ts: UTCtimestamp,
                 pathColor: pathColor
             };
-    
+
         this._items.set(id, A);
 
         // make baseline projection (convert latLngs to pixel points)
@@ -372,13 +372,13 @@ const DotLayer = {
 
         for (let i=0, len=px.length; i<len; i+=2)
             project(px.subarray(i, i+2));
-        
+
     },
 
-    removeItems: function(ids) {        
+    removeItems: function(ids) {
         for (const id of ids)
             this._items.delete(id)
-        
+
         this.reset()
     },
 
@@ -389,8 +389,8 @@ const DotLayer = {
         // so we use a regular Array.
         if (!_rawPoint.buf)
             _rawPoint.buf = [NaN, NaN]
-        
-        const buf = _rawPoint.buf,  
+
+        const buf = _rawPoint.buf,
               px = A.px;
 
         return j => {
@@ -409,12 +409,12 @@ const DotLayer = {
             arrayFunc;
 
         if (!zoom) {
-            arrayFunc = i => point(2*i); 
-        }  
+            arrayFunc = i => point(2*i);
+        }
         else {
             const key = `I${A.id}:${zoom}`;
             let  idx = this._lru.get(key);
-            
+
             if (!idx) {
                 idx = A.idxSet[zoom].array();
                 this._lru.set(key, idx);
@@ -451,13 +451,13 @@ const DotLayer = {
     timesArray: function(A, zoom) {
         const key = `T${A.id}:${zoom}`;
         let arr = this._lru.get(key);
-        
+
         if (!arr) {
             arr = Uint16Array.from(
                 StreamRLE.decodeCompressedBuf2(A.time, A.idxSet[zoom])
             );
             this._lru.set(key, arr);
-        }      
+        }
         return i => arr[i];
     },
 
@@ -502,7 +502,7 @@ const DotLayer = {
         if (zoom === undefined)
             zoom = this.ViewBox.zoom;
 
-        // simplify from the first available zoom level 
+        // simplify from the first available zoom level
         //  higher than this one if one exists
         // const nextZoomLevel = 20;
         return this._simplify(A, zoom);
@@ -526,7 +526,7 @@ const DotLayer = {
     iterSegments: function(A, zoom, segMask) {
         const obj = this.Segment(),
               seg = obj.segment,
-              a = seg.a, 
+              a = seg.a,
               b = seg.b,
               temp = obj.temp,
               set = (s, p) => {
@@ -544,10 +544,10 @@ const DotLayer = {
 
         // note: this.iterPoints() returns the a reference to the same
         // object every time so if we need to deal with more than
-        // one at a time we will need to make a copy. 
-        
+        // one at a time we will need to make a copy.
+
         // const points = this.iterPoints(A, zoom);
-        // let j = 0, 
+        // let j = 0,
         //     obj = points.next();
 
         // return segMask.imap( i => {
@@ -557,14 +557,14 @@ const DotLayer = {
 
         //     obj = points.next();
         //     set(b, obj.value);
-         
+
         //     return seg;
         // });
 
         /*
          * Method 2: this is more efficient if
          *  we need to skip a lot of segments.
-         */              
+         */
         const pointsArray = this.pointsArray(A, null),
               idxSet = A.idxSet[zoom],
               segsIdx = segMask.imap(),
@@ -575,9 +575,9 @@ const DotLayer = {
             set(a, points.next().value); // point at firstIdx
             set(temp, points.next().value);
             set(b, temp); // point at firstIdx + 1
-            
+
             yield seg
-            
+
             let last_i = firstIdx;
             for (const i of segsIdx) {
                 if (i === ++last_i)
@@ -589,7 +589,7 @@ const DotLayer = {
                 set(temp, points.next().value);
                 set(b, temp);
                 last_i = i;
-                yield seg    
+                yield seg
             }
         }
         return iterSegs();
@@ -600,7 +600,7 @@ const DotLayer = {
     },
 
     // A segMask is a BitSet containing the index of the start-point of each
-    //  segment that is in view and is not bad.  A segment is considered to be 
+    //  segment that is in view and is not bad.  A segment is considered to be
     //  in view if one of its points is in the current view.
     // A "bad" segment is one that represents a gap in GPS data.
     //  The indices are relative to the current zoom's idxSet mask,
@@ -676,10 +676,10 @@ const DotLayer = {
             ctx.beginPath();
             group.forEach( i => this._drawPathFromPointArray(ctx, items[i]));
             ctx.stroke();
-        } 
+        }
     },
-    
-    // Draw all paths for the current items in such a way 
+
+    // Draw all paths for the current items in such a way
     // that we group stroke-styles together in batch calls.
     drawPaths: function() {
         if (!this._ready)
@@ -707,24 +707,24 @@ const DotLayer = {
             ctx.lineWidth = options.selected.pathWidth;
             ctx.globalAlpha = options.selected.pathOpacity * alphaScale;
             this._drawPathsByColor(selected, options.selected.pathColor);
-        
+
         } else if (unselected) {
             // draw unselected paths
             ctx.lineWidth = options.normal.pathWidth;
             ctx.globalAlpha = options.normal.pathOpacity * alphaScale;
             this._drawPathsByColor(unselected, options.normal.pathColor);
         }
-            
+
         if (options.debug) {
             this._debugCtxReset();
             this.DrawBox.draw(this._debugCtx);
             this._debugCtx.strokeStyle = "rgb(255,0,255,1)";
             this.ViewBox.drawPxBounds(this._debugCtx);
-        }        
+        }
     },
 
     // --------------------------------------------------------------------
-    dotPointsIterFromSegs: function*(A, now) {      
+    dotPointsIterFromSegs: function*(A, now) {
         const ds = this.getDotSettings(),
               T = ds._period,
               start = A.ts,
@@ -750,7 +750,7 @@ const DotLayer = {
                   t_b = timeInterval.b,
                   lowest = Math.ceil((t_a - timeOffset) / T),
                   highest = Math.floor((t_b - timeOffset) / T);
-                       
+
             if (lowest <= highest) {
                 // console.log(`${t_a}, ${t_b}`);
                 const t_ab = t_b - t_a,
@@ -771,13 +771,13 @@ const DotLayer = {
                     }
                 }
             }
-            
-        } while( !segments.next().done && !times.next().done ) 
+
+        } while( !segments.next().done && !times.next().done )
 
         // return count
     },
 
-    dotPointsIterFromArray: function*(A, now) {      
+    dotPointsIterFromArray: function*(A, now) {
         const ds = this.getDotSettings(),
               T = ds._period,
               start = A.ts,
@@ -807,7 +807,7 @@ const DotLayer = {
             if (lowest <= highest) {
                 set(p_a, points(i));
                 set(p_b, points(i+1));
-            
+
                 const t_ab = t_b - t_a,
                       vx = (p_b[0] - p_a[0]) / t_ab,
                       vy = (p_b[1] - p_a[1]) / t_ab;
@@ -884,10 +884,10 @@ const DotLayer = {
     drawDots: function(now) {
         if ( !this._ready )
             return;
-        
+
         if (!now)
             now = this._timePaused || this.UTCnowSecs();
-        
+
         const options = this.options,
               ctx = this._dotCtx,
               g = this._gifPatch,
@@ -895,7 +895,7 @@ const DotLayer = {
               vb = this.ViewBox;
 
         const colorGroups = vb.dotColorGroups();
-        
+
         let unselected = colorGroups.unselected,
               selected = colorGroups.selected;
 
@@ -907,7 +907,7 @@ const DotLayer = {
             unselected = {...selected, ...unselected};
             selected = null;
         }
-        
+
         const alphaScale = this.dotSettings.alphaScale;
 
         if (selected) {
@@ -920,25 +920,25 @@ const DotLayer = {
             drawDotFunc = this.makeCircleDrawFunc();
             ctx.globalAlpha = options.selected.dotOpacity * alphaScale;
             count += this._drawDotsByColor(now, selected, drawDotFunc, options.selected.dotColor);
-        
+
         } else if (unselected) {
             // draw normal activity dots
             ctx.globalAlpha = options.normal.dotOpacity * alphaScale;
             let drawDotFunc = this.makeSquareDrawFunc();
             count += this._drawDotsByColor(now, unselected, drawDotFunc, options.normal.dotColor);
         }
-        
+
         if (options.debug) {
             this._debugCtxReset();
             this.DrawBox.draw(this._debugCtx);
             this._debugCtx.strokeStyle = "rgb(255,0,255,1)";
             vb.drawPxBounds(this._debugCtx);
-        }        
+        }
 
         return count
     },
 
-   
+
     // --------------------------------------------------------------------
     animate: function() {
 
@@ -1036,7 +1036,7 @@ const DotLayer = {
     itemsInRegion: function(selectPxBounds) {
         const pxOffset = this.ViewBox.pxOffset,
               zf = this.ViewBox._zf;
-        
+
         // un-transform screen coordinates given by the selection
         // plugin to absolute values that we can compare ours to.
         selectPxBounds.min._subtract(pxOffset)._divideBy(zf);
@@ -1044,9 +1044,9 @@ const DotLayer = {
 
         const itemsArray = this._itemsArray,
               inView = this.ViewBox.inView();
-        
+
         let selected = new BitSet();
-        
+
         inView.forEach(i => {
             const A = itemsArray[i];
             for (const seg of this.iterSegments(A)) {
@@ -1059,7 +1059,7 @@ const DotLayer = {
 
         if (!selected.isEmpty())
             return selected.imap(i => itemsArray[i].id);
-    },  
+    },
 
 
     // -----------------------------------------------------------------------
@@ -1205,7 +1205,7 @@ const DotLayer = {
             w2 = this.strava_icon.width,
             simg = [50, h2*50/w2],
             sd = [sw-simg[0]-2, sh-simg[1]-2, simg[0], simg[1]];
-            
+
         let framePrev = null;
         // Add frames to the encoder
         for (let i=0, num=~~numFrames; i<num; i++, frameTime+=delay){
@@ -1287,7 +1287,7 @@ const DotLayer = {
         for ( const item of items )
             item.dotColor = this._colorPalette[ i++ ];
     },
-    
+
     dotSettings: {
         C1: 1000000.0,
         C2: 200.0,
@@ -1367,16 +1367,16 @@ const DotLayer = {
         const n = llt.length / 3,
               time = i => llt[3*i+2],
               arr = [];
-        
+
         let max = 0;
 
         for (let i=1, tprev=time(0); i<n; i++) {
             let t = time(i),
                 dt = t - tprev;
-            
+
             if (dt > ttol)
                 arr.push(tprev);
-            
+
             if (dt > max)
                 max = dt;
 
@@ -1386,18 +1386,18 @@ const DotLayer = {
         return arr.length? arr : null
     },
 
-    binarySearch: function(map, x, start, end) {        
-        if (start > end) return false; 
-       
-        let mid = Math.floor((start + end) / 2); 
+    binarySearch: function(map, x, start, end) {
+        if (start > end) return false;
 
-        if (map(mid) === x) return mid; 
-              
-        if(map(mid) > x)  
-            return binarySearch(map, x, start, mid-1); 
+        let mid = Math.floor((start + end) / 2);
+
+        if (map(mid) === x) return mid;
+
+        if(map(mid) > x)
+            return binarySearch(map, x, start, mid-1);
         else
-            return binarySearch(map, x, mid+1, end); 
-    } 
+            return binarySearch(map, x, mid+1, end);
+    }
     */
 
 };  // end of L.DotLayer definition

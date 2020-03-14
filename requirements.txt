@@ -1,13 +1,13 @@
 stravalib
 rjsmin
-redis==3
+redis==3.4.1
 requests
 #pymongo==3.9
 pymongo[srv]
 polyline==1.4
-msgpack==0.6
-gunicorn==20
-flask==1
+msgpack==1.0.0
+gunicorn==20.0.4
+flask==1.1.1
 flask-redis
 flask-login
 flask-assets
@@ -19,11 +19,10 @@ flask-analytics
 flask-sqlalchemy==2.4.1
 flask-limiter
 
-cssmin
 base36
 
 python-dateutil
-psycopg2==2.8
+psycopg2==2.8.4
 gevent==1.4
 
 wsaccel

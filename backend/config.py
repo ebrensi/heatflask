@@ -28,7 +28,7 @@ class Config(object):
     # ASSETS_CACHE = False
     # ASSETS_MANIFEST = None
     CLOSURE_COMPRESSOR_OPTIMIZATION = "simple"
-    
+
     # Concurrency for User database triage
     TRIAGE_CONCURRENCY = 5
 
@@ -59,10 +59,10 @@ class Config(object):
 
     MONGO_URI = os.environ.get("MONGODB_URI")
     REDIS_URL = os.environ.get("REDIS_URL")
-    
+
     SECS_IN_HOUR = 60 * 60
     SECS_IN_DAY = 24 * SECS_IN_HOUR
-    
+
     # How long we store Index entry in MongoDB
     TTL_INDEX = int(os.environ.get("TTL_INDEX", 10)) * SECS_IN_DAY
 
@@ -110,7 +110,7 @@ class Config(object):
     TO_DOMAIN = "www.heatflask.com"
 
     # This is the spec for parsing urls.  The pattern is
-    #  field_name: ([query_string options], default-value) 
+    #  field_name: ([query_string options], default-value)
     URL_QUERY_SPEC = dict(
         date1=(["after", "date1", "a"], ""),
         date2=(["before", "date2", "b"], ""),
@@ -160,13 +160,13 @@ class ProductionConfig(Config):
     These are settings specific to the production environment
     (the main app running on Heroku)
     """
-    
+
     ANALYTICS = {
         'GOOGLE_UNIVERSAL_ANALYTICS': {
             'ACCOUNT': "UA-85621398-1"
         }
     }
-    
+
     DEBUG = False
 
     # Turn off webassets building for production, but we need to make sure
@@ -210,7 +210,7 @@ class DevelopmentConfig(Config):
     Note that this file is part of the repo so any changes you make
     here will affect all developers.
     """
-    
+
     # OFFLINE setting suppresses any internet access
     OFFLINE = os.environ.get("OFFLINE", False)
 
@@ -229,7 +229,7 @@ class DevelopmentConfig(Config):
     ASSETS_DEBUG = "merge"
     # ASSETS_DEBUG = True
     ASSETS_AUTO_BUILD = True
-    
+
     CLOSURE_COMPRESSOR_OPTIMIZATION = "advanced"
     # CLOSURE_COMPRESSOR_OPTIMIZATION = "simple"
     CLOSURE_EXTRA_ARGS = [
@@ -251,7 +251,7 @@ class DevelopmentConfig(Config):
     else:
         # How long we Redis-cache Activity stream data
         TTL_CACHE = 2 * Config.SECS_IN_HOUR
-        
+
         # How long we Redis-cache a User object
         CACHE_USERS_TIMEOUT = 2 * Config.SECS_IN_HOUR
 
@@ -261,4 +261,4 @@ class DevelopmentConfig(Config):
         # How long we store an Index entry in MongoDB
         STORE_INDEX_TIMEOUT = 60 * Config.SECS_IN_DAY   # 60 days
 
-        
+

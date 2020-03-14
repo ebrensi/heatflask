@@ -1,19 +1,40 @@
 #!/bin/bash
+
 # This runs a development server with gunicorn.
 #  You need a .env file that sets the python (virtualenv, conda, etc) and shell environments.
 #  See contributing.md
 
-source .env
+source ./backend/.env
 
-# export GUNICORN_CMD_ARGS="--reload --worker-class flask_sockets.worker --log-level=debug --certfile=cert.pem --keyfile=key.pem --bind '127.0.0.1:5000'"
-GUNICORN_CMD_ARGS="--reload --worker-class flask_sockets.worker --log-level=debug --bind '0.0.0.0:5000'"
+usage()
+{
+    echo "usage: dev-run [[[-o ] [-r]] | [-h]]"
+}
+
+
+while [ "$1" != "" ]; do
+    case $1 in
+        -o | --offline )        OFFLINE=1
+                                ;;
+        -r | --remote_db )      USE_REMOTE_DB=1
+                                ;;
+        -h | --help )           usage
+                                exit
+                                ;;
+        * )                     usage
+                                exit 1
+    esac
+    shift
+done
+
+GUNICORN_CMD_ARGS="--reload --worker-class flask_sockets.worker --log-level=debug --bind '0.0.0.0:5000' --chdir=./backend/"
 
 FILE=/usr/bin/heroku
 
 if [ -f "$FILE" ]; then
     echo "$FILE is present"
     heroku local
-else 
+else
     echo "$FILE does not exist"
-    gunicorn wsgi:app
+    gunicorn heatflask.wsgi:app
 fi
