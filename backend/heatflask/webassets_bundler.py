@@ -22,6 +22,7 @@ Leaflet_js = flask_assets.Bundle(
     path + 'js/leaflet-src.js',
     path + 'js/leaflet-sidebar.js',
     path + "js/heatflaskTileLayer.js",
+    path + "js/L.TileLayer.NoGap.js",
     path + 'js/L.Control.fps.js',
     path + 'js/L.Control.Watermark.js',
     path + 'js/L.Control.Window.js',

@@ -39,7 +39,7 @@ L.TileLayer.include({
         if (this.options.useCache) {
             this._db = new idbKeyval.Store(this.options.dbName, this.name);
         }
-        
+
         L.GridLayer.prototype.onAdd.call(this, map)
     },
 
@@ -84,7 +84,7 @@ L.TileLayer.include({
 
             const key = this._key(coords);
             idbKeyval.get(key, this._db)
-                     .then( data => data? 
+                     .then( data => data?
                             this._onCacheHit(tile, tileUrl, key, data, done) :
                             this._onCacheMiss(tile, tileUrl, key, done)
                     )
@@ -199,7 +199,7 @@ L.TileLayer.include({
     },
 
     _onCacheMiss: function(tile, tileUrl, key, done) {
-   
+
         this.cacheMisses++;
 
         if (this.options.useOnlyCache) {
@@ -223,11 +223,11 @@ L.TileLayer.include({
                         }, this._db);
 
                         tile.src = URL.createObjectURL(blob);
-                        
+
                     })
                     .catch(error => {
                         this._tileOnError(done, tile, error);
-                    });   
+                    });
             } else {
                 // handle normally
                 tile.onload = L.bind(this._tileOnLoad, this, done, tile);
