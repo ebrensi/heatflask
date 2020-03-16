@@ -38,9 +38,10 @@
     const map = L.map('map', {
             center: ONLOAD_PARAMS.map_center,
             zoom: ONLOAD_PARAMS.map_zoom,
-            // layers : [ default_baseLayer ],
             preferCanvas: true,
-            zoomAnimation: false
+            zoomAnimation: false,
+            // zoomAnimationThreshold: 6,
+            // updateWhenZooming: false,
           });
 
           // map controls
@@ -928,7 +929,8 @@
                     limit: (type == "activities")? Math.max(1, +num) : undefined,
                     after: date1? date1 : undefined,
                     before: (date2 && date2 != "now")? date2 : undefined,
-                    activity_ids: idString?  Array.from(new Set(idString.split(/\D/).map(Number))): undefined,
+                    activity_ids: idString?
+                        Array.from(new Set(idString.split(/\D/).map(Number))) : undefined,
                     exclude_ids: to_exclude.length?  to_exclude: undefined,
                     streams: true
             };
@@ -1239,6 +1241,8 @@
     Dom.addEvent("#activity-list-buton", "click", () => openActivityListPage(false));
 
     Dom.prop("#autozoom", 'checked', ONLOAD_PARAMS.autozoom);
+
+    Dom.set("#activity_ids", "");
 
     if (ONLOAD_PARAMS.activity_ids) {
         Dom.set("#activity_ids", ONLOAD_PARAMS.activity_ids);

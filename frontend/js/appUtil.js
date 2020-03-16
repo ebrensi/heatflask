@@ -48,10 +48,6 @@ function formatDate( data, type, row, meta ) {
         date.toLocaleString( "en-US", { hour12: false } ) : date;
 }
 
-function ip_lookup_url(ip) {
-    return
-}
-
 function formatIP( data, type, row, meta ) {
     if ( data ) {
         const ip = data;

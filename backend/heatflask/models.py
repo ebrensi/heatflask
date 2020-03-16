@@ -120,15 +120,15 @@ class Users(UserMixin, db_sql.Model):
                 access_token=access_info.get("access_token"),
                 rate_limiter=(lambda x=None: None)
             )
-        
+
         now = time.time()
         one_hour = 60 * 60
         ttl = access_info["expires_at"] - now
-        
+
         token_expired = ttl < one_hour
         start = now
         if (token_expired and refresh) or (refresh == "force"):
-            
+
             # The existing access_token is expired
             # Attempt to refresh the token
             try:
@@ -136,14 +136,14 @@ class Users(UserMixin, db_sql.Model):
                     client_id=STRAVA_CLIENT_ID,
                     client_secret=STRAVA_CLIENT_SECRET,
                     refresh_token=access_info.get("refresh_token"))
-                
+
                 self.access_token = json.dumps(new_access_info)
 
                 try:
                     session.commit()
                 except Exception:
                     log.exception("postgres error")
-            
+
                 self.cli = stravalib.Client(
                     access_token=new_access_info.get("access_token"),
                     rate_limiter=(lambda x=None: None)
@@ -180,7 +180,7 @@ class Users(UserMixin, db_sql.Model):
 
         else:
             return
-        
+
         if not client:
             return
 
@@ -279,7 +279,7 @@ class Users(UserMixin, db_sql.Model):
         # cls = self.__class__
 
         now = now or datetime.utcnow()
-        
+
         last_active = self.dt_last_active
         if not last_active:
             log.info("%s was never active", self)
@@ -300,7 +300,7 @@ class Users(UserMixin, db_sql.Model):
             if client:
                 log.debug("%s updated")
                 return "updated"
-            
+
             log.debug("%s can't create client", self)
             return
         return True
@@ -315,7 +315,7 @@ class Users(UserMixin, db_sql.Model):
                 updated=0,
                 deleted=0
             )
-            
+
             def verify_user(user):
                 result = user.verify(
                     days_inactive_cutoff=days_inactive_cutoff,
@@ -356,7 +356,7 @@ class Users(UserMixin, db_sql.Model):
             def do_it():
                 for result in results:
                     handle_verify_result(result)
-            
+
             return P.spawn(do_it).link(when_done)
 
     @classmethod
@@ -377,7 +377,7 @@ class Users(UserMixin, db_sql.Model):
         key = "IDX:{}".format(self.id)
         if status is None:
             return redis.get(key)
-        
+
         elif status is False:
             return redis.delete(key)
         else:
@@ -423,7 +423,6 @@ class Users(UserMixin, db_sql.Model):
             before=before,
             activity_ids=activity_ids
         ))
-        # log.debug("received query %s", client_query)
 
         self.strava_client = None
         if not OFFLINE:
@@ -466,7 +465,7 @@ class Users(UserMixin, db_sql.Model):
             if not summaries_generator:
                 log.info("Could not build index for %s", self)
                 return
-        
+
         # Here we introduce a mapper that readys an activity summary
         #  (with or without streams) to be yielded to the client
         now = datetime.utcnow()
@@ -497,7 +496,7 @@ class Users(UserMixin, db_sql.Model):
                 ts_UTC = int(Utility.to_datetime(ts_UTC).timestamp())
             except Exception:
                 log.exception("%s, %s", ts_local, ts_UTC)
-            
+
             # A["ts"] received by the client will be a tuple (UTC, diff)
             #  where UTC is the time of activity (GMT), and diff is
             #  hours offset so that
@@ -508,7 +507,7 @@ class Users(UserMixin, db_sql.Model):
                 A.update(dict(owner=self.id, profile=self.profile))
 
             return A
-        
+
         # if we are only sending summaries to client,
         #  get them ready to export and yield them
         count = 0
@@ -528,7 +527,7 @@ class Users(UserMixin, db_sql.Model):
         #  summaries_generator yields activity summaries without streams
         #  We want to attach a stream to each one, get it ready to export,
         #  and yield it.
-        
+
         to_export = gevent.queue.Queue(maxsize=512)
         if self.strava_client:
             to_import = gevent.queue.Queue(maxsize=512)
@@ -543,7 +542,7 @@ class Users(UserMixin, db_sql.Model):
             if self.abort_signal:
                 log.debug("%s import %s aborted", self, A["_id"])
                 return
-            
+
             start = time.time()
             _id = A["_id"]
             log.debug("%s request import %s", self, _id)
@@ -551,10 +550,10 @@ class Users(UserMixin, db_sql.Model):
             A = Activities.import_streams(
                 self.strava_client, A,
                 batch_queue=batch_queue)
-            
+
             elapsed = time.time() - start
             log.debug("%s response %s in %s", self, _id, round(elapsed, 2))
-            
+
             if A:
                 import_stats["n"] += 1
                 import_stats["dt"] += elapsed
@@ -576,7 +575,7 @@ class Users(UserMixin, db_sql.Model):
 
         import_pool = gevent.pool.Pool(IMPORT_CONCURRENCY)
         aux_pool = gevent.pool.Pool(3)
-       
+
         if self.strava_client:
             # this is a lazy iterator that pulls activites from import queue
             #  and generates activities with streams. Roughly equivalent to
@@ -658,13 +657,13 @@ class Users(UserMixin, db_sql.Model):
             except Exception:
                 pass
             log.info("%s import %s", self, import_stats)
-        
+
         if "n" in stats:
             log.info("%s fetch %s", self, stats)
-        
+
         if import_stats:
             stats["import"] = import_stats
-        
+
         if ("n" in stats) or import_stats:
             EventLogger.new_event(msg="{} fetch {}".format(self, stats))
 
@@ -679,14 +678,14 @@ class Users(UserMixin, db_sql.Model):
 class Index(object):
     name = "index"
     db = mongodb.get_collection(name)
-    
+
     @classmethod
     # Initialize the database
     def init_db(cls, clear_cache=False):
         # drop the "indexes" collection
         try:
             mongodb.drop_collection(cls.name)
-        
+
             # create new index collection
             mongodb.create_collection(cls.name)
             cls.db.create_index([
@@ -806,7 +805,7 @@ class Index(object):
                 queue.put(dict(error="No network connection"))
             return
         user = client.user
-        
+
         for query in [fetch_query, out_query]:
             if "before" in query:
                 query["before"] = Utility.to_datetime(query["before"])
@@ -828,7 +827,7 @@ class Index(object):
         # otherwise, unordered fetching is faster
         if limit or check_dates:
             fetch_query["ordered"] = True
-        
+
         count = 0
         in_range = False
         mongo_requests = []
@@ -847,12 +846,12 @@ class Index(object):
 
         if not (queue and out_query):
             queue = FakeQueue()
-        
+
         if out_query:
             yielding = True
-        
+
         try:
-            
+
             summaries = client.get_activities(
                 **fetch_query
             )
@@ -861,7 +860,7 @@ class Index(object):
             for d in summaries:
                 if not d or "_id" not in d:
                     continue
-                
+
                 d["ts"] = dtnow
                 ts_local = None
 
@@ -881,7 +880,7 @@ class Index(object):
                                 activity_ids.discard(d2["_id"])
                                 if not activity_ids:
                                     raise StopIteration
-                        
+
                         elif limit:
                             if count <= limit:
                                 queue.put(d2)
@@ -922,7 +921,7 @@ class Index(object):
                 mongo_requests.append(
                     pymongo.ReplaceOne({"_id": d["_id"]}, d, upsert=True)
                 )
-                  
+
             if mongo_requests:
                 result = cls.db.bulk_write(
                     list(mongo_requests),
@@ -932,7 +931,7 @@ class Index(object):
         except Exception as e:
             log.exception("%s index import error", user)
             queue.put(dict(error=str(e)))
-            
+
         else:
             elapsed = timer.elapsed()
             msg = "{} index {}".format(
@@ -967,7 +966,7 @@ class Index(object):
 
         if not client:
             return [{"error": "invalid user client. not authenticated?"}]
-        
+
         args = dict(
             fetch_query=fetch_query,
             out_query=out_query,
@@ -985,14 +984,14 @@ class Index(object):
                 for A in queue:
                     if not abort_signal:
                         abort_signal = yield A
-                    
+
             return index_gen(queue)
 
         if blocking:
             cls._import(client, **args)
         else:
             gevent.spawn(cls._import, client, **args)
-        
+
     @classmethod
     def import_by_id(cls, user, activity_ids):
         client = StravaClient(user=user)
@@ -1015,7 +1014,7 @@ class Index(object):
 
             d["ts"] = dtnow
             d["ts_local"] = Utility.to_datetime(d["ts_local"])
-            
+
             mongo_requests.append(
                 pymongo.ReplaceOne({"_id": d["_id"]}, d, upsert=True)
             )
@@ -1027,9 +1026,9 @@ class Index(object):
                 log.exception("mongo error")
             else:
                 import_stats["imported"] += len(mongo_requests)
-        
+
         import_stats["elapsed"] = timer.elapsed()
-        
+
         return Utility.cleandict(import_stats)
 
     @classmethod
@@ -1064,7 +1063,7 @@ class Index(object):
         if after:
             after = Utility.to_datetime(after)
             tsfltr["$gte"] = after
-        
+
         if tsfltr:
             query["ts_local"] = tsfltr
 
@@ -1072,7 +1071,7 @@ class Index(object):
             query["_id"] = {"$in": list(activity_ids)}
 
         to_delete = None
-        
+
         if exclude_ids:
             try:
                 result = cls.db.find(
@@ -1086,7 +1085,7 @@ class Index(object):
             except Exception:
                 log.exception("mongo error")
                 return
-            
+
             query_ids = set(
                 int(doc["_id"]) for doc in result
             )
@@ -1104,7 +1103,7 @@ class Index(object):
             if limit:
                 count = min(limit, count)
             yield {"count": count}
-        
+
         try:
             if out_fields:
                 cursor = cls.db.find(query, out_fields)
@@ -1132,7 +1131,7 @@ class Index(object):
                 )
             except Exception:
                 log.exception("mongo error")
-                
+
 
 class StravaClient(object):
     # Stravalib includes a lot of unnecessary overhead
@@ -1145,7 +1144,7 @@ class StravaClient(object):
     # MAX_PAGE = 3  # for testing
 
     BASE_URL = "https://www.strava.com/api/v3"
-    
+
     GET_ACTIVITIES_ENDPOINT = "/athlete/activities?per_page={page_size}"
     GET_ACTIVITIES_URL = BASE_URL + GET_ACTIVITIES_ENDPOINT.format(
         page_size=PAGE_SIZE
@@ -1181,7 +1180,7 @@ class StravaClient(object):
     def strava2doc(cls, a):
         if ("id" not in a) or not a["start_latlng"]:
             return
-        
+
         try:
             polyline = a["map"]["summary_polyline"]
             bounds = Activities.bounds(polyline)
@@ -1249,7 +1248,7 @@ class StravaClient(object):
         self.cancel_index_import = False
 
         query_base_url = cls.GET_ACTIVITIES_URL
-        
+
         #  handle parameters
         try:
             if "limit" in query:
@@ -1260,7 +1259,7 @@ class StravaClient(object):
             if "before" in query:
                 before = Utility.to_epoch(query["before"])
                 query_base_url += "&before={}".format(before)
-        
+
             if "after" in query:
                 after = Utility.to_epoch(query["after"])
                 query_base_url += "&after={}".format(after)
@@ -1284,7 +1283,7 @@ class StravaClient(object):
                 return pagenum, None
 
             url = query_base_url + "&page={}".format(pagenum)
-            
+
             log.debug("%s request index page %s", self, pagenum)
             page_timer = Timer()
 
@@ -1296,7 +1295,7 @@ class StravaClient(object):
             except Exception:
                 log.exception("%s failed index page request", self)
                 activities = "error"
-            
+
             elapsed = page_timer.elapsed()
             size = len(activities)
 
@@ -1311,7 +1310,7 @@ class StravaClient(object):
                 page_stats["pages"] += 1
             else:
                 page_stats["emp"] += 1
-            
+
             log.debug(
                 "%s index page %s %s",
                 self,
@@ -1347,7 +1346,7 @@ class StravaClient(object):
 
                 if (activities == "error"):
                     raise UserWarning("Strava error")
-                   
+
                 num = len(activities)
                 if num < cls.PAGE_SIZE:
                     total_num_activities = (pagenum - 1) * cls.PAGE_SIZE + num
@@ -1362,7 +1361,7 @@ class StravaClient(object):
                     doc = cls.strava2doc(a)
                     if not doc:
                         continue
-                    
+
                     abort_signal = yield doc
 
                     if abort_signal:
@@ -1383,7 +1382,7 @@ class StravaClient(object):
             self.user.delete()
         except Exception as e:
             log.exception(e)
-        
+
         try:
             pages = page_stats["pages"]
             if pages:
@@ -1414,7 +1413,7 @@ class StravaClient(object):
                     raise UserWarning(
                         "stream {} insufficient".format(s))
                 return stream
-        
+
         try:
             response = requests.get(url, headers=self.headers())
             response.raise_for_status()
@@ -1472,7 +1471,7 @@ class Activities(object):
             result["redis"] = pipe.execute()
 
         result["mongo_create"] = mongodb.create_collection(cls.name)
-        
+
         result = cls.db.create_index(
             "ts",
             name="ts",
@@ -1480,11 +1479,11 @@ class Activities(object):
         )
         log.info("initialized '{}' collection".format(cls.name))
         return result
-        
-    @classmethod 
+
+    @classmethod
     def update_ttl(cls, timeout=TTL_DB):
 
-        # Update the MongoDB Activities TTL if necessary 
+        # Update the MongoDB Activities TTL if necessary
         info = cls.db.index_information()
 
         if "ts" not in info:
@@ -1590,7 +1589,7 @@ class Activities(object):
 
     @classmethod
     def set_many(cls, batch_queue, ttl=TTL_CACHE):
-      
+
         now = datetime.utcnow()
         redis_pipe = redis.pipeline()
         mongo_batch = []
@@ -1606,7 +1605,7 @@ class Activities(object):
                 {"_id": int(_id)},
                 {"$set": document},
                 upsert=True))
-        
+
         if not mongo_batch:
             return
 
@@ -1630,7 +1629,7 @@ class Activities(object):
 
         # note we are creating a list from the entire iterable of ids!
         keys = [cls.cache_key(id) for id in ids]
-    
+
         # Attempt to fetch activities with ids from redis cache
         read_pipe = redis.pipeline()
         for key in keys:
@@ -1645,10 +1644,10 @@ class Activities(object):
         for id, key, cached in zip(ids, keys, results):
             if cached:
                 write_pipe.expire(key, ttl)
-                yield (id, msgpack.unpackb(cached, encoding="utf-8"))
+                yield (id, msgpack.unpackb(cached))
             else:
                 notcached[int(id)] = key
-        
+
         # Batch update TTL for redis cached activity streams
         # write_pipe.execute()
         fetched = set()
@@ -1670,7 +1669,7 @@ class Activities(object):
                 write_pipe.setex(notcached[id], ttl, packed)
                 fetched.add(id)
 
-                yield (id, msgpack.unpackb(packed, encoding="utf-8"))
+                yield (id, msgpack.unpackb(packed))
 
         # All fetched streams have been sent to the client
         # now we update the data-stores
@@ -1711,7 +1710,7 @@ class Activities(object):
                 packed = document["mpk"]
                 redis.setex(key, ttl, packed)
         if packed:
-            return msgpack.unpackb(packed, encoding="utf-8")
+            return msgpack.unpackb(packed)
 
     @classmethod
     def import_streams(cls, client, activity, batch_queue=None):
@@ -1726,7 +1725,7 @@ class Activities(object):
         # log.debug("%s request import %s", client, _id)
 
         result = client.get_activity_streams(_id)
-        
+
         if not result:
             if result is None:
                 # a result of None means this activity has no streams
@@ -1756,12 +1755,12 @@ class Activities(object):
                     "failed RLE encoding stream '%s' for activity %s",
                     name, _id)
                 return False
-     
+
         if batch_queue:
             batch_queue.put((_id, encoded_streams))
         else:
             cls.set(_id, encoded_streams)
-        
+
         activity.update(encoded_streams)
 
         # elapsed = round(time.time() - start, 2)
@@ -1787,7 +1786,7 @@ class Activities(object):
         for _id, stream_data in cls.get_many(list(to_fetch.keys())):
             if not stream_data:
                 continue
-                
+
             A = to_fetch.pop(_id)
             A.update(stream_data)
             yield A
@@ -1810,13 +1809,13 @@ class Activities(object):
                 for a in activities:
 
                     abort_signal = yield a
-                    
+
                     if abort_signal:
                         activities.send(abort_signal)
                         return
-        
+
         yield ""
-        
+
 
 class EventLogger(object):
     name = "history"
@@ -1997,7 +1996,7 @@ class Webhooks(object):
         except Exception:
             log.exception("problem fetching user for update %s", update_raw)
             return
-            
+
         if (not user) or (not user.index_count()):
             return
 
@@ -2017,7 +2016,7 @@ class Webhooks(object):
             mongodb.updates.insert_one(record)
         except Exception:
             log.exception("mongodb error")
-        
+
         if update.object_type == "athlete":
             return
 
@@ -2033,7 +2032,7 @@ class Webhooks(object):
                     )
                     return
 
-        #  If we got here then we know there are index entries 
+        #  If we got here then we know there are index entries
         #  for this user
         if update.aspect_type == "create":
             # fetch activity and add it to the index
@@ -2188,7 +2187,7 @@ class FakeQueue(object):
 
 
 class Timer(object):
-    
+
     def __init__(self):
         self.start = time.time()
 
@@ -2277,7 +2276,7 @@ class BinaryWebsocketClient(object):
             if self.closed:
                 break
             self.sendobj(obj)
-        
+
         watchdog.kill()
 
     def _pinger(self, delay=25):
