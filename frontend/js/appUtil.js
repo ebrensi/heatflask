@@ -81,35 +81,6 @@ function formatUserId ( data, type, row ) {
     }
 }
 
-
-// ------------------------
-
-
-
-// Fetching stuff using "ajax"
-function httpGetAsync(theUrl, callback) {
-    let xmlHttp = new XMLHttpRequest();
-    xmlHttp.onreadystatechange = function() {
-        if (xmlHttp.readyState == 4 && xmlHttp.status == 200)
-            callback(xmlHttp.responseText);
-    }
-    xmlHttp.open("GET", theUrl, true); // true for asynchronous
-    xmlHttp.send(null);
-}
-
-
-function httpPostAsync(theUrl, payload, callback) {
-    let xmlHttp = new XMLHttpRequest();
-    xmlHttp.onreadystatechange = function() {
-        if (xmlHttp.readyState == 4 && xmlHttp.status == 200)
-            callback(xmlHttp.responseText);
-    }
-    xmlHttp.open("POST", theUrl, true); // true for asynchronous
-    xmlHttp.setRequestHeader("Content-type", "application/json");
-    const dataToSend = JSON.stringify(payload);
-    xmlHttp.send(dataToSend);
-}
-
 // ---------------------------------------
 function touchHandler(event) {
     // Add touch support by converting touch events to mouse events

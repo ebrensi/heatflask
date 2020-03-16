@@ -91,7 +91,9 @@
                 "Stamen.Terrain": L.tileLayer.provider("Stamen.Terrain"),
                 "Stamen.TonerLite": L.tileLayer.provider("Stamen.TonerLite"),
                 "CartoDB.Positron": L.tileLayer.provider("CartoDB.Positron"),
-                "CartoDB.DarkMatter": L.tileLayer.provider("CartoDB.DarkMatter")
+                "CartoDB.DarkMatter": L.tileLayer.provider("CartoDB.DarkMatter"),
+                "OpenStreetMap.Mapnik": L.tileLayer.provider("OpenStreetMap.Mapnik"),
+                "Stadia.AlidadeSmoothDark": L.tileLayer.provider("Stadia.AlidadeSmoothDark"),
             });
 
 
@@ -575,12 +577,11 @@
 
 
 
-    function updateShareStatus(status) {
+    async function updateShareStatus(status) {
         if (OFFLINE) return;
-        const url = `${SHARE_STATUS_UPDATE_URL}?status=${status}`;
-        httpGetAsync(url, function(responseText) {
-            console.log(`response: ${responseText}`);
-        });
+        const resp = await fetch(`${SHARE_STATUS_UPDATE_URL}?status=${status}`),
+              text = await resp.text();
+        console.log(`response: ${text}`);
     }
 
 

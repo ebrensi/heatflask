@@ -64,6 +64,10 @@ L.TileLayer.include({
         tile.onerror = L.bind(this._tileOnError, this, done, tile);
         tile.onload = L.bind(this._tileOnLoad, this, done, tile);
 
+        // tile.ts = performance.now(); ////
+        // tile.key = this._tileCoordsToKey(coords); ////
+        // console.log(`loading tile ${tile.key} at ${tile.ts}`);
+
         if (this.options.crossOrigin) {
             tile.crossOrigin = "";
         }
@@ -186,21 +190,22 @@ L.TileLayer.include({
         // Serve tile from cached data
         //console.log('Tile is cached: ', tileUrl);
         tile.src = URL.createObjectURL(data.blob);
-
-        // if (
-        //     Date.now() > data.ts + this.options.cacheMaxAge &&
-        //     !this.options.useOnlyCache
-        // )
+        tile.stat = "hit";////
     },
 
     _tileOnLoad: function(done, tile) {
         URL.revokeObjectURL(tile.src);
         done(null, tile);
+
+        // const elapsed = performance.now() - tile.ts;
+        // console.log(`${tile.key} ${tile.stat}: ${~~elapsed}`);
     },
 
     _onCacheMiss: function(tile, tileUrl, key, done) {
 
         this.cacheMisses++;
+
+        // tile.stat = "miss"; ////
 
         if (this.options.useOnlyCache) {
             // Offline, not cached
