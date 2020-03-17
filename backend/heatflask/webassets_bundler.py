@@ -62,6 +62,7 @@ bundles = {
 
         # Minified
         path + "js/simple-datatables.js",
+        path + "js/pureknob.js",
         # path + "js/round-slider.min.js",
         # path + "js/round-slider.js",
 

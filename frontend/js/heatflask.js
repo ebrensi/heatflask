@@ -39,9 +39,9 @@
             center: ONLOAD_PARAMS.map_center,
             zoom: ONLOAD_PARAMS.map_zoom,
             preferCanvas: true,
-            zoomAnimation: false,
-            // zoomAnimationThreshold: 6,
-            // updateWhenZooming: false,
+            zoomAnimation: true,
+            zoomAnimationThreshold: 6,
+            updateWhenZooming: true,
           });
 
           // map controls
@@ -328,6 +328,30 @@
 
     const dialfg = "rgba(0,255,255,0.8)",
           dialbg = "rgba(255,255,255,0.2)";
+
+
+    const knob = pureknob.createKnob(140, 140),
+          rad = deg => deg * Math.PI/180;
+
+    // Set properties.
+    knob.setProperty('angleStart', rad(0) );
+    knob.setProperty('angleEnd', rad(360) );
+    knob.setProperty('angleOffset', rad(-90) );
+    knob.setProperty('colorFG', dialfg);
+    knob.setProperty('colorBG', dialbg);
+    knob.setProperty('trackWidth', 0.4);
+    knob.setProperty('valMin', 0);
+    knob.setProperty('valMax', 360);
+    knob.setProperty('needle', true);
+    knob.setProperty('label', "speed");
+    knob.addListener((knob, val) => {
+        newVal = val * val * SPEED_SCALE;
+        dotLayer.updateDotSettings({C2: newVal});;
+    });
+
+    // Add it to the DOM.
+    Dom.el('#speedConst').appendChild(knob.node());
+
 
     // // set up dial-controls
     // (() => {

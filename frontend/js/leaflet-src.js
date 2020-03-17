@@ -4658,7 +4658,6 @@ var Map = Evented.extend({
 	},
 
 	_tryAnimatedZoom: function (center, zoom, options) {
-
 		if (this._animatingZoom) { return true; }
 
 		options = options || {};
@@ -4706,7 +4705,10 @@ var Map = Evented.extend({
 		});
 
 		// Work around webkit not firing 'transitionend', see https://github.com/Leaflet/Leaflet/issues/3689, 2693
-		setTimeout(bind(this._onZoomTransitionEnd, this), 250);
+		// setTimeout(bind(this._onZoomTransitionEnd, this), 250);
+		setTimeout(bind(this._onZoomTransitionEnd, this), 10);
+
+		// this._onZoomTransitionEnd();
 	},
 
 	_onZoomTransitionEnd: function () {
@@ -11513,7 +11515,7 @@ var GridLayer = Layer.extend({
 			this._fadeFrame = requestAnimFrame(this._updateOpacity, this);
 		} else {
 			tile.active = true;
-			this._pruneTiles();
+			// this._pruneTiles();
 		}
 
 		if (!err) {
@@ -11538,7 +11540,8 @@ var GridLayer = Layer.extend({
 			} else {
 				// Wait a bit more than 0.2 secs (the duration of the tile fade-in)
 				// to trigger a pruning.
-				setTimeout(bind(this._pruneTiles, this), 250);
+				// setTimeout(bind(this._pruneTiles, this), 250);
+				this._pruneTiles();
 			}
 		}
 	},

@@ -414,7 +414,8 @@
 	                	   value="W9L7ZUADWKE8L">
 	                <input class="paypal_button" type="image"
 	                	   src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif"
-	                	   border="0" name="submit" alt="PayPal - The safer, easier way to pay online!">
+	                	   border="0"
+	                	   name="submit" alt="PayPal - The safer, easier way to pay online!">
 
 	                <img alt="" border="0"
 	                	 src="https://www.paypalobjects.com/en_US/i/scr/pixel.gif"
@@ -469,7 +470,10 @@
 					<form id="layer-settings-form">
 						<h4>System Constants</h4>
 						<div>
-							<span style="text-align: center;">
+							<div class="dial" id="speedConst">
+								<label for="speedConst">Speed</label>
+							</div>
+							<!-- <span style="text-align: center;">
     							<label for="speedConst">Speed</label>
 
                                 <round-slider class="dotconst-dial" id="speedConst"
@@ -487,10 +491,10 @@
 							<span id="period-display">Period T =
 								<span id="period-value"></span>
 								sec
-							</span>
+							</span> -->
 						</div>
 
-						<div>
+						<!-- <div>
                             <label for="dotAlpha">Alpha</label>
                             <round-slider class="dotconst-dial-small" id="dotAlpha"
                             	  		  arcLength=90 startAngle=250 value=10>
@@ -504,7 +508,7 @@
                             			  value=300>
                             </round-slider>
                         </div>
-
+ -->
 						<div>
 							<input type="checkbox" id="showPaths" checked>
 							<label for="showPaths">Show Paths</label>
