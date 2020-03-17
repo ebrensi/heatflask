@@ -272,6 +272,7 @@ const DotLayer = {
             ns2 = 0;
 
         this.DrawBox.reset();
+        const promises = [];
 
         inView.forEach(i => {
             const A = itemsArray[i];
@@ -280,74 +281,51 @@ const DotLayer = {
                 A.idxSet[zoom] = null;
                 ns += A.n;
 
-                // TODO: add this to a list of promises instead
-                //  and Promise.all() them to allow for
-                // concurrency
-                ns2 += this.simplify(A, zoom);
-            }
-            if ( this.makeSegMask(A).isEmpty() )
-                    vb.remove(i);
+                promises.push(
+                    this.simplify(A, zoom).then(A => this.makeSegMask(A))
+                )
+                // ns2 += this.simplify(A, zoom);
+            } else
+                promises.push(this.makeSegMask(A));
+            // if ( this.makeSegMask(A).isEmpty() )
+            //         vb.remove(i);
         });
 
-        let t1 = performance.now();
+        Promise.all(promises).then(fulfilled => {
+            for (A of fulfilled) {
+                if (A.segMask.isEmpty())
+                    vb.remove(itemsArray.indexOf(A));
+            }
 
-        const clear = this.DrawBox.clear,
-              rect = this.DrawBox.defaultRect();
+            let t1 = performance.now();
 
-        if (event)
-            clear(this._dotCtx, rect);
+            const clear = this.DrawBox.clear,
+                  rect = this.DrawBox.defaultRect();
 
-        if (this.options.debug)
-            clear(this._debugCtx, rect);
+            if (event)
+                clear(this._dotCtx, rect);
 
-        if (this.options.showPaths)
-            this.drawPaths();
-        else
-            clear(this._lineCtx, rect);
+            if (this.options.debug)
+                clear(this._debugCtx, rect);
 
-        let t2 = performance.now();
+            if (this.options.showPaths)
+                this.drawPaths();
+            else
+                clear(this._lineCtx, rect);
 
-        if (oldzoom != zoom) {
-            this.updateDotSettings();
-        }
-        else if (this._paused)
-            this.drawDots();
+            let t2 = performance.now();
 
-        // if (ns)
+            if (oldzoom != zoom) {
+                this.updateDotSettings();
+            }
+            else if (this._paused)
+                this.drawDots();
+
+            // if (ns)
         //     console.log(`simplify: ${ns} -> ${ns2} in ${~~(t1-t0)}:  ${(ns-ns2)/(t1-t0)}`)
 
 
-        /*
-
-        const tbls = [],
-              pxs = new Map(),
-              items = this._items;
-
-        toSimplify.forEach(i => {
-            const A = itemsArray[i];
-            tbls.push(A.px.buffer);
-            pxs.set(A.id, A.px);
         });
-
-        const promise = this.WorkerPool.post({"simplify": {
-            "tol": this.ViewBox.tol(zoom),
-            "px": pxs
-        }}, tbls);
-
-        promise.then(result => {
-            let i = 0,
-                args = result["simplify"];
-                                debugger;
-
-            args["px"].forEach((px, id) => {
-                const A = items[id];
-                A.px = px;
-                A.idxSet[zoom] = BitSet.fromWords(result["simplify"]["idx"][i++]);
-            });
-        });
-
-       */
-
 
     },
 
@@ -486,16 +464,18 @@ const DotLayer = {
 
     _simplify: function(A, toZoom, fromZoom) {
         const idxSet = A.idxSet[fromZoom],
-              nPoints = (fromZoom == undefined)? A.px.length/2 : idxSet.size();
+              nPoints = (fromZoom == undefined)? A.px.length/2 : idxSet.size(),
+              pArray = this.pointsArray(A, fromZoom),
+              tol = this.ViewBox.tol(toZoom);
 
-        const subSet = Simplifier.simplify(
-            this.pointsArray(A, fromZoom),
-            nPoints,
-            this.ViewBox.tol(toZoom)
-        );
+        return new Promise( resolve => {
+            const subSet = Simplifier.simplify(pArray, nPoints, tol);
+            A.idxSet[toZoom] = (fromZoom == undefined)? subSet : idxSet.new_subset(subSet);
 
-        A.idxSet[toZoom] = (fromZoom == undefined)? subSet : idxSet.new_subset(subSet);
-        return subSet.size()
+            // console.log(`${A.id}: simplified`)
+
+            resolve(A)
+        });
     },
 
     simplify: function(A, zoom) {
@@ -612,25 +592,30 @@ const DotLayer = {
               points = this.iterPoints(A, viewBox.zoom),
               inBounds = p => viewBox.contains(p) && drawBox.update(p);
 
-        A.segMask = (A.segMask || new BitSet()).clear();
+        return new Promise( resolve => {
+            A.segMask = (A.segMask || new BitSet()).clear();
 
-        let p = points.next().value,
-            p_In = inBounds(p),
-            s = 0;
+            let p = points.next().value,
+                p_In = inBounds(p),
+                s = 0;
 
-        for (const nextp of points) {
-            const nextp_In = inBounds(nextp);
-            if (p_In || nextp_In) {
-                A.segMask.add(s);
+            for (const nextp of points) {
+                const nextp_In = inBounds(nextp);
+                if (p_In || nextp_In) {
+                    A.segMask.add(s);
+                }
+                p_In = nextp_In;
+                s++;
             }
-            p_In = nextp_In;
-            s++;
-        }
 
-        if (A.badSegs)
-            for (s of A.badSegs)
-                A.segMask.remove(s);
-        return A.segMask
+            if (A.badSegs)
+                for (s of A.badSegs)
+                    A.segMask.remove(s);
+
+            // console.log(`${A.id}: segmask`)
+
+            resolve(A)
+        });
     },
 
     _drawPathFromSegIter: function(ctx, A) {
