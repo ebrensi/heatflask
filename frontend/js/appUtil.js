@@ -77,54 +77,21 @@ function formatUserId ( data, type, row ) {
     }
 }
 
-// ---------------------------------------
-function touchHandler(event) {
-    // Add touch support by converting touch events to mouse events
-    // Source: http://stackoverflow.com/a/6362527/725573
 
-    const touches = event.changedTouches,
-        first = touches[0];
-    let type = "";
-
-    switch(event.type) {
-        case "touchstart": type = "mousedown"; break;
-        case "touchmove":  type = "mousemove"; break;
-        case "touchend":   type = "mouseup";   break;
-        default: return;
-    }
-
-    //Convert the touch event into it's corresponding mouse event
-    const simulatedEvent = document.createEvent("MouseEvent");
-    simulatedEvent.initMouseEvent(type, true, true, window, 1,
-                              first.screenX, first.screenY,
-                              first.clientX, first.clientY, false,
-                              false, false, false, 0/*left*/, null);
-
-    first.target.dispatchEvent(simulatedEvent);
-    event.preventDefault();
-}
-
-// // make touch events simulate mouse events via _touchHandler
-// document.addEventListener("touchstart", touchHandler, true);
-// document.addEventListener("touchmove", touchHandler, true);
-// document.addEventListener("touchend", touchHandler, true);
-// document.addEventListener("touchcancel", touchHandler, true);
-
-
-let Pikaday = window.Pikaday,
-    msgpack = window.msgpack,
-    PersistentWebSocket = window.PersistentWebSocket,
-    // $ = window.$ = function() {},
-    // jQuery = window.jQuery = function() {},
-    ga = window.ga,
-    GIF = window.GIF,
-    leafletImage = window.leafletImage,
-    download = window.download,
-    open = window.open,
-    sessionStorage = window.sessionStorage,
-    localStorage = window.localStorage,
-    simpleDatatables = window.simpleDatatables,
-    PouchDB = window.PouchDB,
-    // JSCompiler_renameProperty = window.JSCompiler_renameProperty,
-    SVGElementInstance = window.SVGElementInstance;
+// let Pikaday = window.Pikaday,
+//     msgpack = window.msgpack,
+//     PersistentWebSocket = window.PersistentWebSocket,
+//     // $ = window.$ = function() {},
+//     // jQuery = window.jQuery = function() {},
+//     ga = window.ga,
+//     GIF = window.GIF,
+//     leafletImage = window.leafletImage,
+//     download = window.download,
+//     open = window.open,
+//     sessionStorage = window.sessionStorage,
+//     localStorage = window.localStorage,
+//     simpleDatatables = window.simpleDatatables,
+//     PouchDB = window.PouchDB,
+//     // JSCompiler_renameProperty = window.JSCompiler_renameProperty,
+//     SVGElementInstance = window.SVGElementInstance;
 

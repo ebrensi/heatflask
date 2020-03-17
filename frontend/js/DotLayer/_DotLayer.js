@@ -17,7 +17,7 @@ const DotLayer = {
     target_fps: 25,
 
     options: {
-        debug: true,
+        debug: false,
         numWorkers: 0,
         startPaused: false,
         showPaths: true,
@@ -148,9 +148,9 @@ const DotLayer = {
             resize: this._onLayerResize
         };
 
-        if ( this._map.options.zoomAnimation && L.Browser.any3d ) {
-            events.zoomanim =  this._animateZoom;
-        }
+        // if ( this._map.options.zoomAnimation && L.Browser.any3d ) {
+        //     events.zoomanim =  this._animateZoom;
+        // }
 
         return events;
     },

@@ -470,45 +470,22 @@
 					<form id="layer-settings-form">
 						<h4>System Constants</h4>
 						<div>
-							<div class="dial" id="speedConst">
-								<label for="speedConst">Speed</label>
-							</div>
-							<!-- <span style="text-align: center;">
-    							<label for="speedConst">Speed</label>
-
-                                <round-slider class="dotconst-dial" id="speedConst"
-                                	          arcLength=60 startAngle=200 value=10>
-                                </round-slider>
-							</span>
-
-							<span style="text-align: center;">
-                                <round-slider class="dotconst-dial" id="sepConst"
-                                			  startAngle=240 arcLength=50 value=10>
-                    		    </round-slider>
-                                <label for="sepConst">Density</label>
-							</span>
-
-							<span id="period-display">Period T =
+							<label for="speedConst">Speed</label>
+							<input type="text" id="speedConst" class="dotconst-dial">
+							<label for="sepConst">Sparsity</label>
+							<input type="text" id="sepConst" class="dotconst-dial">
+						</div>
+						<span id="period-display">Period T =
 								<span id="period-value"></span>
 								sec
-							</span> -->
+						</span>
+						<div>
+							<label for="dotAlpha">Alpha</label>
+							<input type="text" id="dotAlpha" class="dotconst-dial-small">
+							<label for="dotScale">Scale</label>
+							<input type="text" id="dotScale" class="dotconst-dial-small">
 						</div>
 
-						<!-- <div>
-                            <label for="dotAlpha">Alpha</label>
-                            <round-slider class="dotconst-dial-small" id="dotAlpha"
-                            	  		  arcLength=90 startAngle=250 value=10>
-                            </round-slider>
-
-
-                            <label for="dotScale">Scale</label>
-                            <round-slider class="dotconst-dial-small scaling"
-                            	          id="dotScale"
-                            			  startAngle=270 arcLength=360
-                            			  value=300>
-                            </round-slider>
-                        </div>
- -->
 						<div>
 							<input type="checkbox" id="showPaths" checked>
 							<label for="showPaths">Show Paths</label>

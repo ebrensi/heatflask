@@ -34,11 +34,27 @@ button, input, select, textarea {
 
 /* Leaflet.js stuff */
 
+/* deals with a browser warning:
+    see https://github.com/Leaflet/Leaflet/issues/4686
+*/
+.leaflet-fade-anim .leaflet-tile,
+.leaflet-zoom-anim .leaflet-zoom-animated {
+  will-change:auto !important;
+}
+
+/* addresses warning
+  https://stackoverflow.com/questions/59477050/css-non-standard-zoom-property
+*/
+.leaflet-oldie .leaflet-popup-content-wrapper {
+  transform: scale(1);
+  transform-origin: 0 0;
+}
+
 
 /* we need to specify non-standard location for images */
 .leaflet-control-layers-toggle {
   background-image: url(../images/layers.png);
-  }
+}
 
 .leaflet-retina .leaflet-control-layers-toggle {
   background-image: url(../images/layers-2x.png);
@@ -107,7 +123,6 @@ button, input, select, textarea {
 .sidebar-pane {
   padding: 10px 10px;
 }
-
 
 /*!
  * Pikaday

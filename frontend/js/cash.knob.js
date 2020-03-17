@@ -13,13 +13,13 @@
 (function (factory) {
     if (typeof exports === 'object') {
         // CommonJS
-        module.exports = factory(require('jquery'));
+        module.exports = factory(require('cash'));
     } else if (typeof define === 'function' && define.amd) {
         // AMD. Register as an anonymous module.
-        define(['jquery'], factory);
+        define(['cash'], factory);
     } else {
         // Browser globals
-        factory(jQuery);
+        factory(cash);
     }
 }(function ($) {
 
@@ -38,7 +38,7 @@
     k.c = {};
     k.c.d = $(document);
     k.c.t = function (e) {
-        return e.originalEvent.touches.length - 1;
+        return e.touches.length - 1;
     };
 
     /**
@@ -154,7 +154,7 @@
                     s.i[k] = $this;
                     s.v[k] = s.o.parse($this.val());
 
-                    $this.bind(
+                    $this.on(
                         'change blur',
                         function () {
                             var val = {};
@@ -170,7 +170,7 @@
                 this.i = this.$;
                 this.v = this.o.parse(this.$.val());
                 this.v === '' && (this.v = this.o.min);
-                this.$.bind(
+                this.$.on(
                     'change blur',
                     function () {
                         s.val(s._validate(s.o.parse(s.$.val())));
@@ -240,9 +240,9 @@
 
             // binds configure event
             this.$
-                .bind("configure", cf)
+                .on("configure", cf)
                 .parent()
-                .bind("configure", cf);
+                .on("configure", cf);
 
             // finalize init
             this._listen()
@@ -316,8 +316,8 @@
         this._touch = function (e) {
             var touchMove = function (e) {
                 var v = s.xy2val(
-                            e.originalEvent.touches[s.t].pageX,
-                            e.originalEvent.touches[s.t].pageY
+                            e.touches[s.t].pageX,
+                            e.touches[s.t].pageY
                         );
 
                 if (v == s.cv) return;
@@ -336,11 +336,11 @@
 
             // Touch events listeners
             k.c.d
-                .bind("touchmove.k", touchMove)
-                .bind(
+                .on("touchmove.k", touchMove)
+                .on(
                     "touchend.k",
                     function () {
-                        k.c.d.unbind('touchmove.k touchend.k');
+                        k.c.d.off('touchmove.k touchend.k');
                         s.val(s.cv);
                     }
                 );
@@ -365,13 +365,13 @@
 
             // Mouse events listeners
             k.c.d
-                .bind("mousemove.k", mouseMove)
-                .bind(
+                .on("mousemove.k", mouseMove)
+                .on(
                     // Escape key cancel current change
                     "keyup.k",
                     function (e) {
                         if (e.keyCode === 27) {
-                            k.c.d.unbind("mouseup.k mousemove.k keyup.k");
+                            k.c.d.off("mouseup.k mousemove.k keyup.k");
 
                             if (s.eH && s.eH() === false)
                                 return;
@@ -380,10 +380,10 @@
                         }
                     }
                 )
-                .bind(
+                .on(
                     "mouseup.k",
                     function (e) {
-                        k.c.d.unbind('mousemove.k mouseup.k keyup.k');
+                        k.c.d.off('mousemove.k mouseup.k keyup.k');
                         s.val(s.cv);
                     }
                 );
@@ -402,14 +402,14 @@
         this._listen = function () {
             if (!this.o.readOnly) {
                 this.$c
-                    .bind(
+                    .on(
                         "mousedown",
                         function (e) {
                             e.preventDefault();
                             s._xy()._mouse(e);
                         }
                     )
-                    .bind(
+                    .on(
                         "touchstart",
                         function (e) {
                             e.preventDefault();
@@ -568,9 +568,8 @@
                 mw = function (e) {
                     e.preventDefault();
 
-                    var ori = e.originalEvent,
-                        deltaX = ori.detail || ori.wheelDeltaX,
-                        deltaY = ori.detail || ori.wheelDeltaY,
+                    var deltaX = e.detail || e.wheelDeltaX,
+                        deltaY = e.detail || e.wheelDeltaY,
                         v = s._validate(s.o.parse(s.$.val()))
                             + (
                                 deltaX > 0 || deltaY > 0
@@ -611,7 +610,7 @@
                 };
 
             this.$
-                .bind(
+                .on(
                     "keydown",
                     function (e) {
                         var kc = e.keyCode;
@@ -650,7 +649,7 @@
                         }
                     }
                 )
-                .bind(
+                .on(
                     "keyup",
                     function (e) {
                         if (isNaN(kval)) {
@@ -668,8 +667,8 @@
                     }
                 );
 
-            this.$c.bind("mousewheel DOMMouseScroll", mw);
-            this.$.bind("mousewheel DOMMouseScroll", mw);
+            this.$c.on("mousewheel DOMMouseScroll", mw);
+            this.$.on("mousewheel DOMMouseScroll", mw);
         };
 
         this.init = function () {
