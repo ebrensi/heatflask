@@ -620,8 +620,9 @@ const DotLayer = {
 
         for (const nextp of points) {
             const nextp_In = inBounds(nextp);
-            if (p_In || nextp_In)
+            if (p_In || nextp_In) {
                 A.segMask.add(s);
+            }
             p_In = nextp_In;
             s++;
         }
@@ -926,13 +927,6 @@ const DotLayer = {
             ctx.globalAlpha = options.normal.dotOpacity * alphaScale;
             let drawDotFunc = this.makeSquareDrawFunc();
             count += this._drawDotsByColor(now, unselected, drawDotFunc, options.normal.dotColor);
-        }
-
-        if (options.debug) {
-            this._debugCtxReset();
-            this.DrawBox.draw(this._debugCtx);
-            this._debugCtx.strokeStyle = "rgb(255,0,255,1)";
-            vb.drawPxBounds(this._debugCtx);
         }
 
         return count

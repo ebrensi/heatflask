@@ -203,7 +203,7 @@ DotLayer.ViewBox = {
     },
 
     // this function operates in-place!
-    px2Container: function(p) {
+    px2Container: function() {
         const offset = this.pxOffset,
               zf = this._zf;
 
