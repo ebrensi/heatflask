@@ -3,7 +3,7 @@
   "version": "0.5.0",
   "homepage": "https://www.heatflask.com",
   "description": "Animated Movement Data Visualization for Strava Tracks",
-  "main": "js/fromNPM.js",
+  "main": "js/heatflask.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -11,7 +11,12 @@
   "license": "ISC",
   "dependencies": {
     "@msgpack/msgpack": "^1.12.0",
+    "downloadjs": "^1.4.7",
+    "gif.js.optimized": "^1.0.1",
     "leaflet": "^1.6.0",
+    "leaflet-easybutton": "^2.4.0",
+    "leaflet-image": "^0.4.0",
+    "persistent-websocket": "^1.0.2",
     "pikaday": "^1.8.0",
     "simple-datatables": "^2.1.9"
   }

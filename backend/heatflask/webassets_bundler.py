@@ -64,7 +64,6 @@ bundles = {
         path + "js/simple-datatables.js",
         path + "js/pureknob.js",
         # path + "js/cash.js",
-        # path + "js/jquery-3.4.1.slim.js",
         # path + "js/cash.knob.js",
 
         path + 'js/gif2.js',  # Johan Nordberg: http://jnordberg.github.io/gif.js/
@@ -75,8 +74,6 @@ bundles = {
             # unMinified
             path + "js/msgpack.js",
             path + 'js/Dom.js',
-
-            # simple_datatables_js,
 
             # both
             Leaflet_js,
@@ -132,7 +129,6 @@ bundles = {
         path + 'js/pws.js', # persistent websocket https://github.com/porsager/pws
         path + 'js/msgpack.min.js',
         path + "js/simple-datatables.js",
-        # path + simple_datatables_js,
         path + 'js/strava.js',
         path + 'js/appUtil.js',
         path + 'js/Dom.js',
