@@ -193,26 +193,15 @@ button, input, select, textarea {
 
 /* end pikaday */
 
-
-round-slider {
-  max-width: 200px;
-  transition: all 1.3s ease-out 0s;
-}
-
-round-slider.scaling:hover {
-  max-width: 200px;
-}
-
-
 .dataTable-table > thead > tr {
   background-color: #0000ff50;
 }
 
-/*.dataTable-table > tbody > tr :hover{
-  background-color: #0000ff40;
-}*/
-
-.dataTable-table tbody > tr:hover{
+.dataTable-table tbody > tr:hover {
   background-color: #00ff0040;
+}
+
+.dataTable-table tbody > tr.selected{
+  background-color: #00ff0060;
 }
 

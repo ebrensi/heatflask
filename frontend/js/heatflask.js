@@ -326,100 +326,184 @@
 
     })();
 
-    const dialfg = "rgba(0,255,255,0.8)",
-          dialbg = "rgba(255,255,255,0.2)";
+
+    let dialfg, dialbg;
+
+    ( function() {
+        const rad = deg => deg * Math.PI/180,
+              settings = {
+                'angleStart': rad(0),
+                'angleEnd': rad(360),
+                'angleOffset': rad(-90),
+                'colorFG': "rgba(0,255,255,0.4)",
+                'colorBG': "rgba(255,255,255,0.2)",
+                'trackWidth': 0.5,
+                'valMin': 0,
+                'valMax': 100,
+                'needle': true,
+              };
+        dialfg = settings["colorFG"];
+        dialbg = settings["colorBG"];
+
+        function makeKnob(selector, options) {
+            const knob = pureknob.createKnob(options.width, options.height),
+                  mySettings = Object.assign({}, settings);
+                  Object.assign(mySettings, options);
+
+            for ( const [property, value] of Object.entries(mySettings) ) {
+                knob.setProperty(property, value);
+            }
+
+            const node = knob.node();
+
+            Dom.el(selector).appendChild(node);
+
+            return knob
+        }
+
+        function updatePeriod() {
+            // Enable capture if period is less than CAPTURE_DURATION_MAX
+            let cycleDuration = dotLayer.periodInSecs().toFixed(2),
+                captureEnabled = controls.captureControl.enabled;
+
+            Dom.html("#period-value", cycleDuration);
+            if (cycleDuration <= CAPTURE_DURATION_MAX) {
+                if (!captureEnabled) {
+                    controls.captureControl.addTo(map);
+                    controls.captureControl.enabled = true;
+                }
+            } else if (captureEnabled) {
+                controls.captureControl.removeFrom(map);
+                controls.captureControl.enabled = false;
+            }
+        }
+
+        function listener(knob, val) {
+            let period_changed;
+
+            switch (knob['_properties']['label']) {
+                case "Speed":
+                    newVal = val * val * SPEED_SCALE;
+                    dotLayer.updateDotSettings({C2: newVal});
+                    updatePeriod();
+                break;
+
+                case "Sparcity":
+                    newVal = Math.pow(2, val * SEP_SCALE.m + SEP_SCALE.b);
+                    dotLayer.updateDotSettings({C1: newVal});
+                    updatePeriod();
+                break;
+
+                case "Alpha":
+                    dotLayer.updateDotSettings({alphaScale: val / 10 });
+                    dotLayer.drawPaths();
+                break;
+
+                case "Size":
+                    dotLayer.updateDotSettings({dotScale: val});
+                break;
+            }
+        }
 
 
-    // const knob = pureknob.createKnob(140, 140),
-    //       rad = deg => deg * Math.PI/180;
+        makeKnob('#dot-controls1', {
+            width: "140",
+            height: "140",
+            "label": "Speed"
+        }).addListener(listener);
 
-    // // Set properties.
-    // knob.setProperty('angleStart', rad(0) );
-    // knob.setProperty('angleEnd', rad(360) );
-    // knob.setProperty('angleOffset', rad(-90) );
-    // knob.setProperty('colorFG', dialfg);
-    // knob.setProperty('colorBG', dialbg);
-    // knob.setProperty('trackWidth', 0.4);
-    // knob.setProperty('valMin', 0);
-    // knob.setProperty('valMax', 360);
-    // // knob.setProperty('needle', true);
-    // knob.setProperty('label', "speed");
-    // knob.addListener((knob, val) => {
-    //     newVal = val * val * SPEED_SCALE;
-    //     dotLayer.updateDotSettings({C2: newVal});;
-    // });
+        makeKnob('#dot-controls1', {
+            width: "140",
+            height: "140",
+            "label": "Sparcity"
+        }).addListener(listener);
 
-    // // Add it to the DOM.
-    // Dom.el('#speedConst').appendChild(knob.node());
+        makeKnob('#dot-controls2', {
+            width: "100",
+            height: "100",
+            valMin: 0,
+            valMax: 10,
+            "label": "Alpha"
+        }).addListener(listener);
+
+        makeKnob('#dot-controls2', {
+            width: "100",
+            height: "100",
+            valMin: 0,
+            valMax: 10,
+            "label": "Size"
+        }).addListener(listener);
+
+    })();
 
 
     // set up dial-controls
-    (() => {
-        $(".dotconst-dial").knob({
-            min: 0,
-            max: 100,
-            step: 0.1,
-            width: "140",
-            height: "140",
-            cursor: 20,
-            inline: true,
-            displayInput: false,
-            fgColor: dialfg,
-            bgColor : dialbg,
-            change: function (val) {
-                let newVal;
-                if (this.$[0].id == "sepConst") {
-                    newVal = Math.pow(2, val * SEP_SCALE.m + SEP_SCALE.b);
-                    dotLayer.updateDotSettings({C1: newVal});
-                } else {
-                    newVal = val * val * SPEED_SCALE;
-                    dotLayer.updateDotSettings({C2: newVal});;
-                }
+    // (() => {
+    //     $(".dotconst-dial").knob({
+    //         min: 0,
+    //         max: 100,
+    //         step: 0.1,
+    //         width: "140",
+    //         height: "140",
+    //         cursor: 20,
+    //         inline: true,
+    //         displayInput: false,
+    //         fgColor: dialfg,
+    //         bgColor : dialbg,
+    //         change: function (val) {
+    //             let newVal;
+    //             if (this.$[0].id == "sepConst") {
+    //                 newVal = Math.pow(2, val * SEP_SCALE.m + SEP_SCALE.b);
+    //                 dotLayer.updateDotSettings({C1: newVal});
+    //             } else {
+    //                 newVal = val * val * SPEED_SCALE;
+    //                 dotLayer.updateDotSettings({C2: newVal});;
+    //             }
 
-                // Enable capture if period is less than CAPTURE_DURATION_MAX
-                let cycleDuration = dotLayer.periodInSecs().toFixed(2),
-                    captureEnabled = controls.captureControl.enabled;
+    //             // Enable capture if period is less than CAPTURE_DURATION_MAX
+    //             let cycleDuration = dotLayer.periodInSecs().toFixed(2),
+    //                 captureEnabled = controls.captureControl.enabled;
 
-                Dom.html("#period-value", cycleDuration);
-                if (cycleDuration <= CAPTURE_DURATION_MAX) {
-                    if (!captureEnabled) {
-                        controls.captureControl.addTo(map);
-                        controls.captureControl.enabled = true;
-                    }
-                } else if (captureEnabled) {
-                    controls.captureControl.removeFrom(map);
-                    controls.captureControl.enabled = false;
-                }
-            },
-            release: function() {
-                updateState();
-            }
-        });
+    //             Dom.html("#period-value", cycleDuration);
+    //             if (cycleDuration <= CAPTURE_DURATION_MAX) {
+    //                 if (!captureEnabled) {
+    //                     controls.captureControl.addTo(map);
+    //                     controls.captureControl.enabled = true;
+    //                 }
+    //             } else if (captureEnabled) {
+    //                 controls.captureControl.removeFrom(map);
+    //                 controls.captureControl.enabled = false;
+    //             }
+    //         },
+    //         release: function() {
+    //             updateState();
+    //         }
+    //     });
 
-        $(".dotconst-dial-small").knob({
-            min: 0.01,
-            max: 10,
-            step: 0.01,
-            width: "100",
-            height: "100",
-            cursor: 20,
-            inline: true,
-            displayInput: false,
-            fgColor: dialfg,
-            bgColor : dialbg,
-            change: function (val) {
-                if (this.$[0].id == "dotScale")
-                    dotLayer.updateDotSettings({dotScale: val});
-                else {
-                    dotLayer.updateDotSettings({alphaScale: val / 10});
-                    dotLayer.drawPaths();
-                }
-            },
-            release: function() {
-                updateState();
-            }
-        });
-    })();
+    //     $(".dotconst-dial-small").knob({
+    //         min: 0.01,
+    //         max: 10,
+    //         step: 0.01,
+    //         width: "100",
+    //         height: "100",
+    //         cursor: 20,
+    //         inline: true,
+    //         displayInput: false,
+    //         fgColor: dialfg,
+    //         bgColor : dialbg,
+    //         change: function (val) {
+    //             if (this.$[0].id == "dotScale")
+    //                 dotLayer.updateDotSettings({dotScale: val});
+    //             else {
+    //                 dotLayer.updateDotSettings({alphaScale: val / 10});
+    //                 dotLayer.drawPaths();
+    //             }
+    //         },
+    //         release: function() {
+    //             updateState();
+    //         }
+    //     });
+    // })();
 
 
     if (FLASH_MESSAGES.length > 0) {
@@ -540,7 +624,7 @@
     function makeTable(items) {
         const colData = [];
 
-        for (const id of items.keys()) {
+        for (const id of appState.items.keys()) {
             colData.push([id, id, id, id, id]) ;
         }
 
@@ -558,8 +642,8 @@
         const config = {
           data,
           columns: [
-            { select: 0, type: "string", render: id => items.get(+id).tsLoc.toLocaleString() },
-            { select: 1, type: "string", render: id => {
+            { select: 0, type: "string", sort: "desc", render: id => items.get(+id).tsLoc.toLocaleString() },
+            { select: 1, type: "string", render: (id, cell, row) => {
                 const A = items.get(+id);
                 return `<p style="color:${A.pathColor}">${A.type}</p>`;
             }},
@@ -572,9 +656,67 @@
           paging: false,
           scrollY: "60vh"
         };
-        const dt = new simpleDatatables.DataTable("#activitiesList", config);
 
+        const table = new simpleDatatables.DataTable("#activitiesList", config);
 
+        table.table.addEventListener("click", function(e) {
+            const td = e.target,
+                  colNum = td.cellIndex,
+                  id = +td.data,
+                  tr = td.parentElement,
+                  dataIndex = tr.dataIndex,
+                  selections = {},
+                  ids = Array.from(appState.items.keys());
+
+            // toggle selection property of the clicked row
+            const A = appState.items.get(id);
+            tr.classList.toggle("selected");
+            A.selected = !A.selected;
+            const selected = selections[id] = A.selected;
+
+            // handle shift-click for multiple (de)selection
+            //  all rows beteween the clicked row and the last clicked row
+            //  will be set to whatever this row was set to.
+            if (e.shiftKey && appState.lastSelection) {
+
+                const prev = appState.lastSelection,
+                      first = Math.min(dataIndex, prev.dataIndex),
+                      last = Math.max(dataIndex, prev.dataIndex);
+
+                debugger;
+                for (let i=first+1; i<=last; i++) {
+                    const tr = table.data[i],
+                          classes = tr.classList,
+                          id = ids[tr.dataIndex],
+                          A = appState.items.get(id);
+
+                    A.selected = selected;
+                    selections[id] = selected;
+
+                    if (selected && !classes.contains("selected")) {
+                        classes.add("selected");
+                        debugger;
+                    } else if (!selected && classes.contains("selected")) {
+                        classes.remove("selected");
+                    }
+                }
+            }
+
+            // let dotLayer know about selection changes
+            dotLayer.setItemSelect(selections);
+
+            appState.lastSelection = {
+                val: selected,
+                dataIndex: dataIndex
+            }
+
+            let redraw = false;
+            const mapBounds = map.getBounds();
+
+            if ( Dom.prop("#zoom-to-selection", 'checked') )
+                zoomToSelectedPaths();
+
+        });
     }
 
 
@@ -796,8 +938,7 @@
         // atable.rows.add(Array.from(appState.items.values()));
         // atable.columns.adjust().draw()
 
-        // debugger;
-        makeTable(appState.items);
+        const table = makeTable(appState.items);
 
         if (!ADMIN && !OFFLINE) {
             // Record this to google analytics

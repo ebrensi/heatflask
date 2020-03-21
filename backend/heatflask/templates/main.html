@@ -450,9 +450,7 @@
                 	Zoom to selection
 
 				<div>
-					<table id='activitiesList'
-						   class='display order-column compact wrap'>
-					</table>
+					<table id='activitiesList'></table>
 				</div>
 			</div>
 
@@ -469,21 +467,26 @@
 				<div>
 					<form id="layer-settings-form">
 						<h4>System Constants</h4>
-						<div>
-							<label for="speedConst">Speed</label>
-							<input type="text" id="speedConst" class="dotconst-dial">
-							<label for="sepConst">Sparsity</label>
-							<input type="text" id="sepConst" class="dotconst-dial">
+						<div id="dot-controls1">
+							<!-- <label for="speedConst">
+								Speed
+								<input type="text" id="speedConst" class="dotconst-dial">
+							</label>
+							<label for="sepConst">
+								Sparsity
+								<input type="text" id="sepConst" class="dotconst-dial">
+							</label> -->
 						</div>
-						<span id="period-display">Period T =
-								<span id="period-value"></span>
-								sec
+						<span id="period-display">
+							Period T =
+							<span id="period-value"></span>
+							sec
 						</span>
-						<div>
-							<label for="dotAlpha">Alpha</label>
+						<div id="dot-controls2">
+							<!-- <label for="dotAlpha">Alpha</label>
 							<input type="text" id="dotAlpha" class="dotconst-dial-small">
 							<label for="dotScale">Scale</label>
-							<input type="text" id="dotScale" class="dotconst-dial-small">
+							<input type="text" id="dotScale" class="dotconst-dial-small"> -->
 						</div>
 
 						<div>

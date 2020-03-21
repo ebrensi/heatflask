@@ -62,10 +62,10 @@ bundles = {
 
         # Minified
         path + "js/simple-datatables.js",
-        # path + "js/pureknob.js",
-        path + "js/cash.js",
+        path + "js/pureknob.js",
+        # path + "js/cash.js",
         # path + "js/jquery-3.4.1.slim.js",
-        path + "js/cash.knob.js",
+        # path + "js/cash.knob.js",
 
         path + 'js/gif2.js',  # Johan Nordberg: http://jnordberg.github.io/gif.js/
         path + 'js/pws.js', # persistent websocket https://github.com/porsager/pws

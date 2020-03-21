@@ -166,6 +166,21 @@ DotLayer.ViewBox = {
 
     },
 
+    calibrate: function() {
+        // calibrate screen coordinates
+        const m = this._map,
+              topLeft = m.containerPointToLayerPoint( [ 0, 0 ] ),
+              setPosition = L.DomUtil.setPosition,
+              canvases = this._canvases;
+
+        for (let i=0, len=canvases.length; i<len; i++)
+            setPosition( canvases[i], topLeft );
+
+        const pxOrigin = m.getPixelOrigin(),
+              mapPanePos = m._getMapPanePos();
+        this.pxOffset = mapPanePos.subtract(pxOrigin);
+    },
+
     update: function(calibrate=true) {
         const m = this._map,
               zoom = m.getZoom(),
@@ -176,19 +191,8 @@ DotLayer.ViewBox = {
         if (zoomChange)
             this.onZoomChange(zoom);
 
-        if (calibrate) {
-            // calibrate screen coordinates
-            const topLeft = m.containerPointToLayerPoint( [ 0, 0 ] ),
-                   setPosition = L.DomUtil.setPosition,
-                   canvases = this._canvases;
-
-            for (let i=0, len=canvases.length; i<len; i++)
-                setPosition( canvases[i], topLeft );
-
-            const pxOrigin = m.getPixelOrigin(),
-                  mapPanePos = m._getMapPanePos();
-            this.pxOffset = mapPanePos.subtract(pxOrigin);
-        }
+        if (calibrate)
+            this.calibrate();
 
         this.pxBounds = this.latLng2pxBounds(latLngMapBounds);
 

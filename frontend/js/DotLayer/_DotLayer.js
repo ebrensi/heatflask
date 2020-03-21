@@ -194,7 +194,7 @@ const DotLayer = {
         this.setDotColors();
         this.ViewBox.reset(this._itemsArray);
         this._ready = true;
-        this._redraw();
+        this._redraw(true);
 
         if (!this._paused)
             this.animate();
@@ -212,7 +212,7 @@ const DotLayer = {
             canvas.height = newHeight;
         }
 
-        this._redraw();
+        this._redraw(true);
     },
 
     viewReset: function() {
@@ -247,10 +247,13 @@ const DotLayer = {
     },
 
     onMove: function om(event) {
+        this._dotRect = this.DrawBox.defaultRect();
+
         // prevent redrawing more often than necessary
         const ts = performance.now(),
               lr = om.lastRedraw || 0;
-        if (ts - lr < 500)
+
+        if (ts - lr < 1000)
             return;
 
         om.lastRedraw = ts;
@@ -261,17 +264,25 @@ const DotLayer = {
         if ( !this._ready )
             return;
 
-        const oldzoom = this.ViewBox.zoom;
+        const vb = this.ViewBox;
+        this.DrawBox.clear(this._dotCtx);
+
+        this.DrawBox.reset();
+        if (event) {
+            this._drawingDots = false;
+            this._dotRect = this.DrawBox.defaultRect();
+            vb.update();
+        }
+
+        const inView = vb.inView(),
+              oldzoom = this.ViewBox.zoom;
 
         const itemsArray = this._itemsArray,
-              vb = this.ViewBox,
-              inView = vb.update(),
               zoom = vb.zoom;
 
         let ns = 0,
             ns2 = 0;
 
-        this.DrawBox.reset();
         const promises = [];
 
         inView.forEach(i => {
@@ -284,14 +295,13 @@ const DotLayer = {
                 promises.push(
                     this.simplify(A, zoom).then(A => this.makeSegMask(A))
                 )
-                // ns2 += this.simplify(A, zoom);
             } else
                 promises.push(this.makeSegMask(A));
-            // if ( this.makeSegMask(A).isEmpty() )
-            //         vb.remove(i);
         });
 
         Promise.all(promises).then(fulfilled => {
+            this._drawingDots = true;
+
             for (A of fulfilled) {
                 if (A.segMask.isEmpty())
                     vb.remove(itemsArray.indexOf(A));
@@ -301,9 +311,6 @@ const DotLayer = {
 
             const clear = this.DrawBox.clear,
                   rect = this.DrawBox.defaultRect();
-
-            if (event)
-                clear(this._dotCtx, rect);
 
             if (this.options.debug)
                 clear(this._debugCtx, rect);
@@ -885,7 +892,9 @@ const DotLayer = {
         let unselected = colorGroups.unselected,
               selected = colorGroups.selected;
 
-        this.DrawBox.clear(ctx);
+        this.DrawBox.clear(ctx, this._dotRect);
+        if (this._dotRect)
+            this._dotRect = undefined;
 
         let count = 0;
 
@@ -920,7 +929,7 @@ const DotLayer = {
 
     // --------------------------------------------------------------------
     animate: function() {
-
+        this._drawingDots = true;
         this._paused = false;
         if ( this._timePaused ) {
             this._timeOffset = (this.UTCnowSecs() - this._timePaused);
@@ -939,7 +948,7 @@ const DotLayer = {
 
     // --------------------------------------------------------------------
     _animate: function() {
-        if (!this._frame || !this._ready)
+        if (!this._frame || !this._ready || !this._drawingDots)
             return;
 
         this._frame = null;
