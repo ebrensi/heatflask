@@ -23,6 +23,7 @@ var/
 .installed.cfg
 *.egg
 node_modules/
+.cache
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -101,4 +102,6 @@ test.py
 env.sh
 clean.sh
 .env
+
+dist/
 

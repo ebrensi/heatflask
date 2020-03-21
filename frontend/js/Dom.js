@@ -1,5 +1,5 @@
 
-// This will eventually replace JQuery
+// TODO: make this an es6 module
 
 const Dom = {
     el: function(selector) {
@@ -18,7 +18,7 @@ const Dom = {
             const elList = el,
                   result = [];
 
-            for (const el of elList) 
+            for (const el of elList)
                 result.push(func(el));
             return result
         } else
@@ -27,8 +27,8 @@ const Dom = {
 
     // get or set a property of a dom element or class of elements
     prop: function prop(string, prop, val) {
-        if (val === undefined)   
-            return this.doFunc(string, el => el[prop]); 
+        if (val === undefined)
+            return this.doFunc(string, el => el[prop]);
         else
             return this.doFunc(string, el => el[prop] = val);
     },
@@ -56,7 +56,7 @@ const Dom = {
             const event = document.createEvent('HTMLEvents');
             event.initEvent(eventType, true, false);
             el.dispatchEvent(event);
-        });        
+        });
     },
 
     fade: function fade(string, out) {

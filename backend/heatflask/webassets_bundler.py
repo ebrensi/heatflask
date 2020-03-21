@@ -103,7 +103,8 @@ bundles = {
         path + 'js/DotLayer/dotLayerWorker.js',
         path + 'js/BitSet.js',
         path + 'js/Codecs.js',
-        path + "js/MapUtil.js",
+        path + "js/CRS.js",
+        path + 'js/Simplifier.js',
         filters=["closure_js"],
         output="bundles/dotLayer.worker.js"
     ),

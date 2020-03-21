@@ -6,7 +6,7 @@
  * by [Mark McClure](http://facstaff.unca.edu/mcmcclur/)
  *
  * modified by Efrem Rensi
- * 
+ *
  */
 
 const Polyline = {
@@ -88,12 +88,12 @@ const Polyline = {
         }
         return count;
     },
- 
+
     decode2Buf: function(str, n, precision) {
         n = n || this.lengthInPoints(str);
         const buf = new Float32Array(2*n),
               decoder = this.decode(str, precision);
-        
+
         let i = 0;
         for (const latLng of decoder)
             buf.set(latLng, 2*i++);
@@ -105,7 +105,6 @@ const Polyline = {
         for (let i=0; i<len; i+=2)
             yield buf.subarray(i, i+2);
     }
-
 };
 
 const StreamRLE = {
@@ -143,7 +142,7 @@ const StreamRLE = {
     },
 
     // We store RLE stream data locally a little differently.
-    //  a run of repeated values is represented by 
+    //  a run of repeated values is represented by
     //  3 consecutive values 0, runlength, value
     //  which allows us to avoid storing negative numbers.
     _transcodeInfo: function(rle_list) {
@@ -171,7 +170,7 @@ const StreamRLE = {
     transcode2Buf: function(rle_list) {
       // debugger;
         const {len, max} = this._transcodeInfo(rle_list),
-              ArrayConstructor = (max >> 8)? ((max >> 16)? Uint32Array : Uint16Array) : Uint8Array, 
+              ArrayConstructor = (max >> 8)? ((max >> 16)? Uint32Array : Uint16Array) : Uint8Array,
               buf = new ArrayConstructor(len);
 
         let j = 0;
@@ -188,7 +187,7 @@ const StreamRLE = {
                   buf[j++] = el[0];
                   buf[j++] = el[0];
                 }
-          
+
             } else
                 buf[j++] = el;
         }
@@ -251,7 +250,7 @@ const StreamRLE = {
 
         return idxSet.imap(i => {
           // we will return the i-th element of bufGen
-          
+
           // ..if we are continuing a repeat streak
           while (k > 0) {
             sum += repeated;
@@ -260,7 +259,7 @@ const StreamRLE = {
               return sum
           }
 
-          if (j == i) 
+          if (j == i)
             return sum
           else {
 
@@ -425,7 +424,7 @@ const VByte =  {
       const bytelog = this._bytelog,
             zze = this._zigzag_encode,
             bzze = i => bytelog(zze(input[i]));
-      
+
       let answer = 0;
 
       for(let i = 0; i < c; i++)

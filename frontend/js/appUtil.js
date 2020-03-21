@@ -77,21 +77,3 @@ function formatUserId ( data, type, row ) {
     }
 }
 
-
-// let Pikaday = window.Pikaday,
-//     msgpack = window.msgpack,
-//     PersistentWebSocket = window.PersistentWebSocket,
-//     // $ = window.$ = function() {},
-//     // jQuery = window.jQuery = function() {},
-//     ga = window.ga,
-//     GIF = window.GIF,
-//     leafletImage = window.leafletImage,
-//     download = window.download,
-//     open = window.open,
-//     sessionStorage = window.sessionStorage,
-//     localStorage = window.localStorage,
-//     simpleDatatables = window.simpleDatatables,
-//     PouchDB = window.PouchDB,
-//     // JSCompiler_renameProperty = window.JSCompiler_renameProperty,
-//     SVGElementInstance = window.SVGElementInstance;
-
