@@ -1,23 +1,31 @@
 {
   "name": "heatflask",
   "version": "0.5.0",
-  "homepage": "https://www.heatflask.com",
+  "homepage": "https://github.com/ebrensi/heatflask",
   "description": "Animated Movement Data Visualization for Strava Tracks",
-  "main": "js/heatflask.js",
+  "browser": "main_bundle.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "parcel build main.js",
+    "watch": "parcel watch main.js"
   },
+
   "author": "Efrem Rensi",
+
   "license": "ISC",
+
   "dependencies": {
     "@msgpack/msgpack": "^1.12.0",
     "downloadjs": "^1.4.7",
-    "gif.js.optimized": "^1.0.1",
     "leaflet": "^1.6.0",
     "leaflet-easybutton": "^2.4.0",
     "leaflet-image": "^0.4.0",
     "persistent-websocket": "^1.0.2",
     "pikaday": "^1.8.0",
     "simple-datatables": "^2.1.9"
-  }
+  },
+
+  "browserslist": [
+    "last 2 Chrome versions"
+  ]
 }

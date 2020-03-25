@@ -1,5 +1,5 @@
 
-// TODO: make this an es6 module
+export default Dom;
 
 const Dom = {
     el: function(selector) {

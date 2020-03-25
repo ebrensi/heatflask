@@ -9,6 +9,8 @@
  *
  */
 
+export {Polyline, StreamRLE, VByte};
+
 const Polyline = {
     /**
      * Decodes to a [latitude, longitude] coordinates array.

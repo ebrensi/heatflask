@@ -3,38 +3,11 @@
  * (c) the authors
  * Licensed under the Apache License, Version 2.0.
  *
- * Speed-optimized BitSet implementation for modern browsers and JavaScript engines.
- *
- * A BitSet is an ideal data structure to implement a Set when values being stored are
- * reasonably small integers. It can be orders of magnitude faster than a generic set implementation.
- * The BitSet implementation optimizes for speed, leveraging commonly available features
- * like typed arrays.
- *
- * Simple usage :
- *  // let BitSet = require("BitSet");// if you use node
- *  let b = new BitSet();// initially empty
- *  b.add(1);// add the value "1"
- *  b.has(1); // check that the value is present! (will return true)
- *  b.add(2);
- *  console.log(""+b);// should display {1,2}
- *  b.add(10);
- *  b.array(); // would return [1,2,10]
- *
- *  let c = new BitSet([1,2,3,10]); // create bitset initialized with values 1,2,3,10
- *  c.difference(b); // from c, remove elements that are in b
- *  let su = c.union_size(b);// compute the size of the union (bitsets are unchanged)
- * c.union(b); // c will contain all elements that are in c and b
- * let s1 = c.intersection_size(b);// compute the size of the intersection (bitsets are unchanged)
- * c.intersection(b); // c will only contain elements that are in both c and b
- * c = b.clone(); // create a (deep) copy of b and assign it to c.
- * c.equals(b); // check whether c and b are equal
- *
- *   See README.md file for a more complete description.
- *
- * You can install the library under node with the command line
- *   npm install BitSet
+ * Modified by Efrem Rensi 2020
  */
 'use strict';
+
+export default BitSet;
 
 // you can provide an iterable
 function BitSet(iterable) {
@@ -57,13 +30,13 @@ function BitSet(iterable) {
 
 BitSet.fromWords = function(words) {
   const answer = Object.create(BitSet.prototype);
-  answer.words = words; 
+  answer.words = words;
 }
 
 BitSet.new_filter = function(iterable, fnc) {
   const answer = Object.create(BitSet.prototype);
   answer.words = [];
-  return answer.filter(iterable, fnc) 
+  return answer.filter(iterable, fnc)
 };
 
 BitSet.prototype.filter = function(iterable, fnc) {
@@ -229,7 +202,7 @@ BitSet.prototype.max = function() {
 // Return an array with the set bit locations (values)
 BitSet.prototype.array = function(ArrayConstructor) {
   const max = this.max();
-  ArrayConstructor = ArrayConstructor || (max >> 8)? ((max >> 16)? Uint32Array : Uint16Array) : Uint8Array 
+  ArrayConstructor = ArrayConstructor || (max >> 8)? ((max >> 16)? Uint32Array : Uint16Array) : Uint8Array
 
   const answer = new ArrayConstructor(this.size());
   let pos = 0 | 0;
@@ -276,7 +249,7 @@ BitSet.prototype[Symbol.iterator] = function (){
   return this.imap()
 };
 
-//   with the option to "fast-forward" 
+//   with the option to "fast-forward"
 //  to a position set by this.next(position).
 BitSet.prototype.imap_find = function*(fnc, next_pos) {
   const c = this.words.length,
@@ -306,7 +279,7 @@ BitSet.prototype.imap_subset = function*(bitSubSet, fnc) {
 
   let pos = 0,
       next = idxGen.next(),
-      k = 0, 
+      k = 0,
       w = this.words[0];
 
   while (!next.done) {
@@ -327,7 +300,7 @@ BitSet.prototype.new_subset = function(bitSubSet) {
         idxGen = bitSubSet.imap();
 
   newSet.words = [];
-        
+
   let c = this.words.length,
       next = idxGen.next().value,
       i = 0;

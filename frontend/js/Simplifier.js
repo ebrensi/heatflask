@@ -1,4 +1,7 @@
-//TODO: make this into a module
+import BitSet from "./BitSet";
+
+
+export default Simplifier;
 
 const Simplifier = {
     /*

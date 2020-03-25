@@ -1,3 +1,5 @@
+// export default CRS;
+
 const CRS = {
     // This is a streamlined version of Leaflet's EPSG:3857 crs,
     // which can run independently of Leaflet.js (i.e. in a worker thread)

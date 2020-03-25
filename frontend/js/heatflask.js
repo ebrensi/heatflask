@@ -1,9 +1,34 @@
+// import {PersistentWebsocket} from "persistent-websocket"
+import * as PersistentWebsocket from "./pws.js";
+import * as pikaday from 'pikaday';
 
-'use strict';
+import { decode as msgpackDecode} from "@msgpack/msgpack";
 
-const R = window["_runtime"];
+import * as L from "leaflet";
+import "leaflet-easybutton";
+import "./DotLayer/DotLayer.js";
+import "./heatflaskTileLayer.js"
+import "./L.TileLayer.NoGap.js";
+import "./leaflet-sidebar.js";
+import './L.Control.Watermark.js';
+import './L.Control.Window.js';
+import './leaflet-providers.js';
+import './leaflet-areaselect.js';
+import './L.BoxHook.js';
+import './L.SwipeSelect.js';
+import './L.Control.fps.js';
 
+import {DataTable} from "simple-datatables";
+import pureknob from "./pureknob.js";
 
+import Dom from './Dom.js'
+
+import * as strava from './strava.js';
+import * as Util from './appUtil.js'
+
+export default heatflask;
+
+const heatflask = function heatflask(R) {
 
 // R is defined at runtime and has attributes with these exact names
 // so we don't want closure compiler renaming them
@@ -29,7 +54,7 @@ const DIST_UNIT = (MEASURMENT_PREFERENCE=="feet")? 1609.34 : 1000.0,
       DIST_LABEL = (MEASURMENT_PREFERENCE=="feet")?  "mi" : "km",
       SPEED_SCALE = 5.0,
       SEP_SCALE = {m: 0.15, b: 15.0},
-      WEBSOCKET_URL = WS_SCHEME+window.location.host+"/data_socket",
+      WEBSOCKET_URL = Util.WS_SCHEME+window.location.host+"/data_socket",
 
       appState = {
         paused: ONLOAD_PARAMS.start_paused,
@@ -526,7 +551,7 @@ if (FLASH_MESSAGES.length > 0) {
 //             render: (data, type, row) => {
 //                 if ( type === 'display' || type === 'filter' ) {
 //                     // const dstr = row.tsLoc.toISOString().split('T')[0];
-//                     return href( stravaActivityURL(row.id), row.tsLoc.toLocaleString());
+//                     return Util.href( strava.activityURL(row.id), row.tsLoc.toLocaleString());
 //                 } else
 //                     return row.UTCtimestamp;
 //             }
@@ -545,7 +570,7 @@ if (FLASH_MESSAGES.length > 0) {
 //         {
 //             title: '<i class="fa fa-clock-o" aria-hidden="true"></i>',
 //             data: "elapsed_time",
-//             render: hhmmss
+//             render: Util.hhmmss
 //         },
 
 //         {
@@ -559,7 +584,7 @@ if (FLASH_MESSAGES.length > 0) {
 //     imgColumn = {
 //         title: "<i class='fa fa-user' aria-hidden='true'></i>",
 //         data: "owner",
-//         render: formatUserId
+//         render: Util.formatUserId
 //     };
 
 // const atable = $('#activitiesList').DataTable({
@@ -570,7 +595,7 @@ if (FLASH_MESSAGES.length > 0) {
 //                 scrollCollapse: true,
 //                 // scroller: true,
 //                 order: [[ 0, "desc" ]],
-//                 select: isMobileDevice()? "multi" : "os",
+//                 select: Util.isMobileDevice()? "multi" : "os",
 //                 data: appState.items.values(),
 //                 rowId: "id",
 //                 columns: tableColumns
@@ -586,7 +611,7 @@ let tableColumns = [
             render: (data, type, row) => {
                 if ( type === 'display' || type === 'filter' ) {
                     // const dstr = row.tsLoc.toISOString().split('T')[0];
-                    return href( stravaActivityURL(row.id), row.tsLoc.toLocaleString());
+                    return Util.href( strava.activityURL(row.id), row.tsLoc.toLocaleString());
                 } else
                     return row.UTCtimestamp;
             }
@@ -605,7 +630,7 @@ let tableColumns = [
         {
             title: '<i class="fa fa-clock-o" aria-hidden="true"></i>',
             data: "elapsed_time",
-            render: hhmmss
+            render: Util.hhmmss
         },
 
         {
@@ -619,7 +644,7 @@ let tableColumns = [
     imgColumn = {
         title: "<i class='fa fa-user' aria-hidden='true'></i>",
         data: "owner",
-        render: formatUserId
+        render: Util.formatUserId
     };
 
 
@@ -650,7 +675,7 @@ function makeTable(items) {
             return `<p style="color:${A.pathColor}">${A.type}</p>`;
         }},
         { select: 2, type: "number", render: id => items.get(+id).total_distance },
-        { select: 3, type: "number", render: id => hhmmss(items.get(+id).elapsed_time) },
+        { select: 3, type: "number", render: id => Util.hhmmss(items.get(+id).elapsed_time) },
         { select: 4, type: "string", render: id => items.get(+id).name },
       ],
       sortable: true,
@@ -843,7 +868,7 @@ function resumeFlow(){
 function activityDataPopup(id, latlng){
     let A = appState.items.get(id),
         d = A.total_distance,
-        elapsed = hhmmss(A.elapsed_time),
+        elapsed = Util.hhmmss(A.elapsed_time),
         v = A.average_speed,
         dkm = +(d / 1000).toFixed(2),
         dmi = +(d / 1609.34).toFixed(2),
@@ -851,8 +876,8 @@ function activityDataPopup(id, latlng){
         vmi;
 
     if (A.vtype == "pace"){
-        vkm = hhmmss(1000 / v).slice(3) + "/km";
-        vmi = hhmmss(1609.34 / v).slice(3) + "/mi";
+        vkm = Util.hhmmss(1000 / v).slice(3) + "/km";
+        vmi = Util.hhmmss(1609.34 / v).slice(3) + "/mi";
     } else {
         vkm = (v * 3600 / 1000).toFixed(2) + "km/hr";
         vmi = (v * 3600 / 1609.34).toFixed(2) + "mi/hr";
@@ -1092,7 +1117,7 @@ function renderLayers(query={}) {
         let A;
 
         try {
-            A = msgpack.decode(new Uint8Array(event.data));
+            A = msgpackDecode(new Uint8Array(event.data));
         }
         catch(e) {
             console.log(event);
@@ -1147,7 +1172,7 @@ function renderLayers(query={}) {
                 return;
 
             // assign this activity a path color and speed type (pace, mph)
-            Object.assign( A, ATYPE.specs(A) );
+            Object.assign( A, strava.ATYPE.specs(A) );
             A.id = A._id;
             delete A._id;
 
@@ -1401,3 +1426,5 @@ if (ONLOAD_PARAMS.activity_ids) {
 initializedotLayer();
 renderLayers();
 preset_sync();
+
+}

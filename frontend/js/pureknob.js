@@ -21,6 +21,7 @@
 
 "use strict";
 
+export default new PureKnob();
 /*
  * Custom user interface elements for pure knob.
  */
@@ -1109,5 +1110,4 @@ function PureKnob() {
 
 }
 
-const pureknob = new PureKnob();
 

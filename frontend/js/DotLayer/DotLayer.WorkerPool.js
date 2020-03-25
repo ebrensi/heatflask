@@ -1,5 +1,6 @@
+export default WorkerPool;
 
-DotLayer.WorkerPool = {
+const WorkerPool = {
 
     _workers: [],
 
@@ -32,7 +33,7 @@ DotLayer.WorkerPool = {
             return new Promise(resolve => {
                 this.worker.onmessage = event => resolve(event.data);
                 this.worker.postMessage(msg, transferables);
-            });         
+            });
         }
     },
 

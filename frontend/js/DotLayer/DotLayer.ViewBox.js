@@ -3,7 +3,13 @@
  *  we are doing happens
  *
  */
-DotLayer.ViewBox = {
+
+import CRS from "../CRS.js";
+import BitSet from "../BitSet.js";
+
+export default ViewBox;
+
+const ViewBox = {
 
     initialize: function(map, canvases, itemsArray) {
         this._map = map;

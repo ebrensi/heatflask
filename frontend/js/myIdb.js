@@ -1,6 +1,6 @@
-const idbKeyval = (function (exports) {
 
-class Store {
+
+export class Store {
     constructor(dbName, storeName, keyPath) {
         this.storeName = storeName;
         this._dbp = this._initialize(dbName, storeName, keyPath);
@@ -16,7 +16,7 @@ class Store {
             openreq.onerror = onerror;
             openreq.onupgradeneeded = onupgradeneeded;
             openreq.onsuccess = onsuccess;
-            
+
             function onupgradeneeded(e) {
                 // console.log(`"${dbName}" onupgradeneeded: adding "${storeName}"`, e);
                 db = e.target.result;
@@ -34,15 +34,15 @@ class Store {
             function onsuccess(event) {
                 // console.log(`"${dbName}" success`, event)
                 db = event.target.result;
-                
+
                 db.onversionchange = onversionchange;
 
                 if (db.objectStoreNames.contains(storeName))
                     resolve(db);
-                
+
                 else {
                     // console.log(`"${storeName}" not in "${dbName}". attempting upgrade...`)
-                    upgrade();   
+                    upgrade();
                 }
             }
 
@@ -74,28 +74,32 @@ class Store {
     }
 }
 
-function get(key, store) {
+export function get(key, store) {
     let req;
     return store._withIDBStore('readonly', store => {
         req = store.get(key);
     }).then(() => req.result);
 }
-function set(key, value, store) {
+
+export function set(key, value, store) {
     return store._withIDBStore('readwrite', store => {
         store.put(value, key);
     });
 }
-function del(key, store) {
+
+export function del(key, store) {
     return store._withIDBStore('readwrite', store => {
         store.delete(key);
     });
 }
-function clear(store) {
+
+export function clear(store) {
     return store._withIDBStore('readwrite', store => {
         store.clear();
     });
 }
-function keys(store) {
+
+export function keys(store) {
     const keys = [];
     return store._withIDBStore('readonly', store => {
         // This would be store.getAllKeys(), but it isn't supported by Edge or Safari.
@@ -109,13 +113,4 @@ function keys(store) {
     }).then(() => keys);
 }
 
-exports.Store = Store;
-exports.get = get;
-exports.set = set;
-exports.del = del;
-exports.clear = clear;
-exports.keys = keys;
 
-return exports;
-
-}({}));

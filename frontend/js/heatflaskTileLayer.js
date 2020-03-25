@@ -1,7 +1,5 @@
-
-L.TileLayer.CreateDB = function() {
-
-}
+import * as idbKeyval from "./myIdb.js";
+// import * as L from "leaflet";
 
 // 🍂namespace TileLayer
 // 🍂option useCache: Boolean = false

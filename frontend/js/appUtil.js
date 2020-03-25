@@ -1,4 +1,4 @@
-let WS_SCHEME;
+export let WS_SCHEME;
 
 if (window.location.protocol == "https:") {
   WS_SCHEME = "wss://";
@@ -7,7 +7,7 @@ if (window.location.protocol == "https:") {
 };
 
 // Courtesy of TwoFuckingDevelopers (@2fdevs, @elecash and @qmarcos)
-function isMobileDevice() {
+export function isMobileDevice() {
     return (typeof window.orientation !== "undefined") || (navigator.userAgent.indexOf('IEMobile') !== -1);
 };
 
@@ -20,7 +20,7 @@ Number.prototype.pad = function(size) {
 };
 
 // ------------------------------
-function hhmmss( secs ) {
+export function hhmmss( secs ) {
     let totalSeconds = secs;
 
     const hours = Math.floor(totalSeconds / 3600).pad(2);
@@ -31,24 +31,24 @@ function hhmmss( secs ) {
     return `${hours}:${minutes}:${seconds}`;
 }
 
-function img( url, w=20, h=20, alt="" ) {
+export function img( url, w=20, h=20, alt="" ) {
   return `<img src='${url}' width=${w}px height=${h}px class="img-fluid" alt="${alt}">`;
 }
 
 
 // return an HTML href tag from a url and text
-function href( url, text ) {
+export function href( url, text ) {
     return `<a href='${url}' target='_blank'>${text}</a>`;
 }
 
 // For DataTables
-function formatDate( data, type, row, meta ) {
+export function formatDate( data, type, row, meta ) {
     const date = new Date( data );
     return ( type === "display" || type === "filter" ) ?
         date.toLocaleString( "en-US", { hour12: false } ) : date;
 }
 
-function formatIP( data, type, row, meta ) {
+export function formatIP( data, type, row, meta ) {
     if ( data ) {
         const ip = data;
         return ( type === "display" ) ? href( ip_lookup_url( ip ), ip ) : ip;
@@ -57,7 +57,7 @@ function formatIP( data, type, row, meta ) {
     }
 }
 
-function formatUserId ( data, type, row ) {
+export function formatUserId ( data, type, row ) {
     if ( data ) {
         if ( type == "display" ) {
             const link = "/" + data;

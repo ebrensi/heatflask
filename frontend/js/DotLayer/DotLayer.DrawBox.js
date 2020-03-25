@@ -4,7 +4,9 @@
  *   of the animation.
  */
 
-DotLayer.DrawBox = {
+export default DrawBox;
+
+const DrawBox = {
     _pad: 25,
 
     initialize: function(ViewBox) {
