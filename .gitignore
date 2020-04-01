@@ -103,5 +103,6 @@ env.sh
 clean.sh
 .env
 
+frontend/test/
 dist/
 

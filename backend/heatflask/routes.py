@@ -135,48 +135,9 @@ def redirect_to_new_domain():
         return redirect(new_url, code=301)
     return
 
-#  ------------- Serve some static files -----------------------------
-#  TODO: There might be a better way to do this.
-IMAGE_PATH = os.path.join(app.root_path, 'static/images')
-FONTS_PATH = os.path.join(app.root_path, 'static/fonts')
-STATIC_PATH = os.path.join(app.root_path, 'static')
-
-def static_file_url(filename):
-    return send_from_directory(STATIC_PATH, filename)
-
-def image_url(img_filename):
-    return send_from_directory(IMAGE_PATH, img_filename)
-
-@app.route('/favicon.ico')
-def favicon():
-    return image_url('favicon.ico')
-
-@app.route('/fonts/<filename>')
-def font(filename):
-    return send_from_directory(FONTS_PATH, filename)
-
-@app.route('/images/<filename>')
-def image(filename):
-    return send_from_directory(IMAGE_PATH, filename)
-
-@app.route('/avatar/athlete/medium.png')
-def anon_photo():
-    return image_url('anon-photo.jpg')
-
-@app.route('/apple-touch-icon')
-@app.route('/logo.png')
-def touch():
-    return image_url('logo.png')
-
-
-@app.route("/robots.txt")
-def robots_txt():
-    EventLogger.log_request(
-        request,
-        cuid="bot",
-        msg=request.user_agent.string
-    )
-    return static_file_url("robots.txt")
+# @app.route('/avatar/athlete/medium.png')
+# def anon_photo():
+#     return image_url('anon-photo.jpg')
 
 
 # -----------------------------------------------------------------------------
@@ -194,10 +155,19 @@ def splash():
             logout_user()
             flash("oops! Please log back in.")
 
-    return render_template(
-        "splash.html",
-        next=(request.args.get("next") or url_for("splash"))
-    )
+    args = {
+        "DEVELOPMENT": app.config.get("DEVELOPMENT"),
+        "URL": {
+            "demo": url_for("demo"),
+            "directory": url_for("public_directory"),
+            "strava-button": url_for(
+                "authorize",
+                next=(request.args.get("next") or url_for("splash"))
+            )
+        }
+    }
+
+    return render_template("splash.html", args=args)
 
 
 # Attempt to authorize a user via Oauth(2)
@@ -438,11 +408,15 @@ def activities(username):
     web_client_id = "HA:{}:{}".format(ip, int(time.time()))
     log.debug("%s OPEN", web_client_id)
 
-    return render_template(
-        "activities.html",
-        user=user,
-        client_id=web_client_id
-    )
+    args = {
+        USER_ID: user.id,
+        CLIENT_ID: web_client_id,
+        OFFLINE: config.get("OFFLINE"),
+        ADMIN: current_user.is_admin(),
+        IMPERIAL: user.measurement_preference == "feet"
+    }
+
+    return render_template("activities.html", _args=args)
 
 
 @app.route('/<username>/activities/<int:_id>')

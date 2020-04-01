@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>{{ config["APP_NAME"] }} - {{ (user.username or user.id) }} - Activities List</title>
+    <link rel="shortcut icon" href="../images/favicon.ico">
+    <meta name="robots" content="noindex">
+  </head>
+
+  <body>
+    <h4>Activities list</h4>
+
+    <p>
+      TTL is "Time To Live" for index entries.  Index entries expire if
+      not accessed for a while, in order to save memory.
+      <button type="button" id="rebuild-button"
+              class="btn btn-b btn-sm">Re-build index
+      </button>
+    </p>
+
+    <div id="status">
+      <span id="status_msg"></span>
+      <progress id="progress"></progress>
+      <span id="count"></span>
+    </div>
+
+    <div id="activity-list"></div>
+
+    <div id="query-form"></div>
+
+  </body>
+  <script type="text/javascript">
+      window["_argstring"] = `{{ _args | tojson | safe }}`;
+  </script>
+
+  <script src="../js/activity-list.js"></script>
+
+</html>

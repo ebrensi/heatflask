@@ -9,15 +9,14 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_redis import FlaskRedis
 from flask_pymongo import PyMongo
-from flask_compress import Compress
 from flask_login import LoginManager
-from flask_analytics import Analytics
-from flask_sslify import SSLify
 from flask_sockets import Sockets
-from flask_assets import Environment
-
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from whitenoise import WhiteNoise
+from flask_sslify import SSLify
+
+from urllib.parse import urljoin
 
 # Globally accessible libraries
 db_sql = SQLAlchemy()
@@ -25,7 +24,6 @@ redis = FlaskRedis()
 mongo = PyMongo()
 login_manager = LoginManager()
 sockets = Sockets()
-assets = Environment()
 limiter = Limiter(key_func=get_remote_address)
 # talisman = Talisman()
 
@@ -38,21 +36,25 @@ def create_app():
 
     app.config.from_object(os.environ['APP_SETTINGS'])
 
+    app.template_folder = urljoin(
+        app.instance_path,
+        app.config["TEMPLATE_FOLDER"]
+    )
+
+    app.wsgi_app = WhiteNoise(app.wsgi_app,
+        autorefresh=app.config["DEVELOPMENT"])
+
+    for folder in app.config["STATIC_FOLDERS"]:
+        app.wsgi_app.add_files(folder)
+
     with app.app_context():
-
-        Analytics(app)
-        Compress(app)
         SSLify(app, skips=["webhook_callback"])
-
-        from .webassets_bundler import bundles
-        assets.register(bundles)
 
         db_sql.init_app(app)
         redis.init_app(app)
         mongo.init_app(app, **app.config["MONGO_OPTIONS"])
         login_manager.init_app(app)
         sockets.init_app(app)
-        assets.init_app(app)
         limiter.init_app(app)
 
         # talisman.init_app(

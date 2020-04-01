@@ -8,6 +8,15 @@ class Config(object):
     DEVELOPMENT = False
     CSRF_ENABLED = True
 
+    # For WhiteNoise static file serving
+    # Folders that constain files that WhiteNoise will serve
+    #  paths are relative to Flask app start point (backend/)
+    TEMPLATE_FOLDER = "../frontend/dist"
+    STATIC_FOLDERS = [
+        "../frontend/dist",
+        "../frontend/dist_unbundled"
+    ]
+
     LOG_LEVEL = os.environ.get("LOG_LEVEL", "DEBUG")
 
     # Heatflask settings
@@ -22,15 +31,8 @@ class Config(object):
     # We limit the capture duration to keep gif file size down
     CAPTURE_DURATION_MAX = 20
 
-    # We make Flask-Assets Default to manual build without caching
-    # ASSETS_AUTO_BUILD = False
-    # ASSETS_DEBUG = False
-    # ASSETS_CACHE = False
-    # ASSETS_MANIFEST = None
-    CLOSURE_COMPRESSOR_OPTIMIZATION = "simple"
-
     # Concurrency for User database triage
-    TRIAGE_CONCURRENCY = 5
+    TRIAGE_CONCURRENCY = 1
 
     # Concurrency for activity streams import
     IMPORT_CONCURRENCY = 64
@@ -161,20 +163,7 @@ class ProductionConfig(Config):
     (the main app running on Heroku)
     """
 
-    ANALYTICS = {
-        'GOOGLE_UNIVERSAL_ANALYTICS': {
-            'ACCOUNT': "UA-85621398-1"
-        }
-    }
-
     DEBUG = False
-
-    # Turn off webassets building for production, but we need to make sure
-    #  assets files are built in development
-    ASSETS_DEBUG = False
-    ASSETS_AUTO_BUILD = False
-    ASSETS_CACHE = False
-    ASSETS_MANIFEST = False
 
     MONGO_URI = os.environ.get("ATLAS_MONGODB_URI")
     REDIS_URL = os.environ.get("REDISGREEN_URL")
@@ -187,11 +176,6 @@ class StagingConfig(Config):
     """
     DEVELOPMENT = True
     DEBUG = True
-
-    ASSETS_DEBUG = False
-    ASSETS_AUTO_BUILD = False
-    ASSETS_CACHE = False
-    ASSETS_MANIFEST = False
 
     MONGO_URI = os.environ.get("ATLAS_MONGODB_URI")
     REDIS_URL = os.environ.get("REDISGREEN_URL")
@@ -225,23 +209,6 @@ class DevelopmentConfig(Config):
     # SSLIFY Settings
     SSLIFY_PERMANENT = False
 
-    # Flask-Assets settings
-    ASSETS_DEBUG = "merge"
-    # ASSETS_DEBUG = True
-    ASSETS_AUTO_BUILD = True
-
-    CLOSURE_COMPRESSOR_OPTIMIZATION = "advanced"
-    # CLOSURE_COMPRESSOR_OPTIMIZATION = "simple"
-    CLOSURE_EXTRA_ARGS = [
-        "--language_in", "ECMASCRIPT_2019",
-        "--language_out", "ECMASCRIPT_2016",
-        "--warning_level", "DEFAULT",
-        # "--process_common_js_modules",
-        "--strict_mode_input",
-
-        # "--dependency_mode=STRICT"
-        # "--debug"
-    ]
 
     if USE_REMOTE_DB:
         MONGO_URI = os.environ.get("REMOTE_MONGODB_URL")

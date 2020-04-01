@@ -4,31 +4,34 @@ import * as pikaday from 'pikaday';
 
 import { decode as msgpackDecode} from "@msgpack/msgpack";
 
+import {DataTable} from "simple-datatables";
+import pureknob from "./pureknob.js";
+
 import * as L from "leaflet";
 import "leaflet-easybutton";
-import "./DotLayer/DotLayer.js";
-import "./heatflaskTileLayer.js"
-import "./L.TileLayer.NoGap.js";
-import "./leaflet-sidebar.js";
-import './L.Control.Watermark.js';
-import './L.Control.Window.js';
-import './leaflet-providers.js';
-import './leaflet-areaselect.js';
+
 import './L.BoxHook.js';
 import './L.SwipeSelect.js';
 import './L.Control.fps.js';
+import "./DotLayer/index.js";
+import "./heatflaskTileLayer.js"
+import "./ext/L.TileLayer.NoGap.js";
 
-import {DataTable} from "simple-datatables";
-import pureknob from "./pureknob.js";
+
+import "./ext/leaflet-sidebar.js";
+import './ext/L.Control.Watermark.js';
+import './ext/L.Control.Window.js';
+import './ext/leaflet-providers.js';
+import './ext/leaflet-areaselect.js';
+
+
 
 import Dom from './Dom.js'
 
 import * as strava from './strava.js';
 import * as Util from './appUtil.js'
 
-export default heatflask;
-
-const heatflask = function heatflask(R) {
+const R = window["_runtime"];
 
 // R is defined at runtime and has attributes with these exact names
 // so we don't want closure compiler renaming them
@@ -1427,4 +1430,3 @@ initializedotLayer();
 renderLayers();
 preset_sync();
 
-}

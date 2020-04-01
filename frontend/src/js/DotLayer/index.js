@@ -6,15 +6,15 @@
 
 // import * as L from "leaflet";
 import * as leafletImage from "leaflet-image";
-import * as GIF from "../gif.js";
+import * as GIF from "../ext/gif.js";
 import * as download from "downloadjs";
 
-import ViewBox    from "./DotLayer.ViewBox.js";
-import DrawBox    from "./DotLayer.DrawBox.js";
-import WorkerPool from "./DotLayer.WorkerPool.js";
-import { Polyline, StreamRLE } from "../Codecs";
-import Simplifier from "../Simplifier";
-import BitSet from "../BitSet";
+import ViewBox    from "./ViewBox.js";
+import DrawBox    from "./DrawBox.js";
+import WorkerPool from "./WorkerPool.js";
+import { Polyline, StreamRLE } from "../Codecs.js";
+import Simplifier from "../Simplifier.js";
+import BitSet from "../BitSet.js";
 
 
 L.DotLayer = L.Layer.extend({

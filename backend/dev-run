@@ -4,13 +4,9 @@
 #  You need a .env file that sets the python (virtualenv, conda, etc) and shell environments.
 #  See contributing.md
 
-source ./backend/.env
+source .env
 
-usage()
-{
-    echo "usage: dev-run [[[-o ] [-r]] | [-h]]"
-}
-
+PORT=5000
 
 while [ "$1" != "" ]; do
     case $1 in
@@ -18,16 +14,16 @@ while [ "$1" != "" ]; do
                                 ;;
         -r | --remote_db )      USE_REMOTE_DB=1
                                 ;;
+        -p | --port )           PORT="$2"
+                                ;;
         -h | --help )           usage
                                 exit
                                 ;;
-        * )                     usage
-                                exit 1
     esac
     shift
 done
 
-GUNICORN_CMD_ARGS="--reload --worker-class flask_sockets.worker --log-level=debug --bind '0.0.0.0:5000' --chdir=./backend/"
+GUNICORN_CMD_ARGS="--reload --worker-class flask_sockets.worker --log-level=debug --graceful-timeout 5 --bind '0.0.0.0:$PORT'"
 
 FILE=/usr/bin/heroku
 

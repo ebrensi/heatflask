@@ -10,14 +10,13 @@ gunicorn==20.0.4
 flask==1.1.1
 flask-redis
 flask-login
-flask-assets
 flask-sslify
 Flask-PyMongo==2.3
 flask-sockets
-flask-compress
-flask-analytics
 flask-sqlalchemy==2.4.1
 flask-limiter
+
+whitenoise==5.0.1
 
 base36
 
