@@ -4,7 +4,7 @@ const WorkerPool = {
 
     _workers: [],
 
-    initialize: function(numWorkers, url) {
+    initialize: function(numWorkers) {
         if (numWorkers == 0)
             return
 
@@ -19,15 +19,15 @@ const WorkerPool = {
         this.currentWorker = 0;
 
         for (let i=0; i<numWorkers; i++) {
-            const worker = new this.Worker(url);
+            const worker = new this.Worker();
             this._workers.push(worker);
             worker.post({hello: `worker_${i}`}).then(msg => console.log(msg));
         }
     },
 
     // Worker class wraps a JavaScript Worker
-    Worker: function(url) {
-        this.worker = new Worker(url);
+    Worker: function() {
+        this.worker = new Worker("./Worker.js");
 
         this.post = function(msg, transferables) {
             return new Promise(resolve => {

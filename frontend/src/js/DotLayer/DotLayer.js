@@ -1,12 +1,12 @@
 /*
   DotLayer Efrem Rensi, 2020,
-  inspired by L.CanvasLayer by Stanislav Sumbera,  2016 , sumbera.com
+  inspired by L.CanvasLayer by Stanislav Sumbera, 2016, sumbera.com
   license MIT
 */
 
-// import * as L from "leaflet";
+import { Layer, Util, DomUtil, Browser, setOptions } from "leaflet";
 import * as leafletImage from "leaflet-image";
-import * as GIF from "../ext/gif.js";
+import * as GIF from "../../../node_modules/gif.js/src/gif.coffee";
 import * as download from "downloadjs";
 
 import ViewBox    from "./ViewBox.js";
@@ -16,8 +16,12 @@ import { Polyline, StreamRLE } from "../Codecs.js";
 import Simplifier from "../Simplifier.js";
 import BitSet from "../BitSet.js";
 
+import heatflask_logo from "../../images/logo.png";
+import strava_logo from "../../images/pbs4.png";
 
-L.DotLayer = L.Layer.extend({
+export { DotLayer, dotLayer }
+
+const DotLayer = Layer.extend({
 
     _pane: "shadowPane",
     two_pi: 2 * Math.PI,
@@ -68,20 +72,20 @@ L.DotLayer = L.Layer.extend({
     // -- initialized is called on prototype
     initialize: function( options ) {
         this._timeOffset = 0;
-        L.setOptions( this, options );
+        setOptions( this, options );
         this._paused = this.options.startPaused;
         this._timePaused = this.UTCnowSecs();
 
         this.heatflask_icon = new Image();
-        this.heatflask_icon.src = "images/logo.png";
+        this.heatflask_icon.src = heatflask_logo;
 
         this.strava_icon = new Image();
-        this.strava_icon.src = "images/pbs4.png";
+        this.strava_icon.src = strava_logo;
 
         this._items = new Map();
         this._lru = new Map();  // turn this into a real LRU-cache
 
-        // WorkerPool.initialize(this.options["numWorkers"], options["dotWorkerUrl"]);
+        WorkerPool.initialize(this.options.numWorkers);
     },
 
     UTCnowSecs: function() {
@@ -93,10 +97,10 @@ L.DotLayer = L.Layer.extend({
 
         this._map = map;
         let size = map.getSize(),
-            zoomAnimated = map.options.zoomAnimation && L.Browser.any3d;
+            zoomAnimated = map.options.zoomAnimation && Browser.any3d;
 
-        const create = L.DomUtil.create,
-              addClass = L.DomUtil.addClass,
+        const create = DomUtil.create,
+              addClass = DomUtil.addClass,
               panes = map._panes,
               appendChild = pane => obj => panes[pane].appendChild(obj),
               canvases = [];
@@ -133,8 +137,8 @@ L.DotLayer = L.Layer.extend({
             canvases.push(this._debugCanvas);
         }
 
-         if (this.options.fps_display)
-            this.fps_display = L.control.fps().addTo(this._map);
+         // if (this.options.fps_display)
+         //    this.fps_display = L.control.fps().addTo(this._map);
 
         ViewBox.initialize(this._map, canvases);
         DrawBox.initialize(ViewBox);
@@ -155,7 +159,7 @@ L.DotLayer = L.Layer.extend({
             resize: this._onLayerResize
         };
 
-        // if ( this._map.options.zoomAnimation && L.Browser.any3d ) {
+        // if ( this._map.options.zoomAnimation && Browser.any3d ) {
         //     events.zoomanim =  this._animateZoom;
         // }
 
@@ -944,7 +948,7 @@ L.DotLayer = L.Layer.extend({
         }
         this.lastCalledTime = 0;
         this.minDelay = ~~( 1000 / this.target_fps + 0.5 );
-        this._frame = L.Util.requestAnimFrame( this._animate, this );
+        this._frame = Util.requestAnimFrame( this._animate, this );
     },
 
     // --------------------------------------------------------------------
@@ -984,7 +988,7 @@ L.DotLayer = L.Layer.extend({
 
         }
 
-        this._frame = L.Util.requestAnimFrame( this._animate, this );
+        this._frame = Util.requestAnimFrame( this._animate, this );
     },
 
     //------------------------------------------------------------------------------
@@ -994,10 +998,10 @@ L.DotLayer = L.Layer.extend({
               scale = m.getZoomScale( z );
 
         // -- different calc of offset in leaflet 1.0.0 and 0.0.7 thanks for 1.0.0-rc2 calc @jduggan1
-        const offset = L.Layer ? m._latLngToNewLayerPoint( m.getBounds().getNorthWest(), z, e.center ) :
+        const offset = Layer ? m._latLngToNewLayerPoint( m.getBounds().getNorthWest(), z, e.center ) :
                                m._getCenterOffset( e.center )._multiplyBy( -scale ).subtract( m._getMapPanePos() );
 
-        const setTransform = L.DomUtil.setTransform;
+        const setTransform = DomUtil.setTransform;
         setTransform( this._dotCanvas, offset, scale );
         setTransform( this._lineCanvas, offset, scale );
     },
@@ -1115,8 +1119,7 @@ L.DotLayer = L.Layer.extend({
             encoder = new GIF({
                 workers: window.navigator.hardwareConcurrency,
                 quality: 8,
-                transparent: 'rgba(0,0,0,0)',
-                workerScript: this.options.gifWorkerUrl
+                transparent: 'rgba(0,0,0,0)'
             });
 
         this._encoder = encoder;
@@ -1188,9 +1191,10 @@ L.DotLayer = L.Layer.extend({
         }
 
         function display(canvas, title){
-            let w = open(canvas["toDataURL"]("image/png"), '_blank');
+            let w = open(canvas.toDataURL("image/png"), '_blank');
             // w.document.write(`<title>${title}</title>`);
         }
+
         // console.log(`GIF output: ${numFrames.toFixed(4)} frames, delay=${delay.toFixed(4)}`);
         let h1 = this.heatflask_icon.height,
             w1 = this.heatflask_icon.width,
@@ -1342,7 +1346,7 @@ L.DotLayer = L.Layer.extend({
                 let r = Math.round(Math.sin(frequency1*i + phase1) * width + center),
                     g = Math.round(Math.sin(frequency2*i + phase2) * width + center),
                     b = Math.round(Math.sin(frequency3*i + phase3) * width + center);
-                // palette[i] = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+
                 palette[i] = `rgb(${r}, ${g}, ${b})`;
             }
             return palette;
@@ -1395,9 +1399,9 @@ L.DotLayer = L.Layer.extend({
     }
     */
 
-});  // end of L.DotLayer definition
+});  // end of DotLayer definition
 
 
-L.dotLayer = function( options ) {
-    return new L.DotLayer( options );
+const dotLayer = function( options ) {
+    return new DotLayer( options );
 };
