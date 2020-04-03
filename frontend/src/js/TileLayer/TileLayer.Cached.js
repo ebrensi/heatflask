@@ -1,49 +1,39 @@
-import * as idbKeyval from "./myIdb.js";
-// import * as L from "leaflet";
+import * as idb from "./myIdb.js";
 
-// 🍂namespace TileLayer
-// 🍂option useCache: Boolean = false
-L.TileLayer.prototype.options.useCache = true;
-L.TileLayer.prototype.cacheHits = 0;
-L.TileLayer.prototype.cacheMisses = 0;
+import { TileLayer, tileLayer, GridLayer, Util, Browser, bind, extend } from "leaflet";
 
+export { TileLayer, tileLayer, options, extension }
 
-// 🍂option saveToCache: Boolean = true
-// When caching is enabled, whether to save new tiles to the cache or not
-L.TileLayer.prototype.options.saveToCache = true;
+TileLayer.mergeOptions(options);
+TileLayer.include(extension);
 
-// 🍂option useOnlyCache: Boolean = false
-// When caching is enabled, whether to request new tiles from the network or not
-L.TileLayer.prototype.options.useOnlyCache = false;
+const options = {
+    useCache: true,
+    saveToCache: true,
+    useOnlyCache: false,
+    cacheMaxAge: 24 * 3600 * 1000,
+    minNativeZoom: 0,
+    dbName: "tile-storage",
+    updateInterval: 0
+}
 
-// // 🍂option cacheFormat: String = 'image/png'
-// // The image format to be used when saving the tile images in the cache
-// L.TileLayer.prototype.options.cacheFormat = "image/png";
+const extension = {
 
-// 🍂option cacheMaxAge: Number = 24*3600*1000
-// Maximum age of the cache, in milliseconds
-L.TileLayer.prototype.options.cacheMaxAge = 24 * 3600 * 1000;
-
-L.TileLayer.prototype.options.minNativeZoom = 0;
-
-L.TileLayer.prototype.options.dbName = "tile-storage";
-
-L.TileLayer.prototype.options.updateInterval = 0;
-
-L.TileLayer.include({
+    cacheHits: 0,
+    cacheMisses: 0,
 
     // returns the unique and compact lookup key for this tile
     onAdd: function(map) {
         if (this.options.useCache) {
-            this._db = new idbKeyval.Store(this.options.dbName, this.name);
+            this._db = new idb.Store(this.options.dbName, this.name);
         }
 
-        L.GridLayer.prototype.onAdd.call(this, map)
+        GridLayer.prototype.onAdd.call(this, map)
     },
 
     onRemove: function (map) {
         if (this._db) {
-            L.GridLayer.prototype.onRemove.call(this, map);
+            GridLayer.prototype.onRemove.call(this, map);
             this._db.close()
             this._db = undefined
         }
@@ -54,13 +44,13 @@ L.TileLayer.include({
         // return `${coords.z}:${coords.x}:${coords.y}`
     },
 
-    // Overwrites L.TileLayer.prototype.createTile
+    // Overwrites TileLayer.prototype.createTile
     createTile: function(coords, done) {
         const tile = document.createElement("img"),
               tileUrl = this.getTileUrl(coords);
 
-        tile.onerror = L.bind(this._tileOnError, this, done, tile);
-        tile.onload = L.bind(this._tileOnLoad, this, done, tile);
+        tile.onerror = bind(this._tileOnError, this, done, tile);
+        tile.onload = bind(this._tileOnLoad, this, done, tile);
 
         // tile.ts = performance.now(); ////
         // tile.key = this._tileCoordsToKey(coords); ////
@@ -85,14 +75,14 @@ L.TileLayer.include({
         if (this.options.useCache && this._db) {
 
             const key = this._key(coords);
-            idbKeyval.get(key, this._db)
+            idb.get(key, this._db)
                      .then( data => data?
                             this._onCacheHit(tile, tileUrl, key, data, done) :
                             this._onCacheMiss(tile, tileUrl, key, done)
-                    )
+                      )
         } else {
             // Fall back to standard behaviour
-            tile.onload = L.bind(this._tileOnLoad, this, done, tile);
+            tile.onload = bind(this._tileOnLoad, this, done, tile);
             tile.src = tileUrl;
         }
 
@@ -110,10 +100,10 @@ L.TileLayer.include({
         return currentCoords;
     },
 
-    _originalTileOnError: L.TileLayer.prototype._tileOnError,
+    _originalTileOnError: TileLayer.prototype._tileOnError,
 
     _tileOnError: function (done, tile, e) {
-        var layer = this, // `this` is bound to the Tile Layer in L.TileLayer.prototype.createTile.
+        var layer = this, // `this` is bound to the Tile Layer in TileLayer.prototype.createTile.
             originalCoords = tile._originalCoords,
             currentCoords = tile._currentCoords = tile._currentCoords || layer._createCurrentCoords(originalCoords),
             fallbackZoom = tile._fallbackZoom = tile._fallbackZoom === undefined ? originalCoords.z - 1 : tile._fallbackZoom - 1,
@@ -164,7 +154,7 @@ L.TileLayer.include({
         var z = coords.z = coords.fallback ? coords.z : this._getZoomForUrl();
 
         var data = {
-            r: L.Browser.retina ? '@2x' : '',
+            r: Browser.retina ? '@2x' : '',
             s: this._getSubdomain(coords),
             x: coords.x,
             y: coords.y,
@@ -178,7 +168,7 @@ L.TileLayer.include({
             data['-y'] = invertedY;
         }
 
-        return L.Util.template(this._url, L.extend(data, this.options));
+        return Util.template(this._url, extend(data, this.options));
     },
 
     _onCacheHit: function(tile, tileUrl, key, data, done) {
@@ -208,8 +198,8 @@ L.TileLayer.include({
         if (this.options.useOnlyCache) {
             // Offline, not cached
             //  console.log('Tile not in cache', tileUrl);
-            tile.onload = L.Util.falseFn;
-            tile.src = L.Util.emptyImageUrl;
+            tile.onload = Util.falseFn;
+            tile.src = Util.emptyImageUrl;
         } else {
             // Online, not cached, fetch the tile
             if (this.options.saveToCache) {
@@ -220,7 +210,7 @@ L.TileLayer.include({
                     .then( response => response.blob() )
                     .then( blob => {
                         // console.log(`${key} fetch took ${~~(performance.now()-t0)}`);
-                        idbKeyval.set(key, {
+                        idb.set(key, {
                             ts: Date.now(),
                             blob: blob,
                         }, this._db);
@@ -233,7 +223,7 @@ L.TileLayer.include({
                     });
             } else {
                 // handle normally
-                tile.onload = L.bind(this._tileOnLoad, this, done, tile);
+                tile.onload = bind(this._tileOnLoad, this, done, tile);
                 tile.crossOrigin = "Anonymous";
                 tile.src = tileUrl;
             }
@@ -244,7 +234,7 @@ L.TileLayer.include({
         return document.createElement("img");
     },
 
-    // Modified L.TileLayer.getTileUrl, this will use the zoom given by the parameter coords
+    // Modified TileLayer.getTileUrl, this will use the zoom given by the parameter coords
     //  instead of the maps current zoomlevel.
     _getTileUrl: function(coords) {
         var zoom = coords.z;
@@ -252,13 +242,13 @@ L.TileLayer.include({
             zoom = this.options.maxZoom - zoom;
         }
         zoom += this.options.zoomOffset;
-        return L.Util.template(
+        return Util.template(
             this._url,
-            L.extend(
+            extend(
                 {
                     r:
                         this.options.detectRetina &&
-                        L.Browser.retina &&
+                        Browser.retina &&
                         this.options.maxZoom > 0
                             ? "@2x"
                             : "",
@@ -275,4 +265,4 @@ L.TileLayer.include({
             )
         );
     },
-});
+}

@@ -1,539 +1,53 @@
 // import {PersistentWebsocket} from "persistent-websocket"
 import * as PersistentWebsocket from "./pws.js";
+
 import * as pikaday from 'pikaday';
+import "../../node_modules/pikaday/css/pikaday.css";
 
 import { decode as msgpackDecode} from "@msgpack/msgpack";
 
-import {DataTable} from "simple-datatables";
+import { DataTable } from "simple-datatables";
+import "../../node_modules/simple-datatables/src/style.css";
+
 import pureknob from "./pureknob.js";
 
-import * as L from "leaflet";
-import "leaflet-easybutton";
-
-import './L.BoxHook.js';
-import './L.SwipeSelect.js';
-import './L.Control.fps.js';
-import "./DotLayer/index.js";
-import "./heatflaskTileLayer.js"
-import "./ext/L.TileLayer.NoGap.js";
-
-
-import "./ext/leaflet-sidebar.js";
-import './ext/L.Control.Watermark.js';
-import './ext/L.Control.Window.js';
-import './ext/leaflet-providers.js';
-import './ext/leaflet-areaselect.js';
-
-
+import "../../node_modules/leaflet/dist/leaflet.css";
+import {
+    map as Lmap,
+    popup as Lpopup,
+    latLngBounds
+} from "leaflet";
 
 import Dom from './Dom.js'
 
 import * as strava from './strava.js';
-import * as Util from './appUtil.js'
 
-const R = window["_runtime"];
+import appState, * as args from "./appState.js";
 
-// R is defined at runtime and has attributes with these exact names
-// so we don't want closure compiler renaming them
-const ONLOAD_PARAMS = R["QUERY"],
-      CLIENT_ID = R["CLIENT_ID"],
-      OFFLINE = R["OFFLINE"],
-      ADMIN = R["ADMIN"],
-      FLASH_MESSAGES = R["FLASH_MESSAGES"],
-      MAPBOX_ACCESS_TOKEN = R["MAPBOX_ACCESS_TOKEN"],
-      CAPTURE_DURATION_MAX = R["CAPTURE_DURATION_MAX"],
-      DEFAULT_DOTCOLOR = R["DEFAULT_DOTCOLOR"],
-      MEASURMENT_PREFERENCE = R["MEASURMENT_PREFERENCE"],
-      GIFJS_WORKER_URL = R["GIFJS_WORKER_URL"],
-      DOTLAYER_WORKER_URL = R["DOTLAYER_WORKER_URL"],
-      USER_ID = R["USER_ID"],
-      BASE_USER_URL = R["BASE_USER_URL"],
-      SHARE_PROFILE = R["SHARE_PROFILE"],
-      SHARE_STATUS_UPDATE_URL = R["SHARE_STATUS_UPDATE_URL"],
-      ACTIVITY_LIST_URL = R["ACTIVITY_LIST_URL"],
-      BEACON_HANDLER_URL = R["BEACON_HANDLER_URL"];
+import { map, dotLayer } from "./mainComponents.js"
 
-const DIST_UNIT = (MEASURMENT_PREFERENCE=="feet")? 1609.34 : 1000.0,
-      DIST_LABEL = (MEASURMENT_PREFERENCE=="feet")?  "mi" : "km",
-      SPEED_SCALE = 5.0,
-      SEP_SCALE = {m: 0.15, b: 15.0},
-      WEBSOCKET_URL = Util.WS_SCHEME+window.location.host+"/data_socket",
+import { default_baseLayer } from "./Baselayers.js";
+default_baseLayer.addTo(map);
+appState.currentBaseLayer = default_baseLayer;
 
-      appState = {
-        paused: ONLOAD_PARAMS.start_paused,
-        items: new Map(),
-        currentBaseLayer: null
-      };
+map.on('baselayerchange', function (e) {
+    appState.currentBaseLayer = e.layer;
+    updateState();
+});
 
-const map = L.map('map', {
-        center: ONLOAD_PARAMS.map_center,
-        zoom: ONLOAD_PARAMS.map_zoom,
-        preferCanvas: true,
-        zoomAnimation: true,
-        zoomAnimationThreshold: 6,
-        updateWhenZooming: true,
-      });
+import * as controls from "./Controls.js"
+Object.values(controls).forEach( control =>
+    if (!control._noadd)
+        control.addTo(map)
+);
 
-      // map controls
-const controls = {
-        _sidebarControl: L.control.sidebar('sidebar').addTo(map),
-        _zoomControl: map.zoomControl.setPosition('bottomright'),
-        _stravaLogo: L.control.watermark({ image: "images/pbs4.png", width: '20%', opacity:'0.5', position: 'bottomleft' }).addTo(map),
-        _heatflaskLogo: L.control.watermark({image: "images/logo.png", opacity: '0.5', width: '20%', position: 'bottomleft' }).addTo(map),
-        areaSelect: L.areaSelect({width:200, height:200})
-      };
+import dotLayer from "./Control.dotLayer.js";
+dotLayer.addTo(map);
 
-      // the DotLayer
-const dotLayer = L.dotLayer({
-        startPaused: appState.paused,
-        dotWorkerUrl: DOTLAYER_WORKER_URL,
-        gifWorkerUrl: GIFJS_WORKER_URL
-      }).addTo(map);
+
 
 let msgBox = null;
 
-// baselayers IIFE
-(() => {
-    const map_providers = ONLOAD_PARAMS.map_providers,
-          baseLayers = {"None": L.tileLayer("", {useCache: false})};
-    let default_baseLayer = baseLayers["None"];
-
-    if (!OFFLINE) {
-
-        const mapBox_layernames = [
-            "MapBox.Dark",
-            "MapBox.Streets",
-            "MapBox.Streets-Basic",
-            "MapBox.Satellite"
-        ];
-
-        const online_baseLayers = {};
-
-        for (const name of mapBox_layernames) {
-            baseLayers[name] = L.tileLayer.provider('MapBox', {
-                id: name.toLowerCase(),
-                accessToken: MAPBOX_ACCESS_TOKEN
-            })
-        }
-
-        Object.assign(baseLayers, {
-            "Esri.WorldImagery": L.tileLayer.provider("Esri.WorldImagery"),
-            "Esri.NatGeoWorldMap": L.tileLayer.provider("Esri.NatGeoWorldMap"),
-            "Stamen.Terrain": L.tileLayer.provider("Stamen.Terrain"),
-            "Stamen.TonerLite": L.tileLayer.provider("Stamen.TonerLite"),
-            "CartoDB.Positron": L.tileLayer.provider("CartoDB.Positron"),
-            "CartoDB.DarkMatter": L.tileLayer.provider("CartoDB.DarkMatter"),
-            "OpenStreetMap.Mapnik": L.tileLayer.provider("OpenStreetMap.Mapnik"),
-            "Stadia.AlidadeSmoothDark": L.tileLayer.provider("Stadia.AlidadeSmoothDark"),
-        });
-
-
-        if (map_providers.length) {
-            for (var i = 0; i < map_providers.length; i++) {
-                let provider = map_providers[i];
-                if (!baseLayers[provider]) {
-                    try {
-                            baseLayers[provider] = L.tileLayer.provider(provider);
-                    }
-                    catch(err) {
-                        // do nothing if the user-supplied baselayer is not valid
-                    }
-                }
-                if (i==0 && baseLayers[provider]) default_baseLayer = baseLayers[provider];
-            }
-        } else {
-            default_baseLayer = baseLayers["CartoDB.DarkMatter"];
-        }
-    }
-
-    for (const name in baseLayers) {
-        const layer = baseLayers[name],
-              maxZoom = layer.options.maxZoom;
-        layer.name = name;
-
-        if (maxZoom) {
-            layer.options.maxNativeZoom = maxZoom;
-            layer.options.maxZoom = 22;
-            layer.options.minZoom = 3;
-        }
-    }
-
-    controls._layerControl = L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map)
-
-    appState.currentBaseLayer = default_baseLayer;
-
-    default_baseLayer.addTo(map);
-
-    map.on('baselayerchange', function (e) {
-        appState.currentBaseLayer = e.layer;
-        updateState();
-    });
-})();
-
-// set animation controls IIFE
-(() => {
-    const button_states = [
-        {
-            stateName: 'animation-running',
-            icon:      'fa-pause',
-            title:     'Pause Animation',
-            onClick: function(btn, map) {
-                pauseFlow();
-                updateState();
-                btn.state('animation-paused');
-                }
-        },
-
-        {
-            stateName: 'animation-paused',
-            icon:      'fa-play',
-            title:     'Resume Animation',
-            onClick: function(btn, map) {
-                resumeFlow();
-                if (dotLayer) {
-                    dotLayer.animate();
-                }
-                updateState();
-                btn.state('animation-running');
-            }
-        }
-    ];
-
-    // Animation play/pause button
-    controls._animationControl =  L.easyButton({
-        states: appState.paused? button_states.reverse() : button_states
-    }).addTo(map);
-})();
-
-
-
-
-// Select-activities-in-region functionality IIFE
-(() => {
-    function doneSelecting(obj) {
-        dotLayer && dotLayer.setSelectRegion(obj.pxBounds, function(ids){
-            if (controls.selectControl && controls.selectControl.canvas) {
-                controls.selectControl.remove();
-                controls.selectButton.state("not-selecting");
-            }
-
-            // handle_path_selections returns the id of the single
-            // selected activity if only one is selected
-            const id = handle_path_selections(ids);
-
-            if (id) {
-                const A = appState.items.get(id),
-                    loc = A.bounds.getCenter();
-
-                setTimeout(function (){
-                    activityDataPopup(id, loc);
-                }, 100);
-            }
-        });
-    }
-
-    // set hooks for ctrl-drag
-    map.on("boxhookend", doneSelecting);
-    controls.selectControl = new L.SwipeSelect({}, doneSelecting);
-
-
-    // button for selecting via touchscreen
-    const selectButton_states = [
-        {
-            stateName: 'not-selecting',
-            icon: 'fa-object-group',
-            title: 'Toggle Path Selection',
-            onClick: function(btn, map) {
-                btn.state('selecting');
-                controls.selectControl.addTo(map);
-            },
-        },
-        {
-            stateName: 'selecting',
-            icon: '<span>&cross;</span>',
-            title: 'Stop Selecting',
-            onClick: function(btn, map) {
-                btn.state('not-selecting');
-                controls.selectControl.remove();
-            }
-        },
-    ];
-
-    controls.selectButton = L.easyButton({
-        states: selectButton_states,
-        position: "topright"
-    }).addTo(map);
-})();
-
-
-
-// Capture button IIFE
-(() => {
-    const capture_button_states = [
-        {
-            stateName: 'idle',
-            icon: 'fa-video',
-            title: 'Capture GIF',
-            onClick: function (btn, map) {
-                if (!dotLayer) {
-                    return;
-                }
-                let size = map.getSize();
-                controls.areaSelect._width = ~~(0.8 * size.x);
-                controls.areaSelect._height = ~~(0.8 * size.y);
-                controls.areaSelect.addTo(map);
-                btn.state('selecting');
-            }
-        },
-        {
-            stateName: 'selecting',
-            icon: 'fa-expand',
-            title: 'Select Capture Region',
-            onClick: function (btn, map) {
-                let size = map.getSize(),
-                    w = controls.areaSelect._width,
-                    h = controls.areaSelect._height,
-                    topLeft = {
-                        x: Math.round((size.x - w) / 2),
-                        y: Math.round((size.y - h) / 2)
-                    },
-
-                    selection = {
-                        topLeft: topLeft,
-                        width: w,
-                        height: h
-                    };
-
-                let center = controls.areaSelect.getBounds().getCenter(),
-                    zoom = map.getZoom();
-                console.log(`center: `, center);
-                console.log(`width = ${w}, height = ${h}, zoom = ${zoom}`);
-
-
-                dotLayer.captureCycle(selection, function(){
-                    btn.state('idle');
-                    controls.areaSelect.remove();
-                    if (!ADMIN && !OFFLINE) {
-                        // Record this to google analytics
-                        let cycleDuration = Math.round(dotLayer.periodInSecs() * 1000);
-                        try{
-                            ga('send', 'event', {
-                                eventCategory: USER_ID,
-                                eventAction: 'Capture-GIF',
-                                eventValue: cycleDuration
-                            });
-                        }
-                        catch(err){
-                            //
-                        }
-
-                    }
-                });
-
-                btn.state('capturing');
-            }
-        },
-        {
-            stateName: 'capturing',
-            icon: 'fa-stop-circle',
-            title: 'Cancel Capture',
-            onClick: function (btn, map) {
-                if (dotLayer && dotLayer._capturing) {
-                    dotLayer.abortCapture();
-                    controls.areaSelect.remove();
-                    btn.state('idle');
-                }
-            }
-        }
-    ];
-
-    // Capture control button
-    controls.captureControl = L.easyButton({
-        states: capture_button_states
-    });
-
-    controls.captureControl.enabled = false;
-
-})();
-
-
-let dialfg, dialbg;
-
-( function() {
-    const rad = deg => deg * Math.PI/180,
-          settings = {
-            'angleStart': rad(0),
-            'angleEnd': rad(360),
-            'angleOffset': rad(-90),
-            'colorFG': "rgba(0,255,255,0.4)",
-            'colorBG': "rgba(255,255,255,0.2)",
-            'trackWidth': 0.5,
-            'valMin': 0,
-            'valMax': 100,
-            'needle': true,
-          };
-    dialfg = settings["colorFG"];
-    dialbg = settings["colorBG"];
-
-    function makeKnob(selector, options) {
-        const knob = pureknob.createKnob(options.width, options.height),
-              mySettings = Object.assign({}, settings);
-              Object.assign(mySettings, options);
-
-        for ( const [property, value] of Object.entries(mySettings) ) {
-            knob.setProperty(property, value);
-        }
-
-        const node = knob.node();
-
-        Dom.el(selector).appendChild(node);
-
-        return knob
-    }
-
-    function updatePeriod() {
-        // Enable capture if period is less than CAPTURE_DURATION_MAX
-        let cycleDuration = dotLayer.periodInSecs().toFixed(2),
-            captureEnabled = controls.captureControl.enabled;
-
-        Dom.html("#period-value", cycleDuration);
-        if (cycleDuration <= CAPTURE_DURATION_MAX) {
-            if (!captureEnabled) {
-                controls.captureControl.addTo(map);
-                controls.captureControl.enabled = true;
-            }
-        } else if (captureEnabled) {
-            controls.captureControl.removeFrom(map);
-            controls.captureControl.enabled = false;
-        }
-    }
-
-    function listener(knob, val) {
-        let period_changed;
-
-        switch (knob['_properties']['label']) {
-            case "Speed":
-                newVal = val * val * SPEED_SCALE;
-                dotLayer.updateDotSettings({C2: newVal});
-                updatePeriod();
-            break;
-
-            case "Sparcity":
-                newVal = Math.pow(2, val * SEP_SCALE.m + SEP_SCALE.b);
-                dotLayer.updateDotSettings({C1: newVal});
-                updatePeriod();
-            break;
-
-            case "Alpha":
-                dotLayer.updateDotSettings({alphaScale: val / 10 });
-                dotLayer.drawPaths();
-            break;
-
-            case "Size":
-                dotLayer.updateDotSettings({dotScale: val});
-            break;
-        }
-    }
-
-
-    makeKnob('#dot-controls1', {
-        width: "140",
-        height: "140",
-        "label": "Speed"
-    }).addListener(listener);
-
-    makeKnob('#dot-controls1', {
-        width: "140",
-        height: "140",
-        "label": "Sparcity"
-    }).addListener(listener);
-
-    makeKnob('#dot-controls2', {
-        width: "100",
-        height: "100",
-        valMin: 0,
-        valMax: 10,
-        "label": "Alpha"
-    }).addListener(listener);
-
-    makeKnob('#dot-controls2', {
-        width: "100",
-        height: "100",
-        valMin: 0,
-        valMax: 10,
-        "label": "Size"
-    }).addListener(listener);
-
-})();
-
-
-// set up dial-controls
-// (() => {
-//     $(".dotconst-dial").knob({
-//         min: 0,
-//         max: 100,
-//         step: 0.1,
-//         width: "140",
-//         height: "140",
-//         cursor: 20,
-//         inline: true,
-//         displayInput: false,
-//         fgColor: dialfg,
-//         bgColor : dialbg,
-//         change: function (val) {
-//             let newVal;
-//             if (this.$[0].id == "sepConst") {
-//                 newVal = Math.pow(2, val * SEP_SCALE.m + SEP_SCALE.b);
-//                 dotLayer.updateDotSettings({C1: newVal});
-//             } else {
-//                 newVal = val * val * SPEED_SCALE;
-//                 dotLayer.updateDotSettings({C2: newVal});;
-//             }
-
-//             // Enable capture if period is less than CAPTURE_DURATION_MAX
-//             let cycleDuration = dotLayer.periodInSecs().toFixed(2),
-//                 captureEnabled = controls.captureControl.enabled;
-
-//             Dom.html("#period-value", cycleDuration);
-//             if (cycleDuration <= CAPTURE_DURATION_MAX) {
-//                 if (!captureEnabled) {
-//                     controls.captureControl.addTo(map);
-//                     controls.captureControl.enabled = true;
-//                 }
-//             } else if (captureEnabled) {
-//                 controls.captureControl.removeFrom(map);
-//                 controls.captureControl.enabled = false;
-//             }
-//         },
-//         release: function() {
-//             updateState();
-//         }
-//     });
-
-//     $(".dotconst-dial-small").knob({
-//         min: 0.01,
-//         max: 10,
-//         step: 0.01,
-//         width: "100",
-//         height: "100",
-//         cursor: 20,
-//         inline: true,
-//         displayInput: false,
-//         fgColor: dialfg,
-//         bgColor : dialbg,
-//         change: function (val) {
-//             if (this.$[0].id == "dotScale")
-//                 dotLayer.updateDotSettings({dotScale: val});
-//             else {
-//                 dotLayer.updateDotSettings({alphaScale: val / 10});
-//                 dotLayer.drawPaths();
-//             }
-//         },
-//         release: function() {
-//             updateState();
-//         }
-//     });
-// })();
 
 
 if (FLASH_MESSAGES.length > 0) {
@@ -542,212 +56,9 @@ if (FLASH_MESSAGES.length > 0) {
         msg += "<li>" + FLASH_MESSAGES[i] + "</li>";
     }
     msg += "</ul>";
-    L.control.window(map, {content:msg, visible:true});
+    Lcontrol.window(map, {content:msg, visible:true});
 }
 
-
-// Initialize Activity Table in sidebar
-// let tableColumns = [
-//         {
-//             title: '<i class="fa fa-calendar" aria-hidden="true"></i>',
-//             data: null,
-//             render: (data, type, row) => {
-//                 if ( type === 'display' || type === 'filter' ) {
-//                     // const dstr = row.tsLoc.toISOString().split('T')[0];
-//                     return Util.href( strava.activityURL(row.id), row.tsLoc.toLocaleString());
-//                 } else
-//                     return row.UTCtimestamp;
-//             }
-//         },
-
-//         {
-//             title: "Type",
-//             data: null,
-//             render: (A) => `<p style="color:${A.pathColor}">${A.type}</p>`
-//         },
-
-//         {
-//             title: `<i class="fa fa-arrows-h" aria-hidden="true"></i> (${DIST_LABEL})`,
-//             data: "total_distance",
-//             render: (A) => +(A / DIST_UNIT).toFixed(2)},
-//         {
-//             title: '<i class="fa fa-clock-o" aria-hidden="true"></i>',
-//             data: "elapsed_time",
-//             render: Util.hhmmss
-//         },
-
-//         {
-//             title: "Name",
-//             data: null,
-//             render: (A) => `<p style="background-color:${A.dotColor}"> ${A.name}</p>`
-//         },
-
-//     ],
-
-//     imgColumn = {
-//         title: "<i class='fa fa-user' aria-hidden='true'></i>",
-//         data: "owner",
-//         render: Util.formatUserId
-//     };
-
-// const atable = $('#activitiesList').DataTable({
-//                 paging: false,
-//                 deferRender: true,
-//                 scrollY: "60vh",
-//                 // scrollX: true,
-//                 scrollCollapse: true,
-//                 // scroller: true,
-//                 order: [[ 0, "desc" ]],
-//                 select: Util.isMobileDevice()? "multi" : "os",
-//                 data: appState.items.values(),
-//                 rowId: "id",
-//                 columns: tableColumns
-//             }).on( 'select', handle_table_selections)
-//               .on( 'deselect', handle_table_selections);
-
-// const tableScroller = $('.dataTables_scrollBody');
-
-let tableColumns = [
-        {
-            title: '<i class="fa fa-calendar" aria-hidden="true"></i>',
-            data: null,
-            render: (data, type, row) => {
-                if ( type === 'display' || type === 'filter' ) {
-                    // const dstr = row.tsLoc.toISOString().split('T')[0];
-                    return Util.href( strava.activityURL(row.id), row.tsLoc.toLocaleString());
-                } else
-                    return row.UTCtimestamp;
-            }
-        },
-
-        {
-            title: "Type",
-            data: null,
-            render: (A) => `<p style="color:${A.pathColor}">${A.type}</p>`
-        },
-
-        {
-            title: `<i class="fa fa-arrows-h" aria-hidden="true"></i> (${DIST_LABEL})`,
-            data: "total_distance",
-            render: (A) => +(A / DIST_UNIT).toFixed(2)},
-        {
-            title: '<i class="fa fa-clock-o" aria-hidden="true"></i>',
-            data: "elapsed_time",
-            render: Util.hhmmss
-        },
-
-        {
-            title: "Name",
-            data: null,
-            render: (A) => `<p style="background-color:${A.dotColor}"> ${A.name}</p>`
-        },
-
-    ],
-
-    imgColumn = {
-        title: "<i class='fa fa-user' aria-hidden='true'></i>",
-        data: "owner",
-        render: Util.formatUserId
-    };
-
-
-function makeTable(items) {
-    const colData = [];
-
-    for (const id of appState.items.keys()) {
-        colData.push([id, id, id, id, id]) ;
-    }
-
-    const data = {
-      headings: [
-        '<i class="fa fa-calendar" aria-hidden="true"></i>',
-        "Type",
-        `<i class="fa fa-arrows-h" aria-hidden="true"></i> (${DIST_LABEL})`,
-        '<i class="fa fa-clock-o" aria-hidden="true"></i>',
-        "Name"
-      ],
-      data: colData
-    };
-
-    const config = {
-      data,
-      columns: [
-        { select: 0, type: "string", sort: "desc", render: id => items.get(+id).tsLoc.toLocaleString() },
-        { select: 1, type: "string", render: (id, cell, row) => {
-            const A = items.get(+id);
-            return `<p style="color:${A.pathColor}">${A.type}</p>`;
-        }},
-        { select: 2, type: "number", render: id => items.get(+id).total_distance },
-        { select: 3, type: "number", render: id => Util.hhmmss(items.get(+id).elapsed_time) },
-        { select: 4, type: "string", render: id => items.get(+id).name },
-      ],
-      sortable: true,
-      searchable: true,
-      paging: false,
-      scrollY: "60vh"
-    };
-
-    const table = new DataTable("#activitiesList", config);
-
-    table.table.addEventListener("click", function(e) {
-        const td = e.target,
-              colNum = td.cellIndex,
-              id = +td.data,
-              tr = td.parentElement,
-              dataIndex = tr.dataIndex,
-              selections = {},
-              ids = Array.from(appState.items.keys());
-
-        // toggle selection property of the clicked row
-        const A = appState.items.get(id);
-        tr.classList.toggle("selected");
-        A.selected = !A.selected;
-        const selected = selections[id] = A.selected;
-
-        // handle shift-click for multiple (de)selection
-        //  all rows beteween the clicked row and the last clicked row
-        //  will be set to whatever this row was set to.
-        if (e.shiftKey && appState.lastSelection) {
-
-            const prev = appState.lastSelection,
-                  first = Math.min(dataIndex, prev.dataIndex),
-                  last = Math.max(dataIndex, prev.dataIndex);
-
-            debugger;
-            for (let i=first+1; i<=last; i++) {
-                const tr = table.data[i],
-                      classes = tr.classList,
-                      id = ids[tr.dataIndex],
-                      A = appState.items.get(id);
-
-                A.selected = selected;
-                selections[id] = selected;
-
-                if (selected && !classes.contains("selected")) {
-                    classes.add("selected");
-                    debugger;
-                } else if (!selected && classes.contains("selected")) {
-                    classes.remove("selected");
-                }
-            }
-        }
-
-        // let dotLayer know about selection changes
-        dotLayer.setItemSelect(selections);
-
-        appState.lastSelection = {
-            val: selected,
-            dataIndex: dataIndex
-        }
-
-        let redraw = false;
-        const mapBounds = map.getBounds();
-
-        if ( Dom.prop("#zoom-to-selection", 'checked') )
-            zoomToSelectedPaths();
-
-    });
-}
 
 
 
@@ -760,68 +71,12 @@ async function updateShareStatus(status) {
 
 
 
-function handle_table_selections( e, dt, type, indexes ) {
-    // let redraw = false;
-    // const mapBounds = map.getBounds(),
-    //       selections = {};
 
-    // if ( type === 'row' ) {
-    //     const rows = atable.rows( indexes ).data();
-    //      for ( const A of Object.values(rows) ) {
-    //         if (!A.id)
-    //             break;
-    //         A.selected = !A.selected;
-    //         selections[A.id] = A.selected;
-    //         if (!redraw)
-    //             redraw |= mapBounds.overlaps(A.bounds);
-    //     }
-    // }
-
-    // if ( Dom.prop("#zoom-to-selection", 'checked') )
-    //     zoomToSelectedPaths();
-
-    // dotLayer.setItemSelect(selections);
-}
-
-function handle_path_selections(ids) {
-    // if (!ids) return;
-
-    // const toSelect = [],
-    //       toDeSelect = [];
-
-    // let count = 0,
-    //     id;
-
-    // for (id of ids) {
-    //     const A = appState.items.get(id),
-    //           tag = `#${A.id}`;
-    //     if (A.selected)
-    //         toDeSelect.push(tag);
-    //     else
-    //         toSelect.push(tag);
-
-    //     count++;
-    // }
-
-    // // simulate table (de)selections
-    // // note that table selection events get triggered
-    // // either way
-    // // atable.rows(toSelect).select();
-    // // atable.rows(toDeSelect).deselect();
-
-    // if (toSelect.length == 1) {
-    //     let row = $(toSelect[0]);
-    //     tableScroller.scrollTop(row.prop('offsetTop') - tableScroller.height()/2);
-    // }
-
-    // if (count === 1)
-    //     return id
-}
 
 
 function zoomToSelectedPaths(){
     // Pan-Zoom to fit all selected activities
-    let selection_bounds = L.latLngBounds();
+    let selection_bounds = latLngBounds();
     appState.items.forEach((A, id) => {
         if (A.selected) {
             selection_bounds.extend(A.bounds);
@@ -854,24 +109,10 @@ function deselectAll(){
 }
 
 
-
-function pauseFlow(){
-    dotLayer.pause();
-    appState.paused = true;
-}
-
-function resumeFlow(){
-    appState.paused = false;
-    if (dotLayer) {
-        dotLayer.animate();
-    }
-}
-
-
 function activityDataPopup(id, latlng){
     let A = appState.items.get(id),
         d = A.total_distance,
-        elapsed = Util.hhmmss(A.elapsed_time),
+        elapsed = util.hhmmss(A.elapsed_time),
         v = A.average_speed,
         dkm = +(d / 1000).toFixed(2),
         dmi = +(d / 1609.34).toFixed(2),
@@ -879,14 +120,14 @@ function activityDataPopup(id, latlng){
         vmi;
 
     if (A.vtype == "pace"){
-        vkm = Util.hhmmss(1000 / v).slice(3) + "/km";
-        vmi = Util.hhmmss(1609.34 / v).slice(3) + "/mi";
+        vkm = util.hhmmss(1000 / v).slice(3) + "/km";
+        vmi = util.hhmmss(1609.34 / v).slice(3) + "/mi";
     } else {
         vkm = (v * 3600 / 1000).toFixed(2) + "km/hr";
         vmi = (v * 3600 / 1609.34).toFixed(2) + "mi/hr";
     }
 
-    const popup = L.popup()
+    const popup = Lpopup()
                 .setLatLng(latlng)
                 .setContent(
                     `<b>${A.name}</b><br>${A.type}:&nbsp;${A.tsLoc}<br>`+
@@ -899,7 +140,7 @@ function activityDataPopup(id, latlng){
 
 
 function getBounds(ids) {
-    const bounds = L.latLngBounds();
+    const bounds = latLngBounds();
     for (const id of ids){
         bounds.extend( appState.items.get(id).bounds );
     }
@@ -1016,7 +257,7 @@ function renderLayers(query={}) {
           to_exclude = Array.from(appState.items.keys()).map(Number);
 
     // create a status box
-    msgBox = L.control.window(map, {
+    msgBox = Lcontrol.window(map, {
             position: 'top',
             content:"<div class='data_message'></div><div><progress class='progbar' id='box'></progress></div>",
             visible:true
@@ -1185,7 +426,7 @@ function renderLayers(query={}) {
             A.tsLoc = new Date((tup[0] + tup[1]*3600) * 1000);
             A.UTCtimestamp = tup[0];
 
-            A.bounds = L.latLngBounds(A.bounds.SW, A.bounds.NE);
+            A.bounds = latLngBounds(A.bounds.SW, A.bounds.NE);
 
             dotLayer.addItem(A.id, A.polyline, A.pathColor, A.time, tup[0], A.bounds, A.n);
             appState.items.set(A.id, A);
