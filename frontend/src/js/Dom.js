@@ -1,97 +1,94 @@
 
-export default Dom;
 
-const Dom = {
-    el: function(selector) {
-        if (selector[0] == "#")
-            return document.querySelector(selector);
-        else if (selector[0] = ".")
-            return document.querySelectorAll(selector);
-    },
+export function el(selector) {
+    if (selector[0] == "#")
+        return document.querySelector(selector);
+    else if (selector[0] = ".")
+        return document.querySelectorAll(selector);
+}
 
-    doFunc: function(selector, func) {
-        const el = this.el(selector);
-        if (!el) {
-            console.warn(`DOM element "${selector}" does not exist.`);
-            return
-        } else if (NodeList.prototype.isPrototypeOf(el)) {
-            const elList = el,
-                  result = [];
+function doFunc (selector, func) {
+    const el = el(selector);
+    if (!el) {
+        console.warn(`DOM element "${selector}" does not exist.`);
+        return
+    } else if (NodeList.prototype.isPrototypeOf(el)) {
+        const elList = el,
+              result = [];
 
-            for (const el of elList)
-                result.push(func(el));
-            return result
-        } else
-            return func(el);
-    },
+        for (const el of elList)
+            result.push(func(el));
+        return result
+    } else
+        return func(el);
+}
 
-    // get or set a property of a dom element or class of elements
-    prop: function prop(string, prop, val) {
-        if (val === undefined)
-            return this.doFunc(string, el => el[prop]);
-        else
-            return this.doFunc(string, el => el[prop] = val);
-    },
+// get or set a property of a dom element or class of elements
+export function prop(string, prop, val) {
+    if (val === undefined)
+        return doFunc(string, el => el[prop]);
+    else
+        return doFunc(string, el => el[prop] = val);
+}
 
-    set: function set(string, val) {
-        return this.prop(string, "value", val)
-    },
+export function set(string, val) {
+    return prop(string, "value", val)
+}
 
-    get: function get(string) {
-        return this.prop(string, "value")
-    },
+export function get(string) {
+    return prop(string, "value")
+}
 
-    html: function html(string, val) {
-        return this.prop(string, "innerHTML", val)
-    },
+export function html(string, val) {
+    return prop(string, "innerHTML", val)
+}
 
-    addEvent: function addEvent(string, eventName, eventHandler) {
-        this.doFunc(string, el => {
-            el.addEventListener(eventName, eventHandler)
-        });
-    },
+export function addEvent(string, eventName, eventHandler) {
+    doFunc(string, el => {
+        el.addEventListener(eventName, eventHandler)
+    });
+}
 
-    trigger: function trigger(string, eventType) {
-        this.doFunc(string, el => {
-            const event = document.createEvent('HTMLEvents');
-            event.initEvent(eventType, true, false);
-            el.dispatchEvent(event);
-        });
-    },
+export function trigger(string, eventType) {
+    doFunc(string, el => {
+        const event = document.createEvent('HTMLEvents');
+        event.initEvent(eventType, true, false);
+        el.dispatchEvent(event);
+    });
+}
 
-    fade: function fade(string, out) {
-        let ops;
-        if (out)
-            ops = {add: "hide", remove:"show"};
-        else
-            ops = {add: "show", remove: "hide"};
+export function fade(string, out) {
+    let ops;
+    if (out)
+        ops = {add: "hide", remove:"show"};
+    else
+        ops = {add: "show", remove: "hide"};
 
-        this.doFunc(string, el => {
-            el.classList.add(ops.add);
-            el.classList.remove(ops.remove);
-        });
-    },
+    doFunc(string, el => {
+        el.classList.add(ops.add);
+        el.classList.remove(ops.remove);
+    });
+}
 
-    fadeIn: function fadeIn(string) {
-        return this.fade(string, false);
-    },
+export function fadeIn(string) {
+    return fade(string, false);
+}
 
-    fadeOut: function fadeOut(string) {
-        return this.fade(string, true);
-    },
+export function fadeOut(string) {
+    return fade(string, true);
+}
 
-    setDisplayStyle: function(string, style) {
-        this.doFunc(string, el => el.style.display = style);
-    },
+export function setDisplayStyle(string, style) {
+    doFunc(string, el => el.style.display = style);
+}
 
-    show: function(string) {
-        this.setDisplayStyle(string, "");
-    },
+export function show(string) {
+    setDisplayStyle(string, "");
+}
 
-    hide: function(string) {
-        this.setDisplayStyle(string, "none");
-    }
+export function hide(string) {
+    setDisplayStyle(string, "none");
+}
 
-};
 
 

@@ -2,14 +2,14 @@
  * This is the script for the heatflask activity-list view
  * activities.html.
  */
+import { DataTable } from "simple-datatables";
+import "../../node_modules/simple-datatables/src/style.css";
 
 // css for Bundler
-import "../ext/css/simple-datatables.css";
 import "../ext/css/min_entireframework.min.css";
 import "../css/font-awesome-lite.css";
 
 // JS module imports
-import { DataTable } from "simple-datatables";
 // import * as localForage from "localforage";
 
 import * as strava from './strava.js';

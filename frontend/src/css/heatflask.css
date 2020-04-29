@@ -3,6 +3,8 @@ body {
     margin: 0;
 }
 
+
+
 html, body, #map {
     height: 100%;
     font: 10pt "Helvetica Neue", Arial, Helvetica, sans-serif;
@@ -19,17 +21,38 @@ button, input, select, textarea {
   background-color: transparent;
 }
 
-.strava-button{
+.strava-auth{
   background-color: transparent;
 }
 
+img.strava-button {
+  width: 20px;
+  height:20px;
+}
+
+i.sm-button {
+  font-size: 32px;
+  color: blue;
+}
+
+span.date-select {
+  display: block;
+}
+
 /* For Fading in and Out */
+
 .show {
   transition: opacity 400ms;
 }
+
 .hide {
   opacity: 0;
 }
+
+.hidden {
+  display: none;
+}
+
 
 
 /* Leaflet.js stuff */

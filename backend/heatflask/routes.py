@@ -373,7 +373,7 @@ def main(username):
             "msg": Utility.href(request.url, request.full_path)
         }
 
-        if not current_user.is_anonymous:
+        if current_user.is_authenticated:
             event.update({
                 "profile": current_user.profile,
                 "cuid": current_user.id
@@ -382,13 +382,27 @@ def main(username):
         EventLogger.new_event(**event)
 
     # log.debug("created query: %s", query)
+    query["userid"] = user.id;
+    args = {
+        "QUERY": query,
+        "CLIENT_ID": web_client_id,
+        "USERNAME": user.username or user.id,
+        "DEVELOPMENT": config.get("DEVELOPMENT"),
+        "IMPERIAL": user.measurement_preference == "feet",
+        "FLASH_MESSAGES": get_flashed_messages(),
+        "MAPBOX_ACCESS_TOKEN": config.get('MAPBOX_ACCESS_TOKEN'),
+        "CAPTURE_DURATION_MAX": config.get('CAPTURE_DURATION_MAX'),
+        "BASE_USER_URL":  url_for('main', username=user.id),
+        "SHARE_PROFILE": user.share_profile,
+        "SHARE_STATUS_UPDATE_URL": url_for('update_share_status', username=user.id),
+        "ACTIVITY_LIST_URL": url_for('activities', username=user.id),
+        "BEACON_HANDLER_URL": url_for('beacon_handler')
+    }
 
-    return render_template(
-        'main.html',
-        user=user,
-        query=query,
-        client_id=web_client_id,
-    )
+    if current_user.is_authenticated:
+        args["SELF"] = current_user == user
+
+    return render_template('main.html', args=args)
 
 
 @app.route('/<username>/activities')

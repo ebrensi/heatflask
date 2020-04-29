@@ -104,5 +104,6 @@ clean.sh
 .env
 
 frontend/test/
+node_modules
 dist/
 

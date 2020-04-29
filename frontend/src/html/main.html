@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="robots" content="noindex">
+
+	<title id="title">{{ config["APP_NAME"] }}</title>
+
+	<link rel="shortcut icon" href="../images/favicon.ico">
+</head>
+
+<body>
+	<div id="sidebar" class="sidebar collapsed">
+		<!-- Nav tabs -->
+		<div class="sidebar-tabs">
+
+			<ul role="tablist">
+				<li>
+					<a href="#home" role="tab"><i class="fa fa-bars"></i></a>
+				</li>
+
+				<li>
+					<a href="#activities" role="tab"><i class="fa fa-list"></i></a>
+                </li>
+
+				<li class="self hide">
+					<a href="#profile" role="tab"><i class="fa fa-user"></i></a>
+				</li>
+
+				<li><a href="#controls" role="tab"><i class="fa fa-sliders-h"></i></a></li>
+			</ul>
+
+			<ul role="tablist">
+				<li><a href="#info-pane" role="tab"><i class="fa fa-info"></i></a></li>
+
+				<!-- <li>
+					<a href="#settings" role="tab"><i class="fa fa-gear"></i></a>
+				</li> -->
+			</ul>
+		</div>
+
+		<!-- Tab panes -->
+		<div class="sidebar-content">
+
+            <!-- Main Query tab -->
+			<div class="sidebar-pane" id="home">
+				<h1 class="sidebar-header">
+					<a class="href strava_profile"
+					   href="https://www.strava.com/athletes/{{ user.id }}"
+					   target="_blank">
+					   <img src="../images/strava_button.png"
+						    class="strava-button">
+					</a>
+					{{ args["USERNAME"] }}'s map
+					<span class="sidebar-close">
+						<i class="fa fa-caret-left"></i>
+					</span>
+				</h1>
+
+				<h3>Activities query:</h3>
+
+				<form id="renderform" action="#">
+					<div id="num_select">
+						<input class="preset" id="select_num" type="number"
+							   value=0 min=0 max=500>
+						most
+					</div>
+
+					<select class="preset" id="select_type"
+							form="renderform">
+						<option value="days">recent days</option>
+						<option value="activities">recent activities</option>
+						<option value="activity_ids">Activity IDs</option>
+						<option value="" selected="selected">Date-Range</option>
+					</select>
+
+					<span id="id_select">
+						<br>
+						<textarea name="id" id="activity_ids"
+								  form="renderform">
+						</textarea>
+					</span>
+
+                    <br>
+
+                    <div class="date-select">
+						Start:
+						<input class="datepick" id="date1"
+							   type="text"  value="">
+						<br>
+						End:
+						<input class="datepick" id="date2"
+							   type="text" value="">
+						<br>
+					</div>
+
+					<div class="checkbox">
+						<label>
+							<input type="checkbox" id="autozoom" value="1">
+							Auto-Zoom when finished
+						</label>
+					</div>
+
+					<br>
+					<div class="data_message"></div>
+					<div><progress id='tab' class='progbar'></progress></div>
+					<br>
+
+					<button type="button" id="render"
+							class="btn btn-a btn-sm smooth">
+						Render Layers
+					</button>
+
+					<button type="button"
+						    id="abort-render"
+						    class="btn btn-c btn-sm smooth">
+						Abort
+					</button>
+
+				</form>
+
+					<br>
+					<div class="logged-in">
+						You are logged in as
+						<a class="href current_user" href="#" target="_blank">
+							{{ args["USERNAME"] }}
+						</a>
+						<br><br>
+
+						<input ctype="button"
+							   class="btn btn-sm btn-c logout"
+							   value="Log Out" />
+					</div>
+
+                    <br>
+
+                    <div class="logged-out hide">
+						Create an account and/or log in.
+	                    <br>
+
+						<input class="strava-auth"
+							   type="image"
+							   src="#"
+							   alt="Log-In with Strava">
+					</div>
+
+                    <div id="error-message"></div>
+                    <br>
+
+                    <div class="paypal-form"></div>
+                    <br>
+
+                    <a href="mailto:info@heatflask.com">Contact us!</a>
+			</div>
+
+            <!-- Profile & User Settings Tab -->
+			<div class="sidebar-pane self" id="profile">
+				<h1 class="sidebar-header">
+					<a href="https://www.strava.com/athletes/{{ user.id }}"
+						target="_blank">
+					  <img src="../images/strava_button.png"
+					  	   class="strava-button" >
+					</a>
+					{{ uid }}
+					<span class="sidebar-close">
+						<i class="fa fa-caret-left"></i>
+					</span>
+				</h1>
+
+				{% if current_user.is_authenticated and current_user.is_admin() and (not user.is_admin()) %}
+				Admin ({{ current_user.id }}) on behalf of:
+				{% endif %}
+
+				<h3> {{ user.firstname }} {{ user.lastname }}:</h3>
+
+					<a href="https://www.strava.com/settings/profile"
+						target="_blank">
+						<img class="profile" src="#" alt="user.profile"
+							 height="20%" width="20%">
+					</a>
+
+					<br><br>
+					We index your activity summaries for fast access.
+                    <br>
+
+                    <button type="button" id="activity-list-buton"
+                    	    class="btn btn-a btn-sm">View index
+                    </button>
+                    <br>
+                    <hr>
+
+					<div class="checkbox">
+						<label><input type="checkbox" id="share" value="0">
+							Include me in the
+							<a class="directory"
+							   href="#"
+							   target="_blank">
+								public user directory
+							</a>
+						</label>
+					</div>
+
+					<br><br><br>
+
+					<input type="submit"
+						   class="btn btn-c btn-sm logout"
+						   value="Log Out" />
+
+					<br>
+					<hr>
+					<br><br>
+
+					<!-- <form action="#{{ url_for('delete', username=user.id) }}"
+						  onsubmit="return confirm('Delete your info from our database?');"> -->
+					<input type="button" class="btn btn-c btn-sm delete"
+						   value="Delete Account" />
+					<!-- </form> -->
+
+                    <br>
+                    <div class="paypal-form"></div>
+			</div>
+
+
+            <!-- App Info Tab -->
+			<div class="sidebar-pane" id="info-pane">
+
+				<h1 class="sidebar-header">
+					Info
+					<span class="sidebar-close">
+						<i class="fa fa-caret-left"></i>
+					</span>
+				</h1>
+
+				<h4>Controls:</h4>
+
+                On desktop/laptop, shift-mouse-drag for zoom, ctrl-mouse-drag
+                for selecting activities
+                <br><br>
+				The map state (center, zoom), and vizualization constants
+				are embedded in the url so you can
+				share that url and anyone who clicks on it will
+				get the same view.
+				<br>
+
+				<hr>
+
+				<h4>GIF Export</h4>
+
+				<p>
+				If you adjust the cycle duration to less than 15 seconds
+				then you have the option to capture and export the current
+				view of your system as an animated gif.
+				It currrently works with only some map backgrounds.
+				</p>
+
+
+                <br>Check us out on social media!<br>
+
+                <a href="https://www.linkedin.com/company/heatflask" target="_blank">
+                    <i class="fa fa-linkedin sm-button"></i>
+                </a>
+                &nbsp
+                <a href="https://twitter.com/heatflask" target="_blank">
+                    <i class="fa fa-twitter sm-button"></i>
+                </a>
+                &nbsp
+                <a href="https://www.instagram.com/heatflask" target="_blank">
+                    <i class="fa fa-instagram sm-button"></i>
+                </a>
+                <br><br>
+
+
+                <a href="https://www.strava.com/clubs/271165"
+                   target="_blank">
+               	   Strava Heatflask club
+               	</a>
+
+                <br><br>
+
+				<!-- <a href="https://github.com/ebrensi/heatflask" target="_blank">
+					<i class="fa fa-github fa-2x"></i>
+					Want to contribute?
+					<i class="fa fa-github fa-2x"></i>
+				</a> -->
+
+				<!-- <hr> -->
+
+                <div class="paypal-form"></div>
+			</div>
+
+            <!-- Activity List/Table Tab -->
+			<div class="sidebar-pane" id="activities">
+				<h1 class="sidebar-header">
+					Rendered Activities
+					<span class="sidebar-close">
+					    <i class="fa fa-caret-left"></i>
+					</span>
+				</h1>
+                <button type="button" id="clear-selection-button"
+                		class="btn btn-b btn-sm">
+                	Clear Selection
+                </button>
+
+                <button type="button" id="render-selection-button"
+                		class="btn btn-a btn-sm">
+                	Render selected
+                </button>
+
+                <br><br>
+                <input type="checkbox" name="szoom"
+                	   id="zoom-to-selection" value="1">
+                	Zoom to selection
+
+				<div>
+					<table id='activitiesList'></table>
+				</div>
+			</div>
+
+            <!-- Controls Tab -->
+			<div class="sidebar-pane" id="controls">
+
+				<h1 class="sidebar-header">
+					Layer Settings
+					<span class="sidebar-close">
+						<i class="fa fa-caret-left"></i>
+					</span>
+				</h1>
+
+				<div>
+					<form id="layer-settings-form">
+						<h4>System Constants</h4>
+						<div id="dot-controls1">
+							<!-- <label for="speedConst">
+								Speed
+								<input type="text" id="speedConst" class="dotconst-dial">
+							</label>
+							<label for="sepConst">
+								Sparsity
+								<input type="text" id="sepConst" class="dotconst-dial">
+							</label> -->
+						</div>
+						<span id="period-display">
+							Period T =
+							<span id="period-value"></span>
+							sec
+						</span>
+						<div id="dot-controls2">
+							<!-- <label for="dotAlpha">Alpha</label>
+							<input type="text" id="dotAlpha" class="dotconst-dial-small">
+							<label for="dotScale">Scale</label>
+							<input type="text" id="dotScale" class="dotconst-dial-small"> -->
+						</div>
+
+						<div>
+							<input type="checkbox" id="showPaths" checked>
+							<label for="showPaths">Show Paths</label>
+						</div>
+                        <br>
+                        <div>
+                            <input type="checkbox" id="shadows" checked>
+                            <label for="showshadows">Shadows (CPU intensive)</label>
+                        </div>
+					</form>
+			    </div>
+			</div>
+        </div>
+    </div>
+
+    <div id="map" class="sidebar-map"></div>
+</body>
+
+<script>window["_argstring"] = "{{ args | tojson | safe }}";</script>
+
+
+<script src="../js/main.js"></script>
+
+</html>

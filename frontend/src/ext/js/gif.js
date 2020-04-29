@@ -349,7 +349,6 @@ GIF = (function(superClass) {
   extend(GIF, superClass);
 
   defaults = {
-    workerScript: 'gif.worker.js',
     workers: 2,
     repeat: 0,
     background: '#fff',
@@ -493,7 +492,7 @@ GIF = (function(superClass) {
       return function(i) {
         var worker;
         _this.log("spawning worker " + i);
-        worker = new Worker(_this.options.workerScript);
+        worker = new Worker('gif.worker.js');
         worker.onmessage = function(event) {
           _this.activeWorkers.splice(_this.activeWorkers.indexOf(worker), 1);
           _this.freeWorkers.push(worker);

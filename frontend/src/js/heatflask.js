@@ -1,3 +1,5 @@
+import load_google_analytics from "./google-analytics.js";
+
 // import {PersistentWebsocket} from "persistent-websocket"
 import * as PersistentWebsocket from "./pws.js";
 
@@ -5,9 +7,6 @@ import * as pikaday from 'pikaday';
 import "../../node_modules/pikaday/css/pikaday.css";
 
 import { decode as msgpackDecode} from "@msgpack/msgpack";
-
-import { DataTable } from "simple-datatables";
-import "../../node_modules/simple-datatables/src/style.css";
 
 import pureknob from "./pureknob.js";
 
@@ -17,6 +16,9 @@ import {
     popup as Lpopup,
     latLngBounds
 } from "leaflet";
+
+// Google-Analytics object
+const ga = (OFFLINE || ADMIN || DEVELOPMENT)? noop : load_google_analytics();
 
 import Dom from './Dom.js'
 

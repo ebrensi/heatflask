@@ -1,3 +1,6 @@
+import { DataTable } from "simple-datatables";
+import "../../node_modules/simple-datatables/src/style.css";
+
 // Initialize Activity Table in sidebar
 // let tableColumns = [
 //         {

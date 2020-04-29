@@ -1,1 +1,2 @@
 export const GOOGLE_ANLYTICS_ACCOUNT_ID = "UA-85621398-1";
+

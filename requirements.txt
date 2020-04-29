@@ -1,5 +1,4 @@
 stravalib
-rjsmin
 redis==3.4.1
 requests
 #pymongo==3.9
@@ -21,7 +20,7 @@ whitenoise==5.0.1
 base36
 
 python-dateutil
-psycopg2==2.8.4
-gevent==1.4
+psycopg2
+gevent
 
 wsaccel
