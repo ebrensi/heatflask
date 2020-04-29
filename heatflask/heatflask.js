@@ -73,7 +73,8 @@ function heatflask() {
                 "Stamen.Terrain": L.tileLayer.provider("Stamen.Terrain"),
                 "Stamen.TonerLite": L.tileLayer.provider("Stamen.TonerLite"),
                 "CartoDB.Positron": L.tileLayer.provider("CartoDB.Positron"),
-                "CartoDB.DarkMatter": L.tileLayer.provider("CartoDB.DarkMatter")
+                "CartoDB.DarkMatter": L.tileLayer.provider("CartoDB.DarkMatter"),
+                "OpenStreetMap.Mapnik": L.tileLayer.provider("OpenStreetMap.Mapnik")
             };
 
             Object.assign(baseLayers, online_baseLayers);

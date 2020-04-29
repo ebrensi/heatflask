@@ -1,8 +1,8 @@
 /* DrawBox represents the rectangular region that bounds
  *   all of our drawing on the canvas. We use it primarily
  *   to minimize how much we need to clear between frames
- *   of the animation. 
- */  
+ *   of the animation.
+ */
 
 DotLayer.DrawBox = {
     _pad: 25,
@@ -52,11 +52,11 @@ DotLayer.DrawBox = {
         r[0] = ~~Math.max(r[0] - pad, 0);
         r[1] = ~~Math.max(r[1] - pad, 0);
 
-        r[2] = d.xmax; 
+        r[2] = d.xmax;
         r[3] = d.ymax;
         transform(r.subarray(2,4));
-        r[2] = ~~Math.min(r[2] + pad, mapSize.x);
-        r[3] = ~~Math.min(r[3] + pad, mapSize.y);
+        r[2] = ~~Math.min(r[2] + pad, mapSize.x) - r[0];
+        r[3] = ~~Math.min(r[3] + pad, mapSize.y) - r[1];
 
         return r
     },
@@ -78,4 +78,4 @@ DotLayer.DrawBox = {
 
 
 
-    
+
