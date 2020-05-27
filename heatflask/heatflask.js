@@ -51,19 +51,19 @@ function heatflask() {
 
         if (!OFFLINE) {
             const online_baseLayers = {
-                "MapBox.dark": L.tileLayer.provider('MapBox', {
+                "Mapbox.dark": L.tileLayer.provider('MapBox', {
                     id: 'mapbox/dark-v10',
                     accessToken: MAPBOX_ACCESS_TOKEN
                 }),
-                "MapBox.streets": L.tileLayer.provider('MapBox', {
+                "Mapbox.streets": L.tileLayer.provider('MapBox', {
                     id: 'mapbox/streets-v11',
                     accessToken: MAPBOX_ACCESS_TOKEN
                 }),
-                "MapBox.outdoors": L.tileLayer.provider('MapBox', {
+                "Mapbox.outdoors": L.tileLayer.provider('MapBox', {
                     id: 'mapbox/outdoors-v11',
                     accessToken: MAPBOX_ACCESS_TOKEN
                 }),
-                "MapBox.Satellite": L.tileLayer.provider('MapBox', {
+                "Mapbox.Satellite": L.tileLayer.provider('MapBox', {
                     id: 'mapbox/satellite-streets-v11',
                     accessToken: MAPBOX_ACCESS_TOKEN
                 }),
