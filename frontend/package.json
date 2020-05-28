@@ -23,6 +23,7 @@
     "localforage": "^1.7.3",
     "persistent-websocket": "^1.0.2",
     "pikaday": "^1.8.0",
+    "pure-knob": "git+https://github.com/ebrensi/pure-knob.git",
     "simple-datatables": "^2.1.10"
   },
   "browserslist": [
