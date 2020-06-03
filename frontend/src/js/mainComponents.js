@@ -1,4 +1,4 @@
-import appState from "./appState.js"
+import appState, * as args from "./appState.js";
 
 import { Map } from "leaflet";
 export const map = new Map('map', {

@@ -53,12 +53,14 @@
         <br>
         <div class="splash">
           <input id="strava-button"
-                 type="image" alt="Login with Strava">
+                 type="image" alt="Log in with Strava">
        </div>
       </div>
   </body>
 
-  <script> window["args"] = `{{ args|tojson|safe }}`</script>
+  <script>
+      window["args"] = '{{ args|tojson|safe }}'
+  </script>
   <script src="../js/splash-page.js"></script>
 
 </html>

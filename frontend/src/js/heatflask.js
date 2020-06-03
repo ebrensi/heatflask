@@ -1,34 +1,35 @@
 import load_google_analytics from "./google-analytics.js";
 
 // import {PersistentWebsocket} from "persistent-websocket"
-import * as PersistentWebsocket from "./pws.js";
+import * as PersistentWebsocket from "../ext/js/pws.js";
 
-import * as pikaday from 'pikaday';
 import "../../node_modules/pikaday/css/pikaday.css";
+import * as pikaday from 'pikaday';
 
 import { decode as msgpackDecode} from "@msgpack/msgpack";
 
-import pureknob from "./pureknob.js";
+// import pureknob from "./pureknob.js";
 
 import "../../node_modules/leaflet/dist/leaflet.css";
-import {
-    map as Lmap,
-    popup as Lpopup,
-    latLngBounds
-} from "leaflet";
-
-// Google-Analytics object
-const ga = (OFFLINE || ADMIN || DEVELOPMENT)? noop : load_google_analytics();
+import * as L from "leaflet";
 
 import Dom from './Dom.js'
 
 import * as strava from './strava.js';
 
+/*
+ * imports with side-effects start here
+ */
 import appState, * as args from "./appState.js";
 
+// Google-Analytics object
+//const ga = (OFFLINE || ADMIN || DEVELOPMENT)? noop : load_google_analytics();
+
 import { map, dotLayer } from "./mainComponents.js"
+dotLayer.addTo(map);
 
 import { default_baseLayer } from "./Baselayers.js";
+
 default_baseLayer.addTo(map);
 appState.currentBaseLayer = default_baseLayer;
 
@@ -37,16 +38,12 @@ map.on('baselayerchange', function (e) {
     updateState();
 });
 
-import * as controls from "./Controls.js"
+
+import * as controls from "./Controls.js";
+
 Object.values(controls).forEach( control =>
-    if (!control._noadd)
-        control.addTo(map)
+    control._noadd? null : control.addTo(map)
 );
-
-import dotLayer from "./Control.dotLayer.js";
-dotLayer.addTo(map);
-
-
 
 let msgBox = null;
 
@@ -129,7 +126,7 @@ function activityDataPopup(id, latlng){
         vmi = (v * 3600 / 1609.34).toFixed(2) + "mi/hr";
     }
 
-    const popup = Lpopup()
+    const popup = L.popup()
                 .setLatLng(latlng)
                 .setContent(
                     `<b>${A.name}</b><br>${A.type}:&nbsp;${A.tsLoc}<br>`+

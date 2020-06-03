@@ -1,11 +1,8 @@
 import "../css/heatflask.css";
 
 import { WS_SCHEME } from './appUtil.js';
-import * as Dom from "./Dom.js";
 
-debugger;
-
-const R = JSON.parse(window["_runtime"]);
+const R = JSON.parse(window["_argstring"]);
 
 // R is defined at runtime and has attributes with these exact names
 // so we don't want closure compiler renaming them
@@ -31,18 +28,27 @@ export const DIST_UNIT = (MEASURMENT_PREFERENCE=="feet")? 1609.34 : 1000.0,
       SEP_SCALE = {m: 0.15, b: 15.0},
       WEBSOCKET_URL = WS_SCHEME+window.location.host+"/data_socket";
 
-export const appState = {
+const appState = {
   paused: ONLOAD_PARAMS.start_paused,
   items: new Map(),
   currentBaseLayer: null
 };
 
+export { appState as default };
 
 const urlArgs = new URL(window.location.href).searchParams;
 
+
 import strava_login_img from "../images/btn_strava_connectwith_orange.svg";
 
-debugger;
-Dom.el(".strava-auth").forEach(el => el.src = strava_login_img);
+// put user profile urls in the DOM
+document.querySelectorAll(".strava-profile-link").forEach(
+  el => el.href = `https://www.strava.com/athletes/${USER_ID}`
+)
+
+// put strava images into the DOM
+document.querySelectorAll(".strava-auth").forEach(
+  el => el.src = strava_login_img
+);
 
 

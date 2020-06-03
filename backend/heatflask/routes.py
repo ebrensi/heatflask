@@ -17,7 +17,8 @@ import stravalib
 from flask import current_app as app
 from flask import (
     Response, render_template, request, redirect,
-    jsonify, url_for, flash, send_from_directory
+    jsonify, url_for, flash, send_from_directory,
+    get_flashed_messages
 )
 from flask_login import current_user, login_user, logout_user
 
@@ -387,11 +388,11 @@ def main(username):
         "QUERY": query,
         "CLIENT_ID": web_client_id,
         "USERNAME": user.username or user.id,
-        "DEVELOPMENT": config.get("DEVELOPMENT"),
+        "DEVELOPMENT": app.config.get("DEVELOPMENT"),
         "IMPERIAL": user.measurement_preference == "feet",
         "FLASH_MESSAGES": get_flashed_messages(),
-        "MAPBOX_ACCESS_TOKEN": config.get('MAPBOX_ACCESS_TOKEN'),
-        "CAPTURE_DURATION_MAX": config.get('CAPTURE_DURATION_MAX'),
+        "MAPBOX_ACCESS_TOKEN": app.config.get('MAPBOX_ACCESS_TOKEN'),
+        "CAPTURE_DURATION_MAX": app.config.get('CAPTURE_DURATION_MAX'),
         "BASE_USER_URL":  url_for('main', username=user.id),
         "SHARE_PROFILE": user.share_profile,
         "SHARE_STATUS_UPDATE_URL": url_for('update_share_status', username=user.id),
@@ -402,7 +403,7 @@ def main(username):
     if current_user.is_authenticated:
         args["SELF"] = current_user == user
 
-    return render_template('main.html', args=args)
+    return render_template('main.html', user=user, args=args)
 
 
 @app.route('/<username>/activities')
@@ -425,7 +426,7 @@ def activities(username):
     args = {
         USER_ID: user.id,
         CLIENT_ID: web_client_id,
-        OFFLINE: config.get("OFFLINE"),
+        OFFLINE: app.config.get("OFFLINE"),
         ADMIN: current_user.is_admin(),
         IMPERIAL: user.measurement_preference == "feet"
     }

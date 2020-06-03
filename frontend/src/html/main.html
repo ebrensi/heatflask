@@ -45,8 +45,8 @@
             <!-- Main Query tab -->
 			<div class="sidebar-pane" id="home">
 				<h1 class="sidebar-header">
-					<a class="href strava_profile"
-					   href="https://www.strava.com/athletes/{{ user.id }}"
+					<a class="strava-profile-link"
+					   href="#",
 					   target="_blank">
 					   <img src="../images/strava_button.png"
 						    class="strava-button">
@@ -156,10 +156,10 @@
             <!-- Profile & User Settings Tab -->
 			<div class="sidebar-pane self" id="profile">
 				<h1 class="sidebar-header">
-					<a href="https://www.strava.com/athletes/{{ user.id }}"
-						target="_blank">
-					  <img src="../images/strava_button.png"
-					  	   class="strava-button" >
+					<a class="strava-profile-link"
+					   href="#"
+					   target="_blank">
+					  <img src="../images/strava_button.png" class="strava-button" >
 					</a>
 					{{ uid }}
 					<span class="sidebar-close">
@@ -369,9 +369,9 @@
     <div id="map" class="sidebar-map"></div>
 </body>
 
-<script>window["_argstring"] = "{{ args | tojson | safe }}";</script>
+<script>window["_argstring"] = '{{ args | tojson | safe }}';</script>
 
 
-<script src="../js/main.js"></script>
+<script src="../js/heatflask.js"></script>
 
 </html>
