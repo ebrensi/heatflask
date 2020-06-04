@@ -18,7 +18,7 @@ import * as strava from './strava.js';
 /*
  * imports with side-effects start here
  */
-import appState, * as args from "./appState.js";
+import appState, * as args from "./UI.js";
 
 // Google-Analytics object
 { OFFLINE, ADMIN, DEVELOPMENT } = args;
@@ -26,8 +26,6 @@ import appState, * as args from "./appState.js";
 //const ga = (OFFLINE || ADMIN || DEVELOPMENT)? noop : load_google_analytics();
 
 import { map, controls, dotLayer } from "./mainComponents.js";
-
-let msgBox = null;
 
 debugger;
 
@@ -43,82 +41,6 @@ if (FLASH_MESSAGES.length > 0) {
 
 
 
-
-async function updateShareStatus(status) {
-    if (OFFLINE) return;
-    const resp = await fetch(`${SHARE_STATUS_UPDATE_URL}?status=${status}`),
-          text = await resp.text();
-    console.log(`response: ${text}`);
-}
-
-
-
-
-
-
-function zoomToSelectedPaths(){
-    // Pan-Zoom to fit all selected activities
-    let selection_bounds = latLngBounds();
-    appState.items.forEach((A, id) => {
-        if (A.selected) {
-            selection_bounds.extend(A.bounds);
-        }
-    });
-    if (selection_bounds.isValid()) {
-        map.fitBounds(selection_bounds);
-    }
-}
-
-function selectedIDs(){
-    return Array.from(appState.items.values())
-                .filter(A => A.selected)
-                .map(A => A.id );
-}
-
-function openSelected(){
-    let ids = selectedIDs();
-    if (ids.length > 0) {
-        let url = BASE_USER_URL + "?id=" + ids.join("+");
-        if (appState.paused == true){
-            url += "&paused=1"
-        }
-        window.open(url,'_blank');
-    }
-}
-
-function deselectAll(){
-    handle_path_selections(selectedIDs());
-}
-
-
-function activityDataPopup(id, latlng){
-    let A = appState.items.get(id),
-        d = A.total_distance,
-        elapsed = util.hhmmss(A.elapsed_time),
-        v = A.average_speed,
-        dkm = +(d / 1000).toFixed(2),
-        dmi = +(d / 1609.34).toFixed(2),
-        vkm,
-        vmi;
-
-    if (A.vtype == "pace"){
-        vkm = util.hhmmss(1000 / v).slice(3) + "/km";
-        vmi = util.hhmmss(1609.34 / v).slice(3) + "/mi";
-    } else {
-        vkm = (v * 3600 / 1000).toFixed(2) + "km/hr";
-        vmi = (v * 3600 / 1609.34).toFixed(2) + "mi/hr";
-    }
-
-    const popup = L.popup()
-                .setLatLng(latlng)
-                .setContent(
-                    `<b>${A.name}</b><br>${A.type}:&nbsp;${A.tsLoc}<br>`+
-                    `${dkm}&nbsp;km&nbsp;(${dmi}&nbsp;mi)&nbsp;in&nbsp;${elapsed}<br>${vkm}&nbsp;(${vmi})<br>` +
-                    `View&nbsp;in&nbsp;<a href='https://www.strava.com/activities/${A.id}' target='_blank'>Strava</a>`+
-                    `,&nbsp;<a href='${BASE_USER_URL}?id=${A.id}'&nbsp;target='_blank'>Heatflask</a>`
-                    )
-                .openOn(map);
-}
 
 
 function getBounds(ids) {
@@ -211,7 +133,7 @@ function updateLayers(msg) {
     Dom.html("#period-value", T)
     Dom.trigger("#period-value", "change");
 
-    updateState();
+    appState.update()();
 }
 
 
@@ -279,7 +201,7 @@ function renderLayers(query={}) {
 
         appState['after'] = Dom.get("#date1");
         appState["before"] = Dom.get("#date2");
-        updateState();
+        appState.update()();
 
         Dom.fadeOut("#abortButton");
         Dom.fadeOut(".progbar");
@@ -473,7 +395,6 @@ function preset_sync() {
         Dom.hide("#num_select");
         Dom.hide("#id_select");
     }
-
 }
 
 
@@ -529,9 +450,9 @@ function makeDatePicker(selector) {
 const date1picker = makeDatePicker('#date1'),
       date2picker = makeDatePicker('#date2');
 
-map.on('moveend', updateState);
+map.on('moveend', appState.update());
 
-Dom.prop("#autozoom", "change", updateState);
+Dom.prop("#autozoom", "change", appState.update());
 
 Dom.prop("#share", "checked", SHARE_PROFILE);
 Dom.addEvent("#share", "change", function() {
