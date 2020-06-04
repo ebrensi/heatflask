@@ -2,12 +2,9 @@ import * as idb from "./myIdb.js";
 
 import { TileLayer, tileLayer, GridLayer, Util, Browser, bind, extend } from "leaflet";
 
-export { TileLayer, tileLayer, options, extension }
+export { TileLayer, tileLayer }
 
-TileLayer.mergeOptions(options);
-TileLayer.include(extension);
-
-const options = {
+TileLayer.mergeOptions({
     useCache: true,
     saveToCache: true,
     useOnlyCache: false,
@@ -15,9 +12,9 @@ const options = {
     minNativeZoom: 0,
     dbName: "tile-storage",
     updateInterval: 0
-}
+});
 
-const extension = {
+TileLayer.include({
 
     cacheHits: 0,
     cacheMisses: 0,
@@ -265,4 +262,4 @@ const extension = {
             )
         );
     },
-}
+});

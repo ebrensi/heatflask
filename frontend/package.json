@@ -27,7 +27,7 @@
     "simple-datatables": "^2.1.10"
   },
   "browserslist": [
-    "defaults"
+    "last 2 Chrome versions"
   ],
   "devDependencies": {
     "parcel-bundler": "^1.12.4",

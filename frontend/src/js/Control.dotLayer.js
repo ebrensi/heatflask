@@ -1,6 +1,7 @@
+import { dotLayer } from "./mainComponents.js";
+import { CAPTURE_DURATION_MAX } from "./appState.js";
+
 // Controls for system speed, sparsity, etc
-
-
 let dialfg, dialbg;
 
 const rad = deg => deg * Math.PI/180,
@@ -15,13 +16,15 @@ const rad = deg => deg * Math.PI/180,
         'valMax': 100,
         'needle': true,
       };
+
 dialfg = settings["colorFG"];
 dialbg = settings["colorBG"];
 
 function makeKnob(selector, options) {
     const knob = pureknob.createKnob(options.width, options.height),
           mySettings = Object.assign({}, settings);
-          Object.assign(mySettings, options);
+
+    Object.assign(mySettings, options);
 
     for ( const [property, value] of Object.entries(mySettings) ) {
         knob.setProperty(property, value);

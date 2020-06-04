@@ -1,7 +1,7 @@
 import * as L from "leaflet";
 import appState from "./appState.js"
-import { dotLayer } from "./Control.dotLayer.js";
-import "../../node_modules/leaflet-easybutton/src/easy-button.d.ts";
+import { dotLayer } from "./mainComponents.js";
+import "../../node_modules/leaflet-easybutton/src/easy-button.js";
 import "../../node_modules/leaflet-easybutton/src/easy-button.css";
 
 const button_states = [

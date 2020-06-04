@@ -4,7 +4,7 @@
  *
  */
 
-import CRS from "../CRS.js";
+import * as CRS from "../CRS.js";
 import BitSet from "../BitSet.js";
 
 export default ViewBox;

@@ -1,8 +1,9 @@
 import * as L from "leaflet";
 import { map, dotLayer } from "./mainComponents.js"
 
-import './ext/js/leaflet-areaselect.js';
-import './ext/css/leaflet-areaselect.css';
+import "leaflet-areaselect";
+// import '../ext/css/leaflet-areaselect.css';
+
 const areaSelect = L.areaSelect({width:200, height:200})
 
 // Capture button IIFE

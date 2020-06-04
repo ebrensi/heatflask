@@ -8,8 +8,6 @@ import * as pikaday from 'pikaday';
 
 import { decode as msgpackDecode} from "@msgpack/msgpack";
 
-// import pureknob from "./pureknob.js";
-
 import "../../node_modules/leaflet/dist/leaflet.css";
 import * as L from "leaflet";
 
@@ -23,30 +21,15 @@ import * as strava from './strava.js';
 import appState, * as args from "./appState.js";
 
 // Google-Analytics object
+{ OFFLINE, ADMIN, DEVELOPMENT } = args;
+
 //const ga = (OFFLINE || ADMIN || DEVELOPMENT)? noop : load_google_analytics();
 
-import { map, dotLayer } from "./mainComponents.js"
-dotLayer.addTo(map);
-
-import { default_baseLayer } from "./Baselayers.js";
-
-default_baseLayer.addTo(map);
-appState.currentBaseLayer = default_baseLayer;
-
-map.on('baselayerchange', function (e) {
-    appState.currentBaseLayer = e.layer;
-    updateState();
-});
-
-
-import * as controls from "./Controls.js";
-
-Object.values(controls).forEach( control =>
-    control._noadd? null : control.addTo(map)
-);
+import { map, controls, dotLayer } from "./mainComponents.js";
 
 let msgBox = null;
 
+debugger;
 
 
 if (FLASH_MESSAGES.length > 0) {
@@ -451,88 +434,6 @@ function renderLayers(query={}) {
 
 function openActivityListPage() {
     window.open(ACTIVITY_LIST_URL, "_blank")
-}
-
-function updateState(event){
-    let  params = {},
-         type = Dom.get("#select_type"),
-         num = Dom.get("#select_num"),
-         ids = Dom.get("#activity_ids");
-
-    if (type == "activities") {
-        params["limit"] = num;
-    } else if (type == "activity_ids") {
-        if (ids) params["id"] = ids;
-    } else if (type == "days") {
-        params["preset"] = num;
-    } else {
-        if (appState["after"]) {
-            params["after"] = appState.after;
-        }
-        if (appState["before"] && (appState["before"] != "now")) {
-            params["before"] = appState["before"];
-        }
-    }
-
-    if (appState["paused"]){
-        params["paused"] = "1";
-    }
-
-    if (Dom.prop("#autozoom", 'checked')) {
-        appState["autozoom"] = true;
-        params["autozoom"] = "1";
-    } else {
-        appState["autozoom"] = false;
-        const zoom = map.getZoom(),
-              center = map.getCenter(),
-              precision = Math.max(0, Math.ceil(Math.log(zoom) / Math.LN2));
-
-        if (center) {
-            params.lat = center.lat.toFixed(precision);
-            params.lng = center.lng.toFixed(precision);
-            params.zoom = zoom;
-        }
-    }
-
-    if (dotLayer) {
-        const ds = dotLayer.getDotSettings();
-
-        params["c1"] = Math.round(ds["C1"]);
-        params["c2"] = Math.round(ds["C2"]);
-        params["sz"] = Math.round(ds["dotScale"]);
-
-        // Enable capture if period is less than CAPTURE_DURATION_MAX
-        const cycleDuration = dotLayer.periodInSecs().toFixed(2),
-              captureEnabled = controls.captureControl.enabled;
-
-        Dom.html("#period-value", cycleDuration);
-
-        if (cycleDuration <= CAPTURE_DURATION_MAX) {
-            if (!captureEnabled) {
-                controls.captureControl.addTo(map);
-                controls.captureControl.enabled = true;
-            }
-        } else if (captureEnabled) {
-            controls.captureControl.removeFrom(map);
-            controls.captureControl.enabled = false;
-        }
-    }
-
-    if (appState.currentBaseLayer.name)
-        params["baselayer"] = appState.currentBaseLayer.name;
-
-    const paramsString = Object.keys(params).map(function(param) {
-              return encodeURIComponent(param) + '=' +
-              encodeURIComponent(params[param])
-          }).join('&'),
-
-          newURL = `${USER_ID}?${paramsString}`;
-
-    if (appState.url != newURL) {
-        // console.log(`pushing: ${newURL}`);
-        appState.url = newURL;
-        window.history.replaceState("", "", newURL);
-    }
 }
 
 

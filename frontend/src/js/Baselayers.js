@@ -1,4 +1,5 @@
 import { tileLayer } from "./TileLayer/TileLayer.Heatflask.js";
+import { MAPBOX_ACCESS_TOKEN } from "./appState.js";
 
 export { baseLayers, default_baseLayer }
 
@@ -6,16 +7,16 @@ const baseLayers = {
     "None": tileLayer("", { useCache: false })
 };
 
-const mapBox_layer_names = [
-    "MapBox.Dark",
-    "MapBox.Streets",
-    "MapBox.Streets-Basic",
-    "MapBox.Satellite"
-];
+const mapBox_layer_names = {
+    "Mapbox.dark": 'mapbox/dark-v10',
+    "Mapbox.streets": 'mapbox/streets-v11',
+    "Mapbox.outdoors": 'mapbox/outdoors-v11',
+    "Mapbox.satellite": 'mapbox/satellite-streets-v11'
+};
 
-for (const name of mapBox_layer_names)
+for (const [name, id] of Object.entries(mapBox_layer_names))
     baseLayers[name] = tileLayer.provider('MapBox', {
-        id: name.toLowerCase(),
+        id: id,
         accessToken: MAPBOX_ACCESS_TOKEN
     })
 

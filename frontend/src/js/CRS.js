@@ -2,7 +2,7 @@
 // This is a streamlined version of Leaflet's EPSG:3857 crs,
 // which can run independently of Leaflet.js (i.e. in a worker thread)
 //  latlngpt is a a 2d-array [lat,lng] rather than a latlng object
-export const code = 'EPSG:3857',
+export const code = 'EPSG:3857';
 
 const MAX_LATITUDE = 85.0511287798,
       EARTH_RADIUS = 6378137,
@@ -11,7 +11,7 @@ const MAX_LATITUDE = 85.0511287798,
 // Note: These operations are done in-place!!
 
 // This projects LatLng coordinate onto a rectangular grid
-export const Projection = function() {
+export function Projection() {
     const max = this.MAX_LATITUDE,
           R = this.EARTH_RADIUS,
           rad = this.RAD;
@@ -28,7 +28,7 @@ export const Projection = function() {
 }
 
 // This scales distances between points to a given zoom level
-export const Transformation = function(zoom) {
+export function Transformation(zoom) {
     const S = 0.5 / (Math.PI * this.EARTH_RADIUS),
           A = S, B = 0.5, C = -S, D = 0.5,
           scale = 2 ** (8 + zoom);
@@ -41,7 +41,7 @@ export const Transformation = function(zoom) {
     };
 }
 
-export const makePT(zoom) {
+export function makePT(zoom) {
     const P = this.Projection(),
           T = this.Transformation(zoom);
     return function(llpt){ return T(P(llpt)) };

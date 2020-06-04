@@ -4,10 +4,7 @@ import { TileLayer, tileLayer, GridLayer, Browser, DomUtil, point, bounds } from
 
 export { TileLayer, tileLayer };
 
-TileLayer.mergeOptions(options);
-TileLayer.include(extension)
-
-const options = {
+TileLayer.mergeOptions({
 	// @option keepBuffer
 	// The amount of tiles outside the visible map area to be kept in the stitched
 	// `TileLayer`.
@@ -16,9 +13,10 @@ const options = {
 	// Whether to dump loaded tiles to a `<canvas>` to prevent some rendering
 	// artifacts. (Disabled by default in IE)
 	dumpToCanvas: Browser.canvas && !Browser.ie,
-}
+});
 
-const extension = {
+
+TileLayer.include({
 	_onUpdateLevel: function(z, zoom) {
 		if (this.options.dumpToCanvas) {
 			this._levels[z].canvas.style.zIndex =
@@ -247,4 +245,4 @@ const extension = {
 		// this newly dumped tile.
 		return this;
 	},
-}
+});
