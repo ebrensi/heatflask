@@ -15,15 +15,14 @@ import Dom from './Dom.js'
 
 import * as strava from './strava.js';
 
+
 /*
  * imports with side-effects start here
  */
+
+
 import appState, * as args from "./UI.js";
 
-// Google-Analytics object
-{ OFFLINE, ADMIN, DEVELOPMENT } = args;
-
-//const ga = (OFFLINE || ADMIN || DEVELOPMENT)? noop : load_google_analytics();
 
 import { map, controls, dotLayer } from "./mainComponents.js";
 
@@ -359,59 +358,6 @@ function openActivityListPage() {
 }
 
 
-function preset_sync() {
-    const num = Dom.get("#select_num"),
-          type = Dom.get("#select_type");
-
-    if (type=="days"){
-        Dom.hide(".date_select");
-        Dom.hide("#id_select");
-        Dom.show("#num_select");
-        Dom.set('#date2', "now");
-        date2picker.gotoToday();
-        date2picker.setEndRange(new Date());
-
-        let d = new Date();
-        d.setDate(d.getDate()-num);
-        Dom.set('#date1', d.toISOString().split('T')[0] );
-        date1picker.gotoDate(d);
-        date1picker.setStartRange(d)
-
-    } else if (type=="activities") {
-        Dom.hide(".date_select");
-        Dom.hide("#id_select");
-        Dom.show("#num_select");
-        Dom.set('#date1', "");
-        Dom.set('#date2', "now");
-        date2picker.gotoToday();
-    }
-    else if (type=="activity_ids") {
-        Dom.hide(".date_select");
-        Dom.hide("#num_select");
-        Dom.show("#id_select");
-    } else {
-        Dom.show(".date_select");
-        Dom.set("#select_num", "");
-        Dom.hide("#num_select");
-        Dom.hide("#id_select");
-    }
-}
-
-
-// What to do when user changes to a different tab or window
-document.onvisibilitychange = function() {
-    if (document.hidden) {
-        if (!appState.paused)
-            dotLayer.pause();
-    } else if (!appState.paused && dotLayer) {
-        dotLayer.animate();
-
-    }
-};
-
-// activities table set-up
-Dom.prop("#zoom-to-selection", "checked", false);
-
 Dom.addEvent("#zoom-to-selection", "change", function(){
     if ( Dom.prop("#zoom-to-selection", 'checked') ) {
         zoomToSelectedPaths();
@@ -428,27 +374,8 @@ Dom.addEvent("#select_num", "keypress", function(event) {
     }
 });
 
-Dom.show("#abortButton", false);
 
-Dom.hide(".progbar");
 
-function makeDatePicker(selector) {
-    const el = Dom.el(selector),
-          picker = new Pikaday({
-        field: el,
-        onSelect: function(date) {
-            el.value = date.toISOString().split('T')[0];
-            Dom.set(".preset", "");
-        },
-        yearRange: [2000, 2022],
-        theme: "dark-theme"
-
-    });
-    return picker
-}
-
-const date1picker = makeDatePicker('#date1'),
-      date2picker = makeDatePicker('#date2');
 
 map.on('moveend', appState.update());
 
@@ -468,25 +395,10 @@ Dom.addEvent("#renderButton", "click", renderLayers);
 
 Dom.addEvent("#activity-list-buton", "click", () => openActivityListPage(false));
 
-Dom.prop("#autozoom", 'checked', ONLOAD_PARAMS.autozoom);
 
-Dom.set("#activity_ids", "");
 
-if (ONLOAD_PARAMS.activity_ids) {
-    Dom.set("#activity_ids", ONLOAD_PARAMS.activity_ids);
-    Dom.set("#select_type", "activity_ids");
-} else if (ONLOAD_PARAMS.limit) {
-    Dom.set("#select_num", ONLOAD_PARAMS.limit);
-    Dom.set("#select_type", "activities");
-} else if (ONLOAD_PARAMS.preset) {
-    Dom.set("#select_num", ONLOAD_PARAMS.preset);
-    Dom.set("#select_type", "days");
-    preset_sync();
-} else {
-    Dom.set('#date1', ONLOAD_PARAMS.date1);
-    Dom.set('#date2', ONLOAD_PARAMS.date2);
-    Dom.set('#preset', "");
-}
+
+
 
 initializedotLayer();
 renderLayers();

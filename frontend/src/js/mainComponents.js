@@ -14,7 +14,7 @@ export const map = new Map('map', {
     zoom: args.ONLOAD_PARAMS.map_zoom,
     preferCanvas: true,
     zoomAnimation: true,
-    zoomAnimationThreshold: 6,
+    zoomAnimationThreshold: 6\]
     updateWhenZooming: true,
 });
 

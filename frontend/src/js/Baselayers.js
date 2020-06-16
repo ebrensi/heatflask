@@ -1,9 +1,11 @@
+/*
+ *  Here we define the map baselayers
+ */
+
 import { tileLayer } from "./TileLayer/TileLayer.Heatflask.js";
-import { MAPBOX_ACCESS_TOKEN } from "./appState.js";
+import { MAPBOX_ACCESS_TOKEN } from "./appUtil.js";
 
-export { baseLayers, default_baseLayer }
-
-const baseLayers = {
+export const baseLayers = {
     "None": tileLayer("", { useCache: false })
 };
 
@@ -34,8 +36,6 @@ const providers_names = [
 for (const name of providers_names)
     baseLayers[name] = tileLayer.provider(name)
 
-const default_baseLayer = baseLayers["CartoDB.DarkMatter"];
-
 // Set the zoom range the same for all basemaps because this TileLayer
 //  will fill in missing zoom levels with tiles from the nearest zoom level.
 for (const name in baseLayers) {
@@ -50,3 +50,6 @@ for (const name in baseLayers) {
     }
 }
 
+
+
+export const default_baseLayer = baseLayers["CartoDB.DarkMatter"];

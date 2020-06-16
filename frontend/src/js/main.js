@@ -1,23 +1,38 @@
-// main.js
+/*
+ *
+ * ██╗  ██╗███████╗ █████╗ ████████╗███████╗██╗      █████╗ ███████╗██╗  ██╗
+ * ██║  ██║██╔════╝██╔══██╗╚══██╔══╝██╔════╝██║     ██╔══██╗██╔════╝██║ ██╔╝
+ * ███████║█████╗  ███████║   ██║   █████╗  ██║     ███████║███████╗█████╔╝
+ * ██╔══██║██╔══╝  ██╔══██║   ██║   ██╔══╝  ██║     ██╔══██║╚════██║██╔═██╗
+ * ██║  ██║███████╗██║  ██║   ██║   ██║     ███████╗██║  ██║███████║██║  ██╗
+ * ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═╝     ╚══════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
+ *
+ * (2016-2020) Efrem Rensi
+ *
+ * --------------------------------------------------------------------------
+ */
+
+ /*
+  * main.js -- the entry point for the heatflask browser client
+  */
+
+
+/*
+ * Set up Google Analytics Object if
+ *   the current user is not an ADMIN,
+ *   we are not offline,
+ *   this is not a development environment
+ */
 import load_google_analytics from "./google-analytics.js";
-
-// import {PersistentWebsocket} from "persistent-websocket"
-import * as PersistentWebsocket from "../ext/js/pws.js";
-
-import "../../node_modules/pikaday/css/pikaday.css";
-import * as pikaday from 'pikaday';
-
-
-import { decode as msgpackDecode} from "@msgpack/msgpack";
-
-import Dom from './Dom.js'
-import * as strava from './strava.js';
+import { OFFLINE, ADMIN, DEVELOPMENT } = from "./appUtil.js";
+const ga = (OFFLINE || ADMIN || DEVELOPMENT)? noop : load_google_analytics();
 
 import "../../node_modules/leaflet/dist/leaflet.css";
 import * as L from "leaflet";
 
-import appState, * as args from "./appState.js";
+import { appState } from "./UI.js";
 
-import { map, controls } from "./mainComponents.js"
+
+import "../css/heatflask.css";  // This should be the last imported CSS
 
 debugger;

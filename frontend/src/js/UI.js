@@ -1,53 +1,134 @@
-
-/*
- *
- * ██╗  ██╗███████╗ █████╗ ████████╗███████╗██╗      █████╗ ███████╗██╗  ██╗
- * ██║  ██║██╔════╝██╔══██╗╚══██╔══╝██╔════╝██║     ██╔══██╗██╔════╝██║ ██╔╝
- * ███████║█████╗  ███████║   ██║   █████╗  ██║     ███████║███████╗█████╔╝
- * ██╔══██║██╔══╝  ██╔══██║   ██║   ██╔══╝  ██║     ██╔══██║╚════██║██╔═██╗
- * ██║  ██║███████╗██║  ██║   ██║   ██║     ███████╗██║  ██║███████║██║  ██╗
- * ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═╝     ╚══════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
- *
- */
-
-/*
+-/*
+ *  UI.js -- the front-end user interface for heatflask.
  *  Here we initialize the app model and set up the DOM
  */
-
-import "../css/heatflask.css";
 
 import {
   WS_SCHEME, ONLOAD_PARAMS, USER_ID, SHARE_STATUS_UPDATE_URL
 } from "./appUtil.js";
 
-const urlArgs = new URL(window.location.href).searchParams;
-
-import strava_login_img from "../images/btn_strava_connectwith_orange.svg";
-
 import * as Dom from "./Dom.js";
 
+
+
+
 /*
- * Set up the DOM with initial values
- *
+ * ----------------------------------------------------------------------
+ * Set up the DOM with initial values, either defaults or
+ *  specified as url parameters
  */
 
+// get the parameters specified in the browser's current url
+const urlArgs = new URL(window.location.href).searchParams;
 
 // put user profile urls in the DOM
 Dom.prop(".strava-profile-link", "href", `https://www.strava.com/athletes/${USER_ID}`);
 
-// put strava images into the DOM
+// put Strava-login button images into the DOM
+import strava_login_img from "../images/btn_strava_connectwith_orange.svg";
 Dom.prop(".strava-auth", "src", strava_login_img);
 
+Dom.prop("#zoom-to-selection", "checked", false);
+Dom.show("#abortButton", false);
+Dom.hide(".progbar");
 
+Dom.prop("#autozoom", 'checked', ONLOAD_PARAMS.autozoom);
+Dom.set("#activity_ids", "");
+
+
+
+/*
+ * set up activity-query form
+ */
+
+// Put date-pickers in DOM
+import "../../node_modules/pikaday/css/pikaday.css";
+import * as pikaday from 'pikaday';
+function makeDatePicker(selector) {
+    const el = Dom.el(selector),
+          picker = new Pikaday({
+        field: el,
+        onSelect: function(date) {
+            el.value = date.toISOString().split('T')[0];
+            Dom.set(".preset", "");
+        },
+        yearRange: [2000, 2022],
+        theme: "dark-theme"
+
+    });
+    return picker
+}
+
+const date1picker = makeDatePicker('#date1'),
+      date2picker = makeDatePicker('#date2');
+
+
+// preset_sync() gets called whenever the activity query form changes
+function preset_sync() {
+    const num = Dom.get("#select_num"),
+          type = Dom.get("#select_type");
+
+    if (type=="days"){
+        Dom.hide(".date_select");
+        Dom.hide("#id_select");
+        Dom.show("#num_select");
+        Dom.set('#date2', "now");
+        date2picker.gotoToday();
+        date2picker.setEndRange(new Date());
+
+        let d = new Date();
+        d.setDate(d.getDate()-num);
+        Dom.set('#date1', d.toISOString().split('T')[0] );
+        date1picker.gotoDate(d);
+        date1picker.setStartRange(d)
+
+    } else if (type=="activities") {
+        Dom.hide(".date_select");
+        Dom.hide("#id_select");
+        Dom.show("#num_select");
+        Dom.set('#date1', "");
+        Dom.set('#date2', "now");
+        date2picker.gotoToday();
+    }
+    else if (type=="activity_ids") {
+        Dom.hide(".date_select");
+        Dom.hide("#num_select");
+        Dom.show("#id_select");
+    } else {
+        Dom.show(".date_select");
+        Dom.set("#select_num", "");
+        Dom.hide("#num_select");
+        Dom.hide("#id_select");
+    }
+}
+
+
+if (ONLOAD_PARAMS.activity_ids) {
+    Dom.set("#activity_ids", ONLOAD_PARAMS.activity_ids);
+    Dom.set("#select_type", "activity_ids");
+} else if (ONLOAD_PARAMS.limit) {
+    Dom.set("#select_num", ONLOAD_PARAMS.limit);
+    Dom.set("#select_type", "activities");
+} else if (ONLOAD_PARAMS.preset) {
+    Dom.set("#select_num", ONLOAD_PARAMS.preset);
+    Dom.set("#select_type", "days");
+} else {
+    Dom.set('#date1', ONLOAD_PARAMS.date1);
+    Dom.set('#date2', ONLOAD_PARAMS.date2);
+    Dom.set('#preset', "");
+}
+
+preset_sync();
 
 
 
 
 /*
  * appState is our model
+ *  We expect map and dotLayer to be in the namespace
  *
  */
-const appState = {
+export const appState = {
   paused: ONLOAD_PARAMS.start_paused,
   items: new Map(),
   currentBaseLayer: null,
@@ -216,3 +297,15 @@ function activityDataPopup(id, latlng){
 
     const popup = L.popup().setLatLng(latlng).setContent(popupContent).openOn(map);
 }
+
+
+// What to do when user changes to a different tab or window
+document.onvisibilitychange = function() {
+    if (document.hidden) {
+        if (!appState.paused)
+            dotLayer.pause();
+    } else if (!appState.paused && dotLayer) {
+        dotLayer.animate();
+
+    }
+};

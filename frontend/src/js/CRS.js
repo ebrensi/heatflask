@@ -41,7 +41,7 @@ export function Transformation(zoom) {
     };
 }
 
-export function makePT(zoom) {
+ export function makePT(zoom) {
     const P = this.Projection(),
           T = this.Transformation(zoom);
     return function(llpt){ return T(P(llpt)) };
