@@ -20,11 +20,11 @@
     "leaflet-image": "^0.4.0",
     "leaflet-providers": "^1.10.1",
     "leaflet-sidebar-v2": "^3.2.3",
-    "localforage": "^1.7.3",
+    "localforage": "^1.7.4",
     "persistent-websocket": "^1.0.2",
     "pikaday": "^1.8.0",
     "pure-knob": "git+https://github.com/ebrensi/pure-knob.git",
-    "simple-datatables": "^2.1.10"
+    "simple-datatables": "^2.1.13"
   },
   "browserslist": [
     "last 2 Chrome versions"

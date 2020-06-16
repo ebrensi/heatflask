@@ -94,6 +94,7 @@ $RECYCLE.BIN/
 # My Additions
 *.old
 *.log
+log.txt
 .hidden
 .fuse*
 
