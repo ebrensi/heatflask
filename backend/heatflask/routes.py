@@ -158,7 +158,7 @@ def splash():
 
     args = {
         "DEVELOPMENT": app.config.get("DEVELOPMENT"),
-        "URL": {
+        "URLS": {
             "demo": url_for("demo"),
             "directory": url_for("public_directory"),
             "strava-button": url_for(
@@ -385,7 +385,7 @@ def main(username):
     # log.debug("created query: %s", query)
     query["userid"] = user.id;
     args = {
-        "QUERY": query,
+        "ONLOAD_PARAMS": query,
         "CLIENT_ID": web_client_id,
         "USERNAME": user.username or user.id,
         "DEVELOPMENT": app.config.get("DEVELOPMENT"),

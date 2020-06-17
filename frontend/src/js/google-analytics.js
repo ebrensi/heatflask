@@ -1,4 +1,9 @@
-import { GOOGLE_ANLYTICS_ACCOUNT_ID } from "./config.js";
+/*
+ *  google-analytics.js -- exports a function that will insert
+ *   	the google analytics snippets.
+ */
+
+const GOOGLE_ANALYTICS_ACCOUNT_ID = "UA-85621398-1";
 
 export default function load_ga_object() {
 	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
@@ -9,7 +14,7 @@ export default function load_ga_object() {
 	const ga = window["ga"];
 
 	// Creates a default tracker with automatic cookie domain configuration.
-	ga('create', GOOGLE_ANLYTICS_ACCOUNT_ID, 'auto');
+	ga('create', GOOGLE_ANALYTICS_ACCOUNT_ID, 'auto');
 
 	// Sends a pageview hit from the tracker just created.
 	ga('send', 'pageview');

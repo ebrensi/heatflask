@@ -1,61 +1,19 @@
-function ws_prefix() {
-  if (window.location.protocol == "https:")
-    return "wss://";
-  else
-    return "ws://";
-}
-
-export const WS_SCHEME = ws_prefix();
+ /*
+  *   appUtil.js -- this is where we define constants and general utility functions
+  *   that don't fit anywhere else
+  */
 
 
-// runtime arguments that come from the backend server are embedded in the html
-// as a json string, which .
-const R = window["_args"];
-
-// R is defined at runtime and has attributes with these exact names
-// so we don't want closure compiler renaming them
-export const ONLOAD_PARAMS = R["QUERY"],
-             CLIENT_ID = R["CLIENT_ID"],
-             OFFLINE = R["OFFLINE"],
-             ADMIN = R["ADMIN"],
-             FLASH_MESSAGES = R["FLASH_MESSAGES"],
-             MAPBOX_ACCESS_TOKEN = R["MAPBOX_ACCESS_TOKEN"],
-             CAPTURE_DURATION_MAX = R["CAPTURE_DURATION_MAX"],
-             DEFAULT_DOTCOLOR = R["DEFAULT_DOTCOLOR"],
-             MEASURMENT_PREFERENCE = R["MEASURMENT_PREFERENCE"],
-             USER_ID = R["USER_ID"],
-             BASE_USER_URL = R["BASE_USER_URL"],
-             SHARE_PROFILE = R["SHARE_PROFILE"],
-             SHARE_STATUS_UPDATE_URL = R["SHARE_STATUS_UPDATE_URL"],
-             ACTIVITY_LIST_URL = R["ACTIVITY_LIST_URL"],
-             BEACON_HANDLER_URL = R["BEACON_HANDLER_URL"];
-
-export const DIST_UNIT = (MEASURMENT_PREFERENCE=="feet")? 1609.34 : 1000.0,
-             DIST_LABEL = (MEASURMENT_PREFERENCE=="feet")?  "mi" : "km",
-             SPEED_SCALE = 5.0,
-             SEP_SCALE = {m: 0.15, b: 15.0},
-             WEBSOCKET_URL = WS_SCHEME+window.location.host+"/data_socket";
-
-
-
-// Courtesy of TwoFuckingDevelopers (@2fdevs, @elecash and @qmarcos)
-export function isMobileDevice() {
-    return (
-      typeof window.orientation !== "undefined") ||
-      (navigator.userAgent.indexOf('IEMobile') !== -1
-    );
-};
-
-
-//--------------------------------
+// Add .pad method to Number objects
 Number.prototype.pad = function(size) {
   let s = String(this);
   while (s.length < (size || 2)) {s = "0" + s;}
   return s;
 };
 
-// ------------------------------
-export function hhmmss( secs ) {
+
+// return a "HH:MM:SS" string given number of seconds
+export function HHMMSS( secs ) {
     let totalSeconds = secs;
 
     const hours = Math.floor(totalSeconds / 3600).pad(2);
@@ -66,20 +24,10 @@ export function hhmmss( secs ) {
     return `${hours}:${minutes}:${seconds}`;
 }
 
-export function img( url, w=20, h=20, alt="" ) {
-  return `<img src='${url}' width=${w}px height=${h}px class="img-fluid" alt="${alt}">`;
-}
-
-
-// return an HTML href tag from a url and text
-export function href( url, text ) {
-    return `<a href='${url}' target='_blank'>${text}</a>`;
-}
-
-
-export function secs2DDHHMM(sec){
+// return a "DD:HH:MM" string given number of seconds
+export function DDHHMM(sec){
   if (!sec || sec <= 0) {
-    return "??"
+    return "??";
   }
   let days = Math.floor(sec / 86400);
   sec -= days * 86400;
@@ -92,8 +40,53 @@ export function secs2DDHHMM(sec){
   let minutes = Math.floor(sec / 60) % 60;
   sec -= minutes * 60;
 
-  return `${days.pad(2)}:${hours.pad(2)}:${minutes.pad(2)}`
+  return `${days.pad(2)}:${hours.pad(2)}:${minutes.pad(2)}`;
 }
 
 
+
+
+// return an image tag string, given an image url
+export function img( url, w=20, h=20, alt="" ) {
+  return `<img src='${url}' width=${w}px height=${h}px class="img-fluid" alt="${alt}">`;
+}
+
+
+// return an HTML href tag from a url and text
+export function href( url, text ) {
+    return `<a href='${url}' target='_blank'>${text}</a>`;
+}
+
+
+// define the do-nothing function, noop
 export function noop(){}
+
+
+/*
+  depending on whether the page this script is in is http or https, we need to
+  make sure the websocket protocol matches
+*/
+function ws_prefix() {
+  if (window.location.protocol == "https:") {
+    return "wss://";
+  }
+  else {
+    return "ws://";
+  }
+}
+
+export const WS_SCHEME = ws_prefix(),
+             WEBSOCKET_URL = `${WS_SCHEME}${window.location.host}/data_socket`;
+
+
+
+// Courtesy of TwoFuckingDevelopers (@2fdevs, @elecash and @qmarcos)
+function isMobileDevice() {
+    return (
+      typeof window.orientation !== "undefined") ||
+      (navigator.userAgent.indexOf('IEMobile') !== -1
+    );
+}
+
+export const MOBILE = isMobileDevice();
+
