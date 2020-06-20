@@ -1,6 +1,5 @@
-export default WorkerPool;
 
-const WorkerPool = {
+export default {
 
     _workers: [],
 

@@ -10,12 +10,22 @@ import "../css/font-awesome-lite.css";
 
 import { map, areaSelect, msgBox, default_baseLayer, layerControl } from "./mapAPI.js";
 
-import WS_SCHEME from "./appUtil.js";
-
 import {
     ONLOAD_PARAMS,
     SHARE_STATUS_UPDATE_URL
 } from "./Constants.js";
+
+/*
+ * instantiate a DotLayer object and it to the map
+ */
+import { DotLayer } from "./DotLayer/DotLayer.js";
+export const dotLayer = new DotLayer({
+    startPaused: ONLOAD_PARAMS["paused"]
+}).addTo(map);
+
+import WS_SCHEME from "./appUtil.js";
+
+
 
 const USER_ID = ONLOAD_PARAMS["userid"];
 
@@ -53,7 +63,7 @@ Dom.set("#activity_ids", "");
 
 // Put date-pickers in DOM
 import "../../node_modules/pikaday/css/pikaday.css";
-import * as Pikaday from 'pikaday';
+import Pikaday from 'pikaday';
 function makeDatePicker(selector) {
     const el = Dom.el(selector),
           picker = new Pikaday({
@@ -73,60 +83,60 @@ const date1picker = makeDatePicker('#date1'),
       date2picker = makeDatePicker('#date2');
 
 
-// // preset_sync() gets called whenever the activity query form changes
-// function preset_sync() {
-//     const num = Dom.get("#select_num"),
-//           type = Dom.get("#select_type");
+// preset_sync() gets called whenever the activity query form changes
+function preset_sync() {
+    const num = Dom.get("#select_num"),
+          type = Dom.get("#select_type");
 
-//     if (type === "days"){
-//         Dom.hide(".date_select");
-//         Dom.hide("#id_select");
-//         Dom.show("#num_select");
-//         Dom.set('#date2', "now");
-//         date2picker.gotoToday();
-//         date2picker.setEndRange(new Date());
+    if (type === "days"){
+        Dom.hide(".date_select");
+        Dom.hide("#id_select");
+        Dom.show("#num_select");
+        Dom.set('#date2', "now");
+        date2picker.gotoToday();
+        date2picker.setEndRange(new Date());
 
-//         let d = new Date();
-//         d.setDate(d.getDate()-num);
-//         Dom.set('#date1', d.toISOString().split('T')[0] );
-//         date1picker.gotoDate(d);
-//         date1picker.setStartRange(d);
+        let d = new Date();
+        d.setDate(d.getDate()-num);
+        Dom.set('#date1', d.toISOString().split('T')[0] );
+        date1picker.gotoDate(d);
+        date1picker.setStartRange(d);
 
-//     } else if (type === "activities") {
-//         Dom.hide(".date_select");
-//         Dom.hide("#id_select");
-//         Dom.show("#num_select");
-//         Dom.set('#date1', "");
-//         Dom.set('#date2', "now");
-//         date2picker.gotoToday();
-//     }
-//     else if (type === "activity_ids") {
-//         Dom.hide(".date_select");
-//         Dom.hide("#num_select");
-//         Dom.show("#id_select");
-//     } else {
-//         Dom.show(".date_select");
-//         Dom.set("#select_num", "");
-//         Dom.hide("#num_select");
-//         Dom.hide("#id_select");
-//     }
-// }
+    } else if (type === "activities") {
+        Dom.hide(".date_select");
+        Dom.hide("#id_select");
+        Dom.show("#num_select");
+        Dom.set('#date1', "");
+        Dom.set('#date2', "now");
+        date2picker.gotoToday();
+    }
+    else if (type === "activity_ids") {
+        Dom.hide(".date_select");
+        Dom.hide("#num_select");
+        Dom.show("#id_select");
+    } else {
+        Dom.show(".date_select");
+        Dom.set("#select_num", "");
+        Dom.hide("#num_select");
+        Dom.hide("#id_select");
+    }
+}
 
 
-// if (ONLOAD_PARAMS.activity_ids) {
-//     Dom.set("#activity_ids", ONLOAD_PARAMS.activity_ids);
-//     Dom.set("#select_type", "activity_ids");
-// } else if (ONLOAD_PARAMS.limit) {
-//     Dom.set("#select_num", ONLOAD_PARAMS.limit);
-//     Dom.set("#select_type", "activities");
-// } else if (ONLOAD_PARAMS.preset) {
-//     Dom.set("#select_num", ONLOAD_PARAMS.preset);
-//     Dom.set("#select_type", "days");
-// } else {
-//     Dom.set('#date1', ONLOAD_PARAMS.date1);
-//     Dom.set('#date2', ONLOAD_PARAMS.date2);
-//     Dom.set('#preset', "");
-// }
+if (ONLOAD_PARAMS.activity_ids) {
+    Dom.set("#activity_ids", ONLOAD_PARAMS.activity_ids);
+    Dom.set("#select_type", "activity_ids");
+} else if (ONLOAD_PARAMS.limit) {
+    Dom.set("#select_num", ONLOAD_PARAMS.limit);
+    Dom.set("#select_type", "activities");
+} else if (ONLOAD_PARAMS.preset) {
+    Dom.set("#select_num", ONLOAD_PARAMS.preset);
+    Dom.set("#select_type", "days");
+} else {
+    Dom.set('#date1', ONLOAD_PARAMS.date1);
+    Dom.set('#date2', ONLOAD_PARAMS.date2);
+    Dom.set('#preset', "");
+}
 
 // preset_sync();
 
@@ -325,3 +335,9 @@ const date1picker = makeDatePicker('#date1'),
 
 //     }
 // };
+
+// appState.currentBaseLayer = default_baseLayer;
+// map.on('baselayerchange', function (e) {
+//     appState.currentBaseLayer = e.layer;
+//     appState.update();
+// });

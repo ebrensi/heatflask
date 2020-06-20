@@ -4,9 +4,7 @@
  *   of the animation.
  */
 
-export default DrawBox;
-
-const DrawBox = {
+export default {
     _pad: 25,
 
     initialize: function(ViewBox) {

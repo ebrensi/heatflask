@@ -7,9 +7,7 @@
 import * as CRS from "../CRS.js";
 import BitSet from "../BitSet.js";
 
-export default ViewBox;
-
-const ViewBox = {
+export default {
 
     initialize: function(map, canvases, itemsArray) {
         this._map = map;

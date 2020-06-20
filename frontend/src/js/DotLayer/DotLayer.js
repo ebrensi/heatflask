@@ -19,9 +19,7 @@ import BitSet from "../BitSet.js";
 import heatflask_logo from "../../images/logo.png";
 import strava_logo from "../../images/pbs4.png";
 
-export { DotLayer, dotLayer }
-
-const DotLayer = Layer.extend({
+export const DotLayer = Layer.extend({
 
     _pane: "shadowPane",
     two_pi: 2 * Math.PI,
@@ -1402,6 +1400,6 @@ const DotLayer = Layer.extend({
 });  // end of DotLayer definition
 
 
-const dotLayer = function( options ) {
+export const dotLayer = function( options ) {
     return new DotLayer( options );
 };
