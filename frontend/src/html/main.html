@@ -369,6 +369,10 @@
     <div id="map" class="sidebar-map"></div>
 </body>
 
+<!--
+	 The backend server attaches a json string called args.  We parse it here so
+     it will be available to our scripts as window["_args"]
+ -->
 <script>window["_args"] = JSON.parse('{{ args | tojson | safe }}');</script>
 
 

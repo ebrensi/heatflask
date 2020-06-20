@@ -1,52 +1,56 @@
 
 
 export function el(selector) {
-    if (selector[0] == "#")
+    if (selector[0] == "#") {
         return document.querySelector(selector);
-    else if (selector[0] = ".")
+    }
+    else if (selector[0] == ".") {
         return document.querySelectorAll(selector);
+    }
 }
 
 function doFunc (selector, func) {
-    const el = el(selector);
-    if (!el) {
+    const _el = el(selector);
+    if (!_el) {
         console.warn(`DOM element "${selector}" does not exist.`);
-        return
-    } else if (NodeList.prototype.isPrototypeOf(el)) {
-        const elList = el,
+        return;
+    } else if (NodeList.prototype.isPrototypeOf(_el)) {
+        const elList = _el,
               result = [];
 
-        for (const el of elList)
+        for (const el of elList) {
             result.push(func(el));
-        return result
-    } else
+        }
+        return result;
+    } else {
         return func(el);
+    }
 }
 
 // get or set a property of a dom element or class of elements
 export function prop(string, prop, val) {
-    if (val === undefined)
+    if (val === undefined) {
         return doFunc(string, el => el[prop]);
-    else
+    }
+    else {
         return doFunc(string, el => el[prop] = val);
+    }
 }
 
 export function set(string, val) {
-    return prop(string, "value", val)
+    return prop(string, "value", val);
 }
 
 export function get(string) {
-    return prop(string, "value")
+    return prop(string, "value");
 }
 
 export function html(string, val) {
-    return prop(string, "innerHTML", val)
+    return prop(string, "innerHTML", val);
 }
 
 export function addEvent(string, eventName, eventHandler) {
-    doFunc(string, el => {
-        el.addEventListener(eventName, eventHandler)
-    });
+    doFunc(string, el => el.addEventListener(eventName, eventHandler));
 }
 
 export function trigger(string, eventType) {
@@ -59,10 +63,11 @@ export function trigger(string, eventType) {
 
 export function fade(string, out) {
     let ops;
-    if (out)
+    if (out) {
         ops = {add: "hide", remove:"show"};
-    else
+    } else {
         ops = {add: "show", remove: "hide"};
+    }
 
     doFunc(string, el => {
         el.classList.add(ops.add);

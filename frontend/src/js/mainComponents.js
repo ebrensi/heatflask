@@ -1,28 +1,5 @@
-import appState, * as args from "./appState.js";
-
-import { Map } from "leaflet";
-
-// import { DotLayer } from "./DotLayer/DotLayer.js";
 
 
-
-/*
- * Create the leaflet map object
- */
-export const map = new Map('map', {
-    center: args.ONLOAD_PARAMS.map_center,
-    zoom: args.ONLOAD_PARAMS.map_zoom,
-    preferCanvas: true,
-    zoomAnimation: true,
-    zoomAnimationThreshold: 6\]
-    updateWhenZooming: true,
-});
-
-
-// instantiate and add map-tile layers to the map
-import { default_baseLayer } from "./Baselayers.js";
-
-default_baseLayer.addTo(map);
 appState.currentBaseLayer = default_baseLayer;
 map.on('baselayerchange', function (e) {
     appState.currentBaseLayer = e.layer;
@@ -30,9 +7,6 @@ map.on('baselayerchange', function (e) {
 });
 
 import * as controls from "./Controls.js";
-
-// zoom buttons
-controls.zoomControl = map.zoomControl.setPosition('bottomright');
 
 
 Object.values(controls).forEach( control =>

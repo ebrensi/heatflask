@@ -1,11 +1,10 @@
-/**
+/*
  * BitSet.js : a fast bit set implementation in JavaScript.
  * (c) the authors
  * Licensed under the Apache License, Version 2.0.
  *
  * Modified by Efrem Rensi 2020
  */
-'use strict';
 
 export default BitSet;
 

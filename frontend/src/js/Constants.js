@@ -27,6 +27,3 @@ export const DIST_UNIT = IMPERIAL? 1609.34 : 1000.0,
              SPEED_SCALE = 5.0,
              SEP_SCALE = {m: 0.15, b: 15.0};
 
-
-
-
