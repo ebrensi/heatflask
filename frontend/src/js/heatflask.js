@@ -1,45 +1,3 @@
-import load_google_analytics from "./google-analytics.js";
-
-// import {PersistentWebsocket} from "persistent-websocket"
-import * as PersistentWebsocket from "../ext/js/pws.js";
-
-import "../../node_modules/pikaday/css/pikaday.css";
-import * as pikaday from 'pikaday';
-
-import { decode as msgpackDecode} from "@msgpack/msgpack";
-
-import "../../node_modules/leaflet/dist/leaflet.css";
-import * as L from "leaflet";
-
-import Dom from './Dom.js'
-
-import * as strava from './strava.js';
-
-
-/*
- * imports with side-effects start here
- */
-
-
-import appState, * as args from "./UI.js";
-
-
-import { map, controls, dotLayer } from "./mainComponents.js";
-
-debugger;
-
-
-if (FLASH_MESSAGES.length > 0) {
-    let msg = "<ul class=flashes>";
-    for (let i=0, len=FLASH_MESSAGES.length; i<len; i++) {
-        msg += "<li>" + FLASH_MESSAGES[i] + "</li>";
-    }
-    msg += "</ul>";
-    Lcontrol.window(map, {content:msg, visible:true});
-}
-
-
-
 
 
 function getBounds(ids) {
@@ -381,7 +339,6 @@ map.on('moveend', appState.update());
 
 Dom.prop("#autozoom", "change", appState.update());
 
-Dom.prop("#share", "checked", SHARE_PROFILE);
 Dom.addEvent("#share", "change", function() {
     let status = Dom.prop("#share", "checked")? "public":"private";
     updateShareStatus(status);

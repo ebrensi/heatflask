@@ -23,7 +23,7 @@
 					<a href="#activities" role="tab"><i class="fa fa-list"></i></a>
                 </li>
 
-				<li class="self hide">
+				<li class="self">
 					<a href="#profile" role="tab"><i class="fa fa-user"></i></a>
 				</li>
 
@@ -127,14 +127,14 @@
 						</a>
 						<br><br>
 
-						<input ctype="button"
+						<input type="button"
 							   class="btn btn-sm btn-c logout"
 							   value="Log Out" />
 					</div>
 
                     <br>
 
-                    <div class="logged-out hide">
+                    <div class="logged-out">
 						Create an account and/or log in.
 	                    <br>
 
@@ -159,23 +159,24 @@
 					<a class="strava-profile-link"
 					   href="#"
 					   target="_blank">
-					  <img src="../images/strava_button.png" class="strava-button" >
+					  <img src="../images/strava_button.png" class="strava-button">
 					</a>
-					{{ uid }}
+					{{ user.id }}
 					<span class="sidebar-close">
 						<i class="fa fa-caret-left"></i>
 					</span>
 				</h1>
 
-				{% if current_user.is_authenticated and current_user.is_admin() and (not user.is_admin()) %}
-				Admin ({{ current_user.id }}) on behalf of:
-				{% endif %}
+
+				<div class="admin">
+					Admin View for
+				</div>
 
 				<h3> {{ user.firstname }} {{ user.lastname }}:</h3>
 
 					<a href="https://www.strava.com/settings/profile"
 						target="_blank">
-						<img class="profile" src="#" alt="user.profile"
+						<img class="profile" src="{{ user.profile }}" alt="user.profile"
 							 height="20%" width="20%">
 					</a>
 
@@ -373,7 +374,8 @@
 	 The backend server attaches a json string called args.  We parse it here so
      it will be available to our scripts as window["_args"]
  -->
-<script>window["_args"] = JSON.parse('{{ args | tojson | safe }}');</script>
+<script>
+window["_args"] = JSON.parse('{{ args | tojson | safe }}');</script>
 
 
 <script src="../js/main.js"></script>

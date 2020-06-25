@@ -388,6 +388,7 @@ def main(username):
         "ONLOAD_PARAMS": query,
         "CLIENT_ID": web_client_id,
         "USERNAME": user.username or user.id,
+        "LOGGED_IN": current_user.is_authenticated,
         "DEVELOPMENT": app.config.get("DEVELOPMENT"),
         "IMPERIAL": user.measurement_preference == "feet",
         "FLASH_MESSAGES": get_flashed_messages(),

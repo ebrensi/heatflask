@@ -7,12 +7,16 @@
 import "../ext/css/min_entireframework.min.css";
 import "../css/font-awesome-lite.css";
 
-
-import { map, areaSelect, msgBox, default_baseLayer, layerControl } from "./mapAPI.js";
+// Populate the browser window with a Leaflet map
+import { map, msgBox, default_baseLayer, layerControl } from "./mapAPI.js";
 
 import {
     ONLOAD_PARAMS,
-    SHARE_STATUS_UPDATE_URL
+    SELF,
+    LOGGED_IN,
+    SHARE_STATUS_UPDATE_URL,
+    FLASH_MESSAGES,
+    SHARE_PROFILE
 } from "./Constants.js";
 
 /*
@@ -37,6 +41,16 @@ import * as Dom from "./Dom.js";
  */
 
 
+// if (FLASH_MESSAGES.length > 0) {
+//     let msg = "<ul class=flashes>";
+//     for (let i=0, len=FLASH_MESSAGES.length; i<len; i++) {
+//         msg += "<li>" + FLASH_MESSAGES[i] + "</li>";
+//     }
+//     msg += "</ul>";
+//     Lcontrol.window(map, {content:msg, visible:true});
+// }
+
+
 // get the parameters specified in the browser's current url
 const urlArgs = new URL(window.location.href).searchParams;
 console.log(`url parameters: ${urlArgs}`);
@@ -48,12 +62,44 @@ Dom.prop(".strava-profile-link", "href", `https://www.strava.com/athletes/${USER
 import strava_login_img from "../images/btn_strava_connectwith_orange.svg";
 Dom.prop(".strava-auth", "src", strava_login_img);
 
+// add paypal buttons
+import paypalButtonHtml from "../html/paypal-button.html";
+Dom.prop(".paypal-form", "innerHTML", paypalButtonHtml);
+
+
 Dom.prop("#zoom-to-selection", "checked", false);
 Dom.show("#abortButton", false);
 Dom.hide(".progbar");
 
 Dom.prop("#autozoom", 'checked', ONLOAD_PARAMS["autozoom"]);
 Dom.set("#activity_ids", "");
+
+Dom.prop("#share", "checked", SHARE_PROFILE);
+
+
+// Display or hide stuff based on whether current user is logged in
+if (LOGGED_IN) {
+    Dom.show(".logged-in");
+    Dom.hide(".logged-out");
+} else {
+    Dom.show(".logged-out");
+    Dom.hide(".logged-in");
+}
+
+// Display or hide stuff based on whether current user is an admin
+if (ADMIN) {
+  Dom.show(".admin");
+} else {
+  Dom.hide(".admin");
+}
+
+// Display or hide stuff based on whether or not current user
+//  is the same as the user whose activities are being viewed
+if (SELF) {
+    Dom.show(".self");
+} else {
+    Dom.hide(".self");
+}
 
 
 
@@ -82,9 +128,25 @@ function makeDatePicker(selector) {
 const date1picker = makeDatePicker('#date1'),
       date2picker = makeDatePicker('#date2');
 
+// Set up form based on what kind of query this is
+if (ONLOAD_PARAMS["activity_ids"]) {
+    Dom.set("#activity_ids", ONLOAD_PARAMS["activity_ids"]);
+    Dom.set("#select_type", "activity_ids");
+} else if (ONLOAD_PARAMS["limit"]) {
+    Dom.set("#select_num", ONLOAD_PARAMS["limit"]);
+    Dom.set("#select_type", "activities");
+} else if (ONLOAD_PARAMS["preset"]) {
+    Dom.set("#select_num", ONLOAD_PARAMS["preset"]);
+    Dom.set("#select_type", "days");
+} else {
+    Dom.set('#date1', ONLOAD_PARAMS["date1"]);
+    Dom.set('#date2', ONLOAD_PARAMS["date2"]);
+    Dom.set('#preset', "");
+}
+
 
 // preset_sync() gets called whenever the activity query form changes
-function preset_sync() {
+function formatQueryForm() {
     const num = Dom.get("#select_num"),
           type = Dom.get("#select_type");
 
@@ -122,23 +184,8 @@ function preset_sync() {
     }
 }
 
-
-if (ONLOAD_PARAMS.activity_ids) {
-    Dom.set("#activity_ids", ONLOAD_PARAMS.activity_ids);
-    Dom.set("#select_type", "activity_ids");
-} else if (ONLOAD_PARAMS.limit) {
-    Dom.set("#select_num", ONLOAD_PARAMS.limit);
-    Dom.set("#select_type", "activities");
-} else if (ONLOAD_PARAMS.preset) {
-    Dom.set("#select_num", ONLOAD_PARAMS.preset);
-    Dom.set("#select_type", "days");
-} else {
-    Dom.set('#date1', ONLOAD_PARAMS.date1);
-    Dom.set('#date2', ONLOAD_PARAMS.date2);
-    Dom.set('#preset', "");
-}
-
-// preset_sync();
+// initial format of the Query form
+formatQueryForm();
 
 
 

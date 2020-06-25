@@ -5,11 +5,18 @@ import BitSet from "./BitSet";
     Douglas-Peucker simplification algorithm
 */
 
-// points is a function p(i) that directly accesses the i-th point
-// of our data set.  we must assume that the point we get is
-// a pointer to he same memory location every time, so we need to make copy
-// ourselves.
-export const simplify = function(points, n, tolerance) {
+/*
+ * Simplifier.js is based on V. Agafonkin's package with the same name
+ *   but rather than return a new array of points, it returns
+ *   a BitSet mask of points selected by the algorithm.
+ *
+ *  points is a function p(i) that directly accesses the i-th point
+ *  of our data set.  we must assume that the point we get is
+ *  a pointer to he same memory location every time, so we need to make copy
+ *  ourselves.
+ */
+
+export default function(points, n, tolerance) {
     const sqTolerance = tolerance * tolerance;
 
     let idxBitSet = this.simplifyRadialDist(points, n, sqTolerance);

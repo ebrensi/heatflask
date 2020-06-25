@@ -86,14 +86,7 @@ export const layerControl = L.control.layers(
 
 // Add zoom Control
 const zoomControl = map.zoomControl.setPosition('bottomright');
-// The main sidebar UI
-// Leaflet sidebar v2
 
-/*
-import "../../node_modules/sidebar-v2/css/leaflet-sidebar.css";
-import "../../node_modules/sidebar-v2/js/leaflet-sidebar.js";
-const sidebarControl = L.control.sidebar('sidebar');
-*/
 
 // Define a watermark control
 const Watermark = L.Control.extend({
@@ -129,7 +122,8 @@ const heatflaskLogo = new Watermark({
 
 
 // Initialize control window, which is the modal popup that we
-//  display messages in.
+//  display messages in.  We only create one and reuse it for different
+//   messages.
 import 'leaflet-control-window';
 import '../../node_modules/leaflet-control-window/src/L.Control.Window.css';
 
