@@ -69,7 +69,7 @@ Dom.prop(".paypal-form", "innerHTML", paypalButtonHtml);
 
 
 Dom.prop("#zoom-to-selection", "checked", false);
-Dom.show("#abortButton", false);
+Dom.hide(".abort-render");
 Dom.hide(".progbar");
 
 Dom.prop("#autozoom", 'checked', ONLOAD_PARAMS["autozoom"]);

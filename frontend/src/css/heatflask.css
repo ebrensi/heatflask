@@ -89,7 +89,8 @@ span.date-select {
 
 
 .leaflet-container {
-    background: black
+    background: black;
+    overflow: visible;
 }
 
 .leaflet-control-layers-expanded {
