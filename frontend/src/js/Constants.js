@@ -8,6 +8,7 @@ const R = window["_args"];
 export const ONLOAD_PARAMS = R["ONLOAD_PARAMS"],
        CLIENT_ID = R["CLIENT_ID"],
        USERNAME = R["USERNAME"],
+       USERPIC = R["USERPIC"],
        LOGGED_IN = R["LOGGED_IN"],
        SELF = R["SELF"],
        DEVELOPMENT = R["DEVELOPMENT"],

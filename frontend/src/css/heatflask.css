@@ -112,6 +112,11 @@ span.date-select {
   color: rgba(255,255,255,0.9);
 }
 
+
+.sidebar.collapsed {
+  height: 200px;
+}
+
 .sidebar-content {
     background-color: rgba(0,0,0,0.5);
     color: white;

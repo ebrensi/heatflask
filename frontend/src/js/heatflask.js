@@ -346,7 +346,7 @@ Dom.addEvent("#share", "change", function() {
 
 
 
-Dom.addEvent(".preset", "change", preset_sync);
+
 
 Dom.addEvent("#renderButton", "click", renderLayers);
 

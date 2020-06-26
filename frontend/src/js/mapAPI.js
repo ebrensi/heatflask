@@ -137,12 +137,29 @@ export const msgBox = L.control.window(map, {
 
 // The main sidebar UI
 // Leaflet sidebar v2
-
 import "../../node_modules/sidebar-v2/css/leaflet-sidebar.css";
 import "../../node_modules/sidebar-v2/js/leaflet-sidebar.js";
-const sidebarControl = L.control.sidebar('sidebar').addTo(map);
+export const sidebar = L.control.sidebar('sidebar').addTo(map);
+sidebar.addEventListener("opening", e => sidebar.isOpen = true);
+sidebar.addEventListener("closing", e => sidebar.isOpen = false);
 
+// we also define some key and mouse bindings to the map
+//  to control the sidebar
+map.addEventListener("click", e => {
+    if (sidebar.isOpen) {
+        sidebar.close();
+    }
+});
 
+// map.addEventListener("keypress", e => {
+//     if (e.originalEvent.key === "s") {
+//         if (sidebar.isOpen) {
+//             sidebar.close();
+//         } else {
+//             sidebar.open();
+//         }
+//     }
+// });
 
 
 /*  Initialize areaselect control (for selecting activities via map rectangle) */

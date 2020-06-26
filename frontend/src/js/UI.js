@@ -16,8 +16,12 @@ import {
     LOGGED_IN,
     SHARE_STATUS_UPDATE_URL,
     FLASH_MESSAGES,
-    SHARE_PROFILE
+    SHARE_PROFILE,
+    USERPIC,
+    ADMIN
 } from "./Constants.js";
+
+const USER_ID = ONLOAD_PARAMS["userid"];
 
 /*
  * instantiate a DotLayer object and it to the map
@@ -28,10 +32,6 @@ export const dotLayer = new DotLayer({
 }).addTo(map);
 
 import WS_SCHEME from "./appUtil.js";
-
-
-
-const USER_ID = ONLOAD_PARAMS["userid"];
 
 import * as Dom from "./Dom.js";
 
@@ -58,6 +58,7 @@ console.log(`url parameters: ${urlArgs}`);
 // put user profile urls in the DOM
 Dom.prop(".strava-profile-link", "href", `https://www.strava.com/athletes/${USER_ID}`);
 
+
 // put Strava-login button images into the DOM
 import strava_login_img from "../images/btn_strava_connectwith_orange.svg";
 Dom.prop(".strava-auth", "src", strava_login_img);
@@ -81,6 +82,9 @@ Dom.prop("#share", "checked", SHARE_PROFILE);
 if (LOGGED_IN) {
     Dom.show(".logged-in");
     Dom.hide(".logged-out");
+
+    // put user profile pics
+    Dom.prop(".avatar", "src", USERPIC);
 } else {
     Dom.show(".logged-out");
     Dom.hide(".logged-in");
@@ -133,10 +137,10 @@ if (ONLOAD_PARAMS["activity_ids"]) {
     Dom.set("#activity_ids", ONLOAD_PARAMS["activity_ids"]);
     Dom.set("#select_type", "activity_ids");
 } else if (ONLOAD_PARAMS["limit"]) {
-    Dom.set("#select_num", ONLOAD_PARAMS["limit"]);
+    Dom.set("#num", ONLOAD_PARAMS["limit"]);
     Dom.set("#select_type", "activities");
 } else if (ONLOAD_PARAMS["preset"]) {
-    Dom.set("#select_num", ONLOAD_PARAMS["preset"]);
+    Dom.set("#num", ONLOAD_PARAMS["preset"]);
     Dom.set("#select_type", "days");
 } else {
     Dom.set('#date1', ONLOAD_PARAMS["date1"]);
@@ -144,16 +148,15 @@ if (ONLOAD_PARAMS["activity_ids"]) {
     Dom.set('#preset', "");
 }
 
-
-// preset_sync() gets called whenever the activity query form changes
+// formatQueryForm gets called whenever the activity query form changes
 function formatQueryForm() {
-    const num = Dom.get("#select_num"),
+    const num = Dom.get("#num"),
           type = Dom.get("#select_type");
 
     if (type === "days"){
-        Dom.hide(".date_select");
+        Dom.hide(".date-select");
         Dom.hide("#id_select");
-        Dom.show("#num_select");
+        Dom.show("#num_field");
         Dom.set('#date2', "now");
         date2picker.gotoToday();
         date2picker.setEndRange(new Date());
@@ -165,29 +168,29 @@ function formatQueryForm() {
         date1picker.setStartRange(d);
 
     } else if (type === "activities") {
-        Dom.hide(".date_select");
+        Dom.hide(".date-select");
         Dom.hide("#id_select");
-        Dom.show("#num_select");
+        Dom.show("#num_field");
         Dom.set('#date1', "");
         Dom.set('#date2', "now");
         date2picker.gotoToday();
     }
     else if (type === "activity_ids") {
-        Dom.hide(".date_select");
-        Dom.hide("#num_select");
+        Dom.hide(".date-select");
+        Dom.hide("#num_field");
         Dom.show("#id_select");
     } else {
-        Dom.show(".date_select");
-        Dom.set("#select_num", "");
-        Dom.hide("#num_select");
+        Dom.show(".date-select");
+        Dom.set("#num", "");
+        Dom.hide("#num_field");
         Dom.hide("#id_select");
     }
 }
 
+
 // initial format of the Query form
 formatQueryForm();
-
-
+Dom.addEvent(".preset", "change", formatQueryForm);
 
 
 // /*

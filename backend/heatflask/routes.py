@@ -388,6 +388,7 @@ def main(username):
         "ONLOAD_PARAMS": query,
         "CLIENT_ID": web_client_id,
         "USERNAME": user.username or user.id,
+        "USERPIC": user.profile,
         "LOGGED_IN": current_user.is_authenticated,
         "DEVELOPMENT": app.config.get("DEVELOPMENT"),
         "IMPERIAL": user.measurement_preference == "feet",
@@ -403,6 +404,7 @@ def main(username):
 
     if current_user.is_authenticated:
         args["SELF"] = current_user == user
+        args["ADMIN"] = current_user.is_admin()
 
     return render_template('main.html', user=user, args=args)
 
