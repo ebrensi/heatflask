@@ -15,15 +15,14 @@ function doFunc (selector, func) {
         console.warn(`DOM element "${selector}" does not exist.`);
         return;
     } else if (NodeList.prototype.isPrototypeOf(_el)) {
-        const elList = _el,
-              result = [];
+        const result = [];
 
-        for (const el of elList) {
-            result.push(func(el));
+        for (const l of _el) {
+            result.push(func(l));
         }
         return result;
     } else {
-        return func(el);
+        return func(_el);
     }
 }
 
