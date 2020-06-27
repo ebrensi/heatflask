@@ -10,6 +10,7 @@ html, body, #map {
     font: 10pt "Helvetica Neue", Arial, Helvetica, sans-serif;
 }
 
+
 button, input, select, textarea {
   background: rgba(0,0,0,0.5);
   border-color: rgba(0, 0, 0, 0);
@@ -87,10 +88,8 @@ span.date-select {
   background-image: url(../images/marker-icon.png);
 }
 
-
 .leaflet-container {
     background: black;
-    overflow: visible;
 }
 
 .leaflet-control-layers-expanded {
@@ -114,8 +113,62 @@ span.date-select {
 }
 
 
+/* Here we customize the sidebar appearance.
+    By default, Sidebar-V2 changes its layout for
+    mobile devices (width < 768) in a way that I didn't like.
+    In particular, it creates a left margin than renders
+    a blank strip of screen space that should have map in it.
+    these chganges fix that.
+*/
+
+.sidebar-left ~ .sidebar-map {
+    /* eliminate the map margin */
+    margin-left: inherit;
+}
+
+.leaflet-left {
+  /* add a left side offset to map controls to make up
+    for the lost margin, so that the (top-left) controls
+    won't overlap with the sidebar */
+  left: 40px;
+}
+
+
+
+/* The collapsed sidebar normally takes up the whole
+   left side of the screen.  We shorten it to take up
+   only the space needed for tab icons.
+*/
 .sidebar.collapsed {
   height: 200px;
+}
+
+/* let the bottom-left controls (watermarks) stay close to
+     the left edge of the screen, since we
+     shortened the sidebar  */
+.leaflet-bottom.leaflet-left {
+  left: 0px;
+}
+  /* same but on larger displays */
+  @media (min-width: 768px) {
+  .sidebar-left.collapsed ~ .sidebar-map
+  .leaflet-bottom.leaflet-left {
+      left: 0px;
+  } }
+
+@media (max-width: 768px) {
+    .sidebar {
+      width: 97%; }}
+
+
+.sidebar {
+    border-radius: 8px; /* roundness of corners */
+    top: 5px;
+    bottom: 5px;
+}
+
+.sidebar-left {
+  left: 5px;
 }
 
 .sidebar-content {
