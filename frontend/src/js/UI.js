@@ -23,14 +23,6 @@ import {
 
 const USER_ID = ONLOAD_PARAMS["userid"];
 
-/*
- * instantiate a DotLayer object and it to the map
- */
-import { DotLayer } from "./DotLayer/DotLayer.js";
-export const dotLayer = new DotLayer({
-    startPaused: ONLOAD_PARAMS["paused"]
-}).addTo(map);
-
 import WS_SCHEME from "./appUtil.js";
 
 import * as Dom from "./Dom.js";
@@ -57,6 +49,8 @@ console.log(`url parameters: ${urlArgs}`);
 
 // put user profile urls in the DOM
 Dom.prop(".strava-profile-link", "href", `https://www.strava.com/athletes/${USER_ID}`);
+
+// Dom.addEvent(".logout", "click", e => console.log("logging out"));
 
 
 // put Strava-login button images into the DOM
@@ -193,11 +187,64 @@ formatQueryForm();
 Dom.addEvent(".preset", "change", formatQueryForm);
 
 
-// /*
-//  * appState is our model
-//  *  We expect map and dotLayer to be in the namespace
-//  *
-//  */
+// --------------------------------------------------------------------------
+
+/*
+ * instantiate a DotLayer object and add it to the map
+ */
+import { DotLayer } from "./DotLayer/DotLayer.js";
+export const dotLayer = new DotLayer({
+    startPaused: ONLOAD_PARAMS["paused"]
+}).addTo(map);
+
+
+// set initial values from defaults or specified in url
+let ds = dotLayer.getDotSettings();
+
+const C1 = ONLOAD_PARAMS["C1"],
+      C2 = ONLOAD_PARAMS["C2"],
+      SZ = ONLOAD_PARAMS["SZ"];
+
+ds["C1"] = C1;
+ds["C2"] = C2;
+ds["dotScale"] = SZ;
+
+
+const SPEED_SCALE = 5.0,
+      SEP_SCALE = {m: 0.15, b: 15.0};
+
+Dom.set("#sepConst", (Math.log2(C1) - SEP_SCALE.b) / SEP_SCALE.m );
+Dom.set("#speedConst", Math.sqrt(C2) / SPEED_SCALE );
+Dom.set("#dotScale", ds["dotScale"]);
+Dom.set("#dotAlpha", ds["dotAlpha"]);
+
+
+// the following two statements seem to be redundant
+Dom.prop("#shadows", "checked", dotLayer.options.dotShadows.enabled);
+if (ONLOAD_PARAMS["shadows"]) {
+    Dom.set("#shadows", "checked");
+}
+
+Dom.addEvent("#shadows", "change", (e) => {
+    dotLayer.updateDotSettings(null, {"enabled": e.target.checked})
+});
+
+Dom.prop("#showPaths", "checked", dotLayer.options.showPaths);
+Dom.addEvent("#showPaths", "change", function(){
+     dotLayer.options.showPaths = Dom.prop("#showPaths", "checked");
+     dotLayer._redraw();
+});
+
+dotLayer.updateDotSettings(ds);
+
+// now add dotlayer controls to the DOM
+
+
+/*
+ * appState is our model
+ *  We expect map and dotLayer to be in the namespace
+ *
+ */
 // export const appState = {
 //   paused: ONLOAD_PARAMS.start_paused,
 //   items: new Map(),

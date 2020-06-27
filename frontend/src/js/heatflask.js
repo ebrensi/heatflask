@@ -9,48 +9,6 @@ function getBounds(ids) {
 }
 
 
-function initializedotLayer() {
-    let ds = dotLayer.getDotSettings();
-    if (ONLOAD_PARAMS.C1)
-        ds["C1"] = ONLOAD_PARAMS["C1"];
-
-    if (ONLOAD_PARAMS.C2)
-        ds["C2"] = ONLOAD_PARAMS["C2"];
-
-    if (ONLOAD_PARAMS.SZ)
-        ds["dotScale"] = ONLOAD_PARAMS["SZ"];
-
-    Dom.set("#sepConst", (Math.log2(ds["C1"]) - SEP_SCALE.b) / SEP_SCALE.m );
-    Dom.set("#speedConst", Math.sqrt(ds["C2"]) / SPEED_SCALE );
-    Dom.set("#dotScale", ds["dotScale"]);
-    Dom.set("#dotAlpha", ds["dotAlpha"]);
-
-    Dom.trigger("#sepConst",   "change");
-    Dom.trigger("#speedConst", "change");
-    Dom.trigger("#dotScale",   "change");
-    Dom.trigger("#dotAlpha",   "change");
-
-
-
-
-    if (ONLOAD_PARAMS.shadows)
-        Dom.set("#shadows", "checked");
-
-    Dom.prop("#shadows", "checked", dotLayer.options.dotShadows.enabled);
-
-    Dom.addEvent("#shadows", "change", (e) => {
-        dotLayer.updateDotSettings(null, {"enabled": e.target.checked})
-    });
-
-    Dom.prop("#showPaths", "checked", dotLayer.options.showPaths);
-    Dom.addEvent("#showPaths", "change", function(){
-         dotLayer.options.showPaths = Dom.prop("#showPaths", "checked");
-         dotLayer._redraw();
-    });
-
-    dotLayer.updateDotSettings(ds);
-}
-
 
 /* Rendering */
 function updateLayers(msg) {

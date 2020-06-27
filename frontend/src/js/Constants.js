@@ -26,7 +26,5 @@ export const ONLOAD_PARAMS = R["ONLOAD_PARAMS"],
        ADMIN = R["ADMIN"];
 
 export const DIST_UNIT = IMPERIAL? 1609.34 : 1000.0,
-             DIST_LABEL = IMPERIAL?  "mi" : "km",
-             SPEED_SCALE = 5.0,
-             SEP_SCALE = {m: 0.15, b: 15.0};
+             DIST_LABEL = IMPERIAL?  "mi" : "km";
 
