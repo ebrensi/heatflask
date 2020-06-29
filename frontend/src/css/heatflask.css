@@ -1,3 +1,13 @@
+/* heatflask.css -- this stylesheet is meant to get loaded in last
+   in order to over-write some style settings of dependencies      */
+
+
+/* global variables */
+:root {
+  --sidebar-height: 160px;
+}
+
+
 body {
     padding: 0;
     margin: 0;
@@ -89,7 +99,7 @@ span.date-select {
 }
 
 .leaflet-container {
-    background: black;
+    background: green;
 }
 
 .leaflet-control-layers-expanded {
@@ -116,8 +126,8 @@ span.date-select {
 /* Here we customize the sidebar appearance.
     By default, Sidebar-V2 changes its layout for
     mobile devices (width < 768) in a way that I didn't like.
-    In particular, it creates a left margin than renders
-    a blank strip of screen space that should have map in it.
+    In particular, it creates a left margin that takes up
+    a strip of screen space that should have map in it.
     these chganges fix that.
 */
 
@@ -140,7 +150,7 @@ span.date-select {
    only the space needed for tab icons.
 */
 .sidebar.collapsed {
-  height: 200px;
+  height: var(--sidebar-height);
 }
 
 /* let the bottom-left controls (watermarks) stay close to
@@ -206,14 +216,8 @@ span.date-select {
   padding: 10px 10px;
 }
 
-/*!
- * Pikaday
- * Copyright © 2014 David Bushell | BSD & MIT license | https://dbushell.com/
- */
-
-
-/**
- * This theme is an example to show how you can create your own.
+/*
+ * Pikaday is the date-picker form component on the query tab
  */
 .pika-single.dark-theme {
     color: #fff;

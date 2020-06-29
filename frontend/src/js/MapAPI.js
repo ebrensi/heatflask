@@ -1,5 +1,5 @@
 /*
- * mapAPI.js -- Leaflet map and plugins are initialized here
+ * mapAPI.js -- Leaflet map background is initialized here
  */
 
 import "../../node_modules/leaflet/dist/leaflet.css";

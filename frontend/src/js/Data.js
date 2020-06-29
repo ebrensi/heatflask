@@ -1,13 +1,8 @@
-
-
-function getBounds(ids) {
-    const bounds = latLngBounds();
-    for (const id of ids){
-        bounds.extend( appState.items.get(id).bounds );
-    }
-    return bounds
-}
-
+/*
+ * Data.js -- Here we define the functionality for getting the activity data
+ *          that we use for vizualization.  That means, importing
+ *          it from the backend or local storage.
+ */
 
 
 /* Rendering */
@@ -268,54 +263,3 @@ function renderLayers(query={}) {
 
     }
 }
-
-function openActivityListPage() {
-    window.open(ACTIVITY_LIST_URL, "_blank")
-}
-
-
-Dom.addEvent("#zoom-to-selection", "change", function(){
-    if ( Dom.prop("#zoom-to-selection", 'checked') ) {
-        zoomToSelectedPaths();
-    }
-});
-
-Dom.addEvent("#render-selection-button", "click", openSelected);
-Dom.addEvent("#clear-selection-button", "click", deselectAll);
-
-Dom.addEvent("#select_num", "keypress", function(event) {
-    if (event.which == 13) {
-        event.preventDefault();
-        renderLayers();
-    }
-});
-
-
-
-
-map.on('moveend', appState.update());
-
-Dom.prop("#autozoom", "change", appState.update());
-
-Dom.addEvent("#share", "change", function() {
-    let status = Dom.prop("#share", "checked")? "public":"private";
-    updateShareStatus(status);
-});
-
-
-
-
-
-Dom.addEvent("#renderButton", "click", renderLayers);
-
-Dom.addEvent("#activity-list-buton", "click", () => openActivityListPage(false));
-
-
-
-
-
-
-initializedotLayer();
-renderLayers();
-preset_sync();
-

@@ -93,3 +93,21 @@ const captureControl = L.easyButton({
 captureControl.enabled = false;
 
 export default captureControl;
+
+
+function updatePeriod() {
+    // Enable capture if period is less than CAPTURE_DURATION_MAX
+    let cycleDuration = dotLayer.periodInSecs().toFixed(2),
+        captureEnabled = controls.captureControl.enabled;
+
+    Dom.html("#period-value", cycleDuration);
+    if (cycleDuration <= CAPTURE_DURATION_MAX) {
+        if (!captureEnabled) {
+            captureControl.addTo(map);
+            captureControl.enabled = true;
+        }
+    } else if (captureEnabled) {
+        captureControl.removeFrom(map);
+        captureControl.enabled = false;
+    }
+}
