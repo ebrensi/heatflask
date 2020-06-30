@@ -1,5 +1,5 @@
 /*
- * Strava related stuff
+ * strava.js -- Strava related stuff
 */
 
 export function activityURL( id ) {

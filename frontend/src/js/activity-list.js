@@ -17,7 +17,7 @@ import "../css/font-awesome-lite.css";
 // import * as localForage from "localforage";
 
 import * as strava from './strava.js';
-import { WS_SCHEME, DDHHMM, img, href, noop }   from './appUtil.js';
+import { WS_SCHEME, DDHHMM, HHMMSS, img, href, noop }   from './appUtil.js';
 import load_ga_object from "./google-analytics.js";
 
 // _args is an object passed from the server at runtime via
@@ -55,33 +55,6 @@ const DOM = s => document.querySelector(s),
       progressBar = DOM("#progress-bar");
 
 
-// Create a table element in the activities-list div
-const table_el = document.createElement("table");
-DOM("#activity-list").appendChild(table_el);
-
-
-// Table headings, expressed as a list left-to-right
-const headings = [
-  '<i class="fa fa-link" aria-hidden="true"></i>',              // Strava url
-  '<i class="fa fa-calendar" aria-hidden="true"></i>',          // date/time
-  'Type',
-  DIST_LABEL,
-  '<i class="fa fa-clock-o" aria-hidden="true"></i>',
-  'Name',
-  'TTL <br> DD:HH:MM'
-];
-
-const config = {
-  sortable: true,
-  searchable: true,
-  paging: false
-};
-
-// const dataTable = new DataTable(table_el, {
-//   headings: headings
-// })
-
-
 // open websocket and make query
 const sock = new WebSocket(WEBSOCKET_URL);
 let wskey,
@@ -89,6 +62,7 @@ let wskey,
     count_known;
 
 const index = {};
+const data = [];
 
 sock.binaryType = 'arraybuffer';
 
@@ -121,6 +95,14 @@ sock.onclose = function(event) {
           eventAction: 'View-Index'
       });
     }
+
+    progressBar.removeAttribute("max");
+    status_element.innerText = "Building DataTable...";
+    count_DOM_element.innerText = "";
+
+    makeTable().then(e => {
+      DOM("#status").style.display = "none";
+    });
 };
 
 sock.onmessage = function(event) {
@@ -128,8 +110,6 @@ sock.onmessage = function(event) {
 
   if (!A) {
     sock.close();
-    DOM("#status").style.display = "none";
-    // makeTable();
     return;
   }
 
@@ -146,32 +126,30 @@ sock.onmessage = function(event) {
     return;
   }
 
-  index[A._id] = A;
+  // index[A["_id"] = A;
+
+  let strava_link = href(`${strava.activityURL( A["_id"] ) }`, A["_id"]),
+      tup = A["ts"],
+      dt = new Date((tup[0] + tup[1]*3600) * 1000),
+      date = dt.toLocaleString(),
+      dist = +(A.total_distance / DIST_UNIT).toFixed(2);
+
+  data.push([
+    `<input type="checkbox" id=${A["_id"]}>`,
+    strava_link,
+    date,
+    A["type"],
+    dist,
+    HHMMSS(A["elapsed_time"]),
+    A["name"],
+    DDHHMM(A["ttl"])
+  ]);
 
   count_DOM_element.innerText = `${++count}: ${A["name"]}`;
 
   if (count_known) {
     progressBar["value"] = count;
   }
-
-
-  // let heatflask_link = `${USER_BASE_URL}?id=${A._id}`,
-  //     strava_link = href(`${stravaActivityURL( A._id ) }`, STRAVA_BUTTON),
-  //     tup = A["ts"],
-  //     dt = new Date((tup[0] + tup[1]*3600) * 1000),
-  //     date = dt.toLocaleString(),
-  //     dkm = +(A.total_distance / DIST_UNIT).toFixed(2),
-  //     row = "<tr>" +
-  //        td(href(heatflask_link, A._id)) +
-  //        td(strava_link) +
-  //        td(date, sortable=tup[0]) +
-  //        td(A.type) +
-  //        td(dkm) +
-  //        td(hhmmss(A.elapsed_time)) +
-  //        td(A.name) +
-  //        td(secs2DDHHMM(A.ttl)) +
-  //        "</tr>";
-  // table_body.append(row);
 };
 
 
@@ -205,3 +183,107 @@ function tellBackendGoodBye() {
 }
 
 window.addEventListener('beforeunload', tellBackendGoodBye);
+
+
+
+async function makeTable() {
+  /* Make the datatable */
+  // Create a table element in the activities-list div
+  const table_el = document.createElement("table");
+  DOM("#activity-list").appendChild(table_el);
+
+
+  /* Table headings, expressed as a list left-to-right */
+  const headings = [
+    "selected",
+    '<i class="fa fa-link" aria-hidden="true"></i>',              // Strava url
+    '<i class="fa fa-calendar" aria-hidden="true"></i>',          // timestamp
+    'Type',
+    DIST_LABEL,
+    '<i class="fa fa-clock-o" aria-hidden="true"></i>',
+    'Name',
+    'TTL<br>(DD:HH:MM)'
+  ];
+
+
+  /* Instantiate the Datatable */
+  console.time("table build");
+  const dataTable = new DataTable(table_el, {
+    sortable: true,
+    searchable: true,
+    paging: false,
+    header: true,
+    footer: false,
+    scrollY: "70vh",
+    data: {
+      headings: headings,
+      data: data
+    }
+  });
+  console.timeEnd("table build");
+
+  window["dataTable"] = dataTable;
+
+  dataTable.table.addEventListener("click", selectionHandler);
+}
+
+
+function selectionHandler (e) {
+    debugger;
+    const td = e.target,
+          colNum = td.cellIndex,
+          id = +td.data,
+          tr = td.parentElement,
+          dataIndex = tr.dataIndex,
+          selections = {};
+
+    // toggle selection property of the clicked row
+    const A = appState.items.get(id);
+    tr.classList.toggle("selected");
+    A.selected = !A.selected;
+    const selected = selections[id] = A.selected;
+
+    // handle shift-click for multiple (de)selection
+    //  all rows beteween the clicked row and the last clicked row
+    //  will be set to whatever this row was set to.
+    if (e.shiftKey && appState.lastSelection) {
+
+        const prev = appState.lastSelection,
+              first = Math.min(dataIndex, prev.dataIndex),
+              last = Math.max(dataIndex, prev.dataIndex);
+
+        debugger;
+        for (let i=first+1; i<=last; i++) {
+            const tr = table.data[i],
+                  classes = tr.classList,
+                  id = ids[tr.dataIndex],
+                  A = appState.items.get(id);
+
+            A.selected = selected;
+            selections[id] = selected;
+
+            if (selected && !classes.contains("selected")) {
+                classes.add("selected");
+                debugger;
+            } else if (!selected && classes.contains("selected")) {
+                classes.remove("selected");
+            }
+        }
+    }
+
+    // let dotLayer know about selection changes
+    dotLayer.setItemSelect(selections);
+
+    appState.lastSelection = {
+        val: selected,
+        dataIndex: dataIndex
+    }
+
+    let redraw = false;
+    const mapBounds = map.getBounds();
+
+    if ( Dom.prop("#zoom-to-selection", 'checked') )
+        zoomToSelectedPaths();
+
+}
+

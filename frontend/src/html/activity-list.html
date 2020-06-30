@@ -1,17 +1,18 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>{{ config["APP_NAME"] }} - {{ (user.username or user.id) }} - Activities List</title>
+    <title>{{ config["APP_NAME"] }} - Activities List</title>
     <link rel="shortcut icon" href="../images/favicon.ico">
     <meta name="robots" content="noindex">
   </head>
 
   <body>
-    <h4>Activities list</h4>
+    <h4>Activities list for {{ (user.username or user.id) }}</h4>
 
     <p>
       TTL is "Time To Live" for index entries.  Index entries expire if
-      not accessed for a while, in order to save memory.
+      not accessed for a while, in order to save memory.  If you are missing activities then
+      try rebuilding your index.<br>
       <button type="button" id="rebuild-button"
               class="btn btn-b btn-sm">Re-build index
       </button>
