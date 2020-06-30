@@ -100,18 +100,6 @@ export const appState = {
     }
   },
 
-  updateShareStatus: async function(status) {
-    if (OFFLINE) {
-        return;
-    }
-
-    const resp = await fetch(`${SHARE_STATUS_UPDATE_URL}?status=${status}`),
-          text = await resp.text();
-    console.log(`response: ${text}`);
-  },
-
-
-
   /*
    * Selections
    */
@@ -212,3 +200,25 @@ function getBounds(ids) {
     return bounds
 }
 
+
+
+/*
+
+URL_QUERY_SPEC = dict(
+    date1=(["after", "date1", "a"], ""),
+    date2=(["before", "date2", "b"], ""),
+    preset=(["days", "preset", "d"], None),
+    limit=(["limit", "l"], None),
+    activity_ids=(["id", "ids"], None),
+    map_center=(["center"], [27.53, 1.58]),
+    map_zoom=(["zoom", "z"], 3),
+    lat=(["lat"], None),
+    lng=(["lng"], None),
+    autozoom=(["autozoom", "az"], True),
+    c1=(["c1"], 0),
+    c2=(["c2"], 0),
+    sz=(["sz"], 0),
+    start_paused=(["paused", "p"], 0),
+    shadows=(["sh", "shadows"], None)
+)
+*/

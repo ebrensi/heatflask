@@ -7,11 +7,6 @@
 import "../ext/css/min_entireframework.min.css";
 import "../css/font-awesome-lite.css";
 
-// leaflet-easybutton is used for play/pause button and capture
-import "leaflet-easybutton";
-import "../../node_modules/leaflet-easybutton/src/easy-button.css";
-
-
 // Populate the browser window with a Leaflet map
 import { map, msgBox, default_baseLayer, layerControl } from "./MapAPI.js";
 
@@ -23,7 +18,8 @@ import {
     FLASH_MESSAGES,
     SHARE_PROFILE,
     USERPIC,
-    ADMIN
+    ADMIN,
+    ACTIVITY_LIST_URL
 } from "./Constants.js";
 
 const USER_ID = ONLOAD_PARAMS["userid"];
@@ -52,9 +48,6 @@ import * as Dom from "./Dom.js";
 Dom.prop(".strava-profile-link", "href", `https://www.strava.com/athletes/${USER_ID}`);
 
 
-Dom.addEvent(".logout", "click", e => console.log("logging out"));
-
-
 // put Strava-login button images into the DOM
 import strava_login_img from "../images/btn_strava_connectwith_orange.svg";
 Dom.prop(".strava-auth", "src", strava_login_img);
@@ -71,21 +64,53 @@ Dom.hide(".progbar");
 Dom.prop("#autozoom", 'checked', ONLOAD_PARAMS["autozoom"]);
 Dom.set("#activity_ids", "");
 
-Dom.prop("#share", "checked", SHARE_PROFILE);
-
 let nTabs;
 
-// Display or hide stuff based on whether current user is logged in
+/*
+    Display or hide stuff based on whether current user is logged in
+*/
 if (LOGGED_IN) {
+    /* the current user is authenticated so we enable the profile tab
+       and enable those controls
+    */
+    Dom.prop("#share", "checked", SHARE_PROFILE);
     Dom.show(".logged-in");
     Dom.hide(".logged-out");
     nTabs = 4;
 
-    // put user profile pics
+    /* display user profile pic(s) */
     Dom.prop(".avatar", "src", USERPIC);
+
+    // Set a listener to change user's account to public or private
+    //   if they change that setting
+    Dom.addEvent("#share", "change", async function() {
+        let status = Dom.prop("#share", "checked")? "public":"private";
+        const resp = await fetch(`${SHARE_STATUS_UPDATE_URL}?status=${status}`),
+              text = await resp.text();
+        console.log(`response: ${text}`);
+    });
+
+    /* enable activity list button */
+    Dom.addEvent(".activity-list", "click", e => {
+        window.open(ACTIVITY_LIST_URL, "_blank")
+    });
+
+    /* enable log out button */
+    Dom.addEvent(".logout", "click", e => {
+        console.log(`${USER_ID} logging out`);
+        window.open(`${USER_ID}/logout`);
+    });
+
+
 } else {
     Dom.show(".logged-out");
     Dom.hide(".logged-in");
+
+    /* enable strava authentication (login) button */
+    Dom.addEvent(".strava-auth", "click", e => {
+        console.log(`${USER_ID} logging in`);
+        window.location.href = "/authorize";
+    });
     nTabs = 3;
 }
 
@@ -252,6 +277,13 @@ dotLayer.updateDotSettings(ds);
 
 /* now add dotlayer controls to the DOM */
 
+
+
+// leaflet-easybutton is used for play/pause button and capture
+import "leaflet-easybutton";
+import "../../node_modules/leaflet-easybutton/src/easy-button.css";
+
+
 // animation play-pause button
 const button_states = [
     {
@@ -397,10 +429,6 @@ makeKnob('#dot-controls2', {
 
 
 
-// function openActivityListPage() {
-//     window.open(ACTIVITY_LIST_URL, "_blank")
-// }
-
 
 // Dom.addEvent("#zoom-to-selection", "change", function(){
 //     if ( Dom.prop("#zoom-to-selection", 'checked') ) {
@@ -425,10 +453,6 @@ makeKnob('#dot-controls2', {
 
 // Dom.prop("#autozoom", "change", appState.update());
 
-// Dom.addEvent("#share", "change", function() {
-//     let status = Dom.prop("#share", "checked")? "public":"private";
-//     updateShareStatus(status);
-// });
 
 
 
