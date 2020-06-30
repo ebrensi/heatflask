@@ -5,6 +5,10 @@
 import { DataTable } from "simple-datatables";
 import "../../node_modules/simple-datatables/src/style.css";
 
+
+// msgpack is how we encode data for transfer over websocket
+import { decode } from "@msgpack/msgpack";
+
 // css for Bundler
 import "../ext/css/min_entireframework.min.css";
 import "../css/font-awesome-lite.css";
@@ -13,12 +17,18 @@ import "../css/font-awesome-lite.css";
 // import * as localForage from "localforage";
 
 import * as strava from './strava.js';
-import { WS_SCHEME, secs2DDHHMM, img, href, noop }   from './appUtil.js';
-import load_google_analytics from "./google-analytics.js";
+import { WS_SCHEME, DDHHMM, img, href, noop }   from './appUtil.js';
+import load_ga_object from "./google-analytics.js";
 
-// _runtime is an object passed from the server at runtime via
+// _args is an object passed from the server at runtime via
 //  a script tag in the activities.html template.
-const { USER_ID, CLIENT_ID, OFFLINE, ADMIN, IMPERIAL, DEVELOPMENT } = JSON.parse(window["_argstring"]);
+const R = window["_args"],
+      USER_ID = R["USER_ID"],
+      CLIENT_ID = R["CLIENT_ID"],
+      OFFLINE = R["OFFLINE"],
+      ADMIN = R["ADMIN"],
+      IMPERIAL = R["IMPERIAL"],
+      DEVELOPMENT = R["DEVELOPMENT"];
 
 const DIST_UNIT = IMPERIAL? 1609.34 : 1000.0,
       DIST_LABEL = IMPERIAL?  "mi" : "km",
@@ -28,22 +38,29 @@ const DIST_UNIT = IMPERIAL? 1609.34 : 1000.0,
       STRAVA_BUTTON = img("/static/images/strava_button.png"),
       sendBeacon = navigator.sendBeacon || noop;
 
-// Google-Analytics object
-const ga = (OFFLINE || ADMIN || DEVELOPMENT)? noop : load_google_analytics();
+// Insert Google-Analytics object if this is a production environment
+const ga = (OFFLINE || ADMIN || DEVELOPMENT)? noop : load_ga_object();
 
+const console = window.console;
+
+// Forgot what this does...
 window.history.pushState(
   {}, "",
   window.location.origin + window.location.pathname
 );
 
-debugger;
-
 const DOM = s => document.querySelector(s),
       count_DOM_element = DOM("#count"),
-      status_element = DOM("#status_msg");
+      status_element = DOM("#status_msg"),
+      progressBar = DOM("#progress-bar");
 
 
-// create DataTable
+// Create a table element in the activities-list div
+const table_el = document.createElement("table");
+DOM("#activity-list").appendChild(table_el);
+
+
+// Table headings, expressed as a list left-to-right
 const headings = [
   '<i class="fa fa-link" aria-hidden="true"></i>',              // Strava url
   '<i class="fa fa-calendar" aria-hidden="true"></i>',          // date/time
@@ -57,52 +74,32 @@ const headings = [
 const config = {
   sortable: true,
   searchable: true,
-  paging: false,
-}
+  paging: false
+};
 
-const table_div = DOM("#activities-list")
-      table_el = document.createElement("table");
-
-table_div.appendChild(table_el);
 // const dataTable = new DataTable(table_el, {
 //   headings: headings
 // })
 
 
 // open websocket and make query
-sock = new WebSocket(WEBSOCKET_URL);
+const sock = new WebSocket(WEBSOCKET_URL);
 let wskey,
-    total_count,
-    count = 0;
+    count = 0,
+    count_known;
 
 const index = {};
 
 sock.binaryType = 'arraybuffer';
 
-
-// send beacons to the backend's beacon listener when this
-// window gets closed or navigated away from,
-// so that any ongoing backend operations can be aborted.
-function tellBackendGoodBye() {
-  sendBeacon(BEACON_HANDLER_URL, CLIENT_ID);
-
-  if (wskey)
-    sendBeacon(BEACON_HANDLER_URL, wskey);
-
-  if (sock && sock.readyState == 1) {
-    sock.send(JSON.stringify({close: 1}));
-    sock.close()
-  }
-}
-
-window.addEventListener('beforeunload', tellBackendGoodBye);
-
 status_element.innerText = "Retrieving Activity Index...";
 
+
+/* Send the query as soon as the socket is open */
 sock.onopen = function(event) {
     console.log("socket open: ", event);
 
-    queryObj = {client_id: CLIENT_ID};
+    const queryObj = {client_id: CLIENT_ID};
     queryObj[USER_ID] = {
             streams: false,
             update_index_ts: false,
@@ -111,43 +108,52 @@ sock.onopen = function(event) {
 
     let msg = JSON.stringify({query: queryObj});
     sock.send(msg);
-}
+};
 
 sock.onclose = function(event) {
     console.log("socket closed: ", event);
     wskey = null;
 
-    if (window["ga"])
+    if (window["ga"]) {
       // Record this to google analytics
       ga('send', 'event', {
           eventCategory: USER_ID,
           eventAction: 'View-Index'
       });
-}
+    }
+};
 
 sock.onmessage = function(event) {
-  const A = msgpack.decode(new Uint8Array(event.data));
+  const A = decode(new Uint8Array(event.data));
 
   if (!A) {
     sock.close();
-    DOM("#status").style.display = `done with ${count} activities`;
-    makeTable();
-    return
+    DOM("#status").style.display = "none";
+    // makeTable();
+    return;
   }
 
-  if ("wskey" in A)
+  if ("wskey" in A) {
     wskey = A["wskey"];
+  }
 
-  if ("count" in A)
-    total_count = A["count"]
+  if ("count" in A) {
+    progressBar["max"] = A["count"];
+    count_known = true;
+  }
 
-  if (!A._id)
-    return
-
-  if (++count % 5 === 0)
-    count_DOM_element.innerText = count;
+  if (!A["_id"]) {
+    return;
+  }
 
   index[A._id] = A;
+
+  count_DOM_element.innerText = `${++count}: ${A["name"]}`;
+
+  if (count_known) {
+    progressBar["value"] = count;
+  }
+
 
   // let heatflask_link = `${USER_BASE_URL}?id=${A._id}`,
   //     strava_link = href(`${stravaActivityURL( A._id ) }`, STRAVA_BUTTON),
@@ -166,17 +172,36 @@ sock.onmessage = function(event) {
   //        td(secs2DDHHMM(A.ttl)) +
   //        "</tr>";
   // table_body.append(row);
-}
+};
 
 
 DOM('#rebuild-button').onclick = function () {
     if (OFFLINE) {
-       alert("Sorry, I am offline");
-       return
+       window.alert("Sorry, I am offline");
+       return;
     }
 
-    if( confirm("Rebuild your Heatflask Index from Strava Data?") ) {
+    if( window.confirm("Rebuild your Heatflask Index from Strava Data?") ) {
         window.location = window.location.href + "?rebuild=1";
     }
     return false;
 };
+
+
+// send beacons to the backend's beacon listener when this
+// window gets closed or navigated away from,
+// so that any ongoing backend operations can be aborted.
+function tellBackendGoodBye() {
+  sendBeacon(BEACON_HANDLER_URL, CLIENT_ID);
+
+  if (wskey) {
+    sendBeacon(BEACON_HANDLER_URL, wskey);
+  }
+
+  if (sock && sock.readyState == 1) {
+    sock.send(JSON.stringify({close: 1}));
+    sock.close();
+  }
+}
+
+window.addEventListener('beforeunload', tellBackendGoodBye);

@@ -427,14 +427,15 @@ def activities(username):
     log.debug("%s OPEN", web_client_id)
 
     args = {
-        USER_ID: user.id,
-        CLIENT_ID: web_client_id,
-        OFFLINE: app.config.get("OFFLINE"),
-        ADMIN: current_user.is_admin(),
-        IMPERIAL: user.measurement_preference == "feet"
+        "USER_ID": user.id,
+        "CLIENT_ID": web_client_id,
+        "OFFLINE": app.config.get("OFFLINE"),
+        "ADMIN": current_user.is_admin(),
+        "IMPERIAL": user.measurement_preference == "feet",
+        "DEVELOPMENT": app.config.get("DEVELOPMENT")
     }
 
-    return render_template("activities.html", _args=args)
+    return render_template("activity-list.html", user=user, _args=args)
 
 
 @app.route('/<username>/activities/<int:_id>')

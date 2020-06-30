@@ -19,7 +19,7 @@
 
     <div id="status">
       <span id="status_msg"></span>
-      <progress id="progress"></progress>
+      <progress id="progress-bar"></progress>
       <span id="count"></span>
     </div>
 
@@ -29,7 +29,7 @@
 
   </body>
   <script type="text/javascript">
-      window["_argstring"] = `{{ _args | tojson | safe }}`;
+      window["_args"] = JSON.parse(`{{ _args | tojson | safe }}`);
   </script>
 
   <script src="../js/activity-list.js"></script>
