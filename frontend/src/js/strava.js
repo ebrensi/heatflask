@@ -56,6 +56,11 @@ export const ATYPE = {
         return Object.keys(this._specs)
     },
 
+    pathColor: function(type) {
+        spec = this._specs[type.toLowerCase()] || this._specs[undefined];
+        return spec[1];
+    },
+
     specs: function(A) {
         const atype = A.type.toLowerCase(),
               spec = this._specs[atype] || this._specs[undefined];

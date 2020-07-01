@@ -225,7 +225,7 @@ formatQueryForm();
 Dom.addEvent(".preset", "change", formatQueryForm);
 
 
-// --------------------------------------------------------------------------
+// ---------------------------------------------------------
 
 /*
  * instantiate a DotLayer object and add it to the map
@@ -452,11 +452,6 @@ makeKnob('#dot-controls2', {
 // map.on('moveend', appState.update());
 
 // Dom.prop("#autozoom", "change", appState.update());
-
-
-
-
-
 
 // Dom.addEvent("#renderButton", "click", renderLayers);
 

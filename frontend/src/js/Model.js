@@ -1,8 +1,31 @@
 /*
- * appState is our model
+ * Model.js -- appState is our model.
  *  We expect map and dotLayer to be in the namespace
  *
  */
+
+
+
+ /*
+
+URL_QUERY_SPEC = dict(
+    date1=(["after", "date1", "a"], ""),
+    date2=(["before", "date2", "b"], ""),
+    preset=(["days", "preset", "d"], None),
+    limit=(["limit", "l"], None),
+    activity_ids=(["id", "ids"], None),
+    map_center=(["center"], [27.53, 1.58]),
+    map_zoom=(["zoom", "z"], 3),
+    lat=(["lat"], None),
+    lng=(["lng"], None),
+    autozoom=(["autozoom", "az"], True),
+    c1=(["c1"], 0),
+    c2=(["c2"], 0),
+    sz=(["sz"], 0),
+    start_paused=(["paused", "p"], 0),
+    shadows=(["sh", "shadows"], None)
+)
+*/
 
 // get the parameters specified in the browser's current url
 // TODO: get query parameters from the url rather than the backend
@@ -202,23 +225,4 @@ function getBounds(ids) {
 
 
 
-/*
 
-URL_QUERY_SPEC = dict(
-    date1=(["after", "date1", "a"], ""),
-    date2=(["before", "date2", "b"], ""),
-    preset=(["days", "preset", "d"], None),
-    limit=(["limit", "l"], None),
-    activity_ids=(["id", "ids"], None),
-    map_center=(["center"], [27.53, 1.58]),
-    map_zoom=(["zoom", "z"], 3),
-    lat=(["lat"], None),
-    lng=(["lng"], None),
-    autozoom=(["autozoom", "az"], True),
-    c1=(["c1"], 0),
-    c2=(["c2"], 0),
-    sz=(["sz"], 0),
-    start_paused=(["paused", "p"], 0),
-    shadows=(["sh", "shadows"], None)
-)
-*/

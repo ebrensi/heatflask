@@ -8,15 +8,18 @@
 
   <body>
     <h4>Activities list for {{ (user.username or user.id) }}</h4>
-
-    <p>
-      TTL is "Time To Live" for index entries.  Index entries expire if
-      not accessed for a while, in order to save memory.  If you are missing activities then
-      try rebuilding your index.<br>
       <button type="button" id="rebuild-button"
               class="btn btn-b btn-sm">Re-build index
-      </button>
-    </p>
+    </button>
+      TTL is "Time To Live" for index entries.  Index entries expire if
+      not accessed for a while, in order to save memory.  If you are missing activities then
+      try rebuilding your index.
+
+
+
+    <button type="button" id="clear-selection-button"
+              class="btn btn-a btn-sm">Clear Selection
+    </button>
 
     <div id="status">
       <span id="status_msg"></span>

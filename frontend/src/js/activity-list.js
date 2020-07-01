@@ -5,13 +5,13 @@
 import { DataTable } from "simple-datatables";
 import "../../node_modules/simple-datatables/src/style.css";
 
-
 // msgpack is how we encode data for transfer over websocket
 import { decode } from "@msgpack/msgpack";
 
 // css for Bundler
 import "../ext/css/min_entireframework.min.css";
 import "../css/font-awesome-lite.css";
+import "../css/data-table.css";
 
 // JS module imports
 // import * as localForage from "localforage";
@@ -19,6 +19,9 @@ import "../css/font-awesome-lite.css";
 import * as strava from './strava.js';
 import { WS_SCHEME, DDHHMM, HHMMSS, img, href, noop }   from './appUtil.js';
 import load_ga_object from "./google-analytics.js";
+
+import BitSet from "./BitSet";
+
 
 // _args is an object passed from the server at runtime via
 //  a script tag in the activities.html template.
@@ -43,6 +46,26 @@ const ga = (OFFLINE || ADMIN || DEVELOPMENT)? noop : load_ga_object();
 
 const console = window.console;
 
+/*
+  send beacons to the backend's beacon listener when this
+ window gets closed or navigated away from,
+ so that any ongoing backend operations can be aborted.
+*/
+function tellBackendGoodBye() {
+  sendBeacon(BEACON_HANDLER_URL, CLIENT_ID);
+
+  if (wskey) {
+    sendBeacon(BEACON_HANDLER_URL, wskey);
+  }
+
+  if (sock && sock.readyState == 1) {
+    sock.send(JSON.stringify({close: 1}));
+    sock.close();
+  }
+}
+
+
+
 // Forgot what this does...
 window.history.pushState(
   {}, "",
@@ -61,8 +84,10 @@ let wskey,
     count = 0,
     count_known;
 
-const index = {};
-const data = [];
+const index = new Map(),
+      selected = new Set();
+
+let keys, lastSelection;
 
 sock.binaryType = 'arraybuffer';
 
@@ -100,6 +125,8 @@ sock.onclose = function(event) {
     status_element.innerText = "Building DataTable...";
     count_DOM_element.innerText = "";
 
+    keys = Array.from(index.keys());
+
     makeTable().then(e => {
       DOM("#status").style.display = "none";
     });
@@ -126,16 +153,15 @@ sock.onmessage = function(event) {
     return;
   }
 
-  // index[A["_id"] = A;
+  const id = A["_id"];
 
-  let strava_link = href(`${strava.activityURL( A["_id"] ) }`, A["_id"]),
+  const strava_link = href(`${strava.activityURL(id)}`, id),
       tup = A["ts"],
       dt = new Date((tup[0] + tup[1]*3600) * 1000),
       date = dt.toLocaleString(),
-      dist = +(A.total_distance / DIST_UNIT).toFixed(2);
+      dist = +(A["total_distance"] / DIST_UNIT).toFixed(2);
 
-  data.push([
-    `<input type="checkbox" id=${A["_id"]}>`,
+  index.set(id,  [
     strava_link,
     date,
     A["type"],
@@ -165,22 +191,14 @@ DOM('#rebuild-button').onclick = function () {
     return false;
 };
 
-
-// send beacons to the backend's beacon listener when this
-// window gets closed or navigated away from,
-// so that any ongoing backend operations can be aborted.
-function tellBackendGoodBye() {
-  sendBeacon(BEACON_HANDLER_URL, CLIENT_ID);
-
-  if (wskey) {
-    sendBeacon(BEACON_HANDLER_URL, wskey);
-  }
-
-  if (sock && sock.readyState == 1) {
-    sock.send(JSON.stringify({close: 1}));
-    sock.close();
-  }
-}
+DOM('#clear-selection-button').onclick = function () {
+    debugger;
+    for (const id of selected) {
+      const idx = keys.indexOf(id);
+      dataTable.data[idx].classList.remove("selected");
+    }
+    selected.clear();
+};
 
 window.addEventListener('beforeunload', tellBackendGoodBye);
 
@@ -195,14 +213,13 @@ async function makeTable() {
 
   /* Table headings, expressed as a list left-to-right */
   const headings = [
-    "selected",
     '<i class="fa fa-link" aria-hidden="true"></i>',              // Strava url
     '<i class="fa fa-calendar" aria-hidden="true"></i>',          // timestamp
     'Type',
     DIST_LABEL,
     '<i class="fa fa-clock-o" aria-hidden="true"></i>',
     'Name',
-    'TTL<br>(DD:HH:MM)'
+    'TTL (DD:HH:MM)'
   ];
 
 
@@ -211,44 +228,51 @@ async function makeTable() {
   const dataTable = new DataTable(table_el, {
     sortable: true,
     searchable: true,
-    paging: false,
+    paging: true,
+    perPage: 100,
+    layout: {
+        top: "{search}",
+        bottom: "{info}{pager}"
+    },
     header: true,
     footer: false,
-    scrollY: "70vh",
+    scrollY: "60vh",
     data: {
       headings: headings,
-      data: data
+      data: Array.from(index.values())
     }
   });
+
   console.timeEnd("table build");
 
   window["dataTable"] = dataTable;
 
-  dataTable.table.addEventListener("click", selectionHandler);
+  const tbody = dataTable.table.tBodies[0];
+  tbody.addEventListener("click", selectionHandler);
 }
 
 
+
 function selectionHandler (e) {
-    debugger;
     const td = e.target,
-          colNum = td.cellIndex,
-          id = +td.data,
           tr = td.parentElement,
-          dataIndex = tr.dataIndex,
-          selections = {};
+          idx = tr.dataIndex,
+          id = keys[idx];
 
     // toggle selection property of the clicked row
-    const A = appState.items.get(id);
     tr.classList.toggle("selected");
-    A.selected = !A.selected;
-    const selected = selections[id] = A.selected;
+     if (selected.has(id)) {
+      selected.delete(id);
+    } else {
+      selected.add(id);
+    }
 
     // handle shift-click for multiple (de)selection
     //  all rows beteween the clicked row and the last clicked row
     //  will be set to whatever this row was set to.
-    if (e.shiftKey && appState.lastSelection) {
+    if (e.shiftKey && lastSelection) {
 
-        const prev = appState.lastSelection,
+        const prev = lastSelection,
               first = Math.min(dataIndex, prev.dataIndex),
               last = Math.max(dataIndex, prev.dataIndex);
 
@@ -271,19 +295,21 @@ function selectionHandler (e) {
         }
     }
 
-    // let dotLayer know about selection changes
-    dotLayer.setItemSelect(selections);
+    console.log(selected);
 
-    appState.lastSelection = {
-        val: selected,
-        dataIndex: dataIndex
-    }
+    // // let dotLayer know about selection changes
+    // dotLayer.setItemSelect(selections);
 
-    let redraw = false;
-    const mapBounds = map.getBounds();
+    // appState.lastSelection = {
+    //     val: selected,
+    //     dataIndex: dataIndex
+    // }
 
-    if ( Dom.prop("#zoom-to-selection", 'checked') )
-        zoomToSelectedPaths();
+    // let redraw = false;
+    // const mapBounds = map.getBounds();
+
+    // if ( Dom.prop("#zoom-to-selection", 'checked') )
+    //     zoomToSelectedPaths();
 
 }
 
