@@ -126,7 +126,8 @@ sock.onmessage = function(event) {
   index.set(id,  [
     strava_link,
     date,
-    `<span style="color:${strava.ATYPE.pathColor(A["type"])};">${A["type"]}</span>`,
+    // `<span style="color:${strava.ATYPE.pathColor(A["type"])};">${A["type"]}</span>`,
+    `<span class="${A['type'].toLowerCase()}">${A['type']}</span>`,
     dist,
     HHMMSS(A["elapsed_time"]),
     A["name"],
@@ -190,7 +191,7 @@ function makeTable() {
 
   /* Instantiate the Datatable */
   console.time("table build");
-  const table = new DataTable(table_el, {
+  const dt = new DataTable(table_el, {
     sortable: true,
     searchable: true,
     paging: true,
@@ -210,7 +211,7 @@ function makeTable() {
 
   console.timeEnd("table build");
 
-  const tbody = table.table.tBodies[0];
+  const tbody = dt.table.tBodies[0];
 
   /* add a listener for selections */
   tbody.addEventListener("click", selectionHandler);
@@ -226,7 +227,10 @@ function makeTable() {
   div.appendChild(btn);
 
   btn.onclick = clearSelections;
-  return table;
+
+  strava.appendCSS(dt.table);
+
+  return dt;
 }
 
 
