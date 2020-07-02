@@ -4,6 +4,13 @@
  *          it from the backend or local storage.
  */
 
+import { ADMIN, OFFLINE,
+         CLIENT_ID, WEBSOCKET_URL } from "./Constants.js";
+
+import { appState } from "./Model.js";
+
+const target_user = appState.target_user;
+
 
 /* Rendering */
 function updateLayers(msg) {
@@ -49,18 +56,7 @@ function updateLayers(msg) {
 
 let sock;
 
-window.addEventListener('beforeunload', function (event) {
-    if (navigator.sendBeacon) {
-        if (appState.wskey) {
-            navigator.sendBeacon(BEACON_HANDLER_URL, appState.wskey);
-        }
-        navigator.sendBeacon(BEACON_HANDLER_URL, CLIENT_ID);
-    }
-    if (sock && sock.readyState == 1) {
-        sock.send(JSON.stringify({close: 1}));
-        sock.close()
-    }
-});
+
 
 function renderLayers(query={}) {
     const date1 = Dom.get("#date1"),

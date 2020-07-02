@@ -72,7 +72,7 @@ export const ATYPE = {
 
 
 
-/* This fucntion appends CSS style color defs for activity type
+/* This function appends CSS style color defs for activity type
     to a DOM element for <span> children. Then, for example,
     the text in elelment <span class="run"> text </span>
     will be the path-color associated with "run".

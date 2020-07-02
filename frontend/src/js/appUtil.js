@@ -66,7 +66,7 @@ export function noop(){}
   depending on whether the page this script is in is http or https, we need to
   make sure the websocket protocol matches
 */
-function ws_prefix() {
+export function ws_prefix() {
   if (window.location.protocol == "https:") {
     return "wss://";
   }
@@ -74,11 +74,6 @@ function ws_prefix() {
     return "ws://";
   }
 }
-
-export const WS_SCHEME = ws_prefix(),
-             WEBSOCKET_URL = `${WS_SCHEME}${window.location.host}/data_socket`;
-
-
 
 // Courtesy of TwoFuckingDevelopers (@2fdevs, @elecash and @qmarcos)
 function isMobileDevice() {

@@ -1,44 +1,77 @@
 /*
- * Model.js -- appState is our model.
- *  We expect map and dotLayer to be in the namespace
- *
+ * Model.js --  This module holds all parameters for the front end client,
+        beginning with those specified by the current URL in the browser.
  */
 
 
+import {
+    ONLOAD_PARAMS,
+    SELF,
+    LOGGED_IN,
+    SHARE_STATUS_UPDATE_URL,
+    FLASH_MESSAGES,
+    SHARE_PROFILE,
+    USERPIC,
+    ADMIN,
+    ACTIVITY_LIST_URL
+} from "./Constants.js";
 
- /*
 
-URL_QUERY_SPEC = dict(
-    date1=(["after", "date1", "a"], ""),
-    date2=(["before", "date2", "b"], ""),
-    preset=(["days", "preset", "d"], None),
-    limit=(["limit", "l"], None),
-    activity_ids=(["id", "ids"], None),
-    map_center=(["center"], [27.53, 1.58]),
-    map_zoom=(["zoom", "z"], 3),
-    lat=(["lat"], None),
-    lng=(["lng"], None),
-    autozoom=(["autozoom", "az"], True),
-    c1=(["c1"], 0),
-    c2=(["c2"], 0),
-    sz=(["sz"], 0),
-    start_paused=(["paused", "p"], 0),
-    shadows=(["sh", "shadows"], None)
-)
+/* Define the URL query set and defaults
+    For each possible url parameter, we give possible alternative names
+     and a default value.
+
+    Example: the 3 most recent activities can be specified by
+        ?limit=3, or ?l=3, and if not specified it defaults to 10.
 */
+const QUERY_SPEC = {
+    date1: [["after", "date1", "a"], null],
+    date2: [["before", "date2", "b"], null],
+    preset: [["days", "preset", "d"], null],
+    limit: [["limit", "l"], 10],
+    activity_ids: [["id", "ids"], null],
+    map_center: [["center"], [27.53, 1.58]],
+    map_zoom: [["zoom", "z"], 3],
+    lat: [["lat"], null],
+    lng: [["lng"], null],
+    autozoom: [["autozoom", "az"], true],
+    c1: [["c1"], null],
+    c2: [["c2"], null],
+    sz: [["sz"], null],
+    start_paused: [["paused", "p"], false],
+    shadows: [["sh", "shadows"], true]
+};
 
-// get the parameters specified in the browser's current url
-// TODO: get query parameters from the url rather than the backend
-const urlArgs = new URL(window.location.href);//.searchParams;
-console.log(`url parameters: ${urlArgs}`);
+/* set up an initial query with only defaults */
+const query = {};
+for (const field in QUERY_SPEC) {
+    query[field] = QUERY_SPEC[field][1];
+}
+
+/* This will be replaced by code using url parameters
+query = Object.assign(query, ONLOAD_PARAMS);
+
+
+/* get the parameters specified in the browser's current url */
+// const urlArgs = new URL(window.location.href).searchParams;
+
+const target_user = window.location.pathname.substring(1) || null;
 
 export const appState = {
-  paused: ONLOAD_PARAMS.start_paused,
-  items: new Map(),
-  currentBaseLayer: null,
-  msgBox: null,
+    /* target_user is the user whose activities we are viewing */
+    target_user: target_user,
 
-  update: function(event){
+    /* current user is the user who is currently logged-in */
+    current_user: SELF? target_user : null,
+
+    items: new Map(),
+
+    query: query
+};
+
+
+
+function update(event){
     let  params = {},
          type = Dom.get("#select_type"),
          num = Dom.get("#select_num"),
@@ -53,23 +86,23 @@ export const appState = {
     } else if (type == "days") {
         params["preset"] = num;
     } else {
-        if (this.after) {
-            params["after"] = this.after;
+        if (appState.after) {
+            params["after"] = appState.after;
         }
-        if (this.before && (this.before != "now")) {
-            params["before"] = this.before;
+        if (appState.before && (appState.before != "now")) {
+            params["before"] = appState.before;
         }
     }
 
-    if (this.paused){
+    if (appState.paused){
         params["paused"] = "1";
     }
 
     if (Dom.prop("#autozoom", 'checked')) {
-        this.autozoom = true;
+        appState.autozoom = true;
         params["autozoom"] = "1";
     } else {
-        this.autozoom = false;
+        appState.autozoom = false;
         const zoom = map.getZoom(),
               center = map.getCenter(),
               precision = Math.max(0, Math.ceil(Math.log(zoom) / Math.LN2));
@@ -105,8 +138,8 @@ export const appState = {
         }
     }
 
-    if (this.currentBaseLayer.name) {
-        params["baselayer"] = this.currentBaseLayer.name;
+    if (appState.currentBaseLayer.name) {
+        params["baselayer"] = appState.currentBaseLayer.name;
     }
 
     const paramsString = Object.keys(params).map(function(param) {
@@ -116,23 +149,24 @@ export const appState = {
 
           newURL = `${USER_ID}?${paramsString}`;
 
-    if (this.url != newURL) {
+    if (appState.url != newURL) {
         // console.log(`pushing: ${newURL}`);
-        this.url = newURL;
+        appState.url = newURL;
         window.history.replaceState("", "", newURL);
     }
-  },
+  }
+
 
   /*
    * Selections
    */
-  selectedIDs: function(){
-    return Array.from(this.items.values())
+  function selectedIDs(){
+    return Array.from(appState.items.values())
                 .filter(A => A.selected)
                 .map(A => A.id );
-  },
+  }
 
-  zoomToSelectedPaths: function(){
+  function zoomToSelectedPaths(){
     // Pan-Zoom to fit all selected activities
     let selection_bounds = latLngBounds();
     appState.items.forEach((A, id) => {
@@ -143,9 +177,9 @@ export const appState = {
     if (selection_bounds.isValid()) {
         map.fitBounds(selection_bounds);
     }
-  },
+  }
 
-  openSelected: function(){
+  function openSelected(){
     let ids = selectedIDs();
     if (ids.length > 0) {
         let url = BASE_USER_URL + "?id=" + ids.join("+");
@@ -154,14 +188,11 @@ export const appState = {
         }
         window.open(url,'_blank');
     }
-  },
+  }
 
-  deselectAll: function(){
+  function deselectAll(){
     handle_path_selections(selectedIDs());
-  },
-
-
-};
+  }
 
 
 function activityDataPopup(id, latlng){
@@ -197,6 +228,7 @@ function activityDataPopup(id, latlng){
 }
 
 
+/*
 // What to do when user changes to a different tab or window
 document.onvisibilitychange = function() {
     if (document.hidden) {
@@ -214,6 +246,7 @@ map.on('baselayerchange', function (e) {
     appState.update();
 });
 
+*/
 
 function getBounds(ids) {
     const bounds = latLngBounds();

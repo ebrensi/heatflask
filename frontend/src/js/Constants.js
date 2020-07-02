@@ -28,3 +28,7 @@ export const ONLOAD_PARAMS = R["ONLOAD_PARAMS"],
 export const DIST_UNIT = IMPERIAL? 1609.34 : 1000.0,
              DIST_LABEL = IMPERIAL?  "mi" : "km";
 
+import { ws_prefix } from "./appUtil.js";
+export const WS_SCHEME = ws_prefix(),
+             WEBSOCKET_URL = `${WS_SCHEME}${window.location.host}/data_socket`;
+

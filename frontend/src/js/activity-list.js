@@ -342,9 +342,6 @@ document.addEventListener('keydown', function(e) {
 
 
 
-
-
-
 /*
   send beacons to the backend's beacon listener when this
  window gets closed or navigated away from,

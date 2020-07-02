@@ -7,11 +7,14 @@
 import "../ext/css/min_entireframework.min.css";
 import "../css/font-awesome-lite.css";
 
+import { appState } from "./Model.js";
+
+const INITIAL_QUERY = appState.query;
+
 // Populate the browser window with a Leaflet map
 import { map, msgBox, default_baseLayer, layerControl } from "./MapAPI.js";
 
 import {
-    ONLOAD_PARAMS,
     SELF,
     LOGGED_IN,
     SHARE_STATUS_UPDATE_URL,
@@ -19,10 +22,14 @@ import {
     SHARE_PROFILE,
     USERPIC,
     ADMIN,
-    ACTIVITY_LIST_URL
+    ACTIVITY_LIST_URL,
+    BEACON_HANDLER_URL,
+    CLIENT_ID
 } from "./Constants.js";
 
-const USER_ID = ONLOAD_PARAMS["userid"];
+console.log(INITIAL_QUERY);
+
+const USER_ID = INITIAL_QUERY["userid"];
 
 import WS_SCHEME from "./appUtil.js";
 
@@ -34,14 +41,14 @@ import * as Dom from "./Dom.js";
  */
 
 
-// if (FLASH_MESSAGES.length > 0) {
-//     let msg = "<ul class=flashes>";
-//     for (let i=0, len=FLASH_MESSAGES.length; i<len; i++) {
-//         msg += "<li>" + FLASH_MESSAGES[i] + "</li>";
-//     }
-//     msg += "</ul>";
-//     Lcontrol.window(map, {content:msg, visible:true});
-// }
+if (FLASH_MESSAGES.length > 0) {
+    let msg = "<ul class=flashes>";
+    for (let i=0, len=FLASH_MESSAGES.length; i<len; i++) {
+        msg += "<li>" + FLASH_MESSAGES[i] + "</li>";
+    }
+    msg += "</ul>";
+    msgBox.content(msg).show;
+}
 
 
 // put user profile urls in the DOM
@@ -61,7 +68,7 @@ Dom.prop("#zoom-to-selection", "checked", false);
 Dom.hide(".abort-render");
 Dom.hide(".progbar");
 
-Dom.prop("#autozoom", 'checked', ONLOAD_PARAMS["autozoom"]);
+Dom.prop("#autozoom", 'checked', appState.query["autozoom"]);
 Dom.set("#activity_ids", "");
 
 let nTabs;
@@ -87,7 +94,7 @@ if (LOGGED_IN) {
         let status = Dom.prop("#share", "checked")? "public":"private";
         const resp = await fetch(`${SHARE_STATUS_UPDATE_URL}?status=${status}`),
               text = await resp.text();
-        console.log(`response: ${text}`);
+        // console.log(`response: ${text}`);
     });
 
     /* enable activity list button */
@@ -97,8 +104,9 @@ if (LOGGED_IN) {
 
     /* enable log out button */
     Dom.addEvent(".logout", "click", e => {
-        console.log(`${USER_ID} logging out`);
-        window.open(`${USER_ID}/logout`);
+        const current_user = appState.current_user;
+        console.log(`${current_user} logging out`);
+        window.open(`${current_user}/logout`);
     });
 
 
@@ -163,18 +171,18 @@ const date1picker = makeDatePicker('#date1'),
       date2picker = makeDatePicker('#date2');
 
 // Set up form based on what kind of query this is
-if (ONLOAD_PARAMS["activity_ids"]) {
-    Dom.set("#activity_ids", ONLOAD_PARAMS["activity_ids"]);
+if (INITIAL_QUERY["activity_ids"]) {
+    Dom.set("#activity_ids", INITIAL_QUERY["activity_ids"]);
     Dom.set("#select_type", "activity_ids");
-} else if (ONLOAD_PARAMS["limit"]) {
-    Dom.set("#num", ONLOAD_PARAMS["limit"]);
+} else if (INITIAL_QUERY["limit"]) {
+    Dom.set("#num", INITIAL_QUERY["limit"]);
     Dom.set("#select_type", "activities");
-} else if (ONLOAD_PARAMS["preset"]) {
-    Dom.set("#num", ONLOAD_PARAMS["preset"]);
+} else if (INITIAL_QUERY["preset"]) {
+    Dom.set("#num", INITIAL_QUERY["preset"]);
     Dom.set("#select_type", "days");
 } else {
-    Dom.set('#date1', ONLOAD_PARAMS["date1"]);
-    Dom.set('#date2', ONLOAD_PARAMS["date2"]);
+    Dom.set('#date1', INITIAL_QUERY["date1"]);
+    Dom.set('#date2', INITIAL_QUERY["date2"]);
     Dom.set('#preset', "");
 }
 
@@ -232,16 +240,16 @@ Dom.addEvent(".preset", "change", formatQueryForm);
  */
 import { DotLayer } from "./DotLayer/DotLayer.js";
 export const dotLayer = new DotLayer({
-    startPaused: ONLOAD_PARAMS["paused"]
+    startPaused: INITIAL_QUERY["paused"]
 }).addTo(map);
 
 
 // set initial values from defaults or specified in url
 let ds = dotLayer.getDotSettings();
 
-const C1 = ONLOAD_PARAMS["C1"],
-      C2 = ONLOAD_PARAMS["C2"],
-      SZ = ONLOAD_PARAMS["SZ"];
+const C1 = INITIAL_QUERY["C1"],
+      C2 = INITIAL_QUERY["C2"],
+      SZ = INITIAL_QUERY["SZ"];
 
 ds["C1"] = C1;
 ds["C2"] = C2;
@@ -259,7 +267,7 @@ const SPEED_SCALE = 5.0,
 
 // the following two statements seem to be redundant
 Dom.prop("#shadows", "checked", dotLayer.options.dotShadows.enabled);
-if (ONLOAD_PARAMS["shadows"]) {
+if (INITIAL_QUERY["shadows"]) {
     Dom.set("#shadows", "checked");
 }
 
@@ -275,9 +283,10 @@ Dom.addEvent("#showPaths", "change", function(){
 
 dotLayer.updateDotSettings(ds);
 
-/* now add dotlayer controls to the DOM */
 
-
+/*
+ *  now add dotlayer controls to the DOM
+ */
 
 // leaflet-easybutton is used for play/pause button and capture
 import "leaflet-easybutton";
@@ -429,7 +438,6 @@ makeKnob('#dot-controls2', {
 
 
 
-
 // Dom.addEvent("#zoom-to-selection", "change", function(){
 //     if ( Dom.prop("#zoom-to-selection", 'checked') ) {
 //         zoomToSelectedPaths();
@@ -447,7 +455,18 @@ makeKnob('#dot-controls2', {
 // });
 
 
-
+window.addEventListener('beforeunload', function (event) {
+    if (navigator.sendBeacon) {
+        if (appState.wskey) {
+            navigator.sendBeacon(BEACON_HANDLER_URL, appState.wskey);
+        }
+        navigator.sendBeacon(BEACON_HANDLER_URL, CLIENT_ID);
+    }
+    // if (sock && sock.readyState == 1) {
+    //     sock.send(JSON.stringify({close: 1}));
+    //     sock.close()
+    // }
+});
 
 // map.on('moveend', appState.update());
 
@@ -455,7 +474,6 @@ makeKnob('#dot-controls2', {
 
 // Dom.addEvent("#renderButton", "click", renderLayers);
 
-// Dom.addEvent("#activity-list-buton", "click", () => openActivityListPage(false));
 
 
 

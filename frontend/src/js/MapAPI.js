@@ -8,11 +8,11 @@ import "../../node_modules/leaflet/dist/leaflet.css";
  * Initialize the Leaflet map object
  */
 import * as L from "leaflet";
-import { ONLOAD_PARAMS } from "./Constants.js";
+import { appState } from "./Model.js";
 
 export const map = new L.Map('map', {
-    center: ONLOAD_PARAMS.map_center,
-    zoom: ONLOAD_PARAMS.map_zoom,
+    center: appState.query.map_center,
+    zoom: appState.query.map_zoom,
     preferCanvas: true,
     zoomAnimation: false,
     zoomAnimationThreshold: 6,
