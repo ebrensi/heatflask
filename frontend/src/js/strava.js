@@ -57,7 +57,7 @@ export const ATYPE = {
     },
 
     pathColor: function(type) {
-        spec = this._specs[type.toLowerCase()] || this._specs[undefined];
+        const spec = this._specs[type.toLowerCase()] || this._specs[undefined];
         return spec[1];
     },
 

@@ -46,23 +46,6 @@ const ga = (OFFLINE || ADMIN || DEVELOPMENT)? noop : load_ga_object();
 
 const console = window.console;
 
-/*
-  send beacons to the backend's beacon listener when this
- window gets closed or navigated away from,
- so that any ongoing backend operations can be aborted.
-*/
-function tellBackendGoodBye() {
-  sendBeacon(BEACON_HANDLER_URL, CLIENT_ID);
-
-  if (wskey) {
-    sendBeacon(BEACON_HANDLER_URL, wskey);
-  }
-
-  if (sock && sock.readyState == 1) {
-    sock.send(JSON.stringify({close: 1}));
-    sock.close();
-  }
-}
 
 
 
@@ -87,7 +70,7 @@ let wskey,
 const index = new Map(),
       selected = new Set();
 
-let keys, lastSelection;
+let keys, lastSelection, dataTable;
 
 sock.binaryType = 'arraybuffer';
 
@@ -109,29 +92,8 @@ sock.onopen = function(event) {
     sock.send(msg);
 };
 
-sock.onclose = function(event) {
-    console.log("socket closed: ", event);
-    wskey = null;
 
-    if (window["ga"]) {
-      // Record this to google analytics
-      ga('send', 'event', {
-          eventCategory: USER_ID,
-          eventAction: 'View-Index'
-      });
-    }
-
-    progressBar.removeAttribute("max");
-    status_element.innerText = "Building DataTable...";
-    count_DOM_element.innerText = "";
-
-    keys = Array.from(index.keys());
-
-    makeTable().then(e => {
-      DOM("#status").style.display = "none";
-    });
-};
-
+/* For every message we get from the backend */
 sock.onmessage = function(event) {
   const A = decode(new Uint8Array(event.data));
 
@@ -164,7 +126,7 @@ sock.onmessage = function(event) {
   index.set(id,  [
     strava_link,
     date,
-    A["type"],
+    `<span style="color:${strava.ATYPE.pathColor(A["type"])};">${A["type"]}</span>`,
     dist,
     HHMMSS(A["elapsed_time"]),
     A["name"],
@@ -179,32 +141,35 @@ sock.onmessage = function(event) {
 };
 
 
-DOM('#rebuild-button').onclick = function () {
-    if (OFFLINE) {
-       window.alert("Sorry, I am offline");
-       return;
+/* When data import is done, we call makeTable */
+sock.onclose = function(event) {
+    console.log("socket closed: ", event);
+    wskey = null;
+
+    if (window["ga"]) {
+      // Record this to google analytics
+      ga('send', 'event', {
+          eventCategory: USER_ID,
+          eventAction: 'View-Index'
+      });
     }
 
-    if( window.confirm("Rebuild your Heatflask Index from Strava Data?") ) {
-        window.location = window.location.href + "?rebuild=1";
-    }
-    return false;
+    keys = Array.from(index.keys());
+
+    progressBar.removeAttribute("max");
+    status_element.innerText = "Building DataTable...";
+    count_DOM_element.innerText = "";
+
+    /* We need a slight delay here for the above messages to display
+        since makeTable() is blocking */
+    setTimeout(() => {
+      window["dataTable"] = dataTable = makeTable();
+      DOM("#status").style.display = "none";
+    }, 50);
 };
 
-DOM('#clear-selection-button').onclick = function () {
-    debugger;
-    for (const id of selected) {
-      const idx = keys.indexOf(id);
-      dataTable.data[idx].classList.remove("selected");
-    }
-    selected.clear();
-};
 
-window.addEventListener('beforeunload', tellBackendGoodBye);
-
-
-
-async function makeTable() {
+function makeTable() {
   /* Make the datatable */
   // Create a table element in the activities-list div
   const table_el = document.createElement("table");
@@ -225,11 +190,11 @@ async function makeTable() {
 
   /* Instantiate the Datatable */
   console.time("table build");
-  const dataTable = new DataTable(table_el, {
+  const table = new DataTable(table_el, {
     sortable: true,
     searchable: true,
     paging: true,
-    perPage: 100,
+    perPage: 25,
     layout: {
         top: "{search}",
         bottom: "{info}{pager}"
@@ -245,19 +210,40 @@ async function makeTable() {
 
   console.timeEnd("table build");
 
-  window["dataTable"] = dataTable;
+  const tbody = table.table.tBodies[0];
 
-  const tbody = dataTable.table.tBodies[0];
+  /* add a listener for selections */
   tbody.addEventListener("click", selectionHandler);
+
+  /* add a clear selection button */
+  const div = document.createElement("div");
+  div.classList.add("dataTable-clear-selections");
+  document.querySelector(".dataTable-top").prepend(div);
+
+  const btn = document.createElement("button");
+  btn.id = "clear-selection-button";
+  btn.classList.add("btn", "btn-a", "btn-sm", "hidden");
+  div.appendChild(btn);
+
+  btn.onclick = clearSelections;
+  return table;
 }
 
 
-
+/*
+  When the user clicks or taps on a table cell we run this function.
+  This should be intuitive and work for both mouse/dektop
+  and touch screens
+*/
 function selectionHandler (e) {
     const td = e.target,
           tr = td.parentElement,
           idx = tr.dataIndex,
           id = keys[idx];
+
+    if (!idx) {
+      return;
+    }
 
     // toggle selection property of the clicked row
     tr.classList.toggle("selected");
@@ -295,21 +281,97 @@ function selectionHandler (e) {
         }
     }
 
+    const numSelected = selected.size,
+          btn = DOM("#clear-selection-button");
+
+    if (numSelected > 0) {
+      btn.innerText = `Clear ${numSelected} selected entries`;
+      btn.classList.replace("hidden", "visible");
+    } else {
+      btn.classList.replace("visible", "hidden");
+    }
     console.log(selected);
-
-    // // let dotLayer know about selection changes
-    // dotLayer.setItemSelect(selections);
-
-    // appState.lastSelection = {
-    //     val: selected,
-    //     dataIndex: dataIndex
-    // }
-
-    // let redraw = false;
-    // const mapBounds = map.getBounds();
-
-    // if ( Dom.prop("#zoom-to-selection", 'checked') )
-    //     zoomToSelectedPaths();
-
 }
 
+
+/* set up some DOM events */
+
+/* Reload the page with fresh data the backend imports from strava */
+DOM('#rebuild-button').onclick = function () {
+    if (OFFLINE) {
+       window.alert("Sorry, you are offline");
+       return;
+    }
+
+    if( window.confirm("Rebuild your Heatflask Index from Strava Data?") ) {
+        window.location = window.location.href + "?rebuild=1";
+    }
+    return false;
+};
+
+
+/* a function to remove the selected class from all table rows */
+function clearSelections() {
+  for (const id of selected) {
+    const idx = keys.indexOf(id);
+    dataTable.activeRows[idx].classList.remove("selected");
+  }
+  selected.clear();
+
+  DOM("#clear-selection-button").classList.replace("visible", "hidden");
+}
+
+
+/* add some keybindings for the table */
+document.addEventListener('keydown', function(e) {
+  if (e.target !== document.body) {
+      return;
+  }
+
+  const keyCode = e.keyCode;
+
+  if (keyCode === 37 && !dataTable.onFirstPage) { // left arrow
+    dataTable.page(dataTable.currentPage - 1);
+  } else if (keyCode == 39 && !dataTable.onLastPage) { // right arrow
+    dataTable.page(dataTable.currentPage + 1);
+  }
+});
+
+
+
+
+
+
+/*
+  send beacons to the backend's beacon listener when this
+ window gets closed or navigated away from,
+ so that any ongoing backend operations can be aborted.
+*/
+function tellBackendGoodBye() {
+  sendBeacon(BEACON_HANDLER_URL, CLIENT_ID);
+
+  if (wskey) {
+    sendBeacon(BEACON_HANDLER_URL, wskey);
+  }
+
+  if (sock && sock.readyState == 1) {
+    sock.send(JSON.stringify({close: 1}));
+    sock.close();
+  }
+}
+window.addEventListener('beforeunload', tellBackendGoodBye);
+
+
+// // let dotLayer know about selection changes
+// dotLayer.setItemSelect(selections);
+
+// appState.lastSelection = {
+//     val: selected,
+//     dataIndex: dataIndex
+// }
+
+// let redraw = false;
+// const mapBounds = map.getBounds();
+
+// if ( Dom.prop("#zoom-to-selection", 'checked') )
+//     zoomToSelectedPaths();
