@@ -126,7 +126,6 @@ sock.onmessage = function(event) {
   index.set(id,  [
     strava_link,
     date,
-    // `<span style="color:${strava.ATYPE.pathColor(A["type"])};">${A["type"]}</span>`,
     `<span class="${A['type'].toLowerCase()}">${A['type']}</span>`,
     dist,
     HHMMSS(A["elapsed_time"]),
