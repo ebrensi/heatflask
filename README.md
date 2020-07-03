@@ -1,8 +1,7 @@
-![logo](https://github.com/ebrensi/heatflask/blob/master/heatflask/static/logo.png | width=100) 
 # [Heatflask](https://www.heatflask.com)
 ## ☠ The `master` branch has been DEPRECATED! ☠ ##
 Heatflask is currently undergoing a major re-write, which is taking place on the `bundles` branch.  
-### Please do not fork or make any pull requests. ###
+### Please do not fork or make any pull requests until an official release. ###
 
 
 This is the repository for the server-side and client-side code for the Heatflask web-application currently running at at https://www.heatflask.com.  
