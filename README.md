@@ -1,9 +1,14 @@
-# Activities Visualization App
+# [Heatflask](https://www.heatflask.com)
+##☠ The (`master`) branch has been DEPRECATED! ☠##
+Heatflask is currently undergoing a major re-write, which is taking place on the `bundles` branch.  
+### Please do not fork or make any pull requests. ###
+
+
+This is the repository for the server-side and client-side code for the Heatflask web-application currently running at at https://www.heatflask.com.  
 
 #### Cyclic animated visualizations from Strava activity data
-#### http://heatflask.com
 
-See a live demo with data at http://heatflask.com/demo
+See a live demo with data at https://www.heatflask.com/demo
 
 Currently it supports [Strava](https://www.strava.com) data and the [leaflet.js](http://leafletjs.com) map API.
 
