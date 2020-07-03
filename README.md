@@ -1,6 +1,6 @@
 # [Heatflask](https://www.heatflask.com)
 ## ☠ The `master` branch has been DEPRECATED! ☠ ##
-Heatflask is currently undergoing a major re-write, which is taking place on the `bundles` branch.  
+Heatflask is currently undergoing a major re-write, which is taking place on the `bundle` branch.  
 ### Please do not fork or make any pull requests until an official release. ###
 
 
