@@ -32,14 +32,15 @@ const QUERY_SPEC = {
     activity_ids: [["id", "ids"], null],
     map_center: [["center"], [27.53, 1.58]],
     map_zoom: [["zoom", "z"], 3],
-    lat: [["lat"], null],
-    lng: [["lng"], null],
+    lat: [["lat", "x"], null],
+    lng: [["lng", "y"], null],
     autozoom: [["autozoom", "az"], true],
     c1: [["c1"], null],
     c2: [["c2"], null],
     sz: [["sz"], null],
     start_paused: [["paused", "p"], false],
-    shadows: [["sh", "shadows"], true]
+    shadows: [["sh", "shadows"], true],
+    baselayer: [["baselayer", "map", "bl"], null]
 };
 
 /* set up an initial query with only defaults */
@@ -48,113 +49,42 @@ for (const field in QUERY_SPEC) {
     query[field] = QUERY_SPEC[field][1];
 }
 
-/* This will be replaced by code using url parameters
-query = Object.assign(query, ONLOAD_PARAMS);
-
-
 /* get the parameters specified in the browser's current url */
-// const urlArgs = new URL(window.location.href).searchParams;
+const urlArgs = new URL(window.location.href).searchParams;
+for (const [qk, qv] of urlArgs.entries()) {
+    for (const [sk, sv] of Object.entries(QUERY_SPEC)) {
+        const pnames = sv[0];
+        if (pnames.includes(qk)) {
+            query[sk] = qv;
+            delete QUERY_SPEC[sk]; // this field is set no need checking it again
+            break;
+        }
+    }
+}
 
-const target_user = window.location.pathname.substring(1) || null;
+
+if (query.lat && query.lng) {
+    query.map_center = [query.lat, query.lng];
+}
 
 export const appState = {
     /* target_user is the user whose activities we are viewing */
-    target_user: target_user,
+    target_user: {
+        id: window.location.pathname.substring(1) || null
+    },
 
     /* current user is the user who is currently logged-in */
     current_user: SELF? target_user : null,
 
     items: new Map(),
 
+    paused: query.start_paused,
+
     query: query
 };
 
 
-
-function update(event){
-    let  params = {},
-         type = Dom.get("#select_type"),
-         num = Dom.get("#select_num"),
-         ids = Dom.get("#activity_ids");
-
-    if (type == "activities") {
-        params["limit"] = num;
-    } else if (type == "activity_ids") {
-        if (ids) {
-          params["id"] = ids;
-        }
-    } else if (type == "days") {
-        params["preset"] = num;
-    } else {
-        if (appState.after) {
-            params["after"] = appState.after;
-        }
-        if (appState.before && (appState.before != "now")) {
-            params["before"] = appState.before;
-        }
-    }
-
-    if (appState.paused){
-        params["paused"] = "1";
-    }
-
-    if (Dom.prop("#autozoom", 'checked')) {
-        appState.autozoom = true;
-        params["autozoom"] = "1";
-    } else {
-        appState.autozoom = false;
-        const zoom = map.getZoom(),
-              center = map.getCenter(),
-              precision = Math.max(0, Math.ceil(Math.log(zoom) / Math.LN2));
-
-        if (center) {
-            params.lat = center.lat.toFixed(precision);
-            params.lng = center.lng.toFixed(precision);
-            params.zoom = zoom;
-        }
-    }
-
-    if (dotLayer) {
-        const ds = dotLayer.getDotSettings();
-
-        params["c1"] = Math.round(ds["C1"]);
-        params["c2"] = Math.round(ds["C2"]);
-        params["sz"] = Math.round(ds["dotScale"]);
-
-        // Enable capture if period is less than CAPTURE_DURATION_MAX
-        const cycleDuration = dotLayer.periodInSecs().toFixed(2),
-              captureEnabled = controls.captureControl.enabled;
-
-        Dom.html("#period-value", cycleDuration);
-
-        if (cycleDuration <= CAPTURE_DURATION_MAX) {
-            if (!captureEnabled) {
-                controls.captureControl.addTo(map);
-                controls.captureControl.enabled = true;
-            }
-        } else if (captureEnabled) {
-            controls.captureControl.removeFrom(map);
-            controls.captureControl.enabled = false;
-        }
-    }
-
-    if (appState.currentBaseLayer.name) {
-        params["baselayer"] = appState.currentBaseLayer.name;
-    }
-
-    const paramsString = Object.keys(params).map(function(param) {
-              return encodeURIComponent(param) + '=' +
-              encodeURIComponent(params[param]);
-          }).join('&'),
-
-          newURL = `${USER_ID}?${paramsString}`;
-
-    if (appState.url != newURL) {
-        // console.log(`pushing: ${newURL}`);
-        appState.url = newURL;
-        window.history.replaceState("", "", newURL);
-    }
-  }
+console.log("initial appstate: ", appState);
 
 
   /*
@@ -228,25 +158,7 @@ function activityDataPopup(id, latlng){
 }
 
 
-/*
-// What to do when user changes to a different tab or window
-document.onvisibilitychange = function() {
-    if (document.hidden) {
-        if (!appState.paused)
-            dotLayer.pause();
-    } else if (!appState.paused && dotLayer) {
-        dotLayer.animate();
 
-    }
-};
-
-appState.currentBaseLayer = default_baseLayer;
-map.on('baselayerchange', function (e) {
-    appState.currentBaseLayer = e.layer;
-    appState.update();
-});
-
-*/
 
 function getBounds(ids) {
     const bounds = latLngBounds();

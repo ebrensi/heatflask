@@ -75,7 +75,7 @@ export const ATYPE = {
 /* This function appends CSS style color defs for activity type
     to a DOM element for <span> children. Then, for example,
     the text in elelment <span class="run"> text </span>
-    will be the path-color associated with "run".
+    will have the path-color associated with "run".
 */
 export function appendCSS(domElement) {
     /* define a CSS stylesheet for strava path colors */

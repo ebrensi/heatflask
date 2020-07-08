@@ -4,6 +4,8 @@
 
 import "../../node_modules/leaflet/dist/leaflet.css";
 
+import * as Dom from "./Dom.js";
+
 /*
  * Initialize the Leaflet map object
  */
@@ -19,6 +21,39 @@ export const map = new L.Map('map', {
     updateWhenZooming: true,
 });
 
+
+/* Initialize two control windows, which is the modal popup that we
+    display messages in.  We create one for general messages and
+    one for error messages.
+*/
+import 'leaflet-control-window';
+import '../../node_modules/leaflet-control-window/src/L.Control.Window.css';
+
+// create an empty message box (but don't display anything yet)
+const infoMsgBox = L.control.window(map, {
+    position: 'top',
+    content: "<div class='msgBox info-message'> Hello </div>",
+    visible: false
+});
+
+const errMsgBox = L.control.window(map, {
+    position: 'top',
+    title: "!!",
+    content: "<div class='msgBox error-message'></div>",
+    visible: false
+});
+
+function makeMsg(msg, err) {
+    const box = err? errMsgBox : msgBox,
+          selector = err? ".error-message" : ".info-message";
+    Dom.prop(selector, "innerHTML", msg);
+    if (!box.visible) {
+        box.show();
+    }
+}
+
+export const showInfoMessage = msg => makeMsg(msg, false),
+             showErrMessage  = msg => makeMsg(msg, true);
 
 /*
  * Initialize map Baselayers
@@ -55,9 +90,34 @@ const providers_names = [
     "OpenStreetMap.Mapnik",
     "Stadia.AlidadeSmoothDark"
 ];
+const default_name = "OpenStreetMap.Mapnik";
+
 
 for (const name of providers_names) {
     baseLayers[name] = tileLayer.provider(name);
+}
+
+appState.currentBaseLayer = baseLayers[default_name];
+
+/* If the user provided a baselayer name that is not one of
+   those included here, attempt to instantiate it and set it as
+   the current baselayer
+*/
+const qblName = appState.query.baselayer;
+if (qblName) {
+    // URL constains a baselayer setting
+    if (qblName in baseLayers) {
+        // it's one that we already have
+        appState.currentBaseLayer = baseLayers[qblName];
+    } else {
+        try {
+            baseLayers[qblName] = appState.currentBaseLayer = tileLayer.provider(qblName);
+        } catch (e) {
+            const msg = `${e}: sorry we don't support the baseLayer "${qblName}"`;
+            console.log(msg);
+            showErrMessage(msg);
+        }
+    }
 }
 
 // Set the zoom range the same for all basemaps because this TileLayer
@@ -75,8 +135,8 @@ for (const name in baseLayers) {
 }
 
 
-// Add default baselayer to map
-export const default_baseLayer = baseLayers["CartoDB.DarkMatter"].addTo(map);
+// Add baselayer to map
+appState.currentBaseLayer.addTo(map);
 
 // Add baselayer selection control to map
 export const layerControl = L.control.layers(
@@ -121,20 +181,6 @@ const heatflaskLogo = new Watermark({
 }).addTo(map);
 
 
-// Initialize control window, which is the modal popup that we
-//  display messages in.  We only create one and reuse it for different
-//   messages.
-import 'leaflet-control-window';
-import '../../node_modules/leaflet-control-window/src/L.Control.Window.css';
-
-// create an empty message box (but don't display anything yet)
-export const msgBox = L.control.window(map, {
-        position: 'top',
-        content: "<div class='data_message'> Hello </div>",
-        visible: false
-});
-
-
 // The main sidebar UI
 // Leaflet sidebar v2
 import "../../node_modules/sidebar-v2/css/leaflet-sidebar.css";
@@ -143,9 +189,10 @@ export const sidebar = L.control.sidebar('sidebar').addTo(map);
 sidebar.addEventListener("opening", e => sidebar.isOpen = true);
 sidebar.addEventListener("closing", e => sidebar.isOpen = false);
 
-// we also define some key and mouse bindings to the map
-//  to control the sidebar
+/* we define some key and mouse bindings to the map to control the sidebar */
 map.addEventListener("click", e => {
+    /* if the user clicks anywhere on the map when side bar is open,
+        we close the sidebar */
     if (sidebar.isOpen) {
         sidebar.close();
     }

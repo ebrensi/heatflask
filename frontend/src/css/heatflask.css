@@ -64,7 +64,16 @@ span.date-select {
   display: none;
 }
 
+/* For the leaflet-control-window message boxes */
+.control-window {
+  background-color: rgba(0,0,0,0.6);
+  color: white;
+  border-radius: 8px;
+}
 
+.error-message {
+  color: red;
+}
 
 /* Leaflet.js stuff */
 

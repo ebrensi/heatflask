@@ -1,12 +1,13 @@
 import * as L from "leaflet";
-import { map, dotLayer } from "./mainComponents.js"
+import { map } from "./mapAPI.js";
+import { dotLayer } from "./DotLayer/DotLayer.js";
 
 import "leaflet-areaselect";
-// import '../ext/css/leaflet-areaselect.css';
+import '../ext/css/leaflet-areaselect.css';
 
 const areaSelect = L.areaSelect({width:200, height:200})
 
-// Capture button IIFE
+
 const capture_button_states = [
     {
         stateName: 'idle',
@@ -85,6 +86,7 @@ const capture_button_states = [
 
 import "../../node_modules/leaflet-easybutton/src/easy-button.d.ts";
 import "../../node_modules/leaflet-easybutton/src/easy-button.css";
+
 // Capture control button
 const captureControl = L.easyButton({
     states: capture_button_states
@@ -92,15 +94,12 @@ const captureControl = L.easyButton({
 
 captureControl.enabled = false;
 
-export default captureControl;
 
-
-function updatePeriod() {
+function updateCaptureStatus() {
     // Enable capture if period is less than CAPTURE_DURATION_MAX
-    let cycleDuration = dotLayer.periodInSecs().toFixed(2),
-        captureEnabled = controls.captureControl.enabled;
+    const cycleDuration = dotLayer.periodInSecs().toFixed(2),
+          captureEnabled = captureControl.enabled;
 
-    Dom.html("#period-value", cycleDuration);
     if (cycleDuration <= CAPTURE_DURATION_MAX) {
         if (!captureEnabled) {
             captureControl.addTo(map);

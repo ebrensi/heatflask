@@ -12,7 +12,7 @@ import { appState } from "./Model.js";
 const INITIAL_QUERY = appState.query;
 
 // Populate the browser window with a Leaflet map
-import { map, msgBox, default_baseLayer, layerControl } from "./MapAPI.js";
+import { map, showInfoMessage, showErrMessage, layerControl } from "./MapAPI.js";
 
 import {
     SELF,
@@ -27,9 +27,7 @@ import {
     CLIENT_ID
 } from "./Constants.js";
 
-console.log(INITIAL_QUERY);
-
-const USER_ID = INITIAL_QUERY["userid"];
+const USER_ID = appState.target_user.id;
 
 import WS_SCHEME from "./appUtil.js";
 
@@ -47,7 +45,7 @@ if (FLASH_MESSAGES.length > 0) {
         msg += "<li>" + FLASH_MESSAGES[i] + "</li>";
     }
     msg += "</ul>";
-    msgBox.content(msg).show;
+    showErrMessage(msg);
 }
 
 
@@ -116,7 +114,6 @@ if (LOGGED_IN) {
 
     /* enable strava authentication (login) button */
     Dom.addEvent(".strava-auth", "click", e => {
-        console.log(`${USER_ID} logging in`);
         window.location.href = "/authorize";
     });
     nTabs = 3;
@@ -376,21 +373,24 @@ function makeKnob(selector, options) {
 
 function knobListener(knob, val) {
     let period_changed,
-        newVal;
+        newVal,
+        updatePeriod;
 
-    switch (knob['_properties']['label']) {
+    const knobName = knob['_properties']['label'];
+
+    switch (knobName) {
         case "Speed":
             newVal = val * val * SPEED_SCALE;
             dotLayer.updateDotSettings({C2: newVal});
             console.log("C2: "+newVal);
-            // updatePeriod();
+            updatePeriod = true;
         break;
 
         case "Sparcity":
             newVal = Math.pow(2, val * SEP_SCALE.m + SEP_SCALE.b);
             dotLayer.updateDotSettings({C1: newVal});
             console.log("C1: "+newVal);
-            // updatePeriod();
+            updatePeriod = true;
         break;
 
         case "Alpha":
@@ -405,6 +405,13 @@ function knobListener(knob, val) {
             console.log("size: "+val);
         break;
     }
+
+    if (updatePeriod) {
+        const cycleDuration = dotLayer.periodInSecs().toFixed(2);
+        Dom.html("#period-value", cycleDuration);
+    }
+
+    updateURL();
 }
 
 // Instantiate knob controls and add them to the DOM
@@ -437,6 +444,108 @@ makeKnob('#dot-controls2', {
 }).addListener(knobListener);
 
 
+/* Update the browser's current URL
+    This gets called when certain app parameters change
+*/
+function updateURL(event){
+    const  params = {};
+
+    switch (Dom.get("#select_type")) {
+        case "activities":
+            params["limit"] = Dom.get("#num");
+            break;
+
+        case "activity-ids":
+            if (ids) {
+                params["id"] = Dom.get("#activity_ids");
+            }
+            break;
+
+        case "days":
+            params["preset"] = Dom.get("#num");
+            break;
+
+        case "date-range":
+            params["after"] = appState.query.after;
+
+            if (appState.query.before !== "now") {
+                params["before"] = appState.query.before;
+            }
+    }
+
+
+    if (Dom.prop("#autozoom", 'checked')) {
+        params["az"] = "1";
+    } else {
+        const zoom = map.getZoom(),
+              center = map.getCenter(),
+              precision = Math.max(0, Math.ceil(Math.log(zoom) / Math.LN2));
+
+        if (center) {
+            params.lat = center.lat.toFixed(precision);
+            params.lng = center.lng.toFixed(precision);
+            params.zoom = zoom;
+        }
+    }
+
+    if (dotLayer) {
+        const ds = dotLayer.getDotSettings();
+
+        params["c1"] = Math.round(ds["C1"]);
+        params["c2"] = Math.round(ds["C2"]);
+        params["sz"] = Math.round(ds["dotScale"]);
+    }
+
+    if (appState.currentBaseLayer.name) {
+        params["baselayer"] = appState.currentBaseLayer.name;
+    }
+
+    const paramsString = Object.entries(params).filter(([k,v]) => !!v).map(
+        ([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`
+    ).join('&'),
+
+    newURL = `${USER_ID}?${paramsString}`;
+
+    if (appState.url != newURL) {
+        // console.log(`pushing: ${newURL}`);
+        appState.url = newURL;
+        window.history.replaceState("", "", newURL);
+    }
+  }
+
+
+/* Handle autozoom setting:
+    current map location and zoom are encoded in the URL
+    unless autozoom is set.  In that case, the map will initially
+    pan and zoom to accomodate all activities being rendered.
+ */
+Dom.addEvent("#autozoom", "change", updateURL);
+map.on('moveend', e => {
+    if (!Dom.prop("#autozoom", 'checked')) {
+        updateURL();
+    }
+});
+
+// update the url right now
+updateURL();
+
+
+// What to do when user changes to a different tab or window
+document.onvisibilitychange = function() {
+    if (document.hidden) {
+        if (!appState.paused)
+            dotLayer.pause();
+    } else if (!appState.paused && dotLayer) {
+        dotLayer.animate();
+
+    }
+};
+
+map.on('baselayerchange', function (e) {
+    appState.currentBaseLayer = e.layer;
+    updateURL();
+});
+
 
 // Dom.addEvent("#zoom-to-selection", "change", function(){
 //     if ( Dom.prop("#zoom-to-selection", 'checked') ) {
@@ -447,6 +556,8 @@ makeKnob('#dot-controls2', {
 // Dom.addEvent("#render-selection-button", "click", openSelected);
 // Dom.addEvent("#clear-selection-button", "click", deselectAll);
 
+
+// Dom.addEvent("#renderButton", "click", renderLayers);
 // Dom.addEvent("#select_num", "keypress", function(event) {
 //     if (event.which == 13) {
 //         event.preventDefault();
@@ -468,11 +579,8 @@ window.addEventListener('beforeunload', function (event) {
     // }
 });
 
-// map.on('moveend', appState.update());
 
-// Dom.prop("#autozoom", "change", appState.update());
 
-// Dom.addEvent("#renderButton", "click", renderLayers);
 
 
 
