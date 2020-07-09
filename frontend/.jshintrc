@@ -1,9 +1,0 @@
-{
-    "esversion": 6,
-    "strict": "implied",
-    "sub": true,
-    "curly": true,
-    "browser": true,
-    "undef": true,
-    "module": true
-}

@@ -13,9 +13,6 @@ import "../ext/css/min_entireframework.min.css";
 import "../css/font-awesome-lite.css";
 import "../css/data-table.css";
 
-// JS module imports
-// import * as localForage from "localforage";
-
 import * as strava from './strava.js';
 import { WS_SCHEME, DDHHMM, HHMMSS, img, href, noop }   from './appUtil.js';
 import load_ga_object from "./google-analytics.js";
