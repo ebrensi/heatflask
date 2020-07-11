@@ -21,15 +21,12 @@ class Config(object):
 
     # Heatflask settings
     OFFLINE = False
-    APP_VERSION = ""
+    APP_VERSION = "v0.2.0"
     APP_NAME = "Heatflask {}".format(APP_VERSION)
     APP_SETTINGS = os.environ.get("APP_SETTINGS")
 
     # User ids of people to give administrative priviledge
     ADMIN = [15972102]
-
-    # We limit the capture duration to keep gif file size down
-    CAPTURE_DURATION_MAX = 20
 
     # Concurrency for User database triage
     TRIAGE_CONCURRENCY = 1
@@ -94,10 +91,6 @@ class Config(object):
     # PAYPAL_VERIFY_URL = 'https://ipnpb.paypal.com/cgi-bin/webscr'
     PAYPAL_VERIFY_URL = 'https://ipnpb.sandbox.paypal.com/cgi-bin/webscr'
 
-
-    # MapBox stuff
-    MAPBOX_ACCESS_TOKEN = os.environ.get("MAPBOX_ACCESS_TOKEN")
-
     # We are free to delete users who have been inactive for a while
     DAYS_INACTIVE_CUTOFF = 365
 
@@ -111,25 +104,6 @@ class Config(object):
     FROM_DOMAIN = "heatflask.herokuapp.com"
     TO_DOMAIN = "www.heatflask.com"
 
-    # This is the spec for parsing urls.  The pattern is
-    #  field_name: ([query_string options], default-value)
-    URL_QUERY_SPEC = dict(
-        date1=(["after", "date1", "a"], ""),
-        date2=(["before", "date2", "b"], ""),
-        preset=(["days", "preset", "d"], None),
-        limit=(["limit", "l"], None),
-        activity_ids=(["id", "ids"], None),
-        map_center=(["center"], [27.53, 1.58]),
-        map_zoom=(["zoom", "z"], 3),
-        lat=(["lat"], None),
-        lng=(["lng"], None),
-        autozoom=(["autozoom", "az"], True),
-        c1=(["c1"], 0),
-        c2=(["c2"], 0),
-        sz=(["sz"], 0),
-        start_paused=(["paused", "p"], 0),
-        shadows=(["sh", "shadows"], None)
-    )
 
     # A few Demos
     DEMOS = {

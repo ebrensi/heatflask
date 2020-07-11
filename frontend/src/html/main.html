@@ -4,7 +4,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="robots" content="noindex">
 
-	<title id="title">{{ config["APP_NAME"] }}</title>
+	<title id="title" class="app-name">APP-NAME</title>
 
 	<link rel="shortcut icon" href="../images/favicon.ico">
 </head>
@@ -53,7 +53,9 @@
 					   <img src="../images/strava_button.png"
 						    class="strava-button">
 					</a>
-					{{ args["USERNAME"] }}'s map
+
+					<span class="user-name">(user)</span>'s map
+
 					<span class="sidebar-close">
 						<i class="fa fa-caret-left"></i>
 					</span>
@@ -127,7 +129,7 @@
 					<div class="logged-in">
 						You are logged in as
 						<a class="href current_user" href="#" target="_blank">
-							{{ args["USERNAME"] }}
+							<span class="current-user-name">(current-user)</span>
 						</a>
 						<br><br>
 
@@ -169,7 +171,9 @@
 					   target="_blank">
 					  <img src="../images/strava_button.png" class="strava-button">
 					</a>
-					{{ user.id }}
+
+					<span class="current-user-id"></span>
+
 					<span class="sidebar-close">
 						<i class="fa fa-caret-left"></i>
 					</span>
@@ -180,7 +184,9 @@
 					Admin View for
 				</div>
 
-				<h3> {{ user.firstname }} {{ user.lastname }}:</h3>
+				<h3> <span class="current-user-firstname">first</span>
+					 <span class="current-user-lastname">last</span>
+				</h3>
 
 					<a href="https://www.strava.com/settings/profile"
 						target="_blank">
@@ -219,11 +225,8 @@
 					<hr>
 					<br><br>
 
-					<!-- <form action="#{{ url_for('delete', username=user.id) }}"
-						  onsubmit="return confirm('Delete your info from our database?');"> -->
 					<input type="button" class="btn btn-c btn-sm delete"
 						   value="Delete Account" />
-					<!-- </form> -->
 
                     <br>
                     <div class="paypal-form"></div>

@@ -332,41 +332,7 @@ def main(username):
     web_client_id = "H:{}:{}".format(ip, int(time.time()))
     log.debug("%s OPEN", web_client_id)
 
-    query = {
-        "map_providers": (
-            request.args.getlist("baselayer") or
-            request.args.getlist("bl")
-        )
-    }
-
-    query_spec = app.config["URL_QUERY_SPEC"]
-    # populate query dict with values from this urls's query string
-    for field in query_spec:
-        options, default = query_spec[field]
-        query[field] = default
-        for option in options:
-            if option in request.args:
-                query[field] = request.args[option]
-                break
-
-    # log.debug("received query %s", request.args)
-
-    # Here we defal with special cases
-    if all(query.get(x) for x in ["lat", "lng"]):
-        # "lat" and "lng" given in query string override "center"
-        query["map_center"] = [query["lat"], query["lng"]]
-        query["autozoom"] = False
-    del query["lat"]
-    del query["lng"]
-
-    if query.get("activity_ids"):
-        query["activity_ids"] = re.split(';|,| ', query["activity_ids"])
-
-    if not any(query[x] for x in ["date1", "date2", "activity_ids", "preset", "limit"]):
-        # This is the default if nothing is specified
-        query["limit"] = 10
-        query["autozoom"] = True
-
+    # Record the event unless current_user is an admin
     if current_user.is_anonymous or (not current_user.is_admin()):
         event = {
             "ip": request.access_route[-1],
@@ -382,31 +348,19 @@ def main(username):
 
         EventLogger.new_event(**event)
 
-    # log.debug("created query: %s", query)
-    query["userid"] = user.id;
     args = {
-        "ONLOAD_PARAMS": query,
         "CLIENT_ID": web_client_id,
-        "USERNAME": user.username or user.id,
-        "USERPIC": user.profile,
-        "LOGGED_IN": current_user.is_authenticated,
         "DEVELOPMENT": app.config.get("DEVELOPMENT"),
-        "IMPERIAL": user.measurement_preference == "feet",
         "FLASH_MESSAGES": get_flashed_messages(),
-        "MAPBOX_ACCESS_TOKEN": app.config.get('MAPBOX_ACCESS_TOKEN'),
-        "CAPTURE_DURATION_MAX": app.config.get('CAPTURE_DURATION_MAX'),
-        "BASE_USER_URL":  url_for('main', username=user.id),
-        "SHARE_PROFILE": user.share_profile,
-        "SHARE_STATUS_UPDATE_URL": url_for('update_share_status', username=user.id),
-        "ACTIVITY_LIST_URL": url_for('activities', username=user.id),
-        "BEACON_HANDLER_URL": url_for('beacon_handler')
+        "APP_NAME": app.config.get("APP_NAME")
     }
 
     if current_user.is_authenticated:
-        args["SELF"] = current_user == user
-        args["ADMIN"] = current_user.is_admin()
+        current_user_info = current_user.info()
+        current_user_info["isAdmin"] = current_user.is_admin()
+        args["CURRENT_USER"] = current_user_info
 
-    return render_template('main.html', user=user, args=args)
+    return render_template('main.html', args=args)
 
 
 @app.route('/<username>/activities')
@@ -430,7 +384,7 @@ def activities(username):
         "USER_ID": user.id,
         "CLIENT_ID": web_client_id,
         "OFFLINE": app.config.get("OFFLINE"),
-        "ADMIN": True, #current_user.is_admin(),
+        "ADMIN": current_user.is_admin(),
         "IMPERIAL": user.measurement_preference == "feet",
         "DEVELOPMENT": app.config.get("DEVELOPMENT")
     }

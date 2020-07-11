@@ -2,19 +2,33 @@
  * mapAPI.js -- Leaflet map background is initialized here
  */
 
+import * as L from "leaflet";
 import "../../node_modules/leaflet/dist/leaflet.css";
 
+import 'leaflet-control-window';
+import '../../node_modules/leaflet-control-window/src/L.Control.Window.css';
+
+import "../../node_modules/sidebar-v2/css/leaflet-sidebar.css";
+import "../../node_modules/sidebar-v2/js/leaflet-sidebar.js";
+
+
+import { tileLayer } from "./TileLayer/TileLayer.Heatflask.js";
 import * as Dom from "./Dom.js";
+import { appState } from "./Model.js";
+
+import strava_logo from "../images/pbs4.png";
+import heatflask_logo from "../images/logo.png";
+
+import { MAPBOX_ACCESS_TOKEN } from "./Init.js";
 
 /*
  * Initialize the Leaflet map object
  */
-import * as L from "leaflet";
-import { appState } from "./Model.js";
+const params = appState.params;
 
 export const map = new L.Map('map', {
-    center: appState.query.map_center,
-    zoom: appState.query.map_zoom,
+    center: params.map_center,
+    zoom: params.map_zoom,
     preferCanvas: true,
     zoomAnimation: false,
     zoomAnimationThreshold: 6,
@@ -26,8 +40,7 @@ export const map = new L.Map('map', {
     display messages in.  We create one for general messages and
     one for error messages.
 */
-import 'leaflet-control-window';
-import '../../node_modules/leaflet-control-window/src/L.Control.Window.css';
+
 
 // create an empty message box (but don't display anything yet)
 const infoMsgBox = L.control.window(map, {
@@ -44,7 +57,7 @@ const errMsgBox = L.control.window(map, {
 });
 
 function makeMsg(msg, err) {
-    const box = err? errMsgBox : msgBox,
+    const box = err? errMsgBox : infoMsgBox,
           selector = err? ".error-message" : ".info-message";
     Dom.prop(selector, "innerHTML", msg);
     if (!box.visible) {
@@ -52,15 +65,13 @@ function makeMsg(msg, err) {
     }
 }
 
-export const showInfoMessage = msg => makeMsg(msg, false),
-             showErrMessage  = msg => makeMsg(msg, true);
+export const showInfoMessage = msg => makeMsg(msg, false);
+export const showErrMessage  = msg => makeMsg(msg, true);
 
 /*
  * Initialize map Baselayers
  *   with custom TileLayer
  */
-import { tileLayer } from "./TileLayer/TileLayer.Heatflask.js";
-import { MAPBOX_ACCESS_TOKEN } from "./Constants.js";
 
 const baseLayers = {
     "None": tileLayer("", { useCache: false })
@@ -139,21 +150,20 @@ for (const name in baseLayers) {
 appState.currentBaseLayer.addTo(map);
 
 // Add baselayer selection control to map
-export const layerControl = L.control.layers(
+L.control.layers(
 	baseLayers, null, {position: 'topleft'}
 ).addTo(map);
 
 
 // Add zoom Control
-const zoomControl = map.zoomControl.setPosition('bottomright');
+map.zoomControl.setPosition('bottomright');
 
 
 // Define a watermark control
 const Watermark = L.Control.extend({
 
-    onAdd: function(map) {
+    onAdd: function() {
         let img = L.DomUtil.create('img');
-
         img.src = this.options.image;
         img.style.width = this.options.width;
         img.style.opacity = this.options.opacity;
@@ -163,17 +173,14 @@ const Watermark = L.Control.extend({
 
 
 // Add Watermarks
-import strava_logo from "../images/pbs4.png";
-
-const stravaLogo = new Watermark({
+new Watermark({
 	image: strava_logo,
 	width: '20%',
 	opacity:'0.5',
 	position: 'bottomleft'
 }).addTo(map);
 
-import heatflask_logo from "../images/logo.png";
-const heatflaskLogo = new Watermark({
+new Watermark({
 	image: heatflask_logo,
 	opacity: '0.5',
 	width: '20%',
@@ -183,14 +190,12 @@ const heatflaskLogo = new Watermark({
 
 // The main sidebar UI
 // Leaflet sidebar v2
-import "../../node_modules/sidebar-v2/css/leaflet-sidebar.css";
-import "../../node_modules/sidebar-v2/js/leaflet-sidebar.js";
 export const sidebar = L.control.sidebar('sidebar').addTo(map);
-sidebar.addEventListener("opening", e => sidebar.isOpen = true);
-sidebar.addEventListener("closing", e => sidebar.isOpen = false);
+sidebar.addEventListener("opening", () => sidebar.isOpen = true);
+sidebar.addEventListener("closing", () => sidebar.isOpen = false);
 
 /* we define some key and mouse bindings to the map to control the sidebar */
-map.addEventListener("click", e => {
+map.addEventListener("click", () => {
     /* if the user clicks anywhere on the map when side bar is open,
         we close the sidebar */
     if (sidebar.isOpen) {

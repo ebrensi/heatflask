@@ -1,44 +1,49 @@
 /*
  *  UI.js -- the front-end user interface for heatflask.
- *  Here we initialize the app model and set up the DOM
+ *  Here we initialize the DOM/user interface
  */
 
-// We use min as our "bootstrap" framework
+/* min is a lightweight bootstrap-like style framework */
 import "../ext/css/min_entireframework.min.css";
 import "../css/font-awesome-lite.css";
 
-import { appState } from "./Model.js";
+import Pikaday from 'pikaday';
+import "../../node_modules/pikaday/css/pikaday.css";
 
-const INITIAL_QUERY = appState.query;
+import * as L from "leaflet";
 
-// Populate the browser window with a Leaflet map
-import { map, showInfoMessage, showErrMessage, layerControl } from "./MapAPI.js";
+import "leaflet-easybutton";
+import "../../node_modules/leaflet-easybutton/src/easy-button.css";
+
+import pureknob from "pure-knob";
 
 import {
-    SELF,
-    LOGGED_IN,
-    SHARE_STATUS_UPDATE_URL,
     FLASH_MESSAGES,
-    SHARE_PROFILE,
-    USERPIC,
-    ADMIN,
-    ACTIVITY_LIST_URL,
+    MAKE_USER_URLS,
     BEACON_HANDLER_URL,
+    AUTHORIZE_URL,
     CLIENT_ID
-} from "./Constants.js";
+} from "./Init.js";
 
-const USER_ID = appState.target_user.id;
-
-import WS_SCHEME from "./appUtil.js";
+import { appState } from "./Model.js";
 
 import * as Dom from "./Dom.js";
+import { map, showErrMessage } from "./MapAPI.js";
+import { DotLayer } from "./DotLayer/DotLayer.js";
+import strava_login_img from "../images/btn_strava_connectwith_orange.svg";
+import paypalButtonHtml from "../html/paypal-button.html";
+
+const params = appState.params;
+const targetUser = appState.targetUser;
+const currentUser = appState.currentUser;
+
+// SELF indicates whether the target user is also the current user
+const SELF = currentUser && (currentUser.id === targetUser.id) || (currentUser.username === targetUser.id);
 
 /*
  * Set up the DOM with initial values, either defaults or
  *  specified as url parameters
  */
-
-
 if (FLASH_MESSAGES.length > 0) {
     let msg = "<ul class=flashes>";
     for (let i=0, len=FLASH_MESSAGES.length; i<len; i++) {
@@ -48,17 +53,16 @@ if (FLASH_MESSAGES.length > 0) {
     showErrMessage(msg);
 }
 
+targetUser.url = MAKE_USER_URLS(targetUser.id);
 
 // put user profile urls in the DOM
-Dom.prop(".strava-profile-link", "href", `https://www.strava.com/athletes/${USER_ID}`);
+Dom.prop(".strava-profile-link", "href", targetUser.url.STRAVA_PROFILE);
 
 
 // put Strava-login button images into the DOM
-import strava_login_img from "../images/btn_strava_connectwith_orange.svg";
 Dom.prop(".strava-auth", "src", strava_login_img);
 
 // add paypal buttons
-import paypalButtonHtml from "../html/paypal-button.html";
 Dom.prop(".paypal-form", "innerHTML", paypalButtonHtml);
 
 
@@ -66,80 +70,71 @@ Dom.prop("#zoom-to-selection", "checked", false);
 Dom.hide(".abort-render");
 Dom.hide(".progbar");
 
-Dom.prop("#autozoom", 'checked', appState.query["autozoom"]);
-Dom.set("#activity_ids", "");
+Dom.prop("#autozoom", 'checked', params["autozoom"]);
+Dom.set("#activity_ids", params["ids"]);
 
 let nTabs;
 
 /*
     Display or hide stuff based on whether current user is logged in
 */
-if (LOGGED_IN) {
+if (currentUser) {
     /* the current user is authenticated so we enable the profile tab
        and enable those controls
     */
-    Dom.prop("#share", "checked", SHARE_PROFILE);
+    Dom.prop("#share", "checked", currentUser["share_profile"]);
     Dom.show(".logged-in");
     Dom.hide(".logged-out");
     nTabs = 4;
 
     /* display user profile pic(s) */
-    Dom.prop(".avatar", "src", USERPIC);
+    Dom.prop(".avatar", "src", currentUser["profile"]);
 
+    currentUser.url = MAKE_USER_URLS(currentUser.id);
     // Set a listener to change user's account to public or private
     //   if they change that setting
     Dom.addEvent("#share", "change", async function() {
         let status = Dom.prop("#share", "checked")? "public":"private";
-        const resp = await fetch(`${SHARE_STATUS_UPDATE_URL}?status=${status}`),
+        const resp = await fetch(`${currentUser.url.SHARE_STATUS_UPDATE}?status=${status}`),
               text = await resp.text();
-        // console.log(`response: ${text}`);
+        console.log(`response: ${text}`);
     });
 
     /* enable activity list button */
-    Dom.addEvent(".activity-list", "click", e => {
-        window.open(ACTIVITY_LIST_URL, "_blank")
+    Dom.addEvent(".activity-list", "click", () => {
+        window.open(currentUser.url.ACTIVITY_LIST, "_blank")
     });
 
     /* enable log out button */
-    Dom.addEvent(".logout", "click", e => {
-        const current_user = appState.current_user;
-        console.log(`${current_user} logging out`);
-        window.open(`${current_user}/logout`);
+    Dom.addEvent(".logout", "click", () => {
+        console.log(`${currentUser.id} logging out`);
+        window.open(currentUser.url.LOG_OUT);
     });
 
+    if (currentUser.isAdmin) {
+      Dom.show(".admin");
+    }
 
+    if (SELF) {
+        Dom.show(".self");
+    }
 } else {
     Dom.show(".logged-out");
     Dom.hide(".logged-in");
+    Dom.hide(".admin");
+    Dom.hide(".self");
 
     /* enable strava authentication (login) button */
-    Dom.addEvent(".strava-auth", "click", e => {
-        window.location.href = "/authorize";
+    Dom.addEvent(".strava-auth", "click", () => {
+        window.location.href = AUTHORIZE_URL;
     });
     nTabs = 3;
-}
-
-// Display or hide stuff based on whether current user is an admin
-if (ADMIN) {
-  Dom.show(".admin");
-} else {
-  Dom.hide(".admin");
-}
-
-
-
-// Display or hide stuff based on whether or not current user
-//  is the same as the user whose activities are being viewed
-if (SELF) {
-    Dom.show(".self");
-} else {
-    Dom.hide(".self");
 }
 
 
 // set collapsed sidebar height just enough for icons to fit
 const root = document.documentElement;
-root.style.setProperty("--sidebar-height", 50*nTabs+10+"px");
+root.style.setProperty("--sidebar-height", 50 * nTabs + 10 + "px");
 
 
 /*
@@ -147,8 +142,6 @@ root.style.setProperty("--sidebar-height", 50*nTabs+10+"px");
  */
 
 // Put date-pickers in DOM
-import "../../node_modules/pikaday/css/pikaday.css";
-import Pikaday from 'pikaday';
 function makeDatePicker(selector) {
     const el = Dom.el(selector),
           picker = new Pikaday({
@@ -168,18 +161,18 @@ const date1picker = makeDatePicker('#date1'),
       date2picker = makeDatePicker('#date2');
 
 // Set up form based on what kind of query this is
-if (INITIAL_QUERY["activity_ids"]) {
-    Dom.set("#activity_ids", INITIAL_QUERY["activity_ids"]);
+if (params["activity_ids"]) {
+    Dom.set("#activity_ids", params["activity_ids"]);
     Dom.set("#select_type", "activity_ids");
-} else if (INITIAL_QUERY["limit"]) {
-    Dom.set("#num", INITIAL_QUERY["limit"]);
+} else if (params["limit"]) {
+    Dom.set("#num", params["limit"]);
     Dom.set("#select_type", "activities");
-} else if (INITIAL_QUERY["preset"]) {
-    Dom.set("#num", INITIAL_QUERY["preset"]);
+} else if (params["preset"]) {
+    Dom.set("#num", params["preset"]);
     Dom.set("#select_type", "days");
 } else {
-    Dom.set('#date1', INITIAL_QUERY["date1"]);
-    Dom.set('#date2', INITIAL_QUERY["date2"]);
+    Dom.set('#date1', params["date1"]);
+    Dom.set('#date2', params["date2"]);
     Dom.set('#preset', "");
 }
 
@@ -235,102 +228,14 @@ Dom.addEvent(".preset", "change", formatQueryForm);
 /*
  * instantiate a DotLayer object and add it to the map
  */
-import { DotLayer } from "./DotLayer/DotLayer.js";
 export const dotLayer = new DotLayer({
-    startPaused: INITIAL_QUERY["paused"]
+    startPaused: params["paused"]
 }).addTo(map);
 
 
-// set initial values from defaults or specified in url
-let ds = dotLayer.getDotSettings();
-
-const C1 = INITIAL_QUERY["C1"],
-      C2 = INITIAL_QUERY["C2"],
-      SZ = INITIAL_QUERY["SZ"];
-
-ds["C1"] = C1;
-ds["C2"] = C2;
-ds["dotScale"] = SZ;
-
-
-const SPEED_SCALE = 5.0,
-      SEP_SCALE = {m: 0.15, b: 15.0};
-
-// Dom.set("#sepConst", (Math.log2(C1) - SEP_SCALE.b) / SEP_SCALE.m );
-// Dom.set("#speedConst", Math.sqrt(C2) / SPEED_SCALE );
-// Dom.set("#dotScale", ds["dotScale"]);
-// Dom.set("#dotAlpha", ds["dotAlpha"]);
-
-
-// the following two statements seem to be redundant
-Dom.prop("#shadows", "checked", dotLayer.options.dotShadows.enabled);
-if (INITIAL_QUERY["shadows"]) {
-    Dom.set("#shadows", "checked");
-}
-
-Dom.addEvent("#shadows", "change", (e) => {
-    dotLayer.updateDotSettings(null, {"enabled": e.target.checked})
-});
-
-Dom.prop("#showPaths", "checked", dotLayer.options.showPaths);
-Dom.addEvent("#showPaths", "change", function(){
-     dotLayer.options.showPaths = Dom.prop("#showPaths", "checked");
-     dotLayer._redraw();
-});
-
-dotLayer.updateDotSettings(ds);
-
-
-/*
- *  now add dotlayer controls to the DOM
- */
-
-// leaflet-easybutton is used for play/pause button and capture
-import "leaflet-easybutton";
-import "../../node_modules/leaflet-easybutton/src/easy-button.css";
-
-
-// animation play-pause button
-const button_states = [
-    {
-        stateName: 'animation-running',
-        icon:      'fa-pause',
-        title:     'Pause Animation',
-        onClick: function(btn, map) {
-            // pauseFlow();
-            // dotLayer.pause();
-            // appState.paused = true;
-            // appState.update();
-            btn.state('animation-paused');
-            }
-    },
-
-    {
-        stateName: 'animation-paused',
-        icon:      'fa-play',
-        title:     'Resume Animation',
-        onClick: function(btn, map) {
-            // appState.paused = false;
-            // dotLayer.animate();
-            // appState.update();
-            btn.state('animation-running');
-        }
-    }
-];
-
-// add play/pause button to the map
-const animationControl =  L.easyButton({
-    // states: appState.paused? button_states.reverse() : button_states
-    states: button_states.reverse()
-}).addTo(map);
-
-
-
-// knobs for dotlayer control
-let dialfg, dialbg;
-
+// Initialize knob controls for dotlayer
 const rad = deg => deg * Math.PI/180,
-      settings = {
+      initial_knob_settings = {
         'angleStart': rad(0),
         'angleEnd': rad(360),
         'angleOffset': rad(-90),
@@ -342,19 +247,9 @@ const rad = deg => deg * Math.PI/180,
         'needle': true,
       };
 
-dialfg = settings["colorFG"];
-dialbg = settings["colorBG"];
-
-
-/* There are several knob components available but most of them
-    require jQuery.  Pure-Knob does not.
-*/
-
-import pureknob from "pure-knob";
-
 function makeKnob(selector, options) {
     const knob = pureknob.createKnob(options.width, options.height),
-          mySettings = Object.assign({}, settings);
+          mySettings = Object.assign({}, initial_knob_settings);
 
     Object.assign(mySettings, options);
 
@@ -369,11 +264,58 @@ function makeKnob(selector, options) {
     return knob
 }
 
+/* set initial values from defaults or specified in url
+    url params over-ride default values */
+const dotConstants = dotLayer.getDotSettings();
+
+const C1 = params["C1"] || dotConstants["C1"],
+      C2 = params["C2"] || dotConstants["C2"],
+      SZ = params["SZ"] || dotConstants["dotScale"];
+
+dotConstants["C1"] = params["C1"] = C1;
+dotConstants["C2"] = params["C2"] = C2;
+dotConstants["dotScale"] = params["SZ"] = SZ;
+
+const SPEED_SCALE = 5.0,
+      SEP_SCALE = {m: 0.15, b: 15.0};
+
+// Dom.set("#sepConst", (Math.log2(C1) - SEP_SCALE.b) / SEP_SCALE.m );
+// Dom.set("#speedConst", Math.sqrt(C2) / SPEED_SCALE );
+// Dom.set("#dotScale", ds["dotScale"]);
+// Dom.set("#dotAlpha", ds["dotAlpha"]);
+
+// Instantiate knob controls with initial values and add them to the DOM
+makeKnob('#dot-controls1', {
+    width: "150",
+    height: "150",
+    "label": "Speed"
+}).addListener(knobListener);
+
+makeKnob('#dot-controls1', {
+    width: "150",
+    height: "150",
+    "label": "Sparcity"
+}).addListener(knobListener);
+
+makeKnob('#dot-controls2', {
+    width: "100",
+    height: "100",
+    valMin: 0,
+    valMax: 10,
+    "label": "Alpha"
+}).addListener(knobListener);
+
+makeKnob('#dot-controls2', {
+    width: "100",
+    height: "100",
+    valMin: 0,
+    valMax: 10,
+    "label": "Size"
+}).addListener(knobListener);
 
 
 function knobListener(knob, val) {
-    let period_changed,
-        newVal,
+    let newVal,
         updatePeriod;
 
     const knobName = knob['_properties']['label'];
@@ -414,40 +356,68 @@ function knobListener(knob, val) {
     updateURL();
 }
 
-// Instantiate knob controls and add them to the DOM
-makeKnob('#dot-controls1', {
-    width: "150",
-    height: "150",
-    "label": "Speed"
-}).addListener(knobListener);
 
-makeKnob('#dot-controls1', {
-    width: "150",
-    height: "150",
-    "label": "Sparcity"
-}).addListener(knobListener);
 
-makeKnob('#dot-controls2', {
-    width: "100",
-    height: "100",
-    valMin: 0,
-    valMax: 10,
-    "label": "Alpha"
-}).addListener(knobListener);
+/* initialize shadow setting and change event */
+const shadows = params["shadows"];
+Dom.prop("#shadows", "checked", shadows);
+dotLayer.updateDotSettings(dotConstants, {"enabled": shadows});
+Dom.addEvent("#shadows", "change", (e) => {
+    dotLayer.updateDotSettings(null, {"enabled": e.target.checked})
+});
 
-makeKnob('#dot-controls2', {
-    width: "100",
-    height: "100",
-    valMin: 0,
-    valMax: 10,
-    "label": "Size"
-}).addListener(knobListener);
+/* initialize show-paths setting and change event */
+const paths = params["paths"]
+Dom.prop("#showPaths", "checked", paths);
+dotLayer.options.showPaths = paths;
+Dom.addEvent("#showPaths", "change", function(){
+     dotLayer.options.showPaths = Dom.prop("#showPaths", "checked");
+     dotLayer._redraw();
+});
+
+
+
+// leaflet-easybutton is used for play/pause button and capture
+// animation play-pause button
+const button_states = [
+    {
+        stateName: 'animation-running',
+        icon:      'fa-pause',
+        title:     'Pause Animation',
+        onClick: function(btn) {
+            // pauseFlow();
+            // dotLayer.pause();
+            // appState.paused = true;
+            // appState.update();
+            btn.state('animation-paused');
+            }
+    },
+
+    {
+        stateName: 'animation-paused',
+        icon:      'fa-play',
+        title:     'Resume Animation',
+        onClick: function(btn) {
+            // appState.paused = false;
+            // dotLayer.animate();
+            // appState.update();
+            btn.state('animation-running');
+        }
+    }
+];
+
+
+// add play/pause button to the map
+L.easyButton({
+    states: appState.paused? button_states.reverse() : button_states,
+}).addTo(map);
+
 
 
 /* Update the browser's current URL
     This gets called when certain app parameters change
 */
-function updateURL(event){
+function updateURL(){
     const  params = {};
 
     switch (Dom.get("#select_type")) {
@@ -456,9 +426,7 @@ function updateURL(event){
             break;
 
         case "activity-ids":
-            if (ids) {
                 params["id"] = Dom.get("#activity_ids");
-            }
             break;
 
         case "days":
@@ -504,7 +472,7 @@ function updateURL(event){
         ([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`
     ).join('&'),
 
-    newURL = `${USER_ID}?${paramsString}`;
+    newURL = `${targetUser.id}?${paramsString}`;
 
     if (appState.url != newURL) {
         // console.log(`pushing: ${newURL}`);
@@ -520,7 +488,7 @@ function updateURL(event){
     pan and zoom to accomodate all activities being rendered.
  */
 Dom.addEvent("#autozoom", "change", updateURL);
-map.on('moveend', e => {
+map.on('moveend', () => {
     if (!Dom.prop("#autozoom", 'checked')) {
         updateURL();
     }
@@ -566,7 +534,7 @@ map.on('baselayerchange', function (e) {
 // });
 
 
-window.addEventListener('beforeunload', function (event) {
+window.addEventListener('beforeunload', () => {
     if (navigator.sendBeacon) {
         if (appState.wskey) {
             navigator.sendBeacon(BEACON_HANDLER_URL, appState.wskey);

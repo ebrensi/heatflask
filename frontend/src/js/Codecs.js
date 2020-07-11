@@ -27,7 +27,6 @@ const Polyline = {
         let index = 0,
             lat = 0,
             lng = 0,
-            coordinates = [],
             shift = 0,
             result = 0,
             byte = null,
@@ -412,7 +411,7 @@ const VByte =  {
 
     // ***** For Signed Integers *********
     _zigzag_encode: function(val) {
-      return (val + val) ^ (val >> 31);;
+      return (val + val) ^ (val >> 31);
     },
 
     _zigzag_decode: function(val) {

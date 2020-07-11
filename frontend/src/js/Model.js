@@ -1,95 +1,108 @@
 /*
- * Model.js --  This module holds all parameters for the front end client,
-        beginning with those specified by the current URL in the browser.
+ * Model.js -- This module defines the parameters of the Heatflask client,
+ *    beginning with those specified by the current URL in the browser.
  */
 
-
-import {
-    ONLOAD_PARAMS,
-    SELF,
-    LOGGED_IN,
-    SHARE_STATUS_UPDATE_URL,
-    FLASH_MESSAGES,
-    SHARE_PROFILE,
-    USERPIC,
-    ADMIN,
-    ACTIVITY_LIST_URL
-} from "./Constants.js";
+import { CURRENT_USER } from "./Init.js";
 
 
-/* Define the URL query set and defaults
-    For each possible url parameter, we give possible alternative names
-     and a default value.
-
-    Example: the 3 most recent activities can be specified by
-        ?limit=3, or ?l=3, and if not specified it defaults to 10.
-*/
-const QUERY_SPEC = {
-    date1: [["after", "date1", "a"], null],
-    date2: [["before", "date2", "b"], null],
-    preset: [["days", "preset", "d"], null],
-    limit: [["limit", "l"], 10],
-    activity_ids: [["id", "ids"], null],
-    map_center: [["center"], [27.53, 1.58]],
-    map_zoom: [["zoom", "z"], 3],
-    lat: [["lat", "x"], null],
-    lng: [["lng", "y"], null],
-    autozoom: [["autozoom", "az"], true],
-    c1: [["c1"], null],
-    c2: [["c2"], null],
-    sz: [["sz"], null],
-    start_paused: [["paused", "p"], false],
-    shadows: [["sh", "shadows"], true],
-    baselayer: [["baselayer", "map", "bl"], null]
+/* Establish the initial conditions for this model, starting with defaults */
+const params = {
+    date1: null,
+    date2: null,
+    days: null,
+    limit: 10,
+    ids: null,
+    zoom: 3,
+    lat: 27.53,
+    lng: 1.58,
+    autozoom: true,
+    c1: null,
+    c2: null,
+    sz: null,
+    paused: false,
+    shadows: true,
+    paths: true,
+    baselayer: null
 };
 
-/* set up an initial query with only defaults */
-const query = {};
-for (const field in QUERY_SPEC) {
-    query[field] = QUERY_SPEC[field][1];
-}
+/* For each parameter, we accept different possible names */
+const paramNames = {
+    date1: ["start", "after", "date1", "a"],
+    date2: ["end", "before", "date2", "b"],
+    days: ["days", "preset", "d"],
+    limit: ["limit", "l"],
+    ids: ["id", "ids"],
+    zoom: ["zoom", "z"],
+    lat: ["lat", "x"],
+    lng: ["lng", "y"],
+    autozoom: ["autozoom", "az"],
+    c1: ["c1"],
+    c2: ["c2"],
+    sz: ["sz"],
+    paused: ["paused", "pu"],
+    shadows: ["sh", "shadows"],
+    paths: ["pa", "paths"],
+    baselayer: ["baselayer", "map", "bl"]
+};
 
 /* get the parameters specified in the browser's current url */
 const urlArgs = new URL(window.location.href).searchParams;
-for (const [qk, qv] of urlArgs.entries()) {
-    for (const [sk, sv] of Object.entries(QUERY_SPEC)) {
-        const pnames = sv[0];
-        if (pnames.includes(qk)) {
-            query[sk] = qv;
-            delete QUERY_SPEC[sk]; // this field is set no need checking it again
+for (const [uKey, value] of urlArgs.entries()) {
+    for (const [pKey, pNames] of Object.entries(paramNames)) {
+        if (pNames.includes(uKey)) {
+            params[pKey] = value;
+            delete paramNames[pKey]; // this field is set no need to check it again
             break;
         }
     }
 }
+// TODO: parse a geohash location parameter
 
 
-if (query.lat && query.lng) {
-    query.map_center = [query.lat, query.lng];
-}
+/* target_user is the user whose activities we will be viewing */
+const targetUser = window.location.pathname.substring(1);
 
+
+/* App parameters are separate from user query paramters
+    we set up the app state this way to allow for
+    multi-user views in the future */
 export const appState = {
-    /* target_user is the user whose activities we are viewing */
-    target_user: {
-        id: window.location.pathname.substring(1) || null
-    },
 
-    /* current user is the user who is currently logged-in */
-    current_user: SELF? target_user : null,
+    /* current user is the user who is currently logged-in, if any */
+    currentUser: CURRENT_USER,
 
     items: new Map(),
 
-    paused: query.start_paused,
+    params: {
+        center: [params.lat, params.lng],
+        zoom: params.zoom,
+        autozoom: params.autozoom,
+        c1: params.c1,
+        c2: params.c2,
+        sz: params.sz,
+        paused: params.paused,
+        shadows: params.shadows,
+        paths: params.paths,
+        baselayer: params.baselayer
+    },
 
-    query: query
+    query: {
+        user: targetUser,
+        date1: params.date1,
+        date2: params.date2,
+        days: params.days,
+        limit: params.limit,
+        ids: params.ids
+    }
 };
 
 
 console.log("initial appstate: ", appState);
 
 
-  /*
-   * Selections
-   */
+
+ /*
   function selectedIDs(){
     return Array.from(appState.items.values())
                 .filter(A => A.selected)
@@ -170,4 +183,4 @@ function getBounds(ids) {
 
 
 
-
+*/
