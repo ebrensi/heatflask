@@ -4,7 +4,7 @@ Heatflask is currently undergoing a major re-write, which is taking place on the
 
 This is the repository for the server-side and client-side code for the Heatflask web-application currently running at at https://www.heatflask.com.  
  ![]( ![logo](https://github.com/ebrensi/heatflask/blob/ebrensi-patch-1/heatflask/static/logo.png =100)
-
+<img src="/blob/ebrensi-patch-1/heatflask/static/logo.png" alt="logo" style="width:200px;"/>
 #### Cyclic animated visualizations from Strava activity data
 
 See a live demo with data at https://www.heatflask.com/demo
