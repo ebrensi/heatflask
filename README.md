@@ -1,3 +1,4 @@
+Thanks for coming to pay a visit.
 # [<img src="/heatflask/static/logo.png" alt="logo" width=200/>](https://www.heatflask.com) #
 ## ☠ The `master` branch has been DEPRECATED! ☠ ##
 
