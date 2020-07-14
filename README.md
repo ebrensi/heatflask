@@ -40,5 +40,6 @@ Copyright (c) 2016-2020 [Efrem Rensi](mailto:info@heatflask.com)
 
 ![alt text](docs/gif1.gif)
 
+[1.1]: http://i.imgur.com/tXSoThF.png (twitter icon with padding)
 [1]: http://www.twitter.com/heatflask
 
