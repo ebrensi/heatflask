@@ -20,7 +20,9 @@ The backend is stable for now as I am focused on client-side re-factoring and re
     * If `clientId` is in the database then the client is logged in.  If that client has a WebSocket connection open, We send it whatever data it requests.
   * For login, the client asychronously requests our `/authorize` endpoint, which forwards it to a Strava authentication dialog.  The user authenticates with Strava, and Strava sends us (the backend) notification identified with `clientId` by hitting our `/authorized` endpoint.  We create a `clientId` key in the login database.
   
-I would like for the heatflask client and server be decoupled in this way so that people can independently develop their own clients, which can access the backend without having been served by the backend. 
+I would like for the heatflask client and server be decoupled in this way so that people can independently develop their own clients, which can access the backend without having been served by the backend.
+
+Feel free to communicate with me via [issues](https://github.com/ebrensi/heatflask/issues), by [email](mailto:info@heatflask.com) with questions or suggestions.
 
 ## Documentation
 There is none.  But when there is, it will be [here](docs/docs.md).
@@ -33,6 +35,6 @@ Any user is free to suggest modifications, fork this repo, and/or make pull requ
 
 Copyright (c) 2016-2020 [Efrem Rensi](mailto:info@heatflask.com)
 
-Feel free to [contact me](mailto:info@heatflask.com) with questions or suggestions
+
 
 ![alt text](docs/gif1.gif)
