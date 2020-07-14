@@ -1,22 +1,29 @@
-# [Heatflask](https://www.heatflask.com)
-## ☠ The `master` branch has been DEPRECATED! ☠ ##
-Heatflask is currently undergoing a major re-write, which is taking place on the `bundle` branch.  
-### Please do not fork or make any pull requests until an official release ###
+# Heatflask -- Making dataviz great again
+[<img src="/heatflask/static/logo.png" alt="logo" width=200/>](https://www.heatflask.com)
+## ☠ The `master` branch has been DEPRECATED! ☠
 
+### Heatflask is currently undergoing a major re-write, which is taking place on the [`bundle`](https://github.com/ebrensi/heatflask/tree/bundle) branch.
 
-This is the repository for the server-side and client-side code for the Heatflask web-application currently running at at https://www.heatflask.com.  
-
-#### Cyclic animated visualizations from Strava activity data
-
-See a live demo with data at https://www.heatflask.com/demo
-
-Currently it supports [Strava](https://www.strava.com) data and the [leaflet.js](http://leafletjs.com) map API.
+This is the the server-side and client-side code repository for the Heatflask web-application currently serving at at https://www.heatflask.com.  
+ 
 
 ## Contributing
-If you see something you'd like to improve, go ahead and create an issue and/or make a pull request. Contributions welcome!
+### 🙏🏽 Backend help wanted
+### Please do not make any pull requests for client-side code ###
+I am hard at work on heatflask v0.5.0 which I hope to release soon.
+
+The backend is stable for now as I am focused on client-side re-factoring and re-writing on the [`bundle`](https://github.com/ebrensi/heatflask/tree/bundle) branch.  This offers opportunity for someone to contribute to backend development.  It provides a HTTPS and WebSocket API for clients to authenticate and access data.  It currently has the capability to retrieve multi-user queries but the current stable front-end is not taking advantage of that.  Currently the way it works is that the backend serves Jinja2 templated html to the client.  Instead I would like to have the html file be static, so that the authentication happens not on html retrieval but after the WebSocket connection is established. We will get rid of the `flask-login` dependency and authenticate like this:
+  * client requests `/{userid}?{params}`
+  * backend returns a static html file (the same one regardless of `userid` and `params`)
+  * client establishes a WebSocket connection with the backend and sends a query specified by `userid` and `params`. The query contains a `clientId` field that may be blank.
+    * If the `clientId` is blank or not in our database then the client's user is not logged in.  We return activity data if the owner allows access, but not user profile data that goes in the profile tab.  Any query for user profile data will be rejected.  The user can log in manually.
+    * If `clientId` is in the database then the client is logged in.  If that client has a WebSocket connection open, We send it whatever data it requests.
+  * For login, the client asychronously requests our `/authorize` endpoint, which forwards it to a Strava authentication dialog.  The user authenticates with Strava, and Strava sends us (the backend) notification identified with `clientId` by hitting our `/authorized` endpoint.  We create a `clientId` key in the login database.
+  
+I would like for the heatflask client and server be decoupled in this way so that people can independently develop their own clients, which can access the backend without having been served by the backend. 
 
 ## Documentation
-App usage instructions can be found [here](docs/docs.md).
+There is none.  But when there is, it will be [here](docs/docs.md).
 
 ## License
 
