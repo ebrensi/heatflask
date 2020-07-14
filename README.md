@@ -1,8 +1,9 @@
-# [Heatflask](https://www.heatflask.com) ![logo](https://github.com/ebrensi/heatflask/blob/ebrensi-patch-1/heatflask/static/logo.png | width=100)
+# [Heatflask](https://www.heatflask.com)
 ## ☠ The `master` branch has been DEPRECATED! ☠ ##
 Heatflask is currently undergoing a major re-write, which is taking place on the [`bundle`](https://github.com/ebrensi/heatflask/tree/bundle) branch.  
 
 This is the repository for the server-side and client-side code for the Heatflask web-application currently running at at https://www.heatflask.com.  
+ ![logo](https://github.com/ebrensi/heatflask/blob/ebrensi-patch-1/heatflask/static/logo.png | width=100)
 
 #### Cyclic animated visualizations from Strava activity data
 
