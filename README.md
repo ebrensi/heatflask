@@ -1,16 +1,15 @@
-# [Heatflask](https://www.heatflask.com)
+# [<img src="/heatflask/static/logo.png" alt="logo" width=200/>](https://www.heatflask.com) #
 ## ☠ The `master` branch has been DEPRECATED! ☠ ##
 Heatflask is currently undergoing a major re-write, which is taking place on the [`bundle`](https://github.com/ebrensi/heatflask/tree/bundle) branch.  
 
 This is the repository for the server-side and client-side code for the Heatflask web-application currently running at at https://www.heatflask.com.  
  
-<img src="/heatflask/static/logo.png" alt="logo" width=200/>
 
-#### Cyclic animated visualizations from Strava activity data
+
+
 
 See a live demo with data at https://www.heatflask.com/demo
 
-Currently it supports [Strava](https://www.strava.com) data and the [leaflet.js](http://leafletjs.com) map API.
 
 ## Contributing
 ### Do not bother to fork or make any pull requests for client-side code until the official v0.5.0 release ###
