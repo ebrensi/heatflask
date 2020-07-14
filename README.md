@@ -22,7 +22,7 @@ The backend is stable for now as I am focused on client-side re-factoring and re
   
 I would like for the heatflask client and server be decoupled in this way so that people can independently develop their own clients, which can access the backend without having been served by the backend.
 
-Feel free to communicate with me via [issues](https://github.com/ebrensi/heatflask/issues), by [email](mailto:info@heatflask.com) with questions or suggestions.
+Feel free to communicate with me via [issues](https://github.com/ebrensi/heatflask/issues), by [email](mailto:info@heatflask.com), or [![Twitter][1.1]][1].
 
 ## Documentation
 There is none.  But when there is, it will be [here](docs/docs.md).
@@ -38,3 +38,7 @@ Copyright (c) 2016-2020 [Efrem Rensi](mailto:info@heatflask.com)
 
 
 ![alt text](docs/gif1.gif)
+
+[1.1]: http://i.imgur.com/wWzX9uB.png (Heatflask on Twitter)
+[1]: http://www.twitter.com/heatflask
+
