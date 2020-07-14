@@ -1,18 +1,15 @@
 # [<img src="/heatflask/static/logo.png" alt="logo" width=200/>](https://www.heatflask.com) #
 ## ☠ The `master` branch has been DEPRECATED! ☠ ##
-Heatflask is currently undergoing a major re-write, which is taking place on the [`bundle`](https://github.com/ebrensi/heatflask/tree/bundle) branch.  
 
-This is the repository for the server-side and client-side code for the Heatflask web-application currently running at at https://www.heatflask.com.  
+### Heatflask is currently undergoing a major re-write, which is taking place on the [`bundle`](https://github.com/ebrensi/heatflask/tree/bundle) branch.###
+
+This is the the server-side and client-side code repository for the Heatflask web-application currently serving at at https://www.heatflask.com.  
  
 
-
-
-
-See a live demo with data at https://www.heatflask.com/demo
-
-
 ## Contributing
-### Do not bother to fork or make any pull requests for client-side code until the official v0.5.0 release ###
+### Please do not make any pull requests for client-side code ###
+I am hard at work on heatflask v0.5.0 which I hope to release soon.
+
 The backend is stable for now but the client side is undergoing major re-factoring and re-writing on the [`bundle`](https://github.com/ebrensi/heatflask/tree/bundle) branch.  The backend code works fine but would benefit from refactoring or re-writing.  It provides a HTTPS and WebSocket API for clients to authenticate and access data.  It currently has the capability to retrieve multi-user queries but the current stable front-end is not taking advantage of that.  Currently the way it works is that the backend serves Jinja2 templated html to the client.  What I would like to do instead in have the html file be static, so that the authentication happens not on html retrieval but after the WebSocket connection is established. We will get rid of the `flask-login` dependency and authenticate like this:
   * client requests `/{userid}?{params}`
   * backend returns a static html file (the same one regardless of `userid` and `params`)
