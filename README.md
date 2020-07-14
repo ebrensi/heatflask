@@ -8,7 +8,7 @@ This is the the server-side and client-side code repository for the Heatflask we
  
 
 ## Contributing
-### Backend help wanted
+### 🙏🏽 Backend help wanted
 ### Please do not make any pull requests for client-side code ###
 I am hard at work on heatflask v0.5.0 which I hope to release soon.
 
