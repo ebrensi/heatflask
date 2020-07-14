@@ -1,13 +1,14 @@
-# Heatflask -- Making dataviz great again #
+# Heatflask -- Making dataviz great again
 [<img src="/heatflask/static/logo.png" alt="logo" width=200/>](https://www.heatflask.com)
-## ☠ The `master` branch has been DEPRECATED! ☠ ##
+## ☠ The `master` branch has been DEPRECATED! ☠
 
-### Heatflask is currently undergoing a major re-write, which is taking place on the [`bundle`](https://github.com/ebrensi/heatflask/tree/bundle) branch.###
+### Heatflask is currently undergoing a major re-write, which is taking place on the [`bundle`](https://github.com/ebrensi/heatflask/tree/bundle) branch.
 
 This is the the server-side and client-side code repository for the Heatflask web-application currently serving at at https://www.heatflask.com.  
  
 
 ## Contributing
+### Backend help wanted
 ### Please do not make any pull requests for client-side code ###
 I am hard at work on heatflask v0.5.0 which I hope to release soon.
 
