@@ -25,17 +25,49 @@ import {
     CLIENT_ID
 } from "./Init.js";
 
-import { appState } from "./Model.js";
+import appState from "./Model.js";
 
 import * as Dom from "./Dom.js";
+
 import { map, showErrMessage } from "./MapAPI.js";
-import { DotLayer } from "./DotLayer/DotLayer.js";
+
+import { dotLayer } from "./DotLayerAPI.js";
+
 import strava_login_img from "../images/btn_strava_connectwith_orange.svg";
+
 import paypalButtonHtml from "../html/paypal-button.html";
 
-const params = appState.params;
-const targetUser = appState.targetUser;
-const currentUser = appState.currentUser;
+
+
+
+/* currentUser will be null if not logged-in */
+let { currentUser } = appState;
+const { vparams, query } = appState;
+
+
+/* TODO: have two UI submodules: UI-simple.js (single) and
+                                 UI-complex.js (multi-user)
+
+    one of which to be dynamically imported depending on the data query.
+
+  right now we are only doing the single target-user UI.
+*/
+
+/*
+ queryObj[USER_ID] = {
+            limit: (type == "activities")? Math.max(1, +num) : undefined,
+            after: date1? date1 : undefined,
+            before: (date2 && date2 != "now")? date2 : undefined,
+            activity_ids: idString?
+                Array.from(new Set(idString.split(/\D/).map(Number))) : undefined,
+            exclude_ids: to_exclude.length?  to_exclude: undefined,
+            streams: true
+    };
+*/
+
+const targetUser = {
+    id: query.userid
+}
 
 // SELF indicates whether the target user is also the current user
 const SELF = currentUser && (currentUser.id === targetUser.id) || (currentUser.username === targetUser.id);
@@ -70,8 +102,8 @@ Dom.prop("#zoom-to-selection", "checked", false);
 Dom.hide(".abort-render");
 Dom.hide(".progbar");
 
-Dom.prop("#autozoom", 'checked', params["autozoom"]);
-Dom.set("#activity_ids", params["ids"]);
+Dom.prop("#autozoom", 'checked', vparams.autozoom);
+Dom.set("#activity_ids", query.ids);
 
 let nTabs;
 
@@ -81,6 +113,10 @@ let nTabs;
 if (currentUser) {
     /* the current user is authenticated so we enable the profile tab
        and enable those controls
+
+       currentUser attribute names (except for ones we create here) are strings
+       defined by the backend server so we have to address them by their string
+       literals so the references won't get renamed by an optimizer during bundling
     */
     Dom.prop("#share", "checked", currentUser["share_profile"]);
     Dom.show(".logged-in");
@@ -91,6 +127,7 @@ if (currentUser) {
     Dom.prop(".avatar", "src", currentUser["profile"]);
 
     currentUser.url = MAKE_USER_URLS(currentUser.id);
+
     // Set a listener to change user's account to public or private
     //   if they change that setting
     Dom.addEvent("#share", "change", async function() {
@@ -161,18 +198,18 @@ const date1picker = makeDatePicker('#date1'),
       date2picker = makeDatePicker('#date2');
 
 // Set up form based on what kind of query this is
-if (params["activity_ids"]) {
-    Dom.set("#activity_ids", params["activity_ids"]);
+if (query.ids) {
+    Dom.set("#activity_ids", query.ids);
     Dom.set("#select_type", "activity_ids");
-} else if (params["limit"]) {
-    Dom.set("#num", params["limit"]);
+} else if (query["limit"]) {
+    Dom.set("#num", query.limit);
     Dom.set("#select_type", "activities");
-} else if (params["preset"]) {
-    Dom.set("#num", params["preset"]);
+} else if (query["preset"]) {
+    Dom.set("#num", query.days);
     Dom.set("#select_type", "days");
 } else {
-    Dom.set('#date1', params["date1"]);
-    Dom.set('#date2', params["date2"]);
+    Dom.set('#date1', query.date1);
+    Dom.set('#date2', query.date2);
     Dom.set('#preset', "");
 }
 
@@ -181,40 +218,54 @@ function formatQueryForm() {
     const num = Dom.get("#num"),
           type = Dom.get("#select_type");
 
-    if (type === "days"){
-        Dom.hide(".date-select");
-        Dom.hide("#id_select");
-        Dom.show("#num_field");
-        Dom.set('#date2', "now");
-        date2picker.gotoToday();
-        date2picker.setEndRange(new Date());
+    query.type = type;
 
-        let d = new Date();
-        d.setDate(d.getDate()-num);
-        Dom.set('#date1', d.toISOString().split('T')[0] );
-        date1picker.gotoDate(d);
-        date1picker.setStartRange(d);
+    let now, then;
 
-    } else if (type === "activities") {
-        Dom.hide(".date-select");
-        Dom.hide("#id_select");
-        Dom.show("#num_field");
-        Dom.set('#date1', "");
-        Dom.set('#date2', "now");
-        date2picker.gotoToday();
-    }
-    else if (type === "activity_ids") {
-        Dom.hide(".date-select");
-        Dom.hide("#num_field");
-        Dom.show("#id_select");
-    } else {
-        Dom.show(".date-select");
-        Dom.set("#num", "");
-        Dom.hide("#num_field");
-        Dom.hide("#id_select");
+    switch (type) {
+
+        case "days":
+            Dom.hide(".date-select");
+            Dom.hide("#id_select");
+            Dom.show("#num_field");
+            Dom.set('#date2', "now");
+            date2picker.gotoToday();
+            now = new Date();
+            date2picker.setEndRange(now);
+            query.date2 = now;
+
+            then = new Date();
+            then.setDate(now.getDate()-num);
+            Dom.set('#date1', then.toISOString().split('T')[0] );
+            date1picker.gotoDate(then);
+            date1picker.setStartRange(then);
+            query.date1 = then;
+            break;
+
+        case "activities":
+            Dom.hide(".date-select");
+            Dom.hide("#id_select");
+            Dom.show("#num_field");
+            Dom.set('#date1', "");
+            Dom.set('#date2', "now");
+            query.limit = num;
+            date2picker.gotoToday();
+            break;
+
+        case "activity-ids":
+            Dom.hide(".date-select");
+            Dom.hide("#num_field");
+            Dom.show("#id_select");
+            break;
+
+        case "date_range":
+            Dom.show(".date-select");
+            Dom.set("#num", "");
+            Dom.hide("#num_field");
+            Dom.hide("#id_select");
+            break;
     }
 }
-
 
 // initial format of the Query form
 formatQueryForm();
@@ -224,13 +275,6 @@ Dom.addEvent(".preset", "change", formatQueryForm);
 
 
 // ---------------------------------------------------------
-
-/*
- * instantiate a DotLayer object and add it to the map
- */
-export const dotLayer = new DotLayer({
-    startPaused: params["paused"]
-}).addTo(map);
 
 
 // Initialize knob controls for dotlayer
@@ -268,13 +312,13 @@ function makeKnob(selector, options) {
     url params over-ride default values */
 const dotConstants = dotLayer.getDotSettings();
 
-const C1 = params["C1"] || dotConstants["C1"],
-      C2 = params["C2"] || dotConstants["C2"],
-      SZ = params["SZ"] || dotConstants["dotScale"];
+const C1 = vparams.c1 || dotConstants["C1"],
+      C2 = vparams.c2 || dotConstants["C2"],
+      SZ = vparams.sz || dotConstants["dotScale"];
 
-dotConstants["C1"] = params["C1"] = C1;
-dotConstants["C2"] = params["C2"] = C2;
-dotConstants["dotScale"] = params["SZ"] = SZ;
+dotConstants["C1"] = vparams.c1 = C1;
+dotConstants["C2"] = vparams.c2 = C2;
+dotConstants["dotScale"] = vparams.sz = SZ;
 
 const SPEED_SCALE = 5.0,
       SEP_SCALE = {m: 0.15, b: 15.0};
@@ -285,64 +329,70 @@ const SPEED_SCALE = 5.0,
 // Dom.set("#dotAlpha", ds["dotAlpha"]);
 
 // Instantiate knob controls with initial values and add them to the DOM
-makeKnob('#dot-controls1', {
-    width: "150",
-    height: "150",
-    "label": "Speed"
-}).addListener(knobListener);
+const knobs = {
+    timeScale: makeKnob('#dot-controls1', {
+        width: "150",
+        height: "150",
+        "label": "Speed"
+    }),
 
-makeKnob('#dot-controls1', {
-    width: "150",
-    height: "150",
-    "label": "Sparcity"
-}).addListener(knobListener);
+    period: makeKnob('#dot-controls1', {
+        width: "150",
+        height: "150",
+        "label": "Sparcity"
+    }),
 
-makeKnob('#dot-controls2', {
-    width: "100",
-    height: "100",
-    valMin: 0,
-    valMax: 10,
-    "label": "Alpha"
-}).addListener(knobListener);
+    dotAlpha: makeKnob('#dot-controls2', {
+        width: "100",
+        height: "100",
+        valMin: 0,
+        valMax: 10,
+        "label": "Alpha"
+    }),
 
-makeKnob('#dot-controls2', {
-    width: "100",
-    height: "100",
-    valMin: 0,
-    valMax: 10,
-    "label": "Size"
-}).addListener(knobListener);
+    dotSize: makeKnob('#dot-controls2', {
+        width: "100",
+        height: "100",
+        valMin: 0,
+        valMax: 10,
+        "label": "Size"
+    })
+};
 
+knobs.speed.setValue( Math.sqrt(C2) / SPEED_SCALE );
+knobs.period.setValue( (Math.log2(C1) - SEP_SCALE.b) / SEP_SCALE.m );
+knobs.dotSize.setValue(SZ);
+knobs.dotAlpha.setValue(1);
 
 function knobListener(knob, val) {
-    let newVal,
-        updatePeriod;
+    let updatePeriod;
 
     const knobName = knob['_properties']['label'];
 
     switch (knobName) {
         case "Speed":
-            newVal = val * val * SPEED_SCALE;
-            dotLayer.updateDotSettings({C2: newVal});
-            console.log("C2: "+newVal);
+            vparams.c2 = val * val * SPEED_SCALE;
+            dotLayer.updateDotSettings({C2: vparams.c2});
+            console.log("C2: "+vparams.c2);
             updatePeriod = true;
         break;
 
         case "Sparcity":
-            newVal = Math.pow(2, val * SEP_SCALE.m + SEP_SCALE.b);
-            dotLayer.updateDotSettings({C1: newVal});
-            console.log("C1: "+newVal);
+            vparams.c1 = Math.pow(2, val * SEP_SCALE.m + SEP_SCALE.b);
+            dotLayer.updateDotSettings({C1: vparams.c1});
+            console.log("C1: "+vparams.c1);
             updatePeriod = true;
         break;
 
         case "Alpha":
-            newVal = val / 10;
-            dotLayer.updateDotSettings({alphaScale: newVal});
+            vparams.alpha = val / 10;
+            dotLayer.updateDotSettings({alphaScale: vparams.alpha});
             dotLayer.drawPaths();
-            console.log("alpha: "+newVal);
+            console.log("alpha: "+vparams.alpha);
         break;
 
         case "Size":
+            vparams.sz = val;
             dotLayer.updateDotSettings({dotScale: val});
             console.log("size: "+val);
         break;
@@ -357,22 +407,31 @@ function knobListener(knob, val) {
 }
 
 
+for (const knob of Object.values(knobs)) {
+    knob.addListener(knobListener);
+}
+
+
 
 /* initialize shadow setting and change event */
-const shadows = params["shadows"];
+const shadows = vparams["shadows"];
 Dom.prop("#shadows", "checked", shadows);
 dotLayer.updateDotSettings(dotConstants, {"enabled": shadows});
 Dom.addEvent("#shadows", "change", (e) => {
-    dotLayer.updateDotSettings(null, {"enabled": e.target.checked})
+    const enabled = e.target.checked;
+    dotLayer.updateDotSettings(null, {"enabled": enabled});
+    vparams["shadows"] = enabled;
+    updateURL();
 });
 
 /* initialize show-paths setting and change event */
-const paths = params["paths"]
+const paths = vparams["paths"]
 Dom.prop("#showPaths", "checked", paths);
 dotLayer.options.showPaths = paths;
-Dom.addEvent("#showPaths", "change", function(){
-     dotLayer.options.showPaths = Dom.prop("#showPaths", "checked");
-     dotLayer._redraw();
+Dom.addEvent("#showPaths", "change", (e) => {
+    dotLayer.options.showPaths = vparams.paths = e.target.checked;
+    dotLayer._redraw();
+    updateURL();
 });
 
 
@@ -386,9 +445,9 @@ const button_states = [
         title:     'Pause Animation',
         onClick: function(btn) {
             // pauseFlow();
-            // dotLayer.pause();
-            // appState.paused = true;
-            // appState.update();
+            dotLayer.pause();
+            vparams.paused = true;
+            updateURL();
             btn.state('animation-paused');
             }
     },
@@ -398,9 +457,9 @@ const button_states = [
         icon:      'fa-play',
         title:     'Resume Animation',
         onClick: function(btn) {
-            // appState.paused = false;
-            // dotLayer.animate();
-            // appState.update();
+            vparams.paused = false;
+            dotLayer.animate();
+            updateURL();
             btn.state('animation-running');
         }
     }
@@ -409,7 +468,7 @@ const button_states = [
 
 // add play/pause button to the map
 L.easyButton({
-    states: appState.paused? button_states.reverse() : button_states,
+    states: vparams.paused? button_states.reverse() : button_states,
 }).addTo(map);
 
 
@@ -422,21 +481,21 @@ function updateURL(){
 
     switch (Dom.get("#select_type")) {
         case "activities":
-            params["limit"] = Dom.get("#num");
+            params["limit"] = query.limit;
             break;
 
         case "activity-ids":
-                params["id"] = Dom.get("#activity_ids");
+                params["id"] = query.ids;
             break;
 
         case "days":
-            params["preset"] = Dom.get("#num");
+            params["preset"] = query.days;
             break;
 
         case "date-range":
-            params["after"] = appState.query.after;
-
-            if (appState.query.before !== "now") {
+            params["after"] = query.date1;
+//resume here
+            if (query.before !== "now") {
                 params["before"] = appState.query.before;
             }
     }
@@ -546,6 +605,7 @@ window.addEventListener('beforeunload', () => {
     //     sock.close()
     // }
 });
+
 
 
 

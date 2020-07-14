@@ -3,7 +3,6 @@
   *   that don't fit anywhere else
   */
 
-
 // Add .pad method to Number objects
 Number.prototype.pad = function(size) {
   let s = String(this);

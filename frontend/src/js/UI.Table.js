@@ -106,7 +106,7 @@ let tableColumns = [
     };
 
 
-function makeTable(items) {
+export function makeTable(items) {
     const colData = [];
 
     for (const id of appState.items.keys()) {

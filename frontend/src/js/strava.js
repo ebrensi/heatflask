@@ -61,11 +61,11 @@ export const ATYPE = {
         return spec[1];
     },
 
-    specs: function(A) {
-        const atype = A.type.toLowerCase(),
+    specs: function(type) {
+        const atype = type.toLowerCase(),
               spec = this._specs[atype] || this._specs[undefined];
 
-        return {"atype": spec[0], "pathColor": spec[1], "type": spec[2] || A.type}
+        return {vtype: spec[0], pathColor: spec[1], type: spec[2] || type}
     }
 
 };

@@ -14,10 +14,8 @@ import "../css/font-awesome-lite.css";
 import "../css/data-table.css";
 
 import * as strava from './strava.js';
-import { WS_SCHEME, DDHHMM, HHMMSS, img, href, noop }   from './appUtil.js';
+import { WS_SCHEME, DDHHMM, HHMMSS, href, noop }   from './appUtil.js';
 import load_ga_object from "./google-analytics.js";
-
-import BitSet from "./BitSet";
 
 
 // _args is an object passed from the server at runtime via
@@ -32,10 +30,8 @@ const R = window["_args"],
 
 const DIST_UNIT = IMPERIAL? 1609.34 : 1000.0,
       DIST_LABEL = IMPERIAL?  "mi" : "km",
-      USER_BASE_URL = "/" + USER_ID,
       WEBSOCKET_URL = WS_SCHEME + window.location.host + "/data_socket",
       BEACON_HANDLER_URL = "/beacon_handler",
-      STRAVA_BUTTON = img("/static/images/strava_button.png"),
       sendBeacon = navigator.sendBeacon || noop;
 
 // Insert Google-Analytics object if this is a production environment
