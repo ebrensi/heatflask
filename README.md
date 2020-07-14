@@ -1,5 +1,5 @@
-Hi, nice to see you.
-# [<img src="/heatflask/static/logo.png" alt="logo" width=200/>](https://www.heatflask.com) #
+# Heatflask #
+[<img src="/heatflask/static/logo.png" alt="logo" width=200/>](https://www.heatflask.com)
 ## ☠ The `master` branch has been DEPRECATED! ☠ ##
 
 ### Heatflask is currently undergoing a major re-write, which is taking place on the [`bundle`](https://github.com/ebrensi/heatflask/tree/bundle) branch.###
