@@ -18,7 +18,7 @@ The backend is stable for now as I am focused on client-side re-factoring and re
   * client establishes a WebSocket connection with the backend and sends a query specified by `userid` and `params`. The query contains a `clientId` field that may be blank.
     * If the `clientId` is blank or not in our database then the client's user is not logged in.  We return activity data if the owner allows access, but not user profile data that goes in the profile tab.  Any query for user profile data will be rejected.  The user can log in manually.
     * If `clientId` is in the database then the client is logged in.  If that client has a WebSocket connection open, We send it whatever data it requests.
-  * For login, the client asychronously requests the our `/authorize` endpoint, which forwards it to a Strava authentication dialog.  The user authenticates with Strava, and Strava sends us (the backend) notification identified with `clientId`.  We create a `clientId` key in the login database.
+  * For login, the client asychronously requests our `/authorize` endpoint, which forwards it to a Strava authentication dialog.  The user authenticates with Strava, and Strava sends us (the backend) notification identified with `clientId` by hitting our `/authorized` endpoint.  We create a `clientId` key in the login database.
   
 I would like for the heatflask client and server be decoupled in this way so that people can independently develop their own clients, which can access the backend without having been served by the backend. 
 
