@@ -1,4 +1,4 @@
-Thanks for coming to pay a visit.
+Hi, nice to see you.
 # [<img src="/heatflask/static/logo.png" alt="logo" width=200/>](https://www.heatflask.com) #
 ## ☠ The `master` branch has been DEPRECATED! ☠ ##
 
