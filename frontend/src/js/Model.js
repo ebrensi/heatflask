@@ -5,53 +5,32 @@
 
 import { CURRENT_USER } from "./Init.js";
 
-/* For each visual parameter, we accept different possible names */
-const paramNames = {
-    date1: ["start", "after", "date1", "a"],
-    date2: ["end", "before", "date2", "b"],
-    days:  ["days", "preset", "d"],
-    limit: ["limit", "l"],
-    ids:   ["id", "ids"],
-    zoom:  ["zoom", "z"],
-    lat:   ["lat", "x"],
-    lng:   ["lng", "y"],
-    autozoom: ["autozoom", "az"],
-    c1:    ["c1"],
-    c2:    ["c2"],
-    sz:    ["sz"],
-    paused:    ["paused", "pu"],
-    shadows:   ["sh", "shadows"],
-    paths:     ["pa", "paths"],
-    alpha:     ["alpha"],
-    baselayer: ["baselayer", "map", "bl"]
+/* For each visual parameter, we accept different possible URL argument names
+    and provide a default value.
+*/
+const paramDefaults = {
+    "date1": [ ["start", "after", "date1", "a"], null ],
+    "date2": [ ["end", "before", "date2", "b"],  null ],
+    "days":  [ ["days", "preset", "d"],          null ],
+    "limit": [ ["limit", "l"],                    10  ],
+    "ids":   [ ["id", "ids"],                     ""  ],
+    "zoom":  [ ["zoom", "z"],                      3  ],
+    "lat":   [ ["lat", "x"],                    27.53 ],
+    "lng":   [ ["lng", "y"],                     1.58 ],
+    "autozoom": [ ["autozoom", "az"],            true ],
+    "c1":    [ ["c1"],                           null ],
+    "c2":    [ ["c2"],                           null ],
+    "sz":    [ ["sz"],                           null ],
+    "paused": [ ["paused", "pu"],               false ],
+    "shadows":[ ["sh", "shadows"],               true ],
+    "paths":  [ ["pa", "paths"],                 true ],
+    "alpha":  [ ["alpha"],                         1  ],
+    "baselayer": [ ["baselayer", "map", "bl"],   null ]
 };
+
 
 /* TODO: add a geohash location parameter.
         maybe replace lat and lng altogether with geohash */
-
-/* Default visual parameters. The default if there are no arguments
-  is the last 10 activities */
-const params = {
-    queryType: 'activities',
-    date1: null,
-    date2: null,
-    days: null,
-    limit: 10,
-    ids: "",
-    zoom: 3,
-    lat: 27.53,
-    lng: 1.58,
-    autozoom: true,
-    c1: null,
-    c2: null,
-    sz: null,
-    paused: false,
-    shadows: true,
-    paths: true,
-    alpha: 1,
-    baselayer: null
-};
-
 
 /* The current url is {domain}{/{userid}}?{urlArgs}.
     modelKey indicates whether this is simple (single target user) view,
@@ -69,6 +48,14 @@ const params = {
 const userid = window.location.pathname.substring(1);
 const urlArgs = new URL(window.location.href).searchParams;
 
+const params = {};
+const paramNames = {};
+
+for (const [key, val] of Object.entries(paramDefaults) ) {
+    paramNames[key] = val[0];
+    params[key] = val[1];
+}
+
 /* parse visual parameters from the url */
 for (const [uKey, value] of urlArgs.entries()) {
     for (const [pKey, pNames] of Object.entries(paramNames)) {
@@ -80,45 +67,41 @@ for (const [uKey, value] of urlArgs.entries()) {
     }
 }
 
-let query;
-
-if (userid) {
-    query = {
-        userid:  userid,
-        date1: params.date1,
-        date2: params.date2,
-        days:  params.days,
-        limit: params.limit,
-        ids:   params.ids
-    };
-} else {
-    query = {
-        key: urlArgs["key"]
-    }
+export const query = {
+    key: urlArgs["key"],
+    userid:  userid,
+    date1: params["date1"],
+    date2: params["date2"],
+    days:  params["days"],
+    limit: params["limit"],
+    ids:   params["ids"]
 }
 
+export const vparams = {
+    center:    [ params["lat"], params["lng"] ],
+    zoom:      params["zoom"],
+    autozoom:  params["autozoom"],
+    c1:        params["c1"],
+    c2:        params["c2"],
+    sz:        params["sz"],
+    paused:    params["paused"],
+    shadows:   params["shadows"],
+    paths:     params["paths"],
+    alpha:     params["alpha"],
+    baselayer: params["baselayer"]
+}
+
+export const items = new Set();
 
 const appState = {
+    items: items,
 
-    /* each item of items will be an activity */
-    items: new Map(),
-
-    /* current user is the user who is currently logged-in, if any */
+    /* current user is the user who is currently logged-in, if any
+        this will be done away with eventually in favor of getting this info
+        after websocket connection */
     currentUser: CURRENT_USER,
 
-    vparams: {
-        center:    [params.lat, params.lng],
-        zoom:      params.zoom,
-        autozoom:  params.autozoom,
-        c1:        params.c1,
-        c2:        params.c2,
-        sz:        params.sz,
-        paused:    params.paused,
-        shadows:   params.shadows,
-        paths:     params.paths,
-        alpha:     params.alpha,
-        baselayer: params.baselayer
-    },
+    vparams: vparams,
 
     query: query
 };
@@ -129,85 +112,3 @@ window["heatflask"] = appState;
 
 export { appState as default }
 
- /*
-  function selectedIDs(){
-    return Array.from(appState.items.values())
-                .filter(A => A.selected)
-                .map(A => A.id );
-  }
-
-  function zoomToSelectedPaths(){
-    // Pan-Zoom to fit all selected activities
-    let selection_bounds = latLngBounds();
-    appState.items.forEach((A, id) => {
-        if (A.selected) {
-            selection_bounds.extend(A.bounds);
-        }
-    });
-    if (selection_bounds.isValid()) {
-        map.fitBounds(selection_bounds);
-    }
-  }
-
-  function openSelected(){
-    let ids = selectedIDs();
-    if (ids.length > 0) {
-        let url = BASE_USER_URL + "?id=" + ids.join("+");
-        if (appState.paused == true){
-            url += "&paused=1"
-        }
-        window.open(url,'_blank');
-    }
-  }
-
-  function deselectAll(){
-    handle_path_selections(selectedIDs());
-  }
-
-
-function activityDataPopup(id, latlng){
-    let A = appState.items.get(id),
-        d = A.total_distance,
-        elapsed = util.hhmmss(A.elapsed_time),
-        v = A.average_speed,
-        dkm = +(d / 1000).toFixed(2),
-        dmi = +(d / 1609.34).toFixed(2),
-        vkm,
-        vmi;
-
-    if (A.vtype == "pace"){
-        vkm = util.hhmmss(1000 / v).slice(3) + "/km";
-        vmi = util.hhmmss(1609.34 / v).slice(3) + "/mi";
-    } else {
-        vkm = (v * 3600 / 1000).toFixed(2) + "km/hr";
-        vmi = (v * 3600 / 1609.34).toFixed(2) + "mi/hr";
-    }
-
-    const popupContent = `
-        <b>${A.name}</b><br>
-        ${A.type}:&nbsp;${A.tsLoc}<br>
-        ${dkm}&nbsp;km&nbsp;(${dmi}&nbsp;mi)&nbsp;in&nbsp;${elapsed}<br>
-        ${vkm}&nbsp;(${vmi})<br>
-        View&nbsp;in&nbsp;
-        <a href='https://www.strava.com/activities/${A.id}' target='_blank'>Strava</a>
-        ,&nbsp;
-        <a href='${BASE_USER_URL}?id=${A.id}'&nbsp;target='_blank'>Heatflask</a>
-    `;
-
-    const popup = L.popup().setLatLng(latlng).setContent(popupContent).openOn(map);
-}
-
-
-
-
-function getBounds(ids) {
-    const bounds = latLngBounds();
-    for (const id of ids){
-        bounds.extend( appState.items.get(id).bounds );
-    }
-    return bounds
-}
-
-
-
-*/

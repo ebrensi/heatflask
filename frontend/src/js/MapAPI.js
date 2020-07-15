@@ -13,7 +13,6 @@ import "../../node_modules/sidebar-v2/js/leaflet-sidebar.js";
 
 
 import { tileLayer } from "./TileLayer/TileLayer.Heatflask.js";
-import * as Dom from "./Dom.js";
 import { appState } from "./Model.js";
 
 import strava_logo from "../images/pbs4.png";
@@ -24,6 +23,7 @@ import { MAPBOX_ACCESS_TOKEN } from "./Init.js";
 /*
  * Initialize the Leaflet map object
  */
+
 const params = appState.params;
 
 export const map = new L.Map('map', {
@@ -43,30 +43,17 @@ export const map = new L.Map('map', {
 
 
 // create an empty message box (but don't display anything yet)
-const infoMsgBox = L.control.window(map, {
+export const msgBox1 = L.control.window(map, {
     position: 'top',
-    content: "<div class='msgBox info-message'> Hello </div>",
     visible: false
 });
 
-const errMsgBox = L.control.window(map, {
+
+export const msgBox2 = L.control.window(map, {
     position: 'top',
-    title: "!!",
-    content: "<div class='msgBox error-message'></div>",
     visible: false
 });
 
-function makeMsg(msg, err) {
-    const box = err? errMsgBox : infoMsgBox,
-          selector = err? ".error-message" : ".info-message";
-    Dom.prop(selector, "innerHTML", msg);
-    if (!box.visible) {
-        box.show();
-    }
-}
-
-export const showInfoMessage = msg => makeMsg(msg, false);
-export const showErrMessage  = msg => makeMsg(msg, true);
 
 /*
  * Initialize map Baselayers

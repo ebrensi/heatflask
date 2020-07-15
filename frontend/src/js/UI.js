@@ -29,7 +29,7 @@ import appState from "./Model.js";
 
 import * as Dom from "./Dom.js";
 
-import { map, showErrMessage } from "./MapAPI.js";
+import { map, errMsg } from "./MapAPI.js";
 
 import { dotLayer } from "./DotLayerAPI.js";
 
@@ -37,13 +37,13 @@ import strava_login_img from "../images/btn_strava_connectwith_orange.svg";
 
 import paypalButtonHtml from "../html/paypal-button.html";
 
-
-
+import { makeQuery } from "./UI.DataImport.js";
 
 /* currentUser will be null if not logged-in */
 let { currentUser } = appState;
 const { vparams, query } = appState;
 
+makeQuery()
 
 /* TODO: have two UI submodules: UI-simple.js (single) and
                                  UI-complex.js (multi-user)
@@ -53,17 +53,7 @@ const { vparams, query } = appState;
   right now we are only doing the single target-user UI.
 */
 
-/*
- queryObj[USER_ID] = {
-            limit: (type == "activities")? Math.max(1, +num) : undefined,
-            after: date1? date1 : undefined,
-            before: (date2 && date2 != "now")? date2 : undefined,
-            activity_ids: idString?
-                Array.from(new Set(idString.split(/\D/).map(Number))) : undefined,
-            exclude_ids: to_exclude.length?  to_exclude: undefined,
-            streams: true
-    };
-*/
+
 
 const targetUser = {
     id: query.userid
@@ -82,7 +72,7 @@ if (FLASH_MESSAGES.length > 0) {
         msg += "<li>" + FLASH_MESSAGES[i] + "</li>";
     }
     msg += "</ul>";
-    showErrMessage(msg);
+    errMsg(msg);
 }
 
 targetUser.url = MAKE_USER_URLS(targetUser.id);

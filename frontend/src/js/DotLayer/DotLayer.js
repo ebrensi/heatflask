@@ -1,7 +1,5 @@
 /*
   DotLayer Efrem Rensi, 2020,
-  inspired by L.CanvasLayer by Stanislav Sumbera, 2016, sumbera.com
-  license MIT
 */
 
 import { Layer, Util, DomUtil, Browser, setOptions } from "leaflet";

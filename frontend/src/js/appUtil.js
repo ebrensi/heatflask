@@ -84,3 +84,7 @@ function isMobileDevice() {
 
 export const MOBILE = isMobileDevice();
 
+
+
+
+

@@ -226,3 +226,76 @@ function handle_table_selections( e, dt, type, indexes ) {
 
     // dotLayer.setItemSelect(selections);
 }
+
+
+/*
+  function selectedIDs(){
+    return Array.from(appState.items.values())
+                .filter(A => A.selected)
+                .map(A => A.id );
+  }
+
+  function zoomToSelectedPaths(){
+    // Pan-Zoom to fit all selected activities
+    let selection_bounds = latLngBounds();
+    appState.items.forEach((A, id) => {
+        if (A.selected) {
+            selection_bounds.extend(A.bounds);
+        }
+    });
+    if (selection_bounds.isValid()) {
+        map.fitBounds(selection_bounds);
+    }
+  }
+
+  function openSelected(){
+    let ids = selectedIDs();
+    if (ids.length > 0) {
+        let url = BASE_USER_URL + "?id=" + ids.join("+");
+        if (appState.paused == true){
+            url += "&paused=1"
+        }
+        window.open(url,'_blank');
+    }
+  }
+
+  function deselectAll(){
+    handle_path_selections(selectedIDs());
+  }
+
+
+function activityDataPopup(id, latlng){
+    let A = appState.items.get(id),
+        d = A.total_distance,
+        elapsed = util.hhmmss(A.elapsed_time),
+        v = A.average_speed,
+        dkm = +(d / 1000).toFixed(2),
+        dmi = +(d / 1609.34).toFixed(2),
+        vkm,
+        vmi;
+
+    if (A.vtype == "pace"){
+        vkm = util.hhmmss(1000 / v).slice(3) + "/km";
+        vmi = util.hhmmss(1609.34 / v).slice(3) + "/mi";
+    } else {
+        vkm = (v * 3600 / 1000).toFixed(2) + "km/hr";
+        vmi = (v * 3600 / 1609.34).toFixed(2) + "mi/hr";
+    }
+
+    const popupContent = `
+        <b>${A.name}</b><br>
+        ${A.type}:&nbsp;${A.tsLoc}<br>
+        ${dkm}&nbsp;km&nbsp;(${dmi}&nbsp;mi)&nbsp;in&nbsp;${elapsed}<br>
+        ${vkm}&nbsp;(${vmi})<br>
+        View&nbsp;in&nbsp;
+        <a href='https://www.strava.com/activities/${A.id}' target='_blank'>Strava</a>
+        ,&nbsp;
+        <a href='${BASE_USER_URL}?id=${A.id}'&nbsp;target='_blank'>Heatflask</a>
+    `;
+
+    const popup = L.popup().setLatLng(latlng).setContent(popupContent).openOn(map);
+}
+
+
+
+*/
