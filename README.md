@@ -1,5 +1,5 @@
 # Heatflask -- Making Dataviz Great Again
-[<img src="/heatflask/static/logo.png" alt="logo" width=200/>](https://www.heatflask.com)
+[<img src="/frontend/src/images/static/logo.png" alt="logo" width=200/>](https://www.heatflask.com)
 
 This is the the server-side and client-side code repository for the Heatflask web-application currently serving at at https://www.heatflask.com.  
 
