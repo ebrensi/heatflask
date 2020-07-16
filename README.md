@@ -1,7 +1,7 @@
 # Heatflask -- Making Dataviz Great Again
 [<img src="/heatflask/static/logo.png" alt="logo" width=200/>](https://www.heatflask.com)
 
-## ☠ The `master` branch has been DEPRECATED! ☠
+## ☠ The `master` branch is DEPRECATED! ☠
 
 ### Heatflask is currently undergoing a major re-write, which is taking place on the [`bundle`](https://github.com/ebrensi/heatflask/tree/bundle) branch. See issue [#113](https://github.com/ebrensi/heatflask/issues/113).
 
