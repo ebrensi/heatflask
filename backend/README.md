@@ -14,7 +14,7 @@ pip install -r requirements-dev.txt
 pip install -r requirements.txt
 ```
 
-You will need to have a shell script in the `/backend` directory called `.env`, that contains environment variables specific to your machine:
+You will need to have a shell script in the `[/backend](/backend/)` directory called `.env`, that contains environment variables specific to your machine:
 Here is an example:
 
 ```bash
@@ -56,7 +56,7 @@ export STRAVA_CLIENT_ID="...""
 export STRAVA_CLIENT_SECRET="..."
 ```  
 
-The environment has to specify to the Flask app what kind of environment it is running in: Development, Staging, or Production. See [`config.py`](https://github.com/ebrensi/heatflask/blob/ebrensi-patch-2/backend/config.py).
+The environment has to specify to the Flask app what kind of environment it is running in: Development, Staging, or Production. See [`config.py`](/backend/config.py).
 
 For the development environment, which is what you are, 
 ```
@@ -77,8 +77,13 @@ If you want to run the server completely offline on your machine, set the enviro
 Finally, in your `.env` file (or somewhere) you need to have activated a Python environment with all the dependencies from `requirements.txt`.
 
 
-Then, you should be able to run the backend server on your machine by running [`dev-run`](https://github.com/ebrensi/heatflask/blob/ebrensi-patch-1/dev-run)
+Then, you should be able to run the backend server on your machine by running [`dev-run`](/backend/dev-run)
 
-It will serve at [`http://127.0.0.1:5000`](http://127.0.0.1:5000), but there will only be frontend code to serve if you have set up the [frontend](https://github.com/ebrensi/heatflask/tree/bundle/frontend) set up properly.
+It will serve at [`http://127.0.0.1:5000`](http://127.0.0.1:5000), but there will only be frontend code to serve if you have set up the [frontend](/frontend/) set up properly.
+
+If there are any problems getting this working, please create an [issue](https://github.com/ebrensi/heatflask/issues). Otherwise, Congratulations!🥳
+
+I look forward to your contributions.  Let's make Geospatial Dataviz Great Again!
+
 
 

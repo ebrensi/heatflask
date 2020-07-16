@@ -1,17 +1,15 @@
-# Activities Visualization App
+# Heatflask -- Making Geospatial Dataviz Great Again
+[<img src="/frontend/src/images/logo.png" alt="logo" width=200/>](https://www.heatflask.com)
 
-#### Cyclic animated visualizations from Strava activity data
-#### http://heatflask.com
+This is the the server-side and client-side code repository for the Heatflask web-application.  
 
-See a live demo with data at http://heatflask.com/demo
+## The `master` branch is currently being served at [https://www.heatflask.com](https://www.heatflask.com) but is no longer being developed. We are currently undergoing a major re-write on this ([`bundle`](https://github.com/ebrensi/heatflask/tree/bundle) branch), which will be released as v0.5.0. See issue [#113](https://github.com/ebrensi/heatflask/issues/113).
 
-Currently it supports [Strava](https://www.strava.com) data and the [leaflet.js](http://leafletjs.com) map API.
 
-## Contributing
-If you see something you'd like to improve, go ahead and create an issue and/or make a pull request. Contributions welcome!
+## [Contributing](/contributing.md)
 
 ## Documentation
-App usage instructions can be found [here](docs/docs.md).
+There is none.  But when there is, it will be [here](docs/docs.md).
 
 ## License
 
