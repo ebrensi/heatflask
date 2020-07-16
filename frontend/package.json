@@ -11,7 +11,8 @@
     "build": "parcel build ./src/html/*.html",
     "build-compact": "parcel build ./src/html/*.html --experimental-scope-hoisting",
     "watch": "parcel watch ./src/html/*.html",
-    "check": "npx eslint ./src/js"
+    "check": "npx eslint ./src/js",
+    "documentation": "npx documentation build --shallow ./src/js/**.js -f md -o frontend-dev-docs.md"
   },
   "author": "Efrem Rensi",
   "license": "ISC",
@@ -35,25 +36,27 @@
     "last 2 Chrome versions"
   ],
   "devDependencies": {
+    "documentation": "^13.0.2",
     "eslint": "^7.4.0",
     "parcel-bundler": "^1.12.4",
     "parcel-plugin-nuke-dist": "^1.0.1"
   },
-  "eslintConfig" : {
+  "eslintConfig": {
     "env": {
-        "browser": true,
-        "es2020": true
+      "browser": true,
+      "es2020": true
     },
     "extends": "eslint:recommended",
     "parserOptions": {
-        "ecmaVersion": 11,
-        "sourceType": "module"
+      "ecmaVersion": 11,
+      "sourceType": "module"
     },
     "rules": {
-        "dot-notation": "off"
+      "dot-notation": "off"
     },
-    "ignorePatterns": ["dist/*", "dist_unbundled/*"]
-
+    "ignorePatterns": [
+      "dist/*",
+      "dist_unbundled/*"
+    ]
   }
-
 }

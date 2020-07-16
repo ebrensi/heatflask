@@ -1,21 +1,18 @@
+/** @module */
 
-/**
+
+/** Some functions for decoding Google's Polyline format into numbers
+ * This is adapted from the implementation in Project-OSRM.
  * Based off of [the offical Google document](https://developers.google.com/maps/documentation/utilities/polylinealgorithm)
  *
  * Some parts from [this implementation](http://facstaff.unca.edu/mcmcclur/GoogleMaps/EncodePolyline/PolylineEncoder.js)
  * by [Mark McClure](http://facstaff.unca.edu/mcmcclur/)
  *
  * modified by Efrem Rensi
- *
  */
-
-export {Polyline, StreamRLE, VByte};
-
-const Polyline = {
+export const Polyline = {
     /**
      * Decodes to a [latitude, longitude] coordinates array.
-     *
-     * This is adapted from the implementation in Project-OSRM.
      *
      * @param {String} str
      * @param {Number} precision
@@ -108,11 +105,16 @@ const Polyline = {
     }
 };
 
-const StreamRLE = {
-    // decode a (RLE-encoded) array of successive differences into
-    //  an array of the original values
-    //  This will decode both [1, 2,2,2,2,2,2, 5] and [1, [2,6], 5] into
-    //    [0, 1, 3, 5, 7, 9, 11, 13, 18]
+/**
+ * A collection of functions for decoding RLE encoded lists
+ */
+export const StreamRLE = {
+    /** decode a (RLE-encoded) array of successive differences into
+     *  an array of the original values
+     *  This will decode both [1, 2,2,2,2,2,2, 5] and [1, [2,6], 5] into
+     *    [0, 1, 3, 5, 7, 9, 11, 13, 18]
+     *
+     */
     decodeList: function*(rle_list, first_value=0) {
         let running_sum = first_value,
             len = rle_list.length;
@@ -142,10 +144,12 @@ const StreamRLE = {
       return len
     },
 
-    // We store RLE stream data locally a little differently.
-    //  a run of repeated values is represented by
-    //  3 consecutive values 0, runlength, value
-    //  which allows us to avoid storing negative numbers.
+
+    /** We store RLE stream data locally a little differently.
+     *  a run of repeated values is represented by
+     *  3 consecutive values 0, runlength, value
+     *  which allows us to avoid storing negative numbers.
+     */
     _transcodeInfo: function(rle_list) {
       let len = 0, // We don't count the start value!
           max = 0;
@@ -287,6 +291,7 @@ const StreamRLE = {
     }
 };
 
+
 /**
  * FastIntegerCompression.js : a fast integer compression library in JavaScript.
  * (c) the authors (Daniel Lemire)
@@ -294,9 +299,7 @@ const StreamRLE = {
  *
  *  Modified by Efrem Rensi Jan 2020
  */
-
-// you can provide an iterable
-const VByte =  {
+export const VByte =  {
 
     // private function
     _bytelog: function(val) {
@@ -312,8 +315,9 @@ const VByte =  {
       return 5;
     },
 
-    // compute how many bytes an array of integers would use once compressed
-// input is expected to be an array of non-negative integers
+    /** Compute how many bytes an array of integers would use once compressed
+     * @param [input] an array of non-negative integers
+     */
     compressedSizeInBytes: function(input) {
       const c = input.length;
       let answer = 0;

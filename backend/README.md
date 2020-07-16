@@ -7,7 +7,7 @@ If you want to try your hand at Heatflask development, fork this repo and clone 
   * [Redis](https://redis.io) Fast in-memory datastore (backend cache)
   * [MongoDB](https://www.mongodb.com) NoSQL database (Activities database)
   * [Postgres](https://www.postgresql.org) SQL database (User database).  There should be a `heatflask` database with user `heatflask` with password "heatflask".
-  
+
 I'm assuming you know how to get that set up. To install the backend dependencies on your machine, navigate to the `backend` directory.  Make sure your Python 3.8 environment is activated.  Then install all the backend dependencies with
 ```
 pip install -r requirements-dev.txt
@@ -27,7 +27,6 @@ Here is an example:
 
 export APP_SETTINGS="config.DevelopmentConfig"
 export SECRET_KEY="whatever you want here"
-
 
 # data-store URIs
 export DATABASE_URL="postgresql://heatflask:heatflask@localhost/heatflask"
@@ -49,16 +48,16 @@ export GUNICORN_CMD_ARGS="--reload --worker-class flask_sockets.worker --log-lev
 # export OFFLINE=1
 ```
 
-In order to access Strava you will need to have a Strava account, with an app defined.  [Here](https://developers.strava.com/docs/getting-started/) are the instructions for how to do that.  Strava will give you a client-id and a client-secret.  Include them in your `.env` file as 
+In order to access Strava you will need to have a Strava account, with an app defined.  [Here](https://developers.strava.com/docs/getting-started/) are the instructions for how to do that.  Strava will give you a client-id and a client-secret.  Include them in your `.env` file as
 
 ```
 export STRAVA_CLIENT_ID="...""
 export STRAVA_CLIENT_SECRET="..."
-```  
+```
 
 The environment has to specify to the Flask app what kind of environment it is running in: Development, Staging, or Production. See [`config.py`](/backend/config.py).
 
-For the development environment, which is what you are, 
+For the development environment, which is what you are,
 ```
 export APP_SETTINGS="config.DevelopmentConfig"
 ```

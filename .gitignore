@@ -11,7 +11,7 @@ __pycache__/
 env/
 build/
 develop-eggs/
-dist/
+#dist/
 downloads/
 eggs/
 lib/
@@ -107,5 +107,9 @@ clean.sh
 
 frontend/test/
 node_modules
+
+# we allow dist for production
 dist/
 
+# This isnt ready to publish yet
+*-dev-docs.md
