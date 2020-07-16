@@ -39,7 +39,6 @@ export STRAVA_CLIENT_ID="this will be unique to you"
 export STRAVA_CLIENT_SECRET="this too"
 
 # ***************************************************************************
-# Local Flask settings (unnecessary if you use gunicorn)
 export SERVER_NAME="0.0.0.0:5000"
 export FLASK_APP="{this will be different on your machine}/Heatflask/backend/heatflask/wsgi.py"
 export FLASK_ENV=development
@@ -76,10 +75,6 @@ If you want to run the server completely offline on your machine, set the enviro
 
 
 Finally, in your `.env` file (or somewhere) you need to have activated a Python environment with all the dependencies from `requirements.txt`.
-
-Otherwise, in a shell with the environment described above, execute the `dev-run` script.
- 
-
 
 
 Then, you should be able to run the backend server on your machine by running [`dev-run`](https://github.com/ebrensi/heatflask/blob/ebrensi-patch-1/dev-run)
