@@ -77,7 +77,7 @@ If you want to run the server completely offline on your machine, set the enviro
 Finally, in your `.env` file (or somewhere) you need to have activated a Python environment with all the dependencies from `requirements.txt`.
 
 
-Then, you should be able to run the backend server on your machine by running [`dev-run`](/dev-run)
+Then, you should be able to run the backend server on your machine by running [`dev-run`](/backend/dev-run)
 
 It will serve at [`http://127.0.0.1:5000`](http://127.0.0.1:5000), but there will only be frontend code to serve if you have set up the [frontend](/frontend/) set up properly.
 
