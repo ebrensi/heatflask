@@ -18,7 +18,7 @@ For development, run `npm run watch` in the `/frontend` directory.  This will ca
 
 `npm run watch` starts a daemon process that rebuilds the dependency bundles every time a file in `[/frontend/src](/frontend/src)` changes. For a one-time build, run `npm run build`.
 
-Heatflask development typically involves two terminal windows. The backend server [`dev-run`](/backend/dev-run) running in [/backend](/backend)) and serving at `http://127.0.0.1:5000`, and the Parcel watcher (`npm run watch`) running in `/frontend`.  With the backend server running and frontend dependecies built and bundled, you should be able to get Heatflask running in a browser at `[http://127.0.0.1:5000](http://127.0.0.1:5000)`.
+Heatflask development typically involves two terminal windows. The backend server [`dev-run`](/backend/dev-run) running in [`/backend`](/backend)) and serving at `http://127.0.0.1:5000`, and the Parcel watcher (`npm run watch`) running in `/frontend`.  With the backend server running and frontend dependecies built and bundled, you should be able to get Heatflask running in a browser at [`http://127.0.0.1:5000`](http://127.0.0.1:5000).
 
-As long as the watcher is running, whatever changes you make to files in [`/frontend/src`](`/frontend/src`) will be reflected at `[http://127.0.0.1:5000](http://127.0.0.1:5000)`.  Browser developer tools are available in most browsers (Chrome, Firefox, Safari) by the shortcut `ctrl-shift-i`.
+As long as the watcher is running, whatever changes you make to files in [`/frontend/src`](/frontend/src) will be reflected at [`http://127.0.0.1:5000`](http://127.0.0.1:5000).  Browser developer tools are available in most browsers (Chrome, Firefox, Safari) by the shortcut `ctrl-shift-i`.
 
