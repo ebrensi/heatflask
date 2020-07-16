@@ -112,4 +112,4 @@ node_modules
 dist/
 
 # This isnt ready to publish yet
-*-dev-docs.md
+dev-docs.md

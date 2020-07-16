@@ -12,7 +12,7 @@
     "build-compact": "parcel build ./src/html/*.html --experimental-scope-hoisting",
     "watch": "parcel watch ./src/html/*.html",
     "check": "npx eslint ./src/js",
-    "documentation": "npx documentation build --shallow ./src/js/**.js -f md -o frontend-dev-docs.md"
+    "documentation": "npx documentation build --shallow ./src/js/**.js -f md -o dev-docs.md"
   },
   "author": "Efrem Rensi",
   "license": "ISC",
