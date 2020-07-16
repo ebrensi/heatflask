@@ -7,11 +7,12 @@ See a live demo with data at http://heatflask.com/demo
 
 Currently it supports [Strava](https://www.strava.com) data and the [leaflet.js](http://leafletjs.com) map API.
 
-## Contributing
-If you see something you'd like to improve, go ahead and create an issue and/or make a pull request. Contributions welcome!
+
+
+## [Contributing](/CONTRIBUTING.md)
 
 ## Documentation
-App usage instructions can be found [here](docs/docs.md).
+There is none.  But when there is, it will be [here](docs/docs.md).
 
 ## License
 
