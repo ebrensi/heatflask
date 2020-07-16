@@ -81,4 +81,9 @@ Then, you should be able to run the backend server on your machine by running [`
 
 It will serve at [`http://127.0.0.1:5000`](http://127.0.0.1:5000), but there will only be frontend code to serve if you have set up the [frontend](/frontend/) set up properly.
 
+If there are any problems getting this working, please create an [issue](https://github.com/ebrensi/heatflask/issues). Otherwise, Congratulations!🥳
+
+I look forward to your contributions.  Let's make Geospatial Dataviz Great Again!
+
+
 
