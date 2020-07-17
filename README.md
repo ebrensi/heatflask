@@ -1,12 +1,13 @@
 # Heatflask -- Making Geospatial Dataviz Great Again
 [<img src="/frontend/src/images/logo.png" alt="logo" width=200/>](https://www.heatflask.com)
 
-This is the the server-side and client-side code repository for the Heatflask web-application.  
+This is the the server-side and client-side code repository for the Heatflask web-application.
 
-### The `master` branch, currently being served at [https://www.heatflask.com](https://www.heatflask.com), is no longer being developed. We are currently undergoing a major re-write on [`bundle`](https://github.com/ebrensi/heatflask/tree/bundle) branch, which will be released as v0.5.0. See issue [#113](https://github.com/ebrensi/heatflask/issues/113).
+### This is the `bundle` branch. The `master` branch currently being served at [https://www.heatflask.com](https://www.heatflask.com), is no longer being developed. We are currently undergoing a major re-write on this branch, which will be released as v0.5.0. See issue [#113](https://github.com/ebrensi/heatflask/issues/113).
 
 
-## [Contributing](/contributing.md)
+## Contributing
+See [`/contributing.md`](/contributing.md).
 
 ## Documentation
 There is none.  But when there is, it will be [here](docs/docs.md).

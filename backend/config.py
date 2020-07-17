@@ -21,7 +21,7 @@ class Config(object):
 
     # Heatflask settings
     OFFLINE = False
-    APP_VERSION = "v0.2.0"
+    APP_VERSION = "v0.5.0"
     APP_NAME = "Heatflask {}".format(APP_VERSION)
     APP_SETTINGS = os.environ.get("APP_SETTINGS")
 
