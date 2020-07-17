@@ -2,87 +2,63 @@
 This is the server-side code for [Heatflask](https://www.heatflask.com ).  It is written in Python using the [Flask](https://flask.palletsprojects.com/en/1.1.x) framework.  I called the app Heatflask because it originally made heatmaps from [Strava](https://www.strava.com) data using Flask as the backend.  Flask is getting a little dated and I am open to moving to a different platform, or even a different language.  For now the Flask backend is pretty stable and runs itself without much intervention.
 
 ## Contributing
-If you want to try your hand at Heatflask development, fork this repo and clone it to your machine.  These instuctions assume you are using Linux.  I have not tried development on another OS. New to Linux? I recommend [Pop_OS!](https://system76.com/pop). The backend currently runs on Python 3.8. You will need installed on your machine:
-  * A Python 3.8.2 environment
+If you want to try your hand at Heatflask development, you will need to be able to test any changes you make on your own machine.  These instuctions assume you are using Linux.  I have not tried development on another OS. New to Linux? I recommend [Pop_OS!](https://system76.com/pop).
+
+### Set up the backend environment
+Fork this repo and clone it to your machine.   The backend currently runs on Python 3.8. You will need installed on your machine:
+  * A Python 3.8.x environment. [This](https://docs.python.org/3/library/venv.html) describes one way to do it.
+    * For example, to create a python 3.8 environment called `heatflask-dev` in a directory called `~/.venv`, make sure you have Python 3.8 installed. Then `python3 -m venv ~/.venv/heatflask-dev`.  The vitrual-environment directory should not be included in this repo!
   * [Redis](https://redis.io) Fast in-memory datastore (backend cache)
   * [MongoDB](https://www.mongodb.com) NoSQL database (Activities database)
   * [Postgres](https://www.postgresql.org) SQL database (User database).  There should be a `heatflask` database with user `heatflask` with password "heatflask".
 
-I'm assuming you know how to get that set up. To install the backend dependencies on your machine, navigate to the `backend` directory.  Make sure your Python 3.8 environment is activated.  Then install all the backend dependencies with
+### Install Python dependencies
+Now to install the backend dependencies on your machine. Navigate to the `backend` directory.  Make sure your Python 3.8 environment is activated.  Then install all the backend dependencies with
 ```
 pip install -r requirements-dev.txt
 pip install -r requirements.txt
 ```
 
-You will need to have a shell script in the `[/backend](/backend/)` directory called `.env`, that contains environment variables specific to your machine:
-Here is an example:
+### Setup local environment variables
+You will need to have a shell script in the `[/backend](/backend/)` directory called `.env`, that contains environment variables specific to your machine.  That file should only be on your machine, and not part of this repo.
+There is a template file already set up for you, called [`.env.tmp`](/backend/.env.tmp).  Rename it to `.env` and include the missing information.
 
+Unless you want to manually activate the dev environment every time, have a line to do that. If you created an envrinment as suggested above, the line will be
 ```bash
-#! usr/bin/env bash
-
-# *************************************************************************
-#  heatflask app expects the following variables to be in the environment
-#
-# The local evironment is the development enironment
-
-export APP_SETTINGS="config.DevelopmentConfig"
-export SECRET_KEY="whatever you want here"
-
-# data-store URIs
-export DATABASE_URL="postgresql://heatflask:heatflask@localhost/heatflask"
-export REDIS_URL="redis://localhost"
-export MONGODB_URI="mongodb://localhost/heatflask"
-
-# To be able to access Strava data
-export STRAVA_CLIENT_ID="this will be unique to you"
-export STRAVA_CLIENT_SECRET="this too"
-
-# ***************************************************************************
-export SERVER_NAME="0.0.0.0:5000"
-export FLASK_APP="{this will be different on your machine}/Heatflask/backend/heatflask/wsgi.py"
-export FLASK_ENV=development
-export LOG_LEVEL=DEBUG
-
-export GUNICORN_CMD_ARGS="--reload --worker-class flask_sockets.worker --log-level=debug --bind '0.0.0.0:5000'"
-
-# export OFFLINE=1
+source ~/.venv/heatflask-dev/bin/activate
 ```
+
 
 In order to access Strava you will need to have a Strava account, with an app defined.  [Here](https://developers.strava.com/docs/getting-started/) are the instructions for how to do that.  Strava will give you a client-id and a client-secret.  Include them in your `.env` file as
 
-```
+```bash
 export STRAVA_CLIENT_ID="...""
 export STRAVA_CLIENT_SECRET="..."
 ```
 
 The environment has to specify to the Flask app what kind of environment it is running in: Development, Staging, or Production. See [`config.py`](/backend/config.py).
 
-For the development environment, which is what you are,
-```
+For the development environment, which is what you will have,
+```bash
 export APP_SETTINGS="config.DevelopmentConfig"
 ```
 
 In order to access MapBox baselayers, your environment needs to have an access token
-```
+```bash
 export MAPBOX_ACCESS_TOKEN=...(your access token)
 ```
 which you can get from [here](https://docs.mapbox.com/help/how-mapbox-works/access-tokens).
 
 
-If you want to run the server completely offline on your machine, set the environment variable
-`export OFFLINE=1`
+### Start the webserver
+You should be able to run the backend server on your machine by running [`dev-run`](/backend/dev-run)
 
-
-Finally, in your `.env` file (or somewhere) you need to have activated a Python environment with all the dependencies from `requirements.txt`.
-
-
-Then, you should be able to run the backend server on your machine by running [`dev-run`](/backend/dev-run)
-
-It will serve at [`http://127.0.0.1:5000`](http://127.0.0.1:5000), but there will only be frontend code to serve if you have set up the [frontend](/frontend/) set up properly.
+It will serve at [`http://127.0.0.1:5000`](http://127.0.0.1:5000), but there will only be frontend code to serve if you have set up the frontend dev environment set up properly, so see [/frontend/README.md](/frontend/README.md).
 
 If there are any problems getting this working, please create an [issue](https://github.com/ebrensi/heatflask/issues). Otherwise, Congratulations!🥳
 
-I look forward to your contributions.  Let's make Geospatial Dataviz Great Again!
+### Make a pull request
+If you make some changes to the code and have tested it on your machine, you can make a pull request. See [/contributing.md](/contributing.md).
 
 
 

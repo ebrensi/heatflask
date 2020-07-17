@@ -1,17 +1,32 @@
 # Contributing to Heatflask
+For setting up the backend-server, see the [`README.md`](/backend/README.md) in [`/backend`](/backend), and for the frontend, see [`README.md`](/frontend/README.md) in [`/frontend`](/frontend).
 
-For setting up the backend-server, see the `README.md` in [`/backend`](/backend), and for the front-end dpendency building, see that file in in [`/frontend`](/frontend).
+If you are new to this, here's a tip.  First, [fork the repo](https://docs.github.com/en/github/getting-started-with-github/fork-a-repo). Afterwards you will have your own copy of it.  Then [clone your fork of the repo](https://docs.github.com/en/github/creating-cloning-and-archiving-repositories/cloning-a-repository) to your own machine.  Then navigate to the directory of the clone you made, in a terminal, and enter `git remote -v`.  That is the location of your remote repo, and its nickname is `origin` by default. You will add another remote, the main heatflask repo, which we call the `upstream` repo.
+```bash
+git remote add upstream git@github.com:ebrensi/heatflask.git
+```
+
+When you want to update your local repo, pull from `upstream` (eg `git pull upstream master` for the master branch).
+When you have committed changes and want to update your remote repo, push to `origin` (eg `git push origin master`).
+For more info, [take a look here](https://stackoverflow.com/questions/9257533/what-is-the-difference-between-origin-and-upstream-on-github).
 
 ## Code Style Guidelines
 ### Client-side (frontend)
 For frontend development we use [standardjs](https://standardjs.com), which is based on ESLint.  Pull requests that have a lot of Linting errors will not be merged.
 
-When you install frontend dependencies with `npm install`, it is installed for you as a dev-dependency.  You can then integrate it with whatever IDE you like.  I personally perfer [Sublime text](https://www.sublimetext.com) and [Micro](https://micro-editor.github.io) for text editing, and [tig](https://jonas.github.io/tig/) as a Git UI.  I like it simple.
+When you install frontend dependencies with `npm install`, standardjs is installed for you as a dev-dependency.  You can then integrate it with whatever IDE you like.  I personally perfer [Sublime text](https://www.sublimetext.com) and [Micro](https://micro-editor.github.io) for text editing, and [tig](https://jonas.github.io/tig/) as a Git UI.
 
 ### Server-side (backend)
-The backend, well, that's just a mess.😩  But it works for now.  More guidelines to come when I get around to that code.
+More here later.
 
 
-### More specifics to come...
+### Making a Pull Request
+#### Create an issue first
+A [pull request](https://docs.github.com/en/github/collaborating-with-issues-and-pull-requests/about-pull-requests) is a request to have your changes merged into the codebase.
+
+The way this works is that if you have an idea for a new feature, [create an issue](https://github.com/ebrensi/heatflask/issues).   If you found a bug, see if there is already an [issue](https://github.com/ebrensi/heatflask/issues) about it.  If there is not, create one.
+
+### Make the PR
+After you have made changes to your local repo and pushed them up to your `origin` remote on Github, you can make a pull-request on Github.👍
 
 🔥 Thanks 🔥
