@@ -12,9 +12,9 @@ For more info, [take a look here](https://stackoverflow.com/questions/9257533/wh
 
 ## Code Style Guidelines
 ### Client-side (frontend)
-For frontend development we use [standardjs](https://standardjs.com), which is based on ESLint.  Pull requests that have a lot of Linting errors will not be merged.
+For Linting we use [ESLint](https://eslint.org) (error checking only) and for consistent styling we use [prettier](https://prettier.io).
 
-When you install frontend dependencies with `npm install`, standardjs is installed for you as a dev-dependency.  You can then integrate it with whatever IDE you like.  I personally perfer [Sublime text](https://www.sublimetext.com) and [Micro](https://micro-editor.github.io) for text editing, and [tig](https://jonas.github.io/tig/) as a Git UI.
+When you install frontend dependencies with `npm install`, ESLint and Prettier are installed for you as a dev-dependencies and convenient `npm` scripts to use them are defined in [`package.json`](/frontend/package.json). You can then integrate it with whatever IDE you like.
 
 ### Server-side (backend)
 More here later.
