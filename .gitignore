@@ -111,5 +111,3 @@ node_modules
 # we allow dist for production
 dist/
 
-# This isnt ready to publish yet
-dev-docs.md

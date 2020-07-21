@@ -8,11 +8,11 @@
   },
   "description": "Animated Movement Data Visualization for Strava Tracks",
   "scripts": {
-    "build": "parcel build ./src/html/*.html",
+    "build": "npm run documentation && npm run format; parcel build ./src/html/*.html",
     "watch": "parcel watch ./src/html/*.html",
     "check": "prettier --check ./src/",
     "format": "prettier --write ./src/",
-    "documentation": "npx documentation build --shallow ./src/js/**.js -f md -o dev-docs.md"
+    "documentation": "documentation build --shallow ./src/js/**.js -f md -o dev-doc.md"
   },
   "author": "Efrem Rensi",
   "license": "ISC",

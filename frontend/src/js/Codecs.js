@@ -9,6 +9,7 @@
  *
  * modified by Efrem Rensi
  */
+
 export const Polyline = {
   /**
    * Decodes to a [latitude, longitude] coordinates array.
