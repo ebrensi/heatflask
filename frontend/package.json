@@ -9,7 +9,6 @@
   "description": "Animated Movement Data Visualization for Strava Tracks",
   "scripts": {
     "build": "parcel build ./src/html/*.html",
-    "build-compact": "parcel build ./src/html/*.html --experimental-scope-hoisting",
     "watch": "parcel watch ./src/html/*.html",
     "check": "prettier --check ./src/",
     "format": "prettier --write ./src/",
@@ -34,13 +33,13 @@
     "simple-datatables": "^2.1.13"
   },
   "browserslist": [
-    "last 2 Chrome versions"
+    "> 0.75%, not ie 11, not op_mini all"
   ],
   "devDependencies": {
     "documentation": "^13.0.2",
     "eslint": "^7.5.0",
     "eslint-config-prettier": "^6.11.0",
-    "parcel-bundler": "^1.12.4",
+    "parcel": "next",
     "parcel-plugin-nuke-dist": "^1.0.1",
     "prettier": "^2.0.5"
   },
