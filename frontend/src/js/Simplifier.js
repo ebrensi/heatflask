@@ -16,141 +16,140 @@ import BitSet from "./BitSet";
  *  ourselves.
  */
 
-export default function(points, n, tolerance) {
-    const sqTolerance = tolerance * tolerance;
+export default function (points, n, tolerance) {
+  const sqTolerance = tolerance * tolerance;
 
-    let idxBitSet = this.simplifyRadialDist(points, n, sqTolerance);
+  let idxBitSet = simplifyRadialDist(points, n, sqTolerance);
 
-    const idx = idxBitSet.array(),
-          subset = i => points(idx[i]),
+  const idx = idxBitSet.array(),
+    subset = (i) => points(idx[i]),
+    idxBitSubset = simplifyDouglasPeucker(subset, idx.length, sqTolerance);
 
-          idxBitSubset = this.simplifyDouglasPeucker(
-            subset, idx.length, sqTolerance
-          );
+  idxBitSet = idxBitSet.new_subset(idxBitSubset);
 
-    idxBitSet = idxBitSet.new_subset(idxBitSubset);
-
-    return idxBitSet
+  return idxBitSet;
 }
 
 // basic distance-based simplification
 function simplifyRadialDist(points, n, sqTolerance) {
-    const selectedIdx = new BitSet(),
-          prevPoint = new Float32Array(2);
+  const selectedIdx = new BitSet(),
+    prevPoint = new Float32Array(2);
 
-    let point = points(0), i;
-    prevPoint[0] = point[0];
-    prevPoint[1] = point[1];
-    selectedIdx.add(0);
+  let point = points(0),
+    i;
+  prevPoint[0] = point[0];
+  prevPoint[1] = point[1];
+  selectedIdx.add(0);
 
-    for (i=1; i<n; i++) {
-        point = points(i);
-        if (this.getSqDist(point, prevPoint) > sqTolerance) {
-            selectedIdx.add(i++);
-            prevPoint[0] = point[0];
-            prevPoint[1] = point[1];
-        }
+  for (i = 1; i < n; i++) {
+    point = points(i);
+    if (getSqDist(point, prevPoint) > sqTolerance) {
+      selectedIdx.add(i++);
+      prevPoint[0] = point[0];
+      prevPoint[1] = point[1];
     }
+  }
 
-    if (!this.equal(point, prevPoint))
-        selectedIdx.add(i)
+  if (!equal(point, prevPoint)) selectedIdx.add(i);
 
-    return selectedIdx;
+  return selectedIdx;
 }
 
 // simplification using Ramer-Douglas-Peucker algorithm
 function simplifyDouglasPeucker(points, n, sqTolerance) {
-    const bitSet = new BitSet(),
-          buffer = new Float32Array(4),
-          p1 = buffer.subarray(0, 2),
-          p2 = buffer.subarray(2, 4);
+  const bitSet = new BitSet(),
+    buffer = new Float32Array(4),
+    p1 = buffer.subarray(0, 2),
+    p2 = buffer.subarray(2, 4);
 
-    bitSet.add(0);
-    const first = points(0);
-    p1[0] = first[0];
-    p1[1] = first[1];
+  bitSet.add(0);
+  const first = points(0);
+  p1[0] = first[0];
+  p1[1] = first[1];
 
-    bitSet.add(n-1);
-    const last = points(n-1);
-    p2[0] = last[0];
-    p2[1] = last[1];
+  bitSet.add(n - 1);
+  const last = points(n - 1);
+  p2[0] = last[0];
+  p2[1] = last[1];
 
-    this.simplifyDPStep(points, 0, n-1, sqTolerance, bitSet, p1, p2);
+  simplifyDPStep(points, 0, n - 1, sqTolerance, bitSet, p1, p2);
 
-    return bitSet
+  return bitSet;
 }
 
-function simplifyDPStep(points, firstIdx, lastIdx, sqTolerance, bitSet, p1, p2) {
-    let maxSqDist = sqTolerance,
-        index;
+function simplifyDPStep(
+  points,
+  firstIdx,
+  lastIdx,
+  sqTolerance,
+  bitSet,
+  p1,
+  p2
+) {
+  let maxSqDist = sqTolerance,
+    index;
 
-    for (let idx = firstIdx + 1; idx < lastIdx; idx++) {
-        const sqDist = this.getSqSegDist( points(idx), p1, p2 );
+  for (let idx = firstIdx + 1; idx < lastIdx; idx++) {
+    const sqDist = getSqSegDist(points(idx), p1, p2);
 
-        if (sqDist > maxSqDist) {
-            index = idx;
-            maxSqDist = sqDist;
-        }
+    if (sqDist > maxSqDist) {
+      index = idx;
+      maxSqDist = sqDist;
+    }
+  }
+
+  if (maxSqDist > sqTolerance) {
+    if (index - firstIdx > 1) {
+      const p = points(index);
+      p2[0] = p[0];
+      p2[1] = p[1];
+      simplifyDPStep(points, firstIdx, index, sqTolerance, bitSet, p1, p2);
     }
 
-    if (maxSqDist > sqTolerance) {
-        if (index - firstIdx > 1) {
-            const p = points(index);
-            p2[0] = p[0];
-            p2[1] = p[1];
-            this.simplifyDPStep(points, firstIdx, index, sqTolerance, bitSet, p1, p2);
-        }
+    bitSet.add(index);
 
-        bitSet.add(index);
-
-        if (lastIdx - index > 1) {
-            const p = points(index);
-            p1[0] = p[0];
-            p1[1] = p[1];
-            this.simplifyDPStep(points, index, lastIdx, sqTolerance, bitSet, p1, p2);
-        }
+    if (lastIdx - index > 1) {
+      const p = points(index);
+      p1[0] = p[0];
+      p1[1] = p[1];
+      simplifyDPStep(points, index, lastIdx, sqTolerance, bitSet, p1, p2);
     }
+  }
 }
 
 function equal(p1, p2) {
-    return p1[0] == p2[0] && p1[1] == p2[1]
+  return p1[0] == p2[0] && p1[1] == p2[1];
 }
 
 // square distance between 2 points
 function getSqDist(p1, p2) {
+  const dx = p1[0] - p2[0],
+    dy = p1[1] - p2[1];
 
-    const dx = p1[0] - p2[0],
-          dy = p1[1] - p2[1];
-
-    return dx * dx + dy * dy;
+  return dx * dx + dy * dy;
 }
 
 // square distance from a point to a segment
 function getSqSegDist(p, p1, p2) {
+  let x = p1[0],
+    y = p1[1],
+    dx = p2[0] - x,
+    dy = p2[1] - y;
 
-    let x = p1[0],
-        y = p1[1],
-        dx = p2[0] - x,
-        dy = p2[1] - y;
+  if (dx !== 0 || dy !== 0) {
+    const t = ((p[0] - x) * dx + (p[1] - y) * dy) / (dx * dx + dy * dy);
 
-    if (dx !== 0 || dy !== 0) {
-
-        const t = ((p[0] - x) * dx + (p[1] - y) * dy) / (dx * dx + dy * dy);
-
-        if (t > 1) {
-            x = p2[0];
-            y = p2[1];
-
-        } else if (t > 0) {
-            x += dx * t;
-            y += dy * t;
-        }
+    if (t > 1) {
+      x = p2[0];
+      y = p2[1];
+    } else if (t > 0) {
+      x += dx * t;
+      y += dy * t;
     }
+  }
 
-    dx = p[0] - x;
-    dy = p[1] - y;
+  dx = p[0] - x;
+  dy = p[1] - y;
 
-    return dx * dx + dy * dy;
+  return dx * dx + dy * dy;
 }
-
-

@@ -12,13 +12,11 @@
  * --------------------------------------------------------------------------
  */
 
- /*
-  * main.js -- the entry point for the heatflask browser client
-  */
+/*
+ * main.js -- the entry point for the heatflask browser client
+ */
 
 import "./UI.js";
-import "../css/heatflask.css";  // This should be the last imported CSS
-
+import "../css/heatflask.css"; // This should be the last imported CSS
 
 // debugger;
-

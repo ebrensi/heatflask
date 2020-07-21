@@ -1,65 +1,63 @@
 <!DOCTYPE html>
 
 <html>
-
   <head>
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0,
-                   maximum-scale=1.0, user-scalable=no">
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0,
+                   maximum-scale=1.0, user-scalable=no"
+    />
 
     <title>{{ config["APP_NAME"]}} - Animated Activity Visualization</title>
 
-    <link rel="shortcut icon" href="../images/favicon.ico">
-    <link rel="apple-touch-icon" href="../images/logo.png">
-
+    <link rel="shortcut icon" href="../images/favicon.ico" />
+    <link rel="apple-touch-icon" href="../images/logo.png" />
   </head>
   <body>
+    <div id="bubbler" class="container">
+      {% with messages = get_flashed_messages() %} {% if messages %}
+      <ul class="flashes">
+        {% for message in messages %}
+        <li>{{ message }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %} {% endwith %} {% if error %}
+      <p class="error">
+        <strong>Error:</strong> {{ error }} {% endif %}
 
-      <div id="bubbler" class="container">
+        <br />
+        <img class="logo" src="../images/logo.png" />
+      </p>
 
-        {% with messages = get_flashed_messages() %}
-            {% if messages %}
-              <ul class=flashes >
-                {% for message in messages %}
-                  <li>{{ message }}</li>
-                {% endfor %}
-              </ul>
-            {% endif %}
-        {% endwith %}
+      <h2>Motion Mapping for Your Strava&nbspData</h2>
 
-        {% if error %}
-          <p class="error"><strong>Error:</strong> {{ error }}
-        {% endif %}
+      <br />
 
-        <br>
-        <img class="logo" src="../images/logo.png">
-
-        <h2>Motion Mapping for Your Strava&nbspData</h2>
-
-        <br>
-
-        <div class="splash">
-          <input class="action btn btn-a" id="demo"
-                 type="submit" value="Demo">
-        </div>
-
-        <br><br>
-
-        <div class="splash">
-          <input class="action btn btn-b" id="directory"
-                 type="submit" value="Public Users">
-        </div>
-
-        <br>
-        <div class="splash">
-          <input id="strava-button"
-                 type="image" alt="Log in with Strava">
-       </div>
+      <div class="splash">
+        <input class="action btn btn-a" id="demo" type="submit" value="Demo" />
       </div>
+
+      <br /><br />
+
+      <div class="splash">
+        <input
+          class="action btn btn-b"
+          id="directory"
+          type="submit"
+          value="Public Users"
+        />
+      </div>
+
+      <br />
+      <div class="splash">
+        <input id="strava-button" type="image" alt="Log in with Strava" />
+      </div>
+    </div>
   </body>
 
-  <script> window["_args"] = JSON.parse('{{ args | tojson | safe }}'); </script>
+  <script>
+    window["_args"] = JSON.parse("{{ args | tojson | safe }}");
+  </script>
 
   <script src="../js/splash-page.js"></script>
-
 </html>

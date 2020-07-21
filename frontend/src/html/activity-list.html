@@ -2,18 +2,18 @@
 <html>
   <head>
     <title>{{ config["APP_NAME"] }} - Activities List</title>
-    <link rel="shortcut icon" href="../images/favicon.ico">
-    <meta name="robots" content="noindex">
+    <link rel="shortcut icon" href="../images/favicon.ico" />
+    <meta name="robots" content="noindex" />
   </head>
 
   <body>
     <h4>Activities list for {{ (user.username or user.id) }}</h4>
-      <button type="button" id="rebuild-button"
-              class="btn btn-b btn-sm">Re-build index
-      </button>
-      TTL is "Time To Live" for index entries.  Index entries expire if
-      not accessed for a while, in order to save memory.  If you are missing activities then
-      try rebuilding your index.
+    <button type="button" id="rebuild-button" class="btn btn-b btn-sm">
+      Re-build index
+    </button>
+    TTL is "Time To Live" for index entries. Index entries expire if not
+    accessed for a while, in order to save memory. If you are missing activities
+    then try rebuilding your index.
 
     <div id="status">
       <span id="status_msg"></span>
@@ -28,12 +28,10 @@
     <div id="activity-list"></div>
 
     <div id="query-form"></div>
-
   </body>
   <script type="text/javascript">
-      window["_args"] = JSON.parse(`{{ _args | tojson | safe }}`);
+    window["_args"] = JSON.parse(`{{ _args | tojson | safe }}`);
   </script>
 
   <script src="../js/activity-list.js"></script>
-
 </html>

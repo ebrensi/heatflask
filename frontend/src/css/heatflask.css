@@ -1,44 +1,43 @@
 /* heatflask.css -- this stylesheet is meant to get loaded in last
    in order to over-write some style settings of dependencies      */
 
-
 /* global variables */
 :root {
   --sidebar-height: 160px;
 }
 
-
 body {
-    padding: 0;
-    margin: 0;
+  padding: 0;
+  margin: 0;
 }
 
-
-
-html, body, #map {
-    height: 100%;
-    font: 10pt "Helvetica Neue", Arial, Helvetica, sans-serif;
+html,
+body,
+#map {
+  height: 100%;
+  font: 10pt "Helvetica Neue", Arial, Helvetica, sans-serif;
 }
 
-
-button, input, select, textarea {
-  background: rgba(0,0,0,0.5);
+button,
+input,
+select,
+textarea {
+  background: rgba(0, 0, 0, 0.5);
   border-color: rgba(0, 0, 0, 0);
   color: white;
 }
-
 
 .paypal_button {
   background-color: transparent;
 }
 
-.strava-auth{
+.strava-auth {
   background-color: transparent;
 }
 
 img.strava-button {
   width: 20px;
-  height:20px;
+  height: 20px;
 }
 
 i.sm-button {
@@ -66,7 +65,7 @@ span.date-select {
 
 /* For the leaflet-control-window message boxes */
 .control-window {
-  background-color: rgba(0,0,0,0.6);
+  background-color: rgba(0, 0, 0, 0.6);
   color: white;
   border-radius: 8px;
 }
@@ -82,7 +81,7 @@ span.date-select {
 */
 .leaflet-fade-anim .leaflet-tile,
 .leaflet-zoom-anim .leaflet-zoom-animated {
-  will-change:auto !important;
+  will-change: auto !important;
 }
 
 /* addresses warning
@@ -93,7 +92,6 @@ span.date-select {
   transform-origin: 0 0;
 }
 
-
 /* we need to specify non-standard location for images */
 .leaflet-control-layers-toggle {
   background-image: url(../images/layers.png);
@@ -101,36 +99,34 @@ span.date-select {
 
 .leaflet-retina .leaflet-control-layers-toggle {
   background-image: url(../images/layers-2x.png);
-  }
+}
 
 .leaflet-default-icon-path {
   background-image: url(../images/marker-icon.png);
 }
 
 .leaflet-container {
-    background: green;
+  background: green;
 }
 
 .leaflet-control-layers-expanded {
-  color: rgba(255,255,255,0.9);
-  background: rgba(0,0,0,0.5);
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(0, 0, 0, 0.5);
 }
 
-
 .leaflet-control-layers {
-  background: rgba(0,0,0,0.5);
+  background: rgba(0, 0, 0, 0.5);
 }
 
 .leaflet-bar button {
-  background: rgba(0,0,0,0.5);
-  color: rgba(255,255,255,0.9);
+  background: rgba(0, 0, 0, 0.5);
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .leaflet-bar a {
-  background: rgba(0,0,0,0.5);
-  color: rgba(255,255,255,0.9);
+  background: rgba(0, 0, 0, 0.5);
+  color: rgba(255, 255, 255, 0.9);
 }
-
 
 /* Here we customize the sidebar appearance.
     By default, Sidebar-V2 changes its layout for
@@ -141,8 +137,8 @@ span.date-select {
 */
 
 .sidebar-left ~ .sidebar-map {
-    /* eliminate the map margin */
-    margin-left: inherit;
+  /* eliminate the map margin */
+  margin-left: inherit;
 }
 
 .leaflet-left {
@@ -151,8 +147,6 @@ span.date-select {
     won't overlap with the sidebar */
   left: 40px;
 }
-
-
 
 /* The collapsed sidebar normally takes up the whole
    left side of the screen.  We shorten it to take up
@@ -168,22 +162,23 @@ span.date-select {
 .leaflet-bottom.leaflet-left {
   left: 0px;
 }
-  /* same but on larger displays */
-  @media (min-width: 768px) {
-  .sidebar-left.collapsed ~ .sidebar-map
-  .leaflet-bottom.leaflet-left {
-      left: 0px;
-  } }
+/* same but on larger displays */
+@media (min-width: 768px) {
+  .sidebar-left.collapsed ~ .sidebar-map .leaflet-bottom.leaflet-left {
+    left: 0px;
+  }
+}
 
 @media (max-width: 768px) {
-    .sidebar {
-      width: 97%; }}
-
+  .sidebar {
+    width: 97%;
+  }
+}
 
 .sidebar {
-    border-radius: 8px; /* roundness of corners */
-    top: 5px;
-    bottom: 5px;
+  border-radius: 8px; /* roundness of corners */
+  top: 5px;
+  bottom: 5px;
 }
 
 .sidebar-left {
@@ -191,33 +186,35 @@ span.date-select {
 }
 
 .sidebar-content {
-    background-color: rgba(0,0,0,0.5);
-    color: white;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
 }
 
 .sidebar-tabs {
-  background-color: rgba(0,0,0,0.5);
-  color: rgba(255,255,255,0.8);
+  background-color: rgba(0, 0, 0, 0.5);
+  color: rgba(255, 255, 255, 0.8);
 }
 
-.sidebar-tabs>li, .sidebar-tabs>ul>li {
-    color: rgba(255, 255, 255, 0.9);
+.sidebar-tabs > li,
+.sidebar-tabs > ul > li {
+  color: rgba(255, 255, 255, 0.9);
 }
 
-.sidebar-tabs>li.active, .sidebar-tabs>ul>li.active {
+.sidebar-tabs > li.active,
+.sidebar-tabs > ul > li.active {
   color: #fff;
-  background-color: rgba(0,0,0,0.8);
+  background-color: rgba(0, 0, 0, 0.8);
 }
 
 .sidebar-header {
-    background-color: rgba(0,0,0,0.6);
+  background-color: rgba(0, 0, 0, 0.6);
 }
 
 .sidebar {
   transition: width 0s;
 }
 
-.sidebar-left~.sidebar-map .leaflet-left {
+.sidebar-left ~ .sidebar-map .leaflet-left {
   transition: left 0s;
 }
 
@@ -229,61 +226,61 @@ span.date-select {
  * Pikaday is the date-picker form component on the query tab
  */
 .pika-single.dark-theme {
-    color: #fff;
-    background: #333;
-    border: 1px solid #666;
-    border-bottom-color: #999;
+  color: #fff;
+  background: #333;
+  border: 1px solid #666;
+  border-bottom-color: #999;
 }
 
 .dark-theme .pika-label {
-    background-color: #333;
+  background-color: #333;
 }
 
 .dark-theme .pika-label:after {
-    content:" \25be";
+  content: " \25be";
 }
 
 .dark-theme .pika-prev,
 .dark-theme .is-rtl .pika-next {
-    background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAeCAQAAACGG/bgAAAAQ0lEQVR4Ae3KIQ4AIBTD0N0/IeHGI3UIRA3ut/Zl+ltXc5++htVAmIAwAWECwgSEKbgthEoIlRAqIVRCqINQB9nDgQd7ktwFo6UpWQAAAABJRU5ErkJggg==');
+  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAeCAQAAACGG/bgAAAAQ0lEQVR4Ae3KIQ4AIBTD0N0/IeHGI3UIRA3ut/Zl+ltXc5++htVAmIAwAWECwgSEKbgthEoIlRAqIVRCqINQB9nDgQd7ktwFo6UpWQAAAABJRU5ErkJggg==");
 }
 
 .dark-theme .pika-next,
 .dark-theme .is-rtl .pika-prev {
-    background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAeCAQAAACGG/bgAAAAP0lEQVQ4y+3TMQoAMAgEwfwfAvvjTZ1uGzuvHhBPPGczEG+FRqqRaqQaqUaqkX6QBmmjacvQ6qEVTjsh+xizebvlaWptGXZAAAAAAElFTkSuQmCC');
+  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAeCAQAAACGG/bgAAAAP0lEQVQ4y+3TMQoAMAgEwfwfAvvjTZ1uGzuvHhBPPGczEG+FRqqRaqQaqUaqkX6QBmmjacvQ6qEVTjsh+xizebvlaWptGXZAAAAAAElFTkSuQmCC");
 }
 
 .dark-theme .pika-table th {
-    color: #999;
+  color: #999;
 }
 
 .dark-theme .pika-button {
-    color: #fff;
-    background: #222;
+  color: #fff;
+  background: #222;
 }
 
 .dark-theme .pika-week {
-    color: #999;
+  color: #999;
 }
 
 .dark-theme .is-today .pika-button {
-    color: #33aaff;
+  color: #33aaff;
 }
 
 .dark-theme .is-selected .pika-button {
-    color: #fff;
-    background: #33aaff;
-    box-shadow: inset 0 1px 3px #178fe5;
+  color: #fff;
+  background: #33aaff;
+  box-shadow: inset 0 1px 3px #178fe5;
 }
 
 .dark-theme .is-disabled .pika-button {
-    color: #999;
-    opacity: .3;
+  color: #999;
+  opacity: 0.3;
 }
 
 .dark-theme .pika-button:hover {
-    color: #fff !important;
-    background: #ff8000 !important;
+  color: #fff !important;
+  background: #ff8000 !important;
 }
 
 /* end pikaday */
@@ -296,7 +293,6 @@ span.date-select {
   background-color: #00ff0040;
 }
 
-.dataTable-table tbody > tr.selected{
+.dataTable-table tbody > tr.selected {
   background-color: #00ff0060;
 }
-

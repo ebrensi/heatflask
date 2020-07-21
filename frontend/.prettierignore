@@ -1,0 +1,8 @@
+# this file indicates to prettier which files we want to ignore
+#  and is written in .gitignore format
+
+dist/
+ext/
+dist_unbundled/
+node_modules/
+node_modules

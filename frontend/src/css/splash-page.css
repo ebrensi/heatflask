@@ -1,23 +1,23 @@
-
 :root {
   --background-image: url("../images/lake.gif");
 }
 
-
 /* Links */
-a, a:focus, a:hover {
+a,
+a:focus,
+a:hover {
   color: #fff;
 }
 
-
-textarea, input, select {
+textarea,
+input,
+select {
   border: inherit;
 }
 
 .flashes {
-  background: rgba(255,0,0,0.5)
+  background: rgba(255, 0, 0, 0.5);
 }
-
 
 .logo {
   width: 50%;
@@ -35,14 +35,15 @@ textarea, input, select {
   max-width: 300px;
   display: block;
   margin-left: auto;
-  margin-right: auto
+  margin-right: auto;
 }
 
 #strava-button :hover {
   opacity: 0.2;
 }
 
-html, body {
+html,
+body {
   height: 100%;
   background-color: #333;
 }
@@ -50,16 +51,16 @@ html, body {
 body {
   color: #fffff0;
   text-align: center;
-  text-shadow: 12px 13px 5px rgba(0,0,0,0.5);
+  text-shadow: 12px 13px 5px rgba(0, 0, 0, 0.5);
   background-image: var(--background-image);
   background-repeat: no-repeat;
   background-attachment: fixed;
   background-size: cover;
-  display:flex;
+  display: flex;
 }
 
 .container {
-  position:relative;
+  position: relative;
   width: 90vw;
   height: 90vh;
   margin: auto;

@@ -1,49 +1,55 @@
 (function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
-  typeof define === 'function' && define.amd ? define(factory) :
-  (global = global || self, global.PersistentWebSocket = factory());
-}(this, (function () { 'use strict';
+  typeof exports === "object" && typeof module !== "undefined"
+    ? (module.exports = factory())
+    : typeof define === "function" && define.amd
+    ? define(factory)
+    : ((global = global || self), (global.PersistentWebSocket = factory()));
+})(this, function () {
+  "use strict";
 
   function index(url, protocols, WebSocket, options) {
-    if (typeof protocols === 'function') {
-      if (typeof WebSocket === 'object')
-        { options = WebSocket; }
+    if (typeof protocols === "function") {
+      if (typeof WebSocket === "object") {
+        options = WebSocket;
+      }
       WebSocket = protocols;
       protocols = undefined;
     }
 
-    if (!Array.isArray(protocols) && typeof protocols === 'object') {
+    if (!Array.isArray(protocols) && typeof protocols === "object") {
       options = protocols;
       protocols = undefined;
     }
 
-    if (typeof WebSocket === 'object') {
+    if (typeof WebSocket === "object") {
       options = WebSocket;
       WebSocket = undefined;
     }
 
-    var browser = typeof window !== 'undefined' && window.WebSocket;
+    var browser = typeof window !== "undefined" && window.WebSocket;
     if (browser) {
       WebSocket = WebSocket || window.WebSocket;
-      typeof window !== 'undefined'
-        && typeof window.addEventListener === 'function'
-        && window.addEventListener('online', connect);
+      typeof window !== "undefined" &&
+        typeof window.addEventListener === "function" &&
+        window.addEventListener("online", connect);
     }
 
-    if (!WebSocket)
-      { throw new Error('Please supply a websocket library to use') }
+    if (!WebSocket) {
+      throw new Error("Please supply a websocket library to use");
+    }
 
-    if (!options)
-      { options = {}; }
+    if (!options) {
+      options = {};
+    }
 
-    var connection = null
-      , reconnecting = false
-      , reconnectTimer = null
-      , heartbeatTimer = null
-      , binaryType = null
-      , closed = false
-      , lastOpen = null
-      , reconnectDelay;
+    var connection = null,
+      reconnecting = false,
+      reconnectTimer = null,
+      heartbeatTimer = null,
+      binaryType = null,
+      closed = false,
+      lastOpen = null,
+      reconnectDelay;
 
     var listeners = {};
     var listenerHandlers = {};
@@ -51,15 +57,25 @@
     var onHandlers = {};
 
     var pws = {
-      CONNECTING: 'CONNECTING' in WebSocket ? WebSocket.CONNECTING : 0,
-      OPEN: 'OPEN' in WebSocket ? WebSocket.OPEN : 1,
-      CLOSING: 'CLOSING' in WebSocket ? WebSocket.CLOSING : 2,
-      CLOSED: 'CLOSED' in WebSocket ? WebSocket.CLOSED : 3,
-      get readyState() { return connection.readyState },
-      get protocol() { return connection.protocol },
-      get extensions() { return connection.extensions },
-      get bufferedAmount() { return connection.bufferedAmount },
-      get binaryType() { return connection.binaryType },
+      CONNECTING: "CONNECTING" in WebSocket ? WebSocket.CONNECTING : 0,
+      OPEN: "OPEN" in WebSocket ? WebSocket.OPEN : 1,
+      CLOSING: "CLOSING" in WebSocket ? WebSocket.CLOSING : 2,
+      CLOSED: "CLOSED" in WebSocket ? WebSocket.CLOSED : 3,
+      get readyState() {
+        return connection.readyState;
+      },
+      get protocol() {
+        return connection.protocol;
+      },
+      get extensions() {
+        return connection.extensions;
+      },
+      get bufferedAmount() {
+        return connection.bufferedAmount;
+      },
+      get binaryType() {
+        return connection.binaryType;
+      },
       set binaryType(type) {
         binaryType = type;
         connection.binaryType = type;
@@ -67,73 +83,102 @@
       connect: connect,
       url: url,
       retries: 0,
-      pingTimeout: 'pingTimeout' in options ? options.pingTimeout : false,
+      pingTimeout: "pingTimeout" in options ? options.pingTimeout : false,
       maxTimeout: options.maxTimeout || 5 * 60 * 1000,
       maxRetries: options.maxRetries || 0,
-      nextReconnectDelay: options.nextReconnectDelay || function reconnectTimeout(retries) {
-        return Math.min((1 + Math.random()) * Math.pow(1.5, retries) * 1000, pws.maxTimeout)
-      },
-      send: function() {
+      nextReconnectDelay:
+        options.nextReconnectDelay ||
+        function reconnectTimeout(retries) {
+          return Math.min(
+            (1 + Math.random()) * Math.pow(1.5, retries) * 1000,
+            pws.maxTimeout
+          );
+        },
+      send: function () {
         connection.send.apply(connection, arguments);
       },
-      close: function() {
+      close: function () {
         clearTimeout(reconnectTimer);
         closed = true;
         connection.close.apply(connection, arguments);
       },
       onopen: options.onopen,
       onmessage: options.onmessage,
-      onclose:  options.onclose,
-      onerror: options.onerror
+      onclose: options.onclose,
+      onerror: options.onerror,
     };
 
-    var on = function (method, events, handlers) { return function (event, fn, options) {
-      function handler(e) {
-        options && options.once && connection[method === 'on' ? 'off' : 'removeEventListener'](event, handler);
-        e && typeof e === 'object' && reconnectDelay && (e.reconnectDelay = reconnectDelay);
-        fn.apply(pws, arguments);
-      }
+    var on = function (method, events, handlers) {
+      return function (event, fn, options) {
+        function handler(e) {
+          options &&
+            options.once &&
+            connection[method === "on" ? "off" : "removeEventListener"](
+              event,
+              handler
+            );
+          e &&
+            typeof e === "object" &&
+            reconnectDelay &&
+            (e.reconnectDelay = reconnectDelay);
+          fn.apply(pws, arguments);
+        }
 
-      event in events ? events[event].push(fn) : (events[event] = [fn]);
-      event in handlers ? handlers[event].push(handler) : (handlers[event] = [handler]);
-      connection && connection[method](event, handler);
-    }; };
+        event in events ? events[event].push(fn) : (events[event] = [fn]);
+        event in handlers
+          ? handlers[event].push(handler)
+          : (handlers[event] = [handler]);
+        connection && connection[method](event, handler);
+      };
+    };
 
-    var off = function (method, events, handlers) { return function (event, fn) {
-      var index = events[event].indexOf(fn);
-      if (index === -1)
-        { return }
+    var off = function (method, events, handlers) {
+      return function (event, fn) {
+        var index = events[event].indexOf(fn);
+        if (index === -1) {
+          return;
+        }
 
-      connection && connection[method](event, handlers[event][index]);
+        connection && connection[method](event, handlers[event][index]);
 
-      events[event].splice(index, 1);
-      handlers[event].splice(index, 1);
-    }; };
+        events[event].splice(index, 1);
+        handlers[event].splice(index, 1);
+      };
+    };
 
-    pws.addEventListener = on('addEventListener', listeners, listenerHandlers);
-    pws.removeEventListener = off('removeEventListener', listeners, listenerHandlers);
-    pws.on = on('on', ons, onHandlers);
-    pws.off = off('off', ons, onHandlers);
-    pws.once = function (event, fn) { return pws.on(event, fn, { once: true }); };
+    pws.addEventListener = on("addEventListener", listeners, listenerHandlers);
+    pws.removeEventListener = off(
+      "removeEventListener",
+      listeners,
+      listenerHandlers
+    );
+    pws.on = on("on", ons, onHandlers);
+    pws.off = off("off", ons, onHandlers);
+    pws.once = function (event, fn) {
+      return pws.on(event, fn, { once: true });
+    };
 
-    if (url)
-      { connect(); }
+    if (url) {
+      connect();
+    }
 
-    return pws
+    return pws;
 
     function connect(url) {
       closed = false;
       clearTimeout(reconnectTimer);
 
-      if (typeof url === 'string')
-        { pws.url = url; }
+      if (typeof url === "string") {
+        pws.url = url;
+      }
 
-      if (connection && connection.readyState !== 3)
-        { return close(4665, 'Manual connect initiated') }
+      if (connection && connection.readyState !== 3) {
+        return close(4665, "Manual connect initiated");
+      }
 
       reconnecting = false;
 
-      url = typeof pws.url === 'function' ? pws.url(pws) : pws.url;
+      url = typeof pws.url === "function" ? pws.url(pws) : pws.url;
       connection = browser
         ? protocols
           ? new WebSocket(url, protocols)
@@ -145,14 +190,19 @@
       connection.onopen = onopen;
       connection.onmessage = onmessage;
       Object.keys(listenerHandlers).forEach(function (event) {
-        listenerHandlers[event].forEach(function (handler) { return connection.addEventListener(event, handler); });
+        listenerHandlers[event].forEach(function (handler) {
+          return connection.addEventListener(event, handler);
+        });
       });
       Object.keys(onHandlers).forEach(function (event) {
-        onHandlers[event].forEach(function (handler) { return connection.on(event, handler); });
+        onHandlers[event].forEach(function (handler) {
+          return connection.on(event, handler);
+        });
       });
 
-      if (binaryType)
-        { connection.binaryType = binaryType; }
+      if (binaryType) {
+        connection.binaryType = binaryType;
+      }
     }
 
     function onclose(event, emit) {
@@ -163,8 +213,9 @@
     }
 
     function onerror(event) {
-      if (!event)
-        { event = new Error('UnknownError'); }
+      if (!event) {
+        event = new Error("UnknownError");
+      }
 
       event.reconnectDelay = Math.ceil(reconnect());
       pws.onerror && pws.onerror.apply(pws, arguments);
@@ -182,36 +233,41 @@
     }
 
     function heartbeat() {
-      if (!pws.pingTimeout)
-        { return }
+      if (!pws.pingTimeout) {
+        return;
+      }
 
       clearTimeout(heartbeatTimer);
       heartbeatTimer = setTimeout(timedOut, pws.pingTimeout);
     }
 
     function timedOut() {
-      close(4663, 'No heartbeat received within ' + pws.pingTimeout + 'ms');
+      close(4663, "No heartbeat received within " + pws.pingTimeout + "ms");
     }
 
     function reconnect() {
-      if (closed)
-        { return }
+      if (closed) {
+        return;
+      }
 
-      if (reconnecting)
-        { return reconnectDelay - (Date.now() - reconnecting) }
+      if (reconnecting) {
+        return reconnectDelay - (Date.now() - reconnecting);
+      }
 
       reconnecting = Date.now();
-      pws.retries = lastOpen && Date.now() - lastOpen > reconnectDelay
-        ? 1
-        : pws.retries + 1;
+      pws.retries =
+        lastOpen && Date.now() - lastOpen > reconnectDelay
+          ? 1
+          : pws.retries + 1;
 
-      if (pws.maxRetries && pws.retries >= pws.maxRetries)
-        { return }
+      if (pws.maxRetries && pws.retries >= pws.maxRetries) {
+        return;
+      }
 
       reconnectDelay = pws.nextReconnectDelay(pws.retries);
       reconnectTimer = setTimeout(connect, reconnectDelay);
 
-      return reconnectDelay
+      return reconnectDelay;
     }
 
     function close(code, reason) {
@@ -219,17 +275,27 @@
 
       var event = closeEvent(code, reason);
       onclose(event);
-      listenerHandlers.close && listenerHandlers.close.forEach(function (handler) { return handler(event); });
-      onHandlers.close && onHandlers.close.forEach(function (handler) { return handler(code, reason, reconnectDelay); });
+      listenerHandlers.close &&
+        listenerHandlers.close.forEach(function (handler) {
+          return handler(event);
+        });
+      onHandlers.close &&
+        onHandlers.close.forEach(function (handler) {
+          return handler(code, reason, reconnectDelay);
+        });
     }
 
     function clean(connection) {
       connection.onclose = connection.onopen = connection.onerror = connection.onmessage = null;
       Object.keys(listenerHandlers).forEach(function (event) {
-        listenerHandlers[event].forEach(function (handler) { return connection.removeEventListener(event, handler); });
+        listenerHandlers[event].forEach(function (handler) {
+          return connection.removeEventListener(event, handler);
+        });
       });
       Object.keys(onHandlers).forEach(function (event) {
-        onHandlers[event].forEach(function (handler) { return connection.off(event, handler); });
+        onHandlers[event].forEach(function (handler) {
+          return connection.off(event, handler);
+        });
       });
       connection.close();
     }
@@ -237,18 +303,21 @@
     function closeEvent(code, reason) {
       var event;
 
-      if (typeof window !== 'undefined' && window.CloseEvent) {
-        event = new window.CloseEvent('HeartbeatTimeout', { wasClean: true, code: code, reason: reason });
+      if (typeof window !== "undefined" && window.CloseEvent) {
+        event = new window.CloseEvent("HeartbeatTimeout", {
+          wasClean: true,
+          code: code,
+          reason: reason,
+        });
       } else {
-        event = new Error('HeartbeatTimeout');
+        event = new Error("HeartbeatTimeout");
         event.code = code;
         event.reason = reason;
       }
 
-      return event
+      return event;
     }
   }
 
   return index;
-
-})));
+});

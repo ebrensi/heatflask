@@ -9,25 +9,24 @@ import { CURRENT_USER } from "./Init.js";
     and provide a default value.
 */
 const paramDefaults = {
-    "date1": [ ["start", "after", "date1", "a"], null ],
-    "date2": [ ["end", "before", "date2", "b"],  null ],
-    "days":  [ ["days", "preset", "d"],          null ],
-    "limit": [ ["limit", "l"],                    10  ],
-    "ids":   [ ["id", "ids"],                     ""  ],
-    "zoom":  [ ["zoom", "z"],                      3  ],
-    "lat":   [ ["lat", "x"],                    27.53 ],
-    "lng":   [ ["lng", "y"],                     1.58 ],
-    "autozoom": [ ["autozoom", "az"],            true ],
-    "c1":    [ ["c1"],                           null ],
-    "c2":    [ ["c2"],                           null ],
-    "sz":    [ ["sz"],                           null ],
-    "paused": [ ["paused", "pu"],               false ],
-    "shadows":[ ["sh", "shadows"],               true ],
-    "paths":  [ ["pa", "paths"],                 true ],
-    "alpha":  [ ["alpha"],                         1  ],
-    "baselayer": [ ["baselayer", "map", "bl"],   null ]
+  date1: [["start", "after", "date1", "a"], null],
+  date2: [["end", "before", "date2", "b"], null],
+  days: [["days", "preset", "d"], null],
+  limit: [["limit", "l"], 10],
+  ids: [["id", "ids"], ""],
+  zoom: [["zoom", "z"], 3],
+  lat: [["lat", "x"], 27.53],
+  lng: [["lng", "y"], 1.58],
+  autozoom: [["autozoom", "az"], true],
+  c1: [["c1"], null],
+  c2: [["c2"], null],
+  sz: [["sz"], null],
+  paused: [["paused", "pu"], false],
+  shadows: [["sh", "shadows"], true],
+  paths: [["pa", "paths"], true],
+  alpha: [["alpha"], 1],
+  baselayer: [["baselayer", "map", "bl"], null],
 };
-
 
 /* TODO: add a geohash location parameter.
         maybe replace lat and lng altogether with geohash */
@@ -51,64 +50,61 @@ const urlArgs = new URL(window.location.href).searchParams;
 const params = {};
 const paramNames = {};
 
-for (const [key, val] of Object.entries(paramDefaults) ) {
-    paramNames[key] = val[0];
-    params[key] = val[1];
+for (const [key, val] of Object.entries(paramDefaults)) {
+  paramNames[key] = val[0];
+  params[key] = val[1];
 }
 
 /* parse visual parameters from the url */
 for (const [uKey, value] of urlArgs.entries()) {
-    for (const [pKey, pNames] of Object.entries(paramNames)) {
-        if (pNames.includes(uKey)) {
-            params[pKey] = value;
-            delete paramNames[pKey]; // this field is set no need to check it again
-            break;
-        }
+  for (const [pKey, pNames] of Object.entries(paramNames)) {
+    if (pNames.includes(uKey)) {
+      params[pKey] = value;
+      delete paramNames[pKey]; // this field is set no need to check it again
+      break;
     }
+  }
 }
 
 export const query = {
-    key: urlArgs["key"],
-    userid:  userid,
-    date1: params["date1"],
-    date2: params["date2"],
-    days:  params["days"],
-    limit: params["limit"],
-    ids:   params["ids"]
-}
+  key: urlArgs["key"],
+  userid: userid,
+  date1: params["date1"],
+  date2: params["date2"],
+  days: params["days"],
+  limit: params["limit"],
+  ids: params["ids"],
+};
 
 export const vparams = {
-    center:    [ params["lat"], params["lng"] ],
-    zoom:      params["zoom"],
-    autozoom:  params["autozoom"],
-    c1:        params["c1"],
-    c2:        params["c2"],
-    sz:        params["sz"],
-    paused:    params["paused"],
-    shadows:   params["shadows"],
-    paths:     params["paths"],
-    alpha:     params["alpha"],
-    baselayer: params["baselayer"]
-}
+  center: [params["lat"], params["lng"]],
+  zoom: params["zoom"],
+  autozoom: params["autozoom"],
+  c1: params["c1"],
+  c2: params["c2"],
+  sz: params["sz"],
+  paused: params["paused"],
+  shadows: params["shadows"],
+  paths: params["paths"],
+  alpha: params["alpha"],
+  baselayer: params["baselayer"],
+};
 
 export const items = new Set();
 
 const appState = {
-    items: items,
+  items: items,
 
-    /* current user is the user who is currently logged-in, if any
+  /* current user is the user who is currently logged-in, if any
         this will be done away with eventually in favor of getting this info
         after websocket connection */
-    currentUser: CURRENT_USER,
+  currentUser: CURRENT_USER,
 
-    vparams: vparams,
+  vparams: vparams,
 
-    query: query
+  query: query,
 };
-
 
 window["heatflask"] = appState;
 
-
-export { appState as default }
-
+export { appState as default };

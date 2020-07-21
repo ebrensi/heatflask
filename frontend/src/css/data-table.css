@@ -1,11 +1,12 @@
 /* This is css for simple-datatables in general */
 
 body {
-	font: 12pt "Helvetica Neue", Arial, Helvetica, sans-serif;
+  font: 12pt "Helvetica Neue", Arial, Helvetica, sans-serif;
 }
 
-
-datatable-table, th, td {
+datatable-table,
+th,
+td {
   border: 1px solid black;
 }
 
@@ -20,17 +21,16 @@ datatable-table {
 }
 
 .selected {
-	background-color: yellow;
+  background-color: yellow;
 }
 
 tr:hover {
-	background-color: #f5f5f5;
+  background-color: #f5f5f5;
 }
 
 tr.selected:hover {
-	background-color: orange;
+  background-color: orange;
 }
-
 
 .visible {
   visibility: visible;
@@ -43,4 +43,3 @@ tr.selected:hover {
   opacity: 0;
   transition: visibility 0s 0.25s, opacity 0.25s linear;
 }
-

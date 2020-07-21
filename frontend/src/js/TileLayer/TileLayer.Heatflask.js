@@ -5,4 +5,4 @@ import "./TileLayer.NoGap.js";
 import "./TileLayer.Cached.js";
 import "leaflet-providers";
 
-export { TileLayer, tileLayer }
+export { TileLayer, tileLayer };
