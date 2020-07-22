@@ -11,9 +11,9 @@ const MAX_LATITUDE = 85.0511287798,
 
 // This projects LatLng coordinate onto a rectangular grid
 export function Projection() {
-  const max = this.MAX_LATITUDE,
-    R = this.EARTH_RADIUS,
-    rad = this.RAD;
+  const max = MAX_LATITUDE,
+    R = EARTH_RADIUS,
+    rad = RAD;
 
   return function (latlngpt) {
     const lat = Math.max(Math.min(max, latlngpt[0]), -max),
@@ -28,7 +28,7 @@ export function Projection() {
 
 // This scales distances between points to a given zoom level
 export function Transformation(zoom) {
-  const S = 0.5 / (Math.PI * this.EARTH_RADIUS),
+  const S = 0.5 / (Math.PI * EARTH_RADIUS),
     A = S,
     B = 0.5,
     C = -S,
@@ -44,8 +44,8 @@ export function Transformation(zoom) {
 }
 
 export function makePT(zoom) {
-  const P = this.Projection(),
-    T = this.Transformation(zoom);
+  const P = Projection(),
+    T = Transformation(zoom);
   return function (llpt) {
     return T(P(llpt));
   };

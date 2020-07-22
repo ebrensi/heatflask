@@ -2,47 +2,172 @@
 
 ### Table of Contents
 
--   [Codecs][1]
--   [Polyline][2]
-    -   [decode][3]
+-   [BitSet][1]
+    -   [Parameters][2]
+    -   [filter][3]
         -   [Parameters][4]
--   [Data][5]
-    -   [Parameters][6]
--   [StreamRLE][7]
-    -   [decodeList][8]
-        -   [Parameters][9]
-    -   [\_transcodeInfo][10]
+    -   [add][5]
+        -   [Parameters][6]
+    -   [flip][7]
+        -   [Parameters][8]
+    -   [clear][9]
+    -   [remove][10]
         -   [Parameters][11]
--   [VByte][12]
-    -   [compressedSizeInBytes][13]
+    -   [isEmpty][12]
+    -   [has][13]
         -   [Parameters][14]
+    -   [fromWords][15]
+        -   [Parameters][16]
+-   [activityURL][17]
+    -   [Parameters][18]
+-   [Dom][19]
+    -   [Parameters][20]
+-   [el][21]
+    -   [Parameters][22]
+-   [athleteURL][23]
+    -   [Parameters][24]
+-   [Data][25]
+    -   [Parameters][26]
+-   [\_specs][27]
+-   [set][28]
+    -   [Parameters][29]
+-   [get][30]
+    -   [Parameters][31]
+-   [html][32]
+    -   [Parameters][33]
+-   [types][34]
+-   [pathColor][35]
+    -   [Parameters][36]
+-   [specs][37]
+    -   [Parameters][38]
+-   [specs][39]
+    -   [Parameters][40]
+    -   [Properties][41]
+-   [addEvent][42]
+    -   [Parameters][43]
+-   [trigger][44]
+    -   [Parameters][45]
+-   [fadeIn][46]
+    -   [Parameters][47]
+-   [fadeOut][48]
+    -   [Parameters][49]
+-   [setDisplayStyle][50]
+    -   [Parameters][51]
+-   [show][52]
+    -   [Parameters][53]
+-   [hide][54]
+    -   [Parameters][55]
 
-## Codecs
+## BitSet
 
-## Polyline
+Bitset Class Adapted from Daniel Lemire's FastBitSet.js
 
-Some functions for decoding Google's Polyline format into numbers
-This is adapted from the implementation in Project-OSRM.
-Based off of [the offical Google document][15]
+### Parameters
 
-Some parts from [this implementation][16]
-by [Mark McClure][17]
+-   `iterable` **Iterable&lt;[Number][56]>** An iterable of integers
 
-modified by Efrem Rensi
+### filter
 
-### decode
-
--   **See: [https://github.com/Project-OSRM/osrm-frontend/blob/master/WebContent/routing/OSRM.RoutingGeometry.js][18]
-    **
-
-Decodes to a [latitude, longitude] coordinates array.
+Set entries x of this [BitSet][1] to true if [fnc][57](x) is contained. (operates in-place)
 
 #### Parameters
 
--   `str` **[String][19]** 
--   `precision` **[Number][20]** 
+-   `iterable` **Iterable&lt;[Number][56]>** 
+-   `fnc` **[function][58]** 
 
-Returns **[Array][21]** 
+Returns **[BitSet][59]** 
+
+### add
+
+Add the value (Set the bit at [index][60] to true)
+
+#### Parameters
+
+-   `index` **[Number][56]** 
+
+### flip
+
+If the value was not in the set, add it, otherwise remove it (flip bit at [index][60])
+
+#### Parameters
+
+-   `index` **[Number][56]** 
+
+### clear
+
+Remove all values, reset memory usage
+
+### remove
+
+Set the bit at [index][60] to false
+
+#### Parameters
+
+-   `index` **[Number][56]** [description]
+
+Returns **[BitSet][59]** This [BitSet][1]
+
+### isEmpty
+
+Return true if no bit is set
+
+Returns **[Boolean][61]** Is anything in this [BitSet][1]?
+
+### has
+
+Is the value contained in the set? Is the bit at [index][60] true, or false?
+
+#### Parameters
+
+-   `index` **[Number][56]** 
+
+Returns **[Boolean][61]** 
+
+### fromWords
+
+Create a [BitSet][1] from an Array.
+
+#### Parameters
+
+-   `words` **\[type]** [description]
+
+Returns **\[type]** [description]
+
+## activityURL
+
+### Parameters
+
+-   `id`  
+-   `A` **([String][62] \| [Number][56])** Strava activity id
+
+Returns **[String][62]** The Strava URL for that activity
+
+## Dom
+
+Basic DOM manipulation. This is sort of a replacement for JQuery.
+
+### Parameters
+
+-   `selector`  
+
+## el
+
+The DOM element(s) addressed by [selector][63]
+
+### Parameters
+
+-   `selector` **DOMString** A class or id selector
+
+Returns **([HTMLElement][64] \| [NodeList][65])** 
+
+## athleteURL
+
+### Parameters
+
+-   `id`  
+-   `Strava` **([String][62] \| [Number][56])** user-id
+
+Returns **[String][62]** The Strava URL for that user
 
 ## Data
 
@@ -52,94 +177,270 @@ The default export of this module is a function that imports messagepack
 
 ### Parameters
 
--   `query` **[Object][22]** the data query, as specified by our backend API
--   `callback` **[function][23]** A function that processes one imported data item
+-   `query` **[Object][66]** the data query, as specified by our backend API
+-   `callback` **[function][58]** A function that processes one imported data item
 
-## StreamRLE
+## \_specs
 
-A collection of functions for decoding RLE encoded lists
+This is a list of tuples specifying properties of the rendered objects,
+such as path color, speed/pace in description.  others can be added
 
-### decodeList
+Type: [Object][66]
 
-decode a (RLE-encoded) array of successive differences into
- an array of the original values
- This will decode both [1, 2,2,2,2,2,2, 5] and \[1, [2,6], 5] into
-   [0, 1, 3, 5, 7, 9, 11, 13, 18]
+## set
 
-#### Parameters
+Set the value property of a DOM element
 
--   `rle_list`  
--   `first_value`   (optional, default `0`)
+### Parameters
 
-### \_transcodeInfo
+-   `string` **DOMString** The CSS selector
+-   `val` **([String][62] \| [Number][56])** the value to set
 
-We store RLE stream data locally a little differently.
- a run of repeated values is represented by
- 3 consecutive values 0, runlength, value
- which allows us to avoid storing negative numbers.
+## get
 
-#### Parameters
+Get the value property of a DOM element
 
--   `rle_list`  
+### Parameters
 
-## VByte
+-   `string` **DOMString** The CSS selector
 
-FastIntegerCompression.js : a fast integer compression library in JavaScript.
-(c) the authors (Daniel Lemire)
-Licensed under the Apache License, Version 2.0.
+Returns **any** @param {(String|Number)} The value(s) of the selected DOM elements
 
- Modified by Efrem Rensi Jan 2020
+## html
 
-### compressedSizeInBytes
+Set innerHTML attribute of DOM element(s)
 
-Compute how many bytes an array of integers would use once compressed
+### Parameters
 
-#### Parameters
+-   `string` **DOMString** [description]
+-   `html` **[String][62]** 
 
--   `input`  an array of non-negative integers
+## types
 
-[1]: #codecs
+Returns **Iterable&lt;[String][62]>** An Iterable of names of the
+                               Strava activity types that we support
 
-[2]: #polyline
+## pathColor
 
-[3]: #decode
+### Parameters
 
-[4]: #parameters
+-   `type` **[String][62]** The activity type (one of the keys of [\_specs][27])
 
-[5]: #data
+Returns **[String][62]** The color code for that activity type
 
-[6]: #parameters-1
+## specs
 
-[7]: #streamrle
+[specs description]
 
-[8]: #decodelist
+### Parameters
 
-[9]: #parameters-2
+-   `type` **[String][62]** The activity type (one of [\_specs][27])
 
-[10]: #_transcodeinfo
+Returns **atypeSpec** An object with specs for this activity type
 
-[11]: #parameters-3
+## specs
 
-[12]: #vbyte
+Type: atypeSpec
 
-[13]: #compressedsizeinbytes
+### Parameters
 
-[14]: #parameters-4
+-   `type`  
 
-[15]: https://developers.google.com/maps/documentation/utilities/polylinealgorithm
+### Properties
 
-[16]: http://facstaff.unca.edu/mcmcclur/GoogleMaps/EncodePolyline/PolylineEncoder.js
+-   `vtype` **([String][62] | null)** "speed" or "pace" (or null)
+-   `pathColor` **[String][62]** Path color (or null)
+-   `type` **[String][62]?** Alternate name for this activity type
 
-[17]: http://facstaff.unca.edu/mcmcclur/
+## addEvent
 
-[18]: https://github.com/Project-OSRM/osrm-frontend/blob/master/WebContent/routing/OSRM.RoutingGeometry.js
+Add an event listener
 
-[19]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String
+### Parameters
 
-[20]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number
+-   `string` **DOMString** 
+-   `eventName` **[String][62]** 
+-   `eventHandler` **[function][58]** 
 
-[21]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array
+## trigger
 
-[22]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object
+Trigger an event
 
-[23]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Statements/function
+### Parameters
+
+-   `string` **DOMString** 
+-   `eventType` **[String][62]** 
+
+## fadeIn
+
+Fade an element in with CSS
+
+### Parameters
+
+-   `string` **DOMString** 
+
+## fadeOut
+
+Fade an element out with CSS
+
+### Parameters
+
+-   `string` **DOMString** 
+
+## setDisplayStyle
+
+Set the display-style for an element
+
+### Parameters
+
+-   `string` **DOMString** 
+-   `style`  
+-   `the` **[String][62]** CSS style setting
+
+## show
+
+Show an element
+
+### Parameters
+
+-   `string` **DOMString** 
+
+## hide
+
+hide an elelment
+
+### Parameters
+
+-   `string` **DOMString** 
+
+[1]: #bitset
+
+[2]: #parameters
+
+[3]: #filter
+
+[4]: #parameters-1
+
+[5]: #add
+
+[6]: #parameters-2
+
+[7]: #flip
+
+[8]: #parameters-3
+
+[9]: #clear
+
+[10]: #remove
+
+[11]: #parameters-4
+
+[12]: #isempty
+
+[13]: #has
+
+[14]: #parameters-5
+
+[15]: #fromwords
+
+[16]: #parameters-6
+
+[17]: #activityurl
+
+[18]: #parameters-7
+
+[19]: #dom
+
+[20]: #parameters-8
+
+[21]: #el
+
+[22]: #parameters-9
+
+[23]: #athleteurl
+
+[24]: #parameters-10
+
+[25]: #data
+
+[26]: #parameters-11
+
+[27]: #_specs
+
+[28]: #set
+
+[29]: #parameters-12
+
+[30]: #get
+
+[31]: #parameters-13
+
+[32]: #html
+
+[33]: #parameters-14
+
+[34]: #types
+
+[35]: #pathcolor
+
+[36]: #parameters-15
+
+[37]: #specs
+
+[38]: #parameters-16
+
+[39]: #specs-1
+
+[40]: #parameters-17
+
+[41]: #properties
+
+[42]: #addevent
+
+[43]: #parameters-18
+
+[44]: #trigger
+
+[45]: #parameters-19
+
+[46]: #fadein
+
+[47]: #parameters-20
+
+[48]: #fadeout
+
+[49]: #parameters-21
+
+[50]: #setdisplaystyle
+
+[51]: #parameters-22
+
+[52]: #show
+
+[53]: #parameters-23
+
+[54]: #hide
+
+[55]: #parameters-24
+
+[56]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number
+
+[57]: fnc
+
+[58]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Statements/function
+
+[59]: #bitset
+
+[60]: index
+
+[61]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean
+
+[62]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String
+
+[63]: selector
+
+[64]: https://developer.mozilla.org/docs/Web/HTML/Element
+
+[65]: https://developer.mozilla.org/docs/Web/API/NodeList
+
+[66]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object

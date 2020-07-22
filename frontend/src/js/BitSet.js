@@ -1,14 +1,11 @@
-/*
- * BitSet.js : a fast bit set implementation in JavaScript.
- * (c) the authors
- * Licensed under the Apache License, Version 2.0.
- *
- * Modified by Efrem Rensi 2020
- */
-
 export default BitSet;
 
-// you can provide an iterable
+/**
+ * Bitset Class Adapted from Daniel Lemire's FastBitSet.js
+ * @class
+ * @constructor
+ * @param {Iterable.<Number>} iterable An iterable of integers
+ */
 function BitSet(iterable) {
   this.words = [];
 
@@ -29,6 +26,13 @@ function BitSet(iterable) {
   }
 }
 
+/**
+ * Create a {@link BitSet} from an Array.
+ * @constructor
+ * @memberOf BitSet
+ * @param  {[type]} words [description]
+ * @return {[type]}       [description]
+ */
 BitSet.fromWords = function (words) {
   const answer = Object.create(BitSet.prototype);
   answer.words = words;
@@ -40,6 +44,13 @@ BitSet.new_filter = function (iterable, fnc) {
   return answer.filter(iterable, fnc);
 };
 
+/**
+ * Set entries x of this {@link BitSet} to true if {@link fnc}(x) is contained. (operates in-place)
+ * @memberOf  BitSet
+ * @param  {Iterable.<Number>} iterable
+ * @param  {function} fnc
+ * @return {BitSet}
+ */
 BitSet.prototype.filter = function (iterable, fnc) {
   this.clear();
   if (
@@ -63,34 +74,49 @@ BitSet.prototype.filter = function (iterable, fnc) {
   return this;
 };
 
-// Add the value (Set the bit at index to true)
+/**
+ * Add the value (Set the bit at {@link index} to true)
+ * @param {Number} index
+ */
 BitSet.prototype.add = function (index) {
   this.resize(index);
   this.words[index >>> 5] |= 1 << index;
   return this;
 };
 
-// If the value was not in the set, add it, otherwise remove it (flip bit at index)
+/**
+ * If the value was not in the set, add it, otherwise remove it (flip bit at {@link index})
+ * @param  {Number} index
+ */
 BitSet.prototype.flip = function (index) {
   this.resize(index);
   this.words[index >>> 5] ^= 1 << index;
 };
 
-// Remove all values, reset memory usage
+/**
+ * Remove all values, reset memory usage
+ */
 BitSet.prototype.clear = function () {
   this.words = [];
   return this;
 };
 
-// Set the bit at index to false
+/**
+ * Set the bit at {@link index} to false
+ * @param  {Number} index [description]
+ * @return {BitSet} This {@link BitSet}
+ */
 BitSet.prototype.remove = function (index) {
   const w = index >>> 5;
   if (w <= this.words.length) this.words[w] &= ~(1 << index);
   return this;
 };
 
-// Return true if no bit is set
-BitSet.prototype.isEmpty = function (index) {
+/**
+ * Return true if no bit is set
+ * @return {Boolean} Is anything in this {@link BitSet}?
+ */
+BitSet.prototype.isEmpty = function () {
   const c = this.words.length;
   for (let i = 0; i < c; i++) {
     if (this.words[i] !== 0) return false;
@@ -98,7 +124,11 @@ BitSet.prototype.isEmpty = function (index) {
   return true;
 };
 
-// Is the value contained in the set? Is the bit at index true or false? Returns a boolean
+/**
+ * Is the value contained in the set? Is the bit at {@link index} true, or false?
+ * @param  {Number}  index
+ * @return {Boolean}
+ */
 BitSet.prototype.has = function (index) {
   return (this.words[index >>> 5] & (1 << index)) !== 0;
 };

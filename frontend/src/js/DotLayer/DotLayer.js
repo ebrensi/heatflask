@@ -4,14 +4,16 @@
 
 import { Layer, Util, DomUtil, Browser, setOptions } from "leaflet";
 import * as leafletImage from "leaflet-image";
-import * as GIF from "../../../node_modules/gif.js/src/gif.coffee";
+import * as GIF from "gif.js";
 import * as download from "downloadjs";
 
-import ViewBox from "./ViewBox.js";
-import DrawBox from "./DrawBox.js";
-import WorkerPool from "./WorkerPool.js";
-import { Polyline, StreamRLE } from "../Codecs.js";
-import Simplifier from "../Simplifier.js";
+import * as ViewBox from "ViewBox.js";
+import * as DrawBox from "DrawBox.js";
+import * as WorkerPool from "WorkerPool.js";
+
+import * as Polyline from "Codecs/Polyline.js";
+import * as StreamRLE from "Codecs/StreamRLE.js";
+import Simplifier from "Simplifier.js";
 import BitSet from "../BitSet.js";
 
 import heatflask_logo from "../../images/logo.png";
@@ -1074,7 +1076,7 @@ export const DotLayer = Layer.extend({
             selection,
             canvas,
             periodInSecs,
-            (callback = callback)
+            callback
           );
         }
       }.bind(this)

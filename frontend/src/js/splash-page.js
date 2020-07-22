@@ -1,15 +1,9 @@
 import "../ext/css/min_entireframework.min.css";
 import "../css/splash-page.css";
 
-import { noop } from "./appUtil.js";
-
-import load_ga_object from "./google-analytics.js";
-
 import strava_button from "../images/btn_strava_connectwith_orange.svg";
 
-const { DEVELOPMENT, URLS } = window["_args"];
-
-const ga = DEVELOPMENT ? noop : load_ga_object();
+const { URLS } = window["_args"];
 
 const button = document.querySelector("#strava-button");
 
