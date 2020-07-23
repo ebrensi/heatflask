@@ -1,5 +1,7 @@
 import os
+
 basedir = os.path.abspath(os.path.dirname(__file__))
+
 
 class Config(object):
     # Flask settings
@@ -12,10 +14,7 @@ class Config(object):
     # Folders that constain files that WhiteNoise will serve
     #  paths are relative to Flask app start point (backend/)
     TEMPLATE_FOLDER = "../frontend/dist"
-    STATIC_FOLDERS = [
-        "../frontend/dist",
-        "../frontend/dist_unbundled"
-    ]
+    STATIC_FOLDERS = ["../frontend/dist", "../frontend/dist_unbundled"]
 
     LOG_LEVEL = os.environ.get("LOG_LEVEL", "DEBUG")
 
@@ -46,15 +45,12 @@ class Config(object):
         "pool_size": 6,
         "max_overflow": 8,
         "pool_timeout": 10,
-        "pool_recycle": 300
+        "pool_recycle": 300,
     }
 
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
 
-    MONGO_OPTIONS = {
-        "maxIdleTimeMS": 10000,
-        "maxPoolSize": 100
-    }
+    MONGO_OPTIONS = {"maxIdleTimeMS": 10000, "maxPoolSize": 100}
 
     MONGO_URI = os.environ.get("MONGODB_URI")
     REDIS_URL = os.environ.get("REDIS_URL")
@@ -71,7 +67,7 @@ class Config(object):
     # How long we Redis-cache Activity stream data
     TTL_CACHE = int(os.environ.get("TTL_CACHE", 4)) * SECS_IN_HOUR
 
-    CACHE_IP_INFO_TIMEOUT = 1 * SECS_IN_DAY # 1 day
+    CACHE_IP_INFO_TIMEOUT = 1 * SECS_IN_DAY  # 1 day
 
     JSONIFY_PRETTYPRINT_REGULAR = True
 
@@ -89,7 +85,7 @@ class Config(object):
 
     # Paypal Stuff
     # PAYPAL_VERIFY_URL = 'https://ipnpb.paypal.com/cgi-bin/webscr'
-    PAYPAL_VERIFY_URL = 'https://ipnpb.sandbox.paypal.com/cgi-bin/webscr'
+    PAYPAL_VERIFY_URL = "https://ipnpb.sandbox.paypal.com/cgi-bin/webscr"
 
     # We are free to delete users who have been inactive for a while
     DAYS_INACTIVE_CUTOFF = 365
@@ -104,7 +100,6 @@ class Config(object):
     FROM_DOMAIN = "heatflask.herokuapp.com"
     TO_DOMAIN = "www.heatflask.com"
 
-
     # A few Demos
     DEMOS = {
         "portland_6_2017": {
@@ -116,18 +111,10 @@ class Config(object):
             "zoom": "6",
             "c1": "859579",
             "c2": "169",
-            "sz": "4"
+            "sz": "4",
         },
-
-        "last60activities": {
-            "username": "15972102",
-            "limit": "60"
-        },
-
-        "last500activities": {
-            "username": "15972102",
-            "limit": "500"
-        }
+        "last60activities": {"username": "15972102", "limit": "60"},
+        "last500activities": {"username": "15972102", "limit": "500"},
     }
 
 
@@ -143,11 +130,13 @@ class ProductionConfig(Config):
     REDIS_URL = os.environ.get("REDISGREEN_URL")
     LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
 
+
 class StagingConfig(Config):
     """
     These are settings specific to the staging environment
      (hosted test app)
     """
+
     DEVELOPMENT = True
     DEBUG = True
 
@@ -161,6 +150,7 @@ class StagingConfig(Config):
     RATELIMIT_STRATEGY = "fixed-window-elastic-expiry"
     RATELIMIT_IN_MEMORY_FALLBACK_ENABLED = True
 
+
 class DevelopmentConfig(Config):
     """
     These are settings specific to the development environment
@@ -172,9 +162,7 @@ class DevelopmentConfig(Config):
     # OFFLINE setting suppresses any internet access
     OFFLINE = os.environ.get("OFFLINE", False)
 
-    USE_REMOTE_DB = (
-        False if OFFLINE else os.environ.get("USE_REMOTE_DB")
-    )
+    USE_REMOTE_DB = False if OFFLINE else os.environ.get("USE_REMOTE_DB")
 
     DEVELOPMENT = True
     DEBUG = True
@@ -182,7 +170,6 @@ class DevelopmentConfig(Config):
 
     # SSLIFY Settings
     SSLIFY_PERMANENT = False
-
 
     if USE_REMOTE_DB:
         MONGO_URI = os.environ.get("REMOTE_MONGODB_URL")
@@ -200,6 +187,4 @@ class DevelopmentConfig(Config):
         TTL_DB = 60 * Config.SECS_IN_DAY
 
         # How long we store an Index entry in MongoDB
-        STORE_INDEX_TIMEOUT = 60 * Config.SECS_IN_DAY   # 60 days
-
-
+        STORE_INDEX_TIMEOUT = 60 * Config.SECS_IN_DAY  # 60 days

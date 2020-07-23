@@ -12,12 +12,16 @@ For more info, [take a look here](https://stackoverflow.com/questions/9257533/wh
 
 ## Code Style Guidelines
 ### Client-side (frontend)
-For Linting we use [ESLint](https://eslint.org) (error checking only) and for consistent styling we use [prettier](https://prettier.io).
+[![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=flat-square)](https://github.com/prettier/prettier)
+
+Front-end code conforms to [ESLint](https://eslint.org) "recommended" config rules and is auto-formatted with [Prettier](https://prettier.io).
 
 When you install frontend dependencies with `npm install`, ESLint and Prettier are installed for you as a dev-dependencies and convenient `npm` scripts to use them are defined in [`package.json`](/frontend/package.json). You can then integrate it with whatever IDE you like.
 
 ### Server-side (backend)
-More here later.
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
+The code in this repo conforms to [Flake8](https://flake8.pycqa.org/en/latest/#) lint rules and is auto-formatted with [Black](https://black.readthedocs.io/en/stable).
 
 
 ### Making a Pull Request

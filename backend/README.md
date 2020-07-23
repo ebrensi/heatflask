@@ -62,5 +62,7 @@ If there are any problems getting this working, please create an [issue](https:/
 ### Make a pull request
 If you make some changes to the code and have tested it on your machine, you can make a pull request. See [/contributing.md](/contributing.md).
 
+### Code style guidelines
+We use [Flake8](https://flake8.pycqa.org/en/latest/#) linter and [Black](https://black.readthedocs.io/en/stable) formatting.
 
 

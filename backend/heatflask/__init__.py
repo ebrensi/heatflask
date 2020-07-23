@@ -1,4 +1,5 @@
 from gevent import monkey
+
 monkey.patch_all()
 
 from datetime import datetime
@@ -30,19 +31,16 @@ limiter = Limiter(key_func=get_remote_address)
 # Global variables
 EPOCH = datetime.utcfromtimestamp(0)
 
+
 def create_app():
     """Initialize the core application"""
     app = Flask(__name__)
 
-    app.config.from_object(os.environ['APP_SETTINGS'])
+    app.config.from_object(os.environ["APP_SETTINGS"])
 
-    app.template_folder = urljoin(
-        app.instance_path,
-        app.config["TEMPLATE_FOLDER"]
-    )
+    app.template_folder = urljoin(app.instance_path, app.config["TEMPLATE_FOLDER"])
 
-    app.wsgi_app = WhiteNoise(app.wsgi_app,
-        autorefresh=app.config["DEVELOPMENT"])
+    app.wsgi_app = WhiteNoise(app.wsgi_app, autorefresh=app.config["DEVELOPMENT"])
 
     for folder in app.config["STATIC_FOLDERS"]:
         app.wsgi_app.add_files(folder)
@@ -62,11 +60,10 @@ def create_app():
         #     content_security_policy=app.config["CONTENT_SECURITY_POLICY"]
         # )
 
-        from .models import (
-            Activities, EventLogger, Index, Payments
-        )
+        from .models import Activities, EventLogger, Index, Payments
 
         import heatflask.routes
+
         # initialize/update data-stores
         db_sql.create_all()
 

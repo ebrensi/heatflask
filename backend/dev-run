@@ -25,12 +25,13 @@ done
 
 GUNICORN_CMD_ARGS="--reload --worker-class flask_sockets.worker --log-level=debug --graceful-timeout 5 --bind '0.0.0.0:$PORT'"
 
-FILE=/usr/bin/heroku
+HEROKU_CLI=/usr/bin/heroku
 
-if [ -f "$FILE" ]; then
-    echo "$FILE is present"
+if [ -f "$HEROKU_CLI" ]; then
+    echo "$HEROKU_CLI is present"
     heroku local
 else
-    echo "$FILE does not exist"
+    echo "$HEROKU_CLI does not exist"
     gunicorn heatflask.wsgi:app
 fi
+

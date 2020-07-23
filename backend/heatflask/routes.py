@@ -16,9 +16,15 @@ import requests
 import stravalib
 from flask import current_app as app
 from flask import (
-    Response, render_template, request, redirect,
-    jsonify, url_for, flash, send_from_directory,
-    get_flashed_messages
+    Response,
+    render_template,
+    request,
+    redirect,
+    jsonify,
+    url_for,
+    flash,
+    send_from_directory,
+    get_flashed_messages,
 )
 from flask_login import current_user, login_user, logout_user
 
@@ -26,8 +32,16 @@ from flask_login import current_user, login_user, logout_user
 from . import login_manager, redis, mongo, sockets
 
 from .models import (
-    Users, Activities, EventLogger, Utility, Webhooks, Index,
-    Payments, BinaryWebsocketClient, StravaClient, Timer
+    Users,
+    Activities,
+    EventLogger,
+    Utility,
+    Webhooks,
+    Index,
+    Payments,
+    BinaryWebsocketClient,
+    StravaClient,
+    Timer,
 )
 
 mongodb = mongo.db
@@ -35,7 +49,7 @@ mongodb = mongo.db
 log = app.logger
 
 # Handles logging-in and logging-out users via cookies
-login_manager.login_view = 'splash'
+login_manager.login_view = "splash"
 
 
 # -------------------------------------------------------------
@@ -49,18 +63,18 @@ def load_user(user_id):
 
 @login_manager.unauthorized_handler
 def handle_needs_login():
-    return redirect(url_for('authorize', state=request.full_path))
+    return redirect(url_for("authorize", state=request.full_path))
 
 
 def admin_required(f):
     # Views wrapped with this wrapper will only allow admin users
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if (current_user.is_authenticated and
-                current_user.is_admin()):
+        if current_user.is_authenticated and current_user.is_admin():
             return f(*args, **kwargs)
         else:
             return login_manager.unauthorized()
+
     return decorated_function
 
 
@@ -96,24 +110,23 @@ def log_request_event(f):
                 # we don't bother logging this event
                 return f(*args, **kwargs)
 
-            event.update(dict(
-                cuid=current_user.id,
-                profile=current_user.profile
-            ))
+            event.update(dict(cuid=current_user.id, profile=current_user.profile))
 
         # If the user is anonymous or a regular user, we log the event
         EventLogger.log_request(request, **event)
         return f(*args, **kwargs)
+
     return decorated_function
 
-#Redirect any old domain urls to new domain
+
+# Redirect any old domain urls to new domain
 @app.before_request
 def redirect_to_new_domain():
     urlparts = urlparse(request.url)
 
     # Don't redirect calls to /webhook _callback.
     #  They cause an error for some reason
-    if urlparts.path == '/webhook_callback':
+    if urlparts.path == "/webhook_callback":
         return
 
     # ignore localhost requests
@@ -136,6 +149,7 @@ def redirect_to_new_domain():
         return redirect(new_url, code=301)
     return
 
+
 # @app.route('/avatar/athlete/medium.png')
 # def anon_photo():
 #     return image_url('anon-photo.jpg')
@@ -143,13 +157,11 @@ def redirect_to_new_domain():
 
 # -----------------------------------------------------------------------------
 #  **** "routes" are our endpoints ***
-@app.route('/')
+@app.route("/")
 def splash():
     if current_user.is_authenticated:
         if hasattr(current_user, "id"):
-            return redirect(
-                url_for('main', username=current_user.id)
-            )
+            return redirect(url_for("main", username=current_user.id))
         else:
             # If a user is logged in but has no record in our database.
             #  i.e. was deleted.  We direct them to initialize a new account.
@@ -162,20 +174,19 @@ def splash():
             "demo": url_for("demo"),
             "directory": url_for("public_directory"),
             "strava-button": url_for(
-                "authorize",
-                next=(request.args.get("next") or url_for("splash"))
-            )
-        }
+                "authorize", next=(request.args.get("next") or url_for("splash"))
+            ),
+        },
     }
 
     return render_template("splash.html", args=args)
 
 
 # Attempt to authorize a user via Oauth(2)
-@app.route('/authorize')
+@app.route("/authorize")
 def authorize():
     state = request.args.get("state")
-    redirect_uri = url_for('auth_callback', _external=True)
+    redirect_uri = url_for("auth_callback", _external=True)
 
     client = stravalib.Client()
     auth_url = client.authorization_url(
@@ -183,14 +194,14 @@ def authorize():
         redirect_uri=redirect_uri,
         # approval_prompt="force",
         scope=["read", "activity:read", "activity:read_all"],
-        state=state
+        state=state,
     )
     return redirect(auth_url)
 
 
 # Authorization callback.  The service returns here to give us an access_token
 #  for the user who successfully logged in.
-@app.route('/authorized')
+@app.route("/authorized")
 def auth_callback():
     state = request.args.get("state")
 
@@ -207,7 +218,7 @@ def auth_callback():
         args = dict(
             code=request.args.get("code"),
             client_id=app.config["STRAVA_CLIENT_ID"],
-            client_secret=app.config["STRAVA_CLIENT_SECRET"]
+            client_secret=app.config["STRAVA_CLIENT_SECRET"],
         )
 
         client = stravalib.Client()
@@ -216,9 +227,7 @@ def auth_callback():
             access_info = client.exchange_code_for_token(**args)
             # access_info is a dict containing the access_token,
             #  date of expire, and a refresh token
-            user_data = Users.strava_user_data(
-                access_info=access_info
-            )
+            user_data = Users.strava_user_data(access_info=access_info)
 
             assert user_data
 
@@ -251,8 +260,7 @@ def logout(username):
     user_id = user.id
     username = user.username
     logout_user()
-    flash("user '{}' ({}) logged out"
-          .format(username, user_id))
+    flash("user '{}' ({}) logged out".format(username, user_id))
     return redirect(url_for("splash"))
 
 
@@ -288,7 +296,7 @@ def delete(username):
     return redirect(url_for("splash"))
 
 
-@app.route('/<username>')
+@app.route("/<username>")
 def main(username):
     if current_user.is_authenticated:
         # If a user is logged in from a past session but has no record in our
@@ -308,9 +316,8 @@ def main(username):
 
     user = Users.get(username)
     if not user:
-        flash("user '{}' is not registered with heatflask"
-              .format(username))
-        return redirect(url_for('splash'))
+        flash("user '{}' is not registered with heatflask".format(username))
+        return redirect(url_for("splash"))
 
     try:
         #  Catch any registered users that still have the old access_token
@@ -319,14 +326,12 @@ def main(username):
     except Exception:
         # if the logged-in user has a bad access_token
         #  then we log them out so they can re-authenticate
-        flash(
-            "Invalid access token for {}. please re-authenticate."
-            .format(user))
+        flash("Invalid access token for {}. please re-authenticate.".format(user))
         if current_user == user:
             logout_user()
             return login_manager.unauthorized()
         else:
-            return redirect(url_for('splash'))
+            return redirect(url_for("splash"))
 
     ip = Utility.ip_address(request)
     web_client_id = "H:{}:{}".format(ip, int(time.time()))
@@ -337,14 +342,11 @@ def main(username):
         event = {
             "ip": request.access_route[-1],
             "agent": vars(request.user_agent),
-            "msg": Utility.href(request.url, request.full_path)
+            "msg": Utility.href(request.url, request.full_path),
         }
 
         if current_user.is_authenticated:
-            event.update({
-                "profile": current_user.profile,
-                "cuid": current_user.id
-            })
+            event.update({"profile": current_user.profile, "cuid": current_user.id})
 
         EventLogger.new_event(**event)
 
@@ -352,7 +354,7 @@ def main(username):
         "CLIENT_ID": web_client_id,
         "DEVELOPMENT": app.config.get("DEVELOPMENT"),
         "FLASH_MESSAGES": get_flashed_messages(),
-        "APP_NAME": app.config.get("APP_NAME")
+        "APP_NAME": app.config.get("APP_NAME"),
     }
 
     if current_user.is_authenticated:
@@ -360,10 +362,10 @@ def main(username):
         current_user_info["isAdmin"] = current_user.is_admin()
         args["CURRENT_USER"] = current_user_info
 
-    return render_template('main.html', args=args)
+    return render_template("main.html", args=args)
 
 
-@app.route('/<username>/activities')
+@app.route("/<username>/activities")
 @log_request_event
 # @admin_or_self_required
 def activities(username):
@@ -386,13 +388,13 @@ def activities(username):
         "OFFLINE": app.config.get("OFFLINE"),
         "ADMIN": current_user.is_admin(),
         "IMPERIAL": user.measurement_preference == "feet",
-        "DEVELOPMENT": app.config.get("DEVELOPMENT")
+        "DEVELOPMENT": app.config.get("DEVELOPMENT"),
     }
 
     return render_template("activity-list.html", user=user, _args=args)
 
 
-@app.route('/<username>/activities/<int:_id>')
+@app.route("/<username>/activities/<int:_id>")
 @admin_or_self_required
 def activity(username, _id):
     user = Users.get(username)
@@ -401,7 +403,7 @@ def activity(username, _id):
     return jsonify(raw)
 
 
-@app.route('/<username>/update_info')
+@app.route("/<username>/update_info")
 @log_request_event
 @admin_or_self_required
 def update_share_status(username):
@@ -410,15 +412,11 @@ def update_share_status(username):
 
     # set user's share status
     status = user.is_public(status == "public")
-    log.info(
-        "share status for %s set to %s",
-        user,
-        status
-    )
+    log.info("share status for %s set to %s", user, status)
     return jsonify(user=user.id, share=status)
 
 
-@sockets.route('/data_socket')
+@sockets.route("/data_socket")
 def data_socket(ws):
 
     wsclient = BinaryWebsocketClient(ws)
@@ -457,7 +455,7 @@ def data_socket(ws):
 
 
 #  Endpoints for named demos
-@app.route('/demos/<demo_key>')
+@app.route("/demos/<demo_key>")
 def demos(demo_key):
     # Last 60 activities
     demos = app.config.get("DEMOS")
@@ -471,7 +469,7 @@ def demos(demo_key):
     return redirect(url_for("main", **params))
 
 
-@app.route('/demo')
+@app.route("/demo")
 def demo():
     # Last 60 activities
     return redirect(url_for("demos", demo_key="last60activities"))
@@ -480,7 +478,7 @@ def demo():
 # ---- Endpoints to cache and retrieve query urls that might be long
 #   we store them as integer ids and the key for access is that integer
 #   in base-36
-@app.route('/cache', methods=["GET", "POST"])
+@app.route("/cache", methods=["GET", "POST"])
 def cache_put(query_key):
     def new_id():
         ids = mongodb.queries.distinct("_id")
@@ -497,10 +495,10 @@ def cache_put(query_key):
         return _id
 
     obj = {}
-    if request.method == 'GET':
+    if request.method == "GET":
         obj = request.args.to_dict()
 
-    if request.method == 'POST':
+    if request.method == "POST":
         obj = request.get_json(force=True)
 
     if not obj:
@@ -508,9 +506,7 @@ def cache_put(query_key):
 
     h = hash(obj)
 
-    doc = mongodb.queries.find_one(
-        {"hash": h}
-    )
+    doc = mongodb.queries.find_one({"hash": h})
 
     # if a record exists with this hash already then return
     #  the id for that record
@@ -519,30 +515,19 @@ def cache_put(query_key):
 
     else:
         _id = new_id(obj)
-        obj.update({
-            "_id": _id,
-            "hash": h,
-            "ts": datetime.utcnow()
-        })
+        obj.update({"_id": _id, "hash": h, "ts": datetime.utcnow()})
 
         try:
-            mongodb.queries.update_one(
-                {"_id": _id},
-                {"$set": obj},
-                upsert=True
-            )
+            mongodb.queries.update_one({"_id": _id}, {"$set": obj}, upsert=True)
 
         except Exception as e:
-            log.debug(
-                "error writing query {} to MongoDB: {}"
-                .format(_id, e)
-            )
+            log.debug("error writing query {} to MongoDB: {}".format(_id, e))
             return
 
     return jsonify(base36.dumps(_id))
 
 
-@app.route('/cache/<key>')
+@app.route("/cache/<key>")
 def cache_retrieve(key):
     result = mongodb.queries.find_one({"_id": key})
     if not result:
@@ -558,27 +543,36 @@ def cache_retrieve(key):
 
 
 # ---- Shared views ----
-@app.route('/public/directory')
+@app.route("/public/directory")
 @log_request_event
 def public_directory():
-    fields = ["id", "dt_last_active", "username", "profile",
-              "city", "state", "country"]
+    fields = ["id", "dt_last_active", "username", "profile", "city", "state", "country"]
     info = Users.dump(fields, share_profile=True)
     return render_template("directory.html", data=info)
 
 
 # ---- User admin stuff ----
-@app.route('/users')
+@app.route("/users")
 @admin_required
 def users():
-    fields = ["id", "dt_last_active", "firstname", "lastname", "profile",
-              "app_activity_count", "city", "state", "country", "email",
-              "dt_indexed"]
+    fields = [
+        "id",
+        "dt_last_active",
+        "firstname",
+        "lastname",
+        "profile",
+        "app_activity_count",
+        "city",
+        "state",
+        "country",
+        "email",
+        "dt_indexed",
+    ]
     info = Users.dump(fields)
     return render_template("admin.html", data=info)
 
 
-@app.route('/users/update')
+@app.route("/users/update")
 @admin_required
 def users_update():
     delete = request.args.get("delete")
@@ -591,11 +585,7 @@ def users_update():
         except Exception:
             return "bad days value"
 
-    iterator = Users.triage(
-        days_inactive_cutoff=days,
-        delete=delete,
-        update=update
-    )
+    iterator = Users.triage(days_inactive_cutoff=days, delete=delete, update=update)
     return "ok"
 
     # stream = (
@@ -608,7 +598,7 @@ def users_update():
     # )
 
 
-@app.route('/users/<username>')
+@app.route("/users/<username>")
 @log_request_event
 @admin_or_self_required
 def user_profile(username):
@@ -618,7 +608,7 @@ def user_profile(username):
 
 
 # ---- App maintenance stuff -----
-@app.route('/app/info')
+@app.route("/app/info")
 @admin_required
 def app_info():
     info = {
@@ -626,19 +616,19 @@ def app_info():
         "mongodb": mongodb.command("dbstats"),
         Activities.name: mongodb.command("collstats", Activities.name),
         Index.name: mongodb.command("collstats", Index.name),
-        "config": app.config
+        "config": app.config,
     }
     return jsonify(info)
 
 
-@app.route('/app/dbinit')
+@app.route("/app/dbinit")
 @admin_required
 def app_init():
     keys = redis.keys("*")
     info = {
         "redis": redis.delete(*keys) if keys else [],
         "Activities": Activities.init_db(),
-        "Index": Index.init_db()
+        "Index": Index.init_db(),
     }
     return "Activities, Index initialized and redis cleared\n{}".format(info)
 
@@ -660,7 +650,7 @@ def beacon_handler():
 
 
 # ---- Event log stuff ----
-@app.route('/events')
+@app.route("/events")
 @admin_required
 def event_history():
     events = EventLogger.get_log(int(request.args.get("n", 100)))
@@ -669,14 +659,14 @@ def event_history():
     return "No history"
 
 
-@app.route('/events/<event_id>')
+@app.route("/events/<event_id>")
 @log_request_event
 @admin_required
 def logged_event(event_id):
     return jsonify(EventLogger.get_event(event_id))
 
 
-@app.route('/events/init')
+@app.route("/events/init")
 @log_request_event
 @admin_required
 def event_history_init():
@@ -685,7 +675,7 @@ def event_history_init():
 
 
 # IP lookup url
-@app.route('/ip_lookup')
+@app.route("/ip_lookup")
 @admin_required
 def ip_lookup():
     ip = request.args.get("ip")
@@ -700,9 +690,8 @@ def ip_lookup():
         # log.debug("got cached info for {}".format(ip))
 
     else:
-        url = (
-            "http://api.ipstack.com/{}?access_key={}"
-            .format(ip, app.config.get("IPSTACK_ACCESS_KEY"))
+        url = "http://api.ipstack.com/{}?access_key={}".format(
+            ip, app.config.get("IPSTACK_ACCESS_KEY")
         )
         resp = requests.get(url)
         info = json.dumps(resp.json()) if resp else ""
@@ -713,13 +702,11 @@ def ip_lookup():
 
 
 # Stuff for subscription to Strava webhooks
-@app.route('/subscription/<operation>')
+@app.route("/subscription/<operation>")
 @admin_required
 def subscription_endpoint(operation):
     if operation == "create":
-        return jsonify(
-            Webhooks.create(url_for("webhook_callback", _external=True))
-        )
+        return jsonify(Webhooks.create(url_for("webhook_callback", _external=True)))
 
     elif operation == "list":
         return jsonify({"subscriptions": Webhooks.list()})
@@ -727,47 +714,45 @@ def subscription_endpoint(operation):
     elif operation == "delete":
         result = Webhooks.delete(
             subscription_id=request.args.get("id"),
-            delete_collection=request.args.get("reset")
+            delete_collection=request.args.get("reset"),
         )
         return jsonify(result)
 
     elif operation == "updates":
-        return render_template("webhooks.html",
-                               events=list(
-                                   Webhooks.iter_updates(
-                                       int(request.args.get("n", 100)))
-                               ))
+        return render_template(
+            "webhooks.html",
+            events=list(Webhooks.iter_updates(int(request.args.get("n", 100)))),
+        )
 
 
-@app.route('/webhook_callback', methods=["GET", "POST"])
+@app.route("/webhook_callback", methods=["GET", "POST"])
 # @talisman(force_https=False)
 def webhook_callback():
 
-    if request.method == 'GET':
+    if request.method == "GET":
         if request.args.get("hub.challenge"):
-            log.debug(
-                "subscription callback with {}".format(request.args))
+            log.debug("subscription callback with {}".format(request.args))
             cb = Webhooks.handle_subscription_callback(request.args)
-            log.debug(
-                "handle_subscription_callback returns {}".format(cb))
+            log.debug("handle_subscription_callback returns {}".format(cb))
             return jsonify(cb)
 
         log.debug("webhook_callback: {}".format(request))
         return "ok"
 
-    elif request.method == 'POST':
+    elif request.method == "POST":
         update_raw = request.get_json(force=True)
         Webhooks.handle_update_callback(update_raw)
         return "success"
 
 
 # Paypal stuff
-@app.route('/paypal/success')
+@app.route("/paypal/success")
 def success():
     try:
         return "Thanks for your donation!"
     except Exception as e:
-        return(str(e, "utf-8"))
+        return str(e, "utf-8")
+
 
 #
 # Donation/Payment notification handler
@@ -776,21 +761,21 @@ def success():
 #  https://developer.paypal.com/docs/classic/products/payment-data-transfer
 #  IPN:
 #  https://developer.paypal.com/docs/classic/products/instant-payment-notification
-@app.route('/paypal/ipn', methods=['POST'])
+@app.route("/paypal/ipn", methods=["POST"])
 def paypal_ipn_handler():
 
     # Check with Paypal to confirm that this POST form data comes from them
     r = requests.post(
         app.config.get("PAYPAL_VERIFY_URL"),
         headers={
-            'User-Agent': 'PYTHON-IPN-VerificationScript',
-            'content-type': 'application/x-www-form-urlencoded'
+            "User-Agent": "PYTHON-IPN-VerificationScript",
+            "content-type": "application/x-www-form-urlencoded",
         },
-        data='cmd=_notify-validate&{}'.format(request.data)
+        data="cmd=_notify-validate&{}".format(request.data),
     )
     log.debug("ipn verification:  {}".format(r))
 
-    if r.text == 'VERIFIED':
+    if r.text == "VERIFIED":
         log.info("Received verified data: {}".format(request.form))
 
         # Here we take some action based on the data from Paypal,
@@ -800,7 +785,7 @@ def paypal_ipn_handler():
         return "Paypal IPN message could not be verified.", 403
 
 
-@app.route('/test', methods=["GET", "POST"])
+@app.route("/test", methods=["GET", "POST"])
 @admin_required
 def test_endpoint():
     return "yo!"

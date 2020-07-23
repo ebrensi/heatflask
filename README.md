@@ -1,4 +1,4 @@
-# Heatflask -- Making Geospatial Dataviz Great Again
+# Heatflask
 [<img src="/frontend/src/images/logo.png" alt="logo" width=200/>](https://www.heatflask.com)
 
 This is the the server-side and client-side code repository for the Heatflask web-application.
@@ -23,3 +23,4 @@ Copyright (c) 2016-2020 [Efrem Rensi](mailto:info@heatflask.com)
 Feel free to [contact me](mailto:info@heatflask.com) with questions or suggestions
 
 ![alt text](docs/gif1.gif)
+

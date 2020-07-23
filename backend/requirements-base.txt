@@ -1,12 +1,11 @@
-
-Flask-PyMongo
+Flask - PyMongo
 base36
-flask-limiter
-flask-login
-flask-redis
-flask-sockets
-flask-sqlalchemy
-flask-sslify
+flask - limiter
+flask - login
+flask - redis
+flask - sockets
+flask - sqlalchemy
+flask - sslify
 flask
 gevent
 gunicorn
@@ -14,7 +13,7 @@ msgpack
 polyline
 psycopg2
 pymongo[srv]
-python-dateutil
+python - dateutil
 redis
 requests
 stravalib
