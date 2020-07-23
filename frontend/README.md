@@ -1,4 +1,5 @@
 # Heatflask frontend
+[![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=flat-square)](https://github.com/prettier/prettier)
 
 This is the client-side code for [Heatflask](https://www.heatflask.com), which will run in the end-user's browser. It is written in plain "vanilla" JavaScript (ES6+). We assume the user is running a modern, up-to-date browser like Firefox or Chrome. We will not make any effort to support IE or any browser versioned over a couple of years old.
 

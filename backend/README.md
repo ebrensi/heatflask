@@ -1,4 +1,6 @@
 # Heatflask backend
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
 This is the server-side code for [Heatflask](https://www.heatflask.com ).  It is written in Python using the [Flask](https://flask.palletsprojects.com/en/1.1.x) framework.  I called the app Heatflask because it originally made heatmaps from [Strava](https://www.strava.com) data using Flask as the backend.  Flask is getting a little dated and I am open to moving to a different platform, or even a different language.  For now the Flask backend is pretty stable and runs itself without much intervention.
 
 ## Contributing

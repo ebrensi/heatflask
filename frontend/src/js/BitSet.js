@@ -6,6 +6,7 @@ export default BitSet;
  * @constructor
  * @param {Iterable.<Number>} iterable An iterable of integers
  */
+
 function BitSet(iterable) {
   this.words = [];
 
