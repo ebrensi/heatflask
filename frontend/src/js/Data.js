@@ -1,7 +1,8 @@
-/*
- * Data.js -- Here we define the functionality for getting the activity data
+/**
+ * Here we define the functionality for getting the activity data
  *          that we use for vizualization.  That means, importing
  *          it from the backend or local storage.
+ * @module
  */
 
 import { BEACON_HANDLER_URL, WEBSOCKET_URL, CLIENT_ID } from "./Init.js";

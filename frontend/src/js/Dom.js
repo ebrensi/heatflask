@@ -17,11 +17,13 @@ export function el(selector) {
 }
 
 function doFunc(selector, func) {
-  const _el = el(selector);
+  const _el = el(selector),
+        proto = Object.prototype.isPrototypeOf.call(NodeList, _el);
+
   if (!_el) {
     console.warn(`DOM element "${selector}" does not exist.`);
     return;
-  } else if (NodeList.prototype.isPrototypeOf(_el)) {
+  } else if (proto) {
     const result = [];
 
     for (const l of _el) {

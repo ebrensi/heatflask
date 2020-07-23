@@ -109,7 +109,7 @@ if (qblName) {
     } catch (e) {
       const msg = `${e}: sorry we don't support the baseLayer "${qblName}"`;
       console.log(msg);
-      showErrMessage(msg);
+      msgBox2.content(msg).show();
     }
   }
 }
