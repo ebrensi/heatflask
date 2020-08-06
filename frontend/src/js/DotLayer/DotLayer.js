@@ -19,53 +19,19 @@ import BitSet from "../BitSet.js";
 import heatflask_logo from "../../images/logo.png";
 import strava_logo from "../../images/pbs4.png";
 
-export const DotLayer = Layer.extend({
+import options from "options.js";
+
+export const DotLayer = Layer.extend(extension);
+
+export const dotLayer = function (options) {
+  return new DotLayer(options);
+};
+
+const extension = {
   _pane: "shadowPane",
   two_pi: 2 * Math.PI,
   target_fps: 25,
-
-  options: {
-    debug: false,
-    numWorkers: 0,
-    startPaused: false,
-    showPaths: true,
-    fps_display: false,
-
-    normal: {
-      dotColor: "#000000",
-      dotOpacity: 0.7,
-
-      pathColor: "#000000",
-      pathOpacity: 0.7,
-      pathWidth: 1,
-    },
-
-    selected: {
-      dotColor: "#FFFFFF",
-      dotOpacity: 0.9,
-
-      pathColor: "#000000",
-      pathOpacity: 0.7,
-      pathWidth: 5,
-    },
-
-    unselected: {
-      dotColor: "#000000",
-      dotOpacity: 0.3,
-
-      pathColor: "#000000",
-      pathOpacity: 0.3,
-      pathWidth: 1,
-    },
-
-    dotShadows: {
-      enabled: true,
-      x: 0,
-      y: 5,
-      blur: 5,
-      color: "#000000",
-    },
-  },
+  options: options,
 
   // -- initialized is called on prototype
   initialize: function (options) {
@@ -1072,12 +1038,7 @@ export const DotLayer = Layer.extend({
         // download(canvas.toDataURL("image/png"), "mapViewBox.png", "image/png");
         // console.log("leaflet-image: " + err);
         if (canvas) {
-          this.captureGIF(
-            selection,
-            canvas,
-            periodInSecs,
-            callback
-          );
+          this.captureGIF(selection, canvas, periodInSecs, callback);
         }
       }.bind(this)
     );
@@ -1416,8 +1377,4 @@ export const DotLayer = Layer.extend({
             return binarySearch(map, x, mid+1, end);
     }
     */
-}); // end of DotLayer definition
-
-export const dotLayer = function (options) {
-  return new DotLayer(options);
-};
+}; // end of DotLayer definition

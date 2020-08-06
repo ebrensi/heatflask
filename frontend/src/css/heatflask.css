@@ -3,6 +3,15 @@
 
 /* global variables */
 :root {
+  --strava-auth-button: url("../images/btn_strava_connectwith_orange.svg");
+  --strava-badge: url("../images/strava_button.png");
+  --layers-button: url("../images/layers.png");
+  --layers-button-2X: url("../images/layers-2x.png");
+  --marker-icon: url("../images/marker-icon.png");
+
+  --info-tab-content: url("../html/main-info.html");
+  --paypal-button-content: url("../html/paypal-button.html");
+
   --sidebar-height: 160px;
 }
 
@@ -27,17 +36,33 @@ textarea {
   color: white;
 }
 
-.paypal_button {
+#info-tab {
+  content: var(--info-tab-content);
+}
+
+input.paypal-button {
   background-color: transparent;
 }
 
-.strava-auth {
-  background-color: transparent;
+div.paypal-button {
+  content: var(--paypal-button-content);
 }
 
-img.strava-button {
+/* see https://stackoverflow.com/questions/8683528/embed-image-in-a-button-element */
+button.strava-auth {
+  background-image: var(--strava-auth-button);
+}
+
+/*see https://www.w3docs.com/snippets/css/how-to-set-the-equivalent-of-src-attribute-of-an-img-tag-in-css.html */
+img.strava-badge {
+  content: var(--strava-badge);
   width: 20px;
   height: 20px;
+}
+
+img.avatar {
+  height: 20%;
+  width: 20%;
 }
 
 i.sm-button {
@@ -94,15 +119,15 @@ span.date-select {
 
 /* we need to specify non-standard location for images */
 .leaflet-control-layers-toggle {
-  background-image: url(../images/layers.png);
+  background-image: var(--layers-button);
 }
 
 .leaflet-retina .leaflet-control-layers-toggle {
-  background-image: url(../images/layers-2x.png);
+  background-image: var(--layers-button-2X);
 }
 
 .leaflet-default-icon-path {
-  background-image: url(../images/marker-icon.png);
+  background-image: var(--marker-icon);
 }
 
 .leaflet-container {

@@ -5,15 +5,25 @@
 
 import { CURRENT_USER } from "./Init.js";
 
-/* For each visual parameter, we accept different possible URL argument names
-    and provide a default value.
-*/
-const paramDefaults = {
+/**
+ * query parameters are those that describe the query we make to the
+ * backend for activity data
+ * @type {object}
+ */
+const queryDefaults = {
   date1: [["start", "after", "date1", "a"], null],
   date2: [["end", "before", "date2", "b"], null],
   days: [["days", "preset", "d"], null],
   limit: [["limit", "l"], 10],
   ids: [["id", "ids"], ""],
+};
+
+/**
+ * vparams (visual-parameters) are those that determine
+ *   what appears visually.
+ * @type {Object}
+ */
+const vparamDefaults = {
   zoom: [["zoom", "z"], 3],
   lat: [["lat", "x"], 27.53],
   lng: [["lng", "y"], 1.58],
@@ -27,6 +37,8 @@ const paramDefaults = {
   alpha: [["alpha"], 1],
   baselayer: [["baselayer", "map", "bl"], null],
 };
+
+const paramDefaults = { ...queryDefaults, ...vparamDefaults };
 
 /* TODO: add a geohash location parameter.
         maybe replace lat and lng altogether with geohash */
