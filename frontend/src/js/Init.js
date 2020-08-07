@@ -35,14 +35,15 @@ export const WEBSOCKET_URL = `${ws_prefix()}${
 export const BEACON_HANDLER_URL = "/beacon_handler";
 export const AUTHORIZE_URL = "/authorize";
 
+
 export function MAKE_USER_URLS(userid) {
   return {
-    MAIN: `/${userid}`,
-    ACTIVITY_LIST: `/${userid}/activities`,
-    SHARE_STATUS_UPDATE: `/${userid}/update_info`,
-    DELETE_ACCOUNT: `${userid}/delete`,
-    LOG_OUT: `${userid}/logout`,
-    STRAVA_PROFILE: `https://www.strava.com/athletes/${userid}`,
+    main: `/${userid}`,
+    activities: `/${userid}/activities`,
+    public: `/${userid}/update_info`,
+    delete: `${userid}/delete`,
+    logout: `${userid}/logout`,
+    strava: `https://www.strava.com/athletes/${userid}`,
   };
 }
 
