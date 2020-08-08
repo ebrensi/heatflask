@@ -9,9 +9,8 @@ export let FLASH_MESSAGES;
 export let APP_NAME;
 export let CURRENT_USER;
 
-const jinja_args = window["_args"];
-
-if (jinja_args) {
+if ("argstring" in window) {
+  const jinja_args = JSON.parse(window["argstring"]);
   CLIENT_ID = jinja_args["CLIENT_ID"];
   DEVELOPMENT = jinja_args["DEVELOPMENT"];
   CURRENT_USER = jinja_args["CURRENT_USER"];

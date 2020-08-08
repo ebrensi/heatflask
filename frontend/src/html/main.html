@@ -373,7 +373,7 @@
      it will be available to our scripts as window["_args"]
  -->
   <script>
-    window["_args"] = JSON.parse("{{ args | tojson | safe }}");
+    window["argstring"] = JSON.parse("{{ args | tojson | safe }}");
   </script>
 
   <script src="../js/main.js"></script>
