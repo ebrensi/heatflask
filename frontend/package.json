@@ -8,8 +8,9 @@
   },
   "description": "Animated Movement Data Visualization for Strava Tracks",
   "scripts": {
-    "build": "npm run documentation && npm run format; parcel build ./src/html/*.html",
-    "watch": "parcel watch ./src/html/*.html",
+    "build": "npm run format; parcel build ./src/html/*.html",
+    "watch": "parcel watch .--log-level verbose /src/html/*.html",
+    "serve": "parcel serve --log-level verbose ./src/html/*.html",
     "check": "prettier --check ./src/",
     "format": "prettier --write ./src/",
     "documentation": "documentation build --shallow ./src/js/**.js -f html -o ../docs/"

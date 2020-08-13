@@ -5,6 +5,52 @@
 
 import { CURRENT_USER } from "./Init.js";
 
+
+const values = {};
+
+const model = {};
+
+document.querySelectorAll("[data-bind]").forEach(el => {
+  const fieldName = el.dataset.bind,
+        attr = el.dataset.attr || "value",
+        cls = el.dataset.class;
+
+  if (!model[cls]) {
+    model[cls] = {}
+  }
+
+  if (!values[fieldName]) {
+    values[fieldName] = {
+      val: el[attr],
+      els: [el],
+      attr: attr
+    }
+
+    Object.defineProperty(model[cls], fieldName, {
+      get: function() {
+        return values[fieldName].val;
+      },
+
+      set: function(val) {
+        const entry = values[fieldName],
+              attr = entry.attr;
+
+        entry.val = val;
+
+        for (const e of entry.els) {
+          e[attr] = val;
+        }
+      }
+    });
+
+  } else {
+    values[fieldName].els.push(el)
+  }
+
+});
+
+
+
 /**
  * query parameters are those that describe the query we make to the
  * backend for activity data
@@ -102,6 +148,9 @@ export const vparams = {
   baselayer: params["baselayer"],
 };
 
+
+
+
 export const items = new Set();
 
 const appState = {
@@ -120,3 +169,5 @@ const appState = {
 window["heatflask"] = appState;
 
 export { appState as default };
+
+debugger;

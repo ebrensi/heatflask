@@ -18,7 +18,7 @@ export function el(selector) {
 
 function doFunc(selector, func) {
   const _el = el(selector),
-        proto = Object.prototype.isPrototypeOf.call(NodeList, _el);
+    proto = Object.prototype.isPrototypeOf.call(NodeList, _el);
 
   if (!_el) {
     console.warn(`DOM element "${selector}" does not exist.`);
@@ -62,7 +62,6 @@ export function get(string) {
   return prop(string, "value");
 }
 
-
 /**
  * Set innerHTML attribute of DOM element(s)
  * @param  {DOMString} string [description]
@@ -94,7 +93,6 @@ export function trigger(string, eventType) {
     el.dispatchEvent(event);
   });
 }
-
 
 function fade(string, out) {
   let ops;

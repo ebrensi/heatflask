@@ -11,7 +11,6 @@ __pycache__/
 env/
 build/
 develop-eggs/
-#dist/
 downloads/
 eggs/
 lib/
@@ -22,8 +21,7 @@ var/
 *.egg-info/
 .installed.cfg
 *.egg
-node_modules/
-.cache
+
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -98,16 +96,24 @@ log.txt
 .hidden
 .fuse*
 
-.webassets-cache/
-
 test.py
 env.sh
 clean.sh
 .env
 
 frontend/test/
-node_modules
 
-# we allow dist for production
+# Ignore node_modules both as a directory, and as a symbolic link
+node_modules
+node_modules/
+
+# Igonre ParcelJS caches
+.parcel-cache/
+.parcel-cache
+.cache/
+.cache
+
+# we allow dist only for production
 dist/
+docs/
 
