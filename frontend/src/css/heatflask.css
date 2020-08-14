@@ -8,12 +8,14 @@
   --layers-button: url("../images/layers.png");
   --layers-button-2X: url("../images/layers-2x.png");
   --marker-icon: url("../images/marker-icon.png");
-
   --info-tab-content: url("../html/main-info.html");
   --paypal-button-content: url("../html/paypal-button.html");
 
   --sidebar-height: 160px;
 }
+
+@import "./font-awesome-lite.css";
+@import "./../ext/css/min_entireframework.min.css";
 
 body {
   padding: 0;
@@ -36,10 +38,6 @@ textarea {
   color: white;
 }
 
-#info-tab {
-  content: var(--info-tab-content);
-}
-
 input.paypal-button {
   background-color: transparent;
 }
@@ -51,16 +49,18 @@ div.paypal-button {
 /* see https://stackoverflow.com/questions/8683528/embed-image-in-a-button-element */
 button.strava-auth {
   background-image: var(--strava-auth-button);
+  background-size: 100px 100px;
 }
 
 /*see https://www.w3docs.com/snippets/css/how-to-set-the-equivalent-of-src-attribute-of-an-img-tag-in-css.html */
-img.strava-badge {
-  content: var(--strava-badge);
-  width: 20px;
-  height: 20px;
+button.strava-badge {
+  background-image: var(--strava-badge);
+  background-size: 20px 20px;
+  width: 25px;
+  height: 25px;
 }
 
-img.avatar {
+button.avatar {
   height: 20%;
   width: 20%;
 }

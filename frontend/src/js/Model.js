@@ -3,53 +3,75 @@
  *    beginning with those specified by the current URL in the browser.
  */
 
-import { CURRENT_USER } from "./Init.js";
+// import { CURRENT_USER } from "./Init.js";
+import { BoundVariable } from "./Binding.js";
 
+/**
+ * Create a DOM binding with an object property
+ * https://www.wintellect.com/data-binding-pure-javascript/
+ *
+ * @param {[type]} b [description]
+ */
+// function Binding(object, property) {
+//   const _this = this;
 
-const values = {};
+//   this.DOMbindings = [];
+//   this.generalBindings = [];
 
-const model = {};
+//   this.value = object[property];
 
-document.querySelectorAll("[data-bind]").forEach(el => {
-  const fieldName = el.dataset.bind,
-        attr = el.dataset.attr || "value",
-        cls = el.dataset.class;
+//   this.valueSetter = function (val) {
+//     _this.value = val;
+//     for (let i = 0; i < _this.DOMbindings.length; i++) {
+//       const binding = _this.DOMbindings[i];
+//       binding.element[binding.attribute] = val;
+//     }
 
-  if (!model[cls]) {
-    model[cls] = {}
-  }
+//     for (let i = 0; i < _this.generalBindings.length; i++) {
+//       const binding = _this.generalBindings[i];
+//       binding.set(val);
+//     }
+//   };
 
-  if (!values[fieldName]) {
-    values[fieldName] = {
-      val: el[attr],
-      els: [el],
-      attr: attr
-    }
+//   this.addDOMbinding = function (element, attribute, event) {
+//     const binding = {
+//       element: element,
+//       attribute: attribute,
+//     };
 
-    Object.defineProperty(model[cls], fieldName, {
-      get: function() {
-        return values[fieldName].val;
-      },
+//     if (event) {
+//       element.addEventListener(event, function () {
+//         _this.valueSetter(element[attribute]);
+//       });
+//       binding.event = event;
+//     }
+//     _this.DOMbindings.push(binding);
+//     element[attribute] = _this.value;
+//     return _this;
+//   };
 
-      set: function(val) {
-        const entry = values[fieldName],
-              attr = entry.attr;
+//   this.addGeneralBinding = function (object, setFunc) {
+//     const binding = {
+//       set: setFunc,
+//     };
 
-        entry.val = val;
+//     this.generalBindings.push(binding);
+//     setFunc(_this.value);
 
-        for (const e of entry.els) {
-          e[attr] = val;
-        }
-      }
-    });
+//     return function onChange(newVal) {
+//       _this.valueSetter(newVal);
+//     };
+//   };
 
-  } else {
-    values[fieldName].els.push(el)
-  }
+//   Object.defineProperty(object, property, {
+//     get: function () {
+//       return _this.value;
+//     },
+//     set: this.valueSetter,
+//   });
 
-});
-
-
+//   object[property] = this.value;
+// }
 
 /**
  * query parameters are those that describe the query we make to the
@@ -124,17 +146,50 @@ for (const [uKey, value] of urlArgs.entries()) {
   }
 }
 
-export const query = {
-  key: urlArgs["key"],
-  userid: userid,
-  date1: params["date1"],
-  date2: params["date2"],
-  days: params["days"],
-  limit: params["limit"],
-  ids: params["ids"],
-};
 
-export const vparams = {
+const queryType = urlArgs["key"]
+  ? "key"
+  : params.ids
+  ? "ids"
+  : params.date1 || params.date2
+  ? "dates"
+  : params.days
+  ? "days"
+  : "activities";
+
+
+
+// const qParams = {
+//   userid: userid,
+//   queryType: queryType,
+//   key: urlArgs["key"],
+//   quantity: (queryType === "days")? +params.days : +params.limit,
+//   date1: params.date1,
+//   date2: params.date2,
+//   ids: params.ids
+// };
+
+
+// const bindings = {};
+
+// for (const el of document.querySelectorAll("[data-class=query]")) {
+//   const param =  el.dataset.bind,
+//         attr = el.dataset.attr || "value";
+//   console.log(`binding ${param}`);
+//   bindings[param] = new Binding(qParams, param).addDOMbinding(el, attr, "change");
+// }
+
+const qParams = {};
+for (const el of document.querySelectorAll("[data-class=query]")) {
+  const param =  el.dataset.bind,
+        attr = el.dataset.attr || "value";
+  console.log(`binding ${param}`);
+  qParams[param] = new BoundVariable(params[param]).addDOMbinding(el, attr, "change");
+}
+
+window.q = qParams;
+
+export const vParams = {
   center: [params["lat"], params["lng"]],
   zoom: params["zoom"],
   autozoom: params["autozoom"],
@@ -148,26 +203,18 @@ export const vparams = {
   baselayer: params["baselayer"],
 };
 
-
-
-
 export const items = new Set();
 
-const appState = {
-  items: items,
+// const appState = {
+//   items: items,
 
-  /* current user is the user who is currently logged-in, if any
-        this will be done away with eventually in favor of getting this info
-        after websocket connection */
-  currentUser: CURRENT_USER,
+//   vparams: vParams,
 
-  vparams: vparams,
+//   query: query,
+// };
 
-  query: query,
-};
+// window["heatflask"] = appState;
 
-window["heatflask"] = appState;
+// export { appState as default };
 
-export { appState as default };
-
-debugger;
+// debugger;

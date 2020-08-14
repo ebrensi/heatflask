@@ -1,7 +1,7 @@
 import "../ext/css/min_entireframework.min.css";
 import "../css/splash-page.css";
 
-import strava_button from "../images/btn_strava_connectwith_orange.svg";
+import strava_button from "url:../images/btn_strava_connectwith_orange.svg";
 
 const { URLS } = window["_args"];
 

@@ -53,7 +53,7 @@
               data-class="target-user"
               target="_blank"
             >
-              <img class="strava-badge" />
+              <button class="strava-badge"></button>
             </a>
 
             <span
@@ -83,11 +83,11 @@
             most
           </span>
 
-          <select data-bind="type" dataclass="query">
-            <option value="days" selected> recent days</option>
-            <option value="activities"> recent activities</option>
-            <option value="activity-ids">Activity IDs</option>
-            <option value="date-range">Date-Range</option>
+          <select data-bind="queryType" data-class="query">
+            <option value="days"> recent days</option>
+            <option value="activities" selected> recent activities</option>
+            <option value="ids">Activity IDs</option>
+            <option value="dates">Date-Range</option>
             <option value="key">Key</option>
           </select>
 
@@ -96,37 +96,32 @@
             <input type="text" value="" data-bind="key" data-class="query" />
           </div>
 
-          <div class="query activity-ids">
+          <div class="query ids">
             <textarea
-              data-bind="activity-ids"
+              data-bind="ids"
               data-attr="innerText"
               data-class="query"
             >
             </textarea>
           </div>
 
-          <div class="query date-range">
+          <div class="query dates">
             Start:
-            <input
-              class="datepick"
-              type="text"
-              data-bind="date1"
-              data-class="query"
-            />
+            <input type="date" data-bind="date1" data-class="query" />
             <br />
             End:
-            <input
-              class="datepick"
-              type="text"
-              data-bind="date2"
-              data-class="query"
-            />
+            <input type="date" data-bind="date2" data-class="query" />
           </div>
 
           <br />
 
           <label>
-            <input type="checkbox" data-bind="autozoom" data-attr="checked" data-class="visual" />
+            <input
+              type="checkbox"
+              data-bind="autozoom"
+              data-attr="checked"
+              data-class="visual"
+            />
             Auto-Zoom to query
           </label>
 
@@ -137,8 +132,8 @@
             data-class="info"
           ></div>
 
-          <div>
-            <progress class="progbar"></progress>
+          <div class="progress">
+            <!-- <progress class="progbar"></progress> -->
           </div>
           <br />
 
@@ -301,7 +296,7 @@
           <br /><br />
 
           <button type="button" data-action="delete" class="btn btn-c btn-sm">
-            Delete account (de-autheticate)
+            Delete Account
           </button>
 
           <input
