@@ -4,7 +4,7 @@
  */
 
 // import { CURRENT_USER } from "./Init.js";
-import { BoundVariable } from "./Binding.js";
+import { BoundVariable, BoundVariableCollection } from "./Binding.js";
 
 /**
  * Create a DOM binding with an object property
@@ -146,7 +146,6 @@ for (const [uKey, value] of urlArgs.entries()) {
   }
 }
 
-
 const queryType = urlArgs["key"]
   ? "key"
   : params.ids
@@ -156,8 +155,6 @@ const queryType = urlArgs["key"]
   : params.days
   ? "days"
   : "activities";
-
-
 
 // const qParams = {
 //   userid: userid,
@@ -169,7 +166,6 @@ const queryType = urlArgs["key"]
 //   ids: params.ids
 // };
 
-
 // const bindings = {};
 
 // for (const el of document.querySelectorAll("[data-class=query]")) {
@@ -179,12 +175,16 @@ const queryType = urlArgs["key"]
 //   bindings[param] = new Binding(qParams, param).addDOMbinding(el, attr, "change");
 // }
 
-const qParams = {};
+const qParams = new BoundVariableCollection();
+
 for (const el of document.querySelectorAll("[data-class=query]")) {
-  const param =  el.dataset.bind,
-        attr = el.dataset.attr || "value";
+  const param = el.dataset.bind,
+    attr = el.dataset.attr || "value";
   console.log(`binding ${param}`);
-  qParams[param] = new BoundVariable(params[param]).addDOMbinding(el, attr, "change");
+  qParams.add(
+    param,
+    new BoundVariable(params[param]).addDOMbinding(el, attr, "change")
+  );
 }
 
 window.q = qParams;

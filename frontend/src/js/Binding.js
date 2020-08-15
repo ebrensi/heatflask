@@ -1,78 +1,13 @@
 /**
- *
+ * A BoundVariable object has a value that can be bound to a DOM elelment
+ *   or other arbitrary obejct.  It is used to sync properties between
+ *   two or more objects.  It consists of a getter and setter for the value
+ *   as well as one or more two-way bindings.
  */
-export default class Binding {
-  constructor(object, property) {
-    this.DOMbindings = [];
-    this.countDB = 0;
-
-    this.generalBindings = [];
-    this.countGB = 0;
-
-    this.value = object[property];
-
-    Object.defineProperty(object, property, {
-      get: this.getValue.bind(this),
-      set: this.setValue.bind(this),
-    });
-  }
-
-  getValue() {
-    return this.value;
-  }
-
-  setValue(val) {
-    this.value = val;
-
-    for (let i = 0; i < this.countDB; i++) {
-      const binding = this.DOMbindings[i];
-      binding.element[binding.attribute] = val;
-    }
-
-    for (let i = 0; i < this.countGB; i++) {
-      const binding = this.generalBindings[i];
-      binding.set(val);
-    }
-  }
-
-  addDOMbinding(element, attribute, event) {
-    const binding = {
-      element: element,
-      attribute: attribute,
-    };
-
-    if (event) {
-      element.addEventListener(event, function () {
-        this.setValue(element[attribute]);
-      });
-      binding.event = event;
-    }
-
-    this.DOMbindings.push(binding);
-    this.countDB = this.DOMbindings.length;
-
-    element[attribute] = this.value;
-
-    return this;
-  }
-
-  addGeneralBinding(object, setFunc) {
-    const binding = {
-      set: setFunc,
-    };
-
-    this.generalBindings.push(binding);
-    this.countGB = this.generalBindings.length;
-
-    setFunc(this.value);
-
-    return function onChange(newVal) {
-      this.setValue(newVal);
-    };
-  }
-}
-
 export class BoundVariable {
+  /**
+   * @param value An initial value
+   */
   constructor(value) {
     this.DOMbindings = [];
     this.countDB = 0;
@@ -83,11 +18,18 @@ export class BoundVariable {
     this._value = value;
   }
 
-  get value() {
+  /**
+   * @return The current value of this variable
+   */
+  get() {
     return this._value;
   }
 
-  set value(newValue) {
+  /**
+   * Set a new value for this variable
+   * @param newValue the new value
+   */
+  set(newValue) {
     this._value = newValue;
 
     for (let i = 0; i < this.countDB; i++) {
@@ -101,6 +43,29 @@ export class BoundVariable {
     }
   }
 
+  /**
+   * Sets the property "value" as a getter.
+   * @return the current value of this variable
+   */
+  get value() {
+    return this._value;
+  }
+
+  /**
+   * Sets the property "value" as a setter.
+   * @param  {[type]} newValue the new value
+   */
+  set value(newValue) {
+    this.set(newValue);
+  }
+
+  /**
+   * Sync this value with an attribute of a DOM element.
+   *
+   * @param element  the DOM element
+   * @param attribute the attribute to sync (eg. "value", "checked", "href", "innerHTML", etc.)
+   * @param event the event on which to update the value. (eg. "change", "keyup", etc)
+   */
   addDOMbinding(element, attribute, event) {
     const binding = {
       element: element,
@@ -108,9 +73,12 @@ export class BoundVariable {
     };
 
     if (event) {
-      element.addEventListener(event, function () {
-        this.set(element[attribute]);
-      }.bind(this));
+      element.addEventListener(
+        event,
+        function () {
+          this.set(element[attribute]);
+        }.bind(this)
+      );
     }
 
     this.DOMbindings.push(binding);
@@ -121,7 +89,14 @@ export class BoundVariable {
     return this;
   }
 
-  addGeneralBinding(object, setFunc) {
+  /**
+   * Add binding to a generally defined remote value.
+   * Use this to sync this value with a general variable, given a
+   * function to update that variable.
+   *
+   * @param {function} setFunc A function that updates the remote value when this one changes.
+   */
+  addGeneralBinding(setFunc) {
     const binding = {
       set: setFunc,
     };
@@ -134,5 +109,43 @@ export class BoundVariable {
     return function onChange(newVal) {
       this.set(newVal);
     };
+  }
+}
+
+/**
+ * An object with {@link BoundVariable}s as properties.
+ * The value of a {@link BoundVariable} x is accessed
+ *  via x.value (the "value" property)
+ *  or using accessor methods x.get() and x.set().
+ *
+ *  {@link BoundVariableCollection} allows us to keep a collection of
+ *    {@link BoundVariable} objects and access them as if they were properties.
+ *  For example, for col = new {@link BoundVariableCollection} and
+ *  col.add("size", new {@link BoundVariable}(23)):
+ *
+ *  @example col.size == 23
+ *
+ *
+ */
+export class BoundVariableCollection extends Object {
+  /**
+   * Add a {@link BoundVariable} object
+   * @param {String|Number} key The "property" associated with this {@BoundVariable}
+   * @param {[type]} bv The {@link BoundVariable} object.
+   */
+  add(key, bv) {
+    if (!this._binds) {
+      this._binds = {};
+    }
+    this._binds[key] = bv;
+
+    Object.defineProperty(this, key, {
+      get: function () {
+        return this._binds[key].get();
+      }.bind(this),
+      set: function (newValue) {
+        this._binds[key].set(newValue);
+      }.bind(this),
+    });
   }
 }
