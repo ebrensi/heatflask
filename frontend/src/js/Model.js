@@ -6,72 +6,6 @@
 // import { CURRENT_USER } from "./Init.js";
 import { BoundVariable, BoundVariableCollection } from "./Binding.js";
 
-/**
- * Create a DOM binding with an object property
- * https://www.wintellect.com/data-binding-pure-javascript/
- *
- * @param {[type]} b [description]
- */
-// function Binding(object, property) {
-//   const _this = this;
-
-//   this.DOMbindings = [];
-//   this.generalBindings = [];
-
-//   this.value = object[property];
-
-//   this.valueSetter = function (val) {
-//     _this.value = val;
-//     for (let i = 0; i < _this.DOMbindings.length; i++) {
-//       const binding = _this.DOMbindings[i];
-//       binding.element[binding.attribute] = val;
-//     }
-
-//     for (let i = 0; i < _this.generalBindings.length; i++) {
-//       const binding = _this.generalBindings[i];
-//       binding.set(val);
-//     }
-//   };
-
-//   this.addDOMbinding = function (element, attribute, event) {
-//     const binding = {
-//       element: element,
-//       attribute: attribute,
-//     };
-
-//     if (event) {
-//       element.addEventListener(event, function () {
-//         _this.valueSetter(element[attribute]);
-//       });
-//       binding.event = event;
-//     }
-//     _this.DOMbindings.push(binding);
-//     element[attribute] = _this.value;
-//     return _this;
-//   };
-
-//   this.addGeneralBinding = function (object, setFunc) {
-//     const binding = {
-//       set: setFunc,
-//     };
-
-//     this.generalBindings.push(binding);
-//     setFunc(_this.value);
-
-//     return function onChange(newVal) {
-//       _this.valueSetter(newVal);
-//     };
-//   };
-
-//   Object.defineProperty(object, property, {
-//     get: function () {
-//       return _this.value;
-//     },
-//     set: this.valueSetter,
-//   });
-
-//   object[property] = this.value;
-// }
 
 /**
  * query parameters are those that describe the query we make to the
@@ -183,25 +117,52 @@ for (const el of document.querySelectorAll("[data-class=query]")) {
   console.log(`binding ${param}`);
   qParams.add(
     param,
-    new BoundVariable(params[param]).addDOMbinding(el, attr, "change")
+    new BoundVariable(params[param]).addDOMbinding({
+      element: el,
+      attribute: attr,
+      event: "change"
+    })
   );
 }
 
-window.q = qParams;
 
-export const vParams = {
-  center: [params["lat"], params["lng"]],
-  zoom: params["zoom"],
-  autozoom: params["autozoom"],
-  c1: params["c1"],
-  c2: params["c2"],
-  sz: params["sz"],
-  paused: params["paused"],
-  shadows: params["shadows"],
-  paths: params["paths"],
-  alpha: params["alpha"],
-  baselayer: params["baselayer"],
-};
+// export const vParams = {
+//   center: [params["lat"], params["lng"]],
+//   zoom: params["zoom"],
+//   autozoom: params["autozoom"],
+//   c1: params["c1"],
+//   c2: params["c2"],
+//   sz: params["sz"],
+//   paused: params["paused"],
+//   shadows: params["shadows"],
+//   paths: params["paths"],
+//   alpha: params["alpha"],
+//   baselayer: params["baselayer"],
+// };
+
+const vParams = new BoundVariableCollection();
+for (const el of document.querySelectorAll("[data-class=visual]")) {
+  const param = el.dataset.bind,
+        bindInfo = {
+          element: el,
+          attribute: el.dataset.attr || "value",
+          event: "change"
+        };
+
+  console.log(`binding ${param}`);
+
+  let bv;
+  if (param in qParams.binds) {
+    bv = qParams.binds[param];
+  } else {
+    bv = new BoundVariable(params[param]);
+    qParams.add(param, bv);
+  }
+
+  bv.addDOMbinding(bindInfo);
+
+}
+
 
 export const items = new Set();
 

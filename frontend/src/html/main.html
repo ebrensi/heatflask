@@ -97,11 +97,7 @@
           </div>
 
           <div class="query ids">
-            <textarea
-              data-bind="ids"
-              data-attr="innerText"
-              data-class="query"
-            >
+            <textarea data-bind="ids" data-attr="innerText" data-class="query">
             </textarea>
           </div>
 
@@ -371,10 +367,32 @@
 
           <div>
             <h4>System Constants</h4>
+
             <div>
-              <span data-bind="speed" data-class="knob"></span>
-              <span data-bind="sep" data-class="knob"></span>
+              <input
+                type="range"
+                class="dot-const"
+                id="dot-speed"
+                data-bind="speed"
+                data-class="visual"
+              />
+              <label for="dot-speed"
+                >Speed <span data-bind="speed" data-class="visual" data-attr="innerText"></span
+              ></label>
             </div>
+            <div>
+              <input
+                type="range"
+                class="dot-const"
+                id="dot-sep"
+                data-bind="sep"
+                data-class="visual"
+              />
+              <label for="dot-sep"
+                >Sparsity <span data-bind="sep" data-attr="innerText" data-class="visual"></span
+              ></label>
+            </div>
+
             <span>
               Period T =
               <span
@@ -384,32 +402,55 @@
               ></span>
               sec
             </span>
-            <div>
-              <span data-bind="alpha" data-class="knob"></span>
-              <span data-bind="size" data-class="knob"></span>
-            </div>
 
             <div>
               <input
+                type="range"
+                class="dot-const"
+                id="dot-alpha"
+                data-bind="alpha"
+                data-class="visual"
+              />
+              <label for="dot-alpha"
+                >Alpha <span data-bind="alpha" data-attr="innerText" data-class="visual"></span
+              ></label>
+            </div>
+            <div>
+              <input
+                type="range"
+                class="dot-const"
+                id="dot-size"
+                data-bind="sz"
+                data-class="visual"
+              />
+              <label for="dot-size"
+                >Size <span data-bind="sz" data-attr="innerText" data-class="visual"></span
+              ></label>
+            </div>
+
+            <span>
+              <input
                 type="checkbox"
+                id="showPaths"
                 data-bind="paths"
                 data-attr="checked"
                 data-class="visual"
                 checked
               />
               <label for="showPaths">Show Paths</label>
-            </div>
-            <br />
-            <div>
+            </span>
+
+            <span>
               <input
                 type="checkbox"
+                id="showShadows"
                 data-bind="shadows"
                 data-attr="checked"
                 data-class="visual"
                 checked
               />
-              <label for="showshadows">Shadows (CPU intensive)</label>
-            </div>
+              <label for="showShadows">Shadows (CPU intensive)</label>
+            </span>
           </div>
         </div>
       </div>

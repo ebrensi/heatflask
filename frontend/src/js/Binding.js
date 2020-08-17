@@ -1,3 +1,6 @@
+const identity = x => x;
+
+
 /**
  * A BoundVariable object has a value that can be bound to a DOM elelment
  *   or other arbitrary obejct.  It is used to sync properties between
@@ -34,12 +37,12 @@ export class BoundVariable {
 
     for (let i = 0; i < this.countDB; i++) {
       const binding = this.DOMbindings[i];
-      binding.element[binding.attribute] = newValue;
+      binding.element[binding.attribute] =  binding.format(newValue);
     }
 
     for (let i = 0; i < this.countGB; i++) {
       const binding = this.generalBindings[i];
-      binding.set(newValue);
+      binding.setFunc(binding.format(newValue));
     }
   }
 
@@ -66,18 +69,19 @@ export class BoundVariable {
    * @param attribute the attribute to sync (eg. "value", "checked", "href", "innerHTML", etc.)
    * @param event the event on which to update the value. (eg. "change", "keyup", etc)
    */
-  addDOMbinding(element, attribute, event) {
+  addDOMbinding({element, attribute, DOMformat, event, varFormat}) {
     const binding = {
       element: element,
       attribute: attribute,
+      format: DOMformat || identity
     };
 
     if (event) {
+      const format = varFormat || identity;
+
       element.addEventListener(
         event,
-        function () {
-          this.set(element[attribute]);
-        }.bind(this)
+        function () { this.set( format(element[attribute])) }.bind(this)
       );
     }
 
@@ -96,9 +100,10 @@ export class BoundVariable {
    *
    * @param {function} setFunc A function that updates the remote value when this one changes.
    */
-  addGeneralBinding(setFunc) {
+  addGeneralBinding(setFunc, DOMformat) {
     const binding = {
-      set: setFunc,
+      setFunc: setFunc,
+      format: DOMformat || identity
     };
 
     this.generalBindings.push(binding);
@@ -111,6 +116,7 @@ export class BoundVariable {
     };
   }
 }
+
 
 /**
  * An object with {@link BoundVariable}s as properties.
@@ -134,18 +140,27 @@ export class BoundVariableCollection extends Object {
    * @param {[type]} bv The {@link BoundVariable} object.
    */
   add(key, bv) {
-    if (!this._binds) {
-      this._binds = {};
+    if (!this.binds) {
+      this.binds = {};
     }
-    this._binds[key] = bv;
+    this.binds[key] = bv;
+
+    Object.defineProperty(this, "binds", {
+      enumerable: false
+    })
 
     Object.defineProperty(this, key, {
       get: function () {
-        return this._binds[key].get();
+        return this.binds[key].get();
       }.bind(this),
       set: function (newValue) {
-        this._binds[key].set(newValue);
+        this.binds[key].set(newValue);
       }.bind(this),
+
+      enumerable: true,
+
     });
+
+    return bv
   }
 }
