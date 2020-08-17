@@ -1,6 +1,6 @@
-/**
- * Lightweight data-binding
- * @module
+/*
+ * Binding.js -- Lightweight data-binding
+ * Efrem Rensi 8/2020
  */
 
 const identity = (x) => x;
@@ -10,6 +10,8 @@ const identity = (x) => x;
  *   or other arbitrary obejct.  It is used to sync properties between
  *   two or more objects.  It consists of a getter and setter for the value
  *   as well as one or more two-way bindings.
+ *
+ * @property value - The value of this bound variable
  */
 export class BoundVariable {
   /**
@@ -46,23 +48,15 @@ export class BoundVariable {
     }
 
     for (let i = 0; i < this.countGB; i++) {
-      const binding = this.generalBindings[i];
-      binding.setFunc(binding.format(newValue));
+      const setFunc = this.generalBindings[i];
+      setFunc(newValue);
     }
   }
 
-  /**
-   * Sets the property "value" as a getter.
-   * @return the current value of this variable
-   */
   get value() {
     return this._value;
   }
 
-  /**
-   * Sets the property "value" as a setter.
-   * @param  {[type]} newValue the new value
-   */
   set value(newValue) {
     this.set(newValue);
   }
@@ -110,8 +104,9 @@ export class BoundVariable {
   /**
    * Add binding to a generally defined remote value.
    * Use this to sync this value with a general variable, given a
-   * function to update that variable. !! The user is responsible for
-   * updating this variable when the remote value changes !!
+   * function to update that variable.
+   * !! The user is responsible for updating this variable when
+   *    the remote value changes !!
    *
    * @param {function} setFunc - A function that updates the remote value
    *                           when this one changes.
@@ -139,7 +134,7 @@ export class BoundVariable {
  *
  *  @example col.size == 23
  *
- *
+ *  @param {Object} binds - The {@BoundVariable}s referenced by key.
  */
 export class BoundVariableCollection extends Object {
   constructor(...args) {
