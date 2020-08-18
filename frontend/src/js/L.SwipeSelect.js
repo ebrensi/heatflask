@@ -1,9 +1,68 @@
-L.SwipeSelect = L.Class.extend({
+/*
+ * swipeselect
+ *
+ */
+
+import * as L from "leaflet";
+
+function touchHandler(event) {
+  // Add touch support by converting touch events to mouse events
+  // Source: http://stackoverflow.com/a/6362527/725573
+
+  const touches = event.changedTouches,
+    first = touches[0];
+  let type = "";
+
+  switch (event.type) {
+    case "touchstart":
+      type = "mousedown";
+      break;
+    case "touchmove":
+      type = "mousemove";
+      break;
+    case "touchend":
+      type = "mouseup";
+      break;
+    default:
+      return;
+  }
+
+  //Convert the touch event into it's corresponding mouse event
+  const simulatedEvent = document.createEvent("MouseEvent");
+  simulatedEvent.initMouseEvent(
+    type,
+    true,
+    true,
+    window,
+    1,
+    first.screenX,
+    first.screenY,
+    first.clientX,
+    first.clientY,
+    false,
+    false,
+    false,
+    false,
+    0 /*left*/,
+    null
+  );
+
+  first.target.dispatchEvent(simulatedEvent);
+  event.preventDefault();
+}
+
+// // make touch events simulate mouse events via _touchHandler
+// document.addEventListener("touchstart", touchHandler, true);
+// document.addEventListener("touchmove", touchHandler, true);
+// document.addEventListener("touchend", touchHandler, true);
+// document.addEventListener("touchcancel", touchHandler, true);
+
+export const SwipeSelect = L.Class.extend({
   includes: L.Evented.prototype,
 
   options: {},
 
-  initialize: function (options, doneSelecting = null, whileSelecting = null) {
+  initialize: function (options, doneSelecting, whileSelecting) {
     L.Util.setOptions(this, options);
     this.onmousemove = whileSelecting;
     this.onmouseup = doneSelecting;
@@ -54,7 +113,7 @@ L.SwipeSelect = L.Class.extend({
       }
     }.bind(this);
 
-    canvas.onmouseup = function (event) {
+    canvas.onmouseup = function () {
       this.dragging = false;
       this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
       this.mapManipulation(true);
@@ -62,13 +121,11 @@ L.SwipeSelect = L.Class.extend({
       this.onmouseup & this.onmouseup(this.getBounds());
     }.bind(this);
 
-    if (touchHandler) {
-      // make touch events simulate mouse events via touchHandler
-      canvas.addEventListener("touchstart", touchHandler, true);
-      canvas.addEventListener("touchmove", touchHandler, true);
-      canvas.addEventListener("touchend", touchHandler, true);
-      canvas.addEventListener("touchcancel", touchHandler, true);
-    }
+    //   // make touch events simulate mouse events via touchHandler
+    //   canvas.addEventListener("touchstart", touchHandler, true);
+    //   canvas.addEventListener("touchmove", touchHandler, true);
+    //   canvas.addEventListener("touchend", touchHandler, true);
+    //   canvas.addEventListener("touchcancel", touchHandler, true);
   },
 
   getBounds: function () {
@@ -108,14 +165,6 @@ L.SwipeSelect = L.Class.extend({
   },
 });
 
-L.swipeselect = function (
-  options,
-  doneSelecting = null,
-  whileSelecting = null
-) {
-  return new L.SwipeSelect(
-    options,
-    (doneSelecting = null),
-    (whileSelecting = null)
-  );
-};
+export function swipeselect(...args) {
+  return new SwipeSelect(...args);
+}

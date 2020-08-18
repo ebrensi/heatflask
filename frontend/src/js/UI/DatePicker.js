@@ -1,6 +1,5 @@
-/**
+/*
  * Datepickers in the Dom
- * @module UI/DatePicker
  */
 
 import * as Dom from "Dom.js";

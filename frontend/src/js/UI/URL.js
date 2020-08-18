@@ -1,6 +1,5 @@
-/**
+/*
  * Browser URL functionality
- * @module
  */
 
 import * as Dom from "../Dom.js";

@@ -1,3 +1,5 @@
+import * as L from "leaflet";
+
 L.Control.fps = L.Control.extend({
   lastCalledTime: 1,
 
@@ -5,7 +7,7 @@ L.Control.fps = L.Control.extend({
     position: "topright",
   },
 
-  onAdd: function (map) {
+  onAdd: function () {
     // Control container
     this._container = L.DomUtil.create("div", "leaflet-control-fps");
     L.DomEvent.disableClickPropagation(this._container);

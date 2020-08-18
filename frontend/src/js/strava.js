@@ -1,10 +1,9 @@
 /*
  * Strava related stuff
- * @module
  */
 
 /**
- * @param  {(String|Number)} A Strava activity id
+ * @param  {(String|Number)} id - A Strava activity id
  * @return {String} The Strava URL for that activity
  */
 export function activityURL(id) {
@@ -12,7 +11,7 @@ export function activityURL(id) {
 }
 
 /**
- * @param  {(String|Number)} Strava user-id
+ * @param  {(String|Number)} id - Strava user-id
  * @return {String} The Strava URL for that user
  */
 export function athleteURL(id) {

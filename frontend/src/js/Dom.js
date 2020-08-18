@@ -1,6 +1,5 @@
-/**
+/*
  *  Basic DOM manipulation. This is sort of a replacement for JQuery.
- *  @module
  */
 
 /**

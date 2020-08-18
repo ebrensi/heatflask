@@ -14,6 +14,8 @@ const identity = (x) => x;
  * @property value - The value of this bound variable
  */
 export class BoundVariable {
+  // #value is private.  We don't want the user accessing it directly
+  #value;  // eslint-disable-line
 
   /**
    * @param value An initial value
@@ -25,14 +27,14 @@ export class BoundVariable {
     this.generalBindings = [];
     this.countGB = 0;
 
-    this._value = value;
+    this.#value = value;
   }
 
   /**
    * @return The current value of this variable
    */
   get() {
-    return this._value;
+    return this.#value;
   }
 
   /**
@@ -40,7 +42,7 @@ export class BoundVariable {
    * @param newValue the new value
    */
   set(newValue) {
-    this._value = newValue;
+    this.#value = newValue;
     // console.log(newValue);
 
     for (let i = 0; i < this.countDB; i++) {
@@ -55,7 +57,7 @@ export class BoundVariable {
   }
 
   get value() {
-    return this._value;
+    return this.#value;
   }
 
   set value(newValue) {
@@ -97,7 +99,7 @@ export class BoundVariable {
     this.DOMbindings.push(binding);
     this.countDB = this.DOMbindings.length;
 
-    element[attribute] = this._value;
+    element[attribute] = this.#value;
 
     return this;
   }
@@ -116,7 +118,7 @@ export class BoundVariable {
     this.generalBindings.push(setRemote);
     this.countGB = this.generalBindings.length;
 
-    setRemote(this._value);
+    setRemote(this.#value);
 
     return this;
   }
@@ -138,8 +140,9 @@ export class BoundVariable {
  *  @param {Object} binds - The {@BoundVariable}s referenced by key.
  */
 export class BoundObject extends Object {
-  constructor(...args) {
-    super(...args);
+
+  constructor() {
+    super();
     this.properties = {};
   }
 
@@ -171,5 +174,37 @@ export class BoundObject extends Object {
     });
 
     return bv;
+  }
+
+  /**
+   * @return {Object} -- A regular Object "snapshot"
+   * of this {@link BoundBoject}
+   */
+  toObject() {
+    return Object.assign({}, this);
+  }
+
+  /**
+   * Create a new {@BoundObject} from a regular Object,
+   *  with each property possibly bound with a DOM element.
+   * @param  {Object} obj
+   * @return {BoundObject}
+   */
+  static fromObject(obj) {
+    const bObj = new BoundObject();
+    for (const [key, val] of Object.entries(obj)) {
+
+      const bv = bObj.addProperty(key, val),
+        elements = document.querySelectorAll(`[data-bind=${key}]`);
+
+      for (const el of elements) {
+        bv.addDOMbinding({
+          element: el,
+          attribute: el.dataset.attr || "value",
+          event: el.dataset.event || "change",
+        });
+      }
+    }
+    return bObj;
   }
 }

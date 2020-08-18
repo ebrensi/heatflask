@@ -1,6 +1,5 @@
-/**
+/*
  * UI components for DotLayer control
- * @module UI/DotControl
  */
 
 import pureknob from "pure-knob";

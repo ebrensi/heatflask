@@ -7,6 +7,7 @@
  *
  *      map.addInitHook('addHandler', 'BoxHook', BoxHook);
  */
+import * as L from "leaflet";
 
 var BoxHook = L.Handler.extend({
   initialize: function (map) {
