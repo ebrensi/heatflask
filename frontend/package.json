@@ -38,7 +38,7 @@
   ],
   "devDependencies": {
     "documentation": "^13.0.2",
-    "eslint": "^7.6.0",
+    "eslint": "^7.7.0",
     "eslint-config-prettier": "^6.11.0",
     "parcel": "next",
     "parcel-plugin-nuke-dist": "^1.0.1",
