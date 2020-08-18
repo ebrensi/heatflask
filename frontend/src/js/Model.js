@@ -4,13 +4,19 @@
  */
 
 // import { CURRENT_USER } from "./Init.js";
-import { BoundVariable, BoundVariableCollection } from "./Binding.js";
-
+import { BoundObject } from "./DataBinding.js";
 
 /**
  * query parameters are those that describe the query we make to the
  * backend for activity data
- * @type {object}
+ *
+ * @namespace
+ * @property {String} key - A lookup representing a query stored on the server
+ * @property {String} date1 - Start date
+ * @property {String} date2 - End date
+ * @property {String|Number} days  - Number of most recent days
+ * @property {String|Number} limit - Number of most recent activities
+ * @property {String} ids - A string representing a list of activity ids
  */
 const queryDefaults = {
   date1: [["start", "after", "date1", "a"], null],
@@ -18,12 +24,28 @@ const queryDefaults = {
   days: [["days", "preset", "d"], null],
   limit: [["limit", "l"], 10],
   ids: [["id", "ids"], ""],
+  key: [["key"], null],
 };
 
 /**
  * vparams (visual-parameters) are those that determine
  *   what appears visually.
- * @type {Object}
+ * @namespace
+ * @property {Number} zoom - current zoom level
+ * @property {Number} lat - current latitude
+ * @property {Number} lng - current longitude
+ * @property {Boolean} autozoom - Whether or not to automatically zoom
+ *             to include all of the activities after render
+ * @property {Number} c1 - Dot Constant C1
+ * @property {Number} c2 - Dot Constant C2
+ * @property {Number} sz - Dot Size
+ * @property {String} geohash - An alternative indicator of map location
+ * @property {Boolean} paused - Whether the animation is paused
+ * @property {Boolean|Number} shadows - Whether dots have shadows
+ *                                    (or shadow height)
+ * @property {Boolean} paths - Whether to show paths
+ * @property {Number} alpha - opacity of the vizualization over the map
+ * @property {String} baselayer - The name of the current baselayer
  */
 const vparamDefaults = {
   zoom: [["zoom", "z"], 3],
@@ -33,6 +55,7 @@ const vparamDefaults = {
   c1: [["c1"], null],
   c2: [["c2"], null],
   sz: [["sz"], null],
+  geohash: [["geohash"], null],
   paused: [["paused", "pu"], false],
   shadows: [["sh", "shadows"], true],
   paths: [["pa", "paths"], true],
@@ -41,9 +64,6 @@ const vparamDefaults = {
 };
 
 const paramDefaults = { ...queryDefaults, ...vparamDefaults };
-
-/* TODO: add a geohash location parameter.
-        maybe replace lat and lng altogether with geohash */
 
 /* The current url is {domain}{/{userid}}?{urlArgs}.
     modelKey indicates whether this is simple (single target user) view,
@@ -59,28 +79,29 @@ const paramDefaults = { ...queryDefaults, ...vparamDefaults };
         * urlArgs contains both visual and data-query parameters.
 */
 const userid = window.location.pathname.substring(1);
+
 const urlArgs = new URL(window.location.href).searchParams;
 
+const names = {};
 const params = {};
-const paramNames = {};
 
 for (const [key, val] of Object.entries(paramDefaults)) {
-  paramNames[key] = val[0];
+  names[key] = val[0];
   params[key] = val[1];
 }
 
 /* parse visual parameters from the url */
 for (const [uKey, value] of urlArgs.entries()) {
-  for (const [pKey, pNames] of Object.entries(paramNames)) {
+  for (const [pKey, pNames] of Object.entries(names)) {
     if (pNames.includes(uKey)) {
       params[pKey] = value;
-      delete paramNames[pKey]; // this field is set no need to check it again
+      delete names[pKey]; // this field is set no need to check it again
       break;
     }
   }
 }
 
-const queryType = urlArgs["key"]
+params.queryType = urlArgs["key"]
   ? "key"
   : params.ids
   ? "ids"
@@ -90,92 +111,62 @@ const queryType = urlArgs["key"]
   ? "days"
   : "activities";
 
-// const qParams = {
-//   userid: userid,
-//   queryType: queryType,
-//   key: urlArgs["key"],
-//   quantity: (queryType === "days")? +params.days : +params.limit,
-//   date1: params.date1,
-//   date2: params.date2,
-//   ids: params.ids
-// };
+params.quantity = params.queryType === "days" ? +params.days : +params.limit;
 
-// const bindings = {};
-
-// for (const el of document.querySelectorAll("[data-class=query]")) {
-//   const param =  el.dataset.bind,
-//         attr = el.dataset.attr || "value";
-//   console.log(`binding ${param}`);
-//   bindings[param] = new Binding(qParams, param).addDOMbinding(el, attr, "change");
-// }
-
-const qParams = new BoundVariableCollection();
+export const qParams = new BoundObject();
 
 for (const el of document.querySelectorAll("[data-class=query]")) {
   const param = el.dataset.bind,
     attr = el.dataset.attr || "value";
-  console.log(`binding ${param}`);
-  qParams.add(
-    param,
-    new BoundVariable(params[param]).addDOMbinding({
+
+  qParams.addProperty(param, params[param]).addDOMbinding({
+    element: el,
+    attribute: attr,
+    event: "change",
+  });
+}
+
+// These qParams don't have bindings yet
+qParams.addProperty("userid", userid);
+
+export const vParamsInit = {
+  center: [params["lat"], params["lng"]],
+  zoom: params["zoom"],
+  autozoom: params["autozoom"],
+  c1: params["c1"],
+  c2: params["c2"],
+  sz: params["sz"],
+  paused: params["paused"],
+  shadows: params["shadows"],
+  paths: params["paths"],
+  alpha: params["alpha"],
+  baselayer: params["baselayer"],
+};
+
+const vParams = new BoundObject();
+for (const [key, val] of Object.entries(vParamsInit)) {
+  const bv = vParams.addProperty(key, val),
+    elements = document.querySelectorAll(`[data-bind=${key}]`);
+
+  for (const el of elements) {
+    bv.addDOMbinding({
       element: el,
-      attribute: attr,
-      event: "change"
-    })
-  );
-}
-
-
-// export const vParams = {
-//   center: [params["lat"], params["lng"]],
-//   zoom: params["zoom"],
-//   autozoom: params["autozoom"],
-//   c1: params["c1"],
-//   c2: params["c2"],
-//   sz: params["sz"],
-//   paused: params["paused"],
-//   shadows: params["shadows"],
-//   paths: params["paths"],
-//   alpha: params["alpha"],
-//   baselayer: params["baselayer"],
-// };
-
-const vParams = new BoundVariableCollection();
-for (const el of document.querySelectorAll("[data-class=visual]")) {
-  const param = el.dataset.bind,
-        bindInfo = {
-          element: el,
-          attribute: el.dataset.attr || "value",
-          event: "change"
-        };
-
-  console.log(`binding ${param}`);
-
-  let bv;
-  if (param in qParams.binds) {
-    bv = qParams.binds[param];
-  } else {
-    bv = new BoundVariable(params[param]);
-    qParams.add(param, bv);
+      attribute: el.dataset.attr || "value",
+      event: el.dataset.event || "change",
+    });
   }
-
-  bv.addDOMbinding(bindInfo);
-
 }
-
 
 export const items = new Set();
 
-// const appState = {
-//   items: items,
+const state = {
+  items: items,
+  vParams: vParams,
+  qParams: qParams,
+};
 
-//   vparams: vParams,
+window["app"] = state;
 
-//   query: query,
-// };
-
-// window["heatflask"] = appState;
-
-// export { appState as default };
+export { state as default };
 
 // debugger;

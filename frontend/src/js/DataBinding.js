@@ -1,5 +1,5 @@
 /*
- * Binding.js -- Lightweight data-binding
+ * DataBinding.js -- Lightweight data-binding
  * Efrem Rensi 8/2020
  */
 
@@ -14,6 +14,7 @@ const identity = (x) => x;
  * @property value - The value of this bound variable
  */
 export class BoundVariable {
+
   /**
    * @param value An initial value
    */
@@ -108,16 +109,16 @@ export class BoundVariable {
    * !! The user is responsible for updating this variable when
    *    the remote value changes !!
    *
-   * @param {function} setFunc - A function that updates the remote value
+   * @param {function} setRemote - A function that updates the remote value
    *                           when this one changes.
    */
-  addGeneralBinding(setFunc) {
-    this.generalBindings.push(setFunc);
+  addGeneralBinding(setRemote) {
+    this.generalBindings.push(setRemote);
     this.countGB = this.generalBindings.length;
 
-    setFunc(this._value);
+    setRemote(this._value);
 
-    return this
+    return this;
   }
 }
 
@@ -127,39 +128,43 @@ export class BoundVariable {
  *  via x.value (the "value" property)
  *  or using accessor methods x.get() and x.set().
  *
- *  {@link BoundVariableCollection} allows us to keep a collection of
+ *  {@link BoundObject} allows us to keep a collection of
  *    {@link BoundVariable} objects and access them as if they were properties.
- *  For example, for col = new {@link BoundVariableCollection} and
+ *  For example, for col = new {@link BoundObject} and
  *  col.add("size", new {@link BoundVariable}(23)):
  *
  *  @example col.size == 23
  *
  *  @param {Object} binds - The {@BoundVariable}s referenced by key.
  */
-export class BoundVariableCollection extends Object {
+export class BoundObject extends Object {
   constructor(...args) {
     super(...args);
-    this.binds = {};
+    this.properties = {};
   }
 
   /**
-   * Add a {@link BoundVariable} object
-   * @param {String|Number} key The "property" associated with this {@BoundVariable}
-   * @param {[type]} bv The {@link BoundVariable} object.
+   * Add a {@link BoundVariable} object,
+   *   which is a sort of property of this {@BoundObject}.
+   * @param {String|Number} key - The "property" name
+   * @param value - Initial value for the new
+   *                "property" {@link BoundVariable} object.
    */
-  add(key, bv) {
-    this.binds[key] = bv;
+  addProperty(key, value) {
+    const bv = new BoundVariable(value);
+    this.properties[key] = bv;
 
-    Object.defineProperty(this, "binds", {
+    Object.defineProperty(this, "properties", {
       enumerable: false,
     });
 
     Object.defineProperty(this, key, {
       get: function () {
-        return this.binds[key].get();
+        return this.properties[key].get();
       }.bind(this),
+
       set: function (newValue) {
-        this.binds[key].set(newValue);
+        this.properties[key].set(newValue);
       }.bind(this),
 
       enumerable: true,
