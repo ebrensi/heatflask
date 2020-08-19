@@ -1,12 +1,22 @@
-/*
+/**
  * DataBinding.js -- Lightweight data-binding
  * Efrem Rensi 8/2020
+ *
+ * @module
  */
 
+/**
+ * The identity function returns its input
+ * @private
+ * @param x
+ * @return x
+ */
 const identity = (x) => x;
 
 /**
- * @typedef {DOMbinding}
+ * An object that defines a DOM binding
+ *
+ * @typedef {Object} DOMbinding
  * @param {HTMLElement} [element] - The DOM element
  * @param {String} [selector] Optionally, a selector for the DOM element
  * @param {String} [attribute="value"] - The attribute to sync
@@ -144,10 +154,11 @@ export class BoundVariable {
  *
  *  {@link BoundObject} allows us to keep a collection of
  *    {@link BoundVariable} objects and access them as if they were properties.
- *  For example, for col = new {@link BoundObject} and
- *  col.add("size", new {@link BoundVariable}(23)):
  *
- *  @example col.size == 23
+ *  @example
+ *  col = new {@link BoundObject};
+ *  col.add("size", new BoundVariable(23));
+ *  // col.size == 23
  *
  *  @param {Object} binds - The {@BoundVariable}s referenced by key.
  */

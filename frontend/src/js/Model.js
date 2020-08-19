@@ -78,6 +78,10 @@ for (const [uKey, value] of urlArgs.entries()) {
  * @property {String} queryType - "days", "activities", "dates", "ids", or "key"
  */
 
+/**
+ * Ininitial query extracted from defaults and URL parameters
+ * @type {dataQuery}
+ */
 const qParamsInit = {
   userid: userid === "main.html" ? "" : userid,
   date1: params.date1,
@@ -101,7 +105,7 @@ qParamsInit.quantity =
 
 /**
  * Current values of query parameters in the DOM
- * @type {dataQuery}
+ * @type {BoundObject}
  */
 export const qParams = BoundObject.fromObject(qParamsInit, {event: "change"});
 
@@ -126,10 +130,10 @@ export const qParams = BoundObject.fromObject(qParamsInit, {event: "change"});
  */
 
 /**
- * The visual paramters for the current view
+ * Ininitial visual parameters extracted from defaults and URL parameters
  * @type {visualParameters}
  */
-const vParams = BoundObject.fromObject({
+const vParamsInit = {
   center: [params["lat"], params["lng"]],
   zoom: params["zoom"],
   geohash: params["geohash"],
@@ -143,7 +147,13 @@ const vParams = BoundObject.fromObject({
   alpha: params["alpha"],
   shadows: params["shadows"],
   paths: params["paths"],
-}, {
+};
+
+/**
+ * The visual paramters for the current view
+ * @type {BoundObject}
+ */
+const vParams = BoundObject.fromObject(vParamsInit, {
   // bind "change" events of any elements whos data-bind attribute matches these
   event: "change",
 
