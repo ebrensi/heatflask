@@ -6,6 +6,20 @@
 const identity = (x) => x;
 
 /**
+ * @typedef {DOMbinding}
+ * @param {HTMLElement} [element] - The DOM element
+ * @param {String} [selector] Optionally, a selector for the DOM element
+ * @param {String} [attribute="value"] - The attribute to sync
+ *                 (eg. "value", "checked", "href", "innerHTML", etc.)
+ * @param {String} [event] - The event on which to update the value
+ *         (eg. "change", "keyup", etc). "none" is the same as not having an event.
+ * @param {function} [DOMformat] - A function that converts the varible value
+ *                                    to be displayed in the DOM.
+ * @param {function} [varFormat] - A function that converts the DOM value to
+ *                                    the variable value.
+ */
+
+/**
  * A BoundVariable object has a value that can be bound to a DOM elelment
  *   or other arbitrary obejct.  It is used to sync properties between
  *   two or more objects.  It consists of a getter and setter for the value
@@ -15,7 +29,7 @@ const identity = (x) => x;
  */
 export class BoundVariable {
   // #value is private.  We don't want the user accessing it directly
-  #value;  // eslint-disable-line
+  #value; // eslint-disable-line
 
   /**
    * @param value An initial value
@@ -28,6 +42,10 @@ export class BoundVariable {
     this.countGB = 0;
 
     this.#value = value;
+  }
+
+  toString() {
+    return this.#value.toString();
   }
 
   /**
@@ -51,8 +69,8 @@ export class BoundVariable {
     }
 
     for (let i = 0; i < this.countGB; i++) {
-      const setFunc = this.generalBindings[i];
-      setFunc(newValue);
+      const onChange = this.generalBindings[i];
+      onChange(newValue);
     }
   }
 
@@ -67,31 +85,28 @@ export class BoundVariable {
   /**
    * Sync this value with an attribute of a DOM element.
    *
-   * @param {Object} args - keyword arguments in an Object
-   * @param {HTMLElement} args.element - The DOM element
-   * @param {String} [args.attribute="value"] - The attribute to sync
-   *                 (eg. "value", "checked", "href", "innerHTML", etc.)
-   * @param {String} [args.event] - The event on which to update the value
-   *         (eg. "change", "keyup", etc). "none" is the same as not having an event.
-   * @param {function} [args.DOMformat] - A function that converts the varible value
-   *                                    to be displayed in the DOM.
-   * @param {function} [args.varFormat] - A function that converts the DOM value to
-   *                                    the variable value.
+   * @param {DOMbinding} DOMbinding - specs for the element to bind
    */
-  addDOMbinding({ element, attribute, DOMformat, event, varFormat }) {
+  addDOMbinding(DOMbinding) {
+    const {
+      element,
+      attribute = "value",
+      DOMformat = identity,
+      event,
+      varFormat = identity,
+    } = DOMbinding;
+
     const binding = {
       element: element,
       attribute: attribute,
-      format: DOMformat || identity,
+      format: DOMformat,
     };
 
     if (event && event !== "none") {
-      const format = varFormat || identity;
-
       element.addEventListener(
         event,
         function () {
-          this.set(format(element[attribute]));
+          this.set(varFormat(element[attribute]));
         }.bind(this)
       );
     }
@@ -105,17 +120,14 @@ export class BoundVariable {
   }
 
   /**
-   * Add binding to a generally defined remote value.
-   * Use this to sync this value with a general variable, given a
-   * function to update that variable.
-   * !! The user is responsible for updating this variable when
-   *    the remote value changes !!
+   * Add a general binding. Use this to trigger a function whenever
+   * this value changes.
    *
-   * @param {function} setRemote - A function that updates the remote value
-   *                           when this one changes.
+   * @param {function} onChange - A function that gets called when the
+   *   value of this property changes
    */
-  addGeneralBinding(setRemote) {
-    this.generalBindings.push(setRemote);
+  addGeneralBinding(onChange) {
+    this.generalBindings.push(onChange);
     this.countGB = this.generalBindings.length;
 
     setRemote(this.#value);
@@ -140,40 +152,66 @@ export class BoundVariable {
  *  @param {Object} binds - The {@BoundVariable}s referenced by key.
  */
 export class BoundObject extends Object {
-
   constructor() {
     super();
-    this.properties = {};
+    this.boundVariables = {};
+    Object.defineProperty(this, "boundVariables", {
+      enumerable: false,
+    });
   }
 
   /**
-   * Add a {@link BoundVariable} object,
-   *   which is a sort of property of this {@BoundObject}.
+   * Create a {@link BoundVariable} and add it to this {@link BoundObject}
+   *   as a property..
    * @param {String|Number} key - The "property" name
    * @param value - Initial value for the new
    *                "property" {@link BoundVariable} object.
    */
   addProperty(key, value) {
-    const bv = new BoundVariable(value);
-    this.properties[key] = bv;
+    return this.addBoundVariable(key, new BoundVariable(value));
+  }
 
-    Object.defineProperty(this, "properties", {
-      enumerable: false,
-    });
+  /**
+   * Add a {@link BoundVariable} to this {@BoundObject}.
+   * @param {String|Number} key - The "property" name
+   * @param value - An existing {@link BoundVariable} object.
+   */
+  addBoundVariable(key, bv) {
+    this.boundVariables[key] = bv;
 
     Object.defineProperty(this, key, {
       get: function () {
-        return this.properties[key].get();
+        return this.boundVariables[key].get();
       }.bind(this),
 
       set: function (newValue) {
-        this.properties[key].set(newValue);
+        this.boundVariables[key].set(newValue);
       }.bind(this),
 
       enumerable: true,
     });
 
     return bv;
+  }
+
+  /**
+   * See the
+   * @param {String|Number} key
+   * @param {DOMbinding} binding
+   */
+  addDOMbinding(key, DOMbinding) {
+    return this.boundVariables[key].addDOMbinding(DOMbinding);
+  }
+
+  /**
+   * Add a general binding. Use this to trigger a function whenever
+   * the specified property changes.
+   *
+   * @param {function} onChange - A function that gets called when the
+   *   value of this property changes
+   */
+  addGeneralBinding(key, onChange) {
+    return this.boundVariables[key].addGeneralBinding(onChange);
   }
 
   /**
@@ -187,23 +225,65 @@ export class BoundObject extends Object {
   /**
    * Create a new {@BoundObject} from a regular Object,
    *  with each property possibly bound with a DOM element.
+   *  i.e. if obj["key"] and a DOM element with data-bind="key" both
+   *  exist then the "key" property is bound with that element.
+   *
    * @param  {Object} obj
+   * @param {DOMbinding} [DOMbinding] - properties here take precedence
    * @return {BoundObject}
    */
-  static fromObject(obj) {
+  static fromObject(obj, DOMbinding = {}) {
     const bObj = new BoundObject();
-    for (const [key, val] of Object.entries(obj)) {
 
+    for (const [key, val] of Object.entries(obj)) {
       const bv = bObj.addProperty(key, val),
         elements = document.querySelectorAll(`[data-bind=${key}]`);
 
       for (const el of elements) {
-        bv.addDOMbinding({
-          element: el,
-          attribute: el.dataset.attr || "value",
-          event: el.dataset.event || "change",
-        });
+        bv.addDOMbinding(
+          Object.assign(
+            {
+              element: el,
+              attribute: el.dataset.attr,
+              event: el.dataset.event,
+            },
+            DOMbinding[key] || DOMbinding
+          )
+        );
       }
+    }
+    return bObj;
+  }
+
+  /**
+   * Create a {@link BoundObject} from DOM elements
+   *
+   * @param  {String} selector - DOM elements matching this selector
+   *                           will be considered.
+   * @param {DOMbinding} [DOMbinding] - properties here take precedence
+   * @return {@BoundObject}
+   */
+  static fromDOMelements(selector, DOMbinding = {}) {
+    const bObj = new BoundObject();
+
+    for (const el of document.querySelectorAll(selector)) {
+      const key = el.dataset.bind;
+
+      const bv = bObj.boundVariables[key] || bObj.addProperty(key);
+      const attr = el.dataset.attr;
+
+      bv.value = bv.value || el[attr];
+
+      bv.addDOMbinding(
+        Object.assign(
+          {
+            element: el,
+            attribute: attr,
+            event: el.dataset.event,
+          },
+          DOMbinding[key] || DOMbinding
+        )
+      );
     }
     return bObj;
   }

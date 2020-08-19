@@ -35,8 +35,7 @@ const urlArgDefaults = {
   paths: [["pa", "paths"], true],
   alpha: [["alpha"], 1],
   baselayer: [["baselayer", "map", "bl"], null],
-}
-
+};
 
 const userid = window.location.pathname.substring(1);
 
@@ -61,8 +60,6 @@ for (const [uKey, value] of urlArgs.entries()) {
   }
 }
 
-
-
 /**
  * Query parameters are those that describe the query we make to the
  * backend for activity data. Note that there are two types of query:
@@ -81,9 +78,8 @@ for (const [uKey, value] of urlArgs.entries()) {
  * @property {String} queryType - "days", "activities", "dates", "ids", or "key"
  */
 
-
 const qParamsInit = {
-  userid: userid,
+  userid: userid === "main.html" ? "" : userid,
   date1: params.date1,
   date2: params.date2,
   ids: params.ids,
@@ -100,15 +96,14 @@ qParamsInit.queryType = urlArgs["key"]
   ? "days"
   : "activities";
 
-params.quantity = params.queryType === "days" ? +params.days : +params.limit;
+qParamsInit.quantity =
+  params.queryType === "days" ? +params.days : +params.limit;
 
 /**
  * Current values of query parameters in the DOM
  * @type {dataQuery}
  */
-export const qParams = BoundObject.fromObject(qParamsInit);
-
-
+export const qParams = BoundObject.fromObject(qParamsInit, {event: "change"});
 
 /**
  * visual-parameters are those that determine what appears visually.
@@ -130,8 +125,6 @@ export const qParams = BoundObject.fromObject(qParamsInit);
  * @property {String} baselayer - The name of the current baselayer
  */
 
-
-
 /**
  * The visual paramters for the current view
  * @type {visualParameters}
@@ -139,17 +132,33 @@ export const qParams = BoundObject.fromObject(qParamsInit);
 const vParams = BoundObject.fromObject({
   center: [params["lat"], params["lng"]],
   zoom: params["zoom"],
+  geohash: params["geohash"],
   autozoom: params["autozoom"],
+  paused: params["paused"],
+  baselayer: params["baselayer"],
+
   c1: params["c1"],
   c2: params["c2"],
   sz: params["sz"],
-  geohash: params["geohash"],
-  paused: params["paused"],
+  alpha: params["alpha"],
   shadows: params["shadows"],
   paths: params["paths"],
-  alpha: params["alpha"],
-  baselayer: params["baselayer"],
+}, {
+  // bind "change" events of any elements whos data-bind attribute matches these
+  event: "change",
+
+  // except for the sliders whcih use "input" events
+  sz: {event: "input"},
+  alpha: {event: "input"}
 });
+
+// info elements have one-way bindings because the user cannot change them
+export const messages = BoundObject.fromDOMelements("[data-class=info]");
+
+export const targetUser = BoundObject.fromDOMelements("[data-class=target-user]");
+
+export const currentUser = BoundObject.fromDOMelements("[data-class=current-user]");
+currentUser.addProperty("authenticated", false);
 
 export const items = new Set();
 
@@ -157,6 +166,10 @@ const state = {
   items: items,
   vParams: vParams,
   qParams: qParams,
+  messages: messages,
+  targetUser: targetUser,
+  currentUser: currentUser,
+  clientID: null
 };
 
 window["app"] = state;
