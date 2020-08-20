@@ -1,5 +1,7 @@
 /*
  *  Basic DOM manipulation. This is sort of a replacement for JQuery.
+ *
+ *  Efrem Rensi 2020
  */
 
 /**

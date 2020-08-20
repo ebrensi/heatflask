@@ -1,5 +1,7 @@
 /*
  * mapAPI.js -- Leaflet map background is initialized here
+ *
+ * Efrem Rensi 2020
  */
 
 import * as L from "leaflet";
@@ -12,24 +14,21 @@ import "../../node_modules/sidebar-v2/css/leaflet-sidebar.css";
 import "../../node_modules/sidebar-v2/js/leaflet-sidebar.js";
 
 import { tileLayer } from "./TileLayer/TileLayer.Heatflask.js";
-import { appState } from "./Model.js";
+import app from "./Model.js";
 
-import strava_logo from "../images/pbs4.png";
-import heatflask_logo from "../images/logo.png";
+import strava_logo from "url:../images/pbs4.png";
+import heatflask_logo from "url:../images/logo.png";
 
 import { MAPBOX_ACCESS_TOKEN } from "./Init.js";
 
 /*
  * Initialize the Leaflet map object
  */
-
-const params = appState.params;
-
 export const map = new L.Map("map", {
-  center: params.map_center,
-  zoom: params.map_zoom,
+  center: app.vParams.center,
+  zoom: app.vParams.zoom,
   preferCanvas: true,
-  zoomAnimation: false,
+  zoomAnimation: true,
   zoomAnimationThreshold: 6,
   updateWhenZooming: true,
 });
@@ -39,7 +38,9 @@ export const map = new L.Map("map", {
     one for error messages.
 */
 
-// create an empty message box (but don't display anything yet)
+/*
+ * create an empty message box (but don't display anything yet)
+ */
 export const msgBox1 = L.control.window(map, {
   position: "top",
   visible: false,
@@ -54,8 +55,7 @@ export const msgBox2 = L.control.window(map, {
  * Initialize map Baselayers
  *   with custom TileLayer
  */
-
-const baseLayers = {
+const baselayers = {
   None: tileLayer("", { useCache: false }),
 };
 
@@ -67,7 +67,7 @@ const mapBox_layer_names = {
 };
 
 for (const [name, id] of Object.entries(mapBox_layer_names)) {
-  baseLayers[name] = tileLayer.provider("MapBox", {
+  baselayers[name] = tileLayer.provider("MapBox", {
     id: id,
     accessToken: MAPBOX_ACCESS_TOKEN,
   });
@@ -83,41 +83,41 @@ const providers_names = [
   "OpenStreetMap.Mapnik",
   "Stadia.AlidadeSmoothDark",
 ];
-const default_name = "OpenStreetMap.Mapnik";
+const defaultBaselayerName = "OpenStreetMap.Mapnik";
 
 for (const name of providers_names) {
-  baseLayers[name] = tileLayer.provider(name);
+  baselayers[name] = tileLayer.provider(name);
 }
 
-appState.currentBaseLayer = baseLayers[default_name];
 
-/* If the user provided a baselayer name that is not one of
-   those included here, attempt to instantiate it and set it as
-   the current baselayer
-*/
-const qblName = appState.query.baselayer;
-if (qblName) {
-  // URL constains a baselayer setting
-  if (qblName in baseLayers) {
-    // it's one that we already have
-    appState.currentBaseLayer = baseLayers[qblName];
-  } else {
-    try {
-      baseLayers[qblName] = appState.currentBaseLayer = tileLayer.provider(
-        qblName
-      );
-    } catch (e) {
-      const msg = `${e}: sorry we don't support the baseLayer "${qblName}"`;
-      console.log(msg);
-      msgBox2.content(msg).show();
-    }
+/*
+ * If the user provided a baselayer name that is not one of
+ *  our default set, attempt to instantiate it and set it as
+ *  the current baselayer.
+ */
+let blName = app.vParams.baselayer || defaultBaselayerName;
+
+if (!baselayers[blName]) {
+  try {
+    baselayers[blName] = tileLayer.provider(blName);
+  } catch (e) {
+    const msg = `${e}: sorry we don't support the baseLayer "${blName}"`;
+    console.log(msg);
+    msgBox2.content(msg).show();
+    blName = defaultBaselayerName;
   }
 }
 
-// Set the zoom range the same for all basemaps because this TileLayer
-//  will fill in missing zoom levels with tiles from the nearest zoom level.
-for (const name in baseLayers) {
-  const layer = baseLayers[name],
+app.vParams.baselayer = blName;
+app.currentBaseLayer = baselayers[blName];
+app.currentBaseLayer.addTo(map);
+
+/*
+ * Set the zoom range the same for all basemaps because this TileLayer
+ * will fill in missing zoom levels with tiles from the nearest zoom level.
+ */
+for (const name in baselayers) {
+  const layer = baselayers[name],
     maxZoom = layer.options.maxZoom;
   layer.name = name;
 
@@ -128,11 +128,10 @@ for (const name in baseLayers) {
   }
 }
 
-// Add baselayer to map
-appState.currentBaseLayer.addTo(map);
+
 
 // Add baselayer selection control to map
-L.control.layers(baseLayers, null, { position: "topleft" }).addTo(map);
+L.control.layers(baselayers, null, { position: "topleft" }).addTo(map);
 
 // Add zoom Control
 map.zoomControl.setPosition("bottomright");

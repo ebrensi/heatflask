@@ -3,35 +3,32 @@
  *  Here we initialize the DOM/user interface
  */
 
-/* min is a lightweight bootstrap-like style framework */
-import "../../ext/css/min_entireframework.min.css";
-import "../../css/font-awesome-lite.css";
-
 import "leaflet-easybutton";
 import "../../../node_modules/leaflet-easybutton/src/easy-button.css";
 
 import {
   FLASH_MESSAGES,
-  MAKE_USER_URLS,
+  USER_URLS,
   BEACON_HANDLER_URL,
   AUTHORIZE_URL,
-  CLIENT_ID,
 } from "../Init.js";
 
-import appState from "../Model.js";
+import app from "../Model.js";
 import * as Dom from "../Dom.js";
-import { date1picker, date2picker } from "./DatePickers.js";
-import { updateURL } from "./URL.js";
+// import { updateURL } from "./URL.js";
 import { map, errMsg } from "../MapAPI.js";
-import { dotLayer } from "../DotLayerAPI.js";
-import "./DotControls.js";
-import strava_login_img from "../../images/btn_strava_connectwith_orange.svg";
-import paypalButtonHtml from "../../html/paypal-button.html";
-import { makeQuery } from "./DataImport.js";
+// import { dotLayer } from "../DotLayerAPI.js";
+// import "./DotControls.js";
+import strava_login_img from "url:../../images/btn_strava_connectwith_orange.svg";
+import paypalButtonHtml from "url:../../html/paypal-button.html";
+// import { makeQuery } from "./DataImport.js";
+
+
+debugger;
 
 /* currentUser will be null if not logged-in */
-let { currentUser } = appState;
-const { vparams, query } = appState;
+let { currentUser } = app;
+const { vparams, query } = app;
 
 makeQuery();
 
@@ -251,14 +248,14 @@ updateURL();
 // What to do when user changes to a different tab or window
 document.onvisibilitychange = function () {
   if (document.hidden) {
-    if (!appState.paused) dotLayer.pause();
-  } else if (!appState.paused && dotLayer) {
+    if (!app.paused) dotLayer.pause();
+  } else if (!app.paused && dotLayer) {
     dotLayer.animate();
   }
 };
 
 map.on("baselayerchange", function (e) {
-  appState.currentBaseLayer = e.layer;
+  app.currentBaseLayer = e.layer;
   updateURL();
 });
 
@@ -281,8 +278,8 @@ map.on("baselayerchange", function (e) {
 
 window.addEventListener("beforeunload", () => {
   if (navigator.sendBeacon) {
-    if (appState.wskey) {
-      navigator.sendBeacon(BEACON_HANDLER_URL, appState.wskey);
+    if (app.wskey) {
+      navigator.sendBeacon(BEACON_HANDLER_URL, app.wskey);
     }
     navigator.sendBeacon(BEACON_HANDLER_URL, CLIENT_ID);
   }

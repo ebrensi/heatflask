@@ -16,7 +16,8 @@
  * main.js -- the entry point for the heatflask browser client
  */
 
-import "./Model.js";
+import "./MapAPI.js";
+// import "./UI/UI.js";
 import "../css/heatflask.css"; // This should be the last imported CSS
 
 // debugger;

@@ -14,7 +14,13 @@
   --sidebar-height: 160px;
 }
 
+/*
+ * We only use a few icons from font-awesome so I made a smaller version.
+ * This might not be necessary.
+ */
 @import "./font-awesome-lite.css";
+
+/*Min CSS framework (https://mincss.com)*/
 @import "./../ext/css/min_entireframework.min.css";
 
 body {

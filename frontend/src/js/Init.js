@@ -45,7 +45,7 @@ export const WEBSOCKET_URL = `${ws_prefix()}${
 export const BEACON_HANDLER_URL = "/beacon_handler";
 export const AUTHORIZE_URL = "/authorize";
 
-export function MAKE_USER_URLS(userid) {
+export function USER_URLS(userid) {
   return {
     main: `/${userid}`,
     activities: `/${userid}/activities`,
