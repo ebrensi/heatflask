@@ -7,7 +7,7 @@
     />
     <meta name="robots" content="noindex" />
 
-    <title data-bind="app-title" data-attr="innerText" data-class="info">
+    <title data-bind="app-title" data-prop="innerText" data-class="info">
       Heatflask
     </title>
 
@@ -49,7 +49,7 @@
             <a
               href="#"
               data-bind="strava-url"
-              data-attr="href"
+              data-prop="href"
               data-class="target-user"
               target="_blank"
             >
@@ -58,7 +58,7 @@
 
             <span
               data-bind="username"
-              data-attr="innerText"
+              data-prop="innerText"
               data-class="target-user"
             >
               (user)</span
@@ -71,7 +71,7 @@
 
           <h3>Activities query:</h3>
 
-          <span class="query days activities">
+          <span class="query days activities" data-bind="queryType" data-attr="data-queryType" data-event="none">
             <input
               type="number"
               value="0"
@@ -92,16 +92,16 @@
           </select>
 
           <br />
-          <div class="query key">
+          <div class="query key" data-bind="queryType" data-attr="data-queryType" data-event="none">
             <input type="text" value="" data-bind="key" data-class="query" />
           </div>
 
-          <div class="query ids">
-            <textarea data-bind="ids" data-attr="innerText" data-class="query">
+          <div class="query ids" data-bind="queryType" data-attr="data-queryType" data-event="none">
+            <textarea data-bind="ids" data-prop="innerText" data-class="query">
             </textarea>
           </div>
 
-          <div class="query dates">
+          <div class="query dates" data-bind="queryType" data-attr="data-queryType" data-event="none">
             Start:
             <input type="date" data-bind="date1" data-class="query" />
             <br />
@@ -115,7 +115,7 @@
             <input
               type="checkbox"
               data-bind="autozoom"
-              data-attr="checked"
+              data-prop="checked"
               data-class="visual"
             />
             Auto-Zoom to query
@@ -124,7 +124,7 @@
           <br />
           <div
             data-bind="data-message"
-            data-attr="innerHTML"
+            data-prop="innerHTML"
             data-class="info"
           ></div>
 
@@ -152,19 +152,19 @@
           <br />
 
           <!-- Displayed if user is logged-in -->
-          <div class="logged-in">
+          <div class="logged-in" data-class="current-user" data-bind="authenticated" data-attr="data-authenticated">
             You are authenticated as
             <a
               href="#"
               target="_blank"
               data-bind="strava-url"
-              data-attr="href"
+              data-prop="href"
               data-class="current-user"
             >
               <span
-                data-bind="username"
-                data-attr="innerText"
                 data-class="current-user"
+                data-bind="username"
+                data-prop="innerText"
                 >(current-user)</span
               >
             </a>
@@ -178,7 +178,7 @@
           <br />
 
           <!-- Displayed if user is not logged-in -->
-          <div class="logged-out">
+          <div class="logged-out" data-class="current-user" data-bind="authenticated" data-attr="data-authenticated">
             Create an account and/or log in.
             <br />
 
@@ -188,7 +188,7 @@
 
           <div
             data-bind="error-message"
-            data-attr="innerHTML"
+            data-prop="innerHTML"
             data-class="info"
           ></div>
           <br />
@@ -206,7 +206,7 @@
               href="#"
               target="_blank"
               data-bind="strava-url"
-              data-attr="href"
+              data-prop="href"
               data-class="current-user"
             >
               <img class="strava-badge" />
@@ -214,7 +214,7 @@
 
             <span
               data-bind="username"
-              data-attr="innerText"
+              data-prop="innerText"
               data-class="current-user"
             ></span>
 
@@ -230,20 +230,20 @@
           <h3>
             <span
               data-bind="firstname"
-              data-attr="innerText"
+              data-prop="innerText"
               data-class="current-user"
               >first</span
             >
             <span
               data-bind="lastname"
-              data-attr="innerText"
+              data-prop="innerText"
               data-class="current-user"
               >last</span
             >
           </h3>
 
           <a href="https://www.strava.com/settings/profile" target="_blank">
-            <img data-bind="avatar" data-attr="src" data-class="current-user" />
+            <img data-bind="avatar" data-prop="src" data-class="current-user" />
           </a>
 
           <br /><br />
@@ -265,7 +265,7 @@
               ><input
                 type="checkbox"
                 data-bind="public"
-                data-attr="checked"
+                data-prop="checked"
                 data-class="current-user"
               />
               Include me in the
@@ -273,7 +273,7 @@
                 href="#"
                 target="_blank"
                 data-bind="public-users-url"
-                data-attr="href"
+                data-prop="href"
                 data-class="info"
               >
                 public user directory
@@ -346,7 +346,7 @@
           <input
             type="checkbox"
             data-bind="selection-zoom"
-            data-attr="checked"
+            data-prop="checked"
             dtata-class="visual"
           />
           Zoom to selection
@@ -378,7 +378,7 @@
                 data-event="input"
               />
               <label for="dot-speed"
-                >Speed <span data-bind="speed" data-class="visual" data-attr="innerText"></span
+                >Speed <span data-bind="speed" data-class="visual" data-prop="innerText"></span
               ></label>
             </div>
             <div>
@@ -391,7 +391,7 @@
                 data-event="input"
               />
               <label for="dot-sep"
-                >Sparsity <span data-bind="sep" data-attr="innerText" data-class="visual"></span
+                >Sparsity <span data-bind="sep" data-prop="innerText" data-class="visual"></span
               ></label>
             </div>
 
@@ -399,7 +399,7 @@
               Period T =
               <span
                 data-bind="period"
-                data-attr="innerText"
+                data-prop="innerText"
                 data-class="info"
               ></span>
               sec
@@ -408,25 +408,33 @@
             <div>
               <input
                 type="range"
+                min="0"
+                max="1"
+                step="0.01"
                 class="dot-const"
                 id="dot-alpha"
                 data-bind="alpha"
+                data-event="input"
                 data-class="visual"
               />
               <label for="dot-alpha"
-                >Alpha <span data-bind="alpha" data-attr="innerText" data-class="visual"></span
+                >Alpha <span data-bind="alpha" data-prop="innerText" data-class="visual"></span
               ></label>
             </div>
             <div>
               <input
                 type="range"
+                min="0.1"
+                max="10"
+                step="0.1"
                 class="dot-const"
                 id="dot-size"
                 data-bind="sz"
+                data-event="input"
                 data-class="visual"
               />
               <label for="dot-size"
-                >Size <span data-bind="sz" data-attr="innerText" data-class="visual"></span
+                >Size <span data-bind="sz" data-prop="innerText" data-class="visual"></span
               ></label>
             </div>
 
@@ -435,7 +443,7 @@
                 type="checkbox"
                 id="showPaths"
                 data-bind="paths"
-                data-attr="checked"
+                data-prop="checked"
                 data-class="visual"
                 checked
               />
@@ -447,7 +455,7 @@
                 type="checkbox"
                 id="showShadows"
                 data-bind="shadows"
-                data-attr="checked"
+                data-prop="checked"
                 data-class="visual"
                 checked
               />

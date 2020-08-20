@@ -6,28 +6,56 @@
  */
 
 /**
- * The identity function returns its input
- * @private
- * @param x
- * @return x
- */
-const identity = (x) => x;
-
-/**
  * An object that defines a DOM binding
+ *  {@see https://javascript.info/dom-attributes-and-properties#non-standard-attributes-dataset})
+ * about DOM element properties vs attributes
+ *  For "data-*" bindings use attribute.
  *
  * @typedef {Object} DOMbinding
+ *
  * @param {HTMLElement} [element] - The DOM element
- * @param {String} [selector] Optionally, a selector for the DOM element
- * @param {String} [attribute="value"] - The attribute to sync
- *                 (eg. "value", "checked", "href", "innerHTML", etc.)
+ *
+ * @param {String} [selector] Optionally, a selector for the DOM element.
+ *
+ * @param {String} [attribute] - The DOM element attribute to bind. Note that
+ *    property and attribute are mutually exclusive, with attribute preferred
+ *    if it is present.
+ *
+ * @param {String} [property="value"] - The DOM element property to bind
+ *                         (eg. "value", "checked", "href", "innerHTML", etc.)
+ *
  * @param {String} [event] - The event on which to update the value
  *         (eg. "change", "keyup", etc). "none" is the same as not having an event.
+ *
  * @param {function} [DOMformat] - A function that converts the varible value
  *                                    to be displayed in the DOM.
+ *
  * @param {function} [varFormat] - A function that converts the DOM value to
  *                                    the variable value.
  */
+
+const identity = (x) => x;
+
+function setAttribute(element, attribute, value) {
+  if (value) {
+    element.setAttribute(attribute, value);
+  } else {
+    element.removeAttribute(attribute);
+  }
+}
+
+/* Replace any falsey values of obj with values from defaults.
+ * This function possibly modifies obj.
+ */
+function mergeDefaults(defaults, obj) {
+  const newObj = Object.assign({}, defaults);
+  for (const key in obj) {
+    if (obj[key]) {
+      newObj[key] = obj[key];
+    }
+  }
+  return newObj;
+}
 
 /**
  * A BoundVariable object has a value that can be bound to a DOM elelment
@@ -71,13 +99,21 @@ export class BoundVariable {
    */
   set(newValue) {
     this.#value = newValue;
-    // console.log(newValue);
+    console.log(newValue);
 
+    // Update all bound DOM elments
     for (let i = 0; i < this.countDB; i++) {
-      const binding = this.DOMbindings[i];
-      binding.element[binding.attribute] = binding.format(newValue);
+      const { element, property, attribute, format } = this.DOMbindings[i];
+      const val = format(newValue);
+
+      if (property) {
+        element[property] = val;
+      } else {
+        setAttribute(element, attribute, val);
+      }
     }
 
+    // Call all bound hooks
     for (let i = 0; i < this.countGB; i++) {
       const onChange = this.generalBindings[i];
       onChange(newValue);
@@ -99,32 +135,55 @@ export class BoundVariable {
    */
   addDOMbinding(DOMbinding) {
     const {
+      selector,
       element,
-      attribute = "value",
+      attribute,
+      property = "value",
       DOMformat = identity,
       event,
       varFormat = identity,
     } = DOMbinding;
 
-    const binding = {
-      element: element,
-      attribute: attribute,
-      format: DOMformat,
-    };
+    const el = element || document.querySelector(selector);
+
+    if (!(el instanceof HTMLElement)) {
+      throw new TypeError("invalid HTMLElement");
+    }
+
+    // if (!el.hasAttribute(attribute)) {
+    //   console.warn(`"${attribute}" is not a standard attribute for `, el);
+    // }
+
+    /* If an attribute is specified then it takes precedence over a property
+     *   see https://javascript.info/dom-attributes-and-properties
+     */
+    const accessor = attribute ? "attribute" : "property",
+      binding = {
+        element: el,
+        [accessor]: attribute || property,
+        format: DOMformat,
+      };
 
     if (event && event !== "none") {
-      element.addEventListener(
-        event,
-        function () {
-          this.set(varFormat(element[attribute]));
-        }.bind(this)
-      );
+      const getValue = attribute
+        ? () => el.getAttribute(attribute)
+        : () => el[property];
+
+      const setValue = () => this.set(varFormat(getValue()));
+
+      el.addEventListener(event, setValue);
     }
 
     this.DOMbindings.push(binding);
     this.countDB = this.DOMbindings.length;
 
-    element[attribute] = this.#value;
+    const val = DOMformat(this.#value);
+
+    if (attribute) {
+      setAttribute(el, attribute, val);
+    } else {
+      el[property] = val;
+    }
 
     return this;
   }
@@ -172,17 +231,6 @@ export class BoundObject extends Object {
   }
 
   /**
-   * Create a {@link BoundVariable} and add it to this {@link BoundObject}
-   *   as a property..
-   * @param {String|Number} key - The "property" name
-   * @param value - Initial value for the new
-   *                "property" {@link BoundVariable} object.
-   */
-  addProperty(key, value) {
-    return this.addBoundVariable(key, new BoundVariable(value));
-  }
-
-  /**
    * Add a {@link BoundVariable} to this {@BoundObject}.
    * @param {String|Number} key - The "property" name
    * @param value - An existing {@link BoundVariable} object.
@@ -206,7 +254,18 @@ export class BoundObject extends Object {
   }
 
   /**
-   * See the
+   * Create a {@link BoundVariable} and add it to this {@link BoundObject}
+   *   as a property.
+   * @param {String|Number} key - The "property" name
+   * @param value - Initial value for the new
+   *                "property" {@link BoundVariable} object.
+   */
+  addProperty(key, value) {
+    return this.addBoundVariable(key, new BoundVariable(value));
+  }
+
+  /**
+   * Add a DOM binding to one of the properties
    * @param {String|Number} key
    * @param {DOMbinding} binding
    */
@@ -215,7 +274,8 @@ export class BoundObject extends Object {
   }
 
   /**
-   * Add a general binding. Use this to trigger a function whenever
+   * Add a general binding to one of the properties.
+   * Use this to trigger a function whenever
    * the specified property changes.
    *
    * @param {function} onChange - A function that gets called when the
@@ -226,44 +286,82 @@ export class BoundObject extends Object {
   }
 
   /**
-   * @return {Object} -- A regular Object "snapshot"
-   * of this {@link BoundBoject}
-   */
-  toObject() {
-    return Object.assign({}, this);
-  }
-
-  /**
-   * Create a new {@BoundObject} from a regular Object,
-   *  with each property possibly bound with a DOM element.
+   * Add new properties or DOM bindings to existing properties from a regular Object.
+   *  Each property possibly is bound to a DOM element.
    *  i.e. if obj["key"] and a DOM element with data-bind="key" both
    *  exist then the "key" property is bound with that element.
    *
    * @param  {Object} obj
-   * @param {DOMbinding} [DOMbinding] - properties here take precedence
+   * @param {DOMbinding} [defaults] - defaults for {@link DOMbinding} properties
+   *    that are not specified in the HTML data-* attributes.
    * @return {BoundObject}
    */
-  static fromObject(obj, DOMbinding = {}) {
-    const bObj = new BoundObject();
-
+  addFromObject(obj, defaults = {}) {
     for (const [key, val] of Object.entries(obj)) {
-      const bv = bObj.addProperty(key, val),
+      const bv = this.boundVariables[key] || this.addProperty(key, val),
         elements = document.querySelectorAll(`[data-bind=${key}]`);
 
       for (const el of elements) {
+        const { attr, prop, event } = el.dataset;
         bv.addDOMbinding(
-          Object.assign(
+          mergeDefaults(defaults,
             {
               element: el,
-              attribute: el.dataset.attr,
-              event: el.dataset.event,
-            },
-            DOMbinding[key] || DOMbinding
+              property: prop,
+              attribute: attr,
+              event: event,
+            }
           )
         );
       }
     }
-    return bObj;
+    return this;
+  }
+
+  /**
+   * Add new properites or DOM bindings to existing properties from DOM elements.
+   *
+   * @param  {String} selector - DOM elements matching this selector
+   *            will be considered.
+   * @param {DOMbinding} [defaults] - defaults for {@link DOMbinding} properties
+   *    that are not specified in the HTML data-* attributes.
+   * @return {@BoundObject}
+   */
+  addFromDOMelements(selector, defaults = {}) {
+    for (const el of document.querySelectorAll(selector)) {
+      const { bind: key, attr, prop, event } = el.dataset;
+      const bv = this.boundVariables[key] || this.addProperty(key);
+
+      bv.value = bv.value || el.getAttribute(attr) || el[prop];
+
+      bv.addDOMbinding(
+        mergeDefaults(defaults,
+          {
+            element: el,
+            attribute: attr,
+            property: prop,
+            event: el.dataset.event,
+          },
+        )
+      );
+    }
+    return this;
+  }
+
+  /**
+   * Create a new {@BoundObject} from a regular Object,
+   *  with each property possibly bound to a DOM element.
+   *  i.e. if obj["key"] and a DOM element with data-bind="key" both
+   *  exist then the "key" property is bound with that element.
+   *
+   * @param  {Object} obj
+   * @param {DOMbinding} [defaults] - defaults for {@link DOMbinding} properties
+   *    that are not specified in the HTML data-* attributes.
+   * @return {BoundObject}
+   */
+  static fromObject(...args) {
+    const bObj = new BoundObject();
+    return bObj.addFromObject(...args);
   }
 
   /**
@@ -271,31 +369,20 @@ export class BoundObject extends Object {
    *
    * @param  {String} selector - DOM elements matching this selector
    *                           will be considered.
-   * @param {DOMbinding} [DOMbinding] - properties here take precedence
+   * @param {DOMbinding} [defaults] - defaults for {@link DOMbinding} properties
+   *    that are not specified in the HTML data-* attributes.
    * @return {@BoundObject}
    */
-  static fromDOMelements(selector, DOMbinding = {}) {
+  static fromDOMelements(...args) {
     const bObj = new BoundObject();
+    return bObj.addFromDOMelements(...args);
+  }
 
-    for (const el of document.querySelectorAll(selector)) {
-      const key = el.dataset.bind;
-
-      const bv = bObj.boundVariables[key] || bObj.addProperty(key);
-      const attr = el.dataset.attr;
-
-      bv.value = bv.value || el[attr];
-
-      bv.addDOMbinding(
-        Object.assign(
-          {
-            element: el,
-            attribute: attr,
-            event: el.dataset.event,
-          },
-          DOMbinding[key] || DOMbinding
-        )
-      );
-    }
-    return bObj;
+  /**
+   * @return {Object} -- A regular Object "snapshot"
+   * of this {@link BoundBoject}
+   */
+  toObject() {
+    return Object.assign({}, this);
   }
 }

@@ -154,12 +154,8 @@ const vParamsInit = {
  * @type {BoundObject}
  */
 const vParams = BoundObject.fromObject(vParamsInit, {
-  // bind "change" events of any elements whos data-bind attribute matches these
-  event: "change",
-
-  // except for the sliders whcih use "input" events
-  sz: {event: "input"},
-  alpha: {event: "input"}
+  // bind "change" events of any elements whos data-event attribute not set
+  event: "change"
 });
 
 // info elements have one-way bindings because the user cannot change them
@@ -168,7 +164,6 @@ export const messages = BoundObject.fromDOMelements("[data-class=info]");
 export const targetUser = BoundObject.fromDOMelements("[data-class=target-user]");
 
 export const currentUser = BoundObject.fromDOMelements("[data-class=current-user]");
-currentUser.addProperty("authenticated", false);
 
 export const items = new Set();
 
