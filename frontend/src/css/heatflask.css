@@ -20,8 +20,20 @@
  */
 @import "./font-awesome-lite.css";
 
-/*Min CSS framework (https://mincss.com)*/
+/* Min CSS framework (https://mincss.com) */
 @import "./../ext/css/min_entireframework.min.css";
+
+/* Leafletjs */
+@import "../../node_modules/leaflet/dist/leaflet.css";
+
+/* Leaflet Sidebar-v2 */
+@import "../../node_modules/sidebar-v2/css/leaflet-sidebar.css";
+
+/* Leaflet control window for pop-up messages */
+@import "../../node_modules/leaflet-control-window/src/L.Control.Window.css";
+
+/* Easy Button for control buttons on the map */
+@import "../../node_modules/leaflet-easybutton/src/easy-button.css";
 
 body {
   padding: 0;
@@ -316,3 +328,6 @@ span.date-select {
 .dataTable-table tbody > tr.selected {
   background-color: #00ff0060;
 }
+
+/* end-heatflask */
+

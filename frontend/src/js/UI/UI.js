@@ -4,7 +4,6 @@
  */
 
 import "leaflet-easybutton";
-import "../../../node_modules/leaflet-easybutton/src/easy-button.css";
 
 import {
   FLASH_MESSAGES,

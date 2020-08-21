@@ -5,14 +5,8 @@
  */
 
 import * as L from "leaflet";
-import "../../node_modules/leaflet/dist/leaflet.css";
-
 import "leaflet-control-window";
-import "../../node_modules/leaflet-control-window/src/L.Control.Window.css";
-
-import "../../node_modules/sidebar-v2/css/leaflet-sidebar.css";
 import "../../node_modules/sidebar-v2/js/leaflet-sidebar.js";
-
 import { tileLayer } from "./TileLayer/TileLayer.Heatflask.js";
 import app from "./Model.js";
 
