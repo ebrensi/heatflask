@@ -27,13 +27,10 @@ export const map = new L.Map("map", {
   updateWhenZooming: true,
 });
 
-/* Initialize two control windows, which is the modal popup that we
-    display messages in.  We create one for general messages and
-    one for error messages.
-*/
-
 /*
- * create an empty message box (but don't display anything yet)
+ * Initialize two control windows, which is the modal popup that we
+ *   display messages in.  We create one for general messages and
+ *   one for error messages.
  */
 export const msgBox1 = L.control.window(map, {
   position: "top",
@@ -83,7 +80,6 @@ for (const name of providers_names) {
   baselayers[name] = tileLayer.provider(name);
 }
 
-
 /*
  * If the user provided a baselayer name that is not one of
  *  our default set, attempt to instantiate it and set it as
@@ -121,8 +117,6 @@ for (const name in baselayers) {
     layer.options.minZoom = 3;
   }
 }
-
-
 
 // Add baselayer selection control to map
 L.control.layers(baselayers, null, { position: "topleft" }).addTo(map);

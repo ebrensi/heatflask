@@ -4,7 +4,6 @@
 
 import pureknob from "pure-knob";
 import "leaflet-easybutton";
-import "../../../node_modules/leaflet-easybutton/src/easy-button.css";
 
 import * as Dom from "../Dom.js";
 import { map } from "../mapAPI.js";

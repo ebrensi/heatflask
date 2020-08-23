@@ -1,47 +1,44 @@
 /*
- * Browser URL functionality
+ * URL.js -- Browser URL functionality
  */
 
 import * as Dom from "../Dom.js";
-import appState from "../Model.js";
+import { qParams, vParams } from "../Model.js";
 import { map } from "../MapAPI.js";
 
-const query = appState.query;
-
-/** Update the browser's current URL
-    This gets called when certain app parameters change
-*/
+/*
+ * Update the browser's current URL
+ *   This gets called when certain app parameters change
+ */
 export function updateURL() {
-  const params = {};
+  const args = {};
 
-  switch (Dom.get("#select_type")) {
-    case "activities":
-      params["limit"] = query.limit;
+  switch (qParams.queryType) {
+    case "activities" || "days":
+      args[qParams.queryType] = qParams.quantity;
       break;
 
-    case "activity-ids":
-      params["id"] = query.ids;
+    case "ids":
+      args.id = qParams.ids;
       break;
 
-    case "days":
-      params["preset"] = query.days;
-      break;
+    case "dates":
+      args.after = qParams.date1;
+      args.before = qParams.before;
 
-    case "date-range":
-      params["after"] = query.date1;
-      //resume here
-      if (query.before !== "now") {
-        params["before"] = appState.query.before;
-      }
+    case "key":
+      args.key = qParams.key;
   }
 
-  if (Dom.prop("#autozoom", "checked")) {
-    params["az"] = "1";
+  if (vParams.autozoom) {
+    args.az = 1;
+  } else if (vParams.geohash) {
+    args.geohash = vParams.geohash;
   } else {
-    const zoom = map.getZoom(),
-      center = map.getCenter(),
+    const zoom = vParams.zoom,
+      center = vParams.center,
       precision = Math.max(0, Math.ceil(Math.log(zoom) / Math.LN2));
-
+    //here
     if (center) {
       params.lat = center.lat.toFixed(precision);
       params.lng = center.lng.toFixed(precision);
