@@ -189,17 +189,17 @@ export class BoundVariable {
   }
 
   /**
-   * Add a general binding. Use this to trigger a function whenever
+   * Call a function whenever
    * this value changes.
    *
-   * @param {function} onChange - A function that gets called when the
+   * @param {function} func - A function that gets called when the
    *   value of this property changes
    */
-  addGeneralBinding(onChange) {
-    this.generalBindings.push(onChange);
+  onChange(func) {
+    this.generalBindings.push(func);
     this.countGB = this.generalBindings.length;
 
-    setRemote(this.#value);
+    func(this.#value);
 
     return this;
   }
@@ -274,15 +274,15 @@ export class BoundObject extends Object {
   }
 
   /**
-   * Add a general binding to one of the properties.
-   * Use this to trigger a function whenever
+   * Call a function with the new value whenever
    * the specified property changes.
    *
-   * @param {function} onChange - A function that gets called when the
-   *   value of this property changes
+   * @param {function} func - A function that accepts one argument:
+   * the new value for the specifid property. It gets called when the
+   *   value of this property changes.
    */
-  addGeneralBinding(key, onChange) {
-    return this.boundVariables[key].addGeneralBinding(onChange);
+  onChange(key, func) {
+    return this.boundVariables[key].onChange(func);
   }
 
   /**

@@ -12,10 +12,10 @@ import { BoundObject } from "./DataBinding.js";
  *     key: [[kwd1, kwd2, ...], default-value]
  * where kwd1, kwd2, etc are possible parameter names for this field
  */
-const urlArgDefaults = {
+export const urlArgDefaults = {
   // Query parameters
-  date1: [["start", "after", "date1", "a"], null],
-  date2: [["end", "before", "date2", "b"], null],
+  after: [["start", "after", "date1", "a"], null],
+  before: [["end", "before", "date2", "b"], null],
   days: [["days", "preset", "d"], null],
   limit: [["limit", "l"], 10],
   ids: [["id", "ids"], ""],
@@ -24,12 +24,12 @@ const urlArgDefaults = {
   // Visual parameters
   zoom: [["zoom", "z"], 3],
   lat: [["lat", "x"], 27.53],
-  lng: [["lng", "y"], 1.58],
+  lng: [["lng", "lon", "y"], 1.58],
   autozoom: [["autozoom", "az"], true],
   c1: [["c1"], null],
   c2: [["c2"], null],
   sz: [["sz"], null],
-  geohash: [["geohash"], null],
+  geohash: [["geohash", "gh"], null],
   paused: [["paused", "pu"], false],
   shadows: [["sh", "shadows"], true],
   paths: [["pa", "paths"], true],
@@ -71,21 +71,20 @@ for (const [uKey, value] of urlArgs.entries()) {
  * @typedef {Object} dataQuery
  * @property {String} key - A lookup representing a query stored on the server
  * @property {String} userid - Identifier for the owner of the requested activities
- * @property {String} date1 - Start date
- * @property {String} date2 - End date
+ * @property {String} after - Start date
+ * @property {String} before - End date
  * @property {String} ids - A string representing a list of activity ids
  * @property {Number} quantity
  * @property {String} queryType - "days", "activities", "dates", "ids", or "key"
  */
 
-/**
+/*
  * Ininitial query extracted from defaults and URL parameters
- * @type {dataQuery}
  */
 const qParamsInit = {
   userid: userid === "main.html" ? "" : userid,
-  date1: params.date1,
-  date2: params.date2,
+  after: params.after,
+  before: params.before,
   ids: params.ids,
   key: params.key,
 };
@@ -94,7 +93,7 @@ qParamsInit.queryType = urlArgs["key"]
   ? "key"
   : params.ids
   ? "ids"
-  : params.date1 || params.date2
+  : params.after || params.before
   ? "dates"
   : params.days
   ? "days"
@@ -103,9 +102,8 @@ qParamsInit.queryType = urlArgs["key"]
 qParamsInit.quantity =
   params.queryType === "days" ? +params.days : +params.limit;
 
-/**
+/*
  * Current values of query parameters in the DOM
- * @type {BoundObject}
  */
 export const qParams = BoundObject.fromObject(qParamsInit, {event: "change"});
 
@@ -129,12 +127,11 @@ export const qParams = BoundObject.fromObject(qParamsInit, {event: "change"});
  * @property {String} baselayer - The name of the current baselayer
  */
 
-/**
+/*
  * Ininitial visual parameters extracted from defaults and URL parameters
- * @type {visualParameters}
  */
 const vParamsInit = {
-  center: [params["lat"], params["lng"]],
+  center: {lat: params["lat"], lng: params["lng"]},
   zoom: params["zoom"],
   geohash: params["geohash"],
   autozoom: params["autozoom"],
@@ -149,9 +146,8 @@ const vParamsInit = {
   paths: params["paths"],
 };
 
-/**
+/*
  * The visual paramters for the current view
- * @type {BoundObject}
  */
 const vParams = BoundObject.fromObject(vParamsInit, {
   // bind "change" events of any elements whos data-event attribute not set

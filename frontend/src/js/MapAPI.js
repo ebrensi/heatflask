@@ -5,6 +5,8 @@
  */
 
 import * as L from "leaflet";
+import Geohash from "latlon-geohash";
+
 import "leaflet-control-window";
 import "../../node_modules/sidebar-v2/js/leaflet-sidebar.js";
 import { tileLayer } from "./TileLayer/TileLayer.Heatflask.js";
@@ -15,16 +17,50 @@ import heatflask_logo from "url:../images/logo.png";
 
 import { MAPBOX_ACCESS_TOKEN } from "./Init.js";
 
+let center, zoom;
+
+// Geohash uses "lon" for longitude and leaflet uses "lng"
+function ghDecode(s) {
+  const obj = Geohash.decode(s);
+  return L.latLng(obj.lat, obj.lon);
+}
+
+if (app.vParams.geohash) {
+  center = ghDecode(app.vParams.geohash);
+  zoom = app.vParams.geohash.length;
+} else {
+  center = app.vParams.center;
+  zoom = app.vParams.zoom;
+}
+
 /*
  * Initialize the Leaflet map object
  */
 export const map = new L.Map("map", {
-  center: app.vParams.center,
-  zoom: app.vParams.zoom,
+  center: center,
+  zoom: zoom,
   preferCanvas: true,
   zoomAnimation: true,
   zoomAnimationThreshold: 6,
   updateWhenZooming: true,
+  worldCopyJump: true
+});
+
+/*
+ * Create one-way binding from map location to vParams object.
+ * This can't be a two way binding because I don't have a way
+ * to prevent infinite recursion.
+ */
+map.on("moveend", () => {
+  const center = map.getCenter(),
+        zoom = map.getZoom();
+
+  app.vParams.zoom = zoom;
+  app.vParams.center = center;
+
+  const gh = Geohash.encode(center.lat, center.lng, zoom);
+  app.vParams.geohash = gh;
+  // console.log(`(${center.lat}, ${center.lng}, ${zoom}) -> ${gh}`);
 });
 
 /*
@@ -99,8 +135,11 @@ if (!baselayers[blName]) {
 }
 
 app.vParams.baselayer = blName;
-app.currentBaseLayer = baselayers[blName];
-app.currentBaseLayer.addTo(map);
+baselayers[blName].addTo(map);
+
+map.on("baselayerchange", (e) => {
+  app.vParams.baselayer = e.layer.name;
+});
 
 /*
  * Set the zoom range the same for all basemaps because this TileLayer
