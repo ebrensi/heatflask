@@ -37,9 +37,10 @@ export const urlArgDefaults = {
   baselayer: [["baselayer", "map", "bl"], null],
 };
 
-const pathname = window.location.pathname.substring(1);
-
 const urlArgs = new URL(window.location.href).searchParams;
+const pathname = window.location.pathname.substring(1);
+const targetUserId = urlArgs.get("user") || ((pathname === "main.html")? "" : pathname);
+
 
 const names = {};
 const params = {};
@@ -59,8 +60,6 @@ for (const [uKey, value] of urlArgs.entries()) {
     }
   }
 }
-
-const targetUserId = "main.html" ? "" : pathname;
 
 /**
  * Query parameters are those that describe the query we make to the
@@ -151,7 +150,7 @@ const vParamsInit = {
 /*
  * The visual paramters for the current view
  */
-const vParams = BoundObject.fromObject(vParamsInit, {
+export const vParams = BoundObject.fromObject(vParamsInit, {
   // bind "change" events of any elements whos data-event attribute not set
   event: "change",
 });
@@ -164,6 +163,7 @@ export const targetUser = BoundObject.fromDOMelements(
 );
 targetUser.addProperty("id", targetUserId);
 targetUser.onChange("id", (newId) => (qParams.userid = newId));
+targetUser.username = targetUserId || targetUser.name;
 
 export const currentUser = BoundObject.fromDOMelements(
   "[data-class=current-user]"

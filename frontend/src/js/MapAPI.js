@@ -110,7 +110,7 @@ const providers_names = [
   "OpenStreetMap.Mapnik",
   "Stadia.AlidadeSmoothDark",
 ];
-const defaultBaselayerName = "OpenStreetMap.Mapnik";
+export const defaultBaselayerName = "OpenStreetMap.Mapnik";
 
 for (const name of providers_names) {
   baselayers[name] = tileLayer.provider(name);

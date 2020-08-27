@@ -61,8 +61,7 @@
               data-bind="username"
               data-prop="innerText"
               data-class="target-user"
-            >
-              (user)</span
+            >(user)</span
             >'s map
 
             <span class="sidebar-close">
@@ -311,7 +310,7 @@
             </span>
           </h1>
 
-          <div id="info-tab"></div>
+          <div data-class="info" data-bind="infoTab" data-prop="innerHTML"></div>
         </div>
 
         <!-- Activity List/Table Tab -->

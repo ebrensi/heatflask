@@ -8,8 +8,6 @@
   --layers-button: url("../images/layers.png");
   --layers-button-2X: url("../images/layers-2x.png");
   --marker-icon: url("../images/marker-icon.png");
-  --info-tab-content: url("../html/main-info.html");
-  --paypal-button-content: url("../html/paypal-button.html");
 
   --sidebar-height-4icons: 160px;
   --sidebar-height-5icons: 200px;
@@ -59,10 +57,6 @@ textarea {
 
 input.paypal-button {
   background-color: transparent;
-}
-
-div.paypal-button {
-  content: var(--paypal-button-content);
 }
 
 /* see https://stackoverflow.com/questions/8683528/embed-image-in-a-button-element */
