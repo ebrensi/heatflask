@@ -37,7 +37,7 @@ export const urlArgDefaults = {
   baselayer: [["baselayer", "map", "bl"], null],
 };
 
-const userid = window.location.pathname.substring(1);
+const pathname = window.location.pathname.substring(1);
 
 const urlArgs = new URL(window.location.href).searchParams;
 
@@ -59,6 +59,8 @@ for (const [uKey, value] of urlArgs.entries()) {
     }
   }
 }
+
+const targetUserId = "main.html" ? "" : pathname;
 
 /**
  * Query parameters are those that describe the query we make to the
@@ -82,7 +84,7 @@ for (const [uKey, value] of urlArgs.entries()) {
  * Ininitial query extracted from defaults and URL parameters
  */
 const qParamsInit = {
-  userid: userid === "main.html" ? "" : userid,
+  userid: targetUserId,
   after: params.after,
   before: params.before,
   ids: params.ids,
@@ -105,7 +107,7 @@ qParamsInit.quantity =
 /*
  * Current values of query parameters in the DOM
  */
-export const qParams = BoundObject.fromObject(qParamsInit, {event: "change"});
+export const qParams = BoundObject.fromObject(qParamsInit, { event: "change" });
 
 /**
  * visual-parameters are those that determine what appears visually.
@@ -131,7 +133,7 @@ export const qParams = BoundObject.fromObject(qParamsInit, {event: "change"});
  * Ininitial visual parameters extracted from defaults and URL parameters
  */
 const vParamsInit = {
-  center: {lat: params["lat"], lng: params["lng"]},
+  center: { lat: params["lat"], lng: params["lng"] },
   zoom: params["zoom"],
   geohash: params["geohash"],
   autozoom: params["autozoom"],
@@ -151,15 +153,21 @@ const vParamsInit = {
  */
 const vParams = BoundObject.fromObject(vParamsInit, {
   // bind "change" events of any elements whos data-event attribute not set
-  event: "change"
+  event: "change",
 });
 
 // info elements have one-way bindings because the user cannot change them
 export const messages = BoundObject.fromDOMelements("[data-class=info]");
 
-export const targetUser = BoundObject.fromDOMelements("[data-class=target-user]");
+export const targetUser = BoundObject.fromDOMelements(
+  "[data-class=target-user]"
+);
+targetUser.addProperty("id", targetUserId);
+targetUser.onChange("id", (newId) => (qParams.userid = newId));
 
-export const currentUser = BoundObject.fromDOMelements("[data-class=current-user]");
+export const currentUser = BoundObject.fromDOMelements(
+  "[data-class=current-user]"
+);
 
 export const items = new Set();
 
@@ -170,7 +178,7 @@ const state = {
   messages: messages,
   targetUser: targetUser,
   currentUser: currentUser,
-  clientID: null
+  clientID: null,
 };
 
 window["app"] = state;

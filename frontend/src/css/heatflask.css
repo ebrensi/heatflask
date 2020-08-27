@@ -11,7 +11,8 @@
   --info-tab-content: url("../html/main-info.html");
   --paypal-button-content: url("../html/paypal-button.html");
 
-  --sidebar-height: 160px;
+  --sidebar-height-4icons: 160px;
+  --sidebar-height-5icons: 200px;
 }
 
 /*
@@ -248,7 +249,11 @@ span.date-select {
    only the space needed for tab icons.
 */
 .sidebar.collapsed {
-  height: var(--sidebar-height);
+  height: var(--sidebar-height-4icons);
+}
+
+.sidebar.collapsed[data-authenticated] {
+  height: var(--sidebar-height-5icons);
 }
 
 /* let the bottom-left controls (watermarks) stay close to

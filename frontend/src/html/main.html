@@ -15,7 +15,7 @@
   </head>
 
   <body>
-    <div id="sidebar" class="sidebar collapsed">
+    <div id="sidebar" class="sidebar collapsed" data-class="current-user" data-bind="id" data-attr="data-authenticated">
       <!-- Nav tabs -->
       <div class="sidebar-tabs">
         <ul role="tablist">
@@ -27,7 +27,8 @@
             <a href="#activities" role="tab"><i class="fa fa-list"></i></a>
           </li>
 
-          <li class="self">
+          <!-- Only show this tab if current user is authenticated -->
+          <li class="logged-in" data-class="current-user" data-bind="id" data-attr="data-authenticated">
             <a href="#profile" role="tab"><i class="fa fa-user"></i></a>
           </li>
 
@@ -151,8 +152,8 @@
 
           <br />
 
-          <!-- Displayed if user is logged-in -->
-          <div class="logged-in" data-class="current-user" data-bind="authenticated" data-attr="data-authenticated">
+          <!-- Displayed if current-user is logged-in -->
+          <div class="logged-in" data-class="current-user" data-bind="id" data-attr="data-authenticated">
             You are authenticated as
             <a
               href="#"
@@ -177,8 +178,8 @@
 
           <br />
 
-          <!-- Displayed if user is not logged-in -->
-          <div class="logged-out" data-class="current-user" data-bind="authenticated" data-attr="data-authenticated">
+          <!-- Displayed if current-user is not logged-in -->
+          <div class="logged-out" data-class="current-user" data-bind="id" data-attr="data-authenticated">
             Create an account and/or log in.
             <br />
 
@@ -200,7 +201,7 @@
         </div>
 
         <!-- Profile & User Settings Tab -->
-        <div class="sidebar-pane self" id="profile">
+        <div class="sidebar-pane" id="profile">
           <h1 class="sidebar-header">
             <a
               href="#"
@@ -222,10 +223,6 @@
               <i class="fa fa-caret-left"></i>
             </span>
           </h1>
-
-          <div class="admin">
-            Admin View for
-          </div>
 
           <h3>
             <span
