@@ -99,7 +99,6 @@ export class BoundVariable {
    */
   set(newValue) {
     this.#value = newValue;
-    console.log(newValue);
 
     // Update all bound DOM elments
     for (let i = 0; i < this.countDB; i++) {
@@ -274,15 +273,26 @@ export class BoundObject extends Object {
   }
 
   /**
-   * Call a function with the new value whenever
-   * the specified property changes.
+   * Call a function with the new value whenever the specified property
+   * (or any property) changes.
    *
-   * @param {function} func - A function that accepts one argument:
-   * the new value for the specifid property. It gets called when the
-   *   value of this property changes.
+   * @param {String} [key] - (optional) property name to which we
+   *             add this hook
+   * @param {function} func - If key is specified, func is a function that
+   * accepts one argument: the new value for the specified property.
+   * It gets called when the value assoicated with key changes.
+   * If key is not specified, func takes two arguments, the property
+   * that has changed, and the new value.
    */
   onChange(key, func) {
-    return this.boundVariables[key].onChange(func);
+    if (func) {
+      return this.boundVariables[key].onChange(func);
+    } else {
+      func = key;
+      for (const [prop, bv] of Object.entries(this.boundVariables)) {
+        bv.onChange((newVal) => func(prop, newVal));
+      }
+    }
   }
 
   /**
