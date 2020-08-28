@@ -55,6 +55,22 @@ textarea {
   color: white;
 }
 
+/* For validating date input fields */
+/*
+span.validity::after {
+  padding-left: 5px;
+}
+
+input.qdate:invalid+span::after {
+  content: '✖';
+  color: red;
+}
+
+input.qdate:valid+span::after {
+  content: '✓';
+}
+*/
+
 input.paypal-button {
   background-color: transparent;
 }

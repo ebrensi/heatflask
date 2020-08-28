@@ -28,9 +28,11 @@ function ghDecode(s) {
 if (app.vParams.geohash) {
   center = ghDecode(app.vParams.geohash);
   zoom = app.vParams.geohash.length;
+  app.vParams.autozoom = false;
 } else {
   center = app.vParams.center;
   zoom = app.vParams.zoom;
+  app.vParams.geohash = Geohash.encode(center.lat, center.lng);
 }
 
 /*

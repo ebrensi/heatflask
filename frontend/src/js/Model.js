@@ -17,7 +17,7 @@ export const urlArgDefaults = {
   after: [["start", "after", "date1", "a"], null],
   before: [["end", "before", "date2", "b"], null],
   days: [["days", "preset", "d"], null],
-  limit: [["limit", "l"], 10],
+  limit: [["limit", "n"], 10],
   ids: [["id", "ids"], ""],
   key: [["key"], null],
 
@@ -108,6 +108,19 @@ qParamsInit.quantity =
  */
 export const qParams = BoundObject.fromObject(qParamsInit, { event: "change" });
 
+const afterDateElement = document.querySelector("[data-bind=after]"),
+      beforeDateElement = document.querySelector("[data-bind=before]");
+
+// afterDateElement.max = today
+// beforeDateElement.min = today
+qParams.onChange("after", (newDate) => {
+  beforeDateElement.min = newDate;
+});
+
+qParams.onChange("before", (newDate) => {
+  afterDateElement.max = newDate;
+});
+
 /**
  * visual-parameters are those that determine what appears visually.
  *
@@ -128,6 +141,10 @@ export const qParams = BoundObject.fromObject(qParamsInit, { event: "change" });
  * @property {String} baselayer - The name of the current baselayer
  */
 
+
+function bool(val) {
+  return val !== "0" && !!val
+}
 /*
  * Ininitial visual parameters extracted from defaults and URL parameters
  */
@@ -135,16 +152,16 @@ const vParamsInit = {
   center: { lat: params["lat"], lng: params["lng"] },
   zoom: params["zoom"],
   geohash: params["geohash"],
-  autozoom: params["autozoom"],
-  paused: params["paused"],
+  autozoom: bool(params["autozoom"]),
+  paused: bool(params["paused"]),
   baselayer: params["baselayer"],
 
   c1: params["c1"],
   c2: params["c2"],
   sz: params["sz"],
-  alpha: params["alpha"],
-  shadows: params["shadows"],
-  paths: params["paths"],
+  alpha: bool(params["alpha"]),
+  shadows: bool(params["shadows"]),
+  paths: bool(params["paths"]),
 };
 
 /*

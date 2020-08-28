@@ -15,7 +15,13 @@
   </head>
 
   <body>
-    <div id="sidebar" class="sidebar collapsed" data-class="current-user" data-bind="id" data-attr="data-authenticated">
+    <div
+      id="sidebar"
+      class="sidebar collapsed"
+      data-class="current-user"
+      data-bind="id"
+      data-attr="data-authenticated"
+    >
       <!-- Nav tabs -->
       <div class="sidebar-tabs">
         <ul role="tablist">
@@ -28,7 +34,12 @@
           </li>
 
           <!-- Only show this tab if current user is authenticated -->
-          <li class="logged-in" data-class="current-user" data-bind="id" data-attr="data-authenticated">
+          <li
+            class="logged-in"
+            data-class="current-user"
+            data-bind="id"
+            data-attr="data-authenticated"
+          >
             <a href="#profile" role="tab"><i class="fa fa-user"></i></a>
           </li>
 
@@ -61,7 +72,7 @@
               data-bind="username"
               data-prop="innerText"
               data-class="target-user"
-            >(user)</span
+              >(user)</span
             >'s map
 
             <span class="sidebar-close">
@@ -71,42 +82,69 @@
 
           <h3>Activities query:</h3>
 
-          <span class="query days activities" data-bind="queryType" data-attr="data-queryType" data-event="none">
+          <span
+            class="query days activities"
+            data-bind="queryType"
+            data-attr="data-queryType"
+            data-event="none"
+          >
             <input
               type="number"
               value="0"
               min="0"
-              max="500"
+              max="9999"
               data-bind="quantity"
               data-class="query"
             />
-            most
           </span>
 
           <select data-bind="queryType" data-class="query">
-            <option value="days"> recent days</option>
-            <option value="activities" selected> recent activities</option>
+            <option value="days">most recent days</option>
+            <option value="activities" selected>most recent activities</option>
             <option value="ids">Activity IDs</option>
             <option value="dates">Date-Range</option>
             <option value="key">Key</option>
           </select>
 
           <br />
-          <div class="query key" data-bind="queryType" data-attr="data-queryType" data-event="none">
+          <div
+            class="query key"
+            data-bind="queryType"
+            data-attr="data-queryType"
+            data-event="none"
+          >
             <input type="text" value="" data-bind="key" data-class="query" />
           </div>
 
-          <div class="query ids" data-bind="queryType" data-attr="data-queryType" data-event="none">
-            <textarea data-bind="ids" data-prop="innerText" data-class="query">
+          <div
+            class="query ids"
+            data-bind="queryType"
+            data-attr="data-queryType"
+            data-event="none"
+          >
+            <textarea
+              autocomplete="on"
+              placeholder="enter activity ids here"
+              spellcheck="false"
+              data-bind="ids"
+              data-class="query"
+            >
             </textarea>
           </div>
 
-          <div class="query dates" data-bind="queryType" data-attr="data-queryType" data-event="none">
-            Start:
-            <input type="date" data-bind="date1" data-class="query" />
+          <div
+            class="query dates"
+            data-bind="queryType"
+            data-attr="data-queryType"
+            data-event="none"
+          >
+            After:
+            <input type="date" class="qdate" data-bind="after" data-class="query" />
+            <span class="validity"></span>
             <br />
-            End:
-            <input type="date" data-bind="date2" data-class="query" />
+            Before:
+            <input type="date" class="qdate" data-bind="before" data-class="query" />
+            <span class="validity"></span>
           </div>
 
           <br />
@@ -152,7 +190,12 @@
           <br />
 
           <!-- Displayed if current-user is logged-in -->
-          <div class="logged-in" data-class="current-user" data-bind="id" data-attr="data-authenticated">
+          <div
+            class="logged-in"
+            data-class="current-user"
+            data-bind="id"
+            data-attr="data-authenticated"
+          >
             You are authenticated as
             <a
               href="#"
@@ -178,7 +221,12 @@
           <br />
 
           <!-- Displayed if current-user is not logged-in -->
-          <div class="logged-out" data-class="current-user" data-bind="id" data-attr="data-authenticated">
+          <div
+            class="logged-out"
+            data-class="current-user"
+            data-bind="id"
+            data-attr="data-authenticated"
+          >
             Create an account and/or log in.
             <br />
 
@@ -310,7 +358,12 @@
             </span>
           </h1>
 
-          <div data-class="info" data-bind="infoTab" data-prop="innerHTML"></div>
+          <div
+            id="infoTab"
+            data-class="info"
+            data-bind="infoTab"
+            data-prop="innerHTML"
+          ></div>
         </div>
 
         <!-- Activity List/Table Tab -->
@@ -374,7 +427,12 @@
                 data-event="input"
               />
               <label for="dot-speed"
-                >Speed <span data-bind="speed" data-class="visual" data-prop="innerText"></span
+                >Speed
+                <span
+                  data-bind="speed"
+                  data-class="visual"
+                  data-prop="innerText"
+                ></span
               ></label>
             </div>
             <div>
@@ -387,7 +445,12 @@
                 data-event="input"
               />
               <label for="dot-sep"
-                >Sparsity <span data-bind="sep" data-prop="innerText" data-class="visual"></span
+                >Sparsity
+                <span
+                  data-bind="sep"
+                  data-prop="innerText"
+                  data-class="visual"
+                ></span
               ></label>
             </div>
 
@@ -414,7 +477,12 @@
                 data-class="visual"
               />
               <label for="dot-alpha"
-                >Alpha <span data-bind="alpha" data-prop="innerText" data-class="visual"></span
+                >Alpha
+                <span
+                  data-bind="alpha"
+                  data-prop="innerText"
+                  data-class="visual"
+                ></span
               ></label>
             </div>
             <div>
@@ -430,7 +498,12 @@
                 data-class="visual"
               />
               <label for="dot-size"
-                >Size <span data-bind="sz" data-prop="innerText" data-class="visual"></span
+                >Size
+                <span
+                  data-bind="sz"
+                  data-prop="innerText"
+                  data-class="visual"
+                ></span
               ></label>
             </div>
 
