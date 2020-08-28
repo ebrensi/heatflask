@@ -13,11 +13,12 @@
     "serve": "parcel serve --log-level verbose ./src/html/main.html",
     "check": "prettier --check ./src/",
     "format": "prettier --write ./src/",
-    "docs": "documentation build ./src/js/main.js -f html -o ../docs/"
+    "docs": "documentation build ./src/js/main.js -f html -o ./dev-docs/"
   },
   "author": "Efrem Rensi",
   "license": "ISC",
   "dependencies": {
+    "@fortawesome/fontawesome-free": "^5.14.0",
     "@msgpack/msgpack": "^1.12.2",
     "downloadjs": "^1.4.7",
     "gif.js": "github:ebrensi/gif.js#wasm-dev",
@@ -44,7 +45,7 @@
     "eslint-config-prettier": "^6.11.0",
     "parcel": "next",
     "parcel-plugin-nuke-dist": "^1.0.1",
-    "prettier": "^2.0.5"
+    "prettier": "^2.1.1"
   },
   "eslintConfig": {
     "env": {

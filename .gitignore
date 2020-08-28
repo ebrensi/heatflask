@@ -113,7 +113,12 @@ node_modules/
 .cache/
 .cache
 
-# we allow dist only for production
-dist/
-docs/
 
+# For Development
+frontend/dist/
+frontend/dev-docs/
+
+# For Production
+# frontend/dist/fa-*
+# !frontend/dist/fa-brands*.woff2
+# !frontend/dist/fa-solid*.woff2

@@ -17,7 +17,7 @@
  * We only use a few icons from font-awesome so I made a smaller version.
  * This might not be necessary.
  */
-@import "./font-awesome-lite.css";
+@import "../../node_modules/@fortawesome/fontawesome-free/css/all.css";
 
 /* Min CSS framework (https://mincss.com) */
 @import "./../ext/css/min_entireframework.min.css";
@@ -116,11 +116,7 @@ button.avatar {
 
 i.sm-button {
   font-size: 32px;
-  color: blue;
-}
-
-span.date-select {
-  display: block;
+  color: white;
 }
 
 /* For Fading in and Out */
@@ -148,13 +144,9 @@ span.date-select {
   color: red;
 }
 
-/*.query[class~=] {
-
-}*/
-
 /*
  * Display .logged-in and .logged-out elements depending on
- * "data-athenticated" attribute (bound to currentUser.authenticated)
+ * "data-athenticated" attribute (bound to currentUser.id)
  */
 .logged-in,
 .logged-out[data-authenticated] {
@@ -166,7 +158,11 @@ span.date-select {
   display: block;
 }
 
-.days, .activities, .dates, .ids, .key {
+.days,
+.activities,
+.dates,
+.ids,
+.key {
   display: none;
 }
 
@@ -177,8 +173,6 @@ span.date-select {
 .key[data-queryType="key"] {
   display: block;
 }
-
-
 
 /* Leaflet.js stuff */
 
@@ -345,4 +339,3 @@ span.date-select {
 }
 
 /* end-heatflask */
-

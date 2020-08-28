@@ -18,8 +18,9 @@ import "./URL.js";
 // import { dotLayer } from "./DotLayerAPI.js";
 // import "./DotControls.js";
 // import strava_login_img from "url:../images/btn_strava_connectwith_orange.svg";
-// import paypalButtonHtml from "../html/paypal-button.html";
-import data from  "../html/main-info.html";
+
+import paypalButtonHTML from "bundle-text:../html/paypal-button.html";
+import infoTabHTML from  "bundle-text:../html/main-info.html";
 
 // import { makeQuery } from "./DataImport.js";
 
@@ -33,8 +34,12 @@ import data from  "../html/main-info.html";
 
   right now we are only doing the single target-user UI.
 */
-document.querySelector("#infoTab").innerHTML = data;
 
+document.querySelectorAll(".paypal-button").forEach(el => {
+  el.innerHTML = paypalButtonHTML;
+});
+
+document.querySelector("#info-tab").innerHTML = infoTabHTML;
 
 // // put Strava-login button images into the DOM
 // Dom.prop(".strava-auth", "src", strava_login_img);

@@ -26,11 +26,11 @@
       <div class="sidebar-tabs">
         <ul role="tablist">
           <li>
-            <a href="#home" role="tab"><i class="fa fa-bars"></i></a>
+            <a href="#home" role="tab"><i class="fas fa-bars"></i></a>
           </li>
 
           <li>
-            <a href="#activities" role="tab"><i class="fa fa-list"></i></a>
+            <a href="#activities" role="tab"><i class="fas fa-list"></i></a>
           </li>
 
           <!-- Only show this tab if current user is authenticated -->
@@ -40,15 +40,15 @@
             data-bind="id"
             data-attr="data-authenticated"
           >
-            <a href="#profile" role="tab"><i class="fa fa-user"></i></a>
+            <a href="#profile" role="tab"><i class="fas fa-user"></i></a>
           </li>
 
           <li>
-            <a href="#controls" role="tab"><i class="fa fa-sliders-h"></i></a>
+            <a href="#controls" role="tab"><i class="fas fa-sliders-h"></i></a>
           </li>
 
           <li>
-            <a href="#info-pane" role="tab"><i class="fa fa-info"></i></a>
+            <a href="#info-pane" role="tab"><i class="fas fa-info"></i></a>
           </li>
         </ul>
       </div>
@@ -76,7 +76,7 @@
             >'s map
 
             <span class="sidebar-close">
-              <i class="fa fa-caret-left"></i>
+              <i class="fas fa-caret-left"></i>
             </span>
           </h1>
 
@@ -139,11 +139,21 @@
             data-event="none"
           >
             After:
-            <input type="date" class="qdate" data-bind="after" data-class="query" />
+            <input
+              type="date"
+              class="qdate"
+              data-bind="after"
+              data-class="query"
+            />
             <span class="validity"></span>
             <br />
             Before:
-            <input type="date" class="qdate" data-bind="before" data-class="query" />
+            <input
+              type="date"
+              class="qdate"
+              data-bind="before"
+              data-class="query"
+            />
             <span class="validity"></span>
           </div>
 
@@ -267,7 +277,7 @@
             ></span>
 
             <span class="sidebar-close">
-              <i class="fa fa-caret-left"></i>
+              <i class="fas fa-caret-left"></i>
             </span>
           </h1>
 
@@ -346,7 +356,7 @@
           />
 
           <br />
-          <div class="paypal-form"></div>
+          <div class="paypal-button"></div>
         </div>
 
         <!-- App Info Tab -->
@@ -354,16 +364,11 @@
           <h1 class="sidebar-header">
             Info
             <span class="sidebar-close">
-              <i class="fa fa-caret-left"></i>
+              <i class="fas fa-caret-left"></i>
             </span>
           </h1>
 
-          <div
-            id="infoTab"
-            data-class="info"
-            data-bind="infoTab"
-            data-prop="innerHTML"
-          ></div>
+          <div id="info-tab"></div>
         </div>
 
         <!-- Activity List/Table Tab -->
@@ -371,7 +376,7 @@
           <h1 class="sidebar-header">
             Rendered Activities
             <span class="sidebar-close">
-              <i class="fa fa-caret-left"></i>
+              <i class="fas fa-caret-left"></i>
             </span>
           </h1>
           <button
@@ -410,7 +415,7 @@
           <h1 class="sidebar-header">
             Layer Settings
             <span class="sidebar-close">
-              <i class="fa fa-caret-left"></i>
+              <i class="fas fa-caret-left"></i>
             </span>
           </h1>
 
