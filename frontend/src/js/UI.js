@@ -35,11 +35,13 @@ import infoTabHTML from  "bundle-text:../html/main-info.html";
   right now we are only doing the single target-user UI.
 */
 
+document.querySelector("#info-tab").innerHTML = infoTabHTML;
+
+
 document.querySelectorAll(".paypal-button").forEach(el => {
   el.innerHTML = paypalButtonHTML;
 });
 
-document.querySelector("#info-tab").innerHTML = infoTabHTML;
 
 // // put Strava-login button images into the DOM
 // Dom.prop(".strava-auth", "src", strava_login_img);
