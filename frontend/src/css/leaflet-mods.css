@@ -1,0 +1,44 @@
+/* heatflask mods to Leaflet.js styling */
+
+
+/* deals with a browser warning:
+    see https://github.com/Leaflet/Leaflet/issues/4686
+*/
+.leaflet-fade-anim .leaflet-tile,
+.leaflet-zoom-anim .leaflet-zoom-animated {
+  will-change: auto !important;
+}
+
+/* addresses warning
+  https://stackoverflow.com/questions/59477050/css-non-standard-zoom-property
+*/
+.leaflet-oldie .leaflet-popup-content-wrapper {
+  transform: scale(1);
+  transform-origin: 0 0;
+}
+
+/* Background visible as map tiles are loading */
+.leaflet-container {
+  background: green;
+}
+
+/* layer selection button and menu */
+.leaflet-control-layers-expanded {
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.leaflet-control-layers {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+/* zoom buttons */
+.leaflet-bar button {
+  background: rgba(0, 0, 0, 0.5);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.leaflet-bar a {
+  background: rgba(0, 0, 0, 0.5);
+  color: rgba(255, 255, 255, 0.9);
+}

@@ -1,0 +1,118 @@
+/* Here we customize the sidebar appearance.
+    By default, Sidebar-V2 changes its layout for
+    mobile devices (width < 768) in a way that I didn't like.
+    In particular, it creates a left margin that takes up
+    a strip of screen space that should have map in it.
+    these chganges fix that.
+*/
+:root {
+  --sidebar-height-4icons: 160px;
+  --sidebar-height-5icons: 200px;
+}
+/*
+ *  The collapsed sidebar normally takes up the whole
+ *  left side of the screen.  We shorten it to take up
+ *  only the space needed for tab icons.
+ */
+.sidebar.collapsed {
+  height: var(--sidebar-height-4icons);
+}
+/* 5 icons when user profile icon is visible */
+.sidebar.collapsed[data-authenticated] {
+  height: var(--sidebar-height-5icons);
+}
+
+/* eliminate the map margin that shows up on the desktop but not moobile */
+.sidebar-left ~ .sidebar-map {
+  margin-left: inherit;
+}
+
+/*
+ * Add a left side offset to map controls to make up
+ *   for the lost margin, so that the (top-left) controls
+ *   won't overlap with the sidebar
+ *   (this is technically a leaflet mod, but it is specific to the sidebar )
+ */
+.leaflet-left {
+  left: 40px;
+}
+
+
+/*
+ * Let the bottom-left controls (watermarks) stay close to
+ * the left edge of the screen, since we shortened the sidebar
+ */
+.leaflet-bottom.leaflet-left {
+  left: 0px;
+}
+
+/* same but on larger displays (desktop & some tablets) */
+@media (min-width: 768px) {
+  .sidebar-left.collapsed ~ .sidebar-map .leaflet-bottom.leaflet-left {
+    left: 0px;
+  }
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    width: 97%;
+  }
+}
+
+/* roundness of corners */
+.sidebar {
+  border-radius: 8px;
+  top: 5px;
+  bottom: 5px;
+}
+
+.sidebar-left {
+  left: 5px;
+}
+
+.sidebar-content {
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+}
+
+.sidebar-tabs {
+  background-color: rgba(0, 0, 0, 0.5);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.sidebar-tabs > li,
+.sidebar-tabs > ul > li {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.sidebar-tabs > li.active,
+.sidebar-tabs > ul > li.active {
+  color: #fff;
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+.sidebar-header {
+  background-color: rgba(0, 0, 0, 0.6);
+}
+
+.sidebar {
+  transition: width 0s;
+}
+
+.sidebar-left ~ .sidebar-map .leaflet-left {
+  transition: left 0s;
+}
+
+.sidebar-pane {
+  padding: 10px 10px;
+}
+
+.leaflet-bar button {
+  background: rgba(0, 0, 0, 0.5);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.leaflet-bar a {
+  background: rgba(0, 0, 0, 0.5);
+  color: rgba(255, 255, 255, 0.9);
+}

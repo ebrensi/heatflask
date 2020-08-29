@@ -5,18 +5,9 @@
 :root {
   --strava-auth-button: url("../images/btn_strava_connectwith_orange.svg");
   --strava-badge: url("../images/strava_button.png");
-  --layers-button: url("../images/layers.png");
-  --layers-button-2X: url("../images/layers-2x.png");
-  --marker-icon: url("../images/marker-icon.png");
-
-  --sidebar-height-4icons: 160px;
-  --sidebar-height-5icons: 200px;
 }
 
-/*
- * We only use a few icons from font-awesome so I made a smaller version.
- * This might not be necessary.
- */
+/* Font-Awesome 5 icons */
 @import "../../node_modules/@fortawesome/fontawesome-free/css/all.css";
 
 /* Min CSS framework (https://mincss.com) */
@@ -31,8 +22,18 @@
 /* Leaflet control window for pop-up messages */
 @import "../../node_modules/leaflet-control-window/src/L.Control.Window.css";
 
+/* Heatflask styling for leaflet-control-window message boxes */
+.control-window {
+  background-color: rgba(0, 0, 0, 0.6);
+  color: white;
+  border-radius: 8px;
+}
+
 /* Easy Button for control buttons on the map */
 @import "../../node_modules/leaflet-easybutton/src/easy-button.css";
+
+/* Heatflask-specific styles */
+@import "./leaflet-mods.css";
 
 body {
   padding: 0;
@@ -54,22 +55,6 @@ textarea {
   border-color: rgba(0, 0, 0, 0);
   color: white;
 }
-
-/* For validating date input fields */
-/*
-span.validity::after {
-  padding-left: 5px;
-}
-
-input.qdate:invalid+span::after {
-  content: '✖';
-  color: red;
-}
-
-input.qdate:valid+span::after {
-  content: '✓';
-}
-*/
 
 input.paypal-button {
   background-color: transparent;
@@ -133,13 +118,6 @@ i.sm-button {
   display: none;
 }
 
-/* For the leaflet-control-window message boxes */
-.control-window {
-  background-color: rgba(0, 0, 0, 0.6);
-  color: white;
-  border-radius: 8px;
-}
-
 .error-message {
   color: red;
 }
@@ -174,158 +152,6 @@ i.sm-button {
   display: block;
 }
 
-/* Leaflet.js stuff */
-
-/* deals with a browser warning:
-    see https://github.com/Leaflet/Leaflet/issues/4686
-*/
-.leaflet-fade-anim .leaflet-tile,
-.leaflet-zoom-anim .leaflet-zoom-animated {
-  will-change: auto !important;
-}
-
-/* addresses warning
-  https://stackoverflow.com/questions/59477050/css-non-standard-zoom-property
-*/
-.leaflet-oldie .leaflet-popup-content-wrapper {
-  transform: scale(1);
-  transform-origin: 0 0;
-}
-
-/* we need to specify non-standard location for images */
-.leaflet-control-layers-toggle {
-  background-image: var(--layers-button);
-}
-
-.leaflet-retina .leaflet-control-layers-toggle {
-  background-image: var(--layers-button-2X);
-}
-
-.leaflet-default-icon-path {
-  background-image: var(--marker-icon);
-}
-
-.leaflet-container {
-  background: green;
-}
-
-.leaflet-control-layers-expanded {
-  color: rgba(255, 255, 255, 0.9);
-  background: rgba(0, 0, 0, 0.5);
-}
-
-.leaflet-control-layers {
-  background: rgba(0, 0, 0, 0.5);
-}
-
-.leaflet-bar button {
-  background: rgba(0, 0, 0, 0.5);
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.leaflet-bar a {
-  background: rgba(0, 0, 0, 0.5);
-  color: rgba(255, 255, 255, 0.9);
-}
-
-/* Here we customize the sidebar appearance.
-    By default, Sidebar-V2 changes its layout for
-    mobile devices (width < 768) in a way that I didn't like.
-    In particular, it creates a left margin that takes up
-    a strip of screen space that should have map in it.
-    these chganges fix that.
-*/
-
-.sidebar-left ~ .sidebar-map {
-  /* eliminate the map margin */
-  margin-left: inherit;
-}
-
-.leaflet-left {
-  /* add a left side offset to map controls to make up
-    for the lost margin, so that the (top-left) controls
-    won't overlap with the sidebar */
-  left: 40px;
-}
-
-/* The collapsed sidebar normally takes up the whole
-   left side of the screen.  We shorten it to take up
-   only the space needed for tab icons.
-*/
-.sidebar.collapsed {
-  height: var(--sidebar-height-4icons);
-}
-
-.sidebar.collapsed[data-authenticated] {
-  height: var(--sidebar-height-5icons);
-}
-
-/* let the bottom-left controls (watermarks) stay close to
-     the left edge of the screen, since we
-     shortened the sidebar  */
-.leaflet-bottom.leaflet-left {
-  left: 0px;
-}
-/* same but on larger displays */
-@media (min-width: 768px) {
-  .sidebar-left.collapsed ~ .sidebar-map .leaflet-bottom.leaflet-left {
-    left: 0px;
-  }
-}
-
-@media (max-width: 768px) {
-  .sidebar {
-    width: 97%;
-  }
-}
-
-.sidebar {
-  border-radius: 8px; /* roundness of corners */
-  top: 5px;
-  bottom: 5px;
-}
-
-.sidebar-left {
-  left: 5px;
-}
-
-.sidebar-content {
-  background-color: rgba(0, 0, 0, 0.5);
-  color: white;
-}
-
-.sidebar-tabs {
-  background-color: rgba(0, 0, 0, 0.5);
-  color: rgba(255, 255, 255, 0.8);
-}
-
-.sidebar-tabs > li,
-.sidebar-tabs > ul > li {
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.sidebar-tabs > li.active,
-.sidebar-tabs > ul > li.active {
-  color: #fff;
-  background-color: rgba(0, 0, 0, 0.8);
-}
-
-.sidebar-header {
-  background-color: rgba(0, 0, 0, 0.6);
-}
-
-.sidebar {
-  transition: width 0s;
-}
-
-.sidebar-left ~ .sidebar-map .leaflet-left {
-  transition: left 0s;
-}
-
-.sidebar-pane {
-  padding: 10px 10px;
-}
-
 .dataTable-table > thead > tr {
   background-color: #0000ff50;
 }
@@ -339,3 +165,5 @@ i.sm-button {
 }
 
 /* end-heatflask */
+
+@import "./leaflet-sidebar-v2-mods.css";
