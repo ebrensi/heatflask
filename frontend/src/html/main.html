@@ -64,8 +64,9 @@
               data-prop="href"
               data-class="target-user"
               target="_blank"
-            >
-              <button class="strava-badge"></button>
+              class="strava-badge- strava-badge-follow"
+             />
+             <!-- <img src="//badges.strava.com/echelon-sprite-32.png" alt="Strava" /> -->
             </a>
 
             <span
@@ -99,8 +100,8 @@
           </span>
 
           <select data-bind="queryType" data-class="query">
-            <option value="days">most recent days</option>
-            <option value="activities" selected>most recent activities</option>
+            <option value="days">recent days</option>
+            <option value="activities" selected>recent activities</option>
             <option value="ids">Activity IDs</option>
             <option value="dates">Date-Range</option>
             <option value="key">Key</option>

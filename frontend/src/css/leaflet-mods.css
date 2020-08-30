@@ -19,7 +19,9 @@
 
 /* Background visible as map tiles are loading */
 .leaflet-container {
-  background: green;
+  /* background: green; */
+  background-image: linear-gradient(black, blue);
+  /* background-image: url(../images/bh.jpg); */
 }
 
 /* layer selection button and menu */
