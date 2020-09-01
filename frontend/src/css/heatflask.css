@@ -7,6 +7,11 @@
   --strava-badge: url("../images/strava_button.png");
 }
 
+
+/*
+ * ☠ Be careful changing the order of these imports! ☠
+ */
+
 /* Font-Awesome 5 icons */
 @import "../../node_modules/@fortawesome/fontawesome-free/css/all.css";
 
@@ -22,18 +27,17 @@
 /* Leaflet control window for pop-up messages */
 @import "../../node_modules/leaflet-control-window/src/L.Control.Window.css";
 
-/* Heatflask styling for leaflet-control-window message boxes */
-.control-window {
-  background-color: rgba(0, 0, 0, 0.6);
-  color: white;
-  border-radius: 8px;
-}
-
 /* Easy Button for control buttons on the map */
 @import "../../node_modules/leaflet-easybutton/src/easy-button.css";
 
 /* Heatflask-specific styles */
 @import "./leaflet-mods.css";
+
+/* extra styling for sidebar-v2  */
+@import "./leaflet-sidebar-v2-mods.css";
+
+@import "./paypal-button.css";
+
 
 body {
   padding: 0;
@@ -55,6 +59,14 @@ textarea {
   border-color: rgba(0, 0, 0, 0);
   color: white;
 }
+
+/* Heatflask styling for leaflet-control-window message boxes */
+.control-window {
+  background-color: rgba(0, 0, 0, 0.6);
+  color: white;
+  border-radius: 8px;
+}
+
 
 /* see https://stackoverflow.com/questions/8683528/embed-image-in-a-button-element */
 button.strava-auth {
@@ -162,16 +174,15 @@ input[data-bind="quantity"] {
 i.icon-button {
   font-size: 32px;
   color: white;
-  transition-duration: 0.25s;
+  transition: transform 0.25s;
 }
 
 i.icon-button:hover {
-  color: yellow;
-  font-size: 40px;
-  transition-duration: 0.25s;
+  color: #ffc439;
+  transform: scale(1.25);
 }
 
-div.badges {
+div.icon-buttons {
   margin: left;
   width: 70%;
   text-align: center;
@@ -179,31 +190,5 @@ div.badges {
   padding: 10px;
 }
 
-/*
- * Paypal donate button
- */
-div.paypal-button {
-  margin: left;
-  width: 70%;
-  text-align: center;
-  /*border: 3px solid green;*/
-  padding: 30px 0;
-}
-
-input.paypal-button {
-  background-color: transparent;
-  display: block;
-  margin-left: auto;
-  margin-right: auto;
-  transition-duration: 0.25s;
-}
-
-input.paypal-button:hover {
-  transform: scale(1.1);
-  transition-duration: 0.25s;
-}
-
-
-@import "./leaflet-sidebar-v2-mods.css";
 
 /* end-heatflask */
