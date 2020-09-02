@@ -7,14 +7,23 @@ button.strava-auth {
   background: url("../images/btn_strava_connectwith_orange.svg");
   width: 193px;
   height: 48px;
-  transition: 1s;
+  transition: background 1s;
   border: none;
   margin: 10px;
 }
 
 button.strava-auth:hover {
   background: url("../images/btn_strava_connectwith_light.svg");
-  transition: 1s;
+  transition: background 1s;
   cursor: pointer;
 }
 
+button.strava-auth:focus {
+    outline: none;
+    transform: scale(0.95);
+    transition: transform 0.1s;
+}
+
+button.strava-auth:focus-visible {
+    outline: 1px dashed gray;
+}

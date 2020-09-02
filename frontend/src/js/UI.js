@@ -32,10 +32,11 @@ import infoTabHTML from "bundle-text:../html/main-info.html";
 let dotLayer;
 
 // What to do when user changes to a different tab or window
-document.onvisibilitychange = function () {
+document.onvisibilitychange = function (e) {
+  console.log("visibility change: ", e);
   if (!dotLayer) return;
   const paused = app.vParams.paused;
-  if (document.hidden && !paused) {
+  if (e.target.hidden && !paused) {
     dotLayer.pause();
   } else if (!paused) {
     dotLayer.animate();

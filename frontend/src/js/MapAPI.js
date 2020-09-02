@@ -45,7 +45,7 @@ export const map = new L.Map("map", {
   zoomAnimation: true,
   zoomAnimationThreshold: 6,
   updateWhenZooming: true,
-  worldCopyJump: true
+  worldCopyJump: true,
 });
 
 /*
@@ -55,7 +55,7 @@ export const map = new L.Map("map", {
  */
 map.on("moveend", () => {
   const center = map.getCenter(),
-        zoom = map.getZoom();
+    zoom = map.getZoom();
 
   app.vParams.zoom = zoom;
   app.vParams.center = center;
@@ -136,13 +136,6 @@ if (!baselayers[blName]) {
   }
 }
 
-app.vParams.baselayer = blName;
-baselayers[blName].addTo(map);
-
-map.on("baselayerchange", (e) => {
-  app.vParams.baselayer = e.layer.name;
-});
-
 /*
  * Set the zoom range the same for all basemaps because this TileLayer
  * will fill in missing zoom levels with tiles from the nearest zoom level.
@@ -158,6 +151,16 @@ for (const name in baselayers) {
     layer.options.minZoom = 3;
   }
 }
+
+
+app.vParams.baselayer = blName;
+baselayers[blName].addTo(map);
+
+map.on("baselayerchange", (e) => {
+  app.vParams.baselayer = e.layer.name;
+});
+
+
 
 // Add baselayer selection control to map
 L.control.layers(baselayers, null, { position: "topleft" }).addTo(map);
@@ -206,15 +209,14 @@ map.addEventListener("click", () => {
   }
 });
 
-// map.addEventListener("keypress", e => {
-//     if (e.originalEvent.key === "s") {
-//         if (sidebar.isOpen) {
-//             sidebar.close();
-//         } else {
-//             sidebar.open();
-//         }
-//     }
-// });
+/* if the sidebar is open then close it if the user hits ESC key */
+document.onkeydown = (e) => {
+  if (e.keyCode === 27) {
+    if (sidebar.isOpen) {
+      sidebar.close();
+    }
+  }
+};
 
 /*  Initialize areaselect control (for selecting activities via map rectangle) */
 /*
