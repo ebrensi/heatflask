@@ -186,10 +186,13 @@ export const currentUser = BoundObject.fromDOMelements(
   "[data-class=current-user]"
 );
 
+export const flags = BoundObject.fromDOMelements("[data-class=flag]");
+
 export const items = new Set();
 
 const state = {
   items: items,
+  flag: flags,
   vParams: vParams,
   qParams: qParams,
   messages: messages,

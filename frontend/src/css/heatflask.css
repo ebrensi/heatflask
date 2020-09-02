@@ -124,20 +124,40 @@ button.avatar {
   color: red;
 }
 
+
+a:link {
+  color: white;
+}
+
+a:hover {
+  color: orange;
+}
+
+a:visited {
+  color: yellow;
+}
+
 /*
- * Display .logged-in and .logged-out elements depending on
- * "data-athenticated" attribute (bound to currentUser.id)
+ * Elements with "conditional-show" class are only visible if
+ *  "data-show" attribute is set (truthy), and elements with
+ *  "conditional-hide" class are only hidden if "data-hide" is set.
  */
-.logged-in,
-.logged-out[data-authenticated] {
+.conditional-show,
+.conditional-hide[data-hide] {
   display: none;
 }
 
-.logged-out,
-.logged-in[data-authenticated] {
+.conditional-show[data-show],
+.conditional-hide {
   display: block;
 }
 
+
+
+/*
+ * A query-form element only shows if it matches the current
+ *  query-type (app.qParams.queryType)
+ */
 .days,
 .activities,
 .dates,

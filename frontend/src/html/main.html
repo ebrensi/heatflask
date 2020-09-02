@@ -35,10 +35,10 @@
 
           <!-- Only show this tab if current user is authenticated -->
           <li
-            class="logged-in"
+            class="conditional-show"
             data-class="current-user"
             data-bind="id"
-            data-attr="data-authenticated"
+            data-attr="data-show"
           >
             <a href="#profile" role="tab"><i class="fas fa-user"></i></a>
           </li>
@@ -177,35 +177,48 @@
             data-class="info"
           ></div>
 
-          <div class="progress">
-            <!-- <progress class="progbar"></progress> -->
-          </div>
           <br />
 
+          <!-- display only if app.flag.importing is false -->
           <button
             type="button"
-            class="btn btn-a btn-sm smooth"
+            class="btn btn-a btn-sm smooth conditional-hide"
             data-action="render"
+
+            data-class="flag"
+            data-bind="importing"
+            data-attr="data-hide"
           >
+            <i class="fas fa-cloud-download-alt"></i>
             Render Layers
           </button>
 
+          <div class ="conditional-show"
+            data-class="flag"
+            data-bind="importing"
+            data-attr="data-show"
+          >
+          <!-- only display this button if app.flag.importing is true -->
+          <progress class="progbar"></progress>
+          <br/>
           <button
             type="button"
             class="btn btn-c btn-sm smooth"
             data-action="abort-render"
           >
-            Abort
+            <i class="fas fa-times-circle"></i>
+            Abort Import
           </button>
+         </div>
 
           <br />
 
-          <!-- Displayed if current-user is logged-in -->
+          <!-- Displayed only if current-user's id is set (logged-in) -->
           <div
-            class="logged-in"
+            class="conditional-show"
             data-class="current-user"
             data-bind="id"
-            data-attr="data-authenticated"
+            data-attr="data-show"
           >
             You are authenticated as
             <a
@@ -225,18 +238,19 @@
             <br /><br />
 
             <button type="button" class="btn btn-c btn-sm" data-action="logout">
+              <i class="fas fa-sign-out-alt"></i>
               Log Out
             </button>
           </div>
 
           <br />
 
-          <!-- Displayed if current-user is not logged-in -->
+          <!-- Displayed only if current-user id is not set (not logged-in) -->
           <div
-            class="logged-out"
+            class="conditional-hide"
             data-class="current-user"
             data-bind="id"
-            data-attr="data-authenticated"
+            data-attr="data-hide"
           >
             Create an account and/or log in.
             <br />
@@ -307,6 +321,7 @@
             class="btn btn-a btn-sm"
             data-action="activity-list"
           >
+            <i class="fa fa-list-alt"></i>
             View index
           </button>
           <br />
@@ -320,7 +335,7 @@
                 data-prop="checked"
                 data-class="current-user"
               />
-              Include me in the
+              Public Profile&nbsp
               <a
                 href="#"
                 target="_blank"
@@ -328,7 +343,8 @@
                 data-prop="href"
                 data-class="info"
               >
-                public user directory
+              (<i class="fas fa-users"></i>
+              Public Users List)
               </a>
             </label>
           </div>
@@ -336,6 +352,7 @@
           <br /><br /><br />
 
           <button type="button" data-action="logout" class="btn btn-c btn-sm">
+            <i class="fas fa-sign-out-alt"></i>
             Log Out
           </button>
 
@@ -344,14 +361,9 @@
           <br /><br />
 
           <button type="button" data-action="delete" class="btn btn-c btn-sm">
+            <i class="fas fa-user-alt-slash"></i>
             Delete Account
           </button>
-
-          <input
-            type="button"
-            class="btn btn-c btn-sm"
-            value="Delete Account"
-          />
 
           <br />
           <div class="paypal-button"></div>
