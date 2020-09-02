@@ -34,8 +34,10 @@
 /* extra styling for sidebar-v2  */
 @import "./leaflet-sidebar-v2-mods.css";
 
+/* Styles the paypal donation button snippet */
 @import "./paypal-button.css";
 
+/* Strava authentication button and athlete badge */
 @import "./strava-buttons.css";
 
 body {
@@ -66,10 +68,27 @@ textarea {
   border-radius: 8px;
 }
 
+/* Avatar button for registered user */
 button.avatar {
-  height: 20%;
-  width: 20%;
+  background: var(--strava-badge);
+  background-size: cover;
+  width: 32px;
+  height: 32px;
+  border: none;
+  padding: 10px;
+  transition: transform 0.5s
 }
+
+button.avatar[data-url] {
+  background: attr(data-url);
+}
+
+button.avatar:hover {
+  cursor: pointer;
+  transform: scale(0.9);
+  transition: transform 0.5s
+}
+
 
 .error-message {
   color: red;

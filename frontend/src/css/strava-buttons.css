@@ -8,6 +8,8 @@ button.strava-auth {
   width: 193px;
   height: 48px;
   transition: 1s;
+  border: none;
+  margin: 10px;
 }
 
 button.strava-auth:hover {
@@ -16,33 +18,3 @@ button.strava-auth:hover {
   cursor: pointer;
 }
 
-
-
-/*
- * The Strava Badge
- */
-/*see https://www.w3docs.com/snippets/css/how-to-set-the-equivalent-of-src-attribute-of-an-img-tag-in-css.html */
-/* button.strava-badge { */
-/* background-image: var(--strava-badge); */
-/* background-size: 20px 20px; */
-/* width: 25px; */
-/* height: 25px; */
-/* } */
-
-button.strava-badge- {
-  display: inline-block;
-  height: 32px;
-}
-button.strava-badge- img {
-  visibility: hidden;
-  height: 32px;
-}
-button.strava-badge-:hover {
-  background-position: 0 -47px;
-}
-button.strava-badge-follow {
-  height: 32px;
-  width: 32px;
-  background: url(//badges.strava.com/echelon-sprite-32.png) no-repeat 0 0;
-}
-/* <a href="http://strava.com/athletes/15972102/badge" class="strava-badge- strava-badge-follow" target="_blank"><img src="//badges.strava.com/echelon-sprite-32.png" alt="Strava" /></a> */

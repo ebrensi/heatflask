@@ -13,7 +13,6 @@ import "./URL.js";
 // import { map } from "./MapAPI.js";
 // import { dotLayer } from "./DotLayerAPI.js";
 // import "./DotControls.js";
-// import strava_login_img from "url:../images/btn_strava_connectwith_orange.svg";
 
 import paypalButtonHTML from "bundle-text:../html/paypal-button.html";
 import infoTabHTML from "bundle-text:../html/main-info.html";

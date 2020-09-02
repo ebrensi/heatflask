@@ -64,10 +64,7 @@
               data-prop="href"
               data-class="target-user"
               target="_blank"
-              class="strava-badge- strava-badge-follow"
-             />
-             <!-- <img src="//badges.strava.com/echelon-sprite-32.png" alt="Strava" /> -->
-            </a>
+            ><button class="avatar" data-class="target-user" data-bind="avatar" data-attr="data-url"></button></a>
 
             <span
               data-bind="username"
@@ -187,7 +184,6 @@
             type="button"
             class="btn btn-a btn-sm smooth conditional-hide"
             data-action="query"
-
             data-class="flag"
             data-bind="importing"
             data-attr="data-hide"
@@ -196,23 +192,24 @@
             Query
           </button>
 
-          <div class ="conditional-show"
+          <div
+            class="conditional-show"
             data-class="flag"
             data-bind="importing"
             data-attr="data-show"
           >
-          <!-- only display this button if app.flag.importing is true -->
-          <progress class="progbar"></progress>
-          <br/>
-          <button
-            type="button"
-            class="btn btn-c btn-sm smooth"
-            data-action="abort-query"
-          >
-            <i class="fas fa-times-circle"></i>
-            Abort Import
-          </button>
-         </div>
+            <!-- only display this button if app.flag.importing is true -->
+            <progress class="progbar"></progress>
+            <br />
+            <button
+              type="button"
+              class="btn btn-c btn-sm smooth"
+              data-action="abort-query"
+            >
+              <i class="fas fa-times-circle"></i>
+              Abort Import
+            </button>
+          </div>
 
           <br />
 
@@ -235,7 +232,12 @@
                 data-class="current-user"
                 data-bind="username"
                 data-prop="innerText"
-                >(current-user)</span
+                ><button
+                  class="avatar"
+                  data-class="current-user"
+                  data-bind="avatar"
+                  data-prop="data-url"
+                ></button>(current-user)</span
               >
             </a>
             <br /><br />
@@ -254,7 +256,8 @@
             data-class="current-user"
             data-bind="id"
             data-attr="data-hide"
-          >Create an account and/or log in.<br />
+          >
+            Create an account and/or log in.<br />
 
             <!-- https://stackoverflow.com/questions/8683528/embed-image-in-a-button-element -->
             <button class="strava-auth" data-action="login"></button>
@@ -280,9 +283,8 @@
               data-bind="strava-url"
               data-prop="href"
               data-class="current-user"
-            >
-              <img class="strava-badge" />
-            </a>
+            ><button class="avatar" data-class="target-user" data-bind="avatar" data-attr="data-url"></button></a>
+
 
             <span
               data-bind="username"
@@ -294,7 +296,6 @@
               <i class="fas fa-caret-left"></i>
             </span>
           </h1>
-
           <h3>
             <span
               data-bind="firstname"
@@ -311,7 +312,7 @@
           </h3>
 
           <a href="https://www.strava.com/settings/profile" target="_blank">
-            <img data-bind="avatar" data-prop="src" data-class="current-user" />
+            <button class="avatar" data-bind="avatar" data-prop="data-url" data-class="current-user"></button>
           </a>
 
           <br /><br />
@@ -346,8 +347,8 @@
                 data-prop="href"
                 data-class="info"
               >
-              (<i class="fas fa-users"></i>
-              Public Users)
+                (<i class="fas fa-users"></i>
+                Public Users)
               </a>
             </label>
           </div>
