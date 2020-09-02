@@ -197,9 +197,6 @@ export class BoundVariable {
   onChange(func) {
     this.generalBindings.push(func);
     this.countGB = this.generalBindings.length;
-
-    func(this.#value);
-
     return this;
   }
 }

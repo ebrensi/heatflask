@@ -5,8 +5,8 @@ div.paypal-button {
   margin: left;
   width: 70%;
   text-align: center;
-  /*border: 3px solid green;*/
   padding: 30px 0;
+  /*border: 3px solid green;*/
 }
 
 input.paypal-button {
@@ -14,10 +14,10 @@ input.paypal-button {
   display: block;
   margin-left: auto;
   margin-right: auto;
-  transition-duration: 0.25s;
+  transition-duration: 2s;
 }
 
 input.paypal-button:hover {
-  transform: scale(1.1);
+  transform: scale(1.25);
   transition-duration: 0.25s;
 }

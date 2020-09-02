@@ -48,7 +48,7 @@ export const AUTHORIZE_URL = "/authorize";
 export function USER_URLS(userid) {
   return {
     main: `/${userid}`,
-    activities: `/${userid}/activities`,
+    index: `/${userid}/activities`,
     public: `/${userid}/update_info`,
     delete: `${userid}/delete`,
     logout: `${userid}/logout`,

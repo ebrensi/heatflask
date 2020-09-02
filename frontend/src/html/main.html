@@ -167,7 +167,10 @@
               data-prop="checked"
               data-class="visual"
             />
-            Auto-Zoom to query
+            <i class="fas fa-search-location"></i>
+            Auto-Zoom
+            <i class="fas fa-bullseye"></i>
+            to query after import
           </label>
 
           <br />
@@ -183,14 +186,14 @@
           <button
             type="button"
             class="btn btn-a btn-sm smooth conditional-hide"
-            data-action="render"
+            data-action="query"
 
             data-class="flag"
             data-bind="importing"
             data-attr="data-hide"
           >
             <i class="fas fa-cloud-download-alt"></i>
-            Render Layers
+            Query
           </button>
 
           <div class ="conditional-show"
@@ -204,7 +207,7 @@
           <button
             type="button"
             class="btn btn-c btn-sm smooth"
-            data-action="abort-render"
+            data-action="abort-query"
           >
             <i class="fas fa-times-circle"></i>
             Abort Import
@@ -319,7 +322,7 @@
           <button
             type="button"
             class="btn btn-a btn-sm"
-            data-action="activity-list"
+            data-action="view-index"
           >
             <i class="fa fa-list-alt"></i>
             View index
@@ -331,11 +334,12 @@
             <label
               ><input
                 type="checkbox"
+                data-class="current-user"
                 data-bind="public"
                 data-prop="checked"
-                data-class="current-user"
+                data-event="change"
               />
-              Public Profile&nbsp
+              Public Profile
               <a
                 href="#"
                 target="_blank"
@@ -344,7 +348,7 @@
                 data-class="info"
               >
               (<i class="fas fa-users"></i>
-              Public Users List)
+              Public Users)
               </a>
             </label>
           </div>
@@ -409,10 +413,13 @@
 
           <input
             type="checkbox"
-            data-bind="selection-zoom"
+            data-bind="zoom-to-selection"
             data-prop="checked"
-            dtata-class="visual"
+            data-class="flag"
           />
+          <i class="fas fa-search-plus"></i>
+          <i class="far fa-object-group"></i>
+          <i class="fas fa-search-minus"></i>
           Zoom to selection
 
           <div>
@@ -529,7 +536,6 @@
                 data-bind="paths"
                 data-prop="checked"
                 data-class="visual"
-                checked
               />
               <label for="showPaths">Show Paths</label>
             </span>
@@ -541,7 +547,6 @@
                 data-bind="shadows"
                 data-prop="checked"
                 data-class="visual"
-                checked
               />
               <label for="showShadows">Shadows (CPU intensive)</label>
             </span>

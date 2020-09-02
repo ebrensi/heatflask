@@ -7,7 +7,6 @@
   --strava-badge: url("../images/strava_button.png");
 }
 
-
 /*
  * ☠ Be careful changing the order of these imports! ☠
  */
@@ -38,7 +37,6 @@
 
 @import "./paypal-button.css";
 
-
 body {
   padding: 0;
   margin: 0;
@@ -67,7 +65,6 @@ textarea {
   border-radius: 8px;
 }
 
-
 /* see https://stackoverflow.com/questions/8683528/embed-image-in-a-button-element */
 button.strava-auth {
   background-image: var(--strava-auth-button);
@@ -76,12 +73,11 @@ button.strava-auth {
 
 /*see https://www.w3docs.com/snippets/css/how-to-set-the-equivalent-of-src-attribute-of-an-img-tag-in-css.html */
 /* button.strava-badge { */
-  /* background-image: var(--strava-badge); */
-  /* background-size: 20px 20px; */
-  /* width: 25px; */
-  /* height: 25px; */
+/* background-image: var(--strava-badge); */
+/* background-size: 20px 20px; */
+/* width: 25px; */
+/* height: 25px; */
 /* } */
-
 
 button.strava-badge- {
   display: inline-block;
@@ -124,7 +120,7 @@ button.avatar {
   color: red;
 }
 
-
+/* Styles for text links */
 a:link {
   color: white;
 }
@@ -151,8 +147,6 @@ a:visited {
 .conditional-hide {
   display: block;
 }
-
-
 
 /*
  * A query-form element only shows if it matches the current
@@ -195,20 +189,24 @@ i.icon-button {
   font-size: 32px;
   color: white;
   transition: transform 0.25s;
+  margin-left: 10px;
+  margin-right: 10px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  /*border: 2px solid green;*/
 }
 
 i.icon-button:hover {
   color: #ffc439;
-  transform: scale(1.25);
+  transform: scale(3);
 }
 
 div.icon-buttons {
   margin: left;
   width: 70%;
   text-align: center;
-  /*border: 3px solid green;*/
   padding: 10px;
+  /*border: 3px solid green;*/
 }
-
 
 /* end-heatflask */
