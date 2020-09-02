@@ -34,6 +34,7 @@ let dotLayer;
 
 // What to do when user changes to a different tab or window
 document.onvisibilitychange = function () {
+  if (!dotLayer) return;
   const paused = app.vParams.paused;
   if (document.hidden && !paused) {
     dotLayer.pause();
@@ -109,7 +110,6 @@ function openIndexView(id) {
 //   Dom.addEvent(".strava-auth", "click", () => {
 //     window.location.href = AUTHORIZE_URL;
 //   });
-//   nTabs = 3;
 // }
 
 // Dom.addEvent("#zoom-to-selection", "change", function(){
