@@ -1,4 +1,4 @@
-# Heatflask -- Making Dataviz Great Again
+# Heatflask
 [<img src="/heatflask/static/logo.png" alt="logo" width=200/>](https://www.heatflask.com)
 
 ## ☠ The `master` branch is DEPRECATED! ☠
