@@ -23,7 +23,7 @@
     "downloadjs": "^1.4.7",
     "gif.js": "github:ebrensi/gif.js#wasm-dev",
     "latlon-geohash": "^2.0.0",
-    "leaflet": "^1.6.0",
+    "leaflet": "^1.7.1",
     "leaflet-areaselect": "github:ebrensi/leaflet-areaselect",
     "leaflet-control-window": "^1.0.0",
     "leaflet-easybutton": "^2.4.0",
@@ -39,9 +39,8 @@
     "> 0.75%, not ie 11, not op_mini all"
   ],
   "devDependencies": {
-    "@babel/core": "^7.11.4",
     "documentation": "^13.0.2",
-    "eslint": "^7.7.0",
+    "eslint": "^7.8.1",
     "eslint-config-prettier": "^6.11.0",
     "parcel": "next",
     "parcel-plugin-nuke-dist": "^1.0.1",
