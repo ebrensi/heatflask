@@ -29,9 +29,7 @@
     "leaflet-easybutton": "^2.4.0",
     "leaflet-image": "^0.4.0",
     "leaflet-providers": "^1.10.2",
-    "persistent-websocket": "^1.0.2",
-    "pikaday": "^1.8.0",
-    "pure-knob": "github:ebrensi/pure-knob",
+    "pws": "^5.0.1",
     "sidebar-v2": "^0.4.0",
     "simple-datatables": "^2.1.13"
   },
