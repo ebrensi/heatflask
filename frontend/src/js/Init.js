@@ -9,19 +9,20 @@ import { noop } from "./appUtil.js";
 import load_ga_object from "./google-analytics.js";
 
 export let CLIENT_ID;
-export let DEVELOPMENT;
+export let DEVELOPMENT = true;
 export let FLASH_MESSAGES;
 export let APP_NAME;
 export let CURRENT_USER;
 
-
-if ("argstring" in window) {
+try {
   const jinja_args = JSON.parse(window["argstring"]);
   CLIENT_ID = jinja_args["CLIENT_ID"];
-  DEVELOPMENT = jinja_args["DEVELOPMENT"];
+  DEVELOPMENT = jinja_args["DEVELOPMENT"] || DEVELOPMENT;
   CURRENT_USER = jinja_args["CURRENT_USER"];
   FLASH_MESSAGES = jinja_args["FLASH_MESSAGES"];
   APP_NAME = jinja_args["APP_NAME"];
+} catch (e) {
+  console.log("No server-sent arguments");
 }
 
 /* Load in the google analytics object if this is
@@ -55,5 +56,3 @@ export function USER_URLS(userid) {
     strava: `https://www.strava.com/athletes/${userid}`,
   };
 }
-
-

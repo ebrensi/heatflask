@@ -12,6 +12,7 @@
     </title>
 
     <link rel="shortcut icon" href="../images/favicon.ico" />
+    <link rel="apple-touch-icon" href="../images/logo.png" />
   </head>
 
   <body>
@@ -258,10 +259,7 @@
             data-attr="data-hide"
           >
             Create an account and/or log in.<br />
-
-            <!-- https://stackoverflow.com/questions/8683528/embed-image-in-a-button-element -->
             <button class="strava-auth" data-action="login"></button>
-            <!-- <button data-action="login"><span class="strava-auth"></span></button> -->
           </div>
 
           <div
@@ -558,13 +556,10 @@
     <div id="map" class="sidebar-map"></div>
   </body>
 
-  <!--
-   The backend server attaches a json string called args.  We parse it here so
-     it will be available to our scripts as window["_args"]
- -->
-  <!--  <script>
-    window["argstring"] = "{{ args | tojson | safe }}";
-  </script> -->
 
+   <!-- <script>
+    window["argstring"] = `{{ args | tojson | safe }}`;
+  </script>
+ -->
   <script src="../js/main.js"></script>
 </html>

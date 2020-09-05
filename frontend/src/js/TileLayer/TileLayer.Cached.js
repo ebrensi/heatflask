@@ -1,3 +1,15 @@
+/*
+ * This implementation of a cached tile-layer was adapted from
+ *   https://github.com/MazeMap/Leaflet.TileLayer.PouchDBCached
+ *   and
+ *   https://github.com/ghybs/Leaflet.TileLayer.Fallback
+ *
+ *  The code for PouchDBCached was pretty good but rather than use CouchDB
+ *    I decided to go with native IndexedDB, via myIDB.
+ *
+ *  Efrem Rensi 2020
+ */
+
 import * as idb from "./myIdb.js";
 
 import {

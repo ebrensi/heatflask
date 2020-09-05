@@ -9,8 +9,8 @@
   "description": "Animated Movement Data Visualization for Strava Tracks",
   "scripts": {
     "build": "npm run format; parcel build ./src/html/*.html",
-    "watch": "parcel watch .--log-level verbose /src/html/*.html",
-    "serve": "parcel serve --log-level verbose ./src/html/main.html",
+    "watch": "parcel watch --log-level verbose ./src/html/*.html",
+    "serve": "parcel serve --log-level verbose ./src/html/*.html",
     "check": "prettier --check ./src/",
     "format": "prettier --write ./src/",
     "docs": "documentation build ./src/js/main.js -f html -o ./dev-docs/"
@@ -18,6 +18,7 @@
   "author": "Efrem Rensi",
   "license": "ISC",
   "dependencies": {
+    "@babel/core": "^7.11.6",
     "@fortawesome/fontawesome-free": "^5.14.0",
     "@msgpack/msgpack": "^1.12.2",
     "downloadjs": "^1.4.7",

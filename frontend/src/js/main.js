@@ -18,7 +18,7 @@
 
 import "./UI.js";
 
-import "../css/heatflask.css"; // This should be the last imported CSS
+import "../css/main.css"; // This should be the last imported CSS
 
 
 // debugger;

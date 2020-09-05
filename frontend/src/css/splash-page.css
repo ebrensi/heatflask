@@ -2,6 +2,8 @@
   --background-image: url("../images/lake.gif");
 }
 
+@import "./strava-buttons.css";
+
 /* Links */
 a,
 a:focus,
@@ -30,17 +32,6 @@ select {
   opacity: 0.9;
 }
 
-#strava-button {
-  width: 70%;
-  max-width: 300px;
-  display: block;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-#strava-button :hover {
-  opacity: 0.2;
-}
 
 html,
 body {

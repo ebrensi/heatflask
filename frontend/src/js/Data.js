@@ -6,10 +6,11 @@
 
 import { BEACON_HANDLER_URL, WEBSOCKET_URL, CLIENT_ID } from "./Init.js";
 
-import PersistentWebSocket from "../ext/js/pws.js";
+import PersistentWebSocket from "pws";
 import { decode } from "@msgpack/msgpack";
 
-let sock, wskey;
+export let sock, wskey;
+
 
 /**
  * The default export of this module is a function that imports messagepack
@@ -29,7 +30,9 @@ export default function (query, callback) {
   } else {
     let A;
 
-    sock = new PersistentWebSocket(WEBSOCKET_URL);
+    sock = new PersistentWebSocket(WEBSOCKET_URL, {
+      pingTimeout: 30 * 1000, // Reconnect if no message received in 30s.
+    });
 
     sock.binaryType = "arraybuffer";
 
