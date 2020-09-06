@@ -1,0 +1,25 @@
+#!/bin/bash
+#
+# This script sets up a Python 3 virtual environment in a directory .venv/
+#   if it doesn't exist and installs all of the packages from
+#   requirements.txt and requirements-dev.txt
+#  into it.
+#
+#  In order for the backend sever to be set up properly you need to have Python 3.8.3
+#   or higher installed and accessible as python3.
+#
+#  If you have this repo in a Dropbox, Google Drive, or some other online file syncing
+#   service, after this setup you should move the .venv/ directory to somewhere else
+#   and create a symoblic link to it here.
+
+d="./.venv"
+
+if [[ ( ! -d "$d" )  ||  ( ! -L "$d" ) ]]; then
+    echo "mkdir $d"
+    echo "python3 -m venv $d"
+fi
+
+echo "source ./venv/bin/activate"
+
+echo "pip install -r requirements.txt"
+echo "pip install -r requirements-dev.txt"

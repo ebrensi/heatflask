@@ -90,29 +90,30 @@ $RECYCLE.BIN/
 *.lnk
 
 # My Additions
-*.old
 *.log
 log.txt
 .hidden
 .fuse*
 
-test.py
-env.sh
-clean.sh
-.env
+# .env sets environment variables for the backend webserver
+backend/.env
+
+# .venv/ is the directory contanining the Python virtual
+#  environment for the backend server
+backend/.venv/
+backend/.venv
 
 frontend/test/
 
 # Ignore node_modules both as a directory, and as a symbolic link
-node_modules
-node_modules/
+frontend/node_modules
+fronetend/node_modules/
 
 # Igonre ParcelJS caches
-.parcel-cache/
-.parcel-cache
-.cache/
-.cache
-
+frontend/.parcel-cache/
+frontend/.parcel-cache
+frontend/.cache/
+frontend/.cache
 
 # For Development
 frontend/dist/
