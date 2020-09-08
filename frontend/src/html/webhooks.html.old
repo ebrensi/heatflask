@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    {% assets "basic_table_css" %}
+    <link rel="stylesheet" href="{{ ASSET_URL }}" />
+    {% endassets %}
+
+    {% assets "basic_table_js" %}
+    <script type="text/javascript" src="{{ ASSET_URL }}"></script>
+    {% endassets %}
+</head>
+
+
+<body>
+    <h3>Subscription Updates</h3>
+    <table id="updates_table" class='display order-column'>
+    </table>
+
+
+    <script>
+    const user_profile_url = "{{ url_for('user_profile', username='') }}",
+          data = {{ events|tojson }};
+
+    function formatID (data, type, row) {
+        if (data) {
+            if (type == "display") {
+                return href(user_profile_url+data, data);
+            } else {
+                return data;
+            }
+        } else {
+            return "";
+        }
+    }
+
+    function formatActivityID (data, type, row) {
+        if (row.updated == true && type == "display") {
+            return href(stravaActivityURL(data), data)
+        } else {
+            return data
+        }
+    }
+
+     function formatValidity (data, type, row) {
+        let u = row.valid_user? "T":"F",
+            i = row.valid_index? "T":"F";
+
+        return `${u}:${i}`;
+        
+    }
+
+    function formatUpdate(data, type, row) {
+        return JSON.stringify(row.updates)
+    }
+
+    $(document).ready(function() {
+        let updates_table = $('#updates_table').DataTable({
+            pageLength: 100,
+            deferRender: true,
+            data: data,
+            columns: [
+                {title: "dt",    data: "dt", render: formatDate},
+                {title: "owner", data: "owner_id", render: formatID},
+                // {title: "valid?", data: null, render: formatValidity},
+                {title: "object", data: "object_id"},
+                {title: "object_type", data: "object_type"},
+                {title: "aspect_type", data: "aspect_type"},
+                // {title: "event_time", data: "event_time"},
+                {title: "updates", data: null, render: formatUpdate}
+            ],
+            scrollY: "80vh",
+            scrollX: true,
+            scrollCollapse: true,
+            select: true,
+            order: [[ 0, "desc" ]]
+        });
+    });
+    </script>
+</body>
+</html>

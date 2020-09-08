@@ -13,15 +13,30 @@
 #   and create a symoblic link to it here.
 
 d="./.venv"
+a=$d/bin/activate
 
 if [[ ( ! -d "$d" )  &&  ( ! -L "$d" ) ]]; then
-    echo "Creating Python virtual environment in $d"
     mkdir $d
-    python3 -m venv $d
 fi
 
-source  $d/bin/activate
+if [ ! -f $a ]; then
+     echo "Creating Python virtual environment in $d"
+     python3 -m venv --clear $d
+fi
 
+if [ ! -f $a ]; then
+    echo "could not create python environment"
+    exit 1
+fi
+
+echo echo "source $a"
+source $a
+
+echo "attempting to update pip to latest version"
 python -m pip install --upgrade pip
+
+echo "installing backend dependencies (requirements.txt)"
 pip install -r requirements.txt
+
+echo "installing backend dev-dependencies (requirements-dev.txt)"
 pip install -r requirements-dev.txt

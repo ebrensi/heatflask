@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+    {% assets "basic_table_css" %}
+    <link rel="stylesheet" href="{{ ASSET_URL }}" />
+    {% endassets %}
+
+    {% assets "basic_table_js" %}
+    <script type="text/javascript" src="{{ ASSET_URL }}"></script>
+    {% endassets %}
+</head>
+
+<body>
+    <h3>Events</h3>
+    <table id="events_table" class='display order-column' style="width:100%">
+    </table>
+
+    <script>
+
+    const user_profile_url = "{{ url_for('user_profile', username='') }}",
+          event_url = "{{ url_for('logged_event', event_id='') }}",
+          WEBSOCKET_URL = WS_SCHEME+window.location.host+"/data_socket",
+          beacon_handler_url = "{{ url_for('beacon_handler') }}";
+
+
+    function ip_lookup_url( ip ) {
+        return ( ip? "{{ url_for('ip_lookup') }}" + `?ip=${ip}` : "#" );
+    }
+
+    function formatID (data, type, row) {
+        if (data) {
+            if (type == "display") {
+                return href(user_profile_url+data, data);
+            } else {
+                return data;
+            }
+        } else {
+            return "";
+        }
+    }
+
+    function formatDate(data, type, row, meta) {
+        let date = new Date(0);
+        date.setUTCSeconds(data)
+        return (type === "display" || type === "filter") ?
+            href(event_url + row["_id"], date.toLocaleString('en-US', { hour12: false })) : data;
+    }
+
+
+    let data = {{ events|tojson }},
+        table = $('#events_table').DataTable({
+            pageLength: 100,
+            data: data,
+            deferRender: true,
+            columns: [
+                {title: "time",  data: "ts", render: formatDate},
+                {title: "ip",    data: "ip", defaultContent: "", render: formatIP},
+                {title: "user",  data: "cuid", defaultContent: "", render: formatUserId},
+                {title: "event", data: "msg"}
+            ],
+            scrollY: "80vh",
+            scrollX: true,
+            scrollCollapse: true,
+            select: false,
+            order: [[ 0, "desc" ]]
+    });
+
+    table.draw();
+
+    // Now set up websocket
+    let wskey,
+        sock = new PersistentWebSocket(WEBSOCKET_URL),
+        last_ts = data[0].ts + 1;
+
+    sock.binaryType = 'arraybuffer';
+
+    window.addEventListener('beforeunload', function (event) {
+      if (navigator.sendBeacon) {
+        if (wskey) {
+          navigator.sendBeacon(BEACON_HANDLER_URL, wskey);
+        }
+        // navigator.sendBeacon(BEACON_HANDLER_URL, CLIENT_ID);
+      }
+
+      if (sock && sock.readyState == 1) {
+            sock.send(JSON.stringify({close: 1}));
+            sock.close()
+      }
+    });
+
+
+    sock.onopen = function(event) {
+        console.log("socket open: ", event);
+
+        let msg = JSON.stringify({"admin": {"events": last_ts}});
+        console.log(msg);
+        sock.send(msg);
+    }
+
+    sock.onclose = function(event) {
+        console.log("socket closed: ", event);
+        wskey = null;
+    }
+
+    sock.onmessage = function(event) {
+      if (!event.data) {
+        return;
+      }
+
+      let update = msgpack.decode(new Uint8Array(event.data));
+
+      // console.log(`received`, update);
+
+      if ("wskey" in update) {
+        wskey = update.wskey;
+        return
+      }
+
+      if ("ts" in update) {
+        last_ts = update.ts
+      }
+
+      r = table.row.add(update).draw(false).node();
+    }
+
+    </script>
+</body>
+</html>
