@@ -13,7 +13,11 @@ Fork this repo and clone it to your machine.   The backend currently runs on Pyt
   * [Redis](https://redis.io) Fast in-memory datastore (backend cache)
   * [MongoDB](https://www.mongodb.com) NoSQL database (Activities database)
   * [Postgres](https://www.postgresql.org) SQL database (User database).  There should be a `heatflask` database with user `heatflask` with password "heatflask".
-
+    The commands you'll need to do this are
+      ```
+      createuser -P heatflask
+      createdb -O heatflask heatflask
+      ```
 ### Install Python dependencies
 Now to install the backend dependencies on your machine. Navigate to the `backend` directory.  Make sure your Python 3.8 environment is activated.  Then install all the backend dependencies with
 ```

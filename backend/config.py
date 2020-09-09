@@ -78,7 +78,7 @@ class Config(object):
     STRAVA_CLIENT_SECRET = os.environ.get("STRAVA_CLIENT_SECRET")
 
     # IPstack
-    IPSTACK_ACCESS_KEY = os.environ["IPSTACK_ACCESS_KEY"]
+    IPSTACK_ACCESS_KEY = os.environ.get("IPSTACK_ACCESS_KEY")
 
     # Maximum size of event history (for capped MongoDB collection)
     MAX_HISTORY_BYTES = 2 * 1024 * 1024  # 2MB
