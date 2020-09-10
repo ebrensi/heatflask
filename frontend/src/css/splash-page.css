@@ -2,6 +2,7 @@
   --background-image: url("../images/lake.gif");
 }
 
+@import "../ext/css/min_entireframework.min.css";
 @import "./strava-buttons.css";
 
 /* Links */
@@ -55,4 +56,9 @@ body {
   width: 90vw;
   height: 90vh;
   margin: auto;
+}
+
+.ascii-art {
+    font-family: monospace;
+    white-space: pre;
 }

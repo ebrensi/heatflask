@@ -1,4 +1,3 @@
-import "../ext/css/min_entireframework.min.css";
 import "../css/splash-page.css";
 
 const { URLS } = JSON.parse(window["argstring"]);
