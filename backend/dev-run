@@ -27,6 +27,10 @@ GUNICORN_CMD_ARGS="--reload --worker-class flask_sockets.worker --log-level=debu
 
 HEROKU_CLI=/usr/bin/heroku
 
+# Kill any running instances of gunicorn on the target port
+pkill gunicorn
+
+# Run the backend server via heroku local if it is available, otherwise gunicorn directly
 if [ -f "$HEROKU_CLI" ]; then
     echo "$HEROKU_CLI is present"
     heroku local
