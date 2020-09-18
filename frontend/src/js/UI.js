@@ -5,7 +5,7 @@
 
 // import "leaflet-easybutton";
 
-import { BEACON_HANDLER_URL, AUTHORIZE_URL, USER_URLS } from "./Init.js";
+import { BEACON_HANDLER_URL, AUTHORIZE_URL, USER_URLS, CLIENT_ID } from "./Init.js";
 
 import app from "./Model.js";
 import "./URL.js";
@@ -33,7 +33,7 @@ let dotLayer;
 
 // What to do when user changes to a different tab or window
 document.onvisibilitychange = function (e) {
-  console.log("visibility change: ", e);
+  // console.log("visibility: ", e.target.visibilityState);
   if (!dotLayer) return;
   const paused = app.vParams.paused;
   if (e.target.hidden && !paused) {
@@ -55,6 +55,7 @@ document.querySelectorAll(".paypal-button").forEach((el) => {
  */
 app.currentUser.onChange("public", async (status) => {
   const id = app.currentUser.id;
+  if (!id) return;
   const statusUpdateURL = USER_URLS(id).public;
   const resp = await fetch(`${statusUpdateURL}?status=${status}`);
   const response = await resp.text();
@@ -69,8 +70,8 @@ const userActions = {
   "selection-render": null,
   query: null,
   "abort-query": null,
-  login: null,
-  logout: null,
+  login: login,
+  logout: logout,
   delete: null,
   "view-index": openIndexView,
 };
@@ -86,26 +87,28 @@ for (const el of document.querySelectorAll("[data-action]")) {
   el.addEventListener("click", doAction);
 }
 
-// put Strava-login button images into the DOM
-// Dom.prop(".strava-auth", "src", strava_login_img);
+
+function login() {
+  window.location.href = AUTHORIZE_URL;
+}
+
+function logout() {
+  const id = app.currentUser.id;
+  if (!id) return;
+  console.log(`${id} logging out`);
+  window.location.href = app.currentUser.url.logout;
+
+}
 
 function openIndexView(id) {
   id = id || app.currentUser.id;
   if (!id) return;
-  const indexViewURL = USER_URLS(id).index;
-  window.open(indexViewURL, "_blank");
+  window.open(app.currentUser.url.index);
 }
 
 // /*
 //  *  Set up or tear down current user stuff
 //  */
-// if (app.currentUser.id) {
-//   /* enable log out button */
-//   Dom.addEvent(".logout", "click", () => {
-//     console.log(`${currentUser.id} logging out`);
-//     window.open(currentUser.url.LOG_OUT);
-//   });
-
 //   /* enable strava authentication (login) button */
 //   Dom.addEvent(".strava-auth", "click", () => {
 //     window.location.href = AUTHORIZE_URL;

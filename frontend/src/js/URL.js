@@ -35,7 +35,7 @@ function initializeURL() {
       qArgs.key = qParams.key;
   }
 
-  if (qParams.userid) qArgs.user = qParams.userid;
+  // if (qParams.userid) qArgs.user = qParams.userid;
 
   updateURL();
 }

@@ -98,12 +98,20 @@ class Users(UserMixin, db_sql.Model):
         return [attr for attr in attrs if getattr(state, attr)]
 
     def info(self):
-        profile = {}
-        profile.update(vars(self))
-        del profile["_sa_instance_state"]
-        if "activity_index" in profile:
-            del profile["activity_index"]
-        return profile
+        info = {}
+        info.update(vars(self))
+        info["avatar"] = info["profile"]
+        info["public"] = info["share_profile"]
+
+        del info["share_profile"]
+        del info["profile"]
+        del info["_sa_instance_state"]
+        del info["access_token"]
+
+        if "activity_index" in info:
+            del info["activity_index"]
+
+        return info
 
     def client(self, refresh=True, session=db_sql.session):
         try:
@@ -191,7 +199,7 @@ class Users(UserMixin, db_sql.Model):
             log.exception("error getting user '%s' data from token", user)
             return
 
-        return {
+        info = {
             "id": strava_user.id,
             "username": strava_user.username,
             "firstname": strava_user.firstname,
@@ -204,6 +212,10 @@ class Users(UserMixin, db_sql.Model):
             "email": strava_user.email,
             "access_token": access_info_string,
         }
+
+        # log.debug(strava_user.to_dict())
+        # log.debug(info)
+        return info
 
     def is_public(self, setting=None):
         if setting is None:

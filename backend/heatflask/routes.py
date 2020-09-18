@@ -252,6 +252,15 @@ def auth_callback():
     return redirect(state or url_for("main", username=user.id))
 
 
+@app.route("/userinfo")
+def userinfo():
+    info = {}
+    if current_user.is_authenticated:
+        info = current_user.info()
+
+    return jsonify(info)
+
+
 @app.route("/<username>/logout")
 @admin_or_self_required
 def logout(username):
@@ -358,7 +367,6 @@ def main(username):
 
     if current_user.is_authenticated:
         current_user_info = current_user.info()
-        current_user_info["isAdmin"] = current_user.is_admin()
         args["CURRENT_USER"] = current_user_info
 
     return render_template("main.html", args=args)

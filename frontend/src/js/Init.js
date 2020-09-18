@@ -22,19 +22,14 @@ try {
   FLASH_MESSAGES = jinja_args["FLASH_MESSAGES"];
   APP_NAME = jinja_args["APP_NAME"];
 } catch (e) {
-  console.log("No server-sent arguments");
+  console.log("No server-sent arguments", e);
 }
 
 /* Load in the google analytics object if this is
    the production environment and the current user is not
    an admin
 */
-export const ADMIN = CURRENT_USER && CURRENT_USER.isAdmin;
-export const ga = ADMIN || DEVELOPMENT ? noop : load_ga_object();
-
-// const IMPERIAL = CURRENT_USER['measurement_preference'] == "feet"
-// export const DIST_UNIT = IMPERIAL? 1609.34 : 1000.0;
-// export const DIST_LABEL = IMPERIAL?  'mi' : 'km';
+// export const ga = ADMIN || DEVELOPMENT ? noop : load_ga_object();
 
 export const MAPBOX_ACCESS_TOKEN =
   "pk.eyJ1IjoiaGVhdGZsYXNrIiwiYSI6ImNrMXB3NDZtMjA0cG4zbW85N2U1M2p2ZmQifQ.UvD1v0VyI_V1gJSey0vRbg";

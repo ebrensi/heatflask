@@ -3,7 +3,7 @@
  *    beginning with those specified by the current URL in the browser.
  */
 
-// import { CURRENT_USER } from "./Init.js";
+import { CURRENT_USER, USER_URLS } from "./Init.js";
 import { BoundObject } from "./DataBinding.js";
 
 /*
@@ -39,8 +39,8 @@ export const urlArgDefaults = {
 
 const urlArgs = new URL(window.location.href).searchParams;
 const pathname = window.location.pathname.substring(1);
-const targetUserId = urlArgs.get("user") || ((pathname === "main.html")? "" : pathname);
-
+const targetUserId =
+  urlArgs.get("user") || (pathname === "main.html" ? "" : pathname);
 
 const names = {};
 const params = {};
@@ -109,7 +109,7 @@ qParamsInit.quantity =
 export const qParams = BoundObject.fromObject(qParamsInit, { event: "change" });
 
 const afterDateElement = document.querySelector("[data-bind=after]"),
-      beforeDateElement = document.querySelector("[data-bind=before]");
+  beforeDateElement = document.querySelector("[data-bind=before]");
 
 // afterDateElement.max = today
 // beforeDateElement.min = today
@@ -141,9 +141,8 @@ qParams.onChange("before", (newDate) => {
  * @property {String} baselayer - The name of the current baselayer
  */
 
-
 function bool(val) {
-  return val !== "0" && !!val
+  return val !== "0" && !!val;
 }
 /*
  * Ininitial visual parameters extracted from defaults and URL parameters
@@ -185,6 +184,19 @@ targetUser.username = targetUserId || targetUser.name;
 export const currentUser = BoundObject.fromDOMelements(
   "[data-class=current-user]"
 );
+
+/*
+ * If the user is already logged in (via browser cookie),
+ *  populate currentUser object with data provided from the server
+ */
+if (CURRENT_USER) {
+  Object.assign(currentUser, CURRENT_USER);
+  currentUser.url = USER_URLS(currentUser.id)
+
+  // const IMPERIAL = CURRENT_USER['measurement_preference'] == "feet"
+  // const DIST_UNIT = IMPERIAL? 1609.34 : 1000.0;
+  // const DIST_LABEL = IMPERIAL?  'mi' : 'km';
+}
 
 export const flags = BoundObject.fromDOMelements("[data-class=flag]");
 
