@@ -168,14 +168,13 @@ def splash():
             logout_user()
             flash("oops! Please log back in.")
 
+    next_url = (request.args.get("next") or url_for("splash"))
     args = {
         "DEVELOPMENT": app.config.get("DEVELOPMENT"),
         "URLS": {
             "demo": url_for("demo"),
             "directory": url_for("public_directory"),
-            "strava-button": url_for(
-                "authorize", next=(request.args.get("next") or url_for("splash"))
-            ),
+            "authorize": url_for("authorize", next=next_url),
         },
     }
 
