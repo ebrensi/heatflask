@@ -65,20 +65,14 @@ map.on("moveend", () => {
   // console.log(`(${center.lat}, ${center.lng}, ${zoom}) -> ${gh}`);
 });
 
-/*
- * Initialize two control windows, which is the modal popup that we
- *   display messages in.  We create one for general messages and
- *   one for error messages.
- */
-export const msgBox1 = L.control.window(map, {
-  position: "top",
-  visible: false,
-});
 
-export const msgBox2 = L.control.window(map, {
-  position: "top",
-  visible: false,
-});
+/*
+ *  Make control window accessible as an export
+ */
+export function controlWindow(options) {
+  return L.control.window(map, options);
+}
+
 
 /*
  * Initialize map Baselayers

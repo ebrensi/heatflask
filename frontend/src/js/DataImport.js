@@ -1,40 +1,76 @@
 import { latLngBounds } from "leaflet";
-import * as Dom from "./Dom.js";
-import appState from "./Model.js";
-import { map, msgBox1 } from "./mapAPI.js";
-import { dotLayer } from "./DotLayerAPI.js";
-// import { makeTable } from "./UI.ActivitiesTable.js";
+import app from "./Model.js";
+import { controlWindow } from "./MapAPI.js";
+// import { dotLayer } from "./DotLayerAPI.js";
 import { ATYPE } from "./strava.js";
-import importData from "./Data.js";
+import queryBackend from "./Socket.js";
 
-const { items, query } = appState;
+let numActivities, count;
 
-let numActivities,
-  rendering,
-  count,
-  dataMsgElements,
-  errMsgElements,
-  progbarElements;
-
-importData(query, onMessage);
-
-function setAttr(els, attr, val) {
-  els.forEach((el) => {
-    el[attr] = val;
-  });
-}
-
-const dataMsg = (msg) => setAttr(dataMsgElements, "innerHTML", msg);
-const errMsg = (msg) => setAttr(errMsgElements, "innerHTML", msg);
-const progress = (val) => setAttr(progbarElements, "value", val);
-
-Dom.addEvent("#abortButton", "click", function () {
-  importData();
-  Dom.prop("#renderButton", "disabled", false);
-  doneRendering("<font color='red'>Aborted:</font>");
+/*
+ * Set up a message box that appears only when app.flags.importing is true
+ */
+const importInfoBox = controlWindow({
+  position: "center",
+  title: '<i class="fas fa-download"></i> Importing...',
+  content: `<div class="info-message"></div>
+            <progress class="progbar"></progress>`,
+  prompt: {},
+  visible: false,
 });
 
-/**
+app.flags.onChange("importing", (val) => {
+  val ? importInfoBox.show() : importInfoBox.hide();
+});
+
+const infoMsgElements = document.querySelectorAll(".info-message"),
+  progBars = document.querySelectorAll(".progbar");
+
+/*
+ * Display a progress message and percent-completion
+ */
+function displayProgressInfo(msg, progress) {
+  if (!msg && !progress) {
+    infoMsgElements.forEach((el) => (el.innerHTML = ""));
+    progBars.forEach((el) => el.removeAttribute("value"));
+    return;
+  }
+
+  if (msg) {
+    for (const el of infoMsgElements) {
+      el.innerHTML = msg;
+    }
+  }
+
+  if (progress) {
+    for (const el of progBars) {
+      el.value = progress;
+    }
+  }
+}
+
+/*
+ * Send a query to the backend and populate the table and dotlayer with it.
+ */
+export function makeQuery(query, done) {
+  app.flags.importing = true;
+  numActivities = 0;
+  count = 0;
+  displayProgressInfo("Retrieving activity data...");
+
+  queryBackend(query, onMessage, done);
+}
+
+export function abortQuery() {
+  app.flags.importing = false;
+}
+
+// when done
+// Dom.prop("#renderButton", "disabled", false);
+// doneRendering("Finished.");
+// return;
+
+/*
  *  this is the callback for our data importer. If there is an open
  *    connection with the data-layer (backend server), it gets called on
  *    every received message.
@@ -42,13 +78,9 @@ Dom.addEvent("#abortButton", "click", function () {
  * @param {Object} A - A JSON object ecoding 1 message from the data layer
  */
 function onMessage(A) {
-  if (!A) {
-    Dom.prop("#renderButton", "disabled", false);
-    doneRendering("Finished.");
-    return;
-  } else if (!("_id" in A)) {
+  if (!("_id" in A)) {
     if ("idx" in A) {
-      dataMsg(`indexing...${A["idx"]}`);
+      displayProgressInfo(`indexing...${A["idx"]}`);
     } else if ("count" in A) {
       numActivities += A["count"];
     } else if ("delete" in A) {
@@ -56,20 +88,15 @@ function onMessage(A) {
       if (toDelete.length) {
         // delete all ids in A.delete
         for (let id of toDelete) {
-          items.delete(id);
+          app.items.delete(id);
         }
-        dotLayer.removeItems(toDelete);
+        // dotLayer.removeItems(toDelete);
       }
     } else if ("done" in A) {
       console.log("received done");
-      doneRendering("Done rendering.");
-    } else if ("error" in A) {
-      let msg = `<font color='red'>${A.error}</font><br>`;
-      errMsg(msg);
-      console.log(`Error: ${A.error}`);
-      return;
+      // doneRendering("Done rendering.");
     } else if ("msg" in A) {
-      dataMsg(A.msg);
+      displayProgressInfo(A.msg);
     }
 
     return;
@@ -81,127 +108,106 @@ function onMessage(A) {
 
   const id = A["_id"];
 
-  // only add A to items if it isn't already there
-  if (!items.has(id)) {
-    items.add(id);
-
-    // assign this activity a path color and speed type (pace, mph)
-    const atype = ATYPE.specs(A["type"]);
-    const tup = A["ts"];
-    const tsLocal = new Date((tup[0] + tup[1] * 3600) * 1000);
-    const UTCtimestamp = tup[0];
-    const bounds = latLngBounds(A["bounds"]["SW"], A["bounds"]["NE"]);
-
-    dotLayer.addItem(
-      id,
-      A["polyline"],
-      atype.pathColor,
-      A["time"],
-      UTCtimestamp,
-      bounds,
-      A["n"]
-    );
-
-    // activitiesTable.addItem();
+  if (app.items.has(id)) {
+    console.log(`${id} already in items`);
+    return;
   }
+
+  app.items.add(id);
+
+  // assign this activity a path color and speed type (pace, mph)
+  const atype = ATYPE.specs(A["type"]);
+  const tup = A["ts"];
+  const tsLocal = new Date((tup[0] + tup[1] * 3600) * 1000);
+  const UTCtimestamp = tup[0];
+  const bounds = latLngBounds(A["bounds"]["SW"], A["bounds"]["NE"]);
+
+  // dotLayer.addItem(
+  //   id,
+  //   A["polyline"],
+  //   atype.pathColor,
+  //   A["time"],
+  //   UTCtimestamp,
+  //   bounds,
+  //   A["n"]
+  // );
+
+  // activitiesTable.addItem();
 
   count++;
   if (count % 5 === 0) {
+    let prog;
     if (numActivities) {
-      progress(count / numActivities);
-      dataMsg(`imported ${count}/${numActivities}`);
-    } else {
-      dataMsg(`imported ${count}/?`);
+      prog = count / numActivities;
     }
+    displayProgressInfo(`imported ${count}/${numActivities || "?"}`, prog);
   }
 }
 
 /* Rendering */
-function updateLayers(msg) {
-  if (Dom.prop("#autozoom", "checked")) {
-    let totalBounds = getBounds(appState.items.keys());
+// function updateLayers(msg) {
+//   if (Dom.prop("#autozoom", "checked")) {
+//     let totalBounds = getBounds(app.items.keys());
 
-    if (totalBounds.isValid()) {
-      map.fitBounds(totalBounds);
-    }
-  }
+//     if (totalBounds.isValid()) {
+//       map.fitBounds(totalBounds);
+//     }
+//   }
 
-  const num = appState.items.size;
-  Dom.html(".data_message", ` ${msg} ${num} activities rendered.`);
+//   const num = app.items.size;
+//   Dom.html(".data_message", ` ${msg} ${num} activities rendered.`);
 
-  const table = makeTable(appState.items);
+//   const table = makeTable(app.items);
 
-  if (!ADMIN && !OFFLINE) {
-    // Record this to google analytics
-    try {
-      ga("send", "event", {
-        eventCategory: USER_ID,
-        eventAction: "Render",
-        eventValue: num,
-      });
-    } catch (err) {}
-  }
+//   if (!ADMIN && !OFFLINE) {
+//     // Record this to google analytics
+//     try {
+//       ga("send", "event", {
+//         eventCategory: USER_ID,
+//         eventAction: "Render",
+//         eventValue: num,
+//       });
+//     } catch (err) {}
+//   }
 
-  dotLayer.reset();
-  const ds = dotLayer.getDotSettings(),
-    T = dotLayer.periodInSecs().toFixed(2);
-  Dom.html("#period-value", T);
-  Dom.trigger("#period-value", "change");
+//   dotLayer.reset();
+//   const ds = dotLayer.getDotSettings(),
+//     T = dotLayer.periodInSecs().toFixed(2);
+//   Dom.html("#period-value", T);
+//   Dom.trigger("#period-value", "change");
 
-  appState.update()();
-}
+//   app.update()();
+// }
 
-function doneRendering(msg) {
-  if (!rendering) return;
+// function doneRendering(msg) {
+//   if (!rendering) return;
 
-  appState["after"] = Dom.get("#date1");
-  appState["before"] = Dom.get("#date2");
-  appState.update()();
+//   app["after"] = Dom.get("#date1");
+//   app["before"] = Dom.get("#date2");
+//   app.update()();
 
-  Dom.fadeOut("#abortButton");
-  Dom.fadeOut(".progbar");
+//   Dom.fadeOut("#abortButton");
+//   Dom.fadeOut(".progbar");
 
-  if (msgBox) {
-    msgBox.close();
-    msgBox = undefined;
-  }
+//   if (msgBox) {
+//     msgBox.close();
+//     msgBox = undefined;
+//   }
 
-  rendering = false;
-  updateLayers(msg);
-}
+//   rendering = false;
+//   updateLayers(msg);
+// }
 
-/*
+// function getBounds(ids) {
+//   const bounds = latLngBounds();
+//   for (const id of ids) {
+//     bounds.extend(app.items.get(id).bounds);
+//   }
+//   return bounds;
+// }
 
-*/
-
-export function renderLayers(query) {
-  const to_exclude = Array.from(items.values()).map(Number);
-
-  // create a status box
-  msgBox1
-    .content(
-      "<div class='data_message'></div><div><progress class='progbar' id='box'></progress></div>"
-    )
-    .show();
-
-  dataMsgElements = Dom.el(".data_message");
-  dataMsg("Retrieving activity data...");
-
-  progbarElements = Dom.el(".progbar");
-
-  rendering = true;
-  numActivities = 0;
-  count = 0;
-
-  Dom.fadeIn("#abortButton");
-
-  Dom.prop("#renderButton", "disabled", true);
-}
-
-function getBounds(ids) {
-  const bounds = latLngBounds();
-  for (const id of ids) {
-    bounds.extend(appState.items.get(id).bounds);
-  }
-  return bounds;
-}
+// Dom.addEvent("#abortButton", "click", function () {
+//   importData();
+//   Dom.prop("#renderButton", "disabled", false);
+//   doneRendering("<font color='red'>Aborted:</font>");
+// });

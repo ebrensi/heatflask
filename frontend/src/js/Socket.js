@@ -1,7 +1,5 @@
 /*
- * Here we define the functionality for getting the activity data
- *          that we use for vizualization.  That means, importing
- *          it from the backend or local storage.
+ * Here we define the Websocket interface with the backend server
  */
 
 import { BEACON_HANDLER_URL, WEBSOCKET_URL, CLIENT_ID } from "./Init.js";
@@ -18,7 +16,8 @@ export let sock, wskey;
  *   imported data item.
  *
  * @param {Object} query - the data query, as specified by our backend API
- * @param {function} callback - A function that processes one imported data item
+ * @param {function} [callback] - A function that processes one imported data item
+ * @param {function} [done] - Called when we receive a null message
  */
 export default function (query, callback, done) {
   if (sock && sock.readyState < 2) {
@@ -31,7 +30,7 @@ export default function (query, callback, done) {
     let A;
 
     sock = new PersistentWebSocket(WEBSOCKET_URL, {
-      pingTimeout: 30 * 1000, // Reconnect if no message received in 30s.
+      // pingTimeout: 30 * 1000, // Reconnect if no message received in 30s.
     });
 
     sock.binaryType = "arraybuffer";
@@ -56,8 +55,11 @@ export default function (query, callback, done) {
 
       if ("wskey" in A) {
         wskey = A["wskey"];
+      } else if ("error" in A) {
+        console.log(`import error: ${A["error"]}`);
+      } else {
+        callback && callback(A);
       }
-      callback && callback(A);
     };
   }
 }
@@ -72,7 +74,7 @@ function sendQuery(query) {
 }
 
 function closeSocket() {
-  if (!sock) {
+  if (!sock || sock.readyState !== 1) {
     return;
   }
 
@@ -83,3 +85,15 @@ function closeSocket() {
   }
   wskey = null;
 }
+
+
+window.addEventListener("beforeunload", () => {
+  if (navigator.sendBeacon) {
+    if (wskey) {
+      navigator.sendBeacon(BEACON_HANDLER_URL, wskey);
+    }
+    navigator.sendBeacon(BEACON_HANDLER_URL, CLIENT_ID);
+  }
+
+  closeSocket();
+});

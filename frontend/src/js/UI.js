@@ -5,12 +5,7 @@
 
 // import "leaflet-easybutton";
 
-import {
-  BEACON_HANDLER_URL,
-  AUTHORIZE_URL,
-  USER_URLS,
-  CLIENT_ID,
-} from "./Init.js";
+import { AUTHORIZE_URL } from "./Init.js";
 
 import app from "./Model.js";
 import "./URL.js";
@@ -22,7 +17,7 @@ import "./URL.js";
 import paypalButtonHTML from "bundle-text:../html/paypal-button.html";
 import infoTabHTML from "bundle-text:../html/main-info.html";
 
-import makeQuery from "./Data.js";
+import { makeQuery, abortQuery } from "./DataImport.js";
 
 /* TODO: have two UI submodules: UI-simple.js (single) and
                                  UI-complex.js (multi-user)
@@ -34,9 +29,8 @@ import makeQuery from "./Data.js";
 
 let dotLayer;
 
-// What to do when user changes to a different tab or window
+// pause animation when window/tab is not visible
 document.onvisibilitychange = function (e) {
-  // console.log("visibility: ", e.target.visibilityState);
   if (!dotLayer) return;
   const paused = app.vParams.paused;
   if (e.target.hidden && !paused) {
@@ -57,10 +51,7 @@ document.querySelectorAll(".paypal-button").forEach((el) => {
  *  if they change that setting
  */
 app.currentUser.onChange("public", async (status) => {
-  const id = app.currentUser.id;
-  if (!id) return;
-  const statusUpdateURL = USER_URLS(id).public;
-  const resp = await fetch(`${statusUpdateURL}?status=${status}`);
+  const resp = await fetch(`${app.currentUser.url.public}?status=${status}`);
   const response = await resp.text();
   console.log(`response: ${response}`);
 });
@@ -85,6 +76,10 @@ function viewIndex() {
   window.open(app.currentUser.url.index);
 }
 
+function abortRender() {
+  abortQuery();
+}
+
 /*
  * Bind data-actions
  */
@@ -92,7 +87,7 @@ const userActions = {
   "selection-clear": null,
   "selection-render": null,
   query: renderFromQuery,
-  "abort-query": null,
+  "abort-query": abortRender,
   login: login,
   logout: logout,
   delete: deleteAccount,
@@ -111,15 +106,10 @@ for (const el of document.querySelectorAll("[data-action]")) {
 }
 
 /*
- * Establish a websocket connection with the backend server
- *
- */
-
-/*
- *  Construct a query for backend data from our qParams
+ *  Construct a query for activity data from our qParams
  */
 function getCurrentQuery() {
-  const query = { streams: true},
+  const query = { streams: true },
     qParams = app.qParams;
 
   switch (qParams.queryType) {
@@ -130,14 +120,14 @@ function getCurrentQuery() {
     case "days": {
       // debugger;
       const today = new Date(),
-            before = new Date(),
-            after = new Date(),
-            n = +qParams.quantity;
+        before = new Date(),
+        after = new Date(),
+        n = +qParams.quantity;
       before.setDate(today.getDate() + 1); // tomorrow
-      after.setDate(today.getDate()  - n); // n days ago
+      after.setDate(today.getDate() - n); // n days ago
 
-      query.before = before.toISOString().split('T')[0];
-      query.after =  after.toISOString().split('T')[0];
+      query.before = before.toISOString().split("T")[0];
+      query.after = after.toISOString().split("T")[0];
 
       break;
     }
@@ -161,19 +151,22 @@ function getCurrentQuery() {
       query.key = qParams.key;
   }
 
-  return query
+  const to_exclude = Array.from(app.items).map(Number);
+  if (to_exclude.length) query["exclude_ids"] = to_exclude;
+
+  return query;
 }
 
 function renderFromQuery() {
-  app.flags.importing = true;
-
   const query = {
-    [app.qParams.userid]: getCurrentQuery()
+    [app.qParams.userid]: getCurrentQuery(),
   };
   console.log(`making query: ${JSON.stringify(query)}`);
 
-  makeQuery(query, A => console.log(A), () => {app.flags.importing = false; console.log("done")});
-
+  makeQuery(query, () => {
+    app.flags.importing = false;
+    console.log("done");
+  });
 }
 
 // /*
@@ -188,23 +181,9 @@ function renderFromQuery() {
 // Dom.addEvent("#render-selection-button", "click", openSelected);
 // Dom.addEvent("#clear-selection-button", "click", deselectAll);
 
-// Dom.addEvent("#renderButton", "click", renderLayers);
 // Dom.addEvent("#select_num", "keypress", function(event) {
 //     if (event.which == 13) {
 //         event.preventDefault();
 //         renderLayers();
 //     }
 // });
-
-window.addEventListener("beforeunload", () => {
-  if (navigator.sendBeacon) {
-    if (app.wskey) {
-      navigator.sendBeacon(BEACON_HANDLER_URL, app.wskey);
-    }
-    navigator.sendBeacon(BEACON_HANDLER_URL, CLIENT_ID);
-  }
-  // if (sock && sock.readyState == 1) {
-  //     sock.send(JSON.stringify({close: 1}));
-  //     sock.close()
-  // }
-});
