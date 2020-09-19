@@ -20,7 +20,7 @@ export let sock, wskey;
  * @param {Object} query - the data query, as specified by our backend API
  * @param {function} callback - A function that processes one imported data item
  */
-export default function (query, callback) {
+export default function (query, callback, done) {
   if (sock && sock.readyState < 2) {
     if (query) {
       sendQuery(query);
@@ -45,14 +45,19 @@ export default function (query, callback) {
         console.log(event);
         console.log(event.data);
         console.log(err);
-        callback(null);
+        callback();
+        return;
+      }
+
+      if (!A) {
+        done && done();
         return;
       }
 
       if ("wskey" in A) {
         wskey = A["wskey"];
       }
-      callback(A);
+      callback && callback(A);
     };
   }
 }

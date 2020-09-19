@@ -204,7 +204,7 @@ export const items = new Set();
 
 const state = {
   items: items,
-  flag: flags,
+  flags: flags,
   vParams: vParams,
   qParams: qParams,
   messages: messages,
