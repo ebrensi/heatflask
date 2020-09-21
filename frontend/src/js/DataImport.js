@@ -14,7 +14,9 @@ const importInfoBox = controlWindow({
   position: "center",
   title: '<i class="fas fa-download"></i> Importing...',
   content: `<div class="info-message"></div>
-            <progress class="progbar"></progress>`,
+            <div class="progress msgbox">
+            <progress class="progbar"></progress>
+            </div>`,
   prompt: {},
   visible: false,
 });

@@ -186,4 +186,17 @@ div.icon-buttons {
   /*border: 3px solid green;*/
 }
 
+/* control window */
+div.progress.msgbox {
+  text-align: center;
+}
+
+div.titlebar {
+  padding-right: 10px !important;
+}
+
+div.promptButtons {
+  display: none;
+}
+
 /* end-heatflask */
