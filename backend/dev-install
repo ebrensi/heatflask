@@ -12,11 +12,11 @@
 #   service, after this setup you should move the .venv/ directory to somewhere else
 #   and create a symoblic link to it here.
 
-d="./.venv"
+d="./.venv/heatflask"
 a=$d/bin/activate
 
 if [[ ( ! -d "$d" )  &&  ( ! -L "$d" ) ]]; then
-    mkdir $d
+    mkdir --parents $d
 fi
 
 if [ ! -f $a ]; then
