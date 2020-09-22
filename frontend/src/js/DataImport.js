@@ -51,6 +51,8 @@ function displayProgressInfo(msg, progress) {
   }
 }
 
+// app.box = displayProgressInfo;
+
 /*
  * Send a query to the backend and populate the table and dotlayer with it.
  */
@@ -138,13 +140,14 @@ function onMessage(A) {
 
   count++;
   if (count % 5 === 0) {
-    let prog;
-    if (numActivities) {
-      prog = count / numActivities;
-    }
+    const prog = numActivities? count / numActivities : null;
     displayProgressInfo(`imported ${count}/${numActivities || "?"}`, prog);
   }
 }
+
+
+
+
 
 /* Rendering */
 // function updateLayers(msg) {

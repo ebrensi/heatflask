@@ -11,7 +11,7 @@ import { decode } from "@msgpack/msgpack";
 // css for Bundler
 import "../ext/css/min_entireframework.min.css";
 import "../css/font-awesome-lite.css";
-import "../css/data-table.css";
+import "../css/activity-index.css";
 
 import * as strava from "./strava.js";
 import { WS_SCHEME, DDHHMM, HHMMSS, href, noop } from "./appUtil.js";

@@ -18,47 +18,53 @@ export function athleteURL(id) {
   return `https://www.strava.com/athletes/${id}`;
 }
 
+const ohm_char = String.fromCodePoint(2384);
+const sailboat_char = String.fromCodePoint(0x26f5);
+//<a href="https://iconscout.com/icons/ice-skating" target="_blank">Ice skating Icon</a> by <a href="https://iconscout.com/contributors/scott-de-jonge">Scott De Jonge</a> on <a href="https://iconscout.com">Iconscout</a>
+//<a href="https://iconscout.com/icons/canoe" target="_blank">Canoe Icon</a> by <a href="https://iconscout.com/contributors/babycorn" target="_blank">Mister Jo</a>
+//<a href="https://iconscout.com/icons/canoe" target="_blank">Canoe Icon</a> by <a href="https://iconscout.com/contributors/payuan-amin" target="_blank">Payuan Amin</a>
+//
 /**
  * This is a list of tuples specifying properties of the rendered objects,
  * such as path color, speed/pace in description.  others can be added
  * @type {Object}
  */
 const _specs = {
-  canoeing: [null, null],
-  crossfit: [null, null],
-  ebikeride: ["speed", "#0000cd"], // mediumblue
+  canoeing: [null, null, ],
+  crossfit: [null, null, '<i class="fas fa-weight-hanging"></i>'],
+  ebikeride: ["speed", "#0000cd", '<i class="fas fa-motorcycle"></i>'], // mediumblue
   elliptical: [null, null],
-  golf: [null, null],
-  handcycle: [null, null],
-  hike: ["pace", "#ff1493"], // deeppink
-  iceskate: ["speed", "#663399"], // rebeccapurple
-  inlineskate: [null, "#8a2be2"], // blueviolet
-  kayaking: [null, "#ffa500"], // orange
+  golf: [null, null, '<i class="fas fa-golf-ball"></i>'],
+  handcycle: [null, null, '<i class="fab fa-accessible-icon"></i>'],
+  hike: ["pace", "#ff1493", '<i class="fas fa-hiking"></i>'], // deeppink
+  iceskate: ["speed", "#663399", '<i class="fas fa-skating"></i>'], // rebeccapurple
+  inlineskate: [null, "#8a2be2", '<i class="fas fa-skating"></i>'], // blueviolet
+  kayaking: [null, "#ffa500", '<i class="fas fa-skating"></i>'], // orange
   kitesurf: ["speed", null],
-  nordicski: [null, "#800080"], // purple
-  ride: ["speed", "#2b60de"], // ocean blue
+  nordicski: [null, "#800080", '<i class="fas fa-skiing-nordic"></i>'], // purple
+  ride: ["speed", "#2b60de", '<i class="fas fa-biking"></i>'], // ocean blue
   rockclimbing: [null, "#4b0082", "climbing"], // indigo
-  rollerski: ["speed", "#800080"], // purple
+  rollerski: ["speed", "#800080", '<i class="fas fa-skiing-nordic"></i>'], // purple
   rowing: ["speed", "#fa8072"], // salmon
-  run: ["pace", "#ff0000"], // red
-  sail: [null, null],
+  run: ["pace", "#ff0000", '<i class="fas fa-running"></i>'], // red
+  sail: [null, null, sailboat_char],
   skateboard: [null, null],
-  snowboard: [null, "#00ff00"], // lime
+  snowboard: [null, "#00ff00", '<i class="fas fa-snowboarding"></i>'], // lime
   snowshoe: ["pace", "#800080"], // purple
-  soccer: [null, null],
+  soccer: [null, null, '<i class="fas fa-futbol"></i>'],
   stairstepper: [null, null],
   standuppaddling: [null, null, "paddling"],
-  surfing: [null, "#006400"], // darkgreen
-  swim: ["speed", "#00ff7f"], // springgreen
+  surfing: [null, "#006400", "surf"], // darkgreen
+  swim: ["speed", "#00ff7f", '<i class="fas fa-swimmer"></i>'], // springgreen
   velomobile: [null, null],
-  virtualride: ["speed", "#1e90ff"], // dodgerblue
-  virtualrun: [null, null],
-  walk: ["pace", "#ff00ff"], // fuchsia
-  weighttraining: [null, null, "weights"],
-  wheelchair: [null, null],
+  virtualride: ["speed", "#1e90ff", '<i class="fas fa-bicycle"></i>'], // dodgerblue
+  virtualrun: [null, null, '<i class="fas fa-running"></i>'],
+  walk: ["pace", "#ff00ff", '<i class="fas fa-walking"></i>'], // fuchsia
+  weighttraining: [null, null, '<i class="fas fa-weight-hanging"></i>'],
+  wheelchair: [null, null, '<i class="fas fa-wheelchair"></i>'],
   windsurf: ["speed", null],
   workout: [null, null],
-  yoga: [null, null],
+  yoga: [null, null, ohm_char],
   undefined: [null, null],
 };
 

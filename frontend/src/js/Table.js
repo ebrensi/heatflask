@@ -1,67 +1,31 @@
 import { DataTable } from "simple-datatables";
 import "../../node_modules/simple-datatables/src/style.css";
 
-// Initialize Activity Table in sidebar
-// let tableColumns = [
-//         {
-//             title: '<i class="fa fa-calendar" aria-hidden="true"></i>',
-//             data: null,
-//             render: (data, type, row) => {
-//                 if ( type === 'display' || type === 'filter' ) {
-//                     // const dstr = row.tsLoc.toISOString().split('T')[0];
-//                     return util.href( strava.activityURL(row.id), row.tsLoc.toLocaleString());
-//                 } else
-//                     return row.UTCtimestamp;
-//             }
-//         },
+const tableElement = document.getElementById("activitiesList");
 
-//         {
-//             title: "Type",
-//             data: null,
-//             render: (A) => `<p style="color:${A.pathColor}">${A.type}</p>`
-//         },
 
-//         {
-//             title: `<i class="fa fa-arrows-h" aria-hidden="true"></i> (${DIST_LABEL})`,
-//             data: "total_distance",
-//             render: (A) => +(A / DIST_UNIT).toFixed(2)},
-//         {
-//             title: '<i class="fa fa-clock-o" aria-hidden="true"></i>',
-//             data: "elapsed_time",
-//             render: util.hhmmss
-//         },
+const DIST_LABEL = "mi";
 
-//         {
-//             title: "Name",
-//             data: null,
-//             render: (A) => `<p style="background-color:${A.dotColor}"> ${A.name}</p>`
-//         },
+export const dataTable = new DataTable(tableElement, {
+  sortable: true,
+  searchable: true,
+  paging: false,
+  header: true,
+  footer: false,
+  scrollY: "60vh",
+  data: {
+    headings: [
+      '<i class="far fa-calendar-alt"></i>',
+      '<i class="fas fa-running"></i>/<i class="fas fa-biking"></i>',
+      `<i class="fas fa-road"></i> (${DIST_LABEL})`,
+      '<i class="fas fa-hourglass-end"></i>',
+      '<i class="fas fa-file-signature"></i>',
+    ],
+  }
+});
 
-//     ],
 
-//     imgColumn = {
-//         title: "<i class='fa fa-user' aria-hidden='true'></i>",
-//         data: "owner",
-//         render: util.formatUserId
-//     };
-
-// const atable = $('#activitiesList').DataTable({
-//                 paging: false,
-//                 deferRender: true,
-//                 scrollY: "60vh",
-//                 // scrollX: true,
-//                 scrollCollapse: true,
-//                 // scroller: true,
-//                 order: [[ 0, "desc" ]],
-//                 select: util.isMobileDevice()? "multi" : "os",
-//                 data: appState.items.values(),
-//                 rowId: "id",
-//                 columns: tableColumns
-//             }).on( 'select', handle_table_selections)
-//               .on( 'deselect', handle_table_selections);
-
-// const tableScroller = $('.dataTables_scrollBody');
-
+/*
 let tableColumns = [
     {
       title: '<i class="fa fa-calendar" aria-hidden="true"></i>',
@@ -105,6 +69,7 @@ let tableColumns = [
     data: "owner",
     render: util.formatUserId,
   };
+*/
 
 export function makeTable(items) {
   const colData = [];

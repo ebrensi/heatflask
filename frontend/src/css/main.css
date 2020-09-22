@@ -191,6 +191,10 @@ div.progress.msgbox {
   text-align: center;
 }
 
+progress {
+  width: 75%;
+}
+
 div.titlebar {
   padding-right: 10px !important;
 }

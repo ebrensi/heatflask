@@ -19,6 +19,7 @@ import { MAPBOX_ACCESS_TOKEN } from "./Init.js";
 
 let center, zoom;
 
+
 // Geohash uses "lon" for longitude and leaflet uses "lng"
 function ghDecode(s) {
   const obj = Geohash.decode(s);
