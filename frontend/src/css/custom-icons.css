@@ -198,6 +198,10 @@
   background-size: 1rem 1rem;
 }
 
+.ci-activity:before {
+    background: url("../images/activity-icons/activity.svg");
+}
+
 .ci-alpine-ski:before {
     background: url("../images/activity-icons/alpine-ski.svg");
 }
@@ -294,6 +298,11 @@
 .ci-windsurf:before {
     background: url("../images/activity-icons/windsurf.svg");
 }
+
+.ci-weights:before {
+    background: url("../images/activity-icons/weights.svg");
+}
+
 
 .ci-yoga:before {
     background: url("../images/activity-icons/yoga.svg");
