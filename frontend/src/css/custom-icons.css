@@ -1,0 +1,307 @@
+/*
+ * Here we define css bindings for custom icons that we got off of the
+ *  web or wherever.  It is meant to make them similar to font-awesome icons
+ *  in how they are inserted, except that rather than .fa class name we
+ *   use .ci
+ */
+
+
+/* This first part is adapted from font-awesome, but fa, fas, far etc have
+ *  have been replaced with ci (custom icons)
+ */
+.ci {
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-font-smoothing: antialiased;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  text-rendering: auto;
+  line-height: 1; }
+
+.ci-lg {
+  font-size: 1.33333em;
+  line-height: 0.75em;
+  vertical-align: -.0667em; }
+
+.ci-xs {
+  font-size: .75em; }
+
+.ci-sm {
+  font-size: .875em; }
+
+.ci-1x {
+  font-size: 1em; }
+
+.ci-2x {
+  font-size: 2em; }
+
+.ci-3x {
+  font-size: 3em; }
+
+.ci-4x {
+  font-size: 4em; }
+
+.ci-5x {
+  font-size: 5em; }
+
+.ci-6x {
+  font-size: 6em; }
+
+.ci-7x {
+  font-size: 7em; }
+
+.ci-8x {
+  font-size: 8em; }
+
+.ci-9x {
+  font-size: 9em; }
+
+.ci-10x {
+  font-size: 10em; }
+
+.ci-fw {
+  text-align: center;
+  width: 1.25em; }
+
+.ci-ul {
+  list-style-type: none;
+  margin-left: 2.5em;
+  padding-left: 0; }
+  .ci-ul > li {
+    position: relative; }
+
+.ci-li {
+  left: -2em;
+  position: absolute;
+  text-align: center;
+  width: 2em;
+  line-height: inherit; }
+
+.ci-border {
+  border: solid 0.08em #eee;
+  border-radius: .1em;
+  padding: .2em .25em .15em; }
+
+.ci-pull-left {
+  float: left; }
+
+.ci-pull-right {
+  float: right; }
+
+.ci.ci-pull-left,
+.cis.ci-pull-left,
+.cir.ci-pull-left,
+.cil.ci-pull-left,
+.cib.ci-pull-left {
+  margin-right: .3em; }
+
+.ci.ci-pull-right,
+.cis.ci-pull-right,
+.cir.ci-pull-right,
+.cil.ci-pull-right,
+.cib.ci-pull-right {
+  margin-left: .3em; }
+
+.ci-spin {
+  -webkit-animation: fa-spin 2s infinite linear;
+          animation: fa-spin 2s infinite linear; }
+
+.ci-pulse {
+  -webkit-animation: fa-spin 1s infinite steps(8);
+          animation: fa-spin 1s infinite steps(8); }
+
+@-webkit-keyframes fa-spin {
+  0% {
+    -webkit-transform: rotate(0deg);
+            transform: rotate(0deg); }
+  100% {
+    -webkit-transform: rotate(360deg);
+            transform: rotate(360deg); } }
+
+@keyframes fa-spin {
+  0% {
+    -webkit-transform: rotate(0deg);
+            transform: rotate(0deg); }
+  100% {
+    -webkit-transform: rotate(360deg);
+            transform: rotate(360deg); } }
+
+.ci-rotate-90 {
+  -ms-filter: "progid:DXImageTransform.Microsoft.BasicImage(rotation=1)";
+  -webkit-transform: rotate(90deg);
+          transform: rotate(90deg); }
+
+.ci-rotate-180 {
+  -ms-filter: "progid:DXImageTransform.Microsoft.BasicImage(rotation=2)";
+  -webkit-transform: rotate(180deg);
+          transform: rotate(180deg); }
+
+.ci-rotate-270 {
+  -ms-filter: "progid:DXImageTransform.Microsoft.BasicImage(rotation=3)";
+  -webkit-transform: rotate(270deg);
+          transform: rotate(270deg); }
+
+.ci-flip-horizontal {
+  -ms-filter: "progid:DXImageTransform.Microsoft.BasicImage(rotation=0, mirror=1)";
+  -webkit-transform: scale(-1, 1);
+          transform: scale(-1, 1); }
+
+.ci-flip-vertical {
+  -ms-filter: "progid:DXImageTransform.Microsoft.BasicImage(rotation=2, mirror=1)";
+  -webkit-transform: scale(1, -1);
+          transform: scale(1, -1); }
+
+.ci-flip-both, .ci-flip-horizontal.ci-flip-vertical {
+  -ms-filter: "progid:DXImageTransform.Microsoft.BasicImage(rotation=2, mirror=1)";
+  -webkit-transform: scale(-1, -1);
+          transform: scale(-1, -1); }
+
+:root .ci-rotate-90,
+:root .ci-rotate-180,
+:root .ci-rotate-270,
+:root .ci-flip-horizontal,
+:root .ci-flip-vertical,
+:root .ci-flip-both {
+  -webkit-filter: none;
+          filter: none; }
+
+.ci-stack {
+  display: inline-block;
+  height: 2em;
+  line-height: 2em;
+  position: relative;
+  vertical-align: middle;
+  width: 2.5em; }
+
+.ci-stack-1x,
+.ci-stack-2x {
+  left: 0;
+  position: absolute;
+  text-align: center;
+  width: 100%; }
+
+.ci-stack-1x {
+  line-height: inherit; }
+
+.ci-stack-2x {
+  font-size: 2em; }
+
+.ci-inverse {
+  color: #fff; }
+
+/* end font-awesome stuff */
+
+.ci::before {
+  display: inline-block;
+  content: "";
+  background-repeat: no-repeat;
+  background-size: 1rem 1rem;
+}
+
+.ci-alpine-ski:before {
+    background: url("../images/activity-icons/alpine-ski.svg");
+}
+
+.ci-canoe:before {
+    background: url("../images/activity-icons/canoe.svg");
+}
+
+.ci-canoe-alt:before {
+    background: url("../images/activity-icons/canoe-alt.svg");
+}
+
+.ci-climb:before {
+  background: url("../images/activity-icons/climbing.svg");
+}
+
+.ci-crossfit:before {
+    background: url("../images/activity-icons/crossfit.svg");
+}
+
+.ci-dumbell:before {
+    background: url("../images/activity-icons/dumbell.svg");
+}
+
+.ci-kayak:before {
+    background: url("../images/activity-icons/kayak.svg");
+}
+
+.ci-kayak-alt:before {
+    background: url("../images/activity-icons/kayak-alt.svg");
+}
+
+.ci-kettlebell:before {
+    background: url("../images/activity-icons/climbing.svg");
+}
+
+.ci-kitesurf:before {
+    background: url("../images/activity-icons/kitesurf.svg");
+}
+
+.ci-meditate:before {
+    background: url("../images/activity-icons/meditate.svg");
+}
+
+
+.ci-roller-skate:before {
+    background: url("../images/activity-icons/inline-skating.svg");
+}
+
+.ci-roller-ski:before {
+    background: url("../images/activity-icons/inline-ski.svg");
+}
+
+.ci-rowing:before {
+    background: url("../images/activity-icons/rowing.svg");
+}
+
+.ci-sailboat:before {
+    background: url("../images/activity-icons/sailboat.svg");
+}
+
+.ci-skateboarding:before {
+    background: url("../images/activity-icons/skateboarding.svg");
+}
+
+.ci-snowshoes:before {
+    background: url("../images/activity-icons/snowshoes.svg");
+}
+
+.ci-soccer:before {
+    background: url("../images/activity-icons/soccer.svg");
+}
+
+.ci-spinning:before {
+    background: url("../images/activity-icons/spinning.svg");
+}
+
+.ci-stairs:before {
+    background: url("../images/activity-icons/stairs.svg");
+}
+
+.ci-standup-paddle:before {
+    background: url("../images/activity-icons/sup-paddle.svg");
+}
+
+.ci-surf:before {
+    background: url("../images/activity-icons/surf.svg");
+}
+
+.ci-treadmill:before {
+    background: url("../images/activity-icons/treadmill.svg");
+}
+
+.ci-windsurf:before {
+    background: url("../images/activity-icons/windsurf.svg");
+}
+
+.ci-yoga:before {
+    background: url("../images/activity-icons/yoga.svg");
+}
+
+.ci-yoga-alt:before {
+    background: url("../images/activity-icons/yoga-alt.svg");
+}
+
+
+
