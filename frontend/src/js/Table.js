@@ -17,9 +17,10 @@ export const dataTable = new DataTable(tableElement, {
     headings: [
       '<i class="far fa-calendar-alt"></i>',
       '<i class="fas fa-running"></i>/<i class="fas fa-biking"></i>',
+      // '<span class="ci ci-activity"></span>',
       `<i class="fas fa-road"></i> (${DIST_LABEL})`,
       '<i class="fas fa-hourglass-end"></i>',
-      '<i class="fas fa-file-signature"></i>',
+      '<i class="fas fa-file-signature"></i>'
     ],
   }
 });

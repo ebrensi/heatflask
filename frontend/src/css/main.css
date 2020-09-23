@@ -76,7 +76,7 @@ button.avatar {
   height: 32px;
   border: none;
   padding: 10px;
-  transition: transform 0.5s
+  transition: transform 0.5s;
 }
 
 button.avatar[data-url] {
@@ -86,9 +86,8 @@ button.avatar[data-url] {
 button.avatar:hover {
   cursor: pointer;
   transform: scale(0.9);
-  transition: transform 0.5s
+  transition: transform 0.5s;
 }
-
 
 .error-message {
   color: red;
@@ -145,6 +144,14 @@ a:visited {
   display: block;
 }
 
+/* remove little sorting arrows to save space */
+/*
+.dataTable-sorter::before,
+.dataTable-sorter::after {
+  display:none;
+}
+*/
+
 .dataTable-table > thead > tr {
   background-color: #0000ff50;
 }
@@ -164,7 +171,7 @@ input[data-bind="quantity"] {
 /* badges on info tab */
 i.icon-button {
   font-size: 32px;
-  color: white;
+  /*color: white;*/
   transition: transform 0.25s;
   margin-left: 10px;
   margin-right: 10px;
@@ -174,7 +181,7 @@ i.icon-button {
 }
 
 i.icon-button:hover {
-  color: #ffc439;
+  /*color: #ffc439;*/
   transform: scale(3);
 }
 
@@ -203,4 +210,49 @@ div.promptButtons {
   display: none;
 }
 
+.fa-twitter {
+  color: #38a1f3;
+}
+
+.fa-linkedin {
+  color: #0077b5;
+}
+
+.fa-strava {
+  color: #fc4c02;
+}
+
+.fa-github {
+  color: #fff;
+}
+
+.fa-instagram {
+  background: -moz-linear-gradient(
+    45deg,
+    #f09433 0%,
+    #e6683c 25%,
+    #dc2743 50%,
+    #cc2366 75%,
+    #bc1888 100%
+  );
+  background: -webkit-linear-gradient(
+    45deg,
+    #f09433 0%,
+    #e6683c 25%,
+    #dc2743 50%,
+    #cc2366 75%,
+    #bc1888 100%
+  );
+  background: linear-gradient(
+    45deg,
+    #f09433 0%,
+    #e6683c 25%,
+    #dc2743 50%,
+    #cc2366 75%,
+    #bc1888 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
 /* end-heatflask */
