@@ -2,7 +2,7 @@
  * Strava related stuff
  */
 
-import "../css/custom-icons.css";
+// import "../css/custom-icons.css";
 
 /**
  * @param  {(String|Number)} id - A Strava activity id

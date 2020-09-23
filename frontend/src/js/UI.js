@@ -19,7 +19,7 @@ import infoTabHTML from "bundle-text:../html/main-info.html";
 
 import { makeQuery, abortQuery } from "./DataImport.js";
 
-import "./Table.js";
+// import "./Table.js";
 
 /* TODO: have two UI submodules: UI-simple.js (single) and
                                  UI-complex.js (multi-user)

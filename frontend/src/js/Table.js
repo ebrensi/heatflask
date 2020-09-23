@@ -15,16 +15,45 @@ export const dataTable = new DataTable(tableElement, {
   scrollY: "60vh",
   data: {
     headings: [
-      '<i class="far fa-calendar-alt"></i>',
-      '<i class="fas fa-running"></i>/<i class="fas fa-biking"></i>',
+      '<i class="far fa-calendar-alt"></i>', // date/time
+      '<i class="fas fa-running"></i>/<i class="fas fa-biking"></i>', // type
       // '<span class="ci ci-activity"></span>',
-      `<i class="fas fa-road"></i> (${DIST_LABEL})`,
-      '<i class="fas fa-hourglass-end"></i>',
-      '<i class="fas fa-file-signature"></i>'
+      `<i class="fas fa-road"></i> (${DIST_LABEL})`,  // distance
+      '<i class="fas fa-hourglass-end"></i>',  // duration
+      '<i class="fas fa-file-signature"></i>'  // title
     ],
+
+    columns: [
+      { select: 0, type: "string", render: formatTimestamp, sort: "desc"},
+      { select: 1, type: "string", render: formatAtype },
+      { select: 2, type: "number", render: formatDistance },
+      { select: 3, type: "number", render: formatDuration },
+      { select: 4, type: "string", render: formatTitle, sortable: false },
+    ]
   }
 });
 
+
+function formatTimestamp(tsLocal) {
+  debugger;
+  return tsLocal
+}
+
+function formatAtype(data) {
+  return data
+}
+
+function formatDistance(data) {
+  return data
+}
+
+function formatDuration(data) {
+  return data
+}
+
+function formatTitle(data) {
+  return data
+}
 
 /*
 let tableColumns = [

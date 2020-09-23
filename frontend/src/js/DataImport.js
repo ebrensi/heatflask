@@ -5,7 +5,10 @@ import { controlWindow } from "./MapAPI.js";
 import { ATYPE } from "./strava.js";
 import queryBackend from "./Socket.js";
 
+import { dataTable } from "./Table.js";
+
 let numActivities, count;
+const dtRows = dataTable.rows();
 
 /*
  * Set up a message box that appears only when app.flags.importing is true
@@ -125,6 +128,9 @@ function onMessage(A) {
   const tsLocal = new Date((tup[0] + tup[1] * 3600) * 1000);
   const UTCtimestamp = tup[0];
   const bounds = latLngBounds(A["bounds"]["SW"], A["bounds"]["NE"]);
+
+  debugger;
+  dtRows.add([tup[0], atype, A.total_distance, A.elapsed_time, A.name]);
 
   // dotLayer.addItem(
   //   id,
