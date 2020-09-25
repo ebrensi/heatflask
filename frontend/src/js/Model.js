@@ -191,7 +191,7 @@ export const currentUser = BoundObject.fromDOMelements(
  */
 if (CURRENT_USER) {
   Object.assign(currentUser, CURRENT_USER);
-  currentUser.url = USER_URLS(currentUser.id)
+  currentUser.url = USER_URLS(currentUser.id);
 
   // const IMPERIAL = CURRENT_USER['measurement_preference'] == "feet"
   // const DIST_UNIT = IMPERIAL? 1609.34 : 1000.0;

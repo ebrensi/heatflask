@@ -1,4 +1,4 @@
-import * as L from "leaflet";
+import { L } from "./MapAPI.js";
 
 L.Control.fps = L.Control.extend({
   lastCalledTime: 1,

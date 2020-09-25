@@ -4,6 +4,7 @@
  * Efrem Rensi 2020
  */
 
+// import * as L from "../../node_modules/leaflet/dist/leaflet-src.esm.js";
 import * as L from "leaflet";
 import Geohash from "latlon-geohash";
 
@@ -19,6 +20,7 @@ import { MAPBOX_ACCESS_TOKEN } from "./Init.js";
 
 let center, zoom;
 
+export { L };
 
 // Geohash uses "lon" for longitude and leaflet uses "lng"
 function ghDecode(s) {
@@ -66,14 +68,12 @@ map.on("moveend", () => {
   // console.log(`(${center.lat}, ${center.lng}, ${zoom}) -> ${gh}`);
 });
 
-
 /*
  *  Make control window accessible as an export
  */
 export function controlWindow(options) {
   return L.control.window(map, options);
 }
-
 
 /*
  * Initialize map Baselayers
@@ -147,15 +147,12 @@ for (const name in baselayers) {
   }
 }
 
-
 app.vParams.baselayer = blName;
 baselayers[blName].addTo(map);
 
 map.on("baselayerchange", (e) => {
   app.vParams.baselayer = e.layer.name;
 });
-
-
 
 // Add baselayer selection control to map
 L.control.layers(baselayers, null, { position: "topleft" }).addTo(map);

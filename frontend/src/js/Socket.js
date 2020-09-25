@@ -9,7 +9,6 @@ import { decode } from "@msgpack/msgpack";
 
 export let sock, wskey;
 
-
 /**
  * The default export of this module is a function that imports messagepack
  *   encoded objects from the backend, executing the given callback with each
@@ -85,7 +84,6 @@ function closeSocket() {
   }
   wskey = null;
 }
-
 
 window.addEventListener("beforeunload", () => {
   if (navigator.sendBeacon) {

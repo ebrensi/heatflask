@@ -1,5 +1,4 @@
-import * as L from "leaflet";
-import { map } from "./mapAPI.js";
+import { L, map } from "./mapAPI.js";
 import { dotLayer } from "./DotLayer/DotLayer.js";
 
 import "leaflet-areaselect";

@@ -5,7 +5,6 @@
  *   use .ci
  */
 
-
 /* This first part is adapted from font-awesome, but fa, fas, far etc have
  *  have been replaced with ci (custom icons)
  */
@@ -198,30 +197,29 @@
     height: 32px;
 }*/
 
-
 .ci:before {
   display: block;
-  content: ' ';
-  background: '';
+  content: " ";
+  background: "";
   /*background-repeat: no-repeat;*/
   background-size: 1rem 1rem;
   size: 1rem 1rem;
 }
 
 .ci-activity:before {
-    content: url(../images/activity-icons/activity.svg);
+  content: url(../images/activity-icons/activity.svg);
 }
 
 .ci-alpine-ski:before {
-    background: url(../images/activity-icons/alpine-ski.svg);
+  background: url(../images/activity-icons/alpine-ski.svg);
 }
 
 .ci-canoe:before {
-    background: url(../images/activity-icons/canoe.svg);
+  background: url(../images/activity-icons/canoe.svg);
 }
 
 .ci-canoe-alt:before {
-    background: url(../images/activity-icons/canoe-alt.svg);
+  background: url(../images/activity-icons/canoe-alt.svg);
 }
 
 .ci-climb:before {
@@ -229,98 +227,93 @@
 }
 
 .ci-crossfit:before {
-    background: url(../images/activity-icons/crossfit.svg);
+  background: url(../images/activity-icons/crossfit.svg);
 }
 
 .ci-dumbell:before {
-    background: url(../images/activity-icons/dumbell.svg);
+  background: url(../images/activity-icons/dumbell.svg);
 }
 
 .ci-kayak:before {
-    background: url(../images/activity-icons/kayak.svg);
+  background: url(../images/activity-icons/kayak.svg);
 }
 
 .ci-kayak-alt:before {
-    background: url(../images/activity-icons/kayak-alt.svg);
+  background: url(../images/activity-icons/kayak-alt.svg);
 }
 
 .ci-kettlebell:before {
-    background: url(../images/activity-icons/climbing.svg);
+  background: url(../images/activity-icons/climbing.svg);
 }
 
 .ci-kitesurf:before {
-    background: url(../images/activity-icons/kitesurf.svg);
+  background: url(../images/activity-icons/kitesurf.svg);
 }
 
 .ci-meditate:before {
-    background: url(../images/activity-icons/meditate.svg);
+  background: url(../images/activity-icons/meditate.svg);
 }
 
-
 .ci-roller-skate:before {
-    background: url(../images/activity-icons/inline-skating.svg);
+  background: url(../images/activity-icons/inline-skating.svg);
 }
 
 .ci-roller-ski:before {
-    background: url(../images/activity-icons/roller-ski.svg);
+  background: url(../images/activity-icons/roller-ski.svg);
 }
 
 .ci-rowing:before {
-    background: url(../images/activity-icons/rowing.svg);
+  background: url(../images/activity-icons/rowing.svg);
 }
 
 .ci-sailboat:before {
-    background: url(../images/activity-icons/sailboat.svg);
+  background: url(../images/activity-icons/sailboat.svg);
 }
 
 .ci-skateboarding:before {
-    background: url(../images/activity-icons/skateboarding.svg);
+  background: url(../images/activity-icons/skateboarding.svg);
 }
 
 .ci-snowshoes:before {
-    background: url(../images/activity-icons/snowshoes.svg);
+  background: url(../images/activity-icons/snowshoes.svg);
 }
 
 .ci-soccer:before {
-    background: url(../images/activity-icons/soccer.svg);
+  background: url(../images/activity-icons/soccer.svg);
 }
 
 .ci-spinning:before {
-    background: url(../images/activity-icons/spinning.svg);
+  background: url(../images/activity-icons/spinning.svg);
 }
 
 .ci-stairs:before {
-    background: url(../images/activity-icons/stairs.svg);
+  background: url(../images/activity-icons/stairs.svg);
 }
 
 .ci-standup-paddle:before {
-    background: url(../images/activity-icons/sup-paddle.svg);
+  background: url(../images/activity-icons/sup-paddle.svg);
 }
 
 .ci-surf:before {
-    background: url(../images/activity-icons/surf.svg);
+  background: url(../images/activity-icons/surf.svg);
 }
 
 .ci-treadmill:before {
-    background: url(../images/activity-icons/treadmill.svg);
+  background: url(../images/activity-icons/treadmill.svg);
 }
 
 .ci-windsurf:before {
-    background: url(../images/activity-icons/windsurf.svg);
+  background: url(../images/activity-icons/windsurf.svg);
 }
 
 .ci-weights:before {
-    background: url(../images/activity-icons/weights.svg);
+  background: url(../images/activity-icons/weights.svg);
 }
 
-
 .ci-yoga:before {
-    background: url(../images/activity-icons/yoga.svg);
+  background: url(../images/activity-icons/yoga.svg);
 }
 
 .ci-yoga-alt:before {
-    background: url(../images/activity-icons/yoga-alt.svg);
+  background: url(../images/activity-icons/yoga-alt.svg);
 }
-
-
-

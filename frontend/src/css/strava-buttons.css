@@ -1,4 +1,3 @@
-
 /*
  * The Strava Authentication button
  */
@@ -19,11 +18,11 @@ button.strava-auth:hover {
 }
 
 button.strava-auth:focus {
-    outline: none;
-    transform: scale(0.95);
-    transition: transform 0.1s;
+  outline: none;
+  transform: scale(0.95);
+  transition: transform 0.1s;
 }
 
 button.strava-auth:focus-visible {
-    outline: 1px dashed gray;
+  outline: 1px dashed gray;
 }

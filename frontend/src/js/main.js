@@ -20,5 +20,4 @@ import "./UI.js";
 
 import "../css/main.css"; // This should be the last imported CSS
 
-
 // debugger;

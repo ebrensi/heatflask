@@ -1,8 +1,7 @@
-import * as L from "leaflet";
 import "./L.BoxHook.js";
 import "./L.SwipeSelect.js";
 
-import { map, dotLayer } from "./mainComponents.js";
+import { L, map } from "./MapAPI.js";
 import appState from "./appState.js";
 
 // Select-activities-in-region functionality IIFE

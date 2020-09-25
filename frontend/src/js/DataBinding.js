@@ -311,14 +311,12 @@ export class BoundObject extends Object {
       for (const el of elements) {
         const { attr, prop, event } = el.dataset;
         bv.addDOMbinding(
-          mergeDefaults(defaults,
-            {
-              element: el,
-              property: prop,
-              attribute: attr,
-              event: event,
-            }
-          )
+          mergeDefaults(defaults, {
+            element: el,
+            property: prop,
+            attribute: attr,
+            event: event,
+          })
         );
       }
     }
@@ -342,14 +340,12 @@ export class BoundObject extends Object {
       bv.value = bv.value || el.getAttribute(attr) || el[prop];
 
       bv.addDOMbinding(
-        mergeDefaults(defaults,
-          {
-            element: el,
-            attribute: attr,
-            property: prop,
-            event: el.dataset.event,
-          },
-        )
+        mergeDefaults(defaults, {
+          element: el,
+          attribute: attr,
+          property: prop,
+          event: el.dataset.event,
+        })
       );
     }
     return this;

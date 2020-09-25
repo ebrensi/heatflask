@@ -62,7 +62,7 @@ const _specs = {
   Walk: ["pace", "#ff00ff", '<i class="fas fa-walking"></i>'], // fuchsia
   WeightTraining: [null, null, '<i class="ci ci-weights"></i>'],
   Wheelchair: ["speed", "#2b60de", '<i class="fas fa-wheelchair"></i>'],
-  Windsurf: ["speed", "#4b0082",'<i class="ci ci-windsurf"></i>'],
+  Windsurf: ["speed", "#4b0082", '<i class="ci ci-windsurf"></i>'],
   Workout: [null, null, "#4b0082", '<i class="ci ci-activity"></i>'],
   Yoga: [null, null, '<i class="ci ci-meditate"></i>'],
   undefined: [null, '<i class="ci ci-activity"></i>'],
@@ -82,7 +82,8 @@ export const ATYPE = {
    * @return {String} The color code for that activity type
    */
   pathColor: function (type) {
-    const spec = _specs[type] || _specs[type.toLowerCase()] || _specs[undefined];
+    const spec =
+      _specs[type] || _specs[type.toLowerCase()] || _specs[undefined];
     return spec[1];
   },
 
@@ -99,7 +100,8 @@ export const ATYPE = {
    * @return {atypeSpec} An object with specs for this activity type
    */
   specs: function (type) {
-      const spec = _specs[type] || _specs[type.toLowerCase()] || _specs[undefined];
+    const spec =
+      _specs[type] || _specs[type.toLowerCase()] || _specs[undefined];
 
     return { vtype: spec[0], pathColor: spec[1], name: spec[2] || type };
   },

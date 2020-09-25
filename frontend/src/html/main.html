@@ -65,7 +65,13 @@
               data-prop="href"
               data-class="target-user"
               target="_blank"
-            ><button class="avatar" data-class="target-user" data-bind="avatar" data-attr="data-url"></button></a>
+              ><button
+                class="avatar"
+                data-class="target-user"
+                data-bind="avatar"
+                data-attr="data-url"
+              ></button
+            ></a>
 
             <span
               data-bind="username"
@@ -197,7 +203,7 @@
           >
             <!-- only display this button if app.flag.importing is true -->
             <div class="progress">
-            <progress class="progbar"></progress>
+              <progress class="progbar"></progress>
             </div>
             <br />
             <button
@@ -236,7 +242,8 @@
                   data-class="current-user"
                   data-bind="avatar"
                   data-prop="data-url"
-                ></button>(current-user)</span
+                ></button
+                >(current-user)</span
               >
             </a>
             <br /><br />
@@ -279,8 +286,13 @@
               data-bind="strava-url"
               data-prop="href"
               data-class="current-user"
-            ><button class="avatar" data-class="target-user" data-bind="avatar" data-attr="data-url"></button></a>
-
+              ><button
+                class="avatar"
+                data-class="target-user"
+                data-bind="avatar"
+                data-attr="data-url"
+              ></button
+            ></a>
 
             <span
               data-bind="username"
@@ -308,7 +320,12 @@
           </h3>
 
           <a href="https://www.strava.com/settings/profile" target="_blank">
-            <button class="avatar" data-bind="avatar" data-prop="data-url" data-class="current-user"></button>
+            <button
+              class="avatar"
+              data-bind="avatar"
+              data-prop="data-url"
+              data-class="current-user"
+            ></button>
           </a>
 
           <br /><br />
@@ -554,9 +571,8 @@
     <div id="map" class="sidebar-map"></div>
   </body>
 
-
-   <script>
-    window["argstring"] = '{{ args | tojson | safe }}';
+  <script>
+    window["argstring"] = "{{ args | tojson | safe }}";
   </script>
 
   <script src="../js/main.js"></script>

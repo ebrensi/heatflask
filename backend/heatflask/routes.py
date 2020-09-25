@@ -793,9 +793,16 @@ def paypal_ipn_handler():
 def test_endpoint():
     return "yo!"
 
-
-# This endpoint allows access to the source code for source maps (debugging)
+#
+# These endpoints enables access to the source code for source maps (debugging)
+#
 @app.route("/src/<path:loc>")
 def serve_source(loc):
     # log.debug(f"request for source: {loc}")
     return send_from_directory("../../frontend/src/", loc)
+
+
+@app.route("/node_modules/<path:loc>")
+def serve_source_npm(loc):
+    # log.debug(f"request for source: {loc}")
+    return send_from_directory("../../frontend/node_modules/", loc)

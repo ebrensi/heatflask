@@ -1,6 +1,5 @@
-import { latLngBounds } from "leaflet";
 import app from "./Model.js";
-import { controlWindow } from "./MapAPI.js";
+import { L, controlWindow } from "./MapAPI.js";
 // import { dotLayer } from "./DotLayerAPI.js";
 import { ATYPE } from "./strava.js";
 import queryBackend from "./Socket.js";
@@ -127,15 +126,15 @@ function onMessage(A) {
   const tup = A["ts"];
   // const tsLocal = new Date((tup[0] + tup[1] * 3600) * 1000);
   // const UTCtimestamp = tup[0];
-  // const bounds = latLngBounds(A["bounds"]["SW"], A["bounds"]["NE"]);
+  // const bounds = L.latLngBounds(A["bounds"]["SW"], A["bounds"]["NE"]);
 
-
+  // debugger;
   dtRows.add([
-    id,
-    (tup[0] + tup[1] * 3600) * 1000,
+    String(id),
+    String(tup[0] + tup[1] * 3600) * 1000,
     A.type,
-    A.total_distance,
-    A.elapsed_time,
+    String(A.total_distance),
+    String(A.elapsed_time),
     A.name,
   ]);
 
@@ -213,7 +212,7 @@ function onMessage(A) {
 // }
 
 // function getBounds(ids) {
-//   const bounds = latLngBounds();
+//   const bounds = L.latLngBounds();
 //   for (const id of ids) {
 //     bounds.extend(app.items.get(id).bounds);
 //   }

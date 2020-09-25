@@ -1,4 +1,5 @@
-import { DataTable } from "simple-datatables";
+// import { DataTable } from "simple-datatables";
+import { DataTable } from "../../node_modules/simple-datatables/src/index.js";
 import "../../node_modules/simple-datatables/src/style.css";
 
 const tableElement = document.getElementById("activitiesList");
@@ -61,7 +62,7 @@ function formatDistance(distance, cell) {
 function formatDuration(duration, cell) {
   // cell.dataset.content = duration;
   // debugger;
-  return duration
+  return duration;
 }
 
 function formatTitle(title) {
