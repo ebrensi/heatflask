@@ -125,12 +125,18 @@ function onMessage(A) {
   // assign this activity a path color and speed type (pace, mph)
   const atype = ATYPE.specs(A["type"]);
   const tup = A["ts"];
-  const tsLocal = new Date((tup[0] + tup[1] * 3600) * 1000);
-  const UTCtimestamp = tup[0];
-  const bounds = latLngBounds(A["bounds"]["SW"], A["bounds"]["NE"]);
+  // const tsLocal = new Date((tup[0] + tup[1] * 3600) * 1000);
+  // const UTCtimestamp = tup[0];
+  // const bounds = latLngBounds(A["bounds"]["SW"], A["bounds"]["NE"]);
 
-  debugger;
-  dtRows.add([tup[0], atype, A.total_distance, A.elapsed_time, A.name]);
+  dtRows.add([
+    id,
+    (tup[0] + tup[1] * 3600) * 1000,
+    atype,
+    A.total_distance,
+    A.elapsed_time,
+    A.name,
+  ]);
 
   // dotLayer.addItem(
   //   id,
@@ -146,14 +152,10 @@ function onMessage(A) {
 
   count++;
   if (count % 5 === 0) {
-    const prog = numActivities? count / numActivities : null;
+    const prog = numActivities ? count / numActivities : null;
     displayProgressInfo(`imported ${count}/${numActivities || "?"}`, prog);
   }
 }
-
-
-
-
 
 /* Rendering */
 // function updateLayers(msg) {

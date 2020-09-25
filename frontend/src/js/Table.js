@@ -3,7 +3,6 @@ import "../../node_modules/simple-datatables/src/style.css";
 
 const tableElement = document.getElementById("activitiesList");
 
-
 const DIST_LABEL = "mi";
 
 export const dataTable = new DataTable(tableElement, {
@@ -15,44 +14,50 @@ export const dataTable = new DataTable(tableElement, {
   scrollY: "60vh",
   data: {
     headings: [
+      "id",
       '<i class="far fa-calendar-alt"></i>', // date/time
       '<i class="fas fa-running"></i>/<i class="fas fa-biking"></i>', // type
       // '<span class="ci ci-activity"></span>',
-      `<i class="fas fa-road"></i> (${DIST_LABEL})`,  // distance
-      '<i class="fas fa-hourglass-end"></i>',  // duration
-      '<i class="fas fa-file-signature"></i>'  // title
+      `<i class="fas fa-road"></i> (${DIST_LABEL})`, // distance
+      '<i class="fas fa-hourglass-end"></i>', // duration
+      '<i class="fas fa-file-signature"></i>', // title
     ],
 
     columns: [
-      { select: 0, type: "string", render: formatTimestamp, sort: "desc"},
-      { select: 1, type: "string", render: formatAtype },
-      { select: 2, type: "number", render: formatDistance },
-      { select: 3, type: "number", render: formatDuration },
-      { select: 4, type: "string", render: formatTitle, sortable: false },
-    ]
-  }
+      { select: 0, type: "number", render: formatId },
+      { select: 1, type: "number", render: formatTimestamp, sort: "desc" },
+      { select: 2, type: "string", render: formatAtype },
+      { select: 3, type: "number", render: formatDistance },
+      { select: 4, type: "number", render: formatDuration },
+      { select: 5, type: "string", render: formatTitle, sortable: false },
+    ],
+  },
 });
 
-
-function formatTimestamp(tsLocal) {
-  debugger;
-  return tsLocal
+function formatId(id, cell, row) {
+  row.dataset.id = id;
+  return id;
 }
 
-function formatAtype(data) {
-  return data
+function formatTimestamp(tsLocal, cell) {
+  cell.dataset.content = tsLocal;
+  return new Date(tsLocal).toLocaleString();
 }
 
-function formatDistance(data) {
-  return data
+function formatAtype(aType) {
+  return aType;
 }
 
-function formatDuration(data) {
-  return data
+function formatDistance(distance, cell) {
+  return (cell.dataset.content = distance);
 }
 
-function formatTitle(data) {
-  return data
+function formatDuration(duration, cell) {
+  return (cell.dataset.content = duration);
+}
+
+function formatTitle(title) {
+  return title;
 }
 
 /*
