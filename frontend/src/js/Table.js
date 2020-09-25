@@ -25,7 +25,7 @@ export const dataTable = new DataTable(tableElement, {
 
     columns: [
       { select: 0, type: "number", render: formatId },
-      { select: 1, type: "number", render: formatTimestamp, sort: "desc" },
+      { select: 1, type: "string", render: formatTimestamp, sort: "desc" },
       { select: 2, type: "string", render: formatAtype },
       { select: 3, type: "number", render: formatDistance },
       { select: 4, type: "number", render: formatDuration },
@@ -35,28 +35,37 @@ export const dataTable = new DataTable(tableElement, {
 });
 
 function formatId(id, cell, row) {
-  row.dataset.id = id;
+  // debugger;
+  // row.dataset.id = id;
   return id;
 }
 
 function formatTimestamp(tsLocal, cell) {
-  cell.dataset.content = tsLocal;
-  return new Date(tsLocal).toLocaleString();
+  // cell.dataset.content = tsLocal;
+  // debugger;
+  // return new Date(tsLocal).toLocaleString();
+  return tsLocal;
 }
 
 function formatAtype(aType) {
+  // debugger;
   return aType;
 }
 
 function formatDistance(distance, cell) {
-  return (cell.dataset.content = distance);
+  // cell.dataset.content = distance;
+  // debugger;
+  return distance;
 }
 
 function formatDuration(duration, cell) {
-  return (cell.dataset.content = duration);
+  // cell.dataset.content = duration;
+  // debugger;
+  return duration
 }
 
 function formatTitle(title) {
+  // debugger;
   return title;
 }
 

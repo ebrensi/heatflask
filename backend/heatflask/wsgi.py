@@ -31,12 +31,15 @@ if app.config.get("OFFLINE"):
 elif app.config.get("USE_REMOTE_DB"):
     loc_status = " USING REMOTE DATA-STORES"
 
-keys = {"TTL_INDEX", "TTL_DB", "TTL_CACHE"}
-ttls = {s: "{}".format(timedelta(seconds=app.config[s])) for s in keys}
+ttl_keys = ["TTL_INDEX", "TTL_DB", "TTL_CACHE"]
+ttls = {k: f"{timedelta(seconds=app.config[k])}" for k in ttl_keys}
+
+env_var_keys = ["DEVELOPMENT"]
+env_vars = {k: f"{app.config[k]}" for k in env_var_keys}
 
 log.info(
-    "Heatflask server starting%s LOG_LEVEL=%s: %s", loc_status, log_level_name, ttls
-)
+    "Heatflask server starting%s LOG_LEVEL=%s:", loc_status, log_level_name)
+log.info("environment: %s, %s", ttls, env_vars)
 
 if __name__ == "__main__":
     from gevent import pywsgi

@@ -13,8 +13,8 @@ class Config(object):
     # For WhiteNoise static file serving
     # Folders that constain files that WhiteNoise will serve
     #  paths are relative to Flask app start point (backend/)
-    TEMPLATE_FOLDER = "../frontend/dist"
-    STATIC_FOLDERS = ["../frontend/dist", "../frontend/dist_unbundled"]
+    WHITENOISE_TEMPLATE_FOLDER = "../frontend/dist"
+    WHITENOISE_STATIC_FOLDERS = ["../frontend/dist", "../frontend/dist_unbundled"]
 
     LOG_LEVEL = os.environ.get("LOG_LEVEL", "DEBUG")
 

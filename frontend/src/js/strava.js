@@ -99,8 +99,7 @@ export const ATYPE = {
    * @return {atypeSpec} An object with specs for this activity type
    */
   specs: function (type) {
-    const atype = type.toLowerCase(),
-      spec = _specs[atype] || _specs[undefined];
+      const spec = _specs[type] || _specs[type.toLowerCase()] || _specs[undefined];
 
     return { vtype: spec[0], pathColor: spec[1], name: spec[2] || type };
   },

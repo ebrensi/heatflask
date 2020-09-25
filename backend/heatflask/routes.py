@@ -143,7 +143,7 @@ def redirect_to_new_domain():
 
     if changed:
         new_url = urlunparse(urlparts_list)
-        # log.debug("request to {}".format(request.url))
+        # log.debug(f"request to {request.url}")
         # log.debug("redirected to %s", new_url)
 
         return redirect(new_url, code=301)
@@ -205,7 +205,7 @@ def auth_callback():
     state = request.args.get("state")
 
     if "error" in request.args:
-        flash("Error: {}".format(request.args.get("error")))
+        flash(f"Error: {request.args.get('error')}")
         return redirect(state or url_for("splash"))
 
     scope = request.args.get("scope")
@@ -238,13 +238,13 @@ def auth_callback():
 
         except Exception:
             log.exception("authorization error")
-            flash("Authorization Error: {}".format(datetime.utcnow()))
+            flash(f"Authorization Error: {datetime.utcnow()}")
             return redirect(state)
 
         # remember=True, for persistent login.
         login_user(user, remember=True)
 
-        msg = "Authenticated{} {}".format(new_user, user, scope)
+        msg = f"Authenticated{new_user} {user}"
         log.info(msg)
         if new_user:
             EventLogger.new_event(msg=msg)
@@ -268,7 +268,7 @@ def logout(username):
     user_id = user.id
     username = user.username
     logout_user()
-    flash("user '{}' ({}) logged out".format(username, user_id))
+    flash(f"user '{username}' ({user_id}) logged out")
     return redirect(url_for("splash"))
 
 
@@ -278,11 +278,11 @@ def delete_index(username):
     user = Users.get(username)
     if user:
         user.delete_index()
-        msg = "index for {} deleted".format(user)
+        msg = f"index for {user} deleted"
         EventLogger.new_event()
         return msg
     else:
-        return "no user {}".format(username)
+        return f"no user {username}"
 
 
 @app.route("/<username>/delete")
@@ -299,8 +299,8 @@ def delete(username):
     except Exception as e:
         flash(str(e, "utf-8"))
     else:
-        flash("user '{}' ({}) deleted".format(username, user_id))
-        EventLogger.new_event(msg="{} deleted".format(user_id))
+        flash(f"user '{username}' ({user_id}) deleted")
+        EventLogger.new_event(msg=f"{user_id} deleted")
     return redirect(url_for("splash"))
 
 
@@ -324,7 +324,7 @@ def main(username):
 
     user = Users.get(username)
     if not user:
-        flash("user '{}' is not registered with heatflask".format(username))
+        flash(f"user '{username}' is not registered with heatflask")
         return redirect(url_for("splash"))
 
     try:
@@ -334,7 +334,7 @@ def main(username):
     except Exception:
         # if the logged-in user has a bad access_token
         #  then we log them out so they can re-authenticate
-        flash("Invalid access token for {}. please re-authenticate.".format(user))
+        flash(f"Invalid access token for {user}. please re-authenticate.")
         if current_user == user:
             logout_user()
             return login_manager.unauthorized()
@@ -342,7 +342,7 @@ def main(username):
             return redirect(url_for("splash"))
 
     ip = Utility.ip_address(request)
-    web_client_id = "H:{}:{}".format(ip, int(time.time()))
+    web_client_id = f"H:{ip}:{int(time.time())}"
     log.debug("%s OPEN", web_client_id)
 
     # Record the event unless current_user is an admin
@@ -381,12 +381,12 @@ def activities(username):
         try:
             user.delete_index()
         except Exception:
-            log.exception("error deleting index for {}".format(user))
+            log.exception(f"error deleting index for {user}")
 
     # Assign an id to this web client in order to prevent
     #  websocket access from unidentified users
     ip = Utility.ip_address(request)
-    web_client_id = "HA:{}:{}".format(ip, int(time.time()))
+    web_client_id = f"HA:{ip}:{int(time.time())}"
     log.debug("%s OPEN", web_client_id)
 
     args = {
@@ -458,7 +458,7 @@ def data_socket(ws):
             log.debug("%s received object %s", wsclient, obj)
 
     wsclient.close()
-    # log.debug("socket {} CLOSED".format(name))
+    # log.debug(f"socket {name} CLOSED")
 
 
 #  Endpoints for named demos
@@ -471,7 +471,7 @@ def demos(demo_key):
 
     params = demos.get(demo_key)
     if not params:
-        return 'demo "{}" does not exist'.format(demo_key)
+        return f'demo "{demo_key}" does not exist'
 
     return redirect(url_for("main", **params))
 
@@ -528,7 +528,7 @@ def cache_put(query_key):
             mongodb.queries.update_one({"_id": _id}, {"$set": obj}, upsert=True)
 
         except Exception as e:
-            log.debug("error writing query {} to MongoDB: {}".format(_id, e))
+            log.debug(f"error writing query {_id} to MongoDB: {e}")
             return
 
     return jsonify(base36.dumps(_id))
@@ -595,10 +595,7 @@ def users_update():
     iterator = Users.triage(days_inactive_cutoff=days, delete=delete, update=update)
     return "ok"
 
-    # stream = (
-    #     "{}: {}\n".format(id, status)
-    #     for id, status in iterator
-    # )
+    # stream = ( f"{id}: {status}\n" for id, status in iterator )
     # return Response(
     #     stream_with_context(stream),
     #     mimetype='text/event-stream'
@@ -637,7 +634,7 @@ def app_init():
         "Activities": Activities.init_db(),
         "Index": Index.init_db(),
     }
-    return "Activities, Index initialized and redis cleared\n{}".format(info)
+    return f"Activities, Index initialized and redis cleared\n{info}"
 
 
 @app.route("/beacon_handler", methods=["POST"])
@@ -689,17 +686,16 @@ def ip_lookup():
     if not ip:
         return
 
-    key = "IP:{}".format(ip)
+    key = f"IP:{ip}"
     cached = redis.get(key)
 
     if cached:
         info = json.loads(cached)
-        # log.debug("got cached info for {}".format(ip))
+        # log.debug(f"got cached info for {ip}")
 
     else:
-        url = "http://api.ipstack.com/{}?access_key={}".format(
-            ip, app.config.get("IPSTACK_ACCESS_KEY")
-        )
+        access_key = app.config.get("IPSTACK_ACCESS_KEY")
+        url = f"http://api.ipstack.com/{ip}?access_key={access_key}"
         resp = requests.get(url)
         info = json.dumps(resp.json()) if resp else ""
         if info:
@@ -738,12 +734,12 @@ def webhook_callback():
 
     if request.method == "GET":
         if request.args.get("hub.challenge"):
-            log.debug("subscription callback with {}".format(request.args))
+            log.debug(f"subscription callback with {request.args}")
             cb = Webhooks.handle_subscription_callback(request.args)
-            log.debug("handle_subscription_callback returns {}".format(cb))
+            log.debug(f"handle_subscription_callback returns {cb}")
             return jsonify(cb)
 
-        log.debug("webhook_callback: {}".format(request))
+        log.debug(f"webhook_callback: {request}")
         return "ok"
 
     elif request.method == "POST":
@@ -778,12 +774,12 @@ def paypal_ipn_handler():
             "User-Agent": "PYTHON-IPN-VerificationScript",
             "content-type": "application/x-www-form-urlencoded",
         },
-        data="cmd=_notify-validate&{}".format(request.data),
+        data=f"cmd=_notify-validate&{request.data}",
     )
-    log.debug("ipn verification:  {}".format(r))
+    log.debug(f"ipn verification:  {r}")
 
     if r.text == "VERIFIED":
-        log.info("Received verified data: {}".format(request.form))
+        log.info(f"Received verified data: {request.form}")
 
         # Here we take some action based on the data from Paypal,
         #  with info about a payment from a user.
@@ -796,3 +792,10 @@ def paypal_ipn_handler():
 @admin_required
 def test_endpoint():
     return "yo!"
+
+
+# This endpoint allows access to the source code for source maps (debugging)
+@app.route("/src/<path:loc>")
+def serve_source(loc):
+    # log.debug(f"request for source: {loc}")
+    return send_from_directory("../../frontend/src/", loc)
