@@ -61,3 +61,7 @@ body {
   font-family: monospace;
   white-space: pre;
 }
+
+#runtime-arguments {
+  display: none;
+}

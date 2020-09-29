@@ -1,6 +1,7 @@
 import "../css/splash-page.css";
 
-const { URLS } = JSON.parse(window["argstring"]);
+const argstring = document.querySelector("#runtime-arguments").innerText;
+const { URLS } = JSON.parse(argstring);
 
 document.querySelector("#bubbler").addEventListener("click", (e) => {
   const action = e.target.id;

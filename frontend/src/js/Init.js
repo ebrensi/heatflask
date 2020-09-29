@@ -14,15 +14,17 @@ export let FLASH_MESSAGES;
 export let APP_NAME;
 export let CURRENT_USER;
 
-try {
-  const jinja_args = JSON.parse(window["argstring"]);
+const argstring = document.querySelector("#runtime-arguments").innerText;
+
+if (argstring) {
+  const jinja_args = JSON.parse(argstring);
   CLIENT_ID = jinja_args["CLIENT_ID"];
   DEVELOPMENT = jinja_args["DEVELOPMENT"] || DEVELOPMENT;
   CURRENT_USER = jinja_args["CURRENT_USER"];
   FLASH_MESSAGES = jinja_args["FLASH_MESSAGES"];
   APP_NAME = jinja_args["APP_NAME"];
-} catch (e) {
-  console.log("No server-sent arguments", e);
+} else {
+  console.log("No server-sent arguments");
 }
 
 /* Load in the google analytics object if this is

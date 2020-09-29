@@ -55,9 +55,7 @@
     </div>
   </body>
 
-  <script>
-    window["argstring"] = "{{ args | tojson | safe }}";
-  </script>
-
+  <!-- Data passed from the backend at serve-time will be here -->
+  <div id="runtime-arguments">{{args|tojson|safe}}</div>
   <script src="../js/splash-page.js"></script>
 </html>

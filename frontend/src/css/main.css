@@ -255,4 +255,9 @@ div.promptButtons {
   background-clip: text;
   color: transparent;
 }
+
+#runtime-arguments {
+  display: none;
+}
+
 /* end-heatflask */
