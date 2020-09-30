@@ -167,8 +167,15 @@ function renderFromQuery() {
 
   makeQuery(query, () => {
     app.flags.importing = false;
+    app.dataTable.update();
+    app.dataTable.setColumns();
+    app.dataTable.fixColumns();
     console.log("done");
   });
+}
+
+if (app.qParams.userid) {
+  renderFromQuery();
 }
 
 // /*

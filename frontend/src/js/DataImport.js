@@ -9,6 +9,8 @@ import { dataTable } from "./Table.js";
 let numActivities, count;
 const dtRows = dataTable.rows();
 
+app.dataTable = dataTable;
+
 /*
  * Set up a message box that appears only when app.flags.importing is true
  */
@@ -128,10 +130,9 @@ function onMessage(A) {
   // const UTCtimestamp = tup[0];
   // const bounds = L.latLngBounds(A["bounds"]["SW"], A["bounds"]["NE"]);
 
-  // debugger;
   dtRows.add([
     String(id),
-    String(tup[0] + tup[1] * 3600) * 1000,
+    String( (tup[0] + tup[1] * 3600) * 1000 ),
     A.type,
     String(A.total_distance),
     String(A.elapsed_time),

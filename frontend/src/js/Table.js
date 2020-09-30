@@ -1,15 +1,17 @@
-// import { DataTable } from "simple-datatables";
 import { DataTable } from "../../node_modules/simple-datatables/src/index.js";
 import "../../node_modules/simple-datatables/src/style.css";
+import { HHMMSS } from "./appUtil.js";
 
 const tableElement = document.getElementById("activitiesList");
 
 const DIST_LABEL = "mi";
 
+// debugger;
+
 export const dataTable = new DataTable(tableElement, {
   sortable: true,
   searchable: true,
-  paging: false,
+  paging: true,
   header: true,
   footer: false,
   scrollY: "60vh",
@@ -23,50 +25,51 @@ export const dataTable = new DataTable(tableElement, {
       '<i class="fas fa-hourglass-end"></i>', // duration
       '<i class="fas fa-file-signature"></i>', // title
     ],
-
-    columns: [
-      { select: 0, type: "number", render: formatId },
-      { select: 1, type: "string", render: formatTimestamp, sort: "desc" },
-      { select: 2, type: "string", render: formatAtype },
-      { select: 3, type: "number", render: formatDistance },
-      { select: 4, type: "number", render: formatDuration },
-      { select: 5, type: "string", render: formatTitle, sortable: false },
-    ],
+  },
+  columns: [
+    { select: 0, type: "number", render: formatId, hidden: true },
+    { select: 1, type: "string", render: formatTimestamp, sort: "desc" },
+    { select: 2, type: "string", render: formatAtype },
+    { select: 3, type: "number", render: formatDistance },
+    { select: 4, type: "number", render: formatDuration },
+    { select: 5, type: "string", render: formatTitle, sortable: false },
+  ],
+  layout: {
+    top: "{search}",
+    bottom: "{info}{pager}",
   },
 });
 
 function formatId(id, cell, row) {
-  // debugger;
-  // row.dataset.id = id;
+  id = +id;
+  row.dataset.id = id;
+  console.log(`rendered ${id}`);
   return id;
 }
 
 function formatTimestamp(tsLocal, cell) {
-  // cell.dataset.content = tsLocal;
-  // debugger;
-  // return new Date(tsLocal).toLocaleString();
-  return tsLocal;
+  tsLocal = +tsLocal;
+  cell.dataset.content = +tsLocal;
+  return new Date(tsLocal).toLocaleString();
 }
 
 function formatAtype(aType) {
-  // debugger;
   return aType;
 }
 
 function formatDistance(distance, cell) {
-  // cell.dataset.content = distance;
-  // debugger;
+  distance = +distance;
+  cell.dataset.content = distance;
   return distance;
 }
 
 function formatDuration(duration, cell) {
-  // cell.dataset.content = duration;
-  // debugger;
-  return duration;
+  duration = +duration;
+  cell.dataset.content = duration;
+  return HHMMSS(duration);
 }
 
 function formatTitle(title) {
-  // debugger;
   return title;
 }
 
