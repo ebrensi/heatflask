@@ -14,7 +14,7 @@
 @import "../../node_modules/@fortawesome/fontawesome-free/css/all.css";
 
 /* Min CSS framework (https://mincss.com) */
-@import "./../ext/css/min_entireframework.min.css";
+@import "../ext/min_entireframework.css";
 
 /* Leafletjs */
 @import "../../node_modules/leaflet/dist/leaflet.css";
@@ -39,6 +39,9 @@
 
 /* Strava authentication button and athlete badge */
 @import "./strava-buttons.css";
+
+/* Simple-Datatables default styling */
+@import "../../node_modules/simple-datatables/src/style.css";
 
 body {
   padding: 0;

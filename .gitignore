@@ -89,7 +89,9 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
-# My Additions
+################
+# My Additions #
+################
 *.log
 log.txt
 .hidden
@@ -100,24 +102,20 @@ backend/.env
 
 # .venv/ is the directory contanining the Python virtual
 #  environment for the backend server
-backend/.venv/
 backend/.venv
 
 frontend/test/
 
 # Ignore node_modules both as a directory, and as a symbolic link
 frontend/node_modules
-fronetend/node_modules/
 
 # Igonre ParcelJS caches
-frontend/.parcel-cache/
 frontend/.parcel-cache
-frontend/.cache/
 frontend/.cache
 
 # For Development
-frontend/dist/
-frontend/dev-docs/
+frontend/dist
+frontend/dev-docs
 
 # For Production
 # frontend/dist/fa-*

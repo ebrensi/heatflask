@@ -1,5 +1,7 @@
-import { DataTable } from "../../node_modules/simple-datatables/src/index.js";
+// import { DataTable } from "../../node_modules/simple-datatables/src/index.js";
+import { DataTable } from "../ext/Simple-DataTables/src/index.js"; // testing some development-mods (functionality should be the same)
 import "../../node_modules/simple-datatables/src/style.css";
+
 import { HHMMSS } from "./appUtil.js";
 
 const tableElement = document.getElementById("activitiesList");

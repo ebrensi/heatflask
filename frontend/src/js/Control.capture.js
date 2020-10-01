@@ -2,7 +2,7 @@ import { L, map } from "./mapAPI.js";
 import { dotLayer } from "./DotLayer/DotLayer.js";
 
 import "leaflet-areaselect";
-import "../ext/css/leaflet-areaselect.css";
+import "../ext/leaflet-areaselect.css";
 
 const areaSelect = L.areaSelect({ width: 200, height: 200 });
 

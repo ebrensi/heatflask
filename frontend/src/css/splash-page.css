@@ -2,7 +2,7 @@
   --background-image: url("../images/lake.gif");
 }
 
-@import "../ext/css/min_entireframework.min.css";
+@import "../ext/min_entireframework.css";
 @import "./strava-buttons.css";
 
 /* Links */

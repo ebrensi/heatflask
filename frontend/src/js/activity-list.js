@@ -9,7 +9,7 @@ import "../../node_modules/simple-datatables/src/style.css";
 import { decode } from "@msgpack/msgpack";
 
 // css for Bundler
-import "../ext/css/min_entireframework.min.css";
+import "../ext/min_entireframework.css";
 import "../css/font-awesome-lite.css";
 import "../css/activity-index.css";
 

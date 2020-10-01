@@ -132,7 +132,7 @@ function onMessage(A) {
 
   dtRows.add([
     String(id),
-    String( (tup[0] + tup[1] * 3600) * 1000 ),
+    String((tup[0] + tup[1] * 3600) * 1000),
     A.type,
     String(A.total_distance),
     String(A.elapsed_time),
