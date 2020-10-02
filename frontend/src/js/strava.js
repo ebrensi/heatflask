@@ -120,7 +120,7 @@ export function appendCSS(domElement) {
   let string = "";
 
   for (const type of ATYPE.types()) {
-    const color = ATYPE._specs[type][1];
+    const color = _specs[type][1];
     if (color) {
       string += `span.${type}{color:${color}}`;
     }

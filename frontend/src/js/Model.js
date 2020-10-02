@@ -200,7 +200,7 @@ if (CURRENT_USER) {
 
 export const flags = BoundObject.fromDOMelements("[data-class=flag]");
 
-export const items = new Set();
+export const items = {};
 
 const state = {
   items: items,

@@ -1,15 +1,13 @@
 import app from "./Model.js";
 import { L, controlWindow } from "./MapAPI.js";
 // import { dotLayer } from "./DotLayerAPI.js";
-import { ATYPE } from "./strava.js";
 import queryBackend from "./Socket.js";
 
-import { dataTable } from "./Table.js";
+import * as myDT from "./Table.js";
 
 let numActivities, count;
-const dtRows = dataTable.rows();
 
-app.dataTable = dataTable;
+app.dataTable = myDT.dataTable;
 
 /*
  * Set up a message box that appears only when app.flags.importing is true
@@ -64,9 +62,13 @@ export function makeQuery(query, done) {
   app.flags.importing = true;
   numActivities = 0;
   count = 0;
+
   displayProgressInfo("Retrieving activity data...");
 
-  queryBackend(query, onMessage, done);
+  queryBackend(query, onMessage, () => {
+    myDT.update();
+    done();
+  });
 }
 
 export function abortQuery() {
@@ -88,15 +90,16 @@ export function abortQuery() {
 function onMessage(A) {
   if (!("_id" in A)) {
     if ("idx" in A) {
-      displayProgressInfo(`indexing...${A["idx"]}`);
+      displayProgressInfo(`indexing...${A.idx}`);
     } else if ("count" in A) {
-      numActivities += A["count"];
+      numActivities += A.count;
     } else if ("delete" in A) {
-      const toDelete = A["delete"];
+      const toDelete = A.delete;
       if (toDelete.length) {
         // delete all ids in A.delete
-        for (let id of toDelete) {
-          app.items.delete(id);
+        for (const id of toDelete) {
+          delete app.items[id];
+          myDT.removeItem(id);
         }
         // dotLayer.removeItems(toDelete);
       }
@@ -116,28 +119,21 @@ function onMessage(A) {
 
   const id = A["_id"];
 
-  if (app.items.has(id)) {
+  if (id in app.items) {
     console.log(`${id} already in items`);
     return;
   }
 
-  app.items.add(id);
+  app.items[id] = A;
+  myDT.addItem(id);
 
   // assign this activity a path color and speed type (pace, mph)
   // const atype = ATYPE.specs(A["type"]);
-  const tup = A["ts"];
+  // const tup = A["ts"];
   // const tsLocal = new Date((tup[0] + tup[1] * 3600) * 1000);
   // const UTCtimestamp = tup[0];
   // const bounds = L.latLngBounds(A["bounds"]["SW"], A["bounds"]["NE"]);
 
-  dtRows.add([
-    String(id),
-    String((tup[0] + tup[1] * 3600) * 1000),
-    A.type,
-    String(A.total_distance),
-    String(A.elapsed_time),
-    A.name,
-  ]);
 
   // dotLayer.addItem(
   //   id,
@@ -149,14 +145,14 @@ function onMessage(A) {
   //   A["n"]
   // );
 
-  // activitiesTable.addItem();
-
   count++;
   if (count % 5 === 0) {
     const prog = numActivities ? count / numActivities : null;
     displayProgressInfo(`imported ${count}/${numActivities || "?"}`, prog);
   }
 }
+
+
 
 /* Rendering */
 // function updateLayers(msg) {

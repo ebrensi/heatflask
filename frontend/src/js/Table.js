@@ -1,14 +1,19 @@
-// import { DataTable } from "../../node_modules/simple-datatables/src/index.js";
-import { DataTable } from "../ext/Simple-DataTables/src/index.js"; // testing some development-mods (functionality should be the same)
+import { DataTable } from "../../node_modules/simple-datatables/src/index.js";
+// import { DataTable } from "../ext/Simple-DataTables/src/index.js"; // testing some development-mods (functionality should be the same)
 import "../../node_modules/simple-datatables/src/style.css";
-
 import { HHMMSS } from "./appUtil.js";
+import { items } from "./Model.js";
+import { activityURL, appendCSS } from "./strava.js";
+import { href } from "./appUtil.js";
 
 const tableElement = document.getElementById("activitiesList");
+appendCSS(tableElement);
 
-const DIST_LABEL = "mi";
+const DIST_LABEL = "mi",
+  DIST_UNIT = 1609.34;
 
-// debugger;
+const toAdd = new Set(),
+  toRemove = new Set();
 
 export const dataTable = new DataTable(tableElement, {
   sortable: true,
@@ -19,22 +24,19 @@ export const dataTable = new DataTable(tableElement, {
   scrollY: "60vh",
   data: {
     headings: [
-      "id",
       '<i class="far fa-calendar-alt"></i>', // date/time
       '<i class="fas fa-running"></i>/<i class="fas fa-biking"></i>', // type
-      // '<span class="ci ci-activity"></span>',
       `<i class="fas fa-road"></i> (${DIST_LABEL})`, // distance
       '<i class="fas fa-hourglass-end"></i>', // duration
       '<i class="fas fa-file-signature"></i>', // title
     ],
   },
   columns: [
-    { select: 0, type: "number", render: formatId, hidden: true },
-    { select: 1, type: "string", render: formatTimestamp, sort: "desc" },
-    { select: 2, type: "string", render: formatAtype },
-    { select: 3, type: "number", render: formatDistance },
-    { select: 4, type: "number", render: formatDuration },
-    { select: 5, type: "string", render: formatTitle, sortable: false },
+    { select: 0, type: "string", render: formatTimestamp, sort: "desc" },
+    { select: 1, type: "string", render: formatAtype },
+    { select: 2, type: "number", render: formatDistance },
+    { select: 3, type: "number", render: formatDuration },
+    { select: 4, type: "string", render: formatTitle, sortable: false },
   ],
   layout: {
     top: "{search}",
@@ -42,85 +44,95 @@ export const dataTable = new DataTable(tableElement, {
   },
 });
 
-function formatId(id, cell, row) {
-  id = +id;
-  row.dataset.id = id;
-  console.log(`rendered ${id}`);
-  return id;
-}
+const rows = dataTable.rows();
 
-function formatTimestamp(tsLocal, cell) {
-  tsLocal = +tsLocal;
+/*
+ * Formatters.  Each of these formatters takes an activity id
+ *
+ */
+function formatTimestamp(id, cell, row) {
+  console.log(id);
+  const A = items[id],
+    tsLocal = (A.ts[0] + A.ts[1] * 3600) * 1000,
+    tsString = new Date(tsLocal).toLocaleString();
+
+  row.id = +id;
   cell.dataset.content = +tsLocal;
-  return new Date(tsLocal).toLocaleString();
+
+  return href(activityURL(id), tsString);
 }
 
-function formatAtype(aType) {
-  return aType;
+function formatAtype(id, cell) {
+  const A = items[id];
+  cell.dataset.content = A.type;
+  return `<span class="${A.type}">${A.type}</span>`;
 }
 
-function formatDistance(distance, cell) {
-  distance = +distance;
-  cell.dataset.content = distance;
-  return distance;
+function formatDistance(id, cell) {
+  const A = items[id];
+  cell.dataset.content = A.total_distance;
+
+  return (A.total_distance / DIST_UNIT).toFixed(2);
 }
 
-function formatDuration(duration, cell) {
-  duration = +duration;
-  cell.dataset.content = duration;
-  return HHMMSS(duration);
+function formatDuration(id, cell) {
+  const A = items[id];
+  cell.dataset.content = A.elapsed_time;
+  return HHMMSS(A.elapsed_time);
 }
 
-function formatTitle(title) {
-  return title;
+function formatTitle(id) {
+  const A = items[id];
+  return A.name;
 }
 
 /*
-let tableColumns = [
-    {
-      title: '<i class="fa fa-calendar" aria-hidden="true"></i>',
-      data: null,
-      render: (data, type, row) => {
-        if (type === "display" || type === "filter") {
-          // const dstr = row.tsLoc.toISOString().split('T')[0];
-          return util.href(
-            strava.activityURL(row.id),
-            row.tsLoc.toLocaleString()
-          );
-        } else return row.UTCtimestamp;
-      },
-    },
+ * We add and remove rows from the table with these functions.
+ *   addItem and removeItem prepare a bulk action that is executed
+ *   when update() is called.
+ */
+export function addItem(id) {
+  toAdd.add(id);
+}
 
-    {
-      title: "Type",
-      data: null,
-      render: (A) => `<p style="color:${A.pathColor}">${A.type}</p>`,
-    },
+export function removeItem(id) {
+  toRemove.add(id);
+}
 
-    {
-      title: `<i class="fa fa-arrows-h" aria-hidden="true"></i> (${DIST_LABEL})`,
-      data: "total_distance",
-      render: (A) => +(A / DIST_UNIT).toFixed(2),
-    },
-    {
-      title: '<i class="fa fa-clock-o" aria-hidden="true"></i>',
-      data: "elapsed_time",
-      render: util.hhmmss,
-    },
+export function update() {
+  if (toRemove.size) {
+    const arr = Array.from(toRemove).map(
+      (id) => document.getElementById(id).dataIndex
+    );
+    rows.remove(arr);
+  }
 
-    {
-      title: "Name",
-      data: null,
-      render: (A) => `<p style="background-color:${A.dotColor}"> ${A.name}</p>`,
-    },
-  ],
-  imgColumn = {
-    title: "<i class='fa fa-user' aria-hidden='true'></i>",
-    data: "owner",
-    render: util.formatUserId,
-  };
-*/
+  if (toAdd.size) {
+    const gen = rowIterator(toAdd);
+    rows.add(Array.from(gen));
+  }
 
+  debugger;
+  dataTable.update();
+  if (toAdd.size) {
+    dataTable.hiddenColumns = [];
+    dataTable.columnRenderers = [];
+    dataTable.selectedColumns = [];
+    dataTable.setColumns();
+  }
+  dataTable.fixColumns();
+
+  toAdd.clear();
+  toRemove.clear();
+}
+
+function* rowIterator(ids) {
+  for (const id of ids) {
+    yield Array(5).fill(String(id));
+  }
+}
+
+/*
 export function makeTable(items) {
   const colData = [];
 
@@ -253,7 +265,7 @@ function handle_table_selections(e, dt, type, indexes) {
   // dotLayer.setItemSelect(selections);
 }
 
-/*
+
   function selectedIDs(){
     return Array.from(appState.items.values())
                 .filter(A => A.selected)

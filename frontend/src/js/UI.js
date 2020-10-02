@@ -59,6 +59,18 @@ app.currentUser.onChange("public", async (status) => {
 });
 
 /*
+ * If the user hits enter in tbe number field, make the query
+ */
+document
+  .querySelector("[data-bind=quantity]")
+  .addEventListener("keypress", (event) => {
+    if (event.key === "Enter") {
+      app.qParams.quantity = event.target.value;
+      renderFromQuery();
+    }
+  });
+
+/*
  * Define button actions
  */
 function login() {
@@ -153,7 +165,7 @@ function getCurrentQuery() {
       query.key = qParams.key;
   }
 
-  const to_exclude = Array.from(app.items).map(Number);
+  const to_exclude = Object.keys(app.items).map(Number);
   if (to_exclude.length) query["exclude_ids"] = to_exclude;
 
   return query;
@@ -167,9 +179,7 @@ function renderFromQuery() {
 
   makeQuery(query, () => {
     app.flags.importing = false;
-    app.dataTable.update();
-    app.dataTable.setColumns();
-    app.dataTable.fixColumns();
+
     console.log("done");
   });
 }
@@ -189,10 +199,3 @@ if (app.qParams.userid) {
 
 // Dom.addEvent("#render-selection-button", "click", openSelected);
 // Dom.addEvent("#clear-selection-button", "click", deselectAll);
-
-// Dom.addEvent("#select_num", "keypress", function(event) {
-//     if (event.which == 13) {
-//         event.preventDefault();
-//         renderLayers();
-//     }
-// });
