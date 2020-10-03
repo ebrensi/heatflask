@@ -13,7 +13,8 @@ const DIST_LABEL = "mi",
   DIST_UNIT = 1609.34;
 
 const toAdd = new Set(),
-  toRemove = new Set();
+  toRemove = new Set(),
+  lookup = new Map();
 
 export const dataTable = new DataTable(tableElement, {
   sortable: true,
@@ -102,7 +103,15 @@ export function removeItem(id) {
 export function update() {
   if (toRemove.size) {
     const arr = Array.from(toRemove).map(
-      (id) => document.getElementById(id).dataIndex
+      (id) => {
+        const el = dataTable.data.find(el => el.id === id);
+        if (!el) {
+          console.log(`no row id ${id}`);
+          return
+        }
+        console.log(`delete ${id}:`, el);
+        return el.dataIndex;
+      }
     );
     rows.remove(arr);
   }
@@ -112,7 +121,6 @@ export function update() {
     rows.add(Array.from(gen));
   }
 
-  debugger;
   dataTable.update();
   if (toAdd.size) {
     dataTable.hiddenColumns = [];
