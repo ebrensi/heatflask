@@ -56,7 +56,7 @@ const _specs = {
   StandUpPaddling: ["speed", "#800080", '<i class="ci ci-standup-paddle"></i>'],
   Surfing: ["speed", "#006400", '<i class="ci ci-surf"></i>'], // darkgreen
   Swim: ["speed", "#00ff7f", '<i class="fas fa-swimmer"></i>'], // springgreen
-  Velomobile: ["speed", null],
+  Velomobile: ["speed", null, null],
   VirtualRide: ["speed", "#1e90ff", '<i class="ci ci-spinning"></i>'], // dodgerblue
   VirtualRun: ["pace", null, '<i class="ci ci-treadmill"></i>'],
   Walk: ["pace", "#ff00ff", '<i class="fas fa-walking"></i>'], // fuchsia
@@ -65,7 +65,7 @@ const _specs = {
   Windsurf: ["speed", "#4b0082", '<i class="ci ci-windsurf"></i>'],
   Workout: [null, null, "#4b0082", '<i class="ci ci-activity"></i>'],
   Yoga: [null, null, '<i class="ci ci-meditate"></i>'],
-  undefined: [null, '<i class="ci ci-activity"></i>'],
+  undefined: ["speed", null, '<i class="ci ci-activity"></i>'],
 };
 
 export const ATYPE = {
@@ -127,7 +127,5 @@ export function appendCSS(domElement) {
   }
 
   sheet.innerHTML = string;
-
-  console.log(string);
   domElement.appendChild(sheet);
 }
