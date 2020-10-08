@@ -14,7 +14,7 @@ const DIST_LABEL = "mi",
 
 const toAdd = new Set(),
   toRemove = new Set(),
-  lookup = new Map();
+  indexLookup = new Map();
 
 export const dataTable = new DataTable(tableElement, {
   sortable: true,
@@ -57,7 +57,7 @@ function formatTimestamp(id, cell, row) {
     tsLocal = (A.ts[0] + A.ts[1] * 3600) * 1000,
     tsString = new Date(tsLocal).toLocaleString();
 
-  row.id = +id;
+  row.id = id;
   cell.dataset.content = +tsLocal;
 
   return href(activityURL(id), tsString);
@@ -102,41 +102,30 @@ export function removeItem(id) {
 
 export function update() {
   if (toRemove.size) {
-    const arr = Array.from(toRemove).map(
-      (id) => {
-        const el = dataTable.data.find(el => el.id === id);
-        if (!el) {
-          console.log(`no row id ${id}`);
-          return
-        }
-        console.log(`delete ${id}:`, el);
-        return el.dataIndex;
+    const indexGen = function *() {
+      for (const id of toRemove.values()) {
+        yield indexLookup.get(id)
       }
-    );
-    rows.remove(arr);
+    }
+    rows.remove(indexGen());
   }
 
   if (toAdd.size) {
-    const gen = rowIterator(toAdd);
-    rows.add(Array.from(gen));
+    rows.add(rowIterator(toAdd));
   }
-
-  dataTable.update();
-  if (toAdd.size) {
-    dataTable.hiddenColumns = [];
-    dataTable.columnRenderers = [];
-    dataTable.selectedColumns = [];
-    dataTable.setColumns();
-  }
-  dataTable.fixColumns();
 
   toAdd.clear();
   toRemove.clear();
+  indexLookup.clear();
+
+  for (const tr of dataTable.data) {
+    indexLookup.set(+tr.id, tr.dataIndex)
+  }
 }
 
 function* rowIterator(ids) {
   for (const id of ids) {
-    yield Array(5).fill(String(id));
+    yield Array(5).fill(id);
   }
 }
 
