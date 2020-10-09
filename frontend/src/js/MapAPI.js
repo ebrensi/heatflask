@@ -126,7 +126,6 @@ if (!baselayers[blName]) {
   } catch (e) {
     const msg = `${e}: sorry we don't support the baseLayer "${blName}"`;
     console.log(msg);
-    msgBox2.content(msg).show();
     blName = defaultBaselayerName;
   }
 }

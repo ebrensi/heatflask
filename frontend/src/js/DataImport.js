@@ -53,8 +53,6 @@ function displayProgressInfo(msg, progress) {
   }
 }
 
-// app.box = displayProgressInfo;
-
 /*
  * Send a query to the backend and populate the table and dotlayer with it.
  */

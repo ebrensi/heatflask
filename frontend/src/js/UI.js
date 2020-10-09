@@ -18,8 +18,7 @@ import paypalButtonHTML from "bundle-text:../html/paypal-button.html";
 import infoTabHTML from "bundle-text:../html/main-info.html";
 
 import { makeQuery, abortQuery } from "./DataImport.js";
-
-// import "./Table.js";
+import * as dataTable from "./Table.js";
 
 /* TODO: have two UI submodules: UI-simple.js (single) and
                                  UI-complex.js (multi-user)
@@ -187,6 +186,12 @@ function renderFromQuery() {
 if (app.qParams.userid) {
   renderFromQuery();
 }
+
+/* Table Stuff */
+dataTable.events.addListener("selection", e => {
+  // console.log("table selections ", e)
+})
+
 
 // /*
 //  *  Set up or tear down current user stuff

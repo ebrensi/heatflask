@@ -155,16 +155,25 @@ a:visited {
 }
 */
 
+/* This disables text-selection when user shift-clicks */
+.dataTable-table {
+  user-select: none;
+}
+
 .dataTable-table > thead > tr {
   background-color: #0000ff50;
 }
 
 .dataTable-table tbody > tr:hover {
-  background-color: #00ff0040;
+  background-color: #ffffff60;
 }
 
 .dataTable-table tbody > tr.selected {
-  background-color: #00ff0060;
+  background-color: #ffffff30;
+}
+
+.dataTable-table tbody > tr.selected > td:first-child {
+  content: "x";
 }
 
 input[data-bind="quantity"] {
