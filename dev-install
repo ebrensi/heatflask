@@ -1,0 +1,17 @@
+#!/bin/env sh
+
+## This script sets up most of what you will need for full-stack development
+##
+## You will need npm (node package manager) installed, and Python 3.6+
+
+# Install frontend dependencies
+echo "Installing Frontend dependencies..."
+cd frontend
+npm install
+
+echo "Installing backend dependencies..."
+cd ../backend
+./dev-install-backend
+
+echo "You will still need to install data-stores redis, postgresql, and MongoDB"
+
