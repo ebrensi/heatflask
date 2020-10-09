@@ -5,37 +5,37 @@
  */
 
 // import * as L from "../../node_modules/leaflet/dist/leaflet-src.esm.js";
-import * as L from "leaflet";
-import Geohash from "latlon-geohash";
+import * as L from "leaflet"
+import Geohash from "latlon-geohash"
 
-import "leaflet-control-window";
-import "../../node_modules/sidebar-v2/js/leaflet-sidebar.js";
-import { tileLayer } from "./TileLayer/TileLayer.Heatflask.js";
-import app from "./Model.js";
+import "leaflet-control-window"
+import "../../node_modules/sidebar-v2/js/leaflet-sidebar.js"
+import { tileLayer } from "./TileLayer/TileLayer.Heatflask.js"
+import app from "./Model.js"
 
-import strava_logo from "url:../images/pbs4.png";
-import heatflask_logo from "url:../images/logo.png";
+import strava_logo from "url:../images/pbs4.png"
+import heatflask_logo from "url:../images/logo.png"
 
-import { MAPBOX_ACCESS_TOKEN } from "./Init.js";
+import { MAPBOX_ACCESS_TOKEN } from "./Init.js"
 
-let center, zoom;
+let center, zoom
 
-export { L };
+export { L }
 
 // Geohash uses "lon" for longitude and leaflet uses "lng"
 function ghDecode(s) {
-  const obj = Geohash.decode(s);
-  return L.latLng(obj.lat, obj.lon);
+  const obj = Geohash.decode(s)
+  return L.latLng(obj.lat, obj.lon)
 }
 
 if (app.vParams.geohash) {
-  center = ghDecode(app.vParams.geohash);
-  zoom = app.vParams.geohash.length;
-  app.vParams.autozoom = false;
+  center = ghDecode(app.vParams.geohash)
+  zoom = app.vParams.geohash.length
+  app.vParams.autozoom = false
 } else {
-  center = app.vParams.center;
-  zoom = app.vParams.zoom;
-  app.vParams.geohash = Geohash.encode(center.lat, center.lng);
+  center = app.vParams.center
+  zoom = app.vParams.zoom
+  app.vParams.geohash = Geohash.encode(center.lat, center.lng)
 }
 
 /*
@@ -49,7 +49,7 @@ export const map = new L.Map("map", {
   zoomAnimationThreshold: 6,
   updateWhenZooming: true,
   worldCopyJump: true,
-});
+})
 
 /*
  * Create one-way binding from map location to vParams object.
@@ -58,21 +58,21 @@ export const map = new L.Map("map", {
  */
 map.on("moveend", () => {
   const center = map.getCenter(),
-    zoom = map.getZoom();
+    zoom = map.getZoom()
 
-  app.vParams.zoom = zoom;
-  app.vParams.center = center;
+  app.vParams.zoom = zoom
+  app.vParams.center = center
 
-  const gh = Geohash.encode(center.lat, center.lng, zoom);
-  app.vParams.geohash = gh;
+  const gh = Geohash.encode(center.lat, center.lng, zoom)
+  app.vParams.geohash = gh
   // console.log(`(${center.lat}, ${center.lng}, ${zoom}) -> ${gh}`);
-});
+})
 
 /*
  *  Make control window accessible as an export
  */
 export function controlWindow(options) {
-  return L.control.window(map, options);
+  return L.control.window(map, options)
 }
 
 /*
@@ -81,20 +81,20 @@ export function controlWindow(options) {
  */
 const baselayers = {
   None: tileLayer("", { useCache: false }),
-};
+}
 
 const mapBox_layer_names = {
   "Mapbox.dark": "mapbox/dark-v10",
   "Mapbox.streets": "mapbox/streets-v11",
   "Mapbox.outdoors": "mapbox/outdoors-v11",
   "Mapbox.satellite": "mapbox/satellite-streets-v11",
-};
+}
 
 for (const [name, id] of Object.entries(mapBox_layer_names)) {
   baselayers[name] = tileLayer.provider("MapBox", {
     id: id,
     accessToken: MAPBOX_ACCESS_TOKEN,
-  });
+  })
 }
 
 const providers_names = [
@@ -106,11 +106,11 @@ const providers_names = [
   "CartoDB.DarkMatter",
   "OpenStreetMap.Mapnik",
   "Stadia.AlidadeSmoothDark",
-];
-export const defaultBaselayerName = "OpenStreetMap.Mapnik";
+]
+export const defaultBaselayerName = "OpenStreetMap.Mapnik"
 
 for (const name of providers_names) {
-  baselayers[name] = tileLayer.provider(name);
+  baselayers[name] = tileLayer.provider(name)
 }
 
 /*
@@ -118,15 +118,15 @@ for (const name of providers_names) {
  *  our default set, attempt to instantiate it and set it as
  *  the current baselayer.
  */
-let blName = app.vParams.baselayer || defaultBaselayerName;
+let blName = app.vParams.baselayer || defaultBaselayerName
 
 if (!baselayers[blName]) {
   try {
-    baselayers[blName] = tileLayer.provider(blName);
+    baselayers[blName] = tileLayer.provider(blName)
   } catch (e) {
-    const msg = `${e}: sorry we don't support the baseLayer "${blName}"`;
-    console.log(msg);
-    blName = defaultBaselayerName;
+    const msg = `${e}: sorry we don't support the baseLayer "${blName}"`
+    console.log(msg)
+    blName = defaultBaselayerName
   }
 }
 
@@ -136,39 +136,39 @@ if (!baselayers[blName]) {
  */
 for (const name in baselayers) {
   const layer = baselayers[name],
-    maxZoom = layer.options.maxZoom;
-  layer.name = name;
+    maxZoom = layer.options.maxZoom
+  layer.name = name
 
   if (maxZoom) {
-    layer.options.maxNativeZoom = maxZoom;
-    layer.options.maxZoom = 22;
-    layer.options.minZoom = 3;
+    layer.options.maxNativeZoom = maxZoom
+    layer.options.maxZoom = 22
+    layer.options.minZoom = 3
   }
 }
 
-app.vParams.baselayer = blName;
-baselayers[blName].addTo(map);
+app.vParams.baselayer = blName
+baselayers[blName].addTo(map)
 
 map.on("baselayerchange", (e) => {
-  app.vParams.baselayer = e.layer.name;
-});
+  app.vParams.baselayer = e.layer.name
+})
 
 // Add baselayer selection control to map
-L.control.layers(baselayers, null, { position: "topleft" }).addTo(map);
+L.control.layers(baselayers, null, { position: "topleft" }).addTo(map)
 
 // Add zoom Control
-map.zoomControl.setPosition("bottomright");
+map.zoomControl.setPosition("bottomright")
 
 // Define a watermark control
 const Watermark = L.Control.extend({
   onAdd: function () {
-    let img = L.DomUtil.create("img");
-    img.src = this.options.image;
-    img.style.width = this.options.width;
-    img.style.opacity = this.options.opacity;
-    return img;
+    let img = L.DomUtil.create("img")
+    img.src = this.options.image
+    img.style.width = this.options.width
+    img.style.opacity = this.options.opacity
+    return img
   },
-});
+})
 
 // Add Watermarks
 new Watermark({
@@ -176,38 +176,59 @@ new Watermark({
   width: "20%",
   opacity: "0.5",
   position: "bottomleft",
-}).addTo(map);
+}).addTo(map)
 
 new Watermark({
   image: heatflask_logo,
   opacity: "0.5",
   width: "20%",
   position: "bottomleft",
-}).addTo(map);
+}).addTo(map)
 
 // The main sidebar UI
 // Leaflet sidebar v2
-export const sidebar = L.control.sidebar("sidebar").addTo(map);
-sidebar.addEventListener("opening", () => (sidebar.isOpen = true));
-sidebar.addEventListener("closing", () => (sidebar.isOpen = false));
+export const sidebar = L.control.sidebar("sidebar").addTo(map)
+sidebar.addEventListener("opening", onSidebarOpen)
+sidebar.addEventListener("closing", onSidebarClose)
 
-/* we define some key and mouse bindings to the map to control the sidebar */
-map.addEventListener("click", () => {
-  /* if the user clicks anywhere on the map when side bar is open,
-        we close the sidebar */
-  if (sidebar.isOpen) {
-    sidebar.close();
-  }
-});
+/* key and mouse bindings to the map to control the sidebar */
 
-/* if the sidebar is open then close it if the user hits ESC key */
-document.onkeydown = (e) => {
-  if (e.keyCode === 27) {
-    if (sidebar.isOpen) {
-      sidebar.close();
+/* Events listened for when sidebar is open */
+const openEventListeners = {
+  /* close it if the user clicks anywhere on the map */
+  click: () => sidebar.close(),
+
+  keydown: (e) => {
+    switch (e.keyCode) {
+      case 27:
+        sidebar.close() // close on ESC
+        break
     }
-  }
-};
+  },
+}
+
+/* Events listened for when sidebar is open */
+const closedEventListeners = {}
+
+function onSidebarOpen() {
+  sidebar.isOpen = true
+  Object.entries(closedEventListeners).forEach((event, listener) =>
+    map.off(event, listener)
+  )
+  Object.entries(openEventListeners).forEach((event, listener) =>
+    map.on(event, listener)
+  )
+}
+
+function onSidebarClose() {
+  sidebar.isOpen = false
+  Object.entries(openEventListeners).forEach((event, listener) =>
+    map.off(event, listener)
+  )
+  Object.entries(closedEventListeners).forEach((event, listener) =>
+    map.on(event, listener)
+  )
+}
 
 /*  Initialize areaselect control (for selecting activities via map rectangle) */
 /*

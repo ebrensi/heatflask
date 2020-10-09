@@ -10,7 +10,7 @@
  *  Efrem Rensi 2020
  */
 
-import * as idb from "./myIdb.js";
+import * as idb from "./myIdb.js"
 
 import {
   TileLayer,
@@ -20,9 +20,9 @@ import {
   Browser,
   bind,
   extend,
-} from "leaflet";
+} from "leaflet"
 
-export { TileLayer, tileLayer };
+export { TileLayer, tileLayer }
 
 TileLayer.mergeOptions({
   useCache: true,
@@ -32,7 +32,7 @@ TileLayer.mergeOptions({
   minNativeZoom: 0,
   dbName: "tile-storage",
   updateInterval: 0,
-});
+})
 
 TileLayer.include({
   cacheHits: 0,
@@ -41,80 +41,80 @@ TileLayer.include({
   // returns the unique and compact lookup key for this tile
   onAdd: function (map) {
     if (this.options.useCache) {
-      this._db = new idb.Store(this.options.dbName, this.name);
+      this._db = new idb.Store(this.options.dbName, this.name)
     }
 
-    GridLayer.prototype.onAdd.call(this, map);
+    GridLayer.prototype.onAdd.call(this, map)
   },
 
   onRemove: function (map) {
     if (this._db) {
-      GridLayer.prototype.onRemove.call(this, map);
-      this._db.close();
-      this._db = undefined;
+      GridLayer.prototype.onRemove.call(this, map)
+      this._db.close()
+      this._db = undefined
     }
   },
 
   _key: function (coords) {
-    return String.fromCodePoint(coords.z, coords.x, coords.y);
+    return String.fromCodePoint(coords.z, coords.x, coords.y)
     // return `${coords.z}:${coords.x}:${coords.y}`
   },
 
   // Overwrites TileLayer.prototype.createTile
   createTile: function (coords, done) {
     const tile = document.createElement("img"),
-      tileUrl = this.getTileUrl(coords);
+      tileUrl = this.getTileUrl(coords)
 
-    tile.onerror = bind(this._tileOnError, this, done, tile);
-    tile.onload = bind(this._tileOnLoad, this, done, tile);
+    tile.onerror = bind(this._tileOnError, this, done, tile)
+    tile.onload = bind(this._tileOnLoad, this, done, tile)
 
     // tile.ts = performance.now(); ////
     // tile.key = this._tileCoordsToKey(coords); ////
     // console.log(`loading tile ${tile.key} at ${tile.ts}`);
 
     if (this.options.crossOrigin) {
-      tile.crossOrigin = "";
+      tile.crossOrigin = ""
     }
-    tile.crossOrigin = "Anonymous";
+    tile.crossOrigin = "Anonymous"
     /*
          Alt tag is *set to empty string to keep screen readers from reading URL and for compliance reasons
          http://www.w3.org/TR/WCAG20-TECHS/H67
          */
-    tile.alt = "";
+    tile.alt = ""
 
     /*
          Set role="presentation" to force screen readers to ignore this
          https://www.w3.org/TR/wai-aria/roles#textalternativecomputation
         */
-    tile.setAttribute("role", "presentation");
+    tile.setAttribute("role", "presentation")
 
     if (this.options.useCache && this._db) {
-      const key = this._key(coords);
+      const key = this._key(coords)
       idb
         .get(key, this._db)
         .then((data) =>
           data
             ? this._onCacheHit(tile, tileUrl, key, data, done)
             : this._onCacheMiss(tile, tileUrl, key, done)
-        );
+        )
     } else {
       // Fall back to standard behaviour
-      tile.onload = bind(this._tileOnLoad, this, done, tile);
-      tile.src = tileUrl;
+      tile.onload = bind(this._tileOnLoad, this, done, tile)
+      tile.src = tileUrl
     }
 
-    tile._originalCoords = coords;
-    tile._originalSrc = tile.src;
+    tile._originalCoords = coords
+    tile._originalSrc = tile.src
 
-    return tile;
+    return tile
   },
 
   _createCurrentCoords: function (originalCoords) {
-    var currentCoords = this._wrapCoords(originalCoords);
+    var currentCoords = this._wrapCoords(originalCoords)
 
-    currentCoords.fallback = true;
+    currentCoords.fallback = true
 
-    return currentCoords;
+    return currentCoords
   },
 
   _originalTileOnError: TileLayer.prototype._tileOnError,
@@ -133,30 +133,30 @@ TileLayer.include({
       style = tile.style,
       newUrl,
       top,
-      left;
+      left
 
     // If no lower zoom tiles are available, fallback to errorTile.
     if (fallbackZoom < layer.options.minNativeZoom) {
-      return this._originalTileOnError(done, tile, e);
+      return this._originalTileOnError(done, tile, e)
     }
 
     // Modify tilePoint for replacement img.
-    currentCoords.z = fallbackZoom;
-    currentCoords.x = Math.floor(currentCoords.x / 2);
-    currentCoords.y = Math.floor(currentCoords.y / 2);
+    currentCoords.z = fallbackZoom
+    currentCoords.x = Math.floor(currentCoords.x / 2)
+    currentCoords.y = Math.floor(currentCoords.y / 2)
 
     // Generate new src path.
-    newUrl = layer.getTileUrl(currentCoords);
+    newUrl = layer.getTileUrl(currentCoords)
 
     // Zoom replacement img.
-    style.width = tileSize.x * scale + "px";
-    style.height = tileSize.y * scale + "px";
+    style.width = tileSize.x * scale + "px"
+    style.height = tileSize.y * scale + "px"
 
     // Compute margins to adjust position.
-    top = (originalCoords.y - currentCoords.y * scale) * tileSize.y;
-    style.marginTop = -top + "px";
-    left = (originalCoords.x - currentCoords.x * scale) * tileSize.x;
-    style.marginLeft = -left + "px";
+    top = (originalCoords.y - currentCoords.y * scale) * tileSize.y
+    style.marginTop = -top + "px"
+    left = (originalCoords.x - currentCoords.x * scale) * tileSize.x
+    style.marginLeft = -left + "px"
 
     // Crop (clip) image.
     // `clip` is deprecated, but browsers support for `clip-path: inset()` is far behind.
@@ -170,20 +170,20 @@ TileLayer.include({
       (top + tileSize.y) +
       "px " +
       left +
-      "px)";
+      "px)"
 
     layer.fire("tilefallback", {
       tile: tile,
       url: tile._originalSrc,
       urlMissing: tile.src,
       urlFallback: newUrl,
-    });
+    })
 
-    tile.src = newUrl;
+    tile.src = newUrl
   },
 
   getTileUrl: function (coords) {
-    var z = (coords.z = coords.fallback ? coords.z : this._getZoomForUrl());
+    var z = (coords.z = coords.fallback ? coords.z : this._getZoomForUrl())
 
     var data = {
       r: Browser.retina ? "@2x" : "",
@@ -191,45 +191,45 @@ TileLayer.include({
       x: coords.x,
       y: coords.y,
       z: z,
-    };
+    }
     if (this._map && !this._map.options.crs.infinite) {
-      var invertedY = this._globalTileRange.max.y - coords.y;
+      var invertedY = this._globalTileRange.max.y - coords.y
       if (this.options.tms) {
-        data["y"] = invertedY;
+        data["y"] = invertedY
       }
-      data["-y"] = invertedY;
+      data["-y"] = invertedY
     }
 
-    return Util.template(this._url, extend(data, this.options));
+    return Util.template(this._url, extend(data, this.options))
   },
 
   _onCacheHit: function (tile, tileUrl, key, data, done) {
-    this.cacheHits++;
+    this.cacheHits++
 
     // Serve tile from cached data
     //console.log('Tile is cached: ', tileUrl);
-    tile.src = URL.createObjectURL(data.blob);
-    tile.stat = "hit"; ////
+    tile.src = URL.createObjectURL(data.blob)
+    tile.stat = "hit" ////
   },
 
   _tileOnLoad: function (done, tile) {
-    URL.revokeObjectURL(tile.src);
-    done(null, tile);
+    URL.revokeObjectURL(tile.src)
+    done(null, tile)
 
     // const elapsed = performance.now() - tile.ts;
     // console.log(`${tile.key} ${tile.stat}: ${~~elapsed}`);
   },
 
   _onCacheMiss: function (tile, tileUrl, key, done) {
-    this.cacheMisses++;
+    this.cacheMisses++
 
     // tile.stat = "miss"; ////
 
     if (this.options.useOnlyCache) {
       // Offline, not cached
       //  console.log('Tile not in cache', tileUrl);
-      tile.onload = Util.falseFn;
-      tile.src = Util.emptyImageUrl;
+      tile.onload = Util.falseFn
+      tile.src = Util.emptyImageUrl
     } else {
       // Online, not cached, fetch the tile
       if (this.options.saveToCache) {
@@ -247,34 +247,34 @@ TileLayer.include({
                 blob: blob,
               },
               this._db
-            );
+            )
 
-            tile.src = URL.createObjectURL(blob);
+            tile.src = URL.createObjectURL(blob)
           })
           .catch((error) => {
-            this._tileOnError(done, tile, error);
-          });
+            this._tileOnError(done, tile, error)
+          })
       } else {
         // handle normally
-        tile.onload = bind(this._tileOnLoad, this, done, tile);
-        tile.crossOrigin = "Anonymous";
-        tile.src = tileUrl;
+        tile.onload = bind(this._tileOnLoad, this, done, tile)
+        tile.crossOrigin = "Anonymous"
+        tile.src = tileUrl
       }
     }
   },
 
   _createTile: function () {
-    return document.createElement("img");
+    return document.createElement("img")
   },
 
   // Modified TileLayer.getTileUrl, this will use the zoom given by the parameter coords
   //  instead of the maps current zoomlevel.
   _getTileUrl: function (coords) {
-    var zoom = coords.z;
+    var zoom = coords.z
     if (this.options.zoomReverse) {
-      zoom = this.options.maxZoom - zoom;
+      zoom = this.options.maxZoom - zoom
     }
-    zoom += this.options.zoomOffset;
+    zoom += this.options.zoomOffset
     return Util.template(
       this._url,
       extend(
@@ -296,6 +296,6 @@ TileLayer.include({
         },
         this.options
       )
-    );
+    )
   },
-});
+})

@@ -3,28 +3,28 @@
  *   embedded in the html and are made available to us as a variable in the window context
  */
 
-import { ws_prefix } from "./appUtil.js";
+import { ws_prefix } from "./appUtil.js"
 
-import { noop } from "./appUtil.js";
-import load_ga_object from "./google-analytics.js";
+import { noop } from "./appUtil.js"
+import load_ga_object from "./google-analytics.js"
 
-export let CLIENT_ID;
-export let DEVELOPMENT = true;
-export let FLASH_MESSAGES;
-export let APP_NAME;
-export let CURRENT_USER;
+export let CLIENT_ID
+export let DEVELOPMENT = true
+export let FLASH_MESSAGES
+export let APP_NAME
+export let CURRENT_USER
 
-const argstring = document.querySelector("#runtime-arguments").innerText;
+const argstring = document.querySelector("#runtime-arguments").innerText
 
 if (argstring) {
-  const jinja_args = JSON.parse(argstring);
-  CLIENT_ID = jinja_args["CLIENT_ID"];
-  DEVELOPMENT = jinja_args["DEVELOPMENT"] || DEVELOPMENT;
-  CURRENT_USER = jinja_args["CURRENT_USER"];
-  FLASH_MESSAGES = jinja_args["FLASH_MESSAGES"];
-  APP_NAME = jinja_args["APP_NAME"];
+  const jinja_args = JSON.parse(argstring)
+  CLIENT_ID = jinja_args["CLIENT_ID"]
+  DEVELOPMENT = jinja_args["DEVELOPMENT"] || DEVELOPMENT
+  CURRENT_USER = jinja_args["CURRENT_USER"]
+  FLASH_MESSAGES = jinja_args["FLASH_MESSAGES"]
+  APP_NAME = jinja_args["APP_NAME"]
 } else {
-  console.log("No server-sent arguments");
+  console.log("No server-sent arguments")
 }
 
 /* Load in the google analytics object if this is
@@ -34,14 +34,12 @@ if (argstring) {
 // export const ga = ADMIN || DEVELOPMENT ? noop : load_ga_object();
 
 export const MAPBOX_ACCESS_TOKEN =
-  "pk.eyJ1IjoiaGVhdGZsYXNrIiwiYSI6ImNrMXB3NDZtMjA0cG4zbW85N2U1M2p2ZmQifQ.UvD1v0VyI_V1gJSey0vRbg";
-export const CAPTURE_DURATION_MAX = 20;
+  "pk.eyJ1IjoiaGVhdGZsYXNrIiwiYSI6ImNrMXB3NDZtMjA0cG4zbW85N2U1M2p2ZmQifQ.UvD1v0VyI_V1gJSey0vRbg"
+export const CAPTURE_DURATION_MAX = 20
 
-export const WEBSOCKET_URL = `${ws_prefix()}${
-  window.location.host
-}/data_socket`;
-export const BEACON_HANDLER_URL = "/beacon_handler";
-export const AUTHORIZE_URL = "/authorize";
+export const WEBSOCKET_URL = `${ws_prefix()}${window.location.host}/data_socket`
+export const BEACON_HANDLER_URL = "/beacon_handler"
+export const AUTHORIZE_URL = "/authorize"
 
 export function USER_URLS(userid) {
   return {
@@ -51,5 +49,5 @@ export function USER_URLS(userid) {
     delete: `${userid}/delete`,
     logout: `${userid}/logout`,
     strava: `https://www.strava.com/athletes/${userid}`,
-  };
+  }
 }

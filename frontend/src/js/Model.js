@@ -3,8 +3,8 @@
  *    beginning with those specified by the current URL in the browser.
  */
 
-import { CURRENT_USER, USER_URLS } from "./Init.js";
-import { BoundObject } from "./DataBinding.js";
+import { CURRENT_USER, USER_URLS } from "./Init.js"
+import { BoundObject } from "./DataBinding.js"
 
 /*
  * These are all the possible arguments that might be in the URL
@@ -35,28 +35,28 @@ export const urlArgDefaults = {
   paths: [["pa", "paths"], true],
   alpha: [["alpha"], 1],
   baselayer: [["baselayer", "map", "bl"], null],
-};
+}
 
-const urlArgs = new URL(window.location.href).searchParams;
-const pathname = window.location.pathname.substring(1);
+const urlArgs = new URL(window.location.href).searchParams
+const pathname = window.location.pathname.substring(1)
 const targetUserId =
-  urlArgs.get("user") || (pathname === "main.html" ? "" : pathname);
+  urlArgs.get("user") || (pathname === "main.html" ? "" : pathname)
 
-const names = {};
-const params = {};
+const names = {}
+const params = {}
 
 for (const [key, val] of Object.entries(urlArgDefaults)) {
-  names[key] = val[0];
-  params[key] = val[1];
+  names[key] = val[0]
+  params[key] = val[1]
 }
 
 /* parse parameters from the url */
 for (const [uKey, value] of urlArgs.entries()) {
   for (const [pKey, pNames] of Object.entries(names)) {
     if (pNames.includes(uKey)) {
-      params[pKey] = value;
-      delete names[pKey]; // this field is set no need to check it again
-      break;
+      params[pKey] = value
+      delete names[pKey] // this field is set no need to check it again
+      break
     }
   }
 }
@@ -88,7 +88,7 @@ const qParamsInit = {
   before: params.before,
   ids: params.ids,
   key: params.key,
-};
+}
 
 qParamsInit.queryType = urlArgs["key"]
   ? "key"
@@ -98,28 +98,28 @@ qParamsInit.queryType = urlArgs["key"]
   ? "dates"
   : params.days
   ? "days"
-  : "activities";
+  : "activities"
 
 qParamsInit.quantity =
-  params.queryType === "days" ? +params.days : +params.limit;
+  params.queryType === "days" ? +params.days : +params.limit
 
 /*
  * Current values of query parameters in the DOM
  */
-export const qParams = BoundObject.fromObject(qParamsInit, { event: "change" });
+export const qParams = BoundObject.fromObject(qParamsInit, { event: "change" })
 
 const afterDateElement = document.querySelector("[data-bind=after]"),
-  beforeDateElement = document.querySelector("[data-bind=before]");
+  beforeDateElement = document.querySelector("[data-bind=before]")
 
 // afterDateElement.max = today
 // beforeDateElement.min = today
 qParams.onChange("after", (newDate) => {
-  beforeDateElement.min = newDate;
-});
+  beforeDateElement.min = newDate
+})
 
 qParams.onChange("before", (newDate) => {
-  afterDateElement.max = newDate;
-});
+  afterDateElement.max = newDate
+})
 
 /**
  * visual-parameters are those that determine what appears visually.
@@ -142,7 +142,7 @@ qParams.onChange("before", (newDate) => {
  */
 
 function bool(val) {
-  return val !== "0" && !!val;
+  return val !== "0" && !!val
 }
 /*
  * Ininitial visual parameters extracted from defaults and URL parameters
@@ -161,7 +161,7 @@ const vParamsInit = {
   alpha: bool(params["alpha"]),
   shadows: bool(params["shadows"]),
   paths: bool(params["paths"]),
-};
+}
 
 /*
  * The visual paramters for the current view
@@ -169,38 +169,38 @@ const vParamsInit = {
 export const vParams = BoundObject.fromObject(vParamsInit, {
   // bind "change" events of any elements whos data-event attribute not set
   event: "change",
-});
+})
 
 // info elements have one-way bindings because the user cannot change them
-export const messages = BoundObject.fromDOMelements("[data-class=info]");
+export const messages = BoundObject.fromDOMelements("[data-class=info]")
 
 export const targetUser = BoundObject.fromDOMelements(
   "[data-class=target-user]"
-);
-targetUser.addProperty("id", targetUserId);
-targetUser.onChange("id", (newId) => (qParams.userid = newId));
-targetUser.username = targetUserId || targetUser.name;
+)
+targetUser.addProperty("id", targetUserId)
+targetUser.onChange("id", (newId) => (qParams.userid = newId))
+targetUser.username = targetUserId || targetUser.name
 
 export const currentUser = BoundObject.fromDOMelements(
   "[data-class=current-user]"
-);
+)
 
 /*
  * If the user is already logged in (via browser cookie),
  *  populate currentUser object with data provided from the server
  */
 if (CURRENT_USER) {
-  Object.assign(currentUser, CURRENT_USER);
-  currentUser.url = USER_URLS(currentUser.id);
+  Object.assign(currentUser, CURRENT_USER)
+  currentUser.url = USER_URLS(currentUser.id)
 
   // const IMPERIAL = CURRENT_USER['measurement_preference'] == "feet"
   // const DIST_UNIT = IMPERIAL? 1609.34 : 1000.0;
   // const DIST_LABEL = IMPERIAL?  'mi' : 'km';
 }
 
-export const flags = BoundObject.fromDOMelements("[data-class=flag]");
+export const flags = BoundObject.fromDOMelements("[data-class=flag]")
 
-export const items = {};
+export const items = {}
 
 const state = {
   items: items,
@@ -211,8 +211,8 @@ const state = {
   targetUser: targetUser,
   currentUser: currentUser,
   clientID: null,
-};
+}
 
-window["app"] = state;
+window["app"] = state
 
-export { state as default };
+export { state as default }

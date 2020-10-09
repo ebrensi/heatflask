@@ -110,12 +110,12 @@ export function select(selections) {
       dRow = dataTable.data[idx]
 
     if (selected) {
-        dRow.classList.add("selected")
-        selectedItems.add(+id)
-      } else {
-        dRow.classList.remove("selected")
-        selectedItems.delete(+id)
-      }
+      dRow.classList.add("selected")
+      selectedItems.add(+id)
+    } else {
+      dRow.classList.remove("selected")
+      selectedItems.delete(+id)
+    }
   }
   dataTable.update()
 }
@@ -148,7 +148,7 @@ export const dataTable = new DataTable(tableElement, {
   // scrollY: "60vh",
   data: {
     headings: [
-      'sel',
+      "sel",
       '<i class="far fa-calendar-alt"></i>Date', // date/time
       '<i class="fas fa-running"></i>/<i class="fas fa-biking"></i>Type', // type
       `<i class="fas fa-road"></i>Dist (${DIST_LABEL})`, // distance
@@ -157,7 +157,7 @@ export const dataTable = new DataTable(tableElement, {
     ],
   },
   columns: [
-    { select:0, render: formatSelect },
+    { select: 0, render: formatSelect },
     { select: 1, type: "string", render: formatTimestamp, sort: "desc" },
     { select: 2, type: "string", render: formatAtype },
     { select: 3, type: "number", render: formatDistance },
@@ -165,7 +165,6 @@ export const dataTable = new DataTable(tableElement, {
     { select: 5, type: "string", render: formatTitle, sortable: false },
   ],
 })
-
 
 const rows = dataTable.rows()
 const lastSelection = {}
@@ -201,7 +200,7 @@ dataTable.table.addEventListener("click", function (e) {
   }
 
   // let dotLayer know about selection changes
-    // dotLayer.setItemSelect(selections);
+  // dotLayer.setItemSelect(selections);
 
   lastSelection.val = selected
   lastSelection.idx = idx

@@ -9,7 +9,7 @@
  * @return {String} The Strava URL for that activity
  */
 export function activityURL(id) {
-  return `https://www.strava.com/activities/${id}`;
+  return `https://www.strava.com/activities/${id}`
 }
 
 /**
@@ -17,7 +17,7 @@ export function activityURL(id) {
  * @return {String} The Strava URL for that user
  */
 export function athleteURL(id) {
-  return `https://www.strava.com/athletes/${id}`;
+  return `https://www.strava.com/athletes/${id}`
 }
 
 /**
@@ -66,7 +66,7 @@ const _specs = {
   Workout: [null, null, "#4b0082", '<i class="ci ci-activity"></i>'],
   Yoga: [null, null, '<i class="ci ci-meditate"></i>'],
   undefined: ["speed", null, '<i class="ci ci-activity"></i>'],
-};
+}
 
 export const ATYPE = {
   /**
@@ -74,7 +74,7 @@ export const ATYPE = {
    *                                Strava activity types that we support
    */
   types: function () {
-    return Object.keys(_specs);
+    return Object.keys(_specs)
   },
 
   /**
@@ -82,9 +82,8 @@ export const ATYPE = {
    * @return {String} The color code for that activity type
    */
   pathColor: function (type) {
-    const spec =
-      _specs[type] || _specs[type.toLowerCase()] || _specs[undefined];
-    return spec[1];
+    const spec = _specs[type] || _specs[type.toLowerCase()] || _specs[undefined]
+    return spec[1]
   },
 
   /**
@@ -100,12 +99,11 @@ export const ATYPE = {
    * @return {atypeSpec} An object with specs for this activity type
    */
   specs: function (type) {
-    const spec =
-      _specs[type] || _specs[type.toLowerCase()] || _specs[undefined];
+    const spec = _specs[type] || _specs[type.toLowerCase()] || _specs[undefined]
 
-    return { vtype: spec[0], pathColor: spec[1], name: spec[2] || type };
+    return { vtype: spec[0], pathColor: spec[1], name: spec[2] || type }
   },
-};
+}
 
 /* This function appends CSS style color defs for activity type
  *  to a DOM element for <span> children. Then, for example,
@@ -116,16 +114,16 @@ export const ATYPE = {
  */
 export function appendCSS(domElement) {
   /* define a CSS stylesheet for strava path colors */
-  const sheet = document.createElement("style");
-  let string = "";
+  const sheet = document.createElement("style")
+  let string = ""
 
   for (const type of ATYPE.types()) {
-    const color = _specs[type][1];
+    const color = _specs[type][1]
     if (color) {
-      string += `span.${type}{color:${color}}`;
+      string += `span.${type}{color:${color}}`
     }
   }
 
-  sheet.innerHTML = string;
-  domElement.appendChild(sheet);
+  sheet.innerHTML = string
+  domElement.appendChild(sheet)
 }

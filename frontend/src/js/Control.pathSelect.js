@@ -1,35 +1,35 @@
-import "./L.BoxHook.js";
-import "./L.SwipeSelect.js";
+import "./L.BoxHook.js"
+import "./L.SwipeSelect.js"
 
-import { L, map } from "./MapAPI.js";
-import appState from "./appState.js";
+import { L, map } from "./MapAPI.js"
+import appState from "./appState.js"
 
 // Select-activities-in-region functionality IIFE
 function doneSelecting(obj) {
   dotLayer.setSelectRegion(obj.pxBounds, function (ids) {
     if (selectControl.canvas) {
-      selectControl.remove();
-      selectButton.state("not-selecting");
+      selectControl.remove()
+      selectButton.state("not-selecting")
     }
 
     // handle_path_selections returns the id of the single
     // selected activity if only one is selected
-    const id = handle_path_selections(ids);
+    const id = handle_path_selections(ids)
 
     if (id) {
       const A = appState.items.get(id),
-        loc = A.bounds.getCenter();
+        loc = A.bounds.getCenter()
 
       setTimeout(function () {
-        activityDataPopup(id, loc);
-      }, 100);
+        activityDataPopup(id, loc)
+      }, 100)
     }
-  });
+  })
 }
 
 // set hooks for ctrl-drag
-map.on("boxhookend", doneSelecting);
-const selectControl = new L.SwipeSelect({}, doneSelecting);
+map.on("boxhookend", doneSelecting)
+const selectControl = new L.SwipeSelect({}, doneSelecting)
 
 // button for selecting via touchscreen
 const selectButton_states = [
@@ -38,8 +38,8 @@ const selectButton_states = [
     icon: "fa-object-group",
     title: "Toggle Path Selection",
     onClick: function (btn, map) {
-      btn.state("selecting");
-      selectControl.addTo(map);
+      btn.state("selecting")
+      selectControl.addTo(map)
     },
   },
   {
@@ -47,20 +47,20 @@ const selectButton_states = [
     icon: "<span>&cross;</span>",
     title: "Stop Selecting",
     onClick: function (btn, map) {
-      btn.state("not-selecting");
-      selectControl.remove();
+      btn.state("not-selecting")
+      selectControl.remove()
     },
   },
-];
+]
 
-import "../../node_modules/leaflet-easybutton/src/easy-button.d.ts";
-import "../../node_modules/leaflet-easybutton/src/easy-button.css";
+import "../../node_modules/leaflet-easybutton/src/easy-button.d.ts"
+import "../../node_modules/leaflet-easybutton/src/easy-button.css"
 selectButton = L.easyButton({
   states: selectButton_states,
   position: "topright",
-});
+})
 
-export default selectButton;
+export default selectButton
 
 function handle_path_selections(ids) {
   // if (!ids) return;

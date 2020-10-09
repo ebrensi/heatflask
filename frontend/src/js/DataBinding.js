@@ -34,13 +34,13 @@
  *                                    the variable value.
  */
 
-const identity = (x) => x;
+const identity = (x) => x
 
 function setAttribute(element, attribute, value) {
   if (value) {
-    element.setAttribute(attribute, value);
+    element.setAttribute(attribute, value)
   } else {
-    element.removeAttribute(attribute);
+    element.removeAttribute(attribute)
   }
 }
 
@@ -48,13 +48,13 @@ function setAttribute(element, attribute, value) {
  * This function possibly modifies obj.
  */
 function mergeDefaults(defaults, obj) {
-  const newObj = Object.assign({}, defaults);
+  const newObj = Object.assign({}, defaults)
   for (const key in obj) {
     if (obj[key]) {
-      newObj[key] = obj[key];
+      newObj[key] = obj[key]
     }
   }
-  return newObj;
+  return newObj
 }
 
 /**
@@ -67,30 +67,30 @@ function mergeDefaults(defaults, obj) {
  */
 export class BoundVariable {
   // #value is private.  We don't want the user accessing it directly
-  #value; // eslint-disable-line
+  #value // eslint-disable-line
 
   /**
    * @param value An initial value
    */
   constructor(value) {
-    this.DOMbindings = [];
-    this.countDB = 0;
+    this.DOMbindings = []
+    this.countDB = 0
 
-    this.generalBindings = [];
-    this.countGB = 0;
+    this.generalBindings = []
+    this.countGB = 0
 
-    this.#value = value;
+    this.#value = value
   }
 
   toString() {
-    return this.#value.toString();
+    return this.#value.toString()
   }
 
   /**
    * @return The current value of this variable
    */
   get() {
-    return this.#value;
+    return this.#value
   }
 
   /**
@@ -98,33 +98,33 @@ export class BoundVariable {
    * @param newValue the new value
    */
   set(newValue) {
-    this.#value = newValue;
+    this.#value = newValue
 
     // Update all bound DOM elments
     for (let i = 0; i < this.countDB; i++) {
-      const { element, property, attribute, format } = this.DOMbindings[i];
-      const val = format(newValue);
+      const { element, property, attribute, format } = this.DOMbindings[i]
+      const val = format(newValue)
 
       if (property) {
-        element[property] = val;
+        element[property] = val
       } else {
-        setAttribute(element, attribute, val);
+        setAttribute(element, attribute, val)
       }
     }
 
     // Call all bound hooks
     for (let i = 0; i < this.countGB; i++) {
-      const onChange = this.generalBindings[i];
-      onChange(newValue);
+      const onChange = this.generalBindings[i]
+      onChange(newValue)
     }
   }
 
   get value() {
-    return this.#value;
+    return this.#value
   }
 
   set value(newValue) {
-    this.set(newValue);
+    this.set(newValue)
   }
 
   /**
@@ -141,12 +141,12 @@ export class BoundVariable {
       DOMformat = identity,
       event,
       varFormat = identity,
-    } = DOMbinding;
+    } = DOMbinding
 
-    const el = element || document.querySelector(selector);
+    const el = element || document.querySelector(selector)
 
     if (!(el instanceof HTMLElement)) {
-      throw new TypeError("invalid HTMLElement");
+      throw new TypeError("invalid HTMLElement")
     }
 
     // if (!el.hasAttribute(attribute)) {
@@ -161,30 +161,30 @@ export class BoundVariable {
         element: el,
         [accessor]: attribute || property,
         format: DOMformat,
-      };
+      }
 
     if (event && event !== "none") {
       const getValue = attribute
         ? () => el.getAttribute(attribute)
-        : () => el[property];
+        : () => el[property]
 
-      const setValue = () => this.set(varFormat(getValue()));
+      const setValue = () => this.set(varFormat(getValue()))
 
-      el.addEventListener(event, setValue);
+      el.addEventListener(event, setValue)
     }
 
-    this.DOMbindings.push(binding);
-    this.countDB = this.DOMbindings.length;
+    this.DOMbindings.push(binding)
+    this.countDB = this.DOMbindings.length
 
-    const val = DOMformat(this.#value);
+    const val = DOMformat(this.#value)
 
     if (attribute) {
-      setAttribute(el, attribute, val);
+      setAttribute(el, attribute, val)
     } else {
-      el[property] = val;
+      el[property] = val
     }
 
-    return this;
+    return this
   }
 
   /**
@@ -195,9 +195,9 @@ export class BoundVariable {
    *   value of this property changes
    */
   onChange(func) {
-    this.generalBindings.push(func);
-    this.countGB = this.generalBindings.length;
-    return this;
+    this.generalBindings.push(func)
+    this.countGB = this.generalBindings.length
+    return this
   }
 }
 
@@ -219,11 +219,11 @@ export class BoundVariable {
  */
 export class BoundObject extends Object {
   constructor() {
-    super();
-    this.boundVariables = {};
+    super()
+    this.boundVariables = {}
     Object.defineProperty(this, "boundVariables", {
       enumerable: false,
-    });
+    })
   }
 
   /**
@@ -232,21 +232,21 @@ export class BoundObject extends Object {
    * @param value - An existing {@link BoundVariable} object.
    */
   addBoundVariable(key, bv) {
-    this.boundVariables[key] = bv;
+    this.boundVariables[key] = bv
 
     Object.defineProperty(this, key, {
       get: function () {
-        return this.boundVariables[key].get();
+        return this.boundVariables[key].get()
       }.bind(this),
 
       set: function (newValue) {
-        this.boundVariables[key].set(newValue);
+        this.boundVariables[key].set(newValue)
       }.bind(this),
 
       enumerable: true,
-    });
+    })
 
-    return bv;
+    return bv
   }
 
   /**
@@ -257,7 +257,7 @@ export class BoundObject extends Object {
    *                "property" {@link BoundVariable} object.
    */
   addProperty(key, value) {
-    return this.addBoundVariable(key, new BoundVariable(value));
+    return this.addBoundVariable(key, new BoundVariable(value))
   }
 
   /**
@@ -266,7 +266,7 @@ export class BoundObject extends Object {
    * @param {DOMbinding} binding
    */
   addDOMbinding(key, DOMbinding) {
-    return this.boundVariables[key].addDOMbinding(DOMbinding);
+    return this.boundVariables[key].addDOMbinding(DOMbinding)
   }
 
   /**
@@ -283,11 +283,11 @@ export class BoundObject extends Object {
    */
   onChange(key, func) {
     if (func) {
-      return this.boundVariables[key].onChange(func);
+      return this.boundVariables[key].onChange(func)
     } else {
-      func = key;
+      func = key
       for (const [prop, bv] of Object.entries(this.boundVariables)) {
-        bv.onChange((newVal) => func(prop, newVal));
+        bv.onChange((newVal) => func(prop, newVal))
       }
     }
   }
@@ -306,10 +306,10 @@ export class BoundObject extends Object {
   addFromObject(obj, defaults = {}) {
     for (const [key, val] of Object.entries(obj)) {
       const bv = this.boundVariables[key] || this.addProperty(key, val),
-        elements = document.querySelectorAll(`[data-bind=${key}]`);
+        elements = document.querySelectorAll(`[data-bind=${key}]`)
 
       for (const el of elements) {
-        const { attr, prop, event } = el.dataset;
+        const { attr, prop, event } = el.dataset
         bv.addDOMbinding(
           mergeDefaults(defaults, {
             element: el,
@@ -317,10 +317,10 @@ export class BoundObject extends Object {
             attribute: attr,
             event: event,
           })
-        );
+        )
       }
     }
-    return this;
+    return this
   }
 
   /**
@@ -334,10 +334,10 @@ export class BoundObject extends Object {
    */
   addFromDOMelements(selector, defaults = {}) {
     for (const el of document.querySelectorAll(selector)) {
-      const { bind: key, attr, prop, event } = el.dataset;
-      const bv = this.boundVariables[key] || this.addProperty(key);
+      const { bind: key, attr, prop, event } = el.dataset
+      const bv = this.boundVariables[key] || this.addProperty(key)
 
-      bv.value = bv.value || el.getAttribute(attr) || el[prop];
+      bv.value = bv.value || el.getAttribute(attr) || el[prop]
 
       bv.addDOMbinding(
         mergeDefaults(defaults, {
@@ -346,9 +346,9 @@ export class BoundObject extends Object {
           property: prop,
           event: el.dataset.event,
         })
-      );
+      )
     }
-    return this;
+    return this
   }
 
   /**
@@ -363,8 +363,8 @@ export class BoundObject extends Object {
    * @return {BoundObject}
    */
   static fromObject(...args) {
-    const bObj = new BoundObject();
-    return bObj.addFromObject(...args);
+    const bObj = new BoundObject()
+    return bObj.addFromObject(...args)
   }
 
   /**
@@ -377,8 +377,8 @@ export class BoundObject extends Object {
    * @return {@BoundObject}
    */
   static fromDOMelements(...args) {
-    const bObj = new BoundObject();
-    return bObj.addFromDOMelements(...args);
+    const bObj = new BoundObject()
+    return bObj.addFromDOMelements(...args)
   }
 
   /**
@@ -386,6 +386,6 @@ export class BoundObject extends Object {
    * of this {@link BoundBoject}
    */
   toObject() {
-    return Object.assign({}, this);
+    return Object.assign({}, this)
   }
 }

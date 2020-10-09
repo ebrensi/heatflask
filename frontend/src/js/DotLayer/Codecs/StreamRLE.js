@@ -31,7 +31,7 @@
  * @property {number} max - Max Value in the list (used for determining type of typed-array)
  */
 
-import { compress, uncompress } from "VByte.js";
+import { compress, uncompress } from "VByte.js"
 
 /** Decode a (RLE-encoded as a List) array of successive differences into
  * @generator
@@ -41,18 +41,18 @@ import { compress, uncompress } from "VByte.js";
  */
 export function* decodeList(rle_list, first_value = 0) {
   let running_sum = first_value,
-    len = rle_list.length;
-  yield running_sum;
+    len = rle_list.length
+  yield running_sum
   for (let i = 0, el; i < len; i++) {
-    el = rle_list[i];
+    el = rle_list[i]
     if (el instanceof Array) {
       for (let j = 0; j < el[1]; j++) {
-        running_sum += el[0];
-        yield running_sum;
+        running_sum += el[0]
+        yield running_sum
       }
     } else {
-      running_sum += el;
-      yield running_sum;
+      running_sum += el
+      yield running_sum
     }
   }
 }
@@ -63,12 +63,12 @@ export function* decodeList(rle_list, first_value = 0) {
  * @return {Number}
  */
 export function decodedListLength(rle_list) {
-  let len = 0; // We don't count the start value!
+  let len = 0 // We don't count the start value!
   for (const el of rle_list) {
-    if (el instanceof Array) len += el[1];
-    else len++;
+    if (el instanceof Array) len += el[1]
+    else len++
   }
-  return len;
+  return len
 }
 
 /**
@@ -85,21 +85,21 @@ export function decodedListLength(rle_list) {
  */
 function transcodeInfo(rle_list) {
   let len = 0, // We don't count the start value!
-    max = 0;
+    max = 0
 
   for (const el of rle_list) {
     if (el instanceof Array) {
-      if (el[1] > 2) len += 3;
-      else len += 2;
+      if (el[1] > 2) len += 3
+      else len += 2
 
-      if (el[0] > max) max = el[0];
-      if (el[1] > max) max = el[1];
+      if (el[0] > max) max = el[0]
+      if (el[1] > max) max = el[1]
     } else {
-      len++;
-      if (el > max) max = el;
+      len++
+      if (el > max) max = el
     }
   }
-  return { len: len, max: max };
+  return { len: len, max: max }
 }
 
 /**
@@ -110,25 +110,25 @@ export function transcode2Buf(rle_list) {
   const { len, max } = transcodeInfo(rle_list),
     ArrayConstructor =
       max >> 8 ? (max >> 16 ? Uint32Array : Uint16Array) : Uint8Array,
-    buf = new ArrayConstructor(len);
+    buf = new ArrayConstructor(len)
 
-  let j = 0;
+  let j = 0
   for (const el of rle_list) {
     if (el instanceof Array) {
       if (el[1] > 2) {
         /* this is only efficient if we have a run of
            3 or more repeated values */
-        buf[j++] = 0;
-        buf[j++] = el[1];
-        buf[j++] = el[0];
+        buf[j++] = 0
+        buf[j++] = el[1]
+        buf[j++] = el[0]
       } else {
         // we only have two so we flatten it
-        buf[j++] = el[0];
-        buf[j++] = el[0];
+        buf[j++] = el[0]
+        buf[j++] = el[0]
       }
-    } else buf[j++] = el;
+    } else buf[j++] = el
   }
-  return buf;
+  return buf
 }
 
 /**
@@ -137,8 +137,8 @@ export function transcode2Buf(rle_list) {
  * @return {ArrayBuffer}
  */
 export function transcode2CompressedBuf(rle_list) {
-  const buf = transcode2Buf(rle_list);
-  return compress(buf);
+  const buf = transcode2Buf(rle_list)
+  return compress(buf)
 }
 
 /**
@@ -149,22 +149,22 @@ export function transcode2CompressedBuf(rle_list) {
  */
 export function* decodeBuf(buf, first_value = 0) {
   let running_sum = first_value,
-    len = buf.length;
+    len = buf.length
 
-  yield running_sum;
+  yield running_sum
 
   for (let i = 0, el; i < len; i++) {
-    el = buf[i];
+    el = buf[i]
     if (el === 0) {
       const n = buf[++i],
-        repeated = buf[++i];
+        repeated = buf[++i]
       for (let j = 0; j < n; j++) {
-        running_sum += repeated;
-        yield running_sum;
+        running_sum += repeated
+        yield running_sum
       }
     } else {
-      running_sum += el;
-      yield running_sum;
+      running_sum += el
+      yield running_sum
     }
   }
 }
@@ -177,23 +177,23 @@ export function* decodeBuf(buf, first_value = 0) {
  * @yield {Number}
  */
 export function* decodeCompressedBuf(cbuf, first_value = 0) {
-  const bufGen = uncompress(cbuf);
+  const bufGen = uncompress(cbuf)
 
-  let running_sum = first_value;
-  yield running_sum;
+  let running_sum = first_value
+  yield running_sum
 
   for (const el of bufGen) {
     if (el === 0) {
       const n = bufGen.next().value,
-        repeated = bufGen.next().value;
+        repeated = bufGen.next().value
 
       for (let j = 0; j < n; j++) {
-        running_sum += repeated;
-        yield running_sum;
+        running_sum += repeated
+        yield running_sum
       }
     } else {
-      running_sum += el;
-      yield running_sum;
+      running_sum += el
+      yield running_sum
     }
   }
 }
@@ -210,39 +210,39 @@ export function* decodeCompressedBuf(cbuf, first_value = 0) {
  * @yields {Number}
  */
 export function decodeCompressedBuf2(cbuf, idxSet, first_value = 0) {
-  const bufGen = uncompress(cbuf);
+  const bufGen = uncompress(cbuf)
   let j = 0,
     k,
     repeated,
-    sum = first_value; // j is our counter for bufGen
+    sum = first_value // j is our counter for bufGen
 
   return idxSet.imap((i) => {
     // we will return the i-th element of bufGen
 
     // ..if we are continuing a repeat streak
     while (k > 0) {
-      sum += repeated;
-      k--;
-      if (++j == i) return sum;
+      sum += repeated
+      k--
+      if (++j == i) return sum
     }
 
-    if (j == i) return sum;
+    if (j == i) return sum
     else {
       while (j < i) {
-        const el = bufGen.next().value;
+        const el = bufGen.next().value
         if (el === 0) {
-          k = bufGen.next().value;
-          repeated = bufGen.next().value;
+          k = bufGen.next().value
+          repeated = bufGen.next().value
           while (k--) {
-            sum += repeated;
-            if (++j == i) return sum;
+            sum += repeated
+            if (++j == i) return sum
           }
         } else {
-          sum += el;
-          j++;
+          sum += el
+          j++
         }
       }
-      return sum;
+      return sum
     }
-  });
+  })
 }

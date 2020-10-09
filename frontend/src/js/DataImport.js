@@ -1,13 +1,13 @@
-import app from "./Model.js";
-import { L, controlWindow } from "./MapAPI.js";
+import app from "./Model.js"
+import { L, controlWindow } from "./MapAPI.js"
 // import { dotLayer } from "./DotLayerAPI.js";
-import queryBackend from "./Socket.js";
+import queryBackend from "./Socket.js"
 
-import * as myDT from "./Table.js";
+import * as myDT from "./Table.js"
 
-let numActivities, count;
+let numActivities, count
 
-app.dataTable = myDT.dataTable;
+app.dataTable = myDT.dataTable
 
 /*
  * Set up a message box that appears only when app.flags.importing is true
@@ -21,34 +21,34 @@ const importInfoBox = controlWindow({
             </div>`,
   prompt: {},
   visible: false,
-});
+})
 
 app.flags.onChange("importing", (val) => {
-  val ? importInfoBox.show() : importInfoBox.hide();
-});
+  val ? importInfoBox.show() : importInfoBox.hide()
+})
 
 const infoMsgElements = document.querySelectorAll(".info-message"),
-  progBars = document.querySelectorAll(".progbar");
+  progBars = document.querySelectorAll(".progbar")
 
 /*
  * Display a progress message and percent-completion
  */
 function displayProgressInfo(msg, progress) {
   if (!msg && !progress) {
-    infoMsgElements.forEach((el) => (el.innerHTML = ""));
-    progBars.forEach((el) => el.removeAttribute("value"));
-    return;
+    infoMsgElements.forEach((el) => (el.innerHTML = ""))
+    progBars.forEach((el) => el.removeAttribute("value"))
+    return
   }
 
   if (msg) {
     for (const el of infoMsgElements) {
-      el.innerHTML = msg;
+      el.innerHTML = msg
     }
   }
 
   if (progress) {
     for (const el of progBars) {
-      el.value = progress;
+      el.value = progress
     }
   }
 }
@@ -57,20 +57,20 @@ function displayProgressInfo(msg, progress) {
  * Send a query to the backend and populate the table and dotlayer with it.
  */
 export function makeQuery(query, done) {
-  app.flags.importing = true;
-  numActivities = 0;
-  count = 0;
+  app.flags.importing = true
+  numActivities = 0
+  count = 0
 
-  displayProgressInfo("Retrieving activity data...");
+  displayProgressInfo("Retrieving activity data...")
 
   queryBackend(query, onMessage, () => {
-    myDT.update();
-    done();
-  });
+    myDT.update()
+    done()
+  })
 }
 
 export function abortQuery() {
-  app.flags.importing = false;
+  app.flags.importing = false
 }
 
 // when done
@@ -88,42 +88,42 @@ export function abortQuery() {
 function onMessage(A) {
   if (!("_id" in A)) {
     if ("idx" in A) {
-      displayProgressInfo(`indexing...${A.idx}`);
+      displayProgressInfo(`indexing...${A.idx}`)
     } else if ("count" in A) {
-      numActivities += A.count;
+      numActivities += A.count
     } else if ("delete" in A) {
-      const toDelete = A.delete;
+      const toDelete = A.delete
       if (toDelete.length) {
         // delete all ids in A.delete
         for (const id of toDelete) {
-          delete app.items[id];
-          myDT.removeItem(id);
+          delete app.items[id]
+          myDT.removeItem(id)
         }
         // dotLayer.removeItems(toDelete);
       }
     } else if ("done" in A) {
-      console.log("received done");
+      console.log("received done")
       // doneRendering("Done rendering.");
     } else if ("msg" in A) {
-      displayProgressInfo(A.msg);
+      displayProgressInfo(A.msg)
     }
 
-    return;
+    return
   }
 
   if (!("type" in A)) {
-    return;
+    return
   }
 
-  const id = A["_id"];
+  const id = A["_id"]
 
   if (id in app.items) {
-    console.log(`${id} already in items`);
-    return;
+    console.log(`${id} already in items`)
+    return
   }
 
-  app.items[id] = A;
-  myDT.addItem(id);
+  app.items[id] = A
+  myDT.addItem(id)
 
   // assign this activity a path color and speed type (pace, mph)
   // const atype = ATYPE.specs(A["type"]);
@@ -131,7 +131,6 @@ function onMessage(A) {
   // const tsLocal = new Date((tup[0] + tup[1] * 3600) * 1000);
   // const UTCtimestamp = tup[0];
   // const bounds = L.latLngBounds(A["bounds"]["SW"], A["bounds"]["NE"]);
-
 
   // dotLayer.addItem(
   //   id,
@@ -143,14 +142,12 @@ function onMessage(A) {
   //   A["n"]
   // );
 
-  count++;
+  count++
   if (count % 5 === 0) {
-    const prog = numActivities ? count / numActivities : null;
-    displayProgressInfo(`imported ${count}/${numActivities || "?"}`, prog);
+    const prog = numActivities ? count / numActivities : null
+    displayProgressInfo(`imported ${count}/${numActivities || "?"}`, prog)
   }
 }
-
-
 
 /* Rendering */
 // function updateLayers(msg) {

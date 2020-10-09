@@ -45,4 +45,4 @@ export default {
     blur: 5,
     color: "#000000",
   },
-};
+}
