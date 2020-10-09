@@ -11,7 +11,7 @@ npm install
 
 echo "Installing backend dependencies..."
 cd ../backend
-./dev-install-backend
+./.dev-install-backend
 
 echo "You will still need to install data-stores redis, postgresql, and MongoDB"
 
