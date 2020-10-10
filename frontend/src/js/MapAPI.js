@@ -188,47 +188,52 @@ new Watermark({
 // The main sidebar UI
 // Leaflet sidebar v2
 export const sidebar = L.control.sidebar("sidebar").addTo(map)
-sidebar.addEventListener("opening", onSidebarOpen)
-sidebar.addEventListener("closing", onSidebarClose)
+const sidebarTabs = Array.from(document.querySelectorAll("[role=tab]")).map(
+  (el) => el.href.split("#")[1]
+)
+
+if (!app.currentUser.id) {
+  const idx = sidebarTabs.indexOf("profile")
+  sidebarTabs.splice(idx, 1)
+}
+let currentTab = 0
+
+console.log(`tabs`, sidebarTabs)
 
 /* key and mouse bindings to the map to control the sidebar */
 
-/* Events listened for when sidebar is open */
-const openEventListeners = {
-  /* close it if the user clicks anywhere on the map */
-  click: () => sidebar.close(),
+sidebar.addEventListener("opening", () => (sidebar.isOpen = true))
+sidebar.addEventListener("closing", () => (sidebar.isOpen = false))
+sidebar.isOpen = false
 
-  keydown: (e) => {
+document.addEventListener("keydown", (e) => {
+  if (sidebar.isOpen) {
     switch (e.keyCode) {
-      case 27:
-        sidebar.close() // close on ESC
+      case 27:  // ESC key
+      case 32:  // Space key
+        sidebar.close()
+        break
+      case 40: // up-arrow
+        currentTab = (currentTab + 1) % sidebarTabs.length
+        sidebar.open(sidebarTabs[currentTab])
+        break
+      case 38: // down-arrow
+        currentTab--
+        if (currentTab < 0)
+          currentTab = sidebarTabs.length - 1
+        sidebar.open(sidebarTabs[currentTab])
         break
     }
-  },
-}
+  } else {
+    switch (e.keyCode) {
+      case 32:  // Space key
+        sidebar.open(sidebarTabs[currentTab])
+        break
+    }
+  }
+})
 
-/* Events listened for when sidebar is open */
-const closedEventListeners = {}
-
-function onSidebarOpen() {
-  sidebar.isOpen = true
-  Object.entries(closedEventListeners).forEach((event, listener) =>
-    map.off(event, listener)
-  )
-  Object.entries(openEventListeners).forEach((event, listener) =>
-    map.on(event, listener)
-  )
-}
-
-function onSidebarClose() {
-  sidebar.isOpen = false
-  Object.entries(openEventListeners).forEach((event, listener) =>
-    map.off(event, listener)
-  )
-  Object.entries(closedEventListeners).forEach((event, listener) =>
-    map.on(event, listener)
-  )
-}
+map.addEventListener("click", () => sidebar.isOpen && sidebar.close())
 
 /*  Initialize areaselect control (for selecting activities via map rectangle) */
 /*
