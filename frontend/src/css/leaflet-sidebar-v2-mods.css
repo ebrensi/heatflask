@@ -58,6 +58,10 @@
   }
 }
 
+/*.sidebar {
+  resize: horizontal;
+}*/
+
 /* roundness of corners */
 .sidebar {
   border-radius: 8px;

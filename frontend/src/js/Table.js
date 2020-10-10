@@ -136,16 +136,16 @@ const toAdd = new Set(),
   toRemove = new Set(),
   indexLookup = new Map()
 
-sidebar.open("activities")
+// sidebar.open("activities")
 
 export const dataTable = new DataTable(tableElement, {
   sortable: true,
   searchable: true,
-  paging: true,
+  paging: false,
   perPageSelect: false,
   header: true,
   footer: false,
-  // scrollY: "60vh",
+  scrollY: "60vh",
   data: {
     headings: [
       "sel",

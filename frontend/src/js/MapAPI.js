@@ -198,8 +198,6 @@ if (!app.currentUser.id) {
 }
 let currentTab = 0
 
-console.log(`tabs`, sidebarTabs)
-
 /* key and mouse bindings to the map to control the sidebar */
 
 sidebar.addEventListener("opening", () => (sidebar.isOpen = true))
