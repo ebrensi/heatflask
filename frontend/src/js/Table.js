@@ -1,6 +1,4 @@
-// import { DataTable } from "../../node_modules/simple-datatables/src/index.js";
-import { DataTable } from "../ext/Simple-DataTables/src/index.js" // testing some development-mods (functionality should be the same)
-import "../../node_modules/simple-datatables/src/style.css"
+import HyperList from "../../node_modules/hyperlist/lib/index.js"
 import { HHMMSS } from "./appUtil.js"
 import { items } from "./Model.js"
 import { activityURL, appendCSS } from "./strava.js"
@@ -8,168 +6,153 @@ import { href } from "./appUtil.js"
 import { EventHandler } from "./EventHandler.js"
 import { sidebar } from "./MapAPI.js"
 
+// This should vary based on the user's unit preferences
+const DIST_LABEL = "mi",
+  DIST_UNIT = 1609.34
+
+sidebar.open("activities")
+
+/*
+ * Column headings
+ */
+const heading = [
+  "&#10003;",
+  '<i class="far fa-calendar-alt"></i>', // date/time
+  '<i class="fas fa-running"></i>/<i class="fas fa-biking"></i>', // type
+  `<i class="fas fa-road"></i>(${DIST_LABEL})`, // distance
+  '<i class="fas fa-hourglass-end"></i>', // duration
+  '<i class="fas fa-file-signature"></i>', // title
+]
+
 /*
  * Formatters for table columns.
  */
-function formatSelect(id, cell, row) {
-  row.id = id
-  return ""
-}
-
-function formatTimestamp(id, cell) {
-  const A = items[id],
-    tsLocal = (A.ts[0] + A.ts[1] * 3600) * 1000,
+const formatter = [
+  A => A.selected? return "&#10003;" : "",
+  A => {
+    const tsLocal = (A.ts[0] + A.ts[1] * 3600) * 1000,
     tsString = new Date(tsLocal).toLocaleString()
+    return href(activityURL(id), tsString)
+  },
+  A => `<span class="${A.type}">${A.type}</span>`,
+  A => (A.total_distance / DIST_UNIT).toFixed(2),
+  A => HHMMSS(A.elapsed_time),
+  A => A.name
+]
 
-  cell.dataset.content = +tsLocal
-  return href(activityURL(id), tsString)
+/*
+ * Numerical value to sort for each column
+ */
+const sortValue = [
+  A => A.selected? 1 : 0,
+  A => A.ts[0],
+  A => A.type,
+  A => A.total_distance,
+  A => A.elapsed_time,
+  A => null
+]
+
+/* By default, sort the date column descending, vs "asc" */
+const defaultSort = {column: 1, direction: "desc"}
+const numColumns = heading.length
+
+function sortItems2({column, direction}) {
+  const value = sortValue[column]
+  const compareFunc = (direction === "asc")?
+    (item1, item2) => value(item1) - value(item2) :
+    (item1, item2) => value(item2) - value(item1)
+
+  itemsArray.sort(compareFunc)
 }
 
-function formatAtype(id, cell) {
-  const A = items[id]
-  cell.dataset.content = A.type
-  return `<span class="${A.type}">${A.type}</span>`
-}
 
-function formatDistance(id, cell) {
-  const A = items[id]
-  cell.dataset.content = A.total_distance
+function makeRow(idx) {
+  const A = itemsArray[idx]
+  const tr = document.createElement("tr")
 
-  return (A.total_distance / DIST_UNIT).toFixed(2)
-}
+  if (A.selected) {
+    tr.classList.add("selected")
+  }
 
-function formatDuration(id, cell) {
-  const A = items[id]
-  cell.dataset.content = A.elapsed_time
-  return HHMMSS(A.elapsed_time)
-}
+  for (let j=0; j<numColumns; j++) {
+    const td = document.createElement("td", {
+      html: formatter[j](A)
+    })
+  }
 
-function formatTitle(id) {
-  const A = items[id]
-  return A.name
+  return tr
 }
 
 /*
- * We add and remove rows from the table with these functions.
- *   addItem and removeItem prepare a bulk action that is executed
- *   when update() is called.
+ *  Create the table/hyperlist
  */
+const tableElement = document.getElementById("activitiesList")
 
-/**
- * Add an item to the table (deferred until update is called)
- * @param {number|String} id --
- */
-export function addItem(id) {
-  toAdd.add(id)
+// Make header row
+const tHead = tableElement.createTHead()
+const headerRow = tHead.insertRow()
+for (const label of heading) {
+  const th = document.createElement("th", {
+    html: label
+  })
+  headerRow.appendChild(th)
 }
 
-export function removeItem(id) {
-  toRemove.add(id)
+const tBody = document.createElement("tbody")
+table.appendChild(tBody)
+
+const config = {
+  itemHeight: 40,
+  get total() { return itemsArray.length},
+  generate: makeRow
 }
 
-export function update() {
-  if (toRemove.size) {
-    const indexGen = function* () {
-      for (const id of toRemove.values()) {
-        yield indexLookup.get(id)
-      }
-    }
-    rows.remove(indexGen())
-  }
+const list = new HyperList(tBody, config)
 
-  if (toAdd.size) {
-    rows.add(rowIterator(toAdd))
-  }
+// Add Strava activity type stylings
+appendCSS(tBody)
 
-  toAdd.clear()
-  toRemove.clear()
-  indexLookup.clear()
-
-  for (const tr of dataTable.data) {
-    indexLookup.set(+tr.id, tr.dataIndex)
-  }
+function update() {
+  list.refresh(tBody, config)
 }
 
-function* rowIterator(ids) {
-  for (const id of ids) {
-    yield Array(6).fill(id)
-  }
-}
+window.onresize = update
+
 
 /*
  * Row selection management
  */
 /**
  * Specifiy the ids of multiple items to select or dselect
- * @param  {Object} selections -- key, value pairs {id : boolean} indicates whether id is (de)selected
+ * @param  {Object} selections -- key, value pairs {(id|idx)} : boolean}
+            indicates whether that id or index was (de)selected
  */
-export function select(selections) {
-  console.log(selections)
-  for (const [id, selected] of Object.entries(selections)) {
-    const idx = indexLookup.get(+id),
-      dRow = dataTable.data[idx]
 
-    if (selected) {
-      dRow.classList.add("selected")
-      selectedItems.add(+id)
-    } else {
-      dRow.classList.remove("selected")
-      selectedItems.delete(+id)
-    }
+function setSelect(A, selected) {
+  if (selected) {
+    A.selected = true
+  else {
+    A.selected = false
   }
-  dataTable.update()
 }
 
-export const selectedItems = new Set()
+export function updateSelections(selections) {
+  console.log(selections)
+  for (const idx in selections) {
+    setSelect(itemsArray[idx], selections[idx])
+  }
 
-/*
- *  Create the dataTable and set up event listeners
- */
+  for (const id in selections) {
+    const selected = selections[id]
+    const A = itemsArray.find(A => A.id === id)
+    setSelect(A, selected)
+  }
+}
 
-const tableElement = document.getElementById("activitiesList")
-appendCSS(tableElement)
 
-const DIST_LABEL = "mi",
-  DIST_UNIT = 1609.34
-
-const toAdd = new Set(),
-  toRemove = new Set(),
-  indexLookup = new Map()
-
-// sidebar.open("activities")
-
-export const dataTable = new DataTable(tableElement, {
-  sortable: true,
-  searchable: true,
-  paging: false,
-  perPageSelect: false,
-  header: true,
-  footer: false,
-  scrollY: "60vh",
-  data: {
-    headings: [
-      "sel",
-      '<i class="far fa-calendar-alt"></i>Date', // date/time
-      '<i class="fas fa-running"></i>/<i class="fas fa-biking"></i>Type', // type
-      `<i class="fas fa-road"></i>Dist (${DIST_LABEL})`, // distance
-      '<i class="fas fa-hourglass-end"></i>Time', // duration
-      '<i class="fas fa-file-signature"></i>Title', // title
-    ],
-  },
-  columns: [
-    { select: 0, render: formatSelect },
-    { select: 1, type: "string", render: formatTimestamp, sort: "desc" },
-    { select: 2, type: "string", render: formatAtype },
-    { select: 3, type: "number", render: formatDistance },
-    { select: 4, type: "number", render: formatDuration },
-    { select: 5, type: "string", render: formatTitle, sortable: false },
-  ],
-})
-
-const rows = dataTable.rows()
 const lastSelection = {}
 
-dataTable.table.addEventListener("click", function (e) {
+tbody.addEventListener("click", function (e) {
   const td = e.target,
     tr = td.parentElement,
     id = +tr.id,
@@ -199,14 +182,12 @@ dataTable.table.addEventListener("click", function (e) {
     }
   }
 
-  // let dotLayer know about selection changes
-  // dotLayer.setItemSelect(selections);
-
   lastSelection.val = selected
   lastSelection.idx = idx
 
   select(currentSelections)
   events.emit("selection", currentSelections)
+  update()
 
   // let redraw = false;
   // const mapBounds = map.getBounds();

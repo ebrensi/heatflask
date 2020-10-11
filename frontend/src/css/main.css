@@ -40,9 +40,6 @@
 /* Strava authentication button and athlete badge */
 @import "./strava-buttons.css";
 
-/* Simple-Datatables default styling */
-@import "../../node_modules/simple-datatables/src/style.css";
-
 body {
   padding: 0;
   margin: 0;
