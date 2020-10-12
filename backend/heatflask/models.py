@@ -777,7 +777,11 @@ class Index(object):
 
     @classmethod
     def _import(
-        cls, client, queue=None, fetch_query={}, out_query={},
+        cls,
+        client,
+        queue=None,
+        fetch_query={},
+        out_query={},
     ):
         # this method runs in a greenlet and does not have access to the
         #   current_app object.  anything that requires app context will
@@ -929,7 +933,12 @@ class Index(object):
 
     @classmethod
     def import_user_index(
-        cls, client=None, user=None, fetch_query={}, out_query={}, blocking=True,
+        cls,
+        client=None,
+        user=None,
+        fetch_query={},
+        out_query={},
+        blocking=True,
     ):
 
         log.debug(client)
@@ -939,7 +948,10 @@ class Index(object):
         if not client:
             return [{"error": "invalid user client. not authenticated?"}]
 
-        args = dict(fetch_query=fetch_query, out_query=out_query,)
+        args = dict(
+            fetch_query=fetch_query,
+            out_query=out_query,
+        )
 
         if out_query:
             # The presence of out_query means the caller wants
@@ -1830,7 +1842,10 @@ class EventLogger(object):
     def log_request(cls, flask_request_object, **args):
         req = flask_request_object
         args.update(
-            {"ip": req.access_route[-1], "agent": vars(req.user_agent),}
+            {
+                "ip": req.access_route[-1],
+                "agent": vars(req.user_agent),
+            }
         )
         cls.new_event(**args)
 

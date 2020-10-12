@@ -37,8 +37,7 @@ ttls = {k: f"{timedelta(seconds=app.config[k])}" for k in ttl_keys}
 env_var_keys = ["DEVELOPMENT"]
 env_vars = {k: f"{app.config[k]}" for k in env_var_keys}
 
-log.info(
-    "Heatflask server starting%s LOG_LEVEL=%s:", loc_status, log_level_name)
+log.info("Heatflask server starting%s LOG_LEVEL=%s:", loc_status, log_level_name)
 log.info("environment: %s, %s", ttls, env_vars)
 
 if __name__ == "__main__":

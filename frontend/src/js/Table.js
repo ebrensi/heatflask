@@ -28,7 +28,7 @@ const heading = [
  * Formatters for table columns.
  */
 const formatter = [
-  A => A.selected? return "&#10003;" : "",
+  A => A.selected? "&#10003;" : "",
   A => {
     const tsLocal = (A.ts[0] + A.ts[1] * 3600) * 1000,
     tsString = new Date(tsLocal).toLocaleString()

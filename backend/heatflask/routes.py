@@ -168,7 +168,7 @@ def splash():
             logout_user()
             flash("oops! Please log back in.")
 
-    next_url = (request.args.get("next") or url_for("splash"))
+    next_url = request.args.get("next") or url_for("splash")
     args = {
         "DEVELOPMENT": app.config.get("DEVELOPMENT"),
         "URLS": {
@@ -792,6 +792,7 @@ def paypal_ipn_handler():
 @admin_required
 def test_endpoint():
     return "yo!"
+
 
 #
 # These endpoints enables access to the source code for source maps (debugging)
