@@ -14,29 +14,29 @@ patch()
 
 sidebar.open("activities")
 
+const atypeIcon = (atype) => ATYPE.specs(atype).name
+
 /*
  * Column headings
  */
 const heading = [
-  // "&#10003;",
-  '<i class="icon-checkmark"></i>',
-  '<i class="icon-calendar"></i>', // date/time
-  '<i class="icon-activity"></i>', // type
-  `<i class="icon-road"></i>(${DIST_LABEL})`, // distance
-  '<i class="icon-hourglass-3"></i>', // duration
-  '<i class="icon-pencil"></i>', // title
+  '<i class="fas fa-check-double"></i>',
+  '<i class="fas fa-calendar-alt"></i>', // date/time
+  atypeIcon('activity'), // type
+  `<i class="fas fa-ruler"></i>(${DIST_LABEL})`, // distance
+  '<i class="fas fa-hourglass-end"></i>', // duration
+  '<i class="fas fa-file-signature"></i>', // title
 ]
 
 /*
  * Formatters for table columns.
  */
-const atypeIcon = (atype) => ATYPE.specs(atype).name
 const formatter = [
   A => A.selected? "&#10003;" : "",
   A => {
     const tsLocal = (A.ts[0] + A.ts[1] * 3600) * 1000,
     tsString = new Date(tsLocal).toLocaleString()
-    return href(activityURL(A.id), tsString)
+    return href(activityURL(A.id), tsString.split(",")[0])
   },
   A => `<span class="${A.type}">${atypeIcon(A.type)}</span>`,
   A => (A.total_distance / DIST_UNIT).toFixed(2),
@@ -120,7 +120,7 @@ for (const label of heading) {
 
 
 const config = {
-  itemHeight: 0,
+  itemHeight: 40,
   get total() { return app.items.length},
   generate: makeRow
 }
