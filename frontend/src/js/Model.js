@@ -192,15 +192,12 @@ export const currentUser = BoundObject.fromDOMelements(
 if (CURRENT_USER) {
   Object.assign(currentUser, CURRENT_USER)
   currentUser.url = USER_URLS(currentUser.id)
-
-  // const IMPERIAL = CURRENT_USER['measurement_preference'] == "feet"
-  // const DIST_UNIT = IMPERIAL? 1609.34 : 1000.0;
-  // const DIST_LABEL = IMPERIAL?  'mi' : 'km';
 }
 
 export const flags = BoundObject.fromDOMelements("[data-class=flag]")
 
-export const items = {}
+/* The array of activities */
+export const items = []
 
 const state = {
   items: items,
@@ -211,6 +208,13 @@ const state = {
   targetUser: targetUser,
   currentUser: currentUser,
   clientID: null,
+
+  get index() {
+    if (this._index) return this._index
+    this._index = {}
+    this.items.forEach((A, i) => this._index[A.id] = i)
+    return this._index
+  }
 }
 
 window["app"] = state

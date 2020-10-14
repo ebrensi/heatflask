@@ -13,6 +13,9 @@
 /* Font-Awesome 5 icons */
 @import "../../node_modules/@fortawesome/fontawesome-free/css/all.css";
 
+/* Custom font-font set from Icomoon */
+@import "./icons.css";
+
 /* Min CSS framework (https://mincss.com) */
 @import "../ext/min_entireframework.css";
 
@@ -152,26 +155,89 @@ a:visited {
 }
 */
 
+.x2 {
+  font-size: 1em;
+}
 /* This disables text-selection when user shift-clicks */
-.dataTable-table {
+#items-container {
+  height: 70vh;
+  width: 100%;
+  overflow: auto;
+}
+
+#items {
+  /*width: 624px;*/
+  table-layout: fixed;
   user-select: none;
 }
 
-.dataTable-table > thead > tr {
+#items > thead {
+  width: 100%;
+  display: table-header-group;
+  border-collapse: collapse;
+}
+
+#items tr.vrow {
+  position: relative;
+}
+
+#items tr.vrow td:nth-child(6) {
+  /*overflow: hidden;*/
+  /*text-overflow: ellipsis;*/
+  max-height: 50px;
+  /*white-space: nowrap;*/
+}
+
+#items > thead > tr {
   background-color: #0000ff50;
 }
 
-.dataTable-table tbody > tr:hover {
+tr,
+th {
+  border: 1px;
+}
+
+thead tr {
+  border: 1px solid white;
+}
+
+th,
+td {
+  padding-left: 2px;
+  padding-right: 2px;
+}
+
+thead tr th:nth-child(1) {
+  width: 1em;
+}
+
+thead tr th:nth-child(2) {
+  width: 5em;
+}
+
+thead tr th:nth-child(3) {
+  width: 1em;
+}
+
+thead tr th:nth-child(4) {
+  width: 2em;
+}
+
+thead tr th:nth-child(5) {
+  width: 3em;
+}
+
+thead tr th:nth-child(6) {
+  width: 50%;
+}
+
+#items > tbody > tr:hover {
   background-color: #ffffff60;
 }
 
-.dataTable-table tbody > tr.selected {
+/*#items > tbody > tr.selected {
   background-color: #ffffff30;
-}
-
-.dataTable-table tbody > tr.selected > td:first-child {
-  content: "x";
-}
+}*/
 
 input[data-bind="quantity"] {
   width: 4em;

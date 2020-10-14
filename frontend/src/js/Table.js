@@ -1,7 +1,7 @@
 import HyperList from "../../node_modules/hyperlist/lib/index.js"
 import { HHMMSS } from "./appUtil.js"
-import { items } from "./Model.js"
-import { activityURL, appendCSS } from "./strava.js"
+import app from "./Model.js"
+import { activityURL, appendCSS, ATYPE } from "./strava.js"
 import { href } from "./appUtil.js"
 import { EventHandler } from "./EventHandler.js"
 import { sidebar } from "./MapAPI.js"
@@ -10,31 +10,35 @@ import { sidebar } from "./MapAPI.js"
 const DIST_LABEL = "mi",
   DIST_UNIT = 1609.34
 
+patch()
+
 sidebar.open("activities")
 
 /*
  * Column headings
  */
 const heading = [
-  "&#10003;",
-  '<i class="far fa-calendar-alt"></i>', // date/time
-  '<i class="fas fa-running"></i>/<i class="fas fa-biking"></i>', // type
-  `<i class="fas fa-road"></i>(${DIST_LABEL})`, // distance
-  '<i class="fas fa-hourglass-end"></i>', // duration
-  '<i class="fas fa-file-signature"></i>', // title
+  // "&#10003;",
+  '<i class="icon-checkmark"></i>',
+  '<i class="icon-calendar"></i>', // date/time
+  '<i class="icon-activity"></i>', // type
+  `<i class="icon-road"></i>(${DIST_LABEL})`, // distance
+  '<i class="icon-hourglass-3"></i>', // duration
+  '<i class="icon-pencil"></i>', // title
 ]
 
 /*
  * Formatters for table columns.
  */
+const atypeIcon = (atype) => ATYPE.specs(atype).name
 const formatter = [
   A => A.selected? "&#10003;" : "",
   A => {
     const tsLocal = (A.ts[0] + A.ts[1] * 3600) * 1000,
     tsString = new Date(tsLocal).toLocaleString()
-    return href(activityURL(id), tsString)
+    return href(activityURL(A.id), tsString)
   },
-  A => `<span class="${A.type}">${A.type}</span>`,
+  A => `<span class="${A.type}">${atypeIcon(A.type)}</span>`,
   A => (A.total_distance / DIST_UNIT).toFixed(2),
   A => HHMMSS(A.elapsed_time),
   A => A.name
@@ -49,120 +53,109 @@ const sortValue = [
   A => A.type,
   A => A.total_distance,
   A => A.elapsed_time,
-  A => null
+  () => null
 ]
 
 /* By default, sort the date column descending, vs "asc" */
 const defaultSort = {column: 1, direction: "desc"}
+let currentSort
+
 const numColumns = heading.length
 
-function sortItems2({column, direction}) {
+export function sortItems({column, direction}) {
   const value = sortValue[column]
   const compareFunc = (direction === "asc")?
     (item1, item2) => value(item1) - value(item2) :
     (item1, item2) => value(item2) - value(item1)
 
-  itemsArray.sort(compareFunc)
+  app.items.sort(compareFunc)
+  currentSort = {column, direction}
+  delete app._index
+
 }
 
 
 function makeRow(idx) {
-  const A = itemsArray[idx]
+  const A = app.items[idx]
   const tr = document.createElement("tr")
 
   if (A.selected) {
     tr.classList.add("selected")
   }
 
+  tr.idx = idx
+
   for (let j=0; j<numColumns; j++) {
-    const td = document.createElement("td", {
-      html: formatter[j](A)
-    })
+    const td = document.createElement("td")
+    td.innerHTML = formatter[j](A)
+    tr.appendChild(td)
   }
 
   return tr
 }
 
+const rows = new Proxy({}, {
+  get: function(target, prop) {
+    return makeRow(prop)
+  }
+});
+
+app.rows = rows
+
+
 /*
  *  Create the table/hyperlist
  */
-const tableElement = document.getElementById("activitiesList")
+const tableElement = document.getElementById("items")
 
 // Make header row
 const tHead = tableElement.createTHead()
+
 const headerRow = tHead.insertRow()
 for (const label of heading) {
-  const th = document.createElement("th", {
-    html: label
-  })
+  const th = document.createElement("th")
+  th.innerHTML = label
   headerRow.appendChild(th)
 }
 
-const tBody = document.createElement("tbody")
-table.appendChild(tBody)
 
 const config = {
-  itemHeight: 40,
-  get total() { return itemsArray.length},
+  itemHeight: 0,
+  get total() { return app.items.length},
   generate: makeRow
 }
 
-const list = new HyperList(tBody, config)
+let list
 
 // Add Strava activity type stylings
-appendCSS(tBody)
+appendCSS(tableElement)
 
-function update() {
+export function update() {
+  sortItems(currentSort || defaultSort)
+  lastSelection = {}
+
+  const tbOld = document.querySelector("tbody")
+  if (tbOld) tbOld.remove()
+  const tBody = document.createElement("tbody")
+  tableElement.appendChild(tBody)
+
+  list = list || new HyperList(tBody, config)
   list.refresh(tBody, config)
 }
 
 window.onresize = update
 
 
-/*
- * Row selection management
- */
-/**
- * Specifiy the ids of multiple items to select or dselect
- * @param  {Object} selections -- key, value pairs {(id|idx)} : boolean}
-            indicates whether that id or index was (de)selected
- */
+let lastSelection = {}
 
-function setSelect(A, selected) {
-  if (selected) {
-    A.selected = true
-  else {
-    A.selected = false
-  }
-}
-
-export function updateSelections(selections) {
-  console.log(selections)
-  for (const idx in selections) {
-    setSelect(itemsArray[idx], selections[idx])
-  }
-
-  for (const id in selections) {
-    const selected = selections[id]
-    const A = itemsArray.find(A => A.id === id)
-    setSelect(A, selected)
-  }
-}
-
-
-const lastSelection = {}
-
-tbody.addEventListener("click", function (e) {
+tableElement.addEventListener("click", function (e) {
   const td = e.target,
     tr = td.parentElement,
-    id = +tr.id,
-    idx = tr.rowIndex - 1,
-    currentSelections = {}
+    idx = tr.idx,
+    A = app.items[idx];
 
-  // toggle selection property of the clicked row
-  const selected = !selectedItems.has(id)
-
-  currentSelections[id] = selected
+  // toggle selection property of the item represented by clicked row
+  A.selected = !A.selected
 
   /* handle shift-click for multiple (de)selection
    *  all rows beteween the clicked row and the last clicked row
@@ -170,23 +163,22 @@ tbody.addEventListener("click", function (e) {
    */
   if (e.shiftKey && lastSelection) {
     const first = Math.min(idx, lastSelection.idx),
-      last = Math.max(idx, lastSelection.idx),
-      pageRows = dataTable.body.rows
+      last = Math.max(idx, lastSelection.idx)
 
     // console.log(`${selected? "select":"deselect"} ${first} to ${last}`)
-    for (let i = first + 1; i <= last; i++) {
-      const dRow = pageRows[i],
-        did = +dRow.id
-
-      currentSelections[did] = selected
+    let i
+    for (i = first + 1; i <= last; i++) {
+      app.items[i].selected = A.selected
     }
+
+    lastSelection.idx = i
+  }
+  else {
+    lastSelection.idx = idx
   }
 
-  lastSelection.val = selected
-  lastSelection.idx = idx
+  lastSelection.val = A.selected
 
-  select(currentSelections)
-  events.emit("selection", currentSelections)
   update()
 
   // let redraw = false;
@@ -292,3 +284,38 @@ function activityDataPopup(id, latlng){
 
 
 */
+
+function patch() {
+    HyperList.prototype._getRow = function (i) {
+      const config = this._config
+      let item = config.generate(i)
+      let height = item.height
+
+      if (height !== undefined && isNumber(height)) {
+        item = item.element
+
+        // The height isn't the same as predicted, compute positions again
+        if (height !== this._itemHeights[i]) {
+          this._itemHeights[i] = height
+          this._computePositions(i)
+          this._scrollHeight = this._computeScrollHeight(i)
+        }
+      } else {
+        height = this._itemHeights[i]
+      }
+
+      if (!item || item.nodeType !== 1) {
+        throw new Error(`Generator did not return a DOM Node for index: ${i}`)
+      }
+
+      item.classList.add(config.rowClassName || 'vrow')
+
+      const top = this._itemPositions[i] + this._scrollPaddingTop
+
+      HyperList.mergeStyle(item, {
+        [config.horizontal ? 'left' : 'top']: `${top}px`
+      })
+
+      return item
+    }
+}

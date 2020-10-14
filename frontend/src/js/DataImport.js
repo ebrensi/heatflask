@@ -3,11 +3,9 @@ import { L, controlWindow } from "./MapAPI.js"
 // import { dotLayer } from "./DotLayerAPI.js";
 import queryBackend from "./Socket.js"
 
-import * as myDT from "./Table.js"
+import * as table from "./Table.js"
 
 let numActivities, count
-
-app.dataTable = myDT.dataTable
 
 /*
  * Set up a message box that appears only when app.flags.importing is true
@@ -64,7 +62,7 @@ export function makeQuery(query, done) {
   displayProgressInfo("Retrieving activity data...")
 
   queryBackend(query, onMessage, () => {
-    myDT.update()
+    table.update()
     done()
   })
 }
@@ -95,11 +93,10 @@ function onMessage(A) {
       const toDelete = A.delete
       if (toDelete.length) {
         // delete all ids in A.delete
+        const index = app.index
         for (const id of toDelete) {
-          delete app.items[id]
-          myDT.removeItem(id)
+          app.items[index[+id]] = null
         }
-        // dotLayer.removeItems(toDelete);
       }
     } else if ("done" in A) {
       console.log("received done")
@@ -115,15 +112,10 @@ function onMessage(A) {
     return
   }
 
-  const id = A["_id"]
-
-  if (id in app.items) {
-    console.log(`${id} already in items`)
-    return
-  }
-
-  app.items[id] = A
-  myDT.addItem(id)
+  A.id = A._id
+  delete A._id
+  app.items.push(A)
+  // dotLayer.prepItem(A)
 
   // assign this activity a path color and speed type (pace, mph)
   // const atype = ATYPE.specs(A["type"]);
@@ -211,8 +203,3 @@ function onMessage(A) {
 //   return bounds;
 // }
 
-// Dom.addEvent("#abortButton", "click", function () {
-//   importData();
-//   Dom.prop("#renderButton", "disabled", false);
-//   doneRendering("<font color='red'>Aborted:</font>");
-// });

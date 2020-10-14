@@ -28,44 +28,44 @@ export function athleteURL(id) {
  * @type {Object}
  */
 const _specs = {
-  AlpineSki: ["speed", "#800080", '<i class="ci ci-alpine-ski"></i>'],
-  BackcountrySki: [null, null],
-  Canoeing: ["speed", "#fa8080", '<i class="ci ci-canoe"></i>'],
-  Crossfit: [null, null, '<i class="ci ci-crossfit"></i>'],
-  EBikeRide: ["speed", "#0000cd", '<i class="fas fa-motorcycle"></i>'], // mediumblue
+  AlpineSki: ["speed", "#800080", '<i class="icon-skiing"></i>'],
+  BackcountrySki: ["speed", "#800080", '<i class="icon-xc-ski"></i>'],
+  Canoeing: ["speed", "#fa8080", '<i class="icon-canoe"></i>'],
+  Crossfit: [null, null, '<i class="icon-crossfit"></i>'],
+  EBikeRide: ["speed", "#0000cd", '<i class="icon-motorcycle x2"></i>'], // mediumblue
   Elliptical: [null, null],
-  Golf: [null, null, '<i class="fas fa-golf-ball"></i>'],
-  Handcycle: ["speed", "#2b60de", '<i class="fab fa-accessible-icon"></i>'],
-  Hike: ["pace", "#ff1493", '<i class="fas fa-hiking"></i>'], // deeppink
-  IceSkate: ["speed", "#663399", '<i class="fas fa-skating"></i>'], // rebeccapurple
-  InlineSkate: ["speed", "#8a2be2", '<i class="ci ci-roller-skate"></i>'], // blueviolet
-  Kayaking: ["speed", "#ffa500", '<i class="ci ci-kayak"></i>'], // orange
-  Kitesurf: ["speed", "#00ff00", '<i class="ci ci-kitesurf"></i>'],
-  NordicSki: ["speed", "#800080", '<i class="fas fa-skiing-nordic"></i>'], // purple
-  Ride: ["speed", "#2b60de", '<i class="fas fa-biking"></i>'], // ocean blue
-  RockClimbing: [null, "#4b0082", '<i class="ci ci-climb"></i>'], // indigo
-  RollerSki: ["speed", "#800080", '<i class="ci ci-roller-ski"></i>'], // purple
-  Rowing: ["speed", "#fa8072", '<i class="ci ci-rowing"></i>'], // salmon
-  Run: ["pace", "#ff0000", '<i class="fas fa-running"></i>'], // red
-  Sail: ["speed", "#8a2be2", '<i class="ci ci-sailboat"></i>'],
-  Skateboard: ["speed", "#800080", '<i class="ci ci-skateboarding"></i>'],
-  Snowboard: ["speed", "#00ff00", '<i class="fas fa-snowboarding"></i>'], // lime
-  Snowshoe: ["pace", "#800080", '<i class="ci ci-snowshoes"></i>'], // purple
-  Soccer: ["pace", "#8a2be2", '<i class="ci ci-soccer"></i>'],
-  StairStepper: ["pace", null, '<i class="ci ci-stairs"></i>'],
-  StandUpPaddling: ["speed", "#800080", '<i class="ci ci-standup-paddle"></i>'],
-  Surfing: ["speed", "#006400", '<i class="ci ci-surf"></i>'], // darkgreen
-  Swim: ["speed", "#00ff7f", '<i class="fas fa-swimmer"></i>'], // springgreen
+  Golf: [null, null, '<i class="icon-golf"></i>'],
+  Handcycle: ["speed", "#2b60de", '<i class="icon-handbike"></i>'],
+  Hike: ["pace", "#ff1493", '<i class="icon-hiking x2"></i>'], // deeppink
+  IceSkate: ["speed", "#663399", '<i class="icon-skating"></i>'], // rebeccapurple
+  InlineSkate: ["speed", "#8a2be2", '<i class="icon-inline-skating x2"></i>'], // blueviolet
+  Kayaking: ["speed", "#ffa500", '<i class="icon-kayak"></i>'], // orange
+  Kitesurf: ["speed", "#00ff00", '<i class="icon-kitesurf"></i>'],
+  NordicSki: ["speed", "#800080", '<i class="icon-skiing-nordic"></i>'], // purple
+  Ride: ["speed", "#2b60de", '<i class="icon-bicycle x2"></i>'], // ocean blue
+  RockClimbing: [null, "#4b0082", '<i class="icon-climbing"></i>'], // indigo
+  RollerSki: ["speed", "#800080", '<i class="icon-roller-ski"></i>'], // purple
+  Rowing: ["speed", "#fa8072", '<i class="icon-rowing"></i>'], // salmon
+  Run: ["pace", "#ff0000", '<i class="icon-running x2"></i>'], // red
+  Sail: ["speed", "#8a2be2", '<i class="icon-sailboat"></i>'],
+  Skateboard: ["speed", "#800080", '<i class="icon-skateboarding"></i>'],
+  Snowboard: ["speed", "#00ff00", '<i class="icon-snowboarding"></i>'], // lime
+  Snowshoe: ["pace", "#800080", '<i class="icon-snowshoes"></i>'], // purple
+  Soccer: ["pace", "#8a2be2", '<i class="icon-soccer"></i>'],
+  StairStepper: ["pace", null, '<i class="icon-stairs"></i>'],
+  StandUpPaddling: ["speed", "#800080", '<i class="icon-sup-paddle"></i>'],
+  Surfing: ["speed", "#006400", '<i class="icon-surf"></i>'], // darkgreen
+  Swim: ["speed", "#00ff7f", '<i class="icon-swimming"></i>'], // springgreen
   Velomobile: ["speed", null, null],
-  VirtualRide: ["speed", "#1e90ff", '<i class="ci ci-spinning"></i>'], // dodgerblue
-  VirtualRun: ["pace", null, '<i class="ci ci-treadmill"></i>'],
-  Walk: ["pace", "#ff00ff", '<i class="fas fa-walking"></i>'], // fuchsia
-  WeightTraining: [null, null, '<i class="ci ci-weights"></i>'],
-  Wheelchair: ["speed", "#2b60de", '<i class="fas fa-wheelchair"></i>'],
-  Windsurf: ["speed", "#4b0082", '<i class="ci ci-windsurf"></i>'],
-  Workout: [null, null, "#4b0082", '<i class="ci ci-activity"></i>'],
-  Yoga: [null, null, '<i class="ci ci-meditate"></i>'],
-  undefined: ["speed", null, '<i class="ci ci-activity"></i>'],
+  VirtualRide: ["speed", "#1e90ff", '<i class="icon-spinning"></i>'], // dodgerblue
+  VirtualRun: ["pace", null, '<i class="icon-treadmill"></i>'],
+  Walk: ["pace", "#ff00ff", '<i class="icon-walking x2"></i>'], // fuchsia
+  WeightTraining: [null, null, '<i class="icon-weights"></i>'],
+  Wheelchair: ["speed", "#2b60de", '<i class="icon-wheelchair"></i>'],
+  Windsurf: ["speed", "#4b0082", '<i class="icon-windsurf"></i>'],
+  Workout: [null, null, "#4b0082", '<i class="icon-activity"></i>'],
+  Yoga: [null, null, '<i class="icon-meditate"></i>'],
+  undefined: ["speed", null, '<i class="icon-activity"></i>'],
 }
 
 export const ATYPE = {
@@ -120,7 +120,7 @@ export function appendCSS(domElement) {
   for (const type of ATYPE.types()) {
     const color = _specs[type][1]
     if (color) {
-      string += `span.${type}{color:${color}}`
+      string += `span.${type}{background-color:${color}}`
     }
   }
 
