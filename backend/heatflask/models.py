@@ -645,7 +645,6 @@ class Users(UserMixin, db_sql.Model):
             self.abort_signal = yield A
             count += 1
 
-            log.debug(f"exported {count}")
             if self.abort_signal:
                 log.info("%s received abort_signal. quitting...", self)
                 summaries_generator.send(abort_signal)
