@@ -1,4 +1,4 @@
-import BitSet from "./BitSet"
+import BitSet from "../BitSet"
 
 /*
     Adapted from V. Agafonkin's simplify.js implementation of

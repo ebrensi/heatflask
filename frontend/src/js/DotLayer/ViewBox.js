@@ -5,7 +5,7 @@
  *
  */
 
-import { makePT } from "CRS.js"
+import { makePT } from "./CRS.js"
 import BitSet from "../BitSet.js"
 import { DomUtil } from "leaflet"
 

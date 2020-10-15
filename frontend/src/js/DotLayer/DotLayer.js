@@ -7,27 +7,21 @@ import * as leafletImage from "leaflet-image"
 import * as GIF from "gif.js"
 import * as download from "downloadjs"
 
-import * as ViewBox from "ViewBox.js"
-import * as DrawBox from "DrawBox.js"
-import * as WorkerPool from "WorkerPool.js"
+import * as ViewBox from "./ViewBox.js"
+import * as DrawBox from "./DrawBox.js"
+import * as WorkerPool from "./WorkerPool.js"
 
-import * as Polyline from "Codecs/Polyline.js"
-import * as StreamRLE from "Codecs/StreamRLE.js"
-import Simplifier from "Simplifier.js"
+import * as Polyline from "./Codecs/Polyline.js"
+import * as StreamRLE from "./Codecs/StreamRLE.js"
+import Simplifier from "./Simplifier.js"
 import BitSet from "../BitSet.js"
 
-import heatflask_logo from "../../images/logo.png"
-import strava_logo from "../../images/pbs4.png"
+import heatflask_logo from "url:../../images/logo.png"
+import strava_logo from "url:../../images/pbs4.png"
 
-import options from "options.js"
+import options from "./options.js"
 
-export const DotLayer = Layer.extend(extension)
-
-export const dotLayer = function (options) {
-  return new DotLayer(options)
-}
-
-const extension = {
+export const DotLayer = Layer.extend({
   _pane: "shadowPane",
   two_pi: 2 * Math.PI,
   target_fps: 25,
@@ -1376,4 +1370,10 @@ const extension = {
             return binarySearch(map, x, mid+1, end);
     }
     */
-} // end of DotLayer definition
+ // end of DotLayer definition
+ })
+
+export const dotLayer = function (options) {
+  return new DotLayer(options)
+}
+

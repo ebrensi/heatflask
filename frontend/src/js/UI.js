@@ -11,7 +11,7 @@ import app from "./Model.js"
 import "./URL.js"
 
 // import { map } from "./MapAPI.js";
-// import { dotLayer } from "./DotLayerAPI.js";
+import { dotLayer } from "./DotLayerAPI.js";
 // import "./DotControls.js";
 
 import paypalButtonHTML from "bundle-text:../html/paypal-button.html"
@@ -27,8 +27,6 @@ import * as dataTable from "./Table.js"
 
   right now we are only doing the single target-user UI.
 */
-
-let dotLayer
 
 // pause animation when window/tab is not visible
 document.onvisibilitychange = function (e) {
