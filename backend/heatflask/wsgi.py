@@ -34,7 +34,7 @@ elif app.config.get("USE_REMOTE_DB"):
 ttl_keys = ["TTL_INDEX", "TTL_DB", "TTL_CACHE"]
 ttls = {k: f"{timedelta(seconds=app.config[k])}" for k in ttl_keys}
 
-env_var_keys = ["DEVELOPMENT"]
+env_var_keys = ["DEVELOPMENT", "OFFLINE"]
 env_vars = {k: f"{app.config[k]}" for k in env_var_keys}
 
 log.info("Heatflask server starting%s LOG_LEVEL=%s:", loc_status, log_level_name)

@@ -10,11 +10,11 @@ PORT=5000
 
 while [ "$1" != "" ]; do
     case $1 in
-        -o | --offline )        OFFLINE=1
+        -o | --offline )        export OFFLINE=1
                                 ;;
-        -r | --remote_db )      USE_REMOTE_DB=1
+        -r | --remote_db )      export USE_REMOTE_DB=1
                                 ;;
-        -p | --port )           PORT="$2"
+        -p | --port )           export PORT="$2"
                                 ;;
         -h | --help )           usage
                                 exit
@@ -31,7 +31,11 @@ HEROKU_CLI=/usr/bin/heroku
 pkill gunicorn
 
 # Run the backend server via heroku local if it is available, otherwise gunicorn directly
-if [ -f "$HEROKU_CLI" ]; then
+if [ $OFFLINE ]; then
+    echo "Running backend without network connection"
+    gunicorn heatflask.wsgi:app
+
+elif [ -f "$HEROKU_CLI" ]; then
     echo "$HEROKU_CLI is present"
     heroku local
 else
