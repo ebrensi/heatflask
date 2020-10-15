@@ -540,6 +540,7 @@ class Users(UserMixin, db_sql.Model):
             batch_queue = gevent.queue.Queue()
         else:
             to_import = FakeQueue()
+            log.debug("no importing")
 
         def import_activity_streams(A):
             if not (A and "_id" in A):
@@ -631,7 +632,11 @@ class Users(UserMixin, db_sql.Model):
         def raw_done(dummy):
             # The value of result will be False
             log.debug("%s done with raw summaries. elapsed=%s", self, timer.elapsed())
-            to_import.put(StopIteration)
+
+            if self.strava_client:
+                to_import.put(StopIteration)
+            else:
+                to_export.put(StopIteration)
 
         aux_pool.spawn(process_chunks, chunks).link(raw_done)
 
@@ -640,6 +645,7 @@ class Users(UserMixin, db_sql.Model):
             self.abort_signal = yield A
             count += 1
 
+            log.debug(f"exported {count}")
             if self.abort_signal:
                 log.info("%s received abort_signal. quitting...", self)
                 summaries_generator.send(abort_signal)
