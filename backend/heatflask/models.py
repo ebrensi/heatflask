@@ -157,6 +157,8 @@ class Users(UserMixin, db_sql.Model):
                     access_token=new_access_info.get("access_token"),
                     rate_limiter=(lambda x=None: None),
                 )
+            except requests.exceptions.ConnectionError as e:
+                log.error("can't refresh token. no network connection.")
             except Exception:
                 log.exception("%s token refresh fail", self)
                 self.cli = None
