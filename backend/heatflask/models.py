@@ -540,7 +540,6 @@ class Users(UserMixin, db_sql.Model):
             batch_queue = gevent.queue.Queue()
         else:
             to_import = FakeQueue()
-            log.debug("no importing")
 
         def import_activity_streams(A):
             if not (A and "_id" in A):

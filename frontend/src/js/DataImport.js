@@ -69,6 +69,7 @@ export function makeQuery(query, done) {
 
 export function abortQuery() {
   app.flags.importing = false
+  makeQuery()
 }
 
 // when done
@@ -114,7 +115,8 @@ function onMessage(A) {
 
   A.id = A._id
   delete A._id
-  app.items.push(A)
+  app.items.set(A.id, A)
+
   // dotLayer.prepItem(A)
 
   // assign this activity a path color and speed type (pace, mph)

@@ -88,6 +88,7 @@ function viewIndex() {
 }
 
 function abortRender() {
+  debugger;
   abortQuery()
 }
 
@@ -95,7 +96,7 @@ function abortRender() {
  * Bind data-actions
  */
 const userActions = {
-  "selection-clear": null,
+  "selection-clear": dataTable.clearSelections,
   "selection-render": null,
   query: renderFromQuery,
   "abort-query": abortRender,
@@ -105,7 +106,7 @@ const userActions = {
   "view-index": viewIndex,
 }
 
-const doAction = (event) => {
+function doAction(event) {
   const name = event.target.dataset.action,
     action = userActions[name]
   console.log(name)
@@ -176,11 +177,11 @@ function renderFromQuery() {
 
   makeQuery(query, () => {
     app.flags.importing = false
-
-    console.log("done")
   })
 }
 
+
+// Make initial query if there is one
 if (app.qParams.userid) {
   renderFromQuery()
 }

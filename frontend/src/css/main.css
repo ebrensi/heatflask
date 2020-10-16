@@ -148,16 +148,9 @@ a:visited {
   display: block;
 }
 
-/* remove little sorting arrows to save space */
-/*
-.dataTable-sorter::before,
-.dataTable-sorter::after {
-  display:none;
-}
-*/
 
 .x2 {
-  font-size: 1em;
+  font-size: 2em;
 }
 /* This disables text-selection when user shift-clicks */
 #items-container {
@@ -166,79 +159,88 @@ a:visited {
   overflow: auto;
 }
 
-#items {
-  /*width: 624px;*/
+.heatflask-table {
+  width: auto;
   table-layout: fixed;
   user-select: none;
+  cursor: pointer;
 }
 
-#items > thead {
+.heatflask.table thead {
   width: 100%;
   display: table-header-group;
   border-collapse: collapse;
 }
 
-#items tr.vrow {
-  position: relative;
+.heatflask-table th {
+  background-color: #0000ff70;
+  position: sticky;
+  top: 0;
 }
 
-#items tr.vrow td:nth-child(6) {
-  /*overflow: hidden;*/
-  /*text-overflow: ellipsis;*/
-  max-height: 50px;
-  /*white-space: nowrap;*/
+.heatflask-table th[data-sort="asc"]:after,
+.heatflask-table th[data-sort="desc"]:after{
+    content: '';
+    position: relative;
+    left: 10px;
+    border: 7px solid transparent;
 }
 
-#items > thead > tr {
-  background-color: #0000ff50;
+.heatflask-table th[data-sort="desc"]:after{
+    top: 10px;
+    border-top-color: silver;
+}
+.heatflask-table th[data-sort="asc"]:after{
+    bottom: 15px;
+    border-bottom-color: silver;
 }
 
-tr,
-th {
-  border: 1px;
-}
 
-thead tr {
+.heatflask-table tr,
+.heatflask-table th {
   border: 1px solid white;
 }
 
-th,
-td {
-  padding-left: 2px;
-  padding-right: 2px;
+.heatflask-table thead tr {
+  border: 1px solid white;
 }
 
-thead tr th:nth-child(1) {
+.heatflask-table th,
+.heatflask-table td {
+  padding: 5px;
+}
+
+.heatflask-table th:nth-child(1) {
   width: 1em;
 }
 
-thead tr th:nth-child(2) {
+.heatflask-table th:nth-child(2) {
   width: 5em;
 }
 
-thead tr th:nth-child(3) {
+.heatflask-table th:nth-child(3) {
   width: 1em;
 }
 
-thead tr th:nth-child(4) {
+.heatflask-table th:nth-child(4) {
   width: 2em;
 }
 
-thead tr th:nth-child(5) {
+.heatflask-table th:nth-child(5) {
   width: 3em;
 }
 
-thead tr th:nth-child(6) {
-  width: 50%;
+.heatflask-table th:nth-child(6) {
+  width: 100%;
 }
 
-#items > tbody > tr:hover {
+.heatflask-table tbody tr:hover {
   background-color: #ffffff60;
 }
 
-/*#items > tbody > tr.selected {
+.heatflask-table tr.selected {
   background-color: #ffffff30;
-}*/
+}
 
 input[data-bind="quantity"] {
   width: 4em;

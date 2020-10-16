@@ -20,12 +20,11 @@
   "author": "Efrem Rensi",
   "license": "ISC",
   "dependencies": {
-    "@babel/core": "^7.11.6",
+    "@babel/core": "^7.12.1",
     "@fortawesome/fontawesome-free": "^5.15.1",
     "@msgpack/msgpack": "^2.2.1",
     "downloadjs": "^1.4.7",
     "gif.js": "github:ebrensi/gif.js#wasm-dev",
-    "hyperlist": "^1.0.0",
     "latlon-geohash": "^2.0.0",
     "leaflet": "^1.7.1",
     "leaflet-areaselect": "github:ebrensi/leaflet-areaselect",

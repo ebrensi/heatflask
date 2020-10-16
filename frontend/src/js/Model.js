@@ -196,8 +196,9 @@ if (CURRENT_USER) {
 
 export const flags = BoundObject.fromDOMelements("[data-class=flag]")
 
-/* The array of activities */
-export const items = []
+
+/* The collection of activities */
+export const items = new Map()
 
 const state = {
   items: items,
@@ -207,14 +208,7 @@ const state = {
   messages: messages,
   targetUser: targetUser,
   currentUser: currentUser,
-  clientID: null,
-
-  get index() {
-    if (this._index) return this._index
-    this._index = {}
-    this.items.forEach((A, i) => this._index[A.id] = i)
-    return this._index
-  }
+  clientID: null
 }
 
 window["app"] = state

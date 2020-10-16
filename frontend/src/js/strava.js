@@ -77,9 +77,16 @@ export const ATYPE = {
    * @return {Iterable.<String>} An Iterable of names of the
    *                                Strava activity types that we support
    */
-  types: function () {
-    return Object.keys(_specs)
-  },
+  types: Object.keys(_specs),
+
+  index: (() => {
+    const index = {}
+    let i = 0
+    for (const type of Object.keys(_specs)) {
+      index[type] = i++
+    }
+    return index
+  })(),
 
   /**
    * @param  {String} type The activity type (one of the keys of {@link _specs})
@@ -121,7 +128,7 @@ export function appendCSS(domElement) {
   const sheet = document.createElement("style")
   let string = ""
 
-  for (const type of ATYPE.types()) {
+  for (const type of ATYPE.types) {
     const color = _specs[type][1]
     if (color) {
       string += `span.${type}{background-color:${color}}`
