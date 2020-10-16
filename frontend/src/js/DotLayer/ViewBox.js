@@ -20,7 +20,7 @@ let _map,
   _zoom,
   _zf
 
-const latLng2px = makePT(0)
+export const latLng2px = makePT(0)
 
 export function initialize(map, canvases, itemsArray) {
   _map = map
@@ -177,7 +177,7 @@ export function calibrate() {
   _pxOffset = mapPanePos.subtract(pxOrigin)
 }
 
-export function update(calibrate = true) {
+export function update(cal = true) {
   const m = _map,
     zoom = m.getZoom(),
     latLngMapBounds = m.getBounds()
@@ -186,7 +186,7 @@ export function update(calibrate = true) {
   // stuff that (only) needs to be done on zoom change
   if (zoomChange) onZoomChange(zoom)
 
-  if (calibrate) calibrate()
+  if (cal) calibrate()
 
   _pxBounds = latLng2pxBounds(latLngMapBounds)
 

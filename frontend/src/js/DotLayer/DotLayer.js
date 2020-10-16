@@ -2,7 +2,7 @@
   DotLayer Efrem Rensi, 2020,
 */
 
-import { Layer, Util, DomUtil, Browser, setOptions } from "leaflet"
+import { Layer, Util, DomUtil, Browser, setOptions, latLngBounds } from "leaflet"
 import * as leafletImage from "leaflet-image"
 import * as GIF from "gif.js"
 import * as download from "downloadjs"
@@ -13,13 +13,17 @@ import * as WorkerPool from "./WorkerPool.js"
 
 import * as Polyline from "./Codecs/Polyline.js"
 import * as StreamRLE from "./Codecs/StreamRLE.js"
-import Simplifier from "./Simplifier.js"
+import * as Simplifier from "./Simplifier.js"
 import BitSet from "../BitSet.js"
 
 import heatflask_logo from "url:../../images/logo.png"
 import strava_logo from "url:../../images/pbs4.png"
 
 import options from "./options.js"
+
+import { ATYPE } from "../strava.js"
+
+import { items } from "../Model.js"
 
 export const DotLayer = Layer.extend({
   _pane: "shadowPane",
@@ -40,7 +44,7 @@ export const DotLayer = Layer.extend({
     this.strava_icon = new Image()
     this.strava_icon.src = strava_logo
 
-    this._items = new Map()
+    this._items = items
     this._lru = new Map() // turn this into a real LRU-cache
 
     WorkerPool.initialize(this.options.numWorkers)
@@ -58,6 +62,7 @@ export const DotLayer = Layer.extend({
 
     const create = DomUtil.create,
       addClass = DomUtil.addClass,
+
       panes = map._panes,
       appendChild = (pane) => (obj) => panes[pane].appendChild(obj),
       canvases = []
@@ -296,6 +301,31 @@ export const DotLayer = Layer.extend({
       // if (ns)
       //     console.log(`simplify: ${ns} -> ${ns2} in ${~~(t1-t0)}:  ${(ns-ns2)/(t1-t0)}`)
     })
+  },
+
+  prepItem: function(A) {
+    // Make sure id is an integer
+    A.id = +A.id
+
+    A.px = Polyline.decode2Buf(A.polyline, A.n)
+    delete A.polyline
+
+    A.pathColor = ATYPE.pathColor(A.type)
+
+    A.time = StreamRLE.transcode2CompressedBuf(A.time)
+
+    A.ts = A.ts[0]
+
+    A.llbounds = latLngBounds(A.bounds.SW, A.bounds.NE)
+
+    A.bounds = ViewBox.latLng2pxBounds(A.llbounds)
+
+    A.idxSet = {}
+
+    /* make baseline projection (convert latLngs to pixel points) in-place */
+    for (let i = 0, len = A.px.length; i < len; i += 2)
+      ViewBox.latLng2px(A.px.subarray(i, i + 2))
+
   },
 
   addItem: function (id, polyline, pathColor, time, UTCtimestamp, llBounds, n) {

@@ -10,7 +10,7 @@ const DIST_LABEL = "mi",
   DIST_UNIT = 1609.34
 
 // open up the sidebar to the table view (development)
-sidebar.open("activities")
+// sidebar.open("activities")
 
 /*
  * Column headings

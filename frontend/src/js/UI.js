@@ -177,6 +177,7 @@ function renderFromQuery() {
 
   makeQuery(query, () => {
     app.flags.importing = false
+    dotLayer.reset()
   })
 }
 

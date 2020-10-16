@@ -66,14 +66,14 @@ export function rect(pad) {
   return r
 }
 
-export function draw(ctx, rect) {
-  const r = rect || rect()
+export function draw(ctx, r) {
+  r = r || rect()
   if (!r) return
   ctx.strokeRect(r[0], r[1], r[2], r[3])
 }
 
-export function clear(ctx, rect) {
-  const r = rect || rect()
+export function clear(ctx, r) {
+  r = r || rect()
   if (!r) return
   ctx.clearRect(r[0], r[1], r[2], r[3])
 }

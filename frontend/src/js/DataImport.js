@@ -1,6 +1,6 @@
 import app from "./Model.js"
 import { L, controlWindow } from "./MapAPI.js"
-// import { dotLayer } from "./DotLayerAPI.js";
+import { dotLayer } from "./DotLayerAPI.js";
 import queryBackend from "./Socket.js"
 
 import * as table from "./Table.js"
@@ -115,9 +115,9 @@ function onMessage(A) {
 
   A.id = A._id
   delete A._id
-  app.items.set(A.id, A)
+  dotLayer.prepItem(A)
 
-  // dotLayer.prepItem(A)
+  app.items.set(A.id, A)
 
   // assign this activity a path color and speed type (pace, mph)
   // const atype = ATYPE.specs(A["type"]);
