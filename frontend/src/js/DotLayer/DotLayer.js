@@ -1370,10 +1370,9 @@ export const DotLayer = Layer.extend({
             return binarySearch(map, x, mid+1, end);
     }
     */
- // end of DotLayer definition
- })
+  // end of DotLayer definition
+})
 
 export const dotLayer = function (options) {
   return new DotLayer(options)
 }
-

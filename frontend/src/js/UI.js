@@ -11,7 +11,7 @@ import app from "./Model.js"
 import "./URL.js"
 
 // import { map } from "./MapAPI.js";
-import { dotLayer } from "./DotLayerAPI.js";
+import { dotLayer } from "./DotLayerAPI.js"
 // import "./DotControls.js";
 
 import paypalButtonHTML from "bundle-text:../html/paypal-button.html"
@@ -88,7 +88,7 @@ function viewIndex() {
 }
 
 function abortRender() {
-  debugger;
+  debugger
   abortQuery()
 }
 
@@ -179,7 +179,6 @@ function renderFromQuery() {
     app.flags.importing = false
   })
 }
-
 
 // Make initial query if there is one
 if (app.qParams.userid) {

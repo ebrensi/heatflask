@@ -196,7 +196,6 @@ if (CURRENT_USER) {
 
 export const flags = BoundObject.fromDOMelements("[data-class=flag]")
 
-
 /* The collection of activities */
 export const items = new Map()
 
@@ -208,7 +207,7 @@ const state = {
   messages: messages,
   targetUser: targetUser,
   currentUser: currentUser,
-  clientID: null
+  clientID: null,
 }
 
 window["app"] = state

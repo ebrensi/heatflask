@@ -207,8 +207,8 @@ sidebar.isOpen = false
 document.addEventListener("keydown", (e) => {
   if (sidebar.isOpen) {
     switch (e.keyCode) {
-      case 27:  // ESC key
-      case 32:  // Space key
+      case 27: // ESC key
+      case 32: // Space key
         sidebar.close()
         break
       case 40: // up-arrow
@@ -217,14 +217,13 @@ document.addEventListener("keydown", (e) => {
         break
       case 38: // down-arrow
         currentTab--
-        if (currentTab < 0)
-          currentTab = sidebarTabs.length - 1
+        if (currentTab < 0) currentTab = sidebarTabs.length - 1
         sidebar.open(sidebarTabs[currentTab])
         break
     }
   } else {
     switch (e.keyCode) {
-      case 32:  // Space key
+      case 32: // Space key
         sidebar.open(sidebarTabs[currentTab])
         break
     }

@@ -20,7 +20,7 @@ const atypeIcon = (atype) => ATYPE.specs(atype).name
 const heading = [
   '<i class="fas fa-check-double"></i>',
   '<i class="fas fa-calendar-alt"></i>', // date/time
-  atypeIcon('activity'), // type
+  atypeIcon("activity"), // type
   `<i class="fas fa-ruler"></i>(${DIST_LABEL})`, // distance
   '<i class="fas fa-hourglass-end"></i>', // duration
   '<i class="fas fa-file-signature"></i>', // title
@@ -30,44 +30,44 @@ const heading = [
  * Formatters for table columns.
  */
 const formatter = [
-  A => A.selected? "&#10003;" : "",
-  A => {
+  (A) => (A.selected ? "&#10003;" : ""),
+  (A) => {
     const tsLocal = (A.ts[0] + A.ts[1] * 3600) * 1000,
-    tsString = new Date(tsLocal).toLocaleString()
+      tsString = new Date(tsLocal).toLocaleString()
     return href(activityURL(A.id), tsString.split(",")[0])
   },
-  A => `<span class="${A.type}">${atypeIcon(A.type)}</span>`,
-  A => (A.total_distance / DIST_UNIT).toFixed(2),
-  A => HHMMSS(A.elapsed_time),
-  A => A.name
+  (A) => `<span class="${A.type}">${atypeIcon(A.type)}</span>`,
+  (A) => (A.total_distance / DIST_UNIT).toFixed(2),
+  (A) => HHMMSS(A.elapsed_time),
+  (A) => A.name,
 ]
 
 /*
  * Numerical value to sort for each column
  */
-const atypeIndex = ATYPE.index  // the integer index of each activity-type
+const atypeIndex = ATYPE.index // the integer index of each activity-type
 const sortValue = [
-  A => A.selected? 1 : 0,
-  A => A.ts[0],
-  A => atypeIndex[A.type],
-  A => A.total_distance,
-  A => A.elapsed_time,
-  null
+  (A) => (A.selected ? 1 : 0),
+  (A) => A.ts[0],
+  (A) => atypeIndex[A.type],
+  (A) => A.total_distance,
+  (A) => A.elapsed_time,
+  null,
 ]
 
 /* By default, sort the date column descending, */
-const defaultSort = {column: 1, asc: false}
+const defaultSort = { column: 1, asc: false }
 let currentSort
 
 const numColumns = heading.length
 
-export function sort({column, asc}) {
+export function sort({ column, asc }) {
   const value = sortValue[column]
   if (!value) return
 
-  const compareFunc = (asc)?
-    (tr1, tr2) => value(tr1.item) - value(tr2.item) :
-    (tr1, tr2) => value(tr2.item) - value(tr1.item)
+  const compareFunc = asc
+    ? (tr1, tr2) => value(tr1.item) - value(tr2.item)
+    : (tr1, tr2) => value(tr2.item) - value(tr1.item)
 
   const trs = new Array(app.items.size)
   let i = 0
@@ -83,24 +83,21 @@ export function sort({column, asc}) {
   }
 
   const currentBody = tableElement.tBodies[0]
-  if (currentBody)
-    tableElement.replaceChild(newBody, currentBody)
-  else
-    tableElement.appendChild(newBody)
+  if (currentBody) tableElement.replaceChild(newBody, currentBody)
+  else tableElement.appendChild(newBody)
 
   // set the sort attribute for this column's header element
-  headerRow.cells[column].setAttribute("data-sort", asc? "asc":"desc")
+  headerRow.cells[column].setAttribute("data-sort", asc ? "asc" : "desc")
 
-  currentSort = {column, asc}
+  currentSort = { column, asc }
 }
-
 
 function makeRow(A) {
   const tr = document.createElement("tr")
 
   tr.item = A
 
-  for (let j=0; j<numColumns; j++) {
+  for (let j = 0; j < numColumns; j++) {
     const td = document.createElement("td")
     td.innerHTML = formatter[j](A)
     tr.appendChild(td)
@@ -129,11 +126,11 @@ for (const label of heading) {
 }
 
 // Add sort events to header row
-headerRow.addEventListener("click", e => {
+headerRow.addEventListener("click", (e) => {
   // the target may be html that is part of the header name
   const column = e.target.closest("th").cellIndex
 
-  const sortSpec = {...currentSort}
+  const sortSpec = { ...currentSort }
   headerRow.cells[currentSort.column].removeAttribute("data-sort")
 
   if (sortSpec.column === column) {
@@ -141,12 +138,10 @@ headerRow.addEventListener("click", e => {
     // we just change the sort direction
     sortSpec.asc = !sortSpec.asc
   } else {
-
     sortSpec.column = column
   }
   sort(sortSpec)
 })
-
 
 /**
  * Update the table (after adding or removing rows)
@@ -161,16 +156,12 @@ export function update() {
   lastSelection = {}
 }
 
-
-
-
 /*
  * Table Selections
  */
 let lastSelection = {}
 
 function select(A, selected) {
-
   if (selected && !A.selected) {
     A.selected = selected
     A.tr.classList.add("selected")
@@ -184,20 +175,18 @@ function select(A, selected) {
 
 export function clearSelections() {
   for (const A of app.items.values()) {
-    if (A.selected)
-      select(A, false)
+    if (A.selected) select(A, false)
   }
 }
 
 tableElement.addEventListener("click", function (e) {
-
   const td = e.target
   if (td.tagName !== "TD") return
 
   const tr = td.parentElement,
     A = tr.item,
     idx = tr.rowIndex - 1,
-    selected = !A.selected;
+    selected = !A.selected
 
   // toggle selection property of the item represented by clicked row
   select(A, selected)
@@ -218,8 +207,7 @@ tableElement.addEventListener("click", function (e) {
     }
 
     lastSelection.idx = i - 1
-  }
-  else {
+  } else {
     lastSelection.idx = idx
   }
 
@@ -328,4 +316,3 @@ function activityDataPopup(id, latlng){
 
 
 */
-

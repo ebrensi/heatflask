@@ -204,4 +204,3 @@ function onMessage(A) {
 //   }
 //   return bounds;
 // }
-

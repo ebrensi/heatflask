@@ -32,44 +32,44 @@ export function icon(name) {
  * @type {Object}
  */
 const _specs = {
-  AlpineSki: ["speed", "#800080", icon('skiing')],
-  BackcountrySki: ["speed", "#800080", icon('xc-ski')],
-  Canoeing: ["speed", "#fa8080", icon('canoe')],
-  Crossfit: [null, null, icon('crossfit')],
-  EBikeRide: ["speed", "#0000cd", icon('motorcycle')], // mediumblue
+  AlpineSki: ["speed", "#800080", icon("skiing")],
+  BackcountrySki: ["speed", "#800080", icon("xc-ski")],
+  Canoeing: ["speed", "#fa8080", icon("canoe")],
+  Crossfit: [null, null, icon("crossfit")],
+  EBikeRide: ["speed", "#0000cd", icon("motorcycle")], // mediumblue
   Elliptical: [null, null],
-  Golf: [null, null, icon('golf')],
-  Handcycle: ["speed", "#2b60de", icon('handbike')],
-  Hike: ["pace", "#ff1493", icon('hiking')], // deeppink
-  IceSkate: ["speed", "#663399", icon('skating')], // rebeccapurple
-  InlineSkate: ["speed", "#8a2be2", icon('inline-skating')], // blueviolet
-  Kayaking: ["speed", "#ffa500", icon('kayak')], // orange
-  Kitesurf: ["speed", "#00ff00", icon('kitesurf')],
-  NordicSki: ["speed", "#800080", icon('skiing-nordic')], // purple
-  Ride: ["speed", "#2b60de", icon('bicycle')], // ocean blue
-  RockClimbing: [null, "#4b0082", icon('climbing')], // indigo
-  RollerSki: ["speed", "#800080", icon('roller-ski')], // purple
-  Rowing: ["speed", "#fa8072", icon('rowing')], // salmon
-  Run: ["pace", "#ff0000", icon('running')], // red
-  Sail: ["speed", "#8a2be2", icon('sailboat')],
-  Skateboard: ["speed", "#800080", icon('skateboarding')],
-  Snowboard: ["speed", "#00ff00", icon('snowboarding')], // lime
-  Snowshoe: ["pace", "#800080", icon('snowshoes')], // purple
-  Soccer: ["pace", "#8a2be2", icon('soccer')],
-  StairStepper: ["pace", null, icon('stairs')],
-  StandUpPaddling: ["speed", "#800080", icon('sup-paddle')],
-  Surfing: ["speed", "#006400", icon('surf')], // darkgreen
-  Swim: ["speed", "#00ff7f", icon('swimming')], // springgreen
+  Golf: [null, null, icon("golf")],
+  Handcycle: ["speed", "#2b60de", icon("handbike")],
+  Hike: ["pace", "#ff1493", icon("hiking")], // deeppink
+  IceSkate: ["speed", "#663399", icon("skating")], // rebeccapurple
+  InlineSkate: ["speed", "#8a2be2", icon("inline-skating")], // blueviolet
+  Kayaking: ["speed", "#ffa500", icon("kayak")], // orange
+  Kitesurf: ["speed", "#00ff00", icon("kitesurf")],
+  NordicSki: ["speed", "#800080", icon("skiing-nordic")], // purple
+  Ride: ["speed", "#2b60de", icon("bicycle")], // ocean blue
+  RockClimbing: [null, "#4b0082", icon("climbing")], // indigo
+  RollerSki: ["speed", "#800080", icon("roller-ski")], // purple
+  Rowing: ["speed", "#fa8072", icon("rowing")], // salmon
+  Run: ["pace", "#ff0000", icon("running")], // red
+  Sail: ["speed", "#8a2be2", icon("sailboat")],
+  Skateboard: ["speed", "#800080", icon("skateboarding")],
+  Snowboard: ["speed", "#00ff00", icon("snowboarding")], // lime
+  Snowshoe: ["pace", "#800080", icon("snowshoes")], // purple
+  Soccer: ["pace", "#8a2be2", icon("soccer")],
+  StairStepper: ["pace", null, icon("stairs")],
+  StandUpPaddling: ["speed", "#800080", icon("sup-paddle")],
+  Surfing: ["speed", "#006400", icon("surf")], // darkgreen
+  Swim: ["speed", "#00ff7f", icon("swimming")], // springgreen
   Velomobile: ["speed", null, null],
-  VirtualRide: ["speed", "#1e90ff", icon('spinning')], // dodgerblue
-  VirtualRun: ["pace", null, icon('treadmill')],
-  Walk: ["pace", "#ff00ff", icon('walking')], // fuchsia
-  WeightTraining: [null, null, icon('weights')],
-  Wheelchair: ["speed", "#2b60de", icon('wheelchair')],
-  Windsurf: ["speed", "#4b0082", icon('windsurf')],
-  Workout: [null, null, "#4b0082", icon('activity')],
-  Yoga: [null, null, icon('meditate')],
-  undefined: ["speed", null, icon('activity')],
+  VirtualRide: ["speed", "#1e90ff", icon("spinning")], // dodgerblue
+  VirtualRun: ["pace", null, icon("treadmill")],
+  Walk: ["pace", "#ff00ff", icon("walking")], // fuchsia
+  WeightTraining: [null, null, icon("weights")],
+  Wheelchair: ["speed", "#2b60de", icon("wheelchair")],
+  Windsurf: ["speed", "#4b0082", icon("windsurf")],
+  Workout: [null, null, "#4b0082", icon("activity")],
+  Yoga: [null, null, icon("meditate")],
+  undefined: ["speed", null, icon("activity")],
 }
 
 export const ATYPE = {

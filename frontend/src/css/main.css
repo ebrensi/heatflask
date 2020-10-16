@@ -16,7 +16,6 @@
 /* Additional activity-type icons from icomoon */
 @import "./activity-icons.css";
 
-
 /* Min CSS framework (https://mincss.com) */
 @import "../ext/min_entireframework.css";
 
@@ -148,7 +147,6 @@ a:visited {
   display: block;
 }
 
-
 .x2 {
   font-size: 2em;
 }
@@ -179,22 +177,21 @@ a:visited {
 }
 
 .heatflask-table th[data-sort="asc"]:after,
-.heatflask-table th[data-sort="desc"]:after{
-    content: '';
-    position: relative;
-    left: 10px;
-    border: 7px solid transparent;
+.heatflask-table th[data-sort="desc"]:after {
+  content: "";
+  position: relative;
+  left: 10px;
+  border: 7px solid transparent;
 }
 
-.heatflask-table th[data-sort="desc"]:after{
-    top: 10px;
-    border-top-color: silver;
+.heatflask-table th[data-sort="desc"]:after {
+  top: 10px;
+  border-top-color: silver;
 }
-.heatflask-table th[data-sort="asc"]:after{
-    bottom: 15px;
-    border-bottom-color: silver;
+.heatflask-table th[data-sort="asc"]:after {
+  bottom: 15px;
+  border-bottom-color: silver;
 }
-
 
 .heatflask-table tr,
 .heatflask-table th {
