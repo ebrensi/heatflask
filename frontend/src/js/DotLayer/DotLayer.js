@@ -316,9 +316,10 @@ export const DotLayer = Layer.extend({
 
     A.ts = A.ts[0]
 
-    A.llbounds = latLngBounds(A.bounds.SW, A.bounds.NE)
+    A.llBounds = latLngBounds(A.bounds.SW, A.bounds.NE)
+    delete A.bounds
 
-    A.bounds = ViewBox.latLng2pxBounds(A.llbounds)
+    A.pxBounds = ViewBox.latLng2pxBounds(A.llBounds)
 
     A.idxSet = {}
 
@@ -563,7 +564,7 @@ export const DotLayer = Layer.extend({
   },
 
   inMapBounds: function (A) {
-    return ViewBox.overlaps(A.bounds)
+    return ViewBox.overlaps(A.pxBounds)
   },
 
   // A segMask is a BitSet containing the index of the start-point of each

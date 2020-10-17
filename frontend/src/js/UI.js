@@ -10,7 +10,7 @@ import { AUTHORIZE_URL } from "./Init.js"
 import app from "./Model.js"
 import "./URL.js"
 
-// import { map } from "./MapAPI.js";
+import { getBounds, map } from "./MapAPI.js";
 import { dotLayer } from "./DotLayerAPI.js"
 // import "./DotControls.js";
 
@@ -177,19 +177,54 @@ function renderFromQuery() {
 
   makeQuery(query, () => {
     app.flags.importing = false
-    dotLayer.reset()
+    const num = app.items.size
+    const msg = `done! ${num} activities imported`
+    document.querySelectorAll(".info-message").forEach(el => {
+      el.innerHTML = msg
+    })
+    updateLayers()
   })
-}
-
-// Make initial query if there is one
-if (app.qParams.userid) {
-  renderFromQuery()
 }
 
 /* Table Stuff */
 dataTable.events.addListener("selection", (e) => {
   // console.log("table selections ", e)
 })
+
+
+/* Rendering */
+function updateLayers() {
+  if (app.vParams.autozoom) {
+    const totalBounds = getBounds();
+
+    if (totalBounds.isValid()) {
+      map.fitBounds(totalBounds);
+    }
+  }
+
+  // if (!ADMIN && !OFFLINE) {
+  //   // Record this to google analytics
+  //   try {
+  //     ga("send", "event", {
+  //       eventCategory: USER_ID,
+  //       eventAction: "Render",
+  //       eventValue: num,
+  //     });
+  //   } catch (err) {}
+  // }
+
+  dotLayer.reset();
+  app.messages.period = dotLayer.periodInSecs().toFixed(2);
+}
+
+
+
+// Make initial query if there is one
+if (app.qParams.userid) {
+  renderFromQuery()
+}
+
+
 
 // /*
 //  *  Set up or tear down current user stuff
@@ -201,4 +236,4 @@ dataTable.events.addListener("selection", (e) => {
 // });
 
 // Dom.addEvent("#render-selection-button", "click", openSelected);
-// Dom.addEvent("#clear-selection-button", "click", deselectAll);
+

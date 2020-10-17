@@ -4,7 +4,6 @@
  * Efrem Rensi 2020
  */
 
-// import * as L from "../../node_modules/leaflet/dist/leaflet-src.esm.js";
 import * as L from "leaflet"
 import Geohash from "latlon-geohash"
 
@@ -231,6 +230,23 @@ document.addEventListener("keydown", (e) => {
 })
 
 map.addEventListener("click", () => sidebar.isOpen && sidebar.close())
+
+/*
+ * Functions concerning
+ */
+export function getBounds(ids) {
+  const bounds = L.latLngBounds()
+  if (ids) {
+    for (const id of ids) {
+      bounds.extend(app.items.get(id).llBounds)
+    }
+  } else {
+    for (const A of app.items.values()) {
+      bounds.extend(A.llBounds)
+    }
+  }
+  return bounds
+}
 
 /*  Initialize areaselect control (for selecting activities via map rectangle) */
 /*

@@ -82,7 +82,7 @@ export function updateView() {
   const currentInView = inView.current
   // update which items are in the current view
   for (let i = 0, len = allItems.length; i < len; i++) {
-    if (overlaps(allItems[i].bounds)) currentInView.add(i)
+    if (overlaps(allItems[i].pxBounds)) currentInView.add(i)
   }
 
   // update items that have changed since last time

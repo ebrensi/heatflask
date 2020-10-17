@@ -143,64 +143,6 @@ function onMessage(A) {
   }
 }
 
-/* Rendering */
-// function updateLayers(msg) {
-//   if (Dom.prop("#autozoom", "checked")) {
-//     let totalBounds = getBounds(app.items.keys());
 
-//     if (totalBounds.isValid()) {
-//       map.fitBounds(totalBounds);
-//     }
-//   }
 
-//   const num = app.items.size;
-//   Dom.html(".data_message", ` ${msg} ${num} activities rendered.`);
 
-//   const table = makeTable(app.items);
-
-//   if (!ADMIN && !OFFLINE) {
-//     // Record this to google analytics
-//     try {
-//       ga("send", "event", {
-//         eventCategory: USER_ID,
-//         eventAction: "Render",
-//         eventValue: num,
-//       });
-//     } catch (err) {}
-//   }
-
-//   dotLayer.reset();
-//   const ds = dotLayer.getDotSettings(),
-//     T = dotLayer.periodInSecs().toFixed(2);
-//   Dom.html("#period-value", T);
-//   Dom.trigger("#period-value", "change");
-
-//   app.update()();
-// }
-
-// function doneRendering(msg) {
-//   if (!rendering) return;
-
-//   app["after"] = Dom.get("#date1");
-//   app["before"] = Dom.get("#date2");
-//   app.update()();
-
-//   Dom.fadeOut("#abortButton");
-//   Dom.fadeOut(".progbar");
-
-//   if (msgBox) {
-//     msgBox.close();
-//     msgBox = undefined;
-//   }
-
-//   rendering = false;
-//   updateLayers(msg);
-// }
-
-// function getBounds(ids) {
-//   const bounds = L.latLngBounds();
-//   for (const id of ids) {
-//     bounds.extend(app.items.get(id).bounds);
-//   }
-//   return bounds;
-// }
