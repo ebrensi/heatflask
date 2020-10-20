@@ -2,7 +2,14 @@
   DotLayer Efrem Rensi, 2020,
 */
 
-import { Layer, Util, DomUtil, Browser, setOptions, latLngBounds } from "leaflet"
+import {
+  Layer,
+  Util,
+  DomUtil,
+  Browser,
+  setOptions,
+  latLngBounds,
+} from "leaflet"
 import * as leafletImage from "leaflet-image"
 import * as GIF from "gif.js"
 import * as download from "downloadjs"
@@ -60,7 +67,6 @@ export const DotLayer = Layer.extend({
 
     const create = DomUtil.create,
       addClass = DomUtil.addClass,
-
       panes = map._panes,
       appendChild = (pane) => (obj) => panes[pane].appendChild(obj),
       canvases = []
@@ -299,59 +305,6 @@ export const DotLayer = Layer.extend({
       // if (ns)
       //     console.log(`simplify: ${ns} -> ${ns2} in ${~~(t1-t0)}:  ${(ns-ns2)/(t1-t0)}`)
     })
-  },
-
-  prepItem: function(A) {
-
-    A.px = Polyline.decode2Buf(A.polyline, A.n)
-    delete A.polyline
-
-    A.time = StreamRLE.transcode2CompressedBuf(A.time)
-
-    A.tsLocal = new Date((A.ts[0] + A.ts[1] * 3600) * 1000);
-
-    A.ts = A.ts[0]
-
-    A.llBounds = latLngBounds(A.bounds.SW, A.bounds.NE)
-    delete A.bounds
-
-    A.pxBounds = ViewBox.latLng2pxBounds(A.llBounds)
-
-    A.idxSet = {}
-
-    /* make baseline projection (convert latLngs to pixel points) in-place */
-    for (let i = 0, len = A.px.length; i < len; i += 2)
-      ViewBox.latLng2px(A.px.subarray(i, i + 2))
-
-  },
-
-  addItem: function (id, polyline, pathColor, time, UTCtimestamp, llBounds, n) {
-    const A = {
-      id: parseInt(id),
-      bounds: ViewBox.latLng2pxBounds(llBounds),
-      px: Polyline.decode2Buf(polyline, n),
-      idxSet: {},
-      time: StreamRLE.transcode2CompressedBuf(time),
-      n: n,
-      ts: UTCtimestamp,
-      pathColor: pathColor,
-    }
-
-    this._items.set(id, A)
-
-    // make baseline projection (convert latLngs to pixel points)
-    // in-place
-    const px = A.px,
-      project = ViewBox.latLng2px
-
-    for (let i = 0, len = px.length; i < len; i += 2)
-      project(px.subarray(i, i + 2))
-  },
-
-  removeItems: function (ids) {
-    for (const id of ids) this._items.delete(id)
-
-    this.reset()
   },
 
   // this returns a reference to the same buffer every time
@@ -1331,9 +1284,15 @@ export const DotLayer = Layer.extend({
       if (len == undefined) len = 50
 
       for (let i = 0; i < len; ++i) {
-        let r = Math.round(Math.sin(frequency1 * i + phase1) * width + center).toString(16),
-          g = Math.round(Math.sin(frequency2 * i + phase2) * width + center).toString(16),
-          b = Math.round(Math.sin(frequency3 * i + phase3) * width + center).toString(16)
+        let r = Math.round(
+            Math.sin(frequency1 * i + phase1) * width + center
+          ).toString(16),
+          g = Math.round(
+            Math.sin(frequency2 * i + phase2) * width + center
+          ).toString(16),
+          b = Math.round(
+            Math.sin(frequency3 * i + phase3) * width + center
+          ).toString(16)
 
         palette[i] = `#${r}${g}${b}`
       }

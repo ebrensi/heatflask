@@ -1,8 +1,7 @@
 import app from "./Model.js"
 import { L, controlWindow } from "./MapAPI.js"
-import { dotLayer } from "./DotLayerAPI.js"
+import { Activity } from "./DotLayer/Activity.js"
 import queryBackend from "./Socket.js"
-import { ATYPE } from "./strava.js"
 
 let numActivities, count
 
@@ -109,12 +108,7 @@ function onMessage(A) {
     return
   }
 
-  A.id = A._id
-  delete A._id
-  A.pathColor = ATYPE.pathColor(A.type)
-  dotLayer.prepItem(A)
-
-  app.items.set(A.id, A)
+  app.items.set(A._id, new Activity(A))
 
   // assign this activity a path color and speed type (pace, mph)
   // const atype = ATYPE.specs(A["type"]);

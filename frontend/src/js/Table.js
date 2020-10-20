@@ -32,8 +32,7 @@ const heading = [
 const formatter = [
   (A) => (A.selected ? "&#10003;" : ""),
   (A) => {
-    const tsLocal = (A.ts[0] + A.ts[1] * 3600) * 1000,
-      tsString = new Date(tsLocal).toLocaleString()
+    const tsString = A.tsLocal.toLocaleString()
     return href(activityURL(A.id), tsString.split(",")[0])
   },
   (A) => atypeIcon(A.type),
@@ -48,7 +47,7 @@ const formatter = [
 const atypeIndex = ATYPE.index // the integer index of each activity-type
 const sortValue = [
   (A) => (A.selected ? 1 : 0),
-  (A) => A.ts[0],
+  (A) => A.ts,
   (A) => atypeIndex[A.type],
   (A) => A.total_distance,
   (A) => A.elapsed_time,
