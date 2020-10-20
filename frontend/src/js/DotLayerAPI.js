@@ -2,7 +2,8 @@
 
 import { map } from "./MapAPI.js"
 
-import { DotLayer } from "./DotLayer/DotLayer.js"
+// import { DotLayer } from "./DotLayer/DotLayer.js"
+import { DotLayer } from "./DotLayer-old/DotLayer.js"
 
 import { vParams } from "./Model.js"
 

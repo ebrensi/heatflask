@@ -1,9 +1,8 @@
 import app from "./Model.js"
 import { L, controlWindow } from "./MapAPI.js"
-import { dotLayer } from "./DotLayerAPI.js";
+import { dotLayer } from "./DotLayerAPI.js"
 import queryBackend from "./Socket.js"
-
-import * as table from "./Table.js"
+import { ATYPE } from "./strava.js"
 
 let numActivities, count
 
@@ -52,7 +51,7 @@ function displayProgressInfo(msg, progress) {
 }
 
 /*
- * Send a query to the backend and populate the table and dotlayer with it.
+ * Send a query to the backend and populate the items object with it.
  */
 export function makeQuery(query, done) {
   app.flags.importing = true
@@ -61,10 +60,7 @@ export function makeQuery(query, done) {
 
   displayProgressInfo("Retrieving activity data...")
 
-  queryBackend(query, onMessage, () => {
-    table.update()
-    done()
-  })
+  queryBackend(query, onMessage, done)
 }
 
 export function abortQuery() {
@@ -115,6 +111,7 @@ function onMessage(A) {
 
   A.id = A._id
   delete A._id
+  A.pathColor = ATYPE.pathColor(A.type)
   dotLayer.prepItem(A)
 
   app.items.set(A.id, A)
@@ -142,7 +139,3 @@ function onMessage(A) {
     displayProgressInfo(`imported ${count}/${numActivities || "?"}`, prog)
   }
 }
-
-
-
-

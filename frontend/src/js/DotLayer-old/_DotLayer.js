@@ -1,38 +1,74 @@
 /*
   DotLayer Efrem Rensi, 2020,
+  inspired by L.CanvasLayer by Stanislav Sumbera,  2016 , sumbera.com
+  license MIT
 */
+import * as L from "leaflet"
+import * as Polyline from "../DotLayer/Codecs/Polyline.js"
 
-import { Layer, Util, DomUtil, Browser, setOptions, latLngBounds } from "leaflet"
-import * as leafletImage from "leaflet-image"
-import * as GIF from "gif.js"
-import * as download from "downloadjs"
-
-import * as ViewBox from "./ViewBox.js"
-import * as DrawBox from "./DrawBox.js"
-import * as WorkerPool from "./WorkerPool.js"
-
-import * as Polyline from "./Codecs/Polyline.js"
-import * as StreamRLE from "./Codecs/StreamRLE.js"
-import * as Simplifier from "./Simplifier.js"
+import * as StreamRLE from "../DotLayer/Codecs/StreamRLE.js"
+import * as Simplifier from "../DotLayer/Simplifier.js"
 import BitSet from "../BitSet.js"
 
 import heatflask_logo from "url:../../images/logo.png"
 import strava_logo from "url:../../images/pbs4.png"
 
-import options from "./options.js"
-
 import { items } from "../Model.js"
 
-export const DotLayer = Layer.extend({
+export { DotLayer, DotLayer as default }
+
+const DotLayer = {
   _pane: "shadowPane",
   two_pi: 2 * Math.PI,
   target_fps: 25,
-  options: options,
+
+  options: {
+    debug: false,
+    numWorkers: 0,
+    startPaused: false,
+    showPaths: true,
+    fps_display: false,
+
+    normal: {
+      dotColor: "#000000",
+      dotOpacity: 0.7,
+
+      pathColor: "#000000",
+      pathOpacity: 0.7,
+      pathWidth: 1,
+    },
+
+    selected: {
+      dotColor: "#FFFFFF",
+      dotOpacity: 0.9,
+
+      pathColor: "#000000",
+      pathOpacity: 0.7,
+      pathWidth: 5,
+    },
+
+    unselected: {
+      dotColor: "#000000",
+      dotOpacity: 0.3,
+
+      pathColor: "#000000",
+      pathOpacity: 0.3,
+      pathWidth: 1,
+    },
+
+    dotShadows: {
+      enabled: true,
+      x: 0,
+      y: 5,
+      blur: 5,
+      color: "#000000",
+    },
+  },
 
   // -- initialized is called on prototype
   initialize: function (options) {
     this._timeOffset = 0
-    setOptions(this, options)
+    L.setOptions(this, options)
     this._paused = this.options.startPaused
     this._timePaused = this.UTCnowSecs()
 
@@ -45,7 +81,7 @@ export const DotLayer = Layer.extend({
     this._items = items
     this._lru = new Map() // turn this into a real LRU-cache
 
-    WorkerPool.initialize(this.options.numWorkers)
+    // this.WorkerPool.initialize(this.options["numWorkers"], options["dotWorkerUrl"]);
   },
 
   UTCnowSecs: function () {
@@ -56,11 +92,10 @@ export const DotLayer = Layer.extend({
   onAdd: function (map) {
     this._map = map
     let size = map.getSize(),
-      zoomAnimated = map.options.zoomAnimation && Browser.any3d
+      zoomAnimated = map.options.zoomAnimation && L.Browser.any3d
 
-    const create = DomUtil.create,
-      addClass = DomUtil.addClass,
-
+    const create = L.DomUtil.create,
+      addClass = L.DomUtil.addClass,
       panes = map._panes,
       appendChild = (pane) => (obj) => panes[pane].appendChild(obj),
       canvases = []
@@ -106,11 +141,11 @@ export const DotLayer = Layer.extend({
       canvases.push(this._debugCanvas)
     }
 
-    // if (this.options.fps_display)
-    //    this.fps_display = L.control.fps().addTo(this._map);
+    if (this.options.fps_display)
+      this.fps_display = L.control.fps().addTo(this._map)
 
-    ViewBox.initialize(this._map, canvases)
-    DrawBox.initialize(ViewBox)
+    this.ViewBox.initialize(this._map, canvases)
+    this.DrawBox.initialize(this.ViewBox)
     map.on(this.getEvents(), this)
   },
 
@@ -131,9 +166,9 @@ export const DotLayer = Layer.extend({
       resize: this._onLayerResize,
     }
 
-    // if ( this._map.options.zoomAnimation && Browser.any3d ) {
-    //     events.zoomanim =  this._animateZoom;
-    // }
+    if (this._map.options.zoomAnimation && L.Browser.any3d) {
+      events.zoomanim = this._animateZoom
+    }
 
     return events
   },
@@ -174,9 +209,9 @@ export const DotLayer = Layer.extend({
     if (!n) return
 
     this.setDotColors()
-    ViewBox.reset(this._itemsArray)
+    this.ViewBox.reset(this._itemsArray)
     this._ready = true
-    this._redraw(true)
+    this._redraw()
 
     if (!this._paused) this.animate()
   },
@@ -192,7 +227,7 @@ export const DotLayer = Layer.extend({
       canvas.height = newHeight
     }
 
-    this._redraw(true)
+    this._redraw()
   },
 
   viewReset: function () {
@@ -226,13 +261,10 @@ export const DotLayer = Layer.extend({
   },
 
   onMove: function om(event) {
-    this._dotRect = DrawBox.defaultRect()
-
     // prevent redrawing more often than necessary
     const ts = performance.now(),
       lr = om.lastRedraw || 0
-
-    if (ts - lr < 1000) return
+    if (ts - lr < 500) return
 
     om.lastRedraw = ts
     this._redraw(event)
@@ -241,26 +273,17 @@ export const DotLayer = Layer.extend({
   _redraw: function (event) {
     if (!this._ready) return
 
-    const vb = ViewBox
-    DrawBox.clear(this._dotCtx)
-
-    DrawBox.reset()
-    if (event) {
-      this._drawingDots = false
-      this._dotRect = DrawBox.defaultRect()
-      vb.update()
-    }
-
-    const inView = vb.inView(),
-      oldzoom = ViewBox.zoom
+    const oldzoom = this.ViewBox.zoom
 
     const itemsArray = this._itemsArray,
+      vb = this.ViewBox,
+      inView = vb.update(),
       zoom = vb.zoom
 
     let ns = 0,
       ns2 = 0
 
-    const promises = []
+    this.DrawBox.reset()
 
     inView.forEach((i) => {
       const A = itemsArray[i]
@@ -269,66 +292,71 @@ export const DotLayer = Layer.extend({
         A.idxSet[zoom] = null
         ns += A.n
 
-        promises.push(this.simplify(A, zoom).then((A) => this.makeSegMask(A)))
-      } else promises.push(this.makeSegMask(A))
-    })
-
-    Promise.all(promises).then((fulfilled) => {
-      this._drawingDots = true
-
-      for (const A of fulfilled) {
-        if (A.segMask.isEmpty()) vb.remove(itemsArray.indexOf(A))
+        // TODO: add this to a list of promises instead
+        //  and Promise.all() them to allow for
+        // concurrency
+        ns2 += this.simplify(A, zoom)
       }
-
-      let t1 = performance.now()
-
-      const clear = DrawBox.clear,
-        rect = DrawBox.defaultRect()
-
-      if (this.options.debug) clear(this._debugCtx, rect)
-
-      if (this.options.showPaths) this.drawPaths()
-      else clear(this._lineCtx, rect)
-
-      let t2 = performance.now()
-
-      if (oldzoom != zoom) {
-        this.updateDotSettings()
-      } else if (this._paused) this.drawDots()
-
-      // if (ns)
-      //     console.log(`simplify: ${ns} -> ${ns2} in ${~~(t1-t0)}:  ${(ns-ns2)/(t1-t0)}`)
+      if (this.makeSegMask(A).isEmpty()) vb.remove(i)
     })
-  },
 
-  prepItem: function(A) {
+    let t1 = performance.now()
 
-    A.px = Polyline.decode2Buf(A.polyline, A.n)
-    delete A.polyline
+    const clear = this.DrawBox.clear,
+      rect = this.DrawBox.defaultRect()
 
-    A.time = StreamRLE.transcode2CompressedBuf(A.time)
+    if (event) clear(this._dotCtx, rect)
 
-    A.tsLocal = new Date((A.ts[0] + A.ts[1] * 3600) * 1000);
+    if (this.options.debug) clear(this._debugCtx, rect)
 
-    A.ts = A.ts[0]
+    if (this.options.showPaths) this.drawPaths()
+    else clear(this._lineCtx, rect)
 
-    A.llBounds = latLngBounds(A.bounds.SW, A.bounds.NE)
-    delete A.bounds
+    let t2 = performance.now()
 
-    A.pxBounds = ViewBox.latLng2pxBounds(A.llBounds)
+    if (oldzoom != zoom) {
+      this.updateDotSettings()
+    } else if (this._paused) this.drawDots()
 
-    A.idxSet = {}
+    // if (ns)
+    //     console.log(`simplify: ${ns} -> ${ns2} in ${~~(t1-t0)}:  ${(ns-ns2)/(t1-t0)}`)
 
-    /* make baseline projection (convert latLngs to pixel points) in-place */
-    for (let i = 0, len = A.px.length; i < len; i += 2)
-      ViewBox.latLng2px(A.px.subarray(i, i + 2))
+    /*
 
+        const tbls = [],
+              pxs = new Map(),
+              items = this._items;
+
+        toSimplify.forEach(i => {
+            const A = itemsArray[i];
+            tbls.push(A.px.buffer);
+            pxs.set(A.id, A.px);
+        });
+
+        const promise = this.WorkerPool.post({"simplify": {
+            "tol": this.ViewBox.tol(zoom),
+            "px": pxs
+        }}, tbls);
+
+        promise.then(result => {
+            let i = 0,
+                args = result["simplify"];
+                                debugger;
+
+            args["px"].forEach((px, id) => {
+                const A = items[id];
+                A.px = px;
+                A.idxSet[zoom] = BitSet.fromWords(result["simplify"]["idx"][i++]);
+            });
+        });
+
+       */
   },
 
   addItem: function (id, polyline, pathColor, time, UTCtimestamp, llBounds, n) {
     const A = {
       id: parseInt(id),
-      bounds: ViewBox.latLng2pxBounds(llBounds),
+      bounds: this.ViewBox.latLng2pxBounds(llBounds),
       px: Polyline.decode2Buf(polyline, n),
       idxSet: {},
       time: StreamRLE.transcode2CompressedBuf(time),
@@ -342,7 +370,7 @@ export const DotLayer = Layer.extend({
     // make baseline projection (convert latLngs to pixel points)
     // in-place
     const px = A.px,
-      project = ViewBox.latLng2px
+      project = this.ViewBox.latLng2px
 
     for (let i = 0, len = px.length; i < len; i += 2)
       project(px.subarray(i, i + 2))
@@ -352,6 +380,30 @@ export const DotLayer = Layer.extend({
     for (const id of ids) this._items.delete(id)
 
     this.reset()
+  },
+
+  prepItem: function(A) {
+
+    A.px = Polyline.decode2Buf(A.polyline, A.n)
+    delete A.polyline
+
+    A.time = StreamRLE.transcode2CompressedBuf(A.time)
+
+    A.tsLocal = new Date((A.ts[0] + A.ts[1] * 3600) * 1000);
+
+    A.ts = A.ts[0]
+
+    A.llBounds = L.latLngBounds(A.bounds.SW, A.bounds.NE)
+    delete A.bounds
+
+    A.pxBounds = this.ViewBox.latLng2pxBounds(A.llBounds)
+
+    A.idxSet = {}
+
+    /* make baseline projection (convert latLngs to pixel points) in-place */
+    for (let i = 0, len = A.px.length; i < len; i += 2)
+      this.ViewBox.latLng2px(A.px.subarray(i, i + 2))
+
   },
 
   // this returns a reference to the same buffer every time
@@ -409,7 +461,7 @@ export const DotLayer = Layer.extend({
   iterPoints: function (A, zoom) {
     if (zoom === 0) return this._iterAllPoints(A)
 
-    if (!zoom) zoom = ViewBox.zoom
+    if (!zoom) zoom = this.ViewBox.zoom
 
     return this._iterPoints(A, A.idxSet[zoom])
   },
@@ -424,7 +476,10 @@ export const DotLayer = Layer.extend({
       )
       this._lru.set(key, arr)
     }
-    return (i) => arr[i]
+
+    const arrayFunc = (i) => arr[i]
+
+    return arrayFunc
   },
 
   TimeInterval: function interval() {
@@ -433,7 +488,7 @@ export const DotLayer = Layer.extend({
   },
 
   iterTimeIntervals: function (A) {
-    const zoom = ViewBox.zoom,
+    const zoom = this.ViewBox.zoom,
       stream = StreamRLE.decodeCompressedBuf2(A.time, A.idxSet[zoom]),
       timeInterval = this.TimeInterval()
     let j = 0,
@@ -450,23 +505,21 @@ export const DotLayer = Layer.extend({
 
   _simplify: function (A, toZoom, fromZoom) {
     const idxSet = A.idxSet[fromZoom],
-      nPoints = fromZoom == undefined ? A.px.length / 2 : idxSet.size(),
-      pArray = this.pointsArray(A, fromZoom),
-      tol = ViewBox.tol(toZoom)
+      nPoints = fromZoom == undefined ? A.px.length / 2 : idxSet.size()
 
-    return new Promise((resolve) => {
-      const subSet = Simplifier.simplify(pArray, nPoints, tol)
-      A.idxSet[toZoom] =
-        fromZoom == undefined ? subSet : idxSet.new_subset(subSet)
+    const subSet = Simplifier.simplify(
+      this.pointsArray(A, fromZoom),
+      nPoints,
+      this.ViewBox.tol(toZoom)
+    )
 
-      // console.log(`${A.id}: simplified`)
-
-      resolve(A)
-    })
+    A.idxSet[toZoom] =
+      fromZoom == undefined ? subSet : idxSet.new_subset(subSet)
+    return subSet.size()
   },
 
   simplify: function (A, zoom) {
-    if (zoom === undefined) zoom = ViewBox.zoom
+    if (zoom === undefined) zoom = this.ViewBox.zoom
 
     // simplify from the first available zoom level
     //  higher than this one if one exists
@@ -500,7 +553,7 @@ export const DotLayer = Layer.extend({
         s[1] = p[1]
       }
 
-    zoom = zoom || ViewBox.zoom
+    zoom = zoom || this.ViewBox.zoom
     segMask = segMask || A.segMask
 
     /*
@@ -560,7 +613,7 @@ export const DotLayer = Layer.extend({
   },
 
   inMapBounds: function (A) {
-    return ViewBox.overlaps(A.pxBounds)
+    return this.ViewBox.overlaps(A.pxBounds)
   },
 
   // A segMask is a BitSet containing the index of the start-point of each
@@ -571,38 +624,31 @@ export const DotLayer = Layer.extend({
   //  so that the i-th good segment corresponds to the i-th member of
   //  this idxSet.
   makeSegMask: function (A) {
-    const drawBox = DrawBox,
-      viewBox = ViewBox,
+    const drawBox = this.DrawBox,
+      viewBox = this.ViewBox,
       points = this.iterPoints(A, viewBox.zoom),
       inBounds = (p) => viewBox.contains(p) && drawBox.update(p)
 
-    return new Promise((resolve) => {
-      A.segMask = (A.segMask || new BitSet()).clear()
+    A.segMask = (A.segMask || new BitSet()).clear()
 
-      let p = points.next().value,
-        p_In = inBounds(p),
-        s = 0
+    let p = points.next().value,
+      p_In = inBounds(p),
+      s = 0
 
-      for (const nextp of points) {
-        const nextp_In = inBounds(nextp)
-        if (p_In || nextp_In) {
-          A.segMask.add(s)
-        }
-        p_In = nextp_In
-        s++
-      }
+    for (const nextp of points) {
+      const nextp_In = inBounds(nextp)
+      if (p_In || nextp_In) A.segMask.add(s)
+      p_In = nextp_In
+      s++
+    }
 
-      if (A.badSegs) for (s of A.badSegs) A.segMask.remove(s)
-
-      // console.log(`${A.id}: segmask`)
-
-      resolve(A)
-    })
+    if (A.badSegs) for (s of A.badSegs) A.segMask.remove(s)
+    return A.segMask
   },
 
   _drawPathFromSegIter: function (ctx, A) {
     const segs = this.iterSegments(A),
-      transform = ViewBox.px2Container(),
+      transform = this.ViewBox.px2Container(),
       seg = segs.next().value,
       a = seg.a,
       b = seg.b
@@ -618,10 +664,10 @@ export const DotLayer = Layer.extend({
   },
 
   _drawPathFromPointArray: function (ctx, A) {
-    const zoom = ViewBox.zoom,
+    const zoom = this.ViewBox.zoom,
       segMask = A.segMask,
       points = this.pointsArray(A, zoom),
-      transform = ViewBox.px2Container(),
+      transform = this.ViewBox.px2Container(),
       point = (i) => transform(points(i))
 
     segMask.forEach((i) => {
@@ -654,7 +700,7 @@ export const DotLayer = Layer.extend({
     const ctx = this._lineCtx,
       itemsArray = this._itemsArray,
       options = this.options,
-      vb = ViewBox
+      vb = this.ViewBox
 
     const cg = vb.pathColorGroups(),
       selected = cg.selected,
@@ -662,7 +708,7 @@ export const DotLayer = Layer.extend({
 
     const alphaScale = this.dotSettings.alphaScale
 
-    DrawBox.clear(ctx, DrawBox.defaultRect())
+    this.DrawBox.clear(ctx, this.DrawBox.defaultRect())
 
     if (selected) {
       ctx.lineWidth = options.unselected.pathWidth
@@ -682,9 +728,9 @@ export const DotLayer = Layer.extend({
 
     if (options.debug) {
       this._debugCtxReset()
-      DrawBox.draw(this._debugCtx)
+      this.DrawBox.draw(this._debugCtx)
       this._debugCtx.strokeStyle = "rgb(255,0,255,1)"
-      ViewBox.drawPxBounds(this._debugCtx)
+      this.ViewBox.drawPxBounds(this._debugCtx)
     }
   },
 
@@ -746,7 +792,7 @@ export const DotLayer = Layer.extend({
       T = ds._period,
       start = A.ts,
       p = [NaN, NaN],
-      zoom = ViewBox.zoom,
+      zoom = this.ViewBox.zoom,
       points = this.pointsArray(A, zoom),
       times = this.timesArray(A, zoom),
       p_a = [NaN, NaN],
@@ -793,7 +839,7 @@ export const DotLayer = Layer.extend({
     const two_pi = this.two_pi,
       ctx = this._dotCtx,
       dotSize = this.dotSettings._dotSize,
-      transform = ViewBox.px2Container()
+      transform = this.ViewBox.px2Container()
 
     return (p) => {
       transform(p)
@@ -806,7 +852,7 @@ export const DotLayer = Layer.extend({
     const ctx = this._dotCtx,
       dotSize = this.dotSettings._dotSize,
       dotOffset = dotSize / 2.0,
-      transform = ViewBox.px2Container()
+      transform = this.ViewBox.px2Container()
 
     return (p) => {
       transform(p)
@@ -854,15 +900,14 @@ export const DotLayer = Layer.extend({
       ctx = this._dotCtx,
       g = this._gifPatch,
       itemsArray = this._itemsArray,
-      vb = ViewBox
+      vb = this.ViewBox
 
     const colorGroups = vb.dotColorGroups()
 
     let unselected = colorGroups.unselected,
       selected = colorGroups.selected
 
-    DrawBox.clear(ctx, this._dotRect)
-    if (this._dotRect) this._dotRect = undefined
+    this.DrawBox.clear(ctx)
 
     let count = 0
 
@@ -905,12 +950,18 @@ export const DotLayer = Layer.extend({
       )
     }
 
+    if (options.debug) {
+      this._debugCtxReset()
+      this.DrawBox.draw(this._debugCtx)
+      this._debugCtx.strokeStyle = "rgb(255,0,255,1)"
+      vb.drawPxBounds(this._debugCtx)
+    }
+
     return count
   },
 
   // --------------------------------------------------------------------
   animate: function () {
-    this._drawingDots = true
     this._paused = false
     if (this._timePaused) {
       this._timeOffset = this.UTCnowSecs() - this._timePaused
@@ -918,7 +969,7 @@ export const DotLayer = Layer.extend({
     }
     this.lastCalledTime = 0
     this.minDelay = ~~(1000 / this.target_fps + 0.5)
-    this._frame = Util.requestAnimFrame(this._animate, this)
+    this._frame = L.Util.requestAnimFrame(this._animate, this)
   },
 
   // --------------------------------------------------------------------
@@ -928,7 +979,7 @@ export const DotLayer = Layer.extend({
 
   // --------------------------------------------------------------------
   _animate: function () {
-    if (!this._frame || !this._ready || !this._drawingDots) return
+    if (!this._frame || !this._ready) return
 
     this._frame = null
 
@@ -952,29 +1003,29 @@ export const DotLayer = Layer.extend({
         const elapsed = (performance.now() - t0).toFixed(0)
         this.fps_display.update(
           now,
-          `z=${ViewBox.zoom}, dt=${elapsed} ms, n=${count}`
+          `z=${this.ViewBox.zoom}, dt=${elapsed} ms, n=${count}`
         )
       }
     }
 
-    this._frame = Util.requestAnimFrame(this._animate, this)
+    this._frame = L.Util.requestAnimFrame(this._animate, this)
   },
 
   //------------------------------------------------------------------------------
   _animateZoom: function (e) {
-    const m = ViewBox._map,
+    const m = this.ViewBox._map,
       z = e.zoom,
       scale = m.getZoomScale(z)
 
     // -- different calc of offset in leaflet 1.0.0 and 0.0.7 thanks for 1.0.0-rc2 calc @jduggan1
-    const offset = Layer
+    const offset = L.Layer
       ? m._latLngToNewLayerPoint(m.getBounds().getNorthWest(), z, e.center)
       : m
           ._getCenterOffset(e.center)
           ._multiplyBy(-scale)
           .subtract(m._getMapPanePos())
 
-    const setTransform = DomUtil.setTransform
+    const setTransform = L.DomUtil.setTransform
     setTransform(this._dotCanvas, offset, scale)
     setTransform(this._lineCanvas, offset, scale)
   },
@@ -986,7 +1037,7 @@ export const DotLayer = Layer.extend({
 
     const itemIds = this._itemIds,
       arr = this._itemsArray,
-      vb = ViewBox
+      vb = this.ViewBox
 
     for (const [id, selected] of Object.entries(selections)) {
       idx = itemIds.indexOf(+id)
@@ -1004,8 +1055,8 @@ export const DotLayer = Layer.extend({
   },
 
   itemsInRegion: function (selectPxBounds) {
-    const pxOffset = ViewBox.pxOffset,
-      zf = ViewBox._zf
+    const pxOffset = this.ViewBox.pxOffset,
+      zf = this.ViewBox._zf
 
     // un-transform screen coordinates given by the selection
     // plugin to absolute values that we can compare ours to.
@@ -1013,7 +1064,7 @@ export const DotLayer = Layer.extend({
     selectPxBounds.max._subtract(pxOffset)._divideBy(zf)
 
     const itemsArray = this._itemsArray,
-      inView = ViewBox.inView()
+      inView = this.ViewBox.inView()
 
     let selected = new BitSet()
 
@@ -1054,12 +1105,17 @@ export const DotLayer = Layer.extend({
     pd.textContent = msg
 
     leafletImage(
-      ViewBox._map,
+      this.ViewBox._map,
       function (err, canvas) {
         // download(canvas.toDataURL("image/png"), "mapViewBox.png", "image/png");
-        // console.log("leaflet-image: " + err);
+        console.log("leaflet-image: " + err)
         if (canvas) {
-          this.captureGIF(selection, canvas, periodInSecs, callback)
+          this.captureGIF(
+            selection,
+            canvas,
+            periodInSecs,
+            (callback = callback)
+          )
         }
       }.bind(this)
     )
@@ -1079,8 +1135,8 @@ export const DotLayer = Layer.extend({
       sh = selection.height
     } else {
       sx = sy = 0
-      sw = ViewBox.size.x
-      sh = ViewBox.size.y
+      sw = this.ViewBox.size.x
+      sh = this.ViewBox.size.y
     }
 
     // set up GIF encoder
@@ -1095,6 +1151,7 @@ export const DotLayer = Layer.extend({
         workers: window.navigator.hardwareConcurrency,
         quality: 8,
         transparent: "rgba(0,0,0,0)",
+        workerScript: this.options.gifWorkerUrl,
       })
 
     this._encoder = encoder
@@ -1171,10 +1228,9 @@ export const DotLayer = Layer.extend({
     }
 
     function display(canvas, title) {
-      let w = open(canvas.toDataURL("image/png"), "_blank")
+      let w = open(canvas["toDataURL"]("image/png"), "_blank")
       // w.document.write(`<title>${title}</title>`);
     }
-
     // console.log(`GIF output: ${numFrames.toFixed(4)} frames, delay=${delay.toFixed(4)}`);
     let h1 = this.heatflask_icon.height,
       w1 = this.heatflask_icon.width,
@@ -1289,7 +1345,7 @@ export const DotLayer = Layer.extend({
     const ds = this.dotSettings
     if (settings) Object.assign(ds, settings)
 
-    const vb = ViewBox,
+    const vb = this.ViewBox,
       zf = vb._zf,
       zoom = vb.zoom
     ds._timeScale = ds.C2 / zf
@@ -1331,11 +1387,11 @@ export const DotLayer = Layer.extend({
       if (len == undefined) len = 50
 
       for (let i = 0; i < len; ++i) {
-        let r = Math.round(Math.sin(frequency1 * i + phase1) * width + center).toString(16),
-          g = Math.round(Math.sin(frequency2 * i + phase2) * width + center).toString(16),
-          b = Math.round(Math.sin(frequency3 * i + phase3) * width + center).toString(16)
-
-        palette[i] = `#${r}${g}${b}`
+        let r = Math.round(Math.sin(frequency1 * i + phase1) * width + center),
+          g = Math.round(Math.sin(frequency2 * i + phase2) * width + center),
+          b = Math.round(Math.sin(frequency3 * i + phase3) * width + center)
+        // palette[i] = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        palette[i] = `rgb(${r}, ${g}, ${b})`
       }
       return palette
     },
@@ -1397,9 +1453,4 @@ export const DotLayer = Layer.extend({
             return binarySearch(map, x, mid+1, end);
     }
     */
-  // end of DotLayer definition
-})
-
-export const dotLayer = function (options) {
-  return new DotLayer(options)
-}
+} // end of L.DotLayer definition

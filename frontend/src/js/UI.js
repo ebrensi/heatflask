@@ -10,7 +10,7 @@ import { AUTHORIZE_URL } from "./Init.js"
 import app from "./Model.js"
 import "./URL.js"
 
-import { getBounds, map } from "./MapAPI.js";
+import { getBounds, map } from "./MapAPI.js"
 import { dotLayer } from "./DotLayerAPI.js"
 // import "./DotControls.js";
 
@@ -18,7 +18,7 @@ import paypalButtonHTML from "bundle-text:../html/paypal-button.html"
 import infoTabHTML from "bundle-text:../html/main-info.html"
 
 import { makeQuery, abortQuery } from "./DataImport.js"
-import * as dataTable from "./Table.js"
+import * as table from "./Table.js"
 
 /* TODO: have two UI submodules: UI-simple.js (single) and
                                  UI-complex.js (multi-user)
@@ -96,7 +96,7 @@ function abortRender() {
  * Bind data-actions
  */
 const userActions = {
-  "selection-clear": dataTable.clearSelections,
+  "selection-clear": table.clearSelections,
   "selection-render": null,
   query: renderFromQuery,
   "abort-query": abortRender,
@@ -179,7 +179,7 @@ function renderFromQuery() {
     app.flags.importing = false
     const num = app.items.size
     const msg = `done! ${num} activities imported`
-    document.querySelectorAll(".info-message").forEach(el => {
+    document.querySelectorAll(".info-message").forEach((el) => {
       el.innerHTML = msg
     })
     updateLayers()
@@ -187,18 +187,17 @@ function renderFromQuery() {
 }
 
 /* Table Stuff */
-dataTable.events.addListener("selection", (e) => {
+table.events.addListener("selection", (e) => {
   // console.log("table selections ", e)
 })
-
 
 /* Rendering */
 function updateLayers() {
   if (app.vParams.autozoom) {
-    const totalBounds = getBounds();
+    const totalBounds = getBounds()
 
     if (totalBounds.isValid()) {
-      map.fitBounds(totalBounds);
+      map.fitBounds(totalBounds)
     }
   }
 
@@ -213,18 +212,15 @@ function updateLayers() {
   //   } catch (err) {}
   // }
 
-  dotLayer.reset();
-  app.messages.period = dotLayer.periodInSecs().toFixed(2);
+  dotLayer.reset()
+  table.update()
+  app.messages.period = dotLayer.periodInSecs().toFixed(2)
 }
-
-
 
 // Make initial query if there is one
 if (app.qParams.userid) {
   renderFromQuery()
 }
-
-
 
 // /*
 //  *  Set up or tear down current user stuff
@@ -236,4 +232,3 @@ if (app.qParams.userid) {
 // });
 
 // Dom.addEvent("#render-selection-button", "click", openSelected);
-

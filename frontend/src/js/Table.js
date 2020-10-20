@@ -36,7 +36,7 @@ const formatter = [
       tsString = new Date(tsLocal).toLocaleString()
     return href(activityURL(A.id), tsString.split(",")[0])
   },
-  (A) => `<span class="${A.type}">${atypeIcon(A.type)}</span>`,
+  (A) => atypeIcon(A.type),
   (A) => (A.total_distance / DIST_UNIT).toFixed(2),
   (A) => HHMMSS(A.elapsed_time),
   (A) => A.name,
@@ -112,9 +112,6 @@ function makeRow(A) {
 const tableElement = document.getElementById("items")
 tableElement.classList.add("heatflask-table")
 
-// attach strava activity styling
-appendCSS(tableElement)
-
 // Make header row
 const tHead = tableElement.createTHead()
 
@@ -146,11 +143,16 @@ headerRow.addEventListener("click", (e) => {
 /**
  * Update the table (after adding or removing rows)
  */
-export function update() {
+export function update(remake) {
   for (const A of app.items.values()) {
-    if (!A.tr) {
+    if (!A.tr || remake) {
       A.tr = makeRow(A)
+      // A.tr.setAttribute("data-pathColor", A.pathColor)
     }
+
+    // dot-colors get set by DotLayer.reset(), so make sure this is called after that
+    // A.tr.setAttribute("data-dotColor", A.dotColor)
+
   }
   sort(currentSort || defaultSort)
   lastSelection = {}

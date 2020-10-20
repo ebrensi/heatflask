@@ -1,4 +1,4 @@
-export default BitSet
+export {BitSet, BitSet as default}
 
 /**
  * Bitset Class Adapted from Daniel Lemire's FastBitSet.js
