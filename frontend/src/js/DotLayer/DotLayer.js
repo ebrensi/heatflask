@@ -18,9 +18,6 @@ import * as ViewBox from "./ViewBox.js"
 import * as DrawBox from "./DrawBox.js"
 import * as WorkerPool from "./WorkerPool.js"
 
-import * as Polyline from "./Codecs/Polyline.js"
-import * as StreamRLE from "./Codecs/StreamRLE.js"
-import * as Simplifier from "./Simplifier.js"
 import BitSet from "../BitSet.js"
 
 import heatflask_logo from "url:../../images/logo.png"
@@ -251,6 +248,7 @@ export const DotLayer = Layer.extend({
     DrawBox.clear(this._dotCtx)
 
     DrawBox.reset()
+
     if (event) {
       this._drawingDots = false
       this._dotRect = DrawBox.defaultRect()
@@ -263,20 +261,11 @@ export const DotLayer = Layer.extend({
     const itemsArray = this._itemsArray,
       zoom = vb.zoom
 
-    let ns = 0,
-      ns2 = 0
-
     const promises = []
 
     inView.forEach((i) => {
       const A = itemsArray[i]
-      if (!(zoom in A.idxSet)) {
-        // prevent another instance of this function from doing this
-        A.idxSet[zoom] = null
-        ns += A.n
-
-        promises.push(this.simplify(A, zoom).then((A) => this.makeSegMask(A)))
-      } else promises.push(this.makeSegMask(A))
+      promises.push(A.simplify(zoom).then((A) => A.makeSegMask()))
     })
 
     Promise.all(promises).then((fulfilled) => {
@@ -286,8 +275,6 @@ export const DotLayer = Layer.extend({
         if (A.segMask.isEmpty()) vb.remove(itemsArray.indexOf(A))
       }
 
-      let t1 = performance.now()
-
       const clear = DrawBox.clear,
         rect = DrawBox.defaultRect()
 
@@ -296,293 +283,12 @@ export const DotLayer = Layer.extend({
       if (this.options.showPaths) this.drawPaths()
       else clear(this._lineCtx, rect)
 
-      let t2 = performance.now()
-
       if (oldzoom != zoom) {
         this.updateDotSettings()
       } else if (this._paused) this.drawDots()
 
       // if (ns)
       //     console.log(`simplify: ${ns} -> ${ns2} in ${~~(t1-t0)}:  ${(ns-ns2)/(t1-t0)}`)
-    })
-  },
-
-  // this returns a reference to the same buffer every time
-  _rawPoint: function _rawPoint(A) {
-    // px is a Float32Array but JavaScript internally
-    // does computation using 64 bit floats,
-    // so we use a regular Array.
-    if (!_rawPoint.buf) _rawPoint.buf = [NaN, NaN]
-
-    const buf = _rawPoint.buf,
-      px = A.px
-
-    return (j) => {
-      buf[0] = px[j]
-      buf[1] = px[j + 1]
-      return buf
-    }
-  },
-
-  // _pointsArray returns an "array" function from which we directly
-  // access the i-th data point for any given idxSet.
-  // this is an O(1) lookup via index array. it creates an array of length of the point
-  // simplification at this level of zoom.
-  pointsArray: function (A, zoom) {
-    let point = this._rawPoint(A),
-      arrayFunc
-
-    if (!zoom) {
-      arrayFunc = (i) => point(2 * i)
-    } else {
-      const key = `I${A.id}:${zoom}`
-      let idx = this._lru.get(key)
-
-      if (!idx) {
-        idx = A.idxSet[zoom].array()
-        this._lru.set(key, idx)
-      }
-
-      arrayFunc = (i) => point(2 * idx[i])
-    }
-    return arrayFunc
-  },
-
-  _iterAllPoints: function* (A) {
-    const pointAt = this._rawPoint(A)
-
-    for (let j = 0, n = A.px.length; j < n; j += 2) yield pointAt(j)
-  },
-
-  _iterPoints: function (A, idxSet) {
-    if (idxSet) return idxSet.imap(this.pointsArray(A, null))
-    else return this._iterAllPoints(A)
-  },
-
-  iterPoints: function (A, zoom) {
-    if (zoom === 0) return this._iterAllPoints(A)
-
-    if (!zoom) zoom = ViewBox.zoom
-
-    return this._iterPoints(A, A.idxSet[zoom])
-  },
-
-  timesArray: function (A, zoom) {
-    const key = `T${A.id}:${zoom}`
-    let arr = this._lru.get(key)
-
-    if (!arr) {
-      arr = Uint16Array.from(
-        StreamRLE.decodeCompressedBuf2(A.time, A.idxSet[zoom])
-      )
-      this._lru.set(key, arr)
-    }
-    return (i) => arr[i]
-  },
-
-  TimeInterval: function interval() {
-    if (!interval._interval) interval._interval = { a: NaN, b: NaN }
-    return interval._interval
-  },
-
-  iterTimeIntervals: function (A) {
-    const zoom = ViewBox.zoom,
-      stream = StreamRLE.decodeCompressedBuf2(A.time, A.idxSet[zoom]),
-      timeInterval = this.TimeInterval()
-    let j = 0,
-      second = stream.next()
-    return A.segMask.imap((idx) => {
-      let first = second
-      while (j++ < idx) first = stream.next()
-      second = stream.next()
-      timeInterval.a = first.value
-      timeInterval.b = second.value
-      return timeInterval
-    })
-  },
-
-  _simplify: function (A, toZoom, fromZoom) {
-    const idxSet = A.idxSet[fromZoom],
-      nPoints = fromZoom == undefined ? A.px.length / 2 : idxSet.size(),
-      pArray = this.pointsArray(A, fromZoom),
-      tol = ViewBox.tol(toZoom)
-
-    return new Promise((resolve) => {
-      const subSet = Simplifier.simplify(pArray, nPoints, tol)
-      A.idxSet[toZoom] =
-        fromZoom == undefined ? subSet : idxSet.new_subset(subSet)
-
-      // console.log(`${A.id}: simplified`)
-
-      resolve(A)
-    })
-  },
-
-  simplify: function (A, zoom) {
-    if (zoom === undefined) zoom = ViewBox.zoom
-
-    // simplify from the first available zoom level
-    //  higher than this one if one exists
-    // const nextZoomLevel = 20;
-    return this._simplify(A, zoom)
-  },
-
-  Segment: function segment() {
-    if (!segment._data)
-      segment._data = {
-        segment: {
-          a: [NaN, NaN],
-          b: [NaN, NaN],
-        },
-
-        temp: [NaN, NaN],
-      }
-
-    return segment._data
-  },
-
-  // this returns an iterator of segment objects
-  iterSegments: function (A, zoom, segMask) {
-    const obj = this.Segment(),
-      seg = obj.segment,
-      a = seg.a,
-      b = seg.b,
-      temp = obj.temp,
-      set = (s, p) => {
-        s[0] = p[0]
-        s[1] = p[1]
-      }
-
-    zoom = zoom || ViewBox.zoom
-    segMask = segMask || A.segMask
-
-    /*
-     * Method 1: this is more efficient if most segments are
-     *  included, but not so much if we need to skip a lot.
-     */
-
-    // note: this.iterPoints() returns the a reference to the same
-    // object every time so if we need to deal with more than
-    // one at a time we will need to make a copy.
-
-    // const points = this.iterPoints(A, zoom);
-    // let j = 0,
-    //     obj = points.next();
-
-    // return segMask.imap( i => {
-    //     while (j++ < i)
-    //         obj = points.next();
-    //     set(a, obj.value);
-
-    //     obj = points.next();
-    //     set(b, obj.value);
-
-    //     return seg;
-    // });
-
-    /*
-     * Method 2: this is more efficient if
-     *  we need to skip a lot of segments.
-     */
-    const pointsArray = this.pointsArray(A, null),
-      idxSet = A.idxSet[zoom],
-      segsIdx = segMask.imap(),
-      firstIdx = segsIdx.next().value,
-      points = idxSet.imap_find(pointsArray, firstIdx)
-
-    function* iterSegs() {
-      set(a, points.next().value) // point at firstIdx
-      set(temp, points.next().value)
-      set(b, temp) // point at firstIdx + 1
-
-      yield seg
-
-      let last_i = firstIdx
-      for (const i of segsIdx) {
-        if (i === ++last_i) set(a, temp)
-        else set(a, points.next(i).value)
-
-        // there is a weird bug here
-        set(temp, points.next().value)
-        set(b, temp)
-        last_i = i
-        yield seg
-      }
-    }
-    return iterSegs()
-  },
-
-  inMapBounds: function (A) {
-    return ViewBox.overlaps(A.pxBounds)
-  },
-
-  // A segMask is a BitSet containing the index of the start-point of each
-  //  segment that is in view and is not bad.  A segment is considered to be
-  //  in view if one of its points is in the current view.
-  // A "bad" segment is one that represents a gap in GPS data.
-  //  The indices are relative to the current zoom's idxSet mask,
-  //  so that the i-th good segment corresponds to the i-th member of
-  //  this idxSet.
-  makeSegMask: function (A) {
-    const drawBox = DrawBox,
-      viewBox = ViewBox,
-      points = this.iterPoints(A, viewBox.zoom),
-      inBounds = (p) => viewBox.contains(p) && drawBox.update(p)
-
-    return new Promise((resolve) => {
-      A.segMask = (A.segMask || new BitSet()).clear()
-
-      let p = points.next().value,
-        p_In = inBounds(p),
-        s = 0
-
-      for (const nextp of points) {
-        const nextp_In = inBounds(nextp)
-        if (p_In || nextp_In) {
-          A.segMask.add(s)
-        }
-        p_In = nextp_In
-        s++
-      }
-
-      if (A.badSegs) for (s of A.badSegs) A.segMask.remove(s)
-
-      // console.log(`${A.id}: segmask`)
-
-      resolve(A)
-    })
-  },
-
-  _drawPathFromSegIter: function (ctx, A) {
-    const segs = this.iterSegments(A),
-      transform = ViewBox.px2Container(),
-      seg = segs.next().value,
-      a = seg.a,
-      b = seg.b
-
-    let i = 0
-    do {
-      transform(a)
-      ctx.moveTo(a[0], a[1])
-
-      transform(b)
-      ctx.lineTo(b[0], b[1])
-    } while (!segs.next().done)
-  },
-
-  _drawPathFromPointArray: function (ctx, A) {
-    const zoom = ViewBox.zoom,
-      segMask = A.segMask,
-      points = this.pointsArray(A, zoom),
-      transform = ViewBox.px2Container(),
-      point = (i) => transform(points(i))
-
-    segMask.forEach((i) => {
-      let p = point(i)
-      ctx.moveTo(p[0], p[1])
-
-      p = point(i + 1)
-      ctx.lineTo(p[0], p[1])
     })
   },
 
@@ -594,7 +300,7 @@ export const DotLayer = Layer.extend({
       const group = colorGroups[color]
       ctx.strokeStyle = color || defaultColor
       ctx.beginPath()
-      group.forEach((i) => this._drawPathFromPointArray(ctx, items[i]))
+      group.forEach((i) => items[i].drawPathFromPointArray(ctx))
       ctx.stroke()
     }
   },
@@ -642,107 +348,8 @@ export const DotLayer = Layer.extend({
   },
 
   // --------------------------------------------------------------------
-  dotPointsIterFromSegs: function* (A, now) {
-    const ds = this.getDotSettings(),
-      T = ds._period,
-      start = A.ts,
-      p = [NaN, NaN]
 
-    // segments yields the same object seg every time with
-    // the same views a and b to the same memory buffer.
-    //  So we only need to define the references once.
-    const segments = this.iterSegments(A),
-      seg = segments.next().value,
-      p_a = seg.a,
-      p_b = seg.b
-
-    const times = this.iterTimeIntervals(A),
-      timeInterval = times.next().value
-
-    const timeOffset = (ds._timeScale * (now - (start + timeInterval.a))) % T
-
-    // let count = 0;
-
-    do {
-      const t_a = timeInterval.a,
-        t_b = timeInterval.b,
-        lowest = Math.ceil((t_a - timeOffset) / T),
-        highest = Math.floor((t_b - timeOffset) / T)
-
-      if (lowest <= highest) {
-        // console.log(`${t_a}, ${t_b}`);
-        const t_ab = t_b - t_a,
-          vx = (p_b[0] - p_a[0]) / t_ab,
-          vy = (p_b[1] - p_a[1]) / t_ab
-
-        // console.log(`${p_a}, ${p_b}`);
-        for (let j = lowest; j <= highest; j++) {
-          const t = j * T + timeOffset,
-            dt = t - t_a
-          // console.log(t);
-          if (dt > 0) {
-            p[0] = p_a[0] + vx * dt
-            p[1] = p_a[1] + vy * dt
-            // drawDot(p);
-            yield p
-            // count++;
-          }
-        }
-      }
-    } while (!segments.next().done && !times.next().done)
-
-    // return count
-  },
-
-  dotPointsIterFromArray: function* (A, now) {
-    const ds = this.getDotSettings(),
-      T = ds._period,
-      start = A.ts,
-      p = [NaN, NaN],
-      zoom = ViewBox.zoom,
-      points = this.pointsArray(A, zoom),
-      times = this.timesArray(A, zoom),
-      p_a = [NaN, NaN],
-      p_b = [NaN, NaN],
-      set = (d, s) => {
-        d[0] = s[0]
-        d[1] = s[1]
-        return d
-      },
-      i0 = A.segMask.min()
-
-    const timeOffset = (ds._timeScale * (now - (start + times(i0)))) % T
-
-    let count = 0
-
-    for (const i of A.segMask) {
-      const t_a = times(i),
-        t_b = times(i + 1),
-        lowest = Math.ceil((t_a - timeOffset) / T),
-        highest = Math.floor((t_b - timeOffset) / T)
-
-      if (lowest <= highest) {
-        set(p_a, points(i))
-        set(p_b, points(i + 1))
-
-        const t_ab = t_b - t_a,
-          vx = (p_b[0] - p_a[0]) / t_ab,
-          vy = (p_b[1] - p_a[1]) / t_ab
-
-        for (let j = lowest; j <= highest; j++) {
-          const t = j * T + timeOffset,
-            dt = t - t_a
-          if (dt > 0) {
-            p[0] = p_a[0] + vx * dt
-            p[1] = p_a[1] + vy * dt
-            yield p
-          }
-        }
-      }
-    }
-  },
-
-  makeCircleDrawFunc: function () {
+ makeCircleDrawFunc: function () {
     const two_pi = this.two_pi,
       ctx = this._dotCtx,
       dotSize = this.dotSettings._dotSize,
@@ -776,6 +383,7 @@ export const DotLayer = Layer.extend({
     return count
   },
 
+
   _drawDotsByColor: function (now, colorGroups, drawDot) {
     const ctx = this._dotCtx,
       itemsArray = this._itemsArray
@@ -788,8 +396,9 @@ export const DotLayer = Layer.extend({
       ctx.beginPath()
 
       group.forEach((i) => {
-        // const dotLocs = this.dotPointsIterFromSegs(itemsArray[i], now);
-        const dotLocs = this.dotPointsIterFromArray(itemsArray[i], now)
+        const A = itemsArray[i]
+        // const dotLocs = A.dotPointsIterFromSegs(now);
+        const dotLocs = A.dotPointsIterFromArray(now)
         count += this._drawDots(dotLocs, drawDot)
       })
 
