@@ -13,9 +13,8 @@ import BitSet from "../BitSet.js"
  */
 const _lru = new Map()
 
-function set2(s, p) {
-  s[0] = p[0]
-  s[1] = p[1]
+function inBounds(p) {
+  return ViewBox.contains(p) && DrawBox.update(p)
 }
 
 /**
@@ -60,20 +59,12 @@ export class Activity {
     this.segMask = null
 
     // Buffers. In order to save on overhead we re-use some memory
-    this.pointBuf = [NaN, NaN]
     this.timeIntervalBuf = { a: NaN, b: NaN }
-    this.segmentBuf = {
-      segment: {
-        a: [NaN, NaN],
-        b: [NaN, NaN],
-      },
-
-      temp: [NaN, NaN],
-    }
+    this.segmentBuf = {}
 
     // decode polyline format into an Array of [lat, lng] points
     const points = Polyline.decode2Buf(polyline, n)
-    // make baseline projection (latLngs to pixel points) in-place
+    // make baseline projection (latLngs to pixel points at zoom=0) in-place
     for (let i = 0, len = points.length; i < len; i += 2)
       ViewBox.latLng2px(points.subarray(i, i + 2))
     this.px = points
@@ -84,142 +75,150 @@ export class Activity {
   }
 
   /**
-   * The j-th px point (returns the same Array every time, but
-   *   with different contents)
-   * @param  {Number} j -- the index of px
-   * @return {Array}   -- the pointBuf with the point in it
-   */
-  _rawPoint(j) {
-    j = j * 2
-    this.pointBuf[0] = this.px[j]
-    this.pointBuf[1] = this.px[j + 1]
-    return this.pointBuf
-  }
-
-  /**
-   * An "array" function from which we directlY access the i-th
-   * data point for any given idxSet. This is an O(1) lookup via index
-   *  array. it creates an array of length of the point simplification
-   *  at a given level of zoom.
+   * This returns a fuction that provides direct access to the
+   * i-th point [x,y] of the location track at a given zoom level.
+   *  For any zoom != 0  it uses an index of lookups, which takes
+   *  up more memory than the iterator, but it is faster.
+   *
+   * Each point returned by the accessor function is a window into the
+   * actual px array so modifying it will modify the the px array.
+   *
    * @param  {Number} zoom
-   * @return {function}
+   * @return {function} the accessor function
    */
-  pointsArray(zoom) {
+  getPointAccessor(zoom) {
+    const px = this.px
+    if (zoom === 0) {
+      return function (i) {
+        const j = i * 2
+        return px.subarray(j, j + 2)
+      }
+    }
+
     if (!zoom) {
-      return (i) => this._rawPoint(i)
+      throw new TypeError(`zoom=${zoom} is invalid`)
     }
 
     const key = `I${this.id}:${zoom}`
     let idx = _lru.get(key)
 
     if (!idx) {
+      const idxSet = this.idxSet[zoom]
+      if (!idxSet) {
+        throw new Error(`no idxSet[${zoom}]`)
+      }
       idx = this.idxSet[zoom].array()
-      this._lru.set(key, idx)
+      _lru.set(key, idx)
     }
 
-    return (i) => this._rawPoint(idx[i])
+    return function (i) {
+      const j = idx[i] * 2
+      return px.subarray(j, j + 2)
+    }
   }
 
-  iterPoints(zoom) {
-    if (zoom === 0) return _iterAllPoints(this)
+  /**
+   * A generator that yields points [x,y] of the location track at
+   *  a given zoom level, in sequence.
+   *
+   * Each point yielded by the generator is a window into the
+   * actual px array so modifying it will modify the the px array.
+   *
+   * @param {Number} zoom
+   */
+  pointsIterator(zoom) {
+    if (zoom === 0) {
+      return _pointsIterator(this.px)
+    }
 
-    if (!zoom) zoom = ViewBox.zoom
+    if (!zoom) {
+      throw new TypeError(`zoom=${zoom} is invalid`)
+    }
 
     const idxSet = this.idxSet[zoom]
     if (!idxSet) {
       throw new Error(`no idxSet[${zoom}]`)
     }
-    return idxSet.imap(this._rawPoint)
+    return _pointsIterator(this.px, idxSet)
   }
 
   /**
-   * this returns an iterator of segment objects
-   *  Method 1: this is more efficient if most segments are
-   *   included, but not so much if we need to skip a lot.
+   * returns an iterator of segment objects
+   * (actually the same Object with different values)
    *
    * @param  {Number} zoom
    * @param  {BitSet} segMask
    * @return {Iterator}
    */
-  iterSegments(zoom, segMask) {
+  *iterSegments(zoom, segMask) {
     zoom = zoom || ViewBox.zoom
     segMask = segMask || this.segMask
+    const points = this.getPointAccessor(zoom)
+    const seg = this.segmentBuf
 
-    /* note: this.iterPoints() returns the a reference to the same
-     * object every time so if we need to deal with more than
-     * one at a time we will need to make a copy.
-     */
-
-    const points = this.iterPoints(zoom)
-    const seg = this.segmentBuf.segment
-    let j = 0,
-      obj = points.next()
-
-    return segMask.imap((i) => {
-      while (j++ < i) obj = points.next()
-      set2(seg.a, obj.value)
-
-      obj = points.next()
-      set2(seg.b, obj.value)
-
-      return seg
-    })
-  }
-
-  /**
-   * this returns an iterator of segment objects
-   *   Method 2: this is more efficient if
-   *     we need to skip a lot of segments.
-   *
-   * @param  {Number} zoom
-   * @param  {BitSet} segMask
-   * @return {Iterator}
-   */
-  *iterSegments2(zoom, segMask) {
-    zoom = zoom || ViewBox.zoom
-    segMask = segMask || this.segMask
-
-    const { seg, temp } = this.segmentBuf
-    const { a, b } = seg
-
-    const pointsArray = this.pointsArray(null),
-      idxSet = this.idxSet[zoom],
-      segsIdx = segMask.imap(),
-      firstIdx = segsIdx.next().value,
-      points = idxSet.imap_find(pointsArray, firstIdx)
-
-    set2(a, points.next().value) // point at firstIdx
-    set2(temp, points.next().value)
-    set2(b, temp) // point at firstIdx + 1
-
-    yield seg
-
-    let last_i = firstIdx
-    for (const i of segsIdx) {
-      if (i === ++last_i) set2(a, temp)
-      else set2(a, points.next(i).value)
-
-      // there is a weird bug here
-      set2(temp, points.next().value)
-      set2(b, temp)
-      last_i = i
+    for (const i of segMask) {
+      seg.a = points(i)
+      seg.b = points(i + 1)
+      // TODO: only yield the segment if the points are not too far apart
       yield seg
     }
   }
 
-  timesArray(zoom) {
+  /**
+   * this returns an iterator of segments without needing
+   *   a point accessor
+   *
+   * @param  {Number} zoom
+   * @param  {BitSet} segMask
+   * @return {Iterator}
+   */
+  *iterSegmentsFromPointsIterator(zoom, segMask) {
+    zoom = zoom || ViewBox.zoom
+    segMask = segMask || this.segMask
+
+    const points = this.pointsIterator(zoom)
+    const seg = this.segmentBuf
+    let j = 0,
+      obj = points.next()
+
+    for (const i of segMask) {
+      while (j++ < i) {
+        obj = points.next()
+      }
+
+      seg.a = obj.value
+
+      obj = points.next()
+      seg.b = obj.value
+
+      yield seg
+    }
+  }
+
+  timesIterator(zoom) {
+    if (zoom === 0) {
+      return StreamRLE.decodeCompressedBuf(this.time)
+    } else {
+      const idxSet = this.idxSet[zoom]
+      if (!idxSet) {
+        throw new Error(`no idxSet[${zoom}]`)
+      }
+      return StreamRLE.decodeCompressedBuf2(this.time, idxSet)
+    }
+  }
+
+  getTimesAccessor(zoom) {
     const key = `T${this.id}:${zoom}`
     let arr = _lru.get(key)
 
     if (!arr) {
-      arr = Uint16Array.from(
-        StreamRLE.decodeCompressedBuf2(this.time, this.idxSet[zoom])
-      )
+      arr = Uint16Array.from(this.timesIterator(zoom))
       _lru.set(key, arr)
     }
     return (i) => arr[i]
   }
 
+  /*
   iterTimeIntervals() {
     const zoom = ViewBox.zoom,
       stream = StreamRLE.decodeCompressedBuf2(this.time, this.idxSet[zoom]),
@@ -236,6 +235,7 @@ export class Activity {
       return timeInterval
     })
   }
+  */
 
   async simplify(zoom) {
     if (zoom === undefined) {
@@ -245,15 +245,15 @@ export class Activity {
     if (!(zoom in this.idxSet)) {
       // prevent another instance of this function from doing this
       this.idxSet[zoom] = null
+
       const subSet = Simplifier.simplify(
-        this.pointsArray(zoom),
+        this.getPointAccessor(0),
         this.px.length / 2,
         ViewBox.tol(zoom)
       )
       this.idxSet[zoom] = subSet
     }
 
-    // console.log(`${this.id}: simplified`)
     return this
   }
 
@@ -267,10 +267,7 @@ export class Activity {
    *  this idxSet.
    */
   async makeSegMask() {
-    const drawBox = DrawBox,
-      viewBox = ViewBox,
-      points = this.iterPoints(viewBox.zoom),
-      inBounds = (p) => viewBox.contains(p) && drawBox.update(p)
+    const points = this.pointsIterator(ViewBox.zoom)
 
     this.segMask = (this.segMask || new BitSet()).clear()
 
@@ -314,20 +311,18 @@ export class Activity {
     } while (!segs.next().done)
   }
 
-  drawPathFromPointArray (ctx) {
-    const points = this.pointsArray(ViewBox.zoom),
-      transform = ViewBox.px2Container(),
-      point = (i) => transform(points(i))
+  drawPathFromPointArray(ctx) {
+    const points = this.getPointAccessor(ViewBox.zoom),
+      transformedMoveTo = ViewBox.makeTransform((x,y) => ctx.moveTo(x,y)),
+      transformedLineTo = ViewBox.makeTransform((x,y) => ctx.lineTo(x,y))
 
     this.segMask.forEach((i) => {
-      let p = point(i)
-      ctx.moveTo(p[0], p[1])
-
-      p = point(i + 1)
-      ctx.lineTo(p[0], p[1])
+      // ctx.moveTo(...transform(points(i)))
+      // ctx.lineTo(...transform(points(i+1)))
+      transformedMoveTo(points(i))
+      transformedLineTo(points(i+1))
     })
   }
-
 
   *dotPointsIterFromSegs(now) {
     const ds = this.getDotSettings(),
@@ -381,26 +376,16 @@ export class Activity {
     // return count
   }
 
-  *dotPointsIterFromArray(now) {
-    const ds = this.getDotSettings(),
-      T = ds._period,
+  *dotPointsIterFromArray(now, ds) {
+    const T = ds._period,
       start = this.ts,
       p = [NaN, NaN],
       zoom = ViewBox.zoom,
-      points = this.pointsArray(zoom),
-      times = this.timesArray(zoom),
-      p_a = [NaN, NaN],
-      p_b = [NaN, NaN],
-      set = (d, s) => {
-        d[0] = s[0]
-        d[1] = s[1]
-        return d
-      },
+      points = this.getPointAccessor(zoom),
+      times = this.getTimesAccessor(zoom),
       i0 = this.segMask.min()
 
     const timeOffset = (ds._timeScale * (now - (start + times(i0)))) % T
-
-    let count = 0
 
     for (const i of this.segMask) {
       const t_a = times(i),
@@ -409,8 +394,8 @@ export class Activity {
         highest = Math.floor((t_b - timeOffset) / T)
 
       if (lowest <= highest) {
-        set(p_a, points(i))
-        set(p_b, points(i + 1))
+        const p_a = points(i)
+        const p_b = points(i + 1)
 
         const t_ab = t_b - t_a,
           vx = (p_b[0] - p_a[0]) / t_ab,
@@ -430,11 +415,19 @@ export class Activity {
   }
 }
 
-/*
- * Point iterators
- */
-function* _iterAllPoints(A) {
-  for (let j = 0, n = A.px.length / 2; j < n; j++) yield A._rawPoint(j)
+
+/* helper functions */
+
+function* _pointsIterator(px, idxSet) {
+  if (!idxSet) {
+    for (let i = 0, len = px.length / 2; i < len; i++) {
+      const j = i * 2
+      yield px.subarray(j, j + 2)
+    }
+  } else {
+    for (const i of idxSet) {
+      const j = i * 2
+      yield px.subarray(j, j + 2)
+    }
+  }
 }
-
-

@@ -20,6 +20,9 @@ let _map,
   _zoom,
   _zf
 
+export {_zoom as zoom, _zf as zf}
+
+// this operates in-place!
 export const latLng2px = makePT(0)
 
 export function initialize(map, canvases, itemsArray) {
@@ -178,9 +181,8 @@ export function calibrate() {
 }
 
 export function update(cal = true) {
-  const m = _map,
-    zoom = m.getZoom(),
-    latLngMapBounds = m.getBounds()
+  const zoom = _map.getZoom(),
+    latLngMapBounds = _map.getBounds()
 
   const zoomChange = zoom != _zoom
   // stuff that (only) needs to be done on zoom change
@@ -198,13 +200,27 @@ export function onZoomChange(zoom) {
   _zf = 2 ** zoom
 }
 
-// this function operates in-place!
-export function px2Container() {
-  return (p) => {
-    p[0] = _zf * p[0] + _pxOffset.x
-    p[1] = _zf * p[1] + _pxOffset.y
+/**
+ * returns a function that transforms a given point to
+ * the current screen coordinate system
+ *
+ * Since this function will be called a lot we have made an
+ * attempt at optimization: if the user supplies a function
+ * that takes two arguments, the function will be called with
+ * the transformed coordinates so we can avoid creating a new
+ * Array every time we perform the transformation.
+ */
+export function makeTransform(func) {
+  const ox = _pxOffset.x,
+        oy = _pxOffset.y
+  if (func) {
+    return function(p) {
+      return func(_zf * p[0] + ox, _zf * p[1] + oy)
+    }
+  }
 
-    return p
+  return function(p) {
+    return [_zf * p[0] + ox, _zf * p[1] + oy]
   }
 }
 
@@ -249,15 +265,14 @@ export function drawPxBounds(ctx, pxBounds) {
     xmax = b[2],
     ymin = b[3],
     ymax = b[1],
-    transform = px2Container(),
+    transform = makeTransform(),
     ul = transform([xmin, ymin]),
     x = ul[0] + 5,
     y = ul[1] + 5,
     lr = transform([xmax, ymax]),
     w = lr[0] - x - 10,
-    h = lr[1] - y - 10,
-    rect = { x: x, y: y, w: w, h: h }
+    h = lr[1] - y - 10
 
   ctx.strokeRect(x, y, w, h)
-  return rect
+  return { x, y, w, h }
 }

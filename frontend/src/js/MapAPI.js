@@ -44,7 +44,7 @@ export const map = new L.Map("map", {
   center: center,
   zoom: zoom,
   preferCanvas: true,
-  zoomAnimation: true,
+  zoomAnimation: false,
   zoomAnimationThreshold: 6,
   updateWhenZooming: true,
   worldCopyJump: true,

@@ -1,0 +1,89 @@
+
+#items-container {
+  height: 70vh;
+  width: 100%;
+  overflow: auto;
+}
+
+.heatflask-table {
+  width: auto;
+  table-layout: fixed;
+  user-select: none;  /* disables text-selection on shift-click */
+
+  cursor: pointer;
+}
+
+.heatflask.table thead {
+  width: 100%;
+  display: table-header-group;
+  border-collapse: collapse;
+}
+
+.heatflask-table th {
+  background-color: #0000ff70;
+  position: sticky;
+  top: 0;
+}
+
+.heatflask-table th[data-sort="asc"]:after,
+.heatflask-table th[data-sort="desc"]:after {
+  content: "";
+  position: relative;
+  left: 10px;
+  border: 7px solid transparent;
+}
+
+.heatflask-table th[data-sort="desc"]:after {
+  top: 10px;
+  border-top-color: silver;
+}
+.heatflask-table th[data-sort="asc"]:after {
+  bottom: 15px;
+  border-bottom-color: silver;
+}
+
+.heatflask-table tr,
+.heatflask-table th {
+  border: 1px solid white;
+}
+
+.heatflask-table thead tr {
+  border: 1px solid white;
+}
+
+.heatflask-table th,
+.heatflask-table td {
+  padding: 5px;
+}
+
+.heatflask-table th:nth-child(1) {
+  width: 1em;
+}
+
+.heatflask-table th:nth-child(2) {
+  width: 5em;
+}
+
+.heatflask-table th:nth-child(3) {
+  width: 1em;
+}
+
+.heatflask-table th:nth-child(4) {
+  width: 2em;
+}
+
+.heatflask-table th:nth-child(5) {
+  width: 3em;
+}
+
+.heatflask-table th:nth-child(6) {
+  width: 100%;
+}
+
+.heatflask-table tbody tr:hover {
+  background-color: #ffffff60;
+}
+
+.heatflask-table tbdy tr.selected {
+  background-color: #ffffff30;
+}

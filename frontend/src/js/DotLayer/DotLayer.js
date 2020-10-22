@@ -2,27 +2,13 @@
   DotLayer Efrem Rensi, 2020,
 */
 
-import {
-  Layer,
-  Util,
-  DomUtil,
-  Browser,
-  setOptions,
-  latLngBounds,
-} from "leaflet"
-import * as leafletImage from "leaflet-image"
-import * as GIF from "gif.js"
-import * as download from "downloadjs"
+import { Layer, Util, DomUtil, Browser, setOptions } from "leaflet"
 
 import * as ViewBox from "./ViewBox.js"
 import * as DrawBox from "./DrawBox.js"
-import * as WorkerPool from "./WorkerPool.js"
+// import * as WorkerPool from "./WorkerPool.js"
 
 import BitSet from "../BitSet.js"
-
-import heatflask_logo from "url:../../images/logo.png"
-import strava_logo from "url:../../images/pbs4.png"
-
 import options from "./options.js"
 
 import { items } from "../Model.js"
@@ -39,17 +25,10 @@ export const DotLayer = Layer.extend({
     setOptions(this, options)
     this._paused = this.options.startPaused
     this._timePaused = this.UTCnowSecs()
-
-    this.heatflask_icon = new Image()
-    this.heatflask_icon.src = heatflask_logo
-
-    this.strava_icon = new Image()
-    this.strava_icon.src = strava_logo
-
     this._items = items
-    this._lru = new Map() // turn this into a real LRU-cache
 
-    WorkerPool.initialize(this.options.numWorkers)
+    this._redrawCounter = 0
+    // WorkerPool.initialize(this.options.numWorkers)
   },
 
   UTCnowSecs: function () {
@@ -113,7 +92,6 @@ export const DotLayer = Layer.extend({
     //    this.fps_display = L.control.fps().addTo(this._map);
 
     ViewBox.initialize(this._map, canvases)
-    DrawBox.initialize(ViewBox)
     map.on(this.getEvents(), this)
   },
 
@@ -244,7 +222,9 @@ export const DotLayer = Layer.extend({
   _redraw: function (event) {
     if (!this._ready) return
 
-    const vb = ViewBox
+    const timerLabel = `redraw_${this._redrawCounter++}`
+    console.time(timerLabel)
+
     DrawBox.clear(this._dotCtx)
 
     DrawBox.reset()
@@ -252,14 +232,14 @@ export const DotLayer = Layer.extend({
     if (event) {
       this._drawingDots = false
       this._dotRect = DrawBox.defaultRect()
-      vb.update()
+      ViewBox.update()
     }
 
-    const inView = vb.inView(),
+    const inView = ViewBox.inView(),
       oldzoom = ViewBox.zoom
 
     const itemsArray = this._itemsArray,
-      zoom = vb.zoom
+      zoom = ViewBox.zoom
 
     const promises = []
 
@@ -272,21 +252,31 @@ export const DotLayer = Layer.extend({
       this._drawingDots = true
 
       for (const A of fulfilled) {
-        if (A.segMask.isEmpty()) vb.remove(itemsArray.indexOf(A))
+        if (A.segMask.isEmpty()) {
+          ViewBox.remove(itemsArray.indexOf(A))
+        }
       }
 
-      const clear = DrawBox.clear,
-        rect = DrawBox.defaultRect()
+      // the whole viewable area
+      const viewPort = DrawBox.defaultRect()
 
-      if (this.options.debug) clear(this._debugCtx, rect)
+      if (this.options.debug) {
+        DrawBox.clear(this._debugCtx, viewPort)
+      }
 
-      if (this.options.showPaths) this.drawPaths()
-      else clear(this._lineCtx, rect)
+      if (this.options.showPaths) {
+        this.drawPaths()
+      } else {
+        DrawBox.clear(this._lineCtx, viewPort)
+      }
 
       if (oldzoom != zoom) {
         this.updateDotSettings()
-      } else if (this._paused) this.drawDots()
+      } else if (this._paused) {
+        this.drawDots()
+      }
 
+      console.timeEnd(timerLabel)
       // if (ns)
       //     console.log(`simplify: ${ns} -> ${ns2} in ${~~(t1-t0)}:  ${(ns-ns2)/(t1-t0)}`)
     })
@@ -311,7 +301,6 @@ export const DotLayer = Layer.extend({
     if (!this._ready) return
 
     const ctx = this._lineCtx,
-      itemsArray = this._itemsArray,
       options = this.options,
       vb = ViewBox
 
@@ -349,29 +338,27 @@ export const DotLayer = Layer.extend({
 
   // --------------------------------------------------------------------
 
- makeCircleDrawFunc: function () {
+  makeCircleDrawFunc: function () {
     const two_pi = this.two_pi,
       ctx = this._dotCtx,
       dotSize = this.dotSettings._dotSize,
-      transform = ViewBox.px2Container()
+      transformDraw = ViewBox.makeTransform(function(x,y){
+          ctx.arc(x, y, dotSize, 0, two_pi)
+          ctx.closePath()
+      })
 
-    return (p) => {
-      transform(p)
-      ctx.arc(p[0], p[1], dotSize, 0, two_pi)
-      ctx.closePath()
-    }
+    return transformDraw
   },
 
   makeSquareDrawFunc: function () {
     const ctx = this._dotCtx,
       dotSize = this.dotSettings._dotSize,
       dotOffset = dotSize / 2.0,
-      transform = ViewBox.px2Container()
+      transformDraw = ViewBox.makeTransform(function(x,y){
+        ctx.rect(x - dotOffset, y - dotOffset, dotSize, dotSize)
+      })
 
-    return (p) => {
-      transform(p)
-      ctx.rect(p[0] - dotOffset, p[1] - dotOffset, dotSize, dotSize)
-    }
+    return transformDraw
   },
 
   _drawDots: function (pointsIterator, drawDotFunc) {
@@ -382,7 +369,6 @@ export const DotLayer = Layer.extend({
     }
     return count
   },
-
 
   _drawDotsByColor: function (now, colorGroups, drawDot) {
     const ctx = this._dotCtx,
@@ -398,7 +384,7 @@ export const DotLayer = Layer.extend({
       group.forEach((i) => {
         const A = itemsArray[i]
         // const dotLocs = A.dotPointsIterFromSegs(now);
-        const dotLocs = A.dotPointsIterFromArray(now)
+        const dotLocs = A.dotPointsIterFromArray(now, this.getDotSettings())
         count += this._drawDots(dotLocs, drawDot)
       })
 
@@ -414,8 +400,6 @@ export const DotLayer = Layer.extend({
 
     const options = this.options,
       ctx = this._dotCtx,
-      g = this._gifPatch,
-      itemsArray = this._itemsArray,
       vb = ViewBox
 
     const colorGroups = vb.dotColorGroups()
@@ -593,231 +577,6 @@ export const DotLayer = Layer.extend({
   },
 
   // -----------------------------------------------------------------------
-
-  captureCycle: function (selection = null, callback = null) {
-    let periodInSecs = this.periodInSecs()
-    this._capturing = true
-
-    // set up display
-    const pd = document.createElement("div")
-    pd.style.position = "absolute"
-    pd.style.left = pd.style.top = 0
-    pd.style.backgroundColor = "black"
-    pd.style.fontFamily = "monospace"
-    pd.style.fontSize = "20px"
-    pd.style.padding = "5px"
-    pd.style.color = "white"
-    pd.style.zIndex = 100000
-    document.body.appendChild(pd)
-    this._progressDisplay = pd
-
-    let msg = "loading map baseLayer (may take several seconds)..."
-    // console.log(msg);
-    pd.textContent = msg
-
-    leafletImage(
-      ViewBox._map,
-      function (err, canvas) {
-        // download(canvas.toDataURL("image/png"), "mapViewBox.png", "image/png");
-        // console.log("leaflet-image: " + err);
-        if (canvas) {
-          this.captureGIF(selection, canvas, periodInSecs, callback)
-        }
-      }.bind(this)
-    )
-  },
-
-  captureGIF: function (
-    selection = null,
-    baseCanvas = null,
-    durationSecs = 2,
-    callback = null
-  ) {
-    let sx, sy, sw, sh
-    if (selection) {
-      sx = selection.topLeft.x
-      sy = selection.topLeft.y
-      sw = selection.width
-      sh = selection.height
-    } else {
-      sx = sy = 0
-      sw = ViewBox.size.x
-      sh = ViewBox.size.y
-    }
-
-    // set up GIF encoder
-    let pd = this._progressDisplay,
-      frameTime = Date.now(),
-      // we use a frame rate of 25 fps beecause that yields a nice
-      //  4 1/100-th second delay between frames
-      frameRate = 25,
-      numFrames = durationSecs * frameRate,
-      delay = 1000 / frameRate,
-      encoder = new GIF({
-        workers: window.navigator.hardwareConcurrency,
-        quality: 8,
-        transparent: "rgba(0,0,0,0)",
-      })
-
-    this._encoder = encoder
-
-    encoder.on(
-      "progress",
-      function (p) {
-        const msg = `Encoding frames...${~~(p * 100)}%`
-        // console.log(msg);
-        this._progressDisplay.textContent = msg
-      }.bind(this)
-    )
-
-    encoder.on(
-      "finished",
-      function (blob) {
-        // window.open(URL.createObjectURL(blob));
-
-        if (blob) {
-          download(blob, "output.gif", "image/gif")
-        }
-
-        document.body.removeChild(this._progressDisplay)
-        delete this._progressDisplay
-
-        this._capturing = false
-        if (!this._paused) {
-          this.animate()
-        }
-        if (callback) {
-          callback()
-        }
-      }.bind(this)
-    )
-
-    function canvasSubtract(newCanvas, oldCanvas) {
-      if (!oldCanvas) {
-        return newCanvas
-      }
-      let ctxOld = oldCanvas.getContext("2d"),
-        dataOld = ctxOld.getImageData(0, 0, sw, sh),
-        dO = dataOld.data,
-        ctxNew = newCanvas.getContext("2d"),
-        dataNew = ctxNew.getImageData(0, 0, sw, sh),
-        dN = dataNew.data,
-        len = dO.length
-
-      if (dN.length != len) {
-        console.log("canvasDiff: canvases are different size")
-        return
-      }
-      for (let i = 0; i < len; i += 4) {
-        if (
-          dO[i] == dN[i] &&
-          dO[i + 1] == dN[i + 1] &&
-          dO[i + 2] == dN[i + 2] &&
-          dO[i + 3] == dN[i + 3]
-        ) {
-          dO[i] = 0
-          dO[i + 1] = 0
-          dO[i + 2] = 0
-          dO[i + 3] = 0
-        } else {
-          dO[i] = dN[i]
-          dO[i + 1] = dN[i + 1]
-          dO[i + 2] = dN[i + 2]
-          // dO[i+3] = dN[i+3];
-          // console.log(dN[i+3]);
-          dO[i + 3] = 255
-        }
-      }
-      ctxOld.putImageData(dataOld, 0, 0)
-      return oldCanvas
-    }
-
-    function display(canvas, title) {
-      let w = open(canvas.toDataURL("image/png"), "_blank")
-      // w.document.write(`<title>${title}</title>`);
-    }
-
-    // console.log(`GIF output: ${numFrames.toFixed(4)} frames, delay=${delay.toFixed(4)}`);
-    let h1 = this.heatflask_icon.height,
-      w1 = this.heatflask_icon.width,
-      himg = [50, (h1 * 50) / w1],
-      hd = [2, sh - himg[0] - 2, himg[0], himg[1]],
-      h2 = this.strava_icon.height,
-      w2 = this.strava_icon.width,
-      simg = [50, (h2 * 50) / w2],
-      sd = [sw - simg[0] - 2, sh - simg[1] - 2, simg[0], simg[1]]
-
-    let framePrev = null
-    // Add frames to the encoder
-    for (let i = 0, num = ~~numFrames; i < num; i++, frameTime += delay) {
-      let msg = `Rendering frames...${~~((i / num) * 100)}%`
-
-      // let timeOffset = (this.dotSettings._timeScale * frameTime) % this._period;
-      // console.log( `frame${i} @ ${timeOffset}`);
-
-      pd.textContent = msg
-
-      // create a new canvas
-      const frame = document.createElement("canvas")
-      frame.width = sw
-      frame.height = sh
-
-      const frameCtx = frame.getContext("2d")
-
-      // clear the frame
-      frameCtx.clearRect(0, 0, sw, sh)
-
-      // lay the baselayer down
-      baseCanvas && frameCtx.drawImage(baseCanvas, sx, sy, sw, sh, 0, 0, sw, sh)
-
-      // render this set of dots
-      this.drawDots(frameTime)
-
-      // draw dots onto frame
-      frameCtx.drawImage(this._dotCanvas, sx, sy, sw, sh, 0, 0, sw, sh)
-
-      // Put Heatflask and Strava attribution images on the frame
-      let ga = frameCtx.globalAlpha
-      frameCtx.globalAlpha = 0.3
-      frameCtx.drawImage(this.heatflask_icon, hd[0], hd[1], hd[2], hd[3])
-      frameCtx.drawImage(this.strava_icon, sd[0], sd[1], sd[2], sd[3])
-      frameCtx.globalAlpha = ga
-
-      let gifFrame = canvasSubtract(frame, framePrev)
-      // display(gifFrame, `frame_${i}`);
-
-      let thisDelay = i == num - 1 ? ~~(delay / 2) : delay
-      // console.log("frame "+i+": delay="+thisDelay);
-
-      encoder.addFrame(gifFrame, {
-        copy: true,
-        // shorter delay after final frame
-        delay: thisDelay,
-        transparent: i == 0 ? null : "#F0F0F0",
-        dispose: 1, // leave as is
-      })
-
-      framePrev = frame
-    }
-
-    // encode the Frame array
-    encoder.render()
-  },
-
-  abortCapture: function () {
-    // console.log("capture aborted");
-    this._progressDisplay.textContent = "aborting..."
-    if (this._encoder) {
-      this._encoder.abort()
-      document.body.removeChild(this._progressDisplay)
-      delete this._progressDisplay
-
-      this._capturing = false
-      if (!this._paused) {
-        this.animate()
-      }
-    }
-  },
 
   setDotColors: function () {
     let items = this._itemsArray,

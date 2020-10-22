@@ -12,6 +12,8 @@ import "./URL.js"
 
 import { getBounds, map } from "./MapAPI.js"
 import { dotLayer } from "./DotLayerAPI.js"
+// import { captureCycle, abortCapture } from "./DotLayer/Export.js"
+
 // import "./DotControls.js";
 
 import paypalButtonHTML from "bundle-text:../html/paypal-button.html"
@@ -27,6 +29,8 @@ import * as table from "./Table.js"
 
   right now we are only doing the single target-user UI.
 */
+
+dotLayer.updateDotSettings()
 
 // pause animation when window/tab is not visible
 document.onvisibilitychange = function (e) {

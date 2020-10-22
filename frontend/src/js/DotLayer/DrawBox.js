@@ -5,20 +5,16 @@
  *   @module  DotLayer/DrawBox
  */
 
+import * as ViewBox from "./ViewBox.js"
+
+let _dim
+
 const _pad = 25
-
-let _ViewBox, _defaultRect, _rect, _dim
-
-export function initialize(ViewBox) {
-  _ViewBox = ViewBox
-  reset()
-  _defaultRect = new Float32Array([0, 0, 0, 0])
-  _rect = new Float32Array(4) // [x, y, w, h]
-}
+const _defaultRect = new Float32Array([0, 0, 0, 0])
+const _rect = new Float32Array(4) // [x, y, w, h]
 
 export function reset() {
   _dim = undefined
-  return this
 }
 
 export function update(point) {
@@ -34,7 +30,7 @@ export function update(point) {
 }
 
 export function defaultRect() {
-  const mapSize = _ViewBox.getMapSize()
+  const mapSize = ViewBox.getMapSize()
   _defaultRect[2] = mapSize.x
   _defaultRect[3] = mapSize.y
   return _defaultRect
@@ -45,25 +41,20 @@ export function rect(pad) {
   const d = _dim
 
   if (!d) return defaultRect()
-  const c = _ViewBox,
-    mapSize = c.getMapSize(),
-    transform = c.px2Container(),
-    r = _rect
+  const mapSize = ViewBox.getMapSize(),
+    transform = ViewBox.makeTransform()
 
-  r[0] = d.xmin
-  r[1] = d.ymin
-  transform(r)
-  r[0] = ~~Math.max(r[0] - pad, 0)
-  r[1] = ~~Math.max(r[1] - pad, 0)
-  // (r[0], r[1]) is upper-left corner
+  // upper-left corner
+  const UL = transform([d.xmin, d.ymin])
+  _rect[0] = ~~Math.max(UL[0] - pad, 0)
+  _rect[1] = ~~Math.max(UL[1] - pad, 0)
 
-  r[2] = d.xmax
-  r[3] = d.ymax
-  transform(r.subarray(2, 4))
-  r[2] = ~~Math.min(r[2] + pad, mapSize.x) - r[0]
-  r[3] = ~~Math.min(r[3] + pad, mapSize.y) - r[1]
-  // r[2], r[3] are width and height
-  return r
+  // width and height
+  const WH = transform([d.xmax, d.ymax])
+  _rect[2] = ~~Math.min(WH[0] + pad, mapSize.x) - _rect[0]
+  _rect[3] = ~~Math.min(WH[1] + pad, mapSize.y) - _rect[1]
+
+  return _rect
 }
 
 export function draw(ctx, r) {
