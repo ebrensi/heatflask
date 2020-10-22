@@ -13,10 +13,16 @@ import options from "./options.js"
 
 import { items } from "../Model.js"
 
+/* In order to prevent path redraws from happening too often
+ * and hogging up CPU cycles we set a minimum delay between redraws
+ */
+const MIN_REDRAW_DELAY = 100 // milliseconds
+let _lastRedraw = 0
+
+const TWO_PI = 2 * Math.PI
+const TARGET_FPS = 25
+
 export const DotLayer = Layer.extend({
-  _pane: "shadowPane",
-  two_pi: 2 * Math.PI,
-  target_fps: 25,
   options: options,
 
   // -- initialized is called on prototype
@@ -38,7 +44,7 @@ export const DotLayer = Layer.extend({
   //-------------------------------------------------------------
   onAdd: function (map) {
     this._map = map
-    let size = map.getSize(),
+    const size = map.getSize(),
       zoomAnimated = map.options.zoomAnimation && Browser.any3d
 
     const create = DomUtil.create,
@@ -56,23 +62,27 @@ export const DotLayer = Layer.extend({
       this._dotCanvas,
       "leaflet-zoom-" + (zoomAnimated ? "animated" : "hide")
     )
-    panes[this._pane]["style"]["pointerEvents"] = "none"
-    appendChild(this._pane)(this._dotCanvas)
+    panes["shadowPane"]["style"]["pointerEvents"] = "none"
+    appendChild("shadowPane")(this._dotCanvas)
     canvases.push(this._dotCanvas)
 
-    // create Canvas for polyline-ish things
-    this._lineCanvas = create("canvas", "leaflet-layer")
-    this._lineCanvas.width = size.x
-    this._lineCanvas.height = size.y
-    this._lineCtx = this._lineCanvas.getContext("2d")
-    this._lineCtx.lineCap = "round"
-    this._lineCtx.lineJoin = "round"
-    addClass(
-      this._lineCanvas,
-      "leaflet-zoom-" + (zoomAnimated ? "animated" : "hide")
-    )
+    /*
+     * The Line Canvas is for activity paths, which are made up of a bunch of
+     * segments.  We make two of them, the second of which is hidden using
+     * style { display: none }.
+     * when drawing paths, we draw to the hidden canvas and swap the references
+     * so that the hidden one becomes visible and the previously visible one
+     * gets hidden. That way, the user experiences no flicker due to the canvas being
+     * cleared and then drawn to.
+     */
+    this._lineCanvas = createLineCanvas(map)
     appendChild("overlayPane")(this._lineCanvas)
     canvases.push(this._lineCanvas)
+
+    this._lineCanvas2 = createLineCanvas(map)
+    appendChild("overlayPane")(this._lineCanvas2)
+    canvases.push(this._lineCanvas2)
+    this._lineCanvas2.style.display = "none"
 
     if (this.options.debug) {
       // create Canvas for debugging canvas stuff
@@ -103,7 +113,7 @@ export const DotLayer = Layer.extend({
 
     const events = {
       // movestart: loggit,
-      // move: this.onMove,
+      move: this.onMove,
       moveend: this._redraw,
       // zoomstart: loggit,
       // zoom: loggit,
@@ -210,20 +220,19 @@ export const DotLayer = Layer.extend({
     this._dotRect = DrawBox.defaultRect()
 
     // prevent redrawing more often than necessary
-    const ts = performance.now(),
-      lr = om.lastRedraw || 0
+    const ts = performance.now()
 
-    if (ts - lr < 1000) return
+    if (ts - _lastRedraw < MIN_REDRAW_DELAY) return
 
-    om.lastRedraw = ts
+    _lastRedraw = ts
     this._redraw(event)
   },
 
   _redraw: function (event) {
     if (!this._ready) return
 
-    const timerLabel = `redraw_${this._redrawCounter++}`
-    console.time(timerLabel)
+    // const timerLabel = `redraw_${this._redrawCounter++}`
+    // console.time(timerLabel)
 
     DrawBox.clear(this._dotCtx)
 
@@ -267,7 +276,7 @@ export const DotLayer = Layer.extend({
       if (this.options.showPaths) {
         this.drawPaths()
       } else {
-        DrawBox.clear(this._lineCtx, viewPort)
+        this._lineCanvas.style.display = "none"
       }
 
       if (oldzoom != zoom) {
@@ -276,15 +285,15 @@ export const DotLayer = Layer.extend({
         this.drawDots()
       }
 
-      console.timeEnd(timerLabel)
+      // console.timeEnd(timerLabel)
+
       // if (ns)
       //     console.log(`simplify: ${ns} -> ${ns2} in ${~~(t1-t0)}:  ${(ns-ns2)/(t1-t0)}`)
     })
   },
 
-  _drawPathsByColor: function (colorGroups, defaultColor) {
-    const ctx = this._lineCtx,
-      items = this._itemsArray
+  _drawPathsByColor: function (ctx, colorGroups, defaultColor) {
+    const items = this._itemsArray
 
     for (const color in colorGroups) {
       const group = colorGroups[color]
@@ -300,8 +309,7 @@ export const DotLayer = Layer.extend({
   drawPaths: function () {
     if (!this._ready) return
 
-    const ctx = this._lineCtx,
-      options = this.options,
+    const options = this.options,
       vb = ViewBox
 
     const cg = vb.pathColorGroups(),
@@ -310,22 +318,23 @@ export const DotLayer = Layer.extend({
 
     const alphaScale = this.dotSettings.alphaScale
 
-    DrawBox.clear(ctx, DrawBox.defaultRect())
+    console.time("drawPaths")
+    const ctx = this._lineCanvas2.getContext("2d")
 
     if (selected) {
       ctx.lineWidth = options.unselected.pathWidth
       ctx.globalAlpha = options.unselected.pathOpacity * alphaScale
-      this._drawPathsByColor(unselected, options.unselected.pathColor)
+      this._drawPathsByColor(ctx, unselected, options.unselected.pathColor)
 
       // draw selected paths
       ctx.lineWidth = options.selected.pathWidth
       ctx.globalAlpha = options.selected.pathOpacity * alphaScale
-      this._drawPathsByColor(selected, options.selected.pathColor)
+      this._drawPathsByColor(ctx, selected, options.selected.pathColor)
     } else if (unselected) {
       // draw unselected paths
       ctx.lineWidth = options.normal.pathWidth
       ctx.globalAlpha = options.normal.pathOpacity * alphaScale
-      this._drawPathsByColor(unselected, options.normal.pathColor)
+      this._drawPathsByColor(ctx, unselected, options.normal.pathColor)
     }
 
     if (options.debug) {
@@ -334,16 +343,26 @@ export const DotLayer = Layer.extend({
       this._debugCtx.strokeStyle = "rgb(255,0,255,1)"
       ViewBox.drawPxBounds(this._debugCtx)
     }
+
+    // swap line canvases
+    const temp = this._lineCanvas
+    this._lineCanvas = this._lineCanvas2
+    this._lineCanvas2 = temp
+
+    this._lineCanvas.style.display = ""
+    temp.style.display = "none"
+    DrawBox.clear(temp.getContext("2d"), DrawBox.defaultRect())
+
+    console.timeEnd("drawPaths")
   },
 
   // --------------------------------------------------------------------
 
   makeCircleDrawFunc: function () {
-    const two_pi = this.two_pi,
-      ctx = this._dotCtx,
+    const ctx = this._dotCtx,
       dotSize = this.dotSettings._dotSize,
       transformDraw = ViewBox.makeTransform(function(x,y){
-          ctx.arc(x, y, dotSize, 0, two_pi)
+          ctx.arc(x, y, dotSize, 0, TWO_PI)
           ctx.closePath()
       })
 
@@ -463,7 +482,7 @@ export const DotLayer = Layer.extend({
       this._timePaused = null
     }
     this.lastCalledTime = 0
-    this.minDelay = ~~(1000 / this.target_fps + 0.5)
+    this.minDelay = ~~(1000 / TARGET_FPS + 0.5)
     this._frame = Util.requestAnimFrame(this._animate, this)
   },
 
@@ -729,4 +748,24 @@ export const DotLayer = Layer.extend({
 
 export const dotLayer = function (options) {
   return new DotLayer(options)
+}
+
+
+/* Auxilliary functions */
+
+function createLineCanvas(map) {
+  // create Canvas for polyline-ish things
+  const size = map.getSize()
+  const zoomAnimated = map.options.zoomAnimation && Browser.any3d
+  const canvas = DomUtil.create("canvas", "leaflet-layer")
+  canvas.width = size.x
+  canvas.height = size.y
+  const ctx = canvas.getContext("2d")
+  ctx.lineCap = "round"
+  ctx.lineJoin = "round"
+  DomUtil.addClass(
+    canvas,
+    "leaflet-zoom-" + (zoomAnimated ? "animated" : "hide")
+  )
+  return canvas
 }

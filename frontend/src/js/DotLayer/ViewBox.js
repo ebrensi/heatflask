@@ -22,7 +22,15 @@ let _map,
 
 export {_zoom as zoom, _zf as zf}
 
-// this operates in-place!
+/**
+ * Project a [lat, lng] point to [x,y] in rectangular coordinates
+ * at baseline scale (zoom=0).  From there we only need to scale and
+ * shift points for a given zoom level and map position.
+ *
+ * This function operates in-place! It modifies whatever you pass into it.
+ *
+ * @type {function}
+ */
 export const latLng2px = makePT(0)
 
 export function initialize(map, canvases, itemsArray) {
