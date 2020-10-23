@@ -21,6 +21,8 @@ import BitSet from "../BitSet"
 const pxGaps = []
 
 export function simplify(points, n, tolerance, maxGap) {
+  pxGaps.length = 0
+
   const sqTolerance = tolerance * tolerance
 
   let idxBitSet = simplifyRadialDist(points, n, sqTolerance, maxGap)
@@ -47,12 +49,11 @@ function simplifyRadialDist(points, n, sqTolerance, maxGap) {
     point = points(i)
     const sqDist = getSqDist(point, prevPoint)
     if (sqDist > sqTolerance) {
-      selectedIdx.add(i++)
-      prevPoint = point
-
       if (sqDist > maxGap) {
         pxGaps.push(i)  //Math.sqrt(sqDist / sqTolerance)
       }
+      selectedIdx.add(i++)
+      prevPoint = point
     }
   }
 

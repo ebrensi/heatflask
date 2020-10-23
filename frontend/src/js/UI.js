@@ -3,13 +3,13 @@
  *  Here we initialize the DOM/user interface
  */
 
-// import "leaflet-easybutton";
 
 import { AUTHORIZE_URL } from "./Init.js"
 
 import app from "./Model.js"
 import "./URL.js"
 
+import * as L from "leaflet"
 import { getBounds, map } from "./MapAPI.js"
 import { dotLayer } from "./DotLayerAPI.js"
 // import { captureCycle, abortCapture } from "./DotLayer/Export.js"
@@ -29,8 +29,6 @@ import * as table from "./Table.js"
 
   right now we are only doing the single target-user UI.
 */
-
-dotLayer.updateDotSettings()
 
 // pause animation when window/tab is not visible
 document.onvisibilitychange = function (e) {
@@ -189,6 +187,42 @@ function renderFromQuery() {
     updateLayers()
   })
 }
+
+
+// leaflet-easybutton is used for play/pause button and capture
+// animation play-pause button
+const button_states = [
+  {
+    stateName: "animation-running",
+    icon: "fa-pause",
+    title: "Pause Animation",
+    onClick: function (btn) {
+      dotLayer.pause()
+      app.vParams.paused = true
+      btn.state("animation-paused")
+    },
+  },
+
+  {
+    stateName: "animation-paused",
+    icon: "fa-play",
+    title: "Resume Animation",
+    onClick: function (btn) {
+      app.vParams.paused = false
+      dotLayer.animate()
+      btn.state("animation-running")
+    },
+  },
+]
+
+// add play/pause button to the map
+L.easyButton({
+  states: app.vParams.paused ? button_states.reverse() : button_states,
+}).addTo(map)
+
+
+
+
 
 /* Table Stuff */
 table.events.addListener("selection", (e) => {

@@ -5,7 +5,7 @@
  */
 
 export default {
-  debug: true,
+  debug: false,
   numWorkers: 0,
   startPaused: false,
   showPaths: true,

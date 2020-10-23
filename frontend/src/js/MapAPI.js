@@ -8,6 +8,8 @@ import * as L from "leaflet"
 import Geohash from "latlon-geohash"
 
 import "leaflet-control-window"
+import "leaflet-easybutton"
+import "../../node_modules/leaflet-easybutton/src/easy-button.css"
 import "../../node_modules/sidebar-v2/js/leaflet-sidebar.js"
 import { tileLayer } from "./TileLayer/TileLayer.Heatflask.js"
 import app from "./Model.js"

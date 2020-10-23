@@ -1,46 +1,12 @@
 /*
  * UI components for DotLayer control
  */
-
-import pureknob from "pure-knob"
 import "leaflet-easybutton"
 
-import * as Dom from "../Dom.js"
-import { map } from "../mapAPI.js"
-import { dotLayer } from "../DotLayerAPI.js"
+import { map } from "./mapAPI.js"
+import { dotLayer } from "./DotLayerAPI.js"
 import { updateURL } from "./URL.js"
-import { vparams } from "../Model.js"
-
-// Initialize knob controls for dotlayer
-const rad = (deg) => (deg * Math.PI) / 180,
-  initial_knob_settings = {
-    angleStart: rad(0),
-    angleEnd: rad(360),
-    angleOffset: rad(-90),
-    colorFG: "rgba(0,255,255,0.4)",
-    colorBG: "rgba(255,255,255,0.2)",
-    trackWidth: 0.5,
-    valMin: 0,
-    valMax: 100,
-    needle: true,
-  }
-
-function makeKnob(selector, options) {
-  const knob = pureknob.createKnob(options.width, options.height),
-    mySettings = Object.assign({}, initial_knob_settings)
-
-  Object.assign(mySettings, options)
-
-  for (const [property, value] of Object.entries(mySettings)) {
-    knob.setProperty(property, value)
-  }
-
-  const node = knob.node()
-
-  Dom.el(selector).appendChild(node)
-
-  return knob
-}
+import { vparams } from "./Model.js"
 
 /* set initial values from defaults or specified in url
     url params over-ride default values */
@@ -61,37 +27,6 @@ const SPEED_SCALE = 5.0,
 // Dom.set("#speedConst", Math.sqrt(C2) / SPEED_SCALE );
 // Dom.set("#dotScale", ds["dotScale"]);
 // Dom.set("#dotAlpha", ds["dotAlpha"]);
-
-// Instantiate knob controls with initial values and add them to the DOM
-const knobs = {
-  timeScale: makeKnob("#dot-controls1", {
-    width: "150",
-    height: "150",
-    label: "Speed",
-  }),
-
-  period: makeKnob("#dot-controls1", {
-    width: "150",
-    height: "150",
-    label: "Sparcity",
-  }),
-
-  dotAlpha: makeKnob("#dot-controls2", {
-    width: "100",
-    height: "100",
-    valMin: 0,
-    valMax: 10,
-    label: "Alpha",
-  }),
-
-  dotSize: makeKnob("#dot-controls2", {
-    width: "100",
-    height: "100",
-    valMin: 0,
-    valMax: 10,
-    label: "Size",
-  }),
-}
 
 knobs.speed.setValue(Math.sqrt(C2) / SPEED_SCALE)
 knobs.period.setValue((Math.log2(C1) - SEP_SCALE.b) / SEP_SCALE.m)
@@ -165,36 +100,3 @@ Dom.addEvent("#showPaths", "change", (e) => {
   updateURL()
 })
 
-// leaflet-easybutton is used for play/pause button and capture
-// animation play-pause button
-const button_states = [
-  {
-    stateName: "animation-running",
-    icon: "fa-pause",
-    title: "Pause Animation",
-    onClick: function (btn) {
-      // pauseFlow();
-      dotLayer.pause()
-      vparams.paused = true
-      updateURL()
-      btn.state("animation-paused")
-    },
-  },
-
-  {
-    stateName: "animation-paused",
-    icon: "fa-play",
-    title: "Resume Animation",
-    onClick: function (btn) {
-      vparams.paused = false
-      dotLayer.animate()
-      updateURL()
-      btn.state("animation-running")
-    },
-  },
-]
-
-// add play/pause button to the map
-L.easyButton({
-  states: vparams.paused ? button_states.reverse() : button_states,
-}).addTo(map)

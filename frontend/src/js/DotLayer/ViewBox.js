@@ -49,6 +49,7 @@ export function initialize(map, canvases, itemsArray) {
 
 export function reset(itemsArray) {
   initialize(_map, _canvases, itemsArray)
+  update()
 }
 
 export function getMapSize() {

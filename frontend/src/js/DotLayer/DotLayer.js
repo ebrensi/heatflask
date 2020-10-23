@@ -113,7 +113,7 @@ export const DotLayer = Layer.extend({
 
     const events = {
       // movestart: loggit,
-      move: this.onMove,
+      // move: this.onMove,
       moveend: this._redraw,
       // zoomstart: loggit,
       // zoom: loggit,
@@ -152,7 +152,7 @@ export const DotLayer = Layer.extend({
 
   // --------------------------------------------------------------------
 
-  // Call this function after items are added or reomved
+  // Call this function after items are added or removed
   reset: function () {
     if (!this._items.size) return
 
@@ -166,6 +166,8 @@ export const DotLayer = Layer.extend({
 
     this.setDotColors()
     ViewBox.reset(this._itemsArray)
+    this.updateDotSettings()
+
     this._ready = true
     this._redraw(true)
 
@@ -175,8 +177,7 @@ export const DotLayer = Layer.extend({
   //-------------------------------------------------------------
   _onLayerResize: function (resizeEvent) {
     const newWidth = resizeEvent.newSize.x,
-      newHeight = resizeEvent.newSize.y,
-      options = this.options
+      newHeight = resizeEvent.newSize.y
 
     for (const canvas of [this._dotCanvas, this._lineCanvas]) {
       canvas.width = newWidth
@@ -420,7 +421,6 @@ export const DotLayer = Layer.extend({
 
   drawDots: function (now) {
     if (!this._ready) return
-    return
 
     if (!now) now = this._timePaused || this.UTCnowSecs()
 
@@ -637,7 +637,7 @@ export const DotLayer = Layer.extend({
     if (settings) Object.assign(ds, settings)
 
     const vb = ViewBox,
-      zf = vb._zf,
+      zf = vb.zf,
       zoom = vb.zoom
     ds._timeScale = ds.C2 / zf
     ds._period = ds.C1 / zf

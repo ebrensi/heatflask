@@ -29,7 +29,7 @@ function inBounds(p) {
  *
  * @type {Number}
  */
-const MAX_PX_GAP = 100 /* px units */
+const MAX_PX_GAP = 200 /* px units */
 
 /**
  * @class Activity
@@ -47,6 +47,7 @@ export class Activity {
     time,
     n,
   }) {
+    this.n = n
     this.id = +_id
     this.type = type
     this.total_distance = total_distance
@@ -124,6 +125,11 @@ export class Activity {
       const j = idx[i] * 2
       return px.subarray(j, j + 2)
     }
+  }
+
+  gapAt(idx, zoom) {
+    const P = this.getPointAccessor()
+    return pxDist(P(idx), P(idx-1), zoom)
   }
 
   /**
@@ -235,7 +241,7 @@ export class Activity {
     this.idxSet[zoom] = null
 
     const tol = ViewBox.tol(zoom)
-    const {idxBitSet, pxGaps} = Simplifier.simplify(
+    const { idxBitSet, pxGaps } = Simplifier.simplify(
       this.getPointAccessor(),
       this.px.length / 2,
       tol,
@@ -247,6 +253,8 @@ export class Activity {
       return this
     }
 
+    // if (pxGaps.length > 1) debugger
+
     /*
      * pxGaps contains this.px indices of the endpoints of big gaps
      * We convert those to indices of the reduced set of points
@@ -254,35 +262,27 @@ export class Activity {
      * at this.px[234*2] (the 234-th point in this.px),
      * and 234 is the 15-th set bit of idxBitSet, we store 15.
      */
-     let j = -1
-     const gapIdx = []
-     const maxIdx = idxBitSet.max()
-     const idxSetIter = idxBitSet.imap()
-     for (let i=0; i<pxGaps.length; i++) {
+    // pxGaps.sort()  // pxGaps must be sorted for this to work
+    const gapIdx = []
+    let j = -1
+
+    const idxSetIter = idxBitSet.imap()
+
+    let next
+    for (let i = 0; i < pxGaps.length; i++) {
       let pxIdx = pxGaps[i]
 
-      let next
-      // is there a segment of the reduced set that ends at pxIdx?
-      while (!idxBitSet.has(pxIdx)) {
-        pxIdx++
-        if (pxIdx > maxIdx) {
-          throw new Error("can't find interval containing gap")
-          debugger;
-        }
-      }
-
-      do {
+      while (!next || !next.done && next.value < pxIdx) {
         next = idxSetIter.next()
         j++
-      } while (next.value < pxIdx)
-
-      if (next.value === pxIdx) {
-        gapIdx.push(j)  // a gap ends at j-th set bit of idxBitSet
-      } else {
-        throw new Error("idxSetIter is finished!")
-        deubugger;
       }
 
+      if (next.done) {
+        break
+      }
+
+      // a gap ends at j-th set bit of idxBitSet, so it starts at j-1
+      gapIdx.push(j-1)
     }
 
     this.pxGaps[zoom] = gapIdx
@@ -301,7 +301,8 @@ export class Activity {
    *  this idxSet.
    */
   makeSegMask() {
-    const points = this.pointsIterator(ViewBox.zoom)
+    const zoom = ViewBox.zoom
+    const points = this.pointsIterator(zoom)
 
     this.segMask = (this.segMask || new BitSet()).clear()
 
@@ -318,12 +319,12 @@ export class Activity {
       s++
     }
 
-    // if (this.badSegs) {
-    //   const bs = this.badSegs
-    //   for (let i=0, len=bs.length; i<len; i++) {
-    //     this.segMask.remove(bs[i])
-    //   }
-    // }
+    const pxg = this.pxGaps[zoom]
+    if (pxg) {
+      for (let i=0, len=pxg.length; i<len; i++) {
+        this.segMask.remove(pxg[i])
+      }
+    }
 
     // console.log(`${this.id}: segmask`)
 
@@ -348,14 +349,14 @@ export class Activity {
 
   drawPathFromPointArray(ctx) {
     const points = this.getPointAccessor(ViewBox.zoom),
-      transformedMoveTo = ViewBox.makeTransform((x,y) => ctx.moveTo(x,y)),
-      transformedLineTo = ViewBox.makeTransform((x,y) => ctx.lineTo(x,y))
+      transformedMoveTo = ViewBox.makeTransform((x, y) => ctx.moveTo(x, y)),
+      transformedLineTo = ViewBox.makeTransform((x, y) => ctx.lineTo(x, y))
 
     this.segMask.forEach((i) => {
       // ctx.moveTo(...transform(points(i)))
       // ctx.lineTo(...transform(points(i+1)))
       transformedMoveTo(points(i))
-      transformedLineTo(points(i+1))
+      transformedLineTo(points(i + 1))
     })
   }
 
@@ -417,14 +418,14 @@ export class Activity {
       p = [NaN, NaN],
       zoom = ViewBox.zoom,
       points = this.getPointAccessor(zoom),
-      times = this.getTimesAccessor(zoom),
+      times = this.getTimesArray(zoom),
       i0 = this.segMask.min()
 
-    const timeOffset = (ds._timeScale * (now - (start + times(i0)))) % T
+    const timeOffset = (ds._timeScale * (now - (start + times[i0]))) % T
 
     for (const i of this.segMask) {
-      const t_a = times(i),
-        t_b = times(i + 1),
+      const t_a = times[i],
+        t_b = times[i + 1],
         lowest = Math.ceil((t_a - timeOffset) / T),
         highest = Math.floor((t_b - timeOffset) / T)
 
@@ -450,7 +451,6 @@ export class Activity {
   }
 }
 
-
 /* helper functions */
 
 function* _pointsIterator(px, idxSet) {
@@ -467,7 +467,6 @@ function* _pointsIterator(px, idxSet) {
   }
 }
 
-
 /**
  * The pixel-distance between two px points at a given level of zoom.
  * This allows us to identify probable recording errors.
@@ -481,5 +480,5 @@ function pxDist(p1, p2, zoom) {
   const [x2, y2] = p2
   zoom = zoom || 0
 
-  return (x2-x1)**2 + (y2-y1)**2 * (2**zoom)
+  return Math.sqrt( (x2 - x1) ** 2 + (y2 - y1) ** 2 ) * (2 ** zoom)
 }
