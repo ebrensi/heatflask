@@ -32,21 +32,20 @@ export function simplify(points, n, tolerance) {
 
 // basic distance-based simplification
 function simplifyRadialDist(points, n, sqTolerance) {
-  const selectedIdx = new BitSet(),
-    prevPoint = new Float32Array(2)
+  const selectedIdx = new BitSet();
 
-  let point = points(0),
-    i
-  prevPoint[0] = point[0]
-  prevPoint[1] = point[1]
+  let i
+  let point = points(0)
+  let prevPoint = point
+
   selectedIdx.add(0)
 
   for (i = 1; i < n; i++) {
     point = points(i)
-    if (getSqDist(point, prevPoint) > sqTolerance) {
+    const sqDist = getSqDist(point, prevPoint)
+    if (sqDist > sqTolerance) {
       selectedIdx.add(i++)
-      prevPoint[0] = point[0]
-      prevPoint[1] = point[1]
+      prevPoint = point
     }
   }
 
@@ -57,22 +56,15 @@ function simplifyRadialDist(points, n, sqTolerance) {
 
 // simplification using Ramer-Douglas-Peucker algorithm
 function simplifyDouglasPeucker(points, n, sqTolerance) {
-  const bitSet = new BitSet(),
-    buffer = new Float32Array(4),
-    p1 = buffer.subarray(0, 2),
-    p2 = buffer.subarray(2, 4)
+  const bitSet = new BitSet()
 
   bitSet.add(0)
   const first = points(0)
-  p1[0] = first[0]
-  p1[1] = first[1]
 
   bitSet.add(n - 1)
   const last = points(n - 1)
-  p2[0] = last[0]
-  p2[1] = last[1]
 
-  simplifyDPStep(points, 0, n - 1, sqTolerance, bitSet, p1, p2)
+  simplifyDPStep(points, 0, n - 1, sqTolerance, bitSet, first, last)
 
   return bitSet
 }
@@ -83,14 +75,14 @@ function simplifyDPStep(
   lastIdx,
   sqTolerance,
   bitSet,
-  p1,
-  p2
+  first,
+  last
 ) {
   let maxSqDist = sqTolerance,
     index
 
   for (let idx = firstIdx + 1; idx < lastIdx; idx++) {
-    const sqDist = getSqSegDist(points(idx), p1, p2)
+    const sqDist = getSqSegDist(points(idx), first, last)
 
     if (sqDist > maxSqDist) {
       index = idx
@@ -101,18 +93,14 @@ function simplifyDPStep(
   if (maxSqDist > sqTolerance) {
     if (index - firstIdx > 1) {
       const p = points(index)
-      p2[0] = p[0]
-      p2[1] = p[1]
-      simplifyDPStep(points, firstIdx, index, sqTolerance, bitSet, p1, p2)
+      simplifyDPStep(points, firstIdx, index, sqTolerance, bitSet, first, p)
     }
 
     bitSet.add(index)
 
     if (lastIdx - index > 1) {
       const p = points(index)
-      p1[0] = p[0]
-      p1[1] = p[1]
-      simplifyDPStep(points, index, lastIdx, sqTolerance, bitSet, p1, p2)
+      simplifyDPStep(points, index, lastIdx, sqTolerance, bitSet, p, last)
     }
   }
 }
