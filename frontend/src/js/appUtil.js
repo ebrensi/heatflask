@@ -76,4 +76,19 @@ function isMobileDevice() {
   )
 }
 
+/*
+binarySearch: function(map, x, start, end) {
+    if (start > end) return false;
+
+    let mid = Math.floor((start + end) / 2);
+
+    if (map(mid) === x) return mid;
+
+    if(map(mid) > x)
+        return binarySearch(map, x, start, mid-1);
+    else
+        return binarySearch(map, x, mid+1, end);
+}
+*/
+
 export const MOBILE = isMobileDevice()

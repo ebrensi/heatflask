@@ -183,10 +183,12 @@ export const DotLayer = Layer.extend({
       canvas.height = newHeight
     }
 
+    this.viewReset()
     this._redraw(true)
   },
 
   viewReset: function () {
+    console.log("viewReset")
     this._dotCtxReset()
     this._debugCtxReset()
   },
@@ -231,8 +233,8 @@ export const DotLayer = Layer.extend({
   _redraw: function (event) {
     if (!this._ready) return
 
-    // const timerLabel = `redraw_${this._redrawCounter++}`
-    // console.time(timerLabel)
+    const timerLabel = `redraw_${this._redrawCounter++}`
+    console.time(timerLabel)
 
     DrawBox.clear(this._dotCtx)
 
@@ -250,21 +252,27 @@ export const DotLayer = Layer.extend({
     const itemsArray = this._itemsArray,
       zoom = ViewBox.zoom
 
-    const promises = []
+
+    // const promises = []
 
     inView.forEach((i) => {
       const A = itemsArray[i]
-      promises.push(A.simplify(zoom).then((A) => A.makeSegMask()))
+      A.simplify(zoom)
+      A.makeSegMask()
+      if (A.segMask.isEmpty()) {
+        ViewBox.remove(itemsArray.indexOf(A))
+      }
+      // promises.push(A.simplify(zoom).then((A) => A.makeSegMask()))
     })
 
-    Promise.all(promises).then((fulfilled) => {
+    // Promise.all(promises).then((fulfilled) => {
       this._drawingDots = true
 
-      for (const A of fulfilled) {
-        if (A.segMask.isEmpty()) {
-          ViewBox.remove(itemsArray.indexOf(A))
-        }
-      }
+      // for (const A of fulfilled) {
+      //   if (A.segMask.isEmpty()) {
+      //     ViewBox.remove(itemsArray.indexOf(A))
+      //   }
+      // }
 
       // the whole viewable area
       const viewPort = DrawBox.defaultRect()
@@ -285,11 +293,9 @@ export const DotLayer = Layer.extend({
         this.drawDots()
       }
 
-      // console.timeEnd(timerLabel)
+      console.timeEnd(timerLabel)
 
-      // if (ns)
-      //     console.log(`simplify: ${ns} -> ${ns2} in ${~~(t1-t0)}:  ${(ns-ns2)/(t1-t0)}`)
-    })
+    // })
   },
 
   _drawPathsByColor: function (ctx, colorGroups, defaultColor) {
@@ -414,6 +420,7 @@ export const DotLayer = Layer.extend({
 
   drawDots: function (now) {
     if (!this._ready) return
+    return
 
     if (!now) now = this._timePaused || this.UTCnowSecs()
 
@@ -661,8 +668,7 @@ export const DotLayer = Layer.extend({
       phase3,
       center,
       width,
-      len,
-      alpha
+      len
     ) {
       let palette = new Array(len)
 
@@ -704,46 +710,7 @@ export const DotLayer = Layer.extend({
         alpha
       )
     },
-  },
-
-  /*
-    badSegTimes: function(llt, ttol) {
-        const n = llt.length / 3,
-              time = i => llt[3*i+2],
-              arr = [];
-
-        let max = 0;
-
-        for (let i=1, tprev=time(0); i<n; i++) {
-            let t = time(i),
-                dt = t - tprev;
-
-            if (dt > ttol)
-                arr.push(tprev);
-
-            if (dt > max)
-                max = dt;
-
-            tprev = t;
-        }
-        arr.sort((a,b) => a-b);
-        return arr.length? arr : null
-    },
-
-    binarySearch: function(map, x, start, end) {
-        if (start > end) return false;
-
-        let mid = Math.floor((start + end) / 2);
-
-        if (map(mid) === x) return mid;
-
-        if(map(mid) > x)
-            return binarySearch(map, x, start, mid-1);
-        else
-            return binarySearch(map, x, mid+1, end);
-    }
-    */
-  // end of DotLayer definition
+  }
 })
 
 export const dotLayer = function (options) {

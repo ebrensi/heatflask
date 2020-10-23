@@ -11,15 +11,19 @@ import BitSet from "../BitSet"
  *   a BitSet mask of points selected by the algorithm.
  *
  *  points is a function p(i) that directly accesses the i-th point
- *  of our data set.  we must assume that the point we get is
- *  a pointer to he same memory location every time, so we need to make copy
- *  ourselves.
+ *  of our data set.
  */
 
-export function simplify(points, n, tolerance) {
+/**
+ * This is for noting anomalous large distance gaps
+ * @type {Object}
+ */
+const pxGaps = []
+
+export function simplify(points, n, tolerance, maxGap) {
   const sqTolerance = tolerance * tolerance
 
-  let idxBitSet = simplifyRadialDist(points, n, sqTolerance)
+  let idxBitSet = simplifyRadialDist(points, n, sqTolerance, maxGap)
 
   const idx = idxBitSet.array(),
     subset = (i) => points(idx[i]),
@@ -27,13 +31,12 @@ export function simplify(points, n, tolerance) {
 
   idxBitSet = idxBitSet.new_subset(idxBitSubset)
 
-  return idxBitSet
+  return {idxBitSet, pxGaps}
 }
 
 // basic distance-based simplification
-function simplifyRadialDist(points, n, sqTolerance) {
-  const selectedIdx = new BitSet();
-
+function simplifyRadialDist(points, n, sqTolerance, maxGap) {
+  const selectedIdx = new BitSet()
   let i
   let point = points(0)
   let prevPoint = point
@@ -46,6 +49,10 @@ function simplifyRadialDist(points, n, sqTolerance) {
     if (sqDist > sqTolerance) {
       selectedIdx.add(i++)
       prevPoint = point
+
+      if (sqDist > maxGap) {
+        pxGaps.push(i)  //Math.sqrt(sqDist / sqTolerance)
+      }
     }
   }
 

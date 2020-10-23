@@ -18,6 +18,20 @@ function inBounds(p) {
 }
 
 /**
+ * Any two consecutive points that will resolve to a pixel distance
+ * greater than this value is considered an anomaly and any segment
+ * including that gap will be ignored.
+ *
+ * These gaps usually come up when there is a pause in recording
+ * while the person in still moving. If the gap is big enough, it
+ * results in a long straight line segment that is inaccurate
+ * and looks bad.
+ *
+ * @type {Number}
+ */
+const MAX_PX_GAP = 100 /* px units */
+
+/**
  * @class Activity
  */
 export class Activity {
@@ -54,19 +68,18 @@ export class Activity {
     this.llBounds = latLngBounds(bounds.SW, bounds.NE)
     this.pxBounds = ViewBox.latLng2pxBounds(this.llBounds)
 
-    this.idxSet = {}
+    this.idxSet = {} // BitSets of indices of px for each level of zoom
+    this.pxGaps = {} // locations of gaps in data for each level of zoom
 
-    this.segMask = null
-
-    // Buffers. In order to save on overhead we re-use some memory
-    this.timeIntervalBuf = { a: NaN, b: NaN }
-    this.segmentBuf = {}
+    this.segMask = null // BitSet indicating which segments are in view
 
     // decode polyline format into an Array of [lat, lng] points
     const points = Polyline.decode2Buf(polyline, n)
-    // make baseline projection (latLngs to pixel points at zoom=0) in-place
+
+    // make baseline projection to rectangular coordinates in-place
     for (let i = 0, len = points.length; i < len; i += 2)
       ViewBox.latLng2px(points.subarray(i, i + 2))
+
     this.px = points
   }
 
@@ -88,15 +101,11 @@ export class Activity {
    */
   getPointAccessor(zoom) {
     const px = this.px
-    if (zoom === 0) {
+    if (!zoom) {
       return function (i) {
         const j = i * 2
         return px.subarray(j, j + 2)
       }
-    }
-
-    if (!zoom) {
-      throw new TypeError(`zoom=${zoom} is invalid`)
     }
 
     const key = `I${this.id}:${zoom}`
@@ -127,12 +136,8 @@ export class Activity {
    * @param {Number} zoom
    */
   pointsIterator(zoom) {
-    if (zoom === 0) {
-      return _pointsIterator(this.px)
-    }
-
     if (!zoom) {
-      throw new TypeError(`zoom=${zoom} is invalid`)
+      return _pointsIterator(this.px)
     }
 
     const idxSet = this.idxSet[zoom]
@@ -159,7 +164,6 @@ export class Activity {
     for (const i of segMask) {
       seg.a = points(i)
       seg.b = points(i + 1)
-      // TODO: only yield the segment if the points are not too far apart
       yield seg
     }
   }
@@ -196,7 +200,7 @@ export class Activity {
   }
 
   timesIterator(zoom) {
-    if (zoom === 0) {
+    if (!zoom) {
       return StreamRLE.decodeCompressedBuf(this.time)
     } else {
       const idxSet = this.idxSet[zoom]
@@ -207,7 +211,7 @@ export class Activity {
     }
   }
 
-  getTimesAccessor(zoom) {
+  getTimesArray(zoom) {
     const key = `T${this.id}:${zoom}`
     let arr = _lru.get(key)
 
@@ -215,44 +219,74 @@ export class Activity {
       arr = Uint16Array.from(this.timesIterator(zoom))
       _lru.set(key, arr)
     }
-    return (i) => arr[i]
+    return arr
   }
 
-  /*
-  iterTimeIntervals() {
-    const zoom = ViewBox.zoom,
-      stream = StreamRLE.decodeCompressedBuf2(this.time, this.idxSet[zoom]),
-      timeInterval = this.timeIntervalBuf
-
-    let j = 0,
-      second = stream.next()
-    return this.segMask.imap((idx) => {
-      let first = second
-      while (j++ < idx) first = stream.next()
-      second = stream.next()
-      timeInterval.a = first.value
-      timeInterval.b = second.value
-      return timeInterval
-    })
-  }
-  */
-
-  async simplify(zoom) {
-    if (zoom === undefined) {
-      zoom = ViewBox.zoom
+  simplify(zoom) {
+    if (!Number.isFinite(zoom)) {
+      throw new TypeError("zoom must be a number")
     }
 
-    if (!(zoom in this.idxSet)) {
-      // prevent another instance of this function from doing this
-      this.idxSet[zoom] = null
-
-      const subSet = Simplifier.simplify(
-        this.getPointAccessor(0),
-        this.px.length / 2,
-        ViewBox.tol(zoom)
-      )
-      this.idxSet[zoom] = subSet
+    if (zoom in this.idxSet) {
+      return this
     }
+
+    // prevent another instance of this function from doing this
+    this.idxSet[zoom] = null
+
+    const tol = ViewBox.tol(zoom)
+    const {idxBitSet, pxGaps} = Simplifier.simplify(
+      this.getPointAccessor(),
+      this.px.length / 2,
+      tol,
+      (MAX_PX_GAP * tol) ** 2
+    )
+    this.idxSet[zoom] = idxBitSet
+
+    if (!pxGaps.length) {
+      return this
+    }
+
+    /*
+     * pxGaps contains this.px indices of the endpoints of big gaps
+     * We convert those to indices of the reduced set of points
+     * indicated in idxBitSet. For example, if there is a gap ending
+     * at this.px[234*2] (the 234-th point in this.px),
+     * and 234 is the 15-th set bit of idxBitSet, we store 15.
+     */
+     let j = -1
+     const gapIdx = []
+     const maxIdx = idxBitSet.max()
+     const idxSetIter = idxBitSet.imap()
+     for (let i=0; i<pxGaps.length; i++) {
+      let pxIdx = pxGaps[i]
+
+      let next
+      // is there a segment of the reduced set that ends at pxIdx?
+      while (!idxBitSet.has(pxIdx)) {
+        pxIdx++
+        if (pxIdx > maxIdx) {
+          throw new Error("can't find interval containing gap")
+          debugger;
+        }
+      }
+
+      do {
+        next = idxSetIter.next()
+        j++
+      } while (next.value < pxIdx)
+
+      if (next.value === pxIdx) {
+        gapIdx.push(j)  // a gap ends at j-th set bit of idxBitSet
+      } else {
+        throw new Error("idxSetIter is finished!")
+        deubugger;
+      }
+
+    }
+
+    this.pxGaps[zoom] = gapIdx
+    console.log(`zoom ${zoom} gaps: `, gapIdx)
 
     return this
   }
@@ -266,7 +300,7 @@ export class Activity {
    *  so that the i-th good segment corresponds to the i-th member of
    *  this idxSet.
    */
-  async makeSegMask() {
+  makeSegMask() {
     const points = this.pointsIterator(ViewBox.zoom)
 
     this.segMask = (this.segMask || new BitSet()).clear()
@@ -284,11 +318,12 @@ export class Activity {
       s++
     }
 
-    if (this.badSegs) {
-      for (s of this.badSegs) {
-        this.segMask.remove(s)
-      }
-    }
+    // if (this.badSegs) {
+    //   const bs = this.badSegs
+    //   for (let i=0, len=bs.length; i<len; i++) {
+    //     this.segMask.remove(bs[i])
+    //   }
+    // }
 
     // console.log(`${this.id}: segmask`)
 
@@ -430,4 +465,21 @@ function* _pointsIterator(px, idxSet) {
       yield px.subarray(j, j + 2)
     }
   }
+}
+
+
+/**
+ * The pixel-distance between two px points at a given level of zoom.
+ * This allows us to identify probable recording errors.
+ * @param  {Array} p1
+ * @param  {Array} p2
+ * @param  {Number} zoom
+ * @return {Number}
+ */
+function pxDist(p1, p2, zoom) {
+  const [x1, y1] = p1
+  const [x2, y2] = p2
+  zoom = zoom || 0
+
+  return (x2-x1)**2 + (y2-y1)**2 * (2**zoom)
 }

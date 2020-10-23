@@ -211,7 +211,6 @@ BitSet.prototype.min = function () {
 }
 
 BitSet.prototype.max = function () {
-  let pos = 0 | 0
   const c = this.words.length - 1
   for (let k = c; k >= 0; --k) {
     let w = this.words[k]
