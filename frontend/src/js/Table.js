@@ -151,7 +151,6 @@ export function update(remake) {
 
     // dot-colors get set by DotLayer.reset(), so make sure this is called after that
     // A.tr.setAttribute("data-dotColor", A.dotColor)
-
   }
   sort(currentSort || defaultSort)
   lastSelection = {}

@@ -382,14 +382,13 @@ const DotLayer = {
     this.reset()
   },
 
-  prepItem: function(A) {
-
+  prepItem: function (A) {
     A.px = Polyline.decode2Buf(A.polyline, A.n)
     delete A.polyline
 
     A.time = StreamRLE.transcode2CompressedBuf(A.time)
 
-    A.tsLocal = new Date((A.ts[0] + A.ts[1] * 3600) * 1000);
+    A.tsLocal = new Date((A.ts[0] + A.ts[1] * 3600) * 1000)
 
     A.ts = A.ts[0]
 
@@ -403,7 +402,6 @@ const DotLayer = {
     /* make baseline projection (convert latLngs to pixel points) in-place */
     for (let i = 0, len = A.px.length; i < len; i += 2)
       this.ViewBox.latLng2px(A.px.subarray(i, i + 2))
-
   },
 
   // this returns a reference to the same buffer every time

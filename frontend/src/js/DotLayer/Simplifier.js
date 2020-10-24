@@ -31,7 +31,7 @@ export function simplify(points, n, tolerance, maxGap) {
 
   idxBitSet = idxBitSet.new_subset(idxBitSubset)
 
-  return {idxBitSet, pxGaps}
+  return { idxBitSet, pxGaps }
 }
 
 // basic distance-based simplification
@@ -51,7 +51,7 @@ function simplifyRadialDist(points, n, sqTolerance, maxGap) {
       prevPoint = point
 
       if (sqDist > maxGap) {
-        pxGaps.push(i)  //Math.sqrt(sqDist / sqTolerance)
+        pxGaps.push(i) //Math.sqrt(sqDist / sqTolerance)
       }
     }
   }

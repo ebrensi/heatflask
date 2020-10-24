@@ -1,4 +1,3 @@
-
 #items-container {
   height: 70vh;
   width: 100%;
@@ -8,7 +7,7 @@
 .heatflask-table {
   width: auto;
   table-layout: fixed;
-  user-select: none;  /* disables text-selection on shift-click */
+  user-select: none; /* disables text-selection on shift-click */
 
   cursor: pointer;
 }

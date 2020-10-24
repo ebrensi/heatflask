@@ -20,7 +20,7 @@ let _map,
   _zoom,
   _zf
 
-export {_zoom as zoom, _zf as zf}
+export { _zoom as zoom, _zf as zf }
 
 /**
  * Project a [lat, lng] point to [x,y] in rectangular coordinates
@@ -220,14 +220,14 @@ export function onZoomChange(zoom) {
  */
 export function makeTransform(func) {
   const ox = _pxOffset.x,
-        oy = _pxOffset.y
+    oy = _pxOffset.y
   if (func) {
-    return function(p) {
+    return function (p) {
       return func(_zf * p[0] + ox, _zf * p[1] + oy)
     }
   }
 
-  return function(p) {
+  return function (p) {
     return [_zf * p[0] + ox, _zf * p[1] + oy]
   }
 }

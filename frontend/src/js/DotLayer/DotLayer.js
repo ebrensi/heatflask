@@ -252,7 +252,6 @@ export const DotLayer = Layer.extend({
     const itemsArray = this._itemsArray,
       zoom = ViewBox.zoom
 
-
     // const promises = []
 
     inView.forEach((i) => {
@@ -266,34 +265,34 @@ export const DotLayer = Layer.extend({
     })
 
     // Promise.all(promises).then((fulfilled) => {
-      this._drawingDots = true
+    this._drawingDots = true
 
-      // for (const A of fulfilled) {
-      //   if (A.segMask.isEmpty()) {
-      //     ViewBox.remove(itemsArray.indexOf(A))
-      //   }
-      // }
+    // for (const A of fulfilled) {
+    //   if (A.segMask.isEmpty()) {
+    //     ViewBox.remove(itemsArray.indexOf(A))
+    //   }
+    // }
 
-      // the whole viewable area
-      const viewPort = DrawBox.defaultRect()
+    // the whole viewable area
+    const viewPort = DrawBox.defaultRect()
 
-      if (this.options.debug) {
-        DrawBox.clear(this._debugCtx, viewPort)
-      }
+    if (this.options.debug) {
+      DrawBox.clear(this._debugCtx, viewPort)
+    }
 
-      if (this.options.showPaths) {
-        this.drawPaths()
-      } else {
-        this._lineCanvas.style.display = "none"
-      }
+    if (this.options.showPaths) {
+      this.drawPaths()
+    } else {
+      this._lineCanvas.style.display = "none"
+    }
 
-      if (oldzoom != zoom) {
-        this.updateDotSettings()
-      } else if (this._paused) {
-        this.drawDots()
-      }
+    if (oldzoom != zoom) {
+      this.updateDotSettings()
+    } else if (this._paused) {
+      this.drawDots()
+    }
 
-      console.timeEnd(timerLabel)
+    console.timeEnd(timerLabel)
 
     // })
   },
@@ -367,9 +366,9 @@ export const DotLayer = Layer.extend({
   makeCircleDrawFunc: function () {
     const ctx = this._dotCtx,
       dotSize = this.dotSettings._dotSize,
-      transformDraw = ViewBox.makeTransform(function(x,y){
-          ctx.arc(x, y, dotSize, 0, TWO_PI)
-          ctx.closePath()
+      transformDraw = ViewBox.makeTransform(function (x, y) {
+        ctx.arc(x, y, dotSize, 0, TWO_PI)
+        ctx.closePath()
       })
 
     return transformDraw
@@ -379,7 +378,7 @@ export const DotLayer = Layer.extend({
     const ctx = this._dotCtx,
       dotSize = this.dotSettings._dotSize,
       dotOffset = dotSize / 2.0,
-      transformDraw = ViewBox.makeTransform(function(x,y){
+      transformDraw = ViewBox.makeTransform(function (x, y) {
         ctx.rect(x - dotOffset, y - dotOffset, dotSize, dotSize)
       })
 
@@ -710,13 +709,12 @@ export const DotLayer = Layer.extend({
         alpha
       )
     },
-  }
+  },
 })
 
 export const dotLayer = function (options) {
   return new DotLayer(options)
 }
-
 
 /* Auxilliary functions */
 

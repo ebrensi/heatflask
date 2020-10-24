@@ -6,6 +6,7 @@ import * as ViewBox from "./ViewBox"
 import * as DrawBox from "./DrawBox"
 import * as Simplifier from "./Simplifier.js"
 import BitSet from "../BitSet.js"
+import { RunningStatsCalculator } from "./stats.js"
 
 /*
  * This is meant to be a LRU cache for stuff that should go away
@@ -77,10 +78,36 @@ export class Activity {
     const points = Polyline.decode2Buf(polyline, n)
 
     // make baseline projection to rectangular coordinates in-place
-    for (let i = 0, len = points.length; i < len; i += 2)
+    for (let i = 0, len = points.length; i < len; i += 2) {
       ViewBox.latLng2px(points.subarray(i, i + 2))
+    }
 
     this.px = points
+
+    /*
+     * We will compute some stats on interval lengths to
+     *  detect anomalously big gaps in the data.
+     */
+    const stats = new RunningStatsCalculator()
+    const sqDists = []
+    for (let i = 0, len = points.length / 2 - 1; i < len; i++) {
+      const j = 2 * i
+      const p1 = points.subarray(j, j + 2)
+      const p2 = points.subarray(j + 2, j + 4)
+      const sd = sqDist(p1, p2)
+      stats.update(sd)
+      sqDists.push(sd)
+    }
+
+    const mean = stats.mean
+    const stdev = stats.populationStdev
+    const tol = 3 * stdev
+    const outliers = []
+    for (let i = 0, len = points.length / 2 - 1; i < len - 1; i++) {
+      if (Math.abs(sqDists[i] - mean) > tol) {
+        outliers.push[i]
+      }
+    }
   }
 
   inMapBounds() {
@@ -235,7 +262,7 @@ export class Activity {
     this.idxSet[zoom] = null
 
     const tol = ViewBox.tol(zoom)
-    const {idxBitSet, pxGaps} = Simplifier.simplify(
+    const { idxBitSet, pxGaps } = Simplifier.simplify(
       this.getPointAccessor(),
       this.px.length / 2,
       tol,
@@ -254,11 +281,11 @@ export class Activity {
      * at this.px[234*2] (the 234-th point in this.px),
      * and 234 is the 15-th set bit of idxBitSet, we store 15.
      */
-     let j = -1
-     const gapIdx = []
-     const maxIdx = idxBitSet.max()
-     const idxSetIter = idxBitSet.imap()
-     for (let i=0; i<pxGaps.length; i++) {
+    let j = -1
+    const gapIdx = []
+    const maxIdx = idxBitSet.max()
+    const idxSetIter = idxBitSet.imap()
+    for (let i = 0; i < pxGaps.length; i++) {
       let pxIdx = pxGaps[i]
 
       let next
@@ -267,7 +294,7 @@ export class Activity {
         pxIdx++
         if (pxIdx > maxIdx) {
           throw new Error("can't find interval containing gap")
-          debugger;
+          debugger
         }
       }
 
@@ -277,12 +304,11 @@ export class Activity {
       } while (next.value < pxIdx)
 
       if (next.value === pxIdx) {
-        gapIdx.push(j)  // a gap ends at j-th set bit of idxBitSet
+        gapIdx.push(j) // a gap ends at j-th set bit of idxBitSet
       } else {
         throw new Error("idxSetIter is finished!")
-        deubugger;
+        deubugger
       }
-
     }
 
     this.pxGaps[zoom] = gapIdx
@@ -348,14 +374,14 @@ export class Activity {
 
   drawPathFromPointArray(ctx) {
     const points = this.getPointAccessor(ViewBox.zoom),
-      transformedMoveTo = ViewBox.makeTransform((x,y) => ctx.moveTo(x,y)),
-      transformedLineTo = ViewBox.makeTransform((x,y) => ctx.lineTo(x,y))
+      transformedMoveTo = ViewBox.makeTransform((x, y) => ctx.moveTo(x, y)),
+      transformedLineTo = ViewBox.makeTransform((x, y) => ctx.lineTo(x, y))
 
     this.segMask.forEach((i) => {
       // ctx.moveTo(...transform(points(i)))
       // ctx.lineTo(...transform(points(i+1)))
       transformedMoveTo(points(i))
-      transformedLineTo(points(i+1))
+      transformedLineTo(points(i + 1))
     })
   }
 
@@ -450,7 +476,6 @@ export class Activity {
   }
 }
 
-
 /* helper functions */
 
 function* _pointsIterator(px, idxSet) {
@@ -467,7 +492,6 @@ function* _pointsIterator(px, idxSet) {
   }
 }
 
-
 /**
  * The pixel-distance between two px points at a given level of zoom.
  * This allows us to identify probable recording errors.
@@ -481,5 +505,5 @@ function pxDist(p1, p2, zoom) {
   const [x2, y2] = p2
   zoom = zoom || 0
 
-  return (x2-x1)**2 + (y2-y1)**2 * (2**zoom)
+  return (x2 - x1) ** 2 + (y2 - y1) ** 2 * 2 ** zoom
 }
