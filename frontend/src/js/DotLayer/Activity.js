@@ -425,7 +425,7 @@ export class Activity {
     })
   }
 
-  *dotPointsIterFromSegs(now) {
+  dotPointsIterFromSegs(now) {
     const ds = this.getDotSettings(),
       T = ds._period,
       start = this.ts,

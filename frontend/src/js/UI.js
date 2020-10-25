@@ -218,7 +218,7 @@ function updateLayers() {
 
   dotLayer.reset()
   table.update()
-  app.messages.period = dotLayer.periodInSecs().toFixed(2)
+  // app.messages.period = dotLayer.periodInSecs().toFixed(2)
 }
 
 // Make initial query if there is one
