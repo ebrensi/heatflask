@@ -86,28 +86,68 @@ export class Activity {
 
     /*
      * We will compute some stats on interval lengths to
-     *  detect anomalously big gaps in the data.
+     *  detect anomalous big gaps in the data.
      */
-    const stats = new RunningStatsCalculator()
+    const dStats = new RunningStatsCalculator()
     const sqDists = []
     for (let i = 0, len = points.length / 2 - 1; i < len; i++) {
       const j = 2 * i
       const p1 = points.subarray(j, j + 2)
       const p2 = points.subarray(j + 2, j + 4)
       const sd = sqDist(p1, p2)
-      stats.update(sd)
+      dStats.update(sd)
       sqDists.push(sd)
     }
 
-    const mean = stats.mean
-    const stdev = stats.populationStdev
-    const tol = 3 * stdev
-    const outliers = []
-    for (let i = 0, len = points.length / 2 - 1; i < len - 1; i++) {
-      if (Math.abs(sqDists[i] - mean) > tol) {
-        outliers.push[i]
+    const dMean = dStats.mean
+    const dStdev = dStats.populationStdev
+    const dTol = 3 * dStdev
+    const dOutliers = []
+    for (let i = 0, len =n-1; i < len; i++) {
+      if (Math.abs(sqDists[i] - dMean) > dTol) {
+        dOutliers.push[i]
       }
     }
+
+    /*
+     * Do the same with time intervals
+     */
+    const tStats = new RunningStatsCalculator()
+    for (let i=0, len=time.length; i<len; i++) {
+      const dt = time[i]
+      if (Array.isArray(dt)) {
+        const dt2 = dt[0]
+        for (let j=0; j<dt[1]; j++) {
+          tStats.update(dt2)
+        }
+      } else {
+        tStats.update(dt)
+      }
+    }
+    const tMean = tStats.mean
+    const tStdev = tStats.populationStdev
+    const tTol = 3 * tStdev
+    const tOutliers = []
+    let k = 0
+    for (let i=0, len=time.length; i<len; i++) {
+      const dt = time[i]
+      if (Array.isArray(dt)) {
+        const dt2 = dt[0]
+        for (let j=0; j<dt[1]; j++) {
+          if (Math.abs(dt2 - tMean) > tTol) {
+            tOutliers.push(k)
+          }
+          k++
+        }
+      } else {
+        if (Math.abs(dt - tMean) > tTol) {
+          tOutliers.push(k)
+        }
+        k++
+      }
+    }
+
+
   }
 
   inMapBounds() {
