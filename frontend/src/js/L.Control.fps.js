@@ -1,7 +1,8 @@
-import { L } from "./MapAPI.js"
+import * as L from "leaflet"
+
+let container, lastCalledTime
 
 L.Control.fps = L.Control.extend({
-  lastCalledTime: 1,
 
   options: {
     position: "topright",
@@ -9,20 +10,21 @@ L.Control.fps = L.Control.extend({
 
   onAdd: function () {
     // Control container
-    this._container = L.DomUtil.create("div", "leaflet-control-fps")
-    L.DomEvent.disableClickPropagation(this._container)
-    this._container.style.backgroundColor = "white"
-    this.update(0)
-    return this._container
-  },
-
-  update: function (now = Date.now(), msg = "") {
-    let fps = ~~(1000 / (now - this.lastCalledTime) + 0.5)
-    this._container.innerHTML = `${fps} f/s, ${msg}`
-    this.lastCalledTime = now
-    return fps
-  },
+    container = L.DomUtil.create("div", "leaflet-control-fps")
+    L.DomEvent.disableClickPropagation(container)
+    container.style.backgroundColor = "white"
+    update(0)
+    return container
+  }
 })
+
+function update(now, msg) {
+  const ts = now || Date.now()
+  const fps = ~~(1000 / (ts - lastCalledTime) + 0.5)
+  container.innerHTML = `${fps} f/s, ${msg}`
+  lastCalledTime = now
+  return fps
+}
 
 //constructor registration
 L.control.fps = function (options) {

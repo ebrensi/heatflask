@@ -9,18 +9,28 @@ import { makePT } from "./CRS.js"
 import BitSet from "../BitSet.js"
 import { DomUtil } from "leaflet"
 
+const _canvases = []
+
+const _sets = {
+  items: { current: new BitSet(), last: new BitSet() },
+  colorGroups: { path: {}, dot: {} },
+}
+const _pathColorGroups = { selected: null, unselected: null }
+const _dotColorGroups = { selected: null, unselected: null }
+
 let _map,
-  _canvases,
-  _sets,
-  _pathColorGroups,
-  _dotColorGroups,
-  _pxOffset,
   _pxBounds,
+  _pxOffset,
   _itemsArray,
   _zoom,
   _zf
 
-export {_zoom as zoom, _zf as zf}
+export {
+  _zoom as zoom,
+  _zf as zf,
+  _canvases as canvases,
+}
+
 
 /**
  * Project a [lat, lng] point to [x,y] in rectangular coordinates
@@ -33,27 +43,15 @@ export {_zoom as zoom, _zf as zf}
  */
 export const latLng2px = makePT(0)
 
-export function initialize(map, canvases, itemsArray) {
-  _map = map
-  _canvases = canvases
-  _sets = {
-    items: { current: new BitSet(), last: new BitSet() },
-    colorGroups: { path: {}, dot: {} },
-  }
-  _pathColorGroups = { selected: null, unselected: null }
-  _dotColorGroups = { selected: null, unselected: null }
-  _pxOffset = [NaN, NaN]
-
-  if (itemsArray) setItemsArray(itemsArray)
-}
-
-export function reset(itemsArray) {
-  initialize(_map, _canvases, itemsArray)
-  update()
-}
-
 export function getMapSize() {
   return _map.getSize()
+}
+
+export function resize(width, height) {
+  for (const canvas of _canvases) {
+    canvas.width = width
+    canvas.height = height
+  }
 }
 
 export function pathColorGroups() {
@@ -72,6 +70,10 @@ export function dotColorGroups() {
 
 export function setItemsArray(itemsArray) {
   _itemsArray = itemsArray
+}
+
+export function setMap(map) {
+  _map = map
 }
 
 export function tol(zoom) {
@@ -186,6 +188,7 @@ export function calibrate() {
 
   const pxOrigin = m.getPixelOrigin(),
     mapPanePos = m._getMapPanePos()
+
   _pxOffset = mapPanePos.subtract(pxOrigin)
 }
 
@@ -231,6 +234,11 @@ export function makeTransform(func) {
   return function(p) {
     return [_zf * p[0] + ox, _zf * p[1] + oy]
   }
+}
+
+/* Untransform a Leaflet point in place */
+export function unTransform(leafletPoint) {
+  leafletPoint._subtract(_pxOffset)._divideBy(_zf)
 }
 
 export function latLng2pxBounds(llBounds, pxObj) {
