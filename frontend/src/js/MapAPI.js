@@ -17,7 +17,7 @@ import app from "./Model.js"
 import strava_logo from "url:../images/pbs4.png"
 import heatflask_logo from "url:../images/logo.png"
 
-import { MAPBOX_ACCESS_TOKEN } from "./Init.js"
+import { MAPBOX_ACCESS_TOKEN, OFFLINE } from "./Init.js"
 
 let center, zoom
 
@@ -95,6 +95,7 @@ for (const [name, id] of Object.entries(mapBox_layer_names)) {
   baselayers[name] = tileLayer.provider("MapBox", {
     id: id,
     accessToken: MAPBOX_ACCESS_TOKEN,
+    useOnlyCache: OFFLINE
   })
 }
 
@@ -111,7 +112,7 @@ const providers_names = [
 export const defaultBaselayerName = "OpenStreetMap.Mapnik"
 
 for (const name of providers_names) {
-  baselayers[name] = tileLayer.provider(name)
+  baselayers[name] = tileLayer.provider(name, {useOnlyCache: OFFLINE})
 }
 
 /*

@@ -9,20 +9,22 @@ import { noop } from "./appUtil.js"
 import load_ga_object from "./google-analytics.js"
 
 export let CLIENT_ID
-export let DEVELOPMENT = true
+export let DEVELOPMENT
 export let FLASH_MESSAGES
 export let APP_NAME
 export let CURRENT_USER
+export let OFFLINE
 
 const argstring = document.querySelector("#runtime-arguments").innerText
 
 if (argstring) {
   const jinja_args = JSON.parse(argstring)
   CLIENT_ID = jinja_args["CLIENT_ID"]
-  DEVELOPMENT = jinja_args["DEVELOPMENT"] || DEVELOPMENT
+  DEVELOPMENT = jinja_args["DEVELOPMENT"]
   CURRENT_USER = jinja_args["CURRENT_USER"]
   FLASH_MESSAGES = jinja_args["FLASH_MESSAGES"]
   APP_NAME = jinja_args["APP_NAME"]
+  OFFLINE = jinja_args["OFFLINE"]
 } else {
   console.log("No server-sent arguments")
 }

@@ -363,6 +363,7 @@ def main(username):
         "DEVELOPMENT": app.config.get("DEVELOPMENT"),
         "FLASH_MESSAGES": get_flashed_messages(),
         "APP_NAME": app.config.get("APP_NAME"),
+        "OFFLINE": app.config.get("OFFLINE"),
     }
 
     if current_user.is_authenticated:
