@@ -1,28 +1,98 @@
 /*
- * UI components for DotLayer control
+ * Dot Animation Controls
  */
-import "leaflet-easybutton"
 
-import { map } from "./mapAPI.js"
+import * as L from "leaflet"
+import { map } from "./MapAPI.js"
 import { dotLayer } from "./DotLayerAPI.js"
-import { updateURL } from "./URL.js"
-import { vparams } from "./Model.js"
+import { vParams } from "./Model.js"
 
-/* set initial values from defaults or specified in url
-    url params over-ride default values */
-const dotConstants = dotLayer.getDotSettings()
+const ds = dotLayer.dotSettings
+const update = dotLayer.updateDotSettings
+const options = dotLayer.options
 
-const C1 = vparams.c1 || dotConstants["C1"],
-  C2 = vparams.c2 || dotConstants["C2"],
-  SZ = vparams.sz || dotConstants["dotScale"]
+// leaflet-easybutton is used for play/pause button and capture
+// animation play-pause button
+const button_states = [
+  {
+    stateName: "animation-running",
+    icon: "fa-pause",
+    title: "Pause Animation",
+    onClick: function (btn) {
+      dotLayer.pause()
+      vParams.paused = true
+      btn.state("animation-paused")
+    },
+  },
 
-dotConstants["C1"] = vparams.c1 = C1
-dotConstants["C2"] = vparams.c2 = C2
-dotConstants["dotScale"] = vparams.sz = SZ
+  {
+    stateName: "animation-paused",
+    icon: "fa-play",
+    title: "Resume Animation",
+    onClick: function (btn) {
+      vParams.paused = false
+      dotLayer.animate()
+      btn.state("animation-running")
+    },
+  },
+]
+
+// add play/pause button to the map
+L.easyButton({
+  states: vParams.paused ? button_states.reverse() : button_states,
+}).addTo(map)
+
+
+/*
+ * Sliders and checkboxes on dot controls tab
+ */
+
+if (vParams.shadows) {
+  options.dotShadows.enabled = vParams.shadows
+} else {
+  vParams.shadows = options.dotShadows.enabled
+}
+
+vParams.onChange("shadows", (shadows) => {
+  update(null, {enabled: shadows})
+})
+
+if (vParams.paths) {
+  options.showPaths = vParams.paths
+} else {
+  vParams.paths = options.showPaths
+}
+
+vParams.onChange("paths", (paths) => {
+  options.showPaths = paths
+})
+
 
 const SPEED_SCALE = 5.0,
   SEP_SCALE = { m: 0.15, b: 15.0 }
 
+const settingsLinks = {
+  "alphaScale": "alpha",
+  "dotScale": "sz",
+  "C1": "c1",
+  "C2": "c2"
+}
+
+for (const [dsKey, vpKey] of Object.entries(settingsLinks)) {
+  if (vParams[vpKey]) {
+    ds[dsKey] = vParams[vpKey]
+  } else {
+    vParams[vpKey] = ds[dsKey]
+  }
+
+  vParams.onChange(vpKey, (newVal) => {
+    update({[dsKey]: newVal})
+  })
+}
+
+
+
+/*
 // Dom.set("#sepConst", (Math.log2(C1) - SEP_SCALE.b) / SEP_SCALE.m );
 // Dom.set("#speedConst", Math.sqrt(C2) / SPEED_SCALE );
 // Dom.set("#dotScale", ds["dotScale"]);
@@ -79,24 +149,5 @@ for (const knob of Object.values(knobs)) {
   knob.addListener(knobListener)
 }
 
-/* initialize shadow setting and change event */
-const shadows = vparams["shadows"]
-Dom.prop("#shadows", "checked", shadows)
-dotLayer.updateDotSettings(dotConstants, { enabled: shadows })
-Dom.addEvent("#shadows", "change", (e) => {
-  const enabled = e.target.checked
-  dotLayer.updateDotSettings(null, { enabled: enabled })
-  vparams["shadows"] = enabled
-  updateURL()
-})
-
-/* initialize show-paths setting and change event */
-const paths = vparams["paths"]
-Dom.prop("#showPaths", "checked", paths)
-dotLayer.options.showPaths = paths
-Dom.addEvent("#showPaths", "change", (e) => {
-  dotLayer.options.showPaths = vparams.paths = e.target.checked
-  dotLayer._redraw()
-  updateURL()
-})
+*/
 

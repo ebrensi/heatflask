@@ -30,10 +30,10 @@ export const urlArgDefaults = {
   c2: [["c2"], null],
   sz: [["sz"], null],
   geohash: [["geohash", "gh"], null],
-  paused: [["paused", "pu"], false],
-  shadows: [["sh", "shadows"], true],
+  paused: [["paused", "pu"], null],
+  shadows: [["sh", "shadows"], null],
   paths: [["pa", "paths"], true],
-  alpha: [["alpha"], 1],
+  alpha: [["alpha"], null],
   baselayer: [["baselayer", "map", "bl"], null],
 }
 
@@ -158,7 +158,7 @@ const vParamsInit = {
   c1: params["c1"],
   c2: params["c2"],
   sz: params["sz"],
-  alpha: bool(params["alpha"]),
+  alpha: params["alpha"],
   shadows: bool(params["shadows"]),
   paths: bool(params["paths"]),
 }

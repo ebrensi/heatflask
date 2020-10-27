@@ -20,15 +20,12 @@ function makeColorGradient(
   if (len == undefined) len = 50
 
   for (let i = 0; i < len; ++i) {
-    let r = Math.round(Math.sin(freq1 * i + phase1) * width + center).toString(
-        16
-      ),
-      g = Math.round(Math.sin(freq2 * i + phase2) * width + center).toString(
-        16
-      ),
-      b = Math.round(Math.sin(freq3 * i + phase3) * width + center).toString(16)
+    let r = Math.round(Math.sin(freq1 * i + phase1) * width + center),
+      g = Math.round(Math.sin(freq2 * i + phase2) * width + center),
+      b = Math.round(Math.sin(freq3 * i + phase3) * width + center)
 
-    palette[i] = `#${r}${g}${b}`
+    palette[i] = `rgb(${r},${g},${b})`
+    // palette[i] = `#${r.toString(16)}${g.toString(16)}${b.toString(16)}`
   }
   return palette
 }

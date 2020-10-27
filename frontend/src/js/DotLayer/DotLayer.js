@@ -10,7 +10,7 @@ import * as ColorPalette from "./ColorPalette.js"
 // import * as WorkerPool from "./WorkerPool.js"
 
 import BitSet from "../BitSet.js"
-import defaultOptions from "./options.js"
+import { options as defaultOptions, dotSettings as _dotSettings} from "./Defaults.js"
 
 import { items as _items } from "../Model.js"
 
@@ -20,6 +20,7 @@ import { items as _items } from "../Model.js"
 const MIN_REDRAW_DELAY = 100 // milliseconds
 const TWO_PI = 2 * Math.PI
 const TARGET_FPS = 25
+const CONTINUOUS_REDRAWS = false
 
 const _lineCanvases = []
 const _dotCanvases = []
@@ -29,8 +30,6 @@ let _timePaused, _ready, _paused
 let _drawingDots
 let _gifPatch
 
-let _dotCanvas
-let _dotCtx
 let _dotRect
 let _debugCanvas
 let _lastRedraw = 0
@@ -40,9 +39,10 @@ let fps_display
 let _frame, _capturing
 let _lastCalledTime, _minDelay
 
-
 export const DotLayer = Layer.extend({
   options: defaultOptions,
+  dotSettings: _dotSettings,
+  updateDotSettings: updateDotSettings,
 
   // -- initialized is called on prototype
   initialize: function (options) {
@@ -59,8 +59,11 @@ export const DotLayer = Layer.extend({
     ViewBox.canvases.length = 0
 
     // dotlayer canvas
-    _dotCanvas = addCanvasOverlay("shadowPane")
-    _dotCtx = _dotCanvas.getContext("2d")
+    for (let i = 0; i < 2; i++) {
+      const canvas = addCanvasOverlay("shadowPane")
+      _dotCanvases.push(canvas)
+    }
+    _dotCanvases[1].style.display = "none"
 
     /*
      * The Line Canvas is for activity paths, which are made up of a bunch of
@@ -100,8 +103,10 @@ export const DotLayer = Layer.extend({
 
   //-------------------------------------------------------------
   onRemove: function (map) {
-    map._panes.shadowPane.removeChild(_dotCanvas)
-    _dotCanvas = null
+    for (let i = 0; i < 2; i++) {
+      map._panes.shadowPane.removeChild(_dotCanvases[i])
+    }
+    _dotCanvases.length = 0
 
     for (let i = 0; i < 2; i++) {
       map._panes.overlayPane.removeChild(_lineCanvases[i])
@@ -244,7 +249,6 @@ function assignEventHandlers() {
 
   const events = {
     // movestart: loggit,
-    // move: onMove,
     moveend: redraw,
     // zoomstart: loggit,
     // zoom: loggit,
@@ -253,8 +257,12 @@ function assignEventHandlers() {
     resize: onResize,
   }
 
+  if (CONTINUOUS_REDRAWS) {
+    events.move = onMove
+  }
+
   if ( _map.options.zoomAnimation && Browser.any3d ) {
-      events.zoomanim =  animateZoom;
+      events.zoomanim = animateZoom;
   }
 
   return events
@@ -270,18 +278,20 @@ function debugCtxReset() {
 }
 
 function dotCtxReset() {
-  const ctx = _dotCtx
-  if (_options.dotShadows.enabled) {
-    const shadowOpts = _options.dotShadows
+  for (let i=0; i<2; i++) {
+    const ctx = _dotCanvases[i].getContext("2d")
+    if (_options.dotShadows.enabled) {
+      const shadowOpts = _options.dotShadows
 
-    ctx.shadowOffsetX = shadowOpts.x
-    ctx.shadowOffsetY = shadowOpts.y
-    ctx.shadowBlur = shadowOpts.blur
-    ctx.shadowColor = shadowOpts.color
-  } else {
-    ctx.shadowOffsetX = 0
-    ctx.shadowOffsetY = 0
-    ctx.shadowBlur = 0
+      ctx.shadowOffsetX = shadowOpts.x
+      ctx.shadowOffsetY = shadowOpts.y
+      ctx.shadowBlur = shadowOpts.blur
+      ctx.shadowColor = shadowOpts.color
+    } else {
+      ctx.shadowOffsetX = 0
+      ctx.shadowOffsetY = 0
+      ctx.shadowBlur = 0
+    }
   }
 }
 
@@ -316,7 +326,8 @@ function redraw(event) {
   const timerLabel = `redraw_${_redrawCounter++}`
   console.time(timerLabel)
 
-  DrawBox.clear(_dotCtx)
+  DrawBox.clear(_dotCanvases[1].getContext("2d"))
+  DrawBox.clear(_dotCanvases[0].getContext("2d"))
 
   DrawBox.reset()
 
@@ -446,39 +457,26 @@ function drawPaths() {
 /*
  * Functions for Drawing Dots
  */
-function makeCircleDrawFunc() {
-  const ctx = _dotCtx,
-    dotSize = _dotSettings._dotSize,
-    transformDraw = ViewBox.makeTransform(function (x, y) {
-      ctx.arc(x, y, dotSize, 0, TWO_PI)
+function makeCircleDrawFunc(ctx) {
+    const size = _dotSettings._dotSize
+    const transformDraw = ViewBox.makeTransform(function (x, y) {
+      ctx.arc(x, y, size, 0, TWO_PI)
       ctx.closePath()
     })
-
   return transformDraw
 }
 
-function makeSquareDrawFunc() {
-  const ctx = _dotCtx,
-    dotSize = _dotSettings._dotSize,
-    dotOffset = dotSize / 2.0,
-    transformDraw = ViewBox.makeTransform(function (x, y) {
-      ctx.rect(x - dotOffset, y - dotOffset, dotSize, dotSize)
-    })
-
+function makeSquareDrawFunc(ctx) {
+  const size = _dotSettings._dotSize
+  const dotOffset = size / 2.0
+  const transformDraw = ViewBox.makeTransform(function (x, y) {
+    ctx.rect(x - dotOffset, y - dotOffset, size, size)
+  })
   return transformDraw
 }
 
-function _drawDots(pointsIterator, drawDotFunc) {
-  let count = 0
-  for (const p of pointsIterator) {
-    drawDotFunc(p)
-    count++
-  }
-  return count
-}
 
-function drawDotsByColor(now, colorGroups, drawDot) {
-  const ctx = _dotCtx
+function drawDotsByColor(now, colorGroups, ctx, drawDot) {
   let count = 0
 
   for (const color in colorGroups) {
@@ -490,7 +488,10 @@ function drawDotsByColor(now, colorGroups, drawDot) {
       const A = _itemsArray[i]
       // const dotLocs = A.dotPointsIterFromSegs(now);
       const dotLocs = A.dotPointsIterFromArray(now, getDotSettings())
-      count += _drawDots(dotLocs, drawDot)
+      for (const p of dotLocs) {
+        drawDot(p)
+        count++
+      }
     })
 
     ctx.fill()
@@ -503,58 +504,63 @@ function drawDots(now) {
 
   if (!now) now = _timePaused || UTCnowSecs()
 
-  const options = _options,
-    ctx = _dotCtx,
-    vb = ViewBox
+  // We write to the currently hidden canvas
+  const ctx = _dotCanvases[1].getContext("2d")
 
-  const colorGroups = vb.dotColorGroups()
+  const cg = ViewBox.dotColorGroups()
 
-  let unselected = colorGroups.unselected,
-    selected = colorGroups.selected
-
-  DrawBox.clear(ctx, _dotRect)
-  if (_dotRect) _dotRect = undefined
-
-  let count = 0
-
-  if (_gifPatch) {
-    unselected = { ...selected, ...unselected }
-    selected = null
-  }
+  const selected = _gifPatch? null : cg.selected
+  const unselected = _gifPatch? { ...cg.selected, ...cg.unselected } : cg.unselected
 
   const alphaScale = _dotSettings.alphaScale
 
+  // Clear the area to draw on if it hasn't already been cleared
+  DrawBox.clear(ctx, _dotRect)
+  _dotRect = undefined
+
+  let count = 0
+
   if (selected) {
     // draw normal activity dots
-    ctx.globalAlpha = options.unselected.dotOpacity * alphaScale
-    let drawDotFunc = makeSquareDrawFunc()
+    const drawSquare = makeSquareDrawFunc(ctx)
+    ctx.globalAlpha = _options.unselected.dotOpacity * alphaScale
     count += drawDotsByColor(
       now,
       unselected,
-      drawDotFunc,
-      options.unselected.dotColor
+      ctx,
+      drawSquare
     )
 
     // draw selected activity dots
-    drawDotFunc = makeCircleDrawFunc()
-    ctx.globalAlpha = options.selected.dotOpacity * alphaScale
+    const drawCircle = makeCircleDrawFunc(ctx)
+    ctx.globalAlpha = _options.selected.dotOpacity * alphaScale
     count += drawDotsByColor(
       now,
       selected,
-      drawDotFunc,
-      options.selected.dotColor
+      ctx,
+      drawCircle
     )
   } else if (unselected) {
     // draw normal activity dots
-    ctx.globalAlpha = options.normal.dotOpacity * alphaScale
-    let drawDotFunc = makeSquareDrawFunc()
+    const drawSquare = makeSquareDrawFunc(ctx)
+    ctx.globalAlpha = _options.normal.dotOpacity * alphaScale
     count += drawDotsByColor(
       now,
       unselected,
-      drawDotFunc,
-      options.normal.dotColor
+      ctx,
+      drawSquare,
     )
   }
+
+  // swap canvases
+  const temp = _dotCanvases[0]
+  temp.style.display = "none"
+  _dotCanvases[1].style.display = ""
+
+  _dotCanvases[0] = _dotCanvases[1]
+  _dotCanvases[1] = temp
+
+
 
   return count
 }
@@ -566,27 +572,19 @@ function drawDots(now) {
  *
  */
 function setDotColors() {
-    let numItems = _itemsArray.length,
-      i = 0
+  let numItems = _itemsArray.length,
+    i = 0
 
-    _colorPalette = ColorPalette.makePalette(numItems, _options.dotAlpha)
-    for (const item of _itemsArray) item.dotColor = _colorPalette[i++]
-  }
-
-const _dotSettings = {
-    C1: 1000000.0,
-    C2: 200.0,
-    dotScale: 1.0,
-    alphaScale: 0.9,
-  }
+  _colorPalette = ColorPalette.makePalette(numItems)
+  for (const item of _itemsArray) item.dotColor = _colorPalette[i++]
+}
 
 function  getDotSettings() {
   return _dotSettings
 }
 
 function periodInSecs() {
-  const ds = getDotSettings()
-  return ds._period / (ds._timeScale * 1000)
+  return _dotSettings._period / (_dotSettings._timeScale * 1000)
 }
 
 function updateDotSettings(settings, shadowSettings) {

@@ -14,7 +14,7 @@ import { getBounds, map } from "./MapAPI.js"
 import { dotLayer } from "./DotLayerAPI.js"
 // import { captureCycle, abortCapture } from "./DotLayer/Export.js"
 
-// import "./DotControls.js";
+import "./DotControls.js";
 
 import paypalButtonHTML from "bundle-text:../html/paypal-button.html"
 import infoTabHTML from "bundle-text:../html/main-info.html"
@@ -187,39 +187,6 @@ function renderFromQuery() {
     updateLayers()
   })
 }
-
-
-// leaflet-easybutton is used for play/pause button and capture
-// animation play-pause button
-const button_states = [
-  {
-    stateName: "animation-running",
-    icon: "fa-pause",
-    title: "Pause Animation",
-    onClick: function (btn) {
-      dotLayer.pause()
-      app.vParams.paused = true
-      btn.state("animation-paused")
-    },
-  },
-
-  {
-    stateName: "animation-paused",
-    icon: "fa-play",
-    title: "Resume Animation",
-    onClick: function (btn) {
-      app.vParams.paused = false
-      dotLayer.animate()
-      btn.state("animation-running")
-    },
-  },
-]
-
-// add play/pause button to the map
-L.easyButton({
-  states: app.vParams.paused ? button_states.reverse() : button_states,
-}).addTo(map)
-
 
 
 
