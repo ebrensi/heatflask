@@ -20,9 +20,9 @@
   "author": "Efrem Rensi",
   "license": "ISC",
   "dependencies": {
-    "@babel/core": "^7.12.1",
+    "@babel/core": "^7.12.3",
     "@fortawesome/fontawesome-free": "^5.15.1",
-    "@msgpack/msgpack": "^2.2.1",
+    "@msgpack/msgpack": "^2.3.0",
     "downloadjs": "^1.4.7",
     "gif.js": "github:ebrensi/gif.js#wasm-dev",
     "latlon-geohash": "^2.0.0",
@@ -40,8 +40,8 @@
   ],
   "devDependencies": {
     "documentation": "^13.0.2",
-    "eslint": "^7.11.0",
-    "eslint-config-prettier": "^6.12.0",
+    "eslint": "^7.12.0",
+    "eslint-config-prettier": "^6.14.0",
     "parcel": "next",
     "parcel-plugin-nuke-dist": "^1.0.1",
     "prettier": "^2.1.2"

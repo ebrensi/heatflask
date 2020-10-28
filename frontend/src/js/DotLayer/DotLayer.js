@@ -10,7 +10,10 @@ import * as ColorPalette from "./ColorPalette.js"
 // import * as WorkerPool from "./WorkerPool.js"
 
 import BitSet from "../BitSet.js"
-import { options as defaultOptions, dotSettings as _dotSettings} from "./Defaults.js"
+import {
+  options as defaultOptions,
+  dotSettings as _dotSettings,
+} from "./Defaults.js"
 
 import { items as _items } from "../Model.js"
 
@@ -210,7 +213,6 @@ export const DotLayer = Layer.extend({
 
     if (!selected.isEmpty()) return selected.imap((i) => _itemsArray[i].id)
   },
-
 })
 
 export const dotLayer = function (options) {
@@ -262,8 +264,8 @@ function assignEventHandlers() {
     events.move = onMove
   }
 
-  if ( _map.options.zoomAnimation && Browser.any3d ) {
-      events.zoomanim = animateZoom;
+  if (_map.options.zoomAnimation && Browser.any3d) {
+    events.zoomanim = animateZoom
   }
 
   return events
@@ -279,7 +281,7 @@ function debugCtxReset() {
 }
 
 function dotCtxReset() {
-  for (let i=0; i<2; i++) {
+  for (let i = 0; i < 2; i++) {
     const ctx = _dotCanvases[i].getContext("2d")
     if (_options.dotShadows.enabled) {
       const shadowOpts = _options.dotShadows
@@ -385,12 +387,10 @@ function redraw(event) {
   }
 
   if (_options.showPaths) {
-
     const t1 = Date.now()
     drawPaths()
     tpaths = Date.now()
     timePaths = tpaths - t1
-
   } else {
     _lineCanvases[0].style.display = "none"
   }
@@ -398,14 +398,15 @@ function redraw(event) {
   if (oldzoom != zoom) {
     updateDotSettings()
   } else if (_paused) {
-
     drawDots()
     tdots = Date.now()
     timeDots = tdots - tpaths
   }
 
   const tot = timeDots + timeSimp + timeSeg + timePaths
-  console.log(`simplify: ${timeSimp}\nmask: ${timeSeg}\npaths: ${timePaths}\ndots: ${timeDots}\ntot: ${tot}`)
+  console.log(
+    `simplify: ${timeSimp}\nmask: ${timeSeg}\npaths: ${timePaths}\ndots: ${timeDots}\ntot: ${tot}`
+  )
   console.timeEnd(timerLabel)
 
   if (_options.debug) {
@@ -445,7 +446,6 @@ function drawPaths() {
 
   const alphaScale = _dotSettings.alphaScale
 
-
   const ctx = _lineCanvases[1].getContext("2d")
 
   if (selected) {
@@ -478,11 +478,11 @@ function drawPaths() {
  * Functions for Drawing Dots
  */
 function makeCircleDrawFunc(ctx) {
-    const size = _dotSettings._dotSize
-    const transformDraw = ViewBox.makeTransform(function (x, y) {
-      ctx.arc(x, y, size, 0, TWO_PI)
-      ctx.closePath()
-    })
+  const size = _dotSettings._dotSize
+  const transformDraw = ViewBox.makeTransform(function (x, y) {
+    ctx.arc(x, y, size, 0, TWO_PI)
+    ctx.closePath()
+  })
   return transformDraw
 }
 
@@ -494,7 +494,6 @@ function makeSquareDrawFunc(ctx) {
   })
   return transformDraw
 }
-
 
 function drawDotsByColor(now, colorGroups, ctx, drawDot) {
   let count = 0
@@ -525,8 +524,10 @@ function drawDots(now) {
 
   const cg = ViewBox.dotColorGroups()
 
-  const selected = _gifPatch? null : cg.selected
-  const unselected = _gifPatch? { ...cg.selected, ...cg.unselected } : cg.unselected
+  const selected = _gifPatch ? null : cg.selected
+  const unselected = _gifPatch
+    ? { ...cg.selected, ...cg.unselected }
+    : cg.unselected
 
   const alphaScale = _dotSettings.alphaScale
 
@@ -540,32 +541,17 @@ function drawDots(now) {
     // draw normal activity dots
     const drawSquare = makeSquareDrawFunc(ctx)
     ctx.globalAlpha = _options.unselected.dotOpacity * alphaScale
-    count += drawDotsByColor(
-      now,
-      unselected,
-      ctx,
-      drawSquare
-    )
+    count += drawDotsByColor(now, unselected, ctx, drawSquare)
 
     // draw selected activity dots
     const drawCircle = makeCircleDrawFunc(ctx)
     ctx.globalAlpha = _options.selected.dotOpacity * alphaScale
-    count += drawDotsByColor(
-      now,
-      selected,
-      ctx,
-      drawCircle
-    )
+    count += drawDotsByColor(now, selected, ctx, drawCircle)
   } else if (unselected) {
     // draw normal activity dots
     const drawSquare = makeSquareDrawFunc(ctx)
     ctx.globalAlpha = _options.normal.dotOpacity * alphaScale
-    count += drawDotsByColor(
-      now,
-      unselected,
-      ctx,
-      drawSquare,
-    )
+    count += drawDotsByColor(now, unselected, ctx, drawSquare)
   }
 
   // swap canvases
@@ -576,12 +562,8 @@ function drawDots(now) {
   _dotCanvases[0] = _dotCanvases[1]
   _dotCanvases[1] = temp
 
-
-
   return count
 }
-
-
 
 /*
  * Dot colors and settings
@@ -593,14 +575,6 @@ function setDotColors() {
 
   _colorPalette = ColorPalette.makePalette(numItems)
   for (const item of _itemsArray) item.dotColor = _colorPalette[i++]
-}
-
-function  getDotSettings() {
-  return _dotSettings
-}
-
-function periodInSecs() {
-  return _dotSettings._period / (_dotSettings._timeScale * 1000)
 }
 
 function updateDotSettings(settings, shadowSettings) {
@@ -640,7 +614,6 @@ function _animate(ts) {
   // let ts = UTCnowSecs(),
   //   now = ts - _timeOffset
 
-
   if (_paused || _capturing) {
     // Ths is so we can start where we left off when we resume
     _timePaused = ts
@@ -652,7 +625,7 @@ function _animate(ts) {
 
     // const t0 = Date.now()
 
-    const count = drawDots(now)
+    drawDots(now)
 
     // if (fps_display) {
     //   const elapsed = (Date.now() - t0).toFixed(0)
@@ -672,17 +645,13 @@ function animateZoom(e) {
 
   // -- different calc of offset in leaflet 1.0.0 and 0.0.7 thanks for 1.0.0-rc2 calc @jduggan1
   const offset = Layer
-    ? _map._latLngToNewLayerPoint(
-        _map.getBounds().getNorthWest(),
-        z,
-        e.center
-      )
+    ? _map._latLngToNewLayerPoint(_map.getBounds().getNorthWest(), z, e.center)
     : _map
         ._getCenterOffset(e.center)
         ._multiplyBy(-scale)
         .subtract(_map._getMapPanePos())
 
   const setTransform = DomUtil.setTransform
-  setTransform(_dotCanvas, offset, scale)
+  setTransform(_dotCanvases[0], offset, scale)
   setTransform(_lineCanvases[0], offset, scale)
 }

@@ -6,6 +6,7 @@ import * as ViewBox from "./ViewBox"
 import * as DrawBox from "./DrawBox"
 import * as Simplifier from "./Simplifier.js"
 import BitSet from "../BitSet.js"
+import { RunningStatsCalculator } from "./stats.js"
 
 /*
  * This is meant to be a LRU cache for stuff that should go away
@@ -78,10 +79,74 @@ export class Activity {
     const points = Polyline.decode2Buf(polyline, n)
 
     // make baseline projection to rectangular coordinates in-place
-    for (let i = 0, len = points.length; i < len; i += 2)
+    for (let i = 0, len = points.length; i < len; i += 2) {
       ViewBox.latLng2px(points.subarray(i, i + 2))
+    }
 
     this.px = points
+
+    /*
+     * We will compute some stats on interval lengths to
+     *  detect anomalous big gaps in the data.
+     */
+    const dStats = new RunningStatsCalculator()
+    const sqDists = []
+    for (let i = 0, len = points.length / 2 - 1; i < len; i++) {
+      const j = 2 * i
+      const p1 = points.subarray(j, j + 2)
+      const p2 = points.subarray(j + 2, j + 4)
+      const sd = sqDist(p1, p2)
+      dStats.update(sd)
+      sqDists.push(sd)
+    }
+
+    const dMean = dStats.mean
+    const dStdev = dStats.populationStdev
+    const dTol = 3 * dStdev
+    const dOutliers = []
+    for (let i = 0, len = n - 1; i < len; i++) {
+      if (Math.abs(sqDists[i] - dMean) > dTol) {
+        dOutliers.push[i]
+      }
+    }
+
+    /*
+     * Do the same with time intervals
+     */
+    const tStats = new RunningStatsCalculator()
+    for (let i = 0, len = time.length; i < len; i++) {
+      const dt = time[i]
+      if (Array.isArray(dt)) {
+        const dt2 = dt[0]
+        for (let j = 0; j < dt[1]; j++) {
+          tStats.update(dt2)
+        }
+      } else {
+        tStats.update(dt)
+      }
+    }
+    const tMean = tStats.mean
+    const tStdev = tStats.populationStdev
+    const tTol = 3 * tStdev
+    const tOutliers = []
+    let k = 0
+    for (let i = 0, len = time.length; i < len; i++) {
+      const dt = time[i]
+      if (Array.isArray(dt)) {
+        const dt2 = dt[0]
+        for (let j = 0; j < dt[1]; j++) {
+          if (Math.abs(dt2 - tMean) > tTol) {
+            tOutliers.push(k)
+          }
+          k++
+        }
+      } else {
+        if (Math.abs(dt - tMean) > tTol) {
+          tOutliers.push(k)
+        }
+        k++
+      }
+    }
   }
 
   inMapBounds() {
@@ -125,11 +190,6 @@ export class Activity {
       const j = idx[i] * 2
       return px.subarray(j, j + 2)
     }
-  }
-
-  gapAt(idx, zoom) {
-    const P = this.getPointAccessor()
-    return pxDist(P(idx), P(idx-1), zoom)
   }
 
   /**
@@ -241,52 +301,12 @@ export class Activity {
     this.idxSet[zoom] = null
 
     const tol = ViewBox.tol(zoom)
-    const { idxBitSet, pxGaps } = Simplifier.simplify(
+    const idxBitSet = Simplifier.simplify(
       this.getPointAccessor(),
       this.px.length / 2,
-      tol,
-      (MAX_PX_GAP * tol) ** 2
+      tol
     )
     this.idxSet[zoom] = idxBitSet
-
-    if (!pxGaps.length) {
-      return this
-    }
-
-    // if (pxGaps.length > 1) debugger
-
-    /*
-     * pxGaps contains this.px indices of the endpoints of big gaps
-     * We convert those to indices of the reduced set of points
-     * indicated in idxBitSet. For example, if there is a gap ending
-     * at this.px[234*2] (the 234-th point in this.px),
-     * and 234 is the 15-th set bit of idxBitSet, we store 15.
-     */
-    // pxGaps.sort()  // pxGaps must be sorted for this to work
-    const gapIdx = []
-    let j = -1
-
-    const idxSetIter = idxBitSet.imap()
-
-    let next
-    for (let i = 0; i < pxGaps.length; i++) {
-      let pxIdx = pxGaps[i]
-
-      while (!next || !next.done && next.value < pxIdx) {
-        next = idxSetIter.next()
-        j++
-      }
-
-      if (next.done) {
-        break
-      }
-
-      // a gap ends at j-th set bit of idxBitSet, so it starts at j-1
-      gapIdx.push(j-1)
-    }
-
-    this.pxGaps[zoom] = gapIdx
-    console.log(`zoom ${zoom} gaps: `, gapIdx)
 
     return this
   }
@@ -319,12 +339,12 @@ export class Activity {
       s++
     }
 
-    const pxg = this.pxGaps[zoom]
-    if (pxg) {
-      for (let i=0, len=pxg.length; i<len; i++) {
-        this.segMask.remove(pxg[i])
-      }
-    }
+    // const pxg = this.pxGaps[zoom]
+    // if (pxg) {
+    //   for (let i = 0, len = pxg.length; i < len; i++) {
+    //     this.segMask.remove(pxg[i])
+    //   }
+    // }
 
     // console.log(`${this.id}: segmask`)
 
@@ -354,7 +374,7 @@ export class Activity {
 
     this.segMask.forEach((i) => {
       const p1 = points(i)
-      const p2 = points(i+1)
+      const p2 = points(i + 1)
       transformedMoveTo(p1[0], p1[1])
       transformedLineTo(p2[0], p2[1])
     })
@@ -440,7 +460,7 @@ export class Activity {
           const t = j * T + timeOffset,
             dt = t - t_a
           if (dt > 0) {
-            func(p_a[0] + vx * dt,  p_a[1] + vy * dt)
+            func(p_a[0] + vx * dt, p_a[1] + vy * dt)
           }
         }
       }
@@ -464,18 +484,9 @@ function* _pointsIterator(px, idxSet) {
   }
 }
 
-/**
- * The pixel-distance between two px points at a given level of zoom.
- * This allows us to identify probable recording errors.
- * @param  {Array} p1
- * @param  {Array} p2
- * @param  {Number} zoom
- * @return {Number}
- */
-function pxDist(p1, p2, zoom) {
+
+function sqDist(p1, p2) {
   const [x1, y1] = p1
   const [x2, y2] = p2
-  zoom = zoom || 0
-
-  return Math.sqrt( (x2 - x1) ** 2 + (y2 - y1) ** 2 ) * (2 ** zoom)
+  return (x2 - x1)**2 + (y2-y1)**2
 }

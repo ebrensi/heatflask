@@ -14,18 +14,12 @@ import BitSet from "../BitSet"
  *  of our data set.
  */
 
-/**
- * This is for noting anomalous large distance gaps
- * @type {Object}
- */
-const pxGaps = []
 
-export function simplify(points, n, tolerance, maxGap) {
-  pxGaps.length = 0
+export function simplify(points, n, tolerance) {
 
   const sqTolerance = tolerance * tolerance
 
-  let idxBitSet = simplifyRadialDist(points, n, sqTolerance, maxGap)
+  let idxBitSet = simplifyRadialDist(points, n, sqTolerance)
 
   const idx = idxBitSet.array(),
     subset = (i) => points(idx[i]),
@@ -33,11 +27,11 @@ export function simplify(points, n, tolerance, maxGap) {
 
   idxBitSet = idxBitSet.new_subset(idxBitSubset)
 
-  return {idxBitSet, pxGaps}
+  return idxBitSet
 }
 
 // basic distance-based simplification
-function simplifyRadialDist(points, n, sqTolerance, maxGap) {
+function simplifyRadialDist(points, n, sqTolerance) {
   const selectedIdx = new BitSet()
   let i
   let point = points(0)
@@ -49,9 +43,6 @@ function simplifyRadialDist(points, n, sqTolerance, maxGap) {
     point = points(i)
     const sqDist = getSqDist(point, prevPoint)
     if (sqDist > sqTolerance) {
-      if (sqDist > maxGap) {
-        pxGaps.push(i)  //Math.sqrt(sqDist / sqTolerance)
-      }
       selectedIdx.add(i++)
       prevPoint = point
     }

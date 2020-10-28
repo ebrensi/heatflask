@@ -34,7 +34,6 @@ heatflaskImg.src = heatflaskImgSrc
 const stravaImg = new Image()
 stravaImg.src = stravaImgSrc
 
-
 let encoder
 
 function display(canvas, title) {
@@ -125,39 +124,35 @@ function captureGIF(selection, baseCanvas, durationSecs, callback) {
     frameRate = 25,
     numFrames = durationSecs * frameRate,
     delay = 1000 / frameRate,
-
-  encoder = new GIF({
-    workers: window.navigator.hardwareConcurrency,
-    quality: 8,
-    transparent: "rgba(0,0,0,0)",
-  })
+    encoder = new GIF({
+      workers: window.navigator.hardwareConcurrency,
+      quality: 8,
+      transparent: "rgba(0,0,0,0)",
+    })
 
   encoder.on(
     "progress",
-    (p) => progressDisplay.textContent = `Encoding frames...${~~(p * 100)}%`
+    (p) => (progressDisplay.textContent = `Encoding frames...${~~(p * 100)}%`)
   )
 
-  encoder.on(
-    "finished",
-    (blob) => {
-      // window.open(URL.createObjectURL(blob));
+  encoder.on("finished", (blob) => {
+    // window.open(URL.createObjectURL(blob));
 
-      if (blob) {
-        download(blob, "output.gif", "image/gif")
-      }
-
-      progressDisplay.style.display = "none"
-
-      dotLayer._capturing = false
-
-      if (!dotLayer._paused) {
-        dotLayer.animate()
-      }
-      if (callback) {
-        callback()
-      }
+    if (blob) {
+      download(blob, "output.gif", "image/gif")
     }
-  )
+
+    progressDisplay.style.display = "none"
+
+    dotLayer._capturing = false
+
+    if (!dotLayer._paused) {
+      dotLayer.animate()
+    }
+    if (callback) {
+      callback()
+    }
+  })
 
   // console.log(`GIF output: ${numFrames.toFixed(4)} frames, delay=${delay.toFixed(4)}`);
   let h1 = heatflaskImg.height,

@@ -18,19 +18,9 @@ const _sets = {
 const _pathColorGroups = { selected: null, unselected: null }
 const _dotColorGroups = { selected: null, unselected: null }
 
-let _map,
-  _pxBounds,
-  _pxOffset,
-  _itemsArray,
-  _zoom,
-  _zf
+let _map, _pxBounds, _pxOffset, _itemsArray, _zoom, _zf
 
-export {
-  _zoom as zoom,
-  _zf as zf,
-  _canvases as canvases,
-}
-
+export { _zoom as zoom, _zf as zf, _canvases as canvases }
 
 /**
  * Project a [lat, lng] point to [x,y] in rectangular coordinates
@@ -224,14 +214,14 @@ export function onZoomChange(zoom) {
  */
 export function makeTransform(func) {
   const ox = _pxOffset.x,
-        oy = _pxOffset.y
+    oy = _pxOffset.y
   if (func) {
-    return function(x, y) {
+    return function (x, y) {
       return func(_zf * x + ox, _zf * y + oy)
     }
   }
 
-  return function(x, y) {
+  return function (x, y) {
     return [_zf * x + ox, _zf * y + oy]
   }
 }
