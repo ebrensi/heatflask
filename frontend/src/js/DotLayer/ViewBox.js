@@ -213,8 +213,8 @@ export function onZoomChange(zoom) {
 }
 
 /**
- * returns a function that transforms a given point to
- * the current screen coordinate system
+ * returns a function that transforms given x,y coordinates
+ * to the current screen coordinate system
  *
  * Since this function will be called a lot we have made an
  * attempt at optimization: if the user supplies a function
@@ -226,13 +226,13 @@ export function makeTransform(func) {
   const ox = _pxOffset.x,
         oy = _pxOffset.y
   if (func) {
-    return function(p) {
-      return func(_zf * p[0] + ox, _zf * p[1] + oy)
+    return function(x, y) {
+      return func(_zf * x + ox, _zf * y + oy)
     }
   }
 
-  return function(p) {
-    return [_zf * p[0] + ox, _zf * p[1] + oy]
+  return function(x, y) {
+    return [_zf * x + ox, _zf * y + oy]
   }
 }
 
@@ -283,10 +283,10 @@ export function drawPxBounds(ctx, pxBounds) {
     ymin = b[3],
     ymax = b[1],
     transform = makeTransform(),
-    ul = transform([xmin, ymin]),
+    ul = transform(xmin, ymin),
     x = ul[0] + 5,
     y = ul[1] + 5,
-    lr = transform([xmax, ymax]),
+    lr = transform(xmax, ymax),
     w = lr[0] - x - 10,
     h = lr[1] - y - 10
 

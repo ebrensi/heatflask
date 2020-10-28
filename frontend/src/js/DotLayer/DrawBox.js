@@ -45,12 +45,12 @@ export function rect(pad) {
     transform = ViewBox.makeTransform()
 
   // upper-left corner
-  const UL = transform([d.xmin, d.ymin])
+  const UL = transform(d.xmin, d.ymin)
   _rect[0] = ~~Math.max(UL[0] - pad, 0)
   _rect[1] = ~~Math.max(UL[1] - pad, 0)
 
   // width and height
-  const WH = transform([d.xmax, d.ymax])
+  const WH = transform(d.xmax, d.ymax)
   _rect[2] = ~~Math.min(WH[0] + pad, mapSize.x) - _rect[0]
   _rect[3] = ~~Math.min(WH[1] + pad, mapSize.y) - _rect[1]
 

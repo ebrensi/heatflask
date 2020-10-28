@@ -353,10 +353,10 @@ export class Activity {
       transformedLineTo = ViewBox.makeTransform((x, y) => ctx.lineTo(x, y))
 
     this.segMask.forEach((i) => {
-      // ctx.moveTo(...transform(points(i)))
-      // ctx.lineTo(...transform(points(i+1)))
-      transformedMoveTo(points(i))
-      transformedLineTo(points(i + 1))
+      const p1 = points(i)
+      const p2 = points(i+1)
+      transformedMoveTo(p1[0], p1[1])
+      transformedLineTo(p2[0], p2[1])
     })
   }
 
@@ -412,10 +412,9 @@ export class Activity {
     // return count
   }
 
-  *dotPointsIterFromArray(now, ds) {
+  dotPointsFromArray(now, ds, func) {
     const T = ds._period,
       start = this.ts,
-      p = [NaN, NaN],
       zoom = ViewBox.zoom,
       points = this.getPointAccessor(zoom),
       times = this.getTimesArray(zoom),
@@ -441,9 +440,7 @@ export class Activity {
           const t = j * T + timeOffset,
             dt = t - t_a
           if (dt > 0) {
-            p[0] = p_a[0] + vx * dt
-            p[1] = p_a[1] + vy * dt
-            yield p
+            func(p_a[0] + vx * dt,  p_a[1] + vy * dt)
           }
         }
       }

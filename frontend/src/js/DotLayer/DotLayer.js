@@ -21,6 +21,7 @@ const MIN_REDRAW_DELAY = 100 // milliseconds
 const TWO_PI = 2 * Math.PI
 const TARGET_FPS = 25
 const CONTINUOUS_REDRAWS = false
+const _timeOrigin = performance.timing.navigationStart
 
 const _lineCanvases = []
 const _dotCanvases = []
@@ -150,10 +151,10 @@ export const DotLayer = Layer.extend({
   animate: function () {
     _drawingDots = true
     _paused = false
-    if (_timePaused) {
-      _timeOffset = UTCnowSecs() - _timePaused
-      _timePaused = null
-    }
+    // if (_timePaused) {
+    //   _timeOffset = UTCnowSecs() - _timePaused
+    //   _timePaused = null
+    // }
     _lastCalledTime = 0
     _minDelay = ~~(1000 / TARGET_FPS + 0.5)
     _frame = Util.requestAnimFrame(_animate, this)
@@ -238,7 +239,7 @@ function addCanvasOverlay(pane) {
 }
 
 function UTCnowSecs() {
-  return performance.timing.navigationStart + performance.now()
+  return _timeOrigin + performance.now()
 }
 
 function assignEventHandlers() {
@@ -299,7 +300,7 @@ function onMove(event) {
   _dotRect = DrawBox.defaultRect()
 
   // prevent redrawing more often than necessary
-  const ts = performance.now()
+  const ts = Date.now()
 
   if (ts - _lastRedraw < MIN_REDRAW_DELAY) return
 
@@ -345,10 +346,22 @@ function redraw(event) {
 
   // const promises = []
 
+  let timeSimp = 0
+  let timeSeg = 0
+  let tpaths, timePaths, tdots, timeDots
+
   inView.forEach((i) => {
     const A = itemsArray[i]
+
+    const t0 = Date.now()
     A.simplify(zoom)
+    const tsimp = Date.now()
+    timeSimp += tsimp - t0
+
     A.makeSegMask()
+    const tseg = Date.now()
+    timeSeg += tseg - tsimp
+
     if (A.segMask.isEmpty()) {
       ViewBox.remove(itemsArray.indexOf(A))
     }
@@ -372,7 +385,12 @@ function redraw(event) {
   }
 
   if (_options.showPaths) {
+
+    const t1 = Date.now()
     drawPaths()
+    tpaths = Date.now()
+    timePaths = tpaths - t1
+
   } else {
     _lineCanvases[0].style.display = "none"
   }
@@ -380,11 +398,23 @@ function redraw(event) {
   if (oldzoom != zoom) {
     updateDotSettings()
   } else if (_paused) {
+
     drawDots()
+    tdots = Date.now()
+    timeDots = tdots - tpaths
   }
 
+  const tot = timeDots + timeSimp + timeSeg + timePaths
+  console.log(`simplify: ${timeSimp}\nmask: ${timeSeg}\npaths: ${timePaths}\ndots: ${timeDots}\ntot: ${tot}`)
   console.timeEnd(timerLabel)
 
+  if (_options.debug) {
+    const dctx = _debugCanvas.getContext("2d")
+    debugCtxReset()
+    DrawBox.draw(dctx)
+    dctx.strokeStyle = "rgb(255,0,255,1)"
+    ViewBox.drawPxBounds(dctx)
+  }
   // })
 }
 
@@ -415,7 +445,7 @@ function drawPaths() {
 
   const alphaScale = _dotSettings.alphaScale
 
-  console.time("drawPaths")
+
   const ctx = _lineCanvases[1].getContext("2d")
 
   if (selected) {
@@ -434,14 +464,6 @@ function drawPaths() {
     drawPathsByColor(ctx, unselected, options.normal.pathColor)
   }
 
-  if (options.debug) {
-    const dctx = _debugCanvas.getContext("2d")
-    debugCtxReset()
-    DrawBox.draw(dctx)
-    dctx.strokeStyle = "rgb(255,0,255,1)"
-    ViewBox.drawPxBounds(dctx)
-  }
-
   // swap line canvases
   const temp = _lineCanvases[0]
   _lineCanvases[0] = _lineCanvases[1]
@@ -450,8 +472,6 @@ function drawPaths() {
   _lineCanvases[0].style.display = ""
   temp.style.display = "none"
   DrawBox.clear(temp.getContext("2d"), DrawBox.defaultRect())
-
-  console.timeEnd("drawPaths")
 }
 
 /*
@@ -487,11 +507,7 @@ function drawDotsByColor(now, colorGroups, ctx, drawDot) {
     group.forEach((i) => {
       const A = _itemsArray[i]
       // const dotLocs = A.dotPointsIterFromSegs(now);
-      const dotLocs = A.dotPointsIterFromArray(now, getDotSettings())
-      for (const p of dotLocs) {
-        drawDot(p)
-        count++
-      }
+      A.dotPointsFromArray(now, _dotSettings, drawDot)
     })
 
     ctx.fill()
@@ -614,13 +630,16 @@ function updateDotSettings(settings, shadowSettings) {
 /*
  * Animation
  */
-function _animate() {
+function _animate(ts) {
   if (!_frame || !_ready || !_drawingDots) return
 
   _frame = null
 
-  let ts = UTCnowSecs(),
-    now = ts - _timeOffset
+  const now = ts + _timeOrigin
+
+  // let ts = UTCnowSecs(),
+  //   now = ts - _timeOffset
+
 
   if (_paused || _capturing) {
     // Ths is so we can start where we left off when we resume
@@ -631,17 +650,17 @@ function _animate() {
   if (now - _lastCalledTime > _minDelay) {
     _lastCalledTime = now
 
-    const t0 = performance.now()
+    // const t0 = Date.now()
 
     const count = drawDots(now)
 
-    if (fps_display) {
-      const elapsed = (performance.now() - t0).toFixed(0)
-      fps_display.update(
-        now,
-        `z=${ViewBox.zoom}, dt=${elapsed} ms, n=${count}`
-      )
-    }
+    // if (fps_display) {
+    //   const elapsed = (Date.now() - t0).toFixed(0)
+    //   fps_display.update(
+    //     now,
+    //     `z=${ViewBox.zoom}, dt=${elapsed} ms, n=${count}`
+    //   )
+    // }
   }
 
   _frame = Util.requestAnimFrame(_animate, this)
