@@ -31,8 +31,8 @@ TileLayer.mergeOptions({
   cacheMaxAge: 24 * 3600 * 1000,
   minNativeZoom: 0,
   dbName: "tile-storage",
-  updateInterval: 0,
-  updateWhenIdle: false
+  updateInterval: 200,
+  updateWhenIdle: false,
 })
 
 TileLayer.include({

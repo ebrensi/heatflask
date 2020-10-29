@@ -3,7 +3,6 @@
  *  Here we initialize the DOM/user interface
  */
 
-
 import { AUTHORIZE_URL } from "./Env.js"
 
 import app from "./Model.js"
@@ -14,7 +13,7 @@ import { getBounds, map } from "./MapAPI.js"
 import { dotLayer } from "./DotLayerAPI.js"
 // import { captureCycle, abortCapture } from "./DotLayer/Export.js"
 
-import "./DotControls.js";
+import "./DotControls.js"
 
 import paypalButtonHTML from "bundle-text:../html/paypal-button.html"
 import infoTabHTML from "bundle-text:../html/main-info.html"
@@ -189,9 +188,6 @@ function renderFromQuery() {
     updateLayers()
   })
 }
-
-
-
 
 /* Table Stuff */
 table.events.addListener("selection", (e) => {

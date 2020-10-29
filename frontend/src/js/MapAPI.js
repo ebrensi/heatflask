@@ -95,7 +95,7 @@ for (const [name, id] of Object.entries(mapBox_layer_names)) {
   baselayers[name] = tileLayer.provider("MapBox", {
     id: id,
     accessToken: MAPBOX_ACCESS_TOKEN,
-    useOnlyCache: OFFLINE
+    useOnlyCache: OFFLINE,
   })
 }
 
@@ -112,7 +112,7 @@ const providers_names = [
 export const defaultBaselayerName = "OpenStreetMap.Mapnik"
 
 for (const name of providers_names) {
-  baselayers[name] = tileLayer.provider(name, {useOnlyCache: OFFLINE})
+  baselayers[name] = tileLayer.provider(name, { useOnlyCache: OFFLINE })
 }
 
 /*

@@ -14,9 +14,7 @@ import BitSet from "../BitSet"
  *  of our data set.
  */
 
-
 export function simplify(points, n, tolerance) {
-
   const sqTolerance = tolerance * tolerance
 
   let idxBitSet = simplifyRadialDist(points, n, sqTolerance)

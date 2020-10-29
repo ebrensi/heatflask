@@ -51,5 +51,5 @@ export const dotSettings = {
   C1: 1000000.0,
   C2: 200.0,
   dotScale: 2.0,
-  alphaScale: 0.9
+  alphaScale: 0.9,
 }

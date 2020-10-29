@@ -21,7 +21,7 @@ export let OFFLINE
  * }
  * will be stripped out of a production build by terser's dead-code filter
  */
-export const DEV_BUNDLE = process.env.NODE_ENV !== 'production'
+export const DEV_BUNDLE = process.env.NODE_ENV !== "production"
 
 const argstring = document.querySelector("#runtime-arguments").innerText
 

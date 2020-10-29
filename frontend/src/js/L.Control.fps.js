@@ -3,7 +3,6 @@ import * as L from "leaflet"
 let container, lastCalledTime
 
 L.Control.fps = L.Control.extend({
-
   options: {
     position: "topright",
   },
@@ -15,7 +14,7 @@ L.Control.fps = L.Control.extend({
     container.style.backgroundColor = "white"
     update(0)
     return container
-  }
+  },
 })
 
 function update(now, msg) {

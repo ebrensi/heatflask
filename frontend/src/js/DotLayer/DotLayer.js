@@ -347,7 +347,10 @@ function redraw(event) {
 
   let timeSimp = 0
   let timeSeg = 0
-  let tpaths, timePaths, tdots, timeDots = 0
+  let tpaths,
+    timePaths,
+    tdots,
+    timeDots = 0
 
   inView.forEach((i) => {
     const A = itemsArray[i]

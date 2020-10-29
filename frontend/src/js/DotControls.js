@@ -42,7 +42,6 @@ L.easyButton({
   states: vParams.paused ? button_states.reverse() : button_states,
 }).addTo(map)
 
-
 /*
  * Sliders and checkboxes on dot controls tab
  */
@@ -54,7 +53,7 @@ if (vParams.shadows) {
 }
 
 vParams.onChange("shadows", (shadows) => {
-  update(null, {enabled: shadows})
+  update(null, { enabled: shadows })
 })
 
 if (vParams.paths) {
@@ -67,15 +66,14 @@ vParams.onChange("paths", (paths) => {
   options.showPaths = paths
 })
 
-
 const SPEED_SCALE = 5.0,
   SEP_SCALE = { m: 0.15, b: 15.0 }
 
 const settingsLinks = {
-  "alphaScale": "alpha",
-  "dotScale": "sz",
-  "C1": "c1",
-  "C2": "c2"
+  alphaScale: "alpha",
+  dotScale: "sz",
+  C1: "c1",
+  C2: "c2",
 }
 
 for (const [dsKey, vpKey] of Object.entries(settingsLinks)) {
@@ -86,11 +84,9 @@ for (const [dsKey, vpKey] of Object.entries(settingsLinks)) {
   }
 
   vParams.onChange(vpKey, (newVal) => {
-    update({[dsKey]: newVal})
+    update({ [dsKey]: newVal })
   })
 }
-
-
 
 /*
 // Dom.set("#sepConst", (Math.log2(C1) - SEP_SCALE.b) / SEP_SCALE.m );
@@ -150,4 +146,3 @@ for (const knob of Object.values(knobs)) {
 }
 
 */
-

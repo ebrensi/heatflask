@@ -1,7 +1,7 @@
 /*
  * From "Making annoying rainbows in javascript"
  * A tutorial by jim bumgardner
-*/
+ */
 function makeColorGradient(
   freq1,
   freq2,
