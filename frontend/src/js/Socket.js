@@ -2,7 +2,7 @@
  * Here we define the Websocket interface with the backend server
  */
 
-import { BEACON_HANDLER_URL, WEBSOCKET_URL, CLIENT_ID } from "./Init.js"
+import { BEACON_HANDLER_URL, WEBSOCKET_URL, CLIENT_ID } from "./Env.js"
 
 import PersistentWebSocket from "pws"
 import { decode } from "@msgpack/msgpack"

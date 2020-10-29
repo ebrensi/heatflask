@@ -4,6 +4,8 @@
  * Efrem Rensi 2020
  */
 
+import { MAPBOX_ACCESS_TOKEN, OFFLINE } from "./Env.js"
+
 import * as L from "leaflet"
 import Geohash from "latlon-geohash"
 
@@ -16,8 +18,6 @@ import app from "./Model.js"
 
 import strava_logo from "url:../images/pbs4.png"
 import heatflask_logo from "url:../images/logo.png"
-
-import { MAPBOX_ACCESS_TOKEN, OFFLINE } from "./Init.js"
 
 let center, zoom
 

@@ -1,8 +1,8 @@
-/** DrawBox represents the rectangular region that bounds
+/*
+ *  DrawBox represents the rectangular region that bounds
  *   all of our drawing on the canvas. We use it primarily
  *   to minimize how much we need to clear between frames
  *   of the animation.
- *   @module  DotLayer/DrawBox
  */
 
 import * as ViewBox from "./ViewBox.js"

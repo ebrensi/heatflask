@@ -1,12 +1,11 @@
 /*
- *  Init.js  -- runtime arguments that come from the backend server are
- *   embedded in the html and are made available to us as a variable in the window context
+ *  Env.js  -- Here we define a set of runtime environment variables that may be
+ *  of use to any other module.  Some of them are arguments that come from the
+ *   backend server, embedded in main.html
  */
 
 import { ws_prefix } from "./appUtil.js"
-
-import { noop } from "./appUtil.js"
-import load_ga_object from "./google-analytics.js"
+// import load_ga_object from "./google-analytics.js"
 
 export let CLIENT_ID
 export let DEVELOPMENT
@@ -14,6 +13,15 @@ export let FLASH_MESSAGES
 export let APP_NAME
 export let CURRENT_USER
 export let OFFLINE
+
+/*
+ * any code contained in a block
+ * if (DEV_BUNDLE) {
+ *   ...code...
+ * }
+ * will be stripped out of a production build by terser's dead-code filter
+ */
+export const DEV_BUNDLE = process.env.NODE_ENV !== 'production'
 
 const argstring = document.querySelector("#runtime-arguments").innerText
 

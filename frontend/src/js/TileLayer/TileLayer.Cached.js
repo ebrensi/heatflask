@@ -32,6 +32,7 @@ TileLayer.mergeOptions({
   minNativeZoom: 0,
   dbName: "tile-storage",
   updateInterval: 0,
+  updateWhenIdle: false
 })
 
 TileLayer.include({

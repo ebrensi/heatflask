@@ -53,7 +53,7 @@ export const DotLayer = Layer.extend({
     setOptions(this, options)
     _options = this.options
     _paused = _options.startPaused
-    _timePaused = UTCnowSecs()
+    if (_paused) this.pause()
     // WorkerPool.initialize(_options.numWorkers)
   },
 
@@ -166,6 +166,7 @@ export const DotLayer = Layer.extend({
   // --------------------------------------------------------------------
   pause: function () {
     _paused = true
+    _timePaused = Date.now()
   },
 
   // -------------------------------------------------------------------
@@ -238,10 +239,6 @@ function addCanvasOverlay(pane) {
   _map._panes[pane].appendChild(canvas)
   ViewBox.canvases.push(canvas)
   return canvas
-}
-
-function UTCnowSecs() {
-  return _timeOrigin + performance.now()
 }
 
 function assignEventHandlers() {
@@ -350,7 +347,7 @@ function redraw(event) {
 
   let timeSimp = 0
   let timeSeg = 0
-  let tpaths, timePaths, tdots, timeDots
+  let tpaths, timePaths, tdots, timeDots = 0
 
   inView.forEach((i) => {
     const A = itemsArray[i]
@@ -517,7 +514,7 @@ function drawDotsByColor(now, colorGroups, ctx, drawDot) {
 function drawDots(now) {
   if (!_ready) return
 
-  if (!now) now = _timePaused || UTCnowSecs()
+  if (!now) now = _timePaused || Date.now()
 
   // We write to the currently hidden canvas
   const ctx = _dotCanvases[1].getContext("2d")

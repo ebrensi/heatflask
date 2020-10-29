@@ -71,14 +71,88 @@ export class Store {
   }
 }
 
-export function get(key, store) {
-  let req
+
+//// Old get function
+// export function get(key, store) {
+//   let req
+//   return store
+//     ._withIDBStore("readonly", (store) => {
+//       req = store.get(key)
+//     })
+//     .then(() => {
+//       return req.result
+//     })
+// }
+
+const buffers = new Map
+const counters = new Map
+
+function doTransaction(store) {
+  let getCount, putCount = 0
+  const t0 = Date.now()
   return store
-    ._withIDBStore("readonly", (store) => {
-      req = store.get(key)
+    ._withIDBStore("readonly", (objectStore) => {
+      // We do one transaction involving {count} operations
+      const queries = buffers.get(store)
+      for (const [key, {op, value, resolve, reject}] of Object.entries(queries)) {
+        if (op === "get") {
+          const req = objectStore.get(key)
+          req.onsuccess = (e) => resolve(e.target.result)
+          req.onerror = (e)=> reject(e)
+          getCount++
+        } else {
+          // We can assume the op is "put"
+          objectStore.put(key, value)
+          putCount++
+        }
+      }
+      buffers.delete(store)
+      counters.delete(store)
     })
-    .then(() => req.result)
+    .then(() => console.log(`Got ${getCount}, Set ${putCount} tiles in ${Date.now()-t0}ms`))
 }
+
+
+export function get(key, store) {
+  return new Promise((resolve, reject) => {
+    if (!buffers.has(store)) {
+      buffers.set(store, {})
+      counters.set(store, {count: 0})
+    }
+    const op = "get"
+    const buf = buffers.get(store)
+    buf[key] = {op, resolve, reject}
+    const myNum = counters.get(store).count++
+    setTimeout(() => {
+      // if no more get queries have been added to the buffer for 100ms,
+      // go ahead and do the batch indexedDB query
+      if (counters.get(store).count === myNum + 1) {
+        doTransaction(store)
+      }
+    }, 30)
+  })
+}
+
+export function newSet(key, value, store) {
+  return new Promise((resolve, reject) => {
+    if (!buffers.has(store)) {
+      buffers.set(store, {})
+      counters.set(store, {count: 0})
+    }
+    const op = "set"
+    const buf = buffers.get(store)
+    buf[key] = {op, value, resolve, reject}
+    const myNum = counters.get(store).count++
+    setTimeout(() => {
+      // if no more get queries have been added to the buffer for 100ms,
+      // go ahead and do the batch indexedDB query
+      if (counters.get(store).count === myNum + 1) {
+        doTransaction(store)
+      }
+    }, 30)
+  })
+}
+
 
 export function set(key, value, store) {
   return store._withIDBStore("readwrite", (store) => {

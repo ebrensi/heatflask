@@ -4,7 +4,7 @@
  */
 
 
-import { AUTHORIZE_URL } from "./Init.js"
+import { AUTHORIZE_URL } from "./Env.js"
 
 import app from "./Model.js"
 import "./URL.js"
@@ -29,6 +29,8 @@ import * as table from "./Table.js"
 
   right now we are only doing the single target-user UI.
 */
+
+console.log("process: ", process.env)
 
 // pause animation when window/tab is not visible
 document.onvisibilitychange = function (e) {

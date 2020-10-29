@@ -39,7 +39,7 @@
     "> 0.75%, not ie 11, not op_mini all"
   ],
   "devDependencies": {
-    "documentation": "^13.0.2",
+    "documentation": "^13.1.0",
     "eslint": "^7.12.0",
     "eslint-config-prettier": "^6.14.0",
     "parcel": "next",
