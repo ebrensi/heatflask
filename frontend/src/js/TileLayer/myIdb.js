@@ -1,3 +1,6 @@
+const BUFFER_TIMEOUT = 60
+const MAX_TRANSACTION_SIZE = 200
+
 export class Store {
   constructor(dbName, storeName, keyPath) {
     this.storeName = storeName
@@ -72,98 +75,124 @@ export class Store {
 }
 
 
-//// Old get function
-// export function get(key, store) {
-//   let req
-//   return store
-//     ._withIDBStore("readonly", (store) => {
-//       req = store.get(key)
-//     })
-//     .then(() => {
-//       return req.result
-//     })
-// }
+const pendingTransactions = new Map
 
-const buffers = new Map
-const counters = new Map
-
-function doTransaction(store) {
-  let getCount, putCount = 0
-  const t0 = Date.now()
+function doBulkGet(store) {
+  // const t0 = Date.now()
+  // let count = 0
   return store
-    ._withIDBStore("readonly", (objectStore) => {
-      // We do one transaction involving {count} operations
-      const queries = buffers.get(store)
-      for (const [key, {op, value, resolve, reject}] of Object.entries(queries)) {
-        if (op === "get") {
-          const req = objectStore.get(key)
+    ._withIDBStore("readonly", (thisTransactionObjectStore) => {
+      // We do one transaction involving queries.count operations
+      const queries = pendingTransactions.get(store)
+      if (!queries || !queries.count) return
+
+      const getQueries = queries.get
+
+      // clear this set of pending transactions so no one will add to it
+      queries.get = {}
+      queries.count.get = 0
+
+      // make all the get requests
+      for (const [key, {resolve, reject}] of Object.entries(getQueries)) {
+          const req = thisTransactionObjectStore.get(key)
           req.onsuccess = (e) => resolve(e.target.result)
-          req.onerror = (e)=> reject(e)
-          getCount++
-        } else {
-          // We can assume the op is "put"
-          objectStore.put(key, value)
-          putCount++
-        }
+          req.onerror = (e) => reject(e)
+          // count++
       }
-      buffers.delete(store)
-      counters.delete(store)
     })
-    .then(() => console.log(`Got ${getCount}, Set ${putCount} tiles in ${Date.now()-t0}ms`))
+    .then(() => {
+      // console.log(`${store.storeName}: got ${count} in ${Date.now()-t0}ms`)
+    })
+}
+
+
+function doBulkPutDel(store) {
+  // const t0 = Date.now()
+  // let delCount = 0
+  // let putCount = 0
+
+  return store
+    ._withIDBStore("readwrite", (thisTransactionObjectStore) => {
+      // We do one transaction involving queries.count operations
+      const queries = pendingTransactions.get(store)
+      if (!queries || !queries.count) return
+
+      const putQueries = queries.put
+      const delQueries = queries.del
+
+      // delete this set of pending transactions so no one will add to them
+      queries.put = {}
+      queries.del = {}
+      queries.count.put = 0
+      queries.count.del = 0
+
+
+      // make all put and del requests
+      for (const [key, {value, resolve, reject}] of Object.entries(putQueries)) {
+        const req = thisTransactionObjectStore.put(value, key)
+        req.onsuccess = () => resolve()
+        req.onerror = (e) => reject(e)
+        // putCount++
+      }
+
+      for (const [key, {resolve, reject}] of Object.entries(delQueries)) {
+        const req = thisTransactionObjectStore.delete(key)
+        req.onsuccess = () => resolve()
+        req.onerror = (e) => reject(e)
+        // delCount++
+      }
+    })
+    .then(() => {
+      // console.log(`${store.storeName}: put ${putCount}, del ${delCount} in ${Date.now()-t0}ms`)
+    })
+}
+
+// Rather than opening a new transaction for each get operation, we
+// store the operations into a buffer, and perform a batch operation in
+// one transaction when nothing has been added to the buffer for
+function addOp(store, op, key, value) {
+  return new Promise((resolve, reject) => {
+    if (!pendingTransactions.has(store)) {
+      pendingTransactions.set(store,
+        {get: {}, put: {}, del: {}, count: {get: 0, put: 0, del: 0}})
+    }
+    const queries = pendingTransactions.get(store)
+    queries[op][key] = {value, resolve, reject}
+    const myNum = queries.count[op]++
+
+    /*
+     * Here we set a short timeout to allow for more ops to be added.
+     * when we come back, if nothing has been added then we go ahead and
+     * perform a bulk transaction.
+     */
+    setTimeout(() => {
+      if (op === "get") {
+        const getCount = queries.count.get
+        if (getCount > MAX_TRANSACTION_SIZE || getCount === myNum + 1) {
+          doBulkGet(store)
+        }
+        return
+      }
+
+      const putDelCount = queries.count.put + queries.count.del
+      if (putDelCount > MAX_TRANSACTION_SIZE || queries.count[op] === myNum + 1) {
+        doBulkPutDel(store)
+      }
+    }, BUFFER_TIMEOUT)
+  })
 }
 
 
 export function get(key, store) {
-  return new Promise((resolve, reject) => {
-    if (!buffers.has(store)) {
-      buffers.set(store, {})
-      counters.set(store, {count: 0})
-    }
-    const op = "get"
-    const buf = buffers.get(store)
-    buf[key] = {op, resolve, reject}
-    const myNum = counters.get(store).count++
-    setTimeout(() => {
-      // if no more get queries have been added to the buffer for 100ms,
-      // go ahead and do the batch indexedDB query
-      if (counters.get(store).count === myNum + 1) {
-        doTransaction(store)
-      }
-    }, 30)
-  })
+  return addOp(store, "get", key)
 }
-
-export function newSet(key, value, store) {
-  return new Promise((resolve, reject) => {
-    if (!buffers.has(store)) {
-      buffers.set(store, {})
-      counters.set(store, {count: 0})
-    }
-    const op = "set"
-    const buf = buffers.get(store)
-    buf[key] = {op, value, resolve, reject}
-    const myNum = counters.get(store).count++
-    setTimeout(() => {
-      // if no more get queries have been added to the buffer for 100ms,
-      // go ahead and do the batch indexedDB query
-      if (counters.get(store).count === myNum + 1) {
-        doTransaction(store)
-      }
-    }, 30)
-  })
-}
-
 
 export function set(key, value, store) {
-  return store._withIDBStore("readwrite", (store) => {
-    store.put(value, key)
-  })
+  return addOp(store, "put", key, value)
 }
 
 export function del(key, store) {
-  return store._withIDBStore("readwrite", (store) => {
-    store.delete(key)
-  })
+  return addOp(store, "del", key)
 }
 
 export function clear(store) {
