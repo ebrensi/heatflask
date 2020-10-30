@@ -15,7 +15,7 @@ import {
   dotSettings as _dotSettings,
 } from "./Defaults.js"
 
-import { items as _items } from "../Model.js"
+import { vParams, items as _items } from "../Model.js"
 
 /* In order to prevent path redraws from happening too often
  * and hogging up CPU cycles we set a minimum delay between redraws
@@ -33,7 +33,6 @@ let _map, _options, _itemsArray, _itemIds, _colorPalette
 let _timePaused, _ready, _paused
 let _drawingDots
 let _gifPatch
-
 let _dotRect
 let _debugCanvas
 let _lastRedraw = 0
@@ -141,6 +140,7 @@ export const DotLayer = Layer.extend({
 
     setDotColors()
     ViewBox.setItemsArray(_itemsArray)
+    ViewBox.calibrate()
     ViewBox.update()
     updateDotSettings()
 
@@ -249,9 +249,11 @@ function assignEventHandlers() {
 
   const events = {
     // movestart: loggit,
-    moveend: redraw,
+    move: onMove2,
+    moveend: onMoveEnd,
     // zoomstart: loggit,
     // zoom: loggit,
+    zoom: _onZoom,
     // zoomend: loggit,
     // viewreset: loggit,
     resize: onResize,
@@ -261,12 +263,63 @@ function assignEventHandlers() {
     events.move = onMove
   }
 
-  if (_map.options.zoomAnimation && Browser.any3d) {
-    events.zoomanim = animateZoom
-  }
+  // if (_map.options.zoomAnimation && Browser.any3d) {
+  //   events.zoomanim = animateZoom
+  // }
 
   return events
 }
+
+function onMove2(e) {
+  if (!ViewBox.zoom) return
+  const level = vParams.baselayer._level
+  const layerTransform = level.el.style.transform
+  const canvasTransform = _dotCanvases[0].style.transform
+  console.log(`layer: ${layerTransform}\ncanvas: ${canvasTransform}`)
+}
+
+
+function _onZoom(e) {
+  if (!_map || !ViewBox.zoom) return
+
+  if (e.pinch || e.flyTo) {
+    const newZoom = _map.getZoom()
+    const newCenter = _map.getCenter()
+    ViewBox.CSStransformTo(newCenter, newZoom)
+  }
+}
+
+/*
+ * This gets called continuously as the user pans or zooms
+ */
+function onMove(event) {
+  _dotRect = DrawBox.defaultRect()
+
+  // prevent redrawing more often than necessary
+  const ts = Date.now()
+
+  if (ts - _lastRedraw < MIN_REDRAW_DELAY) return
+
+  _lastRedraw = ts
+  redraw(event)
+}
+
+/*
+ * This gets called after a pan or zoom is done.
+ * Leaflet moves the pixel origin so we need to reset the CSS transform
+ */
+function onMoveEnd(event) {
+
+  ViewBox.calibrate()
+
+  console.log(`calibrated`)
+  const layerTransform = vParams.baselayer._level.el.style.transform
+  const canvasTransform = _dotCanvases[0].style.transform
+  console.log(`layer: ${layerTransform}, canvas: ${canvasTransform}`)
+
+  redraw(event)
+}
+
 
 function debugCtxReset() {
   if (!_options.debug) return
@@ -293,18 +346,6 @@ function dotCtxReset() {
       ctx.shadowBlur = 0
     }
   }
-}
-
-function onMove(event) {
-  _dotRect = DrawBox.defaultRect()
-
-  // prevent redrawing more often than necessary
-  const ts = Date.now()
-
-  if (ts - _lastRedraw < MIN_REDRAW_DELAY) return
-
-  _lastRedraw = ts
-  redraw(event)
 }
 
 function onResize(resizeEvent) {
@@ -639,19 +680,4 @@ function _animate(ts) {
   _frame = Util.requestAnimFrame(_animate, this)
 }
 
-function animateZoom(e) {
-  const z = e.zoom,
-    scale = _map.getZoomScale(z)
 
-  // -- different calc of offset in leaflet 1.0.0 and 0.0.7 thanks for 1.0.0-rc2 calc @jduggan1
-  const offset = Layer
-    ? _map._latLngToNewLayerPoint(_map.getBounds().getNorthWest(), z, e.center)
-    : _map
-        ._getCenterOffset(e.center)
-        ._multiplyBy(-scale)
-        .subtract(_map._getMapPanePos())
-
-  const setTransform = DomUtil.setTransform
-  setTransform(_dotCanvases[0], offset, scale)
-  setTransform(_lineCanvases[0], offset, scale)
-}

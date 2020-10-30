@@ -5,7 +5,7 @@
  */
 
 export const options = {
-  debug: true,
+  debug: false,
   numWorkers: 0,
   startPaused: false,
   showPaths: true,

@@ -76,7 +76,8 @@ function updateURL() {
   if (!vParams.autozoom) vArgs.geohash = vParams.geohash
 
   // include baselayer name if it isn't the default
-  if (vParams.baselayer !== defaultBaselayerName) vArgs.map = vParams.baselayer
+  const blName = vParams.baselayer.name
+  if (blName !== defaultBaselayerName) vArgs.map = blName
 
   // include boolean options as 1 or 0 if they differ from the defaults
   for (const param of ["paused", "shadows", "paths"]) {

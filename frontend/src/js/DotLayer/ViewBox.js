@@ -18,13 +18,24 @@ const _sets = {
 const _pathColorGroups = { selected: null, unselected: null }
 const _dotColorGroups = { selected: null, unselected: null }
 
-let _map, _pxBounds, _pxOffset, _itemsArray, _zoom, _zf
+// private module-scope variable
+let _map, _pxBounds, _itemsArray, _baseTransform
 
-export { _zoom as zoom, _zf as zf, _canvases as canvases }
+// exported module-scope variables
+let _pxOrigin, _pxOffset, _mapPanePos, _zoom, _center, _zf
+
+export {
+  _canvases as canvases,
+  _pxOrigin as pxOrigin,
+  _pxOffset as pxOffset,
+  _center as center,
+  _zoom as zoom,
+  _zf as zf,
+}
 
 /**
  * Project a [lat, lng] point to [x,y] in rectangular coordinates
- * at baseline scale (zoom=0).  From there we only need to scale and
+ * at baseline scale (_zoom=0).  From there we only need to scale and
  * shift points for a given zoom level and map position.
  *
  * This function operates in-place! It modifies whatever you pass into it.
@@ -66,53 +77,83 @@ export function setMap(map) {
   _map = map
 }
 
-export function tol(zoom) {
-  return zoom ? 1 / 2 ** zoom : 1 / _zf
+export function tol(_zoom) {
+  return _zoom ? 1 / 2 ** _zoom : 1 / _zf
 }
 
 export function inView() {
   return _sets.items.current
 }
 
-export function updateView() {
-  const sets = _sets,
-    allItems = _itemsArray,
-    inView = sets.items
 
+/*
+ * Determine boundaries of the current view and which items are in it
+ *
+ * This can be done only on move-end, or it can be continuously as the user
+ * pans and zooms around but we want to avoind calling it too often
+ * as that might be too much computation
+ */
+export function update() {
+
+    const z = _map.getZoom()
+    const latLngMapBounds = _map.getBounds()
+
+    if (z !== _zoom) {
+      _zoom = z
+      _zf = 2**z
+    }
+
+  _center = _map.getCenter()
+  _pxBounds = latLng2pxBounds(latLngMapBounds)
+
+  const inView = _sets.items
   const temp = inView.current
   inView.current = inView.last.clear()
   inView.last = temp
 
   const currentInView = inView.current
   // update which items are in the current view
-  for (let i = 0, len = allItems.length; i < len; i++) {
-    if (overlaps(allItems[i].pxBounds)) currentInView.add(i)
+  for (let i = 0, len = _itemsArray.length; i < len; i++) {
+    if (overlaps(_itemsArray[i].pxBounds)) {
+      currentInView.add(i)
+    }
   }
 
   // update items that have changed since last time
   const changed = inView.last.change(inView.current)
   changed.forEach((i) => {
-    const A = allItems[i],
-      emph = !!A.selected
-    let pgroup = sets.colorGroups.path,
-      dgroup = sets.colorGroups.dot
+    const A = _itemsArray[i],
+      selected = !!A.selected
 
-    if (!(emph in pgroup)) pgroup[emph] = {}
-    pgroup = pgroup[emph]
+    let pgroup = _sets.colorGroups.path,
+      dgroup = _sets.colorGroups.dot
 
-    if (!(emph in dgroup)) dgroup[emph] = {}
-    dgroup = dgroup[emph]
+    if (!(selected in pgroup)) {
+      pgroup[selected] = {}
+    }
+    pgroup = pgroup[selected]
+
+    if (!(selected in dgroup)) {
+      dgroup[selected] = {}
+    }
+    dgroup = dgroup[selected]
 
     // update pathColorGroup
-    if (!(A.pathColor in pgroup)) pgroup[A.pathColor] = new BitSet().add(i)
-    else pgroup[A.pathColor].flip(i)
+    if (!(A.pathColor in pgroup)) {
+      pgroup[A.pathColor] = new BitSet().add(i)
+    } else {
+      pgroup[A.pathColor].flip(i)
+    }
 
     // update dotColorGroup
-    if (!(A.dotColor in dgroup)) dgroup[A.dotColor] = new BitSet().add(i)
-    else dgroup[A.dotColor].flip(i)
+    if (!(A.dotColor in dgroup)) {
+      dgroup[A.dotColor] = new BitSet().add(i)
+    } else {
+      dgroup[A.dotColor].flip(i)
+    }
   })
 
-  const groups = sets.colorGroups
+  const groups = _sets.colorGroups
   for (const type in groups) {
     // path or dot
     const typeGroup = groups[type]
@@ -120,12 +161,19 @@ export function updateView() {
       const colorGroup = typeGroup[emph]
       let empty = true
       for (const color in colorGroup) {
-        if (colorGroup[color].isEmpty()) delete colorGroup[color]
-        else if (empty) empty = false
+        if (colorGroup[color].isEmpty()) {
+          delete colorGroup[color]
+        } else if (empty) {
+          empty = false
+        }
       }
-      if (empty) delete typeGroup[emph]
+      if (empty) {
+        delete typeGroup[emph]
+      }
     }
   }
+
+  // TODO: make segmasks here while we're at it
 
   // return the current state of inclusion
   return currentInView
@@ -166,41 +214,42 @@ export function updateSelect(i) {
   }
 }
 
+
+function setCSStransform(offset, scale) {
+  for (let i = 0; i < _canvases.length; i++) {
+    DomUtil.setTransform(_canvases[i], offset, scale)
+  }
+}
+
+/*
+ * apply an additional CSS transform to another center and zoom
+ * This is used for pinch pan and zoom on mobile devices
+ */
+export function CSStransformTo(newCenter, newZoom) {
+  const newPxOrigin = _map._getNewPixelOrigin(newCenter, newZoom)
+  const scale = _map.getZoomScale(newZoom, _zoom)
+  const transform = _pxOrigin.multiplyBy(scale).subtract(newPxOrigin)
+  // setCSStransform(transform.round(), scale)
+  setCSStransform(_baseTransform.add(transform).round(), scale)
+}
+
 export function calibrate() {
-  // calibrate screen coordinates
-  const m = _map,
-    topLeft = m.containerPointToLayerPoint([0, 0]),
-    setPosition = DomUtil.setPosition,
-    canvases = _canvases
+  /* this needs to be called on move-end
+   *
+   * It sets the baseline CSS transformation for the dot and line canvases
+   */
+  _baseTransform = _map.containerPointToLayerPoint([0, 0])
 
-  for (let i = 0, len = canvases.length; i < len; i++)
-    setPosition(canvases[i], topLeft)
+  _pxOrigin = _map.getPixelOrigin()
+  _mapPanePos = _map._getMapPanePos()
 
-  const pxOrigin = m.getPixelOrigin(),
-    mapPanePos = m._getMapPanePos()
+  _pxOffset = _mapPanePos.subtract(_pxOrigin)
 
-  _pxOffset = mapPanePos.subtract(pxOrigin)
+  console.log(`base: ${_baseTransform}, offset: ${_pxOffset}`)
+
+  setCSStransform(_baseTransform.round())
 }
 
-export function update(cal = true) {
-  const zoom = _map.getZoom(),
-    latLngMapBounds = _map.getBounds()
-
-  const zoomChange = zoom != _zoom
-  // stuff that (only) needs to be done on zoom change
-  if (zoomChange) onZoomChange(zoom)
-
-  if (cal) calibrate()
-
-  _pxBounds = latLng2pxBounds(latLngMapBounds)
-
-  return updateView()
-}
-
-export function onZoomChange(zoom) {
-  _zoom = zoom
-  _zf = 2 ** zoom
-}
 
 /**
  * returns a function that transforms given x,y coordinates

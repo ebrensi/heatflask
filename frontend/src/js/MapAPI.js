@@ -148,11 +148,13 @@ for (const name in baselayers) {
   }
 }
 
-app.vParams.baselayer = blName
-baselayers[blName].addTo(map)
+// Now vParams.baselayer becomes the actual baselayer, not just the name
+const currentBaselayer = baselayers[blName]
+app.vParams.baselayer = currentBaselayer
+currentBaselayer.addTo(map)
 
 map.on("baselayerchange", (e) => {
-  app.vParams.baselayer = e.layer.name
+  app.vParams.baselayer = e.layer
 })
 
 // Add baselayer selection control to map
