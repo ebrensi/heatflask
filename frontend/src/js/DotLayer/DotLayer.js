@@ -249,11 +249,11 @@ function assignEventHandlers() {
 
   const events = {
     // movestart: loggit,
-    move: onMove2,
+    // move: onMove2,
     moveend: onMoveEnd,
     // zoomstart: loggit,
     // zoom: loggit,
-    zoom: _onZoom,
+    // zoom: _onZoom,
     // zoomend: loggit,
     // viewreset: loggit,
     resize: onResize,
@@ -278,14 +278,29 @@ function onMove2(e) {
   console.log(`layer: ${layerTransform}\ncanvas: ${canvasTransform}`)
 }
 
+const num = (/(-?\d+\.?\d*)/).source
+const re = new RegExp(`translate3d\\(${num}px, ${num}px, ${num}px\\) scale\\(${num}\\)`)
+// const transformregexp = /translate3d\((-?\d+\.?\d*)px, (-?\d+\.?\d*)px, (-?\d+\.?\d*)px\) scale\((-?\d+\.?\d*)\)/
+function getTransformFromString(str) {
+  const result = str.match(re)
+  if (!result) return
+  const offset = result.slice(1,3).map(Number)
+  const scale = Number(result[4])
+  return {offset, scale}
+}
 
 function _onZoom(e) {
   if (!_map || !ViewBox.zoom) return
 
   if (e.pinch || e.flyTo) {
-    const newZoom = _map.getZoom()
-    const newCenter = _map.getCenter()
-    ViewBox.CSStransformTo(newCenter, newZoom)
+    // const newZoom = _map.getZoom()
+    // const newCenter = _map.getCenter()
+    // ViewBox.CSStransformTo(newCenter, newZoom)
+    const level = vParams.baselayer._level
+    const layerTransformString = level.el.style.transform
+    const transform = getTransformFromString(layerTransformString)
+    if (!transform) return
+    ViewBox.setPinchTransform(transform)
   }
 }
 
@@ -367,10 +382,9 @@ function redraw(event) {
   const timerLabel = `redraw_${_redrawCounter++}`
   console.time(timerLabel)
 
+  DrawBox.reset()
   DrawBox.clear(_dotCanvases[1].getContext("2d"))
   DrawBox.clear(_dotCanvases[0].getContext("2d"))
-
-  DrawBox.reset()
 
   if (event) {
     _drawingDots = false
@@ -679,5 +693,3 @@ function _animate(ts) {
 
   _frame = Util.requestAnimFrame(_animate, this)
 }
-
-

@@ -19,7 +19,8 @@ const _pathColorGroups = { selected: null, unselected: null }
 const _dotColorGroups = { selected: null, unselected: null }
 
 // private module-scope variable
-let _map, _pxBounds, _itemsArray, _baseTransform
+let _map, _pxBounds, _itemsArray,
+    _baseTranslation
 
 // exported module-scope variables
 let _pxOrigin, _pxOffset, _mapPanePos, _zoom, _center, _zf
@@ -228,9 +229,15 @@ function setCSStransform(offset, scale) {
 export function CSStransformTo(newCenter, newZoom) {
   const newPxOrigin = _map._getNewPixelOrigin(newCenter, newZoom)
   const scale = _map.getZoomScale(newZoom, _zoom)
-  const transform = _pxOrigin.multiplyBy(scale).subtract(newPxOrigin)
+  const translation = _pxOrigin.multiplyBy(scale).subtract(newPxOrigin)
+  const newTranslation = _baseTranslation.multiplyBy(scale).add(translation)
   // setCSStransform(transform.round(), scale)
-  setCSStransform(_baseTransform.add(transform).round(), scale)
+  setCSStransform(newTranslation.round(), scale)
+}
+
+export function setPinchTransform({offset, scale}) {
+  const newTranslation = _baseTranslation.multiplyBy(scale).add(offset)
+  setCSStransform(newTranslation.round(), scale)
 }
 
 export function calibrate() {
@@ -238,16 +245,16 @@ export function calibrate() {
    *
    * It sets the baseline CSS transformation for the dot and line canvases
    */
-  _baseTransform = _map.containerPointToLayerPoint([0, 0])
+  _baseTranslation = _map.containerPointToLayerPoint([0, 0])
 
   _pxOrigin = _map.getPixelOrigin()
   _mapPanePos = _map._getMapPanePos()
 
   _pxOffset = _mapPanePos.subtract(_pxOrigin)
 
-  console.log(`base: ${_baseTransform}, offset: ${_pxOffset}`)
+  console.log(`base: ${_baseTranslation}, offset: ${_pxOffset}`)
 
-  setCSStransform(_baseTransform.round())
+  setCSStransform(_baseTranslation.round())
 }
 
 

@@ -32,6 +32,8 @@ function inBounds(p) {
  */
 const MAX_PX_GAP = 200 /* px units */
 
+const OUTILIER_MULT = 40
+
 /**
  * @class Activity
  */
@@ -76,7 +78,12 @@ export class Activity {
     this.segMask = null // BitSet indicating which segments are in view
 
     // decode polyline format into an Array of [lat, lng] points
-    const points = Polyline.decode2Buf(polyline, n)
+
+    const points = new Float32Array(2 * n)
+    let i = 0
+    for (const latLng of Polyline.decode(polyline)) {
+      points.set(latLng, 2 * i++)
+    }
 
     // make baseline projection to rectangular coordinates in-place
     for (let i = 0, len = points.length; i < len; i += 2) {
@@ -102,11 +109,12 @@ export class Activity {
 
     const dMean = dStats.mean
     const dStdev = dStats.populationStdev
-    const dTol = 3 * dStdev
+    const dTol = OUTILIER_MULT * dStdev
     const dOutliers = []
     for (let i = 0, len = n - 1; i < len; i++) {
-      if (Math.abs(sqDists[i] - dMean) > dTol) {
-        dOutliers.push[i]
+      const d = sqDists[i]
+      if (Math.abs(d - dMean) > dTol || d === 0) {
+        dOutliers.push({i, ds: d})
       }
     }
 
@@ -127,7 +135,7 @@ export class Activity {
     }
     const tMean = tStats.mean
     const tStdev = tStats.populationStdev
-    const tTol = 3 * tStdev
+    const tTol = OUTILIER_MULT * tStdev
     const tOutliers = []
     let k = 0
     for (let i = 0, len = time.length; i < len; i++) {
@@ -135,18 +143,31 @@ export class Activity {
       if (Array.isArray(dt)) {
         const dt2 = dt[0]
         for (let j = 0; j < dt[1]; j++) {
-          if (Math.abs(dt2 - tMean) > tTol) {
-            tOutliers.push(k)
+          if (Math.abs(dt2 - tMean) > tTol || dt2 === 0) {
+            tOutliers.push({k, dt2})
           }
           k++
         }
       } else {
-        if (Math.abs(dt - tMean) > tTol) {
-          tOutliers.push(k)
+        if (Math.abs(dt - tMean) > tTol || dt === 0) {
+          tOutliers.push({k, dt})
         }
         k++
       }
     }
+    if (tOutliers.length) {
+      this.tOutliers = tOutliers
+    }
+
+    if (dOutliers.length) {
+      console.log(this, tOutliers, dOutliers)
+      this.selected = true
+    }
+  }
+
+  gapAt(idx) {
+    const p = this.getPointAccessor()
+    return sqDist(p(idx), p(idx+1))
   }
 
   inMapBounds() {
