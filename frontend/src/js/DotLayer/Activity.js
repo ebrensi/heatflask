@@ -50,7 +50,6 @@ export class Activity {
     time,
     n,
   }) {
-    this.n = n
     this.id = +_id
     this.type = type
     this.total_distance = total_distance
@@ -78,19 +77,8 @@ export class Activity {
     this.segMask = null // BitSet indicating which segments are in view
 
     // decode polyline format into an Array of [lat, lng] points
-
-    const points = new Float32Array(2 * n)
-    let i = 0
-    for (const latLng of Polyline.decode(polyline)) {
-      points.set(latLng, 2 * i++)
-    }
-
-    // make baseline projection to rectangular coordinates in-place
-    for (let i = 0, len = points.length; i < len; i += 2) {
-      ViewBox.latLng2px(points.subarray(i, i + 2))
-    }
-
-    this.px = points
+    const points = new Float32Array(n * 2)
+    const mask = new BitSet(n)
 
     /*
      * We will compute some stats on interval lengths to
@@ -98,14 +86,27 @@ export class Activity {
      */
     const dStats = new RunningStatsCalculator()
     const sqDists = []
-    for (let i = 0, len = points.length / 2 - 1; i < len; i++) {
-      const j = 2 * i
-      const p1 = points.subarray(j, j + 2)
-      const p2 = points.subarray(j + 2, j + 4)
+    const project = ViewBox.latLng2px
+    const latlngs = Polyline.decode(polyline)
+    let p1 = project(latlngs.next().value)
+    points.set(p1, 0)
+    let i = 0, j = 0
+    for (const latLng of latlngs) {
+      const p2 = project(latLng)
       const sd = sqDist(p1, p2)
-      dStats.update(sd)
-      sqDists.push(sd)
+      if (sd > 0) {
+        dStats.update(sd)
+        sqDists.push(sd)
+
+        const idx = ++i * 2
+        points.set(p2, idx)
+        mask.add(j)
+        p1 = p2
+      }
+      j++
     }
+
+    n = i + 1
 
     const dMean = dStats.mean
     const dStdev = dStats.populationStdev
@@ -113,7 +114,7 @@ export class Activity {
     const dOutliers = []
     for (let i = 0, len = n - 1; i < len; i++) {
       const d = sqDists[i]
-      if (Math.abs(d - dMean) > dTol || d === 0) {
+      if (Math.abs(d - dMean) > dTol) {
         dOutliers.push({i, ds: d})
       }
     }
