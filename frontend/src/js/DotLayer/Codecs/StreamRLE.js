@@ -7,11 +7,10 @@
  *
  * We have methods to encode and decode, as well as Transcode from one encoding to the other.
  *
- * @module
  */
 
 /**
- * A RLE-encoded list of numbSers and lists. A sub-list [a,b] indicates a repeated b times.
+ * A RLE-encoded list of numbers and lists. A sub-list [a,b] indicates a repeated b times.
  * eg. Both [1,2,2,2,2,2,2,5] and [1, [2,6], 5] represent the unencoded list
  *    [0, 1, 3, 5, 7, 9, 11, 13, 18]
  *
@@ -33,26 +32,55 @@
 
 import { compress, uncompress } from "./VByte.js"
 
-/** Decode a (RLE-encoded as a List) array of successive differences into
- * @generator
- * @param {RLElist} rle_list
- * @param {Number} [first_value=0] The initial value of the original list
+/**
+ * Decode RLE list
+ * @param {RLElist} rle_list -- RLE (Run Length Encoded) list of integers
+ * @param {BitSet|Set} exclude -- indices of elements to exclude
  * @yield {Number}
  */
-export function* decodeList(rle_list, first_value = 0) {
-  let running_sum = first_value,
-    len = rle_list.length
+export function* decodeList(rle_list, exclude) {
+  const len = rle_list.length
+  let count = 0
+  for (let i = 0, el; i < len; i++) {
+    el = rle_list[i]
+    if (el instanceof Array) {
+      const value = el[0]
+      for (let j = 0; j < el[1]; j++) {
+        if (!exclude || !exclude.has(count++)){
+          yield value
+        }
+      }
+    } else if (!exclude || !exclude.has(count++)) {
+      yield el
+    }
+  }
+}
+
+/** Decode a (RLE-encoded as a List) array of successive differences
+ * @param {RLElist} -- rle_list
+ * @param {Number} [first_value] -- The initial value of the original list
+ * @param {exclude} [BitSet|Set] -- Set of indices to exclude
+ * @yield {Number}
+ */
+export function* decodeDiffList(rle_list, first_value, exclude) {
+  let running_sum = first_value || 0
+  const len = rle_list.length
+  let count = 0
   yield running_sum
   for (let i = 0, el; i < len; i++) {
     el = rle_list[i]
     if (el instanceof Array) {
       for (let j = 0; j < el[1]; j++) {
         running_sum += el[0]
-        yield running_sum
+        if (!exclude || !exclude.has(count++)){
+          yield running_sum
+        }
       }
     } else {
       running_sum += el
-      yield running_sum
+      if (!exclude || !exclude.has(count++)){
+        yield running_sum
+      }
     }
   }
 }
@@ -78,12 +106,11 @@ export function decodedListLength(rle_list) {
  * We store RLE stream data locally a little differently.
  *  a run of repeated values is represented by
  *  3 consecutive values 0, runlength, value
- *  which allows us to avoid storing negative numbers.
  *
  * @param {RLElist} rle_list
  * @returns {RLEinfo}
  */
-function transcodeInfo(rle_list) {
+function listInfo(rle_list) {
   let len = 0, // We don't count the start value!
     max = 0
 
@@ -107,7 +134,7 @@ function transcodeInfo(rle_list) {
  * @return {RLEbuff}
  */
 export function transcode2Buf(rle_list) {
-  const { len, max } = transcodeInfo(rle_list),
+  const { len, max } = listInfo(rle_list),
     ArrayConstructor =
       max >> 8 ? (max >> 16 ? Uint32Array : Uint16Array) : Uint8Array,
     buf = new ArrayConstructor(len)
@@ -131,6 +158,7 @@ export function transcode2Buf(rle_list) {
   return buf
 }
 
+
 /**
  * Transcode to a VByte-encoded {@link RLEbuff}.
  * @param  {RLElist} rle_list
@@ -141,13 +169,109 @@ export function transcode2CompressedBuf(rle_list) {
   return compress(buf)
 }
 
+
 /**
- * Decode a into the original integer values
+ * Encode regular list of integers (not RLElist) into RLEbuff
+ * @param  {Iterator} list -- iterable list of integers (must have .next() method)
+ * @return {RLEbuff}      [description]
+ */
+export function encodeBuf(list) {
+  // we start off with regular array because we dont know how long it will be
+  const rle = []
+  let max = 0
+  let repCount = 0
+
+  let num1 = list.next().value
+  for (const num2 of list) {
+    if (num2 > max) {
+      max = num2
+    }
+
+    if (num2 === num1) {
+      repCount++
+    } else if (repCount) {
+      if (repCount > 1) {
+        rle.push(0)          // rep flag
+        rle.push(repCount+1) // how many repeated
+        rle.push(num2)       // the value
+      } else {
+        // if only two are repeated then just push them
+        rle.push(num2)
+        rle.push(num2)
+      }
+      repCount = 0 // reset the rep count
+
+    } else {
+      rle.push(num2)
+    }
+  }
+  /*
+   * Now we have a list of values and a max value.
+   *   We create a typed array with the smallest type that will hold the max value
+   */
+  const ArrayConstructor = max >> 8 ? (max >> 16 ? Uint32Array : Uint16Array) : Uint8Array
+
+  return ArrayConstructor.from(rle)
+}
+
+export function encode2CompressedBuf(list) {
+  const buf = encodeBuf(list)
+  return compress(buf)
+}
+
+
+/**
+ * Iterate successive differences of a list of values
+ * @param {Iterator} list -- iterable list of numbers
+ * @yield {Number}
+ */
+function *diffs(list) {
+  let val1 = list.next().value
+  for (const val2 of list) {
+    yield val2 - val1
+    val1 = val2
+  }
+}
+
+/**
+ * Encode successive diffs of a list of integers into an RLEbuff
+ * @param  {Iterator} list -- iterable list of integers
+ * @return {RLEbuff}
+ */
+export function encodeDiffBuf(list) {
+  return encodeBuf(diffs(list))
+}
+
+export function encode2CompressedDiffBuf(list) {
+  const buf = encodeDiffBuf(list)
+  return compress(buf)
+}
+
+
+export function* decodeBuf(buf) {
+  const len = buf.length
+  for (let i = 0, el; i < len; i++) {
+    el = buf[i]
+    if (el === 0) {
+      const n = buf[++i]
+      const repeated = buf[++i]
+      for (let j = 0; j < n; j++) {
+        yield repeated
+      }
+    } else {
+      yield el
+    }
+  }
+}
+
+
+/**
+ * Decode a RLEbuff of diffs into the original integer values
  * @param {RLEBuff} buf
  * @param {Number} [first_value=0] The first value of the original list
  * @yield {Number}
  */
-export function* decodeBuf(buf, first_value = 0) {
+export function* decodeDiffBuf(buf, first_value = 0) {
   let running_sum = first_value,
     len = buf.length
 
@@ -176,7 +300,7 @@ export function* decodeBuf(buf, first_value = 0) {
  * @param {Number} [first_value=0] The first value of the original list
  * @yield {Number}
  */
-export function* decodeCompressedBuf(cbuf, first_value = 0) {
+export function* decodeCompressedDiffBuf(cbuf, first_value = 0) {
   const bufGen = uncompress(cbuf)
 
   let running_sum = first_value
@@ -209,7 +333,7 @@ export function* decodeCompressedBuf(cbuf, first_value = 0) {
  * @param  {Number} [first_value=0] The first value of the original list
  * @yields {Number}
  */
-export function decodeCompressedBuf2(cbuf, idxSet, first_value = 0) {
+export function decodeCompressedDiffBuf2(cbuf, idxSet, first_value = 0) {
   const bufGen = uncompress(cbuf)
   let j = 0,
     k,

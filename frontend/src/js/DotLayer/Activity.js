@@ -66,8 +66,6 @@ export class Activity {
     this.ts = utc
     this.tsLocal = new Date((utc + offset * 3600) * 1000)
 
-    this.time = StreamRLE.transcode2CompressedBuf(time)
-
     this.llBounds = latLngBounds(bounds.SW, bounds.NE)
     this.pxBounds = ViewBox.latLng2pxBounds(this.llBounds)
 
@@ -78,7 +76,7 @@ export class Activity {
 
     // decode polyline format into an Array of [lat, lng] points
     const points = new Float32Array(n * 2)
-    const mask = new BitSet(n)
+    const excludeMask = new BitSet(n)
 
     /*
      * We will compute some stats on interval lengths to
@@ -88,25 +86,47 @@ export class Activity {
     const sqDists = []
     const project = ViewBox.latLng2px
     const latlngs = Polyline.decode(polyline)
-    let p1 = project(latlngs.next().value)
-    points.set(p1, 0)
-    let i = 0, j = 0
+
+    // Set the first point of points to be the projected first latlng pair
+    points.set(project(latlngs.next().value), 0)
+
+    let i = 0 // index of the i-th element of latlngs
+    let j = 2 // index of the j-th element of points
+    let p1 = points.subarray(0, j)
     for (const latLng of latlngs) {
+      i++
       const p2 = project(latLng)
       const sd = sqDist(p1, p2)
-      if (sd > 0) {
-        dStats.update(sd)
-        sqDists.push(sd)
-
-        const idx = ++i * 2
-        points.set(p2, idx)
-        mask.add(j)
-        p1 = p2
+      if (!sd ) {
+        /*  We ignore any two successive points with zero distance
+         *  this might cause problems so look out for it
+         */
+        excludeMask.add(i)
+        continue
       }
-      j++
+      dStats.update(sd)
+      sqDists.push(sd)
+
+      points.set(p2, j)
+      p1 = points.subarray(j, j+2)
+      j = j + 2
     }
 
-    n = i + 1
+    if (sqDists.length + 1 === n) {
+      this.px = points
+      this.time = StreamRLE.transcode2CompressedBuf(time)
+    } else {
+      n = sqDists.length + 1
+      this.px = points.slice(0, n*2)
+
+      // Some points were discarded so we need to adjust the time diffs
+      const it = StreamRLE.decodeDiffList(time, 0, excludeMask)
+      this.time = StreamRLE.encode2CompressedDiffBuf(it)
+
+      console.log(`${_id}: excluded ${excludeMask.size()} points`)
+    }
+
+    this.n = n
 
     const dMean = dStats.mean
     const dStdev = dStats.populationStdev
@@ -119,49 +139,49 @@ export class Activity {
       }
     }
 
-    /*
-     * Do the same with time intervals
-     */
-    const tStats = new RunningStatsCalculator()
-    for (let i = 0, len = time.length; i < len; i++) {
-      const dt = time[i]
-      if (Array.isArray(dt)) {
-        const dt2 = dt[0]
-        for (let j = 0; j < dt[1]; j++) {
-          tStats.update(dt2)
-        }
-      } else {
-        tStats.update(dt)
-      }
-    }
-    const tMean = tStats.mean
-    const tStdev = tStats.populationStdev
-    const tTol = OUTILIER_MULT * tStdev
-    const tOutliers = []
-    let k = 0
-    for (let i = 0, len = time.length; i < len; i++) {
-      const dt = time[i]
-      if (Array.isArray(dt)) {
-        const dt2 = dt[0]
-        for (let j = 0; j < dt[1]; j++) {
-          if (Math.abs(dt2 - tMean) > tTol || dt2 === 0) {
-            tOutliers.push({k, dt2})
-          }
-          k++
-        }
-      } else {
-        if (Math.abs(dt - tMean) > tTol || dt === 0) {
-          tOutliers.push({k, dt})
-        }
-        k++
-      }
-    }
-    if (tOutliers.length) {
-      this.tOutliers = tOutliers
-    }
+    // /*
+    //  * Do the same with time intervals
+    //  */
+    // const tStats = new RunningStatsCalculator()
+    // for (let i = 0, len = time.length; i < len; i++) {
+    //   const dt = time[i]
+    //   if (Array.isArray(dt)) {
+    //     const dt2 = dt[0]
+    //     for (let j = 0; j < dt[1]; j++) {
+    //       tStats.update(dt2)
+    //     }
+    //   } else {
+    //     tStats.update(dt)
+    //   }
+    // }
+    // const tMean = tStats.mean
+    // const tStdev = tStats.populationStdev
+    // const tTol = OUTILIER_MULT * tStdev
+    // const tOutliers = []
+    // let k = 0
+    // for (let i = 0, len = time.length; i < len; i++) {
+    //   const dt = time[i]
+    //   if (Array.isArray(dt)) {
+    //     const dt2 = dt[0]
+    //     for (let j = 0; j < dt[1]; j++) {
+    //       if (Math.abs(dt2 - tMean) > tTol || dt2 === 0) {
+    //         tOutliers.push({k, dt2})
+    //       }
+    //       k++
+    //     }
+    //   } else {
+    //     if (Math.abs(dt - tMean) > tTol || dt === 0) {
+    //       tOutliers.push({k, dt})
+    //     }
+    //     k++
+    //   }
+    // }
+    // if (tOutliers.length) {
+    //   this.tOutliers = tOutliers
+    // }
 
     if (dOutliers.length) {
-      console.log(this, tOutliers, dOutliers)
+      console.log(this, dOutliers)
       this.selected = true
     }
   }
@@ -289,13 +309,13 @@ export class Activity {
 
   timesIterator(zoom) {
     if (!zoom) {
-      return StreamRLE.decodeCompressedBuf(this.time)
+      return StreamRLE.decodeCompressedDiffBuf(this.time)
     } else {
       const idxSet = this.idxSet[zoom]
       if (!idxSet) {
         throw new Error(`no idxSet[${zoom}]`)
       }
-      return StreamRLE.decodeCompressedBuf2(this.time, idxSet)
+      return StreamRLE.decodeCompressedDiffBuf2(this.time, idxSet)
     }
   }
 
