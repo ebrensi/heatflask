@@ -19,8 +19,7 @@ const _pathColorGroups = { selected: null, unselected: null }
 const _dotColorGroups = { selected: null, unselected: null }
 
 // private module-scope variable
-let _map, _pxBounds, _itemsArray,
-    _baseTranslation
+let _map, _pxBounds, _itemsArray, _baseTranslation
 
 // exported module-scope variables
 let _pxOrigin, _pxOffset, _mapPanePos, _zoom, _center, _zf
@@ -86,7 +85,6 @@ export function inView() {
   return _sets.items.current
 }
 
-
 /*
  * Determine boundaries of the current view and which items are in it
  *
@@ -95,14 +93,13 @@ export function inView() {
  * as that might be too much computation
  */
 export function update() {
+  const z = _map.getZoom()
+  const latLngMapBounds = _map.getBounds()
 
-    const z = _map.getZoom()
-    const latLngMapBounds = _map.getBounds()
-
-    if (z !== _zoom) {
-      _zoom = z
-      _zf = 2**z
-    }
+  if (z !== _zoom) {
+    _zoom = z
+    _zf = 2 ** z
+  }
 
   _center = _map.getCenter()
   _pxBounds = latLng2pxBounds(latLngMapBounds)
@@ -215,7 +212,6 @@ export function updateSelect(i) {
   }
 }
 
-
 function setCSStransform(offset, scale) {
   for (let i = 0; i < _canvases.length; i++) {
     DomUtil.setTransform(_canvases[i], offset, scale)
@@ -235,7 +231,7 @@ export function CSStransformTo(newCenter, newZoom) {
   setCSStransform(newTranslation.round(), scale)
 }
 
-export function setPinchTransform({offset, scale}) {
+export function setPinchTransform({ offset, scale }) {
   const newTranslation = _baseTranslation.multiplyBy(scale).add(offset)
   setCSStransform(newTranslation.round(), scale)
 }
@@ -256,7 +252,6 @@ export function calibrate() {
 
   setCSStransform(_baseTranslation.round())
 }
-
 
 /**
  * returns a function that transforms given x,y coordinates

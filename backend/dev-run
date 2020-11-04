@@ -23,7 +23,7 @@ while [ "$1" != "" ]; do
     shift
 done
 
-GUNICORN_CMD_ARGS="--reload --worker-class flask_sockets.worker --log-level=debug --graceful-timeout 5 --bind '0.0.0.0:$PORT'"
+#GUNICORN_CMD_ARGS="--reload --worker-class flask_sockets.worker --log-level=debug --graceful-timeout 5 --bind '0.0.0.0:$PORT'"
 
 HEROKU_CLI=/usr/bin/heroku
 

@@ -46,7 +46,7 @@ export function* decodeList(rle_list, exclude) {
     if (el instanceof Array) {
       const value = el[0]
       for (let j = 0; j < el[1]; j++) {
-        if (!exclude || !exclude.has(count++)){
+        if (!exclude || !exclude.has(count++)) {
           yield value
         }
       }
@@ -72,13 +72,13 @@ export function* decodeDiffList(rle_list, first_value, exclude) {
     if (el instanceof Array) {
       for (let j = 0; j < el[1]; j++) {
         running_sum += el[0]
-        if (!exclude || !exclude.has(count++)){
+        if (!exclude || !exclude.has(count++)) {
           yield running_sum
         }
       }
     } else {
       running_sum += el
-      if (!exclude || !exclude.has(count++)){
+      if (!exclude || !exclude.has(count++)) {
         yield running_sum
       }
     }
@@ -158,7 +158,6 @@ export function transcode2Buf(rle_list) {
   return buf
 }
 
-
 /**
  * Transcode to a VByte-encoded {@link RLEbuff}.
  * @param  {RLElist} rle_list
@@ -168,7 +167,6 @@ export function transcode2CompressedBuf(rle_list) {
   const buf = transcode2Buf(rle_list)
   return compress(buf)
 }
-
 
 /**
  * Encode regular list of integers (not RLElist) into RLEbuff
@@ -191,16 +189,15 @@ export function encodeBuf(list) {
       repCount++
     } else if (repCount) {
       if (repCount > 1) {
-        rle.push(0)          // rep flag
-        rle.push(repCount+1) // how many repeated
-        rle.push(num2)       // the value
+        rle.push(0) // rep flag
+        rle.push(repCount + 1) // how many repeated
+        rle.push(num2) // the value
       } else {
         // if only two are repeated then just push them
         rle.push(num2)
         rle.push(num2)
       }
       repCount = 0 // reset the rep count
-
     } else {
       rle.push(num2)
     }
@@ -209,7 +206,8 @@ export function encodeBuf(list) {
    * Now we have a list of values and a max value.
    *   We create a typed array with the smallest type that will hold the max value
    */
-  const ArrayConstructor = max >> 8 ? (max >> 16 ? Uint32Array : Uint16Array) : Uint8Array
+  const ArrayConstructor =
+    max >> 8 ? (max >> 16 ? Uint32Array : Uint16Array) : Uint8Array
 
   return ArrayConstructor.from(rle)
 }
@@ -219,13 +217,12 @@ export function encode2CompressedBuf(list) {
   return compress(buf)
 }
 
-
 /**
  * Iterate successive differences of a list of values
  * @param {Iterator} list -- iterable list of numbers
  * @yield {Number}
  */
-function *diffs(list) {
+function* diffs(list) {
   let val1 = list.next().value
   for (const val2 of list) {
     yield val2 - val1
@@ -247,7 +244,6 @@ export function encode2CompressedDiffBuf(list) {
   return compress(buf)
 }
 
-
 export function* decodeBuf(buf) {
   const len = buf.length
   for (let i = 0, el; i < len; i++) {
@@ -263,7 +259,6 @@ export function* decodeBuf(buf) {
     }
   }
 }
-
 
 /**
  * Decode a RLEbuff of diffs into the original integer values

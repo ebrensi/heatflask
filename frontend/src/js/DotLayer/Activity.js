@@ -94,7 +94,7 @@ export class Activity {
       i++
       const p2 = project(latLng)
       const sd = sqDist(p1, p2)
-      if (!sd ) {
+      if (!sd) {
         /*  We ignore any two successive points with zero distance
          *  this might cause problems so look out for it
          */
@@ -105,7 +105,7 @@ export class Activity {
       sqDists.push(sd)
 
       points.set(p2, j)
-      p1 = points.subarray(j, j+2)
+      p1 = points.subarray(j, j + 2)
       j = j + 2
     }
 
@@ -114,7 +114,7 @@ export class Activity {
       this.time = StreamRLE.transcode2CompressedBuf(time)
     } else {
       n = sqDists.length + 1
-      this.px = points.slice(0, n*2)
+      this.px = points.slice(0, n * 2)
 
       // Some points were discarded so we need to adjust the time diffs
       const it = StreamRLE.decodeDiffList(time, 0, excludeMask)
@@ -145,7 +145,7 @@ export class Activity {
 
   gapAt(idx) {
     const p = this.getPointAccessor()
-    return sqDist(p(idx), p(idx+1))
+    return sqDist(p(idx), p(idx + 1))
   }
 
   inMapBounds() {
@@ -316,12 +316,12 @@ export class Activity {
      */
     if (this.pxGaps) {
       const gapLocs = []
-      for (let i=this.pxGaps.length-1; i>=0; i--) {
+      for (let i = this.pxGaps.length - 1; i >= 0; i--) {
         let gapStart = this.pxGaps[i]
         while (!idxBitSet.has(gapStart)) {
           gapStart--
         }
-         gapLocs.push(gapStart)
+        gapLocs.push(gapStart)
       }
 
       /*
@@ -331,7 +331,7 @@ export class Activity {
        *  (set-bit) of idxBitSet.
        */
       gapLocs.sort()
-      const badSegIdx = this.badSegIdx[zoom] = []
+      const badSegIdx = (this.badSegIdx[zoom] = [])
 
       const idxIter = idxBitSet.imap()
       let nextIdx = idxIter.next()

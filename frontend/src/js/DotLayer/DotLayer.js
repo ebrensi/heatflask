@@ -278,15 +278,17 @@ function onMove2(e) {
   console.log(`layer: ${layerTransform}\ncanvas: ${canvasTransform}`)
 }
 
-const num = (/(-?\d+\.?\d*)/).source
-const re = new RegExp(`translate3d\\(${num}px, ${num}px, ${num}px\\) scale\\(${num}\\)`)
+const num = /(-?\d+\.?\d*)/.source
+const re = new RegExp(
+  `translate3d\\(${num}px, ${num}px, ${num}px\\) scale\\(${num}\\)`
+)
 // const transformregexp = /translate3d\((-?\d+\.?\d*)px, (-?\d+\.?\d*)px, (-?\d+\.?\d*)px\) scale\((-?\d+\.?\d*)\)/
 function getTransformFromString(str) {
   const result = str.match(re)
   if (!result) return
-  const offset = result.slice(1,3).map(Number)
+  const offset = result.slice(1, 3).map(Number)
   const scale = Number(result[4])
-  return {offset, scale}
+  return { offset, scale }
 }
 
 function _onZoom(e) {
@@ -324,7 +326,6 @@ function onMove(event) {
  * Leaflet moves the pixel origin so we need to reset the CSS transform
  */
 function onMoveEnd(event) {
-
   ViewBox.calibrate()
 
   console.log(`calibrated`)
@@ -334,7 +335,6 @@ function onMoveEnd(event) {
 
   redraw(event)
 }
-
 
 function debugCtxReset() {
   if (!_options.debug) return

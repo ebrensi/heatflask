@@ -253,7 +253,6 @@ export function getBounds(ids) {
   return bounds
 }
 
-
 /*  Initialize areaselect control (for selecting activities via map rectangle) */
 /*
  AreaSelect is not importing for some reason
