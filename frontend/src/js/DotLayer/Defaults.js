@@ -1,7 +1,5 @@
-/**
- *
- * @module DotLayer/options
- *
+/*
+ *  Default values
  */
 
 export const options = {
@@ -10,6 +8,7 @@ export const options = {
   startPaused: false,
   showPaths: true,
   fps_display: false,
+  outlier_filter: true,
 
   normal: {
     dotColor: "#000000",

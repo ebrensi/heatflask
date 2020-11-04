@@ -19,18 +19,23 @@ function inBounds(p) {
 }
 
 /**
- * Any two consecutive points that will resolve to a pixel distance
- * greater than this value is considered an anomaly and any segment
- * including that gap will be ignored.
+ * We detect anomalous gaps in data by simple statistical analysis of
+ * segment lengths.
  *
  * These gaps usually come up when there is a pause in recording
  * while the person in still moving. If the gap is big enough, it
  * results in a long straight line segment that is inaccurate
- * and looks bad.
+ * and looks bad.  Sometimes they result from bad GPS reception, in which
+ * case they appear as random points far from the activity track.
+ *
+ * We consider the log of the square distance between two successive points.
+ *
+ * Any segment that has a Z-Score above ZSCORE_CUTOFF is considered
+ * an outlier and removed from the path.
  *
  * @type {Number}
  */
-const OUTILIER_MULT = 4
+const ZSCORE_CUTOFF = 5  // TODO: Consider IQR for this
 
 /**
  * @class Activity
@@ -101,8 +106,10 @@ export class Activity {
         excludeMask.add(i)
         continue
       }
-      dStats.update(sd)
-      sqDists.push(sd)
+      // const logSd = Math.log10(sd)
+      const logSd = Math.log(sd)
+      dStats.update(logSd)
+      sqDists.push(logSd)
 
       points.set(p2, j)
       p1 = points.subarray(j, j + 2)
@@ -127,19 +134,24 @@ export class Activity {
 
     const dMean = dStats.mean
     const dStdev = dStats.populationStdev
-    const dTol = OUTILIER_MULT * dStdev
+    // const zScores = []
+    const devTol = ZSCORE_CUTOFF * dStdev
     const dOutliers = []
     for (let i = 0, len = n - 1; i < len; i++) {
-      const d = sqDists[i]
-      if (Math.abs(d - dMean) > dTol) {
+      const dev = sqDists[i] - dMean
+      // const zScore = dev / dStdev
+      // zScores.push(zScore)
+      // if (zScore > ZSCORE_CUTOFF) {
+      if (dev > devTol) {
         dOutliers.push(i)
       }
     }
 
     if (dOutliers.length) {
-      console.log(this, dOutliers)
-      this.selected = true
       this.pxGaps = dOutliers
+      // this.selected = true
+      // const dist = hist(zScores, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+      // console.log({dStats, zScores, dist, dOutliers})
     }
   }
 
@@ -522,4 +534,34 @@ function sqDist(p1, p2) {
   const [x1, y1] = p1
   const [x2, y2] = p2
   return (x2 - x1) ** 2 + (y2 - y1) ** 2
+}
+
+/* Histogram for analysis */
+function hist(points, bins) {
+  const binCounts = new Array(bins.length+1).fill(0)
+  const last = bins.length - 1
+  for (const p of points) {
+
+    if (p < bins[0]) {
+      binCounts[0]++
+
+    } else if (bins[last] < p) {
+      binCounts[bins.length]++
+
+    } else {
+      for (let i=0; i<binCounts.length; i++) {
+
+        if (bins[i] < p && p < bins[i+1]) {
+          binCounts[i]++
+          break
+        }
+      }
+    }
+
+
+
+  }
+
+  // console.log(bins)
+  return binCounts
 }
