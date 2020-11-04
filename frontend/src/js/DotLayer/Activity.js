@@ -30,9 +30,7 @@ function inBounds(p) {
  *
  * @type {Number}
  */
-const MAX_PX_GAP = 200 /* px units */
-
-const OUTILIER_MULT = 40
+const OUTILIER_MULT = 4
 
 /**
  * @class Activity
@@ -70,8 +68,7 @@ export class Activity {
     this.pxBounds = ViewBox.latLng2pxBounds(this.llBounds)
 
     this.idxSet = {} // BitSets of indices of px for each level of zoom
-    this.pxGaps = {} // locations of gaps in data for each level of zoom
-
+    this.badSegIdx = {} // locations of gaps in data for each level of zoom
     this.segMask = null // BitSet indicating which segments are in view
 
     // decode polyline format into an Array of [lat, lng] points
@@ -123,7 +120,7 @@ export class Activity {
       const it = StreamRLE.decodeDiffList(time, 0, excludeMask)
       this.time = StreamRLE.encode2CompressedDiffBuf(it)
 
-      console.log(`${_id}: excluded ${excludeMask.size()} points`)
+      // console.log(`${_id}: excluded ${excludeMask.size()} points`)
     }
 
     this.n = n
@@ -135,54 +132,14 @@ export class Activity {
     for (let i = 0, len = n - 1; i < len; i++) {
       const d = sqDists[i]
       if (Math.abs(d - dMean) > dTol) {
-        dOutliers.push({i, ds: d})
+        dOutliers.push(i)
       }
     }
-
-    // /*
-    //  * Do the same with time intervals
-    //  */
-    // const tStats = new RunningStatsCalculator()
-    // for (let i = 0, len = time.length; i < len; i++) {
-    //   const dt = time[i]
-    //   if (Array.isArray(dt)) {
-    //     const dt2 = dt[0]
-    //     for (let j = 0; j < dt[1]; j++) {
-    //       tStats.update(dt2)
-    //     }
-    //   } else {
-    //     tStats.update(dt)
-    //   }
-    // }
-    // const tMean = tStats.mean
-    // const tStdev = tStats.populationStdev
-    // const tTol = OUTILIER_MULT * tStdev
-    // const tOutliers = []
-    // let k = 0
-    // for (let i = 0, len = time.length; i < len; i++) {
-    //   const dt = time[i]
-    //   if (Array.isArray(dt)) {
-    //     const dt2 = dt[0]
-    //     for (let j = 0; j < dt[1]; j++) {
-    //       if (Math.abs(dt2 - tMean) > tTol || dt2 === 0) {
-    //         tOutliers.push({k, dt2})
-    //       }
-    //       k++
-    //     }
-    //   } else {
-    //     if (Math.abs(dt - tMean) > tTol || dt === 0) {
-    //       tOutliers.push({k, dt})
-    //     }
-    //     k++
-    //   }
-    // }
-    // if (tOutliers.length) {
-    //   this.tOutliers = tOutliers
-    // }
 
     if (dOutliers.length) {
       console.log(this, dOutliers)
       this.selected = true
+      this.pxGaps = dOutliers
     }
   }
 
@@ -350,6 +307,43 @@ export class Activity {
     )
     this.idxSet[zoom] = idxBitSet
 
+    /*
+     * this.pxGaps contains the index of the start point of every segment
+     *  detemined to have an abnormally large gap.  The simplified index
+     *  set for this zoom-level (idxSet[zoom]) may not contain that index,
+     *  so we search backwards until we find the index for the start point
+     *  of the segment that contains the gap.
+     */
+    if (this.pxGaps) {
+      const gapLocs = []
+      for (let i=this.pxGaps.length-1; i>=0; i--) {
+        let gapStart = this.pxGaps[i]
+        while (!idxBitSet.has(gapStart)) {
+          gapStart--
+        }
+         gapLocs.push(gapStart)
+      }
+
+      /*
+       * Now we have the index of this.px at the start of a gap,
+       *  but we need an index in terms of the reduced (simplified)
+       *  index set.  We want j such that gapStart is the j-th element
+       *  (set-bit) of idxBitSet.
+       */
+      gapLocs.sort()
+      const badSegIdx = this.badSegIdx[zoom] = []
+
+      const idxIter = idxBitSet.imap()
+      let nextIdx = idxIter.next()
+      let j = 0
+      for (const pxIdx of gapLocs) {
+        while (!nextIdx.done && nextIdx.value < pxIdx) {
+          nextIdx = idxIter.next()
+          j++
+        }
+        badSegIdx.push(j)
+      }
+    }
     return this
   }
 
@@ -381,15 +375,13 @@ export class Activity {
       s++
     }
 
-    // const pxg = this.pxGaps[zoom]
-    // if (pxg) {
-    //   for (let i = 0, len = pxg.length; i < len; i++) {
-    //     this.segMask.remove(pxg[i])
-    //   }
-    // }
-
-    // console.log(`${this.id}: segmask`)
-
+    if (zoom in this.badSegIdx) {
+      const badSegIdx = this.badSegIdx[zoom]
+      const segMask = this.segMask
+      for (const idx of badSegIdx) {
+        segMask.remove(idx)
+      }
+    }
     return this
   }
 
