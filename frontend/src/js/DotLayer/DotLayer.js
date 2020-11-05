@@ -8,6 +8,7 @@ import * as ViewBox from "./ViewBox.js"
 import * as DrawBox from "./DrawBox.js"
 import * as ColorPalette from "./ColorPalette.js"
 // import * as WorkerPool from "./WorkerPool.js"
+import { infoBox } from "../MapAPI.js"
 
 import BitSet from "../BitSet.js"
 import {
@@ -253,7 +254,7 @@ function assignEventHandlers() {
     moveend: onMoveEnd,
     // zoomstart: loggit,
     // zoom: loggit,
-    // zoom: _onZoom,
+    zoom: _onZoom,
     // zoomend: loggit,
     // viewreset: loggit,
     resize: onResize,
@@ -263,9 +264,9 @@ function assignEventHandlers() {
     events.move = onMove
   }
 
-  // if (_map.options.zoomAnimation && Browser.any3d) {
-  //   events.zoomanim = animateZoom
-  // }
+  if (_map.options.zoomAnimation && Browser.any3d) {
+    events.zoomanim = _animateZoom
+  }
 
   return events
 }
@@ -295,14 +296,18 @@ function _onZoom(e) {
   if (!_map || !ViewBox.zoom) return
 
   if (e.pinch || e.flyTo) {
-    // const newZoom = _map.getZoom()
-    // const newCenter = _map.getCenter()
-    // ViewBox.CSStransformTo(newCenter, newZoom)
-    const level = vParams.baselayer._level
-    const layerTransformString = level.el.style.transform
-    const transform = getTransformFromString(layerTransformString)
-    if (!transform) return
-    ViewBox.setPinchTransform(transform)
+    const newZoom = _map.getZoom()
+    const newCenter = _map.getCenter()
+    const origin = _map.getBounds().getNorthWest()
+    const offset = _map._latLngToNewLayerPoint(origin, newZoom, newCenter)
+    const scale = _map.getZoomScale(newZoom)
+
+    ViewBox.setCSStransform(offset, scale)
+    // const level = vParams.baselayer._level
+    // const layerTransformString = level.el.style.transform
+    // const transform = getTransformFromString(layerTransformString)
+    // if (!transform) return
+    // ViewBox.setPinchTransform(transform)
   }
 }
 
@@ -692,4 +697,15 @@ function _animate(ts) {
   }
 
   _frame = Util.requestAnimFrame(_animate, this)
+}
+
+function _animateZoom(e) {
+  const newZoom = e.zoom
+  const newCenter = e.center
+  const scale = _map.getZoomScale(newZoom)
+
+  const origin = _map.getBounds().getNorthWest()
+  const offset = _map._latLngToNewLayerPoint(origin, newZoom, newCenter)
+
+  ViewBox.setCSStransform(offset, scale)
 }

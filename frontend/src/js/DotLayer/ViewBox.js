@@ -212,7 +212,7 @@ export function updateSelect(i) {
   }
 }
 
-function setCSStransform(offset, scale) {
+export function setCSStransform(offset, scale) {
   for (let i = 0; i < _canvases.length; i++) {
     DomUtil.setTransform(_canvases[i], offset, scale)
   }

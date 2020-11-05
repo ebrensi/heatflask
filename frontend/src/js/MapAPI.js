@@ -4,7 +4,7 @@
  * Efrem Rensi 2020
  */
 
-import { MAPBOX_ACCESS_TOKEN, OFFLINE } from "./Env.js"
+import { MAPBOX_ACCESS_TOKEN, OFFLINE, INFO_BOX } from "./Env.js"
 
 import * as L from "leaflet"
 import Geohash from "latlon-geohash"
@@ -47,7 +47,7 @@ export const map = new L.Map("map", {
   zoom: zoom,
   preferCanvas: true,
   zoomAnimation: false,
-  zoomSnap: 1,
+  zoomSnap: 0.25,
   zoomDelta: 1,
   zoomAnimationThreshold: 6,
   wheelPxPerZoomLevel: 60,
@@ -238,6 +238,33 @@ document.addEventListener("keydown", (e) => {
 })
 
 map.addEventListener("click", () => sidebar.isOpen && sidebar.close())
+
+
+
+export let infoBox
+if (INFO_BOX) {
+  /*
+   * Display for debugging
+   */
+  const ZoomViewer = L.Control.extend({
+    onAdd: function(){
+      const infoBox = L.DomUtil.create('div');
+      infoBox.style.width = '200px';
+      infoBox.style.background = 'rgba(255,255,255,0.6)';
+      infoBox.style.textAlign = 'left';
+      map.on('zoomstart zoom zoomend', function(ev){
+        infoBox.innerHTML = 'Zoom level: ' + map.getZoom().toFixed(2);
+      })
+      return infoBox;
+    }
+  });
+
+  (new ZoomViewer).addTo(map);
+}
+
+
+
+
 
 /*
  * Functions concerning

@@ -29,7 +29,7 @@ import * as table from "./Table.js"
   right now we are only doing the single target-user UI.
 */
 
-console.log("process: ", process.env)
+app.dotLayer = dotLayer
 
 // pause animation when window/tab is not visible
 document.onvisibilitychange = function (e) {

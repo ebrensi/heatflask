@@ -4,6 +4,9 @@
  *   backend server, embedded in main.html
  */
 
+export const INFO_BOX = true
+
+
 import { ws_prefix } from "./appUtil.js"
 // import load_ga_object from "./google-analytics.js"
 
