@@ -5,6 +5,7 @@
 
 import { CURRENT_USER, USER_URLS } from "./Env.js"
 import { BoundObject } from "./DataBinding.js"
+import { items } from "./DotLayer/ActivityCollection.js"
 
 /*
  * These are all the possible arguments that might be in the URL
@@ -195,9 +196,6 @@ if (CURRENT_USER) {
 }
 
 export const flags = BoundObject.fromDOMelements("[data-class=flag]")
-
-/* The collection of activities */
-export const items = new Map()
 
 const state = {
   items: items,

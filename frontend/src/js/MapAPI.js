@@ -4,7 +4,7 @@
  * Efrem Rensi 2020
  */
 
-import { MAPBOX_ACCESS_TOKEN, OFFLINE, INFO_BOX } from "./Env.js"
+import { MAPBOX_ACCESS_TOKEN, OFFLINE, MAP_INFO } from "./Env.js"
 
 import * as L from "leaflet"
 import Geohash from "latlon-geohash"
@@ -14,7 +14,7 @@ import "leaflet-easybutton"
 import "../../node_modules/leaflet-easybutton/src/easy-button.css"
 import "../../node_modules/sidebar-v2/js/leaflet-sidebar.js"
 import { tileLayer } from "./TileLayer/TileLayer.Heatflask.js"
-import app from "./Model.js"
+import { items, vParams, currentUser } from "./Model.js"
 
 import strava_logo from "url:../images/pbs4.png"
 import heatflask_logo from "url:../images/logo.png"
@@ -29,14 +29,14 @@ function ghDecode(s) {
   return L.latLng(obj.lat, obj.lon)
 }
 
-if (app.vParams.geohash) {
-  center = ghDecode(app.vParams.geohash)
-  zoom = app.vParams.geohash.length
-  app.vParams.autozoom = false
+if (vParams.geohash) {
+  center = ghDecode(vParams.geohash)
+  zoom = vParams.geohash.length
+  vParams.autozoom = false
 } else {
-  center = app.vParams.center
-  zoom = app.vParams.zoom
-  app.vParams.geohash = Geohash.encode(center.lat, center.lng)
+  center = vParams.center
+  zoom = vParams.zoom
+  vParams.geohash = Geohash.encode(center.lat, center.lng)
 }
 
 /*
@@ -48,7 +48,7 @@ export const map = new L.Map("map", {
   preferCanvas: true,
   zoomAnimation: false,
   zoomSnap: 0.25,
-  zoomDelta: 1,
+  zoomDelta: 0.5,
   zoomAnimationThreshold: 6,
   wheelPxPerZoomLevel: 60,
   updateWhenZooming: true,
@@ -64,11 +64,11 @@ map.on("moveend", () => {
   const center = map.getCenter(),
     zoom = map.getZoom()
 
-  app.vParams.zoom = zoom
-  app.vParams.center = center
+  vParams.zoom = zoom
+  vParams.center = center
 
   const gh = Geohash.encode(center.lat, center.lng, zoom)
-  app.vParams.geohash = gh
+  vParams.geohash = gh
   // console.log(`(${center.lat}, ${center.lng}, ${zoom}) -> ${gh}`);
 })
 
@@ -123,7 +123,7 @@ for (const name of providers_names) {
  *  our default set, attempt to instantiate it and set it as
  *  the current baselayer.
  */
-let blName = app.vParams.baselayer || defaultBaselayerName
+let blName = vParams.baselayer || defaultBaselayerName
 
 if (!baselayers[blName]) {
   try {
@@ -153,11 +153,11 @@ for (const name in baselayers) {
 
 // Now vParams.baselayer becomes the actual baselayer, not just the name
 const currentBaselayer = baselayers[blName]
-app.vParams.baselayer = currentBaselayer
+vParams.baselayer = currentBaselayer
 currentBaselayer.addTo(map)
 
 map.on("baselayerchange", (e) => {
-  app.vParams.baselayer = e.layer
+  vParams.baselayer = e.layer
 })
 
 // Add baselayer selection control to map
@@ -199,7 +199,7 @@ const sidebarTabs = Array.from(document.querySelectorAll("[role=tab]")).map(
   (el) => el.href.split("#")[1]
 )
 
-if (!app.currentUser.id) {
+if (!currentUser.id) {
   const idx = sidebarTabs.indexOf("profile")
   sidebarTabs.splice(idx, 1)
 }
@@ -239,32 +239,54 @@ document.addEventListener("keydown", (e) => {
 
 map.addEventListener("click", () => sidebar.isOpen && sidebar.close())
 
-
-
 export let infoBox
-if (INFO_BOX) {
+if (MAP_INFO) {
   /*
    * Display for debugging
    */
-  const ZoomViewer = L.Control.extend({
-    onAdd: function(){
-      const infoBox = L.DomUtil.create('div');
-      infoBox.style.width = '200px';
-      infoBox.style.background = 'rgba(255,255,255,0.6)';
-      infoBox.style.textAlign = 'left';
-      map.on('zoomstart zoom zoomend', function(ev){
-        infoBox.innerHTML = 'Zoom level: ' + map.getZoom().toFixed(2);
+  const InfoViewer = L.Control.extend({
+    onAdd: function () {
+      const infoBox = L.DomUtil.create("div")
+      infoBox.style.width = "200px"
+      infoBox.style.padding = "5px"
+      infoBox.style.background = "rgba(255,255,255,0.6)"
+      infoBox.style.textAlign = "left"
+      map.on("zoomstart zoom zoomend move", function () {
+        const zoom = map.getZoom().toFixed(2)
+        const { lat, lng } = map.getCenter()
+        const clat = lat.toFixed(4)
+        const clng = lng.toFixed(4)
+        const { x: pox, y: poy } = map.getPixelOrigin()
+        const { x: mx, y: my } = map._getMapPanePos()
+
+        const level = vParams.baselayer._level
+        const lOrigin = level.origin
+        const { x: lox, y: loy } = lOrigin
+        const lZoom = level.zoom
+        const scale = map.getZoomScale(zoom, lZoom)
+
+        const { x: tx, y: ty } = lOrigin
+          .multiplyBy(scale)
+          .subtract(map._getNewPixelOrigin(center, zoom))
+          .round()
+
+        const layerTransform = level.el.style.transform
+
+        infoBox.innerHTML =
+          `zoom: ${zoom}<br>center: ${clat}, ${clng}<br>` +
+          `pxOrigin: ${pox}, ${poy}<br>mpp: ${mx.toFixed(3)}, ${my.toFixed(
+            3
+          )}<br>` +
+          `lZoom: ${lZoom}<br>lOrigin: ${lox} ${loy}<br>` +
+          `offset: ${tx} ${ty}<br>scale: ${scale.toFixed(4)}<br>` +
+          `${layerTransform}<br>`
       })
-      return infoBox;
-    }
-  });
+      return infoBox
+    },
+  })
 
-  (new ZoomViewer).addTo(map);
+  new InfoViewer().addTo(map)
 }
-
-
-
-
 
 /*
  * Functions concerning
@@ -273,10 +295,10 @@ export function getBounds(ids) {
   const bounds = L.latLngBounds()
   if (ids) {
     for (const id of ids) {
-      bounds.extend(app.items.get(id).llBounds)
+      bounds.extend(items.get(id).llBounds)
     }
   } else {
-    for (const A of app.items.values()) {
+    for (const A of items.values()) {
       bounds.extend(A.llBounds)
     }
   }

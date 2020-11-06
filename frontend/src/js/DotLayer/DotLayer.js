@@ -6,9 +6,7 @@ import { Layer, Util, DomUtil, Browser, setOptions } from "leaflet"
 
 import * as ViewBox from "./ViewBox.js"
 import * as DrawBox from "./DrawBox.js"
-import * as ColorPalette from "./ColorPalette.js"
 // import * as WorkerPool from "./WorkerPool.js"
-import { infoBox } from "../MapAPI.js"
 
 import BitSet from "../BitSet.js"
 import {
@@ -30,7 +28,7 @@ const _timeOrigin = performance.timing.navigationStart
 const _lineCanvases = []
 const _dotCanvases = []
 
-let _map, _options, _itemsArray, _itemIds, _colorPalette
+let _map, _options, _itemsArray, _itemIds
 let _timePaused, _ready, _paused
 let _drawingDots
 let _gifPatch
@@ -133,14 +131,7 @@ export const DotLayer = Layer.extend({
 
     _ready = false
 
-    _itemsArray = Array.from(_items.values())
-    _itemIds = Array.from(_items.keys())
-    const n = _itemsArray.length
-
-    if (!n) return
-
-    setDotColors()
-    ViewBox.setItemsArray(_itemsArray)
+    _items.reset()
     ViewBox.calibrate()
     ViewBox.update()
     updateDotSettings()
@@ -255,7 +246,7 @@ function assignEventHandlers() {
     // zoomstart: loggit,
     // zoom: loggit,
     zoom: _onZoom,
-    // zoomend: loggit,
+    zoomend: onZoomEnd,
     // viewreset: loggit,
     resize: onResize,
   }
@@ -331,14 +322,18 @@ function onMove(event) {
  * Leaflet moves the pixel origin so we need to reset the CSS transform
  */
 function onMoveEnd(event) {
-  ViewBox.calibrate()
+  // ViewBox.calibrate()
 
-  console.log(`calibrated`)
-  const layerTransform = vParams.baselayer._level.el.style.transform
-  const canvasTransform = _dotCanvases[0].style.transform
-  console.log(`layer: ${layerTransform}, canvas: ${canvasTransform}`)
+  // console.log(`calibrated`)
+  // const layerTransform = vParams.baselayer._level.el.style.transform
+  // const canvasTransform = _dotCanvases[0].style.transform
+  // console.log(`layer: ${layerTransform}, canvas: ${canvasTransform}`)
 
   redraw(event)
+}
+
+function onZoomEnd(event) {
+  ViewBox.calibrate()
 }
 
 function debugCtxReset() {
@@ -405,24 +400,11 @@ function redraw(event) {
 
   // const promises = []
 
-  let timeSimp = 0
-  let timeSeg = 0
-  let tpaths,
-    timePaths,
-    tdots,
-    timeDots = 0
-
   inView.forEach((i) => {
     const A = itemsArray[i]
 
-    const t0 = Date.now()
     A.simplify(zoom)
-    const tsimp = Date.now()
-    timeSimp += tsimp - t0
-
     A.makeSegMask()
-    const tseg = Date.now()
-    timeSeg += tseg - tsimp
 
     if (A.segMask.isEmpty()) {
       ViewBox.remove(itemsArray.indexOf(A))
@@ -447,10 +429,7 @@ function redraw(event) {
   }
 
   if (_options.showPaths) {
-    const t1 = Date.now()
     drawPaths()
-    tpaths = Date.now()
-    timePaths = tpaths - t1
   } else {
     _lineCanvases[0].style.display = "none"
   }
@@ -459,15 +438,7 @@ function redraw(event) {
     updateDotSettings()
   } else if (_paused) {
     drawDots()
-    tdots = Date.now()
-    timeDots = tdots - tpaths
   }
-
-  const tot = timeDots + timeSimp + timeSeg + timePaths
-  console.log(
-    `simplify: ${timeSimp}\nmask: ${timeSeg}\npaths: ${timePaths}\ndots: ${timeDots}\ntot: ${tot}`
-  )
-  console.timeEnd(timerLabel)
 
   if (_options.debug) {
     const dctx = _debugCanvas.getContext("2d")
@@ -626,16 +597,9 @@ function drawDots(now) {
 }
 
 /*
- * Dot colors and settings
+ * Dot settings
  *
  */
-function setDotColors() {
-  let numItems = _itemsArray.length,
-    i = 0
-
-  _colorPalette = ColorPalette.makePalette(numItems)
-  for (const item of _itemsArray) item.dotColor = _colorPalette[i++]
-}
 
 function updateDotSettings(settings, shadowSettings) {
   const ds = _dotSettings

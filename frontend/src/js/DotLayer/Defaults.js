@@ -3,7 +3,7 @@
  */
 
 export const options = {
-  debug: false,
+  debug: true,
   numWorkers: 0,
   startPaused: false,
   showPaths: true,

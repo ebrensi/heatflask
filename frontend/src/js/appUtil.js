@@ -68,27 +68,63 @@ export function ws_prefix() {
   }
 }
 
-// Courtesy of TwoFuckingDevelopers (@2fdevs, @elecash and @qmarcos)
-function isMobileDevice() {
-  return (
-    typeof window.orientation !== "undefined" ||
-    navigator.userAgent.indexOf("IEMobile") !== -1
-  )
+/**
+ * Binary Search returns the index of the target value in a sorted array-like
+ *    data structure.
+ * @param  {function} get -- accessor function
+ * @param  {number} target
+ * @param  {number} start -- index of first value
+ * @param  {number} end   -- index of last value
+ * @param  {function} compare -- function compare(x,y) > 0 if x ">" y
+ * @return {number}
+ */
+export function binarySearch(get, target, start, end, compare) {
+  if (start > end) {
+    return false
+  }
+
+  const mid = Math.floor((start + end) / 2)
+
+  if (compare(get(mid), target) === 0) {
+    return mid
+  }
+
+  if (compare(get(mid), target) > 0) {
+    return binarySearch(get, target, start, mid - 1)
+  } else {
+    return binarySearch(get, target, mid + 1, end)
+  }
 }
 
-/*
-binarySearch: function(map, x, start, end) {
-    if (start > end) return false;
-
-    let mid = Math.floor((start + end) / 2);
-
-    if (map(mid) === x) return mid;
-
-    if(map(mid) > x)
-        return binarySearch(map, x, start, mid-1);
-    else
-        return binarySearch(map, x, mid+1, end);
+/**
+ * Histogram for analysis
+ * @param  {Iterable} points
+ * @param  {Array<Number>} bins -- boundaries for bins
+ * @return {Array<Number>}
+ *
+ * @example
+ *  const bins = histogram([1,1,2,2,3,4,4,4], [2, 3])
+ *
+ * Then bins == [2, 3, 3]
+ *
+ */
+export function histogram(points, bins) {
+  const binCounts = new Array(bins.length + 1).fill(0)
+  const last = bins.length - 1
+  for (const p of points) {
+    if (p < bins[0]) {
+      binCounts[0]++
+    } else if (p > bins[last]) {
+      binCounts[bins.length]++
+    } else {
+      for (let i = 0; i < binCounts.length; i++) {
+        if (bins[i] <= p && p <= bins[i + 1]) {
+          binCounts[i]++
+          break
+        }
+      }
+    }
+  }
+  // console.log(bins)
+  return binCounts
 }
-*/
-
-export const MOBILE = isMobileDevice()

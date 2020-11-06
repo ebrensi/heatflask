@@ -3,7 +3,6 @@ import app from "./Model.js"
 import { activityURL, appendCSS, ATYPE } from "./strava.js"
 import { href } from "./appUtil.js"
 import { EventHandler } from "./EventHandler.js"
-import { sidebar } from "./MapAPI.js"
 
 // This should vary based on the user's unit preferences
 const DIST_LABEL = "mi",

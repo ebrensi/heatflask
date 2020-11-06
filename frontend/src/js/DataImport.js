@@ -1,8 +1,7 @@
 import app from "./Model.js"
-import { L, controlWindow } from "./MapAPI.js"
-import { Activity } from "./DotLayer/Activity.js"
+import { controlWindow } from "./MapAPI.js"
 import queryBackend from "./Socket.js"
-
+import * as ActivityCollection from "./DotLayer/ActivityCollection.js"
 let numActivities, count
 
 /*
@@ -89,9 +88,8 @@ function onMessage(A) {
       const toDelete = A.delete
       if (toDelete.length) {
         // delete all ids in A.delete
-        const index = app.index
         for (const id of toDelete) {
-          app.items[index[+id]] = null
+          ActivityCollection.remove(id)
         }
       }
     } else if ("done" in A) {
@@ -108,7 +106,7 @@ function onMessage(A) {
     return
   }
 
-  app.items.set(A._id, new Activity(A))
+  ActivityCollection.add(A)
 
   // assign this activity a path color and speed type (pace, mph)
   // const atype = ATYPE.specs(A["type"]);

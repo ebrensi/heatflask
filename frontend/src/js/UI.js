@@ -29,8 +29,6 @@ import * as table from "./Table.js"
   right now we are only doing the single target-user UI.
 */
 
-app.dotLayer = dotLayer
-
 // pause animation when window/tab is not visible
 document.onvisibilitychange = function (e) {
   if (!dotLayer) return

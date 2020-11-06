@@ -1,10 +1,15 @@
+/*
+ * This module contains definitions for the Activity and ActivityCollection
+ *  classes.
+ */
+
 import { latLngBounds } from "leaflet"
 import * as Polyline from "./Codecs/Polyline.js"
 import * as StreamRLE from "./Codecs/StreamRLE.js"
-import { ATYPE } from "../strava.js"
 import * as ViewBox from "./ViewBox"
 import * as DrawBox from "./DrawBox"
 import * as Simplifier from "./Simplifier.js"
+import { ATYPE } from "../strava.js"
 import BitSet from "../BitSet.js"
 import { RunningStatsCalculator } from "./stats.js"
 
@@ -35,7 +40,7 @@ function inBounds(p) {
  *
  * @type {Number}
  */
-const ZSCORE_CUTOFF = 5  // TODO: Consider IQR for this
+const ZSCORE_CUTOFF = 5 // TODO: Consider IQR for this
 
 /**
  * @class Activity
@@ -58,11 +63,16 @@ export class Activity {
     this.total_distance = total_distance
     this.elapsed_time = elapsed_time
     this.name = name
-    this.selected = false
+    this._selected = false
     this.tr = null
 
-    this.pathColor = ATYPE.pathColor(type)
-    this.dotColor = null
+    this.colors = {
+      // path color is determined by activity type
+      path: ATYPE.pathColor(type),
+
+      // dot color is set by a color selecting algorithm later
+      dot: null,
+    }
 
     // timestamp comes from backend as a UTC-timestamp, local offset pair
     const [utc, offset] = ts
@@ -426,11 +436,9 @@ export class Activity {
     })
   }
 
-  *dotPointsIterFromSegs(now) {
-    const ds = this.getDotSettings(),
-      T = ds._period,
-      start = this.ts,
-      p = [NaN, NaN]
+  dotPointsFromSegs(now, ds, func) {
+    const T = ds._period,
+      start = this.ts
 
     // segments yields the same object seg every time with
     // the same views a and b to the same memory buffer.
@@ -465,10 +473,9 @@ export class Activity {
             dt = t - t_a
           // console.log(t);
           if (dt > 0) {
-            p[0] = p_a[0] + vx * dt
-            p[1] = p_a[1] + vy * dt
-            // drawDot(p);
-            yield p
+            const x = p_a[0] + vx * dt
+            const y = p_a[1] + vy * dt
+            func(x, y)
             // count++;
           }
         }
@@ -506,7 +513,9 @@ export class Activity {
           const t = j * T + timeOffset,
             dt = t - t_a
           if (dt > 0) {
-            func(p_a[0] + vx * dt, p_a[1] + vy * dt)
+            const x = p_a[0] + vx * dt
+            const y = p_a[1] + vy * dt
+            func(x, y)
           }
         }
       }
@@ -515,7 +524,6 @@ export class Activity {
 }
 
 /* helper functions */
-
 function* _pointsIterator(px, idxSet) {
   if (!idxSet) {
     for (let i = 0, len = px.length / 2; i < len; i++) {
@@ -534,34 +542,4 @@ function sqDist(p1, p2) {
   const [x1, y1] = p1
   const [x2, y2] = p2
   return (x2 - x1) ** 2 + (y2 - y1) ** 2
-}
-
-/* Histogram for analysis */
-function hist(points, bins) {
-  const binCounts = new Array(bins.length+1).fill(0)
-  const last = bins.length - 1
-  for (const p of points) {
-
-    if (p < bins[0]) {
-      binCounts[0]++
-
-    } else if (bins[last] < p) {
-      binCounts[bins.length]++
-
-    } else {
-      for (let i=0; i<binCounts.length; i++) {
-
-        if (bins[i] < p && p < bins[i+1]) {
-          binCounts[i]++
-          break
-        }
-      }
-    }
-
-
-
-  }
-
-  // console.log(bins)
-  return binCounts
 }

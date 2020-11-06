@@ -4,8 +4,7 @@
  *   backend server, embedded in main.html
  */
 
-export const INFO_BOX = true
-
+export const MAP_INFO = true
 
 import { ws_prefix } from "./appUtil.js"
 // import load_ga_object from "./google-analytics.js"
@@ -64,3 +63,13 @@ export function USER_URLS(userid) {
     strava: `https://www.strava.com/athletes/${userid}`,
   }
 }
+
+// Courtesy of TwoFuckingDevelopers (@2fdevs, @elecash and @qmarcos)
+function isMobileDevice() {
+  return (
+    typeof window.orientation !== "undefined" ||
+    navigator.userAgent.indexOf("IEMobile") !== -1
+  )
+}
+
+export const MOBILE = isMobileDevice()
