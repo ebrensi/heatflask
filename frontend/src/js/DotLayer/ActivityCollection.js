@@ -190,3 +190,33 @@ export function updateSelect(i) {
   setAdd(i, A.selected)
   setRemove(i, !A.selected)
 }
+
+/**
+ *  Create iterator of Activity objects from a BitSet of indices
+ * @param  {BitSet} bitSet
+ * @return {[type]}
+ */
+function makeArrayFromBitSet(bitSet, arr) {
+  arr = [] || arr
+  bitSet.forEach(i => arr.push(itemsArray[i]))
+  return arr
+}
+
+function makeGroupFromMap(sourceMap, destMap) {
+  sourceMap = sourceMap || destMap
+  sourceMap.forEach((color, bitSet) => destMap.set(color, makeArrayFromBitSet(bitSet)))
+}
+
+function makePathColorGroups() {
+  return {
+    selected: makeGroupFromMap(partitions.path.selected),
+    unselected: makeGroupFromMap(partitions.path.unselected)
+  }
+}
+
+function makeDotColorGroups() {
+  return {
+    selected: makeGroupFromMap(partitions.dot.selected),
+    unselected: makeGroupFromMap(partitions.dot.unselected)
+  }
+}
