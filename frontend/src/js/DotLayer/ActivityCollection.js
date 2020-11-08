@@ -6,6 +6,7 @@
 import * as ColorPalette from "./ColorPalette.js"
 import * as ViewBox from "./ViewBox.js"
 import { Activity } from "./Activity.js"
+import { options } from "./Defaults.js"
 import BitSet from "../BitSet.js"
 
 export const items = new Map()
@@ -220,3 +221,48 @@ function makeDotColorGroups() {
     unselected: makeGroupFromMap(partitions.dot.unselected)
   }
 }
+
+
+function makePathStyleGroups() {
+  const groups = []
+  const parts = partitions.path
+
+  if (parts.selected.size) {
+    const utemplate = {
+      lineWidth: options.unselected.pathWidth,
+      globalAlpha: options.unselected.pathOpacity,
+      strokeStyle: options.unselected.pathColor
+    }
+
+    parts.unselected.forEach((color, bitSet) => {
+      const style = {...utemplate, lineStyle: color}
+      const group = makeArrayFromBitSet(bitSet)
+      groups.push({style, group})
+    })
+
+    const stemplate = {
+      lineWidth: options.selected.pathWidth,
+      globalAlpha: options.selected.pathOpacity,
+      strokeStyle: options.selected.pathColor
+    }
+    parts.selected.forEach((color, bitSet) => {
+      const style = {...stemplate, lineStyle: color}
+      const group = makeArrayFromBitSet(bitSet)
+      groups.push({style, group})
+    })
+  } else {
+    const template = {
+      lineWidth: options.normal.pathWidth
+      globalAlpha: options.normal.pathOpacity,
+      strokeStyle: options.normal.pathColor
+    }
+    parts.unselected.forEach((color, bitSet) => {
+      const style = {...utemplate, lineStyle: color}
+      const group = makeArrayFromBitSet(bitSet)
+      groups.push({style, group})
+    })
+  }
+
+  return groups
+}
+

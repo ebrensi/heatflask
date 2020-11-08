@@ -505,6 +505,34 @@ function drawPaths() {
   DrawBox.clear(temp.getContext("2d"), DrawBox.defaultRect())
 }
 
+function drawPathsByStyleGroup(pathStyleGroups) {
+  if (!_ready) return
+
+  const alphaScale = _dotSettings.alphaScale
+  const ctx = _lineCanvases[1].getContext("2d")
+
+  for (const {style, group} of pathStyleGroups) {
+    style.globalAlpha *= alphaScale
+    ctx.update(style)
+    ctx.beginPath()
+    for (let i=0, len=group.length; i<len; i++) {
+      group[i].drawPathFromPointArray(ctx)
+    }
+    ctx.stroke()
+  }
+
+  // swap line canvases
+  const temp = _lineCanvases[0]
+  _lineCanvases[0] = _lineCanvases[1]
+  _lineCanvases[1] = temp
+
+  _lineCanvases[0].style.display = ""
+  temp.style.display = "none"
+  DrawBox.clear(temp.getContext("2d"), DrawBox.defaultRect())
+}
+
+
+
 /*
  * Functions for Drawing Dots
  */
@@ -534,12 +562,9 @@ function drawDotsByColor(now, colorGroups, ctx, drawDot) {
     ctx.fillStyle = color || _options.normal.dotColor
     ctx.beginPath()
 
-    group.forEach((i) => {
-      const A = _itemsArray[i]
-      // const dotLocs = A.dotPointsIterFromSegs(now);
-      A.dotPointsFromArray(now, _dotSettings, drawDot)
-    })
-
+    group.forEach(
+      (i) => _itemsArray[i].dotPointsFromArray(now, _dotSettings, drawDot)
+    )
     ctx.fill()
   }
   return count
