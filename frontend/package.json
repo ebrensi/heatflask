@@ -9,7 +9,7 @@
   "description": "Animated Movement Data Visualization for Strava Tracks",
   "scripts": {
     "build": "npm run format; parcel build ./src/html/*.html",
-    "watch": "parcel watch --log-level verbose ./src/html/*.html",
+    "watch": "npm run clean; parcel watch --log-level verbose ./src/html/*.html",
     "serve": "parcel serve --log-level verbose ./src/html/*.html",
     "test": "parcel serve --log-level verbose ./test/*.html",
     "clean": "rm -rf dist/* .parcel-cache/*",
@@ -40,7 +40,7 @@
   ],
   "devDependencies": {
     "documentation": "^13.1.0",
-    "eslint": "^7.12.1",
+    "eslint": "^7.13.0",
     "eslint-config-prettier": "^6.15.0",
     "parcel": "next",
     "parcel-plugin-nuke-dist": "^1.0.1",

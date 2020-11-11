@@ -4,7 +4,7 @@
  * Efrem Rensi 2020
  */
 
-import { MAPBOX_ACCESS_TOKEN, OFFLINE, MAP_INFO } from "./Env.js"
+import { MAPBOX_ACCESS_TOKEN, OFFLINE, MAP_INFO, MOBILE } from "./Env.js"
 
 import * as L from "leaflet"
 import Geohash from "latlon-geohash"
@@ -14,8 +14,8 @@ import "leaflet-easybutton"
 import "../../node_modules/leaflet-easybutton/src/easy-button.css"
 import "../../node_modules/sidebar-v2/js/leaflet-sidebar.js"
 import { tileLayer } from "./TileLayer/TileLayer.Heatflask.js"
-import { items, vParams, currentUser } from "./Model.js"
-
+import { vParams, currentUser } from "./Model.js"
+import { items } from "./DotLayer/ActivityCollection.js"
 import strava_logo from "url:../images/pbs4.png"
 import heatflask_logo from "url:../images/logo.png"
 
@@ -46,11 +46,11 @@ export const map = new L.Map("map", {
   center: center,
   zoom: zoom,
   preferCanvas: true,
-  zoomAnimation: false,
-  zoomSnap: 0.25,
-  zoomDelta: 0.5,
+  zoomAnimation: true,// MOBILE,
+  zoomSnap: 0,//0.25,
+  zoomDelta: 0.1, //0.5,
   zoomAnimationThreshold: 6,
-  wheelPxPerZoomLevel: 60,
+  wheelPxPerZoomLevel: 200, //60,
   updateWhenZooming: true,
   worldCopyJump: true,
 })

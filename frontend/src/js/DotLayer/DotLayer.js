@@ -6,6 +6,8 @@ import { Layer, Util, DomUtil, Browser, setOptions } from "leaflet"
 
 import * as ViewBox from "./ViewBox.js"
 import * as DrawBox from "./DrawBox.js"
+import * as ActivityCollection from "./ActivityCollection.js"
+
 // import * as WorkerPool from "./WorkerPool.js"
 
 import BitSet from "../BitSet.js"
@@ -14,7 +16,7 @@ import {
   dotSettings as _dotSettings,
 } from "./Defaults.js"
 
-import { vParams, items as _items } from "../Model.js"
+import { vParams } from "../Model.js"
 
 /* In order to prevent path redraws from happening too often
  * and hogging up CPU cycles we set a minimum delay between redraws
@@ -34,6 +36,7 @@ let _drawingDots
 let _gifPatch
 let _dotRect
 let _debugCanvas
+let _dotStyleGroups
 let _lastRedraw = 0
 let _timeOffset = 0
 let _redrawCounter = 0
@@ -91,9 +94,6 @@ export const DotLayer = Layer.extend({
       _debugCanvas = addCanvasOverlay("overlayPane")
     }
 
-    // if (_options.fps_display)
-    //    this.fps_display = L.control.fps().addTo(_map);
-
     ViewBox.setMap(_map)
     map.on(assignEventHandlers(), this)
   },
@@ -127,11 +127,11 @@ export const DotLayer = Layer.extend({
 
   // Call this function after items are added or removed
   reset: function () {
-    if (!_items.size) return
+    if (!ActivityCollection.items.size) return
 
     _ready = false
 
-    _items.reset()
+    ActivityCollection.reset()
     ViewBox.calibrate()
     ViewBox.update()
     updateDotSettings()
@@ -334,6 +334,7 @@ function onMoveEnd(event) {
 
 function onZoomEnd(event) {
   ViewBox.calibrate()
+  updateDotSettings()
 }
 
 function debugCtxReset() {
@@ -379,64 +380,29 @@ function viewReset() {
 function redraw(event) {
   if (!_ready) return
 
-  const timerLabel = `redraw_${_redrawCounter++}`
-  console.time(timerLabel)
-
+  /*
+   * reset DrawBox to the whole visible area to make sure all of it is
+   * cleared for the next redraw
+   */
   DrawBox.reset()
-  DrawBox.clear(_dotCanvases[1].getContext("2d"))
-  DrawBox.clear(_dotCanvases[0].getContext("2d"))
+  // DrawBox.clear(_dotCanvases[1].getContext("2d"))
+  // DrawBox.clear(_dotCanvases[0].getContext("2d"))
 
-  if (event) {
-    _drawingDots = false
-    _dotRect = DrawBox.defaultRect()
-    ViewBox.update()
-  }
 
-  const inView = ViewBox.inView(),
-    oldzoom = ViewBox.zoom
-
-  const itemsArray = _itemsArray,
-    zoom = ViewBox.zoom
-
-  // const promises = []
-
-  inView.forEach((i) => {
-    const A = itemsArray[i]
-
-    A.simplify(zoom)
-    A.makeSegMask()
-
-    if (A.segMask.isEmpty()) {
-      ViewBox.remove(itemsArray.indexOf(A))
-    }
-    // promises.push(A.simplify(zoom).then((A) => A.makeSegMask()))
-  })
-
-  // Promise.all(promises).then((fulfilled) => {
-  _drawingDots = true
-
-  // for (const A of fulfilled) {
-  //   if (A.segMask.isEmpty()) {
-  //     ViewBox.remove(itemsArray.indexOf(A))
-  //   }
-  // }
-
-  // the whole viewable area
-  const viewPort = DrawBox.defaultRect()
+  const groups = ActivityCollection.updateGroups()
+  _dotStyleGroups = groups.dot
 
   if (_options.debug) {
-    DrawBox.clear(_debugCanvas.getContext("2d"), viewPort)
+    DrawBox.clear(_debugCanvas.getContext("2d"))
   }
 
   if (_options.showPaths) {
-    drawPaths()
+    drawPaths(groups.path)
   } else {
     _lineCanvases[0].style.display = "none"
   }
 
-  if (oldzoom != zoom) {
-    updateDotSettings()
-  } else if (_paused) {
+  if (_paused) {
     drawDots()
   }
 
@@ -450,73 +416,19 @@ function redraw(event) {
   // })
 }
 
-/*
- * Functions for drawing Paths
- */
-function drawPathsByColor(ctx, colorGroups, defaultColor) {
-  for (const color in colorGroups) {
-    const group = colorGroups[color]
-    ctx.strokeStyle = color || defaultColor
-    ctx.beginPath()
-    group.forEach((i) => _itemsArray[i].drawPathFromPointArray(ctx))
-    ctx.stroke()
-  }
-}
 
-// Draw all paths for the current items in such a way
-// that we group stroke-styles together in batch calls.
-function drawPaths() {
-  if (!_ready) return
-
-  const options = _options,
-    vb = ViewBox
-
-  const cg = vb.pathColorGroups(),
-    selected = cg.selected,
-    unselected = cg.unselected
-
-  const alphaScale = _dotSettings.alphaScale
-
-  const ctx = _lineCanvases[1].getContext("2d")
-
-  if (selected) {
-    ctx.lineWidth = options.unselected.pathWidth
-    ctx.globalAlpha = options.unselected.pathOpacity * alphaScale
-    drawPathsByColor(ctx, unselected, options.unselected.pathColor)
-
-    // draw selected paths
-    ctx.lineWidth = options.selected.pathWidth
-    ctx.globalAlpha = options.selected.pathOpacity * alphaScale
-    drawPathsByColor(ctx, selected, options.selected.pathColor)
-  } else if (unselected) {
-    // draw unselected paths
-    ctx.lineWidth = options.normal.pathWidth
-    ctx.globalAlpha = options.normal.pathOpacity * alphaScale
-    drawPathsByColor(ctx, unselected, options.normal.pathColor)
-  }
-
-  // swap line canvases
-  const temp = _lineCanvases[0]
-  _lineCanvases[0] = _lineCanvases[1]
-  _lineCanvases[1] = temp
-
-  _lineCanvases[0].style.display = ""
-  temp.style.display = "none"
-  DrawBox.clear(temp.getContext("2d"), DrawBox.defaultRect())
-}
-
-function drawPathsByStyleGroup(pathStyleGroups) {
+function drawPaths(pathStyleGroups) {
   if (!_ready) return
 
   const alphaScale = _dotSettings.alphaScale
   const ctx = _lineCanvases[1].getContext("2d")
 
-  for (const {style, group} of pathStyleGroups) {
-    style.globalAlpha *= alphaScale
-    ctx.update(style)
+  for (const {spec, items} of pathStyleGroups) {
+    Object.assign(ctx, spec)
+    ctx.globalAlpha = spec.globalAlpha * alphaScale
     ctx.beginPath()
-    for (let i=0, len=group.length; i<len; i++) {
-      group[i].drawPathFromPointArray(ctx)
+    for (const A of items) {
+      A.drawPathFromPointArray(ctx)
     }
     ctx.stroke()
   }
@@ -554,62 +466,26 @@ function makeSquareDrawFunc(ctx) {
   return transformDraw
 }
 
-function drawDotsByColor(now, colorGroups, ctx, drawDot) {
-  let count = 0
-
-  for (const color in colorGroups) {
-    const group = colorGroups[color]
-    ctx.fillStyle = color || _options.normal.dotColor
-    ctx.beginPath()
-
-    group.forEach(
-      (i) => _itemsArray[i].dotPointsFromArray(now, _dotSettings, drawDot)
-    )
-    ctx.fill()
-  }
-  return count
-}
-
 function drawDots(now) {
   if (!_ready) return
 
   if (!now) now = _timePaused || Date.now()
 
-  // We write to the currently hidden canvas
-  const ctx = _dotCanvases[1].getContext("2d")
-
-  const cg = ViewBox.dotColorGroups()
-
-  const selected = _gifPatch ? null : cg.selected
-  const unselected = _gifPatch
-    ? { ...cg.selected, ...cg.unselected }
-    : cg.unselected
-
   const alphaScale = _dotSettings.alphaScale
 
-  // Clear the area to draw on if it hasn't already been cleared
-  DrawBox.clear(ctx, _dotRect)
+  // We write to the currently hidden canvas
+  const ctx = _dotCanvases[1].getContext("2d")
+   DrawBox.clear(ctx, _dotRect)
   _dotRect = undefined
 
-  let count = 0
-
-  if (selected) {
-    // draw normal activity dots
-    const drawSquare = makeSquareDrawFunc(ctx)
-    ctx.globalAlpha = _options.unselected.dotOpacity * alphaScale
-    count += drawDotsByColor(now, unselected, ctx, drawSquare)
-
-    // draw selected activity dots
-    const drawCircle = makeCircleDrawFunc(ctx)
-    ctx.globalAlpha = _options.selected.dotOpacity * alphaScale
-    count += drawDotsByColor(now, selected, ctx, drawCircle)
-  } else if (unselected) {
-    // draw normal activity dots
-    const drawSquare = makeSquareDrawFunc(ctx)
-    ctx.globalAlpha = _options.normal.dotOpacity * alphaScale
-    count += drawDotsByColor(now, unselected, ctx, drawSquare)
+  for (const {spec, items, draw} of _dotStyleGroups) {
+    const drawDot = (draw === "square")? makeSquareDrawFunc(ctx) : makeCircleDrawFunc(ctx)
+    Object.assign(ctx, spec)
+    ctx.globalAlpha = spec.globalAlpha * alphaScale
+    ctx.beginPath()
+    items.forEach(A => A.dotPointsFromArray(now, _dotSettings, drawDot))
+    ctx.fill()
   }
-
   // swap canvases
   const temp = _dotCanvases[0]
   temp.style.display = "none"
@@ -617,9 +493,75 @@ function drawDots(now) {
 
   _dotCanvases[0] = _dotCanvases[1]
   _dotCanvases[1] = temp
-
-  return count
 }
+
+// function drawDotsByColor(now, colorGroups, ctx, drawDot) {
+//   let count = 0
+
+//   for (const color in colorGroups) {
+//     const group = colorGroups[color]
+//     ctx.fillStyle = color || _options.normal.dotColor
+//     ctx.beginPath()
+
+//     group.forEach(
+//       A => A.dotPointsFromArray(now, _dotSettings, drawDot)
+//     )
+//     ctx.fill()
+//   }
+//   return count
+// }
+
+// function drawDots(now) {
+//   return
+//   if (!_ready) return
+
+//   if (!now) now = _timePaused || Date.now()
+
+//   // We write to the currently hidden canvas
+//   const ctx = _dotCanvases[1].getContext("2d")
+
+//   const cg = ViewBox.dotColorGroups()
+
+//   const selected = _gifPatch ? null : cg.selected
+//   const unselected = _gifPatch
+//     ? { ...cg.selected, ...cg.unselected }
+//     : cg.unselected
+
+//   const alphaScale = _dotSettings.alphaScale
+
+//   // Clear the area to draw on if it hasn't already been cleared
+//   DrawBox.clear(ctx, _dotRect)
+//   _dotRect = undefined
+
+//   let count = 0
+
+//   if (selected) {
+//     // draw normal activity dots
+//     const drawSquare = makeSquareDrawFunc(ctx)
+//     ctx.globalAlpha = _options.unselected.dotOpacity * alphaScale
+//     count += drawDotsByColor(now, unselected, ctx, drawSquare)
+
+//     // draw selected activity dots
+//     const drawCircle = makeCircleDrawFunc(ctx)
+//     ctx.globalAlpha = _options.selected.dotOpacity * alphaScale
+//     count += drawDotsByColor(now, selected, ctx, drawCircle)
+//   } else if (unselected) {
+//     // draw normal activity dots
+//     const drawSquare = makeSquareDrawFunc(ctx)
+//     ctx.globalAlpha = _options.normal.dotOpacity * alphaScale
+//     count += drawDotsByColor(now, unselected, ctx, drawSquare)
+//   }
+
+//   // swap canvases
+//   const temp = _dotCanvases[0]
+//   temp.style.display = "none"
+//   _dotCanvases[1].style.display = ""
+
+//   _dotCanvases[0] = _dotCanvases[1]
+//   _dotCanvases[1] = temp
+
+//   return count
+// }
 
 /*
  * Dot settings

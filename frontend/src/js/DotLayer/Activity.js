@@ -314,10 +314,6 @@ export class Activity {
       throw new TypeError("zoom must be a number")
     }
 
-    if (zoom in this.idxSet) {
-      return this
-    }
-
     // prevent another instance of this function from doing this
     this.idxSet[zoom] = null
 
@@ -382,7 +378,7 @@ export class Activity {
     const zoom = ViewBox.zoom
     const points = this.pointsIterator(zoom)
 
-    this.segMask = (this.segMask || new BitSet()).clear()
+    const segMask = this.segMask = (this.segMask || new BitSet()).clear()
 
     let p = points.next().value,
       p_In = inBounds(p),
@@ -391,7 +387,7 @@ export class Activity {
     for (const nextp of points) {
       const nextp_In = inBounds(nextp)
       if (p_In || nextp_In) {
-        this.segMask.add(s)
+        segMask.add(s)
       }
       p_In = nextp_In
       s++
@@ -399,12 +395,11 @@ export class Activity {
 
     if (zoom in this.badSegIdx) {
       const badSegIdx = this.badSegIdx[zoom]
-      const segMask = this.segMask
       for (const idx of badSegIdx) {
         segMask.remove(idx)
       }
     }
-    return this
+    return segMask
   }
 
   drawPathFromSegIter(ctx) {

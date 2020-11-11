@@ -1,5 +1,5 @@
 import { HHMMSS } from "./appUtil.js"
-import app from "./Model.js"
+import { items } from "./DotLayer/ActivityCollection.js"
 import { activityURL, appendCSS, ATYPE } from "./strava.js"
 import { href } from "./appUtil.js"
 import { EventHandler } from "./EventHandler.js"
@@ -67,9 +67,9 @@ export function sort({ column, asc }) {
     ? (tr1, tr2) => value(tr1.item) - value(tr2.item)
     : (tr1, tr2) => value(tr2.item) - value(tr1.item)
 
-  const trs = new Array(app.items.size)
+  const trs = new Array(items.size)
   let i = 0
-  for (const A of app.items.values()) {
+  for (const A of items.values()) {
     trs[i++] = A.tr
   }
 
@@ -142,7 +142,7 @@ headerRow.addEventListener("click", (e) => {
  * Update the table (after adding or removing rows)
  */
 export function update(remake) {
-  for (const A of app.items.values()) {
+  for (const A of items.values()) {
     if (!A.tr || remake) {
       A.tr = makeRow(A)
       // A.tr.setAttribute("data-pathColor", A.pathColor)
@@ -173,7 +173,7 @@ function select(A, selected) {
 }
 
 export function clearSelections() {
-  for (const A of app.items.values()) {
+  for (const A of items.values()) {
     if (A.selected) select(A, false)
   }
 }

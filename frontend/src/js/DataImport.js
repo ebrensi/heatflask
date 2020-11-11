@@ -1,11 +1,11 @@
-import app from "./Model.js"
+import { flags } from "./Model.js"
 import { controlWindow } from "./MapAPI.js"
 import queryBackend from "./Socket.js"
 import * as ActivityCollection from "./DotLayer/ActivityCollection.js"
 let numActivities, count
 
 /*
- * Set up a message box that appears only when app.flags.importing is true
+ * Set up a message box that appears only when flags.importing is true
  */
 const importInfoBox = controlWindow({
   position: "center",
@@ -18,7 +18,7 @@ const importInfoBox = controlWindow({
   visible: false,
 })
 
-app.flags.onChange("importing", (val) => {
+flags.onChange("importing", (val) => {
   val ? importInfoBox.show() : importInfoBox.hide()
 })
 
@@ -52,7 +52,7 @@ function displayProgressInfo(msg, progress) {
  * Send a query to the backend and populate the items object with it.
  */
 export function makeQuery(query, done) {
-  app.flags.importing = true
+  flags.importing = true
   numActivities = 0
   count = 0
 
@@ -62,7 +62,7 @@ export function makeQuery(query, done) {
 }
 
 export function abortQuery() {
-  app.flags.importing = false
+  flags.importing = false
   makeQuery()
 }
 
@@ -107,23 +107,6 @@ function onMessage(A) {
   }
 
   ActivityCollection.add(A)
-
-  // assign this activity a path color and speed type (pace, mph)
-  // const atype = ATYPE.specs(A["type"]);
-  // const tup = A["ts"];
-  // const tsLocal = new Date((tup[0] + tup[1] * 3600) * 1000);
-  // const UTCtimestamp = tup[0];
-  // const bounds = L.latLngBounds(A["bounds"]["SW"], A["bounds"]["NE"]);
-
-  // dotLayer.addItem(
-  //   id,
-  //   A["polyline"],
-  //   atype.pathColor,
-  //   A["time"],
-  //   UTCtimestamp,
-  //   bounds,
-  //   A["n"]
-  // );
 
   count++
   if (count % 5 === 0) {

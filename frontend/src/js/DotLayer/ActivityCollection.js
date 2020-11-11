@@ -32,7 +32,7 @@ export function remove(id) {
 /**
  * This should be called after adding or removing Activities.
  */
-function reset() {
+export function reset() {
   setDotColors()
 
   itemsArray = Array.from(items.values())
@@ -71,29 +71,32 @@ const inView = {
   last: new BitSet(),
 }
 
-/*
- * These are partitions of inView into colors and whether or not they are selected.
- * Each Map will contain a BitSet for every color of Activity that is currently in view
- */
-const partitions = {
-  path: { selected: new Map(), unselected: new Map() },
-  dot: { selected: new Map(), unselected: new Map() },
-}
+export function updateGroups() {
+  ViewBox.update()
 
-export function updateSets() {
-  if (needReset) {
-    reset()
-  }
-  ViewBox.update()[
-    // swap current and last
-    (inView.current, inView.last)
-  ] = [inView.last, inView.current]
+  const zoom = ViewBox.zoom
+
+  // the semicolon is necessary
+  // see https://stackoverflow.com/questions/42562806/destructuring-assignment-and-variable-swapping
+  ;[inView.current, inView.last] = [inView.last, inView.current]
 
   const currentInView = inView.current.clear()
 
   // update which items are in the current view
   for (let i = 0, len = itemsArray.length; i < len; i++) {
-    if (ViewBox.overlaps(itemsArray[i].pxBounds)) {
+    const A = itemsArray[i]
+
+    if (!A.inMapBounds) {
+      continue
+    }
+
+    if (!(zoom in A.idxSet)) {
+      A.simplify(zoom)
+    }
+
+    const segMask = A.makeSegMask()
+
+    if (!segMask.isEmpty()) {
       currentInView.add(i)
     }
   }
@@ -103,14 +106,80 @@ export function updateSets() {
 
   changed.forEach((i) => {
     if (currentInView.has(i)) {
-      setAdd(i)
+      addToGroup(i)
     } else {
-      setRemove(i)
+      removeFromGroup(i)
     }
   })
 
   // return the current state of inclusion
-  return currentInView
+  return makeStyleGroups()
+}
+
+/*
+ * These are partitions of inView into colors and whether or not they are selected.
+ * Each Map will contain a Set for every color of Activity that is currently in view
+ */
+const GROUP_TYPES = {
+  path: {
+    partitions: { selected: new Map(), unselected: new Map() },
+    spec: {
+      normal: {
+        lineWidth: options.normal.pathWidth,
+        globalAlpha: options.normal.pathOpacity,
+        strokeStyle: options.normal.pathColor,
+      },
+      unselected: {
+        lineWidth: options.unselected.pathWidth,
+        globalAlpha: options.unselected.pathOpacity,
+        strokeStyle: options.unselected.pathColor,
+      },
+      selected: {
+        lineWidth: options.selected.pathWidth,
+        globalAlpha: options.selected.pathOpacity,
+        strokeStyle: options.selected.pathColor,
+      },
+    },
+  },
+
+  dot: {
+    partitions: { selected: new Map(), unselected: new Map() },
+    spec: {
+      normal: {
+        globalAlpha: options.normal.dotOpacity,
+        fillStyle: options.normal.dotColor,
+      },
+      unselected: {
+        globalAlpha: options.unselected.dotOpacity,
+        fillStyle: options.unselected.dotColor,
+      },
+      selected: {
+        globalAlpha: options.selected.dotOpacity,
+        fillStyle: options.selected.dotColor,
+      },
+    },
+  },
+}
+
+class StyleGroup {
+  constructor(gtype, color, selected) {
+    const spec = selected
+      ? GROUP_TYPES[gtype].spec.selected
+      : GROUP_TYPES[gtype].spec.normal
+    this.items = new Set()
+    const pen = gtype === "path" ? "strokeStyle" : "fillStyle"
+    this.spec = { ...spec, [pen]: color }
+
+    if (gtype === "dot") {
+      this.draw = selected? "circle" : "square"
+    }
+  }
+  add(item) {
+    this.items.add(item)
+  }
+  remove(item) {
+    this.items.delete(item)
+  }
 }
 
 /**
@@ -118,32 +187,23 @@ export function updateSets() {
  * @param {Number} i -- index of an in-view Activity
  * @param {Boolean} [selected] -- specify which group to add to
  */
-function setAdd(i, selected) {
+function addToGroup(i, selected) {
   const A = itemsArray[i]
   selected = selected || A.selected
 
-  const pgroup = selected
-    ? partitions.path.selected
-    : partitions.path.unselected
-  const pcolor = A.colors.path
-  const pset = pgroup.get(pcolor)
-  if (pset) {
-    pset.add(i)
-  } else {
-    const newpset = new BitSet()
-    newpset.add(i)
-    pgroup.set(pcolor, newpset)
-  }
+  for (const gtype in GROUP_TYPES) {
+    const partitions = GROUP_TYPES[gtype].partitions
+    const groups = selected ? partitions.selected : partitions.unselected
+    const color = A.colors[gtype]
 
-  const dgroup = selected ? partitions.dot.selected : partitions.dot.unselected
-  const dcolor = A.colors.dot
-  const dset = dgroup.get(dcolor)
-  if (dset) {
-    dset.add(i)
-  } else {
-    const newdset = new BitSet()
-    newdset.add(i)
-    dgroup.set(dcolor, newdset)
+    const styleGroup = groups.get(color)
+    if (styleGroup) {
+      styleGroup.add(A)
+    } else {
+      const styleGroup = new StyleGroup(gtype, color)
+      styleGroup.add(A)
+      groups.set(color, styleGroup)
+    }
   }
 }
 
@@ -152,27 +212,20 @@ function setAdd(i, selected) {
  * @param {number} i -- index of an Activity not in-view
  * @param {Boolean} [selected] -- specify which group to remove from
  */
-export function setRemove(i, selected) {
+function removeFromGroup(i, selected) {
   const A = itemsArray[i]
   selected = selected || A.selected
 
-  const pgroup = selected
-    ? partitions.path.selected
-    : partitions.path.unselected
-  const pcolor = A.colors.path
-  const pset = pgroup.get(pcolor)
+  for (const gtype in GROUP_TYPES) {
+    const partitions = GROUP_TYPES[gtype].partitions
+    const groups = selected ? partitions.selected : partitions.unselected
+    const color = A.colors[gtype]
+    const styleGroup = groups.get(color)
 
-  pset.remove(i)
-  if (pset.isEmpty()) {
-    pgroup.delete(pcolor)
-  }
-
-  const dgroup = selected ? partitions.dot.selected : partitions.dot.unselected
-  const dcolor = A.colors.dot
-  const dset = dgroup.get(dcolor)
-  dset.remove(i)
-  if (dset.isEmpty()) {
-    dgroup.delete(dcolor)
+    styleGroup.remove(A)
+    if (styleGroup.size === 0) {
+      groups.delete(color)
+    }
   }
 }
 
@@ -188,81 +241,18 @@ export function updateSelect(i) {
     return
   }
 
-  setAdd(i, A.selected)
-  setRemove(i, !A.selected)
+  addToGroup(i, A.selected)
+  removeFromGroup(i, !A.selected)
 }
 
-/**
- *  Create iterator of Activity objects from a BitSet of indices
- * @param  {BitSet} bitSet
- * @return {[type]}
- */
-function makeArrayFromBitSet(bitSet, arr) {
-  arr = [] || arr
-  bitSet.forEach(i => arr.push(itemsArray[i]))
-  return arr
-}
-
-function makeGroupFromMap(sourceMap, destMap) {
-  sourceMap = sourceMap || destMap
-  sourceMap.forEach((color, bitSet) => destMap.set(color, makeArrayFromBitSet(bitSet)))
-}
-
-function makePathColorGroups() {
-  return {
-    selected: makeGroupFromMap(partitions.path.selected),
-    unselected: makeGroupFromMap(partitions.path.unselected)
+function makeStyleGroups() {
+  const output = {}
+  for (const gtype in GROUP_TYPES) {
+    const partitions = GROUP_TYPES[gtype].partitions
+    output[gtype] = output[gtype] = [
+      ...partitions.unselected.values(),
+      ...partitions.selected.values(),
+    ]
   }
+  return output
 }
-
-function makeDotColorGroups() {
-  return {
-    selected: makeGroupFromMap(partitions.dot.selected),
-    unselected: makeGroupFromMap(partitions.dot.unselected)
-  }
-}
-
-
-function makePathStyleGroups() {
-  const groups = []
-  const parts = partitions.path
-
-  if (parts.selected.size) {
-    const utemplate = {
-      lineWidth: options.unselected.pathWidth,
-      globalAlpha: options.unselected.pathOpacity,
-      strokeStyle: options.unselected.pathColor
-    }
-
-    parts.unselected.forEach((color, bitSet) => {
-      const style = {...utemplate, lineStyle: color}
-      const group = makeArrayFromBitSet(bitSet)
-      groups.push({style, group})
-    })
-
-    const stemplate = {
-      lineWidth: options.selected.pathWidth,
-      globalAlpha: options.selected.pathOpacity,
-      strokeStyle: options.selected.pathColor
-    }
-    parts.selected.forEach((color, bitSet) => {
-      const style = {...stemplate, lineStyle: color}
-      const group = makeArrayFromBitSet(bitSet)
-      groups.push({style, group})
-    })
-  } else {
-    const template = {
-      lineWidth: options.normal.pathWidth
-      globalAlpha: options.normal.pathOpacity,
-      strokeStyle: options.normal.pathColor
-    }
-    parts.unselected.forEach((color, bitSet) => {
-      const style = {...utemplate, lineStyle: color}
-      const group = makeArrayFromBitSet(bitSet)
-      groups.push({style, group})
-    })
-  }
-
-  return groups
-}
-

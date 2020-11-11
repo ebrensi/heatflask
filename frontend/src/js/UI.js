@@ -5,10 +5,10 @@
 
 import { AUTHORIZE_URL } from "./Env.js"
 
-import app from "./Model.js"
+import { currentUser, vParams, qParams, flags } from "./Model.js"
+import { items } from "./DotLayer/ActivityCollection.js"
 import "./URL.js"
 
-import * as L from "leaflet"
 import { getBounds, map } from "./MapAPI.js"
 import { dotLayer } from "./DotLayerAPI.js"
 // import { captureCycle, abortCapture } from "./DotLayer/Export.js"
@@ -32,7 +32,7 @@ import * as table from "./Table.js"
 // pause animation when window/tab is not visible
 document.onvisibilitychange = function (e) {
   if (!dotLayer) return
-  const paused = app.vParams.paused
+  const paused = vParams.paused
   if (e.target.hidden && !paused) {
     dotLayer.pause()
   } else if (!paused) {
@@ -50,8 +50,8 @@ document.querySelectorAll(".paypal-button").forEach((el) => {
  * Set a listener to change user's account to public or private
  *  if they change that setting
  */
-app.currentUser.onChange("public", async (status) => {
-  const resp = await fetch(`${app.currentUser.url.public}?status=${status}`)
+currentUser.onChange("public", async (status) => {
+  const resp = await fetch(`${currentUser.url.public}?status=${status}`)
   const response = await resp.text()
   console.log(`response: ${response}`)
 })
@@ -63,7 +63,7 @@ document
   .querySelector("[data-bind=quantity]")
   .addEventListener("keypress", (event) => {
     if (event.key === "Enter") {
-      app.qParams.quantity = event.target.value
+      qParams.quantity = event.target.value
       renderFromQuery()
     }
   })
@@ -76,16 +76,16 @@ function login() {
 }
 
 function logout() {
-  console.log(`${app.currentUser.id} logging out`)
-  window.location.href = app.currentUser.url.logout
+  console.log(`${currentUser.id} logging out`)
+  window.location.href = currentUser.url.logout
 }
 
 function deleteAccount() {
-  window.location.href = app.currentUser.url.delete
+  window.location.href = currentUser.url.delete
 }
 
 function viewIndex() {
-  window.open(app.currentUser.url.index)
+  window.open(currentUser.url.index)
 }
 
 function abortRender() {
@@ -122,8 +122,7 @@ for (const el of document.querySelectorAll("[data-action]")) {
  *  Construct a query for activity data from our qParams
  */
 function getCurrentQuery() {
-  const query = { streams: true },
-    qParams = app.qParams
+  const query = { streams: true }
 
   switch (qParams.queryType) {
     case "activities":
@@ -164,7 +163,7 @@ function getCurrentQuery() {
       query.key = qParams.key
   }
 
-  const to_exclude = Object.keys(app.items).map(Number)
+  const to_exclude = Object.keys(items).map(Number)
   if (to_exclude.length) query["exclude_ids"] = to_exclude
 
   return query
@@ -172,13 +171,13 @@ function getCurrentQuery() {
 
 function renderFromQuery() {
   const query = {
-    [app.qParams.userid]: getCurrentQuery(),
+    [qParams.userid]: getCurrentQuery(),
   }
   console.log(`making query: ${JSON.stringify(query)}`)
 
   makeQuery(query, () => {
-    app.flags.importing = false
-    const num = app.items.size
+    flags.importing = false
+    const num = items.size
     const msg = `done! ${num} activities imported`
     document.querySelectorAll(".info-message").forEach((el) => {
       el.innerHTML = msg
@@ -194,7 +193,7 @@ table.events.addListener("selection", (e) => {
 
 /* Rendering */
 function updateLayers() {
-  if (app.vParams.autozoom) {
+  if (vParams.autozoom) {
     const totalBounds = getBounds()
 
     if (totalBounds.isValid()) {
@@ -215,11 +214,11 @@ function updateLayers() {
 
   dotLayer.reset()
   table.update()
-  // app.messages.period = dotLayer.periodInSecs().toFixed(2)
+  // messages.period = dotLayer.periodInSecs().toFixed(2)
 }
 
 // Make initial query if there is one
-if (app.qParams.userid) {
+if (qParams.userid) {
   renderFromQuery()
 }
 
