@@ -3,7 +3,7 @@
  *  classes.
  */
 
-import { latLngBounds } from "leaflet"
+import { LatLngBounds } from "../myLeaflet.js"
 import * as Polyline from "./Codecs/Polyline.js"
 import * as StreamRLE from "./Codecs/StreamRLE.js"
 import * as ViewBox from "./ViewBox"
@@ -79,7 +79,7 @@ export class Activity {
     this.ts = utc
     this.tsLocal = new Date((utc + offset * 3600) * 1000)
 
-    this.llBounds = latLngBounds(bounds.SW, bounds.NE)
+    this.llBounds = new LatLngBounds(bounds.SW, bounds.NE)
     this.pxBounds = ViewBox.latLng2pxBounds(this.llBounds)
 
     this.idxSet = {} // BitSets of indices of px for each level of zoom
@@ -378,7 +378,7 @@ export class Activity {
     const zoom = ViewBox.zoom
     const points = this.pointsIterator(zoom)
 
-    const segMask = this.segMask = (this.segMask || new BitSet()).clear()
+    const segMask = (this.segMask = (this.segMask || new BitSet()).clear())
 
     let p = points.next().value,
       p_In = inBounds(p),

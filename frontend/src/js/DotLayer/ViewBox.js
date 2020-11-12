@@ -4,7 +4,7 @@
  */
 
 import { makePT } from "./CRS.js"
-import { DomUtil } from "leaflet"
+import { DomUtil } from "../myLeaflet.js"
 
 const _canvases = []
 
@@ -125,8 +125,8 @@ export function calibrate() {
  * Array every time we perform the transformation.
  */
 export function makeTransform(func) {
-  const ox = _pxOffset.x,
-    oy = _pxOffset.y
+  const ox = _pxOffset.x
+  const oy = _pxOffset.y
   if (func) {
     return function (x, y) {
       return func(_zf * x + ox, _zf * y + oy)

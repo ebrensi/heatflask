@@ -1,8 +1,12 @@
-import "./L.BoxHook.js"
-import "./L.SwipeSelect.js"
+import "./BoxHook.js"
 
-import { L, map } from "./MapAPI.js"
-import appState from "./appState.js"
+import { dotLayer } from "./DotLayerAPI.js"
+import { SwipeSelect } from "./SwipeSelect.js"
+
+import { map } from "./MapAPI.js"
+import { items } from "./DotLayer/ActivityColletion.js"
+
+const easyButton = window.L.easyButton
 
 // Select-activities-in-region functionality IIFE
 function doneSelecting(obj) {
@@ -17,7 +21,7 @@ function doneSelecting(obj) {
     const id = handle_path_selections(ids)
 
     if (id) {
-      const A = appState.items.get(id),
+      const A = items.get(id),
         loc = A.bounds.getCenter()
 
       setTimeout(function () {
@@ -29,7 +33,7 @@ function doneSelecting(obj) {
 
 // set hooks for ctrl-drag
 map.on("boxhookend", doneSelecting)
-const selectControl = new L.SwipeSelect({}, doneSelecting)
+const selectControl = new SwipeSelect({}, doneSelecting)
 
 // button for selecting via touchscreen
 const selectButton_states = [
@@ -53,9 +57,7 @@ const selectButton_states = [
   },
 ]
 
-import "../../node_modules/leaflet-easybutton/src/easy-button.d.ts"
-import "../../node_modules/leaflet-easybutton/src/easy-button.css"
-selectButton = L.easyButton({
+const selectButton = easyButton({
   states: selectButton_states,
   position: "topright",
 })
@@ -69,7 +71,7 @@ function handle_path_selections(ids) {
   // let count = 0,
   //     id;
   // for (id of ids) {
-  //     const A = appState.items.get(id),
+  //     const A = items.get(id),
   //           tag = `#${A.id}`;
   //     if (A.selected)
   //         toDeSelect.push(tag);

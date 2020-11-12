@@ -1,8 +1,10 @@
-import { L, map } from "./mapAPI.js"
+import { map } from "./mapAPI.js"
 import { dotLayer } from "./DotLayer/DotLayer.js"
 
 import "leaflet-areaselect"
 import "../ext/leaflet-areaselect.css"
+
+const L = window.L
 
 const areaSelect = L.areaSelect({ width: 200, height: 200 })
 

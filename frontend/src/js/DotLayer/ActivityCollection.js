@@ -171,7 +171,7 @@ class StyleGroup {
     this.spec = { ...spec, [pen]: color }
 
     if (gtype === "dot") {
-      this.draw = selected? "circle" : "square"
+      this.entity = selected ? "circle" : "square"
     }
   }
   add(item) {

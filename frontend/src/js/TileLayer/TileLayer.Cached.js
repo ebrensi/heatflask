@@ -20,7 +20,7 @@ import {
   Browser,
   bind,
   extend,
-} from "leaflet"
+} from "../myLeaflet.js"
 
 export { TileLayer, tileLayer }
 

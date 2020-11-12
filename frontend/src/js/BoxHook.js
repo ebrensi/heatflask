@@ -1,5 +1,5 @@
 /*
- * L.Handler.BoxHook is used to add kepress-drag-box interaction to the map
+ * Handler.BoxHook is used to add kepress-drag-box interaction to the map
  * (call a callback with selected bounding box)
  *  Based on Leaflet's native BoxZoom
  *
@@ -7,9 +7,17 @@
  *
  *      map.addInitHook('addHandler', 'BoxHook', BoxHook);
  */
-import { L } from "./MapAPI.js"
+import {
+  Map,
+  Bounds,
+  Handler,
+  LatLngBounds,
+  DomEvent,
+  DomUtil,
+  Util,
+} from "./myLeaflet.js"
 
-var BoxHook = L.Handler.extend({
+var BoxHook = Handler.extend({
   initialize: function (map) {
     this._map = map
     this._container = map._container
@@ -19,11 +27,11 @@ var BoxHook = L.Handler.extend({
   },
 
   addHooks: function () {
-    L.DomEvent.on(this._container, "mousedown", this._onMouseDown, this)
+    DomEvent.on(this._container, "mousedown", this._onMouseDown, this)
   },
 
   removeHooks: function () {
-    L.DomEvent.off(this._container, "mousedown", this._onMouseDown, this)
+    DomEvent.off(this._container, "mousedown", this._onMouseDown, this)
   },
 
   moved: function () {
@@ -31,7 +39,7 @@ var BoxHook = L.Handler.extend({
   },
 
   _destroy: function () {
-    L.DomUtil.remove(this._pane)
+    DomUtil.remove(this._pane)
     delete this._pane
   },
 
@@ -57,8 +65,8 @@ var BoxHook = L.Handler.extend({
     this._clearDeferredResetState()
     this._resetState()
 
-    L.DomUtil.disableTextSelection()
-    L.DomUtil.disableImageDrag()
+    DomUtil.disableTextSelection()
+    DomUtil.disableImageDrag()
 
     this._map.dragging.disable()
     this._map.touchZoom.disable()
@@ -67,10 +75,10 @@ var BoxHook = L.Handler.extend({
 
     this._startPoint = this._map.mouseEventToContainerPoint(e)
 
-    L.DomEvent.on(
+    DomEvent.on(
       document,
       {
-        contextmenu: L.DomEvent.stop,
+        contextmenu: DomEvent.stop,
         mousemove: this._onMouseMove,
         mouseup: this._onMouseUp,
         keydown: this._onKeyDown,
@@ -83,18 +91,18 @@ var BoxHook = L.Handler.extend({
     if (!this._moved) {
       this._moved = true
 
-      this._box = L.DomUtil.create("div", "leaflet-zoom-box", this._container)
-      L.DomUtil.addClass(this._container, "leaflet-crosshair")
+      this._box = DomUtil.create("div", "leaflet-zoom-box", this._container)
+      DomUtil.addClass(this._container, "leaflet-crosshair")
 
       this._map.fire("boxhookstart")
     }
 
     this._point = this._map.mouseEventToContainerPoint(e)
 
-    var bounds = new L.Bounds(this._point, this._startPoint),
+    var bounds = new Bounds(this._point, this._startPoint),
       size = bounds.getSize()
 
-    L.DomUtil.setPosition(this._box, bounds.min)
+    DomUtil.setPosition(this._box, bounds.min)
 
     this._box.style.width = size.x + "px"
     this._box.style.height = size.y + "px"
@@ -102,22 +110,22 @@ var BoxHook = L.Handler.extend({
 
   _finish: function () {
     if (this._moved) {
-      L.DomUtil.remove(this._box)
-      L.DomUtil.removeClass(this._container, "leaflet-crosshair")
+      DomUtil.remove(this._box)
+      DomUtil.removeClass(this._container, "leaflet-crosshair")
     }
 
-    L.DomUtil.enableTextSelection()
-    L.DomUtil.enableImageDrag()
+    DomUtil.enableTextSelection()
+    DomUtil.enableImageDrag()
 
     this._map.dragging.enable()
     this._map.touchZoom.enable()
     this._map.doubleClickZoom.enable()
     this._map.scrollWheelZoom.enable()
 
-    L.DomEvent.off(
+    DomEvent.off(
       document,
       {
-        contextmenu: L.DomEvent.stop,
+        contextmenu: DomEvent.stop,
         mousemove: this._onMouseMove,
         mouseup: this._onMouseUp,
         keydown: this._onKeyDown,
@@ -139,13 +147,13 @@ var BoxHook = L.Handler.extend({
     // Postpone to next JS tick so internal click event handling
     // still see it as "moved".
     this._clearDeferredResetState()
-    this._resetStateTimeout = setTimeout(L.Util.bind(this._resetState, this), 0)
+    this._resetStateTimeout = setTimeout(Util.bind(this._resetState, this), 0)
 
-    var llBounds = new L.LatLngBounds(
+    var llBounds = new LatLngBounds(
         this._map.containerPointToLatLng(this._startPoint),
         this._map.containerPointToLatLng(this._point)
       ),
-      pxBounds = new L.Bounds(this._startPoint, this._point)
+      pxBounds = new Bounds(this._startPoint, this._point)
 
     this._map
       // .fitBounds(bounds)
@@ -159,7 +167,7 @@ var BoxHook = L.Handler.extend({
   },
 })
 
-L.Map.mergeOptions({
+Map.mergeOptions({
   // @option boxHook: Boolean = true
   // Whether a custom function can be called with rectangular area specified by
   // dragging the mouse while pressing the shift key.
@@ -169,4 +177,4 @@ L.Map.mergeOptions({
 // @section Handlers
 // @property boxHook: Handler
 // Box (ctrl-drag with mouse) select handler.
-L.Map.addInitHook("addHandler", "boxHook", BoxHook)
+Map.addInitHook("addHandler", "boxHook", BoxHook)

@@ -1,8 +1,9 @@
 /*
  * Dot Animation Controls
  */
+import "leaflet-easybutton"
 
-import * as L from "leaflet"
+// import { easyButton } from "./myLeaflet.js"
 import { map } from "./MapAPI.js"
 import { dotLayer } from "./DotLayerAPI.js"
 import { vParams } from "./Model.js"
@@ -10,6 +11,8 @@ import { vParams } from "./Model.js"
 const ds = dotLayer.dotSettings
 const update = dotLayer.updateDotSettings
 const options = dotLayer.options
+
+const easyButton = window.L.easyButton
 
 // leaflet-easybutton is used for play/pause button and capture
 // animation play-pause button
@@ -38,7 +41,7 @@ const button_states = [
 ]
 
 // add play/pause button to the map
-L.easyButton({
+easyButton({
   states: vParams.paused ? button_states.reverse() : button_states,
 }).addTo(map)
 

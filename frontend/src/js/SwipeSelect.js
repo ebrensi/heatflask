@@ -3,9 +3,17 @@
  *
  */
 
-import * as L from "leaflet"
+import {
+  Class,
+  Evented,
+  DomUtil,
+  Util,
+  Point,
+  Bounds,
+  LatLngBounds,
+} from "./myLeaflet.js"
 
-function touchHandler(event) {
+export function touchHandler(event) {
   // Add touch support by converting touch events to mouse events
   // Source: http://stackoverflow.com/a/6362527/725573
 
@@ -57,13 +65,13 @@ function touchHandler(event) {
 // document.addEventListener("touchend", touchHandler, true);
 // document.addEventListener("touchcancel", touchHandler, true);
 
-export const SwipeSelect = L.Class.extend({
-  includes: L.Evented.prototype,
+export const SwipeSelect = Class.extend({
+  includes: Evented.prototype,
 
   options: {},
 
   initialize: function (options, doneSelecting, whileSelecting) {
-    L.Util.setOptions(this, options)
+    Util.setOptions(this, options)
     this.onmousemove = whileSelecting
     this.onmouseup = doneSelecting
   },
@@ -75,7 +83,7 @@ export const SwipeSelect = L.Class.extend({
 
     this.drag = false
 
-    this.canvas = L.DomUtil.create("canvas", "leaflet-layer")
+    this.canvas = DomUtil.create("canvas", "leaflet-layer")
     const canvas = this.canvas
     map._panes.markerPane.appendChild(canvas)
 
@@ -92,18 +100,18 @@ export const SwipeSelect = L.Class.extend({
       this.mapManipulation(false)
 
       const topLeft = this.map.containerPointToLayerPoint([0, 0])
-      L.DomUtil.setPosition(this.canvas, topLeft)
+      DomUtil.setPosition(this.canvas, topLeft)
 
       this.mapPanePos = this.map._getMapPanePos()
 
-      this.rect = { corner: new L.Point(event.pageX, event.pageY) }
+      this.rect = { corner: new Point(event.pageX, event.pageY) }
       this.dragging = true
     }.bind(this)
 
     canvas.onmousemove = function (event) {
       if (this.dragging) {
         const r = this.rect,
-          currentPoint = new L.Point(event.pageX, event.pageY)
+          currentPoint = new Point(event.pageX, event.pageY)
 
         r.size = currentPoint.subtract(r.corner)
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
@@ -132,10 +140,10 @@ export const SwipeSelect = L.Class.extend({
     const r = this.rect,
       corner1 = r.corner,
       corner2 = r.corner.add(r.size),
-      pxBounds = new L.Bounds(corner1, corner2),
+      pxBounds = new Bounds(corner1, corner2),
       ll1 = this.map.containerPointToLatLng(corner1),
       ll2 = this.map.containerPointToLatLng(corner2),
-      llBounds = new L.LatLngBounds(ll1, ll2)
+      llBounds = new LatLngBounds(ll1, ll2)
 
     return { pxBounds: pxBounds, latLngBounds: llBounds }
   },

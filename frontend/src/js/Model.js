@@ -197,6 +197,8 @@ if (CURRENT_USER) {
 
 export const flags = BoundObject.fromDOMelements("[data-class=flag]")
 
+export { items }
+
 const state = {
   items: items,
   flags: flags,
@@ -208,6 +210,6 @@ const state = {
   clientID: null,
 }
 
-window["app"] = state
+window.app = state
 
 // export { state as default }

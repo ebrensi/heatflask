@@ -6,12 +6,17 @@
 
 import { MAPBOX_ACCESS_TOKEN, OFFLINE, MAP_INFO, MOBILE } from "./Env.js"
 
-import * as L from "leaflet"
+import {
+  Map,
+  control,
+  Control,
+  DomUtil,
+  LatLng,
+  LatLngBounds,
+} from "./myLeaflet.js"
 import Geohash from "latlon-geohash"
 
 import "leaflet-control-window"
-import "leaflet-easybutton"
-import "../../node_modules/leaflet-easybutton/src/easy-button.css"
 import "../../node_modules/sidebar-v2/js/leaflet-sidebar.js"
 import { tileLayer } from "./TileLayer/TileLayer.Heatflask.js"
 import { vParams, currentUser } from "./Model.js"
@@ -21,12 +26,10 @@ import heatflask_logo from "url:../images/logo.png"
 
 let center, zoom
 
-export { L }
-
 // Geohash uses "lon" for longitude and leaflet uses "lng"
 function ghDecode(s) {
   const obj = Geohash.decode(s)
-  return L.latLng(obj.lat, obj.lon)
+  return new LatLng(obj.lat, obj.lon)
 }
 
 if (vParams.geohash) {
@@ -42,12 +45,12 @@ if (vParams.geohash) {
 /*
  * Initialize the Leaflet map object
  */
-export const map = new L.Map("map", {
+export const map = new Map("map", {
   center: center,
   zoom: zoom,
   preferCanvas: true,
-  zoomAnimation: true,// MOBILE,
-  zoomSnap: 0,//0.25,
+  zoomAnimation: true, // MOBILE,
+  zoomSnap: 0, //0.25,
   zoomDelta: 0.1, //0.5,
   zoomAnimationThreshold: 6,
   wheelPxPerZoomLevel: 200, //60,
@@ -76,7 +79,7 @@ map.on("moveend", () => {
  *  Make control window accessible as an export
  */
 export function controlWindow(options) {
-  return L.control.window(map, options)
+  return control.window(map, options)
 }
 
 /*
@@ -161,15 +164,15 @@ map.on("baselayerchange", (e) => {
 })
 
 // Add baselayer selection control to map
-L.control.layers(baselayers, null, { position: "topleft" }).addTo(map)
+control.layers(baselayers, null, { position: "topleft" }).addTo(map)
 
 // Add zoom Control
 map.zoomControl.setPosition("bottomright")
 
 // Define a watermark control
-const Watermark = L.Control.extend({
+const Watermark = Control.extend({
   onAdd: function () {
-    let img = L.DomUtil.create("img")
+    let img = DomUtil.create("img")
     img.src = this.options.image
     img.style.width = this.options.width
     img.style.opacity = this.options.opacity
@@ -194,7 +197,7 @@ new Watermark({
 
 // The main sidebar UI
 // Leaflet sidebar v2
-export const sidebar = L.control.sidebar("sidebar").addTo(map)
+export const sidebar = control.sidebar("sidebar").addTo(map)
 const sidebarTabs = Array.from(document.querySelectorAll("[role=tab]")).map(
   (el) => el.href.split("#")[1]
 )
@@ -244,9 +247,9 @@ if (MAP_INFO) {
   /*
    * Display for debugging
    */
-  const InfoViewer = L.Control.extend({
+  const InfoViewer = Control.extend({
     onAdd: function () {
-      const infoBox = L.DomUtil.create("div")
+      const infoBox = DomUtil.create("div")
       infoBox.style.width = "200px"
       infoBox.style.padding = "5px"
       infoBox.style.background = "rgba(255,255,255,0.6)"
@@ -273,7 +276,7 @@ if (MAP_INFO) {
         const layerTransform = level.el.style.transform
 
         infoBox.innerHTML =
-          `zoom: ${zoom}<br>center: ${clat}, ${clng}<br>` +
+          `<b>Map</b>: zoom: ${zoom}<br>center: ${clat}, ${clng}<br>` +
           `pxOrigin: ${pox}, ${poy}<br>mpp: ${mx.toFixed(3)}, ${my.toFixed(
             3
           )}<br>` +
@@ -292,7 +295,7 @@ if (MAP_INFO) {
  * Functions concerning
  */
 export function getBounds(ids) {
-  const bounds = L.latLngBounds()
+  const bounds = new LatLngBounds()
   if (ids) {
     for (const id of ids) {
       bounds.extend(items.get(id).llBounds)
