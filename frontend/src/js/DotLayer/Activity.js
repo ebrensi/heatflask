@@ -481,14 +481,15 @@ export class Activity {
   }
 
   dotPointsFromArray(now, ds, func) {
-    const T = ds._period,
-      start = this.ts,
-      zoom = ViewBox.zoom,
-      points = this.getPointAccessor(zoom),
-      times = this.getTimesArray(zoom),
-      i0 = this.segMask.min()
-
+    const T = ds._period
+    const start = this.ts
+    const zoom = ViewBox.zoom
+    const points = this.getPointAccessor(zoom)
+    const times = this.getTimesArray(zoom)
+    const i0 = this.segMask.min()
     const timeOffset = (ds._timeScale * (now - (start + times[i0]))) % T
+
+    let count = 0
 
     for (const i of this.segMask) {
       const t_a = times[i],
@@ -511,10 +512,12 @@ export class Activity {
             const x = p_a[0] + vx * dt
             const y = p_a[1] + vy * dt
             func(x, y)
+            count++
           }
         }
       }
     }
+  return count
   }
 }
 

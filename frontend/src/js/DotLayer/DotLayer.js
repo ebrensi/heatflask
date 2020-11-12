@@ -35,8 +35,11 @@ const _drawFunction = {
   square: null,
   circle: null,
 }
+
+// for debug display
 const _fpsRegister = []
 let _fpsSum = 0
+let _roundCount, _duration
 
 let _map, _options, _itemsArray, _itemIds
 let _timePaused, _ready, _paused
@@ -54,14 +57,16 @@ let _lastCalledTime, _minDelay
 /*
  * Display for debugging
  */
-let infoBox
+let _infoBox
 const InfoViewer = Control.extend({
   onAdd: function () {
-    infoBox = DomUtil.create("div")
-    infoBox.style.width = "200px"
-    infoBox.style.padding = "5px"
-    infoBox.style.background = "rgba(255,255,240,0.6)"
-    infoBox.style.textAlign = "left"
+    _infoBox = DomUtil.create("div")
+    _infoBox.style.width = "200px"
+    _infoBox.style.padding = "5px"
+    _infoBox.style.background = "rgba(50,50,240,0.6)"
+    _infoBox.style.textAlign = "left"
+    _infoBox.innerHTML = "dotLayer infoBox"
+    return _infoBox
   },
 })
 
@@ -118,9 +123,9 @@ export const DotLayer = Layer.extend({
     ViewBox.setMap(_map)
     map.on(assignEventHandlers(), this)
 
-    // if (MAP_INFO) {
-    //   new InfoViewer().addTo(map)
-    // }
+    if (MAP_INFO) {
+      new InfoViewer().addTo(map)
+    }
   },
 
   addTo: function (map) {
@@ -498,12 +503,13 @@ function drawDots(now) {
   DrawBox.clear(ctx, _dotRect)
   _dotRect = undefined
 
+  let count = 0
   for (const { spec, items, entity } of _dotStyleGroups) {
     const drawDot = _drawFunction[entity]
     Object.assign(ctx, spec)
     ctx.globalAlpha = spec.globalAlpha * alphaScale
     ctx.beginPath()
-    items.forEach((A) => A.dotPointsFromArray(now, _dotSettings, drawDot))
+    items.forEach((A) => count += A.dotPointsFromArray(now, _dotSettings, drawDot))
     ctx.fill()
   }
   // swap canvases
@@ -513,6 +519,8 @@ function drawDots(now) {
 
   _dotCanvases[0] = _dotCanvases[1]
   _dotCanvases[1] = temp
+
+  return count
 }
 
 /*
@@ -566,23 +574,23 @@ function _animate(ts) {
     _lastCalledTime = now
 
     const t0 = Date.now()
-    drawDots(now)
-    const dt = Date.now() - t0
+    const count = drawDots(now)
 
-    _fpsSum += dt
-    _fpsRegister.push(dt)
-    if (_fpsRegister.length === 30) {
-      app.dur = Math.round(_fpsSum / 30)
-      _fpsSum -= _fpsRegister.shift()
+    if (MAP_INFO) {
+      const dt = Date.now() - t0
+      _fpsSum += dt
+      _fpsRegister.push(dt)
+      if (_fpsRegister.length === 30) {
+        const roundCount = 10 * Math.round(count / 10)
+        const duration = Math.round(_fpsSum / 30)
+        _fpsSum -= _fpsRegister.shift()
+        if (roundCount !== _roundCount && duration !== _duration) {
+          _infoBox.innerHTML = `${duration} ms, ${count} pts`
+        }
+        _roundCount = roundCount
+        _duration = duration
+      }
     }
-
-    // if (fps_display) {
-    //   const elapsed = (Date.now() - t0).toFixed(0)
-    //   fps_display.update(
-    //     now,
-    //     `z=${ViewBox.zoom}, dt=${elapsed} ms, n=${count}`
-    //   )
-    // }
   }
 
   _frame = Util.requestAnimFrame(_animate, this)
