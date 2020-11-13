@@ -154,6 +154,7 @@ export const DotLayer = Layer.extend({
   },
 
   // --------------------------------------------------------------------
+  redraw: redraw,
 
   // Call this function after items are added or removed
   reset: function () {
@@ -504,8 +505,8 @@ function drawDots(now) {
   _dotRect = undefined
 
   let count = 0
-  for (const { spec, items, entity } of _dotStyleGroups) {
-    const drawDot = _drawFunction[entity]
+  for (const { spec, items, sprite } of _dotStyleGroups) {
+    const drawDot = _drawFunction[sprite]
     Object.assign(ctx, spec)
     ctx.globalAlpha = spec.globalAlpha * alphaScale
     ctx.beginPath()

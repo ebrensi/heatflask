@@ -11,28 +11,19 @@ export const options = {
   outlier_filter: true,
 
   normal: {
-    dotColor: "#000000",
     dotOpacity: 0.7,
-
-    pathColor: "#000000",
     pathOpacity: 0.7,
     pathWidth: 1,
   },
 
   selected: {
-    dotColor: "#FFFFFF",
     dotOpacity: 0.9,
-
-    pathColor: "#000000",
     pathOpacity: 0.7,
     pathWidth: 5,
   },
 
   unselected: {
-    dotColor: "#000000",
     dotOpacity: 0.3,
-
-    pathColor: "#000000",
     pathOpacity: 0.3,
     pathWidth: 1,
   },

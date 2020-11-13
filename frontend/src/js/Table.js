@@ -1,5 +1,6 @@
 import { HHMMSS } from "./appUtil.js"
 import { items } from "./DotLayer/ActivityCollection.js"
+import { dotLayer } from "./DotLayerAPI.js"
 import { activityURL, appendCSS, ATYPE } from "./strava.js"
 import { href } from "./appUtil.js"
 import { EventHandler } from "./EventHandler.js"
@@ -176,6 +177,7 @@ export function clearSelections() {
   for (const A of items.values()) {
     if (A.selected) select(A, false)
   }
+  dotLayer.redraw()
 }
 
 tableElement.addEventListener("click", function (e) {
@@ -216,6 +218,7 @@ tableElement.addEventListener("click", function (e) {
   // const mapBounds = map.getBounds();
 
   // if (Dom.prop("#zoom-to-selection", "checked")) zoomToSelectedPaths();
+  dotLayer.redraw()
 })
 
 /*

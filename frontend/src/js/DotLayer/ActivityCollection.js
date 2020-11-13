@@ -10,23 +10,28 @@ import { options } from "./Defaults.js"
 import BitSet from "../BitSet.js"
 
 export const items = new Map()
-const idx = new Map()
 let itemsArray
-let needReset
 
 export function add(specs) {
   const A = new Activity(specs)
+  A._selected = A.selected
+
+  Object.defineProperty(A, "selected", {
+    get() {
+      return this._selected
+    },
+
+    set(value) {
+      this._selected = value
+      updateSelect(this.idx, value)
+    }
+  })
+
   items.set(A.id, A)
-  if (!needReset) {
-    needReset = true
-  }
 }
 
 export function remove(id) {
   items.delete(+id)
-  if (!needReset) {
-    needReset = true
-  }
 }
 
 /**
@@ -35,14 +40,11 @@ export function remove(id) {
 export function reset() {
   setDotColors()
 
-  itemsArray = Array.from(items.values())
+  itemsArray = [...items.values()]
 
-  idx.clear()
   for (let i = 0; i < itemsArray.length; i++) {
-    const A = itemsArray[i]
-    idx.set(A.id, i)
+    itemsArray[i].idx = i
   }
-  needReset = false
 }
 
 /*
@@ -127,17 +129,14 @@ const GROUP_TYPES = {
       normal: {
         lineWidth: options.normal.pathWidth,
         globalAlpha: options.normal.pathOpacity,
-        strokeStyle: options.normal.pathColor,
       },
       unselected: {
         lineWidth: options.unselected.pathWidth,
         globalAlpha: options.unselected.pathOpacity,
-        strokeStyle: options.unselected.pathColor,
       },
       selected: {
         lineWidth: options.selected.pathWidth,
         globalAlpha: options.selected.pathOpacity,
-        strokeStyle: options.selected.pathColor,
       },
     },
   },
@@ -147,38 +146,31 @@ const GROUP_TYPES = {
     spec: {
       normal: {
         globalAlpha: options.normal.dotOpacity,
-        fillStyle: options.normal.dotColor,
       },
       unselected: {
         globalAlpha: options.unselected.dotOpacity,
-        fillStyle: options.unselected.dotColor,
       },
       selected: {
         globalAlpha: options.selected.dotOpacity,
-        fillStyle: options.selected.dotColor,
       },
     },
   },
 }
 
 class StyleGroup {
-  constructor(gtype, color, selected) {
-    const spec = selected
-      ? GROUP_TYPES[gtype].spec.selected
-      : GROUP_TYPES[gtype].spec.normal
-    this.items = new Set()
+  constructor(gtype, color) {
     const pen = gtype === "path" ? "strokeStyle" : "fillStyle"
-    this.spec = { ...spec, [pen]: color }
-
-    if (gtype === "dot") {
-      this.entity = selected ? "circle" : "square"
-    }
+    this.items = new Set()
+    this.spec = { [pen]: color }
   }
   add(item) {
     this.items.add(item)
   }
   remove(item) {
     this.items.delete(item)
+  }
+  get empty() {
+    return this.items.size === 0
   }
 }
 
@@ -189,7 +181,10 @@ class StyleGroup {
  */
 function addToGroup(i, selected) {
   const A = itemsArray[i]
-  selected = selected || A.selected
+
+  if (selected === undefined) {
+    selected = A.selected
+  }
 
   for (const gtype in GROUP_TYPES) {
     const partitions = GROUP_TYPES[gtype].partitions
@@ -214,7 +209,10 @@ function addToGroup(i, selected) {
  */
 function removeFromGroup(i, selected) {
   const A = itemsArray[i]
-  selected = selected || A.selected
+
+  if (selected === undefined) {
+    selected = A.selected
+  }
 
   for (const gtype in GROUP_TYPES) {
     const partitions = GROUP_TYPES[gtype].partitions
@@ -223,7 +221,7 @@ function removeFromGroup(i, selected) {
     const styleGroup = groups.get(color)
 
     styleGroup.remove(A)
-    if (styleGroup.size === 0) {
+    if (styleGroup.empty) {
       groups.delete(color)
     }
   }
@@ -234,22 +232,64 @@ function removeFromGroup(i, selected) {
  *
  * @param  {number} i -- then index of the activity
  */
-export function updateSelect(i) {
-  const A = itemsArray[i]
+function updateSelect(i, selected) {
+  if (selected === undefined) {
+    selected = itemsArray[i].selected
+  }
 
   if (!inView.current.has(i)) {
     return
   }
 
-  addToGroup(i, A.selected)
-  removeFromGroup(i, !A.selected)
+  addToGroup(i, selected)
+  removeFromGroup(i, !selected)
 }
 
 function makeStyleGroups() {
   const output = {}
   for (const gtype in GROUP_TYPES) {
     const partitions = GROUP_TYPES[gtype].partitions
-    output[gtype] = output[gtype] = [
+
+    /*
+     * The specs for all activities default to "normal".
+     *  If any activities are selected, we change the specs to
+     *  "selected" and "unselected"
+     */
+    if (partitions.selected.size) {
+      const sspec = GROUP_TYPES[gtype].spec.selected
+      for (const sg of partitions.selected.values()) {
+        Object.assign(sg.spec, sspec)
+      }
+
+      if (gtype === "dot") {
+        for (const sg of partitions.selected.values())
+          sg.sprite = "circle"
+      }
+
+      const uspec = GROUP_TYPES[gtype].spec.unselected
+      for (const sg of partitions.unselected.values()) {
+        Object.assign(sg.spec, uspec)
+      }
+
+      if (gtype === "dot") {
+        for (const sg of partitions.unselected.values())
+          sg.sprite = "square"
+      }
+    } else {
+
+      // Set everything to normal
+      const nspec = GROUP_TYPES[gtype].spec.normal
+      for (const sg of partitions.unselected.values()) {
+        Object.assign(sg.spec, nspec)
+      }
+
+      if (gtype === "dot") {
+        for (const sg of partitions.unselected.values())
+          sg.sprite = "square"
+      }
+    }
+
+    output[gtype] = [
       ...partitions.unselected.values(),
       ...partitions.selected.values(),
     ]
