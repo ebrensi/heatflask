@@ -8,6 +8,7 @@ import * as ViewBox from "./ViewBox.js"
 import { Activity } from "./Activity.js"
 import { options } from "./Defaults.js"
 import BitSet from "../BitSet.js"
+import { currentUser, vParams } from "../Model.js"
 
 export const items = new Map()
 let itemsArray
@@ -24,7 +25,7 @@ export function add(specs) {
     set(value) {
       this._selected = value
       updateSelect(this.idx, value)
-    }
+    },
   })
 
   items.set(A.id, A)
@@ -262,8 +263,7 @@ function makeStyleGroups() {
       }
 
       if (gtype === "dot") {
-        for (const sg of partitions.selected.values())
-          sg.sprite = "circle"
+        for (const sg of partitions.selected.values()) sg.sprite = "circle"
       }
 
       const uspec = GROUP_TYPES[gtype].spec.unselected
@@ -272,11 +272,9 @@ function makeStyleGroups() {
       }
 
       if (gtype === "dot") {
-        for (const sg of partitions.unselected.values())
-          sg.sprite = "square"
+        for (const sg of partitions.unselected.values()) sg.sprite = "square"
       }
     } else {
-
       // Set everything to normal
       const nspec = GROUP_TYPES[gtype].spec.normal
       for (const sg of partitions.unselected.values()) {
@@ -284,8 +282,7 @@ function makeStyleGroups() {
       }
 
       if (gtype === "dot") {
-        for (const sg of partitions.unselected.values())
-          sg.sprite = "square"
+        for (const sg of partitions.unselected.values()) sg.sprite = "square"
       }
     }
 
@@ -295,4 +292,21 @@ function makeStyleGroups() {
     ]
   }
   return output
+}
+
+function selectedIDs() {
+  return Array.from(items.values())
+    .filter((A) => A.selected)
+    .map((A) => A.id)
+}
+
+export function openSelected() {
+  const ids = selectedIDs()
+  if (ids.length) {
+    let url = currentUser + "?id=" + ids.join("+")
+    if (vParams.paused == true) {
+      url += "&paused=1"
+    }
+    window.open(url, "_blank")
+  }
 }

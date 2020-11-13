@@ -517,7 +517,7 @@ export class Activity {
         }
       }
     }
-  return count
+    return count
   }
 }
 

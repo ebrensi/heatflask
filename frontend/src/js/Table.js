@@ -3,7 +3,8 @@ import { items } from "./DotLayer/ActivityCollection.js"
 import { dotLayer } from "./DotLayerAPI.js"
 import { activityURL, appendCSS, ATYPE } from "./strava.js"
 import { href } from "./appUtil.js"
-import { EventHandler } from "./EventHandler.js"
+import { flags } from "./Model.js"
+import { zoomToSelectedPaths } from "./MapAPI.js"
 
 // This should vary based on the user's unit preferences
 const DIST_LABEL = "mi",
@@ -217,71 +218,14 @@ tableElement.addEventListener("click", function (e) {
   // let redraw = false;
   // const mapBounds = map.getBounds();
 
-  // if (Dom.prop("#zoom-to-selection", "checked")) zoomToSelectedPaths();
+  if (flags["zoom-to-selection"]) {
+    zoomToSelectedPaths()
+  }
+
   dotLayer.redraw()
 })
 
 /*
- * We will generate our own events
- */
-export const events = new EventHandler()
-
-/*
-function handle_table_selections(e, dt, type, indexes) {
-  // let redraw = false;
-  // const mapBounds = map.getBounds(),
-  //       selections = {};
-  // if ( type === 'row' ) {
-  //     const rows = atable.rows( indexes ).data();
-  //      for ( const A of Object.values(rows) ) {
-  //         if (!A.id)
-  //             break;
-  //         A.selected = !A.selected;
-  //         selections[A.id] = A.selected;
-  //         if (!redraw)
-  //             redraw |= mapBounds.overlaps(A.bounds);
-  //     }
-  // }
-  // if ( Dom.prop("#zoom-to-selection", 'checked') )
-  //     zoomToSelectedPaths();
-  // dotLayer.setItemSelect(selections);
-}
-
-
-  function selectedIDs(){
-    return Array.from(appState.items.values())
-                .filter(A => A.selected)
-                .map(A => A.id );
-  }
-
-  function zoomToSelectedPaths(){
-    // Pan-Zoom to fit all selected activities
-    let selection_bounds = latLngBounds();
-    appState.items.forEach((A, id) => {
-        if (A.selected) {
-            selection_bounds.extend(A.bounds);
-        }
-    });
-    if (selection_bounds.isValid()) {
-        map.fitBounds(selection_bounds);
-    }
-  }
-
-  function openSelected(){
-    let ids = selectedIDs();
-    if (ids.length > 0) {
-        let url = BASE_USER_URL + "?id=" + ids.join("+");
-        if (appState.paused == true){
-            url += "&paused=1"
-        }
-        window.open(url,'_blank');
-    }
-  }
-
-  function deselectAll(){
-    handle_path_selections(selectedIDs());
-  }
-
 
 function activityDataPopup(id, latlng){
     let A = appState.items.get(id),

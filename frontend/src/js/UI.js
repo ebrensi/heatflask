@@ -6,7 +6,7 @@
 import { AUTHORIZE_URL } from "./Env.js"
 
 import { currentUser, vParams, qParams, flags } from "./Model.js"
-import { items } from "./DotLayer/ActivityCollection.js"
+import { items, openSelected } from "./DotLayer/ActivityCollection.js"
 import "./URL.js"
 
 import { getBounds, map } from "./MapAPI.js"
@@ -98,7 +98,7 @@ function abortRender() {
  */
 const userActions = {
   "selection-clear": table.clearSelections,
-  "selection-render": null,
+  "selection-render": openSelected,
   query: renderFromQuery,
   "abort-query": abortRender,
   login: login,
@@ -185,11 +185,6 @@ function renderFromQuery() {
     updateLayers()
   })
 }
-
-/* Table Stuff */
-table.events.addListener("selection", (e) => {
-  // console.log("table selections ", e)
-})
 
 /* Rendering */
 function updateLayers() {

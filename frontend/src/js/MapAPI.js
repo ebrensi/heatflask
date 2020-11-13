@@ -17,14 +17,18 @@ import {
 import Geohash from "latlon-geohash"
 
 import "leaflet-control-window"
+import "leaflet-areaselect"
 import "../../node_modules/sidebar-v2/js/leaflet-sidebar.js"
 import { tileLayer } from "./TileLayer/TileLayer.Heatflask.js"
-import { vParams, currentUser } from "./Model.js"
+import { flags, vParams, currentUser } from "./Model.js"
 import { items } from "./DotLayer/ActivityCollection.js"
 import strava_logo from "url:../images/pbs4.png"
 import heatflask_logo from "url:../images/logo.png"
 
 let center, zoom
+
+const AreaSelect = window.L.AreaSelect
+
 
 // Geohash uses "lon" for longitude and leaflet uses "lng"
 function ghDecode(s) {
@@ -308,12 +312,22 @@ export function getBounds(ids) {
   return bounds
 }
 
-/*  Initialize areaselect control (for selecting activities via map rectangle) */
-/*
- AreaSelect is not importing for some reason
-import '../../node_modules/leaflet-areaselect/src/leaflet-areaselect.js';
-import '../../node_modules/leaflet-areaselect/src/leaflet-areaselect.css';
+export function zoomToSelectedPaths() {
+  // Pan-Zoom to fit all selected activities
+  const selection_bounds = new LatLngBounds()
+  for (const A of items.values()) {
+    if (A.selected) {
+      selection_bounds.extend(A.llBounds)
+    }
+  }
+  if (selection_bounds.isValid()) {
+    map.fitBounds(selection_bounds)
+  }
+}
 
-export const areaSelect = L.areaSelect({width:200, height:200});
-areaSelect.addTo(map);
-// */
+flags.onChange("zoom-to-selection", zoomToSelectedPaths)
+
+/*  Initialize areaselect control (for selecting activities via map rectangle) */
+export const areaSelect = new AreaSelect({width:200, height:200});
+
+// areaSelect.addTo(map)

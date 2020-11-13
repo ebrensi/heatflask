@@ -510,7 +510,9 @@ function drawDots(now) {
     Object.assign(ctx, spec)
     ctx.globalAlpha = spec.globalAlpha * alphaScale
     ctx.beginPath()
-    items.forEach((A) => count += A.dotPointsFromArray(now, _dotSettings, drawDot))
+    items.forEach(
+      (A) => (count += A.dotPointsFromArray(now, _dotSettings, drawDot))
+    )
     ctx.fill()
   }
   // swap canvases
