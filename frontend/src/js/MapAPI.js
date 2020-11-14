@@ -5,6 +5,7 @@
  */
 
 import { MAPBOX_ACCESS_TOKEN, OFFLINE, MAP_INFO, MOBILE } from "./Env.js"
+import Geohash from "latlon-geohash"
 
 import {
   Map,
@@ -14,7 +15,6 @@ import {
   LatLng,
   LatLngBounds,
 } from "./myLeaflet.js"
-import Geohash from "latlon-geohash"
 
 import "leaflet-control-window"
 import "leaflet-areaselect"
@@ -22,13 +22,13 @@ import "../../node_modules/sidebar-v2/js/leaflet-sidebar.js"
 import { tileLayer } from "./TileLayer/TileLayer.Heatflask.js"
 import { flags, vParams, currentUser } from "./Model.js"
 import { items } from "./DotLayer/ActivityCollection.js"
+import { HHMMSS } from "./appUtil.js"
 import strava_logo from "url:../images/pbs4.png"
 import heatflask_logo from "url:../images/logo.png"
 
 let center, zoom
 
-const AreaSelect = window.L.AreaSelect
-
+export const AreaSelect = window.L.AreaSelect
 
 // Geohash uses "lon" for longitude and leaflet uses "lng"
 function ghDecode(s) {
@@ -53,7 +53,7 @@ export const map = new Map("map", {
   center: center,
   zoom: zoom,
   preferCanvas: true,
-  zoomAnimation: true, // MOBILE,
+  zoomAnimation: MOBILE,
   zoomSnap: 0, //0.25,
   zoomDelta: 0.1, //0.5,
   zoomAnimationThreshold: 6,
@@ -298,6 +298,39 @@ if (MAP_INFO) {
 /*
  * Functions concerning
  */
+function activityDataPopup(A, latlng) {
+  const d = A.total_distance,
+        elapsed = HHMMSS(A.elapsed_time),
+        v = A.average_speed,
+        dkm = +(d / 1000).toFixed(2),
+        dmi = +(d / 1609.34).toFixed(2)
+
+  let vkm, vmi
+
+  if (A.vtype == "pace") {
+    vkm = HHMMSS(1000 / v).slice(3) + "/km"
+    vmi = HHMMSS(1609.34 / v).slice(3) + "/mi"
+
+  } else {
+    vkm = ((v * 3600) / 1000).toFixed(2) + "km/hr"
+    vmi = ((v * 3600) / 1609.34).toFixed(2) + "mi/hr"
+  }
+
+  const BASE_USER_URL = "hello"
+
+  const popupContent = `
+        <b>${A.name}</b><br>
+        ${A.type}:&nbsp;${A.tsLoc}<br>
+        ${dkm}&nbsp;km&nbsp;(${dmi}&nbsp;mi)&nbsp;in&nbsp;${elapsed}<br>
+        ${vkm}&nbsp;(${vmi})<br>
+        View&nbsp;in&nbsp;
+        <a href='https://www.strava.com/activities/${A.id}'
+        target='_blank'>Strava</a>,&nbsp;
+        <a href='${BASE_USER_URL}?id=${A.id}'&nbsp;target='_blank'>Heatflask</a>
+    `
+  map.openPopup(popupContent, latlng)
+}
+
 export function getBounds(ids) {
   const bounds = new LatLngBounds()
   if (ids) {
@@ -328,6 +361,6 @@ export function zoomToSelectedPaths() {
 flags.onChange("zoomToSelection", zoomToSelectedPaths)
 
 /*  Initialize areaselect control (for selecting activities via map rectangle) */
-export const areaSelect = new AreaSelect({width:200, height:200});
+//export const areaSelect = new AreaSelect({ width: 200, height: 200 })
 
 // areaSelect.addTo(map)

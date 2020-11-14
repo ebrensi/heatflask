@@ -210,21 +210,12 @@ function updateLayers() {
 
   dotLayer.reset()
   table.update()
-  // messages.period = dotLayer.periodInSecs().toFixed(2)
 }
+
+
+
 
 // Make initial query if there is one
 if (qParams.userid) {
   renderFromQuery()
 }
-
-// /*
-//  *  Set up or tear down current user stuff
-//  */
-// Dom.addEvent("#zoom-to-selection", "change", function(){
-//     if ( Dom.prop("#zoom-to-selection", 'checked') ) {
-//         zoomToSelectedPaths();
-//     }
-// });
-
-// Dom.addEvent("#render-selection-button", "click", openSelected);
