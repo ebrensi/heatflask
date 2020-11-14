@@ -195,7 +195,9 @@ if (CURRENT_USER) {
   currentUser.url = USER_URLS(currentUser.id)
 }
 
-export const flags = BoundObject.fromDOMelements("[data-class=flag]")
+export const flags = BoundObject.fromDOMelements("[data-class=flag]", {
+  event: "change"
+})
 
 export { items }
 
@@ -210,6 +212,7 @@ const state = {
   clientID: null,
 }
 
-// window.app = state
-
 export { state as default }
+
+
+window.app = state

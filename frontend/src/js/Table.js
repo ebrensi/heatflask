@@ -215,10 +215,7 @@ tableElement.addEventListener("click", function (e) {
 
   lastSelection.val = selected
 
-  // let redraw = false;
-  // const mapBounds = map.getBounds();
-
-  if (flags["zoom-to-selection"]) {
+  if (flags["zoomToSelection"]) {
     zoomToSelectedPaths()
   }
 

@@ -325,7 +325,7 @@ export function zoomToSelectedPaths() {
   }
 }
 
-flags.onChange("zoom-to-selection", zoomToSelectedPaths)
+flags.onChange("zoomToSelection", zoomToSelectedPaths)
 
 /*  Initialize areaselect control (for selecting activities via map rectangle) */
 export const areaSelect = new AreaSelect({width:200, height:200});
