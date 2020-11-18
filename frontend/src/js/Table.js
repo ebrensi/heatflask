@@ -162,13 +162,17 @@ export function update(remake) {
  */
 let lastSelection = {}
 
-function select(A, selected) {
-  if (selected && !A.selected) {
-    A.selected = selected
+export function select(A, selected) {
+  if (selected) {
+    if (!A.selected) {
+      A.selected = true
+    }
     A.tr.classList.add("selected")
     A.tr.cells[0].innerHTML = "&check;"
-  } else if (!selected && A.selected) {
-    A.selected = selected
+  } else {
+    if (A.selected) {
+      A.selected = false
+    }
     A.tr.classList.remove("selected")
     A.tr.cells[0].innerHTML = ""
   }

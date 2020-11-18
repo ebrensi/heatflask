@@ -15,6 +15,7 @@ import { dotLayer } from "./DotLayerAPI.js"
 // import { captureCycle, abortCapture } from "./DotLayer/Export.js"
 
 import "./DotControls.js"
+import { selectButton } from "./Control.pathSelect.js"
 
 import paypalButtonHTML from "bundle-text:../html/paypal-button.html"
 import infoTabHTML from "bundle-text:../html/main-info.html"

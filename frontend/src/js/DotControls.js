@@ -2,8 +2,6 @@
  * Dot Animation Controls
  */
 import "leaflet-easybutton"
-
-// import { easyButton } from "./myLeaflet.js"
 import { map } from "./MapAPI.js"
 import { dotLayer } from "./DotLayerAPI.js"
 import { vParams } from "./Model.js"

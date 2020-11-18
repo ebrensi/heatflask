@@ -17,7 +17,7 @@ import {
   Util,
 } from "./myLeaflet.js"
 
-var BoxHook = Handler.extend({
+const BoxHook = Handler.extend({
   initialize: function (map) {
     this._map = map
     this._container = map._container

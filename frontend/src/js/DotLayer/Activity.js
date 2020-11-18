@@ -49,9 +49,11 @@ export class Activity {
   constructor({
     _id,
     type,
+    vtype,
     name,
     total_distance,
     elapsed_time,
+    average_speed,
     ts,
     bounds,
     polyline,
@@ -60,8 +62,10 @@ export class Activity {
   }) {
     this.id = +_id
     this.type = type
+    this.vtype = vtype
     this.total_distance = total_distance
     this.elapsed_time = elapsed_time
+    this.average_speed = average_speed
     this.name = name
     this._selected = false
     this.tr = null

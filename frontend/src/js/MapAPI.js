@@ -298,7 +298,7 @@ if (MAP_INFO) {
 /*
  * Functions concerning
  */
-function activityDataPopup(A, latlng) {
+export function activityDataPopup(A, latlng) {
   const d = A.total_distance,
         elapsed = HHMMSS(A.elapsed_time),
         v = A.average_speed,
@@ -320,7 +320,7 @@ function activityDataPopup(A, latlng) {
 
   const popupContent = `
         <b>${A.name}</b><br>
-        ${A.type}:&nbsp;${A.tsLoc}<br>
+        ${A.type}:&nbsp;${A.tsLocal}<br>
         ${dkm}&nbsp;km&nbsp;(${dmi}&nbsp;mi)&nbsp;in&nbsp;${elapsed}<br>
         ${vkm}&nbsp;(${vmi})<br>
         View&nbsp;in&nbsp;
@@ -328,7 +328,7 @@ function activityDataPopup(A, latlng) {
         target='_blank'>Strava</a>,&nbsp;
         <a href='${BASE_USER_URL}?id=${A.id}'&nbsp;target='_blank'>Heatflask</a>
     `
-  map.openPopup(popupContent, latlng)
+  map.openPopup(popupContent, latlng, {closeButton: false})
 }
 
 export function getBounds(ids) {

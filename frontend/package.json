@@ -31,7 +31,7 @@
     "leaflet-control-window": "^1.0.0",
     "leaflet-easybutton": "^2.4.0",
     "leaflet-image": "^0.4.0",
-    "leaflet-providers": "^1.10.2",
+    "leaflet-providers": "^1.11.0",
     "pws": "^5.0.2",
     "sidebar-v2": "^0.4.0"
   },

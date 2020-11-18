@@ -16,6 +16,11 @@
   transform-origin: 0 0;
 }
 
+.leaflet-popup-content-wrapper {
+  background-color: rgba(0, 0, 0, 0.6);
+  color: white;
+}
+
 /* Background visible as map tiles are loading */
 .leaflet-container {
   /* background: green; */

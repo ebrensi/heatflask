@@ -9,6 +9,7 @@ import { Activity } from "./Activity.js"
 import { options } from "./Defaults.js"
 import BitSet from "../BitSet.js"
 import { currentUser, vParams } from "../Model.js"
+import { Point } from "../myLeaflet.js"
 
 export const items = new Map()
 let itemsArray
@@ -246,6 +247,7 @@ function updateSelect(i, selected) {
   removeFromGroup(i, !selected)
 }
 
+
 function makeStyleGroups() {
   const output = {}
   for (const gtype in GROUP_TYPES) {
@@ -308,5 +310,31 @@ export function openSelected() {
       url += "&paused=1"
     }
     window.open(url, "_blank")
+  }
+}
+
+/**
+ * Returns an array of activities given a selection region
+ * in screen-ccordinates
+ * @param  {Bounds} selectPxBounds leaflet Bounds Object
+ */
+export function *inPxBounds(pxBounds) {
+  // un-transform screen coordinates given by the selection
+  // plugin to absolute values that we can compare ours to.
+  ViewBox.unTransform(pxBounds.min)
+  ViewBox.unTransform(pxBounds.max)
+
+  for (const idx of inView.current) {
+    const A = itemsArray[idx]
+    const points = A.getPointAccessor(ViewBox.zoom)
+
+    for (const i of A.segMask) {
+      const px = points(i)
+      const point = new Point(px[0], px[1])
+      if (pxBounds.contains(point)) {
+        yield A
+        break
+      }
+    }
   }
 }

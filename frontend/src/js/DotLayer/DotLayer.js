@@ -190,53 +190,8 @@ export const DotLayer = Layer.extend({
   pause: function () {
     _paused = true
     _timePaused = Date.now()
-  },
+  }
 
-  // -------------------------------------------------------------------
-  setItemSelect: function (selections) {
-    let idx = 0,
-      selectionsChanged = false
-
-    const itemIds = _itemIds,
-      vb = ViewBox
-
-    for (const [id, selected] of Object.entries(selections)) {
-      idx = itemIds.indexOf(+id)
-      const A = _itemsArray[idx]
-      A.selected = selected
-      selectionsChanged |= vb.updateSelect(idx)
-    }
-
-    if (selectionsChanged) redraw()
-  },
-
-  setSelectRegion: function (pxBounds, callback) {
-    let selectedIds = this.itemsInRegion(pxBounds)
-    callback(selectedIds)
-  },
-
-  itemsInRegion: function (selectPxBounds) {
-    // un-transform screen coordinates given by the selection
-    // plugin to absolute values that we can compare ours to.
-    ViewBox.unTransform(selectPxBounds.min)
-    ViewBox.unTransform(selectPxBounds.max)
-
-    const inView = ViewBox.inView()
-
-    let selected = new BitSet()
-
-    inView.forEach((i) => {
-      const A = _itemsArray[i]
-      for (const seg of this.iterSegments(A)) {
-        if (selectPxBounds.contains(seg.a)) {
-          selected.add(i)
-          break
-        }
-      }
-    })
-
-    if (!selected.isEmpty()) return selected.imap((i) => _itemsArray[i].id)
-  },
 })
 
 export const dotLayer = function (options) {
@@ -248,7 +203,6 @@ export const dotLayer = function (options) {
  * Auxilliary functions
  *
  */
-
 function addCanvasOverlay(pane) {
   const size = _map.getSize()
   const zoomAnimated = _map.options.zoomAnimation && Browser.any3d
