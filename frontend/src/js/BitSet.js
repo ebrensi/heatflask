@@ -284,11 +284,8 @@ BitSet.prototype[Symbol.iterator] = function () {
 //   with the option to "fast-forward"
 //  to a position set by this.next(position).
 BitSet.prototype.imap_find = function* (fnc, next_pos) {
-  const c = this.words.length,
-    w = this.words[0]
-
-  let pos = 0,
-    k = 0
+  const c = this.words.length
+  let pos = 0
 
   for (let k = 0; k < c; ++k) {
     let w = this.words[k]

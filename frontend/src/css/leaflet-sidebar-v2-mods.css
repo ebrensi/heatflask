@@ -22,7 +22,7 @@
   height: var(--sidebar-height-5icons);
 }
 
-/* eliminate the map margin that shows up on the desktop but not moobile */
+/* eliminate the map margin that shows up on the desktop but not mobile */
 .sidebar-left ~ .sidebar-map {
   margin-left: inherit;
 }

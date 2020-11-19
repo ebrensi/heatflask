@@ -11,7 +11,6 @@ import * as ActivityCollection from "./ActivityCollection.js"
 import { MAP_INFO } from "../Env.js"
 // import * as WorkerPool from "./WorkerPool.js"
 
-import BitSet from "../BitSet.js"
 import {
   options as defaultOptions,
   dotSettings as _dotSettings,
@@ -41,7 +40,7 @@ const _fpsRegister = []
 let _fpsSum = 0
 let _roundCount, _duration
 
-let _map, _options, _itemsArray, _itemIds
+let _map, _options
 let _timePaused, _ready, _paused
 let _drawingDots
 let _gifPatch
@@ -307,7 +306,7 @@ function onMove(event) {
  * Leaflet moves the pixel origin so we need to reset the CSS transform
  */
 function onMoveEnd(event) {
-  // ViewBox.calibrate()
+  ViewBox.calibrate()
 
   // console.log(`calibrated`)
   // const layerTransform = vParams.baselayer._level.el.style.transform
@@ -397,7 +396,6 @@ function redraw(event) {
     dctx.strokeStyle = "rgb(255,0,255,1)"
     ViewBox.drawPxBounds(dctx)
   }
-  // })
 }
 
 function drawPaths(pathStyleGroups) {

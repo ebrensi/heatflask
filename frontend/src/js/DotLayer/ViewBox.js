@@ -108,10 +108,10 @@ export function calibrate() {
 
   _pxOffset = _mapPanePos.subtract(_pxOrigin)
 
-  // _baseTranslation = _map.containerPointToLayerPoint([0, 0])
-  // setCSStransform(_baseTranslation.round())
+  _baseTranslation = _map.containerPointToLayerPoint([0, 0])
+  setCSStransform(_baseTranslation.round())
 
-  console.log(`base: ${_baseTranslation}, offset: ${_pxOffset}`)
+  // console.log(`base: ${_baseTranslation}, offset: ${_pxOffset}`)
 }
 
 /**

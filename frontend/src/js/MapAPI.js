@@ -16,6 +16,9 @@ import {
   LatLngBounds,
 } from "./myLeaflet.js"
 
+// For ctrl-select
+import "./BoxHook.js"
+
 import "leaflet-control-window"
 import "leaflet-areaselect"
 import "../../node_modules/sidebar-v2/js/leaflet-sidebar.js"

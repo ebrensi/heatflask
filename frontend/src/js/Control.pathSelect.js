@@ -1,14 +1,17 @@
-import "./BoxHook.js"
 import { SwipeSelect } from "./SwipeSelect.js"
 import "leaflet-easybutton"
 import { map, activityDataPopup } from "./MapAPI.js"
 import { inPxBounds } from "./DotLayer/ActivityCollection.js"
 import { dotLayer } from "./DotLayerAPI.js"
 import { select } from "./Table.js"
+
 const easyButton = window.L.easyButton
+
 
 // Select-activities-in-region functionality IIFE
 function doneSelecting(obj) {
+  if (!obj) return
+
   let count = 0
   let A
 
@@ -20,10 +23,6 @@ function doneSelecting(obj) {
   if (selectControl.canvas) {
     selectControl.remove()
     selectButton.state("not-selecting")
-  }
-
-  if (!count) {
-    return
   }
 
   dotLayer.redraw()
@@ -44,6 +43,7 @@ function doneSelecting(obj) {
 
 // set hooks for ctrl-drag
 map.on("boxhookend", doneSelecting)
+
 const selectControl = new SwipeSelect({}, doneSelecting)
 
 // button for selecting via touchscreen
