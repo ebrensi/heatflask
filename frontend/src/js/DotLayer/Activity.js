@@ -385,15 +385,23 @@ export class Activity {
     const segMask = (this.segMask = (this.segMask || new BitSet()).clear())
 
     let p = points.next().value,
-      p_In = inBounds(p),
+      pIn = inBounds(p),
       s = 0
 
     for (const nextp of points) {
-      const nextp_In = inBounds(nextp)
-      if (p_In || nextp_In) {
+      const nextpIn = inBounds(nextp)
+      if (pIn || nextpIn) {
         segMask.add(s)
+
+        // Make sure that the drawBox includes both points
+        if (!pIn) {
+          DrawBox.update(p)
+        } else if (!nextpIn) {
+          DrawBox.update(nextp)
+        }
       }
-      p_In = nextp_In
+      pIn = nextpIn
+      p = nextp
       s++
     }
 
