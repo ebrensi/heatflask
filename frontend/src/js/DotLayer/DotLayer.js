@@ -306,6 +306,7 @@ function onMove(event) {
  * Leaflet moves the pixel origin so we need to reset the CSS transform
  */
 function onMoveEnd(event) {
+  // ViewBox.update()
   ViewBox.calibrate()
 
   // console.log(`calibrated`)
@@ -326,7 +327,7 @@ function debugCtxReset() {
 
   const ctx = _debugCanvas.getContext("2d")
   ctx.strokeStyle = "rgb(0,255,0,1)"
-  ctx.lineWidth = 10
+  ctx.lineWidth = 5
   ctx.setLineDash([10, 5])
 }
 
@@ -372,12 +373,12 @@ function redraw(event) {
   DrawBox.clear(_dotCanvases[1].getContext("2d"))
   DrawBox.clear(_dotCanvases[0].getContext("2d"))
 
-  const groups = ActivityCollection.updateGroups()
-  _dotStyleGroups = groups.dot
-
   if (_options.debug) {
     DrawBox.clear(_debugCanvas.getContext("2d"))
   }
+
+  const groups = ActivityCollection.updateGroups()
+  _dotStyleGroups = groups.dot
 
   if (_options.showPaths) {
     drawPaths(groups.path)

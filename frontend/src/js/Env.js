@@ -4,8 +4,6 @@
  *   backend server, embedded in main.html
  */
 
-export const MAP_INFO = true
-
 import { ws_prefix } from "./appUtil.js"
 // import load_ga_object from "./google-analytics.js"
 
@@ -38,6 +36,8 @@ if (argstring) {
 } else {
   console.log("No server-sent arguments")
 }
+
+export const MAP_INFO = DEV_BUNDLE
 
 /* Load in the google analytics object if this is
    the production environment and the current user is not

@@ -4,15 +4,15 @@
  */
 
 import { makePT } from "./CRS.js"
-import { DomUtil } from "../myLeaflet.js"
-
+import { DomUtil, Control } from "../myLeaflet.js"
+import { MAP_INFO } from "../Env.js"
 const _canvases = []
 
 // private module-scope variable
 let _map, _pxBounds, _baseTranslation
 
 // exported module-scope variables
-let _pxOrigin, _pxOffset, _mapPanePos, _zoom, _center, _zf
+let _pxOrigin, _pxOffset, _mapPanePos, _zoom, _center, _zf, _scale
 
 export {
   _canvases as canvases,
@@ -47,6 +47,10 @@ export function resize(width, height) {
 
 export function setMap(map) {
   _map = map
+  if (MAP_INFO) {
+    new InfoViewer().addTo(map)
+  }
+
 }
 
 export function tol(_zoom) {
@@ -64,10 +68,9 @@ export function update() {
   const z = _map.getZoom()
   const latLngMapBounds = _map.getBounds()
 
-  if (z !== _zoom) {
-    _zoom = z
-    _zf = 2 ** z
-  }
+  _zoom = Math.round(z)
+  _scale = _map.getZoomScale(z, _zoom)
+  _zf = 2 ** _zoom
 
   _center = _map.getCenter()
   _pxBounds = latLng2pxBounds(latLngMapBounds)
@@ -103,6 +106,8 @@ export function calibrate() {
    * It sets the baseline CSS transformation for the dot and line canvases
    */
 
+  update()
+
   _pxOrigin = _map.getPixelOrigin()
   _mapPanePos = _map._getMapPanePos()
 
@@ -111,7 +116,14 @@ export function calibrate() {
   _baseTranslation = _map.containerPointToLayerPoint([0, 0])
   setCSStransform(_baseTranslation.round())
 
-  // console.log(`base: ${_baseTranslation}, offset: ${_pxOffset}`)
+  if (MAP_INFO) {
+    const {x: ox, y: oy} = _pxOffset.round()
+    const {x: tx, y: ty} = _baseTranslation.round()
+    _infoBox.innerHTML = `<b>ViewBox:</b> zoom: ${_zoom.toFixed(2)}<br>`
+          + `offset: ${ox}, ${oy}<br>`
+          + `trans: ${tx}, ${ty}<br>`
+          + `scale: ${_scale}`
+  }
 }
 
 /**
@@ -127,14 +139,16 @@ export function calibrate() {
 export function makeTransform(func) {
   const ox = _pxOffset.x
   const oy = _pxOffset.y
+  const mult = _zf * _scale
+
   if (func) {
     return function (x, y) {
-      return func(_zf * x + ox, _zf * y + oy)
+      return func(mult * x + ox, mult * y + oy)
     }
   }
 
   return function (x, y) {
-    return [_zf * x + ox, _zf * y + oy]
+    return [mult * x + ox, mult * y + oy]
   }
 }
 
@@ -195,3 +209,16 @@ export function drawPxBounds(ctx, pxBounds) {
   ctx.strokeRect(x, y, w, h)
   return { x, y, w, h }
 }
+
+let _infoBox
+const InfoViewer = Control.extend({
+  onAdd: function () {
+    _infoBox = DomUtil.create("div")
+    _infoBox.style.width = "200px"
+    _infoBox.style.padding = "5px"
+    _infoBox.style.background = "rgba(50,240,50,0.6)"
+    _infoBox.style.textAlign = "left"
+    _infoBox.innerHTML = "ViewBox infoBox"
+    return _infoBox
+  },
+})
