@@ -8,7 +8,7 @@ import * as ViewBox from "./ViewBox.js"
 import { Activity } from "./Activity.js"
 import { options } from "./Defaults.js"
 import BitSet from "../BitSet.js"
-import { currentUser, vParams } from "../Model.js"
+import { targetUser, vParams } from "../Model.js"
 import { Point } from "../myLeaflet.js"
 
 export const items = new Map()
@@ -305,7 +305,7 @@ function selectedIDs() {
 export function openSelected() {
   const ids = selectedIDs()
   if (ids.length) {
-    let url = currentUser + "?id=" + ids.join("+")
+    let url = targetUser.id + "?id=" + ids.join("+")
     if (vParams.paused == true) {
       url += "&paused=1"
     }
