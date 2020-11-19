@@ -121,8 +121,8 @@ export function calibrate() {
     const {x: tx, y: ty} = _baseTranslation.round()
     _infoBox.innerHTML = `<b>ViewBox:</b> zoom: ${_zoom.toFixed(2)}<br>`
           + `offset: ${ox}, ${oy}<br>`
+          + `scale: ${_scale.toFixed(3)}<br>`
           + `trans: ${tx}, ${ty}<br>`
-          + `scale: ${_scale}`
   }
 }
 
@@ -154,7 +154,7 @@ export function makeTransform(func) {
 
 /* Untransform a Leaflet point in place */
 export function unTransform(leafletPoint) {
-  leafletPoint._subtract(_pxOffset)._divideBy(_zf)
+  leafletPoint._subtract(_pxOffset)._divideBy(_zf * _scale)
 }
 
 export function latLng2pxBounds(llBounds, pxObj) {

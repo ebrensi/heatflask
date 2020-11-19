@@ -319,7 +319,7 @@ export class Activity {
     }
 
     // prevent another instance of this function from doing this
-    this.idxSet[zoom] = null
+    // this.idxSet[zoom] = null
 
     const tol = ViewBox.tol(zoom)
     const idxBitSet = Simplifier.simplify(

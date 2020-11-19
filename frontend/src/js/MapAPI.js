@@ -58,7 +58,7 @@ export const map = new Map("map", {
   preferCanvas: true,
   zoomAnimation: MOBILE,
   zoomSnap: 0, //0.25,
-  zoomDelta: 0.1, //0.5,
+  zoomDelta: 0.5, //0.5,
   zoomAnimationThreshold: 6,
   wheelPxPerZoomLevel: 200, //60,
   updateWhenZooming: true,

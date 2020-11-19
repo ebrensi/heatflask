@@ -270,6 +270,8 @@ function getTransformFromString(str) {
 function _onZoom(e) {
   if (!_map || !ViewBox.zoom) return
 
+  console.log("onzoom")
+
   if (e.pinch || e.flyTo) {
     const newZoom = _map.getZoom()
     const newCenter = _map.getCenter()
@@ -307,6 +309,7 @@ function onMove(event) {
  */
 function onMoveEnd(event) {
   // ViewBox.update()
+  console.log("onmoveend")
   ViewBox.calibrate()
 
   // console.log(`calibrated`)
@@ -318,8 +321,9 @@ function onMoveEnd(event) {
 }
 
 function onZoomEnd(event) {
+  console.log("onzoomend")
   ViewBox.calibrate()
-  updateDotSettings()
+  // updateDotSettings()
 }
 
 function debugCtxReset() {
