@@ -60,7 +60,7 @@ export const map = new Map("map", {
   zoomSnap: 0, //0.25,
   zoomDelta: 0.5, //0.5,
   zoomAnimationThreshold: 6,
-  wheelPxPerZoomLevel: 200, //60,
+  wheelPxPerZoomLevel: 100, //60,
   updateWhenZooming: true,
   worldCopyJump: true,
 })

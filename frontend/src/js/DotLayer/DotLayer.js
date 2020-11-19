@@ -322,7 +322,7 @@ function onMoveEnd(event) {
 
 function onZoomEnd(event) {
   console.log("onzoomend")
-  ViewBox.calibrate()
+  // ViewBox.calibrate()
   // updateDotSettings()
 }
 
