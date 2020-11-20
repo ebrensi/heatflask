@@ -304,8 +304,8 @@ function debugCtxReset() {
 
   const ctx = _debugCanvas.getContext("2d")
   ctx.strokeStyle = "rgb(0,255,0,1)"
-  ctx.lineWidth = 5
-  ctx.setLineDash([2, 10])
+  ctx.lineWidth = 3
+  ctx.setLineDash([6, 5])
 }
 
 function dotCtxReset() {
