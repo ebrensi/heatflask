@@ -329,33 +329,19 @@ if (MAP_INFO) {
       infoBox.style.textAlign = "left"
       map.on("zoomstart zoom zoomend move", function () {
         const zoom = map.getZoom().toFixed(2)
-        const { lat, lng } = map.getCenter()
-        const clat = lat.toFixed(4)
-        const clng = lng.toFixed(4)
         const { x: pox, y: poy } = map.getPixelOrigin()
         const { x: mx, y: my } = map._getMapPanePos()
+        const {_southWest: SW, _northEast: NE } = map.getBounds()
+        const { lat: swLat, lng: swLng } = SW
+        const { lat: neLat, lng: neLng } = NE
 
-        // const level = vParams.baselayer._level
-        // const lOrigin = level.origin
-        // const { x: lox, y: loy } = lOrigin
-        // const lZoom = level.zoom
-        // const scale = map.getZoomScale(zoom, lZoom)
-
-        // const { x: tx, y: ty } = lOrigin
-        //   .multiplyBy(scale)
-        //   .subtract(map._getNewPixelOrigin(center, zoom))
-        //   .round()
-
-        // const layerTransform = level.el.style.transform
-
-        infoBox.innerHTML =
-          `<b>Map</b>: zoom: ${zoom}<br>center: ${clat}, ${clng}<br>` +
-          `pxOrigin: ${pox}, ${poy}<br>mpp: ${mx.toFixed(3)}, ${my.toFixed(
-            3
-          )}<br>`
-          // `lZoom: ${lZoom}<br>lOrigin: ${lox} ${loy}<br>` +
-          // `offset: ${tx} ${ty}<br>scale: ${scale.toFixed(4)}<br>` +
-          // `${layerTransform}<br>`
+        infoBox.innerHTML = (
+          `<b>Map</b>: zoom: ${zoom}<br>`
+          + `SW: ${swLat.toFixed(4)}, ${swLng.toFixed(4)}<br>`
+          + `NE: ${neLat.toFixed(4)}, ${neLng.toFixed(4)}<br>`
+          + `pxOrigin: ${pox}, ${poy}<br>`
+          + `mpp: ${mx.toFixed(3)}, ${my.toFixed(3)}<br>`
+        )
       })
       return infoBox
     },

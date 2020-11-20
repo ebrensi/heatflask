@@ -5,7 +5,6 @@
 
 import { CURRENT_USER, USER_URLS } from "./Env.js"
 import { BoundObject } from "./DataBinding.js"
-import { items } from "./DotLayer/ActivityCollection.js"
 
 /*
  * These are all the possible arguments that might be in the URL
@@ -199,10 +198,7 @@ export const flags = BoundObject.fromDOMelements("[data-class=flag]", {
   event: "change"
 })
 
-export { items }
-
-const state = {
-  items: items,
+export const state = {
   flags: flags,
   vParams: vParams,
   qParams: qParams,

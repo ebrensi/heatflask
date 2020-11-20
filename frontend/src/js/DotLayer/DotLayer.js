@@ -162,8 +162,9 @@ export const DotLayer = Layer.extend({
     _ready = false
 
     ActivityCollection.reset()
+    ViewBox.updateZoom()
     ViewBox.calibrate()
-    ViewBox.update()
+    ViewBox.updateBounds()
     updateDotSettings()
 
     _ready = true
@@ -246,45 +247,15 @@ function assignEventHandlers() {
   return events
 }
 
-function onMove2(e) {
-  if (!ViewBox.zoom) return
-  const level = vParams.baselayer._level
-  const layerTransform = level.el.style.transform
-  const canvasTransform = _dotCanvases[0].style.transform
-  console.log(`layer: ${layerTransform}\ncanvas: ${canvasTransform}`)
-}
-
-const num = /(-?\d+\.?\d*)/.source
-const re = new RegExp(
-  `translate3d\\(${num}px, ${num}px, ${num}px\\) scale\\(${num}\\)`
-)
-// const transformregexp = /translate3d\((-?\d+\.?\d*)px, (-?\d+\.?\d*)px, (-?\d+\.?\d*)px\) scale\((-?\d+\.?\d*)\)/
-function getTransformFromString(str) {
-  const result = str.match(re)
-  if (!result) return
-  const offset = result.slice(1, 3).map(Number)
-  const scale = Number(result[4])
-  return { offset, scale }
-}
-
 function _onZoom(e) {
   if (!_map || !ViewBox.zoom) return
 
-  console.log("onzoom")
+  // console.log("onzoom")
 
   if (e.pinch || e.flyTo) {
-    const newZoom = _map.getZoom()
-    const newCenter = _map.getCenter()
-    const origin = _map.getBounds().getNorthWest()
-    const offset = _map._latLngToNewLayerPoint(origin, newZoom, newCenter)
-    const scale = _map.getZoomScale(newZoom)
-
-    ViewBox.setCSStransform(offset, scale)
-    // const level = vParams.baselayer._level
-    // const layerTransformString = level.el.style.transform
-    // const transform = getTransformFromString(layerTransformString)
-    // if (!transform) return
-    // ViewBox.setPinchTransform(transform)
+    const zoom = _map.getZoom()
+    const center = _map.getCenter()
+    _animateZoom({zoom, center})
   }
 }
 
@@ -309,7 +280,8 @@ function onMove(event) {
  */
 function onMoveEnd(event) {
   // ViewBox.update()
-  console.log("onmoveend")
+  // console.log("onmoveend")
+  ViewBox.updateBounds()
   ViewBox.calibrate()
 
   // console.log(`calibrated`)
@@ -321,7 +293,8 @@ function onMoveEnd(event) {
 }
 
 function onZoomEnd(event) {
-  console.log("onzoomend")
+  // console.log("onzoomend")
+  ViewBox.updateZoom()
   // ViewBox.calibrate()
   // updateDotSettings()
 }
@@ -332,7 +305,7 @@ function debugCtxReset() {
   const ctx = _debugCanvas.getContext("2d")
   ctx.strokeStyle = "rgb(0,255,0,1)"
   ctx.lineWidth = 5
-  ctx.setLineDash([10, 5])
+  ctx.setLineDash([2, 10])
 }
 
 function dotCtxReset() {

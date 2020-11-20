@@ -69,7 +69,8 @@ export function resetQuery() {
  */
 sidebar.addEventListener("closing", resetQuery)
 
-function updateURL() {
+
+export function getUrlString(altQargs) {
   const vArgs = {}
 
   // put geohash in the url if autozoom is disabled
@@ -91,11 +92,14 @@ function updateURL() {
   // include the global alpha value if it differs from 1
   if (vParams.alpha < 1) vArgs.alpha = vParams.alpha
 
-  const paramsString = Object.entries({ ...qArgs, ...vArgs })
+  const paramsString = Object.entries({ ...(altQargs || qArgs), ...vArgs })
       .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
-      .join("&"),
-    // newURL = `${targetUser.id}?${paramsString}`;
-    newURL = `?${paramsString}`
+      .join("&")
+  return `?${paramsString}`
+}
+
+function updateURL() {
+  const newURL = getUrlString()
 
   if (url !== newURL) {
     // console.log(`pushing: ${newURL}`);

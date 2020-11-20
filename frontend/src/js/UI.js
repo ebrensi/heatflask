@@ -6,10 +6,14 @@
 import { AUTHORIZE_URL } from "./Env.js"
 
 import { currentUser, vParams, qParams, flags } from "./Model.js"
+/* URL.js import must be here because it requires MapAPI which requires
+ *  ActivityCollection, which requires URL.  If we import MapAPI first
+ *  then it will end up requiring itself.
+ */
+import "./URL.js"
 import { getBounds, map } from "./MapAPI.js"
 
 import { items, openSelected } from "./DotLayer/ActivityCollection.js"
-import "./URL.js"
 
 import { dotLayer } from "./DotLayerAPI.js"
 // import { captureCycle, abortCapture } from "./DotLayer/Export.js"

@@ -8,11 +8,14 @@ import * as ViewBox from "./ViewBox.js"
 import { Activity } from "./Activity.js"
 import { options } from "./Defaults.js"
 import BitSet from "../BitSet.js"
-import { targetUser, vParams } from "../Model.js"
+import { targetUser, state } from "../Model.js"
 import { Point } from "../myLeaflet.js"
+import { getUrlString } from "../URL.js"
 
 export const items = new Map()
 let itemsArray
+
+state.items = items
 
 export function add(specs) {
   const A = new Activity(specs)
@@ -76,7 +79,7 @@ const inView = {
 }
 
 export function updateGroups() {
-  ViewBox.update()
+  // ViewBox.update()
 
   const zoom = ViewBox.zoom
 
@@ -305,10 +308,8 @@ function selectedIDs() {
 export function openSelected() {
   const ids = selectedIDs()
   if (ids.length) {
-    let url = targetUser.id + "?id=" + ids.join("+")
-    if (vParams.paused == true) {
-      url += "&paused=1"
-    }
+    const argString = getUrlString({id: ids.join("+")})
+    let url = targetUser.id + argString
     window.open(url, "_blank")
   }
 }

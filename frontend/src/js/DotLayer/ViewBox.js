@@ -6,19 +6,21 @@
 import { makePT } from "./CRS.js"
 import { DomUtil, Control } from "../myLeaflet.js"
 import { MAP_INFO } from "../Env.js"
+
 const _canvases = []
+
+const _pad = 5 // padding for
 
 // private module-scope variable
 let _map, _pxBounds, _baseTranslation
 
 // exported module-scope variables
-let _pxOrigin, _pxOffset, _mapPanePos, _zoom, _center, _zf, _scale
+let _pxOrigin, _pxOffset, _mapPanePos, _zoom, _zf, _scale
 
 export {
   _canvases as canvases,
   _pxOrigin as pxOrigin,
   _pxOffset as pxOffset,
-  _center as center,
   _zoom as zoom,
   _zf as zf,
 }
@@ -64,16 +66,21 @@ export function tol(_zoom) {
  * pans and zooms around but we want to avoind calling it too often
  * as that might be too much computation
  */
-export function update() {
-  const z = _map.getZoom()
+export function updateBounds() {
   const latLngMapBounds = _map.getBounds()
+  _pxBounds = latLng2pxBounds(latLngMapBounds)
 
+
+  if (MAP_INFO) {
+    updateDebugDisplay()
+  }
+}
+
+export function updateZoom() {
+  const z = _map.getZoom()
   _zoom = Math.round(z)
   _scale = _map.getZoomScale(z, _zoom)
   _zf = 2 ** _zoom
-
-  _center = _map.getCenter()
-  _pxBounds = latLng2pxBounds(latLngMapBounds)
 }
 
 export function setCSStransform(offset, scale) {
@@ -105,9 +112,6 @@ export function calibrate() {
    *
    * It sets the baseline CSS transformation for the dot and line canvases
    */
-
-  update()
-
   _pxOrigin = _map.getPixelOrigin()
   _mapPanePos = _map._getMapPanePos()
 
@@ -115,10 +119,13 @@ export function calibrate() {
 
   _baseTranslation = _map.containerPointToLayerPoint([0, 0])
   setCSStransform(_baseTranslation.round())
+}
 
-  if (MAP_INFO) {
+function updateDebugDisplay() {
+  if (MAP_INFO && _pxOffset) {
     const {x: ox, y: oy} = _pxOffset.round()
     const {x: tx, y: ty} = _baseTranslation.round()
+
     _infoBox.innerHTML = `<b>ViewBox:</b> zoom: ${_zoom.toFixed(2)}<br>`
           + `offset: ${ox}, ${oy}<br>`
           + `scale: ${_scale.toFixed(3)}<br>`
@@ -137,8 +144,7 @@ export function calibrate() {
  * Array every time we perform the transformation.
  */
 export function makeTransform(func) {
-  const ox = _pxOffset.x
-  const oy = _pxOffset.y
+  const {x: ox, y: oy} = _pxOffset
   const mult = _zf * _scale
 
   if (func) {
@@ -160,8 +166,7 @@ export function unTransform(leafletPoint) {
 export function latLng2pxBounds(llBounds, pxObj) {
   if (!pxObj) pxObj = new Float32Array(4)
 
-  const sw = llBounds._southWest,
-    ne = llBounds._northEast
+  const {_southWest: sw, _northEast: ne} = llBounds
 
   pxObj[0] = sw.lat // xmin
   pxObj[1] = sw.lng // ymax
@@ -181,30 +186,28 @@ export function overlaps(activityBounds) {
 }
 
 export function contains(point) {
-  const mb = _pxBounds,
-    x = point[0],
-    y = point[1],
-    xmin = mb[0],
-    xmax = mb[2],
-    ymin = mb[3],
-    ymax = mb[1]
+  const [x, y] = point
+  const [xmin, ymax, xmax, ymin] = _pxBounds
 
   return xmin <= x && x <= xmax && ymin <= y && y <= ymax
 }
 
+function getTPxBounds(pxBounds) {
+  const [xmin, ymax, xmax, ymin] = pxBounds || _pxBounds
+  const transform = makeTransform()
+
+  const ul = transform(xmin, ymin)
+  const lr = transform(xmax, ymax)
+  return {ul, lr}
+}
+
 export function drawPxBounds(ctx, pxBounds) {
-  const b = pxBounds || _pxBounds,
-    xmin = b[0],
-    xmax = b[2],
-    ymin = b[3],
-    ymax = b[1],
-    transform = makeTransform(),
-    ul = transform(xmin, ymin),
-    x = ul[0] + 5,
-    y = ul[1] + 5,
-    lr = transform(xmax, ymax),
-    w = lr[0] - x - 10,
-    h = lr[1] - y - 10
+  const {ul, lr} = getTPxBounds(pxBounds)
+
+  const x = ul[0] + _pad
+  const y = ul[1] + _pad
+  const w = lr[0] - x - 2 * _pad
+  const h = lr[1] - y - 2 * _pad
 
   ctx.strokeRect(x, y, w, h)
   return { x, y, w, h }
