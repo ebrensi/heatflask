@@ -20,7 +20,7 @@
   "author": "Efrem Rensi",
   "license": "ISC",
   "dependencies": {
-    "@babel/core": "^7.12.3",
+    "@babel/core": "^7.12.7",
     "@fortawesome/fontawesome-free": "^5.15.1",
     "@msgpack/msgpack": "^2.3.0",
     "downloadjs": "^1.4.7",
@@ -40,11 +40,11 @@
   ],
   "devDependencies": {
     "documentation": "^13.1.0",
-    "eslint": "^7.13.0",
+    "eslint": "^7.14.0",
     "eslint-config-prettier": "^6.15.0",
     "parcel": "next",
     "parcel-plugin-nuke-dist": "^1.0.1",
-    "prettier": "^2.1.2"
+    "prettier": "^2.2.0"
   },
   "eslintConfig": {
     "env": {
