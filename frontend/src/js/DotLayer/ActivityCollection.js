@@ -1,6 +1,5 @@
 /*
- *  ActivityCollection is a Map with some extra methods and properties
- *  for managing a collection of Activity objects.
+ *  ActivityCollection is a some methods for managing a collection of Activity objects.
  */
 
 import * as ColorPalette from "./ColorPalette.js"
@@ -78,6 +77,11 @@ const inView = {
   last: new BitSet(),
 }
 
+
+/**
+ * Update StyleGroups for our collection of activities
+ * @return {[type]} [description]
+ */
 export function updateGroups() {
   // ViewBox.update()
 
