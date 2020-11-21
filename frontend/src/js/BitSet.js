@@ -145,7 +145,7 @@ BitSet.prototype.checkedAdd = function (index) {
 }
 
 // Reduce the memory usage to a minimum
-BitSet.prototype.trim = function (index) {
+BitSet.prototype.trim = function () {
   let nl = this.words.length
   while (nl > 0 && this.words[nl - 1] === 0) {
     nl--

@@ -169,6 +169,11 @@ export class Activity {
     }
   }
 
+  /**
+   * The square distance between to successive points in this.px
+   * @param  {number} idx
+   * @return {number}
+   */
   gapAt(idx) {
     const p = this.getPointAccessor()
     return sqDist(p(idx), p(idx + 1))
@@ -252,57 +257,6 @@ export class Activity {
     return _pointsIterator(this.px, idxSet)
   }
 
-  /**
-   * returns an iterator of segment objects
-   * (actually the same Object with different values)
-   *
-   * @param  {Number} zoom
-   * @param  {BitSet} segMask
-   * @return {Iterator}
-   */
-  *iterSegments(zoom, segMask) {
-    zoom = zoom || ViewBox.zoom
-    segMask = segMask || this.segMask
-    const points = this.getPointAccessor(zoom)
-    const seg = this.segmentBuf
-
-    for (const i of segMask) {
-      seg.a = points(i)
-      seg.b = points(i + 1)
-      yield seg
-    }
-  }
-
-  /**
-   * this returns an iterator of segments without needing
-   *   a point accessor
-   *
-   * @param  {Number} zoom
-   * @param  {BitSet} segMask
-   * @return {Iterator}
-   */
-  *iterSegmentsFromPointsIterator(zoom, segMask) {
-    zoom = zoom || ViewBox.zoom
-    segMask = segMask || this.segMask
-
-    const points = this.pointsIterator(zoom)
-    const seg = this.segmentBuf
-    let j = 0,
-      obj = points.next()
-
-    for (const i of segMask) {
-      while (j++ < i) {
-        obj = points.next()
-      }
-
-      seg.a = obj.value
-
-      obj = points.next()
-      seg.b = obj.value
-
-      yield seg
-    }
-  }
 
   timesIterator(zoom) {
     if (!zoom) {
@@ -393,7 +347,8 @@ export class Activity {
     const zoom = ViewBox.zoom
 
     /* Later we will compare this segMask with the last one so that we only draw or erase
-      parts of the path that changed */
+     * parts of the path that have come into view or are no longer on screen
+     */
     if (this.lastSegMask) {
       // Swap this and last segMask
       ;[this.segMask, this.lastSegMask] = [this.lastSegMask, this.segMask]
@@ -407,7 +362,7 @@ export class Activity {
       /*
        * If this activity is completely contained in the ViewBox then we
        * already know every segment is included.  Explicitly creating a full
-       * segMask is much faster.
+       * segMask and updating DrawBox with the bounds is much faster.
        */
       const len = this.n - 1
       segMask.words = new Array(len >> 5).fill(-1)
@@ -451,26 +406,11 @@ export class Activity {
     return segMask
   }
 
-  drawPathFromSegIter(ctx) {
-    const segs = this.iterSegments(),
-      transform = ViewBox.px2Container(),
-      seg = segs.next().value,
-      a = seg.a,
-      b = seg.b
-
-    do {
-      transform(a)
-      ctx.moveTo(a[0], a[1])
-
-      transform(b)
-      ctx.lineTo(b[0], b[1])
-    } while (!segs.next().done)
-  }
-
   drawPathFromPointArray(ctx) {
-    const points = this.getPointAccessor(ViewBox.zoom),
-      transformedMoveTo = ViewBox.makeTransform((x, y) => ctx.moveTo(x, y)),
-      transformedLineTo = ViewBox.makeTransform((x, y) => ctx.lineTo(x, y))
+    //TODO: continue here
+    const points = this.getPointAccessor(ViewBox.zoom)
+    const transformedMoveTo = ViewBox.makeTransform((x, y) => ctx.moveTo(x, y))
+    const transformedLineTo = ViewBox.makeTransform((x, y) => ctx.lineTo(x, y))
 
     this.segMask.forEach((i) => {
       const p1 = points(i)
@@ -480,56 +420,7 @@ export class Activity {
     })
   }
 
-  dotPointsFromSegs(now, ds, func) {
-    const T = ds._period,
-      start = this.ts
-
-    // segments yields the same object seg every time with
-    // the same views a and b to the same memory buffer.
-    //  So we only need to define the references once.
-    const segments = this.iterSegments(),
-      seg = segments.next().value,
-      p_a = seg.a,
-      p_b = seg.b
-
-    const times = this.iterTimeIntervals(),
-      timeInterval = times.next().value
-
-    const timeOffset = (ds._timeScale * (now - (start + timeInterval.a))) % T
-
-    // let count = 0;
-
-    do {
-      const t_a = timeInterval.a,
-        t_b = timeInterval.b,
-        lowest = Math.ceil((t_a - timeOffset) / T),
-        highest = Math.floor((t_b - timeOffset) / T)
-
-      if (lowest <= highest) {
-        // console.log(`${t_a}, ${t_b}`);
-        const t_ab = t_b - t_a,
-          vx = (p_b[0] - p_a[0]) / t_ab,
-          vy = (p_b[1] - p_a[1]) / t_ab
-
-        // console.log(`${p_a}, ${p_b}`);
-        for (let j = lowest; j <= highest; j++) {
-          const t = j * T + timeOffset,
-            dt = t - t_a
-          // console.log(t);
-          if (dt > 0) {
-            const x = p_a[0] + vx * dt
-            const y = p_a[1] + vy * dt
-            func(x, y)
-            // count++;
-          }
-        }
-      }
-    } while (!segments.next().done && !times.next().done)
-
-    // return count
-  }
-
-  dotPointsFromArray(now, ds, func) {
+   dotPointsFromArray(now, ds, func) {
     const T = ds._period
     const start = this.ts
     const zoom = ViewBox.zoom
@@ -541,18 +432,18 @@ export class Activity {
     let count = 0
 
     for (const i of this.segMask) {
-      const t_a = times[i],
-        t_b = times[i + 1],
-        lowest = Math.ceil((t_a - timeOffset) / T),
-        highest = Math.floor((t_b - timeOffset) / T)
+      const t_a = times[i]
+      const t_b = times[i + 1]
+      const lowest = Math.ceil((t_a - timeOffset) / T)
+      const highest = Math.floor((t_b - timeOffset) / T)
 
       if (lowest <= highest) {
         const p_a = points(i)
         const p_b = points(i + 1)
 
-        const t_ab = t_b - t_a,
-          vx = (p_b[0] - p_a[0]) / t_ab,
-          vy = (p_b[1] - p_a[1]) / t_ab
+        const t_ab = t_b - t_a
+        const vx = (p_b[0] - p_a[0]) / t_ab
+        const vy = (p_b[1] - p_a[1]) / t_ab
 
         for (let j = lowest; j <= highest; j++) {
           const t = j * T + timeOffset,
@@ -566,6 +457,107 @@ export class Activity {
         }
       }
     }
+    return count
+  }
+
+
+  /*
+   * It might be desireable at some point to avoid creating arrays
+   * of indices from idxSets and just use generators
+   */
+
+  /**
+   * this returns an iterator of segments without needing
+   *   a point accessor
+   *
+   * @param  {Number} zoom
+   * @param  {BitSet} segMask
+   * @return {Iterator}
+   */
+  *iterSegments(zoom, segMask) {
+    zoom = zoom || ViewBox.zoom
+    segMask = segMask || this.segMask
+
+    const points = this.pointsIterator(zoom)
+    const seg = this.segmentBuf
+    let j = 0,
+      obj = points.next()
+
+    for (const i of segMask) {
+      while (j++ < i) {
+        obj = points.next()
+      }
+
+      seg.a = obj.value
+
+      obj = points.next()
+      seg.b = obj.value
+
+      yield seg
+    }
+  }
+  drawPathFromSegIter(ctx) {
+    const segs = this.iterSegments()
+    const transform = ViewBox.px2Container()
+    const seg = segs.next().value
+    const a = seg.a
+    const b = seg.b
+
+    do {
+      transform(a)
+      ctx.moveTo(a[0], a[1])
+
+      transform(b)
+      ctx.lineTo(b[0], b[1])
+    } while (!segs.next().done)
+  }
+
+  dotPointsFromSegs(now, ds, func) {
+    const T = ds._period
+    const start = this.ts
+
+    // segments yields the same object seg every time with
+    // the same views a and b to the same memory buffer.
+    //  So we only need to define the references once.
+    const segments = this.iterSegments()
+    const seg = segments.next().value
+    const p_a = seg.a
+    const p_b = seg.b
+
+    const times = this.iterTimeIntervals()
+    const timeInterval = times.next().value
+
+    const timeOffset = (ds._timeScale * (now - (start + timeInterval.a))) % T
+
+    let count = 0
+
+    do {
+      const t_a = timeInterval.a
+      const t_b = timeInterval.b
+      const lowest = Math.ceil((t_a - timeOffset) / T)
+      const highest = Math.floor((t_b - timeOffset) / T)
+
+      if (lowest <= highest) {
+        // console.log(`${t_a}, ${t_b}`);
+        const t_ab = t_b - t_a
+        const vx = (p_b[0] - p_a[0]) / t_ab
+        const vy = (p_b[1] - p_a[1]) / t_ab
+
+        // console.log(`${p_a}, ${p_b}`);
+        for (let j = lowest; j <= highest; j++) {
+          const t = j * T + timeOffset,
+            dt = t - t_a
+          // console.log(t);
+          if (dt > 0) {
+            const x = p_a[0] + vx * dt
+            const y = p_a[1] + vy * dt
+            func(x, y)
+            count++;
+          }
+        }
+      }
+    } while (!segments.next().done && !times.next().done)
+
     return count
   }
 }

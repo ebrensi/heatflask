@@ -12,7 +12,7 @@ import { Point } from "../myLeaflet.js"
 import { getUrlString } from "../URL.js"
 
 export const items = new Map()
-let itemsArray
+let itemsArray, _zoom
 
 state.items = items
 
@@ -86,6 +86,10 @@ export function updateGroups() {
   // ViewBox.update()
 
   const zoom = ViewBox.zoom
+  if (zoom !== _zoom) {
+    zoomChanged()
+  }
+  _zoom = zoom
 
   // the semicolon is necessary
   // see https://stackoverflow.com/questions/42562806/destructuring-assignment-and-variable-swapping
@@ -340,6 +344,17 @@ export function *inPxBounds(pxBounds) {
         yield A
         break
       }
+    }
+  }
+}
+
+/*
+ * Stuff that needs to be done on zoom change
+ */
+function zoomChanged() {
+  for (const A of itemsArray) {
+    if (A.segMask) {
+      A.segMask.clear()
     }
   }
 }
