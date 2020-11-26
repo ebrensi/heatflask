@@ -131,30 +131,26 @@ export function histogram(points, bins) {
 
 /**
  * Filters outliers from an Array using standard IQR method. Creates a new Array.
+ * adapted from https://gist.github.com/ogun/f19dc055e6b84d57e8186cbc9eaa8e45 (Kemal Ogun Isik)
+ *
  * @param  {Array} someArray
  * @return {Array}
  */
-export function filterOutliers(someArray, mult = 1.5) {
-  if (someArray.length < 4) return someArray
+export function quartiles(someArray) {
+  if (someArray.length < 4) return
 
-  let values, q1, q3, iqr, maxValue, minValue
+  const values = someArray.slice().sort((a, b) => a - b)
+  const n = values.length
+  const n_4 = n / 4
+  const evenQuarters = n_4 % 1 === 0
 
-  values = someArray.slice().sort((a, b) => a - b) //copy array fast and sort
+  const q1 = evenQuarters
+    ? (1 / 2) * (values[n_4] + values[n_4 + 1])
+    : values[Math.floor(n_4 + 1)]
 
-  if ((values.length / 4) % 1 === 0) {
-    //find quartiles
-    q1 = (1 / 2) * (values[values.length / 4] + values[values.length / 4 + 1])
-    q3 =
-      (1 / 2) *
-      (values[values.length * (3 / 4)] + values[values.length * (3 / 4) + 1])
-  } else {
-    q1 = values[Math.floor(values.length / 4 + 1)]
-    q3 = values[Math.ceil(values.length * (3 / 4) + 1)]
-  }
+  const q3 = evenQuarters
+    ? (1 / 2) * (values[n * (3 / 4)] + values[n * (3 / 4) + 1])
+    : values[Math.ceil(n * (3 / 4) + 1)]
 
-  iqr = q3 - q1
-  maxValue = q3 + iqr * mult
-  minValue = q1 - iqr * mult
-
-  return values.filter((x) => x >= minValue && x <= maxValue)
+  return {q1, q3, iqr: q3 - q1}
 }

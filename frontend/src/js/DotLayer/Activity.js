@@ -12,7 +12,7 @@ import * as Simplifier from "./Simplifier.js"
 import { ATYPE } from "../strava.js"
 import BitSet from "../BitSet.js"
 import { RunningStatsCalculator } from "./stats.js"
-
+import { quartiles } from "../appUtil.js"
 /*
  * This is meant to be a LRU cache for stuff that should go away
  * if it is not used for a while. For now we just use a Map.
@@ -40,7 +40,11 @@ function inBounds(p) {
  *
  * @type {Number}
  */
-const ZSCORE_CUTOFF = 5 // TODO: Consider IQR for this
+const ZSCORE_CUTOFF = 5
+
+// Alternatively we can use IQR for outlier detection
+// It is slower since we must sort the values
+const IQR_MULT = 3
 
 /**
  * @class Activity
@@ -120,7 +124,6 @@ export class Activity {
         excludeMask.add(i)
         continue
       }
-      // const logSd = Math.log10(sd)
       const logSd = Math.log(sd)
       dStats.update(logSd)
       sqDists.push(logSd)
@@ -146,6 +149,7 @@ export class Activity {
 
     this.n = n
 
+    // stdev (Z-score) method for determining outliers
     const dMean = dStats.mean
     const dStdev = dStats.populationStdev
     // const zScores = []
@@ -161,8 +165,20 @@ export class Activity {
       }
     }
 
+    // // IQR method for determining outliers (it appears to be much slower)
+    // const { q3, iqr } = quartiles(sqDists)
+    // const upperFence = q3 + IQR_MULT * iqr
+    // const dOutliers2 = []
+    // for (let i = 0, len = n - 1; i < len; i++) {
+    //   if (sqDists[i] > upperFence) {
+    //     dOutliers2.push(i)
+    //   }
+    // }
+
     if (dOutliers.length) {
       this.pxGaps = dOutliers
+      // console.log({dOutliers, dOutliers2})
+
       // this.selected = true
       // const dist = hist(zScores, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
       // console.log({dStats, zScores, dist, dOutliers})
@@ -192,8 +208,8 @@ export class Activity {
    */
   containedInMapBounds() {
     const pxB = this.pxBounds
-    const southWest = pxB.subarray(0,2)
-    const northEast = pxB.subarray(2,4)
+    const southWest = pxB.subarray(0, 2)
+    const northEast = pxB.subarray(2, 4)
     return ViewBox.contains(southWest) && ViewBox.contains(northEast)
   }
 
@@ -256,7 +272,6 @@ export class Activity {
     }
     return _pointsIterator(this.px, idxSet)
   }
-
 
   timesIterator(zoom) {
     if (!zoom) {
@@ -366,11 +381,11 @@ export class Activity {
        */
       const len = this.n - 1
       segMask.words = new Array(len >> 5).fill(-1)
-      segMask.words.push(2**(len % 32) - 1)
+      segMask.words.push(2 ** (len % 32) - 1)
 
       const pxB = this.pxBounds
-      const southWest = pxB.subarray(0,2)
-      const northEast = pxB.subarray(2,4)
+      const southWest = pxB.subarray(0, 2)
+      const northEast = pxB.subarray(2, 4)
       DrawBox.update(southWest)
       DrawBox.update(northEast)
     } else {
@@ -420,7 +435,7 @@ export class Activity {
     })
   }
 
-   dotPointsFromArray(now, ds, func) {
+  dotPointsFromArray(now, ds, func) {
     const T = ds._period
     const start = this.ts
     const zoom = ViewBox.zoom
@@ -459,7 +474,6 @@ export class Activity {
     }
     return count
   }
-
 
   /*
    * It might be desireable at some point to avoid creating arrays
@@ -552,7 +566,7 @@ export class Activity {
             const x = p_a[0] + vx * dt
             const y = p_a[1] + vy * dt
             func(x, y)
-            count++;
+            count++
           }
         }
       }
