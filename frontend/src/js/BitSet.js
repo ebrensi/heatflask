@@ -444,26 +444,61 @@ BitSet.prototype.equals = function (otherbitmap) {
   return true
 }
 
-// Computes the change (XOR) between this bitset and another one,
+// Computes the changed elements (XOR) between this bitset and another one,
 // the current bitset is modified (and returned by the function)
 BitSet.prototype.change = function (otherbitmap) {
-  let newcount = Math.max(this.words.length, otherbitmap.words.length)
-  let k = 0 | 0
-  for (; k + 7 < newcount; k += 8) {
-    this.words[k] ^= otherbitmap.words[k]
-    this.words[k + 1] ^= otherbitmap.words[k + 1]
-    this.words[k + 2] ^= otherbitmap.words[k + 2]
-    this.words[k + 3] ^= otherbitmap.words[k + 3]
-    this.words[k + 4] ^= otherbitmap.words[k + 4]
-    this.words[k + 5] ^= otherbitmap.words[k + 5]
-    this.words[k + 6] ^= otherbitmap.words[k + 6]
-    this.words[k + 7] ^= otherbitmap.words[k + 7]
+  const mincount = Math.min(this.words.length, otherbitmap.words.length);
+  let k = 0 | 0;
+  for (; k + 7 < mincount; k += 8) {
+    this.words[k] ^= otherbitmap.words[k];
+    this.words[k + 1] ^= otherbitmap.words[k + 1];
+    this.words[k + 2] ^= otherbitmap.words[k + 2];
+    this.words[k + 3] ^= otherbitmap.words[k + 3];
+    this.words[k + 4] ^= otherbitmap.words[k + 4];
+    this.words[k + 5] ^= otherbitmap.words[k + 5];
+    this.words[k + 6] ^= otherbitmap.words[k + 6];
+    this.words[k + 7] ^= otherbitmap.words[k + 7];
   }
-  for (; k < newcount; ++k) {
-    this.words[k] ^= otherbitmap.words[k]
+  for (; k < mincount; ++k) {
+    this.words[k] ^= otherbitmap.words[k];
   }
-  return this
-}
+  // remaining words are all part of change
+  if (otherbitmap.words.length > this.words.length) {
+    // this.words = this.words.concat(otherbitmap.words.slice(k));
+    var maxcount = otherbitmap.words.length;
+    for (; k < maxcount; ++k) {
+      this.words[k] = otherbitmap.words[k];
+    }
+  }
+  return this;
+};
+
+// Computes the change between this bitset and another one,
+// a new bitmap is generated
+BitSet.prototype.new_change = function (otherbitmap) {
+  if (otherbitmap.words.length > this.words.length) {
+    return this.clone().change(otherbitmap);
+  } else {
+    return otherbitmap.clone().change(this);
+  }
+};
+
+// Computes the number of changed elements between this bitset and another one
+BitSet.prototype.change_size = function (otherbitmap) {
+  var mincount = Math.min(this.words.length, otherbitmap.words.length);
+  var answer = 0 | 0;
+  var k = 0 | 0;
+  for (; k < mincount; ++k) {
+    answer += this.hammingWeight(this.words[k] ^ otherbitmap.words[k]);
+  }
+  var longer =
+    this.words.length > otherbitmap.words.length ? this : otherbitmap;
+  var c = longer.words.length;
+  for (; k < c; ++k) {
+    answer += this.hammingWeight(longer.words[k]);
+  }
+  return answer;
+};
 
 // Computes the difference between this bitset and another one,
 // the current bitset is modified (and returned by the function)
