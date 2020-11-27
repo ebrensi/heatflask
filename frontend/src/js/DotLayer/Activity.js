@@ -379,7 +379,7 @@ export class Activity {
        * already know every segment is included.  Explicitly creating a full
        * segMask and updating DrawBox with the bounds is much faster.
        */
-      const len = this.n - 1
+      const len = this.idxSet[zoom].size() - 1
       segMask.words = new Array(len >> 5).fill(-1)
       segMask.words.push(2 ** (len % 32) - 1)
 
@@ -421,18 +421,34 @@ export class Activity {
     return segMask
   }
 
-  drawPathFromPointArray(ctx) {
-    //TODO: continue here
+  drawPath(...args) {
+    return this.drawPathFromPointArray(...args)
+  }
+
+  drawPathFromPointArray(ctx, segMask) {
+    const newSegs = this.segMask.new_difference(this.lastSegMask)
+    const nChanges = newSegs.size()
+    if (!nChanges) {
+      return 0
+    }
     const points = this.getPointAccessor(ViewBox.zoom)
     const transformedMoveTo = ViewBox.makeTransform((x, y) => ctx.moveTo(x, y))
     const transformedLineTo = ViewBox.makeTransform((x, y) => ctx.lineTo(x, y))
 
-    this.segMask.forEach((i) => {
+    if (!segMask) {
+      // segMask = this.segMask
+      segMask = newSegs
+    }
+
+    let count = 0
+    segMask.forEach((i) => {
       const p1 = points(i)
       const p2 = points(i + 1)
       transformedMoveTo(p1[0], p1[1])
       transformedLineTo(p2[0], p2[1])
+      count++
     })
+    return count
   }
 
   dotPointsFromArray(now, ds, func) {

@@ -21,7 +21,7 @@ import { vParams } from "../Model.js"
 /* In order to prevent path redraws from happening too often
  * and hogging up CPU cycles we set a minimum delay between redraws
  */
-const MIN_REDRAW_DELAY = 100 // milliseconds
+const MIN_REDRAW_DELAY = 1000 // milliseconds
 const TWO_PI = 2 * Math.PI
 const TARGET_FPS = 30
 const CONTINUOUS_REDRAWS = false
@@ -52,6 +52,7 @@ let _timeOffset = 0
 let _redrawCounter = 0
 let _frame, _capturing
 let _lastCalledTime, _minDelay
+let _zoomChanged
 
 /*
  * Display for debugging
@@ -226,7 +227,7 @@ function assignEventHandlers() {
 
   const events = {
     // movestart: loggit,
-    // move: onMove2,
+    // move: onMove,
     moveend: onMoveEnd,
     // zoomstart: loggit,
     // zoom: loggit,
@@ -271,6 +272,7 @@ function onMove(event) {
   if (ts - _lastRedraw < MIN_REDRAW_DELAY) return
 
   _lastRedraw = ts
+  ViewBox.updateBounds()
   redraw(event)
 }
 
@@ -282,20 +284,23 @@ function onMoveEnd(event) {
   // ViewBox.update()
   // console.log("onmoveend")
   ViewBox.updateBounds()
-  ViewBox.calibrate()
-
-  // console.log(`calibrated`)
-  // const layerTransform = vParams.baselayer._level.el.style.transform
-  // const canvasTransform = _dotCanvases[0].style.transform
-  // console.log(`layer: ${layerTransform}, canvas: ${canvasTransform}`)
+  // ViewBox.calibrate()
 
   redraw(event)
 }
 
 function onZoomEnd(event) {
   // console.log("onzoomend")
+  const oldRoundedZoom = ViewBox.zoom
   ViewBox.updateZoom()
-  // ViewBox.calibrate()
+
+  // The zoom has changed but if we are still at the same integer zoom level
+  // then we don't need to redraw because we are not changing to a different idxSet
+  if (ViewBox.zoom !== oldRoundedZoom) {
+    _zoomChanged = true
+  }
+
+  ViewBox.calibrate()
   // updateDotSettings()
 }
 
@@ -374,32 +379,39 @@ function redraw(event) {
     dctx.strokeStyle = "rgb(255,0,255,1)"
     ViewBox.drawPxBounds(dctx)
   }
+
+  _zoomChanged = false
 }
 
 function drawPaths(pathStyleGroups) {
   if (!_ready) return
 
   const alphaScale = _dotSettings.alphaScale
-  const ctx = _lineCanvases[1].getContext("2d")
+  const ctx = _lineCanvases[_zoomChanged? 1 : 0].getContext("2d")
+
+  let count = 0
 
   for (const { spec, items } of pathStyleGroups) {
     Object.assign(ctx, spec)
     ctx.globalAlpha = spec.globalAlpha * alphaScale
     ctx.beginPath()
     for (const A of items) {
-      A.drawPathFromPointArray(ctx)
+      count += A.drawPathFromPointArray(ctx)
     }
     ctx.stroke()
   }
 
-  // swap line canvases
-  const temp = _lineCanvases[0]
-  _lineCanvases[0] = _lineCanvases[1]
-  _lineCanvases[1] = temp
+  if (_zoomChanged) {
+    // swap line canvases
+    const temp = _lineCanvases[0]
+    _lineCanvases[0] = _lineCanvases[1]
+    _lineCanvases[1] = temp
 
-  _lineCanvases[0].style.display = ""
-  temp.style.display = "none"
-  DrawBox.clear(temp.getContext("2d"), DrawBox.defaultRect())
+    _lineCanvases[0].style.display = ""
+    temp.style.display = "none"
+    DrawBox.clear(temp.getContext("2d"), DrawBox.defaultRect())
+  }
+  console.log(`drew ${count} segments`)
 }
 
 /*
