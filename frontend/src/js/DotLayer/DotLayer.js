@@ -284,7 +284,7 @@ function onMoveEnd(event) {
   // ViewBox.update()
   // console.log("onmoveend")
   ViewBox.updateBounds()
-  // ViewBox.calibrate()
+  ViewBox.calibrate()
 
   redraw(event)
 }
@@ -396,7 +396,7 @@ function drawPaths(pathStyleGroups) {
     ctx.globalAlpha = spec.globalAlpha * alphaScale
     ctx.beginPath()
     for (const A of items) {
-      count += A.drawPathFromPointArray(ctx)
+      count += A.drawPath(ctx)
     }
     ctx.stroke()
   }
@@ -411,7 +411,7 @@ function drawPaths(pathStyleGroups) {
     temp.style.display = "none"
     DrawBox.clear(temp.getContext("2d"), DrawBox.defaultRect())
   }
-  console.log(`drew ${count} segments`)
+  // console.log(`drew ${count} segments`)
 }
 
 /*

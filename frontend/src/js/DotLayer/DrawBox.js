@@ -7,64 +7,56 @@
 
 import * as ViewBox from "./ViewBox.js"
 
-let _dim
-
 const _pad = 25
-const _defaultRect = new Float32Array([0, 0, 0, 0])
-const _rect = new Float32Array(4) // [x, y, w, h]
+let xmin, xmax, ymin, ymax
 
 export function reset() {
-  _dim = undefined
+  xmin = xmax = ymin = ymax = undefined
 }
 
 export function update(point) {
-  const x = point[0],
-    y = point[1],
-    d = _dim || {}
-  if (!d.xmin || x < d.xmin) d.xmin = x
-  if (!d.xmax || x > d.xmax) d.xmax = x
-  if (!d.ymin || y < d.ymin) d.ymin = y
-  if (!d.ymax || y > d.ymax) d.ymax = y
+  const [x, y] = point
 
-  return (_dim = d)
+  if (!xmin || x < xmin) xmin = x
+  if (!xmax || x > xmax) xmax = x
+  if (!ymin || y < ymin) ymin = y
+  if (!ymax || y > ymax) ymax = y
+  return true
 }
 
 export function defaultRect() {
   const mapSize = ViewBox.getMapSize()
-  _defaultRect[2] = mapSize.x
-  _defaultRect[3] = mapSize.y
-  return _defaultRect
+  return {x:0, y:0, w: mapSize.x, h: mapSize.y}
 }
 
 export function rect(pad) {
   pad = pad || _pad
-  const d = _dim
 
-  if (!d) return defaultRect()
-  const mapSize = ViewBox.getMapSize(),
-    transform = ViewBox.makeTransform()
+  if (xmin === undefined) return defaultRect()
+  const mapSize = ViewBox.getMapSize()
+  const transform = ViewBox.makeTransform()
 
   // upper-left corner
-  const UL = transform(d.xmin, d.ymin)
-  _rect[0] = ~~Math.max(UL[0] - pad, 0)
-  _rect[1] = ~~Math.max(UL[1] - pad, 0)
+  const [Txmin, Tymin] = transform(xmin, ymin)
+  const x = ~~Math.max(Txmin - pad, 0)
+  const y = ~~Math.max(Tymin - pad, 0)
 
   // width and height
-  const WH = transform(d.xmax, d.ymax)
-  _rect[2] = ~~Math.min(WH[0] + pad, mapSize.x) - _rect[0]
-  _rect[3] = ~~Math.min(WH[1] + pad, mapSize.y) - _rect[1]
+  const [Txmax, Tymax] = transform(xmax, ymax)
+  const w = ~~Math.min(Txmax + pad, mapSize.x) - x
+  const h = ~~Math.min(Tymax + pad, mapSize.y) - y
 
-  return _rect
+  return { x, y, w, h }
 }
 
 export function draw(ctx, r) {
-  r = r || rect()
+  const { x, y, w, h } = r || rect()
   if (!r) return
-  ctx.strokeRect(r[0], r[1], r[2], r[3])
+  ctx.strokeRect(x, y, w, h)
 }
 
 export function clear(ctx, r) {
-  r = r || rect()
+  const { x, y, w, h } = r || rect()
   if (!r) return
-  ctx.clearRect(r[0], r[1], r[2], r[3])
+  ctx.clearRect(x, y, w, h)
 }

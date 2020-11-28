@@ -12,10 +12,12 @@ const _canvases = []
 const _pad = 5 // padding for
 
 // private module-scope variable
-let _map, _pxBounds, _baseTranslation
+let _map, _baseTranslation
 
 // exported module-scope variables
 let _pxOrigin, _pxOffset, _mapPanePos, _zoom, _zf, _scale
+
+let xmin, xmax, ymin, ymax
 
 export {
   _canvases as canvases,
@@ -52,7 +54,6 @@ export function setMap(map) {
   if (MAP_INFO) {
     new InfoViewer().addTo(map)
   }
-
 }
 
 export function tol(_zoom) {
@@ -68,8 +69,7 @@ export function tol(_zoom) {
  */
 export function updateBounds() {
   const latLngMapBounds = _map.getBounds()
-  _pxBounds = latLng2pxBounds(latLngMapBounds)
-
+  ;[xmin, ymax, xmax, ymin] = latLng2pxBounds(latLngMapBounds)
 
   if (MAP_INFO) {
     updateDebugDisplay()
@@ -123,13 +123,19 @@ export function calibrate() {
 
 function updateDebugDisplay() {
   if (MAP_INFO && _pxOffset) {
-    const {x: ox, y: oy} = _pxOffset.round()
-    const {x: tx, y: ty} = _baseTranslation.round()
+    const { x: ox, y: oy } = _pxOffset.round()
+    const { x: tx, y: ty } = _baseTranslation.round()
+    const f = (v, num) => v.toFixed(num)
 
-    _infoBox.innerHTML = `<b>ViewBox:</b> zoom: ${_zoom.toFixed(2)}<br>`
-          + `offset: ${ox}, ${oy}<br>`
-          + `scale: ${_scale.toFixed(3)}<br>`
-          + `trans: ${tx}, ${ty}<br>`
+    const tf = makeTransform((x, y) => `${f(x, 0)}, ${f(y, 0)}`)
+
+    _infoBox.innerHTML =
+      `<b>ViewBox:</b> zoom: ${_zoom.toFixed(2)}<br>` +
+      `offset: ${ox}, ${oy}<br>` +
+      `scale: ${_scale.toFixed(3)}<br>` +
+      `trans: ${tx}, ${ty}<br>` +
+      // + `pxBounds:<br>SW: ${f(x1,4)}, ${f(y1, 4)}<br>NE: ${f(x2,4)}, ${f(y2,4)}<br>`
+      `NW: ${tf(xmin, ymin)}<br>SE: ${tf(xmax, ymax)}`
   }
 }
 
@@ -144,7 +150,7 @@ function updateDebugDisplay() {
  * Array every time we perform the transformation.
  */
 export function makeTransform(func) {
-  const {x: ox, y: oy} = _pxOffset
+  const { x: ox, y: oy } = _pxOffset
   const mult = _zf * _scale
 
   if (func) {
@@ -166,7 +172,7 @@ export function unTransform(leafletPoint) {
 export function latLng2pxBounds(llBounds, pxObj) {
   if (!pxObj) pxObj = new Float32Array(4)
 
-  const {_southWest: sw, _northEast: ne} = llBounds
+  const { _southWest: sw, _northEast: ne } = llBounds
 
   pxObj[0] = sw.lat // xmin
   pxObj[1] = sw.lng // ymax
@@ -178,32 +184,27 @@ export function latLng2pxBounds(llBounds, pxObj) {
 }
 
 export function overlaps(activityBounds) {
-  const mb = _pxBounds,
-    ab = activityBounds,
-    xOverlaps = ab[2] > mb[0] && ab[0] < mb[2],
-    yOverlaps = ab[3] < mb[1] && ab[1] > mb[3]
+  const ab = activityBounds
+  const xOverlaps = ab[2] > xmin && ab[0] < xmax
+  const yOverlaps = ab[3] < ymax && ab[1] > ymin
   return xOverlaps && yOverlaps
 }
 
 export function contains(point) {
   const [x, y] = point
-  const [xmin, ymax, xmax, ymin] = _pxBounds
-
   return xmin <= x && x <= xmax && ymin <= y && y <= ymax
 }
 
-function getTPxBounds(pxBounds) {
-  const [xmin, ymax, xmax, ymin] = pxBounds || _pxBounds
+function getTPxBounds() {
   const transform = makeTransform()
 
   const ul = transform(xmin, ymin)
   const lr = transform(xmax, ymax)
-  return {ul, lr}
+  return { ul, lr }
 }
 
 export function drawPxBounds(ctx, pxBounds) {
-  const {ul, lr} = getTPxBounds(pxBounds)
-
+  const { ul, lr } = getTPxBounds(pxBounds)
   const x = ul[0] + _pad
   const y = ul[1] + _pad
   const w = lr[0] - x - 2 * _pad
