@@ -93,7 +93,7 @@ export const SwipeSelect = Class.extend({
     this.ctx = canvas.getContext("2d")
     this.ctx.fillStyle = "rgba(255,100,100,0.3)"
     this.ctx.strokeStyle = "#38f"
-    this.ctx.setLineDash([5, 5]);
+    this.ctx.setLineDash([5, 5])
 
     this.map.dragging.disable()
 
@@ -115,7 +115,7 @@ export const SwipeSelect = Class.extend({
           currentPoint = new Point(event.pageX, event.pageY)
 
         r.size = currentPoint.subtract(r.corner)
-        this.ctx.clearRect(0, 0, this.canvas.width+5, this.canvas.height+5)
+        this.ctx.clearRect(0, 0, this.canvas.width + 5, this.canvas.height + 5)
         this.ctx.beginPath()
         this.ctx.rect(r.corner.x, r.corner.y, r.size.x, r.size.y)
         this.ctx.fill()
@@ -133,11 +133,11 @@ export const SwipeSelect = Class.extend({
       this.onmouseup & this.onmouseup(this.getBounds())
     }.bind(this)
 
-      // make touch events simulate mouse events via touchHandler
-      canvas.addEventListener("touchstart", touchHandler, true);
-      canvas.addEventListener("touchmove", touchHandler, true);
-      canvas.addEventListener("touchend", touchHandler, true);
-      canvas.addEventListener("touchcancel", touchHandler, true);
+    // make touch events simulate mouse events via touchHandler
+    canvas.addEventListener("touchstart", touchHandler, true)
+    canvas.addEventListener("touchmove", touchHandler, true)
+    canvas.addEventListener("touchend", touchHandler, true)
+    canvas.addEventListener("touchcancel", touchHandler, true)
   },
 
   getBounds: function () {

@@ -191,8 +191,7 @@ export const DotLayer = Layer.extend({
   pause: function () {
     _paused = true
     _timePaused = Date.now()
-  }
-
+  },
 })
 
 export const dotLayer = function (options) {
@@ -256,7 +255,7 @@ function _onZoom(e) {
   if (e.pinch || e.flyTo) {
     const zoom = _map.getZoom()
     const center = _map.getCenter()
-    _animateZoom({zoom, center})
+    _animateZoom({ zoom, center })
   }
 }
 
@@ -304,15 +303,6 @@ function onZoomEnd(event) {
   // updateDotSettings()
 }
 
-function debugCtxReset() {
-  if (!_options.debug) return
-
-  const ctx = _debugCanvas.getContext("2d")
-  ctx.strokeStyle = "rgb(0,255,0,1)"
-  ctx.lineWidth = 3
-  ctx.setLineDash([6, 5])
-}
-
 function dotCtxReset() {
   for (let i = 0; i < 2; i++) {
     const ctx = _dotCanvases[i].getContext("2d")
@@ -341,7 +331,6 @@ function onResize(resizeEvent) {
 function viewReset() {
   console.log("viewReset")
   dotCtxReset()
-  debugCtxReset()
 }
 
 function redraw(event) {
@@ -373,21 +362,25 @@ function redraw(event) {
   }
 
   if (_options.debug) {
-    const dctx = _debugCanvas.getContext("2d")
-    debugCtxReset()
-    DrawBox.draw(dctx)
-    dctx.strokeStyle = "rgb(255,0,255,1)"
-    ViewBox.drawPxBounds(dctx)
+    drawBoundsBoxes()
   }
 
   _zoomChanged = false
+}
+
+function drawBoundsBoxes() {
+  const ctx = _debugCanvas.getContext("2d")
+  ctx.lineWidth = 3
+  ctx.setLineDash([6, 5])
+  DrawBox.draw(ctx)
+  ViewBox.draw(ctx)
 }
 
 function drawPaths(pathStyleGroups) {
   if (!_ready) return
 
   const alphaScale = _dotSettings.alphaScale
-  const ctx = _lineCanvases[_zoomChanged? 1 : 0].getContext("2d")
+  const ctx = _lineCanvases[_zoomChanged ? 1 : 0].getContext("2d")
 
   let count = 0
 

@@ -195,7 +195,7 @@ if (CURRENT_USER) {
 }
 
 export const flags = BoundObject.fromDOMelements("[data-class=flag]", {
-  event: "change"
+  event: "change",
 })
 
 export const state = {
@@ -209,6 +209,5 @@ export const state = {
 }
 
 export { state as default }
-
 
 window.app = state

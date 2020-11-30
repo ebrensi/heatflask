@@ -29,7 +29,7 @@
 @import "../../node_modules/leaflet-control-window/src/L.Control.Window.css";
 
 /* Leaflet plugin for selecting a rectangular area in the viewport */
-@import '../../node_modules/leaflet-areaselect/src/leaflet-areaselect.css';
+@import "../../node_modules/leaflet-areaselect/src/leaflet-areaselect.css";
 
 /* Easy Button for control buttons on the map */
 @import "../../node_modules/leaflet-easybutton/src/easy-button.css";

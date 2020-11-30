@@ -26,7 +26,7 @@ export function update(point) {
 
 export function defaultRect() {
   const mapSize = ViewBox.getMapSize()
-  return {x:0, y:0, w: mapSize.x, h: mapSize.y}
+  return { x: 0, y: 0, w: mapSize.x, h: mapSize.y }
 }
 
 export function rect(pad) {
@@ -49,14 +49,13 @@ export function rect(pad) {
   return { x, y, w, h }
 }
 
-export function draw(ctx, r) {
-  const { x, y, w, h } = r || rect()
-  if (!r) return
+export function draw(ctx) {
+  const { x, y, w, h } = rect()
+  ctx.strokeStyle = "rgb(0,255,0,1)"
   ctx.strokeRect(x, y, w, h)
 }
 
-export function clear(ctx, r) {
-  const { x, y, w, h } = r || rect()
-  if (!r) return
+export function clear(ctx) {
+  const { x, y, w, h } = rect()
   ctx.clearRect(x, y, w, h)
 }

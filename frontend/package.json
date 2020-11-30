@@ -44,7 +44,7 @@
     "eslint-config-prettier": "^6.15.0",
     "parcel": "next",
     "parcel-plugin-nuke-dist": "^1.0.1",
-    "prettier": "^2.2.0"
+    "prettier": "^2.2.1"
   },
   "eslintConfig": {
     "env": {

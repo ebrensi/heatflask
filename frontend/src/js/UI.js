@@ -217,9 +217,6 @@ function updateLayers() {
   table.update()
 }
 
-
-
-
 // Make initial query if there is one
 if (qParams.userid) {
   renderFromQuery()

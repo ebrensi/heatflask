@@ -203,13 +203,14 @@ function getTPxBounds() {
   return { ul, lr }
 }
 
-export function drawPxBounds(ctx, pxBounds) {
+export function draw(ctx, pxBounds) {
   const { ul, lr } = getTPxBounds(pxBounds)
   const x = ul[0] + _pad
   const y = ul[1] + _pad
   const w = lr[0] - x - 2 * _pad
   const h = lr[1] - y - 2 * _pad
 
+  ctx.strokeStyle = "rgb(255,0,255,1)"
   ctx.strokeRect(x, y, w, h)
   return { x, y, w, h }
 }

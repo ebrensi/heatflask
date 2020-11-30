@@ -152,5 +152,5 @@ export function quartiles(someArray) {
     ? (1 / 2) * (values[n * (3 / 4)] + values[n * (3 / 4) + 1])
     : values[Math.ceil(n * (3 / 4) + 1)]
 
-  return {q1, q3, iqr: q3 - q1}
+  return { q1, q3, iqr: q3 - q1 }
 }

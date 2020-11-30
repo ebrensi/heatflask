@@ -7,7 +7,6 @@ import { select } from "./Table.js"
 
 const easyButton = window.L.easyButton
 
-
 // Select-activities-in-region functionality IIFE
 function doneSelecting(obj) {
   if (!obj) return
@@ -40,7 +39,6 @@ function doneSelecting(obj) {
   }
 }
 
-
 // set hooks for ctrl-drag
 map.on("boxhookend", doneSelecting)
 
@@ -72,5 +70,3 @@ export const selectButton = easyButton({
   states: selectButton_states,
   position: "topright",
 }).addTo(map)
-
-

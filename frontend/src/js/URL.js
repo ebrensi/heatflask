@@ -69,7 +69,6 @@ export function resetQuery() {
  */
 sidebar.addEventListener("closing", resetQuery)
 
-
 export function getUrlString(altQargs) {
   const vArgs = {}
 
@@ -93,8 +92,8 @@ export function getUrlString(altQargs) {
   if (vParams.alpha < 1) vArgs.alpha = vParams.alpha
 
   const paramsString = Object.entries({ ...(altQargs || qArgs), ...vArgs })
-      .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
-      .join("&")
+    .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+    .join("&")
   return `?${paramsString}`
 }
 

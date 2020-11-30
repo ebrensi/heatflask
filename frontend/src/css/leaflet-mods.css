@@ -50,7 +50,6 @@
   color: rgba(255, 255, 255, 0.9);
 }
 
-
 .leaflet-aux-box {
   position: absolute;
   left: 0;
@@ -58,8 +57,8 @@
   width: 0;
   height: 0;
   -moz-box-sizing: border-box;
-       box-sizing: border-box;
+  box-sizing: border-box;
   z-index: 800;
   border: 2px dotted #38f;
-  background: rgba(255,100,100,0.3);
+  background: rgba(255, 100, 100, 0.3);
 }

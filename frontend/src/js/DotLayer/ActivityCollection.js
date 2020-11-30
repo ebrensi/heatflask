@@ -77,7 +77,6 @@ const inView = {
   last: new BitSet(),
 }
 
-
 /**
  * Update StyleGroups for our collection of activities
  * @return {[type]} [description]
@@ -258,7 +257,6 @@ function updateSelect(i, selected) {
   removeFromGroup(i, !selected)
 }
 
-
 function makeStyleGroups() {
   const output = {}
   for (const gtype in GROUP_TYPES) {
@@ -316,7 +314,7 @@ function selectedIDs() {
 export function openSelected() {
   const ids = selectedIDs()
   if (ids.length) {
-    const argString = getUrlString({id: ids.join("+")})
+    const argString = getUrlString({ id: ids.join("+") })
     let url = targetUser.id + argString
     window.open(url, "_blank")
   }
@@ -327,7 +325,7 @@ export function openSelected() {
  * in screen-ccordinates
  * @param  {Bounds} selectPxBounds leaflet Bounds Object
  */
-export function *inPxBounds(pxBounds) {
+export function* inPxBounds(pxBounds) {
   // un-transform screen coordinates given by the selection
   // plugin to absolute values that we can compare ours to.
   ViewBox.unTransform(pxBounds.min)

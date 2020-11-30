@@ -254,17 +254,16 @@ map.addEventListener("click", () => sidebar.isOpen && sidebar.close())
  */
 export function activityDataPopup(A, latlng) {
   const d = A.total_distance,
-        elapsed = HHMMSS(A.elapsed_time),
-        v = A.average_speed,
-        dkm = +(d / 1000).toFixed(2),
-        dmi = +(d / 1609.34).toFixed(2)
+    elapsed = HHMMSS(A.elapsed_time),
+    v = A.average_speed,
+    dkm = +(d / 1000).toFixed(2),
+    dmi = +(d / 1609.34).toFixed(2)
 
   let vkm, vmi
 
   if (A.vtype == "pace") {
     vkm = HHMMSS(1000 / v).slice(3) + "/km"
     vmi = HHMMSS(1609.34 / v).slice(3) + "/mi"
-
   } else {
     vkm = ((v * 3600) / 1000).toFixed(2) + "km/hr"
     vmi = ((v * 3600) / 1609.34).toFixed(2) + "mi/hr"
@@ -282,7 +281,7 @@ export function activityDataPopup(A, latlng) {
         target='_blank'>Strava</a>,&nbsp;
         <a href='${BASE_USER_URL}?id=${A.id}'&nbsp;target='_blank'>Heatflask</a>
     `
-  map.openPopup(popupContent, latlng, {closeButton: false})
+  map.openPopup(popupContent, latlng, { closeButton: false })
 }
 
 export function getBounds(ids) {
@@ -314,7 +313,6 @@ export function zoomToSelectedPaths() {
 
 flags.onChange("zoomToSelection", zoomToSelectedPaths)
 
-
 export let infoBox
 if (MAP_INFO) {
   /*
@@ -331,17 +329,16 @@ if (MAP_INFO) {
         const zoom = map.getZoom().toFixed(2)
         const { x: pox, y: poy } = map.getPixelOrigin()
         const { x: mx, y: my } = map._getMapPanePos()
-        const {_southWest: SW, _northEast: NE } = map.getBounds()
+        const { _southWest: SW, _northEast: NE } = map.getBounds()
         const { lat: swLat, lng: swLng } = SW
         const { lat: neLat, lng: neLng } = NE
 
-        infoBox.innerHTML = (
-          `<b>Map</b>: zoom: ${zoom}<br>`
-          + `SW: ${swLat.toFixed(4)}, ${swLng.toFixed(4)}<br>`
-          + `NE: ${neLat.toFixed(4)}, ${neLng.toFixed(4)}<br>`
-          + `pxOrigin: ${pox}, ${poy}<br>`
-          + `mpp: ${mx.toFixed(3)}, ${my.toFixed(3)}<br>`
-        )
+        infoBox.innerHTML =
+          `<b>Map</b>: zoom: ${zoom}<br>` +
+          `SW: ${swLat.toFixed(4)}, ${swLng.toFixed(4)}<br>` +
+          `NE: ${neLat.toFixed(4)}, ${neLng.toFixed(4)}<br>` +
+          `pxOrigin: ${pox}, ${poy}<br>` +
+          `mpp: ${mx.toFixed(3)}, ${my.toFixed(3)}<br>`
       })
       return infoBox
     },
@@ -349,4 +346,3 @@ if (MAP_INFO) {
 
   new InfoViewer().addTo(map)
 }
-
