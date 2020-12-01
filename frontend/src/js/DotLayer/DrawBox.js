@@ -1,19 +1,29 @@
 /*
- *  DrawBox represents the rectangular region that bounds
- *   all of our drawing on the canvas. We use it primarily
- *   to minimize how much we need to clear between frames
- *   of the animation.
+ *  DrawBox represents the rectangular region that bounds all of our drawing on the canvas
+ *  for a particular view. We use it to optimize clearing between redraws and moving a drawing
+ *  after ViewBox recalibration.  Rather than clearing the whole screen for example, we only
+ *  clear the DrawBox region which is more efficient.
  */
 
 import * as ViewBox from "./ViewBox.js"
 
-const _pad = 25
+// Boundaries of the DrawBox in (absolute) px coordinates
 let xmin, xmax, ymin, ymax
 
+// Extra padding around the box, in Pixels.
+const _pad = 10
+
+// Return whether the DrawBox has any size
+export function isEmpty() {
+  return xmin === undefined
+}
+
+// Reset the DrawBox to empty
 export function reset() {
   xmin = xmax = ymin = ymax = undefined
 }
 
+// Update the DrawBox dimensions with a Point in absolute rect coordinates
 export function update(point) {
   const [x, y] = point
 
@@ -21,19 +31,23 @@ export function update(point) {
   if (!xmax || x > xmax) xmax = x
   if (!ymin || y < ymin) ymin = y
   if (!ymax || y > ymax) ymax = y
-  return true
+  return point
 }
 
+
+// The entire screen in screen coordinates.
+// Sometimes when in doubt, it's safer to assume the DrawBox is the whole screen.
 export function defaultRect() {
-  const mapSize = ViewBox.getMapSize()
+  const mapSize = ViewBox.getSize()
   return { x: 0, y: 0, w: mapSize.x, h: mapSize.y }
 }
 
-export function rect(pad) {
+// The position/dimensions of the DrawBox in screen coordinates (0,0) is top-left
+export function getScreenRect(pad) {
   pad = pad || _pad
 
-  if (xmin === undefined) return defaultRect()
-  const mapSize = ViewBox.getMapSize()
+  if (isEmpty()) return defaultRect()
+  const mapSize = ViewBox.getSize()
   const transform = ViewBox.makeTransform()
 
   // upper-left corner
@@ -49,13 +63,29 @@ export function rect(pad) {
   return { x, y, w, h }
 }
 
-export function draw(ctx) {
-  const { x, y, w, h } = rect()
-  ctx.strokeStyle = "rgb(0,255,0,1)"
+// Draw the outline of the DrawBox (or arbitrary rect object in screen coordinates)
+export function draw(ctx, rect) {
+  const { x, y, w, h } = rect || getScreenRect()
+  ctx.strokeStyle = "rgb(0,255,0,0.8)"
   ctx.strokeRect(x, y, w, h)
 }
 
-export function clear(ctx) {
-  const { x, y, w, h } = rect()
+// Clear the current DrawBox (or region given by rect object in screen coordinates)
+export function clear(ctx, rect) {
+  const { x, y, w, h } = rect || getScreenRect()
   ctx.clearRect(x, y, w, h)
+}
+
+// Copy the current DrawBox (or region given by rect object in screen coordinates)
+// returns an ImageData object
+export function copy(ctx, rect) {
+  const { x, y, w, h } = rect || getScreenRect()
+  return ctx.getImageData(x, y, w, h)
+}
+
+// write the contents of an ImageData object to the screen where the upper left-left
+// corner of the rectangle is given by screenLoc
+export function paste(ctx, imageData, screenLoc) {
+  const { x, y } = screenLoc || getScreenRect()
+  return ctx.putImageData(imageData, x, y)
 }

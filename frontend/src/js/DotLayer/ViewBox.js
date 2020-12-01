@@ -1,5 +1,6 @@
 /*
- *  ViewBox represents the the rectangular region occupied by the canvases
+ *  ViewBox represents the the rectangular region visible to the user, on which
+ *  we draw our visualization.
  *
  */
 
@@ -9,7 +10,7 @@ import { MAP_INFO } from "../Env.js"
 
 const _canvases = []
 
-const _pad = 5 // padding for
+const _pad = 2
 
 // private module-scope variable
 let _map, _baseTranslation
@@ -28,8 +29,8 @@ export {
 }
 
 /**
- * Project a [lat, lng] point to [x,y] in rectangular coordinates
- * at baseline scale (_zoom=0).  From there we only need to scale and
+ * Project a [lat, lng] point to [x,y] in absolute rectangular coordinates
+ * at baseline scale (zoom=0).  From there we only need to scale and
  * shift points for a given zoom level and map position.
  *
  * This function operates in-place! It modifies whatever you pass into it.
@@ -38,17 +39,11 @@ export {
  */
 export const latLng2px = makePT(0)
 
-export function getMapSize() {
-  return _map.getSize()
-}
-
-export function resize(width, height) {
-  for (const canvas of _canvases) {
-    canvas.width = width
-    canvas.height = height
-  }
-}
-
+/*
+ * Sets the Map object to be used.
+ * TODO: Find a way to elimintate the need for this.  We do it this way
+ * for now, to avoid the circular dependency if we import map from ../mapAPI.js
+ */
 export function setMap(map) {
   _map = map
   if (MAP_INFO) {
@@ -56,8 +51,24 @@ export function setMap(map) {
   }
 }
 
-export function tol(_zoom) {
-  return _zoom ? 1 / 2 ** _zoom : 1 / _zf
+// The dimensions of the ViewBox (also, the underlying canvases and the map)
+// as a Leaflet Point object
+export function getSize() {
+  return _map.getSize()
+}
+
+// resize the canvases
+export function resize(newSize) {
+  const { x, y } = newSize || getSize()
+  for (const canvas of _canvases) {
+    canvas.width = x
+    canvas.height = y
+  }
+}
+
+// Tolerance for Simplify for current or given zoom level
+export function tol(z) {
+  return z ? 1 / 2 ** z : 1 / _zf
 }
 
 /*
@@ -69,13 +80,17 @@ export function tol(_zoom) {
  */
 export function updateBounds() {
   const latLngMapBounds = _map.getBounds()
-  ;[xmin, ymax, xmax, ymin] = latLng2pxBounds(latLngMapBounds)
 
-  if (MAP_INFO) {
-    updateDebugDisplay()
-  }
+  // leading semi-colon is necessary
+  ;[xmin, ymax, xmax, ymin] = latLng2pxBounds(latLngMapBounds)
 }
 
+/*
+ * This must be called whenever the zoom-level changes
+ * Note that while the map zoom-level can be any number,
+ * we only consider the rounded integer level, and use the
+ * scaling factor _scale
+ */
 export function updateZoom() {
   const z = _map.getZoom()
   _zoom = Math.round(z)
@@ -107,35 +122,35 @@ export function setPinchTransform({ offset, scale }) {
   setCSStransform(newTranslation.round(), scale)
 }
 
+/*
+ * this needs to be called on move-end
+ * It sets the baseline CSS transformation for the dot and line canvases
+ */
 export function calibrate() {
-  /* this needs to be called on move-end
-   *
-   * It sets the baseline CSS transformation for the dot and line canvases
-   */
   _pxOrigin = _map.getPixelOrigin()
   _mapPanePos = _map._getMapPanePos()
-
   _pxOffset = _mapPanePos.subtract(_pxOrigin)
-
   _baseTranslation = _map.containerPointToLayerPoint([0, 0])
   setCSStransform(_baseTranslation.round())
+
+  if (MAP_INFO) {
+    updateDebugDisplay()
+  }
+
+  return _mapPanePos
 }
 
+// Display some debug info on the screen
 function updateDebugDisplay() {
   if (MAP_INFO && _pxOffset) {
     const { x: ox, y: oy } = _pxOffset.round()
     const { x: tx, y: ty } = _baseTranslation.round()
-    const f = (v, num) => v.toFixed(num)
-
-    const tf = makeTransform((x, y) => `${f(x, 0)}, ${f(y, 0)}`)
 
     _infoBox.innerHTML =
       `<b>ViewBox:</b> zoom: ${_zoom.toFixed(2)}<br>` +
       `offset: ${ox}, ${oy}<br>` +
       `scale: ${_scale.toFixed(3)}<br>` +
-      `trans: ${tx}, ${ty}<br>` +
-      // + `pxBounds:<br>SW: ${f(x1,4)}, ${f(y1, 4)}<br>NE: ${f(x2,4)}, ${f(y2,4)}<br>`
-      `NW: ${tf(xmin, ymin)}<br>SE: ${tf(xmax, ymax)}`
+      `trans: ${tx}, ${ty}<br>`
   }
 }
 
@@ -169,8 +184,10 @@ export function unTransform(leafletPoint) {
   leafletPoint._subtract(_pxOffset)._divideBy(_zf * _scale)
 }
 
+// returns an ActivityBounds object (Float32Array) representing a
+// bounding box in absolute px coordinates
 export function latLng2pxBounds(llBounds, pxObj) {
-  if (!pxObj) pxObj = new Float32Array(4)
+  pxObj = pxObj || new Float32Array(4)
 
   const { _southWest: sw, _northEast: ne } = llBounds
 
@@ -183,38 +200,42 @@ export function latLng2pxBounds(llBounds, pxObj) {
   return pxObj
 }
 
+// indicate whether the ViewBox overlaps the region defined by an
+// ActivityBounds object
 export function overlaps(activityBounds) {
-  const ab = activityBounds
-  const xOverlaps = ab[2] > xmin && ab[0] < xmax
-  const yOverlaps = ab[3] < ymax && ab[1] > ymin
+  const [Axmin, Aymax, Axmax, Aymin] = activityBounds
+  const xOverlaps = Axmax > xmin && Axmin < xmax
+  const yOverlaps = Aymin < ymax && Aymax > ymin
   return xOverlaps && yOverlaps
 }
 
+// indicate whether the ViewBox contains a point (given as an array [x,y])
 export function contains(point) {
   const [x, y] = point
   return xmin <= x && x <= xmax && ymin <= y && y <= ymax
 }
 
-function getTPxBounds() {
-  const transform = makeTransform()
-
-  const ul = transform(xmin, ymin)
-  const lr = transform(xmax, ymax)
-  return { ul, lr }
+// draw an outline of the ViewBox on the screen (for debug purposes)
+export function draw(ctx) {
+  const { x: w, y: h } = getSize()
+  ctx.strokeStyle = "rgb(255,0,255,1)"
+  ctx.strokeRect(_pad, _pad, w - 2 * _pad, h - 2 * _pad)
 }
 
-export function draw(ctx, pxBounds) {
-  const { ul, lr } = getTPxBounds(pxBounds)
-  const x = ul[0] + _pad
-  const y = ul[1] + _pad
-  const w = lr[0] - x - 2 * _pad
-  const h = lr[1] - y - 2 * _pad
+// clear the entire ViewBox (for a given context)
+export function clear(ctx) {
+  const { x: w, y: h } = getSize()
+  ctx.clearRect(0, 0, w, h)
+}
 
-  ctx.strokeStyle = "rgb(255,0,255,1)"
-  ctx.strokeRect(x, y, w, h)
+// Get the ViewBox position/dimensions in Leaflet pane-coordinates
+export function getPaneRect() {
+  const { x, y } = _mapPanePos
+  const { x: w, y: h } = getSize()
   return { x, y, w, h }
 }
 
+// Debug info box
 let _infoBox
 const InfoViewer = Control.extend({
   onAdd: function () {

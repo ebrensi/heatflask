@@ -280,10 +280,37 @@ function onMove(event) {
  * Leaflet moves the pixel origin so we need to reset the CSS transform
  */
 function onMoveEnd(event) {
-  // ViewBox.update()
-  // console.log("onmoveend")
   ViewBox.updateBounds()
-  ViewBox.calibrate()
+  // console.log("onmoveend")
+
+  if (DrawBox.isEmpty()) {
+    ViewBox.calibrate()
+
+  } else {
+    const lineCtx = _lineCanvases[0].getContext("2d")
+    const dotCtx = _dotCanvases[0].getContext("2d")
+    const {x: maxW, y: maxH} = ViewBox.getMapSize()
+    const { x, y, w, h } = DrawBox.getScreenRect()
+    const { x: dx, y: dy } = ViewBox.calibrate()
+
+    let sourceX = destX = x + dx
+    let sourceY = destY = y + dy
+    let sourceW = w
+    let sourceH = h
+    // DrawBox.clear(lineCtx)
+    // DrawBox.clear(dotCtx)
+    if (destX < maxW && destX + w > 0 && destY < maxH && destY + h > 0) {
+      if (destX < 0) {
+        destX = 0
+        // sourceX =
+      }
+
+      const lines = DrawBox.copy(lineCtx)
+      const dots = DrawBox.copy(dotCtx)
+      DrawBox.paste(lineCtx, lines, x + sx, y + sy)
+      DrawBox.paste(dotCtx,  dots,  x + sx, y + sy)
+    }
+  }
 
   redraw(event)
 }
@@ -298,9 +325,6 @@ function onZoomEnd(event) {
   if (ViewBox.zoom !== oldRoundedZoom) {
     _zoomChanged = true
   }
-
-  ViewBox.calibrate()
-  // updateDotSettings()
 }
 
 function dotCtxReset() {
@@ -322,8 +346,7 @@ function dotCtxReset() {
 }
 
 function onResize(resizeEvent) {
-  ViewBox.resize(resizeEvent.newSize.x, resizeEvent.newSize.y)
-
+  ViewBox.resize(resizeEvent.newSize)
   viewReset()
   redraw(true)
 }
@@ -333,20 +356,8 @@ function viewReset() {
   dotCtxReset()
 }
 
-function redraw(event) {
+function redraw() {
   if (!_ready) return
-
-  /*
-   * reset DrawBox to the whole visible area to make sure all of it is
-   * cleared for the next redraw
-   */
-  DrawBox.reset()
-  DrawBox.clear(_dotCanvases[1].getContext("2d"))
-  DrawBox.clear(_dotCanvases[0].getContext("2d"))
-
-  if (_options.debug) {
-    DrawBox.clear(_debugCanvas.getContext("2d"))
-  }
 
   const groups = ActivityCollection.updateGroups()
   _dotStyleGroups = groups.dot
@@ -357,9 +368,9 @@ function redraw(event) {
     _lineCanvases[0].style.display = "none"
   }
 
-  if (_paused) {
-    drawDots()
-  }
+  // if (_paused) {
+  //   drawDots()
+  // }
 
   if (_options.debug) {
     drawBoundsBoxes()
@@ -370,7 +381,8 @@ function redraw(event) {
 
 function drawBoundsBoxes() {
   const ctx = _debugCanvas.getContext("2d")
-  ctx.lineWidth = 3
+  ViewBox.clear(ctx)
+  ctx.lineWidth = 4
   ctx.setLineDash([6, 5])
   DrawBox.draw(ctx)
   ViewBox.draw(ctx)
@@ -380,7 +392,7 @@ function drawPaths(pathStyleGroups) {
   if (!_ready) return
 
   const alphaScale = _dotSettings.alphaScale
-  const ctx = _lineCanvases[_zoomChanged ? 1 : 0].getContext("2d")
+  const ctx = _lineCanvases[1].getContext("2d")
 
   let count = 0
 
@@ -394,16 +406,14 @@ function drawPaths(pathStyleGroups) {
     ctx.stroke()
   }
 
-  if (_zoomChanged) {
-    // swap line canvases
-    const temp = _lineCanvases[0]
-    _lineCanvases[0] = _lineCanvases[1]
-    _lineCanvases[1] = temp
+  // swap line canvases
+  const temp = _lineCanvases[0]
+  _lineCanvases[0] = _lineCanvases[1]
+  _lineCanvases[1] = temp
 
-    _lineCanvases[0].style.display = ""
-    temp.style.display = "none"
-    DrawBox.clear(temp.getContext("2d"), DrawBox.defaultRect())
-  }
+  _lineCanvases[0].style.display = ""
+  temp.style.display = "none"
+  DrawBox.clear(temp.getContext("2d"), DrawBox.defaultRect())
   // console.log(`drew ${count} segments`)
 }
 
