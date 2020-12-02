@@ -34,7 +34,6 @@ export function update(point) {
   return point
 }
 
-
 // The entire screen in screen coordinates.
 // Sometimes when in doubt, it's safer to assume the DrawBox is the whole screen.
 export function defaultRect() {
@@ -66,7 +65,6 @@ export function getScreenRect(pad) {
 // Draw the outline of the DrawBox (or arbitrary rect object in screen coordinates)
 export function draw(ctx, rect) {
   const { x, y, w, h } = rect || getScreenRect()
-  ctx.strokeStyle = "rgb(0,255,0,0.8)"
   ctx.strokeRect(x, y, w, h)
 }
 
@@ -85,7 +83,6 @@ export function copy(ctx, rect) {
 
 // write the contents of an ImageData object to the screen where the upper left-left
 // corner of the rectangle is given by screenLoc
-export function paste(ctx, imageData, screenLoc) {
-  const { x, y } = screenLoc || getScreenRect()
+export function paste(ctx, imageData, x ,y) {
   return ctx.putImageData(imageData, x, y)
 }

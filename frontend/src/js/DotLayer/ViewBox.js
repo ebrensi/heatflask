@@ -131,7 +131,7 @@ export function calibrate() {
   _mapPanePos = _map._getMapPanePos()
   _pxOffset = _mapPanePos.subtract(_pxOrigin)
   _baseTranslation = _map.containerPointToLayerPoint([0, 0])
-  setCSStransform(_baseTranslation.round())
+  setCSStransform(_baseTranslation)
 
   if (MAP_INFO) {
     updateDebugDisplay()
@@ -144,13 +144,13 @@ export function calibrate() {
 function updateDebugDisplay() {
   if (MAP_INFO && _pxOffset) {
     const { x: ox, y: oy } = _pxOffset.round()
-    const { x: tx, y: ty } = _baseTranslation.round()
+    const { x: tx, y: ty } = _baseTranslation
 
     _infoBox.innerHTML =
       `<b>ViewBox:</b> zoom: ${_zoom.toFixed(2)}<br>` +
       `offset: ${ox}, ${oy}<br>` +
       `scale: ${_scale.toFixed(3)}<br>` +
-      `trans: ${tx}, ${ty}<br>`
+      `trans: ${tx.toFixed(3)}, ${ty.toFixed(3)}<br>`
   }
 }
 
@@ -218,7 +218,6 @@ export function contains(point) {
 // draw an outline of the ViewBox on the screen (for debug purposes)
 export function draw(ctx) {
   const { x: w, y: h } = getSize()
-  ctx.strokeStyle = "rgb(255,0,255,1)"
   ctx.strokeRect(_pad, _pad, w - 2 * _pad, h - 2 * _pad)
 }
 

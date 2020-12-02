@@ -285,30 +285,57 @@ function onMoveEnd(event) {
 
   if (DrawBox.isEmpty()) {
     ViewBox.calibrate()
-
   } else {
-    const lineCtx = _lineCanvases[0].getContext("2d")
-    const dotCtx = _dotCanvases[0].getContext("2d")
-    const {x: maxW, y: maxH} = ViewBox.getMapSize()
-    const { x, y, w, h } = DrawBox.getScreenRect()
-    const { x: dx, y: dy } = ViewBox.calibrate()
+    // Get the current draw rectangle in screen coordinates (relative to map pane position)
+    const D = DrawBox.getScreenRect()
 
-    let sourceX = destX = x + dx
-    let sourceY = destY = y + dy
-    let sourceW = w
-    let sourceH = h
-    // DrawBox.clear(lineCtx)
-    // DrawBox.clear(dotCtx)
-    if (destX < maxW && destX + w > 0 && destY < maxH && destY + h > 0) {
-      if (destX < 0) {
-        destX = 0
-        // sourceX =
-      }
+    // Get the last recorded ViewBox (screen) rectangle
+    // in pane coordinates (relative to pxOrigin)
+    const V = ViewBox.getPaneRect()
 
-      const lines = DrawBox.copy(lineCtx)
-      const dots = DrawBox.copy(dotCtx)
-      DrawBox.paste(lineCtx, lines, x + sx, y + sy)
-      DrawBox.paste(dotCtx,  dots,  x + sx, y + sy)
+    // reset the canvases to to align with the screen and update the ViewBox location
+    // relative to the map's pxOrigin
+    const V_ = ViewBox.calibrate()
+
+    // Move the visible portion of currently drawn segments and dots
+    // to the new location after calibration
+    const dVx = V.x - V_.x
+    const Dx1 = ~~(D.x + dVx)   // round down
+    const Dx2 = ~~(Dx1 + D.w + 0.5) // round up
+    const DxLeft = Math.max(0, Dx1)
+    const DxRight = Math.min(Dx2, V.w)
+    const Cx = ~~(DxLeft - dVx)
+    const Cw = DxRight - DxLeft
+
+    const dVy = V.y - V_.y
+    const Dy1 = ~~(D.y + dVy)
+    const Dy2 = ~~(Dy1 + D.h + 0.5)
+    const DyTop = Math.max(0, Dy1)
+    const DyBottom = Math.min(Dy2, V.h)
+    const Cy = ~~(DyTop - dVy)
+    const Ch = DyBottom - DyTop
+
+    // We only do this if any of the DrawBox is still on screen
+    if (DxLeft < V.w && DxRight > 0 && DyTop < V.h && DyBottom > 0) {
+      const copyRect = { x: Cx, y: Cy, w: Cw, h: Ch }
+
+      const debugCtx = _debugCanvas.getContext("2d")
+      debugCtx.strokeStyle = "#222222"
+      DrawBox.draw(debugCtx, copyRect) // draw source rect
+      debugCtx.strokeStyle = "#000000"
+      DrawBox.draw(debugCtx, { x: DxLeft, y: DyTop, w: Cw, h: Ch }) // draw dest rect
+
+      // move lines
+      const lineCtx = _lineCanvases[0].getContext("2d")
+      const lines = DrawBox.copy(lineCtx, copyRect)
+      DrawBox.clear(lineCtx, D)
+      DrawBox.paste(lineCtx, lines, DxLeft, DyTop)
+
+      // move Dots
+      const dotCtx = _dotCanvases[0].getContext("2d")
+      const dots = DrawBox.copy(dotCtx, copyRect)
+      DrawBox.clear(dotCtx, D)
+      DrawBox.paste(dotCtx, dots, DxLeft, DyTop)
     }
   }
 
@@ -368,9 +395,9 @@ function redraw() {
     _lineCanvases[0].style.display = "none"
   }
 
-  // if (_paused) {
-  //   drawDots()
-  // }
+  if (_paused) {
+    drawDots()
+  }
 
   if (_options.debug) {
     drawBoundsBoxes()
@@ -384,7 +411,9 @@ function drawBoundsBoxes() {
   ViewBox.clear(ctx)
   ctx.lineWidth = 4
   ctx.setLineDash([6, 5])
+  ctx.strokeStyle = "rgb(0,255,0,0.8)"
   DrawBox.draw(ctx)
+  ctx.strokeStyle = "rgb(255,0,255,1)"
   ViewBox.draw(ctx)
 }
 
@@ -392,7 +421,7 @@ function drawPaths(pathStyleGroups) {
   if (!_ready) return
 
   const alphaScale = _dotSettings.alphaScale
-  const ctx = _lineCanvases[1].getContext("2d")
+  const ctx = _lineCanvases[_zoomChanged? 1 : 0].getContext("2d")
 
   let count = 0
 
@@ -406,6 +435,9 @@ function drawPaths(pathStyleGroups) {
     ctx.stroke()
   }
 
+  if (!_zoomChanged) {
+    return
+  }
   // swap line canvases
   const temp = _lineCanvases[0]
   _lineCanvases[0] = _lineCanvases[1]
