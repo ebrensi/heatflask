@@ -13,12 +13,12 @@ export const options = {
   normal: {
     dotOpacity: 0.7,
     pathOpacity: 0.7,
-    pathWidth: 1,
+    pathWidth: 2,
   },
 
   selected: {
     dotOpacity: 0.9,
-    pathOpacity: 0.7,
+    pathOpacity: 0.8,
     pathWidth: 5,
   },
 

@@ -32,6 +32,7 @@ const HIDDEN = 1
 const _timeOrigin = performance.timing.navigationStart
 const _pathCanvases = []
 const _dotCanvases = []
+const _canvasesToMove = [_pathCanvases]
 
 const _drawFunction = {
   square: null,
@@ -297,7 +298,7 @@ function onMoveEnd(event) {
   ViewBox.updateBounds()
   // console.log("onmoveend")
 
-  if (_zoomChanged || FORCE_FULL_REDRAW) {
+  if (_zoomChanged || FORCE_FULL_REDRAW || DrawBox.isEmpty()) {
     ViewBox.calibrate()
   } else {
     // Get the current draw rectangle in screen coordinates (relative to map pane position)
@@ -315,47 +316,56 @@ function onMoveEnd(event) {
     // to the new location after calibration
     const dVx = V_.x - V.x
     const Dx1 = D.x + dVx
-    const Dx2 = Dx1 + D.w + 0.5
+    const Dx2 = Dx1 + D.w
     const DxLeft = Math.max(0, Dx1)
     const DxRight = Math.min(Dx2, V.w)
-    const Cx = DxLeft - dVx
-    const Cw = DxRight - DxLeft
+    const Cx = ~~(DxLeft - dVx)
+    const Cw = ~~(0.5 + DxRight - DxLeft)
 
     const dVy = V_.y - V.y
-    const Dy1 = D.y + dVy
-    const Dy2 = Dy1 + D.h + 0.5
+    const Dy1 = ~~(D.y + dVy)
+    const Dy2 = Dy1 + D.h
     const DyTop = Math.max(0, Dy1)
     const DyBottom = Math.min(Dy2, V.h)
-    const Cy = DyTop - dVy
-    const Ch = DyBottom - DyTop
+    const Cy = ~~(DyTop - dVy)
+    const Ch = ~~(0.5 + DyBottom - DyTop)
 
-    // We only do this if any of the DrawBox is still on screen
+    // We copy if any of the DrawBox is still on screen
     if (DxLeft < V.w && DxRight > 0 && DyTop < V.h && DyBottom > 0) {
-      const copyRect = { x: Cx, y: Cy, w: Cw, h: Ch }
-      const pasteRect = { x: DxLeft, y: DyTop, w: Cw, h: Ch }
-
-      const debugCtx = _debugCanvas.getContext("2d")
-      debugCtx.strokeStyle = "#222222"
-      DrawBox.draw(debugCtx, copyRect) // draw source rect
-      debugCtx.fillText("Copy", copyRect.x + 20, copyRect.y + 20)
-
-      debugCtx.strokeStyle = "#000000"
-      DrawBox.draw(debugCtx, pasteRect) // draw dest rect
-      debugCtx.fillText("Paste", pasteRect.x + 20, pasteRect.y + 20)
+      // const copyRect = { x: Cx, y: Cy, w: Cw, h: Ch }
+      // const pasteRect = { x: DxLeft, y: DyTop, w: Cw, h: Ch }
+      // const debugCtx = _debugCanvas.getContext("2d")
+      // debugCtx.strokeStyle = "#222222"
+      // DrawBox.draw(debugCtx, copyRect) // draw source rect
+      // debugCtx.fillText("Copy", copyRect.x + 20, copyRect.y + 20)
+      // debugCtx.strokeStyle = "#000000"
+      // DrawBox.draw(debugCtx, pasteRect) // draw dest rect
+      // debugCtx.fillText("Paste", pasteRect.x + 20, pasteRect.y + 20)
 
       console.time("moveDrawBox")
-      // move paths
-      const pathCtx = _pathCanvases[VISIBLE].getContext("2d")
-      const paths = DrawBox.copy(pathCtx, copyRect)
-      DrawBox.clear(pathCtx, D)
-      DrawBox.paste(pathCtx, paths, DxLeft, DyTop)
+      for (const canvases of _canvasesToMove) {
+        const sourceCanvas = canvases[VISIBLE]
+        const destCanvas = canvases[HIDDEN]
+        const destCtx = destCanvas.getContext("2d")
+        destCtx.globalAlpha = 1
+        destCtx.drawImage(sourceCanvas, Cx, Cy, Cw, Ch, DxLeft, DyTop, Cw, Ch)
+      }
 
-      // move Dots
-      const dotCtx = _dotCanvases[VISIBLE].getContext("2d")
-      const dots = DrawBox.copy(dotCtx, copyRect)
-      DrawBox.clear(dotCtx, D)
-      DrawBox.paste(dotCtx, dots, DxLeft, DyTop)
+      for (const canvases of _canvasesToMove) {
+        swapCanvases(canvases)
+       }
+      for (const canvases of _canvasesToMove) {
+        canvases[HIDDEN].getContext("2d").clearRect(D.x, D.y, D.w, D.h)
+      }
       console.timeEnd("moveDrawBox")
+
+    } else {
+      // If none of the last DrawBox is still on screen we just clear it
+      for (const canvases of _canvasesToMove) {
+        const sourceCanvas = canvases[VISIBLE]
+        const sourceCtx = sourceCanvas.getContext("2d")
+        sourceCtx.clearRect(D.x, D.y, D.w, D.h)
+      }
     }
   }
 

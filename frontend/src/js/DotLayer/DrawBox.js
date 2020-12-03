@@ -11,7 +11,7 @@ import * as ViewBox from "./ViewBox.js"
 let xmin, xmax, ymin, ymax
 
 // Extra padding around the box, in Pixels.
-const _pad = 10
+const _pad = 20
 
 // Return whether the DrawBox has any size
 export function isEmpty() {
