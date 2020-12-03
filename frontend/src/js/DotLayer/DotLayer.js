@@ -16,15 +16,14 @@ import {
   dotSettings as _dotSettings,
 } from "./Defaults.js"
 
-import { vParams } from "../Model.js"
-
 /* In order to prevent path redraws from happening too often
  * and hogging up CPU cycles we set a minimum delay between redraws
  */
+const FORCE_FULL_REDRAW = true
+const CONTINUOUS_REDRAWS = false
 const MIN_REDRAW_DELAY = 1000 // milliseconds
 const TWO_PI = 2 * Math.PI
 const TARGET_FPS = 30
-const CONTINUOUS_REDRAWS = false
 const _timeOrigin = performance.timing.navigationStart
 
 const _lineCanvases = []
@@ -44,7 +43,6 @@ let _map, _options
 let _timePaused, _ready, _paused
 let _drawingDots
 let _gifPatch
-let _dotRect
 let _debugCanvas
 let _dotStyleGroups
 let _lastRedraw = 0
@@ -53,7 +51,7 @@ let _redrawCounter = 0
 let _frame, _capturing
 let _lastCalledTime, _minDelay
 let _zoomChanged
-
+let _lastPathDrawBox, _lastDotDrawBox
 /*
  * Display for debugging
  */
@@ -226,10 +224,8 @@ function assignEventHandlers() {
 
   const events = {
     // movestart: loggit,
-    // move: onMove,
     moveend: onMoveEnd,
     // zoomstart: loggit,
-    // zoom: loggit,
     zoom: _onZoom,
     zoomend: onZoomEnd,
     // viewreset: loggit,
@@ -251,6 +247,7 @@ function _onZoom(e) {
   if (!_map || !ViewBox.zoom) return
 
   // console.log("onzoom")
+  _zoomChanged = true
 
   if (e.pinch || e.flyTo) {
     const zoom = _map.getZoom()
@@ -260,19 +257,32 @@ function _onZoom(e) {
 }
 
 /*
- * This gets called continuously as the user pans or zooms
+ * This gets called continuously as the user pinch-pans or zooms
  */
 function onMove(event) {
-  _dotRect = DrawBox.defaultRect()
-
   // prevent redrawing more often than necessary
   const ts = Date.now()
 
-  if (ts - _lastRedraw < MIN_REDRAW_DELAY) return
+  if (ts - _lastRedraw < MIN_REDRAW_DELAY || _zoomChanged || !ViewBox.zoom) return
 
   _lastRedraw = ts
-  ViewBox.updateBounds()
-  redraw(event)
+  onMoveEnd(event)
+}
+
+/*
+ * This gets called after zooming stops, but before onMoveEnd
+ */
+function onZoomEnd() {
+  // console.log("onzoomend")
+  const oldRoundedZoom = ViewBox.zoom
+  ViewBox.updateZoom()
+  _zoomChanged = 1
+
+  // The zoom has changed but if we are still at the same integer zoom level
+  // then we don't need to redraw because we are not changing to a different idxSet
+  if (ViewBox.zoom !== oldRoundedZoom) {
+    _zoomChanged = 2
+  }
 }
 
 /*
@@ -283,7 +293,7 @@ function onMoveEnd(event) {
   ViewBox.updateBounds()
   // console.log("onmoveend")
 
-  if (DrawBox.isEmpty()) {
+  if (_zoomChanged || FORCE_FULL_REDRAW) {
     ViewBox.calibrate()
   } else {
     // Get the current draw rectangle in screen coordinates (relative to map pane position)
@@ -299,32 +309,36 @@ function onMoveEnd(event) {
 
     // Move the visible portion of currently drawn segments and dots
     // to the new location after calibration
-    const dVx = V.x - V_.x
-    const Dx1 = ~~(D.x + dVx)   // round down
-    const Dx2 = ~~(Dx1 + D.w + 0.5) // round up
+    const dVx = V_.x - V.x
+    const Dx1 = D.x + dVx
+    const Dx2 = Dx1 + D.w + 0.5
     const DxLeft = Math.max(0, Dx1)
     const DxRight = Math.min(Dx2, V.w)
-    const Cx = ~~(DxLeft - dVx)
+    const Cx = DxLeft - dVx
     const Cw = DxRight - DxLeft
 
-    const dVy = V.y - V_.y
-    const Dy1 = ~~(D.y + dVy)
-    const Dy2 = ~~(Dy1 + D.h + 0.5)
+    const dVy = V_.y - V.y
+    const Dy1 = D.y + dVy
+    const Dy2 = Dy1 + D.h + 0.5
     const DyTop = Math.max(0, Dy1)
     const DyBottom = Math.min(Dy2, V.h)
-    const Cy = ~~(DyTop - dVy)
+    const Cy = DyTop - dVy
     const Ch = DyBottom - DyTop
 
     // We only do this if any of the DrawBox is still on screen
     if (DxLeft < V.w && DxRight > 0 && DyTop < V.h && DyBottom > 0) {
       const copyRect = { x: Cx, y: Cy, w: Cw, h: Ch }
 
-      const debugCtx = _debugCanvas.getContext("2d")
-      debugCtx.strokeStyle = "#222222"
-      DrawBox.draw(debugCtx, copyRect) // draw source rect
-      debugCtx.strokeStyle = "#000000"
-      DrawBox.draw(debugCtx, { x: DxLeft, y: DyTop, w: Cw, h: Ch }) // draw dest rect
+      // const debugCtx = _debugCanvas.getContext("2d")
+      // debugCtx.strokeStyle = "#222222"
+      // DrawBox.draw(debugCtx, copyRect) // draw source rect
+      // debugCtx.fillText("Copy", Cx + 20, Cy + 20)
 
+      // debugCtx.strokeStyle = "#000000"
+      // DrawBox.draw(debugCtx, { x: DxLeft, y: DyTop, w: Cw, h: Ch }) // draw dest rect
+      // debugCtx.fillText("Paste", DxLeft + 20, DyTop + 20)
+
+      console.time("moveDrawBox")
       // move lines
       const lineCtx = _lineCanvases[0].getContext("2d")
       const lines = DrawBox.copy(lineCtx, copyRect)
@@ -336,22 +350,12 @@ function onMoveEnd(event) {
       const dots = DrawBox.copy(dotCtx, copyRect)
       DrawBox.clear(dotCtx, D)
       DrawBox.paste(dotCtx, dots, DxLeft, DyTop)
+      console.timeEnd("moveDrawBox")
     }
   }
 
+  DrawBox.reset()
   redraw(event)
-}
-
-function onZoomEnd(event) {
-  // console.log("onzoomend")
-  const oldRoundedZoom = ViewBox.zoom
-  ViewBox.updateZoom()
-
-  // The zoom has changed but if we are still at the same integer zoom level
-  // then we don't need to redraw because we are not changing to a different idxSet
-  if (ViewBox.zoom !== oldRoundedZoom) {
-    _zoomChanged = true
-  }
 }
 
 function dotCtxReset() {
@@ -375,24 +379,24 @@ function dotCtxReset() {
 function onResize(resizeEvent) {
   ViewBox.resize(resizeEvent.newSize)
   viewReset()
-  redraw(true)
+  redraw()
 }
 
 function viewReset() {
-  console.log("viewReset")
+  // console.log("viewReset")
   dotCtxReset()
 }
 
 function redraw() {
   if (!_ready) return
 
-  const groups = ActivityCollection.updateGroups()
+  const groups = ActivityCollection.updateGroups(
+    _zoomChanged || FORCE_FULL_REDRAW
+  )
   _dotStyleGroups = groups.dot
 
   if (_options.showPaths) {
     drawPaths(groups.path)
-  } else {
-    _lineCanvases[0].style.display = "none"
   }
 
   if (_paused) {
@@ -402,7 +406,6 @@ function redraw() {
   if (_options.debug) {
     drawBoundsBoxes()
   }
-
   _zoomChanged = false
 }
 
@@ -421,8 +424,13 @@ function drawPaths(pathStyleGroups) {
   if (!_ready) return
 
   const alphaScale = _dotSettings.alphaScale
-  const ctx = _lineCanvases[_zoomChanged? 1 : 0].getContext("2d")
 
+  console.time("drawPaths")
+  const ctx = _lineCanvases[0].getContext("2d")
+  if (_zoomChanged || FORCE_FULL_REDRAW) {
+    DrawBox.draw(_debugCanvas.getContext("2d"), _lastPathDrawBox)
+    DrawBox.clear(ctx, _lastPathDrawBox || DrawBox.defaultRect())
+  }
   let count = 0
 
   for (const { spec, items } of pathStyleGroups) {
@@ -434,19 +442,10 @@ function drawPaths(pathStyleGroups) {
     }
     ctx.stroke()
   }
-
-  if (!_zoomChanged) {
-    return
-  }
-  // swap line canvases
-  const temp = _lineCanvases[0]
-  _lineCanvases[0] = _lineCanvases[1]
-  _lineCanvases[1] = temp
-
-  _lineCanvases[0].style.display = ""
-  temp.style.display = "none"
-  DrawBox.clear(temp.getContext("2d"), DrawBox.defaultRect())
-  // console.log(`drew ${count} segments`)
+  console.timeEnd("drawPaths")
+  _lastPathDrawBox = DrawBox.getScreenRect()
+  console.log(`drew ${count} segments`)
+  return count
 }
 
 /*
@@ -478,8 +477,8 @@ function drawDots(now) {
 
   // We write to the currently hidden canvas
   const ctx = _dotCanvases[1].getContext("2d")
-  DrawBox.clear(ctx, _dotRect)
-  _dotRect = undefined
+
+  if (_paused) console.time("drawDots")
 
   let count = 0
   for (const { spec, items, sprite } of _dotStyleGroups) {
@@ -492,14 +491,21 @@ function drawDots(now) {
     )
     ctx.fill()
   }
-  // swap canvases
-  const temp = _dotCanvases[0]
-  temp.style.display = "none"
-  _dotCanvases[1].style.display = ""
 
-  _dotCanvases[0] = _dotCanvases[1]
-  _dotCanvases[1] = temp
+  _dotCanvases[0].style.display = "none" // hide the last canvas
+  _dotCanvases[1].style.display = "" // show the new canvas
+  // clear the last canvas
+  DrawBox.clear(
+    _dotCanvases[0].getContext("2d"),
+    _lastDotDrawBox || DrawBox.defaultRect()
+  )
+  _dotCanvases.reverse() // swap canvases
+  _lastDotDrawBox = DrawBox.getScreenRect()
 
+  if (_paused) {
+    console.timeEnd("drawDots")
+    console.log(`drew ${count} dots`)
+  }
   return count
 }
 

@@ -17,13 +17,14 @@ let _map, _baseTranslation
 
 // exported module-scope variables
 let _pxOrigin, _pxOffset, _mapPanePos, _zoom, _zf, _scale
-
+let _transform
 let xmin, xmax, ymin, ymax
 
 export {
   _canvases as canvases,
   _pxOrigin as pxOrigin,
   _pxOffset as pxOffset,
+  _transform as transform,
   _zoom as zoom,
   _zf as zf,
 }
@@ -132,6 +133,7 @@ export function calibrate() {
   _pxOffset = _mapPanePos.subtract(_pxOrigin)
   _baseTranslation = _map.containerPointToLayerPoint([0, 0])
   setCSStransform(_baseTranslation)
+  _transform = makeTransform()
 
   if (MAP_INFO) {
     updateDebugDisplay()

@@ -81,12 +81,11 @@ const inView = {
  * Update StyleGroups for our collection of activities
  * @return {[type]} [description]
  */
-export function updateGroups() {
-  // ViewBox.update()
+export function updateGroups(force) {
 
   const zoom = ViewBox.zoom
-  if (zoom !== _zoom) {
-    zoomChanged()
+  if (force || (zoom !== _zoom)) {
+    resetSegMasks()
   }
   _zoom = zoom
 
@@ -347,9 +346,9 @@ export function* inPxBounds(pxBounds) {
 }
 
 /*
- * Stuff that needs to be done on zoom change
+ * Clear all segMasks and force rebuilding them
  */
-function zoomChanged() {
+function resetSegMasks() {
   for (const A of itemsArray) {
     if (A.segMask) {
       A.segMask.clear()
