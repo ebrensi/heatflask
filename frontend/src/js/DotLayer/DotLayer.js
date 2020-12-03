@@ -19,14 +19,18 @@ import {
 /* In order to prevent path redraws from happening too often
  * and hogging up CPU cycles we set a minimum delay between redraws
  */
-const FORCE_FULL_REDRAW = true
+const FORCE_FULL_REDRAW = false
 const CONTINUOUS_REDRAWS = false
 const MIN_REDRAW_DELAY = 1000 // milliseconds
 const TWO_PI = 2 * Math.PI
 const TARGET_FPS = 30
-const _timeOrigin = performance.timing.navigationStart
 
-const _lineCanvases = []
+// For canvases
+const VISIBLE = 0
+const HIDDEN = 1
+
+const _timeOrigin = performance.timing.navigationStart
+const _pathCanvases = []
 const _dotCanvases = []
 
 const _drawFunction = {
@@ -92,10 +96,10 @@ export const DotLayer = Layer.extend({
       const canvas = addCanvasOverlay("shadowPane")
       _dotCanvases.push(canvas)
     }
-    _dotCanvases[1].style.display = "none"
+    _dotCanvases[HIDDEN].style.display = "none"
 
     /*
-     * The Line Canvas is for activity paths, which are made up of a bunch of
+     * The Path Canvas is for activity paths, which are made up of a bunch of
      * segments.  We make two of them, the second of which is hidden using
      * style { display: none }.
      * when drawing paths, we draw to the hidden canvas and swap the references
@@ -108,10 +112,10 @@ export const DotLayer = Layer.extend({
       const ctx = canvas.getContext("2d")
       ctx.lineCap = "round"
       ctx.lineJoin = "round"
-      _lineCanvases.push(canvas)
+      _pathCanvases.push(canvas)
     }
     // [0] will always be the visible one and [1] will be hidden
-    _lineCanvases[1].style.display = "none"
+    _pathCanvases[HIDDEN].style.display = "none"
 
     if (_options.debug) {
       // create Canvas for debugging canvas stuff
@@ -139,9 +143,9 @@ export const DotLayer = Layer.extend({
     _dotCanvases.length = 0
 
     for (let i = 0; i < 2; i++) {
-      map._panes.overlayPane.removeChild(_lineCanvases[i])
+      map._panes.overlayPane.removeChild(_pathCanvases[i])
     }
-    _lineCanvases.length = 0
+    _pathCanvases.length = 0
 
     if (_options.debug) {
       map._panes.overlayPane.removeChild(_debugCanvas)
@@ -328,25 +332,26 @@ function onMoveEnd(event) {
     // We only do this if any of the DrawBox is still on screen
     if (DxLeft < V.w && DxRight > 0 && DyTop < V.h && DyBottom > 0) {
       const copyRect = { x: Cx, y: Cy, w: Cw, h: Ch }
+      const pasteRect = { x: DxLeft, y: DyTop, w: Cw, h: Ch }
 
-      // const debugCtx = _debugCanvas.getContext("2d")
-      // debugCtx.strokeStyle = "#222222"
-      // DrawBox.draw(debugCtx, copyRect) // draw source rect
-      // debugCtx.fillText("Copy", Cx + 20, Cy + 20)
+      const debugCtx = _debugCanvas.getContext("2d")
+      debugCtx.strokeStyle = "#222222"
+      DrawBox.draw(debugCtx, copyRect) // draw source rect
+      debugCtx.fillText("Copy", copyRect.x + 20, copyRect.y + 20)
 
-      // debugCtx.strokeStyle = "#000000"
-      // DrawBox.draw(debugCtx, { x: DxLeft, y: DyTop, w: Cw, h: Ch }) // draw dest rect
-      // debugCtx.fillText("Paste", DxLeft + 20, DyTop + 20)
+      debugCtx.strokeStyle = "#000000"
+      DrawBox.draw(debugCtx, pasteRect) // draw dest rect
+      debugCtx.fillText("Paste", pasteRect.x + 20, pasteRect.y + 20)
 
       console.time("moveDrawBox")
-      // move lines
-      const lineCtx = _lineCanvases[0].getContext("2d")
-      const lines = DrawBox.copy(lineCtx, copyRect)
-      DrawBox.clear(lineCtx, D)
-      DrawBox.paste(lineCtx, lines, DxLeft, DyTop)
+      // move paths
+      const pathCtx = _pathCanvases[VISIBLE].getContext("2d")
+      const paths = DrawBox.copy(pathCtx, copyRect)
+      DrawBox.clear(pathCtx, D)
+      DrawBox.paste(pathCtx, paths, DxLeft, DyTop)
 
       // move Dots
-      const dotCtx = _dotCanvases[0].getContext("2d")
+      const dotCtx = _dotCanvases[VISIBLE].getContext("2d")
       const dots = DrawBox.copy(dotCtx, copyRect)
       DrawBox.clear(dotCtx, D)
       DrawBox.paste(dotCtx, dots, DxLeft, DyTop)
@@ -426,7 +431,7 @@ function drawPaths(pathStyleGroups) {
   const alphaScale = _dotSettings.alphaScale
 
   console.time("drawPaths")
-  const ctx = _lineCanvases[0].getContext("2d")
+  const ctx = _pathCanvases[0].getContext("2d")
   if (_zoomChanged || FORCE_FULL_REDRAW) {
     DrawBox.draw(_debugCanvas.getContext("2d"), _lastPathDrawBox)
     DrawBox.clear(ctx, _lastPathDrawBox || DrawBox.defaultRect())
@@ -492,14 +497,11 @@ function drawDots(now) {
     ctx.fill()
   }
 
-  _dotCanvases[0].style.display = "none" // hide the last canvas
-  _dotCanvases[1].style.display = "" // show the new canvas
-  // clear the last canvas
+  swapCanvases(_dotCanvases)
   DrawBox.clear(
-    _dotCanvases[0].getContext("2d"),
+    _dotCanvases[HIDDEN].getContext("2d"),
     _lastDotDrawBox || DrawBox.defaultRect()
   )
-  _dotCanvases.reverse() // swap canvases
   _lastDotDrawBox = DrawBox.getScreenRect()
 
   if (_paused) {
@@ -508,6 +510,14 @@ function drawDots(now) {
   }
   return count
 }
+
+
+function swapCanvases(canvases) {
+  canvases[VISIBLE].style.display = "none" // hide the currently visible canvas
+  canvases[HIDDEN].style.display = "" // show the new currentlly hidden canvas
+  canvases.reverse() // swap the references
+}
+
 
 /*
  * Dot settings
