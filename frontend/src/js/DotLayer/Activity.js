@@ -445,10 +445,12 @@ export class Activity {
        */
       let lastSeg
       segMask.forEach(s => {
-        if (lastSeg !== s-1) {
-          if (s) segMask.add(s-1)
-          if (lastSeg) segMask.add(lastSeg+1)
-          // console.log(`${lastSeg} => ${s}`)
+        const beforeGap = lastSeg && (lastSeg + 1)
+        const afterGap = s && (s-1)
+        if (lastSeg !== afterGap) {
+          const lsm = this.lastSegMask
+          if (beforeGap && lsm.has(beforeGap)) segMask.add(beforeGap)
+          if (afterGap && lsm.has(afterGap)) segMask.add(afterGap)
         }
         lastSeg = s
       })

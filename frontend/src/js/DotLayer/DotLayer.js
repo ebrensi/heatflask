@@ -19,7 +19,7 @@ import {
 /* In order to prevent path redraws from happening too often
  * and hogging up CPU cycles we set a minimum delay between redraws
  */
-const FORCE_FULL_REDRAW = false
+const FORCE_FULL_REDRAW = true
 const CONTINUOUS_REDRAWS = false
 const MIN_REDRAW_DELAY = 1000 // milliseconds
 const TWO_PI = 2 * Math.PI
@@ -316,15 +316,14 @@ function onMoveEnd(event) {
       // DrawBox.draw(debugCtx, pasteRect) // draw dest rect
       // debugCtx.fillText("Paste", pasteRect.x + 20, pasteRect.y + 20)
 
-      console.time("moveDrawBox")
+      const t0 = Date.now()
       for (const canvas of [pathCanvas]) {
         const ctx = canvas.getContext("2d")
         const imageData = ctx.getImageData(Cx, Cy, Cw, Ch)
         ctx.clearRect(D.x, D.y, D.w, D.h)
         ctx.putImageData(imageData, DxLeft, DyTop)
       }
-
-      console.timeEnd("moveDrawBox")
+      console.log(`moveDrawBox: ${D.w}x${D.h} -- ${Date.now()-t0}ms`)
 
     } else {
       // If none of the last DrawBox is still on screen we just clear it
@@ -336,7 +335,7 @@ function onMoveEnd(event) {
   }
 
   DrawBox.reset()
-  redraw(event)
+  redraw()
 }
 
 function dotCtxReset() {
@@ -358,7 +357,7 @@ function dotCtxReset() {
 function onResize(resizeEvent) {
   ViewBox.resize(resizeEvent.newSize)
   viewReset()
-  redraw()
+  redraw(true)
 }
 
 function viewReset() {
@@ -366,11 +365,11 @@ function viewReset() {
   dotCtxReset()
 }
 
-function redraw() {
+function redraw(forceFull) {
   if (!_ready) return
 
   const groups = ActivityCollection.updateGroups(
-    _zoomChanged || FORCE_FULL_REDRAW
+    _zoomChanged || FORCE_FULL_REDRAW || forceFull
   )
   _dotStyleGroups = groups.dot
 
@@ -386,6 +385,8 @@ function redraw() {
     drawBoundsBoxes()
   }
   _zoomChanged = false
+
+  console.log("--------------------------------------")
 }
 
 function drawBoundsBoxes() {
@@ -404,7 +405,8 @@ function drawPaths(pathStyleGroups) {
 
   const alphaScale = _dotSettings.alphaScale
 
-  console.time("drawPaths")
+  const t0 = Date.now()
+
   const ctx = pathCanvas.getContext("2d")
   if (_zoomChanged || FORCE_FULL_REDRAW) {
     DrawBox.clear(ctx, _lastPathDrawBox || DrawBox.defaultRect())
@@ -420,9 +422,9 @@ function drawPaths(pathStyleGroups) {
     }
     ctx.stroke()
   }
-  console.timeEnd("drawPaths")
+
+  console.log(`drawPaths: ${count} segments -- ${Date.now() - t0}ms`)
   _lastPathDrawBox = DrawBox.getScreenRect()
-  console.log(`drew ${count} segments`)
   return count
 }
 
@@ -456,7 +458,8 @@ function drawDots(now) {
   const ctx = dotCanvas.getContext("2d")
   DrawBox.clear(ctx, _lastDotDrawBox || DrawBox.defaultRect())
 
-  if (_paused) console.time("drawDots")
+
+  const t0 = Date.now()
 
   let count = 0
   for (const { spec, items, sprite } of _dotStyleGroups) {
@@ -473,8 +476,7 @@ function drawDots(now) {
   _lastDotDrawBox = DrawBox.getScreenRect()
 
   if (_paused) {
-    console.timeEnd("drawDots")
-    console.log(`drew ${count} dots`)
+    console.log(`drawDots: ${count} dots -- ${Date.now() - t0}ms`)
   }
   return count
 }
