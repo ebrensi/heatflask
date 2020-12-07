@@ -425,20 +425,39 @@ export class Activity {
     return this.drawPathFromPointArray(...args)
   }
 
-  drawPathFromPointArray(ctx, segMask) {
-    const newSegs = this.segMask.new_difference(this.lastSegMask)
-    const nChanges = newSegs.size()
-    if (!nChanges) {
-      return 0
+  drawPathFromPointArray(ctx, forceFullRedraw) {
+    let segMask
+
+    /*
+     * we either redraw the whole path, or just the segments
+     * that have appeared since the last draw
+     */
+    if (forceFullRedraw) {
+      segMask = this.segMask
+    } else{
+      const nChanges = this.segMask.difference_size(this.lastSegMask)
+      if (!nChanges) return 0
+      segMask = this.segMask.new_difference(this.lastSegMask)
+
+      /*
+       * We include an edge segment (at the edge of the screen)
+       * even if it was in the last draw
+       */
+      let lastSeg
+      segMask.forEach(s => {
+        if (lastSeg !== s-1) {
+          if (s) segMask.add(s-1)
+          if (lastSeg) segMask.add(lastSeg+1)
+          // console.log(`${lastSeg} => ${s}`)
+        }
+        lastSeg = s
+      })
     }
+
+
     const points = this.getPointAccessor(ViewBox.zoom)
     const transformedMoveTo = ViewBox.makeTransform((x, y) => ctx.moveTo(x, y))
     const transformedLineTo = ViewBox.makeTransform((x, y) => ctx.lineTo(x, y))
-
-    if (!segMask) {
-      // segMask = this.segMask
-      segMask = newSegs
-    }
 
     let count = 0
     segMask.forEach((i) => {

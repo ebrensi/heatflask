@@ -25,30 +25,29 @@ const MIN_REDRAW_DELAY = 1000 // milliseconds
 const TWO_PI = 2 * Math.PI
 const TARGET_FPS = 30
 
-// For canvases
-const VISIBLE = 0
-const HIDDEN = 1
-
 const _timeOrigin = performance.timing.navigationStart
-const _pathCanvases = []
-const _dotCanvases = []
-const _canvasesToMove = [_pathCanvases]
 
 const _drawFunction = {
   square: null,
   circle: null,
 }
 
+let dotCanvas, pathCanvas, debugCanvas
+const dotCanvasPane = "shadowPane"
+const pathCanvasPane = "overlayPane"
+const debugCanvasPane = "overlayPane"
+
+
 // for debug display
 const _fpsRegister = []
 let _fpsSum = 0
 let _roundCount, _duration
 
+
 let _map, _options
 let _timePaused, _ready, _paused
 let _drawingDots
 let _gifPatch
-let _debugCanvas
 let _dotStyleGroups
 let _lastRedraw = 0
 let _timeOffset = 0
@@ -93,34 +92,20 @@ export const DotLayer = Layer.extend({
     ViewBox.canvases.length = 0
 
     // dotlayer canvas
-    for (let i = 0; i < 2; i++) {
-      const canvas = addCanvasOverlay("shadowPane")
-      _dotCanvases.push(canvas)
-    }
-    _dotCanvases[HIDDEN].style.display = "none"
+    dotCanvas = addCanvasOverlay(dotCanvasPane)
 
     /*
      * The Path Canvas is for activity paths, which are made up of a bunch of
-     * segments.  We make two of them, the second of which is hidden using
-     * style { display: none }.
-     * when drawing paths, we draw to the hidden canvas and swap the references
-     * so that the hidden one becomes visible and the previously visible one
-     * gets hidden. That way, the user experiences no flicker due to the canvas being
-     * cleared and then drawn to.
+     * segments.
      */
-    for (let i = 0; i < 2; i++) {
-      const canvas = addCanvasOverlay("overlayPane")
-      const ctx = canvas.getContext("2d")
-      ctx.lineCap = "round"
-      ctx.lineJoin = "round"
-      _pathCanvases.push(canvas)
-    }
-    // [0] will always be the visible one and [1] will be hidden
-    _pathCanvases[HIDDEN].style.display = "none"
+    pathCanvas = addCanvasOverlay(pathCanvasPane)
+    const ctx = pathCanvas.getContext("2d")
+    ctx.lineCap = "round"
+    ctx.lineJoin = "round"
 
     if (_options.debug) {
       // create Canvas for debugging canvas stuff
-      _debugCanvas = addCanvasOverlay("overlayPane")
+      debugCanvas = addCanvasOverlay(debugCanvasPane)
     }
 
     ViewBox.setMap(_map)
@@ -138,19 +123,12 @@ export const DotLayer = Layer.extend({
 
   //-------------------------------------------------------------
   onRemove: function (map) {
-    for (let i = 0; i < 2; i++) {
-      map._panes.shadowPane.removeChild(_dotCanvases[i])
-    }
-    _dotCanvases.length = 0
-
-    for (let i = 0; i < 2; i++) {
-      map._panes.overlayPane.removeChild(_pathCanvases[i])
-    }
-    _pathCanvases.length = 0
+    map._panes[dotCanvasPane].removeChild(dotCanvas)
+    map._panes[pathCanvasPane].removeChild(pathCanvas)
 
     if (_options.debug) {
-      map._panes.overlayPane.removeChild(_debugCanvas)
-      _debugCanvas = null
+      map._panes[debugCanvasPane].removeChild(debugCanvas)
+      debugCanvas = null
     }
 
     map.off(assignEventHandlers(), this)
@@ -222,16 +200,12 @@ function addCanvasOverlay(pane) {
 }
 
 function assignEventHandlers() {
-  const loggit = (handler) => (e) => {
-    console.log(e)
-    handler && handler(e)
-  }
 
   const events = {
     // movestart: loggit,
     moveend: onMoveEnd,
     // zoomstart: loggit,
-    zoom: _onZoom,
+    zoom: onZoom,
     zoomend: onZoomEnd,
     // viewreset: loggit,
     resize: onResize,
@@ -248,7 +222,7 @@ function assignEventHandlers() {
   return events
 }
 
-function _onZoom(e) {
+function onZoom(e) {
   if (!_map || !ViewBox.zoom) return
 
   // console.log("onzoom")
@@ -343,28 +317,20 @@ function onMoveEnd(event) {
       // debugCtx.fillText("Paste", pasteRect.x + 20, pasteRect.y + 20)
 
       console.time("moveDrawBox")
-      for (const canvases of _canvasesToMove) {
-        const sourceCanvas = canvases[VISIBLE]
-        const destCanvas = canvases[HIDDEN]
-        const destCtx = destCanvas.getContext("2d")
-        destCtx.globalAlpha = 1
-        destCtx.drawImage(sourceCanvas, Cx, Cy, Cw, Ch, DxLeft, DyTop, Cw, Ch)
+      for (const canvas of [pathCanvas]) {
+        const ctx = canvas.getContext("2d")
+        const imageData = ctx.getImageData(Cx, Cy, Cw, Ch)
+        ctx.clearRect(D.x, D.y, D.w, D.h)
+        ctx.putImageData(imageData, DxLeft, DyTop)
       }
 
-      for (const canvases of _canvasesToMove) {
-        swapCanvases(canvases)
-       }
-      for (const canvases of _canvasesToMove) {
-        canvases[HIDDEN].getContext("2d").clearRect(D.x, D.y, D.w, D.h)
-      }
       console.timeEnd("moveDrawBox")
 
     } else {
       // If none of the last DrawBox is still on screen we just clear it
-      for (const canvases of _canvasesToMove) {
-        const sourceCanvas = canvases[VISIBLE]
-        const sourceCtx = sourceCanvas.getContext("2d")
-        sourceCtx.clearRect(D.x, D.y, D.w, D.h)
+      for (const canvas of [pathCanvas]) {
+        const ctx = canvas.getContext("2d")
+        ctx.clearRect(D.x, D.y, D.w, D.h)
       }
     }
   }
@@ -374,20 +340,18 @@ function onMoveEnd(event) {
 }
 
 function dotCtxReset() {
-  for (let i = 0; i < 2; i++) {
-    const ctx = _dotCanvases[i].getContext("2d")
-    if (_options.dotShadows.enabled) {
-      const shadowOpts = _options.dotShadows
+  const ctx = dotCanvas.getContext("2d")
+  if (_options.dotShadows.enabled) {
+    const shadowOpts = _options.dotShadows
 
-      ctx.shadowOffsetX = shadowOpts.x
-      ctx.shadowOffsetY = shadowOpts.y
-      ctx.shadowBlur = shadowOpts.blur
-      ctx.shadowColor = shadowOpts.color
-    } else {
-      ctx.shadowOffsetX = 0
-      ctx.shadowOffsetY = 0
-      ctx.shadowBlur = 0
-    }
+    ctx.shadowOffsetX = shadowOpts.x
+    ctx.shadowOffsetY = shadowOpts.y
+    ctx.shadowBlur = shadowOpts.blur
+    ctx.shadowColor = shadowOpts.color
+  } else {
+    ctx.shadowOffsetX = 0
+    ctx.shadowOffsetY = 0
+    ctx.shadowBlur = 0
   }
 }
 
@@ -425,7 +389,7 @@ function redraw() {
 }
 
 function drawBoundsBoxes() {
-  const ctx = _debugCanvas.getContext("2d")
+  const ctx = debugCanvas.getContext("2d")
   ViewBox.clear(ctx)
   ctx.lineWidth = 4
   ctx.setLineDash([6, 5])
@@ -441,9 +405,8 @@ function drawPaths(pathStyleGroups) {
   const alphaScale = _dotSettings.alphaScale
 
   console.time("drawPaths")
-  const ctx = _pathCanvases[0].getContext("2d")
+  const ctx = pathCanvas.getContext("2d")
   if (_zoomChanged || FORCE_FULL_REDRAW) {
-    DrawBox.draw(_debugCanvas.getContext("2d"), _lastPathDrawBox)
     DrawBox.clear(ctx, _lastPathDrawBox || DrawBox.defaultRect())
   }
   let count = 0
@@ -453,7 +416,7 @@ function drawPaths(pathStyleGroups) {
     ctx.globalAlpha = spec.globalAlpha * alphaScale
     ctx.beginPath()
     for (const A of items) {
-      count += A.drawPath(ctx)
+      count += A.drawPath(ctx, FORCE_FULL_REDRAW)
     }
     ctx.stroke()
   }
@@ -467,7 +430,7 @@ function drawPaths(pathStyleGroups) {
  * Functions for Drawing Dots
  */
 function updateDrawDotFuncs() {
-  const ctx = _dotCanvases[1].getContext("2d")
+  const ctx = dotCanvas.getContext("2d")
   const size = _dotSettings._dotSize
 
   _drawFunction.circle = ViewBox.makeTransform(function (x, y) {
@@ -490,8 +453,8 @@ function drawDots(now) {
 
   const alphaScale = _dotSettings.alphaScale
 
-  // We write to the currently hidden canvas
-  const ctx = _dotCanvases[1].getContext("2d")
+  const ctx = dotCanvas.getContext("2d")
+  DrawBox.clear(ctx, _lastDotDrawBox || DrawBox.defaultRect())
 
   if (_paused) console.time("drawDots")
 
@@ -507,11 +470,6 @@ function drawDots(now) {
     ctx.fill()
   }
 
-  swapCanvases(_dotCanvases)
-  DrawBox.clear(
-    _dotCanvases[HIDDEN].getContext("2d"),
-    _lastDotDrawBox || DrawBox.defaultRect()
-  )
   _lastDotDrawBox = DrawBox.getScreenRect()
 
   if (_paused) {
@@ -520,14 +478,6 @@ function drawDots(now) {
   }
   return count
 }
-
-
-function swapCanvases(canvases) {
-  canvases[VISIBLE].style.display = "none" // hide the currently visible canvas
-  canvases[HIDDEN].style.display = "" // show the new currentlly hidden canvas
-  canvases.reverse() // swap the references
-}
-
 
 /*
  * Dot settings
@@ -566,9 +516,6 @@ function _animate(ts) {
   _frame = null
 
   const now = ts + _timeOrigin
-
-  // let ts = UTCnowSecs(),
-  //   now = ts - _timeOffset
 
   if (_paused || _capturing) {
     // Ths is so we can start where we left off when we resume
