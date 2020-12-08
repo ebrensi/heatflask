@@ -389,26 +389,31 @@ export class Activity {
       DrawBox.update(southWest)
       DrawBox.update(northEast)
     } else {
-      const points = this.pointsIterator(zoom)
-      let p = points.next().value,
-        pIn = inBounds(p),
-        s = 0
+      const points = this.getPointAccessor(zoom)
+      const n = this.idxSet[zoom].size()
 
-      for (const nextp of points) {
-        const nextpIn = inBounds(nextp)
-        if (pIn || nextpIn) {
-          segMask.add(s)
+      let p = points(0)
+      let pIn = ViewBox.contains(p)
+      if (pIn) DrawBox.update(p)
+      for (let i=0; i<n-1; i++) {
+        const nextp = points(i+1)
+        const nextpIn = ViewBox.contains(nextp)
+        if (nextpIn) DrawBox.update(nextp)
 
-          // Make sure that the drawBox includes both points
-          if (!pIn) {
-            DrawBox.update(p)
-          } else if (!nextpIn) {
-            DrawBox.update(nextp)
-          }
+        /*
+         * If either endpoint of the segment is contained in ViewBox
+         * bounds then include this segment index and update
+         * DrawBox with both endpoints
+         */
+        if (pIn) {
+          segMask.add(i)
+          if (!nextpIn) DrawBox.update(nextp)
+        } else if (nextpIn) {
+          segMask.add(i)
+          if (!pIn) DrawBox.update(p)
         }
         pIn = nextpIn
         p = nextp
-        s++
       }
     }
 
