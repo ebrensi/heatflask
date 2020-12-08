@@ -3,6 +3,9 @@ import { dotLayer } from "./DotLayer/DotLayer.js"
 
 import "leaflet-areaselect"
 import "../ext/leaflet-areaselect.css"
+import "../../node_modules/leaflet-easybutton/src/easy-button.d.ts"
+import "../../node_modules/leaflet-easybutton/src/easy-button.css"
+
 
 const L = window.L
 
@@ -78,9 +81,6 @@ const capture_button_states = [
     },
   },
 ]
-
-import "../../node_modules/leaflet-easybutton/src/easy-button.d.ts"
-import "../../node_modules/leaflet-easybutton/src/easy-button.css"
 
 // Capture control button
 const captureControl = L.easyButton({

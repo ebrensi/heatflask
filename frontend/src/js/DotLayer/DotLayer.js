@@ -19,7 +19,7 @@ import {
 /* In order to prevent path redraws from happening too often
  * and hogging up CPU cycles we set a minimum delay between redraws
  */
-const FORCE_FULL_REDRAW = true
+const FORCE_FULL_REDRAW = false
 const CONTINUOUS_REDRAWS = false
 const MIN_REDRAW_DELAY = 1000 // milliseconds
 const TWO_PI = 2 * Math.PI
@@ -37,12 +37,10 @@ const dotCanvasPane = "shadowPane"
 const pathCanvasPane = "overlayPane"
 const debugCanvasPane = "overlayPane"
 
-
 // for debug display
 const _fpsRegister = []
 let _fpsSum = 0
 let _roundCount, _duration
-
 
 let _map, _options
 let _timePaused, _ready, _paused
@@ -51,7 +49,6 @@ let _gifPatch
 let _dotStyleGroups
 let _lastRedraw = 0
 let _timeOffset = 0
-let _redrawCounter = 0
 let _frame, _capturing
 let _lastCalledTime, _minDelay
 let _zoomChanged
@@ -159,10 +156,10 @@ export const DotLayer = Layer.extend({
   animate: function () {
     _drawingDots = true
     _paused = false
-    // if (_timePaused) {
-    //   _timeOffset = UTCnowSecs() - _timePaused
-    //   _timePaused = null
-    // }
+    if (_timePaused) {
+      _timeOffset = Date.now() - _timePaused
+      _timePaused = null
+    }
     _lastCalledTime = 0
     _minDelay = ~~(1000 / TARGET_FPS + 0.5)
     _frame = Util.requestAnimFrame(_animate, this)
@@ -200,7 +197,6 @@ function addCanvasOverlay(pane) {
 }
 
 function assignEventHandlers() {
-
   const events = {
     // movestart: loggit,
     moveend: onMoveEnd,
@@ -242,7 +238,8 @@ function onMove(event) {
   // prevent redrawing more often than necessary
   const ts = Date.now()
 
-  if (ts - _lastRedraw < MIN_REDRAW_DELAY || _zoomChanged || !ViewBox.zoom) return
+  if (ts - _lastRedraw < MIN_REDRAW_DELAY || _zoomChanged || !ViewBox.zoom)
+    return
 
   _lastRedraw = ts
   onMoveEnd(event)
@@ -323,8 +320,7 @@ function onMoveEnd(event) {
         ctx.clearRect(D.x, D.y, D.w, D.h)
         ctx.putImageData(imageData, DxLeft, DyTop)
       }
-      console.log(`moveDrawBox: ${D.w}x${D.h} -- ${Date.now()-t0}ms`)
-
+      console.log(`moveDrawBox: ${D.w}x${D.h} -- ${Date.now() - t0}ms`)
     } else {
       // If none of the last DrawBox is still on screen we just clear it
       for (const canvas of [pathCanvas]) {
@@ -400,6 +396,7 @@ function drawBoundsBoxes() {
   ViewBox.draw(ctx)
 }
 
+
 function drawPaths(pathStyleGroups) {
   if (!_ready) return
 
@@ -407,25 +404,35 @@ function drawPaths(pathStyleGroups) {
 
   const t0 = Date.now()
 
+  const drawAll = _zoomChanged || FORCE_FULL_REDRAW
+
   const ctx = pathCanvas.getContext("2d")
-  if (_zoomChanged || FORCE_FULL_REDRAW) {
+  if (drawAll) {
     DrawBox.clear(ctx, _lastPathDrawBox || DrawBox.defaultRect())
   }
+
   let count = 0
+  const transformedMoveTo = ViewBox.makeTransform((x, y) => ctx.moveTo(x, y))
+  const transformedLineTo = ViewBox.makeTransform((x, y) => ctx.lineTo(x, y))
+  const drawSegment = (x1, y1, x2, y2) => {
+     transformedMoveTo(x1, y1)
+     transformedLineTo(x2, y2)
+     count++
+  }
 
   for (const { spec, items } of pathStyleGroups) {
     Object.assign(ctx, spec)
     ctx.globalAlpha = spec.globalAlpha * alphaScale
     ctx.beginPath()
     for (const A of items) {
-      count += A.drawPath(ctx, FORCE_FULL_REDRAW)
+      A.forEachSegment(drawSegment, drawAll)
     }
     ctx.stroke()
   }
 
   console.log(`drawPaths: ${count} segments -- ${Date.now() - t0}ms`)
   _lastPathDrawBox = DrawBox.getScreenRect()
-  return count
+  return
 }
 
 /*
@@ -458,7 +465,7 @@ function drawDots(now) {
   const ctx = dotCanvas.getContext("2d")
   DrawBox.clear(ctx, _lastDotDrawBox || DrawBox.defaultRect())
 
-
+  const ds = {T: _dotSettings._period, timeScale: _dotSettings._timeScale}
   const t0 = Date.now()
 
   let count = 0
@@ -468,7 +475,7 @@ function drawDots(now) {
     ctx.globalAlpha = spec.globalAlpha * alphaScale
     ctx.beginPath()
     items.forEach(
-      (A) => (count += A.dotPointsFromArray(now, _dotSettings, drawDot))
+      A => count += A.forEachDot(now, ds, drawDot)
     )
     ctx.fill()
   }
@@ -529,7 +536,7 @@ function _animate(ts) {
     _lastCalledTime = now
 
     const t0 = Date.now()
-    const count = drawDots(now)
+    const count = drawDots(now - _timeOffset)
 
     if (MAP_INFO) {
       const dt = Date.now() - t0
