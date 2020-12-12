@@ -19,9 +19,9 @@ import {
 /* In order to prevent path redraws from happening too often
  * and hogging up CPU cycles we set a minimum delay between redraws
  */
-const FORCE_FULL_REDRAW = false
-const CONTINUOUS_REDRAWS = false
-const MIN_REDRAW_DELAY = 1000 // milliseconds
+const FORCE_FULL_REDRAW = true
+const CONTINUOUS_REDRAWS = true
+const MIN_REDRAW_DELAY = 0 // milliseconds
 const TWO_PI = 2 * Math.PI
 const TARGET_FPS = 30
 
@@ -203,7 +203,7 @@ function assignEventHandlers() {
     // zoomstart: loggit,
     zoom: onZoom,
     zoomend: onZoomEnd,
-    // viewreset: loggit,
+    viewreset: viewReset,
     resize: onResize,
   }
 
@@ -232,20 +232,6 @@ function onZoom(e) {
 }
 
 /*
- * This gets called continuously as the user pinch-pans or zooms
- */
-function onMove(event) {
-  // prevent redrawing more often than necessary
-  const ts = Date.now()
-
-  if (ts - _lastRedraw < MIN_REDRAW_DELAY || _zoomChanged || !ViewBox.zoom)
-    return
-
-  _lastRedraw = ts
-  onMoveEnd(event)
-}
-
-/*
  * This gets called after zooming stops, but before onMoveEnd
  */
 function onZoomEnd() {
@@ -262,11 +248,44 @@ function onZoomEnd() {
 }
 
 /*
+ * This gets called continuously as the user pinch-pans or zooms
+ */
+let REDRAWING
+let cc = 0
+function onMove(event) {
+  // prevent redrawing more often than necessary
+  const ts = Date.now()
+  if (
+    REDRAWING ||
+    ts - _lastRedraw < MIN_REDRAW_DELAY ||
+    _zoomChanged ||
+    !ViewBox.zoom
+  )
+    return
+
+  // const cd = cc++
+  // console.log(cd + ": onmove")
+  // setTimeout(() => console.log(cd+": macroTask after onmove"), 0)
+  // window.queueMicrotask(() => console.log(cd+": microTask after onmove"))
+  // new Promise(resolve => {
+  //   console.log(cd+": promise before resolve")
+  //   resolve(cd)
+  // }).then(result => console.log(cd+": promise after resolve -- "+result))
+  // window.requestAnimationFrame(() => console.log(cd+": rAF after onmove"))
+
+  _lastRedraw = ts
+  REDRAWING = true
+  onMoveEnd(event)
+  REDRAWING = false
+}
+
+/*
  * This gets called after a pan or zoom is done.
  * Leaflet moves the pixel origin so we need to reset the CSS transform
  */
 function onMoveEnd(event) {
   ViewBox.updateBounds()
+
   // console.log("onmoveend")
 
   if (_zoomChanged || FORCE_FULL_REDRAW || DrawBox.isEmpty()) {
@@ -357,17 +376,21 @@ function onResize(resizeEvent) {
 }
 
 function viewReset() {
-  // console.log("viewReset")
-  dotCtxReset()
+  console.log("viewReset")
+  // dotCtxReset()
 }
 
 function redraw(forceFull) {
   if (!_ready) return
 
+  updateDrawDotFuncs()
+
+  console.time("updateGroups")
   const groups = ActivityCollection.updateGroups(
     _zoomChanged || FORCE_FULL_REDRAW || forceFull
   )
   _dotStyleGroups = groups.dot
+  console.timeEnd("updateGroups")
 
   if (_options.showPaths) {
     drawPaths(groups.path)
@@ -396,8 +419,7 @@ function drawBoundsBoxes() {
   ViewBox.draw(ctx)
 }
 
-
-function drawPaths(pathStyleGroups) {
+function drawPaths(pathStyleGroups, clearFirst = false) {
   if (!_ready) return
 
   const alphaScale = _dotSettings.alphaScale
@@ -407,7 +429,7 @@ function drawPaths(pathStyleGroups) {
   const drawAll = _zoomChanged || FORCE_FULL_REDRAW
 
   const ctx = pathCanvas.getContext("2d")
-  if (drawAll) {
+  if (clearFirst || drawAll) {
     DrawBox.clear(ctx, _lastPathDrawBox || DrawBox.defaultRect())
   }
 
@@ -415,9 +437,8 @@ function drawPaths(pathStyleGroups) {
   const transformedMoveTo = ViewBox.makeTransform((x, y) => ctx.moveTo(x, y))
   const transformedLineTo = ViewBox.makeTransform((x, y) => ctx.lineTo(x, y))
   const drawSegment = (x1, y1, x2, y2) => {
-     transformedMoveTo(x1, y1)
-     transformedLineTo(x2, y2)
-     count++
+    transformedMoveTo(x1, y1)
+    transformedLineTo(x2, y2)
   }
 
   for (const { spec, items } of pathStyleGroups) {
@@ -425,7 +446,7 @@ function drawPaths(pathStyleGroups) {
     ctx.globalAlpha = spec.globalAlpha * alphaScale
     ctx.beginPath()
     for (const A of items) {
-      A.forEachSegment(drawSegment, drawAll)
+      count += A.forEachSegment(drawSegment, drawAll)
     }
     ctx.stroke()
   }
@@ -453,30 +474,28 @@ function updateDrawDotFuncs() {
   })
 }
 
-function drawDots(now) {
+function drawDots(now, dotStyleGroups, clearFirst = true) {
   if (!_ready) return
 
-  if (!now) now = _timePaused || Date.now()
-
-  updateDrawDotFuncs()
-
   const alphaScale = _dotSettings.alphaScale
+  const styleGroups = dotStyleGroups || _dotStyleGroups.values()
 
-  const ctx = dotCanvas.getContext("2d")
-  DrawBox.clear(ctx, _lastDotDrawBox || DrawBox.defaultRect())
-
-  const ds = {T: _dotSettings._period, timeScale: _dotSettings._timeScale}
+  if (!now) now = _timePaused || Date.now()
+  const ds = { T: _dotSettings._period, timeScale: _dotSettings._timeScale }
   const t0 = Date.now()
 
+  const ctx = dotCanvas.getContext("2d")
+  if (clearFirst) {
+    DrawBox.clear(ctx, _lastDotDrawBox || DrawBox.defaultRect())
+  }
+
   let count = 0
-  for (const { spec, items, sprite } of _dotStyleGroups) {
+  for (const { spec, items, sprite } of styleGroups) {
     const drawDot = _drawFunction[sprite]
     Object.assign(ctx, spec)
     ctx.globalAlpha = spec.globalAlpha * alphaScale
     ctx.beginPath()
-    items.forEach(
-      A => count += A.forEachDot(now, ds, drawDot)
-    )
+    items.forEach((A) => (count += A.forEachDot(now, ds, drawDot)))
     ctx.fill()
   }
 
@@ -536,6 +555,8 @@ function _animate(ts) {
     _lastCalledTime = now
 
     const t0 = Date.now()
+
+    // draw the dots
     const count = drawDots(now - _timeOffset)
 
     if (MAP_INFO) {
@@ -568,3 +589,30 @@ function _animateZoom(e) {
 
   ViewBox.setCSStransform(offset, scale)
 }
+
+/*
+ * Some functions that make de-janking easier via async code
+ */
+function macroTask(delay = 0) {
+  return new Promise((resolve) => setTimeout(resolve, delay))
+}
+
+function animationFrame() {
+  let resolve = null
+  const promise = new Promise((r) => (resolve = r))
+  window.requestAnimationFrame(resolve)
+  return promise
+}
+
+
+/*
+async function game() {
+    // the game loop
+    while (true) {
+        await animationFrame()
+        drawSomething()
+    }
+}
+
+game()
+ */

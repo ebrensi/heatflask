@@ -466,12 +466,15 @@ export class Activity {
     }
 
 
+    let count = 0
     const points = this.getPointAccessor(ViewBox.zoom)
     segMask.forEach((i) => {
       const p1 = points(i)
       const p2 = points(i + 1)
       func(p1[0], p1[1], p2[0], p2[1])
+      count++
     })
+    return count
   }
 
   /**
