@@ -6,6 +6,7 @@ import { BEACON_HANDLER_URL, WEBSOCKET_URL, CLIENT_ID } from "./Env.js"
 
 import PersistentWebSocket from "pws"
 import { decode } from "@msgpack/msgpack"
+import { queueTask } from "./appUtil.js"
 
 export let sock, wskey
 
@@ -43,12 +44,12 @@ export default function (query, callback, done) {
         console.log(event)
         console.log(event.data)
         console.log(err)
-        callback()
+        callback && queueTask(callback)
         return
       }
 
       if (!A) {
-        done && done()
+        done && queueTask(done)
         return
       }
 
@@ -57,7 +58,8 @@ export default function (query, callback, done) {
       } else if ("error" in A) {
         console.log(`import error: ${A["error"]}`)
       } else {
-        callback && callback(A)
+        const AA = A
+        callback && queueTask(() => callback(AA))
       }
     }
   }

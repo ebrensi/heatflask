@@ -10,9 +10,10 @@ import BitSet from "../BitSet.js"
 import { targetUser, state } from "../Model.js"
 import { Point } from "../myLeaflet.js"
 import { getUrlString } from "../URL.js"
+import { queueTask } from "../appUtil.js"
 
 export const items = new Map()
-let itemsArray, _zoom
+let itemsArray
 
 state.items = items
 
@@ -81,19 +82,15 @@ const inView = {
  * Update StyleGroups for our collection of activities
  * @return {[type]} [description]
  */
-export function updateGroups(force) {
+export function updateGroups() {
 
   const zoom = ViewBox.zoom
-  if (force || (zoom !== _zoom)) {
-    resetSegMasks()
-  }
-  _zoom = zoom
 
   // the semicolon is necessary
   // see https://stackoverflow.com/questions/42562806/destructuring-assignment-and-variable-swapping
   ;[inView.current, inView.last] = [inView.last, inView.current]
 
-  const currentInView = inView.current.clear()
+  inView.current.clear()
 
   // update which items are in the current view
   for (let i = 0, len = itemsArray.length; i < len; i++) {
@@ -103,30 +100,37 @@ export function updateGroups(force) {
       continue
     }
 
-    if (!(zoom in A.idxSet)) {
-      A.simplify(zoom)
-    }
+    if (zoom in A.idxSet) {
+      const segMask = A.makeSegMask()
+      if (!segMask.isEmpty()) {
+        inView.current.add(i)
+      }
+    } else {
+      queueTask(() => {
+        A.makeIdxSet(zoom)
+        const segMask = A.makeSegMask()
 
-    const segMask = A.makeSegMask()
-
-    if (!segMask.isEmpty()) {
-      currentInView.add(i)
+        if (!segMask.isEmpty()) {
+          inView.current.add(i)
+        }
+      })
     }
   }
 
-  // update items that have changed since last time
-  const changed = inView.last.change(currentInView)
+  queueTask(() => {
+    // update items that have changed since last time
+    const changed = inView.last.change(inView.current)
 
-  changed.forEach((i) => {
-    if (currentInView.has(i)) {
-      addToGroup(i)
-    } else {
-      removeFromGroup(i)
-    }
+    changed.forEach((i) => {
+      if (inView.current.has(i)) {
+        addToGroup(i)
+      } else {
+        removeFromGroup(i)
+      }
+    })
+
+    makeStyleGroups()
   })
-
-  // return the current state of inclusion
-  return makeStyleGroups()
 }
 
 /*
@@ -238,6 +242,19 @@ function removeFromGroup(i, selected) {
   }
 }
 
+
+export function getGroups() {
+  const output = {}
+  for (const gtype in GROUP_TYPES) {
+    const partitions = GROUP_TYPES[gtype].partitions
+    output[gtype] = [
+      ...partitions.unselected.values(),
+      ...partitions.selected.values(),
+    ]
+  }
+  return output
+}
+
 /**
  * Update the partitions with a changed selection value for A = itemsArray[i]
  *
@@ -257,7 +274,6 @@ function updateSelect(i, selected) {
 }
 
 function makeStyleGroups() {
-  const output = {}
   for (const gtype in GROUP_TYPES) {
     const partitions = GROUP_TYPES[gtype].partitions
 
@@ -295,13 +311,8 @@ function makeStyleGroups() {
         for (const sg of partitions.unselected.values()) sg.sprite = "square"
       }
     }
-
-    output[gtype] = [
-      ...partitions.unselected.values(),
-      ...partitions.selected.values(),
-    ]
   }
-  return output
+  // return getStyleGroups()
 }
 
 function selectedIDs() {
@@ -348,7 +359,7 @@ export function* inPxBounds(pxBounds) {
 /*
  * Clear all segMasks and force rebuilding them
  */
-function resetSegMasks() {
+export function resetSegMasks() {
   for (const A of itemsArray) {
     if (A.segMask) {
       A.segMask.clear()

@@ -13,6 +13,7 @@ import { ATYPE } from "../strava.js"
 import BitSet from "../BitSet.js"
 import { RunningStatsCalculator } from "./stats.js"
 import { quartiles } from "../appUtil.js"
+import { dotSettings } from "./Defaults.js"
 /*
  * This is meant to be a LRU cache for stuff that should go away
  * if it is not used for a while. For now we just use a Map.
@@ -296,7 +297,13 @@ export class Activity {
     return arr
   }
 
-  simplify(zoom) {
+  /**
+   * Construct the reduced idxSet for a given zoom-level. An idxSet is a
+   * set of indices indicating the subset of px that we will use at the
+   * given zoom level.
+   * @param  {number} zoom [description]
+   */
+  makeIdxSet(zoom) {
     if (!Number.isFinite(zoom)) {
       throw new TypeError("zoom must be a number")
     }
@@ -485,10 +492,14 @@ export class Activity {
    * @param  {function} func
    * @returns {number} number of dot points
    */
-  forEachDot(now, ds, func) {
+  forEachDot(now, func) {
+    const ds = { T: dotSettings._period, timeScale: dotSettings._timeScale }
     const {T, timeScale} = ds
     const start = this.ts
     const zoom = ViewBox.zoom
+
+    if (!this.idxSet[zoom]) return 0
+
     const points = this.getPointAccessor(zoom)
     const times = this.getTimesArray(zoom)
     const i0 = this.segMask.min()

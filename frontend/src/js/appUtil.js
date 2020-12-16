@@ -154,3 +154,34 @@ export function quartiles(someArray) {
 
   return { q1, q3, iqr: q3 - q1 }
 }
+
+/*
+ * Some functions that make de-janking easier via async code
+ */
+export function queueTask(cb) {
+  window.setTimeout(cb,0)
+}
+
+export function newTask() {
+  return new Promise((resolve) => queueTask(resolve))
+}
+
+export function newAnimationFrame() {
+  let resolve = null
+  const promise = new Promise((r) => (resolve = r))
+  window.requestAnimationFrame(resolve)
+  return promise
+}
+
+
+/*
+async function game() {
+    // the game loop
+    while (true) {
+        await animationFrame()
+        drawSomething()
+    }
+}
+
+game()
+ */

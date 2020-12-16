@@ -2,13 +2,15 @@
   DotLayer Efrem Rensi, 2020,
 */
 
-import { Layer, Util, DomUtil, Browser, setOptions } from "../myLeaflet.js"
+import { Layer, DomUtil, Browser, setOptions } from "../myLeaflet.js"
 import { Control } from "../myLeaflet.js"
 
 import * as ViewBox from "./ViewBox.js"
 import * as DrawBox from "./DrawBox.js"
 import * as ActivityCollection from "./ActivityCollection.js"
 import { MAP_INFO } from "../Env.js"
+import { queueTask } from "../appUtil.js"
+
 // import * as WorkerPool from "./WorkerPool.js"
 
 import {
@@ -16,11 +18,13 @@ import {
   dotSettings as _dotSettings,
 } from "./Defaults.js"
 
+export {_dotSettings as dotSettings}
+
 /* In order to prevent path redraws from happening too often
  * and hogging up CPU cycles we set a minimum delay between redraws
  */
 const FORCE_FULL_REDRAW = true
-const CONTINUOUS_REDRAWS = true
+const CONTINUOUS_REDRAWS = false
 const MIN_REDRAW_DELAY = 0 // milliseconds
 const TWO_PI = 2 * Math.PI
 const TARGET_FPS = 30
@@ -46,13 +50,16 @@ let _map, _options
 let _timePaused, _ready, _paused
 let _drawingDots
 let _gifPatch
-let _dotStyleGroups
+let _dotStyleGroups, _pathStyleGroups
 let _lastRedraw = 0
 let _timeOffset = 0
 let _frame, _capturing
-let _lastCalledTime, _minDelay
+let _lastCalledTime
+let _fpsInterval
 let _zoomChanged
 let _lastPathDrawBox, _lastDotDrawBox
+
+
 /*
  * Display for debugging
  */
@@ -160,9 +167,10 @@ export const DotLayer = Layer.extend({
       _timeOffset = Date.now() - _timePaused
       _timePaused = null
     }
-    _lastCalledTime = 0
-    _minDelay = ~~(1000 / TARGET_FPS + 0.5)
-    _frame = Util.requestAnimFrame(_animate, this)
+    _lastCalledTime = performance.now()
+    _fpsInterval = 1000 / TARGET_FPS
+    console.log(`fpsInterval: ${_fpsInterval}`)
+    _frame = window.requestAnimationFrame(_animate)
   },
 
   // --------------------------------------------------------------------
@@ -203,7 +211,7 @@ function assignEventHandlers() {
     // zoomstart: loggit,
     zoom: onZoom,
     zoomend: onZoomEnd,
-    viewreset: viewReset,
+    viewreset: onViewReset,
     resize: onResize,
   }
 
@@ -217,6 +225,34 @@ function assignEventHandlers() {
 
   return events
 }
+
+function dotCtxReset() {
+  const ctx = dotCanvas.getContext("2d")
+  if (_options.dotShadows.enabled) {
+    const shadowOpts = _options.dotShadows
+
+    ctx.shadowOffsetX = shadowOpts.x
+    ctx.shadowOffsetY = shadowOpts.y
+    ctx.shadowBlur = shadowOpts.blur
+    ctx.shadowColor = shadowOpts.color
+  } else {
+    ctx.shadowOffsetX = 0
+    ctx.shadowOffsetY = 0
+    ctx.shadowBlur = 0
+  }
+}
+
+function onResize(resizeEvent) {
+  ViewBox.resize(resizeEvent.newSize)
+  // onViewReset()
+  redraw(true)
+}
+
+function onViewReset() {
+  console.log("viewReset")
+  // dotCtxReset()
+}
+
 
 function onZoom(e) {
   if (!_map || !ViewBox.zoom) return
@@ -247,21 +283,80 @@ function onZoomEnd() {
   }
 }
 
+function moveDrawBox() {
+  const t0 = Date.now()
+
+  // Get the current draw rectangle in screen coordinates (relative to map pane position)
+  const D = DrawBox.getScreenRect()
+
+  // Get the last recorded ViewBox (screen) rectangle
+  // in pane coordinates (relative to pxOrigin)
+  const V = ViewBox.getPaneRect()
+
+  // reset the canvases to to align with the screen and update the ViewBox location
+  // relative to the map's pxOrigin
+  const V_ = ViewBox.calibrate()
+
+  // Move the visible portion of currently drawn segments and dots
+  // to the new location after calibration
+  const dVx = V_.x - V.x
+  const Dx1 = D.x + dVx
+  const Dx2 = Dx1 + D.w
+  const DxLeft = Math.max(0, Dx1)
+  const DxRight = Math.min(Dx2, V.w)
+  const Cx = ~~(DxLeft - dVx)
+  const Cw = ~~(0.5 + DxRight - DxLeft)
+
+  const dVy = V_.y - V.y
+  const Dy1 = ~~(D.y + dVy)
+  const Dy2 = Dy1 + D.h
+  const DyTop = Math.max(0, Dy1)
+  const DyBottom = Math.min(Dy2, V.h)
+  const Cy = ~~(DyTop - dVy)
+  const Ch = ~~(0.5 + DyBottom - DyTop)
+
+  // We copy if any of the DrawBox is still on screen
+  if (DxLeft < V.w && DxRight > 0 && DyTop < V.h && DyBottom > 0) {
+    // const copyRect = { x: Cx, y: Cy, w: Cw, h: Ch }
+    // const pasteRect = { x: DxLeft, y: DyTop, w: Cw, h: Ch }
+    // const debugCtx = _debugCanvas.getContext("2d")
+    // debugCtx.strokeStyle = "#222222"
+    // DrawBox.draw(debugCtx, copyRect) // draw source rect
+    // debugCtx.fillText("Copy", copyRect.x + 20, copyRect.y + 20)
+    // debugCtx.strokeStyle = "#000000"
+    // DrawBox.draw(debugCtx, pasteRect) // draw dest rect
+    // debugCtx.fillText("Paste", pasteRect.x + 20, pasteRect.y + 20)
+
+    const canvasesToMove = [pathCanvas]
+    for (const canvas of canvasesToMove) {
+      const ctx = canvas.getContext("2d")
+      const imageData = ctx.getImageData(Cx, Cy, Cw, Ch)
+      DrawBox.clear(ctx, D)
+      ctx.putImageData(imageData, DxLeft, DyTop)
+    }
+
+    DrawBox.clear(dotCanvas.getContext("2d"), D)
+
+  } else {
+    // If none of the last DrawBox is still on screen we just clear it
+    const canvasesToClear = [pathCanvas, dotCanvas]
+    for (const canvas of canvasesToClear) {
+      DrawBox.clear(canvas.getContext("2d"), D)
+    }
+  }
+
+  console.log(`moveDrawBox: ${D.w}x${D.h} -- ${Date.now() - t0}ms`)
+}
+
 /*
- * This gets called continuously as the user pinch-pans or zooms
+ * This gets called continuously as the user pans or zooms (without pinch)
  */
-let REDRAWING
-let cc = 0
-function onMove(event) {
+function onMove() {
   // prevent redrawing more often than necessary
   const ts = Date.now()
-  if (
-    REDRAWING ||
-    ts - _lastRedraw < MIN_REDRAW_DELAY ||
-    _zoomChanged ||
-    !ViewBox.zoom
-  )
+  if (ts - _lastRedraw < MIN_REDRAW_DELAY || _zoomChanged || !ViewBox.zoom) {
     return
+  }
 
   // const cd = cc++
   // console.log(cd + ": onmove")
@@ -274,165 +369,80 @@ function onMove(event) {
   // window.requestAnimationFrame(() => console.log(cd+": rAF after onmove"))
 
   _lastRedraw = ts
-  REDRAWING = true
-  onMoveEnd(event)
-  REDRAWING = false
+  onMoveEnd()
 }
 
 /*
  * This gets called after a pan or zoom is done.
  * Leaflet moves the pixel origin so we need to reset the CSS transform
  */
-function onMoveEnd(event) {
+function onMoveEnd() {
   ViewBox.updateBounds()
 
   // console.log("onmoveend")
 
   if (_zoomChanged || FORCE_FULL_REDRAW || DrawBox.isEmpty()) {
-    ViewBox.calibrate()
-  } else {
-    // Get the current draw rectangle in screen coordinates (relative to map pane position)
     const D = DrawBox.getScreenRect()
-
-    // Get the last recorded ViewBox (screen) rectangle
-    // in pane coordinates (relative to pxOrigin)
-    const V = ViewBox.getPaneRect()
-
-    // reset the canvases to to align with the screen and update the ViewBox location
-    // relative to the map's pxOrigin
-    const V_ = ViewBox.calibrate()
-
-    // Move the visible portion of currently drawn segments and dots
-    // to the new location after calibration
-    const dVx = V_.x - V.x
-    const Dx1 = D.x + dVx
-    const Dx2 = Dx1 + D.w
-    const DxLeft = Math.max(0, Dx1)
-    const DxRight = Math.min(Dx2, V.w)
-    const Cx = ~~(DxLeft - dVx)
-    const Cw = ~~(0.5 + DxRight - DxLeft)
-
-    const dVy = V_.y - V.y
-    const Dy1 = ~~(D.y + dVy)
-    const Dy2 = Dy1 + D.h
-    const DyTop = Math.max(0, Dy1)
-    const DyBottom = Math.min(Dy2, V.h)
-    const Cy = ~~(DyTop - dVy)
-    const Ch = ~~(0.5 + DyBottom - DyTop)
-
-    // We copy if any of the DrawBox is still on screen
-    if (DxLeft < V.w && DxRight > 0 && DyTop < V.h && DyBottom > 0) {
-      // const copyRect = { x: Cx, y: Cy, w: Cw, h: Ch }
-      // const pasteRect = { x: DxLeft, y: DyTop, w: Cw, h: Ch }
-      // const debugCtx = _debugCanvas.getContext("2d")
-      // debugCtx.strokeStyle = "#222222"
-      // DrawBox.draw(debugCtx, copyRect) // draw source rect
-      // debugCtx.fillText("Copy", copyRect.x + 20, copyRect.y + 20)
-      // debugCtx.strokeStyle = "#000000"
-      // DrawBox.draw(debugCtx, pasteRect) // draw dest rect
-      // debugCtx.fillText("Paste", pasteRect.x + 20, pasteRect.y + 20)
-
-      const t0 = Date.now()
-      for (const canvas of [pathCanvas]) {
-        const ctx = canvas.getContext("2d")
-        const imageData = ctx.getImageData(Cx, Cy, Cw, Ch)
-        ctx.clearRect(D.x, D.y, D.w, D.h)
-        ctx.putImageData(imageData, DxLeft, DyTop)
-      }
-      console.log(`moveDrawBox: ${D.w}x${D.h} -- ${Date.now() - t0}ms`)
-    } else {
-      // If none of the last DrawBox is still on screen we just clear it
-      for (const canvas of [pathCanvas]) {
-        const ctx = canvas.getContext("2d")
-        ctx.clearRect(D.x, D.y, D.w, D.h)
-      }
+    ViewBox.calibrate()
+    const canvasesToClear = [pathCanvas, dotCanvas]
+    for (const canvas of canvasesToClear) {
+      DrawBox.clear(canvas.getContext("2d"), D)
     }
+  } else {
+    moveDrawBox()
   }
 
   DrawBox.reset()
-  redraw()
-}
 
-function dotCtxReset() {
-  const ctx = dotCanvas.getContext("2d")
-  if (_options.dotShadows.enabled) {
-    const shadowOpts = _options.dotShadows
-
-    ctx.shadowOffsetX = shadowOpts.x
-    ctx.shadowOffsetY = shadowOpts.y
-    ctx.shadowBlur = shadowOpts.blur
-    ctx.shadowColor = shadowOpts.color
-  } else {
-    ctx.shadowOffsetX = 0
-    ctx.shadowOffsetY = 0
-    ctx.shadowBlur = 0
-  }
-}
-
-function onResize(resizeEvent) {
-  ViewBox.resize(resizeEvent.newSize)
-  viewReset()
-  redraw(true)
-}
-
-function viewReset() {
-  console.log("viewReset")
-  // dotCtxReset()
+  setTimeout(redraw)
 }
 
 function redraw(forceFull) {
   if (!_ready) return
 
-  updateDrawDotFuncs()
+  if (_zoomChanged || FORCE_FULL_REDRAW || forceFull) {
+    ActivityCollection.resetSegMasks()
+  }
 
-  console.time("updateGroups")
-  const groups = ActivityCollection.updateGroups(
-    _zoomChanged || FORCE_FULL_REDRAW || forceFull
-  )
-  _dotStyleGroups = groups.dot
-  console.timeEnd("updateGroups")
+  ActivityCollection.updateGroups()
+
+  queueTask(updateDrawDotFuncs.default)
+
+  queueTask(() => {
+    const {dot, path} = ActivityCollection.getGroups()
+    _pathStyleGroups = path
+    _dotStyleGroups = dot
+  })
 
   if (_options.showPaths) {
-    drawPaths(groups.path)
+    const drawEverySegment = _zoomChanged
+    queueTask(() => window.requestAnimationFrame(() => {
+
+      drawPaths(_pathStyleGroups, drawEverySegment)
+    }))
   }
 
   if (_paused) {
-    drawDots()
+    queueTask(() => window.requestAnimationFrame(drawDots))
   }
 
   if (_options.debug) {
-    drawBoundsBoxes()
+    queueTask(() => window.requestAnimationFrame(drawBoundsBoxes))
   }
+
   _zoomChanged = false
-
-  console.log("--------------------------------------")
 }
 
-function drawBoundsBoxes() {
-  const ctx = debugCanvas.getContext("2d")
-  ViewBox.clear(ctx)
-  ctx.lineWidth = 4
-  ctx.setLineDash([6, 5])
-  ctx.strokeStyle = "rgb(0,255,0,0.8)"
-  DrawBox.draw(ctx)
-  ctx.strokeStyle = "rgb(255,0,255,1)"
-  ViewBox.draw(ctx)
-}
-
-function drawPaths(pathStyleGroups, clearFirst = false) {
+function drawPaths(pathStyleGroups, forceFullRedraw ) {
   if (!_ready) return
 
   const alphaScale = _dotSettings.alphaScale
 
   const t0 = Date.now()
 
-  const drawAll = _zoomChanged || FORCE_FULL_REDRAW
+  const drawAll = forceFullRedraw || FORCE_FULL_REDRAW
 
   const ctx = pathCanvas.getContext("2d")
-  if (clearFirst || drawAll) {
-    DrawBox.clear(ctx, _lastPathDrawBox || DrawBox.defaultRect())
-  }
-
   let count = 0
   const transformedMoveTo = ViewBox.makeTransform((x, y) => ctx.moveTo(x, y))
   const transformedLineTo = ViewBox.makeTransform((x, y) => ctx.lineTo(x, y))
@@ -450,61 +460,91 @@ function drawPaths(pathStyleGroups, clearFirst = false) {
     }
     ctx.stroke()
   }
-
   console.log(`drawPaths: ${count} segments -- ${Date.now() - t0}ms`)
-  _lastPathDrawBox = DrawBox.getScreenRect()
-  return
+  return count
 }
 
 /*
  * Functions for Drawing Dots
  */
-function updateDrawDotFuncs() {
-  const ctx = dotCanvas.getContext("2d")
-  const size = _dotSettings._dotSize
 
-  _drawFunction.circle = ViewBox.makeTransform(function (x, y) {
-    ctx.arc(x, y, size, 0, TWO_PI)
-    ctx.closePath()
-  })
+const updateDrawDotFuncs = {
 
-  const dotOffset = size / 2.0
-  _drawFunction.square = ViewBox.makeTransform(function (x, y) {
-    ctx.rect(x - dotOffset, y - dotOffset, size, size)
-  })
+  default: function() {
+    const ctx = dotCanvas.getContext("2d")
+    const size = _dotSettings._dotSize
+    const dotOffset = size / 2.0
+
+    _drawFunction.circle = ViewBox.makeTransform(function (x, y) {
+      ctx.arc(x, y, size, 0, TWO_PI)
+      ctx.closePath()
+    })
+
+    _drawFunction.square = ViewBox.makeTransform(function (x, y) {
+      ctx.rect(x - dotOffset, y - dotOffset, size, size)
+    })
+  },
+
+  putImageData: function() {
+    const ctx = dotCanvas.getContext("2d")
+    const size = _dotSettings._dotSize
+    if (!_dotStyleGroups) return
+
+    // Make sprite sheet
+    const bufferCanvas = document.createElement("canvas")
+    const bufCtx = bufferCanvas.getContext("2d")
+
+    const items = ActivityCollection.items
+    const colorSet = new Set(Array.from(items.values()).map(A => A.colors.dot))
+    const colorsArray = Array.from(colorSet)
+    const colorIdx = {}
+    const n = colorsArray.length
+    for (let i=0; i<n; i++) {
+      const color = colorsArray[i]
+      colorIdx[color] = i
+    }
+    bufferCanvas.width = n
+    bufferCanvas.height = 2 * size
+
+
+  }
 }
 
-function drawDots(now, dotStyleGroups, clearFirst = true) {
-  if (!_ready) return
+function drawDots(now, dotStyleGroups) {
+  if (!_ready || !_dotStyleGroups) return 0
 
   const alphaScale = _dotSettings.alphaScale
   const styleGroups = dotStyleGroups || _dotStyleGroups.values()
 
   if (!now) now = _timePaused || Date.now()
-  const ds = { T: _dotSettings._period, timeScale: _dotSettings._timeScale }
-  const t0 = Date.now()
 
   const ctx = dotCanvas.getContext("2d")
-  if (clearFirst) {
-    DrawBox.clear(ctx, _lastDotDrawBox || DrawBox.defaultRect())
-  }
+
+  DrawBox.clear(ctx, _lastDotDrawBox || DrawBox.defaultRect())
 
   let count = 0
   for (const { spec, items, sprite } of styleGroups) {
-    const drawDot = _drawFunction[sprite]
+    const drawDotFunc = _drawFunction[sprite]
     Object.assign(ctx, spec)
     ctx.globalAlpha = spec.globalAlpha * alphaScale
     ctx.beginPath()
-    items.forEach((A) => (count += A.forEachDot(now, ds, drawDot)))
+    items.forEach((A) => (count += A.forEachDot(now, drawDotFunc)))
     ctx.fill()
   }
 
   _lastDotDrawBox = DrawBox.getScreenRect()
-
-  if (_paused) {
-    console.log(`drawDots: ${count} dots -- ${Date.now() - t0}ms`)
-  }
   return count
+}
+
+function drawBoundsBoxes() {
+  const ctx = debugCanvas.getContext("2d")
+  ViewBox.clear(ctx)
+  ctx.lineWidth = 4
+  ctx.setLineDash([6, 5])
+  ctx.strokeStyle = "rgb(0,255,0,0.8)"
+  DrawBox.draw(ctx)
+  ctx.strokeStyle = "rgb(255,0,255,1)"
+  ViewBox.draw(ctx)
 }
 
 /*
@@ -543,40 +583,41 @@ function _animate(ts) {
 
   _frame = null
 
-  const now = ts + _timeOrigin
-
   if (_paused || _capturing) {
     // Ths is so we can start where we left off when we resume
     _timePaused = ts
     return
   }
 
-  if (now - _lastCalledTime > _minDelay) {
-    _lastCalledTime = now
-
-    const t0 = Date.now()
+  const frameDelay = ts - _lastCalledTime
+  if (frameDelay > _fpsInterval) {
+    _lastCalledTime = ts
 
     // draw the dots
-    const count = drawDots(now - _timeOffset)
+    const count = drawDots(ts + _timeOrigin - _timeOffset)
 
     if (MAP_INFO) {
-      const dt = Date.now() - t0
-      _fpsSum += dt
-      _fpsRegister.push(dt)
-      if (_fpsRegister.length === 30) {
-        const roundCount = 10 * Math.round(count / 10)
-        const duration = Math.round(_fpsSum / 30)
-        _fpsSum -= _fpsRegister.shift()
-        if (roundCount !== _roundCount && duration !== _duration) {
-          _infoBox.innerHTML = `${duration} ms, ${count} pts`
-        }
-        _roundCount = roundCount
-        _duration = duration
-      }
+      updateInfoBox(frameDelay, count)
     }
   }
 
-  _frame = Util.requestAnimFrame(_animate, this)
+  _frame = window.requestAnimationFrame(_animate)
+}
+
+// let infoBoxUpdateCounter = 0
+function updateInfoBox(dt, count) {
+  _fpsSum += dt
+  _fpsRegister.push(dt)
+  if (_fpsRegister.length !== 30) return
+
+  const roundCount = 10 * Math.round(count / 10)
+  const duration = Math.round(_fpsSum / 30)
+  _fpsSum -= _fpsRegister.shift()
+  if (roundCount !== _roundCount && duration !== _duration) {
+    _infoBox.innerHTML = `${duration} ms (${Math.round(1000/duration)}fps), ${count} pts`
+  }
+  _roundCount = roundCount
+  _duration = duration
 }
 
 function _animateZoom(e) {
@@ -589,30 +630,3 @@ function _animateZoom(e) {
 
   ViewBox.setCSStransform(offset, scale)
 }
-
-/*
- * Some functions that make de-janking easier via async code
- */
-function macroTask(delay = 0) {
-  return new Promise((resolve) => setTimeout(resolve, delay))
-}
-
-function animationFrame() {
-  let resolve = null
-  const promise = new Promise((r) => (resolve = r))
-  window.requestAnimationFrame(resolve)
-  return promise
-}
-
-
-/*
-async function game() {
-    // the game loop
-    while (true) {
-        await animationFrame()
-        drawSomething()
-    }
-}
-
-game()
- */

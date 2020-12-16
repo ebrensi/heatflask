@@ -72,16 +72,3 @@ export function clear(ctx, rect) {
   const { x, y, w, h } = rect || getScreenRect()
   ctx.clearRect(x, y, w, h)
 }
-
-// Copy the current DrawBox (or region given by rect object in screen coordinates)
-// returns an ImageData object
-export function copy(ctx, rect) {
-  const { x, y, w, h } = rect || getScreenRect()
-  return ctx.getImageData(x, y, w, h)
-}
-
-// write the contents of an ImageData object to the screen where the upper left-left
-// corner of the rectangle is given by screenLoc
-export function paste(ctx, imageData, x ,y) {
-  return ctx.putImageData(imageData, x, y)
-}
