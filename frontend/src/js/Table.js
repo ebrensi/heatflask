@@ -1,4 +1,4 @@
-import { HHMMSS } from "./appUtil.js"
+import { HHMMSS, queueTask, nextTask } from "./appUtil.js"
 import { items } from "./DotLayer/ActivityCollection.js"
 import { dotLayer } from "./DotLayerAPI.js"
 import { activityURL, appendCSS, ATYPE } from "./strava.js"
@@ -143,16 +143,20 @@ headerRow.addEventListener("click", (e) => {
 /**
  * Update the table (after adding or removing rows)
  */
-export function update(remake) {
+export async function update(remake) {
   for (const A of items.values()) {
     if (!A.tr || remake) {
-      A.tr = makeRow(A)
+      queueTask(() => {
+        A.tr = makeRow(A)
+      })
       // A.tr.setAttribute("data-pathColor", A.pathColor)
     }
 
     // dot-colors get set by DotLayer.reset(), so make sure this is called after that
     // A.tr.setAttribute("data-dotColor", A.dotColor)
   }
+
+  await nextTask()
   sort(currentSort || defaultSort)
   lastSelection = {}
 }

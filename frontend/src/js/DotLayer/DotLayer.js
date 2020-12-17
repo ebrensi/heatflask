@@ -23,11 +23,12 @@ export {_dotSettings as dotSettings}
 /* In order to prevent path redraws from happening too often
  * and hogging up CPU cycles we set a minimum delay between redraws
  */
-const FORCE_FULL_REDRAW = true
+const FORCE_FULL_REDRAW = false
 const CONTINUOUS_REDRAWS = false
-const MIN_REDRAW_DELAY = 0 // milliseconds
+const MIN_REDRAW_DELAY = 1000 // milliseconds
 const TWO_PI = 2 * Math.PI
 const TARGET_FPS = 30
+const MAX_POINTS_IN_SPLIT_FRAME = 500
 
 const _timeOrigin = performance.timing.navigationStart
 
@@ -50,14 +51,12 @@ let _map, _options
 let _timePaused, _ready, _paused
 let _drawingDots
 let _gifPatch
-let _dotStyleGroups, _pathStyleGroups
+let _dotStyleGroups
 let _lastRedraw = 0
 let _timeOffset = 0
-let _frame, _capturing
 let _lastCalledTime
 let _fpsInterval
-let _zoomChanged
-let _lastPathDrawBox, _lastDotDrawBox
+let _lastDotDrawBox
 
 
 /*
@@ -142,19 +141,15 @@ export const DotLayer = Layer.extend({
   redraw: redraw,
 
   // Call this function after items are added or removed
-  reset: function () {
+  reset: async function () {
     if (!ActivityCollection.items.size) return
 
     _ready = false
 
     ActivityCollection.reset()
-    ViewBox.updateZoom()
-    ViewBox.calibrate()
-    ViewBox.updateBounds()
     updateDotSettings()
-
     _ready = true
-    redraw(true)
+    await redraw(true)
 
     if (!_paused) this.animate()
   },
@@ -200,7 +195,7 @@ function assignEventHandlers() {
     // zoomstart: loggit,
     zoom: onZoom,
     zoomend: onZoomEnd,
-    viewreset: onViewReset,
+    // viewreset: onViewReset,
     resize: onResize,
   }
 
@@ -216,6 +211,7 @@ function assignEventHandlers() {
 }
 
 function dotCtxReset() {
+
   const ctx = dotCanvas.getContext("2d")
   if (_options.dotShadows.enabled) {
     const shadowOpts = _options.dotShadows
@@ -247,13 +243,12 @@ function onZoom(e) {
   if (!_map || !ViewBox.zoom) return
 
   // console.log("onzoom")
-  _zoomChanged = true
 
-  if (e.pinch || e.flyTo) {
-    const zoom = _map.getZoom()
-    const center = _map.getCenter()
-    _animateZoom({ zoom, center })
-  }
+  // if (e.pinch || e.flyTo) {
+  //   const zoom = _map.getZoom()
+  //   const center = _map.getCenter()
+  //   _animateZoom({ zoom, center })
+  // }
 }
 
 /*
@@ -261,19 +256,32 @@ function onZoom(e) {
  */
 function onZoomEnd() {
   // console.log("onzoomend")
-  const oldRoundedZoom = ViewBox.zoom
-  ViewBox.updateZoom()
-  _zoomChanged = 1
+}
 
-  // The zoom has changed but if we are still at the same integer zoom level
-  // then we don't need to redraw because we are not changing to a different idxSet
-  if (ViewBox.zoom !== oldRoundedZoom) {
-    _zoomChanged = 2
+/*
+ * This gets called continuously as the user pans or zooms (without pinch)
+ */
+async function onMove() {
+  // prevent redrawing more often than necessary
+  const ts = Date.now()
+  if (ts - _lastRedraw < MIN_REDRAW_DELAY) {
+    return
   }
+
+  _lastRedraw = ts
+  await redraw()
+}
+
+/*
+ * This gets called after a pan or zoom is done.
+ * Leaflet moves the pixel origin so we need to reset the CSS transform
+ */
+async function onMoveEnd() {
+  await redraw()
 }
 
 function moveDrawBox() {
-  const t0 = Date.now()
+  // const t0 = Date.now()
 
   // Get the current draw rectangle in screen coordinates (relative to map pane position)
   const D = DrawBox.getScreenRect()
@@ -334,48 +342,34 @@ function moveDrawBox() {
     }
   }
 
-  console.log(`moveDrawBox: ${D.w}x${D.h} -- ${Date.now() - t0}ms`)
+  // console.log(`moveDrawBox: ${D.w}x${D.h} -- ${Date.now() - t0}ms`)
 }
 
-/*
- * This gets called continuously as the user pans or zooms (without pinch)
- */
-function onMove() {
-  // prevent redrawing more often than necessary
-  const ts = Date.now()
-  if (ts - _lastRedraw < MIN_REDRAW_DELAY || _zoomChanged || !ViewBox.zoom) {
+async function redraw(force) {
+  if (!_ready) return
+
+  await nextTask()
+
+  const boundsChanged = ViewBox.updateBounds()
+  const zoomChanged = ViewBox.updateZoom()
+  if (!force && !boundsChanged && !zoomChanged) {
     return
   }
 
-  // const cd = cc++
-  // console.log(cd + ": onmove")
-  // setTimeout(() => console.log(cd+": macroTask after onmove"), 0)
-  // window.queueMicrotask(() => console.log(cd+": microTask after onmove"))
-  // new Promise(resolve => {
-  //   console.log(cd+": promise before resolve")
-  //   resolve(cd)
-  // }).then(result => console.log(cd+": promise after resolve -- "+result))
-  // window.requestAnimationFrame(() => console.log(cd+": rAF after onmove"))
-
-  _lastRedraw = ts
-  onMoveEnd()
-}
-
-/*
- * This gets called after a pan or zoom is done.
- * Leaflet moves the pixel origin so we need to reset the CSS transform
- */
-function onMoveEnd() {
-  ViewBox.updateBounds()
+  // // make sure we are in a new task
+  // await nextTask()
 
   // console.log("onmoveend")
+  updateDotSettings()
+  const fullRedraw = zoomChanged || FORCE_FULL_REDRAW || force
 
-  if (_zoomChanged || FORCE_FULL_REDRAW || DrawBox.isEmpty()) {
-    const D = DrawBox.getScreenRect()
+  // Recalibrate the DrawBox (and possible move it)
+  if (fullRedraw) {
+    const oldDrawBoxDim = DrawBox.getScreenRect()
     ViewBox.calibrate()
     const canvasesToClear = [pathCanvas, dotCanvas]
     for (const canvas of canvasesToClear) {
-      DrawBox.clear(canvas.getContext("2d"), D)
+      DrawBox.clear(canvas.getContext("2d"), oldDrawBoxDim)
     }
   } else {
     moveDrawBox()
@@ -383,52 +377,34 @@ function onMoveEnd() {
 
   DrawBox.reset()
 
-  setTimeout(redraw)
-}
-
-function redraw(forceFull) {
-  if (!_ready) return
-
-  if (_zoomChanged || FORCE_FULL_REDRAW || forceFull) {
+  if (fullRedraw) {
     ActivityCollection.resetSegMasks()
   }
 
-  ActivityCollection.updateGroups()
+  const styleGroups = await ActivityCollection.updateGroups()
+  _dotStyleGroups = styleGroups.dot
 
-  queueTask(updateDrawDotFuncs.default)
+  updateDrawDotFuncs.default()
 
-  queueTask(() => {
-    const {dot, path} = ActivityCollection.getGroups()
-    _pathStyleGroups = path
-    _dotStyleGroups = dot
-  })
+  if (_options.debug) {
+    drawBoundsBoxes()
+  }
 
   if (_options.showPaths) {
-    const drawEverySegment = _zoomChanged
-    queueTask(() => window.requestAnimationFrame(() => {
-
-      drawPaths(_pathStyleGroups, drawEverySegment)
-    }))
+    await nextAnimationFrame()
+    drawPaths(styleGroups.path, fullRedraw)
   }
 
   if (_paused) {
-    queueTask(() => window.requestAnimationFrame(drawDots))
+    await nextAnimationFrame()
+    drawDots(null, styleGroups.dot, true)
   }
-
-  if (_options.debug) {
-    queueTask(() => window.requestAnimationFrame(drawBoundsBoxes))
-  }
-
-  _zoomChanged = false
 }
 
-function drawPaths(pathStyleGroups, forceFullRedraw ) {
+function drawPaths(pathStyleGroups, forceFullRedraw) {
   if (!_ready) return
 
   const alphaScale = _dotSettings.alphaScale
-
-  const t0 = Date.now()
-
   const drawAll = forceFullRedraw || FORCE_FULL_REDRAW
 
   const ctx = pathCanvas.getContext("2d")
@@ -449,7 +425,6 @@ function drawPaths(pathStyleGroups, forceFullRedraw ) {
     }
     ctx.stroke()
   }
-  console.log(`drawPaths: ${count} segments -- ${Date.now() - t0}ms`)
   return count
 }
 
@@ -526,28 +501,36 @@ const updateDrawDotFuncs = {
   }
 }
 
-function drawDots(now, dotStyleGroups) {
+async function drawDots(ts, dotStyleGroups, split) {
   if (!_ready || !_dotStyleGroups) return 0
 
   const alphaScale = _dotSettings.alphaScale
   const styleGroups = dotStyleGroups || _dotStyleGroups.values()
 
-  if (!now) now = _timePaused || Date.now()
+  ts = ts || _timePaused || performance.now()
 
   const ctx = dotCanvas.getContext("2d")
 
   DrawBox.clear(ctx, _lastDotDrawBox || DrawBox.defaultRect())
 
   let count = 0
+  let thisFrameCount = 0
   for (const { spec, items, sprite } of styleGroups) {
     const drawDotFunc = _drawFunction[sprite]
     Object.assign(ctx, spec)
     ctx.globalAlpha = spec.globalAlpha * alphaScale
     ctx.beginPath()
-    items.forEach((A) => (count += A.forEachDot(now, drawDotFunc)))
+    items.forEach((A) => (thisFrameCount += A.forEachDot(ts + _timeOffset, drawDotFunc)))
     ctx.fill()
+
+    if (split && (thisFrameCount > MAX_POINTS_IN_SPLIT_FRAME)) {
+      ts = await nextAnimationFrame();
+      count += thisFrameCount
+      thisFrameCount = 0
+    }
   }
 
+  count += thisFrameCount
   _lastDotDrawBox = DrawBox.getScreenRect()
   return count
 }
@@ -583,18 +566,12 @@ function updateDotSettings(settings, shadowSettings) {
   }
 
   dotCtxReset()
-
-  if (_paused) {
-    drawDots()
-  }
-
   return ds
 }
 
 /*
  * Animation
  */
-
 async function animate() {
   // this prevents accidentally running multiple animation loops
   if (_drawingDots || !_ready) return
@@ -610,7 +587,7 @@ async function animate() {
   }
   _lastCalledTime = performance.now()
   _fpsInterval = 1000 / TARGET_FPS
-  console.log(`fpsInterval: ${_fpsInterval}`)
+  // console.log(`fpsInterval: ${_fpsInterval}`)
 
   while (!_paused) {
     const ts = await nextAnimationFrame()
@@ -619,7 +596,7 @@ async function animate() {
       _lastCalledTime = ts
 
       // draw the dots
-      const count = drawDots(ts + _timeOffset)
+      const count = await drawDots(ts)
 
       if (MAP_INFO) {
         updateInfoBox(frameDelay, count)

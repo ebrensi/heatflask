@@ -20,6 +20,8 @@ let _pxOrigin, _pxOffset, _mapPanePos, _zoom, _zf, _scale
 let _transform
 let xmin, xmax, ymin, ymax
 
+const _boundsObj = new Float32Array(4)
+
 export {
   _canvases as canvases,
   _pxOrigin as pxOrigin,
@@ -72,31 +74,44 @@ export function tol(z) {
   return z ? 1 / 2 ** z : 1 / _zf
 }
 
-/*
- * Determine boundaries of the current view and which items are in it
- *
- * This can be done only on move-end, or it can be continuously as the user
- * pans and zooms around but we want to avoind calling it too often
- * as that might be too much computation
+
+/**
+ * update our internal bounds with those from the associated map
+ * @return {Boolean} whether the bounds have changed
  */
 export function updateBounds() {
   const latLngMapBounds = _map.getBounds()
 
-  // leading semi-colon is necessary
-  ;[xmin, ymax, xmax, ymin] = latLng2pxBounds(latLngMapBounds)
+  const b = latLng2pxBounds(latLngMapBounds, _boundsObj)
+  const changed =  b[0] !== xmin || b[1] !== ymax || b[2] !== xmax || b[3] !== ymin
+  if (changed) {
+    ;[xmin, ymax, xmax, ymin] = b
+    return true
+  }
 }
 
-/*
- * This must be called whenever the zoom-level changes
- * Note that while the map zoom-level can be any number,
- * we only consider the rounded integer level, and use the
- * scaling factor _scale
+/**
+ * update our internal zoom level/scale.  we keep track of the rounded integer zoom level,
+ * and the scale of fractial zoom from that integer level
+ *
+ * @return {number} undefined if no change, 1 if only scale changed,
+ *                  2 if integer zoom-level change
  */
 export function updateZoom() {
   const z = _map.getZoom()
-  _zoom = Math.round(z)
-  _scale = _map.getZoomScale(z, _zoom)
-  _zf = 2 ** _zoom
+  const newRoundedZoom = Math.round(z)
+  const newScale = _map.getZoomScale(z, newRoundedZoom)
+  let changed
+
+  if (newRoundedZoom !== _zoom) changed = 2
+    else if (newScale !== _scale) changed = 1
+
+  if (changed)  {
+    _zoom = newRoundedZoom
+    _scale = newScale
+    _zf = 2 ** _zoom
+    return changed
+  }
 }
 
 export function setCSStransform(offset, scale) {

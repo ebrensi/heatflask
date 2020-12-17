@@ -10,7 +10,7 @@ import BitSet from "../BitSet.js"
 import { targetUser, state } from "../Model.js"
 import { Point } from "../myLeaflet.js"
 import { getUrlString } from "../URL.js"
-import { queueTask } from "../appUtil.js"
+import { queueTask, nextTask } from "../appUtil.js"
 
 export const items = new Map()
 let itemsArray
@@ -82,7 +82,7 @@ const inView = {
  * Update StyleGroups for our collection of activities
  * @return {[type]} [description]
  */
-export function updateGroups() {
+export async function updateGroups() {
 
   const zoom = ViewBox.zoom
 
@@ -92,45 +92,52 @@ export function updateGroups() {
 
   inView.current.clear()
 
+  let queuedTasks
+
   // update which items are in the current view
   for (let i = 0, len = itemsArray.length; i < len; i++) {
     const A = itemsArray[i]
 
-    if (!A.inMapBounds) {
-      continue
-    }
+    if (A.inMapBounds()) {
+      inView.current.add(i)
 
-    if (zoom in A.idxSet) {
-      const segMask = A.makeSegMask()
-      if (!segMask.isEmpty()) {
-        inView.current.add(i)
+      // Making an idxSet is slow so we create new tasks for that
+      if (!A.idxSet[zoom]) {
+        queueTask(() => {
+          A.makeIdxSet(zoom)
+        })
+        queuedTasks = true
       }
-    } else {
-      queueTask(() => {
-        A.makeIdxSet(zoom)
-        const segMask = A.makeSegMask()
-
-        if (!segMask.isEmpty()) {
-          inView.current.add(i)
-        }
-      })
     }
   }
 
-  queueTask(() => {
-    // update items that have changed since last time
-    const changed = inView.last.change(inView.current)
+  // if we queued and makeIdxSet tasks, let's wait for them to finish
+  if (queuedTasks) await nextTask()
 
-    changed.forEach((i) => {
-      if (inView.current.has(i)) {
-        addToGroup(i)
-      } else {
-        removeFromGroup(i)
-      }
-    })
-
-    makeStyleGroups()
+  // Make segMasks (this is usually very fast)
+  inView.current.forEach((i) => {
+    const A = itemsArray[i]
+    if (!A.idxSet[zoom]) {
+      throw `idxSet[${zoom}] didn't get made`
+    }
+    const segMask = A.makeSegMask()
+    if (segMask.isEmpty()) {
+      inView.current.remove(i)
+    }
   })
+
+  // update items that have changed since last time
+  const changed = inView.last.change(inView.current)
+  changed.forEach((i) => {
+    if (inView.current.has(i)) {
+      addToGroup(i)
+    } else {
+      removeFromGroup(i)
+    }
+  })
+
+  makeStyleGroups()
+  return getGroups()
 }
 
 /*

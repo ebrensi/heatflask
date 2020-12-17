@@ -20,7 +20,7 @@
   "author": "Efrem Rensi",
   "license": "ISC",
   "dependencies": {
-    "@babel/core": "^7.12.9",
+    "@babel/core": "^7.12.10",
     "@fortawesome/fontawesome-free": "^5.15.1",
     "@msgpack/msgpack": "^2.3.0",
     "downloadjs": "^1.4.7",
