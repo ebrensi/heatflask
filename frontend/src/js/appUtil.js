@@ -162,11 +162,11 @@ export function queueTask(cb) {
   window.setTimeout(cb,0)
 }
 
-export function newTask() {
+export function nextTask() {
   return new Promise((resolve) => queueTask(resolve))
 }
 
-export function newAnimationFrame() {
+export function nextAnimationFrame() {
   let resolve = null
   const promise = new Promise((r) => (resolve = r))
   window.requestAnimationFrame(resolve)

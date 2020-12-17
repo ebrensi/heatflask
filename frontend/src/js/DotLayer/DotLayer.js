@@ -9,7 +9,7 @@ import * as ViewBox from "./ViewBox.js"
 import * as DrawBox from "./DrawBox.js"
 import * as ActivityCollection from "./ActivityCollection.js"
 import { MAP_INFO } from "../Env.js"
-import { queueTask } from "../appUtil.js"
+import { queueTask, nextTask, nextAnimationFrame } from "../appUtil.js"
 
 // import * as WorkerPool from "./WorkerPool.js"
 
@@ -160,18 +160,7 @@ export const DotLayer = Layer.extend({
   },
 
   // --------------------------------------------------------------------
-  animate: function () {
-    _drawingDots = true
-    _paused = false
-    if (_timePaused) {
-      _timeOffset = Date.now() - _timePaused
-      _timePaused = null
-    }
-    _lastCalledTime = performance.now()
-    _fpsInterval = 1000 / TARGET_FPS
-    console.log(`fpsInterval: ${_fpsInterval}`)
-    _frame = window.requestAnimationFrame(_animate)
-  },
+  animate: animate,
 
   // --------------------------------------------------------------------
   pause: function () {
@@ -466,6 +455,7 @@ function drawPaths(pathStyleGroups, forceFullRedraw ) {
 
 /*
  * Functions for Drawing Dots
+ * size is the length of the square and the radius of the circle
  */
 
 const updateDrawDotFuncs = {
@@ -503,10 +493,36 @@ const updateDrawDotFuncs = {
       const color = colorsArray[i]
       colorIdx[color] = i
     }
-    bufferCanvas.width = n
+    bufferCanvas.width = 3 * size * n
     bufferCanvas.height = 2 * size
+    const loc = (idx, sel) => {
+      const x = 3 * idx + sel
+      const y = 0
+      const w = (1+sel) * size
+      const h = w
+      return {x,y,w,h}
+    }
+    const gloc = (color, selected) => {
+      const idx = colorIdx[color]
+      const sel = selected? 1 : 0
+      return loc(idx, sel)
+    }
 
+    for (let i = 0; i<n; i++) {
+      bufCtx.fillStyle = colorsArray[i]
 
+      const {x0, y0, w0, h0} = loc(i, 0)
+      bufCtx.fillRect(x0,y0,w0,h0)
+
+      const {x1, y1, w1} = loc(i, 1)
+      const radius = w1 / 2
+      const cx = x1 + radius
+      const cy = y1 + radius
+      bufCtx.beginPath()
+      bufCtx.ctx.arc(cx, cy, radius, 0, TWO_PI)
+      ctx.closePath()
+      ctx.fill()
+    }
   }
 }
 
@@ -578,30 +594,41 @@ function updateDotSettings(settings, shadowSettings) {
 /*
  * Animation
  */
-function _animate(ts) {
-  if (!_frame || !_ready || !_drawingDots) return
 
-  _frame = null
+async function animate() {
+  // this prevents accidentally running multiple animation loops
+  if (_drawingDots || !_ready) return
 
-  if (_paused || _capturing) {
-    // Ths is so we can start where we left off when we resume
-    _timePaused = ts
-    return
+  _drawingDots = true
+  _paused = false
+
+  if (_timePaused) {
+    _timeOffset = _timeOrigin - (Date.now() - _timePaused)
+    _timePaused = null
+  } else {
+    _timeOffset = _timeOrigin
   }
+  _lastCalledTime = performance.now()
+  _fpsInterval = 1000 / TARGET_FPS
+  console.log(`fpsInterval: ${_fpsInterval}`)
 
-  const frameDelay = ts - _lastCalledTime
-  if (frameDelay > _fpsInterval) {
-    _lastCalledTime = ts
+  while (!_paused) {
+    const ts = await nextAnimationFrame()
+    const frameDelay = ts - _lastCalledTime
+    if (frameDelay > _fpsInterval) {
+      _lastCalledTime = ts
 
-    // draw the dots
-    const count = drawDots(ts + _timeOrigin - _timeOffset)
+      // draw the dots
+      const count = drawDots(ts + _timeOffset)
 
-    if (MAP_INFO) {
-      updateInfoBox(frameDelay, count)
+      if (MAP_INFO) {
+        updateInfoBox(frameDelay, count)
+      }
     }
   }
 
-  _frame = window.requestAnimationFrame(_animate)
+  _drawingDots = false
+  _timePaused = performance.now() + _timeOffset
 }
 
 // let infoBoxUpdateCounter = 0
