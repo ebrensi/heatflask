@@ -42,8 +42,12 @@ echo "installing backend dev-dependencies (requirements-dev.txt)"
 pip install -r requirements-dev.txt
 
 
-if [ ! -f .env ] then;
+if [ ! -f .env ]; then
     echo "copying .env.tmp to .env"
     cp .env.tmp .env
 fi
 
+echo
+echo
+echo "Backend dependencies installed. You are good to go."
+echo "./dev-run starts the server"
