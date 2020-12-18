@@ -150,11 +150,6 @@ def redirect_to_new_domain():
     return
 
 
-# @app.route('/avatar/athlete/medium.png')
-# def anon_photo():
-#     return image_url('anon-photo.jpg')
-
-
 # -----------------------------------------------------------------------------
 #  **** "routes" are our endpoints ***
 @app.route("/")

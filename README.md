@@ -5,6 +5,8 @@ This is the the server-side and client-side code repository for the Heatflask we
 
 ### This is the `bundle` branch. The `master` branch currently being served at [https://www.heatflask.com](https://www.heatflask.com), is no longer being developed. We are currently undergoing a major re-write on this branch, which will be released as v0.5.0. See issue [#113](https://github.com/ebrensi/heatflask/issues/113).
 
+## The currently staged development version can been accessed at https://dev.heatflask.com
+
 
 ## Contributing
 See [`/contributing.md`](/contributing.md).

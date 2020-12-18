@@ -20,10 +20,6 @@ import { dotSettings } from "./Defaults.js"
  */
 const _lru = new Map()
 
-function inBounds(p) {
-  return ViewBox.contains(p) && DrawBox.update(p)
-}
-
 /**
  * We detect anomalous gaps in data by simple statistical analysis of
  * segment lengths.
