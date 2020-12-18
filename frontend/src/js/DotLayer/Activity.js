@@ -404,8 +404,8 @@ export class Activity {
       let p = points(0)
       let pIn = ViewBox.contains(p)
       if (pIn) DrawBox.update(p)
-      for (let i=0; i<n-1; i++) {
-        const nextp = points(i+1)
+      for (let i = 0; i < n - 1; i++) {
+        const nextp = points(i + 1)
         const nextpIn = ViewBox.contains(nextp)
         if (nextpIn) DrawBox.update(nextp)
 
@@ -452,7 +452,7 @@ export class Activity {
      */
     if (forceAll) {
       segMask = this.segMask
-    } else{
+    } else {
       const nChanges = this.segMask.difference_size(this.lastSegMask)
       if (!nChanges) return 0
       segMask = this.segMask.new_difference(this.lastSegMask)
@@ -462,9 +462,9 @@ export class Activity {
        * even if it was in the last draw
        */
       let lastSeg
-      segMask.forEach(s => {
-        const beforeGap = lastSeg && (lastSeg + 1)
-        const afterGap = s && (s-1)
+      segMask.forEach((s) => {
+        const beforeGap = lastSeg && lastSeg + 1
+        const afterGap = s && s - 1
         if (lastSeg !== afterGap) {
           const lsm = this.lastSegMask
           if (beforeGap && lsm.has(beforeGap)) segMask.add(beforeGap)
@@ -473,7 +473,6 @@ export class Activity {
         lastSeg = s
       })
     }
-
 
     let count = 0
     const points = this.getPointAccessor(ViewBox.zoom)
@@ -499,7 +498,7 @@ export class Activity {
    */
   forEachDot(now, func) {
     const ds = { T: dotSettings._period, timeScale: dotSettings._timeScale }
-    const {T, timeScale} = ds
+    const { T, timeScale } = ds
     const start = this.ts
     const zoom = ViewBox.zoom
 
@@ -512,7 +511,7 @@ export class Activity {
     const timeOffset = (timeScale * (now - (start + times[i0]))) % T
 
     let count = 0
-    this.segMask.forEach(i => {
+    this.segMask.forEach((i) => {
       const t_a = times[i]
       const t_b = times[i + 1]
       const lowest = Math.ceil((t_a - timeOffset) / T)

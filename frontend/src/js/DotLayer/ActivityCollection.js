@@ -83,7 +83,6 @@ const inView = {
  * @return {[type]} [description]
  */
 export async function updateGroups() {
-
   const zoom = ViewBox.zoom
 
   // the semicolon is necessary
@@ -248,7 +247,6 @@ function removeFromGroup(i, selected) {
     }
   }
 }
-
 
 export function getGroups() {
   const output = {}

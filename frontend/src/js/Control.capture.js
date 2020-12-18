@@ -6,7 +6,6 @@ import "../ext/leaflet-areaselect.css"
 import "../../node_modules/leaflet-easybutton/src/easy-button.d.ts"
 import "../../node_modules/leaflet-easybutton/src/easy-button.css"
 
-
 const L = window.L
 
 const areaSelect = L.areaSelect({ width: 200, height: 200 })

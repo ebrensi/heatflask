@@ -159,7 +159,7 @@ export function quartiles(someArray) {
  * Some functions that make de-janking easier via async code
  */
 export function queueTask(cb) {
-  window.setTimeout(cb,0)
+  window.setTimeout(cb, 0)
 }
 
 export function nextTask() {
@@ -172,4 +172,3 @@ export function nextAnimationFrame() {
   window.requestAnimationFrame(resolve)
   return promise
 }
-

@@ -18,7 +18,7 @@ import {
   dotSettings as _dotSettings,
 } from "./Defaults.js"
 
-export {_dotSettings as dotSettings}
+export { _dotSettings as dotSettings }
 
 /* In order to prevent path redraws from happening too often
  * and hogging up CPU cycles we set a minimum delay between redraws
@@ -57,7 +57,6 @@ let _timeOffset = 0
 let _lastCalledTime
 let _fpsInterval
 let _lastDotDrawBox
-
 
 /*
  * Display for debugging
@@ -211,7 +210,6 @@ function assignEventHandlers() {
 }
 
 function dotCtxReset() {
-
   const ctx = dotCanvas.getContext("2d")
   if (_options.dotShadows.enabled) {
     const shadowOpts = _options.dotShadows
@@ -237,7 +235,6 @@ function onViewReset() {
   console.log("viewReset")
   // dotCtxReset()
 }
-
 
 function onZoom(e) {
   if (!_map || !ViewBox.zoom) return
@@ -334,7 +331,6 @@ function moveDrawBox() {
     }
 
     DrawBox.clear(dotCanvas.getContext("2d"), D)
-
   } else {
     // If none of the last DrawBox is still on screen we just clear it
     const canvasesToClear = [pathCanvas, dotCanvas]
@@ -435,8 +431,7 @@ function drawPaths(pathStyleGroups, forceFullRedraw) {
  */
 
 const updateDrawDotFuncs = {
-
-  default: function() {
+  default: function () {
     const ctx = dotCanvas.getContext("2d")
     const size = _dotSettings._dotSize
     const dotOffset = size / 2.0
@@ -451,7 +446,7 @@ const updateDrawDotFuncs = {
     })
   },
 
-  putImageData: function() {
+  putImageData: function () {
     const ctx = dotCanvas.getContext("2d")
     const size = _dotSettings._dotSize
     if (!_dotStyleGroups) return
@@ -461,11 +456,13 @@ const updateDrawDotFuncs = {
     const bufCtx = bufferCanvas.getContext("2d")
 
     const items = ActivityCollection.items
-    const colorSet = new Set(Array.from(items.values()).map(A => A.colors.dot))
+    const colorSet = new Set(
+      Array.from(items.values()).map((A) => A.colors.dot)
+    )
     const colorsArray = Array.from(colorSet)
     const colorIdx = {}
     const n = colorsArray.length
-    for (let i=0; i<n; i++) {
+    for (let i = 0; i < n; i++) {
       const color = colorsArray[i]
       colorIdx[color] = i
     }
@@ -474,23 +471,23 @@ const updateDrawDotFuncs = {
     const loc = (idx, sel) => {
       const x = 3 * idx + sel
       const y = 0
-      const w = (1+sel) * size
+      const w = (1 + sel) * size
       const h = w
-      return {x,y,w,h}
+      return { x, y, w, h }
     }
     const gloc = (color, selected) => {
       const idx = colorIdx[color]
-      const sel = selected? 1 : 0
+      const sel = selected ? 1 : 0
       return loc(idx, sel)
     }
 
-    for (let i = 0; i<n; i++) {
+    for (let i = 0; i < n; i++) {
       bufCtx.fillStyle = colorsArray[i]
 
-      const {x0, y0, w0, h0} = loc(i, 0)
-      bufCtx.fillRect(x0,y0,w0,h0)
+      const { x0, y0, w0, h0 } = loc(i, 0)
+      bufCtx.fillRect(x0, y0, w0, h0)
 
-      const {x1, y1, w1} = loc(i, 1)
+      const { x1, y1, w1 } = loc(i, 1)
       const radius = w1 / 2
       const cx = x1 + radius
       const cy = y1 + radius
@@ -499,7 +496,7 @@ const updateDrawDotFuncs = {
       ctx.closePath()
       ctx.fill()
     }
-  }
+  },
 }
 
 async function drawDots(ts, dotStyleGroups, split) {
@@ -521,11 +518,13 @@ async function drawDots(ts, dotStyleGroups, split) {
     Object.assign(ctx, spec)
     ctx.globalAlpha = spec.globalAlpha * alphaScale
     ctx.beginPath()
-    items.forEach((A) => (thisFrameCount += A.forEachDot(ts + _timeOffset, drawDotFunc)))
+    items.forEach(
+      (A) => (thisFrameCount += A.forEachDot(ts + _timeOffset, drawDotFunc))
+    )
     ctx.fill()
 
-    if (split && (thisFrameCount > MAX_POINTS_IN_SPLIT_FRAME)) {
-      ts = await nextAnimationFrame();
+    if (split && thisFrameCount > MAX_POINTS_IN_SPLIT_FRAME) {
+      ts = await nextAnimationFrame()
       count += thisFrameCount
       thisFrameCount = 0
     }
@@ -619,7 +618,9 @@ function updateInfoBox(dt, count) {
   const duration = Math.round(_fpsSum / 30)
   _fpsSum -= _fpsRegister.shift()
   if (roundCount !== _roundCount && duration !== _duration) {
-    _infoBox.innerHTML = `${duration} ms (${Math.round(1000/duration)}fps), ${count} pts`
+    _infoBox.innerHTML = `${duration} ms (${Math.round(
+      1000 / duration
+    )}fps), ${count} pts`
   }
   _roundCount = roundCount
   _duration = duration
