@@ -238,7 +238,7 @@ export class Activity {
       const idxSet = this.idxSet[zoom]
       if (!idxSet) {
         // throw new Error(`no idxSet[${zoom}]`)
-        console.log(`no idxSet[${zoom}] for ${this.id}`)
+        // console.log(`${this.id}: no idxSet[${zoom}]`)
         return
       }
       idx = this.idxSet[zoom].array()
@@ -432,47 +432,48 @@ export class Activity {
   }
 
   /**
+   * We use this for partial redraws
+   * @return {BitSet} The set of segments that have become visible
+   * since the last draw
+   */
+  getPartialSegMask() {
+    const nChanges = this.segMask.difference_size(this.lastSegMask)
+    if (!nChanges) return
+    const segMask = this.segMask.new_difference(this.lastSegMask)
+
+    /*
+     * We include an edge segment (at the edge of the screen)
+     * even if it was in the last draw
+     */
+    let lastSeg
+    segMask.forEach((s) => {
+      const beforeGap = lastSeg && lastSeg + 1
+      const afterGap = s && s - 1
+      if (lastSeg !== afterGap) {
+        const lsm = this.lastSegMask
+        if (beforeGap && lsm.has(beforeGap)) segMask.add(beforeGap)
+        if (afterGap && lsm.has(afterGap)) segMask.add(afterGap)
+      }
+      lastSeg = s
+    })
+    return segMask
+  }
+
+  /**
    * execute a function func(x1, y1, x2, y2) on each currently in-view
    * segment (x1,y1) -> (x2, y2) of this Activity. The default is to
    * only use segments that have changed since the last segMask update.
    * Set forceAll to force all currently viewed segments.
    * @param  {function} func func(x1, y1, x2, y2)
-   * @param  {[type]} forceAll
+   * @param  {BitSet} [segMask] the set of segments
    */
-  forEachSegment(func, forceAll) {
-    let segMask
+  forEachSegment(func, segMask) {
 
-    /*
-     * we either redraw the whole path, or just the segments
-     * that have appeared since the last draw
-     */
-    if (forceAll) {
-      segMask = this.segMask
-    } else {
-      const nChanges = this.segMask.difference_size(this.lastSegMask)
-      if (!nChanges) return 0
-      segMask = this.segMask.new_difference(this.lastSegMask)
-
-      /*
-       * We include an edge segment (at the edge of the screen)
-       * even if it was in the last draw
-       */
-      let lastSeg
-      segMask.forEach((s) => {
-        const beforeGap = lastSeg && lastSeg + 1
-        const afterGap = s && s - 1
-        if (lastSeg !== afterGap) {
-          const lsm = this.lastSegMask
-          if (beforeGap && lsm.has(beforeGap)) segMask.add(beforeGap)
-          if (afterGap && lsm.has(afterGap)) segMask.add(afterGap)
-        }
-        lastSeg = s
-      })
-    }
+    if (!segMask) segMask = this.segMask
+    if (!segMask) return 0
 
     let count = 0
     const points = this.getPointAccessor(ViewBox.zoom)
-
     if (!points) return 0
 
     segMask.forEach((i) => {
@@ -490,24 +491,26 @@ export class Activity {
    * @param  {number} now
    * @param  {Object} ds
    * @param  {function} func
+   * @param  {BitSet} [segMask] a set of segments over which to place dots
    * @returns {number} number of dot points
    */
-  forEachDot(now, func) {
+  forEachDot(now, func, segMask) {
     const ds = { T: dotSettings._period, timeScale: dotSettings._timeScale }
     const { T, timeScale } = ds
     const start = this.ts
     const zoom = ViewBox.zoom
-
-    if (!this.idxSet[zoom]) return 0
-
     const points = this.getPointAccessor(zoom)
     if (!points) return 0
+
+    if (!segMask) segMask = this.segMask
+    if (!segMask) return 0
+
+    const i0 = segMask.min()
     const times = this.getTimesArray(zoom)
-    const i0 = this.segMask.min()
     const timeOffset = (timeScale * (now - (start + times[i0]))) % T
 
     let count = 0
-    this.segMask.forEach((i) => {
+    segMask.forEach((i) => {
       const t_a = times[i]
       const t_b = times[i + 1]
       const lowest = Math.ceil((t_a - timeOffset) / T)

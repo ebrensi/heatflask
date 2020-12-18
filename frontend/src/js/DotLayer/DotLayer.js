@@ -78,6 +78,8 @@ export const DotLayer = Layer.extend({
   options: defaultOptions,
   dotSettings: _dotSettings,
   updateDotSettings: updateDotSettings,
+  redraw: redraw,
+  animate: animate,
 
   // -- initialized is called on prototype
   initialize: function (options) {
@@ -136,8 +138,7 @@ export const DotLayer = Layer.extend({
     map.off(assignEventHandlers(), this)
   },
 
-  // --------------------------------------------------------------------
-  redraw: redraw,
+  // -------------------------------------------------------------------
 
   // Call this function after items are added or removed
   reset: async function () {
@@ -146,15 +147,15 @@ export const DotLayer = Layer.extend({
     _ready = false
 
     ActivityCollection.reset()
+    ViewBox.updateBounds()
+    ViewBox.updateZoom()
+    dotCtxUpdate()
     updateDotSettings()
     _ready = true
     await redraw(true)
 
     if (!_paused) this.animate()
   },
-
-  // --------------------------------------------------------------------
-  animate: animate,
 
   // --------------------------------------------------------------------
   pause: function () {
@@ -189,12 +190,8 @@ function addCanvasOverlay(pane) {
 
 function assignEventHandlers() {
   const events = {
-    // movestart: loggit,
     moveend: onMoveEnd,
-    // zoomstart: loggit,
     zoom: onZoom,
-    zoomend: onZoomEnd,
-    // viewreset: onViewReset,
     resize: onResize,
   }
 
@@ -209,7 +206,7 @@ function assignEventHandlers() {
   return events
 }
 
-function dotCtxReset() {
+function dotCtxUpdate() {
   const ctx = dotCanvas.getContext("2d")
   if (_options.dotShadows.enabled) {
     const shadowOpts = _options.dotShadows
@@ -225,35 +222,20 @@ function dotCtxReset() {
   }
 }
 
-function onResize(resizeEvent) {
+async function onResize(resizeEvent) {
   ViewBox.resize(resizeEvent.newSize)
-  // onViewReset()
-  redraw(true)
+  dotCtxUpdate()
+  await redraw(true)
 }
 
-function onViewReset() {
-  console.log("viewReset")
-  // dotCtxReset()
-}
-
-function onZoom(e) {
+async function onZoom(e) {
   if (!_map || !ViewBox.zoom) return
 
   // console.log("onzoom")
 
   if (e.pinch || e.flyTo) {
-    const zoom = _map.getZoom()
-    const center = _map.getCenter()
-    _animateZoom({ zoom, center })
-    console.log(e)
+    await redraw(true)
   }
-}
-
-/*
- * This gets called after zooming stops, but before onMoveEnd
- */
-function onZoomEnd() {
-  // console.log("onzoomend")
 }
 
 /*
@@ -357,7 +339,6 @@ async function redraw(force) {
   // await nextTask()
 
   // console.log("onmoveend")
-  updateDotSettings()
   const fullRedraw = zoomChanged || FORCE_FULL_REDRAW || force
 
   // Recalibrate the DrawBox (and possible move it)
@@ -403,7 +384,6 @@ function drawPaths(pathStyleGroups, forceFullRedraw) {
 
   const alphaScale = _dotSettings.alphaScale
   const drawAll = forceFullRedraw || FORCE_FULL_REDRAW
-
   const ctx = pathCanvas.getContext("2d")
   let count = 0
   const transformedMoveTo = ViewBox.makeTransform((x, y) => ctx.moveTo(x, y))
@@ -418,7 +398,8 @@ function drawPaths(pathStyleGroups, forceFullRedraw) {
     ctx.globalAlpha = spec.globalAlpha * alphaScale
     ctx.beginPath()
     for (const A of items) {
-      count += A.forEachSegment(drawSegment, drawAll)
+      const segMask = drawAll? A.segMask : A.getPartialSegMask()
+      count += A.forEachSegment(drawSegment, segMask)
     }
     ctx.stroke()
   }
@@ -433,15 +414,18 @@ function drawPaths(pathStyleGroups, forceFullRedraw) {
 const updateDrawDotFuncs = {
   default: function () {
     const ctx = dotCanvas.getContext("2d")
-    const size = _dotSettings._dotSize
-    const dotOffset = size / 2.0
+    const ds = _dotSettings
+    const pi2 = TWO_PI
 
     _drawFunction.circle = ViewBox.makeTransform(function (x, y) {
-      ctx.arc(x, y, size, 0, TWO_PI)
+      const size = ds._dotSize
+      ctx.arc(x, y, size, 0, pi2)
       ctx.closePath()
     })
 
     _drawFunction.square = ViewBox.makeTransform(function (x, y) {
+      const size = ds._dotSize
+      const dotOffset = size / 2.0
       ctx.rect(x - dotOffset, y - dotOffset, size, size)
     })
   },
@@ -499,7 +483,7 @@ const updateDrawDotFuncs = {
   },
 }
 
-async function drawDots(ts, dotStyleGroups, split) {
+async function drawDots(ts, dotStyleGroups, split, forceFullRedraw) {
   if (!_ready || !_dotStyleGroups) return 0
 
   const alphaScale = _dotSettings.alphaScale
@@ -509,7 +493,11 @@ async function drawDots(ts, dotStyleGroups, split) {
 
   const ctx = dotCanvas.getContext("2d")
 
-  DrawBox.clear(ctx, _lastDotDrawBox || DrawBox.defaultRect())
+  const drawAll = forceFullRedraw || FORCE_FULL_REDRAW
+
+  if (drawAll) {
+    DrawBox.clear(ctx, _lastDotDrawBox || DrawBox.defaultRect())
+  }
 
   let count = 0
   let thisFrameCount = 0
@@ -518,9 +506,10 @@ async function drawDots(ts, dotStyleGroups, split) {
     Object.assign(ctx, spec)
     ctx.globalAlpha = spec.globalAlpha * alphaScale
     ctx.beginPath()
-    items.forEach(
-      (A) => (thisFrameCount += A.forEachDot(ts + _timeOffset, drawDotFunc))
-    )
+    items.forEach((A) => {
+      const segMask = drawAll? A.segMask : A.getPartialSegMask()
+      thisFrameCount += A.forEachDot(ts + _timeOffset, drawDotFunc, segMask)
+    })
     ctx.fill()
 
     if (split && thisFrameCount > MAX_POINTS_IN_SPLIT_FRAME) {
@@ -563,9 +552,10 @@ function updateDotSettings(settings, shadowSettings) {
 
   if (shadowSettings) {
     Object.assign(_options.dotShadows, shadowSettings)
+    dotCtxUpdate()
   }
 
-  dotCtxReset()
+  console.log(ds)
   return ds
 }
 
