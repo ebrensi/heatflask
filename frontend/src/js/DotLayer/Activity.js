@@ -241,7 +241,9 @@ export class Activity {
     if (!idx) {
       const idxSet = this.idxSet[zoom]
       if (!idxSet) {
-        throw new Error(`no idxSet[${zoom}]`)
+        // throw new Error(`no idxSet[${zoom}]`)
+        console.log(`no idxSet[${zoom}] for ${this.id}`)
+        return
       }
       idx = this.idxSet[zoom].array()
       _lru.set(key, idx)
@@ -475,6 +477,9 @@ export class Activity {
 
     let count = 0
     const points = this.getPointAccessor(ViewBox.zoom)
+
+    if (!points) return 0
+
     segMask.forEach((i) => {
       const p1 = points(i)
       const p2 = points(i + 1)
@@ -501,6 +506,7 @@ export class Activity {
     if (!this.idxSet[zoom]) return 0
 
     const points = this.getPointAccessor(zoom)
+    if (!points) return 0
     const times = this.getTimesArray(zoom)
     const i0 = this.segMask.min()
     const timeOffset = (timeScale * (now - (start + times[i0]))) % T

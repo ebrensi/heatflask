@@ -9,8 +9,8 @@ import * as ViewBox from "./ViewBox.js"
 import * as DrawBox from "./DrawBox.js"
 import * as ActivityCollection from "./ActivityCollection.js"
 import { MAP_INFO } from "../Env.js"
-import { queueTask, nextTask, nextAnimationFrame } from "../appUtil.js"
-
+import { nextTask, nextAnimationFrame } from "../appUtil.js"
+import { DEBUG_BORDERS } from "../Env.js"
 // import * as WorkerPool from "./WorkerPool.js"
 
 import {
@@ -23,7 +23,7 @@ export {_dotSettings as dotSettings}
 /* In order to prevent path redraws from happening too often
  * and hogging up CPU cycles we set a minimum delay between redraws
  */
-const FORCE_FULL_REDRAW = false
+const FORCE_FULL_REDRAW = true
 const CONTINUOUS_REDRAWS = false
 const MIN_REDRAW_DELAY = 1000 // milliseconds
 const TWO_PI = 2 * Math.PI
@@ -106,7 +106,7 @@ export const DotLayer = Layer.extend({
     ctx.lineCap = "round"
     ctx.lineJoin = "round"
 
-    if (_options.debug) {
+    if (DEBUG_BORDERS) {
       // create Canvas for debugging canvas stuff
       debugCanvas = addCanvasOverlay(debugCanvasPane)
     }
@@ -129,7 +129,7 @@ export const DotLayer = Layer.extend({
     map._panes[dotCanvasPane].removeChild(dotCanvas)
     map._panes[pathCanvasPane].removeChild(pathCanvas)
 
-    if (_options.debug) {
+    if (DEBUG_BORDERS) {
       map._panes[debugCanvasPane].removeChild(debugCanvas)
       debugCanvas = null
     }
@@ -244,11 +244,12 @@ function onZoom(e) {
 
   // console.log("onzoom")
 
-  // if (e.pinch || e.flyTo) {
-  //   const zoom = _map.getZoom()
-  //   const center = _map.getCenter()
-  //   _animateZoom({ zoom, center })
-  // }
+  if (e.pinch || e.flyTo) {
+    const zoom = _map.getZoom()
+    const center = _map.getCenter()
+    _animateZoom({ zoom, center })
+    console.log(e)
+  }
 }
 
 /*
@@ -386,7 +387,7 @@ async function redraw(force) {
 
   updateDrawDotFuncs.default()
 
-  if (_options.debug) {
+  if (DEBUG_BORDERS) {
     drawBoundsBoxes()
   }
 

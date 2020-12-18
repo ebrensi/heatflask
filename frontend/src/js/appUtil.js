@@ -173,15 +173,3 @@ export function nextAnimationFrame() {
   return promise
 }
 
-
-/*
-async function game() {
-    // the game loop
-    while (true) {
-        await animationFrame()
-        drawSomething()
-    }
-}
-
-game()
- */
