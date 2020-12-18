@@ -7,16 +7,16 @@ Flask-Sockets==0.2.1
 Flask-SQLAlchemy==2.4.4
 Flask-SSLify==0.1.5
 Flask==1.1.2
-gevent==20.6.2
+gevent==20.9.0
 gunicorn==20.0.4
-msgpack==1.0.0
+msgpack==1.0.1
 polyline==1.4.0
-psycopg2==2.8.5
-pymongo==3.11.0
+psycopg2==2.8.6
+pymongo==3.11.2
 python-dateutil==2.8.1
 redis==3.5.3
-requests==2.24.0
+requests==2.25.1
 stravalib==0.10.2
 whitenoise==5.2.0
-wsaccel==0.6.2
+wsaccel==0.6.3
 
