@@ -121,24 +121,6 @@ export function setCSStransform(offset, scale) {
 }
 
 /*
- * apply an additional CSS transform to another center and zoom
- * This is used for pinch pan and zoom on mobile devices
- */
-export function CSStransformTo(newCenter, newZoom) {
-  const newPxOrigin = _map._getNewPixelOrigin(newCenter, newZoom)
-  const scale = _map.getZoomScale(newZoom, _zoom)
-  const translation = _pxOrigin.multiplyBy(scale).subtract(newPxOrigin)
-  const newTranslation = _baseTranslation.multiplyBy(scale).add(translation)
-  // setCSStransform(transform.round(), scale)
-  setCSStransform(newTranslation.round(), scale)
-}
-
-export function setPinchTransform({ offset, scale }) {
-  const newTranslation = _baseTranslation.multiplyBy(scale).add(offset)
-  setCSStransform(newTranslation.round(), scale)
-}
-
-/*
  * this needs to be called on move-end
  * It sets the baseline CSS transformation for the dot and line canvases
  */
@@ -148,7 +130,7 @@ export function calibrate() {
   _pxOffset = _mapPanePos.subtract(_pxOrigin)
   _baseTranslation = _map.containerPointToLayerPoint([0, 0])
   setCSStransform(_baseTranslation)
-  _transform = makeTransform()
+  updateTransform()
 
   if (MAP_INFO) {
     updateDebugDisplay()
@@ -181,9 +163,10 @@ function updateDebugDisplay() {
  * the transformed coordinates so we can avoid creating a new
  * Array every time we perform the transformation.
  */
-export function makeTransform(func) {
+export function updateTransform(func) {
   const { x: ox, y: oy } = _pxOffset
   const mult = _zf * _scale
+  const _transformBuf = new Float32Array(2)
 
   if (func) {
     return function (x, y) {
@@ -191,8 +174,10 @@ export function makeTransform(func) {
     }
   }
 
-  return function (x, y) {
-    return [mult * x + ox, mult * y + oy]
+  _transform = (x, y) => {
+    _transformBuf[0] = mult * x + ox
+    _transformBuf[1] = mult * y + oy
+    return _transformBuf
   }
 }
 

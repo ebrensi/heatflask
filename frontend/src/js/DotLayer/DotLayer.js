@@ -24,11 +24,10 @@ export { _dotSettings as dotSettings }
  * and hogging up CPU cycles we set a minimum delay between redraws
  */
 const FORCE_FULL_REDRAW = true
-const CONTINUOUS_REDRAWS = false
+const CONTINUOUS_REDRAWS = true
 const MIN_REDRAW_DELAY = 1000 // milliseconds
 const TWO_PI = 2 * Math.PI
 const TARGET_FPS = 30
-const MAX_POINTS_IN_SPLIT_FRAME = 500
 
 const _timeOrigin = performance.timing.navigationStart
 
@@ -151,6 +150,7 @@ export const DotLayer = Layer.extend({
     ViewBox.updateZoom()
     dotCtxUpdate()
     updateDotSettings()
+    updateDrawDotFuncs.default()
     _ready = true
     await redraw(true)
 
@@ -335,9 +335,6 @@ async function redraw(force) {
     return
   }
 
-  // // make sure we are in a new task
-  // await nextTask()
-
   // console.log("onmoveend")
   const fullRedraw = zoomChanged || FORCE_FULL_REDRAW || force
 
@@ -345,7 +342,7 @@ async function redraw(force) {
   if (fullRedraw) {
     const oldDrawBoxDim = DrawBox.getScreenRect()
     ViewBox.calibrate()
-    const canvasesToClear = [pathCanvas, dotCanvas]
+    const canvasesToClear = _paused? [pathCanvas, dotCanvas] : [pathCanvas]
     for (const canvas of canvasesToClear) {
       DrawBox.clear(canvas.getContext("2d"), oldDrawBoxDim)
     }
@@ -362,8 +359,6 @@ async function redraw(force) {
   const styleGroups = await ActivityCollection.updateGroups()
   _dotStyleGroups = styleGroups.dot
 
-  updateDrawDotFuncs.default()
-
   if (DEBUG_BORDERS) {
     drawBoundsBoxes()
   }
@@ -375,9 +370,17 @@ async function redraw(force) {
 
   if (_paused) {
     await nextAnimationFrame()
-    drawDots(null, styleGroups.dot, true)
+    drawDots(null, styleGroups.dot)
   }
 }
+
+function drawTransformedSegment(ctx, x1, y1, x2, y2) {
+  const p1 = ViewBox.transform(x1, y1)
+  ctx.moveTo(p1[0], p1[1])
+  const p2 = ViewBox.transform(x2, y2)
+  ctx.lineTo(p2[0], p2[1])
+}
+
 
 function drawPaths(pathStyleGroups, forceFullRedraw) {
   if (!_ready) return
@@ -385,13 +388,8 @@ function drawPaths(pathStyleGroups, forceFullRedraw) {
   const alphaScale = _dotSettings.alphaScale
   const drawAll = forceFullRedraw || FORCE_FULL_REDRAW
   const ctx = pathCanvas.getContext("2d")
+  const drawSegment = (x1,y1,x2,y2) => drawTransformedSegment(ctx, x1,y1,x2,y2)
   let count = 0
-  const transformedMoveTo = ViewBox.makeTransform((x, y) => ctx.moveTo(x, y))
-  const transformedLineTo = ViewBox.makeTransform((x, y) => ctx.lineTo(x, y))
-  const drawSegment = (x1, y1, x2, y2) => {
-    transformedMoveTo(x1, y1)
-    transformedLineTo(x2, y2)
-  }
 
   for (const { spec, items } of pathStyleGroups) {
     Object.assign(ctx, spec)
@@ -417,20 +415,22 @@ const updateDrawDotFuncs = {
     const ds = _dotSettings
     const pi2 = TWO_PI
 
-    _drawFunction.circle = ViewBox.makeTransform(function (x, y) {
+    _drawFunction.circle = (x, y) => {
       const size = ds._dotSize
-      ctx.arc(x, y, size, 0, pi2)
+      const p = ViewBox.transform(x,y)
+      ctx.arc(p[0], p[1], size, 0, pi2)
       ctx.closePath()
-    })
+    }
 
-    _drawFunction.square = ViewBox.makeTransform(function (x, y) {
+    _drawFunction.square = (x, y) => {
       const size = ds._dotSize
       const dotOffset = size / 2.0
-      ctx.rect(x - dotOffset, y - dotOffset, size, size)
-    })
+      const p = ViewBox.transform(x,y)
+      ctx.rect(p[0] - dotOffset, p[1] - dotOffset, size, size)
+    }
   },
 
-  putImageData: function () {
+  imageData: function () {
     const ctx = dotCanvas.getContext("2d")
     const size = _dotSettings._dotSize
     if (!_dotStyleGroups) return
@@ -468,7 +468,7 @@ const updateDrawDotFuncs = {
     for (let i = 0; i < n; i++) {
       bufCtx.fillStyle = colorsArray[i]
 
-      const { x0, y0, w0, h0 } = loc(i, 0)
+      const { x0, y0, w0, h0 } = loc(i, 0)``
       bufCtx.fillRect(x0, y0, w0, h0)
 
       const { x1, y1, w1 } = loc(i, 1)
@@ -483,7 +483,7 @@ const updateDrawDotFuncs = {
   },
 }
 
-async function drawDots(ts, dotStyleGroups, split, forceFullRedraw) {
+async function drawDots(ts, dotStyleGroups, forceFullRedraw) {
   if (!_ready || !_dotStyleGroups) return 0
 
   const alphaScale = _dotSettings.alphaScale
@@ -500,7 +500,6 @@ async function drawDots(ts, dotStyleGroups, split, forceFullRedraw) {
   }
 
   let count = 0
-  let thisFrameCount = 0
   for (const { spec, items, sprite } of styleGroups) {
     const drawDotFunc = _drawFunction[sprite]
     Object.assign(ctx, spec)
@@ -508,18 +507,11 @@ async function drawDots(ts, dotStyleGroups, split, forceFullRedraw) {
     ctx.beginPath()
     items.forEach((A) => {
       const segMask = drawAll? A.segMask : A.getPartialSegMask()
-      thisFrameCount += A.forEachDot(ts + _timeOffset, drawDotFunc, segMask)
+      count += A.forEachDot(ts + _timeOffset, drawDotFunc, segMask)
     })
     ctx.fill()
-
-    if (split && thisFrameCount > MAX_POINTS_IN_SPLIT_FRAME) {
-      ts = await nextAnimationFrame()
-      count += thisFrameCount
-      thisFrameCount = 0
-    }
   }
 
-  count += thisFrameCount
   _lastDotDrawBox = DrawBox.getScreenRect()
   return count
 }
