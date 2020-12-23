@@ -11,6 +11,7 @@ import * as ActivityCollection from "./ActivityCollection.js"
 import { MAP_INFO } from "../Env.js"
 import { nextTask, nextAnimationFrame } from "../appUtil.js"
 import { DEBUG_BORDERS } from "../Env.js"
+import { vParams } from "../Model.js"
 // import * as WorkerPool from "./WorkerPool.js"
 
 import {
@@ -29,8 +30,6 @@ const MIN_REDRAW_DELAY = 1000 // milliseconds
 const TWO_PI = 2 * Math.PI
 const TARGET_FPS = 30
 
-const _timeOrigin = performance.timing.navigationStart
-
 const _drawFunction = {
   square: null,
   circle: null,
@@ -47,14 +46,11 @@ let _fpsSum = 0
 let _roundCount, _duration
 
 let _map, _options
-let _timePaused, _ready, _paused
-let _drawingDots
+let _ready
+
 let _gifPatch
 let _dotStyleGroups
 let _lastRedraw = 0
-let _timeOffset = 0
-let _lastCalledTime
-let _fpsInterval
 let _lastDotDrawBox
 
 /*
@@ -160,7 +156,6 @@ export const DotLayer = Layer.extend({
   // --------------------------------------------------------------------
   pause: function () {
     _paused = true
-    _timePaused = Date.now()
   },
 })
 
@@ -342,7 +337,7 @@ async function redraw(force) {
   if (fullRedraw) {
     const oldDrawBoxDim = DrawBox.getScreenRect()
     ViewBox.calibrate()
-    const canvasesToClear = _paused? [pathCanvas, dotCanvas] : [pathCanvas]
+    const canvasesToClear = _paused ? [pathCanvas, dotCanvas] : [pathCanvas]
     for (const canvas of canvasesToClear) {
       DrawBox.clear(canvas.getContext("2d"), oldDrawBoxDim)
     }
@@ -370,7 +365,7 @@ async function redraw(force) {
 
   if (_paused) {
     await nextAnimationFrame()
-    drawDots(null, styleGroups.dot)
+    drawDots(_timePaused || 0, styleGroups.dot)
   }
 }
 
@@ -381,14 +376,14 @@ function drawTransformedSegment(ctx, x1, y1, x2, y2) {
   ctx.lineTo(p2[0], p2[1])
 }
 
-
 function drawPaths(pathStyleGroups, forceFullRedraw) {
   if (!_ready) return
 
   const alphaScale = _dotSettings.alphaScale
   const drawAll = forceFullRedraw || FORCE_FULL_REDRAW
   const ctx = pathCanvas.getContext("2d")
-  const drawSegment = (x1,y1,x2,y2) => drawTransformedSegment(ctx, x1,y1,x2,y2)
+  const drawSegment = (x1, y1, x2, y2) =>
+    drawTransformedSegment(ctx, x1, y1, x2, y2)
   let count = 0
 
   for (const { spec, items } of pathStyleGroups) {
@@ -396,7 +391,7 @@ function drawPaths(pathStyleGroups, forceFullRedraw) {
     ctx.globalAlpha = spec.globalAlpha * alphaScale
     ctx.beginPath()
     for (const A of items) {
-      const segMask = drawAll? A.segMask : A.getPartialSegMask()
+      const segMask = drawAll ? A.segMask : A.getPartialSegMask()
       count += A.forEachSegment(drawSegment, segMask)
     }
     ctx.stroke()
@@ -417,7 +412,7 @@ const updateDrawDotFuncs = {
 
     _drawFunction.circle = (x, y) => {
       const size = ds._dotSize
-      const p = ViewBox.transform(x,y)
+      const p = ViewBox.transform(x, y)
       ctx.arc(p[0], p[1], size, 0, pi2)
       ctx.closePath()
     }
@@ -425,7 +420,7 @@ const updateDrawDotFuncs = {
     _drawFunction.square = (x, y) => {
       const size = ds._dotSize
       const dotOffset = size / 2.0
-      const p = ViewBox.transform(x,y)
+      const p = ViewBox.transform(x, y)
       ctx.rect(p[0] - dotOffset, p[1] - dotOffset, size, size)
     }
   },
@@ -459,11 +454,6 @@ const updateDrawDotFuncs = {
       const h = w
       return { x, y, w, h }
     }
-    const gloc = (color, selected) => {
-      const idx = colorIdx[color]
-      const sel = selected ? 1 : 0
-      return loc(idx, sel)
-    }
 
     for (let i = 0; i < n; i++) {
       bufCtx.fillStyle = colorsArray[i]
@@ -480,17 +470,24 @@ const updateDrawDotFuncs = {
       ctx.closePath()
       ctx.fill()
     }
+
+    _drawFunction.circle = (x, y, color) => {
+      const idx = color ? colorIdx(color) : 0
+      const r = loc(idx, 1)
+    }
+
+    _drawFunction.square = (x, y, color) => {
+      const idx = color ? colorIdx(color) : 0
+      const r = loc(idx, 0)
+    }
   },
 }
 
-async function drawDots(ts, dotStyleGroups, forceFullRedraw) {
+async function drawDots(tsecs, dotStyleGroups, forceFullRedraw) {
   if (!_ready || !_dotStyleGroups) return 0
 
   const alphaScale = _dotSettings.alphaScale
   const styleGroups = dotStyleGroups || _dotStyleGroups.values()
-
-  ts = ts || _timePaused || performance.now()
-
   const ctx = dotCanvas.getContext("2d")
 
   const drawAll = forceFullRedraw || FORCE_FULL_REDRAW
@@ -506,8 +503,8 @@ async function drawDots(ts, dotStyleGroups, forceFullRedraw) {
     ctx.globalAlpha = spec.globalAlpha * alphaScale
     ctx.beginPath()
     items.forEach((A) => {
-      const segMask = drawAll? A.segMask : A.getPartialSegMask()
-      count += A.forEachDot(ts + _timeOffset, drawDotFunc, segMask)
+      const segMask = drawAll ? A.segMask : A.getPartialSegMask()
+      count += A.forEachDot(tsecs, drawDotFunc, segMask)
     })
     ctx.fill()
   }
@@ -531,29 +528,30 @@ function drawBoundsBoxes() {
  * Dot settings
  *
  */
-function updateDotSettings(settings, shadowSettings) {
+function updateDotSettings(shadowSettings) {
   const ds = _dotSettings
-  if (settings) Object.assign(ds, settings)
 
-  const vb = ViewBox,
-    zf = vb.zf,
-    zoom = vb.zoom
-  ds._timeScale = ds.C2 / zf
-  ds._period = ds.C1 / zf
-  ds._dotSize = Math.max(1, ~~(ds.dotScale * Math.log(zoom) + 0.5))
+  ds._timeScale = vParams.tau
+  ds._period = vParams.T
+
+  const dotScale = vParams.sz
+  ds._dotSize = Math.max(1, ~~(dotScale * Math.log(ViewBox.zoom) + 0.5))
 
   if (shadowSettings) {
     Object.assign(_options.dotShadows, shadowSettings)
     dotCtxUpdate()
   }
 
-  console.log(ds)
+  if (_paused) {
+    drawDots(_timePaused || 0, null, true)
+  }
   return ds
 }
 
 /*
  * Animation
  */
+let _drawingDots, _timePaused, _paused
 async function animate() {
   // this prevents accidentally running multiple animation loops
   if (_drawingDots || !_ready) return
@@ -561,24 +559,27 @@ async function animate() {
   _drawingDots = true
   _paused = false
 
-  if (_timePaused) {
-    _timeOffset = _timeOrigin - (Date.now() - _timePaused)
-    _timePaused = null
-  } else {
-    _timeOffset = _timeOrigin
-  }
-  _lastCalledTime = performance.now()
-  _fpsInterval = 1000 / TARGET_FPS
-  // console.log(`fpsInterval: ${_fpsInterval}`)
+  const fpsInterval = 1000 / TARGET_FPS
+  const timeOrigin = performance.timing.navigationStart
+  const timeOffset = _timePaused
+    ? 1000 * _timePaused - performance.now() + fpsInterval
+    : timeOrigin
+
+  let lastFrameTime = performance.now() + fpsInterval
+  let nowInSeconds
 
   while (!_paused) {
-    const ts = await nextAnimationFrame()
-    const frameDelay = ts - _lastCalledTime
-    if (frameDelay > _fpsInterval) {
-      _lastCalledTime = ts
+    const timeStamp = await nextAnimationFrame()
+    const frameDelay = timeStamp - lastFrameTime
+
+    if (frameDelay > fpsInterval) {
+      lastFrameTime = timeStamp
+
+      // ts is in milliseconds since navigationStart
+      nowInSeconds = (timeStamp + timeOffset) / 1000
 
       // draw the dots
-      const count = await drawDots(ts)
+      const count = await drawDots(nowInSeconds)
 
       if (MAP_INFO) {
         updateInfoBox(frameDelay, count)
@@ -587,7 +588,7 @@ async function animate() {
   }
 
   _drawingDots = false
-  _timePaused = performance.now() + _timeOffset
+  _timePaused = nowInSeconds
 }
 
 // let infoBoxUpdateCounter = 0

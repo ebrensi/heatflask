@@ -468,7 +468,6 @@ export class Activity {
    * @param  {BitSet} [segMask] the set of segments
    */
   forEachSegment(func, segMask) {
-
     if (!segMask) segMask = this.segMask
     if (!segMask) return 0
 
@@ -494,7 +493,7 @@ export class Activity {
    * @param  {BitSet} [segMask] a set of segments over which to place dots
    * @returns {number} number of dot points
    */
-  forEachDot(now, func, segMask) {
+  forEachDot(nowInSecs, func, segMask) {
     const ds = { T: dotSettings._period, timeScale: dotSettings._timeScale }
     const { T, timeScale } = ds
     const start = this.ts
@@ -507,7 +506,7 @@ export class Activity {
 
     const i0 = segMask.min()
     const times = this.getTimesArray(zoom)
-    const timeOffset = (timeScale * (now - (start + times[i0]))) % T
+    const timeOffset = (timeScale * (nowInSecs - (start + times[i0]))) % T
 
     let count = 0
     segMask.forEach((i) => {

@@ -253,4 +253,12 @@ div.promptButtons {
   display: none;
 }
 
+input.dot-const {
+  width: 90%;
+}
+
+div.dot-const-slider {
+  padding-bottom: 10px;
+  padding-top: 10px;
+}
 /* end-heatflask */

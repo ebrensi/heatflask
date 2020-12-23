@@ -95,7 +95,6 @@ function viewIndex() {
 }
 
 function abortRender() {
-  debugger
   abortQuery()
 }
 
