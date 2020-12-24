@@ -42,11 +42,6 @@ const dotCanvasPane = "shadowPane"
 const pathCanvasPane = "overlayPane"
 const debugCanvasPane = "overlayPane"
 
-// for debug display
-const _fpsRegister = []
-let _fpsSum = 0
-let _roundCount, _duration
-
 let _map, _options
 let _ready
 
@@ -370,17 +365,18 @@ async function redraw(force) {
     dotImageData = new ImageData(D.w, D.h)
   }
 
+
+  await nextAnimationFrame()
+
   if (DEBUG_BORDERS) {
     drawBoundsBoxes()
   }
 
   if (_options.showPaths) {
-    await nextAnimationFrame()
     drawPaths(styleGroups.path, fullRedraw)
   }
 
   if (_paused) {
-    await nextAnimationFrame()
     drawDots(_timePaused || 0, styleGroups.dot)
   }
 }
@@ -627,7 +623,7 @@ async function animate() {
     const frameDelay = timeStamp - lastFrameTime
 
     if (frameDelay > fpsInterval) {
-      lastFrameTime = timeStamp
+      lastFrameTime = timeStamp - (frameDelay % fpsInterval)
 
       // ts is in milliseconds since navigationStart
       nowInSeconds = (timeStamp + timeOffset) / 1000
@@ -645,19 +641,25 @@ async function animate() {
   _timePaused = nowInSeconds
 }
 
-// let infoBoxUpdateCounter = 0
+
+// for debug display
+const fpsRegister = []
+let fpsSum = 0
+let _roundCount, _duration
+const fpsRegisterSize = 30
 function updateInfoBox(dt, count) {
-  _fpsSum += dt
-  _fpsRegister.push(dt)
-  if (_fpsRegister.length !== 30) return
+  fpsSum += dt
+  fpsRegister.push(dt)
+  if (fpsRegister.length !== fpsRegisterSize) return
 
   const roundCount = 10 * Math.round(count / 10)
-  const duration = Math.round(_fpsSum / 30)
-  _fpsSum -= _fpsRegister.shift()
-  if (roundCount !== _roundCount && duration !== _duration) {
+  const duration = Math.round(fpsSum / fpsRegisterSize)
+  fpsSum -= fpsRegister.shift()
+
+  if (roundCount !== _roundCount || duration !== _duration) {
     _infoBox.innerHTML = `${duration} ms (${Math.round(
       1000 / duration
-    )}fps), ${count} pts`
+    )}fps), ${roundCount} pts`
   }
   _roundCount = roundCount
   _duration = duration

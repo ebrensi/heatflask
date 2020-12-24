@@ -22,6 +22,7 @@ export let OFFLINE
  * will be stripped out of a production build by terser's dead-code filter
  */
 export const DEV_BUNDLE = process.env.NODE_ENV !== "production"
+export const MAP_INFO = DEV_BUNDLE
 export const DEBUG_BORDERS = false
 
 const argstring = document.querySelector("#runtime-arguments").innerText
@@ -38,7 +39,6 @@ if (argstring) {
   console.log("No server-sent arguments")
 }
 
-export const MAP_INFO = DEV_BUNDLE
 
 /* Load in the google analytics object if this is
    the production environment and the current user is not
