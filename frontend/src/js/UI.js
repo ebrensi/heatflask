@@ -26,6 +26,7 @@ import infoTabHTML from "bundle-text:../html/main-info.html"
 
 import { makeQuery, abortQuery } from "./DataImport.js"
 import * as table from "./Table.js"
+import { queueTask } from "./appUtil.js"
 
 /* TODO: have two UI submodules: UI-simple.js (single) and
                                  UI-complex.js (multi-user)
@@ -218,5 +219,5 @@ function updateLayers() {
 
 // Make initial query if there is one
 if (qParams.userid) {
-  renderFromQuery()
+  queueTask(renderFromQuery)
 }

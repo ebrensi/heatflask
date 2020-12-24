@@ -365,19 +365,19 @@ async function redraw(force) {
     dotImageData = new ImageData(D.w, D.h)
   }
 
-
-  await nextAnimationFrame()
-
   if (DEBUG_BORDERS) {
     drawBoundsBoxes()
   }
 
-  if (_options.showPaths) {
-    drawPaths(styleGroups.path, fullRedraw)
+  if (_paused) {
+    await nextTask()
+    drawDots(_timePaused || 0, styleGroups.dot)
   }
 
-  if (_paused) {
-    drawDots(_timePaused || 0, styleGroups.dot)
+
+  if (_options.showPaths) {
+    await nextTask()
+    drawPaths(styleGroups.path, fullRedraw)
   }
 }
 
@@ -439,10 +439,7 @@ const updateDrawDotFuncs = {
 
   imageDataTest: function () {
     const ds = _dotSettings
-    const r = 0
-    const g = 0
-    const b = 0
-    const a = 200
+    const defaultColor = {r: 0, g:0, b:0}
 
     _drawFunction.square = (x, y) => {
       const { data, width, height } = dotImageData
@@ -453,7 +450,7 @@ const updateDrawDotFuncs = {
 
       const tx = p[0] - offset - D.x
       const ty = p[1] - offset - D.y
-
+      const color = _drawColor || defaultColor
       const xStart = Math.round(Math.max(0, tx))
       const xEnd = Math.round(Math.min(tx + size, width))
 
@@ -464,16 +461,16 @@ const updateDrawDotFuncs = {
         const colStart = 4 * (firstCol + xStart)
         const colEnd = 4 * (firstCol + xEnd)
         for (let col = colStart; col < colEnd; col += 4) {
-          data[col] = r
-          data[col + 1] = g
-          data[col + 2] = b
-          data[col + 3] = a
+          data[col] = color.r
+          data[col + 1] = color.g
+          data[col + 2] = color.b
+          data[col + 3] = ds.alpha
         }
       }
     }
   },
 
-  imageData: function () {
+  sprites: function () {
     const ctx = dotCanvas.getContext("2d")
     const size = _dotSettings._dotSize
     if (!_dotStyleGroups) return
@@ -531,10 +528,16 @@ const updateDrawDotFuncs = {
   },
 }
 
+let _drawColor = {r: 0, g: 0, b: 0}
+const _re = /(\d+),(\d+),(\d+)/
+function extractColor(colorString) {
+  const result = colorString.match(_re)
+  return {r: result[1], g: result[2], b: result[3]}
+}
+
 async function drawDots(tsecs, dotStyleGroups, forceFullRedraw) {
   if (!_ready || !_dotStyleGroups) return 0
 
-  const alphaScale = _dotSettings.alphaScale
   const styleGroups = dotStyleGroups || _dotStyleGroups.values()
   const ctx = dotCanvas.getContext("2d")
 
@@ -550,6 +553,8 @@ async function drawDots(tsecs, dotStyleGroups, forceFullRedraw) {
   let count = 0
   for (const { spec, items, sprite } of styleGroups) {
     const drawDotFunc = _drawFunction[sprite]
+    _drawColor = extractColor(spec.strokeStyle || spec.fillStyle)
+
     // Object.assign(ctx, spec)
     // ctx.globalAlpha = spec.globalAlpha * alphaScale
     // ctx.beginPath()
@@ -581,11 +586,12 @@ function drawBoundsBoxes() {
 function updateDotSettings(shadowSettings) {
   const ds = _dotSettings
 
-  ds._timeScale = vParams.tau
-  ds._period = vParams.T
+  ds._timeScale = +vParams.tau
+  ds._period = +vParams.T
 
-  const dotScale = vParams.sz
+  const dotScale = +vParams.sz
   ds._dotSize = Math.max(1, ~~(dotScale * Math.log(ViewBox.zoom) + 0.5))
+  ds.alpha = (+vParams.alpha * 256) | 0
 
   if (shadowSettings) {
     Object.assign(_options.dotShadows, shadowSettings)
@@ -646,7 +652,7 @@ async function animate() {
 const fpsRegister = []
 let fpsSum = 0
 let _roundCount, _duration
-const fpsRegisterSize = 30
+const fpsRegisterSize = 20
 function updateInfoBox(dt, count) {
   fpsSum += dt
   fpsRegister.push(dt)

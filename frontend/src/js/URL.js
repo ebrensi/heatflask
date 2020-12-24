@@ -6,6 +6,7 @@ import { qParams, vParams, urlArgDefaults } from "./Model.js"
 // import { dotLayer } from "../DotLayerAPI.js";
 import { defaultBaselayerName, map, sidebar } from "./MapAPI.js"
 
+import { nextTask } from "./appUtil.js"
 /*
  * qArgs are updated on render and vArgs are updated every time the map moves
  */
@@ -89,7 +90,13 @@ export function getUrlString(altQargs) {
   }
 
   // include the global alpha value if it differs from 1
-  if (vParams.alpha < 1) vArgs.alpha = vParams.alpha
+  for (const param of ["T", "tau", "alpha", "sz"]) {
+    const val = vParams[param],
+      defaultVal = urlArgDefaults[param][1]
+    if (val !== defaultVal) {
+      vArgs[param] = val
+    }
+  }
 
   const paramsString = Object.entries({ ...(altQargs || qArgs), ...vArgs })
     .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
@@ -97,7 +104,8 @@ export function getUrlString(altQargs) {
   return `?${paramsString}`
 }
 
-function updateURL() {
+async function updateURL() {
+  await nextTask()
   const newURL = getUrlString()
 
   if (url !== newURL) {

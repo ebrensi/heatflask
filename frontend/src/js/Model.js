@@ -33,7 +33,7 @@ export const urlArgDefaults = {
   paused: [["paused", "pu"], null],
   shadows: [["sh", "shadows"], null],
   paths: [["pa", "paths"], true],
-  alpha: [["alpha"], null],
+  alpha: [["alpha"], 0.8],
   baselayer: [["baselayer", "map", "bl"], null],
 }
 

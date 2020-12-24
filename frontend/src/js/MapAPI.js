@@ -25,7 +25,7 @@ import "../../node_modules/sidebar-v2/js/leaflet-sidebar.js"
 import { tileLayer } from "./TileLayer/TileLayer.Heatflask.js"
 import { flags, vParams, currentUser } from "./Model.js"
 import { items } from "./DotLayer/ActivityCollection.js"
-import { HHMMSS } from "./appUtil.js"
+import { HHMMSS, queueTask } from "./appUtil.js"
 import strava_logo from "url:../images/pbs4.png"
 import heatflask_logo from "url:../images/logo.png"
 
@@ -164,7 +164,7 @@ for (const name in baselayers) {
 // Now vParams.baselayer becomes the actual baselayer, not just the name
 const currentBaselayer = baselayers[blName]
 vParams.baselayer = currentBaselayer
-currentBaselayer.addTo(map)
+queueTask(() => currentBaselayer.addTo(map))
 
 map.on("baselayerchange", (e) => {
   vParams.baselayer = e.layer

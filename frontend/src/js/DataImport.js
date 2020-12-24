@@ -2,6 +2,8 @@ import { flags } from "./Model.js"
 import { controlWindow } from "./MapAPI.js"
 import queryBackend from "./Socket.js"
 import * as ActivityCollection from "./DotLayer/ActivityCollection.js"
+import { nextTask } from "./appUtil.js"
+
 let numActivities, count
 
 /*
