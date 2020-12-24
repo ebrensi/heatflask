@@ -6,7 +6,6 @@ import { map } from "./MapAPI.js"
 import { dotLayer } from "./DotLayerAPI.js"
 import { vParams } from "./Model.js"
 
-const ds = dotLayer.dotSettings
 const update = dotLayer.updateDotSettings
 const options = dotLayer.options
 

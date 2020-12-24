@@ -25,7 +25,7 @@ export { _dotSettings as dotSettings }
  * and hogging up CPU cycles we set a minimum delay between redraws
  */
 const FORCE_FULL_REDRAW = true
-const CONTINUOUS_REDRAWS = true
+const CONTINUOUS_REDRAWS = false
 const MIN_REDRAW_DELAY = 1000 // milliseconds
 const TWO_PI = 2 * Math.PI
 const TARGET_FPS = 30
@@ -36,6 +36,8 @@ const _drawFunction = {
 }
 
 let dotCanvas, pathCanvas, debugCanvas
+let dotImageData
+
 const dotCanvasPane = "shadowPane"
 const pathCanvasPane = "overlayPane"
 const debugCanvasPane = "overlayPane"
@@ -146,7 +148,7 @@ export const DotLayer = Layer.extend({
     ViewBox.updateZoom()
     dotCtxUpdate()
     updateDotSettings()
-    updateDrawDotFuncs.default()
+    updateDrawDotFuncs.imageDataTest()
     _ready = true
     await redraw(true)
 
@@ -217,8 +219,13 @@ function dotCtxUpdate() {
   }
 }
 
-async function onResize(resizeEvent) {
-  ViewBox.resize(resizeEvent.newSize)
+async function onResize() {
+  const newMapSize = _map.getSize()
+  const { x, y } = newMapSize
+  const { width, height } = dotCanvas
+  if (x === width && y === height) return
+
+  ViewBox.resize(newMapSize)
   dotCtxUpdate()
   await redraw(true)
 }
@@ -337,7 +344,7 @@ async function redraw(force) {
   if (fullRedraw) {
     const oldDrawBoxDim = DrawBox.getScreenRect()
     ViewBox.calibrate()
-    const canvasesToClear = _paused ? [pathCanvas, dotCanvas] : [pathCanvas]
+    const canvasesToClear = [pathCanvas, dotCanvas]
     for (const canvas of canvasesToClear) {
       DrawBox.clear(canvas.getContext("2d"), oldDrawBoxDim)
     }
@@ -353,6 +360,15 @@ async function redraw(force) {
 
   const styleGroups = await ActivityCollection.updateGroups()
   _dotStyleGroups = styleGroups.dot
+
+  const D = DrawBox.getScreenRect()
+  if (
+    !dotImageData ||
+    dotImageData.width !== D.w ||
+    dotImageData.height !== D.h
+  ) {
+    dotImageData = new ImageData(D.w, D.h)
+  }
 
   if (DEBUG_BORDERS) {
     drawBoundsBoxes()
@@ -425,6 +441,42 @@ const updateDrawDotFuncs = {
     }
   },
 
+  imageDataTest: function () {
+    const ds = _dotSettings
+    const r = 0
+    const g = 0
+    const b = 0
+    const a = 200
+
+    _drawFunction.square = (x, y) => {
+      const { data, width, height } = dotImageData
+      const D = _lastDotDrawBox
+      const size = ds._dotSize
+      const offset = size / 2
+      const p = ViewBox.transform(x, y)
+
+      const tx = p[0] - offset - D.x
+      const ty = p[1] - offset - D.y
+
+      const xStart = Math.round(Math.max(0, tx))
+      const xEnd = Math.round(Math.min(tx + size, width))
+
+      const yStart = Math.round(Math.max(0, ty))
+      const yEnd = Math.round(Math.min(ty + size, height))
+      for (let row = yStart; row < yEnd; row++) {
+        const firstCol = row * width
+        const colStart = 4 * (firstCol + xStart)
+        const colEnd = 4 * (firstCol + xEnd)
+        for (let col = colStart; col < colEnd; col += 4) {
+          data[col] = r
+          data[col + 1] = g
+          data[col + 2] = b
+          data[col + 3] = a
+        }
+      }
+    }
+  },
+
   imageData: function () {
     const ctx = dotCanvas.getContext("2d")
     const size = _dotSettings._dotSize
@@ -492,24 +544,26 @@ async function drawDots(tsecs, dotStyleGroups, forceFullRedraw) {
 
   const drawAll = forceFullRedraw || FORCE_FULL_REDRAW
 
+  const D = (_lastDotDrawBox = DrawBox.getScreenRect())
+
   if (drawAll) {
     DrawBox.clear(ctx, _lastDotDrawBox || DrawBox.defaultRect())
+    dotImageData.data.fill(0, 0)
   }
 
   let count = 0
   for (const { spec, items, sprite } of styleGroups) {
     const drawDotFunc = _drawFunction[sprite]
-    Object.assign(ctx, spec)
-    ctx.globalAlpha = spec.globalAlpha * alphaScale
-    ctx.beginPath()
+    // Object.assign(ctx, spec)
+    // ctx.globalAlpha = spec.globalAlpha * alphaScale
+    // ctx.beginPath()
     items.forEach((A) => {
       const segMask = drawAll ? A.segMask : A.getPartialSegMask()
       count += A.forEachDot(tsecs, drawDotFunc, segMask)
     })
-    ctx.fill()
+    // ctx.fill()
   }
-
-  _lastDotDrawBox = DrawBox.getScreenRect()
+  ctx.putImageData(dotImageData, D.x, D.y)
   return count
 }
 
