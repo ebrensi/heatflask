@@ -186,7 +186,7 @@ export function clearSelections() {
   for (const A of items.values()) {
     if (A.selected) select(A, false)
   }
-  dotLayer.redraw()
+  dotLayer.redraw(true)
 }
 
 tableElement.addEventListener("click", function (e) {
