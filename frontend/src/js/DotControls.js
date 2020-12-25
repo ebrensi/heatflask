@@ -66,7 +66,6 @@ vParams.onChange("paths", (paths) => {
   options.showPaths = paths
 })
 
-
 for (const p of ["tau", "T", "sz", "alpha"]) {
   vParams.onChange(p, update)
 }

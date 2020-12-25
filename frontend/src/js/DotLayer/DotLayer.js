@@ -372,7 +372,6 @@ async function redraw(force) {
     drawDots(_timePaused || 0)
   }
 
-
   if (_options.showPaths) {
     await nextTask()
     drawPaths(fullRedraw)
@@ -436,7 +435,7 @@ const updateDrawDotFuncs = {
   },
 
   imageDataTest: function () {
-    const {x: Dx, y: Dy} = DrawBox.getScreenRect()
+    const { x: Dx, y: Dy } = DrawBox.getScreenRect()
     const ds = _dotSettings
     const { width, height } = dotImageData
     const buf32 = new Uint32Array(dotImageData.data.buffer) // deal with endianness!
@@ -463,11 +462,10 @@ const updateDrawDotFuncs = {
       const tx = (p[0] - dotOffset - Dx + 0.5) | 0
       const ty = (p[1] - dotOffset - Dy + 0.5) | 0
 
-
-      const xStart = (tx < 0)? 0 : tx  // Math.max(0, tx)
+      const xStart = tx < 0 ? 0 : tx // Math.max(0, tx)
       const xEnd = Math.min(tx + size, width)
 
-      const yStart = (ty<0)? 0 : ty
+      const yStart = ty < 0 ? 0 : ty
       const yEnd = Math.min(ty + size, height)
 
       for (let row = yStart; row < yEnd; row++) {
@@ -487,20 +485,21 @@ const updateDrawDotFuncs = {
       const tx = (p[0] - Dx + 0.5) | 0
       const ty = (p[1] - Dy + 0.5) | 0
 
-      const r2 = r * r;
-      for (let cy = -r+1; cy < r; cy++) {
+      const r2 = r * r
+      for (let cy = -r + 1; cy < r; cy++) {
         const offset = (cy + ty) * width
         const cx = Math.sqrt(r2 - cy * cy)
         const colStart = (offset + tx - cx) | 0
-        const colEnd   = (offset + tx + cx) | 0
+        const colEnd = (offset + tx + cx) | 0
         buf32.fill(color, colStart, colEnd)
       }
     }
 
-
     _drawFunction.after = () => {
       if (_options.dotShadows.enabled) {
-        createImageBitmap(dotImageData).then((img) => ctx.drawImage(img, Dx, Dy))
+        createImageBitmap(dotImageData).then((img) =>
+          ctx.drawImage(img, Dx, Dy)
+        )
       } else {
         ctx.putImageData(dotImageData, Dx, Dy)
       }
@@ -667,7 +666,6 @@ async function animate() {
   _drawingDots = false
   _timePaused = nowInSeconds
 }
-
 
 // for debug display
 const fpsRegister = []

@@ -39,7 +39,6 @@ if (argstring) {
   console.log("No server-sent arguments")
 }
 
-
 /* Load in the google analytics object if this is
    the production environment and the current user is not
    an admin

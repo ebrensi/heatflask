@@ -8,8 +8,8 @@
   },
   "description": "Animated Movement Data Visualization for Strava Tracks",
   "scripts": {
-    "build": "npm run format; parcel build ./src/html/*.html",
-    "watch": "npm run clean; parcel watch --log-level verbose ./src/html/*.html",
+    "build": "npm run clean; npm run format; parcel build ./src/html/*.html",
+    "watch": "parcel watch --log-level verbose ./src/html/*.html",
     "serve": "parcel serve --log-level verbose ./src/html/*.html",
     "test": "parcel serve --log-level verbose ./test/*.html",
     "clean": "rm -rf dist/* .parcel-cache/*",
