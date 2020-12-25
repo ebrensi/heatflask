@@ -414,26 +414,6 @@ function drawPaths(forceFullRedraw) {
  */
 
 const updateDrawDotFuncs = {
-  default: function () {
-    const ctx = dotCanvas.getContext("2d")
-    const ds = _dotSettings
-    const pi2 = TWO_PI
-
-    _drawFunction.circle = (x, y) => {
-      const size = ds._dotSize
-      const p = ViewBox.transform(x, y)
-      ctx.arc(p[0], p[1], size, 0, pi2)
-      ctx.closePath()
-    }
-
-    _drawFunction.square = (x, y) => {
-      const size = ds._dotSize
-      const dotOffset = size / 2.0
-      const p = ViewBox.transform(x, y)
-      ctx.rect(p[0] - dotOffset, p[1] - dotOffset, size, size)
-    }
-  },
-
   imageDataTest: function () {
     const { x: Dx, y: Dy } = DrawBox.getScreenRect()
     const ds = _dotSettings
@@ -509,7 +489,6 @@ const updateDrawDotFuncs = {
   sprites: function () {
     const ctx = dotCanvas.getContext("2d")
     const size = _dotSettings._dotSize
-    if (!_dotStyleGroups) return
 
     // Make sprite sheet
     const bufferCanvas = document.createElement("canvas")
