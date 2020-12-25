@@ -227,7 +227,7 @@ tableElement.addEventListener("click", function (e) {
     zoomToSelectedPaths()
   }
 
-  dotLayer.redraw()
+  dotLayer.redraw(true)
 })
 
 /*

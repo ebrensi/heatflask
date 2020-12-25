@@ -24,7 +24,7 @@ function doneSelecting(obj) {
     selectButton.state("not-selecting")
   }
 
-  dotLayer.redraw()
+  dotLayer.redraw(true)
 
   /*
    * handle_path_selections returns the id of the single

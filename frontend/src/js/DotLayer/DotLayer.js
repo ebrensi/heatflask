@@ -9,7 +9,7 @@ import * as ViewBox from "./ViewBox.js"
 import * as DrawBox from "./DrawBox.js"
 import * as ActivityCollection from "./ActivityCollection.js"
 import { MAP_INFO } from "../Env.js"
-import { nextTask, nextAnimationFrame } from "../appUtil.js"
+import { nextTask, nextAnimationFrame, rgbaToUint32 } from "../appUtil.js"
 import { DEBUG_BORDERS } from "../Env.js"
 import { vParams } from "../Model.js"
 // import * as WorkerPool from "./WorkerPool.js"
@@ -46,9 +46,8 @@ let _map, _options
 let _ready
 
 let _gifPatch
-let _dotStyleGroups
+let _styleGroups
 let _lastRedraw = 0
-let _lastDotDrawBox
 
 /*
  * Display for debugging
@@ -143,7 +142,6 @@ export const DotLayer = Layer.extend({
     ViewBox.updateZoom()
     dotCtxUpdate()
     updateDotSettings()
-    updateDrawDotFuncs.imageDataTest()
     _ready = true
     await redraw(true)
 
@@ -353,8 +351,7 @@ async function redraw(force) {
     ActivityCollection.resetSegMasks()
   }
 
-  const styleGroups = await ActivityCollection.updateGroups()
-  _dotStyleGroups = styleGroups.dot
+  _styleGroups = await ActivityCollection.updateGroups()
 
   const D = DrawBox.getScreenRect()
   if (
@@ -362,7 +359,8 @@ async function redraw(force) {
     dotImageData.width !== D.w ||
     dotImageData.height !== D.h
   ) {
-    dotImageData = new ImageData(D.w, D.h)
+    dotImageData = dotCanvas.getContext("2d").createImageData(D.w, D.h)
+    updateDrawDotFuncs.imageDataTest()
   }
 
   if (DEBUG_BORDERS) {
@@ -371,13 +369,13 @@ async function redraw(force) {
 
   if (_paused) {
     await nextTask()
-    drawDots(_timePaused || 0, styleGroups.dot)
+    drawDots(_timePaused || 0)
   }
 
 
   if (_options.showPaths) {
     await nextTask()
-    drawPaths(styleGroups.path, fullRedraw)
+    drawPaths(fullRedraw)
   }
 }
 
@@ -388,7 +386,7 @@ function drawTransformedSegment(ctx, x1, y1, x2, y2) {
   ctx.lineTo(p2[0], p2[1])
 }
 
-function drawPaths(pathStyleGroups, forceFullRedraw) {
+function drawPaths(forceFullRedraw) {
   if (!_ready) return
 
   const alphaScale = _dotSettings.alphaScale
@@ -398,7 +396,7 @@ function drawPaths(pathStyleGroups, forceFullRedraw) {
     drawTransformedSegment(ctx, x1, y1, x2, y2)
   let count = 0
 
-  for (const { spec, items } of pathStyleGroups) {
+  for (const { spec, items } of _styleGroups.path) {
     Object.assign(ctx, spec)
     ctx.globalAlpha = spec.globalAlpha * alphaScale
     ctx.beginPath()
@@ -438,34 +436,73 @@ const updateDrawDotFuncs = {
   },
 
   imageDataTest: function () {
+    const {x: Dx, y: Dy} = DrawBox.getScreenRect()
     const ds = _dotSettings
-    const defaultColor = {r: 0, g:0, b:0}
+    const { width, height } = dotImageData
+    const buf32 = new Uint32Array(dotImageData.data.buffer) // deal with endianness!
+    const ctx = dotCanvas.getContext("2d")
+    let drawColor
+
+    _drawFunction.before = () => {
+      buf32.fill(0)
+      if (_options.dotShadows.enabled) {
+        DrawBox.clear(ctx)
+      }
+    }
+
+    _drawFunction.setColor = (color) => {
+      drawColor = color
+    }
 
     _drawFunction.square = (x, y) => {
-      const { data, width, height } = dotImageData
-      const D = _lastDotDrawBox
       const size = ds._dotSize
-      const offset = size / 2
+      const dotOffset = size / 2
+      const color = drawColor
+
+      const p = ViewBox.transform(x, y)
+      const tx = (p[0] - dotOffset - Dx + 0.5) | 0
+      const ty = (p[1] - dotOffset - Dy + 0.5) | 0
+
+
+      const xStart = (tx < 0)? 0 : tx  // Math.max(0, tx)
+      const xEnd = Math.min(tx + size, width)
+
+      const yStart = (ty<0)? 0 : ty
+      const yEnd = Math.min(ty + size, height)
+
+      for (let row = yStart; row < yEnd; row++) {
+        const offset = row * width
+        const colStart = offset + xStart
+        const colEnd = offset + xEnd
+        buf32.fill(color, colStart, colEnd)
+      }
+    }
+
+    _drawFunction.circle = (x, y) => {
+      const r = ds._dotSize
+      const color = drawColor
+
       const p = ViewBox.transform(x, y)
 
-      const tx = p[0] - offset - D.x
-      const ty = p[1] - offset - D.y
-      const color = _drawColor || defaultColor
-      const xStart = Math.round(Math.max(0, tx))
-      const xEnd = Math.round(Math.min(tx + size, width))
+      const tx = (p[0] - Dx + 0.5) | 0
+      const ty = (p[1] - Dy + 0.5) | 0
 
-      const yStart = Math.round(Math.max(0, ty))
-      const yEnd = Math.round(Math.min(ty + size, height))
-      for (let row = yStart; row < yEnd; row++) {
-        const firstCol = row * width
-        const colStart = 4 * (firstCol + xStart)
-        const colEnd = 4 * (firstCol + xEnd)
-        for (let col = colStart; col < colEnd; col += 4) {
-          data[col] = color.r
-          data[col + 1] = color.g
-          data[col + 2] = color.b
-          data[col + 3] = ds.alpha
-        }
+      const r2 = r * r;
+      for (let cy = -r+1; cy < r; cy++) {
+        const offset = (cy + ty) * width
+        const cx = Math.sqrt(r2 - cy * cy)
+        const colStart = (offset + tx - cx) | 0
+        const colEnd   = (offset + tx + cx) | 0
+        buf32.fill(color, colStart, colEnd)
+      }
+    }
+
+
+    _drawFunction.after = () => {
+      if (_options.dotShadows.enabled) {
+        createImageBitmap(dotImageData).then((img) => ctx.drawImage(img, Dx, Dy))
+      } else {
+        ctx.putImageData(dotImageData, Dx, Dy)
       }
     }
   },
@@ -528,43 +565,27 @@ const updateDrawDotFuncs = {
   },
 }
 
-let _drawColor = {r: 0, g: 0, b: 0}
 const _re = /(\d+),(\d+),(\d+)/
 function extractColor(colorString) {
   const result = colorString.match(_re)
-  return {r: result[1], g: result[2], b: result[3]}
+  return rgbaToUint32(result[1], result[2], result[3], _dotSettings.alpha)
 }
 
-async function drawDots(tsecs, dotStyleGroups, forceFullRedraw) {
-  if (!_ready || !_dotStyleGroups) return 0
+async function drawDots(tsecs) {
+  if (!_ready || !_styleGroups) return 0
 
-  const styleGroups = dotStyleGroups || _dotStyleGroups.values()
-  const ctx = dotCanvas.getContext("2d")
-
-  const drawAll = forceFullRedraw || FORCE_FULL_REDRAW
-
-  const D = (_lastDotDrawBox = DrawBox.getScreenRect())
-
-  if (drawAll) {
-    DrawBox.clear(ctx, _lastDotDrawBox || DrawBox.defaultRect())
-    dotImageData.data.fill(0, 0)
-  }
+  _drawFunction.before()
 
   let count = 0
-  for (const { spec, items, sprite } of styleGroups) {
+  for (const { spec, items, sprite } of _styleGroups.dot) {
     const drawDotFunc = _drawFunction[sprite]
-    _drawColor = extractColor(spec.strokeStyle || spec.fillStyle)
+    _drawFunction.setColor(extractColor(spec.strokeStyle || spec.fillStyle))
 
-    // Object.assign(ctx, spec)
-    // ctx.globalAlpha = spec.globalAlpha * alphaScale
-    // ctx.beginPath()
     items.forEach((A) => {
-      const segMask = drawAll ? A.segMask : A.getPartialSegMask()
-      count += A.forEachDot(tsecs, drawDotFunc, segMask)
+      count += A.forEachDot(tsecs, drawDotFunc)
     })
-    // ctx.fill()
   }
-  ctx.putImageData(dotImageData, D.x, D.y)
+  _drawFunction.after()
   return count
 }
 
@@ -652,7 +673,7 @@ async function animate() {
 const fpsRegister = []
 let fpsSum = 0
 let _roundCount, _duration
-const fpsRegisterSize = 20
+const fpsRegisterSize = 32
 function updateInfoBox(dt, count) {
   fpsSum += dt
   fpsRegister.push(dt)

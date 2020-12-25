@@ -172,3 +172,26 @@ export function nextAnimationFrame() {
   window.requestAnimationFrame(resolve)
   return promise
 }
+
+/*
+ * for graphics and pixel manipulation
+ */
+function isLittleEndian() {
+  // from TooTallNate / endianness.js.   https://gist.github.com/TooTallNate/4750953
+  const b = new ArrayBuffer(4)
+  const a = new Uint32Array(b)
+  const c = new Uint8Array(b)
+  a[0] = 0xdeadbeef
+  if (c[0] == 0xef) return true
+  if (c[0] == 0xde) return false
+  throw new Error("unknown endianness")
+}
+
+const _littleEndian = isLittleEndian()
+export function rgbaToUint32(r, g, b, a) {
+  if (_littleEndian) {
+    return (a << 24) | (b << 16) | (g << 8) | r
+  } else {
+    return (r << 24) | (g << 16) | (b << 8) | a
+  }
+}
