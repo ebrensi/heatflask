@@ -8,6 +8,7 @@ import { Control } from "../myLeaflet.js"
 import * as ViewBox from "./ViewBox.js"
 import * as DrawBox from "./DrawBox.js"
 import * as ActivityCollection from "./ActivityCollection.js"
+import * as PixelGraphics from "./PixelGraphics.js"
 import { MAP_INFO } from "../Env.js"
 import { nextTask, nextAnimationFrame, rgbaToUint32 } from "../appUtil.js"
 import { DEBUG_BORDERS } from "../Env.js"
@@ -36,7 +37,7 @@ const _drawFunction = {
 }
 
 let dotCanvas, pathCanvas, debugCanvas
-let dotImageData
+let dotImageData, pathImageData
 
 const dotCanvasPane = "shadowPane"
 const pathCanvasPane = "overlayPane"
@@ -363,6 +364,15 @@ async function redraw(force) {
     updateDrawDotFuncs.imageDataTest()
   }
 
+  if (
+    !pathImageData ||
+    pathImageData.width !== D.w ||
+    pathImageData.height !== D.h
+  ) {
+    pathImageData = pathCanvas.getContext("2d").createImageData(D.w, D.h)
+    PixelGraphics.setImageData(pathImageData)
+  }
+
   if (DEBUG_BORDERS) {
     drawBoundsBoxes()
   }
@@ -378,33 +388,52 @@ async function redraw(force) {
   }
 }
 
-function drawTransformedSegment(ctx, x1, y1, x2, y2) {
-  const p1 = ViewBox.transform(x1, y1)
-  ctx.moveTo(p1[0], p1[1])
-  const p2 = ViewBox.transform(x2, y2)
-  ctx.lineTo(p2[0], p2[1])
-}
-
 function drawPaths(forceFullRedraw) {
   if (!_ready) return
 
-  const alphaScale = _dotSettings.alphaScale
-  const drawAll = forceFullRedraw || FORCE_FULL_REDRAW
-  const ctx = pathCanvas.getContext("2d")
-  const drawSegment = (x1, y1, x2, y2) =>
-    drawTransformedSegment(ctx, x1, y1, x2, y2)
-  let count = 0
+  const t0 = performance.now()
 
+  // const alphaScale = _dotSettings.alphaScale
+  const drawAll = forceFullRedraw || FORCE_FULL_REDRAW
+  const { x: Dx, y: Dy, w: Dw, h: Dh } = DrawBox.getScreenRect()
+  const ctx = pathCanvas.getContext("2d")
+
+  const drawSegment = (x0, y0, x1, y1) => {
+    const [tx0, ty0] = ViewBox.transform(x0, y0)
+    const [tx1, ty1] = ViewBox.transform(x1, y1)
+    if (!tx0 || !ty0 || !tx1 || !ty1) return
+
+    x0 = Math.round(tx0-Dx)
+    y0 = Math.round(ty0-Dy)
+    x1 = Math.round(tx1-Dx)
+    y1 = Math.round(ty1-Dy)
+    if (x0 < 0) x0 = 0
+    else if (x0 > Dw) x0 = Dw
+    if (x1 < 0) x1 = 0
+    else if (x1 > Dw) x1 = Dw
+    if (y0 < 0) y0 = 0
+    else if (y0 > Dh) y0 = Dh
+    if (y1 < 0) y1 = 0
+    else if (y1 > Dh) y1 = Dh
+    PixelGraphics.drawSegment(x0, y0, x1, y1)
+  }
+
+  if (drawAll) PixelGraphics.clear()
+
+  let count = 0
   for (const { spec, items } of _styleGroups.path) {
-    Object.assign(ctx, spec)
-    ctx.globalAlpha = spec.globalAlpha * alphaScale
-    ctx.beginPath()
+    PixelGraphics.setColor(extractColor(spec.strokeStyle))
+    PixelGraphics.setWidth(spec.lineWidth)
     for (const A of items) {
       const segMask = drawAll ? A.segMask : A.getPartialSegMask()
       count += A.forEachSegment(drawSegment, segMask)
     }
-    ctx.stroke()
   }
+  ctx.putImageData(pathImageData, Dx, Dy)
+  // createImageBitmap(pathImageData).then((img) =>
+  //   ctx.drawImage(img, Dx, Dy)
+  // )
+  console.log(`drawPaths: ${count}, ${Math.round(performance.now() - t0)}ms`)
   return count
 }
 
@@ -545,6 +574,13 @@ const updateDrawDotFuncs = {
 
 const _re = /(\d+),(\d+),(\d+)/
 function extractColor(colorString) {
+  if (colorString[0] === "#") {
+    const num = parseInt(colorString.replace("#", "0x"))
+    const r = (num & 0xff0000) >> 16
+    const g = (num & 0x00ff00) >> 8
+    const b = (num & 0x0000ff)
+    return rgbaToUint32(r,g,b,0xff)
+  }
   const result = colorString.match(_re)
   return rgbaToUint32(result[1], result[2], result[3], _dotSettings.alpha)
 }

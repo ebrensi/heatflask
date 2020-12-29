@@ -2,9 +2,7 @@
  * some functions for writing to an imageData object
  */
 
-
-let imageData, color32
-const { width, data } = imageData
+let height, width, buf32, color32, lineWidth
 
 function isLittleEndian() {
   // from TooTallNate / endianness.js.   https://gist.github.com/TooTallNate/4750953
@@ -18,12 +16,39 @@ function isLittleEndian() {
 }
 
 const _littleEndian = isLittleEndian()
-export function rgbaToUint32(r, g, b, a) {
-  if (_littleEndian) {
-    return (a << 24) | (b << 16) | (g << 8) | r
+
+const rgbaToUint32 = _littleEndian
+  ? (r, g, b, a) => (a << 24) | (b << 16) | (g << 8) | r
+  : (r, g, b, a) => (r << 24) | (g << 16) | (b << 8) | a
+
+const alphaMask = rgbaToUint32(255, 255, 255, 0)
+const shift = _littleEndian ? 24 : 0
+
+export function setColor(r, g, b) {
+  if (!g && !b) {
+    color32 = r | (0xff << shift)
   } else {
-    return (r << 24) | (g << 16) | (b << 8) | a
+    color32 = rgbaToUint32(r, g, b, 255)
   }
+}
+
+export function setWidth(w) {
+  lineWidth = w
+}
+
+function withAlpha(a) {
+  return (color32 & alphaMask) | ((255 - a) << shift)
+  // return color32
+}
+
+export function setImageData(imageData) {
+  width = imageData.width
+  height = imageData.height
+  buf32 = new Uint32Array(imageData.data.buffer)
+}
+
+export function clear() {
+  buf32.fill(0)
 }
 
 /*
@@ -31,26 +56,23 @@ export function rgbaToUint32(r, g, b, a) {
  * http://members.chello.at/~easyfilter/bresenham.html
  */
 function setPixel(x, y) {
-  data[y*width + x] = color32
+  buf32[y * width + x] = color32
 }
 
-function setPixelAA(x, y, i) {
-  i = 1 - i / 255
-  if (context.getImageData(x * zoom, y * zoom, 1, 1).data[3] > i) return
-  context.fillStyle = "rgba(0,0,0," + i + ")"
-  context.fillRect(x * zoom, y * zoom, zoom, zoom)
+function setPixelAA(x, y, a) {
+  const color = withAlpha(Math.round(a))
+  buf32[y * width + x] = color
 }
 
 function plotLineAA(x0, y0, x1, y1) {
-  /* draw a black (0) anti-aliased line on white (255) background */
-  var dx = Math.abs(x1 - x0),
-    sx = x0 < x1 ? 1 : -1
-  var dy = Math.abs(y1 - y0),
-    sy = y0 < y1 ? 1 : -1
-  var err = dx - dy,
-    e2,
-    x2 /* error value e_xy */
-  var ed = dx + dy == 0 ? 1 : Math.sqrt(dx * dx + dy * dy)
+  const dx = Math.abs(x1 - x0)
+  const sx = x0 < x1 ? 1 : -1
+  const dy = Math.abs(y1 - y0)
+  const sy = y0 < y1 ? 1 : -1
+  let err = dx - dy
+  let e2
+  let x2 /* error value e_xy */
+  const ed = dx + dy == 0 ? 1 : Math.sqrt(dx * dx + dy * dy)
 
   for (;;) {
     /* pixel loop */
@@ -74,14 +96,15 @@ function plotLineAA(x0, y0, x1, y1) {
   }
 }
 
-function plotLineWidth(x0, y0, x1, y1, th) {
+export function drawSegment(x0, y0, x1, y1, th) {
+  if (!th) th = lineWidth
   /* plot an anti-aliased line of width th pixel */
-  var dx = Math.abs(x1 - x0),
-    sx = x0 < x1 ? 1 : -1
-  var dy = Math.abs(y1 - y0),
-    sy = y0 < y1 ? 1 : -1
-  var err,
-    e2 = Math.sqrt(dx * dx + dy * dy) /* length */
+  const sx = x0 < x1 ? 1 : -1
+  const sy = y0 < y1 ? 1 : -1
+  let dx = Math.abs(x1 - x0)
+  let dy = Math.abs(y1 - y0)
+  let e2 = Math.sqrt(dx * dx + dy * dy) /* length */
+  let err
 
   if (th <= 1 || e2 == 0) return plotLineAA(x0, y0, x1, y1) /* assert */
   dx *= 255 / e2
