@@ -368,7 +368,6 @@ function imageDataMoveRect(imageData, rect, shiftX, shiftY) {
     }
 
     imageDataClearRect(imageData, clearRegion)
-
   } else if (d.y > s.y) {
     /* otherwise we copy from the bottom row up */
     for (let row = s.h - 1; row >= 0; row--) moveRow(row)
@@ -382,7 +381,6 @@ function imageDataMoveRect(imageData, rect, shiftX, shiftY) {
     }
 
     imageDataClearRect(imageData, clearRegion)
-
   } else {
     /* In the rare case that the source and dest rectangles are
      *  horizontally adjacent to each other, we cannot copy rows directly

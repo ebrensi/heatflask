@@ -15,7 +15,7 @@
     "clean": "rm -rf dist/* .parcel-cache/*",
     "check": "prettier --check ./src/",
     "format": "prettier --write ./src/",
-    "docs": "documentation build ./src/js/main.js -f html -o ./dev-docs/"
+    "docs": "documentation build --shallow --document-exported ./src/js/** -f html -o ./dev-docs/"
   },
   "author": "Efrem Rensi",
   "license": "ISC",

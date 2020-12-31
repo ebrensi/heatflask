@@ -372,7 +372,6 @@ export function resetSegMasks() {
   }
 }
 
-
 // // Debug info box
 // let _infoBox
 // const InfoViewer = Control.extend({
