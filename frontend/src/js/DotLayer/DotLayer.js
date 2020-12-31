@@ -54,7 +54,7 @@ let _styleGroups
 let _lastRedraw = 0
 
 /*
- * Display for debugging
+ * Displays for debugging
  */
 let _infoBox
 const InfoViewer = Control.extend({
@@ -187,9 +187,9 @@ function addCanvasOverlay(pane) {
 
 function assignEventHandlers() {
   const events = {
-    move: CONTINUOUS_PAN_REDRAWS? onMove : undefined,
+    move: CONTINUOUS_PAN_REDRAWS ? onMove : undefined,
     moveend: onMoveEnd,
-    zoom: CONTINUOUS_PINCH_REDRAWS? onZoom : undefined,
+    zoom: CONTINUOUS_PINCH_REDRAWS ? onZoom : undefined,
     resize: onResize,
   }
 
@@ -248,7 +248,7 @@ async function onZoom(e) {
 
     _lastRedraw = ts
     await redraw()
-    }
+  }
 }
 
 /*
@@ -274,7 +274,7 @@ async function onMoveEnd() {
 }
 
 function moveDrawBox() {
-  const t0 = Date.now()
+  // const t0 = Date.now()
 
   // Get the current draw rectangle in screen coordinates (relative to map pane position)
   const D = DrawBox.getScreenRect()
@@ -327,13 +327,14 @@ function imageDataMoveRect(imageData, rect, shiftX, shiftY) {
     return
   }
 
-  // const debugCtx = debugCanvas.getContext("2d")
-  // debugCtx.strokeStyle = "#000000"
-  // DrawBox.draw(debugCtx, s) // draw source rect
-  // debugCtx.fillText("source", s.x + 20, s.y + 20)
-  // DrawBox.draw(debugCtx, d) // draw dest rect
-  // debugCtx.fillText("dest", d.x + 20, d.y + 20)
-
+  if (DEBUG_BORDERS) {
+    const debugCtx = debugCanvas.getContext("2d")
+    debugCtx.strokeStyle = "#000000"
+    DrawBox.draw(debugCtx, s) // draw source rect
+    debugCtx.fillText("source", s.x + 20, s.y + 20)
+    DrawBox.draw(debugCtx, d) // draw dest rect
+    debugCtx.fillText("dest", d.x + 20, d.y + 20)
+  }
 
   const moveRow = (row) => {
     const sOffset = (s.y + row) * width
@@ -360,8 +361,12 @@ function imageDataMoveRect(imageData, rect, shiftX, shiftY) {
     for (let row = 0; row < s.h; row++) moveRow(row)
 
     const clearRegion = { x: r.x, y: r.y, w: r.w, h: r.h - s.h }
-    // DrawBox.draw(debugCtx, clearRegion) // draw source rect
-    // debugCtx.fillText("clear", clearRegion.x + 20, clearRegion.y + 20)
+    if (DEBUG_BORDERS) {
+      const debugCtx = debugCanvas.getContext("2d")
+      DrawBox.draw(debugCtx, clearRegion) // draw source rect
+      debugCtx.fillText("clear", clearRegion.x + 20, clearRegion.y + 20)
+    }
+
     imageDataClearRect(imageData, clearRegion)
 
   } else if (d.y > s.y) {
@@ -370,11 +375,56 @@ function imageDataMoveRect(imageData, rect, shiftX, shiftY) {
 
     // and clear what's left of source rectangle
     const clearRegion = { x: r.x, y: r.y + s.h, w: r.w, h: r.h - s.h }
-    // DrawBox.draw(debugCtx, clearRegion) // draw source rect
-    // debugCtx.fillText("clear", clearRegion.x + 20, clearRegion.y + 20)
+    if (DEBUG_BORDERS) {
+      const debugCtx = debugCanvas.getContext("2d")
+      DrawBox.draw(debugCtx, clearRegion) // draw source rect
+      debugCtx.fillText("clear", clearRegion.x + 20, clearRegion.y + 20)
+    }
+
     imageDataClearRect(imageData, clearRegion)
+
   } else {
-    console.log("oops")
+    /* In the rare case that the source and dest rectangles are
+     *  horizontally adjacent to each other, we cannot copy rows directly
+     *  because the rows may overlap. We have to use an intermediate buffer,
+     *  ideally an unused block of the same imageData arraybuffer.
+     */
+    let bufOffset
+    // use the first row of imagedata if it is available
+    if (d.y > 0) bufOffset = 0
+    // or the last row
+    else if (d.y + d.h < r.h) bufOffset = (r.h - 1) * width
+
+    const rowBuf =
+      bufOffset === undefined
+        ? new Uint32Array(d.w) // Worst-case scenario: allocate new memory
+        : buf32.subarray(bufOffset, bufOffset + d.w)
+
+    for (let y = d.y, n = d.y + d.h; y < n; y++) {
+      const offset = y * width
+      const sRowStart = offset + s.x
+      const sRowEnd = sRowStart + s.w
+      const dRowStart = offset + d.x
+
+      const rowData = buf32.subarray(sRowStart, sRowEnd)
+      rowBuf.set(rowData)
+      buf32.set(rowBuf, dRowStart)
+    }
+    // now clear the row buffer if it is part of imageData
+    if (bufOffset !== undefined) rowBuf.fill(0)
+
+    // and clear the remaining part of source rectangle
+    const clearRegion =
+      s.x < d.x
+        ? { x: s.x, y: s.y, w: d.x - s.x, h: s.h }
+        : { x: d.x + d.w, y: s.y, w: s.x - d.x, h: s.h }
+    if (DEBUG_BORDERS) {
+      const debugCtx = debugCanvas.getContext("2d")
+      DrawBox.draw(debugCtx, clearRegion) // draw source rect
+      debugCtx.fillText("clear", clearRegion.x + 20, clearRegion.y + 20)
+    }
+
+    imageDataClearRect(imageData, clearRegion)
   }
 }
 
@@ -450,7 +500,7 @@ const drawSegment = (x0, y0, x1, y1) => {
 function drawPaths(forceFullRedraw) {
   if (!_ready) return
 
-  const t0 = performance.now()
+  // const t0 = performance.now()
 
   // const alphaScale = _dotSettings.alphaScale
   const drawAll = forceFullRedraw || FORCE_FULL_REDRAW
