@@ -19,6 +19,7 @@ let _map, _baseTranslation
 let _pxOrigin, _pxOffset, _mapPanePos, _zoom, _zf, _scale
 let _transform
 let xmin, xmax, ymin, ymax
+let _width, _height
 
 const _boundsObj = new Float32Array(4)
 
@@ -57,7 +58,19 @@ export function setMap(map) {
 // The dimensions of the ViewBox (also, the underlying canvases and the map)
 // as a Leaflet Point object
 export function getSize() {
-  return _map.getSize()
+  const size = _map.getSize()
+  _width = size.x
+  _height = size.y
+  return size
+}
+
+// This function clips x and y points to visible region
+export function clip(x, y) {
+  if (x < 0) x = 0
+  else if (x > _width) x = _width
+  if (y < 0) y = 0
+  else if (y > _height) y = _height
+  return [x, y]
 }
 
 // resize the canvases

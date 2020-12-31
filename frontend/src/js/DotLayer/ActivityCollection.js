@@ -371,3 +371,18 @@ export function resetSegMasks() {
     }
   }
 }
+
+
+// // Debug info box
+// let _infoBox
+// const InfoViewer = Control.extend({
+//   onAdd: function () {
+//     _infoBox = DomUtil.create("div")
+//     _infoBox.style.width = "200px"
+//     _infoBox.style.padding = "5px"
+//     _infoBox.style.background = "rgba(100,200,50,0.6)"
+//     _infoBox.style.textAlign = "left"
+//     _infoBox.innerHTML = "Activites infoBox"
+//     return _infoBox
+//   },
+// })

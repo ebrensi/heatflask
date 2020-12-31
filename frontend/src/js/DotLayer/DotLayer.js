@@ -25,9 +25,12 @@ export { _dotSettings as dotSettings }
 /* In order to prevent path redraws from happening too often
  * and hogging up CPU cycles we set a minimum delay between redraws
  */
-const FORCE_FULL_REDRAW = true
-const CONTINUOUS_REDRAWS = false
-const MIN_REDRAW_DELAY = 1000 // milliseconds
+const FORCE_FULL_REDRAW = false
+const CONTINUOUS_PAN_REDRAWS = true
+const CONTINUOUS_PINCH_REDRAWS = true
+const MIN_PAN_REDRAW_DELAY = 500 // milliseconds
+const MIN_PINCH_REDRAW_DELAY = 50
+
 const TWO_PI = 2 * Math.PI
 const TARGET_FPS = 30
 
@@ -37,7 +40,7 @@ const _drawFunction = {
 }
 
 let dotCanvas, pathCanvas, debugCanvas
-let dotImageData, pathImageData
+let _lastDotDrawBox
 
 const dotCanvasPane = "shadowPane"
 const pathCanvasPane = "overlayPane"
@@ -89,15 +92,18 @@ export const DotLayer = Layer.extend({
 
     // dotlayer canvas
     dotCanvas = addCanvasOverlay(dotCanvasPane)
+    const { width: dw, height: dh } = dotCanvas
+    dotCanvas.imageData = dotCanvas.getContext("2d").createImageData(dw, dh)
+    makeDrawDotFuncs.imageDataTest()
 
     /*
      * The Path Canvas is for activity paths, which are made up of a bunch of
      * segments.
      */
     pathCanvas = addCanvasOverlay(pathCanvasPane)
-    const ctx = pathCanvas.getContext("2d")
-    ctx.lineCap = "round"
-    ctx.lineJoin = "round"
+    const { width: pw, height: ph } = pathCanvas
+    pathCanvas.imageData = pathCanvas.getContext("2d").createImageData(pw, ph)
+    PixelGraphics.setImageData(pathCanvas.imageData)
 
     if (DEBUG_BORDERS) {
       // create Canvas for debugging canvas stuff
@@ -181,17 +187,10 @@ function addCanvasOverlay(pane) {
 
 function assignEventHandlers() {
   const events = {
+    move: CONTINUOUS_PAN_REDRAWS? onMove : undefined,
     moveend: onMoveEnd,
-    zoom: onZoom,
+    zoom: CONTINUOUS_PINCH_REDRAWS? onZoom : undefined,
     resize: onResize,
-  }
-
-  if (CONTINUOUS_REDRAWS) {
-    events.move = onMove
-  }
-
-  if (_map.options.zoomAnimation && Browser.any3d) {
-    events.zoomanim = _animateZoom
   }
 
   return events
@@ -220,7 +219,19 @@ async function onResize() {
   if (x === width && y === height) return
 
   ViewBox.resize(newMapSize)
+
+  const { width: dw, height: dh } = dotCanvas
+  dotCanvas.imageData = dotCanvas.getContext("2d").createImageData(dw, dh)
+  makeDrawDotFuncs.imageDataTest()
   dotCtxUpdate()
+
+  /*
+   * The Path Canvas is for activity paths, which are made up of a bunch of
+   * segments.
+   */
+  const { width: pw, height: ph } = pathCanvas
+  pathCanvas.imageData = pathCanvas.getContext("2d").createImageData(pw, ph)
+  PixelGraphics.setImageData(pathCanvas.imageData)
   await redraw(true)
 }
 
@@ -230,8 +241,14 @@ async function onZoom(e) {
   // console.log("onzoom")
 
   if (e.pinch || e.flyTo) {
-    await redraw(true)
-  }
+    const ts = Date.now()
+    if (ts - _lastRedraw < MIN_PINCH_REDRAW_DELAY) {
+      return
+    }
+
+    _lastRedraw = ts
+    await redraw()
+    }
 }
 
 /*
@@ -240,7 +257,7 @@ async function onZoom(e) {
 async function onMove() {
   // prevent redrawing more often than necessary
   const ts = Date.now()
-  if (ts - _lastRedraw < MIN_REDRAW_DELAY) {
+  if (ts - _lastRedraw < MIN_PAN_REDRAW_DELAY) {
     return
   }
 
@@ -257,7 +274,7 @@ async function onMoveEnd() {
 }
 
 function moveDrawBox() {
-  // const t0 = Date.now()
+  const t0 = Date.now()
 
   // Get the current draw rectangle in screen coordinates (relative to map pane position)
   const D = DrawBox.getScreenRect()
@@ -272,52 +289,102 @@ function moveDrawBox() {
 
   // Move the visible portion of currently drawn segments and dots
   // to the new location after calibration
-  const dVx = V_.x - V.x
-  const Dx1 = D.x + dVx
-  const Dx2 = Dx1 + D.w
-  const DxLeft = Math.max(0, Dx1)
-  const DxRight = Math.min(Dx2, V.w)
-  const Cx = ~~(DxLeft - dVx)
-  const Cw = ~~(0.5 + DxRight - DxLeft)
+  const dVx = Math.round(V_.x - V.x)
+  const dVy = Math.round(V_.y - V.y)
 
-  const dVy = V_.y - V.y
-  const Dy1 = ~~(D.y + dVy)
-  const Dy2 = Dy1 + D.h
-  const DyTop = Math.max(0, Dy1)
-  const DyBottom = Math.min(Dy2, V.h)
-  const Cy = ~~(DyTop - dVy)
-  const Ch = ~~(0.5 + DyBottom - DyTop)
-
-  // We copy if any of the DrawBox is still on screen
-  if (DxLeft < V.w && DxRight > 0 && DyTop < V.h && DyBottom > 0) {
-    // const copyRect = { x: Cx, y: Cy, w: Cw, h: Ch }
-    // const pasteRect = { x: DxLeft, y: DyTop, w: Cw, h: Ch }
-    // const debugCtx = _debugCanvas.getContext("2d")
-    // debugCtx.strokeStyle = "#222222"
-    // DrawBox.draw(debugCtx, copyRect) // draw source rect
-    // debugCtx.fillText("Copy", copyRect.x + 20, copyRect.y + 20)
-    // debugCtx.strokeStyle = "#000000"
-    // DrawBox.draw(debugCtx, pasteRect) // draw dest rect
-    // debugCtx.fillText("Paste", pasteRect.x + 20, pasteRect.y + 20)
-
-    const canvasesToMove = [pathCanvas]
-    for (const canvas of canvasesToMove) {
-      const ctx = canvas.getContext("2d")
-      const imageData = ctx.getImageData(Cx, Cy, Cw, Ch)
-      DrawBox.clear(ctx, D)
-      ctx.putImageData(imageData, DxLeft, DyTop)
-    }
-
-    DrawBox.clear(dotCanvas.getContext("2d"), D)
-  } else {
-    // If none of the last DrawBox is still on screen we just clear it
-    const canvasesToClear = [pathCanvas, dotCanvas]
-    for (const canvas of canvasesToClear) {
-      DrawBox.clear(canvas.getContext("2d"), D)
-    }
+  const canvasesToMove = [pathCanvas, dotCanvas]
+  for (const canvas of canvasesToMove) {
+    imageDataMoveRect(canvas.imageData, D, dVx, dVy)
+    DrawBox.clear(canvas.getContext("2d"), D)
   }
 
   // console.log(`moveDrawBox: ${D.w}x${D.h} -- ${Date.now() - t0}ms`)
+}
+
+/*
+ * This function moves the pixels from one rectangular region
+ *  of an imageData object to another, possibly overlapping
+ *  rectanglular region of equal size.
+ */
+function imageDataMoveRect(imageData, rect, shiftX, shiftY) {
+  const { width, height, data } = imageData
+  const r = rect
+  const buf32 = new Uint32Array(data.buffer)
+
+  const [dx0, dy0] = ViewBox.clip(r.x + shiftX, r.y + shiftY)
+  const [dx1, dy1] = ViewBox.clip(r.x + r.w + shiftX, r.y + r.h + shiftY)
+  let s, d
+
+  // We only define desatination rect if it is on-screen
+  if (dx0 !== dx1 && dy0 !== dy1) {
+    d = { x: dx0, y: dy0, w: dx1 - dx0, h: dy1 - dy0 }
+    s = { x: dx0 - shiftX, y: dy0 - shiftY, w: d.w, h: d.h }
+  } else {
+    /* if there is no destination rectangle (nothing in view)
+     *  we just clear the source rectangle and exit
+     */
+    imageDataClearRect(imageData, rect)
+    return
+  }
+
+  // const debugCtx = debugCanvas.getContext("2d")
+  // debugCtx.strokeStyle = "#000000"
+  // DrawBox.draw(debugCtx, s) // draw source rect
+  // debugCtx.fillText("source", s.x + 20, s.y + 20)
+  // DrawBox.draw(debugCtx, d) // draw dest rect
+  // debugCtx.fillText("dest", d.x + 20, d.y + 20)
+
+
+  const moveRow = (row) => {
+    const sOffset = (s.y + row) * width
+    const sRowStart = sOffset + s.x
+    const sRowEnd = sRowStart + s.w
+    const rowData = buf32.subarray(sRowStart, sRowEnd)
+
+    const dOffset = (d.y + row) * width
+    const dRowStart = dOffset + d.x
+    buf32.set(rowData, dRowStart)
+
+    // erase the whole source rect row
+    const rStart = sOffset + r.x
+    const rEnd = rStart + r.w
+    buf32.fill(0, rStart, rEnd) // clear the source row
+  }
+
+  /* We only bother copying if the destination rectangle is within
+   * the imageData bounds
+   */
+  if (d.y < s.y) {
+    /* if the source rectangle is below the destination
+       then we copy rows from the top down */
+    for (let row = 0; row < s.h; row++) moveRow(row)
+
+    const clearRegion = { x: r.x, y: r.y, w: r.w, h: r.h - s.h }
+    // DrawBox.draw(debugCtx, clearRegion) // draw source rect
+    // debugCtx.fillText("clear", clearRegion.x + 20, clearRegion.y + 20)
+    imageDataClearRect(imageData, clearRegion)
+
+  } else if (d.y > s.y) {
+    /* otherwise we copy from the bottom row up */
+    for (let row = s.h - 1; row >= 0; row--) moveRow(row)
+
+    // and clear what's left of source rectangle
+    const clearRegion = { x: r.x, y: r.y + s.h, w: r.w, h: r.h - s.h }
+    // DrawBox.draw(debugCtx, clearRegion) // draw source rect
+    // debugCtx.fillText("clear", clearRegion.x + 20, clearRegion.y + 20)
+    imageDataClearRect(imageData, clearRegion)
+  } else {
+    console.log("oops")
+  }
+}
+
+const imageDataClearRect = (imageData, { x, y, w, h }) => {
+  const { width, data } = imageData
+  const buf32 = new Uint32Array(data.buffer)
+  for (let row = y; row < y + h; row++) {
+    const offset = row * width
+    buf32.fill(0, offset + x, offset + x + w)
+  }
 }
 
 async function redraw(force) {
@@ -341,6 +408,7 @@ async function redraw(force) {
     const canvasesToClear = [pathCanvas, dotCanvas]
     for (const canvas of canvasesToClear) {
       DrawBox.clear(canvas.getContext("2d"), oldDrawBoxDim)
+      imageDataClearRect(canvas.imageData, oldDrawBoxDim)
     }
   } else {
     moveDrawBox()
@@ -354,38 +422,29 @@ async function redraw(force) {
 
   _styleGroups = await ActivityCollection.updateGroups()
 
-  const D = DrawBox.getScreenRect()
-  if (
-    !dotImageData ||
-    dotImageData.width !== D.w ||
-    dotImageData.height !== D.h
-  ) {
-    dotImageData = dotCanvas.getContext("2d").createImageData(D.w, D.h)
-    updateDrawDotFuncs.imageDataTest()
-  }
-
-  if (
-    !pathImageData ||
-    pathImageData.width !== D.w ||
-    pathImageData.height !== D.h
-  ) {
-    pathImageData = pathCanvas.getContext("2d").createImageData(D.w, D.h)
-    PixelGraphics.setImageData(pathImageData)
-  }
-
   if (DEBUG_BORDERS) {
     drawBoundsBoxes()
   }
 
   if (_paused) {
-    await nextTask()
+    // await nextTask()
     drawDots(_timePaused || 0)
   }
 
   if (_options.showPaths) {
-    await nextTask()
+    // await nextTask()
     drawPaths(fullRedraw)
   }
+}
+
+const drawSegment = (x0, y0, x1, y1) => {
+  const [tx0, ty0] = ViewBox.transform(x0, y0)
+  const [tx1, ty1] = ViewBox.transform(x1, y1)
+  if (!tx0 || !ty0 || !tx1 || !ty1) return
+
+  const [cx0, cy0] = ViewBox.clip(Math.round(tx0), Math.round(ty0))
+  const [cx1, cy1] = ViewBox.clip(Math.round(tx1), Math.round(ty1))
+  PixelGraphics.drawSegment(cx0, cy0, cx1, cy1)
 }
 
 function drawPaths(forceFullRedraw) {
@@ -395,30 +454,6 @@ function drawPaths(forceFullRedraw) {
 
   // const alphaScale = _dotSettings.alphaScale
   const drawAll = forceFullRedraw || FORCE_FULL_REDRAW
-  const { x: Dx, y: Dy, w: Dw, h: Dh } = DrawBox.getScreenRect()
-  const ctx = pathCanvas.getContext("2d")
-
-  const drawSegment = (x0, y0, x1, y1) => {
-    const [tx0, ty0] = ViewBox.transform(x0, y0)
-    const [tx1, ty1] = ViewBox.transform(x1, y1)
-    if (!tx0 || !ty0 || !tx1 || !ty1) return
-
-    x0 = Math.round(tx0-Dx)
-    y0 = Math.round(ty0-Dy)
-    x1 = Math.round(tx1-Dx)
-    y1 = Math.round(ty1-Dy)
-    if (x0 < 0) x0 = 0
-    else if (x0 > Dw) x0 = Dw
-    if (x1 < 0) x1 = 0
-    else if (x1 > Dw) x1 = Dw
-    if (y0 < 0) y0 = 0
-    else if (y0 > Dh) y0 = Dh
-    if (y1 < 0) y1 = 0
-    else if (y1 > Dh) y1 = Dh
-    PixelGraphics.drawSegment(x0, y0, x1, y1)
-  }
-
-  if (drawAll) PixelGraphics.clear()
 
   let count = 0
   for (const { spec, items } of _styleGroups.path) {
@@ -426,14 +461,17 @@ function drawPaths(forceFullRedraw) {
     PixelGraphics.setWidth(spec.lineWidth)
     for (const A of items) {
       const segMask = drawAll ? A.segMask : A.getPartialSegMask()
-      count += A.forEachSegment(drawSegment, segMask)
+      if (segMask) {
+        count += A.forEachSegment(drawSegment, segMask)
+      }
     }
   }
-  ctx.putImageData(pathImageData, Dx, Dy)
-  // createImageBitmap(pathImageData).then((img) =>
-  //   ctx.drawImage(img, Dx, Dy)
-  // )
-  console.log(`drawPaths: ${count}, ${Math.round(performance.now() - t0)}ms`)
+  const { x: Dx, y: Dy, w: Dw, h: Dh } = DrawBox.getScreenRect()
+  const pathCtx = pathCanvas.getContext("2d")
+  const pathImageData = pathCanvas.imageData
+  pathCtx.putImageData(pathImageData, 0, 0, Dx, Dy, Dw, Dh)
+
+  // console.log(`drawPaths: ${count}, ${Math.round(performance.now() - t0)}ms`)
   return count
 }
 
@@ -442,18 +480,23 @@ function drawPaths(forceFullRedraw) {
  * size is the length of the square and the radius of the circle
  */
 
-const updateDrawDotFuncs = {
+const makeDrawDotFuncs = {
   imageDataTest: function () {
-    const { x: Dx, y: Dy } = DrawBox.getScreenRect()
     const ds = _dotSettings
-    const { width, height } = dotImageData
-    const buf32 = new Uint32Array(dotImageData.data.buffer) // deal with endianness!
+    const imageData = dotCanvas.imageData
+    const { width, height } = imageData
+    const buf32 = new Uint32Array(imageData.data.buffer) // deal with endianness!
     const ctx = dotCanvas.getContext("2d")
     let drawColor
 
     _drawFunction.before = () => {
-      buf32.fill(0)
-      if (_options.dotShadows.enabled) {
+      if (_lastDotDrawBox) {
+        imageDataClearRect(imageData, _lastDotDrawBox)
+        if (_options.dotShadows.enabled) {
+          DrawBox.clear(ctx, _lastDotDrawBox)
+        }
+      } else {
+        buf32.fill(0)
         DrawBox.clear(ctx)
       }
     }
@@ -468,8 +511,8 @@ const updateDrawDotFuncs = {
       const color = drawColor
 
       const p = ViewBox.transform(x, y)
-      const tx = (p[0] - dotOffset - Dx + 0.5) | 0
-      const ty = (p[1] - dotOffset - Dy + 0.5) | 0
+      const tx = (p[0] - dotOffset + 0.5) | 0
+      const ty = (p[1] - dotOffset + 0.5) | 0
 
       const xStart = tx < 0 ? 0 : tx // Math.max(0, tx)
       const xEnd = Math.min(tx + size, width)
@@ -491,8 +534,8 @@ const updateDrawDotFuncs = {
 
       const p = ViewBox.transform(x, y)
 
-      const tx = (p[0] - Dx + 0.5) | 0
-      const ty = (p[1] - Dy + 0.5) | 0
+      const tx = (p[0] + 0.5) | 0
+      const ty = (p[1] + 0.5) | 0
 
       const r2 = r * r
       for (let cy = -r + 1; cy < r; cy++) {
@@ -505,12 +548,14 @@ const updateDrawDotFuncs = {
     }
 
     _drawFunction.after = () => {
+      const D = DrawBox.getScreenRect()
+      _lastDotDrawBox = D
       if (_options.dotShadows.enabled) {
-        createImageBitmap(dotImageData).then((img) =>
-          ctx.drawImage(img, Dx, Dy)
+        createImageBitmap(imageData, D.x, D.y, D.w, D.h).then((img) =>
+          ctx.drawImage(img, D.x, D.y)
         )
       } else {
-        ctx.putImageData(dotImageData, Dx, Dy)
+        ctx.putImageData(imageData, 0, 0, D.x, D.y, D.w, D.h)
       }
     }
   },
@@ -578,8 +623,8 @@ function extractColor(colorString) {
     const num = parseInt(colorString.replace("#", "0x"))
     const r = (num & 0xff0000) >> 16
     const g = (num & 0x00ff00) >> 8
-    const b = (num & 0x0000ff)
-    return rgbaToUint32(r,g,b,0xff)
+    const b = num & 0x0000ff
+    return rgbaToUint32(r, g, b, 0xff)
   }
   const result = colorString.match(_re)
   return rgbaToUint32(result[1], result[2], result[3], _dotSettings.alpha)
@@ -703,15 +748,4 @@ function updateInfoBox(dt, count) {
   }
   _roundCount = roundCount
   _duration = duration
-}
-
-function _animateZoom(e) {
-  const newZoom = e.zoom
-  const newCenter = e.center
-  const scale = _map.getZoomScale(newZoom)
-
-  const origin = _map.getBounds().getNorthWest()
-  const offset = _map._latLngToNewLayerPoint(origin, newZoom, newCenter)
-
-  ViewBox.setCSStransform(offset, scale)
 }

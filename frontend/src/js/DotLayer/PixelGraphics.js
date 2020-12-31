@@ -47,6 +47,8 @@ export function setImageData(imageData) {
   buf32 = new Uint32Array(imageData.data.buffer)
 }
 
+
+// TODO: only clear a given rectangle
 export function clear() {
   buf32.fill(0)
 }
