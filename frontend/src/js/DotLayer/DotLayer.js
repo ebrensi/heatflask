@@ -31,6 +31,8 @@ const CONTINUOUS_PINCH_REDRAWS = true
 const MIN_PAN_REDRAW_DELAY = 500 // milliseconds
 const MIN_PINCH_REDRAW_DELAY = 50
 
+const MAX_SEGMENTS_PER_FRAME = 5000
+
 const TWO_PI = 2 * Math.PI
 const TARGET_FPS = 30
 
@@ -474,18 +476,19 @@ async function redraw(force) {
     drawBoundsBoxes()
   }
 
+  if (_options.showPaths) {
+    // const t0 = performance.now()
+    const count = await drawPaths(fullRedraw)
+    // console.log(`drawPaths: ${count}, ${Math.round(performance.now() - t0)}ms`)
+  }
+
   if (_paused) {
     // await nextTask()
     drawDots(_timePaused || 0)
   }
-
-  if (_options.showPaths) {
-    // await nextTask()
-    drawPaths(fullRedraw)
-  }
 }
 
-const drawSegment = (x0, y0, x1, y1) => {
+function drawSegment(x0, y0, x1, y1) {
   const [tx0, ty0] = ViewBox.transform(x0, y0)
   const [tx1, ty1] = ViewBox.transform(x1, y1)
   if (!tx0 || !ty0 || !tx1 || !ty1) return
@@ -495,31 +498,41 @@ const drawSegment = (x0, y0, x1, y1) => {
   PixelGraphics.drawSegment(cx0, cy0, cx1, cy1)
 }
 
-function drawPaths(forceFullRedraw) {
-  if (!_ready) return
+function drawPathImageData() {
+  const { x: Dx, y: Dy, w: Dw, h: Dh } = DrawBox.getScreenRect()
+  const pathCtx = pathCanvas.getContext("2d")
+  const pathImageData = pathCanvas.imageData
+  pathCtx.putImageData(pathImageData, 0, 0, Dx, Dy, Dw, Dh)
+}
 
-  // const t0 = performance.now()
+async function drawPaths(forceFullRedraw) {
+  if (!_ready) return
 
   // const alphaScale = _dotSettings.alphaScale
   const drawAll = forceFullRedraw || FORCE_FULL_REDRAW
 
   let count = 0
+  let frameCount = 0
   for (const { spec, items } of _styleGroups.path) {
     PixelGraphics.setColor(extractColor(spec.strokeStyle))
     PixelGraphics.setWidth(spec.lineWidth)
     for (const A of items) {
       const segMask = drawAll ? A.segMask : A.getPartialSegMask()
       if (segMask) {
-        count += A.forEachSegment(drawSegment, segMask)
+        frameCount += A.forEachSegment(drawSegment, segMask)
+      }
+
+      if (frameCount > MAX_SEGMENTS_PER_FRAME) {
+        drawPathImageData()
+        count += frameCount
+        frameCount = 0
+        // console.log("drawPaths next frame")
+        await nextAnimationFrame()
       }
     }
   }
-  const { x: Dx, y: Dy, w: Dw, h: Dh } = DrawBox.getScreenRect()
-  const pathCtx = pathCanvas.getContext("2d")
-  const pathImageData = pathCanvas.imageData
-  pathCtx.putImageData(pathImageData, 0, 0, Dx, Dy, Dw, Dh)
-
-  // console.log(`drawPaths: ${count}, ${Math.round(performance.now() - t0)}ms`)
+  count += frameCount
+  drawPathImageData()
   return count
 }
 

@@ -12,10 +12,10 @@
     "watch": "parcel watch --log-level verbose ./src/html/*.html",
     "serve": "parcel serve --log-level verbose ./src/html/*.html",
     "test": "parcel serve --log-level verbose ./test/*.html",
-    "clean": "rm -rf dist/* .parcel-cache/*",
+    "clean": "rm -rf ./dist/* ./.parcel-cache/* ./dev-docs/*",
     "check": "prettier --check ./src/",
     "format": "prettier --write ./src/",
-    "docs": "documentation build --shallow --document-exported ./src/js/** -f html -o ./dev-docs/"
+    "docs": "documentation build --shallow --document-exported ./src/js/** -f md -o ./dev-docs.md"
   },
   "author": "Efrem Rensi",
   "license": "ISC",
@@ -42,7 +42,7 @@
     "documentation": "^13.1.0",
     "eslint": "^7.16.0",
     "eslint-config-prettier": "^6.15.0",
-    "parcel": "next",
+    "parcel": "^2.0.0-nightly.496",
     "parcel-plugin-nuke-dist": "^1.0.1",
     "prettier": "^2.2.1"
   },

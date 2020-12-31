@@ -115,7 +115,7 @@ frontend/.cache
 
 # For Development
 frontend/dist
-frontend/dev-docs
+frontend/dev-docs.md
 
 # For Production
 # frontend/dist/fa-*
