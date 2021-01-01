@@ -26,7 +26,7 @@ export { _dotSettings as dotSettings }
  * and hogging up CPU cycles we set a minimum delay between redraws
  */
 const FORCE_FULL_REDRAW = false
-const CONTINUOUS_PAN_REDRAWS = true
+const CONTINUOUS_PAN_REDRAWS = false
 const CONTINUOUS_PINCH_REDRAWS = true
 const MIN_PAN_REDRAW_DELAY = 500 // milliseconds
 const MIN_PINCH_REDRAW_DELAY = 50
@@ -189,11 +189,12 @@ function addCanvasOverlay(pane) {
 
 function assignEventHandlers() {
   const events = {
-    move: CONTINUOUS_PAN_REDRAWS ? onMove : undefined,
     moveend: onMoveEnd,
-    zoom: CONTINUOUS_PINCH_REDRAWS ? onZoom : undefined,
     resize: onResize,
   }
+
+  if (CONTINUOUS_PAN_REDRAWS) events.move = onMove
+  if (CONTINUOUS_PINCH_REDRAWS) events.zoom = onZoom
 
   return events
 }
@@ -276,7 +277,6 @@ async function onMoveEnd() {
 }
 
 function moveDrawBox() {
-  // const t0 = Date.now()
 
   // Get the current draw rectangle in screen coordinates (relative to map pane position)
   const D = DrawBox.getScreenRect()
@@ -299,8 +299,6 @@ function moveDrawBox() {
     imageDataMoveRect(canvas.imageData, D, dVx, dVy)
     DrawBox.clear(canvas.getContext("2d"), D)
   }
-
-  // console.log(`moveDrawBox: ${D.w}x${D.h} -- ${Date.now() - t0}ms`)
 }
 
 /*
@@ -332,10 +330,8 @@ function imageDataMoveRect(imageData, rect, shiftX, shiftY) {
   if (DEBUG_BORDERS) {
     const debugCtx = debugCanvas.getContext("2d")
     debugCtx.strokeStyle = "#000000"
-    DrawBox.draw(debugCtx, s) // draw source rect
-    debugCtx.fillText("source", s.x + 20, s.y + 20)
-    DrawBox.draw(debugCtx, d) // draw dest rect
-    debugCtx.fillText("dest", d.x + 20, d.y + 20)
+    DrawBox.draw(debugCtx, s, "source") // draw source rect
+    DrawBox.draw(debugCtx, d, "dest") // draw dest rect
   }
 
   const moveRow = (row) => {
@@ -364,9 +360,7 @@ function imageDataMoveRect(imageData, rect, shiftX, shiftY) {
 
     const clearRegion = { x: r.x, y: r.y, w: r.w, h: r.h - s.h }
     if (DEBUG_BORDERS) {
-      const debugCtx = debugCanvas.getContext("2d")
-      DrawBox.draw(debugCtx, clearRegion) // draw source rect
-      debugCtx.fillText("clear", clearRegion.x + 20, clearRegion.y + 20)
+      DrawBox.draw(debugCanvas, clearRegion, "clear") // draw source rect
     }
 
     imageDataClearRect(imageData, clearRegion)
@@ -377,9 +371,7 @@ function imageDataMoveRect(imageData, rect, shiftX, shiftY) {
     // and clear what's left of source rectangle
     const clearRegion = { x: r.x, y: r.y + s.h, w: r.w, h: r.h - s.h }
     if (DEBUG_BORDERS) {
-      const debugCtx = debugCanvas.getContext("2d")
-      DrawBox.draw(debugCtx, clearRegion) // draw source rect
-      debugCtx.fillText("clear", clearRegion.x + 20, clearRegion.y + 20)
+      DrawBox.draw(debugCanvas, clearRegion, "clear") // draw source rect
     }
 
     imageDataClearRect(imageData, clearRegion)
@@ -419,9 +411,7 @@ function imageDataMoveRect(imageData, rect, shiftX, shiftY) {
         ? { x: s.x, y: s.y, w: d.x - s.x, h: s.h }
         : { x: d.x + d.w, y: s.y, w: s.x - d.x, h: s.h }
     if (DEBUG_BORDERS) {
-      const debugCtx = debugCanvas.getContext("2d")
-      DrawBox.draw(debugCtx, clearRegion) // draw source rect
-      debugCtx.fillText("clear", clearRegion.x + 20, clearRegion.y + 20)
+      DrawBox.draw(debugCanvas, clearRegion, "clear")
     }
 
     imageDataClearRect(imageData, clearRegion)
@@ -461,7 +451,10 @@ async function redraw(force) {
       imageDataClearRect(canvas.imageData, oldDrawBoxDim)
     }
   } else {
+    // const t0 = Date.now()
     moveDrawBox()
+    drawPathImageData()
+    // console.log(`moveDrawBox: ${D.w}x${D.h} -- ${Date.now() - t0}ms`)
   }
 
   DrawBox.reset()

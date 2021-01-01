@@ -439,24 +439,24 @@ export class Activity {
   getPartialSegMask() {
     const nChanges = this.segMask.difference_size(this.lastSegMask)
     if (!nChanges) return
-    const segMask = this.segMask.new_difference(this.lastSegMask)
+    const newSegs = this.segMask.new_difference(this.lastSegMask)
 
     /*
      * We include an edge segment (at the edge of the screen)
      * even if it was in the last draw
      */
     let lastSeg
-    segMask.forEach((s) => {
+    newSegs.forEach((s) => {
       const beforeGap = lastSeg && lastSeg + 1
       const afterGap = s && s - 1
       if (lastSeg !== afterGap) {
         const lsm = this.lastSegMask
-        if (beforeGap && lsm.has(beforeGap)) segMask.add(beforeGap)
-        if (afterGap && lsm.has(afterGap)) segMask.add(afterGap)
+        if (beforeGap && lsm.has(beforeGap)) newSegs.add(beforeGap)
+        if (afterGap && lsm.has(afterGap)) newSegs.add(afterGap)
       }
       lastSeg = s
     })
-    return segMask
+    return newSegs
   }
 
   /**
