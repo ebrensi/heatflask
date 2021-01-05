@@ -363,39 +363,37 @@ export class Activity {
    *  so that the i-th good segment corresponds to the i-th member of
    *  this idxSet.
    */
-  makeSegMask() {
+  updateSegMask() {
     const zoom = ViewBox.zoom
 
     /* Later we will compare this segMask with the last one so that we only draw or erase
      * parts of the path that have come into view or are no longer on screen
      */
-    if (this.lastSegMask) {
-      // Swap this and last segMask
-      ;[this.segMask, this.lastSegMask] = [this.lastSegMask, this.segMask]
-    } else {
-      this.lastSegMask = new BitSet()
-    }
-
-    const segMask = (this.segMask = (this.segMask || new BitSet()).clear())
+    if (!this.segMask) this.segMask = new BitSet()
 
     if (this.containedInMapBounds()) {
+      if (this._containedInMapBounds) return this.segMask
       /*
        * If this activity is completely contained in the ViewBox then we
        * already know every segment is included.  Explicitly creating a full
        * segMask and updating DrawBox with the bounds is much faster.
        */
-      const len = this.idxSet[zoom].size() - 1
-      segMask.words = new Array(len >> 5).fill(-1)
-      segMask.words.push(2 ** (len % 32) - 1)
+      const n = this.idxSet[zoom].size()
+      this.segMask.clear().resize(n)
+      this.segMask.words.fill(~0, 0, n >> 5)
+      this.segMask.words[n >> 5] = 2 ** (n % 32) - 1
 
       const pxB = this.pxBounds
       const southWest = pxB.subarray(0, 2)
       const northEast = pxB.subarray(2, 4)
       DrawBox.update(southWest)
       DrawBox.update(northEast)
+      this._containedInMapBounds = true
     } else {
+      this._containedInMapBounds = false
       const points = this.getPointAccessor(zoom)
       const n = this.idxSet[zoom].size()
+      const segMask = this.segMask.clear().resize(n)
 
       let p = points(0)
       let pIn = ViewBox.contains(p)
@@ -425,37 +423,51 @@ export class Activity {
     if (zoom in this.badSegIdx) {
       const badSegIdx = this.badSegIdx[zoom]
       for (const idx of badSegIdx) {
-        segMask.remove(idx)
+        this.segMask.remove(idx)
       }
     }
-    return segMask
+    return this.segMask
+  }
+
+
+  resetSegMask() {
+    if (!this.lastSegMask) {
+      this.lastSegMask = new BitSet()
+      this._segMaskUpdates = new BitSet()
+    }
+    this.lastSegMask.clear()
   }
 
   /**
    * We use this for partial redraws
    * @return {BitSet} The set of segments that have become visible
-   * since the last draw
+   * since the last draw.
    */
-  getPartialSegMask() {
-    const nChanges = this.segMask.difference_size(this.lastSegMask)
-    if (!nChanges) return
-    const newSegs = this.segMask.new_difference(this.lastSegMask)
+  getSegMaskUpdates() {
+
+    if (!this.segMask.difference_size(this.lastSegMask)) return
+
+    const newSegs = this.segMask.new_difference(
+      this.lastSegMask,
+      this._segMaskUpdates
+    )
 
     /*
      * We include an edge segment (at the edge of the screen)
      * even if it was in the last draw
      */
+    const lsm = this.lastSegMask
     let lastSeg
     newSegs.forEach((s) => {
       const beforeGap = lastSeg && lastSeg + 1
       const afterGap = s && s - 1
       if (lastSeg !== afterGap) {
-        const lsm = this.lastSegMask
         if (beforeGap && lsm.has(beforeGap)) newSegs.add(beforeGap)
         if (afterGap && lsm.has(afterGap)) newSegs.add(afterGap)
       }
       lastSeg = s
     })
+    this.segMask.clone(this.lastSegMask)
     return newSegs
   }
 

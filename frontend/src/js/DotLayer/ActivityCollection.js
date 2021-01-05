@@ -50,6 +50,7 @@ export function reset() {
   for (let i = 0; i < itemsArray.length; i++) {
     itemsArray[i].idx = i
   }
+  resetSegMasks()
 }
 
 /*
@@ -119,7 +120,7 @@ export async function updateGroups() {
     if (!A.idxSet[zoom]) {
       throw `idxSet[${zoom}] didn't get made`
     }
-    const segMask = A.makeSegMask()
+    const segMask = A.updateSegMask()
     if (segMask.isEmpty()) {
       inView.current.remove(i)
     }
@@ -366,9 +367,7 @@ export function* inPxBounds(pxBounds) {
  */
 export function resetSegMasks() {
   for (const A of itemsArray) {
-    if (A.segMask) {
-      A.segMask.clear()
-    }
+    A.resetSegMask()
   }
 }
 

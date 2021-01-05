@@ -19,9 +19,9 @@ export function simplify(points, n, tolerance) {
 
   let idxBitSet = simplifyRadialDist(points, n, sqTolerance)
 
-  const idx = idxBitSet.array(),
-    subset = (i) => points(idx[i]),
-    idxBitSubset = simplifyDouglasPeucker(subset, idx.length, sqTolerance)
+  const idx = idxBitSet.array()
+  const subset = (i) => points(idx[i])
+  const idxBitSubset = simplifyDouglasPeucker(subset, idx.length, sqTolerance)
 
   idxBitSet = idxBitSet.new_subset(idxBitSubset)
 
@@ -30,7 +30,7 @@ export function simplify(points, n, tolerance) {
 
 // basic distance-based simplification
 function simplifyRadialDist(points, n, sqTolerance) {
-  const selectedIdx = new BitSet()
+  const selectedIdx = new BitSet(n)
   let i
   let point = points(0)
   let prevPoint = point
@@ -53,7 +53,7 @@ function simplifyRadialDist(points, n, sqTolerance) {
 
 // simplification using Ramer-Douglas-Peucker algorithm
 function simplifyDouglasPeucker(points, n, sqTolerance) {
-  const bitSet = new BitSet()
+  const bitSet = new BitSet(n)
 
   bitSet.add(0)
   const first = points(0)

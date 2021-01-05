@@ -57,10 +57,12 @@ export function clear() {
  * http://members.chello.at/~easyfilter/bresenham.html
  */
 function setPixel(x, y) {
+  if (x < 0 || x >= width || y < 0 || y >= height) return
   buf32[y * width + x] = color32
 }
 
 function setPixelAA(x, y, a) {
+  if (x < 0 || x >= width || y < 0 || y >= height) return
   const color = withAlpha(Math.round(a))
   buf32[y * width + x] = color
 }

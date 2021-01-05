@@ -199,6 +199,7 @@ function assignEventHandlers() {
   return events
 }
 
+
 function dotCtxUpdate() {
   const ctx = dotCanvas.getContext("2d")
   if (_options.dotShadows.enabled) {
@@ -441,7 +442,7 @@ async function redraw(force) {
   // console.log("onmoveend")
   const fullRedraw = zoomChanged || FORCE_FULL_REDRAW || force
 
-  // Recalibrate the DrawBox (and possible move it)
+  // Recalibrate the DrawBox and possibly move it
   if (fullRedraw) {
     const oldDrawBoxDim = DrawBox.getScreenRect()
     ViewBox.calibrate()
@@ -452,16 +453,13 @@ async function redraw(force) {
     }
   } else {
     // const t0 = Date.now()
+    if (zoomChanged > 1) ActivityCollection.resetSegMasks()
     moveDrawBox()
     drawPathImageData()
     // console.log(`moveDrawBox: ${D.w}x${D.h} -- ${Date.now() - t0}ms`)
   }
 
   DrawBox.reset()
-
-  if (fullRedraw) {
-    ActivityCollection.resetSegMasks()
-  }
 
   _styleGroups = await ActivityCollection.updateGroups()
 
@@ -486,9 +484,12 @@ function drawSegment(x0, y0, x1, y1) {
   const [tx1, ty1] = ViewBox.transform(x1, y1)
   if (!tx0 || !ty0 || !tx1 || !ty1) return
 
-  const [cx0, cy0] = ViewBox.clip(Math.round(tx0), Math.round(ty0))
-  const [cx1, cy1] = ViewBox.clip(Math.round(tx1), Math.round(ty1))
-  PixelGraphics.drawSegment(cx0, cy0, cx1, cy1)
+  PixelGraphics.drawSegment(
+    Math.round(tx0),
+    Math.round(ty0),
+    Math.round(tx1),
+    Math.round(ty1)
+  )
 }
 
 function drawPathImageData() {
@@ -510,7 +511,7 @@ async function drawPaths(forceFullRedraw) {
     PixelGraphics.setColor(extractColor(spec.strokeStyle))
     PixelGraphics.setWidth(spec.lineWidth)
     for (const A of items) {
-      const segMask = drawAll ? A.segMask : A.getPartialSegMask()
+      const segMask = drawAll ? A.segMask : A.getSegMaskUpdates()
       if (segMask) {
         frameCount += A.forEachSegment(drawSegment, segMask)
       }

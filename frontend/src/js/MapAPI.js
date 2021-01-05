@@ -56,7 +56,7 @@ export const map = new Map("map", {
   center: center,
   zoom: zoom,
   // preferCanvas: true,
-  zoomAnimation: false,
+  zoomAnimation: true,
   zoomSnap: 0.1,
   zoomDelta: 0.5,
   zoomAnimationThreshold: 6,

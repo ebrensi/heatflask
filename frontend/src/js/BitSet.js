@@ -7,24 +7,9 @@ export { BitSet, BitSet as default }
  * @param {Iterable.<Number>} iterable An iterable of integers
  */
 
-function BitSet(iterable) {
-  this.words = []
-
-  if (
-    Array.isArray(iterable) ||
-    (ArrayBuffer.isView(iterable) && !(iterable instanceof DataView))
-  ) {
-    for (let i = 0, len = iterable.length; i < len; i++) {
-      this.add(iterable[i])
-    }
-  } else if (iterable && iterable[Symbol.iterator] !== undefined) {
-    let iterator = iterable[Symbol.iterator]()
-    let current = iterator.next()
-    while (!current.done) {
-      this.add(current.value)
-      current = iterator.next()
-    }
-  }
+function BitSet(n) {
+  let count = n ? (n + 32) >>> 5 : 8
+  this.words = new Uint32Array(count)
 }
 
 /**
@@ -37,42 +22,7 @@ function BitSet(iterable) {
 BitSet.fromWords = function (words) {
   const answer = Object.create(BitSet.prototype)
   answer.words = words
-}
-
-BitSet.new_filter = function (iterable, fnc) {
-  const answer = Object.create(BitSet.prototype)
-  answer.words = []
-  return answer.filter(iterable, fnc)
-}
-
-/**
- * Set entries x of this {@link BitSet} to true if {@link fnc}(x) is contained. (operates in-place)
- * @memberOf  BitSet
- * @param  {Iterable.<Number>} iterable
- * @param  {function} fnc
- * @return {BitSet}
- */
-BitSet.prototype.filter = function (iterable, fnc) {
-  this.clear()
-  if (
-    Array.isArray(iterable) ||
-    (ArrayBuffer.isView(iterable) && !(iterable instanceof DataView))
-  ) {
-    const n = iterable.length
-    this.resize(n)
-    for (let i = 0; i < n; i++) {
-      if (fnc(iterable[i])) this.words[i >>> 5] |= 1 << i
-    }
-  } else if (iterable[Symbol.iterator] !== undefined) {
-    let iterator = iterable[Symbol.iterator]()
-    let current = iterator.next()
-    let i = 0
-    while (!current.done) {
-      if (fnc(current.value)) this.words[i >>> 5] |= 1 << i
-      current = iterator.next()
-    }
-  }
-  return this
+  return answer
 }
 
 /**
@@ -80,8 +30,13 @@ BitSet.prototype.filter = function (iterable, fnc) {
  * @param {Number} index
  */
 BitSet.prototype.add = function (index) {
-  this.resize(index)
-  this.words[index >>> 5] |= 1 << index
+  const w = index >>> 5
+  if (w >= this.words.length) {
+    throw new RangeError(
+      `cannot access word ${w} of ${this.words.length}-word bitset`
+    )
+  }
+  this.words[w] |= 1 << index
   return this
 }
 
@@ -90,15 +45,20 @@ BitSet.prototype.add = function (index) {
  * @param  {Number} index
  */
 BitSet.prototype.flip = function (index) {
-  this.resize(index)
-  this.words[index >>> 5] ^= 1 << index
+  const w = index >>> 5
+  if (w >= this.words.length) {
+    throw new RangeError(
+      `cannot access word ${w} of ${this.words.length} bitset`
+    )
+  }
+  this.words[w] ^= 1 << index
 }
 
 /**
  * Remove all values, reset memory usage
  */
 BitSet.prototype.clear = function () {
-  this.words = []
+  this.words.fill(0)
   return this
 }
 
@@ -109,7 +69,12 @@ BitSet.prototype.clear = function () {
  */
 BitSet.prototype.remove = function (index) {
   const w = index >>> 5
-  if (w <= this.words.length) this.words[w] &= ~(1 << index)
+  if (w >= this.words.length) {
+    throw new RangeError(
+      `cannot access word ${w} of ${this.words.length}-word bitset`
+    )
+  }
+  this.words[w] &= ~(1 << index)
   return this
 }
 
@@ -137,11 +102,26 @@ BitSet.prototype.has = function (index) {
 // Tries to add the value (Set the bit at index to true), return 1 if the
 // value was added, return 0 if the value was already present
 BitSet.prototype.checkedAdd = function (index) {
-  this.resize(index)
-  let word = this.words[index >>> 5]
+  const w = index >>> 5
+  if (w >= this.words.length) {
+    throw new RangeError(
+      `cannot access word ${w} of ${this.words.length}-word bitset`
+    )
+  }
+  let word = this.words[w]
   let newword = word | (1 << index)
-  this.words[index >>> 5] = newword
+  this.words[w] = newword
   return (newword ^ word) >>> index
+}
+
+// Resize the bitset so that we can write a value at index
+BitSet.prototype.resize = function (index) {
+  let count = (index + 32) >>> 5 // just what is needed
+  if (this.words.length >= count) return this
+  const newWords = new Uint32Array(count)
+  newWords.set(this.words, 0)
+  this.words = newWords
+  return this
 }
 
 // Reduce the memory usage to a minimum
@@ -151,12 +131,6 @@ BitSet.prototype.trim = function () {
     nl--
   }
   this.words = this.words.slice(0, nl)
-}
-
-// Resize the bitset so that we can write a value at index
-BitSet.prototype.resize = function (index) {
-  let count = (index + 32) >>> 5 // just what is needed
-  for (let i = this.words.length; i < count; i++) this.words[i] = 0
   return this
 }
 
@@ -203,7 +177,7 @@ BitSet.prototype.min = function () {
   let w
   for (let k = 0; k < c; ++k) {
     w = this.words[k]
-    if (w != 0) {
+    if (w !== 0) {
       const t = w & -w
       return (k << 5) + this.hammingWeight((t - 1) | 0)
     }
@@ -214,9 +188,9 @@ BitSet.prototype.max = function () {
   const c = this.words.length - 1
   for (let k = c; k >= 0; --k) {
     let w = this.words[k]
-    if (w != 0) {
+    if (w !== 0) {
       let t = 0
-      while (w != 0) {
+      while (w !== 0) {
         t = w & -w
         w ^= t
       }
@@ -250,7 +224,7 @@ BitSet.prototype.array = function (ArrayConstructor) {
   return answer
 }
 
-// Return an array with the set bit locations (values)
+// Execute a function on each of many values
 BitSet.prototype.forEach = function (fnc) {
   const c = this.words.length
   for (let k = 0; k < c; ++k) {
@@ -283,8 +257,9 @@ BitSet.prototype[Symbol.iterator] = function () {
 
 //   with the option to "fast-forward"
 //  to a position set by this.next(position).
-BitSet.prototype.imap_find = function* (fnc, next_pos) {
+BitSet.prototype.imap_find = function* (fnc, first_pos) {
   const c = this.words.length
+  let next_pos = first_pos
   let pos = 0
 
   for (let k = 0; k < c; ++k) {
@@ -325,14 +300,12 @@ BitSet.prototype.imap_subset = function* (bitSubSet, fnc) {
 }
 
 BitSet.prototype.new_subset = function (bitSubSet) {
-  const newSet = Object.create(BitSet.prototype),
-    idxGen = bitSubSet.imap()
+  const newSet = BitSet.fromWords(new Uint32Array(this.words.length))
+  const idxGen = bitSubSet.imap()
 
-  newSet.words = []
-
-  let c = this.words.length,
-    next = idxGen.next().value,
-    i = 0
+  let c = this.words.length
+  let next = idxGen.next().value
+  let i = 0
 
   for (let k = 0; k < c; ++k) {
     let w = this.words[k]
@@ -345,14 +318,18 @@ BitSet.prototype.new_subset = function (bitSubSet) {
       }
     }
   }
-  return newSet
+  return newSet.trim()
 }
 
+
 // Creates a copy of this bitmap
-BitSet.prototype.clone = function () {
-  let clone = Object.create(BitSet.prototype)
-  clone.words = this.words.slice()
-  return clone
+BitSet.prototype.clone = function (recycled) {
+  if (recycled) {
+    recycled.resize((this.words.length << 5) - 1)
+    recycled.words.set(this.words)
+    recycled.words.fill(0, this.words.length)
+    return recycled
+  } else return BitSet.fromWords(this.words.slice())
 }
 
 // Check if this bitset intersects with another one,
@@ -370,6 +347,7 @@ BitSet.prototype.intersects = function (otherbitmap) {
 BitSet.prototype.intersection = function (otherbitmap) {
   let newcount = Math.min(this.words.length, otherbitmap.words.length)
   let k = 0 | 0
+
   for (; k + 7 < newcount; k += 8) {
     this.words[k] &= otherbitmap.words[k]
     this.words[k + 1] &= otherbitmap.words[k + 1]
@@ -404,25 +382,24 @@ BitSet.prototype.intersection_size = function (otherbitmap) {
 // Computes the intersection between this bitset and another one,
 // a new bitmap is generated
 BitSet.prototype.new_intersection = function (otherbitmap) {
-  let answer = Object.create(BitSet.prototype)
   let count = Math.min(this.words.length, otherbitmap.words.length)
-  answer.words = new Array(count)
+  const words = new Uint32Array(count)
   let c = count
   let k = 0 | 0
   for (; k + 7 < c; k += 8) {
-    answer.words[k] = this.words[k] & otherbitmap.words[k]
-    answer.words[k + 1] = this.words[k + 1] & otherbitmap.words[k + 1]
-    answer.words[k + 2] = this.words[k + 2] & otherbitmap.words[k + 2]
-    answer.words[k + 3] = this.words[k + 3] & otherbitmap.words[k + 3]
-    answer.words[k + 4] = this.words[k + 4] & otherbitmap.words[k + 4]
-    answer.words[k + 5] = this.words[k + 5] & otherbitmap.words[k + 5]
-    answer.words[k + 6] = this.words[k + 6] & otherbitmap.words[k + 6]
-    answer.words[k + 7] = this.words[k + 7] & otherbitmap.words[k + 7]
+    words[k] = this.words[k] & otherbitmap.words[k]
+    words[k + 1] = this.words[k + 1] & otherbitmap.words[k + 1]
+    words[k + 2] = this.words[k + 2] & otherbitmap.words[k + 2]
+    words[k + 3] = this.words[k + 3] & otherbitmap.words[k + 3]
+    words[k + 4] = this.words[k + 4] & otherbitmap.words[k + 4]
+    words[k + 5] = this.words[k + 5] & otherbitmap.words[k + 5]
+    words[k + 6] = this.words[k + 6] & otherbitmap.words[k + 6]
+    words[k + 7] = this.words[k + 7] & otherbitmap.words[k + 7]
   }
   for (; k < c; ++k) {
-    answer.words[k] = this.words[k] & otherbitmap.words[k]
+    words[k] = this.words[k] & otherbitmap.words[k]
   }
-  return answer
+  return BitSet.fromWords(words)
 }
 
 BitSet.prototype.equals = function (otherbitmap) {
@@ -464,22 +441,19 @@ BitSet.prototype.change = function (otherbitmap) {
   }
   // remaining words are all part of change
   if (otherbitmap.words.length > this.words.length) {
-    // this.words = this.words.concat(otherbitmap.words.slice(k));
-    var maxcount = otherbitmap.words.length
-    for (; k < maxcount; ++k) {
-      this.words[k] = otherbitmap.words[k]
-    }
+    this.resize((otherbitmap.words.length << 5) - 1)
+    this.words.set(otherbitmap.words.subarray(k), k)
   }
   return this
 }
 
 // Computes the change between this bitset and another one,
 // a new bitmap is generated
-BitSet.prototype.new_change = function (otherbitmap) {
+BitSet.prototype.new_change = function (otherbitmap, recycled) {
   if (otherbitmap.words.length > this.words.length) {
-    return this.clone().change(otherbitmap)
+    return this.clone(recycled).change(otherbitmap)
   } else {
-    return otherbitmap.clone().change(this)
+    return otherbitmap.clone(recycled).change(this)
   }
 }
 
@@ -535,6 +509,36 @@ BitSet.prototype.difference_size = function (otherbitmap) {
   return answer
 }
 
+// Computes the difference between this bitset and another one,
+// the other bitset is modified (and returned by the function)
+// (for this set A and other set B,
+//   this computes B = A - B  and returns B)
+BitSet.prototype.difference2 = function (otherbitmap) {
+  const mincount = Math.min(this.words.length, otherbitmap.words.length)
+  let k = 0 | 0
+  for (; k + 7 < mincount; k += 8) {
+    otherbitmap.words[k] = this.words[k] & ~otherbitmap.words[k]
+    otherbitmap.words[k + 1] = this.words[k + 1] & ~otherbitmap.words[k + 1]
+    otherbitmap.words[k + 2] = this.words[k + 2] & ~otherbitmap.words[k + 2]
+    otherbitmap.words[k + 3] = this.words[k + 3] & ~otherbitmap.words[k + 3]
+    otherbitmap.words[k + 4] = this.words[k + 4] & ~otherbitmap.words[k + 4]
+    otherbitmap.words[k + 5] = this.words[k + 5] & ~otherbitmap.words[k + 5]
+    otherbitmap.words[k + 6] = this.words[k + 6] & ~otherbitmap.words[k + 6]
+    otherbitmap.words[k + 7] = this.words[k + 7] & ~otherbitmap.words[k + 7]
+  }
+  for (; k < mincount; ++k) {
+    otherbitmap.words[k] = this.words[k] & ~otherbitmap.words[k]
+  }
+  // remaining words are all part of difference
+  if (k < this.words.length) {
+    otherbitmap.resize((this.words.length << 5) - 1)
+    otherbitmap.words.set(this.words.subarray(k), k)
+  } else {
+    otherbitmap.words.fill(0, k)
+  }
+  return otherbitmap
+}
+
 // Returns a string representation
 BitSet.prototype.toString = function () {
   return "{" + this.array().join(",") + "}"
@@ -560,48 +564,42 @@ BitSet.prototype.union = function (otherbitmap) {
   }
   if (this.words.length < otherbitmap.words.length) {
     this.resize((otherbitmap.words.length << 5) - 1)
-    let c = otherbitmap.words.length
-    for (let k = mcount; k < c; ++k) {
-      this.words[k] = otherbitmap.words[k]
-    }
+    this.words.set(otherbitmap.words.subarray(k), k)
   }
   return this
 }
 
-BitSet.prototype.new_union = function (otherbitmap) {
-  let answer = Object.create(BitSet.prototype)
+BitSet.prototype.new_union = function (otherbitmap, recycled) {
   let count = Math.max(this.words.length, otherbitmap.words.length)
-  answer.words = new Array(count)
+  const words = recycled
+    ? recycled.resize((count << 5) - 1).words
+    : new Uint32Array(count)
   let mcount = Math.min(this.words.length, otherbitmap.words.length)
   let k = 0
   for (; k + 7 < mcount; k += 8) {
-    answer.words[k] = this.words[k] | otherbitmap.words[k]
-    answer.words[k + 1] = this.words[k + 1] | otherbitmap.words[k + 1]
-    answer.words[k + 2] = this.words[k + 2] | otherbitmap.words[k + 2]
-    answer.words[k + 3] = this.words[k + 3] | otherbitmap.words[k + 3]
-    answer.words[k + 4] = this.words[k + 4] | otherbitmap.words[k + 4]
-    answer.words[k + 5] = this.words[k + 5] | otherbitmap.words[k + 5]
-    answer.words[k + 6] = this.words[k + 6] | otherbitmap.words[k + 6]
-    answer.words[k + 7] = this.words[k + 7] | otherbitmap.words[k + 7]
+    words[k] = this.words[k] | otherbitmap.words[k]
+    words[k + 1] = this.words[k + 1] | otherbitmap.words[k + 1]
+    words[k + 2] = this.words[k + 2] | otherbitmap.words[k + 2]
+    words[k + 3] = this.words[k + 3] | otherbitmap.words[k + 3]
+    words[k + 4] = this.words[k + 4] | otherbitmap.words[k + 4]
+    words[k + 5] = this.words[k + 5] | otherbitmap.words[k + 5]
+    words[k + 6] = this.words[k + 6] | otherbitmap.words[k + 6]
+    words[k + 7] = this.words[k + 7] | otherbitmap.words[k + 7]
   }
   for (; k < mcount; ++k) {
-    answer.words[k] = this.words[k] | otherbitmap.words[k]
+    words[k] = this.words[k] | otherbitmap.words[k]
   }
-  let c = this.words.length
-  for (let k = mcount; k < c; ++k) {
-    answer.words[k] = this.words[k]
-  }
-  let c2 = otherbitmap.words.length
-  for (let k = mcount; k < c2; ++k) {
-    answer.words[k] = otherbitmap.words[k]
-  }
-  return answer
+  if (k < this.words.length) words.set(this.words.subarray(k), k)
+  else if (k < otherbitmap.words.length)
+    words.set(otherbitmap.words.subarray(k), k)
+
+  return recycled || BitSet.fromWords(words)
 }
 
 // Computes the difference between this bitset and another one,
 // a new bitmap is generated
-BitSet.prototype.new_difference = function (otherbitmap) {
-  return this.clone().difference(otherbitmap) // should be fast enough
+BitSet.prototype.new_difference = function (otherbitmap, recycled) {
+  return this.clone(recycled).difference(otherbitmap) // should be fast enough
 }
 
 // Computes the size union between this bitset and another one
