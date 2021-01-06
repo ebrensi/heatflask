@@ -51,6 +51,8 @@ export function reset() {
     itemsArray[i].idx = i
   }
   resetSegMasks()
+  inView.current = new BitSet(itemsArray.length)
+  inView.last = new BitSet(itemsArray.length)
 }
 
 /*
@@ -75,8 +77,8 @@ function setDotColors() {
  * a set of indices of Activities in itemsArray.
  */
 const inView = {
-  current: new BitSet(), // Current means since the last update
-  last: new BitSet(),
+  current: null, // Current means since the last update
+  last: null,
 }
 
 /**
@@ -120,8 +122,8 @@ export async function updateGroups() {
     if (!A.idxSet[zoom]) {
       throw `idxSet[${zoom}] didn't get made`
     }
-    const segMask = A.updateSegMask()
-    if (segMask.isEmpty()) {
+
+    if (!A.updateSegMask()) {
       inView.current.remove(i)
     }
   })
@@ -133,6 +135,7 @@ export async function updateGroups() {
       addToGroup(i)
     } else {
       removeFromGroup(i)
+      itemsArray[i].resetSegMask()
     }
   })
 

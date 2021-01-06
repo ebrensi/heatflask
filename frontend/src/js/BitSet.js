@@ -321,7 +321,6 @@ BitSet.prototype.new_subset = function (bitSubSet) {
   return newSet.trim()
 }
 
-
 // Creates a copy of this bitmap
 BitSet.prototype.clone = function (recycled) {
   if (recycled) {
@@ -540,8 +539,19 @@ BitSet.prototype.difference2 = function (otherbitmap) {
 }
 
 // Returns a string representation
-BitSet.prototype.toString = function () {
-  return "{" + this.array().join(",") + "}"
+BitSet.prototype.toString = function (type) {
+  let str
+  if (type) {
+    const max = this.max()
+    const arr = new Uint8Array(max)
+    for (let j = 0; j < max; j++) {
+      arr[j] = this.has(j)
+    }
+    str = arr.join('') || "0"
+  } else {
+    str = "{" + this.array().join(",") + "}"
+  }
+  return str
 }
 
 // Computes the union between this bitset and another one,

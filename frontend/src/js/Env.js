@@ -23,7 +23,7 @@ export let OFFLINE
  */
 export const DEV_BUNDLE = process.env.NODE_ENV !== "production"
 export const MAP_INFO = true //DEV_BUNDLE
-export const DEBUG_BORDERS = false
+export const DEBUG_BORDERS = true
 
 const argstring = document.querySelector("#runtime-arguments").innerText
 

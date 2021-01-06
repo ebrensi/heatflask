@@ -371,25 +371,33 @@ export class Activity {
      */
     if (!this.segMask) this.segMask = new BitSet()
 
+    console.log(this.id + "----- updating segmask ---------")
     if (this.containedInMapBounds()) {
-      if (this._containedInMapBounds) return this.segMask
       /*
        * If this activity is completely contained in the ViewBox then we
        * already know every segment is included.  Explicitly creating a full
-       * segMask and updating DrawBox with the bounds is much faster.
+       * segMask and updating DrawBox with the bounds saves some work.
        */
-      const n = this.idxSet[zoom].size()
-      this.segMask.clear().resize(n)
-      this.segMask.words.fill(~0, 0, n >> 5)
-      this.segMask.words[n >> 5] = 2 ** (n % 32) - 1
-
       const pxB = this.pxBounds
       const southWest = pxB.subarray(0, 2)
       const northEast = pxB.subarray(2, 4)
       DrawBox.update(southWest)
       DrawBox.update(northEast)
+
+      if (this._containedInMapBounds) {
+        console.log(~~performance.now() + " still contained")
+        return this.segMask
+      }
+
+      const n = this.idxSet[zoom].size()
+      this.segMask.clear().resize(n)
+      this.segMask.words.fill(~0, 0, n >> 5)
+      this.segMask.words[n >> 5] = 2 ** (n % 32) - 1
       this._containedInMapBounds = true
+      console.log(~~performance.now() + " contained")
+
     } else {
+
       this._containedInMapBounds = false
       const points = this.getPointAccessor(zoom)
       const n = this.idxSet[zoom].size()
@@ -426,6 +434,13 @@ export class Activity {
         this.segMask.remove(idx)
       }
     }
+
+    if (!this._containedInMapBounds)
+      console.log(~~performance.now() + " " + this.segMask.toString(1))
+
+    if (this.segMask.isEmpty())
+      return
+
     return this.segMask
   }
 
@@ -436,6 +451,8 @@ export class Activity {
       this._segMaskUpdates = new BitSet()
     }
     this.lastSegMask.clear()
+    this._containedInMapBounds = undefined
+    console.log("segmask reset")
   }
 
   /**
@@ -445,13 +462,21 @@ export class Activity {
    */
   getSegMaskUpdates() {
 
-    if (!this.segMask.difference_size(this.lastSegMask)) return
+    if (!this.segMask.difference_size(this.lastSegMask)) {
+      console.log(~~performance.now() + " no new segs")
+      this.segMask.clone(this.lastSegMask)
+      return
+    }
 
     const newSegs = this.segMask.new_difference(
       this.lastSegMask,
       this._segMaskUpdates
     )
 
+    console.log(~~performance.now() + " update")
+    console.log("lsm: " + this.lastSegMask.toString(1))
+    console.log(" sm: " + this.segMask.toString(1))
+    console.log("new: " + newSegs.toString(1))
     /*
      * We include an edge segment (at the edge of the screen)
      * even if it was in the last draw
@@ -467,6 +492,7 @@ export class Activity {
       }
       lastSeg = s
     })
+    // lastSegMask = segMask
     this.segMask.clone(this.lastSegMask)
     return newSegs
   }

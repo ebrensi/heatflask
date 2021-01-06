@@ -195,10 +195,11 @@ function assignEventHandlers() {
 
   if (CONTINUOUS_PAN_REDRAWS) events.move = onMove
   if (CONTINUOUS_PINCH_REDRAWS) events.zoom = onZoom
-
+  if (_map.options.zoomAnimation && Browser.any3d) {
+    events.zoomanim = animateZoom
+  }
   return events
 }
-
 
 function dotCtxUpdate() {
   const ctx = dotCanvas.getContext("2d")
@@ -278,7 +279,6 @@ async function onMoveEnd() {
 }
 
 function moveDrawBox() {
-
   // Get the current draw rectangle in screen coordinates (relative to map pane position)
   const D = DrawBox.getScreenRect()
 
@@ -446,6 +446,7 @@ async function redraw(force) {
   if (fullRedraw) {
     const oldDrawBoxDim = DrawBox.getScreenRect()
     ViewBox.calibrate()
+    if (zoomChanged > 1) ActivityCollection.resetSegMasks()
     const canvasesToClear = [pathCanvas, dotCanvas]
     for (const canvas of canvasesToClear) {
       DrawBox.clear(canvas.getContext("2d"), oldDrawBoxDim)
@@ -453,7 +454,6 @@ async function redraw(force) {
     }
   } else {
     // const t0 = Date.now()
-    if (zoomChanged > 1) ActivityCollection.resetSegMasks()
     moveDrawBox()
     drawPathImageData()
     // console.log(`moveDrawBox: ${D.w}x${D.h} -- ${Date.now() - t0}ms`)
@@ -780,6 +780,21 @@ async function animate() {
 
   _drawingDots = false
   _timePaused = nowInSeconds
+}
+
+function animateZoom(e) {
+  const m = _map
+  const z = e.zoom
+  const scale = m.getZoomScale(z)
+
+  const offset = m._latLngToNewLayerPoint(
+    m.getBounds().getNorthWest(),
+    z,
+    e.center
+  )
+  DomUtil.setTransform(dotCanvas, offset, scale)
+  DomUtil.setTransform(pathCanvas, offset, scale)
+  // console.log({ offset, scale })
 }
 
 // for debug display
