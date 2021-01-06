@@ -547,7 +547,7 @@ BitSet.prototype.toString = function (type) {
     for (let j = 0; j < max; j++) {
       arr[j] = this.has(j)
     }
-    str = arr.join('') || "0"
+    str = arr.join("") || "0"
   } else {
     str = "{" + this.array().join(",") + "}"
   }

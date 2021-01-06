@@ -395,9 +395,7 @@ export class Activity {
       this.segMask.words[n >> 5] = 2 ** (n % 32) - 1
       this._containedInMapBounds = true
       console.log(~~performance.now() + " contained")
-
     } else {
-
       this._containedInMapBounds = false
       const points = this.getPointAccessor(zoom)
       const n = this.idxSet[zoom].size()
@@ -438,12 +436,10 @@ export class Activity {
     if (!this._containedInMapBounds)
       console.log(~~performance.now() + " " + this.segMask.toString(1))
 
-    if (this.segMask.isEmpty())
-      return
+    if (this.segMask.isEmpty()) return
 
     return this.segMask
   }
-
 
   resetSegMask() {
     if (!this.lastSegMask) {
@@ -461,7 +457,6 @@ export class Activity {
    * since the last draw.
    */
   getSegMaskUpdates() {
-
     if (!this.segMask.difference_size(this.lastSegMask)) {
       console.log(~~performance.now() + " no new segs")
       this.segMask.clone(this.lastSegMask)

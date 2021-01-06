@@ -55,7 +55,6 @@ if (vParams.geohash) {
 export const map = new Map("map", {
   center: center,
   zoom: zoom,
-  // preferCanvas: true,
   zoomAnimation: true,
   zoomSnap: 0.1,
   zoomDelta: 0.5,

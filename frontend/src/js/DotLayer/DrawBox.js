@@ -63,7 +63,9 @@ export function getScreenRect(pad) {
 
 // Draw the outline of the DrawBox (or arbitrary rect object in screen coordinates)
 export function draw(ctxOrCanvas, rect, label) {
-  const ctx = ctxOrCanvas.getContext? ctxOrCanvas.getContext("2d") : ctxOrCanvas
+  const ctx = ctxOrCanvas.getContext
+    ? ctxOrCanvas.getContext("2d")
+    : ctxOrCanvas
   const { x, y, w, h } = rect || getScreenRect()
   ctx.strokeRect(x, y, w, h)
   if (label) ctx.fillText(label, x + 20, y + 20)
@@ -71,7 +73,9 @@ export function draw(ctxOrCanvas, rect, label) {
 
 // Clear the current DrawBox (or region given by rect object in screen coordinates)
 export function clear(ctxOrCanvas, rect) {
-  const ctx = ctxOrCanvas.getContext? ctxOrCanvas.getContext("2d") : ctxOrCanvas
+  const ctx = ctxOrCanvas.getContext
+    ? ctxOrCanvas.getContext("2d")
+    : ctxOrCanvas
   const { x, y, w, h } = rect || getScreenRect()
   ctx.clearRect(x, y, w, h)
 }

@@ -40,9 +40,9 @@
   ],
   "devDependencies": {
     "documentation": "^13.1.0",
-    "eslint": "^7.16.0",
+    "eslint": "^7.17.0",
     "eslint-config-prettier": "^6.15.0",
-    "parcel": "^2.0.0-nightly.496",
+    "parcel": "^2.0.0-nightly.513",
     "parcel-plugin-nuke-dist": "^1.0.1",
     "prettier": "^2.2.1"
   },
