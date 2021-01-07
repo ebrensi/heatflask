@@ -15,12 +15,12 @@ function isLittleEndian() {
   throw new Error("unknown endianness")
 }
 
-const alphaMask = rgbaToUint32(255, 255, 255, 0)
-const alphaPos = _littleEndian ? 24 : 0
 const _littleEndian = isLittleEndian()
 const rgbaToUint32 = _littleEndian
   ? (r, g, b, a) => (a << 24) | (b << 16) | (g << 8) | r
   : (r, g, b, a) => (r << 24) | (g << 16) | (b << 8) | a
+const alphaMask = rgbaToUint32(255, 255, 255, 0)
+const alphaPos = _littleEndian ? 24 : 0
 
 export class PixelGraphics {
   constructor(imageData) {
@@ -50,12 +50,6 @@ export class PixelGraphics {
 
   setTransform(a1, b1, a2, b2) {
     this.transform = [a1, b1, a2, b2]
-    this.pxBounds = {
-      xmin: b1,
-      xmax: (this.width - b1) / a1,
-      ymin: b2,
-      ymax: (this.width - b2) / a2,
-    }
   }
 
   setColor(r, g, b, a = 0xff) {
@@ -67,7 +61,7 @@ export class PixelGraphics {
   }
 
   clearRect({ x, y, w, h }) {
-    if (!x) {
+    if (x === undefined) {
       this.buf32.fill(0)
       return
     }
@@ -78,6 +72,10 @@ export class PixelGraphics {
     }
   }
 
+  inBounds(x,y) {
+    return (x >= 0 && x < this.width && y >= 0 || y < this.height)
+  }
+
   /* ***************************************************
    * This code line-drawing at the pixel level is adapted from
    * "anti-aliased thick line" at
@@ -85,23 +83,19 @@ export class PixelGraphics {
    * *******************************************************
    */
   setPixel(x, y) {
-    const B = this.pxBounds
-    if (x < B.xmin || x >= B.xmax || y < B.ymin || y >= B.ymax) return
-
-    const T = this.transform
-    x = Math.round(T[0] * x + T[1])
-    y = Math.round(T[0] + y + T[2])
+    x = Math.round(x)
+    y = Math.round(y)
+    if (!this.inBounds(x,y)) return
     this.buf32[y * this.width + x] = this.color32
   }
 
   setPixelAA(x, y, a) {
-    const B = this.pxBounds
-    if (x < B.xmin || x >= B.xmax || y < B.ymin || y >= B.ymax) return
+    x = Math.round(x)
+    y = Math.round(y)
 
-    const T = this.transform
-    x = Math.round(T[0] * x + T[1])
-    y = Math.round(T[0] + y + T[2])
-    const alpha = 0xff - Math.round(a)
+    if (!this.inBounds(x,y)) return
+    a = Math.round(a)
+    const alpha = 0xff - a
     const color = (this.color32 & alphaMask) | (alpha << alphaPos)
     this.buf32[y * this.width + x] = color
   }
@@ -140,6 +134,12 @@ export class PixelGraphics {
 
   drawSegment(x0, y0, x1, y1, th) {
     if (!x0 || !y0 || !x1 || !y1) return
+
+    const T = this.transform
+    x0 = T[0] * x0 + T[1]
+    y0 = T[2] * y0 + T[3]
+    x1 = T[0] * x1 + T[1]
+    y1 = T[2] * y1 + T[3]
 
     if (!th) th = this.lineWidth
     /* plot an anti-aliased line of width th pixel */
@@ -318,7 +318,7 @@ export class PixelGraphics {
     const dotOffset = size / 2
     const T = this.transform
     x = Math.round(T[0] * x + T[1] - dotOffset)
-    y = Math.round(T[0] + y + T[2] - dotOffset)
+    y = Math.round(T[2] * y + T[3] - dotOffset)
 
     const xStart = x < 0 ? 0 : x // Math.max(0, tx)
     const xEnd = Math.min(x + size, this.width)
@@ -337,7 +337,7 @@ export class PixelGraphics {
   drawCircle(x, y, size) {
     const T = this.transform
     x = Math.round(T[0] * x + T[1])
-    y = Math.round(T[0] + y + T[2])
+    y = Math.round(T[2] * y + T[3])
     const r = size
     const r2 = r * r
 

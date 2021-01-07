@@ -113,7 +113,8 @@ frontend/node_modules
 frontend/.parcel-cache
 frontend/.cache
 
-backend/.users.db
+# Ignore development SQLite database
+backend/heatflask/.users.db
 
 # For Development
 frontend/dist

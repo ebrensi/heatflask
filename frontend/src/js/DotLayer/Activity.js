@@ -448,7 +448,6 @@ export class Activity {
     }
     this.lastSegMask.clear()
     this._containedInMapBounds = undefined
-    console.log("segmask reset")
   }
 
   /**

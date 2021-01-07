@@ -48,15 +48,15 @@ export function getScreenRect(pad) {
   if (isEmpty()) return defaultRect()
   const mapSize = ViewBox.getSize()
 
+  const [a1, b1, a2, b2] = ViewBox.transform
+
   // upper-left corner
-  const [Txmin, Tymin] = ViewBox.transform(xmin, ymin)
-  const x = ~~Math.max(Txmin - pad, 0)
-  const y = ~~Math.max(Tymin - pad, 0)
+  const x = Math.max(Math.floor(a1 * xmin + b1 - pad), 0)
+  const y = Math.max(Math.floor(a2 * ymin + b2 - pad), 0)
 
   // width and height
-  const [Txmax, Tymax] = ViewBox.transform(xmax, ymax)
-  const w = ~~Math.min(Txmax + pad, mapSize.x) - x
-  const h = ~~Math.min(Tymax + pad, mapSize.y) - y
+  const w = Math.min(Math.ceil(a1 * xmax + b1 + pad), mapSize.x) - x
+  const h = Math.min(Math.ceil(a2 * ymax + b2 + pad), mapSize.y) - y
 
   return { x, y, w, h }
 }

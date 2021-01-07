@@ -321,7 +321,7 @@ async function redraw(force) {
   if (!_ready) return
 
   await nextTask()
-
+  debugger;
   const boundsChanged = ViewBox.updateBounds()
   const zoomChanged = ViewBox.updateZoom()
   if (!force && !boundsChanged && !zoomChanged) {
@@ -385,13 +385,16 @@ async function drawPaths(forceFullRedraw) {
 
   let count = 0
   let frameCount = 0
+  const pxg = pathCanvas.pxg
+  const drawSeg = (x0,y0,x1,y1) => pxg.drawSegment(x0,y0,x1,y1)
+
   for (const { spec, items } of _styleGroups.path) {
-    pathCanvas.pxg.setColor(extractColor(spec.strokeStyle))
-    pathCanvas.pxg.setLineWidth(spec.lineWidth)
+    pxg.setColor(extractColor(spec.strokeStyle))
+    pxg.setLineWidth(spec.lineWidth)
     for (const A of items) {
       const segMask = drawAll ? A.segMask : A.getSegMaskUpdates()
       if (segMask) {
-        frameCount += A.forEachSegment(pathCanvas.pxg.drawSegment, segMask)
+        frameCount += A.forEachSegment(drawSeg, segMask)
       }
 
       if (frameCount > MAX_SEGMENTS_PER_FRAME) {
