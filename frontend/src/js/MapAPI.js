@@ -4,7 +4,7 @@
  * Efrem Rensi 2020
  */
 
-import { MAPBOX_ACCESS_TOKEN, OFFLINE, MAP_INFO, MOBILE } from "./Env.js"
+import { MAPBOX_ACCESS_TOKEN, OFFLINE, MAP_INFO } from "./Env.js"
 import Geohash from "latlon-geohash"
 
 import {
@@ -20,7 +20,7 @@ import {
 import "./BoxHook.js"
 
 import "leaflet-control-window"
-import "leaflet-areaselect"
+import "../../node_modules/leaflet-areaselect/src/leaflet-areaselect.js"
 import "../../node_modules/sidebar-v2/js/leaflet-sidebar.js"
 import { tileLayer } from "./TileLayer/TileLayer.Heatflask.js"
 import { flags, vParams, currentUser } from "./Model.js"

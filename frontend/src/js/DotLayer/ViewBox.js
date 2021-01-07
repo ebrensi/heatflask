@@ -17,7 +17,7 @@ let _map, _baseTranslation
 
 // exported module-scope variables
 let _pxOrigin, _pxOffset, _mapPanePos, _zoom, _zf, _scale
-let _transform
+const _transform = [1, 0, 1, 0]
 let xmin, xmax, ymin, ymax
 let _width, _height
 
@@ -143,7 +143,14 @@ export function calibrate() {
   _pxOffset = _mapPanePos.subtract(_pxOrigin)
   _baseTranslation = _map.containerPointToLayerPoint([0, 0])
   setCSStransform(_baseTranslation)
-  updateTransform()
+
+  // This array is available as ViewBox.transform
+  // for [a1, b1, a2, b2] = _transform,
+  // Tx = b1 + a1 * x
+  // Ty = b2 + a2 * y
+  _transform[0] = _transform[2] = _zf * _scale
+  _transform[1] = _pxOffset.x
+  _transform[3] = _pxOffset.y
 
   if (MAP_INFO) {
     updateDebugDisplay()
@@ -163,34 +170,6 @@ function updateDebugDisplay() {
       `offset: ${ox}, ${oy}<br>` +
       `scale: ${_scale.toFixed(3)}<br>` +
       `trans: ${tx.toFixed(3)}, ${ty.toFixed(3)}<br>`
-  }
-}
-
-/**
- * returns a function that transforms given x,y coordinates
- * to the current screen coordinate system
- *
- * Since this function will be called a lot we have made an
- * attempt at optimization: if the user supplies a function
- * that takes two arguments, the function will be called with
- * the transformed coordinates so we can avoid creating a new
- * Array every time we perform the transformation.
- */
-export function updateTransform(func) {
-  const { x: ox, y: oy } = _pxOffset
-  const mult = _zf * _scale
-  const _transformBuf = new Float32Array(2)
-
-  if (func) {
-    return function (x, y) {
-      return func(mult * x + ox, mult * y + oy)
-    }
-  }
-
-  _transform = (x, y) => {
-    _transformBuf[0] = mult * x + ox
-    _transformBuf[1] = mult * y + oy
-    return _transformBuf
   }
 }
 

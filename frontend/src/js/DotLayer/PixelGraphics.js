@@ -28,6 +28,7 @@ export class PixelGraphics {
       this.imageData = imageData // note that this is a setter call
       this.color32 = rgbaToUint32(0, 0, 0, 255) // default color is black
       this.lineWidth = 1
+      this.transform = [1, 0, 1, 0]
     }
   }
 
@@ -45,6 +46,16 @@ export class PixelGraphics {
 
   get imageData() {
     return this._imageData
+  }
+
+  setTransform(a1, b1, a2, b2) {
+    this.transform = [a1, b1, a2, b2]
+    this.pxBounds = {
+      xmin: b1,
+      xmax: (this.width - b1) / a1,
+      ymin: b2,
+      ymax: (this.width - b2) / a2,
+    }
   }
 
   setColor(r, g, b, a = 0xff) {
@@ -74,12 +85,22 @@ export class PixelGraphics {
    * *******************************************************
    */
   setPixel(x, y) {
-    if (x < 0 || x >= this.width || y < 0 || y >= this.height) return
+    const B = this.pxBounds
+    if (x < B.xmin || x >= B.xmax || y < B.ymin || y >= B.ymax) return
+
+    const T = this.transform
+    x = Math.round(T[0] * x + T[1])
+    y = Math.round(T[0] + y + T[2])
     this.buf32[y * this.width + x] = this.color32
   }
 
   setPixelAA(x, y, a) {
-    if (x < 0 || x >= this.width || y < 0 || y >= this.height) return
+    const B = this.pxBounds
+    if (x < B.xmin || x >= B.xmax || y < B.ymin || y >= B.ymax) return
+
+    const T = this.transform
+    x = Math.round(T[0] * x + T[1])
+    y = Math.round(T[0] + y + T[2])
     const alpha = 0xff - Math.round(a)
     const color = (this.color32 & alphaMask) | (alpha << alphaPos)
     this.buf32[y * this.width + x] = color
@@ -118,6 +139,8 @@ export class PixelGraphics {
   }
 
   drawSegment(x0, y0, x1, y1, th) {
+    if (!x0 || !y0 || !x1 || !y1) return
+
     if (!th) th = this.lineWidth
     /* plot an anti-aliased line of width th pixel */
     const sx = x0 < x1 ? 1 : -1
@@ -293,15 +316,15 @@ export class PixelGraphics {
 
   drawSquare(x, y, size) {
     const dotOffset = size / 2
+    const T = this.transform
+    x = Math.round(T[0] * x + T[1] - dotOffset)
+    y = Math.round(T[0] + y + T[2] - dotOffset)
 
-    const tx = Math.round(x - dotOffset)
-    const ty = Math.round(y - dotOffset)
+    const xStart = x < 0 ? 0 : x // Math.max(0, tx)
+    const xEnd = Math.min(x + size, this.width)
 
-    const xStart = tx < 0 ? 0 : tx // Math.max(0, tx)
-    const xEnd = Math.min(tx + size, this.width)
-
-    const yStart = ty < 0 ? 0 : ty
-    const yEnd = Math.min(ty + size, this.height)
+    const yStart = y < 0 ? 0 : y
+    const yEnd = Math.min(y + size, this.height)
 
     for (let row = yStart; row < yEnd; row++) {
       const offset = row * this.width
@@ -312,8 +335,12 @@ export class PixelGraphics {
   }
 
   drawCircle(x, y, size) {
+    const T = this.transform
+    x = Math.round(T[0] * x + T[1])
+    y = Math.round(T[0] + y + T[2])
     const r = size
     const r2 = r * r
+
     for (let cy = -r + 1; cy < r; cy++) {
       const offset = (cy + y) * this.width
       const cx = Math.sqrt(r2 - cy * cy)

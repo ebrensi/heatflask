@@ -288,7 +288,8 @@ async function onMoveEnd() {
 }
 
 function moveDrawBox() {
-  // Get the current draw rectangle in screen coordinates (relative to map pane position)
+  // Get the current draw rectangle in screen coordinates
+  // (relative to map pane position)
   const D = DrawBox.getScreenRect()
 
   // Get the last recorded ViewBox (screen) rectangle
@@ -347,6 +348,9 @@ async function redraw(force) {
     // console.log(`moveDrawBox: ${D.w}x${D.h} -- ${Date.now() - t0}ms`)
   }
 
+  dotCanvas.pxg.setTransform(...ViewBox.transform)
+  pathCanvas.pxg.setTransform(...ViewBox.transform)
+
   DrawBox.reset()
 
   _styleGroups = await ActivityCollection.updateGroups()
@@ -365,19 +369,6 @@ async function redraw(force) {
     // await nextTask()
     drawDots(_timePaused || 0)
   }
-}
-
-function drawSegment(x0, y0, x1, y1) {
-  const [tx0, ty0] = ViewBox.transform(x0, y0)
-  const [tx1, ty1] = ViewBox.transform(x1, y1)
-  if (!tx0 || !ty0 || !tx1 || !ty1) return
-
-  pathCanvas.pxg.drawSegment(
-    Math.round(tx0),
-    Math.round(ty0),
-    Math.round(tx1),
-    Math.round(ty1)
-  )
 }
 
 function drawPathImageData() {
@@ -400,7 +391,7 @@ async function drawPaths(forceFullRedraw) {
     for (const A of items) {
       const segMask = drawAll ? A.segMask : A.getSegMaskUpdates()
       if (segMask) {
-        frameCount += A.forEachSegment(drawSegment, segMask)
+        frameCount += A.forEachSegment(pathCanvas.pxg.drawSegment, segMask)
       }
 
       if (frameCount > MAX_SEGMENTS_PER_FRAME) {
@@ -438,13 +429,11 @@ const makeDrawDotFuncs = {
     _drawFunction.setColor = pxg.setColor
 
     _drawFunction.square = (x, y) => {
-      const p = ViewBox.transform(x, y)
-      pxg.drawSquare(p[0], p[1], ds._dotSize)
+      pxg.drawSquare(x, y, ds._dotSize)
     }
 
     _drawFunction.circle = (x, y) => {
-      const p = ViewBox.transform(x, y)
-      pxg.drawCircle(p[0], p[1], ds._dotSize)
+      pxg.drawCircle(x, y, ds._dotSize)
     }
 
     _drawFunction.after = () => {
