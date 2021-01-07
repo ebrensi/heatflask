@@ -35,12 +35,11 @@ source $a
 echo "attempting to update pip to latest version"
 python -m pip install --upgrade pip
 
-echo "installing backend dependencies (requirements.txt)"
-pip install -r requirements.txt
-
 echo "installing backend dev-dependencies (requirements-dev.txt)"
 pip install -r requirements-dev.txt
 
+echo "installing backend dependencies (requirements.txt)"
+pip install -r requirements.txt
 
 if [ ! -f .env ]; then
     echo "copying .env.tmp to .env"

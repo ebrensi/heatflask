@@ -204,6 +204,10 @@ def auth_callback():
         return redirect(state or url_for("splash"))
 
     scope = request.args.get("scope")
+    if not scope:
+        log.exception("there is a problem with authentication")
+        return "oops"
+
     if "activity:read" not in scope:
         # We need to be able to read the user's activities
         return redirect(url_for("authorize", state=state))

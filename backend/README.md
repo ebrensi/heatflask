@@ -8,31 +8,18 @@ If you want to try your hand at Heatflask development, you will need to be able 
 
 ### Set up the backend environment
 Fork this repo and clone it to your machine.   The backend currently runs on Python 3.8. You will need installed on your machine:
-  * A Python 3.8.x environment. [This](https://docs.python.org/3/library/venv.html) describes one way to do it.
-    * For example, to create a python 3.8 environment called `heatflask-dev` in a directory called `~/.venv`, make sure you have Python 3.8 installed. Then `python3 -m venv ~/.venv/heatflask-dev`.  The vitrual-environment directory should not be included in this repo!
+  * A Python 3 (3.8 or more recent)
   * [Redis](https://redis.io) Fast in-memory datastore (backend cache)
   * [MongoDB](https://www.mongodb.com) NoSQL database (Activities database)
-  * [Postgres](https://www.postgresql.org) SQL database (User database).  There should be a `heatflask` database with user `heatflask` with password "heatflask".
-    The commands you'll need to do this are
-      ```
-      createuser -P heatflask
-      createdb -O heatflask heatflask
-      ```
-### Install Python dependencies
-Now to install the backend dependencies on your machine. Navigate to the `backend` directory.  Make sure your Python 3.8 environment is activated.  Then install all the backend dependencies with
-```
-pip install -r requirements-dev.txt
-pip install -r requirements.txt
-```
+On some Linux systems Mongo may be installed but the service is not started.  Make sure the MongoDB daemon is running.
+The setup used to be more complicated but now there is a convenient script [`dev-install-backend`](/backend/dev-install-backend)
+Running that should do everything for you:
+  * set up a Python 3 virtual environment in `backend/.venv/heatflask`
+  * install all the python dependencies
 
 ### Setup local environment variables
-You will need to have a shell script in the `[/backend](/backend/)` directory called `.env`, that contains environment variables specific to your machine.  That file should only be on your machine, and not part of this repo.
-There is a template file already set up for you, called [`.env.tmp`](/backend/.env.tmp).  Rename it to `.env` and include the missing information.
-
-Unless you want to manually activate the dev environment every time, have a line to do that. If you created an envrinment as suggested above, the line will be
-```bash
-source ~/.venv/heatflask-dev/bin/activate
-```
+You will need to have a shell script in the [`/backend`](/backend/) directory called `.env`, that contains environment variables specific to your machine.  That file should only be on your machine, and not part of this repo.  There is a line in [`.gitignore`](/.gitignore) that excludes `.env` from the repo so you won't accidentally push it to Github.
+There is a template file already set up for you, called [`.env.tmp`](/backend/.env.tmp).  The `dev-install-backend` script should rename `.env.tmp` to `.env` after it completes.
 
 
 In order to access Strava you will need to have a Strava account, with an app defined.  [Here](https://developers.strava.com/docs/getting-started/) are the instructions for how to do that.  Strava will give you a client-id and a client-secret.  Include them in your `.env` file as
@@ -42,18 +29,12 @@ export STRAVA_CLIENT_ID="...""
 export STRAVA_CLIENT_SECRET="..."
 ```
 
-The environment has to specify to the Flask app what kind of environment it is running in: Development, Staging, or Production. See [`config.py`](/backend/config.py).
-
-For the development environment, which is what you will have,
-```bash
-export APP_SETTINGS="config.DevelopmentConfig"
-```
 
 In order to access MapBox baselayers, your environment needs to have an access token
 ```bash
 export MAPBOX_ACCESS_TOKEN=...(your access token)
 ```
-which you can get from [here](https://docs.mapbox.com/help/how-mapbox-works/access-tokens).
+which you can get from [here](https://docs.mapbox.com/help/how-mapbox-works/access-tokens).  If you don't mind not having Mapbox map backgrounds for development then don't bother.  There are other options that don't require authentication.
 
 
 ### Start the webserver

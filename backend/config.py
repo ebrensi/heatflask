@@ -39,16 +39,8 @@ class Config(object):
 
     BATCH_CHUNK_SIZE = 100
 
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        "pool_pre_ping": True,
-        "pool_size": 6,
-        "max_overflow": 8,
-        "pool_timeout": 10,
-        "pool_recycle": 300,
-    }
-
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     MONGO_OPTIONS = {"maxIdleTimeMS": 10000, "maxPoolSize": 100}
 
@@ -125,6 +117,14 @@ class ProductionConfig(Config):
     """
 
     DEBUG = False
+
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_pre_ping": True,
+        "pool_size": 6,
+        "max_overflow": 8,
+        "pool_timeout": 10,
+        "pool_recycle": 300,
+    }
 
     MONGO_URI = os.environ.get("ATLAS_MONGODB_URI")
     REDIS_URL = os.environ.get("REDISGREEN_URL")

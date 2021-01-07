@@ -109,9 +109,11 @@ frontend/test/
 # Ignore node_modules both as a directory, and as a symbolic link
 frontend/node_modules
 
-# Igonre ParcelJS caches
+# Ignore ParcelJS caches
 frontend/.parcel-cache
 frontend/.cache
+
+backend/.users.db
 
 # For Development
 frontend/dist
