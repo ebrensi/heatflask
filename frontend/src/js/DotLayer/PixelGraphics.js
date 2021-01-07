@@ -73,8 +73,8 @@ export class PixelGraphics {
     }
   }
 
-  inBounds(x,y) {
-    return (x >= 0 && x < this.width && y >= 0 || y < this.height)
+  inBounds(x, y) {
+    return (x >= 0 && x < this.width && y >= 0) || y < this.height
   }
 
   /* ***************************************************
@@ -84,13 +84,13 @@ export class PixelGraphics {
    * *******************************************************
    */
   setPixel(x, y) {
-    if (!this.inBounds(x,y)) return
+    if (!this.inBounds(x, y)) return
     this.buf32[y * this.width + x] = this.color32
   }
 
   setPixelAA(x, y, a) {
-    if (!this.inBounds(x,y)) return
-    const alpha = 0xff -  Math.round(a)
+    if (!this.inBounds(x, y)) return
+    const alpha = 0xff - Math.round(a)
     const color = (this.color32 & alphaMask) | (alpha << alphaPos)
     this.buf32[y * this.width + x] = color
   }

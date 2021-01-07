@@ -434,9 +434,10 @@ export class Activity {
     }
 
     if (!this._containedInMapBounds)
-      // console.log(~~performance.now() + " " + this.segMask.toString(1))
+      if (this.segMask.isEmpty())
+        // console.log(~~performance.now() + " " + this.segMask.toString(1))
 
-    if (this.segMask.isEmpty()) return
+        return
 
     return this.segMask
   }
