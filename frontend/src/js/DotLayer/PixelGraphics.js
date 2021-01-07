@@ -60,12 +60,13 @@ export class PixelGraphics {
     this.lineWidth = w
   }
 
-  clearRect({ x, y, w, h }) {
-    if (x === undefined) {
+  clearRect(rect) {
+    if (!rect) {
       this.buf32.fill(0)
       return
     }
 
+    const { x, y, w, h } = rect
     for (let row = y; row < y + h; row++) {
       const offset = row * this.width
       this.buf32.fill(0, offset + x, offset + x + w)
@@ -83,19 +84,13 @@ export class PixelGraphics {
    * *******************************************************
    */
   setPixel(x, y) {
-    x = Math.round(x)
-    y = Math.round(y)
     if (!this.inBounds(x,y)) return
     this.buf32[y * this.width + x] = this.color32
   }
 
   setPixelAA(x, y, a) {
-    x = Math.round(x)
-    y = Math.round(y)
-
     if (!this.inBounds(x,y)) return
-    a = Math.round(a)
-    const alpha = 0xff - a
+    const alpha = 0xff -  Math.round(a)
     const color = (this.color32 & alphaMask) | (alpha << alphaPos)
     this.buf32[y * this.width + x] = color
   }
@@ -136,10 +131,11 @@ export class PixelGraphics {
     if (!x0 || !y0 || !x1 || !y1) return
 
     const T = this.transform
-    x0 = T[0] * x0 + T[1]
-    y0 = T[2] * y0 + T[3]
-    x1 = T[0] * x1 + T[1]
-    y1 = T[2] * y1 + T[3]
+    // These must be integers
+    x0 = Math.round(T[0] * x0 + T[1])
+    y0 = Math.round(T[2] * y0 + T[3])
+    x1 = Math.round(T[0] * x1 + T[1])
+    y1 = Math.round(T[2] * y1 + T[3])
 
     if (!th) th = this.lineWidth
     /* plot an anti-aliased line of width th pixel */

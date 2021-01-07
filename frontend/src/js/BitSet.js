@@ -204,8 +204,8 @@ BitSet.prototype.max = function () {
 BitSet.prototype.array = function (ArrayConstructor) {
   const max = this.max()
   ArrayConstructor =
-    ArrayConstructor || max >> 8
-      ? max >> 16
+    ArrayConstructor || max >>> 8
+      ? max >>> 16
         ? Uint32Array
         : Uint16Array
       : Uint8Array

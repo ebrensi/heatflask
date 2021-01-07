@@ -321,7 +321,6 @@ async function redraw(force) {
   if (!_ready) return
 
   await nextTask()
-  debugger;
   const boundsChanged = ViewBox.updateBounds()
   const zoomChanged = ViewBox.updateZoom()
   if (!force && !boundsChanged && !zoomChanged) {
@@ -386,7 +385,7 @@ async function drawPaths(forceFullRedraw) {
   let count = 0
   let frameCount = 0
   const pxg = pathCanvas.pxg
-  const drawSeg = (x0,y0,x1,y1) => pxg.drawSegment(x0,y0,x1,y1)
+  const drawSeg = (x0, y0, x1, y1) => pxg.drawSegment(x0, y0, x1, y1)
 
   for (const { spec, items } of _styleGroups.path) {
     pxg.setColor(extractColor(spec.strokeStyle))
@@ -429,7 +428,7 @@ const makeDrawDotFuncs = {
       }
     }
 
-    _drawFunction.setColor = pxg.setColor
+    _drawFunction.setColor = (c) => pxg.setColor(c)
 
     _drawFunction.square = (x, y) => {
       pxg.drawSquare(x, y, ds._dotSize)

@@ -371,7 +371,7 @@ export class Activity {
      */
     if (!this.segMask) this.segMask = new BitSet()
 
-    console.log(this.id + "----- updating segmask ---------")
+    // console.log(this.id + "----- updating segmask ---------")
     if (this.containedInMapBounds()) {
       /*
        * If this activity is completely contained in the ViewBox then we
@@ -385,7 +385,7 @@ export class Activity {
       DrawBox.update(northEast)
 
       if (this._containedInMapBounds) {
-        console.log(~~performance.now() + " still contained")
+        // console.log(~~performance.now() + " still contained")
         return this.segMask
       }
 
@@ -394,7 +394,7 @@ export class Activity {
       this.segMask.words.fill(~0, 0, n >> 5)
       this.segMask.words[n >> 5] = 2 ** (n % 32) - 1
       this._containedInMapBounds = true
-      console.log(~~performance.now() + " contained")
+      // console.log(~~performance.now() + " contained")
     } else {
       this._containedInMapBounds = false
       const points = this.getPointAccessor(zoom)
@@ -434,7 +434,7 @@ export class Activity {
     }
 
     if (!this._containedInMapBounds)
-      console.log(~~performance.now() + " " + this.segMask.toString(1))
+      // console.log(~~performance.now() + " " + this.segMask.toString(1))
 
     if (this.segMask.isEmpty()) return
 
@@ -457,7 +457,7 @@ export class Activity {
    */
   getSegMaskUpdates() {
     if (!this.segMask.difference_size(this.lastSegMask)) {
-      console.log(~~performance.now() + " no new segs")
+      // console.log(~~performance.now() + " no new segs")
       this.segMask.clone(this.lastSegMask)
       return
     }
@@ -467,10 +467,10 @@ export class Activity {
       this._segMaskUpdates
     )
 
-    console.log(~~performance.now() + " update")
-    console.log("lsm: " + this.lastSegMask.toString(1))
-    console.log(" sm: " + this.segMask.toString(1))
-    console.log("new: " + newSegs.toString(1))
+    // console.log(~~performance.now() + " update")
+    // console.log("lsm: " + this.lastSegMask.toString(1))
+    // console.log(" sm: " + this.segMask.toString(1))
+    // console.log("new: " + newSegs.toString(1))
     /*
      * We include an edge segment (at the edge of the screen)
      * even if it was in the last draw
