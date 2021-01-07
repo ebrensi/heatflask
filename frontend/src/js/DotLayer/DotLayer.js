@@ -8,7 +8,7 @@ import { Control } from "../myLeaflet.js"
 import * as ViewBox from "./ViewBox.js"
 import * as DrawBox from "./DrawBox.js"
 import * as ActivityCollection from "./ActivityCollection.js"
-import * as PixelGraphics from "./PixelGraphics.js"
+import { PixelGraphics } from "./PixelGraphics.js"
 import { MAP_INFO } from "../Env.js"
 import { nextTask, nextAnimationFrame, rgbaToUint32 } from "../appUtil.js"
 import { DEBUG_BORDERS } from "../Env.js"
@@ -95,7 +95,9 @@ export const DotLayer = Layer.extend({
     // dotlayer canvas
     dotCanvas = addCanvasOverlay(dotCanvasPane)
     const { width: dw, height: dh } = dotCanvas
-    dotCanvas.imageData = dotCanvas.getContext("2d").createImageData(dw, dh)
+    dotCanvas.pxg = new PixelGraphics(
+      dotCanvas.getContext("2d").createImageData(dw, dh)
+    )
     makeDrawDotFuncs.imageDataTest()
 
     /*
@@ -104,12 +106,16 @@ export const DotLayer = Layer.extend({
      */
     pathCanvas = addCanvasOverlay(pathCanvasPane)
     const { width: pw, height: ph } = pathCanvas
-    pathCanvas.imageData = pathCanvas.getContext("2d").createImageData(pw, ph)
-    PixelGraphics.setImageData(pathCanvas.imageData)
+
+    pathCanvas.pxg = new PixelGraphics(
+      pathCanvas.getContext("2d").createImageData(pw, ph)
+    )
 
     if (DEBUG_BORDERS) {
       // create Canvas for debugging canvas stuff
       debugCanvas = addCanvasOverlay(debugCanvasPane)
+      pathCanvas.pxg.debugCanvas = debugCanvas
+      dotCanvas.pxg.debugCanvas = debugCanvas
     }
 
     ViewBox.setMap(_map)
@@ -226,17 +232,20 @@ async function onResize() {
   ViewBox.resize(newMapSize)
 
   const { width: dw, height: dh } = dotCanvas
-  dotCanvas.imageData = dotCanvas.getContext("2d").createImageData(dw, dh)
+  const dctx = dotCanvas.getContext("2d")
+  dotCanvas.pxg.imageData = dctx.createImageData(dw, dh)
+
   makeDrawDotFuncs.imageDataTest()
   dotCtxUpdate()
 
   /*
-   * The Path Canvas is for activity paths, which are made up of a bunch of
-   * segments.
+   * The Path Canvas is for activity paths, which are made up
+   * of a bunch of segments.
    */
   const { width: pw, height: ph } = pathCanvas
-  pathCanvas.imageData = pathCanvas.getContext("2d").createImageData(pw, ph)
-  PixelGraphics.setImageData(pathCanvas.imageData)
+  const pctx = pathCanvas.getContext("2d")
+  pathCanvas.pxg.imageData = pctx.createImageData(pw, ph)
+
   await redraw(true)
 }
 
@@ -297,137 +306,16 @@ function moveDrawBox() {
 
   const canvasesToMove = [pathCanvas, dotCanvas]
   for (const canvas of canvasesToMove) {
-    imageDataMoveRect(canvas.imageData, D, dVx, dVy)
+    canvas.pxg.moveRect(D, dVx, dVy)
     DrawBox.clear(canvas.getContext("2d"), D)
   }
 }
 
 /*
- * This function moves the pixels from one rectangular region
- *  of an imageData object to another, possibly overlapping
- *  rectanglular region of equal size.
+ * This function redraws paths (and dots if paused),
+ * also recalibrating the position of the canvases
+ * over the map pane
  */
-function imageDataMoveRect(imageData, rect, shiftX, shiftY) {
-  const { width, height, data } = imageData
-  const r = rect
-  const buf32 = new Uint32Array(data.buffer)
-
-  const [dx0, dy0] = ViewBox.clip(r.x + shiftX, r.y + shiftY)
-  const [dx1, dy1] = ViewBox.clip(r.x + r.w + shiftX, r.y + r.h + shiftY)
-  let s, d
-
-  // We only define desatination rect if it is on-screen
-  if (dx0 !== dx1 && dy0 !== dy1) {
-    d = { x: dx0, y: dy0, w: dx1 - dx0, h: dy1 - dy0 }
-    s = { x: dx0 - shiftX, y: dy0 - shiftY, w: d.w, h: d.h }
-  } else {
-    /* if there is no destination rectangle (nothing in view)
-     *  we just clear the source rectangle and exit
-     */
-    imageDataClearRect(imageData, rect)
-    return
-  }
-
-  if (DEBUG_BORDERS) {
-    const debugCtx = debugCanvas.getContext("2d")
-    debugCtx.strokeStyle = "#000000"
-    DrawBox.draw(debugCtx, s, "source") // draw source rect
-    DrawBox.draw(debugCtx, d, "dest") // draw dest rect
-  }
-
-  const moveRow = (row) => {
-    const sOffset = (s.y + row) * width
-    const sRowStart = sOffset + s.x
-    const sRowEnd = sRowStart + s.w
-    const rowData = buf32.subarray(sRowStart, sRowEnd)
-
-    const dOffset = (d.y + row) * width
-    const dRowStart = dOffset + d.x
-    buf32.set(rowData, dRowStart)
-
-    // erase the whole source rect row
-    const rStart = sOffset + r.x
-    const rEnd = rStart + r.w
-    buf32.fill(0, rStart, rEnd) // clear the source row
-  }
-
-  /* We only bother copying if the destination rectangle is within
-   * the imageData bounds
-   */
-  if (d.y < s.y) {
-    /* if the source rectangle is below the destination
-       then we copy rows from the top down */
-    for (let row = 0; row < s.h; row++) moveRow(row)
-
-    const clearRegion = { x: r.x, y: r.y, w: r.w, h: r.h - s.h }
-    if (DEBUG_BORDERS) {
-      DrawBox.draw(debugCanvas, clearRegion, "clear") // draw source rect
-    }
-
-    imageDataClearRect(imageData, clearRegion)
-  } else if (d.y > s.y) {
-    /* otherwise we copy from the bottom row up */
-    for (let row = s.h - 1; row >= 0; row--) moveRow(row)
-
-    // and clear what's left of source rectangle
-    const clearRegion = { x: r.x, y: r.y + s.h, w: r.w, h: r.h - s.h }
-    if (DEBUG_BORDERS) {
-      DrawBox.draw(debugCanvas, clearRegion, "clear") // draw source rect
-    }
-
-    imageDataClearRect(imageData, clearRegion)
-  } else {
-    /* In the rare case that the source and dest rectangles are
-     *  horizontally adjacent to each other, we cannot copy rows directly
-     *  because the rows may overlap. We have to use an intermediate buffer,
-     *  ideally an unused block of the same imageData arraybuffer.
-     */
-    let bufOffset
-    // use the first row of imagedata if it is available
-    if (d.y > 0) bufOffset = 0
-    // or the last row
-    else if (d.y + d.h < r.h) bufOffset = (r.h - 1) * width
-
-    const rowBuf =
-      bufOffset === undefined
-        ? new Uint32Array(d.w) // Worst-case scenario: allocate new memory
-        : buf32.subarray(bufOffset, bufOffset + d.w)
-
-    for (let y = d.y, n = d.y + d.h; y < n; y++) {
-      const offset = y * width
-      const sRowStart = offset + s.x
-      const sRowEnd = sRowStart + s.w
-      const dRowStart = offset + d.x
-
-      const rowData = buf32.subarray(sRowStart, sRowEnd)
-      rowBuf.set(rowData)
-      buf32.set(rowBuf, dRowStart)
-    }
-    // now clear the row buffer if it is part of imageData
-    if (bufOffset !== undefined) rowBuf.fill(0)
-
-    // and clear the remaining part of source rectangle
-    const clearRegion =
-      s.x < d.x
-        ? { x: s.x, y: s.y, w: d.x - s.x, h: s.h }
-        : { x: d.x + d.w, y: s.y, w: s.x - d.x, h: s.h }
-    if (DEBUG_BORDERS) {
-      DrawBox.draw(debugCanvas, clearRegion, "clear")
-    }
-
-    imageDataClearRect(imageData, clearRegion)
-  }
-}
-
-const imageDataClearRect = (imageData, { x, y, w, h }) => {
-  const { width, data } = imageData
-  const buf32 = new Uint32Array(data.buffer)
-  for (let row = y; row < y + h; row++) {
-    const offset = row * width
-    buf32.fill(0, offset + x, offset + x + w)
-  }
-}
-
 async function redraw(force) {
   if (!_ready) return
 
@@ -450,7 +338,7 @@ async function redraw(force) {
     const canvasesToClear = [pathCanvas, dotCanvas]
     for (const canvas of canvasesToClear) {
       DrawBox.clear(canvas.getContext("2d"), oldDrawBoxDim)
-      imageDataClearRect(canvas.imageData, oldDrawBoxDim)
+      canvas.pxg.clearRect(oldDrawBoxDim)
     }
   } else {
     // const t0 = Date.now()
@@ -484,7 +372,7 @@ function drawSegment(x0, y0, x1, y1) {
   const [tx1, ty1] = ViewBox.transform(x1, y1)
   if (!tx0 || !ty0 || !tx1 || !ty1) return
 
-  PixelGraphics.drawSegment(
+  pathCanvas.pxg.drawSegment(
     Math.round(tx0),
     Math.round(ty0),
     Math.round(tx1),
@@ -495,8 +383,7 @@ function drawSegment(x0, y0, x1, y1) {
 function drawPathImageData() {
   const { x: Dx, y: Dy, w: Dw, h: Dh } = DrawBox.getScreenRect()
   const pathCtx = pathCanvas.getContext("2d")
-  const pathImageData = pathCanvas.imageData
-  pathCtx.putImageData(pathImageData, 0, 0, Dx, Dy, Dw, Dh)
+  pathCtx.putImageData(pathCanvas.pxg.imageData, 0, 0, Dx, Dy, Dw, Dh)
 }
 
 async function drawPaths(forceFullRedraw) {
@@ -508,8 +395,8 @@ async function drawPaths(forceFullRedraw) {
   let count = 0
   let frameCount = 0
   for (const { spec, items } of _styleGroups.path) {
-    PixelGraphics.setColor(extractColor(spec.strokeStyle))
-    PixelGraphics.setWidth(spec.lineWidth)
+    pathCanvas.pxg.setColor(extractColor(spec.strokeStyle))
+    pathCanvas.pxg.setLineWidth(spec.lineWidth)
     for (const A of items) {
       const segMask = drawAll ? A.segMask : A.getSegMaskUpdates()
       if (segMask) {
@@ -538,79 +425,37 @@ async function drawPaths(forceFullRedraw) {
 const makeDrawDotFuncs = {
   imageDataTest: function () {
     const ds = _dotSettings
-    const imageData = dotCanvas.imageData
-    const { width, height } = imageData
-    const buf32 = new Uint32Array(imageData.data.buffer) // deal with endianness!
+    const pxg = dotCanvas.pxg
     const ctx = dotCanvas.getContext("2d")
-    let drawColor
 
     _drawFunction.before = () => {
-      if (_lastDotDrawBox) {
-        imageDataClearRect(imageData, _lastDotDrawBox)
-        if (_options.dotShadows.enabled) {
-          DrawBox.clear(ctx, _lastDotDrawBox)
-        }
-      } else {
-        buf32.fill(0)
-        DrawBox.clear(ctx)
+      pxg.clearRect(_lastDotDrawBox)
+      if (_options.dotShadows.enabled) {
+        DrawBox.clear(ctx, _lastDotDrawBox)
       }
     }
 
-    _drawFunction.setColor = (color) => {
-      drawColor = color
-    }
+    _drawFunction.setColor = pxg.setColor
 
     _drawFunction.square = (x, y) => {
-      const size = ds._dotSize
-      const dotOffset = size / 2
-      const color = drawColor
-
       const p = ViewBox.transform(x, y)
-      const tx = (p[0] - dotOffset + 0.5) | 0
-      const ty = (p[1] - dotOffset + 0.5) | 0
-
-      const xStart = tx < 0 ? 0 : tx // Math.max(0, tx)
-      const xEnd = Math.min(tx + size, width)
-
-      const yStart = ty < 0 ? 0 : ty
-      const yEnd = Math.min(ty + size, height)
-
-      for (let row = yStart; row < yEnd; row++) {
-        const offset = row * width
-        const colStart = offset + xStart
-        const colEnd = offset + xEnd
-        buf32.fill(color, colStart, colEnd)
-      }
+      pxg.drawSquare(p[0], p[1], ds._dotSize)
     }
 
     _drawFunction.circle = (x, y) => {
-      const r = ds._dotSize
-      const color = drawColor
-
       const p = ViewBox.transform(x, y)
-
-      const tx = (p[0] + 0.5) | 0
-      const ty = (p[1] + 0.5) | 0
-
-      const r2 = r * r
-      for (let cy = -r + 1; cy < r; cy++) {
-        const offset = (cy + ty) * width
-        const cx = Math.sqrt(r2 - cy * cy)
-        const colStart = (offset + tx - cx) | 0
-        const colEnd = (offset + tx + cx) | 0
-        buf32.fill(color, colStart, colEnd)
-      }
+      pxg.drawCircle(p[0], p[1], ds._dotSize)
     }
 
     _drawFunction.after = () => {
       const D = DrawBox.getScreenRect()
       _lastDotDrawBox = D
       if (_options.dotShadows.enabled) {
-        createImageBitmap(imageData, D.x, D.y, D.w, D.h).then((img) =>
+        createImageBitmap(pxg.imageData, D.x, D.y, D.w, D.h).then((img) =>
           ctx.drawImage(img, D.x, D.y)
         )
       } else {
-        ctx.putImageData(imageData, 0, 0, D.x, D.y, D.w, D.h)
+        ctx.putImageData(pxg.imageData, 0, 0, D.x, D.y, D.w, D.h)
       }
     }
   },
