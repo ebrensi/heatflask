@@ -10,7 +10,7 @@ import * as DrawBox from "./DrawBox.js"
 import * as ActivityCollection from "./ActivityCollection.js"
 import { PixelGraphics } from "./PixelGraphics.js"
 import { MAP_INFO } from "../Env.js"
-import { nextTask, nextAnimationFrame, rgbaToUint32 } from "../appUtil.js"
+import { nextTask, nextAnimationFrame } from "../appUtil.js"
 import { DEBUG_BORDERS } from "../Env.js"
 import { vParams } from "../Model.js"
 // import * as WorkerPool from "./WorkerPool.js"
@@ -30,16 +30,7 @@ const CONTINUOUS_PAN_REDRAWS = false
 const CONTINUOUS_PINCH_REDRAWS = true
 const MIN_PAN_REDRAW_DELAY = 500 // milliseconds
 const MIN_PINCH_REDRAW_DELAY = 50
-
-const MAX_SEGMENTS_PER_FRAME = 5000
-
-const TWO_PI = 2 * Math.PI
 const TARGET_FPS = 30
-
-const _drawFunction = {
-  square: null,
-  circle: null,
-}
 
 let dotCanvas, pathCanvas, debugCanvas
 let _lastDotDrawBox
@@ -98,7 +89,6 @@ export const DotLayer = Layer.extend({
     dotCanvas.pxg = new PixelGraphics(
       dotCanvas.getContext("2d").createImageData(dw, dh)
     )
-    makeDrawDotFuncs.imageDataTest()
 
     /*
      * The Path Canvas is for activity paths, which are made up of a bunch of
@@ -235,7 +225,6 @@ async function onResize() {
   const dctx = dotCanvas.getContext("2d")
   dotCanvas.pxg.imageData = dctx.createImageData(dw, dh)
 
-  makeDrawDotFuncs.imageDataTest()
   dotCtxUpdate()
 
   /*
@@ -347,12 +336,9 @@ async function redraw(force) {
     // console.log(`moveDrawBox: ${D.w}x${D.h} -- ${Date.now() - t0}ms`)
   }
 
-  dotCanvas.pxg.setTransform(...ViewBox.transform)
-  pathCanvas.pxg.setTransform(...ViewBox.transform)
-
   DrawBox.reset()
 
-  _styleGroups = await ActivityCollection.updateGroups()
+  await ActivityCollection.updateGroups()
 
   if (DEBUG_BORDERS) {
     drawBoundsBoxes()
@@ -371,171 +357,53 @@ async function redraw(force) {
 }
 
 function drawPathImageData() {
-  const { x: Dx, y: Dy, w: Dw, h: Dh } = DrawBox.getScreenRect()
-  const pathCtx = pathCanvas.getContext("2d")
-  pathCtx.putImageData(pathCanvas.pxg.imageData, 0, 0, Dx, Dy, Dw, Dh)
+  const D = DrawBox.getScreenRect()
+  const ctx = pathCanvas.getContext("2d")
+  const imageData = pathCanvas.pxg.imageData
+  ctx.putImageData(imageData, 0, 0, D.x, D.y, D.w, D.h)
 }
 
 async function drawPaths(forceFullRedraw) {
-  if (!_ready) return
-
-  // const alphaScale = _dotSettings.alphaScale
-  const drawAll = forceFullRedraw || FORCE_FULL_REDRAW
-
-  let count = 0
-  let frameCount = 0
-  const pxg = pathCanvas.pxg
-  const drawSeg = (x0, y0, x1, y1) => pxg.drawSegment(x0, y0, x1, y1)
-
-  for (const { spec, items } of _styleGroups.path) {
-    pxg.setColor(extractColor(spec.strokeStyle))
-    pxg.setLineWidth(spec.lineWidth)
-    for (const A of items) {
-      const segMask = drawAll ? A.segMask : A.getSegMaskUpdates()
-      if (segMask) {
-        frameCount += A.forEachSegment(drawSeg, segMask)
-      }
-
-      if (frameCount > MAX_SEGMENTS_PER_FRAME) {
-        drawPathImageData()
-        count += frameCount
-        frameCount = 0
-        // console.log("drawPaths next frame")
-        await nextAnimationFrame()
-      }
-    }
-  }
-  count += frameCount
+  if (!_ready) return 0
+  const drawDiffs = !forceFullRedraw
+  const pathImageData = pathCanvas.pxg.imageData
+  const count = ActivityCollection.drawPaths(
+    pathImageData,
+    ViewBox.transform,
+    drawDiffs
+  )
   drawPathImageData()
   return count
 }
 
-/*
- * Functions for Drawing Dots
- * size is the length of the square and the radius of the circle
- */
+async function drawdotImageData() {
+  const D = DrawBox.getScreenRect()
+  const ctx = dotCanvas.getContext("2d")
+  const imageData = dotCanvas.pxg.imageData
 
-const makeDrawDotFuncs = {
-  imageDataTest: function () {
-    const ds = _dotSettings
-    const pxg = dotCanvas.pxg
-    const ctx = dotCanvas.getContext("2d")
-
-    _drawFunction.before = () => {
-      pxg.clearRect(_lastDotDrawBox)
-      if (_options.dotShadows.enabled) {
-        DrawBox.clear(ctx, _lastDotDrawBox)
-      }
-    }
-
-    _drawFunction.setColor = (c) => pxg.setColor(c)
-
-    _drawFunction.square = (x, y) => {
-      pxg.drawSquare(x, y, ds._dotSize)
-    }
-
-    _drawFunction.circle = (x, y) => {
-      pxg.drawCircle(x, y, ds._dotSize)
-    }
-
-    _drawFunction.after = () => {
-      const D = DrawBox.getScreenRect()
-      _lastDotDrawBox = D
-      if (_options.dotShadows.enabled) {
-        createImageBitmap(pxg.imageData, D.x, D.y, D.w, D.h).then((img) =>
-          ctx.drawImage(img, D.x, D.y)
-        )
-      } else {
-        ctx.putImageData(pxg.imageData, 0, 0, D.x, D.y, D.w, D.h)
-      }
-    }
-  },
-
-  sprites: function () {
-    const ctx = dotCanvas.getContext("2d")
-    const size = _dotSettings._dotSize
-
-    // Make sprite sheet
-    const bufferCanvas = document.createElement("canvas")
-    const bufCtx = bufferCanvas.getContext("2d")
-
-    const items = ActivityCollection.items
-    const colorSet = new Set(
-      Array.from(items.values()).map((A) => A.colors.dot)
-    )
-    const colorsArray = Array.from(colorSet)
-    const colorIdx = {}
-    const n = colorsArray.length
-    for (let i = 0; i < n; i++) {
-      const color = colorsArray[i]
-      colorIdx[color] = i
-    }
-    bufferCanvas.width = 3 * size * n
-    bufferCanvas.height = 2 * size
-    const loc = (idx, sel) => {
-      const x = 3 * idx + sel
-      const y = 0
-      const w = (1 + sel) * size
-      const h = w
-      return { x, y, w, h }
-    }
-
-    for (let i = 0; i < n; i++) {
-      bufCtx.fillStyle = colorsArray[i]
-
-      const { x0, y0, w0, h0 } = loc(i, 0)``
-      bufCtx.fillRect(x0, y0, w0, h0)
-
-      const { x1, y1, w1 } = loc(i, 1)
-      const radius = w1 / 2
-      const cx = x1 + radius
-      const cy = y1 + radius
-      bufCtx.beginPath()
-      bufCtx.ctx.arc(cx, cy, radius, 0, TWO_PI)
-      ctx.closePath()
-      ctx.fill()
-    }
-
-    _drawFunction.circle = (x, y, color) => {
-      const idx = color ? colorIdx(color) : 0
-      const r = loc(idx, 1)
-    }
-
-    _drawFunction.square = (x, y, color) => {
-      const idx = color ? colorIdx(color) : 0
-      const r = loc(idx, 0)
-    }
-  },
-}
-
-const _re = /(\d+),(\d+),(\d+)/
-function extractColor(colorString) {
-  if (colorString[0] === "#") {
-    const num = parseInt(colorString.replace("#", "0x"))
-    const r = (num & 0xff0000) >> 16
-    const g = (num & 0x00ff00) >> 8
-    const b = num & 0x0000ff
-    return rgbaToUint32(r, g, b, 0xff)
+  if (_options.dotShadows.enabled) {
+    const img = await createImageBitmap(imageData, D.x, D.y, D.w, D.h)
+    ctx.drawImage(img, D.x, D.y)
+  } else {
+    ctx.putImageData(imageData, 0, 0, D.x, D.y, D.w, D.h)
   }
-  const result = colorString.match(_re)
-  return rgbaToUint32(result[1], result[2], result[3], _dotSettings.alpha)
 }
 
 async function drawDots(tsecs) {
-  if (!_ready || !_styleGroups) return 0
+  if (!_ready) return 0
 
-  _drawFunction.before()
-
-  let count = 0
-  for (const { spec, items, sprite } of _styleGroups.dot) {
-    const drawDotFunc = _drawFunction[sprite]
-    _drawFunction.setColor(extractColor(spec.strokeStyle || spec.fillStyle))
-
-    items.forEach((A) => {
-      count += A.forEachDot(tsecs, drawDotFunc)
-    })
+  const pxg = dotCanvas.pxg
+  pxg.clearRect(_lastDotDrawBox)
+  if (_options.dotShadows.enabled) {
+    DrawBox.clear(dotCanvas.getContext("2d"), _lastDotDrawBox)
   }
-  _drawFunction.after()
+  const count = ActivityCollection.drawDots(
+    pxg.imageData,
+    ViewBox.transform,
+    _dotSettings._dotSize,
+    tsecs
+  )
+  drawdotImageData()
   return count
 }
 

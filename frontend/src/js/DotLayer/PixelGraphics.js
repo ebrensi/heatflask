@@ -26,10 +26,10 @@ export class PixelGraphics {
   constructor(imageData) {
     if (imageData) {
       this.imageData = imageData // note that this is a setter call
-      this.color32 = rgbaToUint32(0, 0, 0, 255) // default color is black
-      this.lineWidth = 1
-      this.transform = [1, 0, 1, 0]
     }
+    this.color32 = rgbaToUint32(0, 0, 0, 255) // default color is black
+    this.lineWidth = 1
+    this.transform = [1, 0, 1, 0]
   }
 
   set imageData(imageData) {
@@ -48,12 +48,13 @@ export class PixelGraphics {
     return this._imageData
   }
 
-  setTransform(a1, b1, a2, b2) {
-    this.transform = [a1, b1, a2, b2]
-  }
-
   setColor(r, g, b, a = 0xff) {
-    this.color32 = g ? rgbaToUint32(r, g, b, a) : r | (a << alphaPos)
+    if (g === undefined) {
+      if (typeof(r) === "string") this.color32 = parseColor(r)
+      else this.color32 = r | (a << alphaPos)
+    } else {
+      this.color32 = rgbaToUint32(r, g, b, a)
+    }
   }
 
   setLineWidth(w) {
@@ -346,6 +347,21 @@ export class PixelGraphics {
     }
   }
 } // end PixelGraphics definition
+
+
+const _re = /(\d+),(\d+),(\d+)/
+function parseColor(colorString) {
+  if (colorString[0] === "#") {
+    const num = parseInt(colorString.replace("#", "0x"))
+    const r = (num & 0xff0000) >>> 16
+    const g = (num & 0x00ff00) >>> 8
+    const b = num & 0x0000ff
+    return rgbaToUint32(r, g, b, 0xff)
+  }
+  const result = colorString.match(_re)
+  return rgbaToUint32(result[1], result[2], result[3], 0xff)
+}
+
 
 // Draw the outline of the DrawBox (or arbitrary rect object in screen coordinates)
 function drawDebugBox(ctxOrCanvas, rect, label) {

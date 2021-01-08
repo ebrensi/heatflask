@@ -11,8 +11,10 @@ import { targetUser, state } from "../Model.js"
 import { Point } from "../myLeaflet.js"
 import { getUrlString } from "../URL.js"
 import { queueTask, nextTask } from "../appUtil.js"
+import { PixelGraphics } from "./PixelGraphics"
 
 export const items = new Map()
+export const pxg = new PixelGraphics()
 let itemsArray
 
 state.items = items
@@ -51,8 +53,8 @@ export function reset() {
     itemsArray[i].idx = i
   }
   resetSegMasks()
-  inView.current = new BitSet(itemsArray.length)
-  inView.last = new BitSet(itemsArray.length)
+  inView.current.resize(itemsArray.length)
+  inView.last.resize(itemsArray.length)
 }
 
 /*
@@ -77,8 +79,8 @@ function setDotColors() {
  * a set of indices of Activities in itemsArray.
  */
 const inView = {
-  current: null, // Current means since the last update
-  last: null,
+  current: new BitSet(), // Current means since the last update
+  last: new BitSet(),
 }
 
 /**
@@ -127,141 +129,6 @@ export async function updateGroups() {
       inView.current.remove(i)
     }
   })
-
-  // update items that have changed since last time
-  const changed = inView.last.change(inView.current)
-  changed.forEach((i) => {
-    if (inView.current.has(i)) {
-      addToGroup(i)
-    } else {
-      removeFromGroup(i)
-      itemsArray[i].resetSegMask()
-    }
-  })
-
-  makeStyleGroups()
-  return getGroups()
-}
-
-/*
- * These are partitions of inView into colors and whether or not they are selected.
- * Each Map will contain a Set for every color of Activity that is currently in view
- */
-const GROUP_TYPES = {
-  path: {
-    partitions: { selected: new Map(), unselected: new Map() },
-    spec: {
-      normal: {
-        lineWidth: options.normal.pathWidth,
-        globalAlpha: options.normal.pathOpacity,
-      },
-      unselected: {
-        lineWidth: options.unselected.pathWidth,
-        globalAlpha: options.unselected.pathOpacity,
-      },
-      selected: {
-        lineWidth: options.selected.pathWidth,
-        globalAlpha: options.selected.pathOpacity,
-      },
-    },
-  },
-
-  dot: {
-    partitions: { selected: new Map(), unselected: new Map() },
-    spec: {
-      normal: {
-        globalAlpha: options.normal.dotOpacity,
-      },
-      unselected: {
-        globalAlpha: options.unselected.dotOpacity,
-      },
-      selected: {
-        globalAlpha: options.selected.dotOpacity,
-      },
-    },
-  },
-}
-
-class StyleGroup {
-  constructor(gtype, color) {
-    const pen = gtype === "path" ? "strokeStyle" : "fillStyle"
-    this.items = new Set()
-    this.spec = { [pen]: color }
-  }
-  add(item) {
-    this.items.add(item)
-  }
-  remove(item) {
-    this.items.delete(item)
-  }
-  get empty() {
-    return this.items.size === 0
-  }
-}
-
-/**
- * Add i to a partition, creatting the partition if necessary
- * @param {Number} i -- index of an in-view Activity
- * @param {Boolean} [selected] -- specify which group to add to
- */
-function addToGroup(i, selected) {
-  const A = itemsArray[i]
-
-  if (selected === undefined) {
-    selected = A.selected
-  }
-
-  for (const gtype in GROUP_TYPES) {
-    const partitions = GROUP_TYPES[gtype].partitions
-    const groups = selected ? partitions.selected : partitions.unselected
-    const color = A.colors[gtype]
-
-    const styleGroup = groups.get(color)
-    if (styleGroup) {
-      styleGroup.add(A)
-    } else {
-      const styleGroup = new StyleGroup(gtype, color)
-      styleGroup.add(A)
-      groups.set(color, styleGroup)
-    }
-  }
-}
-
-/**
- * Remove i from a partition, deleting the partition if necessary
- * @param {number} i -- index of an Activity not in-view
- * @param {Boolean} [selected] -- specify which group to remove from
- */
-function removeFromGroup(i, selected) {
-  const A = itemsArray[i]
-
-  if (selected === undefined) {
-    selected = A.selected
-  }
-
-  for (const gtype in GROUP_TYPES) {
-    const partitions = GROUP_TYPES[gtype].partitions
-    const groups = selected ? partitions.selected : partitions.unselected
-    const color = A.colors[gtype]
-    const styleGroup = groups.get(color)
-
-    styleGroup.remove(A)
-    if (styleGroup.empty) {
-      groups.delete(color)
-    }
-  }
-}
-
-export function getGroups() {
-  const output = {}
-  for (const gtype in GROUP_TYPES) {
-    const partitions = GROUP_TYPES[gtype].partitions
-    output[gtype] = [
-      ...partitions.unselected.values(),
-      ...partitions.selected.values(),
-    ]
-  }
-  return output
 }
 
 /**
@@ -269,60 +136,10 @@ export function getGroups() {
  *
  * @param  {number} i -- then index of the activity
  */
-function updateSelect(i, selected) {
-  if (selected === undefined) {
-    selected = itemsArray[i].selected
-  }
-
-  if (!inView.current.has(i)) {
-    return
-  }
-
-  addToGroup(i, selected)
-  removeFromGroup(i, !selected)
+function updateSelect(idx, value) {
+  return
 }
 
-function makeStyleGroups() {
-  for (const gtype in GROUP_TYPES) {
-    const partitions = GROUP_TYPES[gtype].partitions
-
-    /*
-     * The specs for all activities default to "normal".
-     *  If any activities are selected, we change the specs to
-     *  "selected" and "unselected"
-     */
-    if (partitions.selected.size) {
-      const sspec = GROUP_TYPES[gtype].spec.selected
-      for (const sg of partitions.selected.values()) {
-        Object.assign(sg.spec, sspec)
-      }
-
-      if (gtype === "dot") {
-        for (const sg of partitions.selected.values()) sg.sprite = "circle"
-      }
-
-      const uspec = GROUP_TYPES[gtype].spec.unselected
-      for (const sg of partitions.unselected.values()) {
-        Object.assign(sg.spec, uspec)
-      }
-
-      if (gtype === "dot") {
-        for (const sg of partitions.unselected.values()) sg.sprite = "square"
-      }
-    } else {
-      // Set everything to normal
-      const nspec = GROUP_TYPES[gtype].spec.normal
-      for (const sg of partitions.unselected.values()) {
-        Object.assign(sg.spec, nspec)
-      }
-
-      if (gtype === "dot") {
-        for (const sg of partitions.unselected.values()) sg.sprite = "square"
-      }
-    }
-  }
-  // return getStyleGroups()
-}
 
 function selectedIDs() {
   return Array.from(items.values())
@@ -387,3 +204,43 @@ export function resetSegMasks() {
 //     return _infoBox
 //   },
 // })
+
+/*
+ * Methods for drawing to imageData objects
+ */
+const drawSeg = (x0, y0, x1, y1) => pxg.drawSegment(x0, y0, x1, y1)
+export function drawPaths(imageData, transform, drawDiff) {
+  pxg.imageData = imageData
+  pxg.transform = transform
+
+  let count = 0
+  inView.current.forEach((i) => {
+    const A = itemsArray[i]
+    pxg.setColor(A.colors.path)
+
+    pxg.setLineWidth(
+      A.selected ? options.selected.pathWidth : options.normal.pathWidth
+    )
+
+    const segMask = drawDiff ? A.getSegMaskUpdates() : A.segMask
+    if (segMask) {
+      count += A.forEachSegment(drawSeg, segMask)
+    }
+  })
+  return count
+}
+
+export function drawDots(imageData, transform, dotSize, tsecs) {
+  pxg.imageData = imageData
+  pxg.transform = transform
+
+  let count = 0
+  const circle = (x, y) => pxg.drawCircle(x, y, dotSize)
+  const square = (x, y) => pxg.drawSquare(x, y, dotSize)
+  inView.current.forEach((i) => {
+    const A = itemsArray[i]
+    pxg.setColor(A.colors.dot)
+    count += A.forEachDot(tsecs, A.selected ? circle : square)
+  })
+  return count
+}
