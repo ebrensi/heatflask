@@ -5,7 +5,7 @@
 
 import { AUTHORIZE_URL } from "./Env.js"
 
-import { currentUser, vParams, qParams, flags } from "./Model.js"
+import { targetUser, currentUser, vParams, qParams, flags } from "./Model.js"
 /* URL.js import must be here because it requires MapAPI which requires
  *  ActivityCollection, which requires URL.  If we import MapAPI first
  *  then it will end up requiring itself.
@@ -13,7 +13,7 @@ import { currentUser, vParams, qParams, flags } from "./Model.js"
 import "./URL.js"
 import { getBounds, map } from "./MapAPI.js"
 
-import { items, openSelected } from "./DotLayer/ActivityCollection.js"
+import { items } from "./DotLayer/ActivityCollection.js"
 
 import { dotLayer } from "./DotLayerAPI.js"
 // import { captureCycle, abortCapture } from "./DotLayer/Export.js"
@@ -27,6 +27,7 @@ import infoTabHTML from "bundle-text:../html/main-info.html"
 import { makeQuery, abortQuery } from "./DataImport.js"
 import * as table from "./Table.js"
 import { queueTask } from "./appUtil.js"
+import { getUrlString } from "./URL.js"
 
 /* TODO: have two UI submodules: UI-simple.js (single) and
                                  UI-complex.js (multi-user)
@@ -190,6 +191,18 @@ function renderFromQuery() {
     })
     updateLayers()
   })
+}
+
+export function openSelected() {
+  const ids = Array.from(items.values())
+    .filter((A) => A.selected)
+    .map((A) => A.id)
+
+  if (ids.length) {
+    const argString = getUrlString({ id: ids.join("+") })
+    let url = targetUser.id + argString
+    window.open(url, "_blank")
+  }
 }
 
 /* Rendering */

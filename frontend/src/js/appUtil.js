@@ -174,24 +174,46 @@ export function nextAnimationFrame() {
 }
 
 /*
- * for graphics and pixel manipulation
+ *  An object for general rectangular bounds
  */
-function isLittleEndian() {
-  // from TooTallNate / endianness.js.   https://gist.github.com/TooTallNate/4750953
-  const b = new ArrayBuffer(4)
-  const a = new Uint32Array(b)
-  const c = new Uint8Array(b)
-  a[0] = 0xdeadbeef
-  if (c[0] == 0xef) return true
-  if (c[0] == 0xde) return false
-  throw new Error("unknown endianness")
-}
-
-const _littleEndian = isLittleEndian()
-export function rgbaToUint32(r, g, b, a) {
-  if (_littleEndian) {
-    return (a << 24) | (b << 16) | (g << 8) | r
-  } else {
-    return (r << 24) | (g << 16) | (b << 8) | a
+export class Bounds {
+  constructor() {
+    // [xmin, ymin, xmax, ymax]
+    this._bounds = new Array(4)
+    this.reset()
+  }
+  reset() {
+    this._bounds.fill(NaN)
+  }
+  update(x, y) {
+    if (isNaN(this._bounds[0])) {
+      this._bounds[0] = this._bounds[2] = x
+      this._bounds[1] = this._bounds[3] = y
+      return
+    }
+    if (x < this._bounds[0]) this._bounds[0] = x
+    if (y < this._bounds[1]) this._bounds[1] = y
+    if (x > this._bounds[2]) this._bounds[2] = x
+    if (y > this._bounds[3]) this._bounds[3] = y
+  }
+  updateBounds(x1, y1, x2, y2) {
+    this.update(x1, y1)
+    this.update(x2, y2)
+  }
+  contains(x, y) {
+    return (
+      x >= this._bounds[0] &&
+      x <= this._bounds[2] &&
+      y >= this._bounds[1] &&
+      y <= this._bounds[3]
+    )
+  }
+  overlaps(x1, y1, x2, y2) {
+    return (
+      x2 >= this._bounds[0] &&
+      x1 <= this._bounds[2] &&
+      y2 >= this._bounds[1] &&
+      y1 <= this._bounds[3]
+    )
   }
 }

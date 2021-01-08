@@ -1,5 +1,7 @@
 /*
  *  ActivityCollection is a some methods for managing a collection of Activity objects.
+ *  Since this might running inside a worker, we cannot assume access to anything
+ *  on the main thread.
  */
 
 import * as ColorPalette from "./ColorPalette.js"
@@ -7,9 +9,8 @@ import * as ViewBox from "./ViewBox.js"
 import { Activity } from "./Activity.js"
 import { options } from "./Defaults.js"
 import BitSet from "../BitSet.js"
-import { targetUser, state } from "../Model.js"
+import { state } from "../Model.js"
 import { Point } from "../myLeaflet.js"
-import { getUrlString } from "../URL.js"
 import { queueTask, nextTask } from "../appUtil.js"
 import { PixelGraphics } from "./PixelGraphics"
 
@@ -138,22 +139,6 @@ export async function updateGroups() {
  */
 function updateSelect(idx, value) {
   return
-}
-
-
-function selectedIDs() {
-  return Array.from(items.values())
-    .filter((A) => A.selected)
-    .map((A) => A.id)
-}
-
-export function openSelected() {
-  const ids = selectedIDs()
-  if (ids.length) {
-    const argString = getUrlString({ id: ids.join("+") })
-    let url = targetUser.id + argString
-    window.open(url, "_blank")
-  }
 }
 
 /**

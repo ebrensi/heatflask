@@ -12,13 +12,15 @@ import * as Simplifier from "./Simplifier.js"
 import { ATYPE } from "../strava.js"
 import BitSet from "../BitSet.js"
 import { RunningStatsCalculator } from "./stats.js"
-import { quartiles } from "../appUtil.js"
+import { quartiles, Bounds } from "../appUtil.js"
 import { dotSettings } from "./Defaults.js"
+// import { makePT } from "./CRS.js"
 /*
  * This is meant to be a LRU cache for stuff that should go away
  * if it is not used for a while. For now we just use a Map.
  */
 const _lru = new Map()
+// const latLng2px = makePT(0)
 
 /**
  * We detect anomalous gaps in data by simple statistical analysis of
@@ -42,6 +44,8 @@ const ZSCORE_CUTOFF = 5
 // Alternatively we can use IQR for outlier detection
 // It is slower since we must sort the values
 const IQR_MULT = 3
+
+
 
 /**
  * @class Activity
@@ -90,6 +94,7 @@ export class Activity {
     this.idxSet = {} // BitSets of indices of px for each level of zoom
     this.badSegIdx = {} // locations of gaps in data for each level of zoom
     this.segMask = null // BitSet indicating which segments are in view
+    this.segBounds = new Bounds()
 
     // decode polyline format into an Array of [lat, lng] points
     const points = new Float32Array(n * 2)
@@ -305,6 +310,8 @@ export class Activity {
     if (!Number.isFinite(zoom)) {
       throw new TypeError("zoom must be a number")
     }
+
+    if (zoom in this.idxSet) return
 
     const tol = ViewBox.tol(zoom)
     const idxBitSet = Simplifier.simplify(
