@@ -6,14 +6,17 @@
 import { LatLngBounds } from "../myLeaflet.js"
 import * as Polyline from "./Codecs/Polyline.js"
 import * as StreamRLE from "./Codecs/StreamRLE.js"
-import * as ViewBox from "./ViewBox"
-import * as DrawBox from "./DrawBox"
+import { latLng2pxBounds, latLng2px, tol as dpTol } from "./ViewBox"
 import * as Simplifier from "./Simplifier.js"
 import { ATYPE } from "../strava.js"
 import BitSet from "../BitSet.js"
 import { RunningStatsCalculator } from "./stats.js"
-import { quartiles, Bounds } from "../appUtil.js"
 import { dotSettings } from "./Defaults.js"
+import {
+  // quartiles,
+  Bounds
+} from "../appUtil.js"
+
 // import { makePT } from "./CRS.js"
 /*
  * This is meant to be a LRU cache for stuff that should go away
@@ -44,8 +47,6 @@ const ZSCORE_CUTOFF = 5
 // Alternatively we can use IQR for outlier detection
 // It is slower since we must sort the values
 const IQR_MULT = 3
-
-
 
 /**
  * @class Activity
@@ -89,12 +90,11 @@ export class Activity {
     this.tsLocal = new Date((utc + offset * 3600) * 1000)
 
     this.llBounds = new LatLngBounds(bounds.SW, bounds.NE)
-    this.pxBounds = ViewBox.latLng2pxBounds(this.llBounds)
+    this.pxBounds = latLng2pxBounds(this.llBounds)
 
     this.idxSet = {} // BitSets of indices of px for each level of zoom
     this.badSegIdx = {} // locations of gaps in data for each level of zoom
     this.segMask = null // BitSet indicating which segments are in view
-    this.segBounds = new Bounds()
 
     // decode polyline format into an Array of [lat, lng] points
     const points = new Float32Array(n * 2)
@@ -106,18 +106,17 @@ export class Activity {
      */
     const dStats = new RunningStatsCalculator()
     const sqDists = []
-    const project = ViewBox.latLng2px
     const latlngs = Polyline.decode(polyline)
 
     // Set the first point of points to be the projected first latlng pair
-    points.set(project(latlngs.next().value), 0)
+    points.set(latLng2px(latlngs.next().value), 0)
 
     let i = 0 // index of the i-th element of latlngs
     let j = 2 // index of the j-th element of points
     let p1 = points.subarray(0, j)
     for (const latLng of latlngs) {
       i++
-      const p2 = project(latLng)
+      const p2 = latLng2px(latLng)
       const sd = sqDist(p1, p2)
       if (!sd) {
         /*  We ignore any two successive points with zero distance
@@ -195,24 +194,6 @@ export class Activity {
   gapAt(idx) {
     const p = this.getPointAccessor()
     return sqDist(p(idx), p(idx + 1))
-  }
-
-  /**
-   * Indicates whether this Activity is at least paritally in the current view
-   */
-  inMapBounds() {
-    return ViewBox.overlaps(this.pxBounds)
-  }
-
-  /**
-   * Indicates whther this Activity is completely in the current view
-   * (so we don't need to compute a segMask)
-   */
-  containedInMapBounds() {
-    const pxB = this.pxBounds
-    const southWest = pxB.subarray(0, 2)
-    const northEast = pxB.subarray(2, 4)
-    return ViewBox.contains(southWest) && ViewBox.contains(northEast)
   }
 
   /**
@@ -313,7 +294,7 @@ export class Activity {
 
     if (zoom in this.idxSet) return
 
-    const tol = ViewBox.tol(zoom)
+    const tol = dpTol(zoom)
     const idxBitSet = Simplifier.simplify(
       this.getPointAccessor(),
       this.px.length / 2,
@@ -370,27 +351,19 @@ export class Activity {
    *  so that the i-th good segment corresponds to the i-th member of
    *  this idxSet.
    */
-  updateSegMask() {
-    const zoom = ViewBox.zoom
-
+  updateSegMask(zoom, viewportBounds) {
     /* Later we will compare this segMask with the last one so that we only draw or erase
      * parts of the path that have come into view or are no longer on screen
      */
     if (!this.segMask) this.segMask = new BitSet()
 
     // console.log(this.id + "----- updating segmask ---------")
-    if (this.containedInMapBounds()) {
+    if (viewportBounds.containsBounds(this.pxBounds)) {
       /*
-       * If this activity is completely contained in the ViewBox then we
+       * If this activity is completely contained in the viewport then we
        * already know every segment is included.  Explicitly creating a full
-       * segMask and updating DrawBox with the bounds saves some work.
+       * segMask saves some work.
        */
-      const pxB = this.pxBounds
-      const southWest = pxB.subarray(0, 2)
-      const northEast = pxB.subarray(2, 4)
-      DrawBox.update(southWest)
-      DrawBox.update(northEast)
-
       if (this._containedInMapBounds) {
         // console.log(~~performance.now() + " still contained")
         return this.segMask
@@ -408,28 +381,15 @@ export class Activity {
       const n = this.idxSet[zoom].size()
       const segMask = this.segMask.clear().resize(n)
 
-      let p = points(0)
-      let pIn = ViewBox.contains(p)
-      if (pIn) DrawBox.update(p)
+      let pIn = viewportBounds.contains(points(0))
       for (let i = 0; i < n - 1; i++) {
-        const nextp = points(i + 1)
-        const nextpIn = ViewBox.contains(nextp)
-        if (nextpIn) DrawBox.update(nextp)
-
+        const nextpIn = viewportBounds.contains(points(i + 1))
         /*
-         * If either endpoint of the segment is contained in ViewBox
-         * bounds then include this segment index and update
-         * DrawBox with both endpoints
+         * If either endpoint of the segment is contained in viewport
+         * bounds then include this segment index
          */
-        if (pIn) {
-          segMask.add(i)
-          if (!nextpIn) DrawBox.update(nextp)
-        } else if (nextpIn) {
-          segMask.add(i)
-          if (!pIn) DrawBox.update(p)
-        }
+        if (pIn || nextpIn) segMask.add(i)
         pIn = nextpIn
-        p = nextp
       }
     }
 
@@ -443,7 +403,6 @@ export class Activity {
     if (!this._containedInMapBounds)
       if (this.segMask.isEmpty())
         // console.log(~~performance.now() + " " + this.segMask.toString(1))
-
         return
 
     return this.segMask
@@ -507,12 +466,12 @@ export class Activity {
    * @param  {function} func func(x1, y1, x2, y2)
    * @param  {BitSet} [segMask] the set of segments
    */
-  forEachSegment(func, segMask) {
+  forEachSegment(func, zoom, segMask) {
     if (!segMask) segMask = this.segMask
     if (!segMask) return 0
 
     let count = 0
-    const points = this.getPointAccessor(ViewBox.zoom)
+    const points = this.getPointAccessor(zoom)
     if (!points) return 0
 
     segMask.forEach((i) => {
@@ -533,11 +492,8 @@ export class Activity {
    * @param  {BitSet} [segMask] a set of segments over which to place dots
    * @returns {number} number of dot points
    */
-  forEachDot(nowInSecs, func, segMask) {
-    const ds = { T: dotSettings._period, timeScale: dotSettings._timeScale }
-    const { T, timeScale } = ds
+  forEachDot(nowInSecs, T, timeScale, func, zoom, segMask) {
     const start = this.ts
-    const zoom = ViewBox.zoom
     const points = this.getPointAccessor(zoom)
     if (!points) return 0
 

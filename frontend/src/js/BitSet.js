@@ -255,27 +255,6 @@ BitSet.prototype[Symbol.iterator] = function () {
   return this.imap()
 }
 
-//   with the option to "fast-forward"
-//  to a position set by this.next(position).
-BitSet.prototype.imap_find = function* (fnc, first_pos) {
-  const c = this.words.length
-  let next_pos = first_pos
-  let pos = 0
-
-  for (let k = 0; k < c; ++k) {
-    let w = this.words[k]
-    while (w != 0) {
-      let t = w & -w
-
-      if (next_pos === undefined || pos == next_pos) {
-        next_pos = yield fnc((k << 5) + this.hammingWeight((t - 1) | 0))
-      }
-      pos++
-      w ^= t
-    }
-  }
-}
-
 // iterate a subset of this BitSet, where the subset is a BitSet
 // i.e. for each i in subBitSet, yield the i-th member of this BitSet
 BitSet.prototype.imap_subset = function* (bitSubSet, fnc) {
@@ -320,6 +299,7 @@ BitSet.prototype.new_subset = function (bitSubSet) {
   }
   return newSet.trim()
 }
+
 
 // Creates a copy of this bitmap
 BitSet.prototype.clone = function (recycled) {

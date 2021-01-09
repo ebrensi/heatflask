@@ -178,15 +178,21 @@ export function nextAnimationFrame() {
  */
 export class Bounds {
   constructor() {
-    // [xmin, ymin, xmax, ymax]
     this._bounds = new Array(4)
+    // [xmin, ymin, xmax, ymax]
     this.reset()
   }
+
   reset() {
     this._bounds.fill(NaN)
   }
+
+  empty() {
+    return isNaN(this._bounds[0])
+  }
+
   update(x, y) {
-    if (isNaN(this._bounds[0])) {
+    if (this.empty()) {
       this._bounds[0] = this._bounds[2] = x
       this._bounds[1] = this._bounds[3] = y
       return
@@ -196,24 +202,38 @@ export class Bounds {
     if (x > this._bounds[2]) this._bounds[2] = x
     if (y > this._bounds[3]) this._bounds[3] = y
   }
-  updateBounds(x1, y1, x2, y2) {
+
+  updateBounds(otherBoundsObj) {
+    const [x1, y1, x2, y2] = otherBoundsObj._bounds
     this.update(x1, y1)
     this.update(x2, y2)
   }
+
   contains(x, y) {
-    return (
-      x >= this._bounds[0] &&
-      x <= this._bounds[2] &&
-      y >= this._bounds[1] &&
-      y <= this._bounds[3]
-    )
+    const [xmin, ymin, xmax, ymax] = this._bounds
+    return xmin <= x && x <= xmax && ymin <= y && y <= ymax
   }
+
+  containsBounds(otherBoundsObj) {
+    const [x1, y1, x2, y2] = otherBoundsObj._bounds
+    return this.contains(x1, y1) && this.contains(x2, y2)
+  }
+
   overlaps(x1, y1, x2, y2) {
-    return (
-      x2 >= this._bounds[0] &&
-      x1 <= this._bounds[2] &&
-      y2 >= this._bounds[1] &&
-      y1 <= this._bounds[3]
-    )
+    const [xmin, ymin, xmax, ymax] = this._bounds
+    return x2 >= xmin && x1 <= xmax && y2 >= ymin && y1 <= ymax
+  }
+
+  get rect() {
+    const [xmin, ymin, xmax, ymax] = this._bounds
+    return {x: xmin, y: ymin, w: xmax - xmin, h: ymax - ymin}
+  }
+
+  get data() {
+    return this._bounds
+  }
+
+  set data(data) {
+    this._bounds = data
   }
 }

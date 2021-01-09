@@ -209,13 +209,13 @@ export function drawPaths(imageData, transform, drawDiff) {
 
     const segMask = drawDiff ? A.getSegMaskUpdates() : A.segMask
     if (segMask) {
-      count += A.forEachSegment(drawSeg, segMask)
+      count += A.forEachSegment(drawSeg, ViewBox.zoom, segMask)
     }
   })
   return count
 }
 
-export function drawDots(imageData, transform, dotSize, tsecs) {
+export function drawDots(imageData, transform, dotSize, T, timeScale, tsecs) {
   pxg.imageData = imageData
   pxg.transform = transform
 
@@ -225,7 +225,8 @@ export function drawDots(imageData, transform, dotSize, tsecs) {
   inView.current.forEach((i) => {
     const A = itemsArray[i]
     pxg.setColor(A.colors.dot)
-    count += A.forEachDot(tsecs, A.selected ? circle : square)
+    const drawFunc = A.selected ? circle : square
+    count += A.forEachDot(tsecs, T, timeScale, drawFunc, ViewBox.zoom)
   })
   return count
 }

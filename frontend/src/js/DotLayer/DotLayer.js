@@ -22,15 +22,15 @@ import {
 
 export { _dotSettings as dotSettings }
 
+const TARGET_FPS = 30
 /* In order to prevent path redraws from happening too often
  * and hogging up CPU cycles we set a minimum delay between redraws
  */
 const FORCE_FULL_REDRAW = false
-const CONTINUOUS_PAN_REDRAWS = false
+const CONTINUOUS_PAN_REDRAWS = true
 const CONTINUOUS_PINCH_REDRAWS = true
-const MIN_PAN_REDRAW_DELAY = 500 // milliseconds
-const MIN_PINCH_REDRAW_DELAY = 50
-const TARGET_FPS = 30
+const MIN_PAN_REDRAW_DELAY = 200 // milliseconds
+const MIN_PINCH_REDRAW_DELAY = 100
 
 let dotCanvas, pathCanvas, debugCanvas
 let _lastDotDrawBox

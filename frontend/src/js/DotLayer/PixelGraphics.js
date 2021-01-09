@@ -1,3 +1,5 @@
+import { Bounds } from "../appUtil.js"
+
 /*
  * This module defines the PixelGrapics class.  A PixelGraphics object
  * encapsulates an ImageData buffer and provides methods to modify
@@ -24,18 +26,20 @@ const alphaPos = _littleEndian ? 24 : 0
 
 export class PixelGraphics {
   constructor(imageData) {
-    if (imageData) {
-      this.imageData = imageData // note that this is a setter call
-    }
     this.color32 = rgbaToUint32(0, 0, 0, 255) // default color is black
     this.lineWidth = 1
     this.transform = [1, 0, 1, 0]
+    this.drawBounds = new Bounds()
+    if (imageData) {
+      this.imageData = imageData // note that this is a setter call
+    }
   }
 
   set imageData(imageData) {
     this._imageData = imageData
     this.width = imageData.width
     this.height = imageData.height
+    this.drawBounds.data = imageData.drawBounds
     this.buf32 = new Uint32Array(imageData.data.buffer)
 
     // re-use existing buffer if is large enough to hold a row of data
@@ -61,17 +65,15 @@ export class PixelGraphics {
     this.lineWidth = w
   }
 
-  clearRect(rect) {
-    if (!rect) {
-      this.buf32.fill(0)
-      return
-    }
+  clear(rect) {
 
-    const { x, y, w, h } = rect
+    const {x, y, w, h} = rect || this.drawBounds.rect
+
     for (let row = y; row < y + h; row++) {
       const offset = row * this.width
       this.buf32.fill(0, offset + x, offset + x + w)
     }
+    // make sure to update drawbounds.rect
   }
 
   inBounds(x, y) {
@@ -86,11 +88,13 @@ export class PixelGraphics {
    */
   setPixel(x, y) {
     if (!this.inBounds(x, y)) return
+    this.drawBounds.update(x,y)
     this.buf32[y * this.width + x] = this.color32
   }
 
   setPixelAA(x, y, a) {
     if (!this.inBounds(x, y)) return
+    this.drawBounds.update(x,y)
     const alpha = 0xff - Math.round(a)
     const color = (this.color32 & alphaMask) | (alpha << alphaPos)
     this.buf32[y * this.width + x] = color
@@ -187,7 +191,51 @@ export class PixelGraphics {
     }
   }
 
-  //
+
+  drawSquare(x, y, size) {
+    const dotOffset = size / 2
+    const T = this.transform
+    x = Math.round(T[0] * x + T[1] - dotOffset)
+    y = Math.round(T[2] * y + T[3] - dotOffset)
+
+    const xStart = x < 0 ? 0 : x // Math.max(0, tx)
+    const xEnd = Math.min(x + size, this.width)
+
+    const yStart = y < 0 ? 0 : y
+    const yEnd = Math.min(y + size, this.height)
+
+    // TODO: add padding after loop
+    this.drawBounds.update(x, y)
+
+    for (let row = yStart; row < yEnd; row++) {
+      const offset = row * this.width
+      const colStart = offset + xStart
+      const colEnd = offset + xEnd
+      this.buf32.fill(this.color32, colStart, colEnd)
+    }
+  }
+
+  drawCircle(x, y, size) {
+    const T = this.transform
+    x = Math.round(T[0] * x + T[1])
+    y = Math.round(T[2] * y + T[3])
+
+    // TODO: add padding after loop
+    this.drawBounds.update(x, y)
+
+    const r = size
+    const r2 = r * r
+
+    for (let cy = -r + 1; cy < r; cy++) {
+      const offset = (cy + y) * this.width
+      const cx = Math.sqrt(r2 - cy * cy)
+      const colStart = (offset + x - cx) | 0
+      const colEnd = (offset + x + cx) | 0
+      this.buf32.fill(this.color32, colStart, colEnd)
+    }
+  }
+
+   //
   clip(x, y) {
     if (x < 0) x = 0
     else if (x > this.width) x = this.width
@@ -201,10 +249,10 @@ export class PixelGraphics {
    *  of an imageData object to another, possibly overlapping
    *  rectanglular region of equal size.
    */
-  moveRect(rect, shiftX, shiftY) {
-    const r = rect
-    const [dx0, dy0] = this.clip(r.x + shiftX, r.y + shiftY)
-    const [dx1, dy1] = this.clip(r.x + r.w + shiftX, r.y + r.h + shiftY)
+  translate(shiftX, shiftY) {
+    const [rx, ry, rw, rh] = this.drawBounds.rect
+    const [dx0, dy0] = this.clip(rx + shiftX, ry + shiftY)
+    const [dx1, dy1] = this.clip(rx + rw + shiftX, ry + rh + shiftY)
     let s, d
 
     // We only define desatination rect if it is on-screen
@@ -215,7 +263,7 @@ export class PixelGraphics {
       /* if there is no destination rectangle (nothing in view)
        *  we just clear the source rectangle and exit
        */
-      this.clearRect(rect)
+      this.clear()
       return
     }
 
@@ -237,8 +285,8 @@ export class PixelGraphics {
       this.buf32.set(rowData, dRowStart)
 
       // erase the whole source rect row
-      const rStart = sOffset + r.x
-      const rEnd = rStart + r.w
+      const rStart = sOffset + rx
+      const rEnd = rStart + rw
       this.buf32.fill(0, rStart, rEnd) // clear the source row
     }
 
@@ -250,23 +298,24 @@ export class PixelGraphics {
        then we copy rows from the top down */
       for (let row = 0; row < s.h; row++) moveRow(row)
 
-      const clearRegion = { x: r.x, y: r.y, w: r.w, h: r.h - s.h }
+      const clearRegion = { x: rx, y: ry, w: rw, h: rh - s.h }
       if (this.debugCanvas) {
         drawDebugBox(this.debugCanvas, clearRegion, "clear") // draw source rect
       }
 
-      this.clearRect(clearRegion)
+      this.clear(clearRegion)
     } else if (d.y > s.y) {
       /* otherwise we copy from the bottom row up */
       for (let row = s.h - 1; row >= 0; row--) moveRow(row)
 
       // and clear what's left of source rectangle
-      const clearRegion = { x: r.x, y: r.y + s.h, w: r.w, h: r.h - s.h }
+      const clearRegion = { x: rx, y: ry + s.h, w: rw, h: rh - s.h }
       if (this.debugCanvas) {
         drawDebugBox(this.debugCanvas, clearRegion, "clear") // draw source rect
       }
 
-      this.clearRect(clearRegion)
+      this.clear(clearRegion)
+
     } else {
       /* In the rare case that the source and dest rectangles are
        *  horizontally adjacent to each other, we cannot copy rows directly
@@ -278,7 +327,7 @@ export class PixelGraphics {
       // use the first row of imagedata if it is available
       if (d.y > 0) bufOffset = 0
       // or the last row
-      else if (d.y + d.h < r.h) bufOffset = (r.h - 1) * this.width
+      else if (d.y + d.h < rh) bufOffset = (rh - 1) * this.width
 
       const rowBuf =
         bufOffset === undefined
@@ -307,45 +356,10 @@ export class PixelGraphics {
         drawDebugBox(this.debugCanvas, clearRegion, "clear")
       }
 
-      this.clearRect(clearRegion)
+      this.clear(clearRegion)
     }
   }
 
-  drawSquare(x, y, size) {
-    const dotOffset = size / 2
-    const T = this.transform
-    x = Math.round(T[0] * x + T[1] - dotOffset)
-    y = Math.round(T[2] * y + T[3] - dotOffset)
-
-    const xStart = x < 0 ? 0 : x // Math.max(0, tx)
-    const xEnd = Math.min(x + size, this.width)
-
-    const yStart = y < 0 ? 0 : y
-    const yEnd = Math.min(y + size, this.height)
-
-    for (let row = yStart; row < yEnd; row++) {
-      const offset = row * this.width
-      const colStart = offset + xStart
-      const colEnd = offset + xEnd
-      this.buf32.fill(this.color32, colStart, colEnd)
-    }
-  }
-
-  drawCircle(x, y, size) {
-    const T = this.transform
-    x = Math.round(T[0] * x + T[1])
-    y = Math.round(T[2] * y + T[3])
-    const r = size
-    const r2 = r * r
-
-    for (let cy = -r + 1; cy < r; cy++) {
-      const offset = (cy + y) * this.width
-      const cx = Math.sqrt(r2 - cy * cy)
-      const colStart = (offset + x - cx) | 0
-      const colEnd = (offset + x + cx) | 0
-      this.buf32.fill(this.color32, colStart, colEnd)
-    }
-  }
 } // end PixelGraphics definition
 
 
