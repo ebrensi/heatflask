@@ -6,7 +6,6 @@ import { Layer, DomUtil, Browser, setOptions } from "../myLeaflet.js"
 import { Control } from "../myLeaflet.js"
 
 import * as ViewBox from "./ViewBox.js"
-import * as DrawBox from "./DrawBox.js"
 import * as ActivityCollection from "./ActivityCollection.js"
 import { PixelGraphics } from "./PixelGraphics.js"
 import { MAP_INFO } from "../Env.js"
@@ -33,7 +32,6 @@ const MIN_PAN_REDRAW_DELAY = 200 // milliseconds
 const MIN_PINCH_REDRAW_DELAY = 100
 
 let dotCanvas, pathCanvas, debugCanvas
-let _lastDotDrawBox
 
 const dotCanvasPane = "shadowPane"
 const pathCanvasPane = "overlayPane"
@@ -43,7 +41,6 @@ let _map, _options
 let _ready
 
 let _gifPatch
-let _styleGroups
 let _lastRedraw = 0
 
 /*
@@ -276,31 +273,6 @@ async function onMoveEnd() {
   await redraw()
 }
 
-function moveDrawBox() {
-  // Get the current draw rectangle in screen coordinates
-  // (relative to map pane position)
-  const D = DrawBox.getScreenRect()
-
-  // Get the last recorded ViewBox (screen) rectangle
-  // in pane coordinates (relative to pxOrigin)
-  const V = ViewBox.getPaneRect()
-
-  // reset the canvases to to align with the screen and update the ViewBox location
-  // relative to the map's pxOrigin
-  const V_ = ViewBox.calibrate()
-
-  // Move the visible portion of currently drawn segments and dots
-  // to the new location after calibration
-  const dVx = Math.round(V_.x - V.x)
-  const dVy = Math.round(V_.y - V.y)
-
-  const canvasesToMove = [pathCanvas, dotCanvas]
-  for (const canvas of canvasesToMove) {
-    canvas.pxg.moveRect(D, dVx, dVy)
-    DrawBox.clear(canvas.getContext("2d"), D)
-  }
-}
-
 /*
  * This function redraws paths (and dots if paused),
  * also recalibrating the position of the canvases
@@ -319,24 +291,42 @@ async function redraw(force) {
   // console.log("onmoveend")
   const fullRedraw = zoomChanged || FORCE_FULL_REDRAW || force
 
-  // Recalibrate the DrawBox and possibly move it
+  // Get the last recorded ViewBox (screen) rectangle
+  // in pane coordinates (relative to pxOrigin)
+  const mppOld = _map._getMapPanePos()
+
+  // reset the canvases to to align with the screen and update the ViewBox
+  // location relative to the map's pxOrigin
+  const mppNew = ViewBox.calibrate()
+
   if (fullRedraw) {
-    const oldDrawBoxDim = DrawBox.getScreenRect()
-    ViewBox.calibrate()
     if (zoomChanged > 1) ActivityCollection.resetSegMasks()
     const canvasesToClear = [pathCanvas, dotCanvas]
     for (const canvas of canvasesToClear) {
-      DrawBox.clear(canvas.getContext("2d"), oldDrawBoxDim)
-      canvas.pxg.clearRect(oldDrawBoxDim)
+      if (!canvas.pxg.drawBounds.isEmpty()) {
+        const { x, y, w, h } = canvas.pxg.drawBounds.rect
+        canvas.getContext("2d").clarRect(x, y, w, h)
+        canvas.pxg.clear()
+      }
     }
   } else {
     // const t0 = Date.now()
-    moveDrawBox()
+    // Move the visible portion of currently drawn segments and dots
+    // to the new location after calibration
+    const dx = Math.round(mppNew.x - mppOld.x)
+    const dy = Math.round(mppNew.y - mppOld.y)
+
+    if (!dx && !dy) return
+
+    const canvasesToMove = [pathCanvas, dotCanvas]
+    for (const canvas of canvasesToMove) {
+      const { x, y, w, h } = canvas.pxg.translate(dx, dy)
+      canvas.getContext("2d").clearRect(x, y, w, h)
+    }
     drawPathImageData()
+    drawDotImageData()
     // console.log(`moveDrawBox: ${D.w}x${D.h} -- ${Date.now() - t0}ms`)
   }
-
-  DrawBox.reset()
 
   await ActivityCollection.updateGroups()
 
@@ -345,47 +335,35 @@ async function redraw(force) {
   }
 
   if (_options.showPaths) {
-    // const t0 = performance.now()
-    const count = await drawPaths(fullRedraw)
-    // console.log(`drawPaths: ${count}, ${Math.round(performance.now() - t0)}ms`)
+    drawPaths(fullRedraw)
   }
 
   if (_paused) {
-    // await nextTask()
     drawDots(_timePaused || 0)
   }
 }
 
 function drawPathImageData() {
-  const D = DrawBox.getScreenRect()
-  const ctx = pathCanvas.getContext("2d")
-  const imageData = pathCanvas.pxg.imageData
-  ctx.putImageData(imageData, 0, 0, D.x, D.y, D.w, D.h)
+  pathCanvas.pxg.putImageData(pathCanvas)
 }
 
 async function drawPaths(forceFullRedraw) {
   if (!_ready) return 0
   const drawDiffs = !forceFullRedraw
-  const pathImageData = pathCanvas.pxg.imageData
+  const pxg = pathCanvas.pxg
   const count = ActivityCollection.drawPaths(
-    pathImageData,
+    pxg.imageData,
     ViewBox.transform,
     drawDiffs
   )
   drawPathImageData()
-  return count
 }
 
-async function drawdotImageData() {
-  const D = DrawBox.getScreenRect()
-  const ctx = dotCanvas.getContext("2d")
-  const imageData = dotCanvas.pxg.imageData
-
+function drawDotImageData() {
   if (_options.dotShadows.enabled) {
-    const img = await createImageBitmap(imageData, D.x, D.y, D.w, D.h)
-    ctx.drawImage(img, D.x, D.y)
+    dotCanvas.pxg.drawImageData(dotCanvas)
   } else {
-    ctx.putImageData(imageData, 0, 0, D.x, D.y, D.w, D.h)
+    dotCanvas.pxg.putImageData(dotCanvas)
   }
 }
 
@@ -393,29 +371,32 @@ async function drawDots(tsecs) {
   if (!_ready) return 0
 
   const pxg = dotCanvas.pxg
-  pxg.clearRect(_lastDotDrawBox)
+  pxg.clear()
   if (_options.dotShadows.enabled) {
-    DrawBox.clear(dotCanvas.getContext("2d"), _lastDotDrawBox)
+    const { x, y, w, h } = pxg.drawBounds.rect
+    dotCanvas.getContext("2d").clearRect(x, y, w, h)
   }
   const count = ActivityCollection.drawDots(
     pxg.imageData,
     ViewBox.transform,
-    _dotSettings._dotSize,
+    +vParams.sz,
+    +vParams.T,
+    +vParams.tau,
     tsecs
   )
-  drawdotImageData()
-  return count
+  drawDotImageData()
 }
 
 function drawBoundsBoxes() {
   const ctx = debugCanvas.getContext("2d")
+
   ViewBox.clear(ctx)
   ctx.lineWidth = 4
   ctx.setLineDash([6, 5])
   ctx.strokeStyle = "rgb(0,255,0,0.8)"
-  DrawBox.draw(ctx)
-  ctx.strokeStyle = "rgb(255,0,255,1)"
   ViewBox.draw(ctx)
+  ctx.strokeStyle = "rgb(255,0,255,1)"
+  ViewBox.draw(ctx, pathCanvas.pxg.drawBounds.rect)
 }
 
 /*
@@ -496,8 +477,7 @@ function animateZoom(e) {
     z,
     e.center
   )
-  DomUtil.setTransform(dotCanvas, offset, scale)
-  DomUtil.setTransform(pathCanvas, offset, scale)
+  ViewBox.setCSStransform(offset, scale)
   // console.log({ offset, scale })
 }
 

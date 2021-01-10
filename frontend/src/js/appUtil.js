@@ -187,7 +187,7 @@ export class Bounds {
     this._bounds.fill(NaN)
   }
 
-  empty() {
+  isEmpty() {
     return isNaN(this._bounds[0])
   }
 

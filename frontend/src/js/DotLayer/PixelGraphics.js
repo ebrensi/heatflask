@@ -39,8 +39,13 @@ export class PixelGraphics {
     this._imageData = imageData
     this.width = imageData.width
     this.height = imageData.height
-    this.drawBounds.data = imageData.drawBounds
     this.buf32 = new Uint32Array(imageData.data.buffer)
+
+    if (imageData.drawBounds) {
+      this.drawBounds.data = imageData.drawBounds
+    } else {
+      imageData.drawBounds = this.drawBounds.data
+    }
 
     // re-use existing buffer if is large enough to hold a row of data
     if (!this.rowBuf || this.rowBuf.length < imageData.width) {
@@ -54,7 +59,7 @@ export class PixelGraphics {
 
   setColor(r, g, b, a = 0xff) {
     if (g === undefined) {
-      if (typeof(r) === "string") this.color32 = parseColor(r)
+      if (typeof r === "string") this.color32 = parseColor(r)
       else this.color32 = r | (a << alphaPos)
     } else {
       this.color32 = rgbaToUint32(r, g, b, a)
@@ -66,14 +71,21 @@ export class PixelGraphics {
   }
 
   clear(rect) {
+    if (this.debugCanvas) {
+      drawDebugBox(this.debugCanvas, rect, "clear") // draw source rect
+      debugger
+    }
 
-    const {x, y, w, h} = rect || this.drawBounds.rect
+    const { x, y, w, h } = rect || this.drawBounds.rect
 
     for (let row = y; row < y + h; row++) {
       const offset = row * this.width
       this.buf32.fill(0, offset + x, offset + x + w)
     }
-    // make sure to update drawbounds.rect
+    // make sure to update drawbounds
+    if (!rect) {
+      this.drawBounds.reset()
+    }
   }
 
   inBounds(x, y) {
@@ -88,13 +100,13 @@ export class PixelGraphics {
    */
   setPixel(x, y) {
     if (!this.inBounds(x, y)) return
-    this.drawBounds.update(x,y)
+    this.drawBounds.update(x, y)
     this.buf32[y * this.width + x] = this.color32
   }
 
   setPixelAA(x, y, a) {
     if (!this.inBounds(x, y)) return
-    this.drawBounds.update(x,y)
+    this.drawBounds.update(x, y)
     const alpha = 0xff - Math.round(a)
     const color = (this.color32 & alphaMask) | (alpha << alphaPos)
     this.buf32[y * this.width + x] = color
@@ -191,7 +203,6 @@ export class PixelGraphics {
     }
   }
 
-
   drawSquare(x, y, size) {
     const dotOffset = size / 2
     const T = this.transform
@@ -235,7 +246,7 @@ export class PixelGraphics {
     }
   }
 
-   //
+  //
   clip(x, y) {
     if (x < 0) x = 0
     else if (x > this.width) x = this.width
@@ -253,7 +264,7 @@ export class PixelGraphics {
     const [rx, ry, rw, rh] = this.drawBounds.rect
     const [dx0, dy0] = this.clip(rx + shiftX, ry + shiftY)
     const [dx1, dy1] = this.clip(rx + rw + shiftX, ry + rh + shiftY)
-    let s, d
+    let s, d, clearRegion
 
     // We only define desatination rect if it is on-screen
     if (dx0 !== dx1 && dy0 !== dy1) {
@@ -263,8 +274,8 @@ export class PixelGraphics {
       /* if there is no destination rectangle (nothing in view)
        *  we just clear the source rectangle and exit
        */
-      this.clear()
-      return
+      this.clear(this.drawBounds.rect)
+      return this.drawBounds.rect
     }
 
     if (this.debugCanvas) {
@@ -282,6 +293,7 @@ export class PixelGraphics {
 
       const dOffset = (d.y + row) * this.width
       const dRowStart = dOffset + d.x
+
       this.buf32.set(rowData, dRowStart)
 
       // erase the whole source rect row
@@ -298,24 +310,13 @@ export class PixelGraphics {
        then we copy rows from the top down */
       for (let row = 0; row < s.h; row++) moveRow(row)
 
-      const clearRegion = { x: rx, y: ry, w: rw, h: rh - s.h }
-      if (this.debugCanvas) {
-        drawDebugBox(this.debugCanvas, clearRegion, "clear") // draw source rect
-      }
-
-      this.clear(clearRegion)
+      clearRegion = { x: rx, y: ry, w: rw, h: rh - s.h }
     } else if (d.y > s.y) {
       /* otherwise we copy from the bottom row up */
       for (let row = s.h - 1; row >= 0; row--) moveRow(row)
 
       // and clear what's left of source rectangle
-      const clearRegion = { x: rx, y: ry + s.h, w: rw, h: rh - s.h }
-      if (this.debugCanvas) {
-        drawDebugBox(this.debugCanvas, clearRegion, "clear") // draw source rect
-      }
-
-      this.clear(clearRegion)
-
+      clearRegion = { x: rx, y: ry + s.h, w: rw, h: rh - s.h }
     } else {
       /* In the rare case that the source and dest rectangles are
        *  horizontally adjacent to each other, we cannot copy rows directly
@@ -348,20 +349,28 @@ export class PixelGraphics {
       if (bufOffset !== undefined) rowBuf.fill(0)
 
       // and clear the remaining part of source rectangle
-      const clearRegion =
+      clearRegion =
         s.x < d.x
           ? { x: s.x, y: s.y, w: d.x - s.x, h: s.h }
           : { x: d.x + d.w, y: s.y, w: s.x - d.x, h: s.h }
-      if (this.debugCanvas) {
-        drawDebugBox(this.debugCanvas, clearRegion, "clear")
-      }
-
-      this.clear(clearRegion)
     }
+    this.clear(clearRegion)
+    return clearRegion
   }
 
-} // end PixelGraphics definition
+  putImageData(obj) {
+    const ctx = obj.putImageData ? obj : obj.getContext("2d")
+    const { x, y, w, h } = this.drawBounds.rect
+    ctx.putImageData(this.imageData, 0, 0, x, y, w, h)
+  }
 
+  async drawImageData(obj) {
+    const ctx = obj.drawImage ? obj : obj.getContext("2d")
+    const { x, y, w, h } = this.drawBounds.rect
+    const img = await createImageBitmap(this.imageData, x, y, w, h)
+    ctx.drawImage(img, x, y)
+  }
+} // end PixelGraphics definition
 
 const _re = /(\d+),(\d+),(\d+)/
 function parseColor(colorString) {
@@ -376,9 +385,8 @@ function parseColor(colorString) {
   return rgbaToUint32(result[1], result[2], result[3], 0xff)
 }
 
-
-// Draw the outline of the DrawBox (or arbitrary rect object in screen coordinates)
-function drawDebugBox(ctxOrCanvas, rect, label) {
+// Draw the outline of arbitrary rect object in screen coordinates
+export function drawDebugBox(ctxOrCanvas, rect, label) {
   const ctx = ctxOrCanvas.getContext
     ? ctxOrCanvas.getContext("2d")
     : ctxOrCanvas

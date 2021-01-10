@@ -10,8 +10,6 @@ import { MAP_INFO } from "../Env.js"
 
 const _canvases = []
 
-const _pad = 2
-
 // private module-scope variable
 let _map, _baseTranslation
 
@@ -209,11 +207,17 @@ export function contains(point) {
   return xmin <= x && x <= xmax && ymin <= y && y <= ymax
 }
 
-// draw an outline of the ViewBox on the screen (for debug purposes)
-export function draw(ctx) {
-  const { x: w, y: h } = getSize()
-  ctx.strokeRect(_pad, _pad, w - 2 * _pad, h - 2 * _pad)
+// Draw the outline of arbitrary rect object in screen coordinates
+export function draw(ctxOrCanvas, rect, label) {
+  const ctx = ctxOrCanvas.getContext
+    ? ctxOrCanvas.getContext("2d")
+    : ctxOrCanvas
+  const { x: mw, y: mh } = getSize()
+  const { x, y, w, h } = rect || {x:0, y:0, w: mw, h: mh}
+  ctx.strokeRect(x, y, w, h)
+  if (label) ctx.fillText(label, x + 20, y + 20)
 }
+
 
 // clear the entire ViewBox (for a given context)
 export function clear(ctx) {
