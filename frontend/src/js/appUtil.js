@@ -185,6 +185,7 @@ export class Bounds {
 
   reset() {
     this._bounds.fill(NaN)
+    return this
   }
 
   isEmpty() {
@@ -201,12 +202,14 @@ export class Bounds {
     if (y < this._bounds[1]) this._bounds[1] = y
     if (x > this._bounds[2]) this._bounds[2] = x
     if (y > this._bounds[3]) this._bounds[3] = y
+    return this
   }
 
   updateBounds(otherBoundsObj) {
     const [x1, y1, x2, y2] = otherBoundsObj._bounds
     this.update(x1, y1)
     this.update(x2, y2)
+    return this
   }
 
   contains(x, y) {

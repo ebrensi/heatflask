@@ -282,11 +282,8 @@ async function redraw(force) {
   if (!_ready) return
 
   await nextTask()
-  const boundsChanged = ViewBox.updateBounds()
+  const viewportBounds = ViewBox.updateBounds()
   const zoomChanged = ViewBox.updateZoom()
-  if (!force && !boundsChanged && !zoomChanged) {
-    return
-  }
 
   // console.log("onmoveend")
   const fullRedraw = zoomChanged || FORCE_FULL_REDRAW || force
@@ -328,7 +325,7 @@ async function redraw(force) {
     // console.log(`moveDrawBox: ${D.w}x${D.h} -- ${Date.now() - t0}ms`)
   }
 
-  await ActivityCollection.updateGroups()
+  await ActivityCollection.updateContext()
 
   if (DEBUG_BORDERS) {
     drawBoundsBoxes()

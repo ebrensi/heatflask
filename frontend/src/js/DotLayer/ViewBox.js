@@ -7,6 +7,7 @@
 import { makePT } from "./CRS.js"
 import { DomUtil, Control } from "../myLeaflet.js"
 import { MAP_INFO } from "../Env.js"
+import { Bounds } from "./appUtil.js"
 
 const _canvases = []
 
@@ -16,15 +17,14 @@ let _map, _baseTranslation
 // exported module-scope variables
 let _pxOrigin, _pxOffset, _mapPanePos, _zoom, _zf, _scale
 const _transform = [1, 0, 1, 0]
-let xmin, xmax, ymin, ymax
+const _pxBounds = new Bounds()
 let _width, _height
-
-const _boundsObj = new Float32Array(4)
 
 export {
   _canvases as canvases,
   _pxOrigin as pxOrigin,
   _pxOffset as pxOffset,
+  _pxBounds as pxBounds,
   _transform as transform,
   _zoom as zoom,
   _zf as zf,
@@ -91,14 +91,7 @@ export function tol(z) {
  */
 export function updateBounds() {
   const latLngMapBounds = _map.getBounds()
-
-  const b = latLng2pxBounds(latLngMapBounds, _boundsObj)
-  const changed =
-    b[0] !== xmin || b[1] !== ymax || b[2] !== xmax || b[3] !== ymin
-  if (changed) {
-    ;[xmin, ymax, xmax, ymin] = b
-    return true
-  }
+  return latLng2pxBounds(latLngMapBounds, _pxBounds)
 }
 
 /**
@@ -178,33 +171,14 @@ export function unTransform(leafletPoint) {
 
 // returns an ActivityBounds object (Float32Array) representing a
 // bounding box in absolute px coordinates
-export function latLng2pxBounds(llBounds, pxObj) {
-  pxObj = pxObj || new Float32Array(4)
+export function latLng2pxBounds(llBounds, boundsObj) {
+  boundsObj = boundsObj? boundsObj.reset() : new Bounds()
 
   const { _southWest: sw, _northEast: ne } = llBounds
 
-  pxObj[0] = sw.lat // xmin
-  pxObj[1] = sw.lng // ymax
-  pxObj[2] = ne.lat // xmax
-  pxObj[3] = ne.lng // ymin
-  latLng2px(pxObj.subarray(0, 2))
-  latLng2px(pxObj.subarray(2, 4))
-  return pxObj
-}
-
-// indicate whether the ViewBox overlaps the region defined by an
-// ActivityBounds object
-export function overlaps(activityBounds) {
-  const [Axmin, Aymax, Axmax, Aymin] = activityBounds
-  const xOverlaps = Axmax > xmin && Axmin < xmax
-  const yOverlaps = Aymin < ymax && Aymax > ymin
-  return xOverlaps && yOverlaps
-}
-
-// indicate whether the ViewBox contains a point (given as an array [x,y])
-export function contains(point) {
-  const [x, y] = point
-  return xmin <= x && x <= xmax && ymin <= y && y <= ymax
+  boundsObj.update(...latLng2px([sw.lat, sw.lng]))
+  boundsObj.update(...latLng2px([ne.lat, ne.lng]))
+  return boundsObj
 }
 
 // Draw the outline of arbitrary rect object in screen coordinates
@@ -223,13 +197,6 @@ export function draw(ctxOrCanvas, rect, label) {
 export function clear(ctx) {
   const { x: w, y: h } = getSize()
   ctx.clearRect(0, 0, w, h)
-}
-
-// Get the ViewBox position/dimensions in Leaflet pane-coordinates
-export function getPaneRect() {
-  const { x, y } = _mapPanePos
-  const { x: w, y: h } = getSize()
-  return { x, y, w, h }
 }
 
 // Debug info box

@@ -88,8 +88,7 @@ const inView = {
  * Update StyleGroups for our collection of activities
  * @return {[type]} [description]
  */
-export async function updateGroups() {
-  const zoom = ViewBox.zoom
+export async function updateState(viewportPxBounds, zoom) {
 
   // the semicolon is necessary
   // see https://stackoverflow.com/questions/42562806/destructuring-assignment-and-variable-swapping
