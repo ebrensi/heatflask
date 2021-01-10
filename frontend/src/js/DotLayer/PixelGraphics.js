@@ -70,10 +70,16 @@ export class PixelGraphics {
     this.lineWidth = w
   }
 
+  /**
+   * Clear (set to 0) a rectangular region
+   * @param  {Object} rect      {x, y, w, h}
+   * @param  {Object} [newBoundsRect] a rect object that specifies
+   *                                  new draw bounds
+   */
   clear(rect) {
+
     if (this.debugCanvas) {
       drawDebugBox(this.debugCanvas, rect, "clear") // draw source rect
-      debugger
     }
 
     const { x, y, w, h } = rect || this.drawBounds.rect
@@ -82,6 +88,7 @@ export class PixelGraphics {
       const offset = row * this.width
       this.buf32.fill(0, offset + x, offset + x + w)
     }
+
     // make sure to update drawbounds
     if (!rect) {
       this.drawBounds.reset()
@@ -271,11 +278,13 @@ export class PixelGraphics {
       d = { x: dx0, y: dy0, w: dx1 - dx0, h: dy1 - dy0 }
       s = { x: dx0 - shiftX, y: dy0 - shiftY, w: d.w, h: d.h }
     } else {
-      /* if there is no destination rectangle (nothing in view)
+      /*
+       * If there is no destination rectangle (nothing in view)
        *  we just clear the source rectangle and exit
        */
-      this.clear(this.drawBounds.rect)
-      return this.drawBounds.rect
+      this.clear()
+      this.drawBounds.reset()
+      return
     }
 
     if (this.debugCanvas) {
@@ -355,7 +364,9 @@ export class PixelGraphics {
           : { x: d.x + d.w, y: s.y, w: s.x - d.x, h: s.h }
     }
     this.clear(clearRegion)
-    return clearRegion
+    this.drawBounds.reset()
+    this.drawBounds.update(dx0, dy0)
+    this.drawBounds.update(dx1, dy1)
   }
 
   putImageData(obj) {

@@ -282,7 +282,8 @@ async function redraw(force) {
   if (!_ready) return
 
   await nextTask()
-  const viewportBounds = ViewBox.updateBounds()
+
+  ViewBox.updateBounds()
   const zoomChanged = ViewBox.updateZoom()
 
   // console.log("onmoveend")
@@ -296,36 +297,34 @@ async function redraw(force) {
   // location relative to the map's pxOrigin
   const mppNew = ViewBox.calibrate()
 
-  if (fullRedraw) {
-    if (zoomChanged > 1) ActivityCollection.resetSegMasks()
-    const canvasesToClear = [pathCanvas, dotCanvas]
-    for (const canvas of canvasesToClear) {
-      if (!canvas.pxg.drawBounds.isEmpty()) {
-        const { x, y, w, h } = canvas.pxg.drawBounds.rect
-        canvas.getContext("2d").clarRect(x, y, w, h)
-        canvas.pxg.clear()
-      }
-    }
-  } else {
-    // const t0 = Date.now()
-    // Move the visible portion of currently drawn segments and dots
-    // to the new location after calibration
-    const dx = Math.round(mppNew.x - mppOld.x)
-    const dy = Math.round(mppNew.y - mppOld.y)
+  const dx = Math.round(mppNew.x - mppOld.x)
+  const dy = Math.round(mppNew.y - mppOld.y)
 
-    if (!dx && !dy) return
+  // if (!dx && !dy) return
 
-    const canvasesToMove = [pathCanvas, dotCanvas]
-    for (const canvas of canvasesToMove) {
-      const { x, y, w, h } = canvas.pxg.translate(dx, dy)
-      canvas.getContext("2d").clearRect(x, y, w, h)
+  for (const canvas of [pathCanvas, dotCanvas]) {
+    if (!canvas.pxg.drawBounds.isEmpty()) {
+      const { x, y, w, h } = canvas.pxg.drawBounds.rect
+      canvas.getContext("2d").clarRect(x, y, w, h)
+
+      if (fullRedraw) canvas.pxg.clear()
     }
-    drawPathImageData()
-    drawDotImageData()
-    // console.log(`moveDrawBox: ${D.w}x${D.h} -- ${Date.now() - t0}ms`)
   }
 
-  await ActivityCollection.updateContext()
+  if (!fullRedraw) {
+    if (_options.showPaths) {
+      pathCanvas.pxg.translate(dx, dy)
+      pathCanvas.pxg.putImageData(pathCanvas)
+    }
+    // if (_paused) {
+    //   dotCanvas.pxg.translate(dx, dy)
+    //   dotCanvas.pxg.putImageData(dotCanvas)
+    // }
+  }
+
+  if (zoomChanged > 1) ActivityCollection.resetSegMasks()
+
+  await ActivityCollection.updateContext(ViewBox.pxBounds, ViewBox.zoom)
 
   if (DEBUG_BORDERS) {
     drawBoundsBoxes()

@@ -16,7 +16,7 @@ import { PixelGraphics } from "./PixelGraphics"
 
 export const items = new Map()
 export const pxg = new PixelGraphics()
-let itemsArray
+let itemsArray, _zoom
 
 state.items = items
 
@@ -88,7 +88,9 @@ const inView = {
  * Update StyleGroups for our collection of activities
  * @return {[type]} [description]
  */
-export async function updateState(viewportPxBounds, zoom) {
+export async function updateContext(viewportPxBounds, zoom) {
+
+  _zoom = zoom
 
   // the semicolon is necessary
   // see https://stackoverflow.com/questions/42562806/destructuring-assignment-and-variable-swapping
@@ -153,7 +155,7 @@ export function* inPxBounds(pxBounds) {
 
   for (const idx of inView.current) {
     const A = itemsArray[idx]
-    const points = A.getPointAccessor(ViewBox.zoom)
+    const points = A.getPointAccessor(_zoom)
 
     for (const i of A.segMask) {
       const px = points(i)
@@ -208,7 +210,7 @@ export function drawPaths(imageData, transform, drawDiff) {
 
     const segMask = drawDiff ? A.getSegMaskUpdates() : A.segMask
     if (segMask) {
-      count += A.forEachSegment(drawSeg, ViewBox.zoom, segMask)
+      count += A.forEachSegment(drawSeg, _zoom, segMask)
     }
   })
   return count
@@ -225,7 +227,7 @@ export function drawDots(imageData, transform, dotSize, T, timeScale, tsecs) {
     const A = itemsArray[i]
     pxg.setColor(A.colors.dot)
     const drawFunc = A.selected ? circle : square
-    count += A.forEachDot(tsecs, T, timeScale, drawFunc, ViewBox.zoom)
+    count += A.forEachDot(tsecs, T, timeScale, drawFunc, _zoom)
   })
   return count
 }
