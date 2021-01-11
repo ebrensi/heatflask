@@ -77,7 +77,6 @@ export class PixelGraphics {
    *                                  new draw bounds
    */
   clear(rect) {
-
     if (this.debugCanvas) {
       drawDebugBox(this.debugCanvas, rect, "clear") // draw source rect
     }

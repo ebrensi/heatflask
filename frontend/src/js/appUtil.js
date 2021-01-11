@@ -229,7 +229,7 @@ export class Bounds {
 
   get rect() {
     const [xmin, ymin, xmax, ymax] = this._bounds
-    return {x: xmin, y: ymin, w: xmax - xmin, h: ymax - ymin}
+    return { x: xmin, y: ymin, w: xmax - xmin, h: ymax - ymin }
   }
 
   get data() {

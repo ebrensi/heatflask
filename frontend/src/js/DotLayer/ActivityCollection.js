@@ -89,7 +89,6 @@ const inView = {
  * @return {[type]} [description]
  */
 export async function updateContext(viewportPxBounds, zoom) {
-
   _zoom = zoom
 
   // the semicolon is necessary

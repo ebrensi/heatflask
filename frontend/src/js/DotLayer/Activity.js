@@ -13,7 +13,7 @@ import BitSet from "../BitSet.js"
 import { RunningStatsCalculator } from "./stats.js"
 import {
   // quartiles,
-  Bounds
+  Bounds,
 } from "../appUtil.js"
 
 // import { makePT } from "./CRS.js"

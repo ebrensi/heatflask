@@ -300,7 +300,6 @@ BitSet.prototype.new_subset = function (bitSubSet) {
   return newSet.trim()
 }
 
-
 // Creates a copy of this bitmap
 BitSet.prototype.clone = function (recycled) {
   if (recycled) {

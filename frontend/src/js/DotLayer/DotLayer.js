@@ -283,6 +283,8 @@ async function redraw(force) {
 
   await nextTask()
 
+  debugger
+
   ViewBox.updateBounds()
   const zoomChanged = ViewBox.updateZoom()
 

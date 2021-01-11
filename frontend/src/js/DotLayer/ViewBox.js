@@ -172,7 +172,7 @@ export function unTransform(leafletPoint) {
 // returns an ActivityBounds object (Float32Array) representing a
 // bounding box in absolute px coordinates
 export function latLng2pxBounds(llBounds, boundsObj) {
-  boundsObj = boundsObj? boundsObj.reset() : new Bounds()
+  boundsObj = boundsObj ? boundsObj.reset() : new Bounds()
 
   const { _southWest: sw, _northEast: ne } = llBounds
 
@@ -187,11 +187,10 @@ export function draw(ctxOrCanvas, rect, label) {
     ? ctxOrCanvas.getContext("2d")
     : ctxOrCanvas
   const { x: mw, y: mh } = getSize()
-  const { x, y, w, h } = rect || {x:0, y:0, w: mw, h: mh}
+  const { x, y, w, h } = rect || { x: 0, y: 0, w: mw, h: mh }
   ctx.strokeRect(x, y, w, h)
   if (label) ctx.fillText(label, x + 20, y + 20)
 }
-
 
 // clear the entire ViewBox (for a given context)
 export function clear(ctx) {
