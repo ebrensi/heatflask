@@ -7,7 +7,7 @@
 import { makePT } from "./CRS.js"
 import { DomUtil, Control } from "../myLeaflet.js"
 import { MAP_INFO } from "../Env.js"
-import { Bounds } from "./appUtil.js"
+import { Bounds } from "../appUtil.js"
 
 const _canvases = []
 

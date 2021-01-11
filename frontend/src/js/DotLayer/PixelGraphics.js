@@ -397,6 +397,7 @@ function parseColor(colorString) {
 
 // Draw the outline of arbitrary rect object in screen coordinates
 export function drawDebugBox(ctxOrCanvas, rect, label) {
+  if (!rect) return
   const ctx = ctxOrCanvas.getContext
     ? ctxOrCanvas.getContext("2d")
     : ctxOrCanvas

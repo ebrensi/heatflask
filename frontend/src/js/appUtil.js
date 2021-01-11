@@ -193,7 +193,7 @@ export class Bounds {
   }
 
   update(x, y) {
-    if (this.empty()) {
+    if (this.isEmpty()) {
       this._bounds[0] = this._bounds[2] = x
       this._bounds[1] = this._bounds[3] = y
       return

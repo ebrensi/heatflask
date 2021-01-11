@@ -103,7 +103,7 @@ export async function updateContext(viewportPxBounds, zoom) {
   for (let i = 0, len = itemsArray.length; i < len; i++) {
     const A = itemsArray[i]
 
-    if (A.inMapBounds()) {
+    if (viewportPxBounds.overlaps(A.pxBounds) ){
       inView.current.add(i)
 
       // Making an idxSet is slow so we create new tasks for that
