@@ -222,8 +222,9 @@ export class Bounds {
     return this.contains(x1, y1) && this.contains(x2, y2)
   }
 
-  overlaps(x1, y1, x2, y2) {
+  overlaps(otherBoundsObj) {
     const [xmin, ymin, xmax, ymax] = this._bounds
+    const [x1, y1, x2, y2] = otherBoundsObj._bounds
     return x2 >= xmin && x1 <= xmax && y2 >= ymin && y1 <= ymax
   }
 

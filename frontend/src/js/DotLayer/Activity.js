@@ -350,14 +350,14 @@ export class Activity {
    *  so that the i-th good segment corresponds to the i-th member of
    *  this idxSet.
    */
-  updateSegMask(zoom, viewportBounds) {
+  updateSegMask(viewportPxBounds, zoom) {
     /* Later we will compare this segMask with the last one so that we only draw or erase
      * parts of the path that have come into view or are no longer on screen
      */
     if (!this.segMask) this.segMask = new BitSet()
 
     // console.log(this.id + "----- updating segmask ---------")
-    if (viewportBounds.containsBounds(this.pxBounds)) {
+    if (viewportPxBounds.containsBounds(this.pxBounds)) {
       /*
        * If this activity is completely contained in the viewport then we
        * already know every segment is included.  Explicitly creating a full
@@ -375,14 +375,16 @@ export class Activity {
       this._containedInMapBounds = true
       // console.log(~~performance.now() + " contained")
     } else {
+
       this._containedInMapBounds = false
       const points = this.getPointAccessor(zoom)
       const n = this.idxSet[zoom].size()
       const segMask = this.segMask.clear().resize(n)
-
-      let pIn = viewportBounds.contains(points(0))
+      const p = points(0)
+      let pIn = viewportPxBounds.contains(...p)
       for (let i = 0; i < n - 1; i++) {
-        const nextpIn = viewportBounds.contains(points(i + 1))
+        const p = points(i+1)
+        const nextpIn = viewportPxBounds.contains(...p)
         /*
          * If either endpoint of the segment is contained in viewport
          * bounds then include this segment index
@@ -404,6 +406,8 @@ export class Activity {
         // console.log(~~performance.now() + " " + this.segMask.toString(1))
         return
 
+    if (this.segMask.zoom !== zoom) this.segMask.zoom = zoom
+
     return this.segMask
   }
 
@@ -422,38 +426,47 @@ export class Activity {
    * since the last draw.
    */
   getSegMaskUpdates() {
-    if (!this.segMask.difference_size(this.lastSegMask)) {
-      // console.log(~~performance.now() + " no new segs")
-      this.segMask.clone(this.lastSegMask)
-      return
-    }
+    const zoomChanged = this.segMask.zoom !== this.lastSegMask.zoom
 
-    const newSegs = this.segMask.new_difference(
-      this.lastSegMask,
-      this._segMaskUpdates
-    )
+    if (this.segMask.equals(this.lastSegMask) && !zoomChanged) return
 
-    // console.log(~~performance.now() + " update")
-    // console.log("lsm: " + this.lastSegMask.toString(1))
-    // console.log(" sm: " + this.segMask.toString(1))
-    // console.log("new: " + newSegs.toString(1))
-    /*
-     * We include an edge segment (at the edge of the screen)
-     * even if it was in the last draw
-     */
-    const lsm = this.lastSegMask
-    let lastSeg
-    newSegs.forEach((s) => {
-      const beforeGap = lastSeg && lastSeg + 1
-      const afterGap = s && s - 1
-      if (lastSeg !== afterGap) {
-        if (beforeGap && lsm.has(beforeGap)) newSegs.add(beforeGap)
-        if (afterGap && lsm.has(afterGap)) newSegs.add(afterGap)
+    let newSegs
+
+    if (this.segMask.difference_size(this.lastSegMask) || zoomChanged) {
+      // if there are more segments in view or zoom changed
+      if (zoomChanged) {
+        newSegs = this.segMask.clone(this._segMaskUpdates)
+      } else {
+        newSegs = this.segMask.new_difference(
+          this.lastSegMask,
+          this._segMaskUpdates
+        )
+
+        // console.log(~~performance.now() + " update")
+        // console.log("lsm: " + this.lastSegMask.toString(1))
+        // console.log(" sm: " + this.segMask.toString(1))
+        // console.log("new: " + newSegs.toString(1))
+        /*
+         * We include an edge segment (at the edge of the screen)
+         * even if it was in the last draw
+         */
+        const lsm = this.lastSegMask
+        let lastSeg
+        newSegs.forEach((s) => {
+          const beforeGap = lastSeg && lastSeg + 1
+          const afterGap = s && s - 1
+          if (lastSeg !== afterGap) {
+            if (beforeGap && lsm.has(beforeGap)) newSegs.add(beforeGap)
+            if (afterGap && lsm.has(afterGap)) newSegs.add(afterGap)
+          }
+          lastSeg = s
+        })
       }
-      lastSeg = s
-    })
+      newSegs.zoom = this.segMask.zoom
+    }
     // lastSegMask = segMask
     this.segMask.clone(this.lastSegMask)
+    this.lastSegMask.zoom = this.segMask.zoom
     return newSegs
   }
 
@@ -465,12 +478,12 @@ export class Activity {
    * @param  {function} func func(x1, y1, x2, y2)
    * @param  {BitSet} [segMask] the set of segments
    */
-  forEachSegment(func, zoom, segMask) {
-    if (!segMask) segMask = this.segMask
+  forEachSegment(func, drawDiff) {
+    const segMask = drawDiff ? this.getSegMaskUpdates() : this.segMask
     if (!segMask) return 0
 
     let count = 0
-    const points = this.getPointAccessor(zoom)
+    const points = this.getPointAccessor(segMask.zoom)
     if (!points) return 0
 
     segMask.forEach((i) => {
@@ -491,16 +504,16 @@ export class Activity {
    * @param  {BitSet} [segMask] a set of segments over which to place dots
    * @returns {number} number of dot points
    */
-  forEachDot(nowInSecs, T, timeScale, func, zoom, segMask) {
-    const start = this.ts
-    const points = this.getPointAccessor(zoom)
-    if (!points) return 0
-
-    if (!segMask) segMask = this.segMask
+  forEachDot(func, nowInSecs, T, timeScale, drawDiff) {
+    const segMask = drawDiff ? this.getSegMaskUpdates() : this.segMask
     if (!segMask) return 0
 
+    const start = this.ts
+    const points = this.getPointAccessor(segMask.zoom)
+    if (!points) return 0
+
     const i0 = segMask.min()
-    const times = this.getTimesArray(zoom)
+    const times = this.getTimesArray(segMask.zoom)
     const timeOffset = (timeScale * (nowInSecs - (start + times[i0]))) % T
 
     let count = 0

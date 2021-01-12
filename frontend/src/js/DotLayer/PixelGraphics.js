@@ -28,8 +28,8 @@ export class PixelGraphics {
   constructor(imageData) {
     this.color32 = rgbaToUint32(0, 0, 0, 255) // default color is black
     this.lineWidth = 1
-    this.transform = [1, 0, 1, 0]
     this.drawBounds = new Bounds()
+    this._transform = [1, 0, 1, 0]
     if (imageData) {
       this.imageData = imageData // note that this is a setter call
     }
@@ -37,9 +37,15 @@ export class PixelGraphics {
 
   set imageData(imageData) {
     this._imageData = imageData
-    this.width = imageData.width
-    this.height = imageData.height
     this.buf32 = new Uint32Array(imageData.data.buffer)
+    this.height = imageData.height
+    this.width = imageData.width
+
+    if (imageData.transform) {
+      this._transform = imageData.transform
+    } else {
+      imageData.transform = this._transform
+    }
 
     if (imageData.drawBounds) {
       this.drawBounds.data = imageData.drawBounds
@@ -55,6 +61,14 @@ export class PixelGraphics {
 
   get imageData() {
     return this._imageData
+  }
+
+  get transform() {
+    return this._transform
+  }
+
+  set transform(tf) {
+    this._transform = this._imageData.transform = tf
   }
 
   setColor(r, g, b, a = 0xff) {
@@ -77,11 +91,11 @@ export class PixelGraphics {
    *                                  new draw bounds
    */
   clear(rect) {
+    const { x, y, w, h } = rect || this.drawBounds.rect
+
     if (this.debugCanvas) {
       drawDebugBox(this.debugCanvas, rect, "clear") // draw source rect
     }
-
-    const { x, y, w, h } = rect || this.drawBounds.rect
 
     for (let row = y; row < y + h; row++) {
       const offset = row * this.width
@@ -369,12 +383,14 @@ export class PixelGraphics {
   }
 
   putImageData(obj) {
+    if (this.drawBounds.isEmpty()) return
     const ctx = obj.putImageData ? obj : obj.getContext("2d")
     const { x, y, w, h } = this.drawBounds.rect
     ctx.putImageData(this.imageData, 0, 0, x, y, w, h)
   }
 
   async drawImageData(obj) {
+    if (this.drawBounds.isEmpty()) return
     const ctx = obj.drawImage ? obj : obj.getContext("2d")
     const { x, y, w, h } = this.drawBounds.rect
     const img = await createImageBitmap(this.imageData, x, y, w, h)

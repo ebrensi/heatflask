@@ -25,9 +25,9 @@ const TARGET_FPS = 30
 /* In order to prevent path redraws from happening too often
  * and hogging up CPU cycles we set a minimum delay between redraws
  */
-const FORCE_FULL_REDRAW = false
-const CONTINUOUS_PAN_REDRAWS = true
-const CONTINUOUS_PINCH_REDRAWS = true
+const FORCE_FULL_REDRAW = true
+const CONTINUOUS_PAN_REDRAWS = false
+const CONTINUOUS_PINCH_REDRAWS = false
 const MIN_PAN_REDRAW_DELAY = 200 // milliseconds
 const MIN_PINCH_REDRAW_DELAY = 100
 
@@ -283,8 +283,6 @@ async function redraw(force) {
 
   await nextTask()
 
-  debugger
-
   ViewBox.updateBounds()
   const zoomChanged = ViewBox.updateZoom()
 
@@ -305,11 +303,14 @@ async function redraw(force) {
   // if (!dx && !dy) return
 
   for (const canvas of [pathCanvas, dotCanvas]) {
+    canvas.pxg.transform = ViewBox.transform
+
     if (!canvas.pxg.drawBounds.isEmpty()) {
       const { x, y, w, h } = canvas.pxg.drawBounds.rect
-      canvas.getContext("2d").clarRect(x, y, w, h)
+      canvas.getContext("2d").clearRect(x, y, w, h)
 
       if (fullRedraw) canvas.pxg.clear()
+
     }
   }
 
@@ -318,26 +319,24 @@ async function redraw(force) {
       pathCanvas.pxg.translate(dx, dy)
       pathCanvas.pxg.putImageData(pathCanvas)
     }
-    // if (_paused) {
-    //   dotCanvas.pxg.translate(dx, dy)
-    //   dotCanvas.pxg.putImageData(dotCanvas)
-    // }
+    if (_paused) {
+      dotCanvas.pxg.translate(dx, dy)
+      dotCanvas.pxg.putImageData(dotCanvas)
+    }
   }
-
-  if (zoomChanged > 1) ActivityCollection.resetSegMasks()
 
   await ActivityCollection.updateContext(ViewBox.pxBounds, ViewBox.zoom)
-
-  if (DEBUG_BORDERS) {
-    drawBoundsBoxes()
-  }
 
   if (_options.showPaths) {
     drawPaths(fullRedraw)
   }
 
   if (_paused) {
-    drawDots(_timePaused || 0)
+    drawDots(_timePaused || 0, !fullRedraw)
+  }
+
+  if (DEBUG_BORDERS) {
+    drawBoundsBoxes()
   }
 }
 
@@ -347,12 +346,11 @@ function drawPathImageData() {
 
 async function drawPaths(forceFullRedraw) {
   if (!_ready) return 0
-  const drawDiffs = !forceFullRedraw
+  const drawDiff = !forceFullRedraw
   const pxg = pathCanvas.pxg
   const count = ActivityCollection.drawPaths(
     pxg.imageData,
-    ViewBox.transform,
-    drawDiffs
+    drawDiff
   )
   drawPathImageData()
 }
@@ -365,22 +363,22 @@ function drawDotImageData() {
   }
 }
 
-async function drawDots(tsecs) {
+async function drawDots(tsecs, drawDiff) {
   if (!_ready) return 0
 
   const pxg = dotCanvas.pxg
   pxg.clear()
-  if (_options.dotShadows.enabled) {
+  if (_options.dotShadows.enabled && !pxg.drawBounds.isEmpty()) {
     const { x, y, w, h } = pxg.drawBounds.rect
     dotCanvas.getContext("2d").clearRect(x, y, w, h)
   }
   const count = ActivityCollection.drawDots(
     pxg.imageData,
-    ViewBox.transform,
     +vParams.sz,
     +vParams.T,
     +vParams.tau,
-    tsecs
+    tsecs,
+    drawDiff
   )
   drawDotImageData()
 }
@@ -417,7 +415,7 @@ function updateDotSettings(shadowSettings) {
   }
 
   if (_paused) {
-    drawDots(_timePaused || 0, null, true)
+    drawDots(_timePaused || 0)
   }
   return ds
 }

@@ -16,7 +16,7 @@ import { PixelGraphics } from "./PixelGraphics"
 
 export const items = new Map()
 export const pxg = new PixelGraphics()
-let itemsArray, _zoom
+let itemsArray
 
 state.items = items
 
@@ -89,8 +89,6 @@ const inView = {
  * @return {[type]} [description]
  */
 export async function updateContext(viewportPxBounds, zoom) {
-  _zoom = zoom
-
   // the semicolon is necessary
   // see https://stackoverflow.com/questions/42562806/destructuring-assignment-and-variable-swapping
   ;[inView.current, inView.last] = [inView.last, inView.current]
@@ -108,9 +106,7 @@ export async function updateContext(viewportPxBounds, zoom) {
 
       // Making an idxSet is slow so we create new tasks for that
       if (!A.idxSet[zoom]) {
-        queueTask(() => {
-          A.makeIdxSet(zoom)
-        })
+        queueTask(() => A.makeIdxSet(zoom))
         queuedTasks = true
       }
     }
@@ -126,7 +122,7 @@ export async function updateContext(viewportPxBounds, zoom) {
       throw `idxSet[${zoom}] didn't get made`
     }
 
-    if (!A.updateSegMask()) {
+    if (!A.updateSegMask(viewportPxBounds, zoom)) {
       inView.current.remove(i)
     }
   })
@@ -154,7 +150,7 @@ export function* inPxBounds(pxBounds) {
 
   for (const idx of inView.current) {
     const A = itemsArray[idx]
-    const points = A.getPointAccessor(_zoom)
+    const points = A.getPointAccessor(A.segMask.zoom)
 
     for (const i of A.segMask) {
       const px = points(i)
@@ -193,10 +189,9 @@ export function resetSegMasks() {
 /*
  * Methods for drawing to imageData objects
  */
-const drawSeg = (x0, y0, x1, y1) => pxg.drawSegment(x0, y0, x1, y1)
-export function drawPaths(imageData, transform, drawDiff) {
-  pxg.imageData = imageData
-  pxg.transform = transform
+const drawSegFunc = (x0, y0, x1, y1) => pxg.drawSegment(x0, y0, x1, y1)
+export function drawPaths(imageData, drawDiff) {
+  if (pxg.imageData !== imageData) pxg.imageData = imageData
 
   let count = 0
   inView.current.forEach((i) => {
@@ -207,17 +202,13 @@ export function drawPaths(imageData, transform, drawDiff) {
       A.selected ? options.selected.pathWidth : options.normal.pathWidth
     )
 
-    const segMask = drawDiff ? A.getSegMaskUpdates() : A.segMask
-    if (segMask) {
-      count += A.forEachSegment(drawSeg, _zoom, segMask)
-    }
+    count += A.forEachSegment(drawSegFunc, drawDiff)
   })
   return count
 }
 
-export function drawDots(imageData, transform, dotSize, T, timeScale, tsecs) {
-  pxg.imageData = imageData
-  pxg.transform = transform
+export function drawDots(imageData, dotSize, T, timeScale, tsecs, drawDiff) {
+  if (pxg.imageData !== imageData) pxg.imageData = imageData
 
   let count = 0
   const circle = (x, y) => pxg.drawCircle(x, y, dotSize)
@@ -226,7 +217,7 @@ export function drawDots(imageData, transform, dotSize, T, timeScale, tsecs) {
     const A = itemsArray[i]
     pxg.setColor(A.colors.dot)
     const drawFunc = A.selected ? circle : square
-    count += A.forEachDot(tsecs, T, timeScale, drawFunc, _zoom)
+    count += A.forEachDot(drawFunc, tsecs, T, timeScale, drawDiff)
   })
   return count
 }
