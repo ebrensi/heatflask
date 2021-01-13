@@ -54,8 +54,7 @@ export function reset() {
     itemsArray[i].idx = i
   }
   resetSegMasks()
-  inView.current.resize(itemsArray.length)
-  inView.last.resize(itemsArray.length)
+  inView.resize(itemsArray.length)
 }
 
 /*
@@ -70,19 +69,10 @@ function setDotColors() {
 }
 
 /*
- * We group items in our collection by path color, dot color, and whether
- * they are selected in order to optimze rendering paths and dots.  That way we can
- * do all drawing in chunks of one linestyle at a time.
- */
-
-/*
  * inView is the set indicating which activities are currently in view. It is actually
  * a set of indices of Activities in itemsArray.
  */
-const inView = {
-  current: new BitSet(), // Current means since the last update
-  last: new BitSet(),
-}
+const inView = new BitSet(1)
 
 /**
  * Update StyleGroups for our collection of activities
@@ -91,9 +81,9 @@ const inView = {
 export async function updateContext(viewportPxBounds, zoom) {
   // the semicolon is necessary
   // see https://stackoverflow.com/questions/42562806/destructuring-assignment-and-variable-swapping
-  ;[inView.current, inView.last] = [inView.last, inView.current]
+  // ;[inView.current, inView.last] = [inView.last, inView.current]
 
-  inView.current.clear()
+  inView.clear()
 
   let queuedTasks
 
@@ -102,7 +92,7 @@ export async function updateContext(viewportPxBounds, zoom) {
     const A = itemsArray[i]
 
     if (viewportPxBounds.overlaps(A.pxBounds) ){
-      inView.current.add(i)
+      inView.add(i)
 
       // Making an idxSet is slow so we create new tasks for that
       if (!A.idxSet[zoom]) {
@@ -116,7 +106,7 @@ export async function updateContext(viewportPxBounds, zoom) {
   if (queuedTasks) await nextTask()
 
   // Make segMasks (this is usually very fast)
-  inView.current.forEach((i) => {
+  inView.forEach((i) => {
     const A = itemsArray[i]
     if (!A.idxSet[zoom]) {
       throw `idxSet[${zoom}] didn't get made`
@@ -148,7 +138,7 @@ export function* inPxBounds(pxBounds) {
   ViewBox.unTransform(pxBounds.min)
   ViewBox.unTransform(pxBounds.max)
 
-  for (const idx of inView.current) {
+  for (const idx of inView) {
     const A = itemsArray[idx]
     const points = A.getPointAccessor(A.segMask.zoom)
 
@@ -193,31 +183,45 @@ const drawSegFunc = (x0, y0, x1, y1) => pxg.drawSegment(x0, y0, x1, y1)
 export function drawPaths(imageData, drawDiff) {
   if (pxg.imageData !== imageData) pxg.imageData = imageData
 
+  if (!drawDiff) pxg.clear()
+
   let count = 0
-  inView.current.forEach((i) => {
+  let maxLW = 0
+  inView.forEach((i) => {
     const A = itemsArray[i]
     pxg.setColor(A.colors.path)
 
-    pxg.setLineWidth(
-      A.selected ? options.selected.pathWidth : options.normal.pathWidth
-    )
+    const LW = A.selected ? options.selected.pathWidth : options.normal.pathWidth
+    if (LW > maxLW) maxLW = LW
+    pxg.setLineWidth(LW)
 
     count += A.forEachSegment(drawSegFunc, drawDiff)
   })
+  if (pxg.drawBounds.isEmpty()) return 0
+  let [xmin, ymin, xmax, ymax] = pxg.drawBounds.data
+  pxg.drawBounds.update(Math.max(0, xmin - maxLW), Math.max(0, ymin - maxLW))
+  pxg.drawBounds.update(Math.min(pxg.width, xmax + maxLW), Math.min(pxg.height, ymax + maxLW))
   return count
 }
 
 export function drawDots(imageData, dotSize, T, timeScale, tsecs, drawDiff) {
   if (pxg.imageData !== imageData) pxg.imageData = imageData
 
+  if (!drawDiff) pxg.clear()
+
   let count = 0
-  const circle = (x, y) => pxg.drawCircle(x, y, dotSize)
-  const square = (x, y) => pxg.drawSquare(x, y, dotSize)
-  inView.current.forEach((i) => {
+  const sz = Math.round(dotSize)
+  const circle = (x, y) => pxg.drawCircle(x, y, sz)
+  const square = (x, y) => pxg.drawSquare(x, y, sz)
+  inView.forEach((i) => {
     const A = itemsArray[i]
     pxg.setColor(A.colors.dot)
     const drawFunc = A.selected ? circle : square
     count += A.forEachDot(drawFunc, tsecs, T, timeScale, drawDiff)
   })
+  if (pxg.drawBounds.isEmpty()) return 0
+  let [xmin, ymin, xmax, ymax] = pxg.drawBounds.data
+  pxg.drawBounds.update(Math.max(0, xmin - 10), Math.max(0, ymin - 10))
+  pxg.drawBounds.update(Math.min(pxg.width, xmax + 20), Math.min(pxg.height, ymax + 20))
   return count
 }

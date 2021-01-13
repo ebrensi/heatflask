@@ -25,9 +25,9 @@ const TARGET_FPS = 30
 /* In order to prevent path redraws from happening too often
  * and hogging up CPU cycles we set a minimum delay between redraws
  */
-const FORCE_FULL_REDRAW = true
-const CONTINUOUS_PAN_REDRAWS = false
-const CONTINUOUS_PINCH_REDRAWS = false
+const FORCE_FULL_REDRAW = false
+const CONTINUOUS_PAN_REDRAWS = true
+const CONTINUOUS_PINCH_REDRAWS = true
 const MIN_PAN_REDRAW_DELAY = 200 // milliseconds
 const MIN_PINCH_REDRAW_DELAY = 100
 
@@ -103,6 +103,7 @@ export const DotLayer = Layer.extend({
       debugCanvas = addCanvasOverlay(debugCanvasPane)
       pathCanvas.pxg.debugCanvas = debugCanvas
       dotCanvas.pxg.debugCanvas = debugCanvas
+      ActivityCollection.pxg.debugCanvas = debugCanvas
     }
 
     ViewBox.setMap(_map)
@@ -219,9 +220,9 @@ async function onResize() {
   ViewBox.resize(newMapSize)
 
   const { width: dw, height: dh } = dotCanvas
-  const dctx = dotCanvas.getContext("2d")
-  dotCanvas.pxg.imageData = dctx.createImageData(dw, dh)
-
+  dotCanvas.pxg = new PixelGraphics(
+    dotCanvas.getContext("2d").createImageData(dw, dh)
+  )
   dotCtxUpdate()
 
   /*
@@ -229,8 +230,11 @@ async function onResize() {
    * of a bunch of segments.
    */
   const { width: pw, height: ph } = pathCanvas
-  const pctx = pathCanvas.getContext("2d")
-  pathCanvas.pxg.imageData = pctx.createImageData(pw, ph)
+  pathCanvas.pxg = new PixelGraphics(
+    pathCanvas.getContext("2d").createImageData(pw, ph)
+  )
+
+  console.log("resized to ${x} x ${y}")
 
   await redraw(true)
 }
@@ -289,16 +293,9 @@ async function redraw(force) {
   // console.log("onmoveend")
   const fullRedraw = zoomChanged || FORCE_FULL_REDRAW || force
 
-  // Get the last recorded ViewBox (screen) rectangle
-  // in pane coordinates (relative to pxOrigin)
-  const mppOld = _map._getMapPanePos()
-
   // reset the canvases to to align with the screen and update the ViewBox
   // location relative to the map's pxOrigin
-  const mppNew = ViewBox.calibrate()
-
-  const dx = Math.round(mppNew.x - mppOld.x)
-  const dy = Math.round(mppNew.y - mppOld.y)
+  const shift = ViewBox.calibrate()
 
   // if (!dx && !dy) return
 
@@ -308,19 +305,16 @@ async function redraw(force) {
     if (!canvas.pxg.drawBounds.isEmpty()) {
       const { x, y, w, h } = canvas.pxg.drawBounds.rect
       canvas.getContext("2d").clearRect(x, y, w, h)
-
-      if (fullRedraw) canvas.pxg.clear()
-
     }
   }
 
   if (!fullRedraw) {
     if (_options.showPaths) {
-      pathCanvas.pxg.translate(dx, dy)
+      pathCanvas.pxg.translate(shift.x, shift.y)
       pathCanvas.pxg.putImageData(pathCanvas)
     }
     if (_paused) {
-      dotCanvas.pxg.translate(dx, dy)
+      dotCanvas.pxg.translate(shift.x, shift.y)
       dotCanvas.pxg.putImageData(dotCanvas)
     }
   }
@@ -348,10 +342,7 @@ async function drawPaths(forceFullRedraw) {
   if (!_ready) return 0
   const drawDiff = !forceFullRedraw
   const pxg = pathCanvas.pxg
-  const count = ActivityCollection.drawPaths(
-    pxg.imageData,
-    drawDiff
-  )
+  const count = ActivityCollection.drawPaths(pxg.imageData, drawDiff)
   drawPathImageData()
 }
 
@@ -367,11 +358,11 @@ async function drawDots(tsecs, drawDiff) {
   if (!_ready) return 0
 
   const pxg = dotCanvas.pxg
-  pxg.clear()
   if (_options.dotShadows.enabled && !pxg.drawBounds.isEmpty()) {
     const { x, y, w, h } = pxg.drawBounds.rect
     dotCanvas.getContext("2d").clearRect(x, y, w, h)
   }
+
   const count = ActivityCollection.drawDots(
     pxg.imageData,
     +vParams.sz,
@@ -381,6 +372,8 @@ async function drawDots(tsecs, drawDiff) {
     drawDiff
   )
   drawDotImageData()
+  drawBoundsBoxes()
+  return count
 }
 
 function drawBoundsBoxes() {
@@ -389,10 +382,20 @@ function drawBoundsBoxes() {
   ViewBox.clear(ctx)
   ctx.lineWidth = 4
   ctx.setLineDash([6, 5])
-  ctx.strokeStyle = "rgb(0,255,0,0.8)"
+  ctx.strokeStyle = "rgba(255,0,0,0.8)"
   ViewBox.draw(ctx)
-  ctx.strokeStyle = "rgb(255,0,255,1)"
-  ViewBox.draw(ctx, pathCanvas.pxg.drawBounds.rect)
+
+  if (!pathCanvas.pxg.drawBounds.isEmpty()) {
+    ctx.lineWidth = 1
+    ctx.strokeStyle = "rgba(0,255,0,0.8)"
+    ViewBox.draw(ctx, pathCanvas.pxg.drawBounds.rect)
+  }
+
+  if (!dotCanvas.pxg.drawBounds.isEmpty()) {
+    ctx.lineWidth = 1
+    ctx.strokeStyle = "rgba(0,0,255,0.8)"
+    ViewBox.draw(ctx, dotCanvas.pxg.drawBounds.rect)
+  }
 }
 
 /*
@@ -489,13 +492,14 @@ function updateInfoBox(dt, count) {
 
   const roundCount = 10 * Math.round(count / 10)
   const duration = Math.round(fpsSum / fpsRegisterSize)
-  fpsSum -= fpsRegister.shift()
-
+  const fps = Math.round(1000 / duration)
+  // const [dx, dy, dw, dh] = dotCanvas.pxg.imageData.drawBounds
   if (roundCount !== _roundCount || duration !== _duration) {
-    _infoBox.innerHTML = `${duration} ms (${Math.round(
-      1000 / duration
-    )}fps), ${roundCount} pts`
+    _infoBox.innerHTML =
+      `${duration} ms (${fps}fps), ${roundCount} pts`
+      // + `<br>${dx}, ${dy}, ${dw}, ${dh}`
   }
   _roundCount = roundCount
   _duration = duration
+  fpsSum -= fpsRegister.shift()
 }

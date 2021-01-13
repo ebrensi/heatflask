@@ -22,7 +22,7 @@ let _width, _height
 
 export {
   _canvases as canvases,
-  _pxOrigin as pxOrigin,
+  // _pxOrigin as pxOrigin,
   _pxOffset as pxOffset,
   _pxBounds as pxBounds,
   _transform as transform,
@@ -129,8 +129,11 @@ export function setCSStransform(offset, scale) {
  * It sets the baseline CSS transformation for the dot and line canvases
  */
 export function calibrate() {
+  const newMpp = _map._getMapPanePos()
+  const diff = _mapPanePos? newMpp.subtract(_mapPanePos).round() : undefined
+  _mapPanePos = newMpp
+
   _pxOrigin = _map.getPixelOrigin()
-  _mapPanePos = _map._getMapPanePos()
   _pxOffset = _mapPanePos.subtract(_pxOrigin)
   _baseTranslation = _map.containerPointToLayerPoint([0, 0])
   setCSStransform(_baseTranslation)
@@ -147,7 +150,7 @@ export function calibrate() {
     updateDebugDisplay()
   }
 
-  return _mapPanePos
+  return diff
 }
 
 // Display some debug info on the screen

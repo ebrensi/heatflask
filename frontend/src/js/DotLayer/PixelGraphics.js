@@ -29,8 +29,10 @@ export class PixelGraphics {
     this.color32 = rgbaToUint32(0, 0, 0, 255) // default color is black
     this.lineWidth = 1
     this.drawBounds = new Bounds()
-    this._transform = [1, 0, 1, 0]
+
     if (imageData) {
+      // if (!imageData.transform) imageData.transform = [1, 0, 1, 0]
+      if (!imageData.drawBounds) imageData.drawBounds = this.drawBounds.data
       this.imageData = imageData // note that this is a setter call
     }
   }
@@ -38,20 +40,7 @@ export class PixelGraphics {
   set imageData(imageData) {
     this._imageData = imageData
     this.buf32 = new Uint32Array(imageData.data.buffer)
-    this.height = imageData.height
-    this.width = imageData.width
-
-    if (imageData.transform) {
-      this._transform = imageData.transform
-    } else {
-      imageData.transform = this._transform
-    }
-
-    if (imageData.drawBounds) {
-      this.drawBounds.data = imageData.drawBounds
-    } else {
-      imageData.drawBounds = this.drawBounds.data
-    }
+    this.drawBounds.data = imageData.drawBounds
 
     // re-use existing buffer if is large enough to hold a row of data
     if (!this.rowBuf || this.rowBuf.length < imageData.width) {
@@ -59,16 +48,24 @@ export class PixelGraphics {
     }
   }
 
+  get height() {
+    return this._imageData.height
+  }
+
+  get width() {
+    return this._imageData.width
+  }
+
   get imageData() {
     return this._imageData
   }
 
   get transform() {
-    return this._transform
+    return this._imageData.transform
   }
 
   set transform(tf) {
-    this._transform = this._imageData.transform = tf
+    this._imageData.transform = tf
   }
 
   setColor(r, g, b, a = 0xff) {
@@ -109,7 +106,7 @@ export class PixelGraphics {
   }
 
   inBounds(x, y) {
-    return (x >= 0 && x < this.width && y >= 0) || y < this.height
+    return x >= 0 && x < this.width && y >= 0 && y < this.height
   }
 
   /* ***************************************************
@@ -228,6 +225,7 @@ export class PixelGraphics {
     const T = this.transform
     x = Math.round(T[0] * x + T[1] - dotOffset)
     y = Math.round(T[2] * y + T[3] - dotOffset)
+    if (!this.inBounds(x, y)) return
 
     const xStart = x < 0 ? 0 : x // Math.max(0, tx)
     const xEnd = Math.min(x + size, this.width)
@@ -247,15 +245,17 @@ export class PixelGraphics {
   }
 
   drawCircle(x, y, size) {
+
     const T = this.transform
     x = Math.round(T[0] * x + T[1])
     y = Math.round(T[2] * y + T[3])
-
-    // TODO: add padding after loop
-    this.drawBounds.update(x, y)
+    if (!this.inBounds(x, y)) return
 
     const r = size
     const r2 = r * r
+
+    // TODO: add padding after loop
+    this.drawBounds.update(x, y)
 
     for (let cy = -r + 1; cy < r; cy++) {
       const offset = (cy + y) * this.width
@@ -281,7 +281,8 @@ export class PixelGraphics {
    *  rectanglular region of equal size.
    */
   translate(shiftX, shiftY) {
-    const [rx, ry, rw, rh] = this.drawBounds.rect
+    if (shiftX === 0 && shiftY === 0) return
+    const { x: rx, y: ry, w: rw, h: rh } = this.drawBounds.rect
     const [dx0, dy0] = this.clip(rx + shiftX, ry + shiftY)
     const [dx1, dy1] = this.clip(rx + rw + shiftX, ry + rh + shiftY)
     let s, d, clearRegion
