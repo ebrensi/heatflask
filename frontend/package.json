@@ -21,7 +21,7 @@
   "license": "ISC",
   "dependencies": {
     "@babel/core": "^7.12.10",
-    "@fortawesome/fontawesome-free": "^5.15.1",
+    "@fortawesome/fontawesome-free": "^5.15.2",
     "@msgpack/msgpack": "^2.3.0",
     "downloadjs": "^1.4.7",
     "gif.js": "github:ebrensi/gif.js#wasm-dev",

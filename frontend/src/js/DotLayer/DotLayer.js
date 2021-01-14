@@ -1,7 +1,6 @@
 /*
   DotLayer Efrem Rensi, 2020,
 */
-
 import { Layer, DomUtil, Browser, setOptions } from "../myLeaflet.js"
 import { Control } from "../myLeaflet.js"
 
@@ -10,9 +9,10 @@ import * as ActivityCollection from "./ActivityCollection.js"
 import { PixelGraphics } from "./PixelGraphics.js"
 import { MAP_INFO } from "../Env.js"
 import { nextTask, nextAnimationFrame } from "../appUtil.js"
-import { DEBUG_BORDERS } from "../Env.js"
 import { vParams } from "../Model.js"
 // import * as WorkerPool from "./WorkerPool.js"
+
+const DEBUG_BORDERS = true
 
 import {
   options as defaultOptions,
@@ -282,24 +282,32 @@ async function onMoveEnd() {
  * also recalibrating the position of the canvases
  * over the map pane
  */
+let _redrawing
 async function redraw(force) {
   if (!_ready) return
 
-  await nextTask()
+  while (_redrawing) {
+    console.log("awaiting next task")
+    await nextTask()
+  }
+
+  _redrawing = true
 
   // reset the canvases to to align with the screen and update the ViewBox
   // location relative to the map's pxOrigin
   const { pxBounds, zoomChanged, shift } = ViewBox.update()
 
   if (!force && shift && !shift.x && !shift.y && !zoomChanged) {
-    // console.log("redraw: nothing to do!")
+    console.log("redraw: nothing to do!")
+    _redrawing = false
     return
   }
 
   const fullRedraw = zoomChanged || FORCE_FULL_REDRAW || force
 
-  // Erase the path and dot canvases, using their  respective drawBounds rectangles
-  // The underlying imageData buffers are still intact though
+  // Erase the path and dot canvases, using their respective
+  //  drawBounds rectangles. The underlying imageData buffers are
+  //  still intact though
   for (const canvas of [pathCanvas, dotCanvas]) {
     const pxg = canvas.pxg
     pxg.transform = ViewBox.transform
@@ -329,11 +337,13 @@ async function redraw(force) {
 
   if (_paused) {
     drawDots(_timePaused || 0, !fullRedraw)
+
+    if (DEBUG_BORDERS) {
+      drawBoundsBoxes()
+    }
   }
 
-  if (DEBUG_BORDERS) {
-    drawBoundsBoxes()
-  }
+  _redrawing = false
 }
 
 function drawPathImageData() {
@@ -374,7 +384,9 @@ async function drawDots(tsecs, drawDiff) {
     drawDiff
   )
   drawDotImageData()
-  drawBoundsBoxes()
+
+  if (DEBUG_BORDERS) drawBoundsBoxes()
+
   return count
 }
 
@@ -497,9 +509,8 @@ function updateInfoBox(dt, count) {
   const fps = Math.round(1000 / duration)
   // const [dx, dy, dw, dh] = dotCanvas.pxg.imageData.drawBounds
   if (roundCount !== _roundCount || duration !== _duration) {
-    _infoBox.innerHTML =
-      `${duration} ms (${fps}fps), ${roundCount} pts`
-      // + `<br>${dx}, ${dy}, ${dw}, ${dh}`
+    _infoBox.innerHTML = `${duration} ms (${fps}fps), ${roundCount} pts`
+    // + `<br>${dx}, ${dy}, ${dw}, ${dh}`
   }
   _roundCount = roundCount
   _duration = duration

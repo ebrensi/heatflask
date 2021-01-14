@@ -75,10 +75,6 @@ const inView = new BitSet(1)
  * @return {[type]} [description]
  */
 export async function updateContext(viewportPxBounds, zoom) {
-  // the semicolon is necessary
-  // see https://stackoverflow.com/questions/42562806/destructuring-assignment-and-variable-swapping
-  // ;[inView.current, inView.last] = [inView.last, inView.current]
-
   inView.clear()
 
   let queuedTasks
@@ -109,7 +105,7 @@ export async function updateContext(viewportPxBounds, zoom) {
     }
 
     if (!A.updateSegMask(viewportPxBounds, zoom)) {
-      inView.current.remove(i)
+      inView.remove(i)
     }
   })
 }
