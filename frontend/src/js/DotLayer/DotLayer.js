@@ -274,7 +274,7 @@ async function onMove() {
  * Leaflet moves the pixel origin so we need to reset the CSS transform
  */
 async function onMoveEnd() {
-  await redraw()
+  await redraw(true)
 }
 
 /*
@@ -287,22 +287,24 @@ async function redraw(force) {
 
   await nextTask()
 
-  ViewBox.updateBounds()
-  const zoomChanged = ViewBox.updateZoom()
-
-  // console.log("onmoveend")
-  const fullRedraw = zoomChanged || FORCE_FULL_REDRAW || force
-
   // reset the canvases to to align with the screen and update the ViewBox
   // location relative to the map's pxOrigin
-  const shift = ViewBox.calibrate()
+  const { pxBounds, zoomChanged, shift } = ViewBox.update()
 
-  // if (!dx && !dy) return
+  if (!force && shift && !shift.x && !shift.y && !zoomChanged) {
+    // console.log("redraw: nothing to do!")
+    return
+  }
 
+  const fullRedraw = zoomChanged || FORCE_FULL_REDRAW || force
+
+  // Erase the path and dot canvases, using their  respective drawBounds rectangles
+  // The underlying imageData buffers are still intact though
   for (const canvas of [pathCanvas, dotCanvas]) {
-    canvas.pxg.transform = ViewBox.transform
+    const pxg = canvas.pxg
+    pxg.transform = ViewBox.transform
 
-    if (!canvas.pxg.drawBounds.isEmpty()) {
+    if (!pxg.drawBounds.isEmpty()) {
       const { x, y, w, h } = canvas.pxg.drawBounds.rect
       canvas.getContext("2d").clearRect(x, y, w, h)
     }
@@ -319,7 +321,7 @@ async function redraw(force) {
     }
   }
 
-  await ActivityCollection.updateContext(ViewBox.pxBounds, ViewBox.zoom)
+  await ActivityCollection.updateContext(pxBounds, ViewBox.zoom)
 
   if (_options.showPaths) {
     drawPaths(fullRedraw)

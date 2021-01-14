@@ -85,6 +85,13 @@ export function tol(z) {
   return z ? 1 / 2 ** z : 1 / _zf
 }
 
+export function update() {
+  const pxBounds = updateBounds()
+  const zoomChanged = updateZoom()
+  const shift = calibrate()
+  return { pxBounds, zoomChanged, shift }
+}
+
 /**
  * update our internal bounds with those from the associated map
  * @return {Boolean} whether the bounds have changed
@@ -130,7 +137,7 @@ export function setCSStransform(offset, scale) {
  */
 export function calibrate() {
   const newMpp = _map._getMapPanePos()
-  const diff = _mapPanePos? newMpp.subtract(_mapPanePos).round() : undefined
+  const diff = _mapPanePos ? newMpp.subtract(_mapPanePos).round() : undefined
   _mapPanePos = newMpp
 
   _pxOrigin = _map.getPixelOrigin()

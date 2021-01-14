@@ -3,9 +3,8 @@
  *   that don't fit anywhere else
  */
 
-// Add .pad method to Number objects
-Number.prototype.pad = function (size) {
-  let s = String(this)
+export function padNum(num, size) {
+  let s = String(num)
   while (s.length < (size || 2)) {
     s = "0" + s
   }
@@ -16,10 +15,10 @@ Number.prototype.pad = function (size) {
 export function HHMMSS(secs) {
   let totalSeconds = secs
 
-  const hours = Math.floor(totalSeconds / 3600).pad(2)
+  const hours = padNum(Math.floor(totalSeconds / 3600), 2)
   totalSeconds %= 3600
-  const minutes = Math.floor(totalSeconds / 60).pad(2)
-  const seconds = Math.round(totalSeconds % 60).pad(2)
+  const minutes = padNum(Math.floor(totalSeconds / 60), 2)
+  const seconds = padNum(Math.round(totalSeconds % 60), 2)
 
   return `${hours}:${minutes}:${seconds}`
 }

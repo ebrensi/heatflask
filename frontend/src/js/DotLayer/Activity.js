@@ -11,10 +11,7 @@ import * as Simplifier from "./Simplifier.js"
 import { ATYPE } from "../strava.js"
 import BitSet from "../BitSet.js"
 import { RunningStatsCalculator } from "./stats.js"
-import {
-  // quartiles,
-  Bounds,
-} from "../appUtil.js"
+// import { quartiles } from "../appUtil.js"
 
 // import { makePT } from "./CRS.js"
 /*

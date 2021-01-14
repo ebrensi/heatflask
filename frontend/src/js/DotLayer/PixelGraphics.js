@@ -1,5 +1,5 @@
 import { Bounds } from "../appUtil.js"
-
+const DEBUG = false
 /*
  * This module defines the PixelGrapics class.  A PixelGraphics object
  * encapsulates an ImageData buffer and provides methods to modify
@@ -90,7 +90,7 @@ export class PixelGraphics {
   clear(rect) {
     const { x, y, w, h } = rect || this.drawBounds.rect
 
-    if (this.debugCanvas) {
+    if (DEBUG && this.debugCanvas) {
       drawDebugBox(this.debugCanvas, rect, "clear") // draw source rect
     }
 
@@ -301,7 +301,7 @@ export class PixelGraphics {
       return
     }
 
-    if (this.debugCanvas) {
+    if (DEBUG && this.debugCanvas) {
       const debugCtx = this.debugCanvas.getContext("2d")
       debugCtx.strokeStyle = "#000000"
       drawDebugBox(debugCtx, s, "source") // draw source rect

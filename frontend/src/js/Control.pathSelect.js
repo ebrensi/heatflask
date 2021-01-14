@@ -4,6 +4,8 @@ import { map, activityDataPopup } from "./MapAPI.js"
 import { inPxBounds } from "./DotLayer/ActivityCollection.js"
 import { dotLayer } from "./DotLayerAPI.js"
 import { select } from "./Table.js"
+import { transform } from "./DotLayer/ViewBox.js"
+import { Bounds } from "./appUtil.js"
 
 const easyButton = window.L.easyButton
 
@@ -14,7 +16,19 @@ function doneSelecting(obj) {
   let count = 0
   let A
 
-  for (A of inPxBounds(obj.pxBounds)) {
+  const [a1, b1, a2, b2] = transform
+
+  const screenPxBounds = obj.pxBounds
+  const unTransform = (Tx,Ty) => [(Tx-b1)/a1, (Ty-b2)/a2]
+
+  const pxBounds = new Bounds()
+  pxBounds.update(...unTransform(screenPxBounds.min.x, screenPxBounds.min.y))
+  pxBounds.update(...unTransform(screenPxBounds.max.x, screenPxBounds.max.y))
+
+  // un-transform screen coordinates given by the selection
+  // plugin to absolute values that we can compare ours to.
+
+  for (A of inPxBounds(pxBounds)) {
     select(A, !A.selected)
     A.selected && count++
   }

@@ -5,12 +5,9 @@
  */
 
 import * as ColorPalette from "./ColorPalette.js"
-import * as ViewBox from "./ViewBox.js"
 import { Activity } from "./Activity.js"
 import { options } from "./Defaults.js"
 import BitSet from "../BitSet.js"
-import { state } from "../Model.js"
-import { Point } from "../myLeaflet.js"
 import { queueTask, nextTask } from "../appUtil.js"
 import { PixelGraphics } from "./PixelGraphics"
 
@@ -18,7 +15,6 @@ export const items = new Map()
 export const pxg = new PixelGraphics()
 let itemsArray
 
-state.items = items
 
 export function add(specs) {
   const A = new Activity(specs)
@@ -91,7 +87,7 @@ export async function updateContext(viewportPxBounds, zoom) {
   for (let i = 0, len = itemsArray.length; i < len; i++) {
     const A = itemsArray[i]
 
-    if (viewportPxBounds.overlaps(A.pxBounds) ){
+    if (viewportPxBounds.overlaps(A.pxBounds)) {
       inView.add(i)
 
       // Making an idxSet is slow so we create new tasks for that
@@ -133,19 +129,11 @@ function updateSelect(idx, value) {
  * @param  {Bounds} selectPxBounds leaflet Bounds Object
  */
 export function* inPxBounds(pxBounds) {
-  // un-transform screen coordinates given by the selection
-  // plugin to absolute values that we can compare ours to.
-  ViewBox.unTransform(pxBounds.min)
-  ViewBox.unTransform(pxBounds.max)
 
   for (const idx of inView) {
     const A = itemsArray[idx]
-    const points = A.getPointAccessor(A.segMask.zoom)
-
-    for (const i of A.segMask) {
-      const px = points(i)
-      const point = new Point(px[0], px[1])
-      if (pxBounds.contains(point)) {
+    for (const p of A.pointsIterator()) {
+      if (pxBounds.contains(p[0], p[1])) {
         yield A
         break
       }
@@ -183,7 +171,10 @@ const drawSegFunc = (x0, y0, x1, y1) => pxg.drawSegment(x0, y0, x1, y1)
 export function drawPaths(imageData, drawDiff) {
   if (pxg.imageData !== imageData) pxg.imageData = imageData
 
-  if (!drawDiff) pxg.clear()
+  if (!drawDiff && !pxg.drawBounds.isEmpty()) pxg.clear()
+
+  const bounds = pxg.drawBounds.data
+  const oldArea = (bounds[2] - bounds[0]) * (bounds[3] - bounds[1])
 
   let count = 0
   let maxLW = 0
@@ -191,23 +182,34 @@ export function drawPaths(imageData, drawDiff) {
     const A = itemsArray[i]
     pxg.setColor(A.colors.path)
 
-    const LW = A.selected ? options.selected.pathWidth : options.normal.pathWidth
+    const LW = A.selected
+      ? options.selected.pathWidth
+      : options.normal.pathWidth
     if (LW > maxLW) maxLW = LW
     pxg.setLineWidth(LW)
 
     count += A.forEachSegment(drawSegFunc, drawDiff)
   })
   if (pxg.drawBounds.isEmpty()) return 0
-  let [xmin, ymin, xmax, ymax] = pxg.drawBounds.data
-  pxg.drawBounds.update(Math.max(0, xmin - maxLW), Math.max(0, ymin - maxLW))
-  pxg.drawBounds.update(Math.min(pxg.width, xmax + maxLW), Math.min(pxg.height, ymax + maxLW))
+
+  // add padding to the bounds, but only if they have changed.
+  // This prevents ever-increasing bounds
+  const newArea = (bounds[2] - bounds[0]) * (bounds[3] - bounds[1])
+  if (newArea !== oldArea) {
+    const [xmin, ymin, xmax, ymax] = bounds
+    pxg.drawBounds.update(...pxg.clip(xmin - maxLW, ymin - maxLW))
+    pxg.drawBounds.update(...pxg.clip(xmax + maxLW, ymax + maxLW))
+  }
   return count
 }
 
 export function drawDots(imageData, dotSize, T, timeScale, tsecs, drawDiff) {
   if (pxg.imageData !== imageData) pxg.imageData = imageData
 
-  if (!drawDiff) pxg.clear()
+  if (!drawDiff && !pxg.drawBounds.isEmpty()) pxg.clear()
+
+  const bounds = pxg.drawBounds.data
+  const oldArea = (bounds[2] - bounds[0]) * (bounds[3] - bounds[1])
 
   let count = 0
   const sz = Math.round(dotSize)
@@ -220,8 +222,17 @@ export function drawDots(imageData, dotSize, T, timeScale, tsecs, drawDiff) {
     count += A.forEachDot(drawFunc, tsecs, T, timeScale, drawDiff)
   })
   if (pxg.drawBounds.isEmpty()) return 0
-  let [xmin, ymin, xmax, ymax] = pxg.drawBounds.data
-  pxg.drawBounds.update(Math.max(0, xmin - 10), Math.max(0, ymin - 10))
-  pxg.drawBounds.update(Math.min(pxg.width, xmax + 20), Math.min(pxg.height, ymax + 20))
+
+  const newArea = (bounds[2] - bounds[0]) * (bounds[3] - bounds[1])
+
+  // add padding to the bounds, but only if they have changed.
+  // This prevents ever-increasing bounds
+  if (newArea !== oldArea) {
+    const [xmin, ymin, xmax, ymax] = bounds
+    pxg.drawBounds.update(...pxg.clip(xmin - 10, ymin - 10))
+    pxg.drawBounds.update(...pxg.clip(xmax + 20, ymax + 20))
+  }
+
   return count
 }
+
