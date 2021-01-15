@@ -28,8 +28,8 @@ const TARGET_FPS = 30
 const FORCE_FULL_REDRAW = false
 const CONTINUOUS_PAN_REDRAWS = true
 const CONTINUOUS_PINCH_REDRAWS = true
-const MIN_PAN_REDRAW_DELAY = 200 // milliseconds
-const MIN_PINCH_REDRAW_DELAY = 100
+const MIN_PAN_REDRAW_DELAY = 500 // milliseconds
+const MIN_PINCH_REDRAW_DELAY = 250
 
 let dotCanvas, pathCanvas, debugCanvas
 

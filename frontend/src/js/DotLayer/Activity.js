@@ -4,12 +4,12 @@
  */
 
 import { LatLngBounds } from "../myLeaflet.js"
-import * as Polyline from "./Codecs/Polyline.js"
+import * as Polyline from "./Codecs/Polyline.ts"
 import * as StreamRLE from "./Codecs/StreamRLE.js"
 import { latLng2pxBounds, latLng2px, tol as dpTol } from "./ViewBox"
 import * as Simplifier from "./Simplifier.js"
 import { ATYPE } from "../strava.js"
-import BitSet from "../BitSet.js"
+import BitSet from "../BitSet.ts"
 import { RunningStatsCalculator } from "./stats.js"
 // import { quartiles } from "../appUtil.js"
 

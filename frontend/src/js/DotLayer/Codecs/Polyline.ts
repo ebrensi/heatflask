@@ -1,5 +1,3 @@
-/** @module */
-
 /** Some functions for decoding Google's Polyline format into numbers
  * This is adapted from the implementation in Project-OSRM.
  * Based off of [the offical Google document](https://developers.google.com/maps/documentation/utilities/polylinealgorithm)
@@ -19,7 +17,7 @@
  *
  * @see https://github.com/Project-OSRM/osrm-frontend/blob/master/WebContent/routing/OSRM.RoutingGeometry.js
  */
-export function* decode(str, precision) {
+export function* decode(str: string, precision: number): IterableIterator<Float32Array> {
   let index = 0,
     lat = 0,
     lng = 0,
@@ -68,7 +66,7 @@ export function* decode(str, precision) {
   }
 }
 
-function lengthInPoints(str) {
+function lengthInPoints(str: string): number {
   let byte,
     count = 0,
     index = 0
@@ -85,7 +83,7 @@ function lengthInPoints(str) {
   return count
 }
 
-export function decode2Buf(str, n, precision) {
+export function decode2Buf(str: string, n: number, precision: number): Float32Array {
   n = n || lengthInPoints(str)
   const buf = new Float32Array(2 * n),
     decoder = decode(str, precision)
@@ -95,7 +93,7 @@ export function decode2Buf(str, n, precision) {
   return buf
 }
 
-export function* iterBuf(buf) {
+export function* iterBuf(buf: Float32Array): IterableIterator<Float32Array> {
   const len = buf.length
   for (let i = 0; i < len; i += 2) yield buf.subarray(i, i + 2)
 }
