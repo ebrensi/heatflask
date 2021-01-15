@@ -4,8 +4,8 @@ import { map, activityDataPopup } from "./MapAPI.js"
 import { inPxBounds } from "./DotLayer/ActivityCollection.js"
 import { dotLayer } from "./DotLayerAPI.js"
 import { select } from "./Table.js"
-import { transform } from "./DotLayer/ViewBox.js"
-import { Bounds } from "./appUtil.js"
+import { transform } from "./DotLayer/ViewBox.ts"
+import { Bounds } from "./appUtil.ts"
 
 const easyButton = window.L.easyButton
 

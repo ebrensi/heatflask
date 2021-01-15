@@ -3,7 +3,7 @@
  *    beginning with those specified by the current URL in the browser.
  */
 
-import { CURRENT_USER, USER_URLS } from "./Env.js"
+import { CURRENT_USER, USER_URLS } from "./Env.ts"
 import { BoundObject } from "./DataBinding.js"
 
 /*

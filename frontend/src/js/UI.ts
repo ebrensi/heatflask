@@ -3,7 +3,7 @@
  *  Here we initialize the DOM/user interface
  */
 
-import { AUTHORIZE_URL } from "./Env.js"
+import { AUTHORIZE_URL } from "./Env.ts"
 
 import { targetUser, currentUser, vParams, qParams, flags } from "./Model.js"
 /* URL.js import must be here because it requires MapAPI which requires
@@ -26,7 +26,7 @@ import infoTabHTML from "bundle-text:../html/main-info.html"
 
 import { makeQuery, abortQuery } from "./DataImport.js"
 import * as table from "./Table.js"
-import { queueTask } from "./appUtil.js"
+import { queueTask } from "./appUtil.ts"
 import { getUrlString } from "./URL.js"
 
 /* TODO: have two UI submodules: UI-simple.js (single) and

@@ -4,11 +4,11 @@
 import { Layer, DomUtil, Browser, setOptions } from "../myLeaflet.js"
 import { Control } from "../myLeaflet.js"
 
-import * as ViewBox from "./ViewBox.js"
+import * as ViewBox from "./ViewBox.ts"
 import * as ActivityCollection from "./ActivityCollection.js"
 import { PixelGraphics } from "./PixelGraphics.js"
-import { MAP_INFO } from "../Env.js"
-import { nextTask, nextAnimationFrame } from "../appUtil.js"
+import { MAP_INFO } from "../Env.ts"
+import { nextTask, nextAnimationFrame } from "../appUtil.ts"
 import { vParams } from "../Model.js"
 // import * as WorkerPool from "./WorkerPool.js"
 

@@ -2,11 +2,11 @@
  * Here we define the Websocket interface with the backend server
  */
 
-import { BEACON_HANDLER_URL, WEBSOCKET_URL, CLIENT_ID } from "./Env.js"
+import { BEACON_HANDLER_URL, WEBSOCKET_URL, CLIENT_ID } from "./Env.ts"
 
 import PersistentWebSocket from "pws"
 import { decode } from "@msgpack/msgpack"
-import { queueTask } from "./appUtil.js"
+import { queueTask } from "./appUtil.ts"
 
 export let sock, wskey
 

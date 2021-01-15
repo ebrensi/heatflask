@@ -4,26 +4,29 @@
  *
  */
 
-import { makePT } from "./CRS.js"
+import { makePT } from "./CRS.ts"
 import { DomUtil, Control } from "../myLeaflet.js"
-import { MAP_INFO } from "../Env.js"
-import { Bounds } from "../appUtil.js"
+import { MAP_INFO } from "../Env.ts"
+import { Bounds } from "../appUtil.ts"
 
-const _canvases = []
+type TransformData = [number, number, number, number]
+
+const _canvases: Array<HTMLCanvasElement> = []
 
 // private module-scope variable
 let _map, _baseTranslation
 
 // exported module-scope variables
 let _pxOrigin, _pxOffset, _mapPanePos, _zoom, _zf, _scale
-const _transform = [1, 0, 1, 0]
+
+const _transform: TransformData = [1, 0, 1, 0]
+
 const _pxBounds = new Bounds()
-let _width, _height
+
+let _width: number, _height: number
 
 export {
   _canvases as canvases,
-  // _pxOrigin as pxOrigin,
-  _pxOffset as pxOffset,
   _pxBounds as pxBounds,
   _transform as transform,
   _zoom as zoom,

@@ -6,7 +6,7 @@ import { qParams, vParams, urlArgDefaults } from "./Model.js"
 // import { dotLayer } from "../DotLayerAPI.js";
 import { defaultBaselayerName, map, sidebar } from "./MapAPI.js"
 
-import { nextTask } from "./appUtil.js"
+import { nextTask } from "./appUtil.ts"
 /*
  * qArgs are updated on render and vArgs are updated every time the map moves
  */

@@ -1,4 +1,4 @@
-import { Bounds } from "../appUtil.js"
+import { Bounds } from "../appUtil.ts"
 const DEBUG = false
 /*
  * This module defines the PixelGrapics class.  A PixelGraphics object

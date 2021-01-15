@@ -1,8 +1,7 @@
-import { HHMMSS, queueTask, nextTask } from "./appUtil.js"
+import { HHMMSS, queueTask, nextTask, href } from "./appUtil.ts"
 import { items } from "./DotLayer/ActivityCollection.js"
 import { dotLayer } from "./DotLayerAPI.js"
 import { activityURL, ATYPE } from "./strava.js"
-import { href } from "./appUtil.js"
 import { flags } from "./Model.js"
 import { zoomToSelectedPaths } from "./MapAPI.js"
 

@@ -8,7 +8,7 @@ import * as ColorPalette from "./ColorPalette.js"
 import { Activity } from "./Activity.js"
 import { options } from "./Defaults.js"
 import { BitSet } from "../BitSet.ts"
-import { queueTask, nextTask } from "../appUtil.js"
+import { queueTask, nextTask } from "../appUtil.ts"
 import { PixelGraphics } from "./PixelGraphics"
 
 export const items = new Map()

@@ -4,7 +4,7 @@
  * Efrem Rensi 2020
  */
 
-import { MAPBOX_ACCESS_TOKEN, OFFLINE, MAP_INFO } from "./Env.js"
+import { MAPBOX_ACCESS_TOKEN, OFFLINE, MAP_INFO } from "./Env.ts"
 import Geohash from "latlon-geohash"
 
 import {
@@ -25,7 +25,7 @@ import "../../node_modules/sidebar-v2/js/leaflet-sidebar.js"
 import { tileLayer } from "./TileLayer/TileLayer.Heatflask.js"
 import { flags, vParams, currentUser } from "./Model.js"
 import { items } from "./DotLayer/ActivityCollection.js"
-import { HHMMSS, queueTask } from "./appUtil.js"
+import { HHMMSS, queueTask } from "./appUtil.ts"
 import strava_logo from "url:../images/pbs4.png"
 import heatflask_logo from "url:../images/logo.png"
 

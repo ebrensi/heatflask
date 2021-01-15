@@ -4,15 +4,15 @@
  *   backend server, embedded in main.html
  */
 
-import { ws_prefix } from "./appUtil.js"
+import { ws_prefix } from "./appUtil.ts"
 // import load_ga_object from "./google-analytics.js"
 
-export let CLIENT_ID
-export let DEVELOPMENT
-export let FLASH_MESSAGES
-export let APP_NAME
-export let CURRENT_USER
-export let OFFLINE
+export let CLIENT_ID: string
+export let DEVELOPMENT: Boolean
+export let FLASH_MESSAGES: string[]
+export let APP_NAME: string
+export let CURRENT_USER: string
+export let OFFLINE: Boolean
 
 /*
  * any code contained in a block

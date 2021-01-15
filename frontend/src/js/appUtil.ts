@@ -2,8 +2,7 @@
  *   appUtil.js -- this is where we define constants and general utility functions
  *   that don't fit anywhere else
  */
-
-export function padNum(num, size) {
+export function padNum(num: number, size: number): string {
   let s = String(num)
   while (s.length < (size || 2)) {
     s = "0" + s
@@ -12,7 +11,7 @@ export function padNum(num, size) {
 }
 
 // return a "HH:MM:SS" string given number of seconds
-export function HHMMSS(secs) {
+export function HHMMSS(secs: number): string {
   let totalSeconds = secs
 
   const hours = padNum(Math.floor(totalSeconds / 3600), 2)
@@ -24,7 +23,7 @@ export function HHMMSS(secs) {
 }
 
 // return a "DD:HH:MM" string given number of seconds
-export function DDHHMM(sec) {
+export function DDHHMM(sec: number): string {
   if (!sec || sec <= 0) {
     return "??"
   }
@@ -43,23 +42,23 @@ export function DDHHMM(sec) {
 }
 
 // return an image tag string, given an image url
-export function img(url, w = 20, h = 20, alt = "") {
+export function img(url: string, w = 20, h = 20, alt = "") {
   return `<img src='${url}' width=${w}px height=${h}px class="img-fluid" alt="${alt}">`
 }
 
 // return an HTML href tag from a url and text
-export function href(url, text) {
+export function href(url: string, text: string) {
   return `<a href='${url}' target='_blank'>${text}</a>`
 }
 
 // define the do-nothing function, noop
-export function noop() {}
+export function noop(): void {}
 
 /*
   depending on whether the page this script is in is http or https, we need to
   make sure the websocket protocol matches
 */
-export function ws_prefix() {
+export function ws_prefix(): string {
   if (window.location.protocol == "https:") {
     return "wss://"
   } else {
@@ -128,14 +127,14 @@ export function histogram(points, bins) {
   return binCounts
 }
 
+type quartObj = { q1: number; q3: number; iqr: number }
 /**
  * Filters outliers from an Array using standard IQR method. Creates a new Array.
  * adapted from https://gist.github.com/ogun/f19dc055e6b84d57e8186cbc9eaa8e45 (Kemal Ogun Isik)
  *
  * @param  {Array} someArray
- * @return {Array}
  */
-export function quartiles(someArray) {
+export function quartiles(someArray: Array<number>): quartObj {
   if (someArray.length < 4) return
 
   const values = someArray.slice().sort((a, b) => a - b)
@@ -157,15 +156,15 @@ export function quartiles(someArray) {
 /*
  * Some functions that make de-janking easier via async code
  */
-export function queueTask(cb) {
+export function queueTask(cb: (any) => any): void {
   window.setTimeout(cb, 0)
 }
 
-export function nextTask() {
+export function nextTask(): Promise {
   return new Promise((resolve) => queueTask(resolve))
 }
 
-export function nextAnimationFrame() {
+export function nextAnimationFrame(): Promise {
   let resolve = null
   const promise = new Promise((r) => (resolve = r))
   window.requestAnimationFrame(resolve)
@@ -175,23 +174,27 @@ export function nextAnimationFrame() {
 /*
  *  An object for general rectangular bounds
  */
+type BoundsData = [number, number, number, number]
+type RectObj = { x: number; y: number; w: number; h: number }
 export class Bounds {
+  _bounds: BoundsData
+
   constructor() {
     this._bounds = new Array(4)
     // [xmin, ymin, xmax, ymax]
     this.reset()
   }
 
-  reset() {
+  reset(): Bounds {
     this._bounds.fill(NaN)
     return this
   }
 
-  isEmpty() {
+  isEmpty(): Boolean {
     return isNaN(this._bounds[0])
   }
 
-  update(x, y) {
+  update(x: number, y: number): Bounds {
     if (this.isEmpty()) {
       this._bounds[0] = this._bounds[2] = x
       this._bounds[1] = this._bounds[3] = y
@@ -204,39 +207,39 @@ export class Bounds {
     return this
   }
 
-  updateBounds(otherBoundsObj) {
+  updateBounds(otherBoundsObj: Bounds): Bounds {
     const [x1, y1, x2, y2] = otherBoundsObj._bounds
     this.update(x1, y1)
     this.update(x2, y2)
     return this
   }
 
-  contains(x, y) {
+  contains(x: number, y: number): Boolean {
     const [xmin, ymin, xmax, ymax] = this._bounds
     return xmin <= x && x <= xmax && ymin <= y && y <= ymax
   }
 
-  containsBounds(otherBoundsObj) {
+  containsBounds(otherBoundsObj: Bounds): Boolean {
     const [x1, y1, x2, y2] = otherBoundsObj._bounds
     return this.contains(x1, y1) && this.contains(x2, y2)
   }
 
-  overlaps(otherBoundsObj) {
+  overlaps(otherBoundsObj: Bounds): Boolean {
     const [xmin, ymin, xmax, ymax] = this._bounds
     const [x1, y1, x2, y2] = otherBoundsObj._bounds
     return x2 >= xmin && x1 <= xmax && y2 >= ymin && y1 <= ymax
   }
 
-  get rect() {
+  get rect(): RectObj {
     const [xmin, ymin, xmax, ymax] = this._bounds
     return { x: xmin, y: ymin, w: xmax - xmin, h: ymax - ymin }
   }
 
-  get data() {
+  get data(): BoundsData {
     return this._bounds
   }
 
-  set data(data) {
+  set data(data: BoundsData) {
     this._bounds = data
   }
 }
