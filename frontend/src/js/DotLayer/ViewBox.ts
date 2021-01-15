@@ -149,6 +149,7 @@ export function setCSStransform(offset: Point, scale?: number): void {
   for (let i = 0; i < _canvases.length; i++) {
     DomUtil.setTransform(_canvases[i], offset, scale)
   }
+  console.log(`transform: ${scale}, (${offset.x}, ${offset.y})`)
 }
 
 /*
