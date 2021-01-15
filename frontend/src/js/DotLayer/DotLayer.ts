@@ -8,7 +8,7 @@ import * as ViewBox from "./ViewBox.ts"
 import * as ActivityCollection from "./ActivityCollection.js"
 import { PixelGraphics } from "./PixelGraphics.js"
 import { MAP_INFO } from "../Env.ts"
-import { nextTask, nextAnimationFrame } from "../appUtil.ts"
+import { nextTask, sleep, nextAnimationFrame } from "../appUtil.ts"
 import { vParams } from "../Model.js"
 // import * as WorkerPool from "./WorkerPool.js"
 
@@ -28,8 +28,7 @@ const TARGET_FPS = 30
 const FORCE_FULL_REDRAW = false
 const CONTINUOUS_PAN_REDRAWS = true
 const CONTINUOUS_PINCH_REDRAWS = true
-const MIN_PAN_REDRAW_DELAY = 500 // milliseconds
-const MIN_PINCH_REDRAW_DELAY = 250
+const MIN_REDRAW_DELAY = 50 // milliseconds
 
 let dotCanvas, pathCanvas, debugCanvas
 
@@ -46,7 +45,7 @@ let _lastRedraw = 0
 /*
  * Displays for debugging
  */
-let _infoBox
+let _infoBox: HTMLElement
 const InfoViewer = Control.extend({
   onAdd: function () {
     _infoBox = DomUtil.create("div")
@@ -166,10 +165,10 @@ export const dotLayer = function (options) {
  * Auxilliary functions
  *
  */
-function addCanvasOverlay(pane) {
+function addCanvasOverlay(pane: string): HTMLCanvasElement {
   const size = _map.getSize()
   const zoomAnimated = _map.options.zoomAnimation && Browser.any3d
-  const canvas = DomUtil.create("canvas", "leaflet-layer")
+  const canvas: HTMLCanvasElement = DomUtil.create("canvas", "leaflet-layer")
   canvas.width = size.x
   canvas.height = size.y
   DomUtil.addClass(
@@ -239,33 +238,18 @@ async function onResize() {
   await redraw(true)
 }
 
+/*
+ * This gets called continuously as the user moves the touchscreen by pinching
+ */
 async function onZoom(e) {
   if (!_map || !ViewBox.zoom) return
-
-  // console.log("onzoom")
-
-  if (e.pinch || e.flyTo) {
-    const ts = Date.now()
-    if (ts - _lastRedraw < MIN_PINCH_REDRAW_DELAY) {
-      return
-    }
-
-    _lastRedraw = ts
-    await redraw()
-  }
+  if (e.pinch || e.flyTo) await redraw()
 }
 
 /*
  * This gets called continuously as the user pans or zooms (without pinch)
  */
 async function onMove() {
-  // prevent redrawing more often than necessary
-  const ts = Date.now()
-  if (ts - _lastRedraw < MIN_PAN_REDRAW_DELAY) {
-    return
-  }
-
-  _lastRedraw = ts
   await redraw()
 }
 
@@ -282,12 +266,22 @@ async function onMoveEnd() {
  * also recalibrating the position of the canvases
  * over the map pane
  */
-let _redrawing
+let _redrawing: Boolean
+let _currentTick = 0
 async function redraw(force) {
   if (!_ready) return
 
+  const tick = ++_currentTick
+
+  await sleep(MIN_REDRAW_DELAY)
+
+  if (tick !== _currentTick) {
+    // console.log(tick)
+    return
+  }
+
   while (_redrawing) {
-    console.log("awaiting next task")
+    // console.log("awaiting")
     await nextTask()
   }
 

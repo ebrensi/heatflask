@@ -156,15 +156,19 @@ export function quartiles(someArray: Array<number>): quartObj {
 /*
  * Some functions that make de-janking easier via async code
  */
+export function sleep(t: number): Promise<number> {
+  return new Promise((resolve) => window.setTimeout(resolve, t))
+}
+
 export function queueTask(cb: (any) => any): void {
   window.setTimeout(cb, 0)
 }
 
-export function nextTask(): Promise {
+export function nextTask(): Promise<void> {
   return new Promise((resolve) => queueTask(resolve))
 }
 
-export function nextAnimationFrame(): Promise {
+export function nextAnimationFrame(): Promise<number> {
   let resolve = null
   const promise = new Promise((r) => (resolve = r))
   window.requestAnimationFrame(resolve)
