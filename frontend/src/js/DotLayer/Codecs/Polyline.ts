@@ -17,7 +17,10 @@
  *
  * @see https://github.com/Project-OSRM/osrm-frontend/blob/master/WebContent/routing/OSRM.RoutingGeometry.js
  */
-export function* decode(str: string, precision: number): IterableIterator<Float32Array> {
+export function* decode(
+  str: string,
+  precision: number
+): IterableIterator<Float32Array> {
   let index = 0,
     lat = 0,
     lng = 0,
@@ -83,7 +86,11 @@ function lengthInPoints(str: string): number {
   return count
 }
 
-export function decode2Buf(str: string, n: number, precision: number): Float32Array {
+export function decode2Buf(
+  str: string,
+  n: number,
+  precision: number
+): Float32Array {
   n = n || lengthInPoints(str)
   const buf = new Float32Array(2 * n),
     decoder = decode(str, precision)

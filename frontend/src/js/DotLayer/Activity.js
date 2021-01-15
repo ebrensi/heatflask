@@ -372,7 +372,6 @@ export class Activity {
       this._containedInMapBounds = true
       // console.log(~~performance.now() + " contained")
     } else {
-
       this._containedInMapBounds = false
       const points = this.getPointAccessor(zoom)
       const n = this.idxSet[zoom].size()
@@ -380,7 +379,7 @@ export class Activity {
       const p = points(0)
       let pIn = viewportPxBounds.contains(...p)
       for (let i = 0; i < n - 1; i++) {
-        const p = points(i+1)
+        const p = points(i + 1)
         const nextpIn = viewportPxBounds.contains(...p)
         /*
          * If either endpoint of the segment is contained in viewport

@@ -15,7 +15,6 @@ export const items = new Map()
 export const pxg = new PixelGraphics()
 let itemsArray
 
-
 export function add(specs) {
   const A = new Activity(specs)
   A._selected = A.selected
@@ -125,7 +124,6 @@ function updateSelect(idx, value) {
  * @param  {Bounds} selectPxBounds leaflet Bounds Object
  */
 export function* inPxBounds(pxBounds) {
-
   for (const idx of inView) {
     const A = itemsArray[idx]
     for (const p of A.pointsIterator()) {
@@ -217,4 +215,3 @@ export function drawDots(imageData, dotSize, T, timeScale, tsecs, drawDiff) {
 
   return count
 }
-

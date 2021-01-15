@@ -102,7 +102,7 @@ export class BitSet {
   // Tries to add the value (Set the bit at index to true), return 1 if the
   // value was added, return 0 if the value was already present
   checkedAdd(index: number): number {
-    const w:number = index >>> 5
+    const w: number = index >>> 5
     if (w >= this.words.length) {
       throw new RangeError(
         `cannot access word ${w} of ${this.words.length}-word bitset`
@@ -253,7 +253,10 @@ export class BitSet {
 
   // iterate a subset of this BitSet, where the subset is a BitSet
   // i.e. for each i in subBitSet, yield the i-th member of this BitSet
-  *imap_subset(bitSubSet: BitSet, fnc?: (t: number) => U): IterableIterator<number> {
+  *imap_subset(
+    bitSubSet: BitSet,
+    fnc?: (t: number) => U
+  ): IterableIterator<number> {
     const idxGen = bitSubSet.imap()
 
     let pos = 0,

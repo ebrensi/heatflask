@@ -245,7 +245,6 @@ export class PixelGraphics {
   }
 
   drawCircle(x, y, size) {
-
     const T = this.transform
     x = Math.round(T[0] * x + T[1])
     y = Math.round(T[2] * y + T[3])

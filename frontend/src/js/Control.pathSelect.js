@@ -19,7 +19,7 @@ function doneSelecting(obj) {
   const [a1, b1, a2, b2] = transform
 
   const screenPxBounds = obj.pxBounds
-  const unTransform = (Tx,Ty) => [(Tx-b1)/a1, (Ty-b2)/a2]
+  const unTransform = (Tx, Ty) => [(Tx - b1) / a1, (Ty - b2) / a2]
 
   const pxBounds = new Bounds()
   pxBounds.update(...unTransform(screenPxBounds.min.x, screenPxBounds.min.y))
