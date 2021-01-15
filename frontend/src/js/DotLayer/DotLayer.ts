@@ -242,7 +242,7 @@ async function onResize() {
  * This gets called continuously as the user moves the touchscreen by pinching
  */
 async function onZoom(e) {
-  if (!_map || !ViewBox.zoom) return
+  if (!_map || !ViewBox.zoomLevel) return
   if (e.pinch || e.flyTo) await redraw()
 }
 
@@ -323,7 +323,7 @@ async function redraw(force) {
     }
   }
 
-  await ActivityCollection.updateContext(pxBounds, ViewBox.zoom)
+  await ActivityCollection.updateContext(pxBounds, ViewBox.zoomLevel)
 
   if (_options.showPaths) {
     drawPaths(fullRedraw)
@@ -417,7 +417,7 @@ function updateDotSettings(shadowSettings) {
   ds._period = +vParams.T
 
   const dotScale = +vParams.sz
-  ds._dotSize = Math.max(1, ~~(dotScale * Math.log(ViewBox.zoom) + 0.5))
+  ds._dotSize = Math.max(1, ~~(dotScale * Math.log(ViewBox.zoomLevel) + 0.5))
   ds.alpha = (+vParams.alpha * 256) | 0
 
   if (shadowSettings) {
@@ -485,7 +485,8 @@ function animateZoom(e) {
     e.center
   )
   ViewBox.setCSStransform(offset, scale)
-  // console.log({ offset, scale })
+
+  console.log({ offset, scale })
 }
 
 // for debug display

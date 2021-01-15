@@ -10,25 +10,41 @@ import { MAP_INFO } from "../Env.ts"
 import { Bounds } from "../appUtil.ts"
 
 type TransformData = [number, number, number, number]
+type TransformFunc = (x: [number, number]) => [number, number]
+type Point = {
+  x: number
+  y: number
+  subtract: (p: Point) => Point
+  multiplyBy: (c: number) => Point
+  round: () => Point
+}
+type Bounds = {
+  _bounds: [number, number, number, number]
+  update: (x: number, y: number) => void
+}
+type rect = { x: number; y: number; w: number; h: number }
 
-const _canvases: Array<HTMLCanvasElement> = []
-
-// private module-scope variable
-let _map, _baseTranslation
-
-// exported module-scope variables
-let _pxOrigin, _pxOffset, _mapPanePos, _zoom, _zf, _scale
+let _map
+let _baseTranslation: Point
+let _pxOrigin: Point
+let _pxOffset: Point
+let _mapPanePos: Point
+let _zoom: number
+let _zoomLevel: number
+let _zf: number
+let _scale: number
+let _width: number
+let _height: number
 
 const _transform: TransformData = [1, 0, 1, 0]
-
-const _pxBounds = new Bounds()
-
-let _width: number, _height: number
+const _pxBounds: Bounds = new Bounds()
+const _canvases: Array<HTMLCanvasElement> = []
 
 export {
   _canvases as canvases,
   _pxBounds as pxBounds,
   _transform as transform,
+  _zoomLevel as zoomLevel,
   _zoom as zoom,
   _zf as zf,
 }
@@ -42,7 +58,7 @@ export {
  *
  * @type {function}
  */
-export const latLng2px = makePT(0)
+export const latLng2px: TransformFunc = makePT(0)
 
 /*
  * Sets the Map object to be used.
@@ -58,15 +74,15 @@ export function setMap(map) {
 
 // The dimensions of the ViewBox (also, the underlying canvases and the map)
 // as a Leaflet Point object
-export function getSize() {
-  const size = _map.getSize()
+export function getSize(): Point {
+  const size: Point = _map.getSize()
   _width = size.x
   _height = size.y
   return size
 }
 
 // This function clips x and y points to visible region
-export function clip(x, y) {
+export function clip(x: number, y: number): [number, number] {
   if (x < 0) x = 0
   else if (x > _width) x = _width
   if (y < 0) y = 0
@@ -75,7 +91,7 @@ export function clip(x, y) {
 }
 
 // resize the canvases
-export function resize(newSize) {
+export function resize(newSize: Point): void {
   const { x, y } = newSize || getSize()
   for (const canvas of _canvases) {
     canvas.width = x
@@ -84,7 +100,7 @@ export function resize(newSize) {
 }
 
 // Tolerance for Simplify for current or given zoom level
-export function tol(z) {
+export function tol(z: number): number {
   return z ? 1 / 2 ** z : 1 / _zf
 }
 
@@ -111,24 +127,25 @@ export function updateBounds() {
  * @return {number} undefined if no change, 1 if only scale changed,
  *                  2 if integer zoom-level change
  */
-export function updateZoom() {
-  const z = _map.getZoom()
-  const newRoundedZoom = Math.round(z)
-  const newScale = _map.getZoomScale(z, newRoundedZoom)
+export function updateZoom(): number {
+  const zoom: number = _map.getZoom()
+  const newZoomLevel = Math.round(zoom)
+  const newScale = 2 ** zoom
   let changed
 
-  if (newRoundedZoom !== _zoom) changed = 2
-  else if (newScale !== _scale) changed = 1
+  if (newZoomLevel !== _zoomLevel) changed = 2
+  else if (zoom !== _zoom) changed = 1
 
   if (changed) {
-    _zoom = newRoundedZoom
+    _zoom = zoom
+    _zoomLevel = newZoomLevel
     _scale = newScale
-    _zf = 2 ** _zoom
+
     return changed
   }
 }
 
-export function setCSStransform(offset, scale) {
+export function setCSStransform(offset: Point, scale?: number): void {
   for (let i = 0; i < _canvases.length; i++) {
     DomUtil.setTransform(_canvases[i], offset, scale)
   }
@@ -138,21 +155,21 @@ export function setCSStransform(offset, scale) {
  * this needs to be called on move-end
  * It sets the baseline CSS transformation for the dot and line canvases
  */
-export function calibrate() {
-  const newMpp = _map._getMapPanePos()
+export function calibrate(): Point {
+  const newMpp: Point = _map._getMapPanePos()
   const diff = _mapPanePos ? newMpp.subtract(_mapPanePos).round() : undefined
   _mapPanePos = newMpp
 
   _pxOrigin = _map.getPixelOrigin()
   _pxOffset = _mapPanePos.subtract(_pxOrigin)
-  _baseTranslation = _map.containerPointToLayerPoint([0, 0])
+  _baseTranslation = _mapPanePos.multiplyBy(-1)
   setCSStransform(_baseTranslation)
 
   // This array is available as ViewBox.transform
   // for [a1, b1, a2, b2] = _transform,
   // Tx = b1 + a1 * x
   // Ty = b2 + a2 * y
-  _transform[0] = _transform[2] = _zf * _scale
+  _transform[0] = _transform[2] = _scale
   _transform[1] = _pxOffset.x
   _transform[3] = _pxOffset.y
 
@@ -177,14 +194,9 @@ function updateDebugDisplay() {
   }
 }
 
-/* Untransform a Leaflet point in place */
-export function unTransform(leafletPoint) {
-  leafletPoint._subtract(_pxOffset)._divideBy(_zf * _scale)
-}
-
 // returns an ActivityBounds object (Float32Array) representing a
 // bounding box in absolute px coordinates
-export function latLng2pxBounds(llBounds, boundsObj) {
+export function latLng2pxBounds(llBounds, boundsObj: Bounds) {
   boundsObj = boundsObj ? boundsObj.reset() : new Bounds()
 
   const { _southWest: sw, _northEast: ne } = llBounds
@@ -195,7 +207,7 @@ export function latLng2pxBounds(llBounds, boundsObj) {
 }
 
 // Draw the outline of arbitrary rect object in screen coordinates
-export function draw(ctxOrCanvas, rect, label) {
+export function draw(ctxOrCanvas, rect: rect, label: string) {
   const ctx = ctxOrCanvas.getContext
     ? ctxOrCanvas.getContext("2d")
     : ctxOrCanvas

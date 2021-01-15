@@ -336,7 +336,7 @@ if (MAP_INFO) {
           `<b>Map</b>: zoom: ${zoom}<br>` +
           `SW: ${swLat.toFixed(4)}, ${swLng.toFixed(4)}<br>` +
           `NE: ${neLat.toFixed(4)}, ${neLng.toFixed(4)}<br>` +
-          `pxOrigin: ${pox}, ${poy}<br>` +
+          `px0: ${pox}, ${poy}<br>` +
           `mpp: ${mx.toFixed(3)}, ${my.toFixed(3)}<br>`
       })
       return infoBox
