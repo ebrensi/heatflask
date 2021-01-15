@@ -48,7 +48,7 @@ export function Transformation(zoom: number) {
 export function makePT(zoom: number) {
   const P = Projection()
   const T = Transformation(zoom)
-  return function (llpt: PointArray ) {
+  return function (llpt: PointArray) {
     return T(P(llpt))
   }
 }
