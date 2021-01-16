@@ -23,7 +23,7 @@ type Bounds = {
   update: (x: number, y: number) => void
 }
 type rect = { x: number; y: number; w: number; h: number }
-type LatLamg = { lat: number, lng:number}
+type LatLamg = { lat: number; lng: number }
 
 let _map
 let _baseTranslation: Point
