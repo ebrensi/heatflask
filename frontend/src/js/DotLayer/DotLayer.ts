@@ -27,7 +27,7 @@ const TARGET_FPS = 30
  */
 const FORCE_FULL_REDRAW = false
 const CONTINUOUS_PAN_REDRAWS = false
-const CONTINUOUS_PINCH_REDRAWS = false
+const CONTINUOUS_PINCH_REDRAWS = true
 const MIN_REDRAW_DELAY = 50 // milliseconds
 
 let dotCanvas, pathCanvas, debugCanvas
@@ -233,7 +233,7 @@ async function onResize() {
     pathCanvas.getContext("2d").createImageData(pw, ph)
   )
 
-  console.log("resized to ${x} x ${y}")
+  console.log(`resized to ${x} x ${y}`)
 
   await redraw(true)
 }
@@ -246,12 +246,10 @@ async function onZoom(e) {
 
   if (e.pinch || e.flyTo) {
     const z = _map.getZoom()
-    const c = _map.getCenter()
     const scale = _map.getZoomScale(z, ViewBox.zoom)
-    const NW = _map.getBounds().getNorthWest()
-
-    const offset = _map._latLngToNewLayerPoint(NW, z, c)
-    ViewBox.setCSStransform(offset, scale)
+    const trans = _map.latLngToLayerPoint(ViewBox.ll0)
+    ViewBox.setCSStransform(trans, scale)
+    // console.log(`${trans.x.toFixed(4)}, ${trans.y.toFixed(4)}`)
   }
 }
 

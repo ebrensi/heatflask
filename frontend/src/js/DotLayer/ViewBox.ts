@@ -23,12 +23,14 @@ type Bounds = {
   update: (x: number, y: number) => void
 }
 type rect = { x: number; y: number; w: number; h: number }
+type LatLamg = { lat: number, lng:number}
 
 let _map
 let _baseTranslation: Point
 let _pxOrigin: Point
 let _pxOffset: Point
 let _mapPanePos: Point
+let _ll0: LatLng
 let _zoom: number
 let _zoomLevel: number
 let _zf: number
@@ -41,7 +43,9 @@ const _pxBounds: Bounds = new Bounds()
 const _canvases: Array<HTMLCanvasElement> = []
 
 export {
+  _ll0 as ll0,
   _canvases as canvases,
+  _pxOrigin as pxOrigin,
   _pxBounds as pxBounds,
   _transform as transform,
   _zoomLevel as zoomLevel,
@@ -145,11 +149,14 @@ export function updateZoom(): number {
   }
 }
 
+let _lastT: Point
 export function setCSStransform(offset: Point, scale?: number): void {
+  // if (offset.equals(_lastT) && _scale === scale) return
   for (let i = 0; i < _canvases.length; i++) {
     DomUtil.setTransform(_canvases[i], offset, scale)
   }
-  console.log(`transform: ${scale}, (${offset.x}, ${offset.y})`)
+  _lastT = offset
+  // console.log(`transform: ${scale}, (${offset.x}, ${offset.y})`)
 }
 
 /*
@@ -165,6 +172,8 @@ export function calibrate(): Point {
   _pxOffset = _mapPanePos.subtract(_pxOrigin)
   _baseTranslation = _mapPanePos.multiplyBy(-1)
   setCSStransform(_baseTranslation)
+
+  _ll0 = _map.layerPointToLatLng(_baseTranslation)
 
   // This array is available as ViewBox.transform
   // for [a1, b1, a2, b2] = _transform,
