@@ -27,7 +27,8 @@ import {
   tileLayer,
   GridLayer,
   Util,
-} from "../../node_modules/leaflet/src/Leaflet"
+// } from "../../node_modules/leaflet/src/Leaflet"
+} from "leaflet"
 
 export {
   bind,

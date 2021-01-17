@@ -27,32 +27,34 @@ export function DDHHMM(sec: number): string {
   if (!sec || sec <= 0) {
     return "??"
   }
-  let days = Math.floor(sec / 86400)
+  const days = Math.floor(sec / 86400)
   sec -= days * 86400
 
   // calculate (and subtract) whole hours
-  let hours = Math.floor(sec / 3600) % 24
+  const hours = Math.floor(sec / 3600) % 24
   sec -= hours * 3600
 
   // calculate (and subtract) whole minutes
-  let minutes = Math.floor(sec / 60) % 60
+  const minutes = Math.floor(sec / 60) % 60
   sec -= minutes * 60
 
   return `${days.pad(2)}:${hours.pad(2)}:${minutes.pad(2)}`
 }
 
 // return an image tag string, given an image url
-export function img(url: string, w = 20, h = 20, alt = "") {
+export function img(url: string, w = 20, h = 20, alt = ""): string {
   return `<img src='${url}' width=${w}px height=${h}px class="img-fluid" alt="${alt}">`
 }
 
 // return an HTML href tag from a url and text
-export function href(url: string, text: string) {
+export function href(url: string, text: string): string {
   return `<a href='${url}' target='_blank'>${text}</a>`
 }
 
 // define the do-nothing function, noop
-export function noop(): void {}
+export function noop(): void {
+  return
+}
 
 /*
   depending on whether the page this script is in is http or https, we need to
@@ -76,7 +78,13 @@ export function ws_prefix(): string {
  * @param  {function} compare -- function compare(x,y) > 0 if x ">" y
  * @return {number}
  */
-export function binarySearch(get, target, start, end, compare) {
+export function binarySearch(
+  get: (i: number) => unknown,
+  target: unknown,
+  start: number,
+  end: number,
+  compare?: (x, y) => number
+): number {
   if (start > end) {
     return false
   }
@@ -106,7 +114,7 @@ export function binarySearch(get, target, start, end, compare) {
  * Then bins == [2, 3, 3]
  *
  */
-export function histogram(points, bins) {
+export function histogram(points: Iterable, bins: number[]): number[] {
   const binCounts = new Array(bins.length + 1).fill(0)
   const last = bins.length - 1
   for (const p of points) {
@@ -127,13 +135,13 @@ export function histogram(points, bins) {
   return binCounts
 }
 
-type quartObj = { q1: number; q3: number; iqr: number }
 /**
  * Filters outliers from an Array using standard IQR method. Creates a new Array.
  * adapted from https://gist.github.com/ogun/f19dc055e6b84d57e8186cbc9eaa8e45 (Kemal Ogun Isik)
  *
  * @param  {Array} someArray
  */
+type quartObj = { q1: number; q3: number; iqr: number }
 export function quartiles(someArray: Array<number>): quartObj {
   if (someArray.length < 4) return
 
@@ -160,7 +168,7 @@ export function sleep(t: number): Promise<number> {
   return new Promise((resolve) => window.setTimeout(resolve, t))
 }
 
-export function queueTask(cb: (any) => any): void {
+export function queueTask(cb: (x: unknown) => unknown): void {
   window.setTimeout(cb, 0)
 }
 
@@ -170,7 +178,7 @@ export function nextTask(): Promise<void> {
 
 export function nextAnimationFrame(): Promise<number> {
   let resolve = null
-  const promise = new Promise((r) => (resolve = r))
+  const promise: Promise<number> = new Promise((r) => (resolve = r))
   window.requestAnimationFrame(resolve)
   return promise
 }
@@ -194,7 +202,7 @@ export class Bounds {
     return this
   }
 
-  isEmpty(): Boolean {
+  isEmpty(): boolean {
     return isNaN(this._bounds[0])
   }
 
@@ -218,17 +226,17 @@ export class Bounds {
     return this
   }
 
-  contains(x: number, y: number): Boolean {
+  contains(x: number, y: number): boolean {
     const [xmin, ymin, xmax, ymax] = this._bounds
     return xmin <= x && x <= xmax && ymin <= y && y <= ymax
   }
 
-  containsBounds(otherBoundsObj: Bounds): Boolean {
+  containsBounds(otherBoundsObj: Bounds): boolean {
     const [x1, y1, x2, y2] = otherBoundsObj._bounds
     return this.contains(x1, y1) && this.contains(x2, y2)
   }
 
-  overlaps(otherBoundsObj: Bounds): Boolean {
+  overlaps(otherBoundsObj: Bounds): boolean {
     const [xmin, ymin, xmax, ymax] = this._bounds
     const [x1, y1, x2, y2] = otherBoundsObj._bounds
     return x2 >= xmin && x1 <= xmax && y2 >= ymin && y1 <= ymax

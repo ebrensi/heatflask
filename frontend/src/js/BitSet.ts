@@ -1,3 +1,10 @@
+/**
+ * Bitset Class Adapted from Daniel Lemire's TypedFastBitSet.js
+ * @class
+ * @constructor
+ * @param {Iterable.<Number>} iterable An iterable of integers
+ */
+
 type anyArray = Array<number> | Uint32Array | Uint16Array | Uint8Array
 type anyArrayConstructor =
   | ArrayConstructor
@@ -5,12 +12,6 @@ type anyArrayConstructor =
   | Uint32ArrayConstructor
   | Uint8ArrayConstructor
 
-/**
- * Bitset Class Adapted from Daniel Lemire's TypedFastBitSet.js
- * @class
- * @constructor
- * @param {Iterable.<Number>} iterable An iterable of integers
- */
 export class BitSet {
   words: Uint32Array
 

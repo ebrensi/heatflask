@@ -4,7 +4,7 @@
  * Efrem Rensi 2020
  */
 
-import { MAPBOX_ACCESS_TOKEN, OFFLINE, MAP_INFO } from "./Env.ts"
+import { MAPBOX_ACCESS_TOKEN, OFFLINE, MAP_INFO } from "./Env"
 import Geohash from "latlon-geohash"
 
 import {
@@ -29,12 +29,14 @@ import { HHMMSS, queueTask } from "./appUtil"
 import strava_logo from "url:../images/pbs4.png"
 import heatflask_logo from "url:../images/logo.png"
 
-let center, zoom
+import type { Activity } from "./DotLayer/Activity"
+
+let center: LatLng, zoom: number
 
 export const AreaSelect = window.L.AreaSelect
 
 // Geohash uses "lon" for longitude and leaflet uses "lng"
-function ghDecode(s) {
+function ghDecode(s: string): LatLng {
   const obj = Geohash.decode(s)
   return new LatLng(obj.lat, obj.lon)
 }
@@ -70,8 +72,8 @@ export const map = new Map("map", {
  * to prevent infinite recursion.
  */
 map.on("moveend", () => {
-  const center = map.getCenter(),
-    zoom = map.getZoom()
+  const center = map.getCenter()
+  const zoom = map.getZoom()
 
   vParams.zoom = zoom
   vParams.center = center
@@ -178,7 +180,7 @@ map.zoomControl.setPosition("bottomright")
 // Define a watermark control
 const Watermark = Control.extend({
   onAdd: function () {
-    let img = DomUtil.create("img")
+    const img: HTMLImageElement = DomUtil.create("img")
     img.src = this.options.image
     img.style.width = this.options.width
     img.style.opacity = this.options.opacity
@@ -251,7 +253,7 @@ map.addEventListener("click", () => sidebar.isOpen && sidebar.close())
 /*
  * Functions concerning
  */
-export function activityDataPopup(A, latlng) {
+export function activityDataPopup(A: Activity, latlng: LatLng): void {
   const d = A.total_distance,
     elapsed = HHMMSS(A.elapsed_time),
     v = A.average_speed,
