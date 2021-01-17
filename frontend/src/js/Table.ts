@@ -6,8 +6,8 @@ import { flags } from "./Model"
 import { zoomToSelectedPaths } from "./MapAPI"
 
 // This should vary based on the user's unit preferences
-const DIST_LABEL = "mi",
-  DIST_UNIT = 1609.34
+const DIST_LABEL = "mi"
+const DIST_UNIT = 1609.34
 
 // open up the sidebar to the table view (development)
 // sidebar.open("activities")
@@ -60,7 +60,7 @@ let currentSort
 
 const numColumns = heading.length
 
-export function sort({ column, asc }) {
+export function sort({ column, asc }: { column: number; asc: boolean }): void {
   const value = sortValue[column]
   if (!value) return
 
@@ -108,7 +108,7 @@ function makeRow(A) {
 /*
  *  Create the table
  */
-const tableElement = document.getElementById("items")
+const tableElement: HTMLTableElement = document.getElementById("items")
 tableElement.classList.add("heatflask-table")
 
 // Make header row
@@ -142,7 +142,7 @@ headerRow.addEventListener("click", (e) => {
 /**
  * Update the table (after adding or removing rows)
  */
-export async function update(remake) {
+export async function update(remake: boolean): Promise<void> {
   for (const A of items.values()) {
     if (!A.tr || remake) {
       queueTask(() => {
@@ -163,9 +163,9 @@ export async function update(remake) {
 /*
  * Table Selections
  */
-let lastSelection = {}
+let lastSelection: { idx?: number; val?: boolean } = {}
 
-export function select(A, selected) {
+export function select(A: Activity, selected: boolean): void {
   if (selected) {
     if (!A.selected) {
       A.selected = true
@@ -181,7 +181,7 @@ export function select(A, selected) {
   }
 }
 
-export function clearSelections() {
+export function clearSelections(): void {
   for (const A of items.values()) {
     if (A.selected) select(A, false)
   }
@@ -228,41 +228,3 @@ tableElement.addEventListener("click", function (e) {
 
   dotLayer.redraw(true)
 })
-
-/*
-
-function activityDataPopup(id, latlng){
-    let A = appState.items.get(id),
-        d = A.total_distance,
-        elapsed = util.hhmmss(A.elapsed_time),
-        v = A.average_speed,
-        dkm = +(d / 1000).toFixed(2),
-        dmi = +(d / 1609.34).toFixed(2),
-        vkm,
-        vmi;
-
-    if (A.vtype == "pace"){
-        vkm = util.hhmmss(1000 / v).slice(3) + "/km";
-        vmi = util.hhmmss(1609.34 / v).slice(3) + "/mi";
-    } else {
-        vkm = (v * 3600 / 1000).toFixed(2) + "km/hr";
-        vmi = (v * 3600 / 1609.34).toFixed(2) + "mi/hr";
-    }
-
-    const popupContent = `
-        <b>${A.name}</b><br>
-        ${A.type}:&nbsp;${A.tsLoc}<br>
-        ${dkm}&nbsp;km&nbsp;(${dmi}&nbsp;mi)&nbsp;in&nbsp;${elapsed}<br>
-        ${vkm}&nbsp;(${vmi})<br>
-        View&nbsp;in&nbsp;
-        <a href='https://www.strava.com/activities/${A.id}' target='_blank'>Strava</a>
-        ,&nbsp;
-        <a href='${BASE_USER_URL}?id=${A.id}'&nbsp;target='_blank'>Heatflask</a>
-    `;
-
-    const popup = L.popup().setLatLng(latlng).setContent(popupContent).openOn(map);
-}
-
-
-
-*/

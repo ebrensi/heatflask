@@ -10,7 +10,7 @@ import { options } from "./Defaults"
 import { BitSet } from "../BitSet"
 import { queueTask, nextTask } from "../appUtil"
 import { PixelGraphics } from "./PixelGraphics"
-import { Bounds } from "../appUtil"
+import type { Bounds } from "../appUtil"
 
 export const items: Map<number, Activity> = new Map()
 export const pxg = new PixelGraphics()
