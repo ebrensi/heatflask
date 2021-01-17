@@ -1,7 +1,3 @@
-/**
- * @module  DotLayer/WorkerPool
- */
-
 let _workers = []
 
 export function initialize(numWorkers) {

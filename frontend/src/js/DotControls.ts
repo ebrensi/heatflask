@@ -2,9 +2,9 @@
  * Dot Animation Controls
  */
 import "leaflet-easybutton"
-import { map } from "./MapAPI.js"
-import { dotLayer } from "./DotLayerAPI.js"
-import { vParams } from "./Model.js"
+import { map } from "./MapAPI"
+import { dotLayer } from "./DotLayerAPI"
+import { vParams } from "./Model"
 
 const update = dotLayer.updateDotSettings
 const options = dotLayer.options

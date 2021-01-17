@@ -13,9 +13,9 @@ import "../ext/min_entireframework.css"
 import "../css/font-awesome-lite.css"
 import "../css/activity-index.css"
 
-import * as strava from "./strava.js"
-import { WS_SCHEME, DDHHMM, HHMMSS, href, noop } from "./appUtil.js"
-import load_ga_object from "./google-analytics.js"
+import * as strava from "./strava"
+import { WS_SCHEME, DDHHMM, HHMMSS, href, noop } from "./appUtil"
+import load_ga_object from "./google-analytics"
 
 // _args is an object passed from the server at runtime via
 //  a script tag in the activities.html template.

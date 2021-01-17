@@ -1,7 +1,7 @@
-import { TileLayer, tileLayer } from "../myLeaflet.js"
+import { TileLayer, tileLayer } from "../myLeaflet"
 
 // these plugins modify the TileLayer class
-import "./TileLayer.Cached.js"
+import "./TileLayer.Cached"
 import "leaflet-providers"
 
 export { TileLayer, tileLayer }

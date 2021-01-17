@@ -30,7 +30,7 @@
  * @property {number} max - Max Value in the list (used for determining type of typed-array)
  */
 
-import { compress, uncompress } from "./VByte.js"
+import { compress, uncompress } from "./VByte"
 
 /**
  * Decode RLE list

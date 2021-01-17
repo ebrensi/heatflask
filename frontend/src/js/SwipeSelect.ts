@@ -11,7 +11,7 @@ import {
   Point,
   Bounds,
   LatLngBounds,
-} from "./myLeaflet.js"
+} from "./myLeaflet"
 
 export function touchHandler(event) {
   // Add touch support by converting touch events to mouse events

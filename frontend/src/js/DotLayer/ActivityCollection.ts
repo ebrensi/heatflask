@@ -4,11 +4,11 @@
  *  on the main thread.
  */
 
-import * as ColorPalette from "./ColorPalette.js"
-import { Activity } from "./Activity.js"
-import { options } from "./Defaults.js"
-import { BitSet } from "../BitSet.ts"
-import { queueTask, nextTask } from "../appUtil.ts"
+import * as ColorPalette from "./ColorPalette"
+import { Activity } from "./Activity"
+import { options } from "./Defaults"
+import { BitSet } from "../BitSet"
+import { queueTask, nextTask } from "../appUtil"
 import { PixelGraphics } from "./PixelGraphics"
 
 export const items = new Map()
@@ -26,7 +26,6 @@ export function add(specs) {
 
     set(value) {
       this._selected = value
-      updateSelect(this.idx, value)
     },
   })
 
@@ -110,15 +109,6 @@ export async function updateContext(viewportPxBounds, zoom) {
 }
 
 /**
- * Update the partitions with a changed selection value for A = itemsArray[i]
- *
- * @param  {number} i -- then index of the activity
- */
-function updateSelect(idx, value) {
-  return
-}
-
-/**
  * Returns an array of activities given a selection region
  * in screen-ccordinates
  * @param  {Bounds} selectPxBounds leaflet Bounds Object
@@ -180,6 +170,7 @@ export function drawPaths(imageData, drawDiff) {
     pxg.drawBounds.update(...pxg.clip(xmin - maxLW, ymin - maxLW))
     pxg.drawBounds.update(...pxg.clip(xmax + maxLW, ymax + maxLW))
   }
+
   return count
 }
 

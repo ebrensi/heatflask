@@ -4,26 +4,26 @@
  *
  */
 
-import { makePT } from "./CRS.ts"
-import { DomUtil, Control } from "../myLeaflet.js"
-import { MAP_INFO } from "../Env.ts"
-import { Bounds } from "../appUtil.ts"
+import { makePT } from "./CRS"
+import { DomUtil, Control } from "../myLeaflet"
+import { MAP_INFO } from "../Env"
+import { Bounds } from "../appUtil"
 
-type TransformData = [number, number, number, number]
-type TransformFunc = (x: [number, number]) => [number, number]
-type Point = {
-  x: number
-  y: number
-  subtract: (p: Point) => Point
-  multiplyBy: (c: number) => Point
-  round: () => Point
-}
-type Bounds = {
-  _bounds: [number, number, number, number]
-  update: (x: number, y: number) => void
-}
-type rect = { x: number; y: number; w: number; h: number }
-type LatLamg = { lat: number; lng: number }
+// type TransformData = [number, number, number, number]
+// type TransformFunc = (x: [number, number]) => [number, number]
+// type Point = {
+//   x: number
+//   y: number
+//   subtract: (p: Point) => Point
+//   multiplyBy: (c: number) => Point
+//   round: () => Point
+// }
+// type Bounds = {
+//   _bounds: [number, number, number, number]
+//   update: (x: number, y: number) => void
+// }
+// type rect = { x: number; y: number; w: number; h: number }
+// type LatLamg = { lat: number; lng: number }
 
 let _map
 let _baseTranslation: Point

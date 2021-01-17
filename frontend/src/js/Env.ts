@@ -4,7 +4,7 @@
  *   backend server, embedded in main.html
  */
 
-import { ws_prefix } from "./appUtil.ts"
+import { ws_prefix } from "./appUtil"
 // import load_ga_object from "./google-analytics.js"
 
 export let CLIENT_ID: string

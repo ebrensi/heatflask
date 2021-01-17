@@ -1,9 +1,9 @@
-import { map } from "./mapAPI.js"
-import { dotLayer } from "./DotLayer/DotLayer.js"
+import { map } from "./mapAPI"
+import { dotLayer } from "./DotLayer/DotLayer"
 
 import "leaflet-areaselect"
 import "../ext/leaflet-areaselect.css"
-import "../../node_modules/leaflet-easybutton/src/easy-button.d.ts"
+import "../../node_modules/leaflet-easybutton/src/easy-button.d"
 import "../../node_modules/leaflet-easybutton/src/easy-button.css"
 
 const L = window.L

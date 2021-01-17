@@ -2,11 +2,11 @@
  * URL.js -- Browser URL functionality
  */
 
-import { qParams, vParams, urlArgDefaults } from "./Model.js"
+import { qParams, vParams, urlArgDefaults } from "./Model"
 // import { dotLayer } from "../DotLayerAPI.js";
-import { defaultBaselayerName, map, sidebar } from "./MapAPI.js"
+import { defaultBaselayerName, map, sidebar } from "./MapAPI"
 
-import { nextTask } from "./appUtil.ts"
+import { nextTask } from "./appUtil"
 /*
  * qArgs are updated on render and vArgs are updated every time the map moves
  */

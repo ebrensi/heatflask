@@ -1,11 +1,11 @@
-import { SwipeSelect } from "./SwipeSelect.js"
+import { SwipeSelect } from "./SwipeSelect"
 import "leaflet-easybutton"
-import { map, activityDataPopup } from "./MapAPI.js"
-import { inPxBounds } from "./DotLayer/ActivityCollection.js"
-import { dotLayer } from "./DotLayerAPI.js"
-import { select } from "./Table.js"
-import { transform } from "./DotLayer/ViewBox.ts"
-import { Bounds } from "./appUtil.ts"
+import { map, activityDataPopup } from "./MapAPI"
+import { inPxBounds } from "./DotLayer/ActivityCollection"
+import { dotLayer } from "./DotLayerAPI"
+import { select } from "./Table"
+import { transform } from "./DotLayer/ViewBox"
+import { Bounds } from "./appUtil"
 
 const easyButton = window.L.easyButton
 

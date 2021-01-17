@@ -1,5 +1,5 @@
 /*
- * mapAPI.js -- Leaflet map background is initialized here
+ * mapAPI -- Leaflet map background is initialized here
  *
  * Efrem Rensi 2020
  */
@@ -14,18 +14,18 @@ import {
   DomUtil,
   LatLng,
   LatLngBounds,
-} from "./myLeaflet.js"
+} from "./myLeaflet"
 
 // For ctrl-select
-import "./BoxHook.js"
+import "./BoxHook"
 
 import "leaflet-control-window"
-import "../../node_modules/leaflet-areaselect/src/leaflet-areaselect.js"
-import "../../node_modules/sidebar-v2/js/leaflet-sidebar.js"
-import { tileLayer } from "./TileLayer/TileLayer.Heatflask.js"
-import { flags, vParams, currentUser } from "./Model.js"
-import { items } from "./DotLayer/ActivityCollection.js"
-import { HHMMSS, queueTask } from "./appUtil.ts"
+import "../../node_modules/leaflet-areaselect/src/leaflet-areaselect"
+import "../../node_modules/sidebar-v2/js/leaflet-sidebar"
+import { tileLayer } from "./TileLayer/TileLayer.Heatflask"
+import { flags, vParams, currentUser } from "./Model"
+import { items } from "./DotLayer/ActivityCollection"
+import { HHMMSS, queueTask } from "./appUtil"
 import strava_logo from "url:../images/pbs4.png"
 import heatflask_logo from "url:../images/logo.png"
 

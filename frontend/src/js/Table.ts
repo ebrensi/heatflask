@@ -1,9 +1,9 @@
-import { HHMMSS, queueTask, nextTask, href } from "./appUtil.ts"
-import { items } from "./DotLayer/ActivityCollection.js"
-import { dotLayer } from "./DotLayerAPI.js"
-import { activityURL, ATYPE } from "./strava.js"
-import { flags } from "./Model.js"
-import { zoomToSelectedPaths } from "./MapAPI.js"
+import { HHMMSS, queueTask, nextTask, href } from "./appUtil"
+import { items } from "./DotLayer/ActivityCollection"
+import { dotLayer } from "./DotLayerAPI"
+import { activityURL, ATYPE } from "./strava"
+import { flags } from "./Model"
+import { zoomToSelectedPaths } from "./MapAPI"
 
 // This should vary based on the user's unit preferences
 const DIST_LABEL = "mi",

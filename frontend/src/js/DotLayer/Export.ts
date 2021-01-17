@@ -8,7 +8,7 @@ import * as leafletImage from "leaflet-image"
 import * as GIF from "gif.js"
 import * as download from "downloadjs"
 import * as ViewBox from "./ViewBox"
-import { dotLayer } from "../DotLayerAPI.js"
+import { dotLayer } from "../DotLayerAPI"
 
 import heatflaskImgSrc from "url:../../images/logo.png"
 import stravaImgSrc from "url:../../images/pbs4.png"

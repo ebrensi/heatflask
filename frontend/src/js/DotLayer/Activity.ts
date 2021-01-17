@@ -3,14 +3,14 @@
  *  classes.
  */
 
-import { LatLngBounds } from "../myLeaflet.js"
-import * as Polyline from "./Codecs/Polyline.ts"
-import * as StreamRLE from "./Codecs/StreamRLE.js"
+import { LatLngBounds } from "../myLeaflet"
+import * as Polyline from "./Codecs/Polyline"
+import * as StreamRLE from "./Codecs/StreamRLE"
 import { latLng2pxBounds, latLng2px, tol as dpTol } from "./ViewBox"
-import * as Simplifier from "./Simplifier.js"
-import { ATYPE } from "../strava.js"
-import BitSet from "../BitSet.ts"
-import { RunningStatsCalculator } from "./stats.js"
+import * as Simplifier from "./Simplifier"
+import { ATYPE } from "../strava"
+import BitSet from "../BitSet"
+import { RunningStatsCalculator } from "./stats"
 // import { quartiles } from "../appUtil.js"
 
 // import { makePT } from "./CRS.js"

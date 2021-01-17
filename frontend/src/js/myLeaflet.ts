@@ -27,8 +27,7 @@ import {
   tileLayer,
   GridLayer,
   Util,
-} from "../../node_modules/leaflet/dist/leaflet-src.esm.js"
-// } from "../../node_modules/leaflet/src/Leaflet.js"
+} from "../../node_modules/leaflet/src/Leaflet"
 
 export {
   bind,

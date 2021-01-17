@@ -1,7 +1,7 @@
-import { flags } from "./Model.js"
-import { controlWindow } from "./MapAPI.js"
-import queryBackend from "./Socket.js"
-import * as ActivityCollection from "./DotLayer/ActivityCollection.js"
+import { flags } from "./Model"
+import { controlWindow } from "./MapAPI"
+import queryBackend from "./Socket"
+import * as ActivityCollection from "./DotLayer/ActivityCollection"
 
 let numActivities, count
 

@@ -2,7 +2,7 @@
  * main.js -- the entry point for the heatflask browser client
  */
 
-import "./UI.ts"
+import "./UI"
 
 import "../css/main.css" // This should be the last imported CSS
 

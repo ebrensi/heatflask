@@ -1,15 +1,13 @@
 /*
   DotLayer Efrem Rensi, 2020,
 */
-import { Layer, DomUtil, Browser, setOptions } from "../myLeaflet.js"
-import { Control } from "../myLeaflet.js"
-
-import * as ViewBox from "./ViewBox.ts"
-import * as ActivityCollection from "./ActivityCollection.js"
-import { PixelGraphics } from "./PixelGraphics.js"
-import { MAP_INFO } from "../Env.ts"
-import { nextTask, sleep, nextAnimationFrame } from "../appUtil.ts"
-import { vParams } from "../Model.js"
+import { Layer, DomUtil, Browser, setOptions, Control } from "../myLeaflet"
+import * as ViewBox from "./ViewBox"
+import * as ActivityCollection from "./ActivityCollection"
+import { PixelGraphics } from "./PixelGraphics"
+import { MAP_INFO } from "../Env"
+import { nextTask, sleep, nextAnimationFrame } from "../appUtil"
+import { vParams } from "../Model"
 // import * as WorkerPool from "./WorkerPool.js"
 
 const DEBUG_BORDERS = true
@@ -17,7 +15,7 @@ const DEBUG_BORDERS = true
 import {
   options as defaultOptions,
   dotSettings as _dotSettings,
-} from "./Defaults.js"
+} from "./Defaults"
 
 export { _dotSettings as dotSettings }
 

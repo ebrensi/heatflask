@@ -10,7 +10,7 @@
  *  Efrem Rensi 2020
  */
 
-import * as idb from "./myIdb.js"
+import * as idb from "./myIdb"
 
 import {
   TileLayer,
@@ -20,7 +20,7 @@ import {
   Browser,
   bind,
   extend,
-} from "../myLeaflet.js"
+} from "../myLeaflet"
 
 export { TileLayer, tileLayer }
 

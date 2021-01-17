@@ -3,8 +3,8 @@
  *    beginning with those specified by the current URL in the browser.
  */
 
-import { CURRENT_USER, USER_URLS } from "./Env.ts"
-import { BoundObject } from "./DataBinding.js"
+import { CURRENT_USER, USER_URLS } from "./Env"
+import { BoundObject } from "./DataBinding"
 
 /*
  * These are all the possible arguments that might be in the URL

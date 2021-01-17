@@ -1,10 +1,10 @@
 /* DotLayerAPI.js -- we define and initialize the dotLayer here */
 
-import { map } from "./MapAPI.js"
+import { map } from "./MapAPI"
 
-import { DotLayer } from "./DotLayer/DotLayer.ts"
+import { DotLayer } from "./DotLayer/DotLayer"
 
-import { vParams } from "./Model.js"
+import { vParams } from "./Model"
 
 /* instantiate a DotLayer object and add it to the map */
 export const dotLayer = new DotLayer({

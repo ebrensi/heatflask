@@ -3,34 +3,34 @@
  *  Here we initialize the DOM/user interface
  */
 
-import { AUTHORIZE_URL } from "./Env.ts"
+import { AUTHORIZE_URL } from "./Env"
 
-import { targetUser, currentUser, vParams, qParams, flags } from "./Model.js"
-/* URL.js import must be here because it requires MapAPI which requires
+import { targetUser, currentUser, vParams, qParams, flags } from "./Model"
+/* URL.ts import must be here because it requires MapAPI which requires
  *  ActivityCollection, which requires URL.  If we import MapAPI first
  *  then it will end up requiring itself.
  */
-import "./URL.js"
-import { getBounds, map } from "./MapAPI.js"
+import "./URL"
+import { getBounds, map } from "./MapAPI"
 
-import { items } from "./DotLayer/ActivityCollection.js"
+import { items } from "./DotLayer/ActivityCollection"
 
-import { dotLayer } from "./DotLayerAPI.js"
-// import { captureCycle, abortCapture } from "./DotLayer/Export.js"
+import { dotLayer } from "./DotLayerAPI"
+// import { captureCycle, abortCapture } from "./DotLayer/Export"
 
-import "./DotControls.js"
-import "./Control.pathSelect.js"
+import "./DotControls"
+import "./Control.pathSelect"
 
 import paypalButtonHTML from "bundle-text:../html/paypal-button.html"
 import infoTabHTML from "bundle-text:../html/main-info.html"
 
-import { makeQuery, abortQuery } from "./DataImport.js"
-import * as table from "./Table.js"
-import { queueTask } from "./appUtil.ts"
-import { getUrlString } from "./URL.js"
+import { makeQuery, abortQuery } from "./DataImport"
+import * as table from "./Table"
+import { queueTask } from "./appUtil"
+import { getUrlString } from "./URL"
 
-/* TODO: have two UI submodules: UI-simple.js (single) and
-                                 UI-complex.js (multi-user)
+/* TODO: have two UI submodules: UI-simple (single) and
+                                 UI-complex (multi-user)
 
     one of which to be dynamically imported depending on the data query.
 
