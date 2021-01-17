@@ -10,12 +10,14 @@ import { options } from "./Defaults"
 import { BitSet } from "../BitSet"
 import { queueTask, nextTask } from "../appUtil"
 import { PixelGraphics } from "./PixelGraphics"
+import { Bounds } from "../appUtil"
 
-export const items = new Map()
+export const items: Map<number, Activity> = new Map()
 export const pxg = new PixelGraphics()
-let itemsArray
 
-export function add(specs) {
+let itemsArray: Activity[]
+
+export function add(specs): void {
   const A = new Activity(specs)
   A._selected = A.selected
 
@@ -32,14 +34,14 @@ export function add(specs) {
   items.set(A.id, A)
 }
 
-export function remove(id) {
+export function remove(id: number | string): void {
   items.delete(+id)
 }
 
 /**
  * This should be called after adding or removing Activities.
  */
-export function reset() {
+export function reset(): void {
   setDotColors()
 
   itemsArray = [...items.values()]
@@ -54,7 +56,7 @@ export function reset() {
 /*
  * assign a dot-color to each item of _items
  */
-function setDotColors() {
+function setDotColors(): void {
   const colorPalette = ColorPalette.makePalette(items.size)
   let i = 0
   for (const A of items.values()) {
@@ -72,7 +74,10 @@ const inView = new BitSet(1)
  * Update StyleGroups for our collection of activities
  * @return {[type]} [description]
  */
-export async function updateContext(viewportPxBounds, zoom) {
+export async function updateContext(
+  viewportPxBounds: Bounds,
+  zoom: number
+): Promise<void> {
   inView.clear()
 
   let queuedTasks
@@ -111,9 +116,9 @@ export async function updateContext(viewportPxBounds, zoom) {
 /**
  * Returns an array of activities given a selection region
  * in screen-ccordinates
- * @param  {Bounds} selectPxBounds leaflet Bounds Object
+ * @param  {Bounds} selectPxBounds Bounds Object
  */
-export function* inPxBounds(pxBounds) {
+export function* inPxBounds(pxBounds: Bounds): IterableIterator<Activity> {
   for (const idx of inView) {
     const A = itemsArray[idx]
     for (const p of A.pointsIterator()) {
@@ -128,7 +133,7 @@ export function* inPxBounds(pxBounds) {
 /*
  * Clear all segMasks and force rebuilding them
  */
-export function resetSegMasks() {
+export function resetSegMasks(): void {
   for (const A of itemsArray) {
     A.resetSegMask()
   }
@@ -137,8 +142,11 @@ export function resetSegMasks() {
 /*
  * Methods for drawing to imageData objects
  */
-const drawSegFunc = (x0, y0, x1, y1) => pxg.drawSegment(x0, y0, x1, y1)
-export function drawPaths(imageData, drawDiff) {
+const drawSegFunc = (x0: number, y0: number, x1: number, y1: number) => {
+  pxg.drawSegment(x0, y0, x1, y1)
+}
+
+export function drawPaths(imageData: myImageData, drawDiff: boolean): number {
   if (pxg.imageData !== imageData) pxg.imageData = imageData
 
   if (!drawDiff && !pxg.drawBounds.isEmpty()) pxg.clear()
@@ -174,7 +182,14 @@ export function drawPaths(imageData, drawDiff) {
   return count
 }
 
-export function drawDots(imageData, dotSize, T, timeScale, tsecs, drawDiff) {
+export function drawDots(
+  imageData: myImageData,
+  dotSize: number,
+  T: number,
+  timeScale: number,
+  tsecs: number,
+  drawDiff: boolean
+): number {
   if (pxg.imageData !== imageData) pxg.imageData = imageData
 
   if (!drawDiff && !pxg.drawBounds.isEmpty()) pxg.clear()
@@ -184,8 +199,8 @@ export function drawDots(imageData, dotSize, T, timeScale, tsecs, drawDiff) {
 
   let count = 0
   const sz = Math.round(dotSize)
-  const circle = (x, y) => pxg.drawCircle(x, y, sz)
-  const square = (x, y) => pxg.drawSquare(x, y, sz)
+  const circle = (x: number, y: number) => pxg.drawCircle(x, y, sz)
+  const square = (x: number, y: number) => pxg.drawSquare(x, y, sz)
   inView.forEach((i) => {
     const A = itemsArray[i]
     pxg.setColor(A.colors.dot)

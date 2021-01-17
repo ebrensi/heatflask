@@ -1,4 +1,9 @@
 type anyArray = Array<number> | Uint32Array | Uint16Array | Uint8Array
+type anyArrayConstructor =
+  | ArrayConstructor
+  | Uint16ArrayConstructor
+  | Uint32ArrayConstructor
+  | Uint8ArrayConstructor
 
 /**
  * Bitset Class Adapted from Daniel Lemire's TypedFastBitSet.js
@@ -10,7 +15,7 @@ export class BitSet {
   words: Uint32Array
 
   constructor(n: number) {
-    let count: number = n ? (n + 32) >>> 5 : 8
+    const count: number = n ? (n + 32) >>> 5 : 8
     this.words = new Uint32Array(count)
   }
 
@@ -20,7 +25,7 @@ export class BitSet {
     return answer
   }
 
-  [Symbol.iterator]() {
+  [Symbol.iterator](): IterableIterator<number> {
     return this.imap()
   }
 
@@ -57,7 +62,7 @@ export class BitSet {
   /**
    * Remove all values, reset memory usage
    */
-  clear() {
+  clear(): BitSet {
     this.words.fill(0)
     return this
   }
@@ -82,7 +87,7 @@ export class BitSet {
    * Return true if no bit is set
    * @return {Boolean} Is anything in this {@link BitSet}?
    */
-  isEmpty(): Boolean {
+  isEmpty(): boolean {
     const c: number = this.words.length
     for (let i = 0; i < c; i++) {
       if (this.words[i] !== 0) return false
@@ -95,7 +100,7 @@ export class BitSet {
    * @param  {Number}  index
    * @return {Boolean}
    */
-  has(index: number): Boolean {
+  has(index: number): boolean {
     return (this.words[index >>> 5] & (1 << index)) !== 0
   }
 
@@ -108,15 +113,15 @@ export class BitSet {
         `cannot access word ${w} of ${this.words.length}-word bitset`
       )
     }
-    let word = this.words[w]
-    let newword = word | (1 << index)
+    const word = this.words[w]
+    const newword = word | (1 << index)
     this.words[w] = newword
     return (newword ^ word) >>> index
   }
 
   // Resize the bitset so that we can write a value at index
   resize(index: number): BitSet {
-    let count: number = (index + 32) >>> 5 // just what is needed
+    const count: number = (index + 32) >>> 5 // just what is needed
     if (this.words.length >= count) return this
     const newWords = new Uint32Array(count)
     newWords.set(this.words, 0)
@@ -201,7 +206,7 @@ export class BitSet {
   }
 
   // Return an array with the set bit locations (values)
-  array(ArrayConstructor): anyArray {
+  array(ArrayConstructor?: anyArrayConstructor): anyArray {
     const max = this.max()
     ArrayConstructor =
       ArrayConstructor || max >>> 8
@@ -230,7 +235,7 @@ export class BitSet {
     for (let k = 0; k < c; ++k) {
       let w = this.words[k]
       while (w != 0) {
-        let t = w & -w
+        const t = w & -w
         fnc((k << 5) + this.hammingWeight((t - 1) | 0))
         w ^= t
       }
@@ -244,7 +249,7 @@ export class BitSet {
     for (let k = 0; k < c; ++k) {
       let w = this.words[k]
       while (w != 0) {
-        let t = w & -w
+        const t = w & -w
         yield fnc((k << 5) + this.hammingWeight((t - 1) | 0))
         w ^= t
       }
@@ -259,14 +264,14 @@ export class BitSet {
   ): IterableIterator<number> {
     const idxGen = bitSubSet.imap()
 
-    let pos = 0,
-      next = idxGen.next(),
-      k = 0,
-      w = this.words[0]
+    let pos = 0
+    let next = idxGen.next()
+    let k = 0
+    let w = this.words[0]
 
     while (!next.done) {
-      let t,
-        next_pos = next.value
+      let t: number
+      const next_pos = next.value
       while (pos++ < next_pos) {
         t = w & -w
         w ^= t
@@ -281,14 +286,14 @@ export class BitSet {
     const newSet = BitSet.fromWords(new Uint32Array(this.words.length))
     const idxGen = bitSubSet.imap()
 
-    let c = this.words.length
+    const c = this.words.length
     let next = idxGen.next().value
     let i = 0
 
     for (let k = 0; k < c; ++k) {
       let w = this.words[k]
       while (w != 0) {
-        let t = w & -w
+        const t = w & -w
         w ^= t
         if (i++ == next) {
           newSet.add((k << 5) + this.hammingWeight((t - 1) | 0))
@@ -311,8 +316,8 @@ export class BitSet {
 
   // Check if this bitset intersects with another one,
   // no bitmap is modified
-  intersects(otherbitmap: BitSet): Boolean {
-    let newcount = Math.min(this.words.length, otherbitmap.words.length)
+  intersects(otherbitmap: BitSet): boolean {
+    const newcount = Math.min(this.words.length, otherbitmap.words.length)
     for (let k = 0 | 0; k < newcount; ++k) {
       if ((this.words[k] & otherbitmap.words[k]) !== 0) return true
     }
@@ -322,7 +327,7 @@ export class BitSet {
   // Computes the intersection between this bitset and another one,
   // the current bitmap is modified  (and returned by the function)
   intersection(otherbitmap: BitSet): BitSet {
-    let newcount = Math.min(this.words.length, otherbitmap.words.length)
+    const newcount = Math.min(this.words.length, otherbitmap.words.length)
     let k = 0 | 0
 
     for (; k + 7 < newcount; k += 8) {
@@ -338,7 +343,7 @@ export class BitSet {
     for (; k < newcount; ++k) {
       this.words[k] &= otherbitmap.words[k]
     }
-    let c = this.words.length
+    const c = this.words.length
     for (let k = newcount; k < c; ++k) {
       this.words[k] = 0
     }
@@ -347,7 +352,7 @@ export class BitSet {
 
   // Computes the size of the intersection between this bitset and another one
   intersection_size(otherbitmap: BitSet): number {
-    let newcount = Math.min(this.words.length, otherbitmap.words.length)
+    const newcount = Math.min(this.words.length, otherbitmap.words.length)
     let answer = 0 | 0
     for (let k = 0 | 0; k < newcount; ++k) {
       answer += this.hammingWeight(this.words[k] & otherbitmap.words[k])
@@ -359,9 +364,9 @@ export class BitSet {
   // Computes the intersection between this bitset and another one,
   // a new bitmap is generated
   new_intersection(otherbitmap: BitSet): BitSet {
-    let count = Math.min(this.words.length, otherbitmap.words.length)
+    const count = Math.min(this.words.length, otherbitmap.words.length)
     const words = new Uint32Array(count)
-    let c = count
+    const c = count
     let k = 0 | 0
     for (; k + 7 < c; k += 8) {
       words[k] = this.words[k] & otherbitmap.words[k]
@@ -379,18 +384,18 @@ export class BitSet {
     return BitSet.fromWords(words)
   }
 
-  equals(otherbitmap: BitSet): Boolean {
-    let mcount = Math.min(this.words.length, otherbitmap.words.length)
+  equals(otherbitmap: BitSet): boolean {
+    const mcount = Math.min(this.words.length, otherbitmap.words.length)
     for (let k = 0 | 0; k < mcount; ++k) {
       if (this.words[k] != otherbitmap.words[k]) return false
     }
     if (this.words.length < otherbitmap.words.length) {
-      let c = otherbitmap.words.length
+      const c = otherbitmap.words.length
       for (let k = this.words.length; k < c; ++k) {
         if (otherbitmap.words[k] != 0) return false
       }
     } else if (otherbitmap.words.length < this.words.length) {
-      let c = this.words.length
+      const c = this.words.length
       for (let k = otherbitmap.words.length; k < c; ++k) {
         if (this.words[k] != 0) return false
       }
@@ -426,7 +431,7 @@ export class BitSet {
 
   // Computes the change between this bitset and another one,
   // a new bitmap is generated
-  new_change(otherbitmap: BitSet, recycled: BitSet) {
+  new_change(otherbitmap: BitSet, recycled: BitSet): BitSet {
     if (otherbitmap.words.length > this.words.length) {
       return this.clone(recycled).change(otherbitmap)
     } else {
@@ -436,15 +441,15 @@ export class BitSet {
 
   // Computes the number of changed elements between this bitset and another one
   change_size(otherbitmap: BitSet): number {
-    var mincount = Math.min(this.words.length, otherbitmap.words.length)
-    var answer = 0 | 0
-    var k = 0 | 0
+    const mincount = Math.min(this.words.length, otherbitmap.words.length)
+    let answer = 0 | 0
+    let k = 0 | 0
     for (; k < mincount; ++k) {
       answer += this.hammingWeight(this.words[k] ^ otherbitmap.words[k])
     }
-    var longer =
+    const longer =
       this.words.length > otherbitmap.words.length ? this : otherbitmap
-    var c = longer.words.length
+    const c = longer.words.length
     for (; k < c; ++k) {
       answer += this.hammingWeight(longer.words[k])
     }
@@ -453,8 +458,8 @@ export class BitSet {
 
   // Computes the difference between this bitset and another one,
   // the current bitset is modified (and returned by the function)
-  difference(otherbitmap: BitSet): number {
-    let newcount = Math.min(this.words.length, otherbitmap.words.length)
+  difference(otherbitmap: BitSet): BitSet {
+    const newcount = Math.min(this.words.length, otherbitmap.words.length)
     let k = 0 | 0
     for (; k + 7 < newcount; k += 8) {
       this.words[k] &= ~otherbitmap.words[k]
@@ -474,13 +479,13 @@ export class BitSet {
 
   // Computes the size of the difference between this bitset and another one
   difference_size(otherbitmap: BitSet): number {
-    let newcount = Math.min(this.words.length, otherbitmap.words.length)
+    const newcount = Math.min(this.words.length, otherbitmap.words.length)
     let answer = 0 | 0
     let k = 0 | 0
     for (; k < newcount; ++k) {
       answer += this.hammingWeight(this.words[k] & ~otherbitmap.words[k])
     }
-    let c = this.words.length
+    const c = this.words.length
     for (; k < c; ++k) {
       answer += this.hammingWeight(this.words[k])
     }
@@ -518,13 +523,13 @@ export class BitSet {
   }
 
   // Returns a string representation
-  toString(type: any): string {
+  toString(type: boolean): string {
     let str
     if (type) {
       const max = this.max()
       const arr = new Uint8Array(max)
       for (let j = 0; j < max; j++) {
-        arr[j] = this.has(j)
+        arr[j] = this.has(j) ? 1 : 0
       }
       str = arr.join("") || "0"
     } else {
@@ -536,7 +541,7 @@ export class BitSet {
   // Computes the union between this bitset and another one,
   // the current bitset is modified  (and returned by the function)
   union(otherbitmap: BitSet): BitSet {
-    let mcount = Math.min(this.words.length, otherbitmap.words.length)
+    const mcount = Math.min(this.words.length, otherbitmap.words.length)
     let k = 0 | 0
     for (; k + 7 < mcount; k += 8) {
       this.words[k] |= otherbitmap.words[k]
@@ -558,12 +563,12 @@ export class BitSet {
     return this
   }
 
-  new_union(otherbitmap: BitSet, recycled: BitSet) {
-    let count = Math.max(this.words.length, otherbitmap.words.length)
+  new_union(otherbitmap: BitSet, recycled: BitSet): BitSet {
+    const count = Math.max(this.words.length, otherbitmap.words.length)
     const words = recycled
       ? recycled.resize((count << 5) - 1).words
       : new Uint32Array(count)
-    let mcount = Math.min(this.words.length, otherbitmap.words.length)
+    const mcount = Math.min(this.words.length, otherbitmap.words.length)
     let k = 0
     for (; k + 7 < mcount; k += 8) {
       words[k] = this.words[k] | otherbitmap.words[k]
@@ -587,24 +592,24 @@ export class BitSet {
 
   // Computes the difference between this bitset and another one,
   // a new bitmap is generated
-  new_difference(otherbitmap: BitSet, recycled: BitSet) {
+  new_difference(otherbitmap: BitSet, recycled: BitSet): BitSet {
     return this.clone(recycled).difference(otherbitmap) // should be fast enough
   }
 
   // Computes the size union between this bitset and another one
   union_size(otherbitmap: BitSet): number {
-    let mcount = Math.min(this.words.length, otherbitmap.words.length)
+    const mcount = Math.min(this.words.length, otherbitmap.words.length)
     let answer = 0 | 0
     for (let k = 0 | 0; k < mcount; ++k) {
       answer += this.hammingWeight(this.words[k] | otherbitmap.words[k])
     }
     if (this.words.length < otherbitmap.words.length) {
-      let c = otherbitmap.words.length
+      const c = otherbitmap.words.length
       for (let k = this.words.length; k < c; ++k) {
         answer += this.hammingWeight(otherbitmap.words[k] | 0)
       }
     } else {
-      let c = this.words.length
+      const c = this.words.length
       for (let k = otherbitmap.words.length; k < c; ++k) {
         answer += this.hammingWeight(this.words[k] | 0)
       }

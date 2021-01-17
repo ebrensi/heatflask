@@ -1,12 +1,17 @@
 import { Bounds } from "../appUtil"
 const DEBUG = false
+
+type tuple4 = [number, number, number, number]
+type tuple2 = [number, number]
+type rect = { x: number; y: number; w: number; h: number }
+type CanvasOrCtx = HTMLCanvasElement | CanvasRenderingContext2D
+
 /*
  * This module defines the PixelGrapics class.  A PixelGraphics object
  * encapsulates an ImageData buffer and provides methods to modify
  * pixels in that buffer.
  */
-
-function isLittleEndian() {
+function isLittleEndian(): boolean {
   // from TooTallNate / endianness.js.   https://gist.github.com/TooTallNate/4750953
   const b = new ArrayBuffer(4)
   const a = new Uint32Array(b)
@@ -18,14 +23,35 @@ function isLittleEndian() {
 }
 
 const _littleEndian = isLittleEndian()
-const rgbaToUint32 = _littleEndian
-  ? (r, g, b, a) => (a << 24) | (b << 16) | (g << 8) | r
-  : (r, g, b, a) => (r << 24) | (g << 16) | (b << 8) | a
+export const rgbaToUint32 = _littleEndian
+  ? (r: number, g: number, b: number, a: number) =>
+      (a << 24) | (b << 16) | (g << 8) | r
+  : (r: number, g: number, b: number, a: number) =>
+      (r << 24) | (g << 16) | (b << 8) | a
 const alphaMask = rgbaToUint32(255, 255, 255, 0)
 const alphaPos = _littleEndian ? 24 : 0
 
+export class myImageData extends ImageData {
+  drawBounds: tuple4
+  transform: tuple4
+
+  constructor(w: number, h: number) {
+    this.drawBounds = [NaN, NaN, NaN, NaN]
+    this.transform = [1, 0, 1, 0]
+    super(w, h)
+  }
+}
+
 export class PixelGraphics {
-  constructor(imageData) {
+  _imageData: myImageData
+  buf32: Uint32Array
+  rowBuf: Uint32Array
+  drawBounds: Bounds
+  color32: number
+  lineWidth: number
+  debugCanvas?: HTMLCanvasElement
+
+  constructor(imageData?: myImageData) {
     this.color32 = rgbaToUint32(0, 0, 0, 255) // default color is black
     this.lineWidth = 1
     this.drawBounds = new Bounds()
@@ -37,7 +63,11 @@ export class PixelGraphics {
     }
   }
 
-  set imageData(imageData) {
+  get imageData(): myImageData {
+    return this._imageData
+  }
+
+  set imageData(imageData: myImageData) {
     this._imageData = imageData
     this.buf32 = new Uint32Array(imageData.data.buffer)
     this.drawBounds.data = imageData.drawBounds
@@ -48,27 +78,23 @@ export class PixelGraphics {
     }
   }
 
-  get height() {
+  get height(): number {
     return this._imageData.height
   }
 
-  get width() {
+  get width(): number {
     return this._imageData.width
   }
 
-  get imageData() {
-    return this._imageData
-  }
-
-  get transform() {
+  get transform(): tuple4 {
     return this._imageData.transform
   }
 
-  set transform(tf) {
+  set transform(tf: tuple4) {
     this._imageData.transform = tf
   }
 
-  setColor(r, g, b, a = 0xff) {
+  setColor(r: number, g: number, b: number, a = 0xff): void {
     if (g === undefined) {
       if (typeof r === "string") this.color32 = parseColor(r)
       else this.color32 = r | (a << alphaPos)
@@ -77,7 +103,7 @@ export class PixelGraphics {
     }
   }
 
-  setLineWidth(w) {
+  setLineWidth(w: number): void {
     this.lineWidth = w
   }
 
@@ -87,7 +113,7 @@ export class PixelGraphics {
    * @param  {Object} [newBoundsRect] a rect object that specifies
    *                                  new draw bounds
    */
-  clear(rect) {
+  clear(rect?: rect): void {
     const { x, y, w, h } = rect || this.drawBounds.rect
 
     if (DEBUG && this.debugCanvas) {
@@ -105,7 +131,7 @@ export class PixelGraphics {
     }
   }
 
-  inBounds(x, y) {
+  inBounds(x: number, y: number): boolean {
     return x >= 0 && x < this.width && y >= 0 && y < this.height
   }
 
@@ -115,13 +141,13 @@ export class PixelGraphics {
    * http://members.chello.at/~easyfilter/bresenham.html
    * *******************************************************
    */
-  setPixel(x, y) {
+  setPixel(x: number, y: number): void {
     if (!this.inBounds(x, y)) return
     this.drawBounds.update(x, y)
     this.buf32[y * this.width + x] = this.color32
   }
 
-  setPixelAA(x, y, a) {
+  setPixelAA(x: number, y: number, a: number): void {
     if (!this.inBounds(x, y)) return
     this.drawBounds.update(x, y)
     const alpha = 0xff - Math.round(a)
@@ -129,7 +155,7 @@ export class PixelGraphics {
     this.buf32[y * this.width + x] = color
   }
 
-  plotLineAA(x0, y0, x1, y1) {
+  plotLineAA(x0: number, y0: number, x1: number, y1: number): void {
     const dx = Math.abs(x1 - x0)
     const sx = x0 < x1 ? 1 : -1
     const dy = Math.abs(y1 - y0)
@@ -161,8 +187,20 @@ export class PixelGraphics {
     }
   }
 
-  drawSegment(x0, y0, x1, y1, th) {
-    if (!x0 || !y0 || !x1 || !y1) return
+  drawSegment(
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number,
+    th?: number
+  ): void {
+    if (
+      x0 === undefined ||
+      y0 === undefined ||
+      x1 === undefined ||
+      y1 === undefined
+    )
+      return
 
     const T = this.transform
     // These must be integers
@@ -220,7 +258,7 @@ export class PixelGraphics {
     }
   }
 
-  drawSquare(x, y, size) {
+  drawSquare(x: number, y: number, size: number): void {
     const dotOffset = size / 2
     const T = this.transform
     x = Math.round(T[0] * x + T[1] - dotOffset)
@@ -244,7 +282,7 @@ export class PixelGraphics {
     }
   }
 
-  drawCircle(x, y, size) {
+  drawCircle(x: number, y: number, size: number): void {
     const T = this.transform
     x = Math.round(T[0] * x + T[1])
     y = Math.round(T[2] * y + T[3])
@@ -266,7 +304,7 @@ export class PixelGraphics {
   }
 
   //
-  clip(x, y) {
+  clip(x: number, y: number): tuple2 {
     if (x < 0) x = 0
     else if (x > this.width) x = this.width
     if (y < 0) y = 0
@@ -279,12 +317,12 @@ export class PixelGraphics {
    *  of an imageData object to another, possibly overlapping
    *  rectanglular region of equal size.
    */
-  translate(shiftX, shiftY) {
+  translate(shiftX: number, shiftY: number): void {
     if (shiftX === 0 && shiftY === 0) return
     const { x: rx, y: ry, w: rw, h: rh } = this.drawBounds.rect
     const [dx0, dy0] = this.clip(rx + shiftX, ry + shiftY)
     const [dx1, dy1] = this.clip(rx + rw + shiftX, ry + rh + shiftY)
-    let s, d, clearRegion
+    let s: rect, d: rect, clearRegion: rect
 
     // We only define desatination rect if it is on-screen
     if (dx0 !== dx1 && dy0 !== dy1) {
@@ -307,7 +345,7 @@ export class PixelGraphics {
       drawDebugBox(debugCtx, d, "dest") // draw dest rect
     }
 
-    const moveRow = (row) => {
+    const moveRow = (row: number): void => {
       const sOffset = (s.y + row) * this.width
       const sRowStart = sOffset + s.x
       const sRowEnd = sRowStart + s.w
@@ -382,16 +420,16 @@ export class PixelGraphics {
     this.drawBounds.update(dx1, dy1)
   }
 
-  putImageData(obj) {
+  putImageData(obj: CanvasOrCtx): void {
     if (this.drawBounds.isEmpty()) return
-    const ctx = obj.putImageData ? obj : obj.getContext("2d")
+    const ctx = obj.getContext ? obj.getContext("2d") : obj
     const { x, y, w, h } = this.drawBounds.rect
     ctx.putImageData(this.imageData, 0, 0, x, y, w, h)
   }
 
-  async drawImageData(obj) {
+  async drawImageData(obj: CanvasOrCtx): Promise<void> {
     if (this.drawBounds.isEmpty()) return
-    const ctx = obj.drawImage ? obj : obj.getContext("2d")
+    const ctx = obj.getContext ? obj.getContext("2d") : obj
     const { x, y, w, h } = this.drawBounds.rect
     const img = await createImageBitmap(this.imageData, x, y, w, h)
     ctx.drawImage(img, x, y)
@@ -399,7 +437,7 @@ export class PixelGraphics {
 } // end PixelGraphics definition
 
 const _re = /(\d+),(\d+),(\d+)/
-function parseColor(colorString) {
+function parseColor(colorString: string) {
   if (colorString[0] === "#") {
     const num = parseInt(colorString.replace("#", "0x"))
     const r = (num & 0xff0000) >>> 16
@@ -412,11 +450,13 @@ function parseColor(colorString) {
 }
 
 // Draw the outline of arbitrary rect object in screen coordinates
-export function drawDebugBox(ctxOrCanvas, rect, label) {
+export function drawDebugBox(
+  obj: CanvasOrCtx,
+  rect: rect,
+  label: string
+): void {
   if (!rect) return
-  const ctx = ctxOrCanvas.getContext
-    ? ctxOrCanvas.getContext("2d")
-    : ctxOrCanvas
+  const ctx = obj.hasOwnProperty("getContext") ? obj.getContext("2d") : obj
   const { x, y, w, h } = rect
   ctx.strokeRect(x, y, w, h)
   if (label) ctx.fillText(label, x + 20, y + 20)
