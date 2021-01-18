@@ -1,24 +1,32 @@
 /**
- * This is a tiny Event Handler class that enables your code to generate
+ * A tiny Event Handler class that enables your code to generate
  * events and let others add listeners
  *
  * Efrem Rensi 2020
  */
+type EventCallback = (x: unknown) => void
 
 export class EventHandler {
+  eventListeners: Map<string, EventCallback[]>
+
   constructor() {
-    this.eventListeners = {}
+    this.eventListeners = new Map()
   }
 
   /**
    * Let other code listen for an event.
    * @param {String}   event    the event name
    */
-  addListener(event, callback) {
-    if (!this.eventListeners[event]) {
-      this.eventListeners[event] = []
+  addListener(event: string, callback: EventCallback): void {
+    let eventCallbacks: EventCallback[]
+
+    if (!this.eventListeners.has(event)) {
+      eventCallbacks = []
+      this.eventListeners.set(event, eventCallbacks)
+    } else {
+      eventCallbacks = this.eventListeners.get(event)
     }
-    this.eventListeners[event].push(callback)
+    eventCallbacks.push(callback)
     console.log(this.eventListeners)
   }
 
@@ -27,11 +35,8 @@ export class EventHandler {
    * @param  {String} event   then event name
    * @param  {} payload the data that you will pass to the listener
    */
-  emit(event, payload) {
-    if (event in this.eventListeners) {
-      for (const func of this.eventListeners[event]) {
-        func(payload)
-      }
-    }
+  emit(event: string, payload: unknown): void {
+    if (!this.eventListeners.has(event)) return
+    for (const func of this.eventListeners[event]) func(payload)
   }
 }

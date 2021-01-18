@@ -1,6 +1,10 @@
 const BUFFER_TIMEOUT = 60
 const MAX_TRANSACTION_SIZE = 200
 
+/**
+ * A minimal key-value IndexedDB key-value store.key-value
+ * adapted from IDB-Keyval by Jake Archibald
+ */
 export class Store {
   constructor(dbName, storeName, keyPath) {
     this.storeName = storeName
@@ -9,9 +13,9 @@ export class Store {
 
   _initialize(dbName, storeName, keyPath, version) {
     return new Promise((resolve, reject) => {
-      let openreq = indexedDB.open(dbName, version),
-        db
+      const openreq = indexedDB.open(dbName, version)
       const self = this
+      let db
 
       openreq.onerror = onerror
       openreq.onupgradeneeded = onupgradeneeded
