@@ -6,13 +6,36 @@
 import { CURRENT_USER, USER_URLS } from "./Env"
 import { BoundObject } from "./DataBinding"
 
+type boolNum = 0 | 1
+interface ArgDefaults {
+  after: [string[], string]
+  before: [string[], string]
+  days: [string[], number]
+  limit: [string[], number]
+  ids: [string[], string]
+  key: [string[], string]
+  zoom: [string[], number]
+  lat: [string[], number]
+  lng: [string[], number]
+  autozoom: [string[], boolean]
+  tau: [string[], number]
+  T: [string[], number]
+  sz: [string[], number]
+  geohash: [string[], string]
+  paused: [string[], boolean]
+  shadows: [string[], boolean]
+  paths: [string[], boolean]
+  alpha: [string[], number]
+  baselayer: [string[], string]
+}
+
 /*
  * These are all the possible arguments that might be in the URL
  * parameter string.  The format here is:
  *     key: [[kwd1, kwd2, ...], default-value]
  * where kwd1, kwd2, etc are possible parameter names for this field
  */
-export const urlArgDefaults = {
+export const urlArgDefaults: ArgDefaults = {
   // Query parameters
   after: [["start", "after", "date1", "a"], null],
   before: [["end", "before", "date2", "b"], null],
@@ -69,20 +92,21 @@ for (const [uKey, value] of urlArgs.entries()) {
  * Type (1) is more general and is meant to be used for long complex
  *   queries and those involving multiple users.
  *
- * @typedef {Object} dataQuery
- * @property {String} key - A lookup representing a query stored on the server
- * @property {String} userid - Identifier for the owner of the requested activities
- * @property {String} after - Start date
- * @property {String} before - End date
- * @property {String} ids - A string representing a list of activity ids
- * @property {Number} quantity
- * @property {String} queryType - "days", "activities", "dates", "ids", or "key"
  */
+interface QueryParameters {
+  userid?: string
+  queryType?: string //"days", "activities", "dates", "ids", or "key"
+  key?: string // A lookup representing a query stored on the server
+  after?: string // Start date
+  before?: string // End date
+  ids?: string //representing a list of activity ids
+  quantity?: number
+}
 
 /*
  * Ininitial query extracted from defaults and URL parameters
  */
-const qParamsInit = {
+const qParamsInit: QueryParameters = {
   userid: targetUserId,
   after: params.after,
   before: params.before,
@@ -106,10 +130,16 @@ qParamsInit.quantity =
 /*
  * Current values of query parameters in the DOM
  */
-export const qParams = BoundObject.fromObject(qParamsInit, { event: "change" })
+export const qParams = <QueryParameters>(
+  BoundObject.fromObject(qParamsInit, { event: "change" })
+)
 
-const afterDateElement = document.querySelector("[data-bind=after]"),
-  beforeDateElement = document.querySelector("[data-bind=before]")
+const afterDateElement: HTMLInputElement = document.querySelector(
+  "[data-bind=after]"
+)
+const beforeDateElement: HTMLInputElement = document.querySelector(
+  "[data-bind=before]"
+)
 
 // afterDateElement.max = today
 // beforeDateElement.min = today
@@ -122,24 +152,23 @@ qParams.onChange("before", (newDate) => {
 })
 
 /**
- * visual-parameters are those that determine what appears visually.
- *
- * @typedef {Object} visualParameters
- * @property {Number} zoom - map zoom level
- * @property {Array<Number>} center - map latitude, longitude
- * @property {Boolean} autozoom - Whether or not to automatically zoom
- *             to include all of the activities after render
- * @property {Number} c1 - Dot Constant C1
- * @property {Number} c2 - Dot Constant C2
- * @property {Number} sz - Dot Size
- * @property {String} geohash - An alternative indicator of map location
- * @property {Boolean} paused - Whether the animation is paused
- * @property {Boolean|Number} shadows - Whether dots have shadows
- *                                    (or shadow height)
- * @property {Boolean} paths - Whether to show paths
- * @property {Number} alpha - opacity of the vizualization over the map
- * @property {String} baselayer - The name of the current baselayer
+ * visual-parameters are those that determine what appears visually
  */
+
+interface VisualParams {
+  zoom?: number // map zoom level
+  center?: [number, number] // map latitude, longitude
+  geohash?: string // a string representing zoom/center
+  autozoom?: boolean // Whether or not to automatically zoom to include all of the activities after render
+  paused?: boolean // start in paused state
+  baselayer?: string // map background tile group name
+  tau?: number // timescale
+  T?: number // Period
+  sz?: number // Dot Size
+  alpha?: number // global alpha for all rendering
+  shadows?: boolean // render shadows under dots
+  paths?: boolean // show paths
+}
 
 function bool(val) {
   return val !== "0" && !!val
@@ -147,7 +176,7 @@ function bool(val) {
 /*
  * Ininitial visual parameters extracted from defaults and URL parameters
  */
-const vParamsInit = {
+const vParamsInit: VisualParams = {
   center: { lat: params["lat"], lng: params["lng"] },
   zoom: params["zoom"],
   geohash: params["geohash"],
@@ -166,7 +195,7 @@ const vParamsInit = {
 /*
  * The visual paramters for the current view
  */
-export const vParams = BoundObject.fromObject(vParamsInit, {
+export const vParams = <VisualParams>BoundObject.fromObject(vParamsInit, {
   // bind "change" events of any elements whos data-event attribute not set
   event: "change",
 })

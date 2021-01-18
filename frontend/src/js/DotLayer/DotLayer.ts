@@ -10,6 +10,8 @@ import { nextTask, sleep, nextAnimationFrame } from "../appUtil"
 import { vParams } from "../Model"
 // import * as WorkerPool from "./WorkerPool.js"
 
+import type { Map as LMap } from "leaflet"
+
 const DEBUG_BORDERS = true
 
 import {
@@ -28,17 +30,18 @@ const CONTINUOUS_PAN_REDRAWS = false
 const CONTINUOUS_PINCH_REDRAWS = true
 const MIN_REDRAW_DELAY = 50 // milliseconds
 
-let dotCanvas, pathCanvas, debugCanvas
+let dotCanvas: HTMLCanvasElement
+let pathCanvas: HTMLCanvasElement
+let debugCanvas: HTMLCanvasElement
 
 const dotCanvasPane = "shadowPane"
 const pathCanvasPane = "overlayPane"
 const debugCanvasPane = "overlayPane"
 
-let _map, _options
-let _ready
-
-let _gifPatch
-let _lastRedraw = 0
+let _map: LMap
+let _ready: boolean
+let _options
+let _gifPatch: boolean
 
 /*
  * Displays for debugging
@@ -73,7 +76,7 @@ export const DotLayer = Layer.extend({
   },
 
   //-------------------------------------------------------------
-  onAdd: function (map) {
+  onAdd: function (map: LMap) {
     _map = map
     ViewBox.canvases.length = 0
 
@@ -271,9 +274,9 @@ async function onMoveEnd() {
  * also recalibrating the position of the canvases
  * over the map pane
  */
-let _redrawing: Boolean
+let _redrawing: boolean
 let _currentTick = 0
-async function redraw(force?: Boolean) {
+async function redraw(force?: boolean) {
   if (!_ready) return
 
   const tick = ++_currentTick
@@ -367,7 +370,6 @@ function drawDotImageData() {
 
 async function drawDots(tsecs, drawDiff) {
   if (!_ready) return 0
-
   const pxg = dotCanvas.pxg
   if (_options.dotShadows.enabled && !pxg.drawBounds.isEmpty()) {
     const { x, y, w, h } = pxg.drawBounds.rect

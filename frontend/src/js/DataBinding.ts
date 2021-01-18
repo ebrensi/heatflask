@@ -1,8 +1,6 @@
 /**
- * DataBinding.js -- Lightweight data-binding
+ * DataBinding.ts -- Lightweight data-binding
  * Efrem Rensi 8/2020
- *
- * @module
  */
 
 /**
@@ -10,33 +8,34 @@
  *  {@see https://javascript.info/dom-attributes-and-properties#non-standard-attributes-dataset})
  * about DOM element properties vs attributes
  *  For "data-*" bindings use attribute.
- *
- * @typedef {Object} DOMbinding
- *
- * @param {HTMLElement} [element] - The DOM element
- *
- * @param {String} [selector] Optionally, a selector for the DOM element.
- *
- * @param {String} [attribute] - The DOM element attribute to bind. Note that
- *    property and attribute are mutually exclusive, with attribute preferred
- *    if it is present.
- *
- * @param {String} [property="value"] - The DOM element property to bind
- *                         (eg. "value", "checked", "href", "innerHTML", etc.)
- *
- * @param {String} [event] - The event on which to update the value
- *         (eg. "change", "keyup", etc). "none" is the same as not having an event.
- *
- * @param {function} [DOMformat] - A function that converts the varible value
- *                                    to be displayed in the DOM.
- *
- * @param {function} [varFormat] - A function that converts the DOM value to
- *                                    the variable value.
  */
+interface DOMBindingSpec {
+  element?: HTMLElement
+  selector?: string
+  attribute?: string
+  property?: string
+  event?: string
+  DOMformat?: (x: any) => string
+  varFormat?: (x: any) => string
+}
 
-const identity = (x) => x
+interface DOMBinding {
+  element: HTMLElement
+  attribute?: string
+  property?: string
+  format: (x: any) => string
+}
 
-function setAttribute(element, attribute, value) {
+type ObjectKey = string | number
+
+// A dummy function that returns its input
+const identity = (x: any): any => x
+
+function setAttribute(
+  element: HTMLElement,
+  attribute: string,
+  value?: unknown
+): void {
   if (value) {
     element.setAttribute(attribute, value)
   } else {
@@ -44,13 +43,14 @@ function setAttribute(element, attribute, value) {
   }
 }
 
-/* Replace any falsey values of obj with values from defaults.
- * This function possibly modifies obj.
+/*
+ * Create a clone of defaults, replaced by truthy values (or 0) from obj
  */
-function mergeDefaults(defaults, obj) {
-  const newObj = Object.assign({}, defaults)
+function mergeDefaults(defaults: Object, obj: Object): Object {
+  const newObj = Object.assign({}, defaults) // clone defaults
   for (const key in obj) {
-    if (obj[key]) {
+    const val = obj[key]
+    if (val || val === 0) {
       newObj[key] = obj[key]
     }
   }
@@ -66,13 +66,13 @@ function mergeDefaults(defaults, obj) {
  * @property value - The value of this bound variable
  */
 export class BoundVariable {
-  // #value is private.  We don't want the user accessing it directly
-  #value // eslint-disable-line
+  #value: any // eslint-disable-line
+  DOMbindings: DOMBinding[]
+  countDB: number
+  generalBindings: Array<(x: any) => any>
+  countGB: number
 
-  /**
-   * @param value An initial value
-   */
-  constructor(value) {
+  constructor(value?: any) {
     this.DOMbindings = []
     this.countDB = 0
 
@@ -82,14 +82,14 @@ export class BoundVariable {
     this.#value = value
   }
 
-  toString() {
+  toString(): string {
     return this.#value.toString()
   }
 
   /**
    * @return The current value of this variable
    */
-  get() {
+  get(): any {
     return this.#value
   }
 
@@ -97,7 +97,7 @@ export class BoundVariable {
    * Set a new value for this variable
    * @param newValue the new value
    */
-  set(newValue) {
+  set(newValue: any): void {
     this.#value = newValue
 
     // Update all bound DOM elments
@@ -119,20 +119,20 @@ export class BoundVariable {
     }
   }
 
-  get value() {
+  get value(): any {
     return this.#value
   }
 
-  set value(newValue) {
+  set value(newValue: any): void {
     this.set(newValue)
   }
 
   /**
    * Sync this value with an attribute of a DOM element.
    *
-   * @param {DOMbinding} DOMbinding - specs for the element to bind
+   * @param {DOMbinding} DOMbindingSpec - specs for the element to bind
    */
-  addDOMbinding(DOMbinding) {
+  addDOMbinding(DOMbindingSpec: DOMBindingSpec): BoundVariable {
     const {
       selector,
       element,
@@ -141,7 +141,7 @@ export class BoundVariable {
       DOMformat = identity,
       event,
       varFormat = identity,
-    } = DOMbinding
+    } = DOMbindingSpec
 
     const el = element || document.querySelector(selector)
 
@@ -156,12 +156,12 @@ export class BoundVariable {
     /* If an attribute is specified then it takes precedence over a property
      *   see https://javascript.info/dom-attributes-and-properties
      */
-    const accessor = attribute ? "attribute" : "property",
-      binding = {
-        element: el,
-        [accessor]: attribute || property,
-        format: DOMformat,
-      }
+    const accessor = attribute ? "attribute" : "property"
+    const binding = {
+      element: el,
+      [accessor]: attribute || property,
+      format: DOMformat,
+    }
 
     if (event && event !== "none") {
       const getValue = attribute
@@ -188,17 +188,17 @@ export class BoundVariable {
   }
 
   /**
-   * Call a function whenever
-   * this value changes.
-   *
-   * @param {function} func - A function that gets called when the
-   *   value of this property changes
+   * Call a specified function with the new value whenever this value changes.
    */
-  onChange(func) {
+  onChange(func: (x: any) => any): BoundVariable {
     this.generalBindings.push(func)
     this.countGB = this.generalBindings.length
     return this
   }
+}
+
+interface BO {
+  [prop: string]: BoundVariable
 }
 
 /**
@@ -218,6 +218,8 @@ export class BoundVariable {
  *  @param {Object} binds - The {@BoundVariable}s referenced by key.
  */
 export class BoundObject extends Object {
+  boundVariables: BO
+
   constructor() {
     super()
     this.boundVariables = {}
@@ -231,7 +233,7 @@ export class BoundObject extends Object {
    * @param {String|Number} key - The "property" name
    * @param value - An existing {@link BoundVariable} object.
    */
-  addBoundVariable(key, bv) {
+  addBoundVariable(key: ObjectKey, bv: BoundVariable): BoundVariable {
     this.boundVariables[key] = bv
 
     Object.defineProperty(this, key, {
@@ -256,17 +258,15 @@ export class BoundObject extends Object {
    * @param value - Initial value for the new
    *                "property" {@link BoundVariable} object.
    */
-  addProperty(key, value) {
+  addProperty(key: ObjectKey, value?: any): BoundVariable {
     return this.addBoundVariable(key, new BoundVariable(value))
   }
 
   /**
    * Add a DOM binding to one of the properties
-   * @param {String|Number} key
-   * @param {DOMbinding} binding
    */
-  addDOMbinding(key, DOMbinding) {
-    return this.boundVariables[key].addDOMbinding(DOMbinding)
+  addDOMbinding(key: ObjectKey, DOMbindingSpec: DomBindingSpec): BoundVariable {
+    return this.boundVariables[key].addDOMbinding(DOMbindingSpec)
   }
 
   /**
@@ -281,13 +281,13 @@ export class BoundObject extends Object {
    * If key is not specified, func takes two arguments, the property
    * that has changed, and the new value.
    */
-  onChange(key, func) {
+  onChange(key: ObjectKey, func: (x: any) => any): BoundVariable | void {
     if (func) {
       return this.boundVariables[key].onChange(func)
     } else {
       func = key
       for (const [prop, bv] of Object.entries(this.boundVariables)) {
-        bv.onChange((newVal) => func(prop, newVal))
+        bv.onChange((newVal) => func(newVal))
       }
     }
   }
@@ -295,7 +295,7 @@ export class BoundObject extends Object {
   /**
    * Add new properties or DOM bindings to existing properties from a regular Object.
    *  Each property possibly is bound to a DOM element.
-   *  i.e. if obj["key"] and a DOM element with data-bind="key" both
+   *  i.e. if obj["key"] and a DOM element with data-bi`nd="key" both
    *  exist then the "key" property is bound with that element.
    *
    * @param  {Object} obj
@@ -303,7 +303,7 @@ export class BoundObject extends Object {
    *    that are not specified in the HTML data-* attributes.
    * @return {BoundObject}
    */
-  addFromObject(obj, defaults = {}) {
+  addFromObject(obj: Object, defaults: DOMBindingSpec = {}): BoundObject {
     for (const [key, val] of Object.entries(obj)) {
       const bv = this.boundVariables[key] || this.addProperty(key, val),
         elements = document.querySelectorAll(`[data-bind=${key}]`)
@@ -332,7 +332,10 @@ export class BoundObject extends Object {
    *    that are not specified in the HTML data-* attributes.
    * @return {@BoundObject}
    */
-  addFromDOMelements(selector, defaults = {}) {
+  addFromDOMelements(
+    selector: string,
+    defaults: DOMBindingSpec = {}
+  ): BoundObject {
     for (const el of document.querySelectorAll(selector)) {
       const { bind: key, attr, prop, event } = el.dataset
       const bv = this.boundVariables[key] || this.addProperty(key)
@@ -344,7 +347,7 @@ export class BoundObject extends Object {
           element: el,
           attribute: attr,
           property: prop,
-          event: el.dataset.event,
+          event: event,
         })
       )
     }
@@ -362,7 +365,7 @@ export class BoundObject extends Object {
    *    that are not specified in the HTML data-* attributes.
    * @return {BoundObject}
    */
-  static fromObject(...args) {
+  static fromObject(...args): BoundObject {
     const bObj = new BoundObject()
     return bObj.addFromObject(...args)
   }
@@ -376,7 +379,7 @@ export class BoundObject extends Object {
    *    that are not specified in the HTML data-* attributes.
    * @return {@BoundObject}
    */
-  static fromDOMelements(...args) {
+  static fromDOMelements(...args): BoundObject {
     const bObj = new BoundObject()
     return bObj.addFromDOMelements(...args)
   }
@@ -385,7 +388,7 @@ export class BoundObject extends Object {
    * @return {Object} -- A regular Object "snapshot"
    * of this {@link BoundBoject}
    */
-  toObject() {
+  toObject(): Object {
     return Object.assign({}, this)
   }
 }

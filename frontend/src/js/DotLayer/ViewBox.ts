@@ -9,23 +9,14 @@ import { DomUtil, Control } from "../myLeaflet"
 import { MAP_INFO } from "../Env"
 import { Bounds } from "../appUtil"
 
-// type TransformData = [number, number, number, number]
-// type TransformFunc = (x: [number, number]) => [number, number]
-// type Point = {
-//   x: number
-//   y: number
-//   subtract: (p: Point) => Point
-//   multiplyBy: (c: number) => Point
-//   round: () => Point
-// }
-// type Bounds = {
-//   _bounds: [number, number, number, number]
-//   update: (x: number, y: number) => void
-// }
-// type rect = { x: number; y: number; w: number; h: number }
-// type LatLamg = { lat: number; lng: number }
+import type { Map as LMap, Point, LatLng, LatLngBounds } from "leaflet"
 
-let _map
+type ctxOrCanvas = CanvasRenderingContext2D | HTMLCanvasElement
+type TransformData = [number, number, number, number]
+type TransformFunc = (x: [number, number]) => [number, number]
+type rect = { x: number; y: number; w: number; h: number }
+
+let _map: LMap
 let _baseTranslation: Point
 let _pxOrigin: Point
 let _pxOffset: Point
@@ -69,7 +60,7 @@ export const latLng2px: TransformFunc = makePT(0)
  * TODO: Find a way to elimintate the need for this.  We do it this way
  * for now, to avoid the circular dependency if we import map from ../mapAPI.js
  */
-export function setMap(map) {
+export function setMap(map: LMap): void {
   _map = map
   if (MAP_INFO) {
     new InfoViewer().addTo(map)
@@ -119,7 +110,7 @@ export function update() {
  * update our internal bounds with those from the associated map
  * @return {Boolean} whether the bounds have changed
  */
-export function updateBounds() {
+export function updateBounds(): Bounds {
   const latLngMapBounds = _map.getBounds()
   return latLng2pxBounds(latLngMapBounds, _pxBounds)
 }
@@ -155,7 +146,7 @@ export function setCSStransform(offset: Point, scale?: number): void {
   for (let i = 0; i < _canvases.length; i++) {
     DomUtil.setTransform(_canvases[i], offset, scale)
   }
-  _lastT = offset
+  // _lastT = offset
   // console.log(`transform: ${scale}, (${offset.x}, ${offset.y})`)
 }
 
@@ -191,7 +182,7 @@ export function calibrate(): Point {
 }
 
 // Display some debug info on the screen
-function updateDebugDisplay() {
+function updateDebugDisplay(): void {
   if (MAP_INFO && _pxOffset) {
     const { x: ox, y: oy } = _pxOffset.round()
     const { x: tx, y: ty } = _baseTranslation
@@ -206,7 +197,10 @@ function updateDebugDisplay() {
 
 // returns an ActivityBounds object (Float32Array) representing a
 // bounding box in absolute px coordinates
-export function latLng2pxBounds(llBounds, boundsObj: Bounds) {
+export function latLng2pxBounds(
+  llBounds: LatLngBounds,
+  boundsObj: Bounds
+): Bounds {
   boundsObj = boundsObj ? boundsObj.reset() : new Bounds()
 
   const { _southWest: sw, _northEast: ne } = llBounds
@@ -217,10 +211,8 @@ export function latLng2pxBounds(llBounds, boundsObj: Bounds) {
 }
 
 // Draw the outline of arbitrary rect object in screen coordinates
-export function draw(ctxOrCanvas, rect: rect, label: string) {
-  const ctx = ctxOrCanvas.getContext
-    ? ctxOrCanvas.getContext("2d")
-    : ctxOrCanvas
+export function draw(obj: ctxOrCanvas, rect: rect, label: string): void {
+  const ctx = obj instanceof HTMLCanvasElement ? obj.getContext("2d") : obj
   const { x: mw, y: mh } = getSize()
   const { x, y, w, h } = rect || { x: 0, y: 0, w: mw, h: mh }
   ctx.strokeRect(x, y, w, h)
@@ -228,13 +220,13 @@ export function draw(ctxOrCanvas, rect: rect, label: string) {
 }
 
 // clear the entire ViewBox (for a given context)
-export function clear(ctx) {
+export function clear(ctx: CanvasRenderingContext2D): void {
   const { x: w, y: h } = getSize()
   ctx.clearRect(0, 0, w, h)
 }
 
 // Debug info box
-let _infoBox
+let _infoBox: HTMLDivElement
 const InfoViewer = Control.extend({
   onAdd: function () {
     _infoBox = DomUtil.create("div")

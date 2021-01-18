@@ -35,10 +35,10 @@ export class myImageData extends ImageData {
   drawBounds: tuple4
   transform: tuple4
 
-  constructor(w: number, h: number) {
+  constructor(...args: any[]) {
+    super(...args)
     this.drawBounds = [NaN, NaN, NaN, NaN]
     this.transform = [1, 0, 1, 0]
-    super(w, h)
   }
 }
 
@@ -51,15 +51,18 @@ export class PixelGraphics {
   lineWidth: number
   debugCanvas?: HTMLCanvasElement
 
-  constructor(imageData?: myImageData) {
+  constructor(imageData?: myImageData | ImageData) {
     this.color32 = rgbaToUint32(0, 0, 0, 255) // default color is black
     this.lineWidth = 1
     this.drawBounds = new Bounds()
 
     if (imageData) {
-      // if (!imageData.transform) imageData.transform = [1, 0, 1, 0]
-      if (!imageData.drawBounds) imageData.drawBounds = this.drawBounds.data
-      this.imageData = imageData // note that this is a setter call
+      if (imageData instanceof myImageData) {
+        this.imageData = imageData // note that this is a setter call
+      } else {
+        const { data, width } = imageData
+        this.imageData = new myImageData(data, width)
+      }
     }
   }
 
@@ -422,14 +425,14 @@ export class PixelGraphics {
 
   putImageData(obj: CanvasOrCtx): void {
     if (this.drawBounds.isEmpty()) return
-    const ctx = obj.getContext ? obj.getContext("2d") : obj
+    const ctx = obj instanceof HTMLCanvasElement ? obj.getContext("2d") : obj
     const { x, y, w, h } = this.drawBounds.rect
     ctx.putImageData(this.imageData, 0, 0, x, y, w, h)
   }
 
   async drawImageData(obj: CanvasOrCtx): Promise<void> {
     if (this.drawBounds.isEmpty()) return
-    const ctx = obj.getContext ? obj.getContext("2d") : obj
+    const ctx = obj instanceof HTMLCanvasElement ? obj.getContext("2d") : obj
     const { x, y, w, h } = this.drawBounds.rect
     const img = await createImageBitmap(this.imageData, x, y, w, h)
     ctx.drawImage(img, x, y)
@@ -456,7 +459,7 @@ export function drawDebugBox(
   label: string
 ): void {
   if (!rect) return
-  const ctx = obj.hasOwnProperty("getContext") ? obj.getContext("2d") : obj
+  const ctx = obj instanceof HTMLCanvasElement ? obj.getContext("2d") : obj
   const { x, y, w, h } = rect
   ctx.strokeRect(x, y, w, h)
   if (label) ctx.fillText(label, x + 20, y + 20)
