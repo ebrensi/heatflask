@@ -243,11 +243,13 @@ async function onResize(): Promise<void> {
 /*
  * This gets called continuously as the user moves the touchscreen by pinching
  */
+let _pinching = false
 async function onZoom(e) {
   if (!_map || !ViewBox.zoomLevel) return
   // console.log("onZoom")
 
-  if (e.pinch || e.flyTo) {
+  _pinching = e.pinch || e.flyTo
+  if (_pinching) {
     const z = _map.getZoom()
     const scale = _map.getZoomScale(z, ViewBox.zoom)
     const trans = _map.latLngToLayerPoint(ViewBox.ll0)
@@ -261,7 +263,7 @@ async function onZoom(e) {
  */
 async function onMove() {
   // console.log("onMove")
-  await redraw()
+  await redraw(_pinching)
 }
 
 /*
@@ -272,6 +274,7 @@ let _moveEnd: boolean
 async function onMoveEnd() {
   // console.log("onMoveEnd")
   _moveEnd = true
+  _pinching = false
   await redraw(true)
 }
 
@@ -327,11 +330,11 @@ async function redraw(force?: boolean) {
     }
   }
 
+  const fullRedraw = zoomChanged > 1 || FORCE_FULL_REDRAW || force
+
   // reset the canvases to to align with the screen and update the ViewBox
   // location relative to the map's pxOrigin
   const shift = ViewBox.calibrate()
-
-  const fullRedraw = zoomChanged > 1 || FORCE_FULL_REDRAW || force
 
   if (!fullRedraw) {
     if (_options.showPaths) {
