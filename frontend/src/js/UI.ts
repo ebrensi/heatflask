@@ -11,9 +11,9 @@ import { targetUser, currentUser, vParams, qParams, flags } from "./Model"
  *  then it will end up requiring itself.
  */
 import "./URL"
-import { getBounds, map } from "./MapAPI"
+import { map } from "./MapAPI"
 
-import { items } from "./DotLayer/ActivityCollection"
+import * as ActivityCollection from "./DotLayer/ActivityCollection"
 
 import { dotLayer } from "./DotLayerAPI"
 // import { captureCycle, abortCapture } from "./DotLayer/Export"
@@ -180,7 +180,7 @@ function renderFromQuery() {
   const query = {
     [qParams.userid]: getCurrentQuery(),
   }
-  console.log(`making query: ${JSON.stringify(query)}`)
+  // console.log(`making query: ${JSON.stringify(query)}`)
 
   makeQuery(query, () => {
     flags.importing = false
@@ -193,22 +193,22 @@ function renderFromQuery() {
   })
 }
 
-export function openSelected() {
+export function openSelected(): void {
   const ids = Array.from(items.values())
     .filter((A) => A.selected)
     .map((A) => A.id)
 
   if (ids.length) {
     const argString = getUrlString({ id: ids.join("+") })
-    let url = targetUser.id + argString
+    const url = targetUser.id + argString
     window.open(url, "_blank")
   }
 }
 
 /* Rendering */
-function updateLayers() {
+async function updateLayers(): Promise<void> {
   if (vParams.autozoom) {
-    const totalBounds = getBounds()
+    const totalBounds = await ActivityCollection.getLatLngBounds()
 
     if (totalBounds.isValid()) {
       map.fitBounds(totalBounds)

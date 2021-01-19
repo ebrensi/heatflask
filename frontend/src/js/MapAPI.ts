@@ -7,14 +7,7 @@
 import { MAPBOX_ACCESS_TOKEN, OFFLINE, MAP_INFO } from "./Env"
 import Geohash from "latlon-geohash"
 
-import {
-  Map,
-  control,
-  Control,
-  DomUtil,
-  LatLng,
-  LatLngBounds,
-} from "./myLeaflet"
+import { Map, control, Control, DomUtil, LatLng } from "./myLeaflet"
 
 // For ctrl-select
 import "./BoxHook"
@@ -24,7 +17,7 @@ import "../../node_modules/leaflet-areaselect/src/leaflet-areaselect"
 import "../../node_modules/sidebar-v2/js/leaflet-sidebar"
 import { tileLayer } from "./TileLayer/TileLayer.Heatflask"
 import { flags, vParams, currentUser } from "./Model"
-import { items } from "./DotLayer/ActivityCollection"
+import * as ActivityCollection from "./DotLayer/ActivityCollection"
 import { HHMMSS, queueTask } from "./appUtil"
 import strava_logo from "url:../images/pbs4.png"
 import heatflask_logo from "url:../images/logo.png"
@@ -285,31 +278,10 @@ export function activityDataPopup(A: Activity, latlng: LatLng): void {
   map.openPopup(popupContent, latlng, { closeButton: false })
 }
 
-export function getBounds(ids) {
-  const bounds = new LatLngBounds()
-  if (ids) {
-    for (const id of ids) {
-      bounds.extend(items.get(id).llBounds)
-    }
-  } else {
-    for (const A of items.values()) {
-      bounds.extend(A.llBounds)
-    }
-  }
-  return bounds
-}
-
-export function zoomToSelectedPaths() {
+export async function zoomToSelectedPaths(): Promise<void> {
   // Pan-Zoom to fit all selected activities
-  const selection_bounds = new LatLngBounds()
-  for (const A of items.values()) {
-    if (A.selected) {
-      selection_bounds.extend(A.llBounds)
-    }
-  }
-  if (selection_bounds.isValid()) {
-    map.fitBounds(selection_bounds)
-  }
+  const bounds = await ActivityCollection.getSelectedLatLngBounds()
+  if (bounds) map.fitBounds(bounds)
 }
 
 flags.onChange("zoomToSelection", zoomToSelectedPaths)

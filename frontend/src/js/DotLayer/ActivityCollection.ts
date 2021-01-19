@@ -10,7 +10,10 @@ import { options } from "./Defaults"
 import { BitSet } from "../BitSet"
 import { queueTask, nextTask } from "../appUtil"
 import { PixelGraphics } from "./PixelGraphics"
+import { LatLngBounds } from "../myLeaflet"
+
 import type { Bounds } from "../appUtil"
+import type { myImageData } from "./PixelGraphics"
 
 export const items: Map<number, Activity> = new Map()
 export const pxg = new PixelGraphics()
@@ -130,6 +133,33 @@ export function* inPxBounds(pxBounds: Bounds): IterableIterator<Activity> {
   }
 }
 
+export async function getLatLngBounds(
+  ids?: Iterable<number>
+): Promise<LatLngBounds> {
+  const bounds = new LatLngBounds()
+
+  if (ids) {
+    for (const id of ids) {
+      bounds.extend(items.get(id).llBounds)
+    }
+  } else {
+    for (const A of items.values()) {
+      bounds.extend(A.llBounds)
+    }
+  }
+  if (bounds.isValid()) return bounds
+}
+
+export async function getSelectedLatLngBounds(): Promise<LatLngBounds> {
+  const bounds = new LatLngBounds()
+  for (const A of items.values()) {
+    if (A.selected) {
+      bounds.extend(A.llBounds)
+    }
+  }
+  if (bounds.isValid()) return bounds
+}
+
 /*
  * Clear all segMasks and force rebuilding them
  */
@@ -146,7 +176,12 @@ const drawSegFunc = (x0: number, y0: number, x1: number, y1: number) => {
   pxg.drawSegment(x0, y0, x1, y1)
 }
 
-export function drawPaths(imageData: myImageData, drawDiff: boolean): number {
+type drawOutput = { imageData: myImageData; count: number }
+
+export async function drawPaths(
+  imageData: myImageData,
+  drawDiff: boolean
+): Promise<drawOutput> {
   if (pxg.imageData !== imageData) pxg.imageData = imageData
 
   if (!drawDiff && !pxg.drawBounds.isEmpty()) pxg.clear()
@@ -168,28 +203,28 @@ export function drawPaths(imageData: myImageData, drawDiff: boolean): number {
 
     count += A.forEachSegment(drawSegFunc, drawDiff)
   })
-  if (pxg.drawBounds.isEmpty()) return 0
-
-  // add padding to the bounds, but only if they have changed.
-  // This prevents ever-increasing bounds
-  const newArea = (bounds[2] - bounds[0]) * (bounds[3] - bounds[1])
-  if (newArea !== oldArea) {
-    const [xmin, ymin, xmax, ymax] = bounds
-    pxg.drawBounds.update(...pxg.clip(xmin - maxLW, ymin - maxLW))
-    pxg.drawBounds.update(...pxg.clip(xmax + maxLW, ymax + maxLW))
+  if (!pxg.drawBounds.isEmpty()) {
+    // add padding to the bounds, but only if they have changed.
+    // This prevents ever-increasing bounds
+    const newArea = (bounds[2] - bounds[0]) * (bounds[3] - bounds[1])
+    if (newArea !== oldArea) {
+      const [xmin, ymin, xmax, ymax] = bounds
+      pxg.drawBounds.update(...pxg.clip(xmin - maxLW, ymin - maxLW))
+      pxg.drawBounds.update(...pxg.clip(xmax + maxLW, ymax + maxLW))
+    }
   }
 
-  return count
+  return { count, imageData }
 }
 
-export function drawDots(
+export async function drawDots(
   imageData: myImageData,
   dotSize: number,
   T: number,
   timeScale: number,
   tsecs: number,
   drawDiff: boolean
-): number {
+): Promise<drawOutput> {
   if (pxg.imageData !== imageData) pxg.imageData = imageData
 
   if (!drawDiff && !pxg.drawBounds.isEmpty()) pxg.clear()
@@ -207,17 +242,18 @@ export function drawDots(
     const drawFunc = A.selected ? circle : square
     count += A.forEachDot(drawFunc, tsecs, T, timeScale, drawDiff)
   })
-  if (pxg.drawBounds.isEmpty()) return 0
 
-  const newArea = (bounds[2] - bounds[0]) * (bounds[3] - bounds[1])
+  if (!pxg.drawBounds.isEmpty()) {
+    const newArea = (bounds[2] - bounds[0]) * (bounds[3] - bounds[1])
 
-  // add padding to the bounds, but only if they have changed.
-  // This prevents ever-increasing bounds
-  if (newArea !== oldArea) {
-    const [xmin, ymin, xmax, ymax] = bounds
-    pxg.drawBounds.update(...pxg.clip(xmin - 10, ymin - 10))
-    pxg.drawBounds.update(...pxg.clip(xmax + 20, ymax + 20))
+    // add padding to the bounds, but only if they have changed.
+    // This prevents ever-increasing bounds
+    if (newArea !== oldArea) {
+      const [xmin, ymin, xmax, ymax] = bounds
+      pxg.drawBounds.update(...pxg.clip(xmin - 10, ymin - 10))
+      pxg.drawBounds.update(...pxg.clip(xmax + 20, ymax + 20))
+    }
   }
 
-  return count
+  return { count, imageData }
 }

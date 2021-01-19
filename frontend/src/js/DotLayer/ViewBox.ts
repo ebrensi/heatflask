@@ -156,7 +156,7 @@ export function setCSStransform(offset: Point, scale?: number): void {
   _lastT.x = offset.x
   _lastT.y = offset.y
 
-  console.log(`transform: ${scale}, (${offset.x}, ${offset.y})`)
+  // console.log(`transform: ${scale}, (${offset.x}, ${offset.y})`)
 }
 
 /*

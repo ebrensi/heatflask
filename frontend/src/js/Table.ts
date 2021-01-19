@@ -142,7 +142,7 @@ headerRow.addEventListener("click", (e) => {
 /**
  * Update the table (after adding or removing rows)
  */
-export async function update(remake: boolean): Promise<void> {
+export async function update(remake?: boolean): Promise<void> {
   for (const A of items.values()) {
     if (!A.tr || remake) {
       queueTask(() => {

@@ -1,5 +1,5 @@
 /*
-  DotLayer Efrem Rensi, 2020,
+  DotLayer Efrem Rensi, 2020 - 2021
 */
 import { Layer, DomUtil, Browser, setOptions, Control } from "../myLeaflet"
 import * as ViewBox from "./ViewBox"
@@ -10,25 +10,24 @@ import { nextTask, sleep, nextAnimationFrame } from "../appUtil"
 import { vParams } from "../Model"
 // import * as WorkerPool from "./WorkerPool.js"
 
-import type { Map as LMap } from "leaflet"
-
-const DEBUG_BORDERS = true
-
 import {
   options as defaultOptions,
   dotSettings as _dotSettings,
 } from "./Defaults"
 
+import type { Map as LMap } from "leaflet"
+
 export { _dotSettings as dotSettings }
 
+const DEBUG_BORDERS = true
 const TARGET_FPS = 30
 /* In order to prevent path redraws from happening too often
  * and hogging up CPU cycles we set a minimum delay between redraws
  */
 const FORCE_FULL_REDRAW = false
-const CONTINUOUS_PAN_REDRAWS = false
+const CONTINUOUS_PAN_REDRAWS = true
 const CONTINUOUS_PINCH_REDRAWS = true
-const MIN_REDRAW_DELAY = 10 // milliseconds
+const MIN_REDRAW_DELAY = 100 // milliseconds
 
 let dotCanvas: HTMLCanvasElement
 let pathCanvas: HTMLCanvasElement
@@ -46,7 +45,7 @@ let _gifPatch: boolean
 /*
  * Displays for debugging
  */
-let _infoBox: HTMLElement
+let _infoBox: HTMLDivElement
 const InfoViewer = Control.extend({
   onAdd: function () {
     _infoBox = DomUtil.create("div")
@@ -114,18 +113,19 @@ export const DotLayer = Layer.extend({
     }
   },
 
-  addTo: function (map) {
+  addTo: function (map: LMap) {
     map.addLayer(this)
     return this
   },
 
   //-------------------------------------------------------------
-  onRemove: function (map) {
-    map._panes[dotCanvasPane].removeChild(dotCanvas)
-    map._panes[pathCanvasPane].removeChild(pathCanvas)
+  onRemove: function (map: LMap) {
+    const panes = _map.getPanes()
+    panes[dotCanvasPane].removeChild(dotCanvas)
+    panes[pathCanvasPane].removeChild(pathCanvas)
 
     if (DEBUG_BORDERS) {
-      map._panes[debugCanvasPane].removeChild(debugCanvas)
+      panes[debugCanvasPane].removeChild(debugCanvas)
       debugCanvas = null
     }
 
@@ -135,7 +135,7 @@ export const DotLayer = Layer.extend({
   // -------------------------------------------------------------------
 
   // Call this function after items are added or removed
-  reset: async function () {
+  reset: async function (): Promise<void> {
     if (!ActivityCollection.items.size) return
 
     _ready = false
@@ -181,6 +181,7 @@ function addCanvasOverlay(pane: string): HTMLCanvasElement {
   return canvas
 }
 
+// Define handlers for leaflet events
 function assignEventHandlers() {
   const events = {
     moveend: onMoveEnd,
@@ -195,7 +196,7 @@ function assignEventHandlers() {
   return events
 }
 
-function dotCtxUpdate() {
+function dotCtxUpdate(): void {
   const ctx = dotCanvas.getContext("2d")
   if (_options.dotShadows.enabled) {
     const shadowOpts = _options.dotShadows
@@ -211,7 +212,7 @@ function dotCtxUpdate() {
   }
 }
 
-async function onResize() {
+async function onResize(): Promise<void> {
   const newMapSize = _map.getSize()
   const { x, y } = newMapSize
   const { width, height } = dotCanvas
@@ -244,13 +245,13 @@ async function onResize() {
  */
 async function onZoom(e) {
   if (!_map || !ViewBox.zoomLevel) return
-  console.log("onZoom")
+  // console.log("onZoom")
 
   if (e.pinch || e.flyTo) {
     const z = _map.getZoom()
     const scale = _map.getZoomScale(z, ViewBox.zoom)
     const trans = _map.latLngToLayerPoint(ViewBox.ll0)
-    console.log(`pinch transform ${scale}, ${trans.x}, ${trans.y}`)
+    // console.log(`pinch transform ${scale}, ${trans.x}, ${trans.y}`)
     ViewBox.setCSStransform(trans, scale)
   }
 }
@@ -259,7 +260,7 @@ async function onZoom(e) {
  * This gets called continuously as the user pans or zooms (without pinch)
  */
 async function onMove() {
-  console.log("onMove")
+  // console.log("onMove")
   await redraw()
 }
 
@@ -269,7 +270,7 @@ async function onMove() {
  */
 let _moveEnd: boolean
 async function onMoveEnd() {
-  console.log("onMoveEnd")
+  // console.log("onMoveEnd")
   _moveEnd = true
   await redraw(true)
 }
@@ -301,7 +302,7 @@ async function redraw(force?: boolean) {
 
   _redrawing = true
 
-  console.log(`tick: ${_currentTick}`)
+  // console.log(`tick: ${_currentTick}`)
 
   const zoomChanged = ViewBox.updateZoom()
   const boundsChanged = ViewBox.updateBounds()
@@ -311,8 +312,6 @@ async function redraw(force?: boolean) {
     _redrawing = false
     return
   }
-
-  const fullRedraw = zoomChanged || FORCE_FULL_REDRAW || force
 
   /* Erase the path and dot canvases, using their respective
    * drawBounds rectangles. The underlying imageData buffers are
@@ -331,6 +330,8 @@ async function redraw(force?: boolean) {
   // reset the canvases to to align with the screen and update the ViewBox
   // location relative to the map's pxOrigin
   const shift = ViewBox.calibrate()
+
+  const fullRedraw = zoomChanged > 1 || FORCE_FULL_REDRAW || force
 
   if (!fullRedraw) {
     if (_options.showPaths) {
@@ -369,7 +370,11 @@ async function drawPaths(forceFullRedraw) {
   if (!_ready) return 0
   const drawDiff = !forceFullRedraw
   const pxg = pathCanvas.pxg
-  const count = ActivityCollection.drawPaths(pxg.imageData, drawDiff)
+  const { count, imageData } = await ActivityCollection.drawPaths(
+    pxg.imageData,
+    drawDiff
+  )
+  pxg.imageData = imageData
   drawPathImageData()
 }
 
@@ -389,7 +394,7 @@ async function drawDots(tsecs, drawDiff) {
     dotCanvas.getContext("2d").clearRect(x, y, w, h)
   }
 
-  const count = ActivityCollection.drawDots(
+  const { count, imageData } = await ActivityCollection.drawDots(
     pxg.imageData,
     +vParams.sz,
     +vParams.T,
@@ -397,6 +402,7 @@ async function drawDots(tsecs, drawDiff) {
     tsecs,
     drawDiff
   )
+  pxg.imageData = imageData
   drawDotImageData()
 
   if (DEBUG_BORDERS) drawBoundsBoxes()
