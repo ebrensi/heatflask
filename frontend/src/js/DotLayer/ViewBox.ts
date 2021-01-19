@@ -20,7 +20,7 @@ const BOUNDSTOL = 0.000001
 
 let _map: LMap
 let _baseTranslation: Point
-let _lastT = new Point(0,0)
+let _lastT = new Point(0, 0)
 let _pxOrigin: Point
 let _pxOffset: Point
 let _mapPanePos: Point
