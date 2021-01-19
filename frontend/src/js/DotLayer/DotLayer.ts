@@ -28,7 +28,7 @@ const TARGET_FPS = 30
 const FORCE_FULL_REDRAW = false
 const CONTINUOUS_PAN_REDRAWS = false
 const CONTINUOUS_PINCH_REDRAWS = true
-const MIN_REDRAW_DELAY = 50 // milliseconds
+const MIN_REDRAW_DELAY = 10 // milliseconds
 
 let dotCanvas: HTMLCanvasElement
 let pathCanvas: HTMLCanvasElement
@@ -244,13 +244,14 @@ async function onResize() {
  */
 async function onZoom(e) {
   if (!_map || !ViewBox.zoomLevel) return
+  console.log("onZoom")
 
   if (e.pinch || e.flyTo) {
     const z = _map.getZoom()
     const scale = _map.getZoomScale(z, ViewBox.zoom)
     const trans = _map.latLngToLayerPoint(ViewBox.ll0)
+    console.log(`pinch transform ${scale}, ${trans.x}, ${trans.y}`)
     ViewBox.setCSStransform(trans, scale)
-    // console.log(`${trans.x.toFixed(4)}, ${trans.y.toFixed(4)}`)
   }
 }
 
@@ -258,6 +259,7 @@ async function onZoom(e) {
  * This gets called continuously as the user pans or zooms (without pinch)
  */
 async function onMove() {
+  console.log("onMove")
   await redraw()
 }
 
@@ -265,7 +267,10 @@ async function onMove() {
  * This gets called after a pan or zoom is done.
  * Leaflet moves the pixel origin so we need to reset the CSS transform
  */
+let _moveEnd: boolean
 async function onMoveEnd() {
+  console.log("onMoveEnd")
+  _moveEnd = true
   await redraw(true)
 }
 
@@ -276,6 +281,7 @@ async function onMoveEnd() {
  */
 let _redrawing: boolean
 let _currentTick = 0
+
 async function redraw(force?: boolean) {
   if (!_ready) return
 
@@ -283,23 +289,24 @@ async function redraw(force?: boolean) {
 
   await sleep(MIN_REDRAW_DELAY)
 
+  _moveEnd = false
+
   if (tick !== _currentTick) {
-    // console.log(tick)
     return
   }
 
   while (_redrawing) {
-    // console.log("awaiting")
     await nextTask()
   }
 
   _redrawing = true
 
-  // reset the canvases to to align with the screen and update the ViewBox
-  // location relative to the map's pxOrigin
-  const { pxBounds, zoomChanged, shift } = ViewBox.update()
+  console.log(`tick: ${_currentTick}`)
 
-  if (!force && shift && !shift.x && !shift.y && !zoomChanged) {
+  const zoomChanged = ViewBox.updateZoom()
+  const boundsChanged = ViewBox.updateBounds()
+
+  if (!force && !boundsChanged && !zoomChanged) {
     console.log("redraw: nothing to do!")
     _redrawing = false
     return
@@ -307,9 +314,10 @@ async function redraw(force?: boolean) {
 
   const fullRedraw = zoomChanged || FORCE_FULL_REDRAW || force
 
-  // Erase the path and dot canvases, using their respective
-  //  drawBounds rectangles. The underlying imageData buffers are
-  //  still intact though
+  /* Erase the path and dot canvases, using their respective
+   * drawBounds rectangles. The underlying imageData buffers are
+   *  still intact though
+   */
   for (const canvas of [pathCanvas, dotCanvas]) {
     const pxg = canvas.pxg
     pxg.transform = ViewBox.transform
@@ -320,18 +328,23 @@ async function redraw(force?: boolean) {
     }
   }
 
+  // reset the canvases to to align with the screen and update the ViewBox
+  // location relative to the map's pxOrigin
+  const shift = ViewBox.calibrate()
+
   if (!fullRedraw) {
     if (_options.showPaths) {
       pathCanvas.pxg.translate(shift.x, shift.y)
-      pathCanvas.pxg.putImageData(pathCanvas)
+      // pathCanvas.pxg.putImageData(pathCanvas)
     }
     if (_paused) {
       dotCanvas.pxg.translate(shift.x, shift.y)
-      dotCanvas.pxg.putImageData(dotCanvas)
+      // dotCanvas.pxg.putImageData(dotCanvas)
     }
   }
 
-  await ActivityCollection.updateContext(pxBounds, ViewBox.zoomLevel)
+  const { pxBounds, zoomLevel } = ViewBox
+  await ActivityCollection.updateContext(pxBounds, zoomLevel)
 
   if (_options.showPaths) {
     drawPaths(fullRedraw)
@@ -482,6 +495,7 @@ async function animate() {
 }
 
 function animateZoom(e) {
+  if (_moveEnd) return // prevents weird animation on moveEnd.
   const m = _map
   const z = e.zoom
   const scale = m.getZoomScale(z)

@@ -242,6 +242,29 @@ export class Bounds {
     return x2 >= xmin && x1 <= xmax && y2 >= ymin && y1 <= ymax
   }
 
+  /**
+   * Euclidean distance between two bounds
+   */
+  dist(otherBoundsObj: Bounds): number {
+    const b = this._bounds
+    const o = otherBoundsObj._bounds
+    return Math.sqrt(
+      (b[0] - o[0]) ** 2 +
+        (b[1] - o[1]) ** 2 +
+        (b[2] - o[2]) ** 2 +
+        (b[3] - o[3]) ** 2
+    )
+  }
+
+  copyTo(otherBoundsObj: Bounds): void {
+    const b = this._bounds
+    const o = otherBoundsObj._bounds
+    o[0] = b[0]
+    o[1] = b[1]
+    o[2] = b[2]
+    o[3] = b[3]
+  }
+
   get rect(): RectObj {
     const [xmin, ymin, xmax, ymax] = this._bounds
     return { x: xmin, y: ymin, w: xmax - xmin, h: ymax - ymin }

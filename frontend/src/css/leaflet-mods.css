@@ -8,6 +8,13 @@
   will-change: auto !important;
 }
 
+/* Disable the stupid zoom animations */
+.leaflet-zoom-anim .leaflet-zoom-animated {
+  -webkit-transition: none;
+  -moz-transition: none;
+  transition: none;
+}
+
 /* addresses warning
   https://stackoverflow.com/questions/59477050/css-non-standard-zoom-property
 */

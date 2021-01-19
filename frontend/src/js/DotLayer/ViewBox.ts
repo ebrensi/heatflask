@@ -5,19 +5,22 @@
  */
 
 import { makePT } from "./CRS"
-import { DomUtil, Control } from "../myLeaflet"
+import { DomUtil, Control, Point } from "../myLeaflet"
 import { MAP_INFO } from "../Env"
 import { Bounds } from "../appUtil"
 
-import type { Map as LMap, Point, LatLng, LatLngBounds } from "leaflet"
+import type { Map as LMap, LatLng, LatLngBounds } from "leaflet"
 
 type ctxOrCanvas = CanvasRenderingContext2D | HTMLCanvasElement
 type TransformData = [number, number, number, number]
 type TransformFunc = (x: [number, number]) => [number, number]
 type rect = { x: number; y: number; w: number; h: number }
 
+const BOUNDSTOL = 0.000001
+
 let _map: LMap
 let _baseTranslation: Point
+let _lastT = new Point(0,0)
 let _pxOrigin: Point
 let _pxOffset: Point
 let _mapPanePos: Point
@@ -31,6 +34,7 @@ let _height: number
 
 const _transform: TransformData = [1, 0, 1, 0]
 const _pxBounds: Bounds = new Bounds()
+const _lastPxBounds: Bounds = new Bounds()
 const _canvases: Array<HTMLCanvasElement> = []
 
 export {
@@ -99,20 +103,21 @@ export function tol(z: number): number {
   return z ? 1 / 2 ** z : 1 / _zf
 }
 
-export function update() {
-  const pxBounds = updateBounds()
-  const zoomChanged = updateZoom()
-  const shift = calibrate()
-  return { pxBounds, zoomChanged, shift }
-}
-
 /**
  * update our internal bounds with those from the associated map
  * @return {Boolean} whether the bounds have changed
  */
-export function updateBounds(): Bounds {
-  const latLngMapBounds = _map.getBounds()
-  return latLng2pxBounds(latLngMapBounds, _pxBounds)
+export function updateBounds(): boolean {
+  const llBounds = _map.getBounds()
+  const NW = llBounds.getNorthWest()
+  const SE = llBounds.getSouthEast()
+  _pxBounds.reset()
+  _pxBounds.update(...latLng2px([NW.lat, NW.lng]))
+  _pxBounds.update(...latLng2px([SE.lat, SE.lng]))
+
+  const boundsChanged = _pxBounds.dist(_lastPxBounds) > BOUNDSTOL
+  _pxBounds.copyTo(_lastPxBounds)
+  return boundsChanged
 }
 
 /**
@@ -140,14 +145,18 @@ export function updateZoom(): number {
   }
 }
 
-let _lastT: Point
 export function setCSStransform(offset: Point, scale?: number): void {
-  // if (offset.equals(_lastT) && _scale === scale) return
+  if (offset.equals(_lastT) && _scale === scale) {
+    console.log("redundant transform update")
+    return
+  }
   for (let i = 0; i < _canvases.length; i++) {
     DomUtil.setTransform(_canvases[i], offset, scale)
   }
-  // _lastT = offset
-  // console.log(`transform: ${scale}, (${offset.x}, ${offset.y})`)
+  _lastT.x = offset.x
+  _lastT.y = offset.y
+
+  console.log(`transform: ${scale}, (${offset.x}, ${offset.y})`)
 }
 
 /*
