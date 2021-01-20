@@ -4,11 +4,11 @@
  * Adapted for Heatflask from Daniel Lemire's
  * FastIntegerCompression.js : a fast integer compression library in JavaScript.
  *
- * @module
- *
  */
 
-function bytelog(val) {
+type NumericArray = number[] | Uint16Array | Uint8Array | Uint32Array
+
+function bytelog(val: number): number {
   if (val < 1 << 7) {
     return 1
   } else if (val < 1 << 14) {
@@ -22,10 +22,8 @@ function bytelog(val) {
 }
 
 /** Compute how many bytes an array of non-negative integers would use once compressed
- * @param {Array.<Number>} input an array of non-negative integers
- * @returns {Number} size in bytes of VByte compressed buffer
  */
-function compressedSizeInBytes(input) {
+function compressedSizeInBytes(input: NumericArray) {
   const c = input.length
   let answer = 0
   for (let i = 0; i < c; i++) {
@@ -35,11 +33,8 @@ function compressedSizeInBytes(input) {
 }
 
 /** Compress an array of integers,
- *
- *  @param {Array.<Number>} input An array of non-negative integers
- *  @returns {ArrayBuffer}
  */
-export function compress(input) {
+export function compress(input: NumericArray): ArrayBuffer {
   const c = input.length,
     buf = new ArrayBuffer(compressedSizeInBytes(input)),
     view = new Int8Array(buf)
@@ -71,15 +66,12 @@ export function compress(input) {
   return buf
 }
 
-/* from a compressed array of non-negative integers stored ArrayBuffer,
+/** from a compressed array of non-negative integers stored ArrayBuffer,
  *  compute the number of compressed integers by scanning the input
- *
- *  @param {ArrayBuffer} input An ArrayBuffer created by {@link compress}
- *  @returns {Number}
  */
-export function computeHowManyIntegers(input) {
-  const view = new Int8Array(input),
-    c = view.length
+export function computeHowManyIntegers(input: ArrayBuffer): number {
+  const view = new Int8Array(input)
+  const c = view.length
 
   let count = 0
   for (let i = 0; i < c; i++) {
@@ -90,18 +82,14 @@ export function computeHowManyIntegers(input) {
 }
 
 /** Uncompress an array of non-negative integers from an ArrayBuffer
- *
- * @generator
- * @param {ArrayBuffer} input An ArrayBuffer created by {@link compress}
- * @yields {Number} Non-negative integers
  */
-export function* uncompress(input) {
-  const inbyte = new Int8Array(input),
-    end = inbyte.length
+export function* uncompress(input: ArrayBuffer): Generator<number> {
+  const inbyte = new Int8Array(input)
+  const end = inbyte.length
   let pos = 0
   while (end > pos) {
-    let c = inbyte[pos++],
-      v = c & 0x7f
+    let c = inbyte[pos++]
+    let v = c & 0x7f
     if (c >= 0) {
       yield v
       continue
@@ -131,43 +119,36 @@ export function* uncompress(input) {
 }
 
 /* ***** For Signed Integers ********* */
-function zigzag_encode(val) {
+function zigzag_encode(val: number) {
   return (val + val) ^ (val >> 31)
 }
 
-function zigzag_decode(val) {
+function zigzag_decode(val: number) {
   return (val >> 1) ^ -(val & 1)
 }
 
 /**
  * compute how many bytes an array of signed integers would use once compressed
- * @param {Array.<Number>} input An array of possibly negative integers
- * @returns {Number}
  */
-function compressedSizeInBytesSigned(input) {
-  const c = input.length
-  const bzze = (i) => bytelog(zigzag_encode(input[i]))
-
+function compressedSizeInBytesSigned(arr: NumericArray) {
+  const c = arr.length
+  const bzze = (i) => bytelog(zigzag_encode(arr[i]))
   let answer = 0
-
   for (let i = 0; i < c; i++) answer += bzze(i)
   return answer
 }
 
 /**
  * Compress an array of integers. Encodes signed integers at a small performance and size cost.
- *
- * @param {Array.<Number>} input An array of integers
- * @returns {ArrayBuffer}
  */
-export function compressSigned(input) {
-  const c = input.length,
-    buf = new ArrayBuffer(compressedSizeInBytesSigned(input)),
-    view = new Int8Array(buf)
+export function compressSigned(arr: NumericArray): ArrayBuffer {
+  const c = arr.length
+  const buf = new ArrayBuffer(compressedSizeInBytesSigned(arr))
+  const view = new Int8Array(buf)
   let pos = 0
 
   for (let i = 0; i < c; i++) {
-    let val = zigzag_encode(input[i])
+    const val = zigzag_encode(arr[i])
     if (val < 1 << 7) {
       view[pos++] = val
     } else if (val < 1 << 14) {
@@ -195,13 +176,9 @@ export function compressSigned(input) {
 
 /**
  * uncompress an array of integer from an ArrayBuffer
- * @generator
- * @param {ArrayBuffer} input An ArrayBuffer created by {@link compressSigned}
- * @yields {Number}
- *
  */
-export function* uncompressSigned(input) {
-  const inbyte = new Int8Array(input)
+export function* uncompressSigned(buf: ArrayBuffer): IterableIterator<number> {
+  const inbyte = new Int8Array(buf)
   const end = inbyte.length
   let pos = 0
 

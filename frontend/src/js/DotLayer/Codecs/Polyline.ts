@@ -19,18 +19,17 @@
  */
 export function* decode(
   str: string,
-  precision: number
-): IterableIterator<Float32Array> {
-  let index = 0,
-    lat = 0,
-    lng = 0,
-    shift = 0,
-    result = 0,
-    byte = null,
-    latitude_change,
-    longitude_change,
-    factor = Math.pow(10, Number.isInteger(precision) ? precision : 5),
-    latLng = new Float32Array(2)
+  precision?: number
+): IterableIterator<[number, number]> {
+  let index = 0
+  let lat = 0
+  let lng = 0
+  let shift = 0
+  let result = 0
+  let byte = null
+  let latitude_change
+  let longitude_change
+  const factor = Math.pow(10, Number.isInteger(precision) ? precision : 5)
 
   // Coordinates have variable length when encoded, so just keep
   // track of whether we've hit the end of the string. In each
@@ -62,17 +61,14 @@ export function* decode(
     lat += latitude_change
     lng += longitude_change
 
-    latLng[0] = lat / factor
-    latLng[1] = lng / factor
-
-    yield latLng
+    yield [lat / factor, lng / factor]
   }
 }
 
 function lengthInPoints(str: string): number {
-  let byte,
-    count = 0,
-    index = 0
+  let byte
+  let count = 0
+  let index = 0
 
   while (index < str.length) {
     do byte = str.charCodeAt(index++) - 63
@@ -92,8 +88,8 @@ export function decode2Buf(
   precision: number
 ): Float32Array {
   n = n || lengthInPoints(str)
-  const buf = new Float32Array(2 * n),
-    decoder = decode(str, precision)
+  const buf = new Float32Array(2 * n)
+  const decoder = decode(str, precision)
 
   let i = 0
   for (const latLng of decoder) buf.set(latLng, 2 * i++)

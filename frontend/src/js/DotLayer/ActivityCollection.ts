@@ -52,7 +52,7 @@ export function reset(): void {
   for (let i = 0; i < itemsArray.length; i++) {
     itemsArray[i].idx = i
   }
-  resetSegMasks()
+  // resetSegMasks()
   inView.resize(itemsArray.length)
 }
 

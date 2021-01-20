@@ -13,13 +13,23 @@ import BitSet from "../BitSet"
 import { RunningStatsCalculator } from "./stats"
 // import { quartiles } from "../appUtil.js"
 
-// import { makePT } from "./CRS.js"
+import type { Bounds } from "../appUtil"
+import type { RLElist } from "./Codecs/StreamRLE"
+
+interface SegMask extends BitSet {
+  zoom?: number
+}
+
+type numericArray = Uint8Array | Uint16Array | Uint32Array | number[]
+type snum = string | number
+type tuple2 = [number, number] | Float32Array
+type segFunc = (x0: number, y0: number, x1: number, y1: number) => void
+type pointFunc = (x: number, y: number) => void
 /*
  * This is meant to be a LRU cache for stuff that should go away
  * if it is not used for a while. For now we just use a Map.
  */
-const _lru = new Map()
-// const latLng2px = makePT(0)
+const _lru: Map<string, numericArray> = new Map()
 
 /**
  * We detect anomalous gaps in data by simple statistical analysis of
@@ -44,10 +54,51 @@ const ZSCORE_CUTOFF = 5
 // It is slower since we must sort the values
 const IQR_MULT = 3
 
+type latlng = { lat: number; lng: number }
+interface ActivitySpec {
+  _id: snum
+  type: string
+  vtype: string
+  name: string
+  total_distance: snum
+  elapsed_time: snum
+  average_speed: snum
+  ts: [number, number]
+  bounds: { SW: latlng; NE: latlng }
+  polyline: string
+  time: RLElist
+  n: number
+}
+
 /**
  * @class Activity
  */
 export class Activity {
+  id: number
+  type: string
+  vtype: string
+  total_distance: number
+  elapsed_time: number
+  average_speed: number
+  name: string
+  _selected: boolean
+  tr: HTMLTableRowElement
+  colors: { path: string; dot: string }
+  ts: number
+  tsLocal: Date
+  llBounds: LatLngBounds
+  pxBounds: Bounds
+  idxSet: { [zoom: number]: BitSet }
+  badSegIdx: { [zoom: number]: number[] }
+  segMask: SegMask
+  lastSegMask: SegMask
+  _segMaskUpdates: SegMask
+  px: Float32Array
+  time: ArrayBuffer
+  n: number
+  pxGaps: number[]
+  _containedInMapBounds: boolean
+
   constructor({
     _id,
     type,
@@ -61,13 +112,13 @@ export class Activity {
     polyline,
     time,
     n,
-  }) {
+  }: ActivitySpec) {
     this.id = +_id
     this.type = type
     this.vtype = vtype
-    this.total_distance = total_distance
-    this.elapsed_time = elapsed_time
-    this.average_speed = average_speed
+    this.total_distance = +total_distance
+    this.elapsed_time = +elapsed_time
+    this.average_speed = +average_speed
     this.name = name
     this._selected = false
     this.tr = null
@@ -82,7 +133,7 @@ export class Activity {
 
     // timestamp comes from backend as a UTC-timestamp, local offset pair
     const [utc, offset] = ts
-    this.ts = utc
+    this.ts = +utc
     this.tsLocal = new Date((utc + offset * 3600) * 1000)
 
     this.llBounds = new LatLngBounds(bounds.SW, bounds.NE)
@@ -91,6 +142,7 @@ export class Activity {
     this.idxSet = {} // BitSets of indices of px for each level of zoom
     this.badSegIdx = {} // locations of gaps in data for each level of zoom
     this.segMask = null // BitSet indicating which segments are in view
+    this.pxGaps = null
 
     // decode polyline format into an Array of [lat, lng] points
     const points = new Float32Array(n * 2)
@@ -184,10 +236,8 @@ export class Activity {
 
   /**
    * The square distance between to successive points in this.px
-   * @param  {number} idx
-   * @return {number}
    */
-  gapAt(idx) {
+  gapAt(idx: number): number {
     const p = this.getPointAccessor()
     return sqDist(p(idx), p(idx + 1))
   }
@@ -200,11 +250,8 @@ export class Activity {
    *
    * Each point returned by the accessor function is a window into the
    * actual px array so modifying it will modify the the px array.
-   *
-   * @param  {Number} zoom
-   * @return {function} the accessor function
    */
-  getPointAccessor(zoom) {
+  getPointAccessor(zoom?: number): (i: number) => Float32Array {
     const px = this.px
     if (!zoom) {
       return function (i) {
@@ -242,7 +289,7 @@ export class Activity {
    *
    * @param {Number} zoom
    */
-  pointsIterator(zoom) {
+  pointsIterator(zoom: number): IterableIterator<tuple2> {
     if (!zoom) {
       return _pointsIterator(this.px)
     }
@@ -254,7 +301,7 @@ export class Activity {
     return _pointsIterator(this.px, idxSet)
   }
 
-  timesIterator(zoom) {
+  timesIterator(zoom: number): IterableIterator<number> {
     if (!zoom) {
       return StreamRLE.decodeCompressedDiffBuf(this.time)
     } else {
@@ -266,7 +313,7 @@ export class Activity {
     }
   }
 
-  getTimesArray(zoom) {
+  getTimesArray(zoom: number): numericArray {
     const key = `T${this.id}:${zoom}`
     let arr = _lru.get(key)
 
@@ -281,9 +328,8 @@ export class Activity {
    * Construct the reduced idxSet for a given zoom-level. An idxSet is a
    * set of indices indicating the subset of px that we will use at the
    * given zoom level.
-   * @param  {number} zoom [description]
    */
-  makeIdxSet(zoom) {
+  makeIdxSet(zoom: number): Activity {
     if (!Number.isFinite(zoom)) {
       throw new TypeError("zoom must be a number")
     }
@@ -306,7 +352,7 @@ export class Activity {
      *  of the segment that contains the gap.
      */
     if (this.pxGaps) {
-      const gapLocs = []
+      const gapLocs: number[] = []
       for (let i = this.pxGaps.length - 1; i >= 0; i--) {
         let gapStart = this.pxGaps[i]
         while (!idxBitSet.has(gapStart)) {
@@ -347,21 +393,30 @@ export class Activity {
    *  so that the i-th good segment corresponds to the i-th member of
    *  this idxSet.
    */
-  updateSegMask(viewportPxBounds, zoom) {
+  updateSegMask(viewportPxBounds: Bounds, zoom: number): SegMask {
     /* Later we will compare this segMask with the last one so that we only draw or erase
      * parts of the path that have come into view or are no longer on screen
      */
-    if (!this.segMask) this.segMask = new BitSet()
+    if (!this.segMask) {
+      this.segMask = new BitSet()
+      this.lastSegMask = new BitSet()
+      this._segMaskUpdates = new BitSet()
+    } else {
+      this.lastSegMask = this.segMask.clone(this.lastSegMask)
+      this.lastSegMask.zoom = this.segMask.zoom
+    }
+
+    this.segMask.zoom = zoom
 
     // console.log(this.id + "----- updating segmask ---------")
     if (viewportPxBounds.containsBounds(this.pxBounds)) {
       /*
        * If this activity is completely contained in the viewport then we
-       * already know every segment is included.  Explicitly creating a full
-       * segMask saves some work.
+       * already know every segment is included and we quickly create a full segMask
        */
       if (this._containedInMapBounds) {
-        // console.log(~~performance.now() + " still contained")
+        // This is still contained (and was last time)
+        this._segMaskUpdates.clear()
         return this.segMask
       }
 
@@ -370,17 +425,16 @@ export class Activity {
       this.segMask.words.fill(~0, 0, n >> 5)
       this.segMask.words[n >> 5] = 2 ** (n % 32) - 1
       this._containedInMapBounds = true
-      // console.log(~~performance.now() + " contained")
     } else {
       this._containedInMapBounds = false
       const points = this.getPointAccessor(zoom)
       const n = this.idxSet[zoom].size()
       const segMask = this.segMask.clear().resize(n)
       const p = points(0)
-      let pIn = viewportPxBounds.contains(...p)
+      let pIn = viewportPxBounds.contains(p[0], p[1])
       for (let i = 0; i < n - 1; i++) {
         const p = points(i + 1)
-        const nextpIn = viewportPxBounds.contains(...p)
+        const nextpIn = viewportPxBounds.contains(p[0], p[1])
         /*
          * If either endpoint of the segment is contained in viewport
          * bounds then include this segment index
@@ -397,17 +451,45 @@ export class Activity {
       }
     }
 
-    if (!this._containedInMapBounds)
-      if (this.segMask.isEmpty())
-        // console.log(~~performance.now() + " " + this.segMask.toString(1))
-        return
+    if (!this._containedInMapBounds && this.segMask.isEmpty()) {
+      this._segMaskUpdates.clear()
+      return
+    }
 
-    if (this.segMask.zoom !== zoom) this.segMask.zoom = zoom
+    /*
+     * Now we have a current and a last segMask
+     */
+    const zoomChanged = this.segMask.zoom !== this.lastSegMask.zoom
+    if (zoomChanged) {
+      this.segMask.clone(this._segMaskUpdates)
+      this._segMaskUpdates.zoom = this.segMask.zoom
+
+    } else {
+      const newSegs = this.segMask.new_difference(
+        this.lastSegMask,
+        this._segMaskUpdates
+      )
+      /*
+       * We include an edge segment (at the edge of the screen)
+       * even if it was in the last draw
+       */
+      const lsm = this.lastSegMask
+      let lastSeg
+      newSegs.forEach((s) => {
+        const beforeGap = lastSeg && lastSeg + 1
+        const afterGap = s && s - 1
+        if (lastSeg !== afterGap) {
+          if (beforeGap && lsm.has(beforeGap)) newSegs.add(beforeGap)
+          if (afterGap && lsm.has(afterGap)) newSegs.add(afterGap)
+        }
+        lastSeg = s
+      })
+    }
 
     return this.segMask
   }
 
-  resetSegMask() {
+  resetSegMask(): void {
     if (!this.lastSegMask) {
       this.lastSegMask = new BitSet()
       this._segMaskUpdates = new BitSet()
@@ -416,66 +498,15 @@ export class Activity {
     this._containedInMapBounds = undefined
   }
 
-  /**
-   * We use this for partial redraws
-   * @return {BitSet} The set of segments that have become visible
-   * since the last draw.
-   */
-  getSegMaskUpdates() {
-    const zoomChanged = this.segMask.zoom !== this.lastSegMask.zoom
-
-    if (this.segMask.equals(this.lastSegMask) && !zoomChanged) return
-
-    let newSegs
-
-    if (this.segMask.difference_size(this.lastSegMask) || zoomChanged) {
-      // if there are more segments in view or zoom changed
-      if (zoomChanged) {
-        newSegs = this.segMask.clone(this._segMaskUpdates)
-      } else {
-        newSegs = this.segMask.new_difference(
-          this.lastSegMask,
-          this._segMaskUpdates
-        )
-
-        // console.log(~~performance.now() + " update")
-        // console.log("lsm: " + this.lastSegMask.toString(1))
-        // console.log(" sm: " + this.segMask.toString(1))
-        // console.log("new: " + newSegs.toString(1))
-        /*
-         * We include an edge segment (at the edge of the screen)
-         * even if it was in the last draw
-         */
-        const lsm = this.lastSegMask
-        let lastSeg
-        newSegs.forEach((s) => {
-          const beforeGap = lastSeg && lastSeg + 1
-          const afterGap = s && s - 1
-          if (lastSeg !== afterGap) {
-            if (beforeGap && lsm.has(beforeGap)) newSegs.add(beforeGap)
-            if (afterGap && lsm.has(afterGap)) newSegs.add(afterGap)
-          }
-          lastSeg = s
-        })
-      }
-      newSegs.zoom = this.segMask.zoom
-    }
-    // lastSegMask = segMask
-    this.segMask.clone(this.lastSegMask)
-    this.lastSegMask.zoom = this.segMask.zoom
-    return newSegs
-  }
 
   /**
    * execute a function func(x1, y1, x2, y2) on each currently in-view
    * segment (x1,y1) -> (x2, y2) of this Activity. The default is to
    * only use segments that have changed since the last segMask update.
    * Set forceAll to force all currently viewed segments.
-   * @param  {function} func func(x1, y1, x2, y2)
-   * @param  {BitSet} [segMask] the set of segments
    */
-  forEachSegment(func, drawDiff) {
-    const segMask = drawDiff ? this.getSegMaskUpdates() : this.segMask
+  forEachSegment(func: segFunc, drawDiff: boolean): number {
+    const segMask = drawDiff ? this._segMaskUpdates : this.segMask
     if (!segMask) return 0
 
     let count = 0
@@ -494,14 +525,15 @@ export class Activity {
   /**
    * execute a function func(x,y) on each dot point of this Activity
    * given time now (in seconds since epoch) and dot Specs.
-   * @param  {number} now
-   * @param  {Object} ds
-   * @param  {function} func
-   * @param  {BitSet} [segMask] a set of segments over which to place dots
-   * @returns {number} number of dot points
    */
-  forEachDot(func, nowInSecs, T, timeScale, drawDiff) {
-    const segMask = drawDiff ? this.getSegMaskUpdates() : this.segMask
+  forEachDot(
+    func: pointFunc,
+    nowInSecs: number,
+    T: number,
+    timeScale: number,
+    drawDiff: boolean
+  ): number {
+    const segMask = drawDiff ? this._segMaskUpdates : this.segMask
     if (!segMask) return 0
 
     const start = this.ts
@@ -544,7 +576,7 @@ export class Activity {
 }
 
 /* helper functions */
-function* _pointsIterator(px, idxSet) {
+function* _pointsIterator(px, idxSet?: BitSet) {
   if (!idxSet) {
     for (let i = 0, len = px.length / 2; i < len; i++) {
       const j = i * 2
@@ -558,7 +590,7 @@ function* _pointsIterator(px, idxSet) {
   }
 }
 
-function sqDist(p1, p2) {
+function sqDist(p1: tuple2, p2: tuple2) {
   const [x1, y1] = p1
   const [x2, y2] = p2
   return (x2 - x1) ** 2 + (y2 - y1) ** 2

@@ -45,7 +45,6 @@
     "documentation": "^13.1.0",
     "eslint": "^7.18.0",
     "eslint-config-prettier": "^6.15.0",
-    "eslint-plugin-prettier": "^3.3.1",
     "parcel": "next",
     "parcel-plugin-nuke-dist": "^1.0.1",
     "prettier": "^2.2.1",
@@ -59,8 +58,7 @@
     "parser": "@typescript-eslint/parser",
     "extends": [
       "plugin:@typescript-eslint/recommended",
-      "prettier/@typescript-eslint",
-      "plugin:prettier/recommended"
+      "prettier/@typescript-eslint"
     ],
     "parserOptions": {
       "ecmaVersion": 2020,

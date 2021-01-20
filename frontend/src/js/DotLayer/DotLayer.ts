@@ -21,6 +21,7 @@ export { _dotSettings as dotSettings }
 
 const DEBUG_BORDERS = true
 const TARGET_FPS = 30
+
 /* In order to prevent path redraws from happening too often
  * and hogging up CPU cycles we set a minimum delay between redraws
  */
@@ -263,7 +264,8 @@ async function onZoom(e) {
  */
 async function onMove() {
   // console.log("onMove")
-  await redraw(_pinching)
+  // await redraw(_pinching)
+  await redraw()
 }
 
 /*
@@ -305,8 +307,6 @@ async function redraw(force?: boolean) {
 
   _redrawing = true
 
-  // console.log(`tick: ${_currentTick}`)
-
   const zoomChanged = ViewBox.updateZoom()
   const boundsChanged = ViewBox.updateBounds()
 
@@ -316,21 +316,15 @@ async function redraw(force?: boolean) {
     return
   }
 
+  const fullRedraw = FORCE_FULL_REDRAW || force || zoomChanged > 1
+
+  const t0 = performance.now()
+
   /* Erase the path and dot canvases, using their respective
    * drawBounds rectangles. The underlying imageData buffers are
    *  still intact though
    */
-  for (const canvas of [pathCanvas, dotCanvas]) {
-    const pxg = canvas.pxg
-    pxg.transform = ViewBox.transform
-
-    if (!pxg.drawBounds.isEmpty()) {
-      const { x, y, w, h } = canvas.pxg.drawBounds.rect
-      canvas.getContext("2d").clearRect(x, y, w, h)
-    }
-  }
-
-  const fullRedraw = zoomChanged > 1 || FORCE_FULL_REDRAW || force
+  clearCanvases()
 
   // reset the canvases to to align with the screen and update the ViewBox
   // location relative to the map's pxOrigin
@@ -339,40 +333,52 @@ async function redraw(force?: boolean) {
   if (!fullRedraw) {
     if (_options.showPaths) {
       pathCanvas.pxg.translate(shift.x, shift.y)
-      // pathCanvas.pxg.putImageData(pathCanvas)
+      // drawPathImageData()
     }
     if (_paused) {
       dotCanvas.pxg.translate(shift.x, shift.y)
-      // dotCanvas.pxg.putImageData(dotCanvas)
+      // drawDotImageData()
     }
   }
 
-  const { pxBounds, zoomLevel } = ViewBox
-  await ActivityCollection.updateContext(pxBounds, zoomLevel)
+  await ActivityCollection.updateContext(ViewBox.pxBounds, ViewBox.zoomLevel)
 
   if (_options.showPaths) {
-    drawPaths(fullRedraw)
+    await drawPaths(fullRedraw)
   }
 
   if (_paused) {
-    drawDots(_timePaused || 0, !fullRedraw)
-
-    if (DEBUG_BORDERS) {
-      drawBoundsBoxes()
-    }
+    await drawDots(_timePaused || 0, !fullRedraw)
   }
 
   _redrawing = false
+
+  console.log(
+    `${_currentTick} redraw: ${fullRedraw} ${Math.round(
+      performance.now() - t0
+    )}ms`
+  )
+}
+
+function clearCanvases() {
+  for (const canvas of [pathCanvas, dotCanvas]) {
+    const pxg = canvas.pxg
+    if (!pxg.drawBounds.isEmpty()) {
+      const { x, y, w, h } = pxg.drawBounds.rect
+      canvas.getContext("2d").clearRect(x, y, w, h)
+    }
+  }
 }
 
 function drawPathImageData() {
   pathCanvas.pxg.putImageData(pathCanvas)
 }
 
-async function drawPaths(forceFullRedraw) {
+async function drawPaths(forceFullRedraw?: boolean) {
   if (!_ready) return 0
   const drawDiff = !forceFullRedraw
   const pxg = pathCanvas.pxg
+  pxg.transform = ViewBox.transform
   const { count, imageData } = await ActivityCollection.drawPaths(
     pxg.imageData,
     drawDiff
@@ -389,14 +395,10 @@ function drawDotImageData() {
   }
 }
 
-async function drawDots(tsecs, drawDiff) {
+async function drawDots(tsecs: number, drawDiff?: boolean) {
   if (!_ready) return 0
   const pxg = dotCanvas.pxg
-  if (_options.dotShadows.enabled && !pxg.drawBounds.isEmpty()) {
-    const { x, y, w, h } = pxg.drawBounds.rect
-    dotCanvas.getContext("2d").clearRect(x, y, w, h)
-  }
-
+  pxg.transform = ViewBox.transform
   const { count, imageData } = await ActivityCollection.drawDots(
     pxg.imageData,
     +vParams.sz,
@@ -463,7 +465,10 @@ function updateDotSettings(shadowSettings) {
 /*
  * Animation
  */
-let _drawingDots, _timePaused, _paused
+let _drawingDots: boolean
+let _timePaused: number
+let _paused: boolean
+
 async function animate() {
   // this prevents accidentally running multiple animation loops
   if (_drawingDots || !_ready) return
@@ -490,6 +495,11 @@ async function animate() {
       // ts is in milliseconds since navigationStart
       nowInSeconds = (timeStamp + timeOffset) / 1000
 
+      const pxg = dotCanvas.pxg
+      if (!pxg.drawBounds.isEmpty()) {
+        const { x, y, w, h } = pxg.drawBounds.rect
+        dotCanvas.getContext("2d").clearRect(x, y, w, h)
+      }
       // draw the dots
       const count = await drawDots(nowInSeconds)
 
@@ -520,11 +530,13 @@ function animateZoom(e) {
 }
 
 // for debug display
-const fpsRegister = []
+const fpsRegister: number[] = []
 let fpsSum = 0
-let _roundCount, _duration
+let _roundCount: number
+let _duration: number
 const fpsRegisterSize = 32
-function updateInfoBox(dt, count) {
+
+function updateInfoBox(dt: number, count: number) {
   fpsSum += dt
   fpsRegister.push(dt)
   if (fpsRegister.length !== fpsRegisterSize) return

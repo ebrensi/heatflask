@@ -15,7 +15,7 @@ type anyArrayConstructor =
 export class BitSet {
   words: Uint32Array
 
-  constructor(n: number) {
+  constructor(n?: number) {
     const count: number = n ? (n + 32) >>> 5 : 8
     this.words = new Uint32Array(count)
   }

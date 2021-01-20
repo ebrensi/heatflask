@@ -16,7 +16,7 @@ type TransformData = [number, number, number, number]
 type TransformFunc = (x: [number, number]) => [number, number]
 type rect = { x: number; y: number; w: number; h: number }
 
-const BOUNDSTOL = 0.000001
+const BOUNDSTOL = 0.0001
 
 let _map: LMap
 let _baseTranslation: Point
@@ -197,7 +197,7 @@ function updateDebugDisplay(): void {
     const { x: tx, y: ty } = _baseTranslation
 
     _infoBox.innerHTML =
-      `<b>ViewBox:</b> zoom: ${_zoom.toFixed(2)}<br>` +
+      `<b>ViewBox:</b> zoomLevel: ${_zoomLevel.toFixed(2)}<br>` +
       `offset: ${ox}, ${oy}<br>` +
       `scale: ${_scale.toFixed(3)}<br>` +
       `trans: ${tx.toFixed(3)}, ${ty.toFixed(3)}<br>`
@@ -208,7 +208,7 @@ function updateDebugDisplay(): void {
 // bounding box in absolute px coordinates
 export function latLng2pxBounds(
   llBounds: LatLngBounds,
-  boundsObj: Bounds
+  boundsObj?: Bounds
 ): Bounds {
   boundsObj = boundsObj ? boundsObj.reset() : new Bounds()
 

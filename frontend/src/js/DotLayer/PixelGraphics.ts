@@ -119,10 +119,6 @@ export class PixelGraphics {
   clear(rect?: rect): void {
     const { x, y, w, h } = rect || this.drawBounds.rect
 
-    if (DEBUG && this.debugCanvas) {
-      drawDebugBox(this.debugCanvas, rect, "clear") // draw source rect
-    }
-
     for (let row = y; row < y + h; row++) {
       const offset = row * this.width
       this.buf32.fill(0, offset + x, offset + x + w)
@@ -325,13 +321,8 @@ export class PixelGraphics {
     const { x: rx, y: ry, w: rw, h: rh } = this.drawBounds.rect
     const [dx0, dy0] = this.clip(rx + shiftX, ry + shiftY)
     const [dx1, dy1] = this.clip(rx + rw + shiftX, ry + rh + shiftY)
-    let s: rect, d: rect, clearRegion: rect
 
-    // We only define desatination rect if it is on-screen
-    if (dx0 !== dx1 && dy0 !== dy1) {
-      d = { x: dx0, y: dy0, w: dx1 - dx0, h: dy1 - dy0 }
-      s = { x: dx0 - shiftX, y: dy0 - shiftY, w: d.w, h: d.h }
-    } else {
+    if (dx0 === dx1 || dy0 === dy1) {
       /*
        * If there is no destination rectangle (nothing in view)
        *  we just clear the source rectangle and exit
@@ -341,12 +332,25 @@ export class PixelGraphics {
       return
     }
 
+    const d = { x: dx0, y: dy0, w: dx1 - dx0, h: dy1 - dy0 }
+    const s = { x: dx0 - shiftX, y: dy0 - shiftY, w: d.w, h: d.h }
+
+    const clearRegion =
+      d.y < s.y
+        ? { x: rx, y: ry, w: rw, h: rh - s.h } // source below dest
+        : d.y > s.y
+        ? { x: rx, y: ry + s.h, w: rw, h: rh - s.h } // source above dest
+        : s.x < d.x
+        ? { x: s.x, y: s.y, w: d.x - s.x, h: s.h } // source left of dest
+        : { x: d.x + d.w, y: s.y, w: s.x - d.x, h: s.h } // source right of dest
+
     if (DEBUG && this.debugCanvas) {
-      const debugCtx = this.debugCanvas.getContext("2d")
-      debugCtx.strokeStyle = "#000000"
-      drawDebugBox(debugCtx, s, "source") // draw source rect
-      drawDebugBox(debugCtx, d, "dest") // draw dest rect
+      this.drawDebugBox(s, "source", "yellow", true) // draw source rect
+      this.drawDebugBox(d, "dest", "blue", true) // draw dest rect
+      this.drawDebugBox(clearRegion, "clear", "black", true) // draw dest rect
     }
+
+    this.clear(clearRegion)
 
     const moveRow = (row: number): void => {
       const sOffset = (s.y + row) * this.width
@@ -372,14 +376,9 @@ export class PixelGraphics {
       /* if the source rectangle is below the destination
        then we copy rows from the top down */
       for (let row = 0; row < s.h; row++) moveRow(row)
-
-      clearRegion = { x: rx, y: ry, w: rw, h: rh - s.h }
     } else if (d.y > s.y) {
       /* otherwise we copy from the bottom row up */
       for (let row = s.h - 1; row >= 0; row--) moveRow(row)
-
-      // and clear what's left of source rectangle
-      clearRegion = { x: rx, y: ry + s.h, w: rw, h: rh - s.h }
     } else {
       /* In the rare case that the source and dest rectangles are
        *  horizontally adjacent to each other, we cannot copy rows directly
@@ -410,14 +409,8 @@ export class PixelGraphics {
       }
       // now clear the row buffer if it is part of imageData
       if (bufOffset !== undefined) rowBuf.fill(0)
-
-      // and clear the remaining part of source rectangle
-      clearRegion =
-        s.x < d.x
-          ? { x: s.x, y: s.y, w: d.x - s.x, h: s.h }
-          : { x: d.x + d.w, y: s.y, w: s.x - d.x, h: s.h }
     }
-    this.clear(clearRegion)
+
     this.drawBounds.reset()
     this.drawBounds.update(dx0, dy0)
     this.drawBounds.update(dx1, dy1)
@@ -437,6 +430,31 @@ export class PixelGraphics {
     const img = await createImageBitmap(this.imageData, x, y, w, h)
     ctx.drawImage(img, x, y)
   }
+
+  // Draw the outline of arbitrary rect object in screen coordinates
+  drawDebugBox(
+    rect?: rect,
+    label?: string,
+    color?: string,
+    fill?: boolean
+  ): void {
+    if (!rect || !this.debugCanvas) return
+    const ctx = this.debugCanvas.getContext("2d")
+    const { x, y, w, h } = rect
+
+    if (w === 0 || h === 0) return
+
+    if (fill) {
+      ctx.globalAlpha = 0.3
+      ctx.fillStyle = color
+      ctx.fillRect(x, y, w, h)
+      ctx.globalAlpha = 1
+    } else {
+      if (color) ctx.strokeStyle = color
+      ctx.strokeRect(x, y, w, h)
+    }
+    if (label) ctx.fillText(label, x + 20, y + 20)
+  }
 } // end PixelGraphics definition
 
 const _re = /(\d+),(\d+),(\d+)/
@@ -450,17 +468,4 @@ function parseColor(colorString: string) {
   }
   const result = colorString.match(_re)
   return rgbaToUint32(result[1], result[2], result[3], 0xff)
-}
-
-// Draw the outline of arbitrary rect object in screen coordinates
-export function drawDebugBox(
-  obj: CanvasOrCtx,
-  rect: rect,
-  label: string
-): void {
-  if (!rect) return
-  const ctx = obj instanceof HTMLCanvasElement ? obj.getContext("2d") : obj
-  const { x, y, w, h } = rect
-  ctx.strokeRect(x, y, w, h)
-  if (label) ctx.fillText(label, x + 20, y + 20)
 }
