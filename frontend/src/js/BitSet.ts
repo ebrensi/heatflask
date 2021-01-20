@@ -137,7 +137,6 @@ export class BitSet {
     return this
   }
 
-
   // How many values stored in the set? How many set bits?
   size(): number {
     let answer = 0
@@ -193,7 +192,7 @@ export class BitSet {
     const c = this.words.length
     for (let k = 0; k < c; ++k) {
       let w = this.words[k]
-      while (w != 0) {
+      while (w !== 0) {
         const t = w & -w
         answer[pos++] = (k << 5) + hammingWeight((t - 1) | 0)
         w ^= t
@@ -203,11 +202,11 @@ export class BitSet {
   }
 
   // Execute a function on each of many values
-  forEach(fnc: (t: number) => U): void {
+  forEach(fnc: (t: number) => unknown): void {
     const c = this.words.length
     for (let k = 0; k < c; ++k) {
       let w = this.words[k]
-      while (w != 0) {
+      while (w !== 0) {
         const t = w & -w
         fnc((k << 5) + hammingWeight((t - 1) | 0))
         w ^= t
@@ -216,12 +215,12 @@ export class BitSet {
   }
 
   // Iterate the members of this BitSet
-  *imap(fnc?: (t: number) => any): IterableIterator<number> {
+  *imap(fnc?: (t: number) => unknown): IterableIterator<number> {
     fnc = fnc || ((i) => i)
     const c = this.words.length
     for (let k = 0; k < c; ++k) {
       let w = this.words[k]
-      while (w != 0) {
+      while (w !== 0) {
         const t = w & -w
         yield fnc((k << 5) + hammingWeight((t - 1) | 0))
         w ^= t
@@ -233,8 +232,8 @@ export class BitSet {
   // i.e. for each i in subBitSet, yield the i-th member of this BitSet
   *imap_subset(
     bitSubSet: BitSet,
-    fnc?: (t: number) => U
-  ): IterableIterator<number> {
+    fnc?: (t: number) => unknown
+  ): IterableIterator<unknown> {
     const idxGen = bitSubSet.imap()
 
     let pos = 0
@@ -248,7 +247,7 @@ export class BitSet {
       while (pos++ < next_pos) {
         t = w & -w
         w ^= t
-        if (w == 0) w = this.words[++k]
+        if (w === 0) w = this.words[++k]
       }
       yield fnc((k << 5) + hammingWeight((t - 1) | 0))
       next = idxGen.next()
@@ -265,10 +264,10 @@ export class BitSet {
 
     for (let k = 0; k < c; ++k) {
       let w = this.words[k]
-      while (w != 0) {
+      while (w !== 0) {
         const t = w & -w
         w ^= t
-        if (i++ == next) {
+        if (i++ === next) {
           newSet.add((k << 5) + hammingWeight((t - 1) | 0))
           next = idxGen.next().value
         }
@@ -290,17 +289,17 @@ export class BitSet {
   equals(other: BitSet): boolean {
     const mcount = Math.min(this.words.length, other.words.length)
     for (let k = 0 | 0; k < mcount; ++k) {
-      if (this.words[k] != other.words[k]) return false
+      if (this.words[k] !== other.words[k]) return false
     }
     if (this.words.length < other.words.length) {
       const c = other.words.length
       for (let k = this.words.length; k < c; ++k) {
-        if (other.words[k] != 0) return false
+        if (other.words[k] !== 0) return false
       }
     } else if (other.words.length < this.words.length) {
       const c = this.words.length
       for (let k = other.words.length; k < c; ++k) {
-        if (this.words[k] != 0) return false
+        if (this.words[k] !== 0) return false
       }
     }
     return true
@@ -534,16 +533,20 @@ export class BitSet {
   }
 }
 
-
 // fast function to compute the Hamming weight of a 32-bit unsigned integer
-function hammingWeight(v: number): number {
+export function hammingWeight(v: number): number {
   v -= (v >>> 1) & 0x55555555 // works with signed or unsigned shifts
   v = (v & 0x33333333) + ((v >>> 2) & 0x33333333)
   return (((v + (v >>> 4)) & 0xf0f0f0f) * 0x1010101) >>> 24
 }
 
 // fast function to compute the Hamming weight of four 32-bit unsigned integers
-function hammingWeight4(v1: number, v2: number, v3: number, v4: number): number {
+export function hammingWeight4(
+  v1: number,
+  v2: number,
+  v3: number,
+  v4: number
+): number {
   v1 -= (v1 >>> 1) & 0x55555555 // works with signed or unsigned shifts
   v2 -= (v2 >>> 1) & 0x55555555 // works with signed or unsigned shifts
   v3 -= (v3 >>> 1) & 0x55555555 // works with signed or unsigned shifts
@@ -560,6 +563,5 @@ function hammingWeight4(v1: number, v2: number, v3: number, v4: number): number 
   v4 = (v4 + (v4 >>> 4)) & 0xf0f0f0f
   return ((v1 + v2 + v3 + v4) * 0x1010101) >>> 24
 }
-
 
 export { BitSet as default }

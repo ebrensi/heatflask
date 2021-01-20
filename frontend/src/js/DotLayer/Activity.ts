@@ -9,7 +9,7 @@ import * as StreamRLE from "./Codecs/StreamRLE"
 import { latLng2pxBounds, latLng2px, tol as dpTol } from "./ViewBox"
 import * as Simplifier from "./Simplifier"
 import { ATYPE } from "../strava"
-import BitSet from "../BitSet"
+import { BitSet, hammingWeight } from "../BitSet"
 import { RunningStatsCalculator } from "./stats"
 // import { quartiles } from "../appUtil.js"
 
@@ -463,7 +463,6 @@ export class Activity {
     if (zoomChanged) {
       this.segMask.clone(this._segMaskUpdates)
       this._segMaskUpdates.zoom = this.segMask.zoom
-
     } else {
       const newSegs = this.segMask.difference(
         this.lastSegMask,
@@ -498,10 +497,9 @@ export class Activity {
     this._containedInMapBounds = undefined
   }
 
-
   /**
    * execute a function func(x1, y1, x2, y2) on each currently in-view
-   * segment (x1,y1) -> (x2, y2) of this Activity. The default is to
+   * segment (x1,y1) -> (x2, y2) of this Activity. drawDiff specifies to
    * only use segments that have changed since the last segMask update.
    * Set forceAll to force all currently viewed segments.
    */
@@ -510,12 +508,12 @@ export class Activity {
     if (!segMask) return 0
 
     let count = 0
-    const points = this.getPointAccessor(segMask.zoom)
-    if (!points) return 0
+    const zoom = segMask.zoom
+    const points = this.getPointAccessor()
 
-    segMask.forEach((i) => {
-      const p1 = points(i)
-      const p2 = points(i + 1)
+    forEachSegmentIter(this.idxSet[zoom], segMask, (i1, i2) => {
+      const p1 = points(i1)
+      const p2 = points(i2)
       func(p1[0], p1[1], p2[0], p2[1])
       count++
     })
@@ -594,4 +592,57 @@ function sqDist(p1: tuple2, p2: tuple2) {
   const [x1, y1] = p1
   const [x2, y2] = p2
   return (x2 - x1) ** 2 + (y2 - y1) ** 2
+}
+
+function forEachSegmentIter(
+  idxSet: BitSet,
+  segMask: BitSet,
+  func: (i1: number, i2: number) => unknown
+): void {
+  let ik = 0 // index of current idxSet word
+  let iw = 0
+  let i = 0 // index of current idxSet element
+  let innerLoop = false
+  let idx1: number
+  let idx2: number
+
+  for (let sk = 0; sk < segMask.words.length; ++sk) {
+    let sw = segMask.words[sk]
+    while (sw !== 0) {
+      const st = sw & -sw
+      const j = (sk << 5) + hammingWeight((st - 1) | 0)
+      // Now navigate to the j-th element of idxSet
+      // console.log(`finding ${j}-th element of idxSet`)
+      innerLoop = true
+      while (innerLoop && ik < idxSet.words.length) {
+        iw = iw || idxSet.words[ik]
+        while (innerLoop && iw !== 0) {
+          const it = iw & -iw
+          // console.log(`at ${i}-th element`)
+          if (i >= j) {
+            if (i === j) {
+              // idx1 is the j-th element of idxSet
+              idx1 = (ik << 5) + hammingWeight((it - 1) | 0)
+              // console.log(`${i}-th element is ${idx1}`)
+            } else if (i === j + 1) {
+              // idx2 is the (j+1)-th element of idxSet
+              idx2 = (ik << 5) + hammingWeight((it - 1) | 0)
+              // console.log(`${i}-th element is ${idx2}. yay!`)
+
+              func(idx1, idx2)
+
+              idx1 = idx2
+              innerLoop = false
+            } else throw "oops. something went wrong here."
+          }
+
+          i++
+          iw ^= it
+        }
+        if (iw === 0) ik++ // advance to next word of idxSet
+      }
+      ///
+      sw ^= st
+    }
+  }
 }
