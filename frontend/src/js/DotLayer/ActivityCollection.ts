@@ -160,14 +160,6 @@ export async function getSelectedLatLngBounds(): Promise<LatLngBounds> {
   if (bounds.isValid()) return bounds
 }
 
-/*
- * Clear all segMasks and force rebuilding them
- */
-export function resetSegMasks(): void {
-  for (const A of itemsArray) {
-    A.resetSegMask()
-  }
-}
 
 /*
  * Methods for drawing to imageData objects

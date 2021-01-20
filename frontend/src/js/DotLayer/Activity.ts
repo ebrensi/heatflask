@@ -488,15 +488,6 @@ export class Activity {
     return this.segMask
   }
 
-  resetSegMask(): void {
-    if (!this.lastSegMask) {
-      this.lastSegMask = new BitSet()
-      this._segMaskUpdates = new BitSet()
-    }
-    this.lastSegMask.clear()
-    this._containedInMapBounds = undefined
-  }
-
   /**
    * execute a function func(x1, y1, x2, y2) on each currently in-view
    * segment (x1,y1) -> (x2, y2) of this Activity. drawDiff specifies to
@@ -593,6 +584,7 @@ function sqDist(p1: tuple2, p2: tuple2) {
   const [x2, y2] = p2
   return (x2 - x1) ** 2 + (y2 - y1) ** 2
 }
+
 
 function forEachSegmentIter(
   idxSet: BitSet,
