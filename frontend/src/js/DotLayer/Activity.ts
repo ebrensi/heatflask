@@ -465,7 +465,7 @@ export class Activity {
       this._segMaskUpdates.zoom = this.segMask.zoom
 
     } else {
-      const newSegs = this.segMask.new_difference(
+      const newSegs = this.segMask.difference(
         this.lastSegMask,
         this._segMaskUpdates
       )
