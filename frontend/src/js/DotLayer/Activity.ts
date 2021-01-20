@@ -280,26 +280,7 @@ export class Activity {
     }
   }
 
-  /**
-   * A generator that yields points [x,y] of the location track at
-   *  a given zoom level, in sequence.
-   *
-   * Each point yielded by the generator is a window into the
-   * actual px array so modifying it will modify the the px array.
-   *
-   * @param {Number} zoom
-   */
-  pointsIterator(zoom: number): IterableIterator<tuple2> {
-    if (!zoom) {
-      return _pointsIterator(this.px)
-    }
 
-    const idxSet = this.idxSet[zoom]
-    if (!idxSet) {
-      throw new Error(`no idxSet[${zoom}]`)
-    }
-    return _pointsIterator(this.px, idxSet)
-  }
 
   timesIterator(zoom: number): IterableIterator<number> {
     if (!zoom) {
@@ -427,21 +408,25 @@ export class Activity {
       this._containedInMapBounds = true
     } else {
       this._containedInMapBounds = false
-      const points = this.getPointAccessor(zoom)
+      const points = this.getPointAccessor()
       const n = this.idxSet[zoom].size()
       const segMask = this.segMask.clear().resize(n)
-      const p = points(0)
-      let pIn = viewportPxBounds.contains(p[0], p[1])
-      for (let i = 0; i < n - 1; i++) {
-        const p = points(i + 1)
-        const nextpIn = viewportPxBounds.contains(p[0], p[1])
-        /*
-         * If either endpoint of the segment is contained in viewport
-         * bounds then include this segment index
-         */
-        if (pIn || nextpIn) segMask.add(i)
-        pIn = nextpIn
-      }
+
+      let lastpIn
+      let i = -1
+      this.idxSet[zoom].forEach(idx => {
+        if (lastpIn !== undefined) {
+          const p = points(idx)
+          const pIn = viewportPxBounds.contains(p[0], p[1])
+          /*
+           * If either endpoint of the segment is contained in viewport
+           * bounds then include this segment index
+           */
+          if (lastpIn || pIn) segMask.add(i)
+          lastpIn = pIn
+        }
+        i++
+      })
     }
 
     if (zoom in this.badSegIdx) {
@@ -564,20 +549,6 @@ export class Activity {
   }
 }
 
-/* helper functions */
-function* _pointsIterator(px, idxSet?: BitSet) {
-  if (!idxSet) {
-    for (let i = 0, len = px.length / 2; i < len; i++) {
-      const j = i * 2
-      yield px.subarray(j, j + 2)
-    }
-  } else {
-    for (const i of idxSet) {
-      const j = i * 2
-      yield px.subarray(j, j + 2)
-    }
-  }
-}
 
 function sqDist(p1: tuple2, p2: tuple2) {
   const [x1, y1] = p1
