@@ -238,8 +238,7 @@ export class Activity {
    * The square distance between to successive points in this.px
    */
   gapAt(idx: number): number {
-    const p = this.getPointAccessor()
-    return sqDist(p(idx), p(idx + 1))
+    return sqDist(this.pointAccessor(idx), this.pointAccessor(idx + 1))
   }
 
   /**
@@ -251,36 +250,10 @@ export class Activity {
    * Each point returned by the accessor function is a window into the
    * actual px array so modifying it will modify the the px array.
    */
-  getPointAccessor(zoom?: number): (i: number) => Float32Array {
-    const px = this.px
-    if (!zoom) {
-      return function (i) {
-        const j = i * 2
-        return px.subarray(j, j + 2)
-      }
-    }
-
-    const key = `I${this.id}:${zoom}`
-    let idx = _lru.get(key)
-
-    if (!idx) {
-      const idxSet = this.idxSet[zoom]
-      if (!idxSet) {
-        // throw new Error(`no idxSet[${zoom}]`)
-        // console.log(`${this.id}: no idxSet[${zoom}]`)
-        return
-      }
-      idx = this.idxSet[zoom].array()
-      _lru.set(key, idx)
-    }
-
-    return function (i) {
-      const j = idx[i] * 2
-      return px.subarray(j, j + 2)
-    }
+  pointAccessor(i: number): Float32Array {
+    const j = i * 2
+    return this.px.subarray(j, j + 2)
   }
-
-
 
   timesIterator(zoom: number): IterableIterator<number> {
     if (!zoom) {
@@ -319,7 +292,7 @@ export class Activity {
 
     const tol = dpTol(zoom)
     const idxBitSet = Simplifier.simplify(
-      this.getPointAccessor(),
+      (i) => this.pointAccessor(i),
       this.px.length / 2,
       tol
     )
@@ -408,15 +381,14 @@ export class Activity {
       this._containedInMapBounds = true
     } else {
       this._containedInMapBounds = false
-      const points = this.getPointAccessor()
       const n = this.idxSet[zoom].size()
       const segMask = this.segMask.clear().resize(n)
 
       let lastpIn
       let i = -1
-      this.idxSet[zoom].forEach(idx => {
+      this.idxSet[zoom].forEach((idx) => {
         if (lastpIn !== undefined) {
-          const p = points(idx)
+          const p = this.pointAccessor(idx)
           const pIn = viewportPxBounds.contains(p[0], p[1])
           /*
            * If either endpoint of the segment is contained in viewport
@@ -485,11 +457,10 @@ export class Activity {
 
     let count = 0
     const zoom = segMask.zoom
-    const points = this.getPointAccessor()
 
     forEachSegmentIter(this.idxSet[zoom], segMask, (i1, i2) => {
-      const p1 = points(i1)
-      const p2 = points(i2)
+      const p1 = this.pointAccessor(i1)
+      const p2 = this.pointAccessor(i2)
       func(p1[0], p1[1], p2[0], p2[1])
       count++
     })
@@ -511,23 +482,21 @@ export class Activity {
     if (!segMask) return 0
 
     const start = this.ts
-    const points = this.getPointAccessor(segMask.zoom)
-    if (!points) return 0
 
     const i0 = segMask.min()
     const times = this.getTimesArray(segMask.zoom)
     const timeOffset = (timeScale * (nowInSecs - (start + times[i0]))) % T
 
     let count = 0
-    segMask.forEach((i) => {
+    forEachSegmentIter(this.idxSet[segMask.zoom], segMask, (idx1, idx2, i) => {
       const t_a = times[i]
       const t_b = times[i + 1]
       const lowest = Math.ceil((t_a - timeOffset) / T)
       const highest = Math.floor((t_b - timeOffset) / T)
 
       if (lowest <= highest) {
-        const p_a = points(i)
-        const p_b = points(i + 1)
+        const p_a = this.pointAccessor(idx1)
+        const p_b = this.pointAccessor(idx2)
 
         const t_ab = t_b - t_a
         const vx = (p_b[0] - p_a[0]) / t_ab
@@ -549,18 +518,16 @@ export class Activity {
   }
 }
 
-
 function sqDist(p1: tuple2, p2: tuple2) {
   const [x1, y1] = p1
   const [x2, y2] = p2
   return (x2 - x1) ** 2 + (y2 - y1) ** 2
 }
 
-
 function forEachSegmentIter(
   idxSet: BitSet,
   segMask: BitSet,
-  func: (i1: number, i2: number) => unknown
+  func: (i1: number, i2: number, i: number) => unknown
 ): void {
   let ik = 0 // index of current idxSet word
   let iw = 0
@@ -592,7 +559,7 @@ function forEachSegmentIter(
               idx2 = (ik << 5) + hammingWeight((it - 1) | 0)
               // console.log(`${i}-th element is ${idx2}. yay!`)
 
-              func(idx1, idx2)
+              func(idx1, idx2, j)
 
               idx1 = idx2
               innerLoop = false
