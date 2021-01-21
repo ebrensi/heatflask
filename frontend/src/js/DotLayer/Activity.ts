@@ -25,11 +25,6 @@ type snum = string | number
 type tuple2 = [number, number] | Float32Array
 type segFunc = (x0: number, y0: number, x1: number, y1: number) => void
 type pointFunc = (x: number, y: number) => void
-/*
- * This is meant to be a LRU cache for stuff that should go away
- * if it is not used for a while. For now we just use a Map.
- */
-const _lru: Map<string, numericArray> = new Map()
 
 /**
  * We detect anomalous gaps in data by simple statistical analysis of
@@ -255,29 +250,6 @@ export class Activity {
     return this.px.subarray(j, j + 2)
   }
 
-  timesIterator(zoom: number): IterableIterator<number> {
-    if (!zoom) {
-      return StreamRLE.decodeCompressedDiffBuf(this.time)
-    } else {
-      const idxSet = this.idxSet[zoom]
-      if (!idxSet) {
-        throw new Error(`no idxSet[${zoom}]`)
-      }
-      return StreamRLE.decodeCompressedDiffBuf2(this.time, idxSet)
-    }
-  }
-
-  getTimesArray(zoom: number): numericArray {
-    const key = `T${this.id}:${zoom}`
-    let arr = _lru.get(key)
-
-    if (!arr) {
-      arr = Uint16Array.from(this.timesIterator(zoom))
-      _lru.set(key, arr)
-    }
-    return arr
-  }
-
   /**
    * Construct the reduced idxSet for a given zoom-level. An idxSet is a
    * set of indices indicating the subset of px that we will use at the
@@ -479,40 +451,52 @@ export class Activity {
     if (!segMask) return 0
 
     const start = this.ts
+    const times = uncompressVByteRLEGen(this.time, 0)
+    times.next()
+    let lastIdx2 = 0
+    let t_b = 0
 
-    const i0 = segMask.min()
-    const times = this.getTimesArray(segMask.zoom)
-    // const times2 = uncompressVByteRLEGen(this.time)
+    let timeOffset: number
 
-    const timeOffset = (timeScale * (nowInSecs - (start + times[i0]))) % T
-
+    let dummy = true
     let count = 0
-    forEachSegmentIter(this.idxSet[segMask.zoom], segMask, (idx1, idx2, i) => {
-      const t_a = times[i]
-      const t_b = times[i + 1]
+    forEachSegmentIter(this.idxSet[segMask.zoom], segMask, (idx1, idx2) => {
+      const t_a = (idx1 === lastIdx2)? t_b : times.next(idx1).value
+      t_b = times.next(idx2).value
+
+      if (t_a === undefined || t_b === undefined) return
+
+      lastIdx2 = idx2
+
+      if (dummy) {
+        timeOffset = (timeScale * (nowInSecs - (start + t_a))) % T
+        dummy = false
+      }
       // const timeOffset = (timeScale * (nowInSecs - (start + t_a))) % T
+
       const lowest = Math.ceil((t_a - timeOffset) / T)
       const highest = Math.floor((t_b - timeOffset) / T)
 
-      if (lowest <= highest) {
-        const p_a = this.pointAccessor(idx1)
-        const p_b = this.pointAccessor(idx2)
+      if (lowest > highest) return
 
-        const t_ab = t_b - t_a
-        const vx = (p_b[0] - p_a[0]) / t_ab
-        const vy = (p_b[1] - p_a[1]) / t_ab
+      const p_a = this.pointAccessor(idx1)
+      const p_b = this.pointAccessor(idx2)
 
-        for (let j = lowest; j <= highest; j++) {
-          const t = j * T + timeOffset
-          const dt = t - t_a
-          if (dt > 0) {
-            const x = p_a[0] + vx * dt
-            const y = p_a[1] + vy * dt
-            func(x, y)
-            count++
-          }
+      const t_ab = t_b - t_a
+      const vx = (p_b[0] - p_a[0]) / t_ab
+      const vy = (p_b[1] - p_a[1]) / t_ab
+
+      for (let j = lowest; j <= highest; j++) {
+        const t = j * T + timeOffset
+        const dt = t - t_a
+        if (dt > 0) {
+          const x = p_a[0] + vx * dt
+          const y = p_a[1] + vy * dt
+          func(x, y)
+          count++
         }
       }
+
     })
     return count
   }
@@ -580,13 +564,16 @@ function forEachSegmentIter(
 export function* uncompressVByteRLEGen(
   input: ArrayBuffer,
   targetPos?: number
-): IterableIterator<{ v: number; i: number }> {
+): IterableIterator<number> {
   const inbyte = new Int8Array(input)
   const end = inbyte.length
   let pos = 0
   let runningSum = 0
   let reps = 0
   let si = 0
+
+  if (si === targetPos || targetPos === undefined)
+     targetPos = yield runningSum //{ v: runningSum, i: si }
 
   while (end > pos) {
     let c = inbyte[pos++]
@@ -597,8 +584,8 @@ export function* uncompressVByteRLEGen(
       else
         do {
           runningSum += v
-          if (si++ === targetPos || targetPos === undefined)
-            targetPos = yield { v: runningSum, i: si }
+          if (++si === targetPos || targetPos === undefined)
+            targetPos = yield runningSum //{ v: runningSum, i: si }
         } while (--reps > 0)
       continue
     }
@@ -610,8 +597,8 @@ export function* uncompressVByteRLEGen(
       else
         do {
           runningSum += v
-          if (si++ === targetPos || targetPos === undefined)
-            targetPos = yield { v: runningSum, i: si }
+          if (++si === targetPos || targetPos === undefined)
+            targetPos = yield runningSum //{ v: runningSum, i: si }
         } while (--reps > 0)
       continue
     }
@@ -623,8 +610,8 @@ export function* uncompressVByteRLEGen(
       else
         do {
           runningSum += v
-          if (si++ === targetPos || targetPos === undefined)
-            targetPos = yield { v: runningSum, i: si }
+          if (++si === targetPos || targetPos === undefined)
+            targetPos = yield runningSum //{ v: runningSum, i: si }
         } while (--reps > 0)
       continue
     }
@@ -636,8 +623,8 @@ export function* uncompressVByteRLEGen(
       else
         do {
           runningSum += v
-          if (si++ === targetPos || targetPos === undefined)
-            targetPos = yield { v: runningSum, i: si }
+          if (++si === targetPos || targetPos === undefined)
+            targetPos = yield runningSum //{ v: runningSum, i: si }
         } while (--reps > 0)
       continue
     }
@@ -648,8 +635,8 @@ export function* uncompressVByteRLEGen(
     else
       do {
         runningSum += v
-        if (si++ === targetPos || targetPos === undefined)
-          targetPos = yield { v: runningSum, i: si }
+        if (++si === targetPos || targetPos === undefined)
+          targetPos = yield runningSum //{ v: runningSum, i: si }
       } while (--reps > 0)
   }
 }
