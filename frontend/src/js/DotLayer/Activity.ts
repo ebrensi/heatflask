@@ -387,17 +387,14 @@ export class Activity {
       let lastpIn
       let i = -1
       this.idxSet[zoom].forEach((idx) => {
-        if (lastpIn !== undefined) {
-          const p = this.pointAccessor(idx)
-          const pIn = viewportPxBounds.contains(p[0], p[1])
-          /*
-           * If either endpoint of the segment is contained in viewport
-           * bounds then include this segment index
-           */
-          if (lastpIn || pIn) segMask.add(i)
-          lastpIn = pIn
-        }
-        i++
+        const p = this.pointAccessor(idx)
+        const pIn = viewportPxBounds.contains(p[0], p[1])
+        /*
+         * If either endpoint of the segment is contained in viewport
+         * bounds then include this segment index
+         */
+        if (i++ >= 0 && (lastpIn || pIn)) segMask.add(i)
+        lastpIn = pIn
       })
     }
 
@@ -442,7 +439,7 @@ export class Activity {
       })
     }
 
-    return this.segMask
+    if (!this.segMask.isEmpty()) return this.segMask
   }
 
   /**
@@ -485,12 +482,15 @@ export class Activity {
 
     const i0 = segMask.min()
     const times = this.getTimesArray(segMask.zoom)
+    // const times2 = uncompressVByteRLEGen(this.time)
+
     const timeOffset = (timeScale * (nowInSecs - (start + times[i0]))) % T
 
     let count = 0
     forEachSegmentIter(this.idxSet[segMask.zoom], segMask, (idx1, idx2, i) => {
       const t_a = times[i]
       const t_b = times[i + 1]
+      // const timeOffset = (timeScale * (nowInSecs - (start + t_a))) % T
       const lowest = Math.ceil((t_a - timeOffset) / T)
       const highest = Math.floor((t_b - timeOffset) / T)
 
@@ -574,5 +574,82 @@ function forEachSegmentIter(
       ///
       sw ^= st
     }
+  }
+}
+
+export function* uncompressVByteRLEGen(
+  input: ArrayBuffer,
+  targetPos?: number
+): IterableIterator<{ v: number; i: number }> {
+  const inbyte = new Int8Array(input)
+  const end = inbyte.length
+  let pos = 0
+  let runningSum = 0
+  let reps = 0
+  let si = 0
+
+  while (end > pos) {
+    let c = inbyte[pos++]
+    let v = c & 0x7f
+    if (c >= 0) {
+      if (v === 0) reps = NaN
+      else if (isNaN(reps)) reps = v
+      else
+        do {
+          runningSum += v
+          if (si++ === targetPos || targetPos === undefined)
+            targetPos = yield { v: runningSum, i: si }
+        } while (--reps > 0)
+      continue
+    }
+    c = inbyte[pos++]
+    v |= (c & 0x7f) << 7
+    if (c >= 0) {
+      if (v === 0) reps = NaN
+      else if (isNaN(reps)) reps = v
+      else
+        do {
+          runningSum += v
+          if (si++ === targetPos || targetPos === undefined)
+            targetPos = yield { v: runningSum, i: si }
+        } while (--reps > 0)
+      continue
+    }
+    c = inbyte[pos++]
+    v |= (c & 0x7f) << 14
+    if (c >= 0) {
+      if (v === 0) reps = NaN
+      else if (isNaN(reps)) reps = v
+      else
+        do {
+          runningSum += v
+          if (si++ === targetPos || targetPos === undefined)
+            targetPos = yield { v: runningSum, i: si }
+        } while (--reps > 0)
+      continue
+    }
+    c = inbyte[pos++]
+    v |= (c & 0x7f) << 21
+    if (c >= 0) {
+      if (v === 0) reps = NaN
+      else if (isNaN(reps)) reps = v
+      else
+        do {
+          runningSum += v
+          if (si++ === targetPos || targetPos === undefined)
+            targetPos = yield { v: runningSum, i: si }
+        } while (--reps > 0)
+      continue
+    }
+    c = inbyte[pos++]
+    v |= c << 28
+    if (v === 0) reps = NaN
+    else if (isNaN(reps)) reps = v
+    else
+      do {
+        runningSum += v
+        if (si++ === targetPos || targetPos === undefined)
+          targetPos = yield { v: runningSum, i: si }
+      } while (--reps > 0)
   }
 }

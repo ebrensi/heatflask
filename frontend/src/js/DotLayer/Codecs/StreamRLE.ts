@@ -150,7 +150,7 @@ export function transcode2CompressedBuf(rleList: RLElist): ArrayBuffer {
  * @param  {Iterator} list -- iterable list of integers (must have .next() method)
  * @return {RLEbuff}      [description]
  */
-export function encodeBuf(list: Iterator<number>): tArray {
+export function encodeBuf(list: IterableIterator<number>): tArray {
   // we start off with regular array because we dont know how long it will be
   const rle = []
   let max = 0
@@ -189,7 +189,7 @@ export function encodeBuf(list: Iterator<number>): tArray {
   return ArrayConstructor.from(rle)
 }
 
-export function encode2CompressedBuf(list: Iterator<number>): ArrayBuffer {
+export function encode2CompressedBuf(list: IterableIterator<number>): ArrayBuffer {
   const buf = encodeBuf(list)
   return compress(buf)
 }
@@ -197,7 +197,7 @@ export function encode2CompressedBuf(list: Iterator<number>): ArrayBuffer {
 /**
  * Iterate successive differences of a list of values
  */
-function* diffs(list: Iterator<number>) {
+function* diffs(list: IterableIterator<number>) {
   let val1 = list.next().value
   for (const val2 of list) {
     yield val2 - val1
@@ -210,11 +210,11 @@ function* diffs(list: Iterator<number>) {
  * @param  {Iterator} list -- iterable list of integers
  * @return {RLEbuff}
  */
-export function encodeDiffBuf(list: Iterator<number>): tArray {
+export function encodeDiffBuf(list: IterableIterator<number>): tArray {
   return encodeBuf(diffs(list))
 }
 
-export function encode2CompressedDiffBuf(list: Iterator<number>): ArrayBuffer {
+export function encode2CompressedDiffBuf(list: IterableIterator<number>): ArrayBuffer {
   const buf = encodeDiffBuf(list)
   return compress(buf)
 }
@@ -277,8 +277,8 @@ export function* decodeCompressedDiffBuf(
 
   for (const el of bufGen) {
     if (el === 0) {
-      const n = bufGen.next().value,
-        repeated = bufGen.next().value
+      const n = bufGen.next().value
+      const repeated = bufGen.next().value
 
       for (let j = 0; j < n; j++) {
         running_sum += repeated
