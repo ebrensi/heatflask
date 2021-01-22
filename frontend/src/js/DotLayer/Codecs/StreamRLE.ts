@@ -189,7 +189,9 @@ export function encodeBuf(list: IterableIterator<number>): tArray {
   return ArrayConstructor.from(rle)
 }
 
-export function encode2CompressedBuf(list: IterableIterator<number>): ArrayBuffer {
+export function encode2CompressedBuf(
+  list: IterableIterator<number>
+): ArrayBuffer {
   const buf = encodeBuf(list)
   return compress(buf)
 }
@@ -214,7 +216,9 @@ export function encodeDiffBuf(list: IterableIterator<number>): tArray {
   return encodeBuf(diffs(list))
 }
 
-export function encode2CompressedDiffBuf(list: IterableIterator<number>): ArrayBuffer {
+export function encode2CompressedDiffBuf(
+  list: IterableIterator<number>
+): ArrayBuffer {
   const buf = encodeDiffBuf(list)
   return compress(buf)
 }
@@ -264,82 +268,62 @@ export function* decodeDiffBuf(
 }
 
 /**
- * Decode a VByte-encoded buffer into the original integer values
+ * Returns a function that returns the next encoded member each time
+ * it is called.  Optionally it can be called with the index of the next
+ * number to return.
+ *
+ * Another way to describe it is that this returns a sort of element-array
+ * S where S(i) is the i-th element, but i must be larger every time S(i)
+ * is called.
  */
-export function* decodeCompressedDiffBuf(
-  cbuf: ArrayBuffer,
-  first_value = 0
-): IterableIterator<number> {
-  const bufGen = uncompress(cbuf)
+export function uncompressVByteRLEIterator(
+  buf: ArrayBuffer,
+  runningSum = 0
+): (i: number) => number {
+  const inbyte = new Int8Array(buf)
+  const end = inbyte.length
+  let pos = 0
+  let reps = 0
+  let si = 0
+  let v = 0
 
-  let running_sum = first_value
-  yield running_sum
-
-  for (const el of bufGen) {
-    if (el === 0) {
-      const n = bufGen.next().value
-      const repeated = bufGen.next().value
-
-      for (let j = 0; j < n; j++) {
-        running_sum += repeated
-        yield running_sum
+  return (targetPos: number) => {
+    while (true) {
+      while (0 < reps--) {
+        runningSum += v
+        if (si++ === targetPos || targetPos === undefined) return runningSum //{ v: runningSum, i: si }
       }
-    } else {
-      running_sum += el
-      yield running_sum
+
+      while (end > pos) {
+        // get the next value
+        let c = inbyte[pos++]
+        v = c & 0x7f
+        if (c < 0) {
+          c = inbyte[pos++]
+          v |= (c & 0x7f) << 7
+          if (c < 0) {
+            c = inbyte[pos++]
+            v |= (c & 0x7f) << 14
+            if (c < 0) {
+              c = inbyte[pos++]
+              v |= (c & 0x7f) << 21
+              if (c < 0) {
+                c = inbyte[pos++]
+                v |= c << 28
+              }
+            }
+          }
+        }
+
+        // 0 followed by the number of reps specifies a run of repeats
+        if (v === 0) reps = NaN
+        else if (isNaN(reps)) reps = v
+        else
+          do {
+            runningSum += v
+            if (si++ === targetPos || targetPos === undefined) return runningSum //{ v: runningSum, i: si }
+          } while (--reps > 0)
+      }
     }
   }
-}
-
-/**
- * Decode VByte-encoded {@link RLEBuff} into a subsequence of the original integer values.
- * The indices of the original values are expected as a {@link BitSet}.
- *
- * (Alternative method)
- * @generator
- * @param  {ArrayBuffer} cbuf
- * @param  {BitSet} idxSet
- * @param  {Number} [first_value=0] The first value of the original list
- * @yields {Number}
- */
-export function decodeCompressedDiffBuf2(
-  cbuf: ArrayBuffer,
-  idxSet: BitSet,
-  first_value = 0
-): IterableIterator<number> {
-  const bufGen = uncompress(cbuf)
-  let j = 0,
-    k,
-    repeated,
-    sum = first_value // j is our counter for bufGen
-
-  return idxSet.imap((i) => {
-    // we will return the i-th element of bufGen
-
-    // ..if we are continuing a repeat streak
-    while (k > 0) {
-      sum += repeated
-      k--
-      if (++j == i) return sum
-    }
-
-    if (j == i) return sum
-    else {
-      while (j < i) {
-        const el = bufGen.next().value
-        if (el === 0) {
-          k = bufGen.next().value
-          repeated = bufGen.next().value
-          while (k--) {
-            sum += repeated
-            if (++j == i) return sum
-          }
-        } else {
-          sum += el
-          j++
-        }
-      }
-      return sum
-    }
-  })
 }

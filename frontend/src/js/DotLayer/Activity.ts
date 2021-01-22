@@ -4,10 +4,15 @@
  */
 
 import { LatLngBounds } from "../myLeaflet"
-import * as Polyline from "./Codecs/Polyline"
-import * as StreamRLE from "./Codecs/StreamRLE"
+import { decode as decodePolyline} from "./Codecs/Polyline"
+import {
+  uncompressVByteRLEIterator,
+  transcode2CompressedBuf,
+  decodeDiffList,
+  encode2CompressedDiffBuf,
+} from "./Codecs/StreamRLE"
 import { latLng2pxBounds, latLng2px, tol as dpTol } from "./ViewBox"
-import * as Simplifier from "./Simplifier"
+import { simplify as simplifyPath } from "./Simplifier"
 import { ATYPE } from "../strava"
 import { BitSet, hammingWeight } from "../BitSet"
 import { RunningStatsCalculator } from "./stats"
@@ -20,7 +25,6 @@ interface SegMask extends BitSet {
   zoom?: number
 }
 
-type numericArray = Uint8Array | Uint16Array | Uint32Array | number[]
 type snum = string | number
 type tuple2 = [number, number] | Float32Array
 type segFunc = (x0: number, y0: number, x1: number, y1: number) => void
@@ -149,7 +153,7 @@ export class Activity {
      */
     const dStats = new RunningStatsCalculator()
     const sqDists = []
-    const latlngs = Polyline.decode(polyline)
+    const latlngs = decodePolyline(polyline)
 
     // Set the first point of points to be the projected first latlng pair
     points.set(latLng2px(latlngs.next().value), 0)
@@ -179,14 +183,14 @@ export class Activity {
 
     if (sqDists.length + 1 === n) {
       this.px = points
-      this.time = StreamRLE.transcode2CompressedBuf(time)
+      this.time = transcode2CompressedBuf(time)
     } else {
       n = sqDists.length + 1
       this.px = points.slice(0, n * 2)
 
       // Some points were discarded so we need to adjust the time diffs
-      const it = StreamRLE.decodeDiffList(time, 0, excludeMask)
-      this.time = StreamRLE.encode2CompressedDiffBuf(it)
+      const it = decodeDiffList(time, 0, excludeMask)
+      this.time = encode2CompressedDiffBuf(it)
 
       // console.log(`${_id}: excluded ${excludeMask.size()} points`)
     }
@@ -263,7 +267,7 @@ export class Activity {
     if (zoom in this.idxSet) return
 
     const tol = dpTol(zoom)
-    const idxBitSet = Simplifier.simplify(
+    const idxBitSet = simplifyPath(
       (i) => this.pointAccessor(i),
       this.px.length / 2,
       tol
@@ -426,10 +430,20 @@ export class Activity {
 
     let count = 0
     const zoom = segMask.zoom
+    const idx = this.idxSet[zoom].iterator()
+    let lasti: number
+    let lastidx2: number
+    let lastp2 : Float32Array
 
-    forEachSegmentIter(this.idxSet[zoom], segMask, (i1, i2) => {
-      const p1 = this.pointAccessor(i1)
-      const p2 = this.pointAccessor(i2)
+    segMask.forEach((i) => {
+      const reuse = i === lasti + 1
+      lasti = i
+
+      const idx1 = reuse? lastidx2 : idx(i)
+      const idx2 = lastidx2 = idx(i + 1)
+
+      const p1 = reuse? lastp2 : this.pointAccessor(idx1)
+      const p2 = lastp2 = this.pointAccessor(idx2)
       func(p1[0], p1[1], p2[0], p2[1])
       count++
     })
@@ -451,22 +465,33 @@ export class Activity {
     if (!segMask) return 0
 
     const start = this.ts
-    const times = uncompressVByteRLEGen(this.time, 0)
-    times.next()
-    let lastIdx2 = 0
-    let t_b = 0
+    const time = uncompressVByteRLEIterator(this.time, 0)
+    const idx = this.idxSet[segMask.zoom].iterator()
+
+    // we do this because first time is always 0 and time(0) corresponds
+    //  to pointAccessor(1)
+    let lasti = -1
+    let lastIdx1 = 0
+    let lastt_b = 0
+    let lastp_b = this.pointAccessor(0)
 
     let timeOffset: number
 
+    debugger
+
     let dummy = true
     let count = 0
-    forEachSegmentIter(this.idxSet[segMask.zoom], segMask, (idx1, idx2) => {
-      const t_a = (idx1 === lastIdx2)? t_b : times.next(idx1).value
-      t_b = times.next(idx2).value
+    this.segMask.forEach((i) => {
+      const reuse = i === lasti + 1
+      lasti = i
+
+      const idx0 = reuse ? lastIdx1 : idx(i-1)
+      const idx1 = (lastIdx1 = idx(i))
+
+      const t_a = reuse ? lastt_b : time(idx0)
+      const t_b = (lastt_b = time(idx1))
 
       if (t_a === undefined || t_b === undefined) return
-
-      lastIdx2 = idx2
 
       if (dummy) {
         timeOffset = (timeScale * (nowInSecs - (start + t_a))) % T
@@ -479,8 +504,8 @@ export class Activity {
 
       if (lowest > highest) return
 
-      const p_a = this.pointAccessor(idx1)
-      const p_b = this.pointAccessor(idx2)
+      const p_a = reuse ? lastp_b : this.pointAccessor(idx0)
+      const p_b = (lastp_b = this.pointAccessor(idx1))
 
       const t_ab = t_b - t_a
       const vx = (p_b[0] - p_a[0]) / t_ab
@@ -496,7 +521,6 @@ export class Activity {
           count++
         }
       }
-
     })
     return count
   }
@@ -508,7 +532,7 @@ function sqDist(p1: tuple2, p2: tuple2) {
   return (x2 - x1) ** 2 + (y2 - y1) ** 2
 }
 
-function forEachSegmentIter(
+function forEachSegmentIdx(
   idxSet: BitSet,
   segMask: BitSet,
   func: (i1: number, i2: number, i: number) => unknown
@@ -558,85 +582,5 @@ function forEachSegmentIter(
       ///
       sw ^= st
     }
-  }
-}
-
-export function* uncompressVByteRLEGen(
-  input: ArrayBuffer,
-  targetPos?: number
-): IterableIterator<number> {
-  const inbyte = new Int8Array(input)
-  const end = inbyte.length
-  let pos = 0
-  let runningSum = 0
-  let reps = 0
-  let si = 0
-
-  if (si === targetPos || targetPos === undefined)
-     targetPos = yield runningSum //{ v: runningSum, i: si }
-
-  while (end > pos) {
-    let c = inbyte[pos++]
-    let v = c & 0x7f
-    if (c >= 0) {
-      if (v === 0) reps = NaN
-      else if (isNaN(reps)) reps = v
-      else
-        do {
-          runningSum += v
-          if (++si === targetPos || targetPos === undefined)
-            targetPos = yield runningSum //{ v: runningSum, i: si }
-        } while (--reps > 0)
-      continue
-    }
-    c = inbyte[pos++]
-    v |= (c & 0x7f) << 7
-    if (c >= 0) {
-      if (v === 0) reps = NaN
-      else if (isNaN(reps)) reps = v
-      else
-        do {
-          runningSum += v
-          if (++si === targetPos || targetPos === undefined)
-            targetPos = yield runningSum //{ v: runningSum, i: si }
-        } while (--reps > 0)
-      continue
-    }
-    c = inbyte[pos++]
-    v |= (c & 0x7f) << 14
-    if (c >= 0) {
-      if (v === 0) reps = NaN
-      else if (isNaN(reps)) reps = v
-      else
-        do {
-          runningSum += v
-          if (++si === targetPos || targetPos === undefined)
-            targetPos = yield runningSum //{ v: runningSum, i: si }
-        } while (--reps > 0)
-      continue
-    }
-    c = inbyte[pos++]
-    v |= (c & 0x7f) << 21
-    if (c >= 0) {
-      if (v === 0) reps = NaN
-      else if (isNaN(reps)) reps = v
-      else
-        do {
-          runningSum += v
-          if (++si === targetPos || targetPos === undefined)
-            targetPos = yield runningSum //{ v: runningSum, i: si }
-        } while (--reps > 0)
-      continue
-    }
-    c = inbyte[pos++]
-    v |= c << 28
-    if (v === 0) reps = NaN
-    else if (isNaN(reps)) reps = v
-    else
-      do {
-        runningSum += v
-        if (++si === targetPos || targetPos === undefined)
-          targetPos = yield runningSum //{ v: runningSum, i: si }
-      } while (--reps > 0)
   }
 }

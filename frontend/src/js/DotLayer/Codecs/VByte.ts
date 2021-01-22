@@ -212,3 +212,4 @@ export function* uncompressSigned(buf: ArrayBuffer): IterableIterator<number> {
     yield zigzag_decode(v)
   }
 }
+

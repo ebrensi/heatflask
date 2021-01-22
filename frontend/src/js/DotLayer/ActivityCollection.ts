@@ -160,7 +160,6 @@ export async function getSelectedLatLngBounds(): Promise<LatLngBounds> {
   if (bounds.isValid()) return bounds
 }
 
-
 /*
  * Methods for drawing to imageData objects
  */
