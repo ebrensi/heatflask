@@ -289,12 +289,14 @@ export function uncompressVByteRLEIterator(
 
   return (targetPos: number) => {
     while (true) {
-      while (0 < reps--) {
+      do {
         runningSum += v
         if (si++ === targetPos || targetPos === undefined) return runningSum //{ v: runningSum, i: si }
-      }
+      } while (--reps > 0)
 
-      while (end > pos) {
+      if (pos >= end) throw RangeError
+
+      while (true) {
         // get the next value
         let c = inbyte[pos++]
         v = c & 0x7f
@@ -318,11 +320,7 @@ export function uncompressVByteRLEIterator(
         // 0 followed by the number of reps specifies a run of repeats
         if (v === 0) reps = NaN
         else if (isNaN(reps)) reps = v
-        else
-          do {
-            runningSum += v
-            if (si++ === targetPos || targetPos === undefined) return runningSum //{ v: runningSum, i: si }
-          } while (--reps > 0)
+        else break
       }
     }
   }

@@ -4,7 +4,7 @@
  */
 
 import { LatLngBounds } from "../myLeaflet"
-import { decode as decodePolyline} from "./Codecs/Polyline"
+import { decode as decodePolyline } from "./Codecs/Polyline"
 import {
   uncompressVByteRLEIterator,
   transcode2CompressedBuf,
@@ -433,17 +433,17 @@ export class Activity {
     const idx = this.idxSet[zoom].iterator()
     let lasti: number
     let lastidx2: number
-    let lastp2 : Float32Array
+    let lastp2: Float32Array
 
     segMask.forEach((i) => {
       const reuse = i === lasti + 1
       lasti = i
 
-      const idx1 = reuse? lastidx2 : idx(i)
-      const idx2 = lastidx2 = idx(i + 1)
+      const idx1 = reuse ? lastidx2 : idx(i)
+      const idx2 = (lastidx2 = idx(i + 1))
 
-      const p1 = reuse? lastp2 : this.pointAccessor(idx1)
-      const p2 = lastp2 = this.pointAccessor(idx2)
+      const p1 = reuse ? lastp2 : this.pointAccessor(idx1)
+      const p2 = (lastp2 = this.pointAccessor(idx2))
       func(p1[0], p1[1], p2[0], p2[1])
       count++
     })
@@ -464,34 +464,33 @@ export class Activity {
     const segMask = drawDiff ? this._segMaskUpdates : this.segMask
     if (!segMask) return 0
 
+    const zoom = segMask.zoom
     const start = this.ts
     const time = uncompressVByteRLEIterator(this.time, 0)
-    const idx = this.idxSet[segMask.zoom].iterator()
+    const idx = this.idxSet[zoom].iterator()
 
     // we do this because first time is always 0 and time(0) corresponds
     //  to pointAccessor(1)
-    let lasti = -1
-    let lastIdx1 = 0
+    let lasti: number
+    let lastIdx1: number
     let lastt_b = 0
-    let lastp_b = this.pointAccessor(0)
 
     let timeOffset: number
 
-    debugger
-
     let dummy = true
     let count = 0
-    this.segMask.forEach((i) => {
+    // segMask[i] gives the idx of the start of the i-th segment
+    segMask.forEach((i) => {
       const reuse = i === lasti + 1
       lasti = i
 
-      const idx0 = reuse ? lastIdx1 : idx(i-1)
-      const idx1 = (lastIdx1 = idx(i))
+      const idx0 = reuse ? lastIdx1 : idx(i)
+      const idx1 = (lastIdx1 = idx(i + 1))
 
-      const t_a = reuse ? lastt_b : time(idx0)
+      if (idx1 === undefined) return
+
+      const t_a = (reuse) ? lastt_b : time(idx0)
       const t_b = (lastt_b = time(idx1))
-
-      if (t_a === undefined || t_b === undefined) return
 
       if (dummy) {
         timeOffset = (timeScale * (nowInSecs - (start + t_a))) % T
@@ -504,8 +503,8 @@ export class Activity {
 
       if (lowest > highest) return
 
-      const p_a = reuse ? lastp_b : this.pointAccessor(idx0)
-      const p_b = (lastp_b = this.pointAccessor(idx1))
+      const p_a = this.pointAccessor(idx0)
+      const p_b = this.pointAccessor(idx1)
 
       const t_ab = t_b - t_a
       const vx = (p_b[0] - p_a[0]) / t_ab
@@ -530,57 +529,4 @@ function sqDist(p1: tuple2, p2: tuple2) {
   const [x1, y1] = p1
   const [x2, y2] = p2
   return (x2 - x1) ** 2 + (y2 - y1) ** 2
-}
-
-function forEachSegmentIdx(
-  idxSet: BitSet,
-  segMask: BitSet,
-  func: (i1: number, i2: number, i: number) => unknown
-): void {
-  let ik = 0 // index of current idxSet word
-  let iw = 0
-  let i = 0 // index of current idxSet element
-  let innerLoop = false
-  let idx1: number
-  let idx2: number
-
-  for (let sk = 0; sk < segMask.words.length; ++sk) {
-    let sw = segMask.words[sk]
-    while (sw !== 0) {
-      const st = sw & -sw
-      const j = (sk << 5) + hammingWeight((st - 1) | 0)
-      // Now navigate to the j-th element of idxSet
-      // console.log(`finding ${j}-th element of idxSet`)
-      innerLoop = true
-      while (innerLoop && ik < idxSet.words.length) {
-        iw = iw || idxSet.words[ik]
-        while (innerLoop && iw !== 0) {
-          const it = iw & -iw
-          // console.log(`at ${i}-th element`)
-          if (i >= j) {
-            if (i === j) {
-              // idx1 is the j-th element of idxSet
-              idx1 = (ik << 5) + hammingWeight((it - 1) | 0)
-              // console.log(`${i}-th element is ${idx1}`)
-            } else if (i === j + 1) {
-              // idx2 is the (j+1)-th element of idxSet
-              idx2 = (ik << 5) + hammingWeight((it - 1) | 0)
-              // console.log(`${i}-th element is ${idx2}. yay!`)
-
-              func(idx1, idx2, j)
-
-              idx1 = idx2
-              innerLoop = false
-            } else throw "oops. something went wrong here."
-          }
-
-          i++
-          iw ^= it
-        }
-        if (iw === 0) ik++ // advance to next word of idxSet
-      }
-      ///
-      sw ^= st
-    }
-  }
 }
