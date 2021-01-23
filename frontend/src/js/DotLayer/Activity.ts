@@ -458,15 +458,13 @@ export class Activity {
     func: pointFunc,
     nowInSecs: number,
     T: number,
-    timeScale: number,
     drawDiff: boolean
   ): number {
     const segMask = drawDiff ? this._segMaskUpdates : this.segMask
     if (!segMask) return 0
 
     const zoom = segMask.zoom
-    const start = this.ts
-    const time = uncompressVByteRLEIterator(this.time, 0)
+    const time = uncompressVByteRLEIterator(this.time, this.ts)
     const idx = this.idxSet[zoom].iterator()
 
     // we do this because first time is always 0 and time(0) corresponds
@@ -475,9 +473,6 @@ export class Activity {
     let lastIdx1: number
     let lastt_b = 0
 
-    let timeOffset: number
-
-    let dummy = true
     let count = 0
     // segMask[i] gives the idx of the start of the i-th segment
     segMask.forEach((i) => {
@@ -492,16 +487,11 @@ export class Activity {
       const t_a = (reuse) ? lastt_b : time(idx0)
       const t_b = (lastt_b = time(idx1))
 
-      if (dummy) {
-        timeOffset = (timeScale * (nowInSecs - (start + t_a))) % T
-        dummy = false
-      }
-      // const timeOffset = (timeScale * (nowInSecs - (start + t_a))) % T
 
-      const lowest = Math.ceil((t_a - timeOffset) / T)
-      const highest = Math.floor((t_b - timeOffset) / T)
+      const kLow = Math.ceil((nowInSecs - t_b)  / T)
+      const kHigh = Math.floor((nowInSecs - t_a) / T)
 
-      if (lowest > highest) return
+      if (kLow > kHigh) return
 
       const p_a = this.pointAccessor(idx0)
       const p_b = this.pointAccessor(idx1)
@@ -510,8 +500,8 @@ export class Activity {
       const vx = (p_b[0] - p_a[0]) / t_ab
       const vy = (p_b[1] - p_a[1]) / t_ab
 
-      for (let j = lowest; j <= highest; j++) {
-        const t = j * T + timeOffset
+      for (let k = kLow; k <= kHigh; k++) {
+        const t = nowInSecs - k * T
         const dt = t - t_a
         if (dt > 0) {
           const x = p_a[0] + vx * dt

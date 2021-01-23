@@ -348,7 +348,7 @@ async function redraw(force?: boolean) {
   }
 
   if (_paused) {
-    await drawDots(_timePaused || 0, !fullRedraw)
+    await drawDots(_timePaused || timeOrigin / 1000, !fullRedraw)
   }
 
   _redrawing = false
@@ -401,9 +401,8 @@ async function drawDots(tsecs: number, drawDiff?: boolean) {
   pxg.transform = ViewBox.transform
   const { count, imageData } = await ActivityCollection.drawDots(
     pxg.imageData,
-    +vParams.sz,
-    +vParams.T,
-    +vParams.tau,
+    vParams.sz,
+    vParams.T / vParams.tau,
     tsecs,
     drawDiff
   )
@@ -468,6 +467,8 @@ function updateDotSettings(shadowSettings) {
 let _drawingDots: boolean
 let _timePaused: number
 let _paused: boolean
+const timeOrigin = performance.timing.navigationStart
+const fpsInterval = 1000 / TARGET_FPS
 
 async function animate() {
   // this prevents accidentally running multiple animation loops
@@ -476,8 +477,6 @@ async function animate() {
   _drawingDots = true
   _paused = false
 
-  const fpsInterval = 1000 / TARGET_FPS
-  const timeOrigin = performance.timing.navigationStart
   const timeOffset = _timePaused
     ? 1000 * _timePaused - performance.now() + fpsInterval
     : timeOrigin

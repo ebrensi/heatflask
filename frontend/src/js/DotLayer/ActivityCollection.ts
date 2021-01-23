@@ -212,7 +212,6 @@ export async function drawDots(
   imageData: myImageData,
   dotSize: number,
   T: number,
-  timeScale: number,
   tsecs: number,
   drawDiff: boolean
 ): Promise<drawOutput> {
@@ -231,7 +230,7 @@ export async function drawDots(
     const A = itemsArray[i]
     pxg.setColor(A.colors.dot)
     const drawFunc = A.selected ? circle : square
-    count += A.forEachDot(drawFunc, tsecs, T, timeScale, drawDiff)
+    count += A.forEachDot(drawFunc, tsecs, T, drawDiff)
   })
 
   if (!pxg.drawBounds.isEmpty()) {
