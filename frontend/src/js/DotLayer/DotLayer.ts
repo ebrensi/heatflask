@@ -402,8 +402,8 @@ async function drawDots(tsecs: number, drawDiff?: boolean) {
   const { count, imageData } = await ActivityCollection.drawDots(
     pxg.imageData,
     vParams.sz,
-    vParams.T / vParams.tau,
-    tsecs,
+    vParams.T * vParams.tau,
+    tsecs * vParams.tau,
     drawDiff
   )
   pxg.imageData = imageData
