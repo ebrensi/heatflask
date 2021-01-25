@@ -9,13 +9,14 @@
   "description": "Animated Movement Data Visualization for Strava Tracks",
   "scripts": {
     "docs": "documentation build --shallow --document-exported ./src/js/** -f md -o ./dev-docs.md",
-    "watch": "parcel watch --log-level verbose ./src/html/*.html",
-    "serve": "parcel serve --log-level verbose ./src/html/*.html",
-    "build": "npm run clean; parcel build ./src/html/*.html",
+    "watch": "npm run asc-watch & parcel watch --log-level verbose ./src/html/*.html",
+    "serve": "npm run asc-watch & parcel serve --log-level verbose ./src/html/*.html",
+    "build": "npm run clean; npm run asc-build & parcel build ./src/html/*.html",
     "test": "parcel serve --log-level verbose ./test/*.html",
     "clean": "rm -rf ./dist/* ./.parcel-cache/* ./dev-docs/*",
     "format": "prettier --write ./src/",
-    "asc": "asc ./src/assembly/index.ts --target release"
+    "asc-build": "asc ./src/assembly/wasm.ts --target production",
+    "asc-watch": "onchange -i --verbose './src/assembly/*.ts' --  asc ./src/assembly/wasm.ts --target development"
   },
   "author": "Efrem Rensi",
   "license": "ISC",
@@ -47,6 +48,7 @@
     "documentation": "^13.1.1",
     "eslint": "^7.18.0",
     "eslint-config-prettier": "^6.15.0",
+    "onchange": "^7.1.0",
     "parcel": "next",
     "parcel-plugin-nuke-dist": "^1.0.1",
     "prettier": "^2.2.1",

@@ -11,6 +11,7 @@ import { BitSet } from "../BitSet"
 import { queueTask, nextTask } from "../appUtil"
 import { PixelGraphics } from "./PixelGraphics"
 import { LatLngBounds } from "../myLeaflet"
+import wasm from "./myWasm"
 
 import type { Bounds } from "../appUtil"
 import type { myImageData } from "./PixelGraphics"
@@ -20,7 +21,8 @@ export const pxg = new PixelGraphics()
 
 let itemsArray: Activity[]
 
-import "./ActivityData"
+// window.wasm = wasm
+
 
 export function add(specs): void {
   const A = new Activity(specs)
@@ -175,6 +177,9 @@ export async function drawPaths(
   imageData: myImageData,
   drawDiff: boolean
 ): Promise<drawOutput> {
+
+  console.log("wasm exports:", wasm)
+
   if (pxg.imageData !== imageData) pxg.imageData = imageData
 
   if (!drawDiff && !pxg.drawBounds.isEmpty()) pxg.clear()
