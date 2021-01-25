@@ -14,7 +14,7 @@ import {
 import { latLng2pxBounds, latLng2px, tol as dpTol } from "./ViewBox"
 import { simplify as simplifyPath } from "./Simplifier"
 import { ATYPE } from "../strava"
-import { BitSet, hammingWeight } from "../BitSet"
+import { BitSet } from "../BitSet"
 import { RunningStatsCalculator } from "./stats"
 // import { quartiles } from "../appUtil.js"
 

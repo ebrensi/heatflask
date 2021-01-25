@@ -20,6 +20,8 @@ export const pxg = new PixelGraphics()
 
 let itemsArray: Activity[]
 
+import "./ActivityData"
+
 export function add(specs): void {
   const A = new Activity(specs)
   A._selected = A.selected

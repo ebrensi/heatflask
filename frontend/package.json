@@ -8,18 +8,19 @@
   },
   "description": "Animated Movement Data Visualization for Strava Tracks",
   "scripts": {
-    "build": "npm run clean; npm run format; parcel build ./src/html/*.html",
+    "docs": "documentation build --shallow --document-exported ./src/js/** -f md -o ./dev-docs.md",
     "watch": "parcel watch --log-level verbose ./src/html/*.html",
     "serve": "parcel serve --log-level verbose ./src/html/*.html",
+    "build": "npm run clean; parcel build ./src/html/*.html",
     "test": "parcel serve --log-level verbose ./test/*.html",
     "clean": "rm -rf ./dist/* ./.parcel-cache/* ./dev-docs/*",
-    "check": "prettier --check ./src/",
     "format": "prettier --write ./src/",
-    "docs": "documentation build --shallow --document-exported ./src/js/** -f md -o ./dev-docs.md"
+    "asc": "asc ./src/assembly/index.ts --target release"
   },
   "author": "Efrem Rensi",
   "license": "ISC",
   "dependencies": {
+    "@assemblyscript/loader": "latest",
     "@babel/core": "^7.12.10",
     "@fortawesome/fontawesome-free": "^5.15.2",
     "@msgpack/msgpack": "^2.3.0",
@@ -42,7 +43,8 @@
     "@types/leaflet": "^1.5.21",
     "@typescript-eslint/eslint-plugin": "^4.14.0",
     "@typescript-eslint/parser": "^4.14.0",
-    "documentation": "^13.1.0",
+    "assemblyscript": "latest",
+    "documentation": "^13.1.1",
     "eslint": "^7.18.0",
     "eslint-config-prettier": "^6.15.0",
     "parcel": "next",
