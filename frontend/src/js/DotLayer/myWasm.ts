@@ -7,7 +7,7 @@
 // const imports = {}
 
 import { DEV_BUNDLE } from "../Env"
-const sourceFilePath = DEV_BUNDLE? "dev.wasm" : "prod.wasm"
+const sourceFilePath = DEV_BUNDLE ? "dev.wasm" : "prod.wasm"
 
 export let everything
 export const exports = {}
@@ -28,18 +28,17 @@ export { exports as default }
  * but adds some overhead.
  */
 import loader from "@assemblyscript/loader"
-loader.instantiate(fetch(sourceFilePath) /* { ... } */).then(resultObject => {
-    everything = resultObject
-    Object.assign(exports, resultObject.exports)
+loader.instantiate(fetch(sourceFilePath) /* { ... } */).then((resultObject) => {
+  everything = resultObject
+  Object.assign(exports, resultObject.exports)
 })
 
 // --------------------------------------------------------------------------
 
 type ResultObject = {
-  module: WebAssembly.Module,
+  module: WebAssembly.Module
   instance: WebAssembly.Instance
 }
-
 
 /*
  * Adapted from

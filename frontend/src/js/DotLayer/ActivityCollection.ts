@@ -23,7 +23,6 @@ let itemsArray: Activity[]
 
 // window.wasm = wasm
 
-
 export function add(specs): void {
   const A = new Activity(specs)
   A._selected = A.selected
@@ -177,7 +176,6 @@ export async function drawPaths(
   imageData: myImageData,
   drawDiff: boolean
 ): Promise<drawOutput> {
-
   console.log("wasm exports:", wasm)
 
   if (pxg.imageData !== imageData) pxg.imageData = imageData

@@ -484,11 +484,10 @@ export class Activity {
 
       if (idx1 === undefined) return
 
-      const t_a = (reuse) ? lastt_b : time(idx0)
+      const t_a = reuse ? lastt_b : time(idx0)
       const t_b = (lastt_b = time(idx1))
 
-
-      const kLow = Math.ceil((nowInSecs - t_b)  / T)
+      const kLow = Math.ceil((nowInSecs - t_b) / T)
       const kHigh = Math.floor((nowInSecs - t_a) / T)
 
       if (kLow > kHigh) return

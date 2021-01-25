@@ -532,7 +532,6 @@ export class BitSet {
     return str
   }
 
-
   /**
    * Returns a function that returns the next set member each time
    * it is called.  Optionally it can be called with the index of the next
@@ -542,16 +541,15 @@ export class BitSet {
    * S where S(i) is the i-th element, but i must be larger every time S(i)
    * is called.
    */
-  iterator(): (x?:number) => number {
+  iterator(): (x?: number) => number {
     const c = this.words.length
     let k = 0
     let w = 0
     let i = 0
 
-    return (target?:number): number => {
-
+    return (target?: number): number => {
       // idiot-proofing
-      if (i > target) throw new RangeError
+      if (i > target) throw new RangeError()
 
       while (true) {
         // fast-forward to the first non-zero word
@@ -564,7 +562,8 @@ export class BitSet {
         do {
           const t = w & -w
           w ^= t
-          if (!target || i++ === target) return (k << 5) + hammingWeight((t - 1) | 0)
+          if (!target || i++ === target)
+            return (k << 5) + hammingWeight((t - 1) | 0)
         } while (w)
       }
     }
