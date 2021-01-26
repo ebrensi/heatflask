@@ -564,7 +564,7 @@ export class BitSet {
           w ^= t
           if (i++ === target || target === undefined)
             return (k << 5) + hammingWeight((t - 1) | 0)
-        } while (w)
+        } while (w !== 0)
       }
     }
   }
