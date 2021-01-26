@@ -283,45 +283,49 @@ export function uncompressVByteRLEIterator(
   const inbyte = new Int8Array(buf)
   const end = inbyte.length
   let pos = 0
-  let reps = 0
+  let reps = 1
   let si = 0
-  let v = 0
+  let currentVal = 0
 
-  return (targetPos: number) => {
+  const getNextVal = () => {
+    // get the next value
+    if (pos >= end) throw RangeError
+    let c = inbyte[pos++]
+    let v = c & 0x7f
+    if (c >= 0) return v
+
+    c = inbyte[pos++]
+    v |= (c & 0x7f) << 7
+    if (c >= 0) return v
+
+    c = inbyte[pos++]
+    v |= (c & 0x7f) << 14
+    if (c >= 0) return v
+
+    c = inbyte[pos++]
+    v |= (c & 0x7f) << 21
+    if (c >= 0) return v
+
+    c = inbyte[pos++]
+    v |= c << 28
+    return v
+  }
+
+  return (targetPos?: number) => {
     while (true) {
-      do {
-        runningSum += v
+      while (reps > 0) {
+        runningSum += currentVal
         if (si++ === targetPos || targetPos === undefined) return runningSum //{ v: runningSum, i: si }
-      } while (--reps > 0)
-
-      if (pos >= end) throw RangeError
-
-      while (true) {
-        // get the next value
-        let c = inbyte[pos++]
-        v = c & 0x7f
-        if (c < 0) {
-          c = inbyte[pos++]
-          v |= (c & 0x7f) << 7
-          if (c < 0) {
-            c = inbyte[pos++]
-            v |= (c & 0x7f) << 14
-            if (c < 0) {
-              c = inbyte[pos++]
-              v |= (c & 0x7f) << 21
-              if (c < 0) {
-                c = inbyte[pos++]
-                v |= c << 28
-              }
-            }
-          }
-        }
-
-        // 0 followed by the number of reps specifies a run of repeats
-        if (v === 0) reps = NaN
-        else if (isNaN(reps)) reps = v
-        else break
+        reps--
       }
+
+      while ((currentVal = getNextVal()) !== 0) {
+        runningSum += currentVal
+        if (si++ === targetPos || targetPos === undefined) return runningSum //{ v: runningSum, i: si }
+      }
+
+      reps = getNextVal()
+      currentVal = getNextVal()
     }
   }
 }
