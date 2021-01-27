@@ -8,7 +8,7 @@
  * We have methods to encode and decode, as well as Transcode from one encoding to the other.
  *
  */
-import { compress, uncompress } from "./VByte"
+import { compress } from "./VByte"
 import type { BitSet } from "../../BitSet"
 /**
  * A RLE-encoded list of numbers and lists. A sub-list [a,b] indicates a repeated b times.
@@ -107,10 +107,7 @@ function listInfo(rleList: RLElist) {
   return { len: len, max: max }
 }
 
-/**
- * @param {RLElist}
- * @return {RLEbuff}
- */
+
 export function transcode2Buf(rleList: RLElist): number[] {
   const { len } = listInfo(rleList)
   const buf = new Array(len)
@@ -144,36 +141,25 @@ export function transcode2CompressedBuf(rleList: RLElist): ArrayBuffer {
 
 /**
  * Encode regular list of integers (not RLElist) into RLEbuff
- * @param  {Iterator} list -- iterable list of integers (must have .next() method)
- * @return {RLEbuff}      [description]
  */
 export function encodeBuf(list: IterableIterator<number>): number[] {
   // we start off with regular array because we dont know how long it will be
   const rle = []
-  let repCount = 0
+  let reps = 0
+  let nextNum: number
+  let num = list.next().value
 
-  let lastNum = list.next().value
-  for (const num of list) {
-    if (num === lastNum) {
-      repCount++
-    } else if (repCount) {
-      // We've reached the end of a run
-      if (repCount > 1) {
-        rle.push(0) // rep flag
-        rle.push(repCount + 1) // how many repeated
-        rle.push(lastNum) // the value
-      } else {
-        // if only two are repeated then just push them
-        rle.push(lastNum)
-        rle.push(lastNum)
-      }
-      rle.push(num)
-      repCount = 0 // reset the rep count
-    } else {
-      rle.push(num)
+  while (num !== undefined) {
+
+    while ((nextNum = list.next().value) === num) reps++
+
+    if (reps) {
+      rle.push(0) // rep flag
+      rle.push(reps + 1) // how many repeated
+      reps = 0
     }
-
-    lastNum = num
+    rle.push(num)
+    num = nextNum
   }
 
   return rle
