@@ -17,14 +17,13 @@ import type { BitSet } from "../../BitSet"
  */
 export type RLElist = Array<number | [number, number]>
 type anySet = BitSet | Set<number>
-type tArray = Uint32Array | Uint16Array | Uint8Array
 
 /**
  * Decode RLE list
  */
 export function* decodeList(
   rleList: RLElist,
-  exclude: anySet
+  exclude?: anySet
 ): IterableIterator<number> {
   const len = rleList.length
   let count = 0
@@ -48,10 +47,10 @@ export function* decodeList(
  */
 export function* decodeDiffList(
   rleList: RLElist,
-  first_value: number,
-  exclude: anySet
+  first_value = 0,
+  exclude?: anySet
 ): IterableIterator<number> {
-  let running_sum = first_value || 0
+  let running_sum = first_value
   const len = rleList.length
   let count = 0
   yield running_sum
@@ -112,11 +111,9 @@ function listInfo(rleList: RLElist) {
  * @param {RLElist}
  * @return {RLEbuff}
  */
-export function transcode2Buf(rleList: RLElist): tArray {
-  const { len, max } = listInfo(rleList)
-  const ArrayConstructor =
-    max >> 8 ? (max >> 16 ? Uint32Array : Uint16Array) : Uint8Array
-  const buf = new ArrayConstructor(len)
+export function transcode2Buf(rleList: RLElist): number[] {
+  const { len } = listInfo(rleList)
+  const buf = new Array(len)
 
   let j = 0
   for (const el of rleList) {
@@ -150,43 +147,36 @@ export function transcode2CompressedBuf(rleList: RLElist): ArrayBuffer {
  * @param  {Iterator} list -- iterable list of integers (must have .next() method)
  * @return {RLEbuff}      [description]
  */
-export function encodeBuf(list: IterableIterator<number>): tArray {
+export function encodeBuf(list: IterableIterator<number>): number[] {
   // we start off with regular array because we dont know how long it will be
   const rle = []
-  let max = 0
   let repCount = 0
 
-  const num1 = list.next().value
-  for (const num2 of list) {
-    if (num2 > max) {
-      max = num2
-    }
-
-    if (num2 === num1) {
+  let lastNum = list.next().value
+  for (const num of list) {
+    if (num === lastNum) {
       repCount++
     } else if (repCount) {
+      // We've reached the end of a run
       if (repCount > 1) {
         rle.push(0) // rep flag
         rle.push(repCount + 1) // how many repeated
-        rle.push(num2) // the value
+        rle.push(lastNum) // the value
       } else {
         // if only two are repeated then just push them
-        rle.push(num2)
-        rle.push(num2)
+        rle.push(lastNum)
+        rle.push(lastNum)
       }
+      rle.push(num)
       repCount = 0 // reset the rep count
     } else {
-      rle.push(num2)
+      rle.push(num)
     }
-  }
-  /*
-   * Now we have a list of values and a max value.
-   *   We create a typed array with the smallest type that will hold the max value
-   */
-  const ArrayConstructor =
-    max >> 8 ? (max >> 16 ? Uint32Array : Uint16Array) : Uint8Array
 
-  return ArrayConstructor.from(rle)
+    lastNum = num
+  }
+
+  return rle
 }
 
 export function encode2CompressedBuf(
@@ -212,7 +202,7 @@ function* diffs(list: IterableIterator<number>) {
  * @param  {Iterator} list -- iterable list of integers
  * @return {RLEbuff}
  */
-export function encodeDiffBuf(list: IterableIterator<number>): tArray {
+export function encodeDiffBuf(list: IterableIterator<number>): number[] {
   return encodeBuf(diffs(list))
 }
 
@@ -283,45 +273,49 @@ export function uncompressVByteRLEIterator(
   const inbyte = new Int8Array(buf)
   const end = inbyte.length
   let pos = 0
-  let reps = 0
+  let reps = 1
   let si = 0
-  let v = 0
+  let currentVal = 0
 
-  return (targetPos: number) => {
+  const getNextVal = () => {
+    // get the next value
+    if (pos >= end) throw RangeError
+    let c = inbyte[pos++]
+    let v = c & 0x7f
+    if (c >= 0) return v
+
+    c = inbyte[pos++]
+    v |= (c & 0x7f) << 7
+    if (c >= 0) return v
+
+    c = inbyte[pos++]
+    v |= (c & 0x7f) << 14
+    if (c >= 0) return v
+
+    c = inbyte[pos++]
+    v |= (c & 0x7f) << 21
+    if (c >= 0) return v
+
+    c = inbyte[pos++]
+    v |= c << 28
+    return v
+  }
+
+  return (targetPos?: number) => {
     while (true) {
-      do {
-        runningSum += v
+      while (reps > 0) {
+        runningSum += currentVal
         if (si++ === targetPos || targetPos === undefined) return runningSum //{ v: runningSum, i: si }
-      } while (--reps > 0)
-
-      if (pos >= end) throw RangeError
-
-      while (true) {
-        // get the next value
-        let c = inbyte[pos++]
-        v = c & 0x7f
-        if (c < 0) {
-          c = inbyte[pos++]
-          v |= (c & 0x7f) << 7
-          if (c < 0) {
-            c = inbyte[pos++]
-            v |= (c & 0x7f) << 14
-            if (c < 0) {
-              c = inbyte[pos++]
-              v |= (c & 0x7f) << 21
-              if (c < 0) {
-                c = inbyte[pos++]
-                v |= c << 28
-              }
-            }
-          }
-        }
-
-        // 0 followed by the number of reps specifies a run of repeats
-        if (v === 0) reps = NaN
-        else if (isNaN(reps)) reps = v
-        else break
+        reps--
       }
+
+      while ((currentVal = getNextVal()) !== 0) {
+        runningSum += currentVal
+        if (si++ === targetPos || targetPos === undefined) return runningSum //{ v: runningSum, i: si }
+      }
+
+      reps = getNextVal()
+      currentVal = getNextVal()
     }
   }
 }

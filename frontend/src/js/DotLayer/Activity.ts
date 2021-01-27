@@ -324,8 +324,9 @@ export class Activity {
    *  this idxSet.
    */
   updateSegMask(viewportPxBounds: Bounds, zoom: number): SegMask {
-    /* Later we will compare this segMask with the last one so that we only draw or erase
-     * parts of the path that have come into view or are no longer on screen
+    /* Later we will compare this segMask with the last one so that
+     *  we only draw or erase parts of the path that have come
+     *  into view or are no longer on screen
      */
     if (!this.segMask) {
       this.segMask = new BitSet()
@@ -350,35 +351,47 @@ export class Activity {
         return this.segMask
       }
 
-      const n = this.idxSet[zoom].size()
-      this.segMask.clear().resize(n)
-      this.segMask.words.fill(~0, 0, n >> 5)
-      this.segMask.words[n >> 5] = 2 ** (n % 32) - 1
       this._containedInMapBounds = true
-    } else {
-      this._containedInMapBounds = false
-      const n = this.idxSet[zoom].size()
-      const segMask = this.segMask.clear().resize(n)
+      const nSegs = this.idxSet[zoom].size() - 1
+      const segMask = this.segMask.clear().resize(nSegs)
+      for (let i=0; i<nSegs; i++) segMask.add(i)
+      // const nWords = (nSegs + 32) >>> 5
+      // this.segMask.words.fill(~0, 0, nWords-1)
+      // this.segMask.words[nWords - 1] = 2 ** (nWords % 32) - 1
 
-      let lastpIn
-      let i = -1
-      this.idxSet[zoom].forEach((idx) => {
+    } else {
+
+      this._containedInMapBounds = false
+      const idxSet = this.idxSet[zoom]
+      const nPoints = idxSet.size()
+      const nSegs = nPoints - 1
+      const segMask = this.segMask.clear().resize(nSegs)
+      const seekIdx = idxSet.iterator()
+      let lastAdded = -1
+
+      for (let i=0; i<nSegs; i++){
+        const idx = seekIdx(i)
         const p = this.pointAccessor(idx)
-        const pIn = viewportPxBounds.contains(p[0], p[1])
-        /*
-         * If either endpoint of the segment is contained in viewport
-         * bounds then include this segment index
-         */
-        if (i++ >= 0 && (lastpIn || pIn)) segMask.add(i)
-        lastpIn = pIn
-      })
+        if (viewportPxBounds.contains(p[0], p[1])) {
+          // The viewport contains this point so we include
+          // the segments before and after it
+          if (lastAdded !== i-1) segMask.add(i-1)
+          segMask.add(lastAdded = i)
+        }
+      }
+
+      // Check the last point
+      if (lastAdded !== nSegs-1) {
+        const p = this.pointAccessor(seekIdx(nSegs))
+        if (viewportPxBounds.contains(p[0], p[1])) segMask.add(nSegs-1)
+      }
+
     }
 
     if (zoom in this.badSegIdx) {
       const badSegIdx = this.badSegIdx[zoom]
-      for (const idx of badSegIdx) {
+      for (const idx of badSegIdx)
         this.segMask.remove(idx)
-      }
     }
 
     if (!this._containedInMapBounds && this.segMask.isEmpty()) {
@@ -389,8 +402,8 @@ export class Activity {
     /*
      * Now we have a current and a last segMask
      */
-    const zoomChanged = this.segMask.zoom !== this.lastSegMask.zoom
-    if (zoomChanged) {
+    const zoomLevelChanged = this.segMask.zoom !== this.lastSegMask.zoom
+    if (zoomLevelChanged) {
       this.segMask.clone(this._segMaskUpdates)
       this._segMaskUpdates.zoom = this.segMask.zoom
     } else {

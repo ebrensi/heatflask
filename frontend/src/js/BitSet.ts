@@ -543,7 +543,7 @@ export class BitSet {
    */
   iterator(): (x?: number) => number {
     const c = this.words.length
-    let k = 0
+    let k = -1
     let w = 0
     let i = 0
 
@@ -553,18 +553,18 @@ export class BitSet {
 
       while (true) {
         // fast-forward to the first non-zero word
-        while (!w) {
-          if (k >= c) return
-          w = this.words[k++]
+        while (w === 0) {
+          if (++k >= c) return
+          w = this.words[k]
         }
 
         // extract bits from this word until it is zero
         do {
           const t = w & -w
           w ^= t
-          if (!target || i++ === target)
+          if (i++ === target || target === undefined)
             return (k << 5) + hammingWeight((t - 1) | 0)
-        } while (w)
+        } while (w !== 0)
       }
     }
   }

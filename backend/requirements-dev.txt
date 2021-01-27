@@ -1,6 +1,5 @@
 #dev
 
-wheel
 Brotli
 black
 flake8
