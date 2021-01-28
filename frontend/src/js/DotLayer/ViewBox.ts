@@ -171,8 +171,11 @@ export function calibrate(): Point {
   _pxOrigin = _map.getPixelOrigin()
   _pxOffset = _mapPanePos.subtract(_pxOrigin)
   _baseTranslation = _mapPanePos.multiplyBy(-1)
+
   setCSStransform(_baseTranslation)
 
+  // const altDiff = _ll0? _map.latLngToLayerPoint(_ll0).subtract(_baseTranslation).round() : undefined
+  // console.log({diff, altDiff})
   _ll0 = _map.layerPointToLatLng(_baseTranslation)
 
   // This array is available as ViewBox.transform

@@ -1,5 +1,5 @@
 import { Bounds } from "../appUtil"
-const DEBUG = false
+const DEBUG = true
 
 type tuple4 = [number, number, number, number]
 type tuple2 = [number, number]

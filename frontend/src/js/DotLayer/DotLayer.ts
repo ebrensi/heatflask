@@ -264,8 +264,8 @@ async function onZoom(e) {
  */
 async function onMove() {
   // console.log("onMove")
-  // await redraw(_pinching)
-  await redraw()
+  await redraw(_pinching)
+  // await redraw()
 }
 
 /*
@@ -288,7 +288,7 @@ async function onMoveEnd() {
 let _redrawing: boolean
 let _currentTick = 0
 
-async function redraw(force?: boolean) {
+async function redraw(forceFullRedraw?: boolean) {
   if (!_ready) return
 
   const tick = ++_currentTick
@@ -310,15 +310,13 @@ async function redraw(force?: boolean) {
   const zoomChanged = ViewBox.updateZoom()
   const boundsChanged = ViewBox.updateBounds()
 
-  if (!force && !boundsChanged && !zoomChanged) {
+  if (!(forceFullRedraw || boundsChanged || zoomChanged)) {
     console.log("redraw: nothing to do!")
     _redrawing = false
     return
   }
 
-  const fullRedraw = FORCE_FULL_REDRAW || force || zoomChanged > 1
-
-  const t0 = performance.now()
+  const drawDiff = !FORCE_FULL_REDRAW && !forceFullRedraw && zoomChanged < 2
 
   /* Erase the path and dot canvases, using their respective
    * drawBounds rectangles. The underlying imageData buffers are
@@ -330,34 +328,29 @@ async function redraw(force?: boolean) {
   // location relative to the map's pxOrigin
   const shift = ViewBox.calibrate()
 
-  if (!fullRedraw) {
+  if (drawDiff) {
     if (_options.showPaths) {
       pathCanvas.pxg.translate(shift.x, shift.y)
-      // drawPathImageData()
+      drawPathImageData()
     }
     if (_paused) {
       dotCanvas.pxg.translate(shift.x, shift.y)
-      // drawDotImageData()
+      drawDotImageData()
     }
   }
 
   await ActivityCollection.updateContext(ViewBox.pxBounds, ViewBox.zoomLevel)
 
   if (_options.showPaths) {
-    await drawPaths(fullRedraw)
+    drawPaths(drawDiff)
   }
 
   if (_paused) {
-    await drawDots(_timePaused || timeOrigin / 1000, !fullRedraw)
+    drawDots(null, drawDiff)
   }
 
+  await nextTask()
   _redrawing = false
-
-  console.log(
-    `${_currentTick} redraw: ${fullRedraw} ${Math.round(
-      performance.now() - t0
-    )}ms`
-  )
 }
 
 function clearCanvases() {
@@ -374,9 +367,8 @@ function drawPathImageData() {
   pathCanvas.pxg.putImageData(pathCanvas)
 }
 
-async function drawPaths(forceFullRedraw?: boolean) {
+async function drawPaths(drawDiff?: boolean) {
   if (!_ready) return 0
-  const drawDiff = !forceFullRedraw
   const pxg = pathCanvas.pxg
   pxg.transform = ViewBox.transform
   const { count, imageData } = await ActivityCollection.drawPaths(
@@ -395,8 +387,11 @@ function drawDotImageData() {
   }
 }
 
-async function drawDots(tsecs: number, drawDiff?: boolean) {
+async function drawDots(tsecs?: number, drawDiff?: boolean) {
   if (!_ready) return 0
+
+  if (!tsecs) tsecs = _timePaused || (timeOrigin / 1000)
+
   const pxg = dotCanvas.pxg
   pxg.transform = ViewBox.transform
   const { count, imageData } = await ActivityCollection.drawDots(
@@ -456,7 +451,7 @@ function updateDotSettings(shadowSettings) {
   }
 
   if (_paused) {
-    drawDots(_timePaused || 0)
+    drawDots()
   }
   return ds
 }
