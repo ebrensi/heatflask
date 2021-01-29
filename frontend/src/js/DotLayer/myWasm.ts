@@ -7,7 +7,7 @@ let wasmModule: WebAssembly.Module
 type WasmImports = Record<string, Record<string, WebAssembly.ImportValue>>
 type WasmExports = Record<string, WebAssembly.ExportValue>
 
-const defaultImportObject: WasmImports = {
+const defaultWasmImports: WasmImports = {
   env: {
     consoleLog(arg: number): void {
       console.log(arg)
@@ -56,17 +56,10 @@ async function wasmBrowserInstantiate(
   return response
 }
 
-export async function getWasm(otherImports?: WasmImports): Promise<WasmExports> {
-  const importObject = {...defaultImportObject}
-  if (otherImports) {
-    for (const key in otherImports) {
-      if (key in importObject) {
-        Object.assign(importObject[key], otherImports[key])
-      } else {
-        importObject[key] = otherImports[key]
-      }
-    }
-  }
+export async function getWasm(memory?: WebAssembly.Memory): Promise<WasmExports> {
+  const importObject = {...defaultWasmImports}
+
+  if (memory) importObject.env.memory = memory
 
   // If we already have the compiled module, just instantiate it
   if (wasmModule) {

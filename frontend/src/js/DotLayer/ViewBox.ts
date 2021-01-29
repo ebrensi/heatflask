@@ -215,7 +215,8 @@ export function latLng2pxBounds(
 ): Bounds {
   boundsObj = boundsObj ? boundsObj.reset() : new Bounds()
 
-  const { _southWest: sw, _northEast: ne } = llBounds
+  const sw = llBounds.getSouthWest()
+  const ne = llBounds.getNorthEast()
 
   boundsObj.update(...latLng2px([sw.lat, sw.lng]))
   boundsObj.update(...latLng2px([ne.lat, ne.lng]))
@@ -223,7 +224,7 @@ export function latLng2pxBounds(
 }
 
 // Draw the outline of arbitrary rect object in screen coordinates
-export function draw(obj: ctxOrCanvas, rect: rect, label: string): void {
+export function draw(obj: ctxOrCanvas, rect?: rect, label?: string): void {
   const ctx = obj instanceof HTMLCanvasElement ? obj.getContext("2d") : obj
   const { x: mw, y: mh } = getSize()
   const { x, y, w, h } = rect || { x: 0, y: 0, w: mw, h: mh }
@@ -241,7 +242,7 @@ export function clear(ctx: CanvasRenderingContext2D): void {
 let _infoBox: HTMLDivElement
 const InfoViewer = Control.extend({
   onAdd: function () {
-    _infoBox = DomUtil.create("div")
+    _infoBox = <HTMLDivElement>DomUtil.create("div")
     _infoBox.style.width = "200px"
     _infoBox.style.padding = "5px"
     _infoBox.style.background = "rgba(50,240,50,0.6)"

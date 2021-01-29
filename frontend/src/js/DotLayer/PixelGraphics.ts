@@ -9,8 +9,6 @@ type WasmExports = Record<string, WebAssembly.ExportValue>
 
 const DEBUG = true
 
-
-
 /*
  * This module defines the PixelGrapics class.  A PixelGraphics object
  * encapsulates an ImageData buffer and provides methods to modify
@@ -37,36 +35,28 @@ const alphaMask = rgbaToUint32(255, 255, 255, 0)
 const alphaPos = _littleEndian ? 24 : 0
 
 export class PixelGraphics {
-  canvas: HTMLCanvasElement
   imageData: ImageData
   buf32: Uint32Array
   rowBuf: Uint32Array
   drawBounds: Bounds
   color32: number
   lineWidth: number
-  wasmPromise: Promise<WasmExports>
+  transform: tuple4
+  wasm: WasmExports
   debugCanvas?: HTMLCanvasElement
 
-  constructor(canvas: HTMLCanvasElement) {
+  constructor(width?: number, height?: number) {
     this.color32 = rgbaToUint32(0, 0, 0, 255) // default color is black
-    this.lineWidth = 1
     this.drawBounds = new Bounds()
-    this.transform = [1, 0, 1, 0]
-    this.canvas = canvas
+    this.lineWidth = 1
+    this.transform = [1,0,1,0]
 
-    const width = canvas.width
-    const height = canvas.height
-    const size = (width | 0) * (height | 0)
-    const byteSize = size << 2; // (4 bytes per pixel)
-    const memory = new WebAssembly.Memory({ initial: ((byteSize + 0xffff) & ~0xffff) >>> 16 });
-
-    this.buf32 = new Uint32Array(memory.buffer, size)
-
-    const imageDataArr = new Uint8ClampedArray(memory.buffer, byteSize)
-    this.imageData = new ImageData(imageDataArr, width, height)
-    this.rowBuf = new Uint32Array(this.imageData.width)
-
-    this.wasmPromise = getWasm({"memory": memory})
+    if (width && height) {
+      getWasm().then((exports) => {
+        this.wasm = exports
+        this.setSize(width, height)
+      })
+    }
   }
 
   get height(): number {
@@ -77,12 +67,26 @@ export class PixelGraphics {
     return this.imageData.width
   }
 
-  get transform(): tuple4 {
-    return this.transform
-  }
+  // make sure we have enough memory in the wasm instance
+  // for all the screen pixel data. note that it only grows memory
+  setSize(width: number, height: number): void {
+    const memory = <WebAssembly.Memory>this.wasm.memory
+    const numPixels = width * height // reserve an extra row
+    const byteSize = numPixels << 2  // (4 bytes per rgba pixel)
 
-  set transform(tf: tuple4) {
-    this._imageData.transform = tf
+    const numPages = ((byteSize + 0xffff) & ~0xffff) >>> 16
+    const currentNumPages = memory.grow(0)
+
+    if (numPages > currentNumPages) {
+      memory.grow(numPages - currentNumPages)
+    }
+
+    // this is a view into the memory for JavaSript access
+    this.buf32 = new Uint32Array(memory.buffer, 0, numPixels)
+    this.rowBuf = new Uint32Array(width)
+
+    const imageDataArr = new Uint8ClampedArray(memory.buffer, 0, byteSize)
+    this.imageData = new ImageData(imageDataArr, width, height)
   }
 
   setColor(r: number, g: number, b: number, a = 0xff): void {
@@ -404,21 +408,6 @@ export class PixelGraphics {
     this.drawBounds.update(dx1, dy1)
   }
 
-  putImageData(obj: CanvasOrCtx): void {
-    if (this.drawBounds.isEmpty()) return
-    const ctx = obj instanceof HTMLCanvasElement ? obj.getContext("2d") : obj
-    const { x, y, w, h } = this.drawBounds.rect
-    ctx.putImageData(this.imageData, 0, 0, x, y, w, h)
-  }
-
-  async drawImageData(obj: CanvasOrCtx): Promise<void> {
-    if (this.drawBounds.isEmpty()) return
-    const ctx = obj instanceof HTMLCanvasElement ? obj.getContext("2d") : obj
-    const { x, y, w, h } = this.drawBounds.rect
-    const img = await createImageBitmap(this.imageData, x, y, w, h)
-    ctx.drawImage(img, x, y)
-  }
-
   // Draw the outline of arbitrary rect object in screen coordinates
   drawDebugBox(
     rect?: rect,
@@ -443,6 +432,7 @@ export class PixelGraphics {
     }
     if (label) ctx.fillText(label, x + 20, y + 20)
   }
+
 } // end PixelGraphics definition
 
 const _re = /(\d+),(\d+),(\d+)/

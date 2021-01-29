@@ -9,15 +9,11 @@ import { Activity } from "./Activity"
 import { options } from "./Defaults"
 import { BitSet } from "../BitSet"
 import { queueTask, nextTask } from "../appUtil"
-import { PixelGraphics } from "./PixelGraphics"
 import { LatLngBounds } from "../myLeaflet"
-// import wasm from "./myWasm"
 
 import type { Bounds } from "../appUtil"
-import type { myImageData } from "./PixelGraphics"
-
+import type {PixelGraphics} from "./PixelGraphics"
 export const items: Map<number, Activity> = new Map()
-export const pxg = new PixelGraphics()
 
 let itemsArray: Activity[]
 
@@ -166,21 +162,19 @@ export async function getSelectedLatLngBounds(): Promise<LatLngBounds> {
 /*
  * Methods for drawing to imageData objects
  */
-const drawSegFunc = (x0: number, y0: number, x1: number, y1: number) => {
-  pxg.drawSegment(x0, y0, x1, y1)
-}
 
-type drawOutput = { imageData: myImageData; count: number }
+type drawOutput = { pxg: PixelGraphics; count: number }
 
 export async function drawPaths(
-  imageData: myImageData,
+  pxg: PixelGraphics,
   drawDiff: boolean
 ): Promise<drawOutput> {
 
-  if (pxg.imageData !== imageData) pxg.imageData = imageData
-
   if (!drawDiff && !pxg.drawBounds.isEmpty()) pxg.clear()
 
+  const drawSegFunc = (x0: number, y0: number, x1: number, y1: number) => {
+    pxg.drawSegment(x0, y0, x1, y1)
+  }
   const bounds = pxg.drawBounds.data
   const oldArea = (bounds[2] - bounds[0]) * (bounds[3] - bounds[1])
 
@@ -209,17 +203,16 @@ export async function drawPaths(
     }
   }
 
-  return { count, imageData }
+  return { count, pxg }
 }
 
 export async function drawDots(
-  imageData: myImageData,
+  pxg: PixelGraphics,
   dotSize: number,
   T: number,
   tsecs: number,
   drawDiff: boolean
 ): Promise<drawOutput> {
-  if (pxg.imageData !== imageData) pxg.imageData = imageData
 
   if (!drawDiff && !pxg.drawBounds.isEmpty()) pxg.clear()
 
@@ -249,5 +242,5 @@ export async function drawDots(
     }
   }
 
-  return { count, imageData }
+  return { count, pxg }
 }
