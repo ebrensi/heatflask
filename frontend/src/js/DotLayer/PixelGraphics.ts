@@ -1,10 +1,15 @@
 import { Bounds } from "../appUtil"
-const DEBUG = true
+import { getWasm } from "./myWasm"
 
 type tuple4 = [number, number, number, number]
 type tuple2 = [number, number]
 type rect = { x: number; y: number; w: number; h: number }
 type CanvasOrCtx = HTMLCanvasElement | CanvasRenderingContext2D
+type WasmExports = Record<string, WebAssembly.ExportValue>
+
+const DEBUG = true
+
+
 
 /*
  * This module defines the PixelGrapics class.  A PixelGraphics object
@@ -31,66 +36,49 @@ export const rgbaToUint32 = _littleEndian
 const alphaMask = rgbaToUint32(255, 255, 255, 0)
 const alphaPos = _littleEndian ? 24 : 0
 
-export class myImageData extends ImageData {
-  drawBounds: tuple4
-  transform: tuple4
-
-  constructor(...args: any[]) {
-    super(...args)
-    this.drawBounds = [NaN, NaN, NaN, NaN]
-    this.transform = [1, 0, 1, 0]
-  }
-}
-
 export class PixelGraphics {
-  _imageData: myImageData
+  canvas: HTMLCanvasElement
+  imageData: ImageData
   buf32: Uint32Array
   rowBuf: Uint32Array
   drawBounds: Bounds
   color32: number
   lineWidth: number
+  wasmPromise: Promise<WasmExports>
   debugCanvas?: HTMLCanvasElement
 
-  constructor(imageData?: myImageData | ImageData) {
+  constructor(canvas: HTMLCanvasElement) {
     this.color32 = rgbaToUint32(0, 0, 0, 255) // default color is black
     this.lineWidth = 1
     this.drawBounds = new Bounds()
+    this.transform = [1, 0, 1, 0]
+    this.canvas = canvas
 
-    if (imageData) {
-      if (imageData instanceof myImageData) {
-        this.imageData = imageData // note that this is a setter call
-      } else {
-        const { data, width } = imageData
-        this.imageData = new myImageData(data, width)
-      }
-    }
-  }
+    const width = canvas.width
+    const height = canvas.height
+    const size = (width | 0) * (height | 0)
+    const byteSize = size << 2; // (4 bytes per pixel)
+    const memory = new WebAssembly.Memory({ initial: ((byteSize + 0xffff) & ~0xffff) >>> 16 });
 
-  get imageData(): myImageData {
-    return this._imageData
-  }
+    this.buf32 = new Uint32Array(memory.buffer, size)
 
-  set imageData(imageData: myImageData) {
-    this._imageData = imageData
-    this.buf32 = new Uint32Array(imageData.data.buffer)
-    this.drawBounds.data = imageData.drawBounds
+    const imageDataArr = new Uint8ClampedArray(memory.buffer, byteSize)
+    this.imageData = new ImageData(imageDataArr, width, height)
+    this.rowBuf = new Uint32Array(this.imageData.width)
 
-    // re-use existing buffer if is large enough to hold a row of data
-    if (!this.rowBuf || this.rowBuf.length < imageData.width) {
-      this.rowBuf = new Uint32Array(imageData.width)
-    }
+    this.wasmPromise = getWasm({"memory": memory})
   }
 
   get height(): number {
-    return this._imageData.height
+    return this.imageData.height
   }
 
   get width(): number {
-    return this._imageData.width
+    return this.imageData.width
   }
 
   get transform(): tuple4 {
-    return this._imageData.transform
+    return this.transform
   }
 
   set transform(tf: tuple4) {

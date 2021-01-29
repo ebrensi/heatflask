@@ -1,54 +1,29 @@
-/*
- * This module is meant to be able to run off the main thread,
- * or possibly compiled into WebAssembly.  It must have minimal
- * dependencies and use only primitive data-types.
- */
-
-// const imports = {}
-
 import { DEV_BUNDLE } from "../Env"
+
 const sourceFilePath = DEV_BUNDLE ? "dev.wasm" : "prod.wasm"
 
-export let everything
-export const exports = {}
-export { exports as default }
+let wasmModule: WebAssembly.Module
 
-/*
- * Instantiate a WebAssembly using standard API
- */
-// wasmBrowserInstantiate(sourceFilePath /* { ... } */).then(resultObject => {
-//     everything = ResultObject
-//     Object.assign(exports, resultObject.instance.exports)
-// })
+type WasmImports = Record<string, Record<string, WebAssembly.ImportValue>>
+type WasmExports = Record<string, WebAssembly.ExportValue>
 
-/*
- * Instantiate a WebAssembly using AssemblyScript Loader.  This provides
- * more functionality than the standard WebAssembly API
- * (see https://www.assemblyscript.org/loader.html)
- * but adds some overhead.
- */
-import loader from "@assemblyscript/loader"
-loader.instantiate(fetch(sourceFilePath) /* { ... } */).then((resultObject) => {
-  everything = resultObject
-  Object.assign(exports, resultObject.exports)
-})
+const defaultImportObject: WasmImports = {
+  env: {
+    consoleLog(arg: number): void {
+      console.log(arg)
+    },
 
-// --------------------------------------------------------------------------
-
-type ResultObject = {
-  module: WebAssembly.Module
-  instance: WebAssembly.Instance
+    abort(_msg: string, _file: string, line: number, column: number): void {
+      console.error("abort called at wasm.ts:" + line + ":" + column)
+    },
+  },
 }
 
-/*
- * Adapted from
- * https://github.com/torch2424/wasm-by-example/blob/master/demo-util/
- */
-
-export async function wasmBrowserInstantiate(
+// https://github.com/torch2424/wasm-by-example/blob/master/demo-util/
+async function wasmBrowserInstantiate(
   wasmModuleUrl: string,
-  importObject?: Object
-): Promise<ResultObject> {
+  importObject?: WasmImports
+): Promise<WebAssembly.WebAssemblyInstantiatedSource> {
   let response = undefined
 
   if (!importObject) {
@@ -80,3 +55,28 @@ export async function wasmBrowserInstantiate(
 
   return response
 }
+
+export async function getWasm(otherImports?: WasmImports): Promise<WasmExports> {
+  const importObject = {...defaultImportObject}
+  if (otherImports) {
+    for (const key in otherImports) {
+      if (key in importObject) {
+        Object.assign(importObject[key], otherImports[key])
+      } else {
+        importObject[key] = otherImports[key]
+      }
+    }
+  }
+
+  // If we already have the compiled module, just instantiate it
+  if (wasmModule) {
+    const instance = await WebAssembly.instantiate(wasmModule, importObject)
+    return instance.exports
+  }
+
+  const result = await wasmBrowserInstantiate(sourceFilePath, importObject)
+  wasmModule = result.module
+  return result.instance.exports
+}
+
+export {getWasm as default}
