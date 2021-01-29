@@ -1,28 +1,53 @@
 /**
- * A collection of functions for RLE encoding/decoding lists of integers.
- * We actually are concerned with two different methods of an RLE encoded list:
- *   (1) RLE-List -- An Array of numbers and subarrays (see {@link RLElist})
- *
- *   (2) RLE-Buffer -- A typed-array of integers. (see {@link RLEbuff})
- *
- * We have methods to encode and decode, as well as Transcode from one encoding to the other.
- *
+ * A collection of functions for RLE encoding/decoding lists of integers. *
  */
-import { compress } from "./VByte"
 import type { BitSet } from "../../BitSet"
 /**
  * A RLE-encoded list of numbers and lists. A sub-list [a,b] indicates a repeated b times.
  * eg. Both [1,2,2,2,2,2,2,5] and [1, [2,6], 5] represent the unencoded list
  *    [0, 1, 3, 5, 7, 9, 11, 13, 18]
  */
-export type RLElist = Array<number | [number, number]>
+export type RLElist1 = Array<number | [number, number]>
+export type RLElist2 = IterableIterator<number>
+
 type anySet = BitSet | Set<number>
+
+/**
+ * Iterate successive differences of a list of values
+ */
+function* diffs(list: Iterable<number>): IterableIterator<number> {
+  let val1
+  for (const val2 of list) {
+    if (val1 !== undefined) yield val2 - val1
+    val1 = val2
+  }
+}
+
+function* cumulativeSum(
+  arr: Iterable<number>,
+  firstValue?: number
+): IterableIterator<number> {
+  let sum = firstValue || 0
+  for (const num of arr) yield (sum += num)
+}
+
+/**
+ * The number of values in the original (non RLE-encoded) list
+ */
+export function decodedList1Length(rleList: RLElist1): number {
+  let len = 0 // We don't count the start value!
+  for (const el of rleList) {
+    if (el instanceof Array) len += el[1]
+    else len++
+  }
+  return len
+}
 
 /**
  * Decode RLE list
  */
-export function* decodeList(
-  rleList: RLElist,
+export function* decodeList1(
+  rleList: RLElist1,
   exclude?: anySet
 ): IterableIterator<number> {
   const len = rleList.length
@@ -44,264 +69,104 @@ export function* decodeList(
 
 /**
  * Decode a (RLE-encoded as a List) array of successive differences
+ * into the original values
  */
-export function* decodeDiffList(
-  rleList: RLElist,
-  first_value = 0,
+export function* decodeDiffList1(
+  rleList: RLElist1,
+  firstValue?: number,
   exclude?: anySet
 ): IterableIterator<number> {
-  let running_sum = first_value
-  const len = rleList.length
-  let count = 0
-  yield running_sum
-  for (let i = 0, el; i < len; i++) {
-    el = rleList[i]
-    if (el instanceof Array) {
-      for (let j = 0; j < el[1]; j++) {
-        running_sum += el[0]
-        if (!exclude || !exclude.has(count++)) {
-          yield running_sum
-        }
-      }
-    } else {
-      running_sum += el
-      if (!exclude || !exclude.has(count++)) {
-        yield running_sum
-      }
-    }
-  }
+  const decodedDiffs = decodeList1(rleList, exclude)
+  return cumulativeSum(decodedDiffs, firstValue)
 }
 
 /**
- * The number of values in the original (non RLE-encoded) list
+ * Transcode RLElist into alternate form
  */
-export function decodedListLength(rleList: RLElist): number {
-  let len = 0 // We don't count the start value!
-  for (const el of rleList) {
-    if (el instanceof Array) len += el[1]
-    else len++
-  }
-  return len
-}
-
-/**
- * Info about the data resulting from transcoding a List-sublist RLE list
- * into a VByte-encoded buffer.
- */
-function listInfo(rleList: RLElist) {
-  let len = 0 // We don't count the start value!
-  let max = 0
-
-  for (const el of rleList) {
-    if (el instanceof Array) {
-      if (el[1] > 2) len += 3
-      else len += 2
-
-      if (el[0] > max) max = el[0]
-      if (el[1] > max) max = el[1]
-    } else {
-      len++
-      if (el > max) max = el
-    }
-  }
-  return { len: len, max: max }
-}
-
-
-export function transcode2Buf(rleList: RLElist): number[] {
-  const { len } = listInfo(rleList)
-  const buf = new Array(len)
-
-  let j = 0
+export function* transcodeList(rleList: RLElist1): RLElist2 {
   for (const el of rleList) {
     if (el instanceof Array) {
       if (el[1] > 2) {
         /* this is only efficient if we have a run of
            3 or more repeated values */
-        buf[j++] = 0
-        buf[j++] = el[1]
-        buf[j++] = el[0]
+        yield 0
+        yield el[1]
+        yield el[0]
       } else {
         // we only have two so we flatten it
-        buf[j++] = el[0]
-        buf[j++] = el[0]
+        yield el[0]
+        yield el[0]
       }
-    } else buf[j++] = el
+    } else yield el
   }
-  return buf
 }
 
 /**
- * Transcode to a VByte-encoded buffer.
+ * Encode regular list of integers (not RLElist) into an RLElist2
  */
-export function transcode2CompressedBuf(rleList: RLElist): ArrayBuffer {
-  const buf = transcode2Buf(rleList)
-  return compress(buf)
-}
-
-/**
- * Encode regular list of integers (not RLElist) into RLEbuff
- */
-export function encodeBuf(list: IterableIterator<number>): number[] {
+export function* encode(
+  list: IterableIterator<number>
+): RLElist2 {
   // we start off with regular array because we dont know how long it will be
-  const rle = []
   let reps = 0
   let nextNum: number
   let num = list.next().value
 
   while (num !== undefined) {
-
     while ((nextNum = list.next().value) === num) reps++
 
     if (reps) {
-      rle.push(0) // rep flag
-      rle.push(reps + 1) // how many repeated
+      yield 0 // rep flag
+      yield reps + 1 // how many repeated
       reps = 0
     }
-    rle.push(num)
+    yield num
     num = nextNum
   }
-
-  return rle
-}
-
-export function encode2CompressedBuf(
-  list: IterableIterator<number>
-): ArrayBuffer {
-  const buf = encodeBuf(list)
-  return compress(buf)
 }
 
 /**
- * Iterate successive differences of a list of values
+ * Encode successive diffs of a list of integers into an RLElist2
  */
-function* diffs(list: IterableIterator<number>) {
-  let val1 = list.next().value
-  for (const val2 of list) {
-    yield val2 - val1
-    val1 = val2
+export function encodeDiffs(list: Iterable<number>): RLElist2{
+  return encode(diffs(list))
+}
+
+
+export function decodedList2Length(rleList: RLElist2): number {
+  let len = 1 // we count the start value!
+  for (const el of rleList) {
+    if (el) len++
+      else {
+      const reps = rleList.next().value() - 1
+      len += reps
+    }
   }
+  return len
 }
 
-/**
- * Encode successive diffs of a list of integers into an RLEbuff
- * @param  {Iterator} list -- iterable list of integers
- * @return {RLEbuff}
- */
-export function encodeDiffBuf(list: IterableIterator<number>): number[] {
-  return encodeBuf(diffs(list))
-}
 
-export function encode2CompressedDiffBuf(
-  list: IterableIterator<number>
-): ArrayBuffer {
-  const buf = encodeDiffBuf(list)
-  return compress(buf)
-}
-
-export function* decodeBuf(buf: number[]): IterableIterator<number> {
-  const len = buf.length
-  for (let i = 0, el; i < len; i++) {
-    el = buf[i]
-    if (el === 0) {
-      const n = buf[++i]
-      const repeated = buf[++i]
-      for (let j = 0; j < n; j++) {
+export function* decodeList2(rleList: RLElist2): IterableIterator<number> {
+  for (const el of rleList) {
+    if (el) yield el
+    else {
+      const reps = rleList.next().value()
+      const repeated = rleList.next().value()
+      for (let j = 0; j < reps; j++) {
         yield repeated
       }
-    } else {
-      yield el
     }
   }
 }
 
+
 /**
- * Decode a RLEbuff of diffs into the original integer values
+ * Decode a RLEList2 of diffs into the original integer values
  */
-export function* decodeDiffBuf(
-  buf: number[],
-  first_value = 0
+export function decodeDiffList2(
+  rleList: RLElist2,
+  firstValue = 0
 ): IterableIterator<number> {
-  let running_sum = first_value
-  const len = buf.length
-
-  yield running_sum
-
-  for (let i = 0, el; i < len; i++) {
-    el = buf[i]
-    if (el === 0) {
-      const n = buf[++i],
-        repeated = buf[++i]
-      for (let j = 0; j < n; j++) {
-        running_sum += repeated
-        yield running_sum
-      }
-    } else {
-      running_sum += el
-      yield running_sum
-    }
-  }
-}
-
-/**
- * Returns a function that returns the next encoded member each time
- * it is called.  Optionally it can be called with the index of the next
- * number to return.
- *
- * Another way to describe it is that this returns a sort of element-array
- * S where S(i) is the i-th element, but i must be larger every time S(i)
- * is called.
- */
-export function uncompressVByteRLEIterator(
-  buf: ArrayBuffer,
-  runningSum = 0
-): (i: number) => number {
-  const inbyte = new Int8Array(buf)
-  const end = inbyte.length
-  let pos = 0
-  let reps = 1
-  let si = 0
-  let currentVal = 0
-
-  const getNextVal = () => {
-    // get the next value
-    if (pos >= end) throw RangeError
-    let c = inbyte[pos++]
-    let v = c & 0x7f
-    if (c >= 0) return v
-
-    c = inbyte[pos++]
-    v |= (c & 0x7f) << 7
-    if (c >= 0) return v
-
-    c = inbyte[pos++]
-    v |= (c & 0x7f) << 14
-    if (c >= 0) return v
-
-    c = inbyte[pos++]
-    v |= (c & 0x7f) << 21
-    if (c >= 0) return v
-
-    c = inbyte[pos++]
-    v |= c << 28
-    return v
-  }
-
-  return (targetPos?: number) => {
-    while (true) {
-      while (reps > 0) {
-        runningSum += currentVal
-        if (si++ === targetPos || targetPos === undefined) return runningSum //{ v: runningSum, i: si }
-        reps--
-      }
-
-      while ((currentVal = getNextVal()) !== 0) {
-        runningSum += currentVal
-        if (si++ === targetPos || targetPos === undefined) return runningSum //{ v: runningSum, i: si }
-      }
-
-      reps = getNextVal()
-      currentVal = getNextVal()
-    }
-  }
+  const decodedDiffs = decodeList2(rleList)
+  return cumulativeSum(decodedDiffs, firstValue)
 }

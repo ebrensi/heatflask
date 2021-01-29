@@ -2,7 +2,7 @@
  * Unit testing is set up informally here to simplify the process.
  */
 
-import * as StreamRLE from "./DotLayer/Codecs/StreamRLE"
+import * as S from "./DotLayer/Codecs/StreamRLE"
 import type { RLElist } from "./DotLayer/Codecs/StreamRLE"
 
 function arraysEqual(arr1: number[], arr2: number[]): boolean {
@@ -27,11 +27,11 @@ log("testing StreamRLE")
 const rleList: RLElist = [1, 2, 3, 6, [1, 4], 2]
 const expandedRleList = [1, 2, 3, 6, 1, 1, 1, 1, 2]
 
-const decodedRleList = Array.from(StreamRLE.decodeList(rleList))
+const decodedRleList = Array.from(S.decodeList(rleList))
 
 log(`decodeList: ${result(arraysEqual(expandedRleList, decodedRleList))}`)
 
-const decodedDiffList = Array.from(StreamRLE.decodeDiffList(rleList))
+const decodedDiffList = Array.from(S.decodeDiffList(rleList))
 const decodedDiffListAnswer = cumulativeSum(expandedRleList)
 
 log(
@@ -40,11 +40,11 @@ log(
   )}`
 )
 
-const difbuf = StreamRLE.transcode2Buf(rleList)
-const difbuf2 = StreamRLE.encodeDiffBuf(decodedDiffList.values())
+const difbuf = S.transcode2Buf(rleList)
+const difbuf2 = S.encodeDiffBuf(decodedDiffList.values())
 log(`transcode/encode: ${result(arraysEqual(difbuf, difbuf2))}`)
 
-const decodedDiffList2 = Array.from(StreamRLE.decodeDiffBuf(difbuf))
+const decodedDiffList2 = Array.from(S.decodeDiffBuf(difbuf))
 log(
   `decodeDiffList2: ${result(
     arraysEqual(decodedDiffListAnswer, decodedDiffList2)
@@ -52,6 +52,9 @@ log(
 )
 
 const exclude = new Set([2, 6])
+const decodedListExcl = Array.from(S.decodeList(rleList, exclude))
+console.log(decodedListExcl)
+
 // with exclusions
 
 // with compression
