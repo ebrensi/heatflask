@@ -11,19 +11,17 @@ import { BitSet } from "../BitSet"
 import { queueTask, nextTask } from "../appUtil"
 import { PixelGraphics } from "./PixelGraphics"
 import { LatLngBounds } from "../myLeaflet"
-// import wasm from "./myWasm"
 
 import type { Bounds } from "../appUtil"
 import type { myImageData } from "./PixelGraphics"
+import type { ActivitySpec } from "./Activity"
 
 export const items: Map<number, Activity> = new Map()
 export const pxg = new PixelGraphics()
 
 let itemsArray: Activity[]
 
-// window.wasm = wasm
-
-export function add(specs): void {
+export function add(specs: ActivitySpec): void {
   const A = new Activity(specs)
   A._selected = A.selected
 
@@ -122,7 +120,6 @@ export async function updateContext(
 /**
  * Returns an array of activities given a selection region
  * in screen-ccordinates
- * @param  {Bounds} selectPxBounds Bounds Object
  */
 export function* inPxBounds(pxBounds: Bounds): IterableIterator<Activity> {
   for (const idx of inView) {

@@ -23,7 +23,7 @@ function bytelog(val: number): number {
  * Compute how many bytes an Iterableof non-negative integers
  *  would use once compressed
  */
-function compressedSizeInBytes(input: Iterable<number>) {
+export function compressedSizeInBytes(input: Iterable<number>): number {
   let answer = 0
   for (const val of input) {
     answer += bytelog(val)
@@ -31,10 +31,14 @@ function compressedSizeInBytes(input: Iterable<number>) {
   return answer
 }
 
-/** Compress an Iterable of integers,
+/** Compress an Iterable of non-negative integers
  */
-export function compress(input: Iterable<number>): ArrayBuffer {
-  const buf = new ArrayBuffer(compressedSizeInBytes(input))
+export function compress(
+  input: Iterable<number>,
+  estimatedSize?: number
+): ArrayBuffer {
+  const buf = new ArrayBuffer(estimatedSize || compressedSizeInBytes(input))
+
   const view = new Int8Array(buf)
   let pos = 0
   for (const val of input) {
@@ -60,7 +64,8 @@ export function compress(input: Iterable<number>): ArrayBuffer {
       view[pos++] = val >>> 28
     }
   }
-  return buf
+
+  return (pos < estimatedSize)? buf.slice(0, pos) : buf
 }
 
 /** from a compressed array of non-negative integers stored ArrayBuffer,

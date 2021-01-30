@@ -25,11 +25,18 @@ function* diffs(list: Iterable<number>): IterableIterator<number> {
 
 function* cumulativeSum(
   arr: Iterable<number>,
-  firstValue?: number
+  firstValue?: number,
+  exclusions?: anySet
 ): IterableIterator<number> {
   let sum = firstValue || 0
-  yield sum
-  for (const num of arr) yield (sum += num)
+  let i = 0
+  const check = exclusions? () => !exclusions.has(i++) : () => true
+  if (check()) yield sum
+
+  for (const num of arr) {
+    sum += num
+    if (check()) yield sum
+  }
 }
 
 /**
@@ -47,24 +54,16 @@ export function decode1Length(rleList: RLElist1): number {
 /**
  * Decode RLE list
  */
-export function* decode1(
-  rleList: RLElist1,
-  exclude?: anySet
-): IterableIterator<number> {
+export function* decode1(rleList: RLElist1): IterableIterator<number> {
   const len = rleList.length
-  let count = 0
+
   for (let i = 0, el; i < len; i++) {
     el = rleList[i]
     if (el instanceof Array) {
       const value = el[0]
-      for (let j = 0; j < el[1]; j++) {
-        if (!exclude || !exclude.has(count++)) {
-          yield value
-        }
-      }
-    } else if (!exclude || !exclude.has(count++)) {
-      yield el
-    }
+
+      for (let j = 0; j < el[1]; j++) yield value
+    } else yield el
   }
 }
 
@@ -75,10 +74,9 @@ export function* decode1(
 export function decode1Diffs(
   rleList: RLElist1,
   firstValue?: number,
-  exclude?: anySet
+  exclusions?: anySet
 ): IterableIterator<number> {
-
-  return cumulativeSum(decode1(rleList, exclude), firstValue)
+  return cumulativeSum(decode1(rleList), firstValue, exclusions)
 }
 
 /**
@@ -177,11 +175,11 @@ if (DEV_BUNDLE) doUnitTests()
 
 type lizt = IterableIterator<number> | number[]
 function equal(list1: lizt, list2: lizt): boolean {
-  const iter1 = Array.isArray(list1)? list1[Symbol.iterator]() : list1
-  const iter2 = Array.isArray(list2)? list2[Symbol.iterator]() : list2
+  const iter1 = list1[Symbol.iterator]()
+  const iter2 = list2[Symbol.iterator]()
   let done1: boolean
   let done2: boolean
-  while (!done1 && !done2){
+  while (!done1 && !done2) {
     const next1 = iter1.next()
     const next2 = iter2.next()
     const v1 = next1.value
@@ -202,6 +200,9 @@ function doUnitTests(): void {
   const diffs = [1, 3, 1, 1, 1, 2]
   const rle1EncodedDiffs: RLElist1 = [1, 3, [1, 3], 2]
   const rle2EncodedDiffs = [1, 3, 0, 3, 1, 2]
+
+  const exclusions = [0, 3, 6]
+  const listWexclusions = [1, 4, 6, 7]
 
   // cumulativeSum test
   const summedDiffs = cumulativeSum(diffs, 0)
@@ -242,4 +243,7 @@ function doUnitTests(): void {
   // decode2Diffs
   const diffDecoded2 = decode2Diffs(rle2EncodedDiffs.values(), 0)
   if (!equal(diffDecoded2, list)) throw "bad decode2Diffs"
+
+  // decode1 test with exclusions
+  const decoded1excl = decode1(rle1EncodedDiffs, exclusions)
 }
