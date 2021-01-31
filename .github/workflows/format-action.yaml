@@ -42,7 +42,9 @@ jobs:
       #   with:
       #     args: "--target-version=py38 **/*.py *.py"
       - name: Format Python files
-        run: black --target-version=py38 **/*.py *.py
+        run: |
+          pip install black
+          black --target-version=py38 **/*.py *.py
 
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v4
