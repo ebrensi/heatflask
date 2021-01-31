@@ -18,7 +18,7 @@ jobs:
         with:
           node-version: "12.x"
 
-      - name: Format
+      - name: Format js/ts files
         run: |
           npm ci
           npm run format
@@ -38,9 +38,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
-      - uses: psf/black@stable
-        with:
-          args: "--target-version=py38 **/*.py *.py"
+      # - uses: psf/black@stable
+      #   with:
+      #     args: "--target-version=py38 **/*.py *.py"
+      - name: Format Python files
+        run: black --target-version=py38 **/*.py *.py
 
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v4
