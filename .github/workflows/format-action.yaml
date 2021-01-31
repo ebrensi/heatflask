@@ -39,7 +39,7 @@ jobs:
       - uses: actions/setup-python@v2
       - uses: psf/black@stable
         with:
-          black_args: "---target-version=py38 **/*.py *.py"
+          args: "---target-version=py38 **/*.py *.py"
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
