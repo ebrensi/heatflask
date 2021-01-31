@@ -1,0 +1,47 @@
+name: Format
+
+on: [push, pull_request]
+
+jobs:
+  prettier-format:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.head_ref }}
+      - uses: actions/setup-node@v1
+        with:
+          node-version: "12.x"
+      - name: Format
+        run: |
+          npm ci
+          npm run format
+      - name: Commit changes
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: Auto-apply prettier formatting changes
+          branch: ${{ github.head_ref }}
+
+  black-format:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+      - uses: psf/black@stable
+        with:
+          black_args: "--target-version py38 *.py **/**.js"
+      - name: Commit changes
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: Auto-apply Black formatting changes
+          branch: ${{ github.head_ref }}
