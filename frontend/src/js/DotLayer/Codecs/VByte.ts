@@ -65,7 +65,7 @@ export function compress(
     }
   }
 
-  return (pos < estimatedSize)? buf.slice(0, pos) : buf
+  return pos < estimatedSize ? buf.slice(0, pos) : buf
 }
 
 /** from a compressed array of non-negative integers stored ArrayBuffer,

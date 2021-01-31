@@ -6,8 +6,6 @@ import "./UI"
 
 import "../css/main.css" // This should be the last imported CSS
 
-
-
 const string = `
 
 ██╗  ██╗███████╗ █████╗ ████████╗███████╗██╗      █████╗ ███████╗██╗  ██╗

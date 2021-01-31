@@ -173,7 +173,6 @@ export async function drawPaths(
   imageData: myImageData,
   drawDiff: boolean
 ): Promise<drawOutput> {
-
   if (pxg.imageData !== imageData) pxg.imageData = imageData
 
   if (!drawDiff && !pxg.drawBounds.isEmpty()) pxg.clear()

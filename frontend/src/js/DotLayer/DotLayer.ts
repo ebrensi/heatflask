@@ -390,7 +390,7 @@ function drawDotImageData() {
 async function drawDots(tsecs?: number, drawDiff?: boolean) {
   if (!_ready) return 0
 
-  if (!tsecs) tsecs = _timePaused || (timeOrigin / 1000)
+  if (!tsecs) tsecs = _timePaused || timeOrigin / 1000
 
   const pxg = dotCanvas.pxg
   pxg.transform = ViewBox.transform

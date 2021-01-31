@@ -30,7 +30,7 @@ function* cumulativeSum(
 ): IterableIterator<number> {
   let sum = firstValue || 0
   let i = 0
-  const check = exclusions? () => !exclusions.has(i++) : () => true
+  const check = exclusions ? () => !exclusions.has(i++) : () => true
   if (check()) yield sum
 
   for (const num of arr) {
