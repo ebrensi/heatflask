@@ -40,8 +40,8 @@
   ],
   "devDependencies": {
     "@types/leaflet": "^1.5.21",
-    "@typescript-eslint/eslint-plugin": "^4.14.1",
-    "@typescript-eslint/parser": "^4.14.1",
+    "@typescript-eslint/eslint-plugin": "^4.14.2",
+    "@typescript-eslint/parser": "^4.14.2",
     "assemblyscript": "latest",
     "eslint": "^7.19.0",
     "eslint-config-prettier": "^6.15.0",
