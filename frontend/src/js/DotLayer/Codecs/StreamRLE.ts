@@ -222,7 +222,8 @@ function doUnitTests(): void {
 
   // decode1Diffs w/exclusions test
   const diffDecodedExcl = decode1Diffs(rle1EncodedDiffs, 0, exclusions)
-  if (!equal(diffDecodedExcl, listWexclusions)) throw "bad decode1Diffs (exclusions)"
+  if (!equal(diffDecodedExcl, listWexclusions))
+    throw "bad decode1Diffs (exclusions)"
 
   // transcode test
   const transcoded = transcode(rle1EncodedDiffs)

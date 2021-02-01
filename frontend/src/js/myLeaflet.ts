@@ -84,7 +84,6 @@ window.L = {
   Util,
 }
 
-
 // Map._animateZoom = function (center, zoom, startAnim, noUpdate) {
 //     if (!this._mapPane) { return; }
 

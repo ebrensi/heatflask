@@ -273,7 +273,7 @@ export class Activity {
     const idxBitSet = simplifyPath(
       (i) => this.pointAccessor(i),
       this.px.length / 2,
-      1 / (2 ** zoom)
+      1 / 2 ** zoom
     )
     this.idxSet[zoom] = idxBitSet
 
