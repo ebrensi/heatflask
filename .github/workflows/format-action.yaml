@@ -11,19 +11,31 @@ jobs:
         working-directory: frontend
     steps:
       - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.head_ref }}
       - uses: actions/setup-node@v1
         with:
           node-version: "12.x"
 
-      - name: Install frontend dependencies
-        run: npm ci
-
       - name: Format js/ts files
-        run: npm run format
+        run: |
+          npm install --save-dev prettier
+          npm run format
 
       - name: Build frontend
         if: ${{ github.ref == "refs/heads/staging" }}
-        run: npm run build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Commit changes
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: Auto-apply js/ts formatting and/or build
+          branch: ${{ github.head_ref }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 
 
   black-format:
@@ -45,11 +57,10 @@ jobs:
       - name: Format py files
         run: black --target-version=py39 **/*.py *.py
 
-  commit-changes:
-    needs: [prettier-format-build, black-format]
-    runs-on: ubuntu-latest
-    steps:
-      uses: stefanzweifel/git-auto-commit-action@v4
+      - name: Commit changes
+        uses: stefanzweifel/git-auto-commit-action@v4
         with:
-          commit_message: Auto-apply formatting and/or build
+          commit_message: Auto-apply Python formatting
           branch: ${{ github.head_ref }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
