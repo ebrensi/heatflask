@@ -93,6 +93,9 @@ jobs:
 
   deploy:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
     needs: [prettier-format, black-format]
     if: github.ref == 'refs/heads/staging'
     steps:
