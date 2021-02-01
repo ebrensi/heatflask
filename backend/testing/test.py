@@ -7,5 +7,3 @@ app = create_app()
 log = app.logger
 
 u = Users.get("e_rensi")
-
-

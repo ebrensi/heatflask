@@ -287,6 +287,7 @@ async function redraw(forceFullRedraw?: boolean) {
   }
 
   while (_redrawing) {
+    console.log("can't redraw")
     await nextTask()
   }
 
@@ -327,15 +328,16 @@ async function redraw(forceFullRedraw?: boolean) {
 
   await ActivityCollection.updateContext(ViewBox.pxBounds, ViewBox.zoomLevel)
 
+  const promises = []
   if (_options.showPaths) {
-    drawPaths(drawDiff)
+    promises.push(drawPaths(drawDiff))
   }
 
   if (_paused) {
-    drawDots(null, drawDiff)
+    promises.push(drawDots(null, drawDiff))
   }
 
-  await nextTask()
+  await Promise.all(promises)
   _redrawing = false
 }
 

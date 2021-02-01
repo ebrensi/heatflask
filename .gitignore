@@ -116,6 +116,8 @@ frontend/.cache
 # Ignore development SQLite database
 backend/heatflask/.users.db
 
+#package-lock.json
+
 # For Development
 frontend/dist
 frontend/dev-docs.md

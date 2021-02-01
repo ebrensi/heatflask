@@ -13,25 +13,23 @@ import { LatLngBounds } from "../myLeaflet"
 
 import type { Bounds } from "../appUtil"
 import type {PixelGraphics} from "./PixelGraphics"
+
 export const items: Map<number, Activity> = new Map()
 
 let itemsArray: Activity[]
 
-// window.wasm = wasm
-
-export function add(specs): void {
+export function add(specs: ActivitySpec): void {
   const A = new Activity(specs)
-  A._selected = A.selected
+  // A._selected = A.selected
+  // Object.defineProperty(A, "selected", {
+  //   get() {
+  //     return this._selected
+  //   },
 
-  Object.defineProperty(A, "selected", {
-    get() {
-      return this._selected
-    },
-
-    set(value) {
-      this._selected = value
-    },
-  })
+  //   set(value) {
+  //     this._selected = value
+  //   },
+  // })
 
   items.set(A.id, A)
 }
@@ -118,12 +116,12 @@ export async function updateContext(
 /**
  * Returns an array of activities given a selection region
  * in screen-ccordinates
- * @param  {Bounds} selectPxBounds Bounds Object
  */
 export function* inPxBounds(pxBounds: Bounds): IterableIterator<Activity> {
   for (const idx of inView) {
     const A = itemsArray[idx]
-    for (const p of A.pointsIterator()) {
+    for (let j = 0; j < A.n; j++) {
+      const p = A.pointAccessor(j)
       if (pxBounds.contains(p[0], p[1])) {
         yield A
         break

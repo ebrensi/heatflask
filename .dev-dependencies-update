@@ -1,13 +1,13 @@
 #!/bin/env sh
 
-## This script sets up most of what you will need for full-stack development
-##
-## You will need npm (node package manager) installed, and Python 3.6+
+## This script installs/updates all frontend and backend dependecies
+##  to the the versions specified in
+##   frontend/package.json and backend/requirements.txt
 
 # Install frontend dependencies
 echo "Installing Frontend dependencies..."
 cd frontend
-npm install
+npm install &
 
 echo "Installing backend dependencies..."
 cd ../backend

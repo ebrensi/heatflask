@@ -2,14 +2,9 @@
  * main.js -- the entry point for the heatflask browser client
  */
 
-import { DEV_BUNDLE } from "./Env"
-if (DEV_BUNDLE) import("./UnitTests")
-
 import "./UI"
 
 import "../css/main.css" // This should be the last imported CSS
-
-
 
 const string = `
 

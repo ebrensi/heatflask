@@ -6,8 +6,6 @@
  *
  */
 
-type NumericArray = number[] | Uint16Array | Uint8Array | Uint32Array
-
 function bytelog(val: number): number {
   if (val < 1 << 7) {
     return 1
@@ -21,26 +19,29 @@ function bytelog(val: number): number {
   return 5
 }
 
-/** Compute how many bytes an array of non-negative integers would use once compressed
+/**
+ * Compute how many bytes an Iterableof non-negative integers
+ *  would use once compressed
  */
-function compressedSizeInBytes(input: NumericArray) {
-  const c = input.length
+export function compressedSizeInBytes(input: Iterable<number>): number {
   let answer = 0
-  for (let i = 0; i < c; i++) {
-    answer += bytelog(input[i])
+  for (const val of input) {
+    answer += bytelog(val)
   }
   return answer
 }
 
-/** Compress an array of integers,
+/** Compress an Iterable of non-negative integers
  */
-export function compress(input: NumericArray): ArrayBuffer {
-  const c = input.length,
-    buf = new ArrayBuffer(compressedSizeInBytes(input)),
-    view = new Int8Array(buf)
+export function compress(
+  input: Iterable<number>,
+  estimatedSize?: number
+): ArrayBuffer {
+  const buf = new ArrayBuffer(estimatedSize || compressedSizeInBytes(input))
+
+  const view = new Int8Array(buf)
   let pos = 0
-  for (let i = 0; i < c; i++) {
-    const val = input[i]
+  for (const val of input) {
     if (val < 1 << 7) {
       view[pos++] = val
     } else if (val < 1 << 14) {
@@ -63,7 +64,8 @@ export function compress(input: NumericArray): ArrayBuffer {
       view[pos++] = val >>> 28
     }
   }
-  return buf
+
+  return pos < estimatedSize ? buf.slice(0, pos) : buf
 }
 
 /** from a compressed array of non-negative integers stored ArrayBuffer,
@@ -72,18 +74,16 @@ export function compress(input: NumericArray): ArrayBuffer {
 export function computeHowManyIntegers(input: ArrayBuffer): number {
   const view = new Int8Array(input)
   const c = view.length
-
   let count = 0
   for (let i = 0; i < c; i++) {
     count += input[i] >>> 7
   }
-
   return c - count
 }
 
 /** Uncompress an array of non-negative integers from an ArrayBuffer
  */
-export function* uncompress(input: ArrayBuffer): Generator<number> {
+export function* uncompress(input: ArrayBuffer): IterableIterator<number> {
   const inbyte = new Int8Array(input)
   const end = inbyte.length
   let pos = 0
@@ -128,27 +128,24 @@ function zigzag_decode(val: number) {
 }
 
 /**
- * compute how many bytes an array of signed integers would use once compressed
+ * compute how many bytes an Iterable of signed integers
+ * would use once compressed
  */
-function compressedSizeInBytesSigned(arr: NumericArray) {
-  const c = arr.length
-  const bzze = (i) => bytelog(zigzag_encode(arr[i]))
+function compressedSizeInBytesSigned(list: Iterable<number>): number {
   let answer = 0
-  for (let i = 0; i < c; i++) answer += bzze(i)
+  for (const val of list) answer += bytelog(zigzag_encode(val))
   return answer
 }
 
 /**
  * Compress an array of integers. Encodes signed integers at a small performance and size cost.
  */
-export function compressSigned(arr: NumericArray): ArrayBuffer {
-  const c = arr.length
-  const buf = new ArrayBuffer(compressedSizeInBytesSigned(arr))
+export function compressSigned(list: Iterable<number>): ArrayBuffer {
+  const buf = new ArrayBuffer(compressedSizeInBytesSigned(list))
   const view = new Int8Array(buf)
   let pos = 0
 
-  for (let i = 0; i < c; i++) {
-    const val = zigzag_encode(arr[i])
+  for (const val of list) {
     if (val < 1 << 7) {
       view[pos++] = val
     } else if (val < 1 << 14) {

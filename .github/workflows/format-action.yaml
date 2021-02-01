@@ -1,0 +1,117 @@
+name: Format
+
+on: [push, pull_request]
+
+jobs:
+  check:
+    name: Check files
+    outputs:
+      run_prettier: ${{ steps.fileCheck.outputs.run_prettier }}
+      run_black: ${{ steps.fileCheck.outputs.run_black }}
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2.1.0
+      - uses: jitterbit/get-changed-files@v1
+        id: fileCheck
+        with:
+          format: space-delimited
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: checking
+        run: |
+          for file in ${{ steps.fileCheck.outputs.all }}; do
+            if [[ $file == frontend/* ]]; then
+              echo "::set-output name=run_prettier::true"
+            fi
+            if [[ $file == backend/* ]]; then
+              echo "::set-output name=run_black::true"
+            fi
+          done
+
+  prettier-format:
+    name: Format frontend (js/ts) files with prettier
+    needs: check
+    if: needs.check.outputs.run_prettier == 'true'
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.head_ref }}
+      - uses: actions/setup-node@v1
+        with:
+          node-version: "12.x"
+
+      - name: Format js/ts files
+        run: |
+          npm install --save-dev prettier
+          npm run format
+
+      - name: Commit changes
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: Auto-apply js/ts formatting
+          branch: ${{ github.head_ref }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  black-format:
+    name: Format backend (py) files with black
+    needs: check
+    if: needs.check.outputs.run_black == 'true'
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.8"
+
+      - name: Install backend dependencies
+        run: python -m pip install --upgrade pip black
+
+      - name: Format py files
+        run: black --target-version=py38 **/*.py *.py
+
+      - name: Commit changes
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: Auto-apply Python formatting
+          branch: ${{ github.head_ref }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    # needs: [prettier-format, black-format]
+    if: github.ref == 'refs/heads/staging'
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.head_ref }}
+      - uses: actions/setup-node@v1
+        with:
+          node-version: "12.x"
+      - name:
+        run: |
+          npm ci
+          npm run build
+
+      - name: Commit changes
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: build front-end for deployment
+          branch: ${{ github.head_ref }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

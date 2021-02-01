@@ -2,24 +2,29 @@
  * This module contains definitions for the Activity and ActivityCollection
  *  classes.
  */
-
-import { LatLngBounds } from "../myLeaflet"
+import { latLng2pxBounds, latLng2px } from "./ViewBox"
 import { decode as decodePolyline } from "./Codecs/Polyline"
-import {
-  uncompressVByteRLEIterator,
-  transcode2CompressedBuf,
-  decodeDiffList,
-  encode2CompressedDiffBuf,
-} from "./Codecs/StreamRLE"
-import { latLng2pxBounds, latLng2px, tol as dpTol } from "./ViewBox"
 import { simplify as simplifyPath } from "./Simplifier"
-import { ATYPE } from "../strava"
-import { BitSet } from "../BitSet"
 import { RunningStatsCalculator } from "./stats"
+import { LatLngBounds } from "../myLeaflet"
+import { BitSet } from "../BitSet"
+import { ATYPE } from "../strava"
+
+import {
+  compress as VByteCompress,
+  compressedSizeInBytes as cSize,
+} from "./Codecs/VByte"
+
+import {
+  transcode,
+  decode1Diffs as decode,
+  encode2Diffs as encode,
+} from "./Codecs/StreamRLE"
+
 // import { quartiles } from "../appUtil.js"
 
 import type { Bounds } from "../appUtil"
-import type { RLElist } from "./Codecs/StreamRLE"
+import type { RLElist1 } from "./Codecs/StreamRLE"
 
 interface SegMask extends BitSet {
   zoom?: number
@@ -51,10 +56,10 @@ const ZSCORE_CUTOFF = 5
 
 // Alternatively we can use IQR for outlier detection
 // It is slower since we must sort the values
-const IQR_MULT = 3
+// const IQR_MULT = 3
 
 type latlng = { lat: number; lng: number }
-interface ActivitySpec {
+export interface ActivitySpec {
   _id: snum
   type: string
   vtype: string
@@ -65,13 +70,10 @@ interface ActivitySpec {
   ts: [number, number]
   bounds: { SW: latlng; NE: latlng }
   polyline: string
-  time: RLElist
+  time: RLElist1
   n: number
 }
 
-/**
- * @class Activity
- */
 export class Activity {
   id: number
   type: string
@@ -80,7 +82,7 @@ export class Activity {
   elapsed_time: number
   average_speed: number
   name: string
-  _selected: boolean
+  selected: boolean
   tr: HTMLTableRowElement
   colors: { path: string; dot: string }
   ts: number
@@ -119,7 +121,7 @@ export class Activity {
     this.elapsed_time = +elapsed_time
     this.average_speed = +average_speed
     this.name = name
-    this._selected = false
+    this.selected = false
     this.tr = null
 
     this.colors = {
@@ -132,7 +134,7 @@ export class Activity {
 
     // timestamp comes from backend as a UTC-timestamp, local offset pair
     const [utc, offset] = ts
-    this.ts = +utc
+    this.ts = utc
     this.tsLocal = new Date((utc + offset * 3600) * 1000)
 
     this.llBounds = new LatLngBounds(bounds.SW, bounds.NE)
@@ -145,7 +147,7 @@ export class Activity {
 
     // decode polyline format into an Array of [lat, lng] points
     const points = new Float32Array(n * 2)
-    const excludeMask = new BitSet(n)
+    const excluded = new BitSet(n)
 
     /*
      * We will compute some stats on interval lengths to
@@ -169,7 +171,7 @@ export class Activity {
         /*  We ignore any two successive points with zero distance
          *  this might cause problems so look out for it
          */
-        excludeMask.add(i)
+        excluded.add(i)
         continue
       }
       const logSd = Math.log(sd)
@@ -181,16 +183,20 @@ export class Activity {
       j = j + 2
     }
 
-    if (sqDists.length + 1 === n) {
+    if (excluded.isEmpty()) {
       this.px = points
-      this.time = transcode2CompressedBuf(time)
+      // transcode returns a generator so we need to
+      // go through one to get the size
+      const size = cSize(transcode(time))
+      this.time = VByteCompress(transcode(time), size)
     } else {
       n = sqDists.length + 1
       this.px = points.slice(0, n * 2)
 
       // Some points were discarded so we need to adjust the time diffs
-      const it = decodeDiffList(time, 0, excludeMask)
-      this.time = encode2CompressedDiffBuf(it)
+      const newTimes = decode(time, 0, excluded)
+      const transcoded = encode(newTimes)
+      this.time = VByteCompress(transcoded, n)
 
       // console.log(`${_id}: excluded ${excludeMask.size()} points`)
     }
@@ -242,15 +248,13 @@ export class Activity {
 
   /**
    * This returns a fuction that provides direct access to the
-   * i-th point [x,y] of the location track at a given zoom level.
-   *  For any zoom != 0  it uses an index of lookups, which takes
-   *  up more memory than the iterator, but it is faster.
+   * i-th point [x,y] of this.px
    *
    * Each point returned by the accessor function is a window into the
    * actual px array so modifying it will modify the the px array.
    */
   pointAccessor(i: number): Float32Array {
-    const j = i * 2
+    const j = i << 1
     return this.px.subarray(j, j + 2)
   }
 
@@ -266,11 +270,10 @@ export class Activity {
 
     if (zoom in this.idxSet) return
 
-    const tol = dpTol(zoom)
     const idxBitSet = simplifyPath(
       (i) => this.pointAccessor(i),
       this.px.length / 2,
-      tol
+      1 / 2 ** zoom
     )
     this.idxSet[zoom] = idxBitSet
 
@@ -354,13 +357,11 @@ export class Activity {
       this._containedInMapBounds = true
       const nSegs = this.idxSet[zoom].size() - 1
       const segMask = this.segMask.clear().resize(nSegs)
-      for (let i=0; i<nSegs; i++) segMask.add(i)
+      for (let i = 0; i < nSegs; i++) segMask.add(i)
       // const nWords = (nSegs + 32) >>> 5
       // this.segMask.words.fill(~0, 0, nWords-1)
       // this.segMask.words[nWords - 1] = 2 ** (nWords % 32) - 1
-
     } else {
-
       this._containedInMapBounds = false
       const idxSet = this.idxSet[zoom]
       const nPoints = idxSet.size()
@@ -369,29 +370,27 @@ export class Activity {
       const seekIdx = idxSet.iterator()
       let lastAdded = -1
 
-      for (let i=0; i<nSegs; i++){
+      for (let i = 0; i < nSegs; i++) {
         const idx = seekIdx(i)
         const p = this.pointAccessor(idx)
         if (viewportPxBounds.contains(p[0], p[1])) {
           // The viewport contains this point so we include
           // the segments before and after it
-          if (lastAdded !== i-1) segMask.add(i-1)
-          segMask.add(lastAdded = i)
+          if (lastAdded !== i - 1) segMask.add(i - 1)
+          segMask.add((lastAdded = i))
         }
       }
 
       // Check the last point
-      if (lastAdded !== nSegs-1) {
+      if (lastAdded !== nSegs - 1) {
         const p = this.pointAccessor(seekIdx(nSegs))
-        if (viewportPxBounds.contains(p[0], p[1])) segMask.add(nSegs-1)
+        if (viewportPxBounds.contains(p[0], p[1])) segMask.add(nSegs - 1)
       }
-
     }
 
     if (zoom in this.badSegIdx) {
       const badSegIdx = this.badSegIdx[zoom]
-      for (const idx of badSegIdx)
-        this.segMask.remove(idx)
+      for (const idx of badSegIdx) this.segMask.remove(idx)
     }
 
     if (!this._containedInMapBounds && this.segMask.isEmpty()) {
@@ -484,7 +483,7 @@ export class Activity {
     //  to pointAccessor(1)
     let lasti: number
     let lastIdx1: number
-    let lastt_b = 0
+    let lasttb = 0
 
     let count = 0
     // segMask[i] gives the idx of the start of the i-th segment
@@ -497,30 +496,26 @@ export class Activity {
 
       if (idx1 === undefined) return
 
-      const t_a = reuse ? lastt_b : time(idx0)
-      const t_b = (lastt_b = time(idx1))
+      const ta = reuse ? lasttb : time(idx0)
+      const tb = (lasttb = time(idx1))
 
-      const kLow = Math.ceil((nowInSecs - t_b) / T)
-      const kHigh = Math.floor((nowInSecs - t_a) / T)
+      const kLow = Math.ceil((nowInSecs - tb) / T)
+      const kHigh = Math.floor((nowInSecs - ta) / T)
 
       if (kLow > kHigh) return
 
-      const p_a = this.pointAccessor(idx0)
-      const p_b = this.pointAccessor(idx1)
+      const [pax, pay] = this.pointAccessor(idx0)
+      const [pbx, pby] = this.pointAccessor(idx1)
 
-      const t_ab = t_b - t_a
-      const vx = (p_b[0] - p_a[0]) / t_ab
-      const vy = (p_b[1] - p_a[1]) / t_ab
+      const tab = tb - ta
+      const vx = (pbx - pax) / tab
+      const vy = (pby - pay) / tab
 
       for (let k = kLow; k <= kHigh; k++) {
         const t = nowInSecs - k * T
-        const dt = t - t_a
-        if (dt > 0) {
-          const x = p_a[0] + vx * dt
-          const y = p_a[1] + vy * dt
-          func(x, y)
-          count++
-        }
+        const dt = t - ta
+        func(pax + vx * dt, pay + vy * dt)
+        count++
       }
     })
     return count
@@ -531,4 +526,63 @@ function sqDist(p1: tuple2, p2: tuple2) {
   const [x1, y1] = p1
   const [x2, y2] = p2
   return (x2 - x1) ** 2 + (y2 - y1) ** 2
+}
+
+/**
+ * Returns a function that returns the next encoded member each time
+ * it is called.  Optionally it can be called with the index of the next
+ * number to return.
+ *
+ * Another way to describe it is that this returns a sort of element-array
+ * S where S(i) is the i-th element, but i must be larger every time S(i)
+ * is called.
+ */
+function uncompressVByteRLEIterator(
+  buf: ArrayBuffer,
+  runningSum = 0
+): (i: number) => number {
+  const inbyte = new Int8Array(buf)
+  const end = inbyte.length
+  let pos = 0
+  let reps = 0
+  let si = 0
+  let v = 0
+
+  return (targetPos: number) => {
+    while (true) {
+      do {
+        runningSum += v
+        if (si++ === targetPos || targetPos === undefined) return runningSum //{ v: runningSum, i: si }
+      } while (--reps > 0)
+
+      if (pos >= end) throw RangeError
+
+      while (true) {
+        // get the next value
+        let c = inbyte[pos++]
+        v = c & 0x7f
+        if (c < 0) {
+          c = inbyte[pos++]
+          v |= (c & 0x7f) << 7
+          if (c < 0) {
+            c = inbyte[pos++]
+            v |= (c & 0x7f) << 14
+            if (c < 0) {
+              c = inbyte[pos++]
+              v |= (c & 0x7f) << 21
+              if (c < 0) {
+                c = inbyte[pos++]
+                v |= c << 28
+              }
+            }
+          }
+        }
+
+        // 0 followed by the number of reps specifies a run of repeats
+        if (v === 0) reps = NaN
+        else if (isNaN(reps)) reps = v
+        else break
+      }
+    }
+  }
 }
