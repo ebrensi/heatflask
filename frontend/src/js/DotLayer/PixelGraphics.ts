@@ -89,7 +89,9 @@ export class PixelGraphics {
     this.imageData = new ImageData(imageDataArr, width, height)
   }
 
-  setColor(r: number, g: number, b: number, a = 0xff): void {
+  setColor(colorValue: string | number): void
+  setColor(r: number, g?: number, b?: number, a?: number): void {
+    if (!a) a = 0xff // default full alpha
     if (g === undefined) {
       if (typeof r === "string") this.color32 = parseColor(r)
       else this.color32 = r | (a << alphaPos)
