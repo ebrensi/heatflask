@@ -83,3 +83,30 @@ window.L = {
   //GridLayer,
   Util,
 }
+
+
+// Map._animateZoom = function (center, zoom, startAnim, noUpdate) {
+//     if (!this._mapPane) { return; }
+
+//     if (startAnim) {
+//       this._animatingZoom = true;
+
+//       // remember what center/zoom to set after animation
+//       this._animateToCenter = center;
+//       this._animateToZoom = zoom;
+
+//       addClass(this._mapPane, 'leaflet-zoom-anim');
+//     }
+
+//     // @section Other Events
+//     // @event zoomanim: ZoomAnimEvent
+//     // Fired at least once per zoom animation. For continuous zoom, like pinch zooming, fired once per frame during zoom.
+//     this.fire('zoomanim', {
+//       center: center,
+//       zoom: zoom,
+//       noUpdate: noUpdate
+//     });
+
+//     // Work around webkit not firing 'transitionend', see https://github.com/Leaflet/Leaflet/issues/3689, 2693
+//     setTimeout(bind(this._onZoomTransitionEnd, this), 0);
+//   }

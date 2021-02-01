@@ -3,30 +3,28 @@ name: Format
 on: [push, pull_request]
 
 jobs:
-  prettier-format:
+  prettier-format-build:
     runs-on: ubuntu-latest
 
     defaults:
       run:
         working-directory: frontend
-
     steps:
       - uses: actions/checkout@v2
-        with:
-          ref: ${{ github.head_ref }}
       - uses: actions/setup-node@v1
         with:
           node-version: "12.x"
 
+      - name: Install frontend dependencies
+        run: npm ci
+
       - name: Format js/ts files
-        run: |
-          npm ci
-          npm run format
-      - name: Commit changes
-        uses: stefanzweifel/git-auto-commit-action@v4
-        with:
-          commit_message: Auto-apply prettier formatting changes
-          branch: ${{ github.head_ref }}
+        run: npm run format
+
+      - name: Build frontend
+        if: ${{ github.ref == "refs/heads/staging" }}
+        run: npm run build
+
 
   black-format:
     runs-on: ubuntu-latest
@@ -38,16 +36,20 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
-      # - uses: psf/black@stable
-      #   with:
-      #     args: "--target-version=py38 **/*.py *.py"
-      - name: Format Python files
-        run: |
-          pip install black
-          black --target-version=py38 **/*.py *.py
-
-      - name: Commit changes
-        uses: stefanzweifel/git-auto-commit-action@v4
         with:
-          commit_message: Auto-apply Black formatting changes
+          python-version: "3.9"
+
+      - name: Install backend dependencies
+        run: python -m pip install --upgrade pip black
+
+      - name: Format py files
+        run: black --target-version=py39 **/*.py *.py
+
+  commit-changes:
+    needs: [prettier-format-build, black-format]
+    runs-on: ubuntu-latest
+    steps:
+      uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: Auto-apply formatting and/or build
           branch: ${{ github.head_ref }}

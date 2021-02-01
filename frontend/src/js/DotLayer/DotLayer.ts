@@ -170,7 +170,7 @@ export const dotLayer = function (options) {
 function addCanvasOverlay(pane: string): HTMLCanvasElement {
   const size = _map.getSize()
   const zoomAnimated = _map.options.zoomAnimation && Browser.any3d
-  const canvas: HTMLCanvasElement = DomUtil.create("canvas", "leaflet-layer")
+  const canvas = <HTMLCanvasElement>DomUtil.create("canvas", "leaflet-layer")
   canvas.width = size.x
   canvas.height = size.y
   DomUtil.addClass(
@@ -302,6 +302,7 @@ async function redraw(forceFullRedraw?: boolean) {
   }
 
   while (_redrawing) {
+    console.log("can't redraw")
     await nextTask()
   }
 
@@ -341,15 +342,16 @@ async function redraw(forceFullRedraw?: boolean) {
 
   await ActivityCollection.updateContext(ViewBox.pxBounds, ViewBox.zoomLevel)
 
+  const promises = []
   if (_options.showPaths) {
-    drawPaths(drawDiff)
+    promises.push(drawPaths(drawDiff))
   }
 
   if (_paused) {
-    drawDots(null, drawDiff)
+    promises.push(drawDots(null, drawDiff))
   }
 
-  await nextTask()
+  await Promise.all(promises)
   _redrawing = false
 }
 

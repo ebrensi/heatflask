@@ -124,7 +124,8 @@ export async function updateContext(
 export function* inPxBounds(pxBounds: Bounds): IterableIterator<Activity> {
   for (const idx of inView) {
     const A = itemsArray[idx]
-    for (const p of A.pointsIterator()) {
+    for (let j=0; j<A.n; j++) {
+      const p = A.pointAccessor(j)
       if (pxBounds.contains(p[0], p[1])) {
         yield A
         break

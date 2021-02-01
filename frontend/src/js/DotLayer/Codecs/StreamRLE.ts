@@ -132,10 +132,11 @@ export function encode2Diffs(list: Iterable<number>): RLElist2 {
 
 export function decode2Length(rleList: RLElist2): number {
   let len = 0 // we count the start value!
-  for (const el of rleList) {
+  const iter = rleList[Symbol.iterator]()
+  for (const el of iter) {
     if (el) len++
     else {
-      const reps = rleList.next().value - 1
+      const reps = iter.next().value - 1
       len += reps
     }
   }
@@ -200,25 +201,28 @@ function doUnitTests(): void {
   const diffs = [1, 3, 1, 1, 1, 2]
   const rle1EncodedDiffs: RLElist1 = [1, 3, [1, 3], 2]
   const rle2EncodedDiffs = [1, 3, 0, 3, 1, 2]
-
-  const exclusions = [0, 3, 6]
+  const exclusions = new Set([0, 3, 6])
   const listWexclusions = [1, 4, 6, 7]
 
   // cumulativeSum test
   const summedDiffs = cumulativeSum(diffs, 0)
   if (!equal(summedDiffs, list)) throw "bad cumulativeSum"
 
-  // length test
+  // decode1Length test
   if (decode1Length(rle1EncodedDiffs) !== diffs.length)
     throw "bad decode1Length"
 
-  // decodeList1 test
+  // decode1 test
   const decoded1 = decode1(rle1EncodedDiffs)
   if (!equal(decoded1, diffs)) throw "bad decode1"
 
-  // decodeDiffList1 test
+  // decode1Diffs test
   const diffDecoded1 = decode1Diffs(rle1EncodedDiffs, 0)
   if (!equal(diffDecoded1, list)) throw "bad decode1Diffs"
+
+  // decode1Diffs w/exclusions test
+  const diffDecodedExcl = decode1Diffs(rle1EncodedDiffs, 0, exclusions)
+  if (!equal(diffDecodedExcl, listWexclusions)) throw "bad decode1Diffs (exclusions)"
 
   // transcode test
   const transcoded = transcode(rle1EncodedDiffs)
@@ -243,7 +247,4 @@ function doUnitTests(): void {
   // decode2Diffs
   const diffDecoded2 = decode2Diffs(rle2EncodedDiffs.values(), 0)
   if (!equal(diffDecoded2, list)) throw "bad decode2Diffs"
-
-  // decode1 test with exclusions
-  const decoded1excl = decode1(rle1EncodedDiffs, exclusions)
 }
