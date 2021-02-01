@@ -6,31 +6,27 @@ jobs:
   check:
     name: Check files
     outputs:
-      run_prettier: ${{ steps.check_files.outputs.run_prettier }}
-      run_black: ${{ steps.check_files.outputs.run_black }}
+      run_prettier: ${{ steps.fileCheck.outputs.run_prettier }}
+      run_black: ${{ steps.fileCheck.outputs.run_black }}
 
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v2.1.0
+      - uses: jitterbit/get-changed-files@v1
+        id: fileCheck
         with:
-          fetch-depth: 2
-
-      - name: check modified files
-        id: check_files
+          format: space-delimited
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: checking
         run: |
-          echo "========== check paths of modified files =========="
-          git diff --name-only ${{ github.event.before }} ${{ github.sha }}
-          git diff --name-only ${{ github.event.before }} ${{ github.sha }} > files.txt
-          while IFS= read -r file
-          do
+          for file in ${{ steps.fileCheck.outputs.all }}; do
             if [[ $file == frontend/* ]]; then
               echo "::set-output name=run_prettier::true"
             fi
             if [[ $file == backend/* ]]; then
               echo "::set-output name=run_black::true"
             fi
-          done < files.txt
+          done
 
   prettier-format:
     name: Format frontend (js/ts) files with prettier
