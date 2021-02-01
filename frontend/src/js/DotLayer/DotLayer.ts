@@ -367,9 +367,7 @@ async function drawDotImageData() {
   const ctx = pathCanvas.getContext("2d")
   const r = dotPxg.drawBounds.rect
   if (_options.dotShadows.enabled) {
-    const img = await createImageBitmap(
-      dotPxg.imageData, r.x, r.y, r.w, r.h
-    )
+    const img = await createImageBitmap(dotPxg.imageData, r.x, r.y, r.w, r.h)
     ctx.drawImage(img, r.x, r.y)
   } else {
     ctx.putImageData(pathPxg.imageData, 0, 0, r.x, r.y, r.w, r.h)

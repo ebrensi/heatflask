@@ -56,8 +56,10 @@ async function wasmBrowserInstantiate(
   return response
 }
 
-export async function getWasm(memory?: WebAssembly.Memory): Promise<WasmExports> {
-  const importObject = {...defaultWasmImports}
+export async function getWasm(
+  memory?: WebAssembly.Memory
+): Promise<WasmExports> {
+  const importObject = { ...defaultWasmImports }
 
   if (memory) importObject.env.memory = memory
 
@@ -72,4 +74,4 @@ export async function getWasm(memory?: WebAssembly.Memory): Promise<WasmExports>
   return result.instance.exports
 }
 
-export {getWasm as default}
+export { getWasm as default }

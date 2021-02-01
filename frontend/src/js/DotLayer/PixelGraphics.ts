@@ -49,7 +49,7 @@ export class PixelGraphics {
     this.color32 = rgbaToUint32(0, 0, 0, 255) // default color is black
     this.drawBounds = new Bounds()
     this.lineWidth = 1
-    this.transform = [1,0,1,0]
+    this.transform = [1, 0, 1, 0]
 
     if (width && height) {
       getWasm().then((exports) => {
@@ -72,7 +72,7 @@ export class PixelGraphics {
   setSize(width: number, height: number): void {
     const memory = <WebAssembly.Memory>this.wasm.memory
     const numPixels = width * height // reserve an extra row
-    const byteSize = numPixels << 2  // (4 bytes per rgba pixel)
+    const byteSize = numPixels << 2 // (4 bytes per rgba pixel)
 
     const numPages = ((byteSize + 0xffff) & ~0xffff) >>> 16
     const currentNumPages = memory.grow(0)
@@ -432,7 +432,6 @@ export class PixelGraphics {
     }
     if (label) ctx.fillText(label, x + 20, y + 20)
   }
-
 } // end PixelGraphics definition
 
 const _re = /(\d+),(\d+),(\d+)/

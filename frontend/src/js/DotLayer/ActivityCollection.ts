@@ -12,7 +12,7 @@ import { queueTask, nextTask } from "../appUtil"
 import { LatLngBounds } from "../myLeaflet"
 
 import type { Bounds } from "../appUtil"
-import type {PixelGraphics} from "./PixelGraphics"
+import type { PixelGraphics } from "./PixelGraphics"
 
 export const items: Map<number, Activity> = new Map()
 
@@ -167,7 +167,6 @@ export async function drawPaths(
   pxg: PixelGraphics,
   drawDiff: boolean
 ): Promise<drawOutput> {
-
   if (!drawDiff && !pxg.drawBounds.isEmpty()) pxg.clear()
 
   const drawSegFunc = (x0: number, y0: number, x1: number, y1: number) => {
@@ -211,7 +210,6 @@ export async function drawDots(
   tsecs: number,
   drawDiff: boolean
 ): Promise<drawOutput> {
-
   if (!drawDiff && !pxg.drawBounds.isEmpty()) pxg.clear()
 
   const bounds = pxg.drawBounds.data
