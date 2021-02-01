@@ -13,6 +13,7 @@ import { LatLngBounds } from "../myLeaflet"
 
 import type { Bounds } from "../appUtil"
 import type { PixelGraphics } from "./PixelGraphics"
+import type { ActivitySpec } from "./Activity"
 
 export const items: Map<number, Activity> = new Map()
 
