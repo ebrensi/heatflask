@@ -3,38 +3,39 @@ name: Format
 on: [push, pull_request]
 
 jobs:
-  # check:
-  #   name: Check files
-  #   outputs:
-  #     run_prettier: ${{ steps.check_files.outputs.run_prettier }}
-  #     run_black: ${{ steps.check_files.outputs.run_black }}
+  check:
+    name: Check files
+    outputs:
+      run_prettier: ${{ steps.check_files.outputs.run_prettier }}
+      run_black: ${{ steps.check_files.outputs.run_black }}
 
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v2
-  #       with:
-  #         fetch-depth: 2
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 2
 
-  #     - name: check modified files
-  #       id: check_files
-  #       run: |
-  #         echo "========== check paths of modified files =========="
-  #         git diff-tree --no-commit-id --name-only -r ${{ github.sha }} > files.txt
-  #         while IFS= read -r file
-  #         do
-  #           if [[ $file == frontend/* ]]; then
-  #             echo "::set-output name=run_prettier::true"
-  #           fi
-  #           if [[ $file == backend/* ]]; then
-  #             echo "::set-output name=run_black::true"
-  #           fi
-  #         done < files.txt
+      - name: check modified files
+        id: check_files
+        run: |
+          echo "========== check paths of modified files =========="
+          git diff --name-only ${{ github.event.before }} ${{ github.sha }}
+          git diff --name-only ${{ github.event.before }} ${{ github.sha }} > files.txt
+          while IFS= read -r file
+          do
+            if [[ $file == frontend/* ]]; then
+              echo "::set-output name=run_prettier::true"
+            fi
+            if [[ $file == backend/* ]]; then
+              echo "::set-output name=run_black::true"
+            fi
+          done < files.txt
 
   prettier-format:
     name: Format frontend (js/ts) files with prettier
-    # needs: check
-    # if: needs.check.outputs.run_prettier == 'true'
+    needs: check
+    if: needs.check.outputs.run_prettier == 'true'
     runs-on: ubuntu-latest
 
     defaults:
@@ -63,8 +64,8 @@ jobs:
 
   black-format:
     name: Format backend (py) files with black
-    # needs: check
-    # if: needs.check.outputs.run_black == 'true'
+    needs: check
+    if: needs.check.outputs.run_black == 'true'
     runs-on: ubuntu-latest
 
     defaults:
@@ -107,7 +108,7 @@ jobs:
           node-version: "12.x"
       - name:
         run: |
-          npm ci --production
+          npm ci
           npm run build
 
       - name: Commit changes
