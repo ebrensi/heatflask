@@ -267,7 +267,6 @@ export class PixelGraphics {
     const yStart = y < 0 ? 0 : y
     const yEnd = Math.min(y + size, this.height)
 
-    // TODO: add padding after loop
     this.drawBounds.update(x, y)
 
     for (let row = yStart; row < yEnd; row++) {
@@ -287,7 +286,6 @@ export class PixelGraphics {
     const r = size
     const r2 = r * r
 
-    // TODO: add padding after loop
     this.drawBounds.update(x, y)
 
     for (let cy = -r + 1; cy < r; cy++) {
