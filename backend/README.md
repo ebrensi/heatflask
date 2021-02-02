@@ -12,7 +12,8 @@ Fork this repo and clone it to your machine.   The backend currently runs on Pyt
   * [Redis](https://redis.io) Fast in-memory datastore (backend cache)
   * [MongoDB](https://www.mongodb.com) NoSQL database (Activities database)
 On some Linux systems Mongo may be installed but the service is not started.  Make sure the MongoDB daemon is running.
-The setup used to be more complicated but now there is a convenient script [`dev-install-backend`](/backend/dev-install-backend)
+The setup used to be more complicated but now there is a convenient script [`.dev-install-backend`](/backend/.dev-install-backend)
+
 Running that should do everything for you:
   * set up a Python 3 virtual environment in `backend/.venv/heatflask`
   * install all the python dependencies
@@ -28,14 +29,6 @@ In order to access Strava you will need to have a Strava account, with an app de
 export STRAVA_CLIENT_ID="...""
 export STRAVA_CLIENT_SECRET="..."
 ```
-
-
-In order to access MapBox baselayers, your environment needs to have an access token
-```bash
-export MAPBOX_ACCESS_TOKEN=...(your access token)
-```
-which you can get from [here](https://docs.mapbox.com/help/how-mapbox-works/access-tokens).  If you don't mind not having Mapbox map backgrounds for development then don't bother.  There are other options that don't require authentication.
-
 
 ### Start the webserver
 You should be able to run the backend server on your machine by running [`dev-run`](/backend/dev-run)

@@ -8,6 +8,7 @@ This is the client-side code for [Heatflask](https://www.heatflask.com), which w
 If you want to try your hand at Heatflask development, you will need to fork this repo and clone it to your machine. These instuctions assume you are using Linux. I have not tried development on another OS. New to Linux? I recommend [Pop_OS!](https://system76.com/pop).
 
 ### Set up frontend dev environment
+Note: The [`.dev-setup`](/.dev-setup) script does this all for you.
 
 You will need [npm](https://www.npmjs.com) (Node Package Manager) installed on your machine.
 

@@ -1,4 +1,12 @@
 # Contributing to Heatflask
+### tl;dr
+If you know mostly what you are doing and you are on a Linux based operating system, just clone this repo, and run the setup script [`.dev-setup`](/.dev-setup) in the root directory.
+Run the frontend bundler watch script with `npm run watch` in the `frontend` directory.
+Run the backend server with `dev-run` in the `backend` directory.
+  * You will need to have MongoDB and Redis installed for the backend server to work.
+
+
+## Setup
 For setting up the backend-server, see the [`README.md`](/backend/README.md) in [`/backend`](/backend), and for the frontend, see [`README.md`](/frontend/README.md) in [`/frontend`](/frontend).
 
 If you are new to this, here's a tip.  First, [fork the repo](https://docs.github.com/en/github/getting-started-with-github/fork-a-repo). Afterwards you will have your own copy of it.  Then [clone your fork of the repo](https://docs.github.com/en/github/creating-cloning-and-archiving-repositories/cloning-a-repository) to your own machine.  Then navigate to the directory of the clone you made, in a terminal, and enter `git remote -v`.  That is the location of your remote repo, and its nickname is `origin` by default. You will add another remote, the main heatflask repo, which we call the `upstream` repo.

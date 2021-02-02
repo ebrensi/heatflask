@@ -10,13 +10,6 @@ PRETTIER_FILES=$(git diff --cached --name-only --diff-filter=ACMR "*.js" "*.ts" 
 # Files to run Black on
 BLACK_FILES=$(git diff --cached --name-only --diff-filter=ACMR "*.py")
 
-if [ -z "$PRETTIER_FILES" ] && [ -z "BLACK_FILES" ]
-then
-    echo "pre-commit: nothing to re-format"
-    exit 0
-fi
-
-
 if [ ! -z "$PRETTIER_FILES" ]; then
     # Prettify selected files
     echo "$PRETTIER_FILES" | xargs ./frontend/node_modules/.bin/prettier --write;
