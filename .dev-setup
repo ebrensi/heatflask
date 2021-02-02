@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+
+## This script sets up the git hooks and installs/updates dev-dependencies
+##
+## As long as there are no errors this should set up everything for you.
+##
+
+cd .git/hooks
+
+if [[ ! -f post-merge ]]
+then
+    echo "adding post-merge hook"
+    ln -s ../../.githooks/update-dependencies-hook post-merge
+else
+    echo "post-merge hook already exists"
+fi
+
+if [[ ! -f post-rewrite ]]
+then
+    echo "adding post-rewrite hook"
+    ln -s ../../.githooks/update-dependencies-hook post-rewrite
+else
+    echo "$post-rewrite hook already exists";
+fi
+
+if [[ ! -f pre-commit ]]
+then
+    echo "adding pre-commit hook"
+    ln -s ../../.githooks/pre-commit pre-commit
+else
+    echo "pre-commit hook already exists"
+fi
+
+echo "Installing frontend dependencies"
+cd ../../frontend
+npm ci
+
+cd ../backend
+echo "Installing backend dependencies"
+./dev-install-backend
+
