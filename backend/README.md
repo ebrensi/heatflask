@@ -8,7 +8,7 @@ If you want to try your hand at Heatflask development, you will need to be able 
 
 ### Set up the backend environment
 Fork this repo and clone it to your machine.   The backend currently runs on Python 3.8. You will need installed on your machine:
-  * A Python 3 (3.8 or more recent)
+  * A Python 3 (3.8+)
   * [Redis](https://redis.io) Fast in-memory datastore (backend cache)
   * [MongoDB](https://www.mongodb.com) NoSQL database (Activities database)
 On some Linux systems Mongo may be installed but the service is not started.  Make sure the MongoDB daemon is running.
