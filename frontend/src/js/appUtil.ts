@@ -38,7 +38,7 @@ export function DDHHMM(sec: number): string {
   const minutes = Math.floor(sec / 60) % 60
   sec -= minutes * 60
 
-  return `${days.pad(2)}:${hours.pad(2)}:${minutes.pad(2)}`
+  return `${padNum(days, 2)}:${padNum(hours, 2)}:${padNum(minutes, 2)}`
 }
 
 // return an image tag string, given an image url
@@ -71,12 +71,6 @@ export function ws_prefix(): string {
 /**
  * Binary Search returns the index of the target value in a sorted array-like
  *    data structure.
- * @param  {function} get -- accessor function
- * @param  {number} target
- * @param  {number} start -- index of first value
- * @param  {number} end   -- index of last value
- * @param  {function} compare -- function compare(x,y) > 0 if x ">" y
- * @return {number}
  */
 export function binarySearch(
   get: (i: number) => unknown,
@@ -104,17 +98,13 @@ export function binarySearch(
 
 /**
  * Histogram for analysis
- * @param  {Iterable} points
- * @param  {Array<Number>} bins -- boundaries for bins
- * @return {Array<Number>}
- *
  * @example
  *  const bins = histogram([1,1,2,2,3,4,4,4], [2, 3])
  *
  * Then bins == [2, 3, 3]
  *
  */
-export function histogram(points: Iterable, bins: number[]): number[] {
+export function histogram(points: Iterable<number>, bins: number[]): number[] {
   const binCounts = new Array(bins.length + 1).fill(0)
   const last = bins.length - 1
   for (const p of points) {
@@ -138,8 +128,6 @@ export function histogram(points: Iterable, bins: number[]): number[] {
 /**
  * Filters outliers from an Array using standard IQR method. Creates a new Array.
  * adapted from https://gist.github.com/ogun/f19dc055e6b84d57e8186cbc9eaa8e45 (Kemal Ogun Isik)
- *
- * @param  {Array} someArray
  */
 type quartObj = { q1: number; q3: number; iqr: number }
 export function quartiles(someArray: Array<number>): quartObj {
@@ -192,9 +180,8 @@ export class Bounds {
   _bounds: BoundsData
 
   constructor() {
-    this._bounds = new Array(4)
+    this._bounds = [NaN, NaN, NaN, NaN]
     // [xmin, ymin, xmax, ymax]
-    this.reset()
   }
 
   reset(): Bounds {

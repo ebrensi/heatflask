@@ -446,5 +446,5 @@ function parseColor(colorString: string) {
     return rgbaToUint32(r, g, b, 0xff)
   }
   const result = colorString.match(_re)
-  return rgbaToUint32(result[1], result[2], result[3], 0xff)
+  return rgbaToUint32(+result[1], +result[2], +result[3], 0xff)
 }

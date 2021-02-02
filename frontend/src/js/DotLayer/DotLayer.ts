@@ -364,13 +364,13 @@ async function drawPaths(drawDiff?: boolean) {
 
 async function drawDotImageData() {
   if (dotPxg.drawBounds.isEmpty()) return
-  const ctx = pathCanvas.getContext("2d")
+  const ctx = dotCanvas.getContext("2d")
   const r = dotPxg.drawBounds.rect
   if (_options.dotShadows.enabled) {
     const img = await createImageBitmap(dotPxg.imageData, r.x, r.y, r.w, r.h)
     ctx.drawImage(img, r.x, r.y)
   } else {
-    ctx.putImageData(pathPxg.imageData, 0, 0, r.x, r.y, r.w, r.h)
+    ctx.putImageData(dotPxg.imageData, 0, 0, r.x, r.y, r.w, r.h)
   }
 }
 
@@ -378,6 +378,7 @@ async function drawDots(tsecs?: number, drawDiff?: boolean) {
   if (!_ready) return 0
 
   if (!tsecs) tsecs = _timePaused || timeOrigin / 1000
+  if (!drawDiff) dotPxg.clear()
 
   const { count } = await ActivityCollection.drawDots(
     dotPxg,

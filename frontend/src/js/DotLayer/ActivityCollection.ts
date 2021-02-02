@@ -73,7 +73,6 @@ const inView = new BitSet(1)
 
 /**
  * Update StyleGroups for our collection of activities
- * @return {[type]} [description]
  */
 export async function updateContext(
   viewportPxBounds: Bounds,
