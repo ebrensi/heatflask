@@ -313,7 +313,8 @@ async function redraw(forceFullRedraw?: boolean) {
   // reset the canvases to to align with the screen and update the ViewBox
   // location relative to the map's pxOrigin
   const shift = ViewBox.calibrate()
-  pathPxg.transform = dotPxg.transform = ViewBox.transform
+  pathPxg.setTransform(ViewBox.transform)
+  dotPxg.setTransform(ViewBox.transform)
 
   if (drawDiff) {
     if (_options.showPaths) {

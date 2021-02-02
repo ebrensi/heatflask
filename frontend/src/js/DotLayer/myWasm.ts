@@ -1,5 +1,7 @@
 import { DEV_BUNDLE } from "../Env"
 
+export type { setSize } from "../../assembly/wasm"
+
 const sourceFilePath = DEV_BUNDLE ? "dev.wasm" : "prod.wasm"
 
 let wasmModule: WebAssembly.Module

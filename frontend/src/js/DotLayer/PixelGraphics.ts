@@ -4,7 +4,6 @@ import { getWasm } from "./myWasm"
 type tuple4 = [number, number, number, number]
 type tuple2 = [number, number]
 type rect = { x: number; y: number; w: number; h: number }
-type CanvasOrCtx = HTMLCanvasElement | CanvasRenderingContext2D
 type WasmExports = Record<string, WebAssembly.ExportValue>
 
 const DEBUG = true
@@ -87,6 +86,13 @@ export class PixelGraphics {
 
     const imageDataArr = new Uint8ClampedArray(memory.buffer, 0, byteSize)
     this.imageData = new ImageData(imageDataArr, width, height)
+
+    this.wasm.setSize(width, height)
+  }
+
+  setTransform(tfArray: tuple4): void {
+    this.transform = tfArray
+    this.wasm.setTransform(...tfArray)
   }
 
   setColor(colorValue: string | number): void
@@ -98,6 +104,8 @@ export class PixelGraphics {
     } else {
       this.color32 = rgbaToUint32(r, g, b, a)
     }
+
+    this.wasm.setColor(this.color32)
   }
 
   setLineWidth(w: number): void {
@@ -106,17 +114,12 @@ export class PixelGraphics {
 
   /**
    * Clear (set to 0) a rectangular region
-   * @param  {Object} rect      {x, y, w, h}
-   * @param  {Object} [newBoundsRect] a rect object that specifies
-   *                                  new draw bounds
    */
   clear(rect?: rect): void {
     const { x, y, w, h } = rect || this.drawBounds.rect
+    if (isNaN(x)) return
 
-    for (let row = y; row < y + h; row++) {
-      const offset = row * this.width
-      this.buf32.fill(0, offset + x, offset + x + w)
-    }
+    this.wasm.clearRect(x, y, w, h)
 
     // make sure to update drawbounds
     if (!rect) {
