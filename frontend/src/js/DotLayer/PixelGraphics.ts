@@ -130,7 +130,7 @@ export class PixelGraphics {
    */
   clear(rect?: rect): void {
     const { x, y, w, h } = rect || this.drawBounds.rect
-    if (isNaN(x)) return
+    if (isNaN(x) || w == 0 || h == 0) return
 
     this.wasm.clearRect(x, y, w, h)
 
@@ -330,11 +330,11 @@ export class PixelGraphics {
     if (this.drawBounds.isEmpty()) return
 
     console.time("moveRect")
-    this.translateJS(shiftX, shiftY)
+    // this.translateJS(shiftX, shiftY)
 
-    // this.updateWasmDrawBounds()
-    // this.wasm.moveRect(shiftX, shiftY)
-    // this.updateDrawBoundsFromWasm()
+    this.updateWasmDrawBounds()
+    this.wasm.moveRect(shiftX, shiftY)
+    this.updateDrawBoundsFromWasm()
 
     console.timeEnd("moveRect")
   }
@@ -375,7 +375,7 @@ export class PixelGraphics {
       this.drawDebugBox({ x: cx, y: cy, w: cw, h: ch }, "clear", "black", true) // draw dest rect
     }
 
-    this.clear({ x: cx, y: cy, w: cw, h: ch })
+    if (ch && cw) this.clear({ x: cx, y: cy, w: cw, h: ch })
 
     const moveRow = (row: number): void => {
       const sOffset = (sy + row) * this.width

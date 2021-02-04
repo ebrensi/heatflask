@@ -4,7 +4,8 @@ export type { setSize } from "../../assembly/wasm"
 
 const sourceFilePath = DEV_BUNDLE ? "dev.wasm" : "prod.wasm"
 
-let wasmModule: WebAssembly.Module
+let _wasmModule: WebAssembly.Module
+let _ctx: CanvasRenderingContext2D
 
 type WasmImports = Record<string, Record<string, WebAssembly.ImportValue>>
 type WasmExports = Record<string, WebAssembly.ExportValue>
@@ -13,6 +14,10 @@ const defaultWasmImports: WasmImports = {
   env: {
     consoleLog(arg: number): void {
       console.log(arg)
+    },
+
+    drawDebugRect(x: number, y: number, w: number, h: number): void {
+      _ctx.strokeRect(x, y, w, h)
     },
 
     abort(_msg: string, _file: string, line: number, column: number): void {
@@ -31,7 +36,9 @@ async function wasmBrowserInstantiate(
   if (!importObject) {
     importObject = {
       env: {
-        abort: () => console.log("Abort!"),
+        abort(_msg: string, _file: string, line: number, column: number): void {
+          console.error("abort called at wasm.ts:" + line + ":" + column)
+        },
       },
     }
   }
@@ -66,14 +73,18 @@ export async function getWasm(
   if (memory) importObject.env.memory = memory
 
   // If we already have the compiled module, just instantiate it
-  if (wasmModule) {
-    const instance = await WebAssembly.instantiate(wasmModule, importObject)
+  if (_wasmModule) {
+    const instance = await WebAssembly.instantiate(_wasmModule, importObject)
     return instance.exports
   }
 
   const result = await wasmBrowserInstantiate(sourceFilePath, importObject)
-  wasmModule = result.module
+  _wasmModule = result.module
   return result.instance.exports
+}
+
+export function setCtx(ctx: CanvasRenderingContext2D): void {
+  _ctx = ctx
 }
 
 export { getWasm as default }

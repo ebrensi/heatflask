@@ -1,4 +1,5 @@
-// The entry file of your WebAssembly module.
+// declare function drawDebugRect(x: number, y: number, w: number, h: number): void
+// declare function consoleLog(arg0: i32): void;
 
 export let WIDTH: i32
 export let HEIGHT: i32
@@ -80,6 +81,7 @@ function clip(v: i32, vmax: i32): i32 {
 }
 
 export function clearRect(x: i32, y: i32, w: i32, h: i32): void {
+  if (w == 0 || h == 0) return
   const widthInBytes = w << 2
   const lastRow = y + h
   for (let row = y; row < lastRow; row++) {
@@ -139,7 +141,7 @@ export function moveRect(shiftX: i32, shiftY: i32): void {
   const cw = dy != sy ? rw : abs<i32>(sx - dx)
   const ch = dy != sy ? rh - h : h
 
-  clearRect(cx, cy, cw, ch)
+  if (cw && ch) clearRect(cx, cy, cw, ch)
 
   /* We only bother copying if the destination rectangle is within
    * the imageData bounds
