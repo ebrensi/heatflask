@@ -1,7 +1,7 @@
 // The entry file of your WebAssembly module.
 
-let WIDTH: i32
-let HEIGHT: i32
+export let WIDTH: i32
+export let HEIGHT: i32
 
 // transform
 let TA1: f32
@@ -16,7 +16,7 @@ export let YMIN: i32
 export let YMAX: i32
 export let BOUNDSEMPTY = true
 
-let COLOR: u32
+export let COLOR: u32
 let MASKEDCOLOR: u32
 let ALPHAMASK: u32
 let ALPHAPOS: i32
@@ -48,6 +48,37 @@ export function setColor(color: u32): void {
   MASKEDCOLOR = ALPHAMASK & COLOR
 }
 
+// @inline
+function inViewportBounds(x: i32, y: i32): boolean {
+  return x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT
+}
+
+export function resetDrawBounds(): void {
+  BOUNDSEMPTY = true
+}
+
+// @inline
+export function updateDrawBounds(x: i32, y: i32): void {
+  if (BOUNDSEMPTY) {
+    XMIN = x
+    XMAX = x
+    YMIN = y
+    YMAX = y
+    BOUNDSEMPTY = false
+    return
+  }
+  if (x < XMIN) XMIN = x
+  else if (x > XMAX) XMAX = x
+  if (y < YMIN) YMIN = y
+  else if (y > YMAX) YMAX = y
+}
+
+function clip(v: i32, vmax: i32): i32 {
+  if (v < 0) return <i32>0
+  else if (v > vmax) return vmax
+  return v
+}
+
 export function clearRect(x: i32, y: i32, w: i32, h: i32): void {
   const widthInBytes = w << 2
   const lastRow = y + h
@@ -57,69 +88,111 @@ export function clearRect(x: i32, y: i32, w: i32, h: i32): void {
   }
 }
 
-// @inline
-function inViewportBounds(x: i32, y: i32): boolean {
-  return x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT
+function moveRow(
+  sx: i32,
+  sy: i32,
+  dx: i32,
+  dy: i32,
+  row: i32,
+  wBytes: i32
+): void {
+  const sOffset = (sx + (sy + row) * WIDTH) << 2
+  const dOffset = (dx + (dy + row) * WIDTH) << 2
+  memory.copy(dOffset, sOffset, wBytes)
 }
-
-export function clearDrawBounds(): void {
-  BOUNDSEMPTY = true
-}
-
-// @inline
-function updateDrawBounds(x: i32, y: i32): void {
-  if (BOUNDSEMPTY) {
-    XMIN = x
-    XMAX = x
-    YMIN = y
-    YMAX = y
-  }
-  if (x < XMIN) XMIN = x
-  else if (x > XMAX) XMAX = x
-  if (y < YMIN) YMIN = y
-  else if (y > YMAX) YMAX = y
-}
-
-/* ***************************************************
- * This code line-drawing at the pixel level is adapted from
- * "anti-aliased thick line" at
- * http://members.chello.at/~easyfilter/bresenham.html
- * *******************************************************
+/*
+ * This function moves the pixels from one rectangular region
+ *  of an imageData object to another, possibly overlapping
+ *  rectanglular region of equal size.
  */
-function setPixel(x: i32, y: i32): void {
-  if (!inViewportBounds(x, y)) return
-  updateDrawBounds(x, y)
-  memory.store<u32>(y * WIDTH + x, COLOR)
+export function moveRect(shiftX: i32, shiftY: i32): void {
+  if (shiftX == 0 && shiftY == 0) return
+
+  const rx = XMIN
+  const ry = YMIN
+  const rw = XMAX - XMIN
+  const rh = YMAX - YMIN
+
+  // destination rectangle
+  const dx = clip(rx + shiftX, WIDTH)
+  const dy = clip(ry + shiftY, HEIGHT)
+  const w = clip(rx + rw + shiftX, WIDTH) - dx
+  const h = clip(ry + rh + shiftY, HEIGHT) - dy
+
+  if (w === 0 || h === 0) {
+    /*
+     * If there is no destination rectangle (nothing in view)
+     *  we just clear the source rectangle and exit
+     */
+    clearRect(rx, ry, rw, rh)
+    resetDrawBounds()
+    return
+  }
+
+  // source rectangle
+  const sx = dx - shiftX
+  const sy = dy - shiftY
+
+  // clear rectangle
+  const cx = dy != sy ? rx : sx < dx ? sx : dx + w
+  const cy = dy < sy ? ry : dy > sy ? ry + h : sy
+  const cw = dy != sy ? rw : abs<i32>(sx - dx)
+  const ch = dy != sy ? rh - h : h
+
+  clearRect(cx, cy, cw, ch)
+
+  /* We only bother copying if the destination rectangle is within
+   * the imageData bounds
+   */
+  const widthInBytes = w << 2
+  if (dy < sy) {
+    /* if the source rectangle is below the destination
+     then we copy rows from the top down */
+    for (let row = 0; row < h; row++) {
+      moveRow(sx, sy, dx, dy, row, widthInBytes)
+      memory.fill((rx + (sy + row) * WIDTH) << 2, 0, rw << 2)
+    }
+  } else if (dy > sy) {
+    /* otherwise we copy from the bottom row up */
+    for (let row = h - 1; row >= 0; row--) {
+      moveRow(sx, sy, dx, dy, row, widthInBytes)
+      memory.fill((rx + (sy + row) * WIDTH) << 2, 0, rw << 2)
+    }
+  } else {
+    for (let row = 0; row < h; row++) {
+      moveRow(sx, sy, dx, dy, row, widthInBytes)
+    }
+  }
+
+  resetDrawBounds()
+  updateDrawBounds(dx, dy)
+  updateDrawBounds(dx + w, dy + h)
 }
 
-function setPixelAA(x: i32, y: i32, a: i32): void {
-  if (!inViewportBounds(x, y)) return
-  updateDrawBounds(x, y)
-  const alpha = 0xff - nearest<i32>(a)
-  const color = MASKEDCOLOR | (alpha << ALPHAPOS)
-  memory.store<u32>(y * WIDTH + x, color)
-}
 // ---------------------------------------------------------
 
-// drawSquare(x: i32, y: i32, size: i32): void {
-//     const dotOffset = size / 2
-//     const T = this.transform
-//     x = Math.round(T[0] * x + T[1] - dotOffset)
-//     y = Math.round(T[2] * y + T[3] - dotOffset)
-//     if (!this.inBounds(x, y)) return
+export function drawSquare(x: f32, y: f32, size: f32): void {
+  const dotOffset = size / 2
+  x = Mathf.round(TA1 * x + TB1 - dotOffset)
+  y = Mathf.round(TA2 * y + TB2 - dotOffset)
+  if (!inViewportBounds(<i32>x, <i32>y)) return
 
-//     const xStart = x < 0 ? 0 : x // Math.max(0, tx)
-//     const xEnd = Math.min(x + size, this.width)
+  const xStart = max<i32>(0, i32(x)) // Math.max(0, tx)
+  const xEnd = min<i32>(i32(x + size), WIDTH)
 
-//     const yStart = y < 0 ? 0 : y
-//     const yEnd = Math.min(y + size, this.height)
+  const yStart = max<i32>(0, i32(y))
+  const yEnd = min<i32>(i32(y + size), HEIGHT)
 
-//     this.drawBounds.update(x, y)
+  updateDrawBounds(xStart, yStart)
+  updateDrawBounds(xEnd, yEnd)
 
-//     for (let row = yStart; row < yEnd; row++) {
-//       const offset = row * this.width
-//       const colStart = offset + xStart
-//       const colEnd = offset + xEnd
-//       this.buf32.fill(this.color32, colStart, colEnd)
-//     }
-//   }
+  for (let row = yStart; row < yEnd; row++) {
+    const offset = row * WIDTH
+    const colStart = offset + xStart
+    const colEnd = offset + xEnd
+    for (let i = colStart; i < colEnd; i++) {
+      store<u32>(i, COLOR)
+    }
+    // this.buf32.fill(this.color32, colStart, colEnd)
+  }
+}

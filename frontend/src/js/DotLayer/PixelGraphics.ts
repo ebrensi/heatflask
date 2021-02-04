@@ -112,6 +112,19 @@ export class PixelGraphics {
     this.lineWidth = w
   }
 
+  updateDrawBoundsFromWasm(): void {
+    const W = this.wasm
+    this.drawBounds.update(W.XMIN, W.YMIN)
+    this.drawBounds.update(W.XMAX, W.YMAX)
+  }
+
+  updateWasmDrawBounds(): void {
+    this.wasm.resetDrawBounds()
+    const [xmin, ymin, xmax, ymax] = this.drawBounds.data
+    this.wasm.updateDrawBounds(xmin, ymin)
+    this.wasm.updateDrawBounds(xmax, ymax)
+  }
+
   /**
    * Clear (set to 0) a rectangular region
    */
@@ -124,6 +137,7 @@ export class PixelGraphics {
     // make sure to update drawbounds
     if (!rect) {
       this.drawBounds.reset()
+      this.wasm.resetDrawBounds()
     }
   }
 
@@ -254,7 +268,7 @@ export class PixelGraphics {
     }
   }
 
-  drawSquare(x: number, y: number, size: number): void {
+  drawSquareJS(x: number, y: number, size: number): void {
     const dotOffset = size / 2
     const T = this.transform
     x = Math.round(T[0] * x + T[1] - dotOffset)
@@ -277,6 +291,11 @@ export class PixelGraphics {
     }
   }
 
+  drawSquare(x: number, y: number, size: number): void {
+    // this.wasm.drawSquare(x, y, size)
+    this.drawSquareJS(x, y, size)
+  }
+
   drawCircle(x: number, y: number, size: number): void {
     const T = this.transform
     x = Math.round(T[0] * x + T[1])
@@ -297,27 +316,40 @@ export class PixelGraphics {
     }
   }
 
-  //
-  clip(x: number, y: number): tuple2 {
-    if (x < 0) x = 0
-    else if (x > this.width) x = this.width
-    if (y < 0) y = 0
-    else if (y > this.height) y = this.height
-    return [x, y]
+  clip(x: number, max: number): number {
+    if (x < 0) return 0
+    else if (x > max) return max
+    return x
   }
-
   /*
    * This function moves the pixels from one rectangular region
    *  of an imageData object to another, possibly overlapping
    *  rectanglular region of equal size.
    */
   translate(shiftX: number, shiftY: number): void {
+    if (this.drawBounds.isEmpty()) return
+
+    console.time("moveRect")
+    this.translateJS(shiftX, shiftY)
+
+    // this.updateWasmDrawBounds()
+    // this.wasm.moveRect(shiftX, shiftY)
+    // this.updateDrawBoundsFromWasm()
+
+    console.timeEnd("moveRect")
+  }
+
+  translateJS(shiftX: number, shiftY: number): void {
     if (shiftX === 0 && shiftY === 0) return
     const { x: rx, y: ry, w: rw, h: rh } = this.drawBounds.rect
-    const [dx0, dy0] = this.clip(rx + shiftX, ry + shiftY)
-    const [dx1, dy1] = this.clip(rx + rw + shiftX, ry + rh + shiftY)
 
-    if (dx0 === dx1 || dy0 === dy1) {
+    // destination rectangle
+    const dx = this.clip(rx + shiftX, this.width)
+    const dy = this.clip(ry + shiftY, this.height)
+    const w = this.clip(rx + rw + shiftX, this.width) - dx
+    const h = this.clip(ry + rh + shiftY, this.height) - dy
+
+    if (w === 0 || h === 0) {
       /*
        * If there is no destination rectangle (nothing in view)
        *  we just clear the source rectangle and exit
@@ -327,34 +359,32 @@ export class PixelGraphics {
       return
     }
 
-    const d = { x: dx0, y: dy0, w: dx1 - dx0, h: dy1 - dy0 }
-    const s = { x: dx0 - shiftX, y: dy0 - shiftY, w: d.w, h: d.h }
+    // source rectangle
+    const sx = dx - shiftX
+    const sy = dy - shiftY
 
-    const clearRegion =
-      d.y < s.y
-        ? { x: rx, y: ry, w: rw, h: rh - s.h } // source below dest
-        : d.y > s.y
-        ? { x: rx, y: ry + s.h, w: rw, h: rh - s.h } // source above dest
-        : s.x < d.x
-        ? { x: s.x, y: s.y, w: d.x - s.x, h: s.h } // source left of dest
-        : { x: d.x + d.w, y: s.y, w: s.x - d.x, h: s.h } // source right of dest
+    // clear rectangle
+    const cx = dy != sy ? rx : sx < dx ? sx : dx + w
+    const cy = dy < sy ? ry : dy > sy ? ry + h : sy
+    const cw = dy != sy ? rw : Math.abs(sx - dx)
+    const ch = dy != sy ? rh - h : h
 
     if (DEBUG && this.debugCanvas) {
-      this.drawDebugBox(s, "source", "yellow", true) // draw source rect
-      this.drawDebugBox(d, "dest", "blue", true) // draw dest rect
-      this.drawDebugBox(clearRegion, "clear", "black", true) // draw dest rect
+      this.drawDebugBox({ x: sx, y: sy, w, h }, "source", "yellow", true) // draw source rect
+      this.drawDebugBox({ x: dx, y: dy, w, h }, "dest", "blue", true) // draw dest rect
+      this.drawDebugBox({ x: cx, y: cy, w: cw, h: ch }, "clear", "black", true) // draw dest rect
     }
 
-    this.clear(clearRegion)
+    this.clear({ x: cx, y: cy, w: cw, h: ch })
 
     const moveRow = (row: number): void => {
-      const sOffset = (s.y + row) * this.width
-      const sRowStart = sOffset + s.x
-      const sRowEnd = sRowStart + s.w
+      const sOffset = (sy + row) * this.width
+      const sRowStart = sOffset + sx
+      const sRowEnd = sRowStart + w
       const rowData = this.buf32.subarray(sRowStart, sRowEnd)
 
-      const dOffset = (d.y + row) * this.width
-      const dRowStart = dOffset + d.x
+      const dOffset = (dy + row) * this.width
+      const dRowStart = dOffset + dx
 
       this.buf32.set(rowData, dRowStart)
 
@@ -367,13 +397,13 @@ export class PixelGraphics {
     /* We only bother copying if the destination rectangle is within
      * the imageData bounds
      */
-    if (d.y < s.y) {
+    if (dy < sy) {
       /* if the source rectangle is below the destination
        then we copy rows from the top down */
-      for (let row = 0; row < s.h; row++) moveRow(row)
-    } else if (d.y > s.y) {
+      for (let row = 0; row < h; row++) moveRow(row)
+    } else if (dy > sy) {
       /* otherwise we copy from the bottom row up */
-      for (let row = s.h - 1; row >= 0; row--) moveRow(row)
+      for (let row = h - 1; row >= 0; row--) moveRow(row)
     } else {
       /* In the rare case that the source and dest rectangles are
        *  horizontally adjacent to each other, we cannot copy rows directly
@@ -383,20 +413,20 @@ export class PixelGraphics {
       let bufOffset
 
       // use the first row of imagedata if it is available
-      if (d.y > 0) bufOffset = 0
+      if (dy > 0) bufOffset = 0
       // or the last row
-      else if (d.y + d.h < rh) bufOffset = (rh - 1) * this.width
+      else if (dy + h < rh) bufOffset = (rh - 1) * this.width
 
       const rowBuf =
         bufOffset === undefined
-          ? this.rowBuf.subarray(0, d.w)
-          : this.buf32.subarray(bufOffset, bufOffset + d.w)
+          ? this.rowBuf.subarray(0, w)
+          : this.buf32.subarray(bufOffset, bufOffset + w)
 
-      for (let y = d.y, n = d.y + d.h; y < n; y++) {
+      for (let y = dy, n = dy + h; y < n; y++) {
         const offset = y * this.width
-        const sRowStart = offset + s.x
-        const sRowEnd = sRowStart + s.w
-        const dRowStart = offset + d.x
+        const sRowStart = offset + sx
+        const sRowEnd = sRowStart + w
+        const dRowStart = offset + dx
 
         const rowData = this.buf32.subarray(sRowStart, sRowEnd)
         rowBuf.set(rowData)
@@ -407,8 +437,8 @@ export class PixelGraphics {
     }
 
     this.drawBounds.reset()
-    this.drawBounds.update(dx0, dy0)
-    this.drawBounds.update(dx1, dy1)
+    this.drawBounds.update(dx, dy)
+    this.drawBounds.update(dx + w, dy + h)
   }
 
   // Draw the outline of arbitrary rect object in screen coordinates

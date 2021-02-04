@@ -195,8 +195,14 @@ export async function drawPaths(
     const newArea = (bounds[2] - bounds[0]) * (bounds[3] - bounds[1])
     if (newArea !== oldArea) {
       const [xmin, ymin, xmax, ymax] = bounds
-      pxg.drawBounds.update(...pxg.clip(xmin - maxLW, ymin - maxLW))
-      pxg.drawBounds.update(...pxg.clip(xmax + maxLW, ymax + maxLW))
+      pxg.drawBounds.update(
+        Math.max(xmin - maxLW, 0),
+        Math.max(ymin - maxLW, 0)
+      )
+      pxg.drawBounds.update(
+        Math.min(xmax + maxLW, pxg.width),
+        Math.min(ymax + maxLW, pxg.height)
+      )
     }
   }
 
@@ -219,12 +225,15 @@ export async function drawDots(
   const sz = Math.round(dotSize)
   const circle = (x: number, y: number) => pxg.drawCircle(x, y, sz)
   const square = (x: number, y: number) => pxg.drawSquare(x, y, sz)
+
   inView.forEach((i) => {
     const A = itemsArray[i]
     pxg.setColor(A.colors.dot)
     const drawFunc = A.selected ? circle : square
     count += A.forEachDot(drawFunc, tsecs, T, drawDiff)
   })
+
+  // pxg.updateDrawBoundsFromWasm()
 
   if (!pxg.drawBounds.isEmpty()) {
     const newArea = (bounds[2] - bounds[0]) * (bounds[3] - bounds[1])
@@ -233,8 +242,11 @@ export async function drawDots(
     // This prevents ever-increasing bounds
     if (newArea !== oldArea) {
       const [xmin, ymin, xmax, ymax] = bounds
-      pxg.drawBounds.update(...pxg.clip(xmin - 10, ymin - 10))
-      pxg.drawBounds.update(...pxg.clip(xmax + 20, ymax + 20))
+      pxg.drawBounds.update(Math.max(0, xmin - 10), Math.max(0, ymin - 10))
+      pxg.drawBounds.update(
+        Math.min(pxg.width, xmax + 20),
+        Math.min(pxg.height, ymax + 20)
+      )
     }
   }
 

@@ -131,7 +131,7 @@ export function updateZoom(): number {
   const zoom: number = _map.getZoom()
   const newZoomLevel = Math.round(zoom)
   const newScale = 2 ** zoom
-  let changed
+  let changed = 0
 
   if (newZoomLevel !== _zoomLevel) changed = 2
   else if (zoom !== _zoom) changed = 1
@@ -140,9 +140,8 @@ export function updateZoom(): number {
     _zoom = zoom
     _zoomLevel = newZoomLevel
     _scale = newScale
-
-    return changed
   }
+  return changed
 }
 
 export function setCSStransform(offset: Point, scale?: number): void {

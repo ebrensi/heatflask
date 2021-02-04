@@ -263,6 +263,7 @@ async function onMoveEnd() {
   _moveEnd = true
   _pinching = false
   await redraw(true)
+  // await redraw()
 }
 
 /*

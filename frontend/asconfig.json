@@ -4,7 +4,8 @@
       "binaryFile": "dist/dev.wasm",
       "textFile": "dist/dev.wat",
       "sourceMap": true,
-      "debug": true
+      "debug": true,
+      "enable": ["bulk-memory", "simd"]
     },
     "production": {
       "binaryFile": "dist/prod.wasm",
@@ -13,7 +14,8 @@
       "optimizeLevel": 3,
       "shrinkLevel": 1,
       "converge": false,
-      "noAssert": false
+      "noAssert": false,
+      "enable": ["bulk-memory", "simd"]
     }
   },
   "options": {}
