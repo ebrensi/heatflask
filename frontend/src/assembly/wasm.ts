@@ -203,3 +203,24 @@ export function drawSquare(fx: f32, fy: f32, size: f32): void {
     // this.buf32.fill(this.color32, colStart, colEnd)
   }
 }
+
+export function drawCircle(fx: f32, fy: f32, size: f32): void {
+    const x = <i32>Mathf.round(TA1 * fx + TB1)
+    const y = <i32>Mathf.round(TA2 * fy + TB2)
+    if (!inViewportBounds(x, y)) return
+    updateDrawBounds(x, y)
+
+    const r = <i32>Mathf.round(size)
+    const r2 = r * r
+
+    for (let cy = -r + 1; cy < r; cy++) {
+      const offset = (cy + y) * WIDTH
+      const cx = <i32>Mathf.round(Mathf.sqrt(<f32>(r2 - cy * cy)))
+      const colStart = offset + x - cx
+      const colEnd = offset + x + cx
+      for (let i = colStart; i < colEnd; i++) {
+          store<u32>(i, COLOR)
+        }
+      // this.buf32.fill(this.color32, colStart, colEnd)
+    }
+  }

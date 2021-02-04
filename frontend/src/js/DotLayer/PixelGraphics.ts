@@ -298,7 +298,7 @@ export class PixelGraphics {
     // this.drawSquareJS(x, y, size)
   }
 
-  drawCircle(x: number, y: number, size: number): void {
+  drawCircleJS(x: number, y: number, size: number): void {
     const T = this.transform
     x = Math.round(T[0] * x + T[1])
     y = Math.round(T[2] * y + T[3])
@@ -316,6 +316,11 @@ export class PixelGraphics {
       const colEnd = (offset + x + cx) | 0
       this.buf32.fill(this.color32, colStart, colEnd)
     }
+  }
+
+  drawCircle(x: number, y: number, size: number): void {
+    this.wasm.drawCircle(x, y, size)
+    // this.drawCircleJS(x, y, size)
   }
 
   clip(x: number, max: number): number {
