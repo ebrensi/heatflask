@@ -233,7 +233,7 @@ export async function drawDots(
     count += A.forEachDot(drawFunc, tsecs, T, drawDiff)
   })
 
-  // pxg.updateDrawBoundsFromWasm()
+  pxg.updateDrawBoundsFromWasm()
 
   if (!pxg.drawBounds.isEmpty()) {
     const newArea = (bounds[2] - bounds[0]) * (bounds[3] - bounds[1])

@@ -114,8 +114,10 @@ export class PixelGraphics {
 
   updateDrawBoundsFromWasm(): void {
     const W = this.wasm
-    this.drawBounds.update(W.XMIN, W.YMIN)
-    this.drawBounds.update(W.XMAX, W.YMAX)
+    this.drawBounds.reset()
+    if (W.BOUNDSEMPTY.value) return
+    this.drawBounds.update(W.XMIN.value, W.YMIN.value)
+    this.drawBounds.update(W.XMAX.value, W.YMAX.value)
   }
 
   updateWasmDrawBounds(): void {
@@ -292,8 +294,8 @@ export class PixelGraphics {
   }
 
   drawSquare(x: number, y: number, size: number): void {
-    // this.wasm.drawSquare(x, y, size)
-    this.drawSquareJS(x, y, size)
+    this.wasm.drawSquare(x, y, size)
+    // this.drawSquareJS(x, y, size)
   }
 
   drawCircle(x: number, y: number, size: number): void {

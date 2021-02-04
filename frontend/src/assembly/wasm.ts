@@ -49,16 +49,17 @@ export function setColor(color: u32): void {
   MASKEDCOLOR = ALPHAMASK & COLOR
 }
 
-// @inline
+@inline
 function inViewportBounds(x: i32, y: i32): boolean {
   return x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT
 }
 
+@inline
 export function resetDrawBounds(): void {
   BOUNDSEMPTY = true
 }
 
-// @inline
+@inline
 export function updateDrawBounds(x: i32, y: i32): void {
   if (BOUNDSEMPTY) {
     XMIN = x
@@ -74,12 +75,14 @@ export function updateDrawBounds(x: i32, y: i32): void {
   else if (y > YMAX) YMAX = y
 }
 
+@inline
 function clip(v: i32, vmax: i32): i32 {
   if (v < 0) return <i32>0
   else if (v > vmax) return vmax
   return v
 }
 
+@inline
 export function clearRect(x: i32, y: i32, w: i32, h: i32): void {
   if (w == 0 || h == 0) return
   const widthInBytes = w << 2
@@ -90,6 +93,7 @@ export function clearRect(x: i32, y: i32, w: i32, h: i32): void {
   }
 }
 
+@inline
 function moveRow(
   sx: i32,
   sy: i32,
@@ -173,17 +177,18 @@ export function moveRect(shiftX: i32, shiftY: i32): void {
 
 // ---------------------------------------------------------
 
-export function drawSquare(x: f32, y: f32, size: f32): void {
+export function drawSquare(fx: f32, fy: f32, size: f32): void {
   const dotOffset = size / 2
-  x = Mathf.round(TA1 * x + TB1 - dotOffset)
-  y = Mathf.round(TA2 * y + TB2 - dotOffset)
-  if (!inViewportBounds(<i32>x, <i32>y)) return
+  const s = <i32>size
+  const x = <i32>Mathf.round(TA1 * fx + TB1 - dotOffset)
+  const y = <i32>Mathf.round(TA2 * fy + TB2 - dotOffset)
+  if (!inViewportBounds(x, y)) return
 
-  const xStart = max<i32>(0, i32(x)) // Math.max(0, tx)
-  const xEnd = min<i32>(i32(x + size), WIDTH)
+  const xStart = max<i32>(0, x) // Math.max(0, tx)
+  const xEnd = min<i32>(x + s, WIDTH)
 
-  const yStart = max<i32>(0, i32(y))
-  const yEnd = min<i32>(i32(y + size), HEIGHT)
+  const yStart = max<i32>(0, y)
+  const yEnd = min<i32>(y + s, HEIGHT)
 
   updateDrawBounds(xStart, yStart)
   updateDrawBounds(xEnd, yEnd)
