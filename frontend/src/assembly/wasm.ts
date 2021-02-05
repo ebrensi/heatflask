@@ -23,6 +23,19 @@ let ALPHAMASK: u32
 let ALPHAPOS: i32
 let GLOBALALPHA: u32
 
+// @inline
+function Tx(x: f32): i32 {
+  return <i32>Mathf.round(TA1 * x + TB1)
+}
+
+// @inline
+function Ty(y: f32): i32 {
+  return <i32>Mathf.round(TA2 * y + TB2)
+}
+
+/*
+ * Getters and Setters
+ */
 export function setSize(width: i32, height: i32): void {
   WIDTH = width
   HEIGHT = height
@@ -49,17 +62,17 @@ export function setColor(color: u32): void {
   MASKEDCOLOR = ALPHAMASK & COLOR
 }
 
-@inline
+// @inline
 function inViewportBounds(x: i32, y: i32): boolean {
   return x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT
 }
 
-@inline
+// @inline
 export function resetDrawBounds(): void {
   BOUNDSEMPTY = true
 }
 
-@inline
+// @inline
 export function updateDrawBounds(x: i32, y: i32): void {
   if (BOUNDSEMPTY) {
     XMIN = x
@@ -75,14 +88,14 @@ export function updateDrawBounds(x: i32, y: i32): void {
   else if (y > YMAX) YMAX = y
 }
 
-@inline
+// @inline
 function clip(v: i32, vmax: i32): i32 {
   if (v < 0) return <i32>0
   else if (v > vmax) return vmax
   return v
 }
 
-@inline
+// @inline
 export function clearRect(x: i32, y: i32, w: i32, h: i32): void {
   if (w == 0 || h == 0) return
   const widthInBytes = w << 2
@@ -93,7 +106,7 @@ export function clearRect(x: i32, y: i32, w: i32, h: i32): void {
   }
 }
 
-@inline
+// @inline
 function moveRow(
   sx: i32,
   sy: i32,
@@ -175,8 +188,9 @@ export function moveRect(shiftX: i32, shiftY: i32): void {
   updateDrawBounds(dx + w, dy + h)
 }
 
-// ---------------------------------------------------------
-
+/*
+ *  **** Dot Drawing functions ****
+ */
 export function drawSquare(fx: f32, fy: f32, size: f32): void {
   const dotOffset = size / 2
   const s = <i32>size
@@ -197,30 +211,215 @@ export function drawSquare(fx: f32, fy: f32, size: f32): void {
     const offset = row * WIDTH
     const colStart = offset + xStart
     const colEnd = offset + xEnd
-    for (let i = colStart; i < colEnd; i++) {
-      store<u32>(i, COLOR)
-    }
-    // this.buf32.fill(this.color32, colStart, colEnd)
+    fill32(colStart, colEnd, COLOR)
   }
 }
 
 export function drawCircle(fx: f32, fy: f32, size: f32): void {
-    const x = <i32>Mathf.round(TA1 * fx + TB1)
-    const y = <i32>Mathf.round(TA2 * fy + TB2)
-    if (!inViewportBounds(x, y)) return
-    updateDrawBounds(x, y)
+  const x = Tx(fx)
+  const y = Ty(fy)
+  if (!inViewportBounds(x, y)) return
+  updateDrawBounds(x, y)
 
-    const r = <i32>Mathf.round(size)
-    const r2 = r * r
+  const r = <i32>Mathf.round(size)
+  const r2 = r * r
 
-    for (let cy = -r + 1; cy < r; cy++) {
-      const offset = (cy + y) * WIDTH
-      const cx = <i32>Mathf.round(Mathf.sqrt(<f32>(r2 - cy * cy)))
-      const colStart = offset + x - cx
-      const colEnd = offset + x + cx
-      for (let i = colStart; i < colEnd; i++) {
-          store<u32>(i, COLOR)
-        }
-      // this.buf32.fill(this.color32, colStart, colEnd)
+  for (let cy = -r + 1; cy < r; cy++) {
+    const offset = (cy + y) * WIDTH
+    const cx = <i32>Mathf.round(Mathf.sqrt(<f32>(r2 - cy * cy)))
+    const colStart = offset + x - cx
+    const colEnd = offset + x + cx
+    fill32(colStart, colEnd, COLOR)
+  }
+}
+
+/**
+ * Fills a range of adresses with a 32-bit values
+ * repeat a 4-byte pattern
+ */
+// @inline
+function fill32(start: usize, end: usize, val32: i32): void {
+  // for (let i = start; i < end; i++) {
+  //     store<i32>(i, val32)
+  // }
+
+  store<i32>(start, val32)
+  memory.repeat(start + 1, start, 4, end - start - 1)
+}
+
+/*
+ *  Path Drawing functions
+ */
+/* ***************************************************
+ * This code line-drawing at the pixel level is adapted from
+ * "anti-aliased thick line" at
+ * http://members.chello.at/~easyfilter/bresenham.html
+ * *******************************************************
+ */
+function setPixel(x: i32, y: i32): void {
+  if (!inViewportBounds(x, y)) return
+  updateDrawBounds(x, y)
+  store<i32>(y * WIDTH + x, COLOR)
+}
+
+function setPixelAA(x: i32, y: i32, a: i32): void {
+  if (!inViewportBounds(x, y)) return
+  updateDrawBounds(x, y)
+  const alpha = 0xff - a
+  const color = MASKEDCOLOR | (alpha << ALPHAPOS)
+  store<i32>(y * WIDTH + x, color)
+}
+
+function plotLineAA(x0: i32, y0: i32, x1: i32, y1: i32): void {
+  const dx = abs<i32>(x1 - x0)
+  const sx: i32 = x0 < x1 ? 1 : -1
+  const dy = abs<i32>(y1 - y0)
+  const sy: i32 = y0 < y1 ? 1 : -1
+  let err = dx - dy
+  let e2: i32
+  let x2: i32 /* error value e_xy */
+  const ed = dx + dy == 0 ? 1 : Mathf.sqrt(<f32>dx * dx + <f32>dy * dy)
+
+  for (;;) {
+    /* pixel loop */
+    setPixelAA(x0, y0, (255 * abs<i32>(err - dx + dy)) / ed)
+    e2 = err
+    x2 = x0
+    if (2 * e2 >= -dx) {
+      /* x step */
+      if (x0 == x1) break
+      if (e2 + dy < ed) setPixelAA(x0, y0 + sy, (255 * (e2 + dy)) / ed)
+      err -= dy
+      x0 += sx
+    }
+    if (2 * e2 <= dy) {
+      /* y step */
+      if (y0 == y1) break
+      if (dx - e2 < ed) setPixelAA(x2 + sx, y0, (255 * (dx - e2)) / ed)
+      err += dx
+      y0 += sy
     }
   }
+}
+
+// function plotLineAA(x0: i32, y0: i32, x1: i32, y1: i32): void {
+//   /* draw a black (0) anti-aliased line on white (255) background */
+//   const sx: i32 = x0 < x1 ? 1 : -1
+//   const sy: i32 = y0 < y1 ? 1 : -1
+//   let x2: i32
+//   let dx = abs<i32>(x1 - x0)
+//   let dy = abs<i32>(y1 - y0)
+//   let err = dx * dx + dy * dy
+
+//   let e2: i32 =
+//     err == 0 ? 1 : <f32>0xffff7 / sqrt(err) /* multiplication factor */
+
+//   dx *= e2
+//   dy *= e2
+//   err = dx - dy /* error value e_xy */
+//   for (;;) {
+//     /* pixel loop */
+//     setPixelAA(x0, y0, abs(err - dx + dy) >> 16)
+//     e2 = err
+//     x2 = x0
+//     if (2 * e2 >= -dx) {
+//       /* x step */
+//       if (x0 == x1) break
+//       if (e2 + dy < <i32>0xff0000) setPixelAA(x0, y0 + sy, (e2 + dy) >> 16)
+//       err -= dy
+//       x0 += sx
+//     }
+//     if (2 * e2 <= dy) {
+//       /* y step */
+//       if (y0 == y1) break
+//       if (dx - e2 < <i32>0xff0000) setPixelAA(x2 + sx, y0, (dx - e2) >> 16)
+//       err += dx
+//       y0 += sy
+//     }
+//   }
+// }
+
+// export function plotLineWidth(x0: i32, y0: i32, x1: i32, y1: i32, wd: f32): void {                                    /* plot an anti-aliased line of width wd */
+//    dx = abs<i32>(x1-x0), sx = x0 < x1 ? 1 : -1;
+//    int dy = abs(y1-y0), sy = y0 < y1 ? 1 : -1;
+//    int err = dx-dy, e2, x2, y2;                           /* error value e_xy */
+//    float ed = dx+dy == 0 ? 1 : sqrt((float)dx*dx+(float)dy*dy);
+
+//    for (wd = (wd+1)/2; ; ) {                                    /* pixel loop */
+//       setPixelColor(x0, y0, max(0,255*(abs(err-dx+dy)/ed-wd+1)));
+//       e2 = err; x2 = x0;
+//       if (2*e2 >= -dx) {                                            /* x step */
+//          for (e2 += dy, y2 = y0; e2 < ed*wd && (y1 != y2 || dx > dy); e2 += dx)
+//             setPixelColor(x0, y2 += sy, max(0,255*(abs(e2)/ed-wd+1)));
+//          if (x0 == x1) break;
+//          e2 = err; err -= dy; x0 += sx;
+//       }
+//       if (2*e2 <= dy) {                                             /* y step */
+//          for (e2 = dx-e2; e2 < ed*wd && (x1 != x2 || dx < dy); e2 += dy)
+//             setPixelColor(x2 += sx, y0, max(0,255*(abs(e2)/ed-wd+1)));
+//          if (y0 == y1) break;
+//          err += dx; y0 += sy;
+//       }
+//    }
+// }
+
+export function drawSegment(
+  fx0: f32,
+  fy0: f32,
+  fx1: f32,
+  fy1: f32,
+  th: f32
+): void {
+  // These must be integers
+  let x0: i32 = Tx(fx0)
+  let y0: i32 = Ty(fy0)
+  let x1: i32 = Tx(fx1)
+  let y1: i32 = Ty(fy1)
+
+  /* plot an anti-aliased line of width th pixel */
+  const sx: i32 = x0 < x1 ? 1 : -1
+  const sy: i32 = y0 < y1 ? 1 : -1
+  let dx: i32 = abs<i32>(x1 - x0)
+  let dy: i32 = abs<i32>(y1 - y0)
+  let e2: i32 = sqrt<i32>(dx * dx + dy * dy) /* length */
+  let err: i32
+
+  if (th <= 1 || e2 == 0) return plotLineAA(x0, y0, x1, y1)
+  dx *= 255 / e2
+  dy *= 255 / e2
+  th = 255 * (th - 1) /* scale values */
+
+  if (dx < dy) {
+    /* steep line */
+    x1 = <i32>Mathf.round((<f32>e2 + th / 2) / dy) /* start offset */
+    err = x1 * dy - th / 2 /* shift error value to offset width */
+    for (x0 -= x1 * sx; ; y0 += sy) {
+      setPixelAA((x1 = x0), y0, err) /* aliasing pre-pixel */
+      for (e2 = dy - err - th; e2 + dy < 255; e2 += dy)
+        setPixel((x1 += sx), y0) /* pixel on the line */
+      setPixelAA(x1 + sx, y0, e2) /* aliasing post-pixel */
+      if (y0 == y1) break
+      err += dx /* y-step */
+      if (err > 255) {
+        err -= dy
+        x0 += sx
+      } /* x-step */
+    }
+  } else {
+    /* flat line */
+    y1 = <i32>Mathf.round((<f32>e2 + th / 2) / dx) /* start offset */
+    err = y1 * dx - th / 2 /* shift error value to offset width */
+    for (y0 -= y1 * sy; ; x0 += sx) {
+      setPixelAA(x0, (y1 = y0), err) /* aliasing pre-pixel */
+      for (e2 = dx - err - th; e2 + dx < 255; e2 += dx)
+        setPixel(x0, (y1 += sy)) /* pixel on the line */
+      setPixelAA(x0, y1 + sy, e2) /* aliasing post-pixel */
+      if (x0 == x1) break
+      err += dy /* x-step */
+      if (err > 255) {
+        err -= dx
+        y0 += sy
+      } /* y-step */
+    }
+  }
+}
