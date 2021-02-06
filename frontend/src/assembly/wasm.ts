@@ -1,8 +1,8 @@
 // declare function drawDebugRect(x: number, y: number, w: number, h: number): void
 // declare function consoleLog(arg0: i32): void;
 
-export let WIDTH: i32
-export let HEIGHT: i32
+let WIDTH: i32
+let HEIGHT: i32
 
 // transform
 let TA1: f32
@@ -17,11 +17,13 @@ export let YMIN: i32
 export let YMAX: i32
 export let BOUNDSEMPTY = true
 
-export let COLOR: u32
-let MASKEDCOLOR: u32
-let ALPHAMASK: u32
+let COLOR: i32
+let MASKEDCOLOR: i32
+let ALPHAMASK: i32
 let ALPHAPOS: i32
-let GLOBALALPHA: u32
+let GLOBALALPHA: i32
+
+let LINEWIDTH: i32 = 1
 
 // @inline
 function Tx(x: f32): i32 {
@@ -48,9 +50,13 @@ export function setTransform(a1: f32, b1: f32, a2: f32, b2: f32): void {
   TB2 = b2
 }
 
-export function setAlphaMask(mask: u32, pos: u8): void {
+export function setAlphaMask(mask: i32, pos: i32): void {
   ALPHAMASK = mask
   ALPHAPOS = pos
+}
+
+export function setLineWidth(w: i32): void {
+  LINEWIDTH = w
 }
 
 export function setGlobalAlpha(ga: u32): void {
@@ -239,12 +245,12 @@ export function drawCircle(fx: f32, fy: f32, size: f32): void {
  */
 // @inline
 function fill32(start: usize, end: usize, val32: i32): void {
-  // for (let i = start; i < end; i++) {
-  //     store<i32>(i, val32)
-  // }
+  for (let i = start; i < end; i++) {
+    store<i32>(i, val32)
+  }
 
-  store<i32>(start, val32)
-  memory.repeat(start + 1, start, 4, end - start - 1)
+  // store<i32>(start, val32)
+  // memory.repeat(start + 1, start, 4, end - start - 1)
 }
 
 /*
@@ -271,14 +277,14 @@ function setPixelAA(x: i32, y: i32, a: i32): void {
 }
 
 function plotLineAA(x0: i32, y0: i32, x1: i32, y1: i32): void {
-  const dx = abs<i32>(x1 - x0)
+  const dx: i32 = abs<i32>(x1 - x0)
   const sx: i32 = x0 < x1 ? 1 : -1
-  const dy = abs<i32>(y1 - y0)
+  const dy: i32 = abs<i32>(y1 - y0)
   const sy: i32 = y0 < y1 ? 1 : -1
-  let err = dx - dy
+  let err: i32 = dx - dy
   let e2: i32
   let x2: i32 /* error value e_xy */
-  const ed = dx + dy == 0 ? 1 : Mathf.sqrt(<f32>dx * dx + <f32>dy * dy)
+  const ed: i32 = dx + dy == 0 ? 1 : <i32>sqrt<f32>(<f32>(dx * dx + dy * dy))
 
   for (;;) {
     /* pixel loop */
@@ -302,96 +308,32 @@ function plotLineAA(x0: i32, y0: i32, x1: i32, y1: i32): void {
   }
 }
 
-// function plotLineAA(x0: i32, y0: i32, x1: i32, y1: i32): void {
-//   /* draw a black (0) anti-aliased line on white (255) background */
-//   const sx: i32 = x0 < x1 ? 1 : -1
-//   const sy: i32 = y0 < y1 ? 1 : -1
-//   let x2: i32
-//   let dx = abs<i32>(x1 - x0)
-//   let dy = abs<i32>(y1 - y0)
-//   let err = dx * dx + dy * dy
-
-//   let e2: i32 =
-//     err == 0 ? 1 : <f32>0xffff7 / sqrt(err) /* multiplication factor */
-
-//   dx *= e2
-//   dy *= e2
-//   err = dx - dy /* error value e_xy */
-//   for (;;) {
-//     /* pixel loop */
-//     setPixelAA(x0, y0, abs(err - dx + dy) >> 16)
-//     e2 = err
-//     x2 = x0
-//     if (2 * e2 >= -dx) {
-//       /* x step */
-//       if (x0 == x1) break
-//       if (e2 + dy < <i32>0xff0000) setPixelAA(x0, y0 + sy, (e2 + dy) >> 16)
-//       err -= dy
-//       x0 += sx
-//     }
-//     if (2 * e2 <= dy) {
-//       /* y step */
-//       if (y0 == y1) break
-//       if (dx - e2 < <i32>0xff0000) setPixelAA(x2 + sx, y0, (dx - e2) >> 16)
-//       err += dx
-//       y0 += sy
-//     }
-//   }
-// }
-
-// export function plotLineWidth(x0: i32, y0: i32, x1: i32, y1: i32, wd: f32): void {                                    /* plot an anti-aliased line of width wd */
-//    dx = abs<i32>(x1-x0), sx = x0 < x1 ? 1 : -1;
-//    int dy = abs(y1-y0), sy = y0 < y1 ? 1 : -1;
-//    int err = dx-dy, e2, x2, y2;                           /* error value e_xy */
-//    float ed = dx+dy == 0 ? 1 : sqrt((float)dx*dx+(float)dy*dy);
-
-//    for (wd = (wd+1)/2; ; ) {                                    /* pixel loop */
-//       setPixelColor(x0, y0, max(0,255*(abs(err-dx+dy)/ed-wd+1)));
-//       e2 = err; x2 = x0;
-//       if (2*e2 >= -dx) {                                            /* x step */
-//          for (e2 += dy, y2 = y0; e2 < ed*wd && (y1 != y2 || dx > dy); e2 += dx)
-//             setPixelColor(x0, y2 += sy, max(0,255*(abs(e2)/ed-wd+1)));
-//          if (x0 == x1) break;
-//          e2 = err; err -= dy; x0 += sx;
-//       }
-//       if (2*e2 <= dy) {                                             /* y step */
-//          for (e2 = dx-e2; e2 < ed*wd && (x1 != x2 || dx < dy); e2 += dy)
-//             setPixelColor(x2 += sx, y0, max(0,255*(abs(e2)/ed-wd+1)));
-//          if (y0 == y1) break;
-//          err += dx; y0 += sy;
-//       }
-//    }
-// }
-
-export function drawSegment(
-  fx0: f32,
-  fy0: f32,
-  fx1: f32,
-  fy1: f32,
-  th: f32
-): void {
-  // These must be integers
+export function drawSegment(fx0: f32, fy0: f32, fx1: f32, fy1: f32): void {
   let x0: i32 = Tx(fx0)
   let y0: i32 = Ty(fy0)
   let x1: i32 = Tx(fx1)
   let y1: i32 = Ty(fy1)
+  let th: i32 = LINEWIDTH
 
   /* plot an anti-aliased line of width th pixel */
   const sx: i32 = x0 < x1 ? 1 : -1
   const sy: i32 = y0 < y1 ? 1 : -1
   let dx: i32 = abs<i32>(x1 - x0)
   let dy: i32 = abs<i32>(y1 - y0)
-  let e2: i32 = sqrt<i32>(dx * dx + dy * dy) /* length */
+  let e2: i32 = <i32>sqrt<f32>(<f32>(dx * dx + dy * dy)) /* length */
   let err: i32
 
-  if (th <= 1 || e2 == 0) return plotLineAA(x0, y0, x1, y1)
+  if (th <= 1 || e2 == 0) {
+    plotLineAA(x0, y0, x1, y1)
+    return
+  }
   dx *= 255 / e2
   dy *= 255 / e2
   th = 255 * (th - 1) /* scale values */
 
   if (dx < dy) {
     /* steep line */
-    x1 = <i32>Mathf.round((<f32>e2 + th / 2) / dy) /* start offset */
+    x1 = (e2 + th / 2) / dy /* start offset */
     err = x1 * dy - th / 2 /* shift error value to offset width */
     for (x0 -= x1 * sx; ; y0 += sy) {
       setPixelAA((x1 = x0), y0, err) /* aliasing pre-pixel */
@@ -407,7 +349,7 @@ export function drawSegment(
     }
   } else {
     /* flat line */
-    y1 = <i32>Mathf.round((<f32>e2 + th / 2) / dx) /* start offset */
+    y1 = (e2 + th / 2) / dx /* start offset */
     err = y1 * dx - th / 2 /* shift error value to offset width */
     for (y0 -= y1 * sy; ; x0 += sx) {
       setPixelAA(x0, (y1 = y0), err) /* aliasing pre-pixel */

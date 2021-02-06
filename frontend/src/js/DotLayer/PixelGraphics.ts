@@ -7,6 +7,8 @@ type rect = { x: number; y: number; w: number; h: number }
 type WasmExports = Record<string, WebAssembly.ExportValue>
 
 const DEBUG = true
+export const WASMPATH = false
+export const WASMDOTS = false
 
 /*
  * This module defines the PixelGrapics class.  A PixelGraphics object
@@ -53,6 +55,7 @@ export class PixelGraphics {
     if (width && height) {
       getWasm().then((exports) => {
         this.wasm = exports
+        this.wasm.setAlphaMask(alphaMask, alphaPos)
         this.setSize(width, height)
       })
     }
@@ -110,6 +113,7 @@ export class PixelGraphics {
 
   setLineWidth(w: number): void {
     this.lineWidth = w
+    this.wasm.setLineWidth(w)
   }
 
   updateDrawBoundsFromWasm(): void {
@@ -199,7 +203,7 @@ export class PixelGraphics {
     }
   }
 
-  drawSegment(
+  drawSegmentJS(
     x0: number,
     y0: number,
     x1: number,
@@ -270,6 +274,17 @@ export class PixelGraphics {
     }
   }
 
+  drawSegment(
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number,
+    th?: number
+  ): void {
+    if (WASMPATH) this.wasm.drawSegment(x0, y0, x1, y1, th)
+    else this.drawSegmentJS(x0, y0, x1, y1, th)
+  }
+
   drawSquareJS(x: number, y: number, size: number): void {
     const dotOffset = size / 2
     const T = this.transform
@@ -294,8 +309,10 @@ export class PixelGraphics {
   }
 
   drawSquare(x: number, y: number, size: number): void {
-    this.wasm.drawSquare(x, y, size)
-    // this.drawSquareJS(x, y, size)
+    if (x && y && size) {
+      if (WASMDOTS) this.wasm.drawSquare(x, y, size)
+      else this.drawSquareJS(x, y, size)
+    }
   }
 
   drawCircleJS(x: number, y: number, size: number): void {
@@ -319,8 +336,10 @@ export class PixelGraphics {
   }
 
   drawCircle(x: number, y: number, size: number): void {
-    this.wasm.drawCircle(x, y, size)
-    // this.drawCircleJS(x, y, size)
+    if (x && y && size) {
+      if (WASMDOTS) this.wasm.drawCircle(x, y, size)
+      else this.drawCircleJS(x, y, size)
+    }
   }
 
   clip(x: number, max: number): number {

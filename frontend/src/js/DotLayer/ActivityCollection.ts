@@ -10,6 +10,7 @@ import { options } from "./Defaults"
 import { BitSet } from "../BitSet"
 import { queueTask, nextTask } from "../appUtil"
 import { LatLngBounds } from "../myLeaflet"
+import { WASMPATH, WASMDOTS } from "./PixelGraphics"
 
 import type { Bounds } from "../appUtil"
 import type { PixelGraphics } from "./PixelGraphics"
@@ -184,11 +185,15 @@ export async function drawPaths(
     const LW = A.selected
       ? options.selected.pathWidth
       : options.normal.pathWidth
+
     if (LW > maxLW) maxLW = LW
     pxg.setLineWidth(LW)
 
     count += A.forEachSegment(drawSegFunc, drawDiff)
   })
+
+  WASMPATH && pxg.updateDrawBoundsFromWasm()
+
   if (!pxg.drawBounds.isEmpty()) {
     // add padding to the bounds, but only if they have changed.
     // This prevents ever-increasing bounds
@@ -233,7 +238,7 @@ export async function drawDots(
     count += A.forEachDot(drawFunc, tsecs, T, drawDiff)
   })
 
-  pxg.updateDrawBoundsFromWasm()
+  WASMDOTS && pxg.updateDrawBoundsFromWasm()
 
   if (!pxg.drawBounds.isEmpty()) {
     const newArea = (bounds[2] - bounds[0]) * (bounds[3] - bounds[1])

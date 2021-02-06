@@ -456,7 +456,7 @@ export class Activity {
 
       const p1 = reuse ? lastp2 : this.pointAccessor(idx1)
       const p2 = (lastp2 = this.pointAccessor(idx2))
-      func(p1[0], p1[1], p2[0], p2[1])
+      if (p2[0] || p2[1]) func(p1[0], p1[1], p2[0], p2[1])
       count++
     })
     return count
