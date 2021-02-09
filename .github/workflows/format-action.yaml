@@ -32,7 +32,7 @@ jobs:
   prettier-format:
     name: Format frontend (js/ts) files with prettier
     needs: check
-    if: contains(needs.check.outputs.files, "frontend/")
+    if: contains(needs.check.outputs.files, 'frontend/')
     runs-on: ubuntu-latest
 
     defaults:
@@ -62,7 +62,7 @@ jobs:
   black-format:
     name: Format backend (py) files with black
     needs: check
-    if: contains(needs.check.outputs.files, "backend/")
+    if: contains(needs.check.outputs.files, 'backend/')
     runs-on: ubuntu-latest
 
     defaults:
