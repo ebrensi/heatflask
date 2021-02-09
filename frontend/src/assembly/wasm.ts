@@ -1,8 +1,6 @@
 // declare function drawDebugRect(x: number, y: number, w: number, h: number): void
 // declare function consoleLog(arg0: i32): void;
 
-// test
-
 let WIDTH: i32
 let HEIGHT: i32
 
