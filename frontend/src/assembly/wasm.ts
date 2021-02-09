@@ -1,6 +1,8 @@
 // declare function drawDebugRect(x: number, y: number, w: number, h: number): void
 // declare function consoleLog(arg0: i32): void;
 
+// test
+
 let WIDTH: i32
 let HEIGHT: i32
 
@@ -21,18 +23,18 @@ let COLOR: i32
 let MASKEDCOLOR: i32
 let ALPHAMASK: i32
 let ALPHAPOS: i32
-let GLOBALALPHA: i32
+let ALPHASCALE: f32
 
 let LINEWIDTH: i32 = 1
 
 // @inline
-function Tx(x: f32): i32 {
-  return <i32>Mathf.round(TA1 * x + TB1)
+function Tx(x: f64): i32 {
+  return <i32>Math.round(TA1 * x + TB1)
 }
 
 // @inline
-function Ty(y: f32): i32 {
-  return <i32>Mathf.round(TA2 * y + TB2)
+function Ty(y: f64): i32 {
+  return <i32>Math.round(TA2 * y + TB2)
 }
 
 /*
@@ -59,8 +61,8 @@ export function setLineWidth(w: i32): void {
   LINEWIDTH = w
 }
 
-export function setGlobalAlpha(ga: u32): void {
-  GLOBALALPHA = ga
+export function setAlphaScale(alphaScale: f32): void {
+  ALPHASCALE = alphaScale
 }
 
 export function setColor(color: u32): void {

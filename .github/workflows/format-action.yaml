@@ -4,34 +4,35 @@ on: [push, pull_request]
 
 jobs:
   check:
-    name: Check files
+    name: Check changed/updated files
     outputs:
-      run_prettier: ${{ steps.fileCheck.outputs.run_prettier }}
-      run_black: ${{ steps.fileCheck.outputs.run_black }}
+      files: ${{ steps.checkStep.outputs.files }}
 
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2.1.0
       - uses: jitterbit/get-changed-files@v1
-        id: fileCheck
+        id: checkStep
         with:
           format: space-delimited
           token: ${{ secrets.GITHUB_TOKEN }}
-      - name: checking
-        run: |
-          for file in ${{ steps.fileCheck.outputs.all }}; do
-            if [[ $file == frontend/* ]]; then
-              echo "::set-output name=run_prettier::true"
-            fi
-            if [[ $file == backend/* ]]; then
-              echo "::set-output name=run_black::true"
-            fi
-          done
+      - run: |
+          echo "::set-output name=files::${{ steps.fileCheck.outputs.added_modified }}"
+
+  test: Test output of check job
+    name: Test output
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "Changed files:"
+          echo "${needs.check.outputs.files}"
+
 
   prettier-format:
     name: Format frontend (js/ts) files with prettier
     needs: check
-    if: needs.check.outputs.run_prettier == 'true'
+    if: contains(needs.check.outputs.files, "frontend/")
     runs-on: ubuntu-latest
 
     defaults:
@@ -61,7 +62,7 @@ jobs:
   black-format:
     name: Format backend (py) files with black
     needs: check
-    if: needs.check.outputs.run_black == 'true'
+    if: contains(needs.check.outputs.files, "backend/")
     runs-on: ubuntu-latest
 
     defaults:
@@ -93,7 +94,6 @@ jobs:
     defaults:
       run:
         working-directory: frontend
-    # needs: [prettier-format, black-format]
     if: github.ref == 'refs/heads/staging'
     steps:
       - uses: actions/checkout@v2
