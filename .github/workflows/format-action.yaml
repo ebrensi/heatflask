@@ -19,8 +19,8 @@ jobs:
       - run: |
           echo "::set-output name=files::${{ steps.fileCheck.outputs.added_modified }}"
 
-  test: Test output of check job
-    name: Test output
+  test:
+    name: Test output of check job
     needs: check
     runs-on: ubuntu-latest
     steps:
