@@ -19,16 +19,6 @@ jobs:
       - run: |
           echo "::set-output name=files::${{ steps.checkStep.outputs.added_modified }}"
 
-  test:
-    name: Test output of check job
-    needs: check
-    runs-on: ubuntu-latest
-    steps:
-      - run: |
-          echo "Changed files:"
-          echo "${needs.check.outputs.files}"
-
-
   prettier-format:
     name: Format frontend (js/ts) files with prettier
     needs: check
@@ -115,3 +105,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+
+  test:
+    name: Test output of check job
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "Changed files:"
+          echo "$needs.check.outputs.files"
