@@ -17,7 +17,7 @@ jobs:
           format: space-delimited
           token: ${{ secrets.GITHUB_TOKEN }}
       - run: |
-          echo "::set-output name=files::${{ steps.fileCheck.outputs.added_modified }}"
+          echo "::set-output name=files::${{ steps.checkStep.outputs.added_modified }}"
 
   test:
     name: Test output of check job
