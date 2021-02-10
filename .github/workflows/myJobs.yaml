@@ -5,12 +5,11 @@ on: [push, pull_request]
 jobs:
   check:
     name: Check changed/updated files
-    outputs:
-      files: ${{ steps.checkStep.outputs.files }}
+    outputs: ${{ steps.checkStep.outputs }}
 
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2.1.0
+      - uses: actions/checkout@v2
       - uses: jitterbit/get-changed-files@v1
         id: checkStep
         with:
@@ -113,4 +112,4 @@ jobs:
     steps:
       - run: |
           echo "Changed files:"
-          echo ${{ needs.check.outputs.files }}
+          echo "${{ needs.check.outputs.files }}"

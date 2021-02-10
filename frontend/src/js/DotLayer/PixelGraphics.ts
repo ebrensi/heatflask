@@ -7,8 +7,8 @@ type rect = { x: number; y: number; w: number; h: number }
 type WasmExports = Record<string, WebAssembly.ExportValue>
 
 const DEBUG = true
-export const WASMPATH = false
-export const WASMDOTS = false
+export const WASMPATH = true
+export const WASMDOTS = true
 
 /*
  * This module defines the PixelGrapics class.  A PixelGraphics object
@@ -210,14 +210,6 @@ export class PixelGraphics {
     y1: number,
     th?: number
   ): void {
-    if (
-      x0 === undefined ||
-      y0 === undefined ||
-      x1 === undefined ||
-      y1 === undefined
-    )
-      return
-
     const T = this.transform
     // These must be integers
     x0 = Math.round(T[0] * x0 + T[1])
@@ -281,6 +273,13 @@ export class PixelGraphics {
     y1: number,
     th?: number
   ): void {
+    if (
+      x0 === undefined ||
+      y0 === undefined ||
+      x1 === undefined ||
+      y1 === undefined
+    )
+      return
     if (WASMPATH) this.wasm.drawSegment(x0, y0, x1, y1, th)
     else this.drawSegmentJS(x0, y0, x1, y1, th)
   }
