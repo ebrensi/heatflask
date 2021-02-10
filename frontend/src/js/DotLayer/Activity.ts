@@ -348,7 +348,7 @@ export class Activity {
        * If this activity is completely contained in the viewport then we
        * already know every segment is included and we quickly create a full segMask
        */
-      if (this._containedInMapBounds) {
+      if (this._containedInMapBounds && zoom === this.lastSegMask.zoom) {
         // This is still contained (and was last time)
         this._segMaskUpdates.clear()
         return this.segMask

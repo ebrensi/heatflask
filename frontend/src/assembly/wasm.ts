@@ -1,6 +1,9 @@
 // declare function drawDebugRect(x: number, y: number, w: number, h: number): void
 // declare function consoleLog(arg0: i32): void;
 
+let DOT_IMAGEDATA_OFFSET: usize = 0
+let PATH_IMAGEDATA_OFFSET: usize = 0
+
 let WIDTH: i32
 let HEIGHT: i32
 
@@ -257,12 +260,12 @@ export function drawCircle(fx: f32, fy: f32, size: f32): void {
  */
 // @inline
 function fill32(start: usize, end: usize, val32: i32): void {
-  // const endByte = end << 2
-  // for (let i = start << 2; i < endByte; i += 4) {
+  // const endByte = (end << 2) + DOT_IMAGEDATA_OFFSET
+  // for (let i = (start << 2)+ DOT_IMAGEDATA_OFFSET; i < endByte; i += 4) {
   //   store<i32>(i, val32)
   // }
 
-  const startByte = start << 2
+  const startByte = (start << 2) + DOT_IMAGEDATA_OFFSET
   store<i32>(startByte, val32)
   memory.repeat(startByte + 4, startByte, 4, end - start - 1)
 }
@@ -281,7 +284,7 @@ function setPixelAA(x: i32, y: i32, a: i32): void {
   updateDrawBounds(x, y)
   const alpha = 0xff - a
   const color = MASKEDCOLOR | (alpha << ALPHAPOS)
-  store<i32>((y * WIDTH + x) << 2, color)
+  store<i32>(<usize>((y * WIDTH + x) << 2) + PATH_IMAGEDATA_OFFSET, color)
 }
 
 export function drawSegment(fx0: f32, fy0: f32, fx1: f32, fy1: f32): void {
