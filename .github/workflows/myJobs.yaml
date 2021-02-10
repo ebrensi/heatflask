@@ -5,7 +5,8 @@ on: [push, pull_request]
 jobs:
   check:
     name: Check changed/updated files
-    outputs: ${{ steps.checkStep.outputs }}
+    outputs:
+        files: ${{ steps.checkStep.outputs.files }}
 
     runs-on: ubuntu-latest
     steps:
