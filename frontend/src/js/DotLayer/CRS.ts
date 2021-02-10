@@ -12,7 +12,7 @@ const RAD = Math.PI / 180
 type PointArray = [number, number]
 
 // This projects LatLng coordinate onto a rectangular grid
-export function Projection() {
+export function Projection(): (p: PointArray) => PointArray {
   const max = MAX_LATITUDE
   const R = EARTH_RADIUS
   const rad = RAD
@@ -29,7 +29,7 @@ export function Projection() {
 }
 
 // This scales distances between points to a given zoom level
-export function Transformation(zoom: number) {
+export function Transformation(zoom: number): (p: PointArray) => PointArray {
   const S = 0.5 / (Math.PI * EARTH_RADIUS)
   const A = S
   const B = 0.5
@@ -45,7 +45,7 @@ export function Transformation(zoom: number) {
   }
 }
 
-export function makePT(zoom: number) {
+export function makePT(zoom: number): (p: PointArray) => PointArray {
   const P = Projection()
   const T = Transformation(zoom)
   return function (llpt: PointArray) {

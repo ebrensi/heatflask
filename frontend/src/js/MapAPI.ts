@@ -50,9 +50,9 @@ if (vParams.geohash) {
 export const map = new Map("map", {
   center: center,
   zoom: zoom,
-  zoomAnimation: false,
+  zoomAnimation: true,
   zoomSnap: 0.1,
-  zoomDelta: 1,
+  zoomDelta: 0.5,
   zoomAnimationThreshold: 6,
   wheelPxPerZoomLevel: 60,
   updateWhenZooming: true,

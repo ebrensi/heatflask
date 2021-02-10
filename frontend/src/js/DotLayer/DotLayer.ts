@@ -250,7 +250,6 @@ async function onZoom(e) {
 async function onMove() {
   // console.log("onMove")
   await redraw(_pinching)
-  // await redraw()
 }
 
 /*
@@ -263,7 +262,6 @@ async function onMoveEnd() {
   _moveEnd = true
   _pinching = false
   await redraw(true)
-  // await redraw()
 }
 
 /*
@@ -273,19 +271,27 @@ async function onMoveEnd() {
  */
 let _redrawing: boolean
 let _currentTick = 0
+let _lt = 0
 
 async function redraw(forceFullRedraw?: boolean) {
   if (!_ready) return
 
   const tick = ++_currentTick
 
-  await sleep(MIN_REDRAW_DELAY)
+  const zoomChanged = ViewBox.updateZoom()
+
+  // await sleep(zoomChanged? 0 : MIN_REDRAW_DELAY)
+  if (!zoomChanged) await sleep(MIN_REDRAW_DELAY)
 
   _moveEnd = false
 
   if (tick !== _currentTick) {
     return
   }
+
+  // const dn = Date.now()
+  // console.log(`${dn-_lt} - ${_currentTick}`)
+  // _lt = dn
 
   while (_redrawing) {
     console.log("can't redraw")
@@ -294,7 +300,6 @@ async function redraw(forceFullRedraw?: boolean) {
 
   _redrawing = true
 
-  const zoomChanged = ViewBox.updateZoom()
   const boundsChanged = ViewBox.updateBounds()
 
   if (!(forceFullRedraw || boundsChanged || zoomChanged)) {
@@ -320,11 +325,11 @@ async function redraw(forceFullRedraw?: boolean) {
   if (drawDiff) {
     if (_options.showPaths) {
       pathPxg.translate(shift.x, shift.y)
-      drawPathImageData()
+      // drawPathImageData()
     }
     if (_paused) {
       dotPxg.translate(shift.x, shift.y)
-      drawDotImageData()
+      // drawDotImageData()
     }
   }
 
@@ -360,9 +365,9 @@ function drawPathImageData() {
 
 async function drawPaths(drawDiff?: boolean) {
   if (!_ready) return 0
-  console.time("drawpaths")
+  // console.time("drawpaths")
   await ActivityCollection.drawPaths(pathPxg, drawDiff)
-  console.timeEnd("drawpaths")
+  // console.timeEnd("drawpaths")
   drawPathImageData()
 }
 
@@ -440,7 +445,11 @@ function updateDotSettings(shadowSettings?) {
   }
 
   if (_paused) {
-    drawDots()
+    if (!dotPxg.drawBounds.isEmpty()) {
+      const { x, y, w, h } = dotPxg.drawBounds.rect
+      dotCanvas.getContext("2d").clearRect(x, y, w, h)
+    }
+    drawDots(null, false)
   }
   return ds
 }
