@@ -314,7 +314,11 @@ export function drawSegment(fx0: f32, fy0: f32, fx1: f32, fy1: f32): void {
       y0,
       max<i32>(
         0,
-        <i32>(<f32>255 * (<f32>abs<i32>(err - dx + dy) / ed - wd + <f32>1))
+        <i32>(
+          Mathf.round(
+            <f32>255 * (<f32>abs<i32>(err - dx + dy) / ed - wd + <f32>1)
+          )
+        )
       )
     )
     e2 = err
@@ -329,7 +333,10 @@ export function drawSegment(fx0: f32, fy0: f32, fx1: f32, fy1: f32): void {
         setPixelAA(
           x0,
           (y2 += sy),
-          max<i32>(0, <i32>(<f32>255 * (<f32>abs<i32>(e2) / ed - wd + <f32>1)))
+          max<i32>(
+            0,
+            <i32>Mathf.round(<f32>255 * (<f32>abs<i32>(e2) / ed - wd + <f32>1))
+          )
         )
       if (x0 == x1) break
       e2 = err
@@ -342,7 +349,10 @@ export function drawSegment(fx0: f32, fy0: f32, fx1: f32, fy1: f32): void {
         setPixelAA(
           (x2 += sx),
           y0,
-          max(0, <i32>(<f32>255 * (<f32>abs<i32>(e2) / ed - wd + <f32>1)))
+          max(
+            0,
+            <i32>Mathf.round(<f32>255 * (<f32>abs<i32>(e2) / ed - wd + <f32>1))
+          )
         )
       if (y0 == y1) break
       err += dx
