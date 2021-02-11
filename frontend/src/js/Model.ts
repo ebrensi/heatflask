@@ -5,6 +5,7 @@
 
 import { CURRENT_USER, USER_URLS } from "./Env"
 import { BoundObject } from "./DataBinding"
+import { HHMMSS } from "./appUtil"
 
 type boolNum = 0 | 1
 interface ArgDefaults {
@@ -130,7 +131,7 @@ qParamsInit.quantity =
 /*
  * Current values of query parameters in the DOM
  */
-export const qParams = <QueryParameters>(
+export const qParams = <QueryParameters & BoundObject>(
   BoundObject.fromObject(qParamsInit, { event: "change" })
 )
 
@@ -184,6 +185,7 @@ const vParamsInit: VisualParams = {
   paused: bool(params["paused"]),
   baselayer: params["baselayer"],
 
+  s: NaN,
   tau: params["tau"],
   T: params["T"],
   sz: params["sz"],
@@ -195,13 +197,37 @@ const vParamsInit: VisualParams = {
 /*
  * The visual paramters for the current view
  */
-export const vParams = <VisualParams>BoundObject.fromObject(vParamsInit, {
-  // bind "change" events of any elements whos data-event attribute not set
-  event: "change",
-})
+export const vParams = <VisualParams & BoundObject>BoundObject.fromObject(
+  vParamsInit,
+  {
+    // bind "change" events of any elements whos data-event attribute not set
+    event: "change",
+  }
+)
 
 // info elements have one-way bindings because the user cannot change them
 export const messages = BoundObject.fromDOMelements("[data-class=info]")
+
+vParams.onChange("s", (s) => {
+  const tau = (vParams.tau = tauLow * (tauHigh / tauLow) ** s)
+  messages["tau-info"] = `${tau.toFixed(1)}`
+  // console.log(`s = ${s} => tau = ${vParams.tau}`)
+})
+
+// exponential scaling so that tau(s=0) = tauLow
+//                          and tau(s=1) = tauHigh
+// tau(s) = tauLow * (tauHigh / tauLow) ** s
+const tauLow = 0.5
+const tauHigh = 3600
+const tau = vParams.tau
+vParams.s = Math.log2(tau / tauLow) / Math.log2(tauHigh / tauLow)
+
+function updateTinfo() {
+  const T = vParams.T
+  messages["T-info"] = `${HHMMSS(T)} <==> ${HHMMSS(T * vParams.tau)}`
+}
+vParams.onChange("T", () => updateTinfo())
+vParams.onChange("tau", () => updateTinfo())
 
 export const targetUser = BoundObject.fromDOMelements(
   "[data-class=target-user]"

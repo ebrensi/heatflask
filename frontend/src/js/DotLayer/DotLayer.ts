@@ -18,8 +18,8 @@ import {
 import type { Map as LMap } from "leaflet"
 type EventHandlerObject = { [eventName: string]: EventListener }
 
-const DEBUG_BORDERS = true
-const TARGET_FPS = 30
+const DEBUG_BORDERS = false
+const TARGET_FPS = 36
 
 /* In order to prevent path redraws from happening too often
  * and hogging up CPU cycles we set a minimum delay between redraws

@@ -94,7 +94,7 @@ export function getUrlString(altQargs) {
     const val = vParams[param],
       defaultVal = urlArgDefaults[param][1]
     if (val !== defaultVal) {
-      vArgs[param] = val
+      vArgs[param] = Math.round(val)
     }
   }
 
