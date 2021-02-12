@@ -5,7 +5,6 @@ on: [push, pull_request]
 jobs:
   check:
     name: Check changed/updated files
-    if: github.ref != 'refs/heads/staging'
     outputs:
         files: ${{ steps.checkStep.outputs.files }}
 
