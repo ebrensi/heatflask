@@ -280,8 +280,8 @@ async function redraw(forceFullRedraw?: boolean) {
 
   const zoomChanged = ViewBox.updateZoom()
 
-  // await sleep(zoomChanged? 0 : MIN_REDRAW_DELAY)
-  if (!zoomChanged) await sleep(MIN_REDRAW_DELAY)
+  await sleep(MIN_REDRAW_DELAY)
+  // if (!zoomChanged) await sleep(MIN_REDRAW_DELAY)
 
   _moveEnd = false
 
@@ -337,10 +337,12 @@ async function redraw(forceFullRedraw?: boolean) {
 
   const promises = []
   if (_options.showPaths) {
+    await nextTask()
     promises.push(drawPaths(drawDiff))
   }
 
   if (_paused) {
+    await nextTask()
     promises.push(drawDots(null, drawDiff))
   }
 

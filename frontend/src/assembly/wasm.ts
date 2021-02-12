@@ -1,17 +1,8 @@
 // declare function drawDebugRect(x: number, y: number, w: number, h: number): void
 // declare function consoleLog(arg0: i32): void;
 
-let DOT_IMAGEDATA_OFFSET: usize = 0
-let PATH_IMAGEDATA_OFFSET: usize = 0
-
-let WIDTH: i32
-let HEIGHT: i32
-
-// transform
-let TA1: f32
-let TB1: f32
-let TA2: f32
-let TB2: f32
+export const DOT_IMAGEDATA_OFFSET: usize = 0
+export const PATH_IMAGEDATA_OFFSET: usize = 0
 
 // draw bounds
 export let XMIN: i32
@@ -20,35 +11,34 @@ export let YMIN: i32
 export let YMAX: i32
 export let BOUNDSEMPTY = true
 
+let WIDTH: i32
+let HEIGHT: i32
+
+// transform
+let TA1: f64
+let TB1: f64
+let TA2: f64
+let TB2: f64
+
 let COLOR: i32
 let MASKEDCOLOR: i32
 let ALPHAMASK: i32
 let ALPHAPOS: i32
-let ALPHASCALE: f32
+let ALPHASCALE: f32 = 1
 
 let LINEWIDTH: i32 = 1
 
-// @inline
-function Tx(x: f64): i32 {
-  return <i32>Math.round(TA1 * x + TB1)
-}
+// function i32toi64(v1: i32, v2: i32): i64 {
+//   return (<i64>v1) << 32 || <i64>v2
+// }
 
-// @inline
-function Ty(y: f64): i32 {
-  return <i32>Math.round(TA2 * y + TB2)
-}
+// function i64toi32_1(v: i64): i32 {
+//   return <i32>(v >> 32)
+// }
 
-function i32toi64(v1: i32, v2: i32): i64 {
-  return (<i64>v1) << 32 || <i64>v2
-}
-
-function i64toi32_1(v: i64): i32 {
-  return <i32>(v >> 32)
-}
-
-function i64toi32_2(v: i64): i32 {
-  return <i32>(v && 0x00000000ffffffff)
-}
+// function i64toi32_2(v: i64): i32 {
+//   return <i32>(v && 0x00000000ffffffff)
+// }
 
 /*
  * Getters and Setters
@@ -58,7 +48,7 @@ export function setSize(width: i32, height: i32): void {
   HEIGHT = height
 }
 
-export function setTransform(a1: f32, b1: f32, a2: f32, b2: f32): void {
+export function setTransform(a1: f64, b1: f64, a2: f64, b2: f64): void {
   TA1 = a1
   TA2 = a2
   TB1 = b1
@@ -83,16 +73,22 @@ export function setColor(color: u32): void {
   MASKEDCOLOR = ALPHAMASK & COLOR
 }
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: decorator
 // @inline
 function inViewportBounds(x: i32, y: i32): boolean {
   return x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT
 }
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: decorator
 // @inline
 export function resetDrawBounds(): void {
   BOUNDSEMPTY = true
 }
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: decorator
 // @inline
 export function updateDrawBounds(x: i32, y: i32): void {
   if (BOUNDSEMPTY) {
@@ -109,6 +105,8 @@ export function updateDrawBounds(x: i32, y: i32): void {
   else if (y > YMAX) YMAX = y
 }
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: decorator
 // @inline
 function clip(v: i32, vmax: i32): i32 {
   if (v < 0) return <i32>0
@@ -116,6 +114,8 @@ function clip(v: i32, vmax: i32): i32 {
   return v
 }
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: decorator
 // @inline
 export function clearRect(x: i32, y: i32, w: i32, h: i32): void {
   if (w == 0 || h == 0) return
@@ -127,6 +127,8 @@ export function clearRect(x: i32, y: i32, w: i32, h: i32): void {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: decorator
 // @inline
 function moveRow(
   sx: i32,
@@ -140,6 +142,7 @@ function moveRow(
   const dOffset = (dx + (dy + row) * WIDTH) << 2
   memory.copy(dOffset, sOffset, wBytes)
 }
+
 /*
  * This function moves the pixels from one rectangular region
  *  of an imageData object to another, possibly overlapping
@@ -212,21 +215,22 @@ export function moveRect(shiftX: i32, shiftY: i32): void {
 /*
  *  **** Dot Drawing functions ****
  */
-export function drawSquare(fx: f32, fy: f32, size: f32): void {
-  const dotOffset = size / 2
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: decorator
+// @inline
+export function drawSquare(fx: f64, fy: f64, size: f64): void {
+  const dotOffset: f64 = size / <f64>2
   const s = <i32>size
-  const x = <i32>Mathf.round(TA1 * fx + TB1 - dotOffset)
-  const y = <i32>Mathf.round(TA2 * fy + TB2 - dotOffset)
+  const x = <i32>Math.round(TA1 * fx + TB1 - dotOffset)
+  const y = <i32>Math.round(TA2 * fy + TB2 - dotOffset)
   if (!inViewportBounds(x, y)) return
+  updateDrawBounds(x, y)
 
   const xStart = max<i32>(0, x) // Math.max(0, tx)
   const xEnd = min<i32>(x + s, WIDTH)
 
   const yStart = max<i32>(0, y)
   const yEnd = min<i32>(y + s, HEIGHT)
-
-  updateDrawBounds(xStart, yStart)
-  updateDrawBounds(xEnd, yEnd)
 
   for (let row = yStart; row < yEnd; row++) {
     const offset = row * WIDTH
@@ -236,18 +240,20 @@ export function drawSquare(fx: f32, fy: f32, size: f32): void {
   }
 }
 
-export function drawCircle(fx: f32, fy: f32, size: f32): void {
-  const x = Tx(fx)
-  const y = Ty(fy)
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: decorator
+// @inline
+export function drawCircle(fx: f64, fy: f64, r: i32): void {
+  const x = <i32>Math.round(TA1 * fx + TB1)
+  const y = <i32>Math.round(TA2 * fy + TB2)
   if (!inViewportBounds(x, y)) return
   updateDrawBounds(x, y)
 
-  const r = <i32>Mathf.round(size)
   const r2 = r * r
 
   for (let cy = -r + 1; cy < r; cy++) {
     const offset = (cy + y) * WIDTH
-    const cx = <i32>Mathf.round(Mathf.sqrt(<f32>(r2 - cy * cy)))
+    const cx = <i32>Math.round(Math.sqrt(<f64>(r2 - cy * cy)))
     const colStart = offset + x - cx
     const colEnd = offset + x + cx
     fill32(colStart, colEnd, COLOR)
@@ -258,6 +264,8 @@ export function drawCircle(fx: f32, fy: f32, size: f32): void {
  * Fills a range of adresses with a 32-bit values
  * repeat a 4-byte pattern
  */
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: decorator
 // @inline
 function fill32(start: usize, end: usize, val32: i32): void {
   // const endByte = (end << 2) + DOT_IMAGEDATA_OFFSET
@@ -279,23 +287,104 @@ function fill32(start: usize, end: usize, val32: i32): void {
  * http://members.chello.at/~easyfilter/bresenham.html
  * *******************************************************
  */
+
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: decorator
+// @inline
 function setPixelAA(x: i32, y: i32, a: i32): void {
-  if (!inViewportBounds(x, y)) return
-  updateDrawBounds(x, y)
   const alpha = 0xff - a
   const color = MASKEDCOLOR | (alpha << ALPHAPOS)
   store<i32>(<usize>((y * WIDTH + x) << 2) + PATH_IMAGEDATA_OFFSET, color)
 }
 
-export function drawSegment(fx0: f32, fy0: f32, fx1: f32, fy1: f32): void {
+const posarr = new Float64Array(5)
+const negarr = new Float64Array(5)
+
+export function drawSegment(fx0: f64, fy0: f64, fx1: f64, fy1: f64): void {
   /* plot an anti-aliased line of width wd */
 
-  let x0: i32 = Tx(fx0)
-  let y0: i32 = Ty(fy0)
-  const x1: i32 = Tx(fx1)
-  const y1: i32 = Ty(fy1)
-  const wd: f32 = (<f32>LINEWIDTH + 1.0) / 2.0
+  fx0 = TA1 * fx0 + TB1
+  fy0 = TA2 * fy0 + TB2
+  fx1 = TA1 * fx1 + TB1
+  fy1 = TA2 * fy1 + TB2
 
+  if (
+    fx0 < 0 ||
+    fx0 > WIDTH ||
+    fx1 < 0 ||
+    fx1 > WIDTH ||
+    fy0 < 0 ||
+    fy0 > HEIGHT ||
+    fy1 < 0 ||
+    fy1 > HEIGHT
+  ) {
+    /*
+     * clip the segment to viewPort if necessary
+     * adapted from Liang–Barsky algorithm
+     * https://en.wikipedia.org/wiki/Liang%E2%80%93Barsky_algorithm
+     */
+    const p1: f64 = -(fx1 - fx0)
+    const p2: f64 = -p1
+    const p3: f64 = -(fy1 - fy0)
+    const p4: f64 = -p3
+
+    const q1: f64 = fx0
+    const q2: f64 = <f64>WIDTH - fx0
+    const q3: f64 = fy0
+    const q4: f64 = <f64>HEIGHT - fy0
+
+    let posind: u8 = 0
+    let negind: u8 = 0
+
+    if (p1 != 0) {
+      const r1: f64 = q1 / p1
+      const r2: f64 = q2 / p2
+      if (p1 < 0) {
+        negarr[negind++] = r1 // for negative p1, add it to negative array
+        posarr[posind++] = r2 // and add p2 to positive array
+      } else {
+        negarr[negind++] = r2
+        posarr[posind++] = r1
+      }
+    }
+    if (p3 != 0) {
+      const r3: f64 = q3 / p3
+      const r4: f64 = q4 / p4
+      if (p3 < 0) {
+        negarr[negind++] = r3
+        posarr[posind++] = r4
+      } else {
+        negarr[negind++] = r4
+        posarr[posind++] = r3
+      }
+    }
+
+    let rn1: f64 = 0
+    while (negind > 0) {
+      negind--
+      if (negarr[negind] > rn1) rn1 = negarr[negind]
+    }
+    let rn2: f64 = 1
+    while (posind > 0) {
+      posind--
+      if (posarr[posind] < rn2) rn2 = posarr[posind]
+    }
+
+    fx1 = fx0 + p2 * rn2
+    fy1 = fy0 + p4 * rn2
+    fx0 += p2 * rn1
+    fy0 += p4 * rn1
+  }
+
+  let x0: i32 = <i32>Math.round(fx0)
+  let y0: i32 = <i32>Math.round(fy0)
+  const x1: i32 = <i32>Math.round(fx1)
+  const y1: i32 = <i32>Math.round(fy1)
+
+  updateDrawBounds(x0, y0)
+  updateDrawBounds(x1, y1)
+
+  const wd: f32 = (<f32>LINEWIDTH + 1.0) / 2.0
   const dx: i32 = abs(x1 - x0)
   const sx: i32 = x0 < x1 ? 1 : -1
 

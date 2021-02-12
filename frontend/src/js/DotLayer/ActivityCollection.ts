@@ -51,8 +51,8 @@ export function reset(): void {
   for (let i = 0; i < itemsArray.length; i++) {
     itemsArray[i].idx = i
   }
-  // resetSegMasks()
   inView.resize(itemsArray.length)
+  lastInView.resize(itemsArray.length)
 }
 
 /*
@@ -71,6 +71,7 @@ function setDotColors(): void {
  * a set of indices of Activities in itemsArray.
  */
 const inView = new BitSet(1)
+const lastInView = new BitSet(1)
 
 /**
  * Update StyleGroups for our collection of activities
@@ -100,6 +101,14 @@ export async function updateContext(
 
   // if we queued and makeIdxSet tasks, let's wait for them to finish
   if (queuedTasks) await nextTask()
+
+  const newlyInView = inView.difference(lastInView, lastInView)
+  newlyInView.forEach((i) => {
+    const A = itemsArray[i]
+    if (A.segMask) A.segMask.clear()
+    A._containedInMapBounds = false
+  })
+  inView.clone(lastInView)
 
   // Make segMasks (this is usually very fast)
   inView.forEach((i) => {

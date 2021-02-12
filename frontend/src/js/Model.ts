@@ -66,8 +66,8 @@ const pathname = window.location.pathname.substring(1)
 const targetUserId =
   urlArgs.get("user") || (pathname === "main.html" ? "" : pathname)
 
-const names = {}
-const params = {}
+const names: { [name: string]: string[] } = {}
+const params: QueryParameters & VisualParameters = {}
 
 for (const [key, val] of Object.entries(urlArgDefaults)) {
   names[key] = val[0]
@@ -156,7 +156,7 @@ qParams.onChange("before", (newDate) => {
  * visual-parameters are those that determine what appears visually
  */
 
-interface VisualParams {
+interface VisualParameters {
   zoom?: number // map zoom level
   center?: [number, number] // map latitude, longitude
   geohash?: string // a string representing zoom/center
@@ -177,7 +177,7 @@ function bool(val) {
 /*
  * Ininitial visual parameters extracted from defaults and URL parameters
  */
-const vParamsInit: VisualParams = {
+const vParamsInit: VisualParameters = {
   center: { lat: params["lat"], lng: params["lng"] },
   zoom: params["zoom"],
   geohash: params["geohash"],
@@ -197,7 +197,7 @@ const vParamsInit: VisualParams = {
 /*
  * The visual paramters for the current view
  */
-export const vParams = <VisualParams & BoundObject>BoundObject.fromObject(
+export const vParams = <VisualParameters & BoundObject>BoundObject.fromObject(
   vParamsInit,
   {
     // bind "change" events of any elements whos data-event attribute not set
@@ -220,11 +220,11 @@ vParams.onChange("s", (s) => {
 const tauLow = 0.5
 const tauHigh = 3600
 const tau = vParams.tau
-vParams.s = Math.log2(tau / tauLow) / Math.log2(tauHigh / tauLow)
+vParams["s"] = Math.log2(tau / tauLow) / Math.log2(tauHigh / tauLow)
 
 function updateTinfo() {
   const T = vParams.T
-  messages["T-info"] = `${HHMMSS(T)} <==> ${HHMMSS(T * vParams.tau)}`
+  messages["T-info"] = `${T}s ~ ${HHMMSS(T * vParams.tau)}`
 }
 vParams.onChange("T", () => updateTinfo())
 vParams.onChange("tau", () => updateTinfo())

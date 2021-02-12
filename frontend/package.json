@@ -8,13 +8,14 @@
   },
   "description": "Animated Movement Data Visualization for Strava Tracks",
   "scripts": {
-    "watch": "parcel watch --log-level verbose ./src/html/*.html",
-    "serve": "npm run asc-watch & parcel serve --log-level verbose ./src/html/*.html",
-    "build": "npm run clean; npm run asc-build & parcel build ./src/html/*.html",
-    "clean": "rm -rf ./dist/* ./.parcel-cache/* ./dev-docs/*",
-    "format": "prettier --write ./src/",
+    "parcel-watch": "parcel watch --log-level verbose ./src/html/*.html",
+    "parcel-build": "parcel build ./src/html/*.html",
     "asc-build": "asc ./src/assembly/wasm.ts --target production",
-    "asc-watch": "onchange -i --verbose './src/assembly/*.ts' --  asc ./src/assembly/wasm.ts --target development"
+    "asc-watch": "onchange -i --verbose './src/assembly/*.ts' --  asc ./src/assembly/wasm.ts --target development",
+    "build": "npm run clean; npm run asc-build; npm run parcel-build",
+    "watch": "sh -c 'npm run parcel-watch & npm run asc-watch & wait'",
+    "clean": "rm -rf ./dist/* ./.parcel-cache/* ./dev-docs/*",
+    "format": "prettier --write ./src/"
   },
   "author": "Efrem Rensi",
   "license": "ISC",
