@@ -1,8 +1,12 @@
 // declare function drawDebugRect(x: number, y: number, w: number, h: number): void
-// declare function consoleLog(arg0: i32): void;
 
-export const DOT_IMAGEDATA_OFFSET: usize = 0
-export const PATH_IMAGEDATA_OFFSET: usize = 0
+declare function logi(v0: i64, v1?: i64, v2?: i64, v3?: i64): void
+declare function logf(v0: f64, v1?: f64, v2?: f64, v3?: f64): void
+
+export let DOT_IMAGEDATA_OFFSET: usize = 0
+export let DOT_IMAGEDATA_LENGTH: usize = 0
+export let PATH_IMAGEDATA_OFFSET: usize = 0
+export let PATH_IMAGEDATA_LENGTH: usize = 0
 
 // draw bounds
 export let XMIN: i32
@@ -46,6 +50,7 @@ let LINEWIDTH: i32 = 1
 export function setSize(width: i32, height: i32): void {
   WIDTH = width
   HEIGHT = height
+  logi(WIDTH, HEIGHT)
 }
 
 export function setTransform(a1: f64, b1: f64, a2: f64, b2: f64): void {
@@ -294,11 +299,38 @@ function fill32(start: usize, end: usize, val32: i32): void {
 function setPixelAA(x: i32, y: i32, a: i32): void {
   const alpha = 0xff - a
   const color = MASKEDCOLOR | (alpha << ALPHAPOS)
+  if (!inViewportBounds(x, y)) {
+    logi(x, y)
+    return
+  }
   store<i32>(<usize>((y * WIDTH + x) << 2) + PATH_IMAGEDATA_OFFSET, color)
 }
 
-const posarr = new Float64Array(5)
-const negarr = new Float64Array(5)
+/*
+ * We use the Cohen-Southerland algorithm for clipping to the view-port
+ * https://en.wikipedia.org/wiki/Cohen-Sutherland_algorithm
+ */
+// This pad is necessary because sometimes drawSegment draws Anti-Aliased points past its bundaries
+const pad: f64 = 3
+
+// @inline
+function CohenSoutherlandCode(x: f64, y: f64): u8 {
+  let code: u8 = 0b0000 // initialised as being inside of [[clip window]]
+
+  if (x < pad)
+    // to the left of clip window
+    code |= 0b0001
+  else if (x > WIDTH - pad)
+    // to the right of clip window
+    code |= 0b0010
+  if (y < pad)
+    // below the clip window
+    code |= 0b0100
+  else if (y > HEIGHT - pad)
+    // above the clip window
+    code |= 0b1000
+  return code
+}
 
 export function drawSegment(fx0: f64, fy0: f64, fx1: f64, fy1: f64): void {
   /* plot an anti-aliased line of width wd */
@@ -308,72 +340,63 @@ export function drawSegment(fx0: f64, fy0: f64, fx1: f64, fy1: f64): void {
   fx1 = TA1 * fx1 + TB1
   fy1 = TA2 * fy1 + TB2
 
-  if (
-    fx0 < 0 ||
-    fx0 > WIDTH ||
-    fx1 < 0 ||
-    fx1 > WIDTH ||
-    fy0 < 0 ||
-    fy0 > HEIGHT ||
-    fy1 < 0 ||
-    fy1 > HEIGHT
-  ) {
-    /*
-     * clip the segment to viewPort if necessary
-     * adapted from Liang–Barsky algorithm
-     * https://en.wikipedia.org/wiki/Liang%E2%80%93Barsky_algorithm
-     */
-    const p1: f64 = -(fx1 - fx0)
-    const p2: f64 = -p1
-    const p3: f64 = -(fy1 - fy0)
-    const p4: f64 = -p3
+  // compute outcodes for P0, P1, and whatever point lies outside the clip rectangle
+  let outcode0: u8 = CohenSoutherlandCode(fx0, fy0)
+  let outcode1: u8 = CohenSoutherlandCode(fx1, fy1)
 
-    const q1: f64 = fx0
-    const q2: f64 = <f64>WIDTH - fx0
-    const q3: f64 = fy0
-    const q4: f64 = <f64>HEIGHT - fy0
+  while (true) {
+    if (!(outcode0 | outcode1)) {
+      break
+    } else if (outcode0 & outcode1) {
+      // bitwise AND is not 0: both points share an outside zone (LEFT, RIGHT, TOP,
+      // or BOTTOM), so both must be outside window; exit loop (accept is false)
+      return
+    } else {
+      // failed both tests, so calculate the line segment to clip
+      // from an outside point to an intersection with clip edge
+      let x: f64
+      let y: f64
 
-    let posind: u8 = 0
-    let negind: u8 = 0
+      // At least one endpoint is outside the clip rectangle; pick it.
+      const outcodeOut: u8 = outcode1 > outcode0 ? outcode1 : outcode0
 
-    if (p1 != 0) {
-      const r1: f64 = q1 / p1
-      const r2: f64 = q2 / p2
-      if (p1 < 0) {
-        negarr[negind++] = r1 // for negative p1, add it to negative array
-        posarr[posind++] = r2 // and add p2 to positive array
+      // Now find the intersection point;
+      // use formulas:
+      //   slope = (y1 - y0) / (x1 - x0)
+      //   x = x0 + (1 / slope) * (ym - y0), where ym is ymin or ymax
+      //   y = y0 + slope * (xm - x0), where xm is xmin or xmax
+      // No need to worry about divide-by-zero because, in each case, the
+      // outcode bit being tested guarantees the denominator is non-zero
+      if (outcodeOut & 0b1000) {
+        // point is above the clip window
+        x = fx0 + ((fx1 - fx0) * (<f64>HEIGHT - pad - fy0)) / (fy1 - fy0)
+        y = <f64>HEIGHT - pad
+      } else if (outcodeOut & 0b0100) {
+        // point is below the clip window
+        x = fx0 + ((fx1 - fx0) * (pad - fy0)) / (fy1 - fy0)
+        y = pad
+      } else if (outcodeOut & 0b0010) {
+        // point is to the right of clip window
+        y = fy0 + ((fy1 - fy0) * (<f64>WIDTH - pad - fx0)) / (fx1 - fx0)
+        x = <f64>WIDTH - pad
+      } else if (outcodeOut & 0b0001) {
+        // point is to the left of clip window
+        y = fy0 + ((fy1 - fy0) * (pad - fx0)) / (fx1 - fx0)
+        x = pad
+      }
+
+      // Now we move outside point to intersection point to clip
+      // and get ready for next pass.
+      if (outcodeOut == outcode0) {
+        fx0 = x
+        fy0 = y
+        outcode0 = CohenSoutherlandCode(fx0, fy0)
       } else {
-        negarr[negind++] = r2
-        posarr[posind++] = r1
+        fx1 = x
+        fy1 = y
+        outcode1 = CohenSoutherlandCode(fx1, fy1)
       }
     }
-    if (p3 != 0) {
-      const r3: f64 = q3 / p3
-      const r4: f64 = q4 / p4
-      if (p3 < 0) {
-        negarr[negind++] = r3
-        posarr[posind++] = r4
-      } else {
-        negarr[negind++] = r4
-        posarr[posind++] = r3
-      }
-    }
-
-    let rn1: f64 = 0
-    while (negind > 0) {
-      negind--
-      if (negarr[negind] > rn1) rn1 = negarr[negind]
-    }
-    let rn2: f64 = 1
-    while (posind > 0) {
-      posind--
-      if (posarr[posind] < rn2) rn2 = posarr[posind]
-    }
-
-    fx1 = fx0 + p2 * rn2
-    fy1 = fy0 + p4 * rn2
-    fx0 += p2 * rn1
-    fy0 += p4 * rn1
   }
 
   let x0: i32 = <i32>Math.round(fx0)
@@ -404,14 +427,7 @@ export function drawSegment(fx0: f64, fy0: f64, fx1: f64, fy1: f64): void {
     setPixelAA(
       x0,
       y0,
-      max<i32>(
-        0,
-        <i32>(
-          Mathf.round(
-            <f32>255 * (<f32>abs<i32>(err - dx + dy) / ed - wd + <f32>1)
-          )
-        )
-      )
+      max<i32>(0, <i32>(255.0 * (<f32>abs<i32>(err - dx + dy) / ed - wd + 1.0)))
     )
     e2 = err
     x2 = x0
@@ -425,10 +441,7 @@ export function drawSegment(fx0: f64, fy0: f64, fx1: f64, fy1: f64): void {
         setPixelAA(
           x0,
           (y2 += sy),
-          max<i32>(
-            0,
-            <i32>Mathf.round(<f32>255 * (<f32>abs<i32>(e2) / ed - wd + <f32>1))
-          )
+          max<i32>(0, <i32>(255.0 * (<f32>abs<i32>(e2) / ed - wd + 1.0)))
         )
       if (x0 == x1) break
       e2 = err
@@ -441,10 +454,7 @@ export function drawSegment(fx0: f64, fy0: f64, fx1: f64, fy1: f64): void {
         setPixelAA(
           (x2 += sx),
           y0,
-          max(
-            0,
-            <i32>Mathf.round(<f32>255 * (<f32>abs<i32>(e2) / ed - wd + <f32>1))
-          )
+          max<i32>(0, <i32>(255.0 * (<f32>abs<i32>(e2) / ed - wd + 1.0)))
         )
       if (y0 == y1) break
       err += dx

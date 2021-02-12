@@ -190,6 +190,7 @@ export class Activity {
       const size = cSize(transcode(time))
       this.time = VByteCompress(transcode(time), size)
     } else {
+      console.log("got here")
       n = sqDists.length + 1
       this.px = points.slice(0, n * 2)
 

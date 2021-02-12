@@ -12,16 +12,17 @@ type WasmExports = Record<string, WebAssembly.ExportValue>
 
 const defaultWasmImports: WasmImports = {
   env: {
-    consoleLog(arg: number): void {
-      console.log(arg)
-    },
-
-    drawDebugRect(x: number, y: number, w: number, h: number): void {
-      _ctx.strokeRect(x, y, w, h)
-    },
-
     abort(_msg: string, _file: string, line: number, column: number): void {
       console.error("abort called at wasm.ts:" + line + ":" + column)
+    },
+  },
+
+  wasm: {
+    logi(v0: number, v1?: number, v2?: number, v3?: number): void {
+      console.log({ v0, v1, v2, v3 })
+    },
+    logf(v0: number, v1?: number, v2?: number, v3?: number): void {
+      console.log({ v0, v1, v2, v3 })
     },
   },
 }
