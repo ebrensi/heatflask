@@ -84,8 +84,4 @@ export async function getWasm(
   return result.instance.exports
 }
 
-export function setCtx(ctx: CanvasRenderingContext2D): void {
-  _ctx = ctx
-}
-
 export { getWasm as default }

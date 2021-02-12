@@ -299,10 +299,10 @@ function fill32(start: usize, end: usize, val32: i32): void {
 function setPixelAA(x: i32, y: i32, a: i32): void {
   const alpha = 0xff - a
   const color = MASKEDCOLOR | (alpha << ALPHAPOS)
-  if (!inViewportBounds(x, y)) {
-    logi(x, y)
-    return
-  }
+  // if (!inViewportBounds(x, y)) {
+  //   logi(x, y)
+  //   return
+  // }
   store<i32>(<usize>((y * WIDTH + x) << 2) + PATH_IMAGEDATA_OFFSET, color)
 }
 

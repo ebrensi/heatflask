@@ -25,8 +25,7 @@ const TARGET_FPS = 36
  * and hogging up CPU cycles we set a minimum delay between redraws
  */
 const FORCE_FULL_REDRAW = false
-const CONTINUOUS_PAN_REDRAWS = true
-const CONTINUOUS_PINCH_REDRAWS = true
+const CONTINUOUS_REDRAWS = true
 const MIN_REDRAW_DELAY = 100 // milliseconds
 
 let dotCanvas: HTMLCanvasElement
@@ -176,10 +175,10 @@ function assignEventHandlers() {
   const events: EventHandlerObject = {
     moveend: onMoveEnd,
     resize: onResize,
+    zoom: onZoom,
   }
 
-  if (CONTINUOUS_PAN_REDRAWS) events.move = onMove
-  if (CONTINUOUS_PINCH_REDRAWS) events.zoom = onZoom
+  if (CONTINUOUS_REDRAWS) events.move = onMove
   if (_map.options.zoomAnimation && Browser.any3d) {
     events.zoomanim = animateZoom
   }
@@ -250,6 +249,7 @@ async function onZoom(e) {
 async function onMove() {
   // console.log("onMove")
   await redraw(_pinching)
+  // await redraw()
 }
 
 /*
@@ -271,17 +271,13 @@ async function onMoveEnd() {
  */
 let _redrawing: boolean
 let _currentTick = 0
-let _lt = 0
 
 async function redraw(forceFullRedraw?: boolean) {
   if (!_ready) return
 
   const tick = ++_currentTick
 
-  const zoomChanged = ViewBox.updateZoom()
-
   await sleep(MIN_REDRAW_DELAY)
-  // if (!zoomChanged) await sleep(MIN_REDRAW_DELAY)
 
   _moveEnd = false
 
@@ -289,18 +285,15 @@ async function redraw(forceFullRedraw?: boolean) {
     return
   }
 
-  // const dn = Date.now()
-  // console.log(`${dn-_lt} - ${_currentTick}`)
-  // _lt = dn
-
-  while (_redrawing) {
+  if (_redrawing) {
     console.log("can't redraw")
-    await nextTask()
+    await sleep(1000)
   }
 
   _redrawing = true
 
   const boundsChanged = ViewBox.updateBounds()
+  const zoomChanged = ViewBox.updateZoom()
 
   if (!(forceFullRedraw || boundsChanged || zoomChanged)) {
     console.log("redraw: nothing to do!")
@@ -367,9 +360,9 @@ function drawPathImageData() {
 
 async function drawPaths(drawDiff?: boolean) {
   if (!_ready) return 0
-  // console.time("drawpaths")
+  console.time("drawpaths")
   await ActivityCollection.drawPaths(pathPxg, drawDiff)
-  // console.timeEnd("drawpaths")
+  console.timeEnd("drawpaths")
   drawPathImageData()
 }
 

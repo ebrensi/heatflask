@@ -256,10 +256,13 @@ export async function drawDots(
     // This prevents ever-increasing bounds
     if (newArea !== oldArea) {
       const [xmin, ymin, xmax, ymax] = bounds
-      pxg.drawBounds.update(Math.max(0, xmin - 10), Math.max(0, ymin - 10))
       pxg.drawBounds.update(
-        Math.min(pxg.width, xmax + 20),
-        Math.min(pxg.height, ymax + 20)
+        Math.max(0, xmin - 3 * sz),
+        Math.max(0, ymin - 3 * sz)
+      )
+      pxg.drawBounds.update(
+        Math.min(pxg.width, xmax + 3 * sz),
+        Math.min(pxg.height, ymax + 3 * sz)
       )
     }
   }
