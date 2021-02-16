@@ -53,7 +53,7 @@ export const map = new Map("map", {
   zoomAnimation: true,
   zoomSnap: 0.1,
   zoomDelta: 0.5,
-  zoomAnimationThreshold: 6,
+  zoomAnimationThreshold: 8,
   wheelPxPerZoomLevel: 60,
   updateWhenZooming: true,
   worldCopyJump: true,

@@ -7,8 +7,6 @@ type rect = { x: number; y: number; w: number; h: number }
 type WasmExports = Record<string, WebAssembly.ExportValue>
 
 const DEBUG = true
-export const WASMPATH = true
-export const WASMDOTS = true
 
 /*
  * This module defines the PixelGrapics class.  A PixelGraphics object
@@ -151,121 +149,6 @@ export class PixelGraphics {
     return x >= 0 && x < this.width && y >= 0 && y < this.height
   }
 
-  /* ***************************************************
-   * This code line-drawing at the pixel level is adapted from
-   * "anti-aliased thick line" at
-   * http://members.chello.at/~easyfilter/bresenham.html
-   * *******************************************************
-   */
-  setPixel(x: number, y: number): void {
-    if (!this.inBounds(x, y)) return
-    this.drawBounds.update(x, y)
-    this.buf32[y * this.width + x] = this.color32
-  }
-
-  setPixelAA(x: number, y: number, a: number): void {
-    if (!this.inBounds(x, y)) return
-    this.drawBounds.update(x, y)
-    const alpha = 0xff - Math.round(a)
-    const color = (this.color32 & alphaMask) | (alpha << alphaPos)
-    this.buf32[y * this.width + x] = color
-  }
-
-  plotLineAA(x0: number, y0: number, x1: number, y1: number): void {
-    const dx = Math.abs(x1 - x0)
-    const sx = x0 < x1 ? 1 : -1
-    const dy = Math.abs(y1 - y0)
-    const sy = y0 < y1 ? 1 : -1
-    let err = dx - dy
-    let e2
-    let x2 /* error value e_xy */
-    const ed = dx + dy == 0 ? 1 : Math.sqrt(dx * dx + dy * dy)
-
-    for (;;) {
-      /* pixel loop */
-      this.setPixelAA(x0, y0, (255 * Math.abs(err - dx + dy)) / ed)
-      e2 = err
-      x2 = x0
-      if (2 * e2 >= -dx) {
-        /* x step */
-        if (x0 == x1) break
-        if (e2 + dy < ed) this.setPixelAA(x0, y0 + sy, (255 * (e2 + dy)) / ed)
-        err -= dy
-        x0 += sx
-      }
-      if (2 * e2 <= dy) {
-        /* y step */
-        if (y0 == y1) break
-        if (dx - e2 < ed) this.setPixelAA(x2 + sx, y0, (255 * (dx - e2)) / ed)
-        err += dx
-        y0 += sy
-      }
-    }
-  }
-
-  drawSegmentJS(
-    x0: number,
-    y0: number,
-    x1: number,
-    y1: number,
-    th?: number
-  ): void {
-    const T = this.transform
-    // These must be integers
-    x0 = Math.round(T[0] * x0 + T[1])
-    y0 = Math.round(T[2] * y0 + T[3])
-    x1 = Math.round(T[0] * x1 + T[1])
-    y1 = Math.round(T[2] * y1 + T[3])
-
-    if (!th) th = this.lineWidth
-    /* plot an anti-aliased line of width th pixel */
-    const sx = x0 < x1 ? 1 : -1
-    const sy = y0 < y1 ? 1 : -1
-    let dx = Math.abs(x1 - x0)
-    let dy = Math.abs(y1 - y0)
-    let e2 = Math.sqrt(dx * dx + dy * dy) /* length */
-    let err
-
-    if (th <= 1 || e2 == 0) return this.plotLineAA(x0, y0, x1, y1)
-    dx *= 255 / e2
-    dy *= 255 / e2
-    th = 255 * (th - 1) /* scale values */
-
-    if (dx < dy) {
-      /* steep line */
-      x1 = Math.round((e2 + th / 2) / dy) /* start offset */
-      err = x1 * dy - th / 2 /* shift error value to offset width */
-      for (x0 -= x1 * sx; ; y0 += sy) {
-        this.setPixelAA((x1 = x0), y0, err) /* aliasing pre-pixel */
-        for (e2 = dy - err - th; e2 + dy < 255; e2 += dy)
-          this.setPixel((x1 += sx), y0) /* pixel on the line */
-        this.setPixelAA(x1 + sx, y0, e2) /* aliasing post-pixel */
-        if (y0 == y1) break
-        err += dx /* y-step */
-        if (err > 255) {
-          err -= dy
-          x0 += sx
-        } /* x-step */
-      }
-    } else {
-      /* flat line */
-      y1 = Math.round((e2 + th / 2) / dx) /* start offset */
-      err = y1 * dx - th / 2 /* shift error value to offset width */
-      for (y0 -= y1 * sy; ; x0 += sx) {
-        this.setPixelAA(x0, (y1 = y0), err) /* aliasing pre-pixel */
-        for (e2 = dx - err - th; e2 + dx < 255; e2 += dx)
-          this.setPixel(x0, (y1 += sy)) /* pixel on the line */
-        this.setPixelAA(x0, y1 + sy, e2) /* aliasing post-pixel */
-        if (x0 == x1) break
-        err += dy /* x-step */
-        if (err > 255) {
-          err -= dx
-          y0 += sy
-        } /* y-step */
-      }
-    }
-  }
-
   drawSegment(
     x0: number,
     y0: number,
@@ -280,65 +163,17 @@ export class PixelGraphics {
       y1 === undefined
     )
       return
-    if (WASMPATH) this.wasm.drawSegment(x0, y0, x1, y1, th)
-    else this.drawSegmentJS(x0, y0, x1, y1, th)
-  }
-
-  drawSquareJS(x: number, y: number, size: number): void {
-    const dotOffset = size / 2
-    const T = this.transform
-    x = Math.round(T[0] * x + T[1] - dotOffset)
-    y = Math.round(T[2] * y + T[3] - dotOffset)
-    if (!this.inBounds(x, y)) return
-
-    const xStart = x < 0 ? 0 : x // Math.max(0, tx)
-    const xEnd = Math.min(x + size, this.width)
-
-    const yStart = y < 0 ? 0 : y
-    const yEnd = Math.min(y + size, this.height)
-
-    this.drawBounds.update(x, y)
-
-    for (let row = yStart; row < yEnd; row++) {
-      const offset = row * this.width
-      const colStart = offset + xStart
-      const colEnd = offset + xEnd
-      this.buf32.fill(this.color32, colStart, colEnd)
-    }
+    this.wasm.drawSegment(x0, y0, x1, y1, th)
   }
 
   drawSquare(x: number, y: number, size: number): void {
-    if (x && y && size) {
-      if (WASMDOTS) this.wasm.drawSquare(x, y, size)
-      else this.drawSquareJS(x, y, size)
-    }
-  }
-
-  drawCircleJS(x: number, y: number, size: number): void {
-    const T = this.transform
-    x = Math.round(T[0] * x + T[1])
-    y = Math.round(T[2] * y + T[3])
-    if (!this.inBounds(x, y)) return
-
-    const r = size
-    const r2 = r * r
-
-    this.drawBounds.update(x, y)
-
-    for (let cy = -r + 1; cy < r; cy++) {
-      const offset = (cy + y) * this.width
-      const cx = Math.sqrt(r2 - cy * cy)
-      const colStart = (offset + x - cx) | 0
-      const colEnd = (offset + x + cx) | 0
-      this.buf32.fill(this.color32, colStart, colEnd)
-    }
+    if (!(x && y && size)) return
+    this.wasm.drawSquare(x, y, size)
   }
 
   drawCircle(x: number, y: number, size: number): void {
-    if (x && y && size) {
-      if (WASMDOTS) this.wasm.drawCircle(x, y, size)
-      else this.drawCircleJS(x, y, size)
-    }
+    if (!(x && y && size)) return
+    this.wasm.drawCircle(x, y, size)
   }
 
   clip(x: number, max: number): number {
@@ -354,116 +189,13 @@ export class PixelGraphics {
   translate(shiftX: number, shiftY: number): void {
     if (this.drawBounds.isEmpty()) return
 
-    console.time("moveRect")
-    // this.translateJS(shiftX, shiftY)
+    // console.time("moveRect")
 
     this.updateWasmDrawBounds()
     this.wasm.moveRect(shiftX, shiftY)
     this.updateDrawBoundsFromWasm()
 
-    console.timeEnd("moveRect")
-  }
-
-  translateJS(shiftX: number, shiftY: number): void {
-    if (shiftX === 0 && shiftY === 0) return
-    const { x: rx, y: ry, w: rw, h: rh } = this.drawBounds.rect
-
-    // destination rectangle
-    const dx = this.clip(rx + shiftX, this.width)
-    const dy = this.clip(ry + shiftY, this.height)
-    const w = this.clip(rx + rw + shiftX, this.width) - dx
-    const h = this.clip(ry + rh + shiftY, this.height) - dy
-
-    if (w === 0 || h === 0) {
-      /*
-       * If there is no destination rectangle (nothing in view)
-       *  we just clear the source rectangle and exit
-       */
-      this.clear()
-      this.drawBounds.reset()
-      return
-    }
-
-    // source rectangle
-    const sx = dx - shiftX
-    const sy = dy - shiftY
-
-    // clear rectangle
-    const cx = dy != sy ? rx : sx < dx ? sx : dx + w
-    const cy = dy < sy ? ry : dy > sy ? ry + h : sy
-    const cw = dy != sy ? rw : Math.abs(sx - dx)
-    const ch = dy != sy ? rh - h : h
-
-    if (DEBUG && this.debugCanvas) {
-      this.drawDebugBox({ x: sx, y: sy, w, h }, "source", "yellow", true) // draw source rect
-      this.drawDebugBox({ x: dx, y: dy, w, h }, "dest", "blue", true) // draw dest rect
-      this.drawDebugBox({ x: cx, y: cy, w: cw, h: ch }, "clear", "black", true) // draw dest rect
-    }
-
-    if (ch && cw) this.clear({ x: cx, y: cy, w: cw, h: ch })
-
-    const moveRow = (row: number): void => {
-      const sOffset = (sy + row) * this.width
-      const sRowStart = sOffset + sx
-      const sRowEnd = sRowStart + w
-      const rowData = this.buf32.subarray(sRowStart, sRowEnd)
-
-      const dOffset = (dy + row) * this.width
-      const dRowStart = dOffset + dx
-
-      this.buf32.set(rowData, dRowStart)
-
-      // erase the whole source rect row
-      const rStart = sOffset + rx
-      const rEnd = rStart + rw
-      this.buf32.fill(0, rStart, rEnd) // clear the source row
-    }
-
-    /* We only bother copying if the destination rectangle is within
-     * the imageData bounds
-     */
-    if (dy < sy) {
-      /* if the source rectangle is below the destination
-       then we copy rows from the top down */
-      for (let row = 0; row < h; row++) moveRow(row)
-    } else if (dy > sy) {
-      /* otherwise we copy from the bottom row up */
-      for (let row = h - 1; row >= 0; row--) moveRow(row)
-    } else {
-      /* In the rare case that the source and dest rectangles are
-       *  horizontally adjacent to each other, we cannot copy rows directly
-       *  because the rows may overlap. We have to use an intermediate buffer,
-       *  ideally an unused block of the same imageData arraybuffer.
-       */
-      let bufOffset
-
-      // use the first row of imagedata if it is available
-      if (dy > 0) bufOffset = 0
-      // or the last row
-      else if (dy + h < rh) bufOffset = (rh - 1) * this.width
-
-      const rowBuf =
-        bufOffset === undefined
-          ? this.rowBuf.subarray(0, w)
-          : this.buf32.subarray(bufOffset, bufOffset + w)
-
-      for (let y = dy, n = dy + h; y < n; y++) {
-        const offset = y * this.width
-        const sRowStart = offset + sx
-        const sRowEnd = sRowStart + w
-        const dRowStart = offset + dx
-
-        const rowData = this.buf32.subarray(sRowStart, sRowEnd)
-        rowBuf.set(rowData)
-        this.buf32.set(rowBuf, dRowStart)
-      }
-      // now clear the row buffer if it is part of imageData
-      if (bufOffset !== undefined) rowBuf.fill(0)
-    }
-
-    this.drawBounds.reset()
-    this.drawBounds.update(dx, dy)
-    this.drawBounds.update(dx + w, dy + h)
+    // console.timeEnd("moveRect")
   }
 
   // Draw the outline of arbitrary rect object in screen coordinates

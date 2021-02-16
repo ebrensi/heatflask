@@ -360,9 +360,9 @@ function drawPathImageData() {
 
 async function drawPaths(drawDiff?: boolean) {
   if (!_ready) return 0
-  console.time("drawpaths")
+  // console.time("drawpaths")
   await ActivityCollection.drawPaths(pathPxg, drawDiff)
-  console.timeEnd("drawpaths")
+  // console.timeEnd("drawpaths")
   drawPathImageData()
 }
 

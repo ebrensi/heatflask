@@ -80,21 +80,21 @@ export function setColor(color: u32): void {
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: decorator
-// @inline
+@inline
 function inViewportBounds(x: i32, y: i32): boolean {
   return x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT
 }
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: decorator
-// @inline
+@inline
 export function resetDrawBounds(): void {
   BOUNDSEMPTY = true
 }
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: decorator
-// @inline
+@inline
 export function updateDrawBounds(x: i32, y: i32): void {
   if (BOUNDSEMPTY) {
     XMIN = x
@@ -112,7 +112,7 @@ export function updateDrawBounds(x: i32, y: i32): void {
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: decorator
-// @inline
+@inline
 function clip(v: i32, vmax: i32): i32 {
   if (v < 0) return <i32>0
   else if (v > vmax) return vmax
@@ -121,7 +121,7 @@ function clip(v: i32, vmax: i32): i32 {
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: decorator
-// @inline
+@inline
 export function clearRect(x: i32, y: i32, w: i32, h: i32): void {
   if (w == 0 || h == 0) return
   const widthInBytes = w << 2
@@ -134,7 +134,7 @@ export function clearRect(x: i32, y: i32, w: i32, h: i32): void {
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: decorator
-// @inline
+@inline
 function moveRow(
   sx: i32,
   sy: i32,
@@ -222,7 +222,7 @@ export function moveRect(shiftX: i32, shiftY: i32): void {
  */
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: decorator
-// @inline
+@inline
 export function drawSquare(fx: f64, fy: f64, size: f64): void {
   const dotOffset: f64 = size / <f64>2
   const s = <i32>size
@@ -247,7 +247,7 @@ export function drawSquare(fx: f64, fy: f64, size: f64): void {
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: decorator
-// @inline
+@inline
 export function drawCircle(fx: f64, fy: f64, r: i32): void {
   const x = <i32>Math.round(TA1 * fx + TB1)
   const y = <i32>Math.round(TA2 * fy + TB2)
@@ -271,7 +271,7 @@ export function drawCircle(fx: f64, fy: f64, r: i32): void {
  */
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: decorator
-// @inline
+@inline
 function fill32(start: usize, end: usize, val32: i32): void {
   // const endByte = (end << 2) + DOT_IMAGEDATA_OFFSET
   // for (let i = (start << 2)+ DOT_IMAGEDATA_OFFSET; i < endByte; i += 4) {
@@ -295,7 +295,7 @@ function fill32(start: usize, end: usize, val32: i32): void {
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: decorator
-// @inline
+@inline
 function setPixelAA(x: i32, y: i32, a: i32): void {
   const alpha = 0xff - a
   const color = MASKEDCOLOR | (alpha << ALPHAPOS)
@@ -313,7 +313,7 @@ function setPixelAA(x: i32, y: i32, a: i32): void {
 // This pad is necessary because sometimes drawSegment draws Anti-Aliased points past its bundaries
 const pad: f64 = 3
 
-// @inline
+@inline
 function CohenSoutherlandCode(x: f64, y: f64): u8 {
   let code: u8 = 0b0000 // initialised as being inside of [[clip window]]
 
