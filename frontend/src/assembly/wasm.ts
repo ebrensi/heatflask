@@ -232,7 +232,7 @@ export function drawSquare(fx: f64, fy: f64, size: f64): void {
   updateDrawBounds(x, y)
 
   const xStart = max<i32>(0, x) // Math.max(0, tx)
-  const xEnd = min<i32>(x + s, WIDTH-1)
+  const xEnd = min<i32>(x + s, WIDTH)
 
   const yStart = max<i32>(0, y)
   const yEnd = min<i32>(y + s, HEIGHT)
@@ -275,14 +275,14 @@ export function drawCircle(fx: f64, fy: f64, r: i32): void {
 // @ts-ignore: decorator
 @inline
 function fill32(start: usize, end: usize, val32: i32): void {
-  // const endByte = (end << 2) + DOT_IMAGEDATA_OFFSET
-  // for (let i = (start << 2)+ DOT_IMAGEDATA_OFFSET; i < endByte; i += 4) {
-  //   store<i32>(i, val32)
-  // }
+  const endByte = (end << 2) + DOT_IMAGEDATA_OFFSET
+  for (let i = (start << 2)+ DOT_IMAGEDATA_OFFSET; i < endByte; i += 4) {
+    store<i32>(i, val32)
+  }
 
-  const startByte = (start << 2) + DOT_IMAGEDATA_OFFSET
-  store<i32>(startByte, val32)
-  memory.repeat(startByte + 4, startByte, 4, end - start - 1)
+  // const startByte = (start << 2) + DOT_IMAGEDATA_OFFSET
+  // store<i32>(startByte, val32)
+  // memory.repeat(startByte + 4, startByte, 4, end - start - 1)
 }
 
 /*
@@ -462,5 +462,48 @@ export function drawSegment(fx0: f64, fy0: f64, fx1: f64, fy1: f64): void {
       err += dx
       y0 += sy
     }
+  }
+}
+
+
+/*
+ * Activity data processing functions
+ */
+const MAX_LATITUDE: f32 = 85.0511287798
+const EARTH_RADIUS: f32 = 6378137.0
+const RAD: f32 = Mathf.PI / 180.0
+
+// CRS transformation
+const S: f32 = 0.5 / (Mathf.PI * EARTH_RADIUS)
+const A: f32 = S
+const B: f32 = 0.5
+const C: f32 = -S
+const D: f32 = 0.5
+
+/**
+ * This is a streamlined version of Leaflet's EPSG:3857 projection.
+ *   Given a pointer to a block of memory with nPoints 32-bit float
+ *   latLng pairs, this function converts them in-place to
+ *   32-bit floats of rectangular coordinates.
+ */
+export function CRSproject(startLoc: usize, nPoints: i32, zoom: u8 = 0): void {
+  const scale: f32 = <f32>(1 << (8 + zoom))
+
+  for (let i: i32 = 0; i < nPoints; i++) {
+    const loc = startLoc + (i << 2)
+    let px: f32 = load<f32>(loc) // latitude
+    let py: f32 = load<f32>(loc + 4) // longitude
+
+    px = Mathf.max(Mathf.min(MAX_LATITUDE, px), -MAX_LATITUDE)
+    const sin = Mathf.sin(px * RAD)
+
+    px = EARTH_RADIUS * py * RAD
+    py = (EARTH_RADIUS * Mathf.log((1 + sin) / (1 - sin))) / 2
+
+    px = scale * (A * px + B)
+    py = scale * (C * py + D)
+
+    store<f32>(loc, px)
+    store<f32>(loc + 4, py)
   }
 }

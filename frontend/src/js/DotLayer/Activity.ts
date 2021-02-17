@@ -3,7 +3,7 @@
  *  classes.
  */
 import { latLng2pxBounds, latLng2px } from "./ViewBox"
-import { decode as decodePolyline } from "./Codecs/Polyline"
+import { decode as decodePolyline, lengthInPoints } from "./Codecs/Polyline"
 import { simplify as simplifyPath } from "./Simplifier"
 import { RunningStatsCalculator } from "./stats"
 import { LatLngBounds } from "../myLeaflet"
@@ -99,6 +99,7 @@ export class Activity {
   n: number
   pxGaps: number[]
   _containedInMapBounds: boolean
+  idx?: number
 
   constructor({
     _id,
@@ -155,6 +156,9 @@ export class Activity {
      */
     const dStats = new RunningStatsCalculator()
     const sqDists = []
+
+    if (lengthInPoints(polyline) != n) throw "length mismatch"
+
     const latlngs = decodePolyline(polyline)
 
     // Set the first point of points to be the projected first latlng pair

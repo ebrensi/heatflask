@@ -65,7 +65,7 @@ export function* decode(
   }
 }
 
-function lengthInPoints(str: string): number {
+export function lengthInPoints(str: string): number {
   let byte
   let count = 0
   let index = 0

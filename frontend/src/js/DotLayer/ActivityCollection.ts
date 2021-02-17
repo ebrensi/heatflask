@@ -18,7 +18,6 @@ import type { ActivitySpec } from "./Activity"
 export const items: Map<number, Activity> = new Map()
 
 let itemsArray: Activity[]
-
 export function add(specs: ActivitySpec): void {
   const A = new Activity(specs)
   items.set(A.id, A)
@@ -39,6 +38,19 @@ export function reset(): void {
   for (let i = 0; i < itemsArray.length; i++) {
     itemsArray[i].idx = i
   }
+
+  /*
+   * We will pack all relevant data into linear memory
+   */
+  let pointsBufSize = 0
+  let timeBufSize = 0
+  for (let i = 0; i < itemsArray.length; i++) {
+    const A = itemsArray[i]
+    pointsBufSize += A.px.length << 2
+    timeBufSize += A.time.byteLength
+  }
+  console.log({ pointsBufSize, timeBufSize })
+
   inView.resize(itemsArray.length)
   lastInView.resize(itemsArray.length)
 }
