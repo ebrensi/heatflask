@@ -10,7 +10,6 @@ import { options } from "./Defaults"
 import { BitSet } from "../BitSet"
 import { queueTask, nextTask } from "../appUtil"
 import { LatLngBounds } from "../myLeaflet"
-import { WASMPATH, WASMDOTS } from "./PixelGraphics"
 
 import type { Bounds } from "../appUtil"
 import type { PixelGraphics } from "./PixelGraphics"
@@ -22,17 +21,6 @@ let itemsArray: Activity[]
 
 export function add(specs: ActivitySpec): void {
   const A = new Activity(specs)
-  // A._selected = A.selected
-  // Object.defineProperty(A, "selected", {
-  //   get() {
-  //     return this._selected
-  //   },
-
-  //   set(value) {
-  //     this._selected = value
-  //   },
-  // })
-
   items.set(A.id, A)
 }
 
@@ -201,7 +189,7 @@ export async function drawPaths(
     count += A.forEachSegment(drawSegFunc, drawDiff)
   })
 
-  WASMPATH && pxg.updateDrawBoundsFromWasm()
+  pxg.updateDrawBoundsFromWasm()
 
   if (!pxg.drawBounds.isEmpty()) {
     // add padding to the bounds, but only if they have changed.
@@ -247,7 +235,7 @@ export async function drawDots(
     count += A.forEachDot(drawFunc, tsecs, T, drawDiff)
   })
 
-  WASMDOTS && pxg.updateDrawBoundsFromWasm()
+  pxg.updateDrawBoundsFromWasm()
 
   if (!pxg.drawBounds.isEmpty()) {
     const newArea = (bounds[2] - bounds[0]) * (bounds[3] - bounds[1])

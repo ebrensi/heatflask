@@ -232,7 +232,7 @@ export function drawSquare(fx: f64, fy: f64, size: f64): void {
   updateDrawBounds(x, y)
 
   const xStart = max<i32>(0, x) // Math.max(0, tx)
-  const xEnd = min<i32>(x + s, WIDTH)
+  const xEnd = min<i32>(x + s, WIDTH-1)
 
   const yStart = max<i32>(0, y)
   const yEnd = min<i32>(y + s, HEIGHT)
@@ -255,12 +255,14 @@ export function drawCircle(fx: f64, fy: f64, r: i32): void {
   updateDrawBounds(x, y)
 
   const r2 = r * r
+  const yStart = max<i32>(-y, -r+1)
+  const yEnd = min<i32>(r, HEIGHT - y)
 
-  for (let cy = -r + 1; cy < r; cy++) {
+  for (let cy = yStart; cy < yEnd; cy++) {
     const offset = (cy + y) * WIDTH
     const cx = <i32>Math.round(Math.sqrt(<f64>(r2 - cy * cy)))
-    const colStart = offset + x - cx
-    const colEnd = offset + x + cx
+    const colStart = offset + max<i32>(0, x - cx)
+    const colEnd = offset + min<i32>(x + cx, WIDTH)
     fill32(colStart, colEnd, COLOR)
   }
 }
