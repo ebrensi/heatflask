@@ -111,7 +111,7 @@ TileLayer.include({
   },
 
   _createCurrentCoords: function (originalCoords) {
-    var currentCoords = this._wrapCoords(originalCoords)
+    const currentCoords = this._wrapCoords(originalCoords)
 
     currentCoords.fallback = true
 
@@ -121,20 +121,17 @@ TileLayer.include({
   _originalTileOnError: TileLayer.prototype._tileOnError,
 
   _tileOnError: function (done, tile, e) {
-    var layer = this, // `this` is bound to the Tile Layer in TileLayer.prototype.createTile.
-      originalCoords = tile._originalCoords,
-      currentCoords = (tile._currentCoords =
-        tile._currentCoords || layer._createCurrentCoords(originalCoords)),
-      fallbackZoom = (tile._fallbackZoom =
-        tile._fallbackZoom === undefined
-          ? originalCoords.z - 1
-          : tile._fallbackZoom - 1),
-      scale = (tile._fallbackScale = (tile._fallbackScale || 1) * 2),
-      tileSize = layer.getTileSize(),
-      style = tile.style,
-      newUrl,
-      top,
-      left
+    const layer = this // `this` is bound to the Tile Layer in TileLayer.prototype.createTile.
+    const originalCoords = tile._originalCoords
+    const currentCoords = (tile._currentCoords =
+      tile._currentCoords || layer._createCurrentCoords(originalCoords))
+    const fallbackZoom = (tile._fallbackZoom =
+      tile._fallbackZoom === undefined
+        ? originalCoords.z - 1
+        : tile._fallbackZoom - 1)
+    const scale = (tile._fallbackScale = (tile._fallbackScale || 1) * 2)
+    const tileSize = layer.getTileSize()
+    const style = tile.style
 
     // If no lower zoom tiles are available, fallback to errorTile.
     if (fallbackZoom < layer.options.minNativeZoom) {
@@ -147,16 +144,16 @@ TileLayer.include({
     currentCoords.y = Math.floor(currentCoords.y / 2)
 
     // Generate new src path.
-    newUrl = layer.getTileUrl(currentCoords)
+    const newUrl = layer.getTileUrl(currentCoords)
 
     // Zoom replacement img.
     style.width = tileSize.x * scale + "px"
     style.height = tileSize.y * scale + "px"
 
     // Compute margins to adjust position.
-    top = (originalCoords.y - currentCoords.y * scale) * tileSize.y
+    const top = (originalCoords.y - currentCoords.y * scale) * tileSize.y
     style.marginTop = -top + "px"
-    left = (originalCoords.x - currentCoords.x * scale) * tileSize.x
+    const left = (originalCoords.x - currentCoords.x * scale) * tileSize.x
     style.marginLeft = -left + "px"
 
     // Crop (clip) image.
@@ -184,9 +181,9 @@ TileLayer.include({
   },
 
   getTileUrl: function (coords) {
-    var z = (coords.z = coords.fallback ? coords.z : this._getZoomForUrl())
+    const z = (coords.z = coords.fallback ? coords.z : this._getZoomForUrl())
 
-    var data = {
+    const data = {
       r: Browser.retina ? "@2x" : "",
       s: this._getSubdomain(coords),
       x: coords.x,
@@ -194,7 +191,7 @@ TileLayer.include({
       z: z,
     }
     if (this._map && !this._map.options.crs.infinite) {
-      var invertedY = this._globalTileRange.max.y - coords.y
+      const invertedY = this._globalTileRange.max.y - coords.y
       if (this.options.tms) {
         data["y"] = invertedY
       }
@@ -271,7 +268,7 @@ TileLayer.include({
   // Modified TileLayer.getTileUrl, this will use the zoom given by the parameter coords
   //  instead of the maps current zoomlevel.
   _getTileUrl: function (coords) {
-    var zoom = coords.z
+    let zoom = coords.z
     if (this.options.zoomReverse) {
       zoom = this.options.maxZoom - zoom
     }

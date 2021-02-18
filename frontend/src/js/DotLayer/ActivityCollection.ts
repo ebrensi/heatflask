@@ -18,6 +18,8 @@ import type { ActivitySpec } from "./Activity"
 export const items: Map<number, Activity> = new Map()
 
 let itemsArray: Activity[]
+let memory: WebAssembly.Memory
+
 export function add(specs: ActivitySpec): void {
   const A = new Activity(specs)
   items.set(A.id, A)
@@ -49,7 +51,25 @@ export function reset(): void {
     pointsBufSize += A.px.length << 2
     timeBufSize += A.time.byteLength
   }
-  console.log({ pointsBufSize, timeBufSize })
+
+  const numPages = ((pointsBufSize + timeBufSize + 0xffff) & ~0xffff) >>> 16
+  console.log({ pointsBufSize, timeBufSize, numPages })
+
+  memory = new WebAssembly.Memory({ initial: numPages })
+  const buf = memory.buffer
+  // const buf = new ArrayBuffer(pointsBufSize + timeBufSize)
+  const f32view = new Float32Array(buf, 0, pointsBufSize >> 2)
+  const uint8view = new Uint8Array(buf, pointsBufSize, timeBufSize)
+  let pos32 = 0
+  let pos8 = 0
+  for (let i = 0; i < itemsArray.length; i++) {
+    const A = itemsArray[i]
+    f32view.set(A.px, pos32)
+    A.px = f32view.subarray(pos32, (pos32 += A.px.length))
+
+    uint8view.set(new Uint8Array(A.time), pos8)
+    A.time = uint8view.subarray(pos8, (pos8 += A.time.byteLength))
+  }
 
   inView.resize(itemsArray.length)
   lastInView.resize(itemsArray.length)

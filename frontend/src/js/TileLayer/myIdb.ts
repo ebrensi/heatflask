@@ -6,16 +6,24 @@ const MAX_TRANSACTION_SIZE = 200
  * adapted from IDB-Keyval by Jake Archibald
  */
 export class Store {
-  constructor(dbName, storeName, keyPath) {
+  storeName: string
+  _dbp: Promise<IDBDatabase>
+
+  constructor(dbName: string, storeName: string, keyPath: string) {
     this.storeName = storeName
     this._dbp = this._initialize(dbName, storeName, keyPath)
   }
 
-  _initialize(dbName, storeName, keyPath, version) {
+  _initialize(
+    dbName: string,
+    storeName: string,
+    keyPath?: string,
+    version?: number
+  ): Promise<IDBDatabase> {
     return new Promise((resolve, reject) => {
       const openreq = indexedDB.open(dbName, version)
       const self = this
-      let db
+      let db: IDBDatabase
 
       openreq.onerror = onerror
       openreq.onupgradeneeded = onupgradeneeded
@@ -60,7 +68,10 @@ export class Store {
     })
   }
 
-  _withIDBStore(type, callback) {
+  _withIDBStore(
+    type: IDBTransactionMode,
+    callback: (t: IDBObjectStore) => void
+  ) {
     return this._dbp.then(
       (db) =>
         new Promise((resolve, reject) => {
