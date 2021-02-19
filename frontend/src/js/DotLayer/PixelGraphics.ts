@@ -50,13 +50,13 @@ export class PixelGraphics {
     this.lineWidth = 1
     this.transform = [1, 0, 1, 0]
 
-    if (width && height) {
-      getWasm().then((exports) => {
-        this.wasm = exports
-        this.wasm.setAlphaMask(alphaMask, alphaPos)
+    getWasm().then((exports) => {
+      this.wasm = exports
+      this.wasm.setAlphaMask(alphaMask, alphaPos)
+      if (width && height) {
         this.setSize(width, height)
-      })
-    }
+      }
+    })
   }
 
   get height(): number {

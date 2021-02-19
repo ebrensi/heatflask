@@ -4,9 +4,8 @@
 import { Layer, DomUtil, Browser, setOptions, Control } from "../myLeaflet"
 import * as ViewBox from "./ViewBox"
 import * as ActivityCollection from "./ActivityCollection"
-import { PixelGraphics } from "./PixelGraphics"
 import { MAP_INFO } from "../Env"
-import { nextTask, sleep, nextAnimationFrame } from "../appUtil"
+import { nextTask, sleep, nextAnimationFrame, Bounds } from "../appUtil"
 import { vParams } from "../Model"
 // import * as WorkerPool from "./WorkerPool.js"
 
@@ -29,14 +28,14 @@ const CONTINUOUS_REDRAWS = true
 const MIN_REDRAW_DELAY = 100 // milliseconds
 
 let dotCanvas: HTMLCanvasElement
-let dotPxg: PixelGraphics
 let pathCanvas: HTMLCanvasElement
-let pathPxg: PixelGraphics
 let debugCanvas: HTMLCanvasElement
 
 const dotCanvasPane = "shadowPane"
 const pathCanvasPane = "overlayPane"
 const debugCanvasPane = "overlayPane"
+
+const _drawBounds = new Bounds()
 
 let _map: LMap
 let _ready: boolean
@@ -82,20 +81,20 @@ export const DotLayer = Layer.extend({
 
     // dotlayer canvas
     dotCanvas = addCanvasOverlay(dotCanvasPane)
-    dotPxg = new PixelGraphics(dotCanvas.width, dotCanvas.height)
 
     /*
      * The Path Canvas is for activity paths, which are made up of
      * a bunch of segments.
      */
     pathCanvas = addCanvasOverlay(pathCanvasPane)
-    pathPxg = new PixelGraphics(pathCanvas.width, pathCanvas.height)
+
+    const { width, height } = dotCanvas
+    ActivityCollection.pxg.setSize(width, height)
 
     if (DEBUG_BORDERS) {
       // create Canvas for debugging canvas stuff
       debugCanvas = addCanvasOverlay(debugCanvasPane)
-      pathPxg.debugCanvas = debugCanvas
-      dotPxg.debugCanvas = debugCanvas
+      ActivityCollection.pxg.debugCanvas = debugCanvas
     }
 
     ViewBox.setMap(_map)
@@ -214,8 +213,7 @@ async function onResize(): Promise<void> {
 
   ViewBox.resize(newMapSize)
 
-  dotPxg.setSize(x, y)
-  pathPxg.setSize(x, y)
+  ActivityCollection.pxg.setSize(x, y)
   dotCtxUpdate()
 
   console.log(`resized to ${x} x ${y}`)
@@ -312,22 +310,17 @@ async function redraw(forceFullRedraw?: boolean) {
   // reset the canvases to to align with the screen and update the ViewBox
   // location relative to the map's pxOrigin
   const shift = ViewBox.calibrate()
-  pathPxg.setTransform(ViewBox.transform)
-  dotPxg.setTransform(ViewBox.transform)
-
   if (drawDiff) {
-    if (_options.showPaths) {
-      pathPxg.translate(shift.x, shift.y)
-      // drawPathImageData()
-    }
-    if (_paused) {
-      dotPxg.translate(shift.x, shift.y)
-      // drawDotImageData()
-    }
+    ActivityCollection.pxg.translate(
+      shift.x,
+      shift.y,
+      _options.showPaths,
+      _paused
+    )
   }
-
   await ActivityCollection.updateContext(ViewBox.pxBounds, ViewBox.zoomLevel)
 
+  ActivityCollection.pxg.setTransform(ViewBox.transform)
   const promises = []
   if (_options.showPaths) {
     await nextTask()
@@ -344,37 +337,40 @@ async function redraw(forceFullRedraw?: boolean) {
 }
 
 function clearCanvases() {
-  const pr = pathPxg.drawBounds.rect
-  pathCanvas.getContext("2d").clearRect(pr.x, pr.y, pr.w, pr.h)
+  _drawBounds.clear()
+  _drawBounds.updateBounds(ActivityCollection.pxg.pathBounds)
+  _drawBounds.updateBounds(ActivityCollection.pxg.dotBounds)
 
-  const dr = dotPxg.drawBounds.rect
-  dotCanvas.getContext("2d").clearRect(dr.x, dr.y, dr.w, dr.h)
+  const r = _drawBounds.rect
+  dotCanvas.getContext("2d").clearRect(r.x, r.y, r.w, r.h)
 }
 
 function drawPathImageData() {
-  if (pathPxg.drawBounds.isEmpty()) return
-  const r = pathPxg.drawBounds.rect
+  if (ActivityCollection.pxg.pathBounds.isEmpty()) return
+  const r = ActivityCollection.pxg.pathBounds.rect
   const ctx = pathCanvas.getContext("2d")
-  ctx.putImageData(pathPxg.imageData, 0, 0, r.x, r.y, r.w, r.h)
+  const imageData = ActivityCollection.pxg.pathImageData
+  ctx.putImageData(imageData, 0, 0, r.x, r.y, r.w, r.h)
 }
 
 async function drawPaths(drawDiff?: boolean) {
   if (!_ready) return 0
   // console.time("drawpaths")
-  await ActivityCollection.drawPaths(pathPxg, drawDiff)
+  await ActivityCollection.pxg.drawPaths(drawDiff)
   // console.timeEnd("drawpaths")
   drawPathImageData()
 }
 
 async function drawDotImageData() {
-  if (dotPxg.drawBounds.isEmpty()) return
+  if (ActivityCollection.pxg.dotBounds.isEmpty()) return
   const ctx = dotCanvas.getContext("2d")
-  const r = dotPxg.drawBounds.rect
+  const r = ActivityCollection.pxg.dotBounds.rect
+  const imageData = ActivityCollection.pxg.dotImageData
   if (_options.dotShadows.enabled) {
-    const img = await createImageBitmap(dotPxg.imageData, r.x, r.y, r.w, r.h)
+    const img = await createImageBitmap(imageData, r.x, r.y, r.w, r.h)
     ctx.drawImage(img, r.x, r.y)
   } else {
-    ctx.putImageData(dotPxg.imageData, 0, 0, r.x, r.y, r.w, r.h)
+    ctx.putImageData(imageData, 0, 0, r.x, r.y, r.w, r.h)
   }
 }
 

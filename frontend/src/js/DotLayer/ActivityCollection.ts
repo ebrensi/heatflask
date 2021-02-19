@@ -10,15 +10,15 @@ import { options } from "./Defaults"
 import { BitSet } from "../BitSet"
 import { queueTask, nextTask } from "../appUtil"
 import { LatLngBounds } from "../myLeaflet"
+import { PixelGraphics } from "./PixelGraphics"
 
 import type { Bounds } from "../appUtil"
-import type { PixelGraphics } from "./PixelGraphics"
 import type { ActivitySpec } from "./Activity"
 
 export const items: Map<number, Activity> = new Map()
 
 let itemsArray: Activity[]
-let memory: WebAssembly.Memory
+export const pxg = new PixelGraphics()
 
 export function add(specs: ActivitySpec): void {
   const A = new Activity(specs)
@@ -55,9 +55,7 @@ export function reset(): void {
   const numPages = ((pointsBufSize + timeBufSize + 0xffff) & ~0xffff) >>> 16
   console.log({ pointsBufSize, timeBufSize, numPages })
 
-  memory = new WebAssembly.Memory({ initial: numPages })
-  const buf = memory.buffer
-  // const buf = new ArrayBuffer(pointsBufSize + timeBufSize)
+  const buf = new ArrayBuffer(pointsBufSize + timeBufSize)
   const f32view = new Float32Array(buf, 0, pointsBufSize >> 2)
   const uint8view = new Uint8Array(buf, pointsBufSize, timeBufSize)
   let pos32 = 0
