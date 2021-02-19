@@ -34,15 +34,7 @@ async function wasmBrowserInstantiate(
 ): Promise<WebAssembly.WebAssemblyInstantiatedSource> {
   let response = undefined
 
-  if (!importObject) {
-    importObject = {
-      env: {
-        abort(_msg: string, _file: string, line: number, column: number): void {
-          console.error("abort called at wasm.ts:" + line + ":" + column)
-        },
-      },
-    }
-  }
+  importObject = importObject || defaultWasmImports
 
   // Check if the browser supports streaming instantiation
   if (WebAssembly.instantiateStreaming) {
