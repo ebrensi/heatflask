@@ -3,22 +3,20 @@
 declare function logi(v0: i64, v1?: i64, v2?: i64, v3?: i64): void
 declare function logf(v0: f64, v1?: f64, v2?: f64, v3?: f64): void
 
-export let DOT_IMAGEDATA_OFFSET: usize = 0
-export let DOT_IMAGEDATA_LENGTH: usize = 0
-export let PATH_IMAGEDATA_OFFSET: usize = 0
-export let PATH_IMAGEDATA_LENGTH: usize = 0
+export let PATH_IMAGEDATA_OFFSET: usize = NaN
+export let DOT_IMAGEDATA_OFFSET: usize = NaN
 
-// draw bounds
-export let XMIN: i32
-export let XMAX: i32
-export let YMIN: i32
-export let YMAX: i32
-export let BOUNDSEMPTY = true
+// reserve 4 32-bit words for each set of bounds
+// [xmin, xmax, ymin, ymax]
+export const PATH_DRAW_BOUNDS = memory.data(4 << 5)
+export const DOT_DRAW_BOUNDS = memory.data(4 << 5)
 
 let WIDTH: i32
 let HEIGHT: i32
 
-// transform
+// transform: 4 x 64-bit float
+// [TA1, TB1, TA2, TB2]
+// export const TRANSFORM = memory.data(4 << 6)
 let TA1: f64
 let TB1: f64
 let TA2: f64
@@ -44,19 +42,34 @@ let LINEWIDTH: i32 = 1
 //   return <i32>(v && 0x00000000ffffffff)
 // }
 
+export function allocateViewport(width: i32, height: i32): usize {
+  WIDTH = width
+  HEIGHT = height
+  const viewportPixelSize = width * height
+  const viewportBufSize = viewportPixelSize << 2
+  const totBufSize: usize = viewportBufSize << 1
+  if (isNaN(PATH_IMAGEDATA_OFFSET)) {
+    PATH_IMAGEDATA_OFFSET = heap.alloc(totBufSize)
+  } else {
+    PATH_IMAGEDATA_OFFSET = heap.realloc(DOT_IMAGEDATA_OFFSET, totBufSize)
+  }
+
+  DOT_IMAGEDATA_OFFSET = PATH_IMAGEDATA_OFFSET + viewportBufSize
+
+  return PATH_IMAGEDATA_OFFSET
+}
+
 /*
  * Getters and Setters
  */
-export function setSize(width: i32, height: i32): void {
-  WIDTH = width
-  HEIGHT = height
-  logi(WIDTH, HEIGHT)
-}
-
 export function setTransform(a1: f64, b1: f64, a2: f64, b2: f64): void {
+  // store<f64>(TRANSFORM, a1)
+  // store<f64>(TRANSFORM + 64, b1)
+  // store<f64>(TRANSFORM + 128, a2)
+  // store<f64>(TRANSFORM + 256, b2)
   TA1 = a1
-  TA2 = a2
   TB1 = b1
+  TA2 = a2
   TB2 = b2
 }
 
@@ -78,40 +91,44 @@ export function setColor(color: u32): void {
   MASKEDCOLOR = ALPHAMASK & COLOR
 }
 
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore: decorator
 @inline
 function inViewportBounds(x: i32, y: i32): boolean {
   return x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT
 }
 
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore: decorator
 @inline
-export function resetDrawBounds(): void {
-  BOUNDSEMPTY = true
+export function resetDrawBounds(loc: usize): void {
+  store<i32>(loc, -1)
 }
 
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore: decorator
 @inline
-export function updateDrawBounds(x: i32, y: i32): void {
-  if (BOUNDSEMPTY) {
-    XMIN = x
-    XMAX = x
-    YMIN = y
-    YMAX = y
-    BOUNDSEMPTY = false
+function boundsEmpty(loc: usize): boolean {
+  return load<i32>(loc) == -1
+}
+
+@inline
+export function updateDrawBounds(loc: usize, x: i32, y: i32): void {
+  const xmin = loc
+  const ymin = loc + 32
+  @lazy
+  const xmax = loc + 64
+  @lazy
+  const ymax = loc + 96
+
+  if (boundsEmpty(loc)) {
+    store<i32>(xmin, x)
+    store<i32>(ymin, y)
+    store<i32>(xmax, x)
+    store<i32>(ymax, y)
     return
   }
-  if (x < XMIN) XMIN = x
-  else if (x > XMAX) XMAX = x
-  if (y < YMIN) YMIN = y
-  else if (y > YMAX) YMAX = y
+  if (x < load<i32>(xmin)) store<i32>(xmin, x)
+  else if (x < load<i32>(xmax)) store<i32>(xmax, x)
+
+  if (y < load<i32>(ymin)) store<i32>(ymin, y)
+  else if (y > load<i32>(ymax)) store<i32>(ymax, y)
 }
 
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore: decorator
 @inline
 function clip(v: i32, vmax: i32): i32 {
   if (v < 0) return <i32>0
@@ -119,23 +136,20 @@ function clip(v: i32, vmax: i32): i32 {
   return v
 }
 
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore: decorator
 @inline
-export function clearRect(x: i32, y: i32, w: i32, h: i32): void {
+export function clearRect(loc: usize, x: i32, y: i32, w: i32, h: i32): void {
   if (w == 0 || h == 0) return
   const widthInBytes = w << 2
   const lastRow = y + h
   for (let row = y; row < lastRow; row++) {
     const offsetBytes = (row * WIDTH + x) << 2
-    memory.fill(offsetBytes, 0, widthInBytes)
+    memory.fill(loc + offsetBytes, 0, widthInBytes)
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore: decorator
 @inline
 function moveRow(
+  loc: usize,
   sx: i32,
   sy: i32,
   dx: i32,
@@ -145,7 +159,7 @@ function moveRow(
 ): void {
   const sOffset = (sx + (sy + row) * WIDTH) << 2
   const dOffset = (dx + (dy + row) * WIDTH) << 2
-  memory.copy(dOffset, sOffset, wBytes)
+  memory.copy(loc + dOffset, sOffset, wBytes)
 }
 
 /*
@@ -153,13 +167,18 @@ function moveRow(
  *  of an imageData object to another, possibly overlapping
  *  rectanglular region of equal size.
  */
-export function moveRect(shiftX: i32, shiftY: i32): void {
-  if (shiftX == 0 && shiftY == 0) return
+export function moveRect(
+  bounds: usize,
+  loc: usize,
+  shiftX: i32,
+  shiftY: i32
+): void {
+  if ((shiftX == 0 && shiftY == 0) || boundsEmpty(bounds)) return
 
-  const rx = XMIN
-  const ry = YMIN
-  const rw = XMAX - XMIN
-  const rh = YMAX - YMIN
+  const rx = load<i32>(bounds) // xmin
+  const ry = load<i32>(bounds + 32) // ymin
+  const rw = load<i32>(bounds + 64) - rx // xmax - xmin
+  const rh = load<i32>(bounds + 96) - ry // ymax - ymin
 
   // destination rectangle
   const dx = clip(rx + shiftX, WIDTH)
@@ -172,8 +191,8 @@ export function moveRect(shiftX: i32, shiftY: i32): void {
      * If there is no destination rectangle (nothing in view)
      *  we just clear the source rectangle and exit
      */
-    clearRect(rx, ry, rw, rh)
-    resetDrawBounds()
+    clearRect(loc, rx, ry, rw, rh)
+    resetDrawBounds(bounds)
     return
   }
 
@@ -187,7 +206,7 @@ export function moveRect(shiftX: i32, shiftY: i32): void {
   const cw = dy != sy ? rw : abs<i32>(sx - dx)
   const ch = dy != sy ? rh - h : h
 
-  if (cw && ch) clearRect(cx, cy, cw, ch)
+  if (cw && ch) clearRect(loc, cx, cy, cw, ch)
 
   /* We only bother copying if the destination rectangle is within
    * the imageData bounds
@@ -197,31 +216,29 @@ export function moveRect(shiftX: i32, shiftY: i32): void {
     /* if the source rectangle is below the destination
      then we copy rows from the top down */
     for (let row = 0; row < h; row++) {
-      moveRow(sx, sy, dx, dy, row, widthInBytes)
-      memory.fill((rx + (sy + row) * WIDTH) << 2, 0, rw << 2)
+      moveRow(loc, sx, sy, dx, dy, row, widthInBytes)
+      memory.fill((loc + (rx + (sy + row) * WIDTH)) << 2, 0, rw << 2)
     }
   } else if (dy > sy) {
     /* otherwise we copy from the bottom row up */
     for (let row = h - 1; row >= 0; row--) {
-      moveRow(sx, sy, dx, dy, row, widthInBytes)
-      memory.fill((rx + (sy + row) * WIDTH) << 2, 0, rw << 2)
+      moveRow(loc, sx, sy, dx, dy, row, widthInBytes)
+      memory.fill((loc + (rx + (sy + row) * WIDTH)) << 2, 0, rw << 2)
     }
   } else {
     for (let row = 0; row < h; row++) {
-      moveRow(sx, sy, dx, dy, row, widthInBytes)
+      moveRow(loc, sx, sy, dx, dy, row, widthInBytes)
     }
   }
 
-  resetDrawBounds()
-  updateDrawBounds(dx, dy)
-  updateDrawBounds(dx + w, dy + h)
+  resetDrawBounds(bounds)
+  updateDrawBounds(bounds, dx, dy)
+  updateDrawBounds(bounds, dx + w, dy + h)
 }
 
 /*
  *  **** Dot Drawing functions ****
  */
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore: decorator
 @inline
 export function drawSquare(fx: f64, fy: f64, size: f64): void {
   const dotOffset: f64 = size / <f64>2
@@ -229,7 +246,7 @@ export function drawSquare(fx: f64, fy: f64, size: f64): void {
   const x = <i32>Math.round(TA1 * fx + TB1 - dotOffset)
   const y = <i32>Math.round(TA2 * fy + TB2 - dotOffset)
   if (!inViewportBounds(x, y)) return
-  updateDrawBounds(x, y)
+  updateDrawBounds(DOT_DRAW_BOUNDS, x, y)
 
   const xStart = max<i32>(0, x) // Math.max(0, tx)
   const xEnd = min<i32>(x + s, WIDTH)
@@ -245,17 +262,15 @@ export function drawSquare(fx: f64, fy: f64, size: f64): void {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore: decorator
 @inline
 export function drawCircle(fx: f64, fy: f64, r: i32): void {
   const x = <i32>Math.round(TA1 * fx + TB1)
   const y = <i32>Math.round(TA2 * fy + TB2)
   if (!inViewportBounds(x, y)) return
-  updateDrawBounds(x, y)
+  updateDrawBounds(DOT_DRAW_BOUNDS, x, y)
 
   const r2 = r * r
-  const yStart = max<i32>(-y, -r+1)
+  const yStart = max<i32>(-y, -r + 1)
   const yEnd = min<i32>(r, HEIGHT - y)
 
   for (let cy = yStart; cy < yEnd; cy++) {
@@ -271,12 +286,10 @@ export function drawCircle(fx: f64, fy: f64, r: i32): void {
  * Fills a range of adresses with a 32-bit values
  * repeat a 4-byte pattern
  */
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore: decorator
 @inline
 function fill32(start: usize, end: usize, val32: i32): void {
   const endByte = (end << 2) + DOT_IMAGEDATA_OFFSET
-  for (let i = (start << 2)+ DOT_IMAGEDATA_OFFSET; i < endByte; i += 4) {
+  for (let i = (start << 2) + DOT_IMAGEDATA_OFFSET; i < endByte; i += 4) {
     store<i32>(i, val32)
   }
 
@@ -301,10 +314,7 @@ function fill32(start: usize, end: usize, val32: i32): void {
 function setPixelAA(x: i32, y: i32, a: i32): void {
   const alpha = 0xff - a
   const color = MASKEDCOLOR | (alpha << ALPHAPOS)
-  // if (!inViewportBounds(x, y)) {
-  //   logi(x, y)
-  //   return
-  // }
+  assert(inViewportBounds(x, y))
   store<i32>(<usize>((y * WIDTH + x) << 2) + PATH_IMAGEDATA_OFFSET, color)
 }
 
@@ -406,8 +416,8 @@ export function drawSegment(fx0: f64, fy0: f64, fx1: f64, fy1: f64): void {
   const x1: i32 = <i32>Math.round(fx1)
   const y1: i32 = <i32>Math.round(fy1)
 
-  updateDrawBounds(x0, y0)
-  updateDrawBounds(x1, y1)
+  updateDrawBounds(PATH_DRAW_BOUNDS, x0, y0)
+  updateDrawBounds(PATH_DRAW_BOUNDS, x1, y1)
 
   const wd: f32 = (<f32>LINEWIDTH + 1.0) / 2.0
   const dx: i32 = abs(x1 - x0)
@@ -464,7 +474,6 @@ export function drawSegment(fx0: f64, fy0: f64, fx1: f64, fy1: f64): void {
     }
   }
 }
-
 
 /*
  * Activity data processing functions

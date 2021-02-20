@@ -30,14 +30,15 @@ export const rgbaToUint32 = _littleEndian
       (a << 24) | (b << 16) | (g << 8) | r
   : (r: number, g: number, b: number, a: number) =>
       (r << 24) | (g << 16) | (b << 8) | a
+
 const alphaMask = rgbaToUint32(255, 255, 255, 0)
 const alphaPos = _littleEndian ? 24 : 0
 
 export class PixelGraphics {
-  imageData: ImageData
-  buf32: Uint32Array
-  rowBuf: Uint32Array
-  drawBounds: Bounds
+  pathImageData: ImageData
+  dotImageData: ImageData
+  pathDrawBounds: Bounds
+  dotDrawBounds: Bounds
   color32: number
   lineWidth: number
   transform: tuple4
@@ -46,7 +47,8 @@ export class PixelGraphics {
 
   constructor(width?: number, height?: number) {
     this.color32 = rgbaToUint32(0, 0, 0, 255) // default color is black
-    this.drawBounds = new Bounds()
+    this.pathDrawBounds = new Bounds()
+    this.dotDrawBounds = new Bounds()
     this.lineWidth = 1
     this.transform = [1, 0, 1, 0]
 
@@ -67,28 +69,53 @@ export class PixelGraphics {
     return this.imageData.width
   }
 
-  // make sure we have enough memory in the wasm instance
-  // for all the screen pixel data. note that it only grows memory
-  setSize(width: number, height: number): void {
+  /**
+   * Ensure that we have byteSize bytes available.
+   * If this wasm instance's memory already has hat capacity then
+   * nothing happens, otherwise we grow the memory.  We cannot
+   * assume anything currently in memory is preserved.
+   * @returns the size of the memory in bytes
+   */
+  allocateWasmMemory(byteSize?: number): number {
+    const memory = <WebAssembly.Memory>this.wasm.memory
+    let currentNumPages = memory.grow(0)
+
+    if (byteSize) {
+      const numPages = ((byteSize + 0xffff) & ~0xffff) >>> 16
+      if (numPages > currentNumPages) {
+        memory.grow(numPages - currentNumPages)
+        currentNumPages = numPages
+      }
+    }
+
+    return currentNumPages * 2 ** 16
+  }
+
+  initViewport(width: number, height: number): void {
     const memory = <WebAssembly.Memory>this.wasm.memory
     const numPixels = width * height // reserve an extra row
     const byteSize = numPixels << 2 // (4 bytes per rgba pixel)
 
-    const numPages = ((byteSize + 0xffff) & ~0xffff) >>> 16
-    const currentNumPages = memory.grow(0)
+    // get the memory offset of a chunk of memory byteSize * 2 in length
+    this.wasm.allocateViewport(width, height)
 
-    if (numPages > currentNumPages) {
-      memory.grow(numPages - currentNumPages)
-    }
+    const pathDataLoc = this.wasm.PATH_IMAGEDATA_OFFSET.value
+    const dotDataLoc = this.wasm.DOT_IMAGEDATA_OFFSET.value
 
-    // this is a view into the memory for JavaSript access
-    this.buf32 = new Uint32Array(memory.buffer, 0, numPixels)
-    this.rowBuf = new Uint32Array(width)
+    // views into the viewport memory for JavaSript access
+    const pathImageDataArr = new Uint8ClampedArray(
+      memory.buffer,
+      pathDataLoc,
+      byteSize
+    )
+    this.pathImageData = new ImageData(pathImageDataArr, width, height)
 
-    const imageDataArr = new Uint8ClampedArray(memory.buffer, 0, byteSize)
-    this.imageData = new ImageData(imageDataArr, width, height)
-
-    this.wasm.setSize(width, height)
+    const dotImageDataArr = new Uint8ClampedArray(
+      memory.buffer,
+      dotDataLoc,
+      byteSize
+    )
+    this.dotImageData = new ImageData(dotImageDataArr, width, height)
   }
 
   setTransform(tfArray: tuple4): void {
