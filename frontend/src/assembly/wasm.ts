@@ -11,8 +11,8 @@ export let DOT_IMAGEDATA_OFFSET: usize = NaN
 export const PATH_DRAW_BOUNDS = memory.data(4 << 5)
 export const DOT_DRAW_BOUNDS = memory.data(4 << 5)
 
-let WIDTH: i32
-let HEIGHT: i32
+export let WIDTH: i32
+export let HEIGHT: i32
 
 // transform: 4 x 64-bit float
 // [TA1, TB1, TA2, TB2]
@@ -29,18 +29,6 @@ let ALPHAPOS: i32
 let ALPHASCALE: f32 = 1
 
 let LINEWIDTH: i32 = 1
-
-// function i32toi64(v1: i32, v2: i32): i64 {
-//   return (<i64>v1) << 32 || <i64>v2
-// }
-
-// function i64toi32_1(v: i64): i32 {
-//   return <i32>(v >> 32)
-// }
-
-// function i64toi32_2(v: i64): i32 {
-//   return <i32>(v && 0x00000000ffffffff)
-// }
 
 export function allocateViewport(width: i32, height: i32): usize {
   WIDTH = width
@@ -96,16 +84,20 @@ function inViewportBounds(x: i32, y: i32): boolean {
   return x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT
 }
 
+// Reset Draw bounds
 @inline
 export function resetDrawBounds(loc: usize): void {
   store<i32>(loc, -1)
 }
 
+
+// indicate whether bounds are empty
 @inline
-function boundsEmpty(loc: usize): boolean {
+export function boundsEmpty(loc: usize): boolean {
   return load<i32>(loc) == -1
 }
 
+// Update draw bounds
 @inline
 export function updateDrawBounds(loc: usize, x: i32, y: i32): void {
   const xmin = loc
@@ -129,6 +121,7 @@ export function updateDrawBounds(loc: usize, x: i32, y: i32): void {
   else if (y > load<i32>(ymax)) store<i32>(ymax, y)
 }
 
+
 @inline
 function clip(v: i32, vmax: i32): i32 {
   if (v < 0) return <i32>0
@@ -136,6 +129,8 @@ function clip(v: i32, vmax: i32): i32 {
   return v
 }
 
+
+// Clear rectangle
 @inline
 export function clearRect(loc: usize, x: i32, y: i32, w: i32, h: i32): void {
   if (w == 0 || h == 0) return
@@ -146,6 +141,7 @@ export function clearRect(loc: usize, x: i32, y: i32, w: i32, h: i32): void {
     memory.fill(loc + offsetBytes, 0, widthInBytes)
   }
 }
+
 
 @inline
 function moveRow(
@@ -167,7 +163,7 @@ function moveRow(
  *  of an imageData object to another, possibly overlapping
  *  rectanglular region of equal size.
  */
-export function moveRect(
+function moveRect(
   bounds: usize,
   loc: usize,
   shiftX: i32,

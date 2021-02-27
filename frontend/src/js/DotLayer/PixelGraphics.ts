@@ -37,8 +37,8 @@ const alphaPos = _littleEndian ? 24 : 0
 export class PixelGraphics {
   pathImageData: ImageData
   dotImageData: ImageData
-  pathDrawBounds: Bounds
-  dotDrawBounds: Bounds
+  pathBounds: Bounds
+  dotBounds: Bounds
   color32: number
   lineWidth: number
   transform: tuple4
@@ -47,26 +47,26 @@ export class PixelGraphics {
 
   constructor(width?: number, height?: number) {
     this.color32 = rgbaToUint32(0, 0, 0, 255) // default color is black
-    this.pathDrawBounds = new Bounds()
-    this.dotDrawBounds = new Bounds()
     this.lineWidth = 1
     this.transform = [1, 0, 1, 0]
 
     getWasm().then((exports) => {
       this.wasm = exports
       this.wasm.setAlphaMask(alphaMask, alphaPos)
+
+      const pathBoundsData = new Uint32Array(
+        this.wasm.PATH_DRAW_BOUNDS.value,
+        4
+      )
+      this.pathBounds = new Bounds(pathBoundsData)
+
+      const dotBoundsData = new Uint32Array(this.wasm.DOT_DRAW_BOUNDS.value, 4)
+      this.dotBounds = new Bounds(dotBoundsData)
+
       if (width && height) {
-        this.setSize(width, height)
+        this.initViewport(width, height)
       }
     })
-  }
-
-  get height(): number {
-    return this.imageData.height
-  }
-
-  get width(): number {
-    return this.imageData.width
   }
 
   /**
@@ -141,34 +141,32 @@ export class PixelGraphics {
     this.wasm.setLineWidth(w)
   }
 
-  updateDrawBoundsFromWasm(): void {
-    const W = this.wasm
-    this.drawBounds.reset()
-    if (W.BOUNDSEMPTY.value) return
-    this.drawBounds.update(W.XMIN.value, W.YMIN.value)
-    this.drawBounds.update(W.XMAX.value, W.YMAX.value)
+  get width() {
+    return this.wasm.WIDTH.value
   }
 
-  updateWasmDrawBounds(): void {
-    this.wasm.resetDrawBounds()
-    const [xmin, ymin, xmax, ymax] = this.drawBounds.data
-    this.wasm.updateDrawBounds(xmin, ymin)
-    this.wasm.updateDrawBounds(xmax, ymax)
+  get height() {
+    return this.wasm.HEIGHT.value
   }
 
   /**
    * Clear (set to 0) a rectangular region
    */
-  clear(rect?: rect): void {
-    const { x, y, w, h } = rect || this.drawBounds.rect
-    if (isNaN(x) || w == 0 || h == 0) return
+  clear(path?: boolean, rect?: rect): void {
+    const boundsLoc = path
+      ? this.wasm.PATH_DRAW_BOUNDS.value
+      : this.wasm.DOT_DRAW_BOUNDS.value
+    const loc = path
+      ? this.wasm.PATH_IMAGEDATA_OFFSET.value
+      : this.wasm.DOT_IMAGEDATA_OFFSET.value
+    const { x, y, w, h } = rect || bounds.rect
+    if (w == 0 || h == 0 || this.wasm.boundsEmpty(loc)) return
 
-    this.wasm.clearRect(x, y, w, h)
+    this.wasm.clearRect(boundsLoc, x, y, w, h)
 
     // make sure to update drawbounds
     if (!rect) {
-      this.drawBounds.reset()
-      this.wasm.resetDrawBounds()
+      this.wasm.resetDrawBounds(boundsLoc)
     }
   }
 

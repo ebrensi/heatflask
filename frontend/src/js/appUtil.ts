@@ -179,8 +179,8 @@ type RectObj = { x: number; y: number; w: number; h: number }
 export class Bounds {
   _bounds: BoundsData
 
-  constructor() {
-    this._bounds = [NaN, NaN, NaN, NaN]
+  constructor(data?: BoundsData) {
+    this._bounds = data || [NaN, NaN, NaN, NaN]
     // [xmin, ymin, xmax, ymax]
   }
 
