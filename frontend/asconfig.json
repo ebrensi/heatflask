@@ -1,22 +1,23 @@
 {
+  "options": {
+    "enable": ["bulk-memory", "simd"],
+    "memoryBase": 1024,
+    "sourceMap": true
+  },
+
   "targets": {
     "development": {
       "binaryFile": "dist/dev.wasm",
       "textFile": "dist/dev.wat",
-      "sourceMap": true,
-      "debug": true,
-      "enable": ["bulk-memory", "simd"]
+      "debug": true
     },
     "production": {
       "binaryFile": "dist/prod.wasm",
       "textFile": "dist/prod.wat",
-      "sourceMap": true,
       "optimizeLevel": 3,
       "shrinkLevel": 1,
       "converge": false,
-      "noAssert": false,
-      "enable": ["bulk-memory", "simd"]
+      "noAssert": false
     }
-  },
-  "options": {}
+  }
 }

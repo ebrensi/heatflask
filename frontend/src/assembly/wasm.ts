@@ -8,8 +8,8 @@ export let DOT_IMAGEDATA_OFFSET: usize
 
 // reserve 4 32-bit words for each set of bounds
 // [xmin, xmax, ymin, ymax]
-export let PATH_DRAW_BOUNDS: usize
-export let DOT_DRAW_BOUNDS: usize
+export const PATH_DRAW_BOUNDS: usize = 16
+export const DOT_DRAW_BOUNDS: usize = 16 + (4 * 32)
 
 export let WIDTH: i32 = 0
 export let HEIGHT: i32 = 0
@@ -29,11 +29,6 @@ let ALPHAPOS: i32
 let ALPHASCALE: f32 = 1
 
 let LINEWIDTH: i32 = 1
-
-export function allocateBasics(): void {
-  PATH_DRAW_BOUNDS = heap.alloc(4 << 5)
-  DOT_DRAW_BOUNDS = heap.alloc(4 << 5)
-}
 
 export function allocateViewport(width: i32, height: i32): usize {
   const viewportPixelSize = width * height
@@ -102,6 +97,7 @@ export function drawBoundsEmpty(loc: usize): boolean {
   return load<i32>(loc) == -1
 }
 
+
 // Update draw bounds
 @inline
 export function updateDrawBounds(loc: usize, x: i32, y: i32): void {
@@ -123,6 +119,7 @@ export function updateDrawBounds(loc: usize, x: i32, y: i32): void {
   if (y < load<i32>(ymin)) store<i32>(ymin, y)
   else if (y > load<i32>(ymax)) store<i32>(ymax, y)
 }
+
 
 
 @inline

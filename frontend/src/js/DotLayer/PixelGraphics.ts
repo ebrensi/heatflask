@@ -75,6 +75,12 @@ export class PixelGraphics {
       const W = (this.wasm = exports)
       W.setAlphaMask(alphaMask, alphaPos)
 
+      this.pathBounds = new WasmBounds(
+        W.memory.buffer,
+        W.PATH_DRAW_BOUNDS.value
+      )
+      this.dotBounds = new WasmBounds(W.memory.buffer, W.DOT_DRAW_BOUNDS.value)
+
       if (width && height) {
         this.initViewport(width, height)
       }
@@ -99,9 +105,6 @@ export class PixelGraphics {
         currentNumPages = numPages
       }
     }
-    this.wasm.allocateBasics()
-    this.pathBounds = new WasmBounds(W.memory.buffer, W.PATH_DRAW_BOUNDS.value)
-    this.dotBounds = new WasmBounds(W.memory.buffer, W.DOT_DRAW_BOUNDS.value)
 
     return currentNumPages
   }
