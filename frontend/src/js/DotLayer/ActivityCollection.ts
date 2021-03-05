@@ -30,9 +30,9 @@ export function remove(id: number | string): void {
 }
 
 /**
- * This should be called after adding or removing Activities.
+ * This should be called after adding or removing Activities, or changing screen-size
  */
-export function reset(): void {
+export function reset(width: number, height: number): void {
   setDotColors()
 
   itemsArray = [...items.values()]
@@ -44,16 +44,25 @@ export function reset(): void {
   /*
    * We will pack all relevant data into linear memory
    */
-  let pointsBufSize = 0
+  let numPoints = 0
   let timeBufSize = 0
   for (let i = 0; i < itemsArray.length; i++) {
     const A = itemsArray[i]
-    pointsBufSize += A.px.length << 2
+    numPoints += A.px.length
     timeBufSize += A.time.byteLength
   }
 
-  const numPages = ((pointsBufSize + timeBufSize + 0xffff) & ~0xffff) >>> 16
-  console.log({ pointsBufSize, timeBufSize, numPages })
+  const pointsBufSize = numPoints << 2
+  const extrasBufSize = (numPoints >> 3) * 4 // idxsets, segmasks, etc
+  const screenBufSize = (width * height) << 2
+  const totalBufSize =
+    screenBufSize + pointsBufSize + timeBufSize + extrasBufSize
+
+  const oldMemSize = pxg.wasm.memory.grow(0)
+  const newMemSize = pxg.allocateWasmMemory(totalBufSize)
+  console.log(`Allocated ${oldMemSize} -> ${newMemSize} pages for wasm`)
+
+  pxg.initViewport(width, height)
 
   const buf = new ArrayBuffer(pointsBufSize + timeBufSize)
   const f32view = new Float32Array(buf, 0, pointsBufSize >> 2)
@@ -191,16 +200,13 @@ export async function getSelectedLatLngBounds(): Promise<LatLngBounds> {
 
 type drawOutput = { pxg: PixelGraphics; count: number }
 
-export async function drawPaths(
-  pxg: PixelGraphics,
-  drawDiff: boolean
-): Promise<drawOutput> {
-  if (!drawDiff && !pxg.drawBounds.isEmpty()) pxg.clear()
+export async function drawPaths(drawDiff: boolean): Promise<drawOutput> {
+  if (!drawDiff && !pxg.pathBounds.isEmpty()) pxg.clearPathRect()
 
   const drawSegFunc = (x0: number, y0: number, x1: number, y1: number) => {
     pxg.drawSegment(x0, y0, x1, y1)
   }
-  const bounds = pxg.drawBounds.data
+  const bounds = pxg.pathBounds.data
   const oldArea = (bounds[2] - bounds[0]) * (bounds[3] - bounds[1])
 
   let count = 0
@@ -219,38 +225,35 @@ export async function drawPaths(
     count += A.forEachSegment(drawSegFunc, drawDiff)
   })
 
-  pxg.updateDrawBoundsFromWasm()
-
-  if (!pxg.drawBounds.isEmpty()) {
+  if (!pxg.pathBounds.isEmpty()) {
     // add padding to the bounds, but only if they have changed.
     // This prevents ever-increasing bounds
     const newArea = (bounds[2] - bounds[0]) * (bounds[3] - bounds[1])
     if (newArea !== oldArea) {
       const [xmin, ymin, xmax, ymax] = bounds
-      pxg.drawBounds.update(
+      pxg.pathBounds.update(
         Math.max(xmin - maxLW, 0),
         Math.max(ymin - maxLW, 0)
       )
-      pxg.drawBounds.update(
+      pxg.pathBounds.update(
         Math.min(xmax + maxLW, pxg.width),
         Math.min(ymax + maxLW, pxg.height)
       )
     }
   }
 
-  return { count, pxg }
+  return { count }
 }
 
 export async function drawDots(
-  pxg: PixelGraphics,
   dotSize: number,
   T: number,
   tsecs: number,
   drawDiff: boolean
 ): Promise<drawOutput> {
-  if (!drawDiff && !pxg.drawBounds.isEmpty()) pxg.clear()
+  if (!drawDiff && !pxg.dotBounds.isEmpty()) pxg.clearDotRect()
 
-  const bounds = pxg.drawBounds.data
+  const bounds = pxg.dotBounds.data
   const oldArea = (bounds[2] - bounds[0]) * (bounds[3] - bounds[1])
 
   let count = 0
@@ -265,25 +268,23 @@ export async function drawDots(
     count += A.forEachDot(drawFunc, tsecs, T, drawDiff)
   })
 
-  pxg.updateDrawBoundsFromWasm()
-
-  if (!pxg.drawBounds.isEmpty()) {
+  if (!pxg.dotBounds.isEmpty()) {
     const newArea = (bounds[2] - bounds[0]) * (bounds[3] - bounds[1])
 
     // add padding to the bounds, but only if they have changed.
     // This prevents ever-increasing bounds
     if (newArea !== oldArea) {
       const [xmin, ymin, xmax, ymax] = bounds
-      pxg.drawBounds.update(
+      pxg.dotBounds.update(
         Math.max(0, xmin - 3 * sz),
         Math.max(0, ymin - 3 * sz)
       )
-      pxg.drawBounds.update(
+      pxg.dotBounds.update(
         Math.min(pxg.width, xmax + 3 * sz),
         Math.min(pxg.height, ymax + 3 * sz)
       )
     }
   }
 
-  return { count, pxg }
+  return { count }
 }

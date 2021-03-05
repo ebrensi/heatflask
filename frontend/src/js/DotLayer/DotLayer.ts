@@ -88,9 +88,6 @@ export const DotLayer = Layer.extend({
      */
     pathCanvas = addCanvasOverlay(pathCanvasPane)
 
-    const { width, height } = dotCanvas
-    ActivityCollection.pxg.setSize(width, height)
-
     if (DEBUG_BORDERS) {
       // create Canvas for debugging canvas stuff
       debugCanvas = addCanvasOverlay(debugCanvasPane)
@@ -132,7 +129,8 @@ export const DotLayer = Layer.extend({
 
     _ready = false
 
-    ActivityCollection.reset()
+    const { width, height } = dotCanvas
+    ActivityCollection.reset(width, height)
     ViewBox.updateBounds()
     ViewBox.updateZoom()
     dotCtxUpdate()
@@ -337,12 +335,12 @@ async function redraw(forceFullRedraw?: boolean) {
 }
 
 function clearCanvases() {
-  _drawBounds.clear()
-  _drawBounds.updateBounds(ActivityCollection.pxg.pathBounds)
-  _drawBounds.updateBounds(ActivityCollection.pxg.dotBounds)
+  _drawBounds.reset()
+  const pr = ActivityCollection.pxg.pathBounds.rect
+  pathCanvas.getContext("2d").clearRect(pr.x, pr.y, pr.w, pr.h)
 
-  const r = _drawBounds.rect
-  dotCanvas.getContext("2d").clearRect(r.x, r.y, r.w, r.h)
+  const dr = ActivityCollection.pxg.dotBounds.rect
+  dotCanvas.getContext("2d").clearRect(dr.x, dr.y, dr.w, dr.h)
 }
 
 function drawPathImageData() {
@@ -356,7 +354,7 @@ function drawPathImageData() {
 async function drawPaths(drawDiff?: boolean) {
   if (!_ready) return 0
   // console.time("drawpaths")
-  await ActivityCollection.pxg.drawPaths(drawDiff)
+  await ActivityCollection.drawPaths(drawDiff)
   // console.timeEnd("drawpaths")
   drawPathImageData()
 }
@@ -381,7 +379,6 @@ async function drawDots(tsecs?: number, drawDiff?: boolean) {
   if (!drawDiff) dotPxg.clear()
 
   const { count } = await ActivityCollection.drawDots(
-    dotPxg,
     vParams.sz,
     vParams.T * vParams.tau,
     tsecs * vParams.tau,
@@ -403,16 +400,18 @@ function drawBoundsBoxes() {
   ctx.strokeStyle = "rgba(255,0,0,0.8)"
   ViewBox.draw(ctx)
 
-  if (!pathPxg.drawBounds.isEmpty()) {
+  const pathBounds = ActivityCollection.pxg.pathBounds
+  if (!pathBounds.isEmpty()) {
     ctx.lineWidth = 1
     ctx.strokeStyle = "rgba(0,255,0,0.8)"
-    ViewBox.draw(ctx, pathPxg.drawBounds.rect)
+    ViewBox.draw(ctx, pathBounds.rect)
   }
 
-  if (!dotPxg.drawBounds.isEmpty()) {
+  const dotBounds = ActivityCollection.pxg.dotBounds
+  if (!dotBounds.isEmpty()) {
     ctx.lineWidth = 1
     ctx.strokeStyle = "rgba(0,0,255,0.8)"
-    ViewBox.draw(ctx, dotPxg.drawBounds.rect)
+    ViewBox.draw(ctx, dotBounds.rect)
   }
 }
 
@@ -435,9 +434,10 @@ function updateDotSettings(shadowSettings?) {
     dotCtxUpdate()
   }
 
+  const bounds = ActivityCollection.pxg.dotBounds
   if (_paused) {
-    if (!dotPxg.drawBounds.isEmpty()) {
-      const { x, y, w, h } = dotPxg.drawBounds.rect
+    if (!bounds.isEmpty()) {
+      const { x, y, w, h } = bounds.rect
       dotCanvas.getContext("2d").clearRect(x, y, w, h)
     }
     drawDots(null, false)
@@ -467,6 +467,7 @@ async function animate() {
 
   let lastFrameTime = performance.now() + fpsInterval
   let nowInSeconds
+  const dotBounds = ActivityCollection.pxg.dotBounds
 
   while (!_paused) {
     const timeStamp = await nextAnimationFrame()
@@ -478,8 +479,8 @@ async function animate() {
       // ts is in milliseconds since navigationStart
       nowInSeconds = (timeStamp + timeOffset) / 1000
 
-      if (!dotPxg.drawBounds.isEmpty()) {
-        const { x, y, w, h } = dotPxg.drawBounds.rect
+      if (!dotBounds.isEmpty()) {
+        const { x, y, w, h } = dotBounds.rect
         dotCanvas.getContext("2d").clearRect(x, y, w, h)
       }
       // draw the dots
@@ -527,10 +528,8 @@ function updateInfoBox(dt: number, count: number) {
   const roundCount = 10 * Math.round(count / 10)
   const duration = Math.round(fpsSum / fpsRegisterSize)
   const fps = Math.round(1000 / duration)
-  // const [dx, dy, dw, dh] = dotCanvas.pxg.imageData.drawBounds
   if (roundCount !== _roundCount || duration !== _duration) {
     _infoBox.innerHTML = `${duration} ms (${fps}fps), ${roundCount} pts`
-    // + `<br>${dx}, ${dy}, ${dw}, ${dh}`
   }
   _roundCount = roundCount
   _duration = duration

@@ -8,6 +8,27 @@ type WasmExports = Record<string, WebAssembly.ExportValue>
 
 const DEBUG = true
 
+/**
+ * This is an extension of the Bounds class where we assume the bounds data
+ * is a block of 4 32-bit words in WebAssembly memory
+ * (we can't use NaN to indicate empty bounds)
+ */
+class WasmBounds extends Bounds {
+  constructor(memory: WebAssembly.Memory, boundsDataOffset: number) {
+    const boundsData = new Int32Array(memory, boundsDataOffset, 4)
+    super(boundsData)
+    this.reset()
+  }
+
+  reset(): void {
+    this._bounds[0] = -1
+  }
+
+  isEmpty(): boolean {
+    return this._bounds[0] == -1
+  }
+}
+
 /*
  * This module defines the PixelGrapics class.  A PixelGraphics object
  * encapsulates an ImageData buffer and provides methods to modify
@@ -37,8 +58,8 @@ const alphaPos = _littleEndian ? 24 : 0
 export class PixelGraphics {
   pathImageData: ImageData
   dotImageData: ImageData
-  pathBounds: Bounds
-  dotBounds: Bounds
+  pathBounds: WasmBounds
+  dotBounds: WasmBounds
   color32: number
   lineWidth: number
   transform: tuple4
@@ -51,17 +72,8 @@ export class PixelGraphics {
     this.transform = [1, 0, 1, 0]
 
     getWasm().then((exports) => {
-      this.wasm = exports
-      this.wasm.setAlphaMask(alphaMask, alphaPos)
-
-      const pathBoundsData = new Uint32Array(
-        this.wasm.PATH_DRAW_BOUNDS.value,
-        4
-      )
-      this.pathBounds = new Bounds(pathBoundsData)
-
-      const dotBoundsData = new Uint32Array(this.wasm.DOT_DRAW_BOUNDS.value, 4)
-      this.dotBounds = new Bounds(dotBoundsData)
+      const W = (this.wasm = exports)
+      W.setAlphaMask(alphaMask, alphaPos)
 
       if (width && height) {
         this.initViewport(width, height)
@@ -77,18 +89,21 @@ export class PixelGraphics {
    * @returns the size of the memory in bytes
    */
   allocateWasmMemory(byteSize?: number): number {
-    const memory = <WebAssembly.Memory>this.wasm.memory
-    let currentNumPages = memory.grow(0)
+    const W = this.wasm
+    let currentNumPages = W.memory.grow(0)
 
     if (byteSize) {
       const numPages = ((byteSize + 0xffff) & ~0xffff) >>> 16
       if (numPages > currentNumPages) {
-        memory.grow(numPages - currentNumPages)
+        W.memory.grow(numPages - currentNumPages)
         currentNumPages = numPages
       }
     }
+    this.wasm.allocateBasics()
+    this.pathBounds = new WasmBounds(W.memory.buffer, W.PATH_DRAW_BOUNDS.value)
+    this.dotBounds = new WasmBounds(W.memory.buffer, W.DOT_DRAW_BOUNDS.value)
 
-    return currentNumPages * 2 ** 16
+    return currentNumPages
   }
 
   initViewport(width: number, height: number): void {
@@ -141,28 +156,39 @@ export class PixelGraphics {
     this.wasm.setLineWidth(w)
   }
 
-  get width() {
+  get width(): number {
     return this.wasm.WIDTH.value
   }
 
-  get height() {
+  get height(): number {
     return this.wasm.HEIGHT.value
   }
 
   /**
    * Clear (set to 0) a rectangular region
    */
-  clear(path?: boolean, rect?: rect): void {
-    const boundsLoc = path
-      ? this.wasm.PATH_DRAW_BOUNDS.value
-      : this.wasm.DOT_DRAW_BOUNDS.value
-    const loc = path
-      ? this.wasm.PATH_IMAGEDATA_OFFSET.value
-      : this.wasm.DOT_IMAGEDATA_OFFSET.value
-    const { x, y, w, h } = rect || bounds.rect
-    if (w == 0 || h == 0 || this.wasm.boundsEmpty(loc)) return
-
+  clearRect(boundsLoc: usize, dataLoc: usize, rect: rect): void {
+    if (this.wasm.drawBoundsEmpty(boundsLoc)) return
+    const { x, y, w, h } = rect
+    if (w == 0 || h == 0) return
     this.wasm.clearRect(boundsLoc, x, y, w, h)
+  }
+
+  clearPathRect(rect?: rect): void {
+    const boundsLoc = this.wasm.PATH_DRAW_BOUNDS.value
+    const dataLoc = this.wasm.PATH_IMAGEDATA_OFFSET.value
+    this.clearRect(boundsLoc, dataLoc, rect || this.pathBounds.rect)
+
+    // make sure to update drawbounds
+    if (!rect) {
+      this.wasm.resetDrawBounds(boundsLoc)
+    }
+  }
+
+  clearDotRect(rect?: rect): void {
+    const boundsLoc = this.wasm.DOT_DRAW_BOUNDS.value
+    const dataLoc = this.wasm.DOT_IMAGEDATA_OFFSET.value
+    this.clearRect(boundsLoc, dataLoc, rect || this.pathBounds.rect)
 
     // make sure to update drawbounds
     if (!rect) {
@@ -211,15 +237,21 @@ export class PixelGraphics {
    *  of an imageData object to another, possibly overlapping
    *  rectanglular region of equal size.
    */
-  translate(shiftX: number, shiftY: number): void {
-    if (this.drawBounds.isEmpty()) return
+  translatePaths(shiftX: number, shiftY: number): void {
+    const boundsLoc = this.wasm.PATH_DRAW_BOUNDS.value
+    const dataLoc = this.wasm.PATH_IMAGEDATA_OFFSET.value
 
     // console.time("moveRect")
+    this.wasm.moveRect(boundsLoc, dataLoc, shiftX, shiftY)
+    // console.timeEnd("moveRect")
+  }
 
-    this.updateWasmDrawBounds()
-    this.wasm.moveRect(shiftX, shiftY)
-    this.updateDrawBoundsFromWasm()
+  translateDots(shiftX: number, shiftY: number): void {
+    const boundsLoc = this.wasm.DOT_DRAW_BOUNDS.value
+    const dataLoc = this.wasm.DOT_IMAGEDATA_OFFSET.value
 
+    // console.time("moveRect")
+    this.wasm.moveRect(boundsLoc, dataLoc, shiftX, shiftY)
     // console.timeEnd("moveRect")
   }
 

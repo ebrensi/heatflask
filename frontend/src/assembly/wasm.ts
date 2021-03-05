@@ -3,16 +3,16 @@
 declare function logi(v0: i64, v1?: i64, v2?: i64, v3?: i64): void
 declare function logf(v0: f64, v1?: f64, v2?: f64, v3?: f64): void
 
-export let PATH_IMAGEDATA_OFFSET: usize = NaN
-export let DOT_IMAGEDATA_OFFSET: usize = NaN
+export let PATH_IMAGEDATA_OFFSET: usize
+export let DOT_IMAGEDATA_OFFSET: usize
 
 // reserve 4 32-bit words for each set of bounds
 // [xmin, xmax, ymin, ymax]
-export const PATH_DRAW_BOUNDS = memory.data(4 << 5)
-export const DOT_DRAW_BOUNDS = memory.data(4 << 5)
+export let PATH_DRAW_BOUNDS: usize
+export let DOT_DRAW_BOUNDS: usize
 
-export let WIDTH: i32
-export let HEIGHT: i32
+export let WIDTH: i32 = 0
+export let HEIGHT: i32 = 0
 
 // transform: 4 x 64-bit float
 // [TA1, TB1, TA2, TB2]
@@ -30,13 +30,16 @@ let ALPHASCALE: f32 = 1
 
 let LINEWIDTH: i32 = 1
 
+export function allocateBasics(): void {
+  PATH_DRAW_BOUNDS = heap.alloc(4 << 5)
+  DOT_DRAW_BOUNDS = heap.alloc(4 << 5)
+}
+
 export function allocateViewport(width: i32, height: i32): usize {
-  WIDTH = width
-  HEIGHT = height
   const viewportPixelSize = width * height
   const viewportBufSize = viewportPixelSize << 2
   const totBufSize: usize = viewportBufSize << 1
-  if (isNaN(PATH_IMAGEDATA_OFFSET)) {
+  if (WIDTH * HEIGHT == 0) {
     PATH_IMAGEDATA_OFFSET = heap.alloc(totBufSize)
   } else {
     PATH_IMAGEDATA_OFFSET = heap.realloc(DOT_IMAGEDATA_OFFSET, totBufSize)
@@ -44,6 +47,8 @@ export function allocateViewport(width: i32, height: i32): usize {
 
   DOT_IMAGEDATA_OFFSET = PATH_IMAGEDATA_OFFSET + viewportBufSize
 
+  WIDTH = width
+  HEIGHT = height
   return PATH_IMAGEDATA_OFFSET
 }
 
@@ -93,7 +98,7 @@ export function resetDrawBounds(loc: usize): void {
 
 // indicate whether bounds are empty
 @inline
-export function boundsEmpty(loc: usize): boolean {
+export function drawBoundsEmpty(loc: usize): boolean {
   return load<i32>(loc) == -1
 }
 
@@ -102,12 +107,10 @@ export function boundsEmpty(loc: usize): boolean {
 export function updateDrawBounds(loc: usize, x: i32, y: i32): void {
   const xmin = loc
   const ymin = loc + 32
-  @lazy
   const xmax = loc + 64
-  @lazy
   const ymax = loc + 96
 
-  if (boundsEmpty(loc)) {
+  if (drawBoundsEmpty(loc)) {
     store<i32>(xmin, x)
     store<i32>(ymin, y)
     store<i32>(xmax, x)
@@ -169,9 +172,9 @@ function moveRect(
   shiftX: i32,
   shiftY: i32
 ): void {
-  if ((shiftX == 0 && shiftY == 0) || boundsEmpty(bounds)) return
+  if ((shiftX == 0 && shiftY == 0) || drawBoundsEmpty(bounds)) return
 
-  const rx = load<i32>(bounds) // xmin
+  const rx = load<i32>(bounds)      // xmin
   const ry = load<i32>(bounds + 32) // ymin
   const rw = load<i32>(bounds + 64) - rx // xmax - xmin
   const rh = load<i32>(bounds + 96) - ry // ymax - ymin
@@ -304,8 +307,6 @@ function fill32(start: usize, end: usize, val32: i32): void {
  * *******************************************************
  */
 
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore: decorator
 @inline
 function setPixelAA(x: i32, y: i32, a: i32): void {
   const alpha = 0xff - a
