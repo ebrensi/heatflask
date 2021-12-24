@@ -1,8 +1,6 @@
 #! usr/bin/env python
 
 # Standard library imports
-import os
-import re
 import time
 import json
 import itertools
@@ -16,7 +14,6 @@ import requests
 import stravalib
 from flask import current_app as app
 from flask import (
-    Response,
     render_template,
     request,
     redirect,
@@ -30,19 +27,14 @@ from flask_login import current_user, login_user, logout_user
 
 # Local imports
 from . import login_manager, redis, mongo, sockets
-
-from .models import (
-    Users,
-    Activities,
-    EventLogger,
-    Utility,
-    Webhooks,
-    Index,
-    Payments,
-    BinaryWebsocketClient,
-    StravaClient,
-    Timer,
-)
+from .Users import Users
+from .Activities import Activities
+from .Index import Index
+from .EventLogger import EventLogger
+from .Utility import Utility
+from .BinaryWebsocketClient import BinaryWebsocketClient
+from .Webhooks import Webhooks
+from .StravaClient import StravaClient
 
 mongodb = mongo.db
 
@@ -746,46 +738,6 @@ def webhook_callback():
         update_raw = request.get_json(force=True)
         Webhooks.handle_update_callback(update_raw)
         return "success"
-
-
-# Paypal stuff
-@app.route("/paypal/success")
-def success():
-    try:
-        return "Thanks for your donation!"
-    except Exception as e:
-        return str(e, "utf-8")
-
-
-#
-# Donation/Payment notification handler
-#  Handle calls from Paypal's PDT and IPN APIs
-#  PDT:
-#  https://developer.paypal.com/docs/classic/products/payment-data-transfer
-#  IPN:
-#  https://developer.paypal.com/docs/classic/products/instant-payment-notification
-@app.route("/paypal/ipn", methods=["POST"])
-def paypal_ipn_handler():
-
-    # Check with Paypal to confirm that this POST form data comes from them
-    r = requests.post(
-        app.config.get("PAYPAL_VERIFY_URL"),
-        headers={
-            "User-Agent": "PYTHON-IPN-VerificationScript",
-            "content-type": "application/x-www-form-urlencoded",
-        },
-        data=f"cmd=_notify-validate&{request.data}",
-    )
-    log.debug(f"ipn verification:  {r}")
-
-    if r.text == "VERIFIED":
-        log.info(f"Received verified data: {request.form}")
-
-        # Here we take some action based on the data from Paypal,
-        #  with info about a payment from a user.
-        return "Paypal IPN message verified.", 200
-    else:
-        return "Paypal IPN message could not be verified.", 403
 
 
 @app.route("/test", methods=["GET", "POST"])

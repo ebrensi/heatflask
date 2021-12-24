@@ -26,7 +26,6 @@ mongo = PyMongo()
 login_manager = LoginManager()
 sockets = Sockets()
 limiter = Limiter(key_func=get_remote_address)
-# talisman = Talisman()
 
 # Global variables
 EPOCH = datetime.utcfromtimestamp(0)
@@ -61,12 +60,9 @@ def create_app():
         sockets.init_app(app)
         limiter.init_app(app)
 
-        # talisman.init_app(
-        #     app,
-        #     content_security_policy=app.config["CONTENT_SECURITY_POLICY"]
-        # )
-
-        from .models import Activities, EventLogger, Index, Payments
+        from .Activities import Activities
+        from .EventLogger import EventLogger
+        from .Index import Index
 
         import heatflask.routes
 
@@ -74,7 +70,7 @@ def create_app():
         db_sql.create_all()
 
         mongodb = mongo.db
-        collections = mongodb.collection_names()
+        collections = mongodb.list_collection_names()
 
         if EventLogger.name not in collections:
             EventLogger.init_db()
@@ -88,9 +84,6 @@ def create_app():
             Index.init_db()
         else:
             Index.update_ttl()
-
-        if Payments.name not in collections:
-            Payments.init_db()
 
         if app.debug:
             app.wsgi_app = DebuggedApplication(app.wsgi_app, evalex=True)
