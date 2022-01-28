@@ -1,7 +1,7 @@
 #dev
 
-wheel
 Brotli
 black
 flake8
 pur
+jupyter
