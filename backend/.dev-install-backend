@@ -42,8 +42,8 @@ echo "installing backend dependencies (requirements.txt)"
 pip install -r requirements.txt
 
 if [ ! -f .env ]; then
-    echo "copying .env.tmp to .env"
-    cp .env.tmp .env
+    echo "copying .env.tmp to activate"
+    cp .env.tmp activate
 fi
 
 echo

@@ -1,7 +1,5 @@
 #dev
 
-Brotli
 black
 flake8
-pur
 jupyter
