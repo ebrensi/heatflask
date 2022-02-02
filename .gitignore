@@ -122,7 +122,7 @@ backend/heatflask/.users.db
 frontend/dist
 frontend/dev-docs.md
 backend/notebooks/.ipynb_checkpoints
-
+backend/activate
 
 # For Production
 # frontend/dist/fa-*
