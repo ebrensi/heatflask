@@ -28,5 +28,15 @@ if [ ! -z "$BLACK_FILES" ]; then
     echo "$BLACK_FILES" | xargs git add;
 fi
 
+# Clear outputs of Python notebooks
+#  Outputs can make versioning notebook files unpleasant
+IPYNB_FILES=$(git diff --cached --name-only --diff-filter=ACMR "*.ipynb")
+if [ ! -z "$IPYNB_FILES" ]; then
+
+    echo "$IPYNB_FILES" | xargs jupyter nbconvert --ClearOutputPreprocessor.enabled=True --inplace;
+
+    # Add back the modified files to staging
+    echo "$IPYNB_FILES" | xargs git add;
+fi
 
 exit 0
