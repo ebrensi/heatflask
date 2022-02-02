@@ -28,7 +28,7 @@ export MONGODB_URI="mongodb://localhost/heatflask"
 
 # remote data-stores
 export REMOTE_POSTGRES_URL="postgresql://blpuuglazurfee:3f23d9c3aca618f47a9610c6279c58d2158638949d3cebbbb2219ecc126703b4@ec2-3-221-49-44.compute-1.amazonaws.com:5432/d12qgqcc9rv222"
-export REMOTE_MONGODB_URL="mongodb+srv://efrem:pcIzlDI9swnuYhLm@cluster0-wlylc.mongodb.net/heatflask?retryWrites=true&w=majority"
+export REMOTE_MONGODB_URL="mongodb+srv://dev:47FLFpL54ZNiBxDx@cluster0-wlylc.mongodb.net/heatflask?retryWrites=true&w=majority"
 
 # These are the Strava credentials you will need to acces Strava data
 # see https://developers.strava.com/docs for instructions.
