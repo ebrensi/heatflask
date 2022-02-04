@@ -1,14 +1,60 @@
-import requests
-from flask import current_app as app
-from requests.exceptions import HTTPError
-import gevent
+import os
+import time
+import aiohttp
+from logging import getLogger
+import urllib
 
-from .Activities import Activities
-from .Utility import Utility, Timer
+log = getLogger(__name__)
+log.propagate = True
 
-log = app.log
+STRAVA_DOMAIN = "https://www.strava.com"
+API_SPEC = "/api/v3"
+
+AUTH_ENDPOINT = "/oauth/authorize"
+AUTH_PARAMS = {
+    "client_id": os.environ["STRAVA_CLIENT_ID"],
+    "response_type": "code",
+    "approval_prompt": "auto",  # or "force"
+    "scope": "read,activity:read,activity:read_all",
+    "redirect_uri": None,
+    "state": None,
+}
+
+TOKEN_EXCHANGE_ENDPOINT = "/oauth/token"
+TOKEN_EXCHANGE_PARAMS = {
+    "client_id": os.environ["STRAVA_CLIENT_ID"],
+    "client_secret": os.environ["STRAVA_CLIENT_SECRET"],
+    "code": None,
+    "grant_type": "authorization_code"
+}
 
 
+def auth_url(redirect_uri=None, state=None):
+
+    params = {**AUTH_PARAMS, "redirect_uri": redirect_uri, "state": state}
+
+    return STRAVA_DOMAIN + AUTH_ENDPOINT + "?" + urllib.parse.urlencode(params)
+
+
+def StravaSession(headers=None):
+    return aiohttp.ClientSession(STRAVA_DOMAIN, headers=headers)
+
+
+async def exchange_code_for_token(code):
+    t0 = time.perf_counter()
+    params = {**TOKEN_EXCHANGE_PARAMS, "code": code}
+    sesh = StravaSession()
+    async with sesh.get(TOKEN_EXCHANGE_ENDPOINT, params=params) as response:
+        if response.staus == 200:
+            log.info("token exchange failed")
+
+        rjson = await response.json()
+    elapsed = time.perf_counter() - t0
+    log.info(f"token exchange took {elapsed:2f}")
+    return rjson
+
+
+"""
 class StravaClient(object):
     # Stravalib includes a lot of unnecessary overhead
     #  so we have our own in-house client
@@ -39,7 +85,7 @@ class StravaClient(object):
         self.cancel_index_import = False
 
         if access_token:
-            self.access_token = access_token
+            self.access_token = access_toke
         elif user:
             stravalib_client = user.client()
             if not stravalib_client:
@@ -300,3 +346,4 @@ class StravaClient(object):
             return False
 
         return streams
+"""

@@ -1,3 +1,5 @@
+
+"""
 from gevent import monkey
 
 monkey.patch_all()
@@ -32,7 +34,6 @@ EPOCH = datetime.utcfromtimestamp(0)
 
 
 def create_app():
-    """Initialize the core application"""
     app = Flask(__name__)
 
     app.config.from_object(os.environ["APP_SETTINGS"])
@@ -89,3 +90,4 @@ def create_app():
             app.wsgi_app = DebuggedApplication(app.wsgi_app, evalex=True)
 
         return app
+"""

@@ -1,3 +1,106 @@
+
+
+"""
+***  For Jupyter notebook ***
+
+Paste one of these Jupyter magic directives to the top of a cell
+ and run it, to do these things:
+
+  * %%cython --annotate
+      Compile and run the cell
+
+  * %load ../heatflask/Users.py
+     Load Users.py file into this (empty) cell
+
+  * %%writefile ../heatflask/Users.py
+      Write the contents of this cell to Users.py
+
+"""
+
+from logging import getLogger
+from DataAPIs import mongodb, redis
+
+log = getLogger(__name__)
+log.propagate = True
+
+APP_NAME = "heatflask"
+COLLECTION_NAME = "users"
+
+USER_TTL = 365 * 24 * 3600  # Drop a user after a year of inactivity
+
+collection = None
+
+
+def cache_key(user_id):
+    return f"U:{user_id}"
+
+
+async def init_db(clobber=False, clear_cache=True, timeout=USER_TTL):
+
+    if (not clobber) and (COLLECTION_NAME in await mongodb.list_collection_names()):
+        log.info("%s collection exists")
+        await update_ttl()
+
+    # Create/Initialize Activity database
+    result = {}
+    try:
+        result["mongo_drop"] = await mongodb.drop_collection(COLLECTION_NAME)
+    except Exception as e:
+        log.exception("error deleting '%s' collection from MongoDB", COLLECTION_NAME)
+        result["mongod_drop"] = str(e)
+
+    if clear_cache:
+        to_delete = await redis.keys(cache_key("*"))
+
+        async with redis.pipeline(transaction=True) as pipe:
+            for k in to_delete:
+                pipe.delete(k)
+
+            result["redis"] = await pipe.execute()
+
+    result["mongo_create"] = await mongodb.create_collection(COLLECTION_NAME)
+
+    collection = mongodb.get_collection(COLLECTION_NAME)
+    result = await collection.create_index(
+        "ts", name="ts", unique=True, expireAfterSeconds=timeout
+    )
+    log.info(f"Initialized '{COLLECTION_NAME}' MongoDB collection")
+    return result
+
+
+async def update_ttl(timeout=USER_TTL):
+
+    # Update the MongoDB Activities TTL if necessary
+    info = await collection.index_information()
+
+    if "ts" not in info:
+        return await init_db(timeout=timeout)
+
+    current_ttl = info["ts"]["expireAfterSeconds"]
+
+    if current_ttl != timeout:
+        return
+
+    result = await mongodb.command(
+        "collMod",
+        COLLECTION_NAME,
+        index={
+            "keyPattern": {"ts": 1},
+            "background": True,
+            "expireAfterSeconds": timeout,
+        },
+    )
+
+    log.info(
+        "%s TTL updated from %d to %d: %s",
+        current_ttl,
+        timeout,
+        COLLECTION_NAME,
+        result,
+    )
+
+
+"""
 from sqlalchemy.dialects import postgresql as pg
 from flask_login import UserMixin
 from sqlalchemy import inspect
@@ -32,20 +135,6 @@ MAX_IMPORT_ERRORS = app.config["MAX_IMPORT_ERRORS"]
 TTL_INDEX = app.config["TTL_INDEX"]
 TTL_CACHE = app.config["TTL_CACHE"]
 TTL_DB = app.config["TTL_DB"]
-
-
-@contextmanager
-def session_scope():
-    """Provide a transactional scope around a series of operations."""
-    session = db_sql.session()
-    try:
-        yield session
-    except Exception:
-        log.exception("error creating Postgres session")
-        raise
-    finally:
-        session.close()
-
 
 class Users(UserMixin, db_sql.Model):
     Column = db_sql.Column
@@ -659,3 +748,4 @@ class Users(UserMixin, db_sql.Model):
 
         if ("n" in stats) or import_stats:
             EventLogger.new_event(msg="{} fetch {}".format(self, stats))
+"""

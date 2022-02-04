@@ -121,7 +121,7 @@ backend/heatflask/.users.db
 # For Development
 frontend/dist
 frontend/dev-docs.md
-backend/notebooks/.ipynb_checkpoints
+backend/heatflask/notebooks/.ipynb_checkpoints
 backend/activate
 
 # For Production

@@ -1,3 +1,7 @@
+
+
+
+"""
 import stravalib
 from flask import current_app as app
 from datetime import datetime
@@ -147,3 +151,4 @@ class Webhooks(object):
         for u in updates:
             u["_id"] = str(u["_id"])
             yield u
+"""

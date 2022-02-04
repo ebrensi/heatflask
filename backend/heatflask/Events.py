@@ -1,3 +1,5 @@
+
+"""
 from bson import ObjectId
 import pymongo
 import gevent
@@ -105,3 +107,4 @@ class EventLogger(object):
             }
         )
         cls.new_event(**args)
+"""

@@ -1,3 +1,8 @@
+
+
+
+
+"""
 import polyline
 import msgpack
 import pymongo
@@ -378,3 +383,4 @@ class Activities(object):
                         return
 
         yield ""
+"""

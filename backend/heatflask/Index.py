@@ -1,3 +1,5 @@
+
+"""
 import pymongo
 import gevent
 
@@ -462,3 +464,4 @@ class Index(object):
                 )
             except Exception:
                 log.exception("mongo error")
+"""
