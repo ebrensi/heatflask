@@ -4,6 +4,7 @@
 #  using Prettier for frontend (.js, .ts, .html) files
 #  and Black for backend (.py) files
 
+
 # Files to run Prettier on
 PRETTIER_FILES=$(git diff --cached --name-only --diff-filter=ACMR "*.js" "*.ts" "*.html" "*.css" "*.jsx" | sed 's| |\\ |g')
 
