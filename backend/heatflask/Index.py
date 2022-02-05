@@ -1,3 +1,43 @@
+import os
+from logging import getLogger
+from DataAPIs import mongodb, redis, init_collection
+
+"""
+***  For Jupyter notebook ***
+
+Paste one of these Jupyter magic directives to the top of a cell
+ and run it, to do these things:
+
+  * %%cython --annotate
+      Compile and run the cell
+
+  * %load Index.py
+     Load Index.py file into this (empty) cell
+
+  * %%writefile Index.py
+      Write the contents of this cell to Index.py
+
+"""
+
+log = getLogger(__name__)
+log.propagate = True
+
+APP_NAME = "heatflask"
+COLLECTION_NAME = "index"
+CACHE_PREFIX = "I:"
+
+SECS_IN_HOUR = 60 * 60
+SECS_IN_DAY = 24 * SECS_IN_HOUR
+
+# How long we store Index entry in MongoDB
+INDEX_TTL = int(os.environ.get("INDEX_TTL", 10)) * SECS_IN_DAY
+
+
+async def init_db():
+    await init_collection(
+        COLLECTION_NAME, force=False, ttl=INDEX_TTL, cache_prefix=CACHE_PREFIX
+    )
+
 
 """
 import pymongo
