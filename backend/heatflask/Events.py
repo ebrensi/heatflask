@@ -1,5 +1,5 @@
 from logging import getLogger
-from DataAPIs import mongodb, init_collection
+from DataAPIs import init_collection
 
 """
 ***  For Jupyter notebook ***
@@ -25,32 +25,18 @@ APP_NAME = "heatflask"
 COLLECTION_NAME = "events"
 
 # Maximum size of event history (for capped MongoDB collection)
-MAX_HISTORY_BYTES = 2 * 1024 * 1024  # 2MB
+MAX_EVENTS_BYTES = 2 * 1024 * 1024  # 2MB
 
 
-def init_db(cls, force=False, size=MAX_HISTORY_BYTES):
-    return init_collection(COLLECTION_NAME, force=False, capped_size=size)
-    collections = await mongodb.list_collection_names()
+DATA = {}
 
-    if (COLLECTION_NAME in collections) and force:
-        collection = await mongodb.get_collection(COLLECTION_NAME)
-        all_docs = collection.find()
 
-        mongodb.create_collection(
-            "temp",
-            capped=True,
-            # autoIndexId=False,
-            size=size,
+async def get_collection():
+    if "col" not in DATA:
+        DATA["col"] = await init_collection(
+            COLLECTION_NAME, force=False, capped_size=MAX_EVENTS_BYTES
         )
-
-        await mongodb.temp.insert_many(all_docs)
-
-        await mongodb.temp.rename(COLLECTION_NAME, dropTarget=True)
-    else:
-        await mongodb.create_collection(COLLECTION_NAME, capped=True, size=size)
-        log.info("Initialized mongodb collection '%s'", COLLECTION_NAME)
-
-    stats = await mongodb.command("collstats", COLLECTION_NAME)
+    return DATA["col"]
 
 
 """

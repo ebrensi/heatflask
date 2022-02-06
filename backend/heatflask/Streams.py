@@ -1,6 +1,6 @@
 import os
 from logging import getLogger
-from DataAPIs import mongodb, redis, init_collection
+from DataAPIs import redis, init_collection
 
 """
 ***  For Jupyter notebook ***
@@ -31,12 +31,15 @@ SECS_IN_DAY = 24 * SECS_IN_HOUR
 
 # How long we store Index entry in MongoDB
 STREAMS_TTL = int(os.environ.get("STREAMS_TTL", 4)) * SECS_IN_DAY
+DATA = {}
 
 
-async def init_db():
-    await init_collection(
-        COLLECTION_NAME, force=False, ttl=STREAMS_TTL, cache_prefix=CACHE_PREFIX
-    )
+async def get_collection():
+    if "col" not in DATA:
+        DATA["col"] = await init_collection(
+            COLLECTION_NAME, force=False, ttl=STREAMS_TTL, cache_prefix=CACHE_PREFIX
+        )
+    return DATA["col"]
 
 
 """

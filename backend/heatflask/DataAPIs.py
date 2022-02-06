@@ -3,6 +3,7 @@ import motor.motor_asyncio
 import aioredis
 import logging
 import datetime
+import uuid
 
 log = logging.getLogger(__name__)
 log.propagate = True
@@ -23,39 +24,41 @@ redis = aioredis.from_url(redis_url)
 async def init_collection(
     name, force=False, ttl=None, capped_size=None, cache_prefix=None
 ):
-    if {not force} and name in await mongodb.list_collection_names():
+    collections = await mongodb.list_collection_names()
+
+    if (not force) and (name in collections):
         if ttl:
             return await update_collection_ttl(name, ttl)
         elif capped_size:
             return await update_collection_cap(name, capped_size)
 
-    else:
-        # Create/Initialize Activity database
-        # Delete existing one
+    # Create/Initialize Activity database
+    # Delete existing one
+    if name in collections:
         await mongodb.drop_collection(name)
 
-        if cache_prefix:
-            to_delete = await redis.keys(f"{cache_prefix}:*")
+    if cache_prefix:
+        to_delete = await redis.keys(f"{cache_prefix}:*")
 
-            async with redis.pipeline(transaction=True) as pipe:
-                for k in to_delete:
-                    pipe.delete(k)
-                await pipe.execute()
+        async with redis.pipeline(transaction=True) as pipe:
+            for k in to_delete:
+                pipe.delete(k)
+            await pipe.execute()
 
-        await mongodb.create_collection(
-            name, capped=capped_size is not None, size=capped_size
+    collection = await (
+        mongodb.create_collection(name, capped=True, size=capped_size)
+        if capped_size
+        else mongodb.create_collection(name)
+    )
+
+    if ttl:
+        await collection.create_index(
+            "ts", name="ts", unique=True, expireAfterSeconds=ttl
         )
-        collection = mongodb.get_collection(name)
-
-        if ttl:
-            await collection.create_index(
-                "ts", name="ts", unique=True, expireAfterSeconds=ttl
-            )
 
     info = await collection.index_information()
-    stats = await mongodb.command("collstats", name)
 
-    log.info("Initialized '%s' MongoDB collection: %s, %s", name, info, stats)
+    log.info("Initialized '%s' MongoDB collection: %s", name, info)
     return collection
 
 
@@ -89,13 +92,26 @@ async def update_collection_ttl(name, new_ttl):
 
 
 async def update_collection_cap(name, new_size):
-    collection = await mongodb.get_collection(name)
-    all_docs = await collection.find()
+    collection = mongodb.get_collection(name)
+    options = await collection.options()
+    current_size = options["size"]
 
-    await mongodb.create_collection(
-        "temp",
-        capped=True,
-        size=new_size,
-    )
-    await mongodb.temp.insert_many(all_docs)
-    await mongodb.temp.rename(name, dropTarget=True)
+    if current_size != new_size:
+        all_docs = await collection.find().to_list(length=100000)
+        temp_collection_name = uuid.uuid4().hex
+        await mongodb.drop_collection(temp_collection_name)
+        temp_collection = await mongodb.create_collection(
+            temp_collection_name,
+            capped=True,
+            size=new_size,
+        )
+        if len(all_docs):
+            await temp_collection.insert_many(all_docs)
+        await temp_collection.rename(name, dropTarget=True)
+        log.info(
+            "%s size updated from %s to %s",
+            name,
+            current_size,
+            new_size,
+        )
+    return collection

@@ -1,4 +1,43 @@
+from logging import getLogger
+from DataAPIs import init_collection
 
+"""
+***  For Jupyter notebook ***
+
+Paste one of these Jupyter magic directives to the top of a cell
+ and run it, to do these things:
+
+  * %%cython --annotate
+      Compile and run the cell
+
+  * %load Updates.py
+     Load Updates.py file into this (empty) cell
+
+  * %%writefile Updates.py
+      Write the contents of this cell to Updates.py
+
+"""
+
+log = getLogger(__name__)
+log.propagate = True
+
+APP_NAME = "heatflask"
+COLLECTION_NAME = "updates"
+
+# Maximum size of updates history (for capped MongoDB collection)
+MAX_UPDATES_BYTES = 1 * 1024 * 1024
+
+collection_future = None
+
+DATA = {}
+
+
+async def get_collection():
+    if "col" not in DATA:
+        DATA["col"] = await init_collection(
+            COLLECTION_NAME, force=False, capped_size=MAX_UPDATES_BYTES
+        )
+    return DATA["col"]
 
 
 """

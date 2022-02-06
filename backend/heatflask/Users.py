@@ -1,5 +1,5 @@
 from logging import getLogger
-from DataAPIs import mongodb, redis, init_collection
+from DataAPIs import redis, init_collection
 
 """
 ***  For Jupyter notebook ***
@@ -27,8 +27,12 @@ CACHE_PREFIX = "U:"
 
 USER_TTL = 365 * 24 * 3600  # Drop a user after a year of inactivity
 
+DATA = {}
 
-async def init_db():
-    collection = await init_collection(
-        COLLECTION_NAME, force=False, ttl=USER_TTL, cache_prefix=CACHE_PREFIX
-    )
+
+async def get_collection():
+    if "col" not in DATA:
+        DATA["col"] = await init_collection(
+            COLLECTION_NAME, force=False, ttl=USER_TTL, cache_prefix=CACHE_PREFIX
+        )
+    return DATA["col"]
