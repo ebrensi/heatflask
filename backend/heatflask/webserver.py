@@ -3,26 +3,23 @@ import sanic.response as Response
 from sanic.log import logger as log
 import asyncio
 
-import Strava
-import Users
-from DataAPIs import mongodb, redis
+from . import Strava
+from . import Users
+from .DataAPIs import mongodb, redis
 
 app = Sanic("heatflask")
 app.ctx.mongodb = mongodb
 app.ctx.redis = redis
 
 
-@app.listener('before_server_start')
+@app.listener("before_server_start")
 async def init(sanic, loop):
+    log.info("Heatflask server starting")
 
-    db_init_results = await asyncio.gather(
-        Users.init_db(),
-        # Index.init_db(),
-        # Streams.init_db(),
-        # Events.init_db(),
-        # Updates.init_db()
-    )
-    log.info("Initializing datastores: %s", db_init_results)
+
+@app.listener("after_server_stop")
+async def shutdown(sanic, loop):
+    log.info("Heatflask server stopping")
 
 
 # Attempt to authorize a user via Oauth(2)
@@ -59,7 +56,7 @@ async def auth_callback(request):
         return Response.redirect(app.url_for("authorize", state=state, _external=True))
 
     code = request.args.get("code")
-    access_info = await Strava.exchange_code_for_token(code)
+    access_info = await Strava.get_access_token(code=code)
 
     Users.add_or_update(access_info)
 

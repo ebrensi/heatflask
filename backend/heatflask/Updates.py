@@ -1,6 +1,3 @@
-from logging import getLogger
-from DataAPIs import init_collection
-
 """
 ***  For Jupyter notebook ***
 
@@ -17,6 +14,11 @@ Paste one of these Jupyter magic directives to the top of a cell
       Write the contents of this cell to Updates.py
 
 """
+
+# Updates come from Strava Webhook callbacks
+
+from logging import getLogger
+from DataAPIs import init_collection
 
 log = getLogger(__name__)
 log.propagate = True

@@ -1,6 +1,3 @@
-from logging import getLogger
-from DataAPIs import redis, init_collection
-
 """
 ***  For Jupyter notebook ***
 
@@ -17,6 +14,9 @@ Paste one of these Jupyter magic directives to the top of a cell
       Write the contents of this cell to Users.py
 
 """
+
+from logging import getLogger
+from DataAPIs import redis, init_collection
 
 log = getLogger(__name__)
 log.propagate = True
@@ -106,11 +106,6 @@ class Users(UserMixin, db_sql.Model):
 
     def __repr__(self):
         return "U:{}".format(self.id)
-
-    def db_state(self):
-        state = inspect(self)
-        attrs = ["transient", "pending", "persistent", "deleted", "detached"]
-        return [attr for attr in attrs if getattr(state, attr)]
 
     def info(self):
         info = {}

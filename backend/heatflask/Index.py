@@ -1,7 +1,3 @@
-import os
-from logging import getLogger
-from DataAPIs import mongodb, redis, init_collection
-
 """
 ***  For Jupyter notebook ***
 
@@ -18,6 +14,10 @@ Paste one of these Jupyter magic directives to the top of a cell
       Write the contents of this cell to Index.py
 
 """
+
+import os
+from logging import getLogger
+from DataAPIs import mongodb, init_collection
 
 log = getLogger(__name__)
 log.propagate = True
