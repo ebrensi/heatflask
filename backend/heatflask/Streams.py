@@ -16,8 +16,12 @@ Paste one of these Jupyter magic directives to the top of a cell
 """
 
 import os
+import datetime
 from logging import getLogger
-from DataAPIs import redis, init_collection
+
+from .DataAPIs import redis, init_collection
+from . import Users
+from . import Strava
 
 log = getLogger(__name__)
 log.propagate = True
@@ -30,16 +34,57 @@ SECS_IN_HOUR = 60 * 60
 SECS_IN_DAY = 24 * SECS_IN_HOUR
 
 # How long we store Index entry in MongoDB
-STREAMS_TTL = int(os.environ.get("STREAMS_TTL", 4)) * SECS_IN_DAY
+MONGO_TTL = int(os.environ.get("MONGO_STREAMS_TTL", 10)) * SECS_IN_DAY
+REDIS_TTL = int(os.environ.get("REDIS_STREAMS_TTL", 4)) * SECS_IN_HOUR
+
 DATA = {}
 
 
 async def get_collection():
     if "col" not in DATA:
         DATA["col"] = await init_collection(
-            COLLECTION_NAME, force=False, ttl=STREAMS_TTL, cache_prefix=CACHE_PREFIX
+            COLLECTION_NAME, force=False, ttl=MONGO_TTL, cache_prefix=CACHE_PREFIX
         )
     return DATA["col"]
+
+
+def mongo_doc(activity_id, stream_data, ts=None):
+    return {
+        "_id": int(activity_id),
+        "mpk": stream_data,
+        "ts": ts or datetime.datetime.now(),
+    }
+
+
+async def strava_import(user_id, activity_ids):
+    user = Users.get(user_id)
+    token = user["auth"]["access_token"]
+
+    index = get_collection()
+    with Strava.Session(access_token=token) as session:
+        gen = await Strava.get_many_streams(session, activity_ids)
+
+    lst = []
+    for thing in gen:
+        if thing:
+            lst.append(thing)
+            abort = yield thing
+            if abort:
+                return
+
+    now = datetime.datetime.now()
+    mongo_result = await index.insert_many(
+        (mongo_doc(A, data, ts=now) for A, data in lst)
+    )
+
+    # redis.setex(f"{CACHE_PREFIX}{aid}", REDIS_TTL, packed)
+
+    return mongo_result
+
+
+async def get(activity_ids: list):
+    streams = get_collection()
+    return await streams.get_many({"_id": {"$in": map(activity_ids, int)}})
 
 
 """
@@ -142,48 +187,6 @@ class Activities(object):
         else:
             return {}
 
-    @staticmethod
-    def stream_encode(vals):
-        diffs = [b - a for a, b in zip(vals, vals[1:])]
-        encoded = []
-        pair = None
-        for a, b in zip(diffs, diffs[1:]):
-            if a == b:
-                if pair:
-                    pair[1] += 1
-                else:
-                    pair = [a, 2]
-            else:
-                if pair:
-                    if pair[1] > 2:
-                        encoded.append(pair)
-                    else:
-                        encoded.extend(2 * [pair[0]])
-                    pair = None
-                else:
-                    encoded.append(a)
-        if pair:
-            encoded.append(pair)
-        else:
-            encoded.append(b)
-        return encoded
-
-    @staticmethod
-    def stream_decode(rll_encoded, first_value=0):
-        running_sum = first_value
-        out_list = [first_value]
-
-        for el in rll_encoded:
-            if isinstance(el, list) and len(el) == 2:
-                val, num_repeats = el
-                for i in range(num_repeats):
-                    running_sum += val
-                    out_list.append(running_sum)
-            else:
-                running_sum += el
-                out_list.append(running_sum)
-
-        return out_list
 
     @staticmethod
     def cache_key(id):

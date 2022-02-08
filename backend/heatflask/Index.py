@@ -16,118 +16,227 @@ Paste one of these Jupyter magic directives to the top of a cell
 """
 
 import os
+import polyline
+import numpy as np
 from logging import getLogger
-from DataAPIs import mongodb, init_collection
+import datetime
+import motor
+
+from .DataAPIs import init_collection
+from . import Users
+from . import Strava
+from . import Utility
 
 log = getLogger(__name__)
 log.propagate = True
 
 APP_NAME = "heatflask"
 COLLECTION_NAME = "index"
-CACHE_PREFIX = "I:"
 
 SECS_IN_HOUR = 60 * 60
 SECS_IN_DAY = 24 * SECS_IN_HOUR
 
 # How long we store Index entry in MongoDB
 INDEX_TTL = int(os.environ.get("INDEX_TTL", 10)) * SECS_IN_DAY
+DATA = {}
 
 
-async def init_db():
-    await init_collection(
-        COLLECTION_NAME, force=False, ttl=INDEX_TTL, cache_prefix=CACHE_PREFIX
-    )
+async def get_collection():
+    if "col" not in DATA:
+        DATA["col"] = await init_collection(COLLECTION_NAME, force=False, ttl=INDEX_TTL)
+    return DATA["col"]
+
+
+def polyline_bounds(poly):
+    if poly is None:
+        return
+
+    try:
+        latlngs = np.array(polyline.decode(poly), dtype=np.float32)
+    except Exception:
+        return
+
+    lats = latlngs[:, 0]
+    lngs = latlngs[:, 1]
+
+    return {"SW": (lats.min(), lngs.min()), "NE": (lats.max(), lngs.max())}
+
+
+# see https://developers.strava.com/docs/reference/#api-models-SummaryActivity
+def mongo_doc(
+    # From Strava SummaryActivity record
+    id=None,
+    athlete=None,
+    name=None,
+    distance=None,
+    moving_time=None,
+    elapsed_time=None,
+    type=None,
+    start_date=None,
+    start_date_local=None,
+    timezone=None,
+    start_latlng=None,
+    end_latlng=None,
+    athlete_count=None,
+    photo_count=None,
+    total_photo_count=None,
+    map=None,
+    commute=None,
+    manual=None,
+    private=None,
+    # my additions
+    _id=None,
+    ts=None,
+):
+    doc = {
+        "_id": int(_id or id),
+        "athlete": int(athlete),
+        "name": name,
+        "distance": distance,
+        "moving_time": moving_time,
+        "elapsed_time": elapsed_time,
+        "type": type,
+        "start_date": start_date,
+        "start_date_local": start_date_local,
+        "timezone": timezone,
+        "start_latlng": start_latlng,
+        "end_latlng": end_latlng,
+        "athlete_count": athlete_count,
+        "photo_count": photo_count,
+        "total_photo_count": total_photo_count,
+        "commute": commute,
+        "manual": manual,
+        "private": private,
+        #
+        "ts": ts or datetime.datetime.utcnow(),
+        "bounds": polyline_bounds(map.get("summary_polyline")),
+    }
+
+    # Filter out any entries with None values
+    return {k: v for k, v in doc.items() if v is not None}
+
+
+async def import_user_entries(user_id):
+    user = Users.get(user_id)
+    token = user["auth"]["access_token"]
+
+    index = get_collection()
+    now = datetime.datetime.utcnow()
+    with Strava.Session(access_token=token) as session:
+        result = await index.insert_many(
+            (mongo_doc(A, ts=now) for A in await Strava.get_index(session))
+        )
+
+    return result
+
+
+async def delete_user_entries(user_id):
+    index = get_collection()
+    return await index.delete_many({"athlete": int(user_id)})
+
+
+async def query(
+    user_id=None,
+    activity_ids=None,
+    exclude_ids=None,
+    after=None,
+    before=None,
+    limit=0,
+    update_ts=True,
+):
+
+    if activity_ids:
+        activity_ids = set(int(id) for id in activity_ids)
+
+    if exclude_ids:
+        exclude_ids = set(int(id) for id in exclude_ids)
+
+    limit = int(limit) if limit else 0
+
+    query = {}
+    out_fields = None
+
+    if user_id:
+        query["athlete"] = int(user_id)
+        out_fields = {"athlete": False}
+
+    tsfltr = {}
+    if before:
+        before = Utility.to_epoch(before)
+        tsfltr["$lt"] = before
+
+    if after:
+        after = Utility.to_epoch(after)
+        tsfltr["$gte"] = after
+
+    if tsfltr:
+        query["start_date_local"] = tsfltr
+
+    if activity_ids:
+        query["_id"] = {"$in": list(activity_ids)}
+
+    to_delete = None
+
+    index = get_collection()
+
+    if exclude_ids:
+        try:
+            result = (
+                await index.find(query, {"_id": True})
+                .sort("ts_local", motor.DESCENDING)
+                .limit(limit)
+            )
+
+        except Exception:
+            log.exception("mongo error")
+            return
+
+        query_ids = set(int(doc["_id"]) for doc in result)
+
+        to_delete = list(exclude_ids - query_ids)
+        to_fetch = list(query_ids - exclude_ids)
+
+        yield {"delete": to_delete}
+        yield {"count": len(to_fetch)}
+
+        query["_id"] = {"$in": to_fetch}
+
+    else:
+        count = index.count_documents(query)
+        if limit:
+            count = min(limit, count)
+        yield {"count": count}
+
+    try:
+        if out_fields:
+            cursor = index.find(query, out_fields)
+        else:
+            cursor = index.find(query)
+
+        cursor = await cursor.sort("start_date", motor.DESCENDING).limit(limit)
+
+    except Exception:
+        log.exception("mongo error")
+        return
+
+    ids = set()
+
+    for a in cursor:
+        if update_ts:
+            ids.add(a["_id"])
+        yield a
+
+    if update_ts:
+        try:
+            result = await index.update_many(
+                {"_id": {"$in": list(ids)}},
+                {"$set": {"ts": datetime.datetime.utcnow()}},
+            )
+        except Exception:
+            log.exception("mongo error")
 
 
 """
-import pymongo
-import gevent
-
-from flask import current_app as app
-from datetime import datetime
-
-from . import mongo
-from .Utility import Utility, Timer, FakeQueue
-from .EventLogger import EventLogger
-from .StravaClient import StravaClient
-
-mongodb = mongo.db
-
-log = app.logger
-
-OFFLINE = app.config["OFFLINE"]
-STRAVA_CLIENT_ID = app.config["STRAVA_CLIENT_ID"]
-STRAVA_CLIENT_SECRET = app.config["STRAVA_CLIENT_SECRET"]
-TRIAGE_CONCURRENCY = app.config["TRIAGE_CONCURRENCY"]
-ADMIN = app.config["ADMIN"]
-BATCH_CHUNK_SIZE = app.config["BATCH_CHUNK_SIZE"]
-IMPORT_CONCURRENCY = app.config["IMPORT_CONCURRENCY"]
-DAYS_INACTIVE_CUTOFF = app.config["DAYS_INACTIVE_CUTOFF"]
-MAX_IMPORT_ERRORS = app.config["MAX_IMPORT_ERRORS"]
-
-TTL_INDEX = app.config["TTL_INDEX"]
-TTL_CACHE = app.config["TTL_CACHE"]
-TTL_DB = app.config["TTL_DB"]
-
-
-class Index(object):
-    name = "index"
-    db = mongodb.get_collection(name)
-
-    @classmethod
-    # Initialize the database
-    def init_db(cls, clear_cache=False):
-        # drop the "indexes" collection
-        try:
-            mongodb.drop_collection(cls.name)
-
-            # create new index collection
-            mongodb.create_collection(cls.name)
-            cls.db.create_index(
-                [("user_id", pymongo.ASCENDING), ("ts_local", pymongo.DESCENDING)]
-            )
-
-            cls.db.create_index("ts", name="ts", expireAfterSeconds=TTL_INDEX)
-        except Exception:
-            log.exception("MongoDB error initializing %s collection", cls.name)
-
-        log.info("initialized '%s' collection:", cls.name)
-
-    @classmethod
-    def update_ttl(cls, timeout=TTL_INDEX):
-
-        # Update the MongoDB Index TTL if necessary
-        info = cls.db.index_information()
-
-        if "ts" not in info:
-            cls.init_db
-            return
-
-        current_ttl = info["ts"]["expireAfterSeconds"]
-
-        if current_ttl != timeout:
-            result = mongodb.command(
-                "collMod",
-                cls.name,
-                index={
-                    "keyPattern": {"ts": 1},
-                    "background": True,
-                    "expireAfterSeconds": timeout,
-                },
-            )
-
-            log.info("'%s' db TTL updated: %s", cls.name, result)
-        else:
-            # log.debug("no need to update TTL")
-            pass
-
-    @classmethod
-    def delete(cls, id):
-        try:
-            return cls.db.delete_one({"_id": id})
-        except Exception:
-            log.exception("error deleting index summary %s", id)
-            return
 
     @classmethod
     def update(cls, id, updates, replace=False):

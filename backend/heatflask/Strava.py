@@ -63,7 +63,12 @@ def auth_url(redirect_uri=None, state=None):
     return STRAVA_DOMAIN + AUTH_ENDPOINT + "?" + urllib.parse.urlencode(params)
 
 
-def StravaSession(headers=None):
+def auth_headers(access_token):
+    return {"Authorization": f"Bearer {access_token}"}
+
+
+def Session(access_token=None):
+    headers = None if access_token is None else auth_headers(access_token)
     return aiohttp.ClientSession(STRAVA_DOMAIN, headers=headers)
 
 
@@ -78,7 +83,7 @@ async def get_access_token(code=None, refresh_token=None):
         else {"grant_type": "refresh_token", "refresh_token": refresh_token}
     )
 
-    async with StravaSession() as sesh:
+    async with Session() as sesh:
         async with sesh.post(TOKEN_EXCHANGE_ENDPOINT, params=params) as response:
             if response.staus == 200:
                 log.info("token exchange failed")
@@ -88,6 +93,24 @@ async def get_access_token(code=None, refresh_token=None):
     method = "authorization code" if code else "refresh token"
     log.info("%s exchange took %.2f", method, elapsed)
     return rjson
+
+
+#
+# Athlete
+#
+ATHLETE_ENDPOINT = "{API_SPEC}/athlete"
+
+
+async def get_athlete(user_session):
+    athlete = None
+    status = None
+    try:
+        async with user_session.get(ATHLETE_ENDPOINT) as response:
+            status = response.status
+            athlete = response.json()
+    except Exception:
+        log.exception("Error getting athlete data")
+    return status, athlete
 
 
 #
@@ -244,44 +267,61 @@ async def get_activity(user_session, activity_id):
 #
 # Updates (Webhook subscription)
 #
-async def create_subscription(session):
-    pass
+SUBSCRIPTION_VERIFY_TOKEN = "heatflask_yay!"
+SUBSCRIPTION_ENDPOINT = f"{API_SPEC}/push_subscriptions"
+SUBSCRIPTION_PARAMS = {
+    "client_id": os.environ["STRAVA_CLIENT_ID"],
+    "client_secret": os.environ["STRAVA_CLIENT_SECRET"],
+}
+CREATE_SUBSCRIPTION_PARAMS = {
+    **SUBSCRIPTION_PARAMS,
+    "verify_token": SUBSCRIPTION_VERIFY_TOKEN,
+    "callback_url": None,
+}
+VIEW_SUBSCRIPTION_PARAMS = SUBSCRIPTION_PARAMS
+DELETE_SUBSCRIPTION_PARAMS = {
+    **SUBSCRIPTION_PARAMS,
+    "id": None,
+}
 
 
-async def delete_subscription(session):
-    pass
+async def create_subscription(callback_url):
+    params = {**CREATE_SUBSCRIPTION_PARAMS, "callback_url": callback_url}
+
+    try:
+        with Session() as session:
+            with session.post(SUBSCRIPTION_ENDPOINT, params=params) as response:
+                return await response.json()
+    except Exception:
+        log.exception("Error creating Strava Webhook subscription")
 
 
-async def handle_subscription_callback(session):
-    pass
+# After calling create_subscription, you will receive a GET request at your
+# supplied callback_url, whose json body is validation_dict.
+#
+# Your response must have HTTP code 200 and be of application/json content type.
+# and be the return value of this function.
+async def verify_subscription(validation_dict):
+    if validation_dict.get("hub.verify_token") != SUBSCRIPTION_VERIFY_TOKEN:
+        return {"hub.challenge": validation_dict["hub.challenge"]}
 
 
-"""
-    def strava2doc(cls, a):
-        if ("id" not in a) or not a["start_latlng"]:
-            return
+async def view_subscription():
+    try:
+        with Session() as session:
+            with session.get(SUBSCRIPTION_ENDPOINT, params=params) as response:
+                return await response.json()
+    except Exception:
+        log.exception("Error viewing Strava Webhook subscription")
 
-        try:
-            polyline = a["map"]["summary_polyline"]
-            bounds = Activities.bounds(polyline)
-            d = dict(
-                _id=a["id"],
-                user_id=a["athlete"]["id"],
-                name=a["name"],
-                type=a["type"],
-                # group=a["athlete_count"],
-                ts_UTC=a["start_date"],
-                ts_local=a["start_date_local"],
-                total_distance=float(a["distance"]),
-                elapsed_time=int(a["elapsed_time"]),
-                average_speed=float(a["average_speed"]),
-                start_latlng=a["start_latlng"],
-                bounds=bounds,
-            )
-        except KeyError:
-            return
-        except Exception:
-            log.exception("strava2doc error")
-            return
-        return d
-"""
+
+async def delete_subscription(subscription_id):
+    params = {**DELETE_SUBSCRIPTION_PARAMS, "id": subscription_id}
+    try:
+        with Session() as session:
+            with session.delete(SUBSCRIPTION_ENDPOINT, params=params) as response:
+                success = response.status == 204
+                return success
+
+    except Exception:
+        log.exception("Error deleting Strava Webhook subscription %d", subscription_id)

@@ -16,7 +16,10 @@ Paste one of these Jupyter magic directives to the top of a cell
 """
 
 from logging import getLogger
+import datetime
+
 from DataAPIs import redis, init_collection
+from . import Index
 
 log = getLogger(__name__)
 log.propagate = True
@@ -25,7 +28,10 @@ APP_NAME = "heatflask"
 COLLECTION_NAME = "users"
 CACHE_PREFIX = "U:"
 
-USER_TTL = 365 * 24 * 3600  # Drop a user after a year of inactivity
+# Drop a user after a year of inactivity
+MONGO_TTL = 365 * 24 * 3600
+
+ADMIN = [15972102]
 
 DATA = {}
 
@@ -33,352 +39,86 @@ DATA = {}
 async def get_collection():
     if "col" not in DATA:
         DATA["col"] = await init_collection(
-            COLLECTION_NAME, force=False, ttl=USER_TTL, cache_prefix=CACHE_PREFIX
+            COLLECTION_NAME, force=False, ttl=MONGO_TTL, cache_prefix=CACHE_PREFIX
         )
     return DATA["col"]
 
 
+def mongo_doc(
+    # From Strava Athlete record
+    id=None,
+    username=None,
+    firstname=None,
+    lastname=None,
+    profile_medium=None,
+    profile=None,
+    measurement_preference=None,
+    city=None,
+    state=None,
+    country=None,
+    email=None,
+    # my additions
+    _id=None,
+    ts=None,
+    auth=None,
+    access_count=None,
+    private=None,
+):
+    doc = {
+        "_id": int(_id or id),
+        "username": username,
+        "firstname": firstname,
+        "lastname": lastname,
+        "profile": profile_medium or profile,
+        "units": measurement_preference,
+        "city": city,
+        "state": state,
+        "country": country,
+        "email": email,
+        #
+        "ts": ts or datetime.datetime.utcnow(),
+        "access_count": access_count or 0,
+        "auth": auth,
+        "private": private or False,
+    }
+
+    # Filter out any entries with None values
+    return {k: v for k, v in doc.items() if v is not None}
+
+
+async def add_or_update(**userdict):
+    users = get_collection()
+    doc = mongo_doc(**userdict)
+
+    # Creates a new user or updates an existing user (with the same id)
+    try:
+        return await users.update_one({"_id": doc["_id"]}, doc, upsert=True)
+    except Exception:
+        log.exception("error adding/updating user: %s", doc)
+
+
+async def get(user_id):
+    users = get_collection()
+    try:
+        doc = await users.find_one({"_id": user_id})
+    except Exception:
+        log.exception("Failed mongodb query")
+        doc = None
+    return doc
+
+
+async def delete(user_id):
+    users = get_collection()
+    uid = int(user_id)
+    try:
+        await users.delete_one({"_id": int(uid)})
+        await Index.delete_user_entries(uid)
+
+    except Exception:
+        log.exception("error deleting user %d", user_id)
+
+
 """
-from sqlalchemy.dialects import postgresql as pg
-from flask_login import UserMixin
-from sqlalchemy import inspect
-from contextlib import contextmanager
-from flask import current_app as app
-import json
-import time
-import stravalib
-import requests
-import gevent
-from datetime import datetime
-
-from . import db_sql, redis
-from .StravaClient import StravaClient
-from .EventLogger import EventLogger
-from .Index import Index
-from .Activities import Activities
-from .Utility import Utility, Timer, FakeQueue
-
-log = app.logger
-
-OFFLINE = app.config["OFFLINE"]
-STRAVA_CLIENT_ID = app.config["STRAVA_CLIENT_ID"]
-STRAVA_CLIENT_SECRET = app.config["STRAVA_CLIENT_SECRET"]
-TRIAGE_CONCURRENCY = app.config["TRIAGE_CONCURRENCY"]
-ADMIN = app.config["ADMIN"]
-BATCH_CHUNK_SIZE = app.config["BATCH_CHUNK_SIZE"]
-IMPORT_CONCURRENCY = app.config["IMPORT_CONCURRENCY"]
-DAYS_INACTIVE_CUTOFF = app.config["DAYS_INACTIVE_CUTOFF"]
-MAX_IMPORT_ERRORS = app.config["MAX_IMPORT_ERRORS"]
-
-TTL_INDEX = app.config["TTL_INDEX"]
-TTL_CACHE = app.config["TTL_CACHE"]
-TTL_DB = app.config["TTL_DB"]
-
-class Users(UserMixin, db_sql.Model):
-    Column = db_sql.Column
-    String = db_sql.String
-    Integer = db_sql.Integer
-    Boolean = db_sql.Boolean
-
-    id = Column(Integer, primary_key=True, autoincrement=False)
-
-    # These fields get refreshed every time the user logs in.
-    #  They are only stored in the database to enable persistent login
-    username = Column(String())
-    firstname = Column(String())
-    lastname = Column(String())
-    profile = Column(String())
-    access_token = Column(String())
-
-    measurement_preference = Column(String())
-    city = Column(String())
-    state = Column(String())
-    country = Column(String())
-    email = Column(String())
-
-    dt_last_active = Column(pg.TIMESTAMP)
-    dt_indexed = Column(pg.TIMESTAMP)
-
-    app_activity_count = Column(Integer, default=0)
-    share_profile = Column(Boolean, default=False)
-
-    cli = None
-
-    def __repr__(self):
-        return "U:{}".format(self.id)
-
-    def info(self):
-        info = {}
-        info.update(vars(self))
-        info["avatar"] = info["profile"]
-        info["public"] = info["share_profile"]
-
-        del info["share_profile"]
-        del info["profile"]
-        del info["_sa_instance_state"]
-        del info["access_token"]
-
-        if "activity_index" in info:
-            del info["activity_index"]
-
-        return info
-
-    def client(self, refresh=True, session=db_sql.session):
-        try:
-            access_info = json.loads(self.access_token)
-        except Exception:
-            log.debug("%s using bad access_token", self)
-            return
-
-        if OFFLINE:
-            return
-
-        if not self.cli:
-            self.cli = stravalib.Client(
-                access_token=access_info.get("access_token"),
-                rate_limiter=(lambda x=None: None),
-            )
-
-        now = time.time()
-        one_hour = 60 * 60
-        ttl = access_info["expires_at"] - now
-
-        token_expired = ttl < one_hour
-        start = now
-        if (token_expired and refresh) or (refresh == "force"):
-
-            # The existing access_token is expired
-            # Attempt to refresh the token
-            try:
-                new_access_info = self.cli.refresh_access_token(
-                    client_id=STRAVA_CLIENT_ID,
-                    client_secret=STRAVA_CLIENT_SECRET,
-                    refresh_token=access_info.get("refresh_token"),
-                )
-
-                self.access_token = json.dumps(new_access_info)
-
-                try:
-                    session.commit()
-                except Exception:
-                    log.exception("postgres error")
-
-                self.cli = stravalib.Client(
-                    access_token=new_access_info.get("access_token"),
-                    rate_limiter=(lambda x=None: None),
-                )
-            except requests.exceptions.ConnectionError:
-                log.error("can't refresh token. no network connection.")
-            except Exception:
-                log.exception("%s token refresh fail", self)
-                self.cli = None
-            else:
-                elapsed = round(time.time() - start, 2)
-                log.debug("%s token refresh elapsed=%s", self, elapsed)
-
-        return self.cli
-
-    def get_id(self):
-        return str(self.id)
-
-    def is_admin(self):
-        return self.id in ADMIN
-
-    @staticmethod
-    def strava_user_data(user=None, access_info=None, session=db_sql.session):
-        # fetch user data from Strava given user object or just a token
-        if OFFLINE:
-            return
-
-        if user:
-            client = user.client(session=session)
-            access_info_string = user.access_token
-
-        elif access_info:
-            access_token = access_info["access_token"]
-            access_info_string = json.dumps(access_info)
-            client = stravalib.Client(access_token=access_token)
-
-        else:
-            return
-
-        if not client:
-            return
-
-        try:
-            strava_user = client.get_athlete()
-        except Exception:
-            log.exception("error getting user '%s' data from token", user)
-            return
-
-        info = {
-            "id": strava_user.id,
-            "username": strava_user.username,
-            "firstname": strava_user.firstname,
-            "lastname": strava_user.lastname,
-            "profile": strava_user.profile_medium or strava_user.profile,
-            "measurement_preference": strava_user.measurement_preference,
-            "city": strava_user.city,
-            "state": strava_user.state,
-            "country": strava_user.country,
-            "email": strava_user.email,
-            "access_token": access_info_string,
-        }
-
-        # log.debug(strava_user.to_dict())
-        # log.debug(info)
-        return info
-
-    def is_public(self, setting=None):
-        if setting is None:
-            return self.share_profile
-
-        if setting != self.share_profile:
-            self.share_profile = setting
-            try:
-                db_sql.session.commit()
-            except Exception:
-                log.exception("error updating user %s", self)
-        return self.share_profile
-
-    def update_usage(self, session=db_sql.session):
-        self.dt_last_active = datetime.utcnow()
-        self.app_activity_count = self.app_activity_count + 1
-        session.commit()
-        return self
-
-    @classmethod
-    def add_or_update(cls, session=db_sql.session, **kwargs):
-        if not kwargs:
-            log.info("attempted to add_or_update user with no data")
-            return
-
-        # Creates a new user or updates an existing user (with the same id)
-        detached_user = cls(**kwargs)
-        try:
-            persistent_user = session.merge(detached_user)
-            session.commit()
-
-        except Exception:
-            session.rollback()
-            log.exception("error adding/updating user: %s", kwargs)
-        else:
-            return persistent_user
-
-    @classmethod
-    def get(cls, user_identifier, session=db_sql.session):
-
-        # Get user from db by id or username
-        try:
-            # try casting identifier to int
-            user_id = int(user_identifier)
-        except ValueError:
-            # if that doesn't work then assume it's a string username
-            user = cls.query.filter_by(username=user_identifier).first()
-        else:
-            user = cls.query.get(user_id)
-        return user if user else None
-
-    def delete(self, deauth=True, session=db_sql.session):
-        self.delete_index()
-        if deauth:
-            try:
-                self.client().deauthorize()
-            except Exception:
-                pass
-        try:
-            session.delete(self)
-            session.commit()
-        except Exception:
-            log.exception("error deleting %s from Postgres", self)
-
-        log.info("%s deleted", self)
-
-    def verify(
-        self,
-        days_inactive_cutoff=DAYS_INACTIVE_CUTOFF,
-        update=True,
-        session=db_sql.session,
-        now=None,
-    ):
-        # cls = self.__class__
-
-        now = now or datetime.utcnow()
-
-        last_active = self.dt_last_active
-        if not last_active:
-            log.info("%s was never active", self)
-            return
-
-        days_inactive = (now - last_active).days
-
-        if days_inactive >= days_inactive_cutoff:
-            log.debug("%s inactive %s days > %s", self, days_inactive)
-            return
-
-        # if we got here then the user has been active recently
-        #  they may have revoked our access, which we can only
-        #  know if we try to get some data on their behalf
-        if update and not OFFLINE:
-            client = StravaClient(user=self)
-
-            if client:
-                log.debug("%s updated")
-                return "updated"
-
-            log.debug("%s can't create client", self)
-            return
-        return True
-
-    @classmethod
-    def triage(
-        cls, days_inactive_cutoff=DAYS_INACTIVE_CUTOFF, delete=True, update=True
-    ):
-        with session_scope() as session:
-            now = datetime.utcnow()
-            stats = dict(count=0, invalid=0, updated=0, deleted=0)
-
-            def verify_user(user):
-                result = user.verify(
-                    days_inactive_cutoff=days_inactive_cutoff,
-                    update=update,
-                    session=session,
-                    now=now,
-                )
-                return (user, result)
-
-            def handle_verify_result(verify_user_output):
-                user, result = verify_user_output
-                stats["count"] += 1
-                if not result:
-                    if delete:
-                        user.delete(session=session)
-                        # log.debug("...%s deleted")
-                        stats["deleted"] += 1
-                    stats["invalid"] += 1
-                if result == "updated":
-                    stats["updated"] += 1
-
-                if not (stats["count"] % 1000):
-                    log.info("triage: %s", stats)
-
-            def when_done(dummy):
-                msg = "Users db triage: {}".format(stats)
-                log.debug(msg)
-                EventLogger.new_event(msg=msg)
-                log.info("Triage Done: %s", stats)
-
-            P = gevent.pool.Pool(TRIAGE_CONCURRENCY + 1)
-
-            results = P.imap_unordered(
-                verify_user, cls.query, maxsize=TRIAGE_CONCURRENCY + 2
-            )
-
-            def do_it():
-                for result in results:
-                    handle_verify_result(result)
-
-            return P.spawn(do_it).link(when_done)
 
     @classmethod
     def dump(cls, attrs, **filter_by):
