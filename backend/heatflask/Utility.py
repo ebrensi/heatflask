@@ -1,7 +1,4 @@
-import requests
 import dateutil
-import uuid
-import time
 from datetime import datetime
 from itertools import islice, repeat, starmap, takewhile
 from operator import truth
@@ -19,9 +16,9 @@ def ip_lookup_url(ip):
     return "http://freegeoip.net/json/{}".format(ip) if ip else "#"
 
 
-def ip_lookup(cls, ip_address):
-    r = requests.get(cls.ip_lookup_url(ip_address))
-    return r.json()
+async def ip_lookup(session, ip_address):
+    r = await session.get(ip_lookup_url(ip_address))
+    return await r.json()
 
 
 def ip_timezone(cls, ip_address):
