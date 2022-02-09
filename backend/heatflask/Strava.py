@@ -23,15 +23,96 @@ import urllib
 import msgpack
 import polyline
 import asyncio
+import datetime
 
-from . import StreamCodecs
+import StreamCodecs
 
 log = getLogger(__name__)
 log.propagate = True
 
-STRAVA_DOMAIN = "https://www.strava.com"
-API_SPEC = "/api/v3"
 
+STRAVA_DOMAIN = "https://www.strava.com"
+STALE_TOKEN = 300
+
+# Client class takes care of refreshing access tokens
+class AsyncClient:
+    def __init__(self, name, refresh_callback=None, **kwargs):
+        self.name = name
+        self.set_state(**kwargs)
+        self.refresh_callback = refresh_callback
+
+    def set_state(
+        self, access_token=None, expires_at=None, refresh_token=None, **extra
+    ):
+        self.access_token = access_token
+        self.expires_at = int(expires_at)
+        self.refresh_token = refresh_token
+        self.session = self.new_session()
+
+    def __repr__(self):
+        expires_at_str = datetime.datetime.fromtimestamp(self.expires_at)
+        return f"<AsyncClient '{self.name}' expires-{expires_at_str}>"
+
+    @property
+    def expires_in(self):
+        return self.expires_at - round(time.time())
+
+    @property
+    def headers(self):
+        if self.access_token:
+            return {"Authorization": f"Bearer {self.access_token}"}
+
+    def new_session(self):
+        return aiohttp.ClientSession(
+            STRAVA_DOMAIN, headers=self.headers, raise_for_status=True
+        )
+
+    async def update_access_token(self, stale_ttl=STALE_TOKEN, code=None):
+        if not (self.refresh_token or code):
+            return
+
+        if self.expires_in > stale_ttl:
+            log.debug("%s is good. TTL %s", self, self.expires_in)
+            return
+
+        log.debug("%s refreshing token token", self)
+        t0 = time.perf_counter()
+        new_auth_info = await self.run_func(
+            get_access_token, code=code, refresh_token=self.refresh_token
+        )
+
+        if not (new_auth_info and new_auth_info.get("refresh_token")):
+            return
+
+        await self.session.close()
+        self.set_state(**new_auth_info)
+
+        if self.refresh_callback:
+            await self.refresh_callback(self.name, new_auth_info)
+
+        elapsed = time.perf_counter() - t0
+        log.info("%s token refresh took %.2f", self.name, elapsed)
+
+        return new_auth_info
+
+    async def run_func(self, func, *args, **kwargs):
+        try:
+            return await func(self.session, *args, **kwargs)
+        except Exception:
+            log.exception("%s, %s", self, func)
+
+    def get_athlete(self):
+        return self.run_func(get_athlete)
+
+    def get_streams(self, activity_id):
+        return self.run_func(get_streams, activity_id)
+
+    def get_activity(self, activity_id):
+        return self.run_func(get_activity, activity_id)
+
+
+# *********************************************************************************************
+API_SPEC = "/api/v3"
 
 #
 # Authentication
@@ -51,71 +132,45 @@ TOKEN_EXCHANGE_ENDPOINT = "/oauth/token"
 TOKEN_EXCHANGE_PARAMS = {
     "client_id": os.environ["STRAVA_CLIENT_ID"],
     "client_secret": os.environ["STRAVA_CLIENT_SECRET"],
-    "code": None,
-    "grant_type": "authorization_code",
+    #     "code": None,
+    #     "grant_type": "authorization_code",
 }
 
 
 def auth_url(redirect_uri=None, state=None):
-
     params = {**AUTH_PARAMS, "redirect_uri": redirect_uri, "state": state}
-
     return STRAVA_DOMAIN + AUTH_ENDPOINT + "?" + urllib.parse.urlencode(params)
-
-
-def auth_headers(access_token):
-    return {"Authorization": f"Bearer {access_token}"}
-
-
-def Session(access_token=None):
-    headers = None if access_token is None else auth_headers(access_token)
-    return aiohttp.ClientSession(STRAVA_DOMAIN, headers=headers)
 
 
 # We can get the access_token for a user either with
 # a code obtained via authentication, or with a refresh token
-async def get_access_token(code=None, refresh_token=None):
-    t0 = time.perf_counter()
+async def get_access_token(session=None, code=None, refresh_token=None):
     params = {**TOKEN_EXCHANGE_PARAMS}
     params.update(
         {"grant_type": "authorization_code", "code": code}
         if code
         else {"grant_type": "refresh_token", "refresh_token": refresh_token}
     )
-
-    async with Session() as sesh:
-        async with sesh.post(TOKEN_EXCHANGE_ENDPOINT, params=params) as response:
-            if response.staus == 200:
-                log.info("token exchange failed")
-
+    async with session.post(TOKEN_EXCHANGE_ENDPOINT, params=params) as response:
         rjson = await response.json()
-    elapsed = time.perf_counter() - t0
-    method = "authorization code" if code else "refresh token"
-    log.info("%s exchange took %.2f", method, elapsed)
     return rjson
 
 
 #
 # Athlete
 #
-ATHLETE_ENDPOINT = "{API_SPEC}/athlete"
+ATHLETE_ENDPOINT = f"{API_SPEC}/athlete"
 
 
-async def get_athlete(user_session):
-    athlete = None
-    status = None
-    try:
-        async with user_session.get(ATHLETE_ENDPOINT) as response:
-            status = response.status
-            athlete = response.json()
-    except Exception:
-        log.exception("Error getting athlete data")
-    return status, athlete
+async def get_athlete(session):
+    async with session.get(ATHLETE_ENDPOINT) as response:
+        return await response.json()
 
 
 #
 # Streams
 #
+MIN_STREAM_LENGTH = 3
 POLYLINE_PRECISION = 6
 ACTIVITY_STREAM_PARAMS = {
     "keys": "latlng,altitude,time",
@@ -130,32 +185,28 @@ def streams_endpoint(activity_id):
 
 
 async def get_streams(session, activity_id):
-    status = None
-    result = None
-
     t0 = time.perf_counter()
-    try:
-        async with session.get(
-            streams_endpoint(activity_id), params=ACTIVITY_STREAM_PARAMS
-        ) as response:
-            status = response.status
-            rjson = await response.json()
+    async with session.get(
+        streams_endpoint(activity_id), params=ACTIVITY_STREAM_PARAMS
+    ) as response:
+        rjson = await response.json()
 
-            if (status == 200) and rjson:
-                result = msgpack.packb(
-                    {
-                        "t": StreamCodecs.rlld_encode(rjson["time"]["data"]),
-                        "a": StreamCodecs.rlld_encode(rjson["altitude"]["data"]),
-                        "p": polyline.encode(
-                            rjson["latlng"]["data"], POLYLINE_PRECISION
-                        ),
-                    }
-                )
-            elapsed = time.perf_counter() - t0
-        log.info("fetching streams for %d took %.1f", activity_id, elapsed)
-    except aiohttp.ClientConnectorError:
-        pass
-    return activity_id, status, result
+        if not (
+            rjson and ("time" in rjson) and (len(rjson["time"] < MIN_STREAM_LENGTH))
+        ):
+            return
+
+        result = msgpack.packb(
+            {
+                "t": StreamCodecs.rlld_encode(rjson["time"]["data"]),
+                "a": StreamCodecs.rlld_encode(rjson["altitude"]["data"]),
+                "p": polyline.encode(rjson["latlng"]["data"], POLYLINE_PRECISION),
+            }
+        )
+    elapsed = time.perf_counter() - t0
+    log.info("fetching streams for %d took %.1f", activity_id, elapsed)
+
+    return activity_id, result
 
 
 def unpack_streams(packed_streams):
@@ -173,7 +224,7 @@ async def get_many_streams(session, activity_ids):
     ]
     for task in asyncio.as_completed(request_tasks):
         activity_id, status, streams = await task
-        if status == 200:
+        if status != 200:
             abort_signal = yield activity_id, streams
 
         if abort_signal or (status is None):
@@ -252,16 +303,8 @@ def activity_endpoint(activity_id):
 
 
 async def get_activity(user_session, activity_id):
-    status = None
-    result = None
-    try:
-        async with user_session.get(activity_endpoint(activity_id)) as r:
-            status = r.status
-            result = await r.json()
-    except Exception:
-        log.exception("error fetching activity %d", activity_id)
-
-    return activity_id, status, result
+    async with user_session.get(activity_endpoint(activity_id)) as r:
+        return await r.json()
 
 
 #
@@ -285,15 +328,10 @@ DELETE_SUBSCRIPTION_PARAMS = {
 }
 
 
-async def create_subscription(callback_url):
+async def create_subscription(admin_session, callback_url):
     params = {**CREATE_SUBSCRIPTION_PARAMS, "callback_url": callback_url}
-
-    try:
-        with Session() as session:
-            with session.post(SUBSCRIPTION_ENDPOINT, params=params) as response:
-                return await response.json()
-    except Exception:
-        log.exception("Error creating Strava Webhook subscription")
+    async with admin_session.post(SUBSCRIPTION_ENDPOINT, params=params) as response:
+        return await response.json()
 
 
 # After calling create_subscription, you will receive a GET request at your
@@ -306,22 +344,12 @@ async def verify_subscription(validation_dict):
         return {"hub.challenge": validation_dict["hub.challenge"]}
 
 
-async def view_subscription():
-    try:
-        with Session() as session:
-            with session.get(SUBSCRIPTION_ENDPOINT, params=params) as response:
-                return await response.json()
-    except Exception:
-        log.exception("Error viewing Strava Webhook subscription")
+async def view_subscription(admin_session):
+    async with admin_session.get(SUBSCRIPTION_ENDPOINT, params=params) as response:
+        return await response.json()
 
 
-async def delete_subscription(subscription_id):
+async def delete_subscription(admin_session, subscription_id=None):
     params = {**DELETE_SUBSCRIPTION_PARAMS, "id": subscription_id}
-    try:
-        with Session() as session:
-            with session.delete(SUBSCRIPTION_ENDPOINT, params=params) as response:
-                success = response.status == 204
-                return success
-
-    except Exception:
-        log.exception("Error deleting Strava Webhook subscription %d", subscription_id)
+    async with admin_session.delete(SUBSCRIPTION_ENDPOINT, params=params) as response:
+        return response.status == 204
