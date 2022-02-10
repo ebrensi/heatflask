@@ -22,10 +22,10 @@ from logging import getLogger
 import datetime
 import motor
 
-from .DataAPIs import init_collection
-from . import Users
-from . import Strava
-from . import Utility
+from DataAPIs import init_collection
+import Users
+import Strava
+import Utility
 
 log = getLogger(__name__)
 log.propagate = True
@@ -75,6 +75,7 @@ def mongo_doc(
     start_date=None,
     start_date_local=None,
     timezone=None,
+    utc_offset=None,
     start_latlng=None,
     end_latlng=None,
     athlete_count=None,
@@ -88,51 +89,54 @@ def mongo_doc(
     _id=None,
     ts=None,
 ):
-    doc = {
-        "_id": int(_id or id),
-        "athlete": int(athlete),
-        "name": name,
-        "distance": distance,
-        "moving_time": moving_time,
-        "elapsed_time": elapsed_time,
-        "type": type,
-        "start_date": start_date,
-        "start_date_local": start_date_local,
-        "timezone": timezone,
-        "start_latlng": start_latlng,
-        "end_latlng": end_latlng,
-        "athlete_count": athlete_count,
-        "photo_count": photo_count,
-        "total_photo_count": total_photo_count,
-        "commute": commute,
-        "manual": manual,
-        "private": private,
-        #
-        "ts": ts or datetime.datetime.utcnow(),
-        "bounds": polyline_bounds(map.get("summary_polyline")),
-    }
+    if not (start_date and map and map.get("summary_polyline")):
+        log.debug("cannot make doc for activity %s", id)
+        return
 
-    # Filter out any entries with None values
-    return {k: v for k, v in doc.items() if v is not None}
+    return Utility.cleandict(
+        {
+            "_id": int(_id or id),
+            "athlete": int(athlete["id"]),
+            "name": name,
+            "distance": distance,
+            "elapsed_time": elapsed_time,
+            "type": type,
+            "start_date": Utility.to_datetime(start_date).timestamp(),
+            "start_date_local": Utility.to_datetime(start_date_local).timestamp(),
+            "utc_offset": utc_offset,
+            "timezone": timezone,
+            "start_latlng": start_latlng,
+            "end_latlng": end_latlng,
+            "athlete_count": athlete_count,
+            "photo_count": photo_count,
+            "total_photo_count": total_photo_count,
+            "commute": commute,
+            "manual": manual,
+            "private": private,
+            #
+            "ts": ts or datetime.datetime.utcnow(),
+            "bounds": polyline_bounds(map.get("summary_polyline")),
+        }
+    )
 
 
-async def import_user_entries(user_id):
-    user = Users.get(user_id)
-    token = user["auth"]["access_token"]
+async def import_user_entries(**user_doc):
+    uid = int(user_doc["_id"])
 
-    index = get_collection()
+    # we assume the access_token is current
+    strava = Strava.AsyncClient(uid, **user_doc["auth"])
+
+    index = await get_collection()
     now = datetime.datetime.utcnow()
-    with Strava.Session(access_token=token) as session:
-        result = await index.insert_many(
-            (mongo_doc(A, ts=now) for A in await Strava.get_index(session))
-        )
-
-    return result
+    docs = [mongo_doc(A, ts=now) async for A in strava.get_index() if A is not None]
+    docs = filter(None, docs)
+    return await index.insert_many(docs, ordered=False)
 
 
-async def delete_user_entries(user_id):
+async def delete_user_entries(**user_data):
+    uid = int(user_data["_id"])
     index = get_collection()
-    return await index.delete_many({"athlete": int(user_id)})
+    return await index.delete_many({"athlete": int(uid)})
 
 
 async def query(
