@@ -42,11 +42,12 @@ class AsyncClient:
         self.refresh_callback = refresh_callback
 
     def set_state(
-        self, access_token=None, expires_at=None, refresh_token=None, **extra
+        self, access_token=None, expires_at=None, refresh_token=None, scope=None, **extra
     ):
         self.access_token = access_token
         self.expires_at = int(expires_at)
         self.refresh_token = refresh_token
+        self.scope = scope
         self.session = self.new_session()
 
     def __repr__(self):
@@ -71,11 +72,11 @@ class AsyncClient:
         if not (self.refresh_token or code):
             return
 
-        if self.expires_in > stale_ttl:
-            log.debug("%s is good. TTL %s", self, self.expires_in)
+        if (code is None) and (self.expires_in > stale_ttl):
+            log.debug("%s is valid for %ss", self, self.expires_in)
             return
 
-        log.debug("%s refreshing token token", self)
+        log.debug("%s updating access token", self)
         t0 = time.perf_counter()
         new_auth_info = await self.run_func(
             get_access_token, code=code, refresh_token=self.refresh_token
@@ -109,7 +110,12 @@ class AsyncClient:
 
     def get_activity(self, activity_id):
         return self.run_func(get_activity, activity_id)
+    
+    def get_index(self):
+        return get_index(self.session)
 
+    def get_many_streams(self, activity_ids):
+        return get_many_streams(self.session, activity_ids)
 
 # *********************************************************************************************
 API_SPEC = "/api/v3"
@@ -163,6 +169,7 @@ ATHLETE_ENDPOINT = f"{API_SPEC}/athlete"
 
 
 async def get_athlete(session):
+    log.info("test")
     async with session.get(ATHLETE_ENDPOINT) as response:
         return await response.json()
 
@@ -170,7 +177,7 @@ async def get_athlete(session):
 #
 # Streams
 #
-MIN_STREAM_LENGTH = 3
+MAX_STREAMS_ERRORS = 10
 POLYLINE_PRECISION = 6
 ACTIVITY_STREAM_PARAMS = {
     "keys": "latlng,altitude,time",
@@ -191,10 +198,9 @@ async def get_streams(session, activity_id):
     ) as response:
         rjson = await response.json()
 
-        if not (
-            rjson and ("time" in rjson) and (len(rjson["time"] < MIN_STREAM_LENGTH))
-        ):
-            return
+        if not (rjson and ("time" in rjson)):
+            log.info("problem with activity %d: %s", activity_id, (response.status, rjson))
+            return activity_id, None
 
         result = msgpack.packb(
             {
@@ -203,8 +209,8 @@ async def get_streams(session, activity_id):
                 "p": polyline.encode(rjson["latlng"]["data"], POLYLINE_PRECISION),
             }
         )
-    elapsed = time.perf_counter() - t0
-    log.info("fetching streams for %d took %.1f", activity_id, elapsed)
+    elapsed = (time.perf_counter() - t0) * 1000
+    log.info("fetching streams for %d took %d", activity_id, elapsed)
 
     return activity_id, result
 
@@ -222,51 +228,53 @@ async def get_many_streams(session, activity_ids):
     request_tasks = [
         asyncio.create_task(get_streams(session, aid)) for aid in activity_ids
     ]
+    errors = 0
     for task in asyncio.as_completed(request_tasks):
-        activity_id, status, streams = await task
-        if status != 200:
-            abort_signal = yield activity_id, streams
+        try:
+            activity_id, result = await task
+        except Exception as e:
+            log.error(e)
+            errors += 1
+            if errors > MAX_STREAMS_ERRORS:
+                abort_signal = True
+        else:
+            abort_signal = yield activity_id, result
 
-        if abort_signal or (status is None):
+        if abort_signal:
             log.info("get_many_streams aborted")
-            for other_task in request_tasks:
-                other_task.cancel()
+            yield
+            for task in request_tasks:
+                task.cancel()
             await asyncio.wait(request_tasks)
-            break
+            return
 
 
 #
 # Index pages
 #
 PER_PAGE = 200
-REQUEST_DELAY = 0.2
+REQUEST_DELAY = 1
 ACTIVITY_LIST_ENDPOINT = f"{API_SPEC}/athlete/activities"
 params = {"per_page": PER_PAGE}
 
 
 async def get_activity_index_page(session, p):
     t0 = time.perf_counter()
-    result = None
-    status = None
-    try:
-        async with session.get(
-            ACTIVITY_LIST_ENDPOINT, params={**params, "page": p}
-        ) as r:
-            status = r.status
-            result = await r.json()
-    except Exception:
-        log.debug("error fetching page %d", p)
-    else:
-        elapsed_ms = round((time.perf_counter() - t0) * 1000)
-        log.debug("retrieved page %d in %d", p, elapsed_ms)
-    return p, status, result
+
+    async with session.get(ACTIVITY_LIST_ENDPOINT, params={**params, "page": p}, raise_for_status=False) as r:
+        status = r.status
+        result = await r.json()
+
+    elapsed_ms = round((time.perf_counter() - t0) * 1000)
+    log.debug("retrieved page %d in %d", p, elapsed_ms)
+    return status, p, result
 
 
 def page_request(session, p):
     return asyncio.create_task(get_activity_index_page(session, p))
 
 
-# sess = aiohttp.ClientSession(STRAVA_DOMAIN, headers=HEADERS)
+EMPTY_LIST = []
 async def get_index(user_session):
 
     done_adding_pages = False
@@ -275,7 +283,7 @@ async def get_index(user_session):
     while tasks:
 
         if not done_adding_pages:
-            # Add a page request task
+            # Add a page requst task
             tasks.add(page_request(user_session, next_page))
             log.debug("requesting page %d", next_page)
             next_page += 1
@@ -286,15 +294,37 @@ async def get_index(user_session):
         )
 
         for task in finished:
-            p, status, entries = task.result()
-
-            if (status == 200) and len(entries):
-                for A in entries:
-                    yield A
-                log.debug("processed %d entries from page %d", len(entries), p)
-            elif not done_adding_pages:
-                done_adding_pages = True
-                log.debug("Done requesting pages (status %d)", status)
+            try:
+                status, p, result = task.result()
+            except Exception as e:
+                log.exception("get_index")
+                abort_signal = True
+            else:
+                if status != 200:
+                    log.error("Strava error %s: %s", status, result)
+                    abort_signal = True
+            
+                elif len(result):
+                    for A in result:
+                        abort_signal = yield A
+                        if abort_signal:
+                            break
+                
+                elif not done_adding_pages:
+                    done_adding_pages = True
+                    log.debug("Done requesting pages (status %d)", status)
+                
+                    
+            if abort_signal:
+                log.warning("get_index aborted")
+                for task in unfinished:
+                    task.cancel()
+                await asyncio.wait(unfinished)
+                yield
+                return
+                    
+                log.debug("processed %d entries from page %d", len(result), p)
+            
         tasks = unfinished
 
 
