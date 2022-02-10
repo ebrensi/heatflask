@@ -26,6 +26,7 @@ import asyncio
 import datetime
 
 import StreamCodecs
+import Utility
 
 log = getLogger(__name__)
 log.propagate = True
@@ -36,27 +37,29 @@ STALE_TOKEN = 300
 
 # Client class takes care of refreshing access tokens
 class AsyncClient:
-    def __init__(self, name, refresh_callback=None, **kwargs):
+    def __init__(self, name, **kwargs):
         self.name = name
         self.set_state(**kwargs)
-        self.refresh_callback = refresh_callback
 
     def set_state(
-        self, access_token=None, expires_at=None, refresh_token=None, scope=None, **extra
+        self, access_token=None, expires_at=None, refresh_token=None, **extra
     ):
         self.access_token = access_token
-        self.expires_at = int(expires_at)
+        self.expires_at = expires_at
         self.refresh_token = refresh_token
-        self.scope = scope
         self.session = self.new_session()
 
     def __repr__(self):
-        expires_at_str = datetime.datetime.fromtimestamp(self.expires_at)
-        return f"<AsyncClient '{self.name}' expires-{expires_at_str}>"
+        s = f"<AsyncClient '{self.name}'"
+        if self.expires_at:
+            expires_at_str = datetime.datetime.fromtimestamp(self.expires_at)
+            s += f" expires-{expires_at_str}>"
+        return s
 
     @property
     def expires_in(self):
-        return self.expires_at - round(time.time())
+        if self.expires_at:
+            return self.expires_at - round(time.time())
 
     @property
     def headers(self):
@@ -69,14 +72,12 @@ class AsyncClient:
         )
 
     async def update_access_token(self, stale_ttl=STALE_TOKEN, code=None):
-        if not (self.refresh_token or code):
+        if code:
+            log.debug("%s exchanging auth-code for token", self)
+        elif (not self.refresh_token) or (self.expires_in > stale_ttl):
+            log.debug("%s is valid", self)
             return
 
-        if (code is None) and (self.expires_in > stale_ttl):
-            log.debug("%s is valid for %ss", self, self.expires_in)
-            return
-
-        log.debug("%s updating access token", self)
         t0 = time.perf_counter()
         new_auth_info = await self.run_func(
             get_access_token, code=code, refresh_token=self.refresh_token
@@ -85,16 +86,21 @@ class AsyncClient:
         if not (new_auth_info and new_auth_info.get("refresh_token")):
             return
 
+        del new_auth_info["expires_in"]
+        del new_auth_info["token_type"]
+
+        log.debug("new_auth_info: %s", new_auth_info)
+
         await self.session.close()
         self.set_state(**new_auth_info)
 
-        if self.refresh_callback:
-            await self.refresh_callback(self.name, new_auth_info)
-
-        elapsed = time.perf_counter() - t0
-        log.info("%s token refresh took %.2f", self.name, elapsed)
+        elapsed = (time.perf_counter() - t0) * 1000
+        log.info("%s token refresh took %d", self.name, elapsed)
 
         return new_auth_info
+
+    async def deauthenticate(self):
+        return deauth(self.session)
 
     async def run_func(self, func, *args, **kwargs):
         try:
@@ -110,12 +116,13 @@ class AsyncClient:
 
     def get_activity(self, activity_id):
         return self.run_func(get_activity, activity_id)
-    
+
     def get_index(self):
         return get_index(self.session)
 
     def get_many_streams(self, activity_ids):
         return get_many_streams(self.session, activity_ids)
+
 
 # *********************************************************************************************
 API_SPEC = "/api/v3"
@@ -127,6 +134,11 @@ API_SPEC = "/api/v3"
 AUTH_ENDPOINT = "/oauth/authorize"
 AUTH_PARAMS = {
     "client_id": os.environ["STRAVA_CLIENT_ID"],
+    "client_secret": os.environ["STRAVA_CLIENT_SECRET"],
+}
+AUTH_URL_PARAMS = {
+    **AUTH_PARAMS,
+    "client_secret": None,
     "response_type": "code",
     "approval_prompt": "auto",  # or "force"
     "scope": "read,activity:read,activity:read_all",
@@ -136,16 +148,22 @@ AUTH_PARAMS = {
 
 TOKEN_EXCHANGE_ENDPOINT = "/oauth/token"
 TOKEN_EXCHANGE_PARAMS = {
-    "client_id": os.environ["STRAVA_CLIENT_ID"],
-    "client_secret": os.environ["STRAVA_CLIENT_SECRET"],
-    #     "code": None,
-    #     "grant_type": "authorization_code",
+    **AUTH_PARAMS,
+    "code": None,
+    "grant_type": "authorization_code",
 }
 
 
-def auth_url(redirect_uri=None, state=None):
-    params = {**AUTH_PARAMS, "redirect_uri": redirect_uri, "state": state}
-    return STRAVA_DOMAIN + AUTH_ENDPOINT + "?" + urllib.parse.urlencode(params)
+DEAUTH_ENDPOINT = "/oauth/deauthorize"
+
+
+def get_auth_url(redirect_uri="http://localhost/exchange_token", state=None):
+    params = Utility.cleandict(
+        {**AUTH_URL_PARAMS, "redirect_uri": redirect_uri, "state": state}
+    )
+    return (
+        STRAVA_DOMAIN + AUTH_ENDPOINT + "?" + urllib.parse.urlencode(params, safe=",:")
+    )
 
 
 # We can get the access_token for a user either with
@@ -157,9 +175,15 @@ async def get_access_token(session=None, code=None, refresh_token=None):
         if code
         else {"grant_type": "refresh_token", "refresh_token": refresh_token}
     )
+    params = Utility.cleandict(params)
     async with session.post(TOKEN_EXCHANGE_ENDPOINT, params=params) as response:
         rjson = await response.json()
     return rjson
+
+
+async def deauth(session):
+    async with session.post(DEAUTH_ENDPOINT) as response:
+        return await response.json()
 
 
 #
@@ -169,7 +193,6 @@ ATHLETE_ENDPOINT = f"{API_SPEC}/athlete"
 
 
 async def get_athlete(session):
-    log.info("test")
     async with session.get(ATHLETE_ENDPOINT) as response:
         return await response.json()
 
@@ -199,7 +222,9 @@ async def get_streams(session, activity_id):
         rjson = await response.json()
 
         if not (rjson and ("time" in rjson)):
-            log.info("problem with activity %d: %s", activity_id, (response.status, rjson))
+            log.info(
+                "problem with activity %d: %s", activity_id, (response.status, rjson)
+            )
             return activity_id, None
 
         result = msgpack.packb(
@@ -261,11 +286,13 @@ params = {"per_page": PER_PAGE}
 async def get_activity_index_page(session, p):
     t0 = time.perf_counter()
 
-    async with session.get(ACTIVITY_LIST_ENDPOINT, params={**params, "page": p}, raise_for_status=False) as r:
+    async with session.get(
+        ACTIVITY_LIST_ENDPOINT, params={**params, "page": p}, raise_for_status=False
+    ) as r:
         status = r.status
         result = await r.json()
 
-    elapsed_ms = round((time.perf_counter() - t0) * 1000)
+    elapsed_ms = (time.perf_counter() - t0) * 1000
     log.debug("retrieved page %d in %d", p, elapsed_ms)
     return status, p, result
 
@@ -275,6 +302,8 @@ def page_request(session, p):
 
 
 EMPTY_LIST = []
+
+
 async def get_index(user_session):
 
     done_adding_pages = False
@@ -303,18 +332,17 @@ async def get_index(user_session):
                 if status != 200:
                     log.error("Strava error %s: %s", status, result)
                     abort_signal = True
-            
+
                 elif len(result):
                     for A in result:
                         abort_signal = yield A
                         if abort_signal:
                             break
-                
+
                 elif not done_adding_pages:
                     done_adding_pages = True
                     log.debug("Done requesting pages (status %d)", status)
-                
-                    
+
             if abort_signal:
                 log.warning("get_index aborted")
                 for task in unfinished:
@@ -322,9 +350,9 @@ async def get_index(user_session):
                 await asyncio.wait(unfinished)
                 yield
                 return
-                    
+
                 log.debug("processed %d entries from page %d", len(result), p)
-            
+
         tasks = unfinished
 
 
@@ -342,18 +370,14 @@ async def get_activity(user_session, activity_id):
 #
 SUBSCRIPTION_VERIFY_TOKEN = "heatflask_yay!"
 SUBSCRIPTION_ENDPOINT = f"{API_SPEC}/push_subscriptions"
-SUBSCRIPTION_PARAMS = {
-    "client_id": os.environ["STRAVA_CLIENT_ID"],
-    "client_secret": os.environ["STRAVA_CLIENT_SECRET"],
-}
 CREATE_SUBSCRIPTION_PARAMS = {
-    **SUBSCRIPTION_PARAMS,
+    **AUTH_PARAMS,
     "verify_token": SUBSCRIPTION_VERIFY_TOKEN,
     "callback_url": None,
 }
-VIEW_SUBSCRIPTION_PARAMS = SUBSCRIPTION_PARAMS
+VIEW_SUBSCRIPTION_PARAMS = AUTH_PARAMS
 DELETE_SUBSCRIPTION_PARAMS = {
-    **SUBSCRIPTION_PARAMS,
+    **VIEW_SUBSCRIPTION_PARAMS,
     "id": None,
 }
 

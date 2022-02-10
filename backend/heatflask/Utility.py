@@ -5,7 +5,7 @@ from operator import truth
 
 
 def cleandict(d: dict) -> dict:
-    return {k: v for k, v in d.items() if v}
+    return {k: v for k, v in d.items() if v is not None}
 
 
 def href(url, text):
