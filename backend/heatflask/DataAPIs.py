@@ -22,11 +22,11 @@ redis = aioredis.from_url(redis_url)
 
 
 async def init_collection(
-    name, force=False, ttl=None, capped_size=None, cache_prefix=None
+    name, ttl=None, capped_size=None, cache_prefix=None
 ):
     collections = await mongodb.list_collection_names()
 
-    if (not force) and (name in collections):
+    if name in collections:
         if ttl:
             return await update_collection_ttl(name, ttl)
         elif capped_size:
@@ -53,7 +53,7 @@ async def init_collection(
 
     if ttl:
         await collection.create_index(
-            "ts", name="ts", unique=True, expireAfterSeconds=ttl
+            "ts", name="ts", unique=False, expireAfterSeconds=ttl
         )
 
     info = await collection.index_information()
@@ -115,3 +115,15 @@ async def update_collection_cap(name, new_size):
             new_size,
         )
     return collection
+
+
+def drop(name):
+    return mongodb.drop_collection(name)
+
+
+def list():
+    return mongodb.list_collection_names()
+
+
+def stats(name):
+    return mongodb.command("collstats", name)

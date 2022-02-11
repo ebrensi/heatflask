@@ -10,7 +10,7 @@ Paste one of these Jupyter magic directives to the top of a cell
 from logging import getLogger
 import datetime
 
-from DataAPIs import init_collection
+import DataAPIs
 import Utility
 
 log = getLogger(__name__)
@@ -29,7 +29,9 @@ DATA = {}
 
 async def get_collection():
     if "col" not in DATA:
-        DATA["col"] = await init_collection(COLLECTION_NAME, force=False, ttl=MONGO_TTL)
+        DATA["col"] = await DataAPIs.init_collection(
+            COLLECTION_NAME, ttl=MONGO_TTL
+        )
     return DATA["col"]
 
 
@@ -131,3 +133,11 @@ async def delete(user_id):
 
     except Exception:
         log.exception("error deleting user %d", uid)
+
+
+def stats():
+    return DataAPIs.stats(COLLECTION_NAME)
+
+
+def drop():
+    return DataAPIs.drop(COLLECTION_NAME)

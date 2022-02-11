@@ -12,12 +12,10 @@ import polyline
 import numpy as np
 from logging import getLogger
 import datetime
-import motor
 import time
 from pymongo import DESCENDING
 
-from DataAPIs import init_collection
-import Users
+import DataAPIs
 import Strava
 import Utility
 
@@ -37,7 +35,7 @@ DATA = {}
 
 async def get_collection():
     if "col" not in DATA:
-        DATA["col"] = await init_collection(COLLECTION_NAME, force=False, ttl=INDEX_TTL)
+        DATA["col"] = await DataAPIs.init_collection(COLLECTION_NAME, ttl=INDEX_TTL)
     return DATA["col"]
 
 
@@ -56,6 +54,24 @@ def polyline_bounds(poly):
     }
 
 
+# MongoDB short field names speed up data transfer to/from
+# remote DB server
+ACTIVITY_ID = "_id"
+TIMESTAMP = "ts"
+USER_ID = "U"
+ACTIVITY_NAME = "N"
+DISTANCE_METERS = "D"
+TIME_SECONDS = "T"
+ACTIVITY_TYPE = "t"
+UTC_START_TIME = "s"
+UTC_LOCAL_OFFSET = "o"
+N_ATHLETES = "#a"
+N_PHOTOS = "#p"
+FLAG_COMMUTE = "c"
+FLAG_PRIVATE = "p"
+LATLNG_BOUNDS = "B"
+
+
 # see https://developers.strava.com/docs/reference/#api-models-SummaryActivity
 def mongo_doc(
     # From Strava SummaryActivity record
@@ -67,17 +83,11 @@ def mongo_doc(
     elapsed_time=None,
     type=None,
     start_date=None,
-    start_date_local=None,
-    timezone=None,
     utc_offset=None,
-    start_latlng=None,
-    end_latlng=None,
     athlete_count=None,
-    photo_count=None,
     total_photo_count=None,
     map=None,
     commute=None,
-    manual=None,
     private=None,
     # my additions
     _id=None,
@@ -88,29 +98,23 @@ def mongo_doc(
         #         log.debug("cannot make doc for activity %s", id)
         return
 
+    utc_start_time = int(Utility.to_datetime(start_date).timestamp())
     return Utility.cleandict(
         {
-            "_id": int(_id or id),
-            "athlete": int(athlete["id"]),
-            "name": name,
-            "distance": distance,
-            "elapsed_time": elapsed_time,
-            "type": type,
-            "start_date": int(Utility.to_datetime(start_date).timestamp()),
-            "start_date_local": int(Utility.to_datetime(start_date_local).timestamp()),
-            "utc_offset": utc_offset,
-            "timezone": timezone,
-            "start_latlng": start_latlng,
-            "end_latlng": end_latlng,
-            "athlete_count": athlete_count,
-            "photo_count": photo_count,
-            "total_photo_count": total_photo_count,
-            "commute": commute,
-            "manual": manual,
-            "private": private,
-            #
-            "ts": ts or datetime.datetime.utcnow(),
-            "bounds": polyline_bounds(map["summary_polyline"]),
+            TIMESTAMP: ts or datetime.datetime.utcnow(),
+            ACTIVITY_ID: int(_id or id),
+            USER_ID: int(athlete["id"]),
+            ACTIVITY_NAME: name,
+            DISTANCE_METERS: distance,
+            TIME_SECONDS: elapsed_time,
+            ACTIVITY_TYPE: type,
+            UTC_START_TIME: utc_start_time,
+            UTC_LOCAL_OFFSET: utc_offset,
+            N_ATHLETES: athlete_count,
+            N_PHOTOS: total_photo_count,
+            FLAG_COMMUTE: commute,
+            FLAG_PRIVATE: private,
+            LATLNG_BOUNDS: polyline_bounds(map["summary_polyline"]),
         }
     )
 
@@ -142,10 +146,10 @@ async def import_user_entries(**user):
 async def delete_user_entries(**user):
     uid = int(user["_id"])
     index = await get_collection()
-    return await index.delete_many({"athlete": int(uid)})
+    return await index.delete_many({USER_ID: int(uid)})
 
 
-SORT_SPECS = [("start_date_local", DESCENDING)]
+SORT_SPECS = [(UTC_START_TIME, DESCENDING)]
 
 
 async def query(
@@ -158,10 +162,10 @@ async def query(
     update_ts=True,
 ):
     if activity_ids:
-        activity_ids = set(int(id) for id in activity_ids)
+        activity_ids = set(int(aid) for aid in activity_ids)
 
     if exclude_ids:
-        exclude_ids = set(int(id) for id in exclude_ids)
+        exclude_ids = set(int(aid) for aid in exclude_ids)
 
     limit = int(limit) if limit else 0
 
@@ -169,11 +173,11 @@ async def query(
     projection = None
 
     if user_id:
-        query["athlete"] = int(user_id)
-        projection = {"athlete": False}
+        query[USER_ID] = int(user_id)
+        projection = {USER_ID: False}
 
     if before or after:
-        query["start_date_local"] = Utility.cleandict(
+        query[UTC_START_TIME] = Utility.cleandict(
             {
                 "$lt": None if before is None else Utility.to_epoch(before),
                 "$gte": None if after is None else Utility.to_epoch(after),
@@ -181,7 +185,7 @@ async def query(
         )
 
     if activity_ids:
-        query["_id"] = {"$in": list(activity_ids)}
+        query[ACTIVITY_ID] = {"$in": list(activity_ids)}
 
     to_delete = None
 
@@ -193,19 +197,19 @@ async def query(
         t0 = time.perf_counter()
         cursor = index.find(
             filter=query,
-            projection={"_id": True},
+            projection={ACTIVITY_ID: True},
             sort=SORT_SPECS,
             limit=limit,
         )
 
         # These are the ids of activities that matched the query
-        query_ids = set([doc["_id"] async for doc in cursor])
+        query_ids = set([doc[ACTIVITY_ID] async for doc in cursor])
 
         to_fetch = list(query_ids - exclude_ids)
         to_delete = list(exclude_ids - query_ids)
 
-        result["delete"] = to_delete
-        query = {"_id": {"$in": to_fetch}}
+        result["triage"] = to_delete
+        query = {ACTIVITY_ID: {"$in": to_fetch}}
 
         elapsed = (time.perf_counter() - t0) * 1000
         log.debug("queried %d ids in %dms", len(query_ids), elapsed)
@@ -227,9 +231,17 @@ async def query(
 
     if update_ts:
         update_result = await index.update_many(
-            {"_id": {"$in": [a["_id"] for a in docs]}},
-            {"$set": {"ts": datetime.datetime.utcnow()}},
+            {"_id": {"$in": [a[ACTIVITY_ID] for a in docs]}},
+            {"$set": {TIMESTAMP: datetime.datetime.utcnow()}},
         )
         elapsed = (time.perf_counter() - t1) * 1000
         log.debug("ts update in %dms", elapsed)
     return result
+
+
+def stats():
+    return DataAPIs.stats(COLLECTION_NAME)
+
+
+def drop():
+    return DataAPIs.drop(COLLECTION_NAME)
