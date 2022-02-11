@@ -1,18 +1,10 @@
 """
 ***  For Jupyter notebook ***
-
 Paste one of these Jupyter magic directives to the top of a cell
  and run it, to do these things:
-
-  * %%cython --annotate
-      Compile and run the cell
-
-  * %load Users.py
-     Load Users.py file into this (empty) cell
-
-  * %%writefile Users.py
-      Write the contents of this cell to Users.py
-
+    %%cython --annotate       # Compile and run the cell
+    %load Users.py            # Load Users.py file into this (empty) cell
+    %%writefile Users.py      # Write the contents of this cell to Users.py
 """
 
 from logging import getLogger
