@@ -286,6 +286,7 @@ async def get_streams(session, activity_id):
     t1 = time.perf_counter()
     result = msgpack.packb(
         {
+            "id": activity_id,
             "t": StreamCodecs.rlld_encode(rjson["time"]["data"]),
             "a": StreamCodecs.rlld_encode(rjson["altitude"]["data"]),
             "p": polyline.encode(rjson["latlng"]["data"], POLYLINE_PRECISION),
@@ -296,7 +297,7 @@ async def get_streams(session, activity_id):
     dt_encode = (t2 - t1) * 1000
     n = rjson["time"]["original_size"]
     log.debug(
-        "fetch streams %d: n=%d, dt_fetch=%d, dt_encode=%d",
+        "streams %d: n=%d, dt_fetch=%d, dt_encode=%d",
         activity_id,
         n,
         dt_fetch,
