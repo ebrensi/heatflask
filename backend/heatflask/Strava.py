@@ -277,22 +277,31 @@ async def get_streams(session, activity_id):
         streams_endpoint(activity_id), params=ACTIVITY_STREAM_PARAMS
     ) as response:
         rjson = await response.json()
+        rstatus = response.status
 
-        if not (rjson and ("time" in rjson)):
-            log.info(
-                "problem with activity %d: %s", activity_id, (response.status, rjson)
-            )
-            return activity_id, None
+    if not (rjson and ("time" in rjson)):
+        log.info("problem with activity %d: %s", activity_id, (rstatus, rjson))
+        return activity_id, None
 
-        result = msgpack.packb(
-            {
-                "t": StreamCodecs.rlld_encode(rjson["time"]["data"]),
-                "a": StreamCodecs.rlld_encode(rjson["altitude"]["data"]),
-                "p": polyline.encode(rjson["latlng"]["data"], POLYLINE_PRECISION),
-            }
-        )
-    elapsed = (time.perf_counter() - t0) * 1000
-    log.info("fetching streams for %d took %d", activity_id, elapsed)
+    t1 = time.perf_counter()
+    result = msgpack.packb(
+        {
+            "t": StreamCodecs.rlld_encode(rjson["time"]["data"]),
+            "a": StreamCodecs.rlld_encode(rjson["altitude"]["data"]),
+            "p": polyline.encode(rjson["latlng"]["data"], POLYLINE_PRECISION),
+        }
+    )
+    t2 = time.perf_counter()
+    dt_fetch = (t1 - t0) * 1000
+    dt_encode = (t2 - t1) * 1000
+    n = rjson["time"]["original_size"]
+    log.debug(
+        "fetch streams %d: n=%d, dt_fetch=%d, dt_encode=%d",
+        activity_id,
+        n,
+        dt_fetch,
+        dt_encode,
+    )
 
     return activity_id, result
 
@@ -335,7 +344,7 @@ async def get_many_streams(session, activity_ids):
 # Index pages
 #
 PER_PAGE = 200
-REQUEST_DELAY = 0.25
+REQUEST_DELAY = 0.2
 ACTIVITY_LIST_ENDPOINT = f"{API_SPEC}/athlete/activities"
 params = {"per_page": PER_PAGE}
 
@@ -392,11 +401,18 @@ async def get_index(user_session):
                     abort_signal = True
 
                 elif len(result):
+                    t0 = time.perf_counter()
                     for A in result:
                         abort_signal = yield A
                         if abort_signal:
                             break
-                    log.debug("processed %d entries from page %d", len(result), p)
+                    elapsed = (time.perf_counter() - t0) * 1000
+                    log.debug(
+                        "processed %d entries from page %d in %dms",
+                        len(result),
+                        p,
+                        elapsed,
+                    )
 
                 elif not done_adding_pages:
                     done_adding_pages = True

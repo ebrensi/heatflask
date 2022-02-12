@@ -124,7 +124,6 @@ async def import_user_entries(**user):
 
     uid = int(user["_id"])
 
-    # we assume the access_token is current
     strava = Strava.AsyncClient(uid, **user["auth"])
     await strava.update_access_token()
     now = datetime.datetime.utcnow()
