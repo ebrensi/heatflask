@@ -21,15 +21,19 @@ COLLECTION_NAME = "events"
 MAX_EVENTS_BYTES = 2 * 1024 * 1024  # 2MB
 
 
-DATA = {}
+class Box:
+    collection = None
+
+
+myBox = Box()
 
 
 async def get_collection():
-    if "col" not in DATA:
-        DATA["col"] = await init_collection(
+    if myBox.collection is None:
+        myBox.collection = await init_collection(
             COLLECTION_NAME, capped_size=MAX_EVENTS_BYTES
         )
-    return DATA["col"]
+    return myBox.collection
 
 
 async def get(event_id):

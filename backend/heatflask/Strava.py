@@ -193,7 +193,7 @@ AUTH_URL_PARAMS = {
     **AUTH_PARAMS,
     "client_secret": None,
     "response_type": "code",
-    "approval_prompt": "auto",  # or "force"
+    "approval_prompt": "force",  # or "force"
     "scope": "read,activity:read,activity:read_all",
     "redirect_uri": None,
     "state": None,
@@ -210,13 +210,12 @@ TOKEN_EXCHANGE_PARAMS = {
 DEAUTH_ENDPOINT = "/oauth/deauthorize"
 
 
-def get_auth_url(redirect_uri="http://localhost/exchange_token", state=None):
+def auth_url(redirect_uri="http://localhost/exchange_token", state=None):
     params = Utility.cleandict(
         {**AUTH_URL_PARAMS, "redirect_uri": redirect_uri, "state": state}
     )
-    return (
-        STRAVA_DOMAIN + AUTH_ENDPOINT + "?" + urllib.parse.urlencode(params, safe=",:")
-    )
+    paramstr = urllib.parse.urlencode(params, safe=",:")
+    return STRAVA_DOMAIN + AUTH_ENDPOINT + "?" + paramstr
 
 
 # We can get the access_token for a user either with

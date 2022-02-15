@@ -3,23 +3,24 @@ import sanic.response as Response
 from sanic.log import logger as log
 import asyncio
 
-from . import Strava
-from . import Users
-from .DataAPIs import mongodb, redis
+import DataAPIs
+import Strava
+import Users
 
 app = Sanic("heatflask")
-app.ctx.mongodb = mongodb
-app.ctx.redis = redis
+app.config.SERVER_NAME = "http://127.0.0.1:8000"
 
 
 @app.listener("before_server_start")
 async def init(sanic, loop):
     log.info("Heatflask server starting")
+    DataAPIs.connect()
 
 
 @app.listener("after_server_stop")
 async def shutdown(sanic, loop):
     log.info("Heatflask server stopping")
+    await DataAPIs.disconnect()
 
 
 # Attempt to authorize a user via Oauth(2)
@@ -31,7 +32,9 @@ async def authorize(request):
     log.info(request)
     state = request.args.get("state")
     return Response.redirect(
-        Strava.auth_url(state=state, redirect_uri=app.url_for("auth_callback"))
+        Strava.auth_url(
+            state=state, redirect_uri=app.url_for("auth_callback", _external=True)
+        )
     )
 
 
@@ -43,6 +46,7 @@ async def auth_callback(request):
 
     if "error" in request.args:
         # flash(f"Error: {request.args.get('error')}")
+        log.debug("authorization error")
         return Response.redirect(state or app.url_for("splash"))
 
     scope = request.args.get("scope")
@@ -53,14 +57,16 @@ async def auth_callback(request):
     if "activity:read" not in scope:
         # We need to be able to read the user's activities
         # return them to authorize
-        return Response.redirect(app.url_for("authorize", state=state, _external=True))
+        return Response.redirect(app.url_for("authorize", state=state))
 
     code = request.args.get("code")
-    access_info = await Strava.get_access_token(code=code)
+    strava_client = Strava.AsyncClient("admin")
+    access_info = await strava_client.update_access_token(code=code)
+    user = access_info.pop("athlete")
+    user["auth"] = access_info
+    await Users.add_or_update(**user, update_ts=True, inc_access_count=True)
 
-    Users.add_or_update(access_info)
-
-    return Response.json(access_info)
+    return Response.json(user)
 
     # remember=True, for persistent login.
     # login_user(user, remember=True)

@@ -13,9 +13,10 @@ import datetime
 from logging import getLogger
 import msgpack
 import polyline
+import asyncio
 
 import DataAPIs
-from DataAPIs import redis
+from DataAPIs import db
 import Strava
 import StreamCodecs
 
@@ -31,15 +32,20 @@ SECS_IN_DAY = 24 * SECS_IN_HOUR
 MONGO_TTL = int(os.environ.get("MONGO_STREAMS_TTL", 10)) * SECS_IN_DAY
 REDIS_TTL = int(os.environ.get("REDIS_STREAMS_TTL", 4)) * SECS_IN_HOUR
 
-DATA = {}
+
+class Box:
+    collection = None
+
+
+myBox = Box()
 
 
 async def get_collection():
-    if "col" not in DATA:
-        DATA["col"] = await DataAPIs.init_collection(
+    if myBox.collection is None:
+        myBox.collection = await DataAPIs.init_collection(
             COLLECTION_NAME, ttl=MONGO_TTL, cache_prefix=CACHE_PREFIX
         )
-    return DATA["col"]
+    return myBox.collection
 
 
 POLYLINE_PRECISION = 6
@@ -108,7 +114,7 @@ async def strava_import(activity_ids, **user):
     await delete([doc["_id"] for doc in docs])
     await coll.insert_many(docs)
     # in Redis
-    async with redis.pipeline(transaction=True) as pipe:
+    async with db.redis.pipeline(transaction=True) as pipe:
         for doc in docs:
             pipe = pipe.setex(cache_key(doc["_id"]), REDIS_TTL, doc["mpk"])
         await pipe.execute()
@@ -121,23 +127,23 @@ async def aiter_query(activity_ids=None, user=None):
     # First we check Redis cache
     t0 = time.perf_counter()
     keys = [cache_key(aid) for aid in activity_ids]
-    redis_response = await redis.mget(keys)
-    redis_result = list(filter(None, redis_response))
-    redis_result_keys = [keys[i] for i, r in enumerate(redis_response)]
+    db.redis_response = await db.redis.mget(keys)
+    db.redis_result = list(filter(None, db.redis_response))
+    db.redis_result_keys = [keys[i] for i, r in enumerate(db.redis_response)]
 
     # Reset TTL for those cached streams that were hit
-    async with redis.pipeline(transaction=True) as pipe:
-        for k in redis_result_keys:
+    async with db.redis.pipeline(transaction=True) as pipe:
+        for k in db.redis_result_keys:
             pipe = pipe.expire(k, REDIS_TTL)
         await pipe.execute()
 
     t1 = time.perf_counter()
     log.debug(
-        "retrieved %d streams from Redis in %d", len(redis_result), (t1 - t0) * 1000
+        "retrieved %d streams from Redis in %d", len(db.redis_result), (t1 - t0) * 1000
     )
-    local_result = list(redis_result)
+    local_result = list(db.redis_result)
 
-    activity_ids = [activity_ids[i] for i, r in enumerate(redis_response) if not r]
+    activity_ids = [activity_ids[i] for i, r in enumerate(db.redis_response) if not r]
     if activity_ids:
 
         # Next we query MongoDB for any cache misses
@@ -150,7 +156,7 @@ async def aiter_query(activity_ids=None, user=None):
         mongo_result_keys = [cache_key(aid) for aid in mongo_result_ids]
 
         # Cache the mongo hits
-        async with redis.pipeline(transaction=True) as pipe:
+        async with db.redis.pipeline(transaction=True) as pipe:
             for k, s in zip(mongo_result_keys, mongo_result):
                 pipe = pipe.setex(k, REDIS_TTL, s)
             await pipe.execute()

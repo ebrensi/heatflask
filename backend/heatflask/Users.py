@@ -23,13 +23,20 @@ MONGO_TTL = 365 * 24 * 3600
 
 ADMIN = [15972102]
 
-DATA = {}
+
+class Box:
+    collection = None
+
+
+myBox = Box()
 
 
 async def get_collection():
-    if "col" not in DATA:
-        DATA["col"] = await DataAPIs.init_collection(COLLECTION_NAME, ttl=MONGO_TTL)
-    return DATA["col"]
+    if myBox.collection is None:
+        myBox.collection = await DataAPIs.init_collection(
+            COLLECTION_NAME, ttl=MONGO_TTL
+        )
+    return myBox.collection
 
 
 def mongo_doc(

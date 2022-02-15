@@ -29,13 +29,21 @@ SECS_IN_DAY = 24 * SECS_IN_HOUR
 
 # How long we store Index entry in MongoDB
 INDEX_TTL = int(os.environ.get("INDEX_TTL", 10)) * SECS_IN_DAY
-DATA = {}
+
+
+class Box:
+    collection = None
+
+
+myBox = Box()
 
 
 async def get_collection():
-    if "col" not in DATA:
-        DATA["col"] = await DataAPIs.init_collection(COLLECTION_NAME, ttl=INDEX_TTL)
-    return DATA["col"]
+    if myBox.collection is None:
+        myBox.collection = await DataAPIs.init_collection(
+            COLLECTION_NAME, ttl=INDEX_TTL
+        )
+    return myBox.collection
 
 
 def polyline_bounds(poly):
