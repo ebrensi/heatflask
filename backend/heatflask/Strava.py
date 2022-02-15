@@ -12,7 +12,6 @@ import time
 import aiohttp
 from logging import getLogger
 import urllib
-import polyline
 import asyncio
 import datetime
 

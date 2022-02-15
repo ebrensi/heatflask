@@ -22,7 +22,6 @@ import Utility
 log = getLogger(__name__)
 log.propagate = True
 
-APP_NAME = "heatflask"
 COLLECTION_NAME = "index"
 
 SECS_IN_HOUR = 60 * 60
@@ -70,6 +69,7 @@ N_PHOTOS = "#p"
 FLAG_COMMUTE = "c"
 FLAG_PRIVATE = "p"
 LATLNG_BOUNDS = "B"
+VISIBILITY = "v"
 
 
 # see https://developers.strava.com/docs/reference/#api-models-SummaryActivity
@@ -89,13 +89,13 @@ def mongo_doc(
     map=None,
     commute=None,
     private=None,
+    visibility=None,
     # my additions
     _id=None,
     ts=None,
     **and_more
 ):
     if not (start_date and map and map.get("summary_polyline")):
-        #         log.debug("cannot make doc for activity %s", id)
         return
 
     utc_start_time = int(Utility.to_datetime(start_date).timestamp())
@@ -112,6 +112,7 @@ def mongo_doc(
             UTC_LOCAL_OFFSET: utc_offset,
             N_ATHLETES: athlete_count,
             N_PHOTOS: total_photo_count,
+            VISIBILITY: visibility,
             FLAG_COMMUTE: commute,
             FLAG_PRIVATE: private,
             LATLNG_BOUNDS: polyline_bounds(map["summary_polyline"]),
@@ -124,6 +125,7 @@ async def import_user_entries(**user):
 
     uid = int(user["_id"])
 
+    # we assume the access_token is current
     strava = Strava.AsyncClient(uid, **user["auth"])
     await strava.update_access_token()
     now = datetime.datetime.utcnow()
@@ -158,8 +160,16 @@ async def query(
     after=None,
     before=None,
     limit=None,
+    activity_type=None,
+    commute=None,
+    private=None,
+    visibility=None,
+    #
     update_ts=True,
 ):
+    query = {}
+    projection = None
+
     if activity_ids:
         activity_ids = set(int(aid) for aid in activity_ids)
 
@@ -167,9 +177,6 @@ async def query(
         exclude_ids = set(int(aid) for aid in exclude_ids)
 
     limit = int(limit) if limit else 0
-
-    query = {}
-    projection = None
 
     if user_id:
         query[USER_ID] = int(user_id)
@@ -184,7 +191,20 @@ async def query(
         )
 
     if activity_ids:
-        query[ACTIVITY_ID] = {"$in": list(activity_ids)}
+        query[ACTIVITY_ID] = {"$in": activity_ids}
+
+    if activity_type:
+        query[ACTIVITY_TYPE] = {"$in": activity_type}
+
+    if visibility:
+        # ["everyone", "followers", "only_me"]
+        query[VISIBILITY] = {"$in": visibility}
+
+    if private is not None:
+        query[FLAG_PRIVATE] = private
+
+    if commute is not None:
+        query[FLAG_COMMUTE] = commute
 
     to_delete = None
 
@@ -244,3 +264,40 @@ def stats():
 
 def drop():
     return DataAPIs.drop(COLLECTION_NAME)
+
+
+ATYPE_SPECS = [
+    "Ride",
+    "Run",
+    "Swim",
+    "Walk",
+    "Hike",
+    "Alpine Ski",
+    "Backcountry Ski",
+    "Canoe",
+    "Crossfit",
+    "E-Bike Ride",
+    "Elliptical",
+    "Handcycle",
+    "Ice Skate",
+    "Inline Skate",
+    "Kayak",
+    "Kitesurf Session",
+    "Nordic Ski",
+    "Rock Climb",
+    "Roller Ski",
+    "Row",
+    "Snowboard",
+    "Snowshoe",
+    "Stair Stepper",
+    "Stand Up Paddle",
+    "Surf",
+    "Velomobile ",
+    "Virtual Ride",
+    "Virtual Run",
+    "Weight Training",
+    "Windsurf Session",
+    "Wheelchair",
+    "Workout",
+    "Yoga",
+]

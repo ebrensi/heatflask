@@ -1,3 +1,9 @@
+# Here we define a custom encoding/compression scheme for streams
+# Run-Length-Diff encoding
+#
+#  It is RLE on successive differences, which in our case are small enough to
+#  be 8 bit integers
+
 import numpy as np
 
 
@@ -15,7 +21,7 @@ def positive_non_decreasing(vals):
     return True
 
 
-def rlld_encode(vals):
+def rld_encode(vals):
     vals = (
         np.fromiter((v + 0.5 for v in vals), dtype="i4", count=len(vals))
         if type(vals[0]) is float
@@ -93,7 +99,7 @@ def decoded_length(enc, rl_marker):
     return L
 
 
-def rlld_decode(enc, dtype=np.int32):
+def rld_decode(enc, dtype=np.int32):
     ntype = np.frombuffer(enc, dtype="i1", count=1, offset=0)[0]
     start_val = np.frombuffer(enc, dtype="i2", count=1, offset=1)[0]
     enc_diffs = np.frombuffer(enc, dtype="i1" if ntype == 0 else "u1", offset=3)

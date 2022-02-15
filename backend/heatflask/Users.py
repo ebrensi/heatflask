@@ -16,7 +16,6 @@ import Utility
 log = getLogger(__name__)
 log.propagate = True
 
-APP_NAME = "heatflask"
 COLLECTION_NAME = "users"
 
 # Drop a user after a year of inactivity
@@ -29,9 +28,7 @@ DATA = {}
 
 async def get_collection():
     if "col" not in DATA:
-        DATA["col"] = await DataAPIs.init_collection(
-            COLLECTION_NAME, ttl=MONGO_TTL
-        )
+        DATA["col"] = await DataAPIs.init_collection(COLLECTION_NAME, ttl=MONGO_TTL)
     return DATA["col"]
 
 

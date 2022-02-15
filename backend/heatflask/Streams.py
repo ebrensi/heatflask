@@ -11,7 +11,6 @@ import os
 import time
 import datetime
 from logging import getLogger
-import numpy as np
 import msgpack
 import polyline
 
@@ -23,7 +22,6 @@ import StreamCodecs
 log = getLogger(__name__)
 log.propagate = True
 
-APP_NAME = "heatflask"
 COLLECTION_NAME = "streams"
 CACHE_PREFIX = "S:"
 
@@ -51,8 +49,8 @@ def encode_streams(activity_id, rjson):
     return msgpack.packb(
         {
             "id": activity_id,
-            "t": StreamCodecs.rlld_encode(rjson["time"]["data"]),
-            "a": StreamCodecs.rlld_encode(rjson["altitude"]["data"]),
+            "t": StreamCodecs.rld_encode(rjson["time"]["data"]),
+            "a": StreamCodecs.rld_encode(rjson["altitude"]["data"]),
             "p": polyline.encode(rjson["latlng"]["data"], POLYLINE_PRECISION),
         }
     )
