@@ -12,12 +12,10 @@ import time
 import aiohttp
 from logging import getLogger
 import urllib
-import msgpack
 import polyline
 import asyncio
 import datetime
 
-import StreamCodecs
 import Utility
 
 log = getLogger(__name__)
@@ -26,6 +24,9 @@ log.propagate = True
 
 STRAVA_DOMAIN = "https://www.strava.com"
 STALE_TOKEN = 300
+CONCURRENCY = 10
+
+LIMITER = asyncio.Semaphore(CONCURRENCY)
 
 # Client class takes care of refreshing access tokens
 class AsyncClient:
@@ -258,7 +259,6 @@ async def get_athlete(session):
 # Streams
 #
 MAX_STREAMS_ERRORS = 10
-POLYLINE_PRECISION = 6
 ACTIVITY_STREAM_PARAMS = {
     "keys": "latlng,altitude,time",
     "key_by_type": "true",
@@ -273,54 +273,29 @@ def streams_endpoint(activity_id):
 
 async def get_streams(session, activity_id):
     t0 = time.perf_counter()
-    async with session.get(
-        streams_endpoint(activity_id), params=ACTIVITY_STREAM_PARAMS
-    ) as response:
-        rjson = await response.json()
-        rstatus = response.status
+    async with LIMITER:
+        async with session.get(
+            streams_endpoint(activity_id), params=ACTIVITY_STREAM_PARAMS
+        ) as response:
+            rjson = await response.json()
+            rstatus = response.status
 
     if not (rjson and ("time" in rjson)):
         log.info("problem with activity %d: %s", activity_id, (rstatus, rjson))
         return activity_id, None
 
-    t1 = time.perf_counter()
-    result = msgpack.packb(
-        {
-            "id": activity_id,
-            "t": StreamCodecs.rlld_encode(rjson["time"]["data"]),
-            "a": StreamCodecs.rlld_encode(rjson["altitude"]["data"]),
-            "p": polyline.encode(rjson["latlng"]["data"], POLYLINE_PRECISION),
-        }
-    )
-    t2 = time.perf_counter()
-    dt_fetch = (t1 - t0) * 1000
-    dt_encode = (t2 - t1) * 1000
+    dt_fetch = (time.perf_counter() - t0) * 1000
     n = rjson["time"]["original_size"]
-    log.debug(
-        "streams %d: n=%d, dt_fetch=%d, dt_encode=%d",
-        activity_id,
-        n,
-        dt_fetch,
-        dt_encode,
-    )
+    log.debug("streams %d: n=%d, dt=%d", activity_id, n, dt_fetch)
 
-    return activity_id, result
+    return activity_id, rjson
 
 
-def unpack_streams(packed_streams):
-    streams = msgpack.unpackb(packed_streams)
-    return {
-        "time": StreamCodecs.rlld_decode(streams["t"], dtype="u2"),
-        "altitude": StreamCodecs.rlld_decode(streams["a"], dtype="i2"),
-        "latlng": polyline.decode(streams["p"], POLYLINE_PRECISION),
-    }
-
-
-async def get_many_streams(session, activity_ids):
-    log.debug("getting multiple streams")
-    request_tasks = [
-        asyncio.create_task(get_streams(session, aid)) for aid in activity_ids
-    ]
+async def get_many_streams(
+    session,
+    activity_ids,
+):
+    request_tasks = [get_streams(session, aid) for aid in activity_ids]
     errors = 0
     for task in asyncio.as_completed(request_tasks):
         try:
@@ -335,9 +310,6 @@ async def get_many_streams(session, activity_ids):
 
         if abort_signal:
             log.info("get_many_streams aborted")
-            for task in request_tasks:
-                task.cancel()
-            await asyncio.wait(request_tasks)
             return
 
 
@@ -345,22 +317,22 @@ async def get_many_streams(session, activity_ids):
 # Index pages
 #
 PER_PAGE = 200
-REQUEST_DELAY = 0.2
 ACTIVITY_LIST_ENDPOINT = f"{API_SPEC}/athlete/activities"
 params = {"per_page": PER_PAGE}
 
 
 async def get_activity_index_page(session, p):
     t0 = time.perf_counter()
-
-    async with session.get(
-        ACTIVITY_LIST_ENDPOINT, params={**params, "page": p}, raise_for_status=False
-    ) as r:
-        status = r.status
-        result = await r.json()
+    async with LIMITER:
+        log.debug("Page %d requested", p)
+        async with session.get(
+            ACTIVITY_LIST_ENDPOINT, params={**params, "page": p}
+        ) as r:
+            status = r.status
+            result = await r.json()
 
     elapsed_ms = (time.perf_counter() - t0) * 1000
-    log.debug("retrieved page %d in %d", p, elapsed_ms)
+    log.debug("Page %d retrieved in %d", p, elapsed_ms)
     return status, p, result
 
 
@@ -370,64 +342,44 @@ def page_request(session, p):
 
 EMPTY_LIST = []
 
+MAX_PAGE = 50
+
 
 async def get_index(user_session):
     log.debug("getting user index")
 
-    done_adding_pages = False
-    tasks = set([page_request(user_session, 1)])
-    next_page = 2
-    while tasks:
+    t0 = time.perf_counter()
+    tasks = [page_request(user_session, p) for p in range(1, MAX_PAGE)]
 
-        if not done_adding_pages:
-            # Add a page requst task
-            tasks.add(page_request(user_session, next_page))
-            log.debug("requesting page %d", next_page)
-            next_page += 1
+    last_page = None
+    for task in asyncio.as_completed(tasks):
+        try:
+            status, last_page, result = await task
+        except Exception as e:
+            log.exception("index page read error")
+            return
 
-        # wait for a moment to check for any completed requests
-        finished, unfinished = await asyncio.wait(
-            tasks, return_when=asyncio.FIRST_COMPLETED, timeout=REQUEST_DELAY
-        )
+        if not len(result):
+            # If this page has no results then break out of this loop
+            #  because we know page-1 is the last page
+            elapsed = (time.perf_counter() - t0) * 1000
+            log.debug("found last page (%d) in %d", last_page - 1, elapsed)
+            break
 
-        for task in finished:
-            try:
-                status, p, result = task.result()
-            except Exception as e:
-                log.exception("get_index")
-                abort_signal = True
-            else:
-                if status != 200:
-                    log.error("Strava error %s: %s", status, result)
-                    abort_signal = True
+    for task in tasks[last_page:]:
+        task.cancel()
 
-                elif len(result):
-                    t0 = time.perf_counter()
-                    for A in result:
-                        abort_signal = yield A
-                        if abort_signal:
-                            break
-                    elapsed = (time.perf_counter() - t0) * 1000
-                    log.debug(
-                        "processed %d entries from page %d in %dms",
-                        len(result),
-                        p,
-                        elapsed,
-                    )
-
-                elif not done_adding_pages:
-                    done_adding_pages = True
-                    log.debug(
-                        "Page %d empty (status %d). Done requesting pages", p, status
-                    )
-
+    for task in asyncio.as_completed(tasks[:last_page]):
+        status, page, result = await task
+        for A in result:
+            abort_signal = yield A
             if abort_signal:
-                log.warning("get_index aborted")
-                for task in unfinished:
+                for task in tasks[:last_page]:
                     task.cancel()
-                await asyncio.wait(unfinished)
+                await asyncio.wait(tasks)
+                log.debug("indexing cancelled")
                 return
-        tasks = unfinished
+        log.debug("done with page %d", page)
 
 
 def activity_endpoint(activity_id):
