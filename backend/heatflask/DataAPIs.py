@@ -26,18 +26,22 @@ class Box:
 db = Box()
 
 # this must be called by whoever controls the asyncio loop
-def connect():
+async def connect():
     if db.mongodb is not None:
         return
     db.mongo_client = motor.motor_asyncio.AsyncIOMotorClient(mongo_uri)
     db.mongodb = db.mongo_client.get_default_database()
     db.redis = aioredis.from_url(redis_url)
-    log.debug("initialized MongoDB and Redis")
+    log.info("Connected to MongoDB and Redis")
 
 
 async def disconnect():
     db.mongo_client.close()
     await db.redis.close()
+    db.mongo_client = None
+    db.mongodb = None
+    db.redis = None
+    log.info("Disconnected from MongoDB and Redis")
 
 
 async def init_collection(name, ttl=None, capped_size=None, cache_prefix=None):

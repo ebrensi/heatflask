@@ -297,14 +297,14 @@ async def get_many_streams(
     errors = 0
     for task in asyncio.as_completed(request_tasks):
         try:
-            activity_id, result = await task
+            item = await task
         except Exception as e:
             log.error(e)
             errors += 1
             if errors > MAX_STREAMS_ERRORS:
                 abort_signal = True
         else:
-            abort_signal = yield activity_id, result
+            abort_signal = yield item
 
         if abort_signal:
             log.info("get_many_streams aborted")
@@ -337,8 +337,6 @@ async def get_activity_index_page(session, p):
 def page_request(session, p):
     return asyncio.create_task(get_activity_index_page(session, p))
 
-
-EMPTY_LIST = []
 
 MAX_PAGE = 50
 

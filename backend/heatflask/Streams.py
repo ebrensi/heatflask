@@ -66,8 +66,8 @@ def decode_streams(msgpacked_streams):
     d = msgpack.unpackb(msgpacked_streams)
     return {
         "id": d["id"],
-        "time": StreamCodecs.rlld_decode(d["t"], dtype="u2"),
-        "altitude": StreamCodecs.rlld_decode(d["a"], dtype="i2"),
+        "time": StreamCodecs.rld_decode(d["t"], dtype="u2"),
+        "altitude": StreamCodecs.rld_decode(d["a"], dtype="i2"),
         "latlng": polyline.decode(d["p"], POLYLINE_PRECISION),
     }
 
@@ -89,35 +89,29 @@ async def strava_import(activity_ids, **user):
 
     strava = Strava.AsyncClient(uid, **user["auth"])
     await strava.update_access_token()
-
     coll = await get_collection()
 
-    docs = []
+    mongo_docs = []
     now = datetime.datetime.now()
     aiterator = strava.get_many_streams(activity_ids)
-    async for aid, streams in aiterator:
-        msgpacked = encode_streams(aid, streams)
-        abort_signal = yield aid, msgpacked
 
-        try:
-            doc = mongo_doc(aid, msgpacked, ts=now)
-        except Exception as e:
-            log.error("Streams %s encode error: %s", activity_id, e)
-        else:
-            docs.append(doc)
-
-        if abort_signal:
-            await Strava.AsyncClient.abort(aiterator)
-            break
-
-    # now store all this stuff in MongoDB (overwrite any existing records)
-    await delete([doc["_id"] for doc in docs])
-    await coll.insert_many(docs)
-    # in Redis
     async with db.redis.pipeline(transaction=True) as pipe:
-        for doc in docs:
-            pipe = pipe.setex(cache_key(doc["_id"]), REDIS_TTL, doc["mpk"])
+        async for aid, streams in aiterator:
+            packed = encode_streams(aid, streams)
+
+            # queue packed streams to be redis cached
+            pipe = pipe.setex(cache_key(aid), REDIS_TTL, packed)
+
+            mongo_docs.append(mongo_doc(aid, packed, ts=now))
+
+            abort_signal = yield aid, packed
+
+            if abort_signal:
+                await Strava.AsyncClient.abort(aiterator)
+                break
+
         await pipe.execute()
+    await coll.insert_many(mongo_docs)
 
 
 async def aiter_query(activity_ids=None, user=None):
@@ -127,38 +121,38 @@ async def aiter_query(activity_ids=None, user=None):
     # First we check Redis cache
     t0 = time.perf_counter()
     keys = [cache_key(aid) for aid in activity_ids]
-    db.redis_response = await db.redis.mget(keys)
-    db.redis_result = list(filter(None, db.redis_response))
-    db.redis_result_keys = [keys[i] for i, r in enumerate(db.redis_response)]
+    redis_response = await db.redis.mget(keys)
 
     # Reset TTL for those cached streams that were hit
     async with db.redis.pipeline(transaction=True) as pipe:
-        for k in db.redis_result_keys:
-            pipe = pipe.expire(k, REDIS_TTL)
+        for k, val in zip(keys, redis_response):
+            if val:
+                pipe = pipe.expire(k, REDIS_TTL)
         await pipe.execute()
 
     t1 = time.perf_counter()
+    local_result = [(a, s) for a, s in zip(activity_ids, redis_response) if s]
     log.debug(
-        "retrieved %d streams from Redis in %d", len(db.redis_result), (t1 - t0) * 1000
+        "retrieved %d streams from Redis in %d", len(local_result), (t1 - t0) * 1000
     )
-    local_result = list(db.redis_result)
-
-    activity_ids = [activity_ids[i] for i, r in enumerate(db.redis_response) if not r]
+    # activity IDs of cache misses
+    activity_ids = [a for a, s in zip(activity_ids, redis_response) if not s]
     if activity_ids:
-
         # Next we query MongoDB for any cache misses
         t0 = time.perf_counter()
         streams = await get_collection()
         query = {"_id": {"$in": activity_ids}}
-        mongo_result = [(d["_id"], d["mpk"]) async for d in streams.find(query)]
+        exclusions = {"ts": False}
+
+        cursor = streams.find(query, projection=exclusions)
+        mongo_result = [(doc["_id"], doc["mpk"]) async for doc in cursor]
         local_result.extend(mongo_result)
         mongo_result_ids = [_id for _id, mpk in mongo_result]
-        mongo_result_keys = [cache_key(aid) for aid in mongo_result_ids]
 
         # Cache the mongo hits
         async with db.redis.pipeline(transaction=True) as pipe:
-            for k, s in zip(mongo_result_keys, mongo_result):
-                pipe = pipe.setex(k, REDIS_TTL, s)
+            for aid, s in mongo_result:
+                pipe = pipe.setex(cache_key(aid), REDIS_TTL, s)
             await pipe.execute()
 
         # Update TTL for mongo hits
@@ -174,17 +168,22 @@ async def aiter_query(activity_ids=None, user=None):
     streams_import = None
     first_fetch = None
     if activity_ids and (user is not None):
+        # Start a fetch process going. We will get back to this...
         t0 = time.perf_counter()
         streams_import = strava_import(activity_ids, **user)
         first_fetch = asyncio.create_task(streams_import.__anext__())
 
+    # Yield all the results from Redis and Mongo
     for item in local_result:
         abort_signal = yield item
         if abort_signal:
             log.info("Local Streams query aborted")
-            return
+            if streams_import:
+                await Strava.AsyncClient.abort(streams_import)
+            break
 
     if streams_import:
+        # Now we yield results of fetches as they come in
         item1 = await first_fetch
         abort_signal = yield item1
         imported_items = [item1]
@@ -217,5 +216,23 @@ async def query(**kwargs):
 
 
 async def delete(activity_ids):
+    if not activity_ids:
+        return
     streams = await get_collection()
-    return await streams.delete_many({"_id": {"$in": activity_ids}})
+    mongo_result = await streams.delete_many({"_id": {"$in": activity_ids}})
+    keys = [cache_key(aid) for aid in activity_ids]
+    redis_result = await db.redis.delete(*keys)
+
+
+async def clear_cache():
+    streams_keys = await db.redis.keys(cache_key("*"))
+    if streams_keys:
+        return await db.redis.delete(*streams_keys)
+
+
+def stats():
+    return DataAPIs.stats(COLLECTION_NAME)
+
+
+def drop():
+    return DataAPIs.drop(COLLECTION_NAME)
