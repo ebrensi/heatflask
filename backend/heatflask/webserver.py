@@ -14,7 +14,7 @@ app.config.SERVER_NAME = "http://127.0.0.1:8000"
 @app.listener("before_server_start")
 async def init(sanic, loop):
     log.info("Heatflask server starting")
-    DataAPIs.connect()
+    await DataAPIs.connect()
 
 
 @app.listener("after_server_stop")

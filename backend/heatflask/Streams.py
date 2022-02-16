@@ -21,6 +21,7 @@ import Strava
 import StreamCodecs
 
 log = getLogger(__name__)
+log.setLevel("DEBUG")
 log.propagate = True
 
 COLLECTION_NAME = "streams"

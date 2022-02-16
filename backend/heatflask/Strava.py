@@ -18,6 +18,7 @@ import datetime
 import Utility
 
 log = getLogger(__name__)
+log.setLevel("DEBUG")
 log.propagate = True
 
 
@@ -193,9 +194,9 @@ AUTH_URL_PARAMS = {
     **AUTH_PARAMS,
     "client_secret": None,
     "response_type": "code",
-    "approval_prompt": "force",  # or "force"
+    "approval_prompt": "auto",  # or "force"
     "scope": "read,activity:read,activity:read_all",
-    "redirect_uri": None,
+    "redirect_uri": "http://localhost/exchange_token",
     "state": None,
 }
 
@@ -210,11 +211,9 @@ TOKEN_EXCHANGE_PARAMS = {
 DEAUTH_ENDPOINT = "/oauth/deauthorize"
 
 
-def auth_url(redirect_uri="http://localhost/exchange_token", state=None):
-    params = Utility.cleandict(
-        {**AUTH_URL_PARAMS, "redirect_uri": redirect_uri, "state": state}
-    )
-    paramstr = urllib.parse.urlencode(params, safe=",:")
+def auth_url(**kwargs):
+    params = {**AUTH_URL_PARAMS, **kwargs}
+    paramstr = urllib.parse.urlencode(Utility.cleandict(params), safe=",:")
     return STRAVA_DOMAIN + AUTH_ENDPOINT + "?" + paramstr
 
 
