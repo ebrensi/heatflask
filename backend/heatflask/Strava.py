@@ -18,7 +18,6 @@ import datetime
 import Utility
 
 log = getLogger(__name__)
-log.setLevel("DEBUG")
 log.propagate = True
 
 
@@ -194,9 +193,9 @@ AUTH_URL_PARAMS = {
     **AUTH_PARAMS,
     "client_secret": None,
     "response_type": "code",
-    "approval_prompt": "auto",  # or "force"
+    "approval_prompt": "force",  # or "force"
     "scope": "read,activity:read,activity:read_all",
-    "redirect_uri": "http://localhost/exchange_token",
+    "redirect_uri": None,
     "state": None,
 }
 
@@ -211,9 +210,11 @@ TOKEN_EXCHANGE_PARAMS = {
 DEAUTH_ENDPOINT = "/oauth/deauthorize"
 
 
-def auth_url(**kwargs):
-    params = {**AUTH_URL_PARAMS, **kwargs}
-    paramstr = urllib.parse.urlencode(Utility.cleandict(params), safe=",:")
+def auth_url(redirect_uri="http://localhost/exchange_token", state=None):
+    params = Utility.cleandict(
+        {**AUTH_URL_PARAMS, "redirect_uri": redirect_uri, "state": state}
+    )
+    paramstr = urllib.parse.urlencode(params, safe=",:")
     return STRAVA_DOMAIN + AUTH_ENDPOINT + "?" + paramstr
 
 
@@ -334,7 +335,13 @@ async def get_activity_index_page(session, p):
 
 
 def page_request(session, p):
-    return asyncio.create_task(get_activity_index_page(session, p))
+    return asyncio.create_task(get_activity_index_page(session, p), name=p)
+
+
+def cancel_all(tasks):
+    for task in tasks:
+        task.cancel()
+    return asyncio.wait(tasks)
 
 
 MAX_PAGE = 50
@@ -345,36 +352,41 @@ async def get_index(user_session):
 
     t0 = time.perf_counter()
     tasks = [page_request(user_session, p) for p in range(1, MAX_PAGE)]
+    last_page = MAX_PAGE
 
-    last_page = None
-    for task in asyncio.as_completed(tasks):
-        try:
-            status, last_page, result = await task
-        except Exception as e:
-            log.exception("index page read error")
-            return
-
-        if not len(result):
-            # If this page has no results then break out of this loop
-            #  because we know page-1 is the last page
-            elapsed = (time.perf_counter() - t0) * 1000
-            log.debug("found last page (%d) in %d", last_page - 1, elapsed)
-            break
-
-    for task in tasks[last_page:]:
-        task.cancel()
-
-    for task in asyncio.as_completed(tasks[:last_page]):
-        status, page, result = await task
-        for A in result:
-            abort_signal = yield A
-            if abort_signal:
-                for task in tasks[:last_page]:
-                    task.cancel()
-                await asyncio.wait(tasks)
-                log.debug("indexing cancelled")
+    while tasks:
+        done, not_done = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+        for task in done:
+            try:
+                status, page, result = task.result()
+            except asyncio.CancelledError:
+                continue
+            except Exception:
+                log.exception("error fetching index page. aborting.")
+                await cancel_all(tasks)
                 return
-        log.debug("done with page %d", page)
+
+            if result and len(result):
+                for A in result:
+                    abort_signal = yield A
+                    if abort_signal:
+                        await cancel_all(tasks)
+                        log.debug("index fetch aborted")
+                        return
+                log.debug("done with page %d", page)
+            else:
+                # If this page has no results then any further pages will
+                # also be empty so we cancel them
+                elapsed = (time.perf_counter() - t0) * 1000
+                if page < last_page:
+                    log.debug("found last page (%d) in %d", page - 1, elapsed)
+                    log.debug("cancelling page %d - %d requests", page + 1, last_page)
+                    for task in tasks:
+                        p = int(task.get_name())
+                        if (page < p) and (p <= last_page):
+                            task.cancel()
+                    last_page = page
+        tasks = not_done
 
 
 def activity_endpoint(activity_id):

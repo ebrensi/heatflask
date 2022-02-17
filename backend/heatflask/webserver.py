@@ -6,6 +6,7 @@ import asyncio
 import DataAPIs
 import Strava
 import Users
+import Index
 
 app = Sanic("heatflask")
 app.config.SERVER_NAME = "http://127.0.0.1:8000"
@@ -65,6 +66,11 @@ async def auth_callback(request):
     user = access_info.pop("athlete")
     user["auth"] = access_info
     await Users.add_or_update(**user, update_ts=True, inc_access_count=True)
+
+    user_index_size = await Index.count_user_entries(user)
+    if user_index_size == 0:
+        # Start building user index in the background
+        asyncio.create_task(Index.import_user_entries(user))
 
     return Response.json(user)
 

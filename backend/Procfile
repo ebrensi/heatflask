@@ -1,2 +1,2 @@
-web: sanic server.app
+web: sanic webserver.app
 

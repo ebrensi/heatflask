@@ -2,7 +2,7 @@
 
 source activate
 
-export PORT=5000
+export PORT=8000
 
 while [ "$1" != "" ]; do
     case $1 in
@@ -25,13 +25,13 @@ export HEROKU_CLI=/usr/bin/heroku
 # Run the backend server via heroku local if it is available, otherwise gunicorn directly
 if [ $OFFLINE ]; then
     echo "Running backend without network connection"
-    sanic server.app
+    sanic heatflask.webserver.app
 
 elif [ -f "$HEROKU_CLI" ]; then
     echo "$HEROKU_CLI is present"
     heroku local
 else
     echo "$HEROKU_CLI does not exist"
-    sanic server.app
+    sanic heatflask.webserver.app
 fi
 

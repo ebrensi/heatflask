@@ -13,9 +13,11 @@ import numpy as np
 from logging import getLogger
 import datetime
 import time
+import asyncio
 from pymongo import DESCENDING
 
 import DataAPIs
+from DataAPIs import db
 import Strava
 import Utility
 
@@ -102,7 +104,7 @@ def mongo_doc(
     # my additions
     _id=None,
     ts=None,
-    **and_more
+    **and_more,
 ):
     if not (start_date and map and map.get("summary_polyline")):
         return
@@ -129,25 +131,66 @@ def mongo_doc(
     )
 
 
+## **************************************
+IMPORT_FLAG_PREFIX = "I:"
+IMPORT_FLAG_TTL = 20  # secods
+
+
+def import_flag_key(uid):
+    return f"{IMPORT_FLAG_PREFIX}{uid}"
+
+
+async def set_import_flag(user_id, val):
+    await db.redis.setex(import_flag_key(user_id), IMPORT_FLAG_TTL, val)
+    log.debug(f"{user_id} import flag set to %s", val)
+
+
+async def clear_import_flag(user_id):
+    await db.redis.delete(import_flag_key(user_id))
+    log.debug(f"{user_id} import flag unset")
+
+
+async def check_import_flag(user_id):
+    return await db.redis.get(import_flag_key(user_id))
+
+
+## **************************************
+
+
 async def import_user_entries(**user):
     t0 = time.perf_counter()
-
     uid = int(user["_id"])
 
-    # we assume the access_token is current
+    await set_import_flag(uid, "importing index...")
+
     strava = Strava.AsyncClient(uid, **user["auth"])
     await strava.update_access_token()
     now = datetime.datetime.utcnow()
-    docs = [mongo_doc(**A, ts=now) async for A in strava.get_index() if A is not None]
+
+    docs = []
+    count = 0
+    async for A in strava.get_index():
+        if A is not None:
+            docs.append(mongo_doc(**A, ts=now))
+            count += 1
+            if count % Strava.PER_PAGE == 0:
+                await set_import_flag(uid, count)
+
+    #     docs = [mongo_doc(**A, ts=now) async for A in strava.get_index() if A is not None]
     docs = filter(None, docs)
     t1 = time.perf_counter()
     fetch_time = (t1 - t0) * 1000
+
+    if not docs:
+        return
 
     index = await get_collection()
     await delete_user_entries(**user)
     insert_result = await index.insert_many(docs, ordered=False)
     insert_time = (time.perf_counter() - t1) * 1000
     count = len(insert_result.inserted_ids)
+
+    await clear_import_flag(uid)
     log.debug(
         "fetched %s entries in %dms, insert_many %dms", count, fetch_time, insert_time
     )
@@ -157,6 +200,18 @@ async def delete_user_entries(**user):
     uid = int(user["_id"])
     index = await get_collection()
     return await index.delete_many({USER_ID: int(uid)})
+
+
+async def count_user_entries(**user):
+    uid = int(user["_id"])
+    index = await get_collection()
+    return await index.count_documents({USER_ID: int(uid)})
+
+
+async def has_user_entries(**user):
+    uid = int(user["_id"])
+    index = await get_collection()
+    return not not (await index.find_one({USER_ID: int(uid)}))
 
 
 SORT_SPECS = [(UTC_START_TIME, DESCENDING)]
@@ -258,7 +313,7 @@ async def query(
     log.debug("queried %d activities in %dms", len(docs), elapsed)
 
     if update_ts:
-        update_result = await index.update_many(
+        await index.update_many(
             {"_id": {"$in": [a[ACTIVITY_ID] for a in docs]}},
             {"$set": {TIMESTAMP: datetime.datetime.utcnow()}},
         )

@@ -26,6 +26,7 @@ class Box:
 
 db = Box()
 
+
 # this must be called by whoever controls the asyncio loop
 async def connect():
     if db.mongodb is not None:
