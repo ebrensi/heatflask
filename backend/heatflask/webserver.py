@@ -1,7 +1,7 @@
+import os
 from sanic import Sanic
 import sanic.response as Response
 from sanic.log import logging, LOGGING_CONFIG_DEFAULTS as log_config, logger as log
-import asyncio
 
 import DataAPIs
 import Strava
@@ -11,11 +11,16 @@ import logging_tree
 
 
 # Logging config
-lc = log_config["loggers"]["sanic.root"]
-lc["level"] = "DEBUG"
-log_config["loggers"].update(
-    {"DataAPIs": lc, "Strava": lc, "Users": lc, "Index": lc, "Utility": lc}
-)
+DEBUG_LEVEL = os.environ.get("DEBUG_LEVEL", "DEBUG")
+BASE_LOGGER_CONFIG = {"handlers": ["console"]}
+LOGGER_CONFIG = {
+    "DataAPIs": {**BASE_LOGGER_CONFIG, "level": DEBUG_LEVEL},
+    "Strava": {**BASE_LOGGER_CONFIG, "level": DEBUG_LEVEL},
+    "Users": {**BASE_LOGGER_CONFIG, "level": DEBUG_LEVEL},
+    "Index": {**BASE_LOGGER_CONFIG, "level": DEBUG_LEVEL},
+    "Utility": {**BASE_LOGGER_CONFIG, "level": DEBUG_LEVEL},
+}
+log_config["loggers"].update(LOGGER_CONFIG)
 
 log_msg_format = "%(levelname)5s [%(name)s.%(funcName)s] %(message)s"
 log_config["formatters"]["generic"].update(
@@ -38,7 +43,7 @@ log_config["formatters"]["access"].update(
 app = Sanic("heatflask", log_config=log_config)
 app.config.SERVER_NAME = "http://127.0.0.1:8000"
 
-logging_tree.printout()
+# logging_tree.printout()
 
 
 @app.listener("before_server_start")
