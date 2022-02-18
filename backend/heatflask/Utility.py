@@ -1,7 +1,12 @@
-import dateutil
+import dateutil.tz
+import dateutil.parser
 from datetime import datetime
 from itertools import islice, repeat, starmap, takewhile
 from operator import truth
+from logging import getLogger
+
+log = getLogger(__name__)
+log.propagate = True
 
 
 def cleandict(d: dict) -> dict:

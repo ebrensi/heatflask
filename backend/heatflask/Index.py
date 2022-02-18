@@ -22,7 +22,6 @@ import Strava
 import Utility
 
 log = getLogger(__name__)
-log.setLevel("DEBUG")
 log.propagate = True
 
 COLLECTION_NAME = "index"
@@ -157,6 +156,14 @@ async def check_import_flag(user_id):
 ## **************************************
 
 
+async def dummy_op():
+    log.info("Starting dummy operation")
+    for i in range(10):
+        await asyncio.sleep(1)
+        log.info("dummy op %d", i)
+    log.info("Finished dummy operation")
+
+
 async def import_user_entries(**user):
     t0 = time.perf_counter()
     uid = int(user["_id"])
@@ -211,7 +218,7 @@ async def count_user_entries(**user):
 async def has_user_entries(**user):
     uid = int(user["_id"])
     index = await get_collection()
-    return not not (await index.find_one({USER_ID: int(uid)}))
+    return not not (await index.find_one({USER_ID: int(uid)}, projection={"_id": True}))
 
 
 SORT_SPECS = [(UTC_START_TIME, DESCENDING)]

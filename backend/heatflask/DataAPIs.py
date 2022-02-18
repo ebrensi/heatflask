@@ -6,7 +6,6 @@ import datetime
 import uuid
 
 log = logging.getLogger(__name__)
-log.setLevel("DEBUG")
 log.propagate = True
 
 # initialize async datastores

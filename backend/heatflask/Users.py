@@ -9,12 +9,12 @@ Paste one of these Jupyter magic directives to the top of a cell
 
 from logging import getLogger
 import datetime
+import pymongo
 
 import DataAPIs
 import Utility
 
 log = getLogger(__name__)
-log.setLevel("DEBUG")
 log.propagate = True
 
 COLLECTION_NAME = "users"
@@ -86,19 +86,21 @@ def mongo_doc(
     )
 
 
-async def add_or_update(update_ts=False, inc_access_count=False, **userdict):
+async def add_or_update(update_ts=False, inc_access_count=False, **strava_athlete):
     users = await get_collection()
-    doc = mongo_doc(**userdict)
+    doc = mongo_doc(**strava_athlete)
     if not doc:
         log.exception("error adding/updating user: %s", doc)
         return
 
-    user_id = doc.pop("_id")
-
     if update_ts:
         doc["ts"] = datetime.datetime.utcnow()
 
-    updates = {"$set": doc} if doc else {}
+    # We cannot technically "update" the _id field if this user exists
+    # in the database, so we need to remove that field from the updates
+    user_info = {**doc}
+    user_id = user_info.pop("_id")
+    updates = {"$set": user_info}
 
     if inc_access_count:
         updates["$inc"] = {"access_count": 1}
@@ -107,7 +109,12 @@ async def add_or_update(update_ts=False, inc_access_count=False, **userdict):
 
     # Creates a new user or updates an existing user (with the same id)
     try:
-        return await users.update_one({"_id": user_id}, updates, upsert=True)
+        return await users.find_one_and_update(
+            {"_id": user_id},
+            updates,
+            upsert=True,
+            return_document=pymongo.ReturnDocument.AFTER,
+        )
     except Exception:
         log.exception("error adding/updating user: %s", doc)
 
@@ -117,11 +124,9 @@ async def get(user_id):
     uid = int(user_id)
     query = {"_id": uid}
     try:
-        doc = await users.find_one(query)
+        return await users.find_one(query)
     except Exception:
         log.exception("Failed mongodb query: %s", query)
-        doc = None
-    return doc
 
 
 # Returns an async iterator
