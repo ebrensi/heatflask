@@ -9,12 +9,13 @@ log = logging.getLogger(__name__)
 log.propagate = True
 
 # initialize async datastores
+use_remote = os.environ.get("USE_REMOTE_DB")
 
 # MongoDB
-mongo_uri = os.environ["MONGODB_URI"]
+mongo_url = os.environ["REMOTE_MONGODB_URL" if use_remote else "MONGODB_URL"]
 
 # Redis
-redis_url = os.environ["REDIS_URL"]
+redis_url = os.environ["REMOTE_REDIS_URL" if use_remote else "REDIS_URL"]
 
 
 class Box:
@@ -30,7 +31,7 @@ db = Box()
 async def connect():
     if db.mongodb is not None:
         return
-    db.mongo_client = motor.motor_asyncio.AsyncIOMotorClient(mongo_uri)
+    db.mongo_client = motor.motor_asyncio.AsyncIOMotorClient(mongo_url)
     db.mongodb = db.mongo_client.get_default_database()
     db.redis = aioredis.from_url(redis_url)
     log.info("Connected to MongoDB and Redis")

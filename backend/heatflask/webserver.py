@@ -3,45 +3,18 @@ import asyncio
 import msgpack
 from sanic import Sanic
 import sanic.response as Response
-from sanic.log import LOGGING_CONFIG_DEFAULTS as log_config, logger as log
+from sanic.log import logger as log
 
 import DataAPIs
 import Strava
 import Users
 import Index
 import Streams
-import logging_tree
+from webserver_config import APP_NAME, LOG_CONFIG
 
 
-# Logging config
-ENVIRONMENT = os.environ.get("ENVIRONMENT", "production")
-default_log_level = "DEBUG" if ENVIRONMENT == "development" else "INFO"
-LOG_LEVEL = os.environ.get("LOG_LEVEL", default_log_level)
-base_logger_config = {"handlers": ["console"]}
-logger_config = {
-    "DataAPIs": {**base_logger_config, "level": LOG_LEVEL},
-    "Strava": {**base_logger_config, "level": LOG_LEVEL},
-    "Users": {**base_logger_config, "level": LOG_LEVEL},
-    "Index": {**base_logger_config, "level": LOG_LEVEL},
-    "Utility": {**base_logger_config, "level": LOG_LEVEL},
-}
-log_config["loggers"].update(logger_config)
-
-ts = "" if ENVIRONMENT == "development" else "%(asctime)s"
-log_fmt = f"{ts}%(levelname)5s [%(name)s.%(funcName)s] %(message)s"
-log_config["formatters"]["generic"]["format"] = log_fmt
-
-access_log_fmt = (
-    f"{ts}%(levelname)5s [%(name)s] [%(host)s]:"
-    f" %(request)s %(message)s %(status)d %(byte)d"
-)
-log_config["formatters"]["access"]["format"] = access_log_fmt
-# End Logging config
-
-app = Sanic("heatflask", log_config=log_config)
-app.config.SERVER_NAME = "http://127.0.0.1:8000"
-
-# logging_tree.printout()
+app = Sanic(APP_NAME, log_config=LOG_CONFIG)
+app.config.SERVER_NAME = os.environ.get("SERVER_NAME")
 
 
 @app.listener("before_server_start")
@@ -56,6 +29,10 @@ async def shutdown(sanic, loop):
     await DataAPIs.disconnect()
 
 
+#
+# Authentication
+#
+
 # Attempt to authorize a user via Oauth(2)
 # When a client requests this endpoint, we redirect them to
 # Strava's authorization page, which will then request our
@@ -69,6 +46,30 @@ async def authorize(request):
             state=state, redirect_uri=app.url_for("auth_callback", _external=True)
         )
     )
+
+
+# We add an identifier cookie to the user's browser upon authentication
+# to create a persistent session
+DEFAULT_COOKIE = {
+    # "expires": None,
+    # "path": None,
+    # "comment": None,
+    # "domain": None,
+    "max-age": 10 * 24 * 3600,  # 10 days
+    # "secure": False,
+    "httponly": True,
+    "samesite": "strict",
+}
+
+
+def set_session_cookie(response, **user):
+    response.cookies[APP_NAME] = user["_id"]
+    for k, v in DEFAULT_COOKIE.items():
+        response.cookies[APP_NAME][k] = v
+
+
+def get_session_cookie(request):
+    pass
 
 
 # Authorization callback.  The service returns here to give us an access_token
@@ -117,17 +118,15 @@ async def auth_callback(request):
         # app.add_task(Index.dummy_op())
         asyncio.create_task(Index.import_user_entries(**user))
 
-    user["ts"] = str(user["ts"])
-    return Response.redirect(app.url_for("indexing_progress", username=user["_id"]))
-    # remember=True, for persistent login.
-    # login_user(user, remember=True)
+    response = Response.redirect(state or app.url_for("main", username=user.id))
+    set_session_cookie(response, **user)
 
     # msg = f"Authenticated{new_user} {user}"
     # log.info(msg)
     # if new_user:
     #     EventLogger.new_event(msg=msg)
 
-    # return Response.redirect(state or app.url_for("main", username=user.id))
+    return response
 
 
 async def aiter_import_index_progress(user_id):

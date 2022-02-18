@@ -32,6 +32,7 @@ SECS_IN_DAY = 24 * SECS_IN_HOUR
 
 MONGO_TTL = int(os.environ.get("MONGO_STREAMS_TTL", 10)) * SECS_IN_DAY
 REDIS_TTL = int(os.environ.get("REDIS_STREAMS_TTL", 4)) * SECS_IN_HOUR
+OFFLINE = os.environ.get("OFFLINE")
 
 
 class Box:
@@ -118,8 +119,9 @@ async def strava_import(activity_ids, **user):
 async def aiter_query(activity_ids=None, user=None):
     if not activity_ids:
         return
-
+    #
     # First we check Redis cache
+    #
     t0 = time.perf_counter()
     keys = [cache_key(aid) for aid in activity_ids]
     redis_response = await db.redis.mget(keys)
@@ -136,6 +138,10 @@ async def aiter_query(activity_ids=None, user=None):
     log.debug(
         "retrieved %d streams from Redis in %d", len(local_result), (t1 - t0) * 1000
     )
+
+    #
+    # Next we query MongoDB for streams that were not in Redis
+    #
     # activity IDs of cache misses
     activity_ids = [a for a, s in zip(activity_ids, redis_response) if not s]
     if activity_ids:
@@ -168,7 +174,7 @@ async def aiter_query(activity_ids=None, user=None):
 
     streams_import = None
     first_fetch = None
-    if activity_ids and (user is not None):
+    if activity_ids and (user is not None) and (not OFFLINE):
         # Start a fetch process going. We will get back to this...
         t0 = time.perf_counter()
         streams_import = strava_import(activity_ids, **user)

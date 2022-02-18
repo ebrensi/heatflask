@@ -4,5 +4,4 @@ black
 flake8
 jupyter
 nbconvert
-logging_tree
 
