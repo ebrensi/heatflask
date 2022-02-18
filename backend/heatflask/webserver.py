@@ -1,43 +1,41 @@
 import os
+import asyncio
+import msgpack
 from sanic import Sanic
 import sanic.response as Response
-from sanic.log import logging, LOGGING_CONFIG_DEFAULTS as log_config, logger as log
+from sanic.log import LOGGING_CONFIG_DEFAULTS as log_config, logger as log
 
 import DataAPIs
 import Strava
 import Users
 import Index
+import Streams
 import logging_tree
 
 
 # Logging config
-DEBUG_LEVEL = os.environ.get("DEBUG_LEVEL", "DEBUG")
-BASE_LOGGER_CONFIG = {"handlers": ["console"]}
-LOGGER_CONFIG = {
-    "DataAPIs": {**BASE_LOGGER_CONFIG, "level": DEBUG_LEVEL},
-    "Strava": {**BASE_LOGGER_CONFIG, "level": DEBUG_LEVEL},
-    "Users": {**BASE_LOGGER_CONFIG, "level": DEBUG_LEVEL},
-    "Index": {**BASE_LOGGER_CONFIG, "level": DEBUG_LEVEL},
-    "Utility": {**BASE_LOGGER_CONFIG, "level": DEBUG_LEVEL},
+ENVIRONMENT = os.environ.get("ENVIRONMENT", "production")
+default_log_level = "DEBUG" if ENVIRONMENT == "development" else "INFO"
+LOG_LEVEL = os.environ.get("LOG_LEVEL", default_log_level)
+base_logger_config = {"handlers": ["console"]}
+logger_config = {
+    "DataAPIs": {**base_logger_config, "level": LOG_LEVEL},
+    "Strava": {**base_logger_config, "level": LOG_LEVEL},
+    "Users": {**base_logger_config, "level": LOG_LEVEL},
+    "Index": {**base_logger_config, "level": LOG_LEVEL},
+    "Utility": {**base_logger_config, "level": LOG_LEVEL},
 }
-log_config["loggers"].update(LOGGER_CONFIG)
+log_config["loggers"].update(logger_config)
 
-log_msg_format = "%(levelname)5s [%(name)s.%(funcName)s] %(message)s"
-log_config["formatters"]["generic"].update(
-    {
-        "format": log_msg_format,
-    }
-)
+ts = "" if ENVIRONMENT == "development" else "%(asctime)s"
+log_fmt = f"{ts}%(levelname)5s [%(name)s.%(funcName)s] %(message)s"
+log_config["formatters"]["generic"]["format"] = log_fmt
 
-access_log_format = (
-    "%(levelname)5s [%(name)s] [%(host)s]: "
-    + "%(request)s %(message)s %(status)d %(byte)d"
+access_log_fmt = (
+    f"{ts}%(levelname)5s [%(name)s] [%(host)s]:"
+    f" %(request)s %(message)s %(status)d %(byte)d"
 )
-log_config["formatters"]["access"].update(
-    {
-        "format": access_log_format,
-    }
-)
+log_config["formatters"]["access"]["format"] = access_log_fmt
 # End Logging config
 
 app = Sanic("heatflask", log_config=log_config)
@@ -50,8 +48,6 @@ app.config.SERVER_NAME = "http://127.0.0.1:8000"
 async def init(sanic, loop):
     log.info("Heatflask server starting")
     await DataAPIs.connect()
-    # loggers = [logging.getLogger(name) for name in logging.root.manager.loggerDict]
-    # logging.warning("after server start. loggers: %s", loggers)
 
 
 @app.listener("after_server_stop")
@@ -64,7 +60,7 @@ async def shutdown(sanic, loop):
 # When a client requests this endpoint, we redirect them to
 # Strava's authorization page, which will then request our
 # enodpoint /authorized
-@app.route("/authorize")
+@app.get("/authorize")
 async def authorize(request):
     log.info(request)
     state = request.args.get("state")
@@ -77,7 +73,7 @@ async def authorize(request):
 
 # Authorization callback.  The service returns here to give us an access_token
 # for the user who successfully logged in.
-@app.route("/authorized")
+@app.get("/authorized")
 async def auth_callback(request):
     state = request.args.get("state")
 
@@ -116,16 +112,13 @@ async def auth_callback(request):
         has_index,
     )
 
-    if True:  # not has_index:
+    if not has_index:
         # Start building user index in the background
-        app.add_task(Index.dummy_op())
-        # app.add_task(Index.import_user_entries(**user))
-        # asyncio.create_task(Index.import_user_entries(**user))
-        # await Index.import_user_entries(**user)
+        # app.add_task(Index.dummy_op())
+        asyncio.create_task(Index.import_user_entries(**user))
 
     user["ts"] = str(user["ts"])
-    return Response.json(user)
-
+    return Response.redirect(app.url_for("indexing_progress", username=user["_id"]))
     # remember=True, for persistent login.
     # login_user(user, remember=True)
 
@@ -137,7 +130,27 @@ async def auth_callback(request):
     # return Response.redirect(state or app.url_for("main", username=user.id))
 
 
-@app.route("/")
+async def aiter_import_index_progress(user_id):
+    msg = True
+    last_msg = None
+    while msg:
+        msg = await Index.check_import_progress(user_id)
+        if msg and (msg != last_msg):
+            yield msg
+            last_msg = msg
+        else:
+            break
+        await asyncio.sleep(0.5)
+
+
+@app.get("/<username>/indexing_progress")
+async def indexing_progress(request, username):
+    response = await request.respond(content_type="text/csv")
+    async for msg in aiter_import_index_progress(username):
+        await response.send(msg)
+
+
+@app.get("/")
 async def test(request):
     auth_url = app.url_for("authorize")
     return Response.html(
@@ -147,6 +160,35 @@ async def test(request):
         <div><a href='{auth_url}'>Authenticate with Strava</a></li></div>
         """
     )
+
+
+@app.post("/query")
+async def query(request):
+    query = request.json()
+
+    response = await request.respond(content_type="application/msgpack")
+    user = Users.get(query.get("user_id"))
+    if not user:
+        return
+
+    # If queried user's index is currently being imported we
+    # have to wait for that, while sending progress indicators
+    async for msg in aiter_import_index_progress(query["user_id"]):
+        response.send(msgpack.packb({"msg": msg}))
+
+    summaries = await Index.query(**query)
+    summaries_lookup = {A["_id"]: A for A in summaries}
+    ids = list(summaries_lookup.keys())
+
+    streams_iter = Streams.aiter_query(activity_ids=ids, user=current_user)
+    async for aid, streams in streams_iter:
+        A = summaries_lookup[aid]
+        A["mpk"] = streams
+        packed = msgpack.packb(A)
+        response.send(packed)
+
+    # Optionally, you can explicitly end the stream by calling:
+    await response.eof()
 
 
 # @app.route("/")
@@ -160,4 +202,9 @@ async def test(request):
 
 
 if __name__ == "__main__":
-    app.run(debug=True, access_log=True)
+    kwargs = (
+        {"debug": True, "access_log": True}
+        if ENVIRONMENT == "development"
+        else {"debug": False, "access_log": False}
+    )
+    app.run(**kwargs)

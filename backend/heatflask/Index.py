@@ -149,7 +149,7 @@ async def clear_import_flag(user_id):
     log.debug(f"{user_id} import flag unset")
 
 
-async def check_import_flag(user_id):
+async def check_import_progress(user_id):
     return await db.redis.get(import_flag_key(user_id))
 
 

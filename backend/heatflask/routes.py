@@ -1,4 +1,3 @@
-
 # Standard library imports
 import time
 import json
@@ -165,81 +164,6 @@ def splash():
     }
 
     return render_template("splash.html", args=args)
-
-
-# Attempt to authorize a user via Oauth(2)
-@app.route("/authorize")
-def authorize():
-    state = request.args.get("state")
-    redirect_uri = url_for("auth_callback", _external=True)
-
-    client = stravalib.Client()
-    auth_url = client.authorization_url(
-        client_id=app.config["STRAVA_CLIENT_ID"],
-        redirect_uri=redirect_uri,
-        # approval_prompt="force",
-        scope=["read", "activity:read", "activity:read_all"],
-        state=state,
-    )
-    return redirect(auth_url)
-
-
-# Authorization callback.  The service returns here to give us an access_token
-#  for the user who successfully logged in.
-@app.route("/authorized")
-def auth_callback():
-    state = request.args.get("state")
-
-    if "error" in request.args:
-        flash(f"Error: {request.args.get('error')}")
-        return redirect(state or url_for("splash"))
-
-    scope = request.args.get("scope")
-    if not scope:
-        log.exception("there is a problem with authentication")
-        return "oops"
-
-    if "activity:read" not in scope:
-        # We need to be able to read the user's activities
-        return redirect(url_for("authorize", state=state))
-
-    if current_user.is_anonymous:
-        args = dict(
-            code=request.args.get("code"),
-            client_id=app.config["STRAVA_CLIENT_ID"],
-            client_secret=app.config["STRAVA_CLIENT_SECRET"],
-        )
-
-        client = stravalib.Client()
-
-        try:
-            access_info = client.exchange_code_for_token(**args)
-            # access_info is a dict containing the access_token,
-            #  date of expire, and a refresh token
-            user_data = Users.strava_user_data(access_info=access_info)
-
-            assert user_data
-
-            new_user = "" if Users.get(user_data["id"]) else " NEW USER"
-
-            user = Users.add_or_update(**user_data)
-
-            assert user
-
-        except Exception:
-            log.exception("authorization error")
-            flash(f"Authorization Error: {datetime.utcnow()}")
-            return redirect(state)
-
-        # remember=True, for persistent login.
-        login_user(user, remember=True)
-
-        msg = f"Authenticated{new_user} {user}"
-        log.info(msg)
-        if new_user:
-            EventLogger.new_event(msg=msg)
-
-    return redirect(state or url_for("main", username=user.id))
 
 
 @app.route("/userinfo")
