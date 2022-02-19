@@ -50,7 +50,7 @@ async def authorize(request):
 
 # We add an identifier cookie to the user's browser upon authentication
 # to create a persistent session
-DEFAULT_COOKIE = {
+DEFAULT_COOKIE_SPEC = {
     # "expires": None,
     # "path": None,
     # "comment": None,
@@ -61,15 +61,34 @@ DEFAULT_COOKIE = {
     "samesite": "strict",
 }
 
-
-def set_session_cookie(response, **user):
-    response.cookies[APP_NAME] = user["_id"]
-    for k, v in DEFAULT_COOKIE.items():
-        response.cookies[APP_NAME][k] = v
+COOKIE_NAME = APP_NAME
 
 
-def get_session_cookie(request):
-    pass
+@app.on_request
+async def fetch_user_from_cookie_info(request):
+    cookie_value = request.cookies.get(COOKIE_NAME)
+    if cookie_value:
+        log.debug("got '%s' cookie: %s", COOKIE_NAME, cookie_value)
+    else:
+        log.debug("no '%s' cookie", COOKIE_NAME)
+    request.ctx.user = await Users.get(cookie_value)
+    log.debug("Session user: %s", request.ctx.user["_id"])
+
+
+@app.on_response
+async def reset_or_delete_cookie(request, response):
+    # (re)set the user session cookie if there is a user
+    # attached to this request context,
+    # otherwise delete any set cookie (ending the session)
+    if request.ctx.user:
+        if request.cookies.get(COOKIE_NAME):
+            del response.cookies[COOKIE_NAME]
+            log.debug("deleted '%s' cookie", COOKIE_NAME)
+    else:
+        response.cookies[COOKIE_NAME] = request.ctx.user["_id"]
+        for k, v in DEFAULT_COOKIE_SPEC.items():
+            response.cookies[COOKIE_NAME][k] = v
+        log.debug("set '%s' cookie %s", COOKIE_NAME, response.cookies[COOKIE_NAME])
 
 
 # Authorization callback.  The service returns here to give us an access_token
@@ -105,6 +124,9 @@ async def auth_callback(request):
         log.info("unable to add user")
         return Response.text("oops")
 
+    # start user session (which will be persisted with a cookie)
+    request.ctx.user = user
+
     has_index = await Index.has_user_entries(**user)
     log.info(
         "Athenticated user %d, access_count=%d, has_index=%s",
@@ -118,15 +140,12 @@ async def auth_callback(request):
         # app.add_task(Index.dummy_op())
         asyncio.create_task(Index.import_user_entries(**user))
 
-    response = Response.redirect(state or app.url_for("main", username=user.id))
-    set_session_cookie(response, **user)
-
     # msg = f"Authenticated{new_user} {user}"
     # log.info(msg)
     # if new_user:
     #     EventLogger.new_event(msg=msg)
 
-    return response
+    # return Response.redirect(state or app.url_for("main", username=user["_id"]))
 
 
 async def aiter_import_index_progress(user_id):
@@ -152,11 +171,18 @@ async def indexing_progress(request, username):
 @app.get("/")
 async def test(request):
     auth_url = app.url_for("authorize")
+    login_msg = f"<a href='{auth_url}'>Authenticate with Strava</a>"
+    logout_url = app.url_for("logout")
+    logout_msg = f"<a href='{logout_url}'>close session and log out of Strava</a>"
+
+    uid = request.ctx.user.get("_id")
+    msg = logout_msg if uid else login_msg
+
     return Response.html(
         f"""
         <!DOCTYPE html><html lang="en"><meta charset="UTF-8">
-        <div>Hi 😎</div>
-        <div><a href='{auth_url}'>Authenticate with Strava</a></li></div>
+        <div>Hi {uid} 😎</div>
+        <div>{msg}</div>
         """
     )
 
@@ -166,8 +192,8 @@ async def query(request):
     query = request.json()
 
     response = await request.respond(content_type="application/msgpack")
-    user = Users.get(query.get("user_id"))
-    if not user:
+    current_user = request.ctx.user
+    if not current_user:
         return
 
     # If queried user's index is currently being imported we
@@ -186,9 +212,6 @@ async def query(request):
         packed = msgpack.packb(A)
         response.send(packed)
 
-    # Optionally, you can explicitly end the stream by calling:
-    await response.eof()
-
 
 # @app.route("/")
 # async def test(request):
@@ -201,9 +224,10 @@ async def query(request):
 
 
 if __name__ == "__main__":
+
     kwargs = (
         {"debug": True, "access_log": True}
-        if ENVIRONMENT == "development"
+        if os.environ("APP_ENV").lower() == "development"
         else {"debug": False, "access_log": False}
     )
     app.run(**kwargs)

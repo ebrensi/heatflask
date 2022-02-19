@@ -21,7 +21,7 @@ log = getLogger(__name__)
 log.propagate = True
 
 
-STRAVA_DOMAIN = "https://www.strava.com"
+DOMAIN = "https://www.strava.com"
 STALE_TOKEN = 300
 CONCURRENCY = 10
 
@@ -60,7 +60,7 @@ class AsyncClient:
 
     def new_session(self):
         return aiohttp.ClientSession(
-            STRAVA_DOMAIN, headers=self.headers, raise_for_status=True
+            DOMAIN, headers=self.headers, raise_for_status=True
         )
 
     async def __aenter__(self):
@@ -208,6 +208,9 @@ TOKEN_EXCHANGE_PARAMS = {
 
 
 DEAUTH_ENDPOINT = "/oauth/deauthorize"
+CLOSE_SESSION_ENDPOINT = "/logout"
+
+LOGOUT_URL = f"{DOMAIN}{CLOSE_SESSION_ENDPOINT}"
 
 
 def auth_url(redirect_uri="http://localhost/exchange_token", state=None):
@@ -215,7 +218,7 @@ def auth_url(redirect_uri="http://localhost/exchange_token", state=None):
         {**AUTH_URL_PARAMS, "redirect_uri": redirect_uri, "state": state}
     )
     paramstr = urllib.parse.urlencode(params, safe=",:")
-    return STRAVA_DOMAIN + AUTH_ENDPOINT + "?" + paramstr
+    return DOMAIN + AUTH_ENDPOINT + "?" + paramstr
 
 
 # We can get the access_token for a user either with
