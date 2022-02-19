@@ -120,6 +120,8 @@ async def add_or_update(update_ts=False, inc_access_count=False, **strava_athlet
 
 
 async def get(user_id):
+    if not user_id:
+        return
     users = await get_collection()
     uid = int(user_id)
     query = {"_id": uid}

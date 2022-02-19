@@ -10,14 +10,6 @@ class Config(object):
     DEVELOPMENT = False
     CSRF_ENABLED = True
 
-    # For WhiteNoise static file serving
-    # Folders that constain files that WhiteNoise will serve
-    #  paths are relative to Flask app start point (backend/)
-    WHITENOISE_TEMPLATE_FOLDER = "../frontend/dist"
-    WHITENOISE_STATIC_FOLDERS = ["../frontend/dist", "../frontend/dist_unbundled"]
-
-    LOG_LEVEL = os.environ.get("LOG_LEVEL", "DEBUG")
-
     # Heatflask settings
     OFFLINE = False
     APP_VERSION = "v0.5.0"
@@ -27,83 +19,10 @@ class Config(object):
     # User ids of people to give administrative priviledge
     ADMIN = [15972102]
 
-    # Concurrency for User database triage
-    TRIAGE_CONCURRENCY = 1
-
-    # Concurrency for activity streams import
-    IMPORT_CONCURRENCY = 64
-
-    # Concurrency for Index page import
-    PAGE_SIZE = int(os.environ.get("PAGE_SIZE", 50))
-    PAGE_REQUEST_CONCURRENCY = 16
-
-    BATCH_CHUNK_SIZE = 100
-
-    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
-
-    MONGO_OPTIONS = {"maxIdleTimeMS": 10000, "maxPoolSize": 100}
-
-    MONGO_URI = os.environ.get("MONGODB_URI")
-    REDIS_URL = os.environ.get("REDIS_URL")
-
     SECS_IN_HOUR = 60 * 60
     SECS_IN_DAY = 24 * SECS_IN_HOUR
 
-    # How long we store Index entry in MongoDB
-    TTL_INDEX = int(os.environ.get("TTL_INDEX", 10)) * SECS_IN_DAY
-
-    # How long we store Activity stream data in MongoDB
-    TTL_DB = int(os.environ.get("TTL_DB", 4)) * SECS_IN_DAY
-
-    # How long we Redis-cache Activity stream data
-    TTL_CACHE = int(os.environ.get("TTL_CACHE", 4)) * SECS_IN_HOUR
-
     CACHE_IP_INFO_TIMEOUT = 1 * SECS_IN_DAY  # 1 day
-
-    JSONIFY_PRETTYPRINT_REGULAR = True
-
-    SECRET_KEY = os.environ.get("SECRET_KEY")
-
-    # Strava stuff
-    STRAVA_CLIENT_ID = os.environ.get("STRAVA_CLIENT_ID")
-    STRAVA_CLIENT_SECRET = os.environ.get("STRAVA_CLIENT_SECRET")
-
-    # IPstack
-    IPSTACK_ACCESS_KEY = os.environ.get("IPSTACK_ACCESS_KEY")
-
-    # Maximum size of event history (for capped MongoDB collection)
-    MAX_HISTORY_BYTES = 2 * 1024 * 1024  # 2MB
-
-    # We are free to delete users who have been inactive for a while
-    DAYS_INACTIVE_CUTOFF = 365
-
-    STREAMS_TO_IMPORT = ["latlng", "time"]
-
-    # The number of failed stream import requests we will allow before
-    #  aborting an import.
-    MAX_IMPORT_ERRORS = 100
-
-    # Domain Redirect for people using herokuapp links
-    FROM_DOMAIN = "heatflask.herokuapp.com"
-    TO_DOMAIN = "www.heatflask.com"
-
-    # A few Demos
-    DEMOS = {
-        "portland_6_2017": {
-            "username": "15972102",
-            "after": "2017-06-30",
-            "before": "2017-07-08",
-            "lat": "41.476",
-            "lng": "-119.290",
-            "zoom": "6",
-            "c1": "859579",
-            "c2": "169",
-            "sz": "4",
-        },
-        "last60activities": {"username": "15972102", "limit": "60"},
-        "last500activities": {"username": "15972102", "limit": "500"},
-    }
 
 
 class ProductionConfig(Config):
@@ -113,14 +32,6 @@ class ProductionConfig(Config):
     """
 
     DEBUG = False
-
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        "pool_pre_ping": True,
-        "pool_size": 6,
-        "max_overflow": 8,
-        "pool_timeout": 10,
-        "pool_recycle": 300,
-    }
 
     MONGO_URI = os.environ.get("ATLAS_MONGODB_URI")
     REDIS_URL = os.environ.get("REDISGREEN_URL")

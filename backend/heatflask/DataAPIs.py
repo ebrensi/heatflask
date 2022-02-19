@@ -11,11 +11,19 @@ log.propagate = True
 # initialize async datastores
 use_remote = os.environ.get("USE_REMOTE_DB")
 
+REDIS_URL = os.environ.get("REDISGREEN_URL")
+
 # MongoDB
-mongo_url = os.environ["REMOTE_MONGODB_URL" if use_remote else "MONGODB_URL"]
+dev_env = os.environ["APP_ENV"].lower() == "development"
+dev_mongo_url = os.environ["REMOTE_MONGODB_URL" if use_remote else "MONGODB_URL"]
+prod_mongo_url = os.environ.get("ATLAS_MONGODB_URI")
+mongo_url = dev_mongo_url if dev_env else prod_mongo_url
+
 
 # Redis
-redis_url = os.environ["REMOTE_REDIS_URL" if use_remote else "REDIS_URL"]
+dev_redis_url = os.environ["REMOTE_REDIS_URL" if use_remote else "REDIS_URL"]
+prod_redis_url = os.environ.get("REDISGREEN_URL")
+redis_url = dev_redis_url if dev_env else prod_redis_url
 
 
 class Box:

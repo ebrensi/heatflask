@@ -71,8 +71,10 @@ async def fetch_user_from_cookie_info(request):
         log.debug("got '%s' cookie: %s", COOKIE_NAME, cookie_value)
     else:
         log.debug("no '%s' cookie", COOKIE_NAME)
-    request.ctx.user = await Users.get(cookie_value)
-    log.debug("Session user: %s", request.ctx.user["_id"])
+    user = await Users.get(cookie_value)
+    if user:
+        request.ctx.user = user
+    log.debug("Session user: %s", user["_id"] if user else None)
 
 
 @app.on_response
@@ -81,14 +83,19 @@ async def reset_or_delete_cookie(request, response):
     # attached to this request context,
     # otherwise delete any set cookie (ending the session)
     if request.ctx.user:
-        if request.cookies.get(COOKIE_NAME):
-            del response.cookies[COOKIE_NAME]
-            log.debug("deleted '%s' cookie", COOKIE_NAME)
-    else:
         response.cookies[COOKIE_NAME] = request.ctx.user["_id"]
         for k, v in DEFAULT_COOKIE_SPEC.items():
             response.cookies[COOKIE_NAME][k] = v
         log.debug("set '%s' cookie %s", COOKIE_NAME, response.cookies[COOKIE_NAME])
+    elif request.cookies.get(COOKIE_NAME):
+        del response.cookies[COOKIE_NAME]
+        log.debug("deleted '%s' cookie", COOKIE_NAME)
+
+
+@app.get("/logout")
+async def logout(request):
+    request.ctx.user = None
+    return Response.redirect(Strava.LOGOUT_URL)
 
 
 # Authorization callback.  The service returns here to give us an access_token
@@ -175,8 +182,10 @@ async def test(request):
     logout_url = app.url_for("logout")
     logout_msg = f"<a href='{logout_url}'>close session and log out of Strava</a>"
 
-    uid = request.ctx.user.get("_id")
-    msg = logout_msg if uid else login_msg
+    log.info(request.ctx)
+    user = request.ctx.get("user")
+    uid = user["_id"] if user else None
+    msg = logout_msg if user else login_msg
 
     return Response.html(
         f"""
@@ -224,10 +233,19 @@ async def query(request):
 
 
 if __name__ == "__main__":
+    RUN_CONFIG = {
+        # "host": "0.0.0.0",
+        "workers": int(os.environ.get("WEB_CONCURRENCY", 1)),
+        "debug": False,
+        "access_log": False,
+    }
 
-    kwargs = (
-        {"debug": True, "access_log": True}
-        if os.environ("APP_ENV").lower() == "development"
-        else {"debug": False, "access_log": False}
-    )
-    app.run(**kwargs)
+    server_name = os.environ.get("SERVER_NAME")
+    if server_name:
+        host, port = server_name.split(":")
+        RUN_CONFIG.update({"host": host, "port": int(port)})
+
+    if os.environ.get("APP_ENV", "production").lower() == "development":
+        RUN_CONFIG.update({"debug": True, "access_log": True})
+
+    app.run(**RUN_CONFIG)
