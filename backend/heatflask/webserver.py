@@ -39,12 +39,14 @@ async def shutdown(sanic, loop):
 # enodpoint /authorized
 @app.get("/authorize")
 async def authorize(request):
-    log.info(request)
     state = request.args.get("state")
+    log.info(
+        "request: %s, app: %s",
+        request.url_for("auth_callback"),
+        app.url_for("auth_callback"),
+    )
     return Response.redirect(
-        Strava.auth_url(
-            state=state, redirect_uri=app.url_for("auth_callback", _external=True)
-        )
+        Strava.auth_url(state=state, redirect_uri=request.url_for("auth_callback"))
     )
 
 
@@ -72,8 +74,7 @@ async def fetch_user_from_cookie_info(request):
     else:
         log.debug("no '%s' cookie", COOKIE_NAME)
     user = await Users.get(cookie_value)
-    if user:
-        request.ctx.user = user
+    request.ctx.user = user
     log.debug("Session user: %s", user["_id"] if user else None)
 
 
@@ -87,9 +88,10 @@ async def reset_or_delete_cookie(request, response):
         for k, v in DEFAULT_COOKIE_SPEC.items():
             response.cookies[COOKIE_NAME][k] = v
         log.debug("set '%s' cookie %s", COOKIE_NAME, response.cookies[COOKIE_NAME])
-    elif request.cookies.get(COOKIE_NAME):
-        del response.cookies[COOKIE_NAME]
-        log.debug("deleted '%s' cookie", COOKIE_NAME)
+    else:  # if request.cookies.get(COOKIE_NAME):
+        log.debug("got here")
+        # del response.cookies[COOKIE_NAME]
+        # log.debug("deleted '%s' cookie", COOKIE_NAME)
 
 
 @app.get("/logout")
@@ -182,11 +184,9 @@ async def test(request):
     logout_url = app.url_for("logout")
     logout_msg = f"<a href='{logout_url}'>close session and log out of Strava</a>"
 
-    log.info(request.ctx)
-    user = request.ctx.get("user")
+    user = request.ctx.user
     uid = user["_id"] if user else None
     msg = logout_msg if user else login_msg
-
     return Response.html(
         f"""
         <!DOCTYPE html><html lang="en"><meta charset="UTF-8">
@@ -234,18 +234,15 @@ async def query(request):
 
 if __name__ == "__main__":
     RUN_CONFIG = {
-        # "host": "0.0.0.0",
+        "host": "0.0.0.0",
+        "port": int(os.environ.get("PORT", 8000)),
         "workers": int(os.environ.get("WEB_CONCURRENCY", 1)),
         "debug": False,
         "access_log": False,
     }
 
-    server_name = os.environ.get("SERVER_NAME")
-    if server_name:
-        host, port = server_name.split(":")
-        RUN_CONFIG.update({"host": host, "port": int(port)})
+    if os.environ.get("APP_ENV").lower() == "development":
+        RUN_CONFIG.update({"host": "127.0.0.1", "debug": True, "access_log": True})
 
-    if os.environ.get("APP_ENV", "production").lower() == "development":
-        RUN_CONFIG.update({"debug": True, "access_log": True})
-
+    # app.config.SERVER_NAME = '{host}:{port}'.format(**RUN_CONFIG)
     app.run(**RUN_CONFIG)

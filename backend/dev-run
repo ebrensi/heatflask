@@ -2,17 +2,15 @@
 
 source activate
 
-export PORT=8000
-
 while [ "$1" != "" ]; do
     case $1 in
         -o | --offline )        export OFFLINE=1
                                 ;;
         -r | --remote_db )      export USE_REMOTE_DB=1
                                 ;;
-        -p | --port )           export PORT="$2"
+        -h | --heroku )         export USE_HEROKU=1
                                 ;;
-        -h | --help )           usage
+        -? | --help )           usage
                                 exit
                                 ;;
     esac
@@ -20,18 +18,13 @@ while [ "$1" != "" ]; do
 done
 
 
-export HEROKU_CLI=/usr/bin/heroku
+export HEROKU_CLI=/usr/local/bin/heroku
 
 # Run the backend server via heroku local if it is available, otherwise gunicorn directly
-if [ $OFFLINE ]; then
-    echo "Running backend without network connection"
-    sanic heatflask.webserver.app
-
-elif [ -f "$HEROKU_CLI" ]; then
-    echo "$HEROKU_CLI is present"
-    heroku local
+if [ "$USE_HEROKU" == 1 ] && [ -f "$HEROKU_CLI" ]; then
+    echo "running Sanic server via $HEROKU_CLI"
+    $HEROKU_CLI local
 else
-    echo "$HEROKU_CLI does not exist"
-    sanic heatflask.webserver.app
+    python heatflask/webserver.py
 fi
 

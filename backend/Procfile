@@ -1,2 +1,2 @@
-web: sanic webserver.app
+web: python heatflask/webserver.py
 
