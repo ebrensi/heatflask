@@ -4,7 +4,6 @@ from sanic.log import LOGGING_CONFIG_DEFAULTS as LOG_CONFIG
 APP_NAME = "heatflask"
 APP_VERSION = "0.5.0"
 
-# *** Logging config ***
 APP_ENV = os.environ.get("APP_ENV", "production")
 default_log_level = "DEBUG" if APP_ENV == "development" else "INFO"
 LOG_LEVEL = os.environ.get("LOG_LEVEL", default_log_level)
@@ -14,7 +13,10 @@ logger_config = {
     "Strava": {**base_logger_config, "level": LOG_LEVEL},
     "Users": {**base_logger_config, "level": LOG_LEVEL},
     "Index": {**base_logger_config, "level": LOG_LEVEL},
+    "Events": {**base_logger_config, "level": LOG_LEVEL},
     "Utility": {**base_logger_config, "level": LOG_LEVEL},
+    "server.sessions": {**base_logger_config, "level": LOG_LEVEL},
+    "server.auth": {**base_logger_config, "level": LOG_LEVEL}
 }
 LOG_CONFIG["loggers"].update(logger_config)
 
@@ -27,4 +29,3 @@ access_log_fmt = (
     f" %(request)s %(message)s %(status)d %(byte)d"
 )
 LOG_CONFIG["formatters"]["access"]["format"] = access_log_fmt
-# *** End Logging config ***

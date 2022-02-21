@@ -11,6 +11,9 @@ Paste one of these Jupyter magic directives to the top of a cell
 
 from logging import getLogger
 from datetime import datetime
+import types
+
+
 import DataAPIs
 import Strava
 import Users
@@ -22,15 +25,16 @@ COLLECTION_NAME = "updates"
 
 # Maximum size of updates history (for capped MongoDB collection)
 MAX_UPDATES_BYTES = 1 * 1024 * 1024
-DATA = {}
+
+myBox = types.SimpleNamespace(collection=None)
 
 
 async def get_collection():
-    if "col" not in DATA:
-        DATA["col"] = await DataAPIs.init_collection(
+    if not myBox.collection:
+        myBox.collection = await DataAPIs.init_collection(
             COLLECTION_NAME, capped_size=MAX_UPDATES_BYTES
         )
-    return DATA["col"]
+    return myBox.collection
 
 
 async def list_subscriptions(cls):

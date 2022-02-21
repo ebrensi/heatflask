@@ -10,6 +10,7 @@ Paste one of these Jupyter magic directives to the top of a cell
 from logging import getLogger
 import datetime
 import pymongo
+import types
 
 import DataAPIs
 import Utility
@@ -24,12 +25,7 @@ MONGO_TTL = 365 * 24 * 3600
 
 ADMIN = [15972102]
 
-
-class Box:
-    collection = None
-
-
-myBox = Box()
+myBox = types.SimpleNamespace(collection=None)
 
 
 async def get_collection():

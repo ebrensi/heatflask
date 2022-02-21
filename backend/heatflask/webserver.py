@@ -1,5 +1,4 @@
 import os
-import json
 import asyncio
 import msgpack
 from sanic import Sanic
@@ -7,164 +6,23 @@ import sanic.response as Response
 from sanic.log import logger as log
 
 import DataAPIs
-import Strava
 import Users
 import Index
 import Streams
 from webserver_config import APP_NAME, LOG_CONFIG
-
+import webserver_sessions
+from webserver_auth import auth
 
 app = Sanic(APP_NAME, log_config=LOG_CONFIG)
-app.config.SERVER_NAME = os.environ.get("SERVER_NAME")
 
+# Redis and MongoDB APIs are async and need to run in the same loop as app
+# so we run init_app to "connect" them
+DataAPIs.init_app(app)
 
-@app.listener("before_server_start")
-async def init(sanic, loop):
-    log.info("Heatflask server starting")
-    await DataAPIs.connect()
+# We maintain persistent logged-in sessions using a browser cookie
+webserver_sessions.init_app(app)
 
-
-@app.listener("after_server_stop")
-async def shutdown(sanic, loop):
-    log.info("Heatflask server stopping")
-    await DataAPIs.disconnect()
-
-
-#
-# Authentication
-#
-
-# Attempt to authorize a user via Oauth(2)
-# When a client requests this endpoint, we redirect them to
-# Strava's authorization page, which will then request our
-# enodpoint /authorized
-@app.get("/authorize")
-async def authorize(request):
-    state = request.args.get("state")
-    log.info(
-        "request: %s, app: %s",
-        request.url_for("auth_callback"),
-        app.url_for("auth_callback"),
-    )
-    return Response.redirect(
-        Strava.auth_url(
-            state=state,
-            approval_prompt="force",
-            redirect_uri=request.url_for("auth_callback"),
-        )
-    )
-
-
-# We add an identifier cookie to the user's browser upon authentication
-# to create a persistent session
-DEFAULT_COOKIE_SPEC = {
-    # "expires": None,
-    # "path": None,
-    # "comment": None,
-    # "domain": None,
-    "max-age": 10 * 24 * 3600,  # 10 days
-    # "secure": False,
-    "httponly": True,
-    # "samesite": "strict",
-}
-
-COOKIE_NAME = APP_NAME
-
-
-@app.on_request
-async def fetch_user_from_cookie_info(request):
-    cookie_value = request.cookies.get(COOKIE_NAME)
-    if cookie_value:
-        log.debug("got '%s' cookie: %s", COOKIE_NAME, cookie_value)
-    else:
-        log.debug("no '%s' cookie", COOKIE_NAME)
-    user = await Users.get(cookie_value)
-    request.ctx.user = user
-    log.debug("Session user: %s", user["_id"] if user else None)
-
-
-@app.on_response
-async def reset_or_delete_cookie(request, response):
-    # (re)set the user session cookie if there is a user
-    # attached to this request context,
-    # otherwise delete any set cookie (ending the session)
-    if hasattr(request.ctx, "user") and request.ctx.user:
-        response.cookies[COOKIE_NAME] = str(request.ctx.user["_id"])
-        for k, v in DEFAULT_COOKIE_SPEC.items():
-            response.cookies[COOKIE_NAME][k] = v
-        cookie_str = json.dumps(response.cookies[COOKIE_NAME])
-        log.debug("set '%s' cookie %s", COOKIE_NAME, cookie_str)
-    elif request.cookies.get(COOKIE_NAME):
-        del response.cookies[COOKIE_NAME]
-        log.debug("deleted '%s' cookie", COOKIE_NAME)
-
-
-
-@app.get("/logout")
-async def logout(request):
-    request.ctx.user = None
-    return Response.redirect(Strava.LOGOUT_URL)
-
-
-# Authorization callback.  The service returns here to give us an access_token
-# for the user who successfully logged in.
-@app.get("/authorized")
-async def auth_callback(request):
-    state = request.args.get("state")
-
-    if "error" in request.args:
-        # flash(f"Error: {request.args.get('error')}")
-        log.debug("authorization error")
-        return Response.redirect(state or app.url_for("splash"))
-
-    scope = request.args.get("scope")
-    if not scope:
-        log.exception("there is a problem with authentication")
-        return Response.text("oops")
-
-    if "activity:read" not in scope:
-        # We need to be able to read the user's activities
-        # return them to authorize
-        return Response.redirect(app.url_for("authorize", state=state))
-
-    code = request.args.get("code")
-    strava_client = Strava.AsyncClient("admin")
-    access_info = await strava_client.update_access_token(code=code)
-
-    if not access_info or ("athlete" not in access_info):
-        return Response.text("login error?: %s", access_info)
-
-    strava_athlete = access_info.pop("athlete")
-    strava_athlete["auth"] = access_info
-    user = await Users.add_or_update(
-        **strava_athlete, update_ts=True, inc_access_count=True
-    )
-    if not user:
-        log.info("unable to add user")
-        return Response.text("oops")
-
-    # start user session (which will be persisted with a cookie)
-    request.ctx.user = user
-
-    has_index = await Index.has_user_entries(**user)
-    log.info(
-        "Athenticated user %d, access_count=%d, has_index=%s",
-        user["_id"],
-        user["access_count"],
-        has_index,
-    )
-
-    if not has_index:
-        # Start building user index in the background
-        # app.add_task(Index.dummy_op())
-        asyncio.create_task(Index.import_user_entries(**user))
-
-    # msg = f"Authenticated{new_user} {user}"
-    # log.info(msg)
-    # if new_user:
-    #     EventLogger.new_event(msg=msg)
-    return Response.redirect(app.url_for("test"))
-    # return Response.redirect(state or app.url_for("main", username=user["_id"]))
+app.blueprint(auth)
 
 
 async def aiter_import_index_progress(user_id):
@@ -187,19 +45,21 @@ async def indexing_progress(request, username):
         await response.send(msg)
 
 
-@app.get("/")
+@app.get("/", name="start")
 async def test(request):
-    auth_url = app.url_for("authorize")
+    this_url = request.url_for("start")
+    auth_url = app.url_for("auth.authorize", state=this_url)
     login_msg = f"<a href='{auth_url}'>Authenticate with Strava</a>"
-    logout_url = app.url_for("logout")
+    logout_url = app.url_for("auth.logout", state=this_url)
     logout_msg = f"<a href='{logout_url}'>close session and log out of Strava</a>"
 
-    user = request.ctx.user
+    user = request.ctx.current_user
 
-    uid = user["_id"] if user else None
+    uid = user["firstname"] if user else None
     msg = logout_msg if user else login_msg
 
-    return Response.html(f"""
+    return Response.html(
+        f"""
         <!DOCTYPE html><html lang="en"><meta charset="UTF-8">
         <div>Hi {uid} 😎</div>
         <div>{msg}</div>
@@ -208,17 +68,16 @@ async def test(request):
     )
 
 
+
+
 @app.post("/query")
 async def query(request):
-    query = request.json()
-
     response = await request.respond(content_type="application/msgpack")
-    current_user = request.ctx.user
-    if not current_user:
-        return
 
     # If queried user's index is currently being imported we
     # have to wait for that, while sending progress indicators
+    query = request.json()
+
     async for msg in aiter_import_index_progress(query["user_id"]):
         response.send(msgpack.packb({"msg": msg}))
 
@@ -226,7 +85,8 @@ async def query(request):
     summaries_lookup = {A["_id"]: A for A in summaries}
     ids = list(summaries_lookup.keys())
 
-    streams_iter = Streams.aiter_query(activity_ids=ids, user=current_user)
+    user = Users.get(query["user_id"])
+    streams_iter = Streams.aiter_query(activity_ids=ids, user=user)
     async for aid, streams in streams_iter:
         A = summaries_lookup[aid]
         A["mpk"] = streams
@@ -256,5 +116,5 @@ if __name__ == "__main__":
     if os.environ.get("APP_ENV").lower() == "development":
         RUN_CONFIG.update({"host": "127.0.0.1", "debug": True, "access_log": True})
 
-    app.config.SERVER_NAME = '{host}:{port}'.format(**RUN_CONFIG)
+    app.config.SERVER_NAME = "{host}:{port}".format(**RUN_CONFIG)
     app.run(**RUN_CONFIG)

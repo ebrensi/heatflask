@@ -11,6 +11,7 @@ from DataAPIs import init_collection
 from bson import ObjectId
 import pymongo
 import asyncio
+import types
 
 log = getLogger(__name__)
 log.propagate = True
@@ -20,12 +21,7 @@ COLLECTION_NAME = "events"
 # Maximum size of event history (for capped MongoDB collection)
 MAX_EVENTS_BYTES = 2 * 1024 * 1024  # 2MB
 
-
-class Box:
-    collection = None
-
-
-myBox = Box()
+myBox = types.SimpleNamespace(collection=None)
 
 
 async def get_collection():
@@ -39,7 +35,8 @@ async def get_collection():
 async def get(event_id):
     col = await get_collection()
     event = await col.find_one({"_id": ObjectId(event_id)})
-    event["_id"] = str(event["_id"])
+    event["ts"] = event["_id"].generation_time
+    del event["_id"]
     return event
 
 
@@ -51,7 +48,7 @@ async def get_all(cls, limit=0):
     events = await col.find(sort=SORT_SPEC, limit=limit).to_list(length=None)
     for e in events:
         e["ts"] = e["_id"].generation_time
-        e["_id"] = str(e["_id"])
+        del e["_id"]
     return events
 
 
@@ -81,19 +78,19 @@ async def tail(cls, ts=None):
 
 async def new_event(**event):
     col = await get_collection()
-    try:
-        await col.insert_one(event)
-    except Exception:
-        log.exception("error inserting event %s", event)
+    log.info("creating new event: %s", event)
+    # try:
+    #     await col.insert_one(event)
+    # except Exception:
+    #     log.exception("error inserting event %s", event)
 
 
-async def log_request(request_object, **args):
-    req = request_object
+def log_request(request, **args):
     args.update(
         {
             # "ip": req.access_route[-1],
-            "ip": req.remote_addr or req.ip,
-            "agent": vars(req.user_agent),
+            "ip": request.remote_addr or request.ip,
+            "agent": vars(request.user_agent),
         }
     )
-    new_event(**args)
+    return new_event(**args)

@@ -20,6 +20,7 @@ import DataAPIs
 from DataAPIs import db
 import Strava
 import Utility
+import types
 
 log = getLogger(__name__)
 log.propagate = True
@@ -32,12 +33,7 @@ SECS_IN_DAY = 24 * SECS_IN_HOUR
 # How long we store Index entry in MongoDB
 INDEX_TTL = int(os.environ.get("INDEX_TTL", 10)) * SECS_IN_DAY
 
-
-class Box:
-    collection = None
-
-
-myBox = Box()
+myBox = types.SimpleNamespace(collection=None)
 
 
 async def get_collection():

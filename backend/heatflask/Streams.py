@@ -19,6 +19,7 @@ import DataAPIs
 from DataAPIs import db
 import Strava
 import StreamCodecs
+import types
 
 log = getLogger(__name__)
 log.setLevel("DEBUG")
@@ -34,12 +35,7 @@ MONGO_TTL = int(os.environ.get("MONGO_STREAMS_TTL", 10)) * SECS_IN_DAY
 REDIS_TTL = int(os.environ.get("REDIS_STREAMS_TTL", 4)) * SECS_IN_HOUR
 OFFLINE = os.environ.get("OFFLINE")
 
-
-class Box:
-    collection = None
-
-
-myBox = Box()
+myBox = types.SimpleNamespace(collection=None)
 
 
 async def get_collection():
