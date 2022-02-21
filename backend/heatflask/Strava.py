@@ -213,9 +213,9 @@ CLOSE_SESSION_ENDPOINT = "/logout"
 LOGOUT_URL = f"{DOMAIN}{CLOSE_SESSION_ENDPOINT}"
 
 
-def auth_url(redirect_uri="http://localhost/exchange_token", state=None):
+def auth_url(redirect_uri="http://localhost/exchange_token", **kwargs):
     params = Utility.cleandict(
-        {**AUTH_URL_PARAMS, "redirect_uri": redirect_uri, "state": state}
+        {**AUTH_URL_PARAMS, "redirect_uri": redirect_uri, **kwargs}
     )
     paramstr = urllib.parse.urlencode(params, safe=",:")
     return DOMAIN + AUTH_ENDPOINT + "?" + paramstr

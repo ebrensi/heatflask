@@ -1,4 +1,5 @@
 import os
+import json
 import asyncio
 import msgpack
 from sanic import Sanic
@@ -46,7 +47,11 @@ async def authorize(request):
         app.url_for("auth_callback"),
     )
     return Response.redirect(
-        Strava.auth_url(state=state, redirect_uri=request.url_for("auth_callback"))
+        Strava.auth_url(
+            state=state,
+            approval_prompt="force",
+            redirect_uri=request.url_for("auth_callback"),
+        )
     )
 
 
@@ -60,7 +65,7 @@ DEFAULT_COOKIE_SPEC = {
     "max-age": 10 * 24 * 3600,  # 10 days
     # "secure": False,
     "httponly": True,
-    "samesite": "strict",
+    # "samesite": "strict",
 }
 
 COOKIE_NAME = APP_NAME
@@ -83,15 +88,16 @@ async def reset_or_delete_cookie(request, response):
     # (re)set the user session cookie if there is a user
     # attached to this request context,
     # otherwise delete any set cookie (ending the session)
-    if request.ctx.user:
-        response.cookies[COOKIE_NAME] = request.ctx.user["_id"]
+    if hasattr(request.ctx, "user") and request.ctx.user:
+        response.cookies[COOKIE_NAME] = str(request.ctx.user["_id"])
         for k, v in DEFAULT_COOKIE_SPEC.items():
             response.cookies[COOKIE_NAME][k] = v
-        log.debug("set '%s' cookie %s", COOKIE_NAME, response.cookies[COOKIE_NAME])
-    else:  # if request.cookies.get(COOKIE_NAME):
-        log.debug("got here")
-        # del response.cookies[COOKIE_NAME]
-        # log.debug("deleted '%s' cookie", COOKIE_NAME)
+        cookie_str = json.dumps(response.cookies[COOKIE_NAME])
+        log.debug("set '%s' cookie %s", COOKIE_NAME, cookie_str)
+    elif request.cookies.get(COOKIE_NAME):
+        del response.cookies[COOKIE_NAME]
+        log.debug("deleted '%s' cookie", COOKIE_NAME)
+
 
 
 @app.get("/logout")
@@ -124,6 +130,10 @@ async def auth_callback(request):
     code = request.args.get("code")
     strava_client = Strava.AsyncClient("admin")
     access_info = await strava_client.update_access_token(code=code)
+
+    if not access_info or ("athlete" not in access_info):
+        return Response.text("login error?: %s", access_info)
+
     strava_athlete = access_info.pop("athlete")
     strava_athlete["auth"] = access_info
     user = await Users.add_or_update(
@@ -153,7 +163,7 @@ async def auth_callback(request):
     # log.info(msg)
     # if new_user:
     #     EventLogger.new_event(msg=msg)
-
+    return Response.redirect(app.url_for("test"))
     # return Response.redirect(state or app.url_for("main", username=user["_id"]))
 
 
@@ -185,13 +195,15 @@ async def test(request):
     logout_msg = f"<a href='{logout_url}'>close session and log out of Strava</a>"
 
     user = request.ctx.user
+
     uid = user["_id"] if user else None
     msg = logout_msg if user else login_msg
-    return Response.html(
-        f"""
+
+    return Response.html(f"""
         <!DOCTYPE html><html lang="en"><meta charset="UTF-8">
         <div>Hi {uid} 😎</div>
         <div>{msg}</div>
+        </html>
         """
     )
 
@@ -244,5 +256,5 @@ if __name__ == "__main__":
     if os.environ.get("APP_ENV").lower() == "development":
         RUN_CONFIG.update({"host": "127.0.0.1", "debug": True, "access_log": True})
 
-    # app.config.SERVER_NAME = '{host}:{port}'.format(**RUN_CONFIG)
+    app.config.SERVER_NAME = '{host}:{port}'.format(**RUN_CONFIG)
     app.run(**RUN_CONFIG)
