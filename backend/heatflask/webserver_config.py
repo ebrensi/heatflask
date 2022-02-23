@@ -15,8 +15,10 @@ logger_config = {
     "Index": {**base_logger_config, "level": LOG_LEVEL},
     "Events": {**base_logger_config, "level": LOG_LEVEL},
     "Utility": {**base_logger_config, "level": LOG_LEVEL},
+    # "server": {**base_logger_config, "level": LOG_LEVEL},
     "server.sessions": {**base_logger_config, "level": LOG_LEVEL},
-    "server.auth": {**base_logger_config, "level": LOG_LEVEL}
+    "server.auth": {**base_logger_config, "level": LOG_LEVEL},
+    "server.files": {**base_logger_config, "level": LOG_LEVEL},
 }
 LOG_CONFIG["loggers"].update(logger_config)
 

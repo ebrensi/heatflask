@@ -222,9 +222,9 @@ async def delete(activity_ids):
     if not activity_ids:
         return
     streams = await get_collection()
-    mongo_result = await streams.delete_many({"_id": {"$in": activity_ids}})
+    await streams.delete_many({"_id": {"$in": activity_ids}})
     keys = [cache_key(aid) for aid in activity_ids]
-    redis_result = await db.redis.delete(*keys)
+    await db.redis.delete(*keys)
 
 
 async def clear_cache():

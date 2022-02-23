@@ -12,6 +12,10 @@ import Streams
 from webserver_config import APP_NAME, LOG_CONFIG
 import webserver_sessions
 from webserver_auth import auth
+import webserver_files
+
+# log = getLogger("server")
+# log.propagate = True
 
 app = Sanic(APP_NAME, log_config=LOG_CONFIG)
 
@@ -19,14 +23,14 @@ app = Sanic(APP_NAME, log_config=LOG_CONFIG)
 # so we run init_app to "connect" them
 DataAPIs.init_app(app)
 
-# We maintain persistent logged-in sessions using a browser cookie
+# enable persistent logged-in sessions using a browser cookie
 webserver_sessions.init_app(app)
 
-app.blueprint(auth)
+# set-up static and template file serving
+webserver_files.init_app(app)
 
-# for serving static files
-FRONTEND_DIST_DIR = "../frontend/dist/"
-app.static("/", FRONTEND_DIST_DIR, name="dist")
+# This is the enpoints for authenticating with Strava
+app.blueprint(auth)
 
 
 async def aiter_import_index_progress(user_id):
@@ -49,9 +53,9 @@ async def indexing_progress(request, username):
         await response.send(msg)
 
 
-@app.get("/", name="start")
-async def test(request):
-    this_url = request.url_for("start")
+@app.get("/")
+async def splash(request):
+    this_url = request.url_for("splash")
     auth_url = app.url_for("auth.authorize", state=this_url)
     login_msg = f"<a href='{auth_url}'>Authenticate with Strava</a>"
     logout_url = app.url_for("auth.logout", state=this_url)
@@ -61,17 +65,9 @@ async def test(request):
 
     uid = user["firstname"] if user else None
     msg = logout_msg if user else login_msg
-    fpath = request.url_for("static", name="dist", filename="splash.html")
-    return Response.html(
-        f"""
-        <!DOCTYPE html><html lang="en"><meta charset="UTF-8">
-        <div>Hi {uid} 😎</div>
-        <div>{msg}</div>
-        <br><br>
-        <div><a href="{fpath}">{fpath}</a></div>
-        </html>
-        """
-    )
+
+    html = webserver_files.render_template("splash.html", **{})
+    return Response.html(html)
 
 
 @app.post("/query")
