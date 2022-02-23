@@ -24,6 +24,10 @@ webserver_sessions.init_app(app)
 
 app.blueprint(auth)
 
+# for serving static files
+FRONTEND_DIST_DIR = "../frontend/dist/"
+app.static("/", FRONTEND_DIST_DIR, name="dist")
+
 
 async def aiter_import_index_progress(user_id):
     msg = True
@@ -57,17 +61,17 @@ async def test(request):
 
     uid = user["firstname"] if user else None
     msg = logout_msg if user else login_msg
-
+    fpath = request.url_for("static", name="dist", filename="splash.html")
     return Response.html(
         f"""
         <!DOCTYPE html><html lang="en"><meta charset="UTF-8">
         <div>Hi {uid} 😎</div>
         <div>{msg}</div>
+        <br><br>
+        <div><a href="{fpath}">{fpath}</a></div>
         </html>
         """
     )
-
-
 
 
 @app.post("/query")
@@ -92,16 +96,6 @@ async def query(request):
         A["mpk"] = streams
         packed = msgpack.packb(A)
         response.send(packed)
-
-
-# @app.route("/")
-# async def test(request):
-#     response = await request.respond(content_type="text/csv")
-#     await response.send("foo,")
-#     await response.send("bar")
-
-#     # Optionally, you can explicitly end the stream by calling:
-#     await response.eof()
 
 
 if __name__ == "__main__":
