@@ -1,4 +1,3 @@
-cython
 sanic
 numpy
 
@@ -8,12 +7,5 @@ motor
 aioredis[hiredis]
 aiohttp[speedups]
 
-aiologger
-
 msgpack
 polyline
-
-
-# Legacy
-psycopg2-binary
-sqlalchemy

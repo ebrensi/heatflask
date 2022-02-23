@@ -1,7 +1,9 @@
-#dev
-
+# dev
 black
 flake8
 jupyter
 nbconvert
 
+# Legacy
+psycopg2-binary
+sqlalchemy
