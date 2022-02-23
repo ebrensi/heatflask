@@ -3,7 +3,7 @@ import time
 from string import Template
 from logging import getLogger
 
-# for serving static files
+# for serving static files (relative to where webserver is run)
 FRONTEND_DIST_DIR = "../frontend/dist/"
 
 log = getLogger("server.files")
@@ -45,7 +45,7 @@ async def load_templates(app, loop):
     for fname in TEMPLATE_FILES:
         fpath = f"{FRONTEND_DIST_DIR}{fname}"
         if not os.path.isfile(fpath):
-            log.info("can't find template file %s", fpath)
+            log.error("can't find template file %s", fpath)
             continue
         with open(fpath, "r") as file:
             file_str = file.read()
