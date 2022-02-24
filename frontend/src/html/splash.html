@@ -8,27 +8,16 @@
                    maximum-scale=1.0, user-scalable=no"
     />
 
-    <title>{{ config["APP_NAME"]}} - Animated Activity Visualization</title>
+    <title>${app_name} - Animated Activity Visualization</title>
 
     <link rel="shortcut icon" href="../images/favicon.ico" />
     <link rel="apple-touch-icon" href="../images/logo.png" />
   </head>
   <body>
     <div id="bubbler" class="container">
-      {% with messages = get_flashed_messages() %} {% if messages %}
-      <ul class="flashes">
-        {% for message in messages %}
-        <li>{{ message }}</li>
-        {% endfor %}
-      </ul>
-      {% endif %} {% endwith %} {% if error %}
-      <p class="error">
-        <strong>Error:</strong> {{ error }} {% endif %}
+      <div class="server-messages">${flashes}</div>
 
-        <br />
-        <img class="logo" src="../images/logo.png" />
-      </p>
-
+      <img class="logo" src="../images/logo.png" />
       <h2>Motion Mapping for Your Strava&nbspData</h2>
 
       <br />
@@ -56,6 +45,6 @@
   </body>
 
   <!-- Data passed from the backend at serve-time will be here -->
-  <div id="runtime-arguments">{{args|tojson|safe}}</div>
+  <div id="runtime-arguments">${params}</div>
   <script src="../js/splash-page.ts" type="module"></script>
 </html>

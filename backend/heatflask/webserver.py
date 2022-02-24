@@ -56,17 +56,25 @@ async def indexing_progress(request, username):
 @app.get("/")
 async def splash(request):
     this_url = request.url_for("splash")
-    auth_url = app.url_for("auth.authorize", state=this_url)
-    login_msg = f"<a href='{auth_url}'>Authenticate with Strava</a>"
-    logout_url = app.url_for("auth.logout", state=this_url)
-    logout_msg = f"<a href='{logout_url}'>close session and log out of Strava</a>"
 
-    user = request.ctx.current_user
+    cu = request.ctx.current_user
+    if cu:
+        webserver_sessions.flash("Welcome back %s", request.ctx.user["firstname"])
+        # return Response.redirect(app.url_for("main", username=cu["id"]))
 
-    uid = user["firstname"] if user else None
-    msg = logout_msg if user else login_msg
+    params = {
+        "app_name": APP_NAME,
+        "app_env": os.environ.get("APP_ENV"),
+        "urls": {
+            # "demo": app.url_for("demo"),
+            # "directory": app.url_for("public_directory"),
+            "authorize": app.url_for("auth.authorize", state=this_url),
+        },
+    }
 
-    html = webserver_files.render_template("splash.html", **{})
+    html = webserver_files.render_template(
+        "splash.html", flashes=webserver_sessions.get_flashes(request), **params
+    )
     return Response.html(html)
 
 

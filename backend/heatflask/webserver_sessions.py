@@ -1,4 +1,6 @@
 from logging import getLogger
+import json
+
 import Users
 from webserver_config import APP_NAME
 
@@ -27,18 +29,12 @@ COOKIE_NAME = APP_NAME
 # attach middleware to Sanic app to check the cookie from every request and
 #  add a cookie to every response
 def init_app(app):
-    app.register_middleware(fetch_user_from_cookie_info, "request")
+    app.register_middleware(fetch_session_from_cookie, "request")
     app.register_middleware(reset_or_delete_cookie, "response")
 
 
-def get_cookie(request):
-    cookie_value = request.cookies.get(COOKIE_NAME)
-    if cookie_value:
-        return cookie_value
-
-
-def set_cookie(response, user_id):
-    response.cookies[COOKIE_NAME] = str(user_id)
+def set_cookie(response, session):
+    response.cookies[COOKIE_NAME] = json.dumps(session)
     response.cookies[COOKIE_NAME].update(DEFAULT_COOKIE_SPEC)
     log.debug("set '%s' cookie %s", COOKIE_NAME, response.cookies[COOKIE_NAME])
 
@@ -49,11 +45,17 @@ def delete_cookie(request, response):
         log.debug("deleted '%s' cookie", COOKIE_NAME)
 
 
-async def fetch_user_from_cookie_info(request):
-    info = get_cookie(request)
-    user = await Users.get(info)
-    request.ctx.current_user = user
-    log.debug("Session user: %s", user["_id"] if user else None)
+async def fetch_session_from_cookie(request):
+    cookie_value = request.cookies.get(COOKIE_NAME)
+    if not cookie_value:
+        log.debug("No session cookie")
+
+    request.ctx.session = json.loads(cookie_value) if cookie_value else {}
+
+    user_id = request.ctx.session.get("user")
+    request.ctx.current_user = await Users.get(user_id) if user_id else None
+
+    log.debug("Session: %s", request.ctx.session)
 
 
 async def reset_or_delete_cookie(request, response):
@@ -61,9 +63,25 @@ async def reset_or_delete_cookie(request, response):
     # attached to this request context,
     # otherwise delete any set cookie (ending the session)
 
-    if hasattr(request.ctx, "current_user") and request.ctx.current_user:
-        set_cookie(response, request.ctx.current_user["_id"])
+    if hasattr(request.ctx, "session") and request.ctx.session:
+        set_cookie(response, request.ctx.session)
 
     elif request.cookies.get(COOKIE_NAME):
         del response.cookies[COOKIE_NAME]
         log.debug("deleted '%s' cookie", COOKIE_NAME)
+
+
+# Attach a Jinja2 style "flash-message" to this session.
+#  The flash messages are saved in the cookie so
+#  they will be available when we fetch the cookie
+#  on the next request
+def flash(request, message):
+    if not message:
+        return
+    if "msg" not in request.ctx.session:
+        request.ctx.session["msg"] = []
+    request.ctx.session["msg"].append(message)
+
+
+def get_flashes(request):
+    return request.ctx.session.pop("msg", None)

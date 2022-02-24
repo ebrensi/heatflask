@@ -1,10 +1,12 @@
 import os
+import shutil
 import time
 from string import Template
 from logging import getLogger
 
 # for serving static files (relative to where webserver is run)
 FRONTEND_DIST_DIR = "../frontend/dist/"
+FRONTEND_MISC_DIR = "../frontend/src/misc"
 
 log = getLogger("server.files")
 log.propagate = True
@@ -20,8 +22,14 @@ def init_app(app):
     # The url for the file can be generated as
     # app.url_for("static", name="dist", filename="logo.png")
     #
-    app.static("/", FRONTEND_DIST_DIR, name="dist")
+    app.static("", FRONTEND_DIST_DIR, name="dist")
     app.register_listener(load_templates, "before_server_start")
+
+    for filename in os.listdir(FRONTEND_MISC_DIR):
+        fpath = os.path.join(FRONTEND_DIST_DIR, filename)
+        if not os.path.isfile(fpath):
+            orig_fpath = os.path.join(FRONTEND_MISC_DIR, filename)
+            shutil.copy(orig_fpath, fpath)
 
 
 TEMPLATE_FILES = [
@@ -53,7 +61,12 @@ async def load_templates(app, loop):
         log.debug("Created string template from %s", fname)
 
 
-def render_template(filename, **kwargs):
+def render_template(filename, flashes=None, **kwargs):
+    if flashes:
+        flash_str = "<ul class='flashes'>\n"
+        for message in flashes:
+            flash_str += f"<li>{message}</li>\n"
+        flash_str += "</ul>\n"
     t = templates[filename]
-    html = t.safe_substitute(**kwargs)
+    html = t.safe_substitute(flashes=flash_str, **kwargs)
     return html

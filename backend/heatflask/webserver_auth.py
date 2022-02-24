@@ -67,6 +67,7 @@ async def auth_callback(request):
         return Response.text("unable to add user")
 
     # start user session (which will be persisted with a cookie)
+    request.ctx.session["user"] = user["_id"]
     request.ctx.current_user = user
 
     has_index = await Index.has_user_entries(**user)
@@ -87,10 +88,10 @@ async def logout(request):
     cuser = request.ctx.current_user
     cuser_id = cuser["_id"] if cuser else None
     request.ctx.current_user = None
+    request.ctx.session = None
     state = request.args.get("state")
     return (
         Response.redirect(state)
         if state
         else Response.text(f"User {cuser_id} logged out")
     )
-

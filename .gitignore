@@ -97,14 +97,10 @@ log.txt
 .hidden
 .fuse*
 
-# .env sets environment variables for the backend webserver
-backend/.env
 
 # .venv/ is the directory contanining the Python virtual
 #  environment for the backend server
 backend/.venv
-
-frontend/test/
 
 # Ignore node_modules both as a directory, and as a symbolic link
 frontend/node_modules
@@ -113,18 +109,13 @@ frontend/node_modules
 frontend/.parcel-cache
 frontend/.cache
 
-# Ignore development SQLite database
-backend/heatflask/.users.db
-
-#package-lock.json
-
 # For Development
 frontend/dist
 frontend/dev-docs.md
 backend/heatflask/notebooks/.ipynb_checkpoints
 backend/activate
 
-# For Production
-# frontend/dist/fa-*
-# !frontend/dist/fa-brands*.woff2
-# !frontend/dist/fa-solid*.woff2
+# Font Awesome creates a bunch of files we don't use
+frontend/dist/fa-*
+!frontend/dist/fa-brands*.woff2
+!frontend/dist/fa-solid*.woff2
