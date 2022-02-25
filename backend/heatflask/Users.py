@@ -77,9 +77,13 @@ def mongo_doc(
             "ts": ts,
             "access_count": access_count,
             "auth": auth,
-            "private": private,
+            "private": private or False,
         }
     )
+
+
+def is_admin(user_id):
+    return int(user_id) in ADMIN
 
 
 async def add_or_update(update_ts=False, inc_access_count=False, **strava_athlete):
@@ -131,6 +135,52 @@ async def get(user_id):
 async def get_all():
     users = await get_collection()
     return users.find()
+
+
+default_out_fields = {
+    "_id": True,
+    "username": True,
+    # "firstname": False,
+    # "lastname": False,
+    "profile": True,
+    # "units": False,
+    "city": True,
+    "state": True,
+    "country": True,
+    # "email": False,
+    #
+    # "ts": False,
+    # "access_count": False,
+    # "auth": False,
+    # "private": False,
+}
+
+
+async def dump(admin=False, serialize_ts=False, output="json"):
+    query = {} if admin else {"private": False}
+
+    out_fields = {**default_out_fields}
+    if admin:
+        out_fields.update(
+            {
+                "firstname": True,
+                "lastname": True,
+                "email": True,
+                "ts": True,
+                "access_count": True,
+                "private": True,
+            }
+        )
+    users = await get_collection()
+    cursor = users.find(filter=query, projection=out_fields)
+    keys = list(out_fields.keys())
+    csv = output == "csv"
+    if csv:
+        yield ",".join(keys)
+    async for u in cursor:
+        if admin and serialize_ts:
+            u["ts"] = u["ts"].timestamp()
+        yield ",".join([str(u.get(k, "")) for k in out_fields]) if csv else u
 
 
 async def delete(user_id):

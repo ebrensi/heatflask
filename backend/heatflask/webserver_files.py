@@ -33,7 +33,7 @@ def init_app(app):
 
 
 TEMPLATE_FILES = [
-    "admin.html",
+    "directory.html",
     "events.html",
     "index-view.html",
     "main.html",

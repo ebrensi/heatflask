@@ -2,6 +2,7 @@
 This is the main thing that runs on the backend
 """
 import os
+import json
 import asyncio
 import msgpack
 from sanic import Sanic
@@ -71,7 +72,7 @@ async def splash(request):
         "app_env": os.environ.get("APP_ENV"),
         "runtime_json": {
             # "demo": app.url_for("demo"),
-            # "directory": app.url_for("public_directory"),
+            "directory": app.url_for("directory"),
             "authorize": app.url_for("auth.authorize", state=this_url),
         },
     }
@@ -80,7 +81,41 @@ async def splash(request):
     return Response.html(html)
 
 
-@app.post("/query")
+@app.get("/users/query")
+async def users_query(request):
+    output = request.args.get("output", "json")
+    admin = request.args.get("admin")
+    if admin:
+        cu = request.ctx.current_user
+        if (not cu) or (not Users.is_admin(cu["_id"])):
+            return Response.json({})
+
+    cursor = Users.dump(admin=admin, serialize_ts=True, output=output)
+    dump = [a async for a in cursor]
+    return Response.json(dump)
+    # response = await request.respond(content_type="text/csv")
+    # for user_record in dump:
+    # #     log.debug(json.dumps(user_record))
+    #     await response.send(json.dumps(user_record))
+    # await response.eof()
+
+
+@app.get("/users/directory")
+async def directory(request):
+    admin = request.args.get("admin")
+    if admin:
+        cu = request.ctx.current_user
+        if not Users.is_admin(cu["_id"]):
+            return Response.redirect(auth.authorize, state=request.url)
+
+    kwargs = {"admin": 1} if admin else {}
+    query_url = request.url_for("users_query", **kwargs)
+    params = {"app_name": APP_NAME, "admin": 1 if admin else 0, "url": query_url}
+    html = request.ctx.render_template("directory.html", **params)
+    return Response.html(html)
+
+
+@app.post("/activities/query")
 async def query(request):
     response = await request.respond(content_type="application/msgpack")
 

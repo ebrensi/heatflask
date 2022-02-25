@@ -27,11 +27,8 @@ prod_redis_url = os.environ.get("REDISGREEN_URL")
 redis_url = dev_redis_url if dev_env else prod_redis_url
 
 
-db = types.SimpleNamespace(
-    mongo_client=None,
-    mongodb=None,
-    redis=None
-)
+db = types.SimpleNamespace(mongo_client=None, mongodb=None, redis=None)
+
 
 def init_app(app):
     app.register_listener(connect, "before_server_start")
@@ -39,7 +36,7 @@ def init_app(app):
 
 
 # this must be called by whoever controls the asyncio loop
-async def connect(app, loop):
+async def connect(*args):
     if db.mongodb is not None:
         return
     db.mongo_client = motor.motor_asyncio.AsyncIOMotorClient(mongo_url)
@@ -48,7 +45,7 @@ async def connect(app, loop):
     log.info("Connected to MongoDB and Redis")
 
 
-async def disconnect(app, loop):
+async def disconnect(*args):
     db.mongo_client.close()
     await db.redis.close()
     db.mongo_client = None
