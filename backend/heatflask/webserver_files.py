@@ -1,6 +1,6 @@
 import os
 import shutil
-import time
+import json
 from string import Template
 from logging import getLogger
 
@@ -62,11 +62,17 @@ async def load_templates(app, loop):
 
 
 def render_template(filename, flashes=None, **kwargs):
+    flash_str = ""
     if flashes:
-        flash_str = "<ul class='flashes'>\n"
+        flash_str += "<ul class='flashes'>"
         for message in flashes:
-            flash_str += f"<li>{message}</li>\n"
-        flash_str += "</ul>\n"
+            flash_str += f"<li>{message}</li>"
+        flash_str += "</ul>"
+
+    for key, val in kwargs.items():
+        if isinstance(val, dict):
+            kwargs[key] = json.dumps(val)
+
     t = templates[filename]
     html = t.safe_substitute(flashes=flash_str, **kwargs)
     return html

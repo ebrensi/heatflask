@@ -2,8 +2,8 @@
 #  and is written in .gitignore format
 
 dist
-dist_unbundled
 src/ext
+src/misc
 node_modules
 .cache
 .parcel-cache

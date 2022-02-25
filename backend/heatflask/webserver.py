@@ -59,22 +59,21 @@ async def splash(request):
 
     cu = request.ctx.current_user
     if cu:
-        webserver_sessions.flash("Welcome back %s", request.ctx.user["firstname"])
+        username = request.ctx.current_user["firstname"]
+        request.ctx.flash(f"Welcome back {username}")
         # return Response.redirect(app.url_for("main", username=cu["id"]))
 
     params = {
         "app_name": APP_NAME,
         "app_env": os.environ.get("APP_ENV"),
-        "urls": {
+        "runtime_json": {
             # "demo": app.url_for("demo"),
             # "directory": app.url_for("public_directory"),
             "authorize": app.url_for("auth.authorize", state=this_url),
         },
     }
 
-    html = webserver_files.render_template(
-        "splash.html", flashes=webserver_sessions.get_flashes(request), **params
-    )
+    html = request.ctx.render_template("splash.html", **params)
     return Response.html(html)
 
 
@@ -109,6 +108,7 @@ if __name__ == "__main__":
         "workers": int(os.environ.get("WEB_CONCURRENCY", 1)),
         "debug": False,
         "access_log": False,
+        "reload_dir": webserver_files.FRONTEND_DIST_DIR,
     }
 
     if os.environ.get("APP_ENV").lower() == "development":

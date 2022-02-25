@@ -36,11 +36,10 @@
     "sidebar-v2": "^0.4.0"
   },
   "browserslist": [
-    "> 0.75%, not ie 11, not op_mini all"
+    "> 0.75%, last 2 versions, not dead"
   ],
   "devDependencies": {
     "@parcel/transformer-image": "^2.0.0-rc.0",
-    "@parcel/transformer-inline-string": "^2.0.0-rc.0",
     "@types/leaflet": "^1.7.7",
     "@typescript-eslint/eslint-plugin": "^5.8.0",
     "@typescript-eslint/parser": "^5.8.0",
@@ -56,15 +55,17 @@
   "eslintConfig": {
     "env": {
       "browser": true,
-      "es2020": true
+      "worker": true,
+      "es2021": true
     },
     "parser": "@typescript-eslint/parser",
     "extends": [
+      "eslint:recommended",
       "plugin:@typescript-eslint/recommended",
-      "prettier/@typescript-eslint"
+      "prettier"
     ],
     "parserOptions": {
-      "ecmaVersion": 2020,
+      "ecmaVersion": 12,
       "sourceType": "module"
     },
     "rules": {

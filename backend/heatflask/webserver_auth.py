@@ -42,21 +42,23 @@ async def auth_callback(request):
     code = request.args.get("code")
     error = request.args.get("error")
 
-    if error:
-        # flash(f"Error: {request.args.get('error')}")
-        return Response.text(f"error: {error}")
-
     if not state:
         return Response.text("no state specified")
 
+    if error:
+        request.ctx.flash(f"Error: {request.args.get('error')}")
+        return Response.redirect(state)
+
     if scope and ("activity:read" not in scope):
-        return Response.text("'activity:read' must be in scope.")
+        request.ctx.flash("'activity:read' must be in scope.")
+        return Response.redirect(state)
 
     strava_client = Strava.AsyncClient("admin")
     access_info = await strava_client.update_access_token(code=code)
 
     if (not access_info) or ("athlete" not in access_info):
-        return Response.text("login error?: %s", access_info)
+        request.ctx.flash("login error?")
+        return Response.redirect(state)
 
     strava_athlete = access_info.pop("athlete")
     strava_athlete["auth"] = access_info
@@ -64,7 +66,8 @@ async def auth_callback(request):
         **strava_athlete, update_ts=True, inc_access_count=True
     )
     if not user:
-        return Response.text("unable to add user")
+        request.ctx.flash("database error?")
+        return Response.redirect(state)
 
     # start user session (which will be persisted with a cookie)
     request.ctx.session["user"] = user["_id"]

@@ -39,12 +39,12 @@
 
       <br />
       <div class="splash">
-        <button class="strava-auth" id="authorize" data-action="login"></button>
+        <button class="strava-auth" id="authorize"></button>
       </div>
     </div>
   </body>
 
   <!-- Data passed from the backend at serve-time will be here -->
-  <div id="runtime-arguments">${params}</div>
+  <div id="runtime_json" style="display: none">${runtime_json}</div>
   <script src="../js/splash-page.ts" type="module"></script>
 </html>

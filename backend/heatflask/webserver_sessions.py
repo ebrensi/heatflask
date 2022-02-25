@@ -1,8 +1,10 @@
 from logging import getLogger
+import functools
 import json
 
 import Users
 from webserver_config import APP_NAME
+import webserver_files
 
 log = getLogger("server.sessions")
 
@@ -31,6 +33,7 @@ COOKIE_NAME = APP_NAME
 def init_app(app):
     app.register_middleware(fetch_session_from_cookie, "request")
     app.register_middleware(reset_or_delete_cookie, "response")
+    app.register_middleware(attach_flash_handlers, "request")
 
 
 def set_cookie(response, session):
@@ -85,3 +88,15 @@ def flash(request, message):
 
 def get_flashes(request):
     return request.ctx.session.pop("msg", None)
+
+
+# Add flash and render_templae functions to request.ctx
+async def attach_flash_handlers(request):
+    request.ctx.flash = functools.partial(flash, request)
+
+    def render_template(filename, **kwargs):
+        return webserver_files.render_template(
+            filename, flashes=get_flashes(request), **kwargs
+        )
+
+    request.ctx.render_template = render_template

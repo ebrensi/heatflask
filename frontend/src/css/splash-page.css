@@ -19,6 +19,7 @@ select {
 }
 
 .flashes {
+  /*width: 50%;*/
   background: rgba(255, 0, 0, 0.5);
 }
 
@@ -62,6 +63,6 @@ body {
   white-space: pre;
 }
 
-#runtime-arguments {
+#runtime_json {
   display: none;
 }
