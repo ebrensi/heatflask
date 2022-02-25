@@ -18,9 +18,17 @@ select {
   border: inherit;
 }
 
-.flashes {
-  /*width: 50%;*/
-  background: rgba(255, 0, 0, 0.5);
+.msg {
+  color: black;
+  font-size: 16pt;
+  margin: 0 auto;
+  width: 50%;
+  opacity: 1;
+  padding: 10px;
+}
+
+.msg li {
+  list-style-type: none;
 }
 
 .logo {
