@@ -39,7 +39,6 @@ async def get_collection():
 def mongo_doc(
     # From Strava Athlete record
     id=None,
-    username=None,
     firstname=None,
     lastname=None,
     profile_medium=None,
@@ -64,7 +63,6 @@ def mongo_doc(
     return Utility.cleandict(
         {
             "_id": int(_id or id),
-            "username": username,
             "firstname": firstname,
             "lastname": lastname,
             "profile": profile_medium or profile,
@@ -72,7 +70,6 @@ def mongo_doc(
             "city": city,
             "state": state,
             "country": country,
-            "email": email,
             #
             "ts": ts,
             "access_count": access_count,
@@ -139,7 +136,6 @@ async def get_all():
 
 default_out_fields = {
     "_id": True,
-    "username": True,
     # "firstname": False,
     # "lastname": False,
     "profile": True,
@@ -147,7 +143,6 @@ default_out_fields = {
     "city": True,
     "state": True,
     "country": True,
-    # "email": False,
     #
     # "ts": False,
     # "access_count": False,
@@ -165,7 +160,6 @@ async def dump(admin=False, serialize_ts=False, output="json"):
             {
                 "firstname": True,
                 "lastname": True,
-                "email": True,
                 "ts": True,
                 "access_count": True,
                 "private": True,
@@ -176,11 +170,11 @@ async def dump(admin=False, serialize_ts=False, output="json"):
     keys = list(out_fields.keys())
     csv = output == "csv"
     if csv:
-        yield ",".join(keys)
+        yield keys
     async for u in cursor:
         if admin and serialize_ts:
             u["ts"] = u["ts"].timestamp()
-        yield ",".join([str(u.get(k, "")) for k in out_fields]) if csv else u
+        yield [u.get(k, "") for k in keys] if csv else u
 
 
 async def delete(user_id):
@@ -199,3 +193,73 @@ def stats():
 
 def drop():
     return DataAPIs.drop(COLLECTION_NAME)
+
+
+##### Legacy ######
+import os
+from sqlalchemy import create_engine, text
+import json
+from datetime import datetime
+
+
+async def migrate():
+    await DataAPIs.connect()
+
+    # Import legacy Users database
+    log.info("Importing users from legacy db")
+    pgurl = os.environ["REMOTE_POSTGRES_URL"]
+    results = None
+    with create_engine(pgurl).connect() as conn:
+        result = conn.execute(text("select * from users"))
+    results = result.all()
+
+    docs = []
+
+    for (
+        id,
+        username,
+        firstname,
+        lastname,
+        profile,
+        access_token,
+        measurement_preference,
+        city,
+        state,
+        country,
+        email,
+        dt_last_active,
+        app_activity_count,
+        share_profile,
+        xxx,
+    ) in results:
+        if (id in ADMIN) or (dt_last_active is None):
+            log.info("skipping %d", id)
+            continue
+        try:
+            docs.append(
+                mongo_doc(
+                    # From Strava Athlete record
+                    id=id,
+                    firstname=firstname,
+                    lastname=lastname,
+                    profile=profile,
+                    measurement_preference=measurement_preference,
+                    city=city,
+                    state=state,
+                    country=country,
+                    #
+                    ts=dt_last_active,
+                    auth=json.loads(access_token),
+                    access_count=app_activity_count,
+                    private=not share_profile,
+                )
+            )
+        except json.JSONDecodeError:
+            pass
+
+    ids = [u["_id"] for u in docs]
+    users = await get_collection()
+    await users.delete_many({"_id": {"$in": ids}})
+    await users.insert_many(docs)
+
+    await DataAPIs.disconnect()

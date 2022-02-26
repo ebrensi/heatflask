@@ -6,7 +6,6 @@ from logging import getLogger
 
 # for serving static files (relative to where webserver is run)
 FRONTEND_DIST_DIR = "../frontend/dist/"
-FRONTEND_MISC_DIR = "../frontend/src/misc"
 
 log = getLogger("server.files")
 log.propagate = True
@@ -25,20 +24,6 @@ def init_app(app):
     app.static("", FRONTEND_DIST_DIR, name="dist")
     app.register_listener(load_templates, "before_server_start")
 
-    for filename in os.listdir(FRONTEND_MISC_DIR):
-        fpath = os.path.join(FRONTEND_DIST_DIR, filename)
-        if not os.path.isfile(fpath):
-            orig_fpath = os.path.join(FRONTEND_MISC_DIR, filename)
-            shutil.copy(orig_fpath, fpath)
-
-
-TEMPLATE_FILES = [
-    "directory.html",
-    "events.html",
-    "index-view.html",
-    "main.html",
-    "splash.html",
-]
 
 templates = {}
 
@@ -50,15 +35,13 @@ async def load_templates(app, loop):
     #
     # This is faster than using a Templating library like Jinja2
     # since we don't need any of its advanced features.
-    for fname in TEMPLATE_FILES:
-        fpath = f"{FRONTEND_DIST_DIR}{fname}"
-        if not os.path.isfile(fpath):
-            log.error("can't find template file %s", fpath)
-            continue
-        with open(fpath, "r") as file:
-            file_str = file.read()
-        templates[fname] = Template(file_str)
-        log.debug("Created string template from %s", fname)
+    for fname in os.listdir(FRONTEND_DIST_DIR):
+        if fname.endswith(".html"):
+            fpath = f"{FRONTEND_DIST_DIR}{fname}"
+            with open(fpath, "r") as file:
+                file_str = file.read()
+            templates[fname] = Template(file_str)
+            log.debug("Created string template from %s", fname)
 
 
 def render_template(filename, flashes=None, **kwargs):

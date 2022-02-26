@@ -46,6 +46,8 @@ async def connect(*args):
 
 
 async def disconnect(*args):
+    if db.mongodb is None:
+        return
     db.mongo_client.close()
     await db.redis.close()
     db.mongo_client = None

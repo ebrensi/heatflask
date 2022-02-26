@@ -77,7 +77,7 @@ async def splash(request):
         },
     }
 
-    html = request.ctx.render_template("splash.html", **params)
+    html = request.ctx.render_template("splash-page.html", **params)
     return Response.html(html)
 
 
@@ -109,9 +109,9 @@ async def directory(request):
             return Response.redirect(auth.authorize, state=request.url)
 
     kwargs = {"admin": 1} if admin else {}
-    query_url = request.url_for("users_query", **kwargs)
+    query_url = request.url_for("users_query", output="csv", **kwargs)
     params = {"app_name": APP_NAME, "admin": 1 if admin else 0, "url": query_url}
-    html = request.ctx.render_template("directory.html", **params)
+    html = request.ctx.render_template("directory-page.html", **params)
     return Response.html(html)
 
 
