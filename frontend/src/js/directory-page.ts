@@ -1,25 +1,81 @@
 import "../ext/min_entireframework.css"
+import { img, href } from "./appUtil"
 
 console.log(`Environment: ${process.env.NODE_ENV}`)
-// const argstring = document.querySelector("#runtime_json").innerText
-// const runtime_json = JSON.parse(argstring)
-const url = window.url
+
+function user_thumbnail(id, img_url) {
+  const avatar = img(img_url, (w = 40), (h = 40), (alt = id))
+  const link = "/" + id
+  return href(link, avatar)
+}
+
+const HEADERS = ["", "username", "City", "Region", "Country"]
+function makeRow(rowData) {
+  const [_id, username, profile, city, state, country] = rowData
+  return [
+    user_thumbnail(_id, profile),
+    username,
+    city,
+    state,
+    country
+  ]
+}
+
+const ADMIN_HEADERS = [
+  "ID",
+  "count",
+  "last_active",
+  "Name",
+  "City",
+  "Region",
+  "Country",
+  "private",
+]
+
+function makeAdminRow(rowData) {
+  const [
+    _id,
+    username,
+    profile,
+    city,
+    state,
+    country,
+    firstname,
+    lastname,
+    ts,
+    access_count,
+    priv,
+  ] = rowData
+
+  return [
+    user_thumbnail(_id, profile),
+    access_count,
+    new Date(1000*ts).toLocaleDateString(),
+    firstname + " " + lastname,
+    city,
+    state,
+    country,
+    priv,
+  ]
+}
 
 async function run() {
   console.log(`fetching ${url}`)
+  console.time("maketable")
   const response = await fetch(url)
   const data = await response.json()
 
-  const n_rows = data.length,
-    n_cols = data[0].length,
-    keys = data[0]
+  const n_rows = data.length
 
-  const headers = keys.join("</th><th>")
+  const header_data = admin? ADMIN_HEADERS: HEADERS
+  const headers = header_data.join("</th><th>")
   const thead_str = `<thead><th>${headers}</th></thead>\n`
 
+  const rowFunc = admin? makeAdminRow : makeRow
   const row_strs = new Array(n_rows - 1)
   for (let i = 1; i < n_rows; i++) {
-    const cells = data[i].join("</td><td>")
+
+    const cells = rowFunc(data[i]).join("</td><td>")
     row_strs[i - 1] = `<tr><td>${cells}</td></tr>`
   }
   const rows_str = row_strs.join("\n")
@@ -27,41 +83,14 @@ async function run() {
 
   const table_element: HTMLTableElement = document.getElementById("users")
   table_element.innerHTML = thead_str + tbody_str
+  console.timeEnd("maketable")
 }
 
-;(async () => {
+
+(async () => {
   try {
     await run()
   } catch (e) {
     console.log("oops. ", e)
   }
 })()
-
-// function combineNames(data, type, row, meta) {
-//     return row.lastname + ", " + row.firstname;
-// }
-
-// const data = {{ data|tojson }};
-// let atable = $('#users_table').DataTable({
-//     pageLength: 100,
-//     deferRender: true,
-//     scroller: true,
-//     data: data,
-//     columns: [
-//         {title: "",    data: "id", render: formatUserId},
-//         {title: "username",  data: "username"},
-//         {title: "City",    data: "city"},
-//         {title: "Region",    data: "state"},
-//         {title: "Country", data: "country"},
-//         {
-//             title: "last active",
-//             data: "dt_last_active",
-//             render: formatDate,
-//         }
-//     ],
-//     scrollY: "80vh",
-//     scrollX: true,
-//     scrollCollapse: true,
-//     select: false,
-//     order: [[ 5, "desc" ]]
-// });

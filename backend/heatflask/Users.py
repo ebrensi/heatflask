@@ -41,6 +41,7 @@ def mongo_doc(
     id=None,
     firstname=None,
     lastname=None,
+    username=None,
     profile_medium=None,
     profile=None,
     measurement_preference=None,
@@ -65,6 +66,7 @@ def mongo_doc(
             "_id": int(_id or id),
             "firstname": firstname,
             "lastname": lastname,
+            "username": username,
             "profile": profile_medium or profile,
             "units": measurement_preference,
             "city": city,
@@ -138,6 +140,7 @@ default_out_fields = {
     "_id": True,
     # "firstname": False,
     # "lastname": False,
+    "username": True,
     "profile": True,
     # "units": False,
     "city": True,
@@ -151,7 +154,7 @@ default_out_fields = {
 }
 
 
-async def dump(admin=False, serialize_ts=False, output="json"):
+async def dump(admin=False, output="json"):
     query = {} if admin else {"private": False}
 
     out_fields = {**default_out_fields}
@@ -172,7 +175,7 @@ async def dump(admin=False, serialize_ts=False, output="json"):
     if csv:
         yield keys
     async for u in cursor:
-        if admin and serialize_ts:
+        if admin and ("ts" in u):
             u["ts"] = u["ts"].timestamp()
         yield [u.get(k, "") for k in keys] if csv else u
 
@@ -195,12 +198,10 @@ def drop():
     return DataAPIs.drop(COLLECTION_NAME)
 
 
-##### Legacy ######
+#  #### Legacy ######
 import os
 from sqlalchemy import create_engine, text
 import json
-from datetime import datetime
-
 
 async def migrate():
     await DataAPIs.connect()
@@ -242,6 +243,7 @@ async def migrate():
                     id=id,
                     firstname=firstname,
                     lastname=lastname,
+                    username=username,
                     profile=profile,
                     measurement_preference=measurement_preference,
                     city=city,

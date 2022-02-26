@@ -90,7 +90,8 @@ async def users_query(request):
         if (not cu) or (not Users.is_admin(cu["_id"])):
             return Response.json({})
 
-    cursor = Users.dump(admin=admin, serialize_ts=True, output=output)
+
+    cursor = Users.dump(admin=admin, output=output)
     dump = [a async for a in cursor]
     return Response.json(dump)
     # response = await request.respond(content_type="text/csv")
