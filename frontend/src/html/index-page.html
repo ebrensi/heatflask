@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>{{ config["APP_NAME"] }} - Activities List</title>
+    <title>$app_name - Activity Index</title>
     <link rel="shortcut icon" href="../images/favicon.ico" />
     <meta name="robots" content="noindex" />
   </head>
 
   <body>
-    <h4>Activities list for {{ (user.username or user.id) }}</h4>
+    <h4>Activity Index</h4>
     <button type="button" id="rebuild-button" class="btn btn-b btn-sm">
       Re-build index
     </button>
@@ -29,9 +29,10 @@
 
     <div id="query-form"></div>
   </body>
-  <script type="text/javascript">
-    window["_args"] = JSON.parse(`{{ _args | tojson | safe }}`);
+  <script>
+    const query_url = "$query_url"
+    const query_obj = JSON.parse("$query_obj")
   </script>
 
-  <script src="../js/activity-list.js"></script>
+  <script src="../js/index-page.ts"></script>
 </html>

@@ -2,13 +2,13 @@
 This is the main thing that runs on the backend
 """
 import os
-import json
 import asyncio
 import msgpack
 from sanic import Sanic
 import sanic.response as Response
 from sanic.log import logger as log
 
+import Utility
 import DataAPIs
 import Users
 import Index
@@ -36,27 +36,7 @@ webserver_files.init_app(app)
 # This is the enpoints for authenticating with Strava
 app.blueprint(auth)
 
-
-async def aiter_import_index_progress(user_id):
-    msg = True
-    last_msg = None
-    while msg:
-        msg = await Index.check_import_progress(user_id)
-        if msg and (msg != last_msg):
-            yield msg
-            last_msg = msg
-        else:
-            break
-        await asyncio.sleep(0.5)
-
-
-@app.get("/<username>/indexing_progress")
-async def indexing_progress(request, username):
-    response = await request.respond(content_type="text/csv")
-    async for msg in aiter_import_index_progress(username):
-        await response.send(msg)
-
-
+# ****** Splash Page ******
 @app.get("/")
 async def splash(request):
     this_url = request.url_for("splash")
@@ -81,6 +61,7 @@ async def splash(request):
     return Response.html(html)
 
 
+# **** Users ******
 @app.get("/users/query")
 async def users_query(request):
     output = request.args.get("output", "json")
@@ -90,15 +71,9 @@ async def users_query(request):
         if (not cu) or (not Users.is_admin(cu["_id"])):
             return Response.json({})
 
-
     cursor = Users.dump(admin=admin, output=output)
     dump = [a async for a in cursor]
     return Response.json(dump)
-    # response = await request.respond(content_type="text/csv")
-    # for user_record in dump:
-    # #     log.debug(json.dumps(user_record))
-    #     await response.send(json.dumps(user_record))
-    # await response.eof()
 
 
 @app.get("/users/directory")
@@ -116,18 +91,57 @@ async def directory(request):
     return Response.html(html)
 
 
-@app.post("/activities/query")
-async def query(request):
-    response = await request.respond(content_type="application/msgpack")
+# **** Activities ******
+async def aiter_import_index_progress(user_id, poll_delay=0.5):
+    msg = True
+    last_msg = None
+    while msg:
+        msg = await Index.check_import_progress(user_id)
+        if msg and (msg != last_msg):
+            yield msg
+            last_msg = msg
+        else:
+            break
+        await asyncio.sleep(poll_delay)
 
+
+def index_dict_to_fields(d):
+    return [d[f] for f in Index.fields]
+
+
+@app.post("/activities/query")
+async def activities_query(request):
     # If queried user's index is currently being imported we
     # have to wait for that, while sending progress indicators
     query = request.json()
+    streams = query.pop("streams", True)
 
+    is_owner_or_admin = request.ctx.current_user and (
+        (request.ctx.current_user["_id"] == query["_id"])
+        or Users.is_admin(request.ctx.current_user["_id"])
+    )
+
+    # Query will only return private activities if current_user
+    # is owner of the activities (or admin)
+    if not is_owner_or_admin:
+        query["private"] = False
+
+    response = await request.respond(content_type="application/msgpack")
     async for msg in aiter_import_index_progress(query["user_id"]):
         response.send(msgpack.packb({"msg": msg}))
 
-    summaries = await Index.query(**query)
+    query_result = await Index.query(**query)
+    if "delete" in query_result:
+        response.send(msgpack.packb({"delete": query_result["delete"]}))
+
+    summaries = query_result["docs"]
+    response.send(msgpack.packb({"count": len(summaries)}))
+
+    if not streams:
+        for A in summaries:
+            response.send(msgpack.packb(A))
+        return
+
     summaries_lookup = {A["_id"]: A for A in summaries}
     ids = list(summaries_lookup.keys())
 
@@ -138,6 +152,24 @@ async def query(request):
         A["mpk"] = streams
         packed = msgpack.packb(A)
         response.send(packed)
+
+
+@app.get("/activities/index")
+async def activities_page(request):
+    user_id = request.args.get("user")
+    is_owner_or_admin = request.ctx.current_user and (
+        (request.ctx.current_user["_id"] == user_id)
+        or Users.is_admin(request.ctx.current_user["_id"])
+    )
+    if not is_owner_or_admin:
+        return Response.text("Sorry, you are not authorized for this action")
+
+    query_url = request.url_for("activities_query")
+    query_obj = Utility.cleandict({"_id_": user_id, "limit": 0, "streams": False})
+
+    params = {"app_name": APP_NAME, "query_url": query_url, "query_obj": query_obj}
+    html = request.ctx.render_template("index-page.html", **params)
+    return Response.html(html)
 
 
 if __name__ == "__main__":

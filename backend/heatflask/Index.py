@@ -61,21 +61,23 @@ def polyline_bounds(poly):
 
 # MongoDB short field names speed up data transfer to/from
 # remote DB server
-ACTIVITY_ID = "_id"
-TIMESTAMP = "ts"
-USER_ID = "U"
-ACTIVITY_NAME = "N"
-DISTANCE_METERS = "D"
-TIME_SECONDS = "T"
-ACTIVITY_TYPE = "t"
-UTC_START_TIME = "s"
-UTC_LOCAL_OFFSET = "o"
-N_ATHLETES = "#a"
-N_PHOTOS = "#p"
-FLAG_COMMUTE = "c"
-FLAG_PRIVATE = "p"
-LATLNG_BOUNDS = "B"
-VISIBILITY = "v"
+fields = [
+    ACTIVITY_ID := "_id",
+    USER_ID := "U",
+    TIMESTAMP := "ts",
+    N_ATHLETES := "#a",
+    N_PHOTOS := "#p",
+    UTC_START_TIME := "s",
+    UTC_LOCAL_OFFSET := "o",
+    DISTANCE_METERS := "D",
+    TIME_SECONDS := "T",
+    LATLNG_BOUNDS := "B",
+    FLAG_COMMUTE := "c",
+    FLAG_PRIVATE := "p",
+    ACTIVITY_NAME := "N",
+    ACTIVITY_TYPE := "t",
+    VISIBILITY := "v",
+]
 
 
 # see https://developers.strava.com/docs/reference/#api-models-SummaryActivity
@@ -220,6 +222,22 @@ async def has_user_entries(**user):
 SORT_SPECS = [(UTC_START_TIME, DESCENDING)]
 
 
+query_obj = {
+    "user_id": None,
+    "activity_ids": None,
+    "exclude_ids": None,
+    "after": None,
+    "before": None,
+    "limit": None,
+    "activity_type": None,
+    "commute": None,
+    "private": None,
+    "visibility": None,
+    #
+    "update_ts": True,
+}
+
+
 async def query(
     user_id=None,
     activity_ids=None,
@@ -234,7 +252,7 @@ async def query(
     #
     update_ts=True,
 ):
-    query = {}
+    mongo_query = {}
     projection = None
 
     if activity_ids:
@@ -246,11 +264,11 @@ async def query(
     limit = int(limit) if limit else 0
 
     if user_id:
-        query[USER_ID] = int(user_id)
+        mongo_query[USER_ID] = int(user_id)
         projection = {USER_ID: False}
 
     if before or after:
-        query[UTC_START_TIME] = Utility.cleandict(
+        mongo_query[UTC_START_TIME] = Utility.cleandict(
             {
                 "$lt": None if before is None else Utility.to_epoch(before),
                 "$gte": None if after is None else Utility.to_epoch(after),
@@ -258,20 +276,20 @@ async def query(
         )
 
     if activity_ids:
-        query[ACTIVITY_ID] = {"$in": activity_ids}
+        mongo_query[ACTIVITY_ID] = {"$in": activity_ids}
 
     if activity_type:
-        query[ACTIVITY_TYPE] = {"$in": activity_type}
+        mongo_query[ACTIVITY_TYPE] = {"$in": activity_type}
 
     if visibility:
         # ["everyone", "followers", "only_me"]
-        query[VISIBILITY] = {"$in": visibility}
+        mongo_query[VISIBILITY] = {"$in": visibility}
 
     if private is not None:
-        query[FLAG_PRIVATE] = private
+        mongo_query[FLAG_PRIVATE] = private
 
     if commute is not None:
-        query[FLAG_COMMUTE] = commute
+        mongo_query[FLAG_COMMUTE] = commute
 
     to_delete = None
 
@@ -282,27 +300,27 @@ async def query(
     if exclude_ids:
         t0 = time.perf_counter()
         cursor = index.find(
-            filter=query,
+            filter=mongo_query,
             projection={ACTIVITY_ID: True},
             sort=SORT_SPECS,
             limit=limit,
         )
 
-        # These are the ids of activities that matched the query
-        query_ids = set([doc[ACTIVITY_ID] async for doc in cursor])
+        # These are the ids of activities that matched the mongo_query
+        mongo_query_ids = set([doc[ACTIVITY_ID] async for doc in cursor])
 
-        to_fetch = list(query_ids - exclude_ids)
-        to_delete = list(exclude_ids - query_ids)
+        to_fetch = list(mongo_query_ids - exclude_ids)
+        to_delete = list(exclude_ids - mongo_query_ids)
 
-        result["triage"] = to_delete
-        query = {ACTIVITY_ID: {"$in": to_fetch}}
+        result["delete"] = to_delete
+        mongo_query = {ACTIVITY_ID: {"$in": to_fetch}}
 
         elapsed = (time.perf_counter() - t0) * 1000
-        log.debug("queried %d ids in %dms", len(query_ids), elapsed)
+        log.debug("queried %d ids in %dms", len(mongo_query_ids), elapsed)
 
     t0 = time.perf_counter()
     cursor = index.find(
-        filter=query,
+        filter=mongo_query,
         projection=projection,
         sort=SORT_SPECS,
         limit=limit,

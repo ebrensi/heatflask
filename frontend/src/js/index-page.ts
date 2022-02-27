@@ -1,12 +1,10 @@
 /*
  * This is the script for the heatflask activity-list view
- * activities.html.
+ * index_page.html.
  */
-import { DataTable } from "simple-datatables"
-import "../../node_modules/simple-datatables/src/style.css"
 
 // msgpack is how we encode data for transfer over websocket
-import { decode } from "@msgpack/msgpack"
+import { decodeMultiStream } from "@msgpack/msgpack"
 
 // css for Bundler
 import "../ext/min_entireframework.css"
@@ -14,29 +12,17 @@ import "../css/font-awesome-lite.css"
 import "../css/activity-index.css"
 
 import * as strava from "./strava"
-import { WS_SCHEME, DDHHMM, HHMMSS, href, noop } from "./appUtil"
+import { DDHHMM, HHMMSS, href, noop } from "./appUtil"
 import load_ga_object from "./google-analytics"
 
-// _args is an object passed from the server at runtime via
-//  a script tag in the activities.html template.
-const R = window["_args"],
-  USER_ID = R["USER_ID"],
-  CLIENT_ID = R["CLIENT_ID"],
-  OFFLINE = R["OFFLINE"],
-  ADMIN = R["ADMIN"],
-  IMPERIAL = R["IMPERIAL"],
-  DEVELOPMENT = R["DEVELOPMENT"]
+// query_obj
+// query_url
 
 const DIST_UNIT = IMPERIAL ? 1609.34 : 1000.0,
-  DIST_LABEL = IMPERIAL ? "mi" : "km",
-  WEBSOCKET_URL = WS_SCHEME + window.location.host + "/data_socket",
-  BEACON_HANDLER_URL = "/beacon_handler",
-  sendBeacon = navigator.sendBeacon || noop
+  DIST_LABEL = IMPERIAL ? "mi" : "km"
 
 // Insert Google-Analytics object if this is a production environment
-const ga = OFFLINE || ADMIN || DEVELOPMENT ? noop : load_ga_object()
-
-const console = window.console
+const ga = process.env.NODE_ENV == "development" ? noop : load_ga_object()
 
 // Forgot what this does...
 window.history.pushState(
@@ -44,6 +30,11 @@ window.history.pushState(
   "",
   window.location.origin + window.location.pathname
 )
+
+async function run() {
+  const response = await fetch(query_url)
+  const streamReader = response.body.getReader()
+}
 
 const DOM = (s) => document.querySelector(s),
   count_DOM_element = DOM("#count"),
@@ -319,25 +310,6 @@ document.addEventListener("keydown", function (e) {
     dataTable.page(dataTable.currentPage + 1)
   }
 })
-
-/*
-  send beacons to the backend's beacon listener when this
- window gets closed or navigated away from,
- so that any ongoing backend operations can be aborted.
-*/
-function tellBackendGoodBye() {
-  sendBeacon(BEACON_HANDLER_URL, CLIENT_ID)
-
-  if (wskey) {
-    sendBeacon(BEACON_HANDLER_URL, wskey)
-  }
-
-  if (sock && sock.readyState == 1) {
-    sock.send(JSON.stringify({ close: 1 }))
-    sock.close()
-  }
-}
-window.addEventListener("beforeunload", tellBackendGoodBye)
 
 // // let dotLayer know about selection changes
 // dotLayer.setItemSelect(selections);
