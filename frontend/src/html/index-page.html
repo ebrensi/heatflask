@@ -17,7 +17,7 @@
 
     <div id="status">
       <span id="status_msg"></span>
-      <progress id="progress-bar"></progress>
+      <!-- <progress id="progress-bar"></progress> -->
       <span id="count"></span>
     </div>
 
@@ -31,8 +31,8 @@
   </body>
   <script>
     const query_url = "$query_url"
-    const query_obj = JSON.parse("$query_obj")
+    const query_obj_str = "$query_obj"
   </script>
 
-  <script src="../js/index-page.ts"></script>
+  <script type="module" src="../js/index-page.ts"></script>
 </html>

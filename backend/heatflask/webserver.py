@@ -20,6 +20,7 @@ import webserver_files
 
 # log = getLogger("server")
 # log.propagate = True
+log.setLevel("DEBUG")
 
 app = Sanic(APP_NAME, log_config=LOG_CONFIG)
 
@@ -43,15 +44,22 @@ async def splash(request):
 
     cu = request.ctx.current_user
     if cu:
-        username = request.ctx.current_user["firstname"]
+        username = cu["username"]
         request.ctx.flash(f"Welcome back {username}")
+        if not await Index.has_user_entries(**cu):
+            log.info("importing index for user %d", cu["_id"])
+            asyncio.create_task(Index.import_user_entries(**cu))
+        else:
+            log.info("fake-importing index for user %d", cu["_id"])
+            app.add_task(Index.fake_import(uid=cu["_id"]))
+
         # return Response.redirect(app.url_for("main", username=cu["id"]))
 
     params = {
         "app_name": APP_NAME,
         "app_env": os.environ.get("APP_ENV"),
         "runtime_json": {
-            # "demo": app.url_for("demo"),
+            "demo": app.url_for("activities_page"),
             "directory": app.url_for("directory"),
             "authorize": app.url_for("auth.authorize", state=this_url),
         },
@@ -92,17 +100,6 @@ async def directory(request):
 
 
 # **** Activities ******
-async def aiter_import_index_progress(user_id, poll_delay=0.5):
-    msg = True
-    last_msg = None
-    while msg:
-        msg = await Index.check_import_progress(user_id)
-        if msg and (msg != last_msg):
-            yield msg
-            last_msg = msg
-        else:
-            break
-        await asyncio.sleep(poll_delay)
 
 
 def index_dict_to_fields(d):
@@ -113,11 +110,12 @@ def index_dict_to_fields(d):
 async def activities_query(request):
     # If queried user's index is currently being imported we
     # have to wait for that, while sending progress indicators
-    query = request.json()
+    query = request.json
+    target_user_id = query.get("user_id")
     streams = query.pop("streams", True)
 
     is_owner_or_admin = request.ctx.current_user and (
-        (request.ctx.current_user["_id"] == query["_id"])
+        (request.ctx.current_user["_id"] == target_user_id)
         or Users.is_admin(request.ctx.current_user["_id"])
     )
 
@@ -127,45 +125,49 @@ async def activities_query(request):
         query["private"] = False
 
     response = await request.respond(content_type="application/msgpack")
-    async for msg in aiter_import_index_progress(query["user_id"]):
-        response.send(msgpack.packb({"msg": msg}))
+    async for msg in Index.import_index_progress(target_user_id):
+        await response.send(msgpack.packb({"msg": msg}))
+        log.info("awaiting index import finish: %s", msg)
 
     query_result = await Index.query(**query)
     if "delete" in query_result:
-        response.send(msgpack.packb({"delete": query_result["delete"]}))
+        await response.send(msgpack.packb({"delete": query_result["delete"]}))
 
     summaries = query_result["docs"]
-    response.send(msgpack.packb({"count": len(summaries)}))
+    await response.send(msgpack.packb({"count": len(summaries)}))
 
     if not streams:
         for A in summaries:
-            response.send(msgpack.packb(A))
+            await response.send(msgpack.packb(A))
         return
 
     summaries_lookup = {A["_id"]: A for A in summaries}
     ids = list(summaries_lookup.keys())
 
-    user = Users.get(query["user_id"])
+    user = Users.get(target_user_id)
     streams_iter = Streams.aiter_query(activity_ids=ids, user=user)
     async for aid, streams in streams_iter:
         A = summaries_lookup[aid]
         A["mpk"] = streams
         packed = msgpack.packb(A)
-        response.send(packed)
+        await response.send(packed)
 
 
 @app.get("/activities/index")
 async def activities_page(request):
-    user_id = request.args.get("user")
-    is_owner_or_admin = request.ctx.current_user and (
-        (request.ctx.current_user["_id"] == user_id)
-        or Users.is_admin(request.ctx.current_user["_id"])
+    current_user_id = (
+        request.ctx.current_user["_id"] if request.ctx.current_user else None
     )
+    target_user_id = request.args.get("user", current_user_id)
+
+    is_owner_or_admin = current_user_id == target_user_id
     if not is_owner_or_admin:
         return Response.text("Sorry, you are not authorized for this action")
 
     query_url = request.url_for("activities_query")
-    query_obj = Utility.cleandict({"_id_": user_id, "limit": 0, "streams": False})
+    query_obj = Utility.cleandict(
+        {"user_id": target_user_id, "limit": 0, "streams": False}
+    )
 
     params = {"app_name": APP_NAME, "query_url": query_url, "query_obj": query_obj}
     html = request.ctx.render_template("index-page.html", **params)

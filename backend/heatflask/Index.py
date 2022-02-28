@@ -154,12 +154,28 @@ async def check_import_progress(user_id):
 ## **************************************
 
 
-async def dummy_op():
-    log.info("Starting dummy operation")
+async def fake_import(uid=None):
+    log.info("Starting fake import for user %s", uid)
+    await set_import_flag(uid, "importing index...")
     for i in range(10):
         await asyncio.sleep(1)
-        log.info("dummy op %d", i)
-    log.info("Finished dummy operation")
+        log.info("fake import %d", i)
+        await set_import_flag(uid, i)
+    log.info("Finished fake import")
+    await clear_import_flag(uid)
+
+
+async def import_index_progress(user_id, poll_delay=0.5):
+    msg = True
+    last_msg = None
+    while msg:
+        msg = await check_import_progress(user_id)
+        if msg and (msg != last_msg):
+            yield msg
+            last_msg = msg
+        else:
+            break
+        await asyncio.sleep(poll_delay)
 
 
 async def import_user_entries(**user):
@@ -182,7 +198,7 @@ async def import_user_entries(**user):
                 await set_import_flag(uid, count)
 
     #     docs = [mongo_doc(**A, ts=now) async for A in strava.get_index() if A is not None]
-    docs = filter(None, docs)
+    docs = list(filter(None, docs))
     t1 = time.perf_counter()
     fetch_time = (t1 - t0) * 1000
 
@@ -191,7 +207,12 @@ async def import_user_entries(**user):
 
     index = await get_collection()
     await delete_user_entries(**user)
-    insert_result = await index.insert_many(docs, ordered=False)
+    try:
+        insert_result = await index.insert_many(docs, ordered=False)
+    except Exception:
+        log.exception("Index insert error")
+        log.error(docs)
+        return
     insert_time = (time.perf_counter() - t1) * 1000
     count = len(insert_result.inserted_ids)
 
