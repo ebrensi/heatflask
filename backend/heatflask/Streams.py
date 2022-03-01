@@ -14,12 +14,12 @@ from logging import getLogger
 import msgpack
 import polyline
 import asyncio
-
-import DataAPIs
-from DataAPIs import db
-import Strava
-import StreamCodecs
 import types
+
+from . import DataAPIs
+from .DataAPIs import db
+from . import Strava
+from . import StreamCodecs
 
 log = getLogger(__name__)
 log.setLevel("DEBUG")

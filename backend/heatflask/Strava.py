@@ -15,7 +15,7 @@ import urllib
 import asyncio
 import datetime
 
-import Utility
+from . import Utility
 
 log = getLogger(__name__)
 log.propagate = True

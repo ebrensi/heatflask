@@ -12,8 +12,8 @@ import datetime
 import pymongo
 import types
 
-import DataAPIs
-import Utility
+from . import DataAPIs
+from . import Utility
 
 log = getLogger(__name__)
 log.propagate = True
@@ -202,6 +202,7 @@ def drop():
 import os
 from sqlalchemy import create_engine, text
 import json
+
 
 async def migrate():
     await DataAPIs.connect()

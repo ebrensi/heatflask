@@ -7,11 +7,12 @@ Paste one of these Jupyter magic directives to the top of a cell
   %%writefile Events.py  # Write the contents of this cell to Events.py
 """
 from logging import getLogger
-from DataAPIs import init_collection
 from bson import ObjectId
 import pymongo
 import asyncio
 import types
+
+from .DataAPIs import init_collection
 
 log = getLogger(__name__)
 log.propagate = True

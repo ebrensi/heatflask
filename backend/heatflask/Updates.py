@@ -14,9 +14,9 @@ from datetime import datetime
 import types
 
 
-import DataAPIs
-import Strava
-import Users
+from . import DataAPIs
+from . import Strava
+from . import Users
 
 log = getLogger(__name__)
 log.propagate = True

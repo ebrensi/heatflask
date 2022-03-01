@@ -4,7 +4,7 @@ import { img, href } from "./appUtil"
 console.log(`Environment: ${process.env.NODE_ENV}`)
 
 function user_thumbnail(id, img_url) {
-  const avatar = img(img_url, (w = 40), (h = 40), (alt = id))
+  const avatar = img(img_url, 40, 40, id)
   const link = "/" + id
   return href(link, avatar)
 }
@@ -12,13 +12,7 @@ function user_thumbnail(id, img_url) {
 const HEADERS = ["", "username", "City", "Region", "Country"]
 function makeRow(rowData) {
   const [_id, username, profile, city, state, country] = rowData
-  return [
-    user_thumbnail(_id, profile),
-    username,
-    city,
-    state,
-    country
-  ]
+  return [user_thumbnail(_id, profile), username, city, state, country]
 }
 
 const ADMIN_HEADERS = [
@@ -50,7 +44,7 @@ function makeAdminRow(rowData) {
   return [
     user_thumbnail(_id, profile),
     access_count,
-    new Date(1000*ts).toLocaleDateString(),
+    new Date(1000 * ts).toLocaleDateString(),
     firstname + " " + lastname,
     city,
     state,
@@ -67,14 +61,13 @@ async function run() {
 
   const n_rows = data.length
 
-  const header_data = admin? ADMIN_HEADERS: HEADERS
+  const header_data = admin ? ADMIN_HEADERS : HEADERS
   const headers = header_data.join("</th><th>")
   const thead_str = `<thead><th>${headers}</th></thead>\n`
 
-  const rowFunc = admin? makeAdminRow : makeRow
+  const rowFunc = admin ? makeAdminRow : makeRow
   const row_strs = new Array(n_rows - 1)
   for (let i = 1; i < n_rows; i++) {
-
     const cells = rowFunc(data[i]).join("</td><td>")
     row_strs[i - 1] = `<tr><td>${cells}</td></tr>`
   }
@@ -86,8 +79,7 @@ async function run() {
   console.timeEnd("maketable")
 }
 
-
-(async () => {
+;(async () => {
   try {
     await run()
   } catch (e) {

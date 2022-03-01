@@ -25,6 +25,6 @@ if [ "$USE_HEROKU" == 1 ] && [ -f "$HEROKU_CLI" ]; then
     echo "running Sanic server via $HEROKU_CLI"
     $HEROKU_CLI local
 else
-    python heatflask/webserver.py
+    python -m heatflask.webserver.serve
 fi
 

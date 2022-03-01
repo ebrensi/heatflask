@@ -14,13 +14,14 @@ from logging import getLogger
 import datetime
 import time
 import asyncio
+import types
 from pymongo import DESCENDING
 
-import DataAPIs
-from DataAPIs import db
-import Strava
-import Utility
-import types
+from . import DataAPIs
+from .DataAPIs import db
+from . import Strava
+from . import Utility
+
 
 log = getLogger(__name__)
 log.propagate = True

@@ -1,5 +1,4 @@
 import os
-import shutil
 import json
 from string import Template
 from logging import getLogger
@@ -7,7 +6,7 @@ from logging import getLogger
 # for serving static files (relative to where webserver is run)
 FRONTEND_DIST_DIR = "../frontend/dist/"
 
-log = getLogger("server.files")
+log = getLogger(__name__)
 log.propagate = True
 
 
@@ -45,12 +44,12 @@ async def load_templates(app, loop):
 
 
 def render_template(filename, flashes=None, **kwargs):
-    flash_str = ""
-    if flashes:
-        flash_str += "<ul class='flashes'>"
-        for message in flashes:
-            flash_str += f"<li>{message}</li>"
-        flash_str += "</ul>"
+    flash_str = flashes.join("\n") if flashes else ""
+    # if flashes:
+    #     flash_str += "<ul class='flashes'>"
+    #     for message in flashes:
+    #         flash_str += f"<li>{message}</li>"
+    #     flash_str += "</ul>"
 
     for key, val in kwargs.items():
         if isinstance(val, dict):

@@ -1,5 +1,9 @@
 :root {
-  --background-image: url("../images/lake.gif");
+  background-color: #000000;
+  background-image: url("../images/lake.gif");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
 }
 
 @import "../ext/min_entireframework.css";
@@ -25,6 +29,7 @@ select {
   width: 50%;
   opacity: 1;
   padding: 10px;
+  display: None;
 }
 
 .msg li {
@@ -71,6 +76,7 @@ body {
   white-space: pre;
 }
 
-#runtime_json {
+#runtime_json,
+#flashes {
   display: none;
 }

@@ -2,11 +2,12 @@ from logging import getLogger
 import functools
 import json
 
-import Users
-from webserver_config import APP_NAME
-import webserver_files
+from .. import Users
 
-log = getLogger("server.sessions")
+from .config import APP_NAME
+from . import files
+
+log = getLogger(__name__)
 
 #
 # Persistent Sessions (via cookie)
@@ -67,7 +68,10 @@ async def reset_or_delete_cookie(request, response):
     # otherwise delete any set cookie (ending the session)
 
     if hasattr(request.ctx, "session") and request.ctx.session:
-        set_cookie(response, request.ctx.session)
+        try:
+            set_cookie(response, request.ctx.session)
+        except Exception:
+            log.exception("cookie: %s", request.ctx.session)
 
     elif request.cookies.get(COOKIE_NAME):
         del response.cookies[COOKIE_NAME]
@@ -95,8 +99,6 @@ async def attach_flash_handlers(request):
     request.ctx.flash = functools.partial(flash, request)
 
     def render_template(filename, **kwargs):
-        return webserver_files.render_template(
-            filename, flashes=get_flashes(request), **kwargs
-        )
+        return files.render_template(filename, flashes=get_flashes(request), **kwargs)
 
     request.ctx.render_template = render_template

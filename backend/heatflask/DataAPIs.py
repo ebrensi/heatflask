@@ -11,7 +11,6 @@ log.propagate = True
 
 # initialize async datastores
 use_remote = os.environ.get("USE_REMOTE_DB")
-
 REDIS_URL = os.environ.get("REDISGREEN_URL")
 
 # MongoDB

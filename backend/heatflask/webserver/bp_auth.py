@@ -2,14 +2,14 @@ import sanic.response as Response
 import sanic
 
 from logging import getLogger
-import Users
-import Strava
-import Index
-import Events
+from .. import Users
+from .. import Strava
+from .. import Index
+from .. import Events
 
-log = getLogger("server.auth")
+log = getLogger(__name__)
 
-auth = sanic.Blueprint("auth", url_prefix="/strava-auth")
+bp = sanic.Blueprint("auth", url_prefix="/strava-auth")
 
 #
 # Authentication
@@ -21,7 +21,7 @@ auth = sanic.Blueprint("auth", url_prefix="/strava-auth")
 # When a client requests this endpoint, we redirect them to
 # Strava's authorization page, which will then request our
 # enodpoint /authorized
-@auth.get("/authorize")
+@bp.get("/authorize")
 async def authorize(request):
     state = request.args.get("state")
     return Response.redirect(
@@ -35,7 +35,7 @@ async def authorize(request):
 
 # Authorization callback.  The service returns here to give us an access_token
 # for the user who successfully logged in.
-@auth.get("/authorized")
+@bp.get("/authorized")
 async def auth_callback(request):
     state = request.args.get("state")
     scope = request.args.get("scope")
@@ -86,7 +86,7 @@ async def auth_callback(request):
     return Response.redirect(state)
 
 
-@auth.get("/logout")
+@bp.get("/logout")
 async def logout(request):
     cuser = request.ctx.current_user
     cuser_id = cuser["_id"] if cuser else None
