@@ -47,6 +47,8 @@ async def query(request):
         await response.send(msgpack.packb({"delete": query_result["delete"]}))
 
     summaries = query_result["docs"]
+    for A in summaries:
+        A["ts"] = A["ts"].timestamp()
     await response.send(msgpack.packb({"count": len(summaries)}))
 
     if not streams:
@@ -82,6 +84,9 @@ async def index_page(request):
         {"user_id": target_user_id, "limit": 0, "streams": False}
     )
 
-    params = {"app_name": APP_NAME, "runtime_json": {"query_url": query_url, "query_obj": query_obj}}
+    params = {
+        "app_name": APP_NAME,
+        "runtime_json": {"query_url": query_url, "query_obj": query_obj},
+    }
     html = request.ctx.render_template("activities-page.html", **params)
     return Response.html(html)

@@ -14,6 +14,7 @@ from logging import getLogger
 import urllib
 import asyncio
 import datetime
+import types
 
 from . import Utility
 
@@ -25,7 +26,12 @@ DOMAIN = "https://www.strava.com"
 STALE_TOKEN = 300
 CONCURRENCY = 10
 
-LIMITER = asyncio.Semaphore(CONCURRENCY)
+myBox = types.SimpleNamespace(limiter=None)
+
+def get_limiter():
+    if myBox.limiter is None:
+        myBox.limiter = asyncio.Semaphore(CONCURRENCY)
+    return myBox.limiter
 
 # Client class takes care of refreshing access tokens
 class AsyncClient:
@@ -274,7 +280,7 @@ def streams_endpoint(activity_id):
 
 async def get_streams(session, activity_id):
     t0 = time.perf_counter()
-    async with LIMITER:
+    async with get_limiter():
         async with session.get(
             streams_endpoint(activity_id), params=ACTIVITY_STREAM_PARAMS
         ) as response:
@@ -324,7 +330,7 @@ params = {"per_page": PER_PAGE}
 
 async def get_activity_index_page(session, p):
     t0 = time.perf_counter()
-    async with LIMITER:
+    async with get_limiter():
         log.debug("Page %d requested", p)
         async with session.get(
             ACTIVITY_LIST_ENDPOINT, params={**params, "page": p}

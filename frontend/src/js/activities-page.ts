@@ -9,29 +9,27 @@ import "../ext/min_entireframework.css"
 // import "../css/activity-index.css"
 
 // msgpack is how we encode data for transfer over websocket
-// import { decodeMultiStream, decodeArrayStream } from "@msgpack/msgpack"
+import { decodeMultiStream, decodeArrayStream } from "@msgpack/msgpack"
 const argstr = document.getElementById("runtime_json").innerText
 const args = JSON.parse(argstr)
 
 const body = JSON.stringify(args["query_obj"])
-console.log("body:", body)
 
 async function run() {
   const response = await fetch(args["query_url"], {
     method: "POST",
     headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
+      Accept: "application/msgpack",
+      "Content-Type": "application/msgpack",
     },
     body: body,
   })
-  // console.log(response)
-  // const tot = await response.body()
-  // console.log(tot)
-  // const streamReader = response.body.getReader()
-  // for await (const item of decodeArrayStream(streamReader)) {
-  //   console.log(item);
-  // }
+  // TODO continue here
+
+  const streamReader = response.body.getReader()
+  for await (const item of decodeArrayStream(streamReader)) {
+    console.log(item);
+  }
 }
 
 ;(async () => {
