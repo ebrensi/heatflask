@@ -82,6 +82,6 @@ async def index_page(request):
         {"user_id": target_user_id, "limit": 0, "streams": False}
     )
 
-    params = {"app_name": APP_NAME, "query_url": query_url, "query_obj": query_obj}
-    html = request.ctx.render_template("index-page.html", **params)
+    params = {"app_name": APP_NAME, "runtime_json": {"query_url": query_url, "query_obj": query_obj}}
+    html = request.ctx.render_template("activities-page.html", **params)
     return Response.html(html)

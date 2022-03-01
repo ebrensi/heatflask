@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>$app_name - Activity Index</title>
+    <title>${app_name} - Activity Index</title>
     <link rel="shortcut icon" href="../images/favicon.ico" />
     <meta name="robots" content="noindex" />
   </head>
@@ -29,10 +29,6 @@
 
     <div id="query-form"></div>
   </body>
-  <script>
-    const query_url = "$query_url"
-    const query_obj_str = "$query_obj"
-  </script>
-
-  <script type="module" src="../js/index-page.ts"></script>
+  <div id="runtime_json">${runtime_json}</div>
+  <script type="module" src="../js/activities-page.ts"></script>
 </html>

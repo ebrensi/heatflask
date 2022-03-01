@@ -52,7 +52,7 @@ async def splash(request):
         request.ctx.flash(f"Welcome back {username}")
         if not await Index.has_user_entries(**cu):
             log.info("importing index for user %d", cu["_id"])
-            asyncio.create_task(Index.import_user_entries(**cu))
+            app.add_task(Index.import_user_entries(**cu))
         else:
             log.info("fake-importing index for user %d", cu["_id"])
             app.add_task(Index.fake_import(uid=cu["_id"]))
