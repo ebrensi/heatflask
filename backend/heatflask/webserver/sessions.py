@@ -4,7 +4,7 @@ import json
 
 from .. import Users
 
-from .config import APP_NAME
+from .config import APP_BASE_NAME
 from . import files
 
 log = getLogger(__name__)
@@ -26,7 +26,7 @@ DEFAULT_COOKIE_SPEC = {
     # "samesite": "strict",
 }
 
-COOKIE_NAME = APP_NAME
+COOKIE_NAME = APP_BASE_NAME.lower()
 
 
 # attach middleware to Sanic app to check the cookie from every request and
@@ -58,6 +58,7 @@ async def fetch_session_from_cookie(request):
 
     user_id = request.ctx.session.get("user")
     request.ctx.current_user = await Users.get(user_id) if user_id else None
+    request.ctx.is_admin = Users.is_admin(user_id) if user_id else False
 
     log.debug("Session: %s", request.ctx.session)
 
@@ -85,13 +86,13 @@ async def reset_or_delete_cookie(request, response):
 def flash(request, message):
     if not message:
         return
-    if "msg" not in request.ctx.session:
-        request.ctx.session["msg"] = []
-    request.ctx.session["msg"].append(message)
+    if "flashes" not in request.ctx.session:
+        request.ctx.session["flashes"] = []
+    request.ctx.session["flashes"].append(message)
 
 
 def get_flashes(request):
-    return request.ctx.session.pop("msg", None)
+    return request.ctx.session.pop("flashes", None)
 
 
 # Add flash and render_templae functions to request.ctx

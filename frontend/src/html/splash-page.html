@@ -15,7 +15,7 @@
   </head>
   <body>
     <div id="bubbler" class="container">
-      <div class="msg"></div>
+      <div class="msg" id="flashes"></div>
 
       <img class="logo" src="../images/logo.png" />
       <h2>Motion Mapping for Your Strava&nbspData</h2>
@@ -46,6 +46,5 @@
 
   <!-- Data passed from the backend at serve-time will be here -->
   <div id="runtime_json">${runtime_json}</div>
-  <div id="flashes">${flashes}</div>
   <script src="../js/splash-page.ts" type="module"></script>
 </html>

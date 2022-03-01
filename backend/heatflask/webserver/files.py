@@ -43,18 +43,11 @@ async def load_templates(app, loop):
             log.debug("Created string template from %s", fname)
 
 
-def render_template(filename, flashes=None, **kwargs):
-    flash_str = flashes.join("\n") if flashes else ""
-    # if flashes:
-    #     flash_str += "<ul class='flashes'>"
-    #     for message in flashes:
-    #         flash_str += f"<li>{message}</li>"
-    #     flash_str += "</ul>"
-
+def render_template(filename, **kwargs):
     for key, val in kwargs.items():
         if isinstance(val, dict):
             kwargs[key] = json.dumps(val)
 
     t = templates[filename]
-    html = t.safe_substitute(flashes=flash_str, **kwargs)
+    html = t.safe_substitute(**kwargs)
     return html

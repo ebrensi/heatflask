@@ -63,9 +63,12 @@ async def splash(request):
         "app_name": APP_NAME,
         "app_env": os.environ.get("APP_ENV"),
         "runtime_json": {
-            "demo": app.url_for("activities.index_page"),
-            "directory": app.url_for("users.directory"),
-            "authorize": app.url_for("auth.authorize", state=this_url),
+            "flashes": request.ctx.session.get("flashes"),
+            "urls": {
+                "demo": app.url_for("activities.index_page"),
+                "directory": app.url_for("users.directory"),
+                "authorize": app.url_for("auth.authorize", state=this_url),
+            }
         },
     }
 
