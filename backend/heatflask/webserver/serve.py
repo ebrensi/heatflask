@@ -3,26 +3,22 @@ This is the main thing that runs on the backend
 """
 import os
 import asyncio
-import msgpack
 from sanic import Sanic
 import sanic.response as Response
 
 # from sanic.log import logger as log
 import logging
 
-from .. import Utility
 from .. import DataAPIs
-from .. import Users
 from .. import Index
-from .. import Streams
 
 from .config import APP_BASE_NAME, APP_NAME, LOG_CONFIG
 from . import sessions
 from . import files
 
-from . import bp_auth
-from . import bp_users
-from . import bp_activities
+from .bp import auth
+from .bp import users
+from .bp import activities
 
 log = logging.getLogger("heatflask.webserver.serve")
 log.propagate = True
@@ -40,15 +36,14 @@ sessions.init_app(app)
 files.init_app(app)
 
 # Endpoint Definitions
-app.blueprint(bp_auth.bp)
-app.blueprint(bp_users.bp)
-app.blueprint(bp_activities.bp)
+app.blueprint(auth.bp)
+app.blueprint(users.bp)
+app.blueprint(activities.bp)
 
 
 # ****** Splash Page ******
 @app.get("/")
 async def splash(request):
-    log.info("__name__: %s", __name__)
     this_url = request.url_for("splash")
 
     cu = request.ctx.current_user

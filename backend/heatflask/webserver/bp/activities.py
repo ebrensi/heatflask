@@ -4,15 +4,14 @@ import msgpack
 
 from logging import getLogger
 
-from .. import Index
-from .. import Users
-from .. import Streams
-from .. import Utility
+from ... import Index
+from ... import Users
+from ... import Streams
+from ... import Utility
 
-from .config import APP_NAME
+from ..config import APP_NAME
 
 log = getLogger(__name__)
-
 bp = sanic.Blueprint("activities", url_prefix="/activities")
 
 # **** Activities ******

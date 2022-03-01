@@ -19,9 +19,9 @@ logger_config = {
     "heatflask.webserver.serve": {**base_logger_config, "level": LOG_LEVEL},
     "heatflask.webserver.sessions": {**base_logger_config, "level": LOG_LEVEL},
     "heatflask.webserver.files": {**base_logger_config, "level": LOG_LEVEL},
-    "heatflask.webserver.bp_auth": {**base_logger_config, "level": LOG_LEVEL},
-    "heatflask.webserver.bp_users": {**base_logger_config, "level": LOG_LEVEL},
-    "heatflask.webserver.bp_activities": {**base_logger_config, "level": LOG_LEVEL},
+    "heatflask.webserver.bp.auth": {**base_logger_config, "level": LOG_LEVEL},
+    "heatflask.webserver.bp.users": {**base_logger_config, "level": LOG_LEVEL},
+    "heatflask.webserver.bp.activities": {**base_logger_config, "level": LOG_LEVEL},
 }
 LOG_CONFIG["loggers"].update(logger_config)
 

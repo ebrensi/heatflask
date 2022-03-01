@@ -2,10 +2,10 @@ import sanic.response as Response
 import sanic
 
 from logging import getLogger
-from .. import Users
+from ... import Users
 
-from .config import APP_NAME
-from .bp_auth import authorize
+from ..config import APP_NAME
+from .auth import authorize
 
 log = getLogger(__name__)
 

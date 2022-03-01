@@ -2,10 +2,10 @@ import sanic.response as Response
 import sanic
 
 from logging import getLogger
-from .. import Users
-from .. import Strava
-from .. import Index
-from .. import Events
+from ... import Users
+from ... import Strava
+from ... import Index
+from ... import Events
 
 log = getLogger(__name__)
 
