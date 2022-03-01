@@ -1,3 +1,8 @@
+"""
+Defines all the /activities/* webserver endpoints
+for querying the Index and Streams data stores
+"""
+
 import sanic.response as Response
 import sanic
 import msgpack
@@ -10,16 +15,19 @@ from ... import Streams
 from ... import Utility
 
 from ..config import APP_NAME
+from ..sessions import session_cookie
+from ..files import render_template
 
 log = getLogger(__name__)
 bp = sanic.Blueprint("activities", url_prefix="/activities")
 
-# **** Activities ******
+
 def index_dict_to_fields(d):
     return [d[f] for f in Index.fields]
 
 
 @bp.post("/query")
+@session_cookie(get=True)
 async def query(request):
     # If queried user's index is currently being imported we
     # have to wait for that, while sending progress indicators
@@ -28,8 +36,7 @@ async def query(request):
     streams = query.pop("streams", True)
 
     is_owner_or_admin = request.ctx.current_user and (
-        (request.ctx.current_user["_id"] == target_user_id)
-        or Users.is_admin(request.ctx.current_user["_id"])
+        request.ctx.is_admin or (request.ctx.current_user["_id"] == target_user_id)
     )
 
     # Query will only return private activities if current_user
@@ -69,13 +76,14 @@ async def query(request):
 
 
 @bp.get("/index")
+@session_cookie(get=True, set=True)
 async def index_page(request):
     current_user_id = (
         request.ctx.current_user["_id"] if request.ctx.current_user else None
     )
     target_user_id = request.args.get("user", current_user_id)
 
-    is_owner_or_admin = current_user_id == target_user_id
+    is_owner_or_admin = request.ctx.is_admin or (current_user_id == target_user_id)
     if not is_owner_or_admin:
         return Response.text("Sorry, you are not authorized for this action")
 
@@ -88,5 +96,5 @@ async def index_page(request):
         "app_name": APP_NAME,
         "runtime_json": {"query_url": query_url, "query_obj": query_obj},
     }
-    html = request.ctx.render_template("activities-page.html", **params)
+    html = render_template("activities-page.html", **params)
     return Response.html(html)

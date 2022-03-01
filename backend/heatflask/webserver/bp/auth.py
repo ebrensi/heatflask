@@ -1,3 +1,7 @@
+"""
+Defines /auth/* webserver endpoints
+used for authenticating (logging in/out) Strava users
+"""
 import sanic.response as Response
 import sanic
 
@@ -6,6 +10,8 @@ from ... import Users
 from ... import Strava
 from ... import Index
 from ... import Events
+
+from ..sessions import session_cookie
 
 log = getLogger(__name__)
 
@@ -36,6 +42,7 @@ async def authorize(request):
 # Authorization callback.  The service returns here to give us an access_token
 # for the user who successfully logged in.
 @bp.get("/authorized")
+@session_cookie(get=True, set=True, flashes=True)
 async def auth_callback(request):
     state = request.args.get("state")
     scope = request.args.get("scope")
@@ -87,6 +94,7 @@ async def auth_callback(request):
 
 
 @bp.get("/logout")
+@session_cookie(get=True, set=True)
 async def logout(request):
     cuser = request.ctx.current_user
     cuser_id = cuser["_id"] if cuser else None

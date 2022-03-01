@@ -28,10 +28,12 @@ CONCURRENCY = 10
 
 myBox = types.SimpleNamespace(limiter=None)
 
+
 def get_limiter():
     if myBox.limiter is None:
         myBox.limiter = asyncio.Semaphore(CONCURRENCY)
     return myBox.limiter
+
 
 # Client class takes care of refreshing access tokens
 class AsyncClient:

@@ -1,6 +1,7 @@
 from logging import getLogger
 import functools
 import json
+import inspect
 
 from .. import Users
 
@@ -29,14 +30,6 @@ DEFAULT_COOKIE_SPEC = {
 COOKIE_NAME = APP_BASE_NAME.lower()
 
 
-# attach middleware to Sanic app to check the cookie from every request and
-#  add a cookie to every response
-def init_app(app):
-    app.register_middleware(fetch_session_from_cookie, "request")
-    app.register_middleware(reset_or_delete_cookie, "response")
-    app.register_middleware(attach_flash_handlers, "request")
-
-
 def set_cookie(response, session):
     response.cookies[COOKIE_NAME] = json.dumps(session)
     response.cookies[COOKIE_NAME].update(DEFAULT_COOKIE_SPEC)
@@ -59,8 +52,7 @@ async def fetch_session_from_cookie(request):
     user_id = request.ctx.session.get("user")
     request.ctx.current_user = await Users.get(user_id) if user_id else None
     request.ctx.is_admin = Users.is_admin(user_id) if user_id else False
-
-    log.debug("Session: %s", request.ctx.session)
+    log.debug("fetched session: %s", request.ctx.session)
 
 
 async def reset_or_delete_cookie(request, response):
@@ -91,15 +83,46 @@ def flash(request, message):
     request.ctx.session["flashes"].append(message)
 
 
-def get_flashes(request):
-    return request.ctx.session.pop("flashes", None)
+def render_template(request, filename, **kwargs):
+    flashed_messages = request.ctx.session.pop("flashes", None)
+    if flashed_messages:
+        kwargs["flashes"] = flashed_messages
+    return files.render_template(filename, **kwargs)
 
 
-# Add flash and render_templae functions to request.ctx
+# Add flash and render_template functions to request.ctx
 async def attach_flash_handlers(request):
     request.ctx.flash = functools.partial(flash, request)
+    request.ctx.render_template = functools.partial(render_template, request)
 
-    def render_template(filename, **kwargs):
-        return files.render_template(filename, flashes=get_flashes(request), **kwargs)
 
-    request.ctx.render_template = render_template
+def session_cookie(get=False, set=False, flashes=False):
+    # This is the decorator we use to specify whether
+    # coookies are retrieved and set for a given request route
+    def decorator(f):
+        @functools.wraps(f)
+        async def decorated_function(request, *args, **kwargs):
+            if get:
+                # attatch session, current_user, and is_admin
+                # to request.ctx if that info is in the cookie
+                await fetch_session_from_cookie(request)
+
+            if flashes:
+                # attach .flash and .render_template methods to request.ctx
+                await attach_flash_handlers(request)
+
+            # perform the endpoint function
+            response = f(request, *args, **kwargs)
+            if inspect.isawaitable(response):
+                response = await response
+
+            if set:
+                # send a directive to the client to
+                # set, update, or delete the session cookie
+                await reset_or_delete_cookie(request, response)
+
+            return response
+
+        return decorated_function
+
+    return decorator

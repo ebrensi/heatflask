@@ -29,11 +29,6 @@ redis_url = dev_redis_url if dev_env else prod_redis_url
 db = types.SimpleNamespace(mongo_client=None, mongodb=None, redis=None)
 
 
-def init_app(app):
-    app.register_listener(connect, "before_server_start")
-    app.register_listener(disconnect, "after_server_stop")
-
-
 # this must be called by whoever controls the asyncio loop
 async def connect(*args):
     if db.mongodb is not None:
@@ -47,12 +42,13 @@ async def connect(*args):
 async def disconnect(*args):
     if db.mongodb is None:
         return
+
+    log.info("Disconnecing from MongoDB and Redis")
     db.mongo_client.close()
     await db.redis.close()
     db.mongo_client = None
     db.mongodb = None
-    db.redis = None
-    log.info("Disconnected from MongoDB and Redis")
+    # db.redis = None
 
 
 async def init_collection(name, ttl=None, capped_size=None, cache_prefix=None):

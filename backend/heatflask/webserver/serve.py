@@ -2,9 +2,9 @@
 This is the main thing that runs on the backend
 """
 import os
-import asyncio
 from sanic import Sanic
 import sanic.response as Response
+import asyncio
 
 # from sanic.log import logger as log
 import logging
@@ -13,7 +13,7 @@ from .. import DataAPIs
 from .. import Index
 
 from .config import APP_BASE_NAME, APP_NAME, LOG_CONFIG
-from . import sessions
+from .sessions import session_cookie
 from . import files
 
 from .bp import auth
@@ -25,12 +25,7 @@ log.propagate = True
 log.setLevel("DEBUG")
 
 app = Sanic(APP_BASE_NAME, log_config=LOG_CONFIG)
-# Redis and MongoDB APIs are async and need to run in the same loop as app
-# so we run init_app to "connect" them
-DataAPIs.init_app(app)
 
-# enable persistent logged-in sessions using a browser cookie
-sessions.init_app(app)
 
 # set-up static and template file serving
 files.init_app(app)
@@ -40,9 +35,42 @@ app.blueprint(auth.bp)
 app.blueprint(users.bp)
 app.blueprint(activities.bp)
 
+# Handler for background tasks
+app.ctx.background_tasks = set()
+
+
+async def do_background_task(coro):
+    task = asyncio.create_task(coro)
+    app.ctx.background_tasks.add(task)
+    await task
+    app.ctx.background_tasks.remove(task)
+
+
+def add_task(coro):
+    asyncio.create_task(do_background_task(coro))
+
+
+async def cancel_background_tasks(*args):
+    for task in app.ctx.background_tasks:
+        task.cancel()
+    try:
+        await asyncio.gather(*app.ctx.background_tasks)
+    except asyncio.exceptions.CancelledError:
+        pass
+    app.ctx.background_tasks.clear()
+
+
+app.register_listener(cancel_background_tasks, "after_server_stop")
+
+# Redis and MongoDB APIs are async and need to run in the same loop as app
+# so we run init_app to "connect" them
+app.register_listener(DataAPIs.connect, "before_server_start")
+app.register_listener(DataAPIs.disconnect, "after_server_stop")
+
 
 # ****** Splash Page ******
 @app.get("/")
+@session_cookie(get=True, set=True, flashes=True)
 async def splash(request):
     this_url = request.url_for("splash")
 
@@ -52,10 +80,10 @@ async def splash(request):
         request.ctx.flash(f"Welcome back {username}")
         if not await Index.has_user_entries(**cu):
             log.info("importing index for user %d", cu["_id"])
-            app.add_task(Index.import_user_entries(**cu))
+            add_task(Index.import_user_entries(**cu))
         else:
             log.info("fake-importing index for user %d", cu["_id"])
-            app.add_task(Index.fake_import(uid=cu["_id"]))
+            add_task(Index.fake_import(uid=cu["_id"]))
 
         # return Response.redirect(app.url_for("main", username=cu["id"]))
 
@@ -68,7 +96,7 @@ async def splash(request):
                 "demo": app.url_for("activities.index_page"),
                 "directory": app.url_for("users.directory"),
                 "authorize": app.url_for("auth.authorize", state=this_url),
-            }
+            },
         },
     }
 

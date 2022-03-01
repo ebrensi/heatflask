@@ -140,7 +140,7 @@ def import_flag_key(uid):
 
 async def set_import_flag(user_id, val):
     await db.redis.setex(import_flag_key(user_id), IMPORT_FLAG_TTL, val)
-    log.debug(f"{user_id} import flag set to %s", val)
+    log.debug(f"{user_id} import flag set to '%s'", val)
 
 
 async def clear_import_flag(user_id):
@@ -149,7 +149,8 @@ async def clear_import_flag(user_id):
 
 
 async def check_import_progress(user_id):
-    return await db.redis.get(import_flag_key(user_id))
+    result = await db.redis.get(import_flag_key(user_id))
+    return result.decode("utf-8") if result else None
 
 
 ## **************************************
