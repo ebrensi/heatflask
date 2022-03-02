@@ -1,4 +1,5 @@
-body {
+@import "../ext/min_entireframework.css"
+  /*body {
   font: 12pt "Helvetica Neue", Arial, Helvetica, sans-serif;
 }
 
@@ -16,9 +17,8 @@ th {
 
 datatable-table {
   width: 100%;
-}
-
-.selected {
+}*/
+  .selected {
   background-color: yellow;
 }
 
@@ -40,4 +40,8 @@ tr.selected:hover {
   visibility: hidden;
   opacity: 0;
   transition: visibility 0s 0.25s, opacity 0.25s linear;
+}
+
+#runtime_json {
+  display: none;
 }

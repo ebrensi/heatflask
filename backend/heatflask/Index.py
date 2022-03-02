@@ -158,25 +158,21 @@ async def check_import_progress(user_id):
 
 async def fake_import(uid=None):
     log.info("Starting fake import for user %s", uid)
-    await set_import_flag(uid, "importing index...")
+    await set_import_flag(uid, "Building index...")
     for i in range(10):
         await asyncio.sleep(1)
         log.info("fake import %d", i)
-        await set_import_flag(uid, i)
+        await set_import_flag(uid, f"Building index...{i}")
     log.info("Finished fake import")
     await clear_import_flag(uid)
 
 
 async def import_index_progress(user_id, poll_delay=0.5):
-    msg = True
     last_msg = None
-    while msg:
-        msg = await check_import_progress(user_id)
-        if msg and (msg != last_msg):
+    while msg := await check_import_progress(user_id):
+        if msg != last_msg:
             yield msg
             last_msg = msg
-        else:
-            break
         await asyncio.sleep(poll_delay)
 
 
@@ -184,7 +180,7 @@ async def import_user_entries(**user):
     t0 = time.perf_counter()
     uid = int(user["_id"])
 
-    await set_import_flag(uid, "importing index...")
+    await set_import_flag(uid, "Building index...")
 
     strava = Strava.AsyncClient(uid, **user["auth"])
     await strava.update_access_token()
@@ -197,9 +193,8 @@ async def import_user_entries(**user):
             docs.append(mongo_doc(**A, ts=now))
             count += 1
             if count % Strava.PER_PAGE == 0:
-                await set_import_flag(uid, count)
+                await set_import_flag(uid, f"Building index...{count}")
 
-    #     docs = [mongo_doc(**A, ts=now) async for A in strava.get_index() if A is not None]
     docs = list(filter(None, docs))
     t1 = time.perf_counter()
     fetch_time = (t1 - t0) * 1000
