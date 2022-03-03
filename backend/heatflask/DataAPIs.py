@@ -59,6 +59,7 @@ async def init_collection(name, ttl=None, capped_size=None, cache_prefix=None):
             return await update_collection_ttl(name, ttl)
         elif capped_size:
             return await update_collection_cap(name, capped_size)
+        return db.mongodb.get_collection(name)
 
     # Create/Initialize Activity database
     # Delete existing one
@@ -146,6 +147,7 @@ async def update_collection_cap(name, new_size):
 
 
 def drop(name):
+    log.info("dropping '%s' collection", name)
     return db.mongodb.drop_collection(name)
 
 

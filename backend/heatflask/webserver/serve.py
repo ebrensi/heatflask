@@ -11,6 +11,7 @@ import logging
 
 from .. import DataAPIs
 from .. import Index
+from .. import Users
 
 from .config import APP_BASE_NAME, APP_NAME, LOG_CONFIG
 from .sessions import session_cookie
@@ -76,22 +77,23 @@ async def splash(request):
 
     cu = request.ctx.current_user
     if cu:
-        username = cu["username"]
-        request.ctx.flash(f"Welcome back {username}")
+        fullname = f"{cu[Users.FIRSTNAME]} {cu[Users.LASTNAME]}"
+        request.ctx.flash(f"Welcome back {fullname}")
+        uid = cu[Users.ID]
         if not await Index.has_user_entries(**cu):
-            log.info("importing index for user %d", cu["_id"])
+            log.info("importing index for user %d", uid)
             add_task(Index.import_user_entries(**cu))
         else:
-            log.info("fake-importing index for user %d", cu["_id"])
-            add_task(Index.fake_import(uid=cu["_id"]))
+            # log.info("fake-importing index for user %d", uid)
+            # add_task(Index.fake_import(uid=uid))
+            pass
 
-        # return Response.redirect(app.url_for("main", username=cu["id"]))
+        # return Response.redirect(app.url_for("main", user_id=uid))
 
     params = {
         "app_name": APP_NAME,
         "app_env": os.environ.get("APP_ENV"),
         "runtime_json": {
-            "flashes": request.ctx.session.get("flashes"),
             "urls": {
                 "demo": app.url_for("activities.index_page"),
                 "directory": app.url_for("users.directory"),

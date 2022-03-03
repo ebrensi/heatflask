@@ -21,7 +21,7 @@ from . import DataAPIs
 from .DataAPIs import db
 from . import Strava
 from . import Utility
-
+from . import Users
 
 log = getLogger(__name__)
 log.propagate = True
@@ -199,11 +199,11 @@ async def import_index_progress(user_id, poll_delay=0.5):
 
 async def import_user_entries(**user):
     t0 = time.perf_counter()
-    uid = int(user["_id"])
+    uid = int(user[Users.ID])
 
     await set_import_flag(uid, "Building index...")
 
-    strava = Strava.AsyncClient(uid, **user["auth"])
+    strava = Strava.AsyncClient(uid, **user[Users.AUTH])
     await strava.update_access_token()
     now = datetime.datetime.utcnow()
 
@@ -241,19 +241,19 @@ async def import_user_entries(**user):
 
 
 async def delete_user_entries(**user):
-    uid = int(user["_id"])
+    uid = int(user[Users.ID])
     index = await get_collection()
     return await index.delete_many({USER_ID: int(uid)})
 
 
 async def count_user_entries(**user):
-    uid = int(user["_id"])
+    uid = int(user[Users.ID])
     index = await get_collection()
     return await index.count_documents({USER_ID: int(uid)})
 
 
 async def has_user_entries(**user):
-    uid = int(user["_id"])
+    uid = int(user[Users.ID])
     index = await get_collection()
     return not not (await index.find_one({USER_ID: int(uid)}, projection={"_id": True}))
 

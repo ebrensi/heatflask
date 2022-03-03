@@ -40,7 +40,8 @@ async def query(request):
     target_user_id = query.get("user_id")
     if target_user_id:
         is_owner_or_admin = request.ctx.current_user and (
-            request.ctx.is_admin or (request.ctx.current_user[Users.ID] == target_user_id)
+            request.ctx.is_admin
+            or (request.ctx.current_user[Users.ID] == target_user_id)
         )
 
         # Query will only return private activities if current_user
@@ -122,9 +123,6 @@ async def index_page(request):
             "query_url": query_url,
             "query_obj": query_obj,
             "atypes": Strava.ATYPES,
-            "units": request.ctx.current_user.get(Users.UNITS)
-            if request.ctx.current_user
-            else None,
         },
     }
     html = render_template("activities-page.html", **params)

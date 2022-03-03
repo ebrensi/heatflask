@@ -33,18 +33,16 @@ async def get_collection():
         myBox.collection = await DataAPIs.init_collection(COLLECTION_NAME)
     return myBox.collection
 
+
 fields = [
     ID := "_id",
     TS := "ts",
     FIRSTNAME := "f",
     LASTNAME := "l",
-    USERNAME := "U",
-    PROFILE := "p",
-    UNITS := "u",
+    PROFILE := "P",
     CITY := "c",
     STATE := "s",
     COUNTRY := "C",
-    EMAIL := "e",
     ACCESS_COUNT := "#",
     AUTH := "@",
     PRIVATE := "p",
@@ -56,21 +54,18 @@ def mongo_doc(
     id=None,
     firstname=None,
     lastname=None,
-    username=None,
     profile_medium=None,
     profile=None,
-    measurement_preference=None,
     city=None,
     state=None,
     country=None,
-    email=None,
     # my additions
     _id=None,
     ts=None,
     auth=None,
     access_count=None,
     private=None,
-    **extras
+    **extras,
 ):
     if not (id or _id):
         log.error("cannot create user with no id")
@@ -81,13 +76,10 @@ def mongo_doc(
             ID: int(_id or id),
             FIRSTNAME: firstname,
             LASTNAME: lastname,
-            USERNAME: username,
             PROFILE: profile_medium or profile,
-            UNITS: measurement_preference,
             CITY: city,
             STATE: state,
             COUNTRY: country,
-            EMAIL: email,
             TS: ts,
             ACCESS_COUNT: access_count,
             AUTH: auth,
@@ -154,15 +146,12 @@ async def get_all():
 
 default_out_fields = {
     ID: True,
-    # FIRSTNAME: False,
-    # LASTNAME: False,
-    USERNAME: True,
+    FIRSTNAME: True,
+    LASTNAME: True,
     PROFILE: True,
-    # UNITS: False,
     CITY: True,
     STATE: True,
     COUNTRY: True,
-    # EMAIL: False,
     #
     # TS: False,
     # ACCESS_COUNT: False,
@@ -178,9 +167,6 @@ async def dump(admin=False, output="json"):
     if admin:
         out_fields.update(
             {
-                FIRSTNAME: True,
-                LASTNAME: True,
-                EMAIL: False,
                 TS: True,
                 ACCESS_COUNT: True,
                 PRIVATE: True,
@@ -223,8 +209,6 @@ import json
 
 
 async def migrate():
-    await DataAPIs.connect()
-
     # Import legacy Users database
     log.info("Importing users from legacy db")
     pgurl = os.environ["REMOTE_POSTGRES_URL"]
@@ -262,13 +246,10 @@ async def migrate():
                     id=id,
                     firstname=firstname,
                     lastname=lastname,
-                    username=username,
                     profile=profile,
-                    measurement_preference=measurement_preference,
                     city=city,
                     state=state,
                     country=country,
-                    email=email,
                     #
                     ts=dt_last_active,
                     auth=json.loads(access_token),
@@ -283,5 +264,3 @@ async def migrate():
     users = await get_collection()
     await users.delete_many({ID: {"$in": ids}})
     await users.insert_many(docs)
-
-    await DataAPIs.disconnect()

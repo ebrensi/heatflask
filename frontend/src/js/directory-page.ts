@@ -9,10 +9,29 @@ function user_thumbnail(id, img_url) {
   return href(link, avatar)
 }
 
-const HEADERS = ["", "username", "City", "Region", "Country"]
+// Field names
+const ID = "_id",
+  TS = "ts",
+  FIRSTNAME = "f",
+  LASTNAME = "l",
+  PROFILE = "P",
+  CITY = "c",
+  STATE = "s",
+  COUNTRY = "C",
+  ACCESS_COUNT = "#",
+  PRIVATE = "p"
+
+const HEADERS = ["", "Name", "City", "Region", "Country"]
+const REQUIRED_FIELDS = [ID, FIRSTNAME, LASTNAME, PROFILE, CITY, STATE, COUNTRY]
 function makeRow(rowData) {
-  const [_id, username, profile, city, state, country] = rowData
-  return [user_thumbnail(_id, profile), username, city, state, country]
+  const [_id, firstname, lastname, profile, city, state, country] = rowData
+  return [
+    user_thumbnail(_id, profile),
+    `${firstname} ${lastname}`,
+    city,
+    state,
+    country,
+  ]
 }
 
 const ADMIN_HEADERS = [
@@ -25,11 +44,21 @@ const ADMIN_HEADERS = [
   "Country",
   "private",
 ]
-
+const ADMIN_REQUIRED_FIELDS = [
+  ID,
+  PROFILE,
+  CITY,
+  STATE,
+  COUNTRY,
+  FIRSTNAME,
+  LASTNAME,
+  TS,
+  ACCESS_COUNT,
+  PRIVATE,
+]
 function makeAdminRow(rowData) {
   const [
     _id,
-    username,
     profile,
     city,
     state,
@@ -45,7 +74,7 @@ function makeAdminRow(rowData) {
     user_thumbnail(_id, profile),
     access_count,
     new Date(1000 * ts).toLocaleDateString(),
-    firstname + " " + lastname,
+    `${firstname} ${lastname}`,
     city,
     state,
     country,
@@ -60,15 +89,26 @@ async function run() {
   const data = await response.json()
 
   const n_rows = data.length
-
   const header_data = admin ? ADMIN_HEADERS : HEADERS
   const headers = header_data.join("</th><th>")
   const thead_str = `<thead><th>${headers}</th></thead>\n`
 
+  // The first row we get is field names
+  // which we will use to determine field ordering
+  const fields = data[0]
+  const field_pos = {}
+  for (let i = 0; i < fields.length; i++) {
+    field_pos[fields[i]] = i
+  }
+  const required_fields = admin ? ADMIN_REQUIRED_FIELDS : REQUIRED_FIELDS
+  const permutation = required_fields.map((f) => field_pos[f])
+
   const rowFunc = admin ? makeAdminRow : makeRow
   const row_strs = new Array(n_rows - 1)
   for (let i = 1; i < n_rows; i++) {
-    const cells = rowFunc(data[i]).join("</td><td>")
+    const row = data[i]
+    const permuted_row = permutation.map((j) => row[j])
+    const cells = rowFunc(permuted_row).join("</td><td>")
     row_strs[i - 1] = `<tr><td>${cells}</td></tr>`
   }
   const rows_str = row_strs.join("\n")
