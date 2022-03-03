@@ -50,7 +50,7 @@ async def directory(request):
 async def migrate(request):
     if not request.ctx.is_admin:
         return Response.text("Nope, sorry. :(")
-    # bp.add_task(Users.migrate())
+    bp.add_task(Users.migrate())
     log.info("Migrating user database")
     request.ctx.flash("Migration task queued")
     return Response.redirect(request.app.url_for("splash"))

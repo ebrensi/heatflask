@@ -30,10 +30,25 @@ myBox = types.SimpleNamespace(collection=None)
 
 async def get_collection():
     if myBox.collection is None:
-        myBox.collection = await DataAPIs.init_collection(
-            COLLECTION_NAME, ttl=MONGO_TTL
-        )
+        myBox.collection = await DataAPIs.init_collection(COLLECTION_NAME)
     return myBox.collection
+
+fields = [
+    ID := "_id",
+    TS := "ts",
+    FIRSTNAME := "f",
+    LASTNAME := "l",
+    USERNAME := "U",
+    PROFILE := "p",
+    UNITS := "u",
+    CITY := "c",
+    STATE := "s",
+    COUNTRY := "C",
+    EMAIL := "e",
+    ACCESS_COUNT := "#",
+    AUTH := "@",
+    PRIVATE := "p",
+]
 
 
 def mongo_doc(
@@ -63,20 +78,20 @@ def mongo_doc(
 
     return Utility.cleandict(
         {
-            "_id": int(_id or id),
-            "firstname": firstname,
-            "lastname": lastname,
-            "username": username,
-            "profile": profile_medium or profile,
-            "units": measurement_preference,
-            "city": city,
-            "state": state,
-            "country": country,
-            #
-            "ts": ts,
-            "access_count": access_count,
-            "auth": auth,
-            "private": private or False,
+            ID: int(_id or id),
+            FIRSTNAME: firstname,
+            LASTNAME: lastname,
+            USERNAME: username,
+            PROFILE: profile_medium or profile,
+            UNITS: measurement_preference,
+            CITY: city,
+            STATE: state,
+            COUNTRY: country,
+            EMAIL: email,
+            TS: ts,
+            ACCESS_COUNT: access_count,
+            AUTH: auth,
+            PRIVATE: private or False,
         }
     )
 
@@ -94,23 +109,23 @@ async def add_or_update(update_ts=False, inc_access_count=False, **strava_athlet
         return
 
     if update_ts:
-        doc["ts"] = datetime.datetime.utcnow()
+        doc[TS] = datetime.datetime.utcnow()
 
     # We cannot technically "update" the _id field if this user exists
     # in the database, so we need to remove that field from the updates
     user_info = {**doc}
-    user_id = user_info.pop("_id")
+    user_id = user_info.pop(ID)
     updates = {"$set": user_info}
 
     if inc_access_count:
-        updates["$inc"] = {"access_count": 1}
+        updates["$inc"] = {ACCESS_COUNT: 1}
 
     log.debug("calling mongodb update_one with updates %s", updates)
 
     # Creates a new user or updates an existing user (with the same id)
     try:
         return await users.find_one_and_update(
-            {"_id": user_id},
+            {ID: user_id},
             updates,
             upsert=True,
             return_document=pymongo.ReturnDocument.AFTER,
@@ -124,7 +139,7 @@ async def get(user_id):
         return
     users = await get_collection()
     uid = int(user_id)
-    query = {"_id": uid}
+    query = {ID: uid}
     try:
         return await users.find_one(query)
     except Exception:
@@ -138,35 +153,37 @@ async def get_all():
 
 
 default_out_fields = {
-    "_id": True,
-    # "firstname": False,
-    # "lastname": False,
-    "username": True,
-    "profile": True,
-    # "units": False,
-    "city": True,
-    "state": True,
-    "country": True,
+    ID: True,
+    # FIRSTNAME: False,
+    # LASTNAME: False,
+    USERNAME: True,
+    PROFILE: True,
+    # UNITS: False,
+    CITY: True,
+    STATE: True,
+    COUNTRY: True,
+    # EMAIL: False,
     #
-    # "ts": False,
-    # "access_count": False,
-    # "auth": False,
-    # "private": False,
+    # TS: False,
+    # ACCESS_COUNT: False,
+    # AUTH: False,
+    # PRIVATE: False,
 }
 
 
 async def dump(admin=False, output="json"):
-    query = {} if admin else {"private": False}
+    query = {} if admin else {PRIVATE: False}
 
     out_fields = {**default_out_fields}
     if admin:
         out_fields.update(
             {
-                "firstname": True,
-                "lastname": True,
-                "ts": True,
-                "access_count": True,
-                "private": True,
+                FIRSTNAME: True,
+                LASTNAME: True,
+                EMAIL: False,
+                TS: True,
+                ACCESS_COUNT: True,
+                PRIVATE: True,
             }
         )
     users = await get_collection()
@@ -176,8 +193,8 @@ async def dump(admin=False, output="json"):
     if csv:
         yield keys
     async for u in cursor:
-        if admin and ("ts" in u):
-            u["ts"] = u["ts"].timestamp()
+        if admin and (TS in u):
+            u[TS] = u[TS].timestamp()
         yield [u.get(k, "") for k in keys] if csv else u
 
 
@@ -185,7 +202,7 @@ async def delete(user_id):
     users = await get_collection()
     uid = int(user_id)
     try:
-        return await users.delete_one({"_id": uid})
+        return await users.delete_one({ID: uid})
 
     except Exception:
         log.exception("error deleting user %d", uid)
@@ -251,6 +268,7 @@ async def migrate():
                     city=city,
                     state=state,
                     country=country,
+                    email=email,
                     #
                     ts=dt_last_active,
                     auth=json.loads(access_token),
@@ -261,9 +279,9 @@ async def migrate():
         except json.JSONDecodeError:
             pass
 
-    ids = [u["_id"] for u in docs]
+    ids = [u[ID] for u in docs]
     users = await get_collection()
-    await users.delete_many({"_id": {"$in": ids}})
+    await users.delete_many({ID: {"$in": ids}})
     await users.insert_many(docs)
 
     await DataAPIs.disconnect()

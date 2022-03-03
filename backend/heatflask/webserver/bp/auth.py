@@ -68,7 +68,7 @@ async def auth_callback(request):
         return Response.redirect(state)
 
     strava_athlete = access_info.pop("athlete")
-    strava_athlete["auth"] = access_info
+    strava_athlete[Users.AUTH] = access_info
     user = await Users.add_or_update(
         **strava_athlete, update_ts=True, inc_access_count=True
     )
@@ -77,19 +77,19 @@ async def auth_callback(request):
         return Response.redirect(state)
 
     # start user session (which will be persisted with a cookie)
-    request.ctx.session["user"] = user["_id"]
+    request.ctx.session["user"] = user[Users.ID]
     request.ctx.current_user = user
 
     has_index = await Index.has_user_entries(**user)
     log.info(
         "Athenticated user %d, access_count=%d, has_index=%s",
-        user["_id"],
-        user["access_count"],
+        user[Users.ID],
+        user[Users.ACCESS_COUNT],
         has_index,
     )
 
     if user["access_count"] == 1:
-        await Events.new_event(msg=f"Authenicated new user {user['_id']}")
+        await Events.new_event(msg=f"Authenicated new user {user[Users.ID]}")
     return Response.redirect(state)
 
 
@@ -97,7 +97,7 @@ async def auth_callback(request):
 @session_cookie(get=True, set=True)
 async def logout(request):
     cuser = request.ctx.current_user
-    cuser_id = cuser["_id"] if cuser else None
+    cuser_id = cuser[Users.ID] if cuser else None
     request.ctx.current_user = None
     request.ctx.session = None
     state = request.args.get("state")
