@@ -1,6 +1,6 @@
 {
   "name": "heatflask-frontend",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "homepage": "https://github.com/ebrensi/heatflask",
   "repository": {
     "type": "git",
@@ -21,7 +21,6 @@
   "license": "ISC",
   "dependencies": {
     "@assemblyscript/loader": "latest",
-    "@fortawesome/fontawesome-free": "^5.15.4",
     "@msgpack/msgpack": "^2.7.1",
     "downloadjs": "^1.4.7",
     "gif.js": "github:ebrensi/gif.js#wasm-dev",
@@ -35,6 +34,8 @@
     "pws": "^5.0.2",
     "sidebar-v2": "^0.4.0"
   },
+  "context": "browser",
+  "outputFormat": "esmodule",
   "browserslist": [
     "> 0.75%, last 2 versions, not dead"
   ],
@@ -75,7 +76,8 @@
     "ignorePatterns": [
       "dist/*",
       "dist_unbundled/*",
-      "src/ext/*"
+      "src/ext/*",
+      "src/misc/*"
     ]
   },
   "prettier": {
