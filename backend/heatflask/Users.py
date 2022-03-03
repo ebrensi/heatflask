@@ -87,6 +87,7 @@ def is_admin(user_id):
 
 async def add_or_update(update_ts=False, inc_access_count=False, **strava_athlete):
     users = await get_collection()
+    # log.debug("Athlete: %s", strava_athlete)
     doc = mongo_doc(**strava_athlete)
     if not doc:
         log.exception("error adding/updating user: %s", doc)

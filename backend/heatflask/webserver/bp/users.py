@@ -31,7 +31,7 @@ async def query(request):
     return Response.json(dump)
 
 
-@bp.get("/directory")
+@bp.get("/")
 @session_cookie(get=True, flashes=True)
 async def directory(request):
     admin = request.args.get("admin")

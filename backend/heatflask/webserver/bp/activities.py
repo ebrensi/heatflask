@@ -6,6 +6,7 @@ for querying the Index and Streams data stores
 import sanic.response as Response
 import sanic
 import msgpack
+import json
 
 from logging import getLogger
 
@@ -13,6 +14,7 @@ from ... import Index
 from ... import Users
 from ... import Streams
 from ... import Utility
+from ... import Strava
 
 from ..config import APP_NAME
 from ..sessions import session_cookie
@@ -32,22 +34,28 @@ async def query(request):
     # If queried user's index is currently being imported we
     # have to wait for that, while sending progress indicators
     query = request.json
-    target_user_id = query.get("user_id")
     streams = query.pop("streams", True)
-
-    is_owner_or_admin = request.ctx.current_user and (
-        request.ctx.is_admin or (request.ctx.current_user["_id"] == target_user_id)
-    )
-
-    # Query will only return private activities if current_user
-    # is owner of the activities (or admin)
-    if not is_owner_or_admin:
-        query["private"] = False
-
     response = await request.respond(content_type="application/msgpack")
-    async for msg in Index.import_index_progress(target_user_id):
-        await response.send(msgpack.packb({"msg": msg}))
-        log.info("awaiting index import finish: %s", msg)
+
+    target_user_id = query.get("user_id")
+    if target_user_id:
+        is_owner_or_admin = request.ctx.current_user and (
+            request.ctx.is_admin or (request.ctx.current_user["_id"] == target_user_id)
+        )
+
+        # Query will only return private activities if current_user
+        # is owner of the activities (or admin)
+        if not is_owner_or_admin:
+            query["private"] = False
+
+        async for msg in Index.import_index_progress(target_user_id):
+            await response.send(msgpack.packb({"msg": msg}))
+            log.info("awaiting index import finish: %s", msg)
+    elif not request.ctx.is_admin:
+        # If there is no target_user then this is most likely
+        # a multi-user query. We need to make sure a user is not accessing
+        # other users' private activities
+        pass
 
     query_result = await Index.query(**query)
     if "delete" in query_result:
@@ -75,26 +83,50 @@ async def query(request):
         await response.send(packed)
 
 
-@bp.get("/index")
+@bp.get("/")
 @session_cookie(get=True, set=True)
 async def index_page(request):
+    all_users = "all" in request.args
+    if all_users:
+        del request.args["all"]
+
+    query = [json.loads(arg) for arg in request.args]
+    query = {"streams": False, "update_ts": False}
+    if "limit" not in query:
+        query["limit"] = 0
+
     current_user_id = (
         request.ctx.current_user["_id"] if request.ctx.current_user else None
     )
-    target_user_id = request.args.get("user", current_user_id)
+    target_user_id = request.args.get("user_id", None if all_users else current_user_id)
+    if target_user_id:
+        query["user_id"] = target_user_id
+        is_owner = current_user_id == target_user_id
+        if not (is_owner or request.ctx.is_admin):
+            query["private"] = False
 
-    is_owner_or_admin = request.ctx.is_admin or (current_user_id == target_user_id)
-    if not is_owner_or_admin:
-        return Response.text("Sorry, you are not authorized for this action")
+    elif not request.ctx.is_admin:
+        # For now, users cannot see private activities in the general index,
+        # even if that user is the owner of those activities.
+        #
+        # TODO: We need to allow a user to see their own private activities
+        #  when looking at a general (multi-user) query.
+        query["private"] = False
 
     query_url = request.url_for("activities.query")
-    query_obj = Utility.cleandict(
-        {"user_id": target_user_id, "limit": 0, "streams": False}
-    )
+    query_obj = Utility.cleandict(query)
 
     params = {
         "app_name": APP_NAME,
-        "runtime_json": {"query_url": query_url, "query_obj": query_obj},
+        "runtime_json": {
+            "query_url": query_url,
+            "query_obj": query_obj,
+            "atypes": Strava.ATYPES,
+            "ttl": Index.INDEX_TTL,
+            "units": request.ctx.current_user.get("units")
+            if request.ctx.current_user
+            else None,
+        },
     }
     html = render_template("activities-page.html", **params)
     return Response.html(html)

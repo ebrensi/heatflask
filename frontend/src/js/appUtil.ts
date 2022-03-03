@@ -56,18 +56,6 @@ export function noop(): void {
   return
 }
 
-/*
-  depending on whether the page this script is in is http or https, we need to
-  make sure the websocket protocol matches
-*/
-export function ws_prefix(): string {
-  if (window.location.protocol == "https:") {
-    return "wss://"
-  } else {
-    return "ws://"
-  }
-}
-
 /**
  * Binary Search returns the index of the target value in a sorted array-like
  *    data structure.

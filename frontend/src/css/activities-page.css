@@ -1,24 +1,4 @@
-@import "../ext/min_entireframework.css"
-  /*body {
-  font: 12pt "Helvetica Neue", Arial, Helvetica, sans-serif;
-}
-
-datatable-table,
-th,
-td {
-  border: 1px solid black;
-}
-
-th {
-  background-color: gray;
-  color: white;
-  text-align: center;
-}
-
-datatable-table {
-  width: 100%;
-}*/
-  .selected {
+@import "../ext/min_entireframework.css" .selected {
   background-color: yellow;
 }
 

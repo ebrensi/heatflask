@@ -271,7 +271,7 @@ query_obj = {
     "commute": None,
     "private": None,
     "visibility": None,
-    "in_bounds": None,
+    "bounds": None,
     #
     "update_ts": True,
 }
