@@ -28,6 +28,44 @@ CONCURRENCY = 10
 
 myBox = types.SimpleNamespace(limiter=None)
 
+ATYPES = [
+    "Ride",
+    "Run",
+    "Swim",
+    "Walk",
+    "Hike",
+    "Alpine Ski",
+    "Backcountry Ski",
+    "Canoe",
+    "Crossfit",
+    "E-Bike Ride",
+    "Elliptical",
+    "Handcycle",
+    "Ice Skate",
+    "Inline Skate",
+    "Kayak",
+    "Kitesurf Session",
+    "Nordic Ski",
+    "Rock Climb",
+    "Roller Ski",
+    "Row",
+    "Snowboard",
+    "Snowshoe",
+    "Stair Stepper",
+    "Stand Up Paddle",
+    "Surf",
+    "Velomobile ",
+    "Virtual Ride",
+    "Virtual Run",
+    "Weight Training",
+    "Windsurf Session",
+    "Wheelchair",
+    "Workout",
+    "Yoga",
+]
+
+ATYPES_LOOKUP = {atype: i for i, atype in enumerate(ATYPES)}
+
 
 def get_limiter():
     if myBox.limiter is None:

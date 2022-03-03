@@ -60,6 +60,27 @@ def polyline_bounds(poly):
     }
 
 
+def overlaps(b1, b2):
+    b1_left, b1_bottom = b1["SW"]
+    b1_right, b1_top = b1["NE"]
+    b2_left, b2_bottom = b2["SW"]
+    b2_right, b2_top = b2["NE"]
+    return (
+        (b1_left < b2_right)
+        and (b1_right > b2_left)
+        and (b1_top > b2_bottom)
+        and (b1_bottom < b2_top)
+    )
+    """
+    {
+        f"{LATLNG_BOUNDS}.NE.0": {"$gt": b1_left},
+        f"{LATLNG_BOUNDS}.SW.0": {"$lt": b1_right},
+        f"{LATLNG_BOUNDS}.SW.1": {"$lt": b1_top},
+        f"{LATLNG_BOUNDS}.NE.1": {"$gt": b1_bottom}
+    }
+    """
+
+
 # MongoDB short field names speed up data transfer to/from
 # remote DB server
 fields = [
@@ -116,7 +137,7 @@ def mongo_doc(
             ACTIVITY_NAME: name,
             DISTANCE_METERS: distance,
             TIME_SECONDS: elapsed_time,
-            ACTIVITY_TYPE: type,
+            ACTIVITY_TYPE: Strava.ATYPES_LOOKUP.get(type, type),
             UTC_START_TIME: utc_start_time,
             UTC_LOCAL_OFFSET: utc_offset,
             N_ATHLETES: athlete_count,
@@ -239,7 +260,6 @@ async def has_user_entries(**user):
 
 SORT_SPECS = [(UTC_START_TIME, DESCENDING)]
 
-
 query_obj = {
     "user_id": None,
     "activity_ids": None,
@@ -251,6 +271,7 @@ query_obj = {
     "commute": None,
     "private": None,
     "visibility": None,
+    "in_bounds": None,
     #
     "update_ts": True,
 }
@@ -267,6 +288,7 @@ async def query(
     commute=None,
     private=None,
     visibility=None,
+    bounds=None,
     #
     update_ts=True,
 ):
@@ -308,6 +330,20 @@ async def query(
 
     if commute is not None:
         mongo_query[FLAG_COMMUTE] = commute
+
+    if bounds is not None:
+        # Find all activities whose bounding box overlaps
+        # a box implied by bounds
+        bounds_left, bounds_bottom = bounds["SW"]
+        bounds_right, bounds_top = bounds["NE"]
+        mongo_query.update(
+            {
+                f"{LATLNG_BOUNDS}.NE.0": {"$gt": bounds_left},
+                f"{LATLNG_BOUNDS}.SW.0": {"$lt": bounds_right},
+                f"{LATLNG_BOUNDS}.SW.1": {"$lt": bounds_top},
+                f"{LATLNG_BOUNDS}.NE.1": {"$gt": bounds_bottom},
+            }
+        )
 
     to_delete = None
 
@@ -351,7 +387,7 @@ async def query(
     elapsed = (t1 - t0) * 1000
     log.debug("queried %d activities in %dms", len(docs), elapsed)
 
-    if update_ts:
+    if docs and update_ts:
         await index.update_many(
             {"_id": {"$in": [a[ACTIVITY_ID] for a in docs]}},
             {"$set": {TIMESTAMP: datetime.datetime.utcnow()}},
@@ -367,40 +403,3 @@ def stats():
 
 def drop():
     return DataAPIs.drop(COLLECTION_NAME)
-
-
-ATYPE_SPECS = [
-    "Ride",
-    "Run",
-    "Swim",
-    "Walk",
-    "Hike",
-    "Alpine Ski",
-    "Backcountry Ski",
-    "Canoe",
-    "Crossfit",
-    "E-Bike Ride",
-    "Elliptical",
-    "Handcycle",
-    "Ice Skate",
-    "Inline Skate",
-    "Kayak",
-    "Kitesurf Session",
-    "Nordic Ski",
-    "Rock Climb",
-    "Roller Ski",
-    "Row",
-    "Snowboard",
-    "Snowshoe",
-    "Stair Stepper",
-    "Stand Up Paddle",
-    "Surf",
-    "Velomobile ",
-    "Virtual Ride",
-    "Virtual Run",
-    "Weight Training",
-    "Windsurf Session",
-    "Wheelchair",
-    "Workout",
-    "Yoga",
-]
