@@ -8,7 +8,7 @@ while [ "$1" != "" ]; do
                                 ;;
         -r | --remote_db )      export USE_REMOTE_DB=1
                                 ;;
-        -h | --heroku )         export USE_HEROKU=1
+        -h | --heroku )         USE_HEROKU=1
                                 ;;
         -? | --help )           usage
                                 exit
@@ -20,7 +20,7 @@ done
 
 export HEROKU_CLI=/usr/local/bin/heroku
 
-# Run the backend server via heroku local if it is available, otherwise gunicorn directly
+# Run the backend server via heroku local if it is available
 if [ "$USE_HEROKU" == 1 ] && [ -f "$HEROKU_CLI" ]; then
     echo "running Sanic server via $HEROKU_CLI"
     $HEROKU_CLI local

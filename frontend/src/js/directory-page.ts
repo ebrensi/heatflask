@@ -11,15 +11,17 @@ function user_thumbnail(id, img_url) {
 
 // Field names
 const ID = "_id",
-  TS = "ts",
+  LAST_LOGIN = "ts",
+  LOGIN_COUNT = "#",
+  LAST_INDEX_ACCESS = "I",
   FIRSTNAME = "f",
   LASTNAME = "l",
   PROFILE = "P",
   CITY = "c",
   STATE = "s",
   COUNTRY = "C",
-  ACCESS_COUNT = "#",
   PRIVATE = "p"
+
 
 const HEADERS = ["", "Name", "City", "Region", "Country"]
 const REQUIRED_FIELDS = [ID, FIRSTNAME, LASTNAME, PROFILE, CITY, STATE, COUNTRY]
@@ -36,8 +38,9 @@ function makeRow(rowData) {
 
 const ADMIN_HEADERS = [
   "ID",
-  "count",
-  "last_active",
+  "LoginCount",
+  "LastLogin",
+  "LastAccess",
   "Name",
   "City",
   "Region",
@@ -52,8 +55,9 @@ const ADMIN_REQUIRED_FIELDS = [
   COUNTRY,
   FIRSTNAME,
   LASTNAME,
-  TS,
-  ACCESS_COUNT,
+  LAST_LOGIN,
+  LOGIN_COUNT,
+  LAST_INDEX_ACCESS,
   PRIVATE,
 ]
 function makeAdminRow(rowData) {
@@ -65,14 +69,17 @@ function makeAdminRow(rowData) {
     country,
     firstname,
     lastname,
-    ts,
-    access_count,
+    last_login,
+    login_count,
+    last_index_access,
     priv,
   ] = rowData
 
   return [
     user_thumbnail(_id, profile),
-    access_count,
+    login_count,
+    last_login,
+    last_index_access,
     new Date(1000 * ts).toLocaleDateString(),
     `${firstname} ${lastname}`,
     city,

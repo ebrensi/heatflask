@@ -31,17 +31,15 @@ COLLECTION_NAME = "index"
 SECS_IN_HOUR = 60 * 60
 SECS_IN_DAY = 24 * SECS_IN_HOUR
 
-# How long we store Index entry in MongoDB
-INDEX_TTL = int(os.environ.get("INDEX_TTL", 10)) * SECS_IN_DAY
+# How long we store a user's Index
+TTL = int(os.environ.get("INDEX_TTL", 20)) * SECS_IN_DAY
 
 myBox = types.SimpleNamespace(collection=None)
 
 
 async def get_collection():
     if myBox.collection is None:
-        myBox.collection = await DataAPIs.init_collection(
-            COLLECTION_NAME, ttl=INDEX_TTL
-        )
+        myBox.collection = await DataAPIs.init_collection(COLLECTION_NAME)
     return myBox.collection
 
 
@@ -86,7 +84,6 @@ def overlaps(b1, b2):
 fields = [
     ACTIVITY_ID := "_id",
     USER_ID := "U",
-    TIMESTAMP := "ts",
     N_ATHLETES := "#a",
     N_PHOTOS := "#p",
     UTC_START_TIME := "s",
@@ -122,7 +119,6 @@ def mongo_doc(
     visibility=None,
     # my additions
     _id=None,
-    ts=None,
     **and_more,
 ):
     if not (start_date and map and map.get("summary_polyline")):
@@ -131,7 +127,6 @@ def mongo_doc(
     utc_start_time = int(Utility.to_datetime(start_date).timestamp())
     return Utility.cleandict(
         {
-            TIMESTAMP: ts or datetime.datetime.utcnow(),
             ACTIVITY_ID: int(_id or id),
             USER_ID: int(athlete["id"]),
             ACTIVITY_NAME: name,
@@ -258,6 +253,20 @@ async def has_user_entries(**user):
     return not not (await index.find_one({USER_ID: int(uid)}, projection={"_id": True}))
 
 
+async def triage(*args):
+    now_ts = datetime.datetime.now().timestamp()
+    cutoff = now_ts - TTL
+    users = await get_collection()
+    cursor = users.find({Users.LAST_INDEX_ACCESS: {"$lt": cutoff}}, {Users.ID: True})
+    stale_ids = [u[Users.ID] async for u in cursor]
+    tasks = [
+        asyncio.create_task(delete_user_entries(**{Users.ID: sid}))
+        for sid in stale_ids
+    ]
+    await asyncio.gather(*tasks)
+
+
+
 SORT_SPECS = [(UTC_START_TIME, DESCENDING)]
 
 query_obj = {
@@ -290,7 +299,7 @@ async def query(
     visibility=None,
     bounds=None,
     #
-    update_ts=True,
+    update_index_access=True
 ):
     mongo_query = {}
     projection = None
@@ -387,13 +396,16 @@ async def query(
     elapsed = (t1 - t0) * 1000
     log.debug("queried %d activities in %dms", len(docs), elapsed)
 
-    if docs and update_ts:
-        await index.update_many(
-            {"_id": {"$in": [a[ACTIVITY_ID] for a in docs]}},
-            {"$set": {TIMESTAMP: datetime.datetime.utcnow()}},
-        )
-        elapsed = (time.perf_counter() - t1) * 1000
-        log.debug("ts update in %dms", elapsed)
+    if update_index_access:
+        if user_id:
+            await Users.add_or_update(id=user_id, update_index_access=True)
+        else:
+            ids = set(a[USER_ID] for a in docs)
+            tasks = [
+                asyncio.create_task(Users.add_or_update(id=user_id, update_index_access=True))
+                for user_id in ids
+            ]
+            await asyncio.gather(*tasks)
     return result
 
 

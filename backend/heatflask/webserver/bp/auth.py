@@ -71,7 +71,10 @@ async def auth_callback(request):
     strava_athlete = access_info.pop("athlete")
     strava_athlete[Users.AUTH] = access_info
     user = await Users.add_or_update(
-        **strava_athlete, update_ts=True, inc_access_count=True
+        **strava_athlete,
+        update_last_login=True,
+        update_index_access=True,
+        inc_login_count=True,
     )
     if not user:
         request.ctx.flash("database error?")
@@ -85,11 +88,10 @@ async def auth_callback(request):
     log.info(
         "Athenticated user %d, access_count=%d, has_index=%s",
         user[Users.ID],
-        user[Users.ACCESS_COUNT],
+        user[Users.LOGIN_COUNT],
         has_index,
     )
-
-    if user[Users.ACCESS_COUNT] == 1:
+    if user[Users.LOGIN_COUNT] == 1:
         await Events.new_event(msg=f"Authenicated new user {user[Users.ID]}")
     return Response.redirect(state)
 

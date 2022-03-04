@@ -15,6 +15,8 @@ import asyncio
 
 from . import DataAPIs
 from . import Utility
+from . import Strava
+from . import Index
 
 log = getLogger(__name__)
 log.propagate = True
@@ -37,14 +39,15 @@ async def get_collection():
 
 fields = [
     ID := "_id",
-    TS := "ts",
+    LAST_LOGIN := "ts",
+    LOGIN_COUNT := "#",
+    LAST_INDEX_ACCESS := "I",
     FIRSTNAME := "f",
     LASTNAME := "l",
     PROFILE := "P",
     CITY := "c",
     STATE := "s",
     COUNTRY := "C",
-    ACCESS_COUNT := "#",
     AUTH := "@",
     PRIVATE := "p",
 ]
@@ -62,10 +65,11 @@ def mongo_doc(
     country=None,
     # my additions
     _id=None,
-    ts=None,
-    auth=None,
-    access_count=None,
+    last_login=None,
+    login_count=None,
+    last_index_access=None,
     private=None,
+    auth=None,
     **extras,
 ):
     if not (id or _id):
@@ -81,10 +85,11 @@ def mongo_doc(
             CITY: city,
             STATE: state,
             COUNTRY: country,
-            TS: ts,
-            ACCESS_COUNT: access_count,
+            LAST_LOGIN: last_login,
+            LOGIN_COUNT: login_count,
+            LAST_INDEX_ACCESS: last_index_access,
             AUTH: auth,
-            PRIVATE: private or False,
+            PRIVATE: private,
         }
     )
 
@@ -93,7 +98,12 @@ def is_admin(user_id):
     return int(user_id) in ADMIN
 
 
-async def add_or_update(update_ts=False, inc_access_count=False, **strava_athlete):
+async def add_or_update(
+    update_last_login=False,
+    update_index_access=False,
+    inc_login_count=False,
+    **strava_athlete,
+):
     users = await get_collection()
     # log.debug("Athlete: %s", strava_athlete)
     doc = mongo_doc(**strava_athlete)
@@ -101,8 +111,12 @@ async def add_or_update(update_ts=False, inc_access_count=False, **strava_athlet
         log.exception("error adding/updating user: %s", doc)
         return
 
-    if update_ts:
-        doc[TS] = datetime.datetime.utcnow()
+    now_ts = datetime.datetime.utcnow().timestamp()
+    if update_last_login:
+        doc[LAST_LOGIN] = now_ts
+
+    if update_index_access:
+        doc[LAST_INDEX_ACCESS] = now_ts
 
     # We cannot technically "update" the _id field if this user exists
     # in the database, so we need to remove that field from the updates
@@ -110,8 +124,8 @@ async def add_or_update(update_ts=False, inc_access_count=False, **strava_athlet
     user_id = user_info.pop(ID)
     updates = {"$set": user_info}
 
-    if inc_access_count:
-        updates["$inc"] = {ACCESS_COUNT: 1}
+    if inc_login_count:
+        updates["$inc"] = {LOGIN_COUNT: 1}
 
     log.debug("calling mongodb update_one with updates %s", updates)
 
@@ -154,8 +168,9 @@ default_out_fields = {
     STATE: True,
     COUNTRY: True,
     #
-    # TS: False,
-    # ACCESS_COUNT: False,
+    # LAST_LOGIN=False
+    # LOGIN_COUNT=False
+    # LAST_INDEX_ACCESS=False
     # AUTH: False,
     # PRIVATE: False,
 }
@@ -168,8 +183,9 @@ async def dump(admin=False, output="json"):
     if admin:
         out_fields.update(
             {
-                TS: True,
-                ACCESS_COUNT: True,
+                LAST_LOGIN: True,
+                LOGIN_COUNT: True,
+                LAST_INDEX_ACCESS: True,
                 PRIVATE: True,
             }
         )
@@ -180,30 +196,45 @@ async def dump(admin=False, output="json"):
     if csv:
         yield keys
     async for u in cursor:
-        if admin and (TS in u):
-            u[TS] = u[TS].timestamp()
         yield [u.get(k, "") for k in keys] if csv else u
 
 
-async def delete(user_id):
+async def strava_client(user_id):
+    user = await get(user_id)
+    return Strava.AsyncClient(user_id, **user)
+
+
+async def delete(user_id, deauthenticate=False):
+    user = await get(user_id)
+    await Index.delete_user_entries(**user)
+    if deauthenticate:
+        client = await Strava.AsyncClient(user_id, **user)
+        with Strava.get_limiter():
+            result = await client.deauthenticate()
+
     users = await get_collection()
-    uid = int(user_id)
     try:
-        return await users.delete_one({ID: uid})
+        await users.delete_one({ID: user_id})
 
     except Exception:
-        log.exception("error deleting user %d", uid)
+        log.exception("error deleting user %d", user_id)
+    else:
+        log.info("deleted and deauthenticated user %s", user_id)
 
 
-async def triage():
+async def triage(*args, test_run=True, deauthenticate=True):
     now_ts = datetime.datetime.now().timestamp()
+    cutoff = now_ts - TTL
     users = await get_collection()
-    bad = [
-        (u[ID], u[AUTH])
-        async for u in users.find()
-        if now_ts - u[TS].timestamp() >= TTL
-    ]
-    # TODO: continue this
+    cursor = users.find({LAST_LOGIN: {"$lt": cutoff}}, {ID: True})
+    stale_ids = [u[ID] async for u in cursor]
+
+    if not test_run:
+        tasks = [
+            asyncio.create_task(delete(sid, deauthenticate=deauthenticate))
+            for sid in stale_ids
+        ]
+        await asyncio.gather(*tasks)
 
 
 def stats():
@@ -263,10 +294,10 @@ async def migrate():
                     state=state,
                     country=country,
                     #
-                    ts=dt_last_active,
-                    auth=json.loads(access_token),
-                    access_count=app_activity_count,
+                    last_login=dt_last_active.timestamp(),
+                    login_count=app_activity_count,
                     private=not share_profile,
+                    auth=json.loads(access_token),
                 )
             )
         except json.JSONDecodeError:
