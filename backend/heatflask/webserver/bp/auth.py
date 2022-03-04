@@ -69,12 +69,12 @@ async def auth_callback(request):
         return Response.redirect(state)
 
     strava_athlete = access_info.pop("athlete")
-    strava_athlete[Users.AUTH] = access_info
     user = await Users.add_or_update(
-        **strava_athlete,
         update_last_login=True,
         update_index_access=True,
         inc_login_count=True,
+        **strava_athlete,
+        auth=access_info
     )
     if not user:
         request.ctx.flash("database error?")

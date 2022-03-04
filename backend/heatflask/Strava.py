@@ -119,7 +119,7 @@ class AsyncClient:
         log.debug("closed session")
         self.session = None
 
-    async def __run_with_session(self, func, *args, **kwargs):
+    async def __run_with_session(self, func, *args, raise_exception=False, **kwargs):
         in_context = self.session is not None
 
         if not in_context:
@@ -127,8 +127,12 @@ class AsyncClient:
 
         try:
             result = await func(self.session, *args, **kwargs)
-        except Exception:
+        except Exception as e:
+            if raise_exception:
+                await self.__aexit__()
+                raise
             log.exception("%s, %s", self, func)
+            result = e
 
         if not in_context:
             await self.__aexit__()
@@ -142,18 +146,25 @@ class AsyncClient:
         except StopAsyncIteration:
             pass
 
-    async def __iterate_with_session(self, func, *args, **kwargs):
+    async def __iterate_with_session(self, func, *args, raise_exception=False, **kwargs):
         in_context = self.session is not None
 
         if not in_context:
             await self.__aenter__()
 
         aiterator = func(self.session, *args, **kwargs)
-        async for item in aiterator:
-            abort_signal = yield item
-            if abort_signal:
-                await self.__class__.abort(aiterator)
-                break
+        try:
+            async for item in aiterator:
+                abort_signal = yield item
+                if abort_signal:
+                    await self.__class__.abort(aiterator)
+                    break
+        except Exception:
+            if raise_exception:
+                await self.__aexit__()
+                raise
+            else:
+                log.exception("%s, %s", self, func)
 
         if not in_context:
             await self.__aexit__()

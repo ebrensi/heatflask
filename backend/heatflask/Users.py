@@ -12,6 +12,7 @@ import datetime
 import pymongo
 import types
 import asyncio
+from aiohttp.client_exceptions import ClientResponseError
 
 from . import DataAPIs
 from . import Utility
@@ -24,9 +25,15 @@ log.propagate = True
 COLLECTION_NAME = "users"
 
 # Drop a user after a year of inactivity
+# not logging in
 TTL = 365 * 24 * 3600
 
+# These are IDs of users we consider to be admin users
 ADMIN = [15972102]
+
+# This is to limit the number of de-auths in one batch so we
+# don't go over our hit quota
+MAX_TRIAGE = 10
 
 myBox = types.SimpleNamespace(collection=None)
 
@@ -64,21 +71,20 @@ def mongo_doc(
     state=None,
     country=None,
     # my additions
-    _id=None,
     last_login=None,
     login_count=None,
     last_index_access=None,
     private=None,
     auth=None,
-    **extras,
+    **kwargs,
 ):
-    if not (id or _id):
+    if not (id or kwargs.get(ID)):
         log.error("cannot create user with no id")
         return
 
     return Utility.cleandict(
         {
-            ID: int(_id or id),
+            ID: int(kwargs.get(ID, id)),
             FIRSTNAME: firstname,
             LASTNAME: lastname,
             PROFILE: profile_medium or profile,
@@ -199,18 +205,28 @@ async def dump(admin=False, output="json"):
         yield [u.get(k, "") for k in keys] if csv else u
 
 
-async def strava_client(user_id):
-    user = await get(user_id)
-    return Strava.AsyncClient(user_id, **user)
 
+async def delete(user_id, deauthenticate=True):
+    # First we delete the user's index
+    await Index.delete_user_entries(**{ID: user_id})
 
-async def delete(user_id, deauthenticate=False):
     user = await get(user_id)
-    await Index.delete_user_entries(**user)
-    if deauthenticate:
-        client = await Strava.AsyncClient(user_id, **user)
-        with Strava.get_limiter():
-            result = await client.deauthenticate()
+
+    # attempt to de-authenticate the user. we
+    #  will no longer access data on their behalf.
+    #  We need their stored access_token in order to do this
+    #  and we won't be able to if we delete that info, so we must
+    #  make sure it is done before deleting this user from mongodb.
+    #  Afterwards it is useless so we can delete it.
+    if user and (AUTH in user) and deauthenticate:
+        client = Strava.AsyncClient(user_id, **user[AUTH])
+        async with Strava.get_limiter():
+            try:
+                await client.deauthenticate(raise_exception=True)
+            except ClientResponseError as e:
+                log.info("user %s is already deauthenticated? (%s, %s)", user_id, e.status, e.message)
+            except Exception:
+                log.exception("strava error?")
 
     users = await get_collection()
     try:
@@ -219,22 +235,23 @@ async def delete(user_id, deauthenticate=False):
     except Exception:
         log.exception("error deleting user %d", user_id)
     else:
-        log.info("deleted and deauthenticated user %s", user_id)
+        log.info("deleted user %s", user_id)
 
 
-async def triage(*args, test_run=True, deauthenticate=True):
+async def triage(*args, only_find=False, deauthenticate=True, max_triage=MAX_TRIAGE):
     now_ts = datetime.datetime.now().timestamp()
     cutoff = now_ts - TTL
     users = await get_collection()
-    cursor = users.find({LAST_LOGIN: {"$lt": cutoff}}, {ID: True})
-    stale_ids = [u[ID] async for u in cursor]
-
-    if not test_run:
-        tasks = [
-            asyncio.create_task(delete(sid, deauthenticate=deauthenticate))
-            for sid in stale_ids
-        ]
-        await asyncio.gather(*tasks)
+    cursor = users.find({LAST_LOGIN: {"$lt": cutoff}}, {ID: True, LAST_LOGIN: True})
+    bad_users = await cursor.to_list(length=max_triage)
+    log.debug({u[ID]: str(datetime.datetime.fromtimestamp(u[LAST_LOGIN]).date()) for u in bad_users})
+    if only_find:
+        return bad_users
+    tasks = [
+        asyncio.create_task(delete(bu[ID], deauthenticate=deauthenticate))
+        for bu in bad_users
+    ]
+    await asyncio.gather(*tasks)
 
 
 def stats():
@@ -249,7 +266,6 @@ def drop():
 import os
 from sqlalchemy import create_engine, text
 import json
-
 
 async def migrate():
     # Import legacy Users database
@@ -306,4 +322,5 @@ async def migrate():
     ids = [u[ID] for u in docs]
     users = await get_collection()
     await users.delete_many({ID: {"$in": ids}})
-    await users.insert_many(docs)
+    insert_result = await users.insert_many(docs)
+    log.info("Done migrating %d users", len(insert_result.inserted_ids))

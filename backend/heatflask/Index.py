@@ -238,7 +238,8 @@ async def import_user_entries(**user):
 async def delete_user_entries(**user):
     uid = int(user[Users.ID])
     index = await get_collection()
-    return await index.delete_many({USER_ID: int(uid)})
+    result = await index.delete_many({USER_ID: int(uid)})
+    log.debug("%d deleted %s entries", uid, result.deleted_count)
 
 
 async def count_user_entries(**user):
