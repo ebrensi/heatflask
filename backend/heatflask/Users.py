@@ -11,6 +11,7 @@ from logging import getLogger
 import datetime
 import pymongo
 import types
+import asyncio
 
 from . import DataAPIs
 from . import Utility
@@ -21,7 +22,7 @@ log.propagate = True
 COLLECTION_NAME = "users"
 
 # Drop a user after a year of inactivity
-MONGO_TTL = 365 * 24 * 3600
+TTL = 365 * 24 * 3600
 
 ADMIN = [15972102]
 
@@ -192,6 +193,17 @@ async def delete(user_id):
 
     except Exception:
         log.exception("error deleting user %d", uid)
+
+
+async def triage():
+    now_ts = datetime.datetime.now().timestamp()
+    users = await get_collection()
+    bad = [
+        (u[ID], u[AUTH])
+        async for u in users.find()
+        if now_ts - u[TS].timestamp() >= TTL
+    ]
+    # TODO: continue this
 
 
 def stats():

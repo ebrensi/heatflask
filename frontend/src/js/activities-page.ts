@@ -15,6 +15,7 @@ const table_el: HTMLTableElement = document.getElementById("activity_list")
 const argstr = document.getElementById("runtime_json").innerText
 const args = JSON.parse(argstr)
 const atypes = args["atypes"]
+const MULTI = !args["query_obj"]["user_id"]
 
 function stravaActivityURL(aid) {
   return `https://www.strava.com/activities/${aid}`
@@ -31,7 +32,7 @@ const DIST_UNIT = 1000
 // This spec should match that in Index.py
 const ACTIVITY_ID = "_id",
   USER_ID = "U",
-  TIMESTAMP = "ts",
+  // TIMESTAMP = "ts",
   // N_ATHLETES = "#a",
   // N_PHOTOS = "#p",
   UTC_START_TIME = "s",
@@ -45,17 +46,23 @@ const ACTIVITY_ID = "_id",
   ACTIVITY_TYPE = "t",
   VISIBILITY = "v"
 
-const HEADERS = [
-  '<i class="icon hf-link"></i>', // heatflask link
-  '<i class="icon hf-external"></i>', // strava link
-  '<i class="icon hf-calendar1"></i>', // date
-  '<i class="icon hf-activity"></i>', // atype
-  '<i class="icon hf-road"></i>', // distance
-  '<i class="icon hf-stopwatch"></i>', // elapsed
-  "{ }", // title
-  '<i class="icon hf-user-secret"></i>', // private
-  '<i class="icon hf-hour-glass"></i><br> DD:HH:MM', // TTL
-]
+function makeHeaderRow() {
+  const h = [
+    '<i class="icon hf-link"></i>', // heatflask link
+    '<i class="icon hf-external"></i>', // strava link
+    '<i class="icon hf-calendar1"></i>', // date
+    '<i class="icon hf-activity"></i>', // atype
+    '<i class="icon hf-road"></i>', // distance
+    '<i class="icon hf-stopwatch"></i>', // elapsed
+    "{ }", // title
+    '<i class="icon hf-user-secret"></i>', // private
+  ]
+  if (MULTI) {
+    return ['<i class="icon hf-user"></i>'].concat(h)
+  } else {
+    return h
+  }
+}
 
 async function main() {
   const response = await fetch(args["query_url"], {
@@ -68,7 +75,6 @@ async function main() {
   })
 
   const data = []
-  const now_timestamp = Date.now() / 1000
   let count = 0
   let n_total
 
@@ -81,7 +87,7 @@ async function main() {
       data.fill(count, n_total, undefined)
       status_msg_el.innerText = "Importing activities..."
     } else {
-      data[count] = makeRow(obj, now_timestamp)
+      data[count] = makeRow(obj)
       count_msg_el.innerText = count++
     }
   }
@@ -89,12 +95,11 @@ async function main() {
   console.time("buildTable")
   buildTableWithInnerHTML(table_el, data)
   console.timeEnd("buildTable")
+  status_msg_el.innerText = ""
+  count_msg_el.innerText = ""
 }
 
-function makeHeaderRow() {
-  return HEADERS
-}
-function makeRow(A, now_timestamp) {
+function makeRow(A) {
   const aid = A[ACTIVITY_ID],
     heatflask_link = `${BASE_URL}?id=${aid}`,
     strava_link = href(`${stravaActivityURL(aid)}`, STRAVA_BUTTON),
@@ -102,20 +107,32 @@ function makeRow(A, now_timestamp) {
       (A[UTC_START_TIME] + A[UTC_LOCAL_OFFSET]) * 1000
     ).toLocaleString(),
     dist = +(A[DISTANCE_METERS] / DIST_UNIT).toFixed(2),
-    elapsed = HHMMSS(A[TIME_SECONDS]),
-    ttl = now_timestamp - A[TIMESTAMP]
+    elapsed = HHMMSS(A[TIME_SECONDS])
 
-  return [
-    href(heatflask_link, aid),
-    strava_link,
-    date,
-    A[ACTIVITY_TYPE],
-    dist,
-    elapsed,
-    A[ACTIVITY_NAME],
-    A[FLAG_PRIVATE],
-    ttl,
-  ]
+  if (MULTI) {
+    return [
+      A[USER_ID],
+      href(heatflask_link, aid),
+      strava_link,
+      date,
+      A[ACTIVITY_TYPE],
+      dist,
+      elapsed,
+      A[ACTIVITY_NAME],
+      A[FLAG_PRIVATE],
+    ]
+  } else {
+    return [
+      href(heatflask_link, aid),
+      strava_link,
+      date,
+      A[ACTIVITY_TYPE],
+      dist,
+      elapsed,
+      A[ACTIVITY_NAME],
+      A[FLAG_PRIVATE],
+    ]
+  }
 }
 
 function buildTableWithInnerHTML(el, data) {
