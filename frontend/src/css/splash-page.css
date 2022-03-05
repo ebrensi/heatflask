@@ -1,3 +1,5 @@
+
+
 :root {
   background-color: #000000;
   background-image: url("../images/lake.gif");
@@ -5,9 +7,6 @@
   background-repeat: no-repeat;
   background-size: cover;
 }
-
-@import "../ext/min_entireframework.css";
-@import "./strava-buttons.css";
 
 /* Links */
 a,
@@ -65,6 +64,7 @@ body {
 }
 
 .container {
+  text-align: center;
   position: relative;
   width: 90vw;
   height: 90vh;

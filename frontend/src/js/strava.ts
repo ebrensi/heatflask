@@ -21,7 +21,7 @@ export function athleteURL(id) {
 }
 
 export function icon(name) {
-  return `<span class="icon atype-${name}"></span>`
+  return `<i class="hf-${name}"></span>`
 }
 
 /**
@@ -70,6 +70,14 @@ const _specs = {
   Workout: [null, null, "#4b0082", icon("activity")],
   Yoga: [null, null, icon("meditate")],
   undefined: ["speed", null, icon("activity")],
+}
+
+export function activity_icon(atype) {
+  return _specs[atype][2] || atype
+}
+
+export function activity_pathcolor(atype) {
+  return _specs[atype][1] || atype
 }
 
 export const ATYPE = {

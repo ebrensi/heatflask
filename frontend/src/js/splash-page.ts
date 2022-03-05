@@ -1,3 +1,5 @@
+import "../ext/min_entireframework.css"
+import "../css/strava-buttons.css"
 import "../css/splash-page.css"
 
 console.log(`Environment: ${process.env.NODE_ENV}`)
@@ -8,7 +10,6 @@ const runtime_json = JSON.parse(
 const urls = runtime_json["urls"]
 const flashes_el = document.getElementById("flashes")
 const flashes = JSON.parse(flashes_el.innerText)
-console.log("flashes: ", flashes)
 if (flashes && flashes.length) {
   const flashes_str = flashes.join("\n")
   flashes_el.innerText = flashes_str

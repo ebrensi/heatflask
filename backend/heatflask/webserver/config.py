@@ -2,7 +2,7 @@ import os
 from sanic.log import LOGGING_CONFIG_DEFAULTS as LOG_CONFIG
 
 APP_BASE_NAME = "Heatflask"
-APP_VERSION = "0.5.0"
+APP_VERSION = "1.0.0"
 APP_NAME = f"{APP_BASE_NAME} v{APP_VERSION}"
 
 APP_ENV = os.environ.get("APP_ENV", "production")

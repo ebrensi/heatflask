@@ -1,12 +1,22 @@
 import "../ext/min_entireframework.css"
+import "../css/icomoon-heatflask.css"
+
 import { img, href } from "./appUtil"
 
 console.log(`Environment: ${process.env.NODE_ENV}`)
 
 function user_thumbnail(id, img_url) {
+  if (!(id && img_url)) return ""
   const avatar = img(img_url, 40, 40, id)
-  const link = "/" + id
-  return href(link, avatar)
+  return href(`/${id}`, avatar)
+}
+
+function ts_to_dt(ts, time=false) {
+  if (!ts) {
+    return ""
+  }
+  const dt = new Date(1000 * ts)
+  return time? dt.toLocaleString() : dt.toLocaleDateString()
 }
 
 // Field names
@@ -36,16 +46,18 @@ function makeRow(rowData) {
   ]
 }
 
+const priv_icon = '<i class="icon hf-eye-blocked"></i>'
+const pub_icon = '<i class="icon hf-eye"></i>'
 const ADMIN_HEADERS = [
   "ID",
-  "LoginCount",
+  "# Logins",
   "LastLogin",
-  "LastAccess",
+  "IndexAccess",
   "Name",
   "City",
   "Region",
   "Country",
-  "private",
+  '<i class="icon hf-user-secret"></i>',
 ]
 const ADMIN_REQUIRED_FIELDS = [
   ID,
@@ -75,17 +87,17 @@ function makeAdminRow(rowData) {
     priv,
   ] = rowData
 
+  // console.log(rowData)
   return [
     user_thumbnail(_id, profile),
     login_count,
-    last_login,
-    last_index_access,
-    new Date(1000 * ts).toLocaleDateString(),
+    ts_to_dt(last_login),
+    ts_to_dt(last_index_access),
     `${firstname} ${lastname}`,
     city,
     state,
     country,
-    priv,
+    priv? priv_icon : pub_icon,
   ]
 }
 

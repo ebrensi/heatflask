@@ -65,12 +65,19 @@ async def query(request):
     summaries = query_result["docs"]
     await response.send(msgpack.packb({"count": len(summaries)}))
 
+    if not target_user_id:
+        uids = list(set(A[Index.USER_ID] for A in summaries))
+        users = await Users.get_collection()
+        cursor = users.find({Users.ID: {"$in": uids}}, {Users.ID: True, Users.PROFILE: True})
+        profile_lookup = {u[Users.ID]: u[Users.PROFILE] async for u in cursor}
+        for A in summaries:
+            A["profile"] = profile_lookup[A[Index.USER_ID]]
     if not streams:
         for A in summaries:
             await response.send(msgpack.packb(A))
         return
 
-    summaries_lookup = {A["_id"]: A for A in summaries}
+    summaries_lookup = {A[Index.ACTIVITY_ID]: A for A in summaries}
     ids = list(summaries_lookup.keys())
 
     user = Users.get(target_user_id)
@@ -85,11 +92,7 @@ async def query(request):
 @bp.get("/")
 @session_cookie(get=True, set=True)
 async def index_page(request):
-    all_users = "all" in request.args
-    if all_users:
-        del request.args["all"]
-
-    query = [json.loads(arg) for arg in request.args]
+    all_users = request.args.pop("all", False)
     query = {"streams": False}
     if "limit" not in query:
         query["limit"] = 0

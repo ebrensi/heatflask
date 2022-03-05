@@ -2,11 +2,13 @@
  * This is the script for the heatflask activity-list view
  * activities-page.html.
  */
-import "../css/activities-page.css"
+import "../ext/min_entireframework.css"
 import "../css/icomoon-heatflask.css"
+import "../css/activities-page.css"
 
 import { decodeMultiStream } from "@msgpack/msgpack"
-import { href, img, HHMMSS, DDHHMM } from "./appUtil"
+import { href, img, HHMMSS } from "./appUtil"
+import { icon, activity_icon, activity_pathcolor } from "./strava"
 
 const status_msg_el = document.getElementById("status_msg")
 const count_msg_el = document.getElementById("count")
@@ -21,13 +23,22 @@ function stravaActivityURL(aid) {
   return `https://www.strava.com/activities/${aid}`
 }
 
+function user_thumbnail(id, img_url) {
+  if (!(id && img_url)) return ""
+  const avatar = img(img_url, 40, 40, id)
+  return href(`/${id}`, avatar)
+}
+
 const BASE_URL = "/"
 const strava_button_url = new URL(
   "../images/strava_button.png",
   import.meta.url
 )
 const STRAVA_BUTTON = img(strava_button_url)
-const DIST_UNIT = 1000
+const store = window.localStorage
+const METRIC = store.getItem('units') == "metric"
+const DIST_UNIT = METRIC? 1000 : 1609.34
+const DIST_LABEL = METRIC? "km" : "mi"
 
 // This spec should match that in Index.py
 const ACTIVITY_ID = "_id",
@@ -39,6 +50,7 @@ const ACTIVITY_ID = "_id",
   UTC_LOCAL_OFFSET = "o",
   DISTANCE_METERS = "D",
   TIME_SECONDS = "T",
+  ELEVATION_GAIN = "+",
   // (LATLNG_BOUNDS = "B"),
   // FLAG_COMMUTE = "c",
   FLAG_PRIVATE = "p",
@@ -48,21 +60,25 @@ const ACTIVITY_ID = "_id",
 
 function makeHeaderRow() {
   const h = [
-    '<i class="icon hf-link"></i>', // heatflask link
-    '<i class="icon hf-external"></i>', // strava link
-    '<i class="icon hf-calendar1"></i>', // date
-    '<i class="icon hf-activity"></i>', // atype
-    '<i class="icon hf-road"></i>', // distance
-    '<i class="icon hf-stopwatch"></i>', // elapsed
-    "{ }", // title
-    '<i class="icon hf-user-secret"></i>', // private
+    icon('calendar1')+" "+icon('link'), // heatflask link
+    icon('external'), // strava link
+    icon('activity'), // atype
+    icon('stopwatch'), // elapsed
+    `${icon('road1')} (${DIST_LABEL})`, // distance
+    icon('rocket'),
+    icon('pencil'), // title
+    icon('user-secret'), // private
   ]
+
   if (MULTI) {
-    return ['<i class="icon hf-user"></i>'].concat(h)
+    return [icon('user')].concat(h)
   } else {
     return h
   }
 }
+
+const priv_icon = icon('eye-blocked')
+const pub_icon = icon('eye')
 
 async function main() {
   const response = await fetch(args["query_url"], {
@@ -85,7 +101,7 @@ async function main() {
       n_total = obj["count"]
       data[n_total - 1] = undefined
       data.fill(count, n_total, undefined)
-      status_msg_el.innerText = "Importing activities..."
+      status_msg_el.innerText = "Fetching activities..."
     } else {
       data[count] = makeRow(obj)
       count_msg_el.innerText = count++
@@ -110,29 +126,30 @@ function makeRow(A) {
     elapsed = HHMMSS(A[TIME_SECONDS])
 
   const atype = atypes[A[ACTIVITY_TYPE]] || `${A[ACTIVITY_TYPE]}*`
+  const picon = A[FLAG_PRIVATE]? priv_icon: pub_icon
 
   if (MULTI) {
     return [
-      A[USER_ID],
-      href(heatflask_link, aid),
+      user_thumbnail(aid, A["profile"]),
+      href(heatflask_link, date),
       strava_link,
-      date,
-      atype,
-      dist,
+      activity_icon(atype),
       elapsed,
+      dist,
+      A[ELEVATION_GAIN],
       A[ACTIVITY_NAME],
-      A[FLAG_PRIVATE],
+      picon,
     ]
   } else {
     return [
-      href(heatflask_link, aid),
+      href(heatflask_link, date),
       strava_link,
-      date,
-      atype,
-      dist,
+      activity_icon(atype),
       elapsed,
+      dist,
+      A[ELEVATION_GAIN],
       A[ACTIVITY_NAME],
-      A[FLAG_PRIVATE],
+      picon,
     ]
   }
 }

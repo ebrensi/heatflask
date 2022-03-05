@@ -1,4 +1,10 @@
-@import "../ext/min_entireframework.css" .selected {
+
+i {
+  font-size: 20pt;
+  text-shadow: 5px 5px 5px #ccc;
+}
+
+.selected {
   background-color: yellow;
 }
 

@@ -23,6 +23,7 @@ bp = sanic.Blueprint("auth", url_prefix="/strava-auth")
 # This blueprint serves the "splash" (login) page and
 #  handles Strava authentication
 SCOPE = ",".join(["read", "activity:read", "activity:read_all"])
+
 # Attempt to authorize a user via Oauth(2)
 # When a client requests this endpoint, we redirect them to
 # Strava's authorization page, which will then request our

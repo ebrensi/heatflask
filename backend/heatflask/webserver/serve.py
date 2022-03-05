@@ -24,7 +24,6 @@ from .bp import activities
 
 log = logging.getLogger("heatflask.webserver.serve")
 log.propagate = True
-log.setLevel("DEBUG")
 
 app = Sanic(APP_BASE_NAME, log_config=LOG_CONFIG)
 
@@ -81,8 +80,9 @@ if os.environ.get("HEATFLASK_RESET"):
 
     app.register_listener(reset_db, "before_server_start")
 
-# app.register_listener(Users.triage, "before_server_start")
-# app.register_listener(Index.triage, "before_server_start")
+app.add_task(Users.triage)
+app.add_task(Index.triage)
+
 app.register_listener(DataAPIs.disconnect, "after_server_stop")
 
 
