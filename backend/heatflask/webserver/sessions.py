@@ -84,10 +84,8 @@ def flash(request, message):
 
 
 def render_template(request, filename, **kwargs):
-    flashes = request.ctx.session.pop("flashes", None)
-
-    if flashes:
-        kwargs["flashes"] = json.dumps(flashes)
+    flashes = request.ctx.session.pop("flashes", [])
+    kwargs["flashes"] = json.dumps(flashes)
     return files.render_template(filename, **kwargs)
 
 

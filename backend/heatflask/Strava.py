@@ -29,37 +29,41 @@ CONCURRENCY = 10
 myBox = types.SimpleNamespace(limiter=None)
 
 ATYPES = [
-    "Ride",
-    "Run",
-    "Swim",
-    "Walk",
-    "Hike",
-    "Alpine Ski",
-    "Backcountry Ski",
-    "Canoe",
+    "AlpineSki",
+    "BackcountrySki",
+    "Canoeing",
     "Crossfit",
-    "E-Bike Ride",
+    "EBikeRide",
     "Elliptical",
+    "Golf",
     "Handcycle",
-    "Ice Skate",
-    "Inline Skate",
-    "Kayak",
-    "Kitesurf Session",
-    "Nordic Ski",
-    "Rock Climb",
-    "Roller Ski",
-    "Row",
+    "Hike",
+    "IceSkate",
+    "InlineSkate",
+    "Kayaking",
+    "Kitesurf",
+    "NordicSki",
+    "Ride",
+    "RockClimbing",
+    "RollerSki",
+    "Rowing",
+    "Run",
+    "Sail",
+    "Skateboard",
     "Snowboard",
     "Snowshoe",
-    "Stair Stepper",
-    "Stand Up Paddle",
-    "Surf",
-    "Velomobile ",
-    "Virtual Ride",
-    "Virtual Run",
-    "Weight Training",
-    "Windsurf Session",
+    "Soccer",
+    "StairStepper",
+    "StandUpPaddling",
+    "Surfing",
+    "Swim",
+    "Velomobile",
+    "VirtualRide",
+    "VirtualRun",
+    "Walk",
+    "WeightTraining",
     "Wheelchair",
+    "Windsurf",
     "Workout",
     "Yoga",
 ]
@@ -146,7 +150,9 @@ class AsyncClient:
         except StopAsyncIteration:
             pass
 
-    async def __iterate_with_session(self, func, *args, raise_exception=False, **kwargs):
+    async def __iterate_with_session(
+        self, func, *args, raise_exception=False, **kwargs
+    ):
         in_context = self.session is not None
 
         if not in_context:

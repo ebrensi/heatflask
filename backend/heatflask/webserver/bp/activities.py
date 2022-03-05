@@ -63,8 +63,6 @@ async def query(request):
         await response.send(msgpack.packb({"delete": query_result["delete"]}))
 
     summaries = query_result["docs"]
-    for A in summaries:
-        A["ts"] = A["ts"].timestamp()
     await response.send(msgpack.packb({"count": len(summaries)}))
 
     if not streams:
@@ -92,7 +90,7 @@ async def index_page(request):
         del request.args["all"]
 
     query = [json.loads(arg) for arg in request.args]
-    query = {"streams": False, "update_ts": False}
+    query = {"streams": False}
     if "limit" not in query:
         query["limit"] = 0
 

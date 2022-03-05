@@ -109,13 +109,15 @@ function makeRow(A) {
     dist = +(A[DISTANCE_METERS] / DIST_UNIT).toFixed(2),
     elapsed = HHMMSS(A[TIME_SECONDS])
 
+  const atype = atypes[A[ACTIVITY_TYPE]] || `${A[ACTIVITY_TYPE]}*`
+
   if (MULTI) {
     return [
       A[USER_ID],
       href(heatflask_link, aid),
       strava_link,
       date,
-      A[ACTIVITY_TYPE],
+      atype,
       dist,
       elapsed,
       A[ACTIVITY_NAME],
@@ -126,7 +128,7 @@ function makeRow(A) {
       href(heatflask_link, aid),
       strava_link,
       date,
-      A[ACTIVITY_TYPE],
+      atype,
       dist,
       elapsed,
       A[ACTIVITY_NAME],

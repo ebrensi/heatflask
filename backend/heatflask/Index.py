@@ -261,11 +261,9 @@ async def triage(*args):
     cursor = users.find({Users.LAST_INDEX_ACCESS: {"$lt": cutoff}}, {Users.ID: True})
     stale_ids = [u[Users.ID] async for u in cursor]
     tasks = [
-        asyncio.create_task(delete_user_entries(**{Users.ID: sid}))
-        for sid in stale_ids
+        asyncio.create_task(delete_user_entries(**{Users.ID: sid})) for sid in stale_ids
     ]
     await asyncio.gather(*tasks)
-
 
 
 SORT_SPECS = [(UTC_START_TIME, DESCENDING)]
@@ -300,7 +298,7 @@ async def query(
     visibility=None,
     bounds=None,
     #
-    update_index_access=True
+    update_index_access=True,
 ):
     mongo_query = {}
     projection = None
@@ -403,7 +401,9 @@ async def query(
         else:
             ids = set(a[USER_ID] for a in docs)
             tasks = [
-                asyncio.create_task(Users.add_or_update(id=user_id, update_index_access=True))
+                asyncio.create_task(
+                    Users.add_or_update(id=user_id, update_index_access=True)
+                )
                 for user_id in ids
             ]
             await asyncio.gather(*tasks)
