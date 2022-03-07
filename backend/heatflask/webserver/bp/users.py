@@ -17,8 +17,9 @@ log = getLogger(__name__)
 
 bp = sanic.Blueprint("users", url_prefix="/users")
 
-
-@bp.get("/query")
+# We have the convention that POST is for data query
+# and GET is for web page
+@bp.post("/")
 @session_cookie(get=True, set=True)
 async def query(request):
     output = request.args.get("output", "json")
@@ -41,7 +42,7 @@ async def directory(request):
     kwargs = {"admin": 1} if admin else {}
     query_url = request.url_for("users.query", output="csv", **kwargs)
     params = {"app_name": APP_NAME, "admin": 1 if admin else 0, "url": query_url}
-    html = request.ctx.render_template("directory-page.html", **params)
+    html = request.ctx.render_template("users-page.html", **params)
     return Response.html(html)
 
 
@@ -50,7 +51,5 @@ async def directory(request):
 async def migrate(request):
     if not request.ctx.is_admin:
         return Response.text("Nope, sorry. :(")
-    request.app.add_task(Users.migrate())
-    log.info("Migrating user database")
-    request.ctx.flash("Migration task queued")
-    return Response.redirect(request.app.url_for("splash"))
+    await Users.migrate()
+    return Response.redirect(request.app.url_for("users.directory", admin=1))

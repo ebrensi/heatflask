@@ -6,7 +6,6 @@ for querying the Index and Streams data stores
 import sanic.response as Response
 import sanic
 import msgpack
-import json
 
 from logging import getLogger
 
@@ -24,11 +23,7 @@ log = getLogger(__name__)
 bp = sanic.Blueprint("activities", url_prefix="/activities")
 
 
-def index_dict_to_fields(d):
-    return [d[f] for f in Index.fields]
-
-
-@bp.post("/query")
+@bp.post("/")
 @session_cookie(get=True)
 async def query(request):
     # If queried user's index is currently being imported we
@@ -51,7 +46,7 @@ async def query(request):
 
         async for msg in Index.import_index_progress(target_user_id):
             await response.send(msgpack.packb({"msg": msg}))
-            log.info("awaiting index import finish: %s", msg)
+            log.debug("awaiting index import finish: %s", msg)
     elif not request.ctx.is_admin:
         # If there is no target_user then this is most likely
         # a multi-user query. We need to make sure a user is not accessing
@@ -68,7 +63,9 @@ async def query(request):
     if not target_user_id:
         uids = list(set(A[Index.USER_ID] for A in summaries))
         users = await Users.get_collection()
-        cursor = users.find({Users.ID: {"$in": uids}}, {Users.ID: True, Users.PROFILE: True})
+        cursor = users.find(
+            {Users.ID: {"$in": uids}}, {Users.ID: True, Users.PROFILE: True}
+        )
         profile_lookup = {u[Users.ID]: u[Users.PROFILE] async for u in cursor}
         for A in summaries:
             A["profile"] = profile_lookup[A[Index.USER_ID]]

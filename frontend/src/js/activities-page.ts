@@ -2,26 +2,21 @@
  * This is the script for the heatflask activity-list view
  * activities-page.html.
  */
-import "../ext/min_entireframework.css"
-import "../css/icomoon-heatflask.css"
 import "../css/activities-page.css"
 
 import { decodeMultiStream } from "@msgpack/msgpack"
-import { href, img, HHMMSS } from "./appUtil"
-import { icon, activity_icon, activity_pathcolor } from "./strava"
+import { href, img, HHMMSS, sleep } from "./appUtil"
+import { icon } from "./Icons"
+import { activity_icon, activityURL, activity_pathcolor } from "./strava"
 
 const status_msg_el = document.getElementById("status_msg")
 const count_msg_el = document.getElementById("count")
-const table_el: HTMLTableElement = document.getElementById("activity_list")
+const table_el = document.getElementById("activity_list")
 
 const argstr = document.getElementById("runtime_json").innerText
 const args = JSON.parse(argstr)
 const atypes = args["atypes"]
 const MULTI = !args["query_obj"]["user_id"]
-
-function stravaActivityURL(aid) {
-  return `https://www.strava.com/activities/${aid}`
-}
 
 function user_thumbnail(id, img_url) {
   if (!(id && img_url)) return ""
@@ -36,9 +31,11 @@ const strava_button_url = new URL(
 )
 const STRAVA_BUTTON = img(strava_button_url)
 const store = window.localStorage
-const METRIC = store.getItem('units') == "metric"
-const DIST_UNIT = METRIC? 1000 : 1609.34
-const DIST_LABEL = METRIC? "km" : "mi"
+const METRIC = store.getItem("units") == "metric"
+const DIST_SCALE = METRIC ? 1 / 1000 : 1 / 1609.34
+const DIST_LABEL = METRIC ? "km" : "mi"
+const ELEV_SCALE = METRIC ? 1 : 3.28084
+const ELEV_LABEL = METRIC ? "m" : "ft"
 
 // This spec should match that in Index.py
 const ACTIVITY_ID = "_id",
@@ -60,27 +57,28 @@ const ACTIVITY_ID = "_id",
 
 function makeHeaderRow() {
   const h = [
-    icon('calendar1')+" "+icon('link'), // heatflask link
-    icon('external'), // strava link
-    icon('activity'), // atype
-    icon('stopwatch'), // elapsed
-    `${icon('road1')} (${DIST_LABEL})`, // distance
-    icon('rocket'),
-    icon('pencil'), // title
-    icon('user-secret'), // private
+    icon("calendar1") + " " + icon("link"), // heatflask link
+    icon("external"), // strava link
+    icon("activity"), // atype
+    icon("user-secret"), // private
+    icon("stopwatch"), // elapsed
+    `${icon("road1")} (${DIST_LABEL})`, // distance
+    `${icon("rocket")} (${ELEV_LABEL})`,
+    icon("pencil"), // title
   ]
 
   if (MULTI) {
-    return [icon('user')].concat(h)
+    return [icon("user")].concat(h)
   } else {
     return h
   }
 }
 
-const priv_icon = icon('eye-blocked')
-const pub_icon = icon('eye')
+const priv_icon = icon("eye-blocked")
+const pub_icon = icon("eye")
 
 async function main() {
+  count_msg_el.classList.add("spinner")
   const response = await fetch(args["query_url"], {
     method: "POST",
     headers: {
@@ -113,43 +111,48 @@ async function main() {
   console.timeEnd("buildTable")
   status_msg_el.innerText = ""
   count_msg_el.innerText = ""
+
+  await sleep(0.2)
+  count_msg_el.classList.remove("spinner")
 }
 
 function makeRow(A) {
   const aid = A[ACTIVITY_ID],
     heatflask_link = `${BASE_URL}?id=${aid}`,
-    strava_link = href(`${stravaActivityURL(aid)}`, STRAVA_BUTTON),
+    strava_link = href(`${activityURL(aid)}`, STRAVA_BUTTON),
     date = new Date(
       (A[UTC_START_TIME] + A[UTC_LOCAL_OFFSET]) * 1000
     ).toLocaleString(),
-    dist = +(A[DISTANCE_METERS] / DIST_UNIT).toFixed(2),
-    elapsed = HHMMSS(A[TIME_SECONDS])
+    dist = (A[DISTANCE_METERS] * DIST_SCALE).toFixed(2),
+    elapsed = HHMMSS(A[TIME_SECONDS]),
+    elev_gain = (A[ELEVATION_GAIN] * ELEV_SCALE).toFixed(2)
 
   const atype = atypes[A[ACTIVITY_TYPE]] || `${A[ACTIVITY_TYPE]}*`
-  const picon = A[FLAG_PRIVATE]? priv_icon: pub_icon
+
+  const picon = A[FLAG_PRIVATE] ? priv_icon : pub_icon
 
   if (MULTI) {
     return [
-      user_thumbnail(aid, A["profile"]),
+      user_thumbnail(A[USER_ID], A["profile"]),
       href(heatflask_link, date),
       strava_link,
       activity_icon(atype),
+      picon,
       elapsed,
       dist,
-      A[ELEVATION_GAIN],
+      elev_gain,
       A[ACTIVITY_NAME],
-      picon,
     ]
   } else {
     return [
       href(heatflask_link, date),
       strava_link,
       activity_icon(atype),
+      picon,
       elapsed,
       dist,
-      A[ELEVATION_GAIN],
+      elev_gain,
       A[ACTIVITY_NAME],
-      picon,
     ]
   }
 }

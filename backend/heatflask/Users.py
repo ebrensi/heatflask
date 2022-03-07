@@ -205,7 +205,6 @@ async def dump(admin=False, output="json"):
         yield [u.get(k, "") for k in keys] if csv else u
 
 
-
 async def delete(user_id, deauthenticate=True):
     # First we delete the user's index
     await Index.delete_user_entries(**{ID: user_id})
@@ -224,7 +223,12 @@ async def delete(user_id, deauthenticate=True):
             try:
                 await client.deauthenticate(raise_exception=True)
             except ClientResponseError as e:
-                log.info("user %s is already deauthenticated? (%s, %s)", user_id, e.status, e.message)
+                log.info(
+                    "user %s is already deauthenticated? (%s, %s)",
+                    user_id,
+                    e.status,
+                    e.message,
+                )
             except Exception:
                 log.exception("strava error?")
 
@@ -244,7 +248,7 @@ async def triage(*args, only_find=False, deauthenticate=True, max_triage=MAX_TRI
     users = await get_collection()
     cursor = users.find({LAST_LOGIN: {"$lt": cutoff}}, {ID: True, LAST_LOGIN: True})
     bad_users = await cursor.to_list(length=max_triage)
-    log.debug({u[ID]: str(datetime.datetime.fromtimestamp(u[LAST_LOGIN]).date()) for u in bad_users})
+    # log.debug({u[ID]: str(datetime.datetime.fromtimestamp(u[LAST_LOGIN]).date()) for u in bad_users})
     if only_find:
         return bad_users
     tasks = [
@@ -266,6 +270,7 @@ def drop():
 import os
 from sqlalchemy import create_engine, text
 import json
+
 
 async def migrate():
     # Import legacy Users database

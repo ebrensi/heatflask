@@ -25,7 +25,7 @@ from .bp import activities
 log = logging.getLogger("heatflask.webserver.serve")
 log.propagate = True
 
-app = Sanic(APP_BASE_NAME, log_config=LOG_CONFIG)
+app = Sanic(APP_BASE_NAME, log_config=LOG_CONFIG, strict_slashes=False)
 
 
 # set-up static and template file serving
@@ -36,29 +36,14 @@ app.blueprint(auth.bp)
 app.blueprint(users.bp)
 app.blueprint(activities.bp)
 
-# Handler for background tasks
-app.ctx.background_tasks = set()
-
-
-async def do_background_task(coro):
-    task = asyncio.create_task(coro)
-    app.ctx.background_tasks.add(task)
-    await task
-    app.ctx.background_tasks.remove(task)
-
-
-def add_task(coro):
-    asyncio.create_task(do_background_task(coro))
-
 
 async def cancel_background_tasks(*args):
-    for task in app.ctx.background_tasks:
+    for task in app.tasks:
         task.cancel()
     try:
-        await asyncio.gather(*app.ctx.background_tasks)
+        app.purge_tasks()
     except asyncio.exceptions.CancelledError:
-        pass
-    app.ctx.background_tasks.clear()
+        log.error("caught cancelled exception")
 
 
 app.register_listener(cancel_background_tasks, "after_server_stop")
@@ -79,9 +64,10 @@ if os.environ.get("HEATFLASK_RESET"):
         print("Dropped databases")
 
     app.register_listener(reset_db, "before_server_start")
-
-app.add_task(Users.triage)
-app.add_task(Index.triage)
+else:
+    app.add_task(Users.triage)
+    app.add_task(Index.triage)
+    log.info("tasks: %s", app.tasks)
 
 app.register_listener(DataAPIs.disconnect, "after_server_stop")
 
@@ -99,10 +85,10 @@ async def splash(request):
         uid = cu[Users.ID]
         if not await Index.has_user_entries(**cu):
             log.info("importing index for user %d", uid)
-            add_task(Index.import_user_entries(**cu))
+            app.add_task(Index.import_user_entries(**cu), name=f"import:{uid}")
         else:
-            # log.info("fake-importing index for user %d", uid)
-            # add_task(Index.fake_import(uid=uid))
+            log.info("fake-importing index for user %d", uid)
+            app.add_task(Index.fake_import(uid=uid), name=f"import:{uid}")
             pass
 
         # return Response.redirect(app.url_for("main", user_id=uid))

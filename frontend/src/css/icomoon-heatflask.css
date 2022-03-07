@@ -6,6 +6,20 @@
   font-display: block;
 }
 
+.ispin {
+  animation: spin-animation 0.5s infinite;
+  display: inline-block;
+}
+
+@keyframes spin-animation {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(359deg);
+  }
+}
+
 i {
   /* use !important to prevent issues with browser extensions that change fonts */
   font-family: "icomoon-heatflask" !important;

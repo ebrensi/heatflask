@@ -1,5 +1,3 @@
-import "../ext/min_entireframework.css"
-import "../css/strava-buttons.css"
 import "../css/splash-page.css"
 
 console.log(`Environment: ${process.env.NODE_ENV}`)

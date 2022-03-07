@@ -1,7 +1,7 @@
 import "../ext/min_entireframework.css"
-import "../css/icomoon-heatflask.css"
 
 import { img, href } from "./appUtil"
+import { icon } from "./Icons"
 
 console.log(`Environment: ${process.env.NODE_ENV}`)
 
@@ -11,12 +11,12 @@ function user_thumbnail(id, img_url) {
   return href(`/${id}`, avatar)
 }
 
-function ts_to_dt(ts, time=false) {
+function ts_to_dt(ts, time = false) {
   if (!ts) {
     return ""
   }
   const dt = new Date(1000 * ts)
-  return time? dt.toLocaleString() : dt.toLocaleDateString()
+  return time ? dt.toLocaleString() : dt.toLocaleDateString()
 }
 
 // Field names
@@ -32,7 +32,6 @@ const ID = "_id",
   COUNTRY = "C",
   PRIVATE = "p"
 
-
 const HEADERS = ["", "Name", "City", "Region", "Country"]
 const REQUIRED_FIELDS = [ID, FIRSTNAME, LASTNAME, PROFILE, CITY, STATE, COUNTRY]
 function makeRow(rowData) {
@@ -46,10 +45,11 @@ function makeRow(rowData) {
   ]
 }
 
-const priv_icon = '<i class="icon hf-eye-blocked"></i>'
-const pub_icon = '<i class="icon hf-eye"></i>'
+const priv_icon = icon("eye-blocked")
+const pub_icon = icon("eye")
 const ADMIN_HEADERS = [
   "ID",
+  icon("user-secret"),
   "# Logins",
   "LastLogin",
   "IndexAccess",
@@ -57,7 +57,6 @@ const ADMIN_HEADERS = [
   "City",
   "Region",
   "Country",
-  '<i class="icon hf-user-secret"></i>',
 ]
 const ADMIN_REQUIRED_FIELDS = [
   ID,
@@ -88,8 +87,10 @@ function makeAdminRow(rowData) {
   ] = rowData
 
   // console.log(rowData)
+  const picon = priv ? priv_icon : pub_icon
   return [
     user_thumbnail(_id, profile),
+    picon,
     login_count,
     ts_to_dt(last_login),
     ts_to_dt(last_index_access),
@@ -97,14 +98,13 @@ function makeAdminRow(rowData) {
     city,
     state,
     country,
-    priv? priv_icon : pub_icon,
   ]
 }
 
 async function run() {
   console.log(`fetching ${url}`)
   console.time("maketable")
-  const response = await fetch(url)
+  const response = await fetch(url, { method: "POST" })
   const data = await response.json()
 
   const n_rows = data.length

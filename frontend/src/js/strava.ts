@@ -3,6 +3,7 @@
  */
 
 /* Custom font-font set from Icomoon */
+import { icon } from "./Icons"
 
 /**
  * @param  {(String|Number)} id - A Strava activity id
@@ -18,10 +19,6 @@ export function activityURL(id) {
  */
 export function athleteURL(id) {
   return `https://www.strava.com/athletes/${id}`
-}
-
-export function icon(name) {
-  return `<i class="hf-${name}"></span>`
 }
 
 /**
