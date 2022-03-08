@@ -121,9 +121,11 @@ def mongo_doc(
     visibility=None,
     # my additions
     _id=None,
+    title=None,
+    update=False,
     **and_more,
 ):
-    if not (start_date and map and map.get("summary_polyline")):
+    if not (update or (start_date and map and map.get("summary_polyline"))):
         return
 
     utc_start_time = int(Utility.to_datetime(start_date).timestamp())
@@ -131,7 +133,7 @@ def mongo_doc(
         {
             ACTIVITY_ID: int(_id or id),
             USER_ID: int(athlete["id"]),
-            ACTIVITY_NAME: name,
+            ACTIVITY_NAME: name or title,
             DISTANCE_METERS: distance,
             TIME_SECONDS: elapsed_time,
             ELEVATION_GAIN: total_elevation_gain,
@@ -236,6 +238,40 @@ async def import_user_entries(**user):
     log.debug(
         "fetched %s entries in %dms, insert_many %dms", count, fetch_time, insert_time
     )
+
+
+async def import_one(activity_id, **user):
+    client = Strava.AsyncClient(user[Users.ID], **user[Users.AUTH])
+    try:
+        DetailedActivity = client.get_activity(activity_id, raise_exception=True)
+    except Exception:
+        log.error("can't import activity")
+        return
+
+    doc = mongo_doc(**DetailedActivity, ts=datetime.datetime.utcnow())
+    index = await get_collection()
+    try:
+        await index.replace_one({ACTIVITY_ID: activity_id}, doc, upsert=True)
+    except Exception:
+        log.exception("mongo error?")
+    else:
+        log.debug("%s imported activity %d", user[Users.ID], activity_id)
+
+
+async def update_one(activity_id, **updates):
+    index = await get_collection()
+    doc = mongo_doc(**updates, update=True)
+    try:
+        await index.update_one({ACTIVITY_ID: activity_id}, {"$set": doc})
+    except Exception:
+        log.exception("mongo error?")
+    else:
+        log.debug("updated activity %d: %s", activity_id, updates)
+
+
+async def delete_one(activity_id):
+    index = await get_collection()
+    return await index.delete_one({ACTIVITY_ID: activity_id})
 
 
 async def delete_user_entries(**user):

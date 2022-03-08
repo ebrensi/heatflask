@@ -79,9 +79,9 @@ def get_limiter():
 
 # Client class takes care of refreshing access tokens
 class AsyncClient:
-    def __init__(self, name, **kwargs):
+    def __init__(self, name, **auth_data):
         self.name = name
-        self.set_state(**kwargs)
+        self.set_state(**auth_data)
         self.session = None
 
     def set_state(

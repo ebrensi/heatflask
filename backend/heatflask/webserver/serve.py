@@ -21,6 +21,7 @@ from . import files
 from .bp import auth
 from .bp import users
 from .bp import activities
+from .bp import updates
 
 log = logging.getLogger("heatflask.webserver.serve")
 log.propagate = True
@@ -35,6 +36,7 @@ files.init_app(app)
 app.blueprint(auth.bp)
 app.blueprint(users.bp)
 app.blueprint(activities.bp)
+app.blueprint(updates.bp)
 
 
 async def cancel_background_tasks(*args):
