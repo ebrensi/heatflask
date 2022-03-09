@@ -1,7 +1,10 @@
 import "../ext/min_entireframework.css"
+import "../css/spinner.css"
 
-import { img, href } from "./appUtil"
+import { img, href, sleep } from "./appUtil"
 import { icon } from "./Icons"
+
+const status_el = document.getElementById("status")
 
 console.log(`Environment: ${process.env.NODE_ENV}`)
 
@@ -102,7 +105,7 @@ function makeAdminRow(rowData) {
 }
 
 async function run() {
-  console.log(`fetching ${url}`)
+  status_el.classList.add("spinner")
   console.time("maketable")
   const response = await fetch(url, { method: "POST" })
   const data = await response.json()
@@ -136,6 +139,8 @@ async function run() {
   const table_element: HTMLTableElement = document.getElementById("users")
   table_element.innerHTML = thead_str + tbody_str
   console.timeEnd("maketable")
+  await sleep(0.2)
+  status_el.classList.remove("spinner")
 }
 
 ;(async () => {

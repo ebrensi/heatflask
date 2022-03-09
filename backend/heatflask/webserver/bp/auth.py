@@ -24,12 +24,15 @@ bp = sanic.Blueprint("auth", url_prefix="/strava-auth")
 #  handles Strava authentication
 SCOPE = ",".join(["read", "activity:read", "activity:read_all"])
 
-# Attempt to authorize a user via Oauth(2)
-# When a client requests this endpoint, we redirect them to
-# Strava's authorization page, which will then request our
-# enodpoint /authorized
+
 @bp.get("/authorize")
 async def authorize(request):
+    """
+    Attempt to authorize a user via Oauth(2)
+    When a client requests this endpoint, we redirect them to
+    Strava's authorization page, which will then request our
+    endpoint /authorized
+    """
     state = request.args.get("state")
     return Response.redirect(
         Strava.auth_url(
@@ -41,11 +44,13 @@ async def authorize(request):
     )
 
 
-# Authorization callback.  The service returns here to give us an access_token
-# for the user who successfully logged in.
 @bp.get("/authorized")
 @session_cookie(get=True, set=True, flashes=True)
 async def auth_callback(request):
+    """
+    Authorization callback.  The service returns here to give us an
+    access_token for the user who successfully logged in.
+    """
     state = request.args.get("state")
     scope = request.args.get("scope")
     code = request.args.get("code")
@@ -74,8 +79,9 @@ async def auth_callback(request):
         update_last_login=True,
         update_index_access=True,
         inc_login_count=True,
+        private=True,  # User accounts are private by default
         **strava_athlete,
-        auth=access_info
+        auth=access_info,
     )
     if not user:
         request.ctx.flash("database error?")

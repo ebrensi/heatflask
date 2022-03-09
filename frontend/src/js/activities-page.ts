@@ -3,6 +3,7 @@
  * activities-page.html.
  */
 import "../css/activities-page.css"
+import "../css/spinner.css"
 
 import { decodeMultiStream } from "@msgpack/msgpack"
 import { href, img, HHMMSS, sleep } from "./appUtil"

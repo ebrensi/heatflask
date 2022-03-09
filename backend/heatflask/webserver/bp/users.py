@@ -17,6 +17,7 @@ log = getLogger(__name__)
 
 bp = sanic.Blueprint("users", url_prefix="/users")
 
+
 # We have the convention that POST is for data query
 # and GET is for web page
 @bp.post("/")
