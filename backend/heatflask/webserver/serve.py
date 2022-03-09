@@ -64,6 +64,7 @@ if os.environ.get("HEATFLASK_RESET"):
         if streams:
             await Streams.drop()
         print("Dropped databases")
+        # app.stop()
 
     app.register_listener(reset_db, "before_server_start")
 else:

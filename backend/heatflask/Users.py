@@ -10,6 +10,7 @@ Paste one of these Jupyter magic directives to the top of a cell
 from logging import getLogger
 import datetime
 import pymongo
+from pymongo import DESCENDING
 import types
 import asyncio
 from aiohttp.client_exceptions import ClientResponseError
@@ -182,6 +183,9 @@ default_out_fields = {
 }
 
 
+SORT_SPEC = [(LAST_LOGIN, DESCENDING)]
+
+
 async def dump(admin=False, output="json"):
     query = {} if admin else {PRIVATE: False}
 
@@ -196,7 +200,7 @@ async def dump(admin=False, output="json"):
             }
         )
     users = await get_collection()
-    cursor = users.find(filter=query, projection=out_fields)
+    cursor = users.find(filter=query, projection=out_fields, sort=SORT_SPEC)
     keys = list(out_fields.keys())
     csv = output == "csv"
     if csv:
