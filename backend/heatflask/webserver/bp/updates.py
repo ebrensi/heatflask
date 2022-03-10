@@ -4,12 +4,19 @@ Users data store
 """
 
 import sanic.response as Response
+from sanic.exceptions import SanicException
 import sanic
+from inspect import isawaitable
+from functools import wraps
+from aiohttp import ClientResponseError
 
 from logging import getLogger
 from ... import Users
 from ... import Strava
 from ... import Index
+
+from ..sessions import session_cookie
+
 
 log = getLogger(__name__)
 
@@ -21,7 +28,7 @@ async def get_callback(request):
     if request.args.get("hub.challenge"):
         return Response.json(Strava.subscription_verification(request.args))
     else:
-        return Response.redirect(request.app.url_for("subscription.updates_page"))
+        return Response.redirect(request.app.url_for("updates.updates_page"))
 
 
 @bp1.post("/")
@@ -30,6 +37,8 @@ async def post_callback(request):
     event_time = update["event_time"]
     subscription_id = update["subscription_id"]
     aspect_type = update["aspect_type"]
+
+    log.info("Strava update: %s", update)
 
     if update["object_type"] == "activity":
         activity_id = update["object_id"]
@@ -51,39 +60,80 @@ async def post_callback(request):
     return Response.text("success")
 
 
-bp2 = sanic.Blueprint("subscription", url_prefix="/subscription")
-
-# Stuff for subscription to Strava webhooks
-@bp2.get("/create")
-async def create_subscription(request):
-    return Response.text("work in progress")
-    # await Strava.create_subscription(admin_session, callback_url)
-    # return Response.json(Webhooks.create(url_for("webhook_callback", _external=True)))
-
-
-@bp2.get("/list")
-async def list_subscriptions(request):
-    return Response.text("work in progress")
-    # return Response.json({"subscriptions": Webhooks.list()})
-
-
-@bp2.get("/delete")
-async def delete_subscription(request):
-    return Response.text("work in progress")
-    # result = Webhooks.delete(
-    #     subscription_id=request.args.get("id"),
-    #     delete_collection=request.args.get("reset"),
-    # )
-    # return Response.json(result)
-
-
-@bp2.get("/updates")
+@bp1.get("/events")
+@session_cookie(get=True)
 async def updates_page(request):
-    return Response.text("work in progress")
+    if not request.ctx.is_admin:
+        raise SanicException("sorry", status_code=401)
+    return Response.text("Updates table will be here")
     # return render_template(
     #     "webhooks.html",
     #     events=list(Webhooks.iter_updates(int(request.args.get("n", 100)))),
     #     )
+
+
+#
+# Stuff for subscription to Strava webhooks
+#
+bp2 = sanic.Blueprint("subscription", url_prefix="/subscription")
+
+
+def admin_strava_session(func):
+    def decorator(f):
+        @wraps(f)
+        async def decorated_function(request, *args, **kwargs):
+            if not request.ctx.is_admin:
+                raise SanicException("sorry", status_code=401)
+            request.ctx.strava_client = Strava.AsyncClient("admin")
+            response = f(request, *args, **kwargs)
+            if isawaitable(response):
+                response = await response
+            return response
+
+        return decorated_function
+
+    return decorator(func)
+
+
+@bp2.get("/create")
+@session_cookie(get=True)
+@admin_strava_session
+async def create_subscription(request):
+    try:
+        response_json = await request.ctx.strava_client.create_subscription(
+            request.url_for("updates.get_callback"), raise_exception=True
+        )
+    except ClientResponseError as e:
+        raise SanicException(e.message, status_code=e.status)
+    return Response.json(response_json)
+
+
+@bp2.get("/view")
+@session_cookie(get=True)
+@admin_strava_session
+async def view_subscription(request):
+    try:
+        response_json = await request.ctx.strava_client.view_subscription(
+            raise_exception=True
+        )
+    except ClientResponseError as e:
+        raise SanicException(e.message, status_code=e.status)
+    return Response.json(response_json)
+
+
+@bp2.get("/delete")
+@session_cookie(get=True)
+@admin_strava_session
+async def delete_subscription(request):
+    s_id = request.args.get("id")
+    try:
+        response_json = await request.ctx.strava_client.delete_subscription(
+            raise_exception=True, subscription_id=s_id
+        )
+    except ClientResponseError as e:
+        raise SanicException(e.message, status_code=e.status)
+
+    return Response.json(response_json)
 
 
 bp = sanic.Blueprint.group(bp1, bp2, url_prefix="/updates")

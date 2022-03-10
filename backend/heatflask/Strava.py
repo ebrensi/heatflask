@@ -131,12 +131,12 @@ class AsyncClient:
 
         try:
             result = await func(self.session, *args, **kwargs)
-        except Exception as e:
+        except Exception:
             if raise_exception:
                 await self.__aexit__()
                 raise
             log.exception("%s, %s", self, func)
-            result = e
+            return
 
         if not in_context:
             await self.__aexit__()
@@ -499,6 +499,7 @@ def subscription_verification(validation_dict):
 
 
 async def view_subscription(admin_session):
+    params = VIEW_SUBSCRIPTION_PARAMS
     async with admin_session.get(SUBSCRIPTION_ENDPOINT, params=params) as response:
         return await response.json()
 
