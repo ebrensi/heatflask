@@ -1,0 +1,25 @@
+<!-- Activity List/Table Tab -->
+<button type="button" class="btn btn-b btn-sm" data-action="selection-clear">
+  Clear Selection
+</button>
+
+<button type="button" class="btn btn-a btn-sm" data-action="selection-render">
+  Render selected
+</button>
+
+<br /><br />
+
+<input
+  type="checkbox"
+  data-bind="zoomToSelection"
+  data-prop="checked"
+  data-class="flag"
+/>
+<i class="fas fa-search-plus"></i>
+<i class="far fa-object-group"></i>
+<i class="fas fa-search-minus"></i>
+Zoom to selection
+
+<div id="items-container">
+  <table id="items"></table>
+</div>

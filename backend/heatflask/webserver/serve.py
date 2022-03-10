@@ -3,6 +3,7 @@ This is the main thing that runs on the backend
 """
 import os
 from sanic import Sanic
+from sanic.exceptions import SanicException
 import sanic.response as Response
 import asyncio
 
@@ -64,7 +65,6 @@ if os.environ.get("HEATFLASK_RESET"):
         if streams:
             await Streams.drop()
         print("Dropped databases")
-        # app.stop()
 
     app.register_listener(reset_db, "before_server_start")
 else:
@@ -90,11 +90,9 @@ async def splash(request):
             log.info("importing index for user %d", uid)
             app.add_task(Index.import_user_entries(**cu), name=f"import:{uid}")
         else:
-            log.info("fake-importing index for user %d", uid)
-            app.add_task(Index.fake_import(uid=uid), name=f"import:{uid}")
-            pass
-
-        # return Response.redirect(app.url_for("main", user_id=uid))
+            # log.info("fake-importing index for user %d", uid)
+            # app.add_task(Index.fake_import(uid=uid), name=f"import:{uid}")
+            return Response.redirect(app.url_for("main_page"))
 
     params = {
         "app_name": APP_NAME,
@@ -110,6 +108,24 @@ async def splash(request):
 
     html = request.ctx.render_template("splash-page.html", **params)
     return Response.html(html)
+
+
+# ****** Main (map/animations) Page ******
+@app.get("/main")
+@session_cookie(get=True, set=True, flashes=True)
+async def main_page(request):
+    current_user_id = request.ctx.current_user[Users.ID]
+    params = {
+        "app_name": APP_NAME,
+        "runtime_json": {"current_user_id": current_user_id},
+    }
+    html = request.ctx.render_template("main-page.html", **params)
+    return Response.html(html)
+
+
+@app.get("/test")
+async def test(request):
+    raise SanicException("get outta here", status_code=403)
 
 
 if __name__ == "__main__":

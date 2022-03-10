@@ -2,9 +2,9 @@
  * main.js -- the entry point for the heatflask browser client
  */
 
-import "./UI"
+import "./sidebar"
 
-import "../css/main.css" // This should be the last imported CSS
+import "../css/main-page.css" // This should be the last imported CSS
 
 const string = `
 
@@ -15,7 +15,7 @@ const string = `
 ██║  ██║███████╗██║  ██║   ██║   ██║     ███████╗██║  ██║███████║██║  ██╗
 ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═╝     ╚══════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
 
-(2016-2021) Efrem Rensi
+(2016-2022) Efrem Rensi
 `
 
 console.log(string)

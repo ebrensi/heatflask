@@ -1,0 +1,97 @@
+<!-- Profile & User Settings Tab -->
+<!-- <h1 class="sidebar-header">
+  <a
+    href="#"
+    target="_blank"
+    data-bind="strava-url"
+    data-prop="href"
+    data-class="current-user"
+    ><button
+      class="avatar"
+      data-class="target-user"
+      data-bind="avatar"
+      data-attr="data-url"
+    ></button
+  ></a>
+
+  <span
+    data-bind="username"
+    data-prop="innerText"
+    data-class="current-user"
+  ></span>
+
+  <span class="sidebar-close">
+    <i class="fas fa-caret-left"></i>
+  </span>
+</h1> -->
+
+<h3>
+  <span data-bind="firstname" data-prop="innerText" data-class="current-user"
+    >first</span
+  >
+  <span data-bind="lastname" data-prop="innerText" data-class="current-user"
+    >last</span
+  >
+</h3>
+
+<a href="https://www.strava.com/settings/profile" target="_blank">
+  <button
+    class="avatar"
+    data-bind="avatar"
+    data-prop="data-url"
+    data-class="current-user"
+  ></button>
+</a>
+
+<br /><br />
+We index your activity summaries for fast access.
+<br />
+
+<button type="button" class="btn btn-a btn-sm" data-action="view-index">
+  <i class="fa fa-list-alt"></i>
+  View index
+</button>
+<br />
+<hr />
+
+<div>
+  <label
+    ><input
+      type="checkbox"
+      data-class="current-user"
+      data-bind="public"
+      data-prop="checked"
+      data-event="change"
+    />
+    Public Profile
+    <a
+      href="#"
+      target="_blank"
+      data-bind="public-users-url"
+      data-prop="href"
+      data-class="info"
+    >
+      (<i class="fas fa-users"></i>
+      Public Users)
+    </a>
+  </label>
+</div>
+
+<br /><br /><br />
+
+<button type="button" data-action="logout" class="btn btn-c btn-sm">
+  <i class="fas fa-sign-out-alt"></i>
+  Log Out
+</button>
+
+<br />
+<hr />
+<br /><br />
+
+<button type="button" data-action="delete" class="btn btn-c btn-sm">
+  <i class="fas fa-user-alt-slash"></i>
+  Delete Account
+</button>
+
+<br />
+<div class="paypal-button"></div>

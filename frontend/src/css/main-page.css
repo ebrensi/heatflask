@@ -10,45 +10,16 @@
  * ☠ Be careful changing the order of these imports! ☠
  */
 
-/* Font-Awesome 5 icons */
-@import "../../node_modules/@fortawesome/fontawesome-free/css/all.css";
-
-/* Additional activity-type icons from icomoon */
-@import "./activity-icons.css";
-
-/* Min CSS framework (https://mincss.com) */
 @import "../ext/min_entireframework.css";
-
-/* Leafletjs */
+/*
 @import "../../node_modules/leaflet/dist/leaflet.css";
-
-/* Leaflet Sidebar-v2 */
-@import "../../node_modules/sidebar-v2/css/leaflet-sidebar.css";
-
-/* Leaflet control window for pop-up messages */
 @import "../../node_modules/leaflet-control-window/src/L.Control.Window.css";
-
-/* Leaflet plugin for selecting a rectangular area in the viewport */
 @import "../../node_modules/leaflet-areaselect/src/leaflet-areaselect.css";
-
-/* Easy Button for control buttons on the map */
 @import "../../node_modules/leaflet-easybutton/src/easy-button.css";
-
-/* Heatflask-specific styles */
 @import "./leaflet-mods.css";
-
-/* extra styling for sidebar-v2  */
-@import "./leaflet-sidebar-v2-mods.css";
-
-/* Styles the paypal donation button snippet */
-@import "./paypal-button.css";
-
-/* Strava authentication button and athlete badge */
 @import "./strava-buttons.css";
-
-/* Styling for the activity list table */
 @import "./main-table.css";
-
+*/
 body {
   padding: 0;
   margin: 0;
@@ -249,7 +220,7 @@ div.promptButtons {
   color: transparent;
 }
 
-#runtime-arguments {
+#runtime_json {
   display: none;
 }
 

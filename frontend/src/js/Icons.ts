@@ -2,5 +2,5 @@
 import "../css/icomoon-heatflask.css"
 
 export function icon(name, cls = "") {
-  return `<i class="hf-${name} ${cls}"></span>`
+  return `<i class="hf-${name} ${cls}"></i>`
 }

@@ -1,0 +1,108 @@
+<!-- Controls Tab -->
+
+<div>
+  <h4>System Constants</h4>
+
+  <!-- Timescale input -->
+  <div class="dot-const-slider">
+    <label for="dot-speed"
+      ><h5>Timescale:</h5>
+      &tau; =
+      <span data-bind="tau-info" data-class="info" data-prop="innerText"></span
+    ></label>
+    <br />
+    <input
+      type="range"
+      min="0"
+      max="1"
+      step="0.001"
+      class="dot-const"
+      id="dot-speed"
+      data-bind="s"
+      data-class="visual"
+      data-event="input"
+    />
+  </div>
+
+  <!-- Period input -->
+  <div class="dot-const-slider">
+    <label for="dot-sep"
+      ><h5>Period:</h5>
+      &Tau; =
+      <span data-bind="T-info" data-prop="innerText" data-class="info"></span
+    ></label>
+    <br />
+    <input
+      type="range"
+      min="0.25"
+      max="30"
+      step="0.25"
+      class="dot-const"
+      id="dot-sep"
+      data-bind="T"
+      data-class="visual"
+      data-event="input"
+    />
+  </div>
+
+  <hr />
+  <div class="dot-const-info"></div>
+  <hr />
+
+  <!-- Dot-alpha -->
+  <div class="dot-const-slider">
+    <label for="dot-alpha"><h5>&alpha;</h5></label>
+    <br />
+    <input
+      type="range"
+      min="0"
+      max="1"
+      step="0.01"
+      class="dot-const"
+      id="dot-alpha"
+      data-bind="alpha"
+      data-event="input"
+      data-class="visual"
+    />
+  </div>
+
+  <!-- Dot-size -->
+  <div class="dot-const-slider">
+    <label for="dot-size"><h5>Size</h5></label>
+    <br />
+    <input
+      type="range"
+      min="1"
+      max="20"
+      step="0.1"
+      class="dot-const"
+      id="dot-size"
+      data-bind="sz"
+      data-event="input"
+      data-class="visual"
+    />
+  </div>
+
+  <hr />
+  <span>
+    <input
+      type="checkbox"
+      id="showPaths"
+      data-bind="paths"
+      data-prop="checked"
+      data-class="visual"
+    />
+    <label for="showPaths">Show Paths</label>
+  </span>
+
+  <span>
+    <input
+      type="checkbox"
+      id="showShadows"
+      data-bind="shadows"
+      data-prop="checked"
+      data-class="visual"
+    />
+    <label for="showShadows">Shadows (CPU intensive)</label>
+  </span>
+</div>

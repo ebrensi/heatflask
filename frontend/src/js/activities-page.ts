@@ -182,7 +182,7 @@ function buildTableWithElements(el, data) {
   const table = document.getElementById("activity_list")
   const thead = document.createElement("thead")
   const header_row = document.createElement("tr")
-  for (h in makeHeaderRow()) {
+  for (const h in makeHeaderRow()) {
     const th = document.createElement("th")
     th.innerText = h
     header_row.appendChild(th)
