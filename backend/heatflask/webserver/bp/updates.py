@@ -20,18 +20,18 @@ from ..sessions import session_cookie
 
 log = getLogger(__name__)
 
-bp1 = sanic.Blueprint("updates", url_prefix="/")
+callbacks = sanic.Blueprint("updates", url_prefix="/")
 
 
-@bp1.get("/")
+@callbacks.get("/")
 async def get_callback(request):
     if request.args.get("hub.challenge"):
         return Response.json(Strava.subscription_verification(request.args))
     else:
-        return Response.redirect(request.app.url_for("updates.updates_page"))
+        return Response.redirect(request.app.url_for("subscription.updates_page"))
 
 
-@bp1.post("/")
+@callbacks.post("/")
 async def post_callback(request):
     update = request.json()
     event_time = update["event_time"]
@@ -60,22 +60,10 @@ async def post_callback(request):
     return Response.text("success")
 
 
-@bp1.get("/events")
-@session_cookie(get=True)
-async def updates_page(request):
-    if not request.ctx.is_admin:
-        raise SanicException("sorry", status_code=401)
-    return Response.text("Updates table will be here")
-    # return render_template(
-    #     "webhooks.html",
-    #     events=list(Webhooks.iter_updates(int(request.args.get("n", 100)))),
-    #     )
-
-
 #
 # Stuff for subscription to Strava webhooks
 #
-bp2 = sanic.Blueprint("subscription", url_prefix="/subscription")
+subscription = sanic.Blueprint("subscription", url_prefix="/subscription")
 
 
 def admin_strava_session(func):
@@ -95,7 +83,7 @@ def admin_strava_session(func):
     return decorator(func)
 
 
-@bp2.get("/create")
+@subscription.get("/create")
 @session_cookie(get=True)
 @admin_strava_session
 async def create_subscription(request):
@@ -108,7 +96,7 @@ async def create_subscription(request):
     return Response.json(response_json)
 
 
-@bp2.get("/view")
+@subscription.get("/view")
 @session_cookie(get=True)
 @admin_strava_session
 async def view_subscription(request):
@@ -121,7 +109,7 @@ async def view_subscription(request):
     return Response.json(response_json)
 
 
-@bp2.get("/delete")
+@subscription.get("/delete")
 @session_cookie(get=True)
 @admin_strava_session
 async def delete_subscription(request):
@@ -136,4 +124,17 @@ async def delete_subscription(request):
     return Response.json(response_json)
 
 
-bp = sanic.Blueprint.group(bp1, bp2, url_prefix="/updates")
+@subscription.get("/events")
+@session_cookie(get=True)
+async def updates_page(request):
+    if not request.ctx.is_admin:
+        raise SanicException("sorry", status_code=401)
+    return Response.text("Updates table will be here")
+    # return render_template(
+    #     "webhooks.html",
+    #     events=list(Webhooks.iter_updates(int(request.args.get("n", 100)))),
+    #     )
+    #
+
+
+bp = sanic.Blueprint.group(callbacks, subscription, url_prefix="/updates")

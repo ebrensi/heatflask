@@ -3,6 +3,7 @@ import "../css/spinner.css"
 
 import { img, href, sleep } from "./appUtil"
 import { icon } from "./Icons"
+import { JSTable } from "./jstable"
 
 const status_el = document.getElementById("status")
 
@@ -139,6 +140,12 @@ async function run() {
   const table_element: HTMLTableElement = document.getElementById("users")
   table_element.innerHTML = thead_str + tbody_str
   console.timeEnd("maketable")
+
+  const myTable = new JSTable(table_element, {
+    sortable: true,
+    searchable: true,
+    perPage: 12,
+  })
   await sleep(0.2)
   status_el.classList.remove("spinner")
 }

@@ -9,6 +9,7 @@ import { decodeMultiStream } from "@msgpack/msgpack"
 import { href, img, HHMMSS, sleep } from "./appUtil"
 import { icon } from "./Icons"
 import { activity_icon, activityURL, activity_pathcolor } from "./strava"
+import { JSTable } from "./jstable"
 
 const status_msg_el = document.getElementById("status_msg")
 const count_msg_el = document.getElementById("count")
@@ -113,6 +114,11 @@ async function main() {
   status_msg_el.innerText = ""
   count_msg_el.innerText = ""
 
+  const myTable = new JSTable(table_el, {
+    sortable: true,
+    searchable: true,
+    perPage: 16,
+  })
   await sleep(0.2)
   count_msg_el.classList.remove("spinner")
 }
