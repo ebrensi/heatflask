@@ -29,14 +29,6 @@ import * as table from "./Table"
 import { queueTask } from "./appUtil"
 import { getUrlString } from "./URL"
 
-/* TODO: have two UI submodules: UI-simple (single) and
-                                 UI-complex (multi-user)
-
-    one of which to be dynamically imported depending on the data query.
-
-  right now we are only doing the single target-user UI.
-*/
-
 // pause animation when window/tab is not visible
 document.onvisibilitychange = function (e) {
   if (!dotLayer) return

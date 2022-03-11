@@ -10,6 +10,9 @@ import profile_html from "bundle-text:../html/main-tabs/profile.html"
 import controls_html from "bundle-text:../html/main-tabs/controls.html"
 import info_html from "bundle-text:../html/main-tabs/info.html"
 
+// Code
+import "../../node_modules/sidebar-v2/js/leaflet-sidebar"
+
 const tabSpec = [
   ["query", icon("bars"), "(Target-user)'s map", query_html],
   ["activities", icon("table2"), "Rendered Activities", actvities_html],
@@ -39,7 +42,8 @@ for (const spec of tabSpec) {
     <div class="sidebar-pane" id="${name}">
       ${header}
       ${content}
-      </div>`)
+      </div>
+  `)
 }
 
 sidebar_tablist_el.innerHTML = tabs.join("\n")

@@ -4,11 +4,8 @@
  *   backend server, embedded in main.html
  */
 
-import { ws_prefix } from "./appUtil"
 // import load_ga_object from "./google-analytics.js"
 
-export let CLIENT_ID: string
-export let DEVELOPMENT: Boolean
 export let FLASH_MESSAGES: string[]
 export let APP_NAME: string
 export let CURRENT_USER: string
