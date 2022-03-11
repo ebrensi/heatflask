@@ -44,9 +44,6 @@ if (argstring) {
 export const MAPBOX_ACCESS_TOKEN =
   "pk.eyJ1IjoiaGVhdGZsYXNrIiwiYSI6ImNrMXB3NDZtMjA0cG4zbW85N2U1M2p2ZmQifQ.UvD1v0VyI_V1gJSey0vRbg"
 export const CAPTURE_DURATION_MAX = 20
-
-export const WEBSOCKET_URL = `${ws_prefix()}${window.location.host}/data_socket`
-export const BEACON_HANDLER_URL = "/beacon_handler"
 export const AUTHORIZE_URL = "/authorize"
 
 export function USER_URLS(userid) {

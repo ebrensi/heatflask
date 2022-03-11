@@ -3,6 +3,11 @@
  *
  * Efrem Rensi 2020
  */
+import "../../node_modules/leaflet/dist/leaflet.css"
+import "../../node_modules/leaflet-control-window/src/L.Control.Window.css"
+import "../../node_modules/leaflet-areaselect/src/leaflet-areaselect.css"
+import "../../node_modules/leaflet-easybutton/src/easy-button.css"
+import "../css/leaflet-mods.css"
 
 import { MAPBOX_ACCESS_TOKEN, OFFLINE, MAP_INFO } from "./Env"
 import Geohash from "latlon-geohash"
