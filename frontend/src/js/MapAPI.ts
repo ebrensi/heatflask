@@ -73,53 +73,6 @@ map.on("baselayerchange", (e) => {
   vParams.baselayer = e.layer
 })
 
-// The main sidebar UI
-// Leaflet sidebar v2
-export const sidebar = control.sidebar("sidebar").addTo(map)
-const sidebarTabs = Array.from(document.querySelectorAll("[role=tab]")).map(
-  (el) => el.href.split("#")[1]
-)
-
-if (!currentUser.id) {
-  const idx = sidebarTabs.indexOf("profile")
-  sidebarTabs.splice(idx, 1)
-}
-let currentTab = 0
-
-/* key and mouse bindings to the map to control the sidebar */
-
-sidebar.addEventListener("opening", () => (sidebar.isOpen = true))
-sidebar.addEventListener("closing", () => (sidebar.isOpen = false))
-sidebar.isOpen = false
-
-document.addEventListener("keydown", (e) => {
-  if (sidebar.isOpen) {
-    switch (e.keyCode) {
-      case 27: // ESC key
-      case 32: // Space key
-        sidebar.close()
-        break
-      case 40: // up-arrow
-        currentTab = (currentTab + 1) % sidebarTabs.length
-        sidebar.open(sidebarTabs[currentTab])
-        break
-      case 38: // down-arrow
-        currentTab--
-        if (currentTab < 0) currentTab = sidebarTabs.length - 1
-        sidebar.open(sidebarTabs[currentTab])
-        break
-    }
-  } else {
-    switch (e.keyCode) {
-      case 32: // Space key
-        sidebar.open(sidebarTabs[currentTab])
-        break
-    }
-  }
-})
-
-map.addEventListener("click", () => sidebar.isOpen && sidebar.close())
-
 /*
  * Functions concerning
  */

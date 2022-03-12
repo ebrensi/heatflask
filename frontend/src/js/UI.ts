@@ -6,6 +6,7 @@
 import { URLS, FLASHES } from "./Env"
 import "./Map"
 import "./sidebar"
+
 // import { targetUser, currentUser, vParams, qParams, flags } from "./Model"
 
 /* URL.ts import must be here because it requires MapAPI which requires

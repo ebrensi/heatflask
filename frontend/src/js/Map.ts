@@ -4,10 +4,10 @@
  *    except for the sidebar overlay.
  */
 
-import "../../node_modules/leaflet/dist/leaflet.css"
-import "../../node_modules/leaflet-control-window/src/L.Control.Window.css"
-import "../../node_modules/leaflet-areaselect/src/leaflet-areaselect.css"
-import "../../node_modules/leaflet-easybutton/src/easy-button.css"
+import "npm:leaflet/dist/leaflet.css"
+import "npm:leaflet-control-window/src/L.Control.Window.css"
+import "npm:leaflet-areaselect/src/leaflet-areaselect.css"
+import "npm:leaflet-easybutton/src/easy-button.css"
 import "../css/leaflet-mods.css"
 
 import { MAPBOX_ACCESS_TOKEN, OFFLINE, ADMIN } from "./Env"
@@ -18,7 +18,7 @@ import "./BoxHook"
 
 import Geohash from "latlon-geohash"
 import "leaflet-control-window"
-import "../../node_modules/leaflet-areaselect/src/leaflet-areaselect"
+import "npm:leaflet-areaselect/src/leaflet-areaselect"
 import { tileLayer } from "./TileLayer/TileLayer.Heatflask"
 
 import strava_logo from "url:../images/pbs4.png"
@@ -31,8 +31,8 @@ export const map = new Map("map", {
   center: [0, 0],
   zoom: 4,
   zoomAnimation: true,
-  zoomSnap: 0.1,
-  zoomDelta: 0.5,
+  zoomSnap: 1,
+  zoomDelta: 1,
   zoomAnimationThreshold: 8,
   wheelPxPerZoomLevel: 60,
   updateWhenZooming: true,

@@ -1,9 +1,10 @@
 // CSS
-import "../../node_modules/sidebar-v2/css/leaflet-sidebar.css"
+import "npm:sidebar-v2/css/leaflet-sidebar.css"
 import "../css/leaflet-sidebar-v2-mods.css"
 
 // HTML
 import { icon } from "./Icons"
+
 import query_html from "bundle-text:../html/main-tabs/query.html"
 import actvities_html from "bundle-text:../html/main-tabs/activities.html"
 import profile_html from "bundle-text:../html/main-tabs/profile.html"
@@ -11,7 +12,9 @@ import controls_html from "bundle-text:../html/main-tabs/controls.html"
 import info_html from "bundle-text:../html/main-tabs/info.html"
 
 // Code
-import "../../node_modules/sidebar-v2/js/leaflet-sidebar"
+import "npm:sidebar-v2/js/leaflet-sidebar"
+import { control } from "./myLeaflet"
+import pureknob from "pure-knob"
 
 const tabSpec = [
   ["query", icon("bars"), "(Target-user)'s map", query_html],
@@ -48,3 +51,60 @@ for (const spec of tabSpec) {
 
 sidebar_tablist_el.innerHTML = tabs.join("\n")
 sidebar_content_el.innerHTML = contents.join("")
+
+// The main sidebar UI
+// Leaflet sidebar v2
+export const sidebar = control.sidebar("sidebar").addTo(map)
+
+// const sidebarTabs = Array.from(document.querySelectorAll("[role=tab]")).map(
+//   (el) => el.href.split("#")[1]
+// )
+
+// if (!currentUser.id) {
+//   const idx = sidebarTabs.indexOf("profile")
+//   sidebarTabs.splice(idx, 1)
+// }
+
+let currentTab = 0
+
+/* key and mouse bindings to the map to control the sidebar */
+
+sidebar.addEventListener("opening", () => (sidebar.isOpen = true))
+sidebar.addEventListener("closing", () => (sidebar.isOpen = false))
+sidebar.isOpen = false
+
+document.addEventListener("keydown", (e) => {
+  if (sidebar.isOpen) {
+    switch (e.keyCode) {
+      case 27: // ESC key
+      case 32: // Space key
+        sidebar.close()
+        break
+      case 40: // up-arrow
+        currentTab = (currentTab + 1) % sidebarTabs.length
+        sidebar.open(sidebarTabs[currentTab])
+        break
+      case 38: // down-arrow
+        currentTab--
+        if (currentTab < 0) currentTab = sidebarTabs.length - 1
+        sidebar.open(sidebarTabs[currentTab])
+        break
+    }
+  } else {
+    switch (e.keyCode) {
+      case 32: // Space key
+        sidebar.open(sidebarTabs[currentTab])
+        break
+    }
+  }
+})
+
+map.addEventListener("click", () => sidebar.isOpen && sidebar.close())
+
+const knob = pureknob.createKnob(300, 300)
+// Create element node.
+const node = knob.node()
+
+// Add it to the DOM.
+const elem = document.getElementById("knob")
+elem.appendChild(node)
