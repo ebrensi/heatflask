@@ -107,6 +107,8 @@ async def auth_callback(request):
 @session_cookie(get=True, set=True)
 async def logout(request):
     cuser = request.ctx.current_user
+    if request.ctx.is_admin and ("user" in request.args):
+        cuser = await Users.get(request.args.get("user"))
     cuser_id = cuser[Users.ID] if cuser else None
     request.ctx.current_user = None
     request.ctx.session = None

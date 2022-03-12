@@ -215,7 +215,8 @@ div.promptButtons {
   color: transparent;
 }
 
-#runtime_json {
+#runtime_json,
+#flashes {
   display: none;
 }
 

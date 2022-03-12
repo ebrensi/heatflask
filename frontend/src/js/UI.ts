@@ -3,15 +3,17 @@
  *  Here we initialize the DOM/user interface
  */
 
-import { AUTHORIZE_URL } from "./Env"
+import { URLS, FLASHES } from "./Env"
+import "./Map"
+import "./sidebar"
+// import { targetUser, currentUser, vParams, qParams, flags } from "./Model"
 
-import { targetUser, currentUser, vParams, qParams, flags } from "./Model"
 /* URL.ts import must be here because it requires MapAPI which requires
  *  ActivityCollection, which requires URL.  If we import MapAPI first
  *  then it will end up requiring itself.
  */
-import "./URL"
-import { map } from "./MapAPI"
+// import "./URL"
+// import { map } from "./MapAPI"
 
 // import * as ActivityCollection from "./DotLayer/ActivityCollection"
 

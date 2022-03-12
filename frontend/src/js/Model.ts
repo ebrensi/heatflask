@@ -3,7 +3,7 @@
  *    beginning with those specified by the current URL in the browser.
  */
 
-import { CURRENT_USER, USER_URLS } from "./Env"
+import { CURRENT_USER, URLS } from "./Env"
 import { BoundObject } from "./DataBinding"
 import { HHMMSS } from "./appUtil"
 
@@ -135,12 +135,10 @@ export const qParams = <QueryParameters & BoundObject>(
   BoundObject.fromObject(qParamsInit, { event: "change" })
 )
 
-const afterDateElement: HTMLInputElement = document.querySelector(
-  "[data-bind=after]"
-)
-const beforeDateElement: HTMLInputElement = document.querySelector(
-  "[data-bind=before]"
-)
+const afterDateElement: HTMLInputElement =
+  document.querySelector("[data-bind=after]")
+const beforeDateElement: HTMLInputElement =
+  document.querySelector("[data-bind=before]")
 
 // afterDateElement.max = today
 // beforeDateElement.min = today

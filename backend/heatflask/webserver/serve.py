@@ -15,7 +15,7 @@ from .. import Index
 from .. import Users
 from .. import Streams
 
-from .config import APP_BASE_NAME, APP_NAME, LOG_CONFIG
+from .config import APP_BASE_NAME, APP_VERSION, APP_NAME, APP_ENV, LOG_CONFIG
 from .sessions import session_cookie
 from . import files
 
@@ -67,10 +67,10 @@ if os.environ.get("HEATFLASK_RESET"):
         print("Dropped databases")
 
     app.register_listener(reset_db, "before_server_start")
-else:
+elif APP_ENV != "development":
+    # We don't do triaging in development
     app.add_task(Users.triage)
     app.add_task(Index.triage)
-    log.info("tasks: %s", app.tasks)
 
 app.register_listener(DataAPIs.disconnect, "after_server_stop")
 
@@ -114,10 +114,35 @@ async def splash(request):
 @app.get("/main")
 @session_cookie(get=True, set=True, flashes=True)
 async def main_page(request):
-    current_user_id = request.ctx.current_user[Users.ID]
+    cu = request.ctx.current_user
+    if request.ctx.is_admin and ("as_user" in request.args):
+        cu = request.args.get("as_user")
+
+    app = request.app
     params = {
-        "app_name": APP_NAME,
-        "runtime_json": {"current_user_id": current_user_id},
+        # These will be imbedded in the served html as text
+        "APP_NAME": APP_NAME,
+        "runtime_json": {
+            # These will be available to the client as a JSON string
+            # at non-visible element "#runtime_json"
+            "APP_VERSION": APP_VERSION,
+            "CURRENT_USER": {"id": cu[Users.ID], "profile": cu[Users.PROFILE]}
+            if cu
+            else None,
+            "ADMIN": request.ctx.is_admin,
+            "URLS": {
+                "login": app.url_for("auth.authorize"),
+                "query": app.url_for("activities.query"),
+                "index": app.url_for("activities.index_page"),
+                "visibility": app.url_for("users.visibility"),
+                "logout": app.url_for("auth.logout"),
+                "delete": app.url_for("users.delete"),
+                "strava": {
+                    "athlete": "https://www.strava.com/athletes/",
+                    "activity": "https://www.strava.com/activities/",
+                },
+            },
+        },
     }
     html = request.ctx.render_template("main-page.html", **params)
     return Response.html(html)

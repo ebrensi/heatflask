@@ -1,12 +1,19 @@
 /*
  * main.js -- the entry point for the heatflask browser client
  */
-
+import { APP_VERSION } from "./Env"
 import "./UI"
 
-import "../css/main-page.css" // This should be the last imported CSS
+/*
+    This should be the last imported CSS so that the rules in it over-ride
+    everything before.
 
-const string = `
+    With ParcelJS packaging, each imported .js/.ts module
+    can have its own imported .css so we import this after the modules as well
+*/
+import "../css/main-page.css"
+
+console.log(`
 
 ██╗  ██╗███████╗ █████╗ ████████╗███████╗██╗      █████╗ ███████╗██╗  ██╗
 ██║  ██║██╔════╝██╔══██╗╚══██╔══╝██╔════╝██║     ██╔══██╗██╔════╝██║ ██╔╝
@@ -14,10 +21,7 @@ const string = `
 ██╔══██║██╔══╝  ██╔══██║   ██║   ██╔══╝  ██║     ██╔══██║╚════██║██╔═██╗
 ██║  ██║███████╗██║  ██║   ██║   ██║     ███████╗██║  ██║███████║██║  ██╗
 ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═╝     ╚══════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
+v${APP_VERSION}                                           (2016-2022) Efrem Rensi
 
-(2016-2022) Efrem Rensi
-`
-
-console.log(string)
-console.log("Are you a developer? Want to contribute?")
-console.log("Check out the repo at https://github.com/ebrensi/heatflask")
+Check out the repo at https://github.com/ebrensi/heatflask
+`)

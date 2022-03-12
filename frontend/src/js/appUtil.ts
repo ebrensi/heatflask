@@ -1,6 +1,8 @@
 /*
  *   appUtil.js -- this is where we define constants and general utility functions
- *   that don't fit anywhere else
+ *   that don't fit anywhere else.
+ *
+ *   importing it has no side-effects
  */
 export function padNum(num: number, size: number): string {
   let s = String(num)
