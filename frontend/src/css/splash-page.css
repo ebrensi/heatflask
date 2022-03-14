@@ -1,5 +1,7 @@
 @import "../ext/min_entireframework.css";
 @import "./strava-buttons.css";
+@import "./hide-runtime-elements.css";
+@import "./flash-messages.css";
 
 :root {
   background-color: #000000;
@@ -20,25 +22,6 @@ textarea,
 input,
 select {
   border: inherit;
-}
-
-.msg {
-  position: absolute;
-  /*top: 10%;*/
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 1000;
-  color: black;
-  font-size: 16pt;
-  margin: 0 auto;
-  width: 50%;
-  opacity: 0.9;
-  padding: 10px;
-  display: None;
-}
-
-.msg li {
-  list-style-type: none;
 }
 
 .logo {
@@ -70,9 +53,4 @@ body {
   width: 90vw;
   height: 90vh;
   margin: auto;
-}
-
-#runtime_json,
-#flashes {
-  display: none;
 }

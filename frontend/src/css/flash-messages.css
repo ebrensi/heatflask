@@ -1,0 +1,18 @@
+.msg {
+  position: absolute;
+  /*top: 10%;*/
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+  color: black;
+  font-size: 16pt;
+  margin: 0 auto;
+  width: 50%;
+  opacity: 0.9;
+  padding: 10px;
+  display: None;
+}
+
+.msg li {
+  list-style-type: none;
+}

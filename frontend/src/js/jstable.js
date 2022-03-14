@@ -1,7 +1,7 @@
 /*!
  * JSTable v1.5.1
  */
-import "../css/jstable.scss"
+// import "../css/jstable.scss"
 
 const JSTableDefaultConfig = {
   perPage: 5,

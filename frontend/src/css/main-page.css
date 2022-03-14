@@ -5,16 +5,19 @@
  * ☠ Be careful changing the order of these imports! ☠
  */
 @import "../ext/min_entireframework.css";
+
 @import "npm:leaflet/dist/leaflet.css";
 @import "npm:sidebar-v2/css/leaflet-sidebar.css";
 @import "npm:leaflet-control-window/src/L.Control.Window.css";
 @import "npm:leaflet-areaselect/src/leaflet-areaselect.css";
 @import "npm:leaflet-easybutton/src/easy-button.css";
-@import "../css/leaflet-mods.css";
-@import "../css/leaflet-sidebar-v2-mods.css";
-@import "../css/strava-buttons.css";
-@import "../css/icomoon-heatflask.css";
 
+@import "./leaflet-mods.css";
+@import "./leaflet-sidebar-v2-mods.css";
+@import "./strava-buttons.css";
+@import "./icomoon-heatflask.css";
+@import "./hide-runtime-elements.css";
+@import "./flash-messages.css";
 /*@import "./main-table.css";*/
 
 :root {
@@ -219,11 +222,6 @@ div.promptButtons {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-}
-
-#runtime_json,
-#flashes {
-  display: none;
 }
 
 input.dot-const {

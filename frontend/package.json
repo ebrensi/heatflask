@@ -76,7 +76,6 @@
     },
     "ignorePatterns": [
       "dist/*",
-      "dist_unbundled/*",
       "src/ext/*",
       "src/misc/*"
     ]

@@ -1,6 +1,9 @@
 @import "../ext/min_entireframework.css";
-@import "../css/spinner.css";
-@import "../css/icomoon-heatflask.css";
+@import "./spinner.css";
+@import "./icomoon-heatflask.css";
+@import "./hide-runtime-elements.css";
+@import "./flash-messages.css";
+@import "./jstable.scss";
 
 i {
   font-size: 20pt;
@@ -29,8 +32,4 @@ tr.selected:hover {
   visibility: hidden;
   opacity: 0;
   transition: visibility 0s 0.25s, opacity 0.25s linear;
-}
-
-#runtime_json {
-  display: none;
 }
