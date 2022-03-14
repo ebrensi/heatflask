@@ -1,6 +1,3 @@
-import "../ext/min_entireframework.css"
-import "../css/spinner.css"
-
 import { img, href, sleep } from "./appUtil"
 import { icon } from "./Icons"
 import { JSTable } from "./jstable"

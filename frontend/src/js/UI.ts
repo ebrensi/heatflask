@@ -3,9 +3,15 @@
  *  Here we initialize the DOM/user interface
  */
 
+import "./Env"
 import { URLS, FLASHES } from "./Env"
 import "./Map"
+import { map } from "./Map"
+
 import "./sidebar"
+import { renderTabs } from "./sidebar"
+
+renderTabs(map)
 
 // import { targetUser, currentUser, vParams, qParams, flags } from "./Model"
 

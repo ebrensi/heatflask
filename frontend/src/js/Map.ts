@@ -4,11 +4,11 @@
  *    except for the sidebar overlay.
  */
 
-import "npm:leaflet/dist/leaflet.css"
-import "npm:leaflet-control-window/src/L.Control.Window.css"
-import "npm:leaflet-areaselect/src/leaflet-areaselect.css"
-import "npm:leaflet-easybutton/src/easy-button.css"
-import "../css/leaflet-mods.css"
+// import "npm:leaflet/dist/leaflet.css"
+// import "npm:leaflet-control-window/src/L.Control.Window.css"
+// import "npm:leaflet-areaselect/src/leaflet-areaselect.css"
+// import "npm:leaflet-easybutton/src/easy-button.css"
+// import "../css/leaflet-mods.css"
 
 import { MAPBOX_ACCESS_TOKEN, OFFLINE, ADMIN } from "./Env"
 import { Map, control, Control, DomUtil } from "./myLeaflet"
@@ -16,7 +16,7 @@ import { Map, control, Control, DomUtil } from "./myLeaflet"
 // For ctrl-select
 import "./BoxHook"
 
-import Geohash from "latlon-geohash"
+// import Geohash from "latlon-geohash"
 import "leaflet-control-window"
 import "npm:leaflet-areaselect/src/leaflet-areaselect"
 import { tileLayer } from "./TileLayer/TileLayer.Heatflask"
@@ -27,6 +27,7 @@ import heatflask_logo from "url:../images/logo.png"
 /*
  * Initialize the Leaflet map object
  */
+
 export const map = new Map("map", {
   center: [0, 0],
   zoom: 4,
@@ -37,6 +38,7 @@ export const map = new Map("map", {
   wheelPxPerZoomLevel: 60,
   updateWhenZooming: true,
   worldCopyJump: true,
+  preferCanvas: true,
 })
 
 // Add zoom Control
@@ -105,6 +107,8 @@ for (const name in baselayers) {
 
 // Add baselayer selection control to map
 control.layers(baselayers, null, { position: "topleft" }).addTo(map)
+
+// Add default baselayer to map
 baselayers[defaultBaselayerName].addTo(map)
 
 // Define a watermark control
@@ -118,7 +122,7 @@ const Watermark = Control.extend({
   },
 })
 
-// Add Watermarks
+// Add Watermarks to map
 new Watermark({
   image: strava_logo,
   width: "20%",

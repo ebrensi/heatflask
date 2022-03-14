@@ -1,20 +1,26 @@
 /* heatflask.css -- this stylesheet is meant to get loaded in last
    in order to over-write some style settings of dependencies      */
 
-/* global variables */
+/*
+ * ☠ Be careful changing the order of these imports! ☠
+ */
+@import "../ext/min_entireframework.css";
+@import "npm:leaflet/dist/leaflet.css";
+@import "npm:sidebar-v2/css/leaflet-sidebar.css";
+@import "npm:leaflet-control-window/src/L.Control.Window.css";
+@import "npm:leaflet-areaselect/src/leaflet-areaselect.css";
+@import "npm:leaflet-easybutton/src/easy-button.css";
+@import "../css/leaflet-mods.css";
+@import "../css/leaflet-sidebar-v2-mods.css";
+@import "../css/strava-buttons.css";
+@import "../css/icomoon-heatflask.css";
+
+/*@import "./main-table.css";*/
+
 :root {
   --strava-badge: url("../images/strava_button.png");
 }
 
-/*
- * ☠ Be careful changing the order of these imports! ☠
- */
-
-@import "../ext/min_entireframework.css";
-/*
-@import "./strava-buttons.css";
-@import "./main-table.css";
-*/
 body {
   padding: 0;
   margin: 0;
@@ -45,7 +51,7 @@ textarea {
 
 /* Avatar button for registered user */
 button.avatar {
-  background: var(--strava-badge);
+  background: url("../images/strava_button.png");
   background-size: cover;
   width: 32px;
   height: 32px;
@@ -169,23 +175,23 @@ div.promptButtons {
   display: none;
 }
 
-.fa-twitter {
+.hf-twitter {
   color: #38a1f3;
 }
 
-.fa-linkedin {
+.hf-linkedin {
   color: #0077b5;
 }
 
-.fa-strava {
+.hf-strava {
   color: #fc4c02;
 }
 
-.fa-github {
+.hf-github {
   color: #fff;
 }
 
-.fa-instagram {
+.hf-instagram {
   background: -moz-linear-gradient(
     45deg,
     #f09433 0%,

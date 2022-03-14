@@ -5,7 +5,7 @@
 
 const GOOGLE_ANALYTICS_ACCOUNT_ID = "UA-85621398-1"
 
-export default function load_ga_object() {
+export function load_ga_object() {
   ;(function (i, s, o, g, r, a, m) {
     i["GoogleAnalyticsObject"] = r
     ;(i[r] =

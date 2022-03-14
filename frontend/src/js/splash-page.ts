@@ -1,5 +1,3 @@
-import "../css/splash-page.css"
-
 console.log(`Environment: ${process.env.NODE_ENV}`)
 
 const runtime_json = JSON.parse(

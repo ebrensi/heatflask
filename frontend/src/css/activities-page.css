@@ -1,4 +1,6 @@
 @import "../ext/min_entireframework.css";
+@import "../css/spinner.css";
+@import "../css/icomoon-heatflask.css";
 
 i {
   font-size: 20pt;
