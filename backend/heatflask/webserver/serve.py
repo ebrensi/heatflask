@@ -75,24 +75,25 @@ elif APP_ENV != "development":
 app.register_listener(DataAPIs.disconnect, "after_server_stop")
 
 
-# ****** Splash Page ******
+# ****** Splash/Main Page ******
 @app.get("/")
 @session_cookie(get=True, set=True, flashes=True)
-async def splash(request):
-    this_url = request.url_for("splash")
-
-    cu = request.ctx.current_user
-    if cu:
+async def splash_page(request):
+    #  This is what a user gets when they navigate their browser to
+    #  https://heatflask.com (with or without www.)
+    #
+    # If this is a logged-in user then we send them a map page,
+    # otherwise a splash page
+    if request.ctx.current_user:
+        cu = request.ctx.current_user
         fullname = f"{cu[Users.FIRSTNAME]} {cu[Users.LASTNAME]}"
         request.ctx.flash(f"Welcome back {fullname}")
         uid = cu[Users.ID]
         if not await Index.has_user_entries(**cu):
             log.info("importing index for user %d", uid)
             app.add_task(Index.import_user_entries(**cu), name=f"import:{uid}")
-        else:
-            # log.info("fake-importing index for user %d", uid)
-            # app.add_task(Index.fake_import(uid=uid), name=f"import:{uid}")
-            return Response.redirect(app.url_for("main_page"))
+
+        return Response.redirect(app.url_for("user_page", target_user_id=uid))
 
     params = {
         "app_name": APP_NAME,
@@ -101,23 +102,25 @@ async def splash(request):
             "urls": {
                 "demo": app.url_for("activities.index_page"),
                 "directory": app.url_for("users.directory"),
-                "authorize": app.url_for("auth.authorize", state=this_url),
+                "authorize": app.url_for("auth.authorize", state=request.endpoint),
             },
         },
     }
-
     html = request.ctx.render_template("splash-page.html", **params)
     return Response.html(html)
 
 
-# ****** Main (map/animations) Page ******
-@app.get("/main")
+@app.get("/<target_user_id:int>")
+@app.get("/global")
 @session_cookie(get=True, set=True, flashes=True)
-async def main_page(request):
-    cu = request.ctx.current_user
-    if request.ctx.is_admin and ("as_user" in request.args):
-        cu = request.args.get("as_user")
+async def user_page(request, target_user_id=None):
+    if target_user_id and not await Users.get(target_user_id):
+        raise SanicException(
+            f"Strava athlete {target_user_id} is not registered.", status_code=404
+        )
 
+    cu = request.ctx.current_user
+    cu_data = {"id": cu[Users.ID], "profile": cu[Users.PROFILE]} if cu else None
     app = request.app
     params = {
         # These will be imbedded in the served html as text
@@ -126,9 +129,8 @@ async def main_page(request):
             # These will be available to the client as a JSON string
             # at non-visible element "#runtime_json"
             "APP_VERSION": APP_VERSION,
-            "CURRENT_USER": {"id": cu[Users.ID], "profile": cu[Users.PROFILE]}
-            if cu
-            else None,
+            "CURRENT_USER": cu_data,
+            "TARGET_USER_ID": target_user_id,
             "ADMIN": request.ctx.is_admin,
             "URLS": {
                 "login": app.url_for("auth.authorize"),
@@ -146,6 +148,11 @@ async def main_page(request):
     }
     html = request.ctx.render_template("main-page.html", **params)
     return Response.html(html)
+
+
+@app.get("/demo")
+async def demo_page(request):
+    raise SanicException("Not implemented yet!", status_code=501)
 
 
 @app.get("/test")

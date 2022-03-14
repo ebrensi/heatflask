@@ -82,3 +82,6 @@ async def migrate(request):
         return Response.text("Nope, sorry. :(")
     await Users.migrate()
     return Response.redirect(request.app.url_for("users.directory", admin=1))
+
+
+# user pages
