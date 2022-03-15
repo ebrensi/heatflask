@@ -16,7 +16,7 @@ import { Map, control, Control, DomUtil } from "./myLeaflet"
 // For ctrl-select
 import "./BoxHook"
 
-// import Geohash from "latlon-geohash"
+import Geohash from "latlon-geohash"
 import "leaflet-control-window"
 import "npm:leaflet-areaselect/src/leaflet-areaselect"
 import { tileLayer } from "./TileLayer/TileLayer.Heatflask"
@@ -140,36 +140,46 @@ new Watermark({
 /*
  * Display for debugging
  */
-// const InfoViewer = Control.extend({
-//   onAdd: function () {
-//     const infoBox = DomUtil.create("div")
-//     infoBox.style.width = "200px"
-//     infoBox.style.padding = "5px"
-//     infoBox.style.background = "rgba(255,255,255,0.6)"
-//     infoBox.style.textAlign = "left"
-//     function onMove() {
-//       const zoom = map.getZoom().toFixed(2)
-//       const center = map.getCenter()
-//       // const gh = Geohash.encode(center.lat, center.lng, zoom)
-//       // const { x: pox, y: poy } = map.getPixelOrigin()
-//       // const { x: mx, y: my } = map._getMapPanePos()
-//       // const { _southWest: SW, _northEast: NE } = map.getBounds()
-//       // const { lat: swLat, lng: swLng } = SW
-//       // const { lat: neLat, lng: neLng } = NE
+const InfoViewer = Control.extend({
+  onAdd: function () {
+    const infoBox = DomUtil.create("div")
+    infoBox.style.width = "200px"
+    infoBox.style.padding = "5px"
+    infoBox.style.background = "rgba(255,255,255,0.6)"
+    infoBox.style.textAlign = "left"
+    this.infoBox = infoBox
 
-//       infoBox.innerHTML =
-//         `<b>Map</b>: zoom: ${zoom}<br>`
-//         // `geohash: ${gh}<br>`
-//         // `SW: ${swLat.toFixed(4)}, ${swLng.toFixed(4)}<br>` +
-//         // `NE: ${neLat.toFixed(4)}, ${neLng.toFixed(4)}<br>` +
-//         // `px0: ${pox}, ${poy}<br>` +
-//         // `mpp: ${mx.toFixed(3)}, ${my.toFixed(3)}<br>`
-//     }
-//     map.on("zoomstart zoom zoomend move", onMove)
-//     return infoBox
-//   }
-// })
+    this.onMove = () => {
+      const zoom = map.getZoom().toFixed(2)
+      const center = map.getCenter()
+      const gh = Geohash.encode(center.lat, center.lng, zoom)
+      const { x: pox, y: poy } = map.getPixelOrigin()
+      const { x: mx, y: my } = map._getMapPanePos()
+      const { _southWest: SW, _northEast: NE } = map.getBounds()
+      const { lat: swLat, lng: swLng } = SW
+      const { lat: neLat, lng: neLng } = NE
 
-// if (ADMIN){
-//   new InfoViewer().addTo(map)
-// }
+      infoBox.innerHTML =
+        `<b>Map</b>: zoom: ${zoom}<br>` +
+        `GeoHash: ${gh}<br>` +
+        `SW: ${swLat.toFixed(4)}, ${swLng.toFixed(4)}<br>` +
+        `NE: ${neLat.toFixed(4)}, ${neLng.toFixed(4)}<br>` +
+        `px0: ${pox}, ${poy}<br>` +
+        `mpp: ${mx.toFixed(3)}, ${my.toFixed(3)}<br>`
+    }
+    map.on("zoomstart zoom zoomend move", this.onMove)
+    return infoBox
+  },
+
+  onRemove: function () {
+    map.off("zoomstart zoom zoomend move", this.onMove)
+    this.infoBox.remove()
+  },
+})
+
+const box = new InfoViewer()
+if (ADMIN) {
+  box.addTo(map)
+}
+
+// To remove it run box.remove()

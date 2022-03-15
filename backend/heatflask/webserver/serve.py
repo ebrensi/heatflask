@@ -51,6 +51,7 @@ app.register_listener(cancel_background_tasks, "after_server_stop")
 # Redis and MongoDB APIs are async and need to run in the same loop as app
 # so we run init_app to "connect" them
 app.register_listener(DataAPIs.connect, "before_server_start")
+app.register_listener(DataAPIs.disconnect, "after_server_stop")
 
 if os.environ.get("HEATFLASK_RESET"):
 
@@ -64,12 +65,11 @@ if os.environ.get("HEATFLASK_RESET"):
         print("Dropped databases")
 
     app.register_listener(reset_db, "before_server_start")
-elif APP_ENV != "development":
+
+if APP_ENV != "development":
     # We don't do triage in development
     app.add_task(Users.triage)
     app.add_task(Index.triage)
-
-app.register_listener(DataAPIs.disconnect, "after_server_stop")
 
 
 if __name__ == "__main__":
