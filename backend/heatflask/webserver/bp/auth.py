@@ -3,6 +3,7 @@ Defines /auth/* webserver endpoints
 used for authenticating (logging in/out) Strava users
 """
 import sanic.response as Response
+from sanic.exceptions import SanicException
 import sanic
 
 from logging import getLogger
@@ -104,15 +105,18 @@ async def auth_callback(request):
 
 
 @bp.get("/logout")
-@session_cookie(get=True, set=True)
+@session_cookie(get=True, set=True, flashes=True)
 async def logout(request):
     cuser = request.ctx.current_user
-    if request.ctx.is_admin and ("user" in request.args):
-        cuser = await Users.get(request.args.get("user"))
-    cuser_id = cuser[Users.ID] if cuser else None
+    if not cuser:
+        raise SanicException("No user currently logged in.", status_code=400)
+
+    cuser_id = cuser[Users.ID]
     request.ctx.current_user = None
-    request.ctx.session = None
-    state = request.args.get("state")
+
+    request.ctx.flash(f"User {cuser_id} logged out.")
+    splash_page_url = request.app.url_for("main.splash_page")
+    state = request.args.get("state", splash_page_url)
     return (
         Response.redirect(state)
         if state

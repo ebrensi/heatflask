@@ -9,8 +9,10 @@
 /*
  * main.js -- the entry point for the heatflask browser client
  */
+console.time("client setup")
 import { APP_VERSION } from "./Env"
 import "./UI"
+console.timeEnd("client setup")
 
 console.log(`
 

@@ -6,12 +6,22 @@
 import "./Env"
 import { URLS, FLASHES } from "./Env"
 import "./Map"
-import { map } from "./Map"
+import { map, controlWindow } from "./Map"
 
 import "./sidebar"
 import { renderTabs } from "./sidebar"
 
 renderTabs(map)
+
+const flashes = FLASHES // || ["flash 1", "flash2"]
+if (!!flashes && flashes.length) {
+  const result = controlWindow({
+    title: "flashes",
+    content: flashes.join("<br>"),
+    position: "top",
+  }).show()
+  console.log(result)
+}
 
 // import { targetUser, currentUser, vParams, qParams, flags } from "./Model"
 
@@ -20,7 +30,6 @@ renderTabs(map)
  *  then it will end up requiring itself.
  */
 // import "./URL"
-// import { map } from "./MapAPI"
 
 // import * as ActivityCollection from "./DotLayer/ActivityCollection"
 

@@ -95,7 +95,7 @@ async def index_page(request):
         query["limit"] = 0
 
     current_user_id = (
-        request.ctx.current_user["_id"] if request.ctx.current_user else None
+        request.ctx.current_user[Users.ID] if request.ctx.current_user else None
     )
     target_user_id = request.args.get("user_id", None if all_users else current_user_id)
     if target_user_id:

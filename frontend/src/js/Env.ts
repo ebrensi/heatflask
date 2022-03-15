@@ -15,13 +15,24 @@ export const DEV_BUNDLE = process.env.NODE_ENV !== "production"
 export const MAP_INFO = DEV_BUNDLE
 
 const argstring = document.getElementById("runtime_json").innerText
-export const { CURRENT_USER, ADMIN, APP_VERSION, URLS } = JSON.parse(argstring)
+export const { CURRENT_USER, TARGET_USER_ID, ADMIN, APP_VERSION, URLS } =
+  JSON.parse(argstring)
 
 const flashes_text = document.getElementById("flashes").innerText
 export const FLASHES = flashes_text ? JSON.parse(flashes_text) : null
 
 export const OFFLINE = false
 
+export function USER_URLS(userid) {
+  return {
+    main: `/${userid}`,
+    index: `/${userid}/activities`,
+    public: `/${userid}/update_info`,
+    delete: `/${userid}/delete`,
+    logout: `/${userid}/logout`,
+    strava: `https://www.strava.com/athletes/${userid}`,
+  }
+}
 /*
  * Load in the google analytics object if this is
  *  the production environment and the current user is not

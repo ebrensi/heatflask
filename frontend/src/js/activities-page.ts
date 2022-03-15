@@ -6,7 +6,7 @@
 import { decodeMultiStream } from "@msgpack/msgpack"
 import { href, img, HHMMSS, sleep } from "./appUtil"
 import { icon } from "./Icons"
-import { activity_icon, activityURL, activity_pathcolor } from "./strava"
+import { activity_icon, activityURL } from "./strava"
 import { JSTable } from "./jstable"
 
 const status_msg_el = document.getElementById("status_msg")

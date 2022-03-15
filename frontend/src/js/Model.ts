@@ -3,11 +3,10 @@
  *    beginning with those specified by the current URL in the browser.
  */
 
-import { CURRENT_USER, URLS } from "./Env"
+import { CURRENT_USER, TARGET_USER_ID, USER_URLS } from "./Env"
 import { BoundObject } from "./DataBinding"
 import { HHMMSS } from "./appUtil"
 
-type boolNum = 0 | 1
 interface ArgDefaults {
   after: [string[], string]
   before: [string[], string]
@@ -27,7 +26,6 @@ interface ArgDefaults {
   shadows: [string[], boolean]
   paths: [string[], boolean]
   alpha: [string[], number]
-  baselayer: [string[], string]
 }
 
 /*
@@ -58,13 +56,11 @@ export const urlArgDefaults: ArgDefaults = {
   shadows: [["sh", "shadows"], null],
   paths: [["pa", "paths"], true],
   alpha: [["alpha"], 0.8],
-  baselayer: [["baselayer", "map", "bl"], null],
 }
 
 const urlArgs = new URL(window.location.href).searchParams
 const pathname = window.location.pathname.substring(1)
-const targetUserId =
-  urlArgs.get("user") || (pathname === "main.html" ? "" : pathname)
+const targetUserId = urlArgs.get("user") || pathname
 
 const names: { [name: string]: string[] } = {}
 const params: QueryParameters & VisualParameters = {}

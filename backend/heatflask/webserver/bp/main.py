@@ -4,6 +4,7 @@ Defines root ( heatflask.com/ ) webserver endpoints
 import os
 import sanic.response as Response
 from sanic.exceptions import SanicException
+from functools import wraps
 import sanic
 
 from logging import getLogger
@@ -46,7 +47,7 @@ async def splash_page(request):
             "urls": {
                 "demo": app.url_for("activities.index_page"),
                 "directory": app.url_for("users.directory"),
-                "authorize": app.url_for("auth.authorize", state=request.endpoint),
+                "authorize": app.url_for("auth.authorize", state=request.path),
             },
         },
     }
@@ -81,9 +82,9 @@ async def user_page(request, target_user_id=None):
                 "login": app.url_for("auth.authorize"),
                 "query": app.url_for("activities.query"),
                 "index": app.url_for("activities.index_page"),
-                "visibility": app.url_for("users.visibility"),
+                "visibility": app.url_for("main.visibility", setting=""),
+                "delete": app.url_for("main.delete"),
                 "logout": app.url_for("auth.logout"),
-                "delete": app.url_for("users.delete"),
                 "strava": {
                     "athlete": "https://www.strava.com/athletes/",
                     "activity": "https://www.strava.com/activities/",
@@ -103,3 +104,57 @@ async def demo_page(request):
 @bp.get("/test")
 async def test(request):
     raise SanicException("get outta here", status_code=403)
+
+
+# This decorator is for endpoints that default to doing something for
+# the current user if there is one, or for admin user on behalf of a user.
+# for example /endpoint/action?user=1234245
+# if there is no user= arg then we assume the user is the currently logged in user,
+# otherwise it is admin acting on behalf of a user
+def self_or_admin(func):
+    def decorator(f):
+        @wraps(f)
+        async def decorated_function(request, *args, **kwargs):
+            target_user_id = request.args.get("user")
+            if target_user_id and not request.ctx.is_admin:
+                raise SanicException(
+                    "sorry, you are not authorized to do this", status_code=401
+                )
+            elif not request.ctx.current_user:
+                raise SanicException("Who are you?", status_code=400)
+
+            target_user = (
+                await Users.get(target_user_id)
+                if target_user_id
+                else request.ctx.current_user
+            )
+            if not target_user:
+                raise SanicException(
+                    f"User {target_user_id} not found.", status_code=404
+                )
+
+            return await f(request, target_user, *args, **kwargs)
+
+        return decorated_function
+
+    return decorator(func)
+
+
+@bp.get(r"/visibility/<setting:(on|off|^$)>")
+@session_cookie(get=True)
+@self_or_admin
+async def visibility(request, target_user, setting=None):
+    if setting is not None:
+        private = False if setting == "on" else True
+        target_user = await Users.add_or_update(
+            **{Users.ID: target_user[Users.ID], "private": private}
+        )
+    return Response.json(not target_user[Users.PRIVATE])
+
+
+@bp.get("/delete")
+@self_or_admin
+@session_cookie(get=True, set=True)
+async def delete(request, target_user):
+    await Users.delete(target_user[Users.ID], deauthenticate=True)
+    return Response.redirect(request.app.url_for("auth.logout"))

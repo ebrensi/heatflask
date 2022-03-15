@@ -1,23 +1,9 @@
 @font-face {
   font-family: "icomoon-heatflask";
-  src: url("../fonts/icomoon-heatflask.woff2?h5d1ef") format("woff2");
+  src: url("../fonts/icomoon-heatflask.woff2") format("woff2");
   font-weight: normal;
   font-style: normal;
   font-display: block;
-}
-
-.ispin {
-  animation: spin-animation 0.5s infinite;
-  display: inline-block;
-}
-
-@keyframes spin-animation {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(359deg);
-  }
 }
 
 i {

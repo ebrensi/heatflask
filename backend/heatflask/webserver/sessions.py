@@ -60,12 +60,19 @@ async def reset_or_delete_cookie(request, response):
     # attached to this request context,
     # otherwise delete any set cookie (ending the session)
 
-    if hasattr(request.ctx, "session") and request.ctx.session:
+    has_session = hasattr(request.ctx, "session")
+    if (
+        has_session
+        and (not request.ctx.current_user)
+        and request.ctx.session.get("user")
+    ):
+        del request.ctx.session["user"]
+
+    if has_session and request.ctx.session:
         try:
             set_cookie(response, request.ctx.session)
         except Exception:
             log.exception("cookie: %s", request.ctx.session)
-
     elif request.cookies.get(COOKIE_NAME):
         del response.cookies[COOKIE_NAME]
         log.debug("deleted '%s' cookie", COOKIE_NAME)
