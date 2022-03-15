@@ -3,20 +3,13 @@
  *    as well as all of the plugins we're going to need
  *    except for the sidebar overlay.
  */
-
-// import "npm:leaflet/dist/leaflet.css"
-// import "npm:leaflet-control-window/src/L.Control.Window.css"
-// import "npm:leaflet-areaselect/src/leaflet-areaselect.css"
-// import "npm:leaflet-easybutton/src/easy-button.css"
-// import "../css/leaflet-mods.css"
+import Geohash from "latlon-geohash"
 
 import { MAPBOX_ACCESS_TOKEN, OFFLINE, ADMIN } from "./Env"
 import { Map, control, Control, DomUtil } from "./myLeaflet"
 
 // For ctrl-select
 import "./BoxHook"
-
-import Geohash from "latlon-geohash"
 import "leaflet-control-window"
 import "npm:leaflet-areaselect/src/leaflet-areaselect"
 import { tileLayer } from "./TileLayer/TileLayer.Heatflask"
@@ -142,12 +135,12 @@ new Watermark({
  */
 const InfoViewer = Control.extend({
   onAdd: function () {
-    const infoBox = DomUtil.create("div")
-    infoBox.style.width = "200px"
-    infoBox.style.padding = "5px"
-    infoBox.style.background = "rgba(255,255,255,0.6)"
-    infoBox.style.textAlign = "left"
-    this.infoBox = infoBox
+    const infoBox_el = DomUtil.create("div")
+    infoBox_el.style.width = "200px"
+    infoBox_el.style.padding = "5px"
+    infoBox_el.style.background = "rgba(255,255,255,0.6)"
+    infoBox_el.style.textAlign = "left"
+    this.infoBox_el = infoBox_el
 
     this.onMove = () => {
       const zoom = map.getZoom().toFixed(2)
@@ -159,7 +152,7 @@ const InfoViewer = Control.extend({
       const { lat: swLat, lng: swLng } = SW
       const { lat: neLat, lng: neLng } = NE
 
-      infoBox.innerHTML =
+      infoBox_el.innerHTML =
         `<b>Map</b>: zoom: ${zoom}<br>` +
         `GeoHash: ${gh}<br>` +
         `SW: ${swLat.toFixed(4)}, ${swLng.toFixed(4)}<br>` +
@@ -168,18 +161,29 @@ const InfoViewer = Control.extend({
         `mpp: ${mx.toFixed(3)}, ${my.toFixed(3)}<br>`
     }
     map.on("zoomstart zoom zoomend move", this.onMove)
-    return infoBox
+    map.fireEvent("move")
+    return infoBox_el
   },
 
   onRemove: function () {
     map.off("zoomstart zoom zoomend move", this.onMove)
-    this.infoBox.remove()
+    this.infoBox_el.remove()
   },
 })
 
-const box = new InfoViewer()
-if (ADMIN) {
-  box.addTo(map)
+const infoBox = new InfoViewer()
+infoBox.on = false
+
+export function showInfoBox(on = true) {
+  if (on && !infoBox.on) {
+    infoBox.addTo(map)
+    infoBox.on = true
+  } else if (!on && infoBox.on) {
+    infoBox.remove()
+    infoBox.on = false
+  }
 }
 
-// To remove it run box.remove()
+if (ADMIN) {
+  showInfoBox()
+}

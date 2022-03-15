@@ -8,7 +8,7 @@
   },
   "description": "Animated Movement Data Visualization for Strava Tracks",
   "scripts": {
-    "parcel-watch": "parcel watch --log-level verbose ./src/html/*.html",
+    "parcel-watch": "parcel watch --log-level info ./src/html/*.html",
     "parcel-build": "parcel build ./src/html/*.html",
     "asc-build": "asc ./src/assembly/wasm.ts --target production",
     "asc-watch": "onchange -i --verbose './src/assembly/*.ts' --  asc ./src/assembly/wasm.ts --target development",

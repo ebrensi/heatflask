@@ -4,21 +4,6 @@
  * Efrem Rensi 2020, 2022
  */
 
-import Geohash from "latlon-geohash"
-
-import { Map, control, Control, DomUtil, LatLng } from "./myLeaflet"
-
-// For ctrl-select
-import "./BoxHook"
-
-import "leaflet-control-window"
-import "../../node_modules/leaflet-areaselect/src/leaflet-areaselect"
-import { tileLayer } from "./TileLayer/TileLayer.Heatflask"
-
-import { HHMMSS, queueTask } from "./appUtil"
-import strava_logo from "url:../images/pbs4.png"
-import heatflask_logo from "url:../images/logo.png"
-
 // import { flags, vParams, currentUser } from "./Model"
 // import * as ActivityCollection from "./DotLayer/ActivityCollection"
 // import type { Activity } from "./DotLayer/Activity"
