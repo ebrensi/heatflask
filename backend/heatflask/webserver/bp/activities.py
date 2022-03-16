@@ -77,7 +77,7 @@ async def query(request):
     summaries_lookup = {A[Index.ACTIVITY_ID]: A for A in summaries}
     ids = list(summaries_lookup.keys())
 
-    user = Users.get(target_user_id)
+    user = await Users.get(target_user_id)
     streams_iter = Streams.aiter_query(activity_ids=ids, user=user)
     async for aid, streams in streams_iter:
         A = summaries_lookup[aid]
@@ -90,9 +90,9 @@ async def query(request):
 @session_cookie(get=True, set=True)
 async def index_page(request):
     all_users = request.args.pop("all", False)
-    query = {"streams": False}
+    query = {"streams": True}
     if "limit" not in query:
-        query["limit"] = 0
+        query["limit"] = 10
 
     current_user_id = (
         request.ctx.current_user[Users.ID] if request.ctx.current_user else None
