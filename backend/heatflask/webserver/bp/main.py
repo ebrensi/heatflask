@@ -45,7 +45,7 @@ async def splash_page(request):
         "app_env": os.environ.get("APP_ENV"),
         "runtime_json": {
             "urls": {
-                "demo": app.url_for("activities.index_page"),
+                "demo": app.url_for("activities.activities_page"),
                 "directory": app.url_for("users.directory"),
                 "authorize": app.url_for("auth.authorize", state=request.path),
             },
@@ -56,8 +56,8 @@ async def splash_page(request):
 
 
 # *** Main user/global activities page
-@bp.get("/<target_user_id:int>")
 @bp.get("/global")
+@bp.get("/<target_user_id:int>")
 @session_cookie(get=True, set=True, flashes=True)
 async def user_page(request, target_user_id=None):
     if target_user_id and not await Users.get(target_user_id):
@@ -81,7 +81,7 @@ async def user_page(request, target_user_id=None):
             "URLS": {
                 "login": app.url_for("auth.authorize"),
                 "query": app.url_for("activities.query"),
-                "index": app.url_for("activities.index_page"),
+                "index": app.url_for("activities.activities_page"),
                 "visibility": app.url_for("main.visibility", setting=""),
                 "delete": app.url_for("main.delete"),
                 "logout": app.url_for("auth.logout"),

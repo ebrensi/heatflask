@@ -166,14 +166,20 @@ function buildTableWithInnerHTML(el, data) {
   const headers = makeHeaderRow().join("</th><th>")
   const thead_str = `<thead><th>${headers}</th></thead>\n`
 
-  const row_strs = data.map((rowArr) => {
-    const cells = rowArr.join("</td><td>")
-    return `<tr><td>${cells}</td></tr>`
-  })
-  const rows_str = row_strs.join("\n")
-  const tbody_str = `<tbody>\n${rows_str}\n</tbody>`
+  if (!data.length) {
+    const row_strs = data.map((rowArr) => {
+      const cells = rowArr.join("</td><td>")
+      return `<tr><td>${cells}</td></tr>`
+    })
+    const rows_str = row_strs.join("\n")
+    const tbody_str = `<tbody>\n${rows_str}\n</tbody>`
 
-  el.innerHTML = thead_str + tbody_str
+    el.innerHTML = thead_str + tbody_str
+  } else {
+    el.innerHTML = thead_str + "<tr>Sorry no data &#128577</tr>"
+  }
+
+
 }
 
 function buildTableWithElements(el, data) {

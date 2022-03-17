@@ -4,8 +4,10 @@ for querying the Index and Streams data stores
 """
 
 import sanic.response as Response
+from sanic.exceptions import SanicException
 import sanic
 import msgpack
+import asyncio
 
 from logging import getLogger
 
@@ -29,7 +31,7 @@ async def query(request):
     # If queried user's index is currently being imported we
     # have to wait for that, while sending progress indicators
     query = request.json
-    streams = query.pop("streams", True)
+    streams = query.pop("streams", False)
     response = await request.respond(content_type="application/msgpack")
 
     target_user_id = query.get("user_id")
@@ -39,14 +41,28 @@ async def query(request):
             or (request.ctx.current_user[Users.ID] == target_user_id)
         )
 
+        target_user = await Users.get(target_user_id)
+        if not target_user:
+            raise SanicException(f"user {target_user_id} not registered", status_code=404)
+
         # Query will only return private activities if current_user
         # is owner of the activities (or admin)
         if not is_owner_or_admin:
             query["private"] = False
 
+        # Handle cases where target user exists in our database but
+        #   * has no index entries
+        #   * index is currently being built (by another process)
+        if not Index.has_user_entries(**target_user):
+            request.app.add_task(Index.import_user_entries(**target_user))
+            # We do this to make sure asyncio starts doing the import task
+            # by the time we start looking at import progress
+            await asyncio.sleep(0)
+
         async for msg in Index.import_index_progress(target_user_id):
             await response.send(msgpack.packb({"msg": msg}))
             log.debug("awaiting index import finish: %s", msg)
+
     elif not request.ctx.is_admin:
         # If there is no target_user then this is most likely
         # a multi-user query. We need to make sure a user is not accessing
@@ -88,7 +104,7 @@ async def query(request):
 
 @bp.get("/")
 @session_cookie(get=True, set=True)
-async def index_page(request):
+async def activities_page(request):
     all_users = request.args.pop("all", False)
     query = {"streams": True}
     if "limit" not in query:
@@ -99,6 +115,10 @@ async def index_page(request):
     )
     target_user_id = request.args.get("user_id", None if all_users else current_user_id)
     if target_user_id:
+        target_user = request.ctx.current_user or await Users.get(target_user_id)
+        if not target_user:
+            raise SanicException(f"user {target_user_id} not registered", status_code=404)
+
         query["user_id"] = target_user_id
         is_owner = current_user_id == target_user_id
         if not (is_owner or request.ctx.is_admin):

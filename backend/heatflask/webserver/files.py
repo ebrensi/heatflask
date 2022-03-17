@@ -46,7 +46,7 @@ async def load_templates(app, loop):
 def render_template(filename, **kwargs):
     for key, val in kwargs.items():
         if isinstance(val, dict):
-            kwargs[key] = json.dumps(val)
+            kwargs[key] = json.dumps(val, indent=2)
 
     t = templates[filename]
     html = t.safe_substitute(**kwargs)
