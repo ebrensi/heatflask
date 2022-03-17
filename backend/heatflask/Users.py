@@ -23,7 +23,7 @@ from . import Index
 log = getLogger(__name__)
 log.propagate = True
 
-COLLECTION_NAME = "users"
+COLLECTION_NAME = "users_v0"
 
 # Drop a user after a year of inactivity
 # not logging in

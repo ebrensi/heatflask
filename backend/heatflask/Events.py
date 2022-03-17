@@ -17,7 +17,7 @@ from .DataAPIs import init_collection
 log = getLogger(__name__)
 log.propagate = True
 
-COLLECTION_NAME = "events"
+COLLECTION_NAME = "events_v0"
 
 # Maximum size of event history (for capped MongoDB collection)
 MAX_EVENTS_BYTES = 2 * 1024 * 1024  # 2MB

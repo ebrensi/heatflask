@@ -26,7 +26,7 @@ from . import Users
 log = getLogger(__name__)
 log.propagate = True
 
-COLLECTION_NAME = "index"
+COLLECTION_NAME = "index_v0"
 
 SECS_IN_HOUR = 60 * 60
 SECS_IN_DAY = 24 * SECS_IN_HOUR

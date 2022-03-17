@@ -21,7 +21,7 @@ from . import Users
 log = getLogger(__name__)
 log.propagate = True
 
-COLLECTION_NAME = "updates"
+COLLECTION_NAME = "updates_v0"
 
 # Maximum size of updates history (for capped MongoDB collection)
 MAX_UPDATES_BYTES = 1 * 1024 * 1024

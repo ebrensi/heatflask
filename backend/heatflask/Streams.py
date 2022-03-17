@@ -26,7 +26,7 @@ log = getLogger(__name__)
 log.setLevel("DEBUG")
 log.propagate = True
 
-COLLECTION_NAME = "streams"
+COLLECTION_NAME = "streams_v0"
 CACHE_PREFIX = "S:"
 
 SECS_IN_HOUR = 60 * 60
