@@ -43,7 +43,9 @@ async def query(request):
 
         target_user = await Users.get(target_user_id)
         if not target_user:
-            raise SanicException(f"user {target_user_id} not registered", status_code=404)
+            raise SanicException(
+                f"user {target_user_id} not registered", status_code=404
+            )
 
         # Query will only return private activities if current_user
         # is owner of the activities (or admin)
@@ -53,7 +55,7 @@ async def query(request):
         # Handle cases where target user exists in our database but
         #   * has no index entries
         #   * index is currently being built (by another process)
-        if not Index.has_user_entries(**target_user):
+        if not await Index.has_user_entries(**target_user):
             request.app.add_task(Index.import_user_entries(**target_user))
             # We do this to make sure asyncio starts doing the import task
             # by the time we start looking at import progress
@@ -117,7 +119,9 @@ async def activities_page(request):
     if target_user_id:
         target_user = request.ctx.current_user or await Users.get(target_user_id)
         if not target_user:
-            raise SanicException(f"user {target_user_id} not registered", status_code=404)
+            raise SanicException(
+                f"user {target_user_id} not registered", status_code=404
+            )
 
         query["user_id"] = target_user_id
         is_owner = current_user_id == target_user_id

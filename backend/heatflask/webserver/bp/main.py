@@ -153,8 +153,10 @@ async def visibility(request, target_user, setting=None):
 
 
 @bp.get("/delete")
+@session_cookie(get=True, set=True, flashes=True)
 @self_or_admin
-@session_cookie(get=True, set=True)
 async def delete(request, target_user):
-    await Users.delete(target_user[Users.ID], deauthenticate=True)
+    uid = target_user[Users.ID]
+    await Users.delete(uid, deauthenticate=False)
+    request.ctx.flash(f"Successfully deleted user {uid}")
     return Response.redirect(request.app.url_for("auth.logout"))

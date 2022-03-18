@@ -430,7 +430,7 @@ async def get_index(user_session):
             except Exception:
                 log.exception("error fetching index page. aborting.")
                 await cancel_all(tasks)
-                return
+                raise
 
             if result and len(result):
                 for A in result:

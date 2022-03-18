@@ -108,13 +108,10 @@ async def auth_callback(request):
 @session_cookie(get=True, set=True, flashes=True)
 async def logout(request):
     cuser = request.ctx.current_user
-    if not cuser:
-        raise SanicException("No user currently logged in.", status_code=400)
-
-    cuser_id = cuser[Users.ID]
+    cuser_id = cuser[Users.ID] if cuser else None
     request.ctx.current_user = None
-
-    request.ctx.flash(f"User {cuser_id} logged out.")
+    if cuser:
+        request.ctx.flash(f"User {cuser_id} logged out.")
     splash_page_url = request.app.url_for("main.splash_page")
     state = request.args.get("state", splash_page_url)
     return (

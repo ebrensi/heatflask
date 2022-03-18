@@ -16,6 +16,7 @@ import time
 import asyncio
 import types
 from pymongo import DESCENDING
+from aiohttp import ClientResponseError
 
 from . import DataAPIs
 from .DataAPIs import db
@@ -150,9 +151,10 @@ def mongo_doc(
     )
 
 
-## **************************************
+# # **************************************
 IMPORT_FLAG_PREFIX = "I:"
 IMPORT_FLAG_TTL = 20  # secods
+IMPORT_ERROR_TTL = 5
 
 
 def import_flag_key(uid):
@@ -162,6 +164,11 @@ def import_flag_key(uid):
 async def set_import_flag(user_id, val):
     await db.redis.setex(import_flag_key(user_id), IMPORT_FLAG_TTL, val)
     log.debug(f"{user_id} import flag set to '%s'", val)
+
+
+async def set_import_error(user_id, e):
+    val = f"Strava error ${e.status}: ${e.message}"
+    await db.redis.setex(import_flag_key(user_id), 5, val)
 
 
 async def clear_import_flag(user_id):
@@ -174,9 +181,7 @@ async def check_import_progress(user_id):
     return result.decode("utf-8") if result else None
 
 
-## **************************************
-
-
+# # **************************************
 async def fake_import(uid=None):
     log.info("Starting fake import for user %s", uid)
     await set_import_flag(uid, "Building index...")
@@ -209,12 +214,22 @@ async def import_user_entries(**user):
 
     docs = []
     count = 0
-    async for A in strava.get_index():
-        if A is not None:
-            docs.append(mongo_doc(**A, ts=now))
-            count += 1
-            if count % Strava.PER_PAGE == 0:
-                await set_import_flag(uid, f"Building index...{count}")
+    try:
+        async for A in strava.get_index():
+            if A is not None:
+                docs.append(mongo_doc(**A, ts=now))
+                count += 1
+                if count % Strava.PER_PAGE == 0:
+                    await set_import_flag(uid, f"Building index...{count}")
+    except ClientResponseError as e:
+        log.info(
+            "%d Index import aborted due to Strava error %d: %s",
+            uid,
+            e.message,
+            e.status,
+        )
+        await set_import_error(uid, e)
+        return
 
     docs = list(filter(None, docs))
     t1 = time.perf_counter()

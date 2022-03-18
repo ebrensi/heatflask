@@ -134,7 +134,7 @@ async def add_or_update(
     if inc_login_count:
         updates["$inc"] = {LOGIN_COUNT: 1}
 
-    log.debug("calling mongodb update_one with updates %s", updates)
+    log.debug("%d updated with %s", user_id, updates)
 
     # Creates a new user or updates an existing user (with the same id)
     try:
