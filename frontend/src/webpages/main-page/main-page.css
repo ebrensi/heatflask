@@ -4,24 +4,24 @@
 /*
  * ☠ Be careful changing the order of these imports! ☠
  */
-@import "../ext/min_entireframework.css";
+@import "../../css/min_entireframework.css";
 
 @import "npm:leaflet/dist/leaflet.css";
 @import "npm:sidebar-v2/css/leaflet-sidebar.css";
 @import "npm:leaflet-control-window/src/L.Control.Window.css";
 @import "npm:leaflet-areaselect/src/leaflet-areaselect.css";
 @import "npm:leaflet-easybutton/src/easy-button.css";
+@import "../../css/leaflet-mods.css";
+@import "../../css/leaflet-sidebar-v2-mods.css";
 
-@import "./leaflet-mods.css";
-@import "./leaflet-sidebar-v2-mods.css";
-@import "./strava-buttons.css";
-@import "./icomoon-heatflask.css";
-@import "./hide-runtime-elements.css";
-@import "./flash-messages.css";
-/*@import "./main-table.css";*/
+@import "../../css/strava-buttons.css";
+@import "../../css/icomoon-heatflask.css";
+@import "../../css/hide-runtime-elements.css";
+@import "../../css/flash-messages.css";
+/*@import "../../css/main-table.css";*/
 
 :root {
-  --strava-badge: url("../images/strava_button.png");
+  --strava-badge: url("../../images/strava_button.png");
 }
 
 body {
@@ -54,7 +54,7 @@ textarea {
 
 /* Avatar button for registered user */
 button.avatar {
-  background: url("../images/strava_button.png");
+  background: --strava-badge;
   background-size: cover;
   width: 32px;
   height: 32px;

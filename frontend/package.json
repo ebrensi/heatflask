@@ -1,24 +1,28 @@
 {
   "name": "heatflask-frontend",
   "version": "1.0.0",
+  "author": "Efrem Rensi",
+  "description": "Animated Movement Data Visualization for Strava Tracks",
+  "license": "ISC",
   "homepage": "https://github.com/ebrensi/heatflask",
   "repository": {
     "type": "git",
     "url": "https://github.com/ebrensi/heatflask"
   },
-  "description": "Animated Movement Data Visualization for Strava Tracks",
   "scripts": {
-    "parcel-watch": "parcel watch --log-level info ./src/html/*.html",
-    "parcel-build": "parcel build ./src/html/*.html",
-    "asc-build": "asc ./src/assembly/wasm.ts --target production",
-    "asc-watch": "onchange -i --verbose './src/assembly/*.ts' --  asc ./src/assembly/wasm.ts --target development",
+    "parcel-watch": "parcel watch --log-level info src/webpages/**/**.html",
+    "parcel-build": "parcel build src/webpages/**/**.html",
+    "asc-build": "asc src/assembly/wasm.ts --target production",
+    "asc-watch": "onchange -i --verbose 'src/assembly/*.ts' --  asc src/assembly/wasm.ts --target development",
     "build": "npm run clean; npm run asc-build; npm run parcel-build",
     "watch": "sh -c 'npm run parcel-watch & npm run asc-watch & wait'",
-    "clean": "rm -rf ./dist/* ./.parcel-cache/* ./dev-docs/*; cp ./src/misc/* ./dist",
-    "format": "prettier --write ./src/"
+    "clean": "rm -rf dist/* .parcel-cache/* dev-docs/*; cp src/dist/* dist/",
+    "format": "prettier --write src/"
   },
-  "author": "Efrem Rensi",
-  "license": "ISC",
+  "workspaces": [
+    "src/*"
+  ],
+  "context": "browser",
   "dependencies": {
     "@assemblyscript/loader": "latest",
     "@msgpack/msgpack": "^2.7.1",
@@ -76,8 +80,7 @@
     },
     "ignorePatterns": [
       "dist/*",
-      "src/ext/*",
-      "src/misc/*"
+      "src/dist/*"
     ]
   },
   "prettier": {

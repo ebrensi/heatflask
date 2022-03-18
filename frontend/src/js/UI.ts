@@ -5,13 +5,6 @@
 
 import "./Env"
 import { URLS, FLASHES } from "./Env"
-import "./Map"
-import { map, controlWindow } from "./Map"
-
-import "./sidebar"
-import { renderTabs } from "./sidebar"
-
-renderTabs(map)
 
 const flashes = FLASHES // || ["flash 1", "flash2"]
 if (!!flashes && flashes.length) {

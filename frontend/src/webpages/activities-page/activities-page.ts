@@ -4,10 +4,16 @@
  */
 
 import { decodeMultiStream } from "@msgpack/msgpack"
-import { href, img, HHMMSS, sleep } from "./appUtil"
-import { icon } from "./Icons"
-import { activity_icon, activityURL } from "./strava"
-import { JSTable } from "./jstable"
+import { href, img, HHMMSS, sleep } from "../../js/appUtil"
+import { icon } from "../../js/Icons"
+import { activity_icon, activityURL } from "../../js/strava"
+import { JSTable } from "../../js/jstable"
+
+const BASE_URL = "/"
+const strava_button_url = new URL(
+  "../../images/strava_button.png",
+  import.meta.url
+)
 
 const status_msg_el = document.getElementById("status_msg")
 const count_msg_el = document.getElementById("count")
@@ -24,11 +30,6 @@ function user_thumbnail(id, img_url) {
   return href(`/${id}`, avatar)
 }
 
-const BASE_URL = "/"
-const strava_button_url = new URL(
-  "../images/strava_button.png",
-  import.meta.url
-)
 const STRAVA_BUTTON = img(strava_button_url)
 const store = window.localStorage
 const METRIC = store.getItem("units") == "metric"
@@ -40,16 +41,11 @@ const ELEV_LABEL = METRIC ? "m" : "ft"
 // This spec should match that in Index.py
 const ACTIVITY_ID = "_id",
   USER_ID = "U",
-  // TIMESTAMP = "ts",
-  // N_ATHLETES = "#a",
-  // N_PHOTOS = "#p",
   UTC_START_TIME = "s",
   UTC_LOCAL_OFFSET = "o",
   DISTANCE_METERS = "D",
   TIME_SECONDS = "T",
   ELEVATION_GAIN = "+",
-  // (LATLNG_BOUNDS = "B"),
-  // FLAG_COMMUTE = "c",
   FLAG_PRIVATE = "p",
   ACTIVITY_NAME = "N",
   ACTIVITY_TYPE = "t",
@@ -178,8 +174,6 @@ function buildTableWithInnerHTML(el, data) {
   } else {
     el.innerHTML = thead_str + "<tr>Sorry no data &#128577</tr>"
   }
-
-
 }
 
 function buildTableWithElements(el, data) {

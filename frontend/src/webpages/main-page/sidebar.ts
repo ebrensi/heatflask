@@ -1,23 +1,19 @@
-// CSS
-// import "npm:sidebar-v2/css/leaflet-sidebar.css"
-// import "../css/leaflet-sidebar-v2-mods.css"
-
 // HTML
-import { icon } from "./Icons"
-import query_html from "bundle-text:../html/main-tabs/query.html"
-import actvities_html from "bundle-text:../html/main-tabs/activities.html"
-import profile_html from "bundle-text:../html/main-tabs/profile.html"
-import controls_html from "bundle-text:../html/main-tabs/controls.html"
-import info_html from "bundle-text:../html/main-tabs/info.html"
+import query_html from "bundle-text:./sidebar-tabs/query.html"
+import actvities_html from "bundle-text:./sidebar-tabs/activities.html"
+import profile_html from "bundle-text:./sidebar-tabs/profile.html"
+import controls_html from "bundle-text:./sidebar-tabs/controls.html"
+import info_html from "bundle-text:./sidebar-tabs/info.html"
 
 // Code
+import { icon } from "../../js/Icons"
 import "npm:sidebar-v2/js/leaflet-sidebar"
-import { control } from "./myLeaflet"
+import { control } from "../../js/myLeaflet"
 
 const tabSpec = {
-  query: [icon("bars"), "(Target-user)'s map", query_html],
+  query: [icon("bars"), "${TARGET_USER}'s map", query_html],
   activities: [icon("list2"), "Rendered Activities", actvities_html],
-  profile: [icon("user-circle-o"), "(Target-user)'s profile", profile_html],
+  profile: [icon("user-circle-o"), "${CURRENT_USER}'s profile", profile_html],
   controls: [icon("equalizer"), "Layer Settings", controls_html],
   info: [icon("info"), "Info", info_html],
 }
@@ -97,6 +93,7 @@ export function renderTabs(map, tabNames) {
 
   S.addTo(map)
   map.addEventListener("click", () => S.isOpen && S.close())
+  return S
 }
 
 // import pureknob from "pure-knob"

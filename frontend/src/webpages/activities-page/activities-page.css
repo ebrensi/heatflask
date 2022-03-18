@@ -1,9 +1,9 @@
-@import "../ext/min_entireframework.css";
-@import "./spinner.css";
-@import "./hide-runtime-elements.css";
-@import "./flash-messages.css";
-@import "./jstable.scss";
-@import "./icomoon-heatflask.css";
+@import "../../css/min_entireframework.css";
+@import "../../css/spinner.css";
+@import "../../css/hide-runtime-elements.css";
+@import "../../css/flash-messages.css";
+@import "../../css/jstable.scss";
+@import "../../css/icomoon-heatflask.css";
 
 i {
   font-size: 20pt;

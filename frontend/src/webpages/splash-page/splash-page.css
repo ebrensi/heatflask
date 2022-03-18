@@ -1,11 +1,11 @@
-@import "../ext/min_entireframework.css";
-@import "./strava-buttons.css";
-@import "./hide-runtime-elements.css";
-@import "./flash-messages.css";
+@import "../../css/min_entireframework.css";
+@import "../../css/strava-buttons.css";
+@import "../../css/hide-runtime-elements.css";
+@import "../../css/flash-messages.css";
 
 :root {
   background-color: #000000;
-  background-image: url("../images/lake.gif");
+  background-image: url("../../images/lake.gif");
   background-position: center;
   background-repeat: no-repeat;
   background-size: cover;
