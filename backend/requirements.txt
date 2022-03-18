@@ -1,11 +1,11 @@
-sanic
-numpy
+sanic==21.12.1
+numpy==1.22.3
 
 pymongo[srv]==3.12
-motor
+motor==2.5.1
 
-aioredis[hiredis]
-aiohttp[speedups]
+aioredis[hiredis]==2.0.1
+aiohttp[speedups]==3.8.1
 
-msgpack
-polyline
+msgpack==1.0.3
+polyline==1.4.0
