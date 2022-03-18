@@ -11,7 +11,15 @@ from .. import Index
 from .. import Users
 from .. import Streams
 
-from .config import APP_BASE_NAME, APP_ENV, LOG_CONFIG
+from .config import (
+    APP_BASE_NAME,
+    APP_NAME,
+    APP_ENV,
+    LOG_CONFIG,
+    LOG_LEVEL,
+    DEV,
+    USE_REMOTE_DB,
+)
 from . import files
 
 from .bp import auth
@@ -74,16 +82,21 @@ if APP_ENV != "development":
 
 if __name__ == "__main__":
     RUN_CONFIG = {
-        "host": "0.0.0.0",
+        "host": "127.0.0.1" if DEV else "0.0.0.0",
         "port": int(os.environ.get("PORT", 8000)),
         "workers": int(os.environ.get("WEB_CONCURRENCY", 1)),
-        "debug": False,
-        "access_log": False,
+        "debug": DEV,
+        "access_log": DEV,
         "reload_dir": files.FRONTEND_DIST_DIR,
     }
-
-    if os.environ.get("APP_ENV").lower() == "development":
-        RUN_CONFIG.update({"host": "127.0.0.1", "debug": True, "access_log": True})
-
     app.config.SERVER_NAME = "{host}:{port}".format(**RUN_CONFIG)
+    app.config.MOTD_DISPLAY = {
+        "APP_NAME": APP_NAME,
+        "APP_ENV": APP_ENV,
+        "LOG_LEVEL": LOG_LEVEL,
+        "REMOTE_DB": str(USE_REMOTE_DB),
+        "collections": str(
+            [Users.COLLECTION_NAME, Index.COLLECTION_NAME, Streams.COLLECTION_NAME]
+        ),
+    }
     app.run(**RUN_CONFIG)

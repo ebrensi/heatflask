@@ -274,12 +274,13 @@ def drop():
 import os
 from sqlalchemy import create_engine, text
 import json
+from .webserver.config import POSTGRES_URL
 
 
 async def migrate():
     # Import legacy Users database
     log.info("Importing users from legacy db")
-    pgurl = os.environ["REMOTE_POSTGRES_URL"]
+    pgurl = os.environ[POSTGRES_URL]
     results = None
     with create_engine(pgurl).connect() as conn:
         result = conn.execute(text("select * from users"))

@@ -1,4 +1,3 @@
-import os
 import motor.motor_asyncio
 import aioredis
 import logging
@@ -6,36 +5,21 @@ import datetime
 import uuid
 import types
 
+from .webserver.config import MONGODB_URL, REDIS_URL
+
 log = logging.getLogger(__name__)
 log.propagate = True
-
-# initialize async datastores
-use_remote = os.environ.get("USE_REMOTE_DB")
-REDIS_URL = os.environ.get("REDISGREEN_URL")
-
-# MongoDB
-dev_env = os.environ["APP_ENV"].lower() == "development"
-dev_mongo_url = os.environ["REMOTE_MONGODB_URL" if use_remote else "MONGODB_URL"]
-prod_mongo_url = os.environ.get("ATLAS_MONGODB_URI")
-mongo_url = dev_mongo_url if dev_env else prod_mongo_url
-
-
-# Redis
-dev_redis_url = os.environ["REMOTE_REDIS_URL" if use_remote else "REDIS_URL"]
-prod_redis_url = os.environ.get("REDISGREEN_URL")
-redis_url = dev_redis_url if dev_env else prod_redis_url
-
 
 db = types.SimpleNamespace(mongo_client=None, mongodb=None, redis=None)
 
 
 # this must be called by whoever controls the asyncio loop
-async def connect(*args):
+async def connect(app, loop):
     if db.mongodb is not None:
         return
-    db.mongo_client = motor.motor_asyncio.AsyncIOMotorClient(mongo_url)
+    db.mongo_client = motor.motor_asyncio.AsyncIOMotorClient(MONGODB_URL)
     db.mongodb = db.mongo_client.get_default_database()
-    db.redis = aioredis.from_url(redis_url)
+    db.redis = aioredis.from_url(REDIS_URL)
     log.info("Connected to MongoDB and Redis")
 
 

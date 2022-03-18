@@ -4,24 +4,30 @@ source activate
 
 while [ "$1" != "" ]; do
     case $1 in
-        -o | --offline )        export OFFLINE=1
+        -o | --offline )        OFFLINE=1
                                 ;;
-        -r | --remote_db )      export USE_REMOTE_DB=1
+        -r | --remote_db )      USE_REMOTE_DB=1
                                 ;;
         -h | --heroku )         USE_HEROKU=1
                                 ;;
-        -? | --help )           usage
+        -R | --reset_db )       HEATFLASK_RESET=1
+                                ;;
+        -? | --help )           bat "${0}"
                                 exit
                                 ;;
     esac
     shift
 done
 
-
-export HEROKU_CLI=/usr/local/bin/heroku
+h1=/usr/bin/heroku
+h2=/usr/local/bin/heroku
 
 # Run the backend server via heroku local if it is available
-if [ "$USE_HEROKU" == 1 ] && [ -f "$HEROKU_CLI" ]; then
+if [ "$USE_HEROKU" == 1 ]; then
+    if [ ! -f "HEROKU_CLI" ]; then
+        [ -f "$h1" ] && HEROKU_CLI="$h1"
+        [ -f "$h2" ] && HEROKU_CLI="$h2"
+    fi
     echo "running Sanic server via $HEROKU_CLI"
     $HEROKU_CLI local
 else

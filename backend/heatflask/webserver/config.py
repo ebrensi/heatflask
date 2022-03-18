@@ -1,11 +1,23 @@
 import os
 from sanic.log import LOGGING_CONFIG_DEFAULTS as LOG_CONFIG
 
+# General app configuration
 APP_BASE_NAME = "Heatflask"
 APP_VERSION = "1.0.0"
 APP_NAME = f"{APP_BASE_NAME} v{APP_VERSION}"
-APP_ENV = os.environ.get("APP_ENV", "production")
 
+# this can be "development", "staging", or "production"
+#  Where "production" is assumed to be a Heroku Python environment
+APP_ENV = os.environ.get("APP_ENV", "development")
+
+# Data Store Configuration
+DEV = APP_ENV == "development"
+USE_REMOTE_DB = os.environ.get("USE_REMOTE_DB") or (not DEV)
+POSTGRES_URL = os.environ["HEROKU_POSTGRES_URL" if DEV else "DATABASE_URL"]
+MONGODB_URL = os.environ["ATLAS_MONGODB_URI" if USE_REMOTE_DB else "MONGODB_URL"]
+REDIS_URL = os.environ["REDISGREEN_URL" if USE_REMOTE_DB else "REDIS_URL"]
+
+# Log Configuration
 default_log_level = "DEBUG" if APP_ENV == "development" else "INFO"
 LOG_LEVEL = os.environ.get("LOG_LEVEL", default_log_level)
 base_logger_config = {"handlers": ["console"]}
