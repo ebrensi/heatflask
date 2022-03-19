@@ -7,7 +7,7 @@ import { decodeMultiStream } from "@msgpack/msgpack"
 import { href, img, HHMMSS, sleep } from "../../js/appUtil"
 import { icon } from "../../js/Icons"
 import { activity_icon, activityURL } from "../../js/strava"
-import { JSTable } from "../../js/jstable"
+// import { JSTable } from "../../js/jstable"
 
 const BASE_URL = "/"
 const strava_button_url = new URL(
@@ -87,6 +87,7 @@ async function main() {
   const data = []
   let count = 0
   let n_total
+  const errors = []
 
   for await (const obj of decodeMultiStream(response.body)) {
     if ("msg" in obj) {
@@ -96,6 +97,8 @@ async function main() {
       data[n_total - 1] = undefined
       data.fill(count, n_total, undefined)
       status_msg_el.innerText = "Fetching activities..."
+    } else if ("error" in obj) {
+      errors.push(obj["error"])
     } else {
       data[count] = makeRow(obj)
       count_msg_el.innerText = count++
@@ -108,11 +111,11 @@ async function main() {
   status_msg_el.innerText = ""
   count_msg_el.innerText = ""
 
-  const myTable = new JSTable(table_el, {
-    sortable: true,
-    searchable: true,
-    perPage: 16,
-  })
+  // const myTable = new JSTable(table_el, {
+  //   sortable: true,
+  //   searchable: true,
+  //   perPage: 16,
+  // })
   await sleep(0.2)
   count_msg_el.classList.remove("spinner")
 }
@@ -162,7 +165,7 @@ function buildTableWithInnerHTML(el, data) {
   const headers = makeHeaderRow().join("</th><th>")
   const thead_str = `<thead><th>${headers}</th></thead>\n`
 
-  if (!data.length) {
+  if (data.length) {
     const row_strs = data.map((rowArr) => {
       const cells = rowArr.join("</td><td>")
       return `<tr><td>${cells}</td></tr>`

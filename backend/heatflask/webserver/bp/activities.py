@@ -28,8 +28,6 @@ bp = sanic.Blueprint("activities", url_prefix="/activities")
 @bp.post("/")
 @session_cookie(get=True)
 async def query(request):
-    # If queried user's index is currently being imported we
-    # have to wait for that, while sending progress indicators
     query = request.json
     streams = query.pop("streams", False)
     response = await request.respond(content_type="application/msgpack")
@@ -62,6 +60,8 @@ async def query(request):
             await asyncio.sleep(0)
 
         async for msg in Index.import_index_progress(target_user_id):
+            # If queried user's index is currently being imported we
+            # have to wait for that, while sending progress indicators
             await response.send(msgpack.packb({"msg": msg}))
             log.debug("awaiting index import finish: %s", msg)
 
@@ -97,20 +97,27 @@ async def query(request):
 
     user = await Users.get(target_user_id)
     streams_iter = Streams.aiter_query(activity_ids=ids, user=user)
+    errors = set()
     async for aid, streams in streams_iter:
-        A = summaries_lookup[aid]
-        A["mpk"] = streams
-        packed = msgpack.packb(A)
-        await response.send(packed)
+        if streams:
+            A = summaries_lookup[aid]
+            A["mpk"] = streams
+            packed = msgpack.packb(A)
+            await response.send(packed)
+        else:
+            errors.add(aid)
+            await response.send(msgpack.packb({"error": aid}))
+    if len(errors):
+        log.error("Errors importing user %d activities %s", user[Users.ID], errors)
 
 
 @bp.get("/")
 @session_cookie(get=True, set=True)
 async def activities_page(request):
     all_users = request.args.pop("all", False)
-    query = {"streams": True}
+    query = {"streams": False}
     if "limit" not in query:
-        query["limit"] = 10
+        query["limit"] = 0
 
     current_user_id = (
         request.ctx.current_user[Users.ID] if request.ctx.current_user else None

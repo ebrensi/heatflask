@@ -338,11 +338,15 @@ def streams_endpoint(activity_id):
 async def get_streams(session, activity_id):
     t0 = time.perf_counter()
     async with get_limiter():
-        async with session.get(
-            streams_endpoint(activity_id), params=ACTIVITY_STREAM_PARAMS
-        ) as response:
-            rjson = await response.json()
-            rstatus = response.status
+        try:
+            async with session.get(
+                streams_endpoint(activity_id), params=ACTIVITY_STREAM_PARAMS
+            ) as response:
+                rjson = await response.json()
+                rstatus = response.status
+        except Exception as e:
+            log.error("Error fetching streams for %s: %s", activity_id, e)
+            return activity_id, None
 
     if not (rjson and ("time" in rjson)):
         log.info("problem with activity %d: %s", activity_id, (rstatus, rjson))
@@ -355,23 +359,16 @@ async def get_streams(session, activity_id):
     return activity_id, rjson
 
 
-async def get_many_streams(
-    session,
-    activity_ids,
-):
+async def get_many_streams(session, activity_ids, max_errors=MAX_STREAMS_ERRORS):
     request_tasks = [get_streams(session, aid) for aid in activity_ids]
     errors = 0
     for task in asyncio.as_completed(request_tasks):
-        try:
-            item = await task
-        except Exception as e:
-            log.error(e)
+        item = await task
+        if item[1] is None:
             errors += 1
-            if errors > MAX_STREAMS_ERRORS:
+            if errors > max_errors:
                 abort_signal = True
-        else:
-            abort_signal = yield item
-
+        abort_signal = yield item
         if abort_signal:
             log.info("get_many_streams aborted")
             return

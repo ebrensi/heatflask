@@ -59,7 +59,7 @@ app.register_listener(cancel_background_tasks, "after_server_stop")
 # Redis and MongoDB APIs are async and need to run in the same loop as app
 # so we run init_app to "connect" them
 app.register_listener(DataAPIs.connect, "before_server_start")
-app.register_listener(DataAPIs.disconnect, "after_server_stop")
+app.register_listener(DataAPIs.disconnect, "before_server_stop")
 
 if os.environ.get("HEATFLASK_RESET"):
 
