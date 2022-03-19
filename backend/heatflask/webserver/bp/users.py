@@ -3,6 +3,7 @@ Defines all the /users/* webserver endpoints for accessing
 Users data store
 """
 import sanic.response as Response
+from sanic.exceptions import SanicException
 import sanic
 
 from logging import getLogger
@@ -50,6 +51,7 @@ async def directory(request):
 @session_cookie(get=True, flashes=True)
 async def migrate(request):
     if not request.ctx.is_admin:
-        return Response.text("Nope, sorry. :(")
+        raise SanicException("sorry", status_code=401)
+
     await Users.migrate()
     return Response.redirect(request.app.url_for("users.directory", admin=1))
