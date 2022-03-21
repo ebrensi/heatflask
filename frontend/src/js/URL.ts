@@ -3,8 +3,9 @@
  */
 
 import { qParams, vParams, urlArgDefaults } from "./Model"
+import { defaultBaselayerName, map } from "./Map"
+
 // import { dotLayer } from "../DotLayerAPI.js";
-import { defaultBaselayerName, map, sidebar } from "./MapAPI"
 
 import { nextTask } from "./appUtil"
 /*

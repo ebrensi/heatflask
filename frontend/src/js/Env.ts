@@ -26,13 +26,18 @@ export const OFFLINE = false
 export function USER_URLS(userid) {
   return {
     main: `/${userid}`,
-    index: `/${userid}/activities`,
-    public: `/${userid}/update_info`,
-    delete: `/${userid}/delete`,
-    logout: `/${userid}/logout`,
-    strava: `https://www.strava.com/athletes/${userid}`,
+    index: URLS["query"],
+    public: URLS["visibility"],
+    delete: URLS["delete"],
+    logout: URLS["logout"],
   }
 }
+
+const StravaDomain = "https://www.strava.com"
+export const STRAVA_USER_URL = (uid) => `${StravaDomain}/athletes/${uid}`
+export const STRAVA_ACTIVITY_URL = (aid) => `${StravaDomain}/activities/${aid}`
+export const STRAVA_PROFILE_URL = `${StravaDomain}/settings/profile`
+
 /*
  * Load in the google analytics object if this is
  *  the production environment and the current user is not

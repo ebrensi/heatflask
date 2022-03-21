@@ -1,16 +1,16 @@
 // Tab Content
 import query_html from "bundle-text:./tab.query.html"
-
 import actvities_html from "bundle-text:./tab.activities.html"
 import profile_html from "bundle-text:./tab.profile.html"
 import controls_html from "bundle-text:./tab.controls.html"
+
 import info_html from "bundle-text:./tab.info.html"
 import "./tab.info"
 
 // Code
-import { icon } from "../../js/Icons"
 import "npm:sidebar-v2/js/leaflet-sidebar"
 import { control } from "../../js/myLeaflet"
+import { icon } from "../../js/Icons"
 
 const tabSpec = {
   query: [icon("bars"), "${TARGET_USER}'s map", query_html],
@@ -19,6 +19,7 @@ const tabSpec = {
   controls: [icon("equalizer"), "Layer Settings", controls_html],
   info: [icon("info"), "Info", info_html],
 }
+
 const sidebar_tablist_el = document.querySelector(".sidebar-tabs > ul")
 const sidebar_content_el = document.querySelector(".sidebar-content")
 

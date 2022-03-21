@@ -30,6 +30,7 @@ async def disconnect(*args):
     log.info("Disconnecing from MongoDB and Redis")
     db.mongo_client.close()
     await db.redis.close()
+
     db.mongo_client = None
     db.mongodb = None
     # db.redis = None

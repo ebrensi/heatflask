@@ -85,10 +85,6 @@ async def user_page(request, target_user_id=None):
                 "visibility": app.url_for("main.visibility", setting=""),
                 "delete": app.url_for("main.delete"),
                 "logout": app.url_for("auth.logout"),
-                "strava": {
-                    "athlete": "https://www.strava.com/athletes/",
-                    "activity": "https://www.strava.com/activities/",
-                },
             },
         },
     }

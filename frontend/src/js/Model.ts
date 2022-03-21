@@ -3,7 +3,7 @@
  *    beginning with those specified by the current URL in the browser.
  */
 
-import { CURRENT_USER, TARGET_USER_ID, USER_URLS } from "./Env"
+import { CURRENT_USER, USER_URLS } from "./Env"
 import { BoundObject } from "./DataBinding"
 import { HHMMSS } from "./appUtil"
 
@@ -228,7 +228,6 @@ export const targetUser = BoundObject.fromDOMelements(
 )
 targetUser.addProperty("id", targetUserId)
 targetUser.onChange("id", (newId) => (qParams.userid = newId))
-targetUser.username = targetUserId || targetUser.name
 
 export const currentUser = BoundObject.fromDOMelements(
   "[data-class=current-user]"
@@ -254,9 +253,6 @@ export const state = {
   messages: messages,
   targetUser: targetUser,
   currentUser: currentUser,
-  clientID: null,
 }
 
 export { state as default }
-
-window.app = state

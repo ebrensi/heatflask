@@ -17,6 +17,5 @@ for (const [icon_name, url] of contact_specs) {
 
 document.addEventListener("DOMContentLoaded", () => {
   contacts_el = document.getElementById("contacts")
-  console.log(contacts_el)
   contacts_el.innerHTML = html_tags.join("")
 })

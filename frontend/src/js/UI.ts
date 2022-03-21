@@ -16,13 +16,8 @@ if (!!flashes && flashes.length) {
   console.log(result)
 }
 
-// import { targetUser, currentUser, vParams, qParams, flags } from "./Model"
-
-/* URL.ts import must be here because it requires MapAPI which requires
- *  ActivityCollection, which requires URL.  If we import MapAPI first
- *  then it will end up requiring itself.
- */
-// import "./URL"
+import { targetUser, currentUser, vParams, qParams, flags } from "./Model"
+import "./URL"
 
 // import * as ActivityCollection from "./DotLayer/ActivityCollection"
 
