@@ -5,7 +5,7 @@
  */
 import Geohash from "latlon-geohash"
 
-import { MAPBOX_ACCESS_TOKEN, OFFLINE, ADMIN } from "./Env"
+import { MAPBOX_ACCESS_TOKEN, OFFLINE, ADMIN, MOBILE } from "./Env"
 import { Map, control, Control, DomUtil } from "./myLeaflet"
 
 // For ctrl-select
@@ -24,7 +24,7 @@ import heatflask_logo from "url:../images/logo.png"
 export const map = new Map("map", {
   center: [0, 0],
   zoom: 4,
-  zoomAnimation: true,
+  zoomAnimation: MOBILE,
   zoomSnap: 1,
   zoomDelta: 1,
   zoomAnimationThreshold: 8,

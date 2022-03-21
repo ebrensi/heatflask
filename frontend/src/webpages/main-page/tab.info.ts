@@ -1,6 +1,6 @@
-import { icon } from "../../../js/Icons"
+import { icon } from "../../js/Icons"
 
-constact_links = [
+contact_specs = [
   ["linkedin", "https://www.linkedin.com/company/heatflask"],
   ["twitter", "https://twitter.com/heatflask"],
   ["instagram", "https://www.instagram.com/heatflask"],
@@ -10,9 +10,13 @@ constact_links = [
 ]
 
 html_tags = []
-for (const [icon_name, url] in contact_specs) {
-  const icon_tag = icon(icon_name, (cls = "icon-button"))
+for (const [icon_name, url] of contact_specs) {
+  const icon_tag = icon(icon_name, "icon-button")
   html_tags.push(`<a href="${url}" target="_blank">${icon_tag}</a>`)
 }
-contacts_el = document.getElementById("contacts")
-contacts_el.innerHTML = html_tags.join("")
+
+document.addEventListener("DOMContentLoaded", () => {
+  contacts_el = document.getElementById("contacts")
+  console.log(contacts_el)
+  contacts_el.innerHTML = html_tags.join("")
+})

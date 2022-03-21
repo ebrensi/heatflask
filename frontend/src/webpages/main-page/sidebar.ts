@@ -1,9 +1,11 @@
-// HTML
-import query_html from "bundle-text:./sidebar-tabs/query.html"
-import actvities_html from "bundle-text:./sidebar-tabs/activities.html"
-import profile_html from "bundle-text:./sidebar-tabs/profile.html"
-import controls_html from "bundle-text:./sidebar-tabs/controls.html"
-import info_html from "bundle-text:./sidebar-tabs/info.html"
+// Tab Content
+import query_html from "bundle-text:./tab.query.html"
+
+import actvities_html from "bundle-text:./tab.activities.html"
+import profile_html from "bundle-text:./tab.profile.html"
+import controls_html from "bundle-text:./tab.controls.html"
+import info_html from "bundle-text:./tab.info.html"
+import "./tab.info"
 
 // Code
 import { icon } from "../../js/Icons"
