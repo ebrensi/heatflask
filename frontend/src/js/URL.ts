@@ -2,7 +2,13 @@
  * URL.js -- Browser URL functionality
  */
 
-import { qParams, vParams } from "./Model"
+import {
+  QueryParameters,
+  DefaultQuery,
+  VisualParameters,
+  DefaultVisual,
+} from "./Model"
+import { BoundObject } from "./DataBinding"
 import { defaultBaselayerName, map } from "./Map"
 
 // import { dotLayer } from "../DotLayerAPI.js";
@@ -15,52 +21,145 @@ import { nextTask } from "./appUtil"
  *     key: [[kwd1, kwd2, ...], default-value]
  * where kwd1, kwd2, etc are possible parameter names for this field
  */
-const urlArgDefaults = {
+const urlArgNames: { [name: string]: string[] } = {
   // Query parameters
-  after: [["start", "after", "date1", "a"], null],
-  before: [["end", "before", "date2", "b"], null],
-  days: [["days", "preset", "d"], null],
-  limit: [["limit", "n"], 10],
-  ids: [["id", "ids"], ""],
-  key: [["key"], null],
+  after: ["start", "after", "date1", "a"],
+  before: ["end", "before", "date2", "b"],
+  days: ["days", "preset", "d"],
+  limit: ["limit", "n"],
+  ids: ["id", "ids"],
+  key: ["key"],
+  userid: ["user", "userid"],
 
   // Visual parameters
-  zoom: [["zoom", "z"], 3],
-  lat: [["lat", "x"], 27.53],
-  lng: [["lng", "lon", "y"], 1.58],
-  autozoom: [["autozoom", "az"], true],
-  tau: [["tau", "timescale"], 30],
-  T: [["T", "period"], 2],
-  sz: [["sz"], 3],
-  geohash: [["geohash", "gh"], null],
-  paused: [["paused", "pu"], null],
-  shadows: [["sh", "shadows"], null],
-  paths: [["pa", "paths"], true],
-  alpha: [["alpha"], 0.8],
+  zoom: ["zoom", "z"],
+  lat: ["lat", "x"],
+  lng: ["lng", "lon", "y"],
+  autozoom: ["autozoom", "az"],
+  tau: ["tau", "timescale"],
+  T: ["T", "period"],
+  sz: ["sz"],
+  geohash: ["geohash", "gh"],
+  paused: ["paused", "pu"],
+  shadows: ["sh", "shadows"],
+  paths: ["pa", "paths"],
+  alpha: ["alpha"],
 }
 
-const urlArgs = new URL(window.location.href).searchParams
-const pathname = window.location.pathname.substring(1)
-const targetUserId = urlArgs.get("user") || pathname
-
-const names: { [name: string]: string[] } = {}
-const params: QueryParameters & VisualParameters = {}
-
-for (const [key, val] of Object.entries(urlArgDefaults)) {
-  names[key] = val[0]
-  params[key] = val[1]
+function bool(val) {
+  return val !== "0" && !!val
 }
 
-/* parse parameters from the url */
-for (const [uKey, value] of urlArgs.entries()) {
-  for (const [pKey, pNames] of Object.entries(names)) {
-    if (pNames.includes(uKey)) {
-      params[pKey] = value
-      delete names[pKey] // this field is set no need to check it again
-      break
-    }
+/*
+ * make a lookup to find the key for a given URL argument
+ */
+const keyLookup: Record<string, string> = {}
+for (const [key, names] of Object.entries(urlArgNames)) {
+  for (const name of names) {
+    keyLookup[name] = key
   }
 }
+
+export function parseURL() {
+  /* parse parameters from the url */
+  const urlArgs = new URL(window.location.href).searchParams
+
+  const urlParams: QueryParameters & VisualParameters = {}
+  for (const [urlArg, value] of urlArgs.entries()) {
+    const key = keyLookup[urlArg]
+    if (key) {
+      urlParams[key] = value
+    } else {
+      console.log(`unknown URL arg ${urlArg}=${value}`)
+    }
+  }
+
+  /*
+   * Construct Query from URL args
+   */
+  let query: QueryParameters
+  const queryType = urlArgs["key"]
+    ? "key"
+    : urlParams.ids
+    ? "ids"
+    : urlParams.after || urlParams.before
+    ? "dates"
+    : urlParams.days
+    ? "days"
+    : urlParams.limit
+    ? "activities"
+    : undefined
+
+  if (queryType) {
+    query = {queryType: queryType}
+
+    const qt = query.queryType
+    if ((qt === "days") && urlParams.days)
+      query.quantity = +urlParams.days
+    else if ((qt === "activities") && urlParams.limit)
+      query.quantity = +urlParams.limit
+    else if (qt === "dates") {
+      query.before = urlParams.before
+      query.after = urlParams.after
+    } else if (qt === "ids")
+      query.ids = urlParams.ids
+    else if (qt === "key")
+      query.key = urlParams.key
+   else {
+     query = DefaultQuery
+   }
+
+  const endpoint = window.location.pathname.substring(1)
+  query.userid = endpoint
+
+  // TODO: continue here
+
+  /*
+   * Construct Visual from URL args
+   */
+  const visual = { ...DefaultVisual }
+
+  const vParamsInit: VisualParameters = {
+    center: { lat: params["lat"], lng: params["lng"] },
+    zoom: params["zoom"],
+    geohash: params["geohash"],
+    autozoom: bool(params["autozoom"]),
+    paused: bool(params["paused"]),
+    baselayer: params["baselayer"],
+
+    s: NaN,
+    tau: params["tau"],
+    T: params["T"],
+    sz: params["sz"],
+    alpha: params["alpha"],
+    shadows: bool(params["shadows"]),
+    paths: bool(params["paths"]),
+  }
+
+  return {
+    qParams: qParamsInit,
+    vParams: vParamsInit,
+  }
+}
+
+export type QueryObject = QueryParameters & BoundObject
+
+const qParams: QueryObject = BoundObject.fromObject(qParamsInit, {
+  event: "change",
+})
+
+const afterDateElement: HTMLInputElement =
+  document.querySelector("[data-bind=after]")
+const beforeDateElement: HTMLInputElement =
+  document.querySelector("[data-bind=before]")
+
+qParams.onChange("after", (newDate) => {
+  beforeDateElement.min = newDate
+})
+
+qParams.onChange("before", (newDate) => {
+  afterDateElement.max = newDate
+})
 
 /*
  * qArgs are updated on render and vArgs are updated every time the map moves

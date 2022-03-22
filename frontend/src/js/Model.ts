@@ -15,7 +15,7 @@ import { HHMMSS } from "./appUtil"
  *   queries and those involving multiple users.
  *
  */
-interface QueryParameters {
+export interface QueryParameters {
   userid?: string
   queryType?: string //"days", "activities", "dates", "ids", or "key"
   key?: string // A lookup representing a query stored on the server
@@ -23,56 +23,20 @@ interface QueryParameters {
   before?: string // End date
   ids?: string //representing a list of activity ids
   quantity?: number
+
+  days?: number
+  limit?: number
 }
 
-/*
- * Ininitial query extracted from defaults and URL parameters
- */
-const qParamsInit: QueryParameters = {
-  userid: targetUserId,
-  after: params.after,
-  before: params.before,
-  ids: params.ids,
-  key: params.key,
+export const DefaultQuery: QueryParameters = {
+  queryType: "activities",
+  quantity: 10,
 }
-
-qParamsInit.queryType = urlArgs["key"]
-  ? "key"
-  : params.ids
-  ? "ids"
-  : params.after || params.before
-  ? "dates"
-  : params.days
-  ? "days"
-  : "activities"
-
-qParamsInit.quantity =
-  params.queryType === "days" ? +params.days : +params.limit
-
-/*
- * Current values of query parameters in the DOM
- */
-export const qParams = <QueryParameters & BoundObject>(
-  BoundObject.fromObject(qParamsInit, { event: "change" })
-)
-
-const afterDateElement: HTMLInputElement =
-  document.querySelector("[data-bind=after]")
-const beforeDateElement: HTMLInputElement =
-  document.querySelector("[data-bind=before]")
-
-qParams.onChange("after", (newDate) => {
-  beforeDateElement.min = newDate
-})
-
-qParams.onChange("before", (newDate) => {
-  afterDateElement.max = newDate
-})
 
 /**
  * visual-parameters are those that determine what appears visually
  */
-interface VisualParameters {
+export interface VisualParameters {
   zoom?: number // map zoom level
   center?: [number, number] // map latitude, longitude
   geohash?: string // a string representing zoom/center
@@ -87,27 +51,17 @@ interface VisualParameters {
   paths?: boolean // show paths
 }
 
-function bool(val) {
-  return val !== "0" && !!val
-}
-/*
- * Ininitial visual parameters extracted from defaults and URL parameters
- */
-const vParamsInit: VisualParameters = {
-  center: { lat: params["lat"], lng: params["lng"] },
-  zoom: params["zoom"],
-  geohash: params["geohash"],
-  autozoom: bool(params["autozoom"]),
-  paused: bool(params["paused"]),
-  baselayer: params["baselayer"],
-
-  s: NaN,
-  tau: params["tau"],
-  T: params["T"],
-  sz: params["sz"],
-  alpha: params["alpha"],
-  shadows: bool(params["shadows"]),
-  paths: bool(params["paths"]),
+export const DefaultVisual: VisualParameters = {
+  zoom: 3,
+  center: [27.53, 1.58],
+  autozoom: true,
+  paused: false,
+  tau: 30,
+  T: 2,
+  sz: 3,
+  shadows: true,
+  paths: true,
+  alpha: 0.8,
 }
 
 /*
