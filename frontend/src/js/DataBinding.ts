@@ -1,7 +1,30 @@
 /**
  * DataBinding.ts -- Lightweight data-binding
- * Efrem Rensi 8/2020
+ * Efrem Rensi 8/2020, 3/2022
  */
+
+/**
+ * Spec for binding an HTML element in the HTML code
+ * @property class - the grouping of this element (which bounded object this will be part of)
+ * @property bind - The name of the variable this will be bound to
+ * @property prop - The property of this element that is bound
+ * @property attr - The attribute of this element thatis bound
+ *
+ * For example we might have an HTML element
+ *  <span class="foo" data-bind="name" data-class="user" prop="innerText"></span>
+ *
+ */
+interface HTMLBindingSpec extends DOMStringMap {
+  class: string
+  bind: string
+  prop?: string
+  attr?: string
+  event?: string
+}
+
+interface BoundHTMLElement extends HTMLElement {
+  dataset: HTMLBindingSpec
+}
 
 /**
  * An object that defines a DOM binding
@@ -15,26 +38,28 @@ interface DOMBindingSpec {
   attribute?: string
   property?: string
   event?: string
-  DOMformat?: (x: any) => string
-  varFormat?: (x: any) => string
+  DOMformat?: (x: unknown) => string
+  varFormat?: (x: unknown) => string
 }
 
 interface DOMBinding {
   element: HTMLElement
   attribute?: string
   property?: string
-  format: (x: any) => string
+  format: (x: unknown) => string
 }
 
+type GeneralBinding = (x: unknown) => void
 type ObjectKey = string | number
+type dict = Record<ObjectKey, unknown>
 
 // A dummy function that returns its input
-const identity = (x: any): any => x
+const str = (x: unknown): string => String(x)
 
 function setAttribute(
   element: HTMLElement,
   attribute: string,
-  value?: unknown
+  value?: string
 ): void {
   if (value) {
     element.setAttribute(attribute, value)
@@ -45,9 +70,10 @@ function setAttribute(
 
 /*
  * Create a clone of defaults, replaced by truthy values (or 0) from obj
+ * Kind of like Object.assign except on
  */
-function mergeDefaults(defaults: Object, obj: Object): Object {
-  const newObj = Object.assign({}, defaults) // clone defaults
+function mergeDefaults(defaults: DOMBindingSpec, obj: dict): dict {
+  const newObj = { ...defaults }
   for (const key in obj) {
     const val = obj[key]
     if (val || val === 0) {
@@ -63,67 +89,56 @@ function mergeDefaults(defaults: Object, obj: Object): Object {
  *   two or more objects.  It consists of a getter and setter for the value
  *   as well as one or more two-way bindings.
  *
- * @property value - The value of this bound variable
+ * @property #value - The value of this bound variable
  */
 export class BoundVariable {
-  #value: any // eslint-disable-line
+  #value: unknown
   DOMbindings: DOMBinding[]
-  countDB: number
-  generalBindings: Array<(x: any) => any>
-  countGB: number
+  generalBindings: GeneralBinding[]
 
-  constructor(value?: any) {
-    this.DOMbindings = []
-    this.countDB = 0
-
-    this.generalBindings = []
-    this.countGB = 0
-
+  constructor(value?: unknown) {
+    this.DOMbindings = null
+    this.generalBindings = null
     this.#value = value
   }
 
   toString(): string {
-    return this.#value.toString()
+    return `<bound ${this.#value}>`
   }
 
-  /**
-   * @return The current value of this variable
-   */
-  get(): any {
+  get(): unknown {
     return this.#value
   }
 
-  /**
-   * Set a new value for this variable
-   * @param newValue the new value
-   */
-  set(newValue: any): void {
+  set(newValue: unknown): void {
     this.#value = newValue
 
-    // Update all bound DOM elments
-    for (let i = 0; i < this.countDB; i++) {
-      const { element, property, attribute, format } = this.DOMbindings[i]
-      const val = format(newValue)
+    if (this.DOMbindings) {
+      // Update all bound DOM elments
+      for (const { element, property, attribute, format } of this.DOMbindings) {
+        const newValueFormatted = format(newValue)
 
-      if (property) {
-        element[property] = val
-      } else {
-        setAttribute(element, attribute, val)
+        if (property) {
+          element[property] = newValueFormatted
+        } else {
+          setAttribute(element, attribute, newValueFormatted)
+        }
       }
     }
 
-    // Call all bound hooks
-    for (let i = 0; i < this.countGB; i++) {
-      const onChange = this.generalBindings[i]
-      onChange(newValue)
+    if (this.generalBindings) {
+      // Call all bound hooks
+      for (const onChange of this.generalBindings) {
+        onChange(newValue)
+      }
     }
   }
 
-  get value(): any {
+  get value(): unknown {
     return this.#value
   }
 
-  set value(newValue: any): void {
+  set value(newValue: unknown) {
     this.set(newValue)
   }
 
@@ -138,9 +153,9 @@ export class BoundVariable {
       element,
       attribute,
       property = "value",
-      DOMformat = identity,
+      DOMformat = str,
       event,
-      varFormat = identity,
+      varFormat = str,
     } = DOMbindingSpec
 
     const el = element || document.querySelector(selector)
@@ -149,15 +164,15 @@ export class BoundVariable {
       throw new TypeError("invalid HTMLElement")
     }
 
-    // if (!el.hasAttribute(attribute)) {
-    //   console.warn(`"${attribute}" is not a standard attribute for `, el);
-    // }
+    if (!el.hasAttribute(attribute)) {
+      console.warn(`"${attribute}" is not a standard attribute for `, el)
+    }
 
     /* If an attribute is specified then it takes precedence over a property
      *   see https://javascript.info/dom-attributes-and-properties
      */
     const accessor = attribute ? "attribute" : "property"
-    const binding = {
+    const domBinding: DOMBinding = {
       element: el,
       [accessor]: attribute || property,
       format: DOMformat,
@@ -173,15 +188,18 @@ export class BoundVariable {
       el.addEventListener(event, setValue)
     }
 
-    this.DOMbindings.push(binding)
-    this.countDB = this.DOMbindings.length
+    if (this.DOMbindings) {
+      this.DOMbindings.push(domBinding)
+    } else {
+      this.DOMbindings = [domBinding]
+    }
 
-    const val = DOMformat(this.#value)
+    const formattedVal = DOMformat(this.#value)
 
     if (attribute) {
-      setAttribute(el, attribute, val)
+      setAttribute(el, attribute, formattedVal)
     } else {
-      el[property] = val
+      el[property] = formattedVal
     }
 
     return this
@@ -190,15 +208,14 @@ export class BoundVariable {
   /**
    * Call a specified function with the new value whenever this value changes.
    */
-  onChange(func: (x: any) => any): BoundVariable {
-    this.generalBindings.push(func)
-    this.countGB = this.generalBindings.length
+  onChange(func: GeneralBinding): BoundVariable {
+    if (this.generalBindings) {
+      this.generalBindings.push(func)
+    } else {
+      this.generalBindings = [func]
+    }
     return this
   }
-}
-
-interface BO {
-  [prop: string]: BoundVariable
 }
 
 /**
@@ -218,7 +235,7 @@ interface BO {
  *  @param {Object} binds - The {@BoundVariable}s referenced by key.
  */
 export class BoundObject extends Object {
-  boundVariables: BO
+  boundVariables: { [prop: string]: BoundVariable }
 
   constructor() {
     super()
@@ -258,15 +275,15 @@ export class BoundObject extends Object {
    * @param value - Initial value for the new
    *                "property" {@link BoundVariable} object.
    */
-  addProperty(key: ObjectKey, value?: any): BoundVariable {
+  addProperty(key: ObjectKey, value?: unknown): BoundVariable {
     return this.addBoundVariable(key, new BoundVariable(value))
   }
 
   /**
    * Add a DOM binding to one of the properties
    */
-  addDOMbinding(key: ObjectKey, DOMbindingSpec: DomBindingSpec): BoundVariable {
-    return this.boundVariables[key].addDOMbinding(DOMbindingSpec)
+  addDOMbinding(key: ObjectKey, spec: DOMBindingSpec): BoundVariable {
+    return this.boundVariables[key].addDOMbinding(spec)
   }
 
   /**
@@ -281,21 +298,21 @@ export class BoundObject extends Object {
    * If key is not specified, func takes two arguments, the property
    * that has changed, and the new value.
    */
-  onChange(key: ObjectKey, func: (x: any) => any): BoundVariable | void {
-    if (func) {
-      return this.boundVariables[key].onChange(func)
+  onChange(func: GeneralBinding, key: ObjectKey): BoundObject {
+    if (key) {
+      this.boundVariables[key].onChange(func)
     } else {
-      func = key
-      for (const [prop, bv] of Object.entries(this.boundVariables)) {
+      for (const bv of Object.values(this.boundVariables)) {
         bv.onChange((newVal) => func(newVal))
       }
     }
+    return this
   }
 
   /**
    * Add new properties or DOM bindings to existing properties from a regular Object.
    *  Each property possibly is bound to a DOM element.
-   *  i.e. if obj["key"] and a DOM element with data-bi`nd="key" both
+   *  i.e. if obj["key"] and a DOM element with data-bind="key" both
    *  exist then the "key" property is bound with that element.
    *
    * @param  {Object} obj
@@ -303,10 +320,12 @@ export class BoundObject extends Object {
    *    that are not specified in the HTML data-* attributes.
    * @return {BoundObject}
    */
-  addFromObject(obj: Object, defaults: DOMBindingSpec = {}): BoundObject {
+  addFromObject(obj: dict, defaults: DOMBindingSpec = {}): BoundObject {
     for (const [key, val] of Object.entries(obj)) {
-      const bv = this.boundVariables[key] || this.addProperty(key, val),
-        elements = document.querySelectorAll(`[data-bind=${key}]`)
+      const bv = this.boundVariables[key] || this.addProperty(key, val)
+      const elements: NodeListOf<HTMLElement> = document.querySelectorAll(
+        `[data-bind=${key}]`
+      )
 
       for (const el of elements) {
         const { attr, prop, event } = el.dataset
@@ -328,7 +347,7 @@ export class BoundObject extends Object {
    *
    * @param  {String} selector - DOM elements matching this selector
    *            will be considered.
-   * @param {DOMbinding} [defaults] - defaults for {@link DOMbinding} properties
+   * @param {DOMBindingSpec} [defaults] - defaults for {@link DOMBindingSpec} properties
    *    that are not specified in the HTML data-* attributes.
    * @return {@BoundObject}
    */
@@ -336,8 +355,10 @@ export class BoundObject extends Object {
     selector: string,
     defaults: DOMBindingSpec = {}
   ): BoundObject {
-    for (const el of document.querySelectorAll(selector)) {
-      const { bind: key, attr, prop, event } = el.dataset
+    const elements: NodeListOf<BoundHTMLElement> =
+      document.querySelectorAll(selector)
+    for (const el of elements) {
+      const { bind: key, attr, prop, event } = <HTMLBindingSpec>el.dataset
       const bv = this.boundVariables[key] || this.addProperty(key)
 
       bv.value = bv.value || el.getAttribute(attr) || el[prop]
@@ -388,7 +409,11 @@ export class BoundObject extends Object {
    * @return {Object} -- A regular Object "snapshot"
    * of this {@link BoundBoject}
    */
-  toObject(): Object {
-    return Object.assign({}, this)
+  toObject(): dict {
+    const output = {}
+    for (const [k, v] of Object.entries(this.boundVariables)) {
+      output[k] = v.value
+    }
+    return output
   }
 }

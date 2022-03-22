@@ -2,12 +2,66 @@
  * URL.js -- Browser URL functionality
  */
 
-import { qParams, vParams, urlArgDefaults } from "./Model"
+import { qParams, vParams } from "./Model"
 import { defaultBaselayerName, map } from "./Map"
 
 // import { dotLayer } from "../DotLayerAPI.js";
 
 import { nextTask } from "./appUtil"
+
+/*
+ * These are all the possible arguments that might be in the URL
+ * parameter string.  The format here is:
+ *     key: [[kwd1, kwd2, ...], default-value]
+ * where kwd1, kwd2, etc are possible parameter names for this field
+ */
+const urlArgDefaults = {
+  // Query parameters
+  after: [["start", "after", "date1", "a"], null],
+  before: [["end", "before", "date2", "b"], null],
+  days: [["days", "preset", "d"], null],
+  limit: [["limit", "n"], 10],
+  ids: [["id", "ids"], ""],
+  key: [["key"], null],
+
+  // Visual parameters
+  zoom: [["zoom", "z"], 3],
+  lat: [["lat", "x"], 27.53],
+  lng: [["lng", "lon", "y"], 1.58],
+  autozoom: [["autozoom", "az"], true],
+  tau: [["tau", "timescale"], 30],
+  T: [["T", "period"], 2],
+  sz: [["sz"], 3],
+  geohash: [["geohash", "gh"], null],
+  paused: [["paused", "pu"], null],
+  shadows: [["sh", "shadows"], null],
+  paths: [["pa", "paths"], true],
+  alpha: [["alpha"], 0.8],
+}
+
+const urlArgs = new URL(window.location.href).searchParams
+const pathname = window.location.pathname.substring(1)
+const targetUserId = urlArgs.get("user") || pathname
+
+const names: { [name: string]: string[] } = {}
+const params: QueryParameters & VisualParameters = {}
+
+for (const [key, val] of Object.entries(urlArgDefaults)) {
+  names[key] = val[0]
+  params[key] = val[1]
+}
+
+/* parse parameters from the url */
+for (const [uKey, value] of urlArgs.entries()) {
+  for (const [pKey, pNames] of Object.entries(names)) {
+    if (pNames.includes(uKey)) {
+      params[pKey] = value
+      delete names[pKey] // this field is set no need to check it again
+      break
+    }
+  }
+}
+
 /*
  * qArgs are updated on render and vArgs are updated every time the map moves
  */
