@@ -1,16 +1,16 @@
 // Tab Content
-import query_html from "bundle-text:./tab.query.html"
-import actvities_html from "bundle-text:./tab.activities.html"
-import profile_html from "bundle-text:./tab.profile.html"
-import controls_html from "bundle-text:./tab.controls.html"
+import query_html from "bundle-text:../webpages/main-page/tab.query.html"
+import actvities_html from "bundle-text:../webpages/main-page/tab.activities.html"
+import profile_html from "bundle-text:../webpages/main-page/tab.profile.html"
+import controls_html from "bundle-text:../webpages/main-page/tab.controls.html"
 
-import info_html from "bundle-text:./tab.info.html"
-import "./tab.info"
+import info_html from "bundle-text:../webpages/main-page/tab.info.html"
+import "../webpages/main-page/tab.info"
 
 // Code
 import "npm:sidebar-v2/js/leaflet-sidebar"
-import { control } from "../../js/myLeaflet"
-import { icon } from "../../js/Icons"
+import { control } from "./myLeaflet"
+import { icon } from "./Icons"
 
 const tabSpec = {
   query: [icon("bars"), "${TARGET_USER}'s map", query_html],

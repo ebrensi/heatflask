@@ -23,9 +23,6 @@ export interface QueryParameters {
   before?: string // End date
   ids?: string //representing a list of activity ids
   quantity?: number
-
-  days?: number
-  limit?: number
 }
 
 export const DefaultQuery: QueryParameters = {
@@ -37,11 +34,9 @@ export const DefaultQuery: QueryParameters = {
  * visual-parameters are those that determine what appears visually
  */
 export interface VisualParameters {
+  center?: { lat: number; lng: number } // map latitude, longitude
   zoom?: number // map zoom level
-  center?: [number, number] // map latitude, longitude
   geohash?: string // a string representing zoom/center
-  autozoom?: boolean // Whether or not to automatically zoom to include all of the activities after render
-  paused?: boolean // start in paused state
   baselayer?: string // map background tile group name
   tau?: number // timescale
   T?: number // Period
@@ -49,11 +44,13 @@ export interface VisualParameters {
   alpha?: number // global alpha for all rendering
   shadows?: boolean // render shadows under dots
   paths?: boolean // show paths
+  autozoom?: boolean // Whether or not to automatically zoom to include all of the activities after render
+  paused?: boolean // start in paused state
 }
 
 export const DefaultVisual: VisualParameters = {
   zoom: 3,
-  center: [27.53, 1.58],
+  center: { lat: 27.53, lng: 1.58 },
   autozoom: true,
   paused: false,
   tau: 30,
@@ -62,73 +59,74 @@ export const DefaultVisual: VisualParameters = {
   shadows: true,
   paths: true,
   alpha: 0.8,
+  baselayer: "OpenStreetMap.Mapnik",
 }
 
-/*
- * The visual paramters for the current view
- */
-export const vParams = <VisualParameters & BoundObject>BoundObject.fromObject(
-  vParamsInit,
-  {
-    // bind "change" events of any elements whos data-event attribute not set
-    event: "change",
-  }
-)
+// /*
+//  * The visual paramters for the current view
+//  */
+// export const vParams = <VisualParameters & BoundObject>BoundObject.fromObject(
+//   vParamsInit,
+//   {
+//     // bind "change" events of any elements whos data-event attribute not set
+//     event: "change",
+//   }
+// )
 
-// info elements have one-way bindings because the user cannot change them
-export const messages = BoundObject.fromDOMelements("[data-class=info]")
+// // info elements have one-way bindings because the user cannot change them
+// export const messages = BoundObject.fromDOMelements("[data-class=info]")
 
-vParams.onChange("s", (s) => {
-  const tau = (vParams.tau = tauLow * (tauHigh / tauLow) ** s)
-  messages["tau-info"] = `${tau.toFixed(1)}`
-  // console.log(`s = ${s} => tau = ${vParams.tau}`)
-})
+// vParams.onChange("s", (s) => {
+//   const tau = (vParams.tau = tauLow * (tauHigh / tauLow) ** s)
+//   messages["tau-info"] = `${tau.toFixed(1)}`
+//   // console.log(`s = ${s} => tau = ${vParams.tau}`)
+// })
 
-// exponential scaling so that tau(s=0) = tauLow
-//                          and tau(s=1) = tauHigh
-// tau(s) = tauLow * (tauHigh / tauLow) ** s
-const tauLow = 0.5
-const tauHigh = 3600
-const tau = vParams.tau
-vParams["s"] = Math.log2(tau / tauLow) / Math.log2(tauHigh / tauLow)
+// // exponential scaling so that tau(s=0) = tauLow
+// //                          and tau(s=1) = tauHigh
+// // tau(s) = tauLow * (tauHigh / tauLow) ** s
+// const tauLow = 0.5
+// const tauHigh = 3600
+// const tau = vParams.tau
+// vParams["s"] = Math.log2(tau / tauLow) / Math.log2(tauHigh / tauLow)
 
-function updateTinfo() {
-  const T = vParams.T
-  messages["T-info"] = `${T}s ~ ${HHMMSS(T * vParams.tau)}`
-}
-vParams.onChange("T", () => updateTinfo())
-vParams.onChange("tau", () => updateTinfo())
+// function updateTinfo() {
+//   const T = vParams.T
+//   messages["T-info"] = `${T}s ~ ${HHMMSS(T * vParams.tau)}`
+// }
+// vParams.onChange("T", () => updateTinfo())
+// vParams.onChange("tau", () => updateTinfo())
 
-export const targetUser = BoundObject.fromDOMelements(
-  "[data-class=target-user]"
-)
-targetUser.addProperty("id", targetUserId)
-targetUser.onChange("id", (newId) => (qParams.userid = newId))
+// export const targetUser = BoundObject.fromDOMelements(
+//   "[data-class=target-user]"
+// )
+// targetUser.addProperty("id", targetUserId)
+// targetUser.onChange("id", (newId) => (qParams.userid = newId))
 
-export const currentUser = BoundObject.fromDOMelements(
-  "[data-class=current-user]"
-)
+// export const currentUser = BoundObject.fromDOMelements(
+//   "[data-class=current-user]"
+// )
 
-/*
- * If the user is already logged in (via browser cookie),
- *  populate currentUser object with data provided from the server
- */
-if (CURRENT_USER) {
-  Object.assign(currentUser, CURRENT_USER)
-  currentUser.url = USER_URLS(currentUser.id)
-}
+// /*
+//  * If the user is already logged in (via browser cookie),
+//  *  populate currentUser object with data provided from the server
+//  */
+// if (CURRENT_USER) {
+//   Object.assign(currentUser, CURRENT_USER)
+//   currentUser.url = USER_URLS(currentUser.id)
+// }
 
-export const flags = BoundObject.fromDOMelements("[data-class=flag]", {
-  event: "change",
-})
+// export const flags = BoundObject.fromDOMelements("[data-class=flag]", {
+//   event: "change",
+// })
 
-export const state = {
-  flags: flags,
-  vParams: vParams,
-  qParams: qParams,
-  messages: messages,
-  targetUser: targetUser,
-  currentUser: currentUser,
-}
+// export const state = {
+//   flags: flags,
+//   vParams: vParams,
+//   qParams: qParams,
+//   messages: messages,
+//   targetUser: targetUser,
+//   currentUser: currentUser,
+// }
 
-export { state as default }
+// export { state as default }

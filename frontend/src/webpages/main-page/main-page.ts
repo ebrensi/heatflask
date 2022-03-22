@@ -10,17 +10,10 @@
  * main.js -- the entry point for the heatflask browser client
  */
 console.time("client setup")
+
 import { APP_VERSION } from "../../js/Env"
-
-import "../../js/Map"
-import { map } from "../../js/Map"
-
-import "./sidebar"
-import { renderTabs } from "./sidebar"
-
-renderTabs(map)
-
 import "../../js/UI"
+
 console.timeEnd("client setup")
 
 console.log(`

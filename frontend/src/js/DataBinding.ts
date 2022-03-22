@@ -72,10 +72,9 @@ function setAttribute(
  * Create a clone of defaults, replaced by truthy values (or 0) from obj
  * Kind of like Object.assign except on
  */
-function mergeDefaults(defaults: DOMBindingSpec, obj: dict): dict {
+export function mergeDefaults(defaults: DOMBindingSpec, obj: dict): dict {
   const newObj = { ...defaults }
-  for (const key in obj) {
-    const val = obj[key]
+  for (const [key, val] of Object.entries(obj)) {
     if (val || val === 0) {
       newObj[key] = obj[key]
     }

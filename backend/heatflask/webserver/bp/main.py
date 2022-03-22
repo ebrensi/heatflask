@@ -56,13 +56,14 @@ async def splash_page(request):
 
 
 # *** Main user/global activities page
-@bp.get("/global")
 @bp.get("/<target_user_id:int>")
+@bp.get("/global")
 @session_cookie(get=True, set=True, flashes=True)
 async def user_page(request, target_user_id=None):
     if target_user_id and not await Users.get(target_user_id):
         raise SanicException(
-            f"Strava athlete {target_user_id} is not registered.", status_code=404
+            f"Sorry, Strava athlete {target_user_id} is not registered with Heatflask",
+            status_code=404,
         )
 
     cu = request.ctx.current_user

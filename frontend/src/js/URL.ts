@@ -8,20 +8,48 @@ import {
   VisualParameters,
   DefaultVisual,
 } from "./Model"
-import { BoundObject } from "./DataBinding"
-import { defaultBaselayerName, map } from "./Map"
+import Geohash from "latlon-geohash"
+
+import { BoundObject, mergeDefaults } from "./DataBinding"
+// import { defaultBaselayerName, map } from "./Map"
 
 // import { dotLayer } from "../DotLayerAPI.js";
 
 import { nextTask } from "./appUtil"
 
-/*
- * These are all the possible arguments that might be in the URL
- * parameter string.  The format here is:
- *     key: [[kwd1, kwd2, ...], default-value]
- * where kwd1, kwd2, etc are possible parameter names for this field
+/**
+ * All the model parameters that we can parse from the URL
  */
-const urlArgNames: { [name: string]: string[] } = {
+interface URLParameters {
+  // Query parameters
+  after?: string
+  before?: string
+  days?: string
+  limit?: string
+  ids?: string
+  key?: string
+  userid?: string
+  // Visual parameters
+  zoom?: string
+  lat?: string
+  lng?: string
+  autozoom?: string
+  tau?: string
+  T?: string
+  sz?: string
+  geohash?: string
+  paused?: string
+  shadows?: string
+  paths?: string
+  alpha?: string
+  baselayer?: string
+}
+
+/**
+ * Reverse-mapping of all the possible URL argument names to their
+ * assoicated paramters.
+ */
+const urlArgNames: { [Property in keyof URLParameters]: string[] } = {
   // Query parameters
   after: ["start", "after", "date1", "a"],
   before: ["end", "before", "date2", "b"],
@@ -44,14 +72,15 @@ const urlArgNames: { [name: string]: string[] } = {
   shadows: ["sh", "shadows"],
   paths: ["pa", "paths"],
   alpha: ["alpha"],
+  baselayer: ["baselayer", "map", "bl"],
 }
 
 function bool(val) {
-  return val !== "0" && !!val
+  return val !== "0" && val != "null" && !!val
 }
 
 /*
- * make a lookup to find the key for a given URL argument
+ * make a lookup to find the paramter name for a given URL argument
  */
 const keyLookup: Record<string, string> = {}
 for (const [key, names] of Object.entries(urlArgNames)) {
@@ -64,7 +93,7 @@ export function parseURL() {
   /* parse parameters from the url */
   const urlArgs = new URL(window.location.href).searchParams
 
-  const urlParams: QueryParameters & VisualParameters = {}
+  const urlParams: URLParameters = {}
   for (const [urlArg, value] of urlArgs.entries()) {
     const key = keyLookup[urlArg]
     if (key) {
@@ -75,9 +104,9 @@ export function parseURL() {
   }
 
   /*
-   * Construct Query from URL args
+   * ***  Construct Query from URL args  ***
    */
-  let query: QueryParameters
+  let qparams: QueryParameters
   const queryType = urlArgs["key"]
     ? "key"
     : urlParams.ids
@@ -91,55 +120,69 @@ export function parseURL() {
     : undefined
 
   if (queryType) {
-    query = { queryType: queryType }
+    qparams = { queryType: queryType }
 
-    const qt = query.queryType
-    if (qt === "days" && urlParams.days) query.quantity = +urlParams.days
+    const qt = qparams.queryType
+    if (qt === "days" && urlParams.days) qparams.quantity = +urlParams.days
     else if (qt === "activities" && urlParams.limit)
-      query.quantity = +urlParams.limit
+      qparams.quantity = +urlParams.limit
     else if (qt === "dates") {
-      query.before = urlParams.before
-      query.after = urlParams.after
-    } else if (qt === "ids") query.ids = urlParams.ids
-    else if (qt === "key") query.key = urlParams.key
-    else {
-      query = DefaultQuery
-    }
+      qparams.before = urlParams.before
+      qparams.after = urlParams.after
+    } else if (qt === "ids") qparams.ids = urlParams.ids
+    else if (qt === "key") qparams.key = urlParams.key
+  } else {
+    qparams = DefaultQuery
   }
+
+  /*
+   * This will give us the endpoint name of the current url,
+   *  which is the target-user's id or "global"
+   *  Example:  https://heatflask.com/1324531?bar=2
+   *                 =>  endpoint = "1324531"
+   */
   const endpoint = window.location.pathname.substring(1)
-  query.userid = endpoint
+  qparams.userid = endpoint
+
+  /*
+   * *** Construct Visual from URL args ***
+   */
+  const vparams: VisualParameters = { ...DefaultVisual }
+
+  if (urlParams.lat && urlParams.lng) {
+    vparams.center = { lat: +urlParams.lat, lng: +urlParams.lng }
+  }
+
+  // string params
+  for (const p of ["geohash", "baselayer"]) {
+    if (urlParams[p]) vparams[p] = urlParams[p]
+  }
+
+  // numerical params
+  for (const p of ["zoom", "tau", "T", "sz", "alpha"]) {
+    if (urlParams[p]) vparams[p] = +urlParams[p]
+  }
+
+  // boolean params
+  for (const p of ["shadows", "paths", "autozoom", "paused"]) {
+    if (urlParams[p]) vparams[p] = bool(urlParams[p])
+  }
+
+  // GeoHash takes precedence over lat, lng if both are there
+  if (vparams.geohash) {
+    const ghObj = Geohash.decode(vparams.geohash)
+    vparams.center = { lat: ghObj.lat, lng: ghObj.lon }
+    vparams.zoom = vparams.geohash.length
+  } else {
+    vparams.geohash = Geohash.encode(
+      vparams.center.lat,
+      vparams.center.lng,
+      vparams.zoom
+    )
+  }
+
+  return { qparams, vparams }
 }
-// TODO: continue here
-
-//   /*
-//    * Construct Visual from URL args
-//    */
-//   const visual = { ...DefaultVisual }
-
-//   const vParamsInit: VisualParameters = {
-//     center: { lat: params["lat"], lng: params["lng"] },
-//     zoom: params["zoom"],
-//     geohash: params["geohash"],
-//     autozoom: bool(params["autozoom"]),
-//     paused: bool(params["paused"]),
-//     baselayer: params["baselayer"],
-
-//     s: NaN,
-//     tau: params["tau"],
-//     T: params["T"],
-//     sz: params["sz"],
-//     alpha: params["alpha"],
-//     shadows: bool(params["shadows"]),
-//     paths: bool(params["paths"]),
-//   }
-
-//   return {
-//     qParams: qParamsInit,
-//     vParams: vParamsInit,
-//   }
-// }
-
-// export type QueryObject = QueryParameters & BoundObject
 
 // const qParams: QueryObject = BoundObject.fromObject(qParamsInit, {
 //   event: "change",

@@ -35,7 +35,7 @@ async def load_templates(app, loop):
     # This is faster than using a Templating library like Jinja2
     # since we don't need any of its advanced features.
     for fname in os.listdir(FRONTEND_DIST_DIR):
-        if fname.endswith(".html"):
+        if fname.endswith(".html") and not fname.startswith("tab."):
             fpath = f"{FRONTEND_DIST_DIR}{fname}"
             with open(fpath, "r") as file:
                 file_str = file.read()

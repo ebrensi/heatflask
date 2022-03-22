@@ -3,21 +3,25 @@
  *  Here we initialize the DOM/user interface
  */
 
-import "./Env"
-import { URLS, FLASHES } from "./Env"
+import { FLASHES } from "./Env"
+import { map, baselayers, controlWindow } from "./Map"
+import { renderTabs } from "./sidebar"
+import { parseURL } from "./URL"
 
-const flashes = FLASHES // || ["flash 1", "flash2"]
+const flashes = FLASHES
 if (!!flashes && flashes.length) {
   const result = controlWindow({
-    title: "flashes",
     content: flashes.join("<br>"),
     position: "top",
   }).show()
-  console.log(result)
 }
 
-import { targetUser, currentUser, vParams, qParams, flags } from "./Model"
-import "./URL"
+const { qparams, vparams } = parseURL()
+
+// initialize map with vparams
+baselayers[vparams.baselayer].addTo(map)
+
+renderTabs(map)
 
 // import * as ActivityCollection from "./DotLayer/ActivityCollection"
 

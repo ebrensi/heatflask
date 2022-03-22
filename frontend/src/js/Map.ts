@@ -46,9 +46,8 @@ export const AreaSelect = window.L.AreaSelect
 
 /*
  * Initialize map Baselayers
- *   with custom TileLayer
  */
-const baselayers = {
+export const baselayers = {
   None: tileLayer("", { useCache: false }),
 }
 
@@ -102,7 +101,7 @@ for (const name in baselayers) {
 control.layers(baselayers, null, { position: "topleft" }).addTo(map)
 
 // Add default baselayer to map
-baselayers[defaultBaselayerName].addTo(map)
+// baselayers[defaultBaselayerName].addTo(map)
 
 // Define a watermark control
 const Watermark = Control.extend({
@@ -134,7 +133,7 @@ new Watermark({
  * Display for debugging
  */
 const InfoViewer = Control.extend({
-  onAdd: function () {
+  onAdd() {
     const infoBox_el = DomUtil.create("div")
     infoBox_el.style.width = "200px"
     infoBox_el.style.padding = "5px"
@@ -165,7 +164,7 @@ const InfoViewer = Control.extend({
     return infoBox_el
   },
 
-  onRemove: function () {
+  onRemove() {
     map.off("zoomstart zoom zoomend move", this.onMove)
     this.infoBox_el.remove()
   },

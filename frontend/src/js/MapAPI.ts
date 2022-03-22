@@ -1,32 +1,4 @@
 /*
- * mapAPI -- Leaflet map background is initialized here
- *
- * Efrem Rensi 2020, 2022
- */
-
-// import { flags, vParams, currentUser } from "./Model"
-// import * as ActivityCollection from "./DotLayer/ActivityCollection"
-// import type { Activity } from "./DotLayer/Activity"
-
-let center: LatLng, zoom: number
-
-// Geohash uses "lon" for longitude and leaflet uses "lng"
-function ghDecode(s: string): LatLng {
-  const obj = Geohash.decode(s)
-  return new LatLng(obj.lat, obj.lon)
-}
-
-if (vParams.geohash) {
-  center = ghDecode(vParams.geohash)
-  zoom = vParams.geohash.length
-  vParams.autozoom = false
-} else {
-  center = vParams.center
-  zoom = vParams.zoom
-  vParams.geohash = Geohash.encode(center.lat, center.lng)
-}
-
-/*
  * Create one-way binding from map location to vParams object.
  * This can't be a two way binding because I don't have a way
  * to prevent infinite recursion.
