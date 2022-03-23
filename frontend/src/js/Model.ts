@@ -15,7 +15,7 @@ import { HHMMSS } from "./appUtil"
  *   queries and those involving multiple users.
  *
  */
-export interface QueryParameters {
+export type QueryParameters = {
   userid?: string
   queryType?: string //"days", "activities", "dates", "ids", or "key"
   key?: string // A lookup representing a query stored on the server
@@ -33,7 +33,7 @@ export const DefaultQuery: QueryParameters = {
 /**
  * visual-parameters are those that determine what appears visually
  */
-export interface VisualParameters {
+export type VisualParameters = {
   center?: { lat: number; lng: number } // map latitude, longitude
   zoom?: number // map zoom level
   geohash?: string // a string representing zoom/center
@@ -62,16 +62,40 @@ export const DefaultVisual: VisualParameters = {
   baselayer: "OpenStreetMap.Mapnik",
 }
 
-// /*
-//  * The visual paramters for the current view
-//  */
-// export const vParams = <VisualParameters & BoundObject>BoundObject.fromObject(
-//   vParamsInit,
-//   {
-//     // bind "change" events of any elements whos data-event attribute not set
-//     event: "change",
-//   }
-// )
+type BoundVisualParameters = VisualParameters & BoundObject
+type BoundQueryParameters = QueryParameters & BoundObject
+
+export type Params = {
+  vparams: VisualParameters
+  qparams: QueryParameters
+}
+
+export type BoundParams = {
+  vparams: BoundVisualParameters
+  qparams: BoundQueryParameters
+}
+
+/*
+ * Given a set of Model Parameters, create objects whose values are bound to the
+ * properties thet represent.  For example vparams.zoom is bound to map zoom and will
+ * always reflect the current state of the map, and if we change vparams.zoom, the map
+ * zoom will change.
+ */
+const bindingDefaults = {
+  event: "change",
+}
+export function createDOMBindings(P: Params): BoundParams {
+  const VISUAL: BoundVisualParameters = BoundObject.fromObject(
+    P.vparams,
+    bindingDefaults
+  )
+  const QUERY: BoundQueryParameters = BoundObject.fromObject(
+    P.qparams,
+    bindingDefaults
+  )
+
+  return { vparams: VISUAL, qparams: QUERY }
+}
 
 // // info elements have one-way bindings because the user cannot change them
 // export const messages = BoundObject.fromDOMelements("[data-class=info]")

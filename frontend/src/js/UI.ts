@@ -16,12 +16,17 @@ if (!!flashes && flashes.length) {
   }).show()
 }
 
-const { qparams, vparams } = parseURL()
+// Get model parameters from the current URL
+const init = parseURL(window.location.href)
 
 // initialize map with vparams
-baselayers[vparams.baselayer].addTo(map)
-
+baselayers[init.vparams.baselayer].addTo(map)
+map.setView(init.vparams.center, init.vparams.zoom)
 renderTabs(map)
+
+import { createDOMBindings } from "./Model"
+const params = createDOMBindings(init)
+console.log(params)
 
 // import * as ActivityCollection from "./DotLayer/ActivityCollection"
 

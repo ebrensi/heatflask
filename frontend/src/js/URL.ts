@@ -7,12 +7,12 @@ import {
   DefaultQuery,
   VisualParameters,
   DefaultVisual,
+  Params,
+  BoundParams,
 } from "./Model"
 import Geohash from "latlon-geohash"
 
-import { BoundObject, mergeDefaults } from "./DataBinding"
 // import { defaultBaselayerName, map } from "./Map"
-
 // import { dotLayer } from "../DotLayerAPI.js";
 
 import { nextTask } from "./appUtil"
@@ -20,7 +20,7 @@ import { nextTask } from "./appUtil"
 /**
  * All the model parameters that we can parse from the URL
  */
-interface URLParameters {
+type URLParameters = {
   // Query parameters
   after?: string
   before?: string
@@ -89,9 +89,9 @@ for (const [key, names] of Object.entries(urlArgNames)) {
   }
 }
 
-export function parseURL() {
-  /* parse parameters from the url */
-  const urlArgs = new URL(window.location.href).searchParams
+export function parseURL(url): Params {
+  /* parse parameters from the current url */
+  const urlArgs = new URL(url).searchParams
 
   const urlParams: URLParameters = {}
   for (const [urlArg, value] of urlArgs.entries()) {
@@ -184,10 +184,9 @@ export function parseURL() {
   return { qparams, vparams }
 }
 
-// const qParams: QueryObject = BoundObject.fromObject(qParamsInit, {
-//   event: "change",
-// })
+// export function bindURL(qParams: BoundParams): void {
 
+// }
 // const afterDateElement: HTMLInputElement =
 //   document.querySelector("[data-bind=after]")
 // const beforeDateElement: HTMLInputElement =

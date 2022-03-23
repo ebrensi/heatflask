@@ -234,12 +234,12 @@ export class BoundVariable {
  *  @param {Object} binds - The {@BoundVariable}s referenced by key.
  */
 export class BoundObject extends Object {
-  boundVariables: { [prop: string]: BoundVariable }
+  _boundVariables: { [prop: string]: BoundVariable }
 
   constructor() {
     super()
-    this.boundVariables = {}
-    Object.defineProperty(this, "boundVariables", {
+    this._boundVariables = {}
+    Object.defineProperty(this, "_boundVariables", {
       enumerable: false,
     })
   }
@@ -250,15 +250,15 @@ export class BoundObject extends Object {
    * @param value - An existing {@link BoundVariable} object.
    */
   addBoundVariable(key: ObjectKey, bv: BoundVariable): BoundVariable {
-    this.boundVariables[key] = bv
+    this._boundVariables[key] = bv
 
     Object.defineProperty(this, key, {
       get: function () {
-        return this.boundVariables[key].get()
+        return this._boundVariables[key].get()
       }.bind(this),
 
       set: function (newValue) {
-        this.boundVariables[key].set(newValue)
+        this._boundVariables[key].set(newValue)
       }.bind(this),
 
       enumerable: true,
@@ -282,7 +282,7 @@ export class BoundObject extends Object {
    * Add a DOM binding to one of the properties
    */
   addDOMbinding(key: ObjectKey, spec: DOMBindingSpec): BoundVariable {
-    return this.boundVariables[key].addDOMbinding(spec)
+    return this._boundVariables[key].addDOMbinding(spec)
   }
 
   /**
@@ -299,9 +299,9 @@ export class BoundObject extends Object {
    */
   onChange(func: GeneralBinding, key: ObjectKey): BoundObject {
     if (key) {
-      this.boundVariables[key].onChange(func)
+      this._boundVariables[key].onChange(func)
     } else {
-      for (const bv of Object.values(this.boundVariables)) {
+      for (const bv of Object.values(this._boundVariables)) {
         bv.onChange((newVal) => func(newVal))
       }
     }
@@ -321,7 +321,7 @@ export class BoundObject extends Object {
    */
   addFromObject(obj: dict, defaults: DOMBindingSpec = {}): BoundObject {
     for (const [key, val] of Object.entries(obj)) {
-      const bv = this.boundVariables[key] || this.addProperty(key, val)
+      const bv = this._boundVariables[key] || this.addProperty(key, val)
       const elements: NodeListOf<HTMLElement> = document.querySelectorAll(
         `[data-bind=${key}]`
       )
@@ -358,7 +358,7 @@ export class BoundObject extends Object {
       document.querySelectorAll(selector)
     for (const el of elements) {
       const { bind: key, attr, prop, event } = <HTMLBindingSpec>el.dataset
-      const bv = this.boundVariables[key] || this.addProperty(key)
+      const bv = this._boundVariables[key] || this.addProperty(key)
 
       bv.value = bv.value || el.getAttribute(attr) || el[prop]
 
@@ -410,7 +410,7 @@ export class BoundObject extends Object {
    */
   toObject(): dict {
     const output = {}
-    for (const [k, v] of Object.entries(this.boundVariables)) {
+    for (const [k, v] of Object.entries(this._boundVariables)) {
       output[k] = v.value
     }
     return output
