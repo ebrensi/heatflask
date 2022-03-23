@@ -114,8 +114,3 @@ frontend/dist
 frontend/dev-docs.md
 backend/heatflask/notebooks/.ipynb_checkpoints
 backend/activate
-
-# Font Awesome creates a bunch of files we don't use
-# frontend/dist/fa-*
-# !frontend/dist/fa-brands*.woff2
-# !frontend/dist/fa-solid*.woff2
