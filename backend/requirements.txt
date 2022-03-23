@@ -1,3 +1,5 @@
+python-dateutil>=2.8.2
+
 sanic==21.12.1
 numpy==1.22.3
 
@@ -9,3 +11,7 @@ aiohttp[speedups]==3.8.1
 
 msgpack==1.0.3
 polyline==1.4.0
+
+# Legacy
+psycopg2-binary==2.9.3
+sqlalchemy==1.4.31
