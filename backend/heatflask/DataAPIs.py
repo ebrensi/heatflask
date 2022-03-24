@@ -4,6 +4,7 @@ import logging
 import datetime
 import uuid
 import types
+import sys
 
 from .webserver.config import MONGODB_URL, REDIS_URL
 
@@ -23,10 +24,10 @@ async def connect(app, loop):
         try:
             await db.mongodb.list_collection_names()
         except Exception:
-            log.exception("mongo error")
+            log.error("mongo error")
             db.mongo_client.close()
             db.mongodb = None
-            return
+            sys.exit("mongodb error")
 
     log.info("Connected to MongoDB and Redis")
 
