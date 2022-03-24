@@ -24,7 +24,8 @@ async def connect(app, loop):
             await db.mongodb.list_collection_names()
         except Exception:
             log.exception("mongo error")
-            await app.stop()
+            db.mongo_client.close()
+            db.mongodb = None
             return
 
     log.info("Connected to MongoDB and Redis")
