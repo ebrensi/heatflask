@@ -5,6 +5,12 @@
 ## As long as there are no errors this should set up everything for you.
 ##
 
+
+# Set git to ignore everything in frontend/dist locally even though it is not in .gitignore
+LOCAL_IGNORE_SETTING="frontend/dist"
+LOCAL_IGNORE_FILE=".git/info/exclude"
+grep -qxF $LOCAL_IGNORE_SETTING  $LOCAL_IGNORE_FILE || echo $LOCAL_IGNORE_SETTING >> $LOCAL_IGNORE_FILE
+
 cd .git/hooks
 
 if [[ ! -f post-merge ]]
@@ -39,3 +45,4 @@ cd ../backend
 echo "Installing backend dependencies"
 ./.dev-install-backend
 
+# .git/info/exclude

@@ -107,10 +107,14 @@ frontend/node_modules
 
 # Ignore ParcelJS caches
 frontend/.parcel-cache
-frontend/.cache
 
 # For Development
-frontend/dist
 frontend/dev-docs.md
 backend/heatflask/notebooks/.ipynb_checkpoints
 backend/activate
+
+# We don't ingore frontend/dist because it needs to be there for the
+# app to run, but since it is built on the server we don't want to
+# push any of our dist code
+
+# frontend/dist
