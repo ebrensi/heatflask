@@ -37,7 +37,7 @@ logger_config = {
 }
 LOG_CONFIG["loggers"].update(logger_config)
 
-ts = "" if APP_ENV == "development" else "%(asctime)s"
+ts = ""  # if APP_ENV == "development" else "%(asctime)s"
 log_fmt = f"{ts}%(levelname)5s [%(module)s.%(funcName)s] %(message)s"
 LOG_CONFIG["formatters"]["generic"]["format"] = log_fmt
 
