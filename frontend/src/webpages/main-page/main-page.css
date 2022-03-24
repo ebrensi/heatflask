@@ -19,11 +19,11 @@
 @import "../../css/hide-runtime-elements.css";
 @import "../../css/flash-messages.css";
 /*@import "../../css/main-table.css";*/
-
+/*
 :root {
-  --strava-badge: url("../../images/strava_button.png");
+  --strava-badge: url(../images/strava_button.png);
 }
-
+*/
 body {
   padding: 0;
   margin: 0;
@@ -54,7 +54,7 @@ textarea {
 
 /* Avatar button for registered user */
 button.avatar {
-  background: --strava-badge;
+  background: url(../../images/strava_button.png);
   background-size: cover;
   width: 32px;
   height: 32px;
