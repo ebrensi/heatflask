@@ -90,7 +90,7 @@ if __name__ == "__main__":
         "reload_dir": files.FRONTEND_DIST_DIR,
     }
     app.config.SERVER_NAME = (
-        "{host}:{port}".format(**RUN_CONFIG) if DEV else "heatflask.com"
+        "{host}:{port}".format(**RUN_CONFIG) if DEV else "http://dev.heatflask.com"
     )
     app.config.MOTD_DISPLAY = {
         "APP_NAME": APP_NAME,
