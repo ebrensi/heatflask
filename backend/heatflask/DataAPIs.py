@@ -12,7 +12,6 @@ log.propagate = True
 
 db = types.SimpleNamespace(mongo_client=None, mongodb=None, redis=None)
 
-
 # this must be called by whoever controls the asyncio loop
 async def connect(app, loop):
     if db.mongodb is not None:
@@ -20,6 +19,14 @@ async def connect(app, loop):
     db.mongo_client = motor.motor_asyncio.AsyncIOMotorClient(MONGODB_URL)
     db.mongodb = db.mongo_client.get_default_database()
     db.redis = aioredis.from_url(REDIS_URL)
+    if app:
+        try:
+            await db.mongodb.list_collection_names()
+        except Exception:
+            log.exception("mongo error")
+            await app.stop()
+            return
+
     log.info("Connected to MongoDB and Redis")
 
 
