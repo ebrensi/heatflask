@@ -84,15 +84,18 @@ if __name__ == "__main__":
     RUN_CONFIG = {
         "host": "127.0.0.1" if DEV else "0.0.0.0",
         "port": int(os.environ.get("PORT", 8000)),
-        "workers": int(os.environ.get("WEB_CONCURRENCY", 1)),
+        "workers": 1,  # int(os.environ.get("WEB_CONCURRENCY", 1)),
         "debug": DEV,
         "access_log": DEV,
         "reload_dir": files.FRONTEND_DIST_DIR,
     }
-    app.config.SERVER_NAME = "{host}:{port}".format(**RUN_CONFIG)
+    app.config.SERVER_NAME = (
+        "{host}:{port}".format(**RUN_CONFIG) if DEV else "heatflask.com"
+    )
     app.config.MOTD_DISPLAY = {
         "APP_NAME": APP_NAME,
         "APP_ENV": APP_ENV,
+        "SERVER_NAME": app.config.SERVER_NAME,
         "LOG_LEVEL": LOG_LEVEL,
         "REMOTE_DB": str(USE_REMOTE_DB),
         "collections": str(
