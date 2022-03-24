@@ -21,6 +21,15 @@ jobs:
         run: |
           echo "::set-output name=paths::$(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | xargs)"
 
+  test:
+    name: Test output of changedfiles job
+    needs: changedfiles
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "Changed files:"
+          echo "${{ needs.changedfiles.outputs.paths }}"
+
   prettier-format:
     name: Format frontend (js/ts) source files with prettier
     needs: changedfiles
@@ -54,8 +63,8 @@ jobs:
 
   black-format:
     name: Format backend (py) files with black
-    needs: check
-    if: contains(needs.check.outputs.files, 'backend/heatflask/')
+    needs: changedfiles
+    if: contains(needs.changedfiles.outputs.paths, 'backend/heatflask/')
     runs-on: ubuntu-latest
 
     defaults:
@@ -97,7 +106,7 @@ jobs:
           node-version: "16"
       - name:
         run: |
-          npm install
+          npm ci
           npm run build
 
       - name: Commit changes
@@ -109,11 +118,3 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 
-  test:
-    name: Test output of check job
-    needs: check
-    runs-on: ubuntu-latest
-    steps:
-      - run: |
-          echo "Changed files:"
-          echo "${{ needs.check.outputs.files }}"
