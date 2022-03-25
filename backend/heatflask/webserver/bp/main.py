@@ -11,7 +11,7 @@ from logging import getLogger
 from ... import Users
 from ... import Index
 
-from ..config import APP_VERSION, APP_NAME
+from ..config import APP_VERSION, APP_NAME, OFFLINE
 from ..sessions import session_cookie
 
 log = getLogger(__name__)
@@ -79,6 +79,7 @@ async def user_page(request, target_user_id=None):
             "CURRENT_USER": cu_data,
             "TARGET_USER_ID": target_user_id,
             "ADMIN": request.ctx.is_admin,
+            "OFFLINE": OFFLINE,
             "URLS": {
                 "login": app.url_for("auth.authorize"),
                 "query": app.url_for("activities.query"),

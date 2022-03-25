@@ -19,6 +19,7 @@ from .config import (
     LOG_LEVEL,
     DEV,
     USE_REMOTE_DB,
+    OFFLINE,
 )
 from . import files
 
@@ -98,6 +99,7 @@ if __name__ == "__main__":
         "SERVER_NAME": app.config.SERVER_NAME,
         "LOG_LEVEL": LOG_LEVEL,
         "REMOTE_DB": str(USE_REMOTE_DB),
+        "OFFLINE": str(OFFLINE),
         "collections": str(
             [Users.COLLECTION_NAME, Index.COLLECTION_NAME, Streams.COLLECTION_NAME]
         ),

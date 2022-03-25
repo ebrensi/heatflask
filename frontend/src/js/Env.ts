@@ -15,13 +15,17 @@ export const DEV_BUNDLE = process.env.NODE_ENV !== "production"
 export const MAP_INFO = DEV_BUNDLE
 
 const argstring = document.getElementById("runtime_json").innerText
-export const { CURRENT_USER, TARGET_USER_ID, ADMIN, APP_VERSION, URLS } =
-  JSON.parse(argstring)
+export const {
+  CURRENT_USER,
+  TARGET_USER_ID,
+  ADMIN,
+  APP_VERSION,
+  URLS,
+  OFFLINE,
+} = JSON.parse(argstring)
 
 const flashes_text = document.getElementById("flashes").innerText
 export const FLASHES = flashes_text ? JSON.parse(flashes_text) : null
-
-export const OFFLINE = false
 
 export function USER_URLS(userid) {
   return {

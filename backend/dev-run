@@ -4,7 +4,7 @@ source activate
 
 while [ "$1" != "" ]; do
     case $1 in
-        -o | --offline )        OFFLINE=1
+        -o | --offline )        export OFFLINE=1
                                 ;;
         -r | --remote_db )      export USE_REMOTE_DB=1
                                 ;;
