@@ -1,16 +1,15 @@
 /*
  * URL.js -- Browser URL functionality
  */
+import Geohash from "latlon-geohash"
 
 import {
   QueryParameters,
   DefaultQuery,
   VisualParameters,
   DefaultVisual,
-  Params,
-  BoundParams,
+  QVParams,
 } from "./Model"
-import Geohash from "latlon-geohash"
 
 // import { defaultBaselayerName, map } from "./Map"
 // import { dotLayer } from "../DotLayerAPI.js";
@@ -51,8 +50,8 @@ type URLParameters = {
  */
 const urlArgNames: { [Property in keyof URLParameters]: string[] } = {
   // Query parameters
-  after: ["start", "after", "date1", "a"],
-  before: ["end", "before", "date2", "b"],
+  after: ["after", "start", "date1", "a"],
+  before: ["before", "end", "date2", "b"],
   days: ["days", "preset", "d"],
   limit: ["limit", "n"],
   ids: ["id", "ids"],
@@ -75,8 +74,48 @@ const urlArgNames: { [Property in keyof URLParameters]: string[] } = {
   baselayer: ["baselayer", "map", "bl"],
 }
 
-function bool(val) {
+const boolString = (x: boolean): string => (x ? "1" : "0")
+const boolVal = (val: string): boolean => {
   return val !== "0" && val != "null" && !!val
+}
+const str = (v: unknown) => v && String(v)
+
+/*
+ * Convert Query and Visual Parameters to URL parameters
+ */
+function QVtoURL({ query, visual }: QVParams): URLParameters {
+  const qtype = query.queryType
+  const urlparams: URLParameters = {
+    after: str(query.after),
+    before: str(query.before),
+    days: qtype === "days" ? str(query.quantity) : undefined,
+    limit: qtype === "activities" ? str(query.quantity) : undefined,
+    ids: undefined,
+    key: query.key,
+    userid: str(query.userid),
+    // Visual parameters
+    autozoom: boolString(visual.autozoom),
+    tau: str(visual.tau),
+    T: str(visual.T),
+    sz: str(visual.sz),
+    geohash: visual.geohash,
+    paused: boolString(visual.paused),
+    shadows: boolString(visual.shadows),
+    paths: boolString(visual.paths),
+    alpha: str(visual.alpha),
+    baselayer: visual.baselayer,
+  }
+  return urlparams
+}
+
+export const DefaultURL: URLParameters = QVtoURL({
+  query: DefaultQuery,
+  visual: DefaultVisual,
+})
+
+const argname: URLParameters = {}
+for (const [key, names] of Object.entries(urlArgNames)) {
+  argname[key] = names[0]
 }
 
 /*
@@ -89,11 +128,17 @@ for (const [key, names] of Object.entries(urlArgNames)) {
   }
 }
 
-export function parseURL(url): Params {
+export function parseURL(urlString: string) {
   /* parse parameters from the current url */
-  const urlArgs = new URL(url).searchParams
-
   const urlParams: URLParameters = {}
+
+  const url = new URL(urlString)
+
+  if (url.hash) {
+    urlParams.geohash = url.hash
+  }
+
+  const urlArgs = url.searchParams
   for (const [urlArg, value] of urlArgs.entries()) {
     const key = keyLookup[urlArg]
     if (key) {
@@ -127,8 +172,8 @@ export function parseURL(url): Params {
     else if (qt === "activities" && urlParams.limit)
       qparams.quantity = +urlParams.limit
     else if (qt === "dates") {
-      qparams.before = urlParams.before
-      qparams.after = urlParams.after
+      qparams.before = +urlParams.before
+      qparams.after = +urlParams.after
     } else if (qt === "ids") qparams.ids = urlParams.ids
     else if (qt === "key") qparams.key = urlParams.key
   } else {
@@ -142,7 +187,7 @@ export function parseURL(url): Params {
    *                 =>  endpoint = "1324531"
    */
   const endpoint = window.location.pathname.substring(1)
-  qparams.userid = endpoint
+  qparams.userid = +endpoint
 
   /*
    * *** Construct Visual from URL args ***
@@ -154,7 +199,7 @@ export function parseURL(url): Params {
   }
 
   // string params
-  for (const p of ["geohash", "baselayer"]) {
+  for (const p of ["baselayer"]) {
     if (urlParams[p]) vparams[p] = urlParams[p]
   }
 
@@ -164,8 +209,8 @@ export function parseURL(url): Params {
   }
 
   // boolean params
-  for (const p of ["shadows", "paths", "autozoom", "paused"]) {
-    if (urlParams[p]) vparams[p] = bool(urlParams[p])
+  for (const p of ["shadows", "paths", "paused"]) {
+    if (urlParams[p]) vparams[p] = boolVal(urlParams[p])
   }
 
   // GeoHash takes precedence over lat, lng if both are there
@@ -181,12 +226,30 @@ export function parseURL(url): Params {
     )
   }
 
-  return { qparams, vparams }
+  return { query: qparams, visual: vparams, url: urlParams }
 }
 
-// export function bindURL(qParams: BoundParams): void {
+export function makeURL(urlParams: URLParameters): string {
+  const currentURL = document.location
+  const url = new URL(`${currentURL.origin}${currentURL.pathname}`)
 
-// }
+  // urlArgs is a mapping that contains what will be the url query string
+  const urlArgs = url.searchParams
+
+  // put geohash in the url if autozoom is not enabled
+  if (!urlParams.autozoom) url.hash = urlParams.geohash
+
+  // Filter out any paramters that are equal to their defaults
+  //  or not present
+  for (const [param, val] of Object.entries(urlParams)) {
+    if (val && DefaultURL[param] !== val) {
+      urlArgs.set(argname[param], val)
+    }
+  }
+
+  return url.toString()
+}
+
 // const afterDateElement: HTMLInputElement =
 //   document.querySelector("[data-bind=after]")
 // const beforeDateElement: HTMLInputElement =
@@ -213,7 +276,7 @@ export function parseURL(url): Params {
 //       break
 
 //     case "days":
-//       qArgs.days = qParams.quantity
+//       qArgs.days =`` qParams.quantity
 //       break
 
 //     case "ids":
@@ -262,40 +325,6 @@ export function parseURL(url): Params {
 //  * query form resets to the last query.
 //  */
 // sidebar.addEventListener("closing", resetQuery)
-
-// export function getUrlString(altQargs) {
-//   const vArgs = {}
-
-//   // put geohash in the url if autozoom is disabled
-//   if (!vParams.autozoom) vArgs.geohash = vParams.geohash
-
-//   // include baselayer name if it isn't the default
-//   const blName = vParams.baselayer.name
-//   if (blName !== defaultBaselayerName) vArgs.map = blName
-
-//   // include boolean options as 1 or 0 if they differ from the defaults
-//   for (const param of ["paused", "shadows", "paths"]) {
-//     const val = vParams[param],
-//       defaultVal = urlArgDefaults[param][1]
-//     if (val !== defaultVal) {
-//       vArgs[param] = val ? 1 : 0
-//     }
-//   }
-
-//   // include the global alpha value if it differs from 1
-//   for (const param of ["T", "tau", "alpha", "sz"]) {
-//     const val = vParams[param],
-//       defaultVal = urlArgDefaults[param][1]
-//     if (val !== defaultVal) {
-//       vArgs[param] = Math.round(val)
-//     }
-//   }
-
-//   const paramsString = Object.entries({ ...(altQargs || qArgs), ...vArgs })
-//     .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
-//     .join("&")
-//   return `?${paramsString}`
-// }
 
 // async function updateURL() {
 //   await nextTask()

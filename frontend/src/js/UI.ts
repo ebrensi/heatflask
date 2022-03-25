@@ -1,5 +1,5 @@
 /*
- *  UI.js -- the front-end user interface for heatflask.
+ *  UI -- the front-end user interface for heatflask.
  *  Here we initialize the DOM/user interface
  */
 

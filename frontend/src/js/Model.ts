@@ -1,10 +1,19 @@
 /*
- * Model.js -- This module defines the parameters of the Heatflask client
+ * Model -- This module defines the parameters of the Heatflask client
  */
-
-import { CURRENT_USER, USER_URLS } from "./Env"
 import { BoundObject } from "./DataBinding"
-import { HHMMSS } from "./appUtil"
+import { URLParameters } from "./URL"
+
+/**
+ * User parameters are the current user browsing and
+ * the user whose activities we are viewing
+ */
+export type User = {
+  id: number
+  name: string
+  profile: string
+  units: string
+}
 
 /**
  * Query parameters are those that describe the query we make to the
@@ -16,13 +25,13 @@ import { HHMMSS } from "./appUtil"
  *
  */
 export type QueryParameters = {
-  userid?: string
-  queryType?: string //"days", "activities", "dates", "ids", or "key"
+  userid?: number
+  queryType?: string // "days", "activities", "dates", "ids", or "key"
   key?: string // A lookup representing a query stored on the server
-  after?: string // Start date
-  before?: string // End date
-  ids?: string //representing a list of activity ids
-  quantity?: number
+  after?: number // Start date Epoch
+  before?: number // End date Epoch
+  ids?: string // string representing and Array of activity ids
+  quantity?: number // number of days or activities
 }
 
 export const DefaultQuery: QueryParameters = {
@@ -65,36 +74,47 @@ export const DefaultVisual: VisualParameters = {
 type BoundVisualParameters = VisualParameters & BoundObject
 type BoundQueryParameters = QueryParameters & BoundObject
 
-export type Params = {
-  vparams: VisualParameters
-  qparams: QueryParameters
+export type QVParams = {
+  visual: VisualParameters
+  query: QueryParameters
 }
 
-export type BoundParams = {
-  vparams: BoundVisualParameters
-  qparams: BoundQueryParameters
+// export type BoundParams = {
+//   vparams: BoundVisualParameters
+//   qparams: BoundQueryParameters
+// }
+
+// *********************************************************
+const bindingDefaults = {
+  event: "change",
 }
 
-/*
+/**
  * Given a set of Model Parameters, create objects whose values are bound to the
  * properties thet represent.  For example vparams.zoom is bound to map zoom and will
  * always reflect the current state of the map, and if we change vparams.zoom, the map
  * zoom will change.
  */
-const bindingDefaults = {
-  event: "change",
-}
-export function createDOMBindings(P: Params): BoundParams {
+export function createDOMBindings({ visual, query }: QVParams) {
   const VISUAL: BoundVisualParameters = BoundObject.fromObject(
-    P.vparams,
+    visual,
     bindingDefaults
   )
   const QUERY: BoundQueryParameters = BoundObject.fromObject(
-    P.qparams,
+    query,
     bindingDefaults
   )
 
-  return { vparams: VISUAL, qparams: QUERY }
+  return { visual: VISUAL, query: QUERY }
+}
+
+// ***************************************************
+export type State = {
+  currentUser: User
+  targetUser: User
+  visual: BoundVisualParameters
+  query: BoundQueryParameters
+  url: URLParameters
 }
 
 // // info elements have one-way bindings because the user cannot change them
