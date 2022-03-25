@@ -11,6 +11,7 @@ import "../webpages/main-page/tab.info"
 import "npm:sidebar-v2/js/leaflet-sidebar"
 import { control } from "./myLeaflet"
 import { icon } from "./Icons"
+import { Map } from "./myLeaflet"
 
 const tabSpec = {
   query: [icon("bars"), "${TARGET_USER}'s map", query_html],
@@ -30,7 +31,7 @@ const SPACE_KEY = 32
 const UP_ARROW_KEY = 40
 const DOWN_ARROW_KEY = 38
 
-export function renderTabs(map, tabNames) {
+export function renderTabs(map: Map, tabNames?: string[]) {
   const tabs = []
   const contents = []
   tabNames = tabNames || Object.keys(tabSpec)

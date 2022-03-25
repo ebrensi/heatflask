@@ -10,7 +10,7 @@ import { parseURL } from "./URL"
 
 const flashes = FLASHES
 if (!!flashes && flashes.length) {
-  const result = controlWindow({
+  controlWindow({
     content: flashes.join("<br>"),
     position: "top",
   }).show()
@@ -20,8 +20,9 @@ if (!!flashes && flashes.length) {
 const init = parseURL(window.location.href)
 
 // initialize map with vparams
-baselayers[init.vparams.baselayer].addTo(map)
-map.setView(init.vparams.center, init.vparams.zoom)
+baselayers[init.visual.baselayer].addTo(map)
+map.setView(init.visual.center, init.visual.zoom)
+
 renderTabs(map)
 
 import { createDOMBindings } from "./Model"
