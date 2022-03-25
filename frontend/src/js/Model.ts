@@ -3,7 +3,7 @@
  */
 import { BoundObject } from "./DataBinding"
 import { URLParameters } from "./URL"
-
+import { defaultBaselayerName } from "./Map"
 /**
  * User parameters are the current user browsing and
  * the user whose activities we are viewing
@@ -68,7 +68,7 @@ export const DefaultVisual: VisualParameters = {
   shadows: true,
   paths: true,
   alpha: 0.8,
-  baselayer: "OpenStreetMap.Mapnik",
+  baselayer: defaultBaselayerName,
 }
 
 type BoundVisualParameters = VisualParameters & BoundObject
@@ -95,7 +95,7 @@ const bindingDefaults = {
  * always reflect the current state of the map, and if we change vparams.zoom, the map
  * zoom will change.
  */
-export function createDOMBindings({ visual, query }: QVParams) {
+export function createDOMBindings({ visual, query, ...other }: QVParams) {
   const VISUAL: BoundVisualParameters = BoundObject.fromObject(
     visual,
     bindingDefaults
@@ -105,7 +105,7 @@ export function createDOMBindings({ visual, query }: QVParams) {
     bindingDefaults
   )
 
-  return { visual: VISUAL, query: QUERY }
+  return { visual: VISUAL, query: QUERY, ...other }
 }
 
 // ***************************************************

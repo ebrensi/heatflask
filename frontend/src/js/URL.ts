@@ -131,11 +131,10 @@ for (const [key, names] of Object.entries(urlArgNames)) {
 export function parseURL(urlString: string) {
   /* parse parameters from the current url */
   const urlParams: URLParameters = {}
-
   const url = new URL(urlString)
 
   if (url.hash) {
-    urlParams.geohash = url.hash
+    urlParams.geohash = url.hash.slice(1)
   }
 
   const urlArgs = url.searchParams
@@ -242,7 +241,7 @@ export function makeURL(urlParams: URLParameters): string {
   // Filter out any paramters that are equal to their defaults
   //  or not present
   for (const [param, val] of Object.entries(urlParams)) {
-    if (val && DefaultURL[param] !== val) {
+    if (param !== "geohash" && val && DefaultURL[param] !== val) {
       urlArgs.set(argname[param], val)
     }
   }

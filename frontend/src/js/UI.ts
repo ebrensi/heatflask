@@ -6,7 +6,7 @@
 import { FLASHES } from "./Env"
 import { map, baselayers, controlWindow } from "./Map"
 import { renderTabs } from "./sidebar"
-import { parseURL } from "./URL"
+import { parseURL, makeURL } from "./URL"
 
 const flashes = FLASHES
 if (!!flashes && flashes.length) {
@@ -26,9 +26,11 @@ map.setView(init.visual.center, init.visual.zoom)
 renderTabs(map)
 
 import { createDOMBindings } from "./Model"
-const params = createDOMBindings(init)
-console.log(params)
+const qvbound = createDOMBindings(init)
+console.log("qvbound", qvbound)
 
+const url: string = makeURL(init.url)
+console.log("url: ", url)
 // import * as ActivityCollection from "./DotLayer/ActivityCollection"
 
 // import { dotLayer } from "./DotLayerAPI"

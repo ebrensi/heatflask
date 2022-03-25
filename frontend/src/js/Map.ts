@@ -76,7 +76,7 @@ const providers_names = [
   "OpenStreetMap.Mapnik",
   "Stadia.AlidadeSmoothDark",
 ]
-export const defaultBaselayerName = "OpenStreetMap.Mapnik"
+export const defaultBaselayerName = "Mapbox.dark"
 
 for (const name of providers_names) {
   baselayers[name] = tileLayer.provider(name, { useOnlyCache: OFFLINE })
