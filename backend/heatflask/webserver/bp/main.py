@@ -55,19 +55,30 @@ async def splash_page(request):
     return Response.html(html)
 
 
+def relevant_info(user):
+    return (
+        {
+            "id": user[Users.ID],
+            "profile": user[Users.PROFILE],
+            "private": user[Users.PRIVATE],
+        }
+        if user
+        else None
+    )
+
+
 # *** Main user/global activities page
 @bp.get("/<target_user_id:int>")
 @bp.get("/global")
 @session_cookie(get=True, set=True, flashes=True)
 async def user_page(request, target_user_id=None):
-    if target_user_id and not await Users.get(target_user_id):
+    target_user = await Users.get(target_user_id)
+    if target_user_id and not target_user:
         raise SanicException(
             f"Sorry, Strava athlete {target_user_id} is not registered with Heatflask",
             status_code=404,
         )
 
-    cu = request.ctx.current_user
-    cu_data = {"id": cu[Users.ID], "profile": cu[Users.PROFILE]} if cu else None
     app = request.app
     params = {
         # These will be imbedded in the served html as text
@@ -76,8 +87,8 @@ async def user_page(request, target_user_id=None):
             # These will be available to the client as a JSON string
             # at non-visible element "#runtime_json"
             "APP_VERSION": APP_VERSION,
-            "CURRENT_USER": cu_data,
-            "TARGET_USER_ID": target_user_id,
+            "CURRENT_USER": relevant_info(request.ctx.current_user),
+            "TARGET_USER": relevant_info(target_user),
             "ADMIN": request.ctx.is_admin,
             "OFFLINE": OFFLINE,
             "URLS": {

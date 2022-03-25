@@ -29,19 +29,21 @@ type URLParameters = {
   key?: string
   userid?: string
   // Visual parameters
+  // Map
   zoom?: string
   lat?: string
   lng?: string
   autozoom?: string
+  geohash?: string
+  baselayer?: string
+  // Animation
   tau?: string
   T?: string
   sz?: string
-  geohash?: string
   paused?: string
   shadows?: string
   paths?: string
   alpha?: string
-  baselayer?: string
 }
 
 /**
@@ -59,19 +61,21 @@ const urlArgNames: { [Property in keyof URLParameters]: string[] } = {
   userid: ["user", "userid"],
 
   // Visual parameters
+  //  Map
   zoom: ["zoom", "z"],
   lat: ["lat", "x"],
   lng: ["lng", "lon", "y"],
   autozoom: ["autozoom", "az"],
+  geohash: ["geohash", "gh"],
+  baselayer: ["baselayer", "map", "bl"],
+  //  Animation
   tau: ["tau", "timescale"],
   T: ["T", "period"],
   sz: ["sz"],
-  geohash: ["geohash", "gh"],
   paused: ["paused", "pu"],
   shadows: ["sh", "shadows"],
   paths: ["pa", "paths"],
   alpha: ["alpha"],
-  baselayer: ["baselayer", "map", "bl"],
 }
 
 const boolString = (x: boolean): string => (x ? "1" : "0")
@@ -213,11 +217,24 @@ export function parseURL(urlString: string) {
   }
 
   // GeoHash takes precedence over lat, lng if both are there
-  if (vparams.geohash) {
-    const ghObj = Geohash.decode(vparams.geohash)
-    vparams.center = { lat: ghObj.lat, lng: ghObj.lon }
-    vparams.zoom = vparams.geohash.length
-  } else {
+  if (urlParams.geohash) {
+    const gh = urlParams.geohash
+    let ghObj: { lat: number; lon: number }
+    try {
+      ghObj = Geohash.decode(gh)
+    } catch (e) {
+      console.log(`can't decode geohash ${gh}`)
+    }
+
+    if (ghObj) {
+      vparams.center = { lat: ghObj.lat, lng: ghObj.lon }
+      vparams.zoom = gh.length
+      vparams.geohash = gh
+      vparams.autozoom = false
+    }
+  }
+
+  if (!vparams.geohash) {
     vparams.geohash = Geohash.encode(
       vparams.center.lat,
       vparams.center.lng,
@@ -228,7 +245,7 @@ export function parseURL(urlString: string) {
   return { query: qparams, visual: vparams, url: urlParams }
 }
 
-export function makeURL(urlParams: URLParameters): string {
+export function toString(urlParams: URLParameters): string {
   const currentURL = document.location
   const url = new URL(`${currentURL.origin}${currentURL.pathname}`)
 
@@ -236,17 +253,39 @@ export function makeURL(urlParams: URLParameters): string {
   const urlArgs = url.searchParams
 
   // put geohash in the url if autozoom is not enabled
-  if (!urlParams.autozoom) url.hash = urlParams.geohash
+  if (!boolVal(urlParams.autozoom)) {
+    url.hash = urlParams.geohash
+    delete urlParams.autozoom
+  }
 
   // Filter out any paramters that are equal to their defaults
   //  or not present
   for (const [param, val] of Object.entries(urlParams)) {
-    if (param !== "geohash" && val && DefaultURL[param] !== val) {
+    if (
+      param !== "userid" &&
+      param !== "geohash" &&
+      val &&
+      DefaultURL[param] !== val
+    ) {
       urlArgs.set(argname[param], val)
     }
   }
 
   return url.toString()
+}
+
+async function setURL(url: URLParameters) {
+  await nextTask()
+  const currentURL = document.location.toString()
+  const newURL = toString(url)
+
+  if (newURL !== currentURL) {
+    window.history.replaceState("", "", newURL)
+  }
+}
+
+export function setURLfromQV(qvparams: QVParams) {
+  return setURL(QVtoURL(qvparams))
 }
 
 // const afterDateElement: HTMLInputElement =
@@ -324,18 +363,3 @@ export function makeURL(urlParams: URLParameters): string {
 //  * query form resets to the last query.
 //  */
 // sidebar.addEventListener("closing", resetQuery)
-
-// async function updateURL() {
-//   await nextTask()
-//   const newURL = getUrlString()
-
-//   if (url !== newURL) {
-//     // console.log(`pushing: ${newURL}`);
-//     url = newURL
-//     window.history.replaceState("", "", newURL)
-//   }
-// }
-
-// initializeURL()
-// vParams.onChange(updateURL)
-// map.on("moveend", updateURL)

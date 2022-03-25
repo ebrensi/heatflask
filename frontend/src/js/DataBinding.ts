@@ -297,7 +297,7 @@ export class BoundObject extends Object {
    * If key is not specified, func takes two arguments, the property
    * that has changed, and the new value.
    */
-  onChange(func: GeneralBinding, key: ObjectKey): BoundObject {
+  onChange(func: GeneralBinding, key?: ObjectKey): BoundObject {
     if (key) {
       this._boundVariables[key].onChange(func)
     } else {

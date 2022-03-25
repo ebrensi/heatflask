@@ -43,32 +43,35 @@ export const DefaultQuery: QueryParameters = {
  * visual-parameters are those that determine what appears visually
  */
 export type VisualParameters = {
+  // Map
   center?: { lat: number; lng: number } // map latitude, longitude
   zoom?: number // map zoom level
   geohash?: string // a string representing zoom/center
   baselayer?: string // map background tile group name
+  autozoom?: boolean // Whether or not to automatically zoom to include all of the activities after render
+
+  // Animation
   tau?: number // timescale
   T?: number // Period
   sz?: number // Dot Size
   alpha?: number // global alpha for all rendering
   shadows?: boolean // render shadows under dots
   paths?: boolean // show paths
-  autozoom?: boolean // Whether or not to automatically zoom to include all of the activities after render
   paused?: boolean // start in paused state
 }
 
 export const DefaultVisual: VisualParameters = {
-  zoom: 3,
   center: { lat: 27.53, lng: 1.58 },
+  zoom: 3,
+  baselayer: defaultBaselayerName,
   autozoom: true,
-  paused: false,
   tau: 30,
   T: 2,
   sz: 3,
+  alpha: 0.8,
   shadows: true,
   paths: true,
-  alpha: 0.8,
-  baselayer: defaultBaselayerName,
+  paused: false,
 }
 
 type BoundVisualParameters = VisualParameters & BoundObject
@@ -95,7 +98,7 @@ const bindingDefaults = {
  * always reflect the current state of the map, and if we change vparams.zoom, the map
  * zoom will change.
  */
-export function createDOMBindings({ visual, query, ...other }: QVParams) {
+export function createDOMBindings({ visual, query }: QVParams) {
   const VISUAL: BoundVisualParameters = BoundObject.fromObject(
     visual,
     bindingDefaults
@@ -105,16 +108,16 @@ export function createDOMBindings({ visual, query, ...other }: QVParams) {
     bindingDefaults
   )
 
-  return { visual: VISUAL, query: QUERY, ...other }
+  return { visual: VISUAL, query: QUERY }
 }
 
 // ***************************************************
 export type State = {
+  url: URLParameters
   currentUser: User
   targetUser: User
   visual: BoundVisualParameters
   query: BoundQueryParameters
-  url: URLParameters
 }
 
 // // info elements have one-way bindings because the user cannot change them

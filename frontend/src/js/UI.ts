@@ -3,10 +3,13 @@
  *  Here we initialize the DOM/user interface
  */
 
-import { FLASHES } from "./Env"
+import Geohash from "latlon-geohash"
+
+import { FLASHES, CURRENT_USER, TARGET_USER } from "./Env"
 import { map, baselayers, controlWindow } from "./Map"
 import { renderTabs } from "./sidebar"
-import { parseURL, makeURL } from "./URL"
+import { parseURL, setURLfromQV } from "./URL"
+import { User, State, createDOMBindings } from "./Model"
 
 const flashes = FLASHES
 if (!!flashes && flashes.length) {
@@ -19,18 +22,35 @@ if (!!flashes && flashes.length) {
 // Get model parameters from the current URL
 const init = parseURL(window.location.href)
 
-// initialize map with vparams
+// Bind visual and query parameters with DOM
+// elements (sliders, text inputs, checkboxes)
+const boundQV = createDOMBindings(init)
+
+const state: State = {
+  currentUser: <User>CURRENT_USER,
+  targetUser: <User>TARGET_USER,
+  visual: boundQV.visual,
+  query: boundQV.query,
+  url: init.url,
+}
+
+// initialize map with visual params
 baselayers[init.visual.baselayer].addTo(map)
 map.setView(init.visual.center, init.visual.zoom)
 
+// Add Sidebar tabs to DOM / Map
 renderTabs(map)
 
-import { createDOMBindings } from "./Model"
-const qvbound = createDOMBindings(init)
-console.log("qvbound", qvbound)
+// state.visual.onChange(updateURL)
+map.on("move", (event) => {
+  const center = map.getCenter()
+  const zoom = map.getZoom()
+  boundQV.visual.center = center
+  boundQV.visual.zoom = zoom
+  boundQV.visual.geohash = Geohash.encode(center.lat, center.lng, zoom)
+  setURLfromQV(boundQV)
+})
 
-const url: string = makeURL(init.url)
-console.log("url: ", url)
 // import * as ActivityCollection from "./DotLayer/ActivityCollection"
 
 // import { dotLayer } from "./DotLayerAPI"
@@ -57,12 +77,6 @@ console.log("url: ", url)
 //     dotLayer.animate()
 //   }
 // }
-
-// document.querySelector("#info-tab").innerHTML = infoTabHTML
-
-// document.querySelectorAll(".paypal-button").forEach((el) => {
-//   el.innerHTML = paypalButtonHTML
-// })
 
 // /*
 //  * Set a listener to change user's account to public or private
