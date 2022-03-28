@@ -4,14 +4,14 @@
  */
 
 import { decodeMultiStream } from "@msgpack/msgpack"
-import { href, img, HHMMSS, sleep } from "../../js/appUtil"
-import { icon } from "../../js/Icons"
-import { activity_icon, activityURL } from "../../js/strava"
+import { href, img, HHMMSS, sleep } from "~/src/js/appUtil"
+import { icon } from "~/src/js/Icons"
+import { activity_icon, activityURL } from "~/src/js/strava"
 // import { JSTable } from "../../js/jstable"
 
 const BASE_URL = "/"
 const strava_button_url = new URL(
-  "../../images/strava_button.png",
+  "~/src/images/strava_button.png",
   import.meta.url
 )
 

@@ -24,32 +24,42 @@ const init = parseURL(window.location.href)
 
 // Bind visual and query parameters with DOM
 // elements (sliders, text inputs, checkboxes)
-const boundQV = createDOMBindings(init)
+const { visual, query } = createDOMBindings(init)
 
 const state: State = {
   currentUser: <User>CURRENT_USER,
   targetUser: <User>TARGET_USER,
-  visual: boundQV.visual,
-  query: boundQV.query,
+  visual: visual,
+  query: query,
   url: init.url,
 }
 
+// **** Map settings / bindings ****
 // initialize map with visual params
-baselayers[init.visual.baselayer].addTo(map)
-map.setView(init.visual.center, init.visual.zoom)
+baselayers[visual.baselayer].addTo(map)
+map.setView(visual.center, visual.zoom)
 
 // Add Sidebar tabs to DOM / Map
 renderTabs(map)
 
-// state.visual.onChange(updateURL)
-map.on("move", (event) => {
+map.on("move", () => {
   const center = map.getCenter()
   const zoom = map.getZoom()
-  boundQV.visual.center = center
-  boundQV.visual.zoom = zoom
-  boundQV.visual.geohash = Geohash.encode(center.lat, center.lng, zoom)
-  setURLfromQV(boundQV)
+  visual.center = center
+  visual.zoom = zoom
+  visual.geohash = Geohash.encode(center.lat, center.lng, zoom)
+  setURLfromQV({ query, visual })
 })
+
+// /*
+//  * Set a listener to change user's account to public or private
+//  *  if they change that setting
+//  */
+// currentUser.onChange("public", async (status) => {
+//   const resp = await fetch(`${currentUser.url.public}?status=${status}`)
+//   const response = await resp.text()
+//   console.log(`response: ${response}`)
+// })
 
 // import * as ActivityCollection from "./DotLayer/ActivityCollection"
 
@@ -77,16 +87,6 @@ map.on("move", (event) => {
 //     dotLayer.animate()
 //   }
 // }
-
-// /*
-//  * Set a listener to change user's account to public or private
-//  *  if they change that setting
-//  */
-// currentUser.onChange("public", async (status) => {
-//   const resp = await fetch(`${currentUser.url.public}?status=${status}`)
-//   const response = await resp.text()
-//   console.log(`response: ${response}`)
-// })
 
 // /*
 //  * If the user hits enter in tbe number field, make the query

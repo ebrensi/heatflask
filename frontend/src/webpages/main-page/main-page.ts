@@ -11,8 +11,8 @@
  */
 console.time("client setup")
 
-import { APP_VERSION } from "../../js/Env"
-import "../../js/UI"
+import { APP_VERSION } from "~/src/js/Env"
+import "~/src/js/UI"
 
 console.timeEnd("client setup")
 

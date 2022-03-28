@@ -1,6 +1,7 @@
-import { icon } from "../../js/Icons"
+import { icon } from "~/src/js/Icons"
+import { nextAnimationFrame } from "~/src/js/appUtil"
 
-contact_specs = [
+const contact_specs = [
   ["linkedin", "https://www.linkedin.com/company/heatflask"],
   ["twitter", "https://twitter.com/heatflask"],
   ["instagram", "https://www.instagram.com/heatflask"],
@@ -9,13 +10,17 @@ contact_specs = [
   ["envelope-o", "mailto:info@heatflask.com"],
 ]
 
-html_tags = []
+const html_tags = []
 for (const [icon_name, url] of contact_specs) {
   const icon_tag = icon(icon_name, "icon-button")
   html_tags.push(`<a href="${url}" target="_blank">${icon_tag}</a>`)
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  contacts_el = document.getElementById("contacts")
+async function onRender() {
+  let contacts_el: HTMLDivElement = undefined
+  while (!contacts_el) {
+    await nextAnimationFrame()
+    contacts_el = document.getElementById("contacts")
+  }
   contacts_el.innerHTML = html_tags.join("")
-})
+}

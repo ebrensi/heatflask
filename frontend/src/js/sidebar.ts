@@ -2,7 +2,9 @@
 import query_html from "bundle-text:../webpages/main-page/tab.query.html"
 import actvities_html from "bundle-text:../webpages/main-page/tab.activities.html"
 import profile_html from "bundle-text:../webpages/main-page/tab.profile.html"
+
 import controls_html from "bundle-text:../webpages/main-page/tab.controls.html"
+import "../webpages/main-page/tab.controls"
 
 import info_html from "bundle-text:../webpages/main-page/tab.info.html"
 import "../webpages/main-page/tab.info"
@@ -99,12 +101,3 @@ export function renderTabs(map: Map, tabNames?: string[]) {
   map.addEventListener("click", () => S.isOpen && S.close())
   return S
 }
-
-// import pureknob from "pure-knob"
-// const knob = pureknob.createKnob(300, 300)
-// // Create element node.
-// const node = knob.node()
-
-// // Add it to the DOM.
-// const elem = document.getElementById("knob")
-// elem.appendChild(node)

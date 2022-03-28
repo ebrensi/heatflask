@@ -4,26 +4,43 @@
 /*
  * ☠ Be careful changing the order of these imports! ☠
  */
-@import "../../css/min_entireframework.css";
+@import "~/src/css/min_entireframework.css";
 
 @import "npm:leaflet/dist/leaflet.css";
 @import "npm:sidebar-v2/css/leaflet-sidebar.css";
 @import "npm:leaflet-control-window/src/L.Control.Window.css";
 @import "npm:leaflet-areaselect/src/leaflet-areaselect.css";
 @import "npm:leaflet-easybutton/src/easy-button.css";
-@import "../../css/leaflet-mods.css";
-@import "../../css/leaflet-sidebar-v2-mods.css";
+@import "~/src/css/leaflet-mods.css";
+@import "~/src/css/leaflet-sidebar-v2-mods.css";
 
-@import "../../css/strava-buttons.css";
-@import "../../css/icomoon-heatflask.css";
-@import "../../css/hide-runtime-elements.css";
-@import "../../css/flash-messages.css";
-/*@import "../../css/main-table.css";*/
-/*
-:root {
-  --strava-badge: url(../images/strava_button.png);
+@import "~/src/css/strava-buttons.css";
+@import "~/src/css/icomoon-heatflask.css";
+@import "~/src/css/hide-runtime-elements.css";
+@import "~/src/css/flash-messages.css";
+/*@import "~/src/css/main-table.css";*/
+
+/* Avatar button for registered user */
+button.avatar {
+  background: url(~/src/images/strava_button.png);
+  background-size: cover;
+  width: 32px;
+  height: 32px;
+  border: none;
+  padding: 10px;
+  transition: transform 0.5s;
 }
-*/
+
+button.avatar[data-url] {
+  background: attr(data-url);
+}
+
+button.avatar:hover {
+  cursor: pointer;
+  transform: scale(0.9);
+  transition: transform 0.5s;
+}
+
 body {
   padding: 0;
   margin: 0;
@@ -50,27 +67,6 @@ textarea {
   background-color: rgba(0, 0, 0, 0.6);
   color: white;
   border-radius: 8px;
-}
-
-/* Avatar button for registered user */
-button.avatar {
-  background: url(../../images/strava_button.png);
-  background-size: cover;
-  width: 32px;
-  height: 32px;
-  border: none;
-  padding: 10px;
-  transition: transform 0.5s;
-}
-
-button.avatar[data-url] {
-  background: attr(data-url);
-}
-
-button.avatar:hover {
-  cursor: pointer;
-  transform: scale(0.9);
-  transition: transform 0.5s;
 }
 
 .error-message {

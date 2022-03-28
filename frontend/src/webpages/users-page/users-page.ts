@@ -1,6 +1,6 @@
-import { img, href, sleep } from "../../js/appUtil"
-import { icon } from "../../js/Icons"
-import { JSTable } from "../../js/jstable"
+import { img, href, sleep } from "~/src/js/appUtil"
+import { icon } from "~/src/js/Icons"
+import { JSTable } from "~/src/js/jstable"
 
 const status_el = document.getElementById("status")
 
