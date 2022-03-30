@@ -15,7 +15,6 @@
  *
  */
 interface HTMLBindingSpec extends DOMStringMap {
-  class: string
   bind: string
   prop?: string
   attr?: string
@@ -32,7 +31,7 @@ interface BoundHTMLElement extends HTMLElement {
  * about DOM element properties vs attributes
  *  For "data-*" bindings use attribute.
  */
-interface DOMBindingSpec {
+type DOMBindingSpec = {
   element?: HTMLElement
   selector?: string
   attribute?: string
@@ -42,8 +41,9 @@ interface DOMBindingSpec {
   varFormat?: (x: unknown) => string
 }
 
-interface DOMBinding {
-  element: HTMLElement
+// This is the binding that is stored and retreived on an event
+type DOMBinding = {
+  element: HTMLElement // you
   attribute?: string
   property?: string
   format: (x: unknown) => string
@@ -144,19 +144,16 @@ export class BoundVariable {
   /**
    * Sync this value with an attribute of a DOM element.
    *
-   * @param {DOMbinding} DOMbindingSpec - specs for the element to bind
    */
-  addDOMbinding(DOMbindingSpec: DOMBindingSpec): BoundVariable {
-    const {
-      selector,
-      element,
-      attribute,
-      property = "value",
-      DOMformat = str,
-      event,
-      varFormat = str,
-    } = DOMbindingSpec
-
+  addDOMbinding({
+    selector,
+    element,
+    attribute,
+    property = "value",
+    event,
+    DOMformat = str,
+    varFormat = str,
+  }: DOMBindingSpec): BoundVariable {
     const el = element || document.querySelector(selector)
 
     if (!(el instanceof HTMLElement)) {

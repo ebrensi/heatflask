@@ -3,7 +3,7 @@
  *  Here we initialize the DOM/user interface
  */
 
-import Geohash from "latlon-geohash"
+import Geohash from "npm:latlon-geohash"
 
 import { FLASHES, CURRENT_USER, TARGET_USER } from "./Env"
 import { map, baselayers, controlWindow } from "./Map"
@@ -40,7 +40,7 @@ baselayers[visual.baselayer].addTo(map)
 map.setView(visual.center, visual.zoom)
 
 // Add Sidebar tabs to DOM / Map
-renderTabs(map)
+renderTabs(map, ["query", "activities"])
 
 map.on("move", () => {
   const center = map.getCenter()

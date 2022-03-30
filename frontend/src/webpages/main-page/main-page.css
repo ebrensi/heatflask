@@ -13,11 +13,12 @@
 @import "npm:leaflet-easybutton/src/easy-button.css";
 @import "~/src/css/leaflet-mods.css";
 @import "~/src/css/leaflet-sidebar-v2-mods.css";
-
 @import "~/src/css/strava-buttons.css";
 @import "~/src/css/icomoon-heatflask.css";
 @import "~/src/css/hide-runtime-elements.css";
 @import "~/src/css/flash-messages.css";
+
+@import "./tab.info.css";
 /*@import "~/src/css/main-table.css";*/
 
 /* Avatar button for registered user */
@@ -132,31 +133,6 @@ input[data-bind="quantity"] {
   width: 4em;
 }
 
-/* badges on info tab */
-i.icon-button {
-  font-size: 32px;
-  /*color: white;*/
-  transition: transform 0.25s;
-  margin-left: 10px;
-  margin-right: 10px;
-  margin-top: 10px;
-  margin-bottom: 10px;
-  /*border: 2px solid green;*/
-}
-
-i.icon-button:hover {
-  /*color: #ffc439;*/
-  transform: scale(3);
-}
-
-div.icon-buttons {
-  margin: left;
-  width: 70%;
-  text-align: center;
-  padding: 10px;
-  /*border: 3px solid green;*/
-}
-
 /* control window */
 div.progress.msgbox {
   text-align: center;
@@ -172,52 +148,6 @@ div.titlebar {
 
 div.promptButtons {
   display: none;
-}
-
-.hf-twitter {
-  color: #38a1f3;
-}
-
-.hf-linkedin {
-  color: #0077b5;
-}
-
-.hf-strava {
-  color: #fc4c02;
-}
-
-.hf-github {
-  color: #fff;
-}
-
-.hf-instagram {
-  background: -moz-linear-gradient(
-    45deg,
-    #f09433 0%,
-    #e6683c 25%,
-    #dc2743 50%,
-    #cc2366 75%,
-    #bc1888 100%
-  );
-  background: -webkit-linear-gradient(
-    45deg,
-    #f09433 0%,
-    #e6683c 25%,
-    #dc2743 50%,
-    #cc2366 75%,
-    #bc1888 100%
-  );
-  background: linear-gradient(
-    45deg,
-    #f09433 0%,
-    #e6683c 25%,
-    #dc2743 50%,
-    #cc2366 75%,
-    #bc1888 100%
-  );
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
 }
 
 input.dot-const {

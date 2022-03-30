@@ -1,4 +1,10 @@
 {
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "~*": ["./*"]
+    }
+  },
   "extends": "assemblyscript/std/assembly.json",
   "include": ["./**/*.ts"]
 }

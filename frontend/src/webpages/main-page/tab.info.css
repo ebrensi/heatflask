@@ -1,0 +1,76 @@
+/* For info Tab */
+
+.hf-twitter {
+  color: #38a1f3;
+}
+
+.hf-linkedin {
+  color: #0077b5;
+}
+
+.hf-strava {
+  color: #fc4c02;
+}
+
+.hf-github {
+  color: #fff;
+}
+
+.hf-instagram {
+  background: -moz-linear-gradient(
+    45deg,
+    #f09433 0%,
+    #e6683c 25%,
+    #dc2743 50%,
+    #cc2366 75%,
+    #bc1888 100%
+  );
+  background: -webkit-linear-gradient(
+    45deg,
+    #f09433 0%,
+    #e6683c 25%,
+    #dc2743 50%,
+    #cc2366 75%,
+    #bc1888 100%
+  );
+  background: linear-gradient(
+    45deg,
+    #f09433 0%,
+    #e6683c 25%,
+    #dc2743 50%,
+    #cc2366 75%,
+    #bc1888 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* badges on info tab */
+i.icon-button {
+  font-size: 300%;
+  transition: transform 0.25s;
+  margin-left: 10px;
+  margin-right: 10px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  display: inline-block;
+  /* border: 2px solid green; */
+}
+
+i.icon-button:hover {
+  /*color: #ffc439;*/
+  transform: scale(2);
+}
+
+div.icon-buttons {
+  margin: left;
+  width: 70%;
+  text-align: center;
+  padding: 10px;
+  /*border: 3px solid green;*/
+}
+
+#contacts > a:link {
+  text-decoration: none;
+}

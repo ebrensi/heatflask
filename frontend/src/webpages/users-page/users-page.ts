@@ -6,13 +6,13 @@ const status_el = document.getElementById("status")
 
 console.log(`Environment: ${process.env.NODE_ENV}`)
 
-function user_thumbnail(id, img_url) {
+function user_thumbnail(id: number | string, img_url: string): string {
   if (!(id && img_url)) return ""
   const avatar = img(img_url, 40, 40, id)
   return href(`/${id}`, avatar)
 }
 
-function ts_to_dt(ts, time = false) {
+function ts_to_dt(ts: number, time = false): string {
   if (!ts) {
     return ""
   }

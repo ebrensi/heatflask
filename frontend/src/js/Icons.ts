@@ -1,7 +1,5 @@
 /* Here is where we define an API for a custom set of icons from icomoon */
 
-// import "../css/icomoon-heatflask.css"
-
-export function icon(name, cls = "") {
+export function icon(name: string, cls = ""): string {
   return `<i class="hf-${name} ${cls}"></i>`
 }

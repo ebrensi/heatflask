@@ -10,8 +10,8 @@
     "url": "https://github.com/ebrensi/heatflask"
   },
   "scripts": {
-    "parcel-watch": "parcel watch --log-level info src/webpages/**/**.html",
-    "parcel-build": "parcel build src/webpages/**/**.html",
+    "parcel-watch": "parcel watch --log-level info 'src/webpages/**/!(tab.*).html'",
+    "parcel-build": "parcel build 'src/webpages/**/!(tab.*).html'",
     "asc-build": "asc src/assembly/wasm.ts --target production",
     "asc-watch": "onchange -i --verbose 'src/assembly/*.ts' --  asc src/assembly/wasm.ts --target development",
     "build": "npm run clean; npm run asc-build; npm run parcel-build",
