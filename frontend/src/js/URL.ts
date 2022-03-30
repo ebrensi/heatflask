@@ -11,15 +11,12 @@ import {
   QVParams,
 } from "./Model"
 
-// import { defaultBaselayerName, map } from "./Map"
-// import { dotLayer } from "../DotLayerAPI.js";
-
 import { nextTask } from "./appUtil"
 
 /**
  * All the model parameters that we can parse from the URL
  */
-type URLParameters = {
+export type URLParameters = {
   // Query parameters
   after?: string
   before?: string
@@ -287,79 +284,3 @@ async function setURL(url: URLParameters) {
 export function setURLfromQV(qvparams: QVParams) {
   return setURL(QVtoURL(qvparams))
 }
-
-// const afterDateElement: HTMLInputElement =
-//   document.querySelector("[data-bind=after]")
-// const beforeDateElement: HTMLInputElement =
-//   document.querySelector("[data-bind=before]")
-
-// qParams.onChange("after", (newDate) => {
-//   beforeDateElement.min = newDate
-// })
-
-// qParams.onChange("before", (newDate) => {
-//   afterDateElement.max = newDate
-// })
-
-// /*
-//  * qArgs are updated on render and vArgs are updated every time the map moves
-//  */
-// let url, qArgs
-
-// function initializeURL() {
-//   qArgs = {}
-//   switch (qParams.queryType) {
-//     case "activities":
-//       qArgs.n = qParams.quantity
-//       break
-
-//     case "days":
-//       qArgs.days =`` qParams.quantity
-//       break
-
-//     case "ids":
-//       qArgs.id = qParams.ids
-//       break
-
-//     case "dates":
-//       if (qParams.before) qArgs.before = qParams.before
-//       if (qParams.after) qArgs.after = qParams.after
-//       break
-
-//     case "key":
-//       qArgs.key = qParams.key
-//   }
-
-//   // if (qParams.userid) qArgs.user = qParams.userid;
-
-//   updateURL()
-// }
-
-// /*
-//  * Reset qParams back to the values from the last render (in qArgs).
-//  */
-// export function resetQuery() {
-//   if ("n" in qArgs) {
-//     qParams.queryType = "activities"
-//     qParams.quantity = qArgs.n
-//   } else if ("days" in qArgs) {
-//     qParams.queryType = "days"
-//     qParams.quantity = qArgs.days
-//   } else if ("id" in qArgs) {
-//     qParams.queryType = "ids"
-//     qParams.ids = qArgs.id
-//   } else if ("before" in qArgs) {
-//     qParams.queryType = "dates"
-//     qParams.before = qArgs.before
-//     qParams.after = qArgs.after
-//   } else if ("key" in qArgs) {
-//     qParams.queryType = "key"
-//     qParams.key = qArgs.key
-//   }
-// }
-
-// /*
-//  * If the user closes the sidebar without performing the query, the
-//  * query form resets to the last query.
-//  */
-// sidebar.addEventListener("closing", resetQuery)

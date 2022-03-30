@@ -59,6 +59,7 @@ def relevant_info(user):
     return (
         {
             "id": user[Users.ID],
+            "name": f"{user[Users.FIRSTNAME]}",
             "profile": user[Users.PROFILE],
             "private": user[Users.PRIVATE],
         }

@@ -12,7 +12,7 @@
  * will be stripped out of a production build by terser's dead-code filter
  */
 export const DEV_BUNDLE = process.env.NODE_ENV !== "production"
-export const MAP_INFO = DEV_BUNDLE
+export const MAP_INFO = true // DEV_BUNDLE
 
 const argstring = document.getElementById("runtime_json").innerText
 export const { CURRENT_USER, TARGET_USER, ADMIN, APP_VERSION, URLS, OFFLINE } =

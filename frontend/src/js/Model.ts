@@ -74,8 +74,9 @@ export const DefaultVisual: VisualParameters = {
   paused: false,
 }
 
-type BoundVisualParameters = VisualParameters & BoundObject
-type BoundQueryParameters = QueryParameters & BoundObject
+export type BoundUser = User & BoundObject
+export type BoundVisualParameters = VisualParameters & BoundObject
+export type BoundQueryParameters = QueryParameters & BoundObject
 
 export type QVParams = {
   visual: VisualParameters

@@ -5,11 +5,12 @@
 
 import Geohash from "npm:latlon-geohash"
 
-import { FLASHES, CURRENT_USER, TARGET_USER } from "./Env"
+import { FLASHES, CURRENT_USER, TARGET_USER, FLASHES, URLS } from "./Env"
 import { map, baselayers, controlWindow } from "./Map"
 import { renderTabs } from "./sidebar"
 import { parseURL, setURLfromQV } from "./URL"
-import { User, State, createDOMBindings } from "./Model"
+import { BoundUser, State, createDOMBindings } from "./Model"
+import { BoundObject } from "./DataBinding"
 
 const flashes = FLASHES
 if (!!flashes && flashes.length) {
@@ -25,14 +26,30 @@ const init = parseURL(window.location.href)
 // Bind visual and query parameters with DOM
 // elements (sliders, text inputs, checkboxes)
 const { visual, query } = createDOMBindings(init)
+const currentUser = CURRENT_USER
+  ? <BoundUser>BoundObject.fromObject(CURRENT_USER)
+  : null
+const targetUser = TARGET_USER
+  ? <BoundUser>BoundObject.fromObject(TARGET_USER)
+  : null
+/*
+ * Set a listener to change user's account to public or private
+ *  if they change that setting
+ */
+currentUser.onChange("private", async (status) => {
+  const resp = await fetch(`${URLS["visibility"]}`)
+  const response = await resp.text()
+  console.log(`response: ${response}`)
+})
 
 const state: State = {
-  currentUser: <User>CURRENT_USER,
-  targetUser: <User>TARGET_USER,
+  currentUser: currentUser,
+  targetUser: targetUser,
   visual: visual,
   query: query,
   url: init.url,
 }
+window.state = state
 
 // **** Map settings / bindings ****
 // initialize map with visual params
@@ -40,7 +57,7 @@ baselayers[visual.baselayer].addTo(map)
 map.setView(visual.center, visual.zoom)
 
 // Add Sidebar tabs to DOM / Map
-renderTabs(map, ["query", "activities"])
+renderTabs(map, state)
 
 map.on("move", () => {
   const center = map.getCenter()
@@ -50,16 +67,6 @@ map.on("move", () => {
   visual.geohash = Geohash.encode(center.lat, center.lng, zoom)
   setURLfromQV({ query, visual })
 })
-
-// /*
-//  * Set a listener to change user's account to public or private
-//  *  if they change that setting
-//  */
-// currentUser.onChange("public", async (status) => {
-//   const resp = await fetch(`${currentUser.url.public}?status=${status}`)
-//   const response = await resp.text()
-//   console.log(`response: ${response}`)
-// })
 
 // import * as ActivityCollection from "./DotLayer/ActivityCollection"
 
@@ -231,7 +238,7 @@ map.on("move", () => {
 // /* Rendering */
 // async function updateLayers(): Promise<void> {
 //   if (vParams.autozoom) {
-//     const totalBounds = await ActivityCollection.getLatLngBounds()
+//     const to talBounds = await ActivityCollection.getLatLngBounds()
 
 //     if (totalBounds.isValid()) {
 //       map.fitBounds(totalBounds)
