@@ -3,9 +3,9 @@
  *    as well as all of the plugins we're going to need
  *    except for the sidebar overlay.
  */
-import Geohash from "latlon-geohash"
+import Geohash from "npm:latlon-geohash"
 
-import { MAPBOX_ACCESS_TOKEN, OFFLINE, ADMIN, MOBILE } from "./Env"
+import { MAPBOX_ACCESS_TOKEN, OFFLINE, MOBILE } from "./Env"
 import { Map, control, Control, DomUtil } from "./myLeaflet"
 
 // For ctrl-select
@@ -20,29 +20,16 @@ import heatflask_logo from "url:../images/logo.png"
 /*
  * Initialize the Leaflet map object
  */
+export const DEFAULT_CENTER = { lat: 27.53, lng: 1.58 }
+export const DEFAULT_ZOOM = 3
 
-export const map = new Map("map", {
-  center: [0, 0],
-  zoom: 4,
-  zoomAnimation: MOBILE,
-  zoomSnap: 1,
-  zoomDelta: 1,
-  zoomAnimationThreshold: 8,
-  wheelPxPerZoomLevel: 60,
-  updateWhenZooming: true,
-  worldCopyJump: true,
-  preferCanvas: true,
-})
+export const DEFAULT_GEOHASH: string = Geohash.encode(
+  DEFAULT_CENTER.lat,
+  DEFAULT_CENTER.lng,
+  DEFAULT_ZOOM
+)
 
-// Add zoom Control
-map.zoomControl.setPosition("bottomright")
-
-// Make control window accessible as an export
-export function controlWindow(options) {
-  return control.window(map, options)
-}
-
-export const AreaSelect = window.L.AreaSelect
+export const AreaSelect = L.AreaSelect
 
 /*
  * Initialize map Baselayers
@@ -76,7 +63,7 @@ const providers_names = [
   "OpenStreetMap.Mapnik",
   "Stadia.AlidadeSmoothDark",
 ]
-export const defaultBaselayerName = "Mapbox.dark"
+export const DEFAULT_BASELAYER = "Mapbox.dark"
 
 for (const name of providers_names) {
   baselayers[name] = tileLayer.provider(name, { useOnlyCache: OFFLINE })
@@ -97,12 +84,6 @@ for (const name in baselayers) {
   }
 }
 
-// Add baselayer selection control to map
-control.layers(baselayers, null, { position: "topleft" }).addTo(map)
-
-// Add default baselayer to map
-// baselayers[defaultBaselayerName].addTo(map)
-
 // Define a watermark control
 const Watermark = Control.extend({
   onAdd: function () {
@@ -114,26 +95,12 @@ const Watermark = Control.extend({
   },
 })
 
-// Add Watermarks to map
-new Watermark({
-  image: strava_logo,
-  width: "20%",
-  opacity: "0.5",
-  position: "bottomleft",
-}).addTo(map)
-
-new Watermark({
-  image: heatflask_logo,
-  opacity: "0.5",
-  width: "20%",
-  position: "bottomleft",
-}).addTo(map)
-
 /*
  * Display for debugging
  */
 const InfoViewer = Control.extend({
-  onAdd() {
+  visible: true,
+  onAdd(map) {
     const infoBox_el = DomUtil.create("div")
     infoBox_el.style.width = "200px"
     infoBox_el.style.padding = "5px"
@@ -164,25 +131,64 @@ const InfoViewer = Control.extend({
     return infoBox_el
   },
 
-  onRemove() {
+  onRemove(map) {
     map.off("zoomstart zoom zoomend move", this.onMove)
     this.infoBox_el.remove()
   },
 })
 
 const infoBox = new InfoViewer()
-infoBox.on = false
+infoBox.visible = false
 
-export function showInfoBox(on = true) {
-  if (on && !infoBox.on) {
+export function showInfoBox(map, visible = true) {
+  if (visible && !infoBox.visible) {
     infoBox.addTo(map)
-    infoBox.on = true
-  } else if (!on && infoBox.on) {
+    infoBox.visible = true
+  } else if (!visible && infoBox.visible) {
     infoBox.remove()
-    infoBox.on = false
+    infoBox.visible = false
   }
 }
 
-if (ADMIN) {
-  showInfoBox()
+// Instantiate the map
+export function CreateMap(divOrID: HTMLDivElement | string): Map {
+  const map = new Map(divOrID, {
+    center: DEFAULT_CENTER,
+    zoom: DEFAULT_ZOOM,
+    zoomAnimation: MOBILE,
+    zoomSnap: 1,
+    zoomDelta: 1,
+    zoomAnimationThreshold: 8,
+    wheelPxPerZoomLevel: 60,
+    updateWhenZooming: true,
+    worldCopyJump: true,
+    preferCanvas: true,
+  })
+
+  // Add zoom Control
+  map.zoomControl.setPosition("bottomright")
+
+  // Add baselayer selection control to map
+  control.layers(baselayers, null, { position: "topleft" }).addTo(map)
+
+  // Add Watermarks to map
+  new Watermark({
+    image: strava_logo,
+    width: "20%",
+    opacity: "0.5",
+    position: "bottomleft",
+  }).addTo(map)
+
+  new Watermark({
+    image: heatflask_logo,
+    opacity: "0.5",
+    width: "20%",
+    position: "bottomleft",
+  }).addTo(map)
+
+  // Make control window accessible as a method
+  map.controlWindow = (options) => control.window(map, options)
+  map.showInfoBox = (visible: boolean) => showInfoBox(map, visible)
+
+  return map
 }

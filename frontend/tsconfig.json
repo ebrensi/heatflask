@@ -1,0 +1,11 @@
+{
+    "compilerOptions": {
+        "baseUrl": ".",
+        "paths": {
+            "npm:*": ["./node_modules/*"],
+            "~*": ["./*"]
+        },
+        "lib": ["DOM", "ESNext", "WebWorker"]
+    },
+    "include": ["./src/**/*"]
+}

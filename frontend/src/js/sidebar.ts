@@ -18,7 +18,7 @@ import "npm:sidebar-v2/js/leaflet-sidebar"
 import { control } from "./myLeaflet"
 import { icon } from "./Icons"
 import { Map } from "./myLeaflet"
-import { State } from "~/src/js/Model"
+import { State } from "./Model"
 import { nextAnimationFrame } from "./appUtil"
 
 const query_header = `

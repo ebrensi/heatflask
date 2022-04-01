@@ -1,7 +1,8 @@
 /*
  * URL.js -- Browser URL functionality
  */
-import Geohash from "latlon-geohash"
+import Geohash from "npm:latlon-geohash"
+import { nextTask } from "./appUtil"
 
 import {
   QueryParameters,
@@ -10,8 +11,6 @@ import {
   DefaultVisual,
   QVParams,
 } from "./Model"
-
-import { nextTask } from "./appUtil"
 
 /**
  * All the model parameters that we can parse from the URL
@@ -151,7 +150,6 @@ export function parseURL(urlString: string) {
   /*
    * ***  Construct Query from URL args  ***
    */
-  let qparams: QueryParameters
   const queryType = urlArgs["key"]
     ? "key"
     : urlParams.ids
@@ -164,10 +162,11 @@ export function parseURL(urlString: string) {
     ? "activities"
     : undefined
 
+  const qparams: QueryParameters = {}
   if (queryType) {
-    qparams = { queryType: queryType }
+    qparams["queryType"] = queryType
 
-    const qt = qparams.queryType
+    const qt = queryType
     if (qt === "days" && urlParams.days) qparams.quantity = +urlParams.days
     else if (qt === "activities" && urlParams.limit)
       qparams.quantity = +urlParams.limit
@@ -176,8 +175,6 @@ export function parseURL(urlString: string) {
       qparams.after = +urlParams.after
     } else if (qt === "ids") qparams.ids = urlParams.ids
     else if (qt === "key") qparams.key = urlParams.key
-  } else {
-    qparams = DefaultQuery
   }
 
   /*
@@ -192,7 +189,7 @@ export function parseURL(urlString: string) {
   /*
    * *** Construct Visual from URL args ***
    */
-  const vparams: VisualParameters = { ...DefaultVisual }
+  const vparams: VisualParameters = {}
 
   if (urlParams.lat && urlParams.lng) {
     vparams.center = { lat: +urlParams.lat, lng: +urlParams.lng }
@@ -229,14 +226,6 @@ export function parseURL(urlString: string) {
       vparams.geohash = gh
       vparams.autozoom = false
     }
-  }
-
-  if (!vparams.geohash) {
-    vparams.geohash = Geohash.encode(
-      vparams.center.lat,
-      vparams.center.lng,
-      vparams.zoom
-    )
   }
 
   return { query: qparams, visual: vparams, url: urlParams }

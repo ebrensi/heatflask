@@ -2,8 +2,16 @@
  * Model -- This module defines the parameters of the Heatflask client
  */
 import { BoundObject } from "./DataBinding"
+import {
+  DEFAULT_CENTER,
+  DEFAULT_ZOOM,
+  DEFAULT_GEOHASH,
+  DEFAULT_BASELAYER,
+} from "./Map"
 import { URLParameters } from "./URL"
-import { defaultBaselayerName } from "./Map"
+
+console.log(`baselayer: ${DEFAULT_BASELAYER}`)
+
 /**
  * User parameters are the current user browsing and
  * the user whose activities we are viewing
@@ -61,9 +69,10 @@ export type VisualParameters = {
 }
 
 export const DefaultVisual: VisualParameters = {
-  center: { lat: 27.53, lng: 1.58 },
-  zoom: 3,
-  baselayer: defaultBaselayerName,
+  center: DEFAULT_CENTER,
+  zoom: DEFAULT_ZOOM,
+  geohash: DEFAULT_GEOHASH,
+  baselayer: DEFAULT_BASELAYER,
   autozoom: true,
   tau: 30,
   T: 2,
@@ -101,11 +110,11 @@ const bindingDefaults = {
  */
 export function createDOMBindings({ visual, query }: QVParams) {
   const VISUAL: BoundVisualParameters = BoundObject.fromObject(
-    visual,
+    { ...DefaultVisual, ...visual },
     bindingDefaults
   )
   const QUERY: BoundQueryParameters = BoundObject.fromObject(
-    query,
+    { ...DefaultQuery, ...query },
     bindingDefaults
   )
 
