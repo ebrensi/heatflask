@@ -1,6 +1,7 @@
 python-dateutil>=2.8.2
 
 sanic==21.12.1
+sanic-openapi
 numpy==1.22.3
 
 pymongo[srv]==3.12

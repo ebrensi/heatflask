@@ -3,6 +3,7 @@ This is the main thing that runs on the backend
 """
 import os
 from sanic import Sanic
+from sanic_openapi import openapi3_blueprint
 import asyncio
 import logging
 
@@ -39,6 +40,8 @@ app = Sanic(APP_BASE_NAME, log_config=LOG_CONFIG, strict_slashes=False)
 files.init_app(app)
 
 # Endpoint Definitions
+app.blueprint(openapi3_blueprint)
+
 app.blueprint(main.bp)
 app.blueprint(auth.bp)
 app.blueprint(users.bp)

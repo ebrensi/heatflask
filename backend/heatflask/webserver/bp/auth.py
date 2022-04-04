@@ -31,8 +31,7 @@ async def authorize(request):
     """
     Attempt to authorize a user via Oauth(2)
     When a client requests this endpoint, we redirect them to
-    Strava's authorization page, which will then request our
-    endpoint /authorized
+    Strava's authorization page, which will then request /authorized
     """
     state = request.args.get("state")
     return Response.redirect(
@@ -49,8 +48,9 @@ async def authorize(request):
 @session_cookie(get=True, set=True, flashes=True)
 async def auth_callback(request):
     """
-    Authorization callback.  The service returns here to give us an
-    access_token for the user who successfully logged in.
+    Authorization Callback
+    After authenticating on Strava's login page, Strava calls this endpoint
+    with an access_token for the user who successfully logged in.
     """
     state = request.args.get("state")
     scope = request.args.get("scope")
@@ -107,6 +107,11 @@ async def auth_callback(request):
 @bp.get("/logout")
 @session_cookie(get=True, set=True, flashes=True)
 async def logout(request):
+    """
+    Log out a currently logged in user (remove browser cookie).
+    This does not effect the user's Strava authentication.  The user will still be
+    logged-in to Strava.
+    """
     cuser = request.ctx.current_user
     cuser_id = cuser[Users.ID] if cuser else None
     request.ctx.current_user = None

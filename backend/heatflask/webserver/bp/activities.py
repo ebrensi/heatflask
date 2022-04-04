@@ -28,6 +28,9 @@ bp = sanic.Blueprint("activities", url_prefix="/activities")
 @bp.post("/")
 @session_cookie(get=True)
 async def query(request):
+    """
+    Get the activity list JSON for currently logged-in user
+    """
     query = request.json
     streams = query.pop("streams", False)
     response = await request.respond(content_type="application/msgpack")
@@ -114,6 +117,9 @@ async def query(request):
 @bp.get("/")
 @session_cookie(get=True, set=True)
 async def activities_page(request):
+    """
+    Activity list HTML page for currently logged-in user
+    """
     all_users = request.args.pop("all", False)
     query = {"streams": False}
     if "limit" not in query:
