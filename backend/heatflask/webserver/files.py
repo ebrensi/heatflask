@@ -16,10 +16,6 @@ def init_app(app):
     # FRONTEND_DIST_DIR, unless there is an endpoint
     # with that name.
     # ex.  /logo.png  ->  we serve FRONTEND_DIST_DIR/logo.png
-    #
-    # The url for the file can be generated as
-    # app.url_for("static", name="dist", filename="logo.png")
-    #
     app.static("", FRONTEND_DIST_DIR, name="dist")
     app.register_listener(load_templates, "before_server_start")
 
@@ -35,7 +31,7 @@ async def load_templates(app, loop):
     # This is faster than using a Templating library like Jinja2
     # since we don't need any of its advanced features.
     for fname in os.listdir(FRONTEND_DIST_DIR):
-        if fname.endswith(".html") and not fname.startswith("tab."):
+        if fname.endswith(".html"):
             fpath = f"{FRONTEND_DIST_DIR}{fname}"
             with open(fpath, "r") as file:
                 file_str = file.read()
