@@ -1,7 +1,11 @@
-import { TileLayer, tileLayer } from "../myLeaflet"
+import { tileLayer, TileLayer, TileLayerOptions } from "../myLeaflet"
 
 // these plugins modify the TileLayer class
-import "./TileLayer.Cached"
-import "leaflet-providers"
+import { cachedLayerOptions, cachedLayerMethods } from "./TileLayer.Cached"
+import "npm:leaflet-providers"
 
-export { TileLayer, tileLayer }
+type myTileLayerOptions = TileLayerOptions & typeof cachedLayerOptions
+type myTileLayer = TileLayer & typeof cachedLayerMethods
+
+// TODO: Get these types right
+export { tileLayer }

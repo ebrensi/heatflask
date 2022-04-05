@@ -9,38 +9,8 @@ import {
   DefaultQuery,
   VisualParameters,
   DefaultVisual,
-  QVParams,
+  URLParameters,
 } from "./Model"
-
-/**
- * All the model parameters that we can parse from the URL
- */
-export type URLParameters = {
-  // Query parameters
-  after?: string
-  before?: string
-  days?: string
-  limit?: string
-  ids?: string
-  key?: string
-  userid?: string
-  // Visual parameters
-  // Map
-  zoom?: string
-  lat?: string
-  lng?: string
-  autozoom?: string
-  geohash?: string
-  baselayer?: string
-  // Animation
-  tau?: string
-  T?: string
-  sz?: string
-  paused?: string
-  shadows?: string
-  paths?: string
-  alpha?: string
-}
 
 /**
  * Reverse-mapping of all the possible URL argument names to their
@@ -83,6 +53,11 @@ const str = (v: unknown) => v && String(v)
 /*
  * Convert Query and Visual Parameters to URL parameters
  */
+type QVParams = {
+  visual: VisualParameters
+  query: QueryParameters
+}
+
 function QVtoURL({ query, visual }: QVParams): URLParameters {
   const qtype = query.queryType
   const urlparams: URLParameters = {

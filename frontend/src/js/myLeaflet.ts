@@ -24,6 +24,7 @@ import {
   Point,
   setOptions,
   TileLayer,
+  TileLayerOptions,
   tileLayer,
   GridLayer,
   Util,
@@ -50,6 +51,7 @@ export {
   Point,
   setOptions,
   TileLayer,
+  TileLayerOptions,
   tileLayer,
   GridLayer,
   Util,
@@ -59,10 +61,8 @@ export {
  * The global namespace L is required by a few plugins.  We provide one,
  * with the bare minimum content that they require.
  */
-window.L = {
-  //bind,
+const L = {
   Browser,
-  //Bounds,
   Class,
   control,
   Control,
@@ -71,15 +71,14 @@ window.L = {
   Draggable,
   Evented,
   extend,
-  //Handler,
-  //LatLngBounds,
-  //Layer,
-  //Map,
   point,
   Point,
   setOptions,
   TileLayer,
   tileLayer,
-  //GridLayer,
   Util,
 }
+
+export type LeafletGlobal = typeof L
+
+window.L = L

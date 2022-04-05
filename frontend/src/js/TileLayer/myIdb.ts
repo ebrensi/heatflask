@@ -9,7 +9,7 @@ export class Store {
   storeName: string
   _dbp: Promise<IDBDatabase>
 
-  constructor(dbName: string, storeName: string, keyPath: string) {
+  constructor(dbName: string, storeName: string, keyPath?: string) {
     this.storeName = storeName
     this._dbp = this._initialize(dbName, storeName, keyPath)
   }
@@ -227,13 +227,12 @@ export function keys(store) {
     ._withIDBStore("readonly", (store) => {
       // This would be store.getAllKeys(), but it isn't supported by Edge or Safari.
       // And openKeyCursor isn't supported by Safari.
-      ;(store.openKeyCursor || store.openCursor).call(
-        store
-      ).onsuccess = function () {
-        if (!this.result) return
-        keys.push(this.result.key)
-        this.result.continue()
-      }
+      ;(store.openKeyCursor || store.openCursor).call(store).onsuccess =
+        function () {
+          if (!this.result) return
+          keys.push(this.result.key)
+          this.result.continue()
+        }
     })
     .then(() => keys)
 }

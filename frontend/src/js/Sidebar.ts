@@ -15,11 +15,11 @@ import controlsTabSetup from "../webpages/main-page/tab.controls"
 
 // Code
 import "npm:sidebar-v2/js/leaflet-sidebar"
-import { control } from "./myLeaflet"
-import { icon } from "./Icons"
-import { Map } from "./myLeaflet"
-import { State } from "./Model"
 import { nextAnimationFrame } from "./appUtil"
+import { icon } from "./Icons"
+import { control, Map } from "./myLeaflet"
+
+import { State } from "./Model"
 
 const query_header = `
   <a href="#"
@@ -68,12 +68,7 @@ const profile_header = `
 const tabSpec: Record<string, [string, string, string, (s: State) => void]> = {
   query: [icon("bars"), query_header, query_html, null],
   activities: [icon("list2"), "Rendered Activities", actvities_html, null],
-  profile: [
-    icon("user-circle-o"),
-    "${CURRENT_USER}'s profile",
-    profile_html,
-    null,
-  ],
+  profile: [icon("user-circle-o"), profile_header, profile_html, null],
   controls: [
     icon("equalizer"),
     "Layer Settings",
@@ -168,5 +163,5 @@ export async function renderTabs(map: Map, state: State, tabNames?: string[]) {
   map.addEventListener("click", () => S.isOpen && S.close())
 
   await nextAnimationFrame()
-  for (const func of setupFuncs) func && func()
+  for (const func of setupFuncs) func && func(state)
 }

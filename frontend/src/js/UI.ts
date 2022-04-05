@@ -6,15 +6,13 @@
 // import { HHMMSS } from "./appUtil"
 import { BoundObject } from "./DataBinding"
 import { CURRENT_USER, TARGET_USER, FLASHES, ADMIN } from "./Env"
-
-import * as MapAPI from "./Map"
-import * as Sidebar from "./sidebar"
+import { createDOMBindings, BoundUser, State } from "./Model"
 import { parseURL } from "./URL"
-import { BoundUser, State, createDOMBindings } from "./Model"
 
-console.log(`baselayer: ${MapAPI.DEFAULT_BASELAYER}`)
+import * as MapAPI from "./MapAPI"
+import * as Sidebar from "./Sidebar"
 
-const map = MapAPI.CreateMap("map")
+const map = MapAPI.CreateMap()
 
 if (ADMIN) map.showInfoBox()
 
@@ -58,26 +56,10 @@ const state: State = {
   query: query,
   url: init.url,
 }
-window.state = state
+window.appState = state
 
 // **** Map settings / bindings ****
-// initialize map with visual params
-MapAPI.baselayers[visual.baselayer].addTo(map)
-map.setView(visual.center, visual.zoom)
-
-map.on("move", () => {
-  const center = map.getCenter()
-  const zoom = map.getZoom()
-  visual.center = center
-  visual.zoom = zoom
-  visual.geohash = Geohash.encode(center.lat, center.lng, zoom)
-  setURLfromQV({ visual, query })
-})
-
-map.on("baselayerchange", (e) => {
-  visual.baselayer = e.layer.name
-  setURLfromQV({ visual, query })
-})
+MapAPI.BindMap(map, state)
 
 // Add Sidebar tabs to DOM / Map
 Sidebar.renderTabs(map, state)

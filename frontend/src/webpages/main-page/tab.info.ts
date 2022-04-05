@@ -6,7 +6,7 @@ const contact_specs = [
   ["twitter", "https://twitter.com/heatflask"],
   ["instagram", "https://www.instagram.com/heatflask"],
   [null, null],
-  ["fire", "https://www.strava.com/clubs/271165"],
+  ["strava", "https://www.strava.com/clubs/271165"],
   ["github", "https://github.com/ebrensi/heatflask"],
   ["envelope-o", "mailto:info@heatflask.com"],
 ]

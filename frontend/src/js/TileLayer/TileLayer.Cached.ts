@@ -7,7 +7,7 @@
  *  The code for PouchDBCached was pretty good but rather than use CouchDB
  *    I decided to go with native IndexedDB, via myIDB.
  *
- *  Efrem Rensi 2020
+ *  Efrem Rensi 2020, 2021
  */
 
 import * as idb from "./myIdb"
@@ -22,9 +22,7 @@ import {
   extend,
 } from "../myLeaflet"
 
-export { TileLayer, tileLayer }
-
-TileLayer.mergeOptions({
+export const cachedLayerOptions = {
   useCache: true,
   saveToCache: true,
   useOnlyCache: false,
@@ -33,9 +31,10 @@ TileLayer.mergeOptions({
   dbName: "tile-storage",
   updateInterval: 200,
   updateWhenIdle: false,
-})
+}
+TileLayer.mergeOptions(cachedLayerOptions)
 
-TileLayer.include({
+export const cachedLayerMethods = {
   cacheHits: 0,
   cacheMisses: 0,
 
@@ -63,8 +62,8 @@ TileLayer.include({
 
   // Overwrites TileLayer.prototype.createTile
   createTile: function (coords, done) {
-    const tile = document.createElement("img"),
-      tileUrl = this.getTileUrl(coords)
+    const tile = document.createElement("img")
+    const tileUrl = this.getTileUrl(coords)
 
     tile.onerror = bind(this._tileOnError, this, done, tile)
     tile.onload = bind(this._tileOnLoad, this, done, tile)
@@ -121,7 +120,9 @@ TileLayer.include({
   _originalTileOnError: TileLayer.prototype._tileOnError,
 
   _tileOnError: function (done, tile, e) {
-    const layer = this // `this` is bound to the Tile Layer in TileLayer.prototype.createTile.
+    // `this` is bound to the Tile Layer in TileLayer.prototype.createTile.
+    const layer = this /* eslint-disable-line */
+
     const originalCoords = tile._originalCoords
     const currentCoords = (tile._currentCoords =
       tile._currentCoords || layer._createCurrentCoords(originalCoords))
@@ -296,4 +297,6 @@ TileLayer.include({
       )
     )
   },
-})
+}
+
+TileLayer.include(cachedLayerMethods)

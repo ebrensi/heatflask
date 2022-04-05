@@ -6,30 +6,55 @@
 import Geohash from "npm:latlon-geohash"
 
 import { MAPBOX_ACCESS_TOKEN, OFFLINE, MOBILE } from "./Env"
-import { Map, control, Control, DomUtil } from "./myLeaflet"
+import {
+  Map,
+  control,
+  Control,
+  DomUtil,
+  LeafletGlobal,
+  LatLngBounds,
+} from "./myLeaflet"
+import { State } from "./Model"
+import { setURLfromQV } from "./URL"
 
 // For ctrl-select
 import "./BoxHook"
 import "leaflet-control-window"
-import "npm:leaflet-areaselect/src/leaflet-areaselect"
+import "npm:leaflet-areaselect"
 import { tileLayer } from "./TileLayer/TileLayer.Heatflask"
 
 import strava_logo from "url:../images/pbs4.png"
 import heatflask_logo from "url:../images/logo.png"
 
+// AreaSelect types
+type AreaSelectOptions = {
+  width?: number | undefined
+  height?: number | undefined
+  keepAspectRatio?: boolean | undefined
+}
+
+type Dimension = {
+  width: number
+  height: number
+}
+
+type AreaSelectObj = {
+  addTo(map: Map): Map
+  getBounds(): LatLngBounds
+  remove(): void
+  setDimensions(dim: Dimension): void
+}
+
 /*
  * Initialize the Leaflet map object
  */
-export const DEFAULT_CENTER = { lat: 27.53, lng: 1.58 }
-export const DEFAULT_ZOOM = 3
+type myLeafletGlobal = LeafletGlobal & {
+  areaSelect?: (box: AreaSelectOptions) => AreaSelectObj
+}
 
-export const DEFAULT_GEOHASH: string = Geohash.encode(
-  DEFAULT_CENTER.lat,
-  DEFAULT_CENTER.lng,
-  DEFAULT_ZOOM
-)
+const L: myLeafletGlobal = window.L
 
-export const AreaSelect = L.AreaSelect
+export const areaSelect = L.areaSelect
 
 /*
  * Initialize map Baselayers
@@ -63,7 +88,6 @@ const providers_names = [
   "OpenStreetMap.Mapnik",
   "Stadia.AlidadeSmoothDark",
 ]
-export const DEFAULT_BASELAYER = "Mapbox.dark"
 
 for (const name of providers_names) {
   baselayers[name] = tileLayer.provider(name, { useOnlyCache: OFFLINE })
@@ -151,11 +175,24 @@ export function showInfoBox(map, visible = true) {
 }
 
 // Instantiate the map
-export function CreateMap(divOrID: HTMLDivElement | string): Map {
-  const map = new Map(divOrID, {
-    center: DEFAULT_CENTER,
-    zoom: DEFAULT_ZOOM,
+interface myMap extends Map {
+  controlWindow: unknown
+  showInfoBox: (visible?: boolean) => void
+  areaSelect: unknown
+}
+
+type latlng = { lat: number; lng: number } | [number, number]
+
+export function CreateMap(
+  divOrID: HTMLDivElement | string = "map",
+  center: latlng = [0, 0],
+  zoom = 3
+) {
+  const map = <myMap>new Map(divOrID, {
+    center: center,
+    zoom: zoom,
     zoomAnimation: MOBILE,
+    fadeAnimation: false,
     zoomSnap: 1,
     zoomDelta: 1,
     zoomAnimationThreshold: 8,
@@ -187,8 +224,30 @@ export function CreateMap(divOrID: HTMLDivElement | string): Map {
   }).addTo(map)
 
   // Make control window accessible as a method
-  map.controlWindow = (options) => control.window(map, options)
-  map.showInfoBox = (visible: boolean) => showInfoBox(map, visible)
-
+  map.controlWindow = (options?) => control.window(map, options)
+  map.showInfoBox = (visible?: boolean) => showInfoBox(map, visible)
+  map.areaSelect = areaSelect
   return map
+}
+
+export function BindMap(map: Map, appState: State) {
+  const { query, visual } = appState
+
+  // initialize map with visual params
+  baselayers[visual.baselayer].addTo(map)
+  map.setView(visual.center, visual.zoom)
+
+  map.on("move", () => {
+    const center = map.getCenter()
+    const zoom = map.getZoom()
+    visual.center = center
+    visual.zoom = zoom
+    visual.geohash = Geohash.encode(center.lat, center.lng, zoom)
+    setURLfromQV({ visual, query })
+  })
+
+  map.on("baselayerchange", (e) => {
+    visual.baselayer = e.layer.name
+    setURLfromQV({ visual, query })
+  })
 }

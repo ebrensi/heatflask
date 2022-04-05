@@ -24,7 +24,7 @@ DEFAULT_COOKIE_SPEC = {
     "max-age": 10 * 24 * 3600,  # 10 days
     # "secure": False,
     "httponly": True,
-    # "samesite": "strict",
+    "samesite": "strict",
 }
 
 COOKIE_NAME = APP_BASE_NAME.lower()

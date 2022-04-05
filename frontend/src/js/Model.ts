@@ -1,16 +1,8 @@
 /*
  * Model -- This module defines the parameters of the Heatflask client
  */
+import Geohash from "npm:latlon-geohash"
 import { BoundObject } from "./DataBinding"
-import {
-  DEFAULT_CENTER,
-  DEFAULT_ZOOM,
-  DEFAULT_GEOHASH,
-  DEFAULT_BASELAYER,
-} from "./Map"
-import { URLParameters } from "./URL"
-
-console.log(`baselayer: ${DEFAULT_BASELAYER}`)
 
 /**
  * User parameters are the current user browsing and
@@ -41,7 +33,6 @@ export type QueryParameters = {
   ids?: string // string representing and Array of activity ids
   quantity?: number // number of days or activities
 }
-
 export const DefaultQuery: QueryParameters = {
   queryType: "activities",
   quantity: 10,
@@ -68,6 +59,15 @@ export type VisualParameters = {
   paused?: boolean // start in paused state
 }
 
+const DEFAULT_CENTER = { lat: 27.53, lng: 1.58 }
+const DEFAULT_ZOOM = 3
+const DEFAULT_GEOHASH: string = Geohash.encode(
+  DEFAULT_CENTER.lat,
+  DEFAULT_CENTER.lng,
+  DEFAULT_ZOOM
+)
+const DEFAULT_BASELAYER = "Mapbox.dark"
+
 export const DefaultVisual: VisualParameters = {
   center: DEFAULT_CENTER,
   zoom: DEFAULT_ZOOM,
@@ -87,7 +87,7 @@ export type BoundUser = User & BoundObject
 export type BoundVisualParameters = VisualParameters & BoundObject
 export type BoundQueryParameters = QueryParameters & BoundObject
 
-export type QVParams = {
+type QVParams = {
   visual: VisualParameters
   query: QueryParameters
 }
@@ -121,7 +121,39 @@ export function createDOMBindings({ visual, query }: QVParams) {
   return { visual: VISUAL, query: QUERY }
 }
 
-// ***************************************************
+/**
+ * All the model parameters that we can parse from the URL
+ */
+export type URLParameters = {
+  // Query parameters
+  after?: string
+  before?: string
+  days?: string
+  limit?: string
+  ids?: string
+  key?: string
+  userid?: string
+  // Visual parameters
+  // Map
+  zoom?: string
+  lat?: string
+  lng?: string
+  autozoom?: string
+  geohash?: string
+  baselayer?: string
+  // Animation
+  tau?: string
+  T?: string
+  sz?: string
+  paused?: string
+  shadows?: string
+  paths?: string
+  alpha?: string
+}
+
+/**
+ * Parameterized representation of the current state of this app
+ */
 export type State = {
   url: URLParameters
   currentUser: User
