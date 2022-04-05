@@ -6,7 +6,7 @@
 import { decodeMultiStream } from "@msgpack/msgpack"
 import { href, img, HHMMSS, sleep } from "~/src/js/appUtil"
 import { icon } from "~/src/js/Icons"
-import { activity_icon, activityURL } from "~/src/js/strava"
+import { activity_icon, activityURL } from "~/src/js/Strava"
 // import { JSTable } from "../../js/jstable"
 
 const BASE_URL = "/"

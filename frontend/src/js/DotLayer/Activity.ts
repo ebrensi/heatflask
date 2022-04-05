@@ -8,7 +8,7 @@ import { simplify as simplifyPath } from "./Simplifier"
 import { RunningStatsCalculator } from "./stats"
 import { LatLngBounds } from "../myLeaflet"
 import { BitSet } from "../BitSet"
-import { ATYPE } from "../strava"
+import { ATYPE } from "../Strava"
 
 import {
   compress as VByteCompress,

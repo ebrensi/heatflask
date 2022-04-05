@@ -1,7 +1,7 @@
 import { HHMMSS, queueTask, nextTask, href } from "./appUtil"
 import { items } from "./DotLayer/ActivityCollection"
 import { dotLayer } from "./DotLayerAPI"
-import { activityURL, ATYPE } from "./strava"
+import { activityURL, ATYPE } from "./Strava"
 import { flags } from "./Model"
 import { zoomToSelectedPaths } from "./MapAPI"
 

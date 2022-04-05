@@ -10,6 +10,9 @@ import controls_html from "bundle-text:../webpages/main-page/tab.controls.html"
 import info_html from "bundle-text:../webpages/main-page/tab.info.html"
 
 // setup code
+import queryTabSetup from "../webpages/main-page/tab.query"
+import activitiesTabSetup from "../webpages/main-page/tab.activities"
+import profileTabSetup from "../webpages/main-page/tab.profile"
 import infoTabSetup from "../webpages/main-page/tab.info"
 import controlsTabSetup from "../webpages/main-page/tab.controls"
 
@@ -66,9 +69,19 @@ const profile_header = `
 `
 
 const tabSpec: Record<string, [string, string, string, (s: State) => void]> = {
-  query: [icon("bars"), query_header, query_html, null],
-  activities: [icon("list2"), "Rendered Activities", actvities_html, null],
-  profile: [icon("user-circle-o"), profile_header, profile_html, null],
+  query: [icon("bars"), query_header, query_html, queryTabSetup],
+  activities: [
+    icon("list2"),
+    "Rendered Activities",
+    actvities_html,
+    activitiesTabSetup,
+  ],
+  profile: [
+    icon("user-circle-o"),
+    profile_header,
+    profile_html,
+    profileTabSetup,
+  ],
   controls: [
     icon("equalizer"),
     "Layer Settings",
