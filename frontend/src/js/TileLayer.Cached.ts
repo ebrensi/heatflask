@@ -12,15 +12,25 @@
 
 import * as idb from "./myIdb"
 
+type TileCoords = { x: number; y: number; z: number; fallback?: boolean }
+interface TileElement extends HTMLImageElement {
+  _originalCoords?: TileCoords
+  _currentCoords?: TileCoords
+  _originalSrc?: string
+  _fallbackZoom?: number
+  _fallbackScale?: number
+}
+type TileCallback = (error: string, tile: TileElement) => void
+
 import {
   TileLayer,
-  tileLayer,
   GridLayer,
   Util,
   Browser,
   bind,
   extend,
-} from "../myLeaflet"
+  Map,
+} from "npm:leaflet"
 
 export const cachedLayerOptions = {
   useCache: true,
@@ -39,7 +49,7 @@ export const cachedLayerMethods = {
   cacheMisses: 0,
 
   // returns the unique and compact lookup key for this tile
-  onAdd: function (map) {
+  onAdd: function (map: Map) {
     if (this.options.useCache) {
       this._db = new idb.Store(this.options.dbName, this.name)
     }
@@ -47,7 +57,7 @@ export const cachedLayerMethods = {
     GridLayer.prototype.onAdd.call(this, map)
   },
 
-  onRemove: function (map) {
+  onRemove: function (map: Map) {
     if (this._db) {
       GridLayer.prototype.onRemove.call(this, map)
       this._db.close()
@@ -55,14 +65,14 @@ export const cachedLayerMethods = {
     }
   },
 
-  _key: function (coords) {
+  _key: function (coords: TileCoords) {
     return String.fromCodePoint(coords.z, coords.x, coords.y)
     // return `${coords.z}:${coords.x}:${coords.y}`
   },
 
   // Overwrites TileLayer.prototype.createTile
-  createTile: function (coords, done) {
-    const tile = document.createElement("img")
+  createTile: function (coords: TileCoords, done: TileCallback) {
+    const tile = <TileElement>document.createElement("img")
     const tileUrl = this.getTileUrl(coords)
 
     tile.onerror = bind(this._tileOnError, this, done, tile)
@@ -109,7 +119,7 @@ export const cachedLayerMethods = {
     return tile
   },
 
-  _createCurrentCoords: function (originalCoords) {
+  _createCurrentCoords: function (originalCoords: TileCoords) {
     const currentCoords = this._wrapCoords(originalCoords)
 
     currentCoords.fallback = true
@@ -119,7 +129,7 @@ export const cachedLayerMethods = {
 
   _originalTileOnError: TileLayer.prototype._tileOnError,
 
-  _tileOnError: function (done, tile, e) {
+  _tileOnError: function (done: TileCallback, tile: TileElement, e: unknown) {
     // `this` is bound to the Tile Layer in TileLayer.prototype.createTile.
     const layer = this /* eslint-disable-line */
 
@@ -181,7 +191,7 @@ export const cachedLayerMethods = {
     tile.src = newUrl
   },
 
-  getTileUrl: function (coords) {
+  getTileUrl: function (coords: TileCoords): string {
     const z = (coords.z = coords.fallback ? coords.z : this._getZoomForUrl())
 
     const data = {
@@ -202,27 +212,31 @@ export const cachedLayerMethods = {
     return Util.template(this._url, extend(data, this.options))
   },
 
-  _onCacheHit: function (tile, tileUrl, key, data, done) {
+  _onCacheHit: function (
+    tile: TileElement,
+    tileUrl: string,
+    key: string,
+    data
+  ) {
     this.cacheHits++
 
     // Serve tile from cached data
     //console.log('Tile is cached: ', tileUrl);
     tile.src = URL.createObjectURL(data.blob)
-    tile.stat = "hit" ////
   },
 
-  _tileOnLoad: function (done, tile) {
+  _tileOnLoad: function (done: TileCallback, tile: TileElement) {
     URL.revokeObjectURL(tile.src)
     done(null, tile)
-
-    // const elapsed = performance.now() - tile.ts;
-    // console.log(`${tile.key} ${tile.stat}: ${~~elapsed}`);
   },
 
-  _onCacheMiss: function (tile, tileUrl, key, done) {
+  _onCacheMiss: function (
+    tile: TileElement,
+    tileUrl: string,
+    key: string,
+    done: TileCallback
+  ) {
     this.cacheMisses++
-
-    // tile.stat = "miss"; ////
 
     if (this.options.useOnlyCache) {
       // Offline, not cached
@@ -263,12 +277,12 @@ export const cachedLayerMethods = {
   },
 
   _createTile: function () {
-    return document.createElement("img")
+    return <TileElement>document.createElement("img")
   },
 
   // Modified TileLayer.getTileUrl, this will use the zoom given by the parameter coords
   //  instead of the maps current zoomlevel.
-  _getTileUrl: function (coords) {
+  _getTileUrl: function (coords: TileCoords) {
     let zoom = coords.z
     if (this.options.zoomReverse) {
       zoom = this.options.maxZoom - zoom

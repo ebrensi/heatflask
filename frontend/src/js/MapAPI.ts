@@ -4,57 +4,20 @@
  *    except for the sidebar overlay.
  */
 import Geohash from "npm:latlon-geohash"
+import { Map, control, Control, DomUtil, tileLayer } from "npm:leaflet"
+import { areaSelect } from "npm:leaflet-areaselect"
+import "npm:leaflet-control-window"
+import "npm:leaflet-providers"
+
+import "./TileLayer.Cached"
+import "./BoxHook"
 
 import { MAPBOX_ACCESS_TOKEN, OFFLINE, MOBILE } from "./Env"
-import {
-  Map,
-  control,
-  Control,
-  DomUtil,
-  LeafletGlobal,
-  LatLngBounds,
-} from "./myLeaflet"
 import { State } from "./Model"
 import { setURLfromQV } from "./URL"
 
-// For ctrl-select
-import "./BoxHook"
-import "leaflet-control-window"
-import "npm:leaflet-areaselect"
-import { tileLayer } from "./TileLayer/TileLayer.Heatflask"
-
 import strava_logo from "url:../images/pbs4.png"
 import heatflask_logo from "url:../images/logo.png"
-
-// AreaSelect types
-type AreaSelectOptions = {
-  width?: number | undefined
-  height?: number | undefined
-  keepAspectRatio?: boolean | undefined
-}
-
-type Dimension = {
-  width: number
-  height: number
-}
-
-type AreaSelectObj = {
-  addTo(map: Map): Map
-  getBounds(): LatLngBounds
-  remove(): void
-  setDimensions(dim: Dimension): void
-}
-
-/*
- * Initialize the Leaflet map object
- */
-type myLeafletGlobal = LeafletGlobal & {
-  areaSelect?: (box: AreaSelectOptions) => AreaSelectObj
-}
-
-const L: myLeafletGlobal = window.L
-
-export const areaSelect = L.areaSelect
 
 /*
  * Initialize map Baselayers

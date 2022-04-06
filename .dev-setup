@@ -44,5 +44,3 @@ npm ci
 cd ../backend
 echo "Installing backend dependencies"
 ./.dev-install-backend
-
-# .git/info/exclude

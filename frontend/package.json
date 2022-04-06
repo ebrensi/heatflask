@@ -45,6 +45,8 @@
     "@parcel/transformer-inline-string": "^2.3.2",
     "@parcel/transformer-sass": "^2.3.2",
     "@types/leaflet": "^1.7.7",
+    "@types/leaflet-areaselect": "^0.1.5",
+    "@types/leaflet-providers": "^1.2.1",
     "@typescript-eslint/eslint-plugin": "^5.8.0",
     "@typescript-eslint/parser": "^5.8.0",
     "assemblyscript": "latest",

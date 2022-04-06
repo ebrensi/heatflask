@@ -15,7 +15,7 @@ import {
   DomEvent,
   DomUtil,
   Util,
-} from "./myLeaflet"
+} from "npm:leaflet"
 
 const BoxHook = Handler.extend({
   initialize: function (map) {

@@ -9,19 +9,22 @@ import profile_html from "bundle-text:../webpages/main-page/tab.profile.html"
 import controls_html from "bundle-text:../webpages/main-page/tab.controls.html"
 import info_html from "bundle-text:../webpages/main-page/tab.info.html"
 
-// setup code
+/*
+ * The default export of each of these modules is a function that
+ * takes Model state as input and runs after the nexr redraw when the
+ * content is present in the DOM
+ */
 import queryTabSetup from "../webpages/main-page/tab.query"
 import activitiesTabSetup from "../webpages/main-page/tab.activities"
 import profileTabSetup from "../webpages/main-page/tab.profile"
 import infoTabSetup from "../webpages/main-page/tab.info"
 import controlsTabSetup from "../webpages/main-page/tab.controls"
 
-// Code
+import { control, Map } from "npm:leaflet"
 import "npm:sidebar-v2/js/leaflet-sidebar"
+
 import { nextAnimationFrame } from "./appUtil"
 import { icon } from "./Icons"
-import { control, Map } from "./myLeaflet"
-
 import { State } from "./Model"
 
 const query_header = `
