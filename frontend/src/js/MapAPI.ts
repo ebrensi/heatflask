@@ -3,8 +3,11 @@
  *    as well as all of the plugins we're going to need
  *    except for the sidebar overlay.
  */
-import Geohash from "npm:latlon-geohash"
-import { Map, control, Control, DomUtil, tileLayer } from "npm:leaflet"
+import strava_logo from "url:../images/pbs4.png"
+import heatflask_logo from "url:../images/logo.png"
+
+import Geohash from "latlon-geohash"
+import { Map as LMap, control, Control, DomUtil, tileLayer } from "npm:leaflet"
 import { areaSelect } from "npm:leaflet-areaselect"
 import "npm:leaflet-control-window"
 import "npm:leaflet-providers"
@@ -15,9 +18,6 @@ import "./BoxHook"
 import { MAPBOX_ACCESS_TOKEN, OFFLINE, MOBILE } from "./Env"
 import { State } from "./Model"
 import { setURLfromQV } from "./URL"
-
-import strava_logo from "url:../images/pbs4.png"
-import heatflask_logo from "url:../images/logo.png"
 
 /*
  * Initialize map Baselayers
@@ -138,8 +138,9 @@ export function showInfoBox(map, visible = true) {
 }
 
 // Instantiate the map
-interface myMap extends Map {
+interface myMap extends LMap {
   controlWindow: unknown
+  zoomControl: Control
   showInfoBox: (visible?: boolean) => void
   areaSelect: unknown
 }
@@ -151,7 +152,7 @@ export function CreateMap(
   center: latlng = [0, 0],
   zoom = 3
 ) {
-  const map = <myMap>new Map(divOrID, {
+  const map = <myMap>new LMap(divOrID, {
     center: center,
     zoom: zoom,
     zoomAnimation: MOBILE,
@@ -193,7 +194,7 @@ export function CreateMap(
   return map
 }
 
-export function BindMap(map: Map, appState: State) {
+export function BindMap(map: LMap, appState: State) {
   const { query, visual } = appState
 
   // initialize map with visual params

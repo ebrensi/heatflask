@@ -1,11 +1,15 @@
 {
     "compilerOptions": {
+        "experimentalDecorators": true,
+        "isolatedModules": true,
         "baseUrl": ".",
         "paths": {
-            "npm:*": ["./node_modules/*"],
+            "npm:*": ["*", "node_modules/*"],
             "~*": ["./*"]
         },
+        "moduleResolution": ["node"],
         "lib": ["DOM", "ESNext", "WebWorker"]
     },
-    "include": ["./src/**/*"]
+    "allowJs": true,
+    "include": ["src/**/*"]
 }
