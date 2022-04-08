@@ -1,14 +1,12 @@
-// import * as L from "npm:leaflet"
-// import { Control, control } from "npm:leaflet"
-import { Map, ControlOptions } from "npm:leaflet"
+import * as L from "leaflet"
 
-declare namespace L {
+declare module "leaflet" {
   namespace Control {
     interface SidebarOptions {
       position: string
     }
 
-    class Sidebar extends Control {
+    class _Sidebar extends Control {
       constructor(id: string, options?: SidebarOptions)
       options: ControlOptions
       addTo(map: Map): this
@@ -16,6 +14,8 @@ declare namespace L {
       open(id: string): this
       close(): this
     }
+
+    interface Sidebar extends _Sidebar, Evented {}
   }
 
   namespace control {

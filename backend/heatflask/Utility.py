@@ -6,6 +6,7 @@ from operator import truth
 from logging import getLogger
 
 log = getLogger(__name__)
+log.setLevel("INFO")
 log.propagate = True
 
 

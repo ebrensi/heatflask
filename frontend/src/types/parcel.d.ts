@@ -1,5 +1,7 @@
-// Some declarations to keep TypeScript from complaining about
-// Parcel URL schemes
+/**
+ * Some declarations to keep TypeScript from complaining about
+ *  Parcel URL schemes
+ */
 
 declare module "bundle-text:*" {
   const value: string

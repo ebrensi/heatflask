@@ -10,8 +10,6 @@
  *  Efrem Rensi 2020, 2021
  */
 
-import * as idb from "./myIdb"
-
 type TileCoords = { x: number; y: number; z: number; fallback?: boolean }
 interface TileElement extends HTMLImageElement {
   _originalCoords?: TileCoords
@@ -20,7 +18,8 @@ interface TileElement extends HTMLImageElement {
   _fallbackZoom?: number
   _fallbackScale?: number
 }
-type TileCallback = (error: string, tile: TileElement) => void
+
+import * as idb from "./myIdb"
 
 import {
   TileLayer,
@@ -30,7 +29,9 @@ import {
   bind,
   extend,
   Map,
-} from "npm:leaflet"
+  DoneCallback,
+  TileLayerOptions,
+} from "leaflet"
 
 export const cachedLayerOptions = {
   useCache: true,
@@ -42,9 +43,8 @@ export const cachedLayerOptions = {
   updateInterval: 200,
   updateWhenIdle: false,
 }
-TileLayer.mergeOptions(cachedLayerOptions)
 
-export const cachedLayerMethods = {
+export const cachedLayerState = {
   cacheHits: 0,
   cacheMisses: 0,
 
@@ -71,31 +71,27 @@ export const cachedLayerMethods = {
   },
 
   // Overwrites TileLayer.prototype.createTile
-  createTile: function (coords: TileCoords, done: TileCallback) {
+  createTile: function (coords: TileCoords, done: DoneCallback) {
     const tile = <TileElement>document.createElement("img")
     const tileUrl = this.getTileUrl(coords)
 
     tile.onerror = bind(this._tileOnError, this, done, tile)
     tile.onload = bind(this._tileOnLoad, this, done, tile)
 
-    // tile.ts = performance.now(); ////
-    // tile.key = this._tileCoordsToKey(coords); ////
-    // console.log(`loading tile ${tile.key} at ${tile.ts}`);
-
     if (this.options.crossOrigin) {
       tile.crossOrigin = ""
     }
     tile.crossOrigin = "Anonymous"
-    /*
-         Alt tag is *set to empty string to keep screen readers from reading URL and for compliance reasons
-         http://www.w3.org/TR/WCAG20-TECHS/H67
-         */
+
+    /* Alt tag is *set to empty string to keep screen readers from reading URL and for compliance reasons
+     *  http://www.w3.org/TR/WCAG20-TECHS/H67
+     */
     tile.alt = ""
 
     /*
-         Set role="presentation" to force screen readers to ignore this
-         https://www.w3.org/TR/wai-aria/roles#textalternativecomputation
-        */
+     * Set role="presentation" to force screen readers to ignore this
+     *  https://www.w3.org/TR/wai-aria/roles#textalternativecomputation
+     */
     tile.setAttribute("role", "presentation")
 
     if (this.options.useCache && this._db) {
@@ -129,7 +125,7 @@ export const cachedLayerMethods = {
 
   _originalTileOnError: TileLayer.prototype._tileOnError,
 
-  _tileOnError: function (done: TileCallback, tile: TileElement, e: unknown) {
+  _tileOnError: function (done: DoneCallback, tile: TileElement, e: Error) {
     // `this` is bound to the Tile Layer in TileLayer.prototype.createTile.
     const layer = this /* eslint-disable-line */
 
@@ -225,7 +221,7 @@ export const cachedLayerMethods = {
     tile.src = URL.createObjectURL(data.blob)
   },
 
-  _tileOnLoad: function (done: TileCallback, tile: TileElement) {
+  _tileOnLoad: function (done: DoneCallback, tile: TileElement) {
     URL.revokeObjectURL(tile.src)
     done(null, tile)
   },
@@ -234,7 +230,7 @@ export const cachedLayerMethods = {
     tile: TileElement,
     tileUrl: string,
     key: string,
-    done: TileCallback
+    done: DoneCallback
   ) {
     this.cacheMisses++
 
@@ -313,4 +309,28 @@ export const cachedLayerMethods = {
   },
 }
 
-TileLayer.include(cachedLayerMethods)
+TileLayer.mergeOptions(cachedLayerOptions)
+TileLayer.include(cachedLayerState)
+
+type CachedTileLayerOptions = TileLayerOptions & {
+  [P in keyof typeof cachedLayerOptions]?: typeof cachedLayerOptions[P]
+}
+type CachedTileLayer = TileLayer & typeof cachedLayerState
+
+export function myTileLayer(
+  urlTemplate: string,
+  options?: CachedTileLayerOptions
+) {
+  return <CachedTileLayer>new TileLayer(urlTemplate, options)
+}
+
+// TODO: pick up here
+
+// declare module "leaflet" {
+//   namespace LayerOptions extends TileLayerOptions {
+
+//   }
+//   class CachedTileLayer extends TileLayer {
+//     constructor(options?: CachedLayerOptions)
+//   }
+// }

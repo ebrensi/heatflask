@@ -7,6 +7,7 @@ from logging import getLogger
 FRONTEND_DIST_DIR = "../frontend/dist/"
 
 log = getLogger(__name__)
+log.setLevel("INFO")
 log.propagate = True
 
 

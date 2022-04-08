@@ -44,6 +44,7 @@
   "devDependencies": {
     "@parcel/transformer-inline-string": "^2.3.2",
     "@parcel/transformer-sass": "^2.3.2",
+    "@types/latlon-geohash": "^2.0.0",
     "@types/leaflet": "^1.7.7",
     "@types/leaflet-areaselect": "^0.1.5",
     "@types/leaflet-providers": "^1.2.1",
@@ -58,30 +59,6 @@
     "prettier": "^2.5.1",
     "process": "^0.11.10",
     "typescript": "^4.5.4"
-  },
-  "eslintConfig": {
-    "env": {
-      "browser": true,
-      "worker": true,
-      "es2022": true
-    },
-    "parser": "@typescript-eslint/parser",
-    "extends": [
-      "eslint:recommended",
-      "plugin:@typescript-eslint/recommended",
-      "prettier"
-    ],
-    "parserOptions": {
-      "ecmaVersion": 12,
-      "sourceType": "module"
-    },
-    "rules": {
-      "dot-notation": "off"
-    },
-    "ignorePatterns": [
-      "dist/*",
-      "src/dist/*"
-    ]
   },
   "prettier": {
     "semi": false

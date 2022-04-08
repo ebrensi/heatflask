@@ -4,10 +4,10 @@
         "isolatedModules": true,
         "baseUrl": ".",
         "paths": {
-            "npm:*": ["*", "node_modules/*"],
+            "npm:*": ["./node_modules/*"],
             "~*": ["./*"]
         },
-        "moduleResolution": ["node"],
+        "moduleResolution": ["nodenext"],
         "lib": ["DOM", "ESNext", "WebWorker"]
     },
     "allowJs": true,

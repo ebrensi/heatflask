@@ -1,6 +1,4 @@
-// import { LeafletGlobal } from "./myLeaflet"
-// import { State } from "./Model"
-
+/*
 export {}
 
 declare global {
@@ -9,3 +7,4 @@ declare global {
     appState: unknown
   }
 }
+*/

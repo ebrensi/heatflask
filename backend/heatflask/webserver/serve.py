@@ -31,6 +31,7 @@ from .bp import updates
 from .bp import main
 
 log = logging.getLogger("heatflask.webserver.serve")
+log.setLevel("INFO")
 log.propagate = True
 
 app = Sanic(APP_BASE_NAME, log_config=LOG_CONFIG, strict_slashes=False)
@@ -89,9 +90,10 @@ if __name__ == "__main__":
         "host": "127.0.0.1" if DEV else "0.0.0.0",
         "port": int(os.environ.get("PORT", 8000)),
         "workers": 1,  # int(os.environ.get("WEB_CONCURRENCY", 1)),
-        "debug": DEV,
+        "debug": False,
+        # "dev": DEV,
         "access_log": DEV,
-        "reload_dir": files.FRONTEND_DIST_DIR,
+        "reload_dir": files.FRONTEND_DIST_DIR if DEV else None,
     }
     app.config.SERVER_NAME = (
         "{host}:{port}".format(**RUN_CONFIG) if DEV else "http://dev.heatflask.com"

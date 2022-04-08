@@ -9,8 +9,6 @@ import { CURRENT_USER, TARGET_USER, FLASHES, ADMIN } from "./Env"
 import { createDOMBindings, BoundUser, State } from "./Model"
 import { parseURL } from "./URL"
 
-import "./leaflet-sidebar-v2"
-
 import * as MapAPI from "./MapAPI"
 import * as Sidebar from "./Sidebar"
 

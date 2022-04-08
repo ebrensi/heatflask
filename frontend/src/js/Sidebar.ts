@@ -20,12 +20,18 @@ import profileTabSetup from "../webpages/main-page/tab.profile"
 import infoTabSetup from "../webpages/main-page/tab.info"
 import controlsTabSetup from "../webpages/main-page/tab.controls"
 
-import { control, Map } from "npm:leaflet"
-import "npm:sidebar-v2/js/leaflet-sidebar"
+import { control, Control, Map } from "leaflet"
+import "~/node_modules/sidebar-v2/js/leaflet-sidebar"
 
 import { nextAnimationFrame } from "./appUtil"
 import { icon } from "./Icons"
 import { State } from "./Model"
+
+interface mySidebar extends Control.Sidebar {
+  tabNames: string[]
+  currentTab: number
+  isOpen: boolean
+}
 
 const query_header = `
   <a href="#"
@@ -140,7 +146,7 @@ export async function renderTabs(map: Map, state: State, tabNames?: string[]) {
 
   // The main sidebar UI
   // Leaflet sidebar v2
-  const S = control.sidebar("sidebar")
+  const S = <mySidebar>control.sidebar("sidebar")
   S.tabNames = tabNames
   S.currentTab = 0
 

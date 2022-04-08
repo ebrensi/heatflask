@@ -22,6 +22,9 @@ from ..sessions import session_cookie
 from ..files import render_template
 
 log = getLogger(__name__)
+log.setLevel("INFO")
+log.propagate = True
+
 bp = sanic.Blueprint("activities", url_prefix="/activities")
 
 

@@ -1,7 +1,7 @@
 /*
  * URL.js -- Browser URL functionality
  */
-import Geohash from "npm:latlon-geohash"
+import Geohash from "latlon-geohash"
 import { nextTask } from "./appUtil"
 
 import {

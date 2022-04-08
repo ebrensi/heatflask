@@ -14,6 +14,8 @@ from ..sessions import session_cookie
 from .auth import authorize
 
 log = getLogger(__name__)
+log.setLevel("INFO")
+log.propagate = True
 
 bp = sanic.Blueprint("users", url_prefix="/users")
 

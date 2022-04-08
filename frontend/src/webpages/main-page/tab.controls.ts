@@ -1,4 +1,4 @@
-import pureknob from "npm:pure-knob"
+import pureknob from "pure-knob"
 import { State } from "~/src/js/Model"
 
 const knob = pureknob.createKnob(250, 250)

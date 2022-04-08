@@ -20,7 +20,7 @@ from . import Utility
 
 log = getLogger(__name__)
 log.propagate = True
-
+log.setLevel("INFO")
 
 DOMAIN = "https://www.strava.com"
 STALE_TOKEN = 300

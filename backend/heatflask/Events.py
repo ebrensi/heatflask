@@ -16,6 +16,7 @@ from .DataAPIs import init_collection
 
 log = getLogger(__name__)
 log.propagate = True
+log.setLevel("INFO")
 
 COLLECTION_NAME = "events_v0"
 

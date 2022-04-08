@@ -7,12 +7,13 @@ import strava_logo from "url:../images/pbs4.png"
 import heatflask_logo from "url:../images/logo.png"
 
 import Geohash from "latlon-geohash"
-import { Map as LMap, control, Control, DomUtil, tileLayer } from "npm:leaflet"
-import { areaSelect } from "npm:leaflet-areaselect"
-import "npm:leaflet-control-window"
-import "npm:leaflet-providers"
+import { Map as LMap, control, Control, DomUtil, areaSelect } from "leaflet"
+import "leaflet-areaselect"
+import "leaflet-control-window"
+import "leaflet-easybutton"
+import "leaflet-providers"
 
-import "./TileLayer.Cached"
+import { myTileLayer as tileLayer } from "./TileLayer.Cached"
 import "./BoxHook"
 
 import { MAPBOX_ACCESS_TOKEN, OFFLINE, MOBILE } from "./Env"
@@ -87,7 +88,7 @@ const Watermark = Control.extend({
  */
 const InfoViewer = Control.extend({
   visible: true,
-  onAdd(map) {
+  onAdd(map: LMap) {
     const infoBox_el = DomUtil.create("div")
     infoBox_el.style.width = "200px"
     infoBox_el.style.padding = "5px"
@@ -96,7 +97,7 @@ const InfoViewer = Control.extend({
     this.infoBox_el = infoBox_el
 
     this.onMove = () => {
-      const zoom = map.getZoom().toFixed(2)
+      const zoom = map.getZoom()
       const center = map.getCenter()
       const gh = Geohash.encode(center.lat, center.lng, zoom)
       const { x: pox, y: poy } = map.getPixelOrigin()
@@ -106,7 +107,7 @@ const InfoViewer = Control.extend({
       const { lat: neLat, lng: neLng } = NE
 
       infoBox_el.innerHTML =
-        `<b>Map</b>: zoom: ${zoom}<br>` +
+        `<b>Map</b>: zoom: ${zoom.toFixed(2)}<br>` +
         `GeoHash: ${gh}<br>` +
         `SW: ${swLat.toFixed(4)}, ${swLng.toFixed(4)}<br>` +
         `NE: ${neLat.toFixed(4)}, ${neLng.toFixed(4)}<br>` +

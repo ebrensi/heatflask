@@ -15,6 +15,8 @@ from ... import Events
 from ..sessions import session_cookie
 
 log = getLogger(__name__)
+log.setLevel("INFO")
+log.propagate = True
 
 bp = sanic.Blueprint("auth", url_prefix="/strava-auth")
 

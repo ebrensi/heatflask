@@ -22,6 +22,7 @@ from . import Index
 
 log = getLogger(__name__)
 log.propagate = True
+log.setLevel("INFO")
 
 COLLECTION_NAME = "users_v0"
 

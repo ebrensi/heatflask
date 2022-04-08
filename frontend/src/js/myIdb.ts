@@ -22,16 +22,16 @@ export class Store {
   ): Promise<IDBDatabase> {
     return new Promise((resolve, reject) => {
       const openreq = indexedDB.open(dbName, version)
-      const self = this
+      const self = this // eslint-disable-line @typescript-eslint/no-this-alias
       let db: IDBDatabase
 
       openreq.onerror = onerror
       openreq.onupgradeneeded = onupgradeneeded
       openreq.onsuccess = onsuccess
 
-      function onupgradeneeded(e) {
+      function onupgradeneeded() {
         // console.log(`"${dbName}" onupgradeneeded: adding "${storeName}"`, e);
-        db = e.target.result
+        db = openreq.result
         if (keyPath === undefined) db.createObjectStore(storeName)
         else db.createObjectStore(storeName, { keyPath: keyPath })
       }
@@ -41,10 +41,9 @@ export class Store {
         reject(event)
       }
 
-      function onsuccess(event) {
+      function onsuccess() {
         // console.log(`"${dbName}" success`, event)
-        db = event.target.result
-
+        db = openreq.result
         db.onversionchange = onversionchange
 
         if (db.objectStoreNames.contains(storeName)) resolve(db)
@@ -74,7 +73,7 @@ export class Store {
   ) {
     return this._dbp.then(
       (db) =>
-        new Promise((resolve, reject) => {
+        new Promise<void>((resolve, reject) => {
           const transaction = db.transaction(this.storeName, type)
           transaction.oncomplete = () => resolve()
           transaction.onabort = transaction.onerror = () =>
@@ -84,34 +83,45 @@ export class Store {
     )
   }
 
-  close() {
-    return this._dbp.then((db) => db.close())
+  async close() {
+    const db = await this._dbp
+    return db.close()
   }
 }
 
-const pendingTransactions = new Map()
+/**
+ * Bulk Transactions
+ */
 
-function doBulkGet(store) {
-  // const t0 = Date.now()
-  // let count = 0
+type OpName = "get" | "put" | "del"
+type Resolve = (x?: unknown) => void
+type Reject = (reason: unknown) => void
+type OpList = {
+  [key: string]: { resolve: Resolve; reject: Reject; value?: unknown }
+}
+type Transaction = {
+  [key: string]: OpList
+}
+
+const pendingTransactions: Map<Store, Transaction> = new Map()
+
+function doBulkGet(store: Store) {
   return store
     ._withIDBStore("readonly", (thisTransactionObjectStore) => {
-      // We do one transaction involving queries.count operations
+      // We do one transaction involving queries.count OpNames
       const queries = pendingTransactions.get(store)
-      if (!queries || !queries.count) return
+      if (!queries) return
 
       const getQueries = queries.get
 
       // clear this set of pending transactions so no one will add to it
       queries.get = {}
-      queries.count.get = 0
 
       // make all the get requests
       for (const [key, { resolve, reject }] of Object.entries(getQueries)) {
         const req = thisTransactionObjectStore.get(key)
         req.onsuccess = (e) => resolve(e.target.result)
         req.onerror = (e) => reject(e)
-        // count++
       }
     })
     .then(() => {
@@ -119,16 +129,16 @@ function doBulkGet(store) {
     })
 }
 
-function doBulkPutDel(store) {
+function doBulkPutDel(store: Store) {
   // const t0 = Date.now()
   // let delCount = 0
   // let putCount = 0
 
   return store
     ._withIDBStore("readwrite", (thisTransactionObjectStore) => {
-      // We do one transaction involving queries.count operations
+      // We do one transaction involving queries.count OpNames
       const queries = pendingTransactions.get(store)
-      if (!queries || !queries.count) return
+      if (!queries) return
 
       const putQueries = queries.put
       const delQueries = queries.del
@@ -136,8 +146,6 @@ function doBulkPutDel(store) {
       // delete this set of pending transactions so no one will add to them
       queries.put = {}
       queries.del = {}
-      queries.count.put = 0
-      queries.count.del = 0
 
       // make all put and del requests
       for (const [key, { value, resolve, reject }] of Object.entries(
@@ -146,14 +154,12 @@ function doBulkPutDel(store) {
         const req = thisTransactionObjectStore.put(value, key)
         req.onsuccess = () => resolve()
         req.onerror = (e) => reject(e)
-        // putCount++
       }
 
       for (const [key, { resolve, reject }] of Object.entries(delQueries)) {
         const req = thisTransactionObjectStore.delete(key)
         req.onsuccess = () => resolve()
         req.onerror = (e) => reject(e)
-        // delCount++
       }
     })
     .then(() => {
@@ -161,22 +167,23 @@ function doBulkPutDel(store) {
     })
 }
 
-// Rather than opening a new transaction for each get operation, we
-// store the operations into a buffer, and perform a batch operation in
-// one transaction when nothing has been added to the buffer for
-function addOp(store, op, key, value) {
+/**
+ * Rather than opening a new transaction for each get OpName, we
+ * store the OpNames into a buffer, and perform a batch OpName in
+ * one transaction when nothing has been added to the buffer for
+ */
+function addOp(store: Store, op: OpName, key: string, value?: unknown) {
   return new Promise((resolve, reject) => {
     if (!pendingTransactions.has(store)) {
       pendingTransactions.set(store, {
         get: {},
         put: {},
         del: {},
-        count: { get: 0, put: 0, del: 0 },
       })
     }
     const queries = pendingTransactions.get(store)
     queries[op][key] = { value, resolve, reject }
-    const myNum = queries.count[op]++
+    const myNum = Object.keys(queries[op]).length
 
     /*
      * Here we set a short timeout to allow for more ops to be added.
@@ -184,19 +191,17 @@ function addOp(store, op, key, value) {
      * perform a bulk transaction.
      */
     setTimeout(() => {
+      const opCount = Object.keys(queries.get).length
       if (op === "get") {
-        const getCount = queries.count.get
-        if (getCount > MAX_TRANSACTION_SIZE || getCount === myNum + 1) {
+        if (opCount > MAX_TRANSACTION_SIZE || opCount === myNum + 1) {
           doBulkGet(store)
         }
         return
       }
 
-      const putDelCount = queries.count.put + queries.count.del
-      if (
-        putDelCount > MAX_TRANSACTION_SIZE ||
-        queries.count[op] === myNum + 1
-      ) {
+      const putDelCount =
+        Object.keys(queries.put).length + Object.keys(queries.del).length
+      if (putDelCount > MAX_TRANSACTION_SIZE || opCount === myNum + 1) {
         doBulkPutDel(store)
       }
     }, BUFFER_TIMEOUT)

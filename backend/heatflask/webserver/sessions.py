@@ -9,6 +9,8 @@ from .config import APP_BASE_NAME
 from . import files
 
 log = getLogger(__name__)
+log.setLevel("INFO")
+log.propagate = True
 
 #
 # Persistent Sessions (via cookie)

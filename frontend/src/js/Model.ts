@@ -1,7 +1,7 @@
 /*
  * Model -- This module defines the parameters of the Heatflask client
  */
-import Geohash from "npm:latlon-geohash"
+import Geohash from "latlon-geohash"
 import { BoundObject } from "./DataBinding"
 
 /**
