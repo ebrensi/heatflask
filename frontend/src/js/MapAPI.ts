@@ -81,8 +81,8 @@ for (const name in baselayers) {
 }
 
 // Define a watermark control
-const Watermark = Control.extend({
-  image: "",
+const ggg = {
+  // options: {},
   onAdd: function () {
     const img: HTMLImageElement = DomUtil.create("img")
     img.src = this.options.image
@@ -90,11 +90,12 @@ const Watermark = Control.extend({
     img.style.opacity = this.options.opacity
     return img
   },
-})
+}
+Control.Watermark = Control.extend(ggg)
 
 // Instantiate the map
 interface myMap extends Map {
-  controlWindow: unknown
+  controlWindow: (options?) => Control.Window
   zoomControl: Control
   showInfoBox: (visible?: boolean) => void
   areaSelect: unknown
@@ -185,14 +186,14 @@ export function CreateMap(
   control.layers(baselayers, null, { position: "topleft" }).addTo(map)
 
   // Add Watermarks to map
-  new Watermark({
+  new Control.Watermark({
     image: strava_logo,
     width: "20%",
     opacity: "0.5",
     position: "bottomleft",
   }).addTo(map)
 
-  new Watermark({
+  new Control.Watermark({
     image: heatflask_logo,
     opacity: "0.5",
     width: "20%",
@@ -200,7 +201,7 @@ export function CreateMap(
   }).addTo(map)
 
   // Make control window accessible as a method
-  map.controlWindow = (options?) => control.window(map, options)
+  map.controlWindow = (options?) => new Control.Window(map, options)
   map.showInfoBox = (visible?: boolean) => showInfoBox(map, visible)
   map.areaSelect = areaSelect
   return map

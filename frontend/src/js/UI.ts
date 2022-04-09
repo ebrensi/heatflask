@@ -47,7 +47,6 @@ const state: State = {
   query: query,
   url: init.url,
 }
-window.appState = state
 
 // **** Map settings / bindings ****
 MapAPI.BindMap(map, state)

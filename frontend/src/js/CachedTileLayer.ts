@@ -20,7 +20,7 @@ interface TileElement extends HTMLImageElement {
 }
 
 type StoredObj = {
-  ts: Date
+  ts?: Date
   blob: Blob
 }
 
