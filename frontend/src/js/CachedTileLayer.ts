@@ -19,23 +19,19 @@ interface TileElement extends HTMLImageElement {
   _fallbackScale?: number
 }
 
+type StoredObj = {
+  ts: Date
+  blob: Blob
+}
+
 import * as idb from "./myIdb"
 
-import {
-  TileLayer,
-  GridLayer,
-  Util,
-  Browser,
-  bind,
-  extend,
-  Map,
-  DoneCallback,
-  TileLayerOptions,
-} from "leaflet"
+import { TileLayer, GridLayer, Util, Browser, bind, extend } from "leaflet"
 
-export const cachedLayerOptions = {
+import type { TileLayerOptions, Map, DoneCallback } from "leaflet"
+
+export const DefaultCachedLayerOptions = {
   useCache: true,
-  saveToCache: true,
   useOnlyCache: false,
   cacheMaxAge: 24 * 3600 * 1000,
   minNativeZoom: 0,
@@ -73,44 +69,33 @@ export const cachedLayerState = {
   // Overwrites TileLayer.prototype.createTile
   createTile: function (coords: TileCoords, done: DoneCallback) {
     const tile = <TileElement>document.createElement("img")
-    const tileUrl = this.getTileUrl(coords)
 
     tile.onerror = bind(this._tileOnError, this, done, tile)
     tile.onload = bind(this._tileOnLoad, this, done, tile)
 
-    if (this.options.crossOrigin) {
-      tile.crossOrigin = ""
+    // tile.crossOrigin = "Anonymous"
+    if (this.options.crossOrigin || this.options.crossOrigin === "") {
+      tile.crossOrigin =
+        this.options.crossOrigin === true ? "" : this.options.crossOrigin
     }
-    tile.crossOrigin = "Anonymous"
-
-    /* Alt tag is *set to empty string to keep screen readers from reading URL and for compliance reasons
-     *  http://www.w3.org/TR/WCAG20-TECHS/H67
-     */
-    tile.alt = ""
-
     /*
-     * Set role="presentation" to force screen readers to ignore this
+     * Some settings to prevent screen readers from having problems
+     *  http://www.w3.org/TR/WCAG20-TECHS/H67
      *  https://www.w3.org/TR/wai-aria/roles#textalternativecomputation
      */
+    tile.alt = ""
     tile.setAttribute("role", "presentation")
 
+    const tileUrl = this.getTileUrl(coords)
     if (this.options.useCache && this._db) {
-      const key = this._key(coords)
-      idb
-        .get(key, this._db)
-        .then((data) =>
-          data
-            ? this._onCacheHit(tile, tileUrl, key, data, done)
-            : this._onCacheMiss(tile, tileUrl, key, done)
-        )
+      this._attachTileData(tile, tileUrl, this._key(coords), done)
     } else {
       // Fall back to standard behaviour
-      tile.onload = bind(this._tileOnLoad, this, done, tile)
       tile.src = tileUrl
     }
 
     tile._originalCoords = coords
-    tile._originalSrc = tile.src
+    tile._originalSrc = tileUrl
 
     return tile
   },
@@ -123,6 +108,7 @@ export const cachedLayerState = {
     return currentCoords
   },
 
+  // @ts-expect-error  -- This object doesn't know it is a TileLayer
   _originalTileOnError: TileLayer.prototype._tileOnError,
 
   _tileOnError: function (done: DoneCallback, tile: TileElement, e: Error) {
@@ -130,8 +116,10 @@ export const cachedLayerState = {
     const layer = this /* eslint-disable-line */
 
     const originalCoords = tile._originalCoords
-    const currentCoords = (tile._currentCoords =
-      tile._currentCoords || layer._createCurrentCoords(originalCoords))
+    const currentCoords =
+      tile._currentCoords || layer._createCurrentCoords(originalCoords)
+    if (!tile._currentCoords) tile._currentCoords = currentCoords
+
     const fallbackZoom = (tile._fallbackZoom =
       tile._fallbackZoom === undefined
         ? originalCoords.z - 1
@@ -159,23 +147,16 @@ export const cachedLayerState = {
 
     // Compute margins to adjust position.
     const top = (originalCoords.y - currentCoords.y * scale) * tileSize.y
-    style.marginTop = -top + "px"
     const left = (originalCoords.x - currentCoords.x * scale) * tileSize.x
-    style.marginLeft = -left + "px"
+    style.marginTop = `${-top}px`
+    style.marginLeft = `${-left}px`
 
     // Crop (clip) image.
     // `clip` is deprecated, but browsers support for `clip-path: inset()` is far behind.
     // http://caniuse.com/#feat=css-clip-path
-    style.clip =
-      "rect(" +
-      top +
-      "px " +
-      (left + tileSize.x) +
-      "px " +
-      (top + tileSize.y) +
-      "px " +
-      left +
-      "px)"
+    style.clip = `rect(${top}px ${left + tileSize.x}px ${
+      top + tileSize.y
+    }px ${left}px)`
 
     layer.fire("tilefallback", {
       tile: tile,
@@ -183,7 +164,6 @@ export const cachedLayerState = {
       urlMissing: tile.src,
       urlFallback: newUrl,
     })
-
     tile.src = newUrl
   },
 
@@ -208,129 +188,56 @@ export const cachedLayerState = {
     return Util.template(this._url, extend(data, this.options))
   },
 
-  _onCacheHit: function (
+  _attachTileData: async function (
     tile: TileElement,
     tileUrl: string,
     key: string,
-    data
+    done: DoneCallback
   ) {
-    this.cacheHits++
-
-    // Serve tile from cached data
-    //console.log('Tile is cached: ', tileUrl);
-    tile.src = URL.createObjectURL(data.blob)
+    const data = <StoredObj>await idb.get(key, this._db)
+    if (data) {
+      // Cache hit, yay!
+      this.cacheHits++
+      tile.src = URL.createObjectURL(data.blob)
+    } else {
+      this.cacheMisses++
+      if (this.options.useOnlyCache) {
+        // Offline, not cached
+        tile.onload = Util.falseFn
+        tile.src = Util.emptyImageUrl
+        return
+      }
+      // Online, not cached, fetch the tile
+      let blob: Blob
+      try {
+        const response = await fetch(tileUrl)
+        blob = await response.blob()
+        tile.src = URL.createObjectURL(blob)
+      } catch (error) {
+        this._tileOnError(done, tile, error)
+        return
+      }
+      if (blob) idb.set(key, { blob: blob }, this._db)
+    }
   },
 
   _tileOnLoad: function (done: DoneCallback, tile: TileElement) {
     URL.revokeObjectURL(tile.src)
     done(null, tile)
   },
-
-  _onCacheMiss: function (
-    tile: TileElement,
-    tileUrl: string,
-    key: string,
-    done: DoneCallback
-  ) {
-    this.cacheMisses++
-
-    if (this.options.useOnlyCache) {
-      // Offline, not cached
-      //  console.log('Tile not in cache', tileUrl);
-      tile.onload = Util.falseFn
-      tile.src = Util.emptyImageUrl
-    } else {
-      // Online, not cached, fetch the tile
-      if (this.options.saveToCache) {
-        // console.log('fetching tile', tileUrl);
-        // t0 = performance.now();
-
-        fetch(tileUrl)
-          .then((response) => response.blob())
-          .then((blob) => {
-            // console.log(`${key} fetch took ${~~(performance.now()-t0)}`);
-            idb.set(
-              key,
-              {
-                ts: Date.now(),
-                blob: blob,
-              },
-              this._db
-            )
-
-            tile.src = URL.createObjectURL(blob)
-          })
-          .catch((error) => {
-            this._tileOnError(done, tile, error)
-          })
-      } else {
-        // handle normally
-        tile.onload = bind(this._tileOnLoad, this, done, tile)
-        tile.crossOrigin = "Anonymous"
-        tile.src = tileUrl
-      }
-    }
-  },
-
-  _createTile: function () {
-    return <TileElement>document.createElement("img")
-  },
-
-  // Modified TileLayer.getTileUrl, this will use the zoom given by the parameter coords
-  //  instead of the maps current zoomlevel.
-  _getTileUrl: function (coords: TileCoords) {
-    let zoom = coords.z
-    if (this.options.zoomReverse) {
-      zoom = this.options.maxZoom - zoom
-    }
-    zoom += this.options.zoomOffset
-    return Util.template(
-      this._url,
-      extend(
-        {
-          r:
-            this.options.detectRetina &&
-            Browser.retina &&
-            this.options.maxZoom > 0
-              ? "@2x"
-              : "",
-          s: this._getSubdomain(coords),
-          x: coords.x,
-          y: this.options.tms
-            ? this._globalTileRange.max.y - coords.y
-            : coords.y,
-          z: this.options.maxNativeZoom
-            ? Math.min(zoom, this.options.maxNativeZoom)
-            : zoom,
-        },
-        this.options
-      )
-    )
-  },
 }
 
-TileLayer.mergeOptions(cachedLayerOptions)
+TileLayer.mergeOptions(DefaultCachedLayerOptions)
 TileLayer.include(cachedLayerState)
 
+type CacheOptions = typeof DefaultCachedLayerOptions
 type CachedTileLayerOptions = TileLayerOptions & {
-  [P in keyof typeof cachedLayerOptions]?: typeof cachedLayerOptions[P]
-}
-type CachedTileLayer = TileLayer & typeof cachedLayerState
-
-export function myTileLayer(
-  urlTemplate: string,
-  options?: CachedTileLayerOptions
-) {
-  return <CachedTileLayer>new TileLayer(urlTemplate, options)
+  [K in keyof CacheOptions]?: CacheOptions[K]
 }
 
-// TODO: pick up here
-
-// declare module "leaflet" {
-//   namespace LayerOptions extends TileLayerOptions {
-
-//   }
-//   class CachedTileLayer extends TileLayer {
-//     constructor(options?: CachedLayerOptions)
-//   }
-// }
+export default class CachedTileLayer extends TileLayer {
+  name?: string
+  constructor(urlTemplate: string, options?: CachedTileLayerOptions) {
+    super(urlTemplate, options)
+  }
+}

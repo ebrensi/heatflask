@@ -1,4 +1,4 @@
-const BUFFER_TIMEOUT = 60
+const BUFFER_TIMEOUT = 10
 const MAX_TRANSACTION_SIZE = 200
 
 /**
