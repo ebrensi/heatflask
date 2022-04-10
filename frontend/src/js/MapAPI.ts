@@ -7,8 +7,10 @@ import strava_logo from "url:../images/pbs4.png"
 import heatflask_logo from "url:../images/logo.png"
 
 import Geohash from "latlon-geohash"
-import { Map, control, Control, DomUtil, areaSelect } from "leaflet"
+import { Map, Control, AreaSelect } from "leaflet"
+import "./LeafletExtensions"
 import type { Point } from "leaflet"
+
 import "./BoxHook"
 import "leaflet-areaselect"
 import "leaflet-control-window"
@@ -35,7 +37,7 @@ const mapBox_layer_names = {
   "Mapbox.outdoors": "mapbox/outdoors-v11",
   "Mapbox.satellite": "mapbox/satellite-streets-v11",
 }
-const mapbox_layer_spec = (id) => ({
+const mapbox_layer_spec = (id: string) => ({
   id: id,
   accessToken: MAPBOX_ACCESS_TOKEN,
   useOnlyCache: OFFLINE,
@@ -80,86 +82,16 @@ for (const name in baselayers) {
   }
 }
 
-// Define a watermark control
-const ggg = {
-  // options: {},
-  onAdd: function () {
-    const img: HTMLImageElement = DomUtil.create("img")
-    img.src = this.options.image
-    img.style.width = this.options.width
-    img.style.opacity = this.options.opacity
-    return img
-  },
-}
-Control.Watermark = Control.extend(ggg)
-
 // Instantiate the map
 interface myMap extends Map {
-  controlWindow: (options?) => Control.Window
-  zoomControl: Control
-  showInfoBox: (visible?: boolean) => void
-  areaSelect: unknown
+  controlWindow: Control.Window
+  zoomControl: Control.Zoom
+  showInfoBox: (yes?: boolean) => void
+  areaSelect: AreaSelect
   _getMapPanePos: () => Point
 }
 
 type latlng = { lat: number; lng: number } | [number, number]
-
-/*
- * Display for debugging
- */
-const InfoViewer = Control.extend({
-  visible: true,
-  onAdd(map: myMap) {
-    const infoBox_el = DomUtil.create("div")
-    infoBox_el.style.width = "200px"
-    infoBox_el.style.padding = "5px"
-    infoBox_el.style.background = "rgba(255,255,255,0.6)"
-    infoBox_el.style.textAlign = "left"
-    this.infoBox_el = infoBox_el
-
-    this.onMove = () => {
-      const zoom = map.getZoom()
-      const center = map.getCenter()
-      const gh = Geohash.encode(center.lat, center.lng, zoom)
-      const { x: pox, y: poy } = map.getPixelOrigin()
-      const { x: mx, y: my } = map._getMapPanePos()
-      const llb = map.getBounds()
-      const W = llb.getWest()
-      const S = llb.getSouth()
-      const N = llb.getNorth()
-      const E = llb.getEast()
-
-      infoBox_el.innerHTML =
-        `<b>Map</b>: zoom: ${zoom.toFixed(2)}<br>` +
-        `GeoHash: ${gh}<br>` +
-        `SW: ${W.toFixed(4)}, ${S.toFixed(4)}<br>` +
-        `NE: ${E.toFixed(4)}, ${N.toFixed(4)}<br>` +
-        `px0: ${pox}, ${poy}<br>` +
-        `mpp: ${mx.toFixed(3)}, ${my.toFixed(3)}<br>`
-    }
-    map.on("zoomstart zoom zoomend move", this.onMove)
-    map.fireEvent("move")
-    return infoBox_el
-  },
-
-  onRemove(map) {
-    map.off("zoomstart zoom zoomend move", this.onMove)
-    this.infoBox_el.remove()
-  },
-})
-
-const infoBox = new InfoViewer()
-infoBox.visible = false
-
-export function showInfoBox(map, visible = true) {
-  if (visible && !infoBox.visible) {
-    infoBox.addTo(map)
-    infoBox.visible = true
-  } else if (!visible && infoBox.visible) {
-    infoBox.remove()
-    infoBox.visible = false
-  }
-}
 
 export function CreateMap(
   divOrID: HTMLDivElement | string = "map",
@@ -179,11 +111,19 @@ export function CreateMap(
     preferCanvas: true,
   })
 
+  const infoBox = new Control.InfoViewer()
+  map.showInfoBox = (yes: boolean) => {
+    if (yes) infoBox.addTo(map)
+    else infoBox.remove()
+  }
   // Add zoom Control
   map.zoomControl.setPosition("bottomright")
 
   // Add baselayer selection control to map
-  control.layers(baselayers, null, { position: "topleft" }).addTo(map)
+  const layers_control = new Control.Layers(baselayers, null, {
+    position: "topleft",
+  })
+  layers_control.addTo(map)
 
   // Add Watermarks to map
   new Control.Watermark({
@@ -201,9 +141,8 @@ export function CreateMap(
   }).addTo(map)
 
   // Make control window accessible as a method
-  map.controlWindow = (options?) => new Control.Window(map, options)
-  map.showInfoBox = (visible?: boolean) => showInfoBox(map, visible)
-  map.areaSelect = areaSelect
+  map.controlWindow = new Control.Window(map, { visible: false })
+  map.areaSelect = new AreaSelect()
   return map
 }
 

@@ -9,18 +9,17 @@ import * as L from "leaflet"
 type CallbackFunction = () => void
 
 declare module "leaflet" {
-  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Control {
     interface WindowOptions extends ControlOptions {
-      element: string
-      className: string
-      visible: boolean
-      title: string
-      closeButton: boolean
-      content: string
-      prompt: PromptObject
-      maxWidth: number
-      modal: boolean
+      element?: string
+      className?: string
+      visible?: boolean
+      title?: string
+      closeButton?: boolean
+      content?: string
+      prompt?: PromptObject
+      maxWidth?: number
+      modal?: boolean
     }
 
     interface PromptObject {
@@ -50,7 +49,6 @@ declare module "leaflet" {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace control {
     function window(
       container: Map,

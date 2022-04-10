@@ -2,12 +2,8 @@ import * as L from "leaflet"
 
 declare module "leaflet" {
   namespace Control {
-    interface SidebarOptions {
-      position: string
-    }
-
     class _Sidebar extends Control {
-      constructor(id: string, options?: SidebarOptions)
+      constructor(id: string, options?: ControlOptions)
       options: ControlOptions
       addTo(map: Map): this
       remove(): this
@@ -19,9 +15,6 @@ declare module "leaflet" {
   }
 
   namespace control {
-    function sidebar(
-      id: string,
-      options?: Control.SidebarOptions
-    ): L.Control.Sidebar
+    function sidebar(id: string, options?: ControlOptions): L.Control.Sidebar
   }
 }
