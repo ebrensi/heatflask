@@ -17,12 +17,8 @@ const map = MapAPI.CreateMap()
 if (ADMIN) map.showInfoBox()
 
 if (!!FLASHES && FLASHES.length) {
-  map
-    .controlWindow({
-      content: FLASHES.join("<br>"),
-      position: "top",
-    })
-    .show()
+  map.controlWindow.content(`<h3>${FLASHES.join("<br>")}</h3>`)
+  map.controlWindow.show()
 }
 
 // Get model parameters from the current URL

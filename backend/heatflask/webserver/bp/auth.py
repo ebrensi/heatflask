@@ -18,7 +18,7 @@ log = getLogger(__name__)
 log.setLevel("INFO")
 log.propagate = True
 
-bp = sanic.Blueprint("auth", url_prefix="/strava-auth")
+bp = sanic.Blueprint("auth", url_prefix="/auth")
 
 #
 # Authentication

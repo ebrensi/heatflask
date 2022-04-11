@@ -36,7 +36,6 @@ log.propagate = True
 
 app = Sanic(APP_BASE_NAME, log_config=LOG_CONFIG, strict_slashes=False)
 
-
 # set-up static and template file serving
 files.init_app(app)
 
@@ -66,6 +65,14 @@ app.register_listener(cancel_background_tasks, "after_server_stop")
 app.register_listener(DataAPIs.connect, "before_server_start")
 app.register_listener(DataAPIs.disconnect, "before_server_stop")
 
+
+def listLoggers(*args):
+    loggers = [logging.getLogger(name) for name in logging.root.manager.loggerDict]
+    log.info(loggers)
+
+
+app.register_listener(listLoggers, "after_server_start")
+
 if os.environ.get("HEATFLASK_RESET"):
 
     async def reset_db(a, b, users=True, index=True, streams=True):
@@ -90,8 +97,8 @@ if __name__ == "__main__":
         "host": "127.0.0.1" if DEV else "0.0.0.0",
         "port": int(os.environ.get("PORT", 8000)),
         "workers": 1,  # int(os.environ.get("WEB_CONCURRENCY", 1)),
-        "debug": False,
-        # "dev": DEV,
+        # "debug": DEV,
+        "dev": DEV,
         "access_log": DEV,
         "reload_dir": files.FRONTEND_DIST_DIR if DEV else None,
     }

@@ -1,5 +1,10 @@
 import os
 from sanic.log import LOGGING_CONFIG_DEFAULTS as LOG_CONFIG
+import logging
+
+log = logging.getLogger("heatflask.webserver.config")
+log.setLevel("INFO")
+log.propagate = True
 
 # General app configuration
 APP_BASE_NAME = "Heatflask"

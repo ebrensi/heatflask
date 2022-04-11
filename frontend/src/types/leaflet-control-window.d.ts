@@ -9,8 +9,18 @@ import * as L from "leaflet"
 type CallbackFunction = () => void
 
 declare module "leaflet" {
+  type ExtendedControlPosition =
+    | "center"
+    | "top"
+    | "topRight"
+    | "right"
+    | "bottomRight"
+    | "bottom"
+    | "bottomLeft"
+    | "left"
+    | "topLeft"
   namespace Control {
-    interface WindowOptions extends ControlOptions {
+    interface WindowOptions {
       element?: string
       className?: string
       visible?: boolean
@@ -20,6 +30,7 @@ declare module "leaflet" {
       prompt?: PromptObject
       maxWidth?: number
       modal?: boolean
+      position?: ExtendedControlPosition
     }
 
     interface PromptObject {

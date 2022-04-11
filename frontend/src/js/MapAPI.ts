@@ -141,7 +141,10 @@ export function CreateMap(
   }).addTo(map)
 
   // Make control window accessible as a method
-  map.controlWindow = new Control.Window(map, { visible: false })
+  map.controlWindow = new Control.Window(map, {
+    visible: false,
+    position: "top",
+  })
   map.areaSelect = new AreaSelect()
   return map
 }

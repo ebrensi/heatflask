@@ -51,6 +51,7 @@ async def splash_page(request):
             },
         },
     }
+    log.warning(params)
     html = request.ctx.render_template("splash-page.html", **params)
     return Response.html(html)
 
