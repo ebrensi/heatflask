@@ -1,5 +1,5 @@
 import os
-from sanic.log import LOGGING_CONFIG_DEFAULTS as LOG_CONFIG
+from sanic.log import LOGGING_CONFIG_DEFAULTS
 import logging
 
 log = logging.getLogger("heatflask.webserver.config")
@@ -26,29 +26,26 @@ REDIS_URL = os.environ["REDISGREEN_URL" if USE_REMOTE_DB else "REDIS_URL"]
 # Log Configuration
 default_log_level = "DEBUG" if APP_ENV == "development" else "INFO"
 LOG_LEVEL = os.environ.get("LOG_LEVEL", default_log_level)
-base_logger_config = {"handlers": ["console"]}
-logger_config = {
-    "heatflask.DataAPIs": {**base_logger_config, "level": LOG_LEVEL},
-    "heatflask.Strava": {**base_logger_config, "level": LOG_LEVEL},
-    "heatflask.Users": {**base_logger_config, "level": LOG_LEVEL},
-    "heatflask.Index": {**base_logger_config, "level": LOG_LEVEL},
-    "heatflask.Events": {**base_logger_config, "level": LOG_LEVEL},
-    "heatflask.Utility": {**base_logger_config, "level": LOG_LEVEL},
-    "heatflask.webserver.serve": {**base_logger_config, "level": LOG_LEVEL},
-    "heatflask.webserver.sessions": {**base_logger_config, "level": LOG_LEVEL},
-    "heatflask.webserver.files": {**base_logger_config, "level": LOG_LEVEL},
-    "heatflask.webserver.bp.auth": {**base_logger_config, "level": LOG_LEVEL},
-    "heatflask.webserver.bp.users": {**base_logger_config, "level": LOG_LEVEL},
-    "heatflask.webserver.bp.activities": {**base_logger_config, "level": LOG_LEVEL},
-}
-LOG_CONFIG["loggers"].update(logger_config)
 
-ts = ""  # if APP_ENV == "development" else "%(asctime)s"
-log_fmt = f"{ts}%(levelname)5s [%(module)s.%(funcName)s] %(message)s"
-LOG_CONFIG["formatters"]["generic"]["format"] = log_fmt
 
-access_log_fmt = (
-    f"{ts}%(levelname)5s [%(name)s] [%(host)s]:"
-    f" %(request)s %(message)s %(status)d %(byte)d"
-)
-LOG_CONFIG["formatters"]["access"]["format"] = access_log_fmt
+def get_logger_config():
+    logger_config = {**LOGGING_CONFIG_DEFAULTS}
+    heatflask_logger_config = {
+        "heatflask": {"handlers": ["console"], "level": LOG_LEVEL}
+    }
+    logger_config["loggers"].update(heatflask_logger_config)
+
+    ts = ""  # if APP_ENV == "development" else "%(asctime)s"
+    log_fmt = f"{ts}%(levelname)5s [%(module)s.%(funcName)s] %(message)s"
+    logger_config["formatters"]["generic"]["format"] = log_fmt
+
+    access_log_fmt = (
+        f"{ts}%(levelname)5s [%(name)s] [%(host)s]:"
+        f" %(request)s %(message)s %(status)d %(byte)d"
+    )
+    logger_config["formatters"]["access"]["format"] = access_log_fmt
+
+    # loggers = logger_config["loggers"]
+    # log_levels = {name: loggers[name]["level"] for name in loggers}
+    # print(log_levels)
+    return logger_config

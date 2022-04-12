@@ -16,11 +16,11 @@ from .config import (
     APP_BASE_NAME,
     APP_NAME,
     APP_ENV,
-    LOG_CONFIG,
     LOG_LEVEL,
     DEV,
     USE_REMOTE_DB,
     OFFLINE,
+    get_logger_config,
 )
 from . import files
 
@@ -34,7 +34,7 @@ log = logging.getLogger("heatflask.webserver.serve")
 log.setLevel("INFO")
 log.propagate = True
 
-app = Sanic(APP_BASE_NAME, log_config=LOG_CONFIG, strict_slashes=False)
+app = Sanic(APP_BASE_NAME, log_config=get_logger_config(), strict_slashes=False)
 
 # set-up static and template file serving
 files.init_app(app)
@@ -65,14 +65,6 @@ app.register_listener(cancel_background_tasks, "after_server_stop")
 app.register_listener(DataAPIs.connect, "before_server_start")
 app.register_listener(DataAPIs.disconnect, "before_server_stop")
 
-
-def listLoggers(*args):
-    loggers = [logging.getLogger(name) for name in logging.root.manager.loggerDict]
-    log.info(loggers)
-
-
-app.register_listener(listLoggers, "after_server_start")
-
 if os.environ.get("HEATFLASK_RESET"):
 
     async def reset_db(a, b, users=True, index=True, streams=True):
@@ -91,15 +83,14 @@ if APP_ENV != "development":
     app.add_task(Users.triage)
     app.add_task(Index.triage)
 
-
 if __name__ == "__main__":
     RUN_CONFIG = {
         "host": "127.0.0.1" if DEV else "0.0.0.0",
         "port": int(os.environ.get("PORT", 8000)),
         "workers": 1,  # int(os.environ.get("WEB_CONCURRENCY", 1)),
-        # "debug": DEV,
-        "dev": DEV,
+        "debug": False,
         "access_log": DEV,
+        "auto_reload": True,
         "reload_dir": files.FRONTEND_DIST_DIR if DEV else None,
     }
     app.config.SERVER_NAME = (

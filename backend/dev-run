@@ -22,6 +22,9 @@ done
 h1=/usr/bin/heroku
 h2=/usr/local/bin/heroku
 
+# systemctl start mongodb
+# systemctl start redis
+
 # Run the backend server via heroku local if it is available
 if [ "$USE_HEROKU" == 1 ]; then
     if [ ! -f "HEROKU_CLI" ]; then

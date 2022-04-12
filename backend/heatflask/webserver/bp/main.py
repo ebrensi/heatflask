@@ -14,7 +14,9 @@ from ... import Index
 from ..config import APP_VERSION, APP_NAME, OFFLINE
 from ..sessions import session_cookie
 
-log = getLogger(__name__)
+log = getLogger("heatflask.webserver.main")
+log.setLevel("INFO")
+log.propagate = True
 
 bp = sanic.Blueprint("main", url_prefix="/")
 
@@ -71,7 +73,6 @@ def relevant_info(user):
 
 # *** Main user/global activities page
 @bp.get("/<target_user_id:int>")
-@bp.get("/global")
 @session_cookie(get=True, set=True, flashes=True)
 async def user_page(request, target_user_id=None):
     target_user = await Users.get(target_user_id)
