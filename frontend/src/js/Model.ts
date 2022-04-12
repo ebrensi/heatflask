@@ -2,7 +2,6 @@
  * Model -- This module defines the parameters of the Heatflask client
  */
 import Geohash from "latlon-geohash"
-import { BoundObject } from "./DataBinding"
 
 /**
  * User parameters are the current user browsing and
@@ -83,44 +82,6 @@ export const DefaultVisual: VisualParameters = {
   paused: false,
 }
 
-export type BoundUser = User & BoundObject
-export type BoundVisualParameters = VisualParameters & BoundObject
-export type BoundQueryParameters = QueryParameters & BoundObject
-
-type QVParams = {
-  visual: VisualParameters
-  query: QueryParameters
-}
-
-// export type BoundParams = {
-//   vparams: BoundVisualParameters
-//   qparams: BoundQueryParameters
-// }
-
-// *********************************************************
-const bindingDefaults = {
-  event: "change",
-}
-
-/**
- * Given a set of Model Parameters, create objects whose values are bound to the
- * properties thet represent.  For example vparams.zoom is bound to map zoom and will
- * always reflect the current state of the map, and if we change vparams.zoom, the map
- * zoom will change.
- */
-export function createDOMBindings({ visual, query }: QVParams) {
-  const VISUAL: BoundVisualParameters = BoundObject.fromObject(
-    { ...DefaultVisual, ...visual },
-    bindingDefaults
-  )
-  const QUERY: BoundQueryParameters = BoundObject.fromObject(
-    { ...DefaultQuery, ...query },
-    bindingDefaults
-  )
-
-  return { visual: VISUAL, query: QUERY }
-}
-
 /**
  * All the model parameters that we can parse from the URL
  */
@@ -158,8 +119,8 @@ export type State = {
   url: URLParameters
   currentUser: User
   targetUser: User
-  visual: BoundVisualParameters
-  query: BoundQueryParameters
+  visual: VisualParameters
+  query: QueryParameters
 }
 
 // // info elements have one-way bindings because the user cannot change them
@@ -208,14 +169,3 @@ export type State = {
 // export const flags = BoundObject.fromDOMelements("[data-class=flag]", {
 //   event: "change",
 // })
-
-// export const state = {
-//   flags: flags,
-//   vParams: vParams,
-//   qParams: qParams,
-//   messages: messages,
-//   targetUser: targetUser,
-//   currentUser: currentUser,
-// }
-
-// export { state as default }

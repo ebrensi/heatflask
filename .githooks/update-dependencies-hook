@@ -13,6 +13,5 @@ check_run() {
 }
 
 # Example usage
-check_run frontend/package-lock.json "cd frontend; npm ci; cd .." &
-
+check_run frontend/package-lock.json "cd frontend; npm ci --quiet; cd .." &
 check_run backend/requirements*.txt "cd backend; sh ./dev-install-backend; cd .."

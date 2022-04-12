@@ -1,18 +1,18 @@
-python-dateutil>=2.8.2
+python-dateutil~=2.8.2
 
-sanic==22.3.0
+sanic~=22.3.0
 sanic-openapi
-numpy==1.22.3
+numpy~=1.22.3
 
-pymongo[srv]==3.12
-motor==2.5.1
+pymongo[srv]~=3.12.0
+motor~=2.5.1
 
-aioredis[hiredis]==2.0.1
-aiohttp[speedups]==3.8.1
+aioredis[hiredis]~=2.0.1
+aiohttp[speedups]~=3.8.1
 
-msgpack==1.0.3
-polyline==1.4.0
+msgpack~=1.0.3
+polyline~=1.4.0
 
 # Legacy
-psycopg2-binary==2.9.3
-sqlalchemy==1.4.34
+psycopg2-binary~=2.9.3
+sqlalchemy~=1.4.34

@@ -64,7 +64,7 @@ fields = [
 
 def mongo_doc(
     # From Strava Athlete record
-    id=None,
+    id: int = None,
     firstname=None,
     lastname=None,
     profile_medium=None,
@@ -79,7 +79,7 @@ def mongo_doc(
     private=None,
     auth=None,
     **kwargs,
-):
+) -> dict:
     if not (id or kwargs.get(ID)):
         log.error("cannot create user with no id")
         return

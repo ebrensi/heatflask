@@ -13,6 +13,7 @@ log.propagate = True
 
 db = types.SimpleNamespace(mongo_client=None, mongodb=None, redis=None)
 
+
 # this must be called by whoever controls the asyncio loop
 async def connect(app, loop):
     if db.mongodb is not None:

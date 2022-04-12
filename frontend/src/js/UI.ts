@@ -4,9 +4,8 @@
  */
 
 // import { HHMMSS } from "./appUtil"
-import { BoundObject } from "./DataBinding"
 import { CURRENT_USER, TARGET_USER, FLASHES, ADMIN } from "./Env"
-import { createDOMBindings, BoundUser, State } from "./Model"
+import { DefaultVisual, DefaultQuery, State } from "./Model"
 import { parseURL } from "./URL"
 
 import * as MapAPI from "./MapAPI"
@@ -22,26 +21,14 @@ if (!!FLASHES && FLASHES.length) {
 }
 
 // Get model parameters from the current URL
-const init = parseURL(window.location.href)
-
-// Bind visual and query parameters with DOM
-// elements (sliders, text inputs, checkboxes)
-const qvparams = createDOMBindings(init)
-const { visual, query } = qvparams
-
-const currentUser = CURRENT_USER
-  ? <BoundUser>BoundObject.fromObject(CURRENT_USER)
-  : null
-const targetUser = TARGET_USER
-  ? <BoundUser>BoundObject.fromObject(TARGET_USER)
-  : null
+const fromUrl = parseURL(window.location.href)
 
 const state: State = {
-  currentUser: currentUser,
-  targetUser: targetUser,
-  visual: visual,
-  query: query,
-  url: init.url,
+  currentUser: CURRENT_USER,
+  targetUser: TARGET_USER,
+  visual: { ...DefaultVisual, ...fromUrl.visual },
+  query: { ...DefaultQuery, ...fromUrl.query },
+  url: fromUrl.url,
 }
 
 // **** Map settings / bindings ****

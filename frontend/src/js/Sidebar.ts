@@ -76,8 +76,8 @@ const profile_header = `
     data-class="current-user"
   ></span>
 `
-
-const tabSpec: Record<string, [string, string, string, (s: State) => void]> = {
+type TabSpec = Record<string, [string, string, string, (s: State) => void]>
+const tabSpec: TabSpec = {
   query: [icon("bars"), query_header, query_html, queryTabSetup],
   activities: [
     icon("list2"),
@@ -185,5 +185,7 @@ export async function renderTabs(map: Map, state: State, tabNames?: string[]) {
   map.addEventListener("click", () => S.isOpen && S.close())
 
   await nextAnimationFrame()
+
+  // note: these funcs may be async
   for (const func of setupFuncs) func && func(state)
 }

@@ -39,7 +39,7 @@ fi
 
 echo "Installing frontend dependencies"
 cd ../../frontend
-npm ci
+npm ci --quiet &
 
 cd ../backend
 echo "Installing backend dependencies"

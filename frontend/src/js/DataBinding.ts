@@ -70,9 +70,9 @@ function setAttribute(
 
 /*
  * Create a clone of defaults, replaced by truthy values (or 0) from obj
- * Kind of like Object.assign except on
+ * Kind of like Object.assign
  */
-export function mergeDefaults(defaults: DOMBindingSpec, obj: dict): dict {
+export function mergeDefaults(defaults: dict, obj: dict): dict {
   const newObj = { ...defaults }
   for (const [key, val] of Object.entries(obj)) {
     if (val || val === 0) {
@@ -412,4 +412,26 @@ export class BoundObject extends Object {
     }
     return output
   }
+}
+
+export function bind(
+  obj: Record<string | number, unkown>,
+  key: string,
+  callback: (newval: unknown) => void
+): typeof obj {
+  const _key = Symbol.for(key)
+  const val = obj[key]
+  delete obj[key]
+  obj[_key] = val
+  Object.defineProperty(obj, key, {
+    get: () => {
+      return obj[_key]
+    },
+
+    set: function (newValue) {
+      obj[_key] = newValue
+      callback(newValue)
+    },
+    enumerable: true,
+  })
 }
