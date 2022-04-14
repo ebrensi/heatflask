@@ -5,9 +5,15 @@
 
 // import { HHMMSS } from "./appUtil"
 import { CURRENT_USER, TARGET_USER, FLASHES, ADMIN } from "./Env"
-import { DefaultVisual, DefaultQuery, User } from "./Model"
+import {
+  DefaultVisual,
+  DefaultQuery,
+  URLParameters,
+  User,
+  State,
+} from "./Model"
 import { parseURL } from "./URL"
-import { EventedObject } from "./DataBinding"
+import { watch } from "./DataBinding"
 
 import * as MapAPI from "./MapAPI"
 import * as Sidebar from "./Sidebar"
@@ -24,12 +30,12 @@ if (!!FLASHES && FLASHES.length) {
 // Get model parameters from the current URL
 const init = parseURL(window.location.href)
 
-const appState = {
-  currentUser: EventedObject.from(<User>CURRENT_USER),
-  targetUser: EventedObject.from(<User>TARGET_USER),
-  visual: EventedObject.from({ ...DefaultVisual, ...init.visual }),
-  query: EventedObject.from({ ...DefaultQuery, ...init.query }),
-  url: EventedObject.from(init.url),
+const appState: State = {
+  currentUser: watch<User>(CURRENT_USER),
+  targetUser: watch<User>(TARGET_USER),
+  visual: watch<typeof DefaultVisual>({ ...DefaultVisual, ...init.visual }),
+  query: watch<typeof DefaultQuery>({ ...DefaultQuery, ...init.query }),
+  url: watch<URLParameters>(init.url),
 }
 
 // **** Map settings / bindings ****

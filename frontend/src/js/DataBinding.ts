@@ -414,41 +414,31 @@ export class BoundObject extends Object {
   }
 }
 
-type CallbackFunction<T> = (newval: T) => void
-type Binding<T> = [T, CallbackFunction<T>[]]
-
-export type Evented<T> = T & {
-  onChange: <T, K extends keyof T>(
-    key: K,
-    callback: CallbackFunction<T[K]>,
-    trigger?: boolean
-  ) => void
+type CallbackFunction<V> = (newval: V) => void
+type Binding<V> = [V, CallbackFunction<V>[]]
+type Bindings<T> = {
+  [K in keyof T]?: [T[K], CallbackFunction<T[K]>[]]
 }
 
 /**
  * A JavaScript Object with an onChange method
  */
-export class EventedObject {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  #bindings: any
+class Bind<Params> {
+  #bindings: Bindings<Params>
 
-  constructor(obj: unknown) {
+  constructor(obj: Params) {
     Object.assign(this, obj)
     this.#bindings = {}
   }
 
-  static from<T extends typeof EventedObject, O>(this: T, obj?: O) {
-    return new this(obj) as O & InstanceType<T>
-  }
-
-  onChange<O, K extends keyof O>(
-    this: O & EventedObject,
+  onChange<K extends keyof Params>(
+    this: Params & Bind<Params>,
     key: K,
-    callback: CallbackFunction<O[K]>,
+    callback: CallbackFunction<Params[K]>,
     trigger = true
   ): void {
-    type V = O[K]
-    let binding: Binding<V> = this.#bindings[key]
+    type V = Params[K]
+    let binding = this.#bindings[key]
 
     if (binding) {
       const [val, callbacks] = binding
@@ -488,3 +478,27 @@ function debounce(func: () => void, timeout: number) {
     timer = setTimeout(() => func(), timeout)
   }
 }
+
+export type Watched<T> = T & Bind<T>
+export function watch<T>(obj: T) {
+  return new Bind<T>(obj) as Watched<T>
+}
+
+/*
+ *  Sandbox
+ */
+type PPP = {
+  a?: string
+  b?: number
+  c?: Date
+}
+
+const obj: PPP = {
+  a: "hello",
+  b: 4,
+}
+const jjj = new Bind<PPP>(obj)
+const uuu = watch<PPP>(obj)
+const fff = watch<PPP>(obj)
+const foop = jjj.a
+const foop2 = uuu.c
