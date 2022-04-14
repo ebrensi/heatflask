@@ -2,6 +2,7 @@
  * Model -- This module defines the parameters of the Heatflask client
  */
 import Geohash from "latlon-geohash"
+import type { Evented } from "./DataBinding"
 
 /**
  * User parameters are the current user browsing and
@@ -116,11 +117,11 @@ export type URLParameters = {
  * Parameterized representation of the current state of this app
  */
 export type State = {
-  url: URLParameters
-  currentUser: User
-  targetUser: User
-  visual: VisualParameters
-  query: QueryParameters
+  url: Evented<URLParameters>
+  currentUser: Evented<User>
+  targetUser: Evented<User>
+  visual: Evented<VisualParameters>
+  query: Evented<QueryParameters>
 }
 
 // // info elements have one-way bindings because the user cannot change them

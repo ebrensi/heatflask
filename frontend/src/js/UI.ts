@@ -5,8 +5,9 @@
 
 // import { HHMMSS } from "./appUtil"
 import { CURRENT_USER, TARGET_USER, FLASHES, ADMIN } from "./Env"
-import { DefaultVisual, DefaultQuery, State } from "./Model"
+import { DefaultVisual, DefaultQuery, User } from "./Model"
 import { parseURL } from "./URL"
+import { EventedObject } from "./DataBinding"
 
 import * as MapAPI from "./MapAPI"
 import * as Sidebar from "./Sidebar"
@@ -16,26 +17,28 @@ const map = MapAPI.CreateMap()
 if (ADMIN) map.showInfoBox()
 
 if (!!FLASHES && FLASHES.length) {
-  map.controlWindow.content(`<h3>${FLASHES.join("<br>")}</h3>`)
+  map.controlWindow.title(`${FLASHES.join("<br>")}`)
   map.controlWindow.show()
 }
 
 // Get model parameters from the current URL
-const fromUrl = parseURL(window.location.href)
+const init = parseURL(window.location.href)
 
-const state: State = {
-  currentUser: CURRENT_USER,
-  targetUser: TARGET_USER,
-  visual: { ...DefaultVisual, ...fromUrl.visual },
-  query: { ...DefaultQuery, ...fromUrl.query },
-  url: fromUrl.url,
+const appState = {
+  currentUser: EventedObject.from(<User>CURRENT_USER),
+  targetUser: EventedObject.from(<User>TARGET_USER),
+  visual: EventedObject.from({ ...DefaultVisual, ...init.visual }),
+  query: EventedObject.from({ ...DefaultQuery, ...init.query }),
+  url: EventedObject.from(init.url),
 }
 
 // **** Map settings / bindings ****
-MapAPI.BindMap(map, state)
+MapAPI.BindMap(map, appState)
 
 // Add Sidebar tabs to DOM / Map
-Sidebar.renderTabs(map, state)
+Sidebar.renderTabs(map, appState)
+
+console.log(appState)
 
 // flags.onChange("zoomToSelection", zoomToSelectedPaths)
 // import * as ActivityCollection from "./DotLayer/ActivityCollection"

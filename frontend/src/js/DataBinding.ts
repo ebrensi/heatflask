@@ -414,24 +414,77 @@ export class BoundObject extends Object {
   }
 }
 
-export function bind(
-  obj: Record<string | number, unkown>,
-  key: string,
-  callback: (newval: unknown) => void
-): typeof obj {
-  const _key = Symbol.for(key)
-  const val = obj[key]
-  delete obj[key]
-  obj[_key] = val
-  Object.defineProperty(obj, key, {
-    get: () => {
-      return obj[_key]
-    },
+type CallbackFunction<T> = (newval: T) => void
+type Binding<T> = [T, CallbackFunction<T>[]]
 
-    set: function (newValue) {
-      obj[_key] = newValue
-      callback(newValue)
-    },
-    enumerable: true,
-  })
+export type Evented<T> = T & {
+  onChange: <T, K extends keyof T>(
+    key: K,
+    callback: CallbackFunction<T[K]>,
+    trigger?: boolean
+  ) => void
+}
+
+/**
+ * A JavaScript Object with an onChange method
+ */
+export class EventedObject {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  #bindings: any
+
+  constructor(obj: unknown) {
+    Object.assign(this, obj)
+    this.#bindings = {}
+  }
+
+  static from<T extends typeof EventedObject, O>(this: T, obj?: O) {
+    return new this(obj) as O & InstanceType<T>
+  }
+
+  onChange<O, K extends keyof O>(
+    this: O & EventedObject,
+    key: K,
+    callback: CallbackFunction<O[K]>,
+    trigger = true
+  ): void {
+    type V = O[K]
+    let binding: Binding<V> = this.#bindings[key]
+
+    if (binding) {
+      const [val, callbacks] = binding
+      callbacks.push(callback)
+      if (trigger) callback(val)
+    } else {
+      const val = this[key]
+      delete this[key]
+
+      binding = this.#bindings[key] = <Binding<V>>[val, [callback]]
+
+      Object.defineProperty(this, key, {
+        get: () => this.#bindings[key][0],
+
+        set: (newValue: V) => {
+          const binding: Binding<V> = this.#bindings[key]
+          binding[0] = newValue
+
+          debounce(() => {
+            const listeners = binding[1]
+            for (const callback of listeners) callback(newValue)
+          }, DEBOUNCE_DELAY)
+        },
+        enumerable: true,
+      })
+
+      if (trigger) callback(val)
+    }
+  }
+}
+
+const DEBOUNCE_DELAY = 20
+function debounce(func: () => void, timeout: number) {
+  let timer: number
+  return () => {
+    clearTimeout(timer)
+    timer = setTimeout(() => func(), timeout)
+  }
 }

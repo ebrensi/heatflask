@@ -1,6 +1,5 @@
 import { icon } from "~/src/js/Icons"
 import { State } from "~/src/js/Model"
-import { bind } from "~/src/js/DataBinding"
 
 /**
  * This runs when all sidebar HTML is in place and we have a model State
@@ -12,9 +11,17 @@ export default function onload({ query, targetUser }: State) {
   const beforeDateEl: HTMLInputElement =
     document.querySelector("[data-bind=before]")
 
-  bind(query, "after", (newval) => {
-    console.log(query)
-  })
+  query.onChange(
+    "after",
+    (newDate: string) => (beforeDateEl.min = newDate),
+    false
+  )
+  query.onChange(
+    "before",
+    (newDate: string) => (afterDateEl.max = newDate),
+    false
+  )
+
   window.query = query
   // query.onChange((newDate: string) => (beforeDateEl.min = newDate), "after")
   // query.onChange((newDate: string) => (afterDateEl.max = newDate), "before")
