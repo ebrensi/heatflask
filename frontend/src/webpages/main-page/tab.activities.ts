@@ -1,7 +1,13 @@
-import { icon } from "~/src/js/Icons"
+import { icon as ico } from "~/src/js/Icons"
 import { State } from "~/src/js/Model"
 
-export default function onload(state: State) {
+import content from "bundle-text:./tab.activities.html"
+export { content }
+
+export const id = "activities"
+export const title = "Rendered Activities"
+export const icon = ico("list2")
+export function setup(state: State) {
   /*
    * Set a listener to change user's account to public or private
    *  if they change that setting

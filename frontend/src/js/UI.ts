@@ -3,7 +3,6 @@
  *  Here we initialize the DOM/user interface
  */
 
-// import { HHMMSS } from "./appUtil"
 import { CURRENT_USER, TARGET_USER, FLASHES, ADMIN } from "./Env"
 import {
   DefaultVisual,

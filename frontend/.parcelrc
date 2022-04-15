@@ -1,4 +1,4 @@
 {
   "extends": "@parcel/config-default",
-  "namers": ["parcel-namer-flat"]
+  "namers": ["parcel-namer-flat"],
 }

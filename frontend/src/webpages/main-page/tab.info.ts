@@ -1,5 +1,12 @@
-import { icon } from "~/src/js/Icons"
+import { icon as ico } from "~/src/js/Icons"
 import { State } from "~/src/js/Model"
+
+import content from "bundle-text:./tab.info.html"
+export { content }
+
+export const id = "info"
+export const title = "Info"
+export const icon = ico("info")
 
 const contact_specs = [
   ["linkedin", "https://www.linkedin.com/company/heatflask"],
@@ -11,17 +18,17 @@ const contact_specs = [
   ["envelope-o", "mailto:info@heatflask.com"],
 ]
 
-const html_tags = []
+const html_tags: string[] = []
 for (const [icon_name, url] of contact_specs) {
   if (icon_name) {
-    const icon_tag = icon(icon_name, "icon-button")
+    const icon_tag = ico(icon_name, "icon-button")
     html_tags.push(`<a href="${url}" target="_blank">${icon_tag}</a>`)
   } else {
     html_tags.push("<br>")
   }
 }
 
-export default function onload(state: State) {
+export function setup(state: State) {
   const contacts_el = document.getElementById("contacts")
   contacts_el.innerHTML = html_tags.join("")
 }

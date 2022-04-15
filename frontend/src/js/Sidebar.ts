@@ -2,23 +2,16 @@
  * We construct the sidebar, but don't do any data binding here
  */
 
-// Tab Content
-import query_html from "bundle-text:../webpages/main-page/tab.query.html"
-import actvities_html from "bundle-text:../webpages/main-page/tab.activities.html"
-import profile_html from "bundle-text:../webpages/main-page/tab.profile.html"
-import controls_html from "bundle-text:../webpages/main-page/tab.controls.html"
-import info_html from "bundle-text:../webpages/main-page/tab.info.html"
-
 /*
  * The default export of each of these modules is a function that
  * takes Model state as input and runs after the nexr redraw when the
  * content is present in the DOM
  */
-import queryTabSetup from "../webpages/main-page/tab.query"
-import activitiesTabSetup from "../webpages/main-page/tab.activities"
-import profileTabSetup from "../webpages/main-page/tab.profile"
-import infoTabSetup from "../webpages/main-page/tab.info"
-import controlsTabSetup from "../webpages/main-page/tab.controls"
+import * as queryTab from "../webpages/main-page/tab.query"
+import * as activitiesTab from "../webpages/main-page/tab.activities"
+import * as profileTab from "../webpages/main-page/tab.profile"
+import * as infoTab from "../webpages/main-page/tab.info"
+import * as controlsTab from "../webpages/main-page/tab.controls"
 
 import { control, Control, Map } from "leaflet"
 import "~/node_modules/sidebar-v2/js/leaflet-sidebar"
@@ -33,71 +26,29 @@ interface mySidebar extends Control.Sidebar {
   isOpen: boolean
 }
 
-const query_header = `
-  <a href="#"
-   data-bind="strava-url"
-   data-prop="href"
-   data-class="target-user"
-   target="_blank"
-  >
-  <button
-    class="avatar"
-    data-class="target-user"
-    data-bind="avatar"
-    data-attr="data-url"
-    ></button
-  ></a>
+/**
+ * All the source data and code for a Sidebar tab
+ */
+type setupFunc = (appState: State) => void
+type TabSource = {
+  id: string
+  icon: string
+  title: string
+  content: string
+  setup: setupFunc
+}
 
-  <span
-    data-bind="username"
-    data-prop="innerText"
-    data-class="target-user"
-    >$TARGET_USER</span
-  >'s map
-`
-const profile_header = `
-  <a href="#"
-    target="_blank"
-    data-bind="strava-url"
-    data-prop="href"
-    data-class="current-user"
-  >
-  <button
-    class="avatar"
-    data-class="target-user"
-    data-bind="avatar"
-    data-attr="data-url"
-  ></button
-  ></a>
+const tabSources: TabSource[] = [
+  queryTab,
+  activitiesTab,
+  profileTab,
+  controlsTab,
+  infoTab,
+]
 
-  <span
-    data-bind="username"
-    data-prop="innerText"
-    data-class="current-user"
-  ></span>
-`
-type TabSpec = Record<string, [string, string, string, (s: State) => void]>
-const tabSpec: TabSpec = {
-  query: [icon("bars"), query_header, query_html, queryTabSetup],
-  activities: [
-    icon("list2"),
-    "Rendered Activities",
-    actvities_html,
-    activitiesTabSetup,
-  ],
-  profile: [
-    icon("user-circle-o"),
-    profile_header,
-    profile_html,
-    profileTabSetup,
-  ],
-  controls: [
-    icon("equalizer"),
-    "Layer Settings",
-    controls_html,
-    controlsTabSetup,
-  ],
-  info: [icon("info"), "Info", info_html, infoTabSetup],
+const tabSpec: Record<TabSource["id"], TabSource> = {}
+for (const tabSource of tabSources) {
+  tabSpec[tabSource.id] = tabSource
 }
 
 const sidebar_tablist_el = document.querySelector(".sidebar-tabs > ul")
@@ -112,18 +63,16 @@ const DOWN_ARROW_KEY = 38
 const RIGHT_ARROW_KEY = 39
 const LEFT_ARROW_KEY = 37
 
-export async function renderTabs(map: Map, state: State, tabNames?: string[]) {
-  const tabs = []
-  const contents = []
-  const setupFuncs = []
+export async function renderTabs(map: Map, state: State, tabIds?: string[]) {
+  const tabs: string[] = []
+  const contents: string[] = []
+  const setupFuncs: setupFunc[] = []
 
-  tabNames = tabNames || Object.keys(tabSpec)
-  for (const name of tabNames) {
-    const [ico, title, content, setupFunc] = tabSpec[name]
-
-    setupFuncs.push(setupFunc)
-
-    tabs.push(`<li><a href="#${name}" role="tab">${ico}</a></li>`)
+  tabIds = tabIds || Object.keys(tabSpec)
+  for (const id of tabIds) {
+    const { icon, title, content, setup } = tabSpec[id]
+    setupFuncs.push(setup)
+    tabs.push(`<li><a href="#${id}" role="tab">${icon}</a></li>`)
 
     const header = `
       <h1 class="sidebar-header">${title}
@@ -134,7 +83,7 @@ export async function renderTabs(map: Map, state: State, tabNames?: string[]) {
     `
 
     contents.push(`
-      <div class="sidebar-pane" id="${name}">
+      <div class="sidebar-pane" id="${id}">
         ${header}
         ${content}
         </div>
@@ -147,7 +96,7 @@ export async function renderTabs(map: Map, state: State, tabNames?: string[]) {
   // The main sidebar UI
   // Leaflet sidebar v2
   const S = <mySidebar>control.sidebar("sidebar")
-  S.tabNames = tabNames
+  S.tabNames = tabIds
   S.currentTab = 0
 
   /* key and mouse bindings to the map to control the sidebar */

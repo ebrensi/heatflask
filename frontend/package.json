@@ -42,6 +42,7 @@
     "> 0.75%, last 2 versions, not dead"
   ],
   "devDependencies": {
+    "@parcel/resolver-glob": "^2.4.1",
     "@parcel/transformer-inline-string": "^2.3.2",
     "@parcel/transformer-sass": "^2.3.2",
     "@types/latlon-geohash": "^2.0.0",
