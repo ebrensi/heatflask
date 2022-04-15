@@ -23,9 +23,8 @@ export const TITLE = `
   ></a>
 
   <span
-    data-bind="username"
+    data-bind="targetUser.name"
     data-prop="innerText"
-    data-class="target-user"
     >$TARGET_USER</span
   >'s map
 `

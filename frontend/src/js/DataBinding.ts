@@ -423,7 +423,7 @@ type Bindings<T> = {
 /**
  * A JavaScript Object with an onChange method
  */
-class Bind<Params> {
+class WatchedParams<Params> {
   #bindings: Bindings<Params>
 
   constructor(obj: Params) {
@@ -432,7 +432,7 @@ class Bind<Params> {
   }
 
   onChange<K extends keyof Params>(
-    this: Params & Bind<Params>,
+    this: Params & WatchedParams<Params>,
     key: K,
     callback: CallbackFunction<Params[K]>,
     trigger = true
@@ -479,9 +479,9 @@ function debounce(func: () => void, timeout: number) {
   }
 }
 
-export type Watched<T> = T & Bind<T>
+export type Watched<T> = T & WatchedParams<T>
 export function watch<T>(obj: T) {
-  return new Bind<T>(obj) as Watched<T>
+  return new WatchedParams<T>(obj) as Watched<T>
 }
 
 /*
@@ -497,7 +497,7 @@ const obj: PPP = {
   a: "hello",
   b: 4,
 }
-const jjj = new Bind<PPP>(obj)
+const jjj = new WatchedParams<PPP>(obj)
 const uuu = watch<PPP>(obj)
 const fff = watch<PPP>(obj)
 const foop = jjj.a
