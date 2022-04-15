@@ -1,4 +1,6 @@
 """
+Functions and constants directly pertaining to our User database
+
 ***  For Jupyter notebook ***
 Paste one of these Jupyter magic directives to the top of a cell
  and run it, to do these things:

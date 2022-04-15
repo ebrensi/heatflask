@@ -1,4 +1,7 @@
 """
+Functions and constants pertaining to the Streams data store.  Each activity
+has the streams time, latlng, and altitude.
+
 ***  For Jupyter notebook ***
 Paste one of these Jupyter magic directives to the top of a cell
  and run it, to do these things:

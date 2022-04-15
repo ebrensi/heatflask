@@ -1,4 +1,7 @@
 """
+Functions and constants pertaining to the Index datastore.  Each record
+represents the summary of a user activity.
+
 ***  For Jupyter notebook ***
 Paste one of these Jupyter magic directives to the top of a cell
  and run it, to do these things:
