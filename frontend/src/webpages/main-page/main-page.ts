@@ -9,12 +9,10 @@
 /*
  * main.js -- the entry point for the heatflask browser client
  */
-console.time("client setup")
+console.time("client_setup")
 
 import { APP_VERSION } from "~/src/js/Env"
-import "~/src/js/UI"
-
-console.timeEnd("client setup")
+import { appState } from "~/src/js/UI"
 
 console.log(`
 
@@ -26,5 +24,12 @@ console.log(`
 ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═╝     ╚══════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
 v${APP_VERSION}                                           (2016-2022) Efrem Rensi
 
-Check out the repo at https://github.com/ebrensi/heatflask
+Want to contribute? Check out the repo at
+https://github.com/ebrensi/heatflask
+
 `)
+
+setTimeout(() => {
+  console.timeEnd("client_setup")
+  console.log("appState: ", appState)
+}, 0)

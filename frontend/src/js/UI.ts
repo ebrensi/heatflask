@@ -30,7 +30,7 @@ if (!!FLASHES && FLASHES.length) {
 // Get model parameters from the current URL
 const init = parseURL(window.location.href)
 
-const appState: State = {
+export const appState: State = {
   currentUser: watch<User>(CURRENT_USER),
   targetUser: watch<User>(TARGET_USER),
   visual: watch<typeof DefaultVisual>({ ...DefaultVisual, ...init.visual }),
@@ -43,8 +43,6 @@ MapAPI.BindMap(map, appState)
 
 // Add Sidebar tabs to DOM / Map
 Sidebar.renderTabs(map, appState)
-
-console.log(appState)
 
 // flags.onChange("zoomToSelection", zoomToSelectedPaths)
 // import * as ActivityCollection from "./DotLayer/ActivityCollection"

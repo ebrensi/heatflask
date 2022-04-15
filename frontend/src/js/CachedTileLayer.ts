@@ -10,7 +10,34 @@
  *  Efrem Rensi 2020, 2021
  */
 
-type TileCoords = { x: number; y: number; z: number; fallback?: boolean }
+import * as idb from "./myIdb"
+
+import { TileLayer, GridLayer, Util, Browser, bind, extend } from "leaflet"
+
+import type {
+  TileLayerOptions,
+  Map,
+  Coords,
+  DoneCallback,
+  Point,
+  Bounds,
+} from "leaflet"
+
+export const DefaultCachedLayerOptions = {
+  useCache: true,
+  useOnlyCache: false,
+  cacheMaxAge: 24 * 3600 * 1000,
+  minNativeZoom: 0,
+  dbName: "tile-storage",
+  updateInterval: 200,
+  updateWhenIdle: false,
+}
+
+TileLayer.mergeOptions(DefaultCachedLayerOptions)
+type CacheOptions = typeof DefaultCachedLayerOptions
+type CachedTileLayerOptions = TileLayerOptions & Partial<CacheOptions>
+
+type TileCoords = Coords & { fallback?: boolean }
 interface TileElement extends HTMLImageElement {
   _originalCoords?: TileCoords
   _currentCoords?: TileCoords
@@ -24,23 +51,31 @@ type StoredObj = {
   blob: Blob
 }
 
-import * as idb from "./myIdb"
-
-import { TileLayer, GridLayer, Util, Browser, bind, extend } from "leaflet"
-
-import type { TileLayerOptions, Map, DoneCallback } from "leaflet"
-
-export const DefaultCachedLayerOptions = {
-  useCache: true,
-  useOnlyCache: false,
-  cacheMaxAge: 24 * 3600 * 1000,
-  minNativeZoom: 0,
-  dbName: "tile-storage",
-  updateInterval: 200,
-  updateWhenIdle: false,
+interface CachedLayerProps extends TileLayer {
+  cacheHits: number
+  cacheMisses: number
+  options: CachedTileLayerOptions
+  _db: idb.Store
+  onAdd: (map: Map) => this
+  _key: (c: TileCoords) => string
+  _createCurrentCoords: (x: TileCoords) => TileCoords
+  _attachTileData: (
+    tile: TileElement,
+    tileUrl: string,
+    key: string,
+    done: DoneCallback
+  ) => void
+  _wrapCoords: (c: Coords) => TileCoords
+  _getSubdomain: (tilePoint: Point) => string
+  _tileOnError: (done: DoneCallback, tile: TileElement, e: any) => void
+  _originalTileOnError: (done: DoneCallback, tile: HTMLElement, e: any) => void
+  _url: string
+  _globalTileRange: Bounds
+  _tileOnLoad: (done: DoneCallback, tile: TileElement) => void
+  _map: Map
 }
 
-export const cachedLayerState = {
+export const cachedLayerState: CachedLayerProps = {
   cacheHits: 0,
   cacheMisses: 0,
 
@@ -51,6 +86,7 @@ export const cachedLayerState = {
     }
 
     GridLayer.prototype.onAdd.call(this, map)
+    return this
   },
 
   onRemove: function (map: Map) {
@@ -59,6 +95,7 @@ export const cachedLayerState = {
       this._db.close()
       this._db = undefined
     }
+    return this
   },
 
   _key: function (coords: TileCoords) {
@@ -227,13 +264,7 @@ export const cachedLayerState = {
   },
 }
 
-TileLayer.mergeOptions(DefaultCachedLayerOptions)
 TileLayer.include(cachedLayerState)
-
-type CacheOptions = typeof DefaultCachedLayerOptions
-type CachedTileLayerOptions = TileLayerOptions & {
-  [K in keyof CacheOptions]?: CacheOptions[K]
-}
 
 export default class CachedTileLayer extends TileLayer {
   name?: string
