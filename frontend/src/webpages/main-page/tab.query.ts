@@ -1,13 +1,13 @@
-import { icon as ico } from "~/src/js/Icons"
+import { icon } from "~/src/js/Icons"
 import { State } from "~/src/js/Model"
 
-import content from "bundle-text:./tab.query.html"
-export { content }
+import CONTENT from "bundle-text:./tab.query.html"
+export { CONTENT }
 
-export const id = "query"
-export const icon = ico("bars")
+export const ID = "query"
+export const ICON = icon("bars")
 
-export const title = `
+export const TITLE = `
   <a href="#"
    data-bind="strava-url"
    data-prop="href"
@@ -33,7 +33,9 @@ export const title = `
 /**
  * This runs when all sidebar HTML is in place and we have a model State
  */
-export function setup({ query, targetUser }: State) {
+export function SETUP({ query, targetUser }: State) {
+  const content_el = document.getElementById(ID)
+
   const afterDateEl: HTMLInputElement =
     document.querySelector("[data-bind=after]")
 
@@ -52,10 +54,6 @@ export function setup({ query, targetUser }: State) {
     (newDate: string) => (afterDateEl.max = newDate),
     false
   )
-
-  window.query = query
-  // query.onChange((newDate: string) => (beforeDateEl.min = newDate), "after")
-  // query.onChange((newDate: string) => (afterDateEl.max = newDate), "before")
 }
 
 // /*

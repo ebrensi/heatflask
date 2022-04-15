@@ -20,22 +20,28 @@ import { nextAnimationFrame } from "./appUtil"
 import { icon } from "./Icons"
 import { State } from "./Model"
 
-interface mySidebar extends Control.Sidebar {
+interface Sidebar extends Control.Sidebar {
   tabNames: string[]
   currentTab: number
   isOpen: boolean
 }
 
+type setupFunc = (appState: State) => void
+
 /**
  * All the source data and code for a Sidebar tab
  */
-type setupFunc = (appState: State) => void
 type TabSource = {
-  id: string
-  icon: string
-  title: string
-  content: string
-  setup: setupFunc
+  /** The HTML5 id property of the content of this tab */
+  ID: string
+  /** HTML tag specifying the icon of this tab  */
+  ICON: string
+  /** The displayed title of this tab */
+  TITLE: string
+  /** HTML content of this tab */
+  CONTENT: string
+  /** A function that binds model parameters with tab elements */
+  SETUP: setupFunc
 }
 
 const tabSources: TabSource[] = [
@@ -46,9 +52,9 @@ const tabSources: TabSource[] = [
   infoTab,
 ]
 
-const tabSpec: Record<TabSource["id"], TabSource> = {}
+const tabSpec: Record<TabSource["ID"], TabSource> = {}
 for (const tabSource of tabSources) {
-  tabSpec[tabSource.id] = tabSource
+  tabSpec[tabSource.ID] = tabSource
 }
 
 const sidebar_tablist_el = document.querySelector(".sidebar-tabs > ul")
@@ -69,13 +75,13 @@ export async function renderTabs(map: Map, state: State, tabIds?: string[]) {
   const setupFuncs: setupFunc[] = []
 
   tabIds = tabIds || Object.keys(tabSpec)
-  for (const id of tabIds) {
-    const { icon, title, content, setup } = tabSpec[id]
-    setupFuncs.push(setup)
-    tabs.push(`<li><a href="#${id}" role="tab">${icon}</a></li>`)
+  for (const ID of tabIds) {
+    const { ICON, TITLE, CONTENT, SETUP } = tabSpec[ID]
+    setupFuncs.push(SETUP)
+    tabs.push(`<li><a href="#${ID}" role="tab">${ICON}</a></li>`)
 
     const header = `
-      <h1 class="sidebar-header">${title}
+      <h1 class="sidebar-header">${TITLE}
         <span class="sidebar-close">
           ${close_tab_icon}
         </span>
@@ -83,9 +89,9 @@ export async function renderTabs(map: Map, state: State, tabIds?: string[]) {
     `
 
     contents.push(`
-      <div class="sidebar-pane" id="${id}">
+      <div class="sidebar-pane" id="${ID}">
         ${header}
-        ${content}
+        ${CONTENT}
         </div>
     `)
   }
@@ -95,7 +101,7 @@ export async function renderTabs(map: Map, state: State, tabIds?: string[]) {
 
   // The main sidebar UI
   // Leaflet sidebar v2
-  const S = <mySidebar>control.sidebar("sidebar")
+  const S = <Sidebar>control.sidebar("sidebar")
   S.tabNames = tabIds
   S.currentTab = 0
 

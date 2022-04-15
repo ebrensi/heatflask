@@ -1,12 +1,12 @@
-import { icon as ico } from "~/src/js/Icons"
+import { icon } from "~/src/js/Icons"
 import { State } from "~/src/js/Model"
 
-import content from "bundle-text:./tab.profile.html"
-export { content }
+import CONTENT from "bundle-text:./tab.profile.html"
+export { CONTENT }
 
-export const id = "profile"
-export const icon = ico("user-circle-o")
-export const title = `
+export const ID = "profile"
+export const ICON = icon("user-circle-o")
+export const TITLE = `
   <a href="#"
     target="_blank"
     data-bind="strava-url"
@@ -28,7 +28,7 @@ export const title = `
   ></span>
 `
 
-export function setup({ currentUser }: State) {
+export function SETUP({ currentUser }: State) {
   /*
    * Set a listener to change user's account to public or private
    *  if they change that setting
