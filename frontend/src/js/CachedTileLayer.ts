@@ -73,6 +73,7 @@ interface CachedLayerProps extends TileLayer {
   _globalTileRange: Bounds
   _tileOnLoad: (done: DoneCallback, tile: TileElement) => void
   _map: Map
+  name: string
 }
 
 export const cachedLayerState: CachedLayerProps = {

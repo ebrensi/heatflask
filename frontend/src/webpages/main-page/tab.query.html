@@ -2,23 +2,17 @@
 
 <h3>Activities Query:</h3>
 
-<span
-  class="query days activities"
-  data-bind="queryType"
-  data-attr="data-queryType"
-  data-event="none"
->
+<span data-qshow="days,activities">
   <input
     type="number"
     value="0"
     min="1"
     max="9999"
-    data-bind="quantity"
-    data-class="query"
+    data-bind="query.quantity:value"
   />
 </span>
 
-<select data-bind="queryType" data-class="query">
+<select id="queryType" data-bind="query.queryType:value">
   <option value="days">recent days</option>
   <option value="activities" selected>recent activities</option>
   <option value="ids">Activity IDs</option>
@@ -27,58 +21,37 @@
 </select>
 
 <br />
-<div
-  class="query key"
-  data-bind="queryType"
-  data-attr="data-queryType"
-  data-event="none"
->
-  <input type="text" value="" data-bind="key" data-class="query" />
+
+<div id="key-input" data-qshow="key">
+  <input type="text" value="" data-bind="query.key:value" />
 </div>
 
-<div
-  class="query ids"
-  data-bind="queryType"
-  data-attr="data-queryType"
-  data-event="none"
->
+<div id="ids-input" data-qshow="ids">
   <textarea
     autocomplete="on"
     placeholder="enter activity ids here"
     spellcheck="false"
-    data-bind="ids"
-    data-class="query"
+    data-bind="query.ids:value"
   >
   </textarea>
 </div>
 
-<div
-  class="dates"
-  data-bind="query.queryType"
-  data-attr="data-queryType"
-  data-event="none"
->
+<div id="date-range-input" data-qshow="dates">
   After:
-  <input type="date" class="qdate" data-bind="after" data-class="query" />
+  <input type="date" class="qdate" data-bind="query.after:value" />
   <span class="validity"></span>
   <br />
   Before:
-  <input type="date" class="qdate" data-bind="before" data-class="query" />
+  <input type="date" class="qdate" data-bind="query.before:value" />
   <span class="validity"></span>
 </div>
 
 <br />
 
 <label>
-  <input
-    type="checkbox"
-    data-bind="autozoom"
-    data-prop="checked"
-    data-class="visual"
-  />
-  <i class="fas fa-search-location"></i>
+  <input type="checkbox" data-bind="visual.autozoom:checked" />
   Auto-Zoom
-  <i class="fas fa-bullseye"></i>
+  <i class="hf hf-bullseye"></i>
   to query after import
 </label>
 
@@ -87,36 +60,25 @@
 
 <br />
 
-<!-- display only if app.flag.importing is false -->
+<!-- display only while not importing -->
 <button
+  id="button:query"
   type="button"
   class="btn btn-a btn-sm smooth conditional-hide"
-  data-action="query"
-  data-class="flag"
-  data-bind="importing"
-  data-attr="data-hide"
 >
-  <i class="fas fa-cloud-download-alt"></i>
+  <i class="hf hf-cloud-download"></i>
   Query
 </button>
+<!-- ------------------------------- -->
 
-<div
-  class="conditional-show"
-  data-class="flag"
-  data-bind="importing"
-  data-attr="data-show"
->
-  <!-- only display this button if app.flag.importing is true -->
+<div id="import-progress-div">
+  <!-- display only while importing  -->
   <div class="progress">
     <progress class="progbar"></progress>
   </div>
   <br />
-  <button
-    type="button"
-    class="btn btn-c btn-sm smooth"
-    data-action="abort-query"
-  >
-    <i class="fas fa-times-circle"></i>
+  <button type="button" class="btn btn-c btn-sm smooth" id="button:abort-query">
+    <i class="hf hf-cancel-circle"></i>
     Abort Import
   </button>
 </div>
@@ -124,34 +86,22 @@
 <br />
 
 <!-- Displayed only if current-user's id is set (logged-in) -->
-<div
-  class="conditional-show"
-  data-class="current-user"
-  data-bind="id"
-  data-attr="data-show"
->
+<div id="logout-dialog">
   You are authenticated as
-  <a
-    href="#"
-    target="_blank"
-    data-bind="strava-url"
-    data-prop="href"
-    data-class="current-user"
-  >
-    <span data-class="current-user" data-bind="username" data-prop="innerText"
+  <a href="#" target="_blank" data-bind="currentUser.stravaUrl:href">
+    <span data-bind="currentUser.name:innerText"
       ><button
         class="avatar"
         data-class="current-user"
-        data-bind="avatar"
-        data-prop="data-url"
+        data-bind="currentUser.profile:*data-url"
       ></button
       >(current-user)</span
     >
   </a>
   <br /><br />
 
-  <button type="button" class="btn btn-c btn-sm" data-action="logout">
-    <i class="fas fa-sign-out-alt"></i>
+  <button type="button" class="btn btn-c btn-sm" id="button:logout">
+    <i class="hf hf-sign-out"></i>
     Log Out
   </button>
 </div>
@@ -159,15 +109,9 @@
 <br />
 
 <!-- Displayed only if current-user id is not set (not logged-in) -->
-<div
-  class="conditional-hide"
-  data-class="current-user"
-  data-bind="id"
-  data-attr="data-hide"
->
+<div id="login-dialog">
   Create an account and/or log in.<br />
-  <button class="strava-auth" data-action="login"></button>
+  <button class="strava-auth" id="button:login"></button>
 </div>
 
-<div data-bind="error-message" data-prop="innerHTML" data-class="info"></div>
 <br />

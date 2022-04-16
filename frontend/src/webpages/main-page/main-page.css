@@ -70,6 +70,14 @@ textarea {
   border-radius: 8px;
 }
 
+div.titlebar {
+  padding-right: 10px !important;
+}
+
+div.promptButtons {
+  display: none;
+}
+
 .error-message {
   color: red;
 }
@@ -87,43 +95,13 @@ a:visited {
   color: yellow;
 }
 
-/*
- * Elements with "conditional-show" class are only visible if
- *  "data-show" attribute is set (truthy), and elements with
- *  "conditional-hide" class are only hidden if "data-hide" is set.
- */
-.conditional-show,
-.conditional-hide[data-hide] {
-  display: none;
-  /*opacity:0;*/
-  /*transition: opacity 1s linear;*/
-}
-
-.conditional-show[data-show],
-.conditional-hide {
-  display: block;
-  /*opacity: 1;*/
-}
-
-/*
- * A query-form element only shows if it matches the current
- *  query-type (app.qParams.queryType)
- */
-.days,
-.activities,
-.dates,
-.ids,
-.key {
+[data-qshow] {
   display: none;
 }
 
-.days[data-queryType="days"],
-.activities[data-queryType="activities"],
-.dates[data-queryType="dates"],
-.ids[data-queryType="ids"],
-.key[data-queryType="key"] {
+/*.show [data-qshow] {
   display: block;
-}
+}*/
 
 .x2 {
   font-size: 2em;
@@ -142,14 +120,6 @@ progress {
   width: 75%;
 }
 
-div.titlebar {
-  padding-right: 10px !important;
-}
-
-div.promptButtons {
-  display: none;
-}
-
 input.dot-const {
   width: 90%;
 }
@@ -157,5 +127,9 @@ input.dot-const {
 div.dot-const-slider {
   padding-bottom: 10px;
   padding-top: 10px;
+}
+
+i.hf {
+  font-size: 16;
 }
 /* end-heatflask */

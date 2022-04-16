@@ -4,55 +4,99 @@ import { State } from "~/src/js/Model"
 import CONTENT from "bundle-text:./tab.query.html"
 export { CONTENT }
 
-export const ID = "query"
+export const ID = "QueryTab"
 export const ICON = icon("bars")
 
 export const TITLE = `
-  <a href="#"
-   data-bind="strava-url"
-   data-prop="href"
-   data-class="target-user"
-   target="_blank"
-  >
-  <button
-    class="avatar"
-    data-class="target-user"
-    data-bind="avatar"
-    data-attr="data-url"
-    ></button
-  ></a>
-
-  <span
-    data-bind="targetUser.name"
-    data-prop="innerText"
-    >$TARGET_USER</span
-  >'s map
+  <a href="#" data-bind="targetUser.stravaUrl:href" target="_blank">
+  <button class="avatar"></button></a>
+  <span data-bind="targetUser.name:innerText">$TARGET_USER</span>'s map
 `
+type CallbackFunction = (el: HTMLElement, S: State) => void
+type CallbackDispatch = Record<string, CallbackFunction>
+const OnClick: CallbackDispatch = {}
+
+const OnChange: CallbackDispatch = {
+  queryType: (el, S) => {
+    const qtype = (<HTMLSelectElement>el).value
+    S.query.queryType = qtype
+
+    const tabContentElement = document.getElementById(ID)
+    const qelements = tabContentElement.querySelectorAll("[data-qshow]")
+    for (const el of qelements) {
+      if (qtype in el.getAttribute("data-qshow").split(",")) {
+        el.classList.addClass("show")
+      } else {
+        el.classList.removeClass("show")
+      }
+    }
+  },
+}
 
 /**
  * This runs when all sidebar HTML is in place and we have a model State
  */
-export function SETUP({ query, targetUser }: State) {
-  const content_el = document.getElementById(ID)
+export function SETUP(appState: State) {
+  const tabContentElement = document.getElementById(ID)
 
-  const afterDateEl: HTMLInputElement =
-    document.querySelector("[data-bind=after]")
+  // Set up change and click listeners
+  tabContentElement.addEventListener("change", (e: Event) => {
+    const el = <HTMLElement>e.target
+    const onChangeFunc = OnChange[el.id]
+    if (onChangeFunc) {
+      onChangeFunc(el, appState)
+    }
+    el.id && console.log(`change: ${el.id}`)
+  })
 
-  const beforeDateEl: HTMLInputElement =
-    document.querySelector("[data-bind=before]")
+  tabContentElement.addEventListener("click", (e: Event) => {
+    const el = <HTMLElement>e.target
+    const onClickFunc = OnClick[el.id]
+    if (onClickFunc) {
+      onClickFunc(el, appState)
+    }
+    el.id && console.log(`click: ${el.id}`)
+  })
 
-  query.onChange(
-    "after",
-    (newDate: string) => {
-      beforeDateEl.min = newDate
-    },
-    false
-  )
-  query.onChange(
-    "before",
-    (newDate: string) => (afterDateEl.max = newDate),
-    false
-  )
+  // Initialize DOM element values with those from appState paramters
+  const elementsTobind = tabContentElement.querySelectorAll("[data-bind]")
+  for (const el of elementsTobind) {
+    const key = el.getAttribute("data-bind")
+    const [paramStr, propOrAttr] = key.split(":")
+    const [pclass, pfield] = paramStr.split(".")
+    const value = appState[pclass][pfield]
+    if (value !== undefined) {
+      const isAttr = propOrAttr[0] === "*"
+      // Depending on whether this is a property or an attribute
+      if (isAttr) {
+        const attr = propOrAttr.slice(1)
+        el.setAttribute(attr, value)
+      } else {
+        const prop = propOrAttr
+        el[prop] = value
+        // console.log(`#${el.id}[${prop}] = ${value}`)
+      }
+    }
+  }
+
+  // const afterDateEl: HTMLInputElement =
+  //   document.querySelector("[data-bind=after]")
+
+  // const beforeDateEl: HTMLInputElement =
+  //   document.querySelector("[data-bind=before]")
+
+  // query.onChange(
+  //   "after",
+  //   (newDate: string) => {
+  //     beforeDateEl.min = newDate
+  //   },
+  //   false
+  // )
+  // query.onChange(
+  //   "before",
+  //   (newDate: string) => (afterDateEl.max = newDate),
+  //   false
+  // )
 }
 
 // /*

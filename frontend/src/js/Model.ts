@@ -2,7 +2,7 @@
  * Model -- This module defines the parameters of the Heatflask client
  */
 import Geohash from "latlon-geohash"
-import type { Watched } from "./DataBinding"
+import type { Live } from "./DataBinding"
 
 /**
  * User parameters are the current user browsing and
@@ -117,11 +117,11 @@ export type URLParameters = {
  * Parameterized representation of the current state of this app
  */
 export type State = {
-  url: Watched<URLParameters>
-  currentUser: Watched<User>
-  targetUser: Watched<User>
-  visual: Watched<VisualParameters>
-  query: Watched<QueryParameters>
+  url: Live<URLParameters>
+  currentUser: Live<User>
+  targetUser: Live<User>
+  visual: Live<VisualParameters>
+  query: Live<QueryParameters>
 }
 
 // // info elements have one-way bindings because the user cannot change them

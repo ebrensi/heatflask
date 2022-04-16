@@ -4,7 +4,7 @@ import { State } from "~/src/js/Model"
 import CONTENT from "bundle-text:./tab.activities.html"
 export { CONTENT }
 
-export const ID = "activities"
+export const ID = "ActivitiesTab"
 export const TITLE = "Rendered Activities"
 export const ICON = icon("list2")
 export function SETUP(state: State) {

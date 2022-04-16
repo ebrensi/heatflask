@@ -4,7 +4,7 @@ import { State } from "~/src/js/Model"
 import CONTENT from "bundle-text:./tab.info.html"
 export { CONTENT }
 
-export const ID = "info"
+export const ID = "InfoTab"
 export const TITLE = "Info"
 export const ICON = icon("info")
 

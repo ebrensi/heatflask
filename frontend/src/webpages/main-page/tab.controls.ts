@@ -6,7 +6,7 @@ import { State } from "~/src/js/Model"
 import CONTENT from "bundle-text:./tab.controls.html"
 export { CONTENT }
 
-export const ID = "controls"
+export const ID = "ControlsTab"
 export const TITLE = "Layer Settings"
 export const ICON = icon("equalizer")
 

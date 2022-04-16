@@ -81,11 +81,11 @@ export async function renderTabs(map: Map, state: State, tabIds?: string[]) {
     tabs.push(`<li><a href="#${ID}" role="tab">${ICON}</a></li>`)
 
     const header = `
-      <h1 class="sidebar-header">${TITLE}
+      <h5 class="sidebar-header">${TITLE}
         <span class="sidebar-close">
           ${close_tab_icon}
         </span>
-      </h1>
+      </h5>
     `
 
     contents.push(`

@@ -423,7 +423,7 @@ type Bindings<T> = {
 /**
  * A JavaScript Object with an onChange method
  */
-class WatchedParams<Params> {
+class LiveParams<Params> {
   #bindings: Bindings<Params>
 
   constructor(obj: Params) {
@@ -432,7 +432,7 @@ class WatchedParams<Params> {
   }
 
   onChange<K extends keyof Params>(
-    this: Params & WatchedParams<Params>,
+    this: Params & LiveParams<Params>,
     key: K,
     callback: CallbackFunction<Params[K]>,
     trigger = true
@@ -458,9 +458,9 @@ class WatchedParams<Params> {
           binding[0] = newValue
 
           debounce(() => {
-            const listeners = binding[1]
-            for (const callback of listeners) callback(newValue)
-          }, DEBOUNCE_DELAY)
+            const callbacks = binding[1]
+            for (let i = 0; i < callbacks.length; i++) callbacks[i](newValue)
+          }, CALLBACK_DEBOUNCE_DELAY)
         },
         enumerable: true,
       })
@@ -470,7 +470,7 @@ class WatchedParams<Params> {
   }
 }
 
-const DEBOUNCE_DELAY = 20
+const CALLBACK_DEBOUNCE_DELAY = 20
 function debounce(func: () => void, timeout: number) {
   let timer: number
   return () => {
@@ -479,9 +479,9 @@ function debounce(func: () => void, timeout: number) {
   }
 }
 
-export type Watched<T> = T & WatchedParams<T>
+export type Live<T> = T & LiveParams<T>
 export function watch<T>(obj: T) {
-  return new WatchedParams<T>(obj) as Watched<T>
+  return new LiveParams<T>(obj) as Live<T>
 }
 
 /*
@@ -497,7 +497,7 @@ const obj: PPP = {
   a: "hello",
   b: 4,
 }
-const jjj = new WatchedParams<PPP>(obj)
+const jjj = new LiveParams<PPP>(obj)
 const uuu = watch<PPP>(obj)
 const fff = watch<PPP>(obj)
 const foop = jjj.a
