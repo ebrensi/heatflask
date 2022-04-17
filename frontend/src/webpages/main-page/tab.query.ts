@@ -50,9 +50,12 @@ const OnClick: CallbackDispatch = {
   },
   "button:login": (el, S) => {
     console.log("button:login")
+    // const currentUrl = window.location.href
+    window.location.href = "/authorize"
   },
   "button:logout": (el, S) => {
     console.log("button:logout")
+    window.location.href = "/auth/logout"
   },
 }
 

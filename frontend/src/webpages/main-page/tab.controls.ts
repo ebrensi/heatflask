@@ -1,4 +1,4 @@
-import pureknob from "pure-knob"
+import { createKnob } from "pure-knob"
 
 import { icon } from "~/src/js/Icons"
 import { State } from "~/src/js/Model"
@@ -10,7 +10,7 @@ export const ID = "ControlsTab"
 export const TITLE = "Layer Settings"
 export const ICON = icon("equalizer")
 
-const knob = pureknob.createKnob(250, 250)
+const knob = createKnob(250, 250)
 // Create element node.
 const node = knob.node()
 
