@@ -423,7 +423,7 @@ type Bindings<T> = {
 /**
  * A JavaScript Object with an onChange method
  */
-class LiveParams<Params> {
+export class LiveParams<Params> {
   #bindings: Bindings<Params>
 
   constructor(obj: Params) {

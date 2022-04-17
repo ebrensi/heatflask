@@ -1,0 +1,19 @@
+[data-qshow] {
+  display: none;
+}
+
+[data-fshow] {
+  display: none;
+}
+
+.show[data-qshow] {
+  display: inline-block;
+}
+
+.show[data-fshow] {
+  display: inline-block;
+}
+
+input#quantity {
+  width: 4em;
+}

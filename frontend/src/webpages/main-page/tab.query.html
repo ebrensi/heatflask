@@ -4,6 +4,7 @@
 
 <span data-qshow="days,activities">
   <input
+    id="quantity"
     type="number"
     value="0"
     min="1"
@@ -22,11 +23,11 @@
 
 <br />
 
-<div id="key-input" data-qshow="key">
+<div data-qshow="key">
   <input type="text" value="" data-bind="query.key:value" />
 </div>
 
-<div id="ids-input" data-qshow="ids">
+<div data-qshow="ids">
   <textarea
     autocomplete="on"
     placeholder="enter activity ids here"
@@ -36,20 +37,20 @@
   </textarea>
 </div>
 
-<div id="date-range-input" data-qshow="dates">
+<div data-qshow="dates">
   After:
-  <input type="date" class="qdate" data-bind="query.after:value" />
+  <input type="date" id="date-after" data-bind="query.after:value" />
   <span class="validity"></span>
   <br />
   Before:
-  <input type="date" class="qdate" data-bind="query.before:value" />
+  <input type="date" id="date-before" data-bind="query.before:value" />
   <span class="validity"></span>
 </div>
 
 <br />
 
 <label>
-  <input type="checkbox" data-bind="visual.autozoom:checked" />
+  <input type="checkbox" id="autozoom" data-bind="visual.autozoom:checked" />
   Auto-Zoom
   <i class="hf hf-bullseye"></i>
   to query after import
@@ -64,20 +65,21 @@
 <button
   id="button:query"
   type="button"
-  class="btn btn-a btn-sm smooth conditional-hide"
+  data-mshow="!importing"
+  class="btn btn-a btn-sm smooth"
 >
   <i class="hf hf-cloud-download"></i>
   Query
 </button>
 <!-- ------------------------------- -->
 
-<div id="import-progress-div">
+<div data-fshow="importing">
   <!-- display only while importing  -->
-  <div class="progress">
+  <div class="import-progress">
     <progress class="progbar"></progress>
   </div>
   <br />
-  <button type="button" class="btn btn-c btn-sm smooth" id="button:abort-query">
+  <button type="button" class="btn btn-c btn-sm smooth" id="button:abort">
     <i class="hf hf-cancel-circle"></i>
     Abort Import
   </button>
@@ -86,7 +88,7 @@
 <br />
 
 <!-- Displayed only if current-user's id is set (logged-in) -->
-<div id="logout-dialog">
+<div data-fshow="authenticated">
   You are authenticated as
   <a href="#" target="_blank" data-bind="currentUser.stravaUrl:href">
     <span data-bind="currentUser.name:innerText"
@@ -109,7 +111,7 @@
 <br />
 
 <!-- Displayed only if current-user id is not set (not logged-in) -->
-<div id="login-dialog">
+<div data-fshow="!authenticated">
   Create an account and/or log in.<br />
   <button class="strava-auth" id="button:login"></button>
 </div>

@@ -1,5 +1,6 @@
 import { icon } from "~/src/js/Icons"
 import { State } from "~/src/js/Model"
+import type { LiveParams } from "~/src/js/DataBinding"
 
 import CONTENT from "bundle-text:./tab.query.html"
 export { CONTENT }
@@ -9,27 +10,49 @@ export const ICON = icon("bars")
 
 export const TITLE = `
   <a href="#" data-bind="targetUser.stravaUrl:href" target="_blank">
-  <button class="avatar"></button></a>
+  <button class="avatar" data-bind="targetUser.profile:*data-url"></button></a>
   <span data-bind="targetUser.name:innerText">$TARGET_USER</span>'s map
 `
 type CallbackFunction = (el: HTMLElement, S: State) => void
 type CallbackDispatch = Record<string, CallbackFunction>
-const OnClick: CallbackDispatch = {}
 
 const OnChange: CallbackDispatch = {
+  /**
+   * Handle Query-Type change
+   */
   queryType: (el, S) => {
     const qtype = (<HTMLSelectElement>el).value
     S.query.queryType = qtype
 
     const tabContentElement = document.getElementById(ID)
     const qelements = tabContentElement.querySelectorAll("[data-qshow]")
-    for (const el of qelements) {
-      if (qtype in el.getAttribute("data-qshow").split(",")) {
-        el.classList.addClass("show")
+    for (const el of Array.from(qelements)) {
+      const toShow = el.getAttribute("data-qshow").split(",")
+      if (toShow.includes(qtype)) {
+        el.classList.add("show")
       } else {
-        el.classList.removeClass("show")
+        el.classList.remove("show")
       }
     }
+  },
+
+  autozoom: (el, S) => {
+    S.visual.autozoom = (<HTMLInputElement>el).checked
+  },
+}
+
+const OnClick: CallbackDispatch = {
+  "button:query": (el, S) => {
+    console.log("button:query")
+  },
+  "button:abort": (el, S) => {
+    console.log("button:abort")
+  },
+  "button:login": (el, S) => {
+    console.log("button:login")
+  },
+  "button:logout": (el, S) => {
+    console.log("button:logout")
   },
 }
 
@@ -46,7 +69,6 @@ export function SETUP(appState: State) {
     if (onChangeFunc) {
       onChangeFunc(el, appState)
     }
-    el.id && console.log(`change: ${el.id}`)
   })
 
   tabContentElement.addEventListener("click", (e: Event) => {
@@ -55,12 +77,19 @@ export function SETUP(appState: State) {
     if (onClickFunc) {
       onClickFunc(el, appState)
     }
-    el.id && console.log(`click: ${el.id}`)
   })
 
-  // Initialize DOM element values with those from appState paramters
-  const elementsTobind = tabContentElement.querySelectorAll("[data-bind]")
-  for (const el of elementsTobind) {
+  const afterDateEl = document.getElementById("date-after")
+  const beforeDateEl = document.getElementById("date-before")
+
+  //   Initialize DOM element values with those from appState paramters
+  setDomFromParams(tabContentElement, appState)
+  tabContentElement.dispatchEvent(new Event("change"))
+}
+
+function setDomFromParams(baseElement: HTMLElement, appState: State) {
+  const elements = (baseElement || document).querySelectorAll("[data-bind]")
+  for (const el of Array.from(elements)) {
     const key = el.getAttribute("data-bind")
     const [paramStr, propOrAttr] = key.split(":")
     const [pclass, pfield] = paramStr.split(".")
@@ -74,30 +103,59 @@ export function SETUP(appState: State) {
       } else {
         const prop = propOrAttr
         el[prop] = value
-        // console.log(`#${el.id}[${prop}] = ${value}`)
       }
     }
   }
+  const querytypeSelectorEl = document.getElementById("queryType")
+  OnChange["queryType"](querytypeSelectorEl, appState)
 
-  // const afterDateEl: HTMLInputElement =
-  //   document.querySelector("[data-bind=after]")
-
-  // const beforeDateEl: HTMLInputElement =
-  //   document.querySelector("[data-bind=before]")
-
-  // query.onChange(
-  //   "after",
-  //   (newDate: string) => {
-  //     beforeDateEl.min = newDate
-  //   },
-  //   false
-  // )
-  // query.onChange(
-  //   "before",
-  //   (newDate: string) => (afterDateEl.max = newDate),
-  //   false
-  // )
+  const fshow_elements = (baseElement || document).querySelectorAll(
+    "[data-fshow$=authenticated]"
+  )
+  for (const el of Array.from(fshow_elements)) {
+    const value = el.getAttribute("data-fshow")
+    const authenticated = !!appState.currentUser
+    const wantsAuthenticated = value[0] !== "!"
+    if (authenticated && wantsAuthenticated) {
+      el.classList.add("show")
+    } else {
+      el.classList.remove("show")
+    }
+  }
 }
+
+export function getQparamsFromDom(baseElement: HTMLElement) {
+  baseElement = baseElement || document.getElementById(ID)
+  const elements = baseElement.querySelectorAll('[data-bind^="query"]')
+  const result: Record<string, Record<string, any>> = {}
+  for (const el of Array.from(elements)) {
+    const key = el.getAttribute("data-bind")
+    const [paramStr, propOrAttr] = key.split(":")
+    const [pclass, pfield] = paramStr.split(".")
+    const isAttr = propOrAttr[0] === "*"
+    const value = isAttr
+      ? el.getAttribute(propOrAttr.slice(1))
+      : el[<keyof typeof el>propOrAttr]
+    if (!result[pclass]) {
+      result[pclass] = {}
+    }
+    result[pclass][pfield] = value
+  }
+  return result
+}
+
+// query.onChange(
+//   "after",
+//   (newDate: string) => {
+//     beforeDateEl.min = newDate
+//   },
+//   false
+// )
+// query.onChange(
+//   "before",
+//   (newDate: string) => (afterDateEl.max = newDate),
+//   false
+// )
 
 // /*
 //  * If the user hits enter in tbe number field, make the query

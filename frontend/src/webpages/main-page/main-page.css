@@ -17,9 +17,22 @@
 @import "~/src/css/icomoon-heatflask.css";
 @import "~/src/css/hide-runtime-elements.css";
 @import "~/src/css/flash-messages.css";
-
-@import "./tab.info.css";
 /*@import "~/src/css/main-table.css";*/
+
+/* CSS for individual sidebar tabs*/
+@import "./tab.*.css";
+
+body {
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body,
+#map {
+  height: 100%;
+  font: 10pt "Helvetica Neue", Arial, Helvetica, sans-serif;
+}
 
 /* Avatar button for registered user */
 button.avatar {
@@ -32,6 +45,9 @@ button.avatar {
   transition: transform 0.5s;
 }
 
+/* If the button has its data-url attribute set,
+ *  we set the background image to that url
+ */
 button.avatar[data-url] {
   background: attr(data-url);
 }
@@ -40,18 +56,6 @@ button.avatar:hover {
   cursor: pointer;
   transform: scale(0.9);
   transition: transform 0.5s;
-}
-
-body {
-  padding: 0;
-  margin: 0;
-}
-
-html,
-body,
-#map {
-  height: 100%;
-  font: 10pt "Helvetica Neue", Arial, Helvetica, sans-serif;
 }
 
 button,
@@ -95,20 +99,8 @@ a:visited {
   color: yellow;
 }
 
-[data-qshow] {
-  display: none;
-}
-
-/*.show [data-qshow] {
-  display: block;
-}*/
-
 .x2 {
   font-size: 2em;
-}
-
-input[data-bind="quantity"] {
-  width: 4em;
 }
 
 /* control window */
