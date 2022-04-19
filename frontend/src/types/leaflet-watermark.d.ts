@@ -25,27 +25,4 @@ declare module "leaflet" {
       onMove(): void
     }
   }
-
-  function areaSelect(box: AreaSelectOptions): AreaSelect
-
-  interface AreaSelectOptions {
-    width?: number
-    height?: number
-    minWidth?: number
-    minHorizontalSpacing?: number
-    minVerticalSpacing?: number
-    keepAspectRatio?: boolean
-  }
-
-  interface Dimension {
-    width: number
-    height: number
-  }
-
-  class AreaSelect extends Evented {
-    constructor(options?: AreaSelectOptions)
-    addTo(map: Map): Map
-    getBounds(): LatLngBounds
-    setDimensions(dim: Dimension): void
-  }
 }

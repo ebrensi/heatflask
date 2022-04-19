@@ -1,7 +1,7 @@
 import { icon } from "~/src/js/Icons"
 import { State } from "~/src/js/Model"
 import type { LiveParams } from "~/src/js/DataBinding"
-
+import type { QueryParameters } from "~/src/js/Model"
 import CONTENT from "bundle-text:./tab.query.html"
 export { CONTENT }
 
@@ -82,15 +82,34 @@ export function SETUP(appState: State) {
     }
   })
 
-  const afterDateEl = document.getElementById("date-after")
-  const beforeDateEl = document.getElementById("date-before")
+  const afterDateEl = <HTMLInputElement>document.getElementById("date-after")
+  const beforeDateEl = <HTMLInputElement>document.getElementById("date-before")
+  afterDateEl.addEventListener(
+    "change",
+    () => (beforeDateEl.min = afterDateEl.value)
+  )
+  beforeDateEl.addEventListener(
+    "change",
+    () => (afterDateEl.max = beforeDateEl.value)
+  )
 
-  //   Initialize DOM element values with those from appState paramters
-  setDomFromParams(tabContentElement, appState)
+  /*
+   * If the user hits enter in tbe number field, make the query
+   */
+  document.getElementById("quantity").addEventListener("keypress", (event) => {
+    if (event.key === "Enter") {
+      appState.query.quantity = +(<HTMLInputElement>event.target).value
+      console.log("we gonna render now...")
+      // renderFromQuery()
+    }
+  })
+
+  //  Initialize DOM element values with those from appState paramters
+  setDomFromParams(appState, tabContentElement)
   tabContentElement.dispatchEvent(new Event("change"))
 }
 
-function setDomFromParams(baseElement: HTMLElement, appState: State) {
+function setDomFromParams(appState: State, baseElement?: HTMLElement) {
   const elements = (baseElement || document).querySelectorAll("[data-bind]")
   for (const el of Array.from(elements)) {
     const key = el.getAttribute("data-bind")
@@ -127,7 +146,7 @@ function setDomFromParams(baseElement: HTMLElement, appState: State) {
   }
 }
 
-export function getQparamsFromDom(baseElement: HTMLElement) {
+export function getQparamsFromDom(baseElement?: HTMLElement) {
   baseElement = baseElement || document.getElementById(ID)
   const elements = baseElement.querySelectorAll('[data-bind^="query"]')
   const result: Record<string, Record<string, any>> = {}
@@ -147,93 +166,64 @@ export function getQparamsFromDom(baseElement: HTMLElement) {
   return result
 }
 
-// query.onChange(
-//   "after",
-//   (newDate: string) => {
-//     beforeDateEl.min = newDate
-//   },
-//   false
-// )
-// query.onChange(
-//   "before",
-//   (newDate: string) => (afterDateEl.max = newDate),
-//   false
-// )
+type BackendQuery = {
+  streams?: boolean
+  limit?: number
+  before?: number
+  after?: number
+  activity_ids?: number[]
+  exclude_ids?: number[]
+  key?: string
+}
 
-// /*
-//  * If the user hits enter in tbe number field, make the query
-//  */
-// document
-//   .querySelector("[data-bind=quantity]")
-//   .addEventListener("keypress", (event) => {
-//     if (event.key === "Enter") {
-//       qParams.quantity = event.target.value
-//       renderFromQuery()
-//     }
-//   })
+function getCurrentQuery(S: State) {
+  const qParams: QueryParameters = { ...S.query, ...getQparamsFromDom() }
+  const query: BackendQuery = { streams: true }
 
-// function login() {
-//   window.location.href = AUTHORIZE_URL
-// }
+  switch (qParams.queryType) {
+    case "activities":
+      query.limit = +qParams.quantity
+      break
 
-// function logout() {
-//   console.log(`${currentUser.id} logging out`)
-//   window.location.href = currentUser.url.logout
-// }
+    case "days": {
+      // debugger;
+      const today = new Date()
+      const before = new Date()
+      const after = new Date()
+      const n = +qParams.quantity
+      before.setDate(today.getDate() + 1) // tomorrow
+      after.setDate(today.getDate() - n) // n days ago
 
-// function abortRender() {
-//   abortQuery()
-// }
+      query.before = Math.round(before.valueOf() / 1000)
+      query.after = Math.round(after.valueOf() / 1000)
 
-//  *  Construct a query for activity data from our qParams
+      break
+    }
 
-// function getCurrentQuery() {
-//   const query = { streams: true }
+    case "ids":
+      if (!qParams.ids) return
+      else {
+        const idSet = new Set(qParams.ids.split(/\D/).map(Number))
+        idSet.delete(0)
+        // create an array of ids (numbers) from a string
+        query.activity_ids = Array.from(idSet)
+      }
+      break
 
-//   switch (qParams.queryType) {
-//     case "activities":
-//       query.limit = +qParams.quantity
-//       break
+    case "dates":
+      if (qParams.before) query.before = qParams.before
+      if (qParams.after) query.after = qParams.after
+      break
 
-//     case "days": {
-//       // debugger;
-//       const today = new Date(),
-//         before = new Date(),
-//         after = new Date(),
-//         n = +qParams.quantity
-//       before.setDate(today.getDate() + 1) // tomorrow
-//       after.setDate(today.getDate() - n) // n days ago
+    case "key":
+      query.key = qParams.key
+  }
 
-//       query.before = before.toISOString().split("T")[0]
-//       query.after = after.toISOString().split("T")[0]
+  const to_exclude = Object.keys(items).map(Number)
+  if (to_exclude.length) query["exclude_ids"] = to_exclude
 
-//       break
-//     }
-
-//     case "ids":
-//       if (!qParams.ids) return
-//       else {
-//         const idSet = new Set(qParams.ids.split(/\D/).map(Number))
-//         idSet.delete(0)
-//         // create an array of ids (numbers) from a string
-//         query.activity_ids = Array.from(idSet)
-//       }
-//       break
-
-//     case "dates":
-//       if (qParams.before) query.before = qParams.before
-//       if (qParams.after) query.after = qParams.after
-//       break
-
-//     case "key":
-//       query.key = qParams.key
-//   }
-
-//   const to_exclude = Object.keys(items).map(Number)
-//   if (to_exclude.length) query["exclude_ids"] = to_exclude
-
-//   return query
-// }
+  return query
+}
 
 // function renderFromQuery() {
 //   const query = {

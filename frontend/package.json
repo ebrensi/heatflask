@@ -27,16 +27,16 @@
     "@assemblyscript/loader": "latest",
     "@msgpack/msgpack": "^2.7.1",
     "downloadjs": "^1.4.7",
-    "gif.js": "github:ebrensi/gif.js#wasm-dev",
     "latlon-geohash": "^2.0.0",
     "leaflet": "^1.7.1",
-    "leaflet-areaselect": "github:ebrensi/leaflet-areaselect",
     "leaflet-control-window": "^1.0.0",
     "leaflet-easybutton": "^2.4.0",
     "leaflet-image": "^0.4.0",
     "leaflet-providers": "^1.13.0",
-    "pure-knob": "github:ebrensi/pure-knob",
-    "sidebar-v2": "^0.4.0"
+    "sidebar-v2": "^0.4.0",
+    "knob": "github:ebrensi/knob",
+    "gif.js": "github:ebrensi/gif.js#wasm-dev",
+    "leaflet-areaselect": "github:ebrensi/leaflet-areaselect"
   },
   "browserslist": [
     "> 0.75%, last 2 versions, not dead"
