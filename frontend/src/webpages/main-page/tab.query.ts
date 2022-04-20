@@ -109,21 +109,25 @@ export function SETUP(appState: State) {
   tabContentElement.dispatchEvent(new Event("change"))
 }
 
+type TT<k extends keyof State> = [k, keyof State[k]]
+type ValidPair = TT<keyof State>
+
 function setDomFromParams(appState: State, baseElement?: HTMLElement) {
   const elements = (baseElement || document).querySelectorAll("[data-bind]")
   for (const el of Array.from(elements)) {
     const key = el.getAttribute("data-bind")
     const [paramStr, propOrAttr] = key.split(":")
-    const [pclass, pfield] = paramStr.split(".")
+    const [pclass, pfield] = <ValidPair>paramStr.split(".")
     const value = appState[pclass][pfield]
     if (value !== undefined) {
       const isAttr = propOrAttr[0] === "*"
       // Depending on whether this is a property or an attribute
       if (isAttr) {
         const attr = propOrAttr.slice(1)
-        el.setAttribute(attr, value)
+        el.setAttribute(attr, String(value))
       } else {
         const prop = propOrAttr
+        // @ts-expect-error -- prop is a "writable" keyof Element
         el[prop] = value
       }
     }
