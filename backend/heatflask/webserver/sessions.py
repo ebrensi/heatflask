@@ -26,7 +26,7 @@ DEFAULT_COOKIE_SPEC = {
     "max-age": 10 * 24 * 3600,  # 10 days
     # "secure": False,
     "httponly": True,
-    "samesite": "strict",
+    # "samesite": "strict",
 }
 
 COOKIE_NAME = APP_BASE_NAME.lower()
@@ -58,9 +58,11 @@ async def fetch_session_from_cookie(request):
 
 
 async def reset_or_delete_cookie(request, response):
-    # (re)set the user session cookie if there is a user
-    # attached to this request context,
-    # otherwise delete any set cookie (ending the session)
+    """
+    (Re)set the user session cookie if there is a user
+    attached to this request context,
+    otherwise delete any set cookie (ending the session)
+    """
 
     has_session = hasattr(request.ctx, "session")
     if (
@@ -80,11 +82,13 @@ async def reset_or_delete_cookie(request, response):
         log.debug("deleted '%s' cookie", COOKIE_NAME)
 
 
-# Attach a Jinja2 style "flash-message" to this session.
-#  The flash messages are saved in the cookie so
-#  they will be available when we fetch the cookie
-#  on the next request
-def flash(request, message):
+def flash(request, message: str):
+    """
+    Attach a Jinja2 style "flash-message" to this session.
+    The flash messages are saved in the cookie so
+    they will be available when we fetch the cookie
+    on the next request
+    """
     if not message:
         return
     if "flashes" not in request.ctx.session:
@@ -92,7 +96,7 @@ def flash(request, message):
     request.ctx.session["flashes"].append(message)
 
 
-def render_template(request, filename, **kwargs):
+def render_template(request, filename: str, **kwargs):
     flashes = request.ctx.session.pop("flashes", [])
     kwargs["flashes"] = json.dumps(flashes)
     return files.render_template(filename, **kwargs)
@@ -105,8 +109,11 @@ async def attach_flash_handlers(request):
 
 
 def session_cookie(get=False, set=False, flashes=False):
-    # This is the decorator we use to specify whether
-    # coookies are retrieved and set for a given request route
+    """
+    This is the decorator we use to specify whether
+    coookies are retrieved and set for a given request route
+    """
+
     def decorator(f):
         @functools.wraps(f)
         async def decorated_function(request, *args, **kwargs):

@@ -27,16 +27,16 @@
     "@assemblyscript/loader": "latest",
     "@msgpack/msgpack": "^2.7.1",
     "downloadjs": "^1.4.7",
+    "gif.js": "github:ebrensi/gif.js#wasm-dev",
+    "knob": "github:ebrensi/knob",
     "latlon-geohash": "^2.0.0",
     "leaflet": "^1.7.1",
+    "leaflet-areaselect": "github:ebrensi/leaflet-areaselect",
     "leaflet-control-window": "^1.0.0",
     "leaflet-easybutton": "^2.4.0",
     "leaflet-image": "^0.4.0",
     "leaflet-providers": "^1.13.0",
-    "sidebar-v2": "^0.4.0",
-    "knob": "github:ebrensi/knob",
-    "gif.js": "github:ebrensi/gif.js#wasm-dev",
-    "leaflet-areaselect": "github:ebrensi/leaflet-areaselect"
+    "sidebar-v2": "^0.4.0"
   },
   "browserslist": [
     "> 0.75%, last 2 versions, not dead"
@@ -58,7 +58,6 @@
     "parcel-plugin-nuke-dist": "^1.0.1",
     "prettier": "^2.5.1",
     "process": "^0.11.10",
-    "typedoc": "^0.22.14",
     "typescript": "^4.5.4"
   },
   "prettier": {
