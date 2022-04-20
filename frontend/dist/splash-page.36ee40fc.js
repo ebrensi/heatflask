@@ -1,0 +1,2 @@
+!function(){console.log("Environment: production");var e=JSON.parse(document.getElementById("runtime_json").innerText).urls,n=document.getElementById("flashes"),t=JSON.parse(n.innerText);if(t&&t.length){var o=t.join("\n");n.innerText=o,n.style="display: block;"}document.querySelector("#bubbler").addEventListener("click",(function(n){var t=e[n.target.id];t&&(window.location.href=t)}))}();
+//# sourceMappingURL=splash-page.36ee40fc.js.map

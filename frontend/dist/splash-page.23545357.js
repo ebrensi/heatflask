@@ -1,0 +1,2 @@
+console.log("Environment: production");const e=JSON.parse(document.getElementById("runtime_json").innerText).urls,n=document.getElementById("flashes"),t=JSON.parse(n.innerText);if(t&&t.length){const e=t.join("\n");n.innerText=e,n.style="display: block;"}document.querySelector("#bubbler").addEventListener("click",(n=>{const t=e[n.target.id];t&&(window.location.href=t)}));
+//# sourceMappingURL=splash-page.23545357.js.map
