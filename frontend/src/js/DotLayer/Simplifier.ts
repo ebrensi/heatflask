@@ -1,9 +1,12 @@
-import BitSet from "../BitSet"
-
-/*
+/*  Simplify
     Adapted from V. Agafonkin's simplify.js implementation of
     Douglas-Peucker simplification algorithm
 */
+
+import BitSet from "../BitSet"
+
+type Point = [number, number]
+type PointAccessor = (i: number) => Point
 
 /*
  * Simplifier.js is based on V. Agafonkin's package with the same name
@@ -13,14 +16,13 @@ import BitSet from "../BitSet"
  *  points is a function p(i) that directly accesses the i-th point
  *  of our data set.
  */
-
-export function simplify(points, n, tolerance) {
+export function simplify(points: PointAccessor, n: number, tolerance: number) {
   const sqTolerance = tolerance * tolerance
 
   let idxBitSet = simplifyRadialDist(points, n, sqTolerance)
 
   const idx = idxBitSet.array()
-  const subset = (i) => points(idx[i])
+  const subset = (i: number) => points(idx[i])
   const idxBitSubset = simplifyDouglasPeucker(subset, idx.length, sqTolerance)
 
   idxBitSet = idxBitSet.new_subset(idxBitSubset)
@@ -29,9 +31,13 @@ export function simplify(points, n, tolerance) {
 }
 
 // basic distance-based simplification
-function simplifyRadialDist(points, n, sqTolerance) {
+function simplifyRadialDist(
+  points: PointAccessor,
+  n: number,
+  sqTolerance: number
+) {
   const selectedIdx = new BitSet(n)
-  let i
+  let i: number
   let point = points(0)
   let prevPoint = point
 
@@ -52,7 +58,11 @@ function simplifyRadialDist(points, n, sqTolerance) {
 }
 
 // simplification using Ramer-Douglas-Peucker algorithm
-function simplifyDouglasPeucker(points, n, sqTolerance) {
+function simplifyDouglasPeucker(
+  points: PointAccessor,
+  n: number,
+  sqTolerance: number
+) {
   const bitSet = new BitSet(n)
 
   bitSet.add(0)
@@ -67,13 +77,13 @@ function simplifyDouglasPeucker(points, n, sqTolerance) {
 }
 
 function simplifyDPStep(
-  points,
-  firstIdx,
-  lastIdx,
-  sqTolerance,
-  bitSet,
-  first,
-  last
+  points: PointAccessor,
+  firstIdx: number,
+  lastIdx: number,
+  sqTolerance: number,
+  bitSet: BitSet,
+  first: Point,
+  last: Point
 ) {
   let maxSqDist = sqTolerance,
     index
@@ -102,12 +112,12 @@ function simplifyDPStep(
   }
 }
 
-function equal(p1, p2) {
+function equal(p1: Point, p2: Point) {
   return p1[0] == p2[0] && p1[1] == p2[1]
 }
 
 // square distance between 2 points
-function getSqDist(p1, p2) {
+function getSqDist(p1: Point, p2: Point) {
   const dx = p1[0] - p2[0],
     dy = p1[1] - p2[1]
 
@@ -115,7 +125,7 @@ function getSqDist(p1, p2) {
 }
 
 // square distance from a point to a segment
-function getSqSegDist(p, p1, p2) {
+function getSqSegDist(p: Point, p1: Point, p2: Point) {
   let x = p1[0],
     y = p1[1],
     dx = p2[0] - x,

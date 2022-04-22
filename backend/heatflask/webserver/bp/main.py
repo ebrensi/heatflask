@@ -19,6 +19,7 @@ log.setLevel("INFO")
 log.propagate = True
 
 bp = sanic.Blueprint("main", url_prefix="/")
+U = Users.UserField
 
 
 # ****** Splash Page ******
@@ -33,9 +34,9 @@ async def splash_page(request):
     # otherwise a splash page
     if request.ctx.current_user:
         cu = request.ctx.current_user
-        fullname = f"{cu[Users.FIRSTNAME]} {cu[Users.LASTNAME]}"
+        fullname = f"{cu[U.FIRSTNAME]} {cu[U.LASTNAME]}"
         request.ctx.flash(f"Welcome back {fullname}")
-        uid = cu[Users.ID]
+        uid = cu[U.ID]
         if not await Index.has_user_entries(**cu):
             log.info("importing index for user %d", uid)
             app.add_task(Index.import_user_entries(**cu), name=f"import:{uid}")
@@ -61,10 +62,10 @@ async def splash_page(request):
 def relevant_info(user):
     return (
         {
-            "id": user[Users.ID],
-            "name": f"{user[Users.FIRSTNAME]}",
-            "profile": user[Users.PROFILE],
-            "private": user[Users.PRIVATE],
+            "id": user[U.ID],
+            "name": f"{user[U.FIRSTNAME]}",
+            "profile": user[U.PROFILE],
+            "private": user[U.PRIVATE],
         }
         if user
         else None
@@ -159,16 +160,16 @@ async def visibility(request, target_user, setting=None):
     if setting is not None:
         private = False if setting == "on" else True
         target_user = await Users.add_or_update(
-            **{Users.ID: target_user[Users.ID], "private": private}
+            **{U.ID: target_user[U.ID], "private": private}
         )
-    return Response.json(not target_user[Users.PRIVATE])
+    return Response.json(not target_user[U.PRIVATE])
 
 
 @bp.get("/delete")
 @session_cookie(get=True, set=True, flashes=True)
 @self_or_admin
 async def delete(request, target_user):
-    uid = target_user[Users.ID]
+    uid = target_user[U.ID]
     await Users.delete(uid, deauthenticate=False)
     request.ctx.flash(f"Successfully deleted user {uid}")
     return Response.redirect(request.app.url_for("auth.logout"))

@@ -40,3 +40,5 @@ export const options = {
 export const dotSettings = {
   dotScale: 2.0,
 }
+
+type DotLayerOptions = typeof options

@@ -26,6 +26,8 @@ log.setLevel("INFO")
 log.propagate = True
 
 bp = sanic.Blueprint("activities", url_prefix="/activities")
+I = Index.ActivitySummaryFields
+U = Users.UserField
 
 
 @bp.post("/")
@@ -41,8 +43,7 @@ async def query(request):
     target_user_id = query.get("user_id")
     if target_user_id:
         is_owner_or_admin = request.ctx.current_user and (
-            request.ctx.is_admin
-            or (request.ctx.current_user[Users.ID] == target_user_id)
+            request.ctx.is_admin or (request.ctx.current_user[U.ID] == target_user_id)
         )
 
         target_user = await Users.get(target_user_id)
@@ -85,20 +86,18 @@ async def query(request):
     await response.send(msgpack.packb({"count": len(summaries)}))
 
     if not target_user_id:
-        uids = list(set(A[Index.USER_ID] for A in summaries))
+        uids = list(set(A[I.USER_ID] for A in summaries))
         users = await Users.get_collection()
-        cursor = users.find(
-            {Users.ID: {"$in": uids}}, {Users.ID: True, Users.PROFILE: True}
-        )
-        profile_lookup = {u[Users.ID]: u[Users.PROFILE] async for u in cursor}
+        cursor = users.find({U.ID: {"$in": uids}}, {U.ID: True, U.PROFILE: True})
+        profile_lookup = {u[U.ID]: u[U.PROFILE] async for u in cursor}
         for A in summaries:
-            A["profile"] = profile_lookup[A[Index.USER_ID]]
+            A["profile"] = profile_lookup[A[I.USER_ID]]
     if not streams:
         for A in summaries:
             await response.send(msgpack.packb(A))
         return
 
-    summaries_lookup = {A[Index.ACTIVITY_ID]: A for A in summaries}
+    summaries_lookup = {A[I.ACTIVITY_ID]: A for A in summaries}
     ids = list(summaries_lookup.keys())
 
     user = await Users.get(target_user_id)
@@ -114,7 +113,7 @@ async def query(request):
             errors.add(aid)
             await response.send(msgpack.packb({"error": aid}))
     if len(errors):
-        log.error("Errors importing user %d activities %s", user[Users.ID], errors)
+        log.error("Errors importing user %d activities %s", user[U.ID], errors)
 
 
 @bp.get("/")
@@ -129,7 +128,7 @@ async def activities_page(request):
         query["limit"] = 0
 
     current_user_id = (
-        request.ctx.current_user[Users.ID] if request.ctx.current_user else None
+        request.ctx.current_user[U.ID] if request.ctx.current_user else None
     )
     target_user_id = request.args.get("user_id", None if all_users else current_user_id)
     if target_user_id:

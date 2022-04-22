@@ -6,7 +6,7 @@ import { latLng2pxBounds, latLng2px } from "./ViewBox"
 import { decode as decodePolyline, lengthInPoints } from "./Codecs/Polyline"
 import { simplify as simplifyPath } from "./Simplifier"
 import { RunningStatsCalculator } from "./stats"
-import { LatLngBounds } from "../myLeaflet"
+import { LatLngBounds } from "leaflet"
 import { BitSet } from "../BitSet"
 import { ATYPE } from "../Strava"
 
@@ -49,8 +49,6 @@ type pointFunc = (x: number, y: number) => void
  *
  * Any segment that has a Z-Score above ZSCORE_CUTOFF is considered
  * an outlier and removed from the path.
- *
- * @type {Number}
  */
 const ZSCORE_CUTOFF = 5
 

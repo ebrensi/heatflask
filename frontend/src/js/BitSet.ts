@@ -29,7 +29,6 @@ export class BitSet {
 
   /**
    * Add the value (Set the bit at {@link index} to true)
-   * @param {Number} index
    */
   add(index: number): BitSet {
     const w: number = index >>> 5
@@ -44,7 +43,6 @@ export class BitSet {
 
   /**
    * If the value was not in the set, add it, otherwise remove it (flip bit at {@link index})
-   * @param  {Number} index
    */
   flip(index: number): BitSet {
     const w: number = index >>> 5
@@ -67,8 +65,6 @@ export class BitSet {
 
   /**
    * Set the bit at {@link index} to false
-   * @param  {Number} index [description]
-   * @return {BitSet} This {@link BitSet}
    */
   remove(index: number): BitSet {
     const w: number = index >>> 5
@@ -83,7 +79,6 @@ export class BitSet {
 
   /**
    * Return true if no bit is set
-   * @return {Boolean} Is anything in this {@link BitSet}?
    */
   isEmpty(): boolean {
     const c: number = this.words.length
@@ -95,8 +90,6 @@ export class BitSet {
 
   /**
    * Is the value contained in the set? Is the bit at {@link index} true, or false?
-   * @param  {Number}  index
-   * @return {Boolean}
    */
   has(index: number): boolean {
     return (this.words[index >>> 5] & (1 << index)) !== 0
@@ -215,7 +208,7 @@ export class BitSet {
   }
 
   // Iterate the members of this BitSet
-  *imap(fnc?: (t: number) => unknown): IterableIterator<number> {
+  *imap(fnc?: (t: number) => unknown): IterableIterator<unknown> {
     fnc = fnc || ((i) => i)
     const c = this.words.length
     for (let k = 0; k < c; ++k) {
@@ -329,7 +322,7 @@ export class BitSet {
   // Computes the intersection between this bitset and another one,
   // the current bitmap is modified  (and returned by the function)
   intersection(other: BitSet, result?: BitSet): BitSet {
-    if (!result) result = this
+    result = result || this
     const count = Math.min(this.words.length, other.words.length)
     result.resize((count << 5) - 1)
     const c = count
@@ -375,7 +368,7 @@ export class BitSet {
   // Computes the changed elements (XOR) between this bitset and another one,
   // the current bitset is modified (and returned by the function)
   change(other: BitSet, result?: BitSet): BitSet {
-    if (!result) result = this
+    result = result || this
     const maxcount = Math.max(this.words.length, other.words.length)
     result.resize((maxcount << 5) - 1)
 
@@ -426,6 +419,7 @@ export class BitSet {
   // (for this set A and other set B,
   //   this computes B = A - B  and returns B)
   difference(other: BitSet, result?: BitSet): BitSet {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     if (!result) result = this
     else result.resize((this.words.length << 5) - 1)
 
@@ -484,7 +478,7 @@ export class BitSet {
    * but you can specify the destination bitset as result.
    */
   union(other: BitSet, result?: BitSet): BitSet {
-    if (!result) result = this
+    result = result || this
     const count = Math.max(this.words.length, other.words.length)
     result.resize((count << 5) - 1)
     const mcount = Math.min(this.words.length, other.words.length)
@@ -551,7 +545,7 @@ export class BitSet {
       // idiot-proofing
       if (i > target) throw new RangeError()
 
-      while (true) {
+      for (;;) {
         // fast-forward to the first non-zero word
         while (w === 0) {
           if (++k >= c) return

@@ -23,7 +23,8 @@ from . import DataAPIs
 from .DataAPIs import db
 from . import Strava
 from . import StreamCodecs
-from . import Users
+from .Users import UserField as U
+
 
 log = getLogger(__name__)
 log.setLevel("DEBUG")
@@ -87,9 +88,9 @@ def cache_key(aid):
 
 
 async def strava_import(activity_ids, **user):
-    uid = int(user[Users.ID])
+    uid = int(user[U.ID])
 
-    strava = Strava.AsyncClient(uid, **user[Users.AUTH])
+    strava = Strava.AsyncClient(uid, **user[U.AUTH])
     await strava.update_access_token()
     coll = await get_collection()
 

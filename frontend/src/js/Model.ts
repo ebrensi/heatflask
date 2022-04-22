@@ -26,7 +26,7 @@ export type User = {
  */
 export type QueryParameters = {
   userid?: number
-  queryType?: string // "days", "activities", "dates", "ids", or "key"
+  type?: "days" | "activities" | "dates" | "ids" | "key"
   key?: string // A lookup representing a query stored on the server
   after?: number // Start date Epoch
   before?: number // End date Epoch
@@ -34,7 +34,7 @@ export type QueryParameters = {
   quantity?: number // number of days or activities
 }
 export const DefaultQuery: QueryParameters = {
-  queryType: "activities",
+  type: "activities",
   quantity: 10,
 }
 

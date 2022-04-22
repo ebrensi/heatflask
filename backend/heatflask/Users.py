@@ -16,6 +16,7 @@ from pymongo import DESCENDING
 import types
 import asyncio
 from aiohttp.client_exceptions import ClientResponseError
+from enum import Enum
 
 from . import DataAPIs
 from . import Utility
@@ -48,63 +49,65 @@ async def get_collection():
     return myBox.collection
 
 
-fields = [
-    ID := "_id",
-    LAST_LOGIN := "ts",
-    LOGIN_COUNT := "#",
-    LAST_INDEX_ACCESS := "I",
-    FIRSTNAME := "f",
-    LASTNAME := "l",
-    PROFILE := "P",
-    CITY := "c",
-    STATE := "s",
-    COUNTRY := "C",
-    AUTH := "@",
-    PRIVATE := "p",
-]
+class UserField(Enum):
+    ID = "_id"
+    LAST_LOGIN = "ts"
+    LOGIN_COUNT = "#"
+    LAST_INDEX_ACCESS = "I"
+    FIRSTNAME = "f"
+    LASTNAME = "l"
+    PROFILE = "P"
+    CITY = "c"
+    STATE = "s"
+    COUNTRY = "C"
+    AUTH = "@"
+    PRIVATE = "p"
+
+
+U = UserField
 
 
 def mongo_doc(
     # From Strava Athlete record
     id: int = None,
-    firstname=None,
-    lastname=None,
-    profile_medium=None,
-    profile=None,
-    city=None,
-    state=None,
-    country=None,
+    firstname: str = None,
+    lastname: str = None,
+    profile_medium: str = None,
+    profile: str = None,
+    city: str = None,
+    state: str = None,
+    country: str = None,
     # my additions
     last_login=None,
-    login_count=None,
+    login_count: int = None,
     last_index_access=None,
-    private=None,
-    auth=None,
+    private: bool = None,
+    auth: dict[str, str | int] = None,
     **kwargs,
 ) -> dict:
-    if not (id or kwargs.get(ID)):
+    if not (id or kwargs.get(U.ID)):
         log.error("cannot create user with no id")
         return
 
     return Utility.cleandict(
         {
-            ID: int(kwargs.get(ID, id)),
-            FIRSTNAME: firstname,
-            LASTNAME: lastname,
-            PROFILE: profile_medium or profile,
-            CITY: city,
-            STATE: state,
-            COUNTRY: country,
-            LAST_LOGIN: last_login,
-            LOGIN_COUNT: login_count,
-            LAST_INDEX_ACCESS: last_index_access,
-            AUTH: auth,
-            PRIVATE: private,
+            U.ID: int(kwargs.get(U.ID, id)),
+            U.FIRSTNAME: firstname,
+            U.LASTNAME: lastname,
+            U.PROFILE: profile_medium or profile,
+            U.CITY: city,
+            U.STATE: state,
+            U.COUNTRY: country,
+            U.LAST_LOGIN: last_login,
+            U.LOGIN_COUNT: login_count,
+            U.LAST_INDEX_ACCESS: last_index_access,
+            U.AUTH: auth,
+            U.PRIVATE: private,
         }
     )
 
 
-def is_admin(user_id):
+def is_admin(user_id: int | str):
     return int(user_id) in ADMIN
 
 
@@ -123,26 +126,26 @@ async def add_or_update(
 
     now_ts = datetime.datetime.utcnow().timestamp()
     if update_last_login:
-        doc[LAST_LOGIN] = now_ts
+        doc[U.LAST_LOGIN] = now_ts
 
     if update_index_access:
-        doc[LAST_INDEX_ACCESS] = now_ts
+        doc[U.LAST_INDEX_ACCESS] = now_ts
 
     # We cannot technically "update" the _id field if this user exists
     # in the database, so we need to remove that field from the updates
     user_info = {**doc}
-    user_id = user_info.pop(ID)
+    user_id = user_info.pop(U.ID)
     updates = {"$set": user_info}
 
     if inc_login_count:
-        updates["$inc"] = {LOGIN_COUNT: 1}
+        updates["$inc"] = {U.LOGIN_COUNT: 1}
 
     log.debug("%d updated with %s", user_id, updates)
 
     # Creates a new user or updates an existing user (with the same id)
     try:
         return await users.find_one_and_update(
-            {ID: user_id},
+            {U.ID: user_id},
             updates,
             upsert=True,
             return_document=pymongo.ReturnDocument.AFTER,
@@ -156,7 +159,7 @@ async def get(user_id):
         return
     users = await get_collection()
     uid = int(user_id)
-    query = {ID: uid}
+    query = {U.ID: uid}
     try:
         return await users.find_one(query)
     except Exception:
@@ -170,36 +173,36 @@ async def get_all():
 
 
 default_out_fields = {
-    ID: True,
-    FIRSTNAME: True,
-    LASTNAME: True,
-    PROFILE: True,
-    CITY: True,
-    STATE: True,
-    COUNTRY: True,
+    U.ID: True,
+    U.FIRSTNAME: True,
+    U.LASTNAME: True,
+    U.PROFILE: True,
+    U.CITY: True,
+    U.STATE: True,
+    U.COUNTRY: True,
     #
-    # LAST_LOGIN=False
-    # LOGIN_COUNT=False
-    # LAST_INDEX_ACCESS=False
-    # AUTH: False,
-    # PRIVATE: False,
+    # U.LAST_LOGIN=False
+    # U.LOGIN_COUNT=False
+    # U.LAST_INDEX_ACCESS=False
+    # U.AUTH: False,
+    # U.PRIVATE: False,
 }
 
 
-SORT_SPEC = [(LAST_LOGIN, DESCENDING)]
+SORT_SPEC = [(U.LAST_LOGIN, DESCENDING)]
 
 
 async def dump(admin=False, output="json"):
-    query = {} if admin else {PRIVATE: False}
+    query = {} if admin else {U.PRIVATE: False}
 
     out_fields = {**default_out_fields}
     if admin:
         out_fields.update(
             {
-                LAST_LOGIN: True,
-                LOGIN_COUNT: True,
-                LAST_INDEX_ACCESS: True,
-                PRIVATE: True,
+                U.LAST_LOGIN: True,
+                U.LOGIN_COUNT: True,
+                U.LAST_INDEX_ACCESS: True,
+                U.PRIVATE: True,
             }
         )
     users = await get_collection()
@@ -214,7 +217,7 @@ async def dump(admin=False, output="json"):
 
 async def delete(user_id, deauthenticate=True):
     # First we delete the user's index
-    await Index.delete_user_entries(**{ID: user_id})
+    await Index.delete_user_entries(**{U.ID: user_id})
 
     user = await get(user_id)
 
@@ -224,8 +227,8 @@ async def delete(user_id, deauthenticate=True):
     #  and we won't be able to if we delete that info, so we must
     #  make sure it is done before deleting this user from mongodb.
     #  Afterwards it is useless so we can delete it.
-    if user and (AUTH in user) and deauthenticate:
-        client = Strava.AsyncClient(user_id, **user[AUTH])
+    if user and (U.AUTH in user) and deauthenticate:
+        client = Strava.AsyncClient(user_id, **user[U.AUTH])
         async with Strava.get_limiter():
             try:
                 await client.deauthenticate(raise_exception=True)
@@ -241,7 +244,7 @@ async def delete(user_id, deauthenticate=True):
 
     users = await get_collection()
     try:
-        await users.delete_one({ID: user_id})
+        await users.delete_one({U.ID: user_id})
 
     except Exception:
         log.exception("error deleting user %d", user_id)
@@ -253,13 +256,15 @@ async def triage(*args, only_find=False, deauthenticate=True, max_triage=MAX_TRI
     now_ts = datetime.datetime.now().timestamp()
     cutoff = now_ts - TTL
     users = await get_collection()
-    cursor = users.find({LAST_LOGIN: {"$lt": cutoff}}, {ID: True, LAST_LOGIN: True})
+    cursor = users.find(
+        {U.LAST_LOGIN: {"$lt": cutoff}}, {U.ID: True, U.LAST_LOGIN: True}
+    )
     bad_users = await cursor.to_list(length=max_triage)
-    # log.debug({u[ID]: str(datetime.datetime.fromtimestamp(u[LAST_LOGIN]).date()) for u in bad_users})
+    # log.debug({u[U.ID]: str(datetime.datetime.fromtimestamp(u[U.LAST_LOGIN]).date()) for u in bad_users})
     if only_find:
         return bad_users
     tasks = [
-        asyncio.create_task(delete(bu[ID], deauthenticate=deauthenticate))
+        asyncio.create_task(delete(bu[U.ID], deauthenticate=deauthenticate))
         for bu in bad_users
     ]
     await asyncio.gather(*tasks)
@@ -332,8 +337,8 @@ async def migrate():
         except json.JSONDecodeError:
             pass
 
-    ids = [u[ID] for u in docs]
+    ids = [u[U.ID] for u in docs]
     users = await get_collection()
-    await users.delete_many({ID: {"$in": ids}})
+    await users.delete_many({U.ID: {"$in": ids}})
     insert_result = await users.insert_many(docs)
     log.info("Done migrating %d users", len(insert_result.inserted_ids))

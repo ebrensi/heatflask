@@ -5,8 +5,10 @@
 
 import { decodeMultiStream } from "@msgpack/msgpack"
 import { href, img, HHMMSS, sleep } from "~/src/js/appUtil"
-import { icon } from "~/src/js/Icons"
 import { activity_icon, activityURL } from "~/src/js/Strava"
+import { ACTIVITY_FIELDNAMES as F } from "~/src/js/DataImport"
+import { icon } from "~/src/js/Icons"
+
 // import { JSTable } from "../../js/jstable"
 
 const BASE_URL = "/"
@@ -24,32 +26,19 @@ const args = JSON.parse(argstr)
 const atypes = args["atypes"]
 const MULTI = !args["query_obj"]["user_id"]
 
-function user_thumbnail(id, img_url) {
+function user_thumbnail(id: number, img_url: string) {
   if (!(id && img_url)) return ""
-  const avatar = img(img_url, 40, 40, id)
+  const avatar = img(img_url, 40, 40, String(id))
   return href(`/${id}`, avatar)
 }
 
-const STRAVA_BUTTON = img(strava_button_url)
+const STRAVA_BUTTON = img(strava_button_url.href)
 const store = window.localStorage
 const METRIC = store.getItem("units") == "metric"
 const DIST_SCALE = METRIC ? 1 / 1000 : 1 / 1609.34
 const DIST_LABEL = METRIC ? "km" : "mi"
 const ELEV_SCALE = METRIC ? 1 : 3.28084
 const ELEV_LABEL = METRIC ? "m" : "ft"
-
-// This spec should match that in Index.py
-const ACTIVITY_ID = "_id",
-  USER_ID = "U",
-  UTC_START_TIME = "s",
-  UTC_LOCAL_OFFSET = "o",
-  DISTANCE_METERS = "D",
-  TIME_SECONDS = "T",
-  ELEVATION_GAIN = "+",
-  FLAG_PRIVATE = "p",
-  ACTIVITY_NAME = "N",
-  ACTIVITY_TYPE = "t",
-  VISIBILITY = "v"
 
 function makeHeaderRow() {
   const h = [
@@ -121,23 +110,23 @@ async function main() {
 }
 
 function makeRow(A) {
-  const aid = A[ACTIVITY_ID],
+  const aid = A[F.ACTIVITY_ID],
     heatflask_link = `${BASE_URL}?id=${aid}`,
     strava_link = href(`${activityURL(aid)}`, STRAVA_BUTTON),
     date = new Date(
-      (A[UTC_START_TIME] + A[UTC_LOCAL_OFFSET]) * 1000
+      (A[F.UTC_START_TIME] + A[F.UTC_LOCAL_OFFSET]) * 1000
     ).toLocaleString(),
-    dist = (A[DISTANCE_METERS] * DIST_SCALE).toFixed(2),
-    elapsed = HHMMSS(A[TIME_SECONDS]),
-    elev_gain = (A[ELEVATION_GAIN] * ELEV_SCALE).toFixed(2)
+    dist = (A[F.DISTANCE_METERS] * DIST_SCALE).toFixed(2),
+    elapsed = HHMMSS(A[F.TIME_SECONDS]),
+    elev_gain = (A[F.ELEVATION_GAIN] * ELEV_SCALE).toFixed(2)
 
-  const atype = atypes[A[ACTIVITY_TYPE]] || `${A[ACTIVITY_TYPE]}*`
+  const atype = atypes[A[F.ACTIVITY_TYPE]] || `${A[F.ACTIVITY_TYPE]}*`
 
-  const picon = A[FLAG_PRIVATE] ? priv_icon : pub_icon
+  const picon = A[F.FLAG_PRIVATE] ? priv_icon : pub_icon
 
   if (MULTI) {
     return [
-      user_thumbnail(A[USER_ID], A["profile"]),
+      user_thumbnail(A[F.USER_ID], A["profile"]),
       href(heatflask_link, date),
       strava_link,
       activity_icon(atype),
@@ -145,7 +134,7 @@ function makeRow(A) {
       elapsed,
       dist,
       elev_gain,
-      A[ACTIVITY_NAME],
+      A[F.ACTIVITY_NAME],
     ]
   } else {
     return [
@@ -156,7 +145,7 @@ function makeRow(A) {
       elapsed,
       dist,
       elev_gain,
-      A[ACTIVITY_NAME],
+      A[F.ACTIVITY_NAME],
     ]
   }
 }

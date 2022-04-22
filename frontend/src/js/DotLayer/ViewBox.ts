@@ -5,7 +5,7 @@
  */
 
 import { makePT } from "./CRS"
-import { DomUtil, Control, Point } from "../myLeaflet"
+import { DomUtil, Control, Point } from "leaflet"
 import { MAP_INFO } from "../Env"
 import { Bounds } from "../appUtil"
 

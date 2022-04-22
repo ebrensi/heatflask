@@ -13,7 +13,7 @@
   />
 </span>
 
-<select id="queryType" data-bind="query.queryType:value">
+<select id="queryType" data-bind="query.type:value">
   <option value="days">recent days</option>
   <option value="activities" selected>recent activities</option>
   <option value="ids">Activity IDs</option>
@@ -74,6 +74,7 @@
 <div data-fshow="importing">
   <!-- display only while importing  -->
   <div class="import-progress">
+    <div class="progress msgbox"></div>
     <progress class="progbar"></progress>
   </div>
   <br />

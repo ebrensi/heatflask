@@ -3,7 +3,6 @@ Defines /auth/* webserver endpoints
 used for authenticating (logging in/out) Strava users
 """
 import sanic.response as Response
-from sanic.exceptions import SanicException
 import sanic
 
 from logging import getLogger
@@ -26,6 +25,7 @@ bp = sanic.Blueprint("auth", url_prefix="/auth")
 # This blueprint serves the "splash" (login) page and
 #  handles Strava authentication
 SCOPE = ",".join(["read", "activity:read", "activity:read_all"])
+U = Users.UserField
 
 
 @bp.get("/authorize")
@@ -91,18 +91,18 @@ async def auth_callback(request):
         return Response.redirect(state)
 
     # start user session (which will be persisted with a cookie)
-    request.ctx.session["user"] = user[Users.ID]
+    request.ctx.session["user"] = user[U.ID]
     request.ctx.current_user = user
 
     has_index = await Index.has_user_entries(**user)
     log.info(
         "Athenticated user %d, access_count=%d, has_index=%s",
-        user[Users.ID],
-        user[Users.LOGIN_COUNT],
+        user[U.ID],
+        user[U.LOGIN_COUNT],
         has_index,
     )
-    if user[Users.LOGIN_COUNT] == 1:
-        await Events.new_event(msg=f"Authenicated new user {user[Users.ID]}")
+    if user[U.LOGIN_COUNT] == 1:
+        await Events.new_event(msg=f"Authenicated new user {user[U.ID]}")
     return Response.redirect(state)
 
 
@@ -115,7 +115,7 @@ async def logout(request):
     logged-in to Strava.
     """
     cuser = request.ctx.current_user
-    cuser_id = cuser[Users.ID] if cuser else None
+    cuser_id = cuser[U.ID] if cuser else None
     request.ctx.current_user = None
     if cuser:
         request.ctx.flash(f"User {cuser_id} logged out.")

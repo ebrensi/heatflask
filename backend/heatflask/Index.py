@@ -20,12 +20,14 @@ import asyncio
 import types
 from pymongo import DESCENDING
 from aiohttp import ClientResponseError
+from enum import Enum
 
 from . import DataAPIs
 from .DataAPIs import db
 from . import Strava
 from . import Utility
 from . import Users
+
 
 log = getLogger(__name__)
 log.propagate = True
@@ -48,7 +50,7 @@ async def get_collection():
     return myBox.collection
 
 
-def polyline_bounds(poly):
+def polyline_bounds(poly: str):
     try:
         latlngs = np.array(polyline.decode(poly), dtype=np.float32)
     except Exception:
@@ -76,33 +78,34 @@ def overlaps(b1, b2):
     )
     """
     {
-        f"{LATLNG_BOUNDS}.NE.0": {"$gt": b1_left},
-        f"{LATLNG_BOUNDS}.SW.0": {"$lt": b1_right},
-        f"{LATLNG_BOUNDS}.SW.1": {"$lt": b1_top},
-        f"{LATLNG_BOUNDS}.NE.1": {"$gt": b1_bottom}
+        f"{F.LATLNG_BOUNDS}.NE.0": {"$gt": b1_left},
+        f"{F.LATLNG_BOUNDS}.SW.0": {"$lt": b1_right},
+        f"{F.LATLNG_BOUNDS}.SW.1": {"$lt": b1_top},
+        f"{F.LATLNG_BOUNDS}.NE.1": {"$gt": b1_bottom}
     }
     """
 
 
-# MongoDB short field names speed up data transfer to/from
-# remote DB server
-fields = [
-    ACTIVITY_ID := "_id",
-    USER_ID := "U",
-    N_ATHLETES := "#a",
-    N_PHOTOS := "#p",
-    ELEVATION_GAIN := "+",
-    UTC_START_TIME := "s",
-    UTC_LOCAL_OFFSET := "o",
-    DISTANCE_METERS := "D",
-    TIME_SECONDS := "T",
-    LATLNG_BOUNDS := "B",
-    FLAG_COMMUTE := "c",
-    FLAG_PRIVATE := "p",
-    ACTIVITY_NAME := "N",
-    ACTIVITY_TYPE := "t",
-    VISIBILITY := "v",
-]
+class ActivitySummaryFields(Enum):
+    ACTIVITY_ID = "_id"
+    USER_ID = "U"
+    N_ATHLETES = "#a"
+    N_PHOTOS = "#p"
+    ELEVATION_GAIN = "+"
+    UTC_START_TIME = "s"
+    UTC_LOCAL_OFFSET = "o"
+    DISTANCE_METERS = "D"
+    TIME_SECONDS = "T"
+    LATLNG_BOUNDS = "B"
+    FLAG_COMMUTE = "c"
+    FLAG_PRIVATE = "p"
+    ACTIVITY_NAME = "N"
+    ACTIVITY_TYPE = "t"
+    VISIBILITY = "v"
+
+
+F = ActivitySummaryFields
+U = Users.UserField
 
 
 # see https://developers.strava.com/docs/reference/#api-models-SummaryActivity
@@ -136,21 +139,21 @@ def mongo_doc(
     utc_start_time = int(Utility.to_datetime(start_date).timestamp())
     return Utility.cleandict(
         {
-            ACTIVITY_ID: int(_id or id),
-            USER_ID: int(athlete["id"]),
-            ACTIVITY_NAME: name or title,
-            DISTANCE_METERS: distance,
-            TIME_SECONDS: elapsed_time,
-            ELEVATION_GAIN: total_elevation_gain,
-            ACTIVITY_TYPE: Strava.ATYPES_LOOKUP.get(type, type),
-            UTC_START_TIME: utc_start_time,
-            UTC_LOCAL_OFFSET: utc_offset,
-            N_ATHLETES: athlete_count,
-            N_PHOTOS: total_photo_count,
-            VISIBILITY: visibility,
-            FLAG_COMMUTE: commute,
-            FLAG_PRIVATE: private,
-            LATLNG_BOUNDS: polyline_bounds(map["summary_polyline"]),
+            F.ACTIVITY_ID: int(_id or id),
+            F.USER_ID: int(athlete["id"]),
+            F.ACTIVITY_NAME: name or title,
+            F.DISTANCE_METERS: distance,
+            F.TIME_SECONDS: elapsed_time,
+            F.ELEVATION_GAIN: total_elevation_gain,
+            F.ACTIVITY_TYPE: Strava.ATYPES_LOOKUP.get(type, type),
+            F.UTC_START_TIME: utc_start_time,
+            F.UTC_LOCAL_OFFSET: utc_offset,
+            F.N_ATHLETES: athlete_count,
+            F.N_PHOTOS: total_photo_count,
+            F.VISIBILITY: visibility,
+            F.FLAG_COMMUTE: commute,
+            F.FLAG_PRIVATE: private,
+            F.LATLNG_BOUNDS: polyline_bounds(map["summary_polyline"]),
         }
     )
 
@@ -208,11 +211,11 @@ async def import_index_progress(user_id, poll_delay=0.5):
 
 async def import_user_entries(**user):
     t0 = time.perf_counter()
-    uid = int(user[Users.ID])
+    uid = int(user[U.ID])
 
     await set_import_flag(uid, "Building index...")
 
-    strava = Strava.AsyncClient(uid, **user[Users.AUTH])
+    strava = Strava.AsyncClient(uid, **user[U.AUTH])
     await strava.update_access_token()
     now = datetime.datetime.utcnow()
 
@@ -260,7 +263,7 @@ async def import_user_entries(**user):
 
 
 async def import_one(activity_id, **user):
-    client = Strava.AsyncClient(user[Users.ID], **user[Users.AUTH])
+    client = Strava.AsyncClient(user[U.ID], **user[U.AUTH])
     try:
         DetailedActivity = client.get_activity(activity_id, raise_exception=True)
     except Exception:
@@ -270,18 +273,18 @@ async def import_one(activity_id, **user):
     doc = mongo_doc(**DetailedActivity, ts=datetime.datetime.utcnow())
     index = await get_collection()
     try:
-        await index.replace_one({ACTIVITY_ID: activity_id}, doc, upsert=True)
+        await index.replace_one({F.ACTIVITY_ID: activity_id}, doc, upsert=True)
     except Exception:
         log.exception("mongo error?")
     else:
-        log.debug("%s imported activity %d", user[Users.ID], activity_id)
+        log.debug("%s imported activity %d", user[U.ID], activity_id)
 
 
 async def update_one(activity_id, **updates):
     index = await get_collection()
     doc = mongo_doc(**updates, update=True)
     try:
-        await index.update_one({ACTIVITY_ID: activity_id}, {"$set": doc})
+        await index.update_one({F.ACTIVITY_ID: activity_id}, {"$set": doc})
     except Exception:
         log.exception("mongo error?")
     else:
@@ -290,71 +293,57 @@ async def update_one(activity_id, **updates):
 
 async def delete_one(activity_id):
     index = await get_collection()
-    return await index.delete_one({ACTIVITY_ID: activity_id})
+    return await index.delete_one({F.ACTIVITY_ID: activity_id})
 
 
 async def delete_user_entries(**user):
-    uid = int(user[Users.ID])
+    uid = int(user[U.ID])
     index = await get_collection()
-    result = await index.delete_many({USER_ID: int(uid)})
+    result = await index.delete_many({F.USER_ID: int(uid)})
     log.debug("%d deleted %s entries", uid, result.deleted_count)
 
 
 async def count_user_entries(**user):
-    uid = int(user[Users.ID])
+    uid = int(user[U.ID])
     index = await get_collection()
-    return await index.count_documents({USER_ID: int(uid)})
+    return await index.count_documents({F.USER_ID: int(uid)})
 
 
 async def has_user_entries(**user):
-    uid = int(user[Users.ID])
+    uid = int(user[U.ID])
     index = await get_collection()
-    return not not (await index.find_one({USER_ID: int(uid)}, projection={"_id": True}))
+    return not not (
+        await index.find_one({F.USER_ID: int(uid)}, projection={F.ACTIVITY_ID: True})
+    )
 
 
 async def triage(*args):
     now_ts = datetime.datetime.now().timestamp()
     cutoff = now_ts - TTL
     users = await get_collection()
-    cursor = users.find({Users.LAST_INDEX_ACCESS: {"$lt": cutoff}}, {Users.ID: True})
-    stale_ids = [u[Users.ID] async for u in cursor]
+    cursor = users.find({U.LAST_INDEX_ACCESS: {"$lt": cutoff}}, {U.ID: True})
+    stale_ids = [u[U.ID] async for u in cursor]
     tasks = [
-        asyncio.create_task(delete_user_entries(**{Users.ID: sid})) for sid in stale_ids
+        asyncio.create_task(delete_user_entries(**{U.ID: sid})) for sid in stale_ids
     ]
     await asyncio.gather(*tasks)
 
 
-SORT_SPECS = [(UTC_START_TIME, DESCENDING)]
-
-query_obj = {
-    "user_id": None,
-    "activity_ids": None,
-    "exclude_ids": None,
-    "after": None,
-    "before": None,
-    "limit": None,
-    "activity_type": None,
-    "commute": None,
-    "private": None,
-    "visibility": None,
-    "bounds": None,
-    #
-    "update_ts": True,
-}
+SORT_SPECS = [(F.UTC_START_TIME, DESCENDING)]
 
 
 async def query(
-    user_id=None,
-    activity_ids=None,
-    exclude_ids=None,
-    after=None,
-    before=None,
-    limit=None,
-    activity_type=None,
-    commute=None,
-    private=None,
-    visibility=None,
-    bounds=None,
+    user_id: int = None,
+    activity_ids: list[int] = None,
+    exclude_ids: list[int] = None,
+    after: int = None,
+    before: int = None,
+    limit: int = None,
+    activity_type: list[str] = None,
+    commute: bool = None,
+    private: bool = None,
+    visibility: bool = None,
+    overlaps=None,
     #
     update_index_access=True,
 ):
@@ -370,11 +359,11 @@ async def query(
     limit = int(limit) if limit else 0
 
     if user_id:
-        mongo_query[USER_ID] = int(user_id)
-        projection = {USER_ID: False}
+        mongo_query[F.USER_ID] = int(user_id)
+        projection = {F.USER_ID: False}
 
     if before or after:
-        mongo_query[UTC_START_TIME] = Utility.cleandict(
+        mongo_query[F.UTC_START_TIME] = Utility.cleandict(
             {
                 "$lt": None if before is None else Utility.to_epoch(before),
                 "$gte": None if after is None else Utility.to_epoch(after),
@@ -382,32 +371,32 @@ async def query(
         )
 
     if activity_ids:
-        mongo_query[ACTIVITY_ID] = {"$in": activity_ids}
+        mongo_query[F.ACTIVITY_ID] = {"$in": activity_ids}
 
     if activity_type:
-        mongo_query[ACTIVITY_TYPE] = {"$in": activity_type}
+        mongo_query[F.ACTIVITY_TYPE] = {"$in": activity_type}
 
     if visibility:
         # ["everyone", "followers", "only_me"]
-        mongo_query[VISIBILITY] = {"$in": visibility}
+        mongo_query[F.VISIBILITY] = {"$in": visibility}
 
     if private is not None:
-        mongo_query[FLAG_PRIVATE] = private
+        mongo_query[F.FLAG_PRIVATE] = private
 
     if commute is not None:
-        mongo_query[FLAG_COMMUTE] = commute
+        mongo_query[F.FLAG_COMMUTE] = commute
 
-    if bounds is not None:
+    if overlaps is not None:
         # Find all activities whose bounding box overlaps
         # a box implied by bounds
-        bounds_left, bounds_bottom = bounds["SW"]
-        bounds_right, bounds_top = bounds["NE"]
+        bounds_left, bounds_bottom = overlaps["SW"]
+        bounds_right, bounds_top = overlaps["NE"]
         mongo_query.update(
             {
-                f"{LATLNG_BOUNDS}.NE.0": {"$gt": bounds_left},
-                f"{LATLNG_BOUNDS}.SW.0": {"$lt": bounds_right},
-                f"{LATLNG_BOUNDS}.SW.1": {"$lt": bounds_top},
-                f"{LATLNG_BOUNDS}.NE.1": {"$gt": bounds_bottom},
+                f"{F.LATLNG_BOUNDS}.NE.0": {"$gt": bounds_left},
+                f"{F.LATLNG_BOUNDS}.SW.0": {"$lt": bounds_right},
+                f"{F.LATLNG_BOUNDS}.SW.1": {"$lt": bounds_top},
+                f"{F.LATLNG_BOUNDS}.NE.1": {"$gt": bounds_bottom},
             }
         )
 
@@ -421,19 +410,19 @@ async def query(
         t0 = time.perf_counter()
         cursor = index.find(
             filter=mongo_query,
-            projection={ACTIVITY_ID: True},
+            projection={F.ACTIVITY_ID: True},
             sort=SORT_SPECS,
             limit=limit,
         )
 
         # These are the ids of activities that matched the mongo_query
-        mongo_query_ids = set([doc[ACTIVITY_ID] async for doc in cursor])
+        mongo_query_ids = set([doc[F.ACTIVITY_ID] async for doc in cursor])
 
         to_fetch = list(mongo_query_ids - exclude_ids)
         to_delete = list(exclude_ids - mongo_query_ids)
 
         result["delete"] = to_delete
-        mongo_query = {ACTIVITY_ID: {"$in": to_fetch}}
+        mongo_query = {F.ACTIVITY_ID: {"$in": to_fetch}}
 
         elapsed = (time.perf_counter() - t0) * 1000
         log.debug("queried %d ids in %dms", len(mongo_query_ids), elapsed)
@@ -457,7 +446,7 @@ async def query(
         if user_id:
             await Users.add_or_update(id=user_id, update_index_access=True)
         else:
-            ids = set(a[USER_ID] for a in docs)
+            ids = set(a[F.USER_ID] for a in docs)
             tasks = [
                 asyncio.create_task(
                     Users.add_or_update(id=user_id, update_index_access=True)

@@ -1,6 +1,6 @@
 import { icon } from "~/src/js/Icons"
 import { State } from "~/src/js/Model"
-import type { LiveParams } from "~/src/js/DataBinding"
+import type { BackendQuery } from "~/src/js/DataImport"
 import type { QueryParameters } from "~/src/js/Model"
 import CONTENT from "bundle-text:./tab.query.html"
 export { CONTENT }
@@ -22,7 +22,7 @@ const OnChange: CallbackDispatch = {
    */
   queryType: (el, S) => {
     const qtype = (<HTMLSelectElement>el).value
-    S.query.queryType = qtype
+    S.query.type = <QueryParameters["type"]>qtype
 
     const tabContentElement = document.getElementById(ID)
     const qelements = tabContentElement.querySelectorAll("[data-qshow]")
@@ -170,64 +170,7 @@ export function getQparamsFromDom(baseElement?: HTMLElement) {
   return result
 }
 
-type BackendQuery = {
-  streams?: boolean
-  limit?: number
-  before?: number
-  after?: number
-  activity_ids?: number[]
-  exclude_ids?: number[]
-  key?: string
-}
-
-function getCurrentQuery(S: State) {
-  const qParams: QueryParameters = { ...S.query, ...getQparamsFromDom() }
-  const query: BackendQuery = { streams: true }
-
-  switch (qParams.queryType) {
-    case "activities":
-      query.limit = +qParams.quantity
-      break
-
-    case "days": {
-      // debugger;
-      const today = new Date()
-      const before = new Date()
-      const after = new Date()
-      const n = +qParams.quantity
-      before.setDate(today.getDate() + 1) // tomorrow
-      after.setDate(today.getDate() - n) // n days ago
-
-      query.before = Math.round(before.valueOf() / 1000)
-      query.after = Math.round(after.valueOf() / 1000)
-
-      break
-    }
-
-    case "ids":
-      if (!qParams.ids) return
-      else {
-        const idSet = new Set(qParams.ids.split(/\D/).map(Number))
-        idSet.delete(0)
-        // create an array of ids (numbers) from a string
-        query.activity_ids = Array.from(idSet)
-      }
-      break
-
-    case "dates":
-      if (qParams.before) query.before = qParams.before
-      if (qParams.after) query.after = qParams.after
-      break
-
-    case "key":
-      query.key = qParams.key
-  }
-
-  const to_exclude = Object.keys(items).map(Number)
-  if (to_exclude.length) query["exclude_ids"] = to_exclude
-
-  return query
-}
+// const qParams: QueryParameters = { ...S.query, ...getQparamsFromDom() }
 
 // function renderFromQuery() {
 //   const query = {

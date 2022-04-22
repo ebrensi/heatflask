@@ -13,8 +13,6 @@ aiohttp[speedups]~=3.8.1
 msgpack~=1.0.3
 polyline~=1.4.0
 
-pdoc~=11.0.0
-
 # Legacy
 psycopg2-binary~=2.9.3
 sqlalchemy~=1.4.34

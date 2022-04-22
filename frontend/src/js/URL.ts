@@ -12,11 +12,13 @@ import {
   URLParameters,
 } from "./Model"
 
+type URLParameter = keyof URLParameters
+
 /**
  * Reverse-mapping of all the possible URL argument names to their
- * assoicated paramters.
+ * associated paramters.
  */
-const urlArgNames: { [Property in keyof URLParameters]: string[] } = {
+const urlArgNames: Record<URLParameter, string[]> = {
   // Query parameters
   after: ["after", "start", "date1", "a"],
   before: ["before", "end", "date2", "b"],
@@ -59,7 +61,7 @@ type QVParams = {
 }
 
 function QVtoURL({ query, visual }: QVParams): URLParameters {
-  const qtype = query.queryType
+  const qtype = query.type
   const urlparams: URLParameters = {
     after: str(query.after),
     before: str(query.before),
@@ -88,18 +90,17 @@ export const DefaultURL: URLParameters = QVtoURL({
   visual: DefaultVisual,
 })
 
-const argname: URLParameters = {}
-for (const [key, names] of Object.entries(urlArgNames)) {
-  argname[key] = names[0]
-}
-
-/*
- * make a lookup to find the paramter name for a given URL argument
+/**
+ * The parameter name for a given URL argument
  */
-const keyLookup: Record<string, string> = {}
-for (const [key, names] of Object.entries(urlArgNames)) {
-  for (const name of names) {
-    keyLookup[name] = key
+const argname: URLParameters = {}
+const paramLookup: Record<string, URLParameter> = {}
+let param: URLParameter
+for (param in urlArgNames) {
+  const argnames = urlArgNames[param]
+  argname[param] = argnames[0]
+  for (const name of argnames) {
+    paramLookup[name] = param
   }
 }
 
@@ -113,10 +114,10 @@ export function parseURL(urlString: string) {
   }
 
   const urlArgs = url.searchParams
-  for (const [urlArg, value] of urlArgs.entries()) {
-    const key = keyLookup[urlArg]
-    if (key) {
-      urlParams[key] = value
+  for (const [urlArg, value] of Object.entries(urlArgs)) {
+    const param = paramLookup[urlArg]
+    if (param) {
+      urlParams[param] = <string>value
     } else {
       console.log(`unknown URL arg ${urlArg}=${value}`)
     }
@@ -125,7 +126,7 @@ export function parseURL(urlString: string) {
   /*
    * ***  Construct Query from URL args  ***
    */
-  const queryType = urlArgs["key"]
+  const type = urlParams.key
     ? "key"
     : urlParams.ids
     ? "ids"
@@ -138,18 +139,17 @@ export function parseURL(urlString: string) {
     : undefined
 
   const qparams: QueryParameters = {}
-  if (queryType) {
-    qparams["queryType"] = queryType
+  if (type) {
+    qparams.type = type
 
-    const qt = queryType
-    if (qt === "days" && urlParams.days) qparams.quantity = +urlParams.days
-    else if (qt === "activities" && urlParams.limit)
+    if (type === "days" && urlParams.days) qparams.quantity = +urlParams.days
+    else if (type === "activities" && urlParams.limit)
       qparams.quantity = +urlParams.limit
-    else if (qt === "dates") {
+    else if (type === "dates") {
       qparams.before = +urlParams.before
       qparams.after = +urlParams.after
-    } else if (qt === "ids") qparams.ids = urlParams.ids
-    else if (qt === "key") qparams.key = urlParams.key
+    } else if (type === "ids") qparams.ids = urlParams.ids
+    else if (type === "key") qparams.key = urlParams.key
   }
 
   /*
@@ -166,22 +166,23 @@ export function parseURL(urlString: string) {
    */
   const vparams: VisualParameters = {}
 
+  type P = URLParameter & keyof VisualParameters
   if (urlParams.lat && urlParams.lng) {
     vparams.center = { lat: +urlParams.lat, lng: +urlParams.lng }
   }
 
   // string params
-  for (const p of ["baselayer"]) {
+  for (const p of ["baselayer"] as P[]) {
     if (urlParams[p]) vparams[p] = urlParams[p]
   }
 
   // numerical params
-  for (const p of ["zoom", "tau", "T", "sz", "alpha"]) {
+  for (const p of ["zoom", "tau", "T", "sz", "alpha"] as P[]) {
     if (urlParams[p]) vparams[p] = +urlParams[p]
   }
 
   // boolean params
-  for (const p of ["shadows", "paths", "paused"]) {
+  for (const p of ["shadows", "paths", "paused"] as P[]) {
     if (urlParams[p]) vparams[p] = boolVal(urlParams[p])
   }
 
@@ -221,7 +222,10 @@ export function toString(urlParams: URLParameters): string {
 
   // Filter out any paramters that are equal to their defaults
   //  or not present
-  for (const [param, val] of Object.entries(urlParams)) {
+  for (const [param, val] of Object.entries(urlParams) as [
+    URLParameter,
+    string
+  ][]) {
     if (
       param !== "userid" &&
       param !== "geohash" &&
