@@ -8,7 +8,7 @@ import * as ActivityCollection from "./DotLayer/ActivityCollection"
 import type { QueryParameters } from "./Model"
 import type { Control } from "leaflet"
 
-const BACKEND_QUERY_URL = "/query" 
+const BACKEND_QUERY_URL = "/query"
 
 interface BBounds {
   SW: [number, number]
@@ -81,25 +81,19 @@ type UnpackedStreams = {
   p: Array<[number, number]>
 }
 
-type QueryResulActivity = ActivitySummary & Partial<PackedStreams> 
+type QueryResulActivity = ActivitySummary & Partial<PackedStreams>
 
-type StatusMessage =  {
+type StatusMessage = {
   msg?: string
   error?: string
   count?: number
 }
-type QueryResultItem =  QueryResulActivity | StatusMessage
-
-
+type QueryResultItem = QueryResulActivity | StatusMessage
 
 /**
  * Convert a set of QueryParamters (from DOM) to BackendQuery parameters
  */
-function qToQ(
-  query: QueryParameters,
-  streams = true,
-  exclude_ids: number[]
-) {
+function qToQ(query: QueryParameters, streams = true, exclude_ids: number[]) {
   const bq: BackendQuery = { streams, exclude_ids }
 
   switch (query.type) {
@@ -142,11 +136,13 @@ function qToQ(
   return bq
 }
 
-
 /**
  * Send a query to the backend and yield its items
  */
-export async function* makeBackendQuery(query: BackendQuery, url=BACKEND_QUERY_URL): AsyncGenerator<QueryResultItem> {   
+export async function* makeBackendQuery(
+  query: BackendQuery,
+  url = BACKEND_QUERY_URL
+): AsyncGenerator<QueryResultItem> {
   // flags.importing = true
 
   const response = await fetch(url, {
@@ -162,8 +158,8 @@ export async function* makeBackendQuery(query: BackendQuery, url=BACKEND_QUERY_U
     const abort = yield <QueryResultItem>obj
     if (abort) break
   }
-
-  // TODO: continue here!!
+}
+// TODO: continue here!!
 
 /*
  * Set up a message box that appears only when flags.importing is true
@@ -206,7 +202,6 @@ function displayProgressInfo(msg?: string, progress?: number) {
     for (const el of progBars) el.value = progress
   }
 }
-
 
 export function abortQuery() {
   flags.importing = false
