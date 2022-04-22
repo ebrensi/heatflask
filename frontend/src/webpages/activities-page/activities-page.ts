@@ -78,6 +78,7 @@ async function main() {
   let n_total
   const errors = []
 
+  // TODO: and here!!
   for await (const obj of decodeMultiStream(response.body)) {
     if ("msg" in obj) {
       status_msg_el.innerText = obj["msg"]

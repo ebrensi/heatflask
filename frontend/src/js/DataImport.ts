@@ -8,10 +8,13 @@ import * as ActivityCollection from "./DotLayer/ActivityCollection"
 import type { QueryParameters } from "./Model"
 import type { Control } from "leaflet"
 
+const BACKEND_QUERY_URL = "/query" 
+
 interface BBounds {
   SW: [number, number]
   NE: [number, number]
 }
+
 export type BackendQuery = {
   user_id?: number
   after?: number // seconds since EPOCH
@@ -66,12 +69,7 @@ type ActivitySummary = {
   [F.VISIBILITY]: string
 }
 
-type QueryResultItem = {
-  msg?: string
-  error?: string
-  count?: number
-  mpk?: string
-} & ActivitySummary
+type PackedStreams = { mpk: string }
 
 type UnpackedStreams = {
   id: number
@@ -83,11 +81,26 @@ type UnpackedStreams = {
   p: Array<[number, number]>
 }
 
+type QueryResulActivity = ActivitySummary & Partial<PackedStreams> 
+
+type StatusMessage =  {
+  msg?: string
+  error?: string
+  count?: number
+}
+type QueryResultItem =  QueryResulActivity | StatusMessage
+
+
+
 /**
  * Convert a set of QueryParamters (from DOM) to BackendQuery parameters
  */
-export function backendQuery(query: QueryParameters) {
-  const bq: BackendQuery = { streams: true }
+function qToQ(
+  query: QueryParameters,
+  streams = true,
+  exclude_ids: number[]
+) {
+  const bq: BackendQuery = { streams, exclude_ids }
 
   switch (query.type) {
     case "activities":
@@ -95,7 +108,6 @@ export function backendQuery(query: QueryParameters) {
       break
 
     case "days": {
-      // debugger;
       const today = new Date()
       const before = new Date()
       const after = new Date()
@@ -127,12 +139,31 @@ export function backendQuery(query: QueryParameters) {
     case "key":
       bq.key = query.key
   }
-
-  const to_exclude = Object.keys(items).map(Number)
-  if (to_exclude.length) bq.exclude_ids = to_exclude
-
   return bq
 }
+
+
+/**
+ * Send a query to the backend and yield its items
+ */
+export async function* makeBackendQuery(query: BackendQuery, url=BACKEND_QUERY_URL): AsyncGenerator<QueryResultItem> {   
+  // flags.importing = true
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      Accept: "application/msgpack",
+      "Content-Type": "application/msgpack",
+    },
+    body: JSON.stringify(query),
+  })
+
+  for await (const obj of decodeMultiStream(response.body)) {
+    const abort = yield <QueryResultItem>obj
+    if (abort) break
+  }
+
+  // TODO: continue here!!
 
 /*
  * Set up a message box that appears only when flags.importing is true
@@ -176,18 +207,6 @@ function displayProgressInfo(msg?: string, progress?: number) {
   }
 }
 
-/*
- * Send a query to the backend and populate the items object with it.
- */
-export function makeBackendQuery(query: QueryParameters, done) {
-  flags.importing = true
-  numActivities = 0
-  count = 0
-
-  displayProgressInfo("Retrieving activity data...")
-
-  queryBackend(query, onMessage, done)
-}
 
 export function abortQuery() {
   flags.importing = false

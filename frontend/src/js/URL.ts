@@ -164,26 +164,25 @@ export function parseURL(urlString: string) {
   /*
    * *** Construct Visual from URL args ***
    */
-  const vparams: VisualParameters = {}
 
-  type P = URLParameter & keyof VisualParameters
+  const vparams: Record<string, unknown> = {}
+
   if (urlParams.lat && urlParams.lng) {
     vparams.center = { lat: +urlParams.lat, lng: +urlParams.lng }
   }
 
-  // TODO: Pick up here
   // string params
-  for (const p of ["baselayer"] as P[]) {
+  for (const p of ["baselayer"] as URLParameter[]) {
     if (urlParams[p]) vparams[p] = urlParams[p]
   }
 
   // numerical params
-  for (const p of ["zoom", "tau", "T", "sz", "alpha"] as P[]) {
+  for (const p of ["zoom", "tau", "T", "sz", "alpha"] as URLParameter[]) {
     if (urlParams[p]) vparams[p] = +urlParams[p]
   }
 
   // boolean params
-  for (const p of ["shadows", "paths", "paused"] as P[]) {
+  for (const p of ["shadows", "paths", "paused"] as URLParameter[]) {
     if (urlParams[p]) vparams[p] = boolVal(urlParams[p])
   }
 
@@ -205,7 +204,7 @@ export function parseURL(urlString: string) {
     }
   }
 
-  return { query: qparams, visual: vparams, url: urlParams }
+  return { query: qparams, visual: <VisualParameters>vparams, url: urlParams }
 }
 
 export function toString(urlParams: URLParameters): string {
