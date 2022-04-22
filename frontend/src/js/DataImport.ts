@@ -129,7 +129,7 @@ export function backendQuery(query: QueryParameters) {
   }
 
   const to_exclude = Object.keys(items).map(Number)
-  if (to_exclude.length) query["exclude_ids"] = to_exclude
+  if (to_exclude.length) bq.exclude_ids = to_exclude
 
   return bq
 }

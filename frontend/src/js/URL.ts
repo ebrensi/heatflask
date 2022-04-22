@@ -171,6 +171,7 @@ export function parseURL(urlString: string) {
     vparams.center = { lat: +urlParams.lat, lng: +urlParams.lng }
   }
 
+  // TODO: Pick up here
   // string params
   for (const p of ["baselayer"] as P[]) {
     if (urlParams[p]) vparams[p] = urlParams[p]
