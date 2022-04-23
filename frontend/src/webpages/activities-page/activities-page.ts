@@ -3,12 +3,12 @@
  * activities-page.html.
  */
 
-import { decodeMultiStream } from "@msgpack/msgpack"
 import { href, img, HHMMSS, sleep } from "~/src/js/appUtil"
 import { activity_icon, activityURL } from "~/src/js/Strava"
-import { ACTIVITY_FIELDNAMES as F } from "~/src/js/DataImport"
+import { makeBackendQuery, ACTIVITY_FIELDNAMES as F } from "~/src/js/DataImport"
 import { icon } from "~/src/js/Icons"
-
+import type { BackendQuery, ActivitySummary } from "~/src/js/DataImport"
+import type { ActivityType } from "~/src/js/Strava"
 // import { JSTable } from "../../js/jstable"
 
 const BASE_URL = "/"
@@ -21,10 +21,15 @@ const status_msg_el = document.getElementById("status_msg")
 const count_msg_el = document.getElementById("count")
 const table_el = document.getElementById("activity_list")
 
+type EmbeddedArgs = {
+  query_url: string
+  query_obj: BackendQuery
+  atypes: ActivityType[]
+}
 const argstr = document.getElementById("runtime_json").innerText
-const args = JSON.parse(argstr)
-const atypes = args["atypes"]
-const MULTI = !args["query_obj"]["user_id"]
+const args = <EmbeddedArgs>JSON.parse(argstr)
+const atypes = args.atypes
+const MULTI = !args.query_obj.user_id
 
 function user_thumbnail(id: number, img_url: string) {
   if (!(id && img_url)) return ""
@@ -64,34 +69,29 @@ const pub_icon = icon("eye")
 
 async function main() {
   count_msg_el.classList.add("spinner")
-  const response = await fetch(args["query_url"], {
-    method: "POST",
-    headers: {
-      Accept: "application/msgpack",
-      "Content-Type": "application/msgpack",
-    },
-    body: JSON.stringify(args["query_obj"]),
-  })
 
-  const data = []
+  const data: string[][] = []
+  const errors: string[] = []
   let count = 0
   let n_total
-  const errors = []
 
-  // TODO: and here!!
-  for await (const obj of decodeMultiStream(response.body)) {
+  for await (const obj of makeBackendQuery(args.query_obj, args.query_url)) {
+    if (!obj) {
+      console.log("aborted?", obj)
+      break
+    }
     if ("msg" in obj) {
-      status_msg_el.innerText = obj["msg"]
+      status_msg_el.innerText = obj.msg
     } else if ("count" in obj) {
-      n_total = obj["count"]
+      n_total = obj.count
       data[n_total - 1] = undefined
-      data.fill(count, n_total, undefined)
+      data.fill(undefined, count, n_total)
       status_msg_el.innerText = "Fetching activities..."
     } else if ("error" in obj) {
-      errors.push(obj["error"])
+      errors.push(obj.error)
     } else {
-      data[count] = makeRow(obj)
-      count_msg_el.innerText = count++
+      data[count] = makeRow(<ActivitySummary>obj)
+      count_msg_el.innerText = String(count++)
     }
   }
 
@@ -101,36 +101,30 @@ async function main() {
   status_msg_el.innerText = ""
   count_msg_el.innerText = ""
 
-  // const myTable = new JSTable(table_el, {
-  //   sortable: true,
-  //   searchable: true,
-  //   perPage: 16,
-  // })
   await sleep(0.2)
   count_msg_el.classList.remove("spinner")
 }
 
-function makeRow(A) {
-  const aid = A[F.ACTIVITY_ID],
-    heatflask_link = `${BASE_URL}?id=${aid}`,
-    strava_link = href(`${activityURL(aid)}`, STRAVA_BUTTON),
-    date = new Date(
-      (A[F.UTC_START_TIME] + A[F.UTC_LOCAL_OFFSET]) * 1000
-    ).toLocaleString(),
-    dist = (A[F.DISTANCE_METERS] * DIST_SCALE).toFixed(2),
-    elapsed = HHMMSS(A[F.TIME_SECONDS]),
-    elev_gain = (A[F.ELEVATION_GAIN] * ELEV_SCALE).toFixed(2)
-
-  const atype = atypes[A[F.ACTIVITY_TYPE]] || `${A[F.ACTIVITY_TYPE]}*`
-
+function makeRow(A: ActivitySummary): string[] {
+  const aid = A[F.ACTIVITY_ID]
+  const heatflask_link = `${BASE_URL}?id=${aid}`
+  const strava_link = href(`${activityURL(aid)}`, STRAVA_BUTTON)
+  const date = new Date(
+    (A[F.UTC_START_TIME] + A[F.UTC_LOCAL_OFFSET]) * 1000
+  ).toLocaleString()
+  const dist = (A[F.DISTANCE_METERS] * DIST_SCALE).toFixed(2)
+  const elapsed = HHMMSS(A[F.TIME_SECONDS])
+  const elev_gain = (A[F.ELEVATION_GAIN] * ELEV_SCALE).toFixed(2)
+  const atype = A[F.ACTIVITY_TYPE]
+  const aicon = activity_icon(atypes[<number>atype]) || `${atype}*`
   const picon = A[F.FLAG_PRIVATE] ? priv_icon : pub_icon
 
   if (MULTI) {
     return [
-      user_thumbnail(A[F.USER_ID], A["profile"]),
+      "", // user_thumbnail(A[F.USER_ID], A[F.USER_PROFILE]),
       href(heatflask_link, date),
       strava_link,
-      activity_icon(atype),
+      aicon,
       picon,
       elapsed,
       dist,
@@ -141,7 +135,7 @@ function makeRow(A) {
     return [
       href(heatflask_link, date),
       strava_link,
-      activity_icon(atype),
+      aicon,
       picon,
       elapsed,
       dist,
@@ -151,7 +145,7 @@ function makeRow(A) {
   }
 }
 
-function buildTableWithInnerHTML(el, data) {
+function buildTableWithInnerHTML(el: HTMLElement, data: string[][]) {
   const headers = makeHeaderRow().join("</th><th>")
   const thead_str = `<thead><th>${headers}</th></thead>\n`
 
@@ -167,33 +161,6 @@ function buildTableWithInnerHTML(el, data) {
   } else {
     el.innerHTML = thead_str + "<tr>Sorry no data &#128577</tr>"
   }
-}
-
-function buildTableWithElements(el, data) {
-  const table = document.getElementById("activity_list")
-  const thead = document.createElement("thead")
-  const header_row = document.createElement("tr")
-  for (const h in makeHeaderRow()) {
-    const th = document.createElement("th")
-    th.innerText = h
-    header_row.appendChild(th)
-  }
-  thead.appendChild(header_row)
-
-  const n_cols = header_data.length
-  const tbody = document.createElement("tbody")
-  for (let i = 0; i < data.length; i++) {
-    const tr = document.createElement("tr")
-    const rowData = makeRow(data[i])
-    for (let j = 0; j < n_cols; j++) {
-      const td = document.createElement("td")
-      td.innerText = rowData[j]
-      tr.appendChild(td)
-    }
-    tbody.appendChild(tr)
-  }
-  table.appendChild(thead)
-  table.appendChild(tbody)
 }
 
 // Run the main async function

@@ -20,7 +20,6 @@ import asyncio
 import types
 from pymongo import DESCENDING
 from aiohttp import ClientResponseError
-from enum import Enum
 
 from . import DataAPIs
 from .DataAPIs import db
@@ -86,7 +85,7 @@ def overlaps(b1, b2):
     """
 
 
-class ActivitySummaryFields(Enum):
+class ActivitySummaryFields:
     ACTIVITY_ID = "_id"
     USER_ID = "U"
     N_ATHLETES = "#a"

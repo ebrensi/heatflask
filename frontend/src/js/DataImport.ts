@@ -3,7 +3,6 @@
  * defined in @link ~/backend/Index.py
  */
 import { decodeMultiStream } from "@msgpack/msgpack"
-import * as ActivityCollection from "./DotLayer/ActivityCollection"
 
 import type { QueryParameters } from "./Model"
 import type { Control } from "leaflet"
@@ -51,7 +50,7 @@ export const ACTIVITY_FIELDNAMES = {
 } as const
 
 const F = ACTIVITY_FIELDNAMES
-type ActivitySummary = {
+export type ActivitySummary = {
   [F.ACTIVITY_ID]: number
   [F.USER_ID]: number
   [F.N_ATHLETES]: number
@@ -71,7 +70,7 @@ type ActivitySummary = {
 
 type PackedStreams = { mpk: string }
 
-type UnpackedStreams = {
+export type UnpackedStreams = {
   id: number
   /** rld encoded times in seconds */
   t: number[]
@@ -93,7 +92,11 @@ type QueryResultItem = QueryResulActivity | StatusMessage
 /**
  * Convert a set of QueryParamters (from DOM) to BackendQuery parameters
  */
-function qToQ(query: QueryParameters, streams = true, exclude_ids: number[]) {
+export function qToQ(
+  query: QueryParameters,
+  streams = true,
+  exclude_ids: number[]
+) {
   const bq: BackendQuery = { streams, exclude_ids }
 
   switch (query.type) {
@@ -136,15 +139,15 @@ function qToQ(query: QueryParameters, streams = true, exclude_ids: number[]) {
   return bq
 }
 
-/**
- * Send a query to the backend and yield its items
+/** Send a query to the backend and yield its items
+ *   * send a non-false object to this generator to abort the operation
+ *   * this generator will yield null and quit if operation is aborted
+ *      from the other side
  */
 export async function* makeBackendQuery(
   query: BackendQuery,
   url = BACKEND_QUERY_URL
-): AsyncGenerator<QueryResultItem> {
-  // flags.importing = true
-
+): AsyncGenerator<QueryResultItem | null, void, boolean> {
   const response = await fetch(url, {
     method: "POST",
     headers: {
@@ -154,12 +157,15 @@ export async function* makeBackendQuery(
     body: JSON.stringify(query),
   })
 
-  for await (const obj of decodeMultiStream(response.body)) {
-    const abort = yield <QueryResultItem>obj
-    if (abort) break
+  try {
+    for await (const obj of decodeMultiStream(response.body)) {
+      const abort = yield obj
+      if (abort) break
+    }
+  } catch (e) {
+    yield null
   }
 }
-// TODO: continue here!!
 
 /*
  * Set up a message box that appears only when flags.importing is true

@@ -16,7 +16,6 @@ from pymongo import DESCENDING
 import types
 import asyncio
 from aiohttp.client_exceptions import ClientResponseError
-from enum import Enum
 
 from . import DataAPIs
 from . import Utility
@@ -49,7 +48,7 @@ async def get_collection():
     return myBox.collection
 
 
-class UserField(Enum):
+class UserField:
     ID = "_id"
     LAST_LOGIN = "ts"
     LOGIN_COUNT = "#"
