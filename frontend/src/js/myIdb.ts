@@ -120,7 +120,7 @@ function doBulkGet(store: Store) {
       // make all the get requests
       for (const [key, { resolve, reject }] of Object.entries(getQueries)) {
         const req = thisTransactionObjectStore.get(key)
-        req.onsuccess = (e) => resolve(e.target.result)
+        req.onsuccess = () => resolve(req.result)
         req.onerror = (e) => reject(e)
       }
     })

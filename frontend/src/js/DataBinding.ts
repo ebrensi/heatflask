@@ -61,7 +61,7 @@ export class LiveParams<Params> {
 
 const CALLBACK_DEBOUNCE_DELAY = 20
 function debounce(func: () => void, timeout: number) {
-  let timer: number
+  let timer: NodeJS.Timeout
   return () => {
     clearTimeout(timer)
     timer = setTimeout(() => func(), timeout)
@@ -72,22 +72,3 @@ export type Live<T> = T & LiveParams<T>
 export function watch<T>(obj: T) {
   return new LiveParams<T>(obj) as Live<T>
 }
-
-/*
- *  Sandbox
- */
-type PPP = {
-  a?: string
-  b?: number
-  c?: Date
-}
-
-const obj: PPP = {
-  a: "hello",
-  b: 4,
-}
-const jjj = new LiveParams<PPP>(obj)
-const uuu = watch<PPP>(obj)
-const fff = watch<PPP>(obj)
-const foop = jjj.a
-const foop2 = uuu.c

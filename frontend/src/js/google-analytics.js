@@ -1,6 +1,6 @@
-/*
- *  google-analytics.js -- exports a function that will insert
+/** analytics.js loader -- exports a function that will insert
  *   	the google analytics snippets.
+ * @ see https://developers.google.com/analytics/devguides/collection/analyticsjs
  */
 
 const GOOGLE_ANALYTICS_ACCOUNT_ID = "UA-85621398-1"
@@ -11,9 +11,10 @@ export function load_ga_object() {
     ;(i[r] =
       i[r] ||
       function () {
+        // eslint-disable-next-line prefer-rest-params
         ;(i[r].q = i[r].q || []).push(arguments)
       }),
-      (i[r].l = 1 * new Date())
+      (i[r].l = Date.now())
     ;(a = s.createElement(o)), (m = s.getElementsByTagName(o)[0])
     a.async = 1
     a.src = g
@@ -26,13 +27,14 @@ export function load_ga_object() {
     "ga"
   )
 
-  const ga = window["ga"]
+  const ga = window.ga
 
   // Creates a default tracker with automatic cookie domain configuration.
   ga("create", GOOGLE_ANALYTICS_ACCOUNT_ID, "auto")
 
   // Sends a pageview hit from the tracker just created.
   ga("send", "pageview")
+  ga("set", "allowAdFeatures", false)
 
   return ga
 }

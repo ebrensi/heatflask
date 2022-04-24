@@ -21,19 +21,11 @@ export const { CURRENT_USER, TARGET_USER, ADMIN, APP_VERSION, URLS, OFFLINE } =
 const flashes_text = document.getElementById("flashes").innerText
 export const FLASHES = flashes_text ? JSON.parse(flashes_text) : null
 
-export function USER_URLS(userid) {
-  return {
-    main: `/${userid}`,
-    index: URLS["query"],
-    public: URLS["visibility"],
-    delete: URLS["delete"],
-    logout: URLS["logout"],
-  }
-}
-
 const StravaDomain = "https://www.strava.com"
-export const STRAVA_USER_URL = (uid) => `${StravaDomain}/athletes/${uid}`
-export const STRAVA_ACTIVITY_URL = (aid) => `${StravaDomain}/activities/${aid}`
+export const STRAVA_USER_URL = (uid: number) =>
+  `${StravaDomain}/athletes/${uid}`
+export const STRAVA_ACTIVITY_URL = (aid: number) =>
+  `${StravaDomain}/activities/${aid}`
 export const STRAVA_PROFILE_URL = `${StravaDomain}/settings/profile`
 
 /*

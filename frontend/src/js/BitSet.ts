@@ -1,7 +1,3 @@
-/**
- * Bitset Class Adapted from Daniel Lemire's TypedFastBitSet.js
- */
-
 type anyArray = Array<number> | Uint32Array | Uint16Array | Uint8Array
 type anyArrayConstructor =
   | ArrayConstructor
@@ -9,6 +5,7 @@ type anyArrayConstructor =
   | Uint32ArrayConstructor
   | Uint8ArrayConstructor
 
+/** Bitset Class Adapted from Daniel Lemire's TypedFastBitSet.js */
 export class BitSet {
   words: Uint32Array
 
@@ -23,8 +20,8 @@ export class BitSet {
     return answer
   }
 
-  [Symbol.iterator](): IterableIterator<number> {
-    return this.imap()
+  [Symbol.iterator]() {
+    return this.imap((i: number) => i)
   }
 
   /**
@@ -209,7 +206,7 @@ export class BitSet {
 
   // Iterate the members of this BitSet
   *imap(fnc?: (t: number) => unknown): IterableIterator<unknown> {
-    fnc = fnc || ((i) => i)
+    fnc = fnc || ((i: number) => i)
     const c = this.words.length
     for (let k = 0; k < c; ++k) {
       let w = this.words[k]
@@ -565,14 +562,14 @@ export class BitSet {
 }
 
 // fast function to compute the Hamming weight of a 32-bit unsigned integer
-export function hammingWeight(v: number): number {
+function hammingWeight(v: number): number {
   v -= (v >>> 1) & 0x55555555 // works with signed or unsigned shifts
   v = (v & 0x33333333) + ((v >>> 2) & 0x33333333)
   return (((v + (v >>> 4)) & 0xf0f0f0f) * 0x1010101) >>> 24
 }
 
 // fast function to compute the Hamming weight of four 32-bit unsigned integers
-export function hammingWeight4(
+function hammingWeight4(
   v1: number,
   v2: number,
   v3: number,

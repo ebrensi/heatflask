@@ -14,14 +14,7 @@ import * as idb from "./myIdb"
 
 import { TileLayer, GridLayer, Util, Browser, bind, extend } from "leaflet"
 
-import type {
-  TileLayerOptions,
-  Map,
-  Coords,
-  DoneCallback,
-  Point,
-  Bounds,
-} from "leaflet"
+import type { TileLayerOptions, Map, Coords, DoneCallback } from "leaflet"
 
 export const DefaultCachedLayerOptions = {
   useCache: true,
@@ -35,7 +28,7 @@ export const DefaultCachedLayerOptions = {
 
 TileLayer.mergeOptions(DefaultCachedLayerOptions)
 type CacheOptions = typeof DefaultCachedLayerOptions
-type CachedTileLayerOptions = TileLayerOptions & Partial<CacheOptions>
+type CachedTileLayerOptions = TileLayerOptions & CacheOptions
 
 type TileCoords = Coords & { fallback?: boolean }
 interface TileElement extends HTMLImageElement {
@@ -51,32 +44,7 @@ type StoredObj = {
   blob: Blob
 }
 
-interface CachedLayerProps extends TileLayer {
-  cacheHits: number
-  cacheMisses: number
-  options: CachedTileLayerOptions
-  _db: idb.Store
-  onAdd: (map: Map) => this
-  _key: (c: TileCoords) => string
-  _createCurrentCoords: (x: TileCoords) => TileCoords
-  _attachTileData: (
-    tile: TileElement,
-    tileUrl: string,
-    key: string,
-    done: DoneCallback
-  ) => void
-  _wrapCoords: (c: Coords) => TileCoords
-  _getSubdomain: (tilePoint: Point) => string
-  _tileOnError: (done: DoneCallback, tile: TileElement, e: any) => void
-  _originalTileOnError: (done: DoneCallback, tile: HTMLElement, e: any) => void
-  _url: string
-  _globalTileRange: Bounds
-  _tileOnLoad: (done: DoneCallback, tile: TileElement) => void
-  _map: Map
-  name: string
-}
-
-export const cachedLayerState: CachedLayerProps = {
+TileLayer.include({
   cacheHits: 0,
   cacheMisses: 0,
 
@@ -263,13 +231,14 @@ export const cachedLayerState: CachedLayerProps = {
     URL.revokeObjectURL(tile.src)
     done(null, tile)
   },
-}
-
-TileLayer.include(cachedLayerState)
+})
 
 export default class CachedTileLayer extends TileLayer {
+  cacheHits: number
+  cacheMisses: number
   name?: string
-  constructor(urlTemplate: string, options?: CachedTileLayerOptions) {
+  declare options: CachedTileLayerOptions
+  constructor(urlTemplate: string, options?: Partial<CachedTileLayerOptions>) {
     super(urlTemplate, options)
   }
 }
