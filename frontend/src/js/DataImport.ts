@@ -2,11 +2,10 @@
  * Our interface with the backend server via /query endpoint
  * defined in @link ~/backend/Index.py
  */
-import { decodeMultiStream } from "@msgpack/msgpack"
+import { decodeMultiStream, decode } from "@msgpack/msgpack"
 
 import type { QueryParameters } from "./Model"
-import type { ActivityType } from "~/src/js/Strava"
-import type { Control } from "leaflet"
+import type { ActivityType } from "./Strava"
 
 const BACKEND_QUERY_URL = "/query"
 
@@ -51,7 +50,7 @@ export const ACTIVITY_FIELDNAMES = {
 } as const
 
 const A = ACTIVITY_FIELDNAMES
-export type ActivitySummary = {
+export type ImportedActivity = {
   [A.ACTIVITY_ID]: number
   [A.USER_ID]: number
   [A.N_ATHLETES]: number
@@ -65,30 +64,39 @@ export type ActivitySummary = {
   [A.FLAG_COMMUTE]: boolean
   [A.FLAG_PRIVATE]: boolean
   [A.ACTIVITY_NAME]: string
-  [A.ACTIVITY_TYPE]: number | string
+  [A.ACTIVITY_TYPE]: number | ActivityType
   [A.VISIBILITY]: string
+  streams?: UnpackedStreams
 }
 
-type PackedStreams = { mpk: string }
+type PackedStreams = { mpk: Uint8Array }
+
+export const STREAM_FIELDNAMES = {
+  TIME: "t",
+  ALTITUDE: "a",
+  POLYLINE: "p",
+} as const
+const S = STREAM_FIELDNAMES
 
 export type UnpackedStreams = {
   id: number
   /** rld encoded times in seconds */
-  t: number[]
+  [S.TIME]: number[]
   /** rld encoded altitude in meters */
-  a: number[]
+  [S.ALTITUDE]: number[]
   /** polyline encoded latlng [lat, lng] pairs  */
-  p: Array<[number, number]>
+  [S.POLYLINE]: Array<[number, number]>
 }
 
-type QueryResulActivity = ActivitySummary & Partial<PackedStreams>
+type QueryResultActivity = ImportedActivity & Partial<PackedStreams>
 
-type StatusMessage = {
+type StatusObject = {
   msg?: string
   error?: string
   count?: number
+  info?: { atypes: string[]; avatars: { [id: number]: string } }
 }
-type QueryResultItem = QueryResulActivity | StatusMessage
+type QueryResultItem = QueryResultActivity | StatusObject
 
 /**
  * Convert a set of QueryParamters (from DOM) to ActivityQuery parameters
@@ -158,8 +166,22 @@ export async function* makeActivityQuery(
     body: JSON.stringify(query),
   })
 
+  let info: StatusObject["info"]
+  const resultStream = decodeMultiStream(
+    response.body
+  ) as AsyncGenerator<QueryResultItem>
   try {
-    for await (const obj of decodeMultiStream(response.body)) {
+    for await (const obj of resultStream) {
+      if (!info && "info" in obj) {
+        info = obj.info
+      } else if (A.ACTIVITY_TYPE in obj) {
+        obj[A.ACTIVITY_TYPE] =
+          info.atypes[obj[A.ACTIVITY_TYPE]] || A.ACTIVITY_TYPE
+      }
+      if ("mpk" in obj) {
+        obj.streams = <UnpackedStreams>decode(obj.mpk)
+        delete obj.mpk
+      }
       const abort = yield obj
       if (abort) break
     }

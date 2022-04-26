@@ -70,7 +70,7 @@
     // "skipDefaultLibCheck": true,                      /* Skip type checking .d.ts files that are included with TypeScript. */
     // "skipLibCheck": false                                 /* Skip type checking all .d.ts files. */
   },
-  // "include": ["src/**/*"],
+  "include": ["src/**/*"],
   "exclude": [
     "src/dist/*", 
     "src/js/DotLayer",

@@ -10,7 +10,7 @@ import {
   ACTIVITY_FIELDNAMES as F,
 } from "~/src/js/DataImport"
 import { icon } from "~/src/js/Icons"
-import type { ActivityQuery, ActivitySummary } from "~/src/js/DataImport"
+import type { ActivityQuery, ImportedActivity } from "~/src/js/DataImport"
 import type { ActivityType } from "~/src/js/Strava"
 // import { JSTable } from "../../js/jstable"
 
@@ -31,7 +31,6 @@ type EmbeddedArgs = {
 }
 const argstr = document.getElementById("runtime_json").innerText
 const args = <EmbeddedArgs>JSON.parse(argstr)
-const atypes = args.atypes
 const MULTI = !args.query_obj.user_id
 
 function user_thumbnail(id: number, img_url: string) {
@@ -69,6 +68,7 @@ function makeHeaderRow() {
 
 const priv_icon = icon("eye-blocked")
 const pub_icon = icon("eye")
+const avatars = <Record<number, string>>{}
 
 async function main() {
   count_msg_el.classList.add("spinner")
@@ -92,8 +92,12 @@ async function main() {
       status_msg_el.innerText = "Fetching activities..."
     } else if ("error" in obj) {
       errors.push(obj.error)
+    } else if ("info" in obj) {
+      if ("avatars" in obj.info) {
+        Object.assign(avatars, obj.info.avatars)
+      }
     } else {
-      data[count] = makeRow(<ActivitySummary>obj)
+      data[count] = makeRow(<ImportedActivity>obj)
       count_msg_el.innerText = String(count++)
     }
   }
@@ -108,7 +112,7 @@ async function main() {
   count_msg_el.classList.remove("spinner")
 }
 
-function makeRow(A: ActivitySummary): string[] {
+function makeRow(A: ImportedActivity): string[] {
   const aid = A[F.ACTIVITY_ID]
   const heatflask_link = `${BASE_URL}?id=${aid}`
   const strava_link = href(`${activityURL(aid)}`, STRAVA_BUTTON)
@@ -119,12 +123,12 @@ function makeRow(A: ActivitySummary): string[] {
   const elapsed = HHMMSS(A[F.TIME_SECONDS])
   const elev_gain = (A[F.ELEVATION_GAIN] * ELEV_SCALE).toFixed(2)
   const atype = A[F.ACTIVITY_TYPE]
-  const aicon = activity_icon(atypes[<number>atype]) || `${atype}*`
+  const aicon = activity_icon(<ActivityType>atype) || `${atype}*`
   const picon = A[F.FLAG_PRIVATE] ? priv_icon : pub_icon
 
   if (MULTI) {
     return [
-      "", // user_thumbnail(A[F.USER_ID], A[F.USER_PROFILE]),
+      user_thumbnail(A[F.USER_ID], avatars[A[F.USER_ID]]),
       href(heatflask_link, date),
       strava_link,
       aicon,

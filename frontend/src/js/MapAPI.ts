@@ -3,24 +3,26 @@
  *    as well as all of the plugins we're going to need
  *    except for the sidebar overlay.
  */
-import strava_logo from "url:../images/pbs4.png"
-import heatflask_logo from "url:../images/logo.png"
 
 import Geohash from "latlon-geohash"
 import { Map, Control, AreaSelect, TileLayer } from "leaflet"
-import "./LeafletExtensions"
-import type { Point } from "leaflet"
-
-import "./BoxHook"
 import "leaflet-areaselect"
 import "leaflet-control-window"
 import "leaflet-easybutton"
-import "./CachedTileLayer"
 import "leaflet-providers"
+
+import strava_logo from "url:../images/pbs4.png"
+import heatflask_logo from "url:../images/logo.png"
+
+import "./BoxHook"
+import "./CachedTileLayer"
+import "./LeafletExtensions"
 
 import { MAPBOX_ACCESS_TOKEN, OFFLINE, MOBILE } from "./Env"
 import { State } from "./Model"
 import { setURLfromQV } from "./URL"
+
+import type { Point } from "leaflet"
 
 /*
  * Initialize map Baselayers

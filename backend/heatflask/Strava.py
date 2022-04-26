@@ -28,6 +28,7 @@ CONCURRENCY = 10
 
 myBox = types.SimpleNamespace(limiter=None)
 
+# These activity types are ordered
 ATYPES = [
     "AlpineSki",
     "BackcountrySki",

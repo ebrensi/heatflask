@@ -40,6 +40,9 @@ async def query(request):
     streams = query.pop("streams", False)
     response = await request.respond(content_type="application/msgpack")
 
+    def sendPacked(doc):
+        return response.send(msgpack.packb(doc))
+
     target_user_id = query.get("user_id")
     if target_user_id:
         is_owner_or_admin = request.ctx.current_user and (
@@ -69,32 +72,36 @@ async def query(request):
         async for msg in Index.import_index_progress(target_user_id):
             # If queried user's index is currently being imported we
             # have to wait for that, while sending progress indicators
-            await response.send(msgpack.packb({"msg": msg}))
+            await sendPacked({"msg": msg})
             log.debug("awaiting index import finish: %s", msg)
 
     elif not request.ctx.is_admin:
-        # If there is no target_user then this is most likely
-        # a multi-user query. We need to make sure a user is not accessing
+        # If there is no target_user then this is a multi-user query.
+
+        # We need to make sure a user is not accessing
         # other users' private activities
         pass
 
     query_result = await Index.query(**query)
     if "delete" in query_result:
-        await response.send(msgpack.packb({"delete": query_result["delete"]}))
+        await sendPacked({"delete": query_result["delete"]})
 
     summaries = query_result["docs"]
-    await response.send(msgpack.packb({"count": len(summaries)}))
+    await sendPacked({"count": len(summaries)})
 
+    info = {"atypes": Strava.ATYPES}
     if not target_user_id:
         uids = list(set(A[I.USER_ID] for A in summaries))
         users = await Users.get_collection()
         cursor = users.find({U.ID: {"$in": uids}}, {U.ID: True, U.PROFILE: True})
         profile_lookup = {u[U.ID]: u[U.PROFILE] async for u in cursor}
-        for A in summaries:
-            A["profile"] = profile_lookup[A[I.USER_ID]]
+        info["avatars"] = profile_lookup
+
+    await sendPacked({"info": info})
+
     if not streams:
         for A in summaries:
-            await response.send(msgpack.packb(A))
+            await sendPacked(A)
         return
 
     summaries_lookup = {A[I.ACTIVITY_ID]: A for A in summaries}
@@ -107,11 +114,10 @@ async def query(request):
         if streams:
             A = summaries_lookup[aid]
             A["mpk"] = streams
-            packed = msgpack.packb(A)
-            await response.send(packed)
+            await sendPacked(A)
         else:
             errors.add(aid)
-            await response.send(msgpack.packb({"error": aid}))
+            await sendPacked({"error": aid})
     if len(errors):
         log.error("Errors importing user %d activities %s", user[U.ID], errors)
 
@@ -159,7 +165,6 @@ async def activities_page(request):
         "runtime_json": {
             "query_url": query_url,
             "query_obj": query_obj,
-            "atypes": Strava.ATYPES,
         },
     }
     html = render_template("activities-page.html", **params)

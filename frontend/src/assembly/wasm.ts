@@ -3,10 +3,10 @@
 declare function logi(v0: i64, v1?: i64, v2?: i64, v3?: i64): void
 declare function logf(v0: f64, v1?: f64, v2?: f64, v3?: f64): void
 
-export let DOT_IMAGEDATA_OFFSET: usize = 0
-export let DOT_IMAGEDATA_LENGTH: usize = 0
-export let PATH_IMAGEDATA_OFFSET: usize = 0
-export let PATH_IMAGEDATA_LENGTH: usize = 0
+export const DOT_IMAGEDATA_OFFSET: usize = 0
+export const DOT_IMAGEDATA_LENGTH: usize = 0
+export const PATH_IMAGEDATA_OFFSET: usize = 0
+export const PATH_IMAGEDATA_LENGTH: usize = 0
 
 // draw bounds
 export let XMIN: i32
@@ -315,6 +315,8 @@ function setPixelAA(x: i32, y: i32, a: i32): void {
 // This pad is necessary because sometimes drawSegment draws Anti-Aliased points past its bundaries
 const pad: f64 = 3
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: decorator
 @inline
 function CohenSoutherlandCode(x: f64, y: f64): u8 {
   let code: u8 = 0b0000 // initialised as being inside of [[clip window]]
@@ -346,7 +348,7 @@ export function drawSegment(fx0: f64, fy0: f64, fx1: f64, fy1: f64): void {
   let outcode0: u8 = CohenSoutherlandCode(fx0, fy0)
   let outcode1: u8 = CohenSoutherlandCode(fx1, fy1)
 
-  while (true) {
+  while(true) {
     if (!(outcode0 | outcode1)) {
       break
     } else if (outcode0 & outcode1) {
@@ -424,7 +426,7 @@ export function drawSegment(fx0: f64, fy0: f64, fx1: f64, fy1: f64): void {
   /* error value e_xy */
   const ed: f32 = dx + dy == 0 ? <f32>1 : sqrt<f32>(<f32>(dx * dx + dy * dy))
 
-  while (true) {
+  while(true) {
     /* pixel loop */
     setPixelAA(
       x0,
