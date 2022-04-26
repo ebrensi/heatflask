@@ -1,5 +1,4 @@
 // @flow strict-local
-
 import type { Bundle, FilePath } from "@parcel/types"
 
 import { Namer } from "@parcel/plugin"

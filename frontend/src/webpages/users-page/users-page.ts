@@ -1,8 +1,13 @@
 import { img, href, sleep } from "~/src/js/appUtil"
 import { icon } from "~/src/js/Icons"
-import { JSTable } from "~/src/js/jstable"
+import { USER_FIELDNAMES as U } from "~/src/js/DataImport"
 
 const status_el = document.getElementById("status")
+const jsonString = document.getElementById("runtime_json").innerText
+const { admin, url } = JSON.parse(jsonString) as {
+  admin: boolean
+  url: string
+}
 
 console.log(`Environment: ${process.env.NODE_ENV}`)
 
@@ -20,21 +25,16 @@ function ts_to_dt(ts: number, time = false): string {
   return time ? dt.toLocaleString() : dt.toLocaleDateString()
 }
 
-// Field names
-const ID = "_id",
-  LAST_LOGIN = "ts",
-  LOGIN_COUNT = "#",
-  LAST_INDEX_ACCESS = "I",
-  FIRSTNAME = "f",
-  LASTNAME = "l",
-  PROFILE = "P",
-  CITY = "c",
-  STATE = "s",
-  COUNTRY = "C",
-  PRIVATE = "p"
-
 const HEADERS = ["", "Name", "City", "Region", "Country"]
-const REQUIRED_FIELDS = [ID, FIRSTNAME, LASTNAME, PROFILE, CITY, STATE, COUNTRY]
+const REQUIRED_FIELDS = [
+  U.ID,
+  U.FIRSTNAME,
+  U.LASTNAME,
+  U.PROFILE,
+  U.CITY,
+  U.STATE,
+  U.COUNTRY,
+]
 function makeRow(rowData) {
   const [_id, firstname, lastname, profile, city, state, country] = rowData
   return [
@@ -60,17 +60,17 @@ const ADMIN_HEADERS = [
   "Country",
 ]
 const ADMIN_REQUIRED_FIELDS = [
-  ID,
-  PROFILE,
-  CITY,
-  STATE,
-  COUNTRY,
-  FIRSTNAME,
-  LASTNAME,
-  LAST_LOGIN,
-  LOGIN_COUNT,
-  LAST_INDEX_ACCESS,
-  PRIVATE,
+  U.ID,
+  U.PROFILE,
+  U.CITY,
+  U.STATE,
+  U.COUNTRY,
+  U.FIRSTNAME,
+  U.LASTNAME,
+  U.LAST_LOGIN,
+  U.LOGIN_COUNT,
+  U.LAST_INDEX_ACCESS,
+  U.PRIVATE,
 ]
 function makeAdminRow(rowData) {
   const [
@@ -134,15 +134,15 @@ async function run() {
   const rows_str = row_strs.join("\n")
   const tbody_str = `<tbody>\n${rows_str}\n</tbody>`
 
-  const table_element: HTMLTableElement = document.getElementById("users")
+  const table_element = <HTMLTableElement>document.getElementById("users")
   table_element.innerHTML = thead_str + tbody_str
   console.timeEnd("maketable")
 
-  const myTable = new JSTable(table_element, {
-    sortable: true,
-    searchable: true,
-    perPage: 12,
-  })
+  // const myTable = new JSTable(table_element, {
+  //   sortable: true,
+  //   searchable: true,
+  //   perPage: 12,
+  // })
   await sleep(0.2)
   status_el.classList.remove("spinner")
 }

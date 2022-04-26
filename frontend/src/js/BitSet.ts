@@ -1,3 +1,6 @@
+/**  JavaScript Bit array
+ */
+
 type anyArray = Array<number> | Uint32Array | Uint16Array | Uint8Array
 type anyArrayConstructor =
   | ArrayConstructor

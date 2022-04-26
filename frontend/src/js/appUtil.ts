@@ -43,7 +43,12 @@ export function DDHHMM(sec: number): string {
 }
 
 /** image tag string, given an image url */
-export function img(url: string, w = 20, h = 20, alt = ""): string {
+export function img(
+  url: string,
+  w = 20,
+  h = 20,
+  alt: number | string = ""
+): string {
   return `<img loading=lazy src='${url}' width=${w}px height=${h}px alt="${alt}">`
 }
 

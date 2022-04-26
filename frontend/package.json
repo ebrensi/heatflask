@@ -18,7 +18,7 @@
     "watch": "sh -c 'npm run parcel-watch & npm run asc-watch & wait'",
     "clean": "rm -rf dist/* .parcel-cache/* dev-docs/*; cp src/dist/* dist/",
     "format": "prettier --write src/",
-    "doc": "pdoc -o ./dist/docs/backend/ ../backend/heatflask"
+    "doc": "pdoc -o ./dist/docs/backend/ ../backend/heatflask & typedoc"
   },
   "workspaces": [
     "src/*"

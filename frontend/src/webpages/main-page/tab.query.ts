@@ -1,6 +1,5 @@
 import { icon } from "~/src/js/Icons"
 import { State } from "~/src/js/Model"
-import type { BackendQuery } from "~/src/js/DataImport"
 import type { QueryParameters } from "~/src/js/Model"
 import CONTENT from "bundle-text:./tab.query.html"
 export { CONTENT }
@@ -43,18 +42,18 @@ const OnChange: CallbackDispatch = {
 
 const OnClick: CallbackDispatch = {
   "button:query": (el, S) => {
-    console.log("button:query")
+    console.log("button:query", el, S)
   },
   "button:abort": (el, S) => {
-    console.log("button:abort")
+    console.log("button:abort", el, S)
   },
   "button:login": (el, S) => {
-    console.log("button:login")
+    console.log("button:login", el, S)
     // const currentUrl = window.location.href
     window.location.href = "/authorize"
   },
   "button:logout": (el, S) => {
-    console.log("button:logout")
+    console.log("button:logout", el, S)
     window.location.href = "/auth/logout"
   },
 }
@@ -127,7 +126,6 @@ function setDomFromParams(appState: State, baseElement?: HTMLElement) {
         el.setAttribute(attr, String(value))
       } else {
         const prop = propOrAttr
-        // @ts-expect-error -- prop is a "writable" keyof Element
         el[prop] = value
       }
     }

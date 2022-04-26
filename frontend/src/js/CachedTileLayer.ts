@@ -1,11 +1,7 @@
-/*
- * This implementation of a cached tile-layer was adapted from
+/** This implementation of a cached tile-layer was adapted from
  *   https://github.com/MazeMap/Leaflet.TileLayer.PouchDBCached
  *   and
  *   https://github.com/ghybs/Leaflet.TileLayer.Fallback
- *
- *  The code for PouchDBCached was pretty good but rather than use CouchDB
- *    I decided to go with native IndexedDB, via myIDB.
  *
  *  Efrem Rensi 2020, 2021
  */
@@ -13,22 +9,36 @@
 import * as idb from "./myIdb"
 
 import { TileLayer, GridLayer, Util, Browser, bind, extend } from "leaflet"
+import type { Map, Coords, DoneCallback } from "leaflet"
 
-import type { TileLayerOptions, Map, Coords, DoneCallback } from "leaflet"
+// We are actually modifying the leaflet TileLayer class
+// rather than extending it
+declare module "leaflet" {
+  interface TileLayerOptions {
+    useCache?: boolean
+    useOnlyCache?: boolean
+    cacheMaxAge?: number
+    dbName?: string
+  }
 
-export const DefaultCachedLayerOptions = {
+  interface TileLayer {
+    cacheHits: number
+    cacheMisses: number
+    name?: string
+  }
+}
+
+const DefaultOptions = {
   useCache: true,
   useOnlyCache: false,
   cacheMaxAge: 24 * 3600 * 1000,
-  minNativeZoom: 0,
   dbName: "tile-storage",
+  minNativeZoom: 0,
   updateInterval: 200,
   updateWhenIdle: false,
 }
 
-TileLayer.mergeOptions(DefaultCachedLayerOptions)
-type CacheOptions = typeof DefaultCachedLayerOptions
-type CachedTileLayerOptions = TileLayerOptions & CacheOptions
+TileLayer.mergeOptions(DefaultOptions)
 
 type TileCoords = Coords & { fallback?: boolean }
 interface TileElement extends HTMLImageElement {
@@ -160,9 +170,11 @@ TileLayer.include({
     // Crop (clip) image.
     // `clip` is deprecated, but browsers support for `clip-path: inset()` is far behind.
     // http://caniuse.com/#feat=css-clip-path
-    style.clip = `rect(${top}px ${left + tileSize.x}px ${
-      top + tileSize.y
-    }px ${left}px)`
+    const p = [top, left, -top, -left]
+    style["clip-path"] = `inset(${p[0]}px ${p[1]}px ${p[2]}px ${p[3]}px )`
+    // style.clip = `rect(${top}px ${left + tileSize.x}px ${
+    //   top + tileSize.y
+    // }px ${left}px)`
 
     layer.fire("tilefallback", {
       tile: tile,
@@ -232,13 +244,3 @@ TileLayer.include({
     done(null, tile)
   },
 })
-
-export default class CachedTileLayer extends TileLayer {
-  cacheHits: number
-  cacheMisses: number
-  name?: string
-  declare options: CachedTileLayerOptions
-  constructor(urlTemplate: string, options?: Partial<CachedTileLayerOptions>) {
-    super(urlTemplate, options)
-  }
-}

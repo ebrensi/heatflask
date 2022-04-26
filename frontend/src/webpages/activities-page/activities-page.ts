@@ -5,9 +5,12 @@
 
 import { href, img, HHMMSS, sleep } from "~/src/js/appUtil"
 import { activity_icon, activityURL } from "~/src/js/Strava"
-import { makeBackendQuery, ACTIVITY_FIELDNAMES as F } from "~/src/js/DataImport"
+import {
+  makeActivityQuery,
+  ACTIVITY_FIELDNAMES as F,
+} from "~/src/js/DataImport"
 import { icon } from "~/src/js/Icons"
-import type { BackendQuery, ActivitySummary } from "~/src/js/DataImport"
+import type { ActivityQuery, ActivitySummary } from "~/src/js/DataImport"
 import type { ActivityType } from "~/src/js/Strava"
 // import { JSTable } from "../../js/jstable"
 
@@ -23,7 +26,7 @@ const table_el = document.getElementById("activity_list")
 
 type EmbeddedArgs = {
   query_url: string
-  query_obj: BackendQuery
+  query_obj: ActivityQuery
   atypes: ActivityType[]
 }
 const argstr = document.getElementById("runtime_json").innerText
@@ -75,7 +78,7 @@ async function main() {
   let count = 0
   let n_total
 
-  for await (const obj of makeBackendQuery(args.query_obj, args.query_url)) {
+  for await (const obj of makeActivityQuery(args.query_obj, args.query_url)) {
     if (!obj) {
       console.log("aborted?", obj)
       break

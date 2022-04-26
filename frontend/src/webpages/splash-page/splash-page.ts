@@ -9,13 +9,14 @@ const flashes = JSON.parse(flashes_el.innerText)
 if (flashes && flashes.length) {
   const flashes_str = flashes.join("\n")
   flashes_el.innerText = flashes_str
-  flashes_el.style = "display: block;"
+  flashes_el.style.display = "block"
 }
 
 document.querySelector("#bubbler").addEventListener("click", (e) => {
-  const url = urls[e.target.id]
+  const url = urls[(<HTMLElement>e.target).id]
 
   if (url) {
     window.location.href = url
   }
 })
+export {}

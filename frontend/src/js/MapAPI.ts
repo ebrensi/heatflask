@@ -7,7 +7,7 @@ import strava_logo from "url:../images/pbs4.png"
 import heatflask_logo from "url:../images/logo.png"
 
 import Geohash from "latlon-geohash"
-import { Map, Control, AreaSelect } from "leaflet"
+import { Map, Control, AreaSelect, TileLayer } from "leaflet"
 import "./LeafletExtensions"
 import type { Point } from "leaflet"
 
@@ -15,8 +15,7 @@ import "./BoxHook"
 import "leaflet-areaselect"
 import "leaflet-control-window"
 import "leaflet-easybutton"
-
-import CachedTileLayer from "./CachedTileLayer"
+import "./CachedTileLayer"
 import "leaflet-providers"
 
 import { MAPBOX_ACCESS_TOKEN, OFFLINE, MOBILE } from "./Env"
@@ -27,8 +26,8 @@ import { setURLfromQV } from "./URL"
  * Initialize map Baselayers
  */
 
-export const baselayers: { [b: string]: CachedTileLayer } = {
-  None: new CachedTileLayer("", { useCache: false }),
+export const baselayers: { [b: string]: TileLayer } = {
+  None: new TileLayer("", { useCache: false }),
 }
 
 const mapBox_layer_names = {
@@ -44,10 +43,7 @@ const mapbox_layer_spec = (id: string) => ({
 })
 
 for (const [name, id] of Object.entries(mapBox_layer_names)) {
-  baselayers[name] = new CachedTileLayer.Provider(
-    "MapBox",
-    mapbox_layer_spec(id)
-  )
+  baselayers[name] = new TileLayer.Provider("MapBox", mapbox_layer_spec(id))
 }
 
 const providers_names = [
@@ -62,7 +58,7 @@ const providers_names = [
 ]
 
 for (const name of providers_names) {
-  baselayers[name] = new CachedTileLayer.Provider(name, {
+  baselayers[name] = new TileLayer.Provider(name, {
     useOnlyCache: OFFLINE,
   })
 }
@@ -166,7 +162,7 @@ export function BindMap(map: myMap, appState: State) {
   })
 
   map.on("baselayerchange", (e) => {
-    visual.baselayer = e.layer.name
+    visual.baselayer = (<TileLayer>e.propagatedFrom).name
     setURLfromQV({ visual, query })
   })
 }

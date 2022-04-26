@@ -71,17 +71,11 @@
     // "skipLibCheck": false                                 /* Skip type checking all .d.ts files. */
   },
   // "include": ["src/**/*"],
-  "exclude": ["src/dist/*", "src/assembly/*"],
-  "files": [
-    "src/js/Env.ts", 
-    "src/js/appUtil.ts",
-    "src/js/BitSet.ts",
-    "src/js/Model.ts",
-    "src/js/Strava.ts",
-    "src/js/myIdb.ts",
-    "src/js/URL.ts",
-    "src/js/Bounds.ts",
-    "src/js/CachedTileLayer.ts",
+  "exclude": [
+    "src/dist/*", 
+    "src/js/DotLayer",
+    "src/assembly",
+    "src/parcel-namer-flat"
   ],
   "typedocOptions": {
       "includeVersion": true,
