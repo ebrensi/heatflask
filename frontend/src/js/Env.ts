@@ -1,6 +1,6 @@
 /*
- *  Env.js  -- Here we define a set of runtime environment variables that may be
- *  of use to any other module.  Some of them are arguments that come from the
+ *  Env.js  -- Here we define a set of runtime environment variables.
+ *   Some of them are arguments that come from the
  *   backend server, embedded in main.html template
  */
 
@@ -14,12 +14,35 @@
 export const DEV_BUNDLE = process.env.NODE_ENV !== "production"
 export const MAP_INFO = true // DEV_BUNDLE
 
+export type UserInfo = {
+  id: number
+  name: string
+  profile: string
+  private: boolean
+}
+
+export type RuntimeJson = {
+  APP_VERSION: string
+  CURRENT_USER: UserInfo
+  TARGET_USER: UserInfo
+  ADMIN: boolean
+  OFFLINE: boolean
+  URLS: {
+    login: string
+    query: string
+    index: string
+    visibility: string
+    delete: string
+    logout: string
+  }
+}
+
 const argstring = document.getElementById("runtime_json").innerText
 export const { CURRENT_USER, TARGET_USER, ADMIN, APP_VERSION, URLS, OFFLINE } =
-  JSON.parse(argstring)
+  <RuntimeJson>JSON.parse(argstring)
 
 const flashes_text = document.getElementById("flashes").innerText
-export const FLASHES = flashes_text ? JSON.parse(flashes_text) : null
+export const FLASHES = flashes_text ? <string[]>JSON.parse(flashes_text) : null
 
 const StravaDomain = "https://www.strava.com"
 export const STRAVA_USER_URL = (uid: number) =>
