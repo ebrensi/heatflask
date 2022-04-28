@@ -1,18 +1,9 @@
-/*
- *  Env.js  -- Here we define a set of runtime environment variables.
+/**
+ * Env.js  -- Here we define a set of runtime environment variables
+ *    for the main (map) webpage
  *   Some of them are arguments that come from the
  *   backend server, embedded in main.html template
  */
-
-/*
- * any code contained in a block
- * if (DEV_BUNDLE) {
- *   ...code...
- * }
- * will be stripped out of a production build by terser's dead-code filter
- */
-export const DEV_BUNDLE = process.env.NODE_ENV !== "production"
-export const MAP_INFO = true // DEV_BUNDLE
 
 export type UserInfo = {
   id: number
@@ -51,11 +42,15 @@ export const STRAVA_ACTIVITY_URL = (aid: number) =>
   `${StravaDomain}/activities/${aid}`
 export const STRAVA_PROFILE_URL = `${StravaDomain}/settings/profile`
 
-/*
- * Load in the google analytics object if this is
- *  the production environment and the current user is not
- *  an admin
+/**
+ * Any code contained in a block
+ * if (DEV_BUNDLE) {
+ *   ...code...
+ * }
+ * will be stripped out of a production build by terser's dead-code filter
  */
+export const DEV_BUNDLE = process.env.NODE_ENV !== "production"
+
 import { load_ga_object } from "./google-analytics"
 import { noop } from "./appUtil"
 export const ga = ADMIN || DEV_BUNDLE ? noop : load_ga_object()

@@ -47,7 +47,6 @@
     "@parcel/resolver-glob": "^2.4.1",
     "@parcel/transformer-inline-string": "^2.3.2",
     "@parcel/transformer-sass": "^2.3.2",
-    "@shopify/eslint-plugin-assemblyscript": "^0.1.13",
     "@types/latlon-geohash": "^2.0.0",
     "@types/leaflet": "^1.7.7",
     "@types/leaflet-providers": "^1.2.1",

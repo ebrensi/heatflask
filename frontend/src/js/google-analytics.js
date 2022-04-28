@@ -1,10 +1,9 @@
-/** analytics.js loader -- exports a function that will insert
- *   	the google analytics snippets.
- * @ see https://developers.google.com/analytics/devguides/collection/analyticsjs
- */
-
 const GOOGLE_ANALYTICS_ACCOUNT_ID = "UA-85621398-1"
 
+/**
+ * Load in the google analytics object
+ * @see https://developers.google.com/analytics/devguides/collection/analyticsjs
+ */
 export function load_ga_object() {
   ;(function (i, s, o, g, r, a, m) {
     i["GoogleAnalyticsObject"] = r

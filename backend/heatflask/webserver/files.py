@@ -4,7 +4,7 @@ from string import Template
 from logging import getLogger
 
 # for serving static files (relative to where webserver is run)
-FRONTEND_DIST_DIR = "../frontend/dist/"
+FRONTEND_DIST_DIR = "../frontend/dist"
 
 log = getLogger(__name__)
 log.setLevel("INFO")
@@ -18,6 +18,10 @@ def init_app(app):
     # with that name.
     # ex.  /logo.png  ->  we serve FRONTEND_DIST_DIR/logo.png
     app.static("", FRONTEND_DIST_DIR, name="dist")
+
+    app.static("docs/b", f"{FRONTEND_DIST_DIR}/docs/backend", name="bdocs")
+    app.static("docs/f", f"{FRONTEND_DIST_DIR}/docs/frontend", name="fdocs")
+
     app.register_listener(load_templates, "before_server_start")
 
 
@@ -33,7 +37,7 @@ async def load_templates(app, loop):
     # since we don't need any of its advanced features.
     for fname in os.listdir(FRONTEND_DIST_DIR):
         if fname.endswith(".html"):
-            fpath = f"{FRONTEND_DIST_DIR}{fname}"
+            fpath = f"{FRONTEND_DIST_DIR}/{fname}"
             with open(fpath, "r") as file:
                 file_str = file.read()
             templates[fname] = Template(file_str)

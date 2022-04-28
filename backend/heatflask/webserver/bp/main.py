@@ -3,6 +3,7 @@ Defines root ( heatflask.com/ ) webserver endpoints
 """
 import os
 import sanic.response as Response
+from sanic.request import Request
 from sanic.exceptions import SanicException
 from functools import wraps
 import sanic
@@ -25,7 +26,7 @@ U = Users.UserField
 # ****** Splash Page ******
 @bp.get("/")
 @session_cookie(get=True, set=True, flashes=True)
-async def splash_page(request):
+async def splash_page(request: Request):
     app = request.app
     #  This is what a user gets when they navigate their browser to
     #  https://heatflask.com (with or without www.)
@@ -75,7 +76,7 @@ def relevant_info(user):
 # *** Main user/global activities page
 @bp.get("/<target_user_id:int>")
 @session_cookie(get=True, set=True, flashes=True)
-async def user_page(request, target_user_id=None):
+async def user_page(request: Request, target_user_id=None):
     target_user = await Users.get(target_user_id)
     if target_user_id and not target_user:
         raise SanicException(
@@ -110,12 +111,12 @@ async def user_page(request, target_user_id=None):
 
 
 @bp.get("/demo")
-async def demo_page(request):
+async def demo_page(request: Request):
     raise SanicException("Not implemented yet!", status_code=501)
 
 
 @bp.get("/test")
-async def test(request):
+async def test(request: Request):
     raise SanicException("get outta here", status_code=403)
 
 
@@ -156,7 +157,7 @@ def self_or_admin(func):
 @bp.get(r"/visibility/<setting:(on|off|^$)>")
 @session_cookie(get=True)
 @self_or_admin
-async def visibility(request, target_user, setting=None):
+async def visibility(request: Request, target_user, setting=None):
     if setting is not None:
         private = False if setting == "on" else True
         target_user = await Users.add_or_update(
@@ -168,8 +169,22 @@ async def visibility(request, target_user, setting=None):
 @bp.get("/delete")
 @session_cookie(get=True, set=True, flashes=True)
 @self_or_admin
-async def delete(request, target_user):
+async def delete(request: Request, target_user):
     uid = target_user[U.ID]
     await Users.delete(uid, deauthenticate=False)
     request.ctx.flash(f"Successfully deleted user {uid}")
     return Response.redirect(request.app.url_for("auth.logout"))
+
+
+@bp.get("/docs/backend")
+async def serve_backend_docs(request):
+    return Response.redirect(
+        request.app.url_for("static", name="bdocs", filename="index.html")
+    )
+
+
+@bp.get("/docs/frontend")
+async def serve_frontend_docs(request):
+    return Response.redirect(
+        request.app.url_for("static", name="fdocs", filename="index.html")
+    )

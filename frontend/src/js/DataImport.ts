@@ -190,8 +190,7 @@ export async function* makeActivityQuery(
   }
 }
 
-/**
- *
+/** User objects coming from the backend have this format
  */
 export const USER_FIELDNAMES = {
   ID: "_id",

@@ -12,7 +12,8 @@ export type User = {
   id: number
   name: string
   profile: string
-  units: string
+  private: boolean
+  units?: string
 }
 
 /**
