@@ -43,7 +43,8 @@ export function rld_decode(enc: Uint8Array, ArrayConstructor) {
   const rl_marker = increasing ? 255 : -128
   const L = decoded_length(enc_diffs, rl_marker)
 
-  debugger
+  if (!increasing) debugger
+
   const decoded = new ArrayConstructor(L)
   decoded[0] = start_val
   let cumsum = start_val
@@ -54,8 +55,10 @@ export function rld_decode(enc: Uint8Array, ArrayConstructor) {
       const d = enc_diffs[i + 1]
       const reps = enc_diffs[i + 2]
       const endreps = j + reps
-      while (j < endreps) cumsum += d
-      decoded[j++] = cumsum
+      while (j < endreps) {
+        cumsum += d
+        decoded[j++] = cumsum
+      }
       i += 3
     } else {
       cumsum += enc_diffs[i++]

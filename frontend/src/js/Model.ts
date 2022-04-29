@@ -35,8 +35,10 @@ export type QueryParameters = {
   quantity?: number // number of days or activities
 }
 export const DefaultQuery: QueryParameters = {
-  type: "activities",
-  quantity: 10,
+  // type: "activities",
+  // quantity: 10,
+  type: "ids",
+  ids: "6839876364",
 }
 
 /**

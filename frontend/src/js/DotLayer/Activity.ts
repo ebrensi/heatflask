@@ -551,7 +551,7 @@ function uncompressVByteRLEIterator(
   let v = 0
 
   return (targetPos: number) => {
-    while (true) {
+    for (;;) {
       do {
         runningSum += v
         if (si++ === targetPos || targetPos === undefined) return runningSum //{ v: runningSum, i: si }
@@ -559,7 +559,7 @@ function uncompressVByteRLEIterator(
 
       if (pos >= end) throw RangeError
 
-      while (true) {
+      for (;;) {
         // get the next value
         let c = inbyte[pos++]
         v = c & 0x7f

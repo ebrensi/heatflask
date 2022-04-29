@@ -65,18 +65,28 @@ app.register_listener(cancel_background_tasks, "after_server_stop")
 app.register_listener(DataAPIs.connect, "before_server_start")
 app.register_listener(DataAPIs.disconnect, "before_server_stop")
 
+
+async def reset_db(*args, users=True, index=True, streams=True):
+    if users:
+        await Users.drop()
+        print("dropped Users")
+    if index:
+        await Index.drop()
+        print("dropped Index")
+    if streams:
+        await Streams.drop()
+        print("dropped Streams")
+
+
 if os.environ.get("HEATFLASK_RESET"):
-
-    async def reset_db(a, b, users=True, index=True, streams=True):
-        if users:
-            await Users.drop()
-        if index:
-            await Index.drop()
-        if streams:
-            await Streams.drop()
-        print("Dropped databases")
-
     app.register_listener(reset_db, "before_server_start")
+
+if os.environ.get("DROP_ACTIVITIES"):
+
+    def myfunc(*args):
+        return reset_db(*args, streams=True, index=False, users=False)
+
+    app.register_listener(myfunc, "before_server_start")
 
 if APP_ENV != "development":
     # We don't do triage in development

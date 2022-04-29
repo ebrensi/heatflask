@@ -350,10 +350,10 @@ async def query(
     projection = None
 
     if activity_ids:
-        activity_ids = set(int(aid) for aid in activity_ids)
+        activity_ids = list(set(int(aid) for aid in activity_ids))
 
     if exclude_ids:
-        exclude_ids = set(int(aid) for aid in exclude_ids)
+        exclude_ids = list(set(int(aid) for aid in exclude_ids))
 
     limit = int(limit) if limit else 0
 
