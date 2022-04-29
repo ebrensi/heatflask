@@ -103,8 +103,8 @@ type QueryResultItem = QueryResultActivity | StatusObject
  */
 export function qToQ(
   query: QueryParameters,
-  streams = true,
-  exclude_ids: number[]
+  streams: boolean,
+  exclude_ids?: number[]
 ) {
   const bq: ActivityQuery = { streams, exclude_ids }
 

@@ -12,9 +12,9 @@
 console.time("client_setup")
 
 import { APP_VERSION } from "~/src/js/Env"
-import { appState } from "~/src/js/UI"
+import { start } from "~/src/js/UI"
 
-setTimeout(() => {
+start().then((appState) => {
   console.log(`
 
   ██╗  ██╗███████╗ █████╗ ████████╗███████╗██╗      █████╗ ███████╗██╗  ██╗
@@ -31,4 +31,4 @@ setTimeout(() => {
   `)
   console.timeEnd("client_setup")
   console.log("appState: ", appState)
-}, 0)
+})

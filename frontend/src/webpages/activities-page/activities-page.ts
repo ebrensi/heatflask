@@ -76,7 +76,7 @@ async function main() {
   const data: string[][] = []
   const errors: string[] = []
   let count = 0
-  let n_total
+  let n_total: number
 
   for await (const obj of makeActivityQuery(args.query_obj, args.query_url)) {
     if (!obj) {

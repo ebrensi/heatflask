@@ -111,8 +111,9 @@ export async function renderTabs(map: Map, state: State, tabIds?: string[]) {
   S.isOpen = false
 
   document.addEventListener("keydown", (e) => {
+    const key = e.key || e.keyCode
     if (S.isOpen) {
-      switch (e.keyCode) {
+      switch (key) {
         case ESC_KEY:
         case SPACE_KEY:
           S.close()
@@ -128,7 +129,7 @@ export async function renderTabs(map: Map, state: State, tabIds?: string[]) {
           break
       }
     } else {
-      switch (e.keyCode) {
+      switch (key) {
         case SPACE_KEY:
           S.open(S.tabNames[S.currentTab])
           break
@@ -141,6 +142,9 @@ export async function renderTabs(map: Map, state: State, tabIds?: string[]) {
 
   await nextAnimationFrame()
 
-  // note: these funcs may be async
-  for (const func of setupFuncs) func && func(state)
+  const promises = [] as Promise<unknown>[]
+  for (const func of setupFuncs) {
+    func && promises.push(Promise.resolve(func(state)))
+  }
+  await Promise.all(promises)
 }

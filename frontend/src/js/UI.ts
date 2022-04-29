@@ -3,7 +3,7 @@
  *  Here we initialize the DOM/user interface
  */
 
-import { CURRENT_USER, TARGET_USER, FLASHES, ADMIN } from "./Env"
+import { CURRENT_USER, TARGET_USER, FLASHES, ADMIN, URLS } from "./Env"
 import {
   DefaultVisual,
   DefaultQuery,
@@ -11,8 +11,10 @@ import {
   User,
   State,
 } from "./Model"
+
 import { parseURL } from "./URL"
 import { watch } from "./DataBinding"
+import { qToQ, makeActivityQuery } from "./DataImport"
 
 import * as MapAPI from "./MapAPI"
 import * as Sidebar from "./Sidebar"
@@ -26,22 +28,35 @@ if (!!FLASHES && FLASHES.length) {
   map.controlWindow.show()
 }
 
-// Get model parameters from the current URL
-const init = parseURL(window.location.href)
-
-export const appState: State = {
-  currentUser: watch<User>(CURRENT_USER),
-  targetUser: watch<User>(TARGET_USER),
-  visual: watch<typeof DefaultVisual>({ ...DefaultVisual, ...init.visual }),
-  query: watch<typeof DefaultQuery>({ ...DefaultQuery, ...init.query }),
-  url: watch<URLParameters>(init.url),
+export async function updateFromQuery({ query }: State) {
+  const backendQuery = qToQ(query, false)
+  for await (const obj of makeActivityQuery(backendQuery, URLS.query)) {
+    console.log(obj)
+    // TODO: Continue Here
+  }
 }
 
-// **** Map settings / bindings ****
-MapAPI.BindMap(map, appState)
+export async function start() {
+  // Get model parameters from the current URL
+  const init = parseURL(window.location.href)
+  const appState: State = {
+    currentUser: watch<User>(CURRENT_USER),
+    targetUser: watch<User>(TARGET_USER),
+    visual: watch<typeof DefaultVisual>({ ...DefaultVisual, ...init.visual }),
+    query: watch<typeof DefaultQuery>({ ...DefaultQuery, ...init.query }),
+    url: watch<URLParameters>(init.url),
+  }
 
-// Add Sidebar tabs to DOM / Map
-Sidebar.renderTabs(map, appState)
+  // **** Map settings / bindings ****
+  MapAPI.BindMap(map, appState)
+
+  // Add Sidebar tabs to DOM / Map
+  await Sidebar.renderTabs(map, appState)
+
+  await updateFromQuery(appState)
+
+  return appState
+}
 
 // flags.onChange("zoomToSelection", zoomToSelectedPaths)
 // import * as ActivityCollection from "./DotLayer/ActivityCollection"
