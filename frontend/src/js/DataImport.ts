@@ -3,7 +3,7 @@
  * defined in @link ~/backend/Index.py
  */
 import { decodeMultiStream, decode } from "@msgpack/msgpack"
-
+import { rld_decode } from "./StreamDecode"
 import type { QueryParameters } from "./Model"
 import type { ActivityType } from "./Strava"
 
@@ -81,11 +81,11 @@ const S = STREAM_FIELDNAMES
 export type UnpackedStreams = {
   id: number
   /** rld encoded times in seconds */
-  [S.TIME]: number[]
+  [S.TIME]: Uint8Array
   /** rld encoded altitude in meters */
-  [S.ALTITUDE]: number[]
+  [S.ALTITUDE]: Uint8Array
   /** polyline encoded latlng [lat, lng] pairs  */
-  [S.POLYLINE]: Array<[number, number]>
+  [S.POLYLINE]: string
 }
 
 type QueryResultActivity = ImportedActivity & Partial<PackedStreams>
@@ -107,6 +107,7 @@ export function qToQ(
   exclude_ids?: number[]
 ) {
   const bq: ActivityQuery = { streams, exclude_ids }
+  if (query.userid) bq.user_id = query.userid
 
   switch (query.type) {
     case "activities":
@@ -175,12 +176,19 @@ export async function* makeActivityQuery(
       if (!info && "info" in obj) {
         info = obj.info
       } else if (A.ACTIVITY_TYPE in obj) {
+        // in this case obj is an activity
+
+        // decode the activity name
         obj[A.ACTIVITY_TYPE] =
           info.atypes[obj[A.ACTIVITY_TYPE]] || A.ACTIVITY_TYPE
-      }
-      if ("mpk" in obj) {
-        obj.streams = <UnpackedStreams>decode(obj.mpk)
-        delete obj.mpk
+
+        // Un-pack the streams if there are any
+        if ("mpk" in obj) {
+          obj.streams = <UnpackedStreams>decode(obj.mpk)
+          delete obj.mpk
+          obj.streams.t = rld_decode(obj.streams.t, Uint16Array)
+          obj.streams.a = rld_decode(obj.streams.t, Int16Array)
+        }
       }
       const abort = yield obj
       if (abort) break

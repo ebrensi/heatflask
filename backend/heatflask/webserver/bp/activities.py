@@ -3,6 +3,7 @@ Defines all the /activities/* webserver endpoints
 for querying the Index and Streams data stores
 """
 
+from prometheus_client import generate_latest
 import sanic.response as Response
 from sanic.exceptions import SanicException
 import sanic
@@ -37,6 +38,7 @@ async def query(request):
     Get the activity list JSON for currently logged-in user
     """
     query = request.json
+
     streams = query.pop("streams", False)
     response = await request.respond(content_type="application/msgpack")
 
@@ -91,6 +93,10 @@ async def query(request):
 
     info = {"atypes": Strava.ATYPES}
     if not target_user_id:
+        # If there is no target_user_id then this is a general
+        # activity query and we will send activity owner id
+        # along with each activity.  We create a lookup here
+        # for the avatar associated with each owner.
         uids = list(set(A[I.USER_ID] for A in summaries))
         users = await Users.get_collection()
         cursor = users.find({U.ID: {"$in": uids}}, {U.ID: True, U.PROFILE: True})
@@ -110,10 +116,10 @@ async def query(request):
     user = await Users.get(target_user_id)
     streams_iter = Streams.aiter_query(activity_ids=ids, user=user)
     errors = set()
-    async for aid, streams in streams_iter:
+    async for aid, packed_streams in streams_iter:
         if streams:
             A = summaries_lookup[aid]
-            A["mpk"] = streams
+            A["mpk"] = packed_streams
             await sendPacked(A)
         else:
             errors.add(aid)

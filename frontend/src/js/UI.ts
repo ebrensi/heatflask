@@ -29,7 +29,7 @@ if (!!FLASHES && FLASHES.length) {
 }
 
 export async function updateFromQuery({ query }: State) {
-  const backendQuery = qToQ(query, false)
+  const backendQuery = qToQ(query, true)
   for await (const obj of makeActivityQuery(backendQuery, URLS.query)) {
     console.log(obj)
     // TODO: Continue Here
@@ -42,8 +42,8 @@ export async function start() {
   const appState: State = {
     currentUser: watch<User>(CURRENT_USER),
     targetUser: watch<User>(TARGET_USER),
-    visual: watch<typeof DefaultVisual>({ ...DefaultVisual, ...init.visual }),
-    query: watch<typeof DefaultQuery>({ ...DefaultQuery, ...init.query }),
+    visual: watch({ ...DefaultVisual, ...init.visual }),
+    query: watch({ ...DefaultQuery, ...init.query }),
     url: watch<URLParameters>(init.url),
   }
 

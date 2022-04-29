@@ -5,7 +5,7 @@ has the streams time, latlng, and altitude.
 ***  For Jupyter notebook ***
 Paste one of these Jupyter magic directives to the top of a cell
  and run it, to do these things:
-    %%cython --annotate    # Compile and run the cell
+    %%cython --annotate      # Compile and run the cell
     %load Streams.py         # Load Streams.py file into this (empty) cell
     %%writefile Streams.py   # Write the contents of this cell to Streams.py
 """
@@ -54,7 +54,8 @@ async def get_collection():
 POLYLINE_PRECISION = 6
 
 
-def encode_streams(activity_id, rjson):
+def encode_streams(activity_id: int, rjson: dict):
+    """compress stream data"""
     return msgpack.packb(
         {
             "id": activity_id,
@@ -66,6 +67,7 @@ def encode_streams(activity_id, rjson):
 
 
 def decode_streams(msgpacked_streams):
+    """de-compress stream data"""
     d = msgpack.unpackb(msgpacked_streams)
     return {
         "id": d["id"],
@@ -117,7 +119,7 @@ async def strava_import(activity_ids, **user):
     await coll.insert_many(mongo_docs)
 
 
-async def aiter_query(activity_ids=None, user=None):
+async def aiter_query(activity_ids: list[int] = None, user=None):
     if not activity_ids:
         return
     #

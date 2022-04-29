@@ -14,8 +14,9 @@ console.time("client_setup")
 import { APP_VERSION } from "~/src/js/Env"
 import { start } from "~/src/js/UI"
 
-start().then((appState) => {
-  console.log(`
+start()
+  .then((appState) => {
+    console.log(`
 
   ██╗  ██╗███████╗ █████╗ ████████╗███████╗██╗      █████╗ ███████╗██╗  ██╗
   ██║  ██║██╔════╝██╔══██╗╚══██╔══╝██╔════╝██║     ██╔══██╗██╔════╝██║ ██╔╝
@@ -29,6 +30,7 @@ start().then((appState) => {
   https://github.com/ebrensi/heatflask
 
   `)
-  console.timeEnd("client_setup")
-  console.log("appState: ", appState)
-})
+    console.timeEnd("client_setup")
+    console.log("appState: ", appState)
+  })
+  .catch((e) => console.error(e))
