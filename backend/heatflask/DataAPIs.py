@@ -43,7 +43,6 @@ async def disconnect(*args):
 
     db.mongo_client = None
     db.mongodb = None
-    # db.redis = None
 
 
 async def init_collection(name, ttl=None, capped_size=None, cache_prefix=None):

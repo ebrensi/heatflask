@@ -233,7 +233,7 @@ class AsyncClient:
     def get_athlete(self, *args, **kwargs):
         return self.__run_with_session(get_athlete, *args, **kwargs)
 
-    def get_streams(self, *args, **kwargs) -> StreamsResult:
+    def get_streams(self, *args, **kwargs):
         return self.__run_with_session(get_streams, *args, **kwargs)
 
     def get_activity(self, *args, **kwargs):
@@ -242,7 +242,7 @@ class AsyncClient:
     def get_index(self, *args, **kwargs):
         return self.__iterate_with_session(get_index, *args, **kwargs)
 
-    def get_many_streams(self, *args, **kwargs) -> AsyncGenerator[StreamsResult, bool]:
+    def get_many_streams(self, *args, **kwargs):
         return self.__iterate_with_session(get_many_streams, *args, **kwargs)
 
     def create_subscription(self, *args, **kwargs):
@@ -376,7 +376,7 @@ class Streams(TypedDict):
 
 
 StreamsFetchResult = tuple[int, Streams | None]
-streamsResult = tuple[int, Streams]
+StreamsResult = tuple[int, Streams]
 
 
 async def get_streams(
@@ -409,13 +409,13 @@ async def get_many_streams(
     session: aiohttp.ClientSession,
     activity_ids: list[int],
     max_errors=MAX_STREAMS_ERRORS,
-) -> AsyncGenerator[streamsResult, bool]:
+) -> AsyncGenerator[StreamsResult, bool]:
     request_tasks = [get_streams(session, aid) for aid in activity_ids]
     errors = 0
     for task in asyncio.as_completed(request_tasks):
         item = await task
         if item[1]:
-            abort_signal = yield cast(streamsResult, item)
+            abort_signal = yield cast(StreamsResult, item)
         else:
             errors += 1
             if errors > max_errors:

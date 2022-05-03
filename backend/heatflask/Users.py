@@ -82,10 +82,10 @@ def mongo_doc(
     private: bool = None,
     auth: dict[str, str | int] = None,
     **kwargs,
-) -> dict:
+) -> dict | None:
     if not (id or kwargs.get(U.ID)):
         log.error("cannot create user with no id")
-        return
+        return None
 
     return Utility.cleandict(
         {
