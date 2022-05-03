@@ -1,9 +1,11 @@
-import dateutil.tz
-import dateutil.parser
+from dateutil.parser import parse
+import aiohttp
+
 from datetime import datetime
 from itertools import islice, repeat, starmap, takewhile
 from operator import truth
 from logging import getLogger
+from typing import Iterable, Iterator, Any
 
 log = getLogger(__name__)
 log.setLevel("INFO")
@@ -14,42 +16,33 @@ def cleandict(d: dict) -> dict:
     return {k: v for k, v in d.items() if v is not None}
 
 
-def href(url, text):
+def href(url: str, text: str) -> str:
     return "<a href='{}' target='_blank'>{}</a>".format(url, text)
 
 
-def ip_lookup_url(ip):
+def ip_lookup_url(ip: str) -> str:
     return "http://freegeoip.net/json/{}".format(ip) if ip else "#"
 
 
-async def ip_lookup(session, ip_address):
+async def ip_lookup(session: aiohttp.ClientSession, ip_address: str) -> dict:
     r = await session.get(ip_lookup_url(ip_address))
     return await r.json()
 
 
-def ip_timezone(cls, ip_address):
-    tz = ip_lookup(ip_address)["time_zone"]
-    return tz if tz else "America/Los_Angeles"
+DatetimeObj = int | str | datetime
 
 
-def utc_to_timezone(dt, timezone="America/Los_Angeles"):
-    from_zone = dateutil.tz.gettz("UTC")
-    to_zone = dateutil.tz.gettz(timezone)
-    utc = dt.replace(tzinfo=from_zone)
-    return utc.astimezone(to_zone)
-
-
-def to_datetime(obj):
+def to_datetime(obj: DatetimeObj) -> datetime | None:
     if not obj:
-        return
+        return None
     if isinstance(obj, datetime):
         return obj
     elif isinstance(obj, int):
         return datetime.utcfromtimestamp(obj)
     try:
-        dt = dateutil.parser.parse(obj, ignoretz=True)
+        dt = parse(obj, ignoretz=True)
     except ValueError:
-        return
+        return None
     else:
         return dt
 
@@ -57,9 +50,12 @@ def to_datetime(obj):
 EPOCH = datetime.utcfromtimestamp(0)
 
 
-def to_epoch(dt):
-    return int((to_datetime(dt) - EPOCH).total_seconds())
+def to_epoch(dtObj: DatetimeObj):
+    dt = to_datetime(dtObj)
+    if dt:
+        return int((dt - EPOCH).total_seconds())
 
 
-def chunks(iterable, size=10):
+def chunks(iterable: Iterable, size=10) -> Iterator:
+    """iterate over an iterable in chunks"""
     return takewhile(truth, map(tuple, starmap(islice, repeat((iter(iterable), size)))))

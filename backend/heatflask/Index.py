@@ -210,7 +210,9 @@ async def fake_import(uid=None):
 
 async def import_index_progress(user_id, poll_delay=0.5):
     last_msg = None
-    while msg := await check_import_progress(user_id):
+    msg = 1
+    while msg:
+        msg = await check_import_progress(user_id)
         if msg != last_msg:
             yield msg
             last_msg = msg

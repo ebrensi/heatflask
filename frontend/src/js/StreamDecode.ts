@@ -43,8 +43,6 @@ export function rld_decode(enc: Uint8Array, ArrayConstructor) {
   const rl_marker = increasing ? 255 : -128
   const L = decoded_length(enc_diffs, rl_marker)
 
-  if (!increasing) debugger
-
   const decoded = new ArrayConstructor(L)
   decoded[0] = start_val
   let cumsum = start_val
