@@ -15,6 +15,8 @@ import urllib
 import asyncio
 import datetime
 import types
+from typing import AsyncGenerator, TypedDict, Tuple, Literal, cast, get_args
+
 
 from . import Utility
 
@@ -29,7 +31,7 @@ CONCURRENCY = 10
 myBox = types.SimpleNamespace(limiter=None)
 
 # These activity types are ordered
-ATYPES = [
+ActivityType = Literal[
     "AlpineSki",
     "BackcountrySki",
     "Canoeing",
@@ -69,7 +71,13 @@ ATYPES = [
     "Yoga",
 ]
 
-ATYPES_LOOKUP = {atype: i for i, atype in enumerate(ATYPES)}
+ATYPES: Tuple[ActivityType, ...] = get_args(ActivityType)
+
+ATYPES_LOOKUP: dict[ActivityType, int] = {atype: i for i, atype in enumerate(ATYPES)}
+
+
+def streams_endpoint(activity_id: int) -> str:
+    return f"{API_SPEC}/activities/{activity_id}/streams"
 
 
 def get_limiter():
@@ -80,6 +88,12 @@ def get_limiter():
 
 # Client class takes care of refreshing access tokens
 class AsyncClient:
+    name: str
+    session: aiohttp.ClientSession
+    access_token: str
+    refresh_token: str
+    expires_at: int
+
     def __init__(self, name, **auth_data):
         self.name = name
         self.set_state(**auth_data)
@@ -109,7 +123,7 @@ class AsyncClient:
         if self.access_token:
             return {"Authorization": f"Bearer {self.access_token}"}
 
-    def new_session(self):
+    def new_session(self) -> aiohttp.ClientSession:
         return aiohttp.ClientSession(
             DOMAIN, headers=self.headers, raise_for_status=True
         )
@@ -219,7 +233,7 @@ class AsyncClient:
     def get_athlete(self, *args, **kwargs):
         return self.__run_with_session(get_athlete, *args, **kwargs)
 
-    def get_streams(self, *args, **kwargs):
+    def get_streams(self, *args, **kwargs) -> StreamsResult:
         return self.__run_with_session(get_streams, *args, **kwargs)
 
     def get_activity(self, *args, **kwargs):
@@ -228,7 +242,7 @@ class AsyncClient:
     def get_index(self, *args, **kwargs):
         return self.__iterate_with_session(get_index, *args, **kwargs)
 
-    def get_many_streams(self, *args, **kwargs):
+    def get_many_streams(self, *args, **kwargs) -> AsyncGenerator[StreamsResult, bool]:
         return self.__iterate_with_session(get_many_streams, *args, **kwargs)
 
     def create_subscription(self, *args, **kwargs):
@@ -247,9 +261,10 @@ API_SPEC = "/api/v3"
 #
 # Authentication
 #
+SpecsDict = dict[str, str | None]
 
 AUTH_ENDPOINT = "/oauth/authorize"
-AUTH_PARAMS = {
+AUTH_PARAMS: SpecsDict = {
     "client_id": os.environ["STRAVA_CLIENT_ID"],
     "client_secret": os.environ["STRAVA_CLIENT_SECRET"],
 }
@@ -332,11 +347,41 @@ ACTIVITY_STREAM_PARAMS = {
 }
 
 
-def streams_endpoint(activity_id):
-    return f"{API_SPEC}/activities/{activity_id}/streams"
+class Stream(TypedDict):
+    """A single stream object as it comes from Strava's API"""
+
+    original_size: int
+    resolution: str
+    series_type: str
 
 
-async def get_streams(session, activity_id):
+class TimeStream(Stream):
+    data: list[int]
+
+
+class AltitudeStream(Stream):
+    data: list[float]
+
+
+class LatLngStream(Stream):
+    data: list[tuple[float, float]]
+
+
+class Streams(TypedDict):
+    """A Streams object as it comes from Strava's API"""
+
+    time: TimeStream
+    altitude: AltitudeStream
+    latlng: LatLngStream
+
+
+StreamsFetchResult = tuple[int, Streams | None]
+streamsResult = tuple[int, Streams]
+
+
+async def get_streams(
+    session: aiohttp.ClientSession, activity_id: int
+) -> StreamsFetchResult:
     t0 = time.perf_counter()
     async with get_limiter():
         try:
@@ -357,19 +402,24 @@ async def get_streams(session, activity_id):
     n = rjson["time"]["original_size"]
     log.debug("streams %d: n=%d, dt=%d", activity_id, n, dt_fetch)
 
-    return activity_id, rjson
+    return activity_id, cast(Streams, rjson)
 
 
-async def get_many_streams(session, activity_ids, max_errors=MAX_STREAMS_ERRORS):
+async def get_many_streams(
+    session: aiohttp.ClientSession,
+    activity_ids: list[int],
+    max_errors=MAX_STREAMS_ERRORS,
+) -> AsyncGenerator[streamsResult, bool]:
     request_tasks = [get_streams(session, aid) for aid in activity_ids]
     errors = 0
     for task in asyncio.as_completed(request_tasks):
         item = await task
-        if item[1] is None:
+        if item[1]:
+            abort_signal = yield cast(streamsResult, item)
+        else:
             errors += 1
             if errors > max_errors:
                 abort_signal = True
-        abort_signal = yield item
         if abort_signal:
             log.info("get_many_streams aborted")
             return
@@ -378,12 +428,44 @@ async def get_many_streams(session, activity_ids, max_errors=MAX_STREAMS_ERRORS)
 #
 # Index pages
 #
+class MetaAthlete(TypedDict):
+    id: int
+
+
+class PolylineMap(TypedDict):
+    summary_polyline: str
+
+
+Visibility = Literal["everyone", "followers", "only_me"]
+
+
+class Activity(TypedDict):
+    id: int
+    athlete: MetaAthlete
+    name: str
+    distance: float
+    moving_time: int
+    elapsed_time: int
+    total_elevation_gain: float
+    type: ActivityType
+    start_date: int
+    utc_offset: int
+    athlete_count: int
+    total_photo_count: int
+    map: PolylineMap
+    commute: bool
+    private: bool
+    visibility: Visibility
+
+
 PER_PAGE = 200
 ACTIVITY_LIST_ENDPOINT = f"{API_SPEC}/athlete/activities"
 params = {"per_page": PER_PAGE}
 
 
-async def get_activity_index_page(session, p):
+async def get_activity_index_page(
+    session: aiohttp.ClientSession, p: int
+) -> tuple[int, int, list[str]]:
     t0 = time.perf_counter()
     async with get_limiter():
         log.debug("Page %d requested", p)
@@ -398,8 +480,8 @@ async def get_activity_index_page(session, p):
     return status, p, result
 
 
-def page_request(session, p):
-    return asyncio.create_task(get_activity_index_page(session, p), name=p)
+def page_request(session: aiohttp.ClientSession, p: int):
+    return asyncio.create_task(get_activity_index_page(session, p), name=str(p))
 
 
 def cancel_all(tasks):
@@ -411,7 +493,9 @@ def cancel_all(tasks):
 MAX_PAGE = 50
 
 
-async def get_index(user_session):
+async def get_index(
+    user_session: aiohttp.ClientSession,
+) -> AsyncGenerator[Activity, bool]:
     log.debug("getting user index")
 
     t0 = time.perf_counter()
@@ -432,7 +516,7 @@ async def get_index(user_session):
 
             if result and len(result):
                 for A in result:
-                    abort_signal = yield A
+                    abort_signal = yield cast(Activity, A)
                     if abort_signal:
                         await cancel_all(tasks)
                         log.debug("index fetch aborted")
@@ -453,11 +537,13 @@ async def get_index(user_session):
         tasks = not_done
 
 
-def activity_endpoint(activity_id):
+def activity_endpoint(activity_id: int) -> str:
     return f"{API_SPEC}/activities/{activity_id}?include_all_efforts=false"
 
 
-async def get_activity(user_session, activity_id):
+async def get_activity(
+    user_session: aiohttp.ClientSession, activity_id: int
+) -> Activity | None:
     log.debug("fetching activity %d", activity_id)
     async with user_session.get(activity_endpoint(activity_id)) as r:
         return await r.json()
@@ -474,14 +560,14 @@ CREATE_SUBSCRIPTION_PARAMS = {
     "callback_url": None,
 }
 VIEW_SUBSCRIPTION_PARAMS = AUTH_PARAMS
-DELETE_SUBSCRIPTION_PARAMS = {
+DELETE_SUBSCRIPTION_PARAMS: SpecsDict = {
     **VIEW_SUBSCRIPTION_PARAMS,
     "id": None,
 }
 
 
-async def create_subscription(admin_session, callback_url):
-    params = {**CREATE_SUBSCRIPTION_PARAMS, "callback_url": callback_url}
+async def create_subscription(admin_session: aiohttp.ClientSession, callback_url: str):
+    params: SpecsDict = {**CREATE_SUBSCRIPTION_PARAMS, "callback_url": callback_url}
     async with admin_session.post(SUBSCRIPTION_ENDPOINT, params=params) as response:
         return await response.json()
 
@@ -496,13 +582,15 @@ def subscription_verification(validation_dict):
         return {"hub.challenge": validation_dict["hub.challenge"]}
 
 
-async def view_subscription(admin_session):
+async def view_subscription(admin_session: aiohttp.ClientSession):
     params = VIEW_SUBSCRIPTION_PARAMS
     async with admin_session.get(SUBSCRIPTION_ENDPOINT, params=params) as response:
         return await response.json()
 
 
-async def delete_subscription(admin_session, subscription_id=None):
+async def delete_subscription(
+    admin_session: aiohttp.ClientSession, subscription_id=None
+):
     params = {**DELETE_SUBSCRIPTION_PARAMS, "id": subscription_id}
     async with admin_session.delete(SUBSCRIPTION_ENDPOINT, params=params) as response:
         return response.status == 204

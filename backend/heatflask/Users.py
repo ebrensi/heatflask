@@ -20,7 +20,6 @@ from aiohttp.client_exceptions import ClientResponseError
 from . import DataAPIs
 from . import Utility
 from . import Strava
-from . import Index
 
 log = getLogger(__name__)
 log.propagate = True
@@ -215,9 +214,6 @@ async def dump(admin=False, output="json"):
 
 
 async def delete(user_id, deauthenticate=True):
-    # First we delete the user's index
-    await Index.delete_user_entries(**{U.ID: user_id})
-
     user = await get(user_id)
 
     # attempt to de-authenticate the user. we

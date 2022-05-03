@@ -6,8 +6,11 @@
 
 import numpy as np
 
+Nums = list[int] | list[float] | np.ndarray
+RLDEncoded = bytes
 
-def positive_non_decreasing(vals):
+
+def positive_non_decreasing(vals: Nums) -> bool:
     lastv = vals[0]
     if lastv < 0:
         return False
@@ -21,7 +24,7 @@ def positive_non_decreasing(vals):
     return True
 
 
-def rld_encode(vals):
+def rld_encode(vals: Nums) -> RLDEncoded:
     vals = (
         np.fromiter((v + 0.5 for v in vals), dtype="i4", count=len(vals))
         if type(vals[0]) is float
@@ -86,7 +89,7 @@ def rld_encode(vals):
     return bytesdata
 
 
-def decoded_length(enc, rl_marker):
+def decoded_length(enc: np.ndarray, rl_marker: int) -> int:
     L = 1
     i = 0
     while i < len(enc):
@@ -99,7 +102,7 @@ def decoded_length(enc, rl_marker):
     return L
 
 
-def rld_decode(enc, dtype=np.int32):
+def rld_decode(enc: RLDEncoded, dtype=np.int32) -> Nums:
     ntype = np.frombuffer(enc, dtype="i1", count=1, offset=0)[0]
     start_val = np.frombuffer(enc, dtype="i2", count=1, offset=1)[0]
     enc_diffs = np.frombuffer(enc, dtype="i1" if ntype == 0 else "u1", offset=3)

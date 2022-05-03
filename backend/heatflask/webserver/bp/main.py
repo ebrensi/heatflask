@@ -171,6 +171,7 @@ async def visibility(request: Request, target_user, setting=None):
 @self_or_admin
 async def delete(request: Request, target_user):
     uid = target_user[U.ID]
+    await Index.delete_user_entries(**{U.ID: uid})
     await Users.delete(uid, deauthenticate=False)
     request.ctx.flash(f"Successfully deleted user {uid}")
     return Response.redirect(request.app.url_for("auth.logout"))

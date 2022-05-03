@@ -91,7 +91,7 @@ async def query(request):
     summaries = query_result["docs"]
     await sendPacked({"count": len(summaries)})
 
-    info = {"atypes": Strava.ATYPES}
+    info = {"atypes": Strava.ATYPES, "polyline_precision": Streams.POLYLINE_PRECISION}
     if not target_user_id:
         # If there is no target_user_id then this is a general
         # activity query and we will send activity owner id

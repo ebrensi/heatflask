@@ -20,12 +20,14 @@ import asyncio
 import types
 from pymongo import DESCENDING
 from aiohttp import ClientResponseError
+from typing import TypedDict
 
 from . import DataAPIs
 from .DataAPIs import db
 from . import Strava
 from . import Utility
 from . import Users
+from .Users import UserField as U
 
 
 log = getLogger(__name__)
@@ -49,11 +51,19 @@ async def get_collection():
     return myBox.collection
 
 
-def polyline_bounds(poly: str):
+LatLng = tuple[float, float]
+
+
+class LLBounds(TypedDict):
+    SW: LatLng
+    NE: LatLng
+
+
+def polyline_bounds(poly: str) -> LLBounds | None:
     try:
         latlngs = np.array(polyline.decode(poly), dtype=np.float32)
     except Exception:
-        return
+        return None
 
     lats = latlngs[:, 0]
     lngs = latlngs[:, 1]
@@ -64,7 +74,7 @@ def polyline_bounds(poly: str):
     }
 
 
-def overlaps(b1, b2):
+def overlaps(b1: LLBounds, b2: LLBounds) -> bool:
     b1_left, b1_bottom = b1["SW"]
     b1_right, b1_top = b1["NE"]
     b2_left, b2_bottom = b2["SW"]
@@ -104,7 +114,6 @@ class ActivitySummaryFields:
 
 
 F = ActivitySummaryFields
-U = Users.UserField
 
 
 # see https://developers.strava.com/docs/reference/#api-models-SummaryActivity

@@ -18,6 +18,7 @@ import msgpack
 import polyline
 import asyncio
 import types
+from typing import TypedDict, Awaitable, AsyncGenerator, Coroutine, cast
 
 from . import DataAPIs
 from .DataAPIs import db
@@ -54,42 +55,59 @@ async def get_collection():
 POLYLINE_PRECISION = 6
 
 
-def encode_streams(activity_id: int, rjson: dict):
+class EncodedStreams(TypedDict):
+    t: StreamCodecs.RLDEncoded
+    a: StreamCodecs.RLDEncoded
+    p: str
+
+
+PackedStreams = bytes
+
+
+def encode_streams(rjson: Strava.Streams) -> PackedStreams:
     """compress stream data"""
-    return msgpack.packb(
-        {
-            "id": activity_id,
-            "t": StreamCodecs.rld_encode(rjson["time"]["data"]),
-            "a": StreamCodecs.rld_encode(rjson["altitude"]["data"]),
-            "p": polyline.encode(rjson["latlng"]["data"], POLYLINE_PRECISION),
-        }
-    )
+    enc: EncodedStreams = {
+        "t": StreamCodecs.rld_encode(rjson["time"]["data"]),
+        "a": StreamCodecs.rld_encode(rjson["altitude"]["data"]),
+        "p": polyline.encode(rjson["latlng"]["data"], POLYLINE_PRECISION),
+    }
+    return msgpack.packb(enc)
 
 
-def decode_streams(msgpacked_streams):
+def decode_streams(msgpacked_streams: PackedStreams):
     """de-compress stream data"""
-    d = msgpack.unpackb(msgpacked_streams)
+    d: EncodedStreams = msgpack.unpackb(msgpacked_streams)
     return {
-        "id": d["id"],
         "time": StreamCodecs.rld_decode(d["t"], dtype="u2"),
         "altitude": StreamCodecs.rld_decode(d["a"], dtype="i2"),
         "latlng": polyline.decode(d["p"], POLYLINE_PRECISION),
     }
 
 
-def mongo_doc(activity_id, stream_data, ts=None):
+class StreamsDoc(TypedDict):
+    _id: int
+    mpk: PackedStreams
+    ts: datetime.datetime
+
+
+def mongo_doc(activity_id: int, packed: PackedStreams, ts=None) -> StreamsDoc:
     return {
         "_id": int(activity_id),
-        "mpk": stream_data,
+        "mpk": packed,
         "ts": ts or datetime.datetime.now(),
     }
 
 
-def cache_key(aid):
+def cache_key(aid: int):
     return f"{CACHE_PREFIX}{aid}"
 
 
-async def strava_import(activity_ids, **user):
+StreamsQueryResult = tuple[int, PackedStreams]
+
+
+async def strava_import(
+    activity_ids: list[int], **user
+) -> AsyncGenerator[StreamsQueryResult, bool]:
     uid = int(user[U.ID])
 
     strava = Strava.AsyncClient(uid, **user[U.AUTH])
@@ -102,7 +120,7 @@ async def strava_import(activity_ids, **user):
 
     async with db.redis.pipeline(transaction=True) as pipe:
         async for aid, streams in aiterator:
-            packed = encode_streams(aid, streams)
+            packed = encode_streams(streams)
 
             # queue packed streams to be redis cached
             pipe = pipe.setex(cache_key(aid), REDIS_TTL, packed)
@@ -119,7 +137,9 @@ async def strava_import(activity_ids, **user):
     await coll.insert_many(mongo_docs)
 
 
-async def aiter_query(activity_ids: list[int] = None, user=None):
+async def aiter_query(
+    activity_ids: list[int], user=None
+) -> AsyncGenerator[StreamsQueryResult, bool]:
     if not activity_ids:
         return
     #
@@ -137,7 +157,9 @@ async def aiter_query(activity_ids: list[int] = None, user=None):
         await pipe.execute()
 
     t1 = time.perf_counter()
-    local_result = [(a, s) for a, s in zip(activity_ids, redis_response) if s]
+    local_result: list[StreamsQueryResult] = [
+        (a, s) for a, s in zip(activity_ids, redis_response) if s
+    ]
     log.debug(
         "retrieved %d streams from Redis in %d", len(local_result), (t1 - t0) * 1000
     )
@@ -181,7 +203,7 @@ async def aiter_query(activity_ids: list[int] = None, user=None):
         # Start a fetch process going. We will get back to this...
         t0 = time.perf_counter()
         streams_import = strava_import(activity_ids, **user)
-        first_fetch = asyncio.create_task(streams_import.__anext__())
+        first_fetch = asyncio.create_task(cast(Coroutine, streams_import.__anext__()))
 
     # Yield all the results from Redis and Mongo
     for item in local_result:
@@ -194,7 +216,7 @@ async def aiter_query(activity_ids: list[int] = None, user=None):
 
     if streams_import:
         # Now we yield results of fetches as they come in
-        item1 = await first_fetch
+        item1: StreamsQueryResult = await cast(Awaitable, first_fetch)
         abort_signal = yield item1
         imported_items = [item1]
 
@@ -221,11 +243,11 @@ async def aiter_query(activity_ids: list[int] = None, user=None):
             log.info("unable to import streams for %s", missing_ids)
 
 
-async def query(**kwargs):
+async def query(**kwargs) -> list[StreamsQueryResult]:
     return [s async for s in aiter_query(**kwargs)]
 
 
-async def delete(activity_ids):
+async def delete(activity_ids: list[int]):
     if not activity_ids:
         return
     streams = await get_collection()
