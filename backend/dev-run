@@ -8,9 +8,9 @@ while [ "$1" != "" ]; do
                                 ;;
         -r | --remote_db )      export USE_REMOTE_DB=1
                                 ;;
-        -h | --heroku )         USE_HEROKU=1
+        -h | --heroku )         export USE_HEROKU=1
                                 ;;
-        -R | --reset_db )       HEATFLASK_RESET=1
+        -R | --reset_db )       export HEATFLASK_RESET=1
                                 ;;
         -? | --help )           bat "${0}"
                                 exit

@@ -113,8 +113,7 @@ export function parseURL(urlString: string) {
     urlParams.geohash = url.hash.slice(1)
   }
 
-  const urlArgs = url.searchParams
-  for (const [urlArg, value] of Object.entries(urlArgs)) {
+  for (const [urlArg, value] of url.searchParams) {
     const param = paramLookup[urlArg]
     if (param) {
       urlParams[param] = <string>value
@@ -152,6 +151,7 @@ export function parseURL(urlString: string) {
     else if (type === "key") qparams.key = urlParams.key
   }
 
+  console.log(`qparams`, qparams)
   /*
    * This will give us the endpoint name of the current url,
    *  which is the target-user's id or "global"
@@ -165,7 +165,7 @@ export function parseURL(urlString: string) {
    * *** Construct Visual from URL args ***
    */
 
-  const vparams: Record<string, unknown> = {}
+  const vparams: VisualParameters = {}
 
   if (urlParams.lat && urlParams.lng) {
     vparams.center = { lat: +urlParams.lat, lng: +urlParams.lng }

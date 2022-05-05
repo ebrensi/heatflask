@@ -33,7 +33,10 @@ export function rld_decode(enc: Uint8Array, ArrayConstructor) {
   const increasing = ntype !== 0
 
   // next two bytes are start value as Int16
-  const start_val = new DataView(enc.buffer, enc.byteOffset + 1, 2).getInt16(0)
+  const start_val = new DataView(enc.buffer, enc.byteOffset + 1, 2).getInt16(
+    0,
+    true
+  )
 
   // The rest is encoded diffs as signed/unisgned depending
   // on whether or not the original is increasing
@@ -65,37 +68,3 @@ export function rld_decode(enc: Uint8Array, ArrayConstructor) {
   }
   return decoded
 }
-
-/*
-def rld_decode(enc, dtype=np.int32):
-    ntype = np.frombuffer(enc, dtype="i1", count=1, offset=0)[0]
-    start_val = np.frombuffer(enc, dtype="i2", count=1, offset=1)[0]
-    enc_diffs = np.frombuffer(enc, dtype="i1" if ntype == 0 else "u1", offset=3)
-
-    increasing = ntype != 0
-
-    rl_marker = 255 if increasing else -128
-    L = decoded_length(enc_diffs, rl_marker)
-
-    decoded = np.empty(L, dtype=dtype)
-    decoded[0] = start_val
-    cumsum = start_val
-    i = 0  # enc_diffs counter
-    j = 1  # decoded counter
-    while i < len(enc_diffs):
-        if enc_diffs[i] == rl_marker:
-            d = enc_diffs[i + 1]
-            reps = enc_diffs[i + 2]
-            endreps = j + reps
-            while j < endreps:
-                cumsum += d
-                decoded[j] = cumsum
-                j += 1
-            i += 3
-        else:
-            cumsum += enc_diffs[i]
-            decoded[j] = cumsum
-            i += 1
-            j += 1
-    return decoded
-*/

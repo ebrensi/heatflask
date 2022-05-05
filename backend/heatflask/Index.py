@@ -172,26 +172,26 @@ IMPORT_FLAG_TTL = 20  # secods
 IMPORT_ERROR_TTL = 5
 
 
-def import_flag_key(uid):
+def import_flag_key(uid: int):
     return f"{IMPORT_FLAG_PREFIX}{uid}"
 
 
-async def set_import_flag(user_id, val):
+async def set_import_flag(user_id: int, val: str):
     await db.redis.setex(import_flag_key(user_id), IMPORT_FLAG_TTL, val)
     log.debug(f"{user_id} import flag set to '%s'", val)
 
 
-async def set_import_error(user_id, e):
+async def set_import_error(user_id: int, e):
     val = f"Strava error ${e.status}: ${e.message}"
     await db.redis.setex(import_flag_key(user_id), 5, val)
 
 
-async def clear_import_flag(user_id):
+async def clear_import_flag(user_id: int):
     await db.redis.delete(import_flag_key(user_id))
     log.debug(f"{user_id} import flag unset")
 
 
-async def check_import_progress(user_id):
+async def check_import_progress(user_id: int):
     result = await db.redis.get(import_flag_key(user_id))
     return result.decode("utf-8") if result else None
 
@@ -208,7 +208,7 @@ async def fake_import(uid=None):
     await clear_import_flag(uid)
 
 
-async def import_index_progress(user_id, poll_delay=0.5):
+async def import_index_progress(user_id: int, poll_delay=0.5):
     last_msg = None
     msg = 1
     while msg:
@@ -220,9 +220,12 @@ async def import_index_progress(user_id, poll_delay=0.5):
 
 
 async def import_user_entries(**user):
-    t0 = time.perf_counter()
     uid = int(user[U.ID])
+    if await check_import_progress(uid):
+        log.info(f"Already importing entries for user {uid}")
+        return
 
+    t0 = time.perf_counter()
     await set_import_flag(uid, "Building index...")
 
     strava = Strava.AsyncClient(uid, **user[U.AUTH])
@@ -272,7 +275,7 @@ async def import_user_entries(**user):
     )
 
 
-async def import_one(activity_id, **user):
+async def import_one(activity_id: int, **user):
     client = Strava.AsyncClient(user[U.ID], **user[U.AUTH])
     try:
         DetailedActivity = client.get_activity(activity_id, raise_exception=True)
@@ -290,7 +293,7 @@ async def import_one(activity_id, **user):
         log.debug("%s imported activity %d", user[U.ID], activity_id)
 
 
-async def update_one(activity_id, **updates):
+async def update_one(activity_id: int, **updates):
     index = await get_collection()
     doc = mongo_doc(**updates, update=True)
     try:
@@ -301,7 +304,7 @@ async def update_one(activity_id, **updates):
         log.debug("updated activity %d: %s", activity_id, updates)
 
 
-async def delete_one(activity_id):
+async def delete_one(activity_id: int):
     index = await get_collection()
     return await index.delete_one({F.ACTIVITY_ID: activity_id})
 
@@ -357,14 +360,8 @@ async def query(
     #
     update_index_access=True,
 ):
-    mongo_query = {}
+    mongo_query: dict = {}
     projection = None
-
-    if activity_ids:
-        activity_ids = list(set(int(aid) for aid in activity_ids))
-
-    if exclude_ids:
-        exclude_ids = list(set(int(aid) for aid in exclude_ids))
 
     limit = int(limit) if limit else 0
 
@@ -381,7 +378,9 @@ async def query(
         )
 
     if activity_ids:
-        mongo_query[F.ACTIVITY_ID] = {"$in": activity_ids}
+        mongo_query[F.ACTIVITY_ID] = {
+            "$in": list(set(int(aid) for aid in activity_ids))
+        }
 
     if activity_type:
         mongo_query[F.ACTIVITY_TYPE] = {"$in": activity_type}
@@ -427,9 +426,9 @@ async def query(
 
         # These are the ids of activities that matched the mongo_query
         mongo_query_ids = set([doc[F.ACTIVITY_ID] async for doc in cursor])
-
-        to_fetch = list(mongo_query_ids - exclude_ids)
-        to_delete = list(exclude_ids - mongo_query_ids)
+        excl = set(int(aid) for aid in exclude_ids)
+        to_fetch = list(mongo_query_ids - excl)
+        to_delete = list(excl - mongo_query_ids)
 
         result["delete"] = to_delete
         mongo_query = {F.ACTIVITY_ID: {"$in": to_fetch}}

@@ -5,7 +5,6 @@ has the streams time, latlng, and altitude.
 ***  For Jupyter notebook ***
 Paste one of these Jupyter magic directives to the top of a cell
  and run it, to do these things:
-    %%cython --annotate      # Compile and run the cell
     %load Streams.py         # Load Streams.py file into this (empty) cell
     %%writefile Streams.py   # Write the contents of this cell to Streams.py
 """
@@ -56,6 +55,8 @@ POLYLINE_PRECISION = 6
 
 
 class EncodedStreams(TypedDict):
+    """note: altitude (with key 'a') is scaled up 10x"""
+
     t: StreamCodecs.RLDEncoded
     a: StreamCodecs.RLDEncoded
     p: str
@@ -68,7 +69,7 @@ def encode_streams(rjson: Strava.Streams) -> PackedStreams:
     """compress stream data"""
     enc: EncodedStreams = {
         "t": StreamCodecs.rld_encode(rjson["time"]["data"]),
-        "a": StreamCodecs.rld_encode(rjson["altitude"]["data"]),
+        "a": StreamCodecs.rld_encode(rjson["altitude"]["data"], scale=10),
         "p": polyline.encode(rjson["latlng"]["data"], POLYLINE_PRECISION),
     }
     return msgpack.packb(enc)
@@ -106,7 +107,7 @@ StreamsQueryResult = tuple[int, PackedStreams]
 
 
 async def strava_import(
-    activity_ids: list[int], **user
+    activity_ids: list[int], write=True, **user
 ) -> AsyncGenerator[StreamsQueryResult, bool]:
     uid = int(user[U.ID])
 
@@ -114,10 +115,14 @@ async def strava_import(
     await strava.update_access_token()
     coll = await get_collection()
 
+    aiterator = strava.get_many_streams(activity_ids)
+    if write is False:
+        async for item in aiterator:
+            yield item
+        return
+
     mongo_docs = []
     now = datetime.datetime.now()
-    aiterator = strava.get_many_streams(activity_ids)
-
     async with db.redis.pipeline(transaction=True) as pipe:
         async for aid, streams in aiterator:
             packed = encode_streams(streams)

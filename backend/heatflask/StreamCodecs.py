@@ -24,9 +24,9 @@ def positive_non_decreasing(vals: Nums) -> bool:
     return True
 
 
-def rld_encode(vals: Nums) -> RLDEncoded:
+def rld_encode(vals: Nums, scale: float = 1) -> RLDEncoded:
     vals = (
-        np.fromiter((v + 0.5 for v in vals), dtype="i4", count=len(vals))
+        np.fromiter((scale * v + 0.5 for v in vals), dtype="i4", count=len(vals))
         if type(vals[0]) is float
         else np.array(vals, dtype="i4")
     )

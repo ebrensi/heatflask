@@ -187,7 +187,7 @@ export async function* makeActivityQuery(
           obj.streams = <UnpackedStreams>decode(obj.mpk)
           delete obj.mpk
           obj.streams.t = rld_decode(obj.streams.t, Uint16Array)
-          obj.streams.a = rld_decode(obj.streams.t, Int16Array)
+          obj.streams.a = rld_decode(obj.streams.a, Int16Array)
         }
       }
       const abort = yield obj

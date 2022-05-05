@@ -62,10 +62,11 @@ async def query(request):
         if not is_owner_or_admin:
             query["private"] = False
 
-        # Handle cases where target user exists in our database but
-        #   * has no index entries
-        #   * index is currently being built (by another process)
-        if not await Index.has_user_entries(**target_user):
+        # If there are no index entries for this user and they aren't
+        #  currently being imported, start importing them now
+        if (not await Index.has_user_entries(**target_user)) and (
+            not await check_import_progress(target_user_id)
+        ):
             request.app.add_task(Index.import_user_entries(**target_user))
             # We do this to make sure asyncio starts doing the import task
             # by the time we start looking at import progress

@@ -37,7 +37,6 @@ export async function updateFromQuery({ query }: State) {
 }
 
 export async function start() {
-  debugger
   // Get model parameters from the current URL
   const init = parseURL(window.location.href)
   const appState: State = {
