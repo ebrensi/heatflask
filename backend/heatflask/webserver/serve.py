@@ -76,6 +76,7 @@ async def reset_db(*args, users=True, index=True, streams=True):
     if streams:
         await Streams.drop()
         print("dropped Streams")
+    app.stop()
 
 
 if os.environ.get("HEATFLASK_RESET"):
