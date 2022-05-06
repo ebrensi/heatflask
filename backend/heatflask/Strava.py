@@ -15,10 +15,11 @@ import urllib
 import asyncio
 import datetime
 import types
-from typing import AsyncGenerator, TypedDict, Tuple, Literal, cast, get_args
+from typing import AsyncGenerator, Awaitable, TypedDict, Tuple, Literal, cast, get_args
 
 
 from . import Utility
+from .Types import Epoch, UrlStr
 
 log = getLogger(__name__)
 log.propagate = True
@@ -227,26 +228,30 @@ class AsyncClient:
 
         return new_auth_info
 
-    def deauthenticate(self, *args, **kwargs):
-        return self.__run_with_session(deauth, *args, **kwargs)
+    def deauthenticate(self) -> Awaitable[dict]:
+        return self.__run_with_session(deauth)
 
-    def get_athlete(self, *args, **kwargs):
-        return self.__run_with_session(get_athlete, *args, **kwargs)
+    def get_athlete(self) -> Awaitable[Athlete]:
+        return self.__run_with_session(get_athlete)
 
-    def get_streams(self, *args, **kwargs):
-        return self.__run_with_session(get_streams, *args, **kwargs)
+    def get_streams(self, activity_id: int) -> Awaitable[StreamsFetchResult]:
+        return self.__run_with_session(get_streams)
 
-    def get_activity(self, *args, **kwargs):
-        return self.__run_with_session(get_activity, *args, **kwargs)
+    def get_many_streams(
+        self, activity_ids: list[int], max_errors=MAX_STREAMS_ERRORS
+    ) -> AsyncGenerator[StreamsResult, bool]:
+        return self.__iterate_with_session(
+            get_many_streams, activity_ids, max_errors=max_errors
+        )
 
-    def get_index(self, *args, **kwargs):
-        return self.__iterate_with_session(get_index, *args, **kwargs)
+    def get_activity(self, activity_id: int) -> Awaitable[Activity | None]:
+        return self.__run_with_session(get_activity, activity_id)
 
-    def get_many_streams(self, *args, **kwargs):
-        return self.__iterate_with_session(get_many_streams, *args, **kwargs)
+    def get_index(self) -> AsyncGenerator[Activity, bool]:
+        return self.__iterate_with_session(get_index)
 
-    def create_subscription(self, *args, **kwargs):
-        return self.__run_with_session(create_subscription, *args, **kwargs)
+    def create_subscription(self, callback_url: str) -> Awaitable[SubscriptionResponse]:
+        return self.__run_with_session(create_subscription, callback_url)
 
     def view_subscription(self, *args, **kwargs):
         return self.__run_with_session(view_subscription, *args, **kwargs)
@@ -292,12 +297,19 @@ CLOSE_SESSION_ENDPOINT = "/logout"
 LOGOUT_URL = f"{DOMAIN}{CLOSE_SESSION_ENDPOINT}"
 
 
+class AuthResponse(TypedDict):
+    access_token: str
+    expires_at: Epoch
+    expires_in: int
+    refresh_token: str
+
+
 def auth_url(redirect_uri="http://localhost/exchange_token", **kwargs):
     params = Utility.cleandict(
         {**AUTH_URL_PARAMS, "redirect_uri": redirect_uri, **kwargs}
     )
     paramstr = urllib.parse.urlencode(params, safe=",:")
-    return DOMAIN + AUTH_ENDPOINT + "?" + paramstr
+    return cast(UrlStr, DOMAIN + AUTH_ENDPOINT + "?" + paramstr)
 
 
 # We can get the access_token for a user either with
@@ -314,7 +326,7 @@ async def get_access_token(session=None, code=None, refresh_token=None):
     params = Utility.cleandict(params)
     async with session.post(TOKEN_EXCHANGE_ENDPOINT, params=params) as response:
         rjson = await response.json()
-    return rjson
+    return cast(AuthResponse, rjson)
 
 
 async def deauth(session):
@@ -566,6 +578,28 @@ DELETE_SUBSCRIPTION_PARAMS: SpecsDict = {
 }
 
 
+class Updates(TypedDict):
+    title: str
+    type: ActivityType
+    private: bool
+    authorized: bool
+
+
+class WebhookUpdate(TypedDict):
+    object_type: str
+    object_id: int
+    aspect_type: str
+    updates: Updates
+    owner_id: int
+    subscription_id: int
+    event_time: Epoch
+
+
+SubscriptionResponse = TypedDict(
+    "SubscriptionResponse", {"hub.challenge": str, "hub.verify_token": str}
+)
+
+
 async def create_subscription(admin_session: aiohttp.ClientSession, callback_url: str):
     params: SpecsDict = {**CREATE_SUBSCRIPTION_PARAMS, "callback_url": callback_url}
     async with admin_session.post(SUBSCRIPTION_ENDPOINT, params=params) as response:
@@ -577,15 +611,17 @@ async def create_subscription(admin_session: aiohttp.ClientSession, callback_url
 #
 # Your response must have HTTP code 200 and be of application/json content type.
 # and be the return value of this function.
-def subscription_verification(validation_dict):
+def subscription_verification(validation_dict: SubscriptionResponse):
     if validation_dict.get("hub.verify_token") != SUBSCRIPTION_VERIFY_TOKEN:
         return {"hub.challenge": validation_dict["hub.challenge"]}
 
 
-async def view_subscription(admin_session: aiohttp.ClientSession):
+async def view_subscription(
+    admin_session: aiohttp.ClientSession,
+) -> SubscriptionResponse:
     params = VIEW_SUBSCRIPTION_PARAMS
     async with admin_session.get(SUBSCRIPTION_ENDPOINT, params=params) as response:
-        return await response.json()
+        return cast(SubscriptionResponse, await response.json())
 
 
 async def delete_subscription(

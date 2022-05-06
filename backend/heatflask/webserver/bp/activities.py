@@ -65,7 +65,7 @@ async def query(request):
         # If there are no index entries for this user and they aren't
         #  currently being imported, start importing them now
         if (not await Index.has_user_entries(**target_user)) and (
-            not await check_import_progress(target_user_id)
+            not await Index.check_import_progress(target_user_id)
         ):
             request.app.add_task(Index.import_user_entries(**target_user))
             # We do this to make sure asyncio starts doing the import task
