@@ -2,7 +2,12 @@ from logging import getLogger
 import functools
 import json
 import inspect
+import datetime
 
+from typing import TypedDict, Literal, Optional, Protocol, Callable, Any, cast
+
+
+from ..Types import SanicRequest, SanicResponse
 from .. import Users
 
 from .config import APP_BASE_NAME
@@ -18,38 +23,77 @@ log.propagate = True
 # When a user "logs-in" we put a cookie in their browser
 # that consists of their user_id.   That way the next time they
 # come to our app they will still be logged in, unless they log-out.
-DEFAULT_COOKIE_SPEC = {
-    # "expires": None,
-    # "path": None,
-    # "comment": None,
-    # "domain": None,
+
+Cookie = TypedDict(
+    "Cookie",
+    {
+        "expires": datetime.datetime,
+        "path": str,
+        "comment": str,
+        "domain": str,
+        "max-age": int,
+        "secure": bool,
+        "httponly": bool,
+        "samesite": Literal["Lax", "Strict", "None"],
+    },
+    total=False,
+)
+
+COOKIE_SPEC: Cookie = {
     "max-age": 10 * 24 * 3600,  # 10 days
-    # "secure": False,
     "httponly": True,
     "samesite": "Lax",
 }
-
 COOKIE_NAME = APP_BASE_NAME.lower()
 
 
-def set_cookie(response, session):
+class Session(TypedDict, total=False):
+    """This is the dict where we store session info"""
+
+    user: int
+    flashes: list[str]
+
+
+class RequestContext(Protocol):
+    """Our customized version of the request context"""
+
+    session: Session
+    current_user: dict
+    is_admin: bool
+
+    @staticmethod
+    def flash(msg: str) -> None:
+        """Flash a message to the client with the response"""
+
+    @staticmethod
+    def render_template(filename: str, **kwargs: Any) -> None:
+        """Send one of our string templates with values loaded"""
+
+
+class SessionRequest(SanicRequest):
+    ctx: RequestContext
+
+
+def set_cookie(response: SanicResponse, session: Session):
     response.cookies[COOKIE_NAME] = json.dumps(session)
-    response.cookies[COOKIE_NAME].update(DEFAULT_COOKIE_SPEC)
+    response.cookies[COOKIE_NAME].update(COOKIE_SPEC)
     log.debug("set '%s' cookie %s", COOKIE_NAME, response.cookies[COOKIE_NAME])
 
 
-def delete_cookie(request, response):
+def delete_cookie(request: SanicRequest, response: SanicResponse):
     if request.cookies.get(COOKIE_NAME):
         del response.cookies[COOKIE_NAME]
         log.debug("deleted '%s' cookie", COOKIE_NAME)
 
 
-async def fetch_session_from_cookie(request):
+async def fetch_session_from_cookie(request: SessionRequest):
     cookie_value = request.cookies.get(COOKIE_NAME)
     if not cookie_value:
         log.debug("No session cookie")
 
-    request.ctx.session = json.loads(cookie_value) if cookie_value else {}
+    request.ctx.session = cast(
+        Session, json.loads(cookie_value) if cookie_value else {}
+    )
 
     user_id = request.ctx.session.get("user")
     request.ctx.current_user = await Users.get(user_id) if user_id else None
@@ -57,7 +101,7 @@ async def fetch_session_from_cookie(request):
     log.debug("fetched session: %s", request.ctx.session)
 
 
-async def reset_or_delete_cookie(request, response):
+async def reset_or_delete_cookie(request: SanicRequest, response: SanicResponse):
     """
     (Re)set the user session cookie if there is a user
     attached to this request context,
@@ -82,7 +126,7 @@ async def reset_or_delete_cookie(request, response):
         log.debug("deleted '%s' cookie", COOKIE_NAME)
 
 
-def flash(request, message: str):
+def flash(request: SanicRequest, message: str):
     """
     Attach a Jinja2 style "flash-message" to this session.
     The flash messages are saved in the cookie so
@@ -96,14 +140,14 @@ def flash(request, message: str):
     request.ctx.session["flashes"].append(message)
 
 
-def render_template(request, filename: str, **kwargs):
+def render_template(request: SessionRequest, filename: str, **kwargs: Any):
     flashes = request.ctx.session.pop("flashes", [])
     kwargs["flashes"] = json.dumps(flashes)
     return files.render_template(filename, **kwargs)
 
 
 # Add flash and render_template functions to request.ctx
-async def attach_flash_handlers(request):
+async def attach_flash_handlers(request: SanicRequest):
     request.ctx.flash = functools.partial(flash, request)
     request.ctx.render_template = functools.partial(render_template, request)
 

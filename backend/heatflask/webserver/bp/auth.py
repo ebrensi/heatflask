@@ -10,8 +10,9 @@ from ... import Users
 from ... import Strava
 from ... import Index
 from ... import Events
+from ...Types import SanicRequest, SanicResponse
 
-from ..sessions import session_cookie
+from ..sessions import session_cookie, SessionRequest
 
 log = getLogger(__name__)
 log.setLevel("INFO")
@@ -29,7 +30,7 @@ U = Users.UserField
 
 
 @bp.get("/authorize")
-async def authorize(request):
+async def authorize(request: SanicRequest):
     """
     Attempt to authorize a user via Oauth(2)
     When a client requests this endpoint, we redirect them to
@@ -48,7 +49,7 @@ async def authorize(request):
 
 @bp.get("/authorized")
 @session_cookie(get=True, set=True, flashes=True)
-async def auth_callback(request):
+async def auth_callback(request: SessionRequest):
     """
     Authorization Callback
     After authenticating on Strava's login page, Strava calls this endpoint

@@ -3,6 +3,9 @@ import json
 from string import Template
 from logging import getLogger
 
+from sanic import Sanic
+from typing import Any
+
 # for serving static files (relative to where webserver is run)
 FRONTEND_DIST_DIR = "../frontend/dist"
 
@@ -11,7 +14,7 @@ log.setLevel("INFO")
 log.propagate = True
 
 
-def init_app(app):
+def init_app(app: Sanic):
     # Any get request for a file at the root of the
     # server domain will attempt to serve that file from
     # FRONTEND_DIST_DIR, unless there is an endpoint
@@ -25,10 +28,10 @@ def init_app(app):
     app.register_listener(load_templates, "before_server_start")
 
 
-templates = {}
+templates: dict[str, Template] = {}
 
 
-async def load_templates(app, loop):
+async def load_templates(app: Sanic, loop):
     # We pre-load all of the templates as strings and serve them
     # from memory with values substituted in at serve-time
     # using Python's built-in string.Template library.
@@ -44,7 +47,7 @@ async def load_templates(app, loop):
             log.debug("Created string template from %s", fname)
 
 
-def render_template(filename, **kwargs):
+def render_template(filename: str, **kwargs: Any) -> str:
     for key, val in kwargs.items():
         if isinstance(val, dict):
             kwargs[key] = json.dumps(val, indent=2)
