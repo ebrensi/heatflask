@@ -3,7 +3,6 @@ Defines all the /activities/* webserver endpoints
 for querying the Index and Streams data stores
 """
 
-from prometheus_client import generate_latest
 import sanic.response as Response
 from sanic.exceptions import SanicException
 import sanic

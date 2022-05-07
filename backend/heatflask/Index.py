@@ -228,14 +228,14 @@ async def import_user_entries(**user):
     t0 = time.perf_counter()
     await set_import_flag(uid, "Building index...")
 
-    strava = Strava.AsyncClient(uid, **user[U.AUTH])
+    strava = Strava.AsyncClient(uid, user[U.AUTH])
     await strava.update_access_token()
     now = datetime.datetime.utcnow()
 
     docs = []
     count = 0
     try:
-        async for A in strava.get_index():
+        async for A in strava.get_all_activities():
             if A is not None:
                 docs.append(mongo_doc(**A, ts=now))
                 count += 1
@@ -276,11 +276,15 @@ async def import_user_entries(**user):
 
 
 async def import_one(activity_id: int, **user):
-    client = Strava.AsyncClient(user[U.ID], **user[U.AUTH])
+    client = Strava.AsyncClient(user[U.ID], user[U.AUTH])
     try:
-        DetailedActivity = client.get_activity(activity_id, raise_exception=True)
+        DetailedActivity = await client.get_activity(activity_id, raise_exception=True)
     except Exception:
-        log.error("can't import activity")
+        log.error("can't import activity %d", activity_id)
+        return
+
+    if not DetailedActivity:
+        log.error("can't import activity %d", activity_id)
         return
 
     doc = mongo_doc(**DetailedActivity, ts=datetime.datetime.utcnow())
@@ -293,6 +297,7 @@ async def import_one(activity_id: int, **user):
         log.debug("%s imported activity %d", user[U.ID], activity_id)
 
 
+# TODO: fix this. updates willnot be in this form
 async def update_one(activity_id: int, **updates):
     index = await get_collection()
     doc = mongo_doc(**updates, update=True)

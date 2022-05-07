@@ -107,19 +107,15 @@ StreamsQueryResult = tuple[int, PackedStreams]
 
 
 async def strava_import(
-    activity_ids: list[int], write=True, **user
+    activity_ids: list[int], **user
 ) -> AsyncGenerator[StreamsQueryResult, bool]:
     uid = int(user[U.ID])
 
-    strava = Strava.AsyncClient(uid, **user[U.AUTH])
+    strava = Strava.AsyncClient(uid, user[U.AUTH])
     await strava.update_access_token()
     coll = await get_collection()
 
     aiterator = strava.get_many_streams(activity_ids)
-    if write is False:
-        async for item in aiterator:
-            yield item
-        return
 
     mongo_docs = []
     now = datetime.datetime.now()

@@ -17,6 +17,7 @@ import types
 from . import DataAPIs
 from . import Strava
 from . import Users
+from . import Index
 
 log = getLogger(__name__)
 log.propagate = True
@@ -37,13 +38,7 @@ async def get_collection():
     return myBox.collection
 
 
-async def list_subscriptions(cls):
-    subs = await Strava.list_subscriptions(**cls.credentials)
-    return [sub.id for sub in subs]
-
-
-"""
-async def handle_update_callback(cls, update):
+async def handle_update_callback(update: Strava.WebhookUpdate):
 
     user_id = update["owner_id"]
     try:
@@ -52,7 +47,7 @@ async def handle_update_callback(cls, update):
         log.exception("problem fetching user for update %s", update)
         return
 
-    if (not user) or (not await Users.index_count(**user)):
+    if (not user) or (not await Index.count_user_entries(**user)):
         return
 
     col = await get_collection()
@@ -69,7 +64,7 @@ async def handle_update_callback(cls, update):
         updates = update.get("updates")
         if updates:
             # update the activity if it exists
-            result = Index.update(aid, updates)
+            result = await Index.update_one(aid, **updates)
             if not result:
                 log.info(
                     "webhook: %s index update failed for update %s",
@@ -80,25 +75,25 @@ async def handle_update_callback(cls, update):
 
     #  If we got here then we know there are index entries
     #  for this user
-    if update.aspect_type == "create":
+    if update["aspect_type"] == "create":
         # fetch activity and add it to the index
-        result = Index.import_by_id(user, [_id])
+        result = Index.import_one(aid, **user)
         if result:
-            log.debug("webhook: %s create %s %s", user, _id, result)
+            log.debug("webhook: %s create %s %s", user_id, aid, result)
         else:
-            log.info("webhook: %s create %s failed", user, _id)
+            log.info("webhook: %s create %s failed", user_id, aid)
 
-    elif update.aspect_type == "delete":
+    elif update["aspect_type"] == "delete":
         # delete the activity from the index
-        Index.delete(_id)
+        await Index.delete_one(aid)
 
-@staticmethod
-def iter_updates(limit=0):
-    updates = mongodb.updates.find(sort=[("$natural", pymongo.DESCENDING)]).limit(
-        limit
-    )
 
-    for u in updates:
-        u["_id"] = str(u["_id"])
-        yield u
-"""
+# @staticmethod
+# def iter_updates(limit=0):
+#     updates = mongodb.updates.find(sort=[("$natural", pymongo.DESCENDING)]).limit(
+#         limit
+#     )
+
+#     for u in updates:
+#         u["_id"] = str(u["_id"])
+#         yield u

@@ -223,7 +223,7 @@ async def delete(user_id, deauthenticate=True):
     #  make sure it is done before deleting this user from mongodb.
     #  Afterwards it is useless so we can delete it.
     if user and (U.AUTH in user) and deauthenticate:
-        client = Strava.AsyncClient(user_id, **user[U.AUTH])
+        client = Strava.AsyncClient(user_id, user[U.AUTH])
         async with Strava.get_limiter():
             try:
                 await client.deauthenticate(raise_exception=True)

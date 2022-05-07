@@ -5,6 +5,7 @@ import datetime
 import uuid
 import types
 import sys
+from typing import Optional
 
 from .webserver.config import MONGODB_URL, REDIS_URL
 
@@ -45,7 +46,12 @@ async def disconnect(*args):
     db.mongodb = None
 
 
-async def init_collection(name, ttl=None, capped_size=None, cache_prefix=None):
+async def init_collection(
+    name: str,
+    ttl: Optional[int] = None,
+    capped_size: Optional[int] = None,
+    cache_prefix: Optional[str] = None,
+):
     collections = await db.mongodb.list_collection_names()
 
     if name in collections:

@@ -1,4 +1,4 @@
 from typing import NewType
 
-Epoch = NewType("Epoch", int)
-UrlStr = NewType("UrlStr", str)
+epoch = NewType("epoch", int)
+urlstr = NewType("urlstr", str)

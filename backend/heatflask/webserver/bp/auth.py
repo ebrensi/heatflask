@@ -24,7 +24,7 @@ bp = sanic.Blueprint("auth", url_prefix="/auth")
 #
 # This blueprint serves the "splash" (login) page and
 #  handles Strava authentication
-SCOPE = ",".join(["read", "activity:read", "activity:read_all"])
+
 U = Users.UserField
 
 
@@ -39,7 +39,7 @@ async def authorize(request):
     return Response.redirect(
         Strava.auth_url(
             state=state,
-            scope=SCOPE,
+            scope=["read", "activity:read", "activity:read_all"],
             approval_prompt="force",
             redirect_uri=request.url_for("auth.auth_callback"),
         )
@@ -54,10 +54,11 @@ async def auth_callback(request):
     After authenticating on Strava's login page, Strava calls this endpoint
     with an access_token for the user who successfully logged in.
     """
-    state = request.args.get("state")
-    scope = request.args.get("scope")
-    code = request.args.get("code")
-    error = request.args.get("error")
+    response: Strava.AuthResponse = request.args
+    code = response.get("code")
+    error = response.get("error")
+    state = response.get("state")
+    scope = response.get("scope")
 
     if not state:
         return Response.text("no state specified")
