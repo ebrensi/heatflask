@@ -70,7 +70,7 @@ class Athlete(TypedDict):
 ATHLETE_ENDPOINT = f"{API_SPEC}/athlete"
 
 
-async def get_athlete(session):
+async def get_athlete(session: aiohttp.ClientSession):
     log.debug("  getting Athlete")
     async with session.get(ATHLETE_ENDPOINT) as response:
         return cast(Athlete, await response.json())

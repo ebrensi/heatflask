@@ -1,4 +1,5 @@
 import motor.motor_asyncio
+from pymongo.collection import Collection
 import aioredis
 import logging
 import datetime
@@ -6,6 +7,7 @@ import uuid
 import types
 import sys
 from typing import Optional
+from sanic import Sanic
 
 from .webserver.config import MONGODB_URL, REDIS_URL
 
@@ -16,7 +18,7 @@ db = types.SimpleNamespace(mongo_client=None, mongodb=None, redis=None)
 
 
 # this must be called by whoever controls the asyncio loop
-async def connect(app, loop):
+async def connect(app: Sanic, loop):
     if db.mongodb is not None:
         return
     db.mongo_client = motor.motor_asyncio.AsyncIOMotorClient(MONGODB_URL)
@@ -51,7 +53,7 @@ async def init_collection(
     ttl: Optional[int] = None,
     capped_size: Optional[int] = None,
     cache_prefix: Optional[str] = None,
-):
+) -> Collection:
     collections = await db.mongodb.list_collection_names()
 
     if name in collections:
@@ -74,7 +76,7 @@ async def init_collection(
                 pipe.delete(k)
             await pipe.execute()
 
-    collection = await (
+    collection: Collection = await (
         db.mongodb.create_collection(name, capped=True, size=capped_size)
         if capped_size
         else db.mongodb.create_collection(name)
@@ -91,8 +93,8 @@ async def init_collection(
     return collection
 
 
-async def update_collection_ttl(name, new_ttl):
-    collection = db.mongodb.get_collection(name)
+async def update_collection_ttl(name: str, new_ttl: int):
+    collection: Collection = db.mongodb.get_collection(name)
 
     # Update the MongoDB Activities TTL if necessary
     info = await collection.index_information()
@@ -120,8 +122,8 @@ async def update_collection_ttl(name, new_ttl):
     return collection
 
 
-async def update_collection_cap(name, new_size):
-    collection = db.mongodb.get_collection(name)
+async def update_collection_cap(name: str, new_size: int):
+    collection: Collection = db.mongodb.get_collection(name)
     options = await collection.options()
     current_size = options["size"]
 
