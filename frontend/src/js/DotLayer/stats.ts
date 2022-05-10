@@ -1,23 +1,21 @@
 export class RunningStatsCalculator {
+  count: number
+  _mean: number
+  _dSquared: number
+
   constructor() {
     this.count = 0
     this._mean = 0
     this._dSquared = 0
   }
 
-  update(newValue) {
+  update(newValue: number) {
     this.count++
-
     const meanDifferential = (newValue - this._mean) / this.count
-
     const newMean = this._mean + meanDifferential
-
     const dSquaredIncrement = (newValue - newMean) * (newValue - this._mean)
-
     const newDSquared = this._dSquared + dSquaredIncrement
-
     this._mean = newMean
-
     this._dSquared = newDSquared
   }
 

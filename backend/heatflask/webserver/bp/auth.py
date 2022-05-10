@@ -2,7 +2,6 @@
 Defines /auth/* webserver endpoints
 used for authenticating (logging in/out) Strava users
 """
-import sanic.response as Response
 import sanic
 
 from logging import getLogger
@@ -10,7 +9,6 @@ from ... import Users
 from ... import Strava
 from ... import Index
 from ... import Events
-from ...Types import SanicRequest, SanicResponse
 
 from ..sessions import session_cookie, SessionRequest
 
@@ -30,14 +28,14 @@ U = Users.UserField
 
 
 @bp.get("/authorize")
-async def authorize(request: SanicRequest):
+async def authorize(request: SessionRequest):
     """
     Attempt to authorize a user via Oauth(2)
     When a client requests this endpoint, we redirect them to
     Strava's authorization page, which will then request /authorized
     """
     state = request.args.get("state")
-    return Response.redirect(
+    return sanic.response.redirect(
         Strava.auth_url(
             state=state,
             scope=["read", "activity:read", "activity:read_all"],
@@ -62,22 +60,22 @@ async def auth_callback(request: SessionRequest):
     scope = response.get("scope")
 
     if not state:
-        return Response.text("no state specified")
+        return sanic.response.text("no state specified")
 
     if error:
         request.ctx.flash(f"Error: {request.args.get('error')}")
-        return Response.redirect(state)
+        return sanic.response.redirect(state)
 
     if scope and ("activity:read" not in scope):
         request.ctx.flash("'activity:read' must be in scope.")
-        return Response.redirect(state)
+        return sanic.response.redirect(state)
 
     strava_client = Strava.AsyncClient("admin")
     access_info = await strava_client.update_access_token(code=code)
 
     if (not access_info) or ("athlete" not in access_info):
         request.ctx.flash("login error?")
-        return Response.redirect(state)
+        return sanic.response.redirect(state)
 
     strava_athlete = access_info.pop("athlete")
     user = await Users.add_or_update(
@@ -90,7 +88,7 @@ async def auth_callback(request: SessionRequest):
     )
     if not user:
         request.ctx.flash("database error?")
-        return Response.redirect(state)
+        return sanic.response.redirect(state)
 
     # start user session (which will be persisted with a cookie)
     request.ctx.session["user"] = user[U.ID]
@@ -105,7 +103,7 @@ async def auth_callback(request: SessionRequest):
     )
     if user[U.LOGIN_COUNT] == 1:
         await Events.new_event(msg=f"Authenicated new user {user[U.ID]}")
-    return Response.redirect(state)
+    return sanic.response.redirect(state)
 
 
 @bp.get("/logout")
@@ -124,7 +122,7 @@ async def logout(request):
     splash_page_url = request.app.url_for("main.splash_page")
     state = request.args.get("state", splash_page_url)
     return (
-        Response.redirect(state)
+        sanic.response.redirect(state)
         if state
-        else Response.text(f"User {cuser_id} logged out")
+        else sanic.response.text(f"User {cuser_id} logged out")
     )

@@ -15,9 +15,9 @@ import pymongo
 from pymongo import DESCENDING
 
 import types
+from typing import Final, TypedDict
 import asyncio
-from aiohttp.client_exceptions import ClientResponseError
-
+from aiohttp import ClientResponseError
 from . import DataAPIs
 from . import Utility
 from . import Strava
@@ -49,18 +49,18 @@ async def get_collection():
 
 
 class UserField:
-    ID = "_id"
-    LAST_LOGIN = "ts"
-    LOGIN_COUNT = "#"
-    LAST_INDEX_ACCESS = "I"
-    FIRSTNAME = "f"
-    LASTNAME = "l"
-    PROFILE = "P"
-    CITY = "c"
-    STATE = "s"
-    COUNTRY = "C"
-    AUTH = "@"
-    PRIVATE = "p"
+    ID: Final = "_id"
+    LAST_LOGIN: Final = "ts"
+    LOGIN_COUNT: Final = "#"
+    LAST_INDEX_ACCESS: Final = "I"
+    FIRSTNAME: Final = "f"
+    LASTNAME: Final = "l"
+    PROFILE: Final = "P"
+    CITY: Final = "c"
+    STATE: Final = "s"
+    COUNTRY: Final = "C"
+    AUTH: Final = "@"
+    PRIVATE: Final = "p"
 
 
 U = UserField

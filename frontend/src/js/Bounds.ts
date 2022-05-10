@@ -1,4 +1,4 @@
-type BoundsData = [number, number, number, number]
+type BoundsData = [xmin: number, ymin: number, xmax: number, ymax: number]
 type RectObj = { x: number; y: number; w: number; h: number }
 
 /**  An object for general rectangular bounds
@@ -8,7 +8,6 @@ export class Bounds {
 
   constructor() {
     this._bounds = [NaN, NaN, NaN, NaN]
-    // [xmin, ymin, xmax, ymax]
   }
 
   reset(): Bounds {

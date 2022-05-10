@@ -4,7 +4,7 @@ import json
 import inspect
 import datetime
 
-from typing import TypedDict, Literal, Optional, Protocol, Callable, Any, cast
+from typing import TypedDict, Literal, Protocol, Any, cast
 
 
 from ..Types import SanicRequest, SanicResponse

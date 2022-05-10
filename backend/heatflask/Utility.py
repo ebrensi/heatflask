@@ -5,7 +5,7 @@ from datetime import datetime
 from itertools import islice, repeat, starmap, takewhile
 from operator import truth
 from logging import getLogger
-from typing import Iterable, Iterator, Any
+from typing import Iterable, Iterator
 
 log = getLogger(__name__)
 log.setLevel("INFO")

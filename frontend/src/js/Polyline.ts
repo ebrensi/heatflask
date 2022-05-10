@@ -84,8 +84,8 @@ export function lengthInPoints(str: string): number {
 
 export function decode2Buf(
   str: string,
-  n: number,
-  precision: number
+  precision: number,
+  n?: number
 ): Float32Array {
   n = n || lengthInPoints(str)
   const buf = new Float32Array(2 * n)

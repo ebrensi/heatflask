@@ -15,8 +15,6 @@ export function athleteURL(id: string | number) {
   return `https://www.strava.com/athletes/${id}`
 }
 
-type spec = [speedOrPace: string, color: string, icon: string]
-
 /**
  * This is a list of tuples specifying properties of the rendered objects,
  * such as path color, speed/pace in description.  others can be added.

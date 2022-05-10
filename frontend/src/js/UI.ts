@@ -19,6 +19,8 @@ import { qToQ, makeActivityQuery } from "./DataImport"
 import * as MapAPI from "./MapAPI"
 import * as Sidebar from "./Sidebar"
 
+import { Activity } from "./DotLayer/Activity"
+
 const map = MapAPI.CreateMap()
 
 if (ADMIN) map.showInfoBox()
@@ -31,7 +33,7 @@ if (!!FLASHES && FLASHES.length) {
 export async function updateFromQuery({ query }: State) {
   const backendQuery = qToQ(query, true)
   for await (const obj of makeActivityQuery(backendQuery, URLS.query)) {
-    console.log(obj)
+    console.log("_id" in obj ? new Activity(obj) : obj)
     // TODO: Continue Here
   }
 }

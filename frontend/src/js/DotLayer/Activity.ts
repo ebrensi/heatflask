@@ -2,34 +2,25 @@
  * This module contains definitions for the Activity and ActivityCollection
  *  classes.
  */
-import { latLng2pxBounds, latLng2px } from "./ViewBox"
-import { decode as decodePolyline, lengthInPoints } from "./Codecs/Polyline"
-import { simplify as simplifyPath } from "./Simplifier"
-import { RunningStatsCalculator } from "./stats"
 import { LatLngBounds } from "leaflet"
+import { simplify as simplifyPath } from "./Simplifier"
+import { latLng2pxBounds, latLng2px } from "./ViewBox"
+import { RunningStatsCalculator } from "./stats"
 import { BitSet } from "../BitSet"
+
+import type { Bounds } from "../Bounds"
+import { ImportedActivity, ACTIVITY_FIELDNAMES as A } from "../DataImport"
+import { ActivityType, activity_pathcolor } from "../Strava"
 
 import {
   compress as VByteCompress,
   compressedSizeInBytes as cSize,
-} from "./Codecs/VByte"
-
-import {
-  transcode,
-  decode1Diffs as decode,
-  encode2Diffs as encode,
-} from "./Codecs/StreamRLE"
-
-// import { quartiles } from "../appUtil.js"
-
-import type { Bounds } from "../appUtil"
-import type { RLElist1 } from "./Codecs/StreamRLE"
+} from "../VByte"
 
 interface SegMask extends BitSet {
   zoom?: number
 }
 
-type snum = string | number
 type tuple2 = [number, number] | Float32Array
 type segFunc = (x0: number, y0: number, x1: number, y1: number) => void
 type pointFunc = (x: number, y: number) => void
@@ -51,99 +42,71 @@ type pointFunc = (x: number, y: number) => void
  */
 const ZSCORE_CUTOFF = 5
 
-// Alternatively we can use IQR for outlier detection
-// It is slower since we must sort the values
-// const IQR_MULT = 3
-
-type latlng = { lat: number; lng: number }
-export interface ActivitySpec {
-  _id: snum
-  type: string
-  vtype: string
-  name: string
-  total_distance: snum
-  elapsed_time: snum
-  average_speed: snum
-  ts: [number, number]
-  bounds: { SW: latlng; NE: latlng }
-  polyline: string
-  time: RLElist1
-  n: number
-}
-
 export class Activity {
   id: number
-  type: string
-  vtype: string
+  type: ActivityType
   total_distance: number
   elapsed_time: number
-  average_speed: number
   name: string
   selected: boolean
-  tr: HTMLTableRowElement
-  colors: { path: string; dot: string }
   ts: number
   tsLocal: Date
   llBounds: LatLngBounds
   pxBounds: Bounds
+  colors: { path: string; dot: string }
+
+  px: Float32Array
+  time: ArrayBuffer
+
+  // segment specs
   idxSet: { [zoom: number]: BitSet }
   badSegIdx: { [zoom: number]: number[] }
   segMask: SegMask
   lastSegMask: SegMask
   _segMaskUpdates: SegMask
-  px: Float32Array
-  time: ArrayBuffer
-  n: number
   pxGaps: number[]
-  _containedInMapBounds: boolean
-  idx?: number
 
-  constructor({
-    _id,
-    type,
-    vtype,
-    name,
-    total_distance,
-    elapsed_time,
-    average_speed,
-    ts,
-    bounds,
-    polyline,
-    time,
-    n,
-  }: ActivitySpec) {
-    this.id = +_id
-    this.type = type
-    this.vtype = vtype
-    this.total_distance = +total_distance
-    this.elapsed_time = +elapsed_time
-    this.average_speed = +average_speed
-    this.name = name
-    this.selected = false
-    this.tr = null
+  _containedInMapBounds: boolean
+
+  // average_speed: number
+  // tr: HTMLTableRowElement
+  // idx?: number
+
+  constructor(a: ImportedActivity) {
+    const offset = a[A.UTC_LOCAL_OFFSET]
+    const bounds = a[A.LATLNG_BOUNDS]
+
+    this.id = a[A.ID]
+    this.type = <ActivityType>a[A.TYPE]
+    this.total_distance = a[A.DISTANCE_METERS]
+    this.elapsed_time = a[A.TIME_SECONDS]
+    this.name = a[A.NAME]
+    this.ts = a[A.UTC_START_TIME]
+    this.tsLocal = new Date((this.ts + offset * 3600) * 1000)
+    this.llBounds = new LatLngBounds(bounds.SW, bounds.NE)
+    this.pxBounds = latLng2pxBounds(this.llBounds)
 
     this.colors = {
       // path color is determined by activity type
-      path: ATYPE.pathColor(type),
+      path: activity_pathcolor(this.type),
 
       // dot color is set by a color selecting algorithm later
       dot: null,
     }
 
-    // timestamp comes from backend as a UTC-timestamp, local offset pair
-    const [utc, offset] = ts
-    this.ts = utc
-    this.tsLocal = new Date((utc + offset * 3600) * 1000)
-
-    this.llBounds = new LatLngBounds(bounds.SW, bounds.NE)
-    this.pxBounds = latLng2pxBounds(this.llBounds)
+    // this.selected = false
+    // this.tr = null
 
     this.idxSet = {} // BitSets of indices of px for each level of zoom
     this.badSegIdx = {} // locations of gaps in data for each level of zoom
-    this.segMask = null // BitSet indicating which segments are in view
-    this.pxGaps = null
+    // this.segMask = null // BitSet indicating which segments are in view
+    // this.pxGaps = null
 
     // decode polyline format into an Array of [lat, lng] points
+    let n = a.streams.time.length
+    if (a.streams.altitude.length != n || a.streams.latlng.length / 2 !== n)
+      throw "length mismatch"
+
     const points = new Float32Array(n * 2)
     const excluded = new BitSet(n)
 
@@ -154,19 +117,17 @@ export class Activity {
     const dStats = new RunningStatsCalculator()
     const sqDists = []
 
-    if (lengthInPoints(polyline) != n) throw "length mismatch"
-
-    const latlngs = decodePolyline(polyline)
+    const latlngs = a.streams.latlng
 
     // Set the first point of points to be the projected first latlng pair
-    points.set(latLng2px(latlngs.next().value), 0)
+    points.set(latLng2px(latlngs.subarray(0, 2)), 0)
 
-    let i = 0 // index of the i-th element of latlngs
     let j = 2 // index of the j-th element of points
-    let p1 = points.subarray(0, j)
-    for (const latLng of latlngs) {
-      i++
-      const p2 = latLng2px(latLng)
+    let p1 = points.subarray(0, 2)
+    for (let i = 1; i < n; i++) {
+      const loc = 2 * i
+      const latlng = latlngs.subarray(loc, loc + 2)
+      const p2 = latLng2px(latlng)
       const sd = sqDist(p1, p2)
       if (!sd) {
         /*  We ignore any two successive points with zero distance
@@ -188,22 +149,20 @@ export class Activity {
       this.px = points
       // transcode returns a generator so we need to
       // go through one to get the size
-      const size = cSize(transcode(time))
-      this.time = VByteCompress(transcode(time), size)
+      const size = cSize(a.streams.time)
+      this.time = VByteCompress(a.streams.time, size)
     } else {
-      console.log("got here")
-      n = sqDists.length + 1
-      this.px = points.slice(0, n * 2)
+      console.log("excluded", excluded.array())
+      // n = sqDists.length + 1
+      // this.px = points.slice(0, n * 2)
 
-      // Some points were discarded so we need to adjust the time diffs
-      const newTimes = decode(time, 0, excluded)
-      const transcoded = encode(newTimes)
-      this.time = VByteCompress(transcoded, n)
+      // // Some points were discarded so we need to adjust the time diffs
+      // const newTimes = decode(time, 0, excluded)
+      // const transcoded = encode(newTimes)
+      // this.time = VByteCompress(transcoded, n)
 
       // console.log(`${_id}: excluded ${excludeMask.size()} points`)
     }
-
-    this.n = n
 
     // stdev (Z-score) method for determining outliers
     const dMean = dStats.mean
@@ -221,23 +180,9 @@ export class Activity {
       }
     }
 
-    // // IQR method for determining outliers (it appears to be much slower)
-    // const { q3, iqr } = quartiles(sqDists)
-    // const upperFence = q3 + IQR_MULT * iqr
-    // const dOutliers2 = []
-    // for (let i = 0, len = n - 1; i < len; i++) {
-    //   if (sqDists[i] > upperFence) {
-    //     dOutliers2.push(i)
-    //   }
-    // }
-
     if (dOutliers.length) {
       this.pxGaps = dOutliers
       // console.log({dOutliers, dOutliers2})
-
-      // this.selected = true
-      // const dist = hist(zScores, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
-      // console.log({dStats, zScores, dist, dOutliers})
     }
   }
 

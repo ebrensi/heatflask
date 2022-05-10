@@ -3,7 +3,6 @@ Defines all the /activities/* webserver endpoints
 for querying the Index and Streams data stores
 """
 
-import sanic.response as Response
 from sanic.exceptions import SanicException
 import sanic
 import msgpack
@@ -18,7 +17,7 @@ from ... import Utility
 from ... import Strava
 
 from ..config import APP_NAME
-from ..sessions import session_cookie
+from ..sessions import session_cookie, SessionRequest
 from ..files import render_template
 
 log = getLogger(__name__)
@@ -32,7 +31,7 @@ U = Users.UserField
 
 @bp.post("/")
 @session_cookie(get=True)
-async def query(request):
+async def query(request: SessionRequest):
     """
     Get the activity list JSON for currently logged-in user
     """
@@ -130,7 +129,7 @@ async def query(request):
 
 @bp.get("/")
 @session_cookie(get=True, set=True)
-async def activities_page(request):
+async def activities_page(request: SessionRequest):
     """
     Activity list HTML page for currently logged-in user
     """
@@ -174,4 +173,4 @@ async def activities_page(request):
         },
     }
     html = render_template("activities-page.html", **params)
-    return Response.html(html)
+    return sanic.Response.html(html)

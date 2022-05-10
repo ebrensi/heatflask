@@ -3,10 +3,10 @@
  * defined in @link ~/backend/Index.py
  */
 import { decodeMultiStream, decode } from "@msgpack/msgpack"
+import { decode2Buf } from "./Polyline"
 import { rld_decode } from "./StreamDecode"
 import type { QueryParameters } from "./Model"
 import type { ActivityType } from "./Strava"
-
 const BACKEND_QUERY_URL = "/query"
 
 interface BBounds {
@@ -32,7 +32,7 @@ export type ActivityQuery = {
 
 // This spec should match that in backend/Index.py
 export const ACTIVITY_FIELDNAMES = {
-  ACTIVITY_ID: "_id",
+  ID: "_id",
   USER_ID: "U",
   N_ATHLETES: "#a",
   N_PHOTOS: "#p",
@@ -44,14 +44,14 @@ export const ACTIVITY_FIELDNAMES = {
   LATLNG_BOUNDS: "B",
   FLAG_COMMUTE: "c",
   FLAG_PRIVATE: "p",
-  ACTIVITY_NAME: "N",
-  ACTIVITY_TYPE: "t",
+  NAME: "N",
+  TYPE: "t",
   VISIBILITY: "v",
 } as const
 
 const A = ACTIVITY_FIELDNAMES
 export type ImportedActivity = {
-  [A.ACTIVITY_ID]: number
+  [A.ID]: number
   [A.USER_ID]: number
   [A.N_ATHLETES]: number
   [A.N_PHOTOS]: number
@@ -63,40 +63,39 @@ export type ImportedActivity = {
   [A.LATLNG_BOUNDS]: BBounds
   [A.FLAG_COMMUTE]: boolean
   [A.FLAG_PRIVATE]: boolean
-  [A.ACTIVITY_NAME]: string
-  [A.ACTIVITY_TYPE]: number | ActivityType
+  [A.NAME]: string
+  [A.TYPE]: number | ActivityType
   [A.VISIBILITY]: string
-  streams?: UnpackedStreams
+
+  mpk?: Uint8Array
+
+  streams?: {
+    time: Uint16Array
+    altitude: Int16Array
+    latlng: Float32Array
+  }
 }
-
-type PackedStreams = { mpk: Uint8Array }
-
-export const STREAM_FIELDNAMES = {
-  TIME: "t",
-  ALTITUDE: "a",
-  POLYLINE: "p",
-} as const
-const S = STREAM_FIELDNAMES
 
 export type UnpackedStreams = {
-  id: number
   /** rld encoded times in seconds */
-  [S.TIME]: Uint8Array
+  t: Uint8Array
   /** rld encoded altitude in meters */
-  [S.ALTITUDE]: Uint8Array
+  a: Uint8Array
   /** polyline encoded latlng [lat, lng] pairs  */
-  [S.POLYLINE]: string
+  p: string
 }
-
-type QueryResultActivity = ImportedActivity & Partial<PackedStreams>
 
 type StatusObject = {
   msg?: string
   error?: string
   count?: number
-  info?: { atypes: string[]; avatars: { [id: number]: string } }
+  info?: {
+    atypes: string[]
+    avatars: { [id: number]: string }
+    polyline_precision: number
+  }
 }
-type QueryResultItem = QueryResultActivity | StatusObject
+type QueryResultItem = ImportedActivity | StatusObject
 
 /**
  * Convert a set of QueryParamters (from DOM) to ActivityQuery parameters
@@ -175,19 +174,22 @@ export async function* makeActivityQuery(
     for await (const obj of resultStream) {
       if (!info && "info" in obj) {
         info = obj.info
-      } else if (A.ACTIVITY_TYPE in obj) {
+      } else if (A.TYPE in obj) {
         // in this case obj is an activity
 
         // decode the activity name
-        obj[A.ACTIVITY_TYPE] =
-          info.atypes[obj[A.ACTIVITY_TYPE]] || A.ACTIVITY_TYPE
+        obj[A.TYPE] = info.atypes[obj[A.TYPE]] || A.TYPE
 
         // Un-pack the streams if there are any
         if ("mpk" in obj) {
-          obj.streams = <UnpackedStreams>decode(obj.mpk)
+          const mpk = <UnpackedStreams>decode(obj.mpk)
           delete obj.mpk
-          obj.streams.t = rld_decode(obj.streams.t, Uint16Array)
-          obj.streams.a = rld_decode(obj.streams.a, Int16Array)
+
+          obj.streams = {
+            time: rld_decode(mpk.t, Uint16Array),
+            altitude: rld_decode(mpk.a, Int16Array),
+            latlng: decode2Buf(mpk.p, info.polyline_precision),
+          }
         }
       }
       const abort = yield obj
@@ -213,7 +215,6 @@ export const USER_FIELDNAMES = {
   COUNTRY: "C",
   PRIVATE: "p",
 } as const
-const U = USER_FIELDNAMES
 
 // /*
 //  * Set up a message box that appears only when flags.importing is true

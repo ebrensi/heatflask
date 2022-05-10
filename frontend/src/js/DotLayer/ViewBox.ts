@@ -6,21 +6,21 @@
 
 import { makePT } from "./CRS"
 import { DomUtil, Control, Point } from "leaflet"
-import { MAP_INFO } from "../Env"
-import { Bounds } from "../appUtil"
+import { Bounds } from "../Bounds"
+import { ADMIN as MAP_INFO } from "../Env"
 
 import type { Map as LMap, LatLng, LatLngBounds } from "leaflet"
 
 type ctxOrCanvas = CanvasRenderingContext2D | HTMLCanvasElement
 type TransformData = [number, number, number, number]
-type TransformFunc = (x: [number, number]) => [number, number]
+type TransformFunc = (x: [number, number] | Float32Array) => [number, number]
 type rect = { x: number; y: number; w: number; h: number }
 
 const BOUNDSTOL = 0.0001
 
 let _map: LMap
 let _baseTranslation: Point
-let _lastT = new Point(0, 0)
+const _lastT = new Point(0, 0)
 let _pxOrigin: Point
 let _pxOffset: Point
 let _mapPanePos: Point
