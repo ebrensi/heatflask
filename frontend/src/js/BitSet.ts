@@ -55,17 +55,13 @@ export class BitSet {
     return this
   }
 
-  /**
-   * Remove all values, reset memory usage
-   */
+  /** Remove all values, reset memory usage */
   clear(): BitSet {
     this.words.fill(0)
     return this
   }
 
-  /**
-   * Set the bit at {@link index} to false
-   */
+  /** Set the bit at {@link index} to false */
   remove(index: number): BitSet {
     const w: number = index >>> 5
     if (w >= this.words.length) {
@@ -77,9 +73,7 @@ export class BitSet {
     return this
   }
 
-  /**
-   * Return true if no bit is set
-   */
+  /** Return true if no bit is set */
   isEmpty(): boolean {
     const c: number = this.words.length
     for (let i = 0; i < c; i++) {
@@ -170,7 +164,7 @@ export class BitSet {
     return 0
   }
 
-  // Return an array with the set bit locations (values)
+  /** Return an array with the set bit locations (values) */
   array(ArrayConstructor?: anyArrayConstructor): anyArray {
     const max = this.max()
     ArrayConstructor =

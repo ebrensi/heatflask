@@ -6,7 +6,7 @@
 import BitSet from "../BitSet"
 
 type Point = [number, number]
-type PointAccessor = (i: number) => Point
+type PointAccessor = (i: number) => Point | Float32Array
 
 /*
  * Simplifier.js is based on V. Agafonkin's package with the same name

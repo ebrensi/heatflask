@@ -76,7 +76,11 @@ def encode_streams(rjson: Strava.Streams) -> PackedStreams:
 
 
 def decode_streams(msgpacked_streams: PackedStreams):
-    """de-compress stream data"""
+    """de-compress stream data
+    * time: UInt16
+    * altitude: Int16
+    * latlng: float32 (Google Polyline encoded)
+    """
     d: EncodedStreams = msgpack.unpackb(msgpacked_streams)
     return {
         "time": StreamCodecs.rld_decode(d["t"], dtype="u2"),

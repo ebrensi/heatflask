@@ -56,7 +56,8 @@ export class Activity {
   colors: { path: string; dot: string }
 
   px: Float32Array
-  time: ArrayBuffer
+  altitude: Int16Array
+  time: Uint16Array
 
   // segment specs
   idxSet: { [zoom: number]: BitSet }
@@ -82,7 +83,7 @@ export class Activity {
     this.elapsed_time = a[A.TIME_SECONDS]
     this.name = a[A.NAME]
     this.ts = a[A.UTC_START_TIME]
-    this.tsLocal = new Date((this.ts + offset * 3600) * 1000)
+    this.tsLocal = new Date(this.ts + offset)
     this.llBounds = new LatLngBounds(bounds.SW, bounds.NE)
     this.pxBounds = latLng2pxBounds(this.llBounds)
 
@@ -107,82 +108,67 @@ export class Activity {
     if (a.streams.altitude.length != n || a.streams.latlng.length / 2 !== n)
       throw "length mismatch"
 
-    const points = new Float32Array(n * 2)
-    const excluded = new BitSet(n)
+    const included = new BitSet(n)
 
     /*
      * We will compute some stats on interval lengths to
-     *  detect anomalous big gaps in the data.
+     *  detect anomalous big gaps between data-points.
      */
     const dStats = new RunningStatsCalculator()
     const sqDists = []
 
-    const latlngs = a.streams.latlng
+    // Conmvert all the latlngs to rectangular points
+    for (let i = 0; i < n; i++) {
+      const p = 2 * i
+      latLng2px(a.streams.latlng.subarray(p, p + 2))
+    }
 
-    // Set the first point of points to be the projected first latlng pair
-    points.set(latLng2px(latlngs.subarray(0, 2)), 0)
+    const px = a.streams.latlng
 
-    let j = 2 // index of the j-th element of points
-    let p1 = points.subarray(0, 2)
+    let p0 = px.subarray(0, 2)
+    included.add(0)
     for (let i = 1; i < n; i++) {
-      const loc = 2 * i
-      const latlng = latlngs.subarray(loc, loc + 2)
-      const p2 = latLng2px(latlng)
-      const sd = sqDist(p1, p2)
-      if (!sd) {
-        /*  We ignore any two successive points with zero distance
-         *  this might cause problems so look out for it
-         */
-        excluded.add(i)
-        continue
-      }
+      const p = 2 * i
+      const p1 = px.subarray(p, p + 2)
+      const sd = sqDist(p0, p1)
+
+      /*  We ignore any two successive points with zero distance
+       *  this might cause problems so look out for it
+       */
+      if (!sd) continue
+
+      included.add(i)
       const logSd = Math.log(sd)
       dStats.update(logSd)
       sqDists.push(logSd)
 
-      points.set(p2, j)
-      p1 = points.subarray(j, j + 2)
-      j = j + 2
+      p0 = p1
     }
 
-    if (excluded.isEmpty()) {
-      this.px = points
-      // transcode returns a generator so we need to
-      // go through one to get the size
-      const size = cSize(a.streams.time)
-      this.time = VByteCompress(a.streams.time, size)
-    } else {
-      console.log("excluded", excluded.array())
-      // n = sqDists.length + 1
-      // this.px = points.slice(0, n * 2)
+    n = included.size()
+    this.altitude = new Int16Array(n)
+    this.time = new Uint16Array(n)
+    this.px = new Float32Array(2 * n)
 
-      // // Some points were discarded so we need to adjust the time diffs
-      // const newTimes = decode(time, 0, excluded)
-      // const transcoded = encode(newTimes)
-      // this.time = VByteCompress(transcoded, n)
-
-      // console.log(`${_id}: excluded ${excludeMask.size()} points`)
-    }
+    let j = 0
+    included.forEach((i) => {
+      this.altitude[j] = a.streams.altitude[i]
+      this.time[j] = a.streams.time[i]
+      this.px[2 * j] = px[2 * i]
+      this.px[2 * j + 1] = px[2 * i + 1]
+    })
 
     // stdev (Z-score) method for determining outliers
     const dMean = dStats.mean
     const dStdev = dStats.populationStdev
     // const zScores = []
     const devTol = ZSCORE_CUTOFF * dStdev
-    const dOutliers = []
+    this.pxGaps = []
     for (let i = 0, len = n - 1; i < len; i++) {
       const dev = sqDists[i] - dMean
-      // const zScore = dev / dStdev
-      // zScores.push(zScore)
-      // if (zScore > ZSCORE_CUTOFF) {
       if (dev > devTol) {
-        dOutliers.push(i)
+        this.pxGaps.push(i)
       }
-    }
-
-    if (dOutliers.length) {
-      this.pxGaps = dOutliers
-      // console.log({dOutliers, dOutliers2})
     }
   }
 
