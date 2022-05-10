@@ -55,9 +55,11 @@ export class Activity {
   pxBounds: Bounds
   colors: { path: string; dot: string }
 
-  px: Float32Array
-  altitude: Int16Array
-  time: Uint16Array
+  streams: {
+    px: Float32Array
+    altitude: Int16Array
+    time: Uint16Array
+  }
 
   // segment specs
   idxSet: { [zoom: number]: BitSet }
@@ -65,7 +67,7 @@ export class Activity {
   segMask: SegMask
   lastSegMask: SegMask
   _segMaskUpdates: SegMask
-  pxGaps: number[]
+  pxGaps: null | number[]
 
   _containedInMapBounds: boolean
 
@@ -131,31 +133,31 @@ export class Activity {
       const p = 2 * i
       const p1 = px.subarray(p, p + 2)
       const sd = sqDist(p0, p1)
+      p0 = p1
 
-      /*  We ignore any two successive points with zero distance
-       *  this might cause problems so look out for it
-       */
-      if (!sd) continue
+      //  Ignore any point with zero distance from the previous one
+      if (sd === 0) continue
 
       included.add(i)
       const logSd = Math.log(sd)
       dStats.update(logSd)
       sqDists.push(logSd)
-
-      p0 = p1
     }
 
     n = included.size()
-    this.altitude = new Int16Array(n)
-    this.time = new Uint16Array(n)
-    this.px = new Float32Array(2 * n)
+    this.streams = {
+      altitude: new Int16Array(n),
+      time: new Uint16Array(n),
+      px: new Float32Array(2 * n),
+    }
 
     let j = 0
     included.forEach((i) => {
-      this.altitude[j] = a.streams.altitude[i]
-      this.time[j] = a.streams.time[i]
-      this.px[2 * j] = px[2 * i]
-      this.px[2 * j + 1] = px[2 * i + 1]
+      this.streams.altitude[j] = a.streams.altitude[i]
+      this.streams.time[j] = a.streams.time[i]
+      this.streams.px[2 * j] = px[2 * i]
+      this.streams.px[2 * j + 1] = px[2 * i + 1]
+      j++
     })
 
     // stdev (Z-score) method for determining outliers
@@ -163,13 +165,11 @@ export class Activity {
     const dStdev = dStats.populationStdev
     // const zScores = []
     const devTol = ZSCORE_CUTOFF * dStdev
-    this.pxGaps = []
-    for (let i = 0, len = n - 1; i < len; i++) {
-      const dev = sqDists[i] - dMean
-      if (dev > devTol) {
-        this.pxGaps.push(i)
-      }
-    }
+
+    const pxGaps = []
+    for (let i = 0, len = n - 1; i < len; i++)
+      if (sqDists[i] - dMean > devTol) pxGaps.push(i)
+    this.pxGaps = pxGaps.length ? pxGaps : null
   }
 
   /**
@@ -188,7 +188,7 @@ export class Activity {
    */
   pointAccessor(i: number): Float32Array {
     const j = i << 1
-    return this.px.subarray(j, j + 2)
+    return this.streams.px.subarray(j, j + 2)
   }
 
   /**
@@ -197,21 +197,17 @@ export class Activity {
    * given zoom level.
    */
   makeIdxSet(zoom: number): Activity {
-    if (!Number.isFinite(zoom)) {
-      throw new TypeError("zoom must be a number")
-    }
-
     if (zoom in this.idxSet) return
 
     const idxBitSet = simplifyPath(
       (i) => this.pointAccessor(i),
-      this.px.length / 2,
+      this.streams.px.length / 2,
       1 / 2 ** zoom
     )
     this.idxSet[zoom] = idxBitSet
 
     /*
-     * this.pxGaps contains the index of the start point of every segment
+     * this.pxGaps contains index of the first point of every segment
      *  detemined to have an abnormally large gap.  The simplified index
      *  set for this zoom-level (idxSet[zoom]) may not contain that index,
      *  so we search backwards until we find the index for the start point
@@ -221,9 +217,7 @@ export class Activity {
       const gapLocs: number[] = []
       for (let i = this.pxGaps.length - 1; i >= 0; i--) {
         let gapStart = this.pxGaps[i]
-        while (!idxBitSet.has(gapStart)) {
-          gapStart--
-        }
+        while (!idxBitSet.has(gapStart)) gapStart--
         gapLocs.push(gapStart)
       }
 
@@ -234,7 +228,7 @@ export class Activity {
        *  (set-bit) of idxBitSet.
        */
       gapLocs.sort()
-      const badSegIdx = (this.badSegIdx[zoom] = [])
+      const badSegIdx: number[] = []
 
       const idxIter = idxBitSet.imap()
       let nextIdx = idxIter.next()
@@ -246,6 +240,7 @@ export class Activity {
         }
         badSegIdx.push(j)
       }
+      if (badSegIdx.length) this.badSegIdx[zoom] = badSegIdx
     }
     return this
   }
@@ -363,11 +358,10 @@ export class Activity {
     if (!this.segMask.isEmpty()) return this.segMask
   }
 
-  /**
+  /*
    * execute a function func(x1, y1, x2, y2) on each currently in-view
    * segment (x1,y1) -> (x2, y2) of this Activity. drawDiff specifies to
    * only use segments that have changed since the last segMask update.
-   * Set forceAll to force all currently viewed segments.
    */
   forEachSegment(func: segFunc, drawDiff: boolean): number {
     const segMask = drawDiff ? this._segMaskUpdates : this.segMask
@@ -409,7 +403,7 @@ export class Activity {
     if (!segMask) return 0
 
     const zoom = segMask.zoom
-    const time = uncompressVByteRLEIterator(this.time, this.ts)
+    const time = (i: number) => this.streams.time[i] + this.ts
     const idx = this.idxSet[zoom].iterator()
 
     // we do this because first time is always 0 and time(0) corresponds
@@ -459,63 +453,4 @@ function sqDist(p1: tuple2, p2: tuple2) {
   const [x1, y1] = p1
   const [x2, y2] = p2
   return (x2 - x1) ** 2 + (y2 - y1) ** 2
-}
-
-/**
- * Returns a function that returns the next encoded member each time
- * it is called.  Optionally it can be called with the index of the next
- * number to return.
- *
- * Another way to describe it is that this returns a sort of element-array
- * S where S(i) is the i-th element, but i must be larger every time S(i)
- * is called.
- */
-function uncompressVByteRLEIterator(
-  buf: ArrayBuffer,
-  runningSum = 0
-): (i: number) => number {
-  const inbyte = new Int8Array(buf)
-  const end = inbyte.length
-  let pos = 0
-  let reps = 0
-  let si = 0
-  let v = 0
-
-  return (targetPos: number) => {
-    for (;;) {
-      do {
-        runningSum += v
-        if (si++ === targetPos || targetPos === undefined) return runningSum //{ v: runningSum, i: si }
-      } while (--reps > 0)
-
-      if (pos >= end) throw RangeError
-
-      for (;;) {
-        // get the next value
-        let c = inbyte[pos++]
-        v = c & 0x7f
-        if (c < 0) {
-          c = inbyte[pos++]
-          v |= (c & 0x7f) << 7
-          if (c < 0) {
-            c = inbyte[pos++]
-            v |= (c & 0x7f) << 14
-            if (c < 0) {
-              c = inbyte[pos++]
-              v |= (c & 0x7f) << 21
-              if (c < 0) {
-                c = inbyte[pos++]
-                v |= c << 28
-              }
-            }
-          }
-        }
-
-        // 0 followed by the number of reps specifies a run of repeats
-        if (v === 0) reps = NaN
-        else if (isNaN(reps)) reps = v
-        else break
-      }
-    }
-  }
 }
