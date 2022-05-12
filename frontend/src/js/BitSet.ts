@@ -23,8 +23,16 @@ export class BitSet {
     return answer
   }
 
-  [Symbol.iterator]() {
-    return this.imap((i: number) => i)
+  *[Symbol.iterator](): Generator<number> {
+    const c = this.words.length
+    for (let k = 0; k < c; ++k) {
+      let w = this.words[k]
+      while (w !== 0) {
+        const t = w & -w
+        yield (k << 5) + hammingWeight((t - 1) | 0)
+        w ^= t
+      }
+    }
   }
 
   /**

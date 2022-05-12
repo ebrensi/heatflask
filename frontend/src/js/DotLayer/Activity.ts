@@ -12,11 +12,6 @@ import type { Bounds } from "../Bounds"
 import { ImportedActivity, ACTIVITY_FIELDNAMES as A } from "../DataImport"
 import { ActivityType, activity_pathcolor } from "../Strava"
 
-import {
-  compress as VByteCompress,
-  compressedSizeInBytes as cSize,
-} from "../VByte"
-
 interface SegMask extends BitSet {
   zoom?: number
 }
@@ -172,16 +167,13 @@ export class Activity {
     this.pxGaps = pxGaps.length ? pxGaps : null
   }
 
-  /**
-   * The square distance between to successive points in this.px
+  /** The square distance between to successive points in this.px
    */
   gapAt(idx: number): number {
     return sqDist(this.pointAccessor(idx), this.pointAccessor(idx + 1))
   }
 
-  /**
-   * This returns a fuction that provides direct access to the
-   * i-th point [x,y] of this.px
+  /** A fuction that provides direct access to the i-th point [x,y] of this.px
    *
    * Each point returned by the accessor function is a window into the
    * actual px array so modifying it will modify the the px array.
@@ -245,8 +237,7 @@ export class Activity {
     return this
   }
 
-  /*
-   * A segMask is a BitSet containing the index of the start-point of
+  /** A segMask is a BitSet containing the index of the start-point of
    *  each segment that is in view and is not bad.  A segment is
    *  considered to be in view if one of its points is in the current
    *  view. A "bad" segment is one that represents a gap in GPS data.
@@ -272,8 +263,7 @@ export class Activity {
 
     // console.log(this.id + "----- updating segmask ---------")
     if (viewportPxBounds.containsBounds(this.pxBounds)) {
-      /*
-       * If this activity is completely contained in the viewport then we
+      /* If this activity is completely contained in the viewport then we
        * already know every segment is included and we quickly create a full segMask
        */
       if (this._containedInMapBounds && zoom === this.lastSegMask.zoom) {
@@ -302,8 +292,8 @@ export class Activity {
         const idx = seekIdx(i)
         const p = this.pointAccessor(idx)
         if (viewportPxBounds.contains(p[0], p[1])) {
-          // The viewport contains this point so we include
-          // the segments before and after it
+          /* The viewport contains this point so we include
+           * the segments before and after it */
           if (lastAdded !== i - 1) segMask.add(i - 1)
           segMask.add((lastAdded = i))
         }
@@ -326,9 +316,7 @@ export class Activity {
       return
     }
 
-    /*
-     * Now we have a current and a last segMask
-     */
+    /* Now we have a current and a last segMask */
     const zoomLevelChanged = this.segMask.zoom !== this.lastSegMask.zoom
     if (zoomLevelChanged) {
       this.segMask.clone(this._segMaskUpdates)
@@ -338,12 +326,10 @@ export class Activity {
         this.lastSegMask,
         this._segMaskUpdates
       )
-      /*
-       * We include an edge segment (at the edge of the screen)
-       * even if it was in the last draw
-       */
+      /* We include an edge segment (at the edge of the screen)
+       * even if it was in the last draw */
       const lsm = this.lastSegMask
-      let lastSeg
+      let lastSeg: number
       newSegs.forEach((s) => {
         const beforeGap = lastSeg && lastSeg + 1
         const afterGap = s && s - 1
@@ -358,8 +344,7 @@ export class Activity {
     if (!this.segMask.isEmpty()) return this.segMask
   }
 
-  /*
-   * execute a function func(x1, y1, x2, y2) on each currently in-view
+  /** Execute a function func(x1, y1, x2, y2) on each currently in-view
    * segment (x1,y1) -> (x2, y2) of this Activity. drawDiff specifies to
    * only use segments that have changed since the last segMask update.
    */
@@ -374,7 +359,7 @@ export class Activity {
     let lastidx2: number
     let lastp2: Float32Array
 
-    segMask.forEach((i) => {
+    for (const i of segMask) {
       const reuse = i === lasti + 1
       lasti = i
 
@@ -385,14 +370,13 @@ export class Activity {
       const p2 = (lastp2 = this.pointAccessor(idx2))
       if (p2[0] || p2[1]) func(p1[0], p1[1], p2[0], p2[1])
       count++
-    })
+    }
+
     return count
   }
 
-  /**
-   * execute a function func(x,y) on each dot point of this Activity
-   * given time now (in seconds since epoch) and dot Specs.
-   */
+  /** Execute a function func(x,y) on each dot point of this Activity
+   * given time now (in seconds since epoch) and dot Specs. */
   forEachDot(
     func: pointFunc,
     nowInSecs: number,
@@ -414,7 +398,7 @@ export class Activity {
 
     let count = 0
     // segMask[i] gives the idx of the start of the i-th segment
-    segMask.forEach((i) => {
+    for (const i of segMask) {
       const reuse = i === lasti + 1
       lasti = i
 
@@ -444,7 +428,7 @@ export class Activity {
         func(pax + vx * dt, pay + vy * dt)
         count++
       }
-    })
+    }
     return count
   }
 }

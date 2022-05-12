@@ -5,7 +5,6 @@ export type { setSize } from "../../assembly/wasm"
 const sourceFilePath = DEV_BUNDLE ? "dev.wasm" : "prod.wasm"
 
 let _wasmModule: WebAssembly.Module
-let _ctx: CanvasRenderingContext2D
 
 type WasmImports = Record<string, Record<string, WebAssembly.ImportValue>>
 type WasmExports = Record<string, WebAssembly.ExportValue>

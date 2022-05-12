@@ -10,23 +10,23 @@ import { options } from "./Defaults"
 import { BitSet } from "../BitSet"
 import { queueTask, nextTask } from "../appUtil"
 
-import type { LatLngBounds } from "leaflet"
-import type { Bounds } from "../appUtil"
-import type { PixelGraphics } from "./PixelGraphics"
-import type { ActivitySpec } from "./Activity"
+import { LatLngBounds } from "leaflet"
+import type { Bounds } from "../Bounds"
+// import type { PixelGraphics } from "./PixelGraphics"
+import type { ImportedActivity } from "../DataImport"
 
 export const items: Map<number, Activity> = new Map()
 
 let itemsArray: Activity[]
 let memory: WebAssembly.Memory
 
-export function add(specs: ActivitySpec): void {
+export function add(specs: ImportedActivity): void {
   const A = new Activity(specs)
   items.set(A.id, A)
 }
 
-export function remove(id: number | string): void {
-  items.delete(+id)
+export function remove(id: number): void {
+  items.delete(id)
 }
 
 /**
@@ -44,40 +44,50 @@ export function reset(): void {
   /*
    * We will pack all relevant data into linear memory
    */
-  let pointsBufSize = 0
-  let timeBufSize = 0
-  for (let i = 0; i < itemsArray.length; i++) {
-    const A = itemsArray[i]
-    pointsBufSize += A.px.length << 2
-    timeBufSize += A.time.byteLength
+  const nbytes = {
+    px: 0,
+    time: 0,
+    alt: 0,
   }
 
-  const numPages = ((pointsBufSize + timeBufSize + 0xffff) & ~0xffff) >>> 16
-  console.log({ pointsBufSize, timeBufSize, numPages })
+  for (let i = 0; i < itemsArray.length; i++) {
+    const A = itemsArray[i]
+    nbytes.px += A.streams.px.byteLength
+    nbytes.time += A.streams.time.byteLength
+    nbytes.alt += A.streams.altitude.byteLength
+  }
+
+  const numPages =
+    ((nbytes.px + nbytes.time + nbytes.alt + 0xffff) & ~0xffff) >>> 16
+  console.log(nbytes, numPages)
 
   memory = new WebAssembly.Memory({ initial: numPages })
   const buf = memory.buffer
-  // const buf = new ArrayBuffer(pointsBufSize + timeBufSize)
-  const f32view = new Float32Array(buf, 0, pointsBufSize >> 2)
-  const uint8view = new Uint8Array(buf, pointsBufSize, timeBufSize)
-  let pos32 = 0
-  let pos8 = 0
-  for (let i = 0; i < itemsArray.length; i++) {
-    const A = itemsArray[i]
-    f32view.set(A.px, pos32)
-    A.px = f32view.subarray(pos32, (pos32 += A.px.length))
+  const pxView = new Float32Array(buf, 0, nbytes.px / 4)
+  const timeView = new Uint16Array(buf, nbytes.px, nbytes.time / 2)
+  const altView = new Int16Array(buf, nbytes.px + nbytes.time, nbytes.alt / 2)
 
-    uint8view.set(new Uint8Array(A.time), pos8)
-    A.time = uint8view.subarray(pos8, (pos8 += A.time.byteLength))
+  let pxLoc = 0
+  let timeLoc = 0
+  let altLoc = 0
+
+  for (let i = 0; i < itemsArray.length; i++) {
+    const s = itemsArray[i].streams
+    pxView.set(s.px, pxLoc)
+    s.px = pxView.subarray(pxLoc, (pxLoc += s.px.length))
+
+    timeView.set(s.time, timeLoc)
+    s.time = timeView.subarray(timeLoc, (timeLoc += s.time.length))
+
+    altView.set(s.altitude, altLoc)
+    s.altitude = altView.subarray(altLoc, (altLoc += s.altitude.length))
   }
 
   inView.resize(itemsArray.length)
   lastInView.resize(itemsArray.length)
 }
 
-/*
- * assign a dot-color to each item of _items
- */
+/** assign a dot-color to each item of _items */
 function setDotColors(): void {
   const colorPalette = ColorPalette.makePalette(items.size)
   let i = 0
@@ -86,10 +96,8 @@ function setDotColors(): void {
   }
 }
 
-/*
- * inView is the set indicating which activities are currently in view. It is actually
- * a set of indices of Activities in itemsArray.
- */
+/** The set indicating which activities are currently in view. It is actually
+ * a set of indices of Activities in itemsArray.*/
 const inView = new BitSet(1)
 const lastInView = new BitSet(1)
 
@@ -150,7 +158,7 @@ export async function updateContext(
 export function* inPxBounds(pxBounds: Bounds): IterableIterator<Activity> {
   for (const idx of inView) {
     const A = itemsArray[idx]
-    for (let j = 0; j < A.n; j++) {
+    for (let j = 0; j < A.streams.time.length; j++) {
       const p = A.pointAccessor(j)
       if (pxBounds.contains(p[0], p[1])) {
         yield A
@@ -161,27 +169,15 @@ export function* inPxBounds(pxBounds: Bounds): IterableIterator<Activity> {
 }
 
 export async function getLatLngBounds(
-  ids?: Iterable<number>
+  ids?: Iterable<number>,
+  only_selected?: boolean
 ): Promise<LatLngBounds> {
   const bounds = new LatLngBounds()
-
+  ids = ids || items.keys()
   if (ids) {
     for (const id of ids) {
-      bounds.extend(items.get(id).llBounds)
-    }
-  } else {
-    for (const A of items.values()) {
-      bounds.extend(A.llBounds)
-    }
-  }
-  if (bounds.isValid()) return bounds
-}
-
-export async function getSelectedLatLngBounds(): Promise<LatLngBounds> {
-  const bounds = new LatLngBounds()
-  for (const A of items.values()) {
-    if (A.selected) {
-      bounds.extend(A.llBounds)
+      const A = items.get(id)
+      if (!only_selected || A.selected) bounds.extend(A.llBounds)
     }
   }
   if (bounds.isValid()) return bounds
