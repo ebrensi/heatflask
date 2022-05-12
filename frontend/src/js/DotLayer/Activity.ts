@@ -170,7 +170,7 @@ export class Activity {
   /** The square distance between to successive points in this.px
    */
   gapAt(idx: number): number {
-    return sqDist(this.pointAccessor(idx), this.pointAccessor(idx + 1))
+    return sqDist(this.pointAt(idx), this.pointAt(idx + 1))
   }
 
   /** A fuction that provides direct access to the i-th point [x,y] of this.px
@@ -178,7 +178,7 @@ export class Activity {
    * Each point returned by the accessor function is a window into the
    * actual px array so modifying it will modify the the px array.
    */
-  pointAccessor(i: number): Float32Array {
+  pointAt(i: number): Float32Array {
     const j = i << 1
     return this.streams.px.subarray(j, j + 2)
   }
@@ -192,7 +192,7 @@ export class Activity {
     if (zoom in this.idxSet) return
 
     const idxBitSet = simplifyPath(
-      (i) => this.pointAccessor(i),
+      (i) => this.pointAt(i),
       this.streams.px.length / 2,
       1 / 2 ** zoom
     )
@@ -290,7 +290,7 @@ export class Activity {
 
       for (let i = 0; i < nSegs; i++) {
         const idx = seekIdx(i)
-        const p = this.pointAccessor(idx)
+        const p = this.pointAt(idx)
         if (viewportPxBounds.contains(p[0], p[1])) {
           /* The viewport contains this point so we include
            * the segments before and after it */
@@ -301,7 +301,7 @@ export class Activity {
 
       // Check the last point
       if (lastAdded !== nSegs - 1) {
-        const p = this.pointAccessor(seekIdx(nSegs))
+        const p = this.pointAt(seekIdx(nSegs))
         if (viewportPxBounds.contains(p[0], p[1])) segMask.add(nSegs - 1)
       }
     }
@@ -366,8 +366,8 @@ export class Activity {
       const idx1 = reuse ? lastidx2 : idx(i)
       const idx2 = (lastidx2 = idx(i + 1))
 
-      const p1 = reuse ? lastp2 : this.pointAccessor(idx1)
-      const p2 = (lastp2 = this.pointAccessor(idx2))
+      const p1 = reuse ? lastp2 : this.pointAt(idx1)
+      const p2 = (lastp2 = this.pointAt(idx2))
       if (p2[0] || p2[1]) func(p1[0], p1[1], p2[0], p2[1])
       count++
     }
@@ -375,23 +375,34 @@ export class Activity {
     return count
   }
 
-  /** Execute a function func(x,y) on each dot point of this Activity
-   * given time now (in seconds since epoch) and dot Specs. */
-  forEachDot(
-    func: pointFunc,
-    nowInSecs: number,
-    T: number,
+  /** timestamp at the ith data-point */
+  timeAt(i: number): epoch {
+    return this.streams.time[i] + this.ts
+  }
+
+  /** altitude at the ith data-point */
+  altitudeAt(i: number): number {
+    return this.streams.altitude[i] / 10
+  }
+
+  /** Given a Float32Array dotlocs, we update it with locations of all the dots
+   * for a given now and looping-period T.  The number of dots may vary, so make sure
+   * your buffer is large enough to hold all of them!
+   */
+  update_dotlocs(
+    now: epoch,
+    T: number, // loop-length in seconds
+    dotlocs: Float32Array,
     drawDiff: boolean
   ): number {
     const segMask = drawDiff ? this._segMaskUpdates : this.segMask
     if (!segMask) return 0
 
     const zoom = segMask.zoom
-    const time = (i: number) => this.streams.time[i] + this.ts
     const idx = this.idxSet[zoom].iterator()
 
     // we do this because first time is always 0 and time(0) corresponds
-    //  to pointAccessor(1)
+    //  to pointAt(1)
     let lasti: number
     let lastIdx1: number
     let lasttb = 0
@@ -407,25 +418,35 @@ export class Activity {
 
       if (idx1 === undefined) return
 
-      const ta = reuse ? lasttb : time(idx0)
-      const tb = (lasttb = time(idx1))
+      const ta = reuse ? lasttb : this.timeAt(idx0)
+      const tb = (lasttb = this.timeAt(idx1))
 
-      const kLow = Math.ceil((nowInSecs - tb) / T)
-      const kHigh = Math.floor((nowInSecs - ta) / T)
+      const kLow = Math.ceil((now - tb) / T)
+      const kHigh = Math.floor((now - ta) / T)
 
       if (kLow > kHigh) return
 
-      const [pax, pay] = this.pointAccessor(idx0)
-      const [pbx, pby] = this.pointAccessor(idx1)
+      const [pax, pay] = this.pointAt(idx0)
+      const [pbx, pby] = this.pointAt(idx1)
 
       const tab = tb - ta
       const vx = (pbx - pax) / tab
       const vy = (pby - pay) / tab
 
+      const alta = this.altitudeAt(idx0)
+      const altb = this.altitudeAt(idx1)
+      const va = (altb - alta) / tab
+
       for (let k = kLow; k <= kHigh; k++) {
-        const t = nowInSecs - k * T
+        const t = now - k * T
         const dt = t - ta
-        func(pax + vx * dt, pay + vy * dt)
+
+        const loc = count * 2
+        // const loc = count * 3
+
+        dotlocs[loc] = pax + vx * dt
+        dotlocs[loc + 1] = pay + vy * dt
+        // dotlocs[loc+2] = alta + va * dt
         count++
       }
     }
