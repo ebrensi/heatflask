@@ -25,7 +25,6 @@
   ],
   "context": "browser",
   "dependencies": {
-    "@assemblyscript/loader": "latest",
     "@msgpack/msgpack": "^2.7.1",
     "@types/google.analytics": "^0.0.42",
     "downloadjs": "^1.4.7",
@@ -41,7 +40,7 @@
     "sidebar-v2": "^0.4.0"
   },
   "browserslist": [
-    "> 0.75%, last 2 versions, not dead"
+    "last 2 versions, not dead"
   ],
   "devDependencies": {
     "@parcel/resolver-glob": "^2.4.1",

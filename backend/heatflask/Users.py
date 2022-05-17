@@ -15,12 +15,16 @@ import pymongo
 from pymongo import DESCENDING
 
 import types
-from typing import Final, TypedDict
+from typing import Final, NamedTuple, Optional, TypedDict
 import asyncio
 from aiohttp import ClientResponseError
+
+from backend.heatflask.webserver.bp.activities import U
+
 from . import DataAPIs
 from . import Utility
 from . import Strava
+from .Types import epoch, urlstr, List
 
 log = getLogger(__name__)
 log.propagate = True
@@ -33,7 +37,7 @@ COLLECTION_NAME = "users_v0"
 TTL = 365 * 24 * 3600
 
 # These are IDs of users we consider to be admin users
-ADMIN = [15972102]
+ADMIN: Final = [15972102]
 
 # This is to limit the number of de-auths in one batch so we
 # don't go over our hit quota
@@ -48,22 +52,40 @@ async def get_collection():
     return myBox.collection
 
 
-class UserField:
-    ID: Final = "_id"
-    LAST_LOGIN: Final = "ts"
-    LOGIN_COUNT: Final = "#"
-    LAST_INDEX_ACCESS: Final = "I"
-    FIRSTNAME: Final = "f"
-    LASTNAME: Final = "l"
-    PROFILE: Final = "P"
-    CITY: Final = "c"
-    STATE: Final = "s"
-    COUNTRY: Final = "C"
-    AUTH: Final = "@"
-    PRIVATE: Final = "p"
+class AuthInfo(NamedTuple):
+    access_token: str
+    expires_at: epoch
+    refresh_token: str
 
 
-U = UserField
+class MongoDoc(TypedDict):
+    _id: int
+    u: tuple
+
+
+class User(NamedTuple):
+    id: int
+    login_count: int
+    last_login: epoch
+    last_index_access: epoch
+    profile: urlstr
+    firstname: str
+    lastname: str
+    city: str
+    state: str
+    country: str
+    auth: AuthInfo
+    private: bool
+
+    @classmethod
+    def from_mongo_doc(cls, doc: MongoDoc):
+        return cls(*doc["u"])
+
+    def mongo_doc(self):
+        return MongoDoc(_id=self.id, u=self)
+
+
+IndexOf: Final = {field: idx for idx, field in enumerate(User._fields)}
 
 
 def mongo_doc(

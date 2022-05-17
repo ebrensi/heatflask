@@ -1,22 +1,24 @@
 {
+  "options": {
+    "outFile": "dist/wasm.wasm",
+    "textFile": "dist/wasm.wat",
+    "stats": true,
+    "runtime": "stub",
+    "exportRuntime": true,
+    "bindings": "esm",
+    "enable": ["threads", "simd"]
+  },
   "targets": {
     "development": {
-      "binaryFile": "dist/dev.wasm",
-      "textFile": "dist/dev.wat",
       "sourceMap": true,
-      "debug": true,
-      "enable": ["bulk-memory", "simd"]
+      "debug": true
     },
     "production": {
-      "binaryFile": "dist/prod.wasm",
-      "textFile": "dist/prod.wat",
       "sourceMap": true,
       "optimizeLevel": 3,
       "shrinkLevel": 1,
-      "converge": false,
-      "noAssert": false,
-      "enable": ["bulk-memory", "simd"]
+      "converge": true,
+      "noAssert": false
     }
-  },
-  "options": {}
+  }
 }

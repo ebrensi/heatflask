@@ -16,6 +16,7 @@ interface SegMask extends BitSet {
   zoom?: number
 }
 
+type epoch = number
 type tuple2 = [number, number] | Float32Array
 type segFunc = (x0: number, y0: number, x1: number, y1: number) => void
 type pointFunc = (x: number, y: number) => void

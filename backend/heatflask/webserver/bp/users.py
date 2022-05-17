@@ -10,8 +10,9 @@ from logging import getLogger
 from ... import Users
 
 from ..config import APP_NAME
-from ..sessions import session_cookie
-from .auth import authorize
+from ..sessions import session_cookie, SessionRequest
+
+# from .auth import authorize
 
 log = getLogger(__name__)
 log.setLevel("INFO")
@@ -24,7 +25,7 @@ bp = sanic.Blueprint("users", url_prefix="/users")
 # and GET is for web page
 @bp.post("/")
 @session_cookie(get=True, set=True)
-async def query(request):
+async def query(request: SessionRequest):
     output = request.args.get("output", "json")
     admin = request.args.get("admin")
     if admin and (not request.ctx.is_admin):
@@ -37,10 +38,11 @@ async def query(request):
 
 @bp.get("/")
 @session_cookie(get=True, flashes=True)
-async def directory(request):
+async def directory(request: SessionRequest):
     admin = request.args.get("admin")
     if admin and (not request.ctx.is_admin):
-        return Response.redirect(authorize, state=request.url)
+        return
+        # return Response.redirect("authorize", state=request.url)
 
     kwargs = {"admin": 1} if admin else {}
     query_url = request.url_for("users.query", output="csv", **kwargs)
@@ -51,7 +53,7 @@ async def directory(request):
 
 @bp.get("/migrate")
 @session_cookie(get=True, flashes=True)
-async def migrate(request):
+async def migrate(request: SessionRequest):
     if not request.ctx.is_admin:
         raise SanicException("sorry", status_code=401)
 

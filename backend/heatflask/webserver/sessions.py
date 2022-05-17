@@ -3,8 +3,9 @@ import functools
 import json
 import inspect
 import datetime
+from types import SimpleNamespace
 
-from typing import TypedDict, Literal, Protocol, Any, cast
+from typing import TypedDict, Literal, Any, cast
 
 
 from ..Types import SanicRequest, SanicResponse
@@ -54,7 +55,7 @@ class Session(TypedDict, total=False):
     flashes: list[str]
 
 
-class RequestContext(Protocol):
+class RequestContext(SimpleNamespace):
     """Our customized version of the request context"""
 
     session: Session
@@ -66,7 +67,7 @@ class RequestContext(Protocol):
         """Flash a message to the client with the response"""
 
     @staticmethod
-    def render_template(filename: str, **kwargs: Any) -> None:
+    def render_template(filename: str, **kwargs: Any) -> str:
         """Send one of our string templates with values loaded"""
 
 
@@ -140,7 +141,7 @@ def flash(request: SanicRequest, message: str):
     request.ctx.session["flashes"].append(message)
 
 
-def render_template(request: SessionRequest, filename: str, **kwargs: Any):
+def render_template(request: SessionRequest, filename: str, **kwargs: Any) -> str:
     flashes = request.ctx.session.pop("flashes", [])
     kwargs["flashes"] = json.dumps(flashes)
     return files.render_template(filename, **kwargs)

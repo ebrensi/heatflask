@@ -733,9 +733,7 @@ class AsyncClient:
             log.info("No refresh token in response?!")
             return None
 
-        new_auth_info = cast(TokenExchangeResponse, response)
-
-        self.set_credentials(new_auth_info)
+        self.set_credentials(response)
 
         # If we are inside a session-context
         if self.session:
@@ -744,7 +742,7 @@ class AsyncClient:
         elapsed = (time.perf_counter() - t0) * 1000
         log.info("%s token refresh took %d", self.name, elapsed)
 
-        return new_auth_info
+        return response
 
     # Wrapped functions
     def deauthenticate(self, **kwargs: Any) -> Awaitable[DeauthResponse]:
