@@ -15,7 +15,7 @@ import pymongo
 from pymongo import DESCENDING
 
 import types
-from typing import Final, NamedTuple, Optional, TypedDict
+from typing import Final, NamedTuple, Optional, TypedDict, cast
 import asyncio
 from aiohttp import ClientResponseError
 
@@ -24,7 +24,7 @@ from backend.heatflask.webserver.bp.activities import U
 from . import DataAPIs
 from . import Utility
 from . import Strava
-from .Types import epoch, urlstr, List
+from .Types import epoch, urlstr
 
 log = getLogger(__name__)
 log.propagate = True
@@ -59,15 +59,16 @@ class AuthInfo(NamedTuple):
 
 
 class MongoDoc(TypedDict):
+    """MongoDB document for a User. u is just the user without id field."""
+
     _id: int
-    u: tuple
+    u: tuple[urlstr, str, str, str, str, str, AuthInfo, int, epoch, epoch, bool]
 
 
 class User(NamedTuple):
+    """A tuple representing a user"""
+
     id: int
-    login_count: int
-    last_login: epoch
-    last_index_access: epoch
     profile: urlstr
     firstname: str
     lastname: str
@@ -75,77 +76,54 @@ class User(NamedTuple):
     state: str
     country: str
     auth: AuthInfo
-    private: bool
+    login_count: int = 0
+    last_login: epoch = cast(epoch, 0)
+    last_index_access: epoch = cast(epoch, 0)
+    public: bool = False
+
+    @classmethod
+    def from_strava_login(cls, info: Strava.TokenExchangeResponse):
+        a = info["athlete"]
+        return cls(
+            id=a["id"],
+            profile=a["profile_medium"] or a["profile"],
+            firstname=a["firstname"],
+            lastname=a["lastname"],
+            city=a["city"],
+            state=a["state"],
+            country=a["country"],
+            auth=AuthInfo(
+                info["access_token"], info["expires_at"], info["refresh_token"]
+            ),
+        )
 
     @classmethod
     def from_mongo_doc(cls, doc: MongoDoc):
-        return cls(*doc["u"])
+        return cls(doc["_id"], *doc["u"])
 
     def mongo_doc(self):
-        return MongoDoc(_id=self.id, u=self)
+        (id, *theRest) = self
+        return MongoDoc(_id=id, u=theRest)
+
+    def is_admin(self):
+        return self.id in ADMIN
 
 
 IndexOf: Final = {field: idx for idx, field in enumerate(User._fields)}
 
 
-def mongo_doc(
-    # From Strava Athlete record
-    id: int = None,
-    firstname: str = None,
-    lastname: str = None,
-    profile_medium: str = None,
-    profile: str = None,
-    city: str = None,
-    state: str = None,
-    country: str = None,
-    # my additions
-    last_login=None,
-    login_count: int = None,
-    last_index_access=None,
-    private: bool = None,
-    auth: dict[str, str | int] = None,
-    **kwargs,
-) -> dict | None:
-    if not (id or kwargs.get(U.ID)):
-        log.error("cannot create user with no id")
-        return None
-
-    return Utility.cleandict(
-        {
-            U.ID: int(kwargs.get(U.ID, id)),
-            U.FIRSTNAME: firstname,
-            U.LASTNAME: lastname,
-            U.PROFILE: profile_medium or profile,
-            U.CITY: city,
-            U.STATE: state,
-            U.COUNTRY: country,
-            U.LAST_LOGIN: last_login,
-            U.LOGIN_COUNT: login_count,
-            U.LAST_INDEX_ACCESS: last_index_access,
-            U.AUTH: auth,
-            U.PRIVATE: private,
-        }
-    )
-
-
-def is_admin(user_id: int | str):
-    return int(user_id) in ADMIN
-
-
 async def add_or_update(
+    user: User,
     update_last_login=False,
     update_index_access=False,
     inc_login_count=False,
-    **strava_athlete,
 ):
     users = await get_collection()
-    # log.debug("Athlete: %s", strava_athlete)
-    doc = mongo_doc(**strava_athlete)
-    if not doc:
-        log.exception("error adding/updating user: %s", doc)
-        return
+    old_u = get()
+    # TODO: pick up here
 
     now_ts = datetime.datetime.utcnow().timestamp()
+
     if update_last_login:
         doc[U.LAST_LOGIN] = now_ts
 
@@ -175,9 +153,7 @@ async def add_or_update(
         log.exception("error adding/updating user: %s", doc)
 
 
-async def get(user_id):
-    if not user_id:
-        return
+async def get(user_id: int):
     users = await get_collection()
     uid = int(user_id)
     query = {U.ID: uid}
