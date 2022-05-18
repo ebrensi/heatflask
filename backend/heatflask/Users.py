@@ -111,6 +111,31 @@ class User(NamedTuple):
 
 IndexOf: Final = {field: idx for idx, field in enumerate(User._fields)}
 
+# def encode(obj):
+#     if type(obj) in (list, tuple) or isinstance(obj, PVector):
+#         return [encode(item) for item in obj]
+#     if isinstance(obj, Mapping):
+#         encoded_obj = {}
+#         for key in obj.keys():
+#             encoded_obj[encode(key)] = encode(obj[key])
+#         return encoded_obj
+#     if isinstance(obj, _native_builtin_types):
+#         return obj
+#     if isinstance(obj, Set):
+#         return ExtType(TYPE_PSET, packb([encode(item) for item in obj], use_bin_type=True))
+#     if isinstance(obj, PList):
+#         return ExtType(TYPE_PLIST, packb([encode(item) for item in obj], use_bin_type=True))
+#     if isinstance(obj, PBag):
+#         return ExtType(TYPE_PBAG, packb([encode(item) for item in obj], use_bin_type=True))
+#     if isinstance(obj, types.FunctionType):
+#         return ExtType(TYPE_FUNC, encode_func(obj))
+#     if isinstance(obj, Receiver):
+#         return ExtType(TYPE_MBOX, packb(obj.encode(), use_bin_type=True))
+#     # assume record
+#     cls = obj.__class__
+#     return ExtType(0, packb([cls.__module__, cls.__name__] + [encode(item) for item in obj],
+#                             use_bin_type=True))
+
 
 async def add_or_update(
     user: User,
