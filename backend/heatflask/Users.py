@@ -13,16 +13,14 @@ from logging import getLogger
 import datetime
 import pymongo
 from pymongo import DESCENDING
-
-import types
-from typing import Final, NamedTuple, Optional, TypedDict, cast
 import asyncio
 from aiohttp import ClientResponseError
 
-from backend.heatflask.webserver.bp.activities import U
+from typing import AsyncGenerator, Final, NamedTuple, Optional, TypedDict, Any, cast
+from dataclasses import dataclass
+from pymongo.collection import Collection
 
 from . import DataAPIs
-from . import Utility
 from . import Strava
 from .Types import epoch, urlstr
 
@@ -43,7 +41,13 @@ ADMIN: Final = [15972102]
 # don't go over our hit quota
 MAX_TRIAGE = 10
 
-myBox = types.SimpleNamespace(collection=None)
+
+@dataclass
+class Box:
+    collection: Optional[Collection]
+
+
+myBox: Final = Box(collection=None)
 
 
 async def get_collection():
@@ -59,7 +63,11 @@ class AuthInfo(NamedTuple):
 
 
 class MongoDoc(TypedDict):
-    """MongoDB document for a User. u is just the user without id field."""
+    """
+    MongoDB document for a User. We store the user as a tuple (Array),
+    much like a User object except with the id field removed and used as
+    the index
+    """
 
     _id: int
     u: tuple[urlstr, str, str, str, str, str, AuthInfo, int, epoch, epoch, bool]
@@ -69,17 +77,17 @@ class User(NamedTuple):
     """A tuple representing a user"""
 
     id: int
-    profile: urlstr
-    firstname: str
-    lastname: str
-    city: str
-    state: str
-    country: str
-    auth: AuthInfo
-    login_count: int = 0
-    last_login: epoch = cast(epoch, 0)
-    last_index_access: epoch = cast(epoch, 0)
-    public: bool = False
+    profile: Optional[urlstr] = None
+    firstname: Optional[str] = None
+    lastname: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    country: Optional[str] = None
+    auth: Optional[AuthInfo] = None
+    login_count: Optional[int] = None
+    last_login: Optional[epoch] = None
+    last_index_access: Optional[epoch] = None
+    public: Optional[bool] = None
 
     @classmethod
     def from_strava_login(cls, info: Strava.TokenExchangeResponse):
@@ -109,7 +117,19 @@ class User(NamedTuple):
         return self.id in ADMIN
 
 
-IndexOf: Final = {field: idx for idx, field in enumerate(User._fields)}
+"""Index of a given field in the MongoDB array for a User"""
+IndexOf: Final = {field: idx for idx, field in enumerate(User._fields[1:])}
+
+
+def selector(idx_or_fieldname: int | str):
+    """The mongodb selector for an array element"""
+    idx = (
+        idx_or_fieldname
+        if isinstance(idx_or_fieldname, int)
+        else IndexOf[idx_or_fieldname]
+    )
+    return f"u.{idx}"
+
 
 # def encode(obj):
 #     if type(obj) in (list, tuple) or isinstance(obj, PVector):
@@ -137,104 +157,99 @@ IndexOf: Final = {field: idx for idx, field in enumerate(User._fields)}
 #                             use_bin_type=True))
 
 
+async def get(user_id: int) -> User | None:
+    """Retrieve a User from the database"""
+    db = await get_collection()
+    query = {"_id": user_id}
+    try:
+        doc: MongoDoc = await db.find_one(query)
+        return User.from_mongo_doc(doc)
+    except Exception:
+        log.exception("Failed mongodb query: %s", query)
+        return None
+
+
+async def get_all() -> AsyncGenerator[User, None]:
+    """Returns an async iterator of all users"""
+    db = await get_collection()
+    docs: AsyncGenerator[MongoDoc, None] = db.find()
+    async for doc in docs:
+        u = User.from_mongo_doc(doc)
+        if u:
+            yield u
+
+
 async def add_or_update(
-    user: User,
+    updates: User,
     update_last_login=False,
     update_index_access=False,
     inc_login_count=False,
 ):
-    users = await get_collection()
-    old_u = get()
-    # TODO: pick up here
+    """Add a new user or update an existing one"""
+    collection = await get_collection()
+    if not collection:
+        return
 
-    now_ts = datetime.datetime.utcnow().timestamp()
-
+    now_ts = cast(epoch, int(datetime.datetime.utcnow().timestamp()))
+    update_array = list(updates[1:])
     if update_last_login:
-        doc[U.LAST_LOGIN] = now_ts
+        update_array[IndexOf["last_login"]] = now_ts
 
     if update_index_access:
-        doc[U.LAST_INDEX_ACCESS] = now_ts
+        update_array[IndexOf["last_index_access"]] = now_ts
 
-    # We cannot technically "update" the _id field if this user exists
-    # in the database, so we need to remove that field from the updates
-    user_info = {**doc}
-    user_id = user_info.pop(U.ID)
-    updates = {"$set": user_info}
+    mongo_updates = {
+        "$set": {selector(i): v for i, v in enumerate(update_array) if v is not None}
+    }
 
     if inc_login_count:
-        updates["$inc"] = {U.LOGIN_COUNT: 1}
+        mongo_updates["$inc"] = {selector("login_count"): 1}
 
-    log.debug("%d updated with %s", user_id, updates)
+    log.debug("Users updated with %s", mongo_updates)
 
     # Creates a new user or updates an existing user (with the same id)
     try:
-        return await users.find_one_and_update(
-            {U.ID: user_id},
-            updates,
+        return await collection.find_one_and_update(
+            {"_id": updates.id},
+            mongo_updates,
             upsert=True,
             return_document=pymongo.ReturnDocument.AFTER,
         )
     except Exception:
-        log.exception("error adding/updating user: %s", doc)
+        log.exception("error adding/updating Users: %s", mongo_updates)
 
 
-async def get(user_id: int):
-    users = await get_collection()
-    uid = int(user_id)
-    query = {U.ID: uid}
-    try:
-        return await users.find_one(query)
-    except Exception:
-        log.exception("Failed mongodb query: %s", query)
+default_out_fieldnames = (
+    "id",
+    "firstname",
+    "lastname",
+    "profile",
+    "city",
+    "state",
+    "country",
+)
+admin_out_fieldnames = default_out_fieldnames + (
+    "last_login",
+    "login_count",
+    "last_index_access",
+    "private",
+)
+
+SORT_SPEC = [(selector("last_login"), DESCENDING)]
 
 
-# Returns an async iterator
-async def get_all():
-    users = await get_collection()
-    return users.find()
+async def dump(admin=False) -> AsyncGenerator[tuple, None]:
+    query = {} if admin else {selector("private"): False}
+    collection = await get_collection()
+    cursor: AsyncGenerator[MongoDoc, None] = collection.find(
+        filter=query, sort=SORT_SPEC
+    )
+    fieldnames = admin_out_fieldnames if admin else default_out_fieldnames
+    yield fieldnames
 
-
-default_out_fields = {
-    U.ID: True,
-    U.FIRSTNAME: True,
-    U.LASTNAME: True,
-    U.PROFILE: True,
-    U.CITY: True,
-    U.STATE: True,
-    U.COUNTRY: True,
-    #
-    # U.LAST_LOGIN=False
-    # U.LOGIN_COUNT=False
-    # U.LAST_INDEX_ACCESS=False
-    # U.AUTH: False,
-    # U.PRIVATE: False,
-}
-
-
-SORT_SPEC = [(U.LAST_LOGIN, DESCENDING)]
-
-
-async def dump(admin=False, output="json"):
-    query = {} if admin else {U.PRIVATE: False}
-
-    out_fields = {**default_out_fields}
-    if admin:
-        out_fields.update(
-            {
-                U.LAST_LOGIN: True,
-                U.LOGIN_COUNT: True,
-                U.LAST_INDEX_ACCESS: True,
-                U.PRIVATE: True,
-            }
-        )
-    users = await get_collection()
-    cursor = users.find(filter=query, projection=out_fields, sort=SORT_SPEC)
-    keys = list(out_fields.keys())
-    csv = output == "csv"
-    if csv:
-        yield keys
-    async for u in cursor:
-        yield [u.get(k, "") for k in keys] if csv else u
+    idx = tuple(IndexOf[f] for f in fieldnames[1:])
+    async for m in cursor:
+        yield tuple(m["u"][i] for i in idx)
 
 
 async def delete(user_id, deauthenticate=True):
@@ -246,8 +261,8 @@ async def delete(user_id, deauthenticate=True):
     #  and we won't be able to if we delete that info, so we must
     #  make sure it is done before deleting this user from mongodb.
     #  Afterwards it is useless so we can delete it.
-    if user and (U.AUTH in user) and deauthenticate:
-        client = Strava.AsyncClient(user_id, user[U.AUTH])
+    if user and (user.auth) and deauthenticate:
+        client = Strava.AsyncClient(user_id, user.auth)
         async with Strava.get_limiter():
             try:
                 await client.deauthenticate(raise_exception=True)
@@ -263,7 +278,7 @@ async def delete(user_id, deauthenticate=True):
 
     users = await get_collection()
     try:
-        await users.delete_one({U.ID: user_id})
+        await users.delete_one({"_id": user_id})
 
     except Exception:
         log.exception("error deleting user %d", user_id)
@@ -275,15 +290,14 @@ async def triage(*args, only_find=False, deauthenticate=True, max_triage=MAX_TRI
     now_ts = datetime.datetime.now().timestamp()
     cutoff = now_ts - TTL
     users = await get_collection()
-    cursor = users.find(
-        {U.LAST_LOGIN: {"$lt": cutoff}}, {U.ID: True, U.LAST_LOGIN: True}
-    )
-    bad_users = await cursor.to_list(length=max_triage)
-    # log.debug({u[U.ID]: str(datetime.datetime.fromtimestamp(u[U.LAST_LOGIN]).date()) for u in bad_users})
+
+    cursor = users.find({selector("last_login"): {"$lt": cutoff}}, {"_id": True})
+    bad_users: list[MongoDoc] = await cursor.to_list(length=max_triage)
+
     if only_find:
         return bad_users
     tasks = [
-        asyncio.create_task(delete(bu[U.ID], deauthenticate=deauthenticate))
+        asyncio.create_task(delete(bu["_id"], deauthenticate=deauthenticate))
         for bu in bad_users
     ]
     await asyncio.gather(*tasks)
@@ -304,60 +318,63 @@ import json
 from .webserver.config import POSTGRES_URL
 
 
+class OldUserRecord(NamedTuple):
+    id: int
+    username: str
+    firstname: str
+    lastname: str
+    profile: str
+    access_token: str
+    measurement_preference: str
+    city: str
+    state: str
+    country: str
+    email: str
+    dt_last_active: datetime.datetime
+    app_activity_count: int
+    share_profile: bool
+    xxx: Any
+
+
 async def migrate():
     # Import legacy Users database
     log.info("Importing users from legacy db")
     pgurl = os.environ[POSTGRES_URL]
-    results = None
     with create_engine(pgurl).connect() as conn:
         result = conn.execute(text("select * from users"))
-    results = result.all()
 
     docs = []
 
-    for (
-        id,
-        username,
-        firstname,
-        lastname,
-        profile,
-        access_token,
-        measurement_preference,
-        city,
-        state,
-        country,
-        email,
-        dt_last_active,
-        app_activity_count,
-        share_profile,
-        xxx,
-    ) in results:
-        if (id in ADMIN) or (dt_last_active is None):
-            log.info("skipping %d", id)
+    for m in result.all():
+        u = OldUserRecord(*m)
+
+        if (u.id in ADMIN) or (u.dt_last_active is None):
+            log.info("skipping %d", u.id)
             continue
         try:
             docs.append(
-                mongo_doc(
+                User(
                     # From Strava Athlete record
-                    id=id,
-                    firstname=firstname,
-                    lastname=lastname,
-                    profile=profile,
-                    city=city,
-                    state=state,
-                    country=country,
+                    id=u.id,
+                    firstname=u.firstname,
+                    lastname=u.lastname,
+                    profile=u.profile,
+                    city=u.city,
+                    state=u.state,
+                    country=u.country,
                     #
-                    last_login=dt_last_active.timestamp(),
-                    login_count=app_activity_count,
-                    private=not share_profile,
-                    auth=json.loads(access_token),
-                )
+                    last_login=int(u.dt_last_active.timestamp()),
+                    login_count=u.app_activity_count,
+                    private=not u.share_profile,
+                    auth=json.loads(u.access_token),
+                ).mongo_doc()
             )
         except json.JSONDecodeError:
             pass
 
-    ids = [u[U.ID] for u in docs]
+    docs = cast(list[MongoDoc], docs)
+    ids = [u["_id"] for u in docs]
     users = await get_collection()
-    await users.delete_many({U.ID: {"$in": ids}})
+    await users.delete_many({"_id": {"$in": ids}})
     insert_result = await users.insert_many(docs)
     log.info("Done migrating %d users", len(insert_result.inserted_ids))

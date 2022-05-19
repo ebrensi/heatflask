@@ -147,6 +147,23 @@ export function qToQ(
   }
   return bq
 }
+/*
+const SET_EXT_TYPE = 0 // Any in 0-127
+extensionCodec.register({
+  type: SET_EXT_TYPE,
+  encode: (object: unknown): Uint8Array | null => {
+    if (object instanceof Set) {
+      return encode([...object]);
+    } else {
+      return null;
+    }
+  },
+  decode: (data: Uint8Array) => {
+    const array = decode(data) as Array<unknown>;
+    return new Set(array);
+  },
+});
+*/
 
 /** Send a query to the backend and yield its items
  *   * send a non-false object to this generator to abort the operation
