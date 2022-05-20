@@ -56,25 +56,19 @@ async def get_collection():
     return myBox.collection
 
 
-class AuthInfo(NamedTuple):
-    access_token: str
-    expires_at: epoch
-    refresh_token: str
-
-
 class MongoDoc(TypedDict):
     """
-    MongoDB document for a User. We store the user as a tuple (Array),
+    MongoDB document for a User. We store the user as a MongoDB Array,
     much like a User object except with the id field removed and used as
-    the index
+    the document index
     """
 
     _id: int
-    u: tuple[urlstr, str, str, str, str, str, AuthInfo, int, epoch, epoch, bool]
+    u: tuple[urlstr, str, str, str, str, str, Strava.AuthInfo, int, epoch, epoch, bool]
 
 
 class User(NamedTuple):
-    """A tuple representing a user"""
+    """A (named) tuple representing a registered Strava user"""
 
     id: int
     profile: Optional[urlstr] = None
@@ -83,7 +77,7 @@ class User(NamedTuple):
     city: Optional[str] = None
     state: Optional[str] = None
     country: Optional[str] = None
-    auth: Optional[AuthInfo] = None
+    auth: Optional[Strava.AuthInfo] = None
     login_count: Optional[int] = None
     last_login: Optional[epoch] = None
     last_index_access: Optional[epoch] = None
@@ -91,6 +85,7 @@ class User(NamedTuple):
 
     @classmethod
     def from_strava_login(cls, info: Strava.TokenExchangeResponse):
+        """Create a User object with the data we receive from Strava when a user logs in"""
         a = info["athlete"]
         return cls(
             id=a["id"],
@@ -100,20 +95,23 @@ class User(NamedTuple):
             city=a["city"],
             state=a["state"],
             country=a["country"],
-            auth=AuthInfo(
+            auth=Strava.AuthInfo(
                 info["access_token"], info["expires_at"], info["refresh_token"]
             ),
         )
 
     @classmethod
     def from_mongo_doc(cls, doc: MongoDoc):
+        """Create a User object from a MongoDB document"""
         return cls(doc["_id"], *doc["u"])
 
     def mongo_doc(self):
+        """Create a MongoDB document for this user"""
         (id, *theRest) = self
         return MongoDoc(_id=id, u=theRest)
 
     def is_admin(self):
+        """Whether or not this user is an admin"""
         return self.id in ADMIN
 
 
@@ -374,7 +372,7 @@ async def migrate():
 
     docs = cast(list[MongoDoc], docs)
     ids = [u["_id"] for u in docs]
-    users = await get_collection()
-    await users.delete_many({"_id": {"$in": ids}})
-    insert_result = await users.insert_many(docs)
+    collection = await get_collection()
+    await collection.delete_many({"_id": {"$in": ids}})
+    insert_result = await collection.insert_many(docs)
     log.info("Done migrating %d users", len(insert_result.inserted_ids))

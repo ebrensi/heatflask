@@ -17,17 +17,17 @@ from logging import getLogger
 import datetime
 import time
 import asyncio
-import types
 from pymongo import DESCENDING
+from pymongo.collection import Collection
+
 from aiohttp import ClientResponseError
-from typing import TypedDict
+from typing import AsyncGenerator, NamedTuple, Optional
 
 from . import DataAPIs
 from .DataAPIs import db
 from . import Strava
 from . import Utility
 from . import Users
-from .Users import UserField as U
 
 
 log = getLogger(__name__)
@@ -42,7 +42,12 @@ SECS_IN_DAY = 24 * SECS_IN_HOUR
 # How long we store a user's Index
 TTL = int(os.environ.get("INDEX_TTL", 20)) * SECS_IN_DAY
 
-myBox = types.SimpleNamespace(collection=None)
+
+class Box(NamedTuple):
+    collection: Optional[Collection]
+
+
+myBox = Box(collection=None)
 
 
 async def get_collection():
@@ -51,10 +56,12 @@ async def get_collection():
     return myBox.collection
 
 
-LatLng = tuple[float, float]
+class LatLng(NamedTuple):
+    lat: float
+    lng: float
 
 
-class LLBounds(TypedDict):
+class LLBounds(NamedTuple):
     SW: LatLng
     NE: LatLng
 
@@ -68,17 +75,17 @@ def polyline_bounds(poly: str) -> LLBounds | None:
     lats = latlngs[:, 0]
     lngs = latlngs[:, 1]
 
-    return {
-        "SW": (float(lats.min()), float(lngs.min())),
-        "NE": (float(lats.max()), float(lngs.max())),
-    }
+    return LLBounds(
+        SW=LatLng(float(lats.min()), float(lngs.min())),
+        NE=LatLng(float(lats.max()), float(lngs.max())),
+    )
 
 
 def overlaps(b1: LLBounds, b2: LLBounds) -> bool:
-    b1_left, b1_bottom = b1["SW"]
-    b1_right, b1_top = b1["NE"]
-    b2_left, b2_bottom = b2["SW"]
-    b2_right, b2_top = b2["NE"]
+    b1_left, b1_bottom = b1.SW
+    b1_right, b1_top = b1.NE
+    b2_left, b2_bottom = b2.SW
+    b2_right, b2_top = b2.NE
     return (
         (b1_left < b2_right)
         and (b1_right > b2_left)
@@ -172,8 +179,8 @@ IMPORT_FLAG_TTL = 20  # secods
 IMPORT_ERROR_TTL = 5
 
 
-def import_flag_key(uid: int):
-    return f"{IMPORT_FLAG_PREFIX}{uid}"
+def import_flag_key(user_id: int):
+    return f"{IMPORT_FLAG_PREFIX}{user_id}"
 
 
 async def set_import_flag(user_id: int, val: str):
@@ -181,7 +188,7 @@ async def set_import_flag(user_id: int, val: str):
     log.debug(f"{user_id} import flag set to '%s'", val)
 
 
-async def set_import_error(user_id: int, e):
+async def set_import_error(user_id: int, e: Error):
     val = f"Strava error ${e.status}: ${e.message}"
     await db.redis.setex(import_flag_key(user_id), 5, val)
 
@@ -197,20 +204,20 @@ async def check_import_progress(user_id: int):
 
 
 # # **************************************
-async def fake_import(uid=None):
-    log.info("Starting fake import for user %s", uid)
-    await set_import_flag(uid, "Building index...")
+async def fake_import(user_id: int):
+    log.info("Starting fake import for user %s", user_id)
+    await set_import_flag(user_id, "Building index...")
     for i in range(10):
         await asyncio.sleep(1)
         log.info("fake import %d", i)
-        await set_import_flag(uid, f"Building index...{i}")
+        await set_import_flag(user_id, f"Building index...{i}")
     log.info("Finished fake import")
-    await clear_import_flag(uid)
+    await clear_import_flag(user_id)
 
 
-async def import_index_progress(user_id: int, poll_delay=0.5):
-    last_msg = None
-    msg = 1
+async def import_index_progress(user_id: int, poll_delay: float = 0.5):
+    last_msg: str = ""
+    msg: str = "1"
     while msg:
         msg = await check_import_progress(user_id)
         if msg != last_msg:
@@ -219,16 +226,14 @@ async def import_index_progress(user_id: int, poll_delay=0.5):
         await asyncio.sleep(poll_delay)
 
 
-async def import_user_entries(**user):
-    uid = int(user[U.ID])
-    if await check_import_progress(uid):
-        log.info(f"Already importing entries for user {uid}")
+async def import_user_entries(user: Users.User):
+    if await check_import_progress(user.id):
+        log.info(f"Already importing entries for user {user.id}")
         return
 
     t0 = time.perf_counter()
-    await set_import_flag(uid, "Building index...")
-
-    strava = Strava.AsyncClient(uid, user[U.AUTH])
+    await set_import_flag(user.id, "Building index...")
+    strava = Strava.AsyncClient(user.id, user.auth)
     await strava.update_access_token()
     now = datetime.datetime.utcnow()
 
@@ -240,15 +245,15 @@ async def import_user_entries(**user):
                 docs.append(mongo_doc(**A, ts=now))
                 count += 1
                 if count % Strava.PER_PAGE == 0:
-                    await set_import_flag(uid, f"Building index...{count}")
+                    await set_import_flag(user.id, f"Building index...{count}")
     except ClientResponseError as e:
         log.info(
             "%d Index import aborted due to Strava error %d: %s",
-            uid,
+            user.id,
             e.message,
             e.status,
         )
-        await set_import_error(uid, e)
+        await set_import_error(user.id, e)
         return
 
     docs = list(filter(None, docs))
@@ -259,7 +264,7 @@ async def import_user_entries(**user):
         return
 
     index = await get_collection()
-    await delete_user_entries(**user)
+    await delete_user_entries(user.id)
     try:
         insert_result = await index.insert_many(docs, ordered=False)
     except Exception:
@@ -269,14 +274,14 @@ async def import_user_entries(**user):
     insert_time = (time.perf_counter() - t1) * 1000
     count = len(insert_result.inserted_ids)
 
-    await clear_import_flag(uid)
+    await clear_import_flag(user.id)
     log.debug(
         "fetched %s entries in %dms, insert_many %dms", count, fetch_time, insert_time
     )
 
 
-async def import_one(activity_id: int, **user):
-    client = Strava.AsyncClient(user[U.ID], user[U.AUTH])
+async def import_one(user: Users.User, activity_id: int):
+    client = Strava.AsyncClient(user.id, user.auth)
     try:
         DetailedActivity = await client.get_activity(activity_id, raise_exception=True)
     except Exception:
@@ -294,7 +299,7 @@ async def import_one(activity_id: int, **user):
     except Exception:
         log.exception("mongo error?")
     else:
-        log.debug("%s imported activity %d", user[U.ID], activity_id)
+        log.debug("%s imported activity %d", user.id, activity_id)
 
 
 # TODO: fix this. updates willnot be in this form
@@ -314,24 +319,21 @@ async def delete_one(activity_id: int):
     return await index.delete_one({F.ACTIVITY_ID: activity_id})
 
 
-async def delete_user_entries(**user):
-    uid = int(user[U.ID])
+async def delete_user_entries(user_id: int):
     index = await get_collection()
-    result = await index.delete_many({F.USER_ID: int(uid)})
-    log.debug("%d deleted %s entries", uid, result.deleted_count)
+    result = await index.delete_many({F.USER_ID: user_id})
+    log.debug("%d deleted %s entries", user_id, result.deleted_count)
 
 
-async def count_user_entries(**user):
-    uid = int(user[U.ID])
+async def count_user_entries(user_id: int):
     index = await get_collection()
-    return await index.count_documents({F.USER_ID: int(uid)})
+    return await index.count_documents({F.USER_ID: user_id})
 
 
-async def has_user_entries(**user):
-    uid = int(user[U.ID])
+async def has_user_entries(user_id: int):
     index = await get_collection()
     return not not (
-        await index.find_one({F.USER_ID: int(uid)}, projection={F.ACTIVITY_ID: True})
+        await index.find_one({F.USER_ID: user_id}, projection={F.ACTIVITY_ID: True})
     )
 
 
@@ -339,11 +341,11 @@ async def triage(*args):
     now_ts = datetime.datetime.now().timestamp()
     cutoff = now_ts - TTL
     users = await get_collection()
-    cursor = users.find({U.LAST_INDEX_ACCESS: {"$lt": cutoff}}, {U.ID: True})
-    stale_ids = [u[U.ID] async for u in cursor]
-    tasks = [
-        asyncio.create_task(delete_user_entries(**{U.ID: sid})) for sid in stale_ids
-    ]
+    cursor: AsyncGenerator[Users.User, None] = users.find(
+        {Users.IndexOf["last_index_access"]: {"$lt": cutoff}}, {"_id": True}
+    )
+    stale_ids = [u.id async for u in cursor]
+    tasks = [asyncio.create_task(delete_user_entries(sid)) for sid in stale_ids]
     await asyncio.gather(*tasks)
 
 
@@ -458,12 +460,12 @@ async def query(
 
     if update_index_access:
         if user_id:
-            await Users.add_or_update(id=user_id, update_index_access=True)
+            await Users.add_or_update(Users.User(user_id), update_index_access=True)
         else:
             ids = set(a[F.USER_ID] for a in docs)
             tasks = [
                 asyncio.create_task(
-                    Users.add_or_update(id=user_id, update_index_access=True)
+                    Users.add_or_update(Users.User(user_id), update_index_access=True)
                 )
                 for user_id in ids
             ]

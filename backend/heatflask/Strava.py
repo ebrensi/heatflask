@@ -22,6 +22,7 @@ from typing import (
     Tuple,
     Literal,
     Final,
+    NamedTuple,
     cast,
     get_args,
     Any,
@@ -462,6 +463,14 @@ class TokenExchangeResponse(TypedDict):
     athlete: Athlete
 
 
+class AuthInfo(NamedTuple):
+    """A (named) Tuple of Access Token, Expire timestamp, and Refresh Token"""
+
+    access_token: str
+    expires_at: epoch
+    refresh_token: str
+
+
 TOKEN_EXCHANGE_ENDPOINT = "/oauth/token"
 
 
@@ -612,15 +621,15 @@ class AsyncClient:
     refresh_token: Optional[str] = None
     expires_at: Optional[epoch] = None
 
-    def __init__(self, name: str | int, auth: Optional[TokenExchangeResponse] = None):
+    def __init__(self, name: str | int, auth: Optional[AuthInfo] = None):
         self.name = name
         if auth:
             self.set_credentials(auth)
 
-    def set_credentials(self, auth: TokenExchangeResponse):
-        self.access_token = auth["access_token"]
-        self.expires_at = auth["expires_at"]
-        self.refresh_token = auth["refresh_token"]
+    def set_credentials(self, auth: AuthInfo):
+        self.access_token = auth.access_token
+        self.expires_at = auth.expires_at
+        self.refresh_token = auth.refresh_token
 
     def __repr__(self):
         s = f"<AsyncClient '{self.name}'"
@@ -676,6 +685,7 @@ class AsyncClient:
 
     @staticmethod
     async def abort(async_iterator):
+        """Abort an async_iterator returned by this class"""
         try:
             await async_iterator.asend(1)
         except StopAsyncIteration:
@@ -733,7 +743,13 @@ class AsyncClient:
             log.info("No refresh token in response?!")
             return None
 
-        self.set_credentials(response)
+        self.set_credentials(
+            AuthInfo(
+                access_token=response["access_token"],
+                expires_at=response["expires_at"],
+                refresh_token=response["refresh_token"],
+            )
+        )
 
         # If we are inside a session-context
         if self.session:
