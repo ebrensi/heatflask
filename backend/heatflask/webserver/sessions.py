@@ -51,7 +51,7 @@ COOKIE_NAME = APP_BASE_NAME.lower()
 class Session(TypedDict, total=False):
     """This is the dict where we store session info"""
 
-    user: int
+    user_id: int
     flashes: list[str]
 
 
@@ -59,8 +59,7 @@ class RequestContext(SimpleNamespace):
     """Our customized version of the request context"""
 
     session: Session
-    current_user: dict
-    is_admin: bool
+    current_user: Users.User | None
 
     @staticmethod
     def flash(msg: str) -> None:
@@ -96,9 +95,8 @@ async def fetch_session_from_cookie(request: SessionRequest):
         Session, json.loads(cookie_value) if cookie_value else {}
     )
 
-    user_id = request.ctx.session.get("user")
+    user_id = request.ctx.session.get("user_id")
     request.ctx.current_user = await Users.get(user_id) if user_id else None
-    request.ctx.is_admin = Users.is_admin(user_id) if user_id else False
     log.debug("fetched session: %s", request.ctx.session)
 
 

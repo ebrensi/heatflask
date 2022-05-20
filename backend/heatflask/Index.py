@@ -10,6 +10,7 @@ Paste one of these Jupyter magic directives to the top of a cell
     %%writefile Index.py   # Write the contents of this cell to Index.py
 """
 
+from optparse import Option
 import os
 from tokenize import Name
 import polyline
@@ -383,6 +384,11 @@ async def triage(*args):
 SORT_SPECS = [(selector("utc_start_time"), DESCENDING)]
 
 
+class ActivityQueryResult(TypedDict):
+    activities: list[Activity]
+    delete: Optional[list[int]]
+
+
 async def query(
     user_id: int = None,
     activity_ids: list[int] = None,
@@ -483,19 +489,19 @@ async def query(
         limit=limit,
     )
 
-    docs = await cursor.to_list(length=None)
-    result["docs"] = docs
+    activities = [Activity.from_mongo_doc(a) async for a in cursor]
+    result["activities"] = activities
 
     t1 = time.perf_counter()
     elapsed = (t1 - t0) * 1000
-    log.debug("queried %d activities in %dms", len(docs), elapsed)
+    log.debug("queried %d activities in %dms", len(activities), elapsed)
 
     if update_index_access:
         if user_id:
             await Users.add_or_update(Users.User(user_id), update_index_access=True)
         else:
             uidfield = selector("user_id")
-            ids = set(a[uidfield] for a in docs)
+            ids = set(A.user_id for A in activities)
             tasks = [
                 asyncio.create_task(
                     Users.add_or_update(Users.User(user_id), update_index_access=True)
@@ -503,7 +509,7 @@ async def query(
                 for user_id in ids
             ]
             await asyncio.gather(*tasks)
-    return result
+    return cast(ActivityQueryResult, result)
 
 
 def stats():

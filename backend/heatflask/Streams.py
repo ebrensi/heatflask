@@ -16,14 +16,24 @@ from logging import getLogger
 import msgpack
 import polyline
 import asyncio
-import types
-from typing import TypedDict, Awaitable, AsyncGenerator, Coroutine, cast
+from pymongo.collection import Collection
+
+from typing import (
+    NamedTuple,
+    TypedDict,
+    Awaitable,
+    AsyncGenerator,
+    Coroutine,
+    Optional,
+    cast,
+)
+from dataclasses import dataclass
 
 from . import DataAPIs
 from .DataAPIs import db
 from . import Strava
 from . import StreamCodecs
-from .Users import UserField as U
+from . import Users
 
 
 log = getLogger(__name__)
@@ -40,7 +50,13 @@ MONGO_TTL = int(os.environ.get("MONGO_STREAMS_TTL", 10)) * SECS_IN_DAY
 REDIS_TTL = int(os.environ.get("REDIS_STREAMS_TTL", 4)) * SECS_IN_HOUR
 OFFLINE = os.environ.get("OFFLINE")
 
-myBox = types.SimpleNamespace(collection=None)
+
+@dataclass
+class Box:
+    collection: Optional[Collection]
+
+
+myBox = Box(collection=None)
 
 
 async def get_collection():
@@ -54,12 +70,12 @@ async def get_collection():
 POLYLINE_PRECISION = 6
 
 
-class EncodedStreams(TypedDict):
-    """note: altitude (with key 'a') is scaled up 10x"""
+class EncodedStreams(NamedTuple):
+    """A tuple holding streams for an activity"""
 
-    t: StreamCodecs.RLDEncoded
-    a: StreamCodecs.RLDEncoded
-    p: str
+    time: StreamCodecs.RLDEncoded
+    altitude: StreamCodecs.RLDEncoded
+    polyline: str
 
 
 PackedStreams = bytes
@@ -67,11 +83,11 @@ PackedStreams = bytes
 
 def encode_streams(rjson: Strava.Streams) -> PackedStreams:
     """compress stream data"""
-    enc: EncodedStreams = {
-        "t": StreamCodecs.rld_encode(rjson["time"]["data"]),
-        "a": StreamCodecs.rld_encode(rjson["altitude"]["data"], scale=10),
-        "p": polyline.encode(rjson["latlng"]["data"], POLYLINE_PRECISION),
-    }
+    enc = EncodedStreams(
+        time=StreamCodecs.rld_encode(rjson["time"]["data"]),
+        altitude=StreamCodecs.rld_encode(rjson["altitude"]["data"], scale=10),
+        polyline=polyline.encode(rjson["latlng"]["data"], POLYLINE_PRECISION),
+    )
     return msgpack.packb(enc)
 
 
@@ -81,11 +97,11 @@ def decode_streams(msgpacked_streams: PackedStreams):
     * altitude: Int16
     * latlng: float32 (Google Polyline encoded)
     """
-    d: EncodedStreams = msgpack.unpackb(msgpacked_streams)
+    d = EncodedStreams(*msgpack.unpackb(msgpacked_streams))
     return {
-        "time": StreamCodecs.rld_decode(d["t"], dtype="u2"),
-        "altitude": StreamCodecs.rld_decode(d["a"], dtype="i2"),
-        "latlng": polyline.decode(d["p"], POLYLINE_PRECISION),
+        "time": StreamCodecs.rld_decode(d.time, dtype="u2"),
+        "altitude": StreamCodecs.rld_decode(d.altitude, dtype="i2"),
+        "latlng": polyline.decode(d.polyline, POLYLINE_PRECISION),
     }
 
 
@@ -95,12 +111,12 @@ class StreamsDoc(TypedDict):
     ts: datetime.datetime
 
 
-def mongo_doc(activity_id: int, packed: PackedStreams, ts=None) -> StreamsDoc:
-    return {
-        "_id": int(activity_id),
-        "mpk": packed,
-        "ts": ts or datetime.datetime.now(),
-    }
+def mongo_doc(activity_id: int, packed: PackedStreams, ts=None):
+    return StreamsDoc(
+        _id=activity_id,
+        mpk=packed,
+        ts=ts or datetime.datetime.now(),
+    )
 
 
 def cache_key(aid: int):
@@ -111,11 +127,11 @@ StreamsQueryResult = tuple[int, PackedStreams]
 
 
 async def strava_import(
-    activity_ids: list[int], **user
+    user: Users.User,
+    activity_ids: list[int],
 ) -> AsyncGenerator[StreamsQueryResult, bool]:
-    uid = int(user[U.ID])
 
-    strava = Strava.AsyncClient(uid, user[U.AUTH])
+    strava = Strava.AsyncClient(user.id, user.auth)
     await strava.update_access_token()
     coll = await get_collection()
 
@@ -143,7 +159,7 @@ async def strava_import(
 
 
 async def aiter_query(
-    activity_ids: list[int], user=None
+    activity_ids: list[int], user: Optional[Users.User] = None
 ) -> AsyncGenerator[StreamsQueryResult, bool]:
     if not activity_ids:
         return
@@ -207,8 +223,8 @@ async def aiter_query(
     if activity_ids and (user is not None) and (not OFFLINE):
         # Start a fetch process going. We will get back to this...
         t0 = time.perf_counter()
-        streams_import = strava_import(activity_ids, **user)
-        first_fetch = asyncio.create_task(cast(Coroutine, streams_import.__anext__()))
+        streams_import = strava_import(user, activity_ids)
+        first_fetch = asyncio.create_task(streams_import.__anext__())
 
     # Yield all the results from Redis and Mongo
     for item in local_result:
