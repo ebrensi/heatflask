@@ -245,8 +245,14 @@ ActivityType = Literal[
 ]
 
 ATYPES: Tuple[ActivityType, ...] = get_args(ActivityType)
-
 ATYPES_LOOKUP: dict[ActivityType, int] = {atype: i for i, atype in enumerate(ATYPES)}
+
+
+ActivityVisibility = Literal["everyone", "followers", "only_me"]
+VISTYPES: Tuple[ActivityVisibility, ...] = get_args(ActivityVisibility)
+VISTYPES_LOOKUP: dict[ActivityVisibility, int] = {
+    vistype: i for i, vistype in enumerate(VISTYPES)
+}
 
 
 class MetaAthlete(TypedDict):
@@ -255,9 +261,6 @@ class MetaAthlete(TypedDict):
 
 class PolylineMap(TypedDict):
     summary_polyline: str
-
-
-Visibility = Literal["everyone", "followers", "only_me"]
 
 
 class Activity(TypedDict):
@@ -280,7 +283,7 @@ class Activity(TypedDict):
     map: PolylineMap
     commute: bool
     private: bool
-    visibility: Visibility
+    visibility: ActivityVisibility
 
 
 class ActivitiesPageRequestParams(TypedDict):

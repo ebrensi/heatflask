@@ -68,7 +68,7 @@ class MongoDoc(TypedDict):
 
 
 class User(NamedTuple):
-    """A (named) tuple representing a registered Strava user"""
+    """A (named) tuple representing a registered Strava Athlete"""
 
     id: int
     profile: Optional[urlstr] = None
