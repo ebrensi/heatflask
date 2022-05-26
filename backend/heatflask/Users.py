@@ -16,8 +16,8 @@ from pymongo import DESCENDING
 import asyncio
 from aiohttp import ClientResponseError
 
-from typing import AsyncGenerator, Final, NamedTuple, Optional, TypedDict, Any, cast
-from dataclasses import dataclass
+from typing import AsyncGenerator, Final, Optional, Any, cast
+from dataclasses import dataclass, asdict, astuple
 from pymongo.collection import Collection
 
 from . import DataAPIs
@@ -56,19 +56,16 @@ async def get_collection():
     return myBox.collection
 
 
-class MongoDoc(TypedDict):
-    """
-    MongoDB document for a User. We store the user as a MongoDB Array,
-    much like a User object except with the id field removed and used as
-    the document index
-    """
-
-    _id: int
-    u: tuple[urlstr, str, str, str, str, str, Strava.AuthInfo, int, epoch, epoch, bool]
+MongoDoc = dict
 
 
-class User(NamedTuple):
-    """A (named) tuple representing a registered Strava Athlete"""
+def clean_dict(d: dict):
+    return {k: v for k, v in d.items() if v is not None}
+
+
+@dataclass(eq=False, order=False, slots=True)
+class User:
+    """A dataclass object representing a registered Strava Athlete"""
 
     id: int
     profile: Optional[urlstr] = None
@@ -85,10 +82,12 @@ class User(NamedTuple):
 
     @classmethod
     def from_strava_login(cls, info: Strava.TokenExchangeResponse):
-        """Create a User object with the data we receive from Strava when a user logs in"""
+        """
+        Create a User object with the data we receive from Strava when a user logs in
+        """
         a = info["athlete"]
         return cls(
-            id=a["id"],
+            a["id"],
             profile=a["profile_medium"] or a["profile"],
             firstname=a["firstname"],
             lastname=a["lastname"],
@@ -101,58 +100,23 @@ class User(NamedTuple):
         )
 
     @classmethod
-    def from_mongo_doc(cls, doc: MongoDoc):
+    def from_mongo_doc(cls, doc: dict):
         """Create a User object from a MongoDB document"""
-        return cls(doc["_id"], *doc["u"])
+        aid = doc.pop("_id")
+        return cls(aid, **doc)
 
     def mongo_doc(self):
         """Create a MongoDB document for this user"""
-        (id, *theRest) = self
-        return MongoDoc(_id=id, u=theRest)
+        doc = asdict(self)
+        doc["_id"] = doc.pop("id")
+        return clean_dict(doc)
+
+    def astuple(self):
+        return astuple(self)
 
     def is_admin(self):
         """Whether or not this user is an admin"""
         return self.id in ADMIN
-
-
-"""Index of a given field in the MongoDB array for a User"""
-IndexOf: Final = {field: idx for idx, field in enumerate(User._fields[1:])}
-
-
-def selector(idx_or_fieldname: int | str):
-    """The mongodb selector for an array element"""
-    idx = (
-        idx_or_fieldname
-        if isinstance(idx_or_fieldname, int)
-        else IndexOf[idx_or_fieldname]
-    )
-    return f"u.{idx}"
-
-
-# def encode(obj):
-#     if type(obj) in (list, tuple) or isinstance(obj, PVector):
-#         return [encode(item) for item in obj]
-#     if isinstance(obj, Mapping):
-#         encoded_obj = {}
-#         for key in obj.keys():
-#             encoded_obj[encode(key)] = encode(obj[key])
-#         return encoded_obj
-#     if isinstance(obj, _native_builtin_types):
-#         return obj
-#     if isinstance(obj, Set):
-#         return ExtType(TYPE_PSET, packb([encode(item) for item in obj], use_bin_type=True))
-#     if isinstance(obj, PList):
-#         return ExtType(TYPE_PLIST, packb([encode(item) for item in obj], use_bin_type=True))
-#     if isinstance(obj, PBag):
-#         return ExtType(TYPE_PBAG, packb([encode(item) for item in obj], use_bin_type=True))
-#     if isinstance(obj, types.FunctionType):
-#         return ExtType(TYPE_FUNC, encode_func(obj))
-#     if isinstance(obj, Receiver):
-#         return ExtType(TYPE_MBOX, packb(obj.encode(), use_bin_type=True))
-#     # assume record
-#     cls = obj.__class__
-#     return ExtType(0, packb([cls.__module__, cls.__name__] + [encode(item) for item in obj],
-#                             use_bin_type=True))
 
 
 async def get(user_id: int) -> User | None:
@@ -179,9 +143,8 @@ async def get_all() -> AsyncGenerator[User, None]:
 
 async def add_or_update(
     updates: User,
-    update_last_login=False,
+    update_login=False,
     update_index_access=False,
-    inc_login_count=False,
 ):
     """Add a new user or update an existing one"""
     collection = await get_collection()
@@ -189,21 +152,20 @@ async def add_or_update(
         return
 
     now_ts = cast(epoch, int(datetime.datetime.utcnow().timestamp()))
-    update_array = list(updates[1:])
-    if update_last_login:
-        update_array[IndexOf["last_login"]] = now_ts
+    if update_login:
+        updates.last_login = now_ts
 
     if update_index_access:
-        update_array[IndexOf["last_index_access"]] = now_ts
+        updates.last_index_access = now_ts
 
-    mongo_updates = {
-        "$set": {selector(i): v for i, v in enumerate(update_array) if v is not None}
-    }
+    settings = updates.mongo_doc()
+    del settings["_id"]
+    mongo_updates = {"$set": settings}
 
-    if inc_login_count:
-        mongo_updates["$inc"] = {selector("login_count"): 1}
+    if update_login:
+        mongo_updates["$inc"] = {"login_count": 1}
 
-    log.debug("Users updated with %s", mongo_updates)
+    log.debug("User %d updated with %s", updates.id, mongo_updates)
 
     # Creates a new user or updates an existing user (with the same id)
     try:
@@ -214,7 +176,7 @@ async def add_or_update(
             return_document=pymongo.ReturnDocument.AFTER,
         )
     except Exception:
-        log.exception("error adding/updating Users: %s", mongo_updates)
+        log.exception("error adding/updating User %s: %s", updates.id, mongo_updates)
 
 
 default_out_fieldnames = (
@@ -230,14 +192,14 @@ admin_out_fieldnames = default_out_fieldnames + (
     "last_login",
     "login_count",
     "last_index_access",
-    "private",
+    "public",
 )
 
-SORT_SPEC = [(selector("last_login"), DESCENDING)]
+SORT_SPEC = [("last_login", DESCENDING)]
 
 
 async def dump(admin=False) -> AsyncGenerator[tuple, None]:
-    query = {} if admin else {selector("private"): False}
+    query = {} if admin else {"public": True}
     collection = await get_collection()
     cursor: AsyncGenerator[MongoDoc, None] = collection.find(
         filter=query, sort=SORT_SPEC
@@ -245,9 +207,8 @@ async def dump(admin=False) -> AsyncGenerator[tuple, None]:
     fieldnames = admin_out_fieldnames if admin else default_out_fieldnames
     yield fieldnames
 
-    idx = tuple(IndexOf[f] for f in fieldnames[1:])
-    async for m in cursor:
-        yield tuple(m["u"][i] for i in idx)
+    async for doc in cursor:
+        yield tuple(doc[i] for i in fieldnames)
 
 
 async def delete(user_id, deauthenticate=True):
@@ -284,19 +245,21 @@ async def delete(user_id, deauthenticate=True):
         log.info("deleted user %s", user_id)
 
 
-async def triage(*args, only_find=False, deauthenticate=True, max_triage=MAX_TRIAGE):
+async def triage(
+    *args, only_find=False, deauthenticate=True, max_triage: int = MAX_TRIAGE
+):
     now_ts = datetime.datetime.now().timestamp()
     cutoff = now_ts - TTL
     users = await get_collection()
 
-    cursor = users.find({selector("last_login"): {"$lt": cutoff}}, {"_id": True})
-    bad_users: list[MongoDoc] = await cursor.to_list(length=max_triage)
+    cursor = users.find({"last_login": {"$lt": cutoff}}, {"_id": True})
+    bad_users_ids = tuple(u["_id"] for u in await cursor.to_list(length=max_triage))
 
     if only_find:
-        return bad_users
+        return bad_users_ids
     tasks = [
-        asyncio.create_task(delete(bu["_id"], deauthenticate=deauthenticate))
-        for bu in bad_users
+        asyncio.create_task(delete(buid, deauthenticate=deauthenticate))
+        for buid in bad_users_ids
     ]
     await asyncio.gather(*tasks)
 
@@ -316,7 +279,8 @@ import json
 from .webserver.config import POSTGRES_URL
 
 
-class OldUserRecord(NamedTuple):
+@dataclass
+class OldUserRecord:
     id: int
     username: str
     firstname: str
@@ -353,7 +317,7 @@ async def migrate():
             docs.append(
                 User(
                     # From Strava Athlete record
-                    id=u.id,
+                    u.id,
                     firstname=u.firstname,
                     lastname=u.lastname,
                     profile=u.profile,
@@ -363,7 +327,7 @@ async def migrate():
                     #
                     last_login=int(u.dt_last_active.timestamp()),
                     login_count=u.app_activity_count,
-                    private=not u.share_profile,
+                    public=u.share_profile,
                     auth=json.loads(u.access_token),
                 ).mongo_doc()
             )

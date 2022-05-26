@@ -8,6 +8,7 @@ import types
 import sys
 from typing import Optional
 from sanic import Sanic
+from asyncio import BaseEventLoop
 
 from .webserver.config import MONGODB_URL, REDIS_URL
 
@@ -18,7 +19,7 @@ db = types.SimpleNamespace(mongo_client=None, mongodb=None, redis=None)
 
 
 # this must be called by whoever controls the asyncio loop
-async def connect(app: Sanic, loop):
+async def connect(app: Optional[Sanic], loop: Optional[BaseEventLoop]):
     if db.mongodb is not None:
         return
     db.mongo_client = motor.motor_asyncio.AsyncIOMotorClient(MONGODB_URL)
