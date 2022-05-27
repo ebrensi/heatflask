@@ -17,8 +17,10 @@ import asyncio
 from aiohttp import ClientResponseError
 
 from typing import AsyncGenerator, Final, Optional, Any, cast
-from dataclasses import dataclass, asdict, astuple
+
+from recordclass import dataobject, astuple, asdict
 from pymongo.collection import Collection
+from json.decoder import JSONDecodeError
 
 from . import DataAPIs
 from . import Strava
@@ -42,8 +44,7 @@ ADMIN: Final = [15972102]
 MAX_TRIAGE = 10
 
 
-@dataclass
-class Box:
+class Box(dataobject):
     collection: Optional[Collection]
 
 
@@ -63,14 +64,14 @@ def clean_dict(d: dict):
     return {k: v for k, v in d.items() if v is not None}
 
 
-@dataclass(eq=False, order=False, slots=True)
-class User:
+class User(dataobject):
     """A dataclass object representing a registered Strava Athlete"""
 
     id: int
     profile: Optional[urlstr] = None
     firstname: Optional[str] = None
     lastname: Optional[str] = None
+    username: Optional[str] = None
     city: Optional[str] = None
     state: Optional[str] = None
     country: Optional[str] = None
@@ -91,6 +92,7 @@ class User:
             profile=a["profile_medium"] or a["profile"],
             firstname=a["firstname"],
             lastname=a["lastname"],
+            username=a["username"],
             city=a["city"],
             state=a["state"],
             country=a["country"],
@@ -103,6 +105,8 @@ class User:
     def from_mongo_doc(cls, doc: dict):
         """Create a User object from a MongoDB document"""
         aid = doc.pop("_id")
+        if "auth" in doc:
+            doc["auth"] = Strava.AuthInfo(*doc["auth"])
         return cls(aid, **doc)
 
     def mongo_doc(self):
@@ -118,6 +122,10 @@ class User:
         """Whether or not this user is an admin"""
         return self.id in ADMIN
 
+    def __repr__(self):
+        name = self.username or f"{self.firstname} {self.lastname}"
+        return f"<User {self.id} '{name}'>"
+
 
 async def get(user_id: int) -> User | None:
     """Retrieve a User from the database"""
@@ -125,10 +133,11 @@ async def get(user_id: int) -> User | None:
     query = {"_id": user_id}
     try:
         doc: MongoDoc = await db.find_one(query)
-        return User.from_mongo_doc(doc)
     except Exception:
         log.exception("Failed mongodb query: %s", query)
         return None
+
+    return User.from_mongo_doc(doc) if doc else None
 
 
 async def get_all() -> AsyncGenerator[User, None]:
@@ -145,11 +154,11 @@ async def add_or_update(
     updates: User,
     update_login=False,
     update_index_access=False,
-):
+) -> User | None:
     """Add a new user or update an existing one"""
     collection = await get_collection()
     if not collection:
-        return
+        return None
 
     now_ts = cast(epoch, int(datetime.datetime.utcnow().timestamp()))
     if update_login:
@@ -177,12 +186,14 @@ async def add_or_update(
         )
     except Exception:
         log.exception("error adding/updating User %s: %s", updates.id, mongo_updates)
+    return None
 
 
 default_out_fieldnames = (
-    "id",
+    "_id",
     "firstname",
     "lastname",
+    "username",
     "profile",
     "city",
     "state",
@@ -208,7 +219,7 @@ async def dump(admin=False) -> AsyncGenerator[tuple, None]:
     yield fieldnames
 
     async for doc in cursor:
-        yield tuple(doc[i] for i in fieldnames)
+        yield tuple(doc.get(field) for field in fieldnames)
 
 
 async def delete(user_id, deauthenticate=True):
@@ -222,22 +233,21 @@ async def delete(user_id, deauthenticate=True):
     #  Afterwards it is useless so we can delete it.
     if user and (user.auth) and deauthenticate:
         client = Strava.AsyncClient(user_id, user.auth)
-        async with Strava.get_limiter():
-            try:
-                await client.deauthenticate(raise_exception=True)
-            except ClientResponseError as e:
-                log.info(
-                    "user %s is already deauthenticated? (%s, %s)",
-                    user_id,
-                    e.status,
-                    e.message,
-                )
-            except Exception:
-                log.exception("strava error?")
+        try:
+            await client.deauthenticate(raise_exception=True)
+        except ClientResponseError as e:
+            log.info(
+                "user %s is already deauthenticated? (%s, %s)",
+                user_id,
+                e.status,
+                e.message,
+            )
+        except Exception:
+            log.exception("Error deauthenticating user %s", user_id)
 
-    users = await get_collection()
+    collection = await get_collection()
     try:
-        await users.delete_one({"_id": user_id})
+        await collection.delete_one({"_id": user_id})
 
     except Exception:
         log.exception("error deleting user %d", user_id)
@@ -279,8 +289,7 @@ import json
 from .webserver.config import POSTGRES_URL
 
 
-@dataclass
-class OldUserRecord:
+class OldUserRecord(dataobject, fast_new=True):
     id: int
     username: str
     firstname: str
@@ -301,8 +310,7 @@ class OldUserRecord:
 async def migrate():
     # Import legacy Users database
     log.info("Importing users from legacy db")
-    pgurl = os.environ[POSTGRES_URL]
-    with create_engine(pgurl).connect() as conn:
+    with create_engine(POSTGRES_URL).connect() as conn:
         result = conn.execute(text("select * from users"))
 
     docs = []
@@ -314,12 +322,22 @@ async def migrate():
             log.info("skipping %d", u.id)
             continue
         try:
+            info = json.loads(u.access_token)
+            auth_info = Strava.AuthInfo(
+                info["access_token"], info["expires_at"], info["refresh_token"]
+            )
+        except JSONDecodeError:
+            pass
+        except Exception:
+            log.exception("error decoding access info for user %d", u.id)
+        else:
             docs.append(
                 User(
                     # From Strava Athlete record
                     u.id,
                     firstname=u.firstname,
                     lastname=u.lastname,
+                    username=u.username,
                     profile=u.profile,
                     city=u.city,
                     state=u.state,
@@ -328,12 +346,9 @@ async def migrate():
                     last_login=int(u.dt_last_active.timestamp()),
                     login_count=u.app_activity_count,
                     public=u.share_profile,
-                    auth=json.loads(u.access_token),
+                    auth=auth_info,
                 ).mongo_doc()
             )
-        except json.JSONDecodeError:
-            pass
-
     docs = cast(list[MongoDoc], docs)
     ids = [u["_id"] for u in docs]
     collection = await get_collection()

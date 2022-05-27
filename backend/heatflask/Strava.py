@@ -33,7 +33,7 @@ from .Types import epoch, urlstr
 
 log = getLogger(__name__)
 log.propagate = True
-log.setLevel("INFO")
+# log.setLevel("INFO")
 
 API_SPEC = "/api/v3"
 DOMAIN = "https://www.strava.com"
@@ -61,6 +61,7 @@ class Athlete(TypedDict):
     id: int
     firstname: str
     lastname: str
+    username: str
     profile_medium: urlstr
     profile: urlstr
     city: str
@@ -410,6 +411,8 @@ Scope = Literal[
     "activity:write",
 ]
 
+ApprovalPrompt = Literal["force", "auto"]
+
 
 class AuthUrlParams(TypedDict):
     """The arguments we send to request Strava authorization for a user"""
@@ -418,7 +421,7 @@ class AuthUrlParams(TypedDict):
     redirect_uri: str
     state: Optional[str]
     response_type: Literal["code"]
-    approval_prompt: Literal["force", "auto"]
+    approval_prompt: ApprovalPrompt
     scope: str  # comma separated elements of Scopes
 
 
@@ -431,14 +434,14 @@ class AuthResponse(TypedDict, total=False):
 
 def auth_url(
     state: str = "",
-    scope: list[Scope] = [],
-    approval_prompt: str = "auto",
+    scope: list[Scope] = ["read"],
+    approval_prompt: ApprovalPrompt = "auto",
     redirect_uri: str = "http://localhost/exchange_token",
 ) -> urlstr:
     params = AuthUrlParams(
         client_id=CLIENT_ID,
         response_type="code",
-        approval_prompt="force",
+        approval_prompt=approval_prompt,
         scope=",".join(scope),
         redirect_uri=redirect_uri,
         state=state,
@@ -477,11 +480,10 @@ class AuthInfo(NamedTuple):
 TOKEN_EXCHANGE_ENDPOINT = "/oauth/token"
 
 
-# We can get the access_token for a user either with
-# a code obtained via authentication, or with a refresh token
 async def get_access_token(
     session=None, code=None, refresh_token=None
 ) -> TokenExchangeResponse:
+    """Exchanged auth code or refresh-token for a valid access token"""
     log.debug("refreshing access token from %s", "code" if code else "refresh_token")
 
     params = (
@@ -515,7 +517,9 @@ DEAUTH_ENDPOINT = "/oauth/deauthorize"
 async def deauth(session):
     log.debug("  deauthenticating")
     async with session.post(DEAUTH_ENDPOINT) as response:
-        return cast(DeauthResponse, await response.json())
+        deauth_response: DeauthResponse = await response.json()
+        log.debug("  deauthenticated: %s", deauth_response)
+        return deauth_response
 
 
 # ---------------------------------------------------------------------------- #
@@ -601,7 +605,7 @@ class DeleteSubscriptionParams(Credentials):
 
 async def delete_subscription(
     admin_session: aiohttp.ClientSession, subscription_id: int
-) -> dict:
+) -> bool:
     params = DeleteSubscriptionParams(
         client_id=CLIENT_ID, client_secret=CLIENT_SECRET, id=subscription_id
     )
@@ -663,34 +667,34 @@ class AsyncClient:
 
     async def __aexit__(self, *args):
         await self.session.close()
-        log.debug("closed session")
+        log.debug("closed session: %s", args)
         self.session = None
 
     async def __run_with_session(self, func, *args, raise_exception=False, **kwargs):
         in_context = self.session is not None
 
-        if not in_context:
-            await self.__aenter__()
-
         try:
+            #  this will raise an exception if the user has de-authenticated
+            if not in_context:
+                await self.__aenter__()
+
             result = await func(self.session, *args, **kwargs)
         except Exception:
             if raise_exception:
-                await self.__aexit__()
                 raise
-            log.exception("%s, %s", self, func)
+            log.exception("Strava API error")
             return
 
-        if not in_context:
-            await self.__aexit__()
-
+        finally:
+            if not in_context:
+                await self.__aexit__()
         return result
 
     @staticmethod
     async def abort(async_iterator):
         """Abort an async_iterator returned by this class"""
         try:
-            await async_iterator.asend(1)
+            await async_iterator.asend(True)
         except StopAsyncIteration:
             pass
 
@@ -698,12 +702,11 @@ class AsyncClient:
         self, func, *args, raise_exception=False, **kwargs
     ):
         in_context = self.session is not None
-
-        if not in_context:
-            await self.__aenter__()
-
-        aiterator = func(self.session, *args, **kwargs)
         try:
+            if not in_context:
+                await self.__aenter__()
+
+            aiterator = func(self.session, *args, **kwargs)
             async for item in aiterator:
                 abort_signal = yield item
                 if abort_signal:
@@ -711,13 +714,12 @@ class AsyncClient:
                     break
         except Exception:
             if raise_exception:
-                await self.__aexit__()
                 raise
             else:
                 log.exception("%s, %s", self, func)
-
-        if not in_context:
-            await self.__aexit__()
+        finally:
+            if not in_context:
+                await self.__aexit__()
 
     async def update_access_token(
         self, code: str = ""
@@ -731,16 +733,9 @@ class AsyncClient:
 
         session = self.session or self.new_session()
 
-        try:
-            response = await get_access_token(
-                session, code=code, refresh_token=self.refresh_token
-            )
-        except Exception:
-            return None
-
-        finally:
-            if self.session:
-                await session.close()
+        response = await get_access_token(
+            session, code=code, refresh_token=self.refresh_token
+        )
 
         if not response.get("refresh_token"):
             log.info("No refresh token in response?!")
@@ -756,6 +751,7 @@ class AsyncClient:
 
         # If we are inside a session-context
         if self.session:
+            await self.session.close()
             self.session = self.new_session()
 
         elapsed = (time.perf_counter() - t0) * 1000
@@ -764,11 +760,11 @@ class AsyncClient:
         return response
 
     # Wrapped functions
-    def deauthenticate(self, **kwargs: Any) -> Awaitable[DeauthResponse]:
+    def deauthenticate(self, **kwargs) -> Awaitable[DeauthResponse]:
         """Revoke this client's Credentials"""
         return self.__run_with_session(deauth, **kwargs)
 
-    def get_athlete(self, **kwargs: Any) -> Awaitable[Athlete]:
+    def get_athlete(self, **kwargs) -> Awaitable[Athlete]:
         """Return the current Athlete, whose credentials we are using"""
         return self.__run_with_session(get_athlete, **kwargs)
 

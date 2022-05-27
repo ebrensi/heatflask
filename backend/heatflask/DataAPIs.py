@@ -19,7 +19,7 @@ db = types.SimpleNamespace(mongo_client=None, mongodb=None, redis=None)
 
 
 # this must be called by whoever controls the asyncio loop
-async def connect(app: Optional[Sanic], loop: Optional[BaseEventLoop]):
+async def connect(app: Optional[Sanic] = None, loop: Optional[BaseEventLoop] = None):
     if db.mongodb is not None:
         return
     db.mongo_client = motor.motor_asyncio.AsyncIOMotorClient(MONGODB_URL)
@@ -47,6 +47,14 @@ async def disconnect(*args):
 
     db.mongo_client = None
     db.mongodb = None
+
+
+class Connection:
+    async def __aenter__(self):
+        await connect()
+
+    async def __aexit__(self, exc_type, exc_value, exc_tb):
+        await disconnect()
 
 
 async def init_collection(

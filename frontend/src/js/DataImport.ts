@@ -147,23 +147,6 @@ export function qToQ(
   }
   return bq
 }
-/*
-const SET_EXT_TYPE = 0 // Any in 0-127
-extensionCodec.register({
-  type: SET_EXT_TYPE,
-  encode: (object: unknown): Uint8Array | null => {
-    if (object instanceof Set) {
-      return encode([...object]);
-    } else {
-      return null;
-    }
-  },
-  decode: (data: Uint8Array) => {
-    const array = decode(data) as Array<unknown>;
-    return new Set(array);
-  },
-});
-*/
 
 /** Send a query to the backend and yield its items
  *   * send a non-false object to this generator to abort the operation
@@ -216,22 +199,6 @@ export async function* makeActivityQuery(
     yield null
   }
 }
-
-/** User objects coming from the backend have this format
- */
-export const USER_FIELDNAMES = {
-  ID: "_id",
-  LAST_LOGIN: "ts",
-  LOGIN_COUNT: "#",
-  LAST_INDEX_ACCESS: "I",
-  FIRSTNAME: "f",
-  LASTNAME: "l",
-  PROFILE: "P",
-  CITY: "c",
-  STATE: "s",
-  COUNTRY: "C",
-  PRIVATE: "p",
-} as const
 
 // /*
 //  * Set up a message box that appears only when flags.importing is true

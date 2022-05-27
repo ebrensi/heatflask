@@ -374,7 +374,7 @@ async def triage(*args):
     cutoff = now_ts - TTL
     users = await get_collection()
     cursor: AsyncGenerator[Users.User, None] = users.find(
-        {Users.IndexOf["last_index_access"]: {"$lt": cutoff}}, {"_id": True}
+        {"last_index_access": {"$lt": cutoff}}, {"_id": True}
     )
     stale_ids = [u.id async for u in cursor]
     tasks = [asyncio.create_task(delete_user_entries(sid)) for sid in stale_ids]
