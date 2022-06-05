@@ -4,5 +4,5 @@ flake8~=4.0.1    # Linting
 jupyter
 nbconvert~=6.5.0 # strip jupyter notebook outputs
 mypy~=0.942      # type checking
-pdoc~=11.1.0
+pdoc~=12.0.1
 
