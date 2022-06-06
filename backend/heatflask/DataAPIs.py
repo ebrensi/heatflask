@@ -1,28 +1,45 @@
-import motor.motor_asyncio
-from pymongo.collection import Collection
+import motor
+from motor.motor_asyncio import (
+    AsyncIOMotorClient,
+    AsyncIOMotorDatabase,
+    AsyncIOMotorCollection,
+)
+
 import aioredis
 import logging
 import datetime
 import uuid
-import types
 import sys
 from typing import Optional
 from sanic import Sanic
 from asyncio import BaseEventLoop
+from recordclass import dataobject
 
 from .webserver.config import MONGODB_URL, REDIS_URL
 
 log = logging.getLogger(__name__)
 log.propagate = True
 
-db = types.SimpleNamespace(mongo_client=None, mongodb=None, redis=None)
+
+class Box(dataobject):
+    mongo_client: Optional[AsyncIOMotorClient]
+    mongodb: Optional[AsyncIOMotorDatabase]
+    redis: Optional[aioredis.Redis]
+
+
+db = Box(mongo_client=None, mongodb=None, redis=None)
 
 
 # this must be called by whoever controls the asyncio loop
-async def connect(app: Optional[Sanic] = None, loop: Optional[BaseEventLoop] = None):
-    if db.mongodb is not None:
+async def connect(
+    app: Optional[Sanic] = None, loop: Optional[BaseEventLoop] = None, force=False
+):
+    if db.mongodb is not None and not force:
         return
-    db.mongo_client = motor.motor_asyncio.AsyncIOMotorClient(MONGODB_URL)
+
+    if db.mongo_client is None:
+        db.mongo_client = motor.motor_asyncio.AsyncIOMotorClient(MONGODB_URL)
+
     db.mongodb = db.mongo_client.get_default_database()
     db.redis = aioredis.from_url(REDIS_URL)
     if app:
@@ -30,7 +47,6 @@ async def connect(app: Optional[Sanic] = None, loop: Optional[BaseEventLoop] = N
             await db.mongodb.list_collection_names()
         except Exception:
             log.error("mongo error")
-            db.mongo_client.close()
             db.mongodb = None
             sys.exit("mongodb error")
 
@@ -38,15 +54,13 @@ async def connect(app: Optional[Sanic] = None, loop: Optional[BaseEventLoop] = N
 
 
 async def disconnect(*args):
-    if db.mongodb is None:
-        return
+    if db.mongodb is not None:
+        db.mongodb = None
 
-    log.info("Disconnecing from MongoDB and Redis")
-    db.mongo_client.close()
-    await db.redis.close()
-
-    db.mongo_client = None
-    db.mongodb = None
+    if db.redis is not None:
+        await db.redis.close()
+        db.redis = None
+    log.info("Disconnected from MongoDB and Redis")
 
 
 class Connection:
@@ -54,6 +68,7 @@ class Connection:
         await connect()
 
     async def __aexit__(self, exc_type, exc_value, exc_tb):
+        log.debug({"exc_type": exc_type, "exc_value": exc_value, "exc_tb": exc_tb})
         await disconnect()
 
 
@@ -62,7 +77,10 @@ async def init_collection(
     ttl: Optional[int] = None,
     capped_size: Optional[int] = None,
     cache_prefix: Optional[str] = None,
-) -> Collection:
+) -> AsyncIOMotorCollection | None:
+    if db.mongodb is None or db.redis is None:
+        return None
+
     collections = await db.mongodb.list_collection_names()
 
     if name in collections:
@@ -85,7 +103,7 @@ async def init_collection(
                 pipe.delete(k)
             await pipe.execute()
 
-    collection: Collection = await (
+    collection: AsyncIOMotorCollection = await (
         db.mongodb.create_collection(name, capped=True, size=capped_size)
         if capped_size
         else db.mongodb.create_collection(name)
@@ -102,8 +120,13 @@ async def init_collection(
     return collection
 
 
-async def update_collection_ttl(name: str, new_ttl: int):
-    collection: Collection = db.mongodb.get_collection(name)
+async def update_collection_ttl(
+    name: str, new_ttl: int
+) -> AsyncIOMotorCollection | None:
+    if db.mongodb is None:
+        return None
+
+    collection: AsyncIOMotorCollection = db.mongodb.get_collection(name)
 
     # Update the MongoDB Activities TTL if necessary
     info = await collection.index_information()
@@ -131,8 +154,12 @@ async def update_collection_ttl(name: str, new_ttl: int):
     return collection
 
 
-async def update_collection_cap(name: str, new_size: int):
-    collection: Collection = db.mongodb.get_collection(name)
+async def update_collection_cap(
+    name: str, new_size: int
+) -> AsyncIOMotorCollection | None:
+    if db.mongodb is None:
+        return None
+    collection: AsyncIOMotorCollection = db.mongodb.get_collection(name)
     options = await collection.options()
     current_size = options["size"]
 

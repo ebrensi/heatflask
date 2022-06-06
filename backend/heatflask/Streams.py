@@ -23,11 +23,11 @@ from typing import (
     TypedDict,
     Awaitable,
     AsyncGenerator,
-    Coroutine,
     Optional,
+    Coroutine,
     cast,
 )
-from dataclasses import dataclass
+from recordclass import dataobject
 
 from . import DataAPIs
 from .DataAPIs import db
@@ -51,8 +51,7 @@ REDIS_TTL = int(os.environ.get("REDIS_STREAMS_TTL", 4)) * SECS_IN_HOUR
 OFFLINE = os.environ.get("OFFLINE")
 
 
-@dataclass
-class Box:
+class Box(dataobject):
     collection: Optional[Collection]
 
 
@@ -224,7 +223,8 @@ async def aiter_query(
         # Start a fetch process going. We will get back to this...
         t0 = time.perf_counter()
         streams_import = strava_import(user, activity_ids)
-        first_fetch = asyncio.create_task(streams_import.__anext__())
+        job1 = cast(Coroutine, streams_import.__anext__())
+        first_fetch = asyncio.create_task(job1)
 
     # Yield all the results from Redis and Mongo
     for item in local_result:

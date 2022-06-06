@@ -4,23 +4,21 @@ Functions and constants directly pertaining to our User database
 ***  For Jupyter notebook ***
 Paste one of these Jupyter magic directives to the top of a cell
  and run it, to do these things:
-    %%cython --annotate       # Compile and run the cell
     %load Users.py            # Load Users.py file into this (empty) cell
     %%writefile Users.py      # Write the contents of this cell to Users.py
 """
 
 from logging import getLogger
 import datetime
-import pymongo
+from motor.motor_asyncio import AsyncIOMotorCollection
 from pymongo import DESCENDING
 import asyncio
 from aiohttp import ClientResponseError
+from recordclass import dataobject, astuple, asdict
+from json.decoder import JSONDecodeError
+import pymongo
 
 from typing import AsyncGenerator, Final, Optional, Any, cast
-
-from recordclass import dataobject, astuple, asdict
-from pymongo.collection import Collection
-from json.decoder import JSONDecodeError
 
 from . import DataAPIs
 from . import Strava
@@ -28,7 +26,7 @@ from .Types import epoch, urlstr
 
 log = getLogger(__name__)
 log.propagate = True
-log.setLevel("INFO")
+log.setLevel("DEBUG")
 
 COLLECTION_NAME = "users_v0"
 
@@ -45,7 +43,7 @@ MAX_TRIAGE = 10
 
 
 class Box(dataobject):
-    collection: Optional[Collection]
+    collection: Optional[AsyncIOMotorCollection]
 
 
 myBox: Final = Box(collection=None)
@@ -64,8 +62,8 @@ def clean_dict(d: dict):
     return {k: v for k, v in d.items() if v is not None}
 
 
-class User(dataobject):
-    """A dataclass object representing a registered Strava Athlete"""
+class User(dataobject, fast_new=True):
+    """An object representing a registered Strava Athlete"""
 
     id: int
     profile: Optional[urlstr] = None
@@ -102,12 +100,12 @@ class User(dataobject):
         )
 
     @classmethod
-    def from_mongo_doc(cls, doc: dict):
+    def from_mongo_doc(cls, doc: MongoDoc):
         """Create a User object from a MongoDB document"""
-        aid = doc.pop("_id")
+        uid = doc.pop("_id")
         if "auth" in doc:
             doc["auth"] = Strava.AuthInfo(*doc["auth"])
-        return cls(aid, **doc)
+        return cls(uid, **doc)
 
     def mongo_doc(self):
         """Create a MongoDB document for this user"""
@@ -130,6 +128,7 @@ class User(dataobject):
 async def get(user_id: int) -> User | None:
     """Retrieve a User from the database"""
     db = await get_collection()
+    log.info("got collection %s", db)
     query = {"_id": user_id}
     try:
         doc: MongoDoc = await db.find_one(query)
@@ -157,7 +156,7 @@ async def add_or_update(
 ) -> User | None:
     """Add a new user or update an existing one"""
     collection = await get_collection()
-    if not collection:
+    if collection is None:
         return None
 
     now_ts = cast(epoch, int(datetime.datetime.utcnow().timestamp()))
@@ -174,7 +173,7 @@ async def add_or_update(
     if update_login:
         mongo_updates["$inc"] = {"login_count": 1}
 
-    log.debug("User %d updated with %s", updates.id, mongo_updates)
+    log.debug("Updating User %d: %s", updates.id, mongo_updates)
 
     # Creates a new user or updates an existing user (with the same id)
     try:

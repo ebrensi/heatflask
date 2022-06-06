@@ -10,9 +10,7 @@ Paste one of these Jupyter magic directives to the top of a cell
     %%writefile Index.py   # Write the contents of this cell to Index.py
 """
 
-from optparse import Option
 import os
-from tokenize import Name
 import polyline
 import numpy as np
 from logging import getLogger
@@ -23,8 +21,8 @@ from aiohttp import ClientResponseError
 from pymongo import DESCENDING
 from pymongo.collection import Collection
 
-from typing import Final, AsyncGenerator, NamedTuple, Optional, TypedDict, cast
-from dataclasses import dataclass
+from typing import AsyncGenerator, NamedTuple, Optional, TypedDict, cast
+from recordclass import dataobject, astuple, asdict
 
 from . import DataAPIs
 from .DataAPIs import db
@@ -46,8 +44,7 @@ SECS_IN_DAY = 24 * SECS_IN_HOUR
 TTL = int(os.environ.get("INDEX_TTL", 20)) * SECS_IN_DAY
 
 
-@dataclass
-class Box:
+class Box(dataobject):
     collection: Optional[Collection]
 
 
@@ -86,10 +83,10 @@ def polyline_bounds(poly: str) -> LLBounds | None:
 
 
 def overlaps(b1: LLBounds, b2: LLBounds) -> bool:
-    b1_left, b1_bottom = b1.SW
-    b1_right, b1_top = b1.NE
-    b2_left, b2_bottom = b2.SW
-    b2_right, b2_top = b2.NE
+    b1_left, b1_bottom = b1[0]  # SW
+    b1_right, b1_top = b1[1]  # NE
+    b2_left, b2_bottom = b2[0]  # SW
+    b2_right, b2_top = b2[1]  # NE
     return (
         (b1_left < b2_right)
         and (b1_right > b2_left)
@@ -106,21 +103,11 @@ def overlaps(b1: LLBounds, b2: LLBounds) -> bool:
     """
 
 
-class MongoDoc(TypedDict):
-    """
-    MongoDB document for a Activity. We store it as a MongoDB Array,
-    much like a Activity object except with the id field removed and used as
-    the document index
-    """
-
-    _id: int
-    a: tuple[
-        int, str, int, int, int, int, epoch, int, int, int, LLBounds, bool, bool, int
-    ]
+MongoDoc = dict
 
 
-class Activity(NamedTuple):
-    """A (named) tuple representing a Strava Activity"""
+class Activity(dataobject, fast_new=True):
+    """Am object representing a Strava Activity"""
 
     id: int
     user_id: int
@@ -175,26 +162,21 @@ class Activity(NamedTuple):
     @classmethod
     def from_mongo_doc(cls, doc: MongoDoc):
         """Create a Activity object from a MongoDB document"""
-        return cls(doc["_id"], *doc["a"])
+        aid = doc.pop("_id")
+        return cls(aid, **doc)
 
-    def mongo_doc(self):
+    def mongo_doc(self) -> MongoDoc:
         """Create a MongoDB document for this Activity"""
-        (id, *theRest) = self
-        return MongoDoc(_id=id, a=theRest)
+        doc = asdict(self)
+        doc["_id"] = doc.pop("id")
+        return doc
 
+    def astuple(self):
+        return astuple(self)
 
-"""Index of a given field in the MongoDB array for a User"""
-IndexOf: Final = {field: idx for idx, field in enumerate(Activity._fields[1:])}
-
-
-def selector(idx_or_fieldname: int | str):
-    """The mongodb selector for an array element"""
-    idx = (
-        idx_or_fieldname
-        if isinstance(idx_or_fieldname, int)
-        else IndexOf[idx_or_fieldname]
-    )
-    return f"a.{idx}"
+    def __repr__(self):
+        name = self.name
+        return f"<Activity {self.id} '{name}'>"
 
 
 # # **************************************
@@ -208,21 +190,25 @@ def import_flag_key(user_id: int):
 
 
 async def set_import_flag(user_id: int, val: str):
+    assert db.redis
     await db.redis.setex(import_flag_key(user_id), IMPORT_FLAG_TTL, val)
     log.debug(f"{user_id} import flag set to '%s'", val)
 
 
 async def set_import_error(user_id: int, e: ClientResponseError):
+    assert db.redis
     val = f"Strava error ${e.status}: ${e.message}"
     await db.redis.setex(import_flag_key(user_id), 5, val)
 
 
 async def clear_import_flag(user_id: int):
+    assert db.redis
     await db.redis.delete(import_flag_key(user_id))
     log.debug(f"{user_id} import flag unset")
 
 
 async def check_import_progress(user_id: int):
+    assert db.redis
     result = await db.redis.get(import_flag_key(user_id))
     return result.decode("utf-8") if result else None
 
@@ -329,14 +315,14 @@ async def update_one(activity_id: int, updates: Strava.Updates):
     settings: dict[str, str | int | bool] = {}
 
     if "title" in updates:
-        settings[selector("name")] = updates["title"]
+        settings["name"] = updates["title"]
 
     if "type" in updates:
-        settings[selector("type")] = updates["type"]
+        settings["type"] = updates["type"]
 
     if "private" in updates:
-        settings[selector("private")] = updates["private"]
-        settings[selector("visibility")] = Strava.VISTYPES_LOOKUP["only_me"]
+        settings["private"] = updates["private"]
+        settings["visibility"] = Strava.VISTYPES_LOOKUP["only_me"]
 
     try:
         await collection.update_one({"_id": activity_id}, {"$set": settings})
@@ -353,19 +339,19 @@ async def delete_one(activity_id: int):
 
 async def delete_user_entries(user_id: int):
     index = await get_collection()
-    result = await index.delete_many({selector("user_id"): user_id})
+    result = await index.delete_many({"user_id": user_id})
     log.debug("%d deleted %s entries", user_id, result.deleted_count)
 
 
 async def count_user_entries(user_id: int):
     index = await get_collection()
-    return await index.count_documents({selector("user_id"): user_id})
+    return await index.count_documents({"user_id": user_id})
 
 
 async def has_user_entries(user_id: int):
     index = await get_collection()
     return not not (
-        await index.find_one({selector("user_id"): user_id}, projection={"_id": True})
+        await index.find_one({"user_id": user_id}, projection={"_id": True})
     )
 
 
@@ -381,7 +367,7 @@ async def triage(*args):
     await asyncio.gather(*tasks)
 
 
-SORT_SPECS = [(selector("utc_start_time"), DESCENDING)]
+SORT_SPECS = [("utc_start_time", DESCENDING)]
 
 
 class ActivityQueryResult(TypedDict):
@@ -410,12 +396,11 @@ async def query(
     limit = int(limit) if limit else 0
 
     if user_id:
-        uidfield = selector("user_id")
-        mongo_query[uidfield] = user_id
-        projection = {uidfield: False}
+        mongo_query["user_id"] = user_id
+        projection = {"user_id": False}
 
     if before or after:
-        mongo_query[selector("utc_start_time")] = Utility.cleandict(
+        mongo_query["utc_start_time"] = Utility.cleandict(
             {
                 "$lt": None if before is None else Utility.to_epoch(before),
                 "$gte": None if after is None else Utility.to_epoch(after),
@@ -426,31 +411,30 @@ async def query(
         mongo_query["_id"] = {"$in": list(set(aid for aid in activity_ids))}
 
     if activity_type:
-        mongo_query[selector("type")] = {"$in": activity_type}
+        mongo_query["type"] = {"$in": activity_type}
 
     if visibility:
         vlist = [Strava.VISTYPES_LOOKUP[v] for v in visibility]
-        mongo_query[selector("visibility")] = {"$in": vlist}
+        mongo_query["visibility"] = {"$in": vlist}
 
     if private is not None:
-        mongo_query[selector("FLAG_PRIVATE")] = private
+        mongo_query["FLAG_PRIVATE"] = private
 
     if commute is not None:
-        mongo_query[selector("flag_commute")] = commute
+        mongo_query["flag_commute"] = commute
 
     if overlaps is not None:
-        otherbounds = cast(LLBounds, overlaps)
+        otherbounds = LLBounds(*overlaps)
         # Find all activities whose bounding box overlaps
         # a box implied by bounds
         bounds_left, bounds_bottom = otherbounds.SW
         bounds_right, bounds_top = otherbounds.NE
-        llselector = selector("latlng_bounds")
         mongo_query.update(
             {
-                f"{llselector}.1.0": {"$gt": bounds_left},
-                f"{llselector}.0.0": {"$lt": bounds_right},
-                f"{llselector}.0.1": {"$lt": bounds_top},
-                f"{llselector}.1.1": {"$gt": bounds_bottom},
+                "latlng_bounds.1.0": {"$gt": bounds_left},
+                "latlng_bounds.0.0": {"$lt": bounds_right},
+                "latlng_bounds.0.1": {"$lt": bounds_top},
+                "latlng_bounds.1.1": {"$gt": bounds_bottom},
             }
         )
 
@@ -500,7 +484,6 @@ async def query(
         if user_id:
             await Users.add_or_update(Users.User(user_id), update_index_access=True)
         else:
-            uidfield = selector("user_id")
             ids = set(A.user_id for A in activities)
             tasks = [
                 asyncio.create_task(
