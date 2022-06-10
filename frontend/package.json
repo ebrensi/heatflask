@@ -66,10 +66,8 @@
     "typedoc": "^0.22.15",
     "typescript": "^4.5.4"
   },
-  "engines": {
-    "node": "<=17"
-  },
   "prettier": {
-    "semi": false
+    "semi": false,
+    "tabWidth": 2
   }
 }
