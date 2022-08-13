@@ -1,10 +1,10 @@
 python-dateutil~=2.8.2
 recordclass~=0.17.2
-sanic~=22.3.2
+sanic~=22.6.2
 sanic-openapi
-numpy~=1.22.4
+numpy~=1.23.1
 
-pymongo[srv]~=4.1.1
+pymongo[srv]~=4.2.0
 motor~=3.0.0
 
 aioredis[hiredis]~=2.0.1
