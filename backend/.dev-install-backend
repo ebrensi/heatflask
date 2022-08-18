@@ -35,9 +35,6 @@ source $a
 echo "attempting to update pip to latest version"
 python -m pip install --upgrade pip
 
-echo "installing backend dev-dependencies (requirements-dev.txt)"
-pip install --quiet --upgrade -r  requirements-dev.txt
-
 echo "installing backend dependencies (requirements.txt)"
 pip install --quiet --upgrade -r requirements.txt
 

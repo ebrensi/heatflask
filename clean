@@ -1,0 +1,6 @@
+rm -r backend/heatflask/__pycache__
+rm -r backend/heatflask/webserver/__pycache__
+rm -r backend/.venv
+rm -r .mypy_cache
+rm -r frontend/node_modules
+rm -r frontend/dist/*

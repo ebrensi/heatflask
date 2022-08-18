@@ -13,6 +13,14 @@ aiohttp[speedups]~=3.8.1
 msgpack~=1.0.4
 polyline~=1.4.0
 
+# dev
+black~=22.6.0    # Formatting
+flake8~=5.0.4    # Linting
+jupyter
+nbconvert~=6.5.0 # strip jupyter notebook outputs
+mypy~=0.961      # type checking
+pdoc~=12.1.0
+
 # Legacy
 psycopg2-binary~=2.9.3
 sqlalchemy~=1.4.37
