@@ -13,7 +13,7 @@ import sys
 from typing import Optional
 from sanic import Sanic
 from asyncio import BaseEventLoop
-from recordclass import dataobject
+from dataclasses import dataclass
 
 from .webserver.config import MONGODB_URL, REDIS_URL
 
@@ -21,7 +21,8 @@ log = logging.getLogger(__name__)
 log.propagate = True
 
 
-class Box(dataobject):
+@dataclass
+class Box:
     mongo_client: Optional[AsyncIOMotorClient]
     mongodb: Optional[AsyncIOMotorDatabase]
     redis: Optional[aioredis.Redis]
@@ -186,12 +187,18 @@ async def update_collection_cap(
 
 def drop(name):
     log.info("dropping '%s' collection", name)
-    return db.mongodb.drop_collection(name)
+    mongo = db.mongodb
+    assert mongo is not None
+    return mongo.drop_collection(name)
 
 
 def list():
-    return db.mongodb.list_collection_names()
+    mongo = db.mongodb
+    assert mongo is not None
+    return mongo.list_collection_names()
 
 
 def stats(name):
-    return db.mongodb.command("collstats", name)
+    mongo = db.mongodb
+    assert mongo is not None
+    return mongo.command("collstats", name)

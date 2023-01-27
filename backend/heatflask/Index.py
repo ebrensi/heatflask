@@ -19,10 +19,11 @@ import time
 import asyncio
 from aiohttp import ClientResponseError
 from pymongo import DESCENDING
-from pymongo.collection import Collection
+
+# from pymongo.collection import Collection
 
 from typing import AsyncGenerator, NamedTuple, Optional, TypedDict, cast
-from recordclass import dataobject, astuple, asdict
+from dataclasses import dataclass, astuple, asdict
 
 from . import DataAPIs
 from .DataAPIs import db
@@ -44,8 +45,9 @@ SECS_IN_DAY = 24 * SECS_IN_HOUR
 TTL = int(os.environ.get("INDEX_TTL", 20)) * SECS_IN_DAY
 
 
-class Box(dataobject):
-    collection: Optional[Collection]
+@dataclass
+class Box:
+    collection: Optional[asyncio.AsyncIOMotorCollection]
 
 
 myBox = Box(collection=None)
@@ -54,6 +56,8 @@ myBox = Box(collection=None)
 async def get_collection():
     if myBox.collection is None:
         myBox.collection = await DataAPIs.init_collection(COLLECTION_NAME)
+    col = myBox.collection
+    assert col is not None
     return myBox.collection
 
 
@@ -106,7 +110,8 @@ def overlaps(b1: LLBounds, b2: LLBounds) -> bool:
 MongoDoc = dict
 
 
-class Activity(dataobject, fast_new=True):
+@dataclass(frozen=True)
+class Activity:
     """Am object representing a Strava Activity"""
 
     id: int
@@ -210,7 +215,7 @@ async def clear_import_flag(user_id: int):
 async def check_import_progress(user_id: int):
     assert db.redis
     result = await db.redis.get(import_flag_key(user_id))
-    return result.decode("utf-8") if result else None
+    return cast(str, result.decode("utf-8")) if result else None
 
 
 # # **************************************
@@ -226,8 +231,8 @@ async def fake_import(user_id: int):
 
 
 async def import_index_progress(user_id: int, poll_delay: float = 0.5):
-    last_msg: str = ""
-    msg: str = "1"
+    last_msg: Optional[str] = ""
+    msg: Optional[str] = "1"
     while msg:
         msg = await check_import_progress(user_id)
         if msg != last_msg:

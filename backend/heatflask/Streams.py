@@ -27,7 +27,8 @@ from typing import (
     Coroutine,
     cast,
 )
-from recordclass import dataobject
+
+from dataclasses import dataclass
 
 from . import DataAPIs
 from .DataAPIs import db
@@ -51,7 +52,8 @@ REDIS_TTL = int(os.environ.get("REDIS_STREAMS_TTL", 4)) * SECS_IN_HOUR
 OFFLINE = os.environ.get("OFFLINE")
 
 
-class Box(dataobject):
+@dataclass
+class Box:
     collection: Optional[Collection]
 
 

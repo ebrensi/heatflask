@@ -14,7 +14,7 @@ from motor.motor_asyncio import AsyncIOMotorCollection
 from pymongo import DESCENDING
 import asyncio
 from aiohttp import ClientResponseError
-from recordclass import dataobject, astuple, asdict
+from dataclasses import dataclass, astuple, asdict
 from json.decoder import JSONDecodeError
 import pymongo
 
@@ -42,7 +42,8 @@ ADMIN: Final = [15972102]
 MAX_TRIAGE = 10
 
 
-class Box(dataobject):
+@dataclass
+class Box:
     collection: Optional[AsyncIOMotorCollection]
 
 
@@ -62,7 +63,8 @@ def clean_dict(d: dict):
     return {k: v for k, v in d.items() if v is not None}
 
 
-class User(dataobject, fast_new=True):
+@dataclass(frozen=True)
+class User:
     """An object representing a registered Strava Athlete"""
 
     id: int
@@ -131,6 +133,7 @@ async def get(user_id: int) -> User | None:
     log.info("got collection %s", db)
     query = {"_id": user_id}
     try:
+        assert db is not None
         doc: MongoDoc = await db.find_one(query)
     except Exception:
         log.exception("Failed mongodb query: %s", query)
@@ -142,6 +145,7 @@ async def get(user_id: int) -> User | None:
 async def get_all() -> AsyncGenerator[User, None]:
     """Returns an async iterator of all users"""
     db = await get_collection()
+    assert db is not None
     docs: AsyncGenerator[MongoDoc, None] = db.find()
     async for doc in docs:
         u = User.from_mongo_doc(doc)
