@@ -1,0 +1,4 @@
+git branch -d staging
+git branch staging
+git push -f origin staging
+git branch -d staging
