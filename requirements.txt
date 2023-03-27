@@ -1,6 +1,6 @@
 stravalib
 rjsmin
-redis==3
+redis==4.5.3
 requests
 #pymongo==3.9
 pymongo[srv]
