@@ -1,46 +1,47 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <title>{{ config["APP_NAME"] }} - {{ (user.username or user.id) }} - Activities List</title>
-    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
-    <meta name="robots" content="noindex">
 
-    {% assets "basic_table_css" %}
-    <link rel="stylesheet" href="{{ ASSET_URL }}" />
-    {% endassets %}
+<head>
+  <title>{{ config["APP_NAME"] }} - {{ (user.username or user.id) }} - Activities List</title>
+  <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+  <meta name="robots" content="noindex">
 
-    {% assets "basic_table_js" %}
-    <script type="text/javascript" src="{{ ASSET_URL }}"></script>
-    {% endassets %}
+  {% assets "basic_table_css" %}
+  <link rel="stylesheet" href="{{ ASSET_URL }}" />
+  {% endassets %}
 
-    {% if current_user.is_anonymous or (not current_user.is_admin()) %}
-    {{analytics}}
-    {% endif %}
+  {% assets "basic_table_js" %}
+  <script type="text/javascript" src="{{ ASSET_URL }}"></script>
+  {% endassets %}
 
-    <script type="text/javascript">
-    const OFFLINE = {{ config.get('OFFLINE')|tojson }},
-          ADMIN = {{ (current_user.is_authenticated and current_user.is_admin())|tojson|safe }},
-          MEASURMENT_PREFERENCE = "{{ current_user.measurement_preference if current_user.is_authenticated else user.measurement_preference }}",
-          USER_ID = "{{ user.id }}",
-          DIST_UNIT = (MEASURMENT_PREFERENCE=="feet")? 1609.34 : 1000.0,
-          DIST_LABEL = (MEASURMENT_PREFERENCE=="feet")?  "mi" : "km",
-          STRAVA_BUTTON = img("{{ url_for('static',filename='strava_button.png') }}"),
-          USER_BASE_URL = "{{url_for('main',username=user.id)}}",
-          WEBSOCKET_URL = WS_SCHEME+window.location.host+"/data_socket",
-          BEACON_HANDLER_URL = "{{ url_for('beacon_handler') }}",
-          CLIENT_ID = "{{ client_id }}";
-    </script>
+  {% if current_user.is_anonymous or (not current_user.is_admin()) %}
+  {{analytics}}
+  {% endif %}
 
-  </head>
+  <script type="text/javascript">
+    const OFFLINE = {{ config.get('OFFLINE') | tojson }},
+    ADMIN = {{ (current_user.is_authenticated and current_user.is_admin())| tojson | safe }},
+    MEASURMENT_PREFERENCE = "{{ current_user.measurement_preference if current_user.is_authenticated else user.measurement_preference }}",
+      USER_ID = "{{ user.id }}",
+      DIST_UNIT = (MEASURMENT_PREFERENCE == "feet") ? 1609.34 : 1000.0,
+      DIST_LABEL = (MEASURMENT_PREFERENCE == "feet") ? "mi" : "km",
+      STRAVA_BUTTON = img("{{ url_for('static',filename='strava_button.png') }}"),
+      USER_BASE_URL = "{{url_for('main',username=user.id)}}",
+      WEBSOCKET_URL = WS_SCHEME + window.location.host + "/data_socket",
+      BEACON_HANDLER_URL = "{{ url_for('beacon_handler') }}",
+      CLIENT_ID = "{{ client_id }}";
+  </script>
 
-  <body>
+</head>
+
+<body>
   <h4>Activities list</h4>
 
   <p>
-    TTL is "Time To Live" for index entries.  Index entries expire if not accessed for a while, in order to save memory.  
-    <button type="button" id="rebuild-button" class="btn btn-b btn-sm">Re-build index</button>  
+    TTL is "Time To Live" for index entries. Index entries expire if not accessed for a while, in order to save memory.
+    <button type="button" id="rebuild-button" class="btn btn-b btn-sm">Re-build index</button>
   </p>
-  
+
   <div id="status">
     <span id="status_msg"></span>
     <progress id="progress"></progress>
@@ -71,15 +72,15 @@
     } else {
       WS_SCHEME = "ws://";
     };
-    
+
     window.history.pushState({}, "", window.location.origin + window.location.pathname);
 
 
-    function td(text, sortable=null) {
+    function td(text, sortable = null) {
       let tag;
       if (sortable) tag = `data-order=${sortable}`;
       else tag = "";
-      return `<td ${tag}>` + text +"</td>";
+      return `<td ${tag}>` + text + "</td>";
     }
 
     function groupLink(A) {
@@ -93,7 +94,7 @@
     }
 
 
-    function secs2DDHHMM(sec){
+    function secs2DDHHMM(sec) {
       // console.log(sec);
 
       if (!sec || sec <= 0) {
@@ -110,17 +111,17 @@
       let minutes = Math.floor(sec / 60) % 60;
       sec -= minutes * 60;
 
-      return `${days.pad(2)}:${hours.pad(2)}:${minutes.pad(2)}` 
+      return `${days.pad(2)}:${hours.pad(2)}:${minutes.pad(2)}`
     }
 
 
     // Main code
     let count = 0,
-        count_DOM_element = document.querySelector("#count"),
-        status_element = document.querySelector("#status_msg"),
-        table_body = $('#activities_list tbody'),
-        wskey, 
-        sock = new WebSocket(WEBSOCKET_URL);
+      count_DOM_element = document.querySelector("#count"),
+      status_element = document.querySelector("#status_msg"),
+      table_body = $('#activities_list tbody'),
+      wskey,
+      sock = new WebSocket(WEBSOCKET_URL);
     sock.binaryType = 'arraybuffer';
 
     window.addEventListener('beforeunload', function (event) {
@@ -130,59 +131,59 @@
         }
         navigator.sendBeacon(BEACON_HANDLER_URL, CLIENT_ID);
       }
- 
+
       if (sock && sock.readyState == 1) {
-            sock.send(JSON.stringify({close: 1}));
-            sock.close()
+        sock.send(JSON.stringify({ close: 1 }));
+        sock.close()
       }
-      
+
     });
 
-    
+
 
     status_element.innerText = "Retrieving Activity Index...";
-    
+
     document.querySelector("#dist").innerHtml = `<i class="fa fa-arrows-h" aria-hidden="true"></i> (${DIST_LABEL})`;
 
-    sock.onopen = function(event) {
-        console.log("socket open: ", event);
+    sock.onopen = function (event) {
+      console.log("socket open: ", event);
 
-        queryObj = {client_id: CLIENT_ID};
-        queryObj[USER_ID] = {
-                streams: false,
-                update_index_ts: false,
-                limit: 1000000
-        };
+      queryObj = { client_id: CLIENT_ID };
+      queryObj[USER_ID] = {
+        streams: false,
+        update_index_ts: false,
+        limit: 1000000
+      };
 
-        let msg = JSON.stringify({query: queryObj});
-        sock.send(msg);
+      let msg = JSON.stringify({ query: queryObj });
+      sock.send(msg);
     }
 
-    sock.onclose = function(event) {
-        console.log("socket closed: ", event);
-        wskey = null;
-        if (!ADMIN && !OFFLINE) {
+    sock.onclose = function (event) {
+      console.log("socket closed: ", event);
+      wskey = null;
+      if (!ADMIN && !OFFLINE) {
         // Record this to google analytics
         ga('send', 'event', {
-            eventCategory: USER_ID,
-            eventAction: 'View-Index'
+          eventCategory: USER_ID,
+          eventAction: 'View-Index'
         });
       }
     }
 
-    sock.onmessage = function(event) {
+    sock.onmessage = function (event) {
       let A = msgpack.decode(new Uint8Array(event.data));
 
       if (!A) {
         sock.close();
         $('#activities_list').DataTable({
-            paging: false,
-            scrollY: "80vh",
-            scrollX: true,
-            scrollCollapse: true,
-            order: [[ 2, "desc" ]],
-            deferRender: true,
-            select: false
+          paging: false,
+          scrollY: "80vh",
+          scrollX: true,
+          scrollCollapse: true,
+          order: [[2, "desc"]],
+          deferRender: true,
+          select: false
         });
 
         document.querySelector("#status").style.display = "none";
@@ -191,9 +192,9 @@
 
       if ("wskey" in A) {
         wskey = A.wskey;
-        console.log("got wskey "+A.wskey)
+        console.log("got wskey " + A.wskey)
       }
-      
+
       if (!A._id) {
         return
       }
@@ -201,38 +202,39 @@
       count_DOM_element.innerText = count++;
 
       let heatflask_link = `${USER_BASE_URL}?id=${A._id}`,
-          strava_link = href(`${stravaActivityURL( A._id ) }`, STRAVA_BUTTON),
-          tup = A["ts"],
-          dt = new Date((tup[0] + tup[1]*3600) * 1000),
-          date = dt.toLocaleString(),
-          dkm = +(A.total_distance / DIST_UNIT).toFixed(2),
-          row = "<tr>" +
-             td(href(heatflask_link, A._id)) +
-             td(strava_link) +
-             td(date, sortable=tup[0]) +
-             td(A.type) +
-             td(dkm) +
-             td(hhmmss(A.elapsed_time)) +
-             td(A.name) +
-             td(secs2DDHHMM(A.ttl)) +
-             "</tr>";
+        strava_link = href(`${stravaActivityURL(A._id)}`, STRAVA_BUTTON),
+        tup = A["ts"],
+        dt = new Date((tup[0] + tup[1] * 3600) * 1000),
+        date = dt.toLocaleString(),
+        dkm = +(A.total_distance / DIST_UNIT).toFixed(2),
+        row = "<tr>" +
+          td(href(heatflask_link, A._id)) +
+          td(strava_link) +
+          td(date, sortable = tup[0]) +
+          td(A.type) +
+          td(dkm) +
+          td(hhmmss(A.elapsed_time)) +
+          td(A.name) +
+          td(secs2DDHHMM(A.ttl)) +
+          "</tr>";
       table_body.append(row);
     }
 
     var link = document.getElementById('rebuild-button');
 
     link.onclick = function () {
-        if (OFFLINE) {
-           alert("Sorry, I am offline");
-           return
-        }
+      if (OFFLINE) {
+        alert("Sorry, I am offline");
+        return
+      }
 
-        if( confirm("Rebuild your Heatflask Index from Strava Data?") ) {
-            window.location = window.location.href + "?rebuild=1";
-        }
-        return false;
+      if (confirm("Rebuild your Heatflask Index from Strava Data?")) {
+        window.location = window.location.href + "?rebuild=1";
+      }
+      return false;
     };
-  
+
   </script>
- </body>
+</body>
+
 </html>

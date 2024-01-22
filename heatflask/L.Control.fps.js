@@ -14,7 +14,7 @@ L.Control.fps = L.Control.extend({
         return this._container;
     },
 
-    update: function(now=Date.now(), msg="") {
+    update: function (now = Date.now(), msg = "") {
         let fps = ~~(1000 / (now - this.lastCalledTime) + 0.5);
         this._container["innerHTML"] = `${fps} f/s, ${msg}`;
         this.lastCalledTime = now;
@@ -23,6 +23,6 @@ L.Control.fps = L.Control.extend({
 });
 
 //constructor registration
-L.control.fps = function(options) {
-  return new L.Control.fps(options);
+L.control.fps = function (options) {
+    return new L.Control.fps(options);
 };

@@ -4,49 +4,49 @@
 heatflask();
 
 function heatflask() {
-    const DIST_UNIT = (MEASURMENT_PREFERENCE=="feet")? 1609.34 : 1000.0,
-          DIST_LABEL = (MEASURMENT_PREFERENCE=="feet")?  "mi" : "km",
-          SPEED_SCALE = 5.0,
-          SEP_SCALE = {m: 0.15, b: 15.0},
-          WEBSOCKET_URL = WS_SCHEME+window.location.host+"/data_socket",
+    const DIST_UNIT = (MEASURMENT_PREFERENCE == "feet") ? 1609.34 : 1000.0,
+        DIST_LABEL = (MEASURMENT_PREFERENCE == "feet") ? "mi" : "km",
+        SPEED_SCALE = 5.0,
+        SEP_SCALE = { m: 0.15, b: 15.0 },
+        WEBSOCKET_URL = WS_SCHEME + window.location.host + "/data_socket",
 
-          appState = {
+        appState = {
             paused: ONLOAD_PARAMS.start_paused,
             items: new Map(),
             currentBaseLayer: null
-          },
+        },
 
-          // the leaflet map
-          map = L.map('map', {
+        // the leaflet map
+        map = L.map('map', {
             center: ONLOAD_PARAMS.map_center,
             zoom: ONLOAD_PARAMS.map_zoom,
             // layers : [ default_baseLayer ],
             preferCanvas: true,
             zoomAnimation: false
-          }),
+        }),
 
-          // map controls
-          controls = {
+        // map controls
+        controls = {
             _sidebarControl: L.control.sidebar('sidebar').addTo(map),
             _zoomControl: map.zoomControl.setPosition('bottomright'),
-            _stravaLogo: L.control.watermark({ image: "static/pbs4.png", width: '20%', opacity:'0.5', position: 'bottomleft' }).addTo(map),
-            _heatflaskLogo: L.control.watermark({image: "static/logo.png", opacity: '0.5', width: '20%', position: 'bottomleft' }).addTo(map),
-            areaSelect: L.areaSelect({width:200, height:200})
-          },
+            _stravaLogo: L.control.watermark({ image: "static/pbs4.png", width: '20%', opacity: '0.5', position: 'bottomleft' }).addTo(map),
+            _heatflaskLogo: L.control.watermark({ image: "static/logo.png", opacity: '0.5', width: '20%', position: 'bottomleft' }).addTo(map),
+            areaSelect: L.areaSelect({ width: 200, height: 200 })
+        },
 
-          // the DotLayer
-          dotLayer = L.dotLayer({
+        // the DotLayer
+        dotLayer = L.dotLayer({
             startPaused: appState.paused,
             dotWorkerUrl: DOTLAYER_WORKER_URL,
             gifWorkerUrl: GIFJS_WORKER_URL
-          }).addTo(map);
+        }).addTo(map);
 
     let msgBox = null;
 
     // baselayers IIFE
     (() => {
         const map_providers = ONLOAD_PARAMS.map_providers,
-              baseLayers = {"None": L.tileLayer("", {useCache: false})};
+            baseLayers = { "None": L.tileLayer("", { useCache: false }) };
         let default_baseLayer = baseLayers["None"];
 
         if (!OFFLINE) {
@@ -84,13 +84,13 @@ function heatflask() {
                     let provider = map_providers[i];
                     if (!baseLayers[provider]) {
                         try {
-                                baseLayers[provider] = L.tileLayer.provider(provider);
+                            baseLayers[provider] = L.tileLayer.provider(provider);
                         }
-                        catch(err) {
+                        catch (err) {
                             // do nothing if the user-supplied baselayer is not valid
                         }
                     }
-                    if (i==0 && baseLayers[provider]) default_baseLayer = baseLayers[provider];
+                    if (i == 0 && baseLayers[provider]) default_baseLayer = baseLayers[provider];
                 }
             } else {
                 default_baseLayer = baseLayers["CartoDB.DarkMatter"];
@@ -99,7 +99,7 @@ function heatflask() {
 
         for (const name in baseLayers) {
             const layer = baseLayers[name],
-                  maxZoom = layer.options.maxZoom;
+                maxZoom = layer.options.maxZoom;
             layer.name = name;
 
             if (maxZoom) {
@@ -109,7 +109,7 @@ function heatflask() {
             }
         }
 
-        controls._layerControl = L.control.layers(baseLayers, null, {position: 'topleft'}).addTo(map)
+        controls._layerControl = L.control.layers(baseLayers, null, { position: 'topleft' }).addTo(map)
 
         appState.currentBaseLayer = default_baseLayer;
 
@@ -127,20 +127,20 @@ function heatflask() {
         const button_states = [
             {
                 stateName: 'animation-running',
-                icon:      'fa-pause',
-                title:     'Pause Animation',
-                onClick: function(btn, map) {
+                icon: 'fa-pause',
+                title: 'Pause Animation',
+                onClick: function (btn, map) {
                     pauseFlow();
                     updateState();
                     btn.state('animation-paused');
-                    }
+                }
             },
 
             {
                 stateName: 'animation-paused',
-                icon:      'fa-play',
-                title:     'Resume Animation',
-                onClick: function(btn, map) {
+                icon: 'fa-play',
+                title: 'Resume Animation',
+                onClick: function (btn, map) {
                     resumeFlow();
                     if (dotLayer) {
                         dotLayer.animate();
@@ -152,8 +152,8 @@ function heatflask() {
         ];
 
         // Animation play/pause button
-        controls._animationControl =  L.easyButton({
-            states: appState.paused? button_states.reverse() : button_states
+        controls._animationControl = L.easyButton({
+            states: appState.paused ? button_states.reverse() : button_states
         }).addTo(map);
     })();
 
@@ -163,7 +163,7 @@ function heatflask() {
     // Select-activities-in-region functionality IIFE
     (() => {
         function doneSelecting(obj) {
-            dotLayer && dotLayer.setSelectRegion(obj.pxBounds, callback=function(ids){
+            dotLayer && dotLayer.setSelectRegion(obj.pxBounds, callback = function (ids) {
                 if (controls.selectControl && controls.selectControl.canvas) {
                     controls.selectControl.remove();
                     controls.selectButton.state("not-selecting");
@@ -177,7 +177,7 @@ function heatflask() {
                     const A = appState.items.get(id),
                         loc = A.bounds.getCenter();
 
-                    setTimeout(function (){
+                    setTimeout(function () {
                         activityDataPopup(id, loc);
                     }, 100);
                 }
@@ -195,7 +195,7 @@ function heatflask() {
                 stateName: 'not-selecting',
                 icon: 'fa-object-group',
                 title: 'Toggle Path Selection',
-                onClick: function(btn, map) {
+                onClick: function (btn, map) {
                     btn.state('selecting');
                     controls.selectControl.addTo(map);
                 },
@@ -204,7 +204,7 @@ function heatflask() {
                 stateName: 'selecting',
                 icon: '<span>&cross;</span>',
                 title: 'Stop Selecting',
-                onClick: function(btn, map) {
+                onClick: function (btn, map) {
                     btn.state('not-selecting');
                     controls.selectControl.remove();
                 }
@@ -232,7 +232,7 @@ function heatflask() {
                     }
                     let size = map.getSize();
                     areaSelect =
-                    controls.areaSelect._width = ~~(0.8 * size.x);
+                        controls.areaSelect._width = ~~(0.8 * size.x);
                     controls.areaSelect._height = ~~(0.8 * size.y);
                     controls.areaSelect.addTo(map);
                     btn.state('selecting');
@@ -263,20 +263,20 @@ function heatflask() {
                     console.log(`width = ${w}, height = ${h}, zoom = ${zoom}`);
 
 
-                    dotLayer.captureCycle(selection=selection, callback=function(){
+                    dotLayer.captureCycle(selection = selection, callback = function () {
                         btn.state('idle');
                         controls.areaSelect.remove();
                         if (!ADMIN && !OFFLINE) {
                             // Record this to google analytics
                             let cycleDuration = Math.round(dotLayer.periodInSecs() * 1000);
-                            try{
+                            try {
                                 ga('send', 'event', {
                                     eventCategory: USER_ID,
                                     eventAction: 'Capture-GIF',
                                     eventValue: cycleDuration
                                 });
                             }
-                            catch(err){
+                            catch (err) {
                                 //
                             }
 
@@ -310,7 +310,7 @@ function heatflask() {
     })();
 
     const dialfg = "rgba(0,255,255,0.8)",
-          dialbg = "rgba(255,255,255,0.2)";
+        dialbg = "rgba(255,255,255,0.2)";
 
     // set up dial-controls
     (() => {
@@ -324,15 +324,15 @@ function heatflask() {
             inline: true,
             displayInput: false,
             fgColor: dialfg,
-            bgColor : dialbg,
+            bgColor: dialbg,
             change: function (val) {
                 let newVal;
                 if (this.$[0].id == "sepConst") {
                     newVal = Math.pow(2, val * SEP_SCALE.m + SEP_SCALE.b);
-                    dotLayer.updateDotSettings({C1: newVal});
+                    dotLayer.updateDotSettings({ C1: newVal });
                 } else {
                     newVal = val * val * SPEED_SCALE;
-                    dotLayer.updateDotSettings({C2: newVal});;
+                    dotLayer.updateDotSettings({ C2: newVal });;
                 }
 
                 // Enable capture if period is less than CAPTURE_DURATION_MAX
@@ -350,7 +350,7 @@ function heatflask() {
                     controls.captureControl.enabled = false;
                 }
             },
-            release: function() {
+            release: function () {
                 updateState();
             }
         });
@@ -365,16 +365,16 @@ function heatflask() {
             inline: true,
             displayInput: false,
             fgColor: dialfg,
-            bgColor : dialbg,
+            bgColor: dialbg,
             change: function (val) {
                 if (this.$[0].id == "dotScale")
-                    dotLayer.updateDotSettings({dotScale: val});
+                    dotLayer.updateDotSettings({ dotScale: val });
                 else {
-                    dotLayer.updateDotSettings({alphaScale: val / 10});
+                    dotLayer.updateDotSettings({ alphaScale: val / 10 });
                     dotLayer.drawPaths();
                 }
             },
-            release: function() {
+            release: function () {
                 updateState();
             }
         });
@@ -406,51 +406,52 @@ function heatflask() {
 
     if (FLASH_MESSAGES.length > 0) {
         let msg = "<ul class=flashes>";
-        for (let i=0, len=FLASH_MESSAGES.length; i<len; i++) {
+        for (let i = 0, len = FLASH_MESSAGES.length; i < len; i++) {
             msg += "<li>" + FLASH_MESSAGES[i] + "</li>";
         }
         msg += "</ul>";
-        L.control.window(map, {content:msg, visible:true});
+        L.control.window(map, { content: msg, visible: true });
     }
 
 
     // IInitialize Activity Table in sidebar
     let tableColumns = [
-            {
-                title: '<i class="fa fa-calendar" aria-hidden="true"></i>',
-                data: null,
-                render: (data, type, row) => {
-                    if ( type === 'display' || type === 'filter' ) {
-                        dstr = row.tsLoc.toISOString().split('T')[0];
-                        return href( stravaActivityURL(row.id), row.tsLoc.toLocaleString());
-                    } else
-                        return row.UTCtimestamp;
-                }
-            },
+        {
+            title: '<i class="fa fa-calendar" aria-hidden="true"></i>',
+            data: null,
+            render: (data, type, row) => {
+                if (type === 'display' || type === 'filter') {
+                    dstr = row.tsLoc.toISOString().split('T')[0];
+                    return href(stravaActivityURL(row.id), row.tsLoc.toLocaleString());
+                } else
+                    return row.UTCtimestamp;
+            }
+        },
 
-            {
-                title: "Type",
-                data: null,
-                render: (A) => `<p style="color:${A.pathColor}">${A.type}</p>`
-            },
+        {
+            title: "Type",
+            data: null,
+            render: (A) => `<p style="color:${A.pathColor}">${A.type}</p>`
+        },
 
-            {
-                title: `<i class="fa fa-arrows-h" aria-hidden="true"></i> (${DIST_LABEL})`,
-                data: "total_distance",
-                render: (A) => +(A / DIST_UNIT).toFixed(2)},
-            {
-                title: '<i class="fa fa-clock-o" aria-hidden="true"></i>',
-                data: "elapsed_time",
-                render: hhmmss
-            },
+        {
+            title: `<i class="fa fa-arrows-h" aria-hidden="true"></i> (${DIST_LABEL})`,
+            data: "total_distance",
+            render: (A) => +(A / DIST_UNIT).toFixed(2)
+        },
+        {
+            title: '<i class="fa fa-clock-o" aria-hidden="true"></i>',
+            data: "elapsed_time",
+            render: hhmmss
+        },
 
-            {
-                title: "Name",
-                data: null,
-                render: (A) => `<p style="background-color:${A.dotColor}"> ${A.name}</p>`
-            },
+        {
+            title: "Name",
+            data: null,
+            render: (A) => `<p style="background-color:${A.dotColor}"> ${A.name}</p>`
+        },
 
-        ],
+    ],
 
         imgColumn = {
             title: "<i class='fa fa-user' aria-hidden='true'></i>",
@@ -459,19 +460,19 @@ function heatflask() {
         };
 
     const atable = $('#activitiesList').DataTable({
-                    paging: false,
-                    deferRender: true,
-                    scrollY: "60vh",
-                    // scrollX: true,
-                    scrollCollapse: true,
-                    // scroller: true,
-                    order: [[ 0, "desc" ]],
-                    select: isMobileDevice()? "multi" : "os",
-                    data: appState.items.values(),
-                    rowId: "id",
-                    columns: tableColumns
-                }).on( 'select', handle_table_selections)
-                  .on( 'deselect', handle_table_selections);
+        paging: false,
+        deferRender: true,
+        scrollY: "60vh",
+        // scrollX: true,
+        scrollCollapse: true,
+        // scroller: true,
+        order: [[0, "desc"]],
+        select: isMobileDevice() ? "multi" : "os",
+        data: appState.items.values(),
+        rowId: "id",
+        columns: tableColumns
+    }).on('select', handle_table_selections)
+        .on('deselect', handle_table_selections);
 
     const tableScroller = $('.dataTables_scrollBody');
 
@@ -480,21 +481,21 @@ function heatflask() {
     function updateShareStatus(status) {
         if (OFFLINE) return;
         const url = `${SHARE_STATUS_UPDATE_URL}?status=${status}`;
-        httpGetAsync(url, function(responseText) {
+        httpGetAsync(url, function (responseText) {
             console.log(`response: ${responseText}`);
         });
     }
 
 
 
-    function handle_table_selections( e, dt, type, indexes ) {
+    function handle_table_selections(e, dt, type, indexes) {
         let redraw = false;
         const mapBounds = map.getBounds(),
-              selections = {};
+            selections = {};
 
-        if ( type === 'row' ) {
-            const rows = atable.rows( indexes ).data();
-             for ( const A of Object.values(rows) ) {
+        if (type === 'row') {
+            const rows = atable.rows(indexes).data();
+            for (const A of Object.values(rows)) {
                 if (!A.id)
                     break;
                 A.selected = !A.selected;
@@ -504,7 +505,7 @@ function heatflask() {
             }
         }
 
-        if ( Dom.prop("#zoom-to-selection", 'checked') )
+        if (Dom.prop("#zoom-to-selection", 'checked'))
             zoomToSelectedPaths();
 
         dotLayer.setItemSelect(selections);
@@ -514,14 +515,14 @@ function heatflask() {
         if (!ids) return;
 
         const toSelect = [],
-              toDeSelect = [];
+            toDeSelect = [];
 
         let count = 0,
             id;
 
         for (id of ids) {
             const A = appState.items.get(id),
-                  tag = `#${A.id}`;
+                tag = `#${A.id}`;
             if (A.selected)
                 toDeSelect.push(tag);
             else
@@ -538,7 +539,7 @@ function heatflask() {
 
         if (toSelect.length == 1) {
             let row = $(toSelect[0]);
-            tableScroller.scrollTop(row.prop('offsetTop') - tableScroller.height()/2);
+            tableScroller.scrollTop(row.prop('offsetTop') - tableScroller.height() / 2);
         }
 
         if (count === 1)
@@ -546,7 +547,7 @@ function heatflask() {
     }
 
 
-    function zoomToSelectedPaths(){
+    function zoomToSelectedPaths() {
         // Pan-Zoom to fit all selected activities
         let selection_bounds = L.latLngBounds();
         appState.items.forEach((A, id) => {
@@ -559,35 +560,35 @@ function heatflask() {
         }
     }
 
-    function selectedIDs(){
+    function selectedIDs() {
         return Array.from(appState.items.values())
-                    .filter(A => A.selected)
-                    .map(A => A.id );
+            .filter(A => A.selected)
+            .map(A => A.id);
     }
 
-    function openSelected(){
+    function openSelected() {
         let ids = selectedIDs();
         if (ids.length > 0) {
             let url = BASE_USER_URL + "?id=" + ids.join("+");
-            if (appState.paused == true){
+            if (appState.paused == true) {
                 url += "&paused=1"
             }
-            window.open(url,'_blank');
+            window.open(url, '_blank');
         }
     }
 
-    function deselectAll(){
+    function deselectAll() {
         handle_path_selections(selectedIDs());
     }
 
 
 
-    function pauseFlow(){
+    function pauseFlow() {
         dotLayer.pause();
         appState.paused = true;
     }
 
-    function resumeFlow(){
+    function resumeFlow() {
         appState.paused = false;
         if (dotLayer) {
             dotLayer.animate();
@@ -595,7 +596,7 @@ function heatflask() {
     }
 
 
-    function activityDataPopup(id, latlng){
+    function activityDataPopup(id, latlng) {
         let A = appState.items.get(id),
             d = A.total_distance,
             elapsed = hhmmss(A.elapsed_time),
@@ -605,7 +606,7 @@ function heatflask() {
             vkm,
             vmi;
 
-        if (A.vtype == "pace"){
+        if (A.vtype == "pace") {
             vkm = hhmmss(1000 / v).slice(3) + "/km";
             vmi = hhmmss(1609.34 / v).slice(3) + "/mi";
         } else {
@@ -614,21 +615,21 @@ function heatflask() {
         }
 
         const popup = L.popup()
-                    .setLatLng(latlng)
-                    .setContent(
-                        `<b>${A.name}</b><br>${A.type}:&nbsp;${A.tsLoc}<br>`+
-                        `${dkm}&nbsp;km&nbsp;(${dmi}&nbsp;mi)&nbsp;in&nbsp;${elapsed}<br>${vkm}&nbsp;(${vmi})<br>` +
-                        `View&nbsp;in&nbsp;<a href='https://www.strava.com/activities/${A.id}' target='_blank'>Strava</a>`+
-                        `,&nbsp;<a href='${BASE_USER_URL}?id=${A.id}'&nbsp;target='_blank'>Heatflask</a>`
-                        )
-                    .openOn(map);
+            .setLatLng(latlng)
+            .setContent(
+                `<b>${A.name}</b><br>${A.type}:&nbsp;${A.tsLoc}<br>` +
+                `${dkm}&nbsp;km&nbsp;(${dmi}&nbsp;mi)&nbsp;in&nbsp;${elapsed}<br>${vkm}&nbsp;(${vmi})<br>` +
+                `View&nbsp;in&nbsp;<a href='https://www.strava.com/activities/${A.id}' target='_blank'>Strava</a>` +
+                `,&nbsp;<a href='${BASE_USER_URL}?id=${A.id}'&nbsp;target='_blank'>Heatflask</a>`
+            )
+            .openOn(map);
     }
 
 
     function getBounds(ids) {
         const bounds = L.latLngBounds();
-        for (const id of ids){
-            bounds.extend( appState.items.get(id).bounds );
+        for (const id of ids) {
+            bounds.extend(appState.items.get(id).bounds);
         }
         return bounds
     }
@@ -645,15 +646,15 @@ function heatflask() {
         if (ONLOAD_PARAMS.SZ)
             ds["dotScale"] = ONLOAD_PARAMS["SZ"];
 
-        Dom.set("#sepConst", (Math.log2(ds["C1"]) - SEP_SCALE.b) / SEP_SCALE.m );
-        Dom.set("#speedConst", Math.sqrt(ds["C2"]) / SPEED_SCALE );
+        Dom.set("#sepConst", (Math.log2(ds["C1"]) - SEP_SCALE.b) / SEP_SCALE.m);
+        Dom.set("#speedConst", Math.sqrt(ds["C2"]) / SPEED_SCALE);
         Dom.set("#dotScale", ds["dotScale"]);
         Dom.set("#dotAlpha", ds["dotAlpha"]);
 
-        Dom.trigger("#sepConst",   "change");
+        Dom.trigger("#sepConst", "change");
         Dom.trigger("#speedConst", "change");
-        Dom.trigger("#dotScale",   "change");
-        Dom.trigger("#dotAlpha",   "change");
+        Dom.trigger("#dotScale", "change");
+        Dom.trigger("#dotAlpha", "change");
 
 
 
@@ -665,18 +666,18 @@ function heatflask() {
         Dom.trigger("#shadowHeight", "change");
 
         Dom.set("#shadowBlur", dotLayer.options.dotShadows.blur);
-        Dom.trigger("#shadowHeight","change");
+        Dom.trigger("#shadowHeight", "change");
 
         Dom.prop("#shadows", "checked", dotLayer.options.dotShadows.enabled);
 
         Dom.addEvent("#shadows", "change", (e) => {
-            dotLayer.updateDotSettings(null, {"enabled": e.target.checked})
+            dotLayer.updateDotSettings(null, { "enabled": e.target.checked })
         });
 
         Dom.prop("#showPaths", "checked", dotLayer.options.showPaths);
-        Dom.addEvent("#showPaths", "change", function(){
-             dotLayer.options.showPaths = Dom.prop("#showPaths", "checked");
-             dotLayer._redraw();
+        Dom.addEvent("#showPaths", "change", function () {
+            dotLayer.options.showPaths = Dom.prop("#showPaths", "checked");
+            dotLayer._redraw();
         });
 
         dotLayer.updateDotSettings(ds);
@@ -685,16 +686,16 @@ function heatflask() {
 
     /* Rendering */
     function updateLayers(msg) {
-        if (Dom.prop("#autozoom", "checked")){
+        if (Dom.prop("#autozoom", "checked")) {
             let totalBounds = getBounds(appState.items.keys());
 
-            if (totalBounds.isValid()){
+            if (totalBounds.isValid()) {
                 map.fitBounds(totalBounds);
             }
         }
 
         const num = appState.items.size;
-        Dom.html(".data_message",` ${msg} ${num} activities rendered.`);
+        Dom.html(".data_message", ` ${msg} ${num} activities rendered.`);
 
         // (re-)render the activities table
         atable.clear();
@@ -703,19 +704,19 @@ function heatflask() {
 
         if (!ADMIN && !OFFLINE) {
             // Record this to google analytics
-            try{
+            try {
                 ga('send', 'event', {
                     eventCategory: USER_ID,
                     eventAction: 'Render',
                     eventValue: num
                 });
             }
-            catch(err){}
+            catch (err) { }
         }
 
         dotLayer.reset();
         const ds = dotLayer.getDotSettings(),
-              T = dotLayer.periodInSecs().toFixed(2);
+            T = dotLayer.periodInSecs().toFixed(2);
         Dom.html("#period-value", T)
         Dom.trigger("#period-value", "change");
 
@@ -733,24 +734,24 @@ function heatflask() {
             navigator.sendBeacon(BEACON_HANDLER_URL, ONLOAD_PARAMS.client_id);
         }
         if (sock && sock.readyState == 1) {
-            sock.send(JSON.stringify({close: 1}));
+            sock.send(JSON.stringify({ close: 1 }));
             sock.close()
         }
     });
 
-    function renderLayers(query={}) {
+    function renderLayers(query = {}) {
         const date1 = Dom.get("#date1"),
-              date2 = Dom.get("#date2"),
-              type = Dom.get("#select_type"),
-              num = Dom.get("#select_num"),
-              idString = Dom.get("#activity_ids"),
-              to_exclude = Array.from(appState.items.keys()).map(Number);
+            date2 = Dom.get("#date2"),
+            type = Dom.get("#select_type"),
+            num = Dom.get("#select_num"),
+            idString = Dom.get("#activity_ids"),
+            to_exclude = Array.from(appState.items.keys()).map(Number);
 
         // create a status box
         msgBox = L.control.window(map, {
-                position: 'top',
-                content:"<div class='data_message'></div><div><progress class='progbar' id='box'></progress></div>",
-                visible:true
+            position: 'top',
+            content: "<div class='data_message'></div><div><progress class='progbar' id='box'></progress></div>",
+            visible: true
         });
 
         Dom.html(".data_message", "Retrieving activity data...");
@@ -770,7 +771,7 @@ function heatflask() {
         Dom.html(".data_message", "Retrieving activity data...");
 
         if (!appState.abortButtonListener)
-            appState.abortButtonListener = Dom.addEvent('#abortButton', "click", function() {
+            appState.abortButtonListener = Dom.addEvent('#abortButton', "click", function () {
                 stopListening();
                 doneRendering("<font color='red'>Aborted:</font>");
             });
@@ -806,7 +807,7 @@ function heatflask() {
             if (!listening)
                 return
             listening = false;
-            sock.send(JSON.stringify({close: 1}));
+            sock.send(JSON.stringify({ close: 1 }));
             sock.close();
             if (navigator.sendBeacon && appState.wskey) {
                 navigator.sendBeacon(BEACON_HANDLER_URL, appState.wskey);
@@ -823,36 +824,36 @@ function heatflask() {
             };
 
             queryObj[USER_ID] = {
-                    limit: (type == "activities")? Math.max(1, +num) : undefined,
-                    after: date1? date1 : undefined,
-                    before: (date2 && date2 != "now")? date2 : undefined,
-                    activity_ids: idString?  Array.from(new Set(idString.split(/\D/).map(Number))): undefined,
-                    exclude_ids: to_exclude.length?  to_exclude: undefined,
-                    streams: true
+                limit: (type == "activities") ? Math.max(1, +num) : undefined,
+                after: date1 ? date1 : undefined,
+                before: (date2 && date2 != "now") ? date2 : undefined,
+                activity_ids: idString ? Array.from(new Set(idString.split(/\D/).map(Number))) : undefined,
+                exclude_ids: to_exclude.length ? to_exclude : undefined,
+                streams: true
             };
 
-            let msg = JSON.stringify({query: queryObj});
+            let msg = JSON.stringify({ query: queryObj });
             sock.send(msg);
         }
 
-        sock.onopen = function(event) {
+        sock.onopen = function (event) {
             // console.log("socket open: ", event);
             if (rendering) sendQuery();
         }
 
-        sock.onclose = function(event) {
+        sock.onclose = function (event) {
             // console.log(`socket ${appState.wskey} closed:`, event);
         }
 
         // handle one incoming chunk from websocket stream
-        sock.onmessage = function(event) {
+        sock.onmessage = function (event) {
 
             let A;
 
             try {
                 A = msgpack.decode(new Uint8Array(event.data));
             }
-            catch(e) {
+            catch (e) {
                 console.log(event);
                 console.log(event.data);
                 console.log(e);
@@ -865,54 +866,54 @@ function heatflask() {
                 return;
             } else
 
-            if (!("_id" in A)) {
+                if (!("_id" in A)) {
 
-                if ("idx" in A)
-                    Dom.html(".data_message", `indexing...${A.idx}`);
+                    if ("idx" in A)
+                        Dom.html(".data_message", `indexing...${A.idx}`);
 
-                else if ("count" in A)
-                    numActivities += A.count;
+                    else if ("count" in A)
+                        numActivities += A.count;
 
-                else if ("wskey" in A)
-                    appState.wskey = A.wskey;
+                    else if ("wskey" in A)
+                        appState.wskey = A.wskey;
 
-                else if ("delete" in A && A.delete.length) {
-                    // delete all ids in A.delete
-                    for (let id of A.delete)
-                        appState.items.delete(id);
-                    dotLayer.removeItems(A.delete);
+                    else if ("delete" in A && A.delete.length) {
+                        // delete all ids in A.delete
+                        for (let id of A.delete)
+                            appState.items.delete(id);
+                        dotLayer.removeItems(A.delete);
 
-                } else if ("done" in A) {
-                    console.log("received done");
-                    doneRendering("Done rendering.");
+                    } else if ("done" in A) {
+                        console.log("received done");
+                        doneRendering("Done rendering.");
+                        return;
+
+                    } else if ("error" in A) {
+                        let msg = `<font color='red'>${A.error}</font><br>`;
+                        Dom.html(".data_message", msg);
+                        console.log(`Error: ${A.error}`);
+                        return;
+                    } else if ("msg" in A) {
+                        Dom.html(".data_message", A.msg);
+                    }
+
                     return;
-
-                } else if ("error" in A) {
-                    let msg = `<font color='red'>${A.error}</font><br>`;
-                    Dom.html(".data_message", msg);
-                    console.log(`Error: ${A.error}`);
-                    return;
-                } else if ("msg" in A) {
-                    Dom.html(".data_message", A.msg);
                 }
 
-                return;
-            }
-
             // only add A to appState.items if it isn't already there
-            if ( !appState.items.has(A._id) ) {
+            if (!appState.items.has(A._id)) {
                 if (!A.type)
                     return;
 
                 // assign this activity a path color and speed type (pace, mph)
-                Object.assign( A, ATYPE.specs(A) );
+                Object.assign(A, ATYPE.specs(A));
                 A.id = A._id;
                 delete A._id;
 
                 const tup = A.ts;
                 delete A.ts;
 
-                A.tsLoc = new Date((tup[0] + tup[1]*3600) * 1000);
+                A.tsLoc = new Date((tup[0] + tup[1] * 3600) * 1000);
                 A.UTCtimestamp = tup[0];
 
                 A.bounds = L.latLngBounds(A.bounds.SW, A.bounds.NE);
@@ -929,7 +930,7 @@ function heatflask() {
             count++;
             if (count % 5 === 0) {
                 if (numActivities) {
-                    Dom.set(".progbar", count/numActivities);
+                    Dom.set(".progbar", count / numActivities);
                     Dom.html(".data_message", `imported ${count}/${numActivities}`);
                 } else {
                     Dom.html(".data_message", `imported ${count}/?`);
@@ -943,11 +944,11 @@ function heatflask() {
         window.open(ACTIVITY_LIST_URL, "_blank")
     }
 
-    function updateState(event){
-        let  params = {},
-             type = Dom.get("#select_type"),
-             num = Dom.get("#select_num"),
-             ids = Dom.get("#activity_ids");
+    function updateState(event) {
+        let params = {},
+            type = Dom.get("#select_type"),
+            num = Dom.get("#select_num"),
+            ids = Dom.get("#activity_ids");
 
         if (type == "activities") {
             params["limit"] = num;
@@ -964,7 +965,7 @@ function heatflask() {
             }
         }
 
-        if (appState["paused"]){
+        if (appState["paused"]) {
             params["paused"] = "1";
         }
 
@@ -974,8 +975,8 @@ function heatflask() {
         } else {
             appState["autozoom"] = false;
             const zoom = map.getZoom(),
-                  center = map.getCenter(),
-                  precision = Math.max(0, Math.ceil(Math.log(zoom) / Math.LN2));
+                center = map.getCenter(),
+                precision = Math.max(0, Math.ceil(Math.log(zoom) / Math.LN2));
 
             if (center) {
                 params.lat = center.lat.toFixed(precision);
@@ -993,7 +994,7 @@ function heatflask() {
 
             // Enable capture if period is less than CAPTURE_DURATION_MAX
             const cycleDuration = dotLayer.periodInSecs().toFixed(2),
-                  captureEnabled = controls.captureControl.enabled;
+                captureEnabled = controls.captureControl.enabled;
 
             Dom.html("#period-value", cycleDuration);
 
@@ -1011,12 +1012,12 @@ function heatflask() {
         if (appState.currentBaseLayer.name)
             params["baselayer"] = appState.currentBaseLayer.name;
 
-        const paramsString = Object.keys(params).map(function(param) {
-                  return encodeURIComponent(param) + '=' +
-                  encodeURIComponent(params[param])
-              }).join('&'),
+        const paramsString = Object.keys(params).map(function (param) {
+            return encodeURIComponent(param) + '=' +
+                encodeURIComponent(params[param])
+        }).join('&'),
 
-              newURL = `${USER_ID}?${paramsString}`;
+            newURL = `${USER_ID}?${paramsString}`;
 
         if (appState.url != newURL) {
             // console.log(`pushing: ${newURL}`);
@@ -1028,9 +1029,9 @@ function heatflask() {
 
     function preset_sync() {
         const num = Dom.get("#select_num"),
-              type = Dom.get("#select_type");
+            type = Dom.get("#select_type");
 
-        if (type=="days"){
+        if (type == "days") {
             Dom.hide(".date_select");
             Dom.hide("#id_select");
             Dom.show("#num_select");
@@ -1039,13 +1040,13 @@ function heatflask() {
             date2picker.setEndRange(new Date());
 
             let d = new Date();
-            d.setDate(d.getDate()-num);
+            d.setDate(d.getDate() - num);
             dstr = d.toISOString().split('T')[0];
             Dom.set('#date1', dstr);
             date1picker.gotoDate(d);
             date1picker.setStartRange(d)
 
-        } else if (type=="activities") {
+        } else if (type == "activities") {
             Dom.hide(".date_select");
             Dom.hide("#id_select");
             Dom.show("#num_select");
@@ -1053,7 +1054,7 @@ function heatflask() {
             Dom.set('#date2', "now");
             date2picker.gotoToday();
         }
-        else if (type=="activity_ids") {
+        else if (type == "activity_ids") {
             Dom.hide(".date_select");
             Dom.hide("#num_select");
             Dom.show("#id_select");
@@ -1068,7 +1069,7 @@ function heatflask() {
 
 
     // What to do when user changes to a different tab or window
-    document.onvisibilitychange = function() {
+    document.onvisibilitychange = function () {
         if (document.hidden) {
             if (!appState.paused)
                 dotLayer.pause();
@@ -1081,8 +1082,8 @@ function heatflask() {
     // activities table set-up
     Dom.prop("#zoom-to-selection", "checked", false);
 
-    Dom.addEvent("#zoom-to-selection", "change", function(){
-        if ( Dom.prop("#zoom-to-selection", 'checked') ) {
+    Dom.addEvent("#zoom-to-selection", "change", function () {
+        if (Dom.prop("#zoom-to-selection", 'checked')) {
             zoomToSelectedPaths();
         }
     });
@@ -1090,7 +1091,7 @@ function heatflask() {
     Dom.addEvent("#render-selection-button", "click", openSelected);
     Dom.addEvent("#clear-selection-button", "click", deselectAll);
 
-    Dom.addEvent("#select_num", "keypress", function(event) {
+    Dom.addEvent("#select_num", "keypress", function (event) {
         if (event.which == 13) {
             event.preventDefault();
             renderLayers();
@@ -1105,7 +1106,7 @@ function heatflask() {
         const el = Dom.el(selector);
         picker = new Pikaday({
             field: el,
-            onSelect: function(date) {
+            onSelect: function (date) {
                 el.value = date.toISOString().split('T')[0];
                 Dom.set(".preset", "");
             },
@@ -1117,15 +1118,15 @@ function heatflask() {
     }
 
     const date1picker = makeDatePicker('#date1'),
-          date2picker = makeDatePicker('#date2');
+        date2picker = makeDatePicker('#date2');
 
     map.on('moveend', updateState);
 
     Dom.prop("#autozoom", "change", updateState);
 
     Dom.prop("#share", "checked", SHARE_PROFILE);
-    Dom.addEvent("#share", "change", function() {
-        let status = Dom.prop("#share", "checked")? "public":"private";
+    Dom.addEvent("#share", "change", function () {
+        let status = Dom.prop("#share", "checked") ? "public" : "private";
         updateShareStatus(status);
     });
 

@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>{{ config["APP_NAME"] }} Public User Directory</title>
     <meta name="robots" content="noindex">
 
     <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
-    
+
     {% assets "basic_table_css" %}
     <link rel="stylesheet" href="{{ ASSET_URL }}" />
     {% endassets %}
@@ -17,7 +18,7 @@
     {% if current_user.is_anonymous or (not current_user.is_admin()) %}
     {{analytics}}
     {% endif %}
-    
+
 </head>
 
 <body>
@@ -33,18 +34,18 @@
 
 
 
-        const data = {{ data|tojson }};
+        const data = {{ data| tojson }};
         let atable = $('#users_table').DataTable({
             pageLength: 100,
             deferRender: true,
             scroller: true,
             data: data,
             columns: [
-                {title: "",    data: "id", render: formatUserId},
-                {title: "username",  data: "username"},
-                {title: "City",    data: "city"},
-                {title: "Region",    data: "state"},
-                {title: "Country", data: "country"},
+                { title: "", data: "id", render: formatUserId },
+                { title: "username", data: "username" },
+                { title: "City", data: "city" },
+                { title: "Region", data: "state" },
+                { title: "Country", data: "country" },
                 {
                     title: "last active",
                     data: "dt_last_active",
@@ -55,8 +56,9 @@
             scrollX: true,
             scrollCollapse: true,
             select: false,
-            order: [[ 5, "desc" ]]
+            order: [[5, "desc"]]
         });
     </script>
 </body>
+
 </html>

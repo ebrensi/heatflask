@@ -22,7 +22,7 @@ DotLayer = {
         startPaused: false,
         showPaths: true,
         fps_display: false,
-        
+
         normal: {
             dotColor: "#000000",
             dotOpacity: 0.7,
@@ -59,9 +59,9 @@ DotLayer = {
     },
 
     // -- initialized is called on prototype
-    initialize: function( options ) {
+    initialize: function (options) {
         this._timeOffset = 0;
-        L.setOptions( this, options );
+        L.setOptions(this, options);
         this._paused = this.options.startPaused;
         this._timePaused = this.UTCnowSecs();
 
@@ -77,65 +77,65 @@ DotLayer = {
         // this.WorkerPool.initialize(this.options["numWorkers"], options["dotWorkerUrl"]);
     },
 
-    UTCnowSecs: function() {
+    UTCnowSecs: function () {
         return performance.timing.navigationStart + performance.now();
     },
 
     //-------------------------------------------------------------
-    onAdd: function( map ) {
+    onAdd: function (map) {
 
         this._map = map;
         let size = map.getSize(),
             zoomAnimated = map.options.zoomAnimation && L.Browser.any3d;
 
         const create = L.DomUtil.create,
-              addClass = L.DomUtil.addClass,
-              panes = map._panes,
-              appendChild = pane => obj => panes[pane].appendChild(obj),
-              canvases = [];
+            addClass = L.DomUtil.addClass,
+            panes = map._panes,
+            appendChild = pane => obj => panes[pane].appendChild(obj),
+            canvases = [];
 
         // dotlayer canvas
-        this._dotCanvas = create( "canvas", "leaflet-layer" );
+        this._dotCanvas = create("canvas", "leaflet-layer");
         this._dotCanvas.width = size.x;
         this._dotCanvas.height = size.y;
-        this._dotCtx = this._dotCanvas.getContext( "2d" );
-        addClass( this._dotCanvas, "leaflet-zoom-" + ( zoomAnimated ? "animated" : "hide" ) );
+        this._dotCtx = this._dotCanvas.getContext("2d");
+        addClass(this._dotCanvas, "leaflet-zoom-" + (zoomAnimated ? "animated" : "hide"));
         panes[this._pane]["style"]["pointerEvents"] = "none";
-        appendChild(this._pane)( this._dotCanvas );
+        appendChild(this._pane)(this._dotCanvas);
         canvases.push(this._dotCanvas);
 
         // create Canvas for polyline-ish things
-        this._lineCanvas = create( "canvas", "leaflet-layer" );
+        this._lineCanvas = create("canvas", "leaflet-layer");
         this._lineCanvas.width = size.x;
         this._lineCanvas.height = size.y;
-        this._lineCtx = this._lineCanvas.getContext( "2d" );
+        this._lineCtx = this._lineCanvas.getContext("2d");
         this._lineCtx.lineCap = "round";
         this._lineCtx.lineJoin = "round";
-        addClass( this._lineCanvas, "leaflet-zoom-" + ( zoomAnimated ? "animated" : "hide" ) );
-        appendChild("overlayPane")( this._lineCanvas );
+        addClass(this._lineCanvas, "leaflet-zoom-" + (zoomAnimated ? "animated" : "hide"));
+        appendChild("overlayPane")(this._lineCanvas);
         canvases.push(this._lineCanvas);
 
         if (this.options.debug) {
             // create Canvas for debugging canvas stuff
-            this._debugCanvas = create( "canvas", "leaflet-layer" );
+            this._debugCanvas = create("canvas", "leaflet-layer");
             this._debugCanvas.width = size.x;
             this._debugCanvas.height = size.y;
-            this._debugCtx = this._debugCanvas.getContext( "2d" );
-            addClass( this._debugCanvas, "leaflet-zoom-" + ( zoomAnimated ? "animated" : "hide" ) );
-            appendChild("overlayPane")( this._debugCanvas );
+            this._debugCtx = this._debugCanvas.getContext("2d");
+            addClass(this._debugCanvas, "leaflet-zoom-" + (zoomAnimated ? "animated" : "hide"));
+            appendChild("overlayPane")(this._debugCanvas);
             canvases.push(this._debugCanvas);
         }
 
-         if (this.options.fps_display)
+        if (this.options.fps_display)
             this.fps_display = L.control.fps().addTo(this._map);
 
         this.ViewBox.initialize(this._map, canvases);
         this.DrawBox.initialize(this.ViewBox);
-        map.on( this.getEvents(), this );
+        map.on(this.getEvents(), this);
     },
 
-    getEvents: function() {
-        const loggit = handler => e => {console.log(e); handler && handler(e)};
+    getEvents: function () {
+        const loggit = handler => e => { console.log(e); handler && handler(e) };
 
         const events = {
             // movestart: loggit,
@@ -148,38 +148,38 @@ DotLayer = {
             resize: this._onLayerResize
         };
 
-        if ( this._map.options.zoomAnimation && L.Browser.any3d ) {
-            events.zoomanim =  this._animateZoom;
+        if (this._map.options.zoomAnimation && L.Browser.any3d) {
+            events.zoomanim = this._animateZoom;
         }
 
         return events;
     },
 
-    addTo: function( map ) {
-        map.addLayer( this );
+    addTo: function (map) {
+        map.addLayer(this);
         return this;
     },
 
     //-------------------------------------------------------------
-    onRemove: function( map ) {
-        map._panes.shadowPane.removeChild( this._dotCanvas )
+    onRemove: function (map) {
+        map._panes.shadowPane.removeChild(this._dotCanvas)
         this._dotCanvas = null;
 
-        map._panes.overlayPane.removeChild( this._lineCanvas );
+        map._panes.overlayPane.removeChild(this._lineCanvas);
         this._lineCanvas = null;
 
         if (this.options.debug) {
-            map._panes.overlayPane.removeChild( this._debugCanvas );
+            map._panes.overlayPane.removeChild(this._debugCanvas);
             this._debugCanvas = null;
         }
 
-        map.off( this.getEvents(), this );
+        map.off(this.getEvents(), this);
     },
 
     // --------------------------------------------------------------------
 
     // Call this function after items are added or reomved
-    reset: function() {
+    reset: function () {
         if (!this._items.size)
             return
 
@@ -189,7 +189,7 @@ DotLayer = {
         this._itemIds = Array.from(this._items.keys());
         const n = this._itemsArray.length;
 
-        if (!n) return; 
+        if (!n) return;
 
         this.setDotColors();
         this.ViewBox.reset(this._itemsArray);
@@ -202,12 +202,12 @@ DotLayer = {
 
 
     //-------------------------------------------------------------
-    _onLayerResize: function( resizeEvent ) {
+    _onLayerResize: function (resizeEvent) {
         const newWidth = resizeEvent.newSize.x,
-              newHeight = resizeEvent.newSize.y,
-              options = this.options;
+            newHeight = resizeEvent.newSize.y,
+            options = this.options;
 
-        for (const canvas of [this._dotCanvas, this._lineCanvas]){
+        for (const canvas of [this._dotCanvas, this._lineCanvas]) {
             canvas.width = newWidth;
             canvas.height = newHeight;
         }
@@ -215,7 +215,7 @@ DotLayer = {
         this._redraw();
     },
 
-    viewReset: function() {
+    viewReset: function () {
         this._dotCtxReset();
         this._debugCtxReset();
     },
@@ -223,19 +223,19 @@ DotLayer = {
     //-------------------------------------------------------------
 
     // -------------------------------------------------------------------
-    _debugCtxReset: function() {
+    _debugCtxReset: function () {
         if (!this.options.debug) return;
         this._debugCtx.strokeStyle = "rgb(0,255,0,1)";
         this._debugCtx.lineWidth = 10;
         this._debugCtx.setLineDash([10, 5]);
     },
 
-    _dotCtxReset: function() {
+    _dotCtxReset: function () {
         const ctx = this._dotCtx;
         if (this.options.dotShadows.enabled) {
             const shadowOpts = this.options.dotShadows,
-                  sx = ctx.shadowOffsetX = shadowOpts.x,
-                  sy = ctx.shadowOffsetY = shadowOpts.y;
+                sx = ctx.shadowOffsetX = shadowOpts.x,
+                sy = ctx.shadowOffsetY = shadowOpts.y;
             ctx.shadowBlur = shadowOpts.blur;
             ctx.shadowColor = shadowOpts.color;
 
@@ -249,7 +249,7 @@ DotLayer = {
     onMove: function om(event) {
         // prevent redrawing more often than necessary
         const ts = performance.now(),
-              lr = om.lastRedraw || 0;
+            lr = om.lastRedraw || 0;
         if (ts - lr < 500)
             return;
 
@@ -257,16 +257,16 @@ DotLayer = {
         this._redraw(event);
     },
 
-    _redraw: function(event) {
-        if ( !this._ready )
-            return;        
+    _redraw: function (event) {
+        if (!this._ready)
+            return;
 
         const oldzoom = this.ViewBox.zoom;
 
         const itemsArray = this._itemsArray,
-              vb = this.ViewBox,
-              inView = vb.update(),
-              zoom = vb.zoom;
+            vb = this.ViewBox,
+            inView = vb.update(),
+            zoom = vb.zoom;
 
         let ns = 0,
             ns2 = 0;
@@ -275,7 +275,7 @@ DotLayer = {
 
         inView.forEach(i => {
             const A = itemsArray[i];
-            if (!(zoom in A.idxSet)) {    
+            if (!(zoom in A.idxSet)) {
                 // prevent another instance of this function from doing this
                 A.idxSet[zoom] = null;
                 ns += A.n;
@@ -285,15 +285,15 @@ DotLayer = {
                 // concurrency
                 ns2 += this.simplify(A, zoom);
             }
-            if ( this.makeSegMask(A).isEmpty() )
-                    vb.remove(i);
+            if (this.makeSegMask(A).isEmpty())
+                vb.remove(i);
         });
 
         let t1 = performance.now();
 
         const clear = this.DrawBox.clear,
-              rect = this.DrawBox.defaultRect(); 
-        
+            rect = this.DrawBox.defaultRect();
+
         if (event)
             clear(this._dotCtx, rect);
 
@@ -312,11 +312,11 @@ DotLayer = {
         }
         else if (this._paused)
             this.drawDots();
-        
+
         // if (ns)
         //     console.log(`simplify: ${ns} -> ${ns2} in ${~~(t1-t0)}:  ${(ns-ns2)/(t1-t0)}`)
 
-        
+
         /*
 
         const tbls = [],
@@ -347,38 +347,38 @@ DotLayer = {
         });
 
        */
-        
-        
+
+
     },
 
-    addItem: function(id, polyline, pathColor, time, UTCtimestamp, llBounds, n) {
+    addItem: function (id, polyline, pathColor, time, UTCtimestamp, llBounds, n) {
         const A = {
-                id: parseInt(id),
-                bounds: this.ViewBox.latLng2pxBounds(llBounds),
-                px: Polyline.decode2Buf(polyline, n),
-                idxSet: {},
-                time: StreamRLE.transcode2CompressedBuf(time),
-                n: n,
-                ts: UTCtimestamp,
-                pathColor: pathColor
-            };
-    
+            id: parseInt(id),
+            bounds: this.ViewBox.latLng2pxBounds(llBounds),
+            px: Polyline.decode2Buf(polyline, n),
+            idxSet: {},
+            time: StreamRLE.transcode2CompressedBuf(time),
+            n: n,
+            ts: UTCtimestamp,
+            pathColor: pathColor
+        };
+
         this._items.set(id, A);
 
         // make baseline projection (convert latLngs to pixel points)
         // in-place
         const px = A.px,
-              project = this.ViewBox.latLng2px;
+            project = this.ViewBox.latLng2px;
 
-        for (let i=0, len=px.length; i<len; i+=2)
-            project(px.subarray(i, i+2));
-        
+        for (let i = 0, len = px.length; i < len; i += 2)
+            project(px.subarray(i, i + 2));
+
     },
 
-    removeItems: function(ids) {        
+    removeItems: function (ids) {
         for (const id of ids)
             this._items.delete(id)
-        
+
         this.reset()
     },
 
@@ -389,13 +389,13 @@ DotLayer = {
         // so we use a regular Array.
         if (!_rawPoint.buf)
             _rawPoint.buf = [NaN, NaN]
-        
-        const buf = _rawPoint.buf,  
-              px = A.px;
+
+        const buf = _rawPoint.buf,
+            px = A.px;
 
         return j => {
-            buf[0] = px[ j ];
-            buf[1] = px[j+1];
+            buf[0] = px[j];
+            buf[1] = px[j + 1];
             return buf;
         };
     },
@@ -404,42 +404,42 @@ DotLayer = {
     // access the i-th data point for any given idxSet.
     // this is an O(1) lookup via index array. it creates an array of length of the point
     // simplification at this level of zoom.
-    pointsArray: function(A, zoom) {
+    pointsArray: function (A, zoom) {
         let point = this._rawPoint(A),
             arrayFunc;
 
         if (!zoom) {
-            arrayFunc = i => point(2*i); 
-        }  
+            arrayFunc = i => point(2 * i);
+        }
         else {
             const key = `I${A.id}:${zoom}`;
-            let  idx = this._lru.get(key);
-            
+            let idx = this._lru.get(key);
+
             if (!idx) {
                 idx = A.idxSet[zoom].array();
                 this._lru.set(key, idx);
             }
 
-            arrayFunc = i => point(2*idx[i]);
+            arrayFunc = i => point(2 * idx[i]);
         }
         return arrayFunc;
     },
 
-    _iterAllPoints: function*(A) {
+    _iterAllPoints: function* (A) {
         const pointAt = this._rawPoint(A);
 
-        for ( let j=0, n = A.px.length; j < n; j +=2 )
+        for (let j = 0, n = A.px.length; j < n; j += 2)
             yield pointAt(j);
     },
 
-    _iterPoints: function(A, idxSet) {
+    _iterPoints: function (A, idxSet) {
         if (idxSet)
-            return idxSet.imap( this.pointsArray(A, null) );
+            return idxSet.imap(this.pointsArray(A, null));
         else
             return this._iterAllPoints(A);
     },
 
-    iterPoints: function(A, zoom) {
+    iterPoints: function (A, zoom) {
         if (zoom === 0) return this._iterAllPoints(A);
 
         if (!zoom)
@@ -448,10 +448,10 @@ DotLayer = {
         return this._iterPoints(A, A.idxSet[zoom]);
     },
 
-    timesArray: function(A, zoom) {
+    timesArray: function (A, zoom) {
         const key = `T${A.id}:${zoom}`;
         let arr = this._lru.get(key);
-        
+
         if (!arr) {
             arr = Uint16Array.from(
                 StreamRLE.decodeCompressedBuf2(A.time, A.idxSet[zoom])
@@ -460,20 +460,20 @@ DotLayer = {
         }
 
         arrayFunc = i => arr[i];
-      
+
         return arrayFunc;
     },
 
     TimeInterval: function interval() {
         if (!interval._interval)
-            interval._interval = {a: NaN, b: NaN};
+            interval._interval = { a: NaN, b: NaN };
         return interval._interval
     },
 
-    iterTimeIntervals: function(A) {
+    iterTimeIntervals: function (A) {
         const zoom = this.ViewBox.zoom,
-              stream = StreamRLE.decodeCompressedBuf2(A.time, A.idxSet[zoom]),
-              timeInterval = this.TimeInterval();
+            stream = StreamRLE.decodeCompressedBuf2(A.time, A.idxSet[zoom]),
+            timeInterval = this.TimeInterval();
         let j = 0,
             second = stream.next();
         return A.segMask.imap(idx => {
@@ -487,9 +487,9 @@ DotLayer = {
         });
     },
 
-    _simplify: function(A, toZoom, fromZoom) {
+    _simplify: function (A, toZoom, fromZoom) {
         const idxSet = A.idxSet[fromZoom],
-              nPoints = (fromZoom == undefined)? A.px.length/2 : idxSet.size();
+            nPoints = (fromZoom == undefined) ? A.px.length / 2 : idxSet.size();
 
         const subSet = Simplifier.simplify(
             this.pointsArray(A, fromZoom),
@@ -497,11 +497,11 @@ DotLayer = {
             this.ViewBox.tol(toZoom)
         );
 
-        A.idxSet[toZoom] = (fromZoom == undefined)? subSet : idxSet.new_subset(subSet);
+        A.idxSet[toZoom] = (fromZoom == undefined) ? subSet : idxSet.new_subset(subSet);
         return subSet.size()
     },
 
-    simplify: function(A, zoom) {
+    simplify: function (A, zoom) {
         if (zoom === undefined)
             zoom = this.ViewBox.zoom;
 
@@ -526,16 +526,16 @@ DotLayer = {
     },
 
     // this returns an iterator of segment objects
-    iterSegments: function(A, zoom, segMask) {
+    iterSegments: function (A, zoom, segMask) {
         const obj = this.Segment(),
-              seg = obj.segment,
-              a = seg.a, 
-              b = seg.b,
-              temp = obj.temp,
-              set = (s, p) => {
+            seg = obj.segment,
+            a = seg.a,
+            b = seg.b,
+            temp = obj.temp,
+            set = (s, p) => {
                 s[0] = p[0];
                 s[1] = p[1];
-              };
+            };
 
         zoom = zoom || this.ViewBox.zoom;
         segMask = segMask || A.segMask;
@@ -548,7 +548,7 @@ DotLayer = {
         // note: this.iterPoints() returns the a reference to the same
         // object every time so if we need to deal with more than
         // one at a time we will need to make a copy. 
-        
+
         // const points = this.iterPoints(A, zoom);
         // let j = 0, 
         //     obj = points.next();
@@ -560,27 +560,27 @@ DotLayer = {
 
         //     obj = points.next();
         //     set(b, obj.value);
-         
+
         //     return seg;
         // });
 
         /*
          * Method 2: this is more efficient if
          *  we need to skip a lot of segments.
-         */              
+         */
         const pointsArray = this.pointsArray(A, null),
-              idxSet = A.idxSet[zoom],
-              segsIdx = segMask.imap(),
-              firstIdx = segsIdx.next().value,
-              points = idxSet.imap_find( pointsArray, firstIdx );
+            idxSet = A.idxSet[zoom],
+            segsIdx = segMask.imap(),
+            firstIdx = segsIdx.next().value,
+            points = idxSet.imap_find(pointsArray, firstIdx);
 
         function* iterSegs() {
             set(a, points.next().value); // point at firstIdx
             set(temp, points.next().value);
             set(b, temp); // point at firstIdx + 1
-            
+
             yield seg
-            
+
             let last_i = firstIdx;
             for (const i of segsIdx) {
                 if (i === ++last_i)
@@ -592,13 +592,13 @@ DotLayer = {
                 set(temp, points.next().value);
                 set(b, temp);
                 last_i = i;
-                yield seg    
+                yield seg
             }
         }
         return iterSegs();
     },
 
-    inMapBounds: function(A) {
+    inMapBounds: function (A) {
         return this.ViewBox.overlaps(A.bounds);
     },
 
@@ -609,11 +609,11 @@ DotLayer = {
     //  The indices are relative to the current zoom's idxSet mask,
     //  so that the i-th good segment corresponds to the i-th member of
     //  this idxSet.
-    makeSegMask: function(A) {
+    makeSegMask: function (A) {
         const drawBox = this.DrawBox,
-              viewBox = this.ViewBox,
-              points = this.iterPoints(A, viewBox.zoom),
-              inBounds = p => viewBox.contains(p) && drawBox.update(p);
+            viewBox = this.ViewBox,
+            points = this.iterPoints(A, viewBox.zoom),
+            inBounds = p => viewBox.contains(p) && drawBox.update(p);
 
         A.segMask = (A.segMask || new BitSet()).clear();
 
@@ -635,12 +635,12 @@ DotLayer = {
         return A.segMask
     },
 
-    _drawPathFromSegIter: function(ctx, A) {
+    _drawPathFromSegIter: function (ctx, A) {
         const segs = this.iterSegments(A),
-              transform = this.ViewBox.px2Container(),
-              seg = segs.next().value,
-              a = seg.a,
-              b = seg.b;
+            transform = this.ViewBox.px2Container(),
+            seg = segs.next().value,
+            a = seg.a,
+            b = seg.b;
 
         let i = 0;
         do {
@@ -653,49 +653,49 @@ DotLayer = {
         } while (!segs.next().done)
     },
 
-    _drawPathFromPointArray: function(ctx, A) {
+    _drawPathFromPointArray: function (ctx, A) {
         const zoom = this.ViewBox.zoom,
-              segMask = A.segMask,
-              points = this.pointsArray(A, zoom),
-              transform = this.ViewBox.px2Container(),
-              point = i => transform(points(i));
+            segMask = A.segMask,
+            points = this.pointsArray(A, zoom),
+            transform = this.ViewBox.px2Container(),
+            point = i => transform(points(i));
 
         segMask.forEach(i => {
             let p = point(i);
             ctx.moveTo(p[0], p[1]);
 
-            p = point(i+1);
+            p = point(i + 1);
             ctx.lineTo(p[0], p[1]);
         });
     },
 
-    _drawPathsByColor: function(colorGroups, defaultColor) {
+    _drawPathsByColor: function (colorGroups, defaultColor) {
         const ctx = this._lineCtx,
-              items = this._itemsArray;
+            items = this._itemsArray;
 
         for (const color in colorGroups) {
             const group = colorGroups[color];
             ctx.strokeStyle = color || defaultColor;
             ctx.beginPath();
-            group.forEach( i => this._drawPathFromPointArray(ctx, items[i]));
+            group.forEach(i => this._drawPathFromPointArray(ctx, items[i]));
             ctx.stroke();
-        } 
+        }
     },
-    
+
     // Draw all paths for the current items in such a way 
     // that we group stroke-styles together in batch calls.
-    drawPaths: function() {
+    drawPaths: function () {
         if (!this._ready)
             return
 
         const ctx = this._lineCtx,
-              itemsArray = this._itemsArray,
-              options = this.options,
-              vb = this.ViewBox;
+            itemsArray = this._itemsArray,
+            options = this.options,
+            vb = this.ViewBox;
 
         const cg = vb.pathColorGroups(),
-              selected = cg.selected,
-              unselected = cg.unselected;
+            selected = cg.selected,
+            unselected = cg.unselected;
 
         const alphaScale = this.dotSettings.alphaScale;
 
@@ -710,60 +710,60 @@ DotLayer = {
             ctx.lineWidth = options.selected.pathWidth;
             ctx.globalAlpha = options.selected.pathOpacity * alphaScale;
             this._drawPathsByColor(selected, options.selected.pathColor);
-        
+
         } else if (unselected) {
             // draw unselected paths
             ctx.lineWidth = options.normal.pathWidth;
             ctx.globalAlpha = options.normal.pathOpacity * alphaScale;
             this._drawPathsByColor(unselected, options.normal.pathColor);
         }
-            
+
         if (options.debug) {
             this._debugCtxReset();
             this.DrawBox.draw(this._debugCtx);
             this._debugCtx.strokeStyle = "rgb(255,0,255,1)";
             this.ViewBox.drawPxBounds(this._debugCtx);
-        }        
+        }
     },
 
     // --------------------------------------------------------------------
-    dotPointsIterFromSegs: function*(A, now) {      
+    dotPointsIterFromSegs: function* (A, now) {
         const ds = this.getDotSettings(),
-              T = ds._period,
-              start = A.ts,
-              p = [NaN, NaN];
+            T = ds._period,
+            start = A.ts,
+            p = [NaN, NaN];
 
         // segments yields the same object seg every time with
         // the same views a and b to the same memory buffer.
         //  So we only need to define the references once.
         const segments = this.iterSegments(A),
-              seg = segments.next().value,
-              p_a = seg.a,
-              p_b = seg.b;
+            seg = segments.next().value,
+            p_a = seg.a,
+            p_b = seg.b;
 
         const times = this.iterTimeIntervals(A),
-              timeInterval = times.next().value;
+            timeInterval = times.next().value;
 
-        const timeOffset = (ds._timeScale * ( now - (start + timeInterval.a))) % T;
+        const timeOffset = (ds._timeScale * (now - (start + timeInterval.a))) % T;
 
         // let count = 0;
 
         do {
             const t_a = timeInterval.a,
-                  t_b = timeInterval.b,
-                  lowest = Math.ceil((t_a - timeOffset) / T),
-                  highest = Math.floor((t_b - timeOffset) / T);
-                       
+                t_b = timeInterval.b,
+                lowest = Math.ceil((t_a - timeOffset) / T),
+                highest = Math.floor((t_b - timeOffset) / T);
+
             if (lowest <= highest) {
                 // console.log(`${t_a}, ${t_b}`);
                 const t_ab = t_b - t_a,
-                      vx = (p_b[0] - p_a[0]) / t_ab,
-                      vy = (p_b[1] - p_a[1]) / t_ab;
+                    vx = (p_b[0] - p_a[0]) / t_ab,
+                    vy = (p_b[1] - p_a[1]) / t_ab;
 
                 // console.log(`${p_a}, ${p_b}`);
                 for (let j = lowest; j <= highest; j++) {
                     const t = j * T + timeOffset,
-                          dt = t - t_a;
+                        dt = t - t_a;
                     // console.log(t);
                     if (dt > 0) {
                         p[0] = p_a[0] + vx * dt;
@@ -774,50 +774,50 @@ DotLayer = {
                     }
                 }
             }
-            
-        } while( !segments.next().done && !times.next().done ) 
+
+        } while (!segments.next().done && !times.next().done)
 
         // return count
     },
 
-    dotPointsIterFromArray: function*(A, now) {      
+    dotPointsIterFromArray: function* (A, now) {
         const ds = this.getDotSettings(),
-              T = ds._period,
-              start = A.ts,
-              p = [NaN, NaN],
-              zoom = this.ViewBox.zoom,
-              points = this.pointsArray(A, zoom),
-              times = this.timesArray(A, zoom),
-              p_a = [NaN, NaN],
-              p_b = [NaN, NaN],
-              set = (d, s) => {
+            T = ds._period,
+            start = A.ts,
+            p = [NaN, NaN],
+            zoom = this.ViewBox.zoom,
+            points = this.pointsArray(A, zoom),
+            times = this.timesArray(A, zoom),
+            p_a = [NaN, NaN],
+            p_b = [NaN, NaN],
+            set = (d, s) => {
                 d[0] = s[0];
                 d[1] = s[1];
                 return d;
-              },
-              i0 = A.segMask.min();
+            },
+            i0 = A.segMask.min();
 
-        const timeOffset = (ds._timeScale * ( now - (start + times(i0) ))) % T;
+        const timeOffset = (ds._timeScale * (now - (start + times(i0)))) % T;
 
         let count = 0;
 
         for (const i of A.segMask) {
             const t_a = times(i),
-                  t_b = times(i+1),
-                  lowest = Math.ceil((t_a - timeOffset) / T),
-                  highest = Math.floor((t_b - timeOffset) / T);
+                t_b = times(i + 1),
+                lowest = Math.ceil((t_a - timeOffset) / T),
+                highest = Math.floor((t_b - timeOffset) / T);
 
             if (lowest <= highest) {
                 set(p_a, points(i));
-                set(p_b, points(i+1));
-            
+                set(p_b, points(i + 1));
+
                 const t_ab = t_b - t_a,
-                      vx = (p_b[0] - p_a[0]) / t_ab,
-                      vy = (p_b[1] - p_a[1]) / t_ab;
+                    vx = (p_b[0] - p_a[0]) / t_ab,
+                    vy = (p_b[1] - p_a[1]) / t_ab;
 
                 for (let j = lowest; j <= highest; j++) {
                     const t = j * T + timeOffset,
-                          dt = t - t_a;
+                        dt = t - t_a;
                     if (dt > 0) {
                         p[0] = p_a[0] + vx * dt;
                         p[1] = p_a[1] + vy * dt;
@@ -828,32 +828,32 @@ DotLayer = {
         }
     },
 
-    makeCircleDrawFunc: function() {
+    makeCircleDrawFunc: function () {
         const two_pi = this.two_pi,
-              ctx = this._dotCtx,
-              dotSize = this.dotSettings._dotSize,
-              transform = this.ViewBox.px2Container();
+            ctx = this._dotCtx,
+            dotSize = this.dotSettings._dotSize,
+            transform = this.ViewBox.px2Container();
 
         return p => {
             transform(p);
-            ctx.arc( p[0], p[1], dotSize, 0, two_pi );
+            ctx.arc(p[0], p[1], dotSize, 0, two_pi);
             ctx.closePath();
         };
     },
 
-    makeSquareDrawFunc: function() {
+    makeSquareDrawFunc: function () {
         const ctx = this._dotCtx,
-              dotSize = this.dotSettings._dotSize,
-              dotOffset = dotSize / 2.0,
-              transform = this.ViewBox.px2Container();
+            dotSize = this.dotSettings._dotSize,
+            dotOffset = dotSize / 2.0,
+            transform = this.ViewBox.px2Container();
 
         return p => {
             transform(p);
-            ctx.rect( p[0] - dotOffset, p[1] - dotOffset, dotSize, dotSize );
+            ctx.rect(p[0] - dotOffset, p[1] - dotOffset, dotSize, dotSize);
         }
     },
 
-    _drawDots: function(pointsIterator, drawDotFunc) {
+    _drawDots: function (pointsIterator, drawDotFunc) {
         let count = 0;
         for (const p of pointsIterator) {
             drawDotFunc(p);
@@ -862,9 +862,9 @@ DotLayer = {
         return count
     },
 
-    _drawDotsByColor: function(now, colorGroups, drawDot) {
+    _drawDotsByColor: function (now, colorGroups, drawDot) {
         const ctx = this._dotCtx,
-              itemsArray = this._itemsArray;
+            itemsArray = this._itemsArray;
 
         let count = 0;
 
@@ -884,33 +884,33 @@ DotLayer = {
         return count
     },
 
-    drawDots: function(now) {
-        if ( !this._ready )
+    drawDots: function (now) {
+        if (!this._ready)
             return;
-        
+
         if (!now)
             now = this._timePaused || this.UTCnowSecs();
-        
+
         const options = this.options,
-              ctx = this._dotCtx,
-              g = this._gifPatch,
-              itemsArray = this._itemsArray,
-              vb = this.ViewBox;
+            ctx = this._dotCtx,
+            g = this._gifPatch,
+            itemsArray = this._itemsArray,
+            vb = this.ViewBox;
 
         const colorGroups = vb.dotColorGroups();
-        
+
         let unselected = colorGroups.unselected,
-              selected = colorGroups.selected;
+            selected = colorGroups.selected;
 
         this.DrawBox.clear(ctx);
 
         let count = 0;
 
         if (this._gifPatch) {
-            unselected = {...selected, ...unselected};
+            unselected = { ...selected, ...unselected };
             selected = null;
         }
-        
+
         const alphaScale = this.dotSettings.alphaScale;
 
         if (selected) {
@@ -923,46 +923,46 @@ DotLayer = {
             drawDotFunc = this.makeCircleDrawFunc();
             ctx.globalAlpha = options.selected.dotOpacity * alphaScale;
             count += this._drawDotsByColor(now, selected, drawDotFunc, options.selected.dotColor);
-        
+
         } else if (unselected) {
             // draw normal activity dots
             ctx.globalAlpha = options.normal.dotOpacity * alphaScale;
             let drawDotFunc = this.makeSquareDrawFunc();
             count += this._drawDotsByColor(now, unselected, drawDotFunc, options.normal.dotColor);
         }
-        
+
         if (options.debug) {
             this._debugCtxReset();
             this.DrawBox.draw(this._debugCtx);
             this._debugCtx.strokeStyle = "rgb(255,0,255,1)";
             vb.drawPxBounds(this._debugCtx);
-        }        
+        }
 
         return count
     },
 
-   
+
     // --------------------------------------------------------------------
-    animate: function() {
+    animate: function () {
 
         this._paused = false;
-        if ( this._timePaused ) {
+        if (this._timePaused) {
             this._timeOffset = (this.UTCnowSecs() - this._timePaused);
             this._timePaused = null;
         }
         this.lastCalledTime = 0;
-        this.minDelay = ~~( 1000 / this.target_fps + 0.5 );
-        this._frame = L.Util.requestAnimFrame( this._animate, this );
+        this.minDelay = ~~(1000 / this.target_fps + 0.5);
+        this._frame = L.Util.requestAnimFrame(this._animate, this);
     },
 
     // --------------------------------------------------------------------
-    pause: function() {
+    pause: function () {
         this._paused = true;
     },
 
 
     // --------------------------------------------------------------------
-    _animate: function() {
+    _animate: function () {
         if (!this._frame || !this._ready)
             return;
 
@@ -971,7 +971,7 @@ DotLayer = {
         let ts = this.UTCnowSecs(),
             now = ts - this._timeOffset;
 
-        if ( this._paused || this._capturing ) {
+        if (this._paused || this._capturing) {
             // Ths is so we can start where we left off when we resume
             this._timePaused = ts;
             return;
@@ -983,42 +983,42 @@ DotLayer = {
 
             const t0 = performance.now();
 
-            count = this.drawDots( now );
+            count = this.drawDots(now);
 
             if (this.fps_display) {
-                const elapsed = ( performance.now() - t0 ).toFixed( 0 );
-                this.fps_display.update( now, `z=${this.ViewBox.zoom}, dt=${elapsed} ms, n=${count}` );
+                const elapsed = (performance.now() - t0).toFixed(0);
+                this.fps_display.update(now, `z=${this.ViewBox.zoom}, dt=${elapsed} ms, n=${count}`);
             }
 
         }
 
-        this._frame = L.Util.requestAnimFrame( this._animate, this );
+        this._frame = L.Util.requestAnimFrame(this._animate, this);
     },
 
     //------------------------------------------------------------------------------
-    _animateZoom: function( e ) {
+    _animateZoom: function (e) {
         const m = this.ViewBox._map,
-              z = e.zoom,
-              scale = m.getZoomScale( z );
+            z = e.zoom,
+            scale = m.getZoomScale(z);
 
         // -- different calc of offset in leaflet 1.0.0 and 0.0.7 thanks for 1.0.0-rc2 calc @jduggan1
-        const offset = L.Layer ? m._latLngToNewLayerPoint( m.getBounds().getNorthWest(), z, e.center ) :
-                               m._getCenterOffset( e.center )._multiplyBy( -scale ).subtract( m._getMapPanePos() );
+        const offset = L.Layer ? m._latLngToNewLayerPoint(m.getBounds().getNorthWest(), z, e.center) :
+            m._getCenterOffset(e.center)._multiplyBy(-scale).subtract(m._getMapPanePos());
 
         const setTransform = L.DomUtil.setTransform;
-        setTransform( this._dotCanvas, offset, scale );
-        setTransform( this._lineCanvas, offset, scale );
+        setTransform(this._dotCanvas, offset, scale);
+        setTransform(this._lineCanvas, offset, scale);
     },
 
 
-// -------------------------------------------------------------------
-    setItemSelect: function(selections) {
+    // -------------------------------------------------------------------
+    setItemSelect: function (selections) {
         let idx = 0,
             redraw = false;
 
         const itemIds = this._itemIds,
-              arr = this._itemsArray,
-              vb = this.ViewBox;
+            arr = this._itemsArray,
+            vb = this.ViewBox;
 
         for (const [id, selected] of Object.entries(selections)) {
             idx = itemIds.indexOf(+id);
@@ -1031,29 +1031,29 @@ DotLayer = {
             this._redraw();
     },
 
-    setSelectRegion: function(pxBounds, callback) {
+    setSelectRegion: function (pxBounds, callback) {
         let selectedIds = this.itemsInRegion(pxBounds);
         callback(selectedIds);
     },
 
-    itemsInRegion: function(selectPxBounds) {
+    itemsInRegion: function (selectPxBounds) {
         const pxOffset = this.ViewBox.pxOffset,
-              zf = this.ViewBox._zf;
-        
+            zf = this.ViewBox._zf;
+
         // un-transform screen coordinates given by the selection
         // plugin to absolute values that we can compare ours to.
         selectPxBounds.min._subtract(pxOffset)._divideBy(zf);
         selectPxBounds.max._subtract(pxOffset)._divideBy(zf);
 
         const itemsArray = this._itemsArray,
-              inView = this.ViewBox.inView();
-        
+            inView = this.ViewBox.inView();
+
         let selected = new BitSet();
-        
+
         inView.forEach(i => {
             const A = itemsArray[i];
             for (const seg of this.iterSegments(A)) {
-                if ( selectPxBounds.contains(seg.a) ) {
+                if (selectPxBounds.contains(seg.a)) {
                     selected.add(i);
                     break;
                 }
@@ -1062,17 +1062,17 @@ DotLayer = {
 
         if (!selected.isEmpty())
             return selected.imap(i => itemsArray[i].id);
-    },  
+    },
 
 
     // -----------------------------------------------------------------------
 
-    captureCycle: function(selection=null, callback=null) {
+    captureCycle: function (selection = null, callback = null) {
         let periodInSecs = this.periodInSecs();
         this._capturing = true;
 
         // set up display
-        const pd = document.createElement( 'div' );
+        const pd = document.createElement('div');
         pd.style.position = 'absolute';
         pd.style.left = pd.style.top = 0
         pd.style.backgroundColor = 'black';
@@ -1081,23 +1081,23 @@ DotLayer = {
         pd.style.padding = '5px'
         pd.style.color = 'white';
         pd.style.zIndex = 100000
-        document.body.appendChild( pd );
+        document.body.appendChild(pd);
         this._progressDisplay = pd;
 
         let msg = "loading map baseLayer (may take several seconds)...";
         // console.log(msg);
         pd.textContent = msg;
 
-        leafletImage(this.ViewBox._map, function(err, canvas) {
+        leafletImage(this.ViewBox._map, function (err, canvas) {
             // download(canvas.toDataURL("image/png"), "mapViewBox.png", "image/png");
             console.log("leaflet-image: " + err);
             if (canvas) {
-                this.captureGIF(selection, canvas, periodInSecs, callback=callback);
+                this.captureGIF(selection, canvas, periodInSecs, callback = callback);
             }
         }.bind(this));
     },
 
-    captureGIF: function(selection=null, baseCanvas=null, durationSecs=2, callback=null) {
+    captureGIF: function (selection = null, baseCanvas = null, durationSecs = 2, callback = null) {
         let sx, sy, sw, sh;
         if (selection) {
             sx = selection.topLeft.x;
@@ -1129,20 +1129,20 @@ DotLayer = {
 
         this._encoder = encoder;
 
-        encoder.on( 'progress', function( p ) {
-            const msg = `Encoding frames...${~~(p*100)}%`;
+        encoder.on('progress', function (p) {
+            const msg = `Encoding frames...${~~(p * 100)}%`;
             // console.log(msg);
             this._progressDisplay.textContent = msg;
-        }.bind( this ) );
+        }.bind(this));
 
-        encoder.on('finished', function( blob ) {
+        encoder.on('finished', function (blob) {
             // window.open(URL.createObjectURL(blob));
 
             if (blob) {
-                download(blob, "output.gif", 'image/gif' );
+                download(blob, "output.gif", 'image/gif');
             }
 
-            document.body.removeChild( this._progressDisplay );
+            document.body.removeChild(this._progressDisplay);
             delete this._progressDisplay
 
             this._capturing = false;
@@ -1152,67 +1152,67 @@ DotLayer = {
             if (callback) {
                 callback();
             }
-        }.bind( this ) );
+        }.bind(this));
 
 
-        function canvasSubtract(newCanvas, oldCanvas){
+        function canvasSubtract(newCanvas, oldCanvas) {
             if (!oldCanvas) {
                 return newCanvas;
             }
             let ctxOld = oldCanvas.getContext('2d'),
-                dataOld = ctxOld.getImageData(0,0,sw,sh),
+                dataOld = ctxOld.getImageData(0, 0, sw, sh),
                 dO = dataOld.data,
                 ctxNew = newCanvas.getContext('2d'),
-                dataNew = ctxNew.getImageData(0,0,sw,sh),
+                dataNew = ctxNew.getImageData(0, 0, sw, sh),
                 dN = dataNew.data,
                 len = dO.length;
 
-            if (dN.length != len){
+            if (dN.length != len) {
                 console.log("canvasDiff: canvases are different size");
                 return;
             }
-            for (let i=0; i<len; i+=4) {
+            for (let i = 0; i < len; i += 4) {
                 if (dO[i] == dN[i] &&
-                    dO[i+1] == dN[i+1] &&
-                    dO[i+2] == dN[i+2]
-                    && dO[i+3] == dN[i+3]
-                    ) {
+                    dO[i + 1] == dN[i + 1] &&
+                    dO[i + 2] == dN[i + 2]
+                    && dO[i + 3] == dN[i + 3]
+                ) {
 
                     dO[i] = 0;
-                    dO[i+1] = 0;
-                    dO[i+2] = 0;
-                    dO[i+3] = 0;
+                    dO[i + 1] = 0;
+                    dO[i + 2] = 0;
+                    dO[i + 3] = 0;
                 } else {
                     dO[i] = dN[i];
-                    dO[i+1] = dN[i+1];
-                    dO[i+2] = dN[i+2];
+                    dO[i + 1] = dN[i + 1];
+                    dO[i + 2] = dN[i + 2];
                     // dO[i+3] = dN[i+3];
                     // console.log(dN[i+3]);
-                    dO[i+3] = 255;
+                    dO[i + 3] = 255;
                 }
             }
-            ctxOld.putImageData(dataOld,0,0);
+            ctxOld.putImageData(dataOld, 0, 0);
             return oldCanvas;
         }
 
-        function display(canvas, title){
+        function display(canvas, title) {
             let w = open(canvas["toDataURL"]("image/png"), '_blank');
             // w.document.write(`<title>${title}</title>`);
         }
         // console.log(`GIF output: ${numFrames.toFixed(4)} frames, delay=${delay.toFixed(4)}`);
         let h1 = this.heatflask_icon.height,
             w1 = this.heatflask_icon.width,
-            himg = [50, h1*50/w1],
-            hd = [2, sh-himg[0]-2, himg[0], himg[1]],
+            himg = [50, h1 * 50 / w1],
+            hd = [2, sh - himg[0] - 2, himg[0], himg[1]],
             h2 = this.strava_icon.height,
             w2 = this.strava_icon.width,
-            simg = [50, h2*50/w2],
-            sd = [sw-simg[0]-2, sh-simg[1]-2, simg[0], simg[1]];
-            
+            simg = [50, h2 * 50 / w2],
+            sd = [sw - simg[0] - 2, sh - simg[1] - 2, simg[0], simg[1]];
+
         let framePrev = null;
         // Add frames to the encoder
-        for (let i=0, num=~~numFrames; i<num; i++, frameTime+=delay){
-            let msg = `Rendering frames...${~~(i/num * 100)}%`;
+        for (let i = 0, num = ~~numFrames; i < num; i++, frameTime += delay) {
+            let msg = `Rendering frames...${~~(i / num * 100)}%`;
 
             // let timeOffset = (this.dotSettings._timeScale * frameTime) % this._period;
             // console.log( `frame${i} @ ${timeOffset}`);
@@ -1227,10 +1227,10 @@ DotLayer = {
             const frameCtx = frame.getContext('2d');
 
             // clear the frame
-            frameCtx.clearRect( 0, 0, sw, sh);
+            frameCtx.clearRect(0, 0, sw, sh);
 
             // lay the baselayer down
-            baseCanvas && frameCtx.drawImage( baseCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
+            baseCanvas && frameCtx.drawImage(baseCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
 
             // render this set of dots
             this.drawDots(frameTime);
@@ -1248,14 +1248,14 @@ DotLayer = {
             let gifFrame = canvasSubtract(frame, framePrev);
             // display(gifFrame, `frame_${i}`);
 
-            let thisDelay = (i == num-1)? ~~(delay/2) : delay
+            let thisDelay = (i == num - 1) ? ~~(delay / 2) : delay
             // console.log("frame "+i+": delay="+thisDelay);
 
             encoder.addFrame(gifFrame, {
                 copy: true,
                 // shorter delay after final frame
                 delay: thisDelay,
-                transparent: (i==0)? null : "#F0F0F0",
+                transparent: (i == 0) ? null : "#F0F0F0",
                 dispose: 1 // leave as is
             });
 
@@ -1266,12 +1266,12 @@ DotLayer = {
         encoder.render();
     },
 
-    abortCapture: function() {
+    abortCapture: function () {
         // console.log("capture aborted");
         this._progressDisplay.textContent = "aborting...";
         if (this._encoder) {
             this._encoder.abort();
-            document.body.removeChild( this._progressDisplay );
+            document.body.removeChild(this._progressDisplay);
             delete this._progressDisplay
 
             this._capturing = false;
@@ -1281,16 +1281,16 @@ DotLayer = {
         }
     },
 
-    setDotColors: function() {
+    setDotColors: function () {
         let items = this._itemsArray,
             numItems = items.length,
             i = 0;
 
         this._colorPalette = this.ColorPalette.palette(numItems, this.options.dotAlpha);
-        for ( const item of items )
-            item.dotColor = this._colorPalette[ i++ ];
+        for (const item of items)
+            item.dotColor = this._colorPalette[i++];
     },
-    
+
     dotSettings: {
         C1: 1000000.0,
         C2: 200.0,
@@ -1298,27 +1298,27 @@ DotLayer = {
         alphaScale: 0.9
     },
 
-    getDotSettings: function() {
+    getDotSettings: function () {
         return this.dotSettings;
     },
 
-    periodInSecs: function() {
+    periodInSecs: function () {
         const ds = this.getDotSettings();
         return ds._period / (ds._timeScale * 1000);
     },
 
-    updateDotSettings: function(settings, shadowSettings) {
+    updateDotSettings: function (settings, shadowSettings) {
 
         const ds = this.dotSettings;
         if (settings)
             Object.assign(ds, settings);
 
         const vb = this.ViewBox,
-              zf = vb._zf,
-              zoom = vb.zoom;
+            zf = vb._zf,
+            zoom = vb.zoom;
         ds._timeScale = ds.C2 / zf;
         ds._period = ds.C1 / zf;
-        ds._dotSize = Math.max(1, ~~(ds.dotScale * Math.log( zoom ) + 0.5));
+        ds._dotSize = Math.max(1, ~~(ds.dotScale * Math.log(zoom) + 0.5));
 
         if (shadowSettings) {
             Object.assign(this.options.dotShadows, shadowSettings);
@@ -1337,19 +1337,19 @@ DotLayer = {
         From "Making annoying rainbows in javascript"
         A tutorial by jim bumgardner
         */
-        makeColorGradient: function(frequency1, frequency2, frequency3,
-                                     phase1, phase2, phase3,
-                                     center, width, len, alpha) {
+        makeColorGradient: function (frequency1, frequency2, frequency3,
+            phase1, phase2, phase3,
+            center, width, len, alpha) {
             let palette = new Array(len);
 
-            if (center == undefined)   center = 128;
-            if (width == undefined)    width = 127;
-            if (len == undefined)      len = 50;
+            if (center == undefined) center = 128;
+            if (width == undefined) width = 127;
+            if (len == undefined) len = 50;
 
             for (let i = 0; i < len; ++i) {
-                let r = Math.round(Math.sin(frequency1*i + phase1) * width + center),
-                    g = Math.round(Math.sin(frequency2*i + phase2) * width + center),
-                    b = Math.round(Math.sin(frequency3*i + phase3) * width + center);
+                let r = Math.round(Math.sin(frequency1 * i + phase1) * width + center),
+                    g = Math.round(Math.sin(frequency2 * i + phase2) * width + center),
+                    b = Math.round(Math.sin(frequency3 * i + phase3) * width + center);
                 // palette[i] = `rgba(${r}, ${g}, ${b}, ${alpha})`;
                 palette[i] = `rgb(${r}, ${g}, ${b})`;
             }
@@ -1358,10 +1358,10 @@ DotLayer = {
 
         palette: function (n, alpha) {
             const center = 128,
-                  width = 127,
-                  steps = 10,
-                  frequency = 2*Math.PI/steps;
-            return this.makeColorGradient(frequency,frequency,frequency,0,2,4,center,width,n,alpha);
+                width = 127,
+                steps = 10,
+                frequency = 2 * Math.PI / steps;
+            return this.makeColorGradient(frequency, frequency, frequency, 0, 2, 4, center, width, n, alpha);
         }
     },
 

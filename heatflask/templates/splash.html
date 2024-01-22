@@ -1,71 +1,74 @@
 <html>
-  <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-    <title>{{ config["APP_NAME"]}} - Animated Activity Visualization</title>
-    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-    {% assets "splash_css" %}
-    <link rel="stylesheet" href="{{ ASSET_URL }}" />
-    {% endassets %}
+  <title>{{ config["APP_NAME"]}} - Animated Activity Visualization</title>
+  <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
 
-    <style> 
-      body {
-        background-image: url("{{ url_for('static', filename='lake.gif') }}");
-        background-repeat: no-repeat;
-        background-attachment: fixed;
-        background-size: cover;
-      }
-    </style>
+  {% assets "splash_css" %}
+  <link rel="stylesheet" href="{{ ASSET_URL }}" />
+  {% endassets %}
 
-    {% if not config.get("OFFLINE") %}
-    {% if current_user.is_anonymous or (not current_user.is_admin()) %}
-    {{analytics}}
-    {% endif %}
-    {% endif %}
+  <style>
+    body {
+      background-image: url("{{ url_for('static', filename='lake.gif') }}");
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+      background-size: cover;
+    }
+  </style>
 
-  </head>
-  <body>
-    <div class="container">
+  {% if not config.get("OFFLINE") %}
+  {% if current_user.is_anonymous or (not current_user.is_admin()) %}
+  {{analytics}}
+  {% endif %}
+  {% endif %}
+
+</head>
+
+<body>
+  <div class="container">
     {% with messages = get_flashed_messages() %}
-        {% if messages %}
-          <ul class=flashes >
-          {% for message in messages %}
-            <li>{{ message }}</li>
-          {% endfor %}
-          </ul>
-        {% endif %}
+    {% if messages %}
+    <ul class=flashes>
+      {% for message in messages %}
+      <li>{{ message }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
     {% endwith %}
-      <br>
-      <img class=logo src="{{ url_for('static', filename='logo.png') }}" alt="" >
+    <br>
+    <img class=logo src="{{ url_for('static', filename='logo.png') }}" alt="">
 
-      <h2>Motion Mapping For your Strava Data</h2>
+    <h2>Motion Mapping For your Strava Data</h2>
 
-      <br>
-      {% if not config.get("OFFLINE") %}
-      <form method="link" action="{{ url_for('authorize') }}">
-          <input class="strava-button" type="image" src="{{ url_for('static', filename='btn_strava_connectwith_orange.svg') }}"
-           alt="Authenticate with Strava" >
-          <input type="hidden" name="state" value="{{ next }}">
-      </form>
+    <br>
+    {% if not config.get("OFFLINE") %}
+    <form method="link" action="{{ url_for('authorize') }}">
+      <input class="strava-button" type="image"
+        src="{{ url_for('static', filename='btn_strava_connectwith_orange.svg') }}" alt="Authenticate with Strava">
+      <input type="hidden" name="state" value="{{ next }}">
+    </form>
+    {% endif %}
+
+    {% if error %}
+    <p class="error"><strong>Error:</strong> {{ error }}
       {% endif %}
 
-      {% if error %}
-        <p class="error"><strong>Error:</strong> {{ error }}
-      {% endif %}
-
       <br>
-      <FORM METHOD="LINK" ACTION="{{ url_for('demo') }}">
+    <FORM METHOD="LINK" ACTION="{{ url_for('demo') }}">
       <INPUT class="btn btn-a" TYPE="submit" VALUE="Demo">
-      </FORM>
+    </FORM>
 
-      <FORM METHOD="LINK" ACTION="{{ url_for('public_directory')}}">
+    <FORM METHOD="LINK" ACTION="{{ url_for('public_directory')}}">
       <INPUT class="btn btn-b" TYPE="submit" VALUE="Public User Directory">
-      </FORM>
+    </FORM>
 
-     <!--  <img src="{{ url_for('static', filename='lake.gif') }}" style="width:50%;">
+    <!--  <img src="{{ url_for('static', filename='lake.gif') }}" style="width:50%;">
  -->
-    </div>
+  </div>
 
-  </body>
+</body>
+
 </html>

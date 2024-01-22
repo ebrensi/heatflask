@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>{{ config["APP_NAME"] }} - Admin</title>
     <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
-    
+
     {% assets "basic_table_css" %}
     <link rel="stylesheet" href="{{ ASSET_URL }}" />
     {% endassets %}
@@ -40,13 +41,13 @@
 
             <span class="date_select" style="display:block">
                 After
-                <input class="datepick" id="date1" type="text"  value=""/>
+                <input class="datepick" id="date1" type="text" value="" />
             </span>
             <br>
 
             <span class="date_select" style="display:block">
                 Before
-                <input class="datepick" id="date2" type="text" value=""/>
+                <input class="datepick" id="date2" type="text" value="" />
             </span>
 
             <span>
@@ -59,7 +60,7 @@
         </form>
     </div>
 
-<script>
+    <script>
 
         function combineNames(data, type, row, meta) {
             return row.lastname + ", " + row.firstname;
@@ -70,22 +71,22 @@
                 num = $("#select_num").val(),
                 type = $("#select_type").val();
 
-            if (type=="grouped_with") {
+            if (type == "grouped_with") {
                 $(".date_select").hide();
                 $("#num_select").hide();
 
-            } else if (type=="days"){
+            } else if (type == "days") {
                 $(".date_select").hide();
                 $("#num_select").show();
                 $('#date1').val(moment().subtract(num, 'days').format(F));
                 $('#date2').val("now");
-            } else if (type=="activities") {
+            } else if (type == "activities") {
                 $(".date_select").hide();
                 $("#num_select").show();
                 $('#date1').val("");
                 $('#date2').val("now");
             }
-            else if (type=="activity_ids") {
+            else if (type == "activity_ids") {
                 $(".date_select").hide();
                 $("#num_select").hide();
             } else {
@@ -96,37 +97,37 @@
 
         }
 
-        const data = {{ data|tojson }};
+        const data = {{ data| tojson }};
         let atable = $('#users_table').DataTable({
             pageLength: 50,
-            lengthMenu: [ 50, 100, 500, 1000, 2000, -1],
+            lengthMenu: [50, 100, 500, 1000, 2000, -1],
             deferRender: true,
             data: data,
             rowId: "id",
             columns: [
-                {title: "ID",    data: "id", render: formatUserId},
-                {title: "count", data: "app_activity_count"},
+                { title: "ID", data: "id", render: formatUserId },
+                { title: "count", data: "app_activity_count" },
                 {
                     title: "last active",
                     data: "dt_last_active",
                     render: formatDate,
                 },
-                {title: "Name", render: combineNames},
-                {title: "City",    data: "city"},
-                {title: "Region", data: "state"},
-                {title: "Country", data: "country"},
-                {title: "email",   data: "email" }
+                { title: "Name", render: combineNames },
+                { title: "City", data: "city" },
+                { title: "Region", data: "state" },
+                { title: "Country", data: "country" },
+                { title: "email", data: "email" }
             ],
             scroller: true,
             scrollY: "75vh",
             scrollX: true,
             scrollCollapse: true,
-            select: isMobileDevice()? "multi" : "os",
-            order: [[ 2, "desc" ]]
+            select: isMobileDevice() ? "multi" : "os",
+            order: [[2, "desc"]]
         });
 
 
-        $(".datepick").on("change", function(){
+        $(".datepick").on("change", function () {
             $(".preset").val("");
         });
 
@@ -181,4 +182,5 @@
         */
     </script>
 </body>
+
 </html>

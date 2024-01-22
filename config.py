@@ -1,5 +1,7 @@
 import os
+
 basedir = os.path.abspath(os.path.dirname(__file__))
+
 
 class Config(object):
     # Flask settings
@@ -49,22 +51,19 @@ class Config(object):
         "pool_size": 6,
         "max_overflow": 8,
         "pool_timeout": 10,
-        "pool_recycle": 300
+        "pool_recycle": 300,
     }
 
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
 
-    MONGO_OPTIONS = {
-        "maxIdleTimeMS": 10000,
-        "maxPoolSize": 100
-    }
+    MONGO_OPTIONS = {"maxIdleTimeMS": 10000, "maxPoolSize": 100}
 
     MONGO_URI = os.environ.get("MONGODB_URI")
     REDIS_URL = os.environ.get("REDIS_URL")
-    
+
     SECS_IN_HOUR = 60 * 60
     SECS_IN_DAY = 24 * SECS_IN_HOUR
-    
+
     # How long we store Index entry in MongoDB
     TTL_INDEX = int(os.environ.get("TTL_INDEX", 10)) * SECS_IN_DAY
 
@@ -74,7 +73,7 @@ class Config(object):
     # How long we Redis-cache Activity stream data
     TTL_CACHE = int(os.environ.get("TTL_CACHE", 4)) * SECS_IN_HOUR
 
-    CACHE_IP_INFO_TIMEOUT = 1 * SECS_IN_DAY # 1 day
+    CACHE_IP_INFO_TIMEOUT = 1 * SECS_IN_DAY  # 1 day
 
     JSONIFY_PRETTYPRINT_REGULAR = True
 
@@ -92,8 +91,7 @@ class Config(object):
 
     # Paypal Stuff
     # PAYPAL_VERIFY_URL = 'https://ipnpb.paypal.com/cgi-bin/webscr'
-    PAYPAL_VERIFY_URL = 'https://ipnpb.sandbox.paypal.com/cgi-bin/webscr'
-
+    PAYPAL_VERIFY_URL = "https://ipnpb.sandbox.paypal.com/cgi-bin/webscr"
 
     # MapBox stuff
     MAPBOX_ACCESS_TOKEN = os.environ.get("MAPBOX_ACCESS_TOKEN")
@@ -112,7 +110,7 @@ class Config(object):
     TO_DOMAIN = "www.heatflask.com"
 
     # This is the spec for parsing urls.  The pattern is
-    #  field_name: ([query_string options], default-value) 
+    #  field_name: ([query_string options], default-value)
     URL_QUERY_SPEC = dict(
         date1=(["after", "date1", "a"], ""),
         date2=(["before", "date2", "b"], ""),
@@ -128,7 +126,7 @@ class Config(object):
         c2=(["c2"], 0),
         sz=(["sz"], 0),
         paused=(["paused", "p"], 0),
-        shadows=(["sh", "shadows"], None)
+        shadows=(["sh", "shadows"], None),
     )
 
     # A few Demos
@@ -142,18 +140,10 @@ class Config(object):
             "zoom": "6",
             "c1": "859579",
             "c2": "169",
-            "sz": "4"
+            "sz": "4",
         },
-
-        "last60activities": {
-            "username": "15972102",
-            "limit": "60"
-        },
-
-        "last500activities": {
-            "username": "15972102",
-            "limit": "500"
-        }
+        "last60activities": {"username": "15972102", "limit": "60"},
+        "last500activities": {"username": "15972102", "limit": "500"},
     }
 
 
@@ -162,13 +152,9 @@ class ProductionConfig(Config):
     These are settings specific to the production environment
     (the main app running on Heroku)
     """
-    
-    ANALYTICS = {
-        'GOOGLE_UNIVERSAL_ANALYTICS': {
-            'ACCOUNT': "UA-85621398-1"
-        }
-    }
-    
+
+    ANALYTICS = {"GOOGLE_UNIVERSAL_ANALYTICS": {"ACCOUNT": "UA-85621398-1"}}
+
     DEBUG = False
 
     # Turn off webassets building for production, but we need to make sure
@@ -182,11 +168,13 @@ class ProductionConfig(Config):
     REDIS_URL = os.environ.get("REDISGREEN_URL")
     LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
 
+
 class StagingConfig(Config):
     """
     These are settings specific to the staging environment
      (hosted test app)
     """
+
     DEVELOPMENT = True
     DEBUG = True
 
@@ -205,6 +193,7 @@ class StagingConfig(Config):
     RATELIMIT_STRATEGY = "fixed-window-elastic-expiry"
     RATELIMIT_IN_MEMORY_FALLBACK_ENABLED = True
 
+
 class DevelopmentConfig(Config):
     """
     These are settings specific to the development environment
@@ -212,13 +201,11 @@ class DevelopmentConfig(Config):
     Note that this file is part of the repo so any changes you make
     here will affect all developers.
     """
-    
+
     # OFFLINE setting suppresses any internet access
     OFFLINE = os.environ.get("OFFLINE", False)
 
-    USE_REMOTE_DB = (
-        False if OFFLINE else os.environ.get("USE_REMOTE_DB")
-    )
+    USE_REMOTE_DB = False if OFFLINE else os.environ.get("USE_REMOTE_DB")
 
     DEVELOPMENT = True
     DEBUG = True
@@ -230,7 +217,7 @@ class DevelopmentConfig(Config):
     # Flask-Assets settings
     # ASSETS_DEBUG = "merge"
     # ASSETS_AUTO_BUILD = True
-    
+
     if USE_REMOTE_DB:
         MONGO_URI = os.environ.get("REMOTE_MONGODB_URL")
         SQLALCHEMY_DATABASE_URI = os.environ.get("REMOTE_POSTGRES_URL")
@@ -239,7 +226,7 @@ class DevelopmentConfig(Config):
     else:
         # How long we Redis-cache Activity stream data
         TTL_CACHE = 2 * Config.SECS_IN_HOUR
-        
+
         # How long we Redis-cache a User object
         CACHE_USERS_TIMEOUT = 2 * Config.SECS_IN_HOUR
 
@@ -247,6 +234,4 @@ class DevelopmentConfig(Config):
         TTL_DB = 60 * Config.SECS_IN_DAY
 
         # How long we store an Index entry in MongoDB
-        STORE_INDEX_TIMEOUT = 60 * Config.SECS_IN_DAY   # 60 days
-
-        
+        STORE_INDEX_TIMEOUT = 60 * Config.SECS_IN_DAY  # 60 days
