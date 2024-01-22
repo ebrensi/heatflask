@@ -8,3 +8,4 @@ heatflask/static/.webassets-cache/
 */gen/build/
 
 .env
+.activate

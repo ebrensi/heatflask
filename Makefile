@@ -11,7 +11,7 @@ PRE_COMMIT_SOURCE=.githooks/pre-commit
 PRE_COMMIT_DEST=$(GIT_HOOKS_FOLDER)/pre-commit
 
 ACTIVATE=$(VENV_FOLDER)/bin/activate
-ENV=./.env
+LOCAL_ACTIVATE=./.activate
 
 .DEFAULT_GOAL := clean-install
 
@@ -60,8 +60,8 @@ $(ACTIVATE): requirements.txt
 	@echo "Creating Python virtual environment"
 	test -d $(VENV_FOLDER) || mkdir --parents $(VENV_FOLDER); \
 	$(PYTHON) -m venv --clear $(VENV_FOLDER); \
-	echo "#!/bin/env sh" > $(ENV) && \
-	echo ". $(ACTIVATE)" >> $(ENV)
+	echo "#!/bin/env sh" > $(LOCAL_ACTIVATE) && \
+	echo ". $(ACTIVATE)" >> $(LOCAL_ACTIVATE)
 
 install-python: $(ACTIVATE)
 	. $(ACTIVATE) && \
