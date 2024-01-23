@@ -25,10 +25,9 @@ from flask import (
     send_from_directory,
 )
 from flask_login import current_user, login_user, logout_user
-from geventwebsocket import WebSocketServer, WebSocketError
 
 # Local imports
-from .app import login_manager, redis, mongo
+from .app import login_manager, redis, mongo, sock
 
 from .models import (
     Users,
@@ -437,9 +436,8 @@ def update_share_status(username):
     return jsonify(user=user.id, share=status)
 
 
-@app.route("/data_socket")
-def data_socket():
-    ws = request.environ.get("wsgi.websocket")
+@sock.route("/data_socket")
+def data_socket(ws):
     log.info("ws %s", ws)
     if not ws:
         # abort(400, "Expected WebSocket request")

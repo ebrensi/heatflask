@@ -1,11 +1,11 @@
 gevent~=23.9.0
-gevent-websocket
 flask~=3.0.1
 stravalib~=1.5
 rjsmin~=1.2.2
 polyline~=2.0.1
 msgpack~=1.0.7
 gunicorn~=21.2.0
+flask-sock~=0.7.0
 flask-redis~=0.4.0
 flask-login~=0.6.3
 flask-assets~=2.1.0

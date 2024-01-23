@@ -11,6 +11,7 @@ from itertools import islice, repeat, starmap, takewhile
 
 # Third party imports
 import gevent
+import gevent.pool
 import msgpack
 import pymongo
 import requests
@@ -2064,8 +2065,8 @@ class BinaryWebsocketClient(object):
             return
 
         try:
-            b = msgpack.packb(obj)
-            self.ws.send(b, binary=True)
+            b = bytes(msgpack.packb(obj))
+            self.ws.send(b)
         except WebSocketError:
             pass
         except Exception:

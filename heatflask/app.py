@@ -10,6 +10,7 @@ from flask_compress import Compress
 from flask_login import LoginManager
 from flask_sslify import SSLify
 from flask_assets import Environment
+from flask_sock import Sock
 
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -21,6 +22,7 @@ mongo = PyMongo()
 login_manager = LoginManager()
 assets = Environment()
 limiter = Limiter(key_func=get_remote_address)
+sock = Sock()
 
 # Global variables
 EPOCH = datetime.utcfromtimestamp(0)
@@ -47,6 +49,7 @@ def create_app():
         login_manager.init_app(app)
         assets.init_app(app)
         limiter.init_app(app)
+        sock.init_app(app)
 
         from .models import Activities, EventLogger, Index
 
