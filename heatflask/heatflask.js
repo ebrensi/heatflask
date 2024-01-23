@@ -37,7 +37,6 @@ function heatflask() {
         // the DotLayer
         dotLayer = L.dotLayer({
             startPaused: appState.paused,
-            dotWorkerUrl: DOTLAYER_WORKER_URL,
             gifWorkerUrl: GIFJS_WORKER_URL
         }).addTo(map);
 

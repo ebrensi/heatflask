@@ -1,4 +1,3 @@
-import init_gevent # noqa
 
 from datetime import datetime
 import os
@@ -10,7 +9,7 @@ from flask_redis import FlaskRedis
 from flask_pymongo import PyMongo
 from flask_compress import Compress
 from flask_login import LoginManager
-from flask_analytics import Analytics
+# from flask_analytics import Analytics
 from flask_sslify import SSLify
 from flask_sockets import Sockets
 from flask_assets import Environment
@@ -38,7 +37,7 @@ def create_app():
     app.config.from_object(os.environ["APP_SETTINGS"])
 
     with app.app_context():
-        Analytics(app)
+        # Analytics(app)
         Compress(app)
         SSLify(app, skips=["webhook_callback"])
         from .js_bundles import bundles

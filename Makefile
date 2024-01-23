@@ -12,6 +12,7 @@ PRE_COMMIT_DEST=$(GIT_HOOKS_FOLDER)/pre-commit
 
 ACTIVATE=$(VENV_FOLDER)/bin/activate
 LOCAL_ACTIVATE=./.activate
+ENV=./.env
 
 .DEFAULT_GOAL := clean-install
 
@@ -49,7 +50,9 @@ $(PRE_COMMIT_DEST): | $(GIT_HOOKS_FOLDER)
 	# Black formatter for Python files and
 	# Prettier for frontend (HTML, JavaScript, TypeScript, CSS, etc)
 	@echo "Creating pre-commit hook"
-	ln -s $(PRE_COMMIT_SOURCE) $@
+	@if [ ! -L "$(PRE_COMMIT_DEST)" ]; then \
+		ln -s $(PRE_COMMIT_SOURCE) $@; \
+	fi
 
 install-hooks: $(PRE_COMMIT_DEST)
 	@echo "Git hooks installed"
@@ -76,7 +79,7 @@ install-python: $(ACTIVATE)
 
 # INSTALL/UPDATE everything (from current repo)
 install:
-	$(MAKE) install-python && $(MAKE) build
+	$(MAKE) install-python
 	# $(MAKE) install-client
 
 update: install
@@ -94,15 +97,14 @@ pull-clean:
 .PHONY: update-repo pull pull-clean
 
 # RUN SERVER
-serve: $(ACTIVATE)
+serve: $(ENV)
 	@echo "Running local server"
-	. $(ACTIVATE) && \
-	if [ -f "$(HEROKU_EXE)" ]; then
-		echo "$(HEROKU_EXE) is present"
-		heroku local
-	else 
-		echo "$(HEROKU_EXE) does not exist"
-		gunicorn wsgi:app
+	@echo
+	@. $(ENV) && \
+	if [ -f "$(HEROKU_EXE)" ]; then \
+		heroku local; \
+	else \
+		gunicorn wsgi:app; \
 	fi
 .PHONY: serve
 

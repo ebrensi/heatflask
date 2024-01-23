@@ -73,8 +73,6 @@ DotLayer = {
 
         this._items = new Map();
         this._lru = new Map();  // turn this into a real LRU-cache
-
-        // this.WorkerPool.initialize(this.options["numWorkers"], options["dotWorkerUrl"]);
     },
 
     UTCnowSecs: function () {
@@ -312,43 +310,6 @@ DotLayer = {
         }
         else if (this._paused)
             this.drawDots();
-
-        // if (ns)
-        //     console.log(`simplify: ${ns} -> ${ns2} in ${~~(t1-t0)}:  ${(ns-ns2)/(t1-t0)}`)
-
-
-        /*
-
-        const tbls = [],
-              pxs = new Map(),
-              items = this._items;
-
-        toSimplify.forEach(i => {
-            const A = itemsArray[i];
-            tbls.push(A.px.buffer);
-            pxs.set(A.id, A.px);
-        });
-
-        const promise = this.WorkerPool.post({"simplify": {
-            "tol": this.ViewBox.tol(zoom),
-            "px": pxs
-        }}, tbls);
-
-        promise.then(result => {
-            let i = 0,
-                args = result["simplify"];
-                                debugger;
-
-            args["px"].forEach((px, id) => {
-                const A = items[id];
-                A.px = px;
-                A.idxSet[zoom] = BitSet.fromWords(result["simplify"]["idx"][i++]);
-            });
-        });
-
-       */
-
-
     },
 
     addItem: function (id, polyline, pathColor, time, UTCtimestamp, llBounds, n) {

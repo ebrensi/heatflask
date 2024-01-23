@@ -3,9 +3,12 @@
 .hidden
 .fuse*
 
+__pycache__
+
 heatflask/static/.webassets-cache/
 .webassets-cache/*
 */gen/build/
 
+.venv
 .env
 .activate

@@ -30,7 +30,6 @@ Leaflet_js = flask_assets.Bundle(
 
 DotLayer_js = flask_assets.Bundle(
     "../_DotLayer.js",
-    "../DotLayer.WorkerPool.js",
     "../DotLayer.ViewBox.js",
     "../DotLayer.DrawBox.js",
     "../DotLayer.js",
@@ -77,19 +76,11 @@ bundles = {
                 "../heatflask.js",
             ),
         ),
-        filters=["closure_js"],
+        filters=["jsmin"],
         output="gen/dependencies.js",
     ),
     "gifjs_webworker_js": flask_assets.Bundle(
         "js/gif.worker.js", output="gen/gif.worker.js"
-    ),
-    "DotLayerWorker_js": flask_assets.Bundle(
-        "../dotLayerWorker.js",
-        "js/BitSet.js",
-        "js/Codecs.js",
-        "js/MapUtil.js",
-        filters=["closure_js"],
-        output="gen/dotLayer.worker.js",
     ),
     #  For the Splash page
     "splash_css": flask_assets.Bundle(
@@ -111,7 +102,7 @@ bundles = {
         "js/strava.js",
         "js/appUtil.js",
         "js/Dom.js",
-        filters=["closure_js"],
+        filters=["jsmin"],
         output="gen/basic_table.js",
     ),
 }
