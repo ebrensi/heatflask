@@ -13,6 +13,9 @@ If for some reason you want to work on this, you will need a Linux environment. 
          postgres=# create user heatflask with password 'heatflask';
          postgres=# grant all privileges on database heatflask to heatflask;
         ``` 
+    * Redis and MongoDB will initialize themselves on first run.
+  
+  * To run the server execute `make serve`.   
 
 
 ## License
