@@ -16,7 +16,7 @@ BLACK_FILES=$(git diff --cached --name-only --diff-filter=ACMR "*.py")
 if [ ! -z "$BLACK_FILES" ]; then
 
     # Prettify selected files
-    echo "$BLACK_FILES" | xargs .venv/geminae-backend/bin/black;
+    echo "$BLACK_FILES" | xargs .venv/heatflask/bin/black;
 
     # Add back the modified/prettified files to staging
     echo "$BLACK_FILES" | xargs git add;
