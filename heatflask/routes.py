@@ -36,7 +36,7 @@ from .models import (
     Utility,
     Webhooks,
     Index,
-    BinaryWebsocketClient,
+    BinaryWebsocketServer,
     StravaClient,
 )
 
@@ -436,15 +436,14 @@ def update_share_status(username):
     return jsonify(user=user.id, share=status)
 
 
-@sock.route("/data_socket")
+@sock.route("/data_socket", websocket=True)
 def data_socket(ws):
-    log.info("ws %s", ws)
     if not ws:
         # abort(400, "Expected WebSocket request")
         log.info("Expected WebSocket request")
         return
 
-    wsclient = BinaryWebsocketClient(ws)
+    wsclient = BinaryWebsocketServer(ws)
 
     while not wsclient.closed:
         obj = wsclient.receiveobj()

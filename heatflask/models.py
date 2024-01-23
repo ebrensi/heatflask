@@ -22,7 +22,7 @@ import dateutil.parser
 from sqlalchemy import inspect
 from flask import current_app as app
 from flask_login import UserMixin
-from geventwebsocket import WebSocketError
+from flask_sock import ConnectionClosed
 from sqlalchemy.dialects import postgresql as pg
 from requests.exceptions import HTTPError
 
@@ -2030,7 +2030,7 @@ class Timer(object):
         return round(time.time() - self.start, 2)
 
 
-class BinaryWebsocketClient(object):
+class BinaryWebsocketServer:
     # WebsocketClient is a wrapper for a websocket
     #  It attempts to gracefully handle broken connections
     def __init__(self, websocket, ttl=60 * 60 * 24):
@@ -2050,46 +2050,40 @@ class BinaryWebsocketClient(object):
         self.send_key()
 
         self.gpool = gevent.pool.Pool(2)
-        self.gpool.spawn(self._pinger)
+        self.closed = False
 
     def __repr__(self):
         return self.key
 
-    @property
-    def closed(self):
-        return self.ws.closed
-
     # We send and receive json objects (dictionaries) encoded as strings
     def sendobj(self, obj):
-        if not self.ws:
-            return
-
         try:
-            b = bytes(msgpack.packb(obj))
-            self.ws.send(b)
-        except WebSocketError:
-            pass
+            self.ws.send(bytes(msgpack.packb(obj)))
+        except ConnectionClosed:
+            self.closed = True
         except Exception:
             log.exception("error in sendobj")
             self.close()
-            return
-
-        return True
+        else:
+            return True
 
     def receiveobj(self):
         try:
             s = self.ws.receive()
             obj = json.loads(s)
+        except ConnectionClosed:
+            self.closed = True
         except (TypeError, ValueError):
             if s:
                 log.info("%s recieved non-json-object: %s", self, s)
         except Exception:
             log.exception("error in receiveobj")
-            return
         else:
             return obj
 
     def close(self):
+        if self.closed:
+            return
         opensecs = int(time.time() - self.birthday)
         elapsed = timedelta(seconds=opensecs)
         log.debug("%s CLOSED. elapsed=%s", self.key, elapsed)
@@ -2099,6 +2093,7 @@ class BinaryWebsocketClient(object):
         except Exception:
             pass
         self.gpool.kill()
+        self.closed = True
 
     def send_key(self):
         self.sendobj(dict(wskey=self.key))
@@ -2108,26 +2103,9 @@ class BinaryWebsocketClient(object):
         watchdog = self.gpool.spawn(self._watchdog, gen)
 
         for obj in gen:
-            if self.closed:
+            if not self.sendobj(obj):
                 break
-            self.sendobj(obj)
-
         watchdog.kill()
-
-    def _pinger(self, delay=25):
-        # This method runs in a separate thread, sending a ping message
-        #  periodically, to keep connection from timing out.
-        while not self.closed:
-            gevent.sleep(25)
-            try:
-                self.ws.send_frame("ping", self.ws.OPCODE_PING)
-            except WebSocketError:
-                log.debug("can't ping. closing...")
-                self.close()
-                return
-            except Exception:
-                log.exception("%s error sending ping", self)
-            # log.debug("%s sent ping", self)
 
     def _watchdog(self, gen):
         # This method runs in a separate thread, monitoring socket
