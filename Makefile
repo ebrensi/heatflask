@@ -28,7 +28,7 @@ clean-temp:
 clean-venv:
 	@echo "Cleaning Python virtual environment"
 	-rm -rf ./.venv/
-	-rm -f $(ENV)
+	-rm -f $(LOCAL_ACTIVATE)
 
 clean-python:
 	@echo "Cleaning Python files"
