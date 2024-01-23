@@ -9,7 +9,6 @@ import itertools
 from functools import wraps
 from datetime import datetime, timedelta
 from urllib.parse import urlparse, urlunparse
-from werkzeug.routing import Rule
 
 # Third party imports
 import base36
@@ -26,9 +25,10 @@ from flask import (
     send_from_directory,
 )
 from flask_login import current_user, login_user, logout_user
+from geventwebsocket import WebSocketServer, WebSocketError
 
 # Local imports
-from .app import login_manager, redis, mongo, sockets
+from .app import login_manager, redis, mongo
 
 from .models import (
     Users,
@@ -437,9 +437,15 @@ def update_share_status(username):
     return jsonify(user=user.id, share=status)
 
 
-@sockets.route("/data_socket", websocket=True)
-def data_socket(ws):
-    log.info("ws: ", ws)
+@app.route("/data_socket")
+def data_socket():
+    ws = request.environ.get("wsgi.websocket")
+    log.info("ws %s", ws)
+    if not ws:
+        # abort(400, "Expected WebSocket request")
+        log.info("Expected WebSocket request")
+        return
+
     wsclient = BinaryWebsocketClient(ws)
 
     while not wsclient.closed:
@@ -473,9 +479,6 @@ def data_socket(ws):
 
     wsclient.close()
     # log.debug("socket {} CLOSED".format(name))
-
-
-sockets.url_map.add(Rule("/data_socket", endpoint=data_socket, websocket=True))
 
 
 #  Endpoints for named demos

@@ -1,4 +1,5 @@
 gevent~=23.9.0
+gevent-websocket
 flask~=3.0.1
 stravalib~=1.5
 rjsmin~=1.2.2
@@ -10,7 +11,6 @@ flask-login~=0.6.3
 flask-assets~=2.1.0
 flask-sslify~=0.1.5
 flask-pymongo~=2.3.0
-flask-sockets~=0.2.1
 flask-compress~=1.14
 flask-analytics~=0.6.0
 flask-sqlalchemy~=3.1.1
