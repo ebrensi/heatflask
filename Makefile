@@ -32,7 +32,7 @@ clean-venv:
 
 clean-python:
 	@echo "Cleaning Python files"
-	-rm -rf *.spec
+	-rm -rf *.spec heatflask/static/gen
 	-for f in $(PYTHON_FOLDERS); do \
 		rm -rf $$f/__pycache__/ $$f/.mypy_cache/; \
 	done
