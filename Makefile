@@ -6,8 +6,8 @@ PYTHON = python3.12
 PYTHON_FOLDERS = . ./heatflask
 VENV_FOLDER= ./.venv/heatflask
 
-GIT_HOOKS_FOLDER=.git/hooks
-PRE_COMMIT_SOURCE=.githooks/pre-commit
+GIT_HOOKS_FOLDER=./.git/hooks
+PRE_COMMIT_SOURCE=../../.githooks/pre-commit
 PRE_COMMIT_DEST=$(GIT_HOOKS_FOLDER)/pre-commit
 
 ACTIVATE=$(VENV_FOLDER)/bin/activate
@@ -37,7 +37,11 @@ clean-python:
 		rm -rf $$f/__pycache__/ $$f/.mypy_cache/; \
 	done
 
-clean-all: clean-temp clean-python clean-venv
+clean-hooks:
+	@echo "Cleaning hooks"
+	-rm $(PRE_COMMIT_DEST)	
+
+clean-all: clean-temp clean-python clean-venv clean-hooks
 .PHONY: clean-temp clean-venv clean-python clean-all
 
 # INSTALL HOOKS

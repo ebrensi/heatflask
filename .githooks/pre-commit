@@ -2,15 +2,15 @@
 
 # This is a pre-commit hook that auto-formats ceartain files
 
-PRETTIER_FILES=$(git diff --cached --name-only --diff-filter=ACMR "*.js" "*.ts" "*.html" "*.css" "*.jsx" | sed 's| |\\ |g')
-
-if [ ! -z "$PRETTIER_FILES" ]; then
-    # Prettify selected files
-    echo "$PRETTIER_FILES" | xargs ./Client/node_modules/.bin/prettier --write;
-
-    # Add back the modified/prettified files to staging
-    echo "$PRETTIER_FILES" | xargs git add;
-fi
+# PRETTIER_FILES=$(git diff --cached --name-only --diff-filter=ACMR "*.js" "*.ts" "*.html" "*.css" "*.jsx" | sed 's| |\\ |g')
+# 
+# if [ ! -z "$PRETTIER_FILES" ]; then
+    # # Prettify selected files
+    # echo "$PRETTIER_FILES" | xargs ./Client/node_modules/.bin/prettier --write;
+# 
+    # # Add back the modified/prettified files to staging
+    # echo "$PRETTIER_FILES" | xargs git add;
+# fi
 
 BLACK_FILES=$(git diff --cached --name-only --diff-filter=ACMR "*.py")
 if [ ! -z "$BLACK_FILES" ]; then
