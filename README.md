@@ -8,7 +8,8 @@ modify/update the `master` branch with some incrimental changes.  Maybe I can in
 If for some reason you want to work on this, you will need a Linux environment.  From the root of this repo, run `make`, and then copy `env.sample` to `.env` and update the environment variables in that file.
   * You will need to have `redis`,`mongodb`, and `postgresql` installed.
     * After installing postgres, create a User/Role and database:
-      ```sudo -u postgres psql
+      ```
+         sudo -u postgres psql
          postgres=# create database heatflask;
          postgres=# create user heatflask with password 'heatflask';
          postgres=# grant all privileges on database heatflask to heatflask;
