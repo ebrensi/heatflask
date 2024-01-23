@@ -47,7 +47,7 @@
     }
 
 
-    let data = {{ events| tojson }},
+    let data = {{ events|tojson }},
     table = $('#events_table').DataTable({
       pageLength: 100,
       data: data,

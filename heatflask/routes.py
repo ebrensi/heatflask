@@ -390,6 +390,7 @@ def main(username):
             event.update({"profile": current_user.profile, "cuid": current_user.id})
 
         EventLogger.new_event(**event)
+    log.info("query: %s", query)
     return render_template("main.html", **query)
 
 

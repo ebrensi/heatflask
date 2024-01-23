@@ -20,7 +20,7 @@
 
     <script>
         const user_profile_url = "{{ url_for('user_profile', username='') }}",
-            data = {{ events| tojson }};
+            data = {{ events|tojson }};
 
         function formatID(data, type, row) {
             if (data) {

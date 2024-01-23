@@ -76,7 +76,7 @@ bundles = {
                 "../heatflask.js",
             ),
         ),
-        filters=["jsmin"],
+        # filters=["jsmin"],
         output="gen/dependencies.js",
     ),
     "gifjs_webworker_js": flask_assets.Bundle(
@@ -102,7 +102,7 @@ bundles = {
         "js/strava.js",
         "js/appUtil.js",
         "js/Dom.js",
-        filters=["jsmin"],
+        # filters=["jsmin"],
         output="gen/basic_table.js",
     ),
 }

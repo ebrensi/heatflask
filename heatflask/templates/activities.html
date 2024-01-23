@@ -19,8 +19,8 @@
   {% endif %}
 
   <script type="text/javascript">
-    const OFFLINE = {{ config.get('OFFLINE') | tojson }},
-    ADMIN = {{ (current_user.is_authenticated and current_user.is_admin())| tojson | safe }},
+    const OFFLINE = {{ config.get('OFFLINE') |tojson }},
+    ADMIN = {{ (current_user.is_authenticated and current_user.is_admin())|tojson | safe }},
     MEASURMENT_PREFERENCE = "{{ current_user.measurement_preference if current_user.is_authenticated else user.measurement_preference }}",
       USER_ID = "{{ user.id }}",
       DIST_UNIT = (MEASURMENT_PREFERENCE == "feet") ? 1609.34 : 1000.0,

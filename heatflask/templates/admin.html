@@ -97,7 +97,7 @@
 
         }
 
-        const data = {{ data| tojson }};
+        const data = {{ data|tojson }};
         let atable = $('#users_table').DataTable({
             pageLength: 50,
             lengthMenu: [50, 100, 500, 1000, 2000, -1],
@@ -133,53 +133,6 @@
 
         $(".preset").on("change", preset_sync);
 
-        /*  not working right now
-        $("#renderButton").click(function() {
-            const date1 = $("#date1").val(),
-                  date2 = $("#date2").val(),
-                  type = $("#select_type").val(),
-                  num = $("#select_num").val(),
-                  key_name = $("#key").val(),
-                  limit = (type == "activities")? Math.max(1, +num) : null,
-                  after = date1? date1 : null,
-                  before = (date2 && date2 != "now")? date2 : null,
-                  APP_URL = "{{ url_for('main', username='') }}";
-
-
-
-            let userIds = atable.rows( { selected: true } ).ids().toArray(),
-                query = {
-                    summaries: true,
-                    streams: true,
-                    owner_id: true,
-                    build_index: false,
-                    cache_timeout: 60
-                },
-                query_all = {};
-
-            if (limit) {
-                query.limit = limit;
-            } else {
-                if (after) {
-                    query.after = after;
-                }
-                if (before) {
-                    query.before = before;
-                }
-            }
-
-            for (let i=0, len=userIds.length; i<len; i++) {
-                query_all[userIds[i]] = query;
-            }
-
-            metaQuery = {
-                "key_timeout": 2 * 24 * 60 * 60, // 2 days
-                "key_name": key_name,
-                "query": query_all
-            };
-
-        });
-        */
     </script>
 </body>
 
