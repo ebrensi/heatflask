@@ -29,10 +29,7 @@ class Config(object):
     # ASSETS_DEBUG = False
     # ASSETS_CACHE = False
     # ASSETS_MANIFEST = None
-    CLOSURE_COMPRESSOR_OPTIMIZATION = "SIMPLE"
-    # CLOSURE_EXTRA_ARGS = [
-    #     # "--debug"
-    # ]
+
     # Concurrency for User database triage
     TRIAGE_CONCURRENCY = 5
 
@@ -57,9 +54,6 @@ class Config(object):
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
 
     MONGO_OPTIONS = {"maxIdleTimeMS": 10000, "maxPoolSize": 100}
-
-    MONGO_URI = os.environ.get("MONGODB_URI")
-    REDIS_URL = os.environ.get("REDIS_URL")
 
     SECS_IN_HOUR = 60 * 60
     SECS_IN_DAY = 24 * SECS_IN_HOUR
@@ -153,8 +147,6 @@ class ProductionConfig(Config):
     (the main app running on Heroku)
     """
 
-    ANALYTICS = {"GOOGLE_UNIVERSAL_ANALYTICS": {"ACCOUNT": "UA-85621398-1"}}
-
     DEBUG = False
 
     # Turn off webassets building for production, but we need to make sure
@@ -203,9 +195,9 @@ class DevelopmentConfig(Config):
     """
 
     # OFFLINE setting suppresses any internet access
-    OFFLINE = os.environ.get("OFFLINE", False)
+    OFFLINE = bool(os.environ.get("OFFLINE", False))
 
-    USE_REMOTE_DB = False if OFFLINE else os.environ.get("USE_REMOTE_DB")
+    USE_REMOTE_DB = False if OFFLINE else bool(os.environ.get("USE_REMOTE_DB"))
 
     DEVELOPMENT = True
     DEBUG = True
@@ -218,12 +210,19 @@ class DevelopmentConfig(Config):
     # ASSETS_DEBUG = "merge"
     # ASSETS_AUTO_BUILD = True
 
+    # DEFAULTS FOR LOCAL DEVELOPMENT
+    LOCALHOST = "127.0.0.1"
+    SQLALCHEMY_DATABASE_URI = f"postgresql://heatflask:heatflask@{LOCALHOST}:5432/heatflask"
+    MONGO_URI = f"mongodb://{LOCALHOST}:27017/heatflask"
+    REDIS_URL = f"redis://{LOCALHOST}:6379"
+
     if USE_REMOTE_DB:
         MONGO_URI = os.environ.get("REMOTE_MONGODB_URL")
         SQLALCHEMY_DATABASE_URI = os.environ.get("REMOTE_POSTGRES_URL")
-        REDIS_URL = os.environ.get("REMOTE_REDIS_URL", Config.REDIS_URL)
+        REDIS_URL = os.environ.get("REMOTE_REDIS_URL", REDIS_URL)
 
     else:
+
         # How long we Redis-cache Activity stream data
         TTL_CACHE = 2 * Config.SECS_IN_HOUR
 

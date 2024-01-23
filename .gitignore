@@ -12,3 +12,6 @@ heatflask/static/.webassets-cache/
 .venv
 .env
 .activate
+
+# Allow this file to be included in production build
+heatflask/static/gen/*

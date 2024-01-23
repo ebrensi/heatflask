@@ -652,13 +652,6 @@ class Users(UserMixin, db_sql.Model):
         if ("n" in stats) or import_stats:
             EventLogger.new_event(msg="{} fetch {}".format(self, stats))
 
-    def make_payment(self, amount):
-        success = Payments.add(self, amount)
-        return success
-
-    def payment_record(self, after=None, before=None):
-        return Payments.get(self, after=after, before=before)
-
 
 class Index(object):
     name = "index"
@@ -1738,7 +1731,7 @@ class EventLogger(object):
 
     @classmethod
     def init_db(cls, rebuild=True, size=app.config["MAX_HISTORY_BYTES"]):
-        collections = mongodb.collection_names(include_system_collections=False)
+        collections = mongodb.list_collection_names()
 
         if (cls.name in collections) and rebuild:
             all_docs = cls.db.find()
@@ -1842,7 +1835,7 @@ class Webhooks(object):
             log.exception("error creating subscription")
             return dict(error=str(e))
 
-        if "updates" not in mongodb.collection_names():
+        if "updates" not in mongodb.list_collection_names():
             mongodb.create_collection("updates", capped=True, size=1 * 1024 * 1024)
         log.info("create_subscription: %s", subs)
         return dict(created=subs)
@@ -1947,52 +1940,6 @@ class Webhooks(object):
         for u in updates:
             u["_id"] = str(u["_id"])
             yield u
-
-
-class Payments(object):
-    name = "payments"
-    db = mongodb.get_collection(name)
-
-    @classmethod
-    def init_db(cls):
-        try:
-            mongodb.drop_collection(cls.name)
-
-            # create new indexes collection
-            mongodb.create_collection(cls.name)
-            cls.db.create_index([("ts", pymongo.DESCENDING)])
-            cls.db.create_index([("user", pymongo.ASCENDING)])
-        except Exception:
-            log.exception("mongodb error for %s collection", cls.name)
-
-        log.info("initialized '%s' collection", cls.name)
-
-    @staticmethod
-    def get(user=None, before=None, after=None):
-        query = {}
-
-        tsfltr = {}
-        if before:
-            tsfltr["$gte"] = before
-        if after:
-            tsfltr["$lt"] = after
-        if tsfltr:
-            query["ts"] = tsfltr
-
-        field_selector = {"_id": False}
-        if user:
-            query["user"] = user.id
-            field_selector["user"] = False
-
-        docs = list(mongodb.payments.find(query, field_selector))
-
-        return docs
-
-    @staticmethod
-    def add(user, amount):
-        mongodb.payments.insert_one(
-            {"user": user.id, "amount": amount, "ts": datetime.utcnow()}
-        )
 
 
 class Utility:

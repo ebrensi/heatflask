@@ -1,15 +1,16 @@
-
-from datetime import datetime
 import os
+import psycopg2
+from psycopg2 import sql
+from datetime import datetime
+from urllib.parse import urlparse
 
-from werkzeug.debug import DebuggedApplication
 from flask import Flask
+from werkzeug.debug import DebuggedApplication
 from flask_sqlalchemy import SQLAlchemy
 from flask_redis import FlaskRedis
 from flask_pymongo import PyMongo
 from flask_compress import Compress
 from flask_login import LoginManager
-# from flask_analytics import Analytics
 from flask_sslify import SSLify
 from flask_sockets import Sockets
 from flask_assets import Environment
@@ -54,7 +55,7 @@ def create_app():
         assets.init_app(app)
         limiter.init_app(app)
 
-        from .models import Activities, EventLogger, Index, Payments
+        from .models import Activities, EventLogger, Index
 
         import heatflask.routes
 
@@ -62,7 +63,7 @@ def create_app():
         db_sql.create_all()
 
         mongodb = mongo.db
-        collections = mongodb.collection_names()
+        collections = mongodb.list_collection_names()
 
         if EventLogger.name not in collections:
             EventLogger.init_db()
@@ -76,9 +77,6 @@ def create_app():
             Index.init_db()
         else:
             Index.update_ttl()
-
-        if Payments.name not in collections:
-            Payments.init_db()
 
         if app.debug:
             app.wsgi_app = DebuggedApplication(app.wsgi_app, evalex=True)
