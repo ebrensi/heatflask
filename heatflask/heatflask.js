@@ -377,29 +377,6 @@ function heatflask() {
                 updateState();
             }
         });
-
-        // $(".shadow-dial").knob({
-        //         min: 0,
-        //         max: 10,
-        //         step: 0.01,
-        //         width: "60",
-        //         height: "60",
-        //         cursor: 20,
-        //         inline: true,
-        //         displayInput: false,
-        //         change: function (val) {
-        //             if (!dotLayer) return;
-
-        //             if (this.$[0].id == "shadowHeight")
-        //                 dotLayer.updateDotSettings(null, {"y": val});
-        //             else
-        //                 dotLayer.updateDotSettings(null, {"blur": val+2});
-        //         },
-
-        //         release: function() {
-        //             dotLayer._redraw(true);
-        //         }
-        // });
     })();
 
 

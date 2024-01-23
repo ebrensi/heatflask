@@ -9,6 +9,7 @@ import itertools
 from functools import wraps
 from datetime import datetime, timedelta
 from urllib.parse import urlparse, urlunparse
+from werkzeug.routing import Rule
 
 # Third party imports
 import base36
@@ -436,8 +437,9 @@ def update_share_status(username):
     return jsonify(user=user.id, share=status)
 
 
-@sockets.route("/data_socket")
+@sockets.route("/data_socket", websocket=True)
 def data_socket(ws):
+    log.info("ws: ", ws)
     wsclient = BinaryWebsocketClient(ws)
 
     while not wsclient.closed:
@@ -471,6 +473,9 @@ def data_socket(ws):
 
     wsclient.close()
     # log.debug("socket {} CLOSED".format(name))
+
+
+sockets.url_map.add(Rule("/data_socket", endpoint=data_socket, websocket=True))
 
 
 #  Endpoints for named demos
@@ -606,15 +611,6 @@ def users_update():
 
     iterator = Users.triage(days_inactive_cutoff=days, delete=delete, update=update)
     return "ok"
-
-    # stream = (
-    #     "{}: {}\n".format(id, status)
-    #     for id, status in iterator
-    # )
-    # return Response(
-    #     stream_with_context(stream),
-    #     mimetype='text/event-stream'
-    # )
 
 
 @app.route("/users/<username>")
