@@ -23,7 +23,7 @@ cssmin
 base36
 
 python-dateutil
-psycopg2==2.8
+psycopg2-binary~=2.9.9
 gevent==1.4
 
 wsaccel
