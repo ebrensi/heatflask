@@ -19,6 +19,19 @@ Added modern Nix flake-based development environment with:
 - **MongoDB** - Local instance with configuration
 - **Redis** - Local instance with configuration
 - **Python 3.11** - Modern Python with venv support
+- **Node.js 20** - For frontend asset building
+
+#### Multi-Framework Support
+The dev environment supports both Flask and Sanic-based branches:
+- **Flask** (master, main-fix, bundle) - Gunicorn with gevent workers
+- **Sanic** (new-backend) - Async web framework with Motor/aioredis
+
+#### Build Dependencies
+Includes all system libraries needed for Python packages:
+- **psycopg2-binary** - PostgreSQL adapter (with libpq)
+- **numpy** - Scientific computing (with BLAS/LAPACK)
+- **hiredis** - High-performance Redis protocol parser
+- **Cython** - For compiled Python extensions
 
 #### Helper Commands
 ```bash
@@ -32,6 +45,12 @@ heatflask-run             # Run the application with auto-reload
 - Automatic environment activation with `.envrc`
 - Requires [direnv](https://direnv.net/) installed
 - Run `direnv allow` once to enable
+
+#### Smart Branch Detection
+The `heatflask-run` command automatically detects which framework to use:
+- Checks for Sanic backend → runs with Sanic dev server
+- Falls back to Flask → runs with Gunicorn
+- Uses `backend/dev-run` script if available on Sanic branches
 
 #### File Structure
 ```
@@ -52,7 +71,7 @@ flake.lock          # Locked dependency versions
 # Enter the development shell (or use direnv)
 nix develop
 
-# One-time setup
+# One-time setup (creates databases + Python venv)
 heatflask-setup
 
 # Start services
@@ -62,8 +81,29 @@ heatflask-start-services
 cp .env.sample .env
 # Edit .env with your Strava API keys
 
-# Run the app
+# Run the app (auto-detects Flask or Sanic)
 heatflask-run
+```
+
+### Using Different Branches
+
+The same dev environment works for all branches:
+
+```bash
+# Flask (main-fix)
+git checkout main-fix
+nix develop
+heatflask-setup  # Installs Flask dependencies
+heatflask-start-services
+heatflask-run    # Runs with Gunicorn
+
+# Sanic (new-backend)
+git checkout new-backend
+rm -rf .venv  # Clean slate
+nix develop
+heatflask-setup  # Installs Sanic dependencies
+heatflask-start-services
+heatflask-run    # Runs with Sanic
 ```
 
 ## Quick Start (Traditional)

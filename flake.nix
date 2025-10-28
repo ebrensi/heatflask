@@ -16,6 +16,7 @@
 
         # Python environment with essential packages
         # Most dependencies will be installed via pip from requirements.txt
+        # This includes build dependencies for packages like numpy, psycopg2, etc.
         pythonEnv = pkgs.python311.withPackages (ps: with ps; [
           # Essential build/dev tools
           pip
@@ -23,9 +24,13 @@
           wheel
           virtualenv
 
+          # Build dependencies for compiled extensions
+          cython
+
           # Development tools
           black
           ipython
+          jupyter
         ]);
 
         # PostgreSQL with custom config
@@ -86,9 +91,19 @@
             python -m venv .venv
             echo "Installing Python dependencies..."
             source .venv/bin/activate
-            pip install --upgrade pip
-            pip install -r requirements.txt
-            pip install -r requirements-dev.txt 2>/dev/null || true
+            pip install --upgrade pip setuptools wheel
+
+            # Install from requirements files based on what exists
+            if [ -f "backend/requirements.txt" ]; then
+              echo "Installing backend dependencies (Sanic)..."
+              pip install -r backend/requirements.txt
+              pip install -r backend/requirements-dev.txt 2>/dev/null || true
+            elif [ -f "requirements.txt" ]; then
+              echo "Installing dependencies (Flask)..."
+              pip install -r requirements.txt
+              pip install -r requirements-dev.txt 2>/dev/null || true
+            fi
+
             deactivate
           fi
 
@@ -173,7 +188,7 @@
           echo "All services stopped!"
         '';
 
-        # Run app script
+        # Run app script (detects Flask vs Sanic)
         runAppScript = pkgs.writeShellScriptBin "heatflask-run" ''
           echo "Starting Heatflask web application..."
           echo ""
@@ -191,22 +206,18 @@
           SERVICES_OK=true
 
           if ! ${pkgs.postgresql_17}/bin/pg_isready -h localhost -p 5432 > /dev/null 2>&1; then
-            echo "ERROR: PostgreSQL is not running. Run 'heatflask-start-services' first."
-            SERVICES_OK=false
+            echo "WARNING: PostgreSQL is not running. Some features may not work."
+            echo "         Run 'heatflask-start-services' to start all services."
           fi
 
           if ! ${pkgs.redis}/bin/redis-cli ping > /dev/null 2>&1; then
-            echo "ERROR: Redis is not running. Run 'heatflask-start-services' first."
-            SERVICES_OK=false
+            echo "WARNING: Redis is not running. Some features may not work."
+            echo "         Run 'heatflask-start-services' to start all services."
           fi
 
           if ! ${pkgs.mongodb}/bin/mongosh --eval "db.version()" > /dev/null 2>&1; then
-            echo "ERROR: MongoDB is not running. Run 'heatflask-start-services' first."
-            SERVICES_OK=false
-          fi
-
-          if [ "$SERVICES_OK" = false ]; then
-            exit 1
+            echo "WARNING: MongoDB is not running. Some features may not work."
+            echo "         Run 'heatflask-start-services' to start all services."
           fi
 
           # Set environment variables if not set
@@ -215,6 +226,7 @@
           export MONGO_URI=''${MONGO_URI:-mongodb://localhost:27017/heatflask}
           export REDIS_URL=''${REDIS_URL:-redis://localhost:6379}
 
+          echo ""
           echo "Environment configured:"
           echo "  APP_SETTINGS: $APP_SETTINGS"
           echo "  DATABASE_URL: $DATABASE_URL"
@@ -222,13 +234,30 @@
           echo "  REDIS_URL: $REDIS_URL"
           echo ""
 
-          # Run with gunicorn
-          exec gunicorn wsgi:app \
-            --worker-class flask_sockets.worker \
-            --timeout 20 \
-            --log-level=debug \
-            --reload \
-            "''${@}"
+          # Detect which framework to use
+          if [ -f "backend/heatflask/webserver/serve.py" ] || python -c "import sanic" 2>/dev/null; then
+            echo "Detected Sanic backend"
+            if [ -f "backend/dev-run" ]; then
+              echo "Using backend/dev-run script"
+              cd backend && exec ./dev-run "''${@}"
+            else
+              echo "Running Sanic directly..."
+              cd backend 2>/dev/null || true
+              exec python -m heatflask.webserver.serve "''${@}"
+            fi
+          elif [ -f "wsgi.py" ]; then
+            echo "Detected Flask backend (gunicorn)"
+            exec gunicorn wsgi:app \
+              --worker-class flask_sockets.worker \
+              --timeout 20 \
+              --log-level=debug \
+              --reload \
+              "''${@}"
+          else
+            echo "ERROR: Could not detect application type (Flask or Sanic)"
+            echo "       Make sure you're in the correct directory"
+            exit 1
+          fi
         '';
 
       in
@@ -243,9 +272,28 @@
             mongodb
             redis
 
-            # Build tools
+            # Build tools and libraries for Python packages
             gcc
             gnumake
+            pkg-config
+
+            # Libraries needed for Python package compilation
+            zlib
+            openssl
+            libffi
+            readline
+            ncurses
+
+            # For numpy and scientific packages
+            blas
+            lapack
+            gfortran
+
+            # For psycopg2
+            postgresql_17.lib
+
+            # For hiredis (aioredis dependency)
+            hiredis
 
             # Development utilities
             git
@@ -253,8 +301,9 @@
             htop
             jq
             curl
+            wget
 
-            # Node.js for frontend assets (if needed)
+            # Node.js for frontend assets
             nodejs_20
 
             # Helper scripts
@@ -272,18 +321,24 @@
             echo "PostgreSQL: $(postgres --version | head -n1)"
             echo "MongoDB:    $(mongod --version | head -n1)"
             echo "Redis:      $(redis-server --version)"
+            echo "Node.js:    $(node --version)"
             echo ""
             echo "Available commands:"
             echo "  heatflask-setup           - Initialize data directories and databases"
             echo "  heatflask-start-services  - Start PostgreSQL, MongoDB, and Redis"
             echo "  heatflask-stop-services   - Stop all services"
-            echo "  heatflask-run             - Run the web application (after starting services)"
+            echo "  heatflask-run             - Run the web application (Flask or Sanic)"
             echo ""
             echo "Quick start:"
             echo "  1. heatflask-setup"
             echo "  2. heatflask-start-services"
             echo "  3. Configure your .env file with Strava API keys"
             echo "  4. heatflask-run"
+            echo ""
+            echo "Supported branches:"
+            echo "  - master/main-fix: Flask + Gunicorn"
+            echo "  - new-backend: Sanic async backend"
+            echo "  - bundle: Flask + WASM frontend"
             echo ""
 
             # Add .data and .venv to gitignore if not already there
@@ -319,11 +374,43 @@ EOF
             fi
           '';
 
-          # Environment variables
+          # Environment variables for PostgreSQL
           PGDATA = ".data/postgresql";
           PGHOST = "localhost";
           PGPORT = "5432";
           PGDATABASE = "heatflask";
+
+          # Build environment variables for Python package compilation
+          LDFLAGS = "-L${pkgs.lib.makeLibraryPath [
+            pkgs.zlib
+            pkgs.openssl
+            pkgs.libffi
+            pkgs.readline
+            pkgs.ncurses
+            pkgs.postgresql_17.lib
+            pkgs.hiredis
+          ]}";
+
+          CPPFLAGS = "-I${pkgs.lib.makeIncludePath [
+            "${pkgs.zlib.dev}/include"
+            "${pkgs.openssl.dev}/include"
+            "${pkgs.libffi.dev}/include"
+            "${pkgs.readline.dev}/include"
+            "${pkgs.ncurses.dev}/include"
+            "${pkgs.postgresql_17}/include"
+            "${pkgs.hiredis}/include"
+          ]}";
+
+          # Help Python find PostgreSQL for psycopg2
+          LIBRARY_PATH = "${pkgs.lib.makeLibraryPath [
+            pkgs.postgresql_17.lib
+            pkgs.openssl
+            pkgs.zlib
+          ]}";
+
+          # For hiredis Python bindings
+          HIREDIS_LIBRARY_PATH = "${pkgs.hiredis}/lib";
+          HIREDIS_INCLUDE_PATH = "${pkgs.hiredis}/include";
         };
       }
     );
