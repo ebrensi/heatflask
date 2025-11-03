@@ -6,7 +6,7 @@ requests
 pymongo[srv]
 polyline==1.4
 msgpack==0.6
-gunicorn==20
+gunicorn==22.0.0
 flask==1
 flask-redis
 flask-login
