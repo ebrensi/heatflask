@@ -64,8 +64,6 @@ export class Activity {
   idxSet: { [zoom: number]: BitSet }
   badSegIdx: { [zoom: number]: number[] }
   segMask: SegMask
-  lastSegMask: SegMask
-  _segMaskUpdates: SegMask
   pxGaps: null | number[]
 
   _containedInMapBounds: boolean
@@ -250,19 +248,12 @@ export class Activity {
    *  this idxSet.
    */
   updateSegMask(viewportPxBounds: Bounds, zoom: number): SegMask {
-    /* Later we will compare this segMask with the last one so that
-     *  we only draw or erase parts of the path that have come
-     *  into view or are no longer on screen
-     */
-    if (!this.segMask) {
-      this.segMask = new BitSet()
-      this.lastSegMask = new BitSet()
-      this._segMaskUpdates = new BitSet()
-    } else {
-      this.lastSegMask = this.segMask.clone(this.lastSegMask)
-      this.lastSegMask.zoom = this.segMask.zoom
-    }
+    /* The zoom this mask was last built at, captured before we overwrite it.
+     * The fully-in-view fast path below needs it to tell whether the index
+     * set the mask was derived from has changed. */
+    const lastZoom = this.segMask ? this.segMask.zoom : undefined
 
+    if (!this.segMask) this.segMask = new BitSet()
     this.segMask.zoom = zoom
 
     // console.log(this.id + "----- updating segmask ---------")
@@ -270,9 +261,8 @@ export class Activity {
       /* If this activity is completely contained in the viewport then we
        * already know every segment is included and we quickly create a full segMask
        */
-      if (this._containedInMapBounds && zoom === this.lastSegMask.zoom) {
-        // This is still contained (and was last time)
-        this._segMaskUpdates.clear()
+      if (this._containedInMapBounds && zoom === lastZoom) {
+        // still fully contained, as it was last time, at the same zoom
         return this.segMask
       }
 
@@ -315,42 +305,12 @@ export class Activity {
       for (const idx of badSegIdx) this.segMask.remove(idx)
     }
 
-    if (!this._containedInMapBounds && this.segMask.isEmpty()) {
-      this._segMaskUpdates.clear()
-      return
-    }
-
-    /* Now we have a current and a last segMask */
-    const zoomLevelChanged = this.segMask.zoom !== this.lastSegMask.zoom
-    if (zoomLevelChanged) {
-      this.segMask.clone(this._segMaskUpdates)
-      this._segMaskUpdates.zoom = this.segMask.zoom
-    } else {
-      const newSegs = this.segMask.difference(
-        this.lastSegMask,
-        this._segMaskUpdates
-      )
-      /* We include an edge segment (at the edge of the screen)
-       * even if it was in the last draw */
-      const lsm = this.lastSegMask
-      let lastSeg: number
-      newSegs.forEach((s) => {
-        const beforeGap = lastSeg && lastSeg + 1
-        const afterGap = s && s - 1
-        if (lastSeg !== afterGap) {
-          if (beforeGap && lsm.has(beforeGap)) newSegs.add(beforeGap)
-          if (afterGap && lsm.has(afterGap)) newSegs.add(afterGap)
-        }
-        lastSeg = s
-      })
-    }
-
-    if (!this.segMask.isEmpty()) return this.segMask
+    if (this.segMask.isEmpty()) return
+    return this.segMask
   }
 
   /** Execute a function func(x1, y1, x2, y2) on each currently in-view
-   * segment (x1,y1) -> (x2, y2) of this Activity. drawDiff specifies to
-   * only use segments that have changed since the last segMask update.
+   * segment (x1,y1) -> (x2, y2) of this Activity.
    */
   forEachSegment(func: segFunc): number {
     const segMask = this.segMask

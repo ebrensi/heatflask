@@ -72,9 +72,8 @@
   },
   "include": ["src/**/*"],
   "exclude": [
-    "src/dist/*", 
+    "src/dist/*",
     "src/js/DotLayer",
-    "src/assembly",
     "src/parcel-namer-flat"
   ],
   "typedocOptions": {
