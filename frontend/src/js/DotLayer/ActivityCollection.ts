@@ -219,7 +219,8 @@ export async function drawDots(
   tsecs: number
 ): Promise<drawOutput> {
   let count = 0
-  const sz = Math.round(dotSize)
+  // not rounded: Canvas 2D draws fractional sizes
+  const sz = dotSize
 
   inView.forEach((i) => {
     const A = itemsArray[i]

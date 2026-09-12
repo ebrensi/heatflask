@@ -64,14 +64,24 @@ const atype_specs = {
 export type ActivityType = keyof typeof atype_specs
 
 const defaultSpec = atype_specs.Workout
+
+/* Strava keeps adding activity types -- WaterSport, GravelRide, TrailRun and
+ * friends postdate this table -- and the backend stores the raw type string
+ * for anything missing from its own list, so unknown keys do reach here.
+ * Indexing straight into atype_specs threw "Cannot read properties of
+ * undefined (reading '1')" and took the whole activity import down with it. */
+function spec(atype: ActivityType) {
+  return atype_specs[atype] || defaultSpec
+}
+
 export function activity_icon(atype: ActivityType) {
-  return atype_specs[atype][2] || atype
+  return spec(atype)[2] || atype
 }
 
 export function activity_pathcolor(atype: ActivityType) {
-  return atype_specs[atype][1] || defaultSpec[1]
+  return spec(atype)[1] || defaultSpec[1]
 }
 
 export function activity_vtype(atype: ActivityType) {
-  return atype_specs[atype][0] || defaultSpec[0]
+  return spec(atype)[0] || defaultSpec[0]
 }

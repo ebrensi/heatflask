@@ -39,17 +39,23 @@ export class LiveParams<Params> {
 
       binding = this.#bindings[key] = <Binding<V>>[val, [callback]]
 
+      /* One debounced notifier per binding, built once, here.
+       *
+       * The setter used to call debounce(...) inline, but debounce() *returns*
+       * a debounced function rather than running one -- so every assignment
+       * constructed a fresh closure and discarded it, and no callback ever
+       * fired on a change. Only the initial trigger worked. */
+      const notify = debounce(() => {
+        const [newValue, callbacks] = this.#bindings[key]
+        for (let i = 0; i < callbacks.length; i++) callbacks[i](newValue)
+      }, CALLBACK_DEBOUNCE_DELAY)
+
       Object.defineProperty(this, key, {
         get: () => this.#bindings[key][0],
 
         set: (newValue: V) => {
-          const binding: Binding<V> = this.#bindings[key]
-          binding[0] = newValue
-
-          debounce(() => {
-            const callbacks = binding[1]
-            for (let i = 0; i < callbacks.length; i++) callbacks[i](newValue)
-          }, CALLBACK_DEBOUNCE_DELAY)
+          this.#bindings[key][0] = newValue
+          notify()
         },
         enumerable: true,
       })

@@ -177,8 +177,21 @@ export async function* makeActivityQuery(
       } else if (A.TYPE in obj) {
         // in this case obj is an activity
 
-        // decode the activity name
-        obj[A.TYPE] = info.atypes[obj[A.TYPE]] || A.TYPE
+        /* Decode the activity type. The backend sends an index into
+         * info.atypes, but falls back to the raw Strava string for types
+         * missing from its own table (Index.mongo_doc does
+         * ATYPES_LOOKUP.get(type, type)) -- "WaterSport", for one. Keep the
+         * string in that case.
+         *
+         * The old fallback assigned A.TYPE, which is the field *name* ("t"),
+         * not an activity type, so a miss was guaranteed to crash
+         * activity_pathcolor downstream. */
+        const rawType = obj[A.TYPE]
+        /* info.atypes is string[], so the decoded name widens to string;
+         * an unrecognised one is handled downstream by Strava.spec(). */
+        obj[A.TYPE] = <ActivityType>(
+          (typeof rawType === "number" ? info.atypes[rawType] : rawType)
+        )
 
         // Un-pack the streams if there are any
         if ("mpk" in obj) {

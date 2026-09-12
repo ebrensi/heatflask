@@ -53,8 +53,8 @@ export type VisualParameters = {
   autozoom?: boolean // Whether or not to automatically zoom to include all of the activities after render
 
   // Animation
-  tau?: number // timescale
-  T?: number // Period
+  tau?: number // time scale: activity-seconds per real second
+  T?: number // s: timestep between successive dots, in activity-seconds
   sz?: number // Dot Size
   alpha?: number // global alpha for all rendering
   shadows?: boolean // render shadows under dots
@@ -79,8 +79,8 @@ export const DefaultVisual: VisualParameters = {
   geohash: DEFAULT_GEOHASH,
   baselayer: DEFAULT_BASELAYER,
   autozoom: true,
-  tau: 30,
-  T: 2,
+  tau: 30, // time scale: activity-seconds per real second
+  T: 60, // s: spacing between dots, in activity-seconds
   sz: 3,
   alpha: 0.8,
   shadows: true,

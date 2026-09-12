@@ -173,4 +173,6 @@ async def activities_page(request: SessionRequest):
         },
     }
     html = render_template("activities-page.html", **params)
-    return sanic.Response.html(html)
+    # sanic has no `Response` attribute; the response helpers live in the
+    # sanic.response module (the other blueprints alias it as Response)
+    return sanic.response.html(html)

@@ -21,7 +21,8 @@ type DotLayerInstance = {
   redraw(forceFullRedraw?: boolean): Promise<void>
   animate(): void
   pause(): void
-  updateDotSettings(shadowSettings?: unknown): unknown
+  updateDotSettings(shadowSettings?: { enabled?: boolean }): unknown
+  options: { showPaths: boolean; dotShadows: { enabled: boolean } }
 }
 type DotLayerCtor = new (options: Record<string, unknown>) => DotLayerInstance
 

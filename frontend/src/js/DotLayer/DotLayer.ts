@@ -29,6 +29,26 @@ const TARGET_FPS = 36
 const CONTINUOUS_REDRAWS = true
 const MIN_REDRAW_DELAY = 100 // milliseconds
 
+/* Dot size grows with zoom, so dots read as objects sitting in space rather
+ * than decoration painted on the screen -- but only partly. Map scale is
+ * already exponential in zoom (level z = scale 2**z), so a real object would
+ * scale as 2**z, doubling every level. K is the fraction of that to apply:
+ * 0 keeps a fixed pixel size, 1 is fully physical. The growth is then a
+ * constant factor per zoom level.
+ *
+ * This replaces Math.log(zoomLevel), whose derivative is 1/z -- so the dots
+ * grew *more slowly* the further you zoomed in, the opposite of the intent. */
+const DOT_ZOOM_SCALING = 0.15
+const DOT_ZOOM_REF = 4
+const MIN_DOT_SIZE = 0.5
+
+function dotSizeForZoom(dotScale: number, zoomLevel: number): number {
+  // zoomLevel is undefined until ViewBox.updateZoom() has run at least once
+  if (!zoomLevel) return Math.max(MIN_DOT_SIZE, dotScale)
+  const zoomFactor = 2 ** (DOT_ZOOM_SCALING * (zoomLevel - DOT_ZOOM_REF))
+  return Math.max(MIN_DOT_SIZE, dotScale * zoomFactor)
+}
+
 let dotCanvas: HTMLCanvasElement
 let dotPxg: PixelGraphics
 let pathCanvas: HTMLCanvasElement
@@ -366,10 +386,19 @@ async function drawDots(tsecs?: number) {
   if (!tsecs) tsecs = _timePaused || timeOrigin / 1000
 
   dotPxg.clear()
+  /* vParams.T is s: the timestep between successive dots, in ACTIVITY
+   * seconds. It used to be a period in real seconds, multiplied by tau here
+   * -- which coupled the two dials, so changing the speed also changed how
+   * far apart the dots sat. Sparsity is a spatial property and the flow rate
+   * is a temporal one; they are independent, so s passes straight through. */
+  /* Computed here rather than read from _dotSettings._dotSize, so it always
+   * reflects the current zoom. drawDots used to pass vParams.sz straight
+   * through, which meant the zoom scaling in updateDotSettings was computed
+   * and then thrown away -- the dots never scaled with zoom at all. */
   const { count } = await ActivityCollection.drawDots(
     dotPxg,
-    vParams.sz,
-    vParams.T * vParams.tau,
+    dotSizeForZoom(+vParams.sz, ViewBox.zoomLevel),
+    vParams.T,
     tsecs * vParams.tau
   )
   dotPxg.flush()
@@ -387,8 +416,11 @@ function updateDotSettings(shadowSettings?) {
   ds._timeScale = +vParams.tau
   ds._period = +vParams.T
 
-  const dotScale = +vParams.sz
-  ds._dotSize = Math.max(1, ~~(dotScale * Math.log(ViewBox.zoomLevel) + 0.5))
+  /* Fractional sizes are fine now. The `~~(... + 0.5)` that used to round
+   * this to whole pixels existed because the old renderer wrote individual
+   * pixels into a buffer by hand; Canvas 2D takes any radius, so the dots can
+   * grow and shrink smoothly instead of jumping a pixel at a time. */
+  ds._dotSize = dotSizeForZoom(+vParams.sz, ViewBox.zoomLevel)
   ds.alpha = (+vParams.alpha * 256) | 0
 
   if (shadowSettings) {

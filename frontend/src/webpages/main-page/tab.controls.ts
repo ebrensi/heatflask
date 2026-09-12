@@ -3,6 +3,7 @@ import type { KnobElement } from "knob"
 
 import { icon } from "~/src/js/Icons"
 import { State } from "~/src/js/Model"
+import { dotLayer } from "~/src/js/DotLayerAPI"
 
 import CONTENT from "bundle-text:./tab.controls.html"
 export { CONTENT }
@@ -26,10 +27,13 @@ const dialSpec1 = {
   bgColor: DIAL_BG,
 }
 
+/* Dot size. Was 0.01..10, which bottomed out invisibly small and topped out
+ * too small to be bold. Now that the size is no longer rounded to whole
+ * pixels, the low end is genuinely usable. */
 const dialSpec2 = {
-  min: 0.01,
-  max: 10,
-  step: 0.01,
+  min: 0.5,
+  max: 20,
+  step: 0.1,
   width: 100,
   height: 100,
   cursor: 20,
@@ -41,15 +45,115 @@ const dialSpec2 = {
 const knobSpec = {
   speedConst: Knob(dialSpec1),
   sepConst: Knob(dialSpec1),
-  alphaConst: Knob(dialSpec2),
   sizeConst: Knob(dialSpec2),
 }
 
-// Add it to the DOM.
+/* tau spans 0.5 .. 3600 -- a factor of 7200 -- so the dial cannot carry it
+ * linearly. It carries a normalised exponent s in [0,1] instead:
+ *
+ *     tau(s) = TAU_LOW * (TAU_HIGH / TAU_LOW) ** s
+ *
+ * giving tau(0) = TAU_LOW and tau(1) = TAU_HIGH. dialSpec1 reports 0..100,
+ * so s = dialValue / 100. (From the original design notes in Model.ts.) */
+const TAU_LOW = 0.5
+const TAU_HIGH = 3600
+const TAU_RATIO = TAU_HIGH / TAU_LOW
+
+/* Sparsity s: the timestep between successive dots, in activity-seconds, so
+ * one second of travel up to a full hour of it. Orders of magnitude again,
+ * so the dial carries an exponent here too. The default of 60s lands the
+ * dial exactly mid-travel. */
+const S_LOW = 1
+const S_HIGH = 3600
+const S_RATIO = S_HIGH / S_LOW
+
+type DialBinding = {
+  id: keyof typeof knobSpec
+  param: "tau" | "T" | "sz"
+  /** dial position -> parameter value */
+  toParam?: (dial: number) => number
+  /** parameter value -> dial position */
+  toDial?: (value: number) => number
+}
+
+const dialBindings: DialBinding[] = [
+  {
+    id: "speedConst",
+    param: "tau",
+    toParam: (v) => TAU_LOW * TAU_RATIO ** (v / 100),
+    toDial: (tau) => (100 * Math.log(tau / TAU_LOW)) / Math.log(TAU_RATIO),
+  },
+  {
+    id: "sepConst",
+    param: "T",
+    toParam: (v) => S_LOW * S_RATIO ** (v / 100),
+    toDial: (s) => (100 * Math.log(s / S_LOW)) / Math.log(S_RATIO),
+  },
+  { id: "sizeConst", param: "sz" },
+]
+
+/**
+ * Add the dials to the DOM and bind them to the model and the layer.
+ *
+ * The binding half of this used to be commented out below, written against
+ * `vParams`, which Model stopped exporting when it became appState.visual.
+ * So the dials were created and appended -- visible, draggable -- and wired
+ * to nothing.
+ */
 export function SETUP(state: State) {
+  const { visual } = state
+
   for (const [id, knob] of Object.entries(knobSpec)) {
     document.getElementById(id).appendChild(knob)
   }
+
+  for (const { id, param, toParam, toDial } of dialBindings) {
+    const knob = knobSpec[id]
+    const fromDial = toParam || ((v: number) => v)
+    const fromValue = toDial || ((v: number) => v)
+
+    // dial -> model
+    knob.onchange = () => {
+      visual[param] = fromDial(knob.getValue())
+    }
+
+    /* model -> dial and layer. onChange fires immediately by default, which
+     * conveniently seeds each dial from the current value. */
+    visual.onChange(param, (value: number) => {
+      const dialValue = fromValue(value)
+      if (Math.abs(knob.getValue() - dialValue) > 1e-9) knob.setValue(dialValue)
+      dotLayer.updateDotSettings()
+    })
+  }
+
+  bindCheckbox(visual, "showPaths", "paths", (on) => {
+    dotLayer.options.showPaths = on
+    dotLayer.redraw(true)
+  })
+
+  bindCheckbox(visual, "showShadows", "shadows", (on) => {
+    dotLayer.updateDotSettings({ enabled: on })
+  })
+}
+
+/** Two-way bind a checkbox to a boolean on appState.visual. */
+function bindCheckbox(
+  visual: State["visual"],
+  elementId: string,
+  param: "paths" | "shadows",
+  apply: (on: boolean) => void
+) {
+  const el = <HTMLInputElement>document.getElementById(elementId)
+  if (!el) return
+
+  el.addEventListener("change", () => {
+    visual[param] = el.checked
+  })
+
+  visual.onChange(param, (on: boolean) => {
+    el.checked = on
+    apply(on)
+  })
 }
 
 // /*
