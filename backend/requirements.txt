@@ -1,19 +1,14 @@
-python-dateutil~=2.8.2
+python-dateutil~=2.9.0
 
-sanic~=22.3.1
-sanic-openapi
-numpy~=1.22.3
+sanic~=25.12.0
+sanic-ext~=25.12.0
+numpy~=2.5.0
 
-pymongo[srv]~=3.12.0
-motor~=2.5.1
+# pymongo 4.13+ ships the async driver natively, replacing motor,
+# which was deprecated 2026-05-14 (critical fixes only until 2027-05-14)
+pymongo[srv]~=4.18.0
 
-aioredis[hiredis]~=2.0.1
-aiohttp[speedups]~=3.8.1
+aiohttp[speedups]~=3.14.0
 
-msgpack~=1.0.3
-polyline~=1.4.0
-
-# Legacy
-psycopg2-binary~=2.9.3
-sqlalchemy~=1.4.35
-
+msgpack~=1.2.0
+polyline~=2.0.0

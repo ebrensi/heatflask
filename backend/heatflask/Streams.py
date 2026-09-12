@@ -20,24 +20,23 @@ import types
 from typing import TypedDict, Awaitable, AsyncGenerator, Coroutine, cast
 
 from . import DataAPIs
-from .DataAPIs import db
 from . import Strava
 from . import StreamCodecs
 from .Users import UserField as U
-
 
 log = getLogger(__name__)
 log.setLevel("DEBUG")
 log.propagate = True
 
 COLLECTION_NAME = "streams_v0"
-CACHE_PREFIX = "S:"
 
 SECS_IN_HOUR = 60 * 60
 SECS_IN_DAY = 24 * SECS_IN_HOUR
 
+# Mongo is now the only local cache of Strava streams. There used to be a
+# Redis tier in front of it with a 4-hour TTL; this is the 10-day one that
+# actually governed how long a stream survived.
 MONGO_TTL = int(os.environ.get("MONGO_STREAMS_TTL", 10)) * SECS_IN_DAY
-REDIS_TTL = int(os.environ.get("REDIS_STREAMS_TTL", 4)) * SECS_IN_HOUR
 OFFLINE = os.environ.get("OFFLINE")
 
 myBox = types.SimpleNamespace(collection=None)
@@ -46,7 +45,7 @@ myBox = types.SimpleNamespace(collection=None)
 async def get_collection():
     if myBox.collection is None:
         myBox.collection = await DataAPIs.init_collection(
-            COLLECTION_NAME, ttl=MONGO_TTL, cache_prefix=CACHE_PREFIX
+            COLLECTION_NAME, ttl=MONGO_TTL
         )
     return myBox.collection
 
@@ -99,12 +98,11 @@ def mongo_doc(activity_id: int, packed: PackedStreams, ts=None) -> StreamsDoc:
     return {
         "_id": int(activity_id),
         "mpk": packed,
-        "ts": ts or datetime.datetime.now(),
+        # aware UTC: this field drives the TTL index, and .now() without a
+        # timezone writes local time, expiring streams early or late by the
+        # machine's UTC offset
+        "ts": ts or datetime.datetime.now(datetime.timezone.utc),
     }
-
-
-def cache_key(aid: int):
-    return f"{CACHE_PREFIX}{aid}"
 
 
 StreamsQueryResult = tuple[int, PackedStreams]
@@ -122,24 +120,22 @@ async def strava_import(
     aiterator = strava.get_many_streams(activity_ids)
 
     mongo_docs = []
-    now = datetime.datetime.now()
-    async with db.redis.pipeline(transaction=True) as pipe:
-        async for aid, streams in aiterator:
-            packed = encode_streams(streams)
+    now = datetime.datetime.now(datetime.timezone.utc)
+    async for aid, streams in aiterator:
+        packed = encode_streams(streams)
 
-            # queue packed streams to be redis cached
-            pipe = pipe.setex(cache_key(aid), REDIS_TTL, packed)
+        mongo_docs.append(mongo_doc(aid, packed, ts=now))
 
-            mongo_docs.append(mongo_doc(aid, packed, ts=now))
+        abort_signal = yield aid, packed
 
-            abort_signal = yield aid, packed
+        if abort_signal:
+            await Strava.AsyncClient.abort(aiterator)
+            break
 
-            if abort_signal:
-                await Strava.AsyncClient.abort(aiterator)
-                break
-
-        await pipe.execute()
-    await coll.insert_many(mongo_docs)
+    # insert_many([]) raises InvalidOperation, and an import that yields
+    # nothing is perfectly possible
+    if mongo_docs:
+        await coll.insert_many(mongo_docs)
 
 
 async def aiter_query(
@@ -148,59 +144,31 @@ async def aiter_query(
     if not activity_ids:
         return
     #
-    # First we check Redis cache
+    # Mongo is the only local cache, so one query settles what we have
     #
     t0 = time.perf_counter()
-    keys = [cache_key(aid) for aid in activity_ids]
-    redis_response = await db.redis.mget(keys)
+    streams = await get_collection()
+    query = {"_id": {"$in": activity_ids}}
+    exclusions = {"ts": False}
 
-    # Reset TTL for those cached streams that were hit
-    async with db.redis.pipeline(transaction=True) as pipe:
-        for k, val in zip(keys, redis_response):
-            if val:
-                pipe = pipe.expire(k, REDIS_TTL)
-        await pipe.execute()
-
-    t1 = time.perf_counter()
+    cursor = streams.find(query, projection=exclusions)
     local_result: list[StreamsQueryResult] = [
-        (a, s) for a, s in zip(activity_ids, redis_response) if s
+        (doc["_id"], doc["mpk"]) async for doc in cursor
     ]
-    log.debug(
-        "retrieved %d streams from Redis in %d", len(local_result), (t1 - t0) * 1000
-    )
+    mongo_result_ids = [_id for _id, mpk in local_result]
 
-    #
-    # Next we query MongoDB for streams that were not in Redis
-    #
-    # activity IDs of cache misses
-    activity_ids = [a for a, s in zip(activity_ids, redis_response) if not s]
-    if activity_ids:
-        # Next we query MongoDB for any cache misses
-        t0 = time.perf_counter()
-        streams = await get_collection()
-        query = {"_id": {"$in": activity_ids}}
-        exclusions = {"ts": False}
-
-        cursor = streams.find(query, projection=exclusions)
-        mongo_result = [(doc["_id"], doc["mpk"]) async for doc in cursor]
-        local_result.extend(mongo_result)
-        mongo_result_ids = [_id for _id, mpk in mongo_result]
-
-        # Cache the mongo hits
-        async with db.redis.pipeline(transaction=True) as pipe:
-            for aid, s in mongo_result:
-                pipe = pipe.setex(cache_key(aid), REDIS_TTL, s)
-            await pipe.execute()
-
-        # Update TTL for mongo hits
+    if mongo_result_ids:
+        # Reset the TTL clock for the streams we are about to serve
         await streams.update_many(
             {"_id": {"$in": mongo_result_ids}},
-            {"$set": {"ts": datetime.datetime.utcnow()}},
+            {"$set": {"ts": datetime.datetime.now(datetime.timezone.utc)}},
         )
-        elapsed = (time.perf_counter() - t0) * 1000
-        log.debug("retrieved %d streams from Mongo in %d", len(mongo_result), elapsed)
 
-        activity_ids = list(set(activity_ids) - set(mongo_result_ids))
+    elapsed = (time.perf_counter() - t0) * 1000
+    log.debug("retrieved %d streams from Mongo in %d", len(local_result), elapsed)
+
+    # whatever is left has to come from Strava
+    activity_ids = list(set(activity_ids) - set(mongo_result_ids))
 
     streams_import = None
     first_fetch = None
@@ -210,7 +178,7 @@ async def aiter_query(
         streams_import = strava_import(activity_ids, **user)
         first_fetch = asyncio.create_task(cast(Coroutine, streams_import.__anext__()))
 
-    # Yield all the results from Redis and Mongo
+    # Yield everything we already had locally
     for item in local_result:
         abort_signal = yield item
         if abort_signal:
@@ -257,14 +225,10 @@ async def delete(activity_ids: list[int]):
         return
     streams = await get_collection()
     await streams.delete_many({"_id": {"$in": activity_ids}})
-    keys = [cache_key(aid) for aid in activity_ids]
-    await db.redis.delete(*keys)
 
 
-async def clear_cache():
-    streams_keys = await db.redis.keys(cache_key("*"))
-    if streams_keys:
-        return await db.redis.delete(*streams_keys)
+# clear_cache() lived here to flush the Redis tier. Nothing called it, and
+# with Redis gone there is no second tier to flush, so it is deleted.
 
 
 def stats():

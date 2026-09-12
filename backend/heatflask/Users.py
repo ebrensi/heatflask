@@ -123,7 +123,9 @@ async def add_or_update(
         log.exception("error adding/updating user: %s", doc)
         return
 
-    now_ts = datetime.datetime.utcnow().timestamp()
+    # .utcnow() returns a naive datetime whose .timestamp() re-interprets it as
+    # local time -- wrong by the UTC offset anywhere but a UTC machine
+    now_ts = datetime.datetime.now(datetime.timezone.utc).timestamp()
     if update_last_login:
         doc[U.LAST_LOGIN] = now_ts
 
@@ -275,20 +277,26 @@ def drop():
 
 
 #  #### Legacy ######
+# One-shot import of the pre-2022 Postgres users table, kept only until the
+# legacy database is decommissioned. Needs requirements-migrate.txt installed
+# and LEGACY_POSTGRES_URL in the environment.
 import os
-from sqlalchemy import create_engine, text
 import json
-from .webserver.config import POSTGRES_URL
 
 
 async def migrate():
+    # Imported here so the app does not need SQLAlchemy installed just to boot
+    from sqlalchemy import create_engine, text
+
     # Import legacy Users database
     log.info("Importing users from legacy db")
-    pgurl = os.environ[POSTGRES_URL]
-    results = None
+    # was: os.environ[POSTGRES_URL], which indexed the environment with a
+    # connection string -- POSTGRES_URL was already the value, not the key
+    pgurl = os.environ["LEGACY_POSTGRES_URL"]
+    # .all() must be called inside the connection context: in SQLAlchemy 2.x
+    # the Result is invalidated once the connection closes
     with create_engine(pgurl).connect() as conn:
-        result = conn.execute(text("select * from users"))
-    results = result.all()
+        results = conn.execute(text("select * from users")).all()
 
     docs = []
 

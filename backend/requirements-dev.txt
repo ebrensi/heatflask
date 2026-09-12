@@ -1,8 +1,7 @@
 # dev
-black~=22.3.0    # Formatting
-flake8~=4.0.1    # Linting
-jupyter
-nbconvert~=6.5.0 # strip jupyter notebook outputs
-mypy~=0.942      # type checking
-pdoc~=11.1.0
-
+black~=26.5.0     # Formatting
+flake8~=7.3.0     # Linting
+mypy~=2.3.0       # Type checking
+pdoc~=16.0.0      # API docs
+jupyter           # notebooks in heatflask/notebooks
+nbconvert~=7.17.0 # strip jupyter notebook outputs

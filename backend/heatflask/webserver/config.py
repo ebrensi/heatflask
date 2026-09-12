@@ -13,18 +13,31 @@ APP_NAME = f"{APP_BASE_NAME} v{APP_VERSION}"
 OFFLINE = os.environ.get("OFFLINE") == "1"
 
 # this can be "development", "staging", or "production"
-#  Where "production" is assumed to be a Heroku Python environment
 APP_ENV = os.environ.get("APP_ENV", "development")
+DEV = APP_ENV == "development"
 
 # Data Store Configuration
-DEV = APP_ENV == "development"
-USE_REMOTE_DB = (os.environ.get("USE_REMOTE_DB") or (not DEV)) and not OFFLINE
-POSTGRES_URL = os.environ["HEROKU_POSTGRES_URL" if DEV else "DATABASE_URL"]
-MONGODB_URL = os.environ["ATLAS_MONGODB_URI" if USE_REMOTE_DB else "MONGODB_URL"]
-REDIS_URL = os.environ["REDISGREEN_URL" if USE_REMOTE_DB else "REDIS_URL"]
+#
+# One datastore: MongoDB. Postgres and Redis are gone -- the Postgres users
+# table survives only as a one-shot import (see Users.migrate()), and Redis
+# was a read cache in front of Mongo, which is itself a cache of Strava.
+#
+# Both spellings are accepted because .env.tmp and the old config disagreed.
+MONGODB_URL = os.environ.get("MONGODB_URL") or os.environ.get("MONGODB_URI")
+
+if not MONGODB_URL:
+    if DEV:
+        MONGODB_URL = "mongodb://localhost:27017/heatflask"
+        log.info("MONGODB_URL not set, using %s", MONGODB_URL)
+    else:
+        raise RuntimeError("MONGODB_URL must be set when APP_ENV is not development")
+
+# Informational only (shown in the startup banner) -- it no longer selects
+# which database to talk to.
+USE_REMOTE_DB = not any(h in MONGODB_URL for h in ("localhost", "127.0.0.1"))
 
 # Log Configuration
-default_log_level = "DEBUG" if APP_ENV == "development" else "INFO"
+default_log_level = "DEBUG" if DEV else "INFO"
 LOG_LEVEL = os.environ.get("LOG_LEVEL", default_log_level)
 
 
@@ -45,7 +58,4 @@ def get_logger_config():
     )
     logger_config["formatters"]["access"]["format"] = access_log_fmt
 
-    # loggers = logger_config["loggers"]
-    # log_levels = {name: loggers[name]["level"] for name in loggers}
-    # print(log_levels)
     return logger_config

@@ -23,12 +23,10 @@ from aiohttp import ClientResponseError
 from typing import TypedDict
 
 from . import DataAPIs
-from .DataAPIs import db
 from . import Strava
 from . import Utility
 from . import Users
 from .Users import UserField as U
-
 
 log = getLogger(__name__)
 log.propagate = True
@@ -167,33 +165,64 @@ def mongo_doc(
 
 
 # # **************************************
-IMPORT_FLAG_PREFIX = "I:"
-IMPORT_FLAG_TTL = 20  # secods
+# Import-progress flags used to be Redis keys with a native TTL. They now live
+# in a Mongo collection. Mongo's TTL monitor only sweeps once a minute, so a
+# doc can outlive its TTL by up to ~60s; the index is therefore garbage
+# collection only, and expiry is enforced by comparing each doc's own `ttl`.
+IMPORT_FLAG_COLLECTION = "import_flags_v0"
+IMPORT_FLAG_TTL = 20  # seconds
 IMPORT_ERROR_TTL = 5
 
+flagBox = types.SimpleNamespace(collection=None)
 
-def import_flag_key(uid: int):
-    return f"{IMPORT_FLAG_PREFIX}{uid}"
+
+async def get_flag_collection():
+    if flagBox.collection is None:
+        flagBox.collection = await DataAPIs.init_collection(
+            IMPORT_FLAG_COLLECTION, ttl=IMPORT_FLAG_TTL
+        )
+    return flagBox.collection
+
+
+async def _set_flag(user_id: int, val: str, ttl: int):
+    flags = await get_flag_collection()
+    await flags.replace_one(
+        {"_id": int(user_id)},
+        {
+            "_id": int(user_id),
+            "msg": val,
+            "ttl": ttl,
+            "ts": datetime.datetime.now(datetime.timezone.utc),
+        },
+        upsert=True,
+    )
 
 
 async def set_import_flag(user_id: int, val: str):
-    await db.redis.setex(import_flag_key(user_id), IMPORT_FLAG_TTL, val)
+    await _set_flag(user_id, val, IMPORT_FLAG_TTL)
     log.debug(f"{user_id} import flag set to '%s'", val)
 
 
 async def set_import_error(user_id: int, e):
     val = f"Strava error ${e.status}: ${e.message}"
-    await db.redis.setex(import_flag_key(user_id), 5, val)
+    await _set_flag(user_id, val, IMPORT_ERROR_TTL)
 
 
 async def clear_import_flag(user_id: int):
-    await db.redis.delete(import_flag_key(user_id))
+    flags = await get_flag_collection()
+    await flags.delete_one({"_id": int(user_id)})
     log.debug(f"{user_id} import flag unset")
 
 
 async def check_import_progress(user_id: int):
-    result = await db.redis.get(import_flag_key(user_id))
-    return result.decode("utf-8") if result else None
+    flags = await get_flag_collection()
+    doc = await flags.find_one({"_id": int(user_id)})
+    if not doc:
+        return None
+    age = datetime.datetime.now(datetime.timezone.utc) - doc["ts"]
+    if age.total_seconds() > doc.get("ttl", IMPORT_FLAG_TTL):
+        return None
+    return doc["msg"]
 
 
 # # **************************************
@@ -230,7 +259,7 @@ async def import_user_entries(**user):
 
     strava = Strava.AsyncClient(uid, user[U.AUTH])
     await strava.update_access_token()
-    now = datetime.datetime.utcnow()
+    now = datetime.datetime.now(datetime.timezone.utc)
 
     docs = []
     count = 0
@@ -287,7 +316,7 @@ async def import_one(activity_id: int, **user):
         log.error("can't import activity %d", activity_id)
         return
 
-    doc = mongo_doc(**DetailedActivity, ts=datetime.datetime.utcnow())
+    doc = mongo_doc(**DetailedActivity, ts=datetime.datetime.now(datetime.timezone.utc))
     index = await get_collection()
     try:
         await index.replace_one({F.ACTIVITY_ID: activity_id}, doc, upsert=True)

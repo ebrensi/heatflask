@@ -10,7 +10,7 @@ from typing import TypedDict, Literal, Protocol, Any, cast
 from ..Types import SanicRequest, SanicResponse
 from .. import Users
 
-from .config import APP_BASE_NAME
+from .config import APP_BASE_NAME, DEV
 from . import files
 
 log = getLogger(__name__)
@@ -31,7 +31,7 @@ Cookie = TypedDict(
         "path": str,
         "comment": str,
         "domain": str,
-        "max-age": int,
+        "max_age": int,
         "secure": bool,
         "httponly": bool,
         "samesite": Literal["Lax", "Strict", "None"],
@@ -40,9 +40,12 @@ Cookie = TypedDict(
 )
 
 COOKIE_SPEC: Cookie = {
-    "max-age": 10 * 24 * 3600,  # 10 days
+    "max_age": 10 * 24 * 3600,  # 10 days
     "httponly": True,
     "samesite": "Lax",
+    # add_cookie() defaults secure=True. Over plain http on localhost a Secure
+    # cookie is never sent back, which would silently break login in dev.
+    "secure": not DEV,
 }
 COOKIE_NAME = APP_BASE_NAME.lower()
 
@@ -75,14 +78,15 @@ class SessionRequest(SanicRequest):
 
 
 def set_cookie(response: SanicResponse, session: Session):
-    response.cookies[COOKIE_NAME] = json.dumps(session)
-    response.cookies[COOKIE_NAME].update(COOKIE_SPEC)
-    log.debug("set '%s' cookie %s", COOKIE_NAME, response.cookies[COOKIE_NAME])
+    # Sanic 24.3 removed the dict-style cookie API (response.cookies[name] =
+    # value, .update(), del). add_cookie()/delete_cookie() replace it.
+    response.add_cookie(COOKIE_NAME, json.dumps(session), **COOKIE_SPEC)
+    log.debug("set '%s' cookie %s", COOKIE_NAME, session)
 
 
 def delete_cookie(request: SanicRequest, response: SanicResponse):
     if request.cookies.get(COOKIE_NAME):
-        del response.cookies[COOKIE_NAME]
+        response.delete_cookie(COOKIE_NAME)
         log.debug("deleted '%s' cookie", COOKIE_NAME)
 
 
@@ -122,7 +126,7 @@ async def reset_or_delete_cookie(request: SanicRequest, response: SanicResponse)
         except Exception:
             log.exception("cookie: %s", request.ctx.session)
     elif request.cookies.get(COOKIE_NAME):
-        del response.cookies[COOKIE_NAME]
+        response.delete_cookie(COOKIE_NAME)
         log.debug("deleted '%s' cookie", COOKIE_NAME)
 
 

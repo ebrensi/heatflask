@@ -31,7 +31,8 @@ def init_app(app: Sanic):
 templates: dict[str, Template] = {}
 
 
-async def load_templates(app: Sanic, loop):
+# Takes only `app`: Sanic 26.6 removes the `loop` argument to listeners
+async def load_templates(app: Sanic):
     # We pre-load all of the templates as strings and serve them
     # from memory with values substituted in at serve-time
     # using Python's built-in string.Template library.

@@ -7,11 +7,17 @@ This is the server-side code for [Heatflask](https://www.heatflask.com ).  It is
 If you want to try your hand at Heatflask development, you will need to be able to test any changes you make on your own machine.  These instuctions assume you are using Linux.  I have not tried development on another OS. New to Linux? I recommend [Pop_OS!](https://system76.com/pop).
 
 ### Set up the backend environment
-Fork this repo and clone it to your machine.   The backend currently runs on Python 3.8. You will need installed on your machine:
-  * A Python 3 (3.8+)
-  * [Redis](https://redis.io) Fast in-memory datastore (backend cache)
-  * [MongoDB](https://www.mongodb.com) NoSQL database (Activities database)
+Fork this repo and clone it to your machine.   The backend runs on Python 3.13 (the floor is set by numpy 2.5, which requires 3.12+). You will need installed on your machine:
+  * Python 3.13
+  * [MongoDB](https://www.mongodb.com) NoSQL database (the only datastore)
+
+If you use Nix, `nix develop` at the repo root gives you all of the above plus
+helper commands (`heatflask-setup`, `heatflask-start-services`, `heatflask-run`).
 On some Linux systems Mongo may be installed but the service is not started.  Make sure the MongoDB daemon is running.
+
+Streams used to be cached in Redis in front of Mongo. That tier is gone: Mongo
+is the only local cache, with a TTL index (`MONGO_STREAMS_TTL`, 10 days default)
+doing the expiry that Redis keys used to do.
 The setup used to be more complicated but now there is a convenient script [`.dev-install-backend`](/backend/.dev-install-backend)
 
 Running that should do everything for you:

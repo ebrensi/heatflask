@@ -1,6 +1,5 @@
-import motor.motor_asyncio
-from pymongo.collection import Collection
-import aioredis
+from pymongo import AsyncMongoClient
+from pymongo.asynchronous.collection import AsyncCollection
 import logging
 import datetime
 import uuid
@@ -9,40 +8,42 @@ import sys
 from typing import Optional
 from sanic import Sanic
 
-from .webserver.config import MONGODB_URL, REDIS_URL
+from .webserver.config import MONGODB_URL
 
 log = logging.getLogger(__name__)
 log.propagate = True
 
-db = types.SimpleNamespace(mongo_client=None, mongodb=None, redis=None)
+db = types.SimpleNamespace(mongo_client=None, mongodb=None)
 
 
-# this must be called by whoever controls the asyncio loop
-async def connect(app: Sanic, loop):
+# this must be called by whoever controls the asyncio loop.
+# Takes only `app`: Sanic 26.6 removes the `loop` argument to listeners, and
+# 25.12 already warns about it.
+async def connect(app: Sanic = None):
     if db.mongodb is not None:
         return
-    db.mongo_client = motor.motor_asyncio.AsyncIOMotorClient(MONGODB_URL)
+    # tz_aware: datetimes come back from Mongo timezone-aware (UTC), so they can
+    # be compared against datetime.now(timezone.utc) without a naive/aware clash
+    db.mongo_client = AsyncMongoClient(MONGODB_URL, tz_aware=True)
     db.mongodb = db.mongo_client.get_default_database()
-    db.redis = aioredis.from_url(REDIS_URL)
     if app:
         try:
             await db.mongodb.list_collection_names()
         except Exception:
             log.error("mongo error")
-            db.mongo_client.close()
+            await db.mongo_client.close()
             db.mongodb = None
             sys.exit("mongodb error")
 
-    log.info("Connected to MongoDB and Redis")
+    log.info("Connected to MongoDB")
 
 
 async def disconnect(*args):
     if db.mongodb is None:
         return
 
-    log.info("Disconnecing from MongoDB and Redis")
-    db.mongo_client.close()
-    await db.redis.close()
+    log.info("Disconnecting from MongoDB")
+    await db.mongo_client.close()
 
     db.mongo_client = None
     db.mongodb = None
@@ -52,8 +53,7 @@ async def init_collection(
     name: str,
     ttl: Optional[int] = None,
     capped_size: Optional[int] = None,
-    cache_prefix: Optional[str] = None,
-) -> Collection:
+) -> AsyncCollection:
     collections = await db.mongodb.list_collection_names()
 
     if name in collections:
@@ -63,20 +63,7 @@ async def init_collection(
             return await update_collection_cap(name, capped_size)
         return db.mongodb.get_collection(name)
 
-    # Create/Initialize Activity database
-    # Delete existing one
-    if name in collections:
-        await db.mongodb.drop_collection(name)
-
-    if cache_prefix:
-        to_delete = await db.redis.keys(f"{cache_prefix}:*")
-
-        async with db.redis.pipeline(transaction=True) as pipe:
-            for k in to_delete:
-                pipe.delete(k)
-            await pipe.execute()
-
-    collection: Collection = await (
+    collection: AsyncCollection = await (
         db.mongodb.create_collection(name, capped=True, size=capped_size)
         if capped_size
         else db.mongodb.create_collection(name)
@@ -94,7 +81,7 @@ async def init_collection(
 
 
 async def update_collection_ttl(name: str, new_ttl: int):
-    collection: Collection = db.mongodb.get_collection(name)
+    collection: AsyncCollection = db.mongodb.get_collection(name)
 
     # Update the MongoDB Activities TTL if necessary
     info = await collection.index_information()
@@ -123,7 +110,7 @@ async def update_collection_ttl(name: str, new_ttl: int):
 
 
 async def update_collection_cap(name: str, new_size: int):
-    collection: Collection = db.mongodb.get_collection(name)
+    collection: AsyncCollection = db.mongodb.get_collection(name)
     options = await collection.options()
     current_size = options["size"]
 

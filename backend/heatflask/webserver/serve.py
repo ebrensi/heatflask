@@ -1,9 +1,9 @@
 """
 This is the main thing that runs on the backend
 """
+
 import os
 from sanic import Sanic
-from sanic_openapi import openapi3_blueprint
 import asyncio
 import logging
 
@@ -40,8 +40,9 @@ app = Sanic(APP_BASE_NAME, log_config=get_logger_config(), strict_slashes=False)
 files.init_app(app)
 
 # Endpoint Definitions
-app.blueprint(openapi3_blueprint)
-
+# sanic-openapi is dead (last release Jan 2022, Python <=3.9). Its successor
+# sanic-ext auto-attaches when installed and serves the same OAS3 docs at /docs,
+# so there is no blueprint to register here.
 app.blueprint(main.bp)
 app.blueprint(auth.bp)
 app.blueprint(users.bp)
@@ -60,8 +61,8 @@ async def cancel_background_tasks(*args):
 
 app.register_listener(cancel_background_tasks, "after_server_stop")
 
-# Redis and MongoDB APIs are async and need to run in the same loop as app
-# so we run init_app to "connect" them
+# The MongoDB API is async and needs to run in the same loop as the app,
+# so we "connect" it from a listener
 app.register_listener(DataAPIs.connect, "before_server_start")
 app.register_listener(DataAPIs.disconnect, "before_server_stop")
 
