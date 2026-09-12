@@ -174,8 +174,12 @@ default_out_fields = {
     U.CITY: True,
     U.STATE: True,
     U.COUNTRY: True,
+    # Shown as "last active" in the public directory, which is also what the
+    # listing is sorted by (SORT_SPEC below). Only users who have opted in to
+    # being public appear there at all, and master's directory showed the same
+    # column.
+    U.LAST_LOGIN: True,
     #
-    # U.LAST_LOGIN=False
     # U.LOGIN_COUNT=False
     # U.LAST_INDEX_ACCESS=False
     # U.AUTH: False,

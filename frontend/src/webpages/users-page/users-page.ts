@@ -1,4 +1,19 @@
-import { img, href, sleep } from "~/src/js/appUtil"
+/*
+ * The user directory.
+ *
+ * Two modes off one page, the way the backend serves it:
+ *
+ *   /users          the public directory -- people who have ticked "public
+ *                   profile", so others can find and browse their map
+ *   /users?admin=1  every registered user, with the operational columns
+ *                   (login count, last login, last index access, private)
+ *
+ * The point of the public list is to get you to somebody's map, so the whole
+ * row is a link to it. Columns sort on click; master used DataTables for that,
+ * which is a large dependency for one table, and the sort here is a few lines.
+ */
+
+import { img, sleep } from "~/src/js/appUtil"
 import { icon } from "~/src/js/Icons"
 import { USER_FIELDNAMES as U } from "~/src/js/DataImport"
 
@@ -23,140 +38,216 @@ try {
   throw e
 }
 
-console.log(`Environment: ${process.env.NODE_ENV}`)
+/* ------------------------------------------------------------------ *
+ * Cell rendering
+ * ------------------------------------------------------------------ */
 
 function user_thumbnail(id: number | string, img_url: string): string {
   if (!(id && img_url)) return ""
-  const avatar = img(img_url, 40, 40, id)
-  return href(`/${id}`, avatar)
+  return img(img_url, 40, 40, String(id))
 }
 
 function ts_to_dt(ts: number, time = false): string {
-  if (!ts) {
-    return ""
-  }
+  if (!ts) return ""
   const dt = new Date(1000 * ts)
   return time ? dt.toLocaleString() : dt.toLocaleDateString()
 }
 
-const HEADERS = ["", "Name", "City", "Region", "Country"]
-const REQUIRED_FIELDS = [
-  U.ID,
-  U.FIRSTNAME,
-  U.LASTNAME,
-  U.PROFILE,
-  U.CITY,
-  U.STATE,
-  U.COUNTRY,
-]
-function makeRow(rowData) {
-  const [_id, firstname, lastname, profile, city, state, country] = rowData
-  return [
-    user_thumbnail(_id, profile),
-    `${firstname} ${lastname}`,
-    city,
-    state,
-    country,
-  ]
+/** "3 days ago", for the last-active column. */
+function since(ts: number): string {
+  if (!ts) return ""
+  const days = (Date.now() / 1000 - ts) / 86400
+  if (days < 1) return "today"
+  if (days < 2) return "yesterday"
+  if (days < 31) return `${Math.floor(days)} days ago`
+  if (days < 365) return `${Math.floor(days / 30)} mo ago`
+  return `${(days / 365).toFixed(1)} yr ago`
 }
 
 const priv_icon = icon("eye-blocked")
 const pub_icon = icon("eye")
-const ADMIN_HEADERS = [
-  "ID",
-  icon("user-secret"),
-  "# Logins",
-  "LastLogin",
-  "IndexAccess",
-  "Name",
-  "City",
-  "Region",
-  "Country",
-]
-const ADMIN_REQUIRED_FIELDS = [
-  U.ID,
-  U.PROFILE,
-  U.CITY,
-  U.STATE,
-  U.COUNTRY,
-  U.FIRSTNAME,
-  U.LASTNAME,
-  U.LAST_LOGIN,
-  U.LOGIN_COUNT,
-  U.LAST_INDEX_ACCESS,
-  U.PRIVATE,
-]
-function makeAdminRow(rowData) {
-  const [
-    _id,
-    profile,
-    city,
-    state,
-    country,
-    firstname,
-    lastname,
-    last_login,
-    login_count,
-    last_index_access,
-    priv,
-  ] = rowData
 
-  // console.log(rowData)
-  const picon = priv ? priv_icon : pub_icon
-  return [
-    user_thumbnail(_id, profile),
-    picon,
-    login_count,
-    ts_to_dt(last_login),
-    ts_to_dt(last_index_access),
-    `${firstname} ${lastname}`,
-    city,
-    state,
-    country,
-  ]
+/* ------------------------------------------------------------------ *
+ * Column definitions
+ * ------------------------------------------------------------------ */
+
+type Row = Record<string, string | number>
+
+type Column = {
+  /** Header text, or an icon */
+  title: string
+  /** The field this column reads */
+  field: string
+  /** Cell content */
+  render?: (row: Row) => string
+  /** What to sort on, when it is not the raw field value */
+  sortKey?: (row: Row) => string | number
+  /** Right-align numeric columns */
+  numeric?: boolean
 }
+
+const nameOf = (r: Row) => `${r[U.FIRSTNAME] || ""} ${r[U.LASTNAME] || ""}`.trim()
+
+const publicColumns: Column[] = [
+  {
+    title: "",
+    field: U.PROFILE,
+    render: (r) => user_thumbnail(r[U.ID], <string>r[U.PROFILE]),
+    sortKey: () => 0,
+  },
+  { title: "Name", field: U.FIRSTNAME, render: nameOf, sortKey: nameOf },
+  { title: "City", field: U.CITY },
+  { title: "Region", field: U.STATE },
+  { title: "Country", field: U.COUNTRY },
+  {
+    title: "Last active",
+    field: U.LAST_LOGIN,
+    render: (r) => since(<number>r[U.LAST_LOGIN]),
+  },
+]
+
+const adminColumns: Column[] = [
+  {
+    title: "",
+    field: U.PROFILE,
+    render: (r) => user_thumbnail(r[U.ID], <string>r[U.PROFILE]),
+    sortKey: () => 0,
+  },
+  { title: "ID", field: U.ID, numeric: true },
+  { title: "Name", field: U.FIRSTNAME, render: nameOf, sortKey: nameOf },
+  {
+    title: icon("eye"),
+    field: U.PRIVATE,
+    render: (r) => (r[U.PRIVATE] ? priv_icon : pub_icon),
+  },
+  { title: "Logins", field: U.LOGIN_COUNT, numeric: true },
+  {
+    title: "Last login",
+    field: U.LAST_LOGIN,
+    render: (r) => ts_to_dt(<number>r[U.LAST_LOGIN]),
+  },
+  {
+    title: "Index access",
+    field: U.LAST_INDEX_ACCESS,
+    render: (r) => ts_to_dt(<number>r[U.LAST_INDEX_ACCESS]),
+  },
+  { title: "City", field: U.CITY },
+  { title: "Region", field: U.STATE },
+  { title: "Country", field: U.COUNTRY },
+]
+
+/* ------------------------------------------------------------------ *
+ * Table
+ * ------------------------------------------------------------------ */
+
+const columns = admin ? adminColumns : publicColumns
+let rows: Row[] = []
+/* The backend already sorts by last login descending, so start there. */
+let sortCol = columns.findIndex((c) => c.field === U.LAST_LOGIN)
+let sortAsc = false
+
+const table_element = <HTMLTableElement>document.getElementById("users")
+
+function sortValue(col: Column, row: Row): string | number {
+  return col.sortKey ? col.sortKey(row) : row[col.field] ?? ""
+}
+
+function renderTable(): void {
+  const col = columns[sortCol]
+  if (col) {
+    rows.sort((a, b) => {
+      const x = sortValue(col, a)
+      const y = sortValue(col, b)
+      const cmp =
+        typeof x === "number" && typeof y === "number"
+          ? x - y
+          : String(x).localeCompare(String(y))
+      return sortAsc ? cmp : -cmp
+    })
+  }
+
+  const heads = columns
+    .map((c, i) => {
+      const arrow = i === sortCol ? (sortAsc ? " ▲" : " ▼") : ""
+      const cls = c.numeric ? ' class="num"' : ""
+      return `<th${cls} data-col="${i}">${c.title}${arrow}</th>`
+    })
+    .join("")
+
+  const body = rows
+    .map((r) => {
+      const cells = columns
+        .map((c) => {
+          const content = c.render ? c.render(r) : String(r[c.field] ?? "")
+          const cls = c.numeric ? ' class="num"' : ""
+          return `<td${cls}>${content}</td>`
+        })
+        .join("")
+      /* The row is a link to that user's map -- the reason the directory
+       * exists. data-href rather than an <a>, since a table row cannot hold
+       * one; the click listener below does the navigation. */
+      return `<tr data-href="/${r[U.ID]}">${cells}</tr>`
+    })
+    .join("\n")
+
+  table_element.innerHTML =
+    `<thead><tr>${heads}</tr></thead>\n<tbody>\n${body}\n</tbody>`
+}
+
+/** Click a header to sort by it; click the same one again to reverse. */
+table_element.addEventListener("click", (e: Event) => {
+  const target = <HTMLElement>e.target
+  const th = target.closest("th")
+  if (th && th.dataset.col !== undefined) {
+    const i = +th.dataset.col
+    if (i === sortCol) sortAsc = !sortAsc
+    else {
+      sortCol = i
+      sortAsc = true
+    }
+    renderTable()
+    return
+  }
+
+  const tr = target.closest("tr")
+  if (tr && tr.dataset.href) window.open(tr.dataset.href, "_blank", "noopener")
+})
+
+/* ------------------------------------------------------------------ *
+ * Load
+ * ------------------------------------------------------------------ */
 
 async function run() {
   status_el.classList.add("spinner")
-  console.time("maketable")
   const response = await fetch(url, { method: "POST" })
-  const data = await response.json()
+  const data = <(string | number)[][]>await response.json()
 
-  const n_rows = data.length
-  const header_data = admin ? ADMIN_HEADERS : HEADERS
-  const headers = header_data.join("</th><th>")
-  const thead_str = `<thead><th>${headers}</th></thead>\n`
+  /* Row 0 is the field names, which also fixes the field ordering */
+  const fields = <string[]>data[0]
+  rows = data.slice(1).map((values) => {
+    const row: Row = {}
+    fields.forEach((f, i) => (row[f] = values[i]))
+    return row
+  })
 
-  // The first row we get is field names
-  // which we will use to determine field ordering
-  const fields = data[0]
-  const field_pos = {}
-  for (let i = 0; i < fields.length; i++) {
-    field_pos[fields[i]] = i
+  const heading = document.getElementById("heading")
+  if (heading) {
+    heading.textContent = admin
+      ? `Registered Users (${rows.length})`
+      : `Public User Directory (${rows.length})`
   }
-  const required_fields = admin ? ADMIN_REQUIRED_FIELDS : REQUIRED_FIELDS
-  const permutation = required_fields.map((f) => field_pos[f])
 
-  const rowFunc = admin ? makeAdminRow : makeRow
-  const row_strs = new Array(n_rows - 1)
-  for (let i = 1; i < n_rows; i++) {
-    const row = data[i]
-    const permuted_row = permutation.map((j) => row[j])
-    const cells = rowFunc(permuted_row).join("</td><td>")
-    row_strs[i - 1] = `<tr><td>${cells}</td></tr>`
+  if (!rows.length) {
+    table_element.innerHTML = ""
+    status_el.classList.remove("spinner")
+    status_el.innerHTML = admin
+      ? "No registered users."
+      : `No one has a public profile yet. You can make yours public from the
+         User tab on your map, and you will be listed here.`
+    return
   }
-  const rows_str = row_strs.join("\n")
-  const tbody_str = `<tbody>\n${rows_str}\n</tbody>`
 
-  const table_element = <HTMLTableElement>document.getElementById("users")
-  table_element.innerHTML = thead_str + tbody_str
-  console.timeEnd("maketable")
-
-  // const myTable = new JSTable(table_element, {
-  //   sortable: true,
-  //   searchable: true,
-  //   perPage: 12,
-  // })
+  renderTable()
   await sleep(0.2)
   status_el.classList.remove("spinner")
 }
@@ -165,6 +256,8 @@ async function run() {
   try {
     await run()
   } catch (e) {
-    console.log("oops. ", e)
+    console.error(e)
+    status_el.classList.remove("spinner")
+    status_el.textContent = `could not load the directory: ${e}`
   }
 })()

@@ -4,3 +4,64 @@
 @import "~/src/css/hide-runtime-elements.css";
 @import "~/src/css/flash-messages.css";
 @import "~/src/css/jstable.scss";
+
+body {
+  padding: 0 16px 24px;
+}
+
+#users {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+#users th {
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  padding: 6px 10px;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.4);
+}
+
+#users th:hover {
+  background: rgba(128, 128, 128, 0.15);
+}
+
+#users td {
+  padding: 4px 10px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+/* Numbers line up when they are tabular and right-aligned */
+#users th.num,
+#users td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Each row links to that user's map, so it should look like it does */
+#users tbody tr {
+  cursor: pointer;
+}
+
+#users tbody tr:hover {
+  background: rgba(128, 128, 128, 0.18);
+}
+
+#users td img {
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
+#status {
+  margin: 0.5rem 0 1rem;
+  min-height: 1.5em;
+}
+
+/* The table is the one thing allowed to outgrow the viewport */
+table#users {
+  display: block;
+  overflow-x: auto;
+}
