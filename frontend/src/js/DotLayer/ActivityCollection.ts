@@ -159,7 +159,8 @@ export function* inPxBounds(pxBounds: Bounds): IterableIterator<Activity> {
   for (const idx of inView) {
     const A = itemsArray[idx]
     for (let j = 0; j < A.streams.time.length; j++) {
-      const p = A.pointAccessor(j)
+      // was A.pointAccessor(j), which does not exist on Activity
+      const p = A.pointAt(j)
       if (pxBounds.contains(p[0], p[1])) {
         yield A
         break

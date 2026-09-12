@@ -19,7 +19,10 @@ import { qToQ, makeActivityQuery } from "./DataImport"
 import * as MapAPI from "./MapAPI"
 import * as Sidebar from "./Sidebar"
 
-import { Activity } from "./DotLayer/Activity"
+import * as ActivityCollection from "./DotLayer/ActivityCollection"
+import { createDotLayer, dotLayer } from "./DotLayerAPI"
+
+import type { ImportedActivity } from "./DataImport"
 
 const map = MapAPI.CreateMap()
 
@@ -30,11 +33,36 @@ if (!!FLASHES && FLASHES.length) {
   map.controlWindow.show()
 }
 
-export async function updateFromQuery({ query }: State) {
+export async function updateFromQuery(appState: State) {
+  const { query, visual } = appState
   const backendQuery = qToQ(query, true)
+
+  let count = 0
   for await (const obj of makeActivityQuery(backendQuery, URLS.query)) {
-    console.log("_id" in obj ? new Activity(obj) : obj)
-    // TODO: Continue Here
+    if (!obj) continue
+
+    if ("_id" in obj) {
+      // An activity. Hand it to the collection the DotLayer draws from.
+      ActivityCollection.add(<ImportedActivity>(<unknown>obj))
+      count++
+    } else {
+      // Progress / status messages from the backend
+      console.log(obj)
+    }
+  }
+
+  if (!count) {
+    console.warn("query returned no activities")
+    return
+  }
+
+  /* reset() packs the streams, builds the per-zoom index sets, draws, and
+   * starts the animation. */
+  await dotLayer.reset()
+
+  if (visual.autozoom) {
+    const bounds = await ActivityCollection.getLatLngBounds()
+    if (bounds && bounds.isValid()) map.fitBounds(bounds)
   }
 }
 
@@ -51,6 +79,10 @@ export async function start() {
 
   // **** Map settings / bindings ****
   MapAPI.BindMap(map, appState)
+
+  // Create the animation layer and add it to the map. Without this nothing
+  // draws, however many activities the query returns.
+  createDotLayer(map, appState)
 
   // Add Sidebar tabs to DOM / Map
   await Sidebar.renderTabs(map, appState)

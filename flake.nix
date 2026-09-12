@@ -73,25 +73,31 @@
         startServicesScript = pkgs.writeShellScriptBin "heatflask-start-services" ''
           set -e
 
-          if ! pgrep -f "mongod.*\.data/mongodb" > /dev/null; then
-            echo "Starting MongoDB..."
-            ${pkgs.mongodb}/bin/mongod --config ${mongoConf} --fork
-            sleep 2
+          # Detect by port, not by process name. mongod's dbPath lives in the
+          # config file, so a `pgrep -f "mongod.*\.data/mongodb"` pattern never
+          # matches -- the command line is just `mongod --config ... --fork`.
+          # We would then start a second server, which exits 48 (addr in use).
+          if (exec 3<>/dev/tcp/127.0.0.1/27017) 2>/dev/null; then
+            echo "MongoDB already running on 127.0.0.1:27017"
           else
-            echo "MongoDB already running"
+            echo "Starting MongoDB..."
+            mkdir -p .data/mongodb
+            ${pkgs.mongodb}/bin/mongod --config ${mongoConf} --fork
+            echo "MongoDB: localhost:27017"
           fi
-
-          echo "MongoDB: localhost:27017"
         '';
 
         stopServicesScript = pkgs.writeShellScriptBin "heatflask-stop-services" ''
-          if pgrep -f "mongod.*\.data/mongodb" > /dev/null; then
+          # mongod can shut itself down given its dbPath. The mongodb package
+          # ships mongo/mongod/mongos and *not* mongosh, so the previous
+          # `mongosh --eval shutdown` was a command-not-found, and its pkill
+          # fallback matched a pattern that never appears in mongod's argv.
+          if (exec 3<>/dev/tcp/127.0.0.1/27017) 2>/dev/null; then
             echo "Stopping MongoDB..."
-            ${pkgs.mongodb}/bin/mongosh --eval "db.adminCommand({ shutdown: 1 })" 2>/dev/null \
-              || pkill -f "mongod.*\.data/mongodb"
+            ${pkgs.mongodb}/bin/mongod --dbpath .data/mongodb --shutdown
+          else
+            echo "MongoDB is not running"
           fi
-
-          echo "Services stopped."
         '';
 
         runAppScript = pkgs.writeShellScriptBin "heatflask-run" ''
@@ -100,20 +106,42 @@
             exit 1
           fi
 
-          source backend/.venv/heatflask/bin/activate
-
-          if ! ${pkgs.mongodb}/bin/mongosh --quiet --eval "db.version()" > /dev/null 2>&1; then
+          if ! (exec 3<>/dev/tcp/127.0.0.1/27017) 2>/dev/null; then
             echo "WARNING: MongoDB is not running. Run 'heatflask-start-services'."
           fi
 
+          cd backend || exit 1
+          source .venv/heatflask/bin/activate
+
+          # Local credentials. `.env` is what backend/.env.tmp is meant to be
+          # copied to; `activate` is the name .dev-install-backend gives it.
+          # Both are gitignored. Sourced from inside backend/ because the file
+          # activates the venv by a path relative to here.
+          for envfile in .env activate; do
+            if [ -f "$envfile" ]; then
+              echo "loading backend/$envfile"
+              set -a
+              . "./$envfile"
+              set +a
+              break
+            fi
+          done
+
           export MONGODB_URL=''${MONGODB_URL:-mongodb://localhost:27017/heatflask}
           export APP_ENV=''${APP_ENV:-development}
+
+          if [ -z "''${STRAVA_CLIENT_ID:-}" ]; then
+            echo ""
+            echo "ERROR: STRAVA_CLIENT_ID is not set, so the app cannot import."
+            echo "       Copy backend/.env.tmp to backend/.env and fill it in."
+            exit 1
+          fi
 
           echo "MONGODB_URL: $MONGODB_URL"
           echo "APP_ENV:     $APP_ENV"
           echo ""
 
-          cd backend && exec python -m heatflask.webserver.serve "''${@}"
+          exec python -m heatflask.webserver.serve "''${@}"
         '';
 
         # Frontend. Note there is no asc-build step: the AssemblyScript/WASM
@@ -132,6 +160,10 @@
 
         frontendBuildScript = pkgs.writeShellScriptBin "heatflask-frontend-build" ''
           ${frontendInstall}
+          # Parcel emits content-hashed filenames, so without clearing the old
+          # output first every build leaves all of its predecessors behind.
+          rm -rf dist/* .parcel-cache
+          cp -n src/dist/* dist/ 2>/dev/null || true
           exec ./node_modules/.bin/parcel build 'src/webpages/**/!(tab.*).html' "''${@}"
         '';
 

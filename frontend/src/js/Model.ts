@@ -69,7 +69,9 @@ const DEFAULT_GEOHASH: string = Geohash.encode(
   DEFAULT_CENTER.lng,
   DEFAULT_ZOOM
 )
-const DEFAULT_BASELAYER = "Mapbox.dark"
+/* Keyless by default. The four Mapbox layers need MAPBOX_ACCESS_TOKEN, so
+ * defaulting to one of them gives anyone without a token an empty map. */
+const DEFAULT_BASELAYER = "OpenStreetMap.Mapnik"
 
 export const DefaultVisual: VisualParameters = {
   center: DEFAULT_CENTER,

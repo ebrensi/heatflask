@@ -164,7 +164,16 @@ export function BindMap(map: myMap, appState: State) {
   })
 
   map.on("baselayerchange", (e) => {
-    visual.baselayer = (<TileLayer>e.propagatedFrom).name
+    /* Leaflet's Control.Layers fires this via map.fire(type, obj) where obj is
+     * the layer record {layer, name, overlay}. Nothing propagates, so there is
+     * no e.propagatedFrom -- reading .name off it threw
+     *   TypeError: Cannot read properties of undefined (reading 'name')
+     * synchronously inside addTo() on line 154, which aborted BindMap and with
+     * it the rest of app startup, including the DotLayer. */
+    const ev = <{ name?: string; layer?: TileLayer }>(<unknown>e)
+    const name = ev.name ?? ev.layer?.name
+    if (!name) return
+    visual.baselayer = name
     setURLfromQV({ visual, query })
   })
 }

@@ -1,13 +1,15 @@
 /*
   DotLayer Efrem Rensi, 2020 - 2021
 */
-import { Layer, DomUtil, Browser, setOptions, Control } from "../myLeaflet"
+// was "../myLeaflet", a module that does not exist anywhere in the tree
+import { Layer, DomUtil, Browser, setOptions, Control } from "leaflet"
 import * as ViewBox from "./ViewBox"
 import * as ActivityCollection from "./ActivityCollection"
 import { PixelGraphics } from "./PixelGraphics"
-import { MAP_INFO } from "../Env"
+// Env exports ADMIN; MAP_INFO is the alias ViewBox.ts uses for it
+import { ADMIN as MAP_INFO } from "../Env"
 import { nextTask, sleep, nextAnimationFrame } from "../appUtil"
-import { vParams } from "../Model"
+import type { VisualParameters } from "../Model"
 // import * as WorkerPool from "./WorkerPool.js"
 
 import {
@@ -42,6 +44,13 @@ let _ready: boolean
 let _options
 let _gifPatch: boolean
 
+/* The animation settings: tau, T, sz, alpha, paused. This module used to do
+ * `import { vParams } from "../Model"`, but Model exports no such binding --
+ * it became VisualParameters / appState.visual and this file was never
+ * updated. Nothing imported DotLayer, so neither Parcel nor tsc ever noticed.
+ * It is now supplied as the `visual` option at construction. */
+let vParams: VisualParameters
+
 /*
  * Displays for debugging
  */
@@ -69,6 +78,12 @@ export const DotLayer = Layer.extend({
   initialize: function (options) {
     setOptions(this, options)
     _options = this.options
+
+    vParams = _options.visual
+    if (!vParams) {
+      throw new Error("DotLayer requires a `visual` option (appState.visual)")
+    }
+
     _paused = _options.startPaused
     if (_paused) this.pause()
     // WorkerPool.initialize(_options.numWorkers)

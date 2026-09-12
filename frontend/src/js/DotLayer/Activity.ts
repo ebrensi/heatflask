@@ -70,7 +70,9 @@ export class Activity {
 
   // average_speed: number
   // tr: HTMLTableRowElement
-  // idx?: number
+  /** index of this Activity in ActivityCollection's itemsArray, assigned by
+   * ActivityCollection.reset(). Was declared only in a comment. */
+  idx?: number
 
   constructor(a: ImportedActivity) {
     const offset = a[A.UTC_LOCAL_OFFSET]
@@ -413,6 +415,13 @@ export class Activity {
          * too -- a duplicate at every segment join. */
         if (dt <= 0) continue
 
+        /* Stride 2: [x, y] per dot. alta/altb/va above interpolate altitude
+         * and are currently unused -- they are the hook for rendering over a
+         * 3D vector map. Going 3D means stride 3 here:
+         *     const loc = count * 3
+         *     dotlocs[loc + 2] = alta + va * dt
+         * and widening the buffer in ActivityCollection.drawDots, which sizes
+         * and grows it as 2 * maxDots. */
         const loc = count * 2
         dotlocs[loc] = pax + vx * dt
         dotlocs[loc + 1] = pay + vy * dt
