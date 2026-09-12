@@ -50,10 +50,13 @@
 
           mkdir -p .data/mongodb
 
-          if [ ! -d ".venv" ]; then
+          # backend/.venv/heatflask, not a bare .venv: that is the path
+          # backend/.env.tmp sources, what backend/.dev-install-backend creates,
+          # and what .gitignore already excludes
+          if [ ! -d "backend/.venv/heatflask" ]; then
             echo "Creating Python virtual environment..."
-            python -m venv .venv
-            source .venv/bin/activate
+            python -m venv backend/.venv/heatflask
+            source backend/.venv/heatflask/bin/activate
             pip install --upgrade pip setuptools wheel
             echo "Installing backend dependencies..."
             pip install -r backend/requirements.txt
@@ -92,12 +95,12 @@
         '';
 
         runAppScript = pkgs.writeShellScriptBin "heatflask-run" ''
-          if [ ! -d ".venv" ]; then
+          if [ ! -d "backend/.venv/heatflask" ]; then
             echo "ERROR: no virtual environment. Run 'heatflask-setup' first."
             exit 1
           fi
 
-          source .venv/bin/activate
+          source backend/.venv/heatflask/bin/activate
 
           if ! ${pkgs.mongodb}/bin/mongosh --quiet --eval "db.version()" > /dev/null 2>&1; then
             echo "WARNING: MongoDB is not running. Run 'heatflask-start-services'."
@@ -111,6 +114,30 @@
           echo ""
 
           cd backend && exec python -m heatflask.webserver.serve "''${@}"
+        '';
+
+        # Frontend. Note there is no asc-build step: the AssemblyScript/WASM
+        # layer is being removed, and npm ci needs --ignore-scripts because the
+        # three GitHub fork dependencies run `prepare` on install and pull in
+        # build chains that do not compile on current Node.
+        frontendInstall = ''
+          cd frontend || exit 1
+          if [ ! -d node_modules ]; then
+            echo "Installing frontend dependencies..."
+            npm ci --ignore-scripts --no-audit --no-fund || exit 1
+          fi
+          mkdir -p dist
+          cp -n src/dist/* dist/ 2>/dev/null || true
+        '';
+
+        frontendBuildScript = pkgs.writeShellScriptBin "heatflask-frontend-build" ''
+          ${frontendInstall}
+          exec ./node_modules/.bin/parcel build 'src/webpages/**/!(tab.*).html' "''${@}"
+        '';
+
+        frontendWatchScript = pkgs.writeShellScriptBin "heatflask-frontend-watch" ''
+          ${frontendInstall}
+          exec ./node_modules/.bin/parcel watch 'src/webpages/**/!(tab.*).html' "''${@}"
         '';
 
       in
@@ -143,6 +170,8 @@
             startServicesScript
             stopServicesScript
             runAppScript
+            frontendBuildScript
+            frontendWatchScript
           ];
 
           shellHook = ''
@@ -168,6 +197,15 @@
             echo "  heatflask-start-services   - start MongoDB"
             echo "  heatflask-stop-services    - stop MongoDB"
             echo "  heatflask-run              - run the Sanic backend"
+            echo "  heatflask-frontend-build   - build the frontend once"
+            echo "  heatflask-frontend-watch   - rebuild the frontend on change"
+            echo ""
+            echo "Local dev loop, from the repo root:"
+            echo "  1. heatflask-setup && heatflask-start-services"
+            echo "  2. heatflask-frontend-watch     (leave running)"
+            echo "  3. heatflask-run               (in a second shell)"
+            echo "  Needs STRAVA_CLIENT_ID/SECRET in the environment; see"
+            echo "  backend/.env.tmp for the full list."
             echo ""
           '';
 

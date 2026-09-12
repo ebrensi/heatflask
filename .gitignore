@@ -108,6 +108,10 @@ frontend/node_modules
 # Ignore ParcelJS caches
 frontend/.parcel-cache
 
+# Local datastore and logs, created by heatflask-setup /
+# heatflask-start-services. Purely local runtime state.
+.data/
+
 # For Development
 frontend/dev-docs.md
 backend/heatflask/notebooks/.ipynb_checkpoints
