@@ -67,8 +67,13 @@
     // "allowUnreachableCode": true,                     /* Disable error reporting for unreachable code. */
 
     /* Completeness */
-    // "skipDefaultLibCheck": true,                      /* Skip type checking .d.ts files that are included with TypeScript. */
-    // "skipLibCheck": false                                 /* Skip type checking all .d.ts files. */
+    /* Don't typecheck third-party .d.ts files. This is tsc's own default in a
+     * generated config, and it is needed here: TS 5.9's lib.dom now ships
+     * WebCodecs itself, which collides with the standalone
+     * @types/dom-webcodecs that mediabunny depends on. Those errors are
+     * between two declaration files in node_modules and say nothing about
+     * this codebase. */
+    "skipLibCheck": true
   },
   "include": ["src/**/*"],
   "exclude": [

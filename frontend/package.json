@@ -35,6 +35,7 @@
     "leaflet-easybutton": "^2.4.0",
     "leaflet-image": "^0.4.0",
     "leaflet-providers": "^1.13.0",
+    "mediabunny": "^1.56.1",
     "sidebar-v2": "^0.4.0"
   },
   "browserslist": [
@@ -57,7 +58,7 @@
     "prettier": "^2.5.1",
     "process": "^0.11.10",
     "typedoc": "^0.22.15",
-    "typescript": "^4.5.4"
+    "typescript": "~5.9"
   },
   "prettier": {
     "semi": false

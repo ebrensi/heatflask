@@ -69,6 +69,24 @@
   color: #fff;
 }
 
+/* Readout while a video capture runs. Centred at the top of the map so it
+ * clears the controls in both top corners. */
+.capture-progress {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  padding: 6px 12px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.75);
+  color: rgba(255, 255, 255, 0.95);
+  font-family: monospace;
+  font-size: 14px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
 .leaflet-aux-box {
   position: absolute;
   left: 0;

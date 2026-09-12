@@ -1,10 +1,10 @@
 /*
  * DotLayerAPI -- creates the one DotLayer instance and exposes it.
  *
- * Both UI.ts and DotLayer/Export.ts imported `{ dotLayer }` from this module,
- * but the module did not exist: those imports sat commented out, and nothing
- * else imported DotLayer either. That is why the animation layer was never
- * bundled, never typechecked, and never ran.
+ * UI.ts imported `{ dotLayer }` from this module, but the module did not
+ * exist: that import sat commented out, and nothing else imported DotLayer
+ * either. That is why the animation layer was never bundled, never
+ * typechecked, and never ran.
  */
 
 import { DotLayer } from "./DotLayer/DotLayer"
@@ -21,8 +21,16 @@ type DotLayerInstance = {
   redraw(forceFullRedraw?: boolean): Promise<void>
   animate(): void
   pause(): void
+  paused(): boolean
   updateDotSettings(shadowSettings?: { enabled?: boolean }): unknown
   options: { showPaths: boolean; dotShadows: { enabled: boolean } }
+
+  /* Frame stepping, for Capture.ts: the length of one animation loop in real
+   * seconds, a draw at an arbitrary time rather than "now", and the canvases
+   * a capture composites (bottom to top). */
+  periodInSecs(): number
+  drawDotsAt(tsecs: number): Promise<number>
+  canvases(): { path: HTMLCanvasElement; dot: HTMLCanvasElement }
 }
 type DotLayerCtor = new (options: Record<string, unknown>) => DotLayerInstance
 

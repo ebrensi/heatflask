@@ -17,8 +17,23 @@ import {
   dotSettings as _dotSettings,
 } from "./Defaults"
 
-import type { Map as LMap } from "leaflet"
-type EventHandlerObject = { [eventName: string]: EventListener }
+import type {
+  Map as LMap,
+  LeafletEvent,
+  ZoomAnimEvent,
+  LatLng,
+  Point,
+} from "leaflet"
+
+/* These handlers receive Leaflet events, not DOM events. The map used to be
+ * typed as { [name: string]: EventListener }, which is a DOM handler and is
+ * not what Leaflet passes. */
+type EventHandlerObject = { [eventName: string]: (e?: LeafletEvent) => void }
+
+/** Leaflet internals @types/leaflet does not declare. */
+type MapInternals = {
+  _latLngToNewLayerPoint(latlng: LatLng, zoom: number, center: LatLng): Point
+}
 
 const DEBUG_BORDERS = false
 const TARGET_FPS = 36
@@ -27,7 +42,9 @@ const TARGET_FPS = 36
  * and hogging up CPU cycles we set a minimum delay between redraws
  */
 const CONTINUOUS_REDRAWS = true
-const MIN_REDRAW_DELAY = 100 // milliseconds
+/* The floor on the interval between redraws, in ms -- so ~20 redraws/sec at
+ * most during a continuous pan. Lower is smoother and costs more CPU. */
+const MIN_REDRAW_DELAY = 50
 
 /* Dot size grows with zoom, so dots read as objects sitting in space rather
  * than decoration painted on the screen -- but only partly. Map scale is
@@ -182,6 +199,32 @@ export const DotLayer = Layer.extend({
   pause: function () {
     _paused = true
   },
+
+  paused: function (): boolean {
+    return !!_paused
+  },
+
+  /* ---- frame stepping, for capture -------------------------------------
+   *
+   * The animation is periodic: the dot pattern repeats every s activity-
+   * seconds, which is s/tau of real time. Capturing exactly one period
+   * therefore yields a seamless loop.
+   */
+
+  /** Length of one loop, in real seconds. */
+  periodInSecs: function (): number {
+    return +vParams.T / +vParams.tau
+  },
+
+  /** Draw one frame at an arbitrary time rather than "now". */
+  drawDotsAt: function (tsecs: number): Promise<number> {
+    return drawDots(tsecs)
+  },
+
+  /** The canvases a capture composites, in bottom-to-top order. */
+  canvases: function (): { path: HTMLCanvasElement; dot: HTMLCanvasElement } {
+    return { path: pathCanvas, dot: dotCanvas }
+  },
 })
 
 /*
@@ -306,12 +349,28 @@ async function onMoveEnd() {
 let _redrawing: boolean
 let _currentTick = 0
 
+let _lastRedrawTime = 0
+
 async function redraw(forceFullRedraw?: boolean) {
   if (!_ready) return
 
   const tick = ++_currentTick
 
-  await sleep(MIN_REDRAW_DELAY)
+  /* A leading-edge throttle, not a debounce.
+   *
+   * This used to sleep MIN_REDRAW_DELAY on every call and only then check
+   * whether a newer call had superseded it. That has two costs: an isolated
+   * redraw -- the one at the end of a zoom, say -- paid the full delay for
+   * nothing, and during a continuous gesture every call kept getting
+   * superseded, so nothing was drawn until the gesture stopped.
+   *
+   * Now a redraw that follows a quiet period runs immediately, and only
+   * back-to-back redraws get spaced out. */
+  const elapsed = performance.now() - _lastRedrawTime
+  if (elapsed < MIN_REDRAW_DELAY) {
+    await sleep(MIN_REDRAW_DELAY - elapsed)
+  }
+  _lastRedrawTime = performance.now()
 
   _moveEnd = false
 
@@ -386,7 +445,9 @@ async function drawPaths() {
 async function drawDots(tsecs?: number) {
   if (!_ready) return 0
 
-  if (!tsecs) tsecs = _timePaused || timeOrigin / 1000
+  /* `=== undefined`, not a falsy test: t=0 is a legitimate timestamp, and a
+   * falsy test quietly turned it into "now". */
+  if (tsecs === undefined) tsecs = _timePaused || timeOrigin / 1000
 
   dotPxg.clear()
   /* vParams.T is s: the timestep between successive dots, in ACTIVITY
@@ -484,21 +545,35 @@ async function animate() {
   _timePaused = nowInSeconds
 }
 
-function animateZoom(e) {
-  return
+/*
+ * Leaflet zooms by CSS-transforming the map pane, and ViewBox.calibrate()
+ * cancels that transform on our canvases so they sit in screen coordinates.
+ * The consequence is that during a zoom animation the tiles scale while the
+ * paths and dots stay frozen, and then snap into place at moveend -- which is
+ * what makes zooming look choppy.
+ *
+ * This handler fixes that without re-rendering anything: it scales the
+ * already-drawn canvas about the zoom centre for the duration of the
+ * animation, the same way Leaflet's own Canvas renderer does. The real redraw
+ * still happens at moveend; this just keeps the layer glued to the map on the
+ * way there.
+ *
+ * It had been disabled by an unconditional `return` on its first line.
+ */
+function animateZoom(e: ZoomAnimEvent) {
   if (_moveEnd) return // prevents weird animation on moveEnd.
-  const m = _map
-  const z = e.zoom
-  const scale = m.getZoomScale(z)
 
+  /* _latLngToNewLayerPoint is Leaflet-internal (no leading-underscore members
+   * appear in @types/leaflet) but it is what every zoom-animated canvas layer
+   * in the ecosystem uses, Leaflet's own Canvas renderer included. */
+  const m = <LMap & MapInternals>_map
+  const scale = m.getZoomScale(e.zoom)
   const offset = m._latLngToNewLayerPoint(
     m.getBounds().getNorthWest(),
-    z,
+    e.zoom,
     e.center
   )
   ViewBox.setCSStransform(offset, scale)
-
-  // console.log({ offset, scale })
 }
 
 // for debug display

@@ -122,8 +122,13 @@ backend/activate
 backend/.env
 .env
 
-# We don't ingore frontend/dist because it needs to be there for the
-# app to run, but since it is built on the server we don't want to
-# push any of our dist code
-
-# frontend/dist
+# frontend/dist has to exist for the app to run, but it is built on the
+# server, so the build output does not belong in the repo. Ignore the
+# generated files and keep the two hand-written ones that get copied in.
+#
+# This was a commented-out `frontend/dist` and nothing else, which left every
+# build artifact showing as untracked -- so a `git add -A` would sweep several
+# MB of hashed bundles and source maps into a commit.
+frontend/dist/*
+!frontend/dist/README.md
+!frontend/dist/robots.txt

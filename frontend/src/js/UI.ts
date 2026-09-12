@@ -21,6 +21,7 @@ import * as Sidebar from "./Sidebar"
 import { createDotLayer } from "./DotLayerAPI"
 import { addAnimationControl } from "./AnimationControl"
 import { addPathSelectControl } from "./PathSelectControl"
+import { addCaptureControl } from "./CaptureControl"
 import * as Table from "./Table"
 import { initRender, renderFromQuery } from "./Render"
 
@@ -54,9 +55,10 @@ export async function start() {
   // draws, however many activities the query returns.
   createDotLayer(map, appState)
 
-  // Play/pause button for the animation, and select-by-area
+  // Play/pause button for the animation, select-by-area, and video capture
   addAnimationControl(map, appState)
   addPathSelectControl(map)
+  addCaptureControl(map)
 
   // Give Render the map and state, so the query tab can trigger a render
   initRender(map, appState)
@@ -77,7 +79,6 @@ export async function start() {
 // import * as ActivityCollection from "./DotLayer/ActivityCollection"
 
 // import { dotLayer } from "./DotLayerAPI"
-// // import { captureCycle, abortCapture } from "./DotLayer/Export"
 
 // import "./DotControls"
 // import "./Control.pathSelect"

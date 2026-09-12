@@ -144,18 +144,27 @@ export function updateZoom(): number {
   return changed
 }
 
+/* The scale most recently written to the canvases' CSS transform. This is NOT
+ * _scale: that one is 2**zoom, the map's own scale, whereas this is whatever
+ * was last handed to DomUtil.setTransform -- usually undefined (no scaling),
+ * and a real number only while a zoom animation is in flight.
+ *
+ * The guard below used to compare the incoming scale against _scale, which is
+ * a different quantity, and never recorded the scale it applied. So after a
+ * zoom animation left the canvases scaled, the calibrate() that follows --
+ * same offset, no scale -- matched the offset half of the guard and returned
+ * early, leaving the canvases stuck at the animation's scale. */
+let _lastScale: number | undefined
+
 export function setCSStransform(offset: Point, scale?: number): void {
-  if (offset.equals(_lastT) && _scale === scale) {
-    console.log("redundant transform update")
-    return
-  }
+  if (offset.equals(_lastT) && scale === _lastScale) return
+
   for (let i = 0; i < _canvases.length; i++) {
     DomUtil.setTransform(_canvases[i], offset, scale)
   }
   _lastT.x = offset.x
   _lastT.y = offset.y
-
-  // console.log(`transform: ${scale}, (${offset.x}, ${offset.y})`)
+  _lastScale = scale
 }
 
 /*
