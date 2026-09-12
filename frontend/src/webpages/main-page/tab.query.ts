@@ -1,6 +1,7 @@
 import { icon } from "~/src/js/Icons"
 import { State } from "~/src/js/Model"
 import type { QueryParameters } from "~/src/js/Model"
+import { renderFromQuery } from "~/src/js/Render"
 import CONTENT from "bundle-text:./tab.query.html"
 export { CONTENT }
 
@@ -42,10 +43,12 @@ const OnChange: CallbackDispatch = {
 
 const OnClick: CallbackDispatch = {
   "button:query": (el, S) => {
-    console.log("button:query", el, S)
+    runQuery(S)
   },
-  "button:abort": (el, S) => {
-    console.log("button:abort", el, S)
+  "button:abort": () => {
+    /* makeActivityQuery is an AsyncGenerator that accepts an abort signal as
+     * the argument to next(), but nothing threads one through yet. */
+    console.warn("aborting an import is not wired up yet")
   },
   "button:login": (el, S) => {
     console.log("button:login", el, S)
@@ -56,6 +59,25 @@ const OnClick: CallbackDispatch = {
     console.log("button:logout", el, S)
     window.location.href = "/auth/logout"
   },
+}
+
+/**
+ * Pull the current form values into the model, then run the query.
+ *
+ * The [data-bind] inputs are not synced to appState as the user edits them --
+ * only queryType and autozoom have change handlers -- so they are collected
+ * here, at the point of use.
+ */
+function runQuery(S: State): void {
+  const fromDom = getQparamsFromDom().query
+  if (fromDom) {
+    const target = <Record<string, unknown>>(<unknown>S.query)
+    for (const [key, value] of Object.entries(fromDom)) {
+      if (value === "" || value === null || value === undefined) continue
+      target[key] = key === "quantity" ? +value : value
+    }
+  }
+  renderFromQuery().catch((e) => console.error("query failed:", e))
 }
 
 /**
@@ -98,8 +120,7 @@ export function SETUP(appState: State) {
   document.getElementById("quantity").addEventListener("keypress", (event) => {
     if (event.key === "Enter") {
       appState.query.quantity = +(<HTMLInputElement>event.target).value
-      console.log("we gonna render now...")
-      // renderFromQuery()
+      runQuery(appState)
     }
   })
 

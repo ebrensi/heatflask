@@ -57,6 +57,18 @@
   color: rgba(255, 255, 255, 0.9);
 }
 
+/* Leaflet's own stylesheet has
+ *     .leaflet-bar a:hover, .leaflet-bar a:focus { background-color: #f4f4f4 }
+ * at specificity (0,2,1), which outranks the (0,1,1) rule above. Since focus
+ * persists after a click, a pressed button stayed lit even once the pointer
+ * left. Qualifying with .leaflet-control takes this to (0,3,1) so it wins
+ * whatever order the stylesheets end up in. */
+.leaflet-bar.leaflet-control a:hover,
+.leaflet-bar.leaflet-control a:focus {
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+}
+
 .leaflet-aux-box {
   position: absolute;
   left: 0;

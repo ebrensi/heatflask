@@ -28,6 +28,14 @@ export function remove(id: number): void {
   items.delete(id)
 }
 
+/** Drop every activity. Used when a new query replaces the current set. */
+export function clear(): void {
+  items.clear()
+  itemsArray = []
+  inView.clear()
+  lastInView.clear()
+}
+
 /**
  * This should be called after adding or removing Activities.
  */

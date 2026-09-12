@@ -335,15 +335,15 @@ async function redraw(forceFullRedraw?: boolean) {
     return
   }
 
-  /* Erase both canvases and draw the whole view.
+  /* Note: the canvases are NOT cleared here. Each draw clears its own canvas
+   * immediately before drawing into it.
    *
-   * This used to erase only each canvas's drawBounds rectangle, shift the
-   * surviving pixels with translate(), and redraw just the segments whose
-   * visibility had changed. That machinery is gone: it was a great deal of
-   * bookkeeping, spread across the renderer, the activity collection and the
-   * wasm module, for an optimization that did not pay for itself.
-   */
-  clearCanvases()
+   * Clearing up front and drawing after `await nextTask()` put a macrotask
+   * boundary between the two, and the browser repaints between tasks -- so a
+   * fully-wiped canvas got painted to the screen, which showed up as blank
+   * frames between zoom steps. The old code avoided this by clearing only the
+   * drawBounds rectangle and shifting the surviving pixels across, machinery
+   * that has since been removed. */
 
   // reset the canvases to to align with the screen and update the ViewBox
   // location relative to the map's pxOrigin
@@ -357,6 +357,9 @@ async function redraw(forceFullRedraw?: boolean) {
   if (_options.showPaths) {
     await nextTask()
     promises.push(drawPaths())
+  } else {
+    // paths turned off: wipe whatever is still on that canvas
+    pathPxg.clear()
   }
 
   if (_paused) {
@@ -368,13 +371,13 @@ async function redraw(forceFullRedraw?: boolean) {
   _redrawing = false
 }
 
-function clearCanvases() {
-  pathPxg.clear()
-  dotPxg.clear()
-}
-
 async function drawPaths() {
   if (!_ready) return 0
+  /* Clear and draw with no macrotask boundary between them. ActivityCollection
+   * .drawPaths contains no awaits, so awaiting it only yields a microtask, and
+   * the browser cannot repaint mid-microtask -- so the wiped canvas is never
+   * visible. */
+  pathPxg.clear()
   const { count } = await ActivityCollection.drawPaths(pathPxg)
   pathPxg.flush()
   return count

@@ -14,15 +14,13 @@ import {
 
 import { parseURL } from "./URL"
 import { watch } from "./DataBinding"
-import { qToQ, makeActivityQuery } from "./DataImport"
 
 import * as MapAPI from "./MapAPI"
 import * as Sidebar from "./Sidebar"
 
-import * as ActivityCollection from "./DotLayer/ActivityCollection"
-import { createDotLayer, dotLayer } from "./DotLayerAPI"
-
-import type { ImportedActivity } from "./DataImport"
+import { createDotLayer } from "./DotLayerAPI"
+import { addAnimationControl } from "./AnimationControl"
+import { initRender, renderFromQuery } from "./Render"
 
 const map = MapAPI.CreateMap()
 
@@ -33,38 +31,8 @@ if (!!FLASHES && FLASHES.length) {
   map.controlWindow.show()
 }
 
-export async function updateFromQuery(appState: State) {
-  const { query, visual } = appState
-  const backendQuery = qToQ(query, true)
-
-  let count = 0
-  for await (const obj of makeActivityQuery(backendQuery, URLS.query)) {
-    if (!obj) continue
-
-    if ("_id" in obj) {
-      // An activity. Hand it to the collection the DotLayer draws from.
-      ActivityCollection.add(<ImportedActivity>(<unknown>obj))
-      count++
-    } else {
-      // Progress / status messages from the backend
-      console.log(obj)
-    }
-  }
-
-  if (!count) {
-    console.warn("query returned no activities")
-    return
-  }
-
-  /* reset() packs the streams, builds the per-zoom index sets, draws, and
-   * starts the animation. */
-  await dotLayer.reset()
-
-  if (visual.autozoom) {
-    const bounds = await ActivityCollection.getLatLngBounds()
-    if (bounds && bounds.isValid()) map.fitBounds(bounds)
-  }
-}
+// The query/render pipeline lives in Render.ts, so the query tab can drive it
+export { renderFromQuery }
 
 export async function start() {
   // Get model parameters from the current URL
@@ -84,10 +52,16 @@ export async function start() {
   // draws, however many activities the query returns.
   createDotLayer(map, appState)
 
+  // Play/pause button for the animation
+  addAnimationControl(map, appState)
+
+  // Give Render the map and state, so the query tab can trigger a render
+  initRender(map, appState)
+
   // Add Sidebar tabs to DOM / Map
   await Sidebar.renderTabs(map, appState)
 
-  await updateFromQuery(appState)
+  await renderFromQuery()
 
   return appState
 }

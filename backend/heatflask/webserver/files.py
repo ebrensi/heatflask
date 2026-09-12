@@ -39,13 +39,39 @@ async def load_templates(app: Sanic):
     #
     # This is faster than using a Templating library like Jinja2
     # since we don't need any of its advanced features.
+    loaded: dict[str, Template] = {}
     for fname in os.listdir(FRONTEND_DIST_DIR):
         if fname.endswith(".html"):
             fpath = f"{FRONTEND_DIST_DIR}/{fname}"
             with open(fpath, "r") as file:
                 file_str = file.read()
-            templates[fname] = Template(file_str)
+            loaded[fname] = Template(file_str)
             log.debug("Created string template from %s", fname)
+
+    if not loaded and templates:
+        # A frontend build empties dist/ before writing to it, and auto_reload
+        # watches that same directory -- so a reload can land mid-build, when
+        # there is no html to read. Keep what we already have rather than
+        # replacing it with nothing and then serving KeyError 500s until the
+        # next reload happens to arrive.
+        log.warning(
+            "no templates found in %s (build in progress?); keeping the %d already loaded",
+            FRONTEND_DIST_DIR,
+            len(templates),
+        )
+        return
+
+    templates.clear()
+    templates.update(loaded)
+
+
+def read_template(filename: str) -> Template | None:
+    """Read one template off disk, or None if it is not there."""
+    try:
+        with open(f"{FRONTEND_DIST_DIR}/{filename}", "r") as file:
+            return Template(file.read())
+    except OSError:
+        return None
 
 
 def render_template(filename: str, **kwargs: Any) -> str:
@@ -53,6 +79,17 @@ def render_template(filename: str, **kwargs: Any) -> str:
         if isinstance(val, dict):
             kwargs[key] = json.dumps(val, indent=2)
 
-    t = templates[filename]
-    html = t.safe_substitute(**kwargs)
-    return html
+    t = templates.get(filename)
+    if t is None:
+        # Not cached. The likely reason is that this worker started while a
+        # frontend build had emptied dist/, so load_templates found nothing --
+        # and auto_reload restarts the process, so there is no previous cache
+        # to fall back on. Read it now instead of serving a 500 until some
+        # later reload happens along.
+        t = read_template(filename)
+        if t is None:
+            raise KeyError(f"no template {filename} in {FRONTEND_DIST_DIR}")
+        templates[filename] = t
+        log.info("loaded template %s on demand", filename)
+
+    return t.safe_substitute(**kwargs)
