@@ -181,7 +181,10 @@ export async function getLatLngBounds(
   ids?: Iterable<number>,
   only_selected?: boolean
 ): Promise<LatLngBounds> {
-  const bounds = new LatLngBounds()
+  /* An empty bounds to extend into. @types/leaflet requires an argument, so
+   * pass an empty corner list: Leaflet loops over it and extends nothing,
+   * leaving exactly the empty, not-yet-valid bounds the no-arg call gives. */
+  const bounds = new LatLngBounds([])
   ids = ids || items.keys()
   if (ids) {
     for (const id of ids) {

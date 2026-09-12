@@ -18,7 +18,13 @@ type rect = { x: number; y: number; w: number; h: number }
 
 const BOUNDSTOL = 0.0001
 
-let _map: LMap
+/* _getMapPanePos is Leaflet-internal, and @types/leaflet declares no
+ * underscore-prefixed members. It is the map pane's current translation, which
+ * is what calibrate() has to cancel to keep the canvases in screen
+ * coordinates; there is no public equivalent. */
+type MapInternals = { _getMapPanePos(): Point }
+
+let _map: LMap & MapInternals
 let _baseTranslation: Point
 const _lastT = new Point(0, 0)
 let _pxOrigin: Point
@@ -65,7 +71,7 @@ export const latLng2px: TransformFunc = makePT(0)
  * for now, to avoid the circular dependency if we import map from ../mapAPI.js
  */
 export function setMap(map: LMap): void {
-  _map = map
+  _map = <LMap & MapInternals>map
   if (MAP_INFO) {
     new InfoViewer().addTo(map)
   }

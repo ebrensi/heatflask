@@ -76,9 +76,13 @@
     "skipLibCheck": true
   },
   "include": ["src/**/*"],
+  /* src/js/DotLayer used to be excluded here. That is how the renderer drifted
+   * out of sync unnoticed for so long: nothing imported DotLayer either, so it
+   * was neither bundled nor typechecked, and its files could reference
+   * functions and modules that no longer existed without anything complaining.
+   * It typechecks clean now, so it stays in. */
   "exclude": [
     "src/dist/*",
-    "src/js/DotLayer",
     "src/parcel-namer-flat"
   ],
   "typedocOptions": {

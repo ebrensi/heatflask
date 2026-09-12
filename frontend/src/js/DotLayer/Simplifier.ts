@@ -5,8 +5,16 @@
 
 import BitSet from "../BitSet"
 
-type Point = [number, number]
-type PointAccessor = (i: number) => Point | Float32Array
+/* Every function here reads a point only as p[0] and p[1]. Callers pass
+ * either a plain [x, y] or a Float32Array view into the packed coordinate
+ * buffer, so the type that describes what this code needs is the indexing,
+ * not the container.
+ *
+ * Point was `[number, number]` while the accessor returned
+ * `Point | Float32Array`, which made every call passing an accessor result to
+ * one of these helpers a type error -- six of the ten left in the project. */
+type Point = ArrayLike<number>
+type PointAccessor = (i: number) => Point
 
 /*
  * Simplifier.js is based on V. Agafonkin's package with the same name

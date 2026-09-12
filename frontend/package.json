@@ -14,6 +14,7 @@
     "parcel-build": "parcel build 'src/webpages/**/!(tab.*).html'",
     "build": "npm run clean; npm run parcel-build",
     "watch": "npm run parcel-watch",
+    "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist/* .parcel-cache/* dev-docs/*; cp src/dist/* dist/",
     "format": "prettier --write src/",
     "doc": "pdoc -o ./dist/docs/backend/ ../backend/heatflask & typedoc"

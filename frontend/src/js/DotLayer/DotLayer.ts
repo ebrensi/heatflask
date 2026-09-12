@@ -150,7 +150,12 @@ export const DotLayer = Layer.extend({
     }
 
     ViewBox.setMap(_map)
-    map.on(assignEventHandlers(), this)
+    /* No context argument: every handler here is a module-level function that
+     * closes over module state and never touches `this`. Leaflet's
+     * on(eventMap, context) is real but undeclared in @types/leaflet, and
+     * passing a context we don't use only bought a type error. on and off must
+     * agree for the listeners to be removable, so both drop it. */
+    map.on(assignEventHandlers())
 
     if (MAP_INFO) {
       new InfoViewer().addTo(map)
@@ -173,7 +178,7 @@ export const DotLayer = Layer.extend({
       debugCanvas = null
     }
 
-    map.off(assignEventHandlers(), this)
+    map.off(assignEventHandlers())
   },
 
   // -------------------------------------------------------------------
