@@ -61,6 +61,12 @@ function filename(): string {
   return `heatflask-${stamp}.mp4`
 }
 
+function fileSize(bytes: number): string {
+  /* A short capture of a sparse map is tens of KB, which read as "0.0 MB" */
+  if (bytes < 1e6) return `${Math.round(bytes / 1e3)} KB`
+  return `${(bytes / 1e6).toFixed(1)} MB`
+}
+
 export function addCaptureControl(map: LMap): void {
   const areaSelect = (<MapWithAreaSelect>map).areaSelect
   if (!areaSelect) return
@@ -131,8 +137,9 @@ export function addCaptureControl(map: LMap): void {
             showProgress(label)
           )
           if (blob) {
-            saveBlob(blob, filename())
-            showProgress(`saved (${(blob.size / 1e6).toFixed(1)} MB)`)
+            const name = filename()
+            saveBlob(blob, name)
+            showProgress(`saved ${name} (${fileSize(blob.size)})`)
           } else {
             showProgress("capture cancelled")
           }

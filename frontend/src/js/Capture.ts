@@ -246,6 +246,17 @@ export async function captureVideo(
       basemap.getContext("2d"),
       region
     )
+    if (!haveBasemap) {
+      /* Worth saying out loud: with no basemap the frames are transparent
+       * behind the dots, and MP4 has no alpha channel, so the recording comes
+       * out on a black background. That looks like a broken capture rather
+       * than a missing basemap. The usual cause is a tile server that sends no
+       * CORS headers, since a tainted canvas cannot be encoded. */
+      console.warn(
+        "capture: no basemap tiles could be composited; " +
+          "recording on a black background"
+      )
+    }
 
     const { path: pathCanvas, dot: dotCanvas } = dotLayer.canvases()
 
