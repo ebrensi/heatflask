@@ -48,7 +48,12 @@ POLYLINE_PRECISION = 6
 
 
 class EncodedStreams(TypedDict):
-    """note: altitude (with key 'a') is scaled up 10x"""
+    """note: altitude (with key 'a') is in whole metres.
+
+    It used to be scaled up 10x (decimetres), which overflowed the codec's
+    int16 first-value field above 3276m, and made the run-length diffs
+    overflow a byte for any step over 12.8m -- routine where a recording
+    pauses across a climb."""
 
     t: StreamCodecs.RLDEncoded
     a: StreamCodecs.RLDEncoded
@@ -62,7 +67,7 @@ def encode_streams(rjson: Strava.Streams) -> PackedStreams:
     """compress stream data"""
     enc: EncodedStreams = {
         "t": StreamCodecs.rld_encode(rjson["time"]["data"]),
-        "a": StreamCodecs.rld_encode(rjson["altitude"]["data"], scale=10),
+        "a": StreamCodecs.rld_encode(rjson["altitude"]["data"], scale=1),
         "p": polyline.encode(rjson["latlng"]["data"], POLYLINE_PRECISION),
     }
     return msgpack.packb(enc)

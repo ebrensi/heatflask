@@ -6,6 +6,7 @@
  */
 
 import * as ActivityCollection from "./DotLayer/ActivityCollection"
+import * as Table from "./Table"
 import { dotLayer } from "./DotLayerAPI"
 import { qToQ, makeActivityQuery } from "./DataImport"
 import { URLS } from "./Env"
@@ -75,6 +76,11 @@ export async function renderFromQuery(): Promise<number> {
   /* reset() packs the streams, builds the per-zoom index sets, draws, and
    * starts the animation. */
   await dotLayer.reset()
+
+  /* After reset, not before: ActivityCollection.setDotColors() runs inside it,
+   * so until it has, every Activity.colors.dot is still null and the table's
+   * colour swatches come out blank. */
+  Table.update()
 
   if (visual.autozoom) {
     const bounds = await ActivityCollection.getLatLngBounds()

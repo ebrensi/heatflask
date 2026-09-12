@@ -113,7 +113,10 @@ async function main() {
 }
 
 function makeRow(A: ImportedActivity): string[] {
-  const aid = A[F.ACTIVITY_ID]
+  // these are F.ID / F.TYPE / F.NAME -- the ACTIVITY_-prefixed names this
+  // file used do not exist on ACTIVITY_FIELDNAMES, so every one of these
+  // columns was reading undefined
+  const aid = A[F.ID]
   const heatflask_link = `${BASE_URL}?id=${aid}`
   const strava_link = href(`${activityURL(aid)}`, STRAVA_BUTTON)
   const date = new Date(
@@ -122,7 +125,7 @@ function makeRow(A: ImportedActivity): string[] {
   const dist = (A[F.DISTANCE_METERS] * DIST_SCALE).toFixed(2)
   const elapsed = HHMMSS(A[F.TIME_SECONDS])
   const elev_gain = (A[F.ELEVATION_GAIN] * ELEV_SCALE).toFixed(2)
-  const atype = A[F.ACTIVITY_TYPE]
+  const atype = A[F.TYPE]
   const aicon = activity_icon(<ActivityType>atype) || `${atype}*`
   const picon = A[F.FLAG_PRIVATE] ? priv_icon : pub_icon
 
@@ -136,7 +139,7 @@ function makeRow(A: ImportedActivity): string[] {
       elapsed,
       dist,
       elev_gain,
-      A[F.ACTIVITY_NAME],
+      A[F.NAME],
     ]
   } else {
     return [
@@ -147,7 +150,7 @@ function makeRow(A: ImportedActivity): string[] {
       elapsed,
       dist,
       elev_gain,
-      A[F.ACTIVITY_NAME],
+      A[F.NAME],
     ]
   }
 }

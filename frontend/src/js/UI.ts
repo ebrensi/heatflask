@@ -20,6 +20,8 @@ import * as Sidebar from "./Sidebar"
 
 import { createDotLayer } from "./DotLayerAPI"
 import { addAnimationControl } from "./AnimationControl"
+import { addPathSelectControl } from "./PathSelectControl"
+import * as Table from "./Table"
 import { initRender, renderFromQuery } from "./Render"
 
 const map = MapAPI.CreateMap()
@@ -52,14 +54,19 @@ export async function start() {
   // draws, however many activities the query returns.
   createDotLayer(map, appState)
 
-  // Play/pause button for the animation
+  // Play/pause button for the animation, and select-by-area
   addAnimationControl(map, appState)
+  addPathSelectControl(map)
 
   // Give Render the map and state, so the query tab can trigger a render
   initRender(map, appState)
 
   // Add Sidebar tabs to DOM / Map
   await Sidebar.renderTabs(map, appState)
+
+  // The table needs both the map and the sidebar DOM, so it is initialised
+  // here rather than in the tab's SETUP, which only receives the state
+  Table.init(map, appState)
 
   await renderFromQuery()
 

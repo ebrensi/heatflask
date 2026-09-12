@@ -1,5 +1,6 @@
 import { icon } from "~/src/js/Icons"
 import { State } from "~/src/js/Model"
+import * as Table from "~/src/js/Table"
 
 import CONTENT from "bundle-text:./tab.activities.html"
 export { CONTENT }
@@ -7,16 +8,23 @@ export { CONTENT }
 export const ID = "ActivitiesTab"
 export const TITLE = "Rendered Activities"
 export const ICON = icon("list2")
+
+/** The markup tags these buttons with data-action; nothing consumed it. */
+const actions: Record<string, () => void> = {
+  "selection-clear": () => Table.clearSelections(),
+  "selection-render": () => Table.openSelected(),
+}
+
 export function SETUP(state: State) {
-  /*
-   * Set a listener to change user's account to public or private
-   *  if they change that setting
-   */
-  // currentUser.onChange("private", async (status) => {
-  //   const resp = await fetch(`${URLS["visibility"]}`)
-  //   const response = await resp.text()
-  //   console.log(`response: ${response}`)
-  // })
+  const tab = document.getElementById(ID)
+  if (!tab) return
+
+  tab.addEventListener("click", (e: Event) => {
+    const el = (<HTMLElement>e.target).closest("[data-action]")
+    if (!el) return
+    const action = actions[(<HTMLElement>el).dataset.action]
+    if (action) action()
+  })
 }
 
 // export function activityDataPopup(A: Activity, latlng: LatLng): void {

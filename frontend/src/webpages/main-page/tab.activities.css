@@ -1,0 +1,70 @@
+/* Activity list in the "Rendered Activities" tab.
+ * Picked up automatically by main-page.css's `@import "./tab.*.css"`.
+ *
+ * Two lines per activity rather than a row of columns: the sidebar is roughly
+ * 230px wide, and six fixed columns left the title about one character across.
+ */
+
+#items-container {
+  max-height: 60vh;
+  overflow-y: auto;
+  overflow-x: hidden; /* nothing is wider than the row now */
+}
+
+table#items {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85em;
+  table-layout: fixed;
+}
+
+table#items td {
+  padding: 5px 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+table#items tbody tr {
+  cursor: pointer;
+}
+
+table#items tbody tr:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+table#items tbody tr.selected {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+/* first line: colour key + title */
+.row-main {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.row-main .title {
+  flex: 1;
+  min-width: 0; /* lets the flex item shrink so ellipsis can apply */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* second line: date, type, elapsed, distance */
+.row-meta {
+  display: flex;
+  gap: 10px;
+  margin-top: 2px;
+  opacity: 0.65;
+  font-size: 0.9em;
+  white-space: nowrap;
+}
+
+/* colour key tying each row to its dots on the map */
+.dot-swatch {
+  flex: none;
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}

@@ -84,7 +84,11 @@ export class Activity {
     this.elapsed_time = a[A.TIME_SECONDS]
     this.name = a[A.NAME]
     this.ts = a[A.UTC_START_TIME]
-    this.tsLocal = new Date(this.ts + offset)
+    /* ts and offset are epoch *seconds* (the backend stores
+     * int(to_datetime(start_date).timestamp())), but Date() takes
+     * milliseconds -- without the factor every activity dated to
+     * 21 January 1970. */
+    this.tsLocal = new Date((this.ts + offset) * 1000)
     this.llBounds = new LatLngBounds(bounds.SW, bounds.NE)
     this.pxBounds = latLng2pxBounds(this.llBounds)
 
@@ -346,9 +350,11 @@ export class Activity {
     return this.streams.time[i] + this.ts
   }
 
-  /** altitude at the ith data-point */
+  /** altitude at the ith data-point, in metres.
+   * (The backend used to send decimetres; it sends metres now, because the
+   * 10x scale overflowed the stream codec.) */
   altitudeAt(i: number): number {
-    return this.streams.altitude[i] / 10
+    return this.streams.altitude[i]
   }
 
   /** Given a Float32Array dotlocs, we update it with locations of all the dots

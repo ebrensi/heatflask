@@ -24,6 +24,22 @@ def positive_non_decreasing(vals: Nums) -> bool:
     return True
 
 
+# Encoding types, stored in the first byte.
+#   0: signed 8-bit diffs
+#   1: unsigned 8-bit diffs (the values never decrease)
+#   2: signed 16-bit diffs, for streams whose steps do not fit in a byte
+NTYPE_I8 = 0
+NTYPE_U8 = 1
+NTYPE_I16 = 2
+
+# ntype -> (numpy dtype, run-length marker, max repeat count)
+SPECS = {
+    NTYPE_I8: (np.int8, -128, 126),
+    NTYPE_U8: (np.uint8, 255, 254),
+    NTYPE_I16: (np.int16, -32768, 126),
+}
+
+
 def rld_encode(vals: Nums, scale: float = 1) -> RLDEncoded:
     vals = (
         np.fromiter((scale * v + 0.5 for v in vals), dtype="i4", count=len(vals))
@@ -32,9 +48,24 @@ def rld_encode(vals: Nums, scale: float = 1) -> RLDEncoded:
     )
 
     increasing = positive_non_decreasing(vals)
-    my_dtype = np.uint8 if increasing else np.int8
-    rl_marker = 255 if increasing else -128
-    max_reps = 254 if increasing else 126
+
+    # choose a width that actually fits the data
+    diffs = np.diff(vals) if len(vals) > 1 else np.zeros(0, dtype="i4")
+    dmax = int(np.abs(diffs).max()) if len(diffs) else 0
+
+    if increasing and dmax <= 254:
+        ntype = NTYPE_U8
+    elif dmax <= 127:
+        # 127, not 128: a diff of -128 would be indistinguishable from the
+        # signed run-length marker
+        ntype = NTYPE_I8
+    else:
+        # A pause in recording can leave hundreds of metres between two
+        # consecutive altitude samples. Those do not fit in a byte, and used
+        # to raise OverflowError mid-stream, killing the whole response.
+        ntype = NTYPE_I16
+
+    my_dtype, rl_marker, max_reps = SPECS[ntype]
 
     n = len(vals)
     encoded = np.empty(n, dtype=my_dtype)
@@ -83,10 +114,8 @@ def rld_encode(vals: Nums, scale: float = 1) -> RLDEncoded:
         encoded[j + 2] = reps + 1
         j += 3
 
-    ntype = b"\x01" if increasing else b"\x00"
     firstval = np.array(vals[0], dtype=np.int16).tobytes()
-    bytesdata = ntype + firstval + encoded[:j].tobytes()
-    return bytesdata
+    return bytes([ntype]) + firstval + encoded[:j].tobytes()
 
 
 def decoded_length(enc: np.ndarray, rl_marker: int) -> int:
@@ -94,7 +123,9 @@ def decoded_length(enc: np.ndarray, rl_marker: int) -> int:
     i = 0
     while i < len(enc):
         if enc[i] == rl_marker:
-            L += enc[i + 2]
+            # int(): under numpy 2's NEP 50 rules `L += enc[i+2]` would make L
+            # a uint8 and wrap it past 255
+            L += int(enc[i + 2])
             i += 3
         else:
             L += 1
@@ -103,13 +134,15 @@ def decoded_length(enc: np.ndarray, rl_marker: int) -> int:
 
 
 def rld_decode(enc: RLDEncoded, dtype=np.int32) -> Nums:
-    ntype = np.frombuffer(enc, dtype="i1", count=1, offset=0)[0]
-    start_val = np.frombuffer(enc, dtype="i2", count=1, offset=1)[0]
-    enc_diffs = np.frombuffer(enc, dtype="i1" if ntype == 0 else "u1", offset=3)
+    ntype = int(np.frombuffer(enc, dtype="i1", count=1, offset=0)[0])
+    start_val = int(np.frombuffer(enc, dtype="i2", count=1, offset=1)[0])
 
-    increasing = ntype != 0
+    np_dtype, rl_marker, _ = SPECS[ntype]
 
-    rl_marker = 255 if increasing else -128
+    # The diffs start at byte 3, an odd offset, so a 16-bit view of the
+    # original buffer would be unaligned. Copy rather than view.
+    enc_diffs = np.frombuffer(bytes(memoryview(enc)[3:]), dtype=np_dtype)
+
     L = decoded_length(enc_diffs, rl_marker)
 
     decoded = np.empty(L, dtype=dtype)
@@ -119,8 +152,11 @@ def rld_decode(enc: RLDEncoded, dtype=np.int32) -> Nums:
     j = 1  # decoded counter
     while i < len(enc_diffs):
         if enc_diffs[i] == rl_marker:
-            d = enc_diffs[i + 1]
-            reps = enc_diffs[i + 2]
+            # int() on every numpy scalar before it meets the running total:
+            # under numpy 2, `cumsum += np.uint8(...)` demands that cumsum fit
+            # in a uint8, so any start value over 255 raised OverflowError
+            d = int(enc_diffs[i + 1])
+            reps = int(enc_diffs[i + 2])
             endreps = j + reps
             while j < endreps:
                 cumsum += d
@@ -128,7 +164,7 @@ def rld_decode(enc: RLDEncoded, dtype=np.int32) -> Nums:
                 j += 1
             i += 3
         else:
-            cumsum += enc_diffs[i]
+            cumsum += int(enc_diffs[i])
             decoded[j] = cumsum
             i += 1
             j += 1
