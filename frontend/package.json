@@ -12,10 +12,8 @@
   "scripts": {
     "parcel-watch": "parcel watch --log-level info 'src/webpages/**/!(tab.*).html'",
     "parcel-build": "parcel build 'src/webpages/**/!(tab.*).html'",
-    "asc-build": "asc src/assembly/wasm.ts --target production",
-    "asc-watch": "onchange -i --verbose 'src/assembly/*.ts' --  asc src/assembly/wasm.ts --target development",
-    "build": "npm run clean; npm run asc-build; npm run parcel-build",
-    "watch": "sh -c 'npm run parcel-watch & npm run asc-watch & wait'",
+    "build": "npm run clean; npm run parcel-build",
+    "watch": "npm run parcel-watch",
     "clean": "rm -rf dist/* .parcel-cache/* dev-docs/*; cp src/dist/* dist/",
     "format": "prettier --write src/",
     "doc": "pdoc -o ./dist/docs/backend/ ../backend/heatflask & typedoc"
@@ -25,7 +23,6 @@
   ],
   "context": "browser",
   "dependencies": {
-    "@assemblyscript/loader": "latest",
     "@msgpack/msgpack": "^2.7.1",
     "@types/google.analytics": "^0.0.42",
     "downloadjs": "^1.4.7",
@@ -53,12 +50,10 @@
     "@types/node": "^17.0.25",
     "@typescript-eslint/eslint-plugin": "^5.8.0",
     "@typescript-eslint/parser": "^5.8.0",
-    "assemblyscript": "latest",
     "eslint": "^8.5.0",
     "eslint-config-prettier": "^8.3.0",
     "onchange": "^7.1.0",
     "parcel": "^2.16.4",
-    "parcel-plugin-nuke-dist": "^1.0.1",
     "prettier": "^2.5.1",
     "process": "^0.11.10",
     "typedoc": "^0.22.15",

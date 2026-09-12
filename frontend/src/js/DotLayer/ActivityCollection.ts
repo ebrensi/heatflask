@@ -12,13 +12,12 @@ import { queueTask, nextTask } from "../appUtil"
 
 import { LatLngBounds } from "leaflet"
 import type { Bounds } from "../Bounds"
-// import type { PixelGraphics } from "./PixelGraphics"
+import type { PixelGraphics } from "./PixelGraphics"
 import type { ImportedActivity } from "../DataImport"
 
 export const items: Map<number, Activity> = new Map()
 
 let itemsArray: Activity[]
-let memory: WebAssembly.Memory
 
 export function add(specs: ImportedActivity): void {
   const A = new Activity(specs)
@@ -57,12 +56,13 @@ export function reset(): void {
     nbytes.alt += A.streams.altitude.byteLength
   }
 
+  /* One contiguous buffer holding every activity's streams, rounded up to
+   * whole 64k pages. This was a WebAssembly.Memory, used purely as a growable
+   * ArrayBuffer and unrelated to the (now deleted) wasm module. */
   const numPages =
     ((nbytes.px + nbytes.time + nbytes.alt + 0xffff) & ~0xffff) >>> 16
-  console.log(nbytes, numPages)
 
-  memory = new WebAssembly.Memory({ initial: numPages })
-  const buf = memory.buffer
+  const buf = new ArrayBuffer(numPages << 16)
   const pxView = new Float32Array(buf, 0, nbytes.px / 4)
   const timeView = new Uint16Array(buf, nbytes.px, nbytes.time / 2)
   const altView = new Int16Array(buf, nbytes.px + nbytes.time, nbytes.alt / 2)
@@ -189,99 +189,62 @@ export async function getLatLngBounds(
 
 type drawOutput = { pxg: PixelGraphics; count: number }
 
-export async function drawPaths(
-  pxg: PixelGraphics,
-  drawDiff: boolean
-): Promise<drawOutput> {
-  if (!drawDiff && !pxg.drawBounds.isEmpty()) pxg.clear()
-
+export async function drawPaths(pxg: PixelGraphics): Promise<drawOutput> {
   const drawSegFunc = (x0: number, y0: number, x1: number, y1: number) => {
     pxg.drawSegment(x0, y0, x1, y1)
   }
-  const bounds = pxg.drawBounds.data
-  const oldArea = (bounds[2] - bounds[0]) * (bounds[3] - bounds[1])
 
   let count = 0
-  let maxLW = 0
   inView.forEach((i) => {
     const A = itemsArray[i]
     pxg.setColor(A.colors.path)
-
-    const LW = A.selected
-      ? options.selected.pathWidth
-      : options.normal.pathWidth
-
-    if (LW > maxLW) maxLW = LW
-    pxg.setLineWidth(LW)
-
-    count += A.forEachSegment(drawSegFunc, drawDiff)
+    pxg.setLineWidth(
+      A.selected ? options.selected.pathWidth : options.normal.pathWidth
+    )
+    count += A.forEachSegment(drawSegFunc)
   })
-
-  pxg.updateDrawBoundsFromWasm()
-
-  if (!pxg.drawBounds.isEmpty()) {
-    // add padding to the bounds, but only if they have changed.
-    // This prevents ever-increasing bounds
-    const newArea = (bounds[2] - bounds[0]) * (bounds[3] - bounds[1])
-    if (newArea !== oldArea) {
-      const [xmin, ymin, xmax, ymax] = bounds
-      pxg.drawBounds.update(
-        Math.max(xmin - maxLW, 0),
-        Math.max(ymin - maxLW, 0)
-      )
-      pxg.drawBounds.update(
-        Math.min(xmax + maxLW, pxg.width),
-        Math.min(ymax + maxLW, pxg.height)
-      )
-    }
-  }
 
   return { count, pxg }
 }
+
+/* Scratch buffer for dot positions, reused across activities and frames.
+ * Activity.update_dotlocs fills it with consecutive [x, y] pairs. */
+let dotlocs = new Float32Array(2048)
 
 export async function drawDots(
   pxg: PixelGraphics,
   dotSize: number,
   T: number,
-  tsecs: number,
-  drawDiff: boolean
+  tsecs: number
 ): Promise<drawOutput> {
-  if (!drawDiff && !pxg.drawBounds.isEmpty()) pxg.clear()
-
-  const bounds = pxg.drawBounds.data
-  const oldArea = (bounds[2] - bounds[0]) * (bounds[3] - bounds[1])
-
   let count = 0
   const sz = Math.round(dotSize)
-  const circle = (x: number, y: number) => pxg.drawCircle(x, y, sz)
-  const square = (x: number, y: number) => pxg.drawSquare(x, y, sz)
 
   inView.forEach((i) => {
     const A = itemsArray[i]
+    if (!A.segMask) return
+
+    /* Upper bound on this activity's dots: each segment yields at most
+     * (its time span)/T + 1, and those spans sum to at most the activity's
+     * elapsed time. update_dotlocs does not bounds-check the buffer. */
+    const maxDots = A.segMask.size() + Math.ceil(A.elapsed_time / T) + 2
+    if (dotlocs.length < 2 * maxDots) dotlocs = new Float32Array(2 * maxDots)
+
+    const n = A.update_dotlocs(tsecs, T, dotlocs)
+    if (!n) return
+
     pxg.setColor(A.colors.dot)
-    const drawFunc = A.selected ? circle : square
-    count += A.forEachDot(drawFunc, tsecs, T, drawDiff)
-  })
-
-  pxg.updateDrawBoundsFromWasm()
-
-  if (!pxg.drawBounds.isEmpty()) {
-    const newArea = (bounds[2] - bounds[0]) * (bounds[3] - bounds[1])
-
-    // add padding to the bounds, but only if they have changed.
-    // This prevents ever-increasing bounds
-    if (newArea !== oldArea) {
-      const [xmin, ymin, xmax, ymax] = bounds
-      pxg.drawBounds.update(
-        Math.max(0, xmin - 3 * sz),
-        Math.max(0, ymin - 3 * sz)
-      )
-      pxg.drawBounds.update(
-        Math.min(pxg.width, xmax + 3 * sz),
-        Math.min(pxg.height, ymax + 3 * sz)
-      )
+    if (A.selected) {
+      for (let j = 0; j < n; j++) {
+        pxg.drawCircle(dotlocs[2 * j], dotlocs[2 * j + 1], sz)
+      }
+    } else {
+      for (let j = 0; j < n; j++) {
+        pxg.drawSquare(dotlocs[2 * j], dotlocs[2 * j + 1], sz)
+      }
     }
-  }
+    count += n
+  })
 
   return { count, pxg }
 }

@@ -1,12 +1,3 @@
-"""
-***  For Jupyter notebook ***
-Paste one of these Jupyter magic directives to the top of a cell
- and run it, to do these things:
-    %%cython --annotate     # Compile and run the cell
-    %load Updates.py        # Load Updates.py file into this (empty) cell
-    %%writefile Updates.py  # Write the contents of this cell to Updates.py
-"""
-
 # Updates come from Strava Webhook callbacks
 
 from logging import getLogger

@@ -1,11 +1,3 @@
-"""
-***  For Jupyter notebook ***
-Paste one of these Jupyter magic directives to the top of a cell
- and run it, to do these things:
-    %load Strava.py         # Load Strava.py file into this (empty) cell
-    %%writefile Strava.py   # Write the contents of this cell to Strava.py
-"""
-
 import os
 import time
 import aiohttp

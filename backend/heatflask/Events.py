@@ -1,11 +1,3 @@
-"""
-***  For Jupyter notebook ***
-Paste one of these Jupyter magic directives to the top of a cell
- and run it, to do these things:
-  %%cython --annotate    # Compile and run the cell
-  %load Events.py        # Load Events.py file into this (empty) cell
-  %%writefile Events.py  # Write the contents of this cell to Events.py
-"""
 from logging import getLogger
 from bson import ObjectId
 import pymongo

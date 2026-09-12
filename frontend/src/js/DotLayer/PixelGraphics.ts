@@ -1,161 +1,127 @@
-import { Bounds } from "../appUtil"
-import { getWasm } from "./myWasm"
+/*
+ * PixelGraphics draws activity paths and dots onto a canvas.
+ *
+ * It used to render by hand into an ImageData buffer aliased onto WebAssembly
+ * memory, with its own line, circle and rectangle routines in AssemblyScript
+ * and draw-bounds bookkeeping shared with the wasm module. All of that is
+ * gone. The WASM experiment measured *slower* than plain JS, and the
+ * incremental-redraw machinery it existed to serve was more complexity than it
+ * earned. This draws with the Canvas 2D API, directly onto the destination
+ * canvas -- no intermediate buffer, and no per-frame ImageData copy.
+ *
+ * Drawing is batched: calls accumulate into a Path2D and are stroked or filled
+ * in one go, flushed whenever the color, line width or drawing mode changes,
+ * and by an explicit flush() at the end of a pass.
+ */
 
 type tuple4 = [number, number, number, number]
-type tuple2 = [number, number]
 type rect = { x: number; y: number; w: number; h: number }
-type WasmExports = Record<string, WebAssembly.ExportValue>
-
-const DEBUG = true
-
-/*
- * This module defines the PixelGrapics class.  A PixelGraphics object
- * encapsulates an ImageData buffer and provides methods to modify
- * pixels in that buffer.
- */
-function isLittleEndian(): boolean {
-  // from TooTallNate / endianness.js.   https://gist.github.com/TooTallNate/4750953
-  const b = new ArrayBuffer(4)
-  const a = new Uint32Array(b)
-  const c = new Uint8Array(b)
-  a[0] = 0xdeadbeef
-  if (c[0] == 0xef) return true
-  if (c[0] == 0xde) return false
-  throw new Error("unknown endianness")
-}
-
-const _littleEndian = isLittleEndian()
-export const rgbaToUint32 = _littleEndian
-  ? (r: number, g: number, b: number, a: number) =>
-      (a << 24) | (b << 16) | (g << 8) | r
-  : (r: number, g: number, b: number, a: number) =>
-      (r << 24) | (g << 16) | (b << 8) | a
-const alphaMask = rgbaToUint32(255, 255, 255, 0)
-const alphaPos = _littleEndian ? 24 : 0
+type Mode = "stroke" | "fill"
 
 export class PixelGraphics {
-  imageData: ImageData
-  buf32: Uint32Array
-  rowBuf: Uint32Array
-  drawBounds: Bounds
-  color32: number
-  lineWidth: number
+  canvas: HTMLCanvasElement
+  ctx: CanvasRenderingContext2D
   transform: tuple4
-  wasm: WasmExports
   debugCanvas?: HTMLCanvasElement
 
-  constructor(width?: number, height?: number) {
-    this.color32 = rgbaToUint32(0, 0, 0, 255) // default color is black
-    this.drawBounds = new Bounds()
-    this.lineWidth = 1
-    this.transform = [1, 0, 1, 0]
+  private _path: Path2D
+  private _mode: Mode
+  private _pending: boolean
+  private _color: string
 
-    if (width && height) {
-      getWasm().then((exports) => {
-        this.wasm = exports
-        this.wasm.setAlphaMask(alphaMask, alphaPos)
-        this.setSize(width, height)
-      })
-    }
+  constructor(canvas: HTMLCanvasElement) {
+    this.canvas = canvas
+    this.ctx = canvas.getContext("2d")
+    this.transform = [1, 0, 1, 0]
+    this._color = "black"
+    this._mode = "stroke"
+    this._path = new Path2D()
+    this._pending = false
+    this._applyLineStyle()
   }
 
-  get height(): number {
-    return this.imageData.height
+  private _applyLineStyle(): void {
+    this.ctx.lineCap = "round"
+    this.ctx.lineJoin = "round"
   }
 
   get width(): number {
-    return this.imageData.width
+    return this.canvas.width
   }
 
-  // make sure we have enough memory in the wasm instance
-  // for all the screen pixel data. note that it only grows memory
+  get height(): number {
+    return this.canvas.height
+  }
+
+  /* Assigning width or height also clears the canvas, which is what we want
+   * on a resize. Skip the assignment when the size is unchanged so we do not
+   * throw away a good frame. */
   setSize(width: number, height: number): void {
-    const memory = <WebAssembly.Memory>this.wasm.memory
-    const numPixels = width * height // reserve an extra row
-    const byteSize = numPixels << 2 // (4 bytes per rgba pixel)
-
-    const numPages = ((byteSize + 0xffff) & ~0xffff) >>> 16
-    const currentNumPages = memory.grow(0)
-
-    if (numPages > currentNumPages) {
-      memory.grow(numPages - currentNumPages)
+    if (this.canvas.width !== width || this.canvas.height !== height) {
+      this.canvas.width = width
+      this.canvas.height = height
+      this._applyLineStyle()
     }
-
-    // this is a view into the memory for JavaSript access
-    this.buf32 = new Uint32Array(memory.buffer, 0, numPixels)
-    this.rowBuf = new Uint32Array(width)
-
-    const imageDataArr = new Uint8ClampedArray(memory.buffer, 0, byteSize)
-    this.imageData = new ImageData(imageDataArr, width, height)
-
-    this.wasm.setSize(width, height)
-  }
-
-  setTransform(tfArray: tuple4): void {
-    this.transform = tfArray
-    this.wasm.setTransform(...tfArray)
-  }
-
-  setColor(colorValue: string | number): void
-  setColor(r: number, g?: number, b?: number, a?: number): void {
-    if (!a) a = 0xff // default full alpha
-    if (g === undefined) {
-      if (typeof r === "string") this.color32 = parseColor(r)
-      else this.color32 = r | (a << alphaPos)
-    } else {
-      this.color32 = rgbaToUint32(r, g, b, a)
-    }
-
-    this.wasm.setColor(this.color32)
-  }
-
-  setLineWidth(w: number): void {
-    this.lineWidth = w
-    this.wasm.setLineWidth(w)
-  }
-
-  updateDrawBoundsFromWasm(): void {
-    const W = this.wasm
-    this.drawBounds.reset()
-    if (W.BOUNDSEMPTY.value) return
-    this.drawBounds.update(W.XMIN.value, W.YMIN.value)
-    this.drawBounds.update(W.XMAX.value, W.YMAX.value)
-  }
-
-  updateWasmDrawBounds(): void {
-    this.wasm.resetDrawBounds()
-    const [xmin, ymin, xmax, ymax] = this.drawBounds.data
-    this.wasm.updateDrawBounds(xmin, ymin)
-    this.wasm.updateDrawBounds(xmax, ymax)
+    this._path = new Path2D()
+    this._pending = false
   }
 
   /**
-   * Clear (set to 0) a rectangular region
+   * [a1, b1, a2, b2], where Tx = b1 + a1 * x and Ty = b2 + a2 * y.
+   *
+   * Applied to each point here rather than through ctx.setTransform, because
+   * a1 is 2**zoom: a canvas transform would scale lineWidth along with the
+   * geometry and the strokes would blow out at high zoom.
    */
-  clear(rect?: rect): void {
-    const { x, y, w, h } = rect || this.drawBounds.rect
-    if (isNaN(x) || w == 0 || h == 0) return
+  setTransform(tfArray: tuple4): void {
+    this.transform = tfArray
+  }
 
-    this.wasm.clearRect(x, y, w, h)
+  setColor(color: string): void {
+    if (color === this._color) return
+    this.flush()
+    this._color = color
+  }
 
-    // make sure to update drawbounds
-    if (!rect) {
-      this.drawBounds.reset()
-      this.wasm.resetDrawBounds()
+  setLineWidth(w: number): void {
+    if (w === this.ctx.lineWidth) return
+    this.flush()
+    this.ctx.lineWidth = w
+  }
+
+  private _setMode(mode: Mode): void {
+    if (mode === this._mode) return
+    this.flush()
+    this._mode = mode
+  }
+
+  /** Stroke or fill everything accumulated since the last flush. */
+  flush(): void {
+    if (!this._pending) return
+    if (this._mode === "stroke") {
+      this.ctx.strokeStyle = this._color
+      this.ctx.stroke(this._path)
+    } else {
+      this.ctx.fillStyle = this._color
+      this.ctx.fill(this._path)
+    }
+    this._path = new Path2D()
+    this._pending = false
+  }
+
+  /** Clear a rectangle, or the whole canvas when given nothing. */
+  clear(r?: rect): void {
+    this._path = new Path2D()
+    this._pending = false
+    if (r) {
+      if (isNaN(r.x) || r.w === 0 || r.h === 0) return
+      this.ctx.clearRect(r.x, r.y, r.w, r.h)
+    } else {
+      this.ctx.clearRect(0, 0, this.width, this.height)
     }
   }
 
-  inBounds(x: number, y: number): boolean {
-    return x >= 0 && x < this.width && y >= 0 && y < this.height
-  }
-
-  drawSegment(
-    x0: number,
-    y0: number,
-    x1: number,
-    y1: number,
-    th?: number
-  ): void {
+  drawSegment(x0: number, y0: number, x1: number, y1: number): void {
     if (
       x0 === undefined ||
       y0 === undefined ||
@@ -163,51 +129,45 @@ export class PixelGraphics {
       y1 === undefined
     )
       return
-    this.wasm.drawSegment(x0, y0, x1, y1, th)
+
+    this._setMode("stroke")
+    const [a1, b1, a2, b2] = this.transform
+    this._path.moveTo(b1 + a1 * x0, b2 + a2 * y0)
+    this._path.lineTo(b1 + a1 * x1, b2 + a2 * y1)
+    this._pending = true
   }
 
   drawSquare(x: number, y: number, size: number): void {
-    if (!(x && y && size)) return
-    this.wasm.drawSquare(x, y, size)
+    if (!size) return
+    this._setMode("fill")
+    const [a1, b1, a2, b2] = this.transform
+    const s = size / 2
+    this._path.rect(b1 + a1 * x - s, b2 + a2 * y - s, size, size)
+    this._pending = true
   }
 
   drawCircle(x: number, y: number, size: number): void {
-    if (!(x && y && size)) return
-    this.wasm.drawCircle(x, y, size)
+    if (!size) return
+    this._setMode("fill")
+    const [a1, b1, a2, b2] = this.transform
+    const tx = b1 + a1 * x
+    const ty = b2 + a2 * y
+    // moveTo before arc, so consecutive dots are not joined by a line
+    this._path.moveTo(tx + size, ty)
+    this._path.arc(tx, ty, size, 0, 2 * Math.PI)
+    this._pending = true
   }
 
-  clip(x: number, max: number): number {
-    if (x < 0) return 0
-    else if (x > max) return max
-    return x
-  }
-  /*
-   * This function moves the pixels from one rectangular region
-   *  of an imageData object to another, possibly overlapping
-   *  rectanglular region of equal size.
-   */
-  translate(shiftX: number, shiftY: number): void {
-    if (this.drawBounds.isEmpty()) return
-
-    // console.time("moveRect")
-
-    this.updateWasmDrawBounds()
-    this.wasm.moveRect(shiftX, shiftY)
-    this.updateDrawBoundsFromWasm()
-
-    // console.timeEnd("moveRect")
-  }
-
-  // Draw the outline of arbitrary rect object in screen coordinates
+  /** Draw the outline of a rect in screen coordinates, for debugging */
   drawDebugBox(
-    rect?: rect,
+    r?: rect,
     label?: string,
     color?: string,
     fill?: boolean
   ): void {
-    if (!rect || !this.debugCanvas) return
+    if (!r || !this.debugCanvas) return
     const ctx = this.debugCanvas.getContext("2d")
-    const { x, y, w, h } = rect
+    const { x, y, w, h } = r
 
     if (w === 0 || h === 0) return
 
@@ -222,17 +182,4 @@ export class PixelGraphics {
     }
     if (label) ctx.fillText(label, x + 20, y + 20)
   }
-} // end PixelGraphics definition
-
-const _re = /(\d+),(\d+),(\d+)/
-function parseColor(colorString: string) {
-  if (colorString[0] === "#") {
-    const num = parseInt(colorString.replace("#", "0x"))
-    const r = (num & 0xff0000) >>> 16
-    const g = (num & 0x00ff00) >>> 8
-    const b = num & 0x0000ff
-    return rgbaToUint32(r, g, b, 0xff)
-  }
-  const result = colorString.match(_re)
-  return rgbaToUint32(+result[1], +result[2], +result[3], 0xff)
 }

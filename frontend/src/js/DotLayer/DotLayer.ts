@@ -24,7 +24,6 @@ const TARGET_FPS = 36
 /* In order to prevent path redraws from happening too often
  * and hogging up CPU cycles we set a minimum delay between redraws
  */
-const FORCE_FULL_REDRAW = false
 const CONTINUOUS_REDRAWS = true
 const MIN_REDRAW_DELAY = 100 // milliseconds
 
@@ -82,14 +81,14 @@ export const DotLayer = Layer.extend({
 
     // dotlayer canvas
     dotCanvas = addCanvasOverlay(dotCanvasPane)
-    dotPxg = new PixelGraphics(dotCanvas.width, dotCanvas.height)
+    dotPxg = new PixelGraphics(dotCanvas)
 
     /*
      * The Path Canvas is for activity paths, which are made up of
      * a bunch of segments.
      */
     pathCanvas = addCanvasOverlay(pathCanvasPane)
-    pathPxg = new PixelGraphics(pathCanvas.width, pathCanvas.height)
+    pathPxg = new PixelGraphics(pathCanvas)
 
     if (DEBUG_BORDERS) {
       // create Canvas for debugging canvas stuff
@@ -301,42 +300,33 @@ async function redraw(forceFullRedraw?: boolean) {
     return
   }
 
-  const drawDiff = !FORCE_FULL_REDRAW && !forceFullRedraw && zoomChanged < 2
-
-  /* Erase the path and dot canvases, using their respective
-   * drawBounds rectangles. The underlying imageData buffers are
-   *  still intact though
+  /* Erase both canvases and draw the whole view.
+   *
+   * This used to erase only each canvas's drawBounds rectangle, shift the
+   * surviving pixels with translate(), and redraw just the segments whose
+   * visibility had changed. That machinery is gone: it was a great deal of
+   * bookkeeping, spread across the renderer, the activity collection and the
+   * wasm module, for an optimization that did not pay for itself.
    */
   clearCanvases()
 
   // reset the canvases to to align with the screen and update the ViewBox
   // location relative to the map's pxOrigin
-  const shift = ViewBox.calibrate()
+  ViewBox.calibrate()
   pathPxg.setTransform(ViewBox.transform)
   dotPxg.setTransform(ViewBox.transform)
-
-  if (drawDiff) {
-    if (_options.showPaths) {
-      pathPxg.translate(shift.x, shift.y)
-      // drawPathImageData()
-    }
-    if (_paused) {
-      dotPxg.translate(shift.x, shift.y)
-      // drawDotImageData()
-    }
-  }
 
   await ActivityCollection.updateContext(ViewBox.pxBounds, ViewBox.zoomLevel)
 
   const promises = []
   if (_options.showPaths) {
     await nextTask()
-    promises.push(drawPaths(drawDiff))
+    promises.push(drawPaths())
   }
 
   if (_paused) {
     await nextTask()
-    promises.push(drawDots(null, drawDiff))
+    promises.push(drawDots())
   }
 
   await Promise.all(promises)
@@ -344,80 +334,32 @@ async function redraw(forceFullRedraw?: boolean) {
 }
 
 function clearCanvases() {
-  const pr = pathPxg.drawBounds.rect
-  pathCanvas.getContext("2d").clearRect(pr.x, pr.y, pr.w, pr.h)
-
-  const dr = dotPxg.drawBounds.rect
-  dotCanvas.getContext("2d").clearRect(dr.x, dr.y, dr.w, dr.h)
+  pathPxg.clear()
+  dotPxg.clear()
 }
 
-function drawPathImageData() {
-  if (pathPxg.drawBounds.isEmpty()) return
-  const r = pathPxg.drawBounds.rect
-  const ctx = pathCanvas.getContext("2d")
-  ctx.putImageData(pathPxg.imageData, 0, 0, r.x, r.y, r.w, r.h)
-}
-
-async function drawPaths(drawDiff?: boolean) {
+async function drawPaths() {
   if (!_ready) return 0
-  // console.time("drawpaths")
-  await ActivityCollection.drawPaths(pathPxg, drawDiff)
-  // console.timeEnd("drawpaths")
-  drawPathImageData()
+  const { count } = await ActivityCollection.drawPaths(pathPxg)
+  pathPxg.flush()
+  return count
 }
 
-async function drawDotImageData() {
-  if (dotPxg.drawBounds.isEmpty()) return
-  const ctx = dotCanvas.getContext("2d")
-  const r = dotPxg.drawBounds.rect
-  if (_options.dotShadows.enabled) {
-    const img = await createImageBitmap(dotPxg.imageData, r.x, r.y, r.w, r.h)
-    ctx.drawImage(img, r.x, r.y)
-  } else {
-    ctx.putImageData(dotPxg.imageData, 0, 0, r.x, r.y, r.w, r.h)
-  }
-}
-
-async function drawDots(tsecs?: number, drawDiff?: boolean) {
+async function drawDots(tsecs?: number) {
   if (!_ready) return 0
 
   if (!tsecs) tsecs = _timePaused || timeOrigin / 1000
-  if (!drawDiff) dotPxg.clear()
 
+  dotPxg.clear()
   const { count } = await ActivityCollection.drawDots(
     dotPxg,
     vParams.sz,
     vParams.T * vParams.tau,
-    tsecs * vParams.tau,
-    drawDiff
+    tsecs * vParams.tau
   )
-  drawDotImageData()
-
-  if (DEBUG_BORDERS) drawBoundsBoxes()
+  dotPxg.flush()
 
   return count
-}
-
-function drawBoundsBoxes() {
-  const ctx = debugCanvas.getContext("2d")
-
-  ViewBox.clear(ctx)
-  ctx.lineWidth = 4
-  ctx.setLineDash([6, 5])
-  ctx.strokeStyle = "rgba(255,0,0,0.8)"
-  ViewBox.draw(ctx)
-
-  if (!pathPxg.drawBounds.isEmpty()) {
-    ctx.lineWidth = 1
-    ctx.strokeStyle = "rgba(0,255,0,0.8)"
-    ViewBox.draw(ctx, pathPxg.drawBounds.rect)
-  }
-
-  if (!dotPxg.drawBounds.isEmpty()) {
-    ctx.lineWidth = 1
-    ctx.strokeStyle = "rgba(0,0,255,0.8)"
-    ViewBox.draw(ctx, dotPxg.drawBounds.rect)
-  }
 }
 
 /*
@@ -440,11 +382,8 @@ function updateDotSettings(shadowSettings?) {
   }
 
   if (_paused) {
-    if (!dotPxg.drawBounds.isEmpty()) {
-      const { x, y, w, h } = dotPxg.drawBounds.rect
-      dotCanvas.getContext("2d").clearRect(x, y, w, h)
-    }
-    drawDots(null, false)
+    // drawDots clears the canvas before drawing
+    drawDots()
   }
   return ds
 }
@@ -482,11 +421,7 @@ async function animate() {
       // ts is in milliseconds since navigationStart
       nowInSeconds = (timeStamp + timeOffset) / 1000
 
-      if (!dotPxg.drawBounds.isEmpty()) {
-        const { x, y, w, h } = dotPxg.drawBounds.rect
-        dotCanvas.getContext("2d").clearRect(x, y, w, h)
-      }
-      // draw the dots
+      // draw the dots (drawDots clears the canvas first)
       const count = await drawDots(nowInSeconds)
 
       if (MAP_INFO) {

@@ -114,7 +114,6 @@ frontend/.parcel-cache
 
 # For Development
 frontend/dev-docs.md
-backend/heatflask/notebooks/.ipynb_checkpoints
 backend/activate
 
 # We don't ingore frontend/dist because it needs to be there for the

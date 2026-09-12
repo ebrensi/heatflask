@@ -1,12 +1,6 @@
 """
 Functions and constants pertaining to the Streams data store.  Each activity
 has the streams time, latlng, and altitude.
-
-***  For Jupyter notebook ***
-Paste one of these Jupyter magic directives to the top of a cell
- and run it, to do these things:
-    %load Streams.py         # Load Streams.py file into this (empty) cell
-    %%writefile Streams.py   # Write the contents of this cell to Streams.py
 """
 
 import os

@@ -18,7 +18,11 @@ interface SegMask extends BitSet {
 
 type tuple2 = [number, number] | Float32Array
 type segFunc = (x0: number, y0: number, x1: number, y1: number) => void
-type pointFunc = (x: number, y: number) => void
+
+/** Seconds since the UNIX epoch. Mirrors the backend's Types.epoch. It was
+ * referenced by timeAt() and update_dotlocs() without ever being declared,
+ * which tsc reports as "Cannot find name 'epoch'". */
+type epoch = number
 
 /**
  * We detect anomalous gaps in data by simple statistical analysis of
@@ -348,8 +352,8 @@ export class Activity {
    * segment (x1,y1) -> (x2, y2) of this Activity. drawDiff specifies to
    * only use segments that have changed since the last segMask update.
    */
-  forEachSegment(func: segFunc, drawDiff: boolean): number {
-    const segMask = drawDiff ? this._segMaskUpdates : this.segMask
+  forEachSegment(func: segFunc): number {
+    const segMask = this.segMask
     if (!segMask) return 0
 
     let count = 0
@@ -392,10 +396,9 @@ export class Activity {
   update_dotlocs(
     now: epoch,
     T: number, // loop-length in seconds
-    dotlocs: Float32Array,
-    drawDiff: boolean
+    dotlocs: Float32Array
   ): number {
-    const segMask = drawDiff ? this._segMaskUpdates : this.segMask
+    const segMask = this.segMask
     if (!segMask) return 0
 
     const zoom = segMask.zoom
@@ -416,7 +419,7 @@ export class Activity {
       const idx0 = reuse ? lastIdx1 : idx(i)
       const idx1 = (lastIdx1 = idx(i + 1))
 
-      if (idx1 === undefined) return
+      if (idx1 === undefined) break
 
       const ta = reuse ? lasttb : this.timeAt(idx0)
       const tb = (lasttb = this.timeAt(idx1))
@@ -424,7 +427,10 @@ export class Activity {
       const kLow = Math.ceil((now - tb) / T)
       const kHigh = Math.floor((now - ta) / T)
 
-      if (kLow > kHigh) return
+      /* This segment contributes no dots, so skip it. This was `return`,
+       * which abandoned every remaining segment and handed back undefined
+       * instead of a count. */
+      if (kLow > kHigh) continue
 
       const [pax, pay] = this.pointAt(idx0)
       const [pbx, pby] = this.pointAt(idx1)
@@ -441,12 +447,15 @@ export class Activity {
         const t = now - k * T
         const dt = t - ta
 
-        const loc = count * 2
-        // const loc = count * 3
+        /* Master's _DotLayer.js guards this same loop with `if (dt > 0)`.
+         * Without it a dot at dt === 0 lands exactly on the boundary this
+         * segment shares with the previous one, which emits a dot there
+         * too -- a duplicate at every segment join. */
+        if (dt <= 0) continue
 
+        const loc = count * 2
         dotlocs[loc] = pax + vx * dt
         dotlocs[loc + 1] = pay + vy * dt
-        // dotlocs[loc+2] = alta + va * dt
         count++
       }
     }
