@@ -44,9 +44,9 @@
     "> 0.75%, last 2 versions, not dead"
   ],
   "devDependencies": {
-    "@parcel/resolver-glob": "^2.4.1",
-    "@parcel/transformer-inline-string": "^2.3.2",
-    "@parcel/transformer-sass": "^2.3.2",
+    "@parcel/resolver-glob": "^2.16.4",
+    "@parcel/transformer-inline-string": "^2.16.4",
+    "@parcel/transformer-sass": "^2.16.4",
     "@types/latlon-geohash": "^2.0.0",
     "@types/leaflet": "^1.7.7",
     "@types/leaflet-providers": "^1.2.1",
@@ -57,15 +57,12 @@
     "eslint": "^8.5.0",
     "eslint-config-prettier": "^8.3.0",
     "onchange": "^7.1.0",
-    "parcel": "latest",
+    "parcel": "^2.16.4",
     "parcel-plugin-nuke-dist": "^1.0.1",
     "prettier": "^2.5.1",
     "process": "^0.11.10",
     "typedoc": "^0.22.15",
     "typescript": "^4.5.4"
-  },
-  "engines": {
-    "node": "<=17"
   },
   "prettier": {
     "semi": false
