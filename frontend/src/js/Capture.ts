@@ -72,21 +72,6 @@ export function abortCapture(): void {
  * The basemap
  * ------------------------------------------------------------------ */
 
-function loadImage(src: string): Promise<HTMLImageElement | null> {
-  return new Promise((resolve) => {
-    const img = new Image()
-    /* Without this the tile taints the canvas, and a tainted canvas cannot be
-     * read back -- VideoEncoder would throw SecurityError on the first frame.
-     * The tile is already in the HTTP cache, so this is a cache hit rather
-     * than a second download, *provided* the server sent CORS headers. If it
-     * did not, the load fails and we drop that tile rather than the capture. */
-    img.crossOrigin = "anonymous"
-    img.onload = () => resolve(img)
-    img.onerror = () => resolve(null)
-    img.src = src
-  })
-}
-
 /**
  * Draw the basemap as it currently appears on screen.
  *
@@ -95,12 +80,24 @@ function loadImage(src: string): Promise<HTMLImageElement | null> {
  * getBoundingClientRect() reports post-CSS-transform geometry, so this comes
  * out right at fractional zoom and mid-pan without knowing anything about how
  * Leaflet positions tiles.
+ *
+ * The tile elements are drawn directly. An earlier version re-loaded each
+ * tile.src into a fresh crossOrigin="anonymous" Image to keep the canvas
+ * readable, which was both a second decode per tile and, as it turned out,
+ * broken: CachedTileLayer serves tiles from blob: URLs, and it was revoking
+ * them the instant they loaded, so every re-load failed and the capture came
+ * out on black.
+ *
+ * Drawing the elements is also what keeps the canvas readable. CachedTileLayer
+ * fetches each tile and displays it from a blob: URL, which is same-origin and
+ * so does not taint -- and a tainted canvas cannot be encoded at all, since
+ * VideoEncoder throws SecurityError on the first frame.
  */
-async function drawBasemap(
+function drawBasemap(
   map: LMap,
   ctx: CanvasRenderingContext2D,
   sel: Selection
-): Promise<boolean> {
+): boolean {
   const container = map.getContainer()
   const origin = container.getBoundingClientRect()
 
@@ -108,24 +105,30 @@ async function drawBasemap(
     container.querySelectorAll<HTMLImageElement>("img.leaflet-tile")
   ).filter((t) => t.complete && t.naturalWidth > 0)
 
-  if (!tiles.length) return false
-
-  const loaded = await Promise.all(tiles.map((t) => loadImage(t.src)))
-
   let drew = false
-  for (let i = 0; i < tiles.length; i++) {
-    const img = loaded[i]
-    if (!img) continue
+  for (const tile of tiles) {
+    /* A tile mid-fade or being swapped out can be transparent; honour it so
+     * the capture matches what is on screen. */
+    const opacity = Number(tile.style.opacity || "1")
+    if (opacity <= 0) continue
 
-    const r = tiles[i].getBoundingClientRect()
-    ctx.drawImage(
-      img,
-      r.left - origin.left - sel.x,
-      r.top - origin.top - sel.y,
-      r.width,
-      r.height
-    )
-    drew = true
+    const r = tile.getBoundingClientRect()
+    const prev = ctx.globalAlpha
+    ctx.globalAlpha = opacity
+    try {
+      ctx.drawImage(
+        tile,
+        r.left - origin.left - sel.x,
+        r.top - origin.top - sel.y,
+        r.width,
+        r.height
+      )
+      drew = true
+    } catch (e) {
+      /* A tile whose src never resolved throws here rather than drawing */
+      console.warn("capture: could not draw a tile", e)
+    }
+    ctx.globalAlpha = prev
   }
   return drew
 }
@@ -241,11 +244,7 @@ export async function captureVideo(
     const basemap = document.createElement("canvas")
     basemap.width = width
     basemap.height = height
-    const haveBasemap = await drawBasemap(
-      map,
-      basemap.getContext("2d"),
-      region
-    )
+    const haveBasemap = drawBasemap(map, basemap.getContext("2d"), region)
     if (!haveBasemap) {
       /* Worth saying out loud: with no basemap the frames are transparent
        * behind the dots, and MP4 has no alpha channel, so the recording comes

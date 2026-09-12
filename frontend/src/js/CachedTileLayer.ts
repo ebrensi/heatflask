@@ -54,6 +54,9 @@ type StoredObj = {
   blob: Blob
 }
 
+/** Leaflet internals this module overrides that @types/leaflet omits. */
+type GridLayerInternals = { _removeTile(key: string): void }
+
 TileLayer.include({
   cacheHits: 0,
   cacheMisses: 0,
@@ -182,6 +185,8 @@ TileLayer.include({
       urlMissing: tile.src,
       urlFallback: newUrl,
     })
+    // reassigning src drops the old blob, so release it first
+    revokeIfBlob(tile)
     tile.src = newUrl
   },
 
@@ -240,7 +245,38 @@ TileLayer.include({
   },
 
   _tileOnLoad: function (done: DoneCallback, tile: TileElement) {
-    URL.revokeObjectURL(tile.src)
+    /* Deliberately NOT revoking tile.src here.
+     *
+     * This used to call URL.revokeObjectURL(tile.src) as soon as the image
+     * loaded. The decoded bitmap keeps painting, so the map looks right and
+     * the bug stays hidden -- but the element's src now points at a blob that
+     * no longer exists, and anything reading it back fails with
+     * net::ERR_FILE_NOT_FOUND. The browser does read it back (a re-decode
+     * after the bitmap is evicted, the fallback path reassigning src), which
+     * is where the console spam came from; and a capture compositing the
+     * basemap could not load a single tile, so it recorded on black.
+     *
+     * The blob has to outlive the element, so it is released in _removeTile,
+     * when Leaflet actually discards the tile. */
     done(null, tile)
   },
+
+  /* Release the blob when the tile element is discarded -- the point at which
+   * nothing can reference it any more. Without this they would accumulate for
+   * the life of the page. */
+  _removeTile: function (key: string) {
+    const tile = this._tiles[key]
+    if (tile && tile.el) revokeIfBlob(tile.el)
+    // _removeTile is Leaflet-internal; @types/leaflet declares no underscore
+    // members, and this file already patches several of them.
+    return (<GridLayerInternals>(<unknown>GridLayer.prototype))._removeTile.call(
+      this,
+      key
+    )
+  },
 })
+
+/** Release a tile's object URL, if that is what it is holding. */
+function revokeIfBlob(el: HTMLImageElement): void {
+  if (el.src && el.src.startsWith("blob:")) URL.revokeObjectURL(el.src)
+}
