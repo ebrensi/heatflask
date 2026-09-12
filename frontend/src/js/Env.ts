@@ -25,6 +25,10 @@ export type RuntimeJson = {
     visibility: string
     delete: string
     logout: string
+    /** The public user directory */
+    directory: string
+    /** The same directory with the admin columns; only sent to admins */
+    admin: string
   }
 }
 

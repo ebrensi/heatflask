@@ -1,0 +1,62 @@
+/*
+ * Layer Settings tab.
+ *
+ * The dials used to sit inline inside the same <span> as their labels, at
+ * 140px across in a sidebar that is 305px wide at its narrowest -- so the
+ * label, the value and the dial fought each other for the line. Each dial is
+ * its own block now, with the readout directly under it.
+ */
+
+.dial-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  justify-content: flex-start;
+  margin: 0.5rem 0 1rem;
+}
+
+.dial {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* the knob canvas is 100px; leave room for the readout under it */
+  width: 100px;
+}
+
+/* knob renders a canvas; keep it from picking up stray inline spacing */
+.dial > span {
+  display: block;
+  line-height: 0;
+}
+
+.dial-name {
+  margin-top: 0.35rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+  opacity: 0.75;
+  white-space: nowrap;
+}
+
+.dial-name i {
+  font-style: italic;
+  opacity: 1;
+}
+
+.dial-value {
+  font-family: monospace;
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.dot-const-info {
+  font-size: 0.85rem;
+  opacity: 0.8;
+  margin-bottom: 0.5rem;
+  min-height: 1.2em;
+}
+
+.dot-const-info code {
+  font-family: monospace;
+  font-variant-numeric: tabular-nums;
+}

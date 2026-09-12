@@ -15,12 +15,15 @@ export const ICON = icon("equalizer")
 const DIAL_FG = "rgba(0,255,255,0.8)"
 const DIAL_BG = "rgba(255,255,255,0.2)"
 
+/* 100px across, matching .dial in tab.controls.css. These were 140px, which
+ * cannot sit beside a label in a sidebar that is 305px at its narrowest --
+ * part of why the tab looked crowded. */
 const dialSpec1 = {
   min: 0,
   max: 100,
   step: 0.1,
-  width: 140,
-  height: 140,
+  width: 100,
+  height: 100,
   cursor: 20,
   displayInput: false,
   fgColor: DIAL_FG,
@@ -67,6 +70,15 @@ const S_LOW = 1
 const S_HIGH = 3600
 const S_RATIO = S_HIGH / S_LOW
 
+/** A duration in seconds, at a length people can read at a glance. */
+function fmtSecs(s: number): string {
+  if (s < 10) return `${s.toFixed(1)} s`
+  if (s < 60) return `${Math.round(s)} s`
+  const m = Math.floor(s / 60)
+  const rem = Math.round(s % 60)
+  return rem ? `${m}m ${rem}s` : `${m} min`
+}
+
 type DialBinding = {
   id: keyof typeof knobSpec
   param: "tau" | "T" | "sz"
@@ -74,6 +86,10 @@ type DialBinding = {
   toParam?: (dial: number) => number
   /** parameter value -> dial position */
   toDial?: (value: number) => number
+  /** id of the element showing this parameter's current value */
+  readout: string
+  /** the value, as the reader should see it */
+  format: (value: number) => string
 }
 
 const dialBindings: DialBinding[] = [
@@ -82,14 +98,25 @@ const dialBindings: DialBinding[] = [
     param: "tau",
     toParam: (v) => TAU_LOW * TAU_RATIO ** (v / 100),
     toDial: (tau) => (100 * Math.log(tau / TAU_LOW)) / Math.log(TAU_RATIO),
+    readout: "tauValue",
+    /* tau is activity-seconds per real second, which is exactly a playback
+     * speed, so show it the way people already read playback speeds. */
+    format: (tau) => (tau < 10 ? `${tau.toFixed(1)}×` : `${Math.round(tau)}×`),
   },
   {
     id: "sepConst",
     param: "T",
     toParam: (v) => S_LOW * S_RATIO ** (v / 100),
     toDial: (s) => (100 * Math.log(s / S_LOW)) / Math.log(S_RATIO),
+    readout: "TValue",
+    format: fmtSecs,
   },
-  { id: "sizeConst", param: "sz" },
+  {
+    id: "sizeConst",
+    param: "sz",
+    readout: "szValue",
+    format: (sz) => sz.toFixed(1),
+  },
 ]
 
 /**
@@ -107,21 +134,27 @@ export function SETUP(state: State) {
     document.getElementById(id).appendChild(knob)
   }
 
-  for (const { id, param, toParam, toDial } of dialBindings) {
+  for (const { id, param, toParam, toDial, readout, format } of dialBindings) {
     const knob = knobSpec[id]
     const fromDial = toParam || ((v: number) => v)
     const fromValue = toDial || ((v: number) => v)
+    const readoutEl = document.getElementById(readout)
 
     // dial -> model
     knob.onchange = () => {
       visual[param] = fromDial(knob.getValue())
     }
 
-    /* model -> dial and layer. onChange fires immediately by default, which
-     * conveniently seeds each dial from the current value. */
+    /* model -> dial, readout and layer. onChange fires immediately by default,
+     * which conveniently seeds each dial and its readout from the current
+     * value. The readouts used to be data-bind="info.tauInfo:innerText" and
+     * data-bind="info.TInfo:innerText", but the model has no `info` class --
+     * nothing was ever bound, so they sat permanently empty. */
     visual.onChange(param, (value: number) => {
       const dialValue = fromValue(value)
       if (Math.abs(knob.getValue() - dialValue) > 1e-9) knob.setValue(dialValue)
+      if (readoutEl) readoutEl.textContent = format(value)
+      updateCycleInfo(visual)
       dotLayer.updateDotSettings()
     })
   }
@@ -134,6 +167,31 @@ export function SETUP(state: State) {
   bindCheckbox(visual, "showShadows", "shadows", (on) => {
     dotLayer.updateDotSettings({ enabled: on })
   })
+}
+
+/**
+ * The one number that follows from the other two.
+ *
+ * T is the spacing between successive dots in activity-seconds, and the dot
+ * pattern repeats every T of activity time -- so T is the period of the cycle.
+ * tau converts activity time to real time, which puts the loop the viewer
+ * actually sees at T/tau real seconds. That is also exactly what a capture
+ * records: one loop.
+ */
+function updateCycleInfo(visual: State["visual"]): void {
+  const el = document.getElementById("cycleInfo")
+  if (!el) return
+
+  const tau = +visual.tau
+  const T = +visual.T
+  if (!(tau > 0) || !(T > 0)) {
+    el.textContent = ""
+    return
+  }
+
+  el.innerHTML =
+    `one loop = <code>T/&tau;</code> = ` +
+    `<code>${fmtSecs(T / tau)}</code> of real time`
 }
 
 /** Two-way bind a checkbox to a boolean on appState.visual. */

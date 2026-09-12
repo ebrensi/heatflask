@@ -61,16 +61,22 @@ async def splash_page(request: Request):
 
 
 def relevant_info(user):
-    return (
-        {
-            "id": user[U.ID],
-            "name": f"{user[U.FIRSTNAME]}",
-            "profile": user[U.PROFILE],
-            "private": user[U.PRIVATE],
-        }
-        if user
-        else None
+    if not user:
+        return None
+
+    # The profile tab shows the user's full name, so send both parts. This
+    # used to be f"{user[U.FIRSTNAME]}" alone, which is why the tab could not
+    # render a surname whatever the frontend did.
+    name = " ".join(
+        part for part in (user.get(U.FIRSTNAME), user.get(U.LASTNAME)) if part
     )
+
+    return {
+        "id": user[U.ID],
+        "name": name,
+        "profile": user[U.PROFILE],
+        "private": user[U.PRIVATE],
+    }
 
 
 # *** Main user/global activities page
@@ -103,6 +109,12 @@ async def user_page(request: Request, target_user_id=None):
                 "visibility": app.url_for("main.visibility", setting=""),
                 "delete": app.url_for("main.delete"),
                 "logout": app.url_for("auth.logout"),
+                # The public directory, so the profile tab can link to the
+                # list a user is opting into when they make themselves public
+                "directory": app.url_for("users.directory"),
+                # Same page with the admin columns; the frontend only offers
+                # this when ADMIN is set, and the route checks again anyway
+                "admin": app.url_for("users.directory", admin=1),
             },
         },
     }

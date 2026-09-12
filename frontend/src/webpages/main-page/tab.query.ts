@@ -2,17 +2,42 @@ import { icon } from "~/src/js/Icons"
 import { State } from "~/src/js/Model"
 import type { QueryParameters } from "~/src/js/Model"
 import { renderFromQuery } from "~/src/js/Render"
+import { STRAVA_USER_URL } from "~/src/js/Env"
 import CONTENT from "bundle-text:./tab.query.html"
 export { CONTENT }
 
 export const ID = "QueryTab"
 export const ICON = icon("bars")
 
+/* These carried data-bind attributes that nothing processed: the only
+ * [data-bind] walk in the codebase covers this tab's own form inputs and never
+ * touches the header. So the avatar sat on its placeholder and the title
+ * rendered the literal text "$TARGET_USER's map". SETUP fills them in by id --
+ * the header is already in the DOM by the time it runs. */
 export const TITLE = `
-  <a href="#" data-bind="targetUser.stravaUrl:href" target="_blank">
-  <button class="avatar" data-bind="targetUser.profile:*data-url"></button></a>
-  <span data-bind="targetUser.name:innerText">$TARGET_USER</span>'s map
+  <a id="query-user-link" href="#" target="_blank" rel="noopener">
+    <img id="query-user-avatar" class="tab-avatar" alt="" />
+  </a>
+  <span id="query-user-name"></span>'s map
 `
+/** Put the target user's name and avatar into the tab header. */
+function fillHeader(appState: State): void {
+  const user = appState.targetUser
+  if (!user) return
+
+  const name = document.getElementById("query-user-name")
+  if (name) name.textContent = user.name || `athlete ${user.id}`
+
+  const avatar = <HTMLImageElement>document.getElementById("query-user-avatar")
+  if (avatar && user.profile) {
+    avatar.src = user.profile
+    avatar.alt = user.name || ""
+  }
+
+  const link = <HTMLAnchorElement>document.getElementById("query-user-link")
+  if (link && user.id) link.href = STRAVA_USER_URL(user.id)
+}
+
 type CallbackFunction = (el: HTMLElement, S: State) => void
 type CallbackDispatch = Record<string, CallbackFunction>
 
@@ -85,6 +110,8 @@ function runQuery(S: State): void {
  */
 export function SETUP(appState: State) {
   const tabContentElement = document.getElementById(ID)
+
+  fillHeader(appState)
 
   // Set up change and click listeners
   tabContentElement.addEventListener("change", (e: Event) => {

@@ -34,28 +34,57 @@ body,
   font: 10pt "Helvetica Neue", Arial, Helvetica, sans-serif;
 }
 
-/* Avatar button for registered user */
-button.avatar {
-  background: url(~/src/images/strava_button.png);
-  background-size: cover;
+/* Avatars.
+ *
+ * These were <button>s carrying the image URL in a data-url attribute, with
+ *   button.avatar[data-url] { background: attr(data-url); }
+ * to display it -- but CSS attr() only works in the `content` property, so
+ * that rule never applied and every avatar stayed on the Strava placeholder.
+ * They are <img> elements now, with the src set from the model.
+ */
+.tab-avatar,
+.profile-avatar {
+  border-radius: 50%;
+  object-fit: cover;
+  vertical-align: middle;
+  background: url(~/src/images/strava_button.png) center / cover;
+}
+
+/* in a sidebar tab header, beside the title text */
+.tab-avatar {
   width: 32px;
   height: 32px;
-  border: none;
-  padding: 10px;
-  transition: transform 0.5s;
+  transition: transform 0.3s;
 }
 
-/* If the button has its data-url attribute set,
- *  we set the background image to that url
- */
-button.avatar[data-url] {
-  background: attr(data-url);
-}
-
-button.avatar:hover {
+.tab-avatar:hover {
   cursor: pointer;
   transform: scale(0.9);
-  transition: transform 0.5s;
+}
+
+/* the larger one at the top of the User tab */
+.profile-avatar {
+  width: 64px;
+  height: 64px;
+}
+
+.profile-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.profile-head h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  line-height: 1.2;
+}
+
+.profile-note {
+  font-size: 0.85rem;
+  opacity: 0.8;
+  margin: 0.4rem 0;
 }
 
 button,

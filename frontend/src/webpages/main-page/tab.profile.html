@@ -1,69 +1,54 @@
 <!-- Profile & User Settings Tab -->
 
-<h3>
-  <span data-bind="firstname" data-prop="innerText" data-class="current-user"
-    >first</span
+<div class="profile-head">
+  <a
+    id="profile-strava-link"
+    href="https://www.strava.com/settings/profile"
+    target="_blank"
+    rel="noopener"
+    title="Edit your profile on Strava"
   >
-  <span data-bind="lastname" data-prop="innerText" data-class="current-user"
-    >last</span
-  >
-</h3>
+    <img id="profile-avatar" class="profile-avatar" alt="" />
+  </a>
+  <h3 id="profile-name">&nbsp;</h3>
+</div>
 
-<a href="https://www.strava.com/settings/profile" target="_blank">
-  <button
-    class="avatar"
-    data-bind="avatar"
-    data-prop="data-url"
-    data-class="current-user"
-  ></button>
-</a>
-
-<br /><br />
-We index your activity summaries for fast access.
-<br />
+<p class="profile-note">We index your activity summaries for fast access.</p>
 
 <button type="button" class="btn btn-a btn-sm" data-action="view-index">
-  <i class="fa fa-list-alt"></i>
   View index
 </button>
-<br />
+
 <hr />
 
 <div>
-  <label
-    ><input
-      type="checkbox"
-      data-class="current-user"
-      data-bind="public"
-      data-prop="checked"
-      data-event="change"
-    />
-    Public Profile
-    <a
-      href="#"
-      target="_blank"
-      data-bind="public-users-url"
-      data-prop="href"
-      data-class="info"
-    >
-      (<i class="fas fa-users"></i>
-      Public Users)
-    </a>
+  <label>
+    <input type="checkbox" id="profile-public" />
+    Public profile
   </label>
+  <div class="profile-note">
+    Public profiles are listed in the
+    <a id="profile-directory-link" href="#" target="_blank" rel="noopener"
+      >public user directory</a
+    >, so other people can find and browse your map.
+  </div>
 </div>
 
-<br /><br /><br />
+<div id="profile-admin" hidden>
+  <hr />
+  <a id="profile-admin-link" href="#" target="_blank" rel="noopener"
+    >User directory (admin)</a
+  >
+</div>
+
+<hr />
 
 <button type="button" data-action="logout" class="btn btn-c btn-sm">
-  <i class="fas fa-sign-out-alt"></i>
   Log Out
 </button>
 
-<br />
-<hr />
 <br /><br />
 
 <button type="button" data-action="delete" class="btn btn-c btn-sm">
-  <i class="fas fa-user-alt-slash"></i>
   Delete Account
 </button>
