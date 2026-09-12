@@ -44,7 +44,18 @@ async def directory(request):
 
     kwargs = {"admin": 1} if admin else {}
     query_url = request.url_for("users.query", output="csv", **kwargs)
-    params = {"app_name": APP_NAME, "admin": 1 if admin else 0, "url": query_url}
+
+    # users-page.ts reads {admin, url} out of the #runtime_json element, the
+    # same way the activities page does. This used to pass `admin` and `url`
+    # as separate template parameters, which left the template's
+    # ${runtime_json} unsubstituted -- render_template uses safe_substitute,
+    # so a missing key is emitted literally rather than raising. The page then
+    # called JSON.parse("${runtime_json}") at module scope, outside its own
+    # try/catch, and died before it ever ran.
+    params = {
+        "app_name": APP_NAME,
+        "runtime_json": {"admin": bool(admin), "url": query_url},
+    }
     html = request.ctx.render_template("users-page.html", **params)
     return Response.html(html)
 

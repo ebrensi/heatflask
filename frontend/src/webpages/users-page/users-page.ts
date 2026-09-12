@@ -3,10 +3,24 @@ import { icon } from "~/src/js/Icons"
 import { USER_FIELDNAMES as U } from "~/src/js/DataImport"
 
 const status_el = document.getElementById("status")
-const jsonString = document.getElementById("runtime_json").innerText
-const { admin, url } = JSON.parse(jsonString) as {
-  admin: boolean
-  url: string
+
+/* textContent rather than innerText: this element is `hidden`, and innerText
+ * is defined in terms of *rendered* text. It does fall back to textContent for
+ * an unrendered element, but textContent is what is actually meant here and
+ * does not lean on that special case.
+ *
+ * Guarded because this runs at module scope, outside run()'s try/catch: a
+ * throw here aborts the module before run() is ever reached, so the page sits
+ * blank with nothing but a console message. That is how the backend failing to
+ * substitute ${runtime_json} stayed invisible. */
+const jsonString = document.getElementById("runtime_json").textContent
+let admin: boolean
+let url: string
+try {
+  ;({ admin, url } = JSON.parse(jsonString) as { admin: boolean; url: string })
+} catch (e) {
+  status_el.textContent = `could not read page parameters: ${jsonString}`
+  throw e
 }
 
 console.log(`Environment: ${process.env.NODE_ENV}`)
