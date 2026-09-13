@@ -183,26 +183,38 @@ function addOp(store: Store, op: OpName, key: string, value?: unknown) {
     }
     const queries = pendingTransactions.get(store)
     queries[op][key] = { value, resolve, reject }
-    const myNum = Object.keys(queries[op]).length
+
+    /* How many ops of this kind are waiting. Gets are flushed by doBulkGet,
+     * and puts and deletes together by doBulkPutDel, so they are counted the
+     * way they are flushed. */
+    const pendingCount = () =>
+      op === "get"
+        ? Object.keys(queries.get).length
+        : Object.keys(queries.put).length + Object.keys(queries.del).length
+
+    const countWhenQueued = pendingCount()
 
     /*
-     * Here we set a short timeout to allow for more ops to be added.
-     * when we come back, if nothing has been added then we go ahead and
-     * perform a bulk transaction.
+     * Wait a moment in case more ops follow, then flush if none did.
+     *
+     * The test used to be `opCount === myNum + 1`, which a lone operation can
+     * never satisfy: a single get queued a batch of one, came back to find a
+     * batch of one, and `1 === 2` left it unflushed -- so its promise never
+     * settled and the caller waited forever. Two or more ops had to land in
+     * the same window for anything to happen at all, which is why the tile
+     * layer never showed it: it asks for a screenful of tiles at once.
+     *
+     * The put/del branch also tested queries.get, so writes were gated on the
+     * number of pending reads.
      */
     setTimeout(() => {
-      const opCount = Object.keys(queries.get).length
-      if (op === "get") {
-        if (opCount > MAX_TRANSACTION_SIZE || opCount === myNum + 1) {
-          doBulkGet(store)
-        }
-        return
-      }
-
-      const putDelCount =
-        Object.keys(queries.put).length + Object.keys(queries.del).length
-      if (putDelCount > MAX_TRANSACTION_SIZE || opCount === myNum + 1) {
-        doBulkPutDel(store)
+      const now = pendingCount()
+      // another op's timer already flushed this batch
+      if (now === 0) return
+      // nothing arrived while we waited, or we are simply full
+      if (now === countWhenQueued || now > MAX_TRANSACTION_SIZE) {
+        if (op === "get") doBulkGet(store)
+        else doBulkPutDel(store)
       }
     }, BUFFER_TIMEOUT)
   })

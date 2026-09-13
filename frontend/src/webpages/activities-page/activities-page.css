@@ -33,3 +33,20 @@ tr.selected:hover {
   opacity: 0;
   transition: visibility 0s 0.25s, opacity 0.25s linear;
 }
+
+/* Where each activity's track is held: server-side Mongo, and this browser's
+ * IndexedDB. A filled dot means it is cached there and will render without
+ * going back to Strava; a dash means it is not. */
+.cached {
+  font-size: 1.1em;
+  line-height: 1;
+}
+
+.cached.yes {
+  color: #2e9e4f;
+}
+
+.cached.no {
+  color: #999;
+  opacity: 0.5;
+}

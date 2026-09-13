@@ -219,6 +219,21 @@ async def query(**kwargs) -> list[StreamsQueryResult]:
     return [s async for s in aiter_query(**kwargs)]
 
 
+async def cached_ids(activity_ids: list[int]) -> list[int]:
+    """
+    Which of these activities we hold streams for, right now.
+
+    Deliberately does not touch `ts` the way aiter_query does: this only
+    reports what is in the cache, and merely looking at the list should not
+    extend anything's stay in it.
+    """
+    if not activity_ids:
+        return []
+    streams = await get_collection()
+    cursor = streams.find({"_id": {"$in": activity_ids}}, projection={"_id": True})
+    return [doc["_id"] async for doc in cursor]
+
+
 async def delete(activity_ids: list[int]):
     if not activity_ids:
         return

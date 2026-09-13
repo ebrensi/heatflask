@@ -26,6 +26,8 @@ export type ActivityQuery = {
   commute?: boolean
   private?: boolean
   streams?: boolean
+  /** Ask the backend to report which of these it holds streams for */
+  stream_status?: boolean
   visibility?: "everyone" | "followers" | "only_me"
   overlaps?: BBounds
 }
@@ -148,14 +150,38 @@ export function qToQ(
   return bq
 }
 
+/**
+ * Turn a packed stream blob into the arrays the renderer draws from.
+ *
+ * Split out of makeActivityQuery so StreamCache can put bytes it stored
+ * earlier through exactly the same decode, rather than duplicating it.
+ */
+export function decodePackedStreams(
+  packed: Uint8Array,
+  polylinePrecision: number
+): ImportedActivity["streams"] {
+  const mpk = <UnpackedStreams>decode(packed)
+  return {
+    time: rld_decode(mpk.t, Uint16Array),
+    altitude: rld_decode(mpk.a, Int16Array),
+    latlng: decode2Buf(mpk.p, polylinePrecision),
+  }
+}
+
 /** Send a query to the backend and yield its items
  *   * send a non-false object to this generator to abort the operation
  *   * this generator will yield null and quit if operation is aborted
  *      from the other side
+ *
+ * `keepPacked` leaves each activity's raw `mpk` bytes in place. Those are
+ * what StreamCache stores -- about 12KB, against megabytes for the decoded
+ * arrays -- so a caller that is caching asks for them and drops them once
+ * they are written.
  */
 export async function* makeActivityQuery(
   query: ActivityQuery,
-  url = BACKEND_QUERY_URL
+  url = BACKEND_QUERY_URL,
+  keepPacked = false
 ): AsyncGenerator<QueryResultItem | null, void, boolean> {
   const response = await fetch(url, {
     method: "POST",
@@ -195,14 +221,8 @@ export async function* makeActivityQuery(
 
         // Un-pack the streams if there are any
         if ("mpk" in obj) {
-          const mpk = <UnpackedStreams>decode(obj.mpk)
-          delete obj.mpk
-
-          obj.streams = {
-            time: rld_decode(mpk.t, Uint16Array),
-            altitude: rld_decode(mpk.a, Int16Array),
-            latlng: decode2Buf(mpk.p, info.polyline_precision),
-          }
+          obj.streams = decodePackedStreams(obj.mpk, info.polyline_precision)
+          if (!keepPacked) delete obj.mpk
         }
       }
       const abort = yield obj

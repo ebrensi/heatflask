@@ -69,8 +69,8 @@ const DEFAULT_GEOHASH: string = Geohash.encode(
   DEFAULT_CENTER.lng,
   DEFAULT_ZOOM
 )
-/* Keyless by default. The four Mapbox layers need MAPBOX_ACCESS_TOKEN, so
- * defaulting to one of them gives anyone without a token an empty map. */
+/* The Mapbox token and CARTO key are hardcoded in Env.ts, so any layer
+ * would work here. OSM is keyless and uses neither quota. */
 const DEFAULT_BASELAYER = "OpenStreetMap.Mapnik"
 
 export const DefaultVisual: VisualParameters = {

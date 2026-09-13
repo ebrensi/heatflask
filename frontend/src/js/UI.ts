@@ -25,6 +25,7 @@ import { addCaptureControl } from "./CaptureControl"
 import * as Table from "./Table"
 import { initRender, renderFromQuery } from "./Render"
 import { initImportProgress } from "./ImportProgress"
+import * as StreamCache from "./StreamCache"
 
 const map = MapAPI.CreateMap()
 
@@ -65,6 +66,17 @@ export async function start() {
 
   // The dialog that shows while activities stream in
   initImportProgress(map)
+
+  /* Local stream cache, but only when you are looking at your own map: another
+   * athlete's tracks are never left behind in your browser. Returns false and
+   * stays inert in every other case, so nothing downstream needs to check. */
+  const caching = await StreamCache.init(CURRENT_USER?.id, TARGET_USER?.id)
+  if (caching) {
+    const { count, bytes } = StreamCache.stats()
+    console.log(
+      `stream cache ready: ${count} activities (${(bytes / 1e6).toFixed(1)} MB)`
+    )
+  }
 
   // Give Render the map and state, so the query tab can trigger a render
   initRender(map, appState)

@@ -10,6 +10,7 @@ import {
   ACTIVITY_FIELDNAMES as F,
 } from "~/src/js/DataImport"
 import { icon } from "~/src/js/Icons"
+import * as StreamCache from "~/src/js/StreamCache"
 import type { ActivityQuery, ImportedActivity } from "~/src/js/DataImport"
 import type { ActivityType } from "~/src/js/Strava"
 // import { JSTable } from "../../js/jstable"
@@ -28,10 +29,21 @@ type EmbeddedArgs = {
   query_url: string
   query_obj: ActivityQuery
   atypes: ActivityType[]
+  current_user_id?: number
 }
 const argstr = document.getElementById("runtime_json").innerText
 const args = <EmbeddedArgs>JSON.parse(argstr)
 const MULTI = !args.query_obj.user_id
+
+/* Ask the backend which of these it holds streams for. */
+args.query_obj.stream_status = true
+
+/** Activities whose streams are in our Mongo cache; from the {cached} message. */
+let serverCached = new Set<number>()
+/** Activities whose streams are in *this browser's* IndexedDB. Only ever
+ * populated when you are looking at your own list: the cache holds nobody
+ * else's tracks. */
+let locallyCached = new Set<number>()
 
 function user_thumbnail(id: number, img_url: string) {
   if (!(id && img_url)) return ""
@@ -56,6 +68,11 @@ function makeHeaderRow() {
     icon("stopwatch"), // elapsed
     `${icon("road1")} (${DIST_LABEL})`, // distance
     `${icon("rocket")} (${ELEV_LABEL})`,
+    /* Where this activity's track is held. Two separate caches: ours in
+     * Mongo, and this browser's IndexedDB. A track in neither has to be
+     * re-fetched from Strava, which is the slow, rate-limited path. */
+    `<span title="Track cached on the server (Mongo)">${icon("database1")}</span>`,
+    `<span title="Track cached in this browser">${icon("download2")}</span>`,
     icon("pencil"), // title
   ]
 
@@ -66,12 +83,27 @@ function makeHeaderRow() {
   }
 }
 
+/* A filled marker means the track is held there, a faint dash means it is not
+ * and would have to come from Strava. */
+function cacheCell(present: boolean, where: string, aid: number): string {
+  return present
+    ? `<span class="cached yes" title="Track for ${aid} is cached ${where}">●</span>`
+    : `<span class="cached no" title="Track for ${aid} is not cached ${where}">–</span>`
+}
+
 const priv_icon = icon("eye-blocked")
 const pub_icon = icon("eye")
 const avatars = <Record<number, string>>{}
 
 async function main() {
   count_msg_el.classList.add("spinner")
+
+  /* What this browser holds. Reads one small index record, not the blobs, and
+   * comes back empty unless this list is the signed-in user's own. */
+  locallyCached = await StreamCache.peekCachedIds(
+    args.current_user_id,
+    args.query_obj.user_id
+  )
 
   const data: string[][] = []
   const errors: string[] = []
@@ -90,6 +122,9 @@ async function main() {
       data[n_total - 1] = undefined
       data.fill(undefined, count, n_total)
       status_msg_el.innerText = "Fetching activities..."
+    } else if ("cached" in obj) {
+      /* Sent ahead of the summaries, so every row can be built knowing it */
+      serverCached = new Set(<number[]>obj.cached)
     } else if ("error" in obj) {
       errors.push(obj.error)
     } else if ("info" in obj) {
@@ -129,30 +164,25 @@ function makeRow(A: ImportedActivity): string[] {
   const aicon = activity_icon(<ActivityType>atype) || `${atype}*`
   const picon = A[F.FLAG_PRIVATE] ? priv_icon : pub_icon
 
-  if (MULTI) {
-    return [
-      user_thumbnail(A[F.USER_ID], avatars[A[F.USER_ID]]),
-      href(heatflask_link, date),
-      strava_link,
-      aicon,
-      picon,
-      elapsed,
-      dist,
-      elev_gain,
-      A[F.NAME],
-    ]
-  } else {
-    return [
-      href(heatflask_link, date),
-      strava_link,
-      aicon,
-      picon,
-      elapsed,
-      dist,
-      elev_gain,
-      A[F.NAME],
-    ]
-  }
+  const onServer = cacheCell(serverCached.has(aid), "on the server", aid)
+  const inBrowser = cacheCell(locallyCached.has(aid), "in this browser", aid)
+
+  const cells = [
+    href(heatflask_link, date),
+    strava_link,
+    aicon,
+    picon,
+    elapsed,
+    dist,
+    elev_gain,
+    onServer,
+    inBrowser,
+    A[F.NAME],
+  ]
+
+  return MULTI
+    ? [user_thumbnail(A[F.USER_ID], avatars[A[F.USER_ID]])].concat(cells)
+    : cells
 }
 
 function buildTableWithInnerHTML(el: HTMLElement, data: string[][]) {

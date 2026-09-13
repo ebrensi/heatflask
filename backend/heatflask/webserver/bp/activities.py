@@ -38,6 +38,9 @@ async def query(request: SessionRequest):
     query = request.json
 
     streams = query.pop("streams", False)
+    # The activity list asks for this to show which activities we hold streams
+    # for. Off by default, so the render path never pays for the extra lookup.
+    stream_status = query.pop("stream_status", False)
     response = await request.respond(content_type="application/msgpack")
 
     def sendPacked(doc):
@@ -120,6 +123,13 @@ async def query(request: SessionRequest):
 
     await sendPacked({"info": info})
 
+    if stream_status:
+        # Which of these we hold streams for, so the activity list can show
+        # what is already cached server-side. Sent ahead of the summaries so
+        # the page has it before it builds a single row.
+        ids = [A[I.ACTIVITY_ID] for A in summaries]
+        await sendPacked({"cached": await Streams.cached_ids(ids)})
+
     if not streams:
         for A in summaries:
             await sendPacked(A)
@@ -186,6 +196,10 @@ async def activities_page(request: SessionRequest):
         "runtime_json": {
             "query_url": query_url,
             "query_obj": query_obj,
+            # The page shows a "cached in this browser" column, and the local
+            # cache only ever holds your own activities, so it needs to know
+            # whether this list is yours.
+            "current_user_id": current_user_id,
         },
     }
     html = render_template("activities-page.html", **params)
