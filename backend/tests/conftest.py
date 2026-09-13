@@ -52,6 +52,10 @@ class FakeStrava:
         self.requests = 0
         self.refused = 0
         self.no_streams: set[int] = set()
+        # what GET /activities/{id} answers: this status, and these fields over
+        # a public ride with a track
+        self.activity_status = 200
+        self.activity_fields: dict = {}
         self.url = ""
 
     def count(self) -> int:
@@ -108,9 +112,19 @@ class FakeStrava:
 
     async def activity(self, request):
         ok, used = self.metered()
-        return web.json_response(
-            {"id": int(request.match_info["id"])}, headers=self.headers(used)
-        )
+        if self.activity_status != 200:
+            return web.json_response({"message": "no"}, status=self.activity_status)
+        body = {
+            "id": int(request.match_info["id"]),
+            "athlete": {"id": 1},
+            "name": "Morning Ride",
+            "start_date": "2026-09-13T08:00:00Z",
+            "private": False,
+            "visibility": "everyone",
+            "map": {"summary_polyline": "_p~iF~ps|U_ulLnnqC"},
+            **self.activity_fields,
+        }
+        return web.json_response(body, headers=self.headers(used))
 
 
 @pytest.fixture

@@ -2,6 +2,7 @@
 
 from logging import getLogger
 import datetime
+import time
 import types
 from typing import Any, AsyncGenerator
 
@@ -48,6 +49,36 @@ async def record(update: Strava.WebhookUpdate) -> None:
         log.exception("could not record update %s", update)
 
 
+# Our webhook subscription's id, looked up from Strava and kept
+subscriptionBox = types.SimpleNamespace(id=None, looked_up_at=0.0)
+SUBSCRIPTION_LOOKUP_INTERVAL = 600
+
+
+async def subscription_id() -> int | None:
+    """
+    The id of our webhook subscription, or None if it cannot be found out.
+
+    A delivery naming any other subscription is not from Strava. The id is not
+    secret enough to authenticate anything by itself -- the refetch in
+    Index.refresh_one is what keeps forged deliveries from changing data -- but
+    checking it stops a stranger from making us spend Strava requests. Until
+    the lookup succeeds, deliveries are accepted: dropping real ones because
+    Strava was briefly unreachable would be worse.
+    """
+    box = subscriptionBox
+    now = time.time()
+    if box.id is None and now - box.looked_up_at > SUBSCRIPTION_LOOKUP_INTERVAL:
+        box.looked_up_at = now
+        try:
+            subs = await Strava.AsyncClient("admin").view_subscription(
+                raise_exception=True
+            )
+            box.id = subs[0]["id"] if subs else None
+        except Exception as e:
+            log.warning("could not look up our webhook subscription: %r", e)
+    return box.id
+
+
 async def handle_update_callback(update: Strava.WebhookUpdate) -> None:
     """
     Act on one webhook delivery from Strava.
@@ -60,8 +91,21 @@ async def handle_update_callback(update: Strava.WebhookUpdate) -> None:
     referenced `aid` on "create" before assigning it. Meanwhile the route in
     webserver/bp/updates.py did the real work inline, without recording
     anything. Now the route calls this, and there is one version.
+
+    Strava does not sign deliveries, so nothing in one is taken as fact:
+    it must name our subscription, and then it only tells us which activity
+    to look at again. See Index.refresh_one.
     """
     await record(update)
+
+    ours = await subscription_id()
+    if ours is not None and update.get("subscription_id") != ours:
+        log.warning(
+            "update for subscription %s, not ours (%s)",
+            update.get("subscription_id"),
+            ours,
+        )
+        return
 
     if update.get("object_type") != "activity":
         # An athlete update with {"authorized": "false"} is a deauthorization.
@@ -80,18 +124,20 @@ async def handle_update_callback(update: Strava.WebhookUpdate) -> None:
     if not (user and await Index.has_user_entries(**user)):
         return
 
-    if aspect_type == "create":
-        await Index.import_one(activity_id, **user)
-
-    elif aspect_type == "update":
-        await Index.update_one(activity_id, **update.get("updates", {}))
-
-    elif aspect_type == "delete":
-        await Index.delete_one(activity_id)
+    # Create, update and delete all come down to the same thing: find out from
+    # Strava what the activity is now.
+    outcome = await Index.refresh_one(activity_id, **user)
+    if outcome == "removed":
         # and its track, which would otherwise sit in the cache until it expired
         await Streams.delete([activity_id])
 
-    log.debug("webhook: user %s %s activity %s", user_id, aspect_type, activity_id)
+    log.debug(
+        "webhook: user %s %s activity %s: %s",
+        user_id,
+        aspect_type,
+        activity_id,
+        outcome,
+    )
 
 
 async def recent(limit: int = 100) -> AsyncGenerator[dict[str, Any], None]:

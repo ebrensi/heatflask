@@ -429,80 +429,48 @@ async def update_user_entries(**user) -> int:
     return len(docs)
 
 
-async def import_one(activity_id: int, **user):
+async def refresh_one(activity_id: int, **user) -> str:
+    """
+    Make the index entry for one activity match Strava, whatever it was.
+
+    Webhooks call this for create, update and delete alike. Strava does not
+    sign webhook deliveries, so their contents are a hint about which activity
+    changed, never a statement of what it now is: applying a delivery's
+    {"private": "false"} as sent would let anyone who can POST to the callback
+    make a private activity public. So we ask Strava.
+
+    Returns what happened: "imported", "removed" or "unchanged".
+
+      * Strava returns it, with a GPS track: stored as Strava has it now.
+      * Strava returns it without one: removed. The index holds only
+        activities with a track.
+      * 404 or 403: removed. It is deleted, or no longer visible with this
+        athlete's token -- either way it should not be shown.
+      * Anything else (rate limit, Strava down, a revoked token): unchanged.
+        Nothing is known, so nothing is touched.
+    """
     client = Strava.AsyncClient(user[U.ID], user[U.AUTH])
-    try:
-        DetailedActivity = await client.get_activity(activity_id, raise_exception=True)
-    except Exception:
-        log.error("can't import activity %d", activity_id)
-        return
-
-    if not DetailedActivity:
-        log.error("can't import activity %d", activity_id)
-        return
-
-    doc = mongo_doc(**DetailedActivity, ts=datetime.datetime.now(datetime.timezone.utc))
     index = await get_collection()
     try:
-        await index.replace_one({F.ACTIVITY_ID: activity_id}, doc, upsert=True)
-    except Exception:
-        log.exception("mongo error?")
-    else:
-        log.debug("%s imported activity %d", user[U.ID], activity_id)
+        activity = await client.get_activity(activity_id, raise_exception=True)
+    except ClientResponseError as e:
+        if e.status not in (403, 404):
+            log.info("activity %d: Strava error %d, left as is", activity_id, e.status)
+            return "unchanged"
+        activity = None
+    except Exception as e:
+        log.info("activity %d: could not fetch (%r), left as is", activity_id, e)
+        return "unchanged"
 
-
-"""
-The keys Strava puts in a webhook's "updates" object for an activity, mapped
-to our stored fields. Per Strava's docs these are title, type, private and
-visibility -- note "title", not the "name" that the activity API returns.
-
-This used to go through mongo_doc(**updates, update=True), which cannot work:
-mongo_doc unconditionally evaluates int(_id or id), athlete["id"],
-Utility.to_datetime(start_date) and map["summary_polyline"], none of which a
-webhook update carries, so it raised on every one. Hence the "TODO: fix this.
-updates will not be in this form" that sat above this function.
-"""
-WEBHOOK_UPDATE_FIELDS = {
-    "title": F.ACTIVITY_NAME,
-    "private": F.FLAG_PRIVATE,
-    "visibility": F.VISIBILITY,
-}
-
-
-def webhook_update_doc(updates: dict) -> dict:
-    """Translate a webhook "updates" object into a Mongo $set document."""
-    doc = {}
-
-    for key, field in WEBHOOK_UPDATE_FIELDS.items():
-        if key in updates:
-            value = updates[key]
-            if key == "private":
-                # Strava sends the strings "true"/"false" here
-                value = value if isinstance(value, bool) else value == "true"
-            doc[field] = value
-
-    # type needs the same lookup the import path uses
-    if "type" in updates:
-        doc[F.ACTIVITY_TYPE] = Strava.ATYPES_LOOKUP.get(
-            updates["type"], updates["type"]
-        )
-
-    return doc
-
-
-async def update_one(activity_id: int, **updates):
-    doc = webhook_update_doc(updates)
+    doc = mongo_doc(**activity) if activity else None
     if not doc:
-        log.debug("activity %d: nothing to update in %s", activity_id, updates)
-        return
+        await index.delete_one({F.ACTIVITY_ID: activity_id})
+        log.debug("%s removed activity %d from index", user[U.ID], activity_id)
+        return "removed"
 
-    index = await get_collection()
-    try:
-        await index.update_one({F.ACTIVITY_ID: activity_id}, {"$set": doc})
-    except Exception:
-        log.exception("mongo error?")
-    else:
-        log.debug("updated activity %d: %s", activity_id, doc)
+    await index.replace_one({F.ACTIVITY_ID: activity_id}, doc, upsert=True)
+    log.debug("%s refreshed activity %d", user[U.ID], activity_id)
+    return "imported"
 
 
 async def delete_one(activity_id: int):
