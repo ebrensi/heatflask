@@ -61,6 +61,8 @@ export const ga = ADMIN || DEV_BUNDLE ? noop : load_ga_object()
 
 export const MAPBOX_ACCESS_TOKEN =
   "pk.eyJ1IjoiaGVhdGZsYXNrIiwiYSI6ImNrMXB3NDZtMjA0cG4zbW85N2U1M2p2ZmQifQ.UvD1v0VyI_V1gJSey0vRbg"
+// Without it CARTO raster tiles carry an "API KEY REQUIRED" watermark
+export const CARTO_API_KEY = "cb1_3iuf_1_b5f01624a165546780866afc"
 export const CAPTURE_DURATION_MAX = 20
 
 // Courtesy of TwoFuckingDevelopers (@2fdevs, @elecash and @qmarcos)

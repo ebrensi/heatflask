@@ -18,7 +18,7 @@ import "./BoxHook"
 import "./CachedTileLayer"
 import "./LeafletExtensions"
 
-import { MAPBOX_ACCESS_TOKEN, OFFLINE, MOBILE } from "./Env"
+import { MAPBOX_ACCESS_TOKEN, CARTO_API_KEY, OFFLINE, MOBILE } from "./Env"
 import { State } from "./Model"
 import { setURLfromQV } from "./URL"
 
@@ -47,6 +47,9 @@ const mapbox_layer_spec = (id: string) => ({
 for (const [name, id] of Object.entries(mapBox_layer_names)) {
   baselayers[name] = new TileLayer.Provider("MapBox", mapbox_layer_spec(id))
 }
+
+// leaflet-providers has no key option for CartoDB, so put it in the URL
+TileLayer.Provider.providers.CartoDB.url += `?key=${CARTO_API_KEY}`
 
 const providers_names = [
   "Esri.WorldImagery",
