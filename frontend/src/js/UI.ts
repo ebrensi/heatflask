@@ -24,6 +24,7 @@ import { addBoxSelect } from "./BoxSelect"
 import { addCaptureControl } from "./CaptureControl"
 import * as Table from "./Table"
 import { initRender, renderFromQuery } from "./Render"
+import { initImportProgress } from "./ImportProgress"
 
 const map = MapAPI.CreateMap()
 
@@ -61,6 +62,9 @@ export async function start() {
 
   // ctrl-drag a box over the map to select the activities inside it
   addBoxSelect(map)
+
+  // The dialog that shows while activities stream in
+  initImportProgress(map)
 
   // Give Render the map and state, so the query tab can trigger a render
   initRender(map, appState)

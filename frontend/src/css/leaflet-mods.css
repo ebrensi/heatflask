@@ -69,6 +69,30 @@
   color: #fff;
 }
 
+/* The dialog shown while activities stream in */
+.import-progress {
+  min-width: 16rem;
+  text-align: center;
+}
+
+.import-progress .info-message {
+  margin-bottom: 0.5rem;
+}
+
+.import-progress .progbar {
+  width: 100%;
+  height: 0.8rem;
+}
+
+.import-progress .import-count {
+  margin-top: 0.4rem;
+  font-family: monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.9rem;
+  opacity: 0.85;
+  min-height: 1.2em;
+}
+
 /* Readout while a video capture runs. Centred at the top of the map so it
  * clears the controls in both top corners. */
 .capture-progress {

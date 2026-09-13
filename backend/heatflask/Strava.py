@@ -359,6 +359,42 @@ async def get_all_activities(
         tasks = not_done
 
 
+async def get_activities_since(
+    user_session: aiohttp.ClientSession, after: int
+) -> AsyncGenerator[Activity, None]:
+    """
+    Yield the athlete's activities that started after the given epoch second.
+
+    get_all_activities above fires every page at once because it has no idea
+    how many there are. This one tops up an index that already exists, where
+    the answer is nearly always "one page, and usually an empty one", so it
+    pages sequentially and stops at the first non-full page. That keeps a
+    freshness check down to a single Strava request.
+    """
+    log.debug("getting activities after %d", after)
+
+    for page in range(1, MAX_PAGE):
+        async with get_limiter():
+            async with user_session.get(
+                ACTIVITY_LIST_ENDPOINT,
+                params={**params, "after": after, "page": page},
+            ) as r:
+                if r.status != 200:
+                    log.warning("activities-since page %d returned %d", page, r.status)
+                    return
+                result = await r.json()
+
+        if not result:
+            return
+
+        for A in result:
+            yield cast(Activity, A)
+
+        # a page that is not full is the last one
+        if len(result) < PER_PAGE:
+            return
+
+
 def activity_endpoint(activity_id: int) -> str:
     return f"{API_SPEC}/activities/{activity_id}?include_all_efforts=false"
 
@@ -770,6 +806,12 @@ class AsyncClient:
     def get_all_activities(self, **kwargs: Any) -> AsyncGenerator[Activity, bool]:
         """async generator of all Activities (summaries)"""
         return self.__iterate_with_session(get_all_activities, **kwargs)
+
+    def get_activities_since(
+        self, after: int, **kwargs: Any
+    ) -> AsyncGenerator[Activity, None]:
+        """async generator of Activities that started after `after` (epoch)"""
+        return self.__iterate_with_session(get_activities_since, after, **kwargs)
 
     def create_subscription(
         self, callback_url: str, **kwargs: Any

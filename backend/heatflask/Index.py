@@ -11,7 +11,7 @@ import datetime
 import time
 import asyncio
 import types
-from pymongo import DESCENDING
+from pymongo import DESCENDING, ReplaceOne
 from aiohttp import ClientResponseError
 from typing import TypedDict
 
@@ -295,6 +295,117 @@ async def import_user_entries(**user):
     log.debug(
         "fetched %s entries in %dms, insert_many %dms", count, fetch_time, insert_time
     )
+
+
+"""
+How often an existing index is topped up from Strava, in seconds. A check
+costs one API request and normally returns nothing, so this only needs to be
+short enough that "I just finished a ride" works after a reload.
+"""
+UPDATE_INTERVAL = 300
+UPDATE_FLAG_TTL = UPDATE_INTERVAL
+
+
+async def due_for_update(user_id: int) -> bool:
+    """
+    True at most once per UPDATE_INTERVAL, and it claims the slot when it says
+    so -- reloading the page in a loop must not mean a Strava request per load.
+
+    This reuses the import-flag collection, which already has a TTL index, but
+    under a separate key so it cannot be mistaken for an import in progress:
+    check_import_progress looks up the bare user id.
+    """
+    flags = await get_flag_collection()
+    key = f"update:{int(user_id)}"
+    now = datetime.datetime.now(datetime.timezone.utc)
+
+    doc = await flags.find_one({"_id": key})
+    if doc:
+        age = (now - doc["ts"]).total_seconds()
+        if age < UPDATE_INTERVAL:
+            return False
+
+    await flags.replace_one(
+        {"_id": key},
+        {"_id": key, "msg": "index update", "ttl": UPDATE_FLAG_TTL, "ts": now},
+        upsert=True,
+    )
+    return True
+
+
+async def newest_entry_timestamp(user_id: int) -> int | None:
+    """The start time of the user's most recent indexed activity, as an epoch."""
+    index = await get_collection()
+    doc = await index.find_one(
+        {F.USER_ID: int(user_id)},
+        {F.UTC_START_TIME: True},
+        sort=[(F.UTC_START_TIME, DESCENDING)],
+    )
+    if not doc:
+        return None
+
+    ts = doc.get(F.UTC_START_TIME)
+    if isinstance(ts, datetime.datetime):
+        return int(ts.timestamp())
+    return int(ts) if ts else None
+
+
+async def update_user_entries(**user) -> int:
+    """
+    Add activities recorded since the last one we have, and return how many.
+
+    The index is built once, by import_user_entries, and after that only
+    Strava's webhooks kept it current -- which means it never updates in local
+    development, since Strava cannot reach localhost, and misses anything
+    recorded while a webhook was missed or the app was down. An activity you
+    finished an hour ago simply would not appear.
+
+    This asks Strava only for what started after the newest activity we
+    already hold, which is normally a single request returning nothing.
+    """
+    uid = int(user[U.ID])
+
+    after = await newest_entry_timestamp(uid)
+    if after is None:
+        # Nothing indexed yet: that is import_user_entries' job, not this one
+        return 0
+
+    strava = Strava.AsyncClient(uid, user[U.AUTH])
+    await strava.update_access_token()
+    now = datetime.datetime.now(datetime.timezone.utc)
+
+    docs = []
+    try:
+        async for A in strava.get_activities_since(after):
+            if A is not None:
+                doc = mongo_doc(**A, ts=now)
+                if doc:
+                    docs.append(doc)
+    except Exception:
+        # Freshness is a nicety; never fail a query because Strava is unhappy
+        log.exception("%d index update failed", uid)
+        return 0
+
+    if not docs:
+        return 0
+
+    index = await get_collection()
+    try:
+        # upsert, because `after` is inclusive-ish at the boundary and a
+        # webhook may already have delivered some of these
+        await index.bulk_write(
+            [
+                ReplaceOne({F.ACTIVITY_ID: d[F.ACTIVITY_ID]}, d, upsert=True)
+                for d in docs
+            ],
+            ordered=False,
+        )
+    except Exception:
+        log.exception("%d index update insert failed", uid)
+        return 0
+
+    log.info("%d index updated with %d new entries", uid, len(docs))
+    return len(docs)
 
 
 async def import_one(activity_id: int, **user):

@@ -7,6 +7,7 @@
 
 import * as ActivityCollection from "./DotLayer/ActivityCollection"
 import * as Table from "./Table"
+import * as ImportProgress from "./ImportProgress"
 import { dotLayer } from "./DotLayerAPI"
 import { qToQ, makeActivityQuery } from "./DataImport"
 import { URLS } from "./Env"
@@ -45,28 +46,52 @@ export async function renderFromQuery(): Promise<number> {
   }
 
   message("importing…")
+  ImportProgress.start()
 
   /* Collect first, swap at the end. Clearing up front emptied the map for the
    * whole network round-trip, so the dots visibly vanished while the new set
    * loaded. */
   const incoming: ImportedActivity[] = []
-  for await (const obj of makeActivityQuery(backendQuery, URLS.query)) {
-    if (!obj) continue
+  /* How many the backend says are coming, so the progress bar can be a real
+   * bar rather than an indeterminate one. */
+  let expected: number | undefined
 
-    if ("_id" in obj) {
-      incoming.push(<ImportedActivity>(<unknown>obj))
-    } else {
-      // progress / status messages from the backend
-      console.log(obj)
+  try {
+    for await (const obj of makeActivityQuery(backendQuery, URLS.query)) {
+      if (!obj) continue
+
+      if ("_id" in obj) {
+        incoming.push(<ImportedActivity>(<unknown>obj))
+        ImportProgress.progress(incoming.length, expected)
+      } else {
+        /* Status messages from the backend: {msg} while it builds the index,
+         * {count} before the activities start, plus {info}, {delete} and
+         * per-activity {error} entries. */
+        const status = <{ msg?: string; count?: number }>obj
+        if (typeof status.count === "number") {
+          expected = status.count
+          ImportProgress.progress(incoming.length, expected)
+        } else if (status.msg) {
+          ImportProgress.message(status.msg)
+        } else {
+          console.log(obj)
+        }
+      }
     }
+  } catch (e) {
+    ImportProgress.finish("import failed")
+    throw e
   }
 
   const count = incoming.length
   if (!count) {
+    ImportProgress.finish("no activities")
     message("no activities")
     console.warn("query returned no activities")
     return 0
   }
+
+  ImportProgress.finish(`${count} activities`)
 
   ActivityCollection.clear()
   for (const activity of incoming) ActivityCollection.add(activity)

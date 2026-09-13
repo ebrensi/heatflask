@@ -70,6 +70,22 @@ async def query(request: SessionRequest):
             # by the time we start looking at import progress
             await asyncio.sleep(0)
 
+        elif is_owner_or_admin:
+            # The index exists, so nothing above will touch it again and only
+            # a Strava webhook would keep it current -- which never happens in
+            # local development, and misses anything recorded while a webhook
+            # was dropped. Top it up with whatever was recorded since the
+            # newest activity we hold.
+            #
+            # Awaited rather than backgrounded, so an activity finished ten
+            # minutes ago is in the results of *this* query rather than the
+            # next one. It costs a single Strava request, and only for the
+            # owner of the index, at most once per UPDATE_INTERVAL.
+            if await Index.due_for_update(target_user_id):
+                added = await Index.update_user_entries(**target_user)
+                if added:
+                    await sendPacked({"msg": f"{added} new activities"})
+
         async for msg in Index.import_index_progress(target_user_id):
             # If queried user's index is currently being imported we
             # have to wait for that, while sending progress indicators
