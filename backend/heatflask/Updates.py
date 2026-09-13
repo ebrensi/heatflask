@@ -54,7 +54,7 @@ subscriptionBox = types.SimpleNamespace(id=None, looked_up_at=0.0)
 SUBSCRIPTION_LOOKUP_INTERVAL = 600
 
 
-async def subscription_id() -> int | None:
+async def subscription_id(recheck: bool = False) -> int | None:
     """
     The id of our webhook subscription, or None if it cannot be found out.
 
@@ -64,10 +64,17 @@ async def subscription_id() -> int | None:
     checking it stops a stranger from making us spend Strava requests. Until
     the lookup succeeds, deliveries are accepted: dropping real ones because
     Strava was briefly unreachable would be worse.
+
+    `recheck` looks again even though an id is known, as when a delivery names
+    another subscription -- which is what happens after the subscription is
+    replaced, as moving hosts requires. Either way Strava is asked at most once
+    per SUBSCRIPTION_LOOKUP_INTERVAL, so forged deliveries cannot make us ask
+    constantly.
     """
     box = subscriptionBox
     now = time.time()
-    if box.id is None and now - box.looked_up_at > SUBSCRIPTION_LOOKUP_INTERVAL:
+    due = now - box.looked_up_at > SUBSCRIPTION_LOOKUP_INTERVAL
+    if (box.id is None or recheck) and due:
         box.looked_up_at = now
         try:
             subs = await Strava.AsyncClient("admin").view_subscription(
@@ -99,6 +106,8 @@ async def handle_update_callback(update: Strava.WebhookUpdate) -> None:
     await record(update)
 
     ours = await subscription_id()
+    if ours is not None and update.get("subscription_id") != ours:
+        ours = await subscription_id(recheck=True)
     if ours is not None and update.get("subscription_id") != ours:
         log.warning(
             "update for subscription %s, not ours (%s)",

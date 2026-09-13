@@ -59,6 +59,8 @@ class FakeStrava:
         self.valid_refresh_tokens = {"refresh-0"}
         self.issued = 0
         self.token_requests = 0
+        self.subscription: int | None = 555
+        self.subscription_lookups = 0
         self.url = ""
 
     def count(self) -> int:
@@ -112,6 +114,17 @@ class FakeStrava:
         start = (page - 1) * per
         ids = range(start, min(start + per, self.n_activities))
         return web.json_response([{"id": i} for i in ids], headers=self.headers(used))
+
+    async def subscriptions(self, request):
+        self.subscription_lookups += 1
+        subs = [{"id": self.subscription}] if self.subscription else []
+        return web.json_response(subs)
+
+    async def delete_subscription(self, request):
+        if int(request.match_info["id"]) != self.subscription:
+            return web.json_response({"message": "Not Found"}, status=404)
+        self.subscription = None
+        return web.Response(status=204)
 
     async def token(self, request):
         """
@@ -182,6 +195,10 @@ async def strava_server(monkeypatch):
         app.router.add_get("/api/v3/activities/{id}", fake.activity)
         app.router.add_get("/api/v3/athlete/activities", fake.activities)
         app.router.add_post("/oauth/token", fake.token)
+        app.router.add_get("/api/v3/push_subscriptions", fake.subscriptions)
+        app.router.add_delete(
+            "/api/v3/push_subscriptions/{id}", fake.delete_subscription
+        )
         runner = web.AppRunner(app)
         await runner.setup()
         site = web.TCPSite(runner, "127.0.0.1", 0)

@@ -714,17 +714,20 @@ async def view_subscription(
         return await response.json()
 
 
-class DeleteSubscriptionParams(Credentials):
-    id: int
-
-
 async def delete_subscription(
     admin_session: aiohttp.ClientSession, subscription_id: int
-) -> dict:
-    params = DeleteSubscriptionParams(
-        client_id=CLIENT_ID, client_secret=CLIENT_SECRET, id=subscription_id
-    )
-    async with admin_session.delete(SUBSCRIPTION_ENDPOINT, params=params) as response:
+) -> bool:
+    """
+    Delete our webhook subscription. True if Strava confirmed it (204).
+
+    The id goes in the path, per Strava's docs. It was sent as a query
+    parameter to /push_subscriptions itself, which cannot have worked -- and
+    this is the call that moving hosts needs, since an application may have
+    only one subscription and the old one points at the old callback URL.
+    """
+    params = Credentials(client_id=CLIENT_ID, client_secret=CLIENT_SECRET)
+    url = f"{SUBSCRIPTION_ENDPOINT}/{int(subscription_id)}"
+    async with admin_session.delete(url, params=params) as response:
         return response.status == 204
 
 

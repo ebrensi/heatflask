@@ -38,7 +38,7 @@ def world(monkeypatch):
     async def delete_streams(ids):
         calls.append(("streams.delete", ids))
 
-    async def subscription_id():
+    async def subscription_id(recheck=False):
         return OUR_SUBSCRIPTION
 
     monkeypatch.setattr(Updates, "get_collection", get_collection)
@@ -174,3 +174,46 @@ async def test_refresh_stores_moving_time(strava):
     await Index.refresh_one(123, **make_user(1))
     doc = index.docs[123]
     assert (doc[Index.F.MOVING_SECONDS], doc[Index.F.TIME_SECONDS]) == (3000, 3600)
+
+
+# ---- our subscription ----------------------------------------------------
+
+
+@pytest.fixture
+def fresh_subscription_box(monkeypatch):
+    monkeypatch.setattr(
+        Updates,
+        "subscriptionBox",
+        type(Updates.subscriptionBox)(id=None, looked_up_at=0.0),
+    )
+
+
+async def test_subscription_id_is_looked_up_once(strava, fresh_subscription_box):
+    fake, _ = strava
+    assert await Updates.subscription_id() == 555
+    assert await Updates.subscription_id() == 555
+    assert fake.subscription_lookups == 1
+
+
+async def test_a_replaced_subscription_is_noticed(
+    strava, fresh_subscription_box, monkeypatch
+):
+    fake, _ = strava
+    assert await Updates.subscription_id() == 555
+    fake.subscription = 777  # deleted and recreated, as moving hosts does
+
+    # within the interval, a recheck does not ask Strava again
+    assert await Updates.subscription_id(recheck=True) == 555
+    assert fake.subscription_lookups == 1
+
+    monkeypatch.setattr(Updates, "SUBSCRIPTION_LOOKUP_INTERVAL", 0)
+    assert await Updates.subscription_id(recheck=True) == 777
+
+
+async def test_delete_subscription_puts_the_id_in_the_path(strava):
+    from heatflask import Strava
+
+    fake, _ = strava
+    admin = Strava.AsyncClient("admin")
+    assert await admin.delete_subscription(555, raise_exception=True) is True
+    assert fake.subscription is None
