@@ -13,6 +13,7 @@ import {
 } from "./Model"
 
 import { parseURL } from "./URL"
+import { escapeHTML } from "./appUtil"
 import { watch } from "./DataBinding"
 
 import * as MapAPI from "./MapAPI"
@@ -32,7 +33,8 @@ const map = MapAPI.CreateMap()
 if (ADMIN) map.showInfoBox()
 
 if (!!FLASHES && FLASHES.length) {
-  map.controlWindow.title(`${FLASHES.join("<br>")}`)
+  // escaped: a flash can quote a URL parameter or an athlete's name
+  map.controlWindow.title(FLASHES.map(escapeHTML).join("<br>"))
   map.controlWindow.show()
 }
 

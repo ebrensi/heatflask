@@ -8,7 +8,7 @@
  * round dots instead of square ones.
  */
 
-import { href, HHMMSS } from "./appUtil"
+import { href, HHMMSS, escapeHTML } from "./appUtil"
 import { activity_icon, activityURL } from "./Strava"
 import * as ActivityCollection from "./DotLayer/ActivityCollection"
 import { dotLayer } from "./DotLayerAPI"
@@ -130,7 +130,8 @@ function makeRow(A: Activity): string {
   const dist = ((A.total_distance || 0) * DIST_SCALE).toFixed(1)
   const elapsed = HHMMSS(A.elapsed_time || 0)
   const aicon = activity_icon(<ActivityType>A.type) || String(A.type)
-  const title = A.name || "(untitled)"
+  // the title is whatever its owner typed, so it goes into the HTML escaped
+  const title = escapeHTML(A.name || "(untitled)")
 
   // dot colour is assigned during ActivityCollection.reset(); fall back to the
   // path colour so the indicator is never invisible
@@ -139,7 +140,7 @@ function makeRow(A: Activity): string {
   const main =
     `<div class="row-main">` +
     `<span class="dot-swatch" style="background:${swatchColor}"></span>` +
-    `<span class="title" title="${title.replace(/"/g, "&quot;")}">` +
+    `<span class="title" title="${title}">` +
     `${href(activityURL(A.id), title)}</span>` +
     `</div>`
 

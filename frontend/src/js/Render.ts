@@ -48,7 +48,7 @@ export function abortRender(): void {
 /** Write to every .info-message element the sidebar puts in the DOM */
 function message(msg: string): void {
   for (const el of Array.from(document.querySelectorAll(".info-message"))) {
-    el.innerHTML = msg
+    el.textContent = msg
   }
 }
 

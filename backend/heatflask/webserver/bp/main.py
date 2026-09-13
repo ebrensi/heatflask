@@ -75,8 +75,9 @@ def relevant_info(user):
     return {
         "id": user[U.ID],
         "name": name,
-        "profile": user[U.PROFILE],
-        "private": user[U.PRIVATE],
+        # .get: a record without a photo, or imported without one, 500ed here
+        "profile": user.get(U.PROFILE),
+        "private": user.get(U.PRIVATE, True),
     }
 
 

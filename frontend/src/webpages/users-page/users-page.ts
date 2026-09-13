@@ -13,7 +13,7 @@
  * which is a large dependency for one table, and the sort here is a few lines.
  */
 
-import { img, sleep } from "~/src/js/appUtil"
+import { img, sleep, escapeHTML } from "~/src/js/appUtil"
 import { icon } from "~/src/js/Icons"
 import { USER_FIELDNAMES as U } from "~/src/js/DataImport"
 
@@ -86,7 +86,11 @@ type Column = {
   numeric?: boolean
 }
 
-const nameOf = (r: Row) => `${r[U.FIRSTNAME] || ""} ${r[U.LASTNAME] || ""}`.trim()
+const nameOf = (r: Row) =>
+  `${r[U.FIRSTNAME] || ""} ${r[U.LASTNAME] || ""}`.trim()
+/* Names, cities and regions are whatever athletes typed into Strava, so every
+ * text cell is escaped before it goes into the table's innerHTML. */
+const nameHTML = (r: Row) => escapeHTML(nameOf(r))
 
 const publicColumns: Column[] = [
   {
@@ -95,7 +99,7 @@ const publicColumns: Column[] = [
     render: (r) => user_thumbnail(r[U.ID], <string>r[U.PROFILE]),
     sortKey: () => 0,
   },
-  { title: "Name", field: U.FIRSTNAME, render: nameOf, sortKey: nameOf },
+  { title: "Name", field: U.FIRSTNAME, render: nameHTML, sortKey: nameOf },
   { title: "City", field: U.CITY },
   { title: "Region", field: U.STATE },
   { title: "Country", field: U.COUNTRY },
@@ -114,7 +118,7 @@ const adminColumns: Column[] = [
     sortKey: () => 0,
   },
   { title: "ID", field: U.ID, numeric: true },
-  { title: "Name", field: U.FIRSTNAME, render: nameOf, sortKey: nameOf },
+  { title: "Name", field: U.FIRSTNAME, render: nameHTML, sortKey: nameOf },
   {
     title: icon("eye"),
     field: U.PRIVATE,
@@ -178,7 +182,9 @@ function renderTable(): void {
     .map((r) => {
       const cells = columns
         .map((c) => {
-          const content = c.render ? c.render(r) : String(r[c.field] ?? "")
+          const content = c.render
+            ? c.render(r)
+            : escapeHTML(String(r[c.field] ?? ""))
           const cls = c.numeric ? ' class="num"' : ""
           return `<td${cls}>${content}</td>`
         })
@@ -190,8 +196,7 @@ function renderTable(): void {
     })
     .join("\n")
 
-  table_element.innerHTML =
-    `<thead><tr>${heads}</tr></thead>\n<tbody>\n${body}\n</tbody>`
+  table_element.innerHTML = `<thead><tr>${heads}</tr></thead>\n<tbody>\n${body}\n</tbody>`
 }
 
 /** Click a header to sort by it; click the same one again to reverse. */

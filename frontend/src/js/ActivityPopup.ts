@@ -11,7 +11,7 @@
  */
 
 import { popup } from "leaflet"
-import { href, HHMMSS } from "./appUtil"
+import { href, HHMMSS, escapeHTML } from "./appUtil"
 import { activityURL, activity_vtype } from "./Strava"
 import { heatflaskURL } from "./Table"
 
@@ -20,14 +20,6 @@ import type { Activity } from "./DotLayer/Activity"
 
 const KM = 1000
 const MI = 1609.34
-
-function escapeHTML(s: string): string {
-  return s.replace(
-    /[&<>"']/g,
-    (c) =>
-      `&${{ "&": "amp", "<": "lt", ">": "gt", '"': "quot", "'": "#39" }[c]};`
-  )
-}
 
 /** "4:52/km" -- a pace, given a speed in m/s and a unit length in m */
 function pace(v: number, unit: number): string {

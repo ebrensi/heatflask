@@ -52,6 +52,21 @@ export function img(
   return `<img loading=lazy src='${url}' width=${w}px height=${h}px alt="${alt}">`
 }
 
+/**
+ * Text made safe to put inside HTML, as element content or a quoted attribute.
+ *
+ * Use it on anything that did not come from this codebase: activity and athlete
+ * names, cities and flash messages come from Strava or a URL, and anyone can
+ * type "<img src=x onerror=...>" into an activity title.
+ */
+export function escapeHTML(s: string): string {
+  return s.replace(
+    /[&<>"']/g,
+    (c) =>
+      `&${{ "&": "amp", "<": "lt", ">": "gt", '"': "quot", "'": "#39" }[c]};`
+  )
+}
+
 /** HTML href tag from a url and text */
 export function href(url: string, text: string): string {
   return `<a href='${url}' target='_blank'>${text}</a>`

@@ -1,4 +1,5 @@
 import os
+import html
 import json
 from string import Template
 from logging import getLogger
@@ -75,9 +76,21 @@ def read_template(filename: str) -> Template | None:
 
 
 def render_template(filename: str, **kwargs: Any) -> str:
+    """
+    Fill a template's ${placeholders}. Every value is HTML-escaped.
+
+    Values used to go into the page raw, and they include text from Strava --
+    runtime_json carries athletes' names, and flashes can quote a URL
+    parameter (auth_callback flashes "Error: <the error arg>"). A name or an
+    error of "</div><script>...</script>" ran as script on heatflask.com for
+    whoever loaded the page. The pages read these elements back with
+    innerText/textContent, which decodes the entities, so JSON.parse still
+    sees exactly what was sent.
+    """
     for key, val in kwargs.items():
         if isinstance(val, dict):
-            kwargs[key] = json.dumps(val, indent=2)
+            val = json.dumps(val, indent=2)
+        kwargs[key] = html.escape(str(val))
 
     t = templates.get(filename)
     if t is None:

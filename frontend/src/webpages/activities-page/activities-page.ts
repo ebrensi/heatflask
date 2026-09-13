@@ -3,7 +3,7 @@
  * activities-page.html.
  */
 
-import { href, img, HHMMSS, sleep } from "~/src/js/appUtil"
+import { href, img, HHMMSS, sleep, escapeHTML } from "~/src/js/appUtil"
 import { activity_icon, activityURL } from "~/src/js/Strava"
 import {
   makeActivityQuery,
@@ -186,7 +186,8 @@ function makeRow(A: ImportedActivity): string[] {
     elev_gain,
     onServer,
     inBrowser,
-    A[F.NAME],
+    // whatever the activity's owner typed, so escaped
+    escapeHTML(A[F.NAME] || ""),
   ]
 
   return MULTI
