@@ -1,8 +1,11 @@
 /* Activity list in the "Rendered Activities" tab.
  * Picked up automatically by main-page.css's `@import "./tab.*.css"`.
  *
- * Two lines per activity rather than a row of columns: the sidebar is roughly
- * 230px wide, and six fixed columns left the title about one character across.
+ * Two lines per activity rather than a row of columns: six fixed columns left
+ * the title about one character across.
+ *
+ * Sizes here are all relative, so they follow the sidebar base font that
+ * leaflet-sidebar-v2-mods.css steps up on wider screens.
  */
 
 #items-container {
@@ -14,12 +17,13 @@
 table#items {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.85em;
+  /* was 0.85em, set when the sidebar was much narrower than it is now */
+  font-size: 0.92em;
   table-layout: fixed;
 }
 
 table#items td {
-  padding: 5px 6px;
+  padding: 0.35em 0.4em;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -39,7 +43,7 @@ table#items tbody tr.selected {
 .row-main {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 0.45em;
 }
 
 .row-main .title {
@@ -53,18 +57,19 @@ table#items tbody tr.selected {
 /* second line: date, type, elapsed, distance */
 .row-meta {
   display: flex;
-  gap: 10px;
-  margin-top: 2px;
+  gap: 0.8em;
+  margin-top: 0.15em;
   opacity: 0.65;
   font-size: 0.9em;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 /* colour key tying each row to its dots on the map */
 .dot-swatch {
   flex: none;
   display: inline-block;
-  width: 10px;
-  height: 10px;
+  width: 0.7em;
+  height: 0.7em;
   border-radius: 50%;
 }

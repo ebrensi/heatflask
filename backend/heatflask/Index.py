@@ -430,16 +430,58 @@ async def import_one(activity_id: int, **user):
         log.debug("%s imported activity %d", user[U.ID], activity_id)
 
 
-# TODO: fix this. updates willnot be in this form
+"""
+The keys Strava puts in a webhook's "updates" object for an activity, mapped
+to our stored fields. Per Strava's docs these are title, type, private and
+visibility -- note "title", not the "name" that the activity API returns.
+
+This used to go through mongo_doc(**updates, update=True), which cannot work:
+mongo_doc unconditionally evaluates int(_id or id), athlete["id"],
+Utility.to_datetime(start_date) and map["summary_polyline"], none of which a
+webhook update carries, so it raised on every one. Hence the "TODO: fix this.
+updates will not be in this form" that sat above this function.
+"""
+WEBHOOK_UPDATE_FIELDS = {
+    "title": F.ACTIVITY_NAME,
+    "private": F.FLAG_PRIVATE,
+    "visibility": F.VISIBILITY,
+}
+
+
+def webhook_update_doc(updates: dict) -> dict:
+    """Translate a webhook "updates" object into a Mongo $set document."""
+    doc = {}
+
+    for key, field in WEBHOOK_UPDATE_FIELDS.items():
+        if key in updates:
+            value = updates[key]
+            if key == "private":
+                # Strava sends the strings "true"/"false" here
+                value = value if isinstance(value, bool) else value == "true"
+            doc[field] = value
+
+    # type needs the same lookup the import path uses
+    if "type" in updates:
+        doc[F.ACTIVITY_TYPE] = Strava.ATYPES_LOOKUP.get(
+            updates["type"], updates["type"]
+        )
+
+    return doc
+
+
 async def update_one(activity_id: int, **updates):
+    doc = webhook_update_doc(updates)
+    if not doc:
+        log.debug("activity %d: nothing to update in %s", activity_id, updates)
+        return
+
     index = await get_collection()
-    doc = mongo_doc(**updates, update=True)
     try:
         await index.update_one({F.ACTIVITY_ID: activity_id}, {"$set": doc})
     except Exception:
         log.exception("mongo error?")
     else:
-        log.debug("updated activity %d: %s", activity_id, updates)
+        log.debug("updated activity %d: %s", activity_id, doc)
 
 
 async def delete_one(activity_id: int):

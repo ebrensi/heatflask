@@ -576,7 +576,12 @@ class CreateSubscriptionresponse(TypedDict):
     id: int
 
 
-SUBSCRIPTION_VERIFY_TOKEN = "heatflask_yay!"
+# The shared secret Strava echoes back during the subscription handshake, so
+# we can tell a real callback from anyone who guessed the URL. Overridable from
+# the environment; the literal is the long-standing default.
+SUBSCRIPTION_VERIFY_TOKEN = os.environ.get(
+    "STRAVA_SUBSCRIPTION_VERIFY_TOKEN", "heatflask_yay!"
+)
 SUBSCRIPTION_ENDPOINT = f"{API_SPEC}/push_subscriptions"
 
 
@@ -599,8 +604,24 @@ async def create_subscription(
 # Your response must have HTTP code 200 and be of application/json content type.
 # and be the return value of this function.
 def subscription_verification(validation_dict: CallbackValidation):
-    if validation_dict.get("hub.verify_token") != SUBSCRIPTION_VERIFY_TOKEN:
+    """
+    Echo Strava's challenge back, but only if it presented our verify token.
+
+    The comparison here was inverted -- `!=` -- so the challenge was echoed
+    exactly when the token did *not* match. That fails both ways: Strava sends
+    the right token and gets nothing back, so no subscription can ever be
+    created; and anyone who guessed the callback URL and sent a wrong token
+    got a valid handshake.
+
+    master does not have this bug because it never hand-rolled the check: it
+    hands the args to stravalib's client.handle_subscription_callback. This is
+    a regression in the port that replaced stravalib with this module.
+    """
+    if validation_dict.get("hub.verify_token") == SUBSCRIPTION_VERIFY_TOKEN:
         return {"hub.challenge": validation_dict["hub.challenge"]}
+
+    log.warning("subscription callback with a bad verify token")
+    return None
 
 
 async def view_subscription(

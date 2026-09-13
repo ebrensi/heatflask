@@ -25,38 +25,63 @@ callbacks = sanic.Blueprint("updates", url_prefix="/")
 
 @callbacks.get("/")
 async def get_callback(request):
+    """The subscription handshake: Strava GETs this with a challenge to echo."""
     if request.args.get("hub.challenge"):
-        return Response.json(Strava.subscription_verification(request.args))
-    else:
-        return Response.redirect(request.app.url_for("subscription.updates_page"))
+        # request.args maps each key to a *list* of values; the verifier
+        # compares plain strings
+        args = {k: v[0] for k, v in request.args.items()}
+        verification = Strava.subscription_verification(args)
+        if verification is None:
+            raise SanicException("bad verify token", status_code=403)
+        return Response.json(verification)
+
+    return Response.redirect(request.app.url_for("subscription.updates_page"))
 
 
 @callbacks.post("/")
 async def post_callback(request):
-    update = request.json()
-    event_time = update["event_time"]
-    subscription_id = update["subscription_id"]
-    aspect_type = update["aspect_type"]
+    # `request.json` is a property in Sanic, not a method. This was
+    # `request.json()`, which calls the already-parsed dict and raises
+    # TypeError -- so every delivery failed before reading a single field.
+    # master is fine here: it is Flask, where request.get_json() is a call.
+    update = request.json
 
-    log.info("Strava update: %s", update)
+    # These two were unpacked into locals and never used (flake8 F841). They
+    # are worth having in the log, which is the only place a dropped or
+    # duplicated delivery can be diagnosed from.
+    log.info(
+        "Strava update: subscription=%s event_time=%s %s",
+        update.get("subscription_id"),
+        update.get("event_time"),
+        update,
+    )
 
-    if update["object_type"] == "activity":
+    if update.get("object_type") == "activity":
+        aspect_type = update.get("aspect_type")
         activity_id = update["object_id"]
         user_id = update["owner_id"]
 
         user = await Users.get(user_id)
-        if user and Index.has_user_entries(**user):
+        # `await`: has_user_entries is a coroutine function, so without it the
+        # condition was a coroutine object -- always truthy, never awaited,
+        # and an "un-awaited coroutine" warning each time.
+        if user and await Index.has_user_entries(**user):
             if aspect_type == "create":
                 request.app.add_task(Index.import_one(activity_id, **user))
 
             elif aspect_type == "delete":
-                await Index.delete_one(activity_id)
+                request.app.add_task(Index.delete_one(activity_id))
 
             elif aspect_type == "update":
-                await Index.update_one(activity_id, **update["updates"])
+                request.app.add_task(
+                    Index.update_one(activity_id, **update.get("updates", {}))
+                )
 
-    elif update["object_type"] == "athlete":
-        log.info("unhandled user update: %s", update)
+    elif update.get("object_type") == "athlete":
+        log.info("unhandled athlete update: %s", update)
+
+    # Strava wants a 2xx within two seconds and retries otherwise, so the work
+    # is queued rather than awaited. delete and update were awaited inline.
     return Response.text("success")
 
 

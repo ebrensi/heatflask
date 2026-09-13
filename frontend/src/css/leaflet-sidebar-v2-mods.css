@@ -9,6 +9,33 @@
   --sidebar-height-4icons: 160px;
   --sidebar-height-5icons: 200px;
 }
+
+/*
+ * Scale the sidebar's text with the sidebar itself.
+ *
+ * sidebar-v2 widens the pane at each breakpoint -- 305px, then 390px, then
+ * 460px -- while the type stayed at the 16px document base. So the wider the
+ * sidebar got, the smaller its contents looked inside it: on a phone, where
+ * the sidebar is the whole screen, 16px reads correctly, but the same text in
+ * a 460px column on a desktop monitor looks undersized.
+ *
+ * This steps the base with those same breakpoints. Everything in the panes
+ * sizes in em, so moving the container carries the whole pane along. The tab
+ * strip is deliberately not included -- .sidebar-tabs is a sibling of
+ * .sidebar-content with its own fixed 40px metrics, and growing the type in it
+ * would push the icons out of their squares.
+ */
+@media (min-width: 992px) {
+  .sidebar-content {
+    font-size: 17px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .sidebar-content {
+    font-size: 18px;
+  }
+}
 /*
  *  The collapsed sidebar normally takes up the whole
  *  left side of the screen.  We shorten it to take up
