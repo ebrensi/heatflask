@@ -30,12 +30,14 @@ const dialSpec1 = {
   bgColor: DIAL_BG,
 }
 
-/* Dot size. Was 0.01..10, which bottomed out invisibly small and topped out
- * too small to be bold. Now that the size is no longer rounded to whole
- * pixels, the low end is genuinely usable. */
+/* Dot size. Was 0.01..10, which bottomed out invisibly small, then 0.5..20,
+ * which spent half the dial on dots far bigger than anyone wants. 10 is about
+ * as big as they need to be, so the dial stops there and the smaller sizes get
+ * twice the travel. The floor matches MIN_DOT_SIZE in DotLayer.ts: anything
+ * lower is drawn at 0.5 anyway. */
 const dialSpec2 = {
   min: 0.5,
-  max: 20,
+  max: 10,
   step: 0.1,
   width: 100,
   height: 100,
@@ -90,6 +92,8 @@ type DialBinding = {
   readout: string
   /** the value, as the reader should see it */
   format: (value: number) => string
+  /** values outside this are clamped into it */
+  range?: { min: number; max: number }
 }
 
 const dialBindings: DialBinding[] = [
@@ -116,6 +120,10 @@ const dialBindings: DialBinding[] = [
     param: "sz",
     readout: "szValue",
     format: (sz) => sz.toFixed(1),
+    /* A link made when the dial went to 20 can still carry sz=15. The knob
+     * clamps what it shows but not the model, so the dots would draw at 15
+     * with the dial reading 10. */
+    range: dialSpec2,
   },
 ]
 
@@ -134,7 +142,8 @@ export function SETUP(state: State) {
     document.getElementById(id).appendChild(knob)
   }
 
-  for (const { id, param, toParam, toDial, readout, format } of dialBindings) {
+  for (const binding of dialBindings) {
+    const { id, param, toParam, toDial, readout, format, range } = binding
     const knob = knobSpec[id]
     const fromDial = toParam || ((v: number) => v)
     const fromValue = toDial || ((v: number) => v)
@@ -151,6 +160,11 @@ export function SETUP(state: State) {
      * data-bind="info.TInfo:innerText", but the model has no `info` class --
      * nothing was ever bound, so they sat permanently empty. */
     visual.onChange(param, (value: number) => {
+      if (range && (value < range.min || value > range.max)) {
+        // assigning notifies again, with the clamped value
+        visual[param] = Math.min(range.max, Math.max(range.min, value))
+        return
+      }
       const dialValue = fromValue(value)
       if (Math.abs(knob.getValue() - dialValue) > 1e-9) knob.setValue(dialValue)
       if (readoutEl) readoutEl.textContent = format(value)
