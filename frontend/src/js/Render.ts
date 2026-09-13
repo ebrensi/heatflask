@@ -11,6 +11,7 @@ import * as ImportProgress from "./ImportProgress"
 import * as StreamCache from "./StreamCache"
 import { dotLayer } from "./DotLayerAPI"
 import { qToQ, makeActivityQuery, decodePackedStreams } from "./DataImport"
+import { nextTask } from "./appUtil"
 import { URLS } from "./Env"
 
 import type { Map as LMap } from "leaflet"
@@ -48,18 +49,41 @@ async function fillStreamsFromCache(
 ): Promise<void> {
   if (!activities.length) return
 
+  const t0 = performance.now()
+  ImportProgress.message("reading cached tracks…")
+
+  /* Every read is issued in the same tick.
+   *
+   * myIdb batches whatever is queued inside its 10ms window into one
+   * IndexedDB transaction. Awaiting the reads one at a time defeated that
+   * completely: each one queued a batch of itself, waited out the full window
+   * alone, and resolved -- so a cache hit cost 10ms of pure idling, and a
+   * render of 120 activities spent 1.2 seconds doing nothing at all. Issued
+   * together they collapse into a single transaction. */
+  const packed = await Promise.all(
+    activities.map((A) => StreamCache.get(A._id))
+  )
+
   const misses: number[] = []
   let hits = 0
 
-  for (const A of activities) {
-    const packed = await StreamCache.get(A._id)
-    if (packed && polylinePrecision !== undefined) {
-      A.streams = decodePackedStreams(packed, polylinePrecision)
+  for (let i = 0; i < activities.length; i++) {
+    const bytes = packed[i]
+    if (bytes && polylinePrecision !== undefined) {
+      activities[i].streams = decodePackedStreams(bytes, polylinePrecision)
       hits++
+      /* Decoding is the real work once the reads are batched, and it is
+       * synchronous. Yield now and then so the progress dialog can actually
+       * paint instead of the page locking up until the whole set is done. */
+      if ((hits & 127) === 0) {
+        ImportProgress.progress(hits, activities.length)
+        await nextTask()
+      }
     } else {
-      misses.push(A._id)
+      misses.push(activities[i]._id)
     }
   }
+  ImportProgress.progress(hits, activities.length)
 
   if (misses.length) {
     ImportProgress.message(`fetching ${misses.length} tracks…`)
@@ -73,6 +97,11 @@ async function fillStreamsFromCache(
     }
 
     let done = 0
+    /* Same reasoning as the reads: awaiting each write made every activity
+     * wait out myIdb's batch window on its own, and stalled the loop that is
+     * draining the network stream. Collected and awaited together instead. */
+    const writes: Promise<void>[] = []
+
     for await (const obj of makeActivityQuery(streamQuery, URLS.query, true)) {
       if (!obj || !("_id" in obj)) continue
 
@@ -80,10 +109,12 @@ async function fillStreamsFromCache(
       const A = byId.get(fetched._id)
       if (A && fetched.streams) {
         A.streams = fetched.streams
-        if (fetched.mpk) await StreamCache.put(fetched._id, fetched.mpk)
+        if (fetched.mpk) writes.push(StreamCache.put(fetched._id, fetched.mpk))
       }
       ImportProgress.progress(hits + ++done, activities.length)
     }
+
+    await Promise.all(writes)
   }
 
   /* One index write for the whole render, rather than one per activity */
@@ -91,7 +122,8 @@ async function fillStreamsFromCache(
 
   const { count, bytes } = StreamCache.stats()
   console.log(
-    `stream cache: ${hits} hits, ${misses.length} fetched; ` +
+    `stream cache: ${hits} hits, ${misses.length} fetched ` +
+      `in ${Math.round(performance.now() - t0)}ms; ` +
       `holding ${count} activities (${(bytes / 1e6).toFixed(1)} MB)`
   )
 
