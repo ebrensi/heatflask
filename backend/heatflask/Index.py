@@ -197,7 +197,7 @@ async def set_import_flag(user_id: int, val: str):
 
 
 async def set_import_error(user_id: int, e):
-    val = f"Strava error ${e.status}: ${e.message}"
+    val = f"Strava error {e.status}: {e.message}"
     await _set_flag(user_id, val, IMPORT_ERROR_TTL)
 
 
@@ -255,22 +255,43 @@ async def import_user_entries(**user):
     now = datetime.datetime.now(datetime.timezone.utc)
 
     docs = []
-    count = 0
+
+    async def keep_flag_alive():
+        """
+        Refresh the import flag while the import runs.
+
+        The flag expires after IMPORT_FLAG_TTL seconds, and was refreshed only
+        once per page of activities. A slow page, and certainly a wait for
+        Strava's rate limit to reset, let it lapse: the query waiting on the
+        import then gave up and served an empty index, and the next query
+        started a second import alongside the first.
+        """
+        while True:
+            await set_import_flag(uid, f"Building index...{len(docs)}")
+            await asyncio.sleep(IMPORT_FLAG_TTL / 4)
+
+    heartbeat = asyncio.create_task(keep_flag_alive())
+    error = None
     try:
         async for A in strava.get_all_activities():
             if A is not None:
                 docs.append(mongo_doc(**A, ts=now))
-                count += 1
-                if count % Strava.PER_PAGE == 0:
-                    await set_import_flag(uid, f"Building index...{count}")
-    except ClientResponseError as e:
+    except (ClientResponseError, Strava.RateLimitExceeded) as e:
+        error = e
+    finally:
+        # Wait for it to stop, so a refresh already under way cannot land on
+        # top of the error flag or the cleared flag that follows
+        heartbeat.cancel()
+        await asyncio.gather(heartbeat, return_exceptions=True)
+
+    if error:
         log.info(
             "%d Index import aborted due to Strava error %d: %s",
             uid,
-            e.message,
-            e.status,
+            error.status,
+            error.message,
         )
-        await set_import_error(uid, e)
+        await set_import_error(uid, error)
         return
 
     docs = list(filter(None, docs))

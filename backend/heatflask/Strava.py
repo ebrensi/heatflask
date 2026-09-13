@@ -5,9 +5,9 @@ from logging import getLogger
 import urllib.parse
 import asyncio
 import datetime
-import types
 from typing import (
     AsyncGenerator,
+    Callable,
     Awaitable,
     Optional,
     TypedDict,
@@ -21,6 +21,7 @@ from typing import (
 
 
 from .Types import epoch, urlstr
+from .RateLimit import limiter, RateLimitExceeded
 
 log = getLogger(__name__)
 log.propagate = True
@@ -30,16 +31,50 @@ API_SPEC = "/api/v3"
 DOMAIN = "https://www.strava.com"
 
 STALE_TOKEN: Final = 300  # Refresh access token if only this many seconds left
-CONCURRENCY: Final = 10
-
-myBox = types.SimpleNamespace(limiter=None)
 
 
-def get_limiter() -> asyncio.locks.Semaphore:
-    """We use this to limit concurrency"""
-    if myBox.limiter is None:
-        myBox.limiter = asyncio.Semaphore(CONCURRENCY)
-    return myBox.limiter
+async def api_request(
+    session: aiohttp.ClientSession,
+    method: str,
+    url: str,
+    *,
+    bulk: bool = False,
+    on_sent: Optional[Callable[[], None]] = None,
+    **kwargs: Any,
+) -> tuple[int, Any]:
+    """
+    Make one Strava API request inside the rate limit. Returns (status, json).
+
+    `bulk` marks work that can wait for the budget -- stream and index
+    imports -- as opposed to a request someone is waiting on. See RateLimit.
+
+    `on_sent` is called once the request has cleared the rate limit and is
+    going out, which is the point from which it costs a request whether or
+    not anyone reads the answer.
+
+    Sessions are made with raise_for_status=True, so a 429 arrives as a
+    ClientResponseError. Its headers still carry Strava's usage counts. Bulk
+    requests refused that way wait for the window to reset and try once more;
+    anything else raises RateLimitExceeded.
+    """
+    for attempt in range(2):
+        async with limiter.slot(method, bulk=bulk) as sent:
+            if on_sent:
+                on_sent()
+            try:
+                async with session.request(method, url, **kwargs) as response:
+                    limiter.report(method, response.headers, sent)
+                    return response.status, await response.json()
+            except aiohttp.ClientResponseError as e:
+                if e.status != 429:
+                    limiter.report(method, e.headers, sent)
+                    raise
+                limiter.refused(method, e.headers, sent)
+                if not bulk or attempt:
+                    # check() raises the right RateLimitExceeded, daily or not
+                    limiter.check(method, bulk=False, now=time.time())
+                    raise RateLimitExceeded(time.time())
+    raise AssertionError("unreachable: the second attempt returns or raises")
 
 
 # ---------------------------------------------------------------------------- #
@@ -64,8 +99,8 @@ ATHLETE_ENDPOINT = f"{API_SPEC}/athlete"
 
 async def get_athlete(session: aiohttp.ClientSession):
     log.debug("  getting Athlete")
-    async with session.get(ATHLETE_ENDPOINT) as response:
-        return cast(Athlete, await response.json())
+    status, athlete = await api_request(session, "GET", ATHLETE_ENDPOINT)
+    return cast(Athlete, athlete)
 
 
 # ---------------------------------------------------------------------------- #
@@ -138,23 +173,30 @@ def STREAMS_ENDPOINT(activity_id: int) -> str:
 
 
 async def get_streams(
-    session: aiohttp.ClientSession, activity_id: int
+    session: aiohttp.ClientSession,
+    activity_id: int,
+    on_sent: Optional[Callable[[], None]] = None,
 ) -> StreamsFetchResult:
     t0 = time.perf_counter()
 
     request_params = StreamsRequestParams(
         id=activity_id, keys=KEYS_STR, key_by_type="true"
     )
-    async with get_limiter():
-        try:
-            async with session.get(
-                STREAMS_ENDPOINT(activity_id), params=request_params
-            ) as response:
-                rjson = await response.json()
-                rstatus = response.status
-        except Exception as e:
-            log.error("Error fetching streams for %s: %s", activity_id, e)
-            return activity_id, None
+    try:
+        rstatus, rjson = await api_request(
+            session,
+            "GET",
+            STREAMS_ENDPOINT(activity_id),
+            bulk=True,
+            on_sent=on_sent,
+            params=request_params,
+        )
+    except RateLimitExceeded:
+        # Not a problem with this activity, so not counted as one
+        raise
+    except Exception as e:
+        log.error("Error fetching streams for %s: %s", activity_id, e)
+        return activity_id, None
 
     if not (rjson and ("time" in rjson)):
         log.info("problem with activity %d: %s", activity_id, (rstatus, rjson))
@@ -173,21 +215,82 @@ async def get_many_streams(
     session: aiohttp.ClientSession,
     activity_ids: list[int],
     max_errors=MAX_STREAMS_ERRORS,
-) -> AsyncGenerator[StreamsResult, bool]:
-    request_tasks = [get_streams(session, aid) for aid in activity_ids]
+    leftovers: Optional[list[StreamsResult]] = None,
+) -> AsyncGenerator[StreamsResult, None]:
+    """
+    Yield streams for these activities in whatever order they arrive.
+
+    Stop early with aclose(). Every request is its own task, started up front,
+    and those tasks do not stop just because nobody is reading their results,
+    so the finally clause deals with them:
+
+      * Requests still waiting on the rate limit are cancelled. They have cost
+        nothing yet, and now never will.
+
+      * Requests already sent have cost a request whatever happens, so they
+        are given up to IN_FLIGHT_GRACE seconds to finish rather than thrown
+        away.
+
+      * Streams that arrived but were never yielded -- finished while the
+        consumer was busy, or in that grace period -- are appended to
+        `leftovers`, if given, so the caller can still keep them.
+
+    Raises RateLimitExceeded when Strava's daily budget is spent.
+    """
+    sent: set[int] = set()
+    yielded: set[int] = set()
+
+    def request(aid: int):
+        return get_streams(session, aid, on_sent=lambda: sent.add(aid))
+
+    request_tasks = {
+        asyncio.create_task(request(aid)): aid for aid in activity_ids
+    }
     errors = 0
-    abort_signal = None
-    for task in asyncio.as_completed(request_tasks):
-        item = await task
-        if item[1]:
-            abort_signal = yield cast(StreamsResult, item)
-        else:
-            errors += 1
-            if errors > max_errors:
-                abort_signal = True
-        if abort_signal:
-            log.info("get_many_streams aborted")
-            return
+    try:
+        for next_result in asyncio.as_completed(request_tasks):
+            item = await next_result
+            if item[1]:
+                yielded.add(item[0])
+                yield cast(StreamsResult, item)
+            else:
+                errors += 1
+                if errors > max_errors:
+                    log.info("get_many_streams: too many errors, stopping")
+                    return
+    finally:
+        await settle(request_tasks, sent)
+
+        if leftovers is not None:
+            for task, aid in request_tasks.items():
+                if aid in yielded or task.cancelled() or task.exception():
+                    continue
+                result = task.result()
+                if result[1]:
+                    leftovers.append(cast(StreamsResult, result))
+
+
+# How long an abandoned import waits for requests that are already out
+IN_FLIGHT_GRACE = 10
+
+
+async def settle(tasks: dict[asyncio.Task, int], sent: set[int]) -> None:
+    """Cancel the requests not yet sent, and let the sent ones finish"""
+    unsent = [t for t, aid in tasks.items() if not t.done() and aid not in sent]
+    for task in unsent:
+        task.cancel()
+
+    in_flight = [t for t in tasks if not t.done() and t not in unsent]
+    if in_flight:
+        done, late = await asyncio.wait(in_flight, timeout=IN_FLIGHT_GRACE)
+        for task in late:
+            task.cancel()
+
+    # Wait until every task has really stopped, while the session they use is
+    # still open, and collect exceptions so none is reported as unretrieved
+    await asyncio.gather(*tasks, return_exceptions=True)
+    if unsent:
+        log.info("get_many_streams: cancelled %d unsent requests", len(unsent))
 
 
 # ---------------------------------------------------------------------------- #
@@ -282,81 +385,69 @@ class ActivitiesPageRequestParams(TypedDict):
 
 
 PER_PAGE = 200
-MAX_PAGE = 50
+
+# How many index pages to request at once after the first. Nobody knows how
+# many pages there are until one comes back short, so every page fetched past
+# that one is a wasted request: at most PAGE_BATCH - 1 per import.
+#
+# This used to request pages 1-49 at once and cancel the rest when one came
+# back empty, which with ten in flight spent up to ten requests to learn what
+# two would tell it -- and quietly stopped at 49 x 200 = 9,800 activities.
+PAGE_BATCH = 4
+
+# Not a real limit, just a guard against paging forever if Strava misbehaves:
+# 200,000 activities
+MAX_PAGE = 1000
 
 ACTIVITY_LIST_ENDPOINT = f"{API_SPEC}/athlete/activities"
 params = {"per_page": PER_PAGE}
 
 
 async def get_activity_index_page(
-    session: aiohttp.ClientSession, p: int
-) -> tuple[int, int, list[str]]:
+    session: aiohttp.ClientSession, page: int, bulk: bool = True, **extra: Any
+) -> list[Activity]:
     t0 = time.perf_counter()
-    async with get_limiter():
-        log.debug("Page %d requested", p)
-        async with session.get(
-            ACTIVITY_LIST_ENDPOINT, params={**params, "page": p}
-        ) as r:
-            status = r.status
-            result = await r.json()
-
+    status, result = await api_request(
+        session,
+        "GET",
+        ACTIVITY_LIST_ENDPOINT,
+        bulk=bulk,
+        params={**params, **extra, "page": page},
+    )
     elapsed_ms = (time.perf_counter() - t0) * 1000
-    log.debug("Page %d retrieved in %d", p, elapsed_ms)
-    return status, p, result
-
-
-def page_request(session: aiohttp.ClientSession, p: int):
-    return asyncio.create_task(get_activity_index_page(session, p), name=str(p))
-
-
-def cancel_all(tasks):
-    for task in tasks:
-        task.cancel()
-    return asyncio.wait(tasks)
+    log.debug("Page %d retrieved in %d", page, elapsed_ms)
+    return result or []
 
 
 async def get_all_activities(
     user_session: aiohttp.ClientSession,
-) -> AsyncGenerator[Activity, bool]:
+) -> AsyncGenerator[Activity, None]:
+    """
+    Yield every one of the athlete's activities, newest first.
+
+    Page 1 goes alone, since most of the time it is also the last; after that
+    pages go PAGE_BATCH at a time and are yielded in order, stopping at the
+    first page that is not full.
+    """
     log.debug("getting user index")
-
     t0 = time.perf_counter()
-    tasks = [page_request(user_session, p) for p in range(1, MAX_PAGE)]
-    last_page = MAX_PAGE
 
-    while tasks:
-        done, not_done = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
-        for task in done:
-            try:
-                status, page, result = task.result()
-            except asyncio.CancelledError:
-                continue
-            except Exception:
-                log.exception("error fetching index page. aborting.")
-                await cancel_all(tasks)
-                raise
-
-            if result and len(result):
-                for A in result:
-                    abort_signal = yield cast(Activity, A)
-                    if abort_signal:
-                        await cancel_all(tasks)
-                        log.debug("index fetch aborted")
-                        return
-                log.debug("done with page %d", page)
-            else:
-                # If this page has no results then any further pages will
-                # also be empty so we cancel them
+    page = 1
+    batch = 1
+    while page <= MAX_PAGE:
+        pages = range(page, page + batch)
+        results = await asyncio.gather(
+            *(get_activity_index_page(user_session, p) for p in pages)
+        )
+        for p, result in zip(pages, results):
+            for A in result:
+                yield A
+            if len(result) < PER_PAGE:
                 elapsed = (time.perf_counter() - t0) * 1000
-                if page < last_page:
-                    log.debug("found last page (%d) in %d", page - 1, elapsed)
-                    log.debug("cancelling page %d - %d requests", page + 1, last_page)
-                    for task in tasks:
-                        p = int(task.get_name())
-                        if (page < p) and (p <= last_page):
-                            task.cancel()
-                    last_page = page
-        tasks = not_done
+                log.debug("last page is %d, found in %d", p, elapsed)
+                return
+        page += batch
+        batch = PAGE_BATCH
 
 
 async def get_activities_since(
@@ -365,30 +456,19 @@ async def get_activities_since(
     """
     Yield the athlete's activities that started after the given epoch second.
 
-    get_all_activities above fires every page at once because it has no idea
-    how many there are. This one tops up an index that already exists, where
-    the answer is nearly always "one page, and usually an empty one", so it
-    pages sequentially and stops at the first non-full page. That keeps a
-    freshness check down to a single Strava request.
+    This tops up an index that already exists, where the answer is nearly
+    always "one page, and usually an empty one", so it pages one at a time.
+    That keeps a freshness check down to a single Strava request. It is not
+    bulk work: someone is waiting on the query it is part of.
     """
     log.debug("getting activities after %d", after)
 
-    for page in range(1, MAX_PAGE):
-        async with get_limiter():
-            async with user_session.get(
-                ACTIVITY_LIST_ENDPOINT,
-                params={**params, "after": after, "page": page},
-            ) as r:
-                if r.status != 200:
-                    log.warning("activities-since page %d returned %d", page, r.status)
-                    return
-                result = await r.json()
-
-        if not result:
-            return
-
+    for page in range(1, MAX_PAGE + 1):
+        result = await get_activity_index_page(
+            user_session, page, bulk=False, after=after
+        )
         for A in result:
-            yield cast(Activity, A)
+            yield A
 
         # a page that is not full is the last one
         if len(result) < PER_PAGE:
@@ -403,8 +483,10 @@ async def fetch_activity(
     user_session: aiohttp.ClientSession, activity_id: int
 ) -> Activity | None:
     log.debug("fetching activity %d", activity_id)
-    async with user_session.get(activity_endpoint(activity_id)) as r:
-        return await r.json()
+    status, activity = await api_request(
+        user_session, "GET", activity_endpoint(activity_id)
+    )
+    return activity
 
 
 # ---------------------------------------------------------------------------- #
@@ -530,8 +612,8 @@ DEAUTH_ENDPOINT = "/oauth/deauthorize"
 
 async def deauth(session):
     log.debug("  deauthenticating")
-    async with session.post(DEAUTH_ENDPOINT) as response:
-        return cast(DeauthResponse, await response.json())
+    status, response = await api_request(session, "POST", DEAUTH_ENDPOINT)
+    return cast(DeauthResponse, response)
 
 
 # ---------------------------------------------------------------------------- #
@@ -710,29 +792,29 @@ class AsyncClient:
             await self.__aenter__()
 
         try:
-            result = await func(self.session, *args, **kwargs)
+            return await func(self.session, *args, **kwargs)
+        except RateLimitExceeded:
+            # always raised: the caller has to know why there is no answer
+            raise
         except Exception:
             if raise_exception:
-                await self.__aexit__()
                 raise
             log.exception("%s, %s", self, func)
-            return
-
-        if not in_context:
-            await self.__aexit__()
-
-        return result
-
-    @staticmethod
-    async def abort(async_iterator):
-        try:
-            await async_iterator.asend(1)
-        except StopAsyncIteration:
-            pass
+            return None
+        finally:
+            if not in_context:
+                await self.__aexit__()
 
     async def __iterate_with_session(
         self, func, *args, raise_exception=False, **kwargs
     ):
+        """
+        Iterate func's async generator inside a session.
+
+        Stop early with aclose(). The finally clause closes the inner
+        generator too, which is what cancels any requests it still has in
+        flight, and only then closes the session they were using.
+        """
         in_context = self.session is not None
 
         if not in_context:
@@ -741,19 +823,17 @@ class AsyncClient:
         aiterator = func(self.session, *args, **kwargs)
         try:
             async for item in aiterator:
-                abort_signal = yield item
-                if abort_signal:
-                    await self.__class__.abort(aiterator)
-                    break
+                yield item
+        except RateLimitExceeded:
+            raise
         except Exception:
             if raise_exception:
-                await self.__aexit__()
                 raise
-            else:
-                log.exception("%s, %s", self, func)
-
-        if not in_context:
-            await self.__aexit__()
+            log.exception("%s, %s", self, func)
+        finally:
+            await aiterator.aclose()
+            if not in_context:
+                await self.__aexit__()
 
     async def update_access_token(
         self, code: str = ""
@@ -775,7 +855,9 @@ class AsyncClient:
             return None
 
         finally:
-            if self.session:
+            # This was `if self.session`, which closed the context's own
+            # session and leaked the temporary one made just above
+            if session is not self.session:
                 await session.close()
 
         if not response.get("refresh_token"):
@@ -786,8 +868,9 @@ class AsyncClient:
 
         self.set_credentials(new_auth_info)
 
-        # If we are inside a session-context
+        # Inside a session context, the session's headers carry the old token
         if self.session:
+            await self.session.close()
             self.session = self.new_session()
 
         elapsed = (time.perf_counter() - t0) * 1000
@@ -808,11 +891,11 @@ class AsyncClient:
         self, activity_id: int, **kwargs: Any
     ) -> Awaitable[StreamsFetchResult]:
         """Return streams for an Activity"""
-        return self.__run_with_session(get_streams, **kwargs)
+        return self.__run_with_session(get_streams, activity_id, **kwargs)
 
     def get_many_streams(
         self, activity_ids: list[int], max_errors=MAX_STREAMS_ERRORS, **kwargs: Any
-    ) -> AsyncGenerator[StreamsResult, bool]:
+    ) -> AsyncGenerator[StreamsResult, None]:
         """An async generatory of streams for a list of given IDs"""
         return self.__iterate_with_session(
             get_many_streams, activity_ids, max_errors=max_errors, **kwargs
@@ -824,7 +907,7 @@ class AsyncClient:
         """Get an Activity (summary) from Strava"""
         return self.__run_with_session(fetch_activity, activity_id, **kwargs)
 
-    def get_all_activities(self, **kwargs: Any) -> AsyncGenerator[Activity, bool]:
+    def get_all_activities(self, **kwargs: Any) -> AsyncGenerator[Activity, None]:
         """async generator of all Activities (summaries)"""
         return self.__iterate_with_session(get_all_activities, **kwargs)
 

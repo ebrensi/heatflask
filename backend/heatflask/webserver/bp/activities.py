@@ -7,6 +7,7 @@ from sanic.exceptions import SanicException
 import sanic
 import msgpack
 import asyncio
+from contextlib import aclosing
 
 from logging import getLogger
 
@@ -89,11 +90,15 @@ async def query(request: SessionRequest):
                 if added:
                     await sendPacked({"msg": f"{added} new activities"})
 
-        async for msg in Index.import_index_progress(target_user_id):
-            # If queried user's index is currently being imported we
-            # have to wait for that, while sending progress indicators
-            await sendPacked({"msg": msg})
-            log.debug("awaiting index import finish: %s", msg)
+        # If queried user's index is currently being imported we have to wait
+        # for that, while sending progress indicators
+        progress = with_wait_notices(
+            Index.import_index_progress(target_user_id), sendPacked
+        )
+        async with aclosing(progress):
+            async for msg in progress:
+                await sendPacked({"msg": msg})
+                log.debug("awaiting index import finish: %s", msg)
 
     elif not request.ctx.is_admin:
         # If there is no target_user then this is a multi-user query.
@@ -140,17 +145,57 @@ async def query(request: SessionRequest):
 
     user = await Users.get(target_user_id)
     streams_iter = Streams.aiter_query(activity_ids=ids, user=user)
-    errors = set()
-    async for aid, packed_streams in streams_iter:
-        if streams:
-            A = summaries_lookup[aid]
-            A["mpk"] = packed_streams
-            await sendPacked(A)
-        else:
-            errors.add(aid)
-            await sendPacked({"error": aid})
-    if len(errors):
-        log.error("Errors importing user %d activities %s", user[U.ID], errors)
+    items = with_wait_notices(streams_iter, sendPacked)
+    try:
+        async with aclosing(items):
+            async for aid, packed_streams in items:
+                A = summaries_lookup[aid]
+                A["mpk"] = packed_streams
+                await sendPacked(A)
+    except Strava.RateLimitExceeded as e:
+        await sendPacked({"error": e.message})
+
+
+# While a query is stalled waiting on Strava's rate limit, the browser is told
+# when it will resume, this often. It doubles as a keepalive: a proxy will
+# close a streaming response that goes quiet for long enough, and a wait for
+# the rate limit to reset can last up to 15 minutes.
+WAIT_NOTICE_INTERVAL = 10
+
+
+async def with_wait_notices(aiterator, sendPacked):
+    """
+    Yield from aiterator, sending {"wait": epoch} whenever it has produced
+    nothing for WAIT_NOTICE_INTERVAL seconds and Strava's rate limit is why.
+
+    On the way out, for any reason -- finished, failed, or cancelled because
+    the client disconnected -- aiterator is closed, which stops its Strava
+    requests.
+    """
+    try:
+        while True:
+            next_item = asyncio.ensure_future(anext(aiterator, StopAsyncIteration))
+            try:
+                while True:
+                    done, _ = await asyncio.wait(
+                        {next_item}, timeout=WAIT_NOTICE_INTERVAL
+                    )
+                    if done:
+                        break
+                    resume_at = Strava.limiter.waiting_until
+                    if resume_at:
+                        await sendPacked({"wait": round(resume_at)})
+            except BaseException:
+                next_item.cancel()
+                await asyncio.gather(next_item, return_exceptions=True)
+                raise
+
+            item = next_item.result()
+            if item is StopAsyncIteration:
+                return
+            yield item
+    finally:
+        await aiterator.aclose()
 
 
 @bp.get("/")

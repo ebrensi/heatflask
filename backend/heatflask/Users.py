@@ -224,18 +224,17 @@ async def delete(user_id, deauthenticate=True):
     #  Afterwards it is useless so we can delete it.
     if user and (U.AUTH in user) and deauthenticate:
         client = Strava.AsyncClient(user_id, user[U.AUTH])
-        async with Strava.get_limiter():
-            try:
-                await client.deauthenticate(raise_exception=True)
-            except ClientResponseError as e:
-                log.info(
-                    "user %s is already deauthenticated? (%s, %s)",
-                    user_id,
-                    e.status,
-                    e.message,
-                )
-            except Exception:
-                log.exception("strava error?")
+        try:
+            await client.deauthenticate(raise_exception=True)
+        except ClientResponseError as e:
+            log.info(
+                "user %s is already deauthenticated? (%s, %s)",
+                user_id,
+                e.status,
+                e.message,
+            )
+        except Exception:
+            log.exception("strava error?")
 
     users = await get_collection()
     try:

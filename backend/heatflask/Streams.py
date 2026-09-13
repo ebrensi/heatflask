@@ -11,7 +11,8 @@ import msgpack
 import polyline
 import asyncio
 import types
-from typing import TypedDict, Awaitable, AsyncGenerator, Coroutine, cast
+from pymongo.errors import BulkWriteError
+from typing import TypedDict, AsyncGenerator
 
 from . import DataAPIs
 from . import Strava
@@ -106,40 +107,98 @@ def mongo_doc(activity_id: int, packed: PackedStreams, ts=None) -> StreamsDoc:
 
 StreamsQueryResult = tuple[int, PackedStreams]
 
+# Imported streams are written to Mongo this many at a time
+INSERT_BATCH = 50
+
+
+async def save(docs: list[StreamsDoc]) -> None:
+    if not docs:
+        return
+    coll = await get_collection()
+    try:
+        # unordered, so one duplicate (two tabs importing the same activity)
+        # does not stop the rest from being written
+        await coll.insert_many(docs, ordered=False)
+    except BulkWriteError as e:
+        others = [
+            err for err in e.details.get("writeErrors", []) if err.get("code") != 11000
+        ]
+        if others:
+            log.error("error saving streams: %s", others)
+
 
 async def strava_import(
     activity_ids: list[int], **user
-) -> AsyncGenerator[StreamsQueryResult, bool]:
+) -> AsyncGenerator[StreamsQueryResult, None]:
+    """
+    Fetch streams from Strava, yield them, and keep them in Mongo.
+
+    They are saved in batches as they arrive, and whatever is left over is
+    saved in the finally clause. The whole import used to be written once, at
+    the very end, so anything that stopped it early -- an abort, the error
+    limit, the browser going away -- threw out every stream already fetched,
+    and the Strava requests they cost with them.
+
+    That includes streams that arrived but were never yielded, which
+    get_many_streams hands back as leftovers when it is closed.
+
+    Stop early with aclose().
+    """
     uid = int(user[U.ID])
 
     strava = Strava.AsyncClient(uid, user[U.AUTH])
     await strava.update_access_token()
-    coll = await get_collection()
 
-    aiterator = strava.get_many_streams(activity_ids)
+    leftovers: list[Strava.StreamsResult] = []
+    aiterator = strava.get_many_streams(activity_ids, leftovers=leftovers)
 
-    mongo_docs = []
+    unsaved: list[StreamsDoc] = []
     now = datetime.datetime.now(datetime.timezone.utc)
-    async for aid, streams in aiterator:
-        packed = encode_streams(streams)
 
-        mongo_docs.append(mongo_doc(aid, packed, ts=now))
+    def pack(aid: int, streams: Strava.Streams) -> PackedStreams | None:
+        try:
+            packed = encode_streams(streams)
+        except KeyError as e:
+            # an activity with a time stream but no GPS or altitude
+            log.info("activity %d has no %s stream", aid, e)
+            return None
+        unsaved.append(mongo_doc(aid, packed, ts=now))
+        return packed
 
-        abort_signal = yield aid, packed
+    try:
+        async for aid, streams in aiterator:
+            packed = pack(aid, streams)
+            if packed is None:
+                continue
 
-        if abort_signal:
-            await Strava.AsyncClient.abort(aiterator)
-            break
+            if len(unsaved) >= INSERT_BATCH:
+                batch, unsaved = unsaved, []
+                await save(batch)
 
-    # insert_many([]) raises InvalidOperation, and an import that yields
-    # nothing is perfectly possible
-    if mongo_docs:
-        await coll.insert_many(mongo_docs)
+            yield aid, packed
+    finally:
+        await aiterator.aclose()
+        for aid, streams in leftovers:
+            pack(aid, streams)
+        if leftovers:
+            log.info("saving %d streams fetched but not sent", len(leftovers))
+        # shielded, so a cancellation (the client disconnecting) cannot
+        # interrupt the write of streams we have already paid for
+        await asyncio.shield(save(unsaved))
 
 
 async def aiter_query(
     activity_ids: list[int], user=None
-) -> AsyncGenerator[StreamsQueryResult, bool]:
+) -> AsyncGenerator[StreamsQueryResult, None]:
+    """
+    Yield streams for these activities: first whatever Mongo already holds,
+    then the rest as Strava sends them.
+
+    The Strava import gets a head start, running while the local results are
+    sent. Stop early with aclose(), which stops the import too.
+
+    Raises Strava.RateLimitExceeded if Strava's daily budget runs out.
+    """
     if not activity_ids:
         return
     #
@@ -172,47 +231,45 @@ async def aiter_query(
     streams_import = None
     first_fetch = None
     if activity_ids and (user is not None) and (not OFFLINE):
-        # Start a fetch process going. We will get back to this...
+        # Start the import now, so it is fetching while we send what we have
         t0 = time.perf_counter()
         streams_import = strava_import(activity_ids, **user)
-        first_fetch = asyncio.create_task(cast(Coroutine, streams_import.__anext__()))
+        first_fetch = asyncio.ensure_future(anext(streams_import, None))
 
-    # Yield everything we already had locally
-    for item in local_result:
-        abort_signal = yield item
-        if abort_signal:
-            log.info("Local Streams query aborted")
-            if streams_import:
-                await Strava.AsyncClient.abort(streams_import)
-            break
+    imported = 0
+    try:
+        for item in local_result:
+            yield item
 
-    if streams_import:
-        # Now we yield results of fetches as they come in
-        item1: StreamsQueryResult = await cast(Awaitable, first_fetch)
-        abort_signal = yield item1
-        imported_items = [item1]
+        if streams_import and first_fetch:
+            fetched = await first_fetch
+            if fetched is not None:
+                imported += 1
+                yield fetched
+                async for item in streams_import:
+                    imported += 1
+                    yield item
 
-        if not abort_signal:
-            async for item in streams_import:
-                imported_items.append(item)
-                abort_signal = yield item
-                if abort_signal:
-                    break
-
-        if abort_signal:
-            Strava.AsyncClient.abort(streams_import)
-            log.info("Remote Streams query aborted")
-
-        t1 = time.perf_counter()
-        log.debug(
-            "retrieved %d streams from Strava in %d",
-            len(imported_items),
-            (t1 - t0) * 1000,
-        )
-        imported_ids = set(aid for aid, mpk in imported_items)
-        missing_ids = set(activity_ids) - imported_ids
-        if missing_ids:
-            log.info("unable to import streams for %s", missing_ids)
+            log.debug(
+                "retrieved %d streams from Strava in %d",
+                imported,
+                (time.perf_counter() - t0) * 1000,
+            )
+            if imported < len(activity_ids):
+                log.info(
+                    "imported %d of %d streams requested",
+                    imported,
+                    len(activity_ids),
+                )
+    finally:
+        if streams_import and first_fetch:
+            if not first_fetch.done():
+                # The import is running inside this task, and a generator that
+                # is running cannot be closed. Cancelling the task stops it,
+                # and runs its cleanup on the way out.
+                first_fetch.cancel()
+            await asyncio.gather(first_fetch, return_exceptions=True)
+            await streams_import.aclose()
 
 
 async def query(**kwargs) -> list[StreamsQueryResult]:
