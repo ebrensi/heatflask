@@ -549,6 +549,29 @@ async def triage(*args):
 SORT_SPECS = [(F.UTC_START_TIME, DESCENDING)]
 
 
+# Strava visibility settings that keep an activity from the public. Followers
+# is among them: Heatflask cannot tell who follows whom, so it cannot honour
+# "followers only" except by treating it as private.
+NON_PUBLIC_VISIBILITY = ["only_me", "followers"]
+
+
+def visible_to(viewer_id: int | None) -> dict:
+    """
+    A Mongo filter for the activities this viewer may see: their own, and
+    everyone's public ones. None is an anonymous viewer, who sees only public.
+
+    Public means not flagged private and not restricted by visibility. Missing
+    fields count as public, since older index entries may lack visibility.
+    """
+    public = {
+        F.FLAG_PRIVATE: {"$ne": True},
+        F.VISIBILITY: {"$nin": NON_PUBLIC_VISIBILITY},
+    }
+    if viewer_id is None:
+        return public
+    return {"$or": [public, {F.USER_ID: int(viewer_id)}]}
+
+
 async def query(
     user_id: int = None,
     activity_ids: list[int] = None,
@@ -563,8 +586,14 @@ async def query(
     overlaps=None,
     #
     update_index_access=True,
+    privacy: dict | None = None,
 ):
-    mongo_query: dict = {}
+    """
+    `privacy` is a filter from visible_to(), ANDed with everything else. The
+    route sets it for every query that is not an admin's; nothing a client
+    sends can remove it.
+    """
+    mongo_query: dict = {"$and": [privacy]} if privacy else {}
     projection = None
 
     limit = int(limit) if limit else 0

@@ -6,11 +6,14 @@ Run from the repo root, inside the dev shell (numpy needs its libraries):
 
     nix develop -c bash -c "source backend/.venv/heatflask/bin/activate && pytest backend/tests"
 
-Nothing here touches the network beyond 127.0.0.1, or a real MongoDB.
+Nothing touches the network beyond 127.0.0.1. test_privacy.py uses a MongoDB
+on localhost if one is running, in a throwaway database, and skips otherwise;
+nothing else needs one.
 """
 
 import asyncio
 import os
+import socket
 import sys
 import time
 from pathlib import Path
@@ -218,3 +221,34 @@ async def wait_for_window_start():
     """Start just after a boundary, so a test's windows are predictable"""
     now = time.time()
     await asyncio.sleep(RateLimit.next_window(now) - now + 0.05)
+
+
+@pytest.fixture
+async def sanic_server():
+    """
+    Serve a Sanic app on a free port; call with the app, get back its base URL.
+
+    Two Sanic quirks this works around: port=0 is treated as unset and binds
+    8000, which the dev server is usually using; and Sanic's "touchup", which
+    rewrites some of its own methods when a server starts, fails the second
+    time it runs in one process (KeyError: '_run_response_middleware').
+    """
+    servers = []
+
+    async def start(app) -> str:
+        app.config.TOUCHUP = False
+        with socket.socket() as s:
+            s.bind(("127.0.0.1", 0))
+            port = s.getsockname()[1]
+        server = await app.create_server(
+            host="127.0.0.1", port=port, return_asyncio_server=True
+        )
+        await server.startup()
+        await server.before_start()
+        await server.after_start()
+        servers.append(server)
+        return f"http://127.0.0.1:{port}"
+
+    yield start
+    for server in servers:
+        await server.close()

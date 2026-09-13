@@ -47,10 +47,21 @@ async def query(request: SessionRequest):
     def sendPacked(doc):
         return response.send(msgpack.packb(doc))
 
+    # Privacy is decided here, from the session, and nothing in the request
+    # can override it. The query is the client's JSON splatted into
+    # Index.query, and only queries naming a user used to be restricted -- so a
+    # query without one (an ?id= link, the all-users list) returned anyone's
+    # private activities, and their cached tracks, to anyone who asked.
+    query.pop("privacy", None)
+    if not request.ctx.is_admin:
+        viewer = request.ctx.current_user
+        query["privacy"] = Index.visible_to(viewer[U.ID] if viewer else None)
+
     target_user_id = query.get("user_id")
     if target_user_id:
         is_owner_or_admin = request.ctx.current_user and (
-            request.ctx.is_admin or (request.ctx.current_user[U.ID] == target_user_id)
+            request.ctx.is_admin
+            or (request.ctx.current_user[U.ID] == int(target_user_id))
         )
 
         target_user = await Users.get(target_user_id)
@@ -58,11 +69,6 @@ async def query(request: SessionRequest):
             raise SanicException(
                 f"user {target_user_id} not registered", status_code=404
             )
-
-        # Query will only return private activities if current_user
-        # is owner of the activities (or admin)
-        if not is_owner_or_admin:
-            query["private"] = False
 
         # If there are no index entries for this user and they aren't
         #  currently being imported, start importing them now

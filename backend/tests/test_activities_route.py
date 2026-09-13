@@ -4,7 +4,6 @@ disconnecting does to the Strava requests behind it.
 """
 
 import asyncio
-import socket
 import time
 from contextlib import aclosing
 
@@ -80,7 +79,7 @@ async def test_cancelled_handler_closes_what_it_was_reading(limiter):
 
 
 async def test_client_disconnect_stops_strava_requests(
-    limiter, strava_server, streams_collection
+    limiter, strava_server, streams_collection, sanic_server
 ):
     fake = await strava_server(latency=0.3)
     user = make_user()
@@ -103,35 +102,22 @@ async def test_client_disconnect_stops_strava_requests(
         finally:
             finished.set()
 
-    # Not port=0: Sanic treats 0 as unset and binds 8000, which the dev server
-    # is usually using
-    with socket.socket() as s:
-        s.bind(("127.0.0.1", 0))
-        port = s.getsockname()[1]
-    server = await app.create_server(
-        host="127.0.0.1", port=port, return_asyncio_server=True
-    )
-    await server.startup()
-    await server.before_start()
-    await server.after_start()
+    base = await sanic_server(app)
 
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(f"http://127.0.0.1:{port}/q", json={}) as r:
-                received = 0
-                async for _ in r.content.iter_any():
-                    received += 1
-                    if received >= 3:
-                        break
-        # leaving the session closes the connection mid-response
+    async with aiohttp.ClientSession() as session:
+        async with session.post(f"{base}/q", json={}) as r:
+            received = 0
+            async for _ in r.content.iter_any():
+                received += 1
+                if received >= 3:
+                    break
+    # leaving the session closes the connection mid-response
 
-        await asyncio.wait_for(finished.wait(), timeout=15)
-        at_close = fake.requests
-        await asyncio.sleep(1.0)
+    await asyncio.wait_for(finished.wait(), timeout=15)
+    at_close = fake.requests
+    await asyncio.sleep(1.0)
 
-        assert fake.requests == at_close
-        assert at_close < 50  # of 300
-        # everything fetched was kept, sent or not
-        assert len(streams_collection.docs) >= 10
-    finally:
-        await server.close()
+    assert fake.requests == at_close
+    assert at_close < 50  # of 300
+    # everything fetched was kept, sent or not
+    assert len(streams_collection.docs) >= 10
