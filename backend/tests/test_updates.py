@@ -166,3 +166,11 @@ async def test_refresh_leaves_the_entry_alone_when_strava_fails(strava):
     fake.activity_status = 500
     assert await Index.refresh_one(123, **make_user(1)) == "unchanged"
     assert 123 in index.docs
+
+
+async def test_refresh_stores_moving_time(strava):
+    fake, index = strava
+    fake.activity_fields = {"moving_time": 3000, "elapsed_time": 3600}
+    await Index.refresh_one(123, **make_user(1))
+    doc = index.docs[123]
+    assert (doc[Index.F.MOVING_SECONDS], doc[Index.F.TIME_SECONDS]) == (3000, 3600)

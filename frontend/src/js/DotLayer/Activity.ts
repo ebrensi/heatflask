@@ -46,6 +46,8 @@ export class Activity {
   type: ActivityType
   total_distance: number
   elapsed_time: number
+  /** undefined for index entries made before moving time was stored */
+  moving_time?: number
   name: string
   selected: boolean
   ts: number
@@ -82,6 +84,7 @@ export class Activity {
     this.type = <ActivityType>a[A.TYPE]
     this.total_distance = a[A.DISTANCE_METERS]
     this.elapsed_time = a[A.TIME_SECONDS]
+    this.moving_time = a[A.MOVING_SECONDS]
     this.name = a[A.NAME]
     this.ts = a[A.UTC_START_TIME]
     /* ts and offset are epoch *seconds* (the backend stores

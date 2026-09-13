@@ -43,6 +43,7 @@ export const ACTIVITY_FIELDNAMES = {
   UTC_LOCAL_OFFSET: "o",
   DISTANCE_METERS: "D",
   TIME_SECONDS: "T",
+  MOVING_SECONDS: "M",
   LATLNG_BOUNDS: "B",
   FLAG_COMMUTE: "c",
   FLAG_PRIVATE: "p",
@@ -62,6 +63,8 @@ export type ImportedActivity = {
   [A.UTC_LOCAL_OFFSET]: number
   [A.DISTANCE_METERS]: number
   [A.TIME_SECONDS]: number
+  /** absent from index entries made before it was stored */
+  [A.MOVING_SECONDS]?: number
   [A.LATLNG_BOUNDS]: BBounds
   [A.FLAG_COMMUTE]: boolean
   [A.FLAG_PRIVATE]: boolean

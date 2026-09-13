@@ -96,6 +96,7 @@ class ActivitySummaryFields:
     UTC_LOCAL_OFFSET = "o"
     DISTANCE_METERS = "D"
     TIME_SECONDS = "T"
+    MOVING_SECONDS = "M"
     LATLNG_BOUNDS = "B"
     FLAG_COMMUTE = "c"
     FLAG_PRIVATE = "p"
@@ -143,6 +144,7 @@ def mongo_doc(
             F.ACTIVITY_NAME: name or title,
             F.DISTANCE_METERS: distance,
             F.TIME_SECONDS: elapsed_time,
+            F.MOVING_SECONDS: moving_time,
             F.ELEVATION_GAIN: total_elevation_gain,
             F.ACTIVITY_TYPE: Strava.ATYPES_LOOKUP.get(type, type),
             F.UTC_START_TIME: utc_start_time,

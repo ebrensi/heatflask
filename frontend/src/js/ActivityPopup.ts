@@ -5,9 +5,10 @@
  * distance and elapsed time, speed or pace, and links to the activity on
  * Strava and on its own Heatflask map.
  *
- * One difference: master showed Strava's average_speed, which is over moving
- * time. The activity index does not keep that, so speed here is distance over
- * elapsed time, and reads slower for any activity with stops in it.
+ * Speed and pace are over moving time, as master showed them (it used Strava's
+ * average_speed). Index entries made before moving time was stored fall back to
+ * elapsed time, which reads slower for any activity with stops in it; they pick
+ * it up the next time the index is rebuilt.
  */
 
 import { popup } from "leaflet"
@@ -27,7 +28,7 @@ function pace(v: number, unit: number): string {
 }
 
 function speedText(A: Activity): string {
-  const v = A.total_distance / A.elapsed_time // m/s
+  const v = A.total_distance / (A.moving_time || A.elapsed_time) // m/s
   if (!isFinite(v) || v <= 0) return ""
 
   if (activity_vtype(A.type) === "pace")
