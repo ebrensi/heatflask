@@ -65,7 +65,15 @@ export function SETUP(_state: State): void {
         "This removes your indexed activities and revokes Heatflask's access " +
         "to your Strava data. It cannot be undone."
     )
-    if (ok) window.location.href = URLS.delete
+    if (!ok) return
+    /* A form POST rather than navigating to the URL: /delete only accepts POST,
+     * so a link on some other site cannot delete a logged-in visitor's
+     * account. The server answers with a redirect to log out. */
+    const form = document.createElement("form")
+    form.method = "POST"
+    form.action = URLS.delete
+    document.body.appendChild(form)
+    form.submit()
   })
 
   /* --- public profile --------------------------------------------------- */
@@ -81,7 +89,9 @@ export function SETUP(_state: State): void {
     pub.addEventListener("change", async () => {
       const setting = pub.checked ? "on" : "off"
       try {
-        const resp = await fetch(`${URLS.visibility}${setting}`)
+        const resp = await fetch(`${URLS.visibility}${setting}`, {
+          method: "POST",
+        })
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
         /* The endpoint answers with the resulting public/not-public state, so
          * take that rather than assuming the click did what it looked like. */

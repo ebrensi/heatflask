@@ -1,6 +1,7 @@
 """
 Defines root ( heatflask.com/ ) webserver endpoints
 """
+
 import os
 import sanic.response as Response
 from sanic.request import Request
@@ -166,7 +167,10 @@ def self_or_admin(func):
     return decorator(func)
 
 
-@bp.get(r"/visibility/<setting:(on|off|^$)>")
+# POST, like /delete: these change data, and a GET would let any page on the web
+# change it for a logged-in visitor with nothing more than a link, since the
+# SameSite=Lax session cookie is still sent on top-level cross-site GETs
+@bp.post(r"/visibility/<setting:(on|off|^$)>")
 @session_cookie(get=True)
 @self_or_admin
 async def visibility(request: Request, target_user, setting=None):
@@ -178,13 +182,15 @@ async def visibility(request: Request, target_user, setting=None):
     return Response.json(not target_user[U.PRIVATE])
 
 
-@bp.get("/delete")
+@bp.post("/delete")
 @session_cookie(get=True, set=True, flashes=True)
 @self_or_admin
 async def delete(request: Request, target_user):
     uid = target_user[U.ID]
     await Index.delete_user_entries(**{U.ID: uid})
-    await Users.delete(uid, deauthenticate=False)
+    # The confirmation the user clicked through says this revokes our access to
+    # their Strava data, and it was called with deauthenticate=False
+    await Users.delete(uid, deauthenticate=True)
     request.ctx.flash(f"Successfully deleted user {uid}")
     return Response.redirect(request.app.url_for("auth.logout"))
 
