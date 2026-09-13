@@ -26,7 +26,7 @@
   "dependencies": {
     "@msgpack/msgpack": "^2.7.1",
     "@types/google.analytics": "^0.0.42",
-    "knob": "github:ebrensi/knob",
+    "knob": "https://codeload.github.com/ebrensi/knob/tar.gz/aa695312da9b804a487ed9fe0e8c66cd655191a6",
     "latlon-geohash": "^2.0.0",
     "leaflet": "^1.7.1",
     "leaflet-areaselect": "github:ebrensi/leaflet-areaselect",

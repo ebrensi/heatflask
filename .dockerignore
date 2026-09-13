@@ -1,0 +1,21 @@
+# Keep the build context to what the Dockerfile copies, and out of it anything
+# built locally or holding secrets.
+.git
+.data
+.dev-setup
+.vscode
+docs
+
+**/node_modules
+**/__pycache__
+**/*.pyc
+
+frontend/dist
+frontend/.parcel-cache
+frontend/dev-docs
+
+backend/.venv
+backend/.env
+backend/activate
+backend/tests
+backend/.pytest_cache
