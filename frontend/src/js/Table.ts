@@ -100,10 +100,14 @@ export function clearSelections(): void {
 export function openSelected(): void {
   const ids = selected().map((A) => A.id)
   if (!ids.length) return
+  window.open(heatflaskURL(ids), "_blank")
+}
 
+/** This app's url for a map of just these activities */
+export function heatflaskURL(ids: number[]): string {
   const uid = _state?.targetUser?.id
   const base = uid ? `/${uid}` : "/"
-  window.open(`${base}?id=${ids.join("+")}`, "_blank")
+  return `${base}?id=${ids.join("+")}`
 }
 
 export function zoomToSelected(): void {

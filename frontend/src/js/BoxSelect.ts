@@ -19,6 +19,7 @@ import * as ViewBox from "./DotLayer/ViewBox"
 import * as ActivityCollection from "./DotLayer/ActivityCollection"
 import * as Table from "./Table"
 import { dotLayer } from "./DotLayerAPI"
+import { activityPopup } from "./ActivityPopup"
 
 import type { Map as LMap } from "leaflet"
 
@@ -201,6 +202,15 @@ export function addBoxSelect(map: LMap): void {
 
     Table.update()
     if (dotLayer) dotLayer.redraw(true)
+
+    /* A lone activity gets its details popped up over it, as on master.
+     * Deferred because the mouseup that ended the drag is followed by a click,
+     * and a map click closes any open popup. */
+    map.closePopup()
+    if (found.size === 1) {
+      const [A] = found
+      setTimeout(() => activityPopup(map, A), 100)
+    }
   })
 }
 
