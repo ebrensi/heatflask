@@ -11,12 +11,10 @@ from functools import wraps
 from aiohttp import ClientResponseError
 
 from logging import getLogger
-from ... import Users
 from ... import Strava
-from ... import Index
+from ... import Updates
 
 from ..sessions import session_cookie
-
 
 log = getLogger(__name__)
 
@@ -56,32 +54,9 @@ async def post_callback(request):
         update,
     )
 
-    if update.get("object_type") == "activity":
-        aspect_type = update.get("aspect_type")
-        activity_id = update["object_id"]
-        user_id = update["owner_id"]
-
-        user = await Users.get(user_id)
-        # `await`: has_user_entries is a coroutine function, so without it the
-        # condition was a coroutine object -- always truthy, never awaited,
-        # and an "un-awaited coroutine" warning each time.
-        if user and await Index.has_user_entries(**user):
-            if aspect_type == "create":
-                request.app.add_task(Index.import_one(activity_id, **user))
-
-            elif aspect_type == "delete":
-                request.app.add_task(Index.delete_one(activity_id))
-
-            elif aspect_type == "update":
-                request.app.add_task(
-                    Index.update_one(activity_id, **update.get("updates", {}))
-                )
-
-    elif update.get("object_type") == "athlete":
-        log.info("unhandled athlete update: %s", update)
-
-    # Strava wants a 2xx within two seconds and retries otherwise, so the work
-    # is queued rather than awaited. delete and update were awaited inline.
+    # Strava wants a 2xx within two seconds and retries otherwise, so all of
+    # the work, including looking the user up, happens after we answer
+    request.app.add_task(Updates.handle_update_callback(update))
     return Response.text("success")
 
 
@@ -157,7 +132,7 @@ async def updates_page(request):
     return Response.text("Updates table will be here")
     # return render_template(
     #     "webhooks.html",
-    #     events=list(Webhooks.iter_updates(int(request.args.get("n", 100)))),
+    #     events=[u async for u in Updates.recent(int(request.args.get("n", 100)))],
     #     )
     #
 
