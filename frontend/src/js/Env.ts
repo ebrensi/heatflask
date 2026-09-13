@@ -55,10 +55,6 @@ export const STRAVA_PROFILE_URL = `${StravaDomain}/settings/profile`
  */
 export const DEV_BUNDLE = process.env.NODE_ENV !== "production"
 
-import { load_ga_object } from "./google-analytics"
-import { noop } from "./appUtil"
-export const ga = ADMIN || DEV_BUNDLE ? noop : load_ga_object()
-
 export const MAPBOX_ACCESS_TOKEN =
   "pk.eyJ1IjoiaGVhdGZsYXNrIiwiYSI6ImNrMXB3NDZtMjA0cG4zbW85N2U1M2p2ZmQifQ.UvD1v0VyI_V1gJSey0vRbg"
 // Without it CARTO raster tiles carry an "API KEY REQUIRED" watermark

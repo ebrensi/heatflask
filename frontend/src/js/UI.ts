@@ -153,17 +153,6 @@ export async function start() {
 //     }
 //   }
 
-//   // if (!ADMIN && !OFFLINE) {
-//   //   // Record this to google analytics
-//   //   try {
-//   //     ga("send", "event", {
-//   //       eventCategory: USER_ID,
-//   //       eventAction: "Render",
-//   //       eventValue: num,
-//   //     });
-//   //   } catch (err) {}
-//   // }
-
 //   dotLayer.reset()
 //   table.update()
 // }

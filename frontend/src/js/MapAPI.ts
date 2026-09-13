@@ -54,8 +54,6 @@ TileLayer.Provider.providers.CartoDB.url += `?key=${CARTO_API_KEY}`
 const providers_names = [
   "Esri.WorldImagery",
   "Esri.NatGeoWorldMap",
-  "Stamen.Terrain",
-  "Stamen.TonerLite",
   "CartoDB.Positron",
   "CartoDB.DarkMatter",
   "OpenStreetMap.Mapnik",
@@ -66,6 +64,37 @@ for (const name of providers_names) {
   baselayers[name] = new TileLayer.Provider(name, {
     useOnlyCache: OFFLINE,
   })
+}
+
+/* Stamen's styles, now served by Stadia Maps.
+ *
+ * Stamen shut its own tile servers down in 2023 and Stadia took over hosting
+ * the styles. leaflet-providers 1.13 still points Stamen.* at the old
+ * stamen-tiles-*.a.ssl.fastly.net, which answers 503, so these two layers had
+ * been blank.
+ *
+ * Stadia authorizes by the requesting page's domain rather than a key in the
+ * URL: heatflask.com is registered on the account, localhost is allowed for
+ * development, and any other origin gets 401.
+ *
+ * The names stay "Stamen.*" so a baselayer someone saved, or put in a link,
+ * still resolves. */
+const STADIA_ATTRIBUTION =
+  '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> ' +
+  '&copy; <a href="https://stamen.com/">Stamen Design</a> ' +
+  '&copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> ' +
+  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+
+const stamen_on_stadia = {
+  "Stamen.Terrain": { style: "stamen_terrain", maxZoom: 18 },
+  "Stamen.TonerLite": { style: "stamen_toner_lite", maxZoom: 20 },
+}
+
+for (const [name, { style, maxZoom }] of Object.entries(stamen_on_stadia)) {
+  baselayers[name] = new TileLayer(
+    `https://tiles.stadiamaps.com/tiles/${style}/{z}/{x}/{y}{r}.png`,
+    { attribution: STADIA_ATTRIBUTION, maxZoom, useOnlyCache: OFFLINE }
+  )
 }
 
 //  * Set the zoom range the same for all basemaps because this TileLayer
