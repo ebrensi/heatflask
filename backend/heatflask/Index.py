@@ -534,7 +534,10 @@ async def has_user_entries(**user):
 async def triage(*args):
     now_ts = datetime.datetime.now().timestamp()
     cutoff = now_ts - TTL
-    users = await get_collection()
+    # The users collection, which is where LAST_INDEX_ACCESS lives. This was
+    # this module's get_collection() -- the index itself, whose documents have
+    # no such field -- so triage found nothing and no index ever expired.
+    users = await Users.get_collection()
     cursor = users.find({U.LAST_INDEX_ACCESS: {"$lt": cutoff}}, {U.ID: True})
     stale_ids = [u[U.ID] async for u in cursor]
     tasks = [

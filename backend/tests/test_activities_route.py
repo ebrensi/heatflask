@@ -4,6 +4,7 @@ disconnecting does to the Strava requests behind it.
 """
 
 import asyncio
+import socket
 import time
 from contextlib import aclosing
 
@@ -102,13 +103,17 @@ async def test_client_disconnect_stops_strava_requests(
         finally:
             finished.set()
 
+    # Not port=0: Sanic treats 0 as unset and binds 8000, which the dev server
+    # is usually using
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        port = s.getsockname()[1]
     server = await app.create_server(
-        host="127.0.0.1", port=0, return_asyncio_server=True
+        host="127.0.0.1", port=port, return_asyncio_server=True
     )
     await server.startup()
     await server.before_start()
     await server.after_start()
-    port = server.server.sockets[0].getsockname()[1]
 
     try:
         async with aiohttp.ClientSession() as session:

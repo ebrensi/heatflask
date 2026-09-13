@@ -243,9 +243,7 @@ async def get_many_streams(
     def request(aid: int):
         return get_streams(session, aid, on_sent=lambda: sent.add(aid))
 
-    request_tasks = {
-        asyncio.create_task(request(aid)): aid for aid in activity_ids
-    }
+    request_tasks = {asyncio.create_task(request(aid)): aid for aid in activity_ids}
     errors = 0
     try:
         for next_result in asyncio.as_completed(request_tasks):
