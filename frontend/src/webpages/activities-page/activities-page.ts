@@ -71,7 +71,9 @@ function makeHeaderRow() {
     /* Where this activity's track is held. Two separate caches: ours in
      * Mongo, and this browser's IndexedDB. A track in neither has to be
      * re-fetched from Strava, which is the slow, rate-limited path. */
-    `<span title="Track cached on the server (Mongo)">${icon("database1")}</span>`,
+    `<span title="Track cached on the server (Mongo)">${icon(
+      "database1"
+    )}</span>`,
     `<span title="Track cached in this browser">${icon("download2")}</span>`,
     icon("pencil"), // title
   ]
@@ -125,8 +127,15 @@ async function main() {
     } else if ("cached" in obj) {
       /* Sent ahead of the summaries, so every row can be built knowing it */
       serverCached = new Set(<number[]>obj.cached)
+    } else if ("wait" in obj) {
+      const at = new Date(obj.wait * 1000).toLocaleTimeString([], {
+        hour: "numeric",
+        minute: "2-digit",
+      })
+      status_msg_el.innerText = `Strava rate limit reached; resuming at ${at}`
     } else if ("error" in obj) {
       errors.push(obj.error)
+      status_msg_el.innerText = obj.error
     } else if ("info" in obj) {
       if ("avatars" in obj.info) {
         Object.assign(avatars, obj.info.avatars)

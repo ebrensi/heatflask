@@ -91,6 +91,8 @@ type StatusObject = {
   msg?: string
   error?: string
   count?: number
+  /** Strava's rate limit is spent; the backend resumes at this epoch second */
+  wait?: number
   info?: {
     atypes: string[]
     avatars: { [id: number]: string }
@@ -169,9 +171,17 @@ export function decodePackedStreams(
 }
 
 /** Send a query to the backend and yield its items
- *   * send a non-false object to this generator to abort the operation
- *   * this generator will yield null and quit if operation is aborted
- *      from the other side
+ *
+ * Stop it with `signal`: aborting cancels the HTTP request itself, which the
+ * backend sees as a disconnect and answers by cancelling whatever Strava
+ * requests the query still had in flight. The generator then simply ends.
+ *
+ * Breaking out of a `for await` over this generator is not enough on its own.
+ * Whether that closes the connection depends on the browser -- msgpack's
+ * decoder cancels the body only where ReadableStream is async-iterable -- so
+ * the signal is what makes it certain.
+ *
+ * If the connection fails for any other reason, it yields null and ends.
  *
  * `keepPacked` leaves each activity's raw `mpk` bytes in place. Those are
  * what StreamCache stores -- about 12KB, against megabytes for the decoded
@@ -181,22 +191,25 @@ export function decodePackedStreams(
 export async function* makeActivityQuery(
   query: ActivityQuery,
   url = BACKEND_QUERY_URL,
-  keepPacked = false
-): AsyncGenerator<QueryResultItem | null, void, boolean> {
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      Accept: "application/msgpack",
-      "Content-Type": "application/msgpack",
-    },
-    body: JSON.stringify(query),
-  })
-
+  keepPacked = false,
+  signal?: AbortSignal
+): AsyncGenerator<QueryResultItem | null, void, undefined> {
   let info: StatusObject["info"]
-  const resultStream = decodeMultiStream(
-    response.body
-  ) as AsyncGenerator<QueryResultItem>
   try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Accept: "application/msgpack",
+        "Content-Type": "application/msgpack",
+      },
+      body: JSON.stringify(query),
+      signal,
+    })
+
+    const resultStream = decodeMultiStream(
+      response.body
+    ) as AsyncGenerator<QueryResultItem>
+
     for await (const obj of resultStream) {
       if (!info && "info" in obj) {
         info = obj.info
@@ -225,10 +238,12 @@ export async function* makeActivityQuery(
           if (!keepPacked) delete obj.mpk
         }
       }
-      const abort = yield obj
-      if (abort) break
+      yield obj
     }
   } catch (e) {
+    // an abort is a normal way to finish, not a failure
+    if (signal?.aborted) return
+    console.error("activity query failed:", e)
     yield null
   }
 }

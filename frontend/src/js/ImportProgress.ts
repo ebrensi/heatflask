@@ -32,15 +32,20 @@ let win: ControlWindow
 let msgEl: HTMLElement
 let barEl: HTMLProgressElement
 let countEl: HTMLElement
+let stopEl: HTMLButtonElement
 let visible = false
+let hideTimer: ReturnType<typeof setTimeout> | undefined
+let stopHandler: (() => void) | undefined
 
 /** How long the finished state stays up before the dialog closes. */
 const LINGER_MS = 700
+/** Longer, when what it says is an error worth reading. */
+const LINGER_ERROR_MS = 6000
 
 export function initImportProgress(map: LMap): void {
-  const Ctor = <new (map: LMap, opts: Record<string, unknown>) => ControlWindow>(
-    (<unknown>Control.Window)
-  )
+  const Ctor = <
+    new (map: LMap, opts: Record<string, unknown>) => ControlWindow
+  >(<unknown>Control.Window)
 
   win = new Ctor(map, {
     visible: false,
@@ -51,6 +56,9 @@ export function initImportProgress(map: LMap): void {
         <div class="info-message"></div>
         <progress class="progbar"></progress>
         <div class="import-count"></div>
+        <button type="button" class="btn btn-c btn-sm smooth import-stop">
+          <i class="hf hf-cancel-circle"></i> Stop
+        </button>
       </div>`,
   })
 
@@ -58,13 +66,31 @@ export function initImportProgress(map: LMap): void {
   msgEl = root.querySelector(".info-message")
   barEl = root.querySelector(".progbar")
   countEl = root.querySelector(".import-count")
+  stopEl = root.querySelector(".import-stop")
+  stopEl.addEventListener("click", () => {
+    stopEl.disabled = true
+    if (msgEl) msgEl.textContent = "stopping…"
+    if (stopHandler) stopHandler()
+  })
+}
+
+/** What the Stop button does. */
+export function onStop(handler: () => void): void {
+  stopHandler = handler
 }
 
 /** Open the dialog at the start of a query. */
 export function start(message = "contacting Strava…"): void {
   if (!win) return
+  /* A previous render's dialog may still be lingering on its final message;
+   * without this its timer would close the one we are opening. */
+  clearTimeout(hideTimer)
   if (msgEl) msgEl.textContent = message
   if (countEl) countEl.textContent = ""
+  if (stopEl) {
+    stopEl.disabled = false
+    stopEl.hidden = false
+  }
   /* No value attribute => the indeterminate barber-pole, which is right until
    * we know how many activities are coming. */
   if (barEl) barEl.removeAttribute("value")
@@ -104,13 +130,20 @@ export function progress(received: number, total?: number): void {
   }
 }
 
-/** Close the dialog, after letting the final state be seen for a moment. */
-export function finish(finalMessage?: string): void {
+/**
+ * Close the dialog, after letting the final state be seen for a moment --
+ * several seconds if it is an error.
+ */
+export function finish(finalMessage?: string, isError = false): void {
   if (!win || !visible) return
 
   if (finalMessage && msgEl) msgEl.textContent = finalMessage
+  if (stopEl) stopEl.hidden = true
   visible = false
-  setTimeout(() => win.hide(), LINGER_MS)
+  hideTimer = setTimeout(
+    () => win.hide(),
+    isError ? LINGER_ERROR_MS : LINGER_MS
+  )
 }
 
 /** Close immediately, leaving an error on screen is the caller's business. */

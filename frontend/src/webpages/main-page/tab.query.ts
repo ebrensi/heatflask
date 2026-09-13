@@ -1,7 +1,7 @@
 import { icon } from "~/src/js/Icons"
 import { State } from "~/src/js/Model"
 import type { QueryParameters } from "~/src/js/Model"
-import { renderFromQuery } from "~/src/js/Render"
+import { renderFromQuery, abortRender } from "~/src/js/Render"
 import { STRAVA_USER_URL } from "~/src/js/Env"
 import CONTENT from "bundle-text:./tab.query.html"
 export { CONTENT }
@@ -71,9 +71,7 @@ const OnClick: CallbackDispatch = {
     runQuery(S)
   },
   "button:abort": () => {
-    /* makeActivityQuery is an AsyncGenerator that accepts an abort signal as
-     * the argument to next(), but nothing threads one through yet. */
-    console.warn("aborting an import is not wired up yet")
+    abortRender()
   },
   "button:login": (el, S) => {
     console.log("button:login", el, S)

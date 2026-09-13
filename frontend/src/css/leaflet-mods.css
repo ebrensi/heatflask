@@ -84,6 +84,15 @@
   height: 0.8rem;
 }
 
+.import-progress .import-stop {
+  margin-top: 0.6rem;
+}
+
+/* .btn sets display, which beats the hidden attribute */
+.import-progress .import-stop[hidden] {
+  display: none;
+}
+
 .import-progress .import-count {
   margin-top: 0.4rem;
   font-family: monospace;
