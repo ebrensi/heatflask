@@ -20,6 +20,7 @@ from .config import (
     DEV,
     USE_REMOTE_DB,
     OFFLINE,
+    SERVER_NAME,
     get_logger_config,
 )
 from . import files
@@ -35,6 +36,16 @@ log.setLevel("INFO")
 log.propagate = True
 
 app = Sanic(APP_BASE_NAME, log_config=get_logger_config(), strict_slashes=False)
+
+# Set here, not under __main__: Sanic serves requests from a worker process that
+# imports this module afresh, so config set under __main__ never reaches it --
+# the hardcoded SERVER_NAME that used to be set there never took effect.
+#
+# Left unset in development, which makes request.url_for build URLs from the
+# host a request actually came to (localhost through an ssh tunnel, say), so the
+# login redirect comes back to the domain holding the session cookie.
+if SERVER_NAME:
+    app.config.SERVER_NAME = SERVER_NAME
 
 # set-up static and template file serving
 files.init_app(app)
@@ -102,16 +113,15 @@ if __name__ == "__main__":
         "workers": 1,  # int(os.environ.get("WEB_CONCURRENCY", 1)),
         "debug": False,
         "access_log": DEV,
-        "auto_reload": True,
+        # Reloading on file changes is for development: in production it adds a
+        # watcher process, and restarts the server whenever a file is touched
+        "auto_reload": DEV,
         "reload_dir": files.FRONTEND_DIST_DIR if DEV else None,
     }
-    app.config.SERVER_NAME = (
-        "{host}:{port}".format(**RUN_CONFIG) if DEV else "http://dev.heatflask.com"
-    )
     app.config.MOTD_DISPLAY = {
         "APP_NAME": APP_NAME,
         "APP_ENV": APP_ENV,
-        "SERVER_NAME": app.config.SERVER_NAME,
+        "SERVER_NAME": SERVER_NAME or "(taken from each request)",
         "LOG_LEVEL": LOG_LEVEL,
         "REMOTE_DB": str(USE_REMOTE_DB),
         "OFFLINE": str(OFFLINE),

@@ -2,6 +2,7 @@
 Defines all the /users/* webserver endpoints for accessing
 Users data store
 """
+
 import sanic.response as Response
 from sanic.exceptions import SanicException
 import sanic
@@ -11,7 +12,6 @@ from ... import Users
 
 from ..config import APP_NAME
 from ..sessions import session_cookie
-from .auth import authorize
 
 log = getLogger(__name__)
 log.setLevel("INFO")
@@ -40,7 +40,13 @@ async def query(request):
 async def directory(request):
     admin = request.args.get("admin")
     if admin and (not request.ctx.is_admin):
-        return Response.redirect(authorize, state=request.url)
+        # This passed the view function itself, and `state` straight to
+        # redirect(), which has no such argument, so it raised a 500. Send them
+        # to log in, then back here.
+        state = request.path + (
+            f"?{request.query_string}" if request.query_string else ""
+        )
+        return Response.redirect(request.app.url_for("auth.authorize", state=state))
 
     kwargs = {"admin": 1} if admin else {}
     query_url = request.url_for("users.query", output="csv", **kwargs)

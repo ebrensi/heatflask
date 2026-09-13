@@ -3,6 +3,10 @@ import functools
 import json
 import inspect
 import datetime
+import base64
+import binascii
+import hashlib
+import hmac
 
 from typing import TypedDict, Literal, Protocol, Any, cast
 
@@ -10,7 +14,7 @@ from typing import TypedDict, Literal, Protocol, Any, cast
 from ..Types import SanicRequest, SanicResponse
 from .. import Users
 
-from .config import APP_BASE_NAME, DEV
+from .config import APP_BASE_NAME, DEV, SESSION_SECRET
 from . import files
 
 log = getLogger(__name__)
@@ -77,10 +81,41 @@ class SessionRequest(SanicRequest):
     ctx: RequestContext
 
 
+def sign(session: Session, secret: str = SESSION_SECRET) -> str:
+    """
+    Serialize a session into a cookie value that cannot be altered unnoticed:
+    base64url(json) "." base64url(HMAC-SHA256 of that).
+
+    The cookie used to be the bare JSON, and the server believed whatever user
+    id it named. The payload is still readable; it holds only a user id and
+    flash messages, so it needs integrity, not secrecy.
+    """
+    payload = base64.urlsafe_b64encode(json.dumps(session).encode()).decode()
+    mac = hmac.new(secret.encode(), payload.encode(), hashlib.sha256).digest()
+    return f"{payload}.{base64.urlsafe_b64encode(mac).decode()}"
+
+
+def unsign(value: str | None, secret: str = SESSION_SECRET) -> Session:
+    """The session in a cookie value, or an empty one if it is missing or forged"""
+    if not value:
+        return {}
+    try:
+        payload, mac = value.split(".")
+        expected = hmac.new(secret.encode(), payload.encode(), hashlib.sha256).digest()
+        if not hmac.compare_digest(base64.urlsafe_b64decode(mac), expected):
+            log.warning("session cookie with a bad signature")
+            return {}
+        session = json.loads(base64.urlsafe_b64decode(payload))
+    except (ValueError, binascii.Error):
+        # includes unsigned cookies from before signing, which end that session
+        return {}
+    return cast(Session, session) if isinstance(session, dict) else {}
+
+
 def set_cookie(response: SanicResponse, session: Session):
     # Sanic 24.3 removed the dict-style cookie API (response.cookies[name] =
     # value, .update(), del). add_cookie()/delete_cookie() replace it.
-    response.add_cookie(COOKIE_NAME, json.dumps(session), **COOKIE_SPEC)
+    response.add_cookie(COOKIE_NAME, sign(session), **COOKIE_SPEC)
     log.debug("set '%s' cookie %s", COOKIE_NAME, session)
 
 
@@ -95,9 +130,7 @@ async def fetch_session_from_cookie(request: SessionRequest):
     if not cookie_value:
         log.debug("No session cookie")
 
-    request.ctx.session = cast(
-        Session, json.loads(cookie_value) if cookie_value else {}
-    )
+    request.ctx.session = unsign(cookie_value)
 
     user_id = request.ctx.session.get("user")
     request.ctx.current_user = await Users.get(user_id) if user_id else None

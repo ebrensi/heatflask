@@ -36,6 +36,25 @@ if not MONGODB_URL:
 # which database to talk to.
 USE_REMOTE_DB = not any(h in MONGODB_URL for h in ("localhost", "127.0.0.1"))
 
+# The key that signs session cookies. Without a signature the cookie was
+# plain JSON naming a user id, which the server believed -- so anyone could
+# set {"user": <any id>} and be that athlete, admin included.
+SESSION_SECRET = os.environ.get("SESSION_SECRET")
+if not SESSION_SECRET:
+    if DEV:
+        # Fixed rather than random, so a dev server restart keeps you logged in
+        SESSION_SECRET = "heatflask-development-only"
+    else:
+        raise RuntimeError("SESSION_SECRET must be set when APP_ENV is not development")
+
+# The public address the app is reached at, e.g. https://www.heatflask.com.
+# url_for() builds absolute URLs from it, and two of those go to Strava: the
+# OAuth redirect_uri, which must be on the app's registered callback domain,
+# and the webhook callback. It was hardcoded to http://dev.heatflask.com.
+SERVER_NAME = os.environ.get("SERVER_NAME")
+if not SERVER_NAME and not DEV:
+    raise RuntimeError("SERVER_NAME must be set when APP_ENV is not development")
+
 # Log Configuration
 default_log_level = "DEBUG" if DEV else "INFO"
 LOG_LEVEL = os.environ.get("LOG_LEVEL", default_log_level)
