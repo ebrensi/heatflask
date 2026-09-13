@@ -19,7 +19,7 @@ import "./CachedTileLayer"
 import "./LeafletExtensions"
 
 import { MAPBOX_ACCESS_TOKEN, CARTO_API_KEY, OFFLINE, MOBILE } from "./Env"
-import { State } from "./Model"
+import { State, DefaultVisual } from "./Model"
 import { setURLfromQV } from "./URL"
 
 import type { Point } from "leaflet"
@@ -94,6 +94,43 @@ for (const [name, { style, maxZoom }] of Object.entries(stamen_on_stadia)) {
   baselayers[name] = new TileLayer(
     `https://tiles.stadiamaps.com/tiles/${style}/{z}/{x}/{y}{r}.png`,
     { attribution: STADIA_ATTRIBUTION, maxZoom, useOnlyCache: OFFLINE }
+  )
+}
+
+/* Japanese maps from GSI, the Geospatial Information Authority of Japan
+ * (国土地理院): very detailed, labelled in Japanese, and covering Japan only --
+ * elsewhere a tile is a 404 and the map is blank.
+ *
+ * Heatflask has many riders in Japan, and every other layer labels Japan
+ * either in Japanese at far less detail (OpenStreetMap) or in romanized English
+ * (CARTO, the default). Worldwide Japanese labels need vector tiles, which is
+ * the MapLibre move.
+ *
+ * GSI's terms (maps.gsi.go.jp/development/ichiran.html): loading tiles live in
+ * a web page needs no application, only attribution naming 国土地理院 or
+ * 地理院タイル with a link to that page. Tiles are served with
+ * Access-Control-Allow-Origin: *, so the tile cache and video capture can read
+ * them. Zoom 3-18 answer; below that Leaflet scales zoom 3 down.
+ *
+ * The names carry the Japanese titles so Japanese riders can find them in the
+ * layer menu. */
+const GSI_ATTRIBUTION =
+  '<a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル</a>'
+
+const gsi_layers = {
+  "GSI.Standard 地理院 標準地図": "std",
+  "GSI.Pale 地理院 淡色地図": "pale",
+}
+
+for (const [name, style] of Object.entries(gsi_layers)) {
+  baselayers[name] = new TileLayer(
+    `https://cyberjapandata.gsi.go.jp/xyz/${style}/{z}/{x}/{y}.png`,
+    {
+      attribution: GSI_ATTRIBUTION,
+      minNativeZoom: 3,
+      maxZoom: 18,
+      useOnlyCache: OFFLINE,
+    }
   )
 }
 
@@ -181,6 +218,14 @@ export function CreateMap(
 
 export function BindMap(map: myMap, appState: State) {
   const { query, visual } = appState
+
+  /* A link or saved setting can name a layer that no longer exists. Indexing
+   * straight into baselayers then threw on .addTo, which stopped app startup
+   * before the map or the dots were set up. */
+  if (!(visual.baselayer in baselayers)) {
+    console.warn(`unknown baselayer "${visual.baselayer}"; using the default`)
+    visual.baselayer = DefaultVisual.baselayer
+  }
 
   // initialize map with visual params
   baselayers[visual.baselayer].addTo(map)
