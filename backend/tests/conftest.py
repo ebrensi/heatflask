@@ -56,6 +56,9 @@ class FakeStrava:
         # a public ride with a track
         self.activity_status = 200
         self.activity_fields: dict = {}
+        self.valid_refresh_tokens = {"refresh-0"}
+        self.issued = 0
+        self.token_requests = 0
         self.url = ""
 
     def count(self) -> int:
@@ -110,6 +113,29 @@ class FakeStrava:
         ids = range(start, min(start + per, self.n_activities))
         return web.json_response([{"id": i} for i in ids], headers=self.headers(used))
 
+    async def token(self, request):
+        """
+        Refresh like Strava: every refresh issues a new refresh token and
+        invalidates the one used, at once.
+        """
+        self.token_requests += 1
+        old = request.query.get("refresh_token")
+        if old not in self.valid_refresh_tokens:
+            return web.json_response({"message": "Bad Request"}, status=400)
+        self.valid_refresh_tokens.discard(old)
+        self.issued += 1
+        new = f"refresh-{self.issued}"
+        self.valid_refresh_tokens.add(new)
+        return web.json_response(
+            {
+                "token_type": "Bearer",
+                "access_token": f"access-{self.issued}",
+                "expires_at": int(time.time()) + 6 * 3600,
+                "expires_in": 6 * 3600,
+                "refresh_token": new,
+            }
+        )
+
     async def activity(self, request):
         ok, used = self.metered()
         if self.activity_status != 200:
@@ -155,6 +181,7 @@ async def strava_server(monkeypatch):
         app.router.add_get("/api/v3/activities/{id}/streams", fake.streams)
         app.router.add_get("/api/v3/activities/{id}", fake.activity)
         app.router.add_get("/api/v3/athlete/activities", fake.activities)
+        app.router.add_post("/oauth/token", fake.token)
         runner = web.AppRunner(app)
         await runner.setup()
         site = web.TCPSite(runner, "127.0.0.1", 0)

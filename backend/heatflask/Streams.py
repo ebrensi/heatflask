@@ -17,7 +17,7 @@ from typing import TypedDict, AsyncGenerator
 from . import DataAPIs
 from . import Strava
 from . import StreamCodecs
-from .Users import UserField as U
+from . import Users
 
 log = getLogger(__name__)
 log.setLevel("DEBUG")
@@ -144,9 +144,7 @@ async def strava_import(
 
     Stop early with aclose().
     """
-    uid = int(user[U.ID])
-
-    strava = Strava.AsyncClient(uid, user[U.AUTH])
+    strava = Users.strava_client(user)
     await strava.update_access_token()
 
     leftovers: list[Strava.StreamsResult] = []

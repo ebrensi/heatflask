@@ -250,7 +250,7 @@ async def import_user_entries(**user):
     t0 = time.perf_counter()
     await set_import_flag(uid, "Building index...")
 
-    strava = Strava.AsyncClient(uid, user[U.AUTH])
+    strava = Users.strava_client(user)
     await strava.update_access_token()
     now = datetime.datetime.now(datetime.timezone.utc)
 
@@ -391,7 +391,7 @@ async def update_user_entries(**user) -> int:
         # Nothing indexed yet: that is import_user_entries' job, not this one
         return 0
 
-    strava = Strava.AsyncClient(uid, user[U.AUTH])
+    strava = Users.strava_client(user)
     await strava.update_access_token()
     now = datetime.datetime.now(datetime.timezone.utc)
 
@@ -449,7 +449,7 @@ async def refresh_one(activity_id: int, **user) -> str:
       * Anything else (rate limit, Strava down, a revoked token): unchanged.
         Nothing is known, so nothing is touched.
     """
-    client = Strava.AsyncClient(user[U.ID], user[U.AUTH])
+    client = Users.strava_client(user)
     index = await get_collection()
     try:
         activity = await client.get_activity(activity_id, raise_exception=True)

@@ -5,6 +5,7 @@ from logging import getLogger
 import urllib.parse
 import asyncio
 import datetime
+import weakref
 from typing import (
     AsyncGenerator,
     Callable,
@@ -13,6 +14,7 @@ from typing import (
     TypedDict,
     Tuple,
     Literal,
+    Protocol,
     Final,
     cast,
     get_args,
@@ -729,6 +731,29 @@ async def delete_subscription(
 # ---------------------------------------------------------------------------- #
 #                               The Strava Client                              #
 # ---------------------------------------------------------------------------- #
+class TokenStore(Protocol):
+    """Where an athlete's Strava credentials are kept between requests"""
+
+    async def load(self) -> Optional[TokenExchangeResponse]: ...
+
+    async def save(self, auth: TokenExchangeResponse) -> None: ...
+
+
+# One lock per client name (an athlete id), so an athlete's token refreshes
+# take turns. Weak values: a lock lives only while someone holds or waits on it.
+_refresh_locks: "weakref.WeakValueDictionary[Any, asyncio.Lock]" = (
+    weakref.WeakValueDictionary()
+)
+
+
+def refresh_lock(name: str | int) -> asyncio.Lock:
+    key = (id(asyncio.get_running_loop()), name)
+    lock = _refresh_locks.get(key)
+    if lock is None:
+        lock = _refresh_locks[key] = asyncio.Lock()
+    return lock
+
+
 class AsyncClient:
     """
     Access Strava via this client, which takes care of refreshing access tokens for you,
@@ -740,9 +765,16 @@ class AsyncClient:
     access_token: Optional[str] = None
     refresh_token: Optional[str] = None
     expires_at: Optional[epoch] = None
+    token_store: Optional[TokenStore] = None
 
-    def __init__(self, name: str | int, auth: Optional[TokenExchangeResponse] = None):
+    def __init__(
+        self,
+        name: str | int,
+        auth: Optional[TokenExchangeResponse] = None,
+        token_store: Optional[TokenStore] = None,
+    ):
         self.name = name
+        self.token_store = token_store
         if auth:
             self.set_credentials(auth)
 
@@ -836,22 +868,72 @@ class AsyncClient:
     async def update_access_token(
         self, code: str = ""
     ) -> Optional[TokenExchangeResponse]:
-        """Update the access_token with a new auth-code or stored refresh-token"""
-        if not (code or (self.refresh_token and (self.expires_in < STALE_TOKEN))):
+        """
+        Get a new access token, with a login's auth code or the refresh token.
+
+        Without a code this does nothing unless the token is about to expire.
+
+        Strava hands back a new refresh token with every refresh and
+        invalidates the old one at once. Nothing here used to keep the new
+        one, so the first refresh after a login -- any time more than six hours
+        later -- left the stored refresh token dead, the next refresh failed
+        silently, and that athlete's Strava access stopped working until they
+        logged in again. Two refreshes racing with the same token did the same.
+
+        So refreshes for one athlete take turns (a lock per client name), each
+        first reloads the credentials from `token_store` in case another request
+        already refreshed, and a new token is saved back before anyone else can
+        use the old one.
+        """
+        if code:
+            return await self._exchange(code=code)
+
+        if not self.token_is_stale:
             log.debug("access token is current")
             return None
 
+        async with refresh_lock(self.name):
+            if self.token_store:
+                latest = await self.token_store.load()
+                if latest and latest.get("refresh_token") != self.refresh_token:
+                    await self._adopt(latest)
+                if not self.token_is_stale:
+                    log.debug("%s: token was refreshed elsewhere", self.name)
+                    return None
+
+            new_auth = await self._exchange(refresh_token=self.refresh_token)
+            if new_auth and self.token_store:
+                await self.token_store.save(new_auth)
+            return new_auth
+
+    @property
+    def token_is_stale(self) -> bool:
+        return bool(self.refresh_token) and (self.expires_in or 0) < STALE_TOKEN
+
+    async def _adopt(self, auth: TokenExchangeResponse) -> None:
+        self.set_credentials(auth)
+        # Inside a session context, the session's headers carry the old token
+        if self.session:
+            await self.session.close()
+            self.session = self.new_session()
+
+    async def _exchange(
+        self, code: str = "", refresh_token: Optional[str] = None
+    ) -> Optional[TokenExchangeResponse]:
         t0 = time.perf_counter()
-
         session = self.session or self.new_session()
-
         try:
             response = await get_access_token(
-                session, code=code, refresh_token=self.refresh_token
+                session, code=code, refresh_token=refresh_token
             )
-        except Exception:
+        except Exception as e:
+            log.warning(
+                "%s token %s failed: %r",
+                self.name,
+                "exchange" if code else "refresh",
+                e,
+            )
             return None
-
         finally:
             # This was `if self.session`, which closed the context's own
             # session and leaked the temporary one made just above
@@ -863,17 +945,10 @@ class AsyncClient:
             return None
 
         new_auth_info = cast(TokenExchangeResponse, response)
-
-        self.set_credentials(new_auth_info)
-
-        # Inside a session context, the session's headers carry the old token
-        if self.session:
-            await self.session.close()
-            self.session = self.new_session()
+        await self._adopt(new_auth_info)
 
         elapsed = (time.perf_counter() - t0) * 1000
         log.info("%s token refresh took %d", self.name, elapsed)
-
         return new_auth_info
 
     # Wrapped functions

@@ -103,6 +103,48 @@ def is_admin(user_id: int | str):
     return int(user_id) in ADMIN
 
 
+# The fields of a token response worth keeping. The code exchange at login
+# also returns the athlete, which is stored separately.
+AUTH_FIELDS = (
+    "token_type",
+    "access_token",
+    "expires_at",
+    "expires_in",
+    "refresh_token",
+)
+
+
+class UserTokenStore:
+    """An athlete's Strava credentials, kept on their user record"""
+
+    def __init__(self, user_id: int):
+        self.user_id = int(user_id)
+
+    async def load(self):
+        users = await get_collection()
+        doc = await users.find_one({U.ID: self.user_id}, {U.AUTH: True})
+        return doc.get(U.AUTH) if doc else None
+
+    async def save(self, auth) -> None:
+        stored = {k: auth[k] for k in AUTH_FIELDS if k in auth}
+        users = await get_collection()
+        await users.update_one({U.ID: self.user_id}, {"$set": {U.AUTH: stored}})
+        log.debug("%d saved refreshed Strava credentials", self.user_id)
+
+
+def strava_client(user: dict) -> Strava.AsyncClient:
+    """
+    A Strava client acting as this user, which saves refreshed credentials.
+
+    Use this rather than Strava.AsyncClient(user_id, user[U.AUTH]): a client
+    made that way refreshes the token and forgets the new refresh token, which
+    Strava has just made the only valid one.
+    """
+    return Strava.AsyncClient(
+        user[U.ID], user[U.AUTH], token_store=UserTokenStore(user[U.ID])
+    )
+
+
 async def add_or_update(
     update_last_login=False,
     update_index_access=False,
@@ -223,7 +265,7 @@ async def delete(user_id, deauthenticate=True):
     #  make sure it is done before deleting this user from mongodb.
     #  Afterwards it is useless so we can delete it.
     if user and (U.AUTH in user) and deauthenticate:
-        client = Strava.AsyncClient(user_id, user[U.AUTH])
+        client = strava_client(user)
         try:
             await client.deauthenticate(raise_exception=True)
         except ClientResponseError as e:
