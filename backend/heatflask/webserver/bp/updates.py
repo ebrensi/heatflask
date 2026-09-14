@@ -13,6 +13,7 @@ from aiohttp import ClientResponseError
 from logging import getLogger
 from ... import Strava
 from ... import Updates
+from ... import Utility
 
 from ..sessions import session_cookie
 
@@ -127,14 +128,14 @@ async def delete_subscription(request):
 @subscription.get("/events")
 @session_cookie(get=True)
 async def updates_page(request):
+    """Recent Strava webhook deliveries, newest first, from the capped log."""
     if not request.ctx.is_admin:
         raise SanicException("sorry", status_code=401)
-    return Response.text("Updates table will be here")
-    # return render_template(
-    #     "webhooks.html",
-    #     events=[u async for u in Updates.recent(int(request.args.get("n", 100)))],
-    #     )
-    #
+    n = int(request.args.get("n", 100))
+    events = [doc async for doc in Updates.recent(n)]
+    for doc in events:
+        doc["ts"] = Utility.to_epoch(doc["ts"])
+    return Response.json(events)
 
 
 bp = sanic.Blueprint.group(callbacks, subscription, url_prefix="/updates")
