@@ -606,13 +606,16 @@ function animateZoom(e: ZoomAnimEvent) {
   /* _latLngToNewLayerPoint is Leaflet-internal (no leading-underscore members
    * appear in @types/leaflet) but it is what every zoom-animated canvas layer
    * in the ecosystem uses, Leaflet's own Canvas renderer included. */
+  /* Measured from what is on the canvas -- drawn at calibratedZoom with its
+   * top-left at ll0 -- not from the map's current view. The two agree for a
+   * button or wheel zoom, but not at the end of a pinch on a phone (the only
+   * place zoomAnimation is on): there the map is at the pinch's zoom while the
+   * canvas still holds the frame from before the pinch, CSS-scaled by onZoom.
+   * Scaling from the current view made the layer jump for the 250 ms the
+   * animation lasts. */
   const m = <LMap & MapInternals>_map
-  const scale = m.getZoomScale(e.zoom)
-  const offset = m._latLngToNewLayerPoint(
-    m.getBounds().getNorthWest(),
-    e.zoom,
-    e.center
-  )
+  const scale = m.getZoomScale(e.zoom, ViewBox.calibratedZoom)
+  const offset = m._latLngToNewLayerPoint(ViewBox.ll0, e.zoom, e.center)
   ViewBox.setCSStransform(offset, scale)
 }
 
