@@ -18,6 +18,7 @@ On some Linux systems Mongo may be installed but the service is not started.  Ma
 Streams used to be cached in Redis in front of Mongo. That tier is gone: Mongo
 is the only local cache, with a TTL index (`MONGO_STREAMS_TTL`, 10 days default)
 doing the expiry that Redis keys used to do.
+
 The setup used to be more complicated but now there is a convenient script [`.dev-install-backend`](/backend/.dev-install-backend)
 
 Running that should do everything for you:
