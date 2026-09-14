@@ -333,27 +333,32 @@ async def migrate():
     pgurl = os.environ["LEGACY_POSTGRES_URL"]
     # .all() must be called inside the connection context: in SQLAlchemy 2.x
     # the Result is invalidated once the connection closes
+    # Columns are named rather than "select *": the table has a dt_indexed
+    # column between dt_last_active and app_activity_count, and positional
+    # unpacking shifted login_count and private by one
     with create_engine(pgurl).connect() as conn:
-        results = conn.execute(text("select * from users")).all()
+        results = conn.execute(
+            text(
+                "select id, firstname, lastname, profile, access_token,"
+                " city, state, country, dt_last_active, app_activity_count,"
+                " share_profile from users"
+            )
+        ).all()
 
     docs = []
 
     for (
         id,
-        username,
         firstname,
         lastname,
         profile,
         access_token,
-        measurement_preference,
         city,
         state,
         country,
-        email,
         dt_last_active,
         app_activity_count,
         share_profile,
-        xxx,
     ) in results:
         if (id in ADMIN) or (dt_last_active is None):
             log.info("skipping %d", id)
@@ -370,7 +375,11 @@ async def migrate():
                     state=state,
                     country=country,
                     #
-                    last_login=dt_last_active.timestamp(),
+                    # Stored naive from datetime.utcnow(); without the
+                    # tzinfo, .timestamp() would read it as local time
+                    last_login=dt_last_active.replace(
+                        tzinfo=datetime.timezone.utc
+                    ).timestamp(),
                     login_count=app_activity_count,
                     private=not share_profile,
                     auth=json.loads(access_token),
