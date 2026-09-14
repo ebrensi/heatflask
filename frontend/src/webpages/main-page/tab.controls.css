@@ -10,7 +10,8 @@
 .dial-stack {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  align-items: center;
+  gap: 1.25rem;
   margin: 0.5rem 0 1rem;
   max-width: 22rem;
 }
