@@ -23,6 +23,15 @@
   transform-origin: 0 0;
 }
 
+/* Links on the main page are white (main-page.css), which on Leaflet's
+   near-white attribution strip made the tile credits unreadable. The credits
+   are a condition of using most of the tile providers, so they must show. */
+.leaflet-container .leaflet-control-attribution {
+  background: rgba(0, 0, 0, 0.5);
+  color: #ddd;
+  text-shadow: none;
+}
+
 .leaflet-popup-content-wrapper {
   background-color: rgba(0, 0, 0, 0.6);
   color: white;
