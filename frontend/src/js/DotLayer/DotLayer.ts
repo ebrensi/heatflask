@@ -8,7 +8,7 @@ import * as ActivityCollection from "./ActivityCollection"
 import { PixelGraphics } from "./PixelGraphics"
 // Env exports ADMIN; MAP_INFO is the alias ViewBox.ts uses for it
 import { ADMIN as MAP_INFO } from "../Env"
-import { nextTask, sleep, nextAnimationFrame } from "../appUtil"
+import { sleep, nextAnimationFrame } from "../appUtil"
 import type { VisualParameters } from "../Model"
 // import * as WorkerPool from "./WorkerPool.js"
 
@@ -253,6 +253,13 @@ function addCanvasOverlay(pane: string): HTMLCanvasElement {
     canvas,
     "leaflet-zoom-" + (zoomAnimated ? "animated" : "hide")
   )
+  /* ViewBox.setCSStransform scales the canvas about its top-left corner, which
+   * is what the tile layers do. Leaflet's stylesheet sets that origin only on
+   * .leaflet-zoom-animated, and zoomAnimation is off except on mobile -- so on
+   * a laptop the canvas got .leaflet-zoom-hide instead, kept the default
+   * origin (its centre), and slid out from under the tiles for as long as a
+   * pinch lasted. */
+  canvas.style.transformOrigin = "0 0"
   _map.getPane(pane).appendChild(canvas)
   ViewBox.canvases.push(canvas)
   return canvas
@@ -313,21 +320,22 @@ async function onResize(): Promise<void> {
 
 /*
  * This gets called continuously as the user moves
- * the touchscreen by pinching
+ * the touchscreen by pinching, and once for any other zoom
+ *
+ * It scales what is already drawn so it stays on the map until a redraw
+ * replaces it. That used to happen only mid-pinch, but the zoom that ends a
+ * pinch matters too: Leaflet snaps it to a whole level (zoomSnap) and jumps
+ * the tiles there, and the canvases have to jump with them.
  */
 let _pinching = false
 async function onZoom(e) {
   if (!_map || !ViewBox.zoomLevel) return
-  // console.log("onZoom")
 
   _pinching = e.pinch || e.flyTo
-  if (_pinching) {
-    const z = _map.getZoom()
-    const scale = _map.getZoomScale(z, ViewBox.zoom)
-    const trans = _map.latLngToLayerPoint(ViewBox.ll0)
-    // console.log(`pinch transform ${scale}, ${trans.x}, ${trans.y}`)
-    ViewBox.setCSStransform(trans, scale)
-  }
+
+  const scale = _map.getZoomScale(_map.getZoom(), ViewBox.calibratedZoom)
+  const trans = _map.latLngToLayerPoint(ViewBox.ll0)
+  ViewBox.setCSStransform(trans, scale)
 }
 
 /*
@@ -335,9 +343,13 @@ async function onZoom(e) {
  * (also when pinching)
  */
 async function onMove() {
-  // console.log("onMove")
-  await redraw(_pinching)
-  // await redraw()
+  /* Not during a pinch. onZoom has already scaled the drawn canvas to match,
+   * and a redraw would fight it: calibrate() resets that transform straight
+   * away, but the new paths only land a task or two later, so the old pixels
+   * get painted unscaled in between -- a jump every redraw, ~20 times a
+   * second. moveend redraws properly once the fingers lift. */
+  if (_pinching) return
+  await redraw()
 }
 
 /*
@@ -389,6 +401,9 @@ async function redraw(forceFullRedraw?: boolean) {
     return
   }
 
+  /* A redraw requested just before a pinch began can wake up during it */
+  if (_pinching) return
+
   if (_redrawing) {
     console.log("can't redraw")
     await sleep(1000)
@@ -415,27 +430,43 @@ async function redraw(forceFullRedraw?: boolean) {
    * drawBounds rectangle and shifting the surviving pixels across, machinery
    * that has since been removed. */
 
-  // reset the canvases to to align with the screen and update the ViewBox
-  // location relative to the map's pxOrigin
+  /* The slow part first, while the canvases still show the old frame at the
+   * old transform. updateContext can yield to the browser (it waits for
+   * makeIdxSet tasks at a new zoom level), and the browser repaints when it
+   * does. */
+  await ActivityCollection.updateContext(ViewBox.pxBounds, ViewBox.zoomLevel)
+
+  /* A pinch that began while we waited owns the transform now */
+  if (_pinching) {
+    _redrawing = false
+    return
+  }
+
+  /* Then re-align the canvases and redraw both of them with no yield in
+   * between, so the new transform and the new pixels reach the screen in the
+   * same frame. calibrate() used to come first, with two `await nextTask()`s
+   * before the drawing -- so for a frame or more the old pixels were shown
+   * with the new transform, which at the end of a pinch meant the whole layer
+   * snapping back to its unscaled size before the redraw landed.
+   *
+   * drawPaths and drawDots contain no real awaits (only microtasks, which the
+   * browser cannot paint between), so calling them here draws synchronously. */
   ViewBox.calibrate()
   pathPxg.setTransform(ViewBox.transform)
   dotPxg.setTransform(ViewBox.transform)
 
-  await ActivityCollection.updateContext(ViewBox.pxBounds, ViewBox.zoomLevel)
-
   const promises = []
   if (_options.showPaths) {
-    await nextTask()
     promises.push(drawPaths())
   } else {
     // paths turned off: wipe whatever is still on that canvas
     pathPxg.clear()
   }
 
-  if (_paused) {
-    await nextTask()
-    promises.push(drawDots())
-  }
+  /* The dots too, even when animating: the animation loop would redraw them
+   * on its next frame, but that can be a paint after this one. Drawn at the
+   * loop's last timestamp, so the frame does not skip. */
+  promises.push(drawDots(_paused ? undefined : _lastDotsTime))
 
   await Promise.all(promises)
   _redrawing = false
@@ -453,12 +484,15 @@ async function drawPaths() {
   return count
 }
 
+let _lastDotsTime: number
+
 async function drawDots(tsecs?: number) {
   if (!_ready) return 0
 
   /* `=== undefined`, not a falsy test: t=0 is a legitimate timestamp, and a
    * falsy test quietly turned it into "now". */
   if (tsecs === undefined) tsecs = _timePaused || timeOrigin / 1000
+  _lastDotsTime = tsecs
 
   dotPxg.clear()
   /* vParams.T is s: the timestep between successive dots, in ACTIVITY

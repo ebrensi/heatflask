@@ -32,6 +32,7 @@ let _pxOffset: Point
 let _mapPanePos: Point
 let _ll0: LatLng
 let _zoom: number
+let _calibratedZoom: number
 let _zoomLevel: number
 let _zf: number
 let _scale: number
@@ -51,6 +52,7 @@ export {
   _transform as transform,
   _zoomLevel as zoomLevel,
   _zoom as zoom,
+  _calibratedZoom as calibratedZoom,
   _zf as zf,
 }
 
@@ -187,6 +189,12 @@ export function calibrate(): Point {
   _baseTranslation = _mapPanePos.multiplyBy(-1)
 
   setCSStransform(_baseTranslation)
+
+  /* The zoom the canvases are drawn at from here on. updateZoom() runs before
+   * the drawing does, so _zoom can be ahead of what is on the canvas; scaling
+   * the canvas to follow the map has to start from this one. ll0 below is the
+   * same idea for position. */
+  _calibratedZoom = _zoom
 
   // const altDiff = _ll0? _map.latLngToLayerPoint(_ll0).subtract(_baseTranslation).round() : undefined
   // console.log({diff, altDiff})
