@@ -1,11 +1,10 @@
 /*
  * Layer Settings tab.
  *
- * The dials stack vertically, one per row, zig-zagging between the two sides
- * of the pane with each readout beside its dial. A row of three 100px dials
- * left most of the pane empty; one per row lets them be bigger, and on a phone,
- * where the sidebar is the whole screen, each dial sits on its own at the edge
- * where a thumb can reach it.
+ * The dials stack vertically, one per row, each with its readout beside it.
+ * A row of three 100px dials left most of the pane empty; one per row lets
+ * them be bigger, and on a phone, where the sidebar is the whole screen,
+ * each dial sits on its own at the edge where a thumb can reach it.
  */
 
 .dial-stack {
@@ -13,7 +12,6 @@
   flex-direction: column;
   gap: 0.25rem;
   margin: 0.5rem 0 1rem;
-  /* keep the zig-zag compact on a wide desktop pane */
   max-width: 22rem;
 }
 
@@ -21,11 +19,6 @@
   display: flex;
   align-items: center;
   gap: 1rem;
-}
-
-.dial:nth-child(even) {
-  flex-direction: row-reverse;
-  text-align: right;
 }
 
 /* knob renders a canvas; keep it from picking up stray inline spacing */
@@ -41,7 +34,7 @@
 }
 
 .dial-name {
-  font-size: 0.85rem;
+  font-size: 1rem;
   letter-spacing: 0.02em;
   opacity: 0.75;
 }
