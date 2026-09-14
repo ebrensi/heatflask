@@ -10,7 +10,7 @@ import time
 
 import pytest
 
-from heatflask import Users
+from heatflask import Strava, Users
 
 USER = 42
 
@@ -97,3 +97,20 @@ async def test_without_a_store_the_second_refresh_fails(limiter, strava_server):
     second = Strava.AsyncClient(USER, expired_auth())
     assert await second.update_access_token() is None  # refresh-0 is dead
     assert fake.token_requests == 2
+
+
+async def test_a_failed_refresh_does_not_log_the_client_secret(
+    strava_server, limiter, caplog
+):
+    await strava_server()
+    client = Strava.AsyncClient(
+        "someone",
+        {"access_token": "a", "refresh_token": "not-valid", "expires_at": 0},
+    )
+    with caplog.at_level("DEBUG"):
+        assert await client.update_access_token() is None
+    # only our records: the fake server's own access log shows the URL
+    ours = "\n".join(r.getMessage() for r in caplog.records if r.name.startswith("heatflask"))
+    assert "token refresh failed: 400" in ours
+    assert Strava.CLIENT_SECRET not in ours
+    assert "not-valid" not in ours

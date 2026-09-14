@@ -35,6 +35,25 @@ DOMAIN = "https://www.strava.com"
 STALE_TOKEN: Final = 300  # Refresh access token if only this many seconds left
 
 
+def log_failure(client, func, e: Exception) -> None:
+    """
+    Log a failed call without its URL. An aiohttp ClientResponseError's text
+    includes the request URL, and the token and subscription endpoints take
+    client_secret (and refresh tokens, auth codes) in the query string.
+    """
+    if isinstance(e, aiohttp.ClientResponseError):
+        log.warning(
+            "%s, %s: %s %s (%s)",
+            client,
+            getattr(func, "__name__", func),
+            e.status,
+            e.message,
+            e.request_info.url.path if e.request_info else "",
+        )
+    else:
+        log.exception("%s, %s", client, func)
+
+
 async def api_request(
     session: aiohttp.ClientSession,
     method: str,
@@ -829,10 +848,10 @@ class AsyncClient:
         except RateLimitExceeded:
             # always raised: the caller has to know why there is no answer
             raise
-        except Exception:
+        except Exception as e:
             if raise_exception:
                 raise
-            log.exception("%s, %s", self, func)
+            log_failure(self, func, e)
             return None
         finally:
             if not in_context:
@@ -859,10 +878,10 @@ class AsyncClient:
                 yield item
         except RateLimitExceeded:
             raise
-        except Exception:
+        except Exception as e:
             if raise_exception:
                 raise
-            log.exception("%s, %s", self, func)
+            log_failure(self, func, e)
         finally:
             await aiterator.aclose()
             if not in_context:
@@ -930,11 +949,19 @@ class AsyncClient:
                 session, code=code, refresh_token=refresh_token
             )
         except Exception as e:
+            # Not %r of the exception: a ClientResponseError's repr carries the
+            # request URL, whose query string holds client_secret and the
+            # refresh token or auth code
+            detail = (
+                f"{e.status} {e.message}"
+                if isinstance(e, aiohttp.ClientResponseError)
+                else type(e).__name__
+            )
             log.warning(
-                "%s token %s failed: %r",
+                "%s token %s failed: %s",
                 self.name,
                 "exchange" if code else "refresh",
-                e,
+                detail,
             )
             return None
         finally:
