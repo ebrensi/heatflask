@@ -14,7 +14,6 @@ import "leaflet-providers"
 import strava_logo from "url:../images/pbs4.png"
 import heatflask_logo from "url:../images/logo.png"
 
-import "./BoxHook"
 import "./CachedTileLayer"
 import "./LeafletExtensions"
 
