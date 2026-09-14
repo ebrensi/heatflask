@@ -16,7 +16,7 @@
 import { Control, DomUtil, DomEvent } from "leaflet"
 import { icon } from "./Icons"
 import { captureVideo, saveBlob, abortCapture } from "./Capture"
-import { CAPTURE_DURATION_MAX } from "./Env"
+import { CAPTURE_DURATION_MAX, OFFLINE, SPONSOR_URL } from "./Env"
 import { dotLayer } from "./DotLayerAPI"
 
 import type { Map as LMap, LatLngBounds } from "leaflet"
@@ -79,10 +79,35 @@ export function addCaptureControl(map: LMap): void {
   const progress = DomUtil.create("div", "capture-progress")
   progress.hidden = true
   map.getContainer().appendChild(progress)
+  DomEvent.disableClickPropagation(progress)
+
+  let hideTimer = 0
 
   function showProgress(text: string): void {
+    clearTimeout(hideTimer)
     progress.textContent = text
     progress.hidden = false
+  }
+
+  /* One timer, so a message that replaced an earlier one is not hidden on the
+   * earlier one's schedule. */
+  function hideProgress(afterMs: number): void {
+    clearTimeout(hideTimer)
+    hideTimer = window.setTimeout(() => (progress.hidden = true), afterMs)
+  }
+
+  /* Just after a video saves is when someone has got something out of
+   * Heatflask, so that is where the one quiet ask goes. run() leaves it up
+   * long enough to read and click. */
+  function showSaved(text: string): void {
+    showProgress(text)
+    if (OFFLINE) return
+    const ask = DomUtil.create("div", "capture-sponsor", progress)
+    const link = <HTMLAnchorElement>DomUtil.create("a", "", ask)
+    link.href = SPONSOR_URL
+    link.target = "_blank"
+    link.rel = "noopener"
+    link.textContent = "Enjoying Heatflask? Help keep it running"
   }
 
   const CaptureControl = Control.extend({
@@ -123,7 +148,7 @@ export function addCaptureControl(map: LMap): void {
 
         if (sel.width < 16 || sel.height < 16) {
           showProgress("selection is too small")
-          setTimeout(() => (progress.hidden = true), 3000)
+          hideProgress(3000)
           state = "idle"
           render()
           return
@@ -131,6 +156,7 @@ export function addCaptureControl(map: LMap): void {
 
         state = "capturing"
         render()
+        let hideAfter = 4000
 
         try {
           const blob = await captureVideo(map, sel, (_frac, label) =>
@@ -139,7 +165,8 @@ export function addCaptureControl(map: LMap): void {
           if (blob) {
             const name = filename()
             saveBlob(blob, name)
-            showProgress(`saved ${name} (${fileSize(blob.size)})`)
+            showSaved(`saved ${name} (${fileSize(blob.size)})`)
+            if (!OFFLINE) hideAfter = 12000
           } else {
             showProgress("capture cancelled")
           }
@@ -147,7 +174,7 @@ export function addCaptureControl(map: LMap): void {
           console.error(e)
           showProgress(`capture failed: ${(<Error>e).message}`)
         } finally {
-          setTimeout(() => (progress.hidden = true), 4000)
+          hideProgress(hideAfter)
           state = "idle"
           render()
         }

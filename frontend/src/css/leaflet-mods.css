@@ -129,6 +129,19 @@
   pointer-events: none;
 }
 
+/* The link under "saved ..." has to be clickable through the readout's
+ * pointer-events: none. */
+.capture-sponsor {
+  margin-top: 4px;
+  font-family: sans-serif;
+  text-align: center;
+}
+
+.capture-progress .capture-sponsor a {
+  pointer-events: auto;
+  color: #fc4c02;
+}
+
 .leaflet-aux-box {
   position: absolute;
   left: 0;

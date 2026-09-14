@@ -1,5 +1,6 @@
 import { icon } from "~/src/js/Icons"
 import { State } from "~/src/js/Model"
+import { OFFLINE, SPONSOR_URL } from "~/src/js/Env"
 
 import CONTENT from "bundle-text:./tab.info.html"
 export { CONTENT }
@@ -31,4 +32,10 @@ for (const [icon_name, url] of contact_specs) {
 export function SETUP(state: State) {
   const contacts_el = document.getElementById("contacts")
   contacts_el.innerHTML = html_tags.join("")
+
+  // A sponsor link is no use to someone running Heatflask offline
+  const support_el = document.getElementById("support")
+  const sponsor_link = <HTMLAnchorElement>support_el.querySelector("a")
+  if (OFFLINE) support_el.remove()
+  else sponsor_link.href = SPONSOR_URL
 }

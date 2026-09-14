@@ -61,6 +61,9 @@ export const MAPBOX_ACCESS_TOKEN =
 export const CARTO_API_KEY = "cb1_3iuf_1_b5f01624a165546780866afc"
 export const CAPTURE_DURATION_MAX = 20
 
+// Where the "support Heatflask" links point
+export const SPONSOR_URL = "https://github.com/sponsors/ebrensi"
+
 // Courtesy of TwoFuckingDevelopers (@2fdevs, @elecash and @qmarcos)
 function isMobileDevice() {
   return (
