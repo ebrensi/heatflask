@@ -86,6 +86,13 @@ async def test_a_confirmed_deauthorization_drops_the_user(setup):
     assert list(coll.docs) == [ACTIVE]
 
 
+async def test_triage_works_when_started_as_a_sanic_task(setup):
+    # add_task(Users.triage) calls Users.triage(app)
+    strava, coll = setup
+    assert await Users.triage(object()) == {"deleted": 1}
+    assert list(coll.docs) == [ACTIVE]
+
+
 async def test_a_passing_failure_keeps_the_user_and_token(setup):
     strava, coll = setup
     strava.deauth_status = 503

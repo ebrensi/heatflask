@@ -340,8 +340,14 @@ async def retire(user: dict) -> str:
     return outcome
 
 
-async def triage(only_find=False):
-    """Retire every user who has not logged in for TTL"""
+async def triage(*_app, only_find=False):
+    """
+    Retire every user who has not logged in for TTL.
+
+    `*_app` because Sanic's add_task calls a task with the app as its first
+    argument; without it the app landed in only_find, and triage quietly
+    listed users and did nothing.
+    """
     cutoff = datetime.datetime.now().timestamp() - TTL
     users = await get_collection()
     query = {U.LAST_LOGIN: {"$lt": cutoff}}
