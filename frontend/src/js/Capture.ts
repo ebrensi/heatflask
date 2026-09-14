@@ -278,7 +278,7 @@ export async function captureVideo(
         if (!src) continue
         /* The dot shadows are a CSS filter on the live canvas, which drawImage
          * does not carry over -- so apply the same filter here. */
-        ctx.filter = src === dotCanvas && dotFilter ? dotFilter : "none"
+        ctx.filter = src === dotCanvas ? dotFilter : "none"
         ctx.drawImage(
           src,
           region.x,

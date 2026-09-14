@@ -130,7 +130,7 @@ const dialBindings: DialBinding[] = [
 /**
  * Add the dials to the DOM and bind them to the model and the layer.
  *
- * The binding half of this used to be commented out below, written against
+ * The binding half of this used to sit commented out in this file, against
  * `vParams`, which Model stopped exporting when it became appState.visual.
  * So the dials were created and appended -- visible, draggable -- and wired
  * to nothing.
@@ -177,10 +177,6 @@ export function SETUP(state: State) {
     dotLayer.options.showPaths = on
     dotLayer.redraw(true)
   })
-
-  bindCheckbox(visual, "showShadows", "shadows", (on) => {
-    dotLayer.updateDotSettings({ enabled: on })
-  })
 }
 
 /**
@@ -212,7 +208,7 @@ function updateCycleInfo(visual: State["visual"]): void {
 function bindCheckbox(
   visual: State["visual"],
   elementId: string,
-  param: "paths" | "shadows",
+  param: "paths",
   apply: (on: boolean) => void
 ) {
   const el = <HTMLInputElement>document.getElementById(elementId)
@@ -227,75 +223,3 @@ function bindCheckbox(
     apply(on)
   })
 }
-
-// /*
-//  * Dot Animation Controls
-//  */
-// import "leaflet-easybutton"
-// import { map } from "./MapAPI"
-// import { dotLayer } from "./DotLayerAPI"
-// import { vParams } from "./Model"
-
-// const update = dotLayer.updateDotSettings
-// const options = dotLayer.options
-
-// const easyButton = window.L.easyButton
-
-// // leaflet-easybutton is used for play/pause button and capture
-// // animation play-pause button
-// const button_states = [
-//   {
-//     stateName: "animation-running",
-//     icon: "fa-pause",
-//     title: "Pause Animation",
-//     onClick: function (btn) {
-//       dotLayer.pause()
-//       vParams.paused = true
-//       btn.state("animation-paused")
-//     },
-//   },
-
-//   {
-//     stateName: "animation-paused",
-//     icon: "fa-play",
-//     title: "Resume Animation",
-//     onClick: function (btn) {
-//       vParams.paused = false
-//       dotLayer.animate()
-//       btn.state("animation-running")
-//     },
-//   },
-// ]
-
-// // add play/pause button to the map
-// easyButton({
-//   states: vParams.paused ? button_states.reverse() : button_states,
-// }).addTo(map)
-
-// /*
-//  * Sliders and checkboxes on dot controls tab
-//  */
-
-// if (vParams.shadows) {
-//   options.dotShadows.enabled = vParams.shadows
-// } else {
-//   vParams.shadows = options.dotShadows.enabled
-// }
-
-// vParams.onChange("shadows", (shadows) => {
-//   update({ enabled: shadows })
-// })
-
-// if (vParams.paths) {
-//   options.showPaths = vParams.paths
-// } else {
-//   vParams.paths = options.showPaths
-// }
-
-// vParams.onChange("paths", (paths) => {
-//   options.showPaths = paths
-// })
-
-// for (const p of ["tau", "T", "sz", "alpha"]) {
-//   vParams.onChange(p, update)
-// }

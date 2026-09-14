@@ -134,6 +134,7 @@ export const DotLayer = Layer.extend({
     // dotlayer canvas
     dotCanvas = addCanvasOverlay(dotCanvasPane)
     dotPxg = new PixelGraphics(dotCanvas)
+    dotCanvas.style.filter = dotShadowFilter()
 
     /*
      * The Path Canvas is for activity paths, which are made up of
@@ -192,7 +193,6 @@ export const DotLayer = Layer.extend({
     ActivityCollection.reset()
     ViewBox.updateBounds()
     ViewBox.updateZoom()
-    dotCtxUpdate()
     updateDotSettings()
     _ready = true
     await redraw(true)
@@ -273,13 +273,6 @@ function assignEventHandlers() {
   return events
 }
 
-/** The CSS filter that draws the dot shadows, or "" when they are off. */
-function dotShadowFilter(): string {
-  const s = _options.dotShadows
-  if (!s.enabled) return ""
-  return `drop-shadow(${s.x}px ${s.y}px ${s.blur}px ${s.color})`
-}
-
 /* Dot shadows are a CSS filter on the dot canvas, not ctx.shadowBlur.
  *
  * A canvas shadow is applied per draw call, and the dots are filled once per
@@ -287,10 +280,14 @@ function dotShadowFilter(): string {
  * in headless Chrome (1000 activities x 60 dots): 388 ms/frame with the canvas
  * shadow, 21 ms without. The CSS filter blurs the finished layer once, on the
  * compositor. It also no longer darkens dots that a later activity's shadow
- * falls on. Capture composites the canvas itself, so it applies the same
- * filter, from canvases().dotFilter. */
-function dotCtxUpdate(): void {
-  dotCanvas.style.filter = dotShadowFilter()
+ * falls on.
+ *
+ * That made shadows cheap enough to be always on, so the toggle is gone.
+ * Capture composites the canvas itself, so it applies the same filter, from
+ * canvases().dotFilter. */
+function dotShadowFilter(): string {
+  const s = _options.dotShadows
+  return `drop-shadow(${s.x}px ${s.y}px ${s.blur}px ${s.color})`
 }
 
 let _resizeTick = 0
@@ -308,7 +305,6 @@ async function onResize(): Promise<void> {
 
   dotPxg.setSize(x, y)
   pathPxg.setSize(x, y)
-  dotCtxUpdate()
 
   console.log(`resized to ${x} x ${y}`)
 
@@ -489,7 +485,7 @@ async function drawDots(tsecs?: number) {
  * Dot settings
  *
  */
-function updateDotSettings(shadowSettings?) {
+function updateDotSettings() {
   const ds = _dotSettings
 
   ds._timeScale = +vParams.tau
@@ -501,11 +497,6 @@ function updateDotSettings(shadowSettings?) {
    * grow and shrink smoothly instead of jumping a pixel at a time. */
   ds._dotSize = dotSizeForZoom(+vParams.sz, ViewBox.zoomLevel)
   ds.alpha = (+vParams.alpha * 256) | 0
-
-  if (shadowSettings) {
-    Object.assign(_options.dotShadows, shadowSettings)
-    dotCtxUpdate()
-  }
 
   if (_paused) {
     // drawDots clears the canvas before drawing

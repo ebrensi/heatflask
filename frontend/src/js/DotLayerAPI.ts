@@ -22,8 +22,8 @@ type DotLayerInstance = {
   animate(): void
   pause(): void
   paused(): boolean
-  updateDotSettings(shadowSettings?: { enabled?: boolean }): unknown
-  options: { showPaths: boolean; dotShadows: { enabled: boolean } }
+  updateDotSettings(): unknown
+  options: { showPaths: boolean }
 
   /* Frame stepping, for Capture.ts: the length of one animation loop in real
    * seconds, a draw at an arbitrary time rather than "now", and the canvases

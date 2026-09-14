@@ -28,8 +28,8 @@ export const options = {
     pathWidth: 1,
   },
 
+  // always on: a CSS drop-shadow filter on the dot canvas (see DotLayer.ts)
   dotShadows: {
-    enabled: true,
     x: 0,
     y: 5,
     blur: 5,

@@ -57,7 +57,6 @@ export type VisualParameters = {
   T?: number // s: timestep between successive dots, in activity-seconds
   sz?: number // Dot Size
   alpha?: number // global alpha for all rendering
-  shadows?: boolean // render shadows under dots
   paths?: boolean // show paths
   paused?: boolean // start in paused state
 }
@@ -83,7 +82,6 @@ export const DefaultVisual: VisualParameters = {
   T: 60, // s: spacing between dots, in activity-seconds
   sz: 3,
   alpha: 0.8,
-  shadows: true,
   paths: true,
   paused: false,
 }
@@ -113,7 +111,6 @@ export type URLParameters = {
   T?: string
   sz?: string
   paused?: string
-  shadows?: string
   paths?: string
   alpha?: string
 }
