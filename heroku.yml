@@ -1,0 +1,5 @@
+# Heroku's container stack builds the Dockerfile, which also builds the
+# frontend; the Python buildpack (Procfile + runtime.txt) would not.
+build:
+  docker:
+    web: Dockerfile
