@@ -1,6 +1,0 @@
-# One-shot import of the pre-2022 Postgres users table (see Users.migrate()).
-# Deliberately NOT in requirements.txt: the app itself no longer touches
-# Postgres. Install these only to run the migration, then decommission the
-# legacy database and delete this file along with the Legacy block in Users.py.
-sqlalchemy~=2.0.0
-psycopg2-binary~=2.9.0

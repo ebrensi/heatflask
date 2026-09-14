@@ -64,13 +64,3 @@ async def directory(request):
     }
     html = request.ctx.render_template("users-page.html", **params)
     return Response.html(html)
-
-
-@bp.get("/migrate")
-@session_cookie(get=True, flashes=True)
-async def migrate(request):
-    if not request.ctx.is_admin:
-        raise SanicException("sorry", status_code=401)
-
-    await Users.migrate()
-    return Response.redirect(request.app.url_for("users.directory", admin=1))
