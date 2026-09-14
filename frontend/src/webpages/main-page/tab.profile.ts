@@ -29,7 +29,21 @@ function el<T extends HTMLElement>(id: string): T {
 
 export function SETUP(_state: State): void {
   const user = CURRENT_USER
-  if (!user) return
+  if (!user) {
+    /* A visitor viewing someone's shared map: offer a login, which comes back
+     * to this same map, instead of account controls they have no account for.
+     * (The server refuses /visibility and /delete without a session anyway.) */
+    const title = el("profile-tab-title")
+    if (title) title.textContent = "Log in"
+    const login = el<HTMLAnchorElement>("profile-login-link")
+    if (login) {
+      const here = window.location.pathname + window.location.search
+      login.href = `${URLS.login}?state=${encodeURIComponent(here)}`
+    }
+    el("profile-anon").hidden = false
+    return
+  }
+  el("profile-authed").hidden = false
 
   /* --- identity -------------------------------------------------------- */
 

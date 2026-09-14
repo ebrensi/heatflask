@@ -1,5 +1,16 @@
 <!-- Profile & User Settings Tab -->
 
+<!-- Shown instead to a visitor who is not logged in: someone viewing a shared
+     map can browse it, but has no account to manage -->
+<div id="profile-anon" hidden>
+  <p class="profile-note">
+    Log in with Strava to see your own activities, and to manage your
+    Heatflask account.
+  </p>
+  <a id="profile-login-link" class="btn btn-a btn-sm" href="#">Log in with Strava</a>
+</div>
+
+<div id="profile-authed" hidden>
 <div class="profile-head">
   <a
     id="profile-strava-link"
@@ -52,3 +63,4 @@
 <button type="button" data-action="delete" class="btn btn-c btn-sm">
   Delete Account
 </button>
+</div>

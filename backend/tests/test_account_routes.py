@@ -75,6 +75,26 @@ async def test_delete_revokes_strava_access(app_url):
     assert ("delete_index", USER) in calls
 
 
+async def test_logout_ends_the_session_and_goes_to_the_splash_page(app_url):
+    base, _ = app_url
+    async with aiohttp.ClientSession(cookies=logged_in()) as s:
+        async with s.get(f"{base}/auth/logout", allow_redirects=False) as r:
+            assert r.status == 302
+            assert r.headers["Location"] == "/"
+            # the cookie survives only to carry the flash message; the user is gone
+            cookie = r.cookies.get(sessions.COOKIE_NAME)
+            assert cookie is not None
+            assert "user" not in sessions.unsign(cookie.value)
+
+
+async def test_demo_is_the_admins_map_not_an_index(app_url):
+    base, _ = app_url
+    async with aiohttp.ClientSession() as s:
+        async with s.get(f"{base}/demo", allow_redirects=False) as r:
+            assert r.status == 302
+            assert r.headers["Location"] == f"/{Users.ADMIN[0]}?limit=60"
+
+
 async def test_nothing_happens_without_a_session(app_url):
     base, calls = app_url
     async with aiohttp.ClientSession() as s:

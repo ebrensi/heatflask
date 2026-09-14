@@ -50,7 +50,9 @@ async def splash_page(request: Request):
         "app_env": os.environ.get("APP_ENV"),
         "runtime_json": {
             "urls": {
-                "demo": app.url_for("activities.activities_page"),
+                # was activities.activities_page, the logged-in user's
+                # activity index, not a demo
+                "demo": app.url_for("main.demo_page"),
                 "directory": app.url_for("users.directory"),
                 "authorize": app.url_for("auth.authorize", state=request.path),
             },
@@ -126,7 +128,10 @@ async def user_page(request: Request, target_user_id=None):
 
 @bp.get("/demo")
 async def demo_page(request: Request):
-    raise SanicException("Not implemented yet!", status_code=501)
+    # As on master: the admin's last 60 activities
+    return Response.redirect(
+        request.app.url_for("main.user_page", target_user_id=Users.ADMIN[0], limit=60)
+    )
 
 
 @bp.get("/test")
