@@ -10,21 +10,25 @@ export const options = {
   fps_display: false,
   outlier_filter: true,
 
+  /* How activities are drawn when nothing is selected (normal), and, once
+   * something is, how the selection (selected) and everything else
+   * (unselected) are drawn. Opacity is 0..1. ActivityCollection draws the
+   * unselected ones first, so the selection sits on top of them. */
   normal: {
-    dotOpacity: 0.7,
-    pathOpacity: 0.7,
+    dotOpacity: 1,
+    pathOpacity: 1,
     pathWidth: 2,
   },
 
   selected: {
-    dotOpacity: 0.9,
-    pathOpacity: 0.8,
+    dotOpacity: 1,
+    pathOpacity: 1,
     pathWidth: 5,
   },
 
   unselected: {
-    dotOpacity: 0.3,
-    pathOpacity: 0.3,
+    dotOpacity: 0.25,
+    pathOpacity: 0.2,
     pathWidth: 1,
   },
 

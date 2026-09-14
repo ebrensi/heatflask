@@ -200,6 +200,37 @@ export async function getLatLngBounds(
  */
 
 type drawOutput = { pxg: PixelGraphics; count: number }
+type DrawStyle = typeof options.normal
+
+/**
+ * Call draw(A, style) for each activity in view.
+ *
+ * With nothing selected that is one pass, in the normal style. With a
+ * selection it is two: everything else first, faded, then the selection on
+ * top of it -- so selected paths and dots are never buried under the rest.
+ */
+function forEachInViewLayered(
+  draw: (A: Activity, style: DrawStyle) => void
+): void {
+  let anySelected = false
+  for (const A of items.values()) {
+    if (A.selected) {
+      anySelected = true
+      break
+    }
+  }
+
+  if (!anySelected) {
+    inView.forEach((i) => draw(itemsArray[i], options.normal))
+    return
+  }
+  inView.forEach((i) => {
+    if (!itemsArray[i].selected) draw(itemsArray[i], options.unselected)
+  })
+  inView.forEach((i) => {
+    if (itemsArray[i].selected) draw(itemsArray[i], options.selected)
+  })
+}
 
 export async function drawPaths(pxg: PixelGraphics): Promise<drawOutput> {
   const drawSegFunc = (x0: number, y0: number, x1: number, y1: number) => {
@@ -207,12 +238,10 @@ export async function drawPaths(pxg: PixelGraphics): Promise<drawOutput> {
   }
 
   let count = 0
-  inView.forEach((i) => {
-    const A = itemsArray[i]
+  forEachInViewLayered((A, style) => {
+    pxg.setAlpha(style.pathOpacity)
     pxg.setColor(A.colors.path)
-    pxg.setLineWidth(
-      A.selected ? options.selected.pathWidth : options.normal.pathWidth
-    )
+    pxg.setLineWidth(style.pathWidth)
     count += A.forEachSegment(drawSegFunc)
   })
 
@@ -233,8 +262,7 @@ export async function drawDots(
   // not rounded: Canvas 2D draws fractional sizes
   const sz = dotSize
 
-  inView.forEach((i) => {
-    const A = itemsArray[i]
+  forEachInViewLayered((A, style) => {
     if (!A.segMask) return
 
     /* Upper bound on this activity's dots: each segment yields at most
@@ -246,6 +274,7 @@ export async function drawDots(
     const n = A.update_dotlocs(tsecs, T, dotlocs)
     if (!n) return
 
+    pxg.setAlpha(style.dotOpacity)
     pxg.setColor(A.colors.dot)
     if (A.selected) {
       for (let j = 0; j < n; j++) {

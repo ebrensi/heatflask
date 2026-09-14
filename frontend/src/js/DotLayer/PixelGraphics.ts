@@ -89,6 +89,14 @@ export class PixelGraphics {
     this.ctx.lineWidth = w
   }
 
+  /* Not restored after a pass: it has to still be in effect at the flush that
+   * follows. Every draw pass sets its own. */
+  setAlpha(alpha: number): void {
+    if (alpha === this.ctx.globalAlpha) return
+    this.flush()
+    this.ctx.globalAlpha = alpha
+  }
+
   private _setMode(mode: Mode): void {
     if (mode === this._mode) return
     this.flush()

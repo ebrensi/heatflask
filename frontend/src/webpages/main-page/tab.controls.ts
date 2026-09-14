@@ -15,32 +15,18 @@ export const ICON = icon("equalizer")
 const DIAL_FG = "rgba(0,255,255,0.8)"
 const DIAL_BG = "rgba(255,255,255,0.2)"
 
-/* 100px across, matching .dial in tab.controls.css. These were 140px, which
- * cannot sit beside a label in a sidebar that is 305px at its narrowest --
- * part of why the tab looked crowded. */
-const dialSpec1 = {
+/* One dial per row now (see tab.controls.css), so they have room to be bigger.
+ * 140px leaves space for the readout beside it in a 305px sidebar. The knob
+ * draws its canvas at this size once, so it cannot follow CSS. */
+const DIAL_PX = 140
+
+/* Every dial reports 0..100; each binding maps that onto its parameter */
+const dialSpec = {
   min: 0,
   max: 100,
   step: 0.1,
-  width: 100,
-  height: 100,
-  cursor: 20,
-  displayInput: false,
-  fgColor: DIAL_FG,
-  bgColor: DIAL_BG,
-}
-
-/* Dot size. Was 0.01..10, which bottomed out invisibly small, then 0.5..20,
- * which spent half the dial on dots far bigger than anyone wants. 10 is about
- * as big as they need to be, so the dial stops there and the smaller sizes get
- * twice the travel. The floor matches MIN_DOT_SIZE in DotLayer.ts: anything
- * lower is drawn at 0.5 anyway. */
-const dialSpec2 = {
-  min: 0.5,
-  max: 10,
-  step: 0.1,
-  width: 100,
-  height: 100,
+  width: DIAL_PX,
+  height: DIAL_PX,
   cursor: 20,
   displayInput: false,
   fgColor: DIAL_FG,
@@ -48,9 +34,9 @@ const dialSpec2 = {
 }
 
 const knobSpec = {
-  speedConst: Knob(dialSpec1),
-  sepConst: Knob(dialSpec1),
-  sizeConst: Knob(dialSpec2),
+  speedConst: Knob(dialSpec),
+  sepConst: Knob(dialSpec),
+  sizeConst: Knob(dialSpec),
 }
 
 /* tau spans 0.5 .. 3600 -- a factor of 7200 -- so the dial cannot carry it
@@ -58,7 +44,7 @@ const knobSpec = {
  *
  *     tau(s) = TAU_LOW * (TAU_HIGH / TAU_LOW) ** s
  *
- * giving tau(0) = TAU_LOW and tau(1) = TAU_HIGH. dialSpec1 reports 0..100,
+ * giving tau(0) = TAU_LOW and tau(1) = TAU_HIGH. every dial reports 0..100,
  * so s = dialValue / 100. (From the original design notes in Model.ts.) */
 const TAU_LOW = 0.5
 const TAU_HIGH = 3600
@@ -71,6 +57,16 @@ const TAU_RATIO = TAU_HIGH / TAU_LOW
 const S_LOW = 1
 const S_HIGH = 3600
 const S_RATIO = S_HIGH / S_LOW
+
+/* Dot size range: CHANGE THESE to make the dial reach smaller or bigger dots.
+ * Was linear over 0.5..10, where everything past 7.5 was too big and the small
+ * sizes were crammed into the first few degrees. Exponential like the others,
+ * so each stretch of the dial multiplies the size by the same amount and the
+ * small end gets as much travel as the big end. The floor should not go below
+ * MIN_DOT_SIZE in DotLayer.ts, which is what is drawn for anything smaller. */
+const SZ_LOW = 0.25
+const SZ_HIGH = 7.5
+const SZ_RATIO = SZ_HIGH / SZ_LOW
 
 /** A duration in seconds, at a length people can read at a glance. */
 function fmtSecs(s: number): string {
@@ -118,12 +114,14 @@ const dialBindings: DialBinding[] = [
   {
     id: "sizeConst",
     param: "sz",
+    toParam: (v) => SZ_LOW * SZ_RATIO ** (v / 100),
+    toDial: (sz) => (100 * Math.log(sz / SZ_LOW)) / Math.log(SZ_RATIO),
     readout: "szValue",
-    format: (sz) => sz.toFixed(1),
+    format: (sz) => (sz < 1 ? sz.toFixed(2) : sz.toFixed(1)),
     /* A link made when the dial went to 20 can still carry sz=15. The knob
      * clamps what it shows but not the model, so the dots would draw at 15
-     * with the dial reading 10. */
-    range: dialSpec2,
+     * with the dial at its stop. */
+    range: { min: SZ_LOW, max: SZ_HIGH },
   },
 ]
 

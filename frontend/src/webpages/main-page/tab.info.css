@@ -74,3 +74,26 @@ div.icon-buttons {
 #contacts > a:link {
   text-decoration: none;
 }
+
+/* In the sidebar's own look: translucent dark, white type, one accent */
+.sponsor-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  margin: 0.25rem 0 0.75rem;
+  padding: 0.45em 1em;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.35);
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 0.95rem;
+  text-decoration: none;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.sponsor-button:hover,
+.sponsor-button:focus-visible {
+  border-color: #fc4c02;
+  background: rgba(252, 76, 2, 0.2);
+  color: #fff;
+}

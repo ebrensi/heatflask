@@ -21,7 +21,8 @@
   The <i class="hf-video-camera"></i> button records the animation as an MP4:
   tap it, size the box over the part of the map you want, and tap again to
   record. One full loop of the animation is recorded, so the video repeats
-  seamlessly; a loop longer than 20 seconds is cut off at 20.
+  seamlessly; a loop longer than 30 seconds (the longest video Strava accepts) is cut off
+  at 30.
 </p>
 <hr />
 
@@ -29,18 +30,16 @@
   <h3>Support Heatflask</h3>
   <p>
     Heatflask is free, and built and run by one person. Hosting and the database
-    cost about $35 a month. If it's worth something to you, you can
-    <a id="sponsor-link" target="_blank" rel="noopener">sponsor it on GitHub</a
-    >.
+    cost about $35 a month. If it's worth something to you, you can sponsor it
+    on GitHub.
   </p>
-  <!-- width 600 as GitHub gives it, but the sidebar is narrower -->
-  <iframe
-    src="https://github.com/sponsors/ebrensi/card"
-    title="Sponsor ebrensi"
-    height="225"
-    width="600"
-    style="border: 0; width: 100%; max-width: 600px"
-  ></iframe>
+  <!-- A plain link rather than GitHub's embeddable sponsor card: the card is
+       GitHub-styled, and a click inside it navigated this whole page away to
+       GitHub instead of opening a tab. GitHub refuses to be framed, so a new
+       tab is the only way to show the sponsor page itself. -->
+  <a id="sponsor-link" class="sponsor-button" target="_blank" rel="noopener">
+    <i class="hf-github"></i> Sponsor on GitHub
+  </a>
   <hr />
 </div>
 

@@ -178,6 +178,11 @@ async def add_or_update(
     if inc_login_count:
         updates["$inc"] = {U.LOGIN_COUNT: 1}
 
+    # Accounts start private, but only new ones: setting this on every login
+    # quietly un-published anyone who had made their profile public
+    if U.PRIVATE not in user_info:
+        updates["$setOnInsert"] = {U.PRIVATE: True}
+
     log.debug("%d updated with %s", user_id, updates)
 
     # Creates a new user or updates an existing user (with the same id)

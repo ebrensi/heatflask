@@ -57,7 +57,7 @@ const MIN_REDRAW_DELAY = 50
  * grew *more slowly* the further you zoomed in, the opposite of the intent. */
 const DOT_ZOOM_SCALING = 0.15
 const DOT_ZOOM_REF = 4
-const MIN_DOT_SIZE = 0.5
+const MIN_DOT_SIZE = 0.25
 
 function dotSizeForZoom(dotScale: number, zoomLevel: number): number {
   // zoomLevel is undefined until ViewBox.updateZoom() has run at least once

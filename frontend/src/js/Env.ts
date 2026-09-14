@@ -59,7 +59,8 @@ export const MAPBOX_ACCESS_TOKEN =
   "pk.eyJ1IjoiaGVhdGZsYXNrIiwiYSI6ImNrMXB3NDZtMjA0cG4zbW85N2U1M2p2ZmQifQ.UvD1v0VyI_V1gJSey0vRbg"
 // Without it CARTO raster tiles carry an "API KEY REQUIRED" watermark
 export const CARTO_API_KEY = "cb1_3iuf_1_b5f01624a165546780866afc"
-export const CAPTURE_DURATION_MAX = 20
+// Strava accepts videos of up to 30 seconds
+export const CAPTURE_DURATION_MAX = 30
 
 // Where the "support Heatflask" links point
 export const SPONSOR_URL = "https://github.com/sponsors/ebrensi"

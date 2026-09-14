@@ -82,7 +82,6 @@ async def auth_callback(request: SessionRequest):
         update_last_login=True,
         update_index_access=True,
         inc_login_count=True,
-        private=True,  # User accounts are private by default
         **strava_athlete,
         auth=access_info,
     )
