@@ -116,9 +116,18 @@ async def handle_update_callback(update: Strava.WebhookUpdate) -> None:
         )
         return
 
+    if update.get("object_type") == "athlete" and str(
+        update.get("updates", {}).get("authorized")
+    ).lower() == "false":
+        # The athlete revoked Heatflask in their Strava settings. Our token is
+        # dead, so there is nothing to deauthorize; just forget them.
+        uid = update["object_id"]
+        if await Users.get(uid):
+            await Index.delete_user_entries(**{Users.U.ID: uid})
+            await Users.delete(uid, deauthenticate=False)
+        return
+
     if update.get("object_type") != "activity":
-        # An athlete update with {"authorized": "false"} is a deauthorization.
-        # Neither master nor this branch has ever acted on those.
         log.info("unhandled %s update: %s", update.get("object_type"), update)
         return
 

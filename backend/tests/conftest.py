@@ -61,6 +61,9 @@ class FakeStrava:
         self.token_requests = 0
         self.subscription: int | None = 555
         self.subscription_lookups = 0
+        # what POST /oauth/deauthorize answers, and the access tokens it was sent
+        self.deauth_status = 200
+        self.deauths: list[str] = []
         self.url = ""
 
     def count(self) -> int:
@@ -149,6 +152,12 @@ class FakeStrava:
             }
         )
 
+    async def deauthorize(self, request):
+        self.deauths.append(request.headers.get("Authorization", ""))
+        if self.deauth_status != 200:
+            return web.json_response({"message": "no"}, status=self.deauth_status)
+        return web.json_response({"access_token": "revoked"})
+
     async def activity(self, request):
         ok, used = self.metered()
         if self.activity_status != 200:
@@ -195,6 +204,7 @@ async def strava_server(monkeypatch):
         app.router.add_get("/api/v3/activities/{id}", fake.activity)
         app.router.add_get("/api/v3/athlete/activities", fake.activities)
         app.router.add_post("/oauth/token", fake.token)
+        app.router.add_post("/oauth/deauthorize", fake.deauthorize)
         app.router.add_get("/api/v3/push_subscriptions", fake.subscriptions)
         app.router.add_delete(
             "/api/v3/push_subscriptions/{id}", fake.delete_subscription

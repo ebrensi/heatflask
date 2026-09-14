@@ -610,9 +610,9 @@ class DeauthResponse(TypedDict):
 DEAUTH_ENDPOINT = "/oauth/deauthorize"
 
 
-async def deauth(session):
+async def deauth(session, bulk: bool = False):
     log.debug("  deauthenticating")
-    status, response = await api_request(session, "POST", DEAUTH_ENDPOINT)
+    status, response = await api_request(session, "POST", DEAUTH_ENDPOINT, bulk=bulk)
     return cast(DeauthResponse, response)
 
 

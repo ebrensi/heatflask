@@ -21,16 +21,17 @@ log.setLevel("INFO")
 
 COLLECTION_NAME = "users_v0"
 
-# Drop a user after a year of inactivity
+# Deauthorize and drop a user after a year of inactivity
 # not logging in
 TTL = 365 * 24 * 3600
 
+# Triage runs at each server start (Heroku restarts dynos daily). This is on
+# how many runs Strava must refuse a stale user's credentials before we give up
+# on revoking them and drop the record
+MAX_DEAUTH_REFUSALS = 3
+
 # These are IDs of users we consider to be admin users
 ADMIN = [15972102]
-
-# This is to limit the number of de-auths in one batch so we
-# don't go over our hit quota
-MAX_TRIAGE = 10
 
 myBox = types.SimpleNamespace(collection=None)
 
@@ -54,6 +55,7 @@ class UserField:
     COUNTRY: Final = "C"
     AUTH: Final = "@"
     PRIVATE: Final = "p"
+    DEAUTH_REFUSALS: Final = "x"
 
 
 U = UserField
@@ -288,22 +290,79 @@ async def delete(user_id, deauthenticate=True):
         log.info("deleted user %s", user_id)
 
 
-async def triage(*args, only_find=False, deauthenticate=True, max_triage=MAX_TRIAGE):
-    now_ts = datetime.datetime.now().timestamp()
-    cutoff = now_ts - TTL
+async def deauthorize(user: dict) -> str:
+    """
+    Revoke our Strava access for this user. Returns
+      "revoked"  Strava confirmed it
+      "refused"  Strava would not take our credentials: the athlete already
+                 revoked us, or the stored refresh token is dead. A refresh that
+                 failed for a passing reason looks the same, hence the retries
+                 in retire().
+      "limited"  out of API budget; stop and try again later
+      "error"    anything else (network, Strava 5xx); try again later
+    """
+    if U.AUTH not in user:
+        return "refused"
+    try:
+        # bulk: this can wait for rate-limit budget; nobody is waiting on it
+        await strava_client(user).deauthenticate(raise_exception=True, bulk=True)
+    except Strava.RateLimitExceeded:
+        return "limited"
+    except ClientResponseError as e:
+        if e.status in (400, 401, 403):
+            return "refused"
+        log.info("user %s deauthorization failed: %s %s", user[U.ID], e.status, e.message)
+        return "error"
+    except Exception:
+        log.exception("user %s deauthorization failed", user[U.ID])
+        return "error"
+    return "revoked"
+
+
+async def retire(user: dict) -> str:
+    """
+    Deauthorize an inactive user and drop their record, but never drop a record
+    whose token might still revoke access: once it is gone, Strava keeps
+    sending us that athlete's webhook events and nothing can stop it.
+    """
+    outcome = await deauthorize(user)
     users = await get_collection()
-    cursor = users.find(
-        {U.LAST_LOGIN: {"$lt": cutoff}}, {U.ID: True, U.LAST_LOGIN: True}
-    )
-    bad_users = await cursor.to_list(length=max_triage)
-    # log.debug({u[U.ID]: str(datetime.datetime.fromtimestamp(u[U.LAST_LOGIN]).date()) for u in bad_users})
+    refusals = user.get(U.DEAUTH_REFUSALS, 0) + (outcome == "refused")
+
+    if outcome == "revoked" or refusals >= MAX_DEAUTH_REFUSALS:
+        await users.delete_one({U.ID: user[U.ID]})
+        log.info("retired user %s (%s)", user[U.ID], outcome)
+        return "deleted"
+    if outcome == "refused":
+        await users.update_one(
+            {U.ID: user[U.ID]}, {"$set": {U.DEAUTH_REFUSALS: refusals}}
+        )
+    return outcome
+
+
+async def triage(only_find=False):
+    """Retire every user who has not logged in for TTL"""
+    cutoff = datetime.datetime.now().timestamp() - TTL
+    users = await get_collection()
+    query = {U.LAST_LOGIN: {"$lt": cutoff}}
+    # ids first: retiring thousands of users at the rate limit's pace would
+    # outlive a cursor
+    ids = [u[U.ID] async for u in users.find(query, {U.ID: True})]
     if only_find:
-        return bad_users
-    tasks = [
-        asyncio.create_task(delete(bu[U.ID], deauthenticate=deauthenticate))
-        for bu in bad_users
-    ]
-    await asyncio.gather(*tasks)
+        return ids
+
+    counts: dict[str, int] = {}
+    for uid in ids:
+        # re-read: they may have logged in, or had their token refreshed
+        user = await users.find_one({U.ID: uid, **query})
+        if not user:
+            continue
+        outcome = await retire(user)
+        counts[outcome] = counts.get(outcome, 0) + 1
+        if outcome == "limited":
+            break
+    log.info("user triage of %d: %s", len(ids), counts)
+    return counts
 
 
 def stats():
