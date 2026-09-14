@@ -8,8 +8,27 @@
  * leaflet-sidebar-v2-mods.css steps up on wider screens.
  */
 
+/*
+ * The list fills whatever height the pane has left below the controls,
+ * rather than a fixed 60vh that left a band of empty pane underneath it.
+ * .sidebar-content is absolutely positioned to the sidebar's full height,
+ * so 100% here is that height (padding included, via border-box).
+ */
+#ActivitiesTab.active {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+#ActivitiesTab > .sidebar-header,
+#ActivitiesTab > .items-controls {
+  flex: none;
+}
+
 #items-container {
-  max-height: 60vh;
+  flex: 1;
+  min-height: 0; /* lets it shrink below its content so it scrolls */
+  margin-top: 0.5em;
   overflow-y: auto;
   overflow-x: hidden; /* nothing is wider than the row now */
 }
