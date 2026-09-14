@@ -33,7 +33,6 @@ import * as ViewBox from "./DotLayer/ViewBox"
 import * as ActivityCollection from "./DotLayer/ActivityCollection"
 import * as Table from "./Table"
 import { icon } from "./Icons"
-import { dotLayer } from "./DotLayerAPI"
 import { activityPopup } from "./ActivityPopup"
 
 import type { Map as LMap } from "leaflet"
@@ -291,7 +290,7 @@ export function addBoxSelect(map: LMap): void {
     for (const A of ActivityCollection.items.values()) A.selected = found.has(A)
 
     Table.update()
-    if (dotLayer) dotLayer.redraw(true)
+    Table.selectionChanged()
 
     /* A lone activity gets its details popped up over it, as on master.
      * Deferred because the mouseup that ended the drag is followed by a click,

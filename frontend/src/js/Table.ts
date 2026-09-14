@@ -13,6 +13,7 @@ import { activity_icon, activityURL } from "./Strava"
 import * as ActivityCollection from "./DotLayer/ActivityCollection"
 import { dotLayer } from "./DotLayerAPI"
 
+import { LatLngBounds } from "leaflet"
 import type { Map as LMap } from "leaflet"
 import type { Activity } from "./DotLayer/Activity"
 import type { ActivityType } from "./Strava"
@@ -51,6 +52,13 @@ export function init(map: LMap, appState: State): void {
 
     toggle(+row.dataset.id, row)
   })
+
+  // ticking the box zooms straight away, not only on the next selection change
+  const zoomBox = document.querySelector('[data-bind="zoomToSelection"]')
+  if (zoomBox)
+    zoomBox.addEventListener("change", () => {
+      if (zoomToSelection()) zoomToSelected()
+    })
 }
 
 function toggle(id: number, row: HTMLElement): void {
@@ -60,8 +68,13 @@ function toggle(id: number, row: HTMLElement): void {
   A.selected = !A.selected
   row.classList.toggle("selected", A.selected)
 
+  selectionChanged()
+}
+
+/** Call after changing which activities are selected, by whatever means. */
+export function selectionChanged(): void {
   redrawSelection()
-  if (A.selected && zoomToSelection()) zoomTo([A])
+  if (zoomToSelection()) zoomToSelected()
 }
 
 /** Paths change width with selection, so they need a redraw. Dots pick it up
@@ -70,10 +83,13 @@ function redrawSelection(): void {
   if (dotLayer) dotLayer.redraw(true)
 }
 
+/** Fit the map to these activities. An empty selection leaves the map alone. */
 function zoomTo(activities: Activity[]): void {
   if (!activities.length || !_map) return
-  let bounds = activities[0].llBounds
-  for (const A of activities.slice(1)) bounds = bounds.extend(A.llBounds)
+  /* A fresh bounds: LatLngBounds.extend mutates in place, so extending the
+   * first activity's own llBounds would grow that activity's bounds. */
+  const bounds = new LatLngBounds([])
+  for (const A of activities) bounds.extend(A.llBounds)
   if (bounds.isValid()) _map.fitBounds(bounds)
 }
 
