@@ -257,7 +257,7 @@ export async function captureVideo(
       )
     }
 
-    const { path: pathCanvas, dot: dotCanvas } = dotLayer.canvases()
+    const { path: pathCanvas, dot: dotCanvas, dotFilter } = dotLayer.canvases()
 
     for (let i = 0; i < numFrames; i++) {
       if (_aborted) {
@@ -276,6 +276,9 @@ export async function captureVideo(
 
       for (const src of [pathCanvas, dotCanvas]) {
         if (!src) continue
+        /* The dot shadows are a CSS filter on the live canvas, which drawImage
+         * does not carry over -- so apply the same filter here. */
+        ctx.filter = src === dotCanvas && dotFilter ? dotFilter : "none"
         ctx.drawImage(
           src,
           region.x,
@@ -289,13 +292,17 @@ export async function captureVideo(
         )
       }
 
+      ctx.filter = "none"
       drawLogos(ctx, region)
 
       /* Awaited so encoder and writer backpressure is respected -- without it
        * a long capture queues every frame in memory at once. */
       await source.add(i / FPS, 1 / FPS)
 
-      onProgress((i + 1) / numFrames, `encoding… ${~~(((i + 1) / numFrames) * 100)}%`)
+      onProgress(
+        (i + 1) / numFrames,
+        `encoding… ${~~(((i + 1) / numFrames) * 100)}%`
+      )
     }
 
     onProgress(1, "finalizing…")

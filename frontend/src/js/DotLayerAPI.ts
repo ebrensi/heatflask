@@ -27,10 +27,15 @@ type DotLayerInstance = {
 
   /* Frame stepping, for Capture.ts: the length of one animation loop in real
    * seconds, a draw at an arbitrary time rather than "now", and the canvases
-   * a capture composites (bottom to top). */
+   * a capture composites (bottom to top), with the CSS filter the dot canvas
+   * is displayed through. */
   periodInSecs(): number
   drawDotsAt(tsecs: number): Promise<number>
-  canvases(): { path: HTMLCanvasElement; dot: HTMLCanvasElement }
+  canvases(): {
+    path: HTMLCanvasElement
+    dot: HTMLCanvasElement
+    dotFilter: string
+  }
 }
 type DotLayerCtor = new (options: Record<string, unknown>) => DotLayerInstance
 

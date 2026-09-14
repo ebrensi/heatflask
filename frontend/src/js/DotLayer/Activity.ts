@@ -64,6 +64,10 @@ export class Activity {
 
   // segment specs
   idxSet: { [zoom: number]: BitSet }
+  /** idxSet[zoom] as a plain array: idxArray[zoom][i] is its i-th member.
+   * update_dotlocs runs every frame and needs random access, which the BitSet
+   * only gives through a forward-seeking closure. */
+  idxArray: { [zoom: number]: Uint32Array }
   badSegIdx: { [zoom: number]: number[] }
   segMask: SegMask
   pxGaps: null | number[]
@@ -107,6 +111,7 @@ export class Activity {
     // this.tr = null
 
     this.idxSet = {} // BitSets of indices of px for each level of zoom
+    this.idxArray = {} // the same sets, as arrays
     this.badSegIdx = {} // locations of gaps in data for each level of zoom
     // this.segMask = null // BitSet indicating which segments are in view
     // this.pxGaps = null
@@ -208,6 +213,13 @@ export class Activity {
       1 / 2 ** zoom
     )
     this.idxSet[zoom] = idxBitSet
+
+    /* Not idxBitSet.array(Uint32Array): an operator-precedence slip there
+     * ignores the constructor it is given. */
+    const idxArray = new Uint32Array(idxBitSet.size())
+    let pos = 0
+    idxBitSet.forEach((i) => (idxArray[pos++] = i))
+    this.idxArray[zoom] = idxArray
 
     /*
      * this.pxGaps contains index of the first point of every segment
@@ -372,69 +384,74 @@ export class Activity {
     const segMask = this.segMask
     if (!segMask) return 0
 
-    const zoom = segMask.zoom
-    const idx = this.idxSet[zoom].iterator()
-
-    // we do this because first time is always 0 and time(0) corresponds
-    //  to pointAt(1)
-    let lasti: number
-    let lastIdx1: number
-    let lasttb = 0
+    /* This runs for every in-view activity on every frame, over every
+     * in-view segment, so it is written for speed: the segMask words are
+     * scanned inline rather than through its generator, the index set is read
+     * from a flat array, and the streams are indexed directly -- pointAt()
+     * allocates a typed-array view per call, and destructuring one goes through
+     * the iterator protocol. */
+    const idxArray = this.idxArray[segMask.zoom]
+    const nPoints = idxArray.length
+    const words = segMask.words
+    const nWords = words.length
+    const px = this.streams.px
+    const time = this.streams.time
+    const t0 = this.ts
 
     let count = 0
-    // segMask[i] gives the idx of the start of the i-th segment
-    for (const i of segMask) {
-      const reuse = i === lasti + 1
-      lasti = i
 
-      const idx0 = reuse ? lastIdx1 : idx(i)
-      const idx1 = (lastIdx1 = idx(i + 1))
+    // each set bit i of segMask is the segment from point i to point i+1
+    for (let w = 0; w < nWords; w++) {
+      let word = words[w]
+      while (word !== 0) {
+        const bit = word & -word
+        word ^= bit
+        const i = (w << 5) + (31 - Math.clz32(bit))
 
-      if (idx1 === undefined) break
+        if (i + 1 >= nPoints) return count
 
-      const ta = reuse ? lasttb : this.timeAt(idx0)
-      const tb = (lasttb = this.timeAt(idx1))
+        const idx0 = idxArray[i]
+        const idx1 = idxArray[i + 1]
+        const ta = time[idx0] + t0
+        const tb = time[idx1] + t0
 
-      const kLow = Math.ceil((now - tb) / T)
-      const kHigh = Math.floor((now - ta) / T)
+        const kLow = Math.ceil((now - tb) / T)
+        const kHigh = Math.floor((now - ta) / T)
 
-      /* This segment contributes no dots, so skip it. This was `return`,
-       * which abandoned every remaining segment and handed back undefined
-       * instead of a count. */
-      if (kLow > kHigh) continue
+        /* This segment contributes no dots, so skip it. This was `return`,
+         * which abandoned every remaining segment and handed back undefined
+         * instead of a count. */
+        if (kLow > kHigh) continue
 
-      const [pax, pay] = this.pointAt(idx0)
-      const [pbx, pby] = this.pointAt(idx1)
+        const pax = px[2 * idx0]
+        const pay = px[2 * idx0 + 1]
+        const tab = tb - ta
+        const vx = (px[2 * idx1] - pax) / tab
+        const vy = (px[2 * idx1 + 1] - pay) / tab
 
-      const tab = tb - ta
-      const vx = (pbx - pax) / tab
-      const vy = (pby - pay) / tab
+        for (let k = kLow; k <= kHigh; k++) {
+          const t = now - k * T
+          const dt = t - ta
 
-      const alta = this.altitudeAt(idx0)
-      const altb = this.altitudeAt(idx1)
-      const va = (altb - alta) / tab
+          /* Master's _DotLayer.js guards this same loop with `if (dt > 0)`.
+           * Without it a dot at dt === 0 lands exactly on the boundary this
+           * segment shares with the previous one, which emits a dot there
+           * too -- a duplicate at every segment join. */
+          if (dt <= 0) continue
 
-      for (let k = kLow; k <= kHigh; k++) {
-        const t = now - k * T
-        const dt = t - ta
-
-        /* Master's _DotLayer.js guards this same loop with `if (dt > 0)`.
-         * Without it a dot at dt === 0 lands exactly on the boundary this
-         * segment shares with the previous one, which emits a dot there
-         * too -- a duplicate at every segment join. */
-        if (dt <= 0) continue
-
-        /* Stride 2: [x, y] per dot. alta/altb/va above interpolate altitude
-         * and are currently unused -- they are the hook for rendering over a
-         * 3D vector map. Going 3D means stride 3 here:
-         *     const loc = count * 3
-         *     dotlocs[loc + 2] = alta + va * dt
-         * and widening the buffer in ActivityCollection.drawDots, which sizes
-         * and grows it as 2 * maxDots. */
-        const loc = count * 2
-        dotlocs[loc] = pax + vx * dt
-        dotlocs[loc + 1] = pay + vy * dt
-        count++
+          /* Stride 2: [x, y] per dot. Altitude is not interpolated because
+           * nothing uses it yet; it is the hook for rendering over a 3D
+           * vector map. Going 3D means stride 3 here:
+           *     const alt = this.streams.altitude
+           *     const va = (alt[idx1] - alt[idx0]) / tab   // above the loop
+           *     dotlocs[count * 3 + 2] = alt[idx0] + va * dt
+           * and widening the buffer in ActivityCollection.drawDots, which
+           * sizes and grows it as 2 * maxDots. */
+          const loc = count * 2
+          dotlocs[loc] = pax + vx * dt
+          dotlocs[loc + 1] = pay + vy * dt
+          count++
+        }
       }
     }
     return count
