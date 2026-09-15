@@ -19,7 +19,7 @@ import { watch } from "./DataBinding"
 import * as MapAPI from "./MapAPI"
 import * as Sidebar from "./Sidebar"
 
-import { createDotLayer } from "./DotLayerAPI"
+import { createDotLayer, dotLayer } from "./DotLayerAPI"
 import { Dialog } from "./Dialog"
 import { LayerPicker } from "./MapControls"
 import { addAnimationControl } from "./AnimationControl"
@@ -94,7 +94,7 @@ export async function start() {
 
   await renderFromQuery()
 
-  if (ADMIN) Object.assign(window, { heatflask: { map, appState } })
+  if (ADMIN) Object.assign(window, { heatflask: { map, appState, dotLayer } })
 
   return appState
 }
