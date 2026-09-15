@@ -24,7 +24,7 @@ start()
   ██╔══██║██╔══╝  ██╔══██║   ██║   ██╔══╝  ██║     ██╔══██║╚════██║██╔═██╗
   ██║  ██║███████╗██║  ██║   ██║   ██║     ███████╗██║  ██║███████║██║  ██╗
   ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═╝     ╚══════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
-  v${APP_VERSION}                                           (2016-2022) Efrem Rensi
+  v${APP_VERSION}                                           (2016-2026) Efrem Rensi
 
   Want to contribute? Check out the repo at
   https://github.com/ebrensi/heatflask
