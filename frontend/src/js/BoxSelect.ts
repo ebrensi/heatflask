@@ -83,7 +83,8 @@ export function addBoxSelect(map: MLMap): void {
   }
 
   function onPointerDown(e: PointerEvent): void {
-    if (!e.isPrimary || e.button !== 0 || pointerId !== null) return
+    // alt-drag rotates the map, even in select mode (AltDragRotate.ts)
+    if (!e.isPrimary || e.button !== 0 || e.altKey || pointerId !== null) return
     if (!selectMode && !(e.ctrlKey && e.pointerType === "mouse")) return
 
     /* pointerdown fires before mousedown and touchstart, so stopping it here
