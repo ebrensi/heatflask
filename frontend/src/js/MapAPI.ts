@@ -9,7 +9,7 @@
  */
 
 import Geohash from "latlon-geohash"
-import { Map as MLMap, NavigationControl } from "maplibre-gl"
+import { Map as MLMap, NavigationControl, setWorkerUrl } from "maplibre-gl"
 
 import strava_logo from "url:../images/pbs4.png"
 import heatflask_logo from "url:../images/logo.png"
@@ -27,6 +27,13 @@ import type {
 } from "maplibre-gl"
 
 export type { MLMap }
+
+/* MapLibre 6 looks for its worker next to its own module file, which isn't
+ * there once Parcel has bundled it; without the worker, vector tiles and
+ * raster-dem terrain silently never load. */
+setWorkerUrl(
+  new URL("npm:maplibre-gl/dist/maplibre-gl-worker.mjs", import.meta.url).href
+)
 
 /* ------------------------------------------------------------------ *
  * Basemaps
