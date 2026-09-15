@@ -101,8 +101,11 @@ if os.environ.get("DROP_ACTIVITIES"):
 
     app.register_listener(myfunc, "before_server_start")
 
-if APP_ENV != "development":
-    # We don't do triage in development
+# Triage retires inactive users and expires stale indexes. Not in development,
+# and not where SKIP_TRIAGE is set: heatflask-dev shares production's database,
+# and one app doing it is enough. (APP_ENV=development cannot stand in for this
+# there -- it also binds the server to 127.0.0.1 and relaxes the secrets.)
+if APP_ENV != "development" and not os.environ.get("SKIP_TRIAGE"):
     app.add_task(Users.triage)
     app.add_task(Index.triage)
 
