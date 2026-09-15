@@ -5,11 +5,6 @@
     a strip of screen space that should have map in it.
     these chganges fix that.
 */
-:root {
-  --sidebar-height-4icons: 160px;
-  --sidebar-height-5icons: 200px;
-}
-
 /*
  * Scale the sidebar's text with the sidebar itself.
  *
@@ -37,16 +32,24 @@
   }
 }
 /*
- *  The collapsed sidebar normally takes up the whole
- *  left side of the screen.  We shorten it to take up
- *  only the space needed for tab icons.
+ *  The collapsed sidebar normally takes up the whole left side of the screen.
+ *  We shorten it to just the strip of tab icons. The height is whatever the
+ *  icons come to -- it used to be a fixed 160px, four icons' worth, which cut
+ *  the last tab off once there were five of them.
  */
 .sidebar.collapsed {
-  height: var(--sidebar-height-4icons);
+  height: auto;
+  /* it is stretched between top and bottom, which height: auto cannot undo */
+  bottom: auto;
 }
-/* 5 icons when user profile icon is visible */
-.sidebar.collapsed[data-authenticated] {
-  height: var(--sidebar-height-5icons);
+
+/* sidebar-v2 stretches the tab strip over the full height with absolute
+ * positioning, which leaves nothing for the collapsed bar to size to */
+.sidebar.collapsed .sidebar-tabs,
+.sidebar.collapsed .sidebar-tabs > ul {
+  position: relative;
+  height: auto;
+  bottom: auto;
 }
 
 /* eliminate the map margin that shows up on the desktop but not mobile */
