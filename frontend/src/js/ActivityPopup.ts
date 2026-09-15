@@ -16,7 +16,7 @@ import { href, HHMMSS, escapeHTML } from "./appUtil"
 import { activityURL, activity_vtype } from "./Strava"
 import { heatflaskURL } from "./Table"
 
-import type { Map as MLMap } from "maplibre-gl"
+import type { Map as MLMap, LngLatLike } from "maplibre-gl"
 import type { Activity } from "./DotLayer/Activity"
 
 const KM = 1000
@@ -40,8 +40,20 @@ function speedText(A: Activity): string {
 }
 
 let open: Popup | undefined
+let openFor: Activity | undefined
 
-export function activityPopup(map: MLMap, A: Activity): void {
+/** Close the popup if the activity it describes is no longer selected */
+export function closePopupIfUnselected(): void {
+  if (openFor && !openFor.selected) open?.remove()
+}
+
+/**
+ * Pop up A's details at `at`, or at the middle of its bounds if not given.
+ * Callers that know where on the screen the user pointed should pass that:
+ * zoomed in on part of a long activity, the middle of its bounds is usually
+ * off-screen, so the popup would never be seen.
+ */
+export function activityPopup(map: MLMap, A: Activity, at?: LngLatLike): void {
   const d = A.total_distance || 0
   const dkm = +(d / KM).toFixed(2)
   const dmi = +(d / MI).toFixed(2)
@@ -57,8 +69,13 @@ export function activityPopup(map: MLMap, A: Activity): void {
     href(heatflaskURL([A.id]), "Heatflask")
 
   open?.remove()
-  open = new Popup({ maxWidth: "320px" })
-    .setLngLat(A.llBounds.getCenter())
+  const popup = new Popup({ maxWidth: "320px" })
+    .setLngLat(at ?? A.llBounds.getCenter())
     .setHTML(content)
-    .addTo(map)
+  /* however it closes -- its own button, a click on the map, or us */
+  popup.on("close", () => {
+    if (open === popup) open = openFor = undefined
+  })
+  open = popup.addTo(map)
+  openFor = A
 }

@@ -19,6 +19,9 @@ import { nextAnimationFrame } from "./appUtil"
 import { icon } from "./Icons"
 import { State } from "./Model"
 
+/** The event a sidebar pane gets when it is opened */
+export const PANE_OPEN = "sidebar-pane-open"
+
 /**
  * sidebar-v2's behaviour without its Leaflet control: the markup and the
  * stylesheet are the same, and all it ever did was move .active and
@@ -59,6 +62,9 @@ class Sidebar {
     if (i >= 0) this.currentTab = i
     this.el.classList.remove("collapsed")
     this.isOpen = true
+
+    // for panes that need to do something once they are visible
+    document.getElementById(id)?.dispatchEvent(new Event(PANE_OPEN))
   }
 
   close(): void {

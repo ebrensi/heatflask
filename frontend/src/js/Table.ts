@@ -13,6 +13,8 @@ import { activity_icon, activityURL } from "./Strava"
 import * as ActivityCollection from "./DotLayer/ActivityCollection"
 import { dotLayer } from "./DotLayerAPI"
 import { fitTo } from "./Render"
+import { closePopupIfUnselected } from "./ActivityPopup"
+import { PANE_OPEN } from "./Sidebar"
 
 import type { Map as MLMap } from "maplibre-gl"
 import type { Activity } from "./DotLayer/Activity"
@@ -26,6 +28,8 @@ const DIST_LABEL = METRIC ? "km" : "mi"
 let tableEl: HTMLTableElement
 let _map: MLMap
 let _state: State
+/** The activity most recently selected, whose row the list scrolls to */
+let lastSelected: Activity | undefined
 
 /** Is the "Zoom to selection" box ticked? */
 function zoomToSelection(): boolean {
@@ -53,6 +57,12 @@ export function init(map: MLMap, appState: State): void {
     toggle(+row.dataset.id, row)
   })
 
+  /* A row can't be scrolled into view while its pane is hidden, as it is
+   * whenever the sidebar is closed, so do it again when the pane opens */
+  tableEl
+    .closest(".sidebar-pane")
+    ?.addEventListener(PANE_OPEN, () => scrollIntoView(lastSelected))
+
   // ticking the box zooms straight away, not only on the next selection change
   const zoomBox = document.querySelector('[data-bind="zoomToSelection"]')
   if (zoomBox)
@@ -68,29 +78,63 @@ function toggle(id: number, row: HTMLElement): void {
   A.selected = !A.selected
   row.classList.toggle("selected", A.selected)
 
-  selectionChanged()
-}
-
-/** Call after changing which activities are selected, by whatever means. */
-export function selectionChanged(): void {
-  redrawSelection()
-  scrollSelectedIntoView()
-  if (zoomToSelection()) zoomToSelected()
+  selectionChanged(A)
 }
 
 /**
- * With exactly one activity selected, bring its row into view -- the same
- * "exactly one" condition BoxSelect uses to pop up that activity's details.
- * With more than one selected there's no single row to scroll to, and
- * scrolling to whichever was selected last would jump the list around
- * without actually showing the rest of the selection.
+ * Call after changing which activities are selected, by whatever means.
+ * `last` is the activity the user most recently selected; its row is brought
+ * into view. Deselecting scrolls nothing, so pass nothing, or an activity
+ * that is no longer selected.
  */
-function scrollSelectedIntoView(): void {
-  if (!tableEl) return
-  const sel = selected()
-  if (sel.length !== 1) return
-  const row = tableEl.querySelector(`tr[data-id="${sel[0].id}"]`)
-  row?.scrollIntoView({ block: "nearest", behavior: "smooth" })
+export function selectionChanged(last?: Activity): void {
+  if (last?.selected) lastSelected = last
+  redrawSelection()
+  closePopupIfUnselected()
+  scrollIntoView(last)
+  if (zoomToSelection()) zoomToSelected()
+}
+
+/** How long scrolling to a row takes, however far it is, in ms */
+const SCROLL_MS = 400
+let scrollFrame = 0
+
+/**
+ * Scroll A's row to the middle of the list, if A is selected. Done by hand
+ * rather than with scrollIntoView({behavior: "smooth"}), whose duration the
+ * browser picks and which crawls across a list thousands of rows long.
+ */
+function scrollIntoView(A?: Activity): void {
+  if (!tableEl || !A?.selected) return
+  const row = tableEl.querySelector<HTMLElement>(`tr[data-id="${A.id}"]`)
+  const list = tableEl.parentElement // #items-container scrolls
+  if (!row || !list) return
+
+  const listBox = list.getBoundingClientRect()
+  const rowBox = row.getBoundingClientRect()
+  const from = list.scrollTop
+  const max = list.scrollHeight - list.clientHeight
+  const to = Math.max(
+    0,
+    Math.min(
+      max,
+      from +
+        (rowBox.top + rowBox.height / 2) -
+        (listBox.top + listBox.height / 2)
+    )
+  )
+
+  cancelAnimationFrame(scrollFrame)
+  if (Math.abs(to - from) < 1) return
+
+  const t0 = performance.now()
+  const step = (now: number) => {
+    const t = Math.min(1, (now - t0) / SCROLL_MS)
+    const ease = 1 - (1 - t) ** 3 // fast start, gentle stop
+    list.scrollTop = from + (to - from) * ease
+    if (t < 1) scrollFrame = requestAnimationFrame(step)
+  }
+  scrollFrame = requestAnimationFrame(step)
 }
 
 /** Selection changes path widths, dot shapes and layering */
@@ -121,6 +165,7 @@ export function clearSelections(): void {
     row.classList.remove("selected")
   }
   if (changed) redrawSelection()
+  closePopupIfUnselected()
 }
 
 /** Open the selected activities on their own, in a new tab. */

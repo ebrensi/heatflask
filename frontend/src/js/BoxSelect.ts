@@ -23,6 +23,7 @@ import { dotLayer } from "./DotLayerAPI"
 import { ButtonControl } from "./MapControls"
 
 import type { Map as MLMap } from "maplibre-gl"
+import type { Activity } from "./DotLayer/Activity"
 
 const SELECT_ICON = icon("object-group")
 const CANCEL_ICON = icon("cross")
@@ -132,22 +133,40 @@ export function addBoxSelect(map: MLMap): void {
     const wasSelectMode = selectMode
     finish()
     if (!moved) return
+    swallowClick()
 
     /* One selection per trip into select mode, as on master */
     if (wasSelectMode) setSelectMode(false)
 
     const found = dotLayer.activitiesInScreenBox(start.x, start.y, end.x, end.y)
-    for (const A of found) A.selected = !A.selected
+    for (const A of found.keys()) A.selected = !A.selected
+
+    /* The list scrolls to, and the popup identifies, what the box just
+     * selected, so adding to a selection on the map says what was added. A
+     * box selects its activities all at once, so of several the most recent
+     * stands for "last": the list is newest first, so its row is the top of
+     * the new selection. Deselecting shows nothing new. */
+    let newest: Activity | undefined
+    for (const A of found.keys())
+      if (A.selected && (!newest || (A.ts || 0) > (newest.ts || 0))) newest = A
 
     Table.update()
-    Table.selectionChanged()
+    Table.selectionChanged(newest)
 
-    /* A lone activity gets its details popped up over it, as on master --
-     * but only when the box just selected it, not when it deselected it */
-    if (found.size === 1) {
-      const [A] = found
-      if (A.selected) activityPopup(map, A)
-    }
+    /* The popup goes on the activity where it crossed the box, which is on
+     * screen, rather than at the middle of the activity, which zoomed in
+     * often isn't. */
+    if (newest) activityPopup(map, newest, map.unproject(found.get(newest)))
+  }
+
+  /* The browser follows a drag with a click. MapLibre would take it for a
+   * click on the map, since it never saw the mousedown that would tell it a
+   * drag came first, and close the popup this drag just opened. So stop that
+   * click -- only that one: if none comes, stop waiting after this task. */
+  function swallowClick(): void {
+    const stop = (e: Event) => e.stopPropagation()
+    window.addEventListener("click", stop, { capture: true, once: true })
+    setTimeout(() => window.removeEventListener("click", stop, true))
   }
 
   function onPointerCancel(e: PointerEvent): void {

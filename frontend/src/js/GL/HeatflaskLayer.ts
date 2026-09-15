@@ -554,12 +554,13 @@ export class HeatflaskLayer implements CustomLayerInterface {
 
   /**
    * Activities with a drawn point inside a box on the screen, in CSS pixels
-   * relative to the map container. Tests the same simplified points that are
-   * drawn, projected through the same matrix, so it agrees with what is on
-   * screen at any pitch, bearing or terrain height.
+   * relative to the map container, each with the first such point found.
+   * Tests the same simplified points that are drawn, projected through the
+   * same matrix, so it agrees with what is on screen at any pitch, bearing or
+   * terrain height.
    */
   activitiesInScreenBox(x0: number, y0: number, x1: number, y1: number) {
-    const found = new Set<Activity>()
+    const found = new Map<Activity, [number, number]>()
     if (!this.ready) return found
 
     const { clientWidth: w, clientHeight: h } = this.map.getCanvas()
@@ -583,7 +584,7 @@ export class HeatflaskLayer implements CustomLayerInterface {
         const sx = ((m[0] * x + m[4] * y + m[8] * z + m[12]) / cw + 1) * 0.5 * w
         const sy = (1 - (m[1] * x + m[5] * y + m[9] * z + m[13]) / cw) * 0.5 * h
         if (sx >= xmin && sx <= xmax && sy >= ymin && sy <= ymax) {
-          found.add(A)
+          found.set(A, [sx, sy])
           break
         }
       }
