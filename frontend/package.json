@@ -54,5 +54,10 @@
   },
   "prettier": {
     "semi": false
+  },
+  "@parcel/bundler-default": {
+    "development": {
+      "disableSharedBundles": true
+    }
   }
 }
