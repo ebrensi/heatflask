@@ -305,7 +305,7 @@ export function BindMap(map: MLMap, appState: State): void {
 
   warnWhenBlocked(map)
 
-  map.on("move", () => {
+  map.on("move", (e) => {
     const c = map.getCenter()
     const zoom = fromMapZoom(map.getZoom())
     visual.center = { lat: c.lat, lng: c.lng }
@@ -313,6 +313,11 @@ export function BindMap(map: MLMap, appState: State): void {
     visual.pitch = Math.round(map.getPitch())
     visual.bearing = Math.round(map.getBearing())
     visual.geohash = Geohash.encode(c.lat, c.lng, Math.round(zoom))
+    /* e.originalEvent is only set for a real user gesture (drag, scroll,
+     * pinch, keyboard) -- not for a programmatic jumpTo/easeTo/fitBounds
+     * such as autozoom's fitTo(). Once the user has taken the wheel, stop
+     * auto-fitting so their chosen view is what gets saved to the URL. */
+    if (e.originalEvent && visual.autozoom) visual.autozoom = false
     setURLfromQV({ visual, query })
   })
 }

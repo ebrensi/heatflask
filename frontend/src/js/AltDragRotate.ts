@@ -48,10 +48,13 @@ export function addAltDragRotate(map: MLMap): void {
     lastX = e.clientX
     lastY = e.clientY
     // the map clamps pitch to its own limits
-    map.jumpTo({
-      bearing: map.getBearing() + dx * BEARING_PER_PX,
-      pitch: map.getPitch() - dy * PITCH_PER_PX,
-    })
+    map.jumpTo(
+      {
+        bearing: map.getBearing() + dx * BEARING_PER_PX,
+        pitch: map.getPitch() - dy * PITCH_PER_PX,
+      },
+      { originalEvent: e }
+    )
   }
 
   function onPointerUp(e: PointerEvent): void {

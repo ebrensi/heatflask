@@ -16,7 +16,6 @@
  * as the Leaflet version did, would select the wrong things.
  */
 
-import * as ActivityCollection from "./DotLayer/ActivityCollection"
 import * as Table from "./Table"
 import { icon } from "./Icons"
 import { activityPopup } from "./ActivityPopup"
@@ -138,15 +137,16 @@ export function addBoxSelect(map: MLMap): void {
     if (wasSelectMode) setSelectMode(false)
 
     const found = dotLayer.activitiesInScreenBox(start.x, start.y, end.x, end.y)
-    for (const A of ActivityCollection.items.values()) A.selected = found.has(A)
+    for (const A of found) A.selected = !A.selected
 
     Table.update()
     Table.selectionChanged()
 
-    /* A lone activity gets its details popped up over it, as on master */
+    /* A lone activity gets its details popped up over it, as on master --
+     * but only when the box just selected it, not when it deselected it */
     if (found.size === 1) {
       const [A] = found
-      activityPopup(map, A)
+      if (A.selected) activityPopup(map, A)
     }
   }
 
