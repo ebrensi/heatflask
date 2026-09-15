@@ -265,6 +265,11 @@ export function setBaselayer(map: MLMap, name: string): void {
   const style = baselayers[name]
   if (!style || name === currentBaselayer) return
   currentBaselayer = name
+  /* The old style's terrain outlives it: while a URL style is being fetched
+   * the map still draws terrain depth, against a style that has no projection
+   * yet, and throws in painter.useProgram. The "style.load" handler puts
+   * terrain back. */
+  if (styleReady && map.terrain) map.setTerrain(null)
   styleReady = false
   map.setStyle(style, { diff: false })
 }
