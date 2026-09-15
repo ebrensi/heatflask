@@ -74,7 +74,23 @@ function toggle(id: number, row: HTMLElement): void {
 /** Call after changing which activities are selected, by whatever means. */
 export function selectionChanged(): void {
   redrawSelection()
+  scrollSelectedIntoView()
   if (zoomToSelection()) zoomToSelected()
+}
+
+/**
+ * With exactly one activity selected, bring its row into view -- the same
+ * "exactly one" condition BoxSelect uses to pop up that activity's details.
+ * With more than one selected there's no single row to scroll to, and
+ * scrolling to whichever was selected last would jump the list around
+ * without actually showing the rest of the selection.
+ */
+function scrollSelectedIntoView(): void {
+  if (!tableEl) return
+  const sel = selected()
+  if (sel.length !== 1) return
+  const row = tableEl.querySelector(`tr[data-id="${sel[0].id}"]`)
+  row?.scrollIntoView({ block: "nearest", behavior: "smooth" })
 }
 
 /** Selection changes path widths, dot shapes and layering */
