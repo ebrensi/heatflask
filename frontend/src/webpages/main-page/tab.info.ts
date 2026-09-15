@@ -10,13 +10,10 @@ export const TITLE = "Info"
 export const ICON = icon("info")
 
 const contact_specs = [
-  ["linkedin", "https://www.linkedin.com/company/heatflask"],
-  ["twitter", "https://twitter.com/heatflask"],
-  ["instagram", "https://www.instagram.com/heatflask"],
-  [null, null],
   ["strava", "https://www.strava.com/clubs/271165"],
-  ["github", "https://github.com/ebrensi/heatflask"],
   ["envelope-o", "mailto:info@heatflask.com"],
+  ["github", "https://github.com/ebrensi/heatflask"],
+  ["linkedin", "https://www.linkedin.com/company/heatflask"],
 ]
 
 const html_tags: string[] = []
@@ -25,7 +22,7 @@ for (const [icon_name, url] of contact_specs) {
     const icon_tag = icon(icon_name, "icon-button")
     html_tags.push(`<a href="${url}" target="_blank">${icon_tag}</a>`)
   } else {
-    html_tags.push("<br>")
+    html_tags.push(`<span class="break"></span>`)
   }
 }
 

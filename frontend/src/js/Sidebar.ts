@@ -114,12 +114,22 @@ const sidebar_content_el = document.querySelector(".sidebar-content")
 
 const close_tab_icon = icon("caret-left")
 
-const ESC_KEY = 27
-const SPACE_KEY = 32
-const UP_ARROW_KEY = 40
-const DOWN_ARROW_KEY = 38
-const RIGHT_ARROW_KEY = 39
-const LEFT_ARROW_KEY = 37
+/**
+ * Is this key meant for something other than the sidebar? Any key typed into
+ * a field, space on a focused button (which presses it), and arrows on the
+ * focused map (which pans with them) all have their own use. A focused link,
+ * as a sidebar tab is after it's clicked, has none for these keys.
+ */
+function keyBelongsElsewhere(e: KeyboardEvent): boolean {
+  if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return true
+  const el = e.target
+  if (!(el instanceof HTMLElement)) return false
+  if (el.isContentEditable || el.closest("input, textarea, select")) return true
+  if (e.key === " ") return !!el.closest("button, [role=button], summary")
+  if (e.key.startsWith("Arrow"))
+    return !!el.closest(".maplibregl-canvas-container")
+  return false
+}
 
 export async function renderTabs(map: MLMap, state: State, tabIds?: string[]) {
   const tabs: string[] = []
@@ -154,31 +164,35 @@ export async function renderTabs(map: MLMap, state: State, tabIds?: string[]) {
   const S = new Sidebar(document.getElementById("sidebar"))
   S.tabNames = tabIds
 
+  /*
+   *   space        open or close the sidebar, on the tab last shown
+   *   escape       close it
+   *   down / up    while open, the next / previous tab, wrapping around
+   */
   document.addEventListener("keydown", (e) => {
-    const key = e.key || e.keyCode
-    if (S.isOpen) {
-      switch (key) {
-        case ESC_KEY:
-        case SPACE_KEY:
-          S.close()
-          break
-        case UP_ARROW_KEY:
-          S.currentTab = (S.currentTab + 1) % S.tabNames.length
-          S.open(S.tabNames[S.currentTab])
-          break
-        case DOWN_ARROW_KEY:
-          S.currentTab--
-          if (S.currentTab < 0) S.currentTab = S.tabNames.length - 1
-          S.open(S.tabNames[S.currentTab])
-          break
-      }
-    } else {
-      switch (key) {
-        case SPACE_KEY:
-          S.open(S.tabNames[S.currentTab])
-          break
-      }
+    if (keyBelongsElsewhere(e)) return
+    const n = S.tabNames.length
+
+    switch (e.key) {
+      case " ":
+        if (S.isOpen) S.close()
+        else S.open(S.tabNames[S.currentTab])
+        break
+      case "Escape":
+        if (!S.isOpen) return
+        S.close()
+        break
+      case "ArrowDown":
+      case "ArrowUp":
+        if (!S.isOpen) return
+        S.currentTab = (S.currentTab + (e.key === "ArrowDown" ? 1 : n - 1)) % n
+        S.open(S.tabNames[S.currentTab])
+        break
+      default:
+        return
     }
+    // a handled key shouldn't also scroll the page or the pane
+    e.preventDefault()
   })
 
   map.on("click", () => S.isOpen && S.close())

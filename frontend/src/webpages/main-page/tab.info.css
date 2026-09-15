@@ -46,33 +46,61 @@
   color: transparent;
 }
 
-/* badges on info tab */
-i.icon-button {
-  font-size: 300%;
-  transition: transform 0.25s;
-  margin-left: 10px;
-  margin-right: 10px;
-  margin-top: 10px;
-  margin-bottom: 10px;
+/* Controls: the keys in a column of their own, what they do beside them */
+.info-controls {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.5em 1em;
+  margin: 0 0 1em;
+}
+
+.info-controls dt {
+  white-space: nowrap;
+}
+
+.info-controls dd {
+  margin: 0;
+}
+
+.info-controls kbd {
   display: inline-block;
-  /* border: 2px solid green; */
-}
-
-i.icon-button:hover {
-  /*color: #ffc439;*/
-  transform: scale(2);
-}
-
-div.icon-buttons {
-  margin: left;
-  width: 70%;
+  min-width: 1.4em;
+  padding: 0 0.35em;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  font: inherit;
+  font-size: 0.85em;
+  line-height: 1.5;
   text-align: center;
-  padding: 10px;
-  /*border: 3px solid green;*/
+}
+
+/* badges on info tab */
+#contacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em 1.25em;
+  margin-bottom: 1em;
+}
+
+/* a line break in the list of contacts */
+#contacts > .break {
+  flex-basis: 100%;
 }
 
 #contacts > a:link {
   text-decoration: none;
+}
+
+i.icon-button {
+  display: inline-block;
+  font-size: 2.25em;
+  transition: transform 0.2s;
+}
+
+i.icon-button:hover {
+  transform: scale(1.2);
 }
 
 /* In the sidebar's own look: translucent dark, white type, one accent */

@@ -2,18 +2,37 @@
 
 <h3>Controls</h3>
 
-<p>
-  <b>ctrl + mouse-drag</b> or tap the <i class="hf-object-group"></i> button and drag with one finger:
-  Selecting a single activity shows its details. With a mouse, shift-drag zooms to a box.
-</p>
+<dl class="info-controls">
+  <dt><kbd>Ctrl</kbd> + drag</dt>
+  <dd>
+    Select activities in a box. On a touchscreen, tap
+    <i class="hf-object-group"></i> first, then drag with one finger. The last
+    activity selected shows its details, and the activity list scrolls to it.
+  </dd>
+
+  <dt><kbd>Shift</kbd> + drag</dt>
+  <dd>Zoom to a box</dd>
+
+  <dt><kbd>Alt</kbd> + drag</dt>
+  <dd>Rotate and tilt the map in 3D, or use two fingers</dd>
+
+  <dt><kbd>Space</kbd></dt>
+  <dd>Open or close the sidebar</dd>
+
+  <dt><kbd>↑</kbd> <kbd>↓</kbd></dt>
+  <dd>Previous or next sidebar tab</dd>
+
+  <dt><kbd>Esc</kbd></dt>
+  <dd>Close the sidebar</dd>
+</dl>
+
+<hr />
+
+<h3>Live URL</h3>
 
 <p>
-  <b>alt + mouse-drag</b> or two-finger gestures: 3D Rotate and Pitch
-</p>
-
-Live URL
-<p>
-  The map view and the animation settings are kept in the page's URL, so anyone you share it with sees the same view.
+  The map view and the animation settings are kept in the page's URL, so anyone
+  you share it with sees the same view.
 </p>
 
 <hr />
@@ -24,9 +43,10 @@ Live URL
   The <i class="hf-video-camera"></i> button records the animation as an MP4:
   tap it, size the box over the part of the map you want, and tap again to
   record. One full loop of the animation is recorded, so the video repeats
-  seamlessly; a loop longer than 30 seconds (the longest video Strava accepts) is cut off
-  at 30.
+  seamlessly; a loop longer than 30 seconds (the longest video Strava accepts)
+  is cut off at 30.
 </p>
+
 <hr />
 
 <div id="support">
@@ -41,11 +61,7 @@ Live URL
   <hr />
 </div>
 
-<div class="icon-buttons">
-  <h3>Contacts</h3>
-  <div id="contacts"></div>
-</div>
-
-<br /><br />
+<h3>Contacts</h3>
+<div id="contacts"></div>
 
 <script type="module" src="./tab.info.ts"></script>
