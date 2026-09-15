@@ -66,21 +66,8 @@ export function addCaptureControl(map: MLMap): void {
     hideTimer = window.setTimeout(() => (progress.hidden = true), afterMs)
   }
 
-  /* Just after a video saves is when someone has got something out of
-   * Heatflask, so that is where the one quiet ask goes. run() leaves it up
-   * long enough to read and click. */
   function showSaved(text: string): void {
     showProgress(text)
-    if (OFFLINE) return
-    const ask = document.createElement("div")
-    ask.className = "capture-sponsor"
-    const link = document.createElement("a")
-    link.href = SPONSOR_URL
-    link.target = "_blank"
-    link.rel = "noopener"
-    link.textContent = "Enjoying Heatflask? Help keep it running"
-    ask.appendChild(link)
-    progress.appendChild(ask)
   }
 
   const control = new ButtonControl("capture-control", onClick)
